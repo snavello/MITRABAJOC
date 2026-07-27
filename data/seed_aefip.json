@@ -1,0 +1,181 @@
+{
+  "sindicato": {
+    "nombre": "AEFIP",
+    "descripcion": "Asociación de Empleados Fiscales e Ingresos Públicos (recibos ARCA)"
+  },
+  "conceptos": [
+    {
+      "codigo": "1-026",
+      "nombre": "Sueldo básico grupo 26",
+      "tipo": "ingreso",
+      "remunerativo": true,
+      "alias": [
+        "SUELDO BASICO GRUPO 26"
+      ]
+    },
+    {
+      "codigo": "4-001",
+      "nombre": "Adicional técnico",
+      "tipo": "ingreso",
+      "remunerativo": true,
+      "alias": [
+        "ADICIONAL TECNICO"
+      ]
+    },
+    {
+      "codigo": "6-026",
+      "nombre": "Bonificación especial grupo 26",
+      "tipo": "ingreso",
+      "remunerativo": true,
+      "alias": [
+        "BONIFICACION ESPECIAL GRUPO 26"
+      ]
+    },
+    {
+      "codigo": "20-024",
+      "nombre": "Refrigerio",
+      "tipo": "ingreso",
+      "remunerativo": false,
+      "alias": [
+        "REFRIGERIO"
+      ]
+    },
+    {
+      "codigo": "37-026",
+      "nombre": "Permanencia en el grupo 26",
+      "tipo": "ingreso",
+      "remunerativo": true,
+      "alias": [
+        "PERMANENCIA EN EL GRUPO 26"
+      ]
+    },
+    {
+      "codigo": "100-001",
+      "nombre": "Adicional por jefatura dirección",
+      "tipo": "ingreso",
+      "remunerativo": true,
+      "alias": [
+        "ADIC. POR JEFATURA DIRECCION"
+      ]
+    },
+    {
+      "codigo": "108-001",
+      "nombre": "Antigüedad laudo 15/91",
+      "tipo": "ingreso",
+      "remunerativo": true,
+      "alias": [
+        "ANTIGUEDAD LAUDO 15/91"
+      ]
+    },
+    {
+      "codigo": "126-001",
+      "nombre": "Título univ/terc. laudo 15/91",
+      "tipo": "ingreso",
+      "remunerativo": true,
+      "alias": [
+        "TITULO UNIV/TERC.LAUDO15/91 - INCISO A)"
+      ]
+    },
+    {
+      "codigo": "704-001",
+      "nombre": "Incremento salarial suma fija",
+      "tipo": "ingreso",
+      "remunerativo": true,
+      "alias": [
+        "INCREMENTO SALARIAL -SUMA FIJA"
+      ]
+    },
+    {
+      "codigo": "707-001",
+      "nombre": "Adicional por serv. acreditado",
+      "tipo": "ingreso",
+      "remunerativo": true,
+      "alias": [
+        "ADICIONAL POR SERV. ACREDITADO"
+      ]
+    },
+    {
+      "codigo": "795-019",
+      "nombre": "Comp. p/dedicación especial",
+      "tipo": "ingreso",
+      "remunerativo": true,
+      "alias": [
+        "COMP. P/DEDICACION ESPECIAL"
+      ]
+    },
+    {
+      "codigo": "38-001",
+      "nombre": "Aporte personal INSSJP (PAMI)",
+      "tipo": "descuento",
+      "alias": [
+        "APORTE PERSONAL I.N.S.S.J.Y P."
+      ]
+    },
+    {
+      "codigo": "42-001",
+      "nombre": "Aporte jubilatorio ANSES",
+      "tipo": "descuento",
+      "alias": [
+        "AP. PERS. JUB. ANSES"
+      ]
+    },
+    {
+      "codigo": "44-001",
+      "nombre": "Seguro obligatorio DGI",
+      "tipo": "descuento",
+      "alias": [
+        "SEGURO OBLIGATORIO - DGI"
+      ]
+    },
+    {
+      "codigo": "85-117",
+      "nombre": "Obra social Comisarios Navales",
+      "tipo": "descuento",
+      "alias": [
+        "O.S. DE COMISARIOS NAVALES"
+      ]
+    },
+    {
+      "codigo": "161-001",
+      "nombre": "Impuesto a las ganancias",
+      "tipo": "descuento",
+      "alias": [
+        "IMPUESTO A LAS GANANCIAS"
+      ]
+    },
+    {
+      "codigo": "288-001",
+      "nombre": "AEFIP cuota afiliación",
+      "tipo": "descuento",
+      "alias": [
+        "A.E.F.I.P. CTA. AFILIACION"
+      ]
+    }
+  ],
+  "formulas": [
+    {
+      "target": "38-001",
+      "descripcion": "Aporte INSSJP (PAMI) = 3% de la base remunerativa",
+      "expr": "0.03 * base_remunerativa",
+      "tolerancia": 1.0
+    },
+    {
+      "target": "42-001",
+      "descripcion": "Aporte jubilatorio ANSES = 11% de la base remunerativa",
+      "expr": "0.11 * base_remunerativa",
+      "tolerancia": 1.0
+    },
+    {
+      "target": "85-117",
+      "descripcion": "Aporte obra social = 3% de la base remunerativa",
+      "expr": "0.03 * base_remunerativa",
+      "tolerancia": 1.0
+    },
+    {
+      "target": "288-001",
+      "descripcion": "Cuota sindical AEFIP = 1.5% de la base remunerativa",
+      "expr": "0.015 * base_remunerativa",
+      "tolerancia": 1.0
+    }
+  ]
+}

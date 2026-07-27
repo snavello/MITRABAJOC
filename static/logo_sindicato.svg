@@ -1,0 +1,5 @@
+<svg width="80" height="40" viewBox="0 0 80 40" xmlns="http://www.w3.org/2000/svg">
+  <rect x="1" y="1" width="78" height="38" rx="6" fill="#f0eee8" stroke="#c9c6be" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="40" y="17" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" fill="#8a887f">logo</text>
+  <text x="40" y="28" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" fill="#8a887f">sindicato</text>
+</svg>

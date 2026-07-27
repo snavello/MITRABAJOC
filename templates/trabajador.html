@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#152238">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Mi Trabajo — Revisá tu recibo</title>
+<style>
+  :root {
+    --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e;
+    --papel:#f7f5f0; --linea:#dcd8cf; --gris:#5c5a54; --card:#ffffff;
+  }
+  * { box-sizing:border-box; margin:0; -webkit-tap-highlight-color:transparent; }
+  html { -webkit-text-size-adjust:100%; }
+  body {
+    font-family:system-ui,-apple-system,sans-serif;
+    background:var(--papel); color:var(--tinta); line-height:1.5;
+    min-height:100dvh;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  /* ---------- Encabezado con logos ---------- */
+  header {
+    background:var(--card); border-bottom:1px solid var(--linea);
+    padding:12px 18px; padding-top:calc(12px + env(safe-area-inset-top));
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    position:sticky; top:0; z-index:10;
+  }
+  .marca { display:flex; align-items:center; gap:9px; }
+  .marca img { width:30px; height:30px; }
+  .marca .nom { font-size:17px; font-weight:600; color:var(--tinta); letter-spacing:-0.3px; }
+  .sind { max-height:38px; max-width:110px; object-fit:contain; }
+  /* ---------- Contenedor ---------- */
+  .cont { max-width:480px; margin:0 auto; padding:22px 20px 40px; }
+  h1 { font-size:clamp(21px, 5.5vw, 26px); font-weight:600; letter-spacing:-0.5px; }
+  .sub { color:var(--gris); margin-top:6px; font-size:15px; }
+  .zona {
+    margin-top:22px; border:2px dashed var(--linea); border-radius:16px;
+    padding:34px 20px; text-align:center; background:var(--card);
+  }
+  .zona .ico { font-size:40px; }
+  .zona p { font-size:14px; color:var(--gris); margin-top:12px; }
+  .btn {
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%; min-height:52px; margin-top:14px;
+    background:var(--tinta); color:#fff; border:none; border-radius:12px;
+    font-size:16px; font-weight:500; cursor:pointer; font-family:inherit;
+    touch-action:manipulation;
+  }
+  .btn:active { transform:scale(0.98); }
+  .btn.sec { background:transparent; color:var(--tinta); border:1px solid #b4b2a9; }
+  .btn.alerta { background:var(--alerta); }
+  input[type=file] { display:none; }
+  .archivo {
+    margin-top:22px; background:var(--card); border:1px solid var(--linea);
+    border-radius:16px; padding:16px; display:flex; align-items:center; gap:14px;
+  }
+  .archivo .thumb {
+    width:44px; height:56px; background:#e3f2ee; border-radius:8px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:24px; color:var(--agua);
+  }
+  .archivo .nombre { font-size:14px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .archivo .meta { font-size:12px; color:var(--gris); margin-top:2px; }
+  /* ---------- Preview ---------- */
+  .card {
+    margin-top:16px; background:var(--card); border:1px solid var(--linea);
+    border-radius:14px; overflow:hidden;
+  }
+  .card h2 {
+    font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase;
+    letter-spacing:0.4px; padding:12px 15px 8px; margin:0;
+  }
+  .datos { padding:0 15px 12px; }
+  .dato { display:flex; justify-content:space-between; gap:12px; padding:7px 0; font-size:14px; border-bottom:1px solid #f0eee8; }
+  .dato:last-child { border-bottom:none; }
+  .dato .k { color:var(--gris); }
+  .dato .v { font-weight:500; text-align:right; }
+  .dato .v.vacio { color:#b4b2a9; font-weight:400; font-style:italic; }
+  .fila { display:flex; justify-content:space-between; gap:12px; padding:11px 15px; border-top:1px solid #f0eee8; font-size:14px; }
+  .fila .imp { font-variant-numeric:tabular-nums; }
+  .fila .imp.neg { color:var(--alerta); }
+  .nuevos {
+    margin-top:16px; background:#fdf6e8; border:1px solid #e8d9b0;
+    border-radius:14px; padding:14px 15px;
+  }
+  .nuevos h2 { font-size:13px; font-weight:600; color:#8a6d1f; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:8px; }
+  .nuevos p { font-size:12.5px; color:#6b5a2f; margin-bottom:10px; line-height:1.5; }
+  .chip { display:flex; justify-content:space-between; gap:10px; padding:10px 0 6px; font-size:13.5px; border-top:1px solid #ecdfc0; }
+  .chip:first-of-type { border-top:none; }
+  .chip-info { display:flex; align-items:center; flex-wrap:wrap; gap:2px; }
+  .chip-desc { font-weight:500; }
+  .chip .tag { font-size:11px; background:#ede0bd; color:#8a6d1f; padding:1px 7px; border-radius:8px; margin-left:6px; }
+  .remun { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:2px 0 12px; border-bottom:1px solid #ecdfc0; }
+  .remun:last-child { border-bottom:none; }
+  .remun-lbl { font-size:12.5px; color:#6b5a2f; }
+  .toggle { display:inline-flex; border:1px solid #d9c893; border-radius:9px; overflow:hidden; background:#fff; }
+  .toggle button {
+    border:none; background:#fff; color:#8a6d1f; font-family:inherit;
+    font-size:13px; font-weight:500; padding:6px 16px; min-height:34px;
+    cursor:pointer; touch-action:manipulation;
+  }
+  .toggle button.activo { background:#1a7a6b; color:#fff; }
+  .toggle button:active { opacity:.85; }
+  /* ---------- Resultado ---------- */
+  .banner { margin-top:20px; padding:16px; border-radius:12px; font-weight:500; font-size:16px; display:flex; align-items:center; gap:8px; }
+  .banner.ok { background:#e3f2ee; color:var(--agua); }
+  .banner.mal { background:#f8e5e2; color:var(--alerta); }
+  .lista { margin-top:16px; background:var(--card); border:1px solid var(--linea); border-radius:12px; overflow:hidden; }
+  .lista .fila { border-top:1px solid #f0eee8; }
+  .lista .fila:first-child { border-top:none; }
+  .disc { margin-top:12px; background:var(--card); border-left:3px solid var(--alerta); border-radius:0 8px 8px 0; padding:12px 14px; font-size:13px; color:#4a4a4a; }
+  .cargando { text-align:center; padding:40px 0; }
+  .spin { width:52px; height:52px; margin:0 auto; border:3px solid var(--linea); border-top-color:var(--tinta); border-radius:50%; animation:spin .9s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .nota { font-size:11px; color:#8a887f; margin-top:22px; line-height:1.5; }
+  @media (prefers-reduced-motion:reduce) { .spin { animation:none; } .btn:active { transform:none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="marca">
+    <img src="/static/logo_mitrabajo.svg" alt="Mi Trabajo">
+    <span class="nom">Mi Trabajo</span>
+  </div>
+  <img class="sind" src="/static/logo_sindicato.svg" alt="{{ sindicato }}">
+</header>
+
+<div class="cont">
+  <!-- Paso 0: inicio -->
+  <div id="inicio">
+    <h1>Revisá tu recibo</h1>
+    <p class="sub">Sacale una foto o subí el PDF y verificamos que los aportes estén bien calculados.</p>
+    <div class="zona">
+      <div class="ico">📄</div>
+      <p>Foto o PDF de tu último recibo</p>
+    </div>
+    <label class="btn" for="archivo">Elegir recibo</label>
+    <input type="file" id="archivo" accept="image/*,application/pdf" capture="environment">
+  </div>
+
+  <!-- Paso 1: archivo elegido -->
+  <div id="listo" style="display:none;">
+    <h1>Revisá tu recibo</h1>
+    <div class="archivo">
+      <div class="thumb">📄</div>
+      <div style="flex:1; min-width:0;">
+        <div class="nombre" id="nombre"></div>
+        <div class="meta" id="meta">listo para leer</div>
+      </div>
+    </div>
+    <button class="btn" id="leer">Leer recibo</button>
+    <button class="btn sec" id="otro">Elegir otro</button>
+  </div>
+
+  <!-- Paso 2: preview -->
+  <div id="preview" style="display:none;">
+    <h1>Confirmá los datos</h1>
+    <p class="sub">Esto es lo que leímos del recibo. Si está bien, seguí con la verificación.</p>
+    <div id="preview-contenido"></div>
+    <button class="btn" id="continuar">Continuar con la verificación</button>
+    <button class="btn sec" id="reintentar">Volver a empezar</button>
+  </div>
+
+  <!-- Paso 3: resultado / cargando -->
+  <div id="resultado"></div>
+
+  <p class="nota">Es una verificación orientativa, no un dictamen legal. Tu recibo se procesa para esta revisión; no lo compartimos con terceros.</p>
+</div>
+
+<script>
+let archivo = null, datosLeidos = null;
+const $ = id => document.getElementById(id);
+const peso = n => '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:2});
+const ver = (id) => { for (const s of ['inicio','listo','preview']) $(s).style.display = (s===id)?'block':'none'; };
+
+$('archivo').onchange = e => {
+  archivo = e.target.files[0];
+  if (!archivo) return;
+  $('nombre').textContent = archivo.name;
+  $('meta').textContent = (archivo.size/1024).toFixed(0) + ' KB · listo para leer';
+  $('resultado').innerHTML = '';
+  ver('listo');
+};
+
+$('otro').onclick = () => { archivo = null; $('archivo').value = ''; ver('inicio'); };
+$('reintentar').onclick = () => { archivo = null; $('archivo').value = ''; datosLeidos = null; $('resultado').innerHTML=''; ver('inicio'); };
+
+// Paso 1 → 2: leer el recibo y mostrar el preview
+$('leer').onclick = async () => {
+  ver('listo'); $('listo').style.display = 'none';
+  $('resultado').innerHTML = `<div class="cargando"><div class="spin"></div>
+    <div style="font-weight:500; margin-top:20px;">Leyendo tu recibo…</div>
+    <div style="font-size:13px; color:var(--gris); margin-top:6px;">Interpretando los conceptos.</div></div>`;
+  const fd = new FormData(); fd.append('archivo', archivo);
+  try {
+    const r = await fetch('/api/leer', { method:'POST', body:fd });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail); }
+    datosLeidos = await r.json();
+    $('resultado').innerHTML = '';
+    renderPreview(datosLeidos);
+    ver('preview');
+  } catch (err) {
+    $('resultado').innerHTML = `<div class="banner mal">${err.message}</div>
+      <button class="btn sec" onclick="location.reload()">Volver a intentar</button>`;
+  }
+};
+
+function dato(k, v) {
+  const vacio = (v === null || v === undefined || v === '');
+  return `<div class="dato"><span class="k">${k}</span>
+    <span class="v ${vacio?'vacio':''}">${vacio ? 'sin dato' : v}</span></div>`;
+}
+
+function fmtPeriodo(p) {
+  if (!p) return null;
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const m = /^(\d{4})-(\d{2})$/.exec(p);
+  if (!m) return p;
+  return `${meses[+m[2]-1]} ${m[1]}`;
+}
+
+function renderPreview(d) {
+  const r = d.recibo;
+  const emp = r.empleado || {}, empresa = r.empleador || {};
+  let h = `<div class="card"><h2>Datos del recibo</h2><div class="datos">`;
+  h += dato('Empleado', emp.apellido_nombre);
+  h += dato('CUIL', emp.cuil);
+  h += dato('Empresa', empresa.nombre);
+  h += dato('CUIT', empresa.cuit);
+  h += dato('Período', fmtPeriodo(r.periodo));
+  h += dato('Fecha de cobro', r.fecha_pago);
+  h += `</div>`;
+
+  // Conceptos leídos
+  h += `<h2>Conceptos leídos (${r.lineas.length})</h2>`;
+  for (const ln of r.lineas) {
+    const neg = (ln.importe || 0) < 0;
+    h += `<div class="fila"><span>${ln.descripcion || ln.codigo || '—'}</span>
+      <span class="imp ${neg?'neg':''}">${peso(ln.importe || 0)}</span></div>`;
+  }
+  h += `</div>`;
+
+  // Conceptos nuevos detectados
+  if (d.conceptos_nuevos && d.conceptos_nuevos.length) {
+    h += `<div class="nuevos"><h2>Conceptos nuevos detectados</h2>
+      <p>Estos conceptos no estaban registrados. Marcá si cada uno es remunerativo (si suma para calcular los aportes). Al continuar se agregan y quedan marcados para que el sindicato los revise.</p>`;
+    d.conceptos_nuevos.forEach((n, i) => {
+      const neg = (n.importe || 0) < 0;
+      h += `<div class="chip">
+        <div class="chip-info">
+          <span class="chip-desc">${n.descripcion}</span>
+          <span class="tag">${n.tipo}</span>
+        </div>
+        <span class="imp ${neg?'neg':''}">${peso(n.importe)}</span>
+      </div>
+      <div class="remun" data-idx="${i}">
+        <span class="remun-lbl">¿Remunerativo?</span>
+        <div class="toggle" role="group">
+          <button type="button" class="tg-si activo" onclick="setRemun(${i}, true, this)">Sí</button>
+          <button type="button" class="tg-no" onclick="setRemun(${i}, false, this)">No</button>
+        </div>
+      </div>`;
+      // Por defecto: remunerativo = true
+      n.remunerativo = true;
+    });
+    h += `</div>`;
+  }
+  $('preview-contenido').innerHTML = h;
+}
+
+// Registrar la elección del trabajador sobre si un concepto nuevo es remunerativo
+function setRemun(idx, valor, btn) {
+  datosLeidos.conceptos_nuevos[idx].remunerativo = valor;
+  const grupo = btn.parentElement;
+  grupo.querySelector('.tg-si').classList.toggle('activo', valor);
+  grupo.querySelector('.tg-no').classList.toggle('activo', !valor);
+}
+
+// Paso 2 → 3: confirmar y validar
+$('continuar').onclick = async () => {
+  ver('preview'); $('preview').style.display = 'none';
+  $('resultado').innerHTML = `<div class="cargando"><div class="spin"></div>
+    <div style="font-weight:500; margin-top:20px;">Verificando los aportes…</div></div>`;
+  try {
+    const r = await fetch('/api/validar', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(datosLeidos)
+    });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail); }
+    renderResultado(await r.json());
+  } catch (err) {
+    $('resultado').innerHTML = `<div class="banner mal">${err.message}</div>
+      <button class="btn sec" onclick="location.reload()">Volver a intentar</button>`;
+  }
+};
+
+function renderResultado(d) {
+  const ok = d.estado === 'OK';
+  let h = `<div class="banner ${ok?'ok':'mal'}">`
+        + (ok ? '✓ Todo en orden' : `Encontramos ${d.discrepancias.length} cosa(s) para revisar`)
+        + `</div><div class="lista">`;
+  for (const f of d.formulas_validadas)
+    h += `<div class="fila"><span>${f.ok?'✓':'✗'} ${f.descripcion}</span><span class="imp">${peso(f.en_recibo)}</span></div>`;
+  h += `</div>`;
+  for (const disc of d.discrepancias) h += `<div class="disc">${disc.detalle}</div>`;
+  if (!ok) h += `<button class="btn alerta" id="rep">Reportar al sindicato</button>`;
+  h += `<button class="btn sec" onclick="location.reload()">Verificar otro recibo</button>`;
+  $('resultado').innerHTML = h;
+  if (!ok) $('rep').onclick = () => reportar(d);
+}
+
+async function reportar(d) {
+  await fetch('/api/reportar', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d)
+  });
+  $('resultado').innerHTML += `<div class="banner ok" style="margin-top:12px;">Enviado. El sindicato va a revisar tu caso.</div>`;
+}
+</script>
+</body>
+</html>

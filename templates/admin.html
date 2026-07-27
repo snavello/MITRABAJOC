@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mi Trabajo — Panel del sindicato</title>
+<style>
+  :root { --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e; --linea:#e2ded5; --gris:#5c5a54; }
+  * { box-sizing:border-box; margin:0; }
+  body { font-family:system-ui,sans-serif; color:#1b1b1b; background:#faf9f6; line-height:1.5; }
+  header { background:#fff; border-bottom:1px solid var(--linea); padding:14px 22px;
+           display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:20; }
+  header img { width:28px; height:28px; }
+  header .nom { font-size:17px; font-weight:600; color:var(--tinta); }
+  header .sind { margin-left:auto; font-size:14px; color:var(--gris); }
+  .wrap { max-width:1000px; margin:0 auto; padding:24px 22px 60px; }
+  nav { display:flex; gap:6px; margin-bottom:24px; flex-wrap:wrap; }
+  nav a { padding:8px 16px; border-radius:8px; text-decoration:none; color:var(--tinta);
+          font-size:14px; font-weight:500; background:#fff; border:1px solid var(--linea); }
+  nav a:hover { background:#f0eee8; }
+  h2 { font-size:17px; margin:34px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--tinta); }
+  h2:first-of-type { margin-top:0; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; background:#fff;
+          border:1px solid var(--linea); border-radius:8px; overflow:hidden; }
+  th,td { text-align:left; padding:9px 11px; border-bottom:1px solid #eee; vertical-align:middle; }
+  th { background:#f2f0ea; font-weight:600; font-size:12.5px; text-transform:uppercase; letter-spacing:.3px; }
+  tr:last-child td { border-bottom:none; }
+  code { font-family:Consolas,monospace; font-size:12.5px; background:#f2f0ea; padding:1px 5px; border-radius:4px; }
+  .pend { background:#fdf6e8; }
+  .tag { font-size:11px; padding:1px 7px; border-radius:8px; margin-left:5px; }
+  .tag-pend { background:#ede0bd; color:#8a6d1f; }
+  .tag-si { background:#e3f2ee; color:var(--agua); }
+  .tag-no { background:#f8e5e2; color:var(--alerta); }
+  .aviso { background:#fdf6e8; border:1px solid #e8d9b0; border-radius:8px;
+           padding:11px 15px; font-size:13.5px; color:#6b5a2f; margin:12px 0; }
+  form.linea { display:flex; gap:7px; flex-wrap:wrap; align-items:center; margin-top:12px;
+               background:#fff; border:1px solid var(--linea); border-radius:8px; padding:12px; }
+  input, select { padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:13.5px; font-family:inherit; }
+  input:focus, select:focus { outline:2px solid #b9d6ce; border-color:var(--agua); }
+  button { padding:8px 15px; background:var(--tinta); color:#fff; border:none; border-radius:6px;
+           cursor:pointer; font-size:13.5px; font-weight:500; font-family:inherit; }
+  button:hover { opacity:.92; }
+  button.sec { background:#fff; color:var(--tinta); border:1px solid #b4b2a9; }
+  button.mini { padding:5px 10px; font-size:12px; }
+  button.peligro { background:#fff; color:var(--alerta); border:1px solid #e3b5ae; }
+  .acc { display:flex; gap:5px; }
+  .drop { background:#fff; border:2px dashed var(--linea); border-radius:12px; padding:28px 20px;
+          text-align:center; color:var(--gris); font-size:14px; }
+  .oculto { display:none; }
+  .msg { padding:11px 15px; border-radius:8px; font-size:14px; margin-top:12px; }
+  .msg.ok { background:#e3f2ee; color:var(--agua); }
+  .muted { color:var(--gris); font-size:13px; }
+  .veces { font-size:12px; color:var(--gris); }
+</style>
+</head>
+<body>
+<header>
+  <img src="/static/logo_mitrabajo.svg" alt="Mi Trabajo">
+  <span class="nom">Mi Trabajo</span>
+  <span class="sind">Panel del sindicato · {{ sindicato }}</span>
+</header>
+
+<div class="wrap">
+  <nav>
+    <a href="#reportes">Reportes</a>
+    <a href="#formulas">Fórmulas</a>
+    <a href="#conceptos">Conceptos</a>
+    <a href="#aprendizaje">Aprendizaje</a>
+  </nav>
+
+  <!-- ============ REPORTES ============ -->
+  <h2 id="reportes">Reportes de trabajadores</h2>
+  <table>
+    <tr><th>Fecha</th><th>CUIL</th><th>Período</th><th>Estado</th></tr>
+    {% for r in reportes %}
+    <tr><td>{{ r.fecha }}</td><td>{{ r.cuil }}</td><td>{{ r.periodo }}</td>
+        <td><span class="tag {{ 'tag-pend' if r.estado=='nuevo' else 'tag-si' }}">{{ r.estado }}</span></td></tr>
+    {% else %}<tr><td colspan="4" class="muted">Sin reportes todavía.</td></tr>{% endfor %}
+  </table>
+
+  <!-- ============ FÓRMULAS ============ -->
+  <h2 id="formulas">Fórmulas a validar</h2>
+  <p class="muted">La variable <code>base_remunerativa</code> es la suma de los ingresos marcados como remunerativos. También está <code>total_ingresos</code>.</p>
+  <table>
+    <tr><th>Concepto</th><th>Descripción</th><th>Expresión</th><th>Tol.</th><th></th></tr>
+    {% for f in formulas %}
+    <tr>
+      <td><code>{{ f.target }}</code></td><td>{{ f.descripcion }}</td>
+      <td><code>{{ f.expr }}</code></td><td>${{ f.tolerancia }}</td>
+      <td class="acc">
+        <button class="sec mini" type="button"
+          onclick='editarFormula({{ f.id }}, {{ f.target|tojson }}, {{ f.descripcion|tojson }}, {{ f.expr|tojson }}, {{ f.tolerancia }})'>Editar</button>
+        <form method="post" action="/admin/formula/borrar" onsubmit="return confirm('¿Borrar esta fórmula?')">
+          <input type="hidden" name="id" value="{{ f.id }}">
+          <button class="peligro mini" type="submit">Borrar</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <form class="linea" method="post" action="/admin/formula" id="form-formula">
+    <input type="hidden" name="id" id="f-id">
+    <input name="target" id="f-target" placeholder="Cód. concepto" required style="width:110px;">
+    <input name="descripcion" id="f-desc" placeholder="Descripción" required style="flex:1; min-width:180px;">
+    <input name="expr" id="f-expr" placeholder="0.015 * base_remunerativa" required style="min-width:200px;">
+    <input name="tolerancia" id="f-tol" type="number" step="0.01" value="1.0" style="width:80px;">
+    <button type="submit" id="f-btn">Agregar fórmula</button>
+    <button type="button" class="sec oculto" id="f-cancel" onclick="cancelarFormula()">Cancelar</button>
+  </form>
+
+  <!-- ============ CONCEPTOS ============ -->
+  <h2 id="conceptos">Conceptos ({{ conceptos|length }})</h2>
+  {% set pendientes = conceptos | selectattr('pendiente_revision') | list %}
+  {% if pendientes %}
+  <div class="aviso"><strong>{{ pendientes|length }} concepto(s) por revisar.</strong>
+    Se detectaron en recibos y están marcados en amarillo. Editalos para confirmar tipo y si son remunerativos.</div>
+  {% endif %}
+  <table>
+    <tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Remun.</th><th>Alias</th><th></th></tr>
+    {% for c in conceptos %}
+    <tr class="{{ 'pend' if c.pendiente_revision }}">
+      <td><code>{{ c.codigo }}</code></td>
+      <td>{{ c.nombre }}{% if c.pendiente_revision %}<span class="tag tag-pend">nuevo</span>{% endif %}</td>
+      <td>{{ c.tipo }}</td>
+      <td>{% if c.tipo=='ingreso' %}<span class="tag {{ 'tag-si' if c.remunerativo else 'tag-no' }}">{{ 'sí' if c.remunerativo else 'no' }}</span>{% else %}—{% endif %}</td>
+      <td class="muted">{{ c.alias|join(', ') }}</td>
+      <td class="acc">
+        <button class="sec mini" type="button"
+          onclick='editarConcepto({{ c.id }}, {{ c.codigo|tojson }}, {{ c.nombre|tojson }}, {{ c.tipo|tojson }}, {{ c.remunerativo|tojson }}, {{ (c.alias or [])|join(", ")|tojson }})'>Editar</button>
+        <form method="post" action="/admin/concepto/borrar" onsubmit="return confirm('¿Borrar este concepto?')">
+          <input type="hidden" name="id" value="{{ c.id }}">
+          <button class="peligro mini" type="submit">Borrar</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <form class="linea" method="post" action="/admin/concepto" id="form-concepto">
+    <input type="hidden" name="id" id="c-id">
+    <input name="codigo" id="c-codigo" placeholder="Código" required style="width:100px;">
+    <input name="nombre" id="c-nombre" placeholder="Nombre" required style="flex:1; min-width:160px;">
+    <select name="tipo" id="c-tipo"><option value="ingreso">ingreso</option><option value="descuento">descuento</option></select>
+    <select name="remunerativo" id="c-remun"><option value="si">remunerativo: sí</option><option value="no">remunerativo: no</option></select>
+    <input name="alias" id="c-alias" placeholder="Alias (separados por coma)" style="min-width:180px;">
+    <button type="submit" id="c-btn">Agregar concepto</button>
+    <button type="button" class="sec oculto" id="c-cancel" onclick="cancelarConcepto()">Cancelar</button>
+  </form>
+
+  <!-- ============ APRENDIZAJE ============ -->
+  <h2 id="aprendizaje">Aprendizaje — incorporar conceptos desde recibos</h2>
+  <p class="muted">Subí varios recibos del mismo convenio. El sistema los lee, junta los conceptos que no están en el catálogo y te propone darlos de alta. Revisá tipo y remunerativo antes de aprobar.</p>
+
+  <form id="form-aprender" style="margin-top:14px;">
+    <label class="drop" for="ap-files" id="ap-drop">
+      Elegí los recibos (podés seleccionar varios)<br>
+      <span class="muted">fotos o PDF</span>
+    </label>
+    <input type="file" id="ap-files" accept="image/*,application/pdf" multiple class="oculto">
+    <div style="margin-top:12px; display:flex; gap:8px; align-items:center;">
+      <button type="submit" id="ap-btn" disabled>Leer recibos</button>
+      <span class="muted" id="ap-count"></span>
+    </div>
+  </form>
+  <div id="ap-resultado"></div>
+</div>
+
+<script>
+// ---------- ABM fórmulas ----------
+function editarFormula(id, target, desc, expr, tol) {
+  document.getElementById('f-id').value = id;
+  document.getElementById('f-target').value = target;
+  document.getElementById('f-desc').value = desc;
+  document.getElementById('f-expr').value = expr;
+  document.getElementById('f-tol').value = tol;
+  document.getElementById('f-btn').textContent = 'Guardar cambios';
+  document.getElementById('f-cancel').classList.remove('oculto');
+  document.getElementById('form-formula').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function cancelarFormula() {
+  document.getElementById('form-formula').reset();
+  document.getElementById('f-id').value = '';
+  document.getElementById('f-btn').textContent = 'Agregar fórmula';
+  document.getElementById('f-cancel').classList.add('oculto');
+}
+
+// ---------- ABM conceptos ----------
+function editarConcepto(id, codigo, nombre, tipo, remun, alias) {
+  document.getElementById('c-id').value = id;
+  document.getElementById('c-codigo').value = codigo;
+  document.getElementById('c-nombre').value = nombre;
+  document.getElementById('c-tipo').value = tipo;
+  document.getElementById('c-remun').value = remun ? 'si' : 'no';
+  document.getElementById('c-alias').value = alias;
+  document.getElementById('c-btn').textContent = 'Guardar cambios';
+  document.getElementById('c-cancel').classList.remove('oculto');
+  document.getElementById('form-concepto').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function cancelarConcepto() {
+  document.getElementById('form-concepto').reset();
+  document.getElementById('c-id').value = '';
+  document.getElementById('c-btn').textContent = 'Agregar concepto';
+  document.getElementById('c-cancel').classList.add('oculto');
+}
+
+// ---------- Aprendizaje ----------
+const apFiles = document.getElementById('ap-files');
+const apBtn = document.getElementById('ap-btn');
+const apCount = document.getElementById('ap-count');
+let propuestas = [];
+
+document.getElementById('ap-drop').onclick = () => apFiles.click();
+apFiles.onchange = () => {
+  const n = apFiles.files.length;
+  apBtn.disabled = n === 0;
+  apCount.textContent = n ? `${n} recibo(s) seleccionado(s)` : '';
+};
+
+document.getElementById('form-aprender').onsubmit = async (e) => {
+  e.preventDefault();
+  apBtn.disabled = true; apBtn.textContent = 'Leyendo…';
+  document.getElementById('ap-resultado').innerHTML = '<p class="muted" style="margin-top:14px;">Procesando recibos, puede tardar unos segundos por cada uno…</p>';
+  const fd = new FormData();
+  for (const f of apFiles.files) fd.append('archivos', f);
+  try {
+    const r = await fetch('/admin/aprender', { method:'POST', body:fd });
+    if (!r.ok) throw new Error('No se pudieron procesar los recibos.');
+    const data = await r.json();
+    propuestas = data.propuestas;
+    renderPropuestas(data);
+  } catch (err) {
+    document.getElementById('ap-resultado').innerHTML = `<div class="msg" style="background:#f8e5e2;color:#b23a2e;">${err.message}</div>`;
+  }
+  apBtn.disabled = false; apBtn.textContent = 'Leer recibos';
+};
+
+function renderPropuestas(data) {
+  if (!propuestas.length) {
+    document.getElementById('ap-resultado').innerHTML =
+      `<div class="msg ok" style="margin-top:14px;">Se leyeron ${data.leidos} recibo(s) y no aparecieron conceptos nuevos: el catálogo ya los cubre.</div>`;
+    return;
+  }
+  let h = `<div class="aviso" style="margin-top:16px;">Se leyeron ${data.leidos} recibo(s)`;
+  if (data.fallidos) h += ` (${data.fallidos} no se pudieron leer)`;
+  h += `. Encontramos ${propuestas.length} concepto(s) nuevo(s). Revisá y aprobá los que correspondan.</div>`;
+  h += `<table><tr><th></th><th>Código</th><th>Nombre</th><th>Tipo</th><th>Remun.</th><th>Apariciones</th></tr>`;
+  propuestas.forEach((p, i) => {
+    h += `<tr>
+      <td><input type="checkbox" checked data-i="${i}" class="ap-check"></td>
+      <td><code>${p.codigo}</code></td>
+      <td>${p.descripcion}</td>
+      <td><select data-i="${i}" class="ap-tipo">
+        <option value="ingreso" ${p.tipo==='ingreso'?'selected':''}>ingreso</option>
+        <option value="descuento" ${p.tipo==='descuento'?'selected':''}>descuento</option>
+      </select></td>
+      <td><select data-i="${i}" class="ap-remun">
+        <option value="si" ${p.remunerativo?'selected':''}>sí</option>
+        <option value="no" ${!p.remunerativo?'selected':''}>no</option>
+      </select></td>
+      <td class="veces">${p.veces}×</td>
+    </tr>`;
+  });
+  h += `</table>
+    <div style="margin-top:12px; display:flex; gap:8px;">
+      <button type="button" onclick="aplicarAprendizaje()">Dar de alta los aprobados</button>
+    </div>
+    <div id="ap-final"></div>`;
+  document.getElementById('ap-resultado').innerHTML = h;
+}
+
+async function aplicarAprendizaje() {
+  // Recoger elecciones
+  document.querySelectorAll('.ap-tipo').forEach(s => propuestas[s.dataset.i].tipo = s.value);
+  document.querySelectorAll('.ap-remun').forEach(s => propuestas[s.dataset.i].remunerativo = (s.value==='si'));
+  const aprobados = [];
+  document.querySelectorAll('.ap-check').forEach(c => { if (c.checked) aprobados.push(propuestas[c.dataset.i]); });
+  if (!aprobados.length) { alert('No seleccionaste ningún concepto.'); return; }
+  const r = await fetch('/admin/aprender/aplicar', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({aprobados})
+  });
+  const data = await r.json();
+  document.getElementById('ap-final').innerHTML =
+    `<div class="msg ok">Se dieron de alta ${data.altas} concepto(s). <a href="/admin#conceptos">Ver en la tabla de conceptos</a> (actualizá la página).</div>`;
+}
+</script>
+</body>
+</html>
