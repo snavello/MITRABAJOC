@@ -28,11 +28,55 @@ class Sindicato(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     nombre: str
     descripcion: str = ""
+    slug: str = Field(default="", index=True)   # identificador corto para URLs y logos
+    # Contacto / institucional
+    cuit: str = ""
+    direccion: str = ""
+    mail: str = ""
+    telefonos: str = ""
+    autoridad: str = ""
+    cargo_autoridad: str = ""
+    # Marca
+    logo: str = ""                              # nombre del archivo en static/logos/
+    color_primario: str = "#152238"
+    color_secundario: str = "#1a7a6b"
+    color_acento: str = "#b23a2e"
+    activo: bool = True
+
+
+class UsuarioSindicato(SQLModel, table=True):
+    """Administrador de un sindicato. Lo da de alta el admin de plataforma."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    usuario: str = Field(index=True)            # mail o nombre de usuario
+    nombre: str = ""
+    clave_hash: str = ""
+    debe_cambiar_clave: bool = True             # la primera clave la pone el admin de plataforma
+    activo: bool = True
+
+
+class CuentaTrabajador(SQLModel, table=True):
+    """La identidad única del trabajador en toda la plataforma: CUIL + clave.
+    Con esto entra, sin importar en cuántos sindicatos esté empadronado."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cuil: str = Field(index=True, unique=True)
+    clave_hash: str = ""
+    nombre: str = ""
+
+
+class Trabajador(SQLModel, table=True):
+    """Empadronamiento de un CUIL en un sindicato, con sus datos propios de ese gremio.
+    El mismo CUIL puede tener varias filas (una por sindicato donde está afiliado)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    cuil: str = Field(index=True)
+    nombre: str = ""            # nombre/legajo en ESE sindicato
+    registrado: bool = False    # True cuando el CUIL ya creó su cuenta
 
 
 class Concepto(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    sindicato_id: int = Field(default=1, foreign_key="sindicato.id")
+    sindicato_id: int = Field(default=1, foreign_key="sindicato.id", index=True)
     codigo: str = Field(index=True)
     nombre: str
     tipo: str                      # "ingreso" | "descuento"
@@ -43,7 +87,7 @@ class Concepto(SQLModel, table=True):
 
 class Formula(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    sindicato_id: int = Field(default=1, foreign_key="sindicato.id")
+    sindicato_id: int = Field(default=1, foreign_key="sindicato.id", index=True)
     target: str                    # código del concepto que controla
     descripcion: str
     expr: str                      # ej: "0.015 * base_remunerativa"
@@ -53,7 +97,7 @@ class Formula(SQLModel, table=True):
 
 class Reporte(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    sindicato_id: int = Field(default=1, foreign_key="sindicato.id")
+    sindicato_id: int = Field(default=1, foreign_key="sindicato.id", index=True)
     fecha: str
     cuil: str = ""
     periodo: str = ""
@@ -103,23 +147,57 @@ def nombre_sindicato() -> str:
         return sind.nombre if sind else ""
 
 
-def conceptos_como_dicts() -> list:
-    """Devuelve los conceptos en el formato que espera el validador."""
+def conceptos_como_dicts(sindicato_id: int = None) -> list:
+    """Devuelve los conceptos en el formato que espera el validador.
+    Si se pasa sindicato_id, filtra solo los de ese sindicato."""
     with Session(engine) as s:
+        q = select(Concepto)
+        if sindicato_id is not None:
+            q = q.where(Concepto.sindicato_id == sindicato_id)
         return [
             {
                 "codigo": c.codigo, "nombre": c.nombre, "tipo": c.tipo,
                 "remunerativo": c.remunerativo, "alias": c.alias or [],
                 "pendiente_revision": c.pendiente_revision,
             }
-            for c in s.exec(select(Concepto)).all()
+            for c in s.exec(q).all()
         ]
 
 
-def formulas_como_dicts() -> list:
+def formulas_como_dicts(sindicato_id: int = None) -> list:
     with Session(engine) as s:
+        q = select(Formula)
+        if sindicato_id is not None:
+            q = q.where(Formula.sindicato_id == sindicato_id)
         return [
             {"target": f.target, "descripcion": f.descripcion,
              "expr": f.expr, "tolerancia": f.tolerancia}
-            for f in s.exec(select(Formula)).all() if f.activa
+            for f in s.exec(q).all() if f.activa
         ]
+
+
+# ---------- Trabajadores: cuenta única + empadronamiento por sindicato ----------
+def sindicatos_de_cuil(cuil: str) -> list:
+    """Devuelve los sindicatos donde este CUIL está empadronado (habilitado)."""
+    with Session(engine) as s:
+        empadronamientos = s.exec(select(Trabajador).where(Trabajador.cuil == cuil)).all()
+        resultado = []
+        for e in empadronamientos:
+            sind = s.get(Sindicato, e.sindicato_id)
+            if sind and sind.activo:
+                resultado.append({"id": sind.id, "nombre": sind.nombre, "slug": sind.slug})
+        return resultado
+
+
+def marca_sindicato(sindicato_id: int) -> dict:
+    """Devuelve la marca (nombre, logo, colores) de un sindicato para pintar la app."""
+    with Session(engine) as s:
+        sind = s.get(Sindicato, sindicato_id)
+        if not sind:
+            return {}
+        return {
+            "id": sind.id, "nombre": sind.nombre, "logo": sind.logo,
+            "color_primario": sind.color_primario,
+            "color_secundario": sind.color_secundario,
+            "color_acento": sind.color_acento,
+        }

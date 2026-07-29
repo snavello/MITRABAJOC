@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mi Trabajo — Plataforma</title>
+<style>
+  :root { --tinta:#152238; --agua:#1a7a6b; --papel:#faf9f6; --linea:#e2ded5; --gris:#5c5a54; }
+  * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
+  body { background:var(--papel); color:#1b1b1b; line-height:1.5; }
+  header { background:#fff; border-bottom:1px solid var(--linea); padding:14px 22px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:20; }
+  header img { width:28px; height:28px; }
+  header .nom { font-size:17px; font-weight:600; color:var(--tinta); }
+  header .rol { margin-left:auto; font-size:13px; color:var(--gris); }
+  header a { color:var(--gris); font-size:13px; margin-left:16px; text-decoration:none; }
+  .wrap { max-width:1000px; margin:0 auto; padding:24px 22px 60px; }
+  h2 { font-size:17px; margin:30px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--tinta); }
+  h2:first-of-type { margin-top:0; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; background:#fff; border:1px solid var(--linea); border-radius:8px; overflow:hidden; }
+  th,td { text-align:left; padding:10px 12px; border-bottom:1px solid #eee; vertical-align:middle; }
+  th { background:#f2f0ea; font-weight:600; font-size:12.5px; text-transform:uppercase; letter-spacing:.3px; }
+  tr:last-child td { border-bottom:none; }
+  .chip-color { display:inline-block; width:16px; height:16px; border-radius:4px; vertical-align:-3px; margin-right:2px; border:1px solid rgba(0,0,0,.1); }
+  .card { background:#fff; border:1px solid var(--linea); border-radius:12px; padding:18px; margin-top:14px; }
+  .card h3 { font-size:14px; color:var(--tinta); margin-bottom:14px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .campo { display:flex; flex-direction:column; gap:4px; }
+  .campo.full { grid-column:1 / -1; }
+  label { font-size:12.5px; color:var(--gris); }
+  input, textarea, select { padding:9px 11px; border:1px solid #ccc; border-radius:7px; font-size:14px; font-family:inherit; width:100%; }
+  input:focus, textarea:focus, select:focus { outline:2px solid #b9d6ce; border-color:var(--agua); }
+  .colores { display:flex; gap:18px; flex-wrap:wrap; margin-top:4px; }
+  .col-item { display:flex; flex-direction:column; gap:4px; align-items:flex-start; }
+  input[type=color] { width:54px; height:38px; padding:2px; cursor:pointer; }
+  button { padding:10px 18px; background:var(--tinta); color:#fff; border:none; border-radius:7px; cursor:pointer; font-size:14px; font-weight:500; font-family:inherit; margin-top:6px; }
+  button:hover { opacity:.92; }
+  .muted { color:var(--gris); font-size:13px; }
+  .badge { font-size:11px; background:#e3f2ee; color:var(--agua); padding:2px 8px; border-radius:8px; }
+  details { margin-top:14px; }
+  summary { cursor:pointer; font-size:14px; color:var(--tinta); font-weight:500; padding:6px 0; }
+</style>
+</head>
+<body>
+<header>
+  <img src="/static/logo_mitrabajo.svg" alt="Mi Trabajo">
+  <span class="nom">Mi Trabajo</span>
+  <span class="rol">Administración de plataforma</span>
+  <a href="/plataforma/salir">Salir</a>
+</header>
+
+<div class="wrap">
+  <h2>Sindicatos en la plataforma ({{ sindicatos|length }})</h2>
+  <table>
+    <tr><th>Sindicato</th><th>CUIT</th><th>Marca</th><th>Admins</th><th>Trabajadores</th></tr>
+    {% for i in sindicatos %}
+    <tr>
+      <td><strong>{{ i.s.nombre }}</strong><br><span class="muted">{{ i.s.descripcion }}</span></td>
+      <td>{{ i.s.cuit or '—' }}</td>
+      <td>
+        <span class="chip-color" style="background:{{ i.s.color_primario }}"></span>
+        <span class="chip-color" style="background:{{ i.s.color_secundario }}"></span>
+        <span class="chip-color" style="background:{{ i.s.color_acento }}"></span>
+      </td>
+      <td>{{ i.usuarios }}</td>
+      <td>{{ i.trabajadores }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="muted">No hay sindicatos cargados todavía. Creá el primero abajo.</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Dar de alta un sindicato</h2>
+  <div class="card">
+    <form method="post" action="/plataforma/sindicato">
+      <div class="grid">
+        <div class="campo"><label>Nombre *</label><input name="nombre" required></div>
+        <div class="campo"><label>CUIT</label><input name="cuit" placeholder="30-12345678-9"></div>
+        <div class="campo full"><label>Descripción</label><input name="descripcion" placeholder="Breve descripción del gremio"></div>
+        <div class="campo"><label>Mail</label><input name="mail" type="email"></div>
+        <div class="campo"><label>Teléfonos</label><input name="telefonos"></div>
+        <div class="campo full"><label>Dirección</label><input name="direccion"></div>
+        <div class="campo"><label>Autoridad</label><input name="autoridad" placeholder="Nombre del referente"></div>
+        <div class="campo"><label>Cargo de la autoridad</label><input name="cargo_autoridad" placeholder="Secretario General"></div>
+      </div>
+
+      <div class="colores">
+        <div class="col-item">
+          <label>Color primario *</label>
+          <input type="color" name="color_primario" value="#152238">
+          <span class="muted" style="font-size:11px;">encabezado y pie</span>
+        </div>
+        <div class="col-item">
+          <label>Color secundario</label>
+          <input type="color" name="color_secundario" value="#1a7a6b">
+          <span class="muted" style="font-size:11px;">botones</span>
+        </div>
+        <div class="col-item">
+          <label>Color acento</label>
+          <input type="color" name="color_acento" value="#b23a2e">
+          <span class="muted" style="font-size:11px;">reservado</span>
+        </div>
+      </div>
+
+      <button type="submit">Crear sindicato</button>
+    </form>
+  </div>
+
+  <h2>Crear un administrador de sindicato</h2>
+  <div class="card">
+    {% if sindicatos %}
+    <form method="post" action="/plataforma/usuario">
+      <div class="grid">
+        <div class="campo">
+          <label>Sindicato *</label>
+          <select name="sindicato_id" required>
+            {% for i in sindicatos %}
+            <option value="{{ i.s.id }}">{{ i.s.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="campo"><label>Usuario (mail) *</label><input name="usuario" required placeholder="admin@sindicato.org"></div>
+        <div class="campo"><label>Nombre</label><input name="nombre"></div>
+        <div class="campo"><label>Clave inicial *</label><input name="clave_inicial" required placeholder="La cambiará en el primer ingreso"></div>
+      </div>
+      <button type="submit">Crear administrador</button>
+    </form>
+    {% else %}
+    <p class="muted">Primero creá un sindicato para poder asignarle administradores.</p>
+    {% endif %}
+  </div>
+</div>
+</body>
+</html>

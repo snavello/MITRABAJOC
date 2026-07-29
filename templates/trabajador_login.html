@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mi Trabajo — Ingresar</title>
+<style>
+  :root { --tinta:#152238; --agua:#1a7a6b; --papel:#f7f5f0; --linea:#dcd8cf; --gris:#5c5a54; --alerta:#b23a2e; }
+  * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
+  body { background:var(--papel); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .caja { background:#fff; border:1px solid var(--linea); border-radius:16px; padding:32px 26px; max-width:400px; width:100%; }
+  .marca { display:flex; align-items:center; gap:10px; margin-bottom:22px; justify-content:center; }
+  .marca img { width:34px; height:34px; }
+  .marca .nom { font-size:20px; font-weight:600; color:var(--tinta); }
+  .tabs { display:flex; gap:6px; margin-bottom:20px; background:#f2f0ea; padding:4px; border-radius:10px; }
+  .tab { flex:1; text-align:center; padding:9px; border-radius:7px; font-size:14px; font-weight:500; cursor:pointer; color:var(--gris); border:none; background:none; font-family:inherit; }
+  .tab.activo { background:#fff; color:var(--tinta); box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  label { display:block; font-size:13px; color:var(--gris); margin-bottom:6px; margin-top:14px; }
+  label:first-of-type { margin-top:0; }
+  input { width:100%; padding:12px 13px; border:1px solid #ccc; border-radius:9px; font-size:16px; font-family:inherit; }
+  input:focus { outline:2px solid #b9d6ce; border-color:var(--agua); }
+  button.enviar { width:100%; margin-top:20px; padding:13px; background:var(--tinta); color:#fff; border:none; border-radius:9px; font-size:16px; font-weight:500; cursor:pointer; font-family:inherit; }
+  .error { background:#f8e5e2; color:var(--alerta); font-size:13px; padding:11px 13px; border-radius:8px; margin-bottom:16px; line-height:1.4; }
+  .ayuda { font-size:12px; color:var(--gris); margin-top:14px; line-height:1.5; text-align:center; }
+  .form { display:none; } .form.activo { display:block; }
+</style>
+</head>
+<body>
+  <div class="caja">
+    <div class="marca">
+      <img src="/static/logo_mitrabajo.svg" alt="Mi Trabajo">
+      <span class="nom">Mi Trabajo</span>
+    </div>
+
+    {% set err = request.query_params.get('error') %}
+    {% if err == 'login' %}<div class="error">CUIL o clave incorrectos.</div>
+    {% elif err == 'nohabilitado' %}<div class="error">Tu CUIL no está habilitado en ningún sindicato todavía. Pedile a tu sindicato que te agregue.</div>
+    {% elif err == 'yaexiste' %}<div class="error">Ya tenés una cuenta con ese CUIL. Ingresá con tu clave.</div>
+    {% elif err == 'sinsind' %}<div class="error">Tu cuenta no está asociada a ningún sindicato activo.</div>
+    {% endif %}
+
+    <div class="tabs">
+      <button class="tab activo" id="tab-login" onclick="mostrar('login')">Ingresar</button>
+      <button class="tab" id="tab-registro" onclick="mostrar('registro')">Registrarme</button>
+    </div>
+
+    <form class="form activo" id="form-login" method="post" action="/trabajador/login">
+      <label>CUIL</label>
+      <input name="cuil" inputmode="numeric" placeholder="20123456789" required>
+      <label>Clave</label>
+      <input type="password" name="clave" required>
+      <button class="enviar" type="submit">Ingresar</button>
+      <div class="ayuda">Si es tu primera vez, tocá "Registrarme".</div>
+    </form>
+
+    <form class="form" id="form-registro" method="post" action="/trabajador/registro">
+      <label>CUIL</label>
+      <input name="cuil" inputmode="numeric" placeholder="20123456789" required>
+      <label>Elegí una clave</label>
+      <input type="password" name="clave" required minlength="4">
+      <button class="enviar" type="submit">Crear mi cuenta</button>
+      <div class="ayuda">Tu CUIL tiene que estar habilitado por tu sindicato. Con una sola cuenta accedés a todos tus sindicatos.</div>
+    </form>
+  </div>
+
+<script>
+function mostrar(cual) {
+  document.getElementById('tab-login').classList.toggle('activo', cual==='login');
+  document.getElementById('tab-registro').classList.toggle('activo', cual==='registro');
+  document.getElementById('form-login').classList.toggle('activo', cual==='login');
+  document.getElementById('form-registro').classList.toggle('activo', cual==='registro');
+}
+</script>
+</body>
+</html>

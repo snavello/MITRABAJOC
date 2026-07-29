@@ -11,6 +11,10 @@
   :root {
     --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e;
     --papel:#f7f5f0; --linea:#dcd8cf; --gris:#5c5a54; --card:#ffffff;
+    /* Colores de marca del sindicato (con respaldo a los de Mi Trabajo) */
+    --marca-primario: {{ marca.color_primario if marca else '#152238' }};
+    --marca-secundario: {{ marca.color_secundario if marca else '#152238' }};
+    --marca-acento: {{ marca.color_acento if marca else '#b23a2e' }};
   }
   * { box-sizing:border-box; margin:0; -webkit-tap-highlight-color:transparent; }
   html { -webkit-text-size-adjust:100%; }
@@ -22,12 +26,13 @@
   }
   /* ---------- Encabezado con logos ---------- */
   header {
-    background:var(--card); border-bottom:1px solid var(--linea);
+    background:var(--marca-primario); border-bottom:1px solid var(--linea);
     padding:12px 18px; padding-top:calc(12px + env(safe-area-inset-top));
     display:flex; align-items:center; justify-content:space-between; gap:12px;
     position:sticky; top:0; z-index:10;
   }
   .marca { display:flex; align-items:center; gap:9px; }
+  header .marca .nom { color:#fff !important; }
   .marca img { width:30px; height:30px; }
   .marca .nom { font-size:17px; font-weight:600; color:var(--tinta); letter-spacing:-0.3px; }
   .sind { max-height:38px; max-width:110px; object-fit:contain; }
@@ -44,7 +49,7 @@
   .btn {
     display:flex; align-items:center; justify-content:center; gap:8px;
     width:100%; min-height:52px; margin-top:14px;
-    background:var(--tinta); color:#fff; border:none; border-radius:12px;
+    background:var(--marca-secundario); color:#fff; border:none; border-radius:12px;
     font-size:16px; font-weight:500; cursor:pointer; font-family:inherit;
     touch-action:manipulation;
   }
@@ -114,16 +119,53 @@
   .spin { width:52px; height:52px; margin:0 auto; border:3px solid var(--linea); border-top-color:var(--tinta); border-radius:50%; animation:spin .9s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
   .nota { font-size:11px; color:#8a887f; margin-top:22px; line-height:1.5; }
+  /* ===== Semáforo ===== */
+  .sep { height:1px; background:var(--linea); margin:28px 0 22px; }
+  .sem-card { background:#fff; border:1px solid var(--linea); border-radius:16px; overflow:hidden; }
+  .sem-head { padding:15px 18px; border-bottom:1px solid #f0eee8; }
+  .sem-h2 { font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; }
+  .sem-sub { font-size:12px; color:var(--gris); margin-top:3px; }
+  .sem-global { display:flex; align-items:center; gap:14px; padding:18px; }
+  .sem-luz { width:50px; height:50px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:24px; }
+  .sem-luz.gris { background:#eceae3; color:#a8a59c; }
+  .sem-luz.verde { background:#e3f2ee; color:var(--agua); }
+  .sem-luz.amarillo { background:#fdf6e8; color:#b8860b; }
+  .sem-luz.rojo { background:#f8e5e2; color:var(--alerta); }
+  .sem-titulo { font-size:16px; font-weight:600; color:var(--tinta); }
+  .sem-global.verde .sem-titulo { color:var(--agua); }
+  .sem-global.amarillo .sem-titulo { color:#b8860b; }
+  .sem-global.rojo .sem-titulo { color:var(--alerta); }
+  .sem-desc { font-size:13px; color:var(--gris); margin-top:3px; line-height:1.4; }
+  .sem-acciones { padding:2px 18px 18px; }
+  .sem-paso { font-size:12px; color:var(--gris); background:#f4f2ec; border-radius:8px; padding:9px 12px; margin-bottom:10px; line-height:1.5; }
+  .sem-paso b { color:var(--tinta); }
+  #arca-file { display:none; }
+  .sem-rubros { padding:0 18px 14px; }
+  .sem-rubro { margin-top:13px; }
+  .sem-rubro-lbl { display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px; }
+  .sem-rubro-lbl .n { color:var(--tinta); font-weight:500; }
+  .sem-barra { display:flex; gap:2px; }
+  .sem-celda { flex:1; height:20px; border-radius:3px; background:#eceae3; }
+  .sem-celda.pagado { background:#2fa88f; }
+  .sem-celda.parcial { background:#e8b84b; }
+  .sem-celda.impago, .sem-celda.no_presentada, .sem-celda.no_declarado { background:#d9685c; }
+  .sem-leyenda { font-size:11px; color:#8a887f; padding:11px 18px; line-height:1.6; border-top:1px solid #f0eee8; }
+  .sem-dot { display:inline-block; width:9px; height:9px; border-radius:2px; vertical-align:-1px; margin-right:3px; }
+  .sem-fuente { font-size:11px; color:#8a887f; padding:0 18px 14px; font-style:italic; }
   @media (prefers-reduced-motion:reduce) { .spin { animation:none; } .btn:active { transform:none; } }
 </style>
 </head>
 <body>
 <header>
   <div class="marca">
-    <img src="/static/logo_mitrabajo.svg" alt="Mi Trabajo">
+    <img src="/static/logo_mitrabajo.svg" alt="Mi Trabajo" style="background:#fff; border-radius:6px; padding:2px;">
     <span class="nom">Mi Trabajo</span>
   </div>
-  <img class="sind" src="/static/logo_sindicato.svg" alt="{{ sindicato }}">
+  {% if marca and marca.logo %}
+  <img class="sind" src="/static/logos/{{ marca.logo }}" alt="{{ sindicato }}">
+  {% else %}
+  <span style="color:#fff; font-size:13px; font-weight:500; text-align:right; opacity:.95;">{{ sindicato }}</span>
+  {% endif %}
 </header>
 
 <div class="cont">
@@ -137,6 +179,16 @@
     </div>
     <label class="btn" for="archivo">Elegir recibo</label>
     <input type="file" id="archivo" accept="image/*,application/pdf" capture="environment">
+
+    <!-- ===== Semáforo de aportes ===== -->
+    <div class="sep"></div>
+    <div class="sem-card">
+      <div class="sem-head">
+        <h2 class="sem-h2">Estado de tus aportes</h2>
+        <div class="sem-sub">Jubilación y obra social · últimos 12 meses</div>
+      </div>
+      <div id="sem-cuerpo"></div>
+    </div>
   </div>
 
   <!-- Paso 1: archivo elegido -->
@@ -316,6 +368,83 @@ async function reportar(d) {
   });
   $('resultado').innerHTML += `<div class="banner ok" style="margin-top:12px;">Enviado. El sindicato va a revisar tu caso.</div>`;
 }
+
+// ==================== Semáforo de aportes ====================
+const semCuerpo = document.getElementById('sem-cuerpo');
+
+function semApagado() {
+  semCuerpo.innerHTML = `
+    <div class="sem-global gris">
+      <div class="sem-luz gris">—</div>
+      <div class="sem-txt">
+        <div class="sem-titulo">Todavía no consultado</div>
+        <div class="sem-desc">Verificá en ARCA si tu empleador depositó tus aportes.</div>
+      </div>
+    </div>
+    <div class="sem-acciones">
+      <div class="sem-paso"><b>Cómo funciona:</b> abrí ARCA, resolvé el "no soy un robot" y guardá la captura de la tabla. Después subila acá y armamos tu semáforo.</div>
+      <a class="btn pri" href="https://serviciossegsoc.afip.gob.ar/MisAportes/app/basica.aspx" target="_blank" rel="noopener">1 · Consultar en ARCA ↗</a>
+      <label class="btn sec" for="arca-file">2 · Subir captura de ARCA</label>
+      <input type="file" id="arca-file" accept="image/*,application/pdf" capture="environment">
+    </div>`;
+  document.getElementById('arca-file').onchange = semSubir;
+}
+
+async function semSubir(e) {
+  const archivo = e.target.files[0];
+  if (!archivo) return;
+  semCuerpo.innerHTML = `<div class="cargando" style="padding:30px 0;"><div class="spin"></div>
+    <div style="font-weight:500; margin-top:16px;">Leyendo tu comprobante…</div></div>`;
+  const fd = new FormData(); fd.append('archivo', archivo);
+  try {
+    const r = await fetch('/api/aportes', { method:'POST', body:fd });
+    if (!r.ok) { const err = await r.json(); throw new Error(err.detail); }
+    semRender(await r.json());
+  } catch (err) {
+    semCuerpo.innerHTML = `<div style="padding:16px;"><div class="banner mal">${err.message}</div>
+      <button class="btn sec" onclick="semApagado()" style="margin-top:10px;">Volver a intentar</button></div>`;
+  }
+}
+
+function semBarra(meses, rubro) {
+  let h = '<div class="sem-barra">';
+  for (const m of meses) h += `<div class="sem-celda ${m[rubro]||''}"></div>`;
+  return h + '</div>';
+}
+
+function semRender(d) {
+  const hoy = new Date().toLocaleDateString('es-AR');
+  semCuerpo.innerHTML = `
+    <div class="sem-global ${d.color}">
+      <div class="sem-luz ${d.color}">${d.color==='verde'?'✓':(d.color==='rojo'?'!':'~')}</div>
+      <div class="sem-txt">
+        <div class="sem-titulo">${d.titulo}</div>
+        <div class="sem-desc">${d.descripcion}</div>
+      </div>
+    </div>
+    <div class="sem-rubros">
+      <div class="sem-rubro">
+        <div class="sem-rubro-lbl"><span class="n">Jubilación</span><span class="n">${d.jubilacion_ok}/${d.total_meses} al día</span></div>
+        ${semBarra(d.meses,'jubilacion')}
+      </div>
+      <div class="sem-rubro">
+        <div class="sem-rubro-lbl"><span class="n">Obra social</span><span class="n">${d.obra_social_ok}/${d.total_meses} al día</span></div>
+        ${semBarra(d.meses,'obra_social')}
+      </div>
+    </div>
+    <div class="sem-leyenda">
+      <span class="sem-dot" style="background:#2fa88f;"></span>Pagado
+      <span class="sem-dot" style="background:#e8b84b;margin-left:8px;"></span>Parcial
+      <span class="sem-dot" style="background:#d9685c;margin-left:8px;"></span>Impago / No presentada
+    </div>
+    <div class="sem-fuente">Datos de ARCA · consultado el ${hoy}</div>
+    <div style="padding:0 18px 16px;"><label class="btn sec" for="arca-file2">Actualizar con otra captura</label>
+      <input type="file" id="arca-file2" accept="image/*,application/pdf" style="display:none;"></div>`;
+  const f2 = document.getElementById('arca-file2');
+  if (f2) f2.onchange = semSubir;
+}
+
+semApagado();
 </script>
 </body>
 </html>

@@ -58,6 +58,7 @@
   <img src="/static/logo_mitrabajo.svg" alt="Mi Trabajo">
   <span class="nom">Mi Trabajo</span>
   <span class="sind">Panel del sindicato · {{ sindicato }}</span>
+  <a href="/admin/salir" style="margin-left:16px; font-size:13px; color:var(--gris); text-decoration:none;">Salir</a>
 </header>
 
 <div class="wrap">
@@ -65,6 +66,7 @@
     <a href="#reportes">Reportes</a>
     <a href="#formulas">Fórmulas</a>
     <a href="#conceptos">Conceptos</a>
+    <a href="#trabajadores">Trabajadores</a>
     <a href="#aprendizaje">Aprendizaje</a>
   </nav>
 
@@ -144,6 +146,26 @@
     <input name="alias" id="c-alias" placeholder="Alias (separados por coma)" style="min-width:180px;">
     <button type="submit" id="c-btn">Agregar concepto</button>
     <button type="button" class="sec oculto" id="c-cancel" onclick="cancelarConcepto()">Cancelar</button>
+  </form>
+
+  <!-- ============ TRABAJADORES ============ -->
+  <h2 id="trabajadores">Trabajadores habilitados ({{ trabajadores|length }})</h2>
+  <p class="muted">Cargá los CUIL de los trabajadores del sindicato. Con eso van a poder registrarse en la app y usarla. Los que ya se registraron aparecen marcados.</p>
+  <table>
+    <tr><th>CUIL</th><th>Estado</th></tr>
+    {% for t in trabajadores %}
+    <tr>
+      <td><code>{{ t.cuil }}</code></td>
+      <td>{% if t.registrado %}<span class="tag tag-si">registrado</span>{% else %}<span class="muted">habilitado, sin registrar</span>{% endif %}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="2" class="muted">No hay trabajadores cargados. Pegá la lista de CUIL abajo.</td></tr>
+    {% endfor %}
+  </table>
+  <form class="linea" method="post" action="/admin/cuils" style="flex-direction:column; align-items:stretch;">
+    <label class="muted" style="margin-bottom:6px;">Pegá los CUIL (uno por línea, o separados por coma o espacio):</label>
+    <textarea name="cuils" rows="4" placeholder="20-12345678-9&#10;27-98765432-1&#10;..." style="width:100%; padding:10px; border:1px solid #ccc; border-radius:7px; font-family:Consolas,monospace; font-size:13px;"></textarea>
+    <button type="submit" style="margin-top:10px; align-self:flex-start;">Cargar CUIL</button>
   </form>
 
   <!-- ============ APRENDIZAJE ============ -->
