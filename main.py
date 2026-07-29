@@ -604,10 +604,11 @@ def trabajador_login(request: Request, cuil: str = Form(...), clave: str = Form(
         cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
         if not cuenta or not auth.verificar_clave(clave, cuenta.clave_hash):
             return RedirectResponse("/ingresar?error=login", status_code=303)
+        cuenta_id = cuenta.id   # capturar el id ANTES de cerrar la sesión
     sinds = db.sindicatos_de_cuil(cuil)
     if not sinds:
         return RedirectResponse("/ingresar?error=sinsind", status_code=303)
-    token = auth.crear_sesion("trabajador", id_usuario=cuenta.id, sindicato_id=0)
+    token = auth.crear_sesion("trabajador", id_usuario=cuenta_id, sindicato_id=0)
     # sindicato_id 0 = todavía no eligió; se define en /elegir o directo si hay uno solo
     resp = RedirectResponse("/app", status_code=303)
     resp.set_cookie(COOKIE, token, httponly=True, max_age=8*3600)
