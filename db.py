@@ -69,9 +69,19 @@ class Trabajador(SQLModel, table=True):
     El mismo CUIL puede tener varias filas (una por sindicato donde está afiliado)."""
     id: Optional[int] = Field(default=None, primary_key=True)
     sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
-    cuil: str = Field(index=True)
-    nombre: str = ""            # nombre/legajo en ESE sindicato
-    registrado: bool = False    # True cuando el CUIL ya creó su cuenta
+    cuil: str = Field(index=True)          # obligatorio
+    nombre: str = ""                       # obligatorio
+    # Datos de contacto / domicilio (opcionales)
+    calle: str = ""
+    numero: str = ""
+    piso: str = ""
+    ciudad: str = ""
+    provincia: str = ""
+    telefono: str = ""
+    mail: str = ""
+    # Estado
+    registrado: bool = False               # True cuando el CUIL ya creó su cuenta
+    activo: bool = True                    # baja lógica: False = dado de baja (recuperable)
 
 
 class Concepto(SQLModel, table=True):
@@ -201,3 +211,21 @@ def marca_sindicato(sindicato_id: int) -> dict:
             "color_secundario": sind.color_secundario,
             "color_acento": sind.color_acento,
         }
+
+
+# ---------- Provincias argentinas (para el ABM de trabajadores) ----------
+PROVINCIAS_AR = [
+    "Ciudad Autónoma de Buenos Aires", "Buenos Aires", "Catamarca", "Chaco",
+    "Chubut", "Córdoba", "Corrientes", "Entre Ríos", "Formosa", "Jujuy",
+    "La Pampa", "La Rioja", "Mendoza", "Misiones", "Neuquén", "Río Negro",
+    "Salta", "San Juan", "San Luis", "Santa Cruz", "Santa Fe",
+    "Santiago del Estero", "Tierra del Fuego", "Tucumán",
+]
+
+
+def nombre_trabajador(cuil: str, sindicato_id: int) -> str:
+    """Devuelve el nombre del trabajador en ese sindicato (o cadena vacía)."""
+    with Session(engine) as s:
+        t = s.exec(select(Trabajador).where(
+            Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
+        return t.nombre if t else ""

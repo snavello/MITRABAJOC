@@ -16,7 +16,7 @@ SINDICATOS = [
         "cuit": "30-11111111-1", "mail": "info@uom.org.ar", "autoridad": "Ana Pérez",
         "cargo_autoridad": "Secretaria General",
         "color_primario": "#1a3d6b", "color_secundario": "#2fa88f", "color_acento": "#e8b84b",
-        "admin": ("admin@uom.org", "uom-demo"),
+        "admin": ("20111111110", "uom-demo"),   # CUIT del admin UOM
         "conceptos": [
             ("SUELDO", "Sueldo básico", "ingreso", True),
             ("PRESENT", "Presentismo", "ingreso", True),
@@ -35,7 +35,7 @@ SINDICATOS = [
         "cuit": "30-22222222-2", "mail": "info@fega.org.ar", "autoridad": "Luis Gómez",
         "cargo_autoridad": "Secretario General",
         "color_primario": "#7a1f2b", "color_secundario": "#c19a3e", "color_acento": "#3d6b4a",
-        "admin": ("admin@fega.org", "fega-demo"),
+        "admin": ("20222222220", "fega-demo"),  # CUIT del admin Gastronómica
         "conceptos": [
             ("BASICO", "Sueldo básico", "ingreso", True),
             ("ADIC", "Adicional por categoría", "ingreso", True),
@@ -92,7 +92,7 @@ with db.get_session() as s:
 
 print("\nDemo cargada. Accesos:")
 print("  Plataforma:  /plataforma  (clave en variable PLATAFORMA_PASSWORD)")
-print("  UOM:         /admin  →  admin@uom.org / uom-demo")
-print("  Gastronómica:/admin  →  admin@fega.org / fega-demo")
+print("  UOM:         /admin  →  CUIT 20111111110 / uom-demo")
+print("  Gastronómica:/admin  →  CUIT 20222222220 / fega-demo")
 print("  Trabajador:  /ingresar  →  registrarse con un CUIL habilitado")
 print("  Pluriempleo: CUIL 27222222224 está en ambos sindicatos")

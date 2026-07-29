@@ -119,6 +119,28 @@
   .spin { width:52px; height:52px; margin:0 auto; border:3px solid var(--linea); border-top-color:var(--tinta); border-radius:50%; animation:spin .9s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
   .nota { font-size:11px; color:#8a887f; margin-top:22px; line-height:1.5; }
+  /* Barra de identidad del trabajador */
+  .ident { display:flex; align-items:center; gap:10px; padding:10px 18px;
+    background:#fff; border-bottom:1px solid var(--linea); }
+  .ident-nombre { font-weight:600; font-size:14px; color:var(--tinta); }
+  .ident-cuil { font-size:12px; color:var(--gris); }
+  .ident-salir { margin-left:auto; font-size:12px; color:var(--gris); text-decoration:none; }
+  /* ===== Pestañas del trabajador (barra inferior) ===== */
+  .cont { padding-bottom:78px; }  /* espacio para la barra fija */
+  .tabbar { position:fixed; bottom:0; left:0; right:0; background:#fff;
+    border-top:1px solid var(--linea); display:flex; z-index:30;
+    padding-bottom:env(safe-area-inset-bottom); }
+  .tabbar button { flex:1; background:none; border:none; padding:9px 4px 8px;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    font-family:inherit; cursor:pointer; color:#9a988f; font-size:10.5px; font-weight:500; }
+  .tabbar button .ic { font-size:19px; line-height:1; }
+  .tabbar button.activa { color:var(--marca-secundario); }
+  .tpanel { display:none; }
+  .tpanel.activo { display:block; }
+  .proximamente { text-align:center; padding:60px 24px; color:var(--gris); }
+  .proximamente .ic { font-size:44px; opacity:.5; }
+  .proximamente h2 { font-size:18px; color:var(--tinta); margin:16px 0 8px; }
+  .proximamente p { font-size:14px; line-height:1.5; }
   /* ===== Semáforo ===== */
   .sep { height:1px; background:var(--linea); margin:28px 0 22px; }
   .sem-card { background:#fff; border:1px solid var(--linea); border-radius:16px; overflow:hidden; }
@@ -168,20 +190,69 @@
   {% endif %}
 </header>
 
-<div class="cont">
-  <!-- Paso 0: inicio -->
-  <div id="inicio">
-    <h1>Revisá tu recibo</h1>
-    <p class="sub">Sacale una foto o subí el PDF y verificamos que los aportes estén bien calculados.</p>
-    <div class="zona">
-      <div class="ico">📄</div>
-      <p>Foto o PDF de tu último recibo</p>
-    </div>
-    <label class="btn" for="archivo">Elegir recibo</label>
-    <input type="file" id="archivo" accept="image/*,application/pdf" capture="environment">
+{% if cuil %}
+<div class="ident">
+  <div class="ident-nombre">{{ nombre_trab or 'Trabajador' }}</div>
+  <div class="ident-cuil">CUIL {{ cuil }}</div>
+  <a class="ident-salir" href="/trabajador/salir">Salir</a>
+</div>
+{% endif %}
 
-    <!-- ===== Semáforo de aportes ===== -->
-    <div class="sep"></div>
+<div class="cont">
+
+  <!-- ============ PESTAÑA: TU RECIBO ============ -->
+  <div class="tpanel activo" id="tp-recibo">
+    <!-- Paso 0: inicio -->
+    <div id="inicio">
+      <h1>Revisá tu recibo</h1>
+      <p class="sub">Sacale una foto o subí el PDF y verificamos que los aportes estén bien calculados.</p>
+      <div class="zona">
+        <div class="ico">📄</div>
+        <p>Foto o PDF de tu último recibo</p>
+      </div>
+      <label class="btn" for="archivo">Elegir recibo</label>
+      <input type="file" id="archivo" accept="image/*,application/pdf" capture="environment">
+    </div>
+
+    <!-- Paso 1: archivo elegido -->
+    <div id="listo" style="display:none;">
+      <h1>Revisá tu recibo</h1>
+      <div class="archivo">
+        <div class="thumb">📄</div>
+        <div style="flex:1; min-width:0;">
+          <div class="nombre" id="nombre"></div>
+          <div class="meta" id="meta">listo para leer</div>
+        </div>
+      </div>
+      <button class="btn" id="leer">Leer recibo</button>
+      <button class="btn sec" id="otro">Elegir otro</button>
+    </div>
+
+    <!-- Paso 2: preview -->
+    <div id="preview" style="display:none;">
+      <h1>Confirmá los datos</h1>
+      <p class="sub">Esto es lo que leímos del recibo. Si está bien, seguí con la verificación.</p>
+      <div id="preview-contenido"></div>
+      <button class="btn" id="continuar">Continuar con la verificación</button>
+      <button class="btn sec" id="reintentar">Volver a empezar</button>
+    </div>
+
+    <!-- Paso 3: resultado / cargando -->
+    <div id="resultado"></div>
+    <p class="nota">Es una verificación orientativa, no un dictamen legal. Tu recibo se procesa para esta revisión; no lo compartimos con terceros.</p>
+  </div>
+
+  <!-- ============ PESTAÑA: NOVEDADES ============ -->
+  <div class="tpanel" id="tp-novedades">
+    <div class="proximamente">
+      <div class="ic">📢</div>
+      <h2>Novedades</h2>
+      <p>Acá vas a ver los mensajes y avisos de tu sindicato.<br>Muy pronto.</p>
+    </div>
+  </div>
+
+  <!-- ============ PESTAÑA: MIS APORTES ============ -->
+  <div class="tpanel" id="tp-aportes">
     <div class="sem-card">
       <div class="sem-head">
         <h2 class="sem-h2">Estado de tus aportes</h2>
@@ -191,36 +262,38 @@
     </div>
   </div>
 
-  <!-- Paso 1: archivo elegido -->
-  <div id="listo" style="display:none;">
-    <h1>Revisá tu recibo</h1>
-    <div class="archivo">
-      <div class="thumb">📄</div>
-      <div style="flex:1; min-width:0;">
-        <div class="nombre" id="nombre"></div>
-        <div class="meta" id="meta">listo para leer</div>
-      </div>
+  <!-- ============ PESTAÑA: CAPACITACIÓN ============ -->
+  <div class="tpanel" id="tp-capacitacion">
+    <div class="proximamente">
+      <div class="ic">🎓</div>
+      <h2>Capacitación</h2>
+      <p>Índice de documentos y actividades de formación de tu sindicato.<br>Muy pronto.</p>
     </div>
-    <button class="btn" id="leer">Leer recibo</button>
-    <button class="btn sec" id="otro">Elegir otro</button>
   </div>
 
-  <!-- Paso 2: preview -->
-  <div id="preview" style="display:none;">
-    <h1>Confirmá los datos</h1>
-    <p class="sub">Esto es lo que leímos del recibo. Si está bien, seguí con la verificación.</p>
-    <div id="preview-contenido"></div>
-    <button class="btn" id="continuar">Continuar con la verificación</button>
-    <button class="btn sec" id="reintentar">Volver a empezar</button>
-  </div>
-
-  <!-- Paso 3: resultado / cargando -->
-  <div id="resultado"></div>
-
-  <p class="nota">Es una verificación orientativa, no un dictamen legal. Tu recibo se procesa para esta revisión; no lo compartimos con terceros.</p>
 </div>
 
+<!-- Barra de pestañas -->
+<nav class="tabbar">
+  <button class="tab-t activa" data-tp="recibo"><span class="ic">📄</span>Tu Recibo</button>
+  <button class="tab-t" data-tp="novedades"><span class="ic">📢</span>Novedades</button>
+  <button class="tab-t" data-tp="aportes"><span class="ic">📊</span>Mis Aportes</button>
+  <button class="tab-t" data-tp="capacitacion"><span class="ic">🎓</span>Capacitación</button>
+</nav>
+
 <script>
+// ---------- Pestañas del trabajador ----------
+document.querySelectorAll('.tab-t').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const dest = btn.dataset.tp;
+    document.querySelectorAll('.tab-t').forEach(b => b.classList.toggle('activa', b === btn));
+    document.querySelectorAll('.tpanel').forEach(pan => {
+      pan.classList.toggle('activo', pan.id === 'tp-' + dest);
+    });
+    window.scrollTo(0, 0);
+  });
+});
+
 let archivo = null, datosLeidos = null;
 const $ = id => document.getElementById(id);
 const peso = n => '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:2});

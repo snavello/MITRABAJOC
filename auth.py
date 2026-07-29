@@ -23,6 +23,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 CLAVE_PLATAFORMA = os.getenv("PLATAFORMA_PASSWORD", "plataforma-demo-2026")
+CUIT_PLATAFORMA = os.getenv("PLATAFORMA_CUIT", "20000000000")
 SECRETO = os.getenv("SESSION_SECRET", "cambiar-este-secreto-en-produccion")
 
 # ---------- Hash de contraseñas ----------
@@ -71,5 +72,10 @@ def leer_sesion(token: str) -> dict | None:
     return payload
 
 
-def verificar_plataforma(clave: str) -> bool:
-    return hmac.compare_digest(clave, CLAVE_PLATAFORMA)
+def verificar_plataforma(clave: str, cuit: str = None) -> bool:
+    ok_clave = hmac.compare_digest(clave, CLAVE_PLATAFORMA)
+    if cuit is None:
+        return ok_clave
+    import re
+    cuit_norm = re.sub(r"[^0-9]", "", cuit or "")
+    return ok_clave and hmac.compare_digest(cuit_norm, CUIT_PLATAFORMA)

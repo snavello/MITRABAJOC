@@ -5,19 +5,45 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mi Trabajo — Panel del sindicato</title>
 <style>
-  :root { --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e; --linea:#e2ded5; --gris:#5c5a54; }
+  :root { --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e; --linea:#e2ded5; --gris:#5c5a54;
+    --marca-primario: {{ marca.color_primario if marca else '#152238' }};
+    --marca-secundario: {{ marca.color_secundario if marca else '#1a7a6b' }}; }
   * { box-sizing:border-box; margin:0; }
   body { font-family:system-ui,sans-serif; color:#1b1b1b; background:#faf9f6; line-height:1.5; }
-  header { background:#fff; border-bottom:1px solid var(--linea); padding:14px 22px;
+  header { background:var(--marca-primario); border-bottom:1px solid var(--linea); padding:14px 22px;
            display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:20; }
-  header img { width:28px; height:28px; }
-  header .nom { font-size:17px; font-weight:600; color:var(--tinta); }
-  header .sind { margin-left:auto; font-size:14px; color:var(--gris); }
+  header img { width:28px; height:28px; background:#fff; border-radius:6px; padding:2px; }
+  header .nom { font-size:17px; font-weight:600; color:#fff; }
+  header .rol { color:rgba(255,255,255,.85) !important; }
+  header a { color:rgba(255,255,255,.9) !important; }
+  header .sind { margin-left:auto; font-size:14px; color:rgba(255,255,255,.9); }
+  header a { color:rgba(255,255,255,.85) !important; }
   .wrap { max-width:1000px; margin:0 auto; padding:24px 22px 60px; }
   nav { display:flex; gap:6px; margin-bottom:24px; flex-wrap:wrap; }
-  nav a { padding:8px 16px; border-radius:8px; text-decoration:none; color:var(--tinta);
-          font-size:14px; font-weight:500; background:#fff; border:1px solid var(--linea); }
-  nav a:hover { background:#f0eee8; }
+  nav button { padding:8px 16px; border-radius:8px; color:var(--gris);
+          font-size:14px; font-weight:500; background:#fff; border:1px solid var(--linea);
+          cursor:pointer; font-family:inherit; }
+  nav button:hover { background:#f0eee8; }
+  nav button.activa { background:var(--marca-primario); color:#fff; border-color:var(--marca-primario); }
+  .panel { display:none; }
+  .panel.activo { display:block; }
+  .panel h2:first-child { margin-top:0; }
+  /* Sub-pestañas y ABM de trabajadores */
+  .subtabs { display:flex; gap:5px; margin:14px 0 18px; flex-wrap:wrap; }
+  .subtab { padding:6px 14px; border-radius:7px; font-size:13px; font-weight:500;
+    background:#f2f0ea; color:var(--gris); border:1px solid var(--linea); cursor:pointer; font-family:inherit; }
+  .subtab.activa { background:var(--marca-secundario); color:#fff; border-color:var(--marca-secundario); }
+  .subpanel { display:none; }
+  .subpanel.activo { display:block; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .form-trab .campo { display:flex; flex-direction:column; gap:4px; }
+  .form-trab label { font-size:12.5px; color:var(--gris); }
+  .form-trab input, .form-trab select { padding:9px 11px; border:1px solid #ccc; border-radius:7px; font-size:14px; font-family:inherit; }
+  button.mini { padding:5px 11px; font-size:12.5px; margin-left:4px; }
+  button.mini.borrar { background:#fff; color:var(--alerta); border:1px solid #e0c4c0; }
+  .rep-detalle { font-family:Consolas,monospace; font-size:12.5px; white-space:pre-wrap;
+    word-break:break-word; color:#333; padding:6px 2px; line-height:1.5; }
+  @media (max-width:560px){ .grid2 { grid-template-columns:1fr; } }
   h2 { font-size:17px; margin:34px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--tinta); }
   h2:first-of-type { margin-top:0; }
   table { width:100%; border-collapse:collapse; font-size:13.5px; background:#fff;
@@ -44,8 +70,9 @@
   button.mini { padding:5px 10px; font-size:12px; }
   button.peligro { background:#fff; color:var(--alerta); border:1px solid #e3b5ae; }
   .acc { display:flex; gap:5px; }
-  .drop { background:#fff; border:2px dashed var(--linea); border-radius:12px; padding:28px 20px;
-          text-align:center; color:var(--gris); font-size:14px; }
+  .drop { display:block; box-sizing:border-box; width:100%; max-width:100%;
+          background:#fff; border:2px dashed var(--linea); border-radius:12px; padding:24px 16px;
+          text-align:center; color:var(--gris); font-size:14px; cursor:pointer; }
   .oculto { display:none; }
   .msg { padding:11px 15px; border-radius:8px; font-size:14px; margin-top:12px; }
   .msg.ok { background:#e3f2ee; color:var(--agua); }
@@ -63,23 +90,30 @@
 
 <div class="wrap">
   <nav>
-    <a href="#reportes">Reportes</a>
-    <a href="#formulas">Fórmulas</a>
-    <a href="#conceptos">Conceptos</a>
-    <a href="#trabajadores">Trabajadores</a>
-    <a href="#aprendizaje">Aprendizaje</a>
+    <button class="tab-btn activa" data-panel="reportes">Reportes</button>
+    <button class="tab-btn" data-panel="formulas">Fórmulas</button>
+    <button class="tab-btn" data-panel="conceptos">Conceptos</button>
+    <button class="tab-btn" data-panel="trabajadores">Trabajadores</button>
+    <button class="tab-btn" data-panel="aprendizaje">Aprendizaje</button>
   </nav>
 
+  <div class="panel activo" id="panel-reportes">
   <!-- ============ REPORTES ============ -->
   <h2 id="reportes">Reportes de trabajadores</h2>
   <table>
-    <tr><th>Fecha</th><th>CUIL</th><th>Período</th><th>Estado</th></tr>
+    <tr><th>Fecha</th><th>CUIL</th><th>Período</th><th>Estado</th><th></th></tr>
     {% for r in reportes %}
     <tr><td>{{ r.fecha }}</td><td>{{ r.cuil }}</td><td>{{ r.periodo }}</td>
-        <td><span class="tag {{ 'tag-pend' if r.estado=='nuevo' else 'tag-si' }}">{{ r.estado }}</span></td></tr>
-    {% else %}<tr><td colspan="4" class="muted">Sin reportes todavía.</td></tr>{% endfor %}
+        <td><span class="tag {{ 'tag-pend' if r.estado=='nuevo' else 'tag-si' }}">{{ r.estado }}</span></td>
+        <td style="text-align:right;"><button type="button" class="mini" onclick="verReporte({{ r.id }})">Ver</button></td></tr>
+    <tr id="rep-{{ r.id }}" style="display:none;"><td colspan="5" style="background:#faf9f6;">
+      <div class="rep-detalle">{{ r.detalle | tojson(indent=2) }}</div>
+    </td></tr>
+    {% else %}<tr><td colspan="5" class="muted">Sin reportes todavía.</td></tr>{% endfor %}
   </table>
 
+  </div>
+  <div class="panel" id="panel-formulas">
   <!-- ============ FÓRMULAS ============ -->
   <h2 id="formulas">Fórmulas a validar</h2>
   <p class="muted">La variable <code>base_remunerativa</code> es la suma de los ingresos marcados como remunerativos. También está <code>total_ingresos</code>.</p>
@@ -110,6 +144,8 @@
     <button type="button" class="sec oculto" id="f-cancel" onclick="cancelarFormula()">Cancelar</button>
   </form>
 
+  </div>
+  <div class="panel" id="panel-conceptos">
   <!-- ============ CONCEPTOS ============ -->
   <h2 id="conceptos">Conceptos ({{ conceptos|length }})</h2>
   {% set pendientes = conceptos | selectattr('pendiente_revision') | list %}
@@ -148,34 +184,102 @@
     <button type="button" class="sec oculto" id="c-cancel" onclick="cancelarConcepto()">Cancelar</button>
   </form>
 
+  </div>
+  <div class="panel" id="panel-trabajadores">
   <!-- ============ TRABAJADORES ============ -->
-  <h2 id="trabajadores">Trabajadores habilitados ({{ trabajadores|length }})</h2>
-  <p class="muted">Cargá los CUIL de los trabajadores del sindicato. Con eso van a poder registrarse en la app y usarla. Los que ya se registraron aparecen marcados.</p>
-  <table>
-    <tr><th>CUIL</th><th>Estado</th></tr>
-    {% for t in trabajadores %}
-    <tr>
-      <td><code>{{ t.cuil }}</code></td>
-      <td>{% if t.registrado %}<span class="tag tag-si">registrado</span>{% else %}<span class="muted">habilitado, sin registrar</span>{% endif %}</td>
-    </tr>
-    {% else %}
-    <tr><td colspan="2" class="muted">No hay trabajadores cargados. Pegá la lista de CUIL abajo.</td></tr>
-    {% endfor %}
-  </table>
-  <form class="linea" method="post" action="/admin/cuils" style="flex-direction:column; align-items:stretch;">
-    <label class="muted" style="margin-bottom:6px;">Pegá los CUIL (uno por línea, o separados por coma o espacio):</label>
-    <textarea name="cuils" rows="4" placeholder="20-12345678-9&#10;27-98765432-1&#10;..." style="width:100%; padding:10px; border:1px solid #ccc; border-radius:7px; font-family:Consolas,monospace; font-size:13px;"></textarea>
-    <button type="submit" style="margin-top:10px; align-self:flex-start;">Cargar CUIL</button>
-  </form>
+  <h2 id="trabajadores">Trabajadores ({{ trabajadores|selectattr('activo')|list|length }} activos)</h2>
+  <p class="muted">Los trabajadores cargados acá pueden registrarse en la app con su CUIL. Podés darlos de alta de a uno o pegar una lista.</p>
 
+  <div class="subtabs">
+    <button class="subtab activa" data-sub="listado">Listado</button>
+    <button class="subtab" data-sub="manual">Alta manual</button>
+    <button class="subtab" data-sub="masivo">Alta masiva</button>
+  </div>
+
+  <!-- Sub-panel: LISTADO -->
+  <div class="subpanel activo" id="sub-listado">
+    <table>
+      <tr><th>CUIL</th><th>Nombre</th><th>Ubicación</th><th>Estado</th><th></th></tr>
+      {% for t in trabajadores %}
+      <tr {% if not t.activo %}style="opacity:.5;"{% endif %}>
+        <td><code>{{ t.cuil }}</code></td>
+        <td>{{ t.nombre or '—' }}</td>
+        <td class="muted">{{ t.ciudad }}{% if t.provincia %}, {{ t.provincia }}{% endif %}</td>
+        <td>
+          {% if not t.activo %}<span class="tag" style="background:#eee;color:#888;">baja</span>
+          {% elif t.registrado %}<span class="tag tag-si">registrado</span>
+          {% else %}<span class="muted">sin registrar</span>{% endif %}
+        </td>
+        <td style="white-space:nowrap; text-align:right;">
+          <button type="button" class="mini"
+            onclick='editarTrab({{ {"id":t.id,"cuil":t.cuil,"nombre":t.nombre,"calle":t.calle,"numero":t.numero,"piso":t.piso,"ciudad":t.ciudad,"provincia":t.provincia,"telefono":t.telefono,"mail":t.mail} | tojson }})'>Editar</button>
+          {% if t.activo %}
+          <form method="post" action="/admin/trabajador/baja" style="display:inline;" onsubmit="return confirm('¿Dar de baja a este trabajador? Se puede reactivar después.');">
+            <input type="hidden" name="id" value="{{ t.id }}"><button class="mini borrar">Baja</button>
+          </form>
+          {% else %}
+          <form method="post" action="/admin/trabajador/alta-logica" style="display:inline;">
+            <input type="hidden" name="id" value="{{ t.id }}"><button class="mini">Reactivar</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="muted">No hay trabajadores cargados. Usá "Alta manual" o "Alta masiva".</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <!-- Sub-panel: ALTA MANUAL -->
+  <div class="subpanel" id="sub-manual">
+    <form method="post" action="/admin/trabajador" class="form-trab">
+      <input type="hidden" name="id" id="trab-id">
+      <div class="grid2">
+        <div class="campo"><label>CUIL *</label><input name="cuil" id="trab-cuil" required placeholder="20123456789"></div>
+        <div class="campo"><label>Nombre *</label><input name="nombre" id="trab-nombre" required></div>
+        <div class="campo"><label>Calle</label><input name="calle" id="trab-calle"></div>
+        <div class="campo"><label>Número</label><input name="numero" id="trab-numero"></div>
+        <div class="campo"><label>Piso / Depto</label><input name="piso" id="trab-piso"></div>
+        <div class="campo"><label>Ciudad</label><input name="ciudad" id="trab-ciudad"></div>
+        <div class="campo"><label>Provincia</label>
+          <select name="provincia" id="trab-provincia">
+            <option value="">—</option>
+            {% for p in provincias %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="campo"><label>Teléfono</label><input name="telefono" id="trab-telefono"></div>
+        <div class="campo"><label>Mail</label><input name="mail" id="trab-mail" type="email"></div>
+      </div>
+      <div style="margin-top:12px;">
+        <button type="submit" id="trab-submit">Agregar trabajador</button>
+        <button type="button" class="sec" id="trab-cancelar" onclick="resetTrab()" style="display:none;">Cancelar edición</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Sub-panel: ALTA MASIVA -->
+  <div class="subpanel" id="sub-masivo">
+    <p class="muted">Pegá una línea por trabajador, con los campos separados por coma, en este orden:</p>
+    <p class="muted" style="font-family:Consolas,monospace; font-size:12.5px; background:#f4f2ec; padding:8px 10px; border-radius:6px;">
+      cuil, nombre, calle, numero, piso, ciudad, provincia, telefono, mail</p>
+    <p class="muted">Solo <b>cuil</b> y <b>nombre</b> son obligatorios; el resto puede ir vacío (pero respetá las comas si querés cargar un campo posterior).</p>
+    <form method="post" action="/admin/trabajador/masivo">
+      <textarea name="lista" rows="6" placeholder="20123456789, Juan Pérez, Av. Siempreviva, 742, , Springfield, Buenos Aires, 11-5555-5555, juan@mail.com&#10;27987654321, Ana López" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:7px; font-family:Consolas,monospace; font-size:13px;"></textarea>
+      <button type="submit" style="margin-top:10px;">Cargar lista</button>
+    </form>
+  </div>
+
+  </div>
+
+  <div class="panel" id="panel-aprendizaje">
   <!-- ============ APRENDIZAJE ============ -->
   <h2 id="aprendizaje">Aprendizaje — incorporar conceptos desde recibos</h2>
-  <p class="muted">Subí varios recibos del mismo convenio. El sistema los lee, junta los conceptos que no están en el catálogo y te propone darlos de alta. Revisá tipo y remunerativo antes de aprobar.</p>
+  <p class="muted">Subí varios recibos del mismo convenio (lo ideal es entre 3 y 10, de distintos empleados o meses). El sistema los lee, junta los conceptos que no están en el catálogo y te propone darlos de alta. Revisá tipo y remunerativo antes de aprobar.</p>
 
   <form id="form-aprender" style="margin-top:14px;">
     <label class="drop" for="ap-files" id="ap-drop">
-      Elegí los recibos (podés seleccionar varios)<br>
-      <span class="muted">fotos o PDF</span>
+      Tocá para elegir los recibos<br>
+      <span class="muted">Podés seleccionar varios a la vez · fotos o PDF · 3 a 10 recomendado</span>
     </label>
     <input type="file" id="ap-files" accept="image/*,application/pdf" multiple class="oculto">
     <div style="margin-top:12px; display:flex; gap:8px; align-items:center;">
@@ -184,9 +288,71 @@
     </div>
   </form>
   <div id="ap-resultado"></div>
+  </div>
 </div>
 
 <script>
+// ---------- Navegación por pestañas ----------
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const destino = btn.dataset.panel;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('activa', b === btn));
+    document.querySelectorAll('.panel').forEach(pan => {
+      pan.classList.toggle('activo', pan.id === 'panel-' + destino);
+    });
+    // recordar la pestaña por si se recarga (ej: tras alta con #ancla)
+    history.replaceState(null, '', '#' + destino);
+  });
+});
+// Si la URL trae un ancla (ej. #conceptos tras un alta), abrir esa pestaña
+(function abrirDesdeHash() {
+  const h = (location.hash || '').replace('#', '');
+  if (h) {
+    const btn = document.querySelector('.tab-btn[data-panel="' + h + '"]');
+    if (btn) btn.click();
+  }
+})();
+
+// ---------- Sub-pestañas de Trabajadores ----------
+document.querySelectorAll('.subtab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const dest = btn.dataset.sub;
+    document.querySelectorAll('.subtab').forEach(b => b.classList.toggle('activa', b === btn));
+    document.querySelectorAll('.subpanel').forEach(pan => pan.classList.toggle('activo', pan.id === 'sub-' + dest));
+  });
+});
+
+// ---------- Ver detalle de reporte ----------
+function verReporte(id) {
+  const fila = document.getElementById('rep-' + id);
+  if (fila) fila.style.display = fila.style.display === 'none' ? 'table-row' : 'none';
+}
+
+// ---------- Editar trabajador ----------
+function editarTrab(t) {
+  document.getElementById('trab-id').value = t.id;
+  document.getElementById('trab-cuil').value = t.cuil || '';
+  document.getElementById('trab-nombre').value = t.nombre || '';
+  document.getElementById('trab-calle').value = t.calle || '';
+  document.getElementById('trab-numero').value = t.numero || '';
+  document.getElementById('trab-piso').value = t.piso || '';
+  document.getElementById('trab-ciudad').value = t.ciudad || '';
+  document.getElementById('trab-provincia').value = t.provincia || '';
+  document.getElementById('trab-telefono').value = t.telefono || '';
+  document.getElementById('trab-mail').value = t.mail || '';
+  document.getElementById('trab-submit').textContent = 'Guardar cambios';
+  document.getElementById('trab-cancelar').style.display = 'inline-block';
+  // pasar a la sub-pestaña de alta manual
+  document.querySelector('.subtab[data-sub="manual"]').click();
+  window.scrollTo(0, document.getElementById('panel-trabajadores').offsetTop);
+}
+function resetTrab() {
+  document.querySelector('.form-trab').reset();
+  document.getElementById('trab-id').value = '';
+  document.getElementById('trab-submit').textContent = 'Agregar trabajador';
+  document.getElementById('trab-cancelar').style.display = 'none';
+}
+
 // ---------- ABM fórmulas ----------
 function editarFormula(id, target, desc, expr, tol) {
   document.getElementById('f-id').value = id;

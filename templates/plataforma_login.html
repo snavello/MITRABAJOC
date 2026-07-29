@@ -31,8 +31,10 @@
     <div class="error">Clave incorrecta. Probá de nuevo.</div>
     {% endif %}
     <form method="post" action="/plataforma/login">
+      <label for="cuit">CUIT / CUIL</label>
+      <input type="text" id="cuit" name="cuit" inputmode="numeric" placeholder="20123456789" autofocus required style="margin-bottom:14px;">
       <label for="clave">Clave de plataforma</label>
-      <input type="password" id="clave" name="clave" autofocus required>
+      <input type="password" id="clave" name="clave" required>
       <button type="submit">Ingresar</button>
     </form>
   </div>

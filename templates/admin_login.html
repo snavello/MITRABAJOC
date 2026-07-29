@@ -32,8 +32,8 @@
     <div class="error">Usuario o clave incorrectos.</div>
     {% endif %}
     <form method="post" action="/admin/login">
-      <label for="usuario">Usuario</label>
-      <input type="text" id="usuario" name="usuario" autofocus required>
+      <label for="usuario">CUIT / CUIL</label>
+      <input type="text" id="usuario" name="usuario" inputmode="numeric" placeholder="20123456789" autofocus required>
       <label for="clave">Clave</label>
       <input type="password" id="clave" name="clave" required>
       <button type="submit">Ingresar</button>

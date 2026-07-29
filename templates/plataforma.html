@@ -15,12 +15,25 @@
   header a { color:var(--gris); font-size:13px; margin-left:16px; text-decoration:none; }
   .wrap { max-width:1000px; margin:0 auto; padding:24px 22px 60px; }
   h2 { font-size:17px; margin:30px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--tinta); }
+  nav.tabs { display:flex; gap:6px; margin-bottom:22px; flex-wrap:wrap; }
+  nav.tabs button { padding:9px 18px; border-radius:8px; color:var(--gris); font-size:14px;
+    font-weight:500; background:#fff; border:1px solid var(--linea); cursor:pointer; font-family:inherit; }
+  nav.tabs button:hover { background:#f0eee8; }
+  nav.tabs button.activa { background:var(--tinta); color:#fff; border-color:var(--tinta); }
+  .ppanel { display:none; }
+  .ppanel.activo { display:block; }
+  .ppanel h2:first-child { margin-top:0; }
   h2:first-of-type { margin-top:0; }
   table { width:100%; border-collapse:collapse; font-size:13.5px; background:#fff; border:1px solid var(--linea); border-radius:8px; overflow:hidden; }
   th,td { text-align:left; padding:10px 12px; border-bottom:1px solid #eee; vertical-align:middle; }
   th { background:#f2f0ea; font-weight:600; font-size:12.5px; text-transform:uppercase; letter-spacing:.3px; }
   tr:last-child td { border-bottom:none; }
   .chip-color { display:inline-block; width:16px; height:16px; border-radius:4px; vertical-align:-3px; margin-right:2px; border:1px solid rgba(0,0,0,.1); }
+  .link-num { background:none; border:none; color:var(--agua); font-weight:600; font-size:14px; cursor:pointer; text-decoration:underline; font-family:inherit; }
+  button.mini { padding:5px 11px; font-size:12.5px; margin-left:4px; background:var(--tinta); color:#fff; border:none; border-radius:6px; cursor:pointer; font-family:inherit; }
+  button.mini.borrar { background:#fff; color:var(--alerta); border:1px solid #e0c4c0; }
+  .admin-item { padding:8px 0; border-bottom:1px solid #f0eee8; font-size:14px; }
+  .admin-item:last-child { border-bottom:none; }
   .card { background:#fff; border:1px solid var(--linea); border-radius:12px; padding:18px; margin-top:14px; }
   .card h3 { font-size:14px; color:var(--tinta); margin-bottom:14px; }
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
@@ -49,29 +62,61 @@
 </header>
 
 <div class="wrap">
+  <nav class="tabs">
+    <button class="ptab activa" data-pp="lista">Sindicatos</button>
+    <button class="ptab" data-pp="nuevo">Nuevo sindicato</button>
+    <button class="ptab" data-pp="admin">Nuevo administrador</button>
+  </nav>
+
+  <div class="ppanel activo" id="pp-lista">
   <h2>Sindicatos en la plataforma ({{ sindicatos|length }})</h2>
   <table>
-    <tr><th>Sindicato</th><th>CUIT</th><th>Marca</th><th>Admins</th><th>Trabajadores</th></tr>
+    <tr><th>Sindicato</th><th>CUIT</th><th>Marca</th><th>Admins</th><th>Trabaj.</th><th></th></tr>
     {% for i in sindicatos %}
     <tr>
-      <td><strong>{{ i.s.nombre }}</strong><br><span class="muted">{{ i.s.descripcion }}</span></td>
+      <td>
+        {% if i.s.logo %}<img src="/static/logos/{{ i.s.logo }}" alt="" style="height:24px; vertical-align:-6px; margin-right:6px;">{% endif %}
+        <strong>{{ i.s.nombre }}</strong><br><span class="muted">{{ i.s.descripcion }}</span>
+      </td>
       <td>{{ i.s.cuit or '—' }}</td>
       <td>
         <span class="chip-color" style="background:{{ i.s.color_primario }}"></span>
         <span class="chip-color" style="background:{{ i.s.color_secundario }}"></span>
         <span class="chip-color" style="background:{{ i.s.color_acento }}"></span>
       </td>
-      <td>{{ i.usuarios }}</td>
+      <td><button type="button" class="link-num" onclick="verAdmins({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.usuarios }}</button></td>
       <td>{{ i.trabajadores }}</td>
+      <td style="white-space:nowrap; text-align:right;">
+        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento} | tojson }})'>Editar</button>
+        <button type="button" class="mini borrar" onclick="borrarSind({{ i.s.id }}, '{{ i.s.nombre }}', {{ i.usuarios }}, {{ i.trabajadores }})">Borrar</button>
+      </td>
     </tr>
     {% else %}
-    <tr><td colspan="5" class="muted">No hay sindicatos cargados todavía. Creá el primero abajo.</td></tr>
+    <tr><td colspan="6" class="muted">No hay sindicatos cargados todavía. Creá el primero abajo.</td></tr>
     {% endfor %}
   </table>
 
-  <h2>Dar de alta un sindicato</h2>
+  <!-- Panel de admins (se llena al clickear el número) -->
+  <div id="admins-box" style="display:none; margin-top:14px; background:#fff; border:1px solid var(--linea); border-radius:10px; padding:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <strong id="admins-titulo"></strong>
+      <button type="button" class="mini" onclick="document.getElementById('admins-box').style.display='none'">Cerrar</button>
+    </div>
+    <div id="admins-lista"></div>
+  </div>
+
+  <!-- Formularios ocultos para borrar y editar -->
+  <form id="form-borrar" method="post" action="/plataforma/sindicato/borrar" style="display:none;">
+    <input type="hidden" name="id" id="borrar-id">
+  </form>
+
+  </div>
+
+  <div class="ppanel" id="pp-nuevo">
+  <h2 id="form-sind-titulo">Dar de alta un sindicato</h2>
   <div class="card">
-    <form method="post" action="/plataforma/sindicato">
+    <form method="post" action="/plataforma/sindicato" enctype="multipart/form-data" id="form-sind">
+      <input type="hidden" name="id" id="sind-id">
       <div class="grid">
         <div class="campo"><label>Nombre *</label><input name="nombre" required></div>
         <div class="campo"><label>CUIT</label><input name="cuit" placeholder="30-12345678-9"></div>
@@ -101,10 +146,19 @@
         </div>
       </div>
 
+      <div class="campo" style="margin-top:14px;">
+        <label>Logo del sindicato (PNG, JPG o similar)</label>
+        <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
+        <span class="muted" style="font-size:11px;">Se mostrará en el encabezado de la app de los trabajadores.</span>
+      </div>
+
       <button type="submit">Crear sindicato</button>
     </form>
   </div>
 
+  </div>
+
+  <div class="ppanel" id="pp-admin">
   <h2>Crear un administrador de sindicato</h2>
   <div class="card">
     {% if sindicatos %}
@@ -118,7 +172,7 @@
             {% endfor %}
           </select>
         </div>
-        <div class="campo"><label>Usuario (mail) *</label><input name="usuario" required placeholder="admin@sindicato.org"></div>
+        <div class="campo"><label>CUIT / CUIL del administrador *</label><input name="usuario" required inputmode="numeric" placeholder="20123456789"></div>
         <div class="campo"><label>Nombre</label><input name="nombre"></div>
         <div class="campo"><label>Clave inicial *</label><input name="clave_inicial" required placeholder="La cambiará en el primer ingreso"></div>
       </div>
@@ -128,6 +182,71 @@
     <p class="muted">Primero creá un sindicato para poder asignarle administradores.</p>
     {% endif %}
   </div>
+  </div>
 </div>
+<script>
+document.querySelectorAll('.ptab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const dest = btn.dataset.pp;
+    document.querySelectorAll('.ptab').forEach(b => b.classList.toggle('activa', b === btn));
+    document.querySelectorAll('.ppanel').forEach(pan => pan.classList.toggle('activo', pan.id === 'pp-' + dest));
+  });
+});
+
+// Punto 12: ver admins al clickear el número
+async function verAdmins(sid, nombre) {
+  const box = document.getElementById('admins-box');
+  const lista = document.getElementById('admins-lista');
+  document.getElementById('admins-titulo').textContent = 'Administradores de ' + nombre;
+  lista.innerHTML = 'Cargando…';
+  box.style.display = 'block';
+  box.scrollIntoView({behavior:'smooth', block:'nearest'});
+  try {
+    const r = await fetch('/plataforma/admins/' + sid);
+    const data = await r.json();
+    if (!data.admins.length) { lista.innerHTML = '<span class="muted">Este sindicato no tiene administradores cargados.</span>'; return; }
+    lista.innerHTML = data.admins.map(a =>
+      '<div class="admin-item"><strong>CUIT ' + a.usuario + '</strong>' +
+      (a.nombre ? ' · ' + a.nombre : '') +
+      (a.activo ? '' : ' <span class="muted">(inactivo)</span>') + '</div>').join('');
+  } catch(e) { lista.innerHTML = '<span class="muted">No se pudo cargar.</span>'; }
+}
+
+// Punto 11: editar sindicato (rellena el form y cambia su action)
+function editarSind(s) {
+  const f = document.getElementById('form-sind');
+  f.action = '/plataforma/sindicato/editar';
+  document.getElementById('sind-id').value = s.id;
+  f.nombre.value = s.nombre || '';
+  f.descripcion.value = s.descripcion || '';
+  f.cuit.value = s.cuit || '';
+  f.direccion.value = s.direccion || '';
+  f.mail.value = s.mail || '';
+  f.telefonos.value = s.telefonos || '';
+  f.autoridad.value = s.autoridad || '';
+  f.cargo_autoridad.value = s.cargo_autoridad || '';
+  f.color_primario.value = s.color_primario || '#152238';
+  f.color_secundario.value = s.color_secundario || '#1a7a6b';
+  f.color_acento.value = s.color_acento || '#b23a2e';
+  document.getElementById('form-sind-titulo').textContent = 'Editar sindicato: ' + s.nombre;
+  f.querySelector('button[type=submit]').textContent = 'Guardar cambios';
+  document.querySelector('.ptab[data-pp="nuevo"]').click();
+  window.scrollTo(0, 0);
+}
+
+// Punto 11: borrar sindicato con aviso de datos huérfanos
+function borrarSind(id, nombre, nAdmins, nTrab) {
+  const msg = '¿Borrar el sindicato "' + nombre + '"?\n\n' +
+    'Se eliminarán también TODOS sus datos:\n' +
+    '· ' + nAdmins + ' administrador(es)\n' +
+    '· ' + nTrab + ' trabajador(es)\n' +
+    '· todos sus conceptos, fórmulas y reportes\n\n' +
+    'Esta acción no se puede deshacer.';
+  if (confirm(msg)) {
+    document.getElementById('borrar-id').value = id;
+    document.getElementById('form-borrar').submit();
+  }
+}
+</script>
 </body>
 </html>
