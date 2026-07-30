@@ -30,7 +30,7 @@ from sqlmodel import select
 
 import db
 import auth
-from db import Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador
+from db import Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador, CuentaTrabajador
 from extractor import extraer, extraer_aportes
 from validador import validar, detectar_nuevos
 from semaforo import calcular_semaforo
