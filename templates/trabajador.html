@@ -130,15 +130,21 @@
   .tabbar { position:fixed; bottom:0; left:0; right:0; background:#fff;
     border-top:1px solid var(--linea); display:flex; z-index:30;
     padding-bottom:env(safe-area-inset-bottom); }
-  .tabbar button { flex:1; background:none; border:none; padding:9px 4px 8px;
+  .tabbar button { flex:1; background:none; border:none; padding:8px 2px 7px;
     display:flex; flex-direction:column; align-items:center; gap:3px;
-    font-family:inherit; cursor:pointer; color:#9a988f; font-size:10.5px; font-weight:500; }
-  .tabbar button .ic { font-size:19px; line-height:1; }
+    font-family:inherit; cursor:pointer; color:#8a887f; font-size:10px; font-weight:500; }
+  .tabbar button .picon { width:42px; height:28px; border-radius:14px;
+    display:flex; align-items:center; justify-content:center; transition:background .15s; }
+  .tabbar button svg { width:22px; height:22px; stroke-width:1.7; fill:none;
+    stroke:#8a887f; transition:stroke .15s; }
   .tabbar button.activa { color:var(--marca-secundario); }
+  .tabbar button.activa .picon { background:color-mix(in srgb, var(--marca-secundario) 15%, transparent); }
+  .tabbar button.activa svg { stroke:var(--marca-secundario); }
   .tpanel { display:none; }
   .tpanel.activo { display:block; }
   .proximamente { text-align:center; padding:60px 24px; color:var(--gris); }
   .proximamente .ic { font-size:44px; opacity:.5; }
+  .proximamente .ic-grande svg { width:52px; height:52px; stroke:var(--marca-secundario); stroke-width:1.5; fill:none; opacity:.55; }
   .proximamente h2 { font-size:18px; color:var(--tinta); margin:16px 0 8px; }
   .proximamente p { font-size:14px; line-height:1.5; }
   /* ===== Semáforo ===== */
@@ -245,7 +251,7 @@
   <!-- ============ PESTAÑA: NOVEDADES ============ -->
   <div class="tpanel" id="tp-novedades">
     <div class="proximamente">
-      <div class="ic">📢</div>
+      <div class="ic-grande"><svg viewBox="0 0 24 24"><use href="#ic-nov"/></svg></div>
       <h2>Novedades</h2>
       <p>Acá vas a ver los mensajes y avisos de tu sindicato.<br>Muy pronto.</p>
     </div>
@@ -265,7 +271,7 @@
   <!-- ============ PESTAÑA: CAPACITACIÓN ============ -->
   <div class="tpanel" id="tp-capacitacion">
     <div class="proximamente">
-      <div class="ic">🎓</div>
+      <div class="ic-grande"><svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg></div>
       <h2>Capacitación</h2>
       <p>Índice de documentos y actividades de formación de tu sindicato.<br>Muy pronto.</p>
     </div>
@@ -273,12 +279,22 @@
 
 </div>
 
+<!-- Íconos SVG de línea -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <g id="ic-recibo"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></g>
+    <g id="ic-nov"><path d="M4 8a2 2 0 0 1 2-2h8l6-3v14l-6-3H6a2 2 0 0 1-2-2z"/><line x1="8" y1="19" x2="8" y2="22"/></g>
+    <g id="ic-aportes"><line x1="5" y1="21" x2="5" y2="12"/><line x1="12" y1="21" x2="12" y2="4"/><line x1="19" y1="21" x2="19" y2="9"/></g>
+    <g id="ic-capac"><path d="M12 4 2 9l10 5 10-5z"/><path d="M6 11v5c0 1 3 2.5 6 2.5s6-1.5 6-2.5v-5"/></g>
+  </defs>
+</svg>
+
 <!-- Barra de pestañas -->
 <nav class="tabbar">
-  <button class="tab-t activa" data-tp="recibo"><span class="ic">📄</span>Tu Recibo</button>
-  <button class="tab-t" data-tp="novedades"><span class="ic">📢</span>Novedades</button>
-  <button class="tab-t" data-tp="aportes"><span class="ic">📊</span>Mis Aportes</button>
-  <button class="tab-t" data-tp="capacitacion"><span class="ic">🎓</span>Capacitación</button>
+  <button class="tab-t activa" data-tp="recibo"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg></span>Tu Recibo</button>
+  <button class="tab-t" data-tp="novedades"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-nov"/></svg></span>Novedades</button>
+  <button class="tab-t" data-tp="aportes"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg></span>Mis Aportes</button>
+  <button class="tab-t" data-tp="capacitacion"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg></span>Capacitación</button>
 </nav>
 
 <script>

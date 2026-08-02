@@ -158,3 +158,14 @@ y el resto de mejoras (4, 6, 7, 9, 11, 12).
 ### Para retomar en un chat nuevo
 Subí `validador-demo.zip` (tiene el Bloque 1 incorporado) y este documento, y
 decí: "Seguimos con Mi Trabajo, Bloque 2 (pestañas), según el ESTADO_DEL_PROYECTO".
+
+
+## Sprint post-deploy (correcciones y mejoras)
+- Fix login trabajador: se capturaba cuenta.id fuera de la sesión SQLModel → 500. Corregido.
+- Fix registro trabajador: faltaba importar CuentaTrabajador en el import principal → 500. Corregido.
+- Reporte legible: el detalle ya no se muestra como JSON crudo, sino formateado (estado, período, CUIL, discrepancias como lista).
+- Totales en el reporte: el validador ahora incluye totales (remunerativo, ingresos, descuentos) y se muestran en el panel.
+- Cambio de clave desde plataforma (TRANSITORIO, para pruebas): nueva pestaña "Cambiar clave" que resetea la clave de cualquier admin de sindicato o trabajador. ⚠️ Quitar o reemplazar por recuperación segura antes de producción.
+- Barra del trabajador rediseñada (estilo C): íconos SVG de línea minimalistas con píldora de fondo en la pestaña activa, en color de marca. Se quitaron los emojis.
+
+RECORDATORIO DEPLOY: al subir esta tanda, si NO se tocó la estructura de tablas, solo hace falta git push (no reiniciar la base). Este sprint NO agregó columnas nuevas, así que basta con push.

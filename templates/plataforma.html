@@ -62,10 +62,14 @@
 </header>
 
 <div class="wrap">
+  {% set reset = request.query_params.get('reset') %}
+  {% if reset == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Clave cambiada correctamente.</div>
+  {% elif reset == 'nohay' %}<div style="background:#f8e5e2; border:1px solid #e0c4c0; color:#b23a2e; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">No se encontró un usuario con ese CUIT/CUIL.</div>{% endif %}
   <nav class="tabs">
     <button class="ptab activa" data-pp="lista">Sindicatos</button>
     <button class="ptab" data-pp="nuevo">Nuevo sindicato</button>
     <button class="ptab" data-pp="admin">Nuevo administrador</button>
+    <button class="ptab" data-pp="clave">Cambiar clave</button>
   </nav>
 
   <div class="ppanel activo" id="pp-lista">
@@ -181,6 +185,31 @@
     {% else %}
     <p class="muted">Primero creá un sindicato para poder asignarle administradores.</p>
     {% endif %}
+  </div>
+  </div>
+
+  <div class="ppanel" id="pp-clave">
+  <h2>Cambiar la clave de un usuario</h2>
+  <div class="card">
+    <div style="background:#fdf3e7; border:1px solid #e8cfa8; border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:#8a5a1a;">
+      <strong>Opción transitoria para pruebas.</strong> Permite resetear la clave de cualquier
+      administrador de sindicato o trabajador. Antes de usar la plataforma en producción,
+      conviene quitar esta opción o reemplazarla por un mecanismo de recuperación seguro.
+    </div>
+    <form method="post" action="/plataforma/reset-clave">
+      <div class="grid">
+        <div class="campo">
+          <label>Tipo de usuario *</label>
+          <select name="tipo" required>
+            <option value="sindicato">Administrador de sindicato</option>
+            <option value="trabajador">Trabajador</option>
+          </select>
+        </div>
+        <div class="campo"><label>CUIT / CUIL *</label><input name="identificador" required inputmode="numeric" placeholder="20123456789"></div>
+        <div class="campo"><label>Nueva clave *</label><input name="clave_nueva" required></div>
+      </div>
+      <button type="submit">Cambiar clave</button>
+    </form>
   </div>
   </div>
 </div>

@@ -41,8 +41,13 @@
   .form-trab input, .form-trab select { padding:9px 11px; border:1px solid #ccc; border-radius:7px; font-size:14px; font-family:inherit; }
   button.mini { padding:5px 11px; font-size:12.5px; margin-left:4px; }
   button.mini.borrar { background:#fff; color:var(--alerta); border:1px solid #e0c4c0; }
-  .rep-detalle { font-family:Consolas,monospace; font-size:12.5px; white-space:pre-wrap;
-    word-break:break-word; color:#333; padding:6px 2px; line-height:1.5; }
+  .rep-detalle { font-size:13.5px; color:#333; padding:10px 4px; line-height:1.6; }
+  .rep-fila { margin-bottom:5px; }
+  .rep-k { display:inline-block; min-width:150px; color:var(--gris); font-weight:500; }
+  .rep-sub { margin-top:12px; margin-bottom:6px; font-weight:600; color:var(--tinta); font-size:13px; }
+  .rep-lista { margin:0 0 4px 20px; padding:0; }
+  .rep-lista li { margin-bottom:4px; }
+  .rep-ok { margin-top:10px; color:var(--verde, #0f6e56); font-weight:500; }
   @media (max-width:560px){ .grid2 { grid-template-columns:1fr; } }
   h2 { font-size:17px; margin:34px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--tinta); }
   h2:first-of-type { margin-top:0; }
@@ -107,7 +112,30 @@
         <td><span class="tag {{ 'tag-pend' if r.estado=='nuevo' else 'tag-si' }}">{{ r.estado }}</span></td>
         <td style="text-align:right;"><button type="button" class="mini" onclick="verReporte({{ r.id }})">Ver</button></td></tr>
     <tr id="rep-{{ r.id }}" style="display:none;"><td colspan="5" style="background:#faf9f6;">
-      <div class="rep-detalle">{{ r.detalle | tojson(indent=2) }}</div>
+      <div class="rep-detalle">
+        {% set d = r.detalle %}
+        <div class="rep-fila"><span class="rep-k">Estado</span>
+          {% if d.estado == 'OK' %}<span class="tag tag-si">Sin discrepancias</span>
+          {% else %}<span class="tag tag-pend">Con discrepancias</span>{% endif %}</div>
+        <div class="rep-fila"><span class="rep-k">Período</span> {{ d.periodo or '—' }}</div>
+        <div class="rep-fila"><span class="rep-k">CUIL</span> {{ d.cuil or r.cuil or '—' }}</div>
+        {% if d.totales %}
+        <div class="rep-fila"><span class="rep-k">Total remunerativo</span> ${{ '%.2f'|format(d.totales.remunerativo) }}</div>
+        <div class="rep-fila"><span class="rep-k">Total descuentos</span> ${{ '%.2f'|format(d.totales.descuentos) }}</div>
+        {% endif %}
+        {% if d.discrepancias %}
+        <div class="rep-sub">Discrepancias detectadas ({{ d.discrepancias|length }})</div>
+        <ul class="rep-lista">
+          {% for x in d.discrepancias %}<li>{{ x.detalle }}</li>{% endfor %}
+        </ul>
+        {% else %}
+        <div class="rep-ok">✓ Todos los aportes coinciden con lo esperado.</div>
+        {% endif %}
+        {% if d.avisos %}
+        <div class="rep-sub">Avisos</div>
+        <ul class="rep-lista">{% for a in d.avisos %}<li>{{ a }}</li>{% endfor %}</ul>
+        {% endif %}
+      </div>
     </td></tr>
     {% else %}<tr><td colspan="5" class="muted">Sin reportes todavía.</td></tr>{% endfor %}
   </table>

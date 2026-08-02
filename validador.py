@@ -114,6 +114,11 @@ def validar(conceptos: list, formulas: list, recibo: dict) -> dict:
         "formulas_validadas": resultados,
         "discrepancias": discrepancias,
         "avisos": avisos,
+        "totales": {
+            "remunerativo": round(variables["base_remunerativa"], 2),
+            "ingresos": round(variables["total_ingresos"], 2),
+            "descuentos": round(abs(sum(m["importe"] for m in descuentos)), 2),
+        },
     }
 
 

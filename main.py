@@ -586,6 +586,33 @@ def plataforma_ver_admins(sindicato_id: int, request: Request):
             for a in admins]}
 
 
+@app.post("/plataforma/reset-clave")
+def plataforma_reset_clave(
+    request: Request, tipo: str = Form(...), identificador: str = Form(...),
+    clave_nueva: str = Form(...),
+):
+    """TRANSITORIO (para pruebas): el admin de plataforma cambia la clave de
+    cualquier usuario. tipo = 'sindicato' (admin) o 'trabajador' (cuenta).
+    ⚠️ Sacar o reemplazar por recuperación segura antes de producción."""
+    ses = sesion_actual(request)
+    if not ses or ses.get("rol") != "plataforma":
+        raise HTTPException(403, "No autorizado")
+    ident = _norm_cuil(identificador)
+    hasheada = auth.hashear_clave(clave_nueva)
+    with db.get_session() as s:
+        if tipo == "sindicato":
+            u = s.exec(select(UsuarioSindicato).where(UsuarioSindicato.usuario == ident)).first()
+            if u:
+                u.clave_hash = hasheada; u.debe_cambiar_clave = False; s.add(u); s.commit()
+                return RedirectResponse("/plataforma?reset=ok", status_code=303)
+        elif tipo == "trabajador":
+            c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == ident)).first()
+            if c:
+                c.clave_hash = hasheada; s.add(c); s.commit()
+                return RedirectResponse("/plataforma?reset=ok", status_code=303)
+    return RedirectResponse("/plataforma?reset=nohay", status_code=303)
+
+
 def _norm_cuil(cuil: str) -> str:
     import re
     return re.sub(r"[^0-9]", "", cuil or "")
