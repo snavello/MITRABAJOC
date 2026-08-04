@@ -18,9 +18,33 @@ from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JS
 
 
 # ---------- Ubicación de la base ----------
-DB_PATH = os.getenv("DB_PATH", "data/validador.db")
-Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
-engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
+# Si hay DATABASE_URL (Render Postgres), se usa Postgres.
+# Si no, cae a SQLite en DB_PATH (desarrollo local, sin cambios).
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+
+if DATABASE_URL:
+    # Render entrega la URL como postgres://; SQLAlchemy/psycopg3 espera postgresql+psycopg://
+    url = DATABASE_URL
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+psycopg://", 1)
+    elif url.startswith("postgresql://") and "+psycopg" not in url:
+        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+    engine = create_engine(
+        url,
+        pool_pre_ping=True,   # descarta conexiones muertas antes de usarlas (clave con base remota)
+        pool_recycle=300,     # recicla conexiones cada 5 min (Render duerme el servicio en plan free)
+        pool_size=5,
+        max_overflow=5,
+    )
+    USANDO_POSTGRES = True
+else:
+    DB_PATH = os.getenv("DB_PATH", "data/validador.db")
+    Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
+    engine = create_engine(
+        f"sqlite:///{DB_PATH}",
+        connect_args={"check_same_thread": False},
+    )
+    USANDO_POSTGRES = False
 
 
 # ---------- Modelos ----------
@@ -37,7 +61,9 @@ class Sindicato(SQLModel, table=True):
     autoridad: str = ""
     cargo_autoridad: str = ""
     # Marca
-    logo: str = ""                              # nombre del archivo en static/logos/
+    logo: str = ""                              # nombre/flag: no vacío = tiene logo cargado
+    logo_datos: Optional[bytes] = Field(default=None)   # binario del logo (Opción B: en la base)
+    logo_mime: str = ""                         # tipo MIME para servirlo (image/png, etc.)
     color_primario: str = "#152238"
     color_secundario: str = "#1a7a6b"
     color_acento: str = "#b23a2e"
@@ -123,26 +149,64 @@ def crear_tablas():
 def cargar_seed_si_vacio():
     """Si no hay conceptos, carga los iniciales desde el JSON semilla."""
     seed_path = Path("data/seed_aefip.json")
+    if not seed_path.exists():
+        return
+    try:
+        with Session(engine) as s:
+            if s.exec(select(Concepto)).first():
+                return  # ya hay datos, no tocar
+    except Exception:
+        # En Postgres el esquema puede no existir aún (Alembic todavía no corrió).
+        # No es un error: simplemente todavía no hay nada que sembrar.
+        return
     with Session(engine) as s:
-        if s.exec(select(Concepto)).first():
-            return  # ya hay datos, no tocar
-        if not seed_path.exists():
-            return
         seed = json.loads(seed_path.read_text(encoding="utf-8"))
         sind_data = seed.get("sindicato", {"nombre": "Sindicato"})
         sind = s.exec(select(Sindicato)).first()
         if not sind:
             sind = Sindicato(id=1, **sind_data)
             s.add(sind)
+            # Postgres SÍ hace cumplir las FK: el sindicato padre debe existir
+            # dentro de la transacción antes de insertar conceptos/fórmulas hijos.
+            # SQLite lo perdonaba; este flush lo hace explícito para ambos motores.
+            s.flush()
         for c in seed.get("conceptos", []):
             s.add(Concepto(sindicato_id=1, **c))
         for f in seed.get("formulas", []):
             s.add(Formula(sindicato_id=1, **f))
         s.commit()
+        # Tras insertar filas con id explícito, Postgres NO avanza su secuencia
+        # interna, así que el próximo alta chocaría con "clave duplicada".
+        # Resincronizamos la secuencia de cada tabla con id explícito.
+        _sincronizar_secuencias(s, [Sindicato])
+
+
+def _sincronizar_secuencias(s, modelos):
+    """Pone el contador de autoincremento de Postgres por encima del id máximo.
+    En SQLite no hace nada (no tiene secuencias con nombre)."""
+    if not USANDO_POSTGRES:
+        return
+    from sqlalchemy import text
+    for modelo in modelos:
+        tabla = modelo.__tablename__
+        s.exec(text(
+            f"SELECT setval(pg_get_serial_sequence('{tabla}', 'id'), "
+            f"COALESCE((SELECT MAX(id) FROM {tabla}), 1))"
+        ))
+    s.commit()
 
 
 def init_db():
-    crear_tablas()
+    """Inicialización en el arranque.
+
+    - En SQLite (desarrollo): crea las tablas con create_all, como siempre.
+    - En Postgres (producción): NO crea tablas; el esquema lo administra Alembic
+      (`alembic upgrade head` corre en el deploy). Si las tablas aún no existen,
+      cargar_seed_si_vacio no encontrará nada y no romperá.
+    El seed se carga si la base está vacía, en ambos motores.
+    """
+    if not USANDO_POSTGRES:
+        crear_tablas()
     cargar_seed_si_vacio()
 
 

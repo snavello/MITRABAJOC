@@ -23,7 +23,7 @@ Arrancar con:  uvicorn main:app --reload
 from datetime import datetime
 
 from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Cookie, Response
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response as BinResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlmodel import select
@@ -37,6 +37,20 @@ from semaforo import calcular_semaforo
 
 app = FastAPI(title="Mi Trabajo — validador de recibos")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/logo/{sindicato_id}")
+def servir_logo(sindicato_id: int):
+    """Sirve el logo de un sindicato guardado en la base (Opción B)."""
+    with db.get_session() as s:
+        sind = s.get(Sindicato, sindicato_id)
+        if not sind or not sind.logo_datos:
+            raise HTTPException(404, "Sin logo")
+        return BinResponse(
+            content=sind.logo_datos,
+            media_type=sind.logo_mime or "application/octet-stream",
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
 templates = Jinja2Templates(directory="templates")
 
 
@@ -476,14 +490,15 @@ async def plataforma_alta_sindicato(
     if not ses or ses.get("rol") != "plataforma":
         raise HTTPException(403, "No autorizado")
     slug = slugify(nombre)
-    logo_nombre = ""
+    logo_datos, logo_mime, logo_flag = (None, "", "")
     if logo and logo.filename:
-        logo_nombre = _guardar_logo(logo, slug)
+        logo_datos, logo_mime, logo_flag = _leer_logo(logo)
     with db.get_session() as s:
         sind = Sindicato(
             nombre=nombre, descripcion=descripcion, slug=slug,
             cuit=cuit, direccion=direccion, mail=mail, telefonos=telefonos,
-            autoridad=autoridad, cargo_autoridad=cargo_autoridad, logo=logo_nombre,
+            autoridad=autoridad, cargo_autoridad=cargo_autoridad,
+            logo=logo_flag, logo_datos=logo_datos, logo_mime=logo_mime,
             color_primario=color_primario or "#152238",
             color_secundario=color_secundario or "#1a7a6b",
             color_acento=color_acento or "#b23a2e",
@@ -492,19 +507,22 @@ async def plataforma_alta_sindicato(
     return RedirectResponse("/plataforma", status_code=303)
 
 
-def _guardar_logo(archivo: UploadFile, slug: str) -> str:
-    """Guarda el logo en static/logos/ y devuelve el nombre del archivo.
+def _leer_logo(archivo: UploadFile):
+    """Lee el logo subido y devuelve (datos, mime, nombre_flag).
+    Guarda el binario en la base (Opción B), no en el disco efímero.
     Acepta PNG y formatos de imagen compatibles."""
     import os
     ext = os.path.splitext(archivo.filename)[1].lower()
-    if ext not in (".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"):
-        return ""
-    os.makedirs("static/logos", exist_ok=True)
-    nombre = f"{slug}{ext}"
-    ruta = os.path.join("static/logos", nombre)
-    with open(ruta, "wb") as f:
-        f.write(archivo.file.read())
-    return nombre
+    mimes = {
+        ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+        ".webp": "image/webp", ".gif": "image/gif", ".svg": "image/svg+xml",
+    }
+    if ext not in mimes:
+        return None, "", ""
+    datos = archivo.file.read()
+    if not datos:
+        return None, "", ""
+    return datos, mimes[ext], f"logo{ext}"
 
 
 @app.post("/plataforma/usuario")
@@ -548,7 +566,9 @@ async def plataforma_editar_sindicato(
             sind.color_secundario = color_secundario or "#1a7a6b"
             sind.color_acento = color_acento or "#b23a2e"
             if logo and logo.filename:
-                sind.logo = _guardar_logo(logo, sind.slug)
+                datos, mime, flag = _leer_logo(logo)
+                if datos:
+                    sind.logo_datos, sind.logo_mime, sind.logo = datos, mime, flag
             s.add(sind); s.commit()
     return RedirectResponse("/plataforma", status_code=303)
 

@@ -1,66 +1,83 @@
-# Desplegar Mi Trabajo en Render (con datos persistentes)
+# Desplegar Mi Trabajo en Render (con Postgres gestionado)
 
-Esta guía publica la app en internet con un link fijo y datos que sobreviven
-a los reinicios, usando SQLite sobre un disco persistente. Plan gratuito.
+Esta guía publica la app usando **Postgres gestionado de Render** como base de
+datos. Reemplaza al esquema anterior de SQLite sobre disco persistente. Ya no
+hace falta disco: todo el estado (incluidos los logos) vive en Postgres.
 
 ## Requisitos previos
-- El proyecto subido a un repositorio de GitHub (público o privado).
-- Una cuenta gratuita en render.com.
+- El proyecto en un repositorio de GitHub.
+- Cuenta en render.com.
 - Tu clave de la API de Anthropic.
 
-## Paso 1 — Subir el proyecto a GitHub
-Si todavía no lo tenés en GitHub, desde la carpeta del proyecto:
+## Paso 1 — Crear la base Postgres en Render
+1. En render.com: New -> Postgres.
+2. Elegí nombre (ej. mitrabajo-db), región y plan.
+3. Al crearse, Render te da varias URLs. Copiá la **Internal Database URL**
+   (empieza con postgres://): esa usa tu app porque vive en la misma red que el
+   servicio web (más rápida y no expone la base a internet).
+4. Guardá también la **External Database URL** para conectarte desde tu máquina
+   con DBeaver / pgAdmin / psql cuando necesites inspeccionar la base.
 
-    git init
-    git add .
-    git commit -m "Mi Trabajo - version con SQLite"
-    git branch -M main
-    git remote add origin https://github.com/TU-USUARIO/mi-trabajo.git
-    git push -u origin main
-
-El archivo .gitignore ya evita subir la base de datos, el .env y los temporales.
-
-## Paso 2 — Crear el servicio web en Render
-1. En render.com: New → Web Service.
-2. Conectá tu repositorio de GitHub.
-3. Configurá:
+## Paso 2 — Crear el servicio web
+1. New -> Web Service, conectá tu repositorio.
+2. Configurá:
    - Runtime: Python 3
    - Build Command:  pip install -r requirements.txt
    - Start Command:  uvicorn main:app --host 0.0.0.0 --port $PORT
-4. Elegí el plan Free.
+3. Elegí el plan que prefieras.
 
-## Paso 3 — El disco persistente (clave para no perder datos)
-Sin esto, SQLite se borra en cada reinicio.
+## Paso 3 — Variables de entorno
+En Environment -> Add Environment Variable:
 
-1. En el servicio, sección Disks → Add Disk.
-2. Configurá:
-   - Name: datos
-   - Mount Path:  /var/data
-   - Size: 1 GB (alcanza de sobra)
+    DATABASE_URL        = (la Internal Database URL del Paso 1)
+    ANTHROPIC_API_KEY   = tu-clave-real
+    PLATAFORMA_CUIT     = 20000000000
+    PLATAFORMA_PASSWORD = una-clave-de-plataforma
+    SESSION_SECRET      = una-cadena-larga-y-secreta
+    PYTHON_VERSION      = 3.12.8
 
-## Paso 4 — Variables de entorno
-En Environment → Add Environment Variable, cargá dos:
+Notas:
+- **Si DATABASE_URL está definida, la app usa Postgres automáticamente.** Si no,
+  cae a SQLite (solo para desarrollo local). Ya NO se usa DB_PATH en Render.
+- PYTHON_VERSION es redundante con .python-version a propósito: fuerza 3.12 y
+  evita que Render agarre 3.14, que rompe SQLModel.
 
-   ANTHROPIC_API_KEY = tu-clave-real
-   DB_PATH = /var/data/validador.db
+## Paso 4 — Aplicar el esquema con Alembic (una vez)
+El esquema lo administra Alembic, no la app. Tras el primer deploy, abrí la
+**Shell** del servicio web en Render y corré:
 
-La segunda le dice a la app que guarde la base en el disco persistente en vez
-de la carpeta temporal. Es lo que hace que los datos sobrevivan.
+    alembic upgrade head
 
-## Paso 5 — Desplegar
-Render construye y publica automáticamente. Al terminar te da un link fijo
-tipo https://mi-trabajo.onrender.com que funciona desde cualquier lado.
+Crea todas las tablas en Postgres. Si más adelante cambia el modelo, se genera
+una nueva migración y se vuelve a correr alembic upgrade head, **sin borrar la
+base**. Ese es el cambio grande respecto de antes.
 
-La primera vez que arranca, la base se crea sola y se siembra con los conceptos
-y fórmulas de data/seed_aefip.json. A partir de ahí, todo lo que cargues desde
-el panel (conceptos, fórmulas, reportes, aprendizaje) queda guardado.
+## Paso 5 — Cargar datos de demostración (opcional, una vez)
+Para los dos sindicatos de demo (UOM y Gastronómica), en la misma Shell:
 
-## Nota sobre el plan gratuito
-El servicio se suspende tras unos minutos de inactividad y tarda unos 30
-segundos en despertar la primera vez que alguien entra. Para una demo, entrá
-vos primero para despertarlo. Los datos NO se pierden al suspenderse: están
-en el disco persistente.
+    python cargar_demo.py
 
-## Actualizar la app más adelante
-Cada vez que hagas git push a la rama main, Render vuelve a desplegar solo.
-Los datos del disco persistente se mantienen entre despliegues.
+Arranca desde cero: solo esos dos sindicatos, sin AEFIP. Para producción real,
+los sindicatos se dan de alta desde el panel de plataforma.
+
+## Paso 6 — Ya no hace falta disco persistente
+Con Postgres y los logos en la base, **el disco de /var/data se puede eliminar**.
+Si venías del esquema anterior, quitalo en Disks -> Delete para dejar de pagarlo.
+
+## Accesos de la demo
+- Plataforma:  /plataforma  -> CUIT 20000000000 + PLATAFORMA_PASSWORD
+- UOM:         /admin        -> CUIT 20111111110 / uom-demo
+- Gastronómica:/admin        -> CUIT 20222222220 / fega-demo
+- Trabajador:  /ingresar     -> registrarse con un CUIL habilitado
+- Pluriempleo: CUIL 27222222224 está en ambos sindicatos
+
+## Inspeccionar la base con SQL (pruebas)
+Con la External Database URL, conectá cualquier cliente Postgres (DBeaver
+recomendado, gratuito) y usá SQL normal: SELECT, UPDATE, ALTER TABLE, etc. El
+explorador web de Render sirve para un vistazo rápido; el trabajo serio se hace
+desde el cliente de escritorio.
+
+## Migrar a Supabase en el futuro (si hiciera falta)
+Como los dos son Postgres: pg_dump desde Render + pg_restore a Supabase, y
+cambiar solo DATABASE_URL. El código no se toca. Alembic deja el esquema
+versionado y portable.

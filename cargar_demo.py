@@ -8,7 +8,10 @@ from db import Sindicato, UsuarioSindicato, Concepto, Formula, Trabajador
 from sqlmodel import select
 import auth
 
-db.init_db()
+# Aseguramos el esquema SIN sembrar AEFIP. La demo arranca desde cero:
+# en SQLite creamos tablas; en Postgres el esquema ya lo aplicó Alembic.
+if not db.USANDO_POSTGRES:
+    db.crear_tablas()
 
 SINDICATOS = [
     {
@@ -52,7 +55,7 @@ SINDICATOS = [
 ]
 
 with db.get_session() as s:
-    # Limpiar sindicatos demo previos (por si se corre dos veces), dejando AEFIP
+    # Limpiar sindicatos demo previos (por si se corre dos veces)
     for nom in [x["nombre"] for x in SINDICATOS]:
         for sind in s.exec(select(Sindicato).where(Sindicato.nombre == nom)).all():
             for c in s.exec(select(Concepto).where(Concepto.sindicato_id == sind.id)).all(): s.delete(c)

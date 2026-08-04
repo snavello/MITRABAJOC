@@ -1,171 +1,114 @@
 # Mi Trabajo — Estado del proyecto
 
-Documento para retomar el trabajo sin perder contexto. Si abrís un chat nuevo,
-subí este archivo junto con `validador-demo.zip` y pediá continuar desde donde
-dice "Próximo paso".
+Documento para retomar sin perder contexto. En un chat nuevo, subí este archivo
+junto con validador-demo.zip y pediá continuar desde "Próximo paso".
 
-_Última actualización: durante el desarrollo de la versión nueva (lista de 12 puntos), con el Bloque 1 terminado._
+_Última actualización: migración a Postgres COMPLETA (rama migracion-postgres),
+verificada sobre Postgres real. Pendiente: desplegar en Render y mergear a main._
 
 ---
 
 ## 1. Qué es Mi Trabajo
+App web para que trabajadores sindicalizados argentinos verifiquen si su recibo
+tiene bien calculados los aportes según el convenio de su sindicato. Suben foto/PDF,
+una IA lo lee y el sistema valida contra las fórmulas del convenio. Es una
+**plataforma multi-sindicato**: misma app, varios sindicatos con su marca,
+conceptos y trabajadores, en aislamiento total. Objetivo comercial: mostrarla a
+sindicatos y a un inversor como algo escalable.
 
-Aplicación web para que trabajadores sindicalizados argentinos verifiquen si su
-recibo de sueldo tiene bien calculados los aportes (jubilación, obra social,
-cuota sindical, etc.) según el convenio de su sindicato. El trabajador saca una
-foto del recibo o sube el PDF, una IA lo lee, y el sistema valida los aportes
-contra las fórmulas del convenio.
+## 2. Arquitectura y stack
+- **Backend:** FastAPI + Jinja2.
+- **Base de datos:** SQLModel sobre **Postgres** en producción (Render gestionado);
+  SQLite solo en desarrollo local. El motor se elige solo: si hay DATABASE_URL usa
+  Postgres, si no cae a SQLite. Una línea en db.py, el resto de la app no cambia.
+- **Migraciones de esquema:** **Alembic**. El esquema ya no se crea con create_all
+  en producción; lo administra Alembic (alembic upgrade head). Esto permite
+  evolucionar el modelo SIN borrar la base (antes había que borrar y recargar).
+- **IA:** API de Anthropic (claude-sonnet-4-6) para leer recibos y comprobantes.
+- **Auth:** claves PBKDF2, sesiones como cookies firmadas HMAC. Auth propia
+  (no se usa auth de terceros). Módulo auth.py.
+- **Python 3.12 fijado** (.python-version + variable PYTHON_VERSION en Render).
+- **Despliegue:** GitHub + Render.
 
-Evolucionó de una app para un solo sindicato (AEFIP como caso de prueba) a una
-**plataforma multi-sindicato**: la misma app puede servir a varios sindicatos a
-la vez, cada uno con su marca, sus conceptos y sus trabajadores, en aislamiento
-total. El objetivo comercial es mostrarla a sindicatos y a un potencial inversor
-como algo escalable, no como una app suelta.
+### Archivos (dentro de validador-demo.zip)
+- main.py, db.py, auth.py, extractor.py, validador.py, semaforo.py
+- cargar_demo.py (2 sindicatos demo, desde cero, sin AEFIP)
+- chequeo.py (autodiagnóstico)
+- migrations/ (Alembic: env.py + versions/ con esquema inicial y logo)
+- alembic.ini
+- templates/ (7 HTML), static/ (2 SVG base)
+- data/seed_aefip.json (semilla histórica; ya NO se carga por defecto)
 
----
+## 3. Los tres roles
+1. **Admin de plataforma** — /plataforma con CUIT + PLATAFORMA_PASSWORD. Da de alta
+   sindicatos (con marca y logo) y sus admins.
+2. **Admin de sindicato** — /admin con CUIT + clave. Gestiona conceptos, fórmulas,
+   trabajadores y reportes SOLO de su sindicato (aislamiento verificado).
+3. **Trabajador** — /ingresar con CUIL + clave. Identidad única (un CUIL para toda
+   la plataforma). Empadronamiento por sindicato: si el CUIL está en varios, elige;
+   la app se pinta con la marca del elegido.
 
-## 2. Arquitectura y stack (decisiones tomadas)
+### Accesos de la demo
+- Plataforma: CUIT 20000000000 + PLATAFORMA_PASSWORD
+- Admin UOM: CUIT 20111111110 / uom-demo
+- Admin Gastronómica: CUIT 20222222220 / fega-demo
+- Trabajador un solo sindicato: CUIL 20111111119 (UOM)
+- Trabajador pluriempleo (ambos): CUIL 27222222224
 
-- **Backend:** FastAPI (Python) + Jinja2 para las plantillas.
-- **Base de datos:** SQLite mediante SQLModel. Archivo único, sin servidor de
-  base aparte. En Render vive en un disco persistente (`/var/data/validador.db`
-  vía la variable `DB_PATH`).
-- **IA:** API de Anthropic (modelo `claude-sonnet-4-6`) para leer recibos y
-  comprobantes de aportes. Se necesita `ANTHROPIC_API_KEY`.
-- **Autenticación:** claves hasheadas con PBKDF2 (nunca texto plano). Sesiones
-  como cookies firmadas con HMAC. Módulo `auth.py`. Variables `PLATAFORMA_PASSWORD`
-  `SESSION_SECRET` y `PLATAFORMA_CUIT` (CUIT del admin de plataforma).
-- **Python 3.12 fijado** con el archivo `.python-version` (Python 3.14 rompe
-  SQLModel con el error "Field 'id' requires a type annotation").
-- **Despliegue:** GitHub + Render (plan gratuito). Ya está desplegado y funcionando.
+## 4. Decisiones tomadas (para no rediscutir)
+- **Motor:** Render Postgres (no Supabase). Razón: la app ya tiene auth propia, que
+  es el mayor valor de Supabase; Storage se resolvió guardando logos en la base.
+  Migrar a Supabase después sería barato (Postgres a Postgres, pg_dump/restore,
+  solo cambia DATABASE_URL). Elegir Render ahora NO encierra.
+- **Datos desde cero:** la demo arranca limpia, sin AEFIP. En producción los
+  sindicatos se dan de alta desde el panel.
+- **Logos en la base (Opción B):** columnas logo_datos (bytes) + logo_mime en
+  Sindicato; se sirven por la ruta /logo/{id}. Elimina la necesidad del disco
+  persistente: todo el estado vive en Postgres y se respalda con la base.
+- **JSON como JSONB en Postgres:** columnas alias (Concepto) y detalle (Reporte)
+  son jsonb, indexables y consultables. En SQLite quedan JSON común.
+- **Aislamiento entre sindicatos: total.** Marca por sindicato (primario obligatorio;
+  secundario/acento opcionales). El semáforo NUNCA toma la marca (colores fijos de
+  estado). Semáforo ARCA: el trabajador resuelve el captcha y sube la captura, la
+  IA la lee (no se automatiza el captcha). Parser de ARCA hecho y probado.
 
-### Archivos del proyecto (dentro de validador-demo.zip)
-- `main.py` — servidor y todas las rutas.
-- `db.py` — modelos SQLModel y acceso a datos.
-- `auth.py` — hash de claves y sesiones.
-- `extractor.py` — lee recibos y comprobantes de aportes con IA.
-- `validador.py` — motor de validación de fórmulas.
-- `semaforo.py` — lógica del semáforo de aportes.
-- `cargar_demo.py` — carga 2 sindicatos de demostración.
-- `chequeo.py` — autodiagnóstico de la instalación.
-- `templates/` — 7 plantillas HTML (trabajador, admin, plataforma, sus logins, selector).
-- `static/` — logos.
-- `data/seed_aefip.json` — semilla inicial de conceptos y fórmulas de AEFIP.
-
----
-
-## 3. Los tres roles (modelo de usuarios)
-
-1. **Admin de plataforma** — entra en `/plataforma` con clave fija
-   (`PLATAFORMA_PASSWORD`). Da de alta sindicatos con sus datos y colores de
-   marca, y crea los administradores de cada sindicato.
-2. **Admin de sindicato** — entra en `/admin` con usuario + clave. Gestiona
-   conceptos, fórmulas, trabajadores y reportes **solo de su sindicato**
-   (aislamiento total, verificado).
-3. **Trabajador** — entra en `/ingresar`. Se registra validando que su CUIL
-   está en la lista de su sindicato y elige una clave. **Identidad única:** un
-   CUIL + una clave para toda la plataforma. **Empadronamiento por sindicato:**
-   el mismo CUIL puede estar en varios sindicatos; al entrar, si está en uno solo
-   va directo, si está en varios elige cuál. La app se pinta con la marca del
-   sindicato elegido.
-
-### Accesos de la demo (los crea cargar_demo.py)
-- Plataforma: clave de `PLATAFORMA_PASSWORD` (default `plataforma-demo-2026`).
-- Admin UOM: `admin@uom.org` / `uom-demo`.
-- Admin Gastronómica: `admin@fega.org` / `fega-demo`.
-- Trabajador pluriempleo (en ambos sindicatos): CUIL `27222222224`.
-- Trabajador de un solo sindicato: CUIL `20111111119` (UOM).
-
----
-
-## 4. Decisiones importantes ya tomadas (para no rediscutir)
-
-- **Aislamiento entre sindicatos: total.** Cada uno ve solo lo suyo. La idea de
-  un padrón de CUIL común quedó como futura, no se implementa ahora.
-- **Marca por sindicato:** formato único para todos; el color cambia solo en
-  puntos predeterminados. Color **primario** (obligatorio) = encabezado y pie.
-  Color **secundario** (opcional) = fondo de botones. Color **acento** (opcional)
-  = reservado, sin uso visible aún. Si falta uno opcional, cae a un valor por
-  defecto. **El semáforo NUNCA toma la marca**: usa sus colores fijos de estado
-  (verde=pagado, amarillo=parcial, rojo=impago), porque tienen significado propio.
-- **Semáforo de aportes (ARCA):** la consulta pública de ARCA (sin clave fiscal)
-  existe, se ingresa con CUIL/DNI + captcha "no soy un robot". Se decidió NO
-  automatizar el captcha (frágil y zona gris legal). El flujo elegido: el
-  trabajador va a ARCA con un botón, resuelve el captcha él mismo, y sube la
-  captura/PDF del resultado, que la IA lee para armar el semáforo. El prellenado
-  del CUIL al abrir ARCA se descartó (la página usa POST, no acepta CUIL por URL).
-  ARCA cubre jubilación y obra social, NO ART (eso solo con clave fiscal).
-  El parser de la tabla de ARCA está hecho y probado; reconoce los estados
-  pagado/parcial/impago/no_presentada/no_declarado.
-- **Claves:** siempre hasheadas. Nunca texto plano.
-- **Alcance de la demo:** 2 sindicatos con marca distinta + los 3 logins
-  funcionando, para mostrar a un inversor "misma plataforma, distinta identidad".
-
----
-
-## 5. La lista de 12 puntos de la versión nueva (EN CURSO)
-
-Estado de cada punto:
-
-1. **Colores de marca en app trabajador Y sindicato.** ✅ HECHO (Bloque 1).
-   El header del panel del sindicato ahora toma el color primario; se corrigió
-   el contraste del texto (blanco sobre color).
-2. **Pestañas navegables** en las 3 apps. ✅ HECHO (Bloque 2). Sindicato: 5 pestañas con Reportes por defecto. Trabajador: barra inferior con 4 pestañas. Plataforma: 3 pestañas (Sindicatos, Nuevo sindicato, Nuevo administrador).
-   por defecto en sindicato. Aplica a las 3 apps. ⏳ PENDIENTE (próximo bloque).
-3. **ABM completo de trabajadores.** ✅ HECHO (Bloque 3). Alta manual con todos los datos (cuil, nombre, calle/número/piso, ciudad, provincia [lista 23+CABA], teléfono, mail; obligatorios cuil y nombre), alta masiva pegando datos separados por coma, modificación, consulta y baja lógica (recuperable). Con sub-pestañas Listado/Alta manual/Alta masiva.
-4. **CUIL y nombre visibles en la app del trabajador.** ✅ HECHO (Bloque 5). Barra de identidad bajo el header con nombre, CUIL y salir.
-5. **Bug: empleado de AEFIP veía chequeos de cuotas de UOM/Gastronómico.** ✅
-   HECHO (Bloque 1). La validación ahora usa solo fórmulas/conceptos del sindicato
-   del trabajador. Se reforzó el caso límite: si no se determina el sindicato,
-   avisa con error en vez de validar en falso.
-6. **Ver los datos del reporte en el panel.** ✅ HECHO (Bloque 5). Cada reporte tiene botón "Ver" que despliega el detalle (JSON legible).
-7. **Cuadro de carga de Aprendizaje.** ✅ HECHO (Bloque 5). Se corrigió el desborde (display block, width 100%) y se aclaró subir de 3 a 10 recibos.
-8. **4 pestañas del trabajador** (Tu Recibo, Novedades, Mis Aportes, Capacitación). ✅ HECHO (Bloque 2). Estructura creada: Tu Recibo (flujo del recibo) y Mis Aportes (semáforo) funcionan; Novedades y Capacitación muestran "próximamente".
-9. **Logo del sindicato en PNG.** ✅ HECHO (Bloque 6). El alta y la edición aceptan logo (PNG/JPG/WebP/SVG), se guarda en static/logos/ y se muestra en la tabla de plataforma y en el header de la app del trabajador.
-10. **Todos los usuarios se identifican con CUIT/CUIL.** ✅ HECHO (Bloque 4). Plataforma: login con CUIT + clave (variable nueva PLATAFORMA_CUIT, default 20000000000). Admin de sindicato: entra con CUIT/CUIL en vez de mail. Trabajador: ya era CUIL. Todos normalizan el número (con o sin guiones). Los admins de demo ahora son CUIT 20111111110 (UOM) y 20222222220 (Gastronómica).
-11. **Editar y borrar sindicatos.** ✅ HECHO (Bloque 6). Editar rellena el formulario; borrar elimina en cascada (admins, trabajadores, conceptos, fórmulas, reportes) con aviso de datos huérfanos y confirmación.
-12. **Ver admins al clickear el número.** ✅ HECHO (Bloque 6). El número de admins es un enlace que despliega la lista (CUIT y nombre de cada admin).
-
----
+## 5. Estado de la migración a Postgres (rama migracion-postgres)
+HECHO y verificado sobre Postgres real:
+- [x] Engine dual SQLite/Postgres con pool (pool_pre_ping, reciclado 5 min).
+- [x] Driver psycopg[binary] en requirements.
+- [x] Alembic funcionando en ambos motores (render_as_batch para SQLite).
+- [x] Migración inicial (7 tablas, FKs, índices) + JSONB en Postgres.
+- [x] Migración incremental de logo (probada: agrega columnas sin borrar datos).
+- [x] Demo desde cero sin AEFIP.
+- [x] Logos en base + ruta /logo/{id}. Carpeta static/logos eliminada.
+- [x] Trampas resueltas: secuencias tras id explícito, orden de FK en seed
+      (SQLite lo perdonaba, Postgres no), NOT NULL con server_default, import de
+      sqlmodel en migraciones.
+- [x] Verificado: 3 logins, aislamiento, pluriempleo, 4 pestañas, alta de sindicato
+      nuevo sin choque de id, JSONB, logo sube/guarda/sirve. SQLite dev intacto.
 
 ## 6. Cómo trabajamos (método)
-
-- Se construye **por bloques**, probando cada uno antes de avanzar.
-- Se verifica la lógica de verdad (no simulada): se prueban las rutas y funciones.
-- Las maquetas se entregan como **archivos HTML abribles** o capturas, porque en
-  el entorno de trabajo las imágenes generadas a veces llegan en blanco al chat.
-- Nota del entorno: el servidor web de prueba a veces se reinicia solo (limitación
-  del entorno de desarrollo, no del código); cuando pasa, se verifica la lógica
-  directamente en Python. En Render funciona normal.
-
----
+- Por bloques, verificando la lógica de verdad (rutas y funciones), no simulada.
+- Cada sesión larga produce ZIP + este documento actualizado para continuidad.
+- Nota de entorno de desarrollo: curl no puede hacer POST al server local (proxy),
+  se usa TestClient de FastAPI. Postgres real se levanta en el contenedor para
+  probar el modo producción.
 
 ## 7. Próximo paso
+**Desplegar la rama migracion-postgres en Render** siguiendo DESPLIEGUE_RENDER.md:
+1. Crear Postgres en Render, copiar Internal Database URL.
+2. Cargar variables (DATABASE_URL, ANTHROPIC_API_KEY, PLATAFORMA_CUIT,
+   PLATAFORMA_PASSWORD, SESSION_SECRET, PYTHON_VERSION).
+3. En la Shell: alembic upgrade head, luego python cargar_demo.py.
+4. Prueba de humo: 3 logins + aislamiento + registro de trabajador.
+5. Eliminar el disco persistente /var/data (ya no se usa).
+6. Si todo anda: mergear migracion-postgres a main.
 
-HECHO hasta Bloque 3. Puntos completados: 1, 2, 3, 5, 8.
-
-Siguiente: **identidad CUIT/CUIL para todos los usuarios** (punto 10), y luego 4, 6, 7, 9, 11, 12.
-
-_(Referencia histórica del Bloque 2:_
-convertir las "sábanas" de las tres apps en pestañas donde se ve una sección a
-la vez. En el sindicato, Reportes por defecto. En el trabajador, crear la
-estructura de 4 pestañas (Tu Recibo default; Novedades y Capacitación como
-"próximamente"; Mis Aportes con el semáforo).
-
-Después seguirían: ABM de trabajadores (punto 3), identidad CUIT/CUIL (punto 10),
-y el resto de mejoras (4, 6, 7, 9, 11, 12).
+Después de la migración, retomar features pendientes: contenido real de Novedades
+y Capacitación, y endurecer para producción (sacar la pestaña transitoria
+"Cambiar clave" del panel de plataforma).
 
 ### Para retomar en un chat nuevo
-Subí `validador-demo.zip` (tiene el Bloque 1 incorporado) y este documento, y
-decí: "Seguimos con Mi Trabajo, Bloque 2 (pestañas), según el ESTADO_DEL_PROYECTO".
-
-
-## Sprint post-deploy (correcciones y mejoras)
-- Fix login trabajador: se capturaba cuenta.id fuera de la sesión SQLModel → 500. Corregido.
-- Fix registro trabajador: faltaba importar CuentaTrabajador en el import principal → 500. Corregido.
-- Reporte legible: el detalle ya no se muestra como JSON crudo, sino formateado (estado, período, CUIL, discrepancias como lista).
-- Totales en el reporte: el validador ahora incluye totales (remunerativo, ingresos, descuentos) y se muestran en el panel.
-- Cambio de clave desde plataforma (TRANSITORIO, para pruebas): nueva pestaña "Cambiar clave" que resetea la clave de cualquier admin de sindicato o trabajador. ⚠️ Quitar o reemplazar por recuperación segura antes de producción.
-- Barra del trabajador rediseñada (estilo C): íconos SVG de línea minimalistas con píldora de fondo en la pestaña activa, en color de marca. Se quitaron los emojis.
-
-RECORDATORIO DEPLOY: al subir esta tanda, si NO se tocó la estructura de tablas, solo hace falta git push (no reiniciar la base). Este sprint NO agregó columnas nuevas, así que basta con push.
+Subí validador-demo.zip y este documento, y decí:
+"Seguimos con Mi Trabajo. La migración a Postgres está hecha en la rama
+migracion-postgres; el próximo paso es desplegarla en Render / mergear."
