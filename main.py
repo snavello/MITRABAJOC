@@ -18,6 +18,9 @@ Rutas del sindicato (admin):
   POST /admin/aprender      sube N recibos y devuelve conceptos nuevos propuestos
   POST /admin/aprender/aplicar   da de alta en lote los conceptos aprobados
 
+Rutas de plataforma:
+  POST /plataforma/config   edita el tope sindical del 2% (Ley 27.802 art. 133)
+
 Arrancar con:  uvicorn main:app --reload
 """
 from datetime import datetime
@@ -106,7 +109,8 @@ def api_validar(request: Request, payload: dict):
             s.commit()
 
     # Validar SOLO con conceptos y fórmulas de ESE sindicato
-    return validar(db.conceptos_como_dicts(sid), db.formulas_como_dicts(sid), recibo)
+    return validar(db.conceptos_como_dicts(sid), db.formulas_como_dicts(sid), recibo,
+                    tope_sindical_pct=db.obtener_tope_sindical())
 
 
 @app.post("/api/reportar")
@@ -283,24 +287,27 @@ def abm_concepto(
     request: Request,
     id: str = Form(""), codigo: str = Form(...), nombre: str = Form(...),
     tipo: str = Form(...), remunerativo: str = Form("no"),
-    alias: str = Form(""),
+    alias: str = Form(""), carga_sindical_convenio: str = Form("no"),
 ):
     sid = exigir_sindicato(request)
     aliases = [a.strip() for a in alias.split(",") if a.strip()]
     if nombre not in aliases:
         aliases.append(nombre)
     es_remun = remunerativo == "si"
+    es_carga_sindical = carga_sindical_convenio == "si"
     with db.get_session() as s:
         if id:  # edición — solo si el concepto es de este sindicato
             c = s.get(Concepto, int(id))
             if c and c.sindicato_id == sid:
                 c.codigo, c.nombre, c.tipo = codigo, nombre, tipo
                 c.remunerativo, c.alias = es_remun, aliases
+                c.carga_sindical_convenio = es_carga_sindical
                 c.pendiente_revision = False
                 s.add(c)
         else:   # alta
             s.add(Concepto(sindicato_id=sid, codigo=codigo, nombre=nombre, tipo=tipo,
                            remunerativo=es_remun, alias=aliases,
+                           carga_sindical_convenio=es_carga_sindical,
                            pendiente_revision=False))
         s.commit()
     return RedirectResponse("/admin#conceptos", status_code=303)
@@ -455,6 +462,7 @@ def plataforma(request: Request):
             info.append({"s": sind, "usuarios": n_users, "trabajadores": n_trab})
     return templates.TemplateResponse("plataforma.html", {
         "request": request, "sindicatos": info,
+        "tope_sindical_pct": db.obtener_tope_sindical(),
     })
 
 
@@ -466,6 +474,15 @@ def plataforma_login(response: Response, cuit: str = Form(...), clave: str = For
     resp = RedirectResponse("/plataforma", status_code=303)
     resp.set_cookie(COOKIE, token, httponly=True, max_age=8*3600)
     return resp
+
+
+@app.post("/plataforma/config")
+def plataforma_config(request: Request, tope_sindical_pct: float = Form(...)):
+    ses = sesion_actual(request)
+    if not ses or ses.get("rol") != "plataforma":
+        raise HTTPException(403, "No autorizado")
+    db.set_tope_sindical(tope_sindical_pct)
+    return RedirectResponse("/plataforma?config=ok", status_code=303)
 
 
 @app.get("/plataforma/salir")

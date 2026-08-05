@@ -65,11 +65,13 @@
   {% set reset = request.query_params.get('reset') %}
   {% if reset == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Clave cambiada correctamente.</div>
   {% elif reset == 'nohay' %}<div style="background:#f8e5e2; border:1px solid #e0c4c0; color:#b23a2e; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">No se encontró un usuario con ese CUIT/CUIL.</div>{% endif %}
+  {% if request.query_params.get('config') == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Configuración actualizada.</div>{% endif %}
   <nav class="tabs">
     <button class="ptab activa" data-pp="lista">Sindicatos</button>
     <button class="ptab" data-pp="nuevo">Nuevo sindicato</button>
     <button class="ptab" data-pp="admin">Nuevo administrador</button>
     <button class="ptab" data-pp="clave">Cambiar clave</button>
+    <button class="ptab" data-pp="config">Configuración legal</button>
   </nav>
 
   <div class="ppanel activo" id="pp-lista">
@@ -209,6 +211,26 @@
         <div class="campo"><label>Nueva clave *</label><input name="clave_nueva" required></div>
       </div>
       <button type="submit">Cambiar clave</button>
+    </form>
+  </div>
+  </div>
+
+  <div class="ppanel" id="pp-config">
+  <h2>Configuración legal</h2>
+  <div class="card">
+    <div style="background:#fdf3e7; border:1px solid #e8cfa8; border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:#8a5a1a;">
+      <strong>Límite de ley nacional.</strong> El tope sindical es el límite global del
+      2% a las cargas de convenio (cuota solidaria, fondos convencionales) que fija el
+      art. 133 de la Ley 27.802 y su Dto. 407/2026. No incluye la cuota de afiliación.
+      Cambiar este valor es bajo responsabilidad del operador de plataforma.
+    </div>
+    <form method="post" action="/plataforma/config">
+      <div class="campo" style="max-width:220px;">
+        <label>Tope sindical (%)</label>
+        <input type="number" name="tope_sindical_pct" step="0.1" min="0" required
+               value="{{ tope_sindical_pct }}">
+      </div>
+      <button type="submit">Guardar</button>
     </form>
   </div>
   </div>

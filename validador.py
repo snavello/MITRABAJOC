@@ -41,7 +41,7 @@ def _evaluar(expr: str, variables: dict) -> float:
     return float(eval(expr, {"__builtins__": {}}, variables))
 
 
-def validar(conceptos: list, formulas: list, recibo: dict) -> dict:
+def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: float = 2.0) -> dict:
     idx = indexar_conceptos(conceptos)
     matcheadas, desconocidas = matchear_lineas(recibo["lineas"], idx)
 
@@ -107,6 +107,27 @@ def validar(conceptos: list, formulas: list, recibo: dict) -> dict:
         "importe": ln.get("importe"),
     } for ln in desconocidas]
 
+    # Ley 27.802 art. 133 / Dto 407/2026: tope global a las cargas sindicales de
+    # convenio (cuota solidaria, fondos convencionales). NO es un error de cálculo:
+    # es una advertencia de posible retención en exceso, separada de discrepancias.
+    alertas = []
+    cargas_sindicales = sum(
+        abs(m.get("importe", 0) or 0) for m in matcheadas
+        if m.get("tipo") == "aporte_trabajador" and m["concepto"].get("carga_sindical_convenio")
+    )
+    base_remunerativa = variables["base_remunerativa"]
+    if base_remunerativa > 0:
+        tope_pesos = tope_sindical_pct / 100 * base_remunerativa
+        if cargas_sindicales > tope_pesos:
+            pct_real = round(cargas_sindicales / base_remunerativa * 100, 2)
+            alertas.append({
+                "tipo": "tope_sindical",
+                "detalle": f"Las cargas sindicales de convenio (${cargas_sindicales:,.2f}, "
+                           f"{pct_real}% de la remuneración) superan el tope legal del "
+                           f"{tope_sindical_pct}% (art. 133 Ley 27.802). Puede ser una "
+                           "retención en exceso: conviene revisarlo con el sindicato.",
+            })
+
     return {
         "periodo": recibo.get("periodo"),
         "cuil": (recibo.get("empleado") or {}).get("cuil"),
@@ -114,6 +135,7 @@ def validar(conceptos: list, formulas: list, recibo: dict) -> dict:
         "formulas_validadas": resultados,
         "discrepancias": discrepancias,
         "avisos": avisos,
+        "alertas": alertas,
         "totales": {
             "remunerativo": round(variables["base_remunerativa"], 2),
             "ingresos": round(variables["total_ingresos"], 2),

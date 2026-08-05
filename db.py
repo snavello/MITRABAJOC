@@ -119,6 +119,10 @@ class Concepto(SQLModel, table=True):
     remunerativo: bool = True
     alias: list = Field(default=[], sa_column=Column(JSON))
     pendiente_revision: bool = False
+    # Ley 27.802 / Dto 407/2026, art. 133: carga sindical de convenio (cuota
+    # solidaria, fondos convencionales) sujeta al tope global del 2%. La cuota de
+    # afiliación y cualquier otro descuento quedan excluidas por no marcar esto.
+    carga_sindical_convenio: bool = False
 
 
 class Formula(SQLModel, table=True):
@@ -139,6 +143,14 @@ class Reporte(SQLModel, table=True):
     periodo: str = ""
     estado: str = "nuevo"          # "nuevo" | "en_revision" | "resuelto"
     detalle: dict = Field(default={}, sa_column=Column(JSON))
+
+
+class ConfiguracionPlataforma(SQLModel, table=True):
+    """Parámetros globales de plataforma (no por sindicato). Fila única, id=1."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    # Ley 27.802 art. 133 / Dto 407/2026: tope global a las cargas sindicales de
+    # convenio, en % de la remuneración. Editable SOLO por el admin de plataforma.
+    tope_sindical_pct: float = 2.0
 
 
 # ---------- Inicialización ----------
@@ -233,6 +245,7 @@ def conceptos_como_dicts(sindicato_id: int = None) -> list:
                 "codigo": c.codigo, "nombre": c.nombre, "tipo": c.tipo,
                 "remunerativo": c.remunerativo, "alias": c.alias or [],
                 "pendiente_revision": c.pendiente_revision,
+                "carga_sindical_convenio": c.carga_sindical_convenio,
             }
             for c in s.exec(q).all()
         ]
@@ -275,6 +288,24 @@ def marca_sindicato(sindicato_id: int) -> dict:
             "color_secundario": sind.color_secundario,
             "color_acento": sind.color_acento,
         }
+
+
+# ---------- Configuración de plataforma ----------
+def obtener_tope_sindical() -> float:
+    with Session(engine) as s:
+        cfg = s.get(ConfiguracionPlataforma, 1)
+        return cfg.tope_sindical_pct if cfg else 2.0
+
+
+def set_tope_sindical(valor: float):
+    with Session(engine) as s:
+        cfg = s.get(ConfiguracionPlataforma, 1)
+        if cfg:
+            cfg.tope_sindical_pct = valor
+        else:
+            cfg = ConfiguracionPlataforma(id=1, tope_sindical_pct=valor)
+        s.add(cfg)
+        s.commit()
 
 
 # ---------- Provincias argentinas (para el ABM de trabajadores) ----------

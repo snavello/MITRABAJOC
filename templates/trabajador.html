@@ -115,6 +115,7 @@
   .lista .fila { border-top:1px solid #f0eee8; }
   .lista .fila:first-child { border-top:none; }
   .disc { margin-top:12px; background:var(--card); border-left:3px solid var(--alerta); border-radius:0 8px 8px 0; padding:12px 14px; font-size:13px; color:#4a4a4a; }
+  .alerta-legal { margin-top:12px; background:#fdf3e7; border-left:3px solid #d9a441; border-radius:0 8px 8px 0; padding:12px 14px; font-size:13px; color:#8a5a1a; }
   .cargando { text-align:center; padding:40px 0; }
   .spin { width:52px; height:52px; margin:0 auto; border:3px solid var(--linea); border-top-color:var(--tinta); border-radius:50%; animation:spin .9s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
@@ -445,6 +446,7 @@ function renderResultado(d) {
     h += `<div class="fila"><span>${f.ok?'✓':'✗'} ${f.descripcion}</span><span class="imp">${peso(f.en_recibo)}</span></div>`;
   h += `</div>`;
   for (const disc of d.discrepancias) h += `<div class="disc">${disc.detalle}</div>`;
+  for (const al of (d.alertas || [])) h += `<div class="alerta-legal">${al.detalle}</div>`;
   if (!ok) h += `<button class="btn alerta" id="rep">Reportar al sindicato</button>`;
   h += `<button class="btn sec" onclick="location.reload()">Verificar otro recibo</button>`;
   $('resultado').innerHTML = h;

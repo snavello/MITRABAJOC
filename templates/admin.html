@@ -131,6 +131,10 @@
         {% else %}
         <div class="rep-ok">✓ Todos los aportes coinciden con lo esperado.</div>
         {% endif %}
+        {% if d.alertas %}
+        <div class="rep-sub" style="color:#8a5a1a;">⚠ Alertas legales</div>
+        <ul class="rep-lista">{% for al in d.alertas %}<li>{{ al.detalle }}</li>{% endfor %}</ul>
+        {% endif %}
         {% if d.avisos %}
         <div class="rep-sub">Avisos</div>
         <ul class="rep-lista">{% for a in d.avisos %}<li>{{ a }}</li>{% endfor %}</ul>
@@ -182,17 +186,18 @@
     Se detectaron en recibos y están marcados en amarillo. Editalos para confirmar tipo y si son remunerativos.</div>
   {% endif %}
   <table>
-    <tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Remun.</th><th>Alias</th><th></th></tr>
+    <tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Remun.</th><th>Sindical conv.</th><th>Alias</th><th></th></tr>
     {% for c in conceptos %}
     <tr class="{{ 'pend' if c.pendiente_revision }}">
       <td><code>{{ c.codigo }}</code></td>
       <td>{{ c.nombre }}{% if c.pendiente_revision %}<span class="tag tag-pend">nuevo</span>{% endif %}</td>
       <td>{{ c.tipo }}</td>
       <td>{% if c.tipo=='ingreso' %}<span class="tag {{ 'tag-si' if c.remunerativo else 'tag-no' }}">{{ 'sí' if c.remunerativo else 'no' }}</span>{% else %}—{% endif %}</td>
+      <td>{% if c.tipo=='descuento' %}<span class="tag {{ 'tag-si' if c.carga_sindical_convenio else 'tag-no' }}">{{ 'sí' if c.carga_sindical_convenio else 'no' }}</span>{% else %}—{% endif %}</td>
       <td class="muted">{{ c.alias|join(', ') }}</td>
       <td class="acc">
         <button class="sec mini" type="button"
-          onclick='editarConcepto({{ c.id }}, {{ c.codigo|tojson }}, {{ c.nombre|tojson }}, {{ c.tipo|tojson }}, {{ c.remunerativo|tojson }}, {{ (c.alias or [])|join(", ")|tojson }})'>Editar</button>
+          onclick='editarConcepto({{ c.id }}, {{ c.codigo|tojson }}, {{ c.nombre|tojson }}, {{ c.tipo|tojson }}, {{ c.remunerativo|tojson }}, {{ (c.alias or [])|join(", ")|tojson }}, {{ c.carga_sindical_convenio|tojson }})'>Editar</button>
         <form method="post" action="/admin/concepto/borrar" onsubmit="return confirm('¿Borrar este concepto?')">
           <input type="hidden" name="id" value="{{ c.id }}">
           <button class="peligro mini" type="submit">Borrar</button>
@@ -207,6 +212,9 @@
     <input name="nombre" id="c-nombre" placeholder="Nombre" required style="flex:1; min-width:160px;">
     <select name="tipo" id="c-tipo"><option value="ingreso">ingreso</option><option value="descuento">descuento</option></select>
     <select name="remunerativo" id="c-remun"><option value="si">remunerativo: sí</option><option value="no">remunerativo: no</option></select>
+    <select name="carga_sindical_convenio" id="c-sindical" title="Cuota solidaria / fondos convencionales, sujeta al tope legal del 2% (Ley 27.802). NO marcar la cuota de afiliación.">
+      <option value="no">sindical convenio: no</option><option value="si">sindical convenio: sí</option>
+    </select>
     <input name="alias" id="c-alias" placeholder="Alias (separados por coma)" style="min-width:180px;">
     <button type="submit" id="c-btn">Agregar concepto</button>
     <button type="button" class="sec oculto" id="c-cancel" onclick="cancelarConcepto()">Cancelar</button>
@@ -400,12 +408,13 @@ function cancelarFormula() {
 }
 
 // ---------- ABM conceptos ----------
-function editarConcepto(id, codigo, nombre, tipo, remun, alias) {
+function editarConcepto(id, codigo, nombre, tipo, remun, alias, cargaSindical) {
   document.getElementById('c-id').value = id;
   document.getElementById('c-codigo').value = codigo;
   document.getElementById('c-nombre').value = nombre;
   document.getElementById('c-tipo').value = tipo;
   document.getElementById('c-remun').value = remun ? 'si' : 'no';
+  document.getElementById('c-sindical').value = cargaSindical ? 'si' : 'no';
   document.getElementById('c-alias').value = alias;
   document.getElementById('c-btn').textContent = 'Guardar cambios';
   document.getElementById('c-cancel').classList.remove('oculto');
