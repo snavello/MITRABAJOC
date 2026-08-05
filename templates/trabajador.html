@@ -342,6 +342,7 @@ $('leer').onclick = async () => {
     $('resultado').innerHTML = '';
     renderPreview(datosLeidos);
     ver('preview');
+    if (!semArcaCargado) semApagado(); // señal temprana de último depósito, si aplica
   } catch (err) {
     $('resultado').innerHTML = `<div class="banner mal">${err.message}</div>
       <button class="btn sec" onclick="location.reload()">Volver a intentar</button>`;
@@ -462,8 +463,12 @@ async function reportar(d) {
 
 // ==================== Semáforo de aportes ====================
 const semCuerpo = document.getElementById('sem-cuerpo');
+let semArcaCargado = false;
 
 function semApagado() {
+  const adv = datosLeidos && datosLeidos.advertencia_deposito;
+  const avisoTemprano = adv ? `<div class="alerta-legal" style="margin:14px 18px 0;">
+    <b>Señal temprana (no reemplaza a ARCA):</b> ${adv.mensaje}</div>` : '';
   semCuerpo.innerHTML = `
     <div class="sem-global gris">
       <div class="sem-luz gris">—</div>
@@ -472,6 +477,7 @@ function semApagado() {
         <div class="sem-desc">Verificá en ARCA si tu empleador depositó tus aportes.</div>
       </div>
     </div>
+    ${avisoTemprano}
     <div class="sem-acciones">
       <div class="sem-paso"><b>Cómo funciona:</b> abrí ARCA, resolvé el "no soy un robot" y guardá la captura de la tabla. Después subila acá y armamos tu semáforo.</div>
       <a class="btn pri" href="https://serviciossegsoc.afip.gob.ar/MisAportes/app/basica.aspx" target="_blank" rel="noopener">1 · Consultar en ARCA ↗</a>
@@ -504,6 +510,7 @@ function semBarra(meses, rubro) {
 }
 
 function semRender(d) {
+  semArcaCargado = true; // ARCA manda: ya no se muestra la señal temprana del recibo
   const hoy = new Date().toLocaleDateString('es-AR');
   semCuerpo.innerHTML = `
     <div class="sem-global ${d.color}">

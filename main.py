@@ -36,7 +36,7 @@ import auth
 from db import Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador, CuentaTrabajador
 from extractor import extraer, extraer_aportes
 from validador import validar, detectar_nuevos
-from semaforo import calcular_semaforo
+from semaforo import calcular_semaforo, advertencia_ultimo_deposito
 
 app = FastAPI(title="Mi Trabajo — validador de recibos")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -81,7 +81,10 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
         raise HTTPException(422, "La imagen no es clara. Sacá la foto de nuevo con buena luz.")
     sid = sindicato_activo_trabajador(request)
     nuevos = detectar_nuevos(db.conceptos_como_dicts(sid), recibo["lineas"])
-    return {"recibo": recibo, "conceptos_nuevos": nuevos}
+    return {
+        "recibo": recibo, "conceptos_nuevos": nuevos,
+        "advertencia_deposito": advertencia_ultimo_deposito(recibo),
+    }
 
 
 @app.post("/api/validar")
