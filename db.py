@@ -271,6 +271,7 @@ def marca_sindicato(sindicato_id: int) -> dict:
             return {}
         return {
             "id": sind.id, "nombre": sind.nombre, "logo": sind.logo,
+            "logo_v": len(sind.logo_datos) if sind.logo_datos else 0,
             "color_primario": sind.color_primario,
             "color_secundario": sind.color_secundario,
             "color_acento": sind.color_acento,
