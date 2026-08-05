@@ -79,7 +79,7 @@
     {% for i in sindicatos %}
     <tr>
       <td>
-        {% if i.s.logo %}<img src="/logo/{{ i.s.id }}" alt="" style="height:24px; vertical-align:-6px; margin-right:6px;">{% endif %}
+        {% if i.s.logo %}<img src="/logo/{{ i.s.id }}?v={{ i.s.logo_datos|length if i.s.logo_datos else 0 }}" alt="" style="height:24px; vertical-align:-6px; margin-right:6px;">{% endif %}
         <strong>{{ i.s.nombre }}</strong><br><span class="muted">{{ i.s.descripcion }}</span>
       </td>
       <td>{{ i.s.cuit or '—' }}</td>
