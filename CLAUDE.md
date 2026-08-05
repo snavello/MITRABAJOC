@@ -103,6 +103,7 @@ sindicato, logos en base (con fix de cache aplicado). Disco persistente eliminad
 3. Quitar la pestaña transitoria "Cambiar clave" del panel de plataforma antes de
    producción (permite cambiar la clave de cualquier usuario; está marcada con una
    advertencia visible). Es un riesgo de seguridad, sacar antes de usuarios reales.
+   Se deja a propósito mientras dure la etapa de demos y pruebas (2026-08-05).
 
 ## Método de trabajo
 - Por bloques chicos, verificando la lógica de verdad (rutas y funciones), no
