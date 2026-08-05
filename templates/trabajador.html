@@ -190,7 +190,7 @@
     <span class="nom">Mi Trabajo</span>
   </div>
   {% if marca and marca.logo %}
-  <img class="sind" src="/logo/{{ marca.id }}" alt="{{ sindicato }}">
+   <img class="sind" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
   {% else %}
   <span style="color:#fff; font-size:13px; font-weight:500; text-align:right; opacity:.95;">{{ sindicato }}</span>
   {% endif %}
