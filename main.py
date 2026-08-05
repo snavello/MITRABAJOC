@@ -49,7 +49,7 @@ def servir_logo(sindicato_id: int):
         return BinResponse(
             content=sind.logo_datos,
             media_type=sind.logo_mime or "application/octet-stream",
-            headers={"Cache-Control": "public, max-age=3600"},
+            headers={"Cache-Control": ""no-cache, must-revalidate"},
         )
 templates = Jinja2Templates(directory="templates")
 
