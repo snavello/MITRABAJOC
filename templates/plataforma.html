@@ -214,11 +214,25 @@
   </div>
 </div>
 <script>
+function activarTab(dest) {
+  document.querySelectorAll('.ptab').forEach(b => b.classList.toggle('activa', b.dataset.pp === dest));
+  document.querySelectorAll('.ppanel').forEach(pan => pan.classList.toggle('activo', pan.id === 'pp-' + dest));
+}
+
+// Punto 11: vuelve el form de sindicato a modo "alta" (lo pisa editarSind al editar)
+function resetSindForm() {
+  const f = document.getElementById('form-sind');
+  f.action = '/plataforma/sindicato';
+  document.getElementById('sind-id').value = '';
+  f.reset();
+  document.getElementById('form-sind-titulo').textContent = 'Dar de alta un sindicato';
+  f.querySelector('button[type=submit]').textContent = 'Crear sindicato';
+}
+
 document.querySelectorAll('.ptab').forEach(btn => {
   btn.addEventListener('click', () => {
-    const dest = btn.dataset.pp;
-    document.querySelectorAll('.ptab').forEach(b => b.classList.toggle('activa', b === btn));
-    document.querySelectorAll('.ppanel').forEach(pan => pan.classList.toggle('activo', pan.id === 'pp-' + dest));
+    if (btn.dataset.pp === 'nuevo') resetSindForm();
+    activarTab(btn.dataset.pp);
   });
 });
 
@@ -259,7 +273,7 @@ function editarSind(s) {
   f.color_acento.value = s.color_acento || '#b23a2e';
   document.getElementById('form-sind-titulo').textContent = 'Editar sindicato: ' + s.nombre;
   f.querySelector('button[type=submit]').textContent = 'Guardar cambios';
-  document.querySelector('.ptab[data-pp="nuevo"]').click();
+  activarTab('nuevo');
   window.scrollTo(0, 0);
 }
 
