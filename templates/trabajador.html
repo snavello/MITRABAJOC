@@ -385,17 +385,20 @@ function renderTotalesIngresosDescuentos(lineas) {
     const imp = ln.importe || 0;
     if (imp >= 0) ingresos += imp; else descuentos += Math.abs(imp);
   }
-  return renderTotalesResumen({ingresos, descuentos});
+  return renderTotalesResumen({ingresos, descuentos, neto: ingresos - descuentos});
 }
 
-// Suma ingresos/descuentos ya validados (resultado.totales, matcheados contra
-// el catálogo del sindicato) — la versión oficial, post-verificación.
+// Suma ingresos/descuentos/neto ya validados (resultado.totales, matcheados
+// contra el catálogo del sindicato) — la versión oficial, post-verificación.
 function renderTotalesResumen(totales) {
   if (!totales) return '';
+  const neto = totales.neto != null ? totales.neto : (totales.ingresos || 0) - (totales.descuentos || 0);
   return `<div class="fila" style="border-top:2px solid var(--linea); margin-top:4px; font-weight:600;">
       <span>Total ingresos</span><span class="imp">${peso(totales.ingresos || 0)}</span></div>
     <div class="fila" style="font-weight:600;">
-      <span>Total descuentos</span><span class="imp neg">${peso(totales.descuentos || 0)}</span></div>`;
+      <span>Total descuentos</span><span class="imp neg">${peso(totales.descuentos || 0)}</span></div>
+    <div class="fila" style="font-weight:600;">
+      <span>Total neto</span><span class="imp">${peso(neto)}</span></div>`;
 }
 
 function fmtPeriodo(p) {
@@ -526,10 +529,18 @@ function renderResultado(d) {
 }
 
 async function reportar(d) {
-  await fetch('/api/reportar', {
-    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d)
-  });
-  $('resultado').innerHTML += `<div class="banner ok" style="margin-top:12px;">Enviado. El sindicato va a revisar tu caso.</div>`;
+  const btn = $('rep');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
+  try {
+    const r = await fetch('/api/reportar', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d)
+    });
+    if (!r.ok) throw new Error();
+    $('resultado').innerHTML += `<div class="banner ok" style="margin-top:12px;">Enviado. El sindicato va a revisar tu caso.</div>`;
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Reportar al sindicato'; }
+    $('resultado').innerHTML += `<div class="banner mal" style="margin-top:12px;">No se pudo enviar el reporte. Probá de nuevo.</div>`;
+  }
 }
 
 async function enviarASindicato(d, boton) {

@@ -3,6 +3,7 @@
 Sin dependencias externas: solo biblioteca estándar.
 Verificado contra recibos reales AEFIP (ago/sep 2024): diferencia 0.00.
 """
+import re
 import unicodedata
 
 TOLERANCIA_TOTALES = 1.0  # pesos
@@ -12,6 +13,10 @@ def normalizar(texto: str) -> str:
     t = unicodedata.normalize("NFD", texto or "")
     t = "".join(ch for ch in t if unicodedata.category(ch) != "Mn")
     return " ".join(t.upper().split())
+
+
+def _norm_cuil(cuil: str) -> str:
+    return re.sub(r"[^0-9]", "", cuil or "")
 
 
 def indexar_conceptos(conceptos: list) -> dict:
@@ -41,7 +46,8 @@ def _evaluar(expr: str, variables: dict) -> float:
     return float(eval(expr, {"__builtins__": {}}, variables))
 
 
-def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: float = 2.0) -> dict:
+def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: float = 2.0,
+            cuil_sesion: str = None) -> dict:
     idx = indexar_conceptos(conceptos)
     matcheadas, desconocidas = matchear_lineas(recibo["lineas"], idx)
 
@@ -59,6 +65,19 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
     }
 
     resultados, discrepancias = [], []
+
+    # El CUIL que leyó la IA del recibo tiene que ser el mismo que el de la
+    # sesión (no el que diga el trabajador): evita validar/enviar el recibo
+    # de otra persona, a propósito o por error.
+    cuil_recibo = _norm_cuil((recibo.get("empleado") or {}).get("cuil"))
+    cuil_sesion_norm = _norm_cuil(cuil_sesion)
+    if cuil_recibo and cuil_sesion_norm and cuil_recibo != cuil_sesion_norm:
+        discrepancias.append({
+            "tipo": "cuil_no_coincide",
+            "detalle": f"Este recibo pertenece al CUIL {cuil_recibo}, pero iniciaste sesión "
+                       f"con el CUIL {cuil_sesion_norm}. Verificá que sea tu propio recibo "
+                       "antes de continuar.",
+        })
 
     for f in formulas:
         codigo = f["target"]
@@ -153,6 +172,7 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
             "remunerativo": round(variables["base_remunerativa"], 2),
             "ingresos": round(variables["total_ingresos"], 2),
             "descuentos": round(abs(sum(m["importe"] for m in descuentos)), 2),
+            "neto": round(variables["total_ingresos"] - abs(sum(m["importe"] for m in descuentos)), 2),
         },
     }
 

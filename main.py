@@ -113,14 +113,15 @@ def api_validar(request: Request, payload: dict):
                     existentes.add(n["codigo"])
             s.commit()
 
-    # Validar SOLO con conceptos y fórmulas de ESE sindicato
+    # Validar SOLO con conceptos y fórmulas de ESE sindicato. cuil_sesion viene
+    # de la cookie (identidad real), no de lo que haya leído la IA del recibo.
+    cuil_sesion = request.cookies.get("cuil_trab", "")
     resultado = validar(db.conceptos_como_dicts(sid), db.formulas_como_dicts(sid), recibo,
-                         tope_sindical_pct=db.obtener_tope_sindical())
+                         tope_sindical_pct=db.obtener_tope_sindical(),
+                         cuil_sesion=cuil_sesion)
 
     # Historial privado del trabajador: se registra CADA verificación, esté todo
-    # en orden o no. La identidad viene de la sesión, no del recibo (más confiable
-    # que lo que haya leído la IA).
-    cuil_sesion = request.cookies.get("cuil_trab", "")
+    # en orden o no.
     with db.get_session() as s:
         registro = ReciboVerificado(
             sindicato_id=sid, cuil=cuil_sesion or resultado.get("cuil", ""),

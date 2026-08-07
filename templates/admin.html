@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mi Trabajo — Panel del sindicato</title>
+<title>Mi Trabajo — {{ sindicato }}</title>
 <style>
   :root { --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e; --linea:#e2ded5; --gris:#5c5a54;
     --marca-primario: {{ marca.color_primario if marca else '#152238' }};
@@ -11,12 +11,16 @@
   * { box-sizing:border-box; margin:0; }
   body { font-family:system-ui,sans-serif; color:#1b1b1b; background:#faf9f6; line-height:1.5; }
   header { background:var(--marca-primario); border-bottom:1px solid var(--linea); padding:14px 22px;
-           display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:20; }
-  header img { width:28px; height:28px; background:#fff; border-radius:6px; padding:2px; }
+           display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+           position:sticky; top:0; z-index:20; }
+  .marca { display:flex; align-items:center; gap:10px; }
+  .marca img { width:28px; height:28px; background:#fff; border-radius:6px; padding:2px; }
   header .nom { font-size:17px; font-weight:600; color:#fff; }
   header .rol { color:rgba(255,255,255,.85) !important; }
   header a { color:rgba(255,255,255,.9) !important; }
-  header .sind { margin-left:auto; font-size:14px; color:rgba(255,255,255,.9); }
+  .sind-wrap { display:flex; align-items:center; gap:14px; }
+  .sind-wrap img.sind { max-height:32px; max-width:130px; object-fit:contain; background:#fff; border-radius:6px; padding:2px; }
+  .sind-wrap .sind-nombre { font-size:14px; color:rgba(255,255,255,.9); }
   header a { color:rgba(255,255,255,.85) !important; }
   .wrap { max-width:1000px; margin:0 auto; padding:24px 22px 60px; }
   nav { display:flex; gap:6px; margin-bottom:24px; flex-wrap:wrap; }
@@ -90,13 +94,18 @@
 </head>
 <body>
 <header>
-  <img src="/static/logo_mitrabajo.svg" alt="Mi Trabajo">
-  <span class="nom">Mi Trabajo</span>
-  {% if marca and marca.logo %}
-  <img src="/logo/{{ marca.id }}" alt="{{ sindicato }}" style="margin-left:14px;">
-  {% endif %}
-  <span class="sind">Panel del sindicato · {{ sindicato }}</span>
-  <a href="/admin/salir" style="margin-left:16px; font-size:13px; color:var(--gris); text-decoration:none;">Salir</a>
+  <div class="marca">
+    <img src="/static/logo_mitrabajo.svg" alt="Mi Trabajo">
+    <span class="nom">Mi Trabajo</span>
+  </div>
+  <div class="sind-wrap">
+    {% if marca and marca.logo %}
+    <img class="sind" src="/logo/{{ marca.id }}" alt="{{ sindicato }}">
+    {% else %}
+    <span class="sind-nombre">{{ sindicato }}</span>
+    {% endif %}
+    <a href="/admin/salir" style="font-size:13px; color:var(--gris); text-decoration:none;">Salir</a>
+  </div>
 </header>
 
 <div class="wrap">
@@ -130,6 +139,7 @@
         <div class="rep-fila"><span class="rep-k">Total ingresos</span> ${{ '%.2f'|format(d.totales.ingresos) }}</div>
         <div class="rep-fila"><span class="rep-k">Total remunerativo</span> ${{ '%.2f'|format(d.totales.remunerativo) }}</div>
         <div class="rep-fila"><span class="rep-k">Total descuentos</span> ${{ '%.2f'|format(d.totales.descuentos) }}</div>
+        <div class="rep-fila"><span class="rep-k">Total neto</span> ${{ '%.2f'|format(d.totales.neto if d.totales.neto is defined else (d.totales.ingresos - d.totales.descuentos)) }}</div>
         {% endif %}
         {% if d.discrepancias %}
         <div class="rep-sub">Discrepancias detectadas ({{ d.discrepancias|length }})</div>
@@ -364,6 +374,9 @@
         </div>
         <div class="linea-concepto" style="font-weight:600;">
           <span>Total descuentos</span><span class="imp neg">${{ '%.2f'|format(res.totales.descuentos or 0) }}</span>
+        </div>
+        <div class="linea-concepto" style="font-weight:600;">
+          <span>Total neto</span><span class="imp">${{ '%.2f'|format(res.totales.neto if res.totales.neto is defined else ((res.totales.ingresos or 0) - (res.totales.descuentos or 0))) }}</span>
         </div>
         {% endif %}
         {% if res.discrepancias %}
