@@ -53,11 +53,14 @@
       <div class="ayuda">Si es tu primera vez, tocá "Registrarme".</div>
     </form>
 
-    <form class="form" id="form-registro" method="post" action="/trabajador/registro">
+    <form class="form" id="form-registro" method="post" action="/trabajador/registro" onsubmit="return confirmarClaves(this, 'reg-clave', 'reg-repetir', 'reg-error')">
       <label>CUIL</label>
       <input name="cuil" inputmode="numeric" placeholder="20123456789" required>
       <label>Elegí una clave</label>
-      <input type="password" name="clave" required minlength="4">
+      <input type="password" id="reg-clave" name="clave" required minlength="4">
+      <label>Repetí la clave</label>
+      <input type="password" id="reg-repetir" required minlength="4">
+      <div id="reg-error" style="display:none; color:var(--alerta); font-size:12px; margin-top:6px;">Las claves no coinciden.</div>
       <button class="enviar" type="submit">Crear mi cuenta</button>
       <div class="ayuda">Tu CUIL tiene que estar habilitado por tu sindicato. Con una sola cuenta accedés a todos tus sindicatos.</div>
     </form>
@@ -69,6 +72,15 @@ function mostrar(cual) {
   document.getElementById('tab-registro').classList.toggle('activo', cual==='registro');
   document.getElementById('form-login').classList.toggle('activo', cual==='login');
   document.getElementById('form-registro').classList.toggle('activo', cual==='registro');
+}
+
+function confirmarClaves(form, idClave, idRepetir, idError) {
+  const clave = document.getElementById(idClave).value;
+  const repetir = document.getElementById(idRepetir).value;
+  const error = document.getElementById(idError);
+  const ok = clave === repetir && clave.length > 0;
+  if (error) error.style.display = ok ? 'none' : 'block';
+  return ok;
 }
 </script>
 </body>

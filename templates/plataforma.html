@@ -168,7 +168,7 @@
   <h2>Crear un administrador de sindicato</h2>
   <div class="card">
     {% if sindicatos %}
-    <form method="post" action="/plataforma/usuario">
+    <form method="post" action="/plataforma/usuario" id="form-nuevo-admin" onsubmit="return confirmarClaves(this, 'na-clave', 'na-repetir', 'na-error')">
       <div class="grid">
         <div class="campo">
           <label>Sindicato *</label>
@@ -180,8 +180,10 @@
         </div>
         <div class="campo"><label>CUIT / CUIL del administrador *</label><input name="usuario" required inputmode="numeric" placeholder="20123456789"></div>
         <div class="campo"><label>Nombre</label><input name="nombre"></div>
-        <div class="campo"><label>Clave inicial *</label><input name="clave_inicial" required placeholder="La cambiará en el primer ingreso"></div>
+        <div class="campo"><label>Clave inicial *</label><input id="na-clave" name="clave_inicial" required placeholder="La cambiará en el primer ingreso"></div>
+        <div class="campo"><label>Repetir clave inicial *</label><input id="na-repetir" required></div>
       </div>
+      <div class="muted" id="na-error" style="color:#b23a2e; display:none;">Las claves no coinciden.</div>
       <button type="submit">Crear administrador</button>
     </form>
     {% else %}
@@ -198,7 +200,7 @@
       administrador de sindicato o trabajador. Antes de usar la plataforma en producción,
       conviene quitar esta opción o reemplazarla por un mecanismo de recuperación seguro.
     </div>
-    <form method="post" action="/plataforma/reset-clave">
+    <form method="post" action="/plataforma/reset-clave" onsubmit="return confirmarClaves(this, 'rc-clave', 'rc-repetir', 'rc-error')">
       <div class="grid">
         <div class="campo">
           <label>Tipo de usuario *</label>
@@ -208,8 +210,10 @@
           </select>
         </div>
         <div class="campo"><label>CUIT / CUIL *</label><input name="identificador" required inputmode="numeric" placeholder="20123456789"></div>
-        <div class="campo"><label>Nueva clave *</label><input name="clave_nueva" required></div>
+        <div class="campo"><label>Nueva clave *</label><input id="rc-clave" name="clave_nueva" required></div>
+        <div class="campo"><label>Repetir nueva clave *</label><input id="rc-repetir" required></div>
       </div>
+      <div class="muted" id="rc-error" style="color:#b23a2e; display:none;">Las claves no coinciden.</div>
       <button type="submit">Cambiar clave</button>
     </form>
   </div>
@@ -297,6 +301,16 @@ function editarSind(s) {
   f.querySelector('button[type=submit]').textContent = 'Guardar cambios';
   activarTab('nuevo');
   window.scrollTo(0, 0);
+}
+
+// Exige repetir cualquier clave nueva y que coincida antes de enviar el form.
+function confirmarClaves(form, idClave, idRepetir, idError) {
+  const clave = document.getElementById(idClave).value;
+  const repetir = document.getElementById(idRepetir).value;
+  const error = document.getElementById(idError);
+  const ok = clave === repetir && clave.length > 0;
+  if (error) error.style.display = ok ? 'none' : 'block';
+  return ok;
 }
 
 // Punto 11: borrar sindicato con aviso de datos huérfanos

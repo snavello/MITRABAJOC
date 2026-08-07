@@ -89,6 +89,9 @@
 <header>
   <img src="/static/logo_mitrabajo.svg" alt="Mi Trabajo">
   <span class="nom">Mi Trabajo</span>
+  {% if marca and marca.logo %}
+  <img src="/logo/{{ marca.id }}" alt="{{ sindicato }}" style="margin-left:14px;">
+  {% endif %}
   <span class="sind">Panel del sindicato · {{ sindicato }}</span>
   <a href="/admin/salir" style="margin-left:16px; font-size:13px; color:var(--gris); text-decoration:none;">Salir</a>
 </header>
