@@ -55,6 +55,10 @@
   .linea-concepto { display:flex; justify-content:space-between; padding:5px 8px; border-radius:5px; margin-bottom:3px; }
   .linea-concepto.descuento { background:#f8e5e2; }
   .linea-concepto .imp.neg { color:var(--alerta); }
+  .filtros { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+  .filtros input { padding:7px 10px; border:1px solid #ccc; border-radius:7px; font-size:13px; font-family:inherit; }
+  .filtros input[type=text] { width:150px; }
+  .filtros .f-cant { font-size:12px; color:var(--gris); margin-left:2px; }
   @media (max-width:560px){ .grid2 { grid-template-columns:1fr; } }
   h2 { font-size:17px; margin:34px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--tinta); }
   h2:first-of-type { margin-top:0; }
@@ -121,10 +125,19 @@
   <div class="panel activo" id="panel-reportes">
   <!-- ============ REPORTES ============ -->
   <h2 id="reportes">Reportes de trabajadores</h2>
+  <div class="filtros">
+    <input type="text" id="f-reportes-cuit" placeholder="Buscar por CUIT/CUIL" oninput="aplicarFiltro('reportes','.fila-reporte')">
+    <input type="text" id="f-reportes-nombre" placeholder="Buscar por nombre" oninput="aplicarFiltro('reportes','.fila-reporte')">
+    <input type="date" id="f-reportes-desde" title="Desde" onchange="aplicarFiltro('reportes','.fila-reporte')">
+    <input type="date" id="f-reportes-hasta" title="Hasta" onchange="aplicarFiltro('reportes','.fila-reporte')">
+    <button type="button" class="sec mini" onclick="limpiarFiltro('reportes','.fila-reporte')">Limpiar</button>
+    <span class="f-cant" id="f-reportes-cant"></span>
+  </div>
   <table>
     <tr><th>Fecha</th><th>CUIL</th><th>Período</th><th>Estado</th><th></th></tr>
     {% for r in reportes %}
-    <tr><td>{{ r.fecha }}</td><td>{{ r.cuil }}</td><td>{{ r.periodo }}</td>
+    <tr class="fila-reporte" data-cuil="{{ r.cuil }}" data-nombre="{{ nombres_por_cuil.get(r.cuil, '') }}" data-fecha="{{ r.fecha }}" data-detalle-id="rep-{{ r.id }}">
+      <td>{{ r.fecha }}</td><td>{{ r.cuil }}</td><td>{{ r.periodo }}</td>
         <td><span class="tag {{ 'tag-pend' if r.estado=='nuevo' else 'tag-si' }}">{{ r.estado }}</span></td>
         <td style="text-align:right;"><button type="button" class="mini" onclick="verReporte({{ r.id }})">Ver</button></td></tr>
     <tr id="rep-{{ r.id }}" style="display:none;"><td colspan="5" style="background:#faf9f6;">
@@ -136,10 +149,10 @@
         <div class="rep-fila"><span class="rep-k">Período</span> {{ d.periodo or '—' }}</div>
         <div class="rep-fila"><span class="rep-k">CUIL</span> {{ d.cuil or r.cuil or '—' }}</div>
         {% if d.totales %}
-        <div class="rep-fila"><span class="rep-k">Total ingresos</span> ${{ '%.2f'|format(d.totales.ingresos) }}</div>
-        <div class="rep-fila"><span class="rep-k">Total remunerativo</span> ${{ '%.2f'|format(d.totales.remunerativo) }}</div>
-        <div class="rep-fila"><span class="rep-k">Total descuentos</span> ${{ '%.2f'|format(d.totales.descuentos) }}</div>
-        <div class="rep-fila"><span class="rep-k">Total neto</span> ${{ '%.2f'|format(d.totales.neto if d.totales.neto is defined else (d.totales.ingresos - d.totales.descuentos)) }}</div>
+        <div class="rep-fila"><span class="rep-k">Total ingresos</span> ${{ '%.2f'|format(d.totales.ingresos or 0) }}</div>
+        <div class="rep-fila"><span class="rep-k">Total remunerativo</span> ${{ '%.2f'|format(d.totales.remunerativo or 0) }}</div>
+        <div class="rep-fila"><span class="rep-k">Total descuentos</span> ${{ '%.2f'|format(d.totales.descuentos or 0) }}</div>
+        <div class="rep-fila"><span class="rep-k">Total neto</span> ${{ '%.2f'|format(d.totales.neto if d.totales.neto is defined else ((d.totales.ingresos or 0) - (d.totales.descuentos or 0))) }}</div>
         {% endif %}
         {% if d.discrepancias %}
         <div class="rep-sub">Discrepancias detectadas ({{ d.discrepancias|length }})</div>
@@ -254,10 +267,16 @@
 
   <!-- Sub-panel: LISTADO -->
   <div class="subpanel activo" id="sub-listado">
+    <div class="filtros">
+      <input type="text" id="f-trab-cuit" placeholder="Buscar por CUIL" oninput="aplicarFiltro('trab','.fila-trabajador')">
+      <input type="text" id="f-trab-nombre" placeholder="Buscar por nombre" oninput="aplicarFiltro('trab','.fila-trabajador')">
+      <button type="button" class="sec mini" onclick="limpiarFiltro('trab','.fila-trabajador')">Limpiar</button>
+      <span class="f-cant" id="f-trab-cant"></span>
+    </div>
     <table>
       <tr><th>CUIL</th><th>Nombre</th><th>Ubicación</th><th>Estado</th><th></th></tr>
       {% for t in trabajadores %}
-      <tr {% if not t.activo %}style="opacity:.5;"{% endif %}>
+      <tr class="fila-trabajador" data-cuil="{{ t.cuil }}" data-nombre="{{ t.nombre }}" {% if not t.activo %}style="opacity:.5;"{% endif %}>
         <td><code>{{ t.cuil }}</code></td>
         <td>{{ t.nombre or '—' }}</td>
         <td class="muted">{{ t.ciudad }}{% if t.provincia %}, {{ t.provincia }}{% endif %}</td>
@@ -350,10 +369,19 @@
   <!-- ============ AFILIADOS COTIZANTES ============ -->
   <h2 id="cotizantes">Afiliados cotizantes ({{ envios|length }})</h2>
   <p class="muted">Trabajadores que enviaron voluntariamente los datos de su recibo, con retención de cuota sindical, como prueba de afiliado cotizante (art. 21 bis, Dto 407/2026).</p>
+  <div class="filtros">
+    <input type="text" id="f-cotizantes-cuit" placeholder="Buscar por CUIT/CUIL" oninput="aplicarFiltro('cotizantes','.fila-envio')">
+    <input type="text" id="f-cotizantes-nombre" placeholder="Buscar por nombre" oninput="aplicarFiltro('cotizantes','.fila-envio')">
+    <input type="date" id="f-cotizantes-desde" title="Desde" onchange="aplicarFiltro('cotizantes','.fila-envio')">
+    <input type="date" id="f-cotizantes-hasta" title="Hasta" onchange="aplicarFiltro('cotizantes','.fila-envio')">
+    <button type="button" class="sec mini" onclick="limpiarFiltro('cotizantes','.fila-envio')">Limpiar</button>
+    <span class="f-cant" id="f-cotizantes-cant"></span>
+  </div>
   <table>
     <tr><th>Fecha de envío</th><th>CUIL</th><th>Período</th><th>Monto de cuota</th><th></th></tr>
     {% for e in envios %}
-    <tr><td>{{ e.fecha }}</td><td>{{ e.cuil }}</td><td>{{ e.periodo }}</td>
+    <tr class="fila-envio" data-cuil="{{ e.cuil }}" data-nombre="{{ nombres_por_cuil.get(e.cuil, '') }}" data-fecha="{{ e.fecha }}" data-detalle-id="envio-{{ e.id }}">
+      <td>{{ e.fecha }}</td><td>{{ e.cuil }}</td><td>{{ e.periodo }}</td>
         <td>${{ '%.2f'|format(e.monto_cuota) }}</td>
         <td style="text-align:right;">{% if e.detalle %}<button type="button" class="mini" onclick="verEnvio({{ e.id }})">Ver</button>{% endif %}</td></tr>
     {% if e.detalle %}
@@ -427,6 +455,56 @@ document.querySelectorAll('.subtab').forEach(btn => {
     document.querySelectorAll('.subpanel').forEach(pan => pan.classList.toggle('activo', pan.id === 'sub-' + dest));
   });
 });
+
+// ---------- Filtro de búsqueda (Reportes / Afiliados cotizantes / Trabajadores) ----------
+function normTexto(s) {
+  return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+function normDigitos(s) { return (s || '').replace(/\D/g, ''); }
+
+function parseFechaHoraAR(s) {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(s || '');
+  return m ? new Date(+m[3], +m[2]-1, +m[1]) : null;
+}
+
+function aplicarFiltro(prefix, selectorFilas) {
+  const cuit = normDigitos(document.getElementById('f-'+prefix+'-cuit')?.value);
+  const nombre = normTexto(document.getElementById('f-'+prefix+'-nombre')?.value);
+  const desdeEl = document.getElementById('f-'+prefix+'-desde');
+  const hastaEl = document.getElementById('f-'+prefix+'-hasta');
+  const desde = desdeEl && desdeEl.value ? new Date(desdeEl.value + 'T00:00:00') : null;
+  const hasta = hastaEl && hastaEl.value ? new Date(hastaEl.value + 'T23:59:59') : null;
+
+  let visibles = 0;
+  document.querySelectorAll(selectorFilas).forEach(fila => {
+    let visible = true;
+    if (cuit && !normDigitos(fila.dataset.cuil).includes(cuit)) visible = false;
+    if (visible && nombre && !normTexto(fila.dataset.nombre).includes(nombre)) visible = false;
+    if (visible && (desde || hasta) && fila.dataset.fecha) {
+      const f = parseFechaHoraAR(fila.dataset.fecha);
+      if (f) {
+        if (desde && f < desde) visible = false;
+        if (hasta && f > hasta) visible = false;
+      }
+    }
+    fila.style.display = visible ? '' : 'none';
+    if (!visible && fila.dataset.detalleId) {
+      const det = document.getElementById(fila.dataset.detalleId);
+      if (det) det.style.display = 'none';
+    }
+    if (visible) visibles++;
+  });
+  const contador = document.getElementById('f-'+prefix+'-cant');
+  if (contador) contador.textContent = visibles + (visibles === 1 ? ' resultado' : ' resultados');
+}
+
+function limpiarFiltro(prefix, selectorFilas) {
+  ['cuit', 'nombre', 'desde', 'hasta'].forEach(campo => {
+    const el = document.getElementById('f-'+prefix+'-'+campo);
+    if (el) el.value = '';
+  });
+  aplicarFiltro(prefix, selectorFilas);
+}
 
 // ---------- Ver detalle de reporte ----------
 function verReporte(id) {

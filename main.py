@@ -243,11 +243,15 @@ def admin(request: Request):
                               .order_by(Trabajador.activo.desc(), Trabajador.nombre)).all()
         envios = s.exec(select(EnvioSindicato).where(EnvioSindicato.sindicato_id == sid)
                         .order_by(EnvioSindicato.periodo.desc(), EnvioSindicato.id.desc())).all()
+    # Nombre por CUIL, para poder filtrar Reportes y Afiliados cotizantes por
+    # nombre (esas tablas solo guardan el CUIL, no el nombre).
+    nombres_por_cuil = {t.cuil: t.nombre for t in trabajadores}
     return templates.TemplateResponse("admin.html", {
         "request": request, "sindicato": sind.nombre if sind else "",
         "marca": db.marca_sindicato(sid),
         "conceptos": conceptos, "formulas": formulas, "reportes": reportes,
         "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR, "envios": envios,
+        "nombres_por_cuil": nombres_por_cuil,
         "debe_cambiar": ses.get("cambiar", False),
         "marca": db.marca_sindicato(sid),
     })
