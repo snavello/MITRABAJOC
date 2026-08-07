@@ -9,6 +9,7 @@ Rutas del trabajador:
   POST /api/validar         valida el recibo confirmado, da de alta conceptos nuevos
   POST /api/reportar        guarda un reporte
   POST /api/enviar-sindicato  envío voluntario para acreditar afiliado cotizante
+  GET  /api/mis-recibos     historial de recibos verificados por el trabajador
 
 Rutas del sindicato (admin):
   GET  /admin               panel
@@ -34,7 +35,7 @@ from sqlmodel import select
 
 import db
 import auth
-from db import Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador, CuentaTrabajador, EnvioSindicato
+from db import Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador, CuentaTrabajador, EnvioSindicato, ReciboVerificado
 from extractor import extraer, extraer_aportes
 from validador import validar, detectar_nuevos
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
@@ -113,8 +114,26 @@ def api_validar(request: Request, payload: dict):
             s.commit()
 
     # Validar SOLO con conceptos y fórmulas de ESE sindicato
-    return validar(db.conceptos_como_dicts(sid), db.formulas_como_dicts(sid), recibo,
-                    tope_sindical_pct=db.obtener_tope_sindical())
+    resultado = validar(db.conceptos_como_dicts(sid), db.formulas_como_dicts(sid), recibo,
+                         tope_sindical_pct=db.obtener_tope_sindical())
+
+    # Historial privado del trabajador: se registra CADA verificación, esté todo
+    # en orden o no. La identidad viene de la sesión, no del recibo (más confiable
+    # que lo que haya leído la IA).
+    cuil_sesion = request.cookies.get("cuil_trab", "")
+    with db.get_session() as s:
+        registro = ReciboVerificado(
+            sindicato_id=sid, cuil=cuil_sesion or resultado.get("cuil", ""),
+            periodo=resultado.get("periodo", ""),
+            fecha=datetime.now().strftime("%d/%m/%Y %H:%M"),
+            estado=resultado.get("estado", ""),
+            detalle={"recibo": recibo, "resultado": resultado},
+        )
+        s.add(registro)
+        s.commit()
+        resultado["recibo_verificado_id"] = registro.id
+
+    return resultado
 
 
 @app.post("/api/reportar")
@@ -133,19 +152,50 @@ def api_reportar(payload: dict):
 def api_enviar_sindicato(request: Request, payload: dict):
     """Envío voluntario y explícito del trabajador: comparte los datos de su
     recibo (incluida la retención de cuota sindical) con su sindicato, para que
-    lo use como prueba de afiliado cotizante (art. 21 bis, Dto 407/2026)."""
+    lo use como prueba de afiliado cotizante (art. 21 bis, Dto 407/2026).
+    payload = {"recibo": {...}, "resultado": {...}} (lo mismo que se guarda en
+    el historial propio del trabajador — ver ReciboVerificado). "resultado"
+    trae "recibo_verificado_id" del intento EXACTO que se está enviando."""
     sid = sindicato_activo_trabajador(request)
     if not sid:
         raise HTTPException(400, "No pudimos determinar tu sindicato. Volvé a ingresar.")
-    monto = (payload.get("retencion_sindical") or {}).get("total", 0.0)
+    resultado = payload.get("resultado") or {}
+    monto = (resultado.get("retencion_sindical") or {}).get("total", 0.0)
+    fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
     with db.get_session() as s:
         s.add(EnvioSindicato(
-            sindicato_id=sid, cuil=payload.get("cuil", ""),
-            periodo=payload.get("periodo", ""), monto_cuota=monto,
-            fecha=datetime.now().strftime("%d/%m/%Y %H:%M"),
+            sindicato_id=sid, cuil=resultado.get("cuil", ""),
+            periodo=resultado.get("periodo", ""), monto_cuota=monto,
+            fecha=fecha, detalle=payload,
         ))
+        recibo_id = resultado.get("recibo_verificado_id")
+        if recibo_id:
+            registro = s.get(ReciboVerificado, recibo_id)
+            if registro and registro.sindicato_id == sid:
+                registro.enviado_sindicato = True
+                registro.fecha_envio = fecha
+                s.add(registro)
         s.commit()
     return {"ok": True}
+
+
+@app.get("/api/mis-recibos")
+def api_mis_recibos(request: Request):
+    """Historial privado del trabajador: todos los recibos que verificó,
+    estén enviados a su sindicato o no."""
+    cuil = request.cookies.get("cuil_trab", "")
+    if not cuil:
+        raise HTTPException(400, "No pudimos determinar tu identidad. Volvé a ingresar.")
+    with db.get_session() as s:
+        recibos = s.exec(select(ReciboVerificado).where(ReciboVerificado.cuil == cuil)
+                         .order_by(ReciboVerificado.id.desc())).all()
+        nombres = {sind.id: sind.nombre for sind in s.exec(select(Sindicato)).all()}
+    return [{
+        "id": r.id, "sindicato": nombres.get(r.sindicato_id, ""),
+        "periodo": r.periodo, "fecha": r.fecha, "estado": r.estado,
+        "enviado": r.enviado_sindicato, "fecha_envio": r.fecha_envio,
+        "detalle": r.detalle,
+    } for r in recibos]
 
 
 @app.post("/api/aportes")

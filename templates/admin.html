@@ -48,6 +48,9 @@
   .rep-lista { margin:0 0 4px 20px; padding:0; }
   .rep-lista li { margin-bottom:4px; }
   .rep-ok { margin-top:10px; color:var(--verde, #0f6e56); font-weight:500; }
+  .linea-concepto { display:flex; justify-content:space-between; padding:5px 8px; border-radius:5px; margin-bottom:3px; }
+  .linea-concepto.descuento { background:#f8e5e2; }
+  .linea-concepto .imp.neg { color:var(--alerta); }
   @media (max-width:560px){ .grid2 { grid-template-columns:1fr; } }
   h2 { font-size:17px; margin:34px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--tinta); }
   h2:first-of-type { margin-top:0; }
@@ -337,12 +340,36 @@
   <h2 id="cotizantes">Afiliados cotizantes ({{ envios|length }})</h2>
   <p class="muted">Trabajadores que enviaron voluntariamente los datos de su recibo, con retención de cuota sindical, como prueba de afiliado cotizante (art. 21 bis, Dto 407/2026).</p>
   <table>
-    <tr><th>Fecha de envío</th><th>CUIL</th><th>Período</th><th>Monto de cuota</th></tr>
+    <tr><th>Fecha de envío</th><th>CUIL</th><th>Período</th><th>Monto de cuota</th><th></th></tr>
     {% for e in envios %}
     <tr><td>{{ e.fecha }}</td><td>{{ e.cuil }}</td><td>{{ e.periodo }}</td>
-        <td>${{ '%.2f'|format(e.monto_cuota) }}</td></tr>
+        <td>${{ '%.2f'|format(e.monto_cuota) }}</td>
+        <td style="text-align:right;">{% if e.detalle %}<button type="button" class="mini" onclick="verEnvio({{ e.id }})">Ver</button>{% endif %}</td></tr>
+    {% if e.detalle %}
+    <tr id="envio-{{ e.id }}" style="display:none;"><td colspan="5" style="background:#faf9f6;">
+      <div class="rep-detalle">
+        {% set rec = e.detalle.recibo or {} %}
+        {% set res = e.detalle.resultado or {} %}
+        <div class="rep-sub">Conceptos del recibo</div>
+        {% for ln in rec.lineas or [] %}
+        <div class="linea-concepto {{ 'descuento' if (ln.importe or 0) < 0 }}">
+          <span>{{ ln.descripcion or ln.codigo or '—' }}</span>
+          <span class="imp {{ 'neg' if (ln.importe or 0) < 0 }}">${{ '%.2f'|format(ln.importe or 0) }}</span>
+        </div>
+        {% endfor %}
+        {% if res.discrepancias %}
+        <div class="rep-sub">Discrepancias</div>
+        <ul class="rep-lista">{% for x in res.discrepancias %}<li>{{ x.detalle }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% if res.alertas %}
+        <div class="rep-sub" style="color:#8a5a1a;">⚠ Alertas legales</div>
+        <ul class="rep-lista">{% for al in res.alertas %}<li>{{ al.detalle }}</li>{% endfor %}</ul>
+        {% endif %}
+      </div>
+    </td></tr>
+    {% endif %}
     {% else %}
-    <tr><td colspan="4" class="muted">Todavía no hay envíos.</td></tr>
+    <tr><td colspan="5" class="muted">Todavía no hay envíos.</td></tr>
     {% endfor %}
   </table>
   </div>
@@ -382,6 +409,12 @@ document.querySelectorAll('.subtab').forEach(btn => {
 // ---------- Ver detalle de reporte ----------
 function verReporte(id) {
   const fila = document.getElementById('rep-' + id);
+  if (fila) fila.style.display = fila.style.display === 'none' ? 'table-row' : 'none';
+}
+
+// ---------- Ver detalle de envío (Afiliados cotizantes) ----------
+function verEnvio(id) {
+  const fila = document.getElementById('envio-' + id);
   if (fila) fila.style.display = fila.style.display === 'none' ? 'table-row' : 'none';
 }
 

@@ -166,6 +166,25 @@ class EnvioSindicato(SQLModel, table=True):
     periodo: str = ""
     monto_cuota: float = 0.0
     fecha: str = ""
+    # {"recibo": {...}, "resultado": {...}} — lo que el sindicato puede consultar
+    # del recibo que el trabajador envió (Punto 3).
+    detalle: dict = Field(default={}, sa_column=Column(JSON))
+
+
+class ReciboVerificado(SQLModel, table=True):
+    """Historial privado del trabajador: cada recibo que verifica queda acá,
+    esté todo en orden o no, lo haya enviado al sindicato o no."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    cuil: str = Field(index=True)
+    periodo: str = ""
+    fecha: str = ""
+    estado: str = ""    # "OK" | "CON_DISCREPANCIAS"
+    # Marca el intento EXACTO que se envió (no todos los intentos del mismo
+    # período): lo actualiza /api/enviar-sindicato por id, no por matching.
+    enviado_sindicato: bool = False
+    fecha_envio: str = ""
+    detalle: dict = Field(default={}, sa_column=Column(JSON))
 
 
 # ---------- Inicialización ----------

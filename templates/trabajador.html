@@ -91,8 +91,9 @@
   }
   .nuevos h2 { font-size:13px; font-weight:600; color:#8a6d1f; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:8px; }
   .nuevos p { font-size:12.5px; color:#6b5a2f; margin-bottom:10px; line-height:1.5; }
-  .chip { display:flex; justify-content:space-between; gap:10px; padding:10px 0 6px; font-size:13.5px; border-top:1px solid #ecdfc0; }
+  .chip { display:flex; justify-content:space-between; gap:10px; padding:10px 6px 6px; font-size:13.5px; border-top:1px solid #ecdfc0; }
   .chip:first-of-type { border-top:none; }
+  .chip-descuento { background:#f8e5e2; border-top-color:#e0c4c0; border-radius:6px; }
   .chip-info { display:flex; align-items:center; flex-wrap:wrap; gap:2px; }
   .chip-desc { font-weight:500; }
   .chip .tag { font-size:11px; background:#ede0bd; color:#8a6d1f; padding:1px 7px; border-radius:8px; margin-left:6px; }
@@ -219,6 +220,15 @@
       </div>
       <label class="btn" for="archivo">Elegir recibo</label>
       <input type="file" id="archivo" accept="image/*,application/pdf" capture="environment">
+      <button class="btn sec" id="ver-historial" style="margin-top:10px;">Ver mis recibos verificados</button>
+    </div>
+
+    <!-- Historial: mis recibos verificados -->
+    <div id="misrecibos" style="display:none;">
+      <h1>Mis recibos verificados</h1>
+      <p class="sub">Historial privado: todo lo que verificaste, lo hayas enviado a tu sindicato o no.</p>
+      <div id="historial-contenido"></div>
+      <button class="btn sec" id="historial-volver" style="margin-top:14px;">Volver</button>
     </div>
 
     <!-- Paso 1: archivo elegido -->
@@ -326,7 +336,7 @@ document.querySelectorAll('.tab-t').forEach(btn => {
 let archivo = null, datosLeidos = null;
 const $ = id => document.getElementById(id);
 const peso = n => '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:2});
-const ver = (id) => { for (const s of ['inicio','listo','preview']) $(s).style.display = (s===id)?'block':'none'; };
+const ver = (id) => { for (const s of ['inicio','listo','preview','misrecibos']) $(s).style.display = (s===id)?'block':'none'; };
 
 $('archivo').onchange = e => {
   archivo = e.target.files[0];
@@ -416,7 +426,7 @@ function renderPreview(d) {
       <p>Estos conceptos no estaban registrados. Marcá si cada uno es remunerativo (si suma para calcular los aportes). Al continuar se agregan y quedan marcados para que el sindicato los revise.</p>`;
     d.conceptos_nuevos.forEach((n, i) => {
       const neg = (n.importe || 0) < 0;
-      h += `<div class="chip">
+      h += `<div class="chip ${n.tipo==='descuento'?'chip-descuento':''}">
         <div class="chip-info">
           <span class="chip-desc">${n.descripcion}</span>
           <span class="tag">${n.tipo}</span>
@@ -475,20 +485,21 @@ function renderResultado(d) {
   for (const disc of d.discrepancias) h += `<div class="disc">${disc.detalle}</div>`;
   for (const al of (d.alertas || [])) h += `<div class="alerta-legal">${al.detalle}</div>`;
   if (!ok) h += `<button class="btn alerta" id="rep">Reportar al sindicato</button>`;
-  const retencion = d.retencion_sindical && d.retencion_sindical.total;
-  if (retencion > 0) {
+  const retencion = (d.retencion_sindical && d.retencion_sindical.total) || 0;
+  if (ok) {
+    const texto = retencion > 0
+      ? `<b>Retención de cuota sindical: ${peso(retencion)}.</b> Si querés, podés enviarle estos datos a tu sindicato para que te acredite como afiliado cotizante.`
+      : `Si querés, podés enviarle los datos de este recibo a tu sindicato.`;
     h += `<div class="disc" style="border-left-color:var(--agua);">
-      <b>Retención de cuota sindical: ${peso(retencion)}.</b> Si querés, podés enviarle
-      estos datos a tu sindicato para que te acredite como afiliado cotizante. Al
-      enviarlo, compartís los datos de este recibo (incluida la cuota retenida) con
-      tu sindicato — no se anonimiza.
+      ${texto} Al enviarlo, compartís los datos de este recibo con tu sindicato —
+      no se anonimiza.
       <div style="margin-top:8px;"><button class="btn sec" id="env-sind">Enviar a mi sindicato</button></div>
     </div>`;
   }
   h += `<button class="btn sec" onclick="location.reload()">Verificar otro recibo</button>`;
   $('resultado').innerHTML = h;
   if (!ok) $('rep').onclick = () => reportar(d);
-  if (retencion > 0) $('env-sind').onclick = (e) => enviarASindicato(d, e.target);
+  if (ok) $('env-sind').onclick = (e) => enviarASindicato(d, e.target);
 }
 
 async function reportar(d) {
@@ -503,7 +514,8 @@ async function enviarASindicato(d, boton) {
   boton.textContent = 'Enviando…';
   try {
     const r = await fetch('/api/enviar-sindicato', {
-      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d)
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ recibo: datosLeidos.recibo, resultado: d })
     });
     if (!r.ok) throw new Error();
     boton.textContent = '✓ Enviado a tu sindicato';
@@ -511,6 +523,74 @@ async function enviarASindicato(d, boton) {
     boton.disabled = false;
     boton.textContent = 'No se pudo enviar, probá de nuevo';
   }
+}
+
+// ==================== Mis recibos verificados (historial) ====================
+$('historial-volver').onclick = () => ver('inicio');
+
+$('ver-historial').onclick = async () => {
+  ver('misrecibos');
+  $('resultado').innerHTML = '';
+  $('historial-contenido').innerHTML = `<div class="cargando" style="padding:30px 0;"><div class="spin"></div></div>`;
+  try {
+    const r = await fetch('/api/mis-recibos');
+    if (!r.ok) throw new Error();
+    renderHistorial(await r.json());
+  } catch (err) {
+    $('historial-contenido').innerHTML = `<div class="banner mal">No pudimos cargar tu historial.</div>`;
+  }
+};
+
+function renderHistorial(lista) {
+  if (!lista.length) {
+    $('historial-contenido').innerHTML = `<p class="muted">Todavía no verificaste ningún recibo.</p>`;
+    return;
+  }
+  let h = '';
+  lista.forEach((r, i) => {
+    const ok = r.estado === 'OK';
+    h += `<div class="card" style="margin-top:12px;">
+      <div class="fila" style="border:none; padding:0; cursor:pointer;" onclick="toggleHistorialItem(${i})">
+        <span><b>${fmtPeriodo(r.periodo)}</b> · ${r.sindicato}<br>
+          <span class="muted" style="font-size:12px;">${r.fecha}</span></span>
+        <span>
+          <span class="tag" style="background:${ok?'#e3f2ee':'#f8e5e2'}; color:${ok?'var(--agua)':'var(--alerta)'};">${ok?'Todo en orden':'Con discrepancias'}</span>
+          ${r.enviado ? '<span class="tag" style="background:#e3f2ee; color:var(--agua); margin-left:4px;">Enviado</span>' : ''}
+        </span>
+      </div>
+      <div id="hist-det-${i}" style="display:none; margin-top:10px;"></div>
+    </div>`;
+  });
+  $('historial-contenido').innerHTML = h;
+  window._historial = lista;
+}
+
+function toggleHistorialItem(i) {
+  const box = $('hist-det-' + i);
+  const abierto = box.style.display !== 'none';
+  if (abierto) { box.style.display = 'none'; return; }
+  if (!box.dataset.cargado) {
+    box.innerHTML = renderHistorialDetalle(window._historial[i].detalle);
+    box.dataset.cargado = '1';
+  }
+  box.style.display = 'block';
+}
+
+function renderHistorialDetalle(detalle) {
+  const rec = (detalle && detalle.recibo) || {};
+  const res = (detalle && detalle.resultado) || {};
+  let h = '<div style="border-top:1px solid var(--linea); padding-top:10px;">';
+  for (const ln of (rec.lineas || [])) {
+    const esDescuento = (ln.importe || 0) < 0;
+    h += `<div class="chip ${esDescuento?'chip-descuento':''}">
+      <div class="chip-info"><span class="chip-desc">${ln.descripcion || ln.codigo || '—'}</span></div>
+      <span class="imp ${esDescuento?'neg':''}">${peso(ln.importe || 0)}</span>
+    </div>`;
+  }
+  for (const disc of (res.discrepancias || [])) h += `<div class="disc">${disc.detalle}</div>`;
+  for (const al of (res.alertas || [])) h += `<div class="alerta-legal">${al.detalle}</div>`;
+  h += '</div>';
+  return h;
 }
 
 // ==================== Semáforo de aportes ====================

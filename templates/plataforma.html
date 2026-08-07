@@ -205,9 +205,10 @@
         <div class="campo">
           <label>Tipo de usuario *</label>
           <select name="tipo" required>
-            <option value="sindicato">Administrador de sindicato</option>
-            <option value="trabajador">Trabajador</option>
+            <option value="sindicato">Administrador de sindicato (login en /admin)</option>
+            <option value="trabajador">Trabajador (login en /ingresar)</option>
           </select>
+          <span class="muted" style="font-size:11px;">Son cuentas separadas aunque compartan CUIT/CUIL: elegí la que corresponda al login que querés cambiar.</span>
         </div>
         <div class="campo"><label>CUIT / CUIL *</label><input name="identificador" required inputmode="numeric" placeholder="20123456789"></div>
         <div class="campo"><label>Nueva clave *</label><input id="rc-clave" name="clave_nueva" required></div>
