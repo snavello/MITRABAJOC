@@ -377,6 +377,27 @@ function dato(k, v) {
     <span class="v ${vacio?'vacio':''}">${vacio ? 'sin dato' : v}</span></div>`;
 }
 
+// Suma ingresos/descuentos a partir de las líneas crudas del recibo (preview,
+// antes de validar contra el catálogo de conceptos).
+function renderTotalesIngresosDescuentos(lineas) {
+  let ingresos = 0, descuentos = 0;
+  for (const ln of (lineas || [])) {
+    const imp = ln.importe || 0;
+    if (imp >= 0) ingresos += imp; else descuentos += Math.abs(imp);
+  }
+  return renderTotalesResumen({ingresos, descuentos});
+}
+
+// Suma ingresos/descuentos ya validados (resultado.totales, matcheados contra
+// el catálogo del sindicato) — la versión oficial, post-verificación.
+function renderTotalesResumen(totales) {
+  if (!totales) return '';
+  return `<div class="fila" style="border-top:2px solid var(--linea); margin-top:4px; font-weight:600;">
+      <span>Total ingresos</span><span class="imp">${peso(totales.ingresos || 0)}</span></div>
+    <div class="fila" style="font-weight:600;">
+      <span>Total descuentos</span><span class="imp neg">${peso(totales.descuentos || 0)}</span></div>`;
+}
+
 function fmtPeriodo(p) {
   if (!p) return null;
   const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -404,6 +425,7 @@ function renderPreview(d) {
     h += `<div class="fila"><span>${ln.descripcion || ln.codigo || '—'}</span>
       <span class="imp ${neg?'neg':''}">${peso(ln.importe || 0)}</span></div>`;
   }
+  h += renderTotalesIngresosDescuentos(r.lineas);
   h += `</div>`;
 
   // Recibo formato nuevo (Anexo III): contribuciones patronales + costo laboral total.
@@ -481,6 +503,7 @@ function renderResultado(d) {
         + `</div><div class="lista">`;
   for (const f of d.formulas_validadas)
     h += `<div class="fila"><span>${f.ok?'✓':'✗'} ${f.descripcion}</span><span class="imp">${peso(f.en_recibo)}</span></div>`;
+  h += renderTotalesResumen(d.totales);
   h += `</div>`;
   for (const disc of d.discrepancias) h += `<div class="disc">${disc.detalle}</div>`;
   for (const al of (d.alertas || [])) h += `<div class="alerta-legal">${al.detalle}</div>`;
@@ -587,6 +610,7 @@ function renderHistorialDetalle(detalle) {
       <span class="imp ${esDescuento?'neg':''}">${peso(ln.importe || 0)}</span>
     </div>`;
   }
+  h += renderTotalesResumen(res.totales);
   for (const disc of (res.discrepancias || [])) h += `<div class="disc">${disc.detalle}</div>`;
   for (const al of (res.alertas || [])) h += `<div class="alerta-legal">${al.detalle}</div>`;
   h += '</div>';

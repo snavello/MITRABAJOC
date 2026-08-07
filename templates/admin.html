@@ -127,6 +127,7 @@
         <div class="rep-fila"><span class="rep-k">Período</span> {{ d.periodo or '—' }}</div>
         <div class="rep-fila"><span class="rep-k">CUIL</span> {{ d.cuil or r.cuil or '—' }}</div>
         {% if d.totales %}
+        <div class="rep-fila"><span class="rep-k">Total ingresos</span> ${{ '%.2f'|format(d.totales.ingresos) }}</div>
         <div class="rep-fila"><span class="rep-k">Total remunerativo</span> ${{ '%.2f'|format(d.totales.remunerativo) }}</div>
         <div class="rep-fila"><span class="rep-k">Total descuentos</span> ${{ '%.2f'|format(d.totales.descuentos) }}</div>
         {% endif %}
@@ -357,6 +358,14 @@
           <span class="imp {{ 'neg' if (ln.importe or 0) < 0 }}">${{ '%.2f'|format(ln.importe or 0) }}</span>
         </div>
         {% endfor %}
+        {% if res.totales %}
+        <div class="linea-concepto" style="border-top:2px solid var(--linea); margin-top:4px; font-weight:600;">
+          <span>Total ingresos</span><span class="imp">${{ '%.2f'|format(res.totales.ingresos or 0) }}</span>
+        </div>
+        <div class="linea-concepto" style="font-weight:600;">
+          <span>Total descuentos</span><span class="imp neg">${{ '%.2f'|format(res.totales.descuentos or 0) }}</span>
+        </div>
+        {% endif %}
         {% if res.discrepancias %}
         <div class="rep-sub">Discrepancias</div>
         <ul class="rep-lista">{% for x in res.discrepancias %}<li>{{ x.detalle }}</li>{% endfor %}</ul>

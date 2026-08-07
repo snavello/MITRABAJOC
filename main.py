@@ -137,9 +137,13 @@ def api_validar(request: Request, payload: dict):
 
 
 @app.post("/api/reportar")
-def api_reportar(payload: dict):
+def api_reportar(request: Request, payload: dict):
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise HTTPException(400, "No pudimos determinar tu sindicato. Volvé a ingresar.")
     with db.get_session() as s:
         s.add(Reporte(
+            sindicato_id=sid,
             fecha=datetime.now().strftime("%d/%m/%Y %H:%M"),
             cuil=payload.get("cuil", ""), periodo=payload.get("periodo", ""),
             estado="nuevo", detalle=payload,
