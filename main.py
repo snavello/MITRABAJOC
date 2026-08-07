@@ -8,6 +8,7 @@ Rutas del trabajador:
   POST /api/leer            lee un recibo con IA y devuelve preview
   POST /api/validar         valida el recibo confirmado, da de alta conceptos nuevos
   POST /api/reportar        guarda un reporte
+  POST /api/enviar-sindicato  envío voluntario para acreditar afiliado cotizante
 
 Rutas del sindicato (admin):
   GET  /admin               panel
@@ -33,7 +34,7 @@ from sqlmodel import select
 
 import db
 import auth
-from db import Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador, CuentaTrabajador
+from db import Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador, CuentaTrabajador, EnvioSindicato
 from extractor import extraer, extraer_aportes
 from validador import validar, detectar_nuevos
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
@@ -128,6 +129,25 @@ def api_reportar(payload: dict):
     return {"ok": True}
 
 
+@app.post("/api/enviar-sindicato")
+def api_enviar_sindicato(request: Request, payload: dict):
+    """Envío voluntario y explícito del trabajador: comparte los datos de su
+    recibo (incluida la retención de cuota sindical) con su sindicato, para que
+    lo use como prueba de afiliado cotizante (art. 21 bis, Dto 407/2026)."""
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise HTTPException(400, "No pudimos determinar tu sindicato. Volvé a ingresar.")
+    monto = (payload.get("retencion_sindical") or {}).get("total", 0.0)
+    with db.get_session() as s:
+        s.add(EnvioSindicato(
+            sindicato_id=sid, cuil=payload.get("cuil", ""),
+            periodo=payload.get("periodo", ""), monto_cuota=monto,
+            fecha=datetime.now().strftime("%d/%m/%Y %H:%M"),
+        ))
+        s.commit()
+    return {"ok": True}
+
+
 @app.post("/api/aportes")
 async def api_aportes(archivo: UploadFile = File(...)):
     """Lee el comprobante de aportes de ARCA que sube el trabajador y arma el semáforo."""
@@ -166,11 +186,13 @@ def admin(request: Request):
                           .order_by(Reporte.id.desc())).all()
         trabajadores = s.exec(select(Trabajador).where(Trabajador.sindicato_id == sid)
                               .order_by(Trabajador.activo.desc(), Trabajador.nombre)).all()
+        envios = s.exec(select(EnvioSindicato).where(EnvioSindicato.sindicato_id == sid)
+                        .order_by(EnvioSindicato.periodo.desc(), EnvioSindicato.id.desc())).all()
     return templates.TemplateResponse("admin.html", {
         "request": request, "sindicato": sind.nombre if sind else "",
         "marca": db.marca_sindicato(sid),
         "conceptos": conceptos, "formulas": formulas, "reportes": reportes,
-        "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR,
+        "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR, "envios": envios,
         "debe_cambiar": ses.get("cambiar", False),
         "marca": db.marca_sindicato(sid),
     })
@@ -285,32 +307,35 @@ def admin_trabajador_reactivar(request: Request, id: int = Form(...)):
 
 
 # ---------- ABM de conceptos ----------
+CATEGORIAS_SINDICALES = ("", "convenio", "afiliacion")
+
+
 @app.post("/admin/concepto")
 def abm_concepto(
     request: Request,
     id: str = Form(""), codigo: str = Form(...), nombre: str = Form(...),
     tipo: str = Form(...), remunerativo: str = Form("no"),
-    alias: str = Form(""), carga_sindical_convenio: str = Form("no"),
+    alias: str = Form(""), categoria_sindical: str = Form(""),
 ):
     sid = exigir_sindicato(request)
     aliases = [a.strip() for a in alias.split(",") if a.strip()]
     if nombre not in aliases:
         aliases.append(nombre)
     es_remun = remunerativo == "si"
-    es_carga_sindical = carga_sindical_convenio == "si"
+    categoria = categoria_sindical if categoria_sindical in CATEGORIAS_SINDICALES else ""
     with db.get_session() as s:
         if id:  # edición — solo si el concepto es de este sindicato
             c = s.get(Concepto, int(id))
             if c and c.sindicato_id == sid:
                 c.codigo, c.nombre, c.tipo = codigo, nombre, tipo
                 c.remunerativo, c.alias = es_remun, aliases
-                c.carga_sindical_convenio = es_carga_sindical
+                c.categoria_sindical = categoria
                 c.pendiente_revision = False
                 s.add(c)
         else:   # alta
             s.add(Concepto(sindicato_id=sid, codigo=codigo, nombre=nombre, tipo=tipo,
                            remunerativo=es_remun, alias=aliases,
-                           carga_sindical_convenio=es_carga_sindical,
+                           categoria_sindical=categoria,
                            pendiente_revision=False))
         s.commit()
     return RedirectResponse("/admin#conceptos", status_code=303)

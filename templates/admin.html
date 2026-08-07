@@ -100,6 +100,7 @@
     <button class="tab-btn" data-panel="conceptos">Conceptos</button>
     <button class="tab-btn" data-panel="trabajadores">Trabajadores</button>
     <button class="tab-btn" data-panel="aprendizaje">Aprendizaje</button>
+    <button class="tab-btn" data-panel="cotizantes">Afiliados cotizantes</button>
   </nav>
 
   <div class="panel activo" id="panel-reportes">
@@ -186,18 +187,18 @@
     Se detectaron en recibos y están marcados en amarillo. Editalos para confirmar tipo y si son remunerativos.</div>
   {% endif %}
   <table>
-    <tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Remun.</th><th>Sindical conv.</th><th>Alias</th><th></th></tr>
+    <tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Remun.</th><th>Categoría sindical</th><th>Alias</th><th></th></tr>
     {% for c in conceptos %}
     <tr class="{{ 'pend' if c.pendiente_revision }}">
       <td><code>{{ c.codigo }}</code></td>
       <td>{{ c.nombre }}{% if c.pendiente_revision %}<span class="tag tag-pend">nuevo</span>{% endif %}</td>
       <td>{{ c.tipo }}</td>
       <td>{% if c.tipo=='ingreso' %}<span class="tag {{ 'tag-si' if c.remunerativo else 'tag-no' }}">{{ 'sí' if c.remunerativo else 'no' }}</span>{% else %}—{% endif %}</td>
-      <td>{% if c.tipo=='descuento' %}<span class="tag {{ 'tag-si' if c.carga_sindical_convenio else 'tag-no' }}">{{ 'sí' if c.carga_sindical_convenio else 'no' }}</span>{% else %}—{% endif %}</td>
+      <td>{% if c.tipo=='descuento' and c.categoria_sindical %}<span class="tag tag-si">{{ 'convenio' if c.categoria_sindical=='convenio' else 'afiliación' }}</span>{% else %}—{% endif %}</td>
       <td class="muted">{{ c.alias|join(', ') }}</td>
       <td class="acc">
         <button class="sec mini" type="button"
-          onclick='editarConcepto({{ c.id }}, {{ c.codigo|tojson }}, {{ c.nombre|tojson }}, {{ c.tipo|tojson }}, {{ c.remunerativo|tojson }}, {{ (c.alias or [])|join(", ")|tojson }}, {{ c.carga_sindical_convenio|tojson }})'>Editar</button>
+          onclick='editarConcepto({{ c.id }}, {{ c.codigo|tojson }}, {{ c.nombre|tojson }}, {{ c.tipo|tojson }}, {{ c.remunerativo|tojson }}, {{ (c.alias or [])|join(", ")|tojson }}, {{ c.categoria_sindical|tojson }})'>Editar</button>
         <form method="post" action="/admin/concepto/borrar" onsubmit="return confirm('¿Borrar este concepto?')">
           <input type="hidden" name="id" value="{{ c.id }}">
           <button class="peligro mini" type="submit">Borrar</button>
@@ -212,8 +213,10 @@
     <input name="nombre" id="c-nombre" placeholder="Nombre" required style="flex:1; min-width:160px;">
     <select name="tipo" id="c-tipo"><option value="ingreso">ingreso</option><option value="descuento">descuento</option></select>
     <select name="remunerativo" id="c-remun"><option value="si">remunerativo: sí</option><option value="no">remunerativo: no</option></select>
-    <select name="carga_sindical_convenio" id="c-sindical" title="Cuota solidaria / fondos convencionales, sujeta al tope legal del 2% (Ley 27.802). NO marcar la cuota de afiliación.">
-      <option value="no">sindical convenio: no</option><option value="si">sindical convenio: sí</option>
+    <select name="categoria_sindical" id="c-sindical" title="Convenio: cuota solidaria / fondos convencionales, sujeta al tope legal del 2% (Ley 27.802). Afiliación: cuota de afiliación, no cuenta para el tope pero sí se envía al sindicato como prueba de afiliado cotizante.">
+      <option value="">categoría sindical: no aplica</option>
+      <option value="convenio">categoría sindical: cuota de convenio</option>
+      <option value="afiliacion">categoría sindical: cuota de afiliación</option>
     </select>
     <input name="alias" id="c-alias" placeholder="Alias (separados por coma)" style="min-width:180px;">
     <button type="submit" id="c-btn">Agregar concepto</button>
@@ -325,6 +328,21 @@
   </form>
   <div id="ap-resultado"></div>
   </div>
+
+  <div class="panel" id="panel-cotizantes">
+  <!-- ============ AFILIADOS COTIZANTES ============ -->
+  <h2 id="cotizantes">Afiliados cotizantes ({{ envios|length }})</h2>
+  <p class="muted">Trabajadores que enviaron voluntariamente los datos de su recibo, con retención de cuota sindical, como prueba de afiliado cotizante (art. 21 bis, Dto 407/2026).</p>
+  <table>
+    <tr><th>Fecha de envío</th><th>CUIL</th><th>Período</th><th>Monto de cuota</th></tr>
+    {% for e in envios %}
+    <tr><td>{{ e.fecha }}</td><td>{{ e.cuil }}</td><td>{{ e.periodo }}</td>
+        <td>${{ '%.2f'|format(e.monto_cuota) }}</td></tr>
+    {% else %}
+    <tr><td colspan="4" class="muted">Todavía no hay envíos.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
 </div>
 
 <script>
@@ -408,13 +426,13 @@ function cancelarFormula() {
 }
 
 // ---------- ABM conceptos ----------
-function editarConcepto(id, codigo, nombre, tipo, remun, alias, cargaSindical) {
+function editarConcepto(id, codigo, nombre, tipo, remun, alias, categoriaSindical) {
   document.getElementById('c-id').value = id;
   document.getElementById('c-codigo').value = codigo;
   document.getElementById('c-nombre').value = nombre;
   document.getElementById('c-tipo').value = tipo;
   document.getElementById('c-remun').value = remun ? 'si' : 'no';
-  document.getElementById('c-sindical').value = cargaSindical ? 'si' : 'no';
+  document.getElementById('c-sindical').value = categoriaSindical || '';
   document.getElementById('c-alias').value = alias;
   document.getElementById('c-btn').textContent = 'Guardar cambios';
   document.getElementById('c-cancel').classList.remove('oculto');

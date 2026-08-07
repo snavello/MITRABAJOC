@@ -271,10 +271,22 @@
 
   <!-- ============ PESTAÑA: CAPACITACIÓN ============ -->
   <div class="tpanel" id="tp-capacitacion">
-    <div class="proximamente">
-      <div class="ic-grande"><svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg></div>
-      <h2>Capacitación</h2>
-      <p>Índice de documentos y actividades de formación de tu sindicato.<br>Muy pronto.</p>
+    <div class="card">
+      <h2>Entendé tu nuevo recibo de sueldo</h2>
+      <p class="sub">Desde el 1/6/2026 rige un modelo único de recibo (Ley 27.802, Dto 407/2026). Esta guía es la misma para todos los sindicatos: es ley nacional, no depende de tu convenio.</p>
+
+      <h3 style="margin-top:18px; font-size:15px; color:var(--tinta);">Las 4 secciones del recibo nuevo</h3>
+      <div class="fila"><span>1 · Datos del empleador y el trabajador</span></div>
+      <div class="fila"><span>2 · Contribuciones patronales y costo laboral total <span class="muted">(nueva)</span></span></div>
+      <div class="fila"><span>3 · Remuneración bruta y tus descuentos</span></div>
+      <div class="fila"><span>4 · Remuneración neta (lo que cobrás)</span></div>
+
+      <h3 style="margin-top:18px; font-size:15px; color:var(--tinta);">Lo más importante: aporte vs. contribución</h3>
+      <p><b>Tus aportes</b> (jubilación, obra social, cuota sindical) se descuentan de TU sueldo y bajan tu neto. <b>Las contribuciones patronales</b> (seguridad social, obra social, PAMI, ART, seguro de vida) las paga tu empleador aparte, por fuera de tu recibo: <b>nunca</b> te bajan el neto, aunque ahora se muestren impresas.</p>
+      <p style="margin-top:10px;"><b>Regla simple:</b> tu neto = tu bruto − tus aportes. El "costo laboral total" (bruto + contribuciones) es lo que le cuesta tu puesto al empleador, no lo que cobrás vos.</p>
+
+      <h3 style="margin-top:18px; font-size:15px; color:var(--tinta);">Qué mirar para detectar un problema</h3>
+      <p>Si algo que figura como "contribución patronal" también te aparece descontado de tu neto, o si la suma de tus descuentos no da lo que dice el recibo, conviene reportarlo desde la pestaña "Tu Recibo".</p>
     </div>
   </div>
 
@@ -384,6 +396,20 @@ function renderPreview(d) {
   }
   h += `</div>`;
 
+  // Recibo formato nuevo (Anexo III): contribuciones patronales + costo laboral total.
+  // No bajan tu neto — se muestran aparte para que reconozcas tu recibo.
+  if (r.formato === 'nuevo' && r.contribuciones_patronales && r.contribuciones_patronales.length) {
+    h += `<div class="card"><h2>Contribuciones patronales</h2>
+      <p class="sub">Las paga tu empleador. No se descuentan de tu sueldo ni bajan tu neto.</p>`;
+    for (const c of r.contribuciones_patronales) {
+      h += `<div class="fila"><span>${c.concepto || '—'}${c.porcentaje ? ' ('+c.porcentaje+')' : ''}</span>
+        <span class="imp">${peso(c.importe || 0)}</span></div>`;
+    }
+    if (r.costo_laboral_total != null)
+      h += `<div class="fila" style="font-weight:600;"><span>Costo laboral total</span><span class="imp">${peso(r.costo_laboral_total)}</span></div>`;
+    h += `</div>`;
+  }
+
   // Conceptos nuevos detectados
   if (d.conceptos_nuevos && d.conceptos_nuevos.length) {
     h += `<div class="nuevos"><h2>Conceptos nuevos detectados</h2>
@@ -449,9 +475,20 @@ function renderResultado(d) {
   for (const disc of d.discrepancias) h += `<div class="disc">${disc.detalle}</div>`;
   for (const al of (d.alertas || [])) h += `<div class="alerta-legal">${al.detalle}</div>`;
   if (!ok) h += `<button class="btn alerta" id="rep">Reportar al sindicato</button>`;
+  const retencion = d.retencion_sindical && d.retencion_sindical.total;
+  if (retencion > 0) {
+    h += `<div class="disc" style="border-left-color:var(--agua);">
+      <b>Retención de cuota sindical: ${peso(retencion)}.</b> Si querés, podés enviarle
+      estos datos a tu sindicato para que te acredite como afiliado cotizante. Al
+      enviarlo, compartís los datos de este recibo (incluida la cuota retenida) con
+      tu sindicato — no se anonimiza.
+      <div style="margin-top:8px;"><button class="btn sec" id="env-sind">Enviar a mi sindicato</button></div>
+    </div>`;
+  }
   h += `<button class="btn sec" onclick="location.reload()">Verificar otro recibo</button>`;
   $('resultado').innerHTML = h;
   if (!ok) $('rep').onclick = () => reportar(d);
+  if (retencion > 0) $('env-sind').onclick = (e) => enviarASindicato(d, e.target);
 }
 
 async function reportar(d) {
@@ -459,6 +496,21 @@ async function reportar(d) {
     method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d)
   });
   $('resultado').innerHTML += `<div class="banner ok" style="margin-top:12px;">Enviado. El sindicato va a revisar tu caso.</div>`;
+}
+
+async function enviarASindicato(d, boton) {
+  boton.disabled = true;
+  boton.textContent = 'Enviando…';
+  try {
+    const r = await fetch('/api/enviar-sindicato', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d)
+    });
+    if (!r.ok) throw new Error();
+    boton.textContent = '✓ Enviado a tu sindicato';
+  } catch (err) {
+    boton.disabled = false;
+    boton.textContent = 'No se pudo enviar, probá de nuevo';
+  }
 }
 
 // ==================== Semáforo de aportes ====================

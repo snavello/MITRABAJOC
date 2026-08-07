@@ -119,10 +119,13 @@ class Concepto(SQLModel, table=True):
     remunerativo: bool = True
     alias: list = Field(default=[], sa_column=Column(JSON))
     pendiente_revision: bool = False
-    # Ley 27.802 / Dto 407/2026, art. 133: carga sindical de convenio (cuota
-    # solidaria, fondos convencionales) sujeta al tope global del 2%. La cuota de
-    # afiliación y cualquier otro descuento quedan excluidas por no marcar esto.
-    carga_sindical_convenio: bool = False
+    # Ley 27.802 / Dto 407/2026: categoría sindical de un descuento.
+    # "convenio"   = cuota solidaria / fondos convencionales -> cuenta para el tope
+    #                global del 2% (art. 133).
+    # "afiliacion" = cuota de afiliación -> NO cuenta para el tope, pero SÍ se
+    #                reporta al sindicato al enviar el recibo (art. 21 bis).
+    # ""           = no aplica (cualquier otro descuento).
+    categoria_sindical: str = ""
 
 
 class Formula(SQLModel, table=True):
@@ -151,6 +154,18 @@ class ConfiguracionPlataforma(SQLModel, table=True):
     # Ley 27.802 art. 133 / Dto 407/2026: tope global a las cargas sindicales de
     # convenio, en % de la remuneración. Editable SOLO por el admin de plataforma.
     tope_sindical_pct: float = 2.0
+
+
+class EnvioSindicato(SQLModel, table=True):
+    """Envío voluntario del trabajador de los datos de su recibo al sindicato,
+    para acreditar afiliado cotizante ante la autoridad (art. 21 bis, Dto 407/2026).
+    NO se anonimiza: el dato identificado es lo que da valor a la acreditación."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    cuil: str = Field(index=True)
+    periodo: str = ""
+    monto_cuota: float = 0.0
+    fecha: str = ""
 
 
 # ---------- Inicialización ----------
@@ -245,7 +260,7 @@ def conceptos_como_dicts(sindicato_id: int = None) -> list:
                 "codigo": c.codigo, "nombre": c.nombre, "tipo": c.tipo,
                 "remunerativo": c.remunerativo, "alias": c.alias or [],
                 "pendiente_revision": c.pendiente_revision,
-                "carga_sindical_convenio": c.carga_sindical_convenio,
+                "categoria_sindical": c.categoria_sindical,
             }
             for c in s.exec(q).all()
         ]

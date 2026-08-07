@@ -111,18 +111,30 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
     # convenio (cuota solidaria, fondos convencionales). NO es un error de cálculo:
     # es una advertencia de posible retención en exceso, separada de discrepancias.
     alertas = []
-    cargas_sindicales = sum(
+    cargas_convenio = sum(
         abs(m.get("importe", 0) or 0) for m in matcheadas
-        if m.get("tipo") == "aporte_trabajador" and m["concepto"].get("carga_sindical_convenio")
+        if m.get("tipo") == "aporte_trabajador" and m["concepto"].get("categoria_sindical") == "convenio"
     )
+    cargas_afiliacion = sum(
+        abs(m.get("importe", 0) or 0) for m in matcheadas
+        if m.get("tipo") == "aporte_trabajador" and m["concepto"].get("categoria_sindical") == "afiliacion"
+    )
+    # Retención de cuota sindical (convenio + afiliación): la base para que el
+    # trabajador, si quiere, se la envíe al sindicato como prueba de afiliado
+    # cotizante (art. 21 bis, Dto 407/2026). Solo "convenio" cuenta para el tope.
+    retencion_sindical = {
+        "convenio": round(cargas_convenio, 2),
+        "afiliacion": round(cargas_afiliacion, 2),
+        "total": round(cargas_convenio + cargas_afiliacion, 2),
+    }
     base_remunerativa = variables["base_remunerativa"]
     if base_remunerativa > 0:
         tope_pesos = tope_sindical_pct / 100 * base_remunerativa
-        if cargas_sindicales > tope_pesos:
-            pct_real = round(cargas_sindicales / base_remunerativa * 100, 2)
+        if cargas_convenio > tope_pesos:
+            pct_real = round(cargas_convenio / base_remunerativa * 100, 2)
             alertas.append({
                 "tipo": "tope_sindical",
-                "detalle": f"Las cargas sindicales de convenio (${cargas_sindicales:,.2f}, "
+                "detalle": f"Las cargas sindicales de convenio (${cargas_convenio:,.2f}, "
                            f"{pct_real}% de la remuneración) superan el tope legal del "
                            f"{tope_sindical_pct}% (art. 133 Ley 27.802). Puede ser una "
                            "retención en exceso: conviene revisarlo con el sindicato.",
@@ -136,6 +148,7 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
         "discrepancias": discrepancias,
         "avisos": avisos,
         "alertas": alertas,
+        "retencion_sindical": retencion_sindical,
         "totales": {
             "remunerativo": round(variables["base_remunerativa"], 2),
             "ingresos": round(variables["total_ingresos"], 2),

@@ -7,11 +7,11 @@ import validador
 
 CONCEPTOS_BASE = [
     {"codigo": "SUELDO", "nombre": "Sueldo básico", "tipo": "ingreso",
-     "remunerativo": True, "alias": [], "carga_sindical_convenio": False},
+     "remunerativo": True, "alias": [], "categoria_sindical": ""},
     {"codigo": "AFIL", "nombre": "Cuota de afiliación", "tipo": "descuento",
-     "remunerativo": True, "alias": [], "carga_sindical_convenio": False},
+     "remunerativo": True, "alias": [], "categoria_sindical": "afiliacion"},
     {"codigo": "SOLID", "nombre": "Cuota solidaria de convenio", "tipo": "descuento",
-     "remunerativo": True, "alias": [], "carga_sindical_convenio": True},
+     "remunerativo": True, "alias": [], "categoria_sindical": "convenio"},
 ]
 
 
