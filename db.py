@@ -330,6 +330,7 @@ def marca_sindicato(sindicato_id: int) -> dict:
             # Para la credencial sindical del trabajador
             "autoridad": sind.autoridad, "cargo_autoridad": sind.cargo_autoridad,
             "firma": sind.firma,
+            "direccion": sind.direccion, "telefonos": sind.telefonos,
         }
 
 
@@ -367,3 +368,16 @@ def nombre_trabajador(cuil: str, sindicato_id: int) -> str:
         t = s.exec(select(Trabajador).where(
             Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
         return t.nombre if t else ""
+
+
+def numero_credencial(cuil: str, sindicato_id: int, slug_sindicato: str) -> str:
+    """Número de credencial derivado del id del empadronamiento: estable,
+    legible, sin campo ni migración nueva. Ej: 'UOM-000123'."""
+    with Session(engine) as s:
+        t = s.exec(select(Trabajador).where(
+            Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
+        if not t:
+            return ""
+        letras = "".join(ch for ch in (slug_sindicato or "") if ch.isalnum())
+        prefijo = (letras[:6] or "SIND").upper()
+        return f"{prefijo}-{t.id:06d}"

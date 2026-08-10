@@ -122,23 +122,31 @@
 
   /* ---- Credencial sindical ---- */
   .cred { background:#fff; border-radius:16px; overflow:hidden; margin-top:8px;
-    box-shadow:0 3px 14px rgba(0,0,0,.10); border:1px solid var(--linea); }
+    box-shadow:0 3px 14px rgba(0,0,0,.10); border:1px solid var(--linea); position:relative; }
+  .cred-fondo { position:absolute; inset:0; z-index:0; pointer-events:none; }
+  .cred-fondo svg { width:100%; height:100%; display:block; }
+  .cred-head, .cred-body, .cred-pie { position:relative; z-index:1; }
   .cred-head { background:var(--marca-primario); padding:18px 20px;
     display:flex; align-items:center; gap:12px; }
   .cred-logo { max-height:46px; max-width:110px; object-fit:contain;
     background:#fff; border-radius:8px; padding:4px; }
   .cred-sind { color:#fff; font-size:16px; font-weight:600; line-height:1.25; }
   .cred-body { padding:20px; }
+  .cred-top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+  .cred-nro { text-align:right; }
   .cred-lbl { font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--gris); }
   .cred-nombre { font-size:22px; font-weight:600; color:var(--tinta); margin:2px 0 16px; line-height:1.2; }
   .cred-datos { display:flex; gap:28px; flex-wrap:wrap; }
   .cred-datos .cred-val { display:block; font-size:16px; font-weight:600;
     color:var(--tinta); font-variant-numeric:tabular-nums; }
+  .cred-nro .cred-val { font-size:14px; font-weight:600; color:var(--tinta); font-variant-numeric:tabular-nums; }
   .cred-firma { margin-top:26px; text-align:center; }
   .cred-firma img { max-height:56px; max-width:200px; object-fit:contain; display:block; margin:0 auto -6px; }
   .cred-linea { border-top:1px solid #c9c6bf; width:210px; margin:0 auto 6px; }
   .cred-autoridad { font-size:14px; font-weight:600; color:var(--tinta); }
   .cred-cargo { font-size:12.5px; color:var(--gris); }
+  .cred-pie { border-top:1px solid var(--linea); padding:9px 20px; font-size:11.5px;
+    color:var(--gris); text-align:center; background:rgba(255,255,255,.7); }
   .cargando { text-align:center; padding:40px 0; }
   .spin { width:52px; height:52px; margin:0 auto; border:3px solid var(--linea); border-top-color:var(--tinta); border-radius:50%; animation:spin .9s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
@@ -327,6 +335,7 @@
   {% if marca %}
   <div class="tpanel" id="tp-credencial">
     <div class="cred">
+      <div class="cred-fondo">{{ filigrana|safe }}</div>
       <div class="cred-head">
         {% if marca and marca.logo %}
         <img class="cred-logo" src="/logo/{{ marca.id }}" alt="{{ sindicato }}">
@@ -334,12 +343,23 @@
         <div class="cred-sind">{{ sindicato }}</div>
       </div>
       <div class="cred-body">
-        <div class="cred-lbl">Afiliado</div>
-        <div class="cred-nombre">{{ nombre_trab or '—' }}</div>
+        <div class="cred-top">
+          <div>
+            <div class="cred-lbl">Afiliado</div>
+            <div class="cred-nombre">{{ nombre_trab or '—' }}</div>
+          </div>
+          {% if numero_credencial %}
+          <div class="cred-nro">
+            <div class="cred-lbl">N° credencial</div>
+            <div class="cred-val">{{ numero_credencial }}</div>
+          </div>
+          {% endif %}
+        </div>
 
         <div class="cred-datos">
           <div><span class="cred-lbl">CUIL</span><span class="cred-val">{{ cuil }}</span></div>
           {% if documento %}<div><span class="cred-lbl">DNI</span><span class="cred-val">{{ documento }}</span></div>{% endif %}
+          {% if vigencia_credencial %}<div><span class="cred-lbl">Vigencia</span><span class="cred-val">{{ vigencia_credencial }}</span></div>{% endif %}
         </div>
 
         <div class="cred-firma">
@@ -351,6 +371,11 @@
           <div class="cred-cargo">{{ marca.cargo_autoridad or '' }}</div>
         </div>
       </div>
+      {% if marca.direccion or marca.telefonos %}
+      <div class="cred-pie">
+        {{ marca.direccion }}{% if marca.direccion and marca.telefonos %} · {% endif %}{{ marca.telefonos }}
+      </div>
+      {% endif %}
     </div>
     <p class="nota" style="text-align:center;">Credencial digital emitida por {{ sindicato }}.</p>
   </div>

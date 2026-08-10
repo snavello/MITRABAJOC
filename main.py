@@ -38,6 +38,7 @@ import auth
 from db import Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador, CuentaTrabajador, EnvioSindicato, ReciboVerificado
 from extractor import extraer, extraer_aportes
 from validador import validar, detectar_nuevos, detectar_provisorios, buscar_similar
+from filigrana import filigrana_svg
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
 
 app = FastAPI(title="Mi Trabajo — validador de recibos")
@@ -909,10 +910,14 @@ def app_trabajador(request: Request):
 
     if sid_activo:
         marca = db.marca_sindicato(sid_activo)
+        slug = next((sd["slug"] for sd in sinds if sd["id"] == sid_activo), "")
         return templates.TemplateResponse("trabajador.html", {
             "request": request, "sindicato": marca["nombre"], "marca": marca,
             "cuil": cuil, "nombre_trab": db.nombre_trabajador(cuil, sid_activo),
             "documento": _dni_de_cuil(cuil),
+            "numero_credencial": db.numero_credencial(cuil, sid_activo, slug),
+            "vigencia_credencial": f"31/12/{datetime.now().year}",
+            "filigrana": filigrana_svg(marca["nombre"], marca["color_secundario"], marca["color_acento"]),
         })
     # Varios y no eligió → selector
     return templates.TemplateResponse("elegir_sindicato.html", {
