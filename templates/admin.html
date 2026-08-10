@@ -180,11 +180,13 @@
   <!-- ============ FÓRMULAS ============ -->
   <h2 id="formulas">Fórmulas a validar</h2>
   <p class="muted">La variable <code>base_remunerativa</code> es la suma de los ingresos marcados como remunerativos. También está <code>total_ingresos</code>.</p>
+  {% set codigos_validos = conceptos | map(attribute='codigo') | list %}
   <table>
     <tr><th>Concepto</th><th>Descripción</th><th>Expresión</th><th>Tol.</th><th></th></tr>
     {% for f in formulas %}
     <tr>
-      <td><code>{{ f.target }}</code></td><td>{{ f.descripcion }}</td>
+      <td><code>{{ f.target }}</code>{% if f.target not in codigos_validos %}<span class="tag" style="background:#f8e5e2; color:var(--alerta);" title="Ningún concepto tiene este código: esta fórmula nunca va a matchear.">⚠ código inexistente</span>{% endif %}</td>
+      <td>{{ f.descripcion }}</td>
       <td><code>{{ f.expr }}</code></td><td>${{ f.tolerancia }}</td>
       <td class="acc">
         <button class="sec mini" type="button"
@@ -199,13 +201,19 @@
   </table>
   <form class="linea" method="post" action="/admin/formula" id="form-formula">
     <input type="hidden" name="id" id="f-id">
-    <input name="target" id="f-target" placeholder="Cód. concepto" required style="width:110px;">
+    <select name="target" id="f-target" required style="min-width:220px;">
+      <option value="" disabled selected>Elegí un concepto…</option>
+      {% for c in conceptos %}
+      <option value="{{ c.codigo }}">{{ c.codigo }} — {{ c.nombre }}</option>
+      {% endfor %}
+    </select>
     <input name="descripcion" id="f-desc" placeholder="Descripción" required style="flex:1; min-width:180px;">
     <input name="expr" id="f-expr" placeholder="0.015 * base_remunerativa" required style="min-width:200px;">
     <input name="tolerancia" id="f-tol" type="number" step="0.01" value="1.0" style="width:80px;">
     <button type="submit" id="f-btn">Agregar fórmula</button>
     <button type="button" class="sec oculto" id="f-cancel" onclick="cancelarFormula()">Cancelar</button>
   </form>
+  {% if not conceptos %}<p class="muted">Primero dá de alta al menos un concepto (pestaña "Conceptos") para poder elegirlo acá.</p>{% endif %}
 
   </div>
   <div class="panel" id="panel-conceptos">
