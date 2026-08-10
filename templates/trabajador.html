@@ -140,11 +140,14 @@
   .cred-datos .cred-val { display:block; font-size:16px; font-weight:600;
     color:var(--tinta); font-variant-numeric:tabular-nums; }
   .cred-nro .cred-val { font-size:14px; font-weight:600; color:var(--tinta); font-variant-numeric:tabular-nums; }
-  .cred-firma { margin-top:26px; text-align:center; }
+  .cred-inferior { margin-top:26px; display:flex; align-items:flex-end; justify-content:center; gap:14px; }
+  .cred-firma { text-align:center; flex:1; }
   .cred-firma img { max-height:56px; max-width:200px; object-fit:contain; display:block; margin:0 auto -6px; }
   .cred-linea { border-top:1px solid #c9c6bf; width:210px; margin:0 auto 6px; }
   .cred-autoridad { font-size:14px; font-weight:600; color:var(--tinta); }
   .cred-cargo { font-size:12.5px; color:var(--gris); }
+  .cred-qr { flex-shrink:0; line-height:0; }
+  .cred-qr svg { width:64px; height:64px; display:block; }
   .cred-pie { border-top:1px solid var(--linea); padding:9px 20px; font-size:11.5px;
     color:var(--gris); text-align:center; background:rgba(255,255,255,.7); }
   .cargando { text-align:center; padding:40px 0; }
@@ -362,13 +365,18 @@
           {% if vigencia_credencial %}<div><span class="cred-lbl">Vigencia</span><span class="cred-val">{{ vigencia_credencial }}</span></div>{% endif %}
         </div>
 
-        <div class="cred-firma">
-          {% if marca and marca.firma %}
-          <img src="/firma/{{ marca.id }}" alt="Firma de la autoridad">
+        <div class="cred-inferior">
+          <div class="cred-firma">
+            {% if marca and marca.firma %}
+            <img src="/firma/{{ marca.id }}" alt="Firma de la autoridad">
+            {% endif %}
+            <div class="cred-linea"></div>
+            <div class="cred-autoridad">{{ marca.autoridad or '' }}</div>
+            <div class="cred-cargo">{{ marca.cargo_autoridad or '' }}</div>
+          </div>
+          {% if qr_credencial %}
+          <div class="cred-qr" title="Escaneá para verificar esta credencial">{{ qr_credencial|safe }}</div>
           {% endif %}
-          <div class="cred-linea"></div>
-          <div class="cred-autoridad">{{ marca.autoridad or '' }}</div>
-          <div class="cred-cargo">{{ marca.cargo_autoridad or '' }}</div>
         </div>
       </div>
       {% if marca.direccion or marca.telefonos %}

@@ -39,6 +39,7 @@ from db import Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajad
 from extractor import extraer, extraer_aportes
 from validador import validar, detectar_nuevos, detectar_provisorios, buscar_similar
 from filigrana import filigrana_svg
+from qr import qr_svg, url_verificacion
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
 
 app = FastAPI(title="Mi Trabajo — validador de recibos")
@@ -915,9 +916,13 @@ def app_trabajador(request: Request):
             "request": request, "sindicato": marca["nombre"], "marca": marca,
             "cuil": cuil, "nombre_trab": db.nombre_trabajador(cuil, sid_activo),
             "documento": _dni_de_cuil(cuil),
-            "numero_credencial": db.numero_credencial(cuil, sid_activo, slug),
+            "numero_credencial": (numero_cred := db.numero_credencial(cuil, sid_activo, slug)),
             "vigencia_credencial": f"31/12/{datetime.now().year}",
             "filigrana": filigrana_svg(marca["nombre"], marca["color_secundario"], marca["color_acento"]),
+            "qr_credencial": qr_svg(url_verificacion(
+                str(request.base_url), db.token_credencial(cuil, sid_activo),
+                db.nombre_trabajador(cuil, sid_activo), cuil, numero_cred,
+            )),
         })
     # Varios y no eligió → selector
     return templates.TemplateResponse("elegir_sindicato.html", {
@@ -938,6 +943,17 @@ def app_cambiar():
     resp = RedirectResponse("/app", status_code=303)
     resp.delete_cookie("sind_elegido")
     return resp
+
+
+@app.get("/v/{token}", response_class=HTMLResponse)
+def verificar_credencial(token: str, request: Request):
+    """Página pública de verificación de una credencial (detrás del QR). No
+    requiere login: es lo que ve quien escanea. A propósito NO muestra el DNI."""
+    datos = db.credencial_por_token(token)
+    return templates.TemplateResponse("verificar_credencial.html", {
+        "request": request, "datos": datos,
+        "marca": db.marca_sindicato(datos["sindicato_id"]) if datos else None,
+    })
 
 
 @app.get("/trabajador/salir")

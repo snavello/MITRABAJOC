@@ -114,6 +114,10 @@ class Trabajador(SQLModel, table=True):
     # Estado
     registrado: bool = False               # True cuando el CUIL ya creó su cuenta
     activo: bool = True                    # baja lógica: False = dado de baja (recuperable)
+    # Token opaco para el QR de la credencial (/v/{token}). Optional/NULL para
+    # las filas ya cargadas: se genera solo, la primera vez que hace falta
+    # (ver db.token_credencial), así no hace falta una migración de datos.
+    token: Optional[str] = Field(default=None, unique=True, index=True)
 
 
 class Concepto(SQLModel, table=True):
@@ -368,6 +372,43 @@ def nombre_trabajador(cuil: str, sindicato_id: int) -> str:
         t = s.exec(select(Trabajador).where(
             Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
         return t.nombre if t else ""
+
+
+def token_credencial(cuil: str, sindicato_id: int) -> str:
+    """Token opaco para el QR (/v/{token}). Se genera y se guarda la primera
+    vez que hace falta, así las filas ya cargadas no necesitan una migración
+    de datos aparte."""
+    import secrets
+    with Session(engine) as s:
+        t = s.exec(select(Trabajador).where(
+            Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
+        if not t:
+            return ""
+        if not t.token:
+            t.token = secrets.token_urlsafe(16)
+            s.add(t)
+            s.commit()
+        return t.token
+
+
+def credencial_por_token(token: str) -> Optional[dict]:
+    """Datos públicos de verificación para /v/{token}. A propósito NO incluye
+    el DNI: la idea del QR es que una foto de la credencial no lo filtre."""
+    if not token:
+        return None
+    with Session(engine) as s:
+        t = s.exec(select(Trabajador).where(Trabajador.token == token)).first()
+        if not t or not t.activo:
+            return None
+        sind = s.get(Sindicato, t.sindicato_id)
+        if not sind or not sind.activo:
+            return None
+        return {
+            "sindicato": sind.nombre, "sindicato_id": sind.id,
+            "logo": sind.logo, "color_primario": sind.color_primario,
+            "nombre": t.nombre, "cuil": t.cuil,
+            "numero_credencial": numero_credencial(t.cuil, t.sindicato_id, sind.slug),
+        }
 
 
 def numero_credencial(cuil: str, sindicato_id: int, slug_sindicato: str) -> str:

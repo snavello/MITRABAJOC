@@ -8,3 +8,4 @@ sqlmodel==0.0.22
 python-dotenv==1.0.1
 psycopg[binary]==3.2.3
 alembic==1.19.0
+segno==1.6.6
