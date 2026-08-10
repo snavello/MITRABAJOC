@@ -117,6 +117,28 @@
   .lista .fila:first-child { border-top:none; }
   .disc { margin-top:12px; background:var(--card); border-left:3px solid var(--alerta); border-radius:0 8px 8px 0; padding:12px 14px; font-size:13px; color:#4a4a4a; }
   .alerta-legal { margin-top:12px; background:#fdf3e7; border-left:3px solid #d9a441; border-radius:0 8px 8px 0; padding:12px 14px; font-size:13px; color:#8a5a1a; }
+  .badge-reforma { display:inline-block; background:#e8def5; color:#5b3d8a; font-size:11.5px;
+    font-weight:600; padding:3px 10px; border-radius:20px; margin-bottom:10px; }
+
+  /* ---- Credencial sindical ---- */
+  .cred { background:#fff; border-radius:16px; overflow:hidden; margin-top:8px;
+    box-shadow:0 3px 14px rgba(0,0,0,.10); border:1px solid var(--linea); }
+  .cred-head { background:var(--marca-primario); padding:18px 20px;
+    display:flex; align-items:center; gap:12px; }
+  .cred-logo { max-height:46px; max-width:110px; object-fit:contain;
+    background:#fff; border-radius:8px; padding:4px; }
+  .cred-sind { color:#fff; font-size:16px; font-weight:600; line-height:1.25; }
+  .cred-body { padding:20px; }
+  .cred-lbl { font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--gris); }
+  .cred-nombre { font-size:22px; font-weight:600; color:var(--tinta); margin:2px 0 16px; line-height:1.2; }
+  .cred-datos { display:flex; gap:28px; flex-wrap:wrap; }
+  .cred-datos .cred-val { display:block; font-size:16px; font-weight:600;
+    color:var(--tinta); font-variant-numeric:tabular-nums; }
+  .cred-firma { margin-top:26px; text-align:center; }
+  .cred-firma img { max-height:56px; max-width:200px; object-fit:contain; display:block; margin:0 auto -6px; }
+  .cred-linea { border-top:1px solid #c9c6bf; width:210px; margin:0 auto 6px; }
+  .cred-autoridad { font-size:14px; font-weight:600; color:var(--tinta); }
+  .cred-cargo { font-size:12.5px; color:var(--gris); }
   .cargando { text-align:center; padding:40px 0; }
   .spin { width:52px; height:52px; margin:0 auto; border:3px solid var(--linea); border-top-color:var(--tinta); border-radius:50%; animation:spin .9s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
@@ -300,6 +322,40 @@
     </div>
   </div>
 
+  <!-- ============ PESTAÑA: CREDENCIAL ============ -->
+  {# Solo con sesión de trabajador: la ruta / (demo sin login) no tiene marca. #}
+  {% if marca %}
+  <div class="tpanel" id="tp-credencial">
+    <div class="cred">
+      <div class="cred-head">
+        {% if marca and marca.logo %}
+        <img class="cred-logo" src="/logo/{{ marca.id }}" alt="{{ sindicato }}">
+        {% endif %}
+        <div class="cred-sind">{{ sindicato }}</div>
+      </div>
+      <div class="cred-body">
+        <div class="cred-lbl">Afiliado</div>
+        <div class="cred-nombre">{{ nombre_trab or '—' }}</div>
+
+        <div class="cred-datos">
+          <div><span class="cred-lbl">CUIL</span><span class="cred-val">{{ cuil }}</span></div>
+          {% if documento %}<div><span class="cred-lbl">DNI</span><span class="cred-val">{{ documento }}</span></div>{% endif %}
+        </div>
+
+        <div class="cred-firma">
+          {% if marca and marca.firma %}
+          <img src="/firma/{{ marca.id }}" alt="Firma de la autoridad">
+          {% endif %}
+          <div class="cred-linea"></div>
+          <div class="cred-autoridad">{{ marca.autoridad or '' }}</div>
+          <div class="cred-cargo">{{ marca.cargo_autoridad or '' }}</div>
+        </div>
+      </div>
+    </div>
+    <p class="nota" style="text-align:center;">Credencial digital emitida por {{ sindicato }}.</p>
+  </div>
+  {% endif %}
+
 </div>
 
 <!-- Íconos SVG de línea -->
@@ -309,12 +365,14 @@
     <g id="ic-nov"><path d="M4 8a2 2 0 0 1 2-2h8l6-3v14l-6-3H6a2 2 0 0 1-2-2z"/><line x1="8" y1="19" x2="8" y2="22"/></g>
     <g id="ic-aportes"><line x1="5" y1="21" x2="5" y2="12"/><line x1="12" y1="21" x2="12" y2="4"/><line x1="19" y1="21" x2="19" y2="9"/></g>
     <g id="ic-capac"><path d="M12 4 2 9l10 5 10-5z"/><path d="M6 11v5c0 1 3 2.5 6 2.5s6-1.5 6-2.5v-5"/></g>
+    <g id="ic-cred"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><line x1="14" y1="10" x2="18" y2="10"/><line x1="14" y1="14" x2="18" y2="14"/><path d="M6 16c.6-1.3 1.7-2 3-2s2.4.7 3 2"/></g>
   </defs>
 </svg>
 
 <!-- Barra de pestañas -->
 <nav class="tabbar">
   <button class="tab-t activa" data-tp="recibo"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg></span>Tu Recibo</button>
+  {% if marca %}<button class="tab-t" data-tp="credencial"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-cred"/></svg></span>Credencial</button>{% endif %}
   <button class="tab-t" data-tp="novedades"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-nov"/></svg></span>Novedades</button>
   <button class="tab-t" data-tp="aportes"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg></span>Mis Aportes</button>
   <button class="tab-t" data-tp="capacitacion"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg></span>Capacitación</button>
@@ -401,6 +459,12 @@ function renderTotalesResumen(totales) {
       <span>Total neto</span><span class="imp">${peso(neto)}</span></div>`;
 }
 
+// Marca los recibos con el formato del Anexo III (Dto 407/2026), para que el
+// trabajador reconozca cuándo su empleador ya emite el recibo nuevo.
+function badgeReforma() {
+  return `<div class="badge-reforma">Formato nuevo · reforma laboral (Dto 407/2026)</div>`;
+}
+
 function fmtPeriodo(p) {
   if (!p) return null;
   const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -412,7 +476,9 @@ function fmtPeriodo(p) {
 function renderPreview(d) {
   const r = d.recibo;
   const emp = r.empleado || {}, empresa = r.empleador || {};
-  let h = `<div class="card"><h2>Datos del recibo</h2><div class="datos">`;
+  let h = `<div class="card">`;
+  if (r.formato === 'nuevo') h += badgeReforma();
+  h += `<h2>Datos del recibo</h2><div class="datos">`;
   h += dato('Empleado', emp.apellido_nombre);
   h += dato('CUIL', emp.cuil);
   h += dato('Empresa', empresa.nombre);
@@ -533,7 +599,8 @@ async function reportar(d) {
   if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
   try {
     const r = await fetch('/api/reportar', {
-      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d)
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ recibo: datosLeidos.recibo, resultado: d })
     });
     if (!r.ok) throw new Error();
     $('resultado').innerHTML += `<div class="banner ok" style="margin-top:12px;">Enviado. El sindicato va a revisar tu caso.</div>`;
@@ -583,6 +650,7 @@ function renderHistorial(lista) {
   let h = '';
   lista.forEach((r, i) => {
     const ok = r.estado === 'OK';
+    const esReforma = r.detalle && r.detalle.recibo && r.detalle.recibo.formato === 'nuevo';
     h += `<div class="card" style="margin-top:12px;">
       <div class="fila" style="border:none; padding:0; cursor:pointer;" onclick="toggleHistorialItem(${i})">
         <span><b>${fmtPeriodo(r.periodo)}</b> · ${r.sindicato}<br>
@@ -590,6 +658,7 @@ function renderHistorial(lista) {
         <span>
           <span class="tag" style="background:${ok?'#e3f2ee':'#f8e5e2'}; color:${ok?'var(--agua)':'var(--alerta)'};">${ok?'Todo en orden':'Con discrepancias'}</span>
           ${r.enviado ? '<span class="tag" style="background:#e3f2ee; color:var(--agua); margin-left:4px;">Enviado</span>' : ''}
+          ${esReforma ? '<span class="tag" style="background:#e8def5; color:#5b3d8a; margin-left:4px;">reforma</span>' : ''}
         </span>
       </div>
       <div id="hist-det-${i}" style="display:none; margin-top:10px;"></div>

@@ -44,6 +44,17 @@ app = FastAPI(title="Mi Trabajo — validador de recibos")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
+@app.middleware("http")
+async def sin_cache_en_paneles(request: Request, call_next):
+    """Los paneles se arman en el servidor con datos de la base. Sin esto el
+    navegador los cachea y, al volver a una pestaña después de dar de alta algo,
+    se ve la versión vieja hasta forzar recarga. No toca /logo ni /static."""
+    respuesta = await call_next(request)
+    if respuesta.headers.get("content-type", "").startswith("text/html"):
+        respuesta.headers["Cache-Control"] = "no-store, must-revalidate"
+    return respuesta
+
+
 @app.get("/logo/{sindicato_id}")
 def servir_logo(sindicato_id: int):
     """Sirve el logo de un sindicato guardado en la base (Opción B)."""
@@ -54,6 +65,20 @@ def servir_logo(sindicato_id: int):
         return BinResponse(
             content=sind.logo_datos,
             media_type=sind.logo_mime or "application/octet-stream",
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+
+
+@app.get("/firma/{sindicato_id}")
+def servir_firma(sindicato_id: int):
+    """Firma digitalizada de la autoridad, para la credencial del trabajador."""
+    with db.get_session() as s:
+        sind = s.get(Sindicato, sindicato_id)
+        if not sind or not sind.firma_datos:
+            raise HTTPException(404, "Sin firma")
+        return BinResponse(
+            content=sind.firma_datos,
+            media_type=sind.firma_mime or "application/octet-stream",
             headers={"Cache-Control": "public, max-age=3600"},
         )
 templates = Jinja2Templates(directory="templates")
@@ -139,14 +164,18 @@ def api_validar(request: Request, payload: dict):
 
 @app.post("/api/reportar")
 def api_reportar(request: Request, payload: dict):
+    """payload = {"recibo": {...}, "resultado": {...}} — se guarda el recibo
+    completo, no solo el resultado, para que el sindicato pueda ver los
+    conceptos igual que los ve el trabajador en el preview."""
     sid = sindicato_activo_trabajador(request)
     if not sid:
         raise HTTPException(400, "No pudimos determinar tu sindicato. Volvé a ingresar.")
+    resultado = payload.get("resultado") or {}
     with db.get_session() as s:
         s.add(Reporte(
             sindicato_id=sid,
             fecha=datetime.now().strftime("%d/%m/%Y %H:%M"),
-            cuil=payload.get("cuil", ""), periodo=payload.get("periodo", ""),
+            cuil=resultado.get("cuil", ""), periodo=resultado.get("periodo", ""),
             estado="nuevo", detalle=payload,
         ))
         s.commit()
@@ -639,7 +668,7 @@ async def plataforma_alta_sindicato(
     color_primario: str = Form("#152238"),
     color_secundario: str = Form("#1a7a6b"),
     color_acento: str = Form("#b23a2e"),
-    logo: UploadFile = File(None),
+    logo: UploadFile = File(None), firma: UploadFile = File(None),
 ):
     ses = sesion_actual(request)
     if not ses or ses.get("rol") != "plataforma":
@@ -648,12 +677,16 @@ async def plataforma_alta_sindicato(
     logo_datos, logo_mime, logo_flag = (None, "", "")
     if logo and logo.filename:
         logo_datos, logo_mime, logo_flag = _leer_logo(logo)
+    firma_datos, firma_mime, firma_flag = (None, "", "")
+    if firma and firma.filename:
+        firma_datos, firma_mime, firma_flag = _leer_logo(firma)
     with db.get_session() as s:
         sind = Sindicato(
             nombre=nombre, descripcion=descripcion, slug=slug,
             cuit=cuit, direccion=direccion, mail=mail, telefonos=telefonos,
             autoridad=autoridad, cargo_autoridad=cargo_autoridad,
             logo=logo_flag, logo_datos=logo_datos, logo_mime=logo_mime,
+            firma=firma_flag, firma_datos=firma_datos, firma_mime=firma_mime,
             color_primario=color_primario or "#152238",
             color_secundario=color_secundario or "#1a7a6b",
             color_acento=color_acento or "#b23a2e",
@@ -707,6 +740,7 @@ async def plataforma_editar_sindicato(
     telefonos: str = Form(""), autoridad: str = Form(""), cargo_autoridad: str = Form(""),
     color_primario: str = Form("#152238"), color_secundario: str = Form("#1a7a6b"),
     color_acento: str = Form("#b23a2e"), logo: UploadFile = File(None),
+    firma: UploadFile = File(None),
 ):
     ses = sesion_actual(request)
     if not ses or ses.get("rol") != "plataforma":
@@ -724,6 +758,10 @@ async def plataforma_editar_sindicato(
                 datos, mime, flag = _leer_logo(logo)
                 if datos:
                     sind.logo_datos, sind.logo_mime, sind.logo = datos, mime, flag
+            if firma and firma.filename:
+                datos, mime, flag = _leer_logo(firma)
+                if datos:
+                    sind.firma_datos, sind.firma_mime, sind.firma = datos, mime, flag
             s.add(sind); s.commit()
     return RedirectResponse("/plataforma", status_code=303)
 
@@ -791,6 +829,13 @@ def plataforma_reset_clave(
 def _norm_cuil(cuil: str) -> str:
     import re
     return re.sub(r"[^0-9]", "", cuil or "")
+
+
+def _dni_de_cuil(cuil: str) -> str:
+    """El DNI son los 8 dígitos del medio del CUIL (20-20279041-1 -> 20279041).
+    Cadena vacía si el CUIL no tiene el largo esperado."""
+    digitos = _norm_cuil(cuil)
+    return digitos[2:10] if len(digitos) == 11 else ""
 
 
 @app.get("/ingresar", response_class=HTMLResponse)
@@ -867,6 +912,7 @@ def app_trabajador(request: Request):
         return templates.TemplateResponse("trabajador.html", {
             "request": request, "sindicato": marca["nombre"], "marca": marca,
             "cuil": cuil, "nombre_trab": db.nombre_trabajador(cuil, sid_activo),
+            "documento": _dni_de_cuil(cuil),
         })
     # Varios y no eligió → selector
     return templates.TemplateResponse("elegir_sindicato.html", {

@@ -1,3 +1,67 @@
+{#- Detalle de un recibo tal como lo vio el trabajador, para Reportes y para
+    Afiliados cotizantes. Acepta las dos formas del JSON guardado: la nueva
+    {recibo, resultado} y la vieja (solo el resultado, sin líneas). -#}
+{% macro detalle_recibo(detalle, cuil_fallback='') %}
+  {% set res = detalle.resultado if detalle.resultado is defined else detalle %}
+  {% set rec = detalle.recibo if detalle.recibo is defined else none %}
+  <div class="rep-fila"><span class="rep-k">Estado</span>
+    {% if res.estado == 'OK' %}<span class="tag tag-si">Sin discrepancias</span>
+    {% else %}<span class="tag tag-pend">Con discrepancias</span>{% endif %}
+    {% if rec and rec.formato == 'nuevo' %}<span class="tag tag-reforma">Formato reforma</span>{% endif %}
+  </div>
+  <div class="rep-fila"><span class="rep-k">Período</span> {{ res.periodo or '—' }}</div>
+  <div class="rep-fila"><span class="rep-k">CUIL</span> {{ res.cuil or cuil_fallback or '—' }}</div>
+  {% if rec %}
+    {% if rec.empleador and rec.empleador.nombre %}
+    <div class="rep-fila"><span class="rep-k">Empleador</span> {{ rec.empleador.nombre }}
+      {%- if rec.empleador.cuit %} (CUIT {{ rec.empleador.cuit }}){% endif %}</div>
+    {% endif %}
+    {% if rec.fecha_pago %}<div class="rep-fila"><span class="rep-k">Fecha de cobro</span> {{ rec.fecha_pago }}</div>{% endif %}
+    <div class="rep-sub">Conceptos del recibo ({{ (rec.lineas or [])|length }})</div>
+    {% for ln in rec.lineas or [] %}
+    <div class="linea-concepto {{ 'descuento' if (ln.importe or 0) < 0 }}">
+      <span>{{ ln.descripcion or ln.codigo or '—' }}</span>
+      <span class="imp {{ 'neg' if (ln.importe or 0) < 0 }}">${{ '%.2f'|format(ln.importe or 0) }}</span>
+    </div>
+    {% endfor %}
+  {% endif %}
+  {% if res.totales %}
+  <div class="linea-concepto" style="border-top:2px solid var(--linea); margin-top:4px; font-weight:600;">
+    <span>Total ingresos</span><span class="imp">${{ '%.2f'|format(res.totales.ingresos or 0) }}</span></div>
+  <div class="linea-concepto" style="font-weight:600;">
+    <span>Total descuentos</span><span class="imp neg">${{ '%.2f'|format(res.totales.descuentos or 0) }}</span></div>
+  <div class="linea-concepto" style="font-weight:600;">
+    <span>Total neto</span><span class="imp">${{ '%.2f'|format(res.totales.neto if res.totales.neto is defined else ((res.totales.ingresos or 0) - (res.totales.descuentos or 0))) }}</span></div>
+  <div class="rep-fila muted" style="margin-top:6px;">Total remunerativo: ${{ '%.2f'|format(res.totales.remunerativo or 0) }}</div>
+  {% endif %}
+  {% if rec and rec.formato == 'nuevo' and rec.contribuciones_patronales %}
+  <div class="rep-sub">Contribuciones patronales <span class="muted" style="font-weight:400;">(las paga el empleador, no bajan el neto)</span></div>
+  {% for c in rec.contribuciones_patronales %}
+  <div class="linea-concepto">
+    <span>{{ c.concepto or '—' }}{% if c.porcentaje %} ({{ c.porcentaje }}){% endif %}</span>
+    <span class="imp">${{ '%.2f'|format(c.importe or 0) }}</span>
+  </div>
+  {% endfor %}
+  {% if rec.costo_laboral_total is not none %}
+  <div class="linea-concepto" style="font-weight:600;">
+    <span>Costo laboral total</span><span class="imp">${{ '%.2f'|format(rec.costo_laboral_total) }}</span></div>
+  {% endif %}
+  {% endif %}
+  {% if res.discrepancias %}
+  <div class="rep-sub">Discrepancias detectadas ({{ res.discrepancias|length }})</div>
+  <ul class="rep-lista">{% for x in res.discrepancias %}<li>{{ x.detalle }}</li>{% endfor %}</ul>
+  {% else %}
+  <div class="rep-ok">✓ Todos los aportes coinciden con lo esperado.</div>
+  {% endif %}
+  {% if res.alertas %}
+  <div class="rep-sub" style="color:#8a5a1a;">⚠ Alertas legales</div>
+  <ul class="rep-lista">{% for al in res.alertas %}<li>{{ al.detalle }}</li>{% endfor %}</ul>
+  {% endif %}
+  {% if res.avisos %}
+  <div class="rep-sub">Avisos</div>
+  <ul class="rep-lista">{% for a in res.avisos %}<li>{{ a.descripcion or a }}</li>{% endfor %}</ul>
+  {% endif %}
+{% endmacro %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -76,6 +140,16 @@
   .aviso { background:#fdf6e8; border:1px solid #e8d9b0; border-radius:8px;
            padding:11px 15px; font-size:13.5px; color:#6b5a2f; margin:12px 0; }
   .prov-item { background:#fff; border-radius:6px; padding:9px 11px; margin-top:9px; color:#4a4a4a; }
+  /* Zebra: una línea de cada color, para leer listados largos. Se aplica solo
+     a filas visibles (ver pintarZebra) para que no se rompa al filtrar. */
+  tr.par > td { background:#f6f5f1; }
+  /* Ingreso vs descuento de un vistazo. Pisa la zebra a propósito. */
+  tr.fila-concepto.es-ingreso > td { background:#f2f8fb; }
+  tr.fila-concepto.es-descuento > td { background:#f1efec; }
+  tr.fila-concepto.pend > td { background:#fdf6e8; }
+  .tag-reforma { background:#e8def5; color:#5b3d8a; }
+  .ref-cuadro { display:inline-block; width:11px; height:11px; border-radius:3px;
+                border:1px solid rgba(0,0,0,.12); vertical-align:-1px; margin-right:3px; }
   form.linea { display:flex; gap:7px; flex-wrap:wrap; align-items:center; margin-top:12px;
                background:#fff; border:1px solid var(--linea); border-radius:8px; padding:12px; }
   input, select { padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:13.5px; font-family:inherit; }
@@ -138,40 +212,14 @@
     <tr><th>Fecha</th><th>CUIL</th><th>Período</th><th>Estado</th><th></th></tr>
     {% for r in reportes %}
     <tr class="fila-reporte" data-cuil="{{ r.cuil }}" data-nombre="{{ nombres_por_cuil.get(r.cuil, '') }}" data-fecha="{{ r.fecha }}" data-detalle-id="rep-{{ r.id }}">
-      <td>{{ r.fecha }}</td><td>{{ r.cuil }}</td><td>{{ r.periodo }}</td>
+      <td>{{ r.fecha }}</td><td>{{ r.cuil }}</td>
+        <td>{{ r.periodo }}
+          {%- if r.detalle and r.detalle.recibo and r.detalle.recibo.formato == 'nuevo' %}
+          <span class="tag tag-reforma" title="Recibo con el formato del Anexo III (Dto 407/2026)">reforma</span>{% endif %}</td>
         <td><span class="tag {{ 'tag-pend' if r.estado=='nuevo' else 'tag-si' }}">{{ r.estado }}</span></td>
         <td style="text-align:right;"><button type="button" class="mini" onclick="verReporte({{ r.id }})">Ver</button></td></tr>
     <tr id="rep-{{ r.id }}" style="display:none;"><td colspan="5" style="background:#faf9f6;">
-      <div class="rep-detalle">
-        {% set d = r.detalle %}
-        <div class="rep-fila"><span class="rep-k">Estado</span>
-          {% if d.estado == 'OK' %}<span class="tag tag-si">Sin discrepancias</span>
-          {% else %}<span class="tag tag-pend">Con discrepancias</span>{% endif %}</div>
-        <div class="rep-fila"><span class="rep-k">Período</span> {{ d.periodo or '—' }}</div>
-        <div class="rep-fila"><span class="rep-k">CUIL</span> {{ d.cuil or r.cuil or '—' }}</div>
-        {% if d.totales %}
-        <div class="rep-fila"><span class="rep-k">Total ingresos</span> ${{ '%.2f'|format(d.totales.ingresos or 0) }}</div>
-        <div class="rep-fila"><span class="rep-k">Total remunerativo</span> ${{ '%.2f'|format(d.totales.remunerativo or 0) }}</div>
-        <div class="rep-fila"><span class="rep-k">Total descuentos</span> ${{ '%.2f'|format(d.totales.descuentos or 0) }}</div>
-        <div class="rep-fila"><span class="rep-k">Total neto</span> ${{ '%.2f'|format(d.totales.neto if d.totales.neto is defined else ((d.totales.ingresos or 0) - (d.totales.descuentos or 0))) }}</div>
-        {% endif %}
-        {% if d.discrepancias %}
-        <div class="rep-sub">Discrepancias detectadas ({{ d.discrepancias|length }})</div>
-        <ul class="rep-lista">
-          {% for x in d.discrepancias %}<li>{{ x.detalle }}</li>{% endfor %}
-        </ul>
-        {% else %}
-        <div class="rep-ok">✓ Todos los aportes coinciden con lo esperado.</div>
-        {% endif %}
-        {% if d.alertas %}
-        <div class="rep-sub" style="color:#8a5a1a;">⚠ Alertas legales</div>
-        <ul class="rep-lista">{% for al in d.alertas %}<li>{{ al.detalle }}</li>{% endfor %}</ul>
-        {% endif %}
-        {% if d.avisos %}
-        <div class="rep-sub">Avisos</div>
-        <ul class="rep-lista">{% for a in d.avisos %}<li>{{ a }}</li>{% endfor %}</ul>
-        {% endif %}
-      </div>
+      <div class="rep-detalle">{{ detalle_recibo(r.detalle, r.cuil) }}</div>
     </td></tr>
     {% else %}<tr><td colspan="5" class="muted">Sin reportes todavía.</td></tr>{% endfor %}
   </table>
@@ -256,10 +304,15 @@
   <div class="aviso"><strong>{{ pendientes|length }} concepto(s) por revisar.</strong>
     Se detectaron en recibos y están marcados en amarillo. Editalos para confirmar tipo y si son remunerativos.</div>
   {% endif %}
+  <p class="muted" style="font-size:12.5px;">
+    <span class="ref-cuadro" style="background:#f2f8fb;"></span> ingreso
+    <span class="ref-cuadro" style="background:#f1efec; margin-left:10px;"></span> descuento
+    <span class="ref-cuadro" style="background:#fdf6e8; margin-left:10px;"></span> por revisar
+  </p>
   <table>
     <tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Remun.</th><th>Categoría sindical</th><th>Alias</th><th></th></tr>
     {% for c in conceptos %}
-    <tr class="{{ 'pend' if c.pendiente_revision }}">
+    <tr class="fila-concepto {{ 'pend' if c.pendiente_revision else ('es-ingreso' if c.tipo=='ingreso' else 'es-descuento') }}">
       <td><code>{{ c.codigo }}</code></td>
       <td>{{ c.nombre }}{% if c.pendiente_revision %}<span class="tag tag-pend">nuevo</span>{% endif %}</td>
       <td>{{ c.tipo }}</td>
@@ -421,41 +474,15 @@
     <tr><th>Fecha de envío</th><th>CUIL</th><th>Período</th><th>Monto de cuota</th><th></th></tr>
     {% for e in envios %}
     <tr class="fila-envio" data-cuil="{{ e.cuil }}" data-nombre="{{ nombres_por_cuil.get(e.cuil, '') }}" data-fecha="{{ e.fecha }}" data-detalle-id="envio-{{ e.id }}">
-      <td>{{ e.fecha }}</td><td>{{ e.cuil }}</td><td>{{ e.periodo }}</td>
+      <td>{{ e.fecha }}</td><td>{{ e.cuil }}</td>
+        <td>{{ e.periodo }}
+          {%- if e.detalle and e.detalle.recibo and e.detalle.recibo.formato == 'nuevo' %}
+          <span class="tag tag-reforma" title="Recibo con el formato del Anexo III (Dto 407/2026)">reforma</span>{% endif %}</td>
         <td>${{ '%.2f'|format(e.monto_cuota) }}</td>
         <td style="text-align:right;">{% if e.detalle %}<button type="button" class="mini" onclick="verEnvio({{ e.id }})">Ver</button>{% endif %}</td></tr>
     {% if e.detalle %}
     <tr id="envio-{{ e.id }}" style="display:none;"><td colspan="5" style="background:#faf9f6;">
-      <div class="rep-detalle">
-        {% set rec = e.detalle.recibo or {} %}
-        {% set res = e.detalle.resultado or {} %}
-        <div class="rep-sub">Conceptos del recibo</div>
-        {% for ln in rec.lineas or [] %}
-        <div class="linea-concepto {{ 'descuento' if (ln.importe or 0) < 0 }}">
-          <span>{{ ln.descripcion or ln.codigo or '—' }}</span>
-          <span class="imp {{ 'neg' if (ln.importe or 0) < 0 }}">${{ '%.2f'|format(ln.importe or 0) }}</span>
-        </div>
-        {% endfor %}
-        {% if res.totales %}
-        <div class="linea-concepto" style="border-top:2px solid var(--linea); margin-top:4px; font-weight:600;">
-          <span>Total ingresos</span><span class="imp">${{ '%.2f'|format(res.totales.ingresos or 0) }}</span>
-        </div>
-        <div class="linea-concepto" style="font-weight:600;">
-          <span>Total descuentos</span><span class="imp neg">${{ '%.2f'|format(res.totales.descuentos or 0) }}</span>
-        </div>
-        <div class="linea-concepto" style="font-weight:600;">
-          <span>Total neto</span><span class="imp">${{ '%.2f'|format(res.totales.neto if res.totales.neto is defined else ((res.totales.ingresos or 0) - (res.totales.descuentos or 0))) }}</span>
-        </div>
-        {% endif %}
-        {% if res.discrepancias %}
-        <div class="rep-sub">Discrepancias</div>
-        <ul class="rep-lista">{% for x in res.discrepancias %}<li>{{ x.detalle }}</li>{% endfor %}</ul>
-        {% endif %}
-        {% if res.alertas %}
-        <div class="rep-sub" style="color:#8a5a1a;">⚠ Alertas legales</div>
-        <ul class="rep-lista">{% for al in res.alertas %}<li>{{ al.detalle }}</li>{% endfor %}</ul>
-        {% endif %}
-      </div>
+      <div class="rep-detalle">{{ detalle_recibo(e.detalle, e.cuil) }}</div>
     </td></tr>
     {% endif %}
     {% else %}
@@ -536,6 +563,7 @@ function aplicarFiltro(prefix, selectorFilas) {
   });
   const contador = document.getElementById('f-'+prefix+'-cant');
   if (contador) contador.textContent = visibles + (visibles === 1 ? ' resultado' : ' resultados');
+  pintarZebra(selectorFilas);
 }
 
 function limpiarFiltro(prefix, selectorFilas) {
@@ -545,6 +573,20 @@ function limpiarFiltro(prefix, selectorFilas) {
   });
   aplicarFiltro(prefix, selectorFilas);
 }
+
+// Una línea de cada color en listados largos. Se recalcula sobre las filas
+// VISIBLES: si se pintara con CSS nth-child, al filtrar quedaría desparejo.
+function pintarZebra(selectorFilas) {
+  let visibles = 0;
+  document.querySelectorAll(selectorFilas).forEach(fila => {
+    if (fila.style.display === 'none') return;
+    fila.classList.toggle('par', visibles % 2 === 1);
+    visibles++;
+  });
+}
+
+const TABLAS_ZEBRA = ['.fila-reporte', '.fila-envio', '.fila-trabajador'];
+TABLAS_ZEBRA.forEach(pintarZebra);
 
 // ---------- Ver detalle de reporte ----------
 function verReporte(id) {
