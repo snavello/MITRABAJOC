@@ -153,6 +153,49 @@
   .cargando { text-align:center; padding:40px 0; }
   .spin { width:52px; height:52px; margin:0 auto; border:3px solid var(--linea); border-top-color:var(--tinta); border-radius:50%; animation:spin .9s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* Carga grande: leyendo/decodificando el recibo con IA. Documento con un
+     haz que lo "escanea" (da la idea de lectura, no un giro genérico) +
+     barra de progreso indeterminada + puntos suspensivos animados. */
+  .cargando-ia { text-align:center; padding:28px 0 36px; }
+  .ia-doc-wrap { position:relative; width:104px; height:130px; margin:0 auto; }
+  .ia-doc-wrap svg { width:100%; height:100%; display:block; overflow:visible; }
+  .ia-doc-hoja { fill:#fff; stroke:var(--linea); stroke-width:2; filter:drop-shadow(0 4px 10px rgba(21,34,56,.12)); }
+  .ia-doc-renglon { fill:var(--linea); animation:ia-parpadeo-renglon 1.8s ease-in-out infinite; }
+  .ia-doc-renglon:nth-child(3) { animation-delay:.15s; }
+  .ia-doc-renglon:nth-child(4) { animation-delay:.3s; }
+  .ia-doc-renglon:nth-child(5) { animation-delay:.45s; }
+  .ia-doc-renglon:nth-child(6) { animation-delay:.6s; }
+  @keyframes ia-parpadeo-renglon { 0%,100% { fill:var(--linea); } 50% { fill:var(--agua); opacity:.55; } }
+  .ia-scan { position:absolute; left:2px; right:2px; height:30px; border-radius:6px;
+    background:linear-gradient(180deg, transparent, rgba(26,122,107,.30), rgba(26,122,107,.55), rgba(26,122,107,.30), transparent);
+    animation:ia-escanear 1.7s cubic-bezier(.45,0,.55,1) infinite; pointer-events:none; }
+  @keyframes ia-escanear { 0% { top:-30px; } 100% { top:130px; } }
+  .ia-barra { width:190px; height:6px; border-radius:99px; background:var(--linea); margin:22px auto 0; overflow:hidden; }
+  .ia-barra-fill { width:42%; height:100%; border-radius:99px; background:var(--agua); animation:ia-avanzar 1.25s ease-in-out infinite; }
+  @keyframes ia-avanzar { 0% { margin-left:-42%; } 100% { margin-left:100%; } }
+  .ia-titulo { font-weight:600; margin-top:20px; font-size:16px; color:var(--tinta); }
+  .ia-sub { font-size:13px; color:var(--gris); margin-top:5px; }
+  .ia-puntos span { opacity:0; animation:ia-parpadeo-punto 1.4s infinite; }
+  .ia-puntos span:nth-child(2) { animation-delay:.2s; }
+  .ia-puntos span:nth-child(3) { animation-delay:.4s; }
+  @keyframes ia-parpadeo-punto { 0%,100% { opacity:0; } 50% { opacity:1; } }
+
+  /* Check verde animado: confirmación visible de un envío, en vez de un
+     cartel que puede pasar desapercibido más abajo. */
+  .check-enviado { display:flex; align-items:center; gap:10px; padding:10px 2px; }
+  .check-enviado svg { width:32px; height:32px; flex-shrink:0; }
+  .check-circulo { fill:none; stroke:var(--agua); stroke-width:3;
+    stroke-dasharray:151; stroke-dashoffset:151; animation:check-dibujar-circulo .5s ease-out forwards; }
+  .check-marca { fill:none; stroke:var(--agua); stroke-width:4; stroke-linecap:round; stroke-linejoin:round;
+    stroke-dasharray:40; stroke-dashoffset:40; animation:check-dibujar-marca .35s ease-out .45s forwards; }
+  @keyframes check-dibujar-circulo { to { stroke-dashoffset:0; } }
+  @keyframes check-dibujar-marca { to { stroke-dashoffset:0; } }
+  .check-enviado span { font-weight:600; color:var(--tinta); font-size:14.5px; }
+  @media (prefers-reduced-motion:reduce) {
+    .ia-scan, .ia-barra-fill, .ia-doc-renglon, .ia-puntos span { animation:none; }
+    .check-circulo, .check-marca { animation:none; stroke-dashoffset:0; }
+  }
   .nota { font-size:11px; color:#8a887f; margin-top:22px; line-height:1.5; }
   /* Barra de identidad del trabajador */
   .ident { display:flex; align-items:center; gap:10px; padding:10px 18px;
@@ -443,12 +486,31 @@ $('archivo').onchange = e => {
 $('otro').onclick = () => { archivo = null; $('archivo').value = ''; ver('inicio'); };
 $('reintentar').onclick = () => { archivo = null; $('archivo').value = ''; datosLeidos = null; $('resultado').innerHTML=''; ver('inicio'); };
 
+// Carga grande (documento "escaneándose" + barra de progreso) para los pasos
+// donde la IA lee/decodifica el recibo — más visible que el spinner chico.
+function cargandoIA(titulo, subtitulo) {
+  return `<div class="cargando-ia">
+    <div class="ia-doc-wrap">
+      <svg viewBox="0 0 104 130" aria-hidden="true">
+        <rect class="ia-doc-hoja" x="4" y="4" width="96" height="122" rx="10"/>
+        <rect class="ia-doc-renglon" x="20" y="26" width="64" height="6" rx="3"/>
+        <rect class="ia-doc-renglon" x="20" y="42" width="64" height="6" rx="3"/>
+        <rect class="ia-doc-renglon" x="20" y="58" width="44" height="6" rx="3"/>
+        <rect class="ia-doc-renglon" x="20" y="80" width="64" height="6" rx="3"/>
+        <rect class="ia-doc-renglon" x="20" y="96" width="36" height="6" rx="3"/>
+      </svg>
+      <div class="ia-scan"></div>
+    </div>
+    <div class="ia-barra"><div class="ia-barra-fill"></div></div>
+    <div class="ia-titulo">${titulo}</div>
+    <div class="ia-sub">${subtitulo}<span class="ia-puntos"><span>.</span><span>.</span><span>.</span></span></div>
+  </div>`;
+}
+
 // Paso 1 → 2: leer el recibo y mostrar el preview
 $('leer').onclick = async () => {
   ver('listo'); $('listo').style.display = 'none';
-  $('resultado').innerHTML = `<div class="cargando"><div class="spin"></div>
-    <div style="font-weight:500; margin-top:20px;">Leyendo tu recibo…</div>
-    <div style="font-size:13px; color:var(--gris); margin-top:6px;">Interpretando los conceptos.</div></div>`;
+  $('resultado').innerHTML = cargandoIA('Leyendo tu recibo', 'Interpretando los conceptos');
   const fd = new FormData(); fd.append('archivo', archivo);
   try {
     const r = await fetch('/api/leer', { method:'POST', body:fd });
@@ -585,8 +647,7 @@ function setRemun(idx, valor, btn) {
 // Paso 2 → 3: confirmar y validar
 $('continuar').onclick = async () => {
   ver('preview'); $('preview').style.display = 'none';
-  $('resultado').innerHTML = `<div class="cargando"><div class="spin"></div>
-    <div style="font-weight:500; margin-top:20px;">Verificando los aportes…</div></div>`;
+  $('resultado').innerHTML = cargandoIA('Verificando los aportes', 'Comparando contra las fórmulas del convenio');
   try {
     const r = await fetch('/api/validar', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -644,10 +705,23 @@ async function reportar(d) {
       body: JSON.stringify({ recibo: datosLeidos.recibo, resultado: d })
     });
     if (!r.ok) throw new Error();
-    $('resultado').innerHTML += `<div class="banner ok" style="margin-top:12px;">Enviado. El sindicato va a revisar tu caso.</div>`;
+    // Reemplaza el botón EN EL LUGAR por un check animado: antes se agregaba
+    // un cartel más abajo (pasaba desapercibido) y el botón quedaba trabado
+    // en "Enviando…" porque `innerHTML +=` reconstruye todo el contenedor y
+    // pierde la referencia al botón sin volver a tocar su texto.
+    if (btn) {
+      btn.outerHTML = `<div class="check-enviado">
+        <svg viewBox="0 0 52 52" aria-hidden="true">
+          <circle class="check-circulo" cx="26" cy="26" r="24"/>
+          <path class="check-marca" d="M15 27l7.5 7.5L37 18"/>
+        </svg>
+        <span>Enviado — el sindicato va a revisar tu caso</span>
+      </div>`;
+    }
   } catch (err) {
     if (btn) { btn.disabled = false; btn.textContent = 'Reportar al sindicato'; }
-    $('resultado').innerHTML += `<div class="banner mal" style="margin-top:12px;">No se pudo enviar el reporte. Probá de nuevo.</div>`;
+    $('resultado').insertAdjacentHTML('beforeend',
+      `<div class="banner mal" style="margin-top:12px;">No se pudo enviar el reporte. Probá de nuevo.</div>`);
   }
 }
 
