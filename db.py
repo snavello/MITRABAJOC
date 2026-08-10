@@ -118,6 +118,15 @@ class Trabajador(SQLModel, table=True):
     # las filas ya cargadas: se genera solo, la primera vez que hace falta
     # (ver db.token_credencial), así no hace falta una migración de datos.
     token: Optional[str] = Field(default=None, unique=True, index=True)
+    # Código de credencial VISIBLE (distinto del token): lo genera a mano el
+    # admin del sindicato con el botón "Generar credencial", no se inventa
+    # solo. NULL hasta que se genera. Formato: 5 letras del sindicato + 8
+    # alfanuméricos al azar (ver db.generar_codigo_credencial).
+    codigo_credencial: Optional[str] = Field(default=None, unique=True, index=True)
+    # Vigencia de la credencial, la carga el admin en el alta o la edición
+    # del trabajador. Fecha como string "AAAA-MM-DD" (formato de <input
+    # type=date>), igual que se recibe del formulario.
+    vigencia_credencial: Optional[str] = Field(default=None)
 
 
 class Concepto(SQLModel, table=True):
@@ -407,18 +416,48 @@ def credencial_por_token(token: str) -> Optional[dict]:
             "sindicato": sind.nombre, "sindicato_id": sind.id,
             "logo": sind.logo, "color_primario": sind.color_primario,
             "nombre": t.nombre, "cuil": t.cuil,
-            "numero_credencial": numero_credencial(t.cuil, t.sindicato_id, sind.slug),
+            "codigo_credencial": t.codigo_credencial,
+            "vigencia_credencial": t.vigencia_credencial,
         }
 
 
-def numero_credencial(cuil: str, sindicato_id: int, slug_sindicato: str) -> str:
-    """Número de credencial derivado del id del empadronamiento: estable,
-    legible, sin campo ni migración nueva. Ej: 'UOM-000123'."""
+def credencial_de(cuil: str, sindicato_id: int) -> Optional[dict]:
+    """Código y vigencia REALES (persistidos) de la credencial de un
+    empadronamiento. None si el trabajador no existe; codigo=None si el admin
+    todavía no la generó — eso es lo que decide si la app del trabajador
+    muestra la credencial o un estado "pendiente"."""
     with Session(engine) as s:
         t = s.exec(select(Trabajador).where(
             Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
         if not t:
+            return None
+        return {"codigo": t.codigo_credencial, "vigencia": t.vigencia_credencial}
+
+
+def generar_codigo_credencial(trabajador_id: int, sindicato_id: int, nombre_sindicato: str) -> str:
+    """Genera y persiste un código de credencial nuevo para ese empadronamiento
+    (lo dispara el admin con el botón "Generar credencial", nunca es
+    automático). Formato: 5 letras del sindicato + 8 alfanuméricos al azar.
+
+    Los 8 caracteres salen de `secrets` (criptográficamente aleatorio), NO de
+    una semilla reproducible: un código de credencial que se puede volver a
+    generar sabiendo de qué sindicato es, no sirve como credencial. Reintenta
+    si por casualidad ya existe (el índice único corta cualquier duda)."""
+    import secrets
+    import string
+    letras = "".join(ch for ch in (nombre_sindicato or "").upper() if ch.isalnum())[:5]
+    prefijo = (letras or "SIND").ljust(5, "X")
+    alfabeto = string.ascii_uppercase + string.digits
+    with Session(engine) as s:
+        t = s.get(Trabajador, trabajador_id)
+        if not t or t.sindicato_id != sindicato_id:
             return ""
-        letras = "".join(ch for ch in (slug_sindicato or "") if ch.isalnum())
-        prefijo = (letras[:6] or "SIND").upper()
-        return f"{prefijo}-{t.id:06d}"
+        for _ in range(25):
+            sufijo = "".join(secrets.choice(alfabeto) for _ in range(8))
+            codigo = f"{prefijo}{sufijo}"
+            if not s.exec(select(Trabajador).where(Trabajador.codigo_credencial == codigo)).first():
+                t.codigo_credencial = codigo
+                s.add(t)
+                s.commit()
+                return codigo
+        raise RuntimeError("No se pudo generar un código de credencial único, reintentá.")

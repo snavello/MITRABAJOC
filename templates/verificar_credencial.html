@@ -39,7 +39,11 @@
       <div class="lbl">CUIL</div>
       <div class="val">{{ datos.cuil }}</div>
       <div class="lbl">N° de credencial</div>
-      <div class="val">{{ datos.numero_credencial }}</div>
+      <div class="val">{{ datos.codigo_credencial or '—' }}</div>
+      {% if datos.vigencia_credencial %}
+      <div class="lbl">Vigencia</div>
+      <div class="val">{{ datos.vigencia_credencial }}</div>
+      {% endif %}
       <p class="nota">Verificado por Mi Trabajo contra los datos de {{ datos.sindicato }}. Por privacidad, esta página no muestra el documento del afiliado.</p>
     </div>
     {% else %}

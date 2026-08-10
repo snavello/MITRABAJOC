@@ -1,4 +1,4 @@
-"""Filigrana determinística y número de credencial sin duplicar guiones.
+"""Filigrana determinística y generación del código de credencial persistido.
 Correr con: .venv/Scripts/python.exe test_credencial_v2.py
 """
 import os
@@ -15,9 +15,12 @@ db.crear_tablas()
 with db.get_session() as s:
     sind = Sindicato(nombre="Unión Obrera Metalúrgica", slug="union-obrera-metalurgica")
     s.add(sind); s.commit(); s.refresh(sind)
-    s.add(Trabajador(sindicato_id=sind.id, cuil="20111111119", nombre="Juan"))
+    trab = Trabajador(sindicato_id=sind.id, cuil="20111111119", nombre="Juan")
+    s.add(trab)
     s.commit()
+    s.refresh(trab)
     SID = sind.id
+    TRAB_ID = trab.id
 
 
 def test_filigrana_es_determinista():
@@ -47,18 +50,36 @@ def test_filigrana_no_rompe_con_nombre_vacio():
     print("OK  test_filigrana_no_rompe_con_nombre_vacio")
 
 
-def test_numero_credencial_no_duplica_guion():
-    # El bug real: slug ya trae guiones ('union-obrera-metalurgica'), y
-    # slug[:6] se comía uno ('union-'), dando 'UNION--000001'.
-    numero = db.numero_credencial("20111111119", SID, "union-obrera-metalurgica")
-    assert numero == "UNIONO-000001", numero
-    assert "--" not in numero, numero
-    print(f"OK  test_numero_credencial_no_duplica_guion ({numero})")
+def test_generar_codigo_credencial_formato():
+    codigo = db.generar_codigo_credencial(TRAB_ID, SID, "Unión Obrera Metalúrgica")
+    assert len(codigo) == 13, codigo  # 5 letras del sindicato + 8 alfanuméricos
+    prefijo, sufijo = codigo[:5], codigo[5:]
+    assert prefijo == "UNIÓN", prefijo  # primeros 5 caracteres alfanuméricos del nombre, en mayúsculas
+    assert sufijo.isalnum() and sufijo == sufijo.upper(), codigo
+    print(f"OK  test_generar_codigo_credencial_formato ({codigo})")
 
 
-def test_numero_credencial_sin_empadronamiento_es_vacio():
-    assert db.numero_credencial("20999999999", SID, "union-obrera-metalurgica") == ""
-    print("OK  test_numero_credencial_sin_empadronamiento_es_vacio")
+def test_generar_codigo_credencial_persiste_y_regenera():
+    c1 = db.generar_codigo_credencial(TRAB_ID, SID, "Unión Obrera Metalúrgica")
+    datos = db.credencial_de("20111111119", SID)
+    assert datos["codigo"] == c1
+    c2 = db.generar_codigo_credencial(TRAB_ID, SID, "Unión Obrera Metalúrgica")
+    assert c2 != c1, "regenerar tiene que dar un código nuevo"
+    assert db.credencial_de("20111111119", SID)["codigo"] == c2
+    print("OK  test_generar_codigo_credencial_persiste_y_regenera")
+
+
+def test_credencial_de_sin_generar_es_none():
+    with db.get_session() as s:
+        otro = Trabajador(sindicato_id=SID, cuil="20999999999", nombre="Sin Generar")
+        s.add(otro); s.commit()
+    assert db.credencial_de("20999999999", SID)["codigo"] is None
+    print("OK  test_credencial_de_sin_generar_es_none")
+
+
+def test_credencial_de_sin_empadronamiento_es_none():
+    assert db.credencial_de("20888888888", SID) is None
+    print("OK  test_credencial_de_sin_empadronamiento_es_none")
 
 
 if __name__ == "__main__":
@@ -66,6 +87,8 @@ if __name__ == "__main__":
     test_filigrana_varia_por_sindicato()
     test_filigrana_es_svg_valido_y_usa_los_colores()
     test_filigrana_no_rompe_con_nombre_vacio()
-    test_numero_credencial_no_duplica_guion()
-    test_numero_credencial_sin_empadronamiento_es_vacio()
-    print("\nTodo OK — filigrana y número de credencial.")
+    test_generar_codigo_credencial_formato()
+    test_generar_codigo_credencial_persiste_y_regenera()
+    test_credencial_de_sin_generar_es_none()
+    test_credencial_de_sin_empadronamiento_es_none()
+    print("\nTodo OK — filigrana y código de credencial.")

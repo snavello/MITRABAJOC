@@ -14,7 +14,7 @@ def qr_svg(datos: str, escala: int = 4) -> str:
     return buf.getvalue().decode("utf-8")
 
 
-def url_verificacion(base_url: str, token: str, nombre: str, cuil: str, numero_credencial: str) -> str:
+def url_verificacion(base_url: str, token: str, nombre: str, cuil: str, codigo_credencial: str) -> str:
     """URL que va adentro del QR. Doble propósito, a propósito:
     - Escaneada con conexión: /v/{token} muestra los datos verificados por
       el servidor (el token es lo único que se usa para buscar; los query
@@ -25,5 +25,5 @@ def url_verificacion(base_url: str, token: str, nombre: str, cuil: str, numero_c
     """
     from urllib.parse import urlencode
     base = base_url.rstrip("/")
-    query = urlencode({"n": nombre or "", "c": cuil or "", "num": numero_credencial or ""})
+    query = urlencode({"n": nombre or "", "c": cuil or "", "num": codigo_credencial or ""})
     return f"{base}/v/{token}?{query}"

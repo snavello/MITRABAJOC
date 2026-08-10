@@ -351,12 +351,10 @@
             <div class="cred-lbl">Afiliado</div>
             <div class="cred-nombre">{{ nombre_trab or '—' }}</div>
           </div>
-          {% if numero_credencial %}
           <div class="cred-nro">
             <div class="cred-lbl">N° credencial</div>
-            <div class="cred-val">{{ numero_credencial }}</div>
+            <div class="cred-val">{{ codigo_credencial or 'Pendiente' }}</div>
           </div>
-          {% endif %}
         </div>
 
         <div class="cred-datos">
@@ -385,7 +383,11 @@
       </div>
       {% endif %}
     </div>
+    {% if codigo_credencial %}
     <p class="nota" style="text-align:center;">Credencial digital emitida por {{ sindicato }}.</p>
+    {% else %}
+    <p class="nota" style="text-align:center;">Tu sindicato todavía no generó el código de tu credencial. El QR de verificación aparecerá cuando esté generado.</p>
+    {% endif %}
   </div>
   {% endif %}
 

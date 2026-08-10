@@ -322,6 +322,7 @@ def admin_trabajador_alta(
     calle: str = Form(""), numero: str = Form(""), piso: str = Form(""),
     ciudad: str = Form(""), provincia: str = Form(""),
     telefono: str = Form(""), mail: str = Form(""),
+    vigencia_credencial: str = Form(""),
 ):
     """Alta o modificación manual de un trabajador. Obligatorios: cuil y nombre."""
     sid = exigir_sindicato(request)
@@ -336,6 +337,7 @@ def admin_trabajador_alta(
                 t.calle, t.numero, t.piso = calle, numero, piso
                 t.ciudad, t.provincia = ciudad, provincia
                 t.telefono, t.mail = telefono, mail
+                t.vigencia_credencial = vigencia_credencial or None
                 s.add(t)
         else:    # alta — evitar duplicado de CUIL en el mismo sindicato
             existe = s.exec(select(Trabajador).where(
@@ -344,8 +346,23 @@ def admin_trabajador_alta(
                 s.add(Trabajador(
                     sindicato_id=sid, cuil=cuil_norm, nombre=nombre.strip(),
                     calle=calle, numero=numero, piso=piso, ciudad=ciudad,
-                    provincia=provincia, telefono=telefono, mail=mail))
+                    provincia=provincia, telefono=telefono, mail=mail,
+                    vigencia_credencial=vigencia_credencial or None))
         s.commit()
+    return RedirectResponse("/admin#trabajadores", status_code=303)
+
+
+@app.post("/admin/trabajador/generar-credencial")
+def admin_generar_credencial(request: Request, id: int = Form(...)):
+    """El admin genera (o regenera) el código de credencial de un trabajador.
+    Nunca es automático — siempre lo dispara este botón."""
+    sid = exigir_sindicato(request)
+    with db.get_session() as s:
+        t = s.get(Trabajador, id)
+        if not t or t.sindicato_id != sid:
+            raise HTTPException(403, "No autorizado")
+        sind = s.get(Sindicato, sid)
+    db.generar_codigo_credencial(id, sid, sind.nombre if sind else "")
     return RedirectResponse("/admin#trabajadores", status_code=303)
 
 
@@ -833,6 +850,18 @@ def _norm_cuil(cuil: str) -> str:
     return re.sub(r"[^0-9]", "", cuil or "")
 
 
+def _fmt_fecha_ar(iso: str) -> str:
+    """'AAAA-MM-DD' (lo que manda <input type=date>) -> 'DD/MM/AAAA'. None o
+    formato inesperado -> lo devuelve tal cual (o vacío)."""
+    if not iso:
+        return ""
+    partes = iso.split("-")
+    if len(partes) == 3 and all(p.isdigit() for p in partes):
+        a, m, d = partes
+        return f"{d}/{m}/{a}"
+    return iso
+
+
 def _dni_de_cuil(cuil: str) -> str:
     """El DNI son los 8 dígitos del medio del CUIL (20-20279041-1 -> 20279041).
     Cadena vacía si el CUIL no tiene el largo esperado."""
@@ -911,19 +940,24 @@ def app_trabajador(request: Request):
 
     if sid_activo:
         marca = db.marca_sindicato(sid_activo)
-        slug = next((sd["slug"] for sd in sinds if sd["id"] == sid_activo), "")
-        return templates.TemplateResponse("trabajador.html", {
+        credencial = db.credencial_de(cuil, sid_activo) or {}
+        codigo_cred = credencial.get("codigo")
+        contexto = {
             "request": request, "sindicato": marca["nombre"], "marca": marca,
             "cuil": cuil, "nombre_trab": db.nombre_trabajador(cuil, sid_activo),
             "documento": _dni_de_cuil(cuil),
-            "numero_credencial": (numero_cred := db.numero_credencial(cuil, sid_activo, slug)),
-            "vigencia_credencial": f"31/12/{datetime.now().year}",
+            "codigo_credencial": codigo_cred,
+            "vigencia_credencial": _fmt_fecha_ar(credencial.get("vigencia")),
             "filigrana": filigrana_svg(marca["nombre"], marca["color_secundario"], marca["color_acento"]),
-            "qr_credencial": qr_svg(url_verificacion(
+        }
+        # El QR (y la verificación pública que hay detrás) solo tiene sentido
+        # una vez que el sindicato generó el código real de la credencial.
+        if codigo_cred:
+            contexto["qr_credencial"] = qr_svg(url_verificacion(
                 str(request.base_url), db.token_credencial(cuil, sid_activo),
-                db.nombre_trabajador(cuil, sid_activo), cuil, numero_cred,
-            )),
-        })
+                db.nombre_trabajador(cuil, sid_activo), cuil, codigo_cred,
+            ))
+        return templates.TemplateResponse("trabajador.html", contexto)
     # Varios y no eligió → selector
     return templates.TemplateResponse("elegir_sindicato.html", {
         "request": request, "sindicatos": sinds,
@@ -950,6 +984,8 @@ def verificar_credencial(token: str, request: Request):
     """Página pública de verificación de una credencial (detrás del QR). No
     requiere login: es lo que ve quien escanea. A propósito NO muestra el DNI."""
     datos = db.credencial_por_token(token)
+    if datos:
+        datos["vigencia_credencial"] = _fmt_fecha_ar(datos.get("vigencia_credencial"))
     return templates.TemplateResponse("verificar_credencial.html", {
         "request": request, "datos": datos,
         "marca": db.marca_sindicato(datos["sindicato_id"]) if datos else None,

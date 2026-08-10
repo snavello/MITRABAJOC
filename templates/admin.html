@@ -367,7 +367,7 @@
       <span class="f-cant" id="f-trab-cant"></span>
     </div>
     <table>
-      <tr><th>CUIL</th><th>Nombre</th><th>Ubicación</th><th>Estado</th><th></th></tr>
+      <tr><th>CUIL</th><th>Nombre</th><th>Ubicación</th><th>Estado</th><th>Credencial</th><th></th></tr>
       {% for t in trabajadores %}
       <tr class="fila-trabajador" data-cuil="{{ t.cuil }}" data-nombre="{{ t.nombre }}" {% if not t.activo %}style="opacity:.5;"{% endif %}>
         <td><code>{{ t.cuil }}</code></td>
@@ -378,9 +378,17 @@
           {% elif t.registrado %}<span class="tag tag-si">registrado</span>
           {% else %}<span class="muted">sin registrar</span>{% endif %}
         </td>
+        <td class="muted" style="white-space:nowrap;">
+          {% if t.codigo_credencial %}
+          <code>{{ t.codigo_credencial }}</code>{% if t.vigencia_credencial %}<br>vence {{ t.vigencia_credencial }}{% endif %}
+          {% else %}sin generar{% endif %}
+        </td>
         <td style="white-space:nowrap; text-align:right;">
           <button type="button" class="mini"
-            onclick='editarTrab({{ {"id":t.id,"cuil":t.cuil,"nombre":t.nombre,"calle":t.calle,"numero":t.numero,"piso":t.piso,"ciudad":t.ciudad,"provincia":t.provincia,"telefono":t.telefono,"mail":t.mail} | tojson }})'>Editar</button>
+            onclick='editarTrab({{ {"id":t.id,"cuil":t.cuil,"nombre":t.nombre,"calle":t.calle,"numero":t.numero,"piso":t.piso,"ciudad":t.ciudad,"provincia":t.provincia,"telefono":t.telefono,"mail":t.mail,"vigencia_credencial":t.vigencia_credencial} | tojson }})'>Editar</button>
+          <form method="post" action="/admin/trabajador/generar-credencial" style="display:inline;" onsubmit="return confirm('{% if t.codigo_credencial %}¿Regenerar el código de credencial? El anterior deja de ser válido.{% else %}¿Generar el código de credencial?{% endif %}');">
+            <input type="hidden" name="id" value="{{ t.id }}"><button class="mini">{% if t.codigo_credencial %}Regenerar{% else %}Generar{% endif %} credencial</button>
+          </form>
           {% if t.activo %}
           <form method="post" action="/admin/trabajador/baja" style="display:inline;" onsubmit="return confirm('¿Dar de baja a este trabajador? Se puede reactivar después.');">
             <input type="hidden" name="id" value="{{ t.id }}"><button class="mini borrar">Baja</button>
@@ -393,7 +401,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="5" class="muted">No hay trabajadores cargados. Usá "Alta manual" o "Alta masiva".</td></tr>
+      <tr><td colspan="6" class="muted">No hay trabajadores cargados. Usá "Alta manual" o "Alta masiva".</td></tr>
       {% endfor %}
     </table>
   </div>
@@ -417,6 +425,7 @@
         </div>
         <div class="campo"><label>Teléfono</label><input name="telefono" id="trab-telefono"></div>
         <div class="campo"><label>Mail</label><input name="mail" id="trab-mail" type="email"></div>
+        <div class="campo"><label>Vigencia de credencial</label><input name="vigencia_credencial" id="trab-vigencia" type="date"></div>
       </div>
       <div style="margin-top:12px;">
         <button type="submit" id="trab-submit">Agregar trabajador</button>
@@ -612,6 +621,7 @@ function editarTrab(t) {
   document.getElementById('trab-provincia').value = t.provincia || '';
   document.getElementById('trab-telefono').value = t.telefono || '';
   document.getElementById('trab-mail').value = t.mail || '';
+  document.getElementById('trab-vigencia').value = t.vigencia_credencial || '';
   document.getElementById('trab-submit').textContent = 'Guardar cambios';
   document.getElementById('trab-cancelar').style.display = 'inline-block';
   // pasar a la sub-pestaña de alta manual
