@@ -145,6 +145,17 @@ class Concepto(SQLModel, table=True):
     #                reporta al sindicato al enviar el recibo (art. 21 bis).
     # ""           = no aplica (cualquier otro descuento).
     categoria_sindical: str = ""
+    # Escalado a muchos empleadores por sindicato: un concepto puede ser
+    # específico de un empleador (código tal cual lo trae SU recibo, sin
+    # normalizar) o genérico (NULL = como hasta ahora, visible para cualquier
+    # recibo del sindicato). El matching en validador.py prioriza el concepto
+    # específico del CUIT del recibo y cae al genérico si no hay uno.
+    cuit_empleador: Optional[str] = Field(default=None, index=True)
+    # Para un concepto específico de un empleador: el código del concepto
+    # genérico que realmente controla la Formula (Formula.target siempre
+    # apunta a un código genérico). NULL = el propio `codigo` ya es el
+    # genérico (caso de hoy, sin cambios). Ver indexar_conceptos().
+    codigo_generico: Optional[str] = Field(default=None)
 
 
 class Formula(SQLModel, table=True):
@@ -299,6 +310,8 @@ def conceptos_como_dicts(sindicato_id: int = None) -> list:
                 "remunerativo": c.remunerativo, "alias": c.alias or [],
                 "pendiente_revision": c.pendiente_revision,
                 "categoria_sindical": c.categoria_sindical,
+                "cuit_empleador": c.cuit_empleador,
+                "codigo_generico": c.codigo_generico,
             }
             for c in s.exec(q).all()
         ]

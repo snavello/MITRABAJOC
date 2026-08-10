@@ -2,16 +2,31 @@
 sin Pillow): genera el SVG como texto para embeber inline en la página.
 """
 import io
+import re
 import segno
 
 
 def qr_svg(datos: str, escala: int = 4) -> str:
-    """SVG <svg>...</svg> como string, listo para insertar con |safe."""
+    """SVG <svg>...</svg> como string, listo para insertar con |safe.
+
+    segno no le pone `viewBox` al <svg>, solo `width`/`height` fijos. Sin
+    viewBox, el CSS que lo reescala a otro tamaño (`.cred-qr svg { width:64px;
+    height:64px }`) no lo escala: el navegador lo RECORTA a esas dimensiones,
+    mostrando el QR cortado (así se vio en la credencial). Se le agrega el
+    viewBox con las mismas dimensiones que declaró segno para que el QR
+    completo escale proporcionalmente a cualquier tamaño que le pida el CSS.
+    """
     qr = segno.make(datos, error="m")
     buf = io.BytesIO()
     qr.save(buf, kind="svg", xmldecl=False, svgns=True, scale=escala,
              dark="#152238", light=None)
-    return buf.getvalue().decode("utf-8")
+    svg = buf.getvalue().decode("utf-8")
+    m = re.search(r'width="(\d+)"\s+height="(\d+)"', svg)
+    if m and "viewBox" not in svg:
+        w, h = m.group(1), m.group(2)
+        svg = svg.replace(f'width="{w}" height="{h}"',
+                           f'width="{w}" height="{h}" viewBox="0 0 {w} {h}"', 1)
+    return svg
 
 
 def url_verificacion(base_url: str, token: str, nombre: str, cuil: str, codigo_credencial: str) -> str:

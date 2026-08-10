@@ -229,12 +229,11 @@
   <!-- ============ FÓRMULAS ============ -->
   <h2 id="formulas">Fórmulas a validar</h2>
   <p class="muted">La variable <code>base_remunerativa</code> es la suma de los ingresos marcados como remunerativos. También está <code>total_ingresos</code>.</p>
-  {% set codigos_validos = conceptos | map(attribute='codigo') | list %}
   <table>
     <tr><th>Concepto</th><th>Descripción</th><th>Expresión</th><th>Tol.</th><th></th></tr>
     {% for f in formulas %}
     <tr>
-      <td><code>{{ f.target }}</code>{% if f.target not in codigos_validos %}<span class="tag" style="background:#f8e5e2; color:var(--alerta);" title="Ningún concepto tiene este código: esta fórmula nunca va a matchear.">⚠ código inexistente</span>{% endif %}</td>
+      <td><code>{{ f.target }}</code>{% if f.target not in codigos_efectivos %}<span class="tag" style="background:#f8e5e2; color:var(--alerta);" title="Ningún concepto tiene este código: esta fórmula nunca va a matchear.">⚠ código inexistente</span>{% endif %}</td>
       <td>{{ f.descripcion }}</td>
       <td><code>{{ f.expr }}</code></td><td>${{ f.tolerancia }}</td>
       <td class="acc">
@@ -252,7 +251,7 @@
     <input type="hidden" name="id" id="f-id">
     <select name="target" id="f-target" required style="min-width:220px;">
       <option value="" disabled selected>Elegí un concepto…</option>
-      {% for c in conceptos %}
+      {% for c in genericos %}
       <option value="{{ c.codigo }}">{{ c.codigo }} — {{ c.nombre }}</option>
       {% endfor %}
     </select>
@@ -262,7 +261,7 @@
     <button type="submit" id="f-btn">Agregar fórmula</button>
     <button type="button" class="sec oculto" id="f-cancel" onclick="cancelarFormula()">Cancelar</button>
   </form>
-  {% if not conceptos %}<p class="muted">Primero dá de alta al menos un concepto (pestaña "Conceptos") para poder elegirlo acá.</p>{% endif %}
+  {% if not genericos %}<p class="muted">Primero dá de alta al menos un concepto genérico (pestaña "Conceptos", sin CUIT de empleador) para poder elegirlo acá.</p>{% endif %}
 
   </div>
   <div class="panel" id="panel-conceptos">
@@ -309,19 +308,28 @@
     <span class="ref-cuadro" style="background:#f1efec; margin-left:10px;"></span> descuento
     <span class="ref-cuadro" style="background:#fdf6e8; margin-left:10px;"></span> por revisar
   </p>
+  <p class="muted">Un concepto sin CUIT es <strong>genérico</strong>: cualquier recibo del sindicato lo puede matchear, y es lo único que una fórmula puede controlar directamente. Si varios empleadores llaman distinto a lo mismo, cargá un concepto por CUIT y vinculalo a un "código genérico" — la fórmula de ese código los va a validar a todos.</p>
+  <div class="filtros">
+    <input type="text" id="f-conc-cuit" placeholder="Buscar por CUIT de empleador" oninput="aplicarFiltro('conc','.fila-concepto')">
+    <input type="text" id="f-conc-nombre" placeholder="Buscar por nombre" oninput="aplicarFiltro('conc','.fila-concepto')">
+    <button type="button" class="sec mini" onclick="limpiarFiltro('conc','.fila-concepto')">Limpiar</button>
+    <span class="f-cant" id="f-conc-cant"></span>
+  </div>
   <table>
-    <tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Remun.</th><th>Categoría sindical</th><th>Alias</th><th></th></tr>
+    <tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Remun.</th><th>Categoría sindical</th><th>Empleador</th><th>Alias</th><th></th></tr>
     {% for c in conceptos %}
-    <tr class="fila-concepto {{ 'pend' if c.pendiente_revision else ('es-ingreso' if c.tipo=='ingreso' else 'es-descuento') }}">
+    <tr class="fila-concepto {{ 'pend' if c.pendiente_revision else ('es-ingreso' if c.tipo=='ingreso' else 'es-descuento') }}"
+        data-cuil="{{ c.cuit_empleador or '' }}" data-nombre="{{ c.nombre }}">
       <td><code>{{ c.codigo }}</code></td>
       <td>{{ c.nombre }}{% if c.pendiente_revision %}<span class="tag tag-pend">nuevo</span>{% endif %}</td>
       <td>{{ c.tipo }}</td>
       <td>{% if c.tipo=='ingreso' %}<span class="tag {{ 'tag-si' if c.remunerativo else 'tag-no' }}">{{ 'sí' if c.remunerativo else 'no' }}</span>{% else %}—{% endif %}</td>
       <td>{% if c.tipo=='descuento' and c.categoria_sindical %}<span class="tag tag-si">{{ 'convenio' if c.categoria_sindical=='convenio' else 'afiliación' }}</span>{% else %}—{% endif %}</td>
+      <td class="muted">{% if c.cuit_empleador %}<code>{{ c.cuit_empleador }}</code>{% if c.codigo_generico %} → <code>{{ c.codigo_generico }}</code>{% endif %}{% else %}genérico{% endif %}</td>
       <td class="muted">{{ c.alias|join(', ') }}</td>
       <td class="acc">
         <button class="sec mini" type="button"
-          onclick='editarConcepto({{ c.id }}, {{ c.codigo|tojson }}, {{ c.nombre|tojson }}, {{ c.tipo|tojson }}, {{ c.remunerativo|tojson }}, {{ (c.alias or [])|join(", ")|tojson }}, {{ c.categoria_sindical|tojson }})'>Editar</button>
+          onclick='editarConcepto({{ c.id }}, {{ c.codigo|tojson }}, {{ c.nombre|tojson }}, {{ c.tipo|tojson }}, {{ c.remunerativo|tojson }}, {{ (c.alias or [])|join(", ")|tojson }}, {{ c.categoria_sindical|tojson }}, {{ (c.cuit_empleador or "")|tojson }}, {{ (c.codigo_generico or "")|tojson }})'>Editar</button>
         <form method="post" action="/admin/concepto/borrar" onsubmit="return confirm('¿Borrar este concepto?')">
           <input type="hidden" name="id" value="{{ c.id }}">
           <button class="peligro mini" type="submit">Borrar</button>
@@ -342,6 +350,9 @@
       <option value="afiliacion">categoría sindical: cuota de afiliación</option>
     </select>
     <input name="alias" id="c-alias" placeholder="Alias (separados por coma)" style="min-width:180px;">
+    <input name="cuit_empleador" id="c-cuit" placeholder="CUIT empleador (vacío = genérico)" style="width:170px;">
+    <input name="codigo_generico" id="c-generico" placeholder="Código genérico" list="dl-genericos" style="width:140px;">
+    <datalist id="dl-genericos">{% for g in genericos %}<option value="{{ g.codigo }}">{% endfor %}</datalist>
     <button type="submit" id="c-btn">Agregar concepto</button>
     <button type="button" class="sec oculto" id="c-cancel" onclick="cancelarConcepto()">Cancelar</button>
   </form>
@@ -654,7 +665,7 @@ function cancelarFormula() {
 }
 
 // ---------- ABM conceptos ----------
-function editarConcepto(id, codigo, nombre, tipo, remun, alias, categoriaSindical) {
+function editarConcepto(id, codigo, nombre, tipo, remun, alias, categoriaSindical, cuitEmpleador, codigoGenerico) {
   document.getElementById('c-id').value = id;
   document.getElementById('c-codigo').value = codigo;
   document.getElementById('c-nombre').value = nombre;
@@ -662,6 +673,8 @@ function editarConcepto(id, codigo, nombre, tipo, remun, alias, categoriaSindica
   document.getElementById('c-remun').value = remun ? 'si' : 'no';
   document.getElementById('c-sindical').value = categoriaSindical || '';
   document.getElementById('c-alias').value = alias;
+  document.getElementById('c-cuit').value = cuitEmpleador || '';
+  document.getElementById('c-generico').value = codigoGenerico || '';
   document.getElementById('c-btn').textContent = 'Guardar cambios';
   document.getElementById('c-cancel').classList.remove('oculto');
   document.getElementById('form-concepto').scrollIntoView({behavior:'smooth', block:'center'});
@@ -713,7 +726,7 @@ function renderPropuestas(data) {
   let h = `<div class="aviso" style="margin-top:16px;">Se leyeron ${data.leidos} recibo(s)`;
   if (data.fallidos) h += ` (${data.fallidos} no se pudieron leer)`;
   h += `. Encontramos ${propuestas.length} concepto(s) nuevo(s). Revisá y aprobá los que correspondan.</div>`;
-  h += `<table><tr><th></th><th>Código</th><th>Nombre</th><th>Tipo</th><th>Remun.</th><th>Apariciones</th></tr>`;
+  h += `<table><tr><th></th><th>Código</th><th>Nombre</th><th>Tipo</th><th>Remun.</th><th>Empleador</th><th>Vincular a genérico</th><th>Apariciones</th></tr>`;
   propuestas.forEach((p, i) => {
     // Si se parece a uno que ya está, viene DESMARCADO: aprobarlo crearía un
     // duplicado. El admin lo marca solo si confirma que es distinto.
@@ -729,10 +742,20 @@ function renderPropuestas(data) {
         <option value="si" ${p.remunerativo?'selected':''}>sí</option>
         <option value="no" ${!p.remunerativo?'selected':''}>no</option>
       </select></td>
+      <td class="muted">${p.cuit_empleador ? `<code>${p.cuit_empleador}</code>` : 'genérico'}</td>
+      <td>${p.cuit_empleador
+        ? `<input data-i="${i}" class="ap-generico" list="dl-genericos" placeholder="código genérico" value="${p.generico_sugerido ? p.generico_sugerido.codigo : ''}" style="width:120px;">`
+        : '—'}</td>
       <td class="veces">${p.veces}×</td>
     </tr>`;
+    if (p.cuit_empleador && p.generico_sugerido) {
+      h += `<tr class="pend"><td></td><td colspan="6" class="muted" style="padding-top:0;">
+        Se parece al concepto genérico <code>${p.generico_sugerido.codigo}</code> ${p.generico_sugerido.nombre}
+        — precargado como vínculo. Cambialo o dejalo vacío si no corresponde a ninguna fórmula existente.
+      </td></tr>`;
+    }
     if (p.similar) {
-      h += `<tr class="pend"><td></td><td colspan="5" class="muted" style="padding-top:0;">
+      h += `<tr class="pend"><td></td><td colspan="6" class="muted" style="padding-top:0;">
         ⚠ Se parece a <code>${p.similar.codigo}</code> ${p.similar.nombre}
         (${Math.round(p.similar.ratio * 100)}% de coincidencia). Si es el mismo concepto,
         dejalo sin marcar y agregá "${p.descripcion}" como alias de
@@ -752,6 +775,7 @@ async function aplicarAprendizaje() {
   // Recoger elecciones
   document.querySelectorAll('.ap-tipo').forEach(s => propuestas[s.dataset.i].tipo = s.value);
   document.querySelectorAll('.ap-remun').forEach(s => propuestas[s.dataset.i].remunerativo = (s.value==='si'));
+  document.querySelectorAll('.ap-generico').forEach(inp => propuestas[inp.dataset.i].codigo_generico = inp.value.trim());
   const aprobados = [];
   document.querySelectorAll('.ap-check').forEach(c => { if (c.checked) aprobados.push(propuestas[c.dataset.i]); });
   if (!aprobados.length) { alert('No seleccionaste ningún concepto.'); return; }

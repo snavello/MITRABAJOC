@@ -86,6 +86,16 @@ def test_qr_svg_es_valido():
     print("OK  test_qr_svg_es_valido")
 
 
+def test_qr_svg_tiene_viewbox_para_escalar_sin_recortarse():
+    # Bug real: segno no pone viewBox, solo width/height fijos. El CSS que
+    # reescala el QR a 64x64 en la credencial (.cred-qr svg) lo RECORTABA en
+    # vez de escalarlo, porque sin viewBox el navegador no sabe reproporcionar
+    # el contenido — se vio cortado en la credencial real.
+    svg = qr_svg("https://mitrabajo.onrender.com/v/abc123")
+    assert 'viewBox="0 0 ' in svg
+    print("OK  test_qr_svg_tiene_viewbox_para_escalar_sin_recortarse")
+
+
 if __name__ == "__main__":
     test_token_se_genera_una_sola_vez_y_es_estable()
     test_token_vacio_si_no_esta_empadronado()
@@ -95,4 +105,5 @@ if __name__ == "__main__":
     test_token_inexistente_no_verifica()
     test_url_verificacion_lleva_datos_de_respaldo_pero_no_dni()
     test_qr_svg_es_valido()
+    test_qr_svg_tiene_viewbox_para_escalar_sin_recortarse()
     print("\nTodo OK — QR y verificación pública de la credencial.")

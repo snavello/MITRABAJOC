@@ -25,15 +25,34 @@ def _norm_cuil(cuil: str) -> str:
     return re.sub(r"[^0-9]", "", cuil or "")
 
 
-def indexar_conceptos(conceptos: list) -> dict:
-    """{codigo o alias normalizado: concepto} para matchear líneas del recibo."""
+def indexar_conceptos(conceptos: list, cuit_empleador: str = None) -> dict:
+    """{codigo o alias normalizado: concepto} para matchear líneas del recibo.
+
+    Con muchos empleadores por sindicato, un concepto puede ser específico de
+    uno (`cuit_empleador` cargado) o genérico (`cuit_empleador` NULL, visible
+    para cualquier recibo). Se indexan primero los genéricos y después los
+    específicos del CUIT del recibo, así estos últimos pisan a los genéricos
+    en caso de colisión de clave: el específico es siempre más preciso. Si no
+    se pasa `cuit_empleador` (o no hay conceptos de ese CUIT), el resultado es
+    el catálogo genérico de siempre.
+    """
     idx = {}
-    for c in conceptos:
+    genericos = [c for c in conceptos if not c.get("cuit_empleador")]
+    especificos = [c for c in conceptos if cuit_empleador and c.get("cuit_empleador") == cuit_empleador]
+    for c in genericos + especificos:
         idx[c["codigo"]] = c
         idx[normalizar(c["nombre"])] = c
         for a in c.get("alias", []):
             idx[normalizar(a)] = c
     return idx
+
+
+def codigo_efectivo(concepto: dict) -> str:
+    """El código que realmente controla una Formula: el propio `codigo` para
+    un concepto genérico, o `codigo_generico` para uno específico de un
+    empleador (así todas las variantes de distintos empleadores para "lo
+    mismo" se validan con una única fórmula por sindicato, sin duplicarlas)."""
+    return concepto.get("codigo_generico") or concepto["codigo"]
 
 
 def matchear_lineas(lineas: list, idx: dict):
@@ -54,12 +73,17 @@ def _evaluar(expr: str, variables: dict) -> float:
 
 def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: float = 2.0,
             cuil_sesion: str = None) -> dict:
-    idx = indexar_conceptos(conceptos)
+    cuit_empleador = _norm_cuil((recibo.get("empleador") or {}).get("cuit"))
+    idx = indexar_conceptos(conceptos, cuit_empleador)
     matcheadas, desconocidas = matchear_lineas(recibo["lineas"], idx)
 
     ingresos = [m for m in matcheadas if m["concepto"]["tipo"] == "ingreso"]
     descuentos = [m for m in matcheadas if m["concepto"]["tipo"] == "descuento"]
-    importe_por_codigo = {m["concepto"]["codigo"]: m["importe"] for m in matcheadas}
+    # Las fórmulas siempre apuntan a un código genérico (ver codigo_efectivo):
+    # un concepto específico de un empleador aporta su importe bajo ESE código,
+    # no bajo el propio, para que una sola fórmula controle a todos los
+    # empleadores sin tener que duplicarla por cada variante.
+    importe_por_codigo = {codigo_efectivo(m["concepto"]): m["importe"] for m in matcheadas}
 
     variables = {
         "total_ingresos": sum(m["importe"] for m in ingresos),
@@ -183,14 +207,15 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
     }
 
 
-def detectar_nuevos(conceptos: list, lineas: list) -> list:
-    """Devuelve las líneas del recibo cuyo concepto no está en el catálogo.
+def detectar_nuevos(conceptos: list, lineas: list, cuit_empleador: str = None) -> list:
+    """Devuelve las líneas del recibo cuyo concepto no está en el catálogo
+    (genérico o específico del `cuit_empleador` del recibo, si se pasa).
 
     Cada una viene con el tipo inferido del signo del importe. Estos conceptos
     se dan de alta como pendientes de revisión; hasta que el sindicato los
     clasifique, no participan de la base de cálculo.
     """
-    idx = indexar_conceptos(conceptos)
+    idx = indexar_conceptos(conceptos, cuit_empleador)
     nuevos, vistos = [], set()
     for ln in lineas:
         concepto = idx.get(ln.get("codigo")) or idx.get(normalizar(ln.get("descripcion", "")))

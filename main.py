@@ -109,7 +109,8 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
     if recibo.get("confianza") == "baja":
         raise HTTPException(422, "La imagen no es clara. Sacá la foto de nuevo con buena luz.")
     sid = sindicato_activo_trabajador(request)
-    nuevos = detectar_nuevos(db.conceptos_como_dicts(sid), recibo["lineas"])
+    cuit_empleador = _norm_cuil((recibo.get("empleador") or {}).get("cuit"))
+    nuevos = detectar_nuevos(db.conceptos_como_dicts(sid), recibo["lineas"], cuit_empleador)
     return {
         "recibo": recibo, "conceptos_nuevos": nuevos,
         "advertencia_deposito": advertencia_ultimo_deposito(recibo),
@@ -124,20 +125,26 @@ def api_validar(request: Request, payload: dict):
     if not sid:
         raise HTTPException(400, "No pudimos determinar tu sindicato. Volvé a ingresar.")
 
-    # Alta de conceptos nuevos como pendientes, EN EL SINDICATO del trabajador
+    # Alta de conceptos nuevos como pendientes, EN EL SINDICATO del trabajador.
+    # Se taguean con el CUIT del empleador de ESTE recibo (si se pudo leer):
+    # así el código crudo de cada empleador no compite por el mismo casillero
+    # que el de otro que use ese mismo código para algo distinto.
     if nuevos and sid:
+        cuit_empleador = _norm_cuil((recibo.get("empleador") or {}).get("cuit"))
         with db.get_session() as s:
-            existentes = {c.codigo for c in s.exec(select(Concepto).where(
+            existentes = {(c.codigo, c.cuit_empleador or "") for c in s.exec(select(Concepto).where(
                 Concepto.sindicato_id == sid)).all()}
             for n in nuevos:
-                if n["codigo"] not in existentes:
+                clave = (n["codigo"], cuit_empleador or "")
+                if clave not in existentes:
                     s.add(Concepto(
                         sindicato_id=sid,
                         codigo=n["codigo"], nombre=n["descripcion"], tipo=n["tipo"],
                         remunerativo=n.get("remunerativo", True),
                         alias=[n["descripcion"]], pendiente_revision=True,
+                        cuit_empleador=cuit_empleador or None,
                     ))
-                    existentes.add(n["codigo"])
+                    existentes.add(clave)
             s.commit()
 
     # Validar SOLO con conceptos y fórmulas de ESE sindicato. cuil_sesion viene
@@ -283,10 +290,18 @@ def admin(request: Request):
         {"id": c.id, "codigo": c.codigo, "nombre": c.nombre, "alias": c.alias or []}
         for c in conceptos
     ])
+    # Conceptos genéricos (sin CUIT de empleador): son los únicos que una
+    # Formula puede targetear directamente. Un concepto específico de un
+    # empleador aporta su importe bajo su codigo_generico (ver validador.py,
+    # codigo_efectivo), así que ESE código cuenta como "válido" para la
+    # fórmula aunque ningún concepto lo tenga como codigo propio.
+    genericos = [c for c in conceptos if not c.cuit_empleador]
+    codigos_efectivos = {c.codigo_generico or c.codigo for c in conceptos}
     return templates.TemplateResponse("admin.html", {
         "request": request, "sindicato": sind.nombre if sind else "",
         "marca": db.marca_sindicato(sid),
-        "conceptos": conceptos, "formulas": formulas, "reportes": reportes,
+        "conceptos": conceptos, "genericos": genericos, "codigos_efectivos": codigos_efectivos,
+        "formulas": formulas, "reportes": reportes,
         "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR, "envios": envios,
         "nombres_por_cuil": nombres_por_cuil, "provisorios": provisorios,
         "debe_cambiar": ses.get("cambiar", False),
@@ -429,6 +444,7 @@ def abm_concepto(
     id: str = Form(""), codigo: str = Form(...), nombre: str = Form(...),
     tipo: str = Form(...), remunerativo: str = Form("no"),
     alias: str = Form(""), categoria_sindical: str = Form(""),
+    cuit_empleador: str = Form(""), codigo_generico: str = Form(""),
 ):
     sid = exigir_sindicato(request)
     aliases = [a.strip() for a in alias.split(",") if a.strip()]
@@ -436,6 +452,11 @@ def abm_concepto(
         aliases.append(nombre)
     es_remun = remunerativo == "si"
     categoria = categoria_sindical if categoria_sindical in CATEGORIAS_SINDICALES else ""
+    cuit_empleador = _norm_cuil(cuit_empleador) or None
+    # El código genérico solo tiene sentido para un concepto específico de un
+    # empleador (ver Concepto.codigo_generico); si no hay CUIT cargado, se
+    # ignora aunque el form lo mande.
+    codigo_gen = (codigo_generico.strip() or None) if cuit_empleador else None
     with db.get_session() as s:
         if id:  # edición — solo si el concepto es de este sindicato
             c = s.get(Concepto, int(id))
@@ -443,12 +464,14 @@ def abm_concepto(
                 c.codigo, c.nombre, c.tipo = codigo, nombre, tipo
                 c.remunerativo, c.alias = es_remun, aliases
                 c.categoria_sindical = categoria
+                c.cuit_empleador, c.codigo_generico = cuit_empleador, codigo_gen
                 c.pendiente_revision = False
                 s.add(c)
         else:   # alta
             s.add(Concepto(sindicato_id=sid, codigo=codigo, nombre=nombre, tipo=tipo,
                            remunerativo=es_remun, alias=aliases,
                            categoria_sindical=categoria,
+                           cuit_empleador=cuit_empleador, codigo_generico=codigo_gen,
                            pendiente_revision=False))
         s.commit()
     return RedirectResponse("/admin#conceptos", status_code=303)
@@ -534,9 +557,12 @@ def borrar_formula(request: Request, id: int = Form(...)):
 # ---------- Aprendizaje: subir N recibos y proponer conceptos nuevos ----------
 @app.post("/admin/aprender")
 async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
-    """Lee varios recibos y junta los conceptos nuevos, deduplicados."""
+    """Lee varios recibos (de uno o varios empleadores) y junta los conceptos
+    nuevos, deduplicados por (código, CUIT del empleador) — el mismo código
+    crudo de dos empleadores distintos puede significar cosas distintas."""
     sid = exigir_sindicato(request)
     conceptos_actuales = db.conceptos_como_dicts(sid)
+    genericos_actuales = [c for c in conceptos_actuales if not c.get("cuit_empleador")]
     acumulados = {}
     leidos, fallidos = 0, 0
 
@@ -548,12 +574,14 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
             fallidos += 1
             continue
         leidos += 1
-        for n in detectar_nuevos(conceptos_actuales, recibo["lineas"]):
-            clave = n["codigo"]
+        cuit_empleador = _norm_cuil((recibo.get("empleador") or {}).get("cuit")) or None
+        for n in detectar_nuevos(conceptos_actuales, recibo["lineas"], cuit_empleador):
+            clave = (n["codigo"], cuit_empleador or "")
             if clave in acumulados:
                 acumulados[clave]["veces"] += 1
             else:
-                acumulados[clave] = {**n, "remunerativo": n["tipo"] == "ingreso", "veces": 1}
+                acumulados[clave] = {**n, "remunerativo": n["tipo"] == "ingreso", "veces": 1,
+                                      "cuit_empleador": cuit_empleador}
 
     # Antes de que el admin apruebe el lote, avisar si alguna propuesta se
     # parece a un concepto que YA está en el catálogo: darla de alta crearía
@@ -565,6 +593,17 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
             "nombre": similar["concepto"]["nombre"],
             "ratio": similar["ratio"],
         } if similar else None
+        # Si la propuesta es específica de un empleador, además sugerir a qué
+        # concepto GENÉRICO parece corresponder — así la fórmula de siempre la
+        # controla sin que el admin tenga que ir a buscarlo a mano.
+        p["generico_sugerido"] = None
+        if p["cuit_empleador"]:
+            similar_generico = buscar_similar(p["descripcion"], genericos_actuales)
+            if similar_generico:
+                p["generico_sugerido"] = {
+                    "codigo": similar_generico["concepto"]["codigo"],
+                    "nombre": similar_generico["concepto"]["nombre"],
+                }
 
     return {
         "leidos": leidos, "fallidos": fallidos,
@@ -574,22 +613,28 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
 
 @app.post("/admin/aprender/aplicar")
 def aprender_aplicar(request: Request, payload: dict):
-    """Da de alta en lote los conceptos aprobados por el admin."""
+    """Da de alta en lote los conceptos aprobados por el admin. Cada uno puede
+    venir con cuit_empleador (propuesto en /admin/aprender) y codigo_generico
+    (que el admin haya confirmado o cambiado en la revisión del lote)."""
     sid = exigir_sindicato(request)
     aprobados = payload.get("aprobados", [])
     altas = 0
     with db.get_session() as s:
-        existentes = {c.codigo for c in s.exec(select(Concepto).where(
+        existentes = {(c.codigo, c.cuit_empleador or "") for c in s.exec(select(Concepto).where(
             Concepto.sindicato_id == sid)).all()}
         for c in aprobados:
-            if c["codigo"] not in existentes:
+            cuit_empleador = _norm_cuil(c.get("cuit_empleador", "")) or None
+            clave = (c["codigo"], cuit_empleador or "")
+            if clave not in existentes:
                 s.add(Concepto(
                     sindicato_id=sid,
                     codigo=c["codigo"], nombre=c["descripcion"], tipo=c["tipo"],
                     remunerativo=c.get("remunerativo", True),
                     alias=[c["descripcion"]], pendiente_revision=False,
+                    cuit_empleador=cuit_empleador,
+                    codigo_generico=(c.get("codigo_generico") or "").strip() or None if cuit_empleador else None,
                 ))
-                existentes.add(c["codigo"])
+                existentes.add(clave)
                 altas += 1
         s.commit()
     return {"ok": True, "altas": altas}
