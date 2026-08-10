@@ -5,7 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mi Trabajo — Plataforma</title>
 <style>
-  :root { --tinta:#152238; --agua:#1a7a6b; --papel:#faf9f6; --linea:#e2ded5; --gris:#5c5a54; }
+  :root {
+    --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
+    --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
+    --papel:#faf9f6; --linea:#e2ded5; --gris:#5c5a54;
+  }
   * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
   body { background:var(--papel); color:#1b1b1b; line-height:1.5; }
   header { background:#fff; border-bottom:1px solid var(--linea); padding:14px 22px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:20; }
@@ -55,7 +59,7 @@
 </head>
 <body>
 <header>
-  <img src="/static/logo_mitrabajo.svg" alt="Mi Trabajo">
+  <img src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo">
   <span class="nom">Mi Trabajo</span>
   <span class="rol">Administración de plataforma</span>
   <a href="/plataforma/salir">Salir</a>
@@ -66,11 +70,13 @@
   {% if reset == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Clave cambiada correctamente.</div>
   {% elif reset == 'nohay' %}<div style="background:#f8e5e2; border:1px solid #e0c4c0; color:#b23a2e; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">No se encontró un usuario con ese CUIT/CUIL.</div>{% endif %}
   {% if request.query_params.get('config') == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Configuración actualizada.</div>{% endif %}
+  {% if request.query_params.get('marca') == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Marca de la plataforma actualizada.</div>{% endif %}
   <nav class="tabs">
     <button class="ptab activa" data-pp="lista">Sindicatos</button>
     <button class="ptab" data-pp="nuevo">Nuevo sindicato</button>
     <button class="ptab" data-pp="admin">Nuevo administrador</button>
     <button class="ptab" data-pp="clave">Cambiar clave</button>
+    <button class="ptab" data-pp="marca">Marca de la plataforma</button>
     <button class="ptab" data-pp="config">Configuración legal</button>
   </nav>
 
@@ -222,6 +228,41 @@
       </div>
       <div class="muted" id="rc-error" style="color:#b23a2e; display:none;">Las claves no coinciden.</div>
       <button type="submit">Cambiar clave</button>
+    </form>
+  </div>
+  </div>
+
+  <div class="ppanel" id="pp-marca">
+  <h2>Marca de la plataforma</h2>
+  <div class="card">
+    <p class="muted" style="margin-bottom:14px;">Es la marca de "Mi Trabajo" en sí — el logo y los colores de las pantallas de login y de este panel, antes de entrar a un sindicato en particular. La marca de cada sindicato se edita aparte, desde "Sindicatos".</p>
+    <form method="post" action="/plataforma/marca" enctype="multipart/form-data">
+      <div class="colores">
+        <div class="col-item">
+          <label>Color primario</label>
+          <input type="color" name="color_primario" value="{{ marca_plataforma.color_primario if marca_plataforma else '#152238' }}">
+          <span class="muted" style="font-size:11px;">encabezado y botones principales</span>
+        </div>
+        <div class="col-item">
+          <label>Color secundario</label>
+          <input type="color" name="color_secundario" value="{{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }}">
+          <span class="muted" style="font-size:11px;">enlaces y acentos</span>
+        </div>
+        <div class="col-item">
+          <label>Color acento</label>
+          <input type="color" name="color_acento" value="{{ marca_plataforma.color_acento if marca_plataforma else '#b23a2e' }}">
+          <span class="muted" style="font-size:11px;">reservado</span>
+        </div>
+      </div>
+      <div class="campo" style="margin-top:14px; max-width:360px;">
+        <label>Logo de la plataforma (PNG, JPG o similar)</label>
+        {% if marca_plataforma and marca_plataforma.logo %}
+        <div style="margin-bottom:8px;"><img src="/logo-plataforma" alt="Logo actual" style="height:36px; background:#fff; border:1px solid var(--linea); border-radius:6px; padding:3px;"></div>
+        {% endif %}
+        <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
+        <span class="muted" style="font-size:11px;">Se muestra en los logins y en el encabezado de este panel. Si no subís uno nuevo, se mantiene el actual.</span>
+      </div>
+      <button type="submit">Guardar marca</button>
     </form>
   </div>
   </div>

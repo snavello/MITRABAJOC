@@ -35,7 +35,8 @@ from sqlmodel import select
 
 import db
 import auth
-from db import Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador, CuentaTrabajador, EnvioSindicato, ReciboVerificado
+from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador,
+                CuentaTrabajador, EnvioSindicato, ReciboVerificado, ConfiguracionPlataforma)
 from extractor import extraer, extraer_aportes
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide)
@@ -84,6 +85,22 @@ def servir_firma(sindicato_id: int):
             media_type=sind.firma_mime or "application/octet-stream",
             headers={"Cache-Control": "public, max-age=3600"},
         )
+
+
+@app.get("/logo-plataforma")
+def servir_logo_plataforma():
+    """Logo de 'Mi Trabajo' cargado por el admin de plataforma. Si no cargó
+    ninguno, las templates caen al SVG estático de siempre (no se llama a
+    esta ruta en ese caso)."""
+    with db.get_session() as s:
+        cfg = s.get(ConfiguracionPlataforma, 1)
+        if not cfg or not cfg.logo_datos:
+            raise HTTPException(404, "Sin logo")
+        return BinResponse(
+            content=cfg.logo_datos,
+            media_type=cfg.logo_mime or "application/octet-stream",
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
 templates = Jinja2Templates(directory="templates")
 
 
@@ -97,6 +114,7 @@ def _startup():
 def home(request: Request):
     return templates.TemplateResponse("trabajador.html", {
         "request": request, "sindicato": db.nombre_sindicato(),
+        "marca_plataforma": db.marca_plataforma(),
     })
 
 
@@ -275,7 +293,8 @@ def exigir_sindicato(request: Request) -> int:
 def admin(request: Request):
     ses = sesion_actual(request)
     if not ses or ses.get("rol") != "sindicato":
-        return templates.TemplateResponse("admin_login.html", {"request": request})
+        return templates.TemplateResponse("admin_login.html", {
+            "request": request, "marca_plataforma": db.marca_plataforma()})
 
     sid = ses.get("sid", 0)
     with db.get_session() as s:
@@ -703,7 +722,8 @@ def slugify(nombre: str) -> str:
 def plataforma(request: Request):
     ses = sesion_actual(request)
     if not ses or ses.get("rol") != "plataforma":
-        return templates.TemplateResponse("plataforma_login.html", {"request": request})
+        return templates.TemplateResponse("plataforma_login.html", {
+            "request": request, "marca_plataforma": db.marca_plataforma()})
     with db.get_session() as s:
         sindicatos = s.exec(select(Sindicato).order_by(Sindicato.id)).all()
         # contar usuarios por sindicato
@@ -717,6 +737,7 @@ def plataforma(request: Request):
     return templates.TemplateResponse("plataforma.html", {
         "request": request, "sindicatos": info,
         "tope_sindical_pct": db.obtener_tope_sindical(),
+        "marca_plataforma": db.marca_plataforma(),
     })
 
 
@@ -737,6 +758,25 @@ def plataforma_config(request: Request, tope_sindical_pct: float = Form(...)):
         raise HTTPException(403, "No autorizado")
     db.set_tope_sindical(tope_sindical_pct)
     return RedirectResponse("/plataforma?config=ok", status_code=303)
+
+
+@app.post("/plataforma/marca")
+async def plataforma_marca(
+    request: Request,
+    color_primario: str = Form("#152238"), color_secundario: str = Form("#1a7a6b"),
+    color_acento: str = Form("#b23a2e"), logo: UploadFile = File(None),
+):
+    """Marca de 'Mi Trabajo' (logins y panel de plataforma) — mismo patrón que
+    la marca de un sindicato, pero para la plataforma misma."""
+    ses = sesion_actual(request)
+    if not ses or ses.get("rol") != "plataforma":
+        raise HTTPException(403, "No autorizado")
+    logo_datos, logo_mime, logo_flag = (None, "", "")
+    if logo and logo.filename:
+        logo_datos, logo_mime, logo_flag = _leer_logo(logo)
+    db.set_marca_plataforma(color_primario, color_secundario, color_acento,
+                             logo_datos, logo_mime, logo_flag)
+    return RedirectResponse("/plataforma?marca=ok", status_code=303)
 
 
 @app.get("/plataforma/salir")
@@ -940,7 +980,8 @@ def _dni_de_cuil(cuil: str) -> str:
 @app.get("/ingresar", response_class=HTMLResponse)
 def ingresar(request: Request):
     """Pantalla de login/registro del trabajador."""
-    return templates.TemplateResponse("trabajador_login.html", {"request": request})
+    return templates.TemplateResponse("trabajador_login.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma()})
 
 
 @app.post("/trabajador/login")
@@ -1012,6 +1053,7 @@ def app_trabajador(request: Request):
         codigo_cred = credencial.get("codigo")
         contexto = {
             "request": request, "sindicato": marca["nombre"], "marca": marca,
+            "marca_plataforma": db.marca_plataforma(),
             "cuil": cuil, "nombre_trab": db.nombre_trabajador(cuil, sid_activo),
             "documento": _dni_de_cuil(cuil),
             "codigo_credencial": codigo_cred,
@@ -1028,7 +1070,7 @@ def app_trabajador(request: Request):
         return templates.TemplateResponse("trabajador.html", contexto)
     # Varios y no eligió → selector
     return templates.TemplateResponse("elegir_sindicato.html", {
-        "request": request, "sindicatos": sinds,
+        "request": request, "sindicatos": sinds, "marca_plataforma": db.marca_plataforma(),
     })
 
 

@@ -11,10 +11,11 @@
   :root {
     --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e;
     --papel:#f7f5f0; --linea:#dcd8cf; --gris:#5c5a54; --card:#ffffff;
-    /* Colores de marca del sindicato (con respaldo a los de Mi Trabajo) */
-    --marca-primario: {{ marca.color_primario if marca else '#152238' }};
-    --marca-secundario: {{ marca.color_secundario if marca else '#152238' }};
-    --marca-acento: {{ marca.color_acento if marca else '#b23a2e' }};
+    /* Colores de marca del sindicato; sin sindicato activo, caen a la marca
+       de la plataforma (configurable en /plataforma), no a un literal fijo. */
+    --marca-primario: {{ marca.color_primario if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238') }};
+    --marca-secundario: {{ marca.color_secundario if marca else (marca_plataforma.color_secundario if marca_plataforma else '#152238') }};
+    --marca-acento: {{ marca.color_acento if marca else (marca_plataforma.color_acento if marca_plataforma else '#b23a2e') }};
   }
   * { box-sizing:border-box; margin:0; -webkit-tap-highlight-color:transparent; }
   html { -webkit-text-size-adjust:100%; }
@@ -264,7 +265,7 @@
 <body>
 <header>
   <div class="marca">
-    <img src="/static/logo_mitrabajo.svg" alt="Mi Trabajo" style="background:#fff; border-radius:6px; padding:2px;">
+    <img src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo" style="background:#fff; border-radius:6px; padding:2px;">
     <span class="nom">Mi Trabajo</span>
   </div>
   {% if marca and marca.logo %}

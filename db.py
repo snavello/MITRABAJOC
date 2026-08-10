@@ -193,6 +193,16 @@ class ConfiguracionPlataforma(SQLModel, table=True):
     # Ley 27.802 art. 133 / Dto 407/2026: tope global a las cargas sindicales de
     # convenio, en % de la remuneración. Editable SOLO por el admin de plataforma.
     tope_sindical_pct: float = 2.0
+    # Marca de la plataforma "Mi Trabajo" (pantallas de login y panel de
+    # plataforma, antes de entrar a un sindicato en particular). Mismo patrón
+    # que Sindicato: logo en la base (Opción B), colores editables. Si no se
+    # cargó nada, se usan los valores de siempre (ver marca_plataforma()).
+    color_primario: str = "#152238"
+    color_secundario: str = "#1a7a6b"
+    color_acento: str = "#b23a2e"
+    logo: str = ""
+    logo_datos: Optional[bytes] = Field(default=None)
+    logo_mime: str = ""
 
 
 class EnvioSindicato(SQLModel, table=True):
@@ -384,6 +394,37 @@ def set_tope_sindical(valor: float):
             cfg.tope_sindical_pct = valor
         else:
             cfg = ConfiguracionPlataforma(id=1, tope_sindical_pct=valor)
+        s.add(cfg)
+        s.commit()
+
+
+def marca_plataforma() -> dict:
+    """Marca de 'Mi Trabajo' para las pantallas sin sindicato (logins, panel de
+    plataforma): degrada a los colores/logo de siempre si no se configuró nada."""
+    with Session(engine) as s:
+        cfg = s.get(ConfiguracionPlataforma, 1)
+        if not cfg:
+            return {"logo": "", "color_primario": "#152238",
+                    "color_secundario": "#1a7a6b", "color_acento": "#b23a2e"}
+        return {
+            "logo": cfg.logo,
+            "color_primario": cfg.color_primario or "#152238",
+            "color_secundario": cfg.color_secundario or "#1a7a6b",
+            "color_acento": cfg.color_acento or "#b23a2e",
+        }
+
+
+def set_marca_plataforma(color_primario: str, color_secundario: str, color_acento: str,
+                          logo_datos: bytes = None, logo_mime: str = "", logo_flag: str = ""):
+    with Session(engine) as s:
+        cfg = s.get(ConfiguracionPlataforma, 1)
+        if not cfg:
+            cfg = ConfiguracionPlataforma(id=1)
+        cfg.color_primario = color_primario or "#152238"
+        cfg.color_secundario = color_secundario or "#1a7a6b"
+        cfg.color_acento = color_acento or "#b23a2e"
+        if logo_datos:
+            cfg.logo_datos, cfg.logo_mime, cfg.logo = logo_datos, logo_mime, logo_flag
         s.add(cfg)
         s.commit()
 
