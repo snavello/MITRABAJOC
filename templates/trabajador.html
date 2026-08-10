@@ -601,6 +601,12 @@ $('continuar').onclick = async () => {
 };
 
 function renderResultado(d) {
+  if (d.bloqueado) {
+    $('resultado').innerHTML = `<div class="banner mal">⚠ Este recibo no es tuyo</div>
+      <div class="disc">${d.discrepancias[0].detalle}</div>
+      <button class="btn sec" onclick="location.reload()">Volver a intentar</button>`;
+    return;
+  }
   const ok = d.estado === 'OK';
   let h = `<div class="banner ${ok?'ok':'mal'}">`
         + (ok ? '✓ Todo en orden' : `Encontramos ${d.discrepancias.length} cosa(s) para revisar`)

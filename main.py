@@ -37,7 +37,8 @@ import db
 import auth
 from db import Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador, CuentaTrabajador, EnvioSindicato, ReciboVerificado
 from extractor import extraer, extraer_aportes
-from validador import validar, detectar_nuevos, detectar_provisorios, buscar_similar
+from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
+                        rangos_se_superponen, cuil_no_coincide)
 from filigrana import filigrana_svg
 from qr import qr_svg, url_verificacion
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
@@ -125,6 +126,14 @@ def api_validar(request: Request, payload: dict):
     if not sid:
         raise HTTPException(400, "No pudimos determinar tu sindicato. Volvé a ingresar.")
 
+    cuil_sesion = request.cookies.get("cuil_trab", "")
+
+    # Si el recibo no es de quien inició sesión, cortar ACÁ: no se cargan
+    # conceptos nuevos al catálogo, no se valida nada, y no queda en el
+    # historial — es como si no se hubiera subido nada.
+    if cuil_no_coincide(recibo, cuil_sesion):
+        return validar([], [], recibo, cuil_sesion=cuil_sesion)
+
     # Alta de conceptos nuevos como pendientes, EN EL SINDICATO del trabajador.
     # Se taguean con el CUIT del empleador de ESTE recibo (si se pudo leer):
     # así el código crudo de cada empleador no compite por el mismo casillero
@@ -149,7 +158,6 @@ def api_validar(request: Request, payload: dict):
 
     # Validar SOLO con conceptos y fórmulas de ESE sindicato. cuil_sesion viene
     # de la cookie (identidad real), no de lo que haya leído la IA del recibo.
-    cuil_sesion = request.cookies.get("cuil_trab", "")
     resultado = validar(db.conceptos_como_dicts(sid), db.formulas_como_dicts(sid), recibo,
                          tope_sindical_pct=db.obtener_tope_sindical(),
                          cuil_sesion=cuil_sesion)
@@ -528,17 +536,32 @@ def abm_formula(
     request: Request,
     id: str = Form(""), target: str = Form(...), descripcion: str = Form(...),
     expr: str = Form(...), tolerancia: float = Form(1.0),
+    fecha_desde: str = Form(""), fecha_hasta: str = Form(""),
 ):
     sid = exigir_sindicato(request)
+    fecha_desde = fecha_desde or None
+    fecha_hasta = fecha_hasta or None
     with db.get_session() as s:
+        # Ninguna fórmula del mismo target puede tener una vigencia que se
+        # pise con otra (si no, un mismo período tendría dos fórmulas
+        # candidatas y no habría forma determinística de elegir cuál aplica).
+        otras = s.exec(select(Formula).where(
+            Formula.sindicato_id == sid, Formula.target == target,
+            Formula.id != (int(id) if id else -1))).all()
+        for otra in otras:
+            if rangos_se_superponen(fecha_desde, fecha_hasta, otra.fecha_desde, otra.fecha_hasta):
+                return RedirectResponse(
+                    f"/admin?error=superposicion&target={target}#formulas", status_code=303)
         if id:
             f = s.get(Formula, int(id))
             if f and f.sindicato_id == sid:
                 f.target, f.descripcion, f.expr, f.tolerancia = target, descripcion, expr, tolerancia
+                f.fecha_desde, f.fecha_hasta = fecha_desde, fecha_hasta
                 s.add(f)
         else:
             s.add(Formula(sindicato_id=sid, target=target, descripcion=descripcion,
-                          expr=expr, tolerancia=tolerancia))
+                          expr=expr, tolerancia=tolerancia,
+                          fecha_desde=fecha_desde, fecha_hasta=fecha_hasta))
         s.commit()
     return RedirectResponse("/admin#formulas", status_code=303)
 

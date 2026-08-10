@@ -6,6 +6,7 @@ Verificado contra recibos reales AEFIP (ago/sep 2024): diferencia 0.00.
 import re
 import difflib
 import unicodedata
+from collections import defaultdict
 
 TOLERANCIA_TOTALES = 1.0  # pesos
 
@@ -23,6 +24,41 @@ def normalizar(texto: str) -> str:
 
 def _norm_cuil(cuil: str) -> str:
     return re.sub(r"[^0-9]", "", cuil or "")
+
+
+def _mes(fecha: str) -> str:
+    """'AAAA-MM' o 'AAAA-MM-DD' -> 'AAAA-MM' (para comparar por mes; el
+    período del recibo solo tiene resolución mensual)."""
+    return (fecha or "")[:7]
+
+
+def formula_vigente_en(formula: dict, periodo: str) -> bool:
+    """¿Esta fórmula regía en el período (AAAA-MM) del recibo?
+
+    fecha_desde/fecha_hasta en None = sin límite de ese lado (una fórmula sin
+    fechas cargadas sigue vigente siempre, igual que antes de esta feature).
+    Si la fórmula SÍ tiene un límite de un lado pero no se puede determinar el
+    período del recibo, no se la considera vigente para ese lado: mejor no
+    chequear el concepto que aplicar una fórmula que podría no corresponder.
+    """
+    mp = _mes(periodo)
+    desde, hasta = formula.get("fecha_desde"), formula.get("fecha_hasta")
+    if desde and (not mp or mp < _mes(desde)):
+        return False
+    if hasta and (not mp or mp > _mes(hasta)):
+        return False
+    return True
+
+
+def rangos_se_superponen(desde1, hasta1, desde2, hasta2) -> bool:
+    """¿Los rangos [desde1,hasta1] y [desde2,hasta2] (AAAA-MM-DD o None = sin
+    límite de ese lado) se pisan en algún período? Los límites son inclusivos:
+    un rango que termina en 2020-12 y otro que empieza en 2020-12 SÍ se pisan
+    (ambos vigentes ese mes)."""
+    d1, h1, d2, h2 = _mes(desde1) or None, _mes(hasta1) or None, _mes(desde2) or None, _mes(hasta2) or None
+    cond1 = h2 is None or d1 is None or d1 <= h2
+    cond2 = h1 is None or d2 is None or d2 <= h1
+    return cond1 and cond2
 
 
 def indexar_conceptos(conceptos: list, cuit_empleador: str = None) -> dict:
@@ -71,8 +107,46 @@ def _evaluar(expr: str, variables: dict) -> float:
     return float(eval(expr, {"__builtins__": {}}, variables))
 
 
+def cuil_no_coincide(recibo: dict, cuil_sesion: str) -> bool:
+    """¿El CUIL que leyó la IA del recibo es distinto del de la sesión?
+    (Si alguno falta, no se puede afirmar que no coincide -> False: no bloquea
+    con datos incompletos, solo ante una discrepancia real y verificable.)"""
+    cuil_recibo = _norm_cuil((recibo.get("empleado") or {}).get("cuil"))
+    cuil_sesion_norm = _norm_cuil(cuil_sesion)
+    return bool(cuil_recibo and cuil_sesion_norm and cuil_recibo != cuil_sesion_norm)
+
+
+def _resultado_bloqueado_por_cuil(recibo: dict, cuil_sesion: str) -> dict:
+    cuil_recibo = _norm_cuil((recibo.get("empleado") or {}).get("cuil"))
+    cuil_sesion_norm = _norm_cuil(cuil_sesion)
+    return {
+        "periodo": recibo.get("periodo"),
+        "cuil": cuil_recibo,
+        "estado": "CUIL_NO_COINCIDE",
+        "bloqueado": True,
+        "formulas_validadas": [],
+        "discrepancias": [{
+            "tipo": "cuil_no_coincide",
+            "detalle": f"Este recibo pertenece al CUIL {cuil_recibo}, pero iniciaste sesión "
+                       f"con el CUIL {cuil_sesion_norm}. No se hizo ningún chequeo: subí tu "
+                       "propio recibo para verificarlo.",
+        }],
+        "avisos": [], "alertas": [],
+        "retencion_sindical": {"convenio": 0.0, "afiliacion": 0.0, "total": 0.0},
+        "totales": {"remunerativo": 0.0, "ingresos": 0.0, "descuentos": 0.0, "neto": 0.0},
+    }
+
+
 def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: float = 2.0,
             cuil_sesion: str = None) -> dict:
+    # El CUIL que leyó la IA del recibo tiene que ser el mismo que el de la
+    # sesión (no el que diga el trabajador). Si no coincide, se corta ACÁ: no
+    # se matchea, no se evalúa ninguna fórmula, no se detecta ninguna
+    # discrepancia de monto — evita validar/enviar el recibo de otra persona,
+    # a propósito o por error.
+    if cuil_no_coincide(recibo, cuil_sesion):
+        return _resultado_bloqueado_por_cuil(recibo, cuil_sesion)
+
     cuit_empleador = _norm_cuil((recibo.get("empleador") or {}).get("cuit"))
     idx = indexar_conceptos(conceptos, cuit_empleador)
     matcheadas, desconocidas = matchear_lineas(recibo["lineas"], idx)
@@ -96,20 +170,20 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
 
     resultados, discrepancias = [], []
 
-    # El CUIL que leyó la IA del recibo tiene que ser el mismo que el de la
-    # sesión (no el que diga el trabajador): evita validar/enviar el recibo
-    # de otra persona, a propósito o por error.
-    cuil_recibo = _norm_cuil((recibo.get("empleado") or {}).get("cuil"))
-    cuil_sesion_norm = _norm_cuil(cuil_sesion)
-    if cuil_recibo and cuil_sesion_norm and cuil_recibo != cuil_sesion_norm:
-        discrepancias.append({
-            "tipo": "cuil_no_coincide",
-            "detalle": f"Este recibo pertenece al CUIL {cuil_recibo}, pero iniciaste sesión "
-                       f"con el CUIL {cuil_sesion_norm}. Verificá que sea tu propio recibo "
-                       "antes de continuar.",
-        })
-
+    # Un mismo target puede tener varias fórmulas históricas (vigencias que no
+    # se superponen, se garantiza al cargar/editar — ver rangos_se_superponen).
+    # Para este recibo se usa la que regía en SU período, no la fórmula
+    # actual. Si ninguna estaba vigente en ese período, el concepto
+    # simplemente no se chequea (no se inventa una discrepancia de monto).
+    formulas_por_target = defaultdict(list)
     for f in formulas:
+        formulas_por_target[f["target"]].append(f)
+    periodo_recibo = recibo.get("periodo")
+
+    for target, fs in formulas_por_target.items():
+        f = next((x for x in fs if formula_vigente_en(x, periodo_recibo)), None)
+        if f is None:
+            continue
         codigo = f["target"]
         if codigo not in importe_por_codigo:
             discrepancias.append({

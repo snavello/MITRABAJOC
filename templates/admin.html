@@ -229,16 +229,21 @@
   <!-- ============ FÓRMULAS ============ -->
   <h2 id="formulas">Fórmulas a validar</h2>
   <p class="muted">La variable <code>base_remunerativa</code> es la suma de los ingresos marcados como remunerativos. También está <code>total_ingresos</code>.</p>
+  <p class="muted">Un recibo se valida con la fórmula vigente en SU período (no con la fórmula actual): podés cargar varias fórmulas históricas del mismo concepto mientras sus vigencias no se superpongan. "Hasta" vacío = sigue vigente. Si un período no tiene ninguna fórmula vigente para un concepto, ese concepto no se chequea (no se marca como discrepancia).</p>
+  {% if request.query_params.get('error') == 'superposicion' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">La vigencia que cargaste para <code>{{ request.query_params.get('target') }}</code> se superpone con otra fórmula existente de ese mismo concepto. Ajustá las fechas (o borrá/editá la otra) antes de guardar.</div>
+  {% endif %}
   <table>
-    <tr><th>Concepto</th><th>Descripción</th><th>Expresión</th><th>Tol.</th><th></th></tr>
+    <tr><th>Concepto</th><th>Descripción</th><th>Expresión</th><th>Tol.</th><th>Vigencia</th><th></th></tr>
     {% for f in formulas %}
     <tr>
       <td><code>{{ f.target }}</code>{% if f.target not in codigos_efectivos %}<span class="tag" style="background:#f8e5e2; color:var(--alerta);" title="Ningún concepto tiene este código: esta fórmula nunca va a matchear.">⚠ código inexistente</span>{% endif %}</td>
       <td>{{ f.descripcion }}</td>
       <td><code>{{ f.expr }}</code></td><td>${{ f.tolerancia }}</td>
+      <td class="muted">{{ f.fecha_desde or '(sin inicio)' }} → {{ f.fecha_hasta or 'vigente' }}</td>
       <td class="acc">
         <button class="sec mini" type="button"
-          onclick='editarFormula({{ f.id }}, {{ f.target|tojson }}, {{ f.descripcion|tojson }}, {{ f.expr|tojson }}, {{ f.tolerancia }})'>Editar</button>
+          onclick='editarFormula({{ f.id }}, {{ f.target|tojson }}, {{ f.descripcion|tojson }}, {{ f.expr|tojson }}, {{ f.tolerancia }}, {{ (f.fecha_desde or "")|tojson }}, {{ (f.fecha_hasta or "")|tojson }})'>Editar</button>
         <form method="post" action="/admin/formula/borrar" onsubmit="return confirm('¿Borrar esta fórmula?')">
           <input type="hidden" name="id" value="{{ f.id }}">
           <button class="peligro mini" type="submit">Borrar</button>
@@ -258,6 +263,8 @@
     <input name="descripcion" id="f-desc" placeholder="Descripción" required style="flex:1; min-width:180px;">
     <input name="expr" id="f-expr" placeholder="0.015 * base_remunerativa" required style="min-width:200px;">
     <input name="tolerancia" id="f-tol" type="number" step="0.01" value="1.0" style="width:80px;">
+    <label class="muted" style="display:flex; align-items:center; gap:4px;">Desde<input name="fecha_desde" id="f-desde" type="date"></label>
+    <label class="muted" style="display:flex; align-items:center; gap:4px;">Hasta<input name="fecha_hasta" id="f-hasta" type="date" title="Vacío = vigente"></label>
     <button type="submit" id="f-btn">Agregar fórmula</button>
     <button type="button" class="sec oculto" id="f-cancel" onclick="cancelarFormula()">Cancelar</button>
   </form>
@@ -647,12 +654,14 @@ function resetTrab() {
 }
 
 // ---------- ABM fórmulas ----------
-function editarFormula(id, target, desc, expr, tol) {
+function editarFormula(id, target, desc, expr, tol, fechaDesde, fechaHasta) {
   document.getElementById('f-id').value = id;
   document.getElementById('f-target').value = target;
   document.getElementById('f-desc').value = desc;
   document.getElementById('f-expr').value = expr;
   document.getElementById('f-tol').value = tol;
+  document.getElementById('f-desde').value = fechaDesde || '';
+  document.getElementById('f-hasta').value = fechaHasta || '';
   document.getElementById('f-btn').textContent = 'Guardar cambios';
   document.getElementById('f-cancel').classList.remove('oculto');
   document.getElementById('form-formula').scrollIntoView({behavior:'smooth', block:'center'});

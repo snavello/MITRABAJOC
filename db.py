@@ -166,6 +166,15 @@ class Formula(SQLModel, table=True):
     expr: str                      # ej: "0.015 * base_remunerativa"
     tolerancia: float = 1.0
     activa: bool = True
+    # Vigencia por período del recibo (recibo["periodo"] = "AAAA-MM"). Un
+    # recibo viejo se valida con la fórmula que regía en SU período, no con la
+    # fórmula actual. NULL en ambas = sin límite de ese lado (una fórmula
+    # cargada sin fechas sigue vigente siempre, como antes de este cambio).
+    # fecha_hasta NULL = todavía vigente (sin fecha de baja). No puede haber
+    # dos fórmulas del mismo target con rangos de vigencia superpuestos — se
+    # valida en el alta/edición (ver validador.rangos_se_superponen).
+    fecha_desde: Optional[str] = Field(default=None)
+    fecha_hasta: Optional[str] = Field(default=None)
 
 
 class Reporte(SQLModel, table=True):
@@ -324,7 +333,8 @@ def formulas_como_dicts(sindicato_id: int = None) -> list:
             q = q.where(Formula.sindicato_id == sindicato_id)
         return [
             {"target": f.target, "descripcion": f.descripcion,
-             "expr": f.expr, "tolerancia": f.tolerancia}
+             "expr": f.expr, "tolerancia": f.tolerancia,
+             "fecha_desde": f.fecha_desde, "fecha_hasta": f.fecha_hasta}
             for f in s.exec(q).all() if f.activa
         ]
 
