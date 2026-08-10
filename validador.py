@@ -4,9 +4,15 @@ Sin dependencias externas: solo biblioteca estándar.
 Verificado contra recibos reales AEFIP (ago/sep 2024): diferencia 0.00.
 """
 import re
+import difflib
 import unicodedata
 
 TOLERANCIA_TOTALES = 1.0  # pesos
+
+# Código que se le pone a un concepto detectado en un recibo cuando la IA no
+# pudo leer su código. Ver detectar_nuevos() y detectar_provisorios().
+PREFIJO_PROVISORIO = "NUEVO-"
+UMBRAL_SIMILITUD = 0.75
 
 
 def normalizar(texto: str) -> str:
@@ -197,9 +203,68 @@ def detectar_nuevos(conceptos: list, lineas: list) -> list:
         vistos.add(clave)
         importe = ln.get("importe", 0) or 0
         nuevos.append({
-            "codigo": ln.get("codigo") or f"NUEVO-{clave[:12]}",
+            "codigo": ln.get("codigo") or f"{PREFIJO_PROVISORIO}{clave[:12]}",
             "descripcion": ln.get("descripcion", "(sin descripción)"),
             "importe": importe,
             "tipo": "descuento" if importe < 0 else "ingreso",
         })
     return nuevos
+
+
+def es_codigo_provisorio(codigo) -> bool:
+    return str(codigo or "").startswith(PREFIJO_PROVISORIO)
+
+
+def _clave_similitud(texto: str) -> str:
+    """Normalización agresiva SOLO para comparar parecidos entre sí.
+    NO se usa para matchear líneas del recibo: ahí la comparación sigue siendo
+    por código exacto o por nombre/alias normalizado (ver indexar_conceptos)."""
+    return re.sub(r"[^A-Z0-9]", "", normalizar(texto))
+
+
+def similitud(a: str, b: str) -> float:
+    return difflib.SequenceMatcher(None, _clave_similitud(a), _clave_similitud(b)).ratio()
+
+
+def buscar_similar(nombre: str, conceptos: list, excluir_codigo=None) -> dict | None:
+    """El concepto de código real más parecido a `nombre`, o None.
+
+    Solo mira conceptos con código real: uno provisorio no sirve de referencia.
+    """
+    mejor, mejor_ratio = None, 0.0
+    for c in conceptos:
+        if es_codigo_provisorio(c.get("codigo")):
+            continue
+        if excluir_codigo is not None and c.get("codigo") == excluir_codigo:
+            continue
+        for candidato in [c.get("nombre", "")] + list(c.get("alias") or []):
+            r = similitud(nombre, candidato)
+            if r > mejor_ratio:
+                mejor, mejor_ratio = c, r
+    if mejor is not None and mejor_ratio >= UMBRAL_SIMILITUD:
+        return {"concepto": mejor, "ratio": round(mejor_ratio, 3)}
+    return None
+
+
+def detectar_provisorios(conceptos: list) -> list:
+    """Conceptos con código provisorio, con el existente más parecido si lo hay.
+
+    Un código provisorio nunca va a matchear por código contra un recibo real
+    (ningún recibo trae 'NUEVO-...'), así que solo puede matchear por nombre:
+    son frágiles y hay que revisarlos, sean duplicados o no.
+
+    Por qué se filtra por código provisorio y no solo por similitud de nombre:
+    medido sobre un catálogo real de 33 conceptos, comparar por nombre a secas
+    da 6 falsos positivos por cada duplicado real — las variantes por grado del
+    escalafón ('PERMANENCIA EN EL GRUPO' vs '...GRUPO 26', 0.95) se parecen MÁS
+    entre sí que el duplicado verdadero (0.82). El umbral solo no los separa.
+    """
+    resultado = []
+    for c in conceptos:
+        if not es_codigo_provisorio(c.get("codigo")):
+            continue
+        resultado.append({
+            "concepto": c,
+            "similar": buscar_similar(c.get("nombre", ""), conceptos, excluir_codigo=c.get("codigo")),
+        })
+    return resultado

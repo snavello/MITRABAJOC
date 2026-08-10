@@ -75,6 +75,7 @@
   .tag-no { background:#f8e5e2; color:var(--alerta); }
   .aviso { background:#fdf6e8; border:1px solid #e8d9b0; border-radius:8px;
            padding:11px 15px; font-size:13.5px; color:#6b5a2f; margin:12px 0; }
+  .prov-item { background:#fff; border-radius:6px; padding:9px 11px; margin-top:9px; color:#4a4a4a; }
   form.linea { display:flex; gap:7px; flex-wrap:wrap; align-items:center; margin-top:12px;
                background:#fff; border:1px solid var(--linea); border-radius:8px; padding:12px; }
   input, select { padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:13.5px; font-family:inherit; }
@@ -219,6 +220,37 @@
   <div class="panel" id="panel-conceptos">
   <!-- ============ CONCEPTOS ============ -->
   <h2 id="conceptos">Conceptos ({{ conceptos|length }})</h2>
+  {% if provisorios %}
+  <div class="aviso" style="background:#f8e5e2; border-color:#e0c4c0;">
+    <strong>⚠ {{ provisorios|length }} concepto(s) con código provisorio.</strong>
+    La IA no pudo leer el código en el recibo y le puso uno inventado
+    (<code>NUEVO-…</code>). Ningún recibo trae ese código, así que estos conceptos
+    solo pueden matchear por nombre: conviene resolverlos.
+    {% for p in provisorios %}
+    <div class="prov-item">
+      <div><code>{{ p.concepto.codigo }}</code> <strong>{{ p.concepto.nombre }}</strong></div>
+      {% if p.similar %}
+      <div class="muted" style="margin:4px 0 6px;">
+        Se parece a <code>{{ p.similar.concepto.codigo }}</code>
+        {{ p.similar.concepto.nombre }} ({{ (p.similar.ratio * 100)|round|int }}% de coincidencia).
+        ¿Es el mismo concepto?
+      </div>
+      <form method="post" action="/admin/concepto/fusionar" style="display:inline;"
+            onsubmit="return confirm('Se va a agregar «{{ p.concepto.nombre }}» como alias de {{ p.similar.concepto.codigo }} y borrar el concepto provisorio. ¿Confirmás?')">
+        <input type="hidden" name="id" value="{{ p.concepto.id }}">
+        <input type="hidden" name="destino_id" value="{{ p.similar.concepto.id }}">
+        <button class="mini" type="submit">Sí, es el mismo — unificar</button>
+      </form>
+      <span class="muted" style="font-size:12px; margin-left:6px;">
+        Si es distinto, editalo y ponele su código real.</span>
+      {% else %}
+      <div class="muted" style="margin:4px 0 0;">
+        No se parece a ningún concepto existente. Editalo y ponele su código real.</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
   {% set pendientes = conceptos | selectattr('pendiente_revision') | list %}
   {% if pendientes %}
   <div class="aviso"><strong>{{ pendientes|length }} concepto(s) por revisar.</strong>
@@ -631,8 +663,10 @@ function renderPropuestas(data) {
   h += `. Encontramos ${propuestas.length} concepto(s) nuevo(s). Revisá y aprobá los que correspondan.</div>`;
   h += `<table><tr><th></th><th>Código</th><th>Nombre</th><th>Tipo</th><th>Remun.</th><th>Apariciones</th></tr>`;
   propuestas.forEach((p, i) => {
-    h += `<tr>
-      <td><input type="checkbox" checked data-i="${i}" class="ap-check"></td>
+    // Si se parece a uno que ya está, viene DESMARCADO: aprobarlo crearía un
+    // duplicado. El admin lo marca solo si confirma que es distinto.
+    h += `<tr${p.similar ? ' class="pend"' : ''}>
+      <td><input type="checkbox" ${p.similar ? '' : 'checked'} data-i="${i}" class="ap-check"></td>
       <td><code>${p.codigo}</code></td>
       <td>${p.descripcion}</td>
       <td><select data-i="${i}" class="ap-tipo">
@@ -645,6 +679,14 @@ function renderPropuestas(data) {
       </select></td>
       <td class="veces">${p.veces}×</td>
     </tr>`;
+    if (p.similar) {
+      h += `<tr class="pend"><td></td><td colspan="5" class="muted" style="padding-top:0;">
+        ⚠ Se parece a <code>${p.similar.codigo}</code> ${p.similar.nombre}
+        (${Math.round(p.similar.ratio * 100)}% de coincidencia). Si es el mismo concepto,
+        dejalo sin marcar y agregá "${p.descripcion}" como alias de
+        <code>${p.similar.codigo}</code> desde la pestaña Conceptos.
+      </td></tr>`;
+    }
   });
   h += `</table>
     <div style="margin-top:12px; display:flex; gap:8px;">

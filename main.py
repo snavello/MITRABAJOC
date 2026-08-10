@@ -37,7 +37,7 @@ import db
 import auth
 from db import Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador, CuentaTrabajador, EnvioSindicato, ReciboVerificado
 from extractor import extraer, extraer_aportes
-from validador import validar, detectar_nuevos
+from validador import validar, detectar_nuevos, detectar_provisorios, buscar_similar
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
 
 app = FastAPI(title="Mi Trabajo — validador de recibos")
@@ -246,12 +246,18 @@ def admin(request: Request):
     # Nombre por CUIL, para poder filtrar Reportes y Afiliados cotizantes por
     # nombre (esas tablas solo guardan el CUIL, no el nombre).
     nombres_por_cuil = {t.cuil: t.nombre for t in trabajadores}
+    # Conceptos con código provisorio (la IA no pudo leer el código del recibo):
+    # nunca matchean por código, así que hay que revisarlos.
+    provisorios = detectar_provisorios([
+        {"id": c.id, "codigo": c.codigo, "nombre": c.nombre, "alias": c.alias or []}
+        for c in conceptos
+    ])
     return templates.TemplateResponse("admin.html", {
         "request": request, "sindicato": sind.nombre if sind else "",
         "marca": db.marca_sindicato(sid),
         "conceptos": conceptos, "formulas": formulas, "reportes": reportes,
         "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR, "envios": envios,
-        "nombres_por_cuil": nombres_por_cuil,
+        "nombres_por_cuil": nombres_por_cuil, "provisorios": provisorios,
         "debe_cambiar": ses.get("cambiar", False),
         "marca": db.marca_sindicato(sid),
     })
@@ -411,6 +417,40 @@ def borrar_concepto(request: Request, id: int = Form(...)):
     return RedirectResponse("/admin#conceptos", status_code=303)
 
 
+@app.post("/admin/concepto/fusionar")
+def fusionar_concepto(request: Request, id: int = Form(...), destino_id: int = Form(...)):
+    """Un concepto provisorio resultó ser el mismo que uno ya existente: se
+    pasa su descripción como alias del original y se borra el provisorio.
+    Así el próximo recibo que traiga esa variante matchea con el original."""
+    sid = exigir_sindicato(request)
+    with db.get_session() as s:
+        origen = s.get(Concepto, id)
+        destino = s.get(Concepto, destino_id)
+        if not (origen and destino and origen.sindicato_id == sid
+                and destino.sindicato_id == sid and origen.id != destino.id):
+            return RedirectResponse("/admin#conceptos", status_code=303)
+
+        # El nombre y los alias del provisorio pasan a ser alias del original.
+        alias = list(destino.alias or [])
+        for texto in [origen.nombre] + list(origen.alias or []):
+            if texto and texto not in alias:
+                alias.append(texto)
+        destino.alias = alias
+        s.add(destino)
+
+        # Si alguna fórmula apuntaba al código provisorio, repuntarla al real:
+        # si no, quedaría huérfana y no matchearía nunca (el mismo problema que
+        # el target de texto libre).
+        for f in s.exec(select(Formula).where(
+                Formula.sindicato_id == sid, Formula.target == origen.codigo)).all():
+            f.target = destino.codigo
+            s.add(f)
+
+        s.delete(origen)
+        s.commit()
+    return RedirectResponse("/admin#conceptos", status_code=303)
+
+
 # ---------- ABM de fórmulas ----------
 @app.post("/admin/formula")
 def abm_formula(
@@ -466,6 +506,17 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
                 acumulados[clave]["veces"] += 1
             else:
                 acumulados[clave] = {**n, "remunerativo": n["tipo"] == "ingreso", "veces": 1}
+
+    # Antes de que el admin apruebe el lote, avisar si alguna propuesta se
+    # parece a un concepto que YA está en el catálogo: darla de alta crearía
+    # un duplicado que después hay que ir a limpiar a mano.
+    for p in acumulados.values():
+        similar = buscar_similar(p["descripcion"], conceptos_actuales)
+        p["similar"] = {
+            "codigo": similar["concepto"]["codigo"],
+            "nombre": similar["concepto"]["nombre"],
+            "ratio": similar["ratio"],
+        } if similar else None
 
     return {
         "leidos": leidos, "fallidos": fallidos,
