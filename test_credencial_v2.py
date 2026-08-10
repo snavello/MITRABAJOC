@@ -38,10 +38,37 @@ def test_filigrana_varia_por_sindicato():
 
 
 def test_filigrana_es_svg_valido_y_usa_los_colores():
-    svg = filigrana_svg("AEFIP", "#3f8fd4", "#8ab4d8")
+    # Son 3 rosetones con tono levemente variado (no el color exacto): se
+    # verifica que los 3 stroke queden CERCA de secundario o acento, no que
+    # coincidan al pixel.
+    import re
+
+    def _dist(hex_a, hex_b):
+        a = [int(hex_a.lstrip("#")[i:i+2], 16) for i in (0, 2, 4)]
+        b = [int(hex_b.lstrip("#")[i:i+2], 16) for i in (0, 2, 4)]
+        return sum(abs(x - y) for x, y in zip(a, b))
+
+    secundario, acento = "#3f8fd4", "#8ab4d8"
+    svg = filigrana_svg("AEFIP", secundario, acento)
     assert svg.startswith("<svg") and svg.endswith("</svg>")
-    assert "#3f8fd4" in svg and "#8ab4d8" in svg
+    strokes = re.findall(r'stroke="(#[0-9a-f]{6})"', svg)
+    assert len(strokes) == 3, strokes
+    for color in strokes:
+        # tono máximo es +-0.15 sobre el canal más alejado de blanco/negro
+        # (255*3*0.15 = 114.75 en el peor caso): 130 da margen sin ser tan
+        # ancho como para no detectar un color realmente distinto.
+        assert min(_dist(color, secundario), _dist(color, acento)) < 130, color
     print("OK  test_filigrana_es_svg_valido_y_usa_los_colores")
+
+
+def test_filigrana_tiene_tres_rosetones_en_posiciones_distintas():
+    svg = filigrana_svg("Unión Obrera Metalúrgica", "#2fa88f", "#e8b84b")
+    assert svg.count("<g transform=") == 3
+    import re
+    traslados = re.findall(r'translate\(([-\d.]+),([-\d.]+)\)', svg)
+    assert len(traslados) == 3
+    assert len(set(traslados)) == 3, "los 3 rosetones deben quedar en posiciones distintas"
+    print("OK  test_filigrana_tiene_tres_rosetones_en_posiciones_distintas")
 
 
 def test_filigrana_no_rompe_con_nombre_vacio():
@@ -86,6 +113,7 @@ if __name__ == "__main__":
     test_filigrana_es_determinista()
     test_filigrana_varia_por_sindicato()
     test_filigrana_es_svg_valido_y_usa_los_colores()
+    test_filigrana_tiene_tres_rosetones_en_posiciones_distintas()
     test_filigrana_no_rompe_con_nombre_vacio()
     test_generar_codigo_credencial_formato()
     test_generar_codigo_credencial_persiste_y_regenera()
