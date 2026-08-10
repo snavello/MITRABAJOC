@@ -326,13 +326,12 @@ def admin(request: Request):
     codigos_efectivos = {c.codigo_generico or c.codigo for c in conceptos}
     return templates.TemplateResponse("admin.html", {
         "request": request, "sindicato": sind.nombre if sind else "",
-        "marca": db.marca_sindicato(sid),
+        "marca": db.marca_sindicato(sid), "marca_plataforma": db.marca_plataforma(),
         "conceptos": conceptos, "genericos": genericos, "codigos_efectivos": codigos_efectivos,
         "formulas": formulas, "reportes": reportes,
         "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR, "envios": envios,
         "nombres_por_cuil": nombres_por_cuil, "provisorios": provisorios,
         "debe_cambiar": ses.get("cambiar", False),
-        "marca": db.marca_sindicato(sid),
     })
 
 

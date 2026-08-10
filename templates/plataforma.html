@@ -12,10 +12,9 @@
   }
   * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
   body { background:var(--papel); color:#1b1b1b; line-height:1.5; }
-  header { background:#fff; border-bottom:1px solid var(--linea); padding:14px 22px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:20; }
-  header img { width:28px; height:28px; }
-  header .nom { font-size:17px; font-weight:600; color:var(--tinta); }
-  header .rol { margin-left:auto; font-size:13px; color:var(--gris); }
+  header { background:#fff; border-bottom:1px solid var(--linea); padding:14px 22px; display:flex; align-items:center; gap:16px; position:sticky; top:0; z-index:20; }
+  header img { width:36px; height:36px; object-fit:contain; }
+  header .rol { margin-right:auto; font-size:13px; color:var(--gris); }
   header a { color:var(--gris); font-size:13px; margin-left:16px; text-decoration:none; }
   .wrap { max-width:1000px; margin:0 auto; padding:24px 22px 60px; }
   h2 { font-size:17px; margin:30px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--tinta); }
@@ -59,10 +58,9 @@
 </head>
 <body>
 <header>
-  <img src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo">
-  <span class="nom">Mi Trabajo</span>
   <span class="rol">Administración de plataforma</span>
   <a href="/plataforma/salir">Salir</a>
+  <img src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo">
 </header>
 
 <div class="wrap">

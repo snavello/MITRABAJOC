@@ -77,12 +77,11 @@
   header { background:var(--marca-primario); border-bottom:1px solid var(--linea); padding:14px 22px;
            display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
            position:sticky; top:0; z-index:20; }
-  .marca { display:flex; align-items:center; gap:10px; }
-  .marca img { width:28px; height:28px; background:#fff; border-radius:6px; padding:2px; }
-  header .nom { font-size:17px; font-weight:600; color:#fff; }
+  .logo-plataforma-header { width:36px; height:36px; object-fit:contain; background:#fff; border-radius:6px; padding:2px; flex-shrink:0; }
   header .rol { color:rgba(255,255,255,.85) !important; }
   header a { color:rgba(255,255,255,.9) !important; }
-  .sind-wrap { display:flex; align-items:center; gap:14px; }
+  .sind-wrap { display:flex; align-items:center; gap:14px; width:100%; justify-content:space-between; }
+  .sind-wrap .der { display:flex; align-items:center; gap:14px; }
   .sind-wrap img.sind { max-height:32px; max-width:130px; object-fit:contain; background:#fff; border-radius:6px; padding:2px; }
   .sind-wrap .sind-nombre { font-size:14px; color:rgba(255,255,255,.9); }
   header a { color:rgba(255,255,255,.85) !important; }
@@ -173,17 +172,16 @@
 </head>
 <body>
 <header>
-  <div class="marca">
-    <img src="/static/logo_mitrabajo.svg" alt="Mi Trabajo">
-    <span class="nom">Mi Trabajo</span>
-  </div>
   <div class="sind-wrap">
     {% if marca and marca.logo %}
     <img class="sind" src="/logo/{{ marca.id }}" alt="{{ sindicato }}">
     {% else %}
     <span class="sind-nombre">{{ sindicato }}</span>
     {% endif %}
-    <a href="/admin/salir" style="font-size:13px; color:var(--gris); text-decoration:none;">Salir</a>
+    <span class="der">
+      <a href="/admin/salir" style="font-size:13px; color:var(--gris); text-decoration:none;">Salir</a>
+      <img class="logo-plataforma-header" src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo">
+    </span>
   </div>
 </header>
 

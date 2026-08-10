@@ -12,10 +12,8 @@
   }
   * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
   body { background:var(--papel); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .logo-esquina { position:fixed; top:22px; right:24px; width:42px; height:42px; object-fit:contain; }
   .caja { background:#fff; border:1px solid var(--linea); border-radius:16px; padding:30px 26px; max-width:400px; width:100%; }
-  .marca { display:flex; align-items:center; gap:10px; margin-bottom:8px; justify-content:center; }
-  .marca img { width:32px; height:32px; }
-  .marca .nom { font-size:19px; font-weight:600; color:var(--tinta); }
   h1 { font-size:16px; color:var(--gris); font-weight:500; margin-bottom:20px; text-align:center; }
   a.sind { display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border:1px solid var(--linea); border-radius:12px; text-decoration:none; color:var(--tinta); font-size:16px; font-weight:500; margin-bottom:10px; transition:border-color .15s; }
   a.sind:hover { border-color:var(--agua); background:#f9fdfc; }
@@ -25,11 +23,8 @@
 </style>
 </head>
 <body>
+  <img class="logo-esquina" src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo">
   <div class="caja">
-    <div class="marca">
-      <img src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo">
-      <span class="nom">Mi Trabajo</span>
-    </div>
     <h1>Estás en varios sindicatos. ¿A cuál querés entrar?</h1>
     {% for s in sindicatos %}
     <a class="sind" href="/app/elegir/{{ s.id }}">
