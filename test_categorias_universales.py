@@ -120,6 +120,67 @@ def test_chequeo_normal_no_se_marca_como_automatico():
     print("OK  test_chequeo_normal_no_se_marca_como_automatico")
 
 
+GENERICOS_SIN_INGRESO = [c for c in GENERICOS if c["tipo"] != "ingreso"]
+
+
+def _recibo_sin_ningun_ingreso_cargado(importe_jub):
+    """Un sindicato que cargó los 3 genéricos de descuento pero NINGÚN
+    concepto de haberes para este empleador: el bug real encontrado con un
+    recibo de AFIP — sin esto, base_remunerativa da $0 y la fórmula compara
+    contra cero (falsa discrepancia) en vez de contra el total impreso."""
+    return {
+        "periodo": "2026-08",
+        "empleado": {"cuil": "20111111119"},
+        "empleador": {"nombre": "Empleador Nuevo SA", "cuit": CUIT_NUEVO},
+        "lineas": [
+            {"codigo": "1-026", "descripcion": "Sueldo Basico AFIP", "importe": 27892.56, "tipo": "remuneracion"},
+            {"codigo": "42-001", "descripcion": "AP. PERS. JUB. ANSES", "importe": importe_jub,
+             "tipo": "aporte_trabajador", "categoria_universal": "jubilacion"},
+        ],
+        "totales_impresos": {"remuneraciones": 27892.56},
+    }
+
+
+def test_base_remunerativa_usa_total_impreso_si_no_matchea_ningun_ingreso():
+    formulas = [{"target": "JUBILACION", "descripcion": "Jubilación = 11%",
+                 "expr": "0.11 * base_remunerativa", "tolerancia": 1.0,
+                 "fecha_desde": None, "fecha_hasta": None}]
+    # 11% de 27892.56 = 3068.18 — el recibo trae justo ese importe.
+    r = validar(GENERICOS_SIN_INGRESO, formulas, _recibo_sin_ningun_ingreso_cargado(-3068.18))
+    assert r["base_remunerativa_aproximada"] is True
+    assert r["estado"] == "OK", r["discrepancias"]
+    print("OK  test_base_remunerativa_usa_total_impreso_si_no_matchea_ningun_ingreso")
+
+
+def test_base_remunerativa_aproximada_detecta_discrepancia_real():
+    formulas = [{"target": "JUBILACION", "descripcion": "Jubilación = 11%",
+                 "expr": "0.11 * base_remunerativa", "tolerancia": 1.0,
+                 "fecha_desde": None, "fecha_hasta": None}]
+    r = validar(GENERICOS_SIN_INGRESO, formulas, _recibo_sin_ningun_ingreso_cargado(-1526.72))
+    assert r["base_remunerativa_aproximada"] is True
+    assert r["estado"] == "CON_DISCREPANCIAS"
+    print("OK  test_base_remunerativa_aproximada_detecta_discrepancia_real")
+
+
+def test_base_remunerativa_no_se_aproxima_si_matchea_algun_ingreso():
+    conceptos = GENERICOS + [{"codigo": "SUELDO", "nombre": "Sueldo básico", "tipo": "ingreso",
+                              "remunerativo": True, "alias": [], "cuit_empleador": None, "codigo_generico": None}]
+    recibo = {
+        "periodo": "2026-08", "empleado": {"cuil": "20111111119"},
+        "empleador": {"nombre": "Otro", "cuit": None},
+        "lineas": [
+            {"codigo": "SUELDO", "descripcion": "Sueldo básico", "importe": 1000000, "tipo": "remuneracion"},
+            {"codigo": "JUBILACION", "descripcion": "Aporte jubilatorio (SIPA)", "importe": -110000,
+             "tipo": "aporte_trabajador"},
+        ],
+        "totales_impresos": {"remuneraciones": 999999999},  # deliberadamente distinto: no debe usarse
+    }
+    r = validar(conceptos, [FORMULAS[0]], recibo)
+    assert r["base_remunerativa_aproximada"] is False
+    assert r["totales"]["remunerativo"] == 1000000.0
+    print("OK  test_base_remunerativa_no_se_aproxima_si_matchea_algun_ingreso")
+
+
 def test_detectar_nuevos_propaga_categoria_universal():
     lineas = [{"codigo": "AB99", "descripcion": "Algo sin catalogar", "importe": -5000,
                "tipo": "aporte_trabajador", "categoria_universal": "cuota_sindical"}]
@@ -137,5 +198,8 @@ if __name__ == "__main__":
     test_validar_empleador_nuevo_sin_catalogo_igual_se_chequea()
     test_validar_empleador_nuevo_detecta_discrepancia_real()
     test_chequeo_normal_no_se_marca_como_automatico()
+    test_base_remunerativa_usa_total_impreso_si_no_matchea_ningun_ingreso()
+    test_base_remunerativa_aproximada_detecta_discrepancia_real()
+    test_base_remunerativa_no_se_aproxima_si_matchea_algun_ingreso()
     test_detectar_nuevos_propaga_categoria_universal()
     print("\nTodo OK — categorías universales (aportes de ley) como red de seguridad.")

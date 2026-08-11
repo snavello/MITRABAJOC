@@ -207,12 +207,29 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
     # chequeo puntual no pasó por el catálogo curado del sindicato.
     codigos_automaticos = {codigo_efectivo(m["concepto"]) for m in matcheadas if m.get("chequeo_automatico")}
 
+    total_ingresos = sum(m["importe"] for m in ingresos)
+    base_remunerativa = sum(
+        m["importe"] for m in ingresos
+        if m["concepto"].get("remunerativo", True)
+    )
+    # Si no matcheó NINGÚN ingreso (típico junto con la red de seguridad de
+    # categoría universal: un sindicato que solo cargó los 3 conceptos
+    # genéricos de descuento, sin ningún concepto de haberes para este
+    # empleador), la base remunerativa da 0 y las fórmulas de % terminan
+    # comparando contra $0 — una discrepancia falsa, no real. Se usa el total
+    # de remuneraciones IMPRESO en el recibo como aproximación: mejor una
+    # base aproximada que compararlo todo contra cero.
+    base_aproximada = False
+    if not ingresos:
+        impreso_remuneraciones = (recibo.get("totales_impresos") or {}).get("remuneraciones")
+        if impreso_remuneraciones is not None:
+            total_ingresos = impreso_remuneraciones
+            base_remunerativa = impreso_remuneraciones
+            base_aproximada = True
+
     variables = {
-        "total_ingresos": sum(m["importe"] for m in ingresos),
-        "base_remunerativa": sum(
-            m["importe"] for m in ingresos
-            if m["concepto"].get("remunerativo", True)
-        ),
+        "total_ingresos": total_ingresos,
+        "base_remunerativa": base_remunerativa,
         "c": lambda codigo: importe_por_codigo.get(codigo, 0.0),
     }
 
@@ -321,6 +338,7 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
         "avisos": avisos,
         "alertas": alertas,
         "retencion_sindical": retencion_sindical,
+        "base_remunerativa_aproximada": base_aproximada,
         "totales": {
             "remunerativo": round(variables["base_remunerativa"], 2),
             "ingresos": round(variables["total_ingresos"], 2),

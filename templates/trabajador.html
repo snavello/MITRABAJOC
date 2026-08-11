@@ -676,6 +676,9 @@ function renderResultado(d) {
     h += `<div class="fila"><span>${f.ok?'✓':'✗'} ${f.descripcion}${f.chequeo_automatico ? '<span class="badge-auto" title="Este empleador todavía no tiene sus conceptos cargados en el sindicato: se identificó y chequeó automáticamente por tratarse de un aporte de ley.">chequeo automático</span>' : ''}</span><span class="imp">${peso(f.en_recibo)}</span></div>`;
   h += renderTotalesResumen(d.totales);
   h += `</div>`;
+  if (d.base_remunerativa_aproximada) {
+    h += `<div class="disc" style="border-left-color:#d9a441;">El sindicato todavía no tiene cargado ningún concepto de haberes para este empleador, así que el remunerativo usado para los cálculos de arriba se tomó del total impreso en el recibo, no de conceptos verificados uno por uno.</div>`;
+  }
   for (const disc of d.discrepancias) h += `<div class="disc">${disc.detalle}</div>`;
   for (const al of (d.alertas || [])) h += `<div class="alerta-legal">${al.detalle}</div>`;
   if (!ok) h += `<button class="btn alerta" id="rep">Reportar al sindicato</button>`;
