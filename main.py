@@ -159,17 +159,34 @@ def api_validar(request: Request, payload: dict):
     if nuevos and sid:
         cuit_empleador = _norm_cuil((recibo.get("empleador") or {}).get("cuit"))
         with db.get_session() as s:
-            existentes = {(c.codigo, c.cuit_empleador or "") for c in s.exec(select(Concepto).where(
-                Concepto.sindicato_id == sid)).all()}
+            catalogo_actual = s.exec(select(Concepto).where(Concepto.sindicato_id == sid)).all()
+            existentes = {(c.codigo, c.cuit_empleador or "") for c in catalogo_actual}
+            # Códigos genéricos ya cargados: si la IA identificó un aporte de
+            # ley (jubilación/PAMI/obra social) en esta línea, y el sindicato
+            # YA tiene el genérico correspondiente, se vincula automáticamente
+            # (codigo_generico) al darlo de alta — así no queda un concepto
+            # "huérfano" bajo el código crudo del empleador, sin conectar con
+            # la fórmula del genérico (bug real encontrado con un recibo de
+            # AFIP: el concepto quedaba creado pero la fórmula de JUBILACION
+            # nunca lo encontraba).
+            genericos_actuales = {c.codigo for c in catalogo_actual if not c.cuit_empleador}
             for n in nuevos:
                 clave = (n["codigo"], cuit_empleador or "")
                 if clave not in existentes:
+                    codigo_universal = CATEGORIAS_UNIVERSALES.get(n.get("categoria_universal"))
+                    codigo_generico = (
+                        codigo_universal
+                        if codigo_universal and codigo_universal in genericos_actuales
+                        and codigo_universal != n["codigo"]
+                        else None
+                    )
                     s.add(Concepto(
                         sindicato_id=sid,
                         codigo=n["codigo"], nombre=n["descripcion"], tipo=n["tipo"],
                         remunerativo=n.get("remunerativo", True),
                         alias=[n["descripcion"]], pendiente_revision=True,
                         cuit_empleador=cuit_empleador or None,
+                        codigo_generico=codigo_generico,
                     ))
                     existentes.add(clave)
             s.commit()
