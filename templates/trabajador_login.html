@@ -12,8 +12,8 @@
   }
   * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
   body { background:var(--papel); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
-  .logo-esquina { position:fixed; top:22px; right:24px; width:44px; height:44px; object-fit:contain; }
   .caja { background:#fff; border:1px solid var(--linea); border-radius:16px; padding:32px 26px; max-width:400px; width:100%; }
+  .logo-recuadro { display:block; width:51px; height:51px; object-fit:contain; margin:0 auto 18px; }
   .tabs { display:flex; gap:6px; margin-bottom:20px; background:#f2f0ea; padding:4px; border-radius:10px; }
   .tab { flex:1; text-align:center; padding:9px; border-radius:7px; font-size:14px; font-weight:500; cursor:pointer; color:var(--gris); border:none; background:none; font-family:inherit; }
   .tab.activo { background:#fff; color:var(--tinta); box-shadow:0 1px 3px rgba(0,0,0,.08); }
@@ -28,8 +28,8 @@
 </style>
 </head>
 <body>
-  <img class="logo-esquina" src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo">
   <div class="caja">
+    <img class="logo-recuadro" src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo">
     {% set err = request.query_params.get('error') %}
     {% if err == 'login' %}<div class="error">CUIL o clave incorrectos.</div>
     {% elif err == 'nohabilitado' %}<div class="error">Tu CUIL no está habilitado en ningún sindicato todavía. Pedile a tu sindicato que te agregue.</div>
