@@ -548,6 +548,18 @@ def fusionar_concepto(request: Request, id: int = Form(...), destino_id: int = F
     return RedirectResponse("/admin#conceptos", status_code=303)
 
 
+# ---------- Aportes de ley (jubilación, PAMI, obra social) ----------
+@app.post("/admin/conceptos-universales")
+def admin_conceptos_universales(request: Request):
+    """Botón manual: carga los conceptos/fórmulas de jubilación, PAMI y obra
+    social. Pensado para sindicatos dados de alta ANTES de que esto se
+    autocargara solo — es idempotente, no duplica lo que ya esté."""
+    sid = exigir_sindicato(request)
+    agregados = db.crear_conceptos_universales(sid)
+    estado = "ok" if agregados else "nada"
+    return RedirectResponse(f"/admin?universales={estado}#formulas", status_code=303)
+
+
 # ---------- ABM de fórmulas ----------
 @app.post("/admin/formula")
 def abm_formula(

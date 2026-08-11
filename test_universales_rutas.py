@@ -96,8 +96,54 @@ def test_aprender_aplicar_con_vinculo_sugerido_persiste_codigo_generico():
     print("OK  test_aprender_aplicar_con_vinculo_sugerido_persiste_codigo_generico")
 
 
+def test_boton_no_duplica_si_ya_estan_completos():
+    # SID ya tiene los 3 desde el alta (test_alta_sindicato_autocarga...) — el
+    # cliente ya está logueado como admin de SID desde el test anterior.
+    r = client.post("/admin/conceptos-universales", follow_redirects=False)
+    assert r.status_code == 303
+    assert "universales=nada" in r.headers.get("location", "")
+    with Session(db.engine) as s:
+        conceptos = s.exec(select(Concepto).where(
+            Concepto.sindicato_id == SID, Concepto.codigo.in_(["JUBILACION", "PAMI", "OBRASOCIAL"]))).all()
+        formulas = s.exec(select(Formula).where(
+            Formula.sindicato_id == SID, Formula.target.in_(["JUBILACION", "PAMI", "OBRASOCIAL"]))).all()
+        assert len(conceptos) == 3, "no debe haber duplicado ningún concepto"
+        assert len(formulas) == 3, "no debe haber duplicado ninguna fórmula"
+    print("OK  test_boton_no_duplica_si_ya_estan_completos")
+
+
+def test_boton_completa_sindicato_previo_a_la_funcion():
+    """Simula un sindicato dado de alta ANTES de que existiera la autocarga:
+    se crea sin llamar a crear_conceptos_universales, y el botón lo completa."""
+    with Session(db.engine) as s:
+        sind = Sindicato(nombre="Sindicato Anterior", slug="sindicato-anterior")
+        s.add(sind); s.commit(); s.refresh(sind)
+        sid_previo = sind.id
+        s.add(UsuarioSindicato(sindicato_id=sid_previo, usuario="20555555550", nombre="Admin Previo",
+                                clave_hash=auth.hashear_clave("clave-previa"), debe_cambiar_clave=False))
+        s.commit()
+
+    client.post("/admin/login", data={"usuario": "20555555550", "clave": "clave-previa"})
+    with Session(db.engine) as s:
+        antes = s.exec(select(Concepto).where(Concepto.sindicato_id == sid_previo)).all()
+        assert antes == [], "el sindicato 'previo a la función' no debe tener nada todavía"
+
+    r = client.post("/admin/conceptos-universales", follow_redirects=False)
+    assert r.status_code == 303
+    assert "universales=ok" in r.headers.get("location", "")
+
+    with Session(db.engine) as s:
+        conceptos = s.exec(select(Concepto).where(Concepto.sindicato_id == sid_previo)).all()
+        formulas = s.exec(select(Formula).where(Formula.sindicato_id == sid_previo)).all()
+        assert {c.codigo for c in conceptos} == {"JUBILACION", "PAMI", "OBRASOCIAL"}
+        assert {f.target for f in formulas} == {"JUBILACION", "PAMI", "OBRASOCIAL"}
+    print("OK  test_boton_completa_sindicato_previo_a_la_funcion")
+
+
 if __name__ == "__main__":
     test_alta_sindicato_autocarga_3_conceptos_y_formulas()
     test_aprender_sugiere_generico_por_categoria_universal()
     test_aprender_aplicar_con_vinculo_sugerido_persiste_codigo_generico()
+    test_boton_no_duplica_si_ya_estan_completos()
+    test_boton_completa_sindicato_previo_a_la_funcion()
     print("\nTodo OK — alta de sindicato + Aprendizaje con categorías universales.")

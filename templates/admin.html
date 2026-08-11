@@ -230,6 +230,15 @@
   {% if request.query_params.get('error') == 'superposicion' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">La vigencia que cargaste para <code>{{ request.query_params.get('target') }}</code> se superpone con otra fórmula existente de ese mismo concepto. Ajustá las fechas (o borrá/editá la otra) antes de guardar.</div>
   {% endif %}
+  {% if request.query_params.get('universales') == 'ok' %}
+  <div class="msg ok">✓ Se cargaron los conceptos/fórmulas de aportes de ley que faltaban.</div>
+  {% elif request.query_params.get('universales') == 'nada' %}
+  <div class="msg" style="background:#f2f0ea;color:var(--gris);">Ya tenías cargados los 3 (jubilación, PAMI, obra social) — no se agregó nada nuevo.</div>
+  {% endif %}
+  <form method="post" action="/admin/conceptos-universales" style="margin-bottom:14px;"
+        onsubmit="return confirm('¿Cargar los conceptos y fórmulas de jubilación (11%), PAMI (3%) y obra social (3%)? No duplica los que ya tengas.');">
+    <button type="submit" class="sec mini">Cargar aportes de ley (jubilación, PAMI, obra social)</button>
+  </form>
   <table>
     <tr><th>Concepto</th><th>Descripción</th><th>Expresión</th><th>Tol.</th><th>Vigencia</th><th></th></tr>
     {% for f in formulas %}
@@ -271,6 +280,15 @@
   <div class="panel" id="panel-conceptos">
   <!-- ============ CONCEPTOS ============ -->
   <h2 id="conceptos">Conceptos ({{ conceptos|length }})</h2>
+  {% if request.query_params.get('universales') == 'ok' %}
+  <div class="msg ok">✓ Se cargaron los conceptos/fórmulas de aportes de ley que faltaban.</div>
+  {% elif request.query_params.get('universales') == 'nada' %}
+  <div class="msg" style="background:#f2f0ea;color:var(--gris);">Ya tenías cargados los 3 (jubilación, PAMI, obra social) — no se agregó nada nuevo.</div>
+  {% endif %}
+  <form method="post" action="/admin/conceptos-universales" style="margin-bottom:14px;"
+        onsubmit="return confirm('¿Cargar los conceptos y fórmulas de jubilación (11%), PAMI (3%) y obra social (3%)? No duplica los que ya tengas.');">
+    <button type="submit" class="sec mini">Cargar aportes de ley (jubilación, PAMI, obra social)</button>
+  </form>
   {% if provisorios %}
   <div class="aviso" style="background:#f8e5e2; border-color:#e0c4c0;">
     <strong>⚠ {{ provisorios|length }} concepto(s) con código provisorio.</strong>

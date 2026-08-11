@@ -349,28 +349,46 @@ def formulas_como_dicts(sindicato_id: int = None) -> list:
         ]
 
 
-def crear_conceptos_universales(sindicato_id: int):
-    """Da de alta, para un sindicato recién creado, los 3 conceptos + fórmulas
-    de aportes de ley (jubilación, PAMI, obra social) — el % es prácticamente
-    igual en cualquier recibo argentino en blanco, así que el chequeo
-    funciona desde el primer recibo aunque el sindicato todavía no haya
-    cargado ningún empleador. Son conceptos y fórmulas comunes y corrientes:
-    el admin los puede editar o borrar como a cualquier otro. La cuota
-    sindical NO se autogenera acá porque el % varía por sindicato."""
+def crear_conceptos_universales(sindicato_id: int) -> list:
+    """Da de alta los 3 conceptos + fórmulas de aportes de ley (jubilación,
+    PAMI, obra social) — el % es prácticamente igual en cualquier recibo
+    argentino en blanco, así que el chequeo funciona desde el primer recibo
+    aunque el sindicato todavía no haya cargado ningún empleador. Son
+    conceptos y fórmulas comunes y corrientes: el admin los puede editar o
+    borrar como a cualquier otro. La cuota sindical NO se autogenera acá
+    porque el % varía por sindicato.
+
+    IDEMPOTENTE: no duplica lo que ya exista (por código). Se usa tanto al
+    dar de alta un sindicato nuevo como desde el botón manual en /admin, para
+    completar sindicatos que ya existían antes de esta función. Devuelve la
+    lista de códigos que efectivamente agregó algo (concepto y/o fórmula)."""
     from validador import CONCEPTOS_UNIVERSALES
     with Session(engine) as s:
+        codigos_concepto = {c.codigo for c in s.exec(select(Concepto).where(
+            Concepto.sindicato_id == sindicato_id)).all()}
+        codigos_formula = {f.target for f in s.exec(select(Formula).where(
+            Formula.sindicato_id == sindicato_id)).all()}
+        agregados = []
         for c in CONCEPTOS_UNIVERSALES:
-            s.add(Concepto(
-                sindicato_id=sindicato_id, codigo=c["codigo"], nombre=c["nombre"],
-                tipo="descuento", remunerativo=True, alias=[c["nombre"]],
-                pendiente_revision=False,
-            ))
-            s.add(Formula(
-                sindicato_id=sindicato_id, target=c["codigo"],
-                descripcion=c["descripcion_formula"],
-                expr=f"{c['pct']} * base_remunerativa", tolerancia=1.0,
-            ))
+            algo_nuevo = False
+            if c["codigo"] not in codigos_concepto:
+                s.add(Concepto(
+                    sindicato_id=sindicato_id, codigo=c["codigo"], nombre=c["nombre"],
+                    tipo="descuento", remunerativo=True, alias=[c["nombre"]],
+                    pendiente_revision=False,
+                ))
+                algo_nuevo = True
+            if c["codigo"] not in codigos_formula:
+                s.add(Formula(
+                    sindicato_id=sindicato_id, target=c["codigo"],
+                    descripcion=c["descripcion_formula"],
+                    expr=f"{c['pct']} * base_remunerativa", tolerancia=1.0,
+                ))
+                algo_nuevo = True
+            if algo_nuevo:
+                agregados.append(c["codigo"])
         s.commit()
+    return agregados
 
 
 # ---------- Trabajadores: cuenta única + empadronamiento por sindicato ----------
