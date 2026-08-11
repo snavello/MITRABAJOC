@@ -697,6 +697,10 @@ const apFiles = document.getElementById('ap-files');
 const apBtn = document.getElementById('ap-btn');
 const apCount = document.getElementById('ap-count');
 let propuestas = [];
+const NOMBRES_CATEGORIA_UNIVERSAL = {
+  jubilacion: "aporte jubilatorio (SIPA)", pami: "Ley 19.032 (PAMI)",
+  obra_social: "obra social", cuota_sindical: "cuota sindical",
+};
 
 document.getElementById('ap-drop').onclick = () => apFiles.click();
 apFiles.onchange = () => {
@@ -755,10 +759,15 @@ function renderPropuestas(data) {
       <td class="veces">${p.veces}×</td>
     </tr>`;
     if (p.cuit_empleador && p.generico_sugerido) {
-      h += `<tr class="pend"><td></td><td colspan="6" class="muted" style="padding-top:0;">
-        Se parece al concepto genérico <code>${p.generico_sugerido.codigo}</code> ${p.generico_sugerido.nombre}
-        — precargado como vínculo. Cambialo o dejalo vacío si no corresponde a ninguna fórmula existente.
-      </td></tr>`;
+      h += p.categoria_universal
+        ? `<tr class="pend"><td></td><td colspan="6" class="muted" style="padding-top:0;">
+            ✓ La IA identificó esto como <strong>${NOMBRES_CATEGORIA_UNIVERSAL[p.categoria_universal] || p.categoria_universal}</strong>
+            — precargado el vínculo a <code>${p.generico_sugerido.codigo}</code> ${p.generico_sugerido.nombre}. Confirmalo o cambialo si no corresponde.
+          </td></tr>`
+        : `<tr class="pend"><td></td><td colspan="6" class="muted" style="padding-top:0;">
+            Se parece al concepto genérico <code>${p.generico_sugerido.codigo}</code> ${p.generico_sugerido.nombre}
+            — precargado como vínculo. Cambialo o dejalo vacío si no corresponde a ninguna fórmula existente.
+          </td></tr>`;
     }
     if (p.similar) {
       h += `<tr class="pend"><td></td><td colspan="6" class="muted" style="padding-top:0;">

@@ -39,7 +39,7 @@ from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabaja
                 CuentaTrabajador, EnvioSindicato, ReciboVerificado, ConfiguracionPlataforma)
 from extractor import extraer, extraer_aportes
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
-                        rangos_se_superponen, cuil_no_coincide)
+                        rangos_se_superponen, cuil_no_coincide, CATEGORIAS_UNIVERSALES)
 from filigrana import filigrana_svg
 from qr import qr_svg, url_verificacion
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
@@ -636,15 +636,27 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
         } if similar else None
         # Si la propuesta es específica de un empleador, además sugerir a qué
         # concepto GENÉRICO parece corresponder — así la fórmula de siempre la
-        # controla sin que el admin tenga que ir a buscarlo a mano.
+        # controla sin que el admin tenga que ir a buscarlo a mano. Si la IA
+        # identificó un aporte de ley (jubilación/PAMI/obra social/cuota
+        # sindical) es una señal más fuerte que la similitud de texto: se usa
+        # primero, y solo se cae a la búsqueda por parecido si no aplica.
         p["generico_sugerido"] = None
         if p["cuit_empleador"]:
-            similar_generico = buscar_similar(p["descripcion"], genericos_actuales)
-            if similar_generico:
+            codigo_universal = CATEGORIAS_UNIVERSALES.get(p.get("categoria_universal"))
+            generico_universal = next(
+                (c for c in genericos_actuales if c["codigo"] == codigo_universal), None
+            ) if codigo_universal else None
+            if generico_universal:
                 p["generico_sugerido"] = {
-                    "codigo": similar_generico["concepto"]["codigo"],
-                    "nombre": similar_generico["concepto"]["nombre"],
+                    "codigo": generico_universal["codigo"], "nombre": generico_universal["nombre"],
                 }
+            else:
+                similar_generico = buscar_similar(p["descripcion"], genericos_actuales)
+                if similar_generico:
+                    p["generico_sugerido"] = {
+                        "codigo": similar_generico["concepto"]["codigo"],
+                        "nombre": similar_generico["concepto"]["nombre"],
+                    }
 
     return {
         "leidos": leidos, "fallidos": fallidos,
@@ -817,7 +829,12 @@ async def plataforma_alta_sindicato(
             color_secundario=color_secundario or "#1a7a6b",
             color_acento=color_acento or "#b23a2e",
         )
-        s.add(sind); s.commit()
+        s.add(sind); s.commit(); s.refresh(sind)
+        sind_id = sind.id
+    # Aportes de ley (jubilación, PAMI, obra social): mismo % en cualquier
+    # recibo argentino en blanco, se autocargan para que el chequeo funcione
+    # desde el primer recibo aunque todavía no haya ningún empleador cargado.
+    db.crear_conceptos_universales(sind_id)
     return RedirectResponse("/plataforma", status_code=303)
 
 

@@ -349,6 +349,30 @@ def formulas_como_dicts(sindicato_id: int = None) -> list:
         ]
 
 
+def crear_conceptos_universales(sindicato_id: int):
+    """Da de alta, para un sindicato recién creado, los 3 conceptos + fórmulas
+    de aportes de ley (jubilación, PAMI, obra social) — el % es prácticamente
+    igual en cualquier recibo argentino en blanco, así que el chequeo
+    funciona desde el primer recibo aunque el sindicato todavía no haya
+    cargado ningún empleador. Son conceptos y fórmulas comunes y corrientes:
+    el admin los puede editar o borrar como a cualquier otro. La cuota
+    sindical NO se autogenera acá porque el % varía por sindicato."""
+    from validador import CONCEPTOS_UNIVERSALES
+    with Session(engine) as s:
+        for c in CONCEPTOS_UNIVERSALES:
+            s.add(Concepto(
+                sindicato_id=sindicato_id, codigo=c["codigo"], nombre=c["nombre"],
+                tipo="descuento", remunerativo=True, alias=[c["nombre"]],
+                pendiente_revision=False,
+            ))
+            s.add(Formula(
+                sindicato_id=sindicato_id, target=c["codigo"],
+                descripcion=c["descripcion_formula"],
+                expr=f"{c['pct']} * base_remunerativa", tolerancia=1.0,
+            ))
+        s.commit()
+
+
 # ---------- Trabajadores: cuenta única + empadronamiento por sindicato ----------
 def sindicatos_de_cuil(cuil: str) -> list:
     """Devuelve los sindicatos donde este CUIL está empadronado (habilitado)."""

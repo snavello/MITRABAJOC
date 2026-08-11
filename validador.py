@@ -15,6 +15,33 @@ TOLERANCIA_TOTALES = 1.0  # pesos
 PREFIJO_PROVISORIO = "NUEVO-"
 UMBRAL_SIMILITUD = 0.75
 
+# Aportes de ley, casi idénticos en cualquier recibo argentino en blanco
+# (cambia el nombre/código que le puso cada empleador, no el %). El
+# extractor (ver extractor.py) etiqueta cada línea de aporte del trabajador
+# con una de estas 4 categorías cuando la reconoce con confianza; acá se
+# mapean al código genérico FIJO con el que se busca/sugiere el concepto en
+# el catálogo del sindicato. "jubilacion"/"pami"/"obra_social" se autocargan
+# (concepto + fórmula) al dar de alta un sindicato — ver db.crear_conceptos_universales().
+# "cuota_sindical" NO se autocarga (el % varía por sindicato) pero si el
+# admin crea a mano un concepto genérico con este código, se beneficia del
+# mismo mecanismo de sugerencia/respaldo.
+CATEGORIAS_UNIVERSALES = {
+    "jubilacion": "JUBILACION",
+    "pami": "PAMI",
+    "obra_social": "OBRASOCIAL",
+    "cuota_sindical": "CUOTA_SINDICAL",
+}
+
+# Los 3 que se autocargan al crear un sindicato (ver db.crear_conceptos_universales).
+CONCEPTOS_UNIVERSALES = [
+    {"codigo": "JUBILACION", "nombre": "Aporte jubilatorio (SIPA)", "pct": 0.11,
+     "descripcion_formula": "Jubilación (SIPA) = 11% del remunerativo"},
+    {"codigo": "PAMI", "nombre": "Ley 19.032 (PAMI)", "pct": 0.03,
+     "descripcion_formula": "Ley 19.032 (PAMI) = 3% del remunerativo"},
+    {"codigo": "OBRASOCIAL", "nombre": "Obra Social", "pct": 0.03,
+     "descripcion_formula": "Obra Social = 3% del remunerativo"},
+]
+
 
 def normalizar(texto: str) -> str:
     t = unicodedata.normalize("NFD", texto or "")
@@ -92,11 +119,28 @@ def codigo_efectivo(concepto: dict) -> str:
 
 
 def matchear_lineas(lineas: list, idx: dict):
+    """Matchea cada línea del recibo contra el catálogo (por código o por
+    nombre/alias normalizado). Si una línea no matchea así pero la IA la
+    etiquetó con una categoría universal (ver CATEGORIAS_UNIVERSALES) y el
+    sindicato tiene el concepto genérico correspondiente, se la matchea IGUAL
+    contra ese concepto — red de seguridad para un empleador recién agregado
+    que todavía no tiene ningún concepto propio cargado. Esas líneas quedan
+    marcadas con "chequeo_automatico": True para que quede claro que no pasó
+    por el catálogo curado del sindicato."""
     matcheadas, desconocidas = [], []
     for ln in lineas:
         concepto = idx.get(ln.get("codigo")) or idx.get(normalizar(ln.get("descripcion", "")))
+        automatico = False
+        if not concepto:
+            codigo_universal = CATEGORIAS_UNIVERSALES.get(ln.get("categoria_universal"))
+            if codigo_universal:
+                concepto = idx.get(codigo_universal)
+                automatico = concepto is not None
         if concepto:
-            matcheadas.append({**ln, "concepto": concepto})
+            entrada = {**ln, "concepto": concepto}
+            if automatico:
+                entrada["chequeo_automatico"] = True
+            matcheadas.append(entrada)
         else:
             desconocidas.append(ln)
     return matcheadas, desconocidas
@@ -158,6 +202,10 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
     # no bajo el propio, para que una sola fórmula controle a todos los
     # empleadores sin tener que duplicarla por cada variante.
     importe_por_codigo = {codigo_efectivo(m["concepto"]): m["importe"] for m in matcheadas}
+    # Códigos que solo matchearon por la red de seguridad de categoría
+    # universal (ver matchear_lineas) — para avisar en el resultado que ESE
+    # chequeo puntual no pasó por el catálogo curado del sindicato.
+    codigos_automaticos = {codigo_efectivo(m["concepto"]) for m in matcheadas if m.get("chequeo_automatico")}
 
     variables = {
         "total_ingresos": sum(m["importe"] for m in ingresos),
@@ -199,6 +247,7 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
             "codigo": codigo, "descripcion": f["descripcion"],
             "esperado": round(esperado, 2), "en_recibo": round(real, 2),
             "diferencia": dif, "ok": ok,
+            "chequeo_automatico": codigo in codigos_automaticos,
         })
         if not ok:
             discrepancias.append({
@@ -306,6 +355,7 @@ def detectar_nuevos(conceptos: list, lineas: list, cuit_empleador: str = None) -
             "descripcion": ln.get("descripcion", "(sin descripción)"),
             "importe": importe,
             "tipo": "descuento" if importe < 0 else "ingreso",
+            "categoria_universal": ln.get("categoria_universal"),
         })
     return nuevos
 

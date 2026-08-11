@@ -43,7 +43,7 @@ ESQUEMA = """Extraé los datos con este esquema exacto:
   "empleador": {"nombre": null, "cuit": null},
   "periodo": "AAAA-MM",
   "fecha_pago": null,
-  "lineas": [{"codigo": null, "descripcion": "", "cantidad": null, "unidad": null, "importe": 0, "tipo": "otro"}],
+  "lineas": [{"codigo": null, "descripcion": "", "cantidad": null, "unidad": null, "importe": 0, "tipo": "otro", "categoria_universal": null}],
   "totales_impresos": {"remuneraciones": null, "descuentos": null, "neto": null},
   "contribuciones_patronales": [],
   "costo_laboral_total": null,
@@ -61,6 +61,22 @@ Reglas para los campos nuevos:
   propios del trabajador que reducen su neto: jubilación, obra social, Ley
   19.032/PAMI, cuota sindical) u "otro" (cualquier otra línea: anticipos, embargos,
   ajustes, algo ambiguo).
+- "lineas[].categoria_universal": SOLO para líneas con tipo "aporte_trabajador", que
+  además reconozcas con confianza como uno de estos 4 aportes de ley (son casi
+  iguales en cualquier recibo argentino en blanco, cambia el nombre/código que le
+  puso cada empleador, no el concepto):
+    "jubilacion"     → aporte jubilatorio / SIPA / Ley 24.241 (normalmente ~11% del
+                        básico). Ej: "Jubilación", "Ap. Jubilatorio", "SIPA", "AFJP".
+    "pami"           → Ley 19.032 / INSSJP / PAMI (normalmente ~3%). Ej: "Ley 19032",
+                        "PAMI", "INSSJP".
+    "obra_social"    → aporte a la obra social (normalmente ~3%). Ej: "Obra Social",
+                        "Aporte O.S.", "OOSS", el nombre de la obra social del gremio.
+    "cuota_sindical" → cuota o aporte al sindicato/gremio. Ej: "Cuota sindical",
+                        "Aporte sindical", "Cuota SUTERH", el nombre del gremio.
+  Si la línea es un aporte del trabajador pero NO estás seguro de cuál de los 4 es
+  (o es un descuento distinto: anticipo, embargo, cuota de préstamo, etc.), dejalo en
+  null — mejor no etiquetar que etiquetar mal. Nunca uses estas 4 categorías para una
+  contribución patronal (esas van en "contribuciones_patronales", nunca en "lineas").
 - "contribuciones_patronales": solo en formato nuevo, una lista de
   {"concepto": null, "base": null, "porcentaje": null, "importe": null} por cada fila
   de la sección "Costo total empleador" (ART, Contribución Jubilación, Contribución

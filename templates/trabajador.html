@@ -121,6 +121,8 @@
   .alerta-legal { margin-top:12px; background:#fdf3e7; border-left:3px solid #d9a441; border-radius:0 8px 8px 0; padding:12px 14px; font-size:13px; color:#8a5a1a; }
   .badge-reforma { display:inline-block; background:#e8def5; color:#5b3d8a; font-size:11.5px;
     font-weight:600; padding:3px 10px; border-radius:20px; margin-bottom:10px; }
+  .badge-auto { display:inline-block; background:#fdf3e7; color:#8a5a1a; font-size:10.5px;
+    font-weight:600; padding:2px 8px; border-radius:20px; margin-left:8px; vertical-align:1px; }
 
   /* ---- Credencial sindical ---- */
   .cred { background:#fff; border-radius:16px; overflow:hidden; margin-top:8px;
@@ -671,7 +673,7 @@ function renderResultado(d) {
         + (ok ? '✓ Todo en orden' : `Encontramos ${d.discrepancias.length} cosa(s) para revisar`)
         + `</div><div class="lista">`;
   for (const f of d.formulas_validadas)
-    h += `<div class="fila"><span>${f.ok?'✓':'✗'} ${f.descripcion}</span><span class="imp">${peso(f.en_recibo)}</span></div>`;
+    h += `<div class="fila"><span>${f.ok?'✓':'✗'} ${f.descripcion}${f.chequeo_automatico ? '<span class="badge-auto" title="Este empleador todavía no tiene sus conceptos cargados en el sindicato: se identificó y chequeó automáticamente por tratarse de un aporte de ley.">chequeo automático</span>' : ''}</span><span class="imp">${peso(f.en_recibo)}</span></div>`;
   h += renderTotalesResumen(d.totales);
   h += `</div>`;
   for (const disc of d.discrepancias) h += `<div class="disc">${disc.detalle}</div>`;
