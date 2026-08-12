@@ -133,20 +133,35 @@ encabezado oscuro. 4 colores por sindicato en vez de 3 (ver "Decisiones tomadas"
   rediseño es 100% presentación + la columna `color_base`.
 
 ## Pendientes (features)
-1. Novedades — hoy es estructura vacía con cartel "próximamente". Falta contenido
-   real: mensajes/anuncios del sindicato al trabajador.
-2. Capacitación — ídem, "próximamente". Falta contenido: índice de documentos y
+1. Capacitación — "próximamente". Falta contenido: índice de documentos y
    links de formación.
-3. Beneficios — sección nueva en la portada, "próximamente". No existe como
+2. Beneficios — sección nueva en la portada, "próximamente". No existe como
    feature en ningún lado; falta definir qué es (descuentos, convenios, etc.).
-4. Quitar la pestaña transitoria "Cambiar clave" del panel de plataforma antes de
+3. Quitar la pestaña transitoria "Cambiar clave" del panel de plataforma antes de
    producción (permite cambiar la clave de cualquier usuario; está marcada con una
    advertencia visible). Es un riesgo de seguridad, sacar antes de usuarios reales.
    Se deja a propósito mientras dure la etapa de demos y pruebas (2026-08-05).
-5. Deep-linking desde la portada a una pestaña específica de `/app` (ver
-   "Rediseño de interfaz" arriba).
-6. Mergear `rediseno-ui` a `main` cuando esté probado (dispara redeploy en Render;
-   la columna `color_base` necesita `alembic upgrade head` después).
+4. Mergear `rediseno-ui` a `main` cuando esté probado (dispara redeploy en Render;
+   las columnas/tabla nuevas necesitan `alembic upgrade head` después).
+
+## Noticias (sindicato → trabajador)
+Reemplaza el placeholder "próximamente" de Novedades. Modelo `Noticia`
+(db.py): título, bajada, texto completo (URLs se auto-enlazan al mostrarse,
+`main.py::_texto_con_links`), vigencia por fecha_desde/fecha_hasta (las dos
+obligatorias — a diferencia de Formula, acá es un período cerrado), hasta 2
+imágenes (bytes en la base, mismo patrón que el logo del sindicato). El
+admin las carga desde `/admin` → pestaña Noticias. El trabajador las ve en
+la portada (hasta 3, "Ver todas" → `/app?tab=novedades`, deep-link por query
+param) y en la pestaña Novedades (lista completa); un click abre un overlay
+con el detalle completo vía `GET /api/noticia/{id}` (aísla por sindicato
+activo).
+
+## Semáforo de aportes persistente
+`Trabajador.semaforo_datos`/`semaforo_actualizado` (JSON) guardan el último
+resultado de `calcular_semaforo()`. `POST /api/aportes` lo persiste;
+`GET /app` lo pre-pinta con `semRender()` si existe (antes se perdía al
+navegar o recargar — arrancaba siempre en blanco). "Actualizar con otra
+captura" sigue disponible debajo del semáforo ya pintado.
 
 ## Método de trabajo
 - Por bloques chicos, verificando la lógica de verdad (rutas y funciones), no

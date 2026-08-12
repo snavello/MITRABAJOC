@@ -82,8 +82,18 @@
   </div>
 
   <div class="sec">
-    <div class="sech"><b>Novedades</b></div>
+    <div class="sech"><b>Novedades</b>{% if noticias %}<a href="/app?tab=novedades">Ver todas</a>{% endif %}</div>
+    {% if noticias %}
+      {% for n in noticias %}
+      <button class="noticia-card" onclick="abrirNoticia({{ n.id }})">
+        <div class="tit">{{ n.titulo }}</div>
+        {% if n.bajada %}<div class="baj">{{ n.bajada }}</div>{% endif %}
+        <div class="ant">{{ n.antiguedad }}</div>
+      </button>
+      {% endfor %}
+    {% else %}
     <div class="vacio-sec">Acá vas a ver los mensajes y avisos de tu sindicato. Muy pronto.</div>
+    {% endif %}
   </div>
 
   <div class="sec">
@@ -109,6 +119,22 @@
   </div>
 </div>
 
+<!-- Overlay: detalle de noticia -->
+<div class="overlay" id="overlay-noticia" onclick="if (event.target === this) cerrarNoticia()">
+  <div class="modal-hoja">
+    <button class="modal-cerrar" onclick="cerrarNoticia()" aria-label="Cerrar"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
+    <h3 id="not-det-titulo"></h3>
+    <div class="ant" id="not-det-antiguedad" style="opacity:.6; font-size:11px; margin-bottom:10px;"></div>
+    <div id="not-det-texto" style="font-size:13.5px; line-height:1.6;"></div>
+    <div id="not-det-imagenes" style="display:flex; gap:8px; margin-top:14px;"></div>
+  </div>
+</div>
+
+<!-- Overlay: imagen ampliada -->
+<div class="overlay overlay-centro" id="overlay-imagen" onclick="cerrarImagen()">
+  <img id="img-ampliada" src="" alt="" style="max-width:92vw; max-height:85vh; border-radius:8px;">
+</div>
+
 <!-- Íconos SVG de línea -->
 <svg style="display:none" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -125,6 +151,34 @@
 <script>
 function abrirPerfil() { document.getElementById('overlay-perfil').classList.add('abierto'); }
 function cerrarPerfil() { document.getElementById('overlay-perfil').classList.remove('abierto'); }
+
+async function abrirNoticia(id) {
+  const ov = document.getElementById('overlay-noticia');
+  document.getElementById('not-det-titulo').textContent = 'Cargando…';
+  document.getElementById('not-det-antiguedad').textContent = '';
+  document.getElementById('not-det-texto').innerHTML = '';
+  document.getElementById('not-det-imagenes').innerHTML = '';
+  ov.classList.add('abierto');
+  try {
+    const r = await fetch('/api/noticia/' + id);
+    if (!r.ok) throw new Error();
+    const n = await r.json();
+    document.getElementById('not-det-titulo').textContent = n.titulo;
+    document.getElementById('not-det-antiguedad').textContent = n.antiguedad;
+    document.getElementById('not-det-texto').innerHTML = n.texto_completo_html;
+    const imgs = document.getElementById('not-det-imagenes');
+    if (n.tiene_imagen1) imgs.innerHTML += `<img src="/noticia-imagen/${id}/1" onclick="abrirImagen('/noticia-imagen/${id}/1')" style="width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer;">`;
+    if (n.tiene_imagen2) imgs.innerHTML += `<img src="/noticia-imagen/${id}/2" onclick="abrirImagen('/noticia-imagen/${id}/2')" style="width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer;">`;
+  } catch (e) {
+    document.getElementById('not-det-titulo').textContent = 'No se pudo cargar la noticia.';
+  }
+}
+function cerrarNoticia() { document.getElementById('overlay-noticia').classList.remove('abierto'); }
+function abrirImagen(src) {
+  document.getElementById('img-ampliada').src = src;
+  document.getElementById('overlay-imagen').classList.add('abierto');
+}
+function cerrarImagen() { document.getElementById('overlay-imagen').classList.remove('abierto'); }
 </script>
 
 </body>

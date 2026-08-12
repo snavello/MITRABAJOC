@@ -183,6 +183,27 @@ class Formula(SQLModel, table=True):
     fecha_hasta: Optional[str] = Field(default=None)
 
 
+class Noticia(SQLModel, table=True):
+    """Novedad del sindicato para sus trabajadores (portada + pestaña
+    Novedades). Vigente cuando fecha_desde <= hoy <= fecha_hasta -- a
+    diferencia de la vigencia de Formula, acá las dos fechas son obligatorias
+    (es un período cerrado, no una entrada en vigencia indefinida)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    titulo: str
+    bajada: str = ""
+    texto_completo: str = ""
+    fecha_desde: str  # AAAA-MM-DD
+    fecha_hasta: str  # AAAA-MM-DD
+    creada: str = ""  # fecha de alta (AAAA-MM-DD), para ordenar y mostrar antigüedad
+    # Hasta 2 imágenes, mismo patrón que el logo del sindicato (bytes en la
+    # base, Opción B -- ver Sindicato.logo_datos).
+    imagen1_datos: Optional[bytes] = Field(default=None)
+    imagen1_mime: str = ""
+    imagen2_datos: Optional[bytes] = Field(default=None)
+    imagen2_mime: str = ""
+
+
 class Reporte(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     sindicato_id: int = Field(default=1, foreign_key="sindicato.id", index=True)
@@ -618,3 +639,43 @@ def generar_codigo_credencial(trabajador_id: int, sindicato_id: int, nombre_sind
                 s.commit()
                 return codigo
         raise RuntimeError("No se pudo generar un código de credencial único, reintentá.")
+
+
+def noticia_vigente(n: "Noticia | dict", hoy: str) -> bool:
+    """hoy en formato AAAA-MM-DD. Vigente = fecha_desde <= hoy <= fecha_hasta
+    (comparación de strings ISO, funciona igual que comparar fechas reales)."""
+    desde = n["fecha_desde"] if isinstance(n, dict) else n.fecha_desde
+    hasta = n["fecha_hasta"] if isinstance(n, dict) else n.fecha_hasta
+    return bool(desde) and bool(hasta) and desde <= hoy <= hasta
+
+
+def _noticia_a_dict(n: "Noticia") -> dict:
+    return {
+        "id": n.id, "sindicato_id": n.sindicato_id, "titulo": n.titulo,
+        "bajada": n.bajada, "texto_completo": n.texto_completo,
+        "fecha_desde": n.fecha_desde, "fecha_hasta": n.fecha_hasta, "creada": n.creada,
+        "tiene_imagen1": bool(n.imagen1_datos), "tiene_imagen2": bool(n.imagen2_datos),
+    }
+
+
+def noticias_del_sindicato(sindicato_id: int) -> list:
+    """Todas las noticias del sindicato (para el panel de admin), más
+    recientes primero."""
+    with Session(engine) as s:
+        noticias = s.exec(select(Noticia).where(Noticia.sindicato_id == sindicato_id)
+                          .order_by(Noticia.id.desc())).all()
+        return [_noticia_a_dict(n) for n in noticias]
+
+
+def noticias_vigentes(sindicato_id: int, limite: int = None) -> list:
+    """Noticias vigentes HOY de un sindicato, más recientes primero."""
+    hoy = datetime.now().strftime("%Y-%m-%d")
+    todas = noticias_del_sindicato(sindicato_id)
+    vigentes = [n for n in todas if noticia_vigente(n, hoy)]
+    return vigentes[:limite] if limite else vigentes
+
+
+def noticia_por_id(noticia_id: int) -> Optional[dict]:
+    with Session(engine) as s:
+        n = s.get(Noticia, noticia_id)
+        return _noticia_a_dict(n) if n else None

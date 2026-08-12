@@ -196,6 +196,7 @@
     <button class="tab-btn" data-panel="trabajadores">Trabajadores</button>
     <button class="tab-btn" data-panel="aprendizaje">Aprendizaje</button>
     <button class="tab-btn" data-panel="cotizantes">Afiliados cotizantes</button>
+    <button class="tab-btn" data-panel="noticias">Noticias</button>
   </nav>
 
   <div class="panel activo" id="panel-reportes">
@@ -536,6 +537,50 @@
     {% endfor %}
   </table>
   </div>
+
+  <div class="panel" id="panel-noticias">
+  <!-- ============ NOTICIAS ============ -->
+  <h2 id="noticias-titulo">Dar de alta una noticia</h2>
+  <div class="card">
+    <form method="post" action="/admin/noticia" enctype="multipart/form-data" id="form-noticia">
+      <input type="hidden" name="id" id="not-id">
+      <div class="grid2">
+        <div class="campo full"><label>Título *</label><input name="titulo" id="not-titulo" required></div>
+        <div class="campo full"><label>Bajada</label><input name="bajada" id="not-bajada" placeholder="Resumen corto, se ve en la portada y el listado"></div>
+        <div class="campo full"><label>Texto completo</label>
+          <textarea name="texto_completo" id="not-texto" rows="5" placeholder="Puede incluir URLs, se muestran como link"></textarea>
+        </div>
+        <div class="campo"><label>Vigente desde *</label><input name="fecha_desde" id="not-desde" type="date" required></div>
+        <div class="campo"><label>Vigente hasta *</label><input name="fecha_hasta" id="not-hasta" type="date" required></div>
+        <div class="campo"><label>Imagen 1 (opcional)</label><input name="imagen1" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
+        <div class="campo"><label>Imagen 2 (opcional)</label><input name="imagen2" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
+      </div>
+      <button type="submit">Guardar noticia</button>
+      <button type="button" class="sec oculto" id="not-cancel" onclick="cancelarNoticia()">Cancelar edición</button>
+    </form>
+  </div>
+
+  <h2>Noticias cargadas ({{ noticias|length }})</h2>
+  <table>
+    <tr><th>Título</th><th>Vigencia</th><th>Cargada</th><th></th></tr>
+    {% for n in noticias %}
+    <tr>
+      <td>{{ n.titulo }}{% if n.bajada %}<br><span class="muted">{{ n.bajada }}</span>{% endif %}</td>
+      <td>{{ n.fecha_desde }} → {{ n.fecha_hasta }}</td>
+      <td>{{ n.creada }}</td>
+      <td style="white-space:nowrap; text-align:right;">
+        <button type="button" class="mini" onclick='editarNoticia({{ n | tojson }})'>Editar</button>
+        <form method="post" action="/admin/noticia/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar esta noticia?')">
+          <input type="hidden" name="id" value="{{ n.id }}">
+          <button class="peligro mini" type="submit">Borrar</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="muted">Todavía no cargaste ninguna noticia.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
 </div>
 
 <script>
@@ -712,6 +757,27 @@ function cancelarConcepto() {
   document.getElementById('c-id').value = '';
   document.getElementById('c-btn').textContent = 'Agregar concepto';
   document.getElementById('c-cancel').classList.add('oculto');
+}
+
+// ---------- Noticias ----------
+function editarNoticia(n) {
+  document.getElementById('not-id').value = n.id;
+  document.getElementById('not-titulo').value = n.titulo || '';
+  document.getElementById('not-bajada').value = n.bajada || '';
+  document.getElementById('not-texto').value = n.texto_completo || '';
+  document.getElementById('not-desde').value = n.fecha_desde || '';
+  document.getElementById('not-hasta').value = n.fecha_hasta || '';
+  document.getElementById('noticias-titulo').textContent = 'Editar noticia: ' + n.titulo;
+  document.getElementById('form-noticia').querySelector('button[type=submit]').textContent = 'Guardar cambios';
+  document.getElementById('not-cancel').classList.remove('oculto');
+  document.getElementById('form-noticia').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function cancelarNoticia() {
+  document.getElementById('form-noticia').reset();
+  document.getElementById('not-id').value = '';
+  document.getElementById('noticias-titulo').textContent = 'Dar de alta una noticia';
+  document.getElementById('form-noticia').querySelector('button[type=submit]').textContent = 'Guardar noticia';
+  document.getElementById('not-cancel').classList.add('oculto');
 }
 
 // ---------- Aprendizaje ----------

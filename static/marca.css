@@ -101,6 +101,15 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
 .vacio-sec { background: var(--sup-1); border: 1px dashed var(--sup-2); border-radius: 11px;
              padding: 14px; font-size: 12px; line-height: 1.5; color: var(--sobre-base-mute); }
 
+/* ---------- Tarjeta de noticia (portada y pestaña Novedades) ---------- */
+.noticia-card { background: var(--sup-1); border: 1px solid var(--sup-2); border-radius: 11px;
+  padding: 11px 12px; margin-bottom: 7px; cursor: pointer; text-align: left; width: 100%;
+  color: var(--sobre-base); font-family: inherit; }
+.noticia-card:last-child { margin-bottom: 0; }
+.noticia-card .tit { font-size: 12px; font-weight: 600; line-height: 1.3; }
+.noticia-card .baj { font-size: 11px; opacity: .75; margin-top: 3px; line-height: 1.4; }
+.noticia-card .ant { font-size: 10px; opacity: .65; margin-top: 5px; }
+
 /* ---------- Círculo de acento (perfil, avatar) ---------- */
 .circulo-acento { width: 34px; height: 34px; border-radius: 50%; background: var(--marca-acento);
   display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;
@@ -111,6 +120,7 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
 .overlay { position: fixed; inset: 0; background: rgba(8,12,20,.6); z-index: 100;
   display: none; align-items: flex-end; justify-content: center; }
 .overlay.abierto { display: flex; }
+.overlay.overlay-centro { align-items: center; }
 .modal-hoja { background: var(--papel); color: var(--tinta); width: 100%; max-width: 480px;
   border-radius: 18px 18px 0 0; padding: 20px 20px calc(18px + env(safe-area-inset-bottom));
   max-height: 82vh; overflow-y: auto; }

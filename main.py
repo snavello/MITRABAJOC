@@ -36,7 +36,7 @@ from sqlmodel import select
 import db
 import auth
 from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador,
-                CuentaTrabajador, EnvioSindicato, ReciboVerificado, ConfiguracionPlataforma)
+                CuentaTrabajador, EnvioSindicato, ReciboVerificado, ConfiguracionPlataforma, Noticia)
 from extractor import extraer, extraer_aportes
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, CATEGORIAS_UNIVERSALES)
@@ -83,6 +83,24 @@ def servir_firma(sindicato_id: int):
         return BinResponse(
             content=sind.firma_datos,
             media_type=sind.firma_mime or "application/octet-stream",
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+
+
+@app.get("/noticia-imagen/{noticia_id}/{n}")
+def servir_imagen_noticia(noticia_id: int, n: int):
+    """Sirve la imagen 1 o 2 de una noticia, guardada en la base (mismo
+    patrón que el logo del sindicato)."""
+    if n not in (1, 2):
+        raise HTTPException(404, "Imagen inválida")
+    with db.get_session() as s:
+        noticia = s.get(Noticia, noticia_id)
+        datos = (noticia.imagen1_datos if n == 1 else noticia.imagen2_datos) if noticia else None
+        mime = (noticia.imagen1_mime if n == 1 else noticia.imagen2_mime) if noticia else ""
+        if not noticia or not datos:
+            raise HTTPException(404, "Sin imagen")
+        return BinResponse(
+            content=datos, media_type=mime or "application/octet-stream",
             headers={"Cache-Control": "public, max-age=3600"},
         )
 
@@ -304,6 +322,25 @@ async def api_aportes(request: Request, archivo: UploadFile = File(...)):
     return resultado
 
 
+@app.get("/api/noticia/{noticia_id}")
+def api_noticia(noticia_id: int, request: Request):
+    """Detalle completo de una noticia (texto completo + flags de imagen)
+    para el overlay de la portada/pestaña Novedades. Aísla por sindicato: no
+    devuelve una noticia de un sindicato ajeno al del trabajador logueado."""
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise HTTPException(403, "No pudimos determinar tu sindicato. Volvé a ingresar.")
+    n = db.noticia_por_id(noticia_id)
+    if not n or n["sindicato_id"] != sid:
+        raise HTTPException(404, "Noticia no encontrada")
+    return {
+        "id": n["id"], "titulo": n["titulo"], "bajada": n["bajada"],
+        "texto_completo_html": _texto_con_links(n["texto_completo"]),
+        "antiguedad": _antiguedad(n["creada"]),
+        "tiene_imagen1": n["tiene_imagen1"], "tiene_imagen2": n["tiene_imagen2"],
+    }
+
+
 # ================= Panel del sindicato =================
 def exigir_sindicato(request: Request) -> int:
     """Devuelve el sindicato_id de la sesión, o lanza 403 si no hay sesión válida."""
@@ -356,6 +393,7 @@ def admin(request: Request):
         "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR, "envios": envios,
         "nombres_por_cuil": nombres_por_cuil, "provisorios": provisorios,
         "debe_cambiar": ses.get("cambiar", False),
+        "noticias": db.noticias_del_sindicato(sid),
     })
 
 
@@ -626,6 +664,58 @@ def borrar_formula(request: Request, id: int = Form(...)):
             s.delete(f)
             s.commit()
     return RedirectResponse("/admin#formulas", status_code=303)
+
+
+@app.post("/admin/noticia")
+async def abm_noticia(
+    request: Request,
+    id: str = Form(""), titulo: str = Form(...), bajada: str = Form(""),
+    texto_completo: str = Form(""), fecha_desde: str = Form(...), fecha_hasta: str = Form(...),
+    imagen1: UploadFile = File(None), imagen2: UploadFile = File(None),
+):
+    sid = exigir_sindicato(request)
+    with db.get_session() as s:
+        if id:
+            n = s.get(Noticia, int(id))
+            if n and n.sindicato_id == sid:
+                n.titulo, n.bajada, n.texto_completo = titulo, bajada, texto_completo
+                n.fecha_desde, n.fecha_hasta = fecha_desde, fecha_hasta
+                if imagen1 and imagen1.filename:
+                    datos, mime, _ = _leer_logo(imagen1)
+                    if datos:
+                        n.imagen1_datos, n.imagen1_mime = datos, mime
+                if imagen2 and imagen2.filename:
+                    datos, mime, _ = _leer_logo(imagen2)
+                    if datos:
+                        n.imagen2_datos, n.imagen2_mime = datos, mime
+                s.add(n)
+        else:
+            imagen1_datos, imagen1_mime = None, ""
+            if imagen1 and imagen1.filename:
+                imagen1_datos, imagen1_mime, _ = _leer_logo(imagen1)
+            imagen2_datos, imagen2_mime = None, ""
+            if imagen2 and imagen2.filename:
+                imagen2_datos, imagen2_mime, _ = _leer_logo(imagen2)
+            s.add(Noticia(
+                sindicato_id=sid, titulo=titulo, bajada=bajada, texto_completo=texto_completo,
+                fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
+                creada=datetime.now().strftime("%Y-%m-%d"),
+                imagen1_datos=imagen1_datos, imagen1_mime=imagen1_mime,
+                imagen2_datos=imagen2_datos, imagen2_mime=imagen2_mime,
+            ))
+        s.commit()
+    return RedirectResponse("/admin#noticias", status_code=303)
+
+
+@app.post("/admin/noticia/borrar")
+def borrar_noticia(request: Request, id: int = Form(...)):
+    sid = exigir_sindicato(request)
+    with db.get_session() as s:
+        n = s.get(Noticia, id)
+        if n and n.sindicato_id == sid:
+            s.delete(n)
+            s.commit()
+    return RedirectResponse("/admin#noticias", status_code=303)
 
 
 # ---------- Aprendizaje: subir N recibos y proponer conceptos nuevos ----------
@@ -1059,6 +1149,42 @@ def _iniciales_sindicato(nombre: str) -> str:
     return "".join(letras[:3]) or "?"
 
 
+def _antiguedad(fecha_iso: str) -> str:
+    """"Hace 2 días" a partir de una fecha AAAA-MM-DD. Sin dramatizar: si no
+    se puede parsear, devuelve la fecha tal cual."""
+    try:
+        dias = (datetime.now().date() - datetime.strptime(fecha_iso, "%Y-%m-%d").date()).days
+    except (ValueError, TypeError):
+        return fecha_iso or ""
+    if dias <= 0:
+        return "Hoy"
+    if dias == 1:
+        return "Ayer"
+    if dias < 30:
+        return f"Hace {dias} días"
+    meses = dias // 30
+    return f"Hace {meses} mes{'es' if meses != 1 else ''}"
+
+
+def _con_antiguedad(noticias: list) -> list:
+    return [{**n, "antiguedad": _antiguedad(n["creada"])} for n in noticias]
+
+
+def _texto_con_links(texto: str) -> str:
+    """Escapa HTML y convierte URLs sueltas en links + saltos de línea en
+    <br>, para el texto completo de una noticia (lo carga el admin, pero
+    puede incluir URLs que sí queremos clickeables)."""
+    import html
+    import re
+    escapado = html.escape(texto or "")
+    con_links = re.sub(
+        r"(https?://[^\s<]+)",
+        r'<a href="\1" target="_blank" rel="noopener">\1</a>',
+        escapado,
+    )
+    return con_links.replace("\n", "<br>")
+
+
 @app.get("/ingresar", response_class=HTMLResponse)
 def ingresar(request: Request):
     """Pantalla de login/registro del trabajador."""
@@ -1142,6 +1268,7 @@ def app_trabajador(request: Request):
             "vigencia_credencial": _fmt_fecha_ar(credencial.get("vigencia")),
             "filigrana": filigrana_svg(marca["nombre"], marca["color_secundario"], marca["color_acento"]),
             "semaforo_guardado": db.semaforo_guardado(cuil, sid_activo),
+            "noticias": _con_antiguedad(db.noticias_vigentes(sid_activo)),
         }
         # El QR (y la verificación pública que hay detrás) solo tiene sentido
         # una vez que el sindicato generó el código real de la credencial.
@@ -1191,6 +1318,7 @@ def app_portada(request: Request):
             "credencial_generada": bool(credencial.get("codigo")),
             "documento": _dni_de_cuil(cuil),
             "perfil": db.perfil_trabajador(cuil, sid_activo),
+            "noticias": _con_antiguedad(db.noticias_vigentes(sid_activo, limite=3)),
         })
     # Varios y no eligió → selector (mismo criterio que /app)
     return templates.TemplateResponse("elegir_sindicato.html", {
