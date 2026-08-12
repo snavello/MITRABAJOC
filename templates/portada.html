@@ -16,6 +16,7 @@
     --marca-apoyo: {{ marca.color_secundario }};
   }
   body { background: var(--marca-base); min-height: 100vh; }
+  .fila-hola { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .hola { font-size: 22px; letter-spacing: -.4px; color: var(--sobre-base); margin-top: 4px; }
   .hola em { font-style: normal; color: var(--marca-acento); }
 </style>
@@ -34,10 +35,20 @@
   </div>
 </div>
 
-<a class="btn-cerrar" href="/trabajador/salir" title="Salir" aria-label="Salir">✕</a>
+<a class="btn-flotante btn-home" href="/app/inicio" title="Inicio" aria-label="Inicio">
+  <svg viewBox="0 0 24 24"><use href="#ic-home"/></svg>
+</a>
+<a class="btn-flotante btn-cerrar" href="/trabajador/salir" title="Salir" aria-label="Salir">
+  <svg viewBox="0 0 24 24"><use href="#ic-x"/></svg>
+</a>
 
 <div class="pad">
-  <div class="hola">Hola, <em>{{ primer_nombre }}</em></div>
+  <div class="fila-hola">
+    <div class="hola">Hola, <em>{{ primer_nombre }}</em></div>
+    <button class="circulo-acento" onclick="abrirPerfil()" aria-label="Tu perfil" title="Tu perfil">
+      <svg viewBox="0 0 24 24"><use href="#ic-perfil"/></svg>
+    </button>
+  </div>
 
   <div class="tarjetas" style="margin-top: 18px;">
     <a class="acceso destacada" href="/app">
@@ -47,21 +58,21 @@
         <div class="estado">Revisá tus aportes</div>
       </div>
     </a>
-    <a class="acceso" href="/app">
+    <a class="acceso" href="/app?tab=aportes">
       <svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg>
       <div>
         <div class="titulo">Mis aportes</div>
         <div class="estado">Semáforo de aportes</div>
       </div>
     </a>
-    <a class="acceso" href="/app">
+    <a class="acceso" href="/app?tab=credencial">
       <svg viewBox="0 0 24 24"><use href="#ic-cred"/></svg>
       <div>
         <div class="titulo">Credencial</div>
         <div class="estado">{{ 'Tu carnet digital' if credencial_generada else 'Todavía no generada' }}</div>
       </div>
     </a>
-    <a class="acceso" href="/app">
+    <a class="acceso" href="/app?tab=capacitacion">
       <svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg>
       <div>
         <div class="titulo">Capacitación</div>
@@ -81,6 +92,23 @@
   </div>
 </div>
 
+<!-- Overlay: tu perfil -->
+<div class="overlay" id="overlay-perfil" onclick="if (event.target === this) cerrarPerfil()">
+  <div class="modal-hoja">
+    <button class="modal-cerrar" onclick="cerrarPerfil()" aria-label="Cerrar"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
+    <h3>Tu perfil</h3>
+    <div class="modal-fila"><span class="k">Nombre</span><span class="v">{{ nombre_trab or '—' }}</span></div>
+    <div class="modal-fila"><span class="k">CUIL</span><span class="v">{{ cuil }}</span></div>
+    {% if documento %}<div class="modal-fila"><span class="k">DNI</span><span class="v">{{ documento }}</span></div>{% endif %}
+    {% if perfil %}
+      {% if perfil.calle %}<div class="modal-fila"><span class="k">Domicilio</span><span class="v">{{ perfil.calle }} {{ perfil.numero }}{% if perfil.piso %} piso {{ perfil.piso }}{% endif %}</span></div>{% endif %}
+      {% if perfil.ciudad or perfil.provincia %}<div class="modal-fila"><span class="k">Localidad</span><span class="v">{{ perfil.ciudad }}{% if perfil.ciudad and perfil.provincia %}, {% endif %}{{ perfil.provincia }}</span></div>{% endif %}
+      {% if perfil.telefono %}<div class="modal-fila"><span class="k">Teléfono</span><span class="v">{{ perfil.telefono }}</span></div>{% endif %}
+      {% if perfil.mail %}<div class="modal-fila"><span class="k">Mail</span><span class="v">{{ perfil.mail }}</span></div>{% endif %}
+    {% endif %}
+  </div>
+</div>
+
 <!-- Íconos SVG de línea -->
 <svg style="display:none" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -88,8 +116,16 @@
     <g id="ic-aportes"><line x1="5" y1="21" x2="5" y2="12"/><line x1="12" y1="21" x2="12" y2="4"/><line x1="19" y1="21" x2="19" y2="9"/></g>
     <g id="ic-cred"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><line x1="14" y1="10" x2="18" y2="10"/><line x1="14" y1="14" x2="18" y2="14"/><path d="M6 16c.6-1.3 1.7-2 3-2s2.4.7 3 2"/></g>
     <g id="ic-capac"><path d="M12 4 2 9l10 5 10-5z"/><path d="M6 11v5c0 1 3 2.5 6 2.5s6-1.5 6-2.5v-5"/></g>
+    <g id="ic-home"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></g>
+    <g id="ic-x"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g>
+    <g id="ic-perfil"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></g>
   </defs>
 </svg>
+
+<script>
+function abrirPerfil() { document.getElementById('overlay-perfil').classList.add('abierto'); }
+function cerrarPerfil() { document.getElementById('overlay-perfil').classList.remove('abierto'); }
+</script>
 
 </body>
 </html>

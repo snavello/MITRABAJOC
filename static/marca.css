@@ -68,12 +68,19 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
 .acceso.destacada { background: var(--marca-acento); border-color: var(--marca-acento); color: var(--marca-base); }
 .acceso svg { width: 26px; height: 26px; stroke: currentColor; stroke-width: 1.7; fill: none; }
 
-/* ---------- Botón "salir" (bordo pastel, fijo abajo a la derecha) ---------- */
-.btn-cerrar { position: fixed; bottom: 84px; right: 18px; width: 42px; height: 42px;
-  border-radius: 50%; background: #e3b6b8; color: #7a2e35; display: flex;
-  align-items: center; justify-content: center; font-size: 18px; font-weight: 600;
-  text-decoration: none; box-shadow: 0 2px 10px rgba(0,0,0,.15); z-index: 40; }
-.btn-cerrar:hover { background: #d9a3a6; }
+/* ---------- Botones flotantes (inicio / salir), fijos abajo a la derecha ----------
+   Fondo = base del sindicato, ícono = acento (mismo color que el botón
+   principal y la pestaña activa) -- consistentes entre sí y con el resto de
+   los íconos de línea de la app (nunca un glyph de texto). */
+.btn-flotante { position: fixed; bottom: 84px; width: 42px; height: 42px;
+  border-radius: 50%; background: var(--marca-base); display: flex;
+  align-items: center; justify-content: center; text-decoration: none;
+  border: 1px solid rgba(255,255,255,.14); box-shadow: 0 2px 10px rgba(0,0,0,.25);
+  z-index: 40; }
+.btn-flotante svg { width: 19px; height: 19px; stroke: var(--marca-acento); stroke-width: 1.8; fill: none; }
+.btn-flotante:hover { opacity: .85; }
+.btn-cerrar { right: 18px; }
+.btn-home { right: 68px; }
 
 /* ---------- Botones ---------- */
 .btn { display: block; width: 100%; background: var(--marca-acento); color: var(--marca-base);
@@ -93,6 +100,30 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
 /* ---------- Estado vacío ("próximamente") dentro de una sección oscura ---------- */
 .vacio-sec { background: var(--sup-1); border: 1px dashed var(--sup-2); border-radius: 11px;
              padding: 14px; font-size: 12px; line-height: 1.5; color: var(--sobre-base-mute); }
+
+/* ---------- Círculo de acento (perfil, avatar) ---------- */
+.circulo-acento { width: 34px; height: 34px; border-radius: 50%; background: var(--marca-acento);
+  display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;
+  flex-shrink: 0; padding: 0; }
+.circulo-acento svg { width: 18px; height: 18px; stroke: var(--marca-base); stroke-width: 1.8; fill: none; }
+
+/* ---------- Overlay / hoja modal (perfil, detalle de noticia) ---------- */
+.overlay { position: fixed; inset: 0; background: rgba(8,12,20,.6); z-index: 100;
+  display: none; align-items: flex-end; justify-content: center; }
+.overlay.abierto { display: flex; }
+.modal-hoja { background: var(--papel); color: var(--tinta); width: 100%; max-width: 480px;
+  border-radius: 18px 18px 0 0; padding: 20px 20px calc(18px + env(safe-area-inset-bottom));
+  max-height: 82vh; overflow-y: auto; }
+.modal-hoja h3 { font-size: 17px; margin-bottom: 2px; padding-right: 30px; }
+.modal-cerrar { position: absolute; top: 14px; right: 18px; background: none; border: none;
+  cursor: pointer; color: var(--gris); padding: 4px; }
+.modal-cerrar svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.8; fill: none; }
+.modal-hoja { position: relative; }
+.modal-fila { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0;
+  border-bottom: 1px solid var(--linea); font-size: 13.5px; }
+.modal-fila:last-child { border-bottom: none; }
+.modal-fila .k { color: var(--gris); }
+.modal-fila .v { font-weight: 500; text-align: right; }
 
 /* ---------- Barra inferior ---------- */
 .tabbar { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: var(--blanco);

@@ -351,7 +351,7 @@
       <td>{{ c.tipo }}</td>
       <td>{% if c.tipo=='ingreso' %}<span class="tag {{ 'tag-si' if c.remunerativo else 'tag-no' }}">{{ 'sí' if c.remunerativo else 'no' }}</span>{% else %}—{% endif %}</td>
       <td>{% if c.tipo=='descuento' and c.categoria_sindical %}<span class="tag tag-si">{{ 'convenio' if c.categoria_sindical=='convenio' else 'afiliación' }}</span>{% else %}—{% endif %}</td>
-      <td class="muted">{% if c.cuit_empleador %}<code>{{ c.cuit_empleador }}</code>{% if c.codigo_generico %} → <code>{{ c.codigo_generico }}</code>{% endif %}{% else %}genérico{% endif %}</td>
+      <td class="muted">{% if c.cuit_empleador %}<code>{{ c.cuit_empleador }}</code>{% if c.codigo_generico %} → <code>{{ c.codigo_generico }}</code>{% endif %}{% else %}genérico{% if c.codigo_generico %} → <code>{{ c.codigo_generico }}</code>{% endif %}{% endif %}</td>
       <td class="muted">{{ c.alias|join(', ') }}</td>
       <td class="acc">
         <button class="sec mini" type="button"

@@ -128,6 +128,11 @@ class Trabajador(SQLModel, table=True):
     # del trabajador. Fecha como string "AAAA-MM-DD" (formato de <input
     # type=date>), igual que se recibe del formulario.
     vigencia_credencial: Optional[str] = Field(default=None)
+    # Último semáforo de ARCA calculado (POST /api/aportes) -- antes se
+    # perdía apenas se navegaba o se recargaba la página, porque nunca se
+    # guardaba. Es el mismo dict que devuelve semaforo.calcular_semaforo().
+    semaforo_datos: dict = Field(default={}, sa_column=Column(JSON))
+    semaforo_actualizado: Optional[str] = Field(default=None)  # fecha ISO del último cálculo
 
 
 class Concepto(SQLModel, table=True):
@@ -491,6 +496,22 @@ def nombre_trabajador(cuil: str, sindicato_id: int) -> str:
         return t.nombre if t else ""
 
 
+def perfil_trabajador(cuil: str, sindicato_id: int) -> Optional[dict]:
+    """Datos propios del trabajador para mostrarle su perfil (solo lectura,
+    no se edita desde la app del trabajador)."""
+    with Session(engine) as s:
+        t = s.exec(select(Trabajador).where(
+            Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
+        if not t:
+            return None
+        return {
+            "nombre": t.nombre, "cuil": t.cuil,
+            "calle": t.calle, "numero": t.numero, "piso": t.piso,
+            "ciudad": t.ciudad, "provincia": t.provincia,
+            "telefono": t.telefono, "mail": t.mail,
+        }
+
+
 def token_credencial(cuil: str, sindicato_id: int) -> str:
     """Token opaco para el QR (/v/{token}). Se genera y se guarda la primera
     vez que hace falta, así las filas ya cargadas no necesitan una migración
@@ -540,6 +561,34 @@ def credencial_de(cuil: str, sindicato_id: int) -> Optional[dict]:
         if not t:
             return None
         return {"codigo": t.codigo_credencial, "vigencia": t.vigencia_credencial}
+
+
+def semaforo_guardado(cuil: str, sindicato_id: int) -> Optional[dict]:
+    """Último semáforo calculado para ese empadronamiento, o None si
+    todavía no subió ningún comprobante de ARCA. Incluye "actualizado" (fecha
+    real del cálculo guardado) para que la pantalla no muestre "hoy" al
+    repintar un dato viejo."""
+    with Session(engine) as s:
+        t = s.exec(select(Trabajador).where(
+            Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
+        if not t or not t.semaforo_datos:
+            return None
+        return {**t.semaforo_datos, "actualizado": t.semaforo_actualizado}
+
+
+def guardar_semaforo(cuil: str, sindicato_id: int, datos: dict) -> None:
+    """Persiste el resultado de calcular_semaforo() para no perderlo al
+    navegar o recargar. No hace nada si el trabajador no existe en ese
+    sindicato (recibo/comprobante de una sesión ya inválida)."""
+    with Session(engine) as s:
+        t = s.exec(select(Trabajador).where(
+            Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
+        if not t:
+            return
+        t.semaforo_datos = datos
+        t.semaforo_actualizado = datetime.now().strftime("%Y-%m-%d")
+        s.add(t)
+        s.commit()
 
 
 def generar_codigo_credencial(trabajador_id: int, sindicato_id: int, nombre_sindicato: str) -> str:

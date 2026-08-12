@@ -28,6 +28,19 @@ client = TestClient(main.app)
 client.post("/admin/login", data={"usuario": "20222222220", "clave": "fega-demo"})
 
 
+def test_listado_muestra_codigo_generico_sin_cuit():
+    # Bug real: un concepto genérico (sin CUIT) con codigo_generico cargado
+    # no se mostraba en /admin -- el template solo lo mostraba si tenía CUIT.
+    client.post("/admin/concepto", data={
+        "codigo": "42-001", "nombre": "AP. PERS. JUB. ANSES", "tipo": "descuento",
+        "remunerativo": "si", "alias": "", "codigo_generico": "JUBILACION",
+    })
+    r = client.get("/admin")
+    assert r.status_code == 200
+    assert "genérico → <code>JUBILACION</code>" in r.text
+    print("OK  test_listado_muestra_codigo_generico_sin_cuit")
+
+
 def test_alta_concepto_generico_no_guarda_cuit():
     client.post("/admin/concepto", data={
         "codigo": "JUB", "nombre": "Aporte jubilatorio", "tipo": "descuento",
@@ -112,6 +125,7 @@ def test_aprender_aplicar_mismo_codigo_distinto_cuit_no_es_duplicado():
 
 
 if __name__ == "__main__":
+    test_listado_muestra_codigo_generico_sin_cuit()
     test_alta_concepto_generico_no_guarda_cuit()
     test_alta_concepto_especifico_guarda_cuit_y_generico()
     test_codigo_generico_se_guarda_incluso_sin_cuit()

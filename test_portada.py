@@ -44,6 +44,29 @@ def _sesion(cuil):
     return c
 
 
+def test_tarjetas_linkean_con_tab_para_deeplink():
+    c = _sesion("20111111119")
+    r = c.get("/app/inicio")
+    assert 'href="/app?tab=aportes"' in r.text
+    assert 'href="/app?tab=credencial"' in r.text
+    assert 'href="/app?tab=capacitacion"' in r.text
+    print("OK  test_tarjetas_linkean_con_tab_para_deeplink")
+
+
+def test_perfil_muestra_datos_reales_del_trabajador():
+    with db.get_session() as s:
+        t = s.exec(select(Trabajador).where(Trabajador.cuil == "20111111119",
+                                             Trabajador.sindicato_id == SID_UOM)).first()
+        t.ciudad = "Rosario"
+        t.provincia = "Santa Fe"
+        s.add(t); s.commit()
+    c = _sesion("20111111119")
+    r = c.get("/app/inicio")
+    assert "Juan Perez" in r.text
+    assert "Rosario" in r.text and "Santa Fe" in r.text
+    print("OK  test_perfil_muestra_datos_reales_del_trabajador")
+
+
 def test_sin_sesion_redirige_a_ingresar():
     r = client.get("/app/inicio", follow_redirects=False)
     assert r.status_code == 303
@@ -103,6 +126,8 @@ def test_login_redirige_a_inicio_no_a_app():
 
 
 if __name__ == "__main__":
+    test_tarjetas_linkean_con_tab_para_deeplink()
+    test_perfil_muestra_datos_reales_del_trabajador()
     test_sin_sesion_redirige_a_ingresar()
     test_un_solo_sindicato_pinta_su_marca()
     test_pluriempleo_sin_elegir_muestra_selector()

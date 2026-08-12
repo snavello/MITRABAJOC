@@ -285,8 +285,10 @@ def api_mis_recibos(request: Request):
 
 
 @app.post("/api/aportes")
-async def api_aportes(archivo: UploadFile = File(...)):
-    """Lee el comprobante de aportes de ARCA que sube el trabajador y arma el semáforo."""
+async def api_aportes(request: Request, archivo: UploadFile = File(...)):
+    """Lee el comprobante de aportes de ARCA que sube el trabajador y arma el
+    semáforo. Lo persiste (si hay sesión de trabajador con sindicato
+    resuelto) para que no se pierda al navegar o recargar la página."""
     contenido = await archivo.read()
     try:
         datos = extraer_aportes(contenido, archivo.content_type)
@@ -294,7 +296,12 @@ async def api_aportes(archivo: UploadFile = File(...)):
         raise HTTPException(422, "No pudimos leer el comprobante. Probá con una captura más nítida.")
     if datos.get("confianza") == "baja" or not datos.get("meses"):
         raise HTTPException(422, "No parece un comprobante de aportes de ARCA. Revisá la captura.")
-    return calcular_semaforo(datos)
+    resultado = calcular_semaforo(datos)
+    cuil = request.cookies.get("cuil_trab", "")
+    sid = sindicato_activo_trabajador(request)
+    if cuil and sid:
+        db.guardar_semaforo(cuil, sid, resultado)
+    return resultado
 
 
 # ================= Panel del sindicato =================
@@ -1134,6 +1141,7 @@ def app_trabajador(request: Request):
             "codigo_credencial": codigo_cred,
             "vigencia_credencial": _fmt_fecha_ar(credencial.get("vigencia")),
             "filigrana": filigrana_svg(marca["nombre"], marca["color_secundario"], marca["color_acento"]),
+            "semaforo_guardado": db.semaforo_guardado(cuil, sid_activo),
         }
         # El QR (y la verificación pública que hay detrás) solo tiene sentido
         # una vez que el sindicato generó el código real de la credencial.
@@ -1181,6 +1189,8 @@ def app_portada(request: Request):
             "primer_nombre": (nombre_trab or "").split(" ")[0] or "Trabajador",
             "iniciales": _iniciales_sindicato(marca["nombre"]),
             "credencial_generada": bool(credencial.get("codigo")),
+            "documento": _dni_de_cuil(cuil),
+            "perfil": db.perfil_trabajador(cuil, sid_activo),
         })
     # Varios y no eligió → selector (mismo criterio que /app)
     return templates.TemplateResponse("elegir_sindicato.html", {
