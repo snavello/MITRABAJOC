@@ -484,7 +484,8 @@
   <div class="modal-hoja">
     <button class="modal-cerrar" onclick="cerrarNoticia()" aria-label="Cerrar"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
     <h3 id="not-det-titulo"></h3>
-    <div class="ant" id="not-det-antiguedad" style="opacity:.6; font-size:11px; margin-bottom:10px;"></div>
+    <div id="not-det-bajada" style="font-size:13px; color:var(--gris); margin-top:3px;"></div>
+    <div class="ant" id="not-det-antiguedad" style="opacity:.6; font-size:11px; margin:8px 0 10px;"></div>
     <div id="not-det-texto" style="font-size:13.5px; line-height:1.6;"></div>
     <div id="not-det-imagenes" style="display:flex; gap:8px; margin-top:14px;"></div>
   </div>
@@ -980,6 +981,7 @@ semApagado();
 async function abrirNoticia(id) {
   const ov = document.getElementById('overlay-noticia');
   document.getElementById('not-det-titulo').textContent = 'Cargando…';
+  document.getElementById('not-det-bajada').textContent = '';
   document.getElementById('not-det-antiguedad').textContent = '';
   document.getElementById('not-det-texto').innerHTML = '';
   document.getElementById('not-det-imagenes').innerHTML = '';
@@ -989,6 +991,7 @@ async function abrirNoticia(id) {
     if (!r.ok) throw new Error();
     const n = await r.json();
     document.getElementById('not-det-titulo').textContent = n.titulo;
+    document.getElementById('not-det-bajada').textContent = n.bajada || '';
     document.getElementById('not-det-antiguedad').textContent = n.antiguedad;
     document.getElementById('not-det-texto').innerHTML = n.texto_completo_html;
     const imgs = document.getElementById('not-det-imagenes');
