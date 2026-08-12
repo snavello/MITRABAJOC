@@ -86,9 +86,12 @@
     {% if noticias %}
       {% for n in noticias %}
       <button class="noticia-card" onclick="abrirNoticia({{ n.id }})">
-        <div class="tit">{{ n.titulo }}</div>
-        {% if n.bajada %}<div class="baj">{{ n.bajada }}</div>{% endif %}
-        <div class="ant">{{ n.antiguedad }}</div>
+        {% if n.tiene_imagen1 %}<img class="miniatura" src="/noticia-imagen/{{ n.id }}/1" alt="">{% endif %}
+        <div class="contenido">
+          <div class="tit">{{ n.titulo }}</div>
+          {% if n.bajada %}<div class="baj">{{ n.bajada }}</div>{% endif %}
+          <div class="ant">{{ n.antiguedad }}</div>
+        </div>
       </button>
       {% endfor %}
     {% else %}

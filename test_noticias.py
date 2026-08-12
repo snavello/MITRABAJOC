@@ -130,6 +130,35 @@ def test_admin_no_edita_noticia_de_otro_sindicato():
     print("OK  test_admin_no_edita_noticia_de_otro_sindicato")
 
 
+def test_miniatura_se_ve_en_el_feed_si_tiene_imagen1():
+    # Bug real: la imagen se veía bien al abrir el detalle, pero la tarjeta
+    # del feed (portada y pestaña Novedades) nunca mostraba una miniatura --
+    # faltaba el <img> en el template, aunque tiene_imagen1 ya viajaba en el dict.
+    png_1x1 = bytes.fromhex(
+        "89504e470d0a1a0a0000000d494844520000000100000001080600000"
+        "01f15c4890000000a4944415478da6360000002000155"
+    )
+    admin_client.post("/admin/noticia", data={
+        "titulo": "Con miniatura", "bajada": "", "texto_completo": "",
+        "fecha_desde": "2020-01-01", "fecha_hasta": "2030-12-31",
+    }, files={"imagen1": ("foto.png", png_1x1, "image/png")})
+    with Session(db.engine) as s:
+        n = s.exec(select(Noticia).where(Noticia.sindicato_id == SID_UOM,
+                                          Noticia.titulo == "Con miniatura")).first()
+        nid = n.id
+
+    r_portada = trab_client.get("/app/inicio")
+    assert f'src="/noticia-imagen/{nid}/1"' in r_portada.text
+
+    r_novedades = trab_client.get("/app?tab=novedades")
+    assert f'src="/noticia-imagen/{nid}/1"' in r_novedades.text
+
+    r_img = trab_client.get(f"/noticia-imagen/{nid}/1")
+    assert r_img.status_code == 200
+    assert r_img.headers["content-type"] == "image/png"
+    print("OK  test_miniatura_se_ve_en_el_feed_si_tiene_imagen1")
+
+
 def test_borrar_noticia():
     with Session(db.engine) as s:
         n = s.exec(select(Noticia).where(Noticia.sindicato_id == SID_UOM,
@@ -149,5 +178,6 @@ if __name__ == "__main__":
     test_aislamiento_entre_sindicatos()
     test_api_noticia_detalle_linkifica_urls_y_bloquea_otro_sindicato()
     test_admin_no_edita_noticia_de_otro_sindicato()
+    test_miniatura_se_ve_en_el_feed_si_tiene_imagen1()
     test_borrar_noticia()
     print("\nTodo OK — noticias.")
