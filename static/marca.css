@@ -1,0 +1,101 @@
+/* ============================================================
+   Mi Trabajo — base del sistema de diseño
+   Los 4 valores de marca se inyectan desde la base de datos.
+   Todo lo demás es fijo para todos los sindicatos.
+   ============================================================ */
+
+:root {
+  /* --- Marca del sindicato (se inyecta desde Jinja) --- */
+  --marca-base:      #0f1b2d;  /* base oscura: portada, encabezados */
+  --marca-primario:  #1a3d6b;  /* color institucional */
+  --marca-acento:    #e8a33d;  /* acción: botones, pestaña activa */
+  --marca-apoyo:     #2fa88f;  /* apoyo: chips, destaques */
+
+  /* --- Superficies derivadas de la base (no se cargan) --- */
+  --sup-1: color-mix(in srgb, var(--marca-base) 88%, white);
+  --sup-2: color-mix(in srgb, var(--marca-base) 80%, white);
+  --sobre-base:      #eef2f7;  /* texto sobre base oscura */
+  --sobre-base-mute: #8ea1b8;  /* texto tenue sobre base oscura */
+
+  /* --- Fijo: grises y papel --- */
+  --tinta:  #152238;
+  --gris:   #5b6478;
+  --linea:  #e4e7ec;
+  --papel:  #f6f7f9;
+  --blanco: #ffffff;
+
+  /* --- Fijo: estados (nunca toman la marca) --- */
+  --ok:    #0d7a5f;
+  --error: #c0392b;
+  --aviso: #b8860b;
+
+  /* --- Fijo: tipografía --- */
+  --fuente: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fuente-num: ui-monospace, Consolas, "SF Mono", monospace;
+
+  /* --- Fijo: radios --- */
+  --r-card: 12px;
+  --r-btn: 9px;
+  --r-chip: 20px;
+}
+
+* { box-sizing: border-box; margin: 0; }
+body { font-family: var(--fuente); color: var(--tinta); background: var(--papel); line-height: 1.5; }
+
+/* Cifras siempre alineadas en columna */
+.num, td.num, .importe { font-family: var(--fuente-num); font-variant-numeric: tabular-nums; }
+
+/* ---------- Encabezado oscuro (portada e interiores) ---------- */
+.enc { background: var(--marca-base); color: var(--sobre-base); padding: 13px 15px;
+       display: flex; align-items: center; gap: 10px; }
+.enc .logo { width: 42px; height: 42px; border-radius: 9px; background: var(--blanco);
+             object-fit: contain; padding: 3px; }
+.enc .logo-fallback { width: 42px; height: 42px; border-radius: 9px; background: var(--marca-acento);
+             color: var(--marca-base); display: flex; align-items: center; justify-content: center;
+             font-weight: 800; font-size: 15px; }
+.enc .nom { font-size: 14.5px; font-weight: 600; line-height: 1.15; }
+.enc .sub { font-size: 10px; color: var(--sobre-base-mute); letter-spacing: 1.1px; text-transform: uppercase; }
+.enc .usuario { margin-left: auto; font-size: 10.5px; color: var(--sobre-base-mute); }
+
+/* ---------- Tarjetas de acceso (portada) ---------- */
+.tarjetas { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.acceso { background: var(--sup-1); border: 1px solid var(--sup-2); border-radius: 13px;
+          padding: 13px 12px 14px; min-height: 88px; color: var(--sobre-base);
+          display: flex; flex-direction: column; justify-content: space-between;
+          text-decoration: none; }
+.acceso .titulo { font-size: 13px; font-weight: 650; line-height: 1.2; }
+.acceso .estado { font-size: 10.5px; opacity: .72; margin-top: 3px; }
+.acceso.destacada { background: var(--marca-acento); border-color: var(--marca-acento); color: var(--marca-base); }
+.acceso svg { width: 26px; height: 26px; stroke: currentColor; stroke-width: 1.7; fill: none; }
+
+/* ---------- Botones ---------- */
+.btn { display: block; width: 100%; background: var(--marca-acento); color: var(--marca-base);
+       border: none; border-radius: var(--r-btn); padding: 13px; font-size: 14.5px;
+       font-weight: 650; font-family: inherit; cursor: pointer; }
+.btn.sec { background: transparent; color: var(--tinta); border: 1px solid var(--linea); }
+
+/* ---------- Barra inferior ---------- */
+.tabbar { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: var(--blanco);
+          border-top: 1px solid var(--linea); z-index: 30;
+          padding-bottom: env(safe-area-inset-bottom); }
+.tabbar button { flex: 1; background: none; border: none; padding: 8px 2px 7px; cursor: pointer;
+                 display: flex; flex-direction: column; align-items: center; gap: 3px;
+                 font-family: inherit; font-size: 10px; font-weight: 500; color: var(--gris); }
+.tabbar .picon { width: 42px; height: 28px; border-radius: 14px; display: flex;
+                 align-items: center; justify-content: center; transition: background .15s; }
+.tabbar svg { width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.7; fill: none; }
+.tabbar button.activa { color: var(--marca-acento); }
+.tabbar button.activa .picon { background: color-mix(in srgb, var(--marca-acento) 15%, transparent); }
+/* En portada oscura la barra también es oscura */
+.oscuro .tabbar { background: var(--marca-base); border-top-color: var(--sup-2); }
+.oscuro .tabbar button { color: var(--sobre-base-mute); }
+
+/* ---------- Estados (fijos) ---------- */
+.chip-ok    { background: color-mix(in srgb, var(--ok) 12%, white);    color: var(--ok); }
+.chip-error { background: color-mix(in srgb, var(--error) 10%, white); color: var(--error); }
+.chip-aviso { background: color-mix(in srgb, var(--aviso) 14%, white); color: var(--aviso); }
+.chip-ok, .chip-error, .chip-aviso {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+  padding: 6px 11px; border-radius: var(--r-chip); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
