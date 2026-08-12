@@ -52,16 +52,22 @@ def test_alta_concepto_especifico_guarda_cuit_y_generico():
     print("OK  test_alta_concepto_especifico_guarda_cuit_y_generico")
 
 
-def test_codigo_generico_se_ignora_sin_cuit():
+def test_codigo_generico_se_guarda_incluso_sin_cuit():
+    # Un concepto sin CUIT (catálogo "genérico" del sindicato) también puede
+    # apuntar su codigo_generico a otro código genérico -- caso real: un
+    # concepto viejo cargado sin CUIT (p.ej. auto-creado antes de que el
+    # extractor identificara el CUIT del empleador en el recibo) que el admin
+    # vincula a mano al código canónico (ver AEFIP, "42-001" -> "JUBILACION").
     client.post("/admin/concepto", data={
         "codigo": "PRESENT", "nombre": "Presentismo", "tipo": "ingreso",
         "remunerativo": "si", "alias": "",
-        "codigo_generico": "ALGO",  # sin cuit_empleador -> se ignora
+        "codigo_generico": "ALGO",
     })
     with Session(db.engine) as s:
         c = s.exec(select(Concepto).where(Concepto.sindicato_id == SID, Concepto.codigo == "PRESENT")).first()
-        assert c.cuit_empleador is None and c.codigo_generico is None
-    print("OK  test_codigo_generico_se_ignora_sin_cuit")
+        assert c.cuit_empleador is None
+        assert c.codigo_generico == "ALGO"
+    print("OK  test_codigo_generico_se_guarda_incluso_sin_cuit")
 
 
 def test_aprender_aplicar_persiste_cuit_y_generico():
@@ -108,7 +114,7 @@ def test_aprender_aplicar_mismo_codigo_distinto_cuit_no_es_duplicado():
 if __name__ == "__main__":
     test_alta_concepto_generico_no_guarda_cuit()
     test_alta_concepto_especifico_guarda_cuit_y_generico()
-    test_codigo_generico_se_ignora_sin_cuit()
+    test_codigo_generico_se_guarda_incluso_sin_cuit()
     test_aprender_aplicar_persiste_cuit_y_generico()
     test_aprender_aplicar_no_duplica_mismo_codigo_mismo_cuit()
     test_aprender_aplicar_mismo_codigo_distinto_cuit_no_es_duplicado()

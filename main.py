@@ -496,10 +496,7 @@ def abm_concepto(
     es_remun = remunerativo == "si"
     categoria = categoria_sindical if categoria_sindical in CATEGORIAS_SINDICALES else ""
     cuit_empleador = _norm_cuil(cuit_empleador) or None
-    # El código genérico solo tiene sentido para un concepto específico de un
-    # empleador (ver Concepto.codigo_generico); si no hay CUIT cargado, se
-    # ignora aunque el form lo mande.
-    codigo_gen = (codigo_generico.strip() or None) if cuit_empleador else None
+    codigo_gen = codigo_generico.strip() or None
     with db.get_session() as s:
         if id:  # edición — solo si el concepto es de este sindicato
             c = s.get(Concepto, int(id))
@@ -714,7 +711,7 @@ def aprender_aplicar(request: Request, payload: dict):
                     remunerativo=c.get("remunerativo", True),
                     alias=[c["descripcion"]], pendiente_revision=False,
                     cuit_empleador=cuit_empleador,
-                    codigo_generico=(c.get("codigo_generico") or "").strip() or None if cuit_empleador else None,
+                    codigo_generico=(c.get("codigo_generico") or "").strip() or None,
                 ))
                 existentes.add(clave)
                 altas += 1
