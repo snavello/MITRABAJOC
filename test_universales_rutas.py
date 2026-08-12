@@ -66,7 +66,8 @@ def test_aprender_sugiere_generico_por_categoria_universal():
         "totales_impresos": {}, "contribuciones_patronales": [], "confianza": "alta",
     }
     original = main.extraer
-    main.extraer = lambda contenido, content_type: recibo_mock
+    main.extraer = lambda contenido, content_type: (
+        recibo_mock, {"modelo": "claude-sonnet-4-6", "tokens_entrada": 100, "tokens_salida": 50})
     try:
         r = client.post("/admin/aprender", files={"archivos": ("recibo.png", b"fake", "image/png")})
     finally:

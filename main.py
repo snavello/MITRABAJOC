@@ -172,12 +172,16 @@ def home(request: Request):
 async def api_leer(request: Request, archivo: UploadFile = File(...)):
     contenido = await archivo.read()
     try:
-        recibo = extraer(contenido, archivo.content_type)
+        recibo, uso = extraer(contenido, archivo.content_type)
     except Exception:
         raise HTTPException(422, "No pudimos leer el recibo. Probá con una foto más nítida.")
+    sid = sindicato_activo_trabajador(request)
+    # Se registra apenas se llama a la IA -- el costo ya se generó, sea cual
+    # sea el resultado (confianza baja, o si el trabajador nunca confirma).
+    db.registrar_uso_ia(sid or None, request.cookies.get("cuil_trab", ""), "recibo",
+                         uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"])
     if recibo.get("confianza") == "baja":
         raise HTTPException(422, "La imagen no es clara. Sacá la foto de nuevo con buena luz.")
-    sid = sindicato_activo_trabajador(request)
     cuit_empleador = _norm_cuil((recibo.get("empleador") or {}).get("cuit"))
     nuevos = detectar_nuevos(db.conceptos_como_dicts(sid), recibo["lineas"], cuit_empleador)
     return {
@@ -341,14 +345,16 @@ async def api_aportes(request: Request, archivo: UploadFile = File(...)):
     resuelto) para que no se pierda al navegar o recargar la página."""
     contenido = await archivo.read()
     try:
-        datos = extraer_aportes(contenido, archivo.content_type)
+        datos, uso = extraer_aportes(contenido, archivo.content_type)
     except Exception:
         raise HTTPException(422, "No pudimos leer el comprobante. Probá con una captura más nítida.")
+    cuil = request.cookies.get("cuil_trab", "")
+    sid = sindicato_activo_trabajador(request)
+    db.registrar_uso_ia(sid or None, cuil, "aportes",
+                         uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"])
     if datos.get("confianza") == "baja" or not datos.get("meses"):
         raise HTTPException(422, "No parece un comprobante de aportes de ARCA. Revisá la captura.")
     resultado = calcular_semaforo(datos)
-    cuil = request.cookies.get("cuil_trab", "")
-    sid = sindicato_activo_trabajador(request)
     if cuil and sid:
         db.guardar_semaforo(cuil, sid, resultado)
     return resultado
@@ -765,11 +771,13 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
     for archivo in archivos:
         contenido = await archivo.read()
         try:
-            recibo = extraer(contenido, archivo.content_type)
+            recibo, uso = extraer(contenido, archivo.content_type)
         except Exception:
             fallidos += 1
             continue
         leidos += 1
+        db.registrar_uso_ia(sid, "", "aprendizaje",
+                             uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"])
         cuit_empleador = _norm_cuil((recibo.get("empleador") or {}).get("cuit")) or None
         for n in detectar_nuevos(conceptos_actuales, recibo["lineas"], cuit_empleador):
             clave = (n["codigo"], cuit_empleador or "")
@@ -900,10 +908,14 @@ def plataforma(request: Request):
             n_trab = len(s.exec(select(Trabajador).where(
                 Trabajador.sindicato_id == sind.id)).all())
             info.append({"s": sind, "usuarios": n_users, "trabajadores": n_trab})
+    uso_ia = db.uso_ia_listado()
     return templates.TemplateResponse("plataforma.html", {
         "request": request, "sindicatos": info,
         "tope_sindical_pct": db.obtener_tope_sindical(),
         "marca_plataforma": db.marca_plataforma(),
+        "uso_ia": uso_ia,
+        "sindicatos_uso_ia": sorted({u["sindicato"] for u in uso_ia}),
+        "modelos_uso_ia": sorted({u["modelo"] for u in uso_ia}),
     })
 
 

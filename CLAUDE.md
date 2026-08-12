@@ -167,6 +167,27 @@ resultado de `calcular_semaforo()`. `POST /api/aportes` lo persiste;
 navegar o recargar — arrancaba siempre en blanco). "Actualizar con otra
 captura" sigue disponible debajo del semáforo ya pintado.
 
+## Uso de la API de IA (costo real)
+`UsoIA` (db.py): una fila por cada llamada real a la API de Anthropic —
+sindicato_id, cuil, tipo ("recibo" | "aportes" | "aprendizaje"), modelo,
+tokens_entrada/tokens_salida (los que devuelve la propia respuesta,
+`msg.usage`, no un estimado). Se registra en el mismo request que hace la
+llamada (`extractor.extraer()`/`extraer_aportes()` devuelven `(datos, uso)`),
+así el conteo no depende de que el trabajador confirme el recibo ni lo
+reporte al sindicato — es el costo real, se use o no. Listado filtrable
+(sindicato/modelo/tipo) en `/plataforma` → pestaña "Uso de IA". Guarda tokens
+crudos, no un costo en $ (los precios de Anthropic cambian).
+
+## Hallazgo pendiente, no arreglado (fuera de alcance de esta sesión)
+`db.cargar_seed_si_vacio()` sigue disparando el seed histórico de AEFIP
+(`data/seed_aefip.json`) apenas la tabla `Concepto` está vacía, aunque
+"Decisiones tomadas" dice que la demo arranca sin AEFIP. Se nota al recrear
+la base local desde cero (`db.crear_tablas()` sin `cargar_demo.py` corrido
+antes): aparece un sindicato "AEFIP" fantasma con id=1, corriendo los ids de
+los sindicatos de demo. No afecta producción real (nunca se recrea la base
+de Render desde cero), pero conviene revisarlo antes de confiar en ids fijos
+en scripts de diagnóstico.
+
 ## Método de trabajo
 - Por bloques chicos, verificando la lógica de verdad (rutas y funciones), no
   simulada. Preferir cambios quirúrgicos y probar antes de avanzar.

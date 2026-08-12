@@ -66,10 +66,11 @@ def test_api_aportes_persiste_al_calcular(monkeypatch):
     import main as m
 
     def fake_extraer(contenido, content_type):
-        return {
+        datos = {
             "confianza": "alta",
             "meses": [{"mes": "2026-04", "jubilacion": "pagado", "obra_social": "parcial"}],
         }
+        return datos, {"modelo": "claude-sonnet-4-6", "tokens_entrada": 100, "tokens_salida": 50}
     monkeypatch.setattr(m, "extraer_aportes", fake_extraer)
     r = client.post("/api/aportes", files={"archivo": ("captura.png", b"fake", "image/png")})
     assert r.status_code == 200

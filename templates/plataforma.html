@@ -92,6 +92,7 @@
     <button class="ptab" data-pp="clave">Cambiar clave</button>
     <button class="ptab" data-pp="marca">Marca de la plataforma</button>
     <button class="ptab" data-pp="config">Configuración legal</button>
+    <button class="ptab" data-pp="usoia">Uso de IA</button>
   </nav>
 
   <div class="ppanel activo" id="pp-lista">
@@ -309,12 +310,72 @@
     </form>
   </div>
   </div>
+
+  <div class="ppanel" id="pp-usoia">
+  <h2>Uso de la API de IA ({{ uso_ia|length }})</h2>
+  <p class="muted" style="margin-bottom:14px; max-width:640px;">Tokens de entrada y salida que devuelve cada llamada real a la API de Anthropic — no es un costo en pesos, es la base para calcularlo con el precio vigente del modelo. Se registra apenas se llama a la IA, no solo cuando el trabajador reporta el recibo.</p>
+  <div class="filtros">
+    <select id="f-usoia-sindicato" onchange="filtrarUsoIA()">
+      <option value="">Todos los sindicatos</option>
+      {% for sn in sindicatos_uso_ia %}<option value="{{ sn }}">{{ sn }}</option>{% endfor %}
+    </select>
+    <select id="f-usoia-modelo" onchange="filtrarUsoIA()">
+      <option value="">Todos los modelos</option>
+      {% for mn in modelos_uso_ia %}<option value="{{ mn }}">{{ mn }}</option>{% endfor %}
+    </select>
+    <select id="f-usoia-tipo" onchange="filtrarUsoIA()">
+      <option value="">Todos los tipos</option>
+      <option value="recibo">Recibo</option>
+      <option value="aportes">Aportes (ARCA)</option>
+      <option value="aprendizaje">Aprendizaje</option>
+    </select>
+    <button type="button" class="sec mini" onclick="limpiarFiltroUsoIA()">Limpiar</button>
+    <span class="f-cant" id="f-usoia-cant"></span>
+  </div>
+  <table>
+    <tr><th>Fecha</th><th>Sindicato</th><th>Tipo</th><th>Modelo</th><th>CUIL</th><th>Tokens entrada</th><th>Tokens salida</th></tr>
+    {% for u in uso_ia %}
+    <tr class="fila-usoia" data-sindicato="{{ u.sindicato }}" data-modelo="{{ u.modelo }}" data-tipo="{{ u.tipo }}" data-entrada="{{ u.tokens_entrada }}" data-salida="{{ u.tokens_salida }}">
+      <td>{{ u.fecha }}</td><td>{{ u.sindicato }}</td><td>{{ u.tipo }}</td><td>{{ u.modelo }}</td>
+      <td>{{ u.cuil or '—' }}</td><td>{{ u.tokens_entrada }}</td><td>{{ u.tokens_salida }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="muted">Todavía no hay consumo registrado.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
 </div>
 <script>
 function activarTab(dest) {
   document.querySelectorAll('.ptab').forEach(b => b.classList.toggle('activa', b.dataset.pp === dest));
   document.querySelectorAll('.ppanel').forEach(pan => pan.classList.toggle('activo', pan.id === 'pp-' + dest));
 }
+
+function filtrarUsoIA() {
+  const sind = document.getElementById('f-usoia-sindicato').value;
+  const mod = document.getElementById('f-usoia-modelo').value;
+  const tipo = document.getElementById('f-usoia-tipo').value;
+  let visibles = 0, sumaEntrada = 0, sumaSalida = 0;
+  document.querySelectorAll('.fila-usoia').forEach(fila => {
+    let visible = true;
+    if (sind && fila.dataset.sindicato !== sind) visible = false;
+    if (visible && mod && fila.dataset.modelo !== mod) visible = false;
+    if (visible && tipo && fila.dataset.tipo !== tipo) visible = false;
+    fila.style.display = visible ? '' : 'none';
+    if (visible) { visibles++; sumaEntrada += Number(fila.dataset.entrada); sumaSalida += Number(fila.dataset.salida); }
+  });
+  const contador = document.getElementById('f-usoia-cant');
+  if (contador) contador.textContent = visibles + (visibles === 1 ? ' resultado' : ' resultados')
+    + ' · ' + sumaEntrada.toLocaleString('es-AR') + ' tokens entrada · '
+    + sumaSalida.toLocaleString('es-AR') + ' tokens salida';
+}
+function limpiarFiltroUsoIA() {
+  document.getElementById('f-usoia-sindicato').value = '';
+  document.getElementById('f-usoia-modelo').value = '';
+  document.getElementById('f-usoia-tipo').value = '';
+  filtrarUsoIA();
+}
+if (document.querySelector('.fila-usoia')) filtrarUsoIA();
 
 // Si el POST de alta/edición de sindicato rechazó el color base, volver
 // directo al tab donde está el formulario y el mensaje de error.

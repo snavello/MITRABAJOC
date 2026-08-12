@@ -98,7 +98,22 @@ def _imagen_desde_pdf(contenido: bytes) -> tuple[str, str]:
     return base64.standard_b64encode(buf.getvalue()).decode(), "image/png"
 
 
-def extraer(contenido: bytes, content_type: str) -> dict:
+def _uso(msg, modelo: str) -> dict:
+    """Tokens de entrada/salida que devuelve la propia respuesta de la API
+    (msg.usage), para medir costo real -- no un estimado."""
+    return {
+        "modelo": modelo,
+        "tokens_entrada": msg.usage.input_tokens,
+        "tokens_salida": msg.usage.output_tokens,
+    }
+
+
+MODELO = "claude-sonnet-4-6"
+
+
+def extraer(contenido: bytes, content_type: str) -> tuple[dict, dict]:
+    """Devuelve (datos_del_recibo, uso) -- uso trae modelo/tokens_entrada/
+    tokens_salida de esta llamada puntual, para registrar el costo real."""
     if content_type == "application/pdf":
         b64, media = _imagen_desde_pdf(contenido)
     else:
@@ -106,7 +121,7 @@ def extraer(contenido: bytes, content_type: str) -> dict:
         media = content_type  # image/jpeg, image/png
 
     msg = client.messages.create(
-        model="claude-sonnet-4-6",
+        model=MODELO,
         max_tokens=2000,
         system=SYSTEM,
         messages=[{
@@ -120,7 +135,7 @@ def extraer(contenido: bytes, content_type: str) -> dict:
     texto = "".join(b.text for b in msg.content if b.type == "text").strip()
     if texto.startswith("```"):
         texto = texto.split("```")[1].removeprefix("json").strip()
-    return json.loads(texto)
+    return json.loads(texto), _uso(msg, MODELO)
 
 
 # ==================== Comprobante de aportes de ARCA ====================
@@ -155,8 +170,9 @@ Devolvé los 12 meses en orden. Si la imagen no es un comprobante de aportes
 de ARCA, poné confianza en "baja"."""
 
 
-def extraer_aportes(contenido: bytes, content_type: str) -> dict:
-    """Lee un comprobante de aportes de ARCA (imagen o PDF) y devuelve el estado mensual."""
+def extraer_aportes(contenido: bytes, content_type: str) -> tuple[dict, dict]:
+    """Lee un comprobante de aportes de ARCA (imagen o PDF) y devuelve
+    (estado_mensual, uso) -- mismo criterio que extraer()."""
     if content_type == "application/pdf":
         b64, media = _imagen_desde_pdf(contenido)
     else:
@@ -164,7 +180,7 @@ def extraer_aportes(contenido: bytes, content_type: str) -> dict:
         media = content_type
 
     msg = client.messages.create(
-        model="claude-sonnet-4-6",
+        model=MODELO,
         max_tokens=2000,
         system=SYSTEM_APORTES,
         messages=[{
@@ -178,4 +194,4 @@ def extraer_aportes(contenido: bytes, content_type: str) -> dict:
     texto = "".join(b.text for b in msg.content if b.type == "text").strip()
     if texto.startswith("```"):
         texto = texto.split("```")[1].removeprefix("json").strip()
-    return json.loads(texto)
+    return json.loads(texto), _uso(msg, MODELO)

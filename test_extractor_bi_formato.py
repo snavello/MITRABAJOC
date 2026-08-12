@@ -59,14 +59,19 @@ NUEVO = {
 
 
 def _mock_response(payload: dict):
-    return SimpleNamespace(content=[SimpleNamespace(type="text", text=json.dumps(payload))])
+    return SimpleNamespace(
+        content=[SimpleNamespace(type="text", text=json.dumps(payload))],
+        usage=SimpleNamespace(input_tokens=1234, output_tokens=567),
+    )
 
 
 def _run_extraer_con_mock(payload: dict) -> dict:
     original = extractor.client.messages.create
     extractor.client.messages.create = lambda **kw: _mock_response(payload)
     try:
-        return extractor.extraer(b"fake-bytes", "image/png")
+        datos, uso = extractor.extraer(b"fake-bytes", "image/png")
+        assert uso == {"modelo": "claude-sonnet-4-6", "tokens_entrada": 1234, "tokens_salida": 567}, uso
+        return datos
     finally:
         extractor.client.messages.create = original
 

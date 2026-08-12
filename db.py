@@ -214,6 +214,22 @@ class Reporte(SQLModel, table=True):
     detalle: dict = Field(default={}, sa_column=Column(JSON))
 
 
+class UsoIA(SQLModel, table=True):
+    """Consumo de la API de Anthropic, una fila por llamada -- sindicato_id
+    NULL cuando no se puede resolver (no debería pasar en los 3 puntos donde
+    se registra hoy, pero no se descarta la fila por eso). Pensado para medir
+    costo real (tokens crudos, sin precio -- cambia según el plan/modelo) por
+    sindicato y por tipo de llamada en el panel de plataforma."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: Optional[int] = Field(default=None, foreign_key="sindicato.id", index=True)
+    cuil: str = ""  # vacío en "aprendizaje": lo dispara el admin, no es de un trabajador puntual
+    tipo: str = ""  # "recibo" | "aportes" | "aprendizaje"
+    modelo: str = ""
+    tokens_entrada: int = 0
+    tokens_salida: int = 0
+    fecha: str = ""  # "AAAA-MM-DD HH:MM"
+
+
 class ConfiguracionPlataforma(SQLModel, table=True):
     """Parámetros globales de plataforma (no por sindicato). Fila única, id=1."""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -679,3 +695,32 @@ def noticia_por_id(noticia_id: int) -> Optional[dict]:
     with Session(engine) as s:
         n = s.get(Noticia, noticia_id)
         return _noticia_a_dict(n) if n else None
+
+
+def registrar_uso_ia(sindicato_id: Optional[int], cuil: str, tipo: str,
+                      modelo: str, tokens_entrada: int, tokens_salida: int) -> None:
+    """Guarda una fila de consumo de la API por cada llamada real -- se llama
+    en el mismo request que hace la llamada (extraer/extraer_aportes), nunca
+    se re-arma después, para que el conteo no dependa de que el trabajador
+    confirme o reporte nada."""
+    with Session(engine) as s:
+        s.add(UsoIA(
+            sindicato_id=sindicato_id, cuil=cuil, tipo=tipo, modelo=modelo,
+            tokens_entrada=tokens_entrada, tokens_salida=tokens_salida,
+            fecha=datetime.now().strftime("%Y-%m-%d %H:%M"),
+        ))
+        s.commit()
+
+
+def uso_ia_listado() -> list:
+    """Todo el consumo de IA de TODOS los sindicatos, más reciente primero,
+    con el nombre del sindicato ya resuelto (para el panel de plataforma)."""
+    with Session(engine) as s:
+        filas = s.exec(select(UsoIA).order_by(UsoIA.id.desc())).all()
+        nombres = {sind.id: sind.nombre for sind in s.exec(select(Sindicato)).all()}
+        return [{
+            "id": f.id, "sindicato": nombres.get(f.sindicato_id, "—"),
+            "sindicato_id": f.sindicato_id, "cuil": f.cuil, "tipo": f.tipo,
+            "modelo": f.modelo, "tokens_entrada": f.tokens_entrada,
+            "tokens_salida": f.tokens_salida, "fecha": f.fecha,
+        } for f in filas]
