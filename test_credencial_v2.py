@@ -54,10 +54,11 @@ def test_filigrana_es_svg_valido_y_usa_los_colores():
     strokes = re.findall(r'stroke="(#[0-9a-f]{6})"', svg)
     assert len(strokes) == 3, strokes
     for color in strokes:
-        # tono máximo es +-0.15 sobre el canal más alejado de blanco/negro
-        # (255*3*0.15 = 114.75 en el peor caso): 130 da margen sin ser tan
-        # ancho como para no detectar un color realmente distinto.
-        assert min(_dist(color, secundario), _dist(color, acento)) < 130, color
+        # tono va de -0.35 a -0.05 (variación +-0.15 de siempre, más un
+        # oscurecimiento fijo de -0.20 pedido por el usuario): en el peor
+        # caso 255*3*0.35 = 267.75. 290 da margen sin ser tan ancho como
+        # para no detectar un color realmente distinto.
+        assert min(_dist(color, secundario), _dist(color, acento)) < 290, color
     print("OK  test_filigrana_es_svg_valido_y_usa_los_colores")
 
 

@@ -75,7 +75,8 @@
        ese, no color_primario (que puede ser cualquier tono). */
     --marca-base: {{ marca.color_base if marca else '#0f1b2d' }};
     --marca-primario: {{ marca.color_primario if marca else '#152238' }};
-    --marca-secundario: {{ marca.color_secundario if marca else '#1a7a6b' }}; }
+    --marca-secundario: {{ marca.color_secundario if marca else '#1a7a6b' }};
+    --marca-acento: {{ marca.color_acento if marca else '#b23a2e' }}; }
   * { box-sizing:border-box; margin:0; }
   body { font-family:system-ui,sans-serif; color:#1b1b1b; background:#faf9f6; line-height:1.5; }
   header { background:var(--marca-base); border-bottom:1px solid var(--linea); padding:14px 22px;
@@ -87,9 +88,11 @@
   .sind-wrap img.sind { max-height:32px; max-width:130px; object-fit:contain; background:#fff; border-radius:6px; padding:2px; }
   .sind-wrap .sind-nombre { font-size:14px; color:rgba(255,255,255,.9); }
   .btn-cerrar { position:fixed; bottom:20px; right:20px; width:44px; height:44px; border-radius:50%;
-    background:#e3b6b8; color:#7a2e35; display:flex; align-items:center; justify-content:center;
-    font-size:19px; font-weight:600; text-decoration:none; box-shadow:0 2px 10px rgba(0,0,0,.15); z-index:40; }
-  .btn-cerrar:hover { background:#d9a3a6; }
+    background:var(--marca-base); display:flex; align-items:center; justify-content:center;
+    text-decoration:none; border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 2px 10px rgba(0,0,0,.25); z-index:40; }
+  .btn-cerrar svg { width:19px; height:19px; stroke:var(--marca-acento); stroke-width:1.8; fill:none; }
+  .btn-cerrar:hover { opacity:.85; }
   .wrap { max-width:1000px; margin:0 auto; padding:24px 22px 60px; }
   nav { display:flex; gap:6px; margin-bottom:24px; flex-wrap:wrap; }
   nav button { padding:8px 16px; border-radius:8px; color:var(--gris);
@@ -186,7 +189,9 @@
     {% endif %}
   </div>
 </header>
-<a class="btn-cerrar" href="/admin/salir" title="Salir" aria-label="Salir">✕</a>
+<a class="btn-cerrar" href="/admin/salir" title="Salir" aria-label="Salir">
+  <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+</a>
 
 <div class="wrap">
   <nav>

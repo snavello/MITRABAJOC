@@ -26,6 +26,11 @@ CLAVE_PLATAFORMA = os.getenv("PLATAFORMA_PASSWORD", "plataforma-demo-2026")
 CUIT_PLATAFORMA = os.getenv("PLATAFORMA_CUIT", "20000000000")
 SECRETO = os.getenv("SESSION_SECRET", "cambiar-este-secreto-en-produccion")
 
+# Sesión por inactividad (sliding window): cada request autenticado reemite
+# el token con la marca de tiempo actual (ver middleware en main.py), así que
+# esto es "tiempo sin uso" antes de expirar, no un límite fijo desde el login.
+IDLE_TIMEOUT_SEGUNDOS = 15 * 60
+
 # ---------- Hash de contraseñas ----------
 def hashear_clave(clave: str) -> str:
     """Devuelve 'sal$hash' usando PBKDF2-HMAC-SHA256."""
@@ -66,8 +71,7 @@ def leer_sesion(token: str) -> dict | None:
         payload = json.loads(base64.urlsafe_b64decode(cuerpo.encode()).decode())
     except Exception:
         return None
-    # Expiración: 8 horas
-    if time.time() - payload.get("t", 0) > 8 * 3600:
+    if time.time() - payload.get("t", 0) > IDLE_TIMEOUT_SEGUNDOS:
         return None
     return payload
 

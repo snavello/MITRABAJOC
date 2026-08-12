@@ -71,7 +71,7 @@ def filigrana_svg(nombre_sindicato: str, color_secundario: str, color_acento: st
         dx = distancia * cos(angulo * pi / 180)
         dy = distancia * sin(angulo * pi / 180)
         giro = (h >> 16) % 360
-        tono = ((h >> 24) % 7 - 3) * 0.05   # -0.15..+0.15, leve
+        tono = ((h >> 24) % 7 - 3) * 0.05 - 0.20   # -0.15..+0.15, leve, y 20% más oscuro en total
         color = _tono(color_base, tono)
         opacidad = 0.15 - i * 0.02
         path = _guilloche(a, b, 1 - amp_b, amp_b, radio, fase=giro)

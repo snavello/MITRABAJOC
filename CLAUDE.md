@@ -22,6 +22,10 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   datos. En SQLite dev, db.crear_tablas() sigue creando tablas.
 - **IA:** API de Anthropic (claude-sonnet-4-6) para leer recibos y comprobantes.
 - **Auth:** propia. Claves PBKDF2, sesiones como cookies firmadas HMAC (auth.py).
+  Sesión por INACTIVIDAD, no por tiempo fijo desde el login: 15 minutos sin uso
+  (`auth.IDLE_TIMEOUT_SEGUNDOS`). El middleware `renovar_sesion_por_actividad`
+  (main.py) reemite la cookie en cada request autenticado; un usuario activo
+  nunca se desloguea solo.
   NO se usa auth de terceros.
 - **Python 3.12** fijado con .python-version (3.12.8) + variable PYTHON_VERSION en
   Render. Python 3.14 rompe SQLModel ("Field 'id' requires a type annotation").

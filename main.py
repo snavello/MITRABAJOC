@@ -59,6 +59,38 @@ async def sin_cache_en_paneles(request: Request, call_next):
     return respuesta
 
 
+@app.middleware("http")
+async def renovar_sesion_por_actividad(request: Request, call_next):
+    """Sesión de 15 minutos SIN uso (no un límite fijo desde el login): cada
+    request autenticado reemite el token con la marca de tiempo actual y
+    corre la cookie de expiración. Un usuario activo nunca se desloguea solo;
+    uno inactivo 15 minutos sí. Si el token ya venció, no se toca -- sigue
+    inválido y la ruta redirige a login como siempre.
+
+    OJO: si la propia ruta (login/logout/elegir sindicato) ya puso un
+    Set-Cookie para este nombre, hay que respetarlo tal cual y NO pisarlo
+    con el valor que traía el request -- si no, un login nunca "prendería"
+    de verdad: esta renovación reemitiría la sesión VIEJA por encima."""
+    respuesta = await call_next(request)
+
+    def _ya_seteada(nombre: str) -> bool:
+        prefijo = f"{nombre}=".encode()
+        return any(k == b"set-cookie" and v.startswith(prefijo) for k, v in respuesta.raw_headers)
+
+    token = request.cookies.get(COOKIE, "")
+    payload = auth.leer_sesion(token) if token else None
+    if payload:
+        if not _ya_seteada(COOKIE):
+            nuevo = auth.crear_sesion(payload.get("rol", ""), payload.get("uid", 0), payload.get("sid", 0))
+            respuesta.set_cookie(COOKIE, nuevo, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+        for cookie_extra in ("cuil_trab", "sind_elegido"):
+            valor = request.cookies.get(cookie_extra)
+            if valor and not _ya_seteada(cookie_extra):
+                respuesta.set_cookie(cookie_extra, valor, httponly=True,
+                                      max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    return respuesta
+
+
 @app.get("/logo/{sindicato_id}")
 def servir_logo(sindicato_id: int):
     """Sirve el logo de un sindicato guardado en la base (Opción B)."""
@@ -407,7 +439,7 @@ def admin_login(usuario: str = Form(...), clave: str = Form(...)):
             return RedirectResponse("/admin?error=1", status_code=303)
         token = auth.crear_sesion("sindicato", id_usuario=user.id, sindicato_id=user.sindicato_id)
     resp = RedirectResponse("/admin", status_code=303)
-    resp.set_cookie(COOKIE, token, httponly=True, max_age=8*3600)
+    resp.set_cookie(COOKIE, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     return resp
 
 
@@ -699,7 +731,7 @@ async def abm_noticia(
             s.add(Noticia(
                 sindicato_id=sid, titulo=titulo, bajada=bajada, texto_completo=texto_completo,
                 fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
-                creada=datetime.now().strftime("%Y-%m-%d"),
+                creada=datetime.now().strftime("%Y-%m-%d %H:%M"),
                 imagen1_datos=imagen1_datos, imagen1_mime=imagen1_mime,
                 imagen2_datos=imagen2_datos, imagen2_mime=imagen2_mime,
             ))
@@ -881,7 +913,7 @@ def plataforma_login(response: Response, cuit: str = Form(...), clave: str = For
         return RedirectResponse("/plataforma?error=1", status_code=303)
     token = auth.crear_sesion("plataforma")
     resp = RedirectResponse("/plataforma", status_code=303)
-    resp.set_cookie(COOKIE, token, httponly=True, max_age=8*3600)
+    resp.set_cookie(COOKIE, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     return resp
 
 
@@ -1149,13 +1181,24 @@ def _iniciales_sindicato(nombre: str) -> str:
     return "".join(letras[:3]) or "?"
 
 
-def _antiguedad(fecha_iso: str) -> str:
-    """"Hace 2 días" a partir de una fecha AAAA-MM-DD. Sin dramatizar: si no
-    se puede parsear, devuelve la fecha tal cual."""
-    try:
-        dias = (datetime.now().date() - datetime.strptime(fecha_iso, "%Y-%m-%d").date()).days
-    except (ValueError, TypeError):
-        return fecha_iso or ""
+def _parsear_creada(creada: str):
+    """Noticia.creada puede venir como "AAAA-MM-DD HH:MM" (formato actual) o
+    "AAAA-MM-DD" (noticias cargadas antes de este cambio) -- probar los dos."""
+    for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(creada, fmt)
+        except (ValueError, TypeError):
+            continue
+    return None
+
+
+def _antiguedad(creada: str) -> str:
+    """"Hace 2 días" a partir de Noticia.creada. Sin dramatizar: si no se
+    puede parsear, devuelve el valor tal cual."""
+    dt = _parsear_creada(creada)
+    if not dt:
+        return creada or ""
+    dias = (datetime.now().date() - dt.date()).days
     if dias <= 0:
         return "Hoy"
     if dias == 1:
@@ -1166,8 +1209,15 @@ def _antiguedad(fecha_iso: str) -> str:
     return f"Hace {meses} mes{'es' if meses != 1 else ''}"
 
 
+def _fmt_fecha_hora_corta(creada: str) -> str:
+    """"12/08 14:30" para la esquina de la tarjeta de noticia en el feed."""
+    dt = _parsear_creada(creada)
+    return dt.strftime("%d/%m %H:%M") if dt else (creada or "")
+
+
 def _con_antiguedad(noticias: list) -> list:
-    return [{**n, "antiguedad": _antiguedad(n["creada"])} for n in noticias]
+    return [{**n, "antiguedad": _antiguedad(n["creada"]),
+              "fecha_hora": _fmt_fecha_hora_corta(n["creada"])} for n in noticias]
 
 
 def _texto_con_links(texto: str) -> str:
@@ -1206,8 +1256,8 @@ def trabajador_login(request: Request, cuil: str = Form(...), clave: str = Form(
     token = auth.crear_sesion("trabajador", id_usuario=cuenta_id, sindicato_id=0)
     # sindicato_id 0 = todavía no eligió; se define en /elegir o directo si hay uno solo
     resp = RedirectResponse("/app/inicio", status_code=303)
-    resp.set_cookie(COOKIE, token, httponly=True, max_age=8*3600)
-    resp.set_cookie("cuil_trab", cuil, httponly=True, max_age=8*3600)
+    resp.set_cookie(COOKIE, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    resp.set_cookie("cuil_trab", cuil, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     return resp
 
 
@@ -1230,8 +1280,8 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
         s.commit()
     token = auth.crear_sesion("trabajador", sindicato_id=0)
     resp = RedirectResponse("/app/inicio", status_code=303)
-    resp.set_cookie(COOKIE, token, httponly=True, max_age=8*3600)
-    resp.set_cookie("cuil_trab", cuil, httponly=True, max_age=8*3600)
+    resp.set_cookie(COOKIE, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    resp.set_cookie("cuil_trab", cuil, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     return resp
 
 
@@ -1329,7 +1379,7 @@ def app_portada(request: Request):
 @app.get("/app/elegir/{sindicato_id}")
 def app_elegir(sindicato_id: int, request: Request):
     resp = RedirectResponse("/app/inicio", status_code=303)
-    resp.set_cookie("sind_elegido", str(sindicato_id), httponly=True, max_age=8*3600)
+    resp.set_cookie("sind_elegido", str(sindicato_id), httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     return resp
 
 

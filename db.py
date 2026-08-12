@@ -195,7 +195,7 @@ class Noticia(SQLModel, table=True):
     texto_completo: str = ""
     fecha_desde: str  # AAAA-MM-DD
     fecha_hasta: str  # AAAA-MM-DD
-    creada: str = ""  # fecha de alta (AAAA-MM-DD), para ordenar y mostrar antigüedad
+    creada: str = ""  # fecha y hora de alta ("AAAA-MM-DD HH:MM"), para ordenar y mostrar
     # Hasta 2 imágenes, mismo patrón que el logo del sindicato (bytes en la
     # base, Opción B -- ver Sindicato.logo_datos).
     imagen1_datos: Optional[bytes] = Field(default=None)
@@ -663,7 +663,7 @@ def noticias_del_sindicato(sindicato_id: int) -> list:
     recientes primero."""
     with Session(engine) as s:
         noticias = s.exec(select(Noticia).where(Noticia.sindicato_id == sindicato_id)
-                          .order_by(Noticia.id.desc())).all()
+                          .order_by(Noticia.creada.desc(), Noticia.id.desc())).all()
         return [_noticia_a_dict(n) for n in noticias]
 
 
