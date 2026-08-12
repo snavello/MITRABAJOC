@@ -67,6 +67,7 @@ class Sindicato(SQLModel, table=True):
     color_primario: str = "#152238"
     color_secundario: str = "#1a7a6b"
     color_acento: str = "#b23a2e"
+    color_base: str = "#0f1b2d"  # fondo oscuro de la portada del trabajador; debe ser oscuro
     # Firma digitalizada de la autoridad, para la credencial sindical del
     # trabajador. Misma estrategia que el logo: el binario va en la base y se
     # sirve por /firma/{id}; `firma` es el flag "tiene firma cargada".
@@ -415,6 +416,7 @@ def marca_sindicato(sindicato_id: int) -> dict:
             "color_primario": sind.color_primario,
             "color_secundario": sind.color_secundario,
             "color_acento": sind.color_acento,
+            "color_base": sind.color_base,
             # Para la credencial sindical del trabajador
             "autoridad": sind.autoridad, "cargo_autoridad": sind.cargo_autoridad,
             "firma": sind.firma,

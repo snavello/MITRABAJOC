@@ -832,11 +832,15 @@ async def plataforma_alta_sindicato(
     color_primario: str = Form("#152238"),
     color_secundario: str = Form("#1a7a6b"),
     color_acento: str = Form("#b23a2e"),
+    color_base: str = Form("#0f1b2d"),
     logo: UploadFile = File(None), firma: UploadFile = File(None),
 ):
     ses = sesion_actual(request)
     if not ses or ses.get("rol") != "plataforma":
         raise HTTPException(403, "No autorizado")
+    color_base = color_base or "#0f1b2d"
+    if not _es_oscuro(color_base):
+        return RedirectResponse("/plataforma?error=colorbase#sindicatos", status_code=303)
     slug = slugify(nombre)
     logo_datos, logo_mime, logo_flag = (None, "", "")
     if logo and logo.filename:
@@ -854,6 +858,7 @@ async def plataforma_alta_sindicato(
             color_primario=color_primario or "#152238",
             color_secundario=color_secundario or "#1a7a6b",
             color_acento=color_acento or "#b23a2e",
+            color_base=color_base,
         )
         s.add(sind); s.commit(); s.refresh(sind)
         sind_id = sind.id
@@ -862,6 +867,22 @@ async def plataforma_alta_sindicato(
     # desde el primer recibo aunque todavía no haya ningún empleador cargado.
     db.crear_conceptos_universales(sind_id)
     return RedirectResponse("/plataforma", status_code=303)
+
+
+def _es_oscuro(color_hex: str) -> bool:
+    """La portada del trabajador pinta texto claro sobre --marca-base: si el
+    sindicato carga un color de base que no es oscuro, el texto deja de
+    contrastar. Luminancia percibida (0.299R+0.587G+0.114B); < 140/255 se
+    considera oscuro -- umbral con margen, no el punto medio exacto."""
+    h = (color_hex or "").lstrip("#")
+    if len(h) != 6:
+        return False
+    try:
+        r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    except ValueError:
+        return False
+    luminancia = 0.299 * r + 0.587 * g + 0.114 * b
+    return luminancia < 140
 
 
 def _leer_logo(archivo: UploadFile):
@@ -908,12 +929,16 @@ async def plataforma_editar_sindicato(
     cuit: str = Form(""), direccion: str = Form(""), mail: str = Form(""),
     telefonos: str = Form(""), autoridad: str = Form(""), cargo_autoridad: str = Form(""),
     color_primario: str = Form("#152238"), color_secundario: str = Form("#1a7a6b"),
-    color_acento: str = Form("#b23a2e"), logo: UploadFile = File(None),
+    color_acento: str = Form("#b23a2e"), color_base: str = Form("#0f1b2d"),
+    logo: UploadFile = File(None),
     firma: UploadFile = File(None),
 ):
     ses = sesion_actual(request)
     if not ses or ses.get("rol") != "plataforma":
         raise HTTPException(403, "No autorizado")
+    color_base = color_base or "#0f1b2d"
+    if not _es_oscuro(color_base):
+        return RedirectResponse("/plataforma?error=colorbase#sindicatos", status_code=303)
     with db.get_session() as s:
         sind = s.get(Sindicato, id)
         if sind:
@@ -923,6 +948,7 @@ async def plataforma_editar_sindicato(
             sind.color_primario = color_primario or "#152238"
             sind.color_secundario = color_secundario or "#1a7a6b"
             sind.color_acento = color_acento or "#b23a2e"
+            sind.color_base = color_base
             if logo and logo.filename:
                 datos, mime, flag = _leer_logo(logo)
                 if datos:
@@ -1019,6 +1045,13 @@ def _dni_de_cuil(cuil: str) -> str:
     return digitos[2:10] if len(digitos) == 11 else ""
 
 
+def _iniciales_sindicato(nombre: str) -> str:
+    """Iniciales para el logo de respaldo cuando el sindicato no cargó uno
+    (ej. "Unión Obrera Metalúrgica" -> "UOM"), hasta 3 letras."""
+    letras = [p[0].upper() for p in (nombre or "").split() if p]
+    return "".join(letras[:3]) or "?"
+
+
 @app.get("/ingresar", response_class=HTMLResponse)
 def ingresar(request: Request):
     """Pantalla de login/registro del trabajador."""
@@ -1039,7 +1072,7 @@ def trabajador_login(request: Request, cuil: str = Form(...), clave: str = Form(
         return RedirectResponse("/ingresar?error=sinsind", status_code=303)
     token = auth.crear_sesion("trabajador", id_usuario=cuenta_id, sindicato_id=0)
     # sindicato_id 0 = todavía no eligió; se define en /elegir o directo si hay uno solo
-    resp = RedirectResponse("/app", status_code=303)
+    resp = RedirectResponse("/app/inicio", status_code=303)
     resp.set_cookie(COOKIE, token, httponly=True, max_age=8*3600)
     resp.set_cookie("cuil_trab", cuil, httponly=True, max_age=8*3600)
     return resp
@@ -1063,7 +1096,7 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
             s.add(t)
         s.commit()
     token = auth.crear_sesion("trabajador", sindicato_id=0)
-    resp = RedirectResponse("/app", status_code=303)
+    resp = RedirectResponse("/app/inicio", status_code=303)
     resp.set_cookie(COOKIE, token, httponly=True, max_age=8*3600)
     resp.set_cookie("cuil_trab", cuil, httponly=True, max_age=8*3600)
     return resp
@@ -1116,9 +1149,48 @@ def app_trabajador(request: Request):
     })
 
 
+@app.get("/app/inicio", response_class=HTMLResponse)
+def app_portada(request: Request):
+    """Portada del trabajador: pantalla de bienvenida con accesos rápidos.
+    No reemplaza /app (Tu Recibo, sigue intacta) -- misma resolución de
+    sindicato activo, landing previa a la que apuntan login/registro/elegir."""
+    ses = sesion_actual(request)
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or ses.get("rol") != "trabajador" or not cuil:
+        return RedirectResponse("/ingresar", status_code=303)
+
+    sinds = db.sindicatos_de_cuil(cuil)
+    elegido = request.cookies.get("sind_elegido", "")
+
+    sid_activo = None
+    if len(sinds) == 1:
+        sid_activo = sinds[0]["id"]
+    elif elegido:
+        for sd in sinds:
+            if str(sd["id"]) == elegido:
+                sid_activo = sd["id"]
+
+    if sid_activo:
+        marca = db.marca_sindicato(sid_activo)
+        credencial = db.credencial_de(cuil, sid_activo) or {}
+        nombre_trab = db.nombre_trabajador(cuil, sid_activo)
+        return templates.TemplateResponse("portada.html", {
+            "request": request, "sindicato": marca["nombre"], "marca": marca,
+            "marca_plataforma": db.marca_plataforma(),
+            "cuil": cuil, "nombre_trab": nombre_trab,
+            "primer_nombre": (nombre_trab or "").split(" ")[0] or "Trabajador",
+            "iniciales": _iniciales_sindicato(marca["nombre"]),
+            "credencial_generada": bool(credencial.get("codigo")),
+        })
+    # Varios y no eligió → selector (mismo criterio que /app)
+    return templates.TemplateResponse("elegir_sindicato.html", {
+        "request": request, "sindicatos": sinds, "marca_plataforma": db.marca_plataforma(),
+    })
+
+
 @app.get("/app/elegir/{sindicato_id}")
 def app_elegir(sindicato_id: int, request: Request):
-    resp = RedirectResponse("/app", status_code=303)
+    resp = RedirectResponse("/app/inicio", status_code=303)
     resp.set_cookie("sind_elegido", str(sindicato_id), httponly=True, max_age=8*3600)
     return resp
 
@@ -1126,7 +1198,7 @@ def app_elegir(sindicato_id: int, request: Request):
 @app.get("/app/cambiar")
 def app_cambiar():
     """Volver al selector de sindicato."""
-    resp = RedirectResponse("/app", status_code=303)
+    resp = RedirectResponse("/app/inicio", status_code=303)
     resp.delete_cookie("sind_elegido")
     return resp
 

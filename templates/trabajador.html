@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#152238">
+<meta name="theme-color" content="{{ marca.color_base if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238') }}">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Mi Trabajo — Revisá tu recibo</title>
@@ -12,10 +12,13 @@
     --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e;
     --papel:#f7f5f0; --linea:#dcd8cf; --gris:#5c5a54; --card:#ffffff;
     /* Colores de marca del sindicato; sin sindicato activo, caen a la marca
-       de la plataforma (configurable en /plataforma), no a un literal fijo. */
+       de la plataforma (configurable en /plataforma), no a un literal fijo.
+       La plataforma no tiene color_base propio (no tiene portada oscura) --
+       en ese caso el encabezado cae al primario, como antes. */
+    --marca-base: {{ marca.color_base if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238') }};
     --marca-primario: {{ marca.color_primario if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238') }};
-    --marca-secundario: {{ marca.color_secundario if marca else (marca_plataforma.color_secundario if marca_plataforma else '#152238') }};
     --marca-acento: {{ marca.color_acento if marca else (marca_plataforma.color_acento if marca_plataforma else '#b23a2e') }};
+    --marca-apoyo: {{ marca.color_secundario if marca else (marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b') }};
   }
   * { box-sizing:border-box; margin:0; -webkit-tap-highlight-color:transparent; }
   html { -webkit-text-size-adjust:100%; }
@@ -27,7 +30,7 @@
   }
   /* ---------- Encabezado con logos ---------- */
   header {
-    background:var(--marca-primario); border-bottom:1px solid var(--linea);
+    background:var(--marca-base); border-bottom:1px solid var(--linea);
     padding:12px 18px; padding-top:calc(12px + env(safe-area-inset-top));
     display:flex; align-items:center; justify-content:space-between; gap:12px;
     position:sticky; top:0; z-index:10;
@@ -51,7 +54,7 @@
   .btn {
     display:flex; align-items:center; justify-content:center; gap:8px;
     width:100%; min-height:52px; margin-top:14px;
-    background:var(--marca-secundario); color:#fff; border:none; border-radius:12px;
+    background:var(--marca-acento); color:#fff; border:none; border-radius:12px;
     font-size:16px; font-weight:500; cursor:pointer; font-family:inherit;
     touch-action:manipulation;
   }
@@ -130,7 +133,7 @@
   .cred-fondo { position:absolute; inset:0; z-index:0; pointer-events:none; }
   .cred-fondo svg { width:100%; height:100%; display:block; }
   .cred-head, .cred-body, .cred-pie { position:relative; z-index:1; }
-  .cred-head { background:var(--marca-primario); padding:18px 20px;
+  .cred-head { background:var(--marca-base); padding:18px 20px;
     display:flex; align-items:center; gap:12px; }
   .cred-logo { max-height:46px; max-width:110px; object-fit:contain;
     background:#fff; border-radius:8px; padding:4px; }
@@ -218,14 +221,14 @@
     display:flex; align-items:center; justify-content:center; transition:background .15s; }
   .tabbar button svg { width:22px; height:22px; stroke-width:1.7; fill:none;
     stroke:#8a887f; transition:stroke .15s; }
-  .tabbar button.activa { color:var(--marca-secundario); }
-  .tabbar button.activa .picon { background:color-mix(in srgb, var(--marca-secundario) 15%, transparent); }
-  .tabbar button.activa svg { stroke:var(--marca-secundario); }
+  .tabbar button.activa { color:var(--marca-acento); }
+  .tabbar button.activa .picon { background:color-mix(in srgb, var(--marca-acento) 15%, transparent); }
+  .tabbar button.activa svg { stroke:var(--marca-acento); }
   .tpanel { display:none; }
   .tpanel.activo { display:block; }
   .proximamente { text-align:center; padding:60px 24px; color:var(--gris); }
   .proximamente .ic { font-size:44px; opacity:.5; }
-  .proximamente .ic-grande svg { width:52px; height:52px; stroke:var(--marca-secundario); stroke-width:1.5; fill:none; opacity:.55; }
+  .proximamente .ic-grande svg { width:52px; height:52px; stroke:var(--marca-apoyo); stroke-width:1.5; fill:none; opacity:.55; }
   .proximamente h2 { font-size:18px; color:var(--tinta); margin:16px 0 8px; }
   .proximamente p { font-size:14px; line-height:1.5; }
   /* ===== Semáforo ===== */

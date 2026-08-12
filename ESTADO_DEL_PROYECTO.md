@@ -3,8 +3,9 @@
 Documento para retomar sin perder contexto. En un chat nuevo, subí este archivo
 junto con validador-demo.zip y pediá continuar desde "Próximo paso".
 
-_Última actualización: migración a Postgres COMPLETA (rama migracion-postgres),
-verificada sobre Postgres real. Pendiente: desplegar en Render y mergear a main._
+_Última actualización: migración a Postgres COMPLETA y en producción (mergeada a
+main hace tiempo). En curso: rediseño de interfaz en la rama `rediseno-ui`
+(portada oscura + 4to color de marca), sin mergear a main todavía._
 
 ---
 
@@ -36,7 +37,9 @@ sindicatos y a un inversor como algo escalable.
 - chequeo.py (autodiagnóstico)
 - migrations/ (Alembic: env.py + versions/ con esquema inicial y logo)
 - alembic.ini
-- templates/ (7 HTML), static/ (2 SVG base)
+- templates/ (9 HTML, incluye portada.html del rediseño), static/ (2 SVG base +
+  marca.css, sistema de diseño compartido)
+- .claude/skills/diseno-mi-trabajo/ (reglas del sistema de diseño del rediseño)
 - data/seed_aefip.json (semilla histórica; ya NO se carga por defecto)
 
 ## 3. Los tres roles
@@ -67,10 +70,11 @@ sindicatos y a un inversor como algo escalable.
   persistente: todo el estado vive en Postgres y se respalda con la base.
 - **JSON como JSONB en Postgres:** columnas alias (Concepto) y detalle (Reporte)
   son jsonb, indexables y consultables. En SQLite quedan JSON común.
-- **Aislamiento entre sindicatos: total.** Marca por sindicato (primario obligatorio;
-  secundario/acento opcionales). El semáforo NUNCA toma la marca (colores fijos de
-  estado). Semáforo ARCA: el trabajador resuelve el captcha y sube la captura, la
-  IA la lee (no se automatiza el captcha). Parser de ARCA hecho y probado.
+- **Aislamiento entre sindicatos: total.** Marca por sindicato: 4 colores desde el
+  rediseño de interfaz (base/primario/acento/secundario, ver más abajo — antes
+  eran 3). El semáforo NUNCA toma la marca (colores fijos de estado). Semáforo
+  ARCA: el trabajador resuelve el captcha y sube la captura, la IA la lee (no se
+  automatiza el captcha). Parser de ARCA hecho y probado.
 
 ## 5. Estado de la migración a Postgres (rama migracion-postgres)
 HECHO y verificado sobre Postgres real:
@@ -94,21 +98,42 @@ HECHO y verificado sobre Postgres real:
   se usa TestClient de FastAPI. Postgres real se levanta en el contenedor para
   probar el modo producción.
 
-## 7. Próximo paso
-**Desplegar la rama migracion-postgres en Render** siguiendo DESPLIEGUE_RENDER.md:
-1. Crear Postgres en Render, copiar Internal Database URL.
-2. Cargar variables (DATABASE_URL, ANTHROPIC_API_KEY, PLATAFORMA_CUIT,
-   PLATAFORMA_PASSWORD, SESSION_SECRET, PYTHON_VERSION).
-3. En la Shell: alembic upgrade head, luego python cargar_demo.py.
-4. Prueba de humo: 3 logins + aislamiento + registro de trabajador.
-5. Eliminar el disco persistente /var/data (ya no se usa).
-6. Si todo anda: mergear migracion-postgres a main.
+## 7. Rediseño de interfaz (rama `rediseno-ui`, en curso)
+Sistema de diseño nuevo: portada del trabajador oscura, todo lo demás claro con
+encabezado oscuro. Definido en `.claude/skills/diseno-mi-trabajo/SKILL.md` +
+`static/marca.css`. Sindicato pasó de 3 a 4 colores (`color_base` nuevo, es el
+único validado como oscuro — `_es_oscuro()` en main.py rechaza el alta/edición si
+no lo es).
 
-Después de la migración, retomar features pendientes: contenido real de Novedades
-y Capacitación, y endurecer para producción (sacar la pestaña transitoria
-"Cambiar clave" del panel de plataforma).
+HECHO en esta rama:
+- [x] `templates/portada.html`, ruta nueva `GET /app/inicio` (no reemplaza `/app`
+      = Tu Recibo, que sigue intacta). Login/registro/selector redirigen ahí.
+- [x] `color_base` en `Sindicato` (migración `04a7e9e26763`) + validación de
+      luminosidad en alta/edición desde `/plataforma`.
+- [x] `admin.html` y `plataforma.html`: encabezado oscuro pasa a usar
+      `color_base` en vez de `color_primario` (que no estaba validado).
+- [x] `trabajador.html`: encabezado y credencial usan `color_base`; botón
+      principal y pestaña activa usan `color_acento` (antes usaban el color que
+      hoy es "apoyo" — alineado con la portada, que ya usaba acento para su
+      tarjeta destacada).
+- [x] Suite de tests completa (22 archivos) verde, incluye `test_portada.py` y
+      `test_color_base_sindicato.py` nuevos.
+- [ ] Falta: mergear a `main` (el usuario la va a probar primero — dispara
+      redeploy en Render + necesita `alembic upgrade head` por la columna nueva).
+
+## 8. Próximo paso
+Probar la rama `rediseno-ui` (local o en un preview de Render) y, si convence,
+mergear a `main`. Al mergear: correr `alembic upgrade head` en la Shell de Render
+para la columna `color_base`, y cargar el 4to color de cada sindicato real desde
+`/plataforma` (si no se carga, cae al default `#0f1b2d`, válido pero no la marca
+real del gremio).
+
+Después del rediseño, retomar features pendientes: contenido real de Novedades,
+Capacitación y Beneficios (las tres son "próximamente" hoy), endurecer para
+producción (sacar la pestaña transitoria "Cambiar clave" del panel de
+plataforma), y deep-linking desde la portada a una pestaña específica de `/app`.
 
 ### Para retomar en un chat nuevo
-Subí validador-demo.zip y este documento, y decí:
-"Seguimos con Mi Trabajo. La migración a Postgres está hecha en la rama
-migracion-postgres; el próximo paso es desplegarla en Render / mergear."
+Subí este documento y decí: "Seguimos con Mi Trabajo. El rediseño de interfaz
+está en la rama rediseno-ui, probado localmente; el próximo paso es [probarlo /
+mergearlo a main / seguir con X pantalla]."

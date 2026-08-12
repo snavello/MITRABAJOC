@@ -4,17 +4,25 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mi Trabajo — Plataforma</title>
+<link rel="stylesheet" href="/static/marca.css">
 <style>
   :root {
+    /* La plataforma no tiene un 4to color propio (no tiene portada oscura):
+       el fondo oscuro del encabezado sale del primario, como siempre. */
+    --marca-base: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
+    --marca-primario: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
+    --marca-acento: {{ marca_plataforma.color_acento if marca_plataforma else '#b23a2e' }};
+    --marca-apoyo: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
     --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
     --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
     --papel:#faf9f6; --linea:#e2ded5; --gris:#5c5a54;
   }
   * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
   body { background:var(--papel); color:#1b1b1b; line-height:1.5; }
-  header { background:#fff; border-bottom:1px solid var(--linea); padding:14px 22px; display:flex; align-items:center; gap:16px; position:sticky; top:0; z-index:20; }
-  header img { width:40px; height:40px; object-fit:contain; }
-  header .rol { font-size:13px; color:var(--gris); }
+  header { background:var(--marca-base); color:#fff; border-bottom:1px solid rgba(255,255,255,.12);
+    padding:14px 22px; display:flex; align-items:center; gap:16px; position:sticky; top:0; z-index:20; }
+  header img { width:40px; height:40px; object-fit:contain; background:#fff; border-radius:8px; padding:3px; }
+  header .rol { font-size:13px; color:rgba(255,255,255,.7); }
   .btn-cerrar { position:fixed; bottom:20px; right:20px; width:44px; height:44px; border-radius:50%;
     background:#e3b6b8; color:#7a2e35; display:flex; align-items:center; justify-content:center;
     font-size:19px; font-weight:600; text-decoration:none; box-shadow:0 2px 10px rgba(0,0,0,.15); z-index:40; }
@@ -54,6 +62,7 @@
   button { padding:10px 18px; background:var(--tinta); color:#fff; border:none; border-radius:7px; cursor:pointer; font-size:14px; font-weight:500; font-family:inherit; margin-top:6px; }
   button:hover { opacity:.92; }
   .muted { color:var(--gris); font-size:13px; }
+  .msg { padding:11px 15px; border-radius:8px; font-size:14px; margin-bottom:14px; }
   .badge { font-size:11px; background:#e3f2ee; color:var(--agua); padding:2px 8px; border-radius:8px; }
   details { margin-top:14px; }
   summary { cursor:pointer; font-size:14px; color:var(--tinta); font-weight:500; padding:6px 0; }
@@ -93,14 +102,15 @@
       </td>
       <td>{{ i.s.cuit or '—' }}</td>
       <td>
+        <span class="chip-color" style="background:{{ i.s.color_base }}"></span>
         <span class="chip-color" style="background:{{ i.s.color_primario }}"></span>
-        <span class="chip-color" style="background:{{ i.s.color_secundario }}"></span>
         <span class="chip-color" style="background:{{ i.s.color_acento }}"></span>
+        <span class="chip-color" style="background:{{ i.s.color_secundario }}"></span>
       </td>
       <td><button type="button" class="link-num" onclick="verAdmins({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.usuarios }}</button></td>
       <td>{{ i.trabajadores }}</td>
       <td style="white-space:nowrap; text-align:right;">
-        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento} | tojson }})'>Editar</button>
+        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base} | tojson }})'>Editar</button>
         <button type="button" class="mini borrar" onclick="borrarSind({{ i.s.id }}, '{{ i.s.nombre }}', {{ i.usuarios }}, {{ i.trabajadores }})">Borrar</button>
       </td>
     </tr>
@@ -128,6 +138,9 @@
   <div class="ppanel" id="pp-nuevo">
   <h2 id="form-sind-titulo">Dar de alta un sindicato</h2>
   <div class="card">
+    {% if request.query_params.get('error') == 'colorbase' %}
+    <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El color base tiene que ser oscuro (es el fondo de la portada del trabajador y de los encabezados) — el que cargaste es muy claro para que el texto blanco se lea bien encima. Probá con un tono más oscuro.</div>
+    {% endif %}
     <form method="post" action="/plataforma/sindicato" enctype="multipart/form-data" id="form-sind">
       <input type="hidden" name="id" id="sind-id">
       <div class="grid">
@@ -143,19 +156,24 @@
 
       <div class="colores">
         <div class="col-item">
-          <label>Color primario *</label>
-          <input type="color" name="color_primario" value="#152238">
-          <span class="muted" style="font-size:11px;">encabezado y pie</span>
+          <label>Color base *</label>
+          <input type="color" name="color_base" value="#0f1b2d" required>
+          <span class="muted" style="font-size:11px;">portada del trabajador y encabezados — tiene que ser oscuro</span>
         </div>
         <div class="col-item">
-          <label>Color secundario</label>
-          <input type="color" name="color_secundario" value="#1a7a6b">
-          <span class="muted" style="font-size:11px;">botones</span>
+          <label>Color primario *</label>
+          <input type="color" name="color_primario" value="#152238">
+          <span class="muted" style="font-size:11px;">identidad: bordes, detalles</span>
         </div>
         <div class="col-item">
           <label>Color acento</label>
           <input type="color" name="color_acento" value="#b23a2e">
-          <span class="muted" style="font-size:11px;">reservado</span>
+          <span class="muted" style="font-size:11px;">acción: botón principal, pestaña activa</span>
+        </div>
+        <div class="col-item">
+          <label>Color de apoyo</label>
+          <input type="color" name="color_secundario" value="#1a7a6b">
+          <span class="muted" style="font-size:11px;">chips, fondos suaves</span>
         </div>
       </div>
 
@@ -294,6 +312,12 @@ function activarTab(dest) {
   document.querySelectorAll('.ppanel').forEach(pan => pan.classList.toggle('activo', pan.id === 'pp-' + dest));
 }
 
+// Si el POST de alta/edición de sindicato rechazó el color base, volver
+// directo al tab donde está el formulario y el mensaje de error.
+if (new URLSearchParams(location.search).get('error') === 'colorbase') {
+  activarTab('nuevo');
+}
+
 // Punto 11: vuelve el form de sindicato a modo "alta" (lo pisa editarSind al editar)
 function resetSindForm() {
   const f = document.getElementById('form-sind');
@@ -346,6 +370,7 @@ function editarSind(s) {
   f.color_primario.value = s.color_primario || '#152238';
   f.color_secundario.value = s.color_secundario || '#1a7a6b';
   f.color_acento.value = s.color_acento || '#b23a2e';
+  f.color_base.value = s.color_base || '#0f1b2d';
   document.getElementById('form-sind-titulo').textContent = 'Editar sindicato: ' + s.nombre;
   f.querySelector('button[type=submit]').textContent = 'Guardar cambios';
   activarTab('nuevo');

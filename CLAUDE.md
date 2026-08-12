@@ -38,9 +38,14 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - chequeo.py — autodiagnóstico de la instalación.
 - migrations/ — Alembic (env.py + versions/: esquema inicial y logo).
 - alembic.ini — config de Alembic.
-- templates/ — 7 HTML (trabajador, admin, plataforma, sus logins, selector).
-- static/ — 2 SVG base. (Ya NO existe static/logos/: los logos van en la base.)
+- templates/ — 9 HTML (trabajador, portada, admin, plataforma, sus logins, selector,
+  verificación pública de credencial).
+- static/ — 2 SVG base + marca.css (sistema de diseño compartido, ver más abajo).
+  (Ya NO existe static/logos/: los logos van en la base.)
 - data/seed_aefip.json — semilla histórica; ya NO se carga por defecto.
+- .claude/skills/diseno-mi-trabajo/ — skill con las reglas del sistema de diseño
+  (paleta, tipografía, portada oscura/interiores claros); .claude/skills/frontend-design/
+  — skill oficial de Anthropic para dirección visual general.
 
 ## Los tres roles
 1. Admin de plataforma — /plataforma con CUIT + PLATAFORMA_PASSWORD. Da de alta
@@ -49,8 +54,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
    trabajadores y reportes SOLO de su sindicato (aislamiento total).
 3. Trabajador — /ingresar con CUIL + clave. Identidad única (un CUIL para toda la
    plataforma). Empadronamiento por sindicato: si el CUIL está en varios, elige;
-   la app se pinta con la marca del elegido. 4 pestañas: Tu Recibo (default),
-   Novedades, Mis Aportes (semáforo), Capacitación.
+   la app se pinta con la marca del elegido. Después de elegir (o directo, si
+   está en uno solo) entra a /app/inicio, la portada (ver "Rediseño de interfaz"
+   más abajo). Desde ahí navega a /app, que sigue siendo Tu Recibo con sus 5
+   pestañas (Tu Recibo default, Credencial si hay marca activa, Novedades, Mis
+   Aportes/semáforo, Capacitación).
 
 ## Variables de entorno (Render)
 - DATABASE_URL — Internal Database URL del Postgres de Render. Si está, usa Postgres.
@@ -81,10 +89,14 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   editar, y la ruta responde con Cache-Control no-cache.
 - **JSON como JSONB en Postgres:** columnas alias (Concepto) y detalle (Reporte)
   son jsonb (indexables). En SQLite quedan JSON común.
-- **Aislamiento entre sindicatos: total.** Marca por sindicato: color primario
-  obligatorio (header/footer); secundario opcional (fondo de botones); acento
-  opcional (reservado). El semáforo NUNCA toma la marca (colores fijos de estado:
-  verde=pagado, amarillo=parcial, rojo=impago).
+- **Aislamiento entre sindicatos: total.** Marca por sindicato: 4 colores
+  (`color_base`, `color_primario`, `color_acento`, `color_secundario`), inyectados
+  como `--marca-base/primario/acento/apoyo` en cada plantilla. `color_base` es el
+  único validado como oscuro (`_es_oscuro()` en main.py, umbral de luminancia
+  percibida < 140/255) — es el fondo de la portada del trabajador y de todos los
+  encabezados oscuros; si no es oscuro, el alta/edición de sindicato se rechaza.
+  El semáforo NUNCA toma la marca (colores fijos de estado: verde=pagado,
+  amarillo=parcial, rojo=impago).
 - **Semáforo ARCA:** el trabajador va a ARCA con un botón, resuelve el captcha él
   mismo y sube la captura/PDF; la IA la lee. NO se automatiza el captcha (frágil y
   zona gris legal). ARCA cubre jubilación y obra social, NO ART. Parser hecho y
@@ -95,15 +107,46 @@ Migración a Postgres COMPLETA y desplegada en Render, mergeada a main. Verifica
 en producción: 3 logins, aislamiento, pluriempleo, 4 pestañas, alta/edición de
 sindicato, logos en base (con fix de cache aplicado). Disco persistente eliminado.
 
+Rediseño de interfaz EN CURSO en la rama `rediseno-ui` (no mergeada a main
+todavía): portada nueva + sistema de 4 colores. Ver sección siguiente.
+
+## Rediseño de interfaz (rama `rediseno-ui`)
+Sistema de diseño nuevo (`.claude/skills/diseno-mi-trabajo/SKILL.md`,
+`static/marca.css`): portada del trabajador oscura, todo lo demás claro con
+encabezado oscuro. 4 colores por sindicato en vez de 3 (ver "Decisiones tomadas").
+
+- **Portada nueva**: `templates/portada.html`, ruta `GET /app/inicio`. Login,
+  registro y el selector de sindicato (`/app/elegir/{id}`, `/app/cambiar`) ahora
+  redirigen ahí en vez de a `/app`. `/app` (Tu Recibo) NO cambió — sigue siendo
+  la misma pantalla con sus 5 pestañas, la portada es una pantalla previa nueva,
+  no un reemplazo. Tarjetas: Tu recibo, Mis aportes, Credencial (estado real,
+  no placeholder — ya existe la feature), Capacitación ("próximamente").
+  Secciones Novedades y Beneficios, ambas "próximamente" (Beneficios es 100%
+  nuevo, no existe como feature en ningún lado todavía).
+- **Limitación conocida v1**: las tarjetas de la portada que no son "Tu recibo"
+  linkean a `/app` sin saltar directo a la pestaña correspondiente (no hay
+  deep-linking por URL a un tab de `trabajador.html` todavía).
+- **admin.html y plataforma.html**: encabezado oscuro ahora usa `color_base`
+  (antes usaba `color_primario`, que no estaba validado como oscuro). El resto
+  de cada panel (tablas, formularios, tabs) sigue claro, sin cambios de fondo.
+- Sin tocar: `validador.py`, `semaforo.py`, ninguna lógica de cálculo — el
+  rediseño es 100% presentación + la columna `color_base`.
+
 ## Pendientes (features)
 1. Novedades — hoy es estructura vacía con cartel "próximamente". Falta contenido
    real: mensajes/anuncios del sindicato al trabajador.
 2. Capacitación — ídem, "próximamente". Falta contenido: índice de documentos y
    links de formación.
-3. Quitar la pestaña transitoria "Cambiar clave" del panel de plataforma antes de
+3. Beneficios — sección nueva en la portada, "próximamente". No existe como
+   feature en ningún lado; falta definir qué es (descuentos, convenios, etc.).
+4. Quitar la pestaña transitoria "Cambiar clave" del panel de plataforma antes de
    producción (permite cambiar la clave de cualquier usuario; está marcada con una
    advertencia visible). Es un riesgo de seguridad, sacar antes de usuarios reales.
    Se deja a propósito mientras dure la etapa de demos y pruebas (2026-08-05).
+5. Deep-linking desde la portada a una pestaña específica de `/app` (ver
+   "Rediseño de interfaz" arriba).
+6. Mergear `rediseno-ui` a `main` cuando esté probado (dispara redeploy en Render;
+   la columna `color_base` necesita `alembic upgrade head` después).
 
 ## Método de trabajo
 - Por bloques chicos, verificando la lógica de verdad (rutas y funciones), no

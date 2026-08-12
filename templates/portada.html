@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="{{ marca.color_base }}">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Mi Trabajo — {{ sindicato }}</title>
+<link rel="stylesheet" href="/static/marca.css">
+<style>
+  :root {
+    --marca-base: {{ marca.color_base }};
+    --marca-primario: {{ marca.color_primario }};
+    --marca-acento: {{ marca.color_acento }};
+    --marca-apoyo: {{ marca.color_secundario }};
+  }
+  body { background: var(--marca-base); min-height: 100vh; }
+  .hola { font-size: 22px; letter-spacing: -.4px; color: var(--sobre-base); margin-top: 4px; }
+  .hola em { font-style: normal; color: var(--marca-acento); }
+</style>
+</head>
+<body class="oscuro">
+
+<div class="enc">
+  {% if marca.logo %}
+  <img class="logo" src="/logo/{{ marca.id }}" alt="{{ sindicato }}">
+  {% else %}
+  <div class="logo-fallback">{{ iniciales }}</div>
+  {% endif %}
+  <div>
+    <div class="nom">{{ sindicato }}</div>
+    <div class="sub">Mi Trabajo</div>
+  </div>
+</div>
+
+<a class="btn-cerrar" href="/trabajador/salir" title="Salir" aria-label="Salir">✕</a>
+
+<div class="pad">
+  <div class="hola">Hola, <em>{{ primer_nombre }}</em></div>
+
+  <div class="tarjetas" style="margin-top: 18px;">
+    <a class="acceso destacada" href="/app">
+      <svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg>
+      <div>
+        <div class="titulo">Tu recibo</div>
+        <div class="estado">Revisá tus aportes</div>
+      </div>
+    </a>
+    <a class="acceso" href="/app">
+      <svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg>
+      <div>
+        <div class="titulo">Mis aportes</div>
+        <div class="estado">Semáforo de aportes</div>
+      </div>
+    </a>
+    <a class="acceso" href="/app">
+      <svg viewBox="0 0 24 24"><use href="#ic-cred"/></svg>
+      <div>
+        <div class="titulo">Credencial</div>
+        <div class="estado">{{ 'Tu carnet digital' if credencial_generada else 'Todavía no generada' }}</div>
+      </div>
+    </a>
+    <a class="acceso" href="/app">
+      <svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg>
+      <div>
+        <div class="titulo">Capacitación</div>
+        <div class="estado">Próximamente</div>
+      </div>
+    </a>
+  </div>
+
+  <div class="sec">
+    <div class="sech"><b>Novedades</b></div>
+    <div class="vacio-sec">Acá vas a ver los mensajes y avisos de tu sindicato. Muy pronto.</div>
+  </div>
+
+  <div class="sec">
+    <div class="sech"><b>Beneficios</b></div>
+    <div class="vacio-sec">Próximamente vas a tener descuentos y beneficios para afiliados.</div>
+  </div>
+</div>
+
+<!-- Íconos SVG de línea -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <g id="ic-recibo"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></g>
+    <g id="ic-aportes"><line x1="5" y1="21" x2="5" y2="12"/><line x1="12" y1="21" x2="12" y2="4"/><line x1="19" y1="21" x2="19" y2="9"/></g>
+    <g id="ic-cred"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><line x1="14" y1="10" x2="18" y2="10"/><line x1="14" y1="14" x2="18" y2="14"/><path d="M6 16c.6-1.3 1.7-2 3-2s2.4.7 3 2"/></g>
+    <g id="ic-capac"><path d="M12 4 2 9l10 5 10-5z"/><path d="M6 11v5c0 1 3 2.5 6 2.5s6-1.5 6-2.5v-5"/></g>
+  </defs>
+</svg>
+
+</body>
+</html>

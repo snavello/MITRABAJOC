@@ -68,13 +68,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mi Trabajo — {{ sindicato }}</title>
+<link rel="stylesheet" href="/static/marca.css">
 <style>
   :root { --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e; --linea:#e2ded5; --gris:#5c5a54;
+    /* color_base es el único color validado como oscuro -- el encabezado usa
+       ese, no color_primario (que puede ser cualquier tono). */
+    --marca-base: {{ marca.color_base if marca else '#0f1b2d' }};
     --marca-primario: {{ marca.color_primario if marca else '#152238' }};
     --marca-secundario: {{ marca.color_secundario if marca else '#1a7a6b' }}; }
   * { box-sizing:border-box; margin:0; }
   body { font-family:system-ui,sans-serif; color:#1b1b1b; background:#faf9f6; line-height:1.5; }
-  header { background:var(--marca-primario); border-bottom:1px solid var(--linea); padding:14px 22px;
+  header { background:var(--marca-base); border-bottom:1px solid var(--linea); padding:14px 22px;
            display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
            position:sticky; top:0; z-index:20; }
   .logo-plataforma-header { width:40px; height:40px; object-fit:contain; background:#fff; border-radius:6px; padding:2px; flex-shrink:0; }
