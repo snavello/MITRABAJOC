@@ -101,6 +101,25 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
 .vacio-sec { background: var(--sup-1); border: 1px dashed var(--sup-2); border-radius: 11px;
              padding: 14px; font-size: 12px; line-height: 1.5; color: var(--sobre-base-mute); }
 
+/* ---------- Carrusel de beneficios (portada): no supera el alto de .acceso ---------- */
+.carrusel-wrap { position: relative; }
+.carrusel { position: relative; height: 88px; border-radius: 13px; overflow: hidden;
+  border: 1px solid var(--sup-2); background: var(--sup-1); }
+.carrusel-slide { position: absolute; inset: 0; display: none; align-items: flex-end;
+  border: none; padding: 0; margin: 0; cursor: pointer; background: none;
+  width: 100%; height: 100%; font-family: inherit; }
+.carrusel-slide.activa { display: flex; }
+.carrusel-slide img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.carrusel-rubro { position: relative; z-index: 1; width: 100%; padding: 8px 34px 8px 12px;
+  background: linear-gradient(transparent, rgba(0,0,0,.6)); color: #fff;
+  font-size: 12px; font-weight: 600; text-align: left; }
+.carrusel-flecha { position: absolute; top: 50%; transform: translateY(-50%);
+  width: 24px; height: 24px; border-radius: 50%; border: none;
+  background: rgba(0,0,0,.4); color: #fff; font-size: 15px; line-height: 1;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 2; }
+.carrusel-izq { left: 6px; }
+.carrusel-der { right: 6px; }
+
 /* ---------- Tarjeta de noticia (portada y pestaña Novedades) ---------- */
 .noticia-card { display: flex; align-items: center; gap: 10px; background: var(--sup-1);
   border: 1px solid var(--sup-2); border-radius: 11px; padding: 11px 12px; margin-bottom: 7px;

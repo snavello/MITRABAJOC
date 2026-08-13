@@ -204,6 +204,24 @@ class Noticia(SQLModel, table=True):
     imagen2_mime: str = ""
 
 
+class Beneficio(SQLModel, table=True):
+    """Descuento/beneficio del sindicato para sus afiliados, mostrado como
+    carrusel en la portada. Mismo patrón de vigencia cerrada que Noticia
+    (fecha_desde/fecha_hasta obligatorias). A diferencia de Noticia, tiene
+    una sola imagen (es la que se expone en el carrusel) y un `rubro` corto
+    (categoría/título breve que se superpone a la imagen)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    rubro: str
+    descripcion: str = ""
+    link: str = ""
+    fecha_desde: str  # AAAA-MM-DD
+    fecha_hasta: str  # AAAA-MM-DD
+    creada: str = ""  # fecha y hora de alta ("AAAA-MM-DD HH:MM")
+    imagen_datos: Optional[bytes] = Field(default=None)
+    imagen_mime: str = ""
+
+
 class Reporte(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     sindicato_id: int = Field(default=1, foreign_key="sindicato.id", index=True)
@@ -695,6 +713,45 @@ def noticia_por_id(noticia_id: int) -> Optional[dict]:
     with Session(engine) as s:
         n = s.get(Noticia, noticia_id)
         return _noticia_a_dict(n) if n else None
+
+
+def beneficio_vigente(b: "Beneficio | dict", hoy: str) -> bool:
+    """Mismo criterio que noticia_vigente: hoy en AAAA-MM-DD, vigente =
+    fecha_desde <= hoy <= fecha_hasta."""
+    desde = b["fecha_desde"] if isinstance(b, dict) else b.fecha_desde
+    hasta = b["fecha_hasta"] if isinstance(b, dict) else b.fecha_hasta
+    return bool(desde) and bool(hasta) and desde <= hoy <= hasta
+
+
+def _beneficio_a_dict(b: "Beneficio") -> dict:
+    return {
+        "id": b.id, "sindicato_id": b.sindicato_id, "rubro": b.rubro,
+        "descripcion": b.descripcion, "link": b.link,
+        "fecha_desde": b.fecha_desde, "fecha_hasta": b.fecha_hasta, "creada": b.creada,
+        "tiene_imagen": bool(b.imagen_datos),
+    }
+
+
+def beneficios_del_sindicato(sindicato_id: int) -> list:
+    """Todos los beneficios del sindicato (para el panel de admin), más
+    recientes primero."""
+    with Session(engine) as s:
+        beneficios = s.exec(select(Beneficio).where(Beneficio.sindicato_id == sindicato_id)
+                            .order_by(Beneficio.creada.desc(), Beneficio.id.desc())).all()
+        return [_beneficio_a_dict(b) for b in beneficios]
+
+
+def beneficios_vigentes(sindicato_id: int) -> list:
+    """Beneficios vigentes HOY de un sindicato, más recientes primero."""
+    hoy = datetime.now().strftime("%Y-%m-%d")
+    todos = beneficios_del_sindicato(sindicato_id)
+    return [b for b in todos if beneficio_vigente(b, hoy)]
+
+
+def beneficio_por_id(beneficio_id: int) -> Optional[dict]:
+    with Session(engine) as s:
+        b = s.get(Beneficio, beneficio_id)
+        return _beneficio_a_dict(b) if b else None
 
 
 def registrar_uso_ia(sindicato_id: Optional[int], cuil: str, tipo: str,

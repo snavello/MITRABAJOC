@@ -125,8 +125,8 @@ encabezado oscuro. 4 colores por sindicato en vez de 3 (ver "Decisiones tomadas"
   la misma pantalla con sus 5 pestañas, la portada es una pantalla previa nueva,
   no un reemplazo. Tarjetas: Tu recibo, Mis aportes, Credencial (estado real,
   no placeholder — ya existe la feature), Capacitación ("próximamente").
-  Secciones Novedades y Beneficios, ambas "próximamente" (Beneficios es 100%
-  nuevo, no existe como feature en ningún lado todavía).
+  Sección Novedades (noticias del sindicato) y Beneficios (carrusel de
+  descuentos) — ver secciones dedicadas más abajo, ninguna es ya placeholder.
 - **Limitación conocida v1**: las tarjetas de la portada que no son "Tu recibo"
   linkean a `/app` sin saltar directo a la pestaña correspondiente (no hay
   deep-linking por URL a un tab de `trabajador.html` todavía).
@@ -139,14 +139,10 @@ encabezado oscuro. 4 colores por sindicato en vez de 3 (ver "Decisiones tomadas"
 ## Pendientes (features)
 1. Capacitación — "próximamente". Falta contenido: índice de documentos y
    links de formación.
-2. Beneficios — sección nueva en la portada, "próximamente". No existe como
-   feature en ningún lado; falta definir qué es (descuentos, convenios, etc.).
-3. Quitar la pestaña transitoria "Cambiar clave" del panel de plataforma antes de
+2. Quitar la pestaña transitoria "Cambiar clave" del panel de plataforma antes de
    producción (permite cambiar la clave de cualquier usuario; está marcada con una
    advertencia visible). Es un riesgo de seguridad, sacar antes de usuarios reales.
    Se deja a propósito mientras dure la etapa de demos y pruebas (2026-08-05).
-4. Mergear `rediseno-ui` a `main` cuando esté probado (dispara redeploy en Render;
-   las columnas/tabla nuevas necesitan `alembic upgrade head` después).
 
 ## Noticias (sindicato → trabajador)
 Reemplaza el placeholder "próximamente" de Novedades. Modelo `Noticia`
@@ -159,6 +155,29 @@ la portada (hasta 3, "Ver todas" → `/app?tab=novedades`, deep-link por query
 param) y en la pestaña Novedades (lista completa); un click abre un overlay
 con el detalle completo vía `GET /api/noticia/{id}` (aísla por sindicato
 activo).
+
+## Beneficios (sindicato → trabajador)
+Carrusel de descuentos en la portada, mismo patrón de datos que Noticias.
+Modelo `Beneficio` (db.py): rubro (título corto que se superpone a la
+imagen), descripción (URLs se auto-enlazan igual que en Noticias), link
+opcional, vigencia por fecha_desde/fecha_hasta (las dos obligatorias, período
+cerrado), una sola imagen (a diferencia de Noticia que admite 2 — acá es la
+que se expone en el carrusel). El admin lo carga desde `/admin` → pestaña
+Beneficios. El trabajador ve los vigentes como carrusel en la portada
+(`.carrusel-wrap` en `static/marca.css`): avanza solo cada 5s, con flechas
+manuales a los costados si hay más de uno vigente; el alto está topeado a
+88px (igual que las tarjetas de acceso) porque es secundario. Un click abre
+un overlay con el detalle completo vía `GET /api/beneficio/{id}` (aísla por
+sindicato activo, mismo criterio que noticias).
+
+## Versionado
+`version.py`: constantes `VERSION_TRABAJADOR`/`VERSION_ADMIN`/
+`VERSION_PLATAFORMA` (arrancan las tres en "0.01.00") + `FECHA_VERSION`. Se
+actualizan a mano en cada deploy — el número lo indica el usuario en el
+prompt de cambio, no hay automatismo. Cada pantalla de inicio (portada,
+`/admin`, `/plataforma`) tiene un link discreto "Acerca de" al pie que abre
+un overlay mostrando la versión de ESA app puntual (no las tres) + fecha del
+despliegue.
 
 ## Semáforo de aportes persistente
 `Trabajador.semaforo_datos`/`semaforo_actualizado` (JSON) guardan el último

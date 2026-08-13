@@ -100,7 +100,28 @@
 
   <div class="sec">
     <div class="sech"><b>Beneficios</b></div>
+    {% if beneficios %}
+    <div class="carrusel-wrap">
+      <div class="carrusel" id="carrusel-beneficios">
+        {% for b in beneficios %}
+        <button type="button" class="carrusel-slide{% if loop.first %} activa{% endif %}" onclick="abrirBeneficio({{ b.id }})">
+          {% if b.tiene_imagen %}<img src="/beneficio-imagen/{{ b.id }}" alt="">{% endif %}
+          <span class="carrusel-rubro">{{ b.rubro }}</span>
+        </button>
+        {% endfor %}
+      </div>
+      {% if beneficios|length > 1 %}
+      <button type="button" class="carrusel-flecha carrusel-izq" onclick="carruselMover(-1)" aria-label="Anterior">‹</button>
+      <button type="button" class="carrusel-flecha carrusel-der" onclick="carruselMover(1)" aria-label="Siguiente">›</button>
+      {% endif %}
+    </div>
+    {% else %}
     <div class="vacio-sec">Próximamente vas a tener descuentos y beneficios para afiliados.</div>
+    {% endif %}
+  </div>
+
+  <div style="text-align:center; margin-top:18px;">
+    <button onclick="abrirAcerca()" style="background:none; border:none; color:var(--sobre-base-mute); opacity:.5; font-size:11px; cursor:pointer; padding:6px;">Acerca de</button>
   </div>
 </div>
 
@@ -133,6 +154,26 @@
   </div>
 </div>
 
+<!-- Overlay: detalle de beneficio -->
+<div class="overlay" id="overlay-beneficio" onclick="if (event.target === this) cerrarBeneficio()">
+  <div class="modal-hoja">
+    <button class="modal-cerrar" onclick="cerrarBeneficio()" aria-label="Cerrar"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
+    <h3 id="ben-det-rubro"></h3>
+    <div id="ben-det-texto" style="font-size:13.5px; line-height:1.6; margin-top:8px;"></div>
+    <div id="ben-det-link" style="margin-top:14px;"></div>
+  </div>
+</div>
+
+<!-- Overlay: acerca de -->
+<div class="overlay" id="overlay-acerca" onclick="if (event.target === this) cerrarAcerca()">
+  <div class="modal-hoja">
+    <button class="modal-cerrar" onclick="cerrarAcerca()" aria-label="Cerrar"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
+    <h3>Acerca de</h3>
+    <div class="modal-fila"><span class="k">Versión</span><span class="v">{{ version }}</span></div>
+    <div class="modal-fila"><span class="k">Fecha</span><span class="v">{{ fecha_version }}</span></div>
+  </div>
+</div>
+
 <!-- Overlay: imagen ampliada -->
 <div class="overlay overlay-centro" id="overlay-imagen" onclick="cerrarImagen()">
   <img id="img-ampliada" src="" alt="" style="max-width:92vw; max-height:85vh; border-radius:8px;">
@@ -154,6 +195,48 @@
 <script>
 function abrirPerfil() { document.getElementById('overlay-perfil').classList.add('abierto'); }
 function cerrarPerfil() { document.getElementById('overlay-perfil').classList.remove('abierto'); }
+
+function abrirAcerca() { document.getElementById('overlay-acerca').classList.add('abierto'); }
+function cerrarAcerca() { document.getElementById('overlay-acerca').classList.remove('abierto'); }
+
+let carruselIdx = 0;
+let carruselTimer = null;
+function carruselMover(delta) {
+  const slides = document.querySelectorAll('#carrusel-beneficios .carrusel-slide');
+  if (!slides.length) return;
+  slides[carruselIdx].classList.remove('activa');
+  carruselIdx = (carruselIdx + delta + slides.length) % slides.length;
+  slides[carruselIdx].classList.add('activa');
+  reiniciarAutoplayCarrusel();
+}
+function reiniciarAutoplayCarrusel() {
+  clearInterval(carruselTimer);
+  const slides = document.querySelectorAll('#carrusel-beneficios .carrusel-slide');
+  if (slides.length > 1) carruselTimer = setInterval(() => carruselMover(1), 5000);
+}
+reiniciarAutoplayCarrusel();
+
+async function abrirBeneficio(id) {
+  const ov = document.getElementById('overlay-beneficio');
+  document.getElementById('ben-det-rubro').textContent = 'Cargando…';
+  document.getElementById('ben-det-texto').innerHTML = '';
+  document.getElementById('ben-det-link').innerHTML = '';
+  ov.classList.add('abierto');
+  try {
+    const r = await fetch('/api/beneficio/' + id);
+    if (!r.ok) throw new Error();
+    const b = await r.json();
+    document.getElementById('ben-det-rubro').textContent = b.rubro;
+    document.getElementById('ben-det-texto').innerHTML = b.descripcion_html;
+    if (b.link) {
+      document.getElementById('ben-det-link').innerHTML =
+        '<a href="' + b.link + '" target="_blank" rel="noopener" style="color:var(--marca-acento); font-weight:600; text-decoration:none;">Ver más →</a>';
+    }
+  } catch (e) {
+    document.getElementById('ben-det-rubro').textContent = 'No se pudo cargar el beneficio.';
+  }
+}
+function cerrarBeneficio() { document.getElementById('overlay-beneficio').classList.remove('abierto'); }
 
 async function abrirNoticia(id) {
   const ov = document.getElementById('overlay-noticia');

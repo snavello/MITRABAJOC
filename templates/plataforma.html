@@ -27,7 +27,7 @@
     background:var(--marca-base); display:flex; align-items:center; justify-content:center;
     text-decoration:none; border:1px solid rgba(255,255,255,.14);
     box-shadow:0 2px 10px rgba(0,0,0,.25); z-index:40; }
-  .btn-cerrar svg { width:19px; height:19px; stroke:var(--marca-acento); stroke-width:1.8; fill:none; }
+  .btn-cerrar svg { width:19px; height:19px; stroke:#fff; stroke-width:2.6; fill:none; }
   .btn-cerrar:hover { opacity:.85; }
   .wrap { max-width:1000px; margin:0 auto; padding:24px 22px 60px; }
   h2 { font-size:17px; margin:30px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--tinta); }
@@ -113,7 +113,7 @@
         <span class="chip-color" style="background:{{ i.s.color_secundario }}"></span>
       </td>
       <td><button type="button" class="link-num" onclick="verAdmins({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.usuarios }}</button></td>
-      <td>{{ i.trabajadores }}</td>
+      <td><button type="button" class="link-num" onclick="verTrabajadores({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.trabajadores }}</button></td>
       <td style="white-space:nowrap; text-align:right;">
         <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base} | tojson }})'>Editar</button>
         <button type="button" class="mini borrar" onclick="borrarSind({{ i.s.id }}, '{{ i.s.nombre }}', {{ i.usuarios }}, {{ i.trabajadores }})">Borrar</button>
@@ -131,6 +131,15 @@
       <button type="button" class="mini" onclick="document.getElementById('admins-box').style.display='none'">Cerrar</button>
     </div>
     <div id="admins-lista"></div>
+  </div>
+
+  <!-- Panel de trabajadores (se llena al clickear el número) -->
+  <div id="trabajadores-box" style="display:none; margin-top:14px; background:#fff; border:1px solid var(--linea); border-radius:10px; padding:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <strong id="trabajadores-titulo"></strong>
+      <button type="button" class="mini" onclick="document.getElementById('trabajadores-box').style.display='none'">Cerrar</button>
+    </div>
+    <div id="trabajadores-lista"></div>
   </div>
 
   <!-- Formularios ocultos para borrar y editar -->
@@ -345,6 +354,20 @@
   </table>
   </div>
 </div>
+
+<div style="text-align:center; padding:0 0 20px;">
+  <button type="button" onclick="document.getElementById('acerca-box').style.display='flex'" style="background:none; border:none; color:var(--gris); opacity:.45; font-size:10.5px; cursor:pointer; padding:6px;">Acerca de</button>
+</div>
+
+<div id="acerca-box" style="display:none; position:fixed; inset:0; background:rgba(8,12,20,.45); z-index:200; align-items:center; justify-content:center;" onclick="if (event.target === this) this.style.display='none'">
+  <div style="background:#fff; border-radius:12px; padding:22px 24px; max-width:280px; width:90%;">
+    <h3 style="margin-bottom:12px;">Acerca de</h3>
+    <div style="display:flex; justify-content:space-between; padding:6px 0; font-size:13.5px;"><span class="muted">Versión</span><strong>{{ version }}</strong></div>
+    <div style="display:flex; justify-content:space-between; padding:6px 0; font-size:13.5px;"><span class="muted">Fecha</span><strong>{{ fecha_version }}</strong></div>
+    <button type="button" class="mini" style="margin-top:10px;" onclick="document.getElementById('acerca-box').style.display='none'">Cerrar</button>
+  </div>
+</div>
+
 <script>
 function activarTab(dest) {
   document.querySelectorAll('.ptab').forEach(b => b.classList.toggle('activa', b.dataset.pp === dest));
@@ -416,6 +439,26 @@ async function verAdmins(sid, nombre) {
       '<div class="admin-item"><strong>CUIT ' + a.usuario + '</strong>' +
       (a.nombre ? ' · ' + a.nombre : '') +
       (a.activo ? '' : ' <span class="muted">(inactivo)</span>') + '</div>').join('');
+  } catch(e) { lista.innerHTML = '<span class="muted">No se pudo cargar.</span>'; }
+}
+
+// Punto 2: ver trabajadores al clickear el número
+async function verTrabajadores(sid, nombre) {
+  const box = document.getElementById('trabajadores-box');
+  const lista = document.getElementById('trabajadores-lista');
+  document.getElementById('trabajadores-titulo').textContent = 'Trabajadores de ' + nombre;
+  lista.innerHTML = 'Cargando…';
+  box.style.display = 'block';
+  box.scrollIntoView({behavior:'smooth', block:'nearest'});
+  try {
+    const r = await fetch('/plataforma/trabajadores/' + sid);
+    const data = await r.json();
+    if (!data.trabajadores.length) { lista.innerHTML = '<span class="muted">Este sindicato no tiene trabajadores empadronados.</span>'; return; }
+    lista.innerHTML = data.trabajadores.map(t =>
+      '<div class="admin-item"><strong>CUIL ' + t.cuil + '</strong>' +
+      (t.nombre ? ' · ' + t.nombre : '') +
+      (t.registrado ? '' : ' <span class="muted">(sin registrar)</span>') +
+      (t.activo ? '' : ' <span class="muted">(inactivo)</span>') + '</div>').join('');
   } catch(e) { lista.innerHTML = '<span class="muted">No se pudo cargar.</span>'; }
 }
 

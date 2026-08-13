@@ -91,7 +91,7 @@
     background:var(--marca-base); display:flex; align-items:center; justify-content:center;
     text-decoration:none; border:1px solid rgba(255,255,255,.14);
     box-shadow:0 2px 10px rgba(0,0,0,.25); z-index:40; }
-  .btn-cerrar svg { width:19px; height:19px; stroke:var(--marca-acento); stroke-width:1.8; fill:none; }
+  .btn-cerrar svg { width:19px; height:19px; stroke:#fff; stroke-width:2.6; fill:none; }
   .btn-cerrar:hover { opacity:.85; }
   .wrap { max-width:1000px; margin:0 auto; padding:24px 22px 60px; }
   nav { display:flex; gap:6px; margin-bottom:24px; flex-wrap:wrap; }
@@ -202,6 +202,7 @@
     <button class="tab-btn" data-panel="aprendizaje">Aprendizaje</button>
     <button class="tab-btn" data-panel="cotizantes">Afiliados cotizantes</button>
     <button class="tab-btn" data-panel="noticias">Noticias</button>
+    <button class="tab-btn" data-panel="beneficios">Beneficios</button>
   </nav>
 
   <div class="panel activo" id="panel-reportes">
@@ -586,6 +587,62 @@
     {% endfor %}
   </table>
   </div>
+
+  <div class="panel" id="panel-beneficios">
+  <!-- ============ BENEFICIOS ============ -->
+  <h2 id="beneficios-titulo">Dar de alta un beneficio</h2>
+  <div class="card">
+    <form method="post" action="/admin/beneficio" enctype="multipart/form-data" id="form-beneficio">
+      <input type="hidden" name="id" id="ben-id">
+      <div class="grid2">
+        <div class="campo full"><label>Rubro *</label><input name="rubro" id="ben-rubro" required placeholder="Ej: Indumentaria, Salud, Turismo"></div>
+        <div class="campo full"><label>Descripción</label>
+          <textarea name="descripcion" id="ben-descripcion" rows="5" placeholder="Detalle del beneficio, puede incluir URLs"></textarea>
+        </div>
+        <div class="campo full"><label>Link (opcional)</label><input name="link" id="ben-link" placeholder="https://..."></div>
+        <div class="campo"><label>Vigente desde *</label><input name="fecha_desde" id="ben-desde" type="date" required></div>
+        <div class="campo"><label>Vigente hasta *</label><input name="fecha_hasta" id="ben-hasta" type="date" required></div>
+        <div class="campo"><label>Imagen (se muestra en el carrusel)</label><input name="imagen" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
+      </div>
+      <button type="submit">Guardar beneficio</button>
+      <button type="button" class="sec oculto" id="ben-cancel" onclick="cancelarBeneficio()">Cancelar edición</button>
+    </form>
+  </div>
+
+  <h2>Beneficios cargados ({{ beneficios|length }})</h2>
+  <table>
+    <tr><th>Rubro</th><th>Vigencia</th><th>Cargado</th><th></th></tr>
+    {% for b in beneficios %}
+    <tr>
+      <td>{{ b.rubro }}</td>
+      <td>{{ b.fecha_desde }} → {{ b.fecha_hasta }}</td>
+      <td>{{ b.creada }}</td>
+      <td style="white-space:nowrap; text-align:right;">
+        <button type="button" class="mini" onclick='editarBeneficio({{ b | tojson }})'>Editar</button>
+        <form method="post" action="/admin/beneficio/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar este beneficio?')">
+          <input type="hidden" name="id" value="{{ b.id }}">
+          <button class="peligro mini" type="submit">Borrar</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="muted">Todavía no cargaste ningún beneficio.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+</div>
+
+<div style="text-align:center; padding:0 0 20px;">
+  <button type="button" onclick="document.getElementById('acerca-box').style.display='flex'" style="background:none; border:none; color:var(--gris); opacity:.45; font-size:10.5px; cursor:pointer; padding:6px;">Acerca de</button>
+</div>
+
+<div id="acerca-box" style="display:none; position:fixed; inset:0; background:rgba(8,12,20,.45); z-index:200; align-items:center; justify-content:center;" onclick="if (event.target === this) this.style.display='none'">
+  <div style="background:#fff; border-radius:12px; padding:22px 24px; max-width:280px; width:90%;">
+    <h3 style="margin-bottom:12px;">Acerca de</h3>
+    <div style="display:flex; justify-content:space-between; padding:6px 0; font-size:13.5px;"><span class="muted">Versión</span><strong>{{ version }}</strong></div>
+    <div style="display:flex; justify-content:space-between; padding:6px 0; font-size:13.5px;"><span class="muted">Fecha</span><strong>{{ fecha_version }}</strong></div>
+    <button type="button" class="mini" style="margin-top:10px;" onclick="document.getElementById('acerca-box').style.display='none'">Cerrar</button>
+  </div>
 </div>
 
 <script>
@@ -783,6 +840,26 @@ function cancelarNoticia() {
   document.getElementById('noticias-titulo').textContent = 'Dar de alta una noticia';
   document.getElementById('form-noticia').querySelector('button[type=submit]').textContent = 'Guardar noticia';
   document.getElementById('not-cancel').classList.add('oculto');
+}
+
+function editarBeneficio(b) {
+  document.getElementById('ben-id').value = b.id;
+  document.getElementById('ben-rubro').value = b.rubro || '';
+  document.getElementById('ben-descripcion').value = b.descripcion || '';
+  document.getElementById('ben-link').value = b.link || '';
+  document.getElementById('ben-desde').value = b.fecha_desde || '';
+  document.getElementById('ben-hasta').value = b.fecha_hasta || '';
+  document.getElementById('beneficios-titulo').textContent = 'Editar beneficio: ' + b.rubro;
+  document.getElementById('form-beneficio').querySelector('button[type=submit]').textContent = 'Guardar cambios';
+  document.getElementById('ben-cancel').classList.remove('oculto');
+  document.getElementById('form-beneficio').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function cancelarBeneficio() {
+  document.getElementById('form-beneficio').reset();
+  document.getElementById('ben-id').value = '';
+  document.getElementById('beneficios-titulo').textContent = 'Dar de alta un beneficio';
+  document.getElementById('form-beneficio').querySelector('button[type=submit]').textContent = 'Guardar beneficio';
+  document.getElementById('ben-cancel').classList.add('oculto');
 }
 
 // ---------- Aprendizaje ----------

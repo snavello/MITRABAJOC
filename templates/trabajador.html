@@ -46,6 +46,7 @@
   .btn-flotante svg { width:19px; height:19px; stroke:var(--marca-acento); stroke-width:1.8; fill:none; }
   .btn-flotante:hover { opacity:.85; }
   .btn-cerrar { right:18px; }
+  .btn-cerrar svg { stroke:#fff; stroke-width:2.6; }
   .btn-home { right:68px; }
   /* ---------- Noticias (pestaña Novedades) ---------- */
   .noticia-card { display:flex; align-items:center; gap:11px; background:var(--card); border:1px solid var(--linea); border-radius:11px;
@@ -285,7 +286,9 @@
   .sem-rubro-lbl { display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px; }
   .sem-rubro-lbl .n { color:var(--tinta); font-weight:500; }
   .sem-barra { display:flex; gap:2px; }
-  .sem-celda { flex:1; height:20px; border-radius:3px; background:#eceae3; }
+  .sem-celda { flex:1; height:20px; border-radius:3px; background:#eceae3;
+    display:flex; align-items:center; justify-content:center;
+    font-size:8.5px; font-weight:700; color:rgba(0,0,0,.5); }
   .sem-celda.pagado { background:#2fa88f; }
   .sem-celda.parcial { background:#e8b84b; }
   .sem-celda.impago, .sem-celda.no_presentada, .sem-celda.no_declarado { background:#d9685c; }
@@ -937,7 +940,10 @@ async function semSubir(e) {
 
 function semBarra(meses, rubro) {
   let h = '<div class="sem-barra">';
-  for (const m of meses) h += `<div class="sem-celda ${m[rubro]||''}"></div>`;
+  for (const m of meses) {
+    const mes = (m.periodo || '').split('/')[0] || '';
+    h += `<div class="sem-celda ${m[rubro]||''}" title="${m.periodo||''}">${mes}</div>`;
+  }
   return h + '</div>';
 }
 

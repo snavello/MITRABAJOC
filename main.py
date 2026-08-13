@@ -25,10 +25,11 @@ Rutas de plataforma:
 
 Arrancar con:  uvicorn main:app --reload
 """
+import traceback
 from datetime import datetime
 
 from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Cookie, Response
-from fastapi.responses import HTMLResponse, RedirectResponse, Response as BinResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response as BinResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlmodel import select
@@ -36,16 +37,33 @@ from sqlmodel import select
 import db
 import auth
 from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador,
-                CuentaTrabajador, EnvioSindicato, ReciboVerificado, ConfiguracionPlataforma, Noticia)
+                CuentaTrabajador, EnvioSindicato, ReciboVerificado, ConfiguracionPlataforma, Noticia,
+                Beneficio)
 from extractor import extraer, extraer_aportes
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, CATEGORIAS_UNIVERSALES)
 from filigrana import filigrana_svg
 from qr import qr_svg, url_verificacion
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
+from version import VERSION_TRABAJADOR, VERSION_ADMIN, VERSION_PLATAFORMA, FECHA_VERSION
 
 app = FastAPI(title="Mi Trabajo — validador de recibos")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.exception_handler(Exception)
+async def error_no_manejado(request: Request, exc: Exception):
+    """Red de seguridad: sin esto, cualquier excepción no prevista devuelve
+    el 500 de texto plano de Starlette (no JSON) -- y el frontend, que
+    siempre espera JSON (`await r.json()`), explota con "unexpected token"
+    en vez de mostrar el banner de error de siempre. No reemplaza arreglar
+    la causa real (se loguea completa para poder diagnosticarla después),
+    solo evita que una excepción cualquiera tire la pantalla abajo."""
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "No pudimos verificar este recibo. Probá con una foto más nítida o el PDF."},
+    )
 
 
 @app.middleware("http")
@@ -133,6 +151,20 @@ def servir_imagen_noticia(noticia_id: int, n: int):
             raise HTTPException(404, "Sin imagen")
         return BinResponse(
             content=datos, media_type=mime or "application/octet-stream",
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+
+
+@app.get("/beneficio-imagen/{beneficio_id}")
+def servir_imagen_beneficio(beneficio_id: int):
+    """Sirve la imagen de un beneficio (una sola, es la que se expone en el
+    carrusel), guardada en la base -- mismo patrón que el logo/noticias."""
+    with db.get_session() as s:
+        b = s.get(Beneficio, beneficio_id)
+        if not b or not b.imagen_datos:
+            raise HTTPException(404, "Sin imagen")
+        return BinResponse(
+            content=b.imagen_datos, media_type=b.imagen_mime or "application/octet-stream",
             headers={"Cache-Control": "public, max-age=3600"},
         )
 
@@ -379,6 +411,23 @@ def api_noticia(noticia_id: int, request: Request):
     }
 
 
+@app.get("/api/beneficio/{beneficio_id}")
+def api_beneficio(beneficio_id: int, request: Request):
+    """Detalle completo de un beneficio para el overlay del carrusel de la
+    portada. Aísla por sindicato, igual que api_noticia."""
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise HTTPException(403, "No pudimos determinar tu sindicato. Volvé a ingresar.")
+    b = db.beneficio_por_id(beneficio_id)
+    if not b or b["sindicato_id"] != sid:
+        raise HTTPException(404, "Beneficio no encontrado")
+    return {
+        "id": b["id"], "rubro": b["rubro"],
+        "descripcion_html": _texto_con_links(b["descripcion"]),
+        "link": b["link"], "tiene_imagen": b["tiene_imagen"],
+    }
+
+
 # ================= Panel del sindicato =================
 def exigir_sindicato(request: Request) -> int:
     """Devuelve el sindicato_id de la sesión, o lanza 403 si no hay sesión válida."""
@@ -432,6 +481,8 @@ def admin(request: Request):
         "nombres_por_cuil": nombres_por_cuil, "provisorios": provisorios,
         "debe_cambiar": ses.get("cambiar", False),
         "noticias": db.noticias_del_sindicato(sid),
+        "beneficios": db.beneficios_del_sindicato(sid),
+        "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
 
 
@@ -756,6 +807,50 @@ def borrar_noticia(request: Request, id: int = Form(...)):
     return RedirectResponse("/admin#noticias", status_code=303)
 
 
+@app.post("/admin/beneficio")
+async def abm_beneficio(
+    request: Request,
+    id: str = Form(""), rubro: str = Form(...), descripcion: str = Form(""),
+    link: str = Form(""), fecha_desde: str = Form(...), fecha_hasta: str = Form(...),
+    imagen: UploadFile = File(None),
+):
+    sid = exigir_sindicato(request)
+    with db.get_session() as s:
+        if id:
+            b = s.get(Beneficio, int(id))
+            if b and b.sindicato_id == sid:
+                b.rubro, b.descripcion, b.link = rubro, descripcion, link
+                b.fecha_desde, b.fecha_hasta = fecha_desde, fecha_hasta
+                if imagen and imagen.filename:
+                    datos, mime, _ = _leer_logo(imagen)
+                    if datos:
+                        b.imagen_datos, b.imagen_mime = datos, mime
+                s.add(b)
+        else:
+            imagen_datos, imagen_mime = None, ""
+            if imagen and imagen.filename:
+                imagen_datos, imagen_mime, _ = _leer_logo(imagen)
+            s.add(Beneficio(
+                sindicato_id=sid, rubro=rubro, descripcion=descripcion, link=link,
+                fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
+                creada=datetime.now().strftime("%Y-%m-%d %H:%M"),
+                imagen_datos=imagen_datos, imagen_mime=imagen_mime,
+            ))
+        s.commit()
+    return RedirectResponse("/admin#beneficios", status_code=303)
+
+
+@app.post("/admin/beneficio/borrar")
+def borrar_beneficio(request: Request, id: int = Form(...)):
+    sid = exigir_sindicato(request)
+    with db.get_session() as s:
+        b = s.get(Beneficio, id)
+        if b and b.sindicato_id == sid:
+            s.delete(b)
+            s.commit()
+    return RedirectResponse("/admin#beneficios", status_code=303)
+
+
 # ---------- Aprendizaje: subir N recibos y proponer conceptos nuevos ----------
 @app.post("/admin/aprender")
 async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
@@ -916,6 +1011,7 @@ def plataforma(request: Request):
         "uso_ia": uso_ia,
         "sindicatos_uso_ia": sorted({u["sindicato"] for u in uso_ia}),
         "modelos_uso_ia": sorted({u["modelo"] for u in uso_ia}),
+        "version": VERSION_PLATAFORMA, "fecha_version": FECHA_VERSION,
     })
 
 
@@ -1133,6 +1229,22 @@ def plataforma_ver_admins(sindicato_id: int, request: Request):
         return {"admins": [
             {"usuario": a.usuario, "nombre": a.nombre, "activo": a.activo}
             for a in admins]}
+
+
+@app.get("/plataforma/trabajadores/{sindicato_id}")
+def plataforma_ver_trabajadores(sindicato_id: int, request: Request):
+    """Devuelve la lista de trabajadores empadronados en un sindicato (para
+    mostrar al clickear el número, mismo patrón que plataforma_ver_admins)."""
+    ses = sesion_actual(request)
+    if not ses or ses.get("rol") != "plataforma":
+        raise HTTPException(403, "No autorizado")
+    with db.get_session() as s:
+        trabajadores = s.exec(select(Trabajador).where(
+            Trabajador.sindicato_id == sindicato_id).order_by(
+            Trabajador.activo.desc(), Trabajador.nombre)).all()
+        return {"trabajadores": [
+            {"cuil": t.cuil, "nombre": t.nombre, "activo": t.activo, "registrado": t.registrado}
+            for t in trabajadores]}
 
 
 @app.post("/plataforma/reset-clave")
@@ -1381,6 +1493,8 @@ def app_portada(request: Request):
             "documento": _dni_de_cuil(cuil),
             "perfil": db.perfil_trabajador(cuil, sid_activo),
             "noticias": _con_antiguedad(db.noticias_vigentes(sid_activo, limite=3)),
+            "beneficios": db.beneficios_vigentes(sid_activo),
+            "version": VERSION_TRABAJADOR, "fecha_version": FECHA_VERSION,
         })
     # Varios y no eligió → selector (mismo criterio que /app)
     return templates.TemplateResponse("elegir_sindicato.html", {
