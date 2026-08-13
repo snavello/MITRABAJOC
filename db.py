@@ -215,6 +215,10 @@ class Noticia(SQLModel, table=True):
     imagen1_mime: str = ""
     imagen2_datos: Optional[bytes] = Field(default=None)
     imagen2_mime: str = ""
+    # Destino: lista de Seccional.id a la(s) que se dirige. Lista vacía (el
+    # default) = todas las seccionales, incluidos los trabajadores sin
+    # seccional asignada.
+    destino_seccionales: list = Field(default=[], sa_column=Column(JSON))
 
 
 class Beneficio(SQLModel, table=True):
@@ -233,6 +237,9 @@ class Beneficio(SQLModel, table=True):
     creada: str = ""  # fecha y hora de alta ("AAAA-MM-DD HH:MM")
     imagen_datos: Optional[bytes] = Field(default=None)
     imagen_mime: str = ""
+    # Destino: lista de Seccional.id a la(s) que se dirige. Lista vacía (el
+    # default) = todas las seccionales, mismo criterio que Noticia.
+    destino_seccionales: list = Field(default=[], sa_column=Column(JSON))
 
 
 class Reporte(SQLModel, table=True):
@@ -702,7 +709,16 @@ def _noticia_a_dict(n: "Noticia") -> dict:
         "bajada": n.bajada, "texto_completo": n.texto_completo,
         "fecha_desde": n.fecha_desde, "fecha_hasta": n.fecha_hasta, "creada": n.creada,
         "tiene_imagen1": bool(n.imagen1_datos), "tiene_imagen2": bool(n.imagen2_datos),
+        "destino_seccionales": n.destino_seccionales or [],
     }
+
+
+def visible_para_seccional(destino_seccionales: list, seccional_id: Optional[int]) -> bool:
+    """Lista vacía = todas las seccionales (incluye trabajadores sin
+    seccional asignada). Si no está vacía, solo es visible para quien tenga
+    esa seccional asignada -- un trabajador sin seccional NO ve contenido
+    dirigido a seccionales específicas."""
+    return not destino_seccionales or seccional_id in destino_seccionales
 
 
 def noticias_del_sindicato(sindicato_id: int) -> list:
@@ -714,11 +730,13 @@ def noticias_del_sindicato(sindicato_id: int) -> list:
         return [_noticia_a_dict(n) for n in noticias]
 
 
-def noticias_vigentes(sindicato_id: int, limite: int = None) -> list:
-    """Noticias vigentes HOY de un sindicato, más recientes primero."""
+def noticias_vigentes(sindicato_id: int, seccional_id: Optional[int] = None, limite: int = None) -> list:
+    """Noticias vigentes HOY de un sindicato, dirigidas a la seccional del
+    trabajador (o a todas), más recientes primero."""
     hoy = datetime.now().strftime("%Y-%m-%d")
     todas = noticias_del_sindicato(sindicato_id)
-    vigentes = [n for n in todas if noticia_vigente(n, hoy)]
+    vigentes = [n for n in todas if noticia_vigente(n, hoy)
+                and visible_para_seccional(n["destino_seccionales"], seccional_id)]
     return vigentes[:limite] if limite else vigentes
 
 
@@ -742,6 +760,7 @@ def _beneficio_a_dict(b: "Beneficio") -> dict:
         "descripcion": b.descripcion, "link": b.link,
         "fecha_desde": b.fecha_desde, "fecha_hasta": b.fecha_hasta, "creada": b.creada,
         "tiene_imagen": bool(b.imagen_datos),
+        "destino_seccionales": b.destino_seccionales or [],
     }
 
 
@@ -754,11 +773,13 @@ def beneficios_del_sindicato(sindicato_id: int) -> list:
         return [_beneficio_a_dict(b) for b in beneficios]
 
 
-def beneficios_vigentes(sindicato_id: int) -> list:
-    """Beneficios vigentes HOY de un sindicato, más recientes primero."""
+def beneficios_vigentes(sindicato_id: int, seccional_id: Optional[int] = None) -> list:
+    """Beneficios vigentes HOY de un sindicato, dirigidos a la seccional del
+    trabajador (o a todos), más recientes primero."""
     hoy = datetime.now().strftime("%Y-%m-%d")
     todos = beneficios_del_sindicato(sindicato_id)
-    return [b for b in todos if beneficio_vigente(b, hoy)]
+    return [b for b in todos if beneficio_vigente(b, hoy)
+            and visible_para_seccional(b["destino_seccionales"], seccional_id)]
 
 
 def beneficio_por_id(beneficio_id: int) -> Optional[dict]:
@@ -774,6 +795,15 @@ def seccionales_del_sindicato(sindicato_id: int) -> list:
         seccionales = s.exec(select(Seccional).where(
             Seccional.sindicato_id == sindicato_id).order_by(Seccional.nombre)).all()
         return [{"id": sec.id, "nombre": sec.nombre, "direccion": sec.direccion} for sec in seccionales]
+
+
+def seccional_de_trabajador(cuil: str, sindicato_id: int) -> Optional[int]:
+    """seccional_id del trabajador en ESE sindicato (None si no tiene
+    asignada) -- para filtrar Noticias/Beneficios por destino."""
+    with Session(engine) as s:
+        t = s.exec(select(Trabajador).where(
+            Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
+        return t.seccional_id if t else None
 
 
 def registrar_uso_ia(sindicato_id: Optional[int], cuil: str, tipo: str,

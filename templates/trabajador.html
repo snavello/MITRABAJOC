@@ -70,6 +70,19 @@
   .modal-cerrar { position:absolute; top:14px; right:18px; background:none; border:none;
     cursor:pointer; color:var(--gris); padding:4px; }
   .modal-cerrar svg { width:20px; height:20px; stroke:currentColor; stroke-width:1.8; fill:none; }
+  .modal-recibo-overlay { display:none; position:fixed; inset:0; background:rgba(8,12,20,.55);
+    z-index:120; align-items:center; justify-content:center; padding:18px; }
+  .modal-recibo-overlay.abierto { display:flex; }
+  .modal-recibo { background:var(--card); border-radius:14px; width:100%; max-width:480px;
+    max-height:85vh; overflow-y:auto; box-shadow:0 10px 30px rgba(0,0,0,.3); }
+  .modal-recibo-enc { position:sticky; top:0; background:var(--marca-base); color:#fff;
+    padding:15px 18px; border-radius:14px 14px 0 0; display:flex; justify-content:space-between;
+    align-items:center; gap:10px; z-index:1; }
+  .modal-recibo-enc h3 { margin:0; font-size:15px; font-weight:600; }
+  .modal-recibo-cerrar { background:none; border:none; padding:2px; display:flex; cursor:pointer; }
+  .modal-recibo-cerrar svg { width:19px; height:19px; stroke:#fff; stroke-width:2.2; fill:none; }
+  .modal-recibo-body { padding:16px 18px; }
+  .modal-recibo-card { background:var(--papel); border-radius:9px; padding:12px 14px; }
   /* ---------- Contenedor ---------- */
   .cont { max-width:480px; margin:0 auto; padding:22px 20px 40px; }
   h1 { font-size:clamp(21px, 5.5vw, 26px); font-weight:600; letter-spacing:-0.5px; }
@@ -505,6 +518,21 @@
   <img id="img-ampliada" src="" alt="" style="max-width:92vw; max-height:85vh; border-radius:8px;">
 </div>
 
+<!-- Modal: detalle de un recibo verificado (Mis recibos verificados) -->
+<div class="modal-recibo-overlay" id="modal-recibo-overlay" onclick="if (event.target === this) cerrarModalRecibo()">
+  <div class="modal-recibo">
+    <div class="modal-recibo-enc">
+      <h3 id="modal-recibo-titulo"></h3>
+      <button type="button" class="modal-recibo-cerrar" onclick="cerrarModalRecibo()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24"><use href="#ic-x"/></svg>
+      </button>
+    </div>
+    <div class="modal-recibo-body">
+      <div class="modal-recibo-card" id="modal-recibo-contenido"></div>
+    </div>
+  </div>
+</div>
+
 <!-- Íconos SVG de línea -->
 <svg style="display:none" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -860,7 +888,6 @@ function renderHistorial(lista) {
           ${esReforma ? '<span class="tag" style="background:#e8def5; color:#5b3d8a; margin-left:4px;">reforma</span>' : ''}
         </span>
       </div>
-      <div id="hist-det-${i}" style="display:none; margin-top:10px;"></div>
     </div>`;
   });
   $('historial-contenido').innerHTML = h;
@@ -868,20 +895,19 @@ function renderHistorial(lista) {
 }
 
 function toggleHistorialItem(i) {
-  const box = $('hist-det-' + i);
-  const abierto = box.style.display !== 'none';
-  if (abierto) { box.style.display = 'none'; return; }
-  if (!box.dataset.cargado) {
-    box.innerHTML = renderHistorialDetalle(window._historial[i].detalle);
-    box.dataset.cargado = '1';
-  }
-  box.style.display = 'block';
+  const r = window._historial[i];
+  $('modal-recibo-titulo').textContent = fmtPeriodo(r.periodo) + ' — ' + r.sindicato;
+  $('modal-recibo-contenido').innerHTML = renderHistorialDetalle(r.detalle);
+  $('modal-recibo-overlay').classList.add('abierto');
+}
+function cerrarModalRecibo() {
+  $('modal-recibo-overlay').classList.remove('abierto');
 }
 
 function renderHistorialDetalle(detalle) {
   const rec = (detalle && detalle.recibo) || {};
   const res = (detalle && detalle.resultado) || {};
-  let h = '<div style="border-top:1px solid var(--linea); padding-top:10px;">';
+  let h = '';
   for (const ln of (rec.lineas || [])) {
     const esDescuento = (ln.importe || 0) < 0;
     h += `<div class="chip ${esDescuento?'chip-descuento':''}">
@@ -892,7 +918,6 @@ function renderHistorialDetalle(detalle) {
   h += renderTotalesResumen(res.totales);
   for (const disc of (res.discrepancias || [])) h += `<div class="disc">${disc.detalle}</div>`;
   for (const al of (res.alertas || [])) h += `<div class="alerta-legal">${al.detalle}</div>`;
-  h += '</div>';
   return h;
 }
 

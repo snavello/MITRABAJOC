@@ -184,11 +184,49 @@ masiva. Borrar una seccional no está bloqueado por tener trabajadores
 asignados — los deja con `seccional_id = NULL` (`borrar_seccional` en
 main.py nullifica antes de borrar). No afecta validación de recibos.
 
+**Destino por seccional en Noticias y Beneficios**: ambos modelos tienen
+`destino_seccionales` (JSON, lista de `Seccional.id`). Lista vacía (default)
+= todas las seccionales, incluidos los trabajadores sin seccional asignada;
+si no está vacía, SOLO la ven los trabajadores con esa(s) seccional(es) —
+uno sin seccional no ve contenido dirigido. El form de alta/edición en
+`/admin` muestra un grupo de checkboxes (uno por seccional del sindicato,
+`.check-seccionales` en el `<style>` de admin.html) solo si el sindicato
+tiene seccionales cargadas; sin marcar ninguna = todas. `db.visible_para_seccional()`
+es el filtro; `db.noticias_vigentes()`/`db.beneficios_vigentes()` ahora
+piden `seccional_id` (la del trabajador, resuelta con
+`db.seccional_de_trabajador(cuil, sindicato_id)`). El admin puede targetear
+solo seccionales de SU sindicato — `main._destinos_validos()` descarta las
+ajenas o inventadas en silencio, mismo criterio que `seccional_id` del alta
+de trabajador.
+
 ## Confirmar concepto pendiente de revisión
 `Concepto.pendiente_revision` ya se limpiaba como efecto secundario de
 editar y guardar un concepto (no era evidente en la UI). Ahora también hay
 un botón "Confirmar" dedicado (`POST /admin/concepto/confirmar`) que solo
 saca la marca, sin tocar los demás datos del concepto.
+
+## Detalle de recibo en modal (no inline)
+Los 3 listados que mostraban el detalle de un recibo expandiendo una fila
+DEBAJO en la misma tabla (poco práctico) ahora abren un modal centrado:
+encabezado con fondo `var(--marca-base)` y el título, cuerpo blanco con el
+detalle en una tarjeta levemente destacada (`#faf9f6` en admin.html,
+`var(--papel)` en trabajador.html). Afecta:
+- `admin.html` → Reportes (`verReporte`) y Afiliados cotizantes (`verEnvio`):
+  el HTML del detalle se sigue renderizando server-side en una `<tr>` oculta
+  (igual que antes), pero ahora un componente `#modal-recibo-overlay`
+  compartido copia su `innerHTML` al abrir en vez de mostrar esa fila.
+- `trabajador.html` → "Ver mis recibos verificados" (`toggleHistorialItem`):
+  el detalle se arma client-side igual que antes (`renderHistorialDetalle`),
+  pero se inyecta en el mismo tipo de modal en vez de expandir un `<div>`
+  bajo la fila.
+**Bug real encontrado y corregido**: los botones "Ver" de Reportes/Afiliados
+cotizantes pasan `{{ r.cuil|tojson }}`/`{{ r.periodo|tojson }}` como
+argumentos al `onclick` -- `tojson` genera comillas dobles, y el atributo
+`onclick="..."` también usaba comillas dobles, así que el HTML se cortaba en
+la primera comilla del cuil (`onclick="verReporte(1, "` truncado, resto
+descartado). Mismo patrón que ya usan `editarNoticia`/`editarBeneficio` en
+este archivo: cuando un `onclick` recibe un valor con `|tojson`, el atributo
+tiene que ir con comillas simples (`onclick='...'`).
 
 ## Versionado
 `version.py`: constantes `VERSION_TRABAJADOR`/`VERSION_ADMIN`/

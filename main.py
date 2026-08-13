@@ -784,14 +784,17 @@ async def abm_noticia(
     id: str = Form(""), titulo: str = Form(...), bajada: str = Form(""),
     texto_completo: str = Form(""), fecha_desde: str = Form(...), fecha_hasta: str = Form(...),
     imagen1: UploadFile = File(None), imagen2: UploadFile = File(None),
+    destino_seccionales: list[str] = Form(default=[]),
 ):
     sid = exigir_sindicato(request)
     with db.get_session() as s:
+        destinos = _destinos_validos(s, destino_seccionales, sid)
         if id:
             n = s.get(Noticia, int(id))
             if n and n.sindicato_id == sid:
                 n.titulo, n.bajada, n.texto_completo = titulo, bajada, texto_completo
                 n.fecha_desde, n.fecha_hasta = fecha_desde, fecha_hasta
+                n.destino_seccionales = destinos
                 if imagen1 and imagen1.filename:
                     datos, mime, _ = _leer_logo(imagen1)
                     if datos:
@@ -814,6 +817,7 @@ async def abm_noticia(
                 creada=datetime.now().strftime("%Y-%m-%d %H:%M"),
                 imagen1_datos=imagen1_datos, imagen1_mime=imagen1_mime,
                 imagen2_datos=imagen2_datos, imagen2_mime=imagen2_mime,
+                destino_seccionales=destinos,
             ))
         s.commit()
     return RedirectResponse("/admin#noticias", status_code=303)
@@ -835,15 +839,17 @@ async def abm_beneficio(
     request: Request,
     id: str = Form(""), rubro: str = Form(...), descripcion: str = Form(""),
     link: str = Form(""), fecha_desde: str = Form(...), fecha_hasta: str = Form(...),
-    imagen: UploadFile = File(None),
+    imagen: UploadFile = File(None), destino_seccionales: list[str] = Form(default=[]),
 ):
     sid = exigir_sindicato(request)
     with db.get_session() as s:
+        destinos = _destinos_validos(s, destino_seccionales, sid)
         if id:
             b = s.get(Beneficio, int(id))
             if b and b.sindicato_id == sid:
                 b.rubro, b.descripcion, b.link = rubro, descripcion, link
                 b.fecha_desde, b.fecha_hasta = fecha_desde, fecha_hasta
+                b.destino_seccionales = destinos
                 if imagen and imagen.filename:
                     datos, mime, _ = _leer_logo(imagen)
                     if datos:
@@ -858,6 +864,7 @@ async def abm_beneficio(
                 fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
                 creada=datetime.now().strftime("%Y-%m-%d %H:%M"),
                 imagen_datos=imagen_datos, imagen_mime=imagen_mime,
+                destino_seccionales=destinos,
             ))
         s.commit()
     return RedirectResponse("/admin#beneficios", status_code=303)
@@ -1181,6 +1188,23 @@ def _es_oscuro(color_hex: str) -> bool:
     return luminancia < 140
 
 
+def _destinos_validos(s, destino_seccionales: list[str], sid: int) -> list[int]:
+    """Convierte los ids de seccional tildados en el form a int, descartando
+    los que no sean de ESTE sindicato (ajenos o inventados) -- mismo criterio
+    defensivo que el seccional_id del alta de trabajador."""
+    ids_del_sindicato = {sec.id for sec in s.exec(
+        select(Seccional).where(Seccional.sindicato_id == sid)).all()}
+    resultado = []
+    for valor in destino_seccionales:
+        try:
+            sec_id = int(valor)
+        except (TypeError, ValueError):
+            continue
+        if sec_id in ids_del_sindicato:
+            resultado.append(sec_id)
+    return resultado
+
+
 def _leer_logo(archivo: UploadFile):
     """Lee el logo subido y devuelve (datos, mime, nombre_flag).
     Guarda el binario en la base (Opción B), no en el disco efímero.
@@ -1501,7 +1525,8 @@ def app_trabajador(request: Request):
             "vigencia_credencial": _fmt_fecha_ar(credencial.get("vigencia")),
             "filigrana": filigrana_svg(marca["nombre"], marca["color_secundario"], marca["color_acento"]),
             "semaforo_guardado": db.semaforo_guardado(cuil, sid_activo),
-            "noticias": _con_antiguedad(db.noticias_vigentes(sid_activo)),
+            "noticias": _con_antiguedad(db.noticias_vigentes(
+                sid_activo, seccional_id=db.seccional_de_trabajador(cuil, sid_activo))),
         }
         # El QR (y la verificación pública que hay detrás) solo tiene sentido
         # una vez que el sindicato generó el código real de la credencial.
@@ -1542,6 +1567,7 @@ def app_portada(request: Request):
         marca = db.marca_sindicato(sid_activo)
         credencial = db.credencial_de(cuil, sid_activo) or {}
         nombre_trab = db.nombre_trabajador(cuil, sid_activo)
+        seccional_id = db.seccional_de_trabajador(cuil, sid_activo)
         return templates.TemplateResponse("portada.html", {
             "request": request, "sindicato": marca["nombre"], "marca": marca,
             "marca_plataforma": db.marca_plataforma(),
@@ -1551,8 +1577,8 @@ def app_portada(request: Request):
             "credencial_generada": bool(credencial.get("codigo")),
             "documento": _dni_de_cuil(cuil),
             "perfil": db.perfil_trabajador(cuil, sid_activo),
-            "noticias": _con_antiguedad(db.noticias_vigentes(sid_activo, limite=3)),
-            "beneficios": db.beneficios_vigentes(sid_activo),
+            "noticias": _con_antiguedad(db.noticias_vigentes(sid_activo, seccional_id=seccional_id, limite=3)),
+            "beneficios": db.beneficios_vigentes(sid_activo, seccional_id=seccional_id),
             "version": VERSION_TRABAJADOR, "fecha_version": FECHA_VERSION,
         })
     # Varios y no eligió → selector (mismo criterio que /app)

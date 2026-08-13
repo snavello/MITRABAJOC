@@ -126,6 +126,26 @@
   .linea-concepto { display:flex; justify-content:space-between; padding:5px 8px; border-radius:5px; margin-bottom:3px; }
   .linea-concepto.descuento { background:#f8e5e2; }
   .linea-concepto .imp.neg { color:var(--alerta); }
+  .modal-recibo-overlay { display:none; position:fixed; inset:0; background:rgba(8,12,20,.5);
+    z-index:250; align-items:center; justify-content:center; padding:20px; }
+  .modal-recibo-overlay.abierto { display:flex; }
+  .modal-recibo { background:#fff; border-radius:12px; width:100%; max-width:560px;
+    max-height:85vh; overflow-y:auto; box-shadow:0 10px 34px rgba(0,0,0,.3); }
+  .modal-recibo-enc { position:sticky; top:0; background:var(--marca-base); color:#fff;
+    padding:15px 18px; border-radius:12px 12px 0 0; display:flex; justify-content:space-between;
+    align-items:center; gap:10px; z-index:1; }
+  .modal-recibo-enc h3 { margin:0; font-size:15.5px; font-weight:600; }
+  .modal-recibo-cerrar { background:none; border:none; color:#fff; opacity:.85; cursor:pointer;
+    padding:2px; display:flex; }
+  .modal-recibo-cerrar:hover { opacity:1; }
+  .modal-recibo-cerrar svg { width:19px; height:19px; stroke:#fff; stroke-width:2.4; fill:none; }
+  .modal-recibo-body { padding:18px; }
+  .modal-recibo-card { background:#faf9f6; border-radius:9px; padding:14px 16px; }
+  .check-seccionales { display:flex; flex-wrap:wrap; gap:4px 14px; padding:9px 11px;
+    border:1px solid #ccc; border-radius:7px; background:#fbfaf7; }
+  .chk-seccional { display:flex; align-items:center; gap:5px; font-size:13px; font-weight:400;
+    color:#333; cursor:pointer; }
+  .chk-seccional input { width:auto; padding:0; }
   .filtros { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
   .filtros input { padding:7px 10px; border:1px solid #ccc; border-radius:7px; font-size:13px; font-family:inherit; }
   .filtros input[type=text] { width:150px; }
@@ -167,7 +187,8 @@
   button.sec { background:#fff; color:var(--tinta); border:1px solid #b4b2a9; }
   button.mini { padding:5px 10px; font-size:12px; }
   button.peligro { background:#fff; color:var(--alerta); border:1px solid #e3b5ae; }
-  .acc { display:flex; gap:5px; }
+  .acc { display:flex; flex-wrap:wrap; gap:5px; justify-content:flex-end; align-items:center; }
+  .acc form { display:flex; margin:0; }
   .drop { display:block; box-sizing:border-box; width:100%; max-width:100%;
           background:#fff; border:2px dashed var(--linea); border-radius:12px; padding:24px 16px;
           text-align:center; color:var(--gris); font-size:14px; cursor:pointer; }
@@ -226,8 +247,8 @@
           {%- if r.detalle and r.detalle.recibo and r.detalle.recibo.formato == 'nuevo' %}
           <span class="tag tag-reforma" title="Recibo con el formato del Anexo III (Dto 407/2026)">reforma</span>{% endif %}</td>
         <td><span class="tag {{ 'tag-pend' if r.estado=='nuevo' else 'tag-si' }}">{{ r.estado }}</span></td>
-        <td style="text-align:right;"><button type="button" class="mini" onclick="verReporte({{ r.id }})">Ver</button></td></tr>
-    <tr id="rep-{{ r.id }}" style="display:none;"><td colspan="5" style="background:#faf9f6;">
+        <td style="text-align:right;"><button type="button" class="mini" onclick='verReporte({{ r.id }}, {{ r.cuil|tojson }}, {{ r.periodo|tojson }})'>Ver</button></td></tr>
+    <tr id="rep-{{ r.id }}" style="display:none;"><td colspan="5">
       <div class="rep-detalle">{{ detalle_recibo(r.detalle, r.cuil) }}</div>
     </td></tr>
     {% else %}<tr><td colspan="5" class="muted">Sin reportes todavía.</td></tr>{% endfor %}
@@ -547,9 +568,9 @@
           {%- if e.detalle and e.detalle.recibo and e.detalle.recibo.formato == 'nuevo' %}
           <span class="tag tag-reforma" title="Recibo con el formato del Anexo III (Dto 407/2026)">reforma</span>{% endif %}</td>
         <td>${{ '%.2f'|format(e.monto_cuota) }}</td>
-        <td style="text-align:right;">{% if e.detalle %}<button type="button" class="mini" onclick="verEnvio({{ e.id }})">Ver</button>{% endif %}</td></tr>
+        <td style="text-align:right;">{% if e.detalle %}<button type="button" class="mini" onclick='verEnvio({{ e.id }}, {{ e.cuil|tojson }}, {{ e.periodo|tojson }})'>Ver</button>{% endif %}</td></tr>
     {% if e.detalle %}
-    <tr id="envio-{{ e.id }}" style="display:none;"><td colspan="5" style="background:#faf9f6;">
+    <tr id="envio-{{ e.id }}" style="display:none;"><td colspan="5">
       <div class="rep-detalle">{{ detalle_recibo(e.detalle, e.cuil) }}</div>
     </td></tr>
     {% endif %}
@@ -575,6 +596,17 @@
         <div class="campo"><label>Vigente hasta *</label><input name="fecha_hasta" id="not-hasta" type="date" required></div>
         <div class="campo"><label>Imagen 1 (opcional)</label><input name="imagen1" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
         <div class="campo"><label>Imagen 2 (opcional)</label><input name="imagen2" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
+        {% if seccionales %}
+        <div class="campo full">
+          <label>Destino</label>
+          <div class="check-seccionales" id="not-destino">
+            {% for sec in seccionales %}
+            <label class="chk-seccional"><input type="checkbox" name="destino_seccionales" value="{{ sec.id }}"> {{ sec.nombre }}</label>
+            {% endfor %}
+          </div>
+          <span class="muted" style="font-size:11.5px;">Sin marcar ninguna = todas las seccionales (default).</span>
+        </div>
+        {% endif %}
       </div>
       <button type="submit">Guardar noticia</button>
       <button type="button" class="sec oculto" id="not-cancel" onclick="cancelarNoticia()">Cancelar edición</button>
@@ -583,11 +615,12 @@
 
   <h2>Noticias cargadas ({{ noticias|length }})</h2>
   <table>
-    <tr><th>Título</th><th>Vigencia</th><th>Cargada</th><th></th></tr>
+    <tr><th>Título</th><th>Vigencia</th><th>Destino</th><th>Cargada</th><th></th></tr>
     {% for n in noticias %}
     <tr>
       <td>{{ n.titulo }}{% if n.bajada %}<br><span class="muted">{{ n.bajada }}</span>{% endif %}</td>
       <td>{{ n.fecha_desde }} → {{ n.fecha_hasta }}</td>
+      <td class="muted">{% if n.destino_seccionales %}{% for sid in n.destino_seccionales %}{{ seccional_por_id.get(sid, '?') }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}Todas{% endif %}</td>
       <td>{{ n.creada }}</td>
       <td style="white-space:nowrap; text-align:right;">
         <button type="button" class="mini" onclick='editarNoticia({{ n | tojson }})'>Editar</button>
@@ -598,7 +631,7 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="4" class="muted">Todavía no cargaste ninguna noticia.</td></tr>
+    <tr><td colspan="5" class="muted">Todavía no cargaste ninguna noticia.</td></tr>
     {% endfor %}
   </table>
   </div>
@@ -618,6 +651,17 @@
         <div class="campo"><label>Vigente desde *</label><input name="fecha_desde" id="ben-desde" type="date" required></div>
         <div class="campo"><label>Vigente hasta *</label><input name="fecha_hasta" id="ben-hasta" type="date" required></div>
         <div class="campo"><label>Imagen (se muestra en el carrusel)</label><input name="imagen" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
+        {% if seccionales %}
+        <div class="campo full">
+          <label>Destino</label>
+          <div class="check-seccionales" id="ben-destino">
+            {% for sec in seccionales %}
+            <label class="chk-seccional"><input type="checkbox" name="destino_seccionales" value="{{ sec.id }}"> {{ sec.nombre }}</label>
+            {% endfor %}
+          </div>
+          <span class="muted" style="font-size:11.5px;">Sin marcar ninguna = todas las seccionales (default).</span>
+        </div>
+        {% endif %}
       </div>
       <button type="submit">Guardar beneficio</button>
       <button type="button" class="sec oculto" id="ben-cancel" onclick="cancelarBeneficio()">Cancelar edición</button>
@@ -626,11 +670,12 @@
 
   <h2>Beneficios cargados ({{ beneficios|length }})</h2>
   <table>
-    <tr><th>Rubro</th><th>Vigencia</th><th>Cargado</th><th></th></tr>
+    <tr><th>Rubro</th><th>Vigencia</th><th>Destino</th><th>Cargado</th><th></th></tr>
     {% for b in beneficios %}
     <tr>
       <td>{{ b.rubro }}</td>
       <td>{{ b.fecha_desde }} → {{ b.fecha_hasta }}</td>
+      <td class="muted">{% if b.destino_seccionales %}{% for sid in b.destino_seccionales %}{{ seccional_por_id.get(sid, '?') }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}Todas{% endif %}</td>
       <td>{{ b.creada }}</td>
       <td style="white-space:nowrap; text-align:right;">
         <button type="button" class="mini" onclick='editarBeneficio({{ b | tojson }})'>Editar</button>
@@ -641,7 +686,7 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="4" class="muted">Todavía no cargaste ningún beneficio.</td></tr>
+    <tr><td colspan="5" class="muted">Todavía no cargaste ningún beneficio.</td></tr>
     {% endfor %}
   </table>
   </div>
@@ -681,6 +726,21 @@
     <tr><td colspan="3" class="muted">Todavía no cargaste ninguna seccional.</td></tr>
     {% endfor %}
   </table>
+  </div>
+</div>
+
+<!-- Modal: detalle de un recibo (Reportes y Afiliados cotizantes) -->
+<div class="modal-recibo-overlay" id="modal-recibo-overlay" onclick="if (event.target === this) cerrarModalRecibo()">
+  <div class="modal-recibo">
+    <div class="modal-recibo-enc">
+      <h3 id="modal-recibo-titulo"></h3>
+      <button type="button" class="modal-recibo-cerrar" onclick="cerrarModalRecibo()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-recibo-body">
+      <div class="modal-recibo-card" id="modal-recibo-contenido"></div>
+    </div>
   </div>
 </div>
 
@@ -793,16 +853,22 @@ function pintarZebra(selectorFilas) {
 const TABLAS_ZEBRA = ['.fila-reporte', '.fila-envio', '.fila-trabajador'];
 TABLAS_ZEBRA.forEach(pintarZebra);
 
-// ---------- Ver detalle de reporte ----------
-function verReporte(id) {
-  const fila = document.getElementById('rep-' + id);
-  if (fila) fila.style.display = fila.style.display === 'none' ? 'table-row' : 'none';
+// ---------- Modal de detalle de recibo (Reportes y Afiliados cotizantes) ----------
+function abrirModalRecibo(titulo, origenId) {
+  const origen = document.getElementById(origenId);
+  if (!origen) return;
+  document.getElementById('modal-recibo-titulo').textContent = titulo;
+  document.getElementById('modal-recibo-contenido').innerHTML = origen.querySelector('.rep-detalle').innerHTML;
+  document.getElementById('modal-recibo-overlay').classList.add('abierto');
 }
-
-// ---------- Ver detalle de envío (Afiliados cotizantes) ----------
-function verEnvio(id) {
-  const fila = document.getElementById('envio-' + id);
-  if (fila) fila.style.display = fila.style.display === 'none' ? 'table-row' : 'none';
+function cerrarModalRecibo() {
+  document.getElementById('modal-recibo-overlay').classList.remove('abierto');
+}
+function verReporte(id, cuil, periodo) {
+  abrirModalRecibo('Recibo de ' + cuil + ' — ' + periodo, 'rep-' + id);
+}
+function verEnvio(id, cuil, periodo) {
+  abrirModalRecibo('Recibo de ' + cuil + ' — ' + periodo, 'envio-' + id);
 }
 
 // ---------- Editar trabajador ----------
@@ -875,6 +941,15 @@ function cancelarConcepto() {
 }
 
 // ---------- Noticias ----------
+function marcarDestino(containerId, ids) {
+  const cont = document.getElementById(containerId);
+  if (!cont) return;
+  const idsStr = (ids || []).map(String);
+  cont.querySelectorAll('input[type=checkbox]').forEach(chk => {
+    chk.checked = idsStr.includes(chk.value);
+  });
+}
+
 function editarNoticia(n) {
   document.getElementById('not-id').value = n.id;
   document.getElementById('not-titulo').value = n.titulo || '';
@@ -882,6 +957,7 @@ function editarNoticia(n) {
   document.getElementById('not-texto').value = n.texto_completo || '';
   document.getElementById('not-desde').value = n.fecha_desde || '';
   document.getElementById('not-hasta').value = n.fecha_hasta || '';
+  marcarDestino('not-destino', n.destino_seccionales);
   document.getElementById('noticias-titulo').textContent = 'Editar noticia: ' + n.titulo;
   document.getElementById('form-noticia').querySelector('button[type=submit]').textContent = 'Guardar cambios';
   document.getElementById('not-cancel').classList.remove('oculto');
@@ -902,6 +978,7 @@ function editarBeneficio(b) {
   document.getElementById('ben-link').value = b.link || '';
   document.getElementById('ben-desde').value = b.fecha_desde || '';
   document.getElementById('ben-hasta').value = b.fecha_hasta || '';
+  marcarDestino('ben-destino', b.destino_seccionales);
   document.getElementById('beneficios-titulo').textContent = 'Editar beneficio: ' + b.rubro;
   document.getElementById('form-beneficio').querySelector('button[type=submit]').textContent = 'Guardar cambios';
   document.getElementById('ben-cancel').classList.remove('oculto');
