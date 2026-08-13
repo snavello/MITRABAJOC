@@ -38,7 +38,7 @@ import db
 import auth
 from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador,
                 CuentaTrabajador, EnvioSindicato, ReciboVerificado, ConfiguracionPlataforma, Noticia,
-                Beneficio)
+                Beneficio, Seccional)
 from extractor import extraer, extraer_aportes
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, CATEGORIAS_UNIVERSALES)
@@ -472,6 +472,8 @@ def admin(request: Request):
     # fórmula aunque ningún concepto lo tenga como codigo propio.
     genericos = [c for c in conceptos if not c.cuit_empleador]
     codigos_efectivos = {c.codigo_generico or c.codigo for c in conceptos}
+    seccionales = db.seccionales_del_sindicato(sid)
+    seccional_por_id = {sec["id"]: sec["nombre"] for sec in seccionales}
     return templates.TemplateResponse("admin.html", {
         "request": request, "sindicato": sind.nombre if sind else "",
         "marca": db.marca_sindicato(sid), "marca_plataforma": db.marca_plataforma(),
@@ -482,6 +484,7 @@ def admin(request: Request):
         "debe_cambiar": ses.get("cambiar", False),
         "noticias": db.noticias_del_sindicato(sid),
         "beneficios": db.beneficios_del_sindicato(sid),
+        "seccionales": seccionales, "seccional_por_id": seccional_por_id,
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
 
@@ -514,14 +517,18 @@ def admin_trabajador_alta(
     calle: str = Form(""), numero: str = Form(""), piso: str = Form(""),
     ciudad: str = Form(""), provincia: str = Form(""),
     telefono: str = Form(""), mail: str = Form(""),
-    vigencia_credencial: str = Form(""),
+    vigencia_credencial: str = Form(""), seccional_id: str = Form(""),
 ):
     """Alta o modificación manual de un trabajador. Obligatorios: cuil y nombre."""
     sid = exigir_sindicato(request)
     cuil_norm = _norm_cuil(cuil)
     if len(cuil_norm) != 11 or not nombre.strip():
         return RedirectResponse("/admin?err=datos#trabajadores", status_code=303)
+    sec_id = int(seccional_id) if seccional_id else None
     with db.get_session() as s:
+        if sec_id and not s.exec(select(Seccional).where(
+                Seccional.id == sec_id, Seccional.sindicato_id == sid)).first():
+            sec_id = None  # seccional ajena o inexistente: se ignora, no se rechaza el alta
         if id:  # modificación (solo si es de este sindicato)
             t = s.get(Trabajador, int(id))
             if t and t.sindicato_id == sid:
@@ -530,6 +537,7 @@ def admin_trabajador_alta(
                 t.ciudad, t.provincia = ciudad, provincia
                 t.telefono, t.mail = telefono, mail
                 t.vigencia_credencial = vigencia_credencial or None
+                t.seccional_id = sec_id
                 s.add(t)
         else:    # alta — evitar duplicado de CUIL en el mismo sindicato
             existe = s.exec(select(Trabajador).where(
@@ -539,7 +547,7 @@ def admin_trabajador_alta(
                     sindicato_id=sid, cuil=cuil_norm, nombre=nombre.strip(),
                     calle=calle, numero=numero, piso=piso, ciudad=ciudad,
                     provincia=provincia, telefono=telefono, mail=mail,
-                    vigencia_credencial=vigencia_credencial or None))
+                    vigencia_credencial=vigencia_credencial or None, seccional_id=sec_id))
         s.commit()
     return RedirectResponse("/admin#trabajadores", status_code=303)
 
@@ -658,6 +666,21 @@ def borrar_concepto(request: Request, id: int = Form(...)):
         c = s.get(Concepto, id)
         if c and c.sindicato_id == sid:
             s.delete(c)
+            s.commit()
+    return RedirectResponse("/admin#conceptos", status_code=303)
+
+
+@app.post("/admin/concepto/confirmar")
+def confirmar_concepto(request: Request, id: int = Form(...)):
+    """Saca la marca "por revisar" de un concepto sin abrir el formulario de
+    edición -- antes solo se podía limpiar como efecto secundario de editar
+    y guardar (ver abm_concepto), lo cual no era evidente en la UI."""
+    sid = exigir_sindicato(request)
+    with db.get_session() as s:
+        c = s.get(Concepto, id)
+        if c and c.sindicato_id == sid:
+            c.pendiente_revision = False
+            s.add(c)
             s.commit()
     return RedirectResponse("/admin#conceptos", status_code=303)
 
@@ -849,6 +872,42 @@ def borrar_beneficio(request: Request, id: int = Form(...)):
             s.delete(b)
             s.commit()
     return RedirectResponse("/admin#beneficios", status_code=303)
+
+
+@app.post("/admin/seccional")
+def abm_seccional(
+    request: Request,
+    id: str = Form(""), nombre: str = Form(...), direccion: str = Form(""),
+):
+    sid = exigir_sindicato(request)
+    with db.get_session() as s:
+        if id:
+            sec = s.get(Seccional, int(id))
+            if sec and sec.sindicato_id == sid:
+                sec.nombre, sec.direccion = nombre, direccion
+                s.add(sec)
+        else:
+            s.add(Seccional(sindicato_id=sid, nombre=nombre, direccion=direccion))
+        s.commit()
+    return RedirectResponse("/admin#seccionales", status_code=303)
+
+
+@app.post("/admin/seccional/borrar")
+def borrar_seccional(request: Request, id: int = Form(...)):
+    """Al borrar una seccional, los trabajadores que la tenían asignada
+    quedan sin seccional (es un dato opcional, no se bloquea el borrado)."""
+    sid = exigir_sindicato(request)
+    with db.get_session() as s:
+        sec = s.get(Seccional, id)
+        if sec and sec.sindicato_id == sid:
+            trabajadores = s.exec(select(Trabajador).where(
+                Trabajador.sindicato_id == sid, Trabajador.seccional_id == id)).all()
+            for t in trabajadores:
+                t.seccional_id = None
+                s.add(t)
+            s.delete(sec)
+            s.commit()
+    return RedirectResponse("/admin#seccionales", status_code=303)
 
 
 # ---------- Aprendizaje: subir N recibos y proponer conceptos nuevos ----------

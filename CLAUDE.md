@@ -164,11 +164,31 @@ opcional, vigencia por fecha_desde/fecha_hasta (las dos obligatorias, período
 cerrado), una sola imagen (a diferencia de Noticia que admite 2 — acá es la
 que se expone en el carrusel). El admin lo carga desde `/admin` → pestaña
 Beneficios. El trabajador ve los vigentes como carrusel en la portada
-(`.carrusel-wrap` en `static/marca.css`): avanza solo cada 5s, con flechas
-manuales a los costados si hay más de uno vigente; el alto está topeado a
-88px (igual que las tarjetas de acceso) porque es secundario. Un click abre
+(`.carrusel-wrap`/`.carrusel-track` en `static/marca.css`): track flex con
+`transform: translateX(...)` y transición CSS (desliza, no crossfade),
+avanza solo cada 5s, con flechas manuales a los costados si hay más de uno
+vigente; el alto está topeado a 88px (igual que las tarjetas de acceso)
+porque es secundario, el ancho está topeado a 480px y centrado (si no, en
+desktop se estira a lo ancho de toda la pantalla y queda muy chato). Las
+imágenes usan `object-fit: contain` (se ven enteras, con relleno `--sup-2`
+a los costados si no calzan) en vez de `cover` (recortaba). Un click abre
 un overlay con el detalle completo vía `GET /api/beneficio/{id}` (aísla por
 sindicato activo, mismo criterio que noticias).
+
+## Seccionales del sindicato
+Modelo `Seccional` (db.py): sindicato_id, nombre, dirección. CRUD simple en
+`/admin` → pestaña Seccionales (sin vigencia, sin imágenes — es solo un dato
+descriptivo). `Trabajador.seccional_id` (FK opcional, nullable): se elige de
+un `<select>` en el alta/edición manual de trabajador; NO está en el alta
+masiva. Borrar una seccional no está bloqueado por tener trabajadores
+asignados — los deja con `seccional_id = NULL` (`borrar_seccional` en
+main.py nullifica antes de borrar). No afecta validación de recibos.
+
+## Confirmar concepto pendiente de revisión
+`Concepto.pendiente_revision` ya se limpiaba como efecto secundario de
+editar y guardar un concepto (no era evidente en la UI). Ahora también hay
+un botón "Confirmar" dedicado (`POST /admin/concepto/confirmar`) que solo
+saca la marca, sin tocar los demás datos del concepto.
 
 ## Versionado
 `version.py`: constantes `VERSION_TRABAJADOR`/`VERSION_ADMIN`/

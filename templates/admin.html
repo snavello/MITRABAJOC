@@ -203,6 +203,7 @@
     <button class="tab-btn" data-panel="cotizantes">Afiliados cotizantes</button>
     <button class="tab-btn" data-panel="noticias">Noticias</button>
     <button class="tab-btn" data-panel="beneficios">Beneficios</button>
+    <button class="tab-btn" data-panel="seccionales">Seccionales</button>
   </nav>
 
   <div class="panel activo" id="panel-reportes">
@@ -334,7 +335,8 @@
   {% set pendientes = conceptos | selectattr('pendiente_revision') | list %}
   {% if pendientes %}
   <div class="aviso"><strong>{{ pendientes|length }} concepto(s) por revisar.</strong>
-    Se detectaron en recibos y están marcados en amarillo. Editalos para confirmar tipo y si son remunerativos.</div>
+    Se detectaron en recibos y están marcados en amarillo. Revisá tipo y si son remunerativos y usá
+    "Confirmar" para sacarles la marca, o "Editar" si además hay que corregir algo.</div>
   {% endif %}
   <p class="muted" style="font-size:12.5px;">
     <span class="ref-cuadro" style="background:#f2f8fb;"></span> ingreso
@@ -361,6 +363,12 @@
       <td class="muted">{% if c.cuit_empleador %}<code>{{ c.cuit_empleador }}</code>{% if c.codigo_generico %} → <code>{{ c.codigo_generico }}</code>{% endif %}{% else %}genérico{% if c.codigo_generico %} → <code>{{ c.codigo_generico }}</code>{% endif %}{% endif %}</td>
       <td class="muted">{{ c.alias|join(', ') }}</td>
       <td class="acc">
+        {% if c.pendiente_revision %}
+        <form method="post" action="/admin/concepto/confirmar" style="display:inline;">
+          <input type="hidden" name="id" value="{{ c.id }}">
+          <button class="mini" type="submit" title="Marca el concepto como revisado, sin cambiar sus datos">Confirmar</button>
+        </form>
+        {% endif %}
         <button class="sec mini" type="button"
           onclick='editarConcepto({{ c.id }}, {{ c.codigo|tojson }}, {{ c.nombre|tojson }}, {{ c.tipo|tojson }}, {{ c.remunerativo|tojson }}, {{ (c.alias or [])|join(", ")|tojson }}, {{ c.categoria_sindical|tojson }}, {{ (c.cuit_empleador or "")|tojson }}, {{ (c.codigo_generico or "")|tojson }})'>Editar</button>
         <form method="post" action="/admin/concepto/borrar" onsubmit="return confirm('¿Borrar este concepto?')">
@@ -411,12 +419,13 @@
       <span class="f-cant" id="f-trab-cant"></span>
     </div>
     <table>
-      <tr><th>CUIL</th><th>Nombre</th><th>Ubicación</th><th>Estado</th><th>Credencial</th><th></th></tr>
+      <tr><th>CUIL</th><th>Nombre</th><th>Ubicación</th><th>Seccional</th><th>Estado</th><th>Credencial</th><th></th></tr>
       {% for t in trabajadores %}
       <tr class="fila-trabajador" data-cuil="{{ t.cuil }}" data-nombre="{{ t.nombre }}" {% if not t.activo %}style="opacity:.5;"{% endif %}>
         <td><code>{{ t.cuil }}</code></td>
         <td>{{ t.nombre or '—' }}</td>
         <td class="muted">{{ t.ciudad }}{% if t.provincia %}, {{ t.provincia }}{% endif %}</td>
+        <td class="muted">{{ seccional_por_id.get(t.seccional_id, '—') }}</td>
         <td>
           {% if not t.activo %}<span class="tag" style="background:#eee;color:#888;">baja</span>
           {% elif t.registrado %}<span class="tag tag-si">registrado</span>
@@ -429,7 +438,7 @@
         </td>
         <td style="white-space:nowrap; text-align:right;">
           <button type="button" class="mini"
-            onclick='editarTrab({{ {"id":t.id,"cuil":t.cuil,"nombre":t.nombre,"calle":t.calle,"numero":t.numero,"piso":t.piso,"ciudad":t.ciudad,"provincia":t.provincia,"telefono":t.telefono,"mail":t.mail,"vigencia_credencial":t.vigencia_credencial} | tojson }})'>Editar</button>
+            onclick='editarTrab({{ {"id":t.id,"cuil":t.cuil,"nombre":t.nombre,"calle":t.calle,"numero":t.numero,"piso":t.piso,"ciudad":t.ciudad,"provincia":t.provincia,"telefono":t.telefono,"mail":t.mail,"vigencia_credencial":t.vigencia_credencial,"seccional_id":t.seccional_id} | tojson }})'>Editar</button>
           <form method="post" action="/admin/trabajador/generar-credencial" style="display:inline;" onsubmit="return confirm('{% if t.codigo_credencial %}¿Regenerar el código de credencial? El anterior deja de ser válido.{% else %}¿Generar el código de credencial?{% endif %}');">
             <input type="hidden" name="id" value="{{ t.id }}"><button class="mini">{% if t.codigo_credencial %}Regenerar{% else %}Generar{% endif %} credencial</button>
           </form>
@@ -445,7 +454,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="6" class="muted">No hay trabajadores cargados. Usá "Alta manual" o "Alta masiva".</td></tr>
+      <tr><td colspan="7" class="muted">No hay trabajadores cargados. Usá "Alta manual" o "Alta masiva".</td></tr>
       {% endfor %}
     </table>
   </div>
@@ -470,6 +479,12 @@
         <div class="campo"><label>Teléfono</label><input name="telefono" id="trab-telefono"></div>
         <div class="campo"><label>Mail</label><input name="mail" id="trab-mail" type="email"></div>
         <div class="campo"><label>Vigencia de credencial</label><input name="vigencia_credencial" id="trab-vigencia" type="date"></div>
+        <div class="campo"><label>Seccional</label>
+          <select name="seccional_id" id="trab-seccional">
+            <option value="">Sin asignar</option>
+            {% for sec in seccionales %}<option value="{{ sec.id }}">{{ sec.nombre }}</option>{% endfor %}
+          </select>
+        </div>
       </div>
       <div style="margin-top:12px;">
         <button type="submit" id="trab-submit">Agregar trabajador</button>
@@ -630,6 +645,43 @@
     {% endfor %}
   </table>
   </div>
+
+  <div class="panel" id="panel-seccionales">
+  <!-- ============ SECCIONALES ============ -->
+  <h2 id="seccionales-titulo">Dar de alta una seccional</h2>
+  <p class="muted">Las seccionales quedan disponibles para elegir en el alta/edición de trabajadores. Es un dato opcional y descriptivo, no afecta la validación de recibos.</p>
+  <div class="card">
+    <form method="post" action="/admin/seccional" id="form-seccional">
+      <input type="hidden" name="id" id="sec-id">
+      <div class="grid2">
+        <div class="campo full"><label>Nombre *</label><input name="nombre" id="sec-nombre" required></div>
+        <div class="campo full"><label>Dirección</label><input name="direccion" id="sec-direccion"></div>
+      </div>
+      <button type="submit">Guardar seccional</button>
+      <button type="button" class="sec oculto" id="sec-cancel" onclick="cancelarSeccional()">Cancelar edición</button>
+    </form>
+  </div>
+
+  <h2>Seccionales cargadas ({{ seccionales|length }})</h2>
+  <table>
+    <tr><th>Nombre</th><th>Dirección</th><th></th></tr>
+    {% for sec in seccionales %}
+    <tr>
+      <td>{{ sec.nombre }}</td>
+      <td class="muted">{{ sec.direccion or '—' }}</td>
+      <td style="white-space:nowrap; text-align:right;">
+        <button type="button" class="mini" onclick='editarSeccional({{ sec | tojson }})'>Editar</button>
+        <form method="post" action="/admin/seccional/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar esta seccional? Los trabajadores que la tengan asignada quedan sin seccional.')">
+          <input type="hidden" name="id" value="{{ sec.id }}">
+          <button class="peligro mini" type="submit">Borrar</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3" class="muted">Todavía no cargaste ninguna seccional.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
 </div>
 
 <div style="text-align:center; padding:0 0 20px;">
@@ -766,6 +818,7 @@ function editarTrab(t) {
   document.getElementById('trab-telefono').value = t.telefono || '';
   document.getElementById('trab-mail').value = t.mail || '';
   document.getElementById('trab-vigencia').value = t.vigencia_credencial || '';
+  document.getElementById('trab-seccional').value = t.seccional_id || '';
   document.getElementById('trab-submit').textContent = 'Guardar cambios';
   document.getElementById('trab-cancelar').style.display = 'inline-block';
   // pasar a la sub-pestaña de alta manual
@@ -860,6 +913,23 @@ function cancelarBeneficio() {
   document.getElementById('beneficios-titulo').textContent = 'Dar de alta un beneficio';
   document.getElementById('form-beneficio').querySelector('button[type=submit]').textContent = 'Guardar beneficio';
   document.getElementById('ben-cancel').classList.add('oculto');
+}
+
+function editarSeccional(sec) {
+  document.getElementById('sec-id').value = sec.id;
+  document.getElementById('sec-nombre').value = sec.nombre || '';
+  document.getElementById('sec-direccion').value = sec.direccion || '';
+  document.getElementById('seccionales-titulo').textContent = 'Editar seccional: ' + sec.nombre;
+  document.getElementById('form-seccional').querySelector('button[type=submit]').textContent = 'Guardar cambios';
+  document.getElementById('sec-cancel').classList.remove('oculto');
+  document.getElementById('form-seccional').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function cancelarSeccional() {
+  document.getElementById('form-seccional').reset();
+  document.getElementById('sec-id').value = '';
+  document.getElementById('seccionales-titulo').textContent = 'Dar de alta una seccional';
+  document.getElementById('form-seccional').querySelector('button[type=submit]').textContent = 'Guardar seccional';
+  document.getElementById('sec-cancel').classList.add('oculto');
 }
 
 // ---------- Aprendizaje ----------

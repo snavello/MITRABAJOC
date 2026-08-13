@@ -103,12 +103,14 @@
     {% if beneficios %}
     <div class="carrusel-wrap">
       <div class="carrusel" id="carrusel-beneficios">
-        {% for b in beneficios %}
-        <button type="button" class="carrusel-slide{% if loop.first %} activa{% endif %}" onclick="abrirBeneficio({{ b.id }})">
-          {% if b.tiene_imagen %}<img src="/beneficio-imagen/{{ b.id }}" alt="">{% endif %}
-          <span class="carrusel-rubro">{{ b.rubro }}</span>
-        </button>
-        {% endfor %}
+        <div class="carrusel-track" id="carrusel-track">
+          {% for b in beneficios %}
+          <button type="button" class="carrusel-slide" onclick="abrirBeneficio({{ b.id }})">
+            {% if b.tiene_imagen %}<img src="/beneficio-imagen/{{ b.id }}" alt="">{% endif %}
+            <span class="carrusel-rubro">{{ b.rubro }}</span>
+          </button>
+          {% endfor %}
+        </div>
       </div>
       {% if beneficios|length > 1 %}
       <button type="button" class="carrusel-flecha carrusel-izq" onclick="carruselMover(-1)" aria-label="Anterior">‹</button>
@@ -202,16 +204,19 @@ function cerrarAcerca() { document.getElementById('overlay-acerca').classList.re
 let carruselIdx = 0;
 let carruselTimer = null;
 function carruselMover(delta) {
-  const slides = document.querySelectorAll('#carrusel-beneficios .carrusel-slide');
+  const track = document.getElementById('carrusel-track');
+  if (!track) return;
+  const slides = track.querySelectorAll('.carrusel-slide');
   if (!slides.length) return;
-  slides[carruselIdx].classList.remove('activa');
   carruselIdx = (carruselIdx + delta + slides.length) % slides.length;
-  slides[carruselIdx].classList.add('activa');
+  track.style.transform = 'translateX(-' + (carruselIdx * 100) + '%)';
   reiniciarAutoplayCarrusel();
 }
 function reiniciarAutoplayCarrusel() {
   clearInterval(carruselTimer);
-  const slides = document.querySelectorAll('#carrusel-beneficios .carrusel-slide');
+  const track = document.getElementById('carrusel-track');
+  if (!track) return;
+  const slides = track.querySelectorAll('.carrusel-slide');
   if (slides.length > 1) carruselTimer = setInterval(() => carruselMover(1), 5000);
 }
 reiniciarAutoplayCarrusel();

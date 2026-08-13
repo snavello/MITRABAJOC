@@ -77,6 +77,16 @@ class Sindicato(SQLModel, table=True):
     activo: bool = True
 
 
+class Seccional(SQLModel, table=True):
+    """Delegación/seccional de un sindicato (ej. por zona geográfica). El
+    admin las da de alta y las asigna a trabajadores en el alta/edición --
+    es un dato descriptivo, no afecta validación de recibos ni aislamiento."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    nombre: str
+    direccion: str = ""
+
+
 class UsuarioSindicato(SQLModel, table=True):
     """Administrador de un sindicato. Lo da de alta el admin de plataforma."""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -128,6 +138,9 @@ class Trabajador(SQLModel, table=True):
     # del trabajador. Fecha como string "AAAA-MM-DD" (formato de <input
     # type=date>), igual que se recibe del formulario.
     vigencia_credencial: Optional[str] = Field(default=None)
+    # Seccional del sindicato a la que pertenece (opcional -- no todos los
+    # sindicatos cargan seccionales, y un trabajador puede quedar sin asignar).
+    seccional_id: Optional[int] = Field(default=None, foreign_key="seccional.id", index=True)
     # Último semáforo de ARCA calculado (POST /api/aportes) -- antes se
     # perdía apenas se navegaba o se recargaba la página, porque nunca se
     # guardaba. Es el mismo dict que devuelve semaforo.calcular_semaforo().
@@ -752,6 +765,15 @@ def beneficio_por_id(beneficio_id: int) -> Optional[dict]:
     with Session(engine) as s:
         b = s.get(Beneficio, beneficio_id)
         return _beneficio_a_dict(b) if b else None
+
+
+def seccionales_del_sindicato(sindicato_id: int) -> list:
+    """Todas las seccionales del sindicato, para el CRUD de admin y el
+    <select> del alta/edición de trabajador."""
+    with Session(engine) as s:
+        seccionales = s.exec(select(Seccional).where(
+            Seccional.sindicato_id == sindicato_id).order_by(Seccional.nombre)).all()
+        return [{"id": sec.id, "nombre": sec.nombre, "direccion": sec.direccion} for sec in seccionales]
 
 
 def registrar_uso_ia(sindicato_id: Optional[int], cuil: str, tipo: str,
