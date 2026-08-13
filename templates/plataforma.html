@@ -93,6 +93,7 @@
     <button class="ptab" data-pp="marca">Marca de la plataforma</button>
     <button class="ptab" data-pp="config">Configuración legal</button>
     <button class="ptab" data-pp="usoia">Uso de IA</button>
+    <button class="ptab" data-pp="sospechosos">Recibos con alerta</button>
   </nav>
 
   <div class="ppanel activo" id="pp-lista">
@@ -350,6 +351,23 @@
     </tr>
     {% else %}
     <tr><td colspan="7" class="muted">Todavía no hay consumo registrado.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+
+  <div class="ppanel" id="pp-sospechosos">
+  <h2>Recibos con alerta de posible adulteración ({{ recibos_sospechosos|length }})</h2>
+  <p class="muted" style="margin-bottom:14px; max-width:640px;">La IA marca un recibo acá cuando ve, con alto grado de certeza, señales de edición en los totales, el CUIL del trabajador, el CUIT del empleador o alguna fecha. No bloquea al trabajador — solo guarda una copia del archivo original para revisión. Todavía es una función a modo de prueba.</p>
+  <table>
+    <tr><th>Fecha</th><th>Sindicato</th><th>CUIL</th><th>Período</th><th>Motivo</th><th></th></tr>
+    {% for rs in recibos_sospechosos %}
+    <tr>
+      <td>{{ rs.fecha }}</td><td>{{ rs.sindicato }}</td><td>{{ rs.cuil }}</td>
+      <td>{{ rs.periodo or '—' }}</td><td class="muted">{{ rs.motivo or '—' }}</td>
+      <td style="text-align:right;"><button type="button" class="mini" onclick="window.open('/plataforma/recibos-sospechosos/{{ rs.id }}/archivo', '_blank')">Ver archivo</button></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="muted">No hay recibos marcados todavía.</td></tr>
     {% endfor %}
   </table>
   </div>

@@ -38,7 +38,7 @@ import db
 import auth
 from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador,
                 CuentaTrabajador, EnvioSindicato, ReciboVerificado, ConfiguracionPlataforma, Noticia,
-                Beneficio, Seccional)
+                Beneficio, Seccional, ReciboSospechoso)
 from extractor import extraer, extraer_aportes
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, CATEGORIAS_UNIVERSALES)
@@ -214,11 +214,21 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
                          uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"])
     if recibo.get("confianza") == "baja":
         raise HTTPException(422, "La imagen no es clara. Sacá la foto de nuevo con buena luz.")
+    # Alerta de posible adulteración (totales, CUIL, CUIT del empleador o
+    # fechas): no bloquea el proceso, solo avisa y guarda una copia del
+    # archivo original para que la plataforma la pueda revisar.
+    alerta = recibo.get("alerta_adulteracion") or {}
+    if alerta.get("detectada"):
+        db.registrar_recibo_sospechoso(
+            sid or None, request.cookies.get("cuil_trab", ""), recibo.get("periodo") or "",
+            alerta.get("motivo") or "", contenido, archivo.content_type, archivo.filename or "",
+        )
     cuit_empleador = _norm_cuil((recibo.get("empleador") or {}).get("cuit"))
     nuevos = detectar_nuevos(db.conceptos_como_dicts(sid), recibo["lineas"], cuit_empleador)
     return {
         "recibo": recibo, "conceptos_nuevos": nuevos,
         "advertencia_deposito": advertencia_ultimo_deposito(recibo),
+        "alerta_adulteracion": alerta if alerta.get("detectada") else None,
     }
 
 
@@ -1077,8 +1087,26 @@ def plataforma(request: Request):
         "uso_ia": uso_ia,
         "sindicatos_uso_ia": sorted({u["sindicato"] for u in uso_ia}),
         "modelos_uso_ia": sorted({u["modelo"] for u in uso_ia}),
+        "recibos_sospechosos": db.recibos_sospechosos_listado(),
         "version": VERSION_PLATAFORMA, "fecha_version": FECHA_VERSION,
     })
+
+
+@app.get("/plataforma/recibos-sospechosos/{recibo_id}/archivo")
+def servir_recibo_sospechoso(recibo_id: int, request: Request):
+    """Archivo original (imagen o PDF) de un recibo marcado con posible
+    adulteración -- solo lo puede ver el admin de plataforma."""
+    ses = sesion_actual(request)
+    if not ses or ses.get("rol") != "plataforma":
+        raise HTTPException(403, "No autorizado")
+    with db.get_session() as s:
+        r = s.get(ReciboSospechoso, recibo_id)
+        if not r:
+            raise HTTPException(404, "No encontrado")
+        return BinResponse(
+            content=r.archivo_datos, media_type=r.archivo_mime or "application/octet-stream",
+            headers={"Cache-Control": "private, no-cache"},
+        )
 
 
 @app.post("/plataforma/login")

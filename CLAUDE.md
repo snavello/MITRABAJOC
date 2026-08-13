@@ -205,6 +205,29 @@ editar y guardar un concepto (no era evidente en la UI). Ahora también hay
 un botón "Confirmar" dedicado (`POST /admin/concepto/confirmar`) que solo
 saca la marca, sin tocar los demás datos del concepto.
 
+## Alerta de posible adulteración en recibos
+La IA que lee el recibo (`extractor.extraer()`) también evalúa, con alto
+grado de certeza únicamente, si hay señales de edición/adulteración en 4
+lugares puntuales: los totales, el CUIL del trabajador, el CUIT del
+empleador y cualquier fecha — NO revisa el resto del recibo. Devuelve
+`alerta_adulteracion: {"detectada": bool, "motivo": str|null}` en el JSON.
+Si `detectada` es true, `/api/leer` (main.py) **no bloquea el proceso** —
+el trabajador sigue normalmente — pero: (1) devuelve la alerta en la
+respuesta para que `trabajador.html` muestre un aviso no bloqueante
+("Algunos datos podrían estar alterados...", reusa `.alerta-legal`) y (2)
+guarda el archivo original (imagen o PDF, bytes en la base, mismo patrón
+que el logo del sindicato) en la tabla nueva `ReciboSospechoso` —
+`db.registrar_recibo_sospechoso()`. Es a modo de prueba: el trabajador
+todavía NO puede enviarlo al sindicato desde acá (queda para una etapa
+siguiente, por su propia voluntad). Solo el admin de **plataforma** (no el
+del sindicato) puede ver esos archivos, en una pestaña nueva "Recibos con
+alerta" en `/plataforma` — listado (`db.recibos_sospechosos_listado()`) +
+`GET /plataforma/recibos-sospechosos/{id}/archivo` para abrir el archivo
+(chequea `rol == "plataforma"`, 403 para cualquier otro). El control NO
+aplica al comprobante de aportes de ARCA (`extraer_aportes()`), a
+propósito: es una captura de un sitio oficial, no un documento que la
+empresa emite y podría alterar.
+
 ## Detalle de recibo en modal (no inline)
 Los 3 listados que mostraban el detalle de un recibo expandiendo una fila
 DEBAJO en la misma tabla (poco práctico) ahora abren un modal centrado:
@@ -232,7 +255,9 @@ tiene que ir con comillas simples (`onclick='...'`).
 `version.py`: constantes `VERSION_TRABAJADOR`/`VERSION_ADMIN`/
 `VERSION_PLATAFORMA` (arrancan las tres en "0.01.00") + `FECHA_VERSION`. Se
 actualizan a mano en cada deploy — el número lo indica el usuario en el
-prompt de cambio, no hay automatismo. Cada pantalla de inicio (portada,
+prompt de cambio, no hay automatismo. Regla para incrementar `release.patch`:
+solo arreglos → +1 al patch; arreglos + funcionalidad nueva en el mismo
+deploy → +1 en los dos (ej. 0.02.01 → 0.03.01). Cada pantalla de inicio (portada,
 `/admin`, `/plataforma`) tiene un link discreto "Acerca de" al pie que abre
 un overlay mostrando la versión de ESA app puntual (no las tres) + fecha del
 despliegue.

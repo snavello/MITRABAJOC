@@ -49,7 +49,8 @@ ESQUEMA = """Extraé los datos con este esquema exacto:
   "costo_laboral_total": null,
   "ultimo_deposito": null,
   "confianza": "alta",
-  "observaciones": null
+  "observaciones": null,
+  "alerta_adulteracion": {"detectada": false, "motivo": null}
 }
 
 Reglas para los campos nuevos:
@@ -87,7 +88,21 @@ Reglas para los campos nuevos:
   nuevo). null en formato clásico.
 - "ultimo_deposito": {"fecha": null, "periodo": null, "banco": null} con la fecha de
   pago de aportes si el recibo la imprime (por ejemplo el campo "F. Pago aportes");
-  si no figura, dejalo en null. No depende del formato ni de si aparecen contribuciones."""
+  si no figura, dejalo en null. No depende del formato ni de si aparecen contribuciones.
+- "alerta_adulteracion": marcá "detectada": true SOLO si ves señales de edición o
+  adulteración física con ALTO grado de certeza (números tachados, corregidos,
+  sobreescritos, superpuestos, con typeface/alineación/tamaño inconsistente con el
+  resto del documento, borrones, recortes o pegados visibles, etc.) en alguno de
+  estos 4 lugares puntuales -- NO revises el resto del recibo:
+    1. Los totales (remuneraciones, descuentos, neto).
+    2. El CUIL del empleado.
+    3. El CUIT del empleador.
+    4. Cualquier fecha (período, fecha de pago, fecha de ingreso).
+  Si tenés cualquier duda razonable (mala calidad de foto, compresión, reflejo,
+  fuente rara pero pareja) NO la marques -- es preferible un falso negativo a
+  alarmar sin certeza. Si "detectada" es true, "motivo" es una frase corta y
+  concreta de qué campo y qué se ve raro (ej: "el neto tiene un dígito con trazo y
+  tamaño distinto al resto del importe"). Si es false, "motivo" queda null."""
 
 
 def _imagen_desde_pdf(contenido: bytes) -> tuple[str, str]:

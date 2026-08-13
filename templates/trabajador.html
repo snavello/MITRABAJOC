@@ -682,7 +682,12 @@ function fmtPeriodo(p) {
 function renderPreview(d) {
   const r = d.recibo;
   const emp = r.empleado || {}, empresa = r.empleador || {};
-  let h = `<div class="card">`;
+  let h = '';
+  if (d.alerta_adulteracion) {
+    h += `<div class="alerta-legal"><b>Atención:</b> algunos datos podrían estar alterados.
+      Podés seguir igual — guardamos una copia del archivo para revisión.</div>`;
+  }
+  h += `<div class="card">`;
   if (r.formato === 'nuevo') h += badgeReforma();
   h += `<h2>Datos del recibo</h2><div class="datos">`;
   h += dato('Empleado', emp.apellido_nombre);

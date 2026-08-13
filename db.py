@@ -317,6 +317,25 @@ class ReciboVerificado(SQLModel, table=True):
     detalle: dict = Field(default={}, sa_column=Column(JSON))
 
 
+class ReciboSospechoso(SQLModel, table=True):
+    """Recibo que la IA marcó con alto grado de certeza de datos posiblemente
+    adulterados (en totales, CUIL del trabajador, CUIT del empleador o
+    fechas) al leerlo en /api/leer. Se guarda el archivo original (imagen o
+    PDF, mismo patrón bytes-en-la-base que el logo del sindicato) para que
+    la plataforma lo pueda revisar -- a modo de prueba, todavía no se envía
+    al sindicato (eso queda para una etapa siguiente, por voluntad del
+    trabajador)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: Optional[int] = Field(default=None, foreign_key="sindicato.id", index=True)
+    cuil: str = Field(index=True)
+    periodo: str = ""
+    fecha: str = ""       # fecha/hora de la detección ("AAAA-MM-DD HH:MM")
+    motivo: str = ""      # explicación corta que dio la IA
+    archivo_datos: bytes
+    archivo_mime: str = ""
+    archivo_nombre: str = ""
+
+
 # ---------- Inicialización ----------
 def crear_tablas():
     SQLModel.metadata.create_all(engine)
@@ -832,4 +851,34 @@ def uso_ia_listado() -> list:
             "sindicato_id": f.sindicato_id, "cuil": f.cuil, "tipo": f.tipo,
             "modelo": f.modelo, "tokens_entrada": f.tokens_entrada,
             "tokens_salida": f.tokens_salida, "fecha": f.fecha,
+        } for f in filas]
+
+
+def registrar_recibo_sospechoso(sindicato_id: Optional[int], cuil: str, periodo: str,
+                                 motivo: str, archivo_datos: bytes, archivo_mime: str,
+                                 archivo_nombre: str) -> None:
+    """Guarda el recibo (imagen o PDF) que la IA marcó con alto grado de
+    certeza de datos posiblemente adulterados, para que la plataforma lo
+    pueda revisar. sindicato_id puede ser None si todavía no se resolvió
+    (no bloquea la detección)."""
+    with Session(engine) as s:
+        s.add(ReciboSospechoso(
+            sindicato_id=sindicato_id or None, cuil=cuil, periodo=periodo or "", motivo=motivo or "",
+            fecha=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            archivo_datos=archivo_datos, archivo_mime=archivo_mime or "",
+            archivo_nombre=archivo_nombre or "",
+        ))
+        s.commit()
+
+
+def recibos_sospechosos_listado() -> list:
+    """Todos los recibos marcados como posiblemente adulterados, de TODOS
+    los sindicatos, más reciente primero -- para el panel de plataforma."""
+    with Session(engine) as s:
+        filas = s.exec(select(ReciboSospechoso).order_by(ReciboSospechoso.id.desc())).all()
+        nombres = {sind.id: sind.nombre for sind in s.exec(select(Sindicato)).all()}
+        return [{
+            "id": f.id, "sindicato": nombres.get(f.sindicato_id, "—"),
+            "sindicato_id": f.sindicato_id, "cuil": f.cuil, "periodo": f.periodo,
+            "motivo": f.motivo, "fecha": f.fecha, "archivo_nombre": f.archivo_nombre,
         } for f in filas]

@@ -110,7 +110,13 @@
   .subtab.activa { background:var(--marca-secundario); color:#fff; border-color:var(--marca-secundario); }
   .subpanel { display:none; }
   .subpanel.activo { display:block; }
-  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .card { background:#fff; border:1px solid var(--linea); border-radius:10px; padding:18px 20px; margin-bottom:20px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px 16px; }
+  .grid2 .campo.full { grid-column:1 / -1; }
+  .campo { display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .campo label { font-size:12.5px; color:var(--gris); font-weight:500; }
+  .campo input, .campo select, .campo textarea { width:100%; }
+  .card > button[type=submit], .card > button.sec { margin-top:6px; }
   .form-trab .campo { display:flex; flex-direction:column; gap:4px; }
   .form-trab label { font-size:12.5px; color:var(--gris); }
   .form-trab input, .form-trab select { padding:9px 11px; border:1px solid #ccc; border-radius:7px; font-size:14px; font-family:inherit; }
@@ -179,8 +185,9 @@
                 border:1px solid rgba(0,0,0,.12); vertical-align:-1px; margin-right:3px; }
   form.linea { display:flex; gap:7px; flex-wrap:wrap; align-items:center; margin-top:12px;
                background:#fff; border:1px solid var(--linea); border-radius:8px; padding:12px; }
-  input, select { padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:13.5px; font-family:inherit; }
-  input:focus, select:focus { outline:2px solid #b9d6ce; border-color:var(--agua); }
+  input, select, textarea { padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:13.5px; font-family:inherit; }
+  textarea { resize:vertical; }
+  input:focus, select:focus, textarea:focus { outline:2px solid #b9d6ce; border-color:var(--agua); }
   button { padding:8px 15px; background:var(--tinta); color:#fff; border:none; border-radius:6px;
            cursor:pointer; font-size:13.5px; font-weight:500; font-family:inherit; }
   button:hover { opacity:.92; }
