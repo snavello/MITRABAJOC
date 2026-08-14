@@ -111,10 +111,14 @@ Migración a Postgres COMPLETA y desplegada en Render, mergeada a main. Verifica
 en producción: 3 logins, aislamiento, pluriempleo, 4 pestañas, alta/edición de
 sindicato, logos en base (con fix de cache aplicado). Disco persistente eliminado.
 
-Rediseño de interfaz EN CURSO en la rama `rediseno-ui` (no mergeada a main
-todavía): portada nueva + sistema de 4 colores. Ver sección siguiente.
+Rediseño de interfaz COMPLETO y mergeado a main: portada nueva + sistema de 4
+colores. Ver sección siguiente.
 
-## Rediseño de interfaz (rama `rediseno-ui`)
+Sistema de módulos habilitables (Fase 1 de "Módulos + Notificaciones +
+Trámites") COMPLETO y en main. Ver sección dedicada más abajo. Fases 2
+(Notificaciones) y 3 (Trámites) del mismo plan, pendientes.
+
+## Rediseño de interfaz
 Sistema de diseño nuevo (`.claude/skills/diseno-mi-trabajo/SKILL.md`,
 `static/marca.css`): portada del trabajador oscura, todo lo demás claro con
 encabezado oscuro. 4 colores por sindicato en vez de 3 (ver "Decisiones tomadas").
@@ -136,6 +140,41 @@ encabezado oscuro. 4 colores por sindicato en vez de 3 (ver "Decisiones tomadas"
 - Sin tocar: `validador.py`, `semaforo.py`, ninguna lógica de cálculo — el
   rediseño es 100% presentación + la columna `color_base`.
 
+## Módulos habilitables por sindicato (Fase 1 de "Módulos + Notificaciones + Trámites")
+El admin de **plataforma** elige, por sindicato, qué funcionalidades tiene
+habilitadas — pensado para modelos comerciales distintos (no todos los
+sindicatos van a adoptar todo). Catálogo fijo en `modulos.py` (`MODULOS`
+dict + `MODULOS_INICIALES`, los 6 que ya existían antes de este sistema:
+recibos, aportes, credencial, capacitacion, noticias, beneficios — más
+`notificaciones` y `tramites`, agregados al catálogo ya mismo aunque sus
+fases todavía no están implementadas). Se guarda como
+`Sindicato.modulos_habilitados` (lista JSON, mismo patrón que
+`Concepto.alias`).
+
+- **Alta/edición de sindicato** (`/plataforma`): grupo de checkboxes
+  (`.check-modulos`/`.chk-modulo` en plataforma.html), todos los
+  `MODULOS_INICIALES` tildados por default en el alta. `editarSind()` los
+  puebla con los datos reales del sindicato.
+- **Qué controla**: en `portada.html` y en la tabbar de `trabajador.html`
+  (`/app`), cada tarjeta/pestaña se envuelve en `{% if 'clave' in modulos %}`
+  (contexto armado por `main._modulos_de(sid)`). En `admin.html`, cada
+  `tab-btn` + su `panel-*` igual — **Trabajadores y Seccionales quedan
+  SIEMPRE visibles**, no dependen de ningún módulo (son la base que usan
+  los demás). Si "recibos" está apagado, `trabajador.html` ya no asume que
+  esa es la pestaña default: el JS activa la primera pestaña habilitada que
+  encuentra en el DOM.
+- **El backend rechaza igual, no solo esconde el botón**: `main._exigir_modulo(sid, "clave")`
+  (403) al principio de las rutas de Noticias, Beneficios y Aprendizaje —
+  mismo criterio que ya usa `_destinos_validos` para seccionales ajenas.
+- **Grandfathering**: la migración (`7c7be1978d90`) hace un `UPDATE` que le
+  carga `MODULOS_INICIALES` a TODOS los sindicatos que ya existían — nadie
+  perdió nada el día del deploy. El default de Python (`Field(default=[])`)
+  es vacío a propósito: solo importa para sindicatos creados fuera del flujo
+  normal de alta (tests, scripts) — `cargar_demo.py` y los tests pasan
+  `modulos_habilitados=list(MODULOS_INICIALES)` explícito.
+- Fases 2 (Notificaciones) y 3 (Trámites) del mismo plan quedan pendientes
+  — el catálogo ya las incluye, pero sin implementación todavía.
+
 ## Pendientes (features)
 1. Capacitación — "próximamente". Falta contenido: índice de documentos y
    links de formación.
@@ -143,6 +182,8 @@ encabezado oscuro. 4 colores por sindicato en vez de 3 (ver "Decisiones tomadas"
    producción (permite cambiar la clave de cualquier usuario; está marcada con una
    advertencia visible). Es un riesgo de seguridad, sacar antes de usuarios reales.
    Se deja a propósito mientras dure la etapa de demos y pruebas (2026-08-05).
+3. Notificaciones (Fase 2) y Trámites (Fase 3) — ver plan completo guardado en
+   memoria (`project_modulos_notificaciones_tramites`).
 
 ## Noticias (sindicato → trabajador)
 Reemplaza el placeholder "próximamente" de Novedades. Modelo `Noticia`
