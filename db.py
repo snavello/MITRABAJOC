@@ -363,7 +363,7 @@ class Notificacion(SQLModel, table=True):
     criterio: str = ""             # "cuil" | "cuit_empleador" | "seccional" | "provincia"
     criterio_valores: list = Field(default=[], sa_column=Column(JSON))
     # "manual" = la compuso el admin desde /admin. "sistema" = la disparó
-    # automáticamente un cambio de trámite (Fase 3, _enviar_notificacion_sistema).
+    # automáticamente un cambio de trámite (Fase 3, main._notificar_cambio_tramite).
     origen: str = "manual"
     enviado_en: str = ""           # fecha/hora de envío ("AAAA-MM-DD HH:MM")
     cantidad_destinatarios: int = 0  # snapshot: cuántos matchearon al enviar
@@ -377,6 +377,84 @@ class NotificacionDestinatario(SQLModel, table=True):
     notificacion_id: int = Field(foreign_key="notificacion.id", index=True)
     cuil: str = Field(index=True)
     leida_en: Optional[str] = Field(default=None)
+
+
+class TipoTramite(SQLModel, table=True):
+    """Tipo de trámite/formulario que el sindicato pone a disposición del
+    trabajador (Fase 3 de Módulos + Notificaciones + Trámites), ej. "F01
+    AEFIP - Solicitud de Reintegro". Sus campos van en CampoTramite."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    titulo: str
+    codigo: str  # ej. "F01 AEFIP" -- prefijo del número de expediente
+    activo: bool = True
+    creado: str = ""
+
+
+class CampoTramite(SQLModel, table=True):
+    """Un campo del formulario dinámico de un TipoTramite. El orden decide
+    cómo se renderiza; longitud/decimales/tipos de archivo solo aplican
+    según tipo_dato (ver validación server-side en main.api_enviar_tramite)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tipo_tramite_id: int = Field(foreign_key="tipotramite.id", index=True)
+    orden: int = 0
+    etiqueta: str
+    tipo_dato: str  # "texto" | "numero" | "fecha" | "archivo"
+    longitud_maxima: Optional[int] = Field(default=None)
+    longitud_exacta: Optional[int] = Field(default=None)  # ej. CVU = 22
+    decimales: Optional[int] = Field(default=None)        # solo si tipo_dato="numero"
+    tipos_archivo_permitidos: str = ""                     # solo si tipo_dato="archivo"
+    obligatorio: bool = True
+
+
+class Tramite(SQLModel, table=True):
+    """Un trámite presentado por un trabajador contra un TipoTramite. El
+    número de expediente es correlativo por (sindicato_id, tipo_tramite_id),
+    NO se reinicia por año aunque el año quede impreso en el número."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    tipo_tramite_id: int = Field(foreign_key="tipotramite.id", index=True)
+    numero_expediente: str = Field(index=True, unique=True)  # "F01AEFIP-2026-000123"
+    cuil: str = Field(index=True)
+    estado: str = "enviado"  # enviado | en_tratamiento | respondido | espera_info | terminado
+    creado: str = ""
+    actualizado: str = ""
+
+
+class RespuestaTramite(SQLModel, table=True):
+    """Lo que cargó el trabajador para cada campo del formulario, al enviar
+    el trámite -- un CampoTramite, una fila."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tramite_id: int = Field(foreign_key="tramite.id", index=True)
+    campo_tramite_id: int = Field(foreign_key="campotramite.id", index=True)
+    valor_texto: str = ""
+    archivo_datos: Optional[bytes] = Field(default=None)
+    archivo_mime: str = ""
+    archivo_nombre: str = ""
+
+
+class NotaTramite(SQLModel, table=True):
+    """Ida y vuelta admin <-> trabajador sobre un trámite puntual, con
+    adjunto opcional de cada lado."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tramite_id: int = Field(foreign_key="tramite.id", index=True)
+    autor: str  # "admin" | "trabajador"
+    texto: str = ""
+    adjunto_datos: Optional[bytes] = Field(default=None)
+    adjunto_mime: str = ""
+    adjunto_nombre: str = ""
+    creado: str = ""
+
+
+class TramiteLog(SQLModel, table=True):
+    """Tabla de log explícita -- un evento por fila (decisión tomada sobre
+    el plan: no una vista derivada). db._log_tramite() es el único punto que
+    escribe acá, así el formato del detalle queda en un solo lugar."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tramite_id: int = Field(foreign_key="tramite.id", index=True)
+    evento: str  # "creado" | "cambio_estado" | "nota_admin" | "nota_trabajador"
+    detalle: str = ""
+    creado: str = ""
 
 
 # ---------- Inicialización ----------
@@ -1075,3 +1153,277 @@ def marcar_notificacion_leida(notificacion_id: int, cuil: str) -> bool:
             d.leida_en = datetime.now().strftime("%Y-%m-%d %H:%M")
             s.add(d); s.commit()
         return True
+
+
+# ---------- Trámites (Fase 3 de Módulos + Notificaciones + Trámites) ----------
+
+def _campo_tramite_a_dict(c: "CampoTramite") -> dict:
+    return {
+        "id": c.id, "orden": c.orden, "etiqueta": c.etiqueta, "tipo_dato": c.tipo_dato,
+        "longitud_maxima": c.longitud_maxima, "longitud_exacta": c.longitud_exacta,
+        "decimales": c.decimales, "tipos_archivo_permitidos": c.tipos_archivo_permitidos,
+        "obligatorio": c.obligatorio,
+    }
+
+
+def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list) -> int:
+    """Crea el tipo y sus campos en un solo alta. `campos` es una lista de
+    dicts con las claves de CampoTramite (sin id/tipo_tramite_id)."""
+    with Session(engine) as s:
+        t = TipoTramite(sindicato_id=sindicato_id, titulo=titulo, codigo=codigo,
+                         creado=datetime.now().strftime("%Y-%m-%d %H:%M"))
+        s.add(t); s.commit(); s.refresh(t)
+        for i, c in enumerate(campos):
+            s.add(CampoTramite(
+                tipo_tramite_id=t.id, orden=i, etiqueta=c["etiqueta"], tipo_dato=c["tipo_dato"],
+                longitud_maxima=c.get("longitud_maxima"), longitud_exacta=c.get("longitud_exacta"),
+                decimales=c.get("decimales"), tipos_archivo_permitidos=c.get("tipos_archivo_permitidos", ""),
+                obligatorio=c.get("obligatorio", True),
+            ))
+        s.commit()
+        return t.id
+
+
+def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: str,
+                         activo: bool, campos: list) -> bool:
+    """Actualiza título/código/activo y REEMPLAZA los campos por los
+    enviados -- el constructor de campos en admin es "lo que ves es lo que
+    queda", como editar un formulario, no un merge campo por campo."""
+    with Session(engine) as s:
+        t = s.get(TipoTramite, tipo_id)
+        if not t or t.sindicato_id != sindicato_id:
+            return False
+        t.titulo, t.codigo, t.activo = titulo, codigo, activo
+        s.add(t)
+        for viejo in s.exec(select(CampoTramite).where(CampoTramite.tipo_tramite_id == tipo_id)).all():
+            s.delete(viejo)
+        s.commit()
+        for i, c in enumerate(campos):
+            s.add(CampoTramite(
+                tipo_tramite_id=tipo_id, orden=i, etiqueta=c["etiqueta"], tipo_dato=c["tipo_dato"],
+                longitud_maxima=c.get("longitud_maxima"), longitud_exacta=c.get("longitud_exacta"),
+                decimales=c.get("decimales"), tipos_archivo_permitidos=c.get("tipos_archivo_permitidos", ""),
+                obligatorio=c.get("obligatorio", True),
+            ))
+        s.commit()
+        return True
+
+
+def borrar_tipo_tramite(tipo_id: int, sindicato_id: int) -> bool:
+    """No borra si ya hay trámites presentados contra este tipo (el FK de
+    Tramite.tipo_tramite_id no es opcional) -- el admin puede desactivarlo
+    en su lugar (editar_tipo_tramite con activo=False)."""
+    with Session(engine) as s:
+        t = s.get(TipoTramite, tipo_id)
+        if not t or t.sindicato_id != sindicato_id:
+            return False
+        if s.exec(select(Tramite).where(Tramite.tipo_tramite_id == tipo_id)).first():
+            return False
+        for c in s.exec(select(CampoTramite).where(CampoTramite.tipo_tramite_id == tipo_id)).all():
+            s.delete(c)
+        s.delete(t)
+        s.commit()
+        return True
+
+
+def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False) -> list:
+    """Tipos de trámite del sindicato con sus campos, para el constructor de
+    admin y el listado que ve el trabajador (con solo_activos=True)."""
+    with Session(engine) as s:
+        q = select(TipoTramite).where(TipoTramite.sindicato_id == sindicato_id)
+        if solo_activos:
+            q = q.where(TipoTramite.activo == True)
+        tipos = s.exec(q.order_by(TipoTramite.creado.desc())).all()
+        resultado = []
+        for t in tipos:
+            campos = s.exec(select(CampoTramite).where(CampoTramite.tipo_tramite_id == t.id)
+                            .order_by(CampoTramite.orden)).all()
+            resultado.append({
+                "id": t.id, "titulo": t.titulo, "codigo": t.codigo, "activo": t.activo,
+                "creado": t.creado, "campos": [_campo_tramite_a_dict(c) for c in campos],
+            })
+        return resultado
+
+
+def tipo_tramite_por_id(tipo_id: int) -> Optional[dict]:
+    with Session(engine) as s:
+        t = s.get(TipoTramite, tipo_id)
+        if not t:
+            return None
+        campos = s.exec(select(CampoTramite).where(CampoTramite.tipo_tramite_id == tipo_id)
+                        .order_by(CampoTramite.orden)).all()
+        return {
+            "id": t.id, "sindicato_id": t.sindicato_id, "titulo": t.titulo, "codigo": t.codigo,
+            "activo": t.activo, "creado": t.creado, "campos": [_campo_tramite_a_dict(c) for c in campos],
+        }
+
+
+def _log_tramite(s: Session, tramite_id: int, evento: str, detalle: str) -> None:
+    """Único punto que escribe en TramiteLog -- recibe la sesión abierta del
+    llamador para que el evento quede en la MISMA transacción que el cambio
+    que lo generó (alta, cambio de estado, nota)."""
+    s.add(TramiteLog(
+        tramite_id=tramite_id, evento=evento, detalle=detalle,
+        creado=datetime.now().strftime("%Y-%m-%d %H:%M"),
+    ))
+
+
+def crear_tramite(sindicato_id: int, tipo_tramite_id: int, cuil: str, respuestas: list) -> Optional[dict]:
+    """Genera el número de expediente (correlativo por tipo, reintenta ante
+    colisión igual que generar_codigo_credencial) y persiste el trámite con
+    sus respuestas en una sola operación. `respuestas` es una lista de dicts
+    con campo_tramite_id/valor_texto/archivo_datos/archivo_mime/archivo_nombre,
+    ya validada por el llamador (ver main.api_enviar_tramite)."""
+    with Session(engine) as s:
+        tipo = s.get(TipoTramite, tipo_tramite_id)
+        if not tipo or tipo.sindicato_id != sindicato_id or not tipo.activo:
+            return None
+        prefijo = "".join(ch for ch in tipo.codigo.upper() if ch.isalnum()) or "TRAM"
+        anio = datetime.now().strftime("%Y")
+        ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
+        existentes = len(s.exec(select(Tramite).where(Tramite.tipo_tramite_id == tipo_tramite_id)).all())
+        numero = None
+        for intento in range(25):
+            candidato = f"{prefijo}-{anio}-{(existentes + 1 + intento):06d}"
+            if not s.exec(select(Tramite).where(Tramite.numero_expediente == candidato)).first():
+                numero = candidato
+                break
+        if not numero:
+            raise RuntimeError("No se pudo generar un número de expediente único, reintentá.")
+        tr = Tramite(sindicato_id=sindicato_id, tipo_tramite_id=tipo_tramite_id, cuil=cuil,
+                     numero_expediente=numero, estado="enviado", creado=ahora, actualizado=ahora)
+        s.add(tr); s.commit(); s.refresh(tr)
+        for r in respuestas:
+            s.add(RespuestaTramite(
+                tramite_id=tr.id, campo_tramite_id=r["campo_tramite_id"],
+                valor_texto=r.get("valor_texto", ""), archivo_datos=r.get("archivo_datos"),
+                archivo_mime=r.get("archivo_mime", ""), archivo_nombre=r.get("archivo_nombre", ""),
+            ))
+        _log_tramite(s, tr.id, "creado", f"Trámite presentado por el trabajador ({numero}).")
+        s.commit()
+        return {"id": tr.id, "numero_expediente": numero}
+
+
+ESTADOS_TRAMITE = ["enviado", "en_tratamiento", "respondido", "espera_info", "terminado"]
+ESTADOS_TRAMITE_LABEL = {
+    "enviado": "Enviado", "en_tratamiento": "En tratamiento", "respondido": "Respondido",
+    "espera_info": "A la espera de información del afiliado", "terminado": "Terminado",
+}
+
+
+def cambiar_estado_tramite(tramite_id: int, sindicato_id: int, nuevo_estado: str) -> bool:
+    if nuevo_estado not in ESTADOS_TRAMITE:
+        return False
+    with Session(engine) as s:
+        tr = s.get(Tramite, tramite_id)
+        if not tr or tr.sindicato_id != sindicato_id:
+            return False
+        anterior = tr.estado
+        tr.estado = nuevo_estado
+        tr.actualizado = datetime.now().strftime("%Y-%m-%d %H:%M")
+        s.add(tr)
+        _log_tramite(s, tramite_id, "cambio_estado",
+                     f"{ESTADOS_TRAMITE_LABEL.get(anterior, anterior)} → {ESTADOS_TRAMITE_LABEL.get(nuevo_estado, nuevo_estado)}")
+        s.commit()
+        return True
+
+
+def agregar_nota_tramite(tramite_id: int, autor: str, texto: str,
+                          adjunto_datos: Optional[bytes] = None, adjunto_mime: str = "",
+                          adjunto_nombre: str = "") -> bool:
+    """`autor` es "admin" o "trabajador" -- la verificación de que quien
+    escribe tiene permiso sobre ESTE trámite la hace el caller (main.py)."""
+    with Session(engine) as s:
+        tr = s.get(Tramite, tramite_id)
+        if not tr:
+            return False
+        s.add(NotaTramite(
+            tramite_id=tramite_id, autor=autor, texto=texto or "",
+            adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime or "",
+            adjunto_nombre=adjunto_nombre or "", creado=datetime.now().strftime("%Y-%m-%d %H:%M"),
+        ))
+        tr.actualizado = datetime.now().strftime("%Y-%m-%d %H:%M")
+        s.add(tr)
+        _log_tramite(s, tramite_id, f"nota_{autor}", texto[:120] if texto else "(sin texto, con adjunto)")
+        s.commit()
+        return True
+
+
+def _tramite_resumen(s: Session, tr: "Tramite", titulos_tipo: dict) -> dict:
+    return {
+        "id": tr.id, "numero_expediente": tr.numero_expediente, "cuil": tr.cuil,
+        "tipo_tramite_id": tr.tipo_tramite_id, "tipo_titulo": titulos_tipo.get(tr.tipo_tramite_id, "—"),
+        "estado": tr.estado, "estado_label": ESTADOS_TRAMITE_LABEL.get(tr.estado, tr.estado),
+        "creado": tr.creado, "actualizado": tr.actualizado,
+    }
+
+
+def tramites_del_sindicato(sindicato_id: int, estado: str = None, tipo_tramite_id: int = None,
+                            cuil: str = None) -> list:
+    """Listado filtrable para el panel de admin, más recientes primero."""
+    with Session(engine) as s:
+        q = select(Tramite).where(Tramite.sindicato_id == sindicato_id)
+        if estado:
+            q = q.where(Tramite.estado == estado)
+        if tipo_tramite_id:
+            q = q.where(Tramite.tipo_tramite_id == tipo_tramite_id)
+        if cuil:
+            q = q.where(Tramite.cuil == cuil)
+        tramites = s.exec(q.order_by(Tramite.id.desc())).all()
+        titulos_tipo = {t.id: t.titulo for t in s.exec(
+            select(TipoTramite).where(TipoTramite.sindicato_id == sindicato_id)).all()}
+        return [_tramite_resumen(s, tr, titulos_tipo) for tr in tramites]
+
+
+def tramites_de_trabajador(cuil: str, sindicato_id: int) -> list:
+    """Los trámites que presentó ESTE trabajador en ESTE sindicato, más
+    recientes primero -- para "Mis trámites"."""
+    with Session(engine) as s:
+        tramites = s.exec(select(Tramite).where(
+            Tramite.cuil == cuil, Tramite.sindicato_id == sindicato_id).order_by(Tramite.id.desc())).all()
+        titulos_tipo = {t.id: t.titulo for t in s.exec(
+            select(TipoTramite).where(TipoTramite.sindicato_id == sindicato_id)).all()}
+        return [_tramite_resumen(s, tr, titulos_tipo) for tr in tramites]
+
+
+def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:
+    tipo = s.get(TipoTramite, tr.tipo_tramite_id)
+    campos = s.exec(select(CampoTramite).where(CampoTramite.tipo_tramite_id == tr.tipo_tramite_id)
+                    .order_by(CampoTramite.orden)).all()
+    campos_por_id = {c.id: c for c in campos}
+    respuestas = s.exec(select(RespuestaTramite).where(RespuestaTramite.tramite_id == tr.id)).all()
+    notas = s.exec(select(NotaTramite).where(NotaTramite.tramite_id == tr.id)
+                   .order_by(NotaTramite.id)).all()
+    log = s.exec(select(TramiteLog).where(TramiteLog.tramite_id == tr.id)
+                 .order_by(TramiteLog.id)).all()
+    return {
+        "id": tr.id, "numero_expediente": tr.numero_expediente, "cuil": tr.cuil,
+        "sindicato_id": tr.sindicato_id, "estado": tr.estado,
+        "estado_label": ESTADOS_TRAMITE_LABEL.get(tr.estado, tr.estado),
+        "creado": tr.creado, "actualizado": tr.actualizado,
+        "tipo_titulo": tipo.titulo if tipo else "—", "tipo_codigo": tipo.codigo if tipo else "",
+        "respuestas": [{
+            "campo_id": r.campo_tramite_id,
+            "etiqueta": campos_por_id[r.campo_tramite_id].etiqueta if r.campo_tramite_id in campos_por_id else "—",
+            "tipo_dato": campos_por_id[r.campo_tramite_id].tipo_dato if r.campo_tramite_id in campos_por_id else "texto",
+            "valor_texto": r.valor_texto, "tiene_archivo": bool(r.archivo_datos),
+            "archivo_nombre": r.archivo_nombre, "respuesta_id": r.id,
+        } for r in respuestas],
+        "notas": [{
+            "id": n.id, "autor": n.autor, "texto": n.texto, "creado": n.creado,
+            "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+        } for n in notas],
+        "log": [{"evento": l.evento, "detalle": l.detalle, "creado": l.creado} for l in log],
+    }
+
+
+def tramite_detalle(tramite_id: int) -> Optional[dict]:
+    with Session(engine) as s:
+        tr = s.get(Tramite, tramite_id)
+        return _tramite_detalle_completo(s, tr) if tr else None
+
+
+def tramite_por_numero_expediente(numero_expediente: str) -> Optional[dict]:
+    with Session(engine) as s:
+        tr = s.exec(select(Tramite).where(Tramite.numero_expediente == numero_expediente)).first()
+        return _tramite_detalle_completo(s, tr) if tr else None

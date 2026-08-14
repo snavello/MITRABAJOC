@@ -110,6 +110,24 @@
   .subtab.activa { background:var(--marca-secundario); color:#fff; border-color:var(--marca-secundario); }
   .subpanel { display:none; }
   .subpanel.activo { display:block; }
+  /* Sub-pestañas de Trámites: clases propias (no .subtab/.subpanel) para no
+     compartir el listener global con las sub-pestañas de Trabajadores. */
+  .tramite-subtab { padding:6px 14px; border-radius:7px; font-size:13px; font-weight:500;
+    background:#f2f0ea; color:var(--gris); border:1px solid var(--linea); cursor:pointer; font-family:inherit; }
+  .tramite-subtab.activa { background:var(--marca-secundario); color:#fff; border-color:var(--marca-secundario); }
+  .tramite-subpanel { display:none; }
+  .tramite-subpanel.activo { display:block; }
+  .campo-tramite-fila { display:grid; grid-template-columns:2fr 1fr 90px 90px 90px 1fr auto auto auto; gap:6px;
+    align-items:center; padding:7px 0; border-bottom:1px solid var(--linea); font-size:12.5px; }
+  .campo-tramite-fila input, .campo-tramite-fila select { padding:5px 6px; font-size:12.5px; }
+  .campo-tramite-fila button { padding:4px 7px; font-size:11px; }
+  .tramite-log { border-left:2px solid var(--linea); margin-left:6px; padding-left:14px; }
+  .tramite-log-item { position:relative; padding-bottom:14px; font-size:12.5px; }
+  .tramite-log-item::before { content:''; position:absolute; left:-18px; top:3px; width:8px; height:8px;
+    border-radius:50%; background:var(--marca-acento); }
+  .tramite-nota { background:#faf9f6; border:1px solid var(--linea); border-radius:8px; padding:9px 11px; margin-bottom:8px; font-size:12.5px; }
+  .tramite-nota.admin { border-left:3px solid var(--marca-primario); }
+  .tramite-nota.trabajador { border-left:3px solid var(--marca-secundario); }
   .card { background:#fff; border:1px solid var(--linea); border-radius:10px; padding:18px 20px; margin-bottom:20px; }
   .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px 16px; }
   .grid2 .campo.full { grid-column:1 / -1; }
@@ -232,6 +250,7 @@
     {% if 'noticias' in modulos %}<button class="tab-btn" data-panel="noticias">Noticias</button>{% endif %}
     {% if 'beneficios' in modulos %}<button class="tab-btn" data-panel="beneficios">Beneficios</button>{% endif %}
     {% if 'notificaciones' in modulos %}<button class="tab-btn" data-panel="notificaciones">Notificaciones</button>{% endif %}
+    {% if 'tramites' in modulos %}<button class="tab-btn" data-panel="tramites">Trámites</button>{% endif %}
     <button class="tab-btn" data-panel="seccionales">Seccionales</button>
   </nav>
 
@@ -791,6 +810,118 @@
   </div>
   {% endif %}
 
+  {% if 'tramites' in modulos %}
+  <div class="panel" id="panel-tramites">
+  <!-- ============ TRÁMITES ============ -->
+  {% if request.query_params.get('error') == 'campos' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Revisá los campos del formulario: necesita al menos uno con etiqueta y tipo de dato válidos.</div>
+  {% elif request.query_params.get('error') == 'tramitesenviados' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se puede borrar: ya hay trámites presentados contra este tipo. Desactivalo en su lugar (destildá "Activo" al editarlo).</div>
+  {% endif %}
+
+  <div class="subtabs">
+    <button type="button" class="tramite-subtab activa" data-tramite-sub="tipos" onclick="cambiarSubTramite('tipos')">Tipos de formulario</button>
+    <button type="button" class="tramite-subtab" data-tramite-sub="recibidos" onclick="cambiarSubTramite('recibidos')">Trámites recibidos</button>
+  </div>
+
+  <!-- Sub: TIPOS DE FORMULARIO -->
+  <div class="tramite-subpanel activo" id="tramite-sub-tipos">
+    <h2 id="tt-h2">Nuevo tipo de trámite</h2>
+    <div class="card">
+      <form method="post" action="/admin/tramite-tipo" id="form-tramite-tipo">
+        <input type="hidden" name="id" id="tt-id">
+        <input type="hidden" name="campos_json" id="tt-campos-json">
+        <div class="grid2">
+          <div class="campo"><label>Título *</label><input name="titulo" id="tt-titulo" required placeholder="Ej: Solicitud de Reintegro"></div>
+          <div class="campo"><label>Código *</label><input name="codigo" id="tt-codigo" required placeholder="Ej: F01 AEFIP"></div>
+        </div>
+        <div class="campo oculto" id="tt-activo-campo" style="margin-top:10px;">
+          <label class="chk-seccional" style="width:fit-content;"><input type="checkbox" id="tt-activo" checked> Activo (visible para el trabajador)</label>
+        </div>
+
+        <h3 style="margin-top:18px; font-size:14px; color:var(--tinta);">Campos del formulario</h3>
+        <p class="muted" style="font-size:11.5px;">"Longitud exacta" es para datos de largo fijo (ej. CVU = 22). "Tipos de archivo" son extensiones separadas por coma (ej. pdf,jpg) -- vacío = cualquiera.</p>
+        <div id="tt-campos-lista"></div>
+        <button type="button" class="sec mini" style="margin-top:8px;" onclick="agregarCampoTramite()">+ Agregar campo</button>
+
+        <div style="margin-top:16px;">
+          <button type="submit" id="tt-submit">Crear tipo de trámite</button>
+          <button type="button" class="sec oculto" id="tt-cancel" onclick="cancelarTramiteTipo()">Cancelar edición</button>
+        </div>
+      </form>
+    </div>
+
+    <h2>Tipos cargados ({{ tipos_tramite|length }})</h2>
+    <table>
+      <tr><th>Título</th><th>Código</th><th>Campos</th><th>Estado</th><th>Cargado</th><th></th></tr>
+      {% for t in tipos_tramite %}
+      <tr>
+        <td>{{ t.titulo }}</td>
+        <td><code>{{ t.codigo }}</code></td>
+        <td class="muted">{{ t.campos|length }}</td>
+        <td>{% if t.activo %}<span class="tag tag-si">activo</span>{% else %}<span class="tag" style="background:#eee;color:#888;">inactivo</span>{% endif %}</td>
+        <td class="muted">{{ t.creado }}</td>
+        <td style="white-space:nowrap; text-align:right;">
+          <button type="button" class="mini" onclick='editarTramiteTipo({{ t | tojson }})'>Editar</button>
+          <form method="post" action="/admin/tramite-tipo/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar este tipo de trámite?')">
+            <input type="hidden" name="id" value="{{ t.id }}">
+            <button class="peligro mini" type="submit">Borrar</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="muted">Todavía no cargaste ningún tipo de trámite.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <!-- Sub: TRÁMITES RECIBIDOS -->
+  <div class="tramite-subpanel" id="tramite-sub-recibidos">
+    <h2>Trámites recibidos ({{ tramites|length }})</h2>
+    <div class="filtros">
+      <input type="text" id="f-tramites-cuit" placeholder="Buscar por CUIL" oninput="filtrarTramites()">
+      <input type="text" id="f-tramites-nombre" placeholder="Buscar por N° de expediente" oninput="filtrarTramites()">
+      <select id="f-tramites-estado" onchange="filtrarTramites()">
+        <option value="">Todos los estados</option>
+        {% for e in estados_tramite %}<option value="{{ e }}">{{ estados_tramite_label[e] }}</option>{% endfor %}
+      </select>
+      <button type="button" class="sec mini" onclick="limpiarFiltroTramites()">Limpiar</button>
+      <span class="f-cant" id="f-tramites-cant"></span>
+    </div>
+    <table>
+      <tr><th>Expediente</th><th>CUIL</th><th>Tipo</th><th>Estado</th><th>Actualizado</th><th></th></tr>
+      {% for tr in tramites %}
+      <tr class="fila-tramite" id="tramite-fila-{{ tr.id }}" data-cuil="{{ tr.cuil }}" data-nombre="{{ tr.numero_expediente }}" data-estado="{{ tr.estado }}">
+        <td><code>{{ tr.numero_expediente }}</code></td>
+        <td>{{ tr.cuil }}</td>
+        <td>{{ tr.tipo_titulo }}</td>
+        <td><span class="tag {{ 'tag-si' if tr.estado == 'terminado' else 'tag-pend' }}">{{ tr.estado_label }}</span></td>
+        <td class="muted">{{ tr.actualizado }}</td>
+        <td style="text-align:right;"><button type="button" class="mini" onclick="abrirTramiteDetalle({{ tr.id }})">Ver</button></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="muted">Todavía no llegó ningún trámite.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <!-- Modal: detalle de trámite (admin) -->
+  <div class="modal-recibo-overlay" id="modal-tramite-overlay" onclick="if (event.target === this) cerrarTramiteDetalle()">
+    <div class="modal-recibo" style="max-width:640px;">
+      <div class="modal-recibo-enc">
+        <h3 id="mt-titulo"></h3>
+        <button type="button" class="modal-recibo-cerrar" onclick="cerrarTramiteDetalle()" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-recibo-body">
+        <div class="modal-recibo-card" id="mt-contenido">Cargando…</div>
+      </div>
+    </div>
+  </div>
+  </div>
+  {% endif %}
+
   <div class="panel" id="panel-seccionales">
   <!-- ============ SECCIONALES ============ -->
   <h2 id="seccionales-titulo">Dar de alta una seccional</h2>
@@ -1041,6 +1172,209 @@ function verDestinatariosNotificacion(id) {
   }).catch(() => {
     document.getElementById('modal-recibo-contenido').innerHTML = 'No se pudo cargar.';
   });
+}
+
+// ---------- Trámites ----------
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+function cambiarSubTramite(dest) {
+  document.querySelectorAll('.tramite-subtab').forEach(b => b.classList.toggle('activa', b.dataset.tramiteSub === dest));
+  document.querySelectorAll('.tramite-subpanel').forEach(p => p.classList.toggle('activo', p.id === 'tramite-sub-' + dest));
+}
+
+let camposTramiteActuales = [];
+
+function renderCamposTramite() {
+  const cont = document.getElementById('tt-campos-lista');
+  if (!camposTramiteActuales.length) {
+    cont.innerHTML = '<p class="muted" style="font-size:12px;">Todavía no agregaste ningún campo.</p>';
+    return;
+  }
+  cont.innerHTML = camposTramiteActuales.map((c, i) => `
+    <div class="campo-tramite-fila">
+      <input placeholder="Etiqueta" value="${escHtml(c.etiqueta)}" oninput="actualizarCampoTramite(${i},'etiqueta',this.value)">
+      <select onchange="actualizarCampoTramite(${i},'tipo_dato',this.value)">
+        <option value="texto" ${c.tipo_dato==='texto'?'selected':''}>Texto</option>
+        <option value="numero" ${c.tipo_dato==='numero'?'selected':''}>Número</option>
+        <option value="fecha" ${c.tipo_dato==='fecha'?'selected':''}>Fecha</option>
+        <option value="archivo" ${c.tipo_dato==='archivo'?'selected':''}>Archivo</option>
+      </select>
+      <input type="number" min="0" placeholder="Long. máx." value="${c.longitud_maxima ?? ''}" ${c.tipo_dato!=='texto'?'disabled':''} oninput="actualizarCampoTramite(${i},'longitud_maxima',this.value)">
+      <input type="number" min="0" placeholder="Long. exacta" value="${c.longitud_exacta ?? ''}" ${c.tipo_dato!=='texto'?'disabled':''} oninput="actualizarCampoTramite(${i},'longitud_exacta',this.value)">
+      <input type="number" min="0" placeholder="Decimales" value="${c.decimales ?? ''}" ${c.tipo_dato!=='numero'?'disabled':''} oninput="actualizarCampoTramite(${i},'decimales',this.value)">
+      <input placeholder="Tipos de archivo (pdf,jpg)" value="${escHtml(c.tipos_archivo_permitidos)}" ${c.tipo_dato!=='archivo'?'disabled':''} oninput="actualizarCampoTramite(${i},'tipos_archivo_permitidos',this.value)">
+      <label style="display:flex; align-items:center; gap:3px; white-space:nowrap;"><input type="checkbox" ${c.obligatorio?'checked':''} onchange="actualizarCampoTramite(${i},'obligatorio',this.checked)"> Oblig.</label>
+      <button type="button" class="sec mini" ${i===0?'disabled':''} onclick="moverCampoTramite(${i},-1)" title="Subir">↑</button>
+      <button type="button" class="sec mini" ${i===camposTramiteActuales.length-1?'disabled':''} onclick="moverCampoTramite(${i},1)" title="Bajar">↓</button>
+      <button type="button" class="peligro mini" onclick="quitarCampoTramite(${i})" title="Quitar">✕</button>
+    </div>
+  `).join('');
+}
+function agregarCampoTramite() {
+  camposTramiteActuales.push({etiqueta:'', tipo_dato:'texto', longitud_maxima:null, longitud_exacta:null, decimales:null, tipos_archivo_permitidos:'', obligatorio:true});
+  renderCamposTramite();
+}
+function actualizarCampoTramite(i, campo, valor) {
+  camposTramiteActuales[i][campo] = valor;
+  if (campo === 'tipo_dato') renderCamposTramite();
+}
+function moverCampoTramite(i, delta) {
+  const j = i + delta;
+  if (j < 0 || j >= camposTramiteActuales.length) return;
+  [camposTramiteActuales[i], camposTramiteActuales[j]] = [camposTramiteActuales[j], camposTramiteActuales[i]];
+  renderCamposTramite();
+}
+function quitarCampoTramite(i) {
+  camposTramiteActuales.splice(i, 1);
+  renderCamposTramite();
+}
+
+const formTramiteTipo = document.getElementById('form-tramite-tipo');
+if (formTramiteTipo) {
+  formTramiteTipo.addEventListener('submit', () => {
+    document.getElementById('tt-campos-json').value = JSON.stringify(camposTramiteActuales);
+  });
+}
+
+function editarTramiteTipo(t) {
+  document.getElementById('tt-id').value = t.id;
+  document.getElementById('tt-titulo').value = t.titulo;
+  document.getElementById('tt-codigo').value = t.codigo;
+  document.getElementById('tt-activo-campo').classList.remove('oculto');
+  document.getElementById('tt-activo').checked = t.activo;
+  camposTramiteActuales = (t.campos || []).map(c => ({...c}));
+  renderCamposTramite();
+  document.getElementById('tt-h2').textContent = 'Editar tipo de trámite';
+  document.getElementById('tt-submit').textContent = 'Guardar cambios';
+  document.getElementById('tt-cancel').classList.remove('oculto');
+  cambiarSubTramite('tipos');
+  window.scrollTo(0, document.getElementById('panel-tramites').offsetTop);
+}
+function cancelarTramiteTipo() {
+  document.getElementById('form-tramite-tipo').reset();
+  document.getElementById('tt-id').value = '';
+  document.getElementById('tt-activo-campo').classList.add('oculto');
+  camposTramiteActuales = [];
+  renderCamposTramite();
+  document.getElementById('tt-h2').textContent = 'Nuevo tipo de trámite';
+  document.getElementById('tt-submit').textContent = 'Crear tipo de trámite';
+  document.getElementById('tt-cancel').classList.add('oculto');
+}
+if (document.getElementById('tt-campos-lista')) renderCamposTramite();
+
+function filtrarTramites() {
+  const cuit = (document.getElementById('f-tramites-cuit').value || '').replace(/\D/g, '');
+  const nombre = (document.getElementById('f-tramites-nombre').value || '').toUpperCase().trim();
+  const estado = document.getElementById('f-tramites-estado').value;
+  let visibles = 0;
+  document.querySelectorAll('.fila-tramite').forEach(fila => {
+    let visible = true;
+    if (cuit && !fila.dataset.cuil.replace(/\D/g, '').includes(cuit)) visible = false;
+    if (visible && nombre && !fila.dataset.nombre.toUpperCase().includes(nombre)) visible = false;
+    if (visible && estado && fila.dataset.estado !== estado) visible = false;
+    fila.style.display = visible ? '' : 'none';
+    if (visible) visibles++;
+  });
+  document.getElementById('f-tramites-cant').textContent = visibles + ' resultado' + (visibles === 1 ? '' : 's');
+}
+function limpiarFiltroTramites() {
+  document.getElementById('f-tramites-cuit').value = '';
+  document.getElementById('f-tramites-nombre').value = '';
+  document.getElementById('f-tramites-estado').value = '';
+  filtrarTramites();
+}
+
+function abrirTramiteDetalle(id) {
+  document.getElementById('mt-titulo').textContent = 'Trámite';
+  document.getElementById('mt-contenido').innerHTML = 'Cargando…';
+  document.getElementById('modal-tramite-overlay').classList.add('abierto');
+  refrescarTramiteDetalle(id);
+}
+function cerrarTramiteDetalle() {
+  document.getElementById('modal-tramite-overlay').classList.remove('abierto');
+}
+
+const EVENTO_LOG_LABEL = {creado:'Creado', cambio_estado:'Cambio de estado', nota_admin:'Nota del sindicato', nota_trabajador:'Nota del trabajador'};
+
+function refrescarTramiteDetalle(id) {
+  fetch('/admin/tramite/' + id).then(r => r.json()).then(d => {
+    document.getElementById('mt-titulo').textContent = d.numero_expediente + ' — ' + d.tipo_titulo;
+    const opcionesEstado = {{ estados_tramite | tojson }}.map(e =>
+      `<option value="${e}" ${e === d.estado ? 'selected' : ''}>${ {{ estados_tramite_label | tojson }}[e] }</option>`).join('');
+    const respuestasHtml = d.respuestas.map(r => `
+      <div class="modal-fila" style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eee; font-size:13px;">
+        <span class="muted">${escHtml(r.etiqueta)}</span>
+        <span>${r.tiene_archivo ? `<a href="/tramite-respuesta-archivo/${r.respuesta_id}" target="_blank" rel="noopener">📎 ${escHtml(r.archivo_nombre)}</a>` : escHtml(r.valor_texto)}</span>
+      </div>`).join('');
+    const logHtml = d.log.map(l => `
+      <div class="tramite-log-item"><b>${EVENTO_LOG_LABEL[l.evento] || l.evento}</b> — ${escHtml(l.detalle)}<br><span class="muted">${l.creado}</span></div>
+    `).join('');
+    const notasHtml = d.notas.map(n => `
+      <div class="tramite-nota ${n.autor}">
+        <b>${n.autor === 'admin' ? 'Sindicato' : 'Trabajador'}</b> · <span class="muted">${n.creado}</span>
+        ${n.texto ? `<div style="margin-top:4px;">${escHtml(n.texto)}</div>` : ''}
+        ${n.tiene_adjunto ? `<div style="margin-top:4px;"><a href="/tramite-nota-adjunto/${n.id}" target="_blank" rel="noopener">📎 ${escHtml(n.adjunto_nombre)}</a></div>` : ''}
+      </div>`).join('') || '<p class="muted" style="font-size:12.5px;">Todavía no hay notas.</p>';
+    document.getElementById('mt-contenido').innerHTML = `
+      <div class="modal-fila" style="display:flex; justify-content:space-between; padding:4px 0; font-size:13px;">
+        <span class="muted">CUIL</span><span><code>${d.cuil}</code></span>
+      </div>
+      <h3 style="font-size:13.5px; margin-top:14px;">Respuestas del formulario</h3>
+      ${respuestasHtml || '<p class="muted" style="font-size:12.5px;">Sin respuestas.</p>'}
+
+      <h3 style="font-size:13.5px; margin-top:16px;">Estado</h3>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <select id="mt-estado-select">${opcionesEstado}</select>
+        <button type="button" class="mini" onclick="cambiarEstadoTramiteAdmin(${d.id})">Actualizar</button>
+      </div>
+
+      <h3 style="font-size:13.5px; margin-top:16px;">Notas</h3>
+      ${notasHtml}
+      <form id="mt-form-nota" style="margin-top:8px;" onsubmit="return enviarNotaTramiteAdmin(event, ${d.id})">
+        <textarea id="mt-nota-texto" rows="2" placeholder="Escribile una nota o pedile más información al trabajador…" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:7px; font-family:inherit; font-size:12.5px;"></textarea>
+        <div style="display:flex; gap:8px; align-items:center; margin-top:6px;">
+          <input type="file" id="mt-nota-adjunto" style="font-size:12px;">
+          <button type="submit" class="mini">Enviar nota</button>
+        </div>
+      </form>
+
+      <h3 style="font-size:13.5px; margin-top:16px;">Historial</h3>
+      <div class="tramite-log">${logHtml}</div>
+    `;
+    const fila = document.getElementById('tramite-fila-' + d.id);
+    if (fila) {
+      fila.dataset.estado = d.estado;
+      const tag = fila.querySelector('.tag');
+      if (tag) { tag.textContent = d.estado_label; tag.className = 'tag ' + (d.estado === 'terminado' ? 'tag-si' : 'tag-pend'); }
+      const celdas = fila.querySelectorAll('td');
+      if (celdas[4]) celdas[4].textContent = d.actualizado;
+    }
+  }).catch(() => {
+    document.getElementById('mt-contenido').innerHTML = 'No se pudo cargar el trámite.';
+  });
+}
+
+function cambiarEstadoTramiteAdmin(id) {
+  const estado = document.getElementById('mt-estado-select').value;
+  const body = new URLSearchParams({estado});
+  fetch('/admin/tramite/' + id + '/estado', {method: 'POST', body})
+    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+    .then(() => refrescarTramiteDetalle(id))
+    .catch(() => alert('No se pudo actualizar el estado.'));
+}
+
+function enviarNotaTramiteAdmin(ev, id) {
+  ev.preventDefault();
+  const texto = document.getElementById('mt-nota-texto').value;
+  const archivo = document.getElementById('mt-nota-adjunto').files[0];
+  const fd = new FormData();
+  fd.append('texto', texto);
+  if (archivo) fd.append('adjunto', archivo);
+  fetch('/admin/tramite/' + id + '/nota', {method: 'POST', body: fd})
+    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+    .then(() => refrescarTramiteDetalle(id))
+    .catch(() => alert('No se pudo enviar la nota.'));
+  return false;
 }
 
 // ---------- Editar trabajador ----------

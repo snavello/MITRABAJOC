@@ -119,6 +119,15 @@
       <span class="badge-noleidas" id="badge-notif" style="display:{{ 'flex' if notificaciones_no_leidas else 'none' }};">{{ notificaciones_no_leidas }}</span>
     </button>
     {% endif %}
+    {% if 'tramites' in modulos %}
+    <a class="acceso" href="/app?tab=tramites">
+      <svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg>
+      <div>
+        <div class="titulo">Trámites</div>
+        <div class="estado">Formularios y seguimiento</div>
+      </div>
+    </a>
+    {% endif %}
   </div>
 
   {% if 'noticias' in modulos %}
@@ -245,6 +254,7 @@
     <g id="ic-x"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g>
     <g id="ic-perfil"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></g>
     <g id="ic-notif"><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></g>
+    <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
   </defs>
 </svg>
 

@@ -38,7 +38,8 @@ import db
 import auth
 from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador,
                 CuentaTrabajador, EnvioSindicato, ReciboVerificado, ConfiguracionPlataforma, Noticia,
-                Beneficio, Seccional, ReciboSospechoso, Notificacion, NotificacionDestinatario)
+                Beneficio, Seccional, ReciboSospechoso, Notificacion, NotificacionDestinatario,
+                TipoTramite, CampoTramite, Tramite, RespuestaTramite, NotaTramite, TramiteLog)
 from extractor import extraer, extraer_aportes
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, CATEGORIAS_UNIVERSALES)
@@ -499,6 +500,9 @@ def admin(request: Request):
         "noticias": db.noticias_del_sindicato(sid),
         "beneficios": db.beneficios_del_sindicato(sid),
         "notificaciones": db.notificaciones_del_sindicato(sid),
+        "tipos_tramite": db.tipos_tramite_del_sindicato(sid),
+        "tramites": db.tramites_del_sindicato(sid),
+        "estados_tramite": db.ESTADOS_TRAMITE, "estados_tramite_label": db.ESTADOS_TRAMITE_LABEL,
         "seccionales": seccionales, "seccional_por_id": seccional_por_id,
         "modulos": _modulos_de(sid),
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
@@ -1059,6 +1063,322 @@ def api_marcar_notificacion_leida(notificacion_id: int, request: Request):
     sid = sindicato_activo_trabajador(request)
     no_leidas = db.contar_notificaciones_no_leidas(cuil, sid) if sid else 0
     return {"ok": True, "no_leidas": no_leidas}
+
+
+# ---------- Trámites (Fase 3 de Módulos + Notificaciones + Trámites) ----------
+ARCHIVO_MIMES_TRAMITE = {
+    ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+    ".webp": "image/webp", ".gif": "image/gif",
+    ".pdf": "application/pdf", ".doc": "application/msword",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+MAX_ARCHIVO_TRAMITE = 10 * 1024 * 1024  # 10 MB
+
+
+def _leer_archivo_tramite(archivo: UploadFile):
+    """Adjunto de una nota o de un campo tipo "archivo" -- mismo criterio de
+    tipos/tamaño que _leer_adjunto_notificacion, tope más generoso porque
+    acá puede ir un recibo escaneado o un comprobante."""
+    import os
+    ext = os.path.splitext(archivo.filename)[1].lower()
+    if ext not in ARCHIVO_MIMES_TRAMITE:
+        return None, "", ""
+    datos = archivo.file.read()
+    if not datos or len(datos) > MAX_ARCHIVO_TRAMITE:
+        return None, "", ""
+    return datos, ARCHIVO_MIMES_TRAMITE[ext], archivo.filename
+
+
+def _notificar_cambio_tramite(sid: int, cuil: str, texto: str) -> None:
+    """Todo cambio de estado o nota ORIGINADA POR EL SINDICATO le avisa al
+    trabajador por el sistema de notificaciones de la Fase 2 -- una nota del
+    trabajador NO dispara esto (no tiene sentido notificarse a sí mismo).
+    No hace nada si el sindicato no tiene el módulo de notificaciones."""
+    if db.modulo_habilitado(sid, "notificaciones"):
+        db.crear_notificacion(sid, None, "Sistema", texto, "cuil", [cuil], origen="sistema")
+
+
+def _campos_tramite_validos(campos_crudos: list) -> list:
+    """Normaliza y descarta campos mal formados que pudieran llegar de un
+    request armado a mano -- misma lógica de saneo defensivo que ya usan
+    _destinos_validos/_modulos_de para otros datos que vienen del cliente."""
+    validos = []
+    for c in campos_crudos:
+        if not isinstance(c, dict) or not str(c.get("etiqueta") or "").strip():
+            continue
+        if c.get("tipo_dato") not in ("texto", "numero", "fecha", "archivo"):
+            continue
+
+        def _entero(v):
+            try:
+                return int(v) if v not in (None, "") else None
+            except (TypeError, ValueError):
+                return None
+
+        validos.append({
+            "etiqueta": str(c["etiqueta"]).strip()[:200],
+            "tipo_dato": c["tipo_dato"],
+            "longitud_maxima": _entero(c.get("longitud_maxima")),
+            "longitud_exacta": _entero(c.get("longitud_exacta")),
+            "decimales": _entero(c.get("decimales")),
+            "tipos_archivo_permitidos": str(c.get("tipos_archivo_permitidos") or "").strip()[:200],
+            "obligatorio": bool(c.get("obligatorio", True)),
+        })
+    return validos
+
+
+@app.post("/admin/tramite-tipo")
+async def abm_tramite_tipo(
+    request: Request,
+    id: str = Form(""), titulo: str = Form(...), codigo: str = Form(...),
+    activo: str = Form("si"), campos_json: str = Form(...),
+):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "tramites")
+    import json
+    try:
+        campos_crudos = json.loads(campos_json)
+        assert isinstance(campos_crudos, list)
+    except Exception:
+        return RedirectResponse("/admin?error=campos#tramites", status_code=303)
+    campos = _campos_tramite_validos(campos_crudos)
+    if not campos:
+        return RedirectResponse("/admin?error=campos#tramites", status_code=303)
+    if id:
+        db.editar_tipo_tramite(int(id), sid, titulo, codigo, activo == "si", campos)
+    else:
+        db.crear_tipo_tramite(sid, titulo, codigo, campos)
+    return RedirectResponse("/admin#tramites", status_code=303)
+
+
+@app.post("/admin/tramite-tipo/borrar")
+def borrar_tramite_tipo(request: Request, id: int = Form(...)):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "tramites")
+    ok = db.borrar_tipo_tramite(id, sid)
+    if not ok:
+        return RedirectResponse("/admin?error=tramitesenviados#tramites", status_code=303)
+    return RedirectResponse("/admin#tramites", status_code=303)
+
+
+@app.get("/admin/tramite/{tramite_id}")
+def admin_ver_tramite(tramite_id: int, request: Request):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "tramites")
+    detalle = db.tramite_detalle(tramite_id)
+    if not detalle or detalle["sindicato_id"] != sid:
+        raise HTTPException(404, "Trámite no encontrado")
+    return detalle
+
+
+@app.post("/admin/tramite/{tramite_id}/estado")
+def admin_cambiar_estado_tramite(tramite_id: int, request: Request, estado: str = Form(...)):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "tramites")
+    detalle = db.tramite_detalle(tramite_id)
+    if not detalle or detalle["sindicato_id"] != sid:
+        raise HTTPException(404, "Trámite no encontrado")
+    if not db.cambiar_estado_tramite(tramite_id, sid, estado):
+        raise HTTPException(400, "Estado inválido")
+    nuevo_label = db.ESTADOS_TRAMITE_LABEL.get(estado, estado)
+    _notificar_cambio_tramite(sid, detalle["cuil"],
+        f'Tu trámite {detalle["numero_expediente"]} cambió de estado: {nuevo_label}.')
+    return {"ok": True}
+
+
+@app.post("/admin/tramite/{tramite_id}/nota")
+async def admin_nota_tramite(tramite_id: int, request: Request, texto: str = Form(""),
+                              adjunto: UploadFile = File(None)):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "tramites")
+    detalle = db.tramite_detalle(tramite_id)
+    if not detalle or detalle["sindicato_id"] != sid:
+        raise HTTPException(404, "Trámite no encontrado")
+    adjunto_datos, adjunto_mime, adjunto_nombre = None, "", ""
+    if adjunto and adjunto.filename:
+        adjunto_datos, adjunto_mime, adjunto_nombre = _leer_archivo_tramite(adjunto)
+        if not adjunto_datos:
+            raise HTTPException(400, "Adjunto inválido o supera el tamaño máximo (10 MB).")
+    if not texto.strip() and not adjunto_datos:
+        raise HTTPException(400, "La nota necesita texto o un adjunto.")
+    db.agregar_nota_tramite(tramite_id, "admin", texto, adjunto_datos, adjunto_mime, adjunto_nombre)
+    _notificar_cambio_tramite(sid, detalle["cuil"],
+        f'Tu sindicato agregó una nota a tu trámite {detalle["numero_expediente"]}.')
+    return {"ok": True}
+
+
+@app.get("/tramite-respuesta-archivo/{respuesta_id}")
+def servir_archivo_respuesta_tramite(respuesta_id: int, request: Request):
+    with db.get_session() as s:
+        r = s.get(RespuestaTramite, respuesta_id)
+        if not r or not r.archivo_datos:
+            raise HTTPException(404, "Sin archivo")
+        tr = s.get(Tramite, r.tramite_id)
+        if not _autorizado_para_tramite(request, tr):
+            raise HTTPException(403, "No autorizado")
+        return BinResponse(
+            content=r.archivo_datos, media_type=r.archivo_mime or "application/octet-stream",
+            headers={"Content-Disposition": f'inline; filename="{r.archivo_nombre or "archivo"}"'},
+        )
+
+
+@app.get("/tramite-nota-adjunto/{nota_id}")
+def servir_adjunto_nota_tramite(nota_id: int, request: Request):
+    with db.get_session() as s:
+        n = s.get(NotaTramite, nota_id)
+        if not n or not n.adjunto_datos:
+            raise HTTPException(404, "Sin adjunto")
+        tr = s.get(Tramite, n.tramite_id)
+        if not _autorizado_para_tramite(request, tr):
+            raise HTTPException(403, "No autorizado")
+        return BinResponse(
+            content=n.adjunto_datos, media_type=n.adjunto_mime or "application/octet-stream",
+            headers={"Content-Disposition": f'inline; filename="{n.adjunto_nombre or "adjunto"}"'},
+        )
+
+
+def _autorizado_para_tramite(request: Request, tr) -> bool:
+    if not tr:
+        return False
+    ses = sesion_actual(request)
+    if not ses:
+        return False
+    if ses.get("rol") == "sindicato" and ses.get("sid") == tr.sindicato_id:
+        return True
+    if ses.get("rol") == "trabajador":
+        cuil = request.cookies.get("cuil_trab", "")
+        if cuil and cuil == tr.cuil:
+            return True
+    return False
+
+
+@app.get("/api/tramites/tipos")
+def api_tipos_tramite(request: Request):
+    ses = sesion_actual(request)
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or ses.get("rol") != "trabajador" or not cuil:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_trabajador(request)
+    return {"tipos": db.tipos_tramite_del_sindicato(sid, solo_activos=True) if sid else []}
+
+
+@app.get("/api/tramites/mios")
+def api_mis_tramites(request: Request):
+    ses = sesion_actual(request)
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or ses.get("rol") != "trabajador" or not cuil:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_trabajador(request)
+    return {"tramites": db.tramites_de_trabajador(cuil, sid) if sid else []}
+
+
+@app.get("/api/tramite/{numero_expediente}")
+def api_consultar_tramite(numero_expediente: str, request: Request):
+    ses = sesion_actual(request)
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or ses.get("rol") != "trabajador" or not cuil:
+        raise HTTPException(403, "No autorizado")
+    detalle = db.tramite_por_numero_expediente(numero_expediente.strip().upper())
+    if not detalle or detalle["cuil"] != cuil:
+        raise HTTPException(404, "No encontramos un trámite tuyo con ese número.")
+    return detalle
+
+
+@app.post("/api/tramite")
+async def api_enviar_tramite(request: Request):
+    """Los campos vienen con nombre dinámico (campo_{id} / archivo_{id}) según
+    el formulario de CADA tipo de trámite, así que se lee el form crudo en
+    vez de declarar parámetros fijos. Valida obligatorios/longitud/tipo de
+    archivo server-side -- el formulario del cliente ya valida lo mismo,
+    pero esto es lo que realmente decide qué se persiste."""
+    ses = sesion_actual(request)
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or ses.get("rol") != "trabajador" or not cuil:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise HTTPException(403, "No autorizado")
+    _exigir_modulo(sid, "tramites")
+    form = await request.form()
+    try:
+        tipo_tramite_id = int(form.get("tipo_tramite_id") or 0)
+    except ValueError:
+        raise HTTPException(400, "Tipo de trámite inválido")
+    tipo = db.tipo_tramite_por_id(tipo_tramite_id)
+    if not tipo or tipo["sindicato_id"] != sid or not tipo["activo"]:
+        raise HTTPException(404, "Tipo de trámite inválido")
+
+    errores = []
+    respuestas = []
+    for campo in tipo["campos"]:
+        if campo["tipo_dato"] == "archivo":
+            archivo = form.get(f'archivo_{campo["id"]}')
+            if archivo is None or not getattr(archivo, "filename", ""):
+                if campo["obligatorio"]:
+                    errores.append(f'"{campo["etiqueta"]}" es obligatorio.')
+                continue
+            import os
+            ext = os.path.splitext(archivo.filename)[1].lower().lstrip(".")
+            permitidos = [e.strip().lower() for e in (campo["tipos_archivo_permitidos"] or "").split(",") if e.strip()]
+            if permitidos and ext not in permitidos:
+                errores.append(f'"{campo["etiqueta"]}": el archivo tiene que ser {", ".join(permitidos)}.')
+                continue
+            datos = await archivo.read()
+            if not datos or len(datos) > MAX_ARCHIVO_TRAMITE:
+                errores.append(f'"{campo["etiqueta"]}": archivo vacío o supera los 10 MB.')
+                continue
+            mime = ARCHIVO_MIMES_TRAMITE.get(f".{ext}", archivo.content_type or "application/octet-stream")
+            respuestas.append({"campo_tramite_id": campo["id"], "archivo_datos": datos,
+                                "archivo_mime": mime, "archivo_nombre": archivo.filename})
+            continue
+
+        valor = str(form.get(f'campo_{campo["id"]}') or "").strip()
+        if not valor:
+            if campo["obligatorio"]:
+                errores.append(f'"{campo["etiqueta"]}" es obligatorio.')
+            continue
+        if campo["tipo_dato"] == "numero":
+            try:
+                float(valor.replace(",", "."))
+            except ValueError:
+                errores.append(f'"{campo["etiqueta"]}" tiene que ser un número.')
+                continue
+        if campo["longitud_exacta"] and len(valor) != campo["longitud_exacta"]:
+            errores.append(f'"{campo["etiqueta"]}" tiene que tener exactamente {campo["longitud_exacta"]} caracteres.')
+            continue
+        if campo["longitud_maxima"] and len(valor) > campo["longitud_maxima"]:
+            errores.append(f'"{campo["etiqueta"]}" supera el máximo de {campo["longitud_maxima"]} caracteres.')
+            continue
+        respuestas.append({"campo_tramite_id": campo["id"], "valor_texto": valor})
+
+    if errores:
+        return JSONResponse(status_code=422, content={"errores": errores})
+
+    resultado = db.crear_tramite(sid, tipo_tramite_id, cuil, respuestas)
+    if not resultado:
+        raise HTTPException(400, "No se pudo crear el trámite.")
+    return resultado
+
+
+@app.post("/api/tramite/{tramite_id}/nota")
+async def api_nota_tramite_trabajador(tramite_id: int, request: Request, texto: str = Form(""),
+                                       adjunto: UploadFile = File(None)):
+    ses = sesion_actual(request)
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or ses.get("rol") != "trabajador" or not cuil:
+        raise HTTPException(403, "No autorizado")
+    detalle = db.tramite_detalle(tramite_id)
+    if not detalle or detalle["cuil"] != cuil:
+        raise HTTPException(404, "Trámite no encontrado")
+    adjunto_datos, adjunto_mime, adjunto_nombre = None, "", ""
+    if adjunto and adjunto.filename:
+        adjunto_datos, adjunto_mime, adjunto_nombre = _leer_archivo_tramite(adjunto)
+        if not adjunto_datos:
+            raise HTTPException(400, "Adjunto inválido o supera el tamaño máximo (10 MB).")
+    if not texto.strip() and not adjunto_datos:
+        raise HTTPException(400, "La nota necesita texto o un adjunto.")
+    db.agregar_nota_tramite(tramite_id, "trabajador", texto, adjunto_datos, adjunto_mime, adjunto_nombre)
+    return {"ok": True}
 
 
 # ---------- Aprendizaje: subir N recibos y proponer conceptos nuevos ----------

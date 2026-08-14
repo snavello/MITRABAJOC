@@ -118,7 +118,11 @@ Sistema de módulos habilitables (Fase 1 de "Módulos + Notificaciones +
 Trámites") COMPLETO y en main. Ver sección dedicada más abajo.
 
 Notificaciones (Fase 2 del mismo plan) COMPLETO y en main. Ver sección
-dedicada más abajo. Fase 3 (Trámites), pendiente.
+dedicada más abajo.
+
+Trámites (Fase 3, última del plan) COMPLETO y en main. Ver sección dedicada
+más abajo. Las 3 fases de "Módulos + Notificaciones + Trámites" están
+terminadas.
 
 ## Rediseño de interfaz
 Sistema de diseño nuevo (`.claude/skills/diseno-mi-trabajo/SKILL.md`,
@@ -174,8 +178,8 @@ fases todavía no están implementadas). Se guarda como
   es vacío a propósito: solo importa para sindicatos creados fuera del flujo
   normal de alta (tests, scripts) — `cargar_demo.py` y los tests pasan
   `modulos_habilitados=list(MODULOS_INICIALES)` explícito.
-- Fase 3 (Trámites) del mismo plan queda pendiente — el catálogo ya la
-  incluye, pero sin implementación todavía.
+- Notificaciones y Trámites (Fases 2 y 3 del mismo plan) están completas —
+  ver sus secciones dedicadas más abajo.
 
 ## Notificaciones (Fase 2 de "Módulos + Notificaciones + Trámites")
 Mensajería dirigida del sindicato a un grupo de trabajadores. Modelos
@@ -216,10 +220,82 @@ targetear "por empresa".
 - **Adjunto**: no es público como el logo — `GET /notificacion-adjunto/{id}`
   chequea que quien pide sea el admin del sindicato que la mandó, o un
   trabajador que sea destinatario real (403 para cualquier otro).
-- Fase 3 (Trámites) va a reusar `db.crear_notificacion(..., origen="sistema")`
-  para avisar automáticamente cuando un trámite cambia de estado — el campo
-  `Notificacion.usuario_id` es `Optional` a propósito para ese caso (no hay
-  un admin humano detrás).
+- Trámites (Fase 3) reusa `db.crear_notificacion(..., origen="sistema")`
+  directo (`main._notificar_cambio_tramite`) para avisar automáticamente
+  cuando un trámite cambia de estado — el campo `Notificacion.usuario_id` es
+  `Optional` a propósito para ese caso (no hay un admin humano detrás). No
+  hizo falta una función `_enviar_notificacion_sistema` aparte, como se
+  había anticipado al cerrar la Fase 2 — `crear_notificacion` ya admite
+  criterio="cuil" con un único destinatario sin cambios.
+
+## Trámites (Fase 3 de "Módulos + Notificaciones + Trámites")
+Formularios dinámicos que el sindicato define y el trabajador completa, con
+seguimiento por número de expediente. 6 tablas nuevas: `TipoTramite` (con
+sus `CampoTramite`, orden + tipo_dato texto/numero/fecha/archivo + reglas de
+longitud/decimales/tipos de archivo/obligatoriedad), `Tramite`,
+`RespuestaTramite` (lo que cargó el trabajador, un `CampoTramite` = una
+fila), `NotaTramite` (ida y vuelta admin↔trabajador, con adjunto opcional
+de cada lado), `TramiteLog` (tabla de log explícita — decisión tomada en el
+plan, no una vista derivada; `db._log_tramite()` es el único punto que
+escribe ahí, llamado desde alta/cambio de estado/cada nota).
+
+- **Número de expediente**: `{código sin espacios}-{año}-{secuencial de 6
+  dígitos}`, correlativo por `tipo_tramite_id` (NO se reinicia por año
+  aunque el año quede impreso) — se genera y persiste en la misma
+  transacción que crea el `Tramite`, con reintento ante colisión (mismo
+  patrón que `db.generar_codigo_credencial`).
+- **Constructor de tipos de trámite** (`/admin` → pestaña Trámites → sub-
+  pestaña "Tipos de formulario"): el admin arma los campos en un builder
+  client-side (agregar/quitar/subir/bajar, cada uno con su `tipo_dato` y
+  reglas propias) que serializa a `campos_json` (un solo POST a
+  `/admin/tramite-tipo` da de alta el tipo Y todos sus campos). Editar un
+  tipo **reemplaza** sus campos enteros (no hace merge campo por campo) —
+  es el mismo modelo mental que editar un formulario de Google. Borrar un
+  tipo con trámites ya presentados está bloqueado (`db.borrar_tipo_tramite`
+  devuelve False); la alternativa es desactivarlo (`activo=False`) desde el
+  mismo form de edición.
+- **Envío del trabajador** (`POST /api/tramite`): los campos vienen con
+  nombre dinámico (`campo_{id}` / `archivo_{id}`, uno por `CampoTramite`
+  del tipo elegido), así que la ruta lee `await request.form()` crudo en
+  vez de declarar parámetros fijos — no hay otra forma de aceptar un
+  esquema que varía por tipo de trámite. Valida obligatorios, longitud
+  exacta/máxima, formato numérico y extensión de archivo permitida
+  server-side ANTES de persistir (el formulario del cliente valida lo
+  mismo, pero eso es solo UX — la ruta es la que realmente decide).
+- **Estados**: `enviado → en_tratamiento → respondido → espera_info →
+  terminado` (`db.ESTADOS_TRAMITE`/`ESTADOS_TRAMITE_LABEL`). Cambiar el
+  estado o agregar una nota **desde el admin** dispara automáticamente una
+  Notificacion `origen="sistema"` al trabajador (Fase 2); una nota **del
+  trabajador** NO se auto-notifica (no tiene sentido notificarse a sí
+  mismo) — probado explícitamente en `test_tramites.py`.
+- **UI trabajador** (`trabajador.html`, 6ta pestaña "Trámites", + tarjeta en
+  `portada.html`): landing con "Mis trámites" + consulta por número de
+  expediente → elegir tipo → formulario dinámico (un input por campo, según
+  `tipo_dato`) → al enviar, salta directo al detalle del trámite recién
+  creado (no a una pantalla de "gracias" genérica). El detalle es el mismo
+  para "Mis trámites" y para la consulta por expediente: estado, respuestas
+  presentadas, thread de notas con caja de respuesta, historial. La
+  consulta por expediente NO es pública — pide sesión de trabajador y el
+  CUIL de la sesión tiene que coincidir con el dueño del trámite
+  (`GET /api/tramite/{numero}`).
+- **UI admin**: sub-pestaña "Trámites recibidos" con filtro por CUIL/N° de
+  expediente/estado (JS propio, no reusa `aplicarFiltro` porque ese helper
+  no compone bien con un filtro por `<select>` además de los de texto) y un
+  modal de detalle que permite cambiar el estado y agregar notas sin salir
+  de la pestaña — al confirmar, refresca el modal Y la fila de la tabla en
+  el mismo re-render (`refrescarTramiteDetalle`), sin recargar la página.
+- **Quirk de implementación evitado a propósito**: las sub-pestañas de
+  Trámites usan sus propias clases CSS (`.tramite-subtab`/`.tramite-
+  subpanel`), NO las mismas `.subtab`/`.subpanel` que ya usa Trabajadores
+  — ese listener es global (`querySelectorAll('.subtab')` sin scope), así
+  que compartir la clase habría hecho que cambiar de sub-pestaña en
+  Trámites también desactivara la sub-pestaña activa de Trabajadores.
+  Mismo cuidado en el `<script>`: cualquier inicialización a nivel de
+  módulo que toque un elemento del panel de Trámites está guardada con un
+  chequeo `if (document.getElementById(...))`, porque el panel entero no
+  existe en el DOM cuando el sindicato no tiene el módulo habilitado — un
+  acceso sin guardar ahí rompe TODO el `<script>` de admin.html a partir de
+  esa línea, no solo la función de Trámites.
 
 ## Pendientes (features)
 1. Capacitación — "próximamente". Falta contenido: índice de documentos y
@@ -228,8 +304,6 @@ targetear "por empresa".
    producción (permite cambiar la clave de cualquier usuario; está marcada con una
    advertencia visible). Es un riesgo de seguridad, sacar antes de usuarios reales.
    Se deja a propósito mientras dure la etapa de demos y pruebas (2026-08-05).
-3. Trámites (Fase 3) — ver plan completo guardado en
-   memoria (`project_modulos_notificaciones_tramites`).
 
 ## Noticias (sindicato → trabajador)
 Reemplaza el placeholder "próximamente" de Novedades. Modelo `Noticia`

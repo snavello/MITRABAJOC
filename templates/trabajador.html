@@ -507,6 +507,54 @@
   </div>
   {% endif %}
 
+  <!-- ============ PESTAÑA: TRÁMITES ============ -->
+  {% if 'tramites' in modulos %}
+  <div class="tpanel" id="tp-tramites">
+
+    <div id="tram-inicio">
+      <h1>Trámites</h1>
+      <p class="sub">Formularios de tu sindicato y seguimiento de tus expedientes.</p>
+      <button class="btn" id="tram-nuevo">Iniciar un trámite nuevo</button>
+
+      <div class="card" style="margin-top:16px; padding:14px 15px;">
+        <h2 style="padding:0 0 8px;">Consultar por número de expediente</h2>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="tram-buscar-input" placeholder="Ej: F01AEFIP-2026-000123" style="flex:1; min-width:0; padding:11px 12px; border:1px solid var(--linea); border-radius:10px; font-family:inherit; font-size:14px;">
+          <button class="btn sec" id="tram-buscar-btn" style="width:auto; margin-top:0; padding:0 16px;">Buscar</button>
+        </div>
+        <div id="tram-buscar-error" class="muted" style="margin-top:8px; font-size:12.5px;"></div>
+      </div>
+
+      <h2 style="margin-top:22px; padding:0 0 8px;">Mis trámites</h2>
+      <div id="tram-lista"><div class="cargando" style="padding:20px 0;"><div class="spin"></div></div></div>
+    </div>
+
+    <div id="tram-tipos" style="display:none;">
+      <h1>Iniciar un trámite</h1>
+      <p class="sub">Elegí qué tipo de trámite querés presentar.</p>
+      <div id="tram-tipos-lista" style="margin-top:16px;"></div>
+      <button class="btn sec" id="tram-tipos-volver" style="margin-top:16px;">Volver</button>
+    </div>
+
+    <div id="tram-form" style="display:none;">
+      <h1 id="tram-form-titulo">Trámite</h1>
+      <p class="sub" id="tram-form-codigo"></p>
+      <div id="tram-form-error" class="banner mal" style="display:none;"></div>
+      <div id="tram-form-campos" style="margin-top:16px;"></div>
+      <button class="btn" id="tram-form-enviar">Enviar trámite</button>
+      <button class="btn sec" id="tram-form-volver">Cancelar</button>
+    </div>
+
+    <div id="tram-detalle" style="display:none;">
+      <h1 id="tram-det-expediente">Trámite</h1>
+      <p class="sub" id="tram-det-tipo"></p>
+      <div id="tram-det-contenido" style="margin-top:12px;"></div>
+      <button class="btn sec" id="tram-det-volver" style="margin-top:16px;">Volver</button>
+    </div>
+
+  </div>
+  {% endif %}
+
 </div>
 
 <!-- Overlay: detalle de noticia -->
@@ -551,6 +599,7 @@
     <g id="ic-cred"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><line x1="14" y1="10" x2="18" y2="10"/><line x1="14" y1="14" x2="18" y2="14"/><path d="M6 16c.6-1.3 1.7-2 3-2s2.4.7 3 2"/></g>
     <g id="ic-home"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></g>
     <g id="ic-x"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g>
+    <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
   </defs>
 </svg>
 
@@ -561,6 +610,7 @@
   {% if 'noticias' in modulos %}<button class="tab-t" data-tp="novedades"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-nov"/></svg></span>Novedades</button>{% endif %}
   {% if 'aportes' in modulos %}<button class="tab-t" data-tp="aportes"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg></span>Mis Aportes</button>{% endif %}
   {% if 'capacitacion' in modulos %}<button class="tab-t" data-tp="capacitacion"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg></span>Capacitación</button>{% endif %}
+  {% if 'tramites' in modulos %}<button class="tab-t" data-tp="tramites"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>Trámites</button>{% endif %}
 </nav>
 
 <script>
@@ -1065,6 +1115,220 @@ function abrirImagen(src) {
   document.getElementById('overlay-imagen').classList.add('abierto');
 }
 function cerrarImagen() { document.getElementById('overlay-imagen').classList.remove('abierto'); }
+
+// ==================== Trámites ====================
+if (document.getElementById('tp-tramites')) {
+  const verTram = (id) => {
+    ['tram-inicio', 'tram-tipos', 'tram-form', 'tram-detalle'].forEach(s => {
+      document.getElementById(s).style.display = (s === id) ? 'block' : 'none';
+    });
+  };
+  const ESTADO_TAG_COLOR = {
+    enviado: ['#fdf3e7', '#8a5a1a'], en_tratamiento: ['#e8def5', '#5b3d8a'],
+    respondido: ['#e3f2ee', 'var(--agua)'], espera_info: ['#f8e5e2', 'var(--alerta)'],
+    terminado: ['#e3f2ee', 'var(--agua)'],
+  };
+  function tagEstado(estado, label) {
+    const c = ESTADO_TAG_COLOR[estado] || ['#eee', '#888'];
+    return `<span class="tag" style="background:${c[0]}; color:${c[1]};">${label}</span>`;
+  }
+  function escTram(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+  document.getElementById('tram-nuevo').onclick = () => { verTram('tram-tipos'); cargarTiposTramite(); };
+  document.getElementById('tram-tipos-volver').onclick = () => verTram('tram-inicio');
+  document.getElementById('tram-form-volver').onclick = () => verTram('tram-inicio');
+  document.getElementById('tram-det-volver').onclick = () => { verTram('tram-inicio'); cargarMisTramites(); };
+  document.getElementById('tram-buscar-btn').onclick = () => {
+    const numero = document.getElementById('tram-buscar-input').value.trim();
+    if (numero) abrirTramiteDetalleTrab(numero);
+  };
+  document.getElementById('tram-buscar-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('tram-buscar-btn').click();
+  });
+
+  async function cargarMisTramites() {
+    const cont = document.getElementById('tram-lista');
+    cont.innerHTML = `<div class="cargando" style="padding:20px 0;"><div class="spin"></div></div>`;
+    try {
+      const r = await fetch('/api/tramites/mios');
+      const data = await r.json();
+      if (!data.tramites.length) { cont.innerHTML = '<p class="muted">Todavía no presentaste ningún trámite.</p>'; return; }
+      cont.innerHTML = data.tramites.map(t => `
+        <div class="card" style="margin-top:10px; padding:13px 15px; cursor:pointer;" onclick="abrirTramiteDetalleTrab('${t.numero_expediente}')">
+          <div class="fila" style="border:none; padding:0;">
+            <span><b>${escTram(t.tipo_titulo)}</b><br><span class="muted" style="font-size:12px;"><code>${t.numero_expediente}</code></span></span>
+            <span>${tagEstado(t.estado, t.estado_label)}</span>
+          </div>
+        </div>`).join('');
+    } catch (e) {
+      cont.innerHTML = '<div class="banner mal">No pudimos cargar tus trámites.</div>';
+    }
+  }
+  cargarMisTramites();
+
+  async function cargarTiposTramite() {
+    const cont = document.getElementById('tram-tipos-lista');
+    cont.innerHTML = `<div class="cargando" style="padding:20px 0;"><div class="spin"></div></div>`;
+    try {
+      const r = await fetch('/api/tramites/tipos');
+      const data = await r.json();
+      if (!data.tipos.length) { cont.innerHTML = '<p class="muted">Tu sindicato todavía no cargó ningún tipo de trámite.</p>'; return; }
+      cont.innerHTML = data.tipos.map(t => `
+        <button type="button" class="card" style="width:100%; text-align:left; margin-top:10px; padding:13px 15px; border:1px solid var(--linea); cursor:pointer; font-family:inherit;" onclick='abrirFormularioTramite(${JSON.stringify(t)})'>
+          <b>${escTram(t.titulo)}</b><br><span class="muted" style="font-size:12.5px;">${escTram(t.codigo)}</span>
+        </button>`).join('');
+    } catch (e) {
+      cont.innerHTML = '<div class="banner mal">No pudimos cargar los tipos de trámite.</div>';
+    }
+  }
+
+  let tipoTramiteActual = null;
+  function campoInputHtml(c) {
+    const id = 'tc_' + c.id;
+    if (c.tipo_dato === 'archivo') {
+      const accept = (c.tipos_archivo_permitidos || '').split(',').map(e => e.trim()).filter(Boolean).map(e => '.' + e).join(',');
+      return `<input type="file" id="${id}" ${accept ? `accept="${accept}"` : ''}>`;
+    }
+    if (c.tipo_dato === 'fecha') return `<input type="date" id="${id}">`;
+    if (c.tipo_dato === 'numero') return `<input type="text" inputmode="decimal" id="${id}" placeholder="${c.decimales ? 'Ej: 1234.56' : 'Ej: 1234'}">`;
+    const maxlen = c.longitud_exacta || c.longitud_maxima;
+    return `<input type="text" id="${id}" ${maxlen ? `maxlength="${maxlen}"` : ''} placeholder="${c.longitud_exacta ? c.longitud_exacta + ' caracteres' : ''}">`;
+  }
+
+  window.abrirFormularioTramite = function (tipo) {
+    tipoTramiteActual = tipo;
+    document.getElementById('tram-form-titulo').textContent = tipo.titulo;
+    document.getElementById('tram-form-codigo').textContent = tipo.codigo;
+    document.getElementById('tram-form-error').style.display = 'none';
+    document.getElementById('tram-form-campos').innerHTML = tipo.campos.map(c => `
+      <div class="campo" style="margin-bottom:14px;">
+        <label style="display:block; font-size:12.5px; color:var(--gris); margin-bottom:5px;">${escTram(c.etiqueta)}${c.obligatorio ? ' *' : ''}</label>
+        ${campoInputHtml(c)}
+      </div>`).join('');
+    verTram('tram-form');
+  };
+
+  document.getElementById('tram-form-enviar').onclick = async () => {
+    if (!tipoTramiteActual) return;
+    const errBox = document.getElementById('tram-form-error');
+    errBox.style.display = 'none';
+    const fd = new FormData();
+    fd.append('tipo_tramite_id', tipoTramiteActual.id);
+    const faltan = [];
+    tipoTramiteActual.campos.forEach(c => {
+      const el = document.getElementById('tc_' + c.id);
+      if (!el) return;
+      if (c.tipo_dato === 'archivo') {
+        if (el.files[0]) fd.append('archivo_' + c.id, el.files[0]);
+        else if (c.obligatorio) faltan.push(c.etiqueta);
+      } else {
+        if (!el.value.trim() && c.obligatorio) faltan.push(c.etiqueta);
+        fd.append('campo_' + c.id, el.value);
+      }
+    });
+    if (faltan.length) {
+      errBox.textContent = 'Completá: ' + faltan.join(', ');
+      errBox.style.display = 'flex';
+      return;
+    }
+    const btn = document.getElementById('tram-form-enviar');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    try {
+      const r = await fetch('/api/tramite', { method: 'POST', body: fd });
+      const data = await r.json();
+      if (!r.ok) {
+        errBox.innerHTML = (data.errores || ['No se pudo enviar el trámite.']).join('<br>');
+        errBox.style.display = 'flex';
+        return;
+      }
+      abrirTramiteDetalleTrab(data.numero_expediente);
+    } catch (e) {
+      errBox.textContent = 'No se pudo enviar el trámite. Probá de nuevo.';
+      errBox.style.display = 'flex';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Enviar trámite';
+    }
+  };
+
+  window.abrirTramiteDetalleTrab = async function (numero) {
+    verTram('tram-detalle');
+    document.getElementById('tram-det-expediente').textContent = numero;
+    document.getElementById('tram-det-tipo').textContent = '';
+    document.getElementById('tram-det-contenido').innerHTML = `<div class="cargando" style="padding:20px 0;"><div class="spin"></div></div>`;
+    document.getElementById('tram-buscar-error').textContent = '';
+    await refrescarTramiteDetalleTrab(numero);
+  };
+
+  async function refrescarTramiteDetalleTrab(numero) {
+    try {
+      const r = await fetch('/api/tramite/' + encodeURIComponent(numero));
+      if (!r.ok) {
+        document.getElementById('tram-det-contenido').innerHTML = '<div class="banner mal">No encontramos un trámite tuyo con ese número.</div>';
+        return;
+      }
+      const d = await r.json();
+      document.getElementById('tram-det-expediente').textContent = d.numero_expediente;
+      document.getElementById('tram-det-tipo').textContent = d.tipo_titulo;
+
+      const respuestasHtml = d.respuestas.map(resp => `
+        <div class="fila" style="padding:9px 0;">
+          <span class="muted">${escTram(resp.etiqueta)}</span>
+          <span>${resp.tiene_archivo ? `<a href="/tramite-respuesta-archivo/${resp.respuesta_id}" target="_blank" rel="noopener">📎 archivo</a>` : escTram(resp.valor_texto)}</span>
+        </div>`).join('');
+
+      const notasHtml = d.notas.map(n => `
+        <div class="card" style="margin-top:8px; padding:10px 13px; border-left:3px solid ${n.autor === 'admin' ? 'var(--marca-primario)' : 'var(--agua)'};">
+          <div class="muted" style="font-size:11px;">${n.autor === 'admin' ? 'Tu sindicato' : 'Vos'} · ${n.creado}</div>
+          ${n.texto ? `<div style="margin-top:4px; font-size:13.5px;">${escTram(n.texto)}</div>` : ''}
+          ${n.tiene_adjunto ? `<div style="margin-top:4px;"><a href="/tramite-nota-adjunto/${n.id}" target="_blank" rel="noopener" style="font-size:12.5px;">📎 ${escTram(n.adjunto_nombre)}</a></div>` : ''}
+        </div>`).join('') || '<p class="muted" style="font-size:12.5px; margin-top:8px;">Sin notas todavía.</p>';
+
+      const logHtml = d.log.map(l => `<div class="fila" style="padding:6px 0; font-size:12.5px;"><span class="muted">${l.creado}</span><span>${escTram(l.detalle)}</span></div>`).join('');
+
+      document.getElementById('tram-det-contenido').innerHTML = `
+        <div class="card" style="padding:6px 15px;">
+          <div class="fila" style="border:none;"><span class="muted">Estado</span><span>${tagEstado(d.estado, d.estado_label)}</span></div>
+        </div>
+        <h2 style="margin-top:18px; padding:0 0 8px;">Datos presentados</h2>
+        <div class="card" style="padding:2px 15px;">${respuestasHtml}</div>
+        <h2 style="margin-top:18px; padding:0 0 8px;">Notas</h2>
+        ${notasHtml}
+        <form id="tram-nota-form" style="margin-top:10px;">
+          <textarea id="tram-nota-texto" rows="2" placeholder="Responder a tu sindicato…" style="width:100%; padding:10px; border:1px solid var(--linea); border-radius:10px; font-family:inherit; font-size:13.5px;"></textarea>
+          <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+            <input type="file" id="tram-nota-adjunto" style="font-size:12.5px; flex:1; min-width:0;">
+            <button type="submit" class="btn sec" style="width:auto; margin-top:0; padding:0 16px; min-height:40px;">Enviar</button>
+          </div>
+        </form>
+        <h2 style="margin-top:18px; padding:0 0 8px;">Historial</h2>
+        <div class="card" style="padding:2px 15px;">${logHtml}</div>
+      `;
+      document.getElementById('tram-nota-form').onsubmit = (ev) => {
+        ev.preventDefault();
+        enviarNotaTramiteTrab(d.id, d.numero_expediente);
+        return false;
+      };
+    } catch (e) {
+      document.getElementById('tram-det-contenido').innerHTML = '<div class="banner mal">No pudimos cargar el trámite.</div>';
+    }
+  }
+
+  async function enviarNotaTramiteTrab(id, numero) {
+    const texto = document.getElementById('tram-nota-texto').value;
+    const archivo = document.getElementById('tram-nota-adjunto').files[0];
+    if (!texto.trim() && !archivo) return;
+    const fd = new FormData();
+    fd.append('texto', texto);
+    if (archivo) fd.append('adjunto', archivo);
+    try {
+      const r = await fetch('/api/tramite/' + id + '/nota', { method: 'POST', body: fd });
+      if (!r.ok) throw new Error();
+      refrescarTramiteDetalleTrab(numero);
+    } catch (e) {
+      alert('No se pudo enviar la nota.');
+    }
+  }
+}
 </script>
 </body>
 </html>
