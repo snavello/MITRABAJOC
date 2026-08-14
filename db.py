@@ -145,6 +145,10 @@ class Trabajador(SQLModel, table=True):
     # Seccional del sindicato a la que pertenece (opcional -- no todos los
     # sindicatos cargan seccionales, y un trabajador puede quedar sin asignar).
     seccional_id: Optional[int] = Field(default=None, foreign_key="seccional.id", index=True)
+    # CUIT del empleador (opcional, lo carga el admin en el alta/edición
+    # manual -- NO está en el alta masiva, mismo criterio que seccional_id).
+    # Permite dirigir una Notificacion "por empresa" (ver Notificacion).
+    cuit_empleador: Optional[str] = Field(default=None, index=True)
     # Último semáforo de ARCA calculado (POST /api/aportes) -- antes se
     # perdía apenas se navegaba o se recargaba la página, porque nunca se
     # guardaba. Es el mismo dict que devuelve semaforo.calcular_semaforo().
@@ -338,6 +342,41 @@ class ReciboSospechoso(SQLModel, table=True):
     archivo_datos: bytes
     archivo_mime: str = ""
     archivo_nombre: str = ""
+
+
+class Notificacion(SQLModel, table=True):
+    """Mensaje dirigido del sindicato a un grupo de trabajadores (Fase 2 de
+    Módulos + Notificaciones + Trámites). La lista de destinatarios se
+    resuelve y se FIJA al momento de enviar (snapshot en
+    NotificacionDestinatario) -- no se recalcula después, así un trabajador
+    que cambia de seccional o CUIT no pierde ni gana mensajes ya enviados."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    remitente: str = ""            # texto libre, ej. "Comisión Directiva"
+    # Quién la generó, auditoría real -- NULL en origen="sistema" (Fase 3:
+    # la dispara un cambio de trámite, no una persona).
+    usuario_id: Optional[int] = Field(default=None, foreign_key="usuariosindicato.id")
+    texto: str = ""
+    adjunto_datos: Optional[bytes] = Field(default=None)
+    adjunto_mime: str = ""
+    adjunto_nombre: str = ""
+    criterio: str = ""             # "cuil" | "cuit_empleador" | "seccional" | "provincia"
+    criterio_valores: list = Field(default=[], sa_column=Column(JSON))
+    # "manual" = la compuso el admin desde /admin. "sistema" = la disparó
+    # automáticamente un cambio de trámite (Fase 3, _enviar_notificacion_sistema).
+    origen: str = "manual"
+    enviado_en: str = ""           # fecha/hora de envío ("AAAA-MM-DD HH:MM")
+    cantidad_destinatarios: int = 0  # snapshot: cuántos matchearon al enviar
+
+
+class NotificacionDestinatario(SQLModel, table=True):
+    """Una fila por CUIL que recibió una Notificacion puntual -- separado de
+    Notificacion para poder marcar la lectura de cada destinatario por su
+    lado (leida_en NULL = todavía no la abrió)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    notificacion_id: int = Field(foreign_key="notificacion.id", index=True)
+    cuil: str = Field(index=True)
+    leida_en: Optional[str] = Field(default=None)
 
 
 # ---------- Inicialización ----------
@@ -913,3 +952,126 @@ def recibos_sospechosos_listado() -> list:
             "sindicato_id": f.sindicato_id, "cuil": f.cuil, "periodo": f.periodo,
             "motivo": f.motivo, "fecha": f.fecha, "archivo_nombre": f.archivo_nombre,
         } for f in filas]
+
+
+# ---------- Notificaciones (Fase 2 de Módulos + Notificaciones + Trámites) ----------
+
+def resolver_destinatarios(sindicato_id: int, criterio: str, valores: list) -> list:
+    """CUILs de trabajadores ACTIVOS de este sindicato que matchean el
+    criterio -- usado tanto por el preview (solo cuenta) como por el envío
+    real (que además fija la lista, ver crear_notificacion). El sindicato
+    solo puede targetear su propia gente: un valor que no matchea ningún
+    trabajador de ESTE sindicato_id simplemente no suma destinatarios."""
+    valores = [str(v).strip() for v in (valores or []) if str(v).strip()]
+    if not valores:
+        return []
+    with Session(engine) as s:
+        trabajadores = s.exec(select(Trabajador).where(
+            Trabajador.sindicato_id == sindicato_id, Trabajador.activo == True)).all()
+    if criterio == "cuil":
+        objetivo = set(valores)
+        return sorted({t.cuil for t in trabajadores if t.cuil in objetivo})
+    if criterio == "cuit_empleador":
+        objetivo = set(valores)
+        return sorted({t.cuil for t in trabajadores if t.cuit_empleador in objetivo})
+    if criterio == "seccional":
+        objetivo = {int(v) for v in valores if v.isdigit()}
+        return sorted({t.cuil for t in trabajadores if t.seccional_id in objetivo})
+    if criterio == "provincia":
+        objetivo = set(valores)
+        return sorted({t.cuil for t in trabajadores if t.provincia in objetivo})
+    return []
+
+
+def crear_notificacion(sindicato_id: int, usuario_id: Optional[int], remitente: str, texto: str,
+                        criterio: str, valores: list, adjunto_datos: Optional[bytes] = None,
+                        adjunto_mime: str = "", adjunto_nombre: str = "",
+                        origen: str = "manual") -> dict:
+    """Resuelve los destinatarios y los FIJA en el momento de enviar (snapshot,
+    ver Notificacion). Devuelve id y cantidad real, para la confirmación."""
+    cuils = resolver_destinatarios(sindicato_id, criterio, valores)
+    with Session(engine) as s:
+        n = Notificacion(
+            sindicato_id=sindicato_id, remitente=remitente or "", usuario_id=usuario_id,
+            texto=texto or "", adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime or "",
+            adjunto_nombre=adjunto_nombre or "", criterio=criterio, criterio_valores=list(valores or []),
+            origen=origen, enviado_en=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            cantidad_destinatarios=len(cuils),
+        )
+        s.add(n); s.commit(); s.refresh(n)
+        for cuil in cuils:
+            s.add(NotificacionDestinatario(notificacion_id=n.id, cuil=cuil))
+        s.commit()
+        return {"id": n.id, "cantidad_destinatarios": len(cuils)}
+
+
+def notificaciones_del_sindicato(sindicato_id: int) -> list:
+    """Todas las notificaciones enviadas por este sindicato, con el resumen
+    leídos/total, más recientes primero -- para el listado de admin."""
+    with Session(engine) as s:
+        filas = s.exec(select(Notificacion).where(Notificacion.sindicato_id == sindicato_id)
+                       .order_by(Notificacion.id.desc())).all()
+        resultado = []
+        for n in filas:
+            dests = s.exec(select(NotificacionDestinatario).where(
+                NotificacionDestinatario.notificacion_id == n.id)).all()
+            leidos = sum(1 for d in dests if d.leida_en)
+            resultado.append({
+                "id": n.id, "remitente": n.remitente, "texto": n.texto,
+                "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+                "criterio": n.criterio, "criterio_valores": n.criterio_valores or [],
+                "origen": n.origen, "enviado_en": n.enviado_en,
+                "cantidad_destinatarios": n.cantidad_destinatarios,
+                "leidos": leidos,
+            })
+        return resultado
+
+
+def notificacion_destinatarios(notificacion_id: int) -> list:
+    """Detalle fila por fila (CUIL + si leyó y cuándo) de una notificación."""
+    with Session(engine) as s:
+        dests = s.exec(select(NotificacionDestinatario).where(
+            NotificacionDestinatario.notificacion_id == notificacion_id).order_by(
+            NotificacionDestinatario.cuil)).all()
+        nombres = {t.cuil: t.nombre for t in s.exec(select(Trabajador)).all()}
+        return [{
+            "cuil": d.cuil, "nombre": nombres.get(d.cuil, ""), "leida_en": d.leida_en,
+        } for d in dests]
+
+
+def notificaciones_de_trabajador(cuil: str, sindicato_id: int) -> list:
+    """Notificaciones que le llegaron a este CUIL en este sindicato, más
+    nuevas primero -- para el modal de la portada."""
+    with Session(engine) as s:
+        dests = s.exec(select(NotificacionDestinatario).where(
+            NotificacionDestinatario.cuil == cuil)).all()
+        if not dests:
+            return []
+        por_id = {d.notificacion_id: d for d in dests}
+        notifs = s.exec(select(Notificacion).where(
+            Notificacion.id.in_(por_id.keys()), Notificacion.sindicato_id == sindicato_id)
+            .order_by(Notificacion.id.desc())).all()
+        return [{
+            "id": n.id, "remitente": n.remitente, "texto": n.texto,
+            "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+            "enviado_en": n.enviado_en, "leida_en": por_id[n.id].leida_en,
+        } for n in notifs]
+
+
+def contar_notificaciones_no_leidas(cuil: str, sindicato_id: int) -> int:
+    return sum(1 for n in notificaciones_de_trabajador(cuil, sindicato_id) if not n["leida_en"])
+
+
+def marcar_notificacion_leida(notificacion_id: int, cuil: str) -> bool:
+    """Marca como leída la copia de ESTE cuil (aislamiento: no toca la fila
+    de otro destinatario). Devuelve False si el cuil no era destinatario."""
+    with Session(engine) as s:
+        d = s.exec(select(NotificacionDestinatario).where(
+            NotificacionDestinatario.notificacion_id == notificacion_id,
+            NotificacionDestinatario.cuil == cuil)).first()
+        if not d:
+            return False
+        if not d.leida_en:
+            d.leida_en = datetime.now().strftime("%Y-%m-%d %H:%M")
+            s.add(d); s.commit()
+        return True

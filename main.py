@@ -38,7 +38,7 @@ import db
 import auth
 from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador,
                 CuentaTrabajador, EnvioSindicato, ReciboVerificado, ConfiguracionPlataforma, Noticia,
-                Beneficio, Seccional, ReciboSospechoso)
+                Beneficio, Seccional, ReciboSospechoso, Notificacion, NotificacionDestinatario)
 from extractor import extraer, extraer_aportes
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, CATEGORIAS_UNIVERSALES)
@@ -498,6 +498,7 @@ def admin(request: Request):
         "debe_cambiar": ses.get("cambiar", False),
         "noticias": db.noticias_del_sindicato(sid),
         "beneficios": db.beneficios_del_sindicato(sid),
+        "notificaciones": db.notificaciones_del_sindicato(sid),
         "seccionales": seccionales, "seccional_por_id": seccional_por_id,
         "modulos": _modulos_de(sid),
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
@@ -533,6 +534,7 @@ def admin_trabajador_alta(
     ciudad: str = Form(""), provincia: str = Form(""),
     telefono: str = Form(""), mail: str = Form(""),
     vigencia_credencial: str = Form(""), seccional_id: str = Form(""),
+    cuit_empleador: str = Form(""),
 ):
     """Alta o modificación manual de un trabajador. Obligatorios: cuil y nombre."""
     sid = exigir_sindicato(request)
@@ -553,6 +555,7 @@ def admin_trabajador_alta(
                 t.telefono, t.mail = telefono, mail
                 t.vigencia_credencial = vigencia_credencial or None
                 t.seccional_id = sec_id
+                t.cuit_empleador = cuit_empleador.strip() or None
                 s.add(t)
         else:    # alta — evitar duplicado de CUIL en el mismo sindicato
             existe = s.exec(select(Trabajador).where(
@@ -562,7 +565,8 @@ def admin_trabajador_alta(
                     sindicato_id=sid, cuil=cuil_norm, nombre=nombre.strip(),
                     calle=calle, numero=numero, piso=piso, ciudad=ciudad,
                     provincia=provincia, telefono=telefono, mail=mail,
-                    vigencia_credencial=vigencia_credencial or None, seccional_id=sec_id))
+                    vigencia_credencial=vigencia_credencial or None, seccional_id=sec_id,
+                    cuit_empleador=cuit_empleador.strip() or None))
         s.commit()
     return RedirectResponse("/admin#trabajadores", status_code=303)
 
@@ -934,6 +938,127 @@ def borrar_seccional(request: Request, id: int = Form(...)):
             s.delete(sec)
             s.commit()
     return RedirectResponse("/admin#seccionales", status_code=303)
+
+
+# ---------- Notificaciones (Fase 2 de Módulos + Notificaciones + Trámites) ----------
+MAX_ADJUNTO_NOTIFICACION = 5 * 1024 * 1024  # 5 MB, pedido explícito del plan
+
+
+def _leer_adjunto_notificacion(archivo: UploadFile):
+    """Lee el adjunto de una notificación (imagen, PDF o Word) y devuelve
+    (datos, mime, nombre_original). None/"" si el tipo no es válido, si está
+    vacío, o si supera MAX_ADJUNTO_NOTIFICACION."""
+    import os
+    ext = os.path.splitext(archivo.filename)[1].lower()
+    mimes = {
+        ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+        ".webp": "image/webp", ".gif": "image/gif",
+        ".pdf": "application/pdf", ".doc": "application/msword",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+    if ext not in mimes:
+        return None, "", ""
+    datos = archivo.file.read()
+    if not datos or len(datos) > MAX_ADJUNTO_NOTIFICACION:
+        return None, "", ""
+    return datos, mimes[ext], archivo.filename
+
+
+@app.post("/admin/notificacion/preview")
+def notificacion_preview(request: Request, criterio: str = Form(...), valores: list[str] = Form(default=[])):
+    """Solo cuenta cuántos trabajadores matchean -- no persiste nada. El
+    admin lo usa para confirmar antes de mandar de verdad."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "notificaciones")
+    cuils = db.resolver_destinatarios(sid, criterio, valores)
+    return {"cantidad": len(cuils)}
+
+
+@app.post("/admin/notificacion")
+async def crear_notificacion(
+    request: Request,
+    remitente: str = Form(""), texto: str = Form(...),
+    criterio: str = Form(...), valores: list[str] = Form(default=[]),
+    adjunto: UploadFile = File(None),
+):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "notificaciones")
+    ses = sesion_actual(request)
+    adjunto_datos, adjunto_mime, adjunto_nombre = None, "", ""
+    if adjunto and adjunto.filename:
+        adjunto_datos, adjunto_mime, adjunto_nombre = _leer_adjunto_notificacion(adjunto)
+        if not adjunto_datos:
+            return RedirectResponse("/admin?error=adjunto#notificaciones", status_code=303)
+    db.crear_notificacion(
+        sid, ses.get("uid") or None, remitente, texto, criterio, valores,
+        adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime, adjunto_nombre=adjunto_nombre,
+    )
+    return RedirectResponse("/admin#notificaciones", status_code=303)
+
+
+@app.get("/admin/notificacion/{notificacion_id}/destinatarios")
+def notificacion_ver_destinatarios(notificacion_id: int, request: Request):
+    sid = exigir_sindicato(request)
+    with db.get_session() as s:
+        n = s.get(Notificacion, notificacion_id)
+        if not n or n.sindicato_id != sid:
+            raise HTTPException(403, "No autorizado")
+    return {"destinatarios": db.notificacion_destinatarios(notificacion_id)}
+
+
+@app.get("/notificacion-adjunto/{notificacion_id}")
+def servir_adjunto_notificacion(notificacion_id: int, request: Request):
+    """El adjunto lo puede ver el admin del sindicato que la mandó, o un
+    trabajador que sea destinatario real -- no es público como el logo."""
+    with db.get_session() as s:
+        n = s.get(Notificacion, notificacion_id)
+        if not n or not n.adjunto_datos:
+            raise HTTPException(404, "Sin adjunto")
+        ses = sesion_actual(request)
+        autorizado = False
+        if ses and ses.get("rol") == "sindicato" and ses.get("sid") == n.sindicato_id:
+            autorizado = True
+        elif ses and ses.get("rol") == "trabajador":
+            cuil = request.cookies.get("cuil_trab", "")
+            if cuil and s.exec(select(NotificacionDestinatario).where(
+                    NotificacionDestinatario.notificacion_id == notificacion_id,
+                    NotificacionDestinatario.cuil == cuil)).first():
+                autorizado = True
+        if not autorizado:
+            raise HTTPException(403, "No autorizado")
+        return BinResponse(
+            content=n.adjunto_datos, media_type=n.adjunto_mime or "application/octet-stream",
+            headers={"Content-Disposition": f'inline; filename="{n.adjunto_nombre or "adjunto"}"'},
+        )
+
+
+@app.get("/api/mis-notificaciones")
+def api_mis_notificaciones(request: Request):
+    ses = sesion_actual(request)
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or ses.get("rol") != "trabajador" or not cuil:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        return {"notificaciones": [], "no_leidas": 0}
+    notifs = db.notificaciones_de_trabajador(cuil, sid)
+    for n in notifs:
+        n["texto_html"] = _texto_con_links(n["texto"])
+    return {"notificaciones": notifs, "no_leidas": sum(1 for n in notifs if not n["leida_en"])}
+
+
+@app.post("/api/notificacion/{notificacion_id}/leer")
+def api_marcar_notificacion_leida(notificacion_id: int, request: Request):
+    ses = sesion_actual(request)
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or ses.get("rol") != "trabajador" or not cuil:
+        raise HTTPException(403, "No autorizado")
+    ok = db.marcar_notificacion_leida(notificacion_id, cuil)
+    if not ok:
+        raise HTTPException(404, "No sos destinatario de esta notificación")
+    sid = sindicato_activo_trabajador(request)
+    no_leidas = db.contar_notificaciones_no_leidas(cuil, sid) if sid else 0
+    return {"ok": True, "no_leidas": no_leidas}
 
 
 # ---------- Aprendizaje: subir N recibos y proponer conceptos nuevos ----------
@@ -1642,6 +1767,7 @@ def app_portada(request: Request):
             "perfil": db.perfil_trabajador(cuil, sid_activo),
             "noticias": _con_antiguedad(db.noticias_vigentes(sid_activo, seccional_id=seccional_id, limite=3)),
             "beneficios": db.beneficios_vigentes(sid_activo, seccional_id=seccional_id),
+            "notificaciones_no_leidas": db.contar_notificaciones_no_leidas(cuil, sid_activo),
             "modulos": _modulos_de(sid_activo),
             "version": VERSION_TRABAJADOR, "fecha_version": FECHA_VERSION,
         })

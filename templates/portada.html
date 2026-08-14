@@ -19,6 +19,28 @@
   .fila-hola { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .hola { font-size: 22px; letter-spacing: -.4px; color: var(--sobre-base); margin-top: 4px; }
   .hola em { font-style: normal; color: var(--marca-acento); }
+
+  /* ---------- Notificaciones ---------- */
+  .badge-noleidas { position: absolute; top: -6px; right: -6px; background: #e5484d; color: #fff;
+    font-size: 10.5px; font-weight: 700; min-width: 19px; height: 19px; border-radius: 999px;
+    align-items: center; justify-content: center; padding: 0 4px; border: 2px solid var(--marca-base); }
+  .modal-notif { max-width: 520px; }
+  .notif-item { background: var(--sup-1); border: 1px solid var(--sup-2); border-left: 3px solid transparent;
+    border-radius: 10px; padding: 11px 13px; margin-bottom: 8px; cursor: pointer; }
+  .notif-item.no-leida { border-left-color: var(--marca-acento); }
+  .notif-cab { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .notif-remitente { font-size: 12.5px; font-weight: 650; color: var(--sobre-base); }
+  .notif-item.no-leida .notif-remitente { color: var(--marca-acento); }
+  .notif-fecha { font-size: 10.5px; color: var(--sobre-base-mute); white-space: nowrap; }
+  .notif-snippet { font-size: 12.5px; color: var(--sobre-base-mute); margin-top: 4px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .notif-texto-full { font-size: 13px; line-height: 1.55; margin-top: 8px; color: var(--sobre-base);
+    display: none; }
+  .notif-item.expandido .notif-snippet { display: none; }
+  .notif-item.expandido .notif-texto-full { display: block; }
+  .notif-adjunto { display: inline-block; margin-top: 9px; font-size: 12px; color: var(--marca-acento);
+    text-decoration: none; font-weight: 600; }
+  .notif-vacio { text-align: center; padding: 34px 10px; color: var(--sobre-base-mute); font-size: 13px; }
 </style>
 </head>
 <body class="oscuro">
@@ -86,6 +108,16 @@
         <div class="estado">Próximamente</div>
       </div>
     </a>
+    {% endif %}
+    {% if 'notificaciones' in modulos %}
+    <button type="button" class="acceso" style="position:relative; text-align:left; font-family:inherit; cursor:pointer;" onclick="abrirNotificaciones()">
+      <svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg>
+      <div>
+        <div class="titulo">Notificaciones</div>
+        <div class="estado">Mensajes de tu sindicato</div>
+      </div>
+      <span class="badge-noleidas" id="badge-notif" style="display:{{ 'flex' if notificaciones_no_leidas else 'none' }};">{{ notificaciones_no_leidas }}</span>
+    </button>
     {% endif %}
   </div>
 
@@ -193,6 +225,15 @@
   <img id="img-ampliada" src="" alt="" style="max-width:92vw; max-height:85vh; border-radius:8px;">
 </div>
 
+<!-- Overlay: notificaciones -->
+<div class="overlay" id="overlay-notificaciones" onclick="if (event.target === this) cerrarNotificaciones()">
+  <div class="modal-hoja modal-notif">
+    <button class="modal-cerrar" onclick="cerrarNotificaciones()" aria-label="Cerrar"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
+    <h3>Notificaciones</h3>
+    <div id="notif-lista"></div>
+  </div>
+</div>
+
 <!-- Íconos SVG de línea -->
 <svg style="display:none" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -203,6 +244,7 @@
     <g id="ic-home"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></g>
     <g id="ic-x"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g>
     <g id="ic-perfil"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></g>
+    <g id="ic-notif"><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></g>
   </defs>
 </svg>
 
@@ -284,6 +326,70 @@ function abrirImagen(src) {
   document.getElementById('overlay-imagen').classList.add('abierto');
 }
 function cerrarImagen() { document.getElementById('overlay-imagen').classList.remove('abierto'); }
+
+async function abrirNotificaciones() {
+  const ov = document.getElementById('overlay-notificaciones');
+  const lista = document.getElementById('notif-lista');
+  lista.innerHTML = '<div class="notif-vacio">Cargando…</div>';
+  ov.classList.add('abierto');
+  try {
+    const r = await fetch('/api/mis-notificaciones');
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    renderNotificaciones(data.notificaciones);
+  } catch (e) {
+    lista.innerHTML = '<div class="notif-vacio">No se pudieron cargar las notificaciones.</div>';
+  }
+}
+function cerrarNotificaciones() { document.getElementById('overlay-notificaciones').classList.remove('abierto'); }
+
+function fmtFechaHora(s) {
+  // "AAAA-MM-DD HH:MM" -> "DD/MM HH:MM"
+  const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})$/.exec(s || '');
+  return m ? `${m[3]}/${m[2]} ${m[4]}` : (s || '');
+}
+
+function renderNotificaciones(items) {
+  const lista = document.getElementById('notif-lista');
+  if (!items.length) {
+    lista.innerHTML = '<div class="notif-vacio">Todavía no tenés notificaciones.</div>';
+    return;
+  }
+  lista.innerHTML = items.map(n => `
+    <div class="notif-item ${n.leida_en ? '' : 'no-leida'}" data-id="${n.id}" onclick="toggleNotificacion(${n.id})">
+      <div class="notif-cab">
+        <span class="notif-remitente">${(n.remitente || 'Tu sindicato').replace(/</g, '&lt;')}</span>
+        <span class="notif-fecha">${fmtFechaHora(n.enviado_en)}</span>
+      </div>
+      <div class="notif-snippet">${(n.texto || '').replace(/</g, '&lt;')}</div>
+      <div class="notif-texto-full">${n.texto_html}${n.tiene_adjunto ? `<br><a class="notif-adjunto" href="/notificacion-adjunto/${n.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📎 Ver adjunto</a>` : ''}</div>
+    </div>
+  `).join('');
+}
+
+async function toggleNotificacion(id) {
+  const item = document.querySelector('.notif-item[data-id="' + id + '"]');
+  if (!item) return;
+  const yaExpandido = item.classList.contains('expandido');
+  document.querySelectorAll('.notif-item.expandido').forEach(el => el.classList.remove('expandido'));
+  if (yaExpandido) return;
+  item.classList.add('expandido');
+  if (item.classList.contains('no-leida')) {
+    item.classList.remove('no-leida');
+    try {
+      const r = await fetch('/api/notificacion/' + id + '/leer', { method: 'POST' });
+      const data = await r.json();
+      actualizarBadgeNotif(data.no_leidas);
+    } catch (e) {}
+  }
+}
+
+function actualizarBadgeNotif(n) {
+  const badge = document.getElementById('badge-notif');
+  if (!badge) return;
+  if (n > 0) { badge.textContent = n; badge.style.display = 'flex'; }
+  else { badge.style.display = 'none'; }
+}
 </script>
 
 </body>

@@ -115,8 +115,10 @@ Rediseño de interfaz COMPLETO y mergeado a main: portada nueva + sistema de 4
 colores. Ver sección siguiente.
 
 Sistema de módulos habilitables (Fase 1 de "Módulos + Notificaciones +
-Trámites") COMPLETO y en main. Ver sección dedicada más abajo. Fases 2
-(Notificaciones) y 3 (Trámites) del mismo plan, pendientes.
+Trámites") COMPLETO y en main. Ver sección dedicada más abajo.
+
+Notificaciones (Fase 2 del mismo plan) COMPLETO y en main. Ver sección
+dedicada más abajo. Fase 3 (Trámites), pendiente.
 
 ## Rediseño de interfaz
 Sistema de diseño nuevo (`.claude/skills/diseno-mi-trabajo/SKILL.md`,
@@ -172,8 +174,52 @@ fases todavía no están implementadas). Se guarda como
   es vacío a propósito: solo importa para sindicatos creados fuera del flujo
   normal de alta (tests, scripts) — `cargar_demo.py` y los tests pasan
   `modulos_habilitados=list(MODULOS_INICIALES)` explícito.
-- Fases 2 (Notificaciones) y 3 (Trámites) del mismo plan quedan pendientes
-  — el catálogo ya las incluye, pero sin implementación todavía.
+- Fase 3 (Trámites) del mismo plan queda pendiente — el catálogo ya la
+  incluye, pero sin implementación todavía.
+
+## Notificaciones (Fase 2 de "Módulos + Notificaciones + Trámites")
+Mensajería dirigida del sindicato a un grupo de trabajadores. Modelos
+`Notificacion` (mensaje + criterio + snapshot de cantidad) y
+`NotificacionDestinatario` (una fila por CUIL, con `leida_en` — la lista de
+destinatarios se FIJA al enviar, no se recalcula después). Se agregó
+`Trabajador.cuit_empleador` (opcional, lo carga el admin) para poder
+targetear "por empresa".
+
+- **Criterios de destinatarios**: `cuil` (lista literal), `cuit_empleador`,
+  `seccional` (solo aparece si el sindicato tiene seccionales cargadas), o
+  `provincia`. `db.resolver_destinatarios(sindicato_id, criterio, valores)`
+  es la única función que resuelve — la usan tanto el preview como el envío
+  real, y solo matchea trabajadores ACTIVOS de ESE sindicato.
+- **Flujo de envío en admin** (`/admin` → pestaña Notificaciones, solo si el
+  módulo está habilitado): el botón "Vista previa" pega a
+  `POST /admin/notificacion/preview` (no persiste, solo cuenta) y recién ahí
+  aparece "Confirmar y enviar (N)" — el submit real (`POST /admin/notificacion`)
+  incluye un adjunto opcional (imagen/PDF/Word, tope `MAX_ADJUNTO_NOTIFICACION`
+  = 5 MB, `main._leer_adjunto_notificacion`). El listado de enviadas muestra
+  leídos/total por fila; "Ver" abre el detalle de destinatarios (reusa el
+  `#modal-recibo-overlay` compartido con Reportes/Afiliados cotizantes,
+  poblado por fetch en vez de copiar un `<tr>` oculto).
+- **UI trabajador** (`portada.html`): tarjeta "Notificaciones" con
+  `#badge-notif` (rojo, oculto si no hay pendientes) — el conteo inicial
+  viene server-side (`db.contar_notificaciones_no_leidas`, evita el flash de
+  "0"). El click abre un modal (`abrirNotificaciones()`) que trae la lista
+  vía `GET /api/mis-notificaciones`; cada card es un acordeón simple —
+  expandirla (`toggleNotificacion`) marca leída en el momento
+  (`POST /api/notificacion/{id}/leer`) y decrementa el badge en vivo, sin
+  recargar. El texto pasa por `_texto_con_links` (mismo autolink+escape que
+  Noticia/Beneficio) antes de inyectarse como HTML.
+- **Aislamiento**: `marcar_notificacion_leida` solo toca la fila
+  `(notificacion_id, cuil)` exacta — el CUIL sale de la cookie de sesión del
+  trabajador, nunca de un parámetro que pueda falsearse. Un trabajador en
+  pluriempleo solo ve las notificaciones del sindicato que tiene activo en
+  ese momento (mismo filtro `sindicato_id` que ya usan Noticias/Beneficios).
+- **Adjunto**: no es público como el logo — `GET /notificacion-adjunto/{id}`
+  chequea que quien pide sea el admin del sindicato que la mandó, o un
+  trabajador que sea destinatario real (403 para cualquier otro).
+- Fase 3 (Trámites) va a reusar `db.crear_notificacion(..., origen="sistema")`
+  para avisar automáticamente cuando un trámite cambia de estado — el campo
+  `Notificacion.usuario_id` es `Optional` a propósito para ese caso (no hay
+  un admin humano detrás).
 
 ## Pendientes (features)
 1. Capacitación — "próximamente". Falta contenido: índice de documentos y
@@ -182,7 +228,7 @@ fases todavía no están implementadas). Se guarda como
    producción (permite cambiar la clave de cualquier usuario; está marcada con una
    advertencia visible). Es un riesgo de seguridad, sacar antes de usuarios reales.
    Se deja a propósito mientras dure la etapa de demos y pruebas (2026-08-05).
-3. Notificaciones (Fase 2) y Trámites (Fase 3) — ver plan completo guardado en
+3. Trámites (Fase 3) — ver plan completo guardado en
    memoria (`project_modulos_notificaciones_tramites`).
 
 ## Noticias (sindicato → trabajador)

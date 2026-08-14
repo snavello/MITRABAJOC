@@ -231,6 +231,7 @@
     {% if 'recibos' in modulos %}<button class="tab-btn" data-panel="cotizantes">Afiliados cotizantes</button>{% endif %}
     {% if 'noticias' in modulos %}<button class="tab-btn" data-panel="noticias">Noticias</button>{% endif %}
     {% if 'beneficios' in modulos %}<button class="tab-btn" data-panel="beneficios">Beneficios</button>{% endif %}
+    {% if 'notificaciones' in modulos %}<button class="tab-btn" data-panel="notificaciones">Notificaciones</button>{% endif %}
     <button class="tab-btn" data-panel="seccionales">Seccionales</button>
   </nav>
 
@@ -453,13 +454,14 @@
       <span class="f-cant" id="f-trab-cant"></span>
     </div>
     <table>
-      <tr><th>CUIL</th><th>Nombre</th><th>Ubicación</th><th>Seccional</th><th>Estado</th><th>Credencial</th><th></th></tr>
+      <tr><th>CUIL</th><th>Nombre</th><th>Ubicación</th><th>Seccional</th><th>CUIT empleador</th><th>Estado</th><th>Credencial</th><th></th></tr>
       {% for t in trabajadores %}
       <tr class="fila-trabajador" data-cuil="{{ t.cuil }}" data-nombre="{{ t.nombre }}" {% if not t.activo %}style="opacity:.5;"{% endif %}>
         <td><code>{{ t.cuil }}</code></td>
         <td>{{ t.nombre or '—' }}</td>
         <td class="muted">{{ t.ciudad }}{% if t.provincia %}, {{ t.provincia }}{% endif %}</td>
         <td class="muted">{{ seccional_por_id.get(t.seccional_id, '—') }}</td>
+        <td class="muted">{{ t.cuit_empleador or '—' }}</td>
         <td>
           {% if not t.activo %}<span class="tag" style="background:#eee;color:#888;">baja</span>
           {% elif t.registrado %}<span class="tag tag-si">registrado</span>
@@ -472,7 +474,7 @@
         </td>
         <td style="white-space:nowrap; text-align:right;">
           <button type="button" class="mini"
-            onclick='editarTrab({{ {"id":t.id,"cuil":t.cuil,"nombre":t.nombre,"calle":t.calle,"numero":t.numero,"piso":t.piso,"ciudad":t.ciudad,"provincia":t.provincia,"telefono":t.telefono,"mail":t.mail,"vigencia_credencial":t.vigencia_credencial,"seccional_id":t.seccional_id} | tojson }})'>Editar</button>
+            onclick='editarTrab({{ {"id":t.id,"cuil":t.cuil,"nombre":t.nombre,"calle":t.calle,"numero":t.numero,"piso":t.piso,"ciudad":t.ciudad,"provincia":t.provincia,"telefono":t.telefono,"mail":t.mail,"vigencia_credencial":t.vigencia_credencial,"seccional_id":t.seccional_id,"cuit_empleador":t.cuit_empleador} | tojson }})'>Editar</button>
           <form method="post" action="/admin/trabajador/generar-credencial" style="display:inline;" onsubmit="return confirm('{% if t.codigo_credencial %}¿Regenerar el código de credencial? El anterior deja de ser válido.{% else %}¿Generar el código de credencial?{% endif %}');">
             <input type="hidden" name="id" value="{{ t.id }}"><button class="mini">{% if t.codigo_credencial %}Regenerar{% else %}Generar{% endif %} credencial</button>
           </form>
@@ -488,7 +490,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="7" class="muted">No hay trabajadores cargados. Usá "Alta manual" o "Alta masiva".</td></tr>
+      <tr><td colspan="8" class="muted">No hay trabajadores cargados. Usá "Alta manual" o "Alta masiva".</td></tr>
       {% endfor %}
     </table>
   </div>
@@ -519,6 +521,7 @@
             {% for sec in seccionales %}<option value="{{ sec.id }}">{{ sec.nombre }}</option>{% endfor %}
           </select>
         </div>
+        <div class="campo"><label>CUIT del empleador</label><input name="cuit_empleador" id="trab-cuit-empleador" placeholder="Para notificar por empresa"></div>
       </div>
       <div style="margin-top:12px;">
         <button type="submit" id="trab-submit">Agregar trabajador</button>
@@ -710,6 +713,84 @@
   </div>
   {% endif %}
 
+  {% if 'notificaciones' in modulos %}
+  {% set CRITERIO_LABELS = {'cuil': 'CUIL', 'cuit_empleador': 'CUIT empresa', 'seccional': 'Seccional', 'provincia': 'Provincia'} %}
+  <div class="panel" id="panel-notificaciones">
+  <!-- ============ NOTIFICACIONES ============ -->
+  <h2>Nueva notificación</h2>
+  <div class="card">
+    <form method="post" action="/admin/notificacion" enctype="multipart/form-data" id="form-notificacion">
+      <div class="grid2">
+        <div class="campo full"><label>Remitente</label><input name="remitente" id="notif-remitente" placeholder="Ej: Comisión Directiva"></div>
+        <div class="campo full"><label>Mensaje *</label>
+          <textarea name="texto" id="notif-texto" rows="5" required placeholder="Puede incluir URLs, se muestran como link"></textarea>
+        </div>
+        <div class="campo full"><label>Destinatarios *</label>
+          <select name="criterio" id="notif-criterio" onchange="cambiarCriterioNotif()">
+            <option value="cuil">Por CUIL</option>
+            <option value="cuit_empleador">Por CUIT de empresa</option>
+            {% if seccionales %}<option value="seccional">Por seccional</option>{% endif %}
+            <option value="provincia">Por provincia</option>
+          </select>
+        </div>
+        <div class="campo full" id="notif-valores-cuil">
+          <label>CUIL(es), separados por coma</label>
+          <input type="text" id="notif-valores-cuil-input" placeholder="20111111119, 27222222224">
+        </div>
+        <div class="campo full oculto" id="notif-valores-cuit_empleador">
+          <label>CUIT(s) de empresa, separados por coma</label>
+          <input type="text" id="notif-valores-cuit_empleador-input" placeholder="30111222339">
+        </div>
+        {% if seccionales %}
+        <div class="campo full oculto" id="notif-valores-seccional">
+          <label>Seccionales</label>
+          <div class="check-seccionales" id="notif-check-seccionales">
+            {% for sec in seccionales %}
+            <label class="chk-seccional"><input type="checkbox" value="{{ sec.id }}"> {{ sec.nombre }}</label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        <div class="campo full oculto" id="notif-valores-provincia">
+          <label>Provincias</label>
+          <div class="check-seccionales" id="notif-check-provincias">
+            {% for p in provincias %}
+            <label class="chk-seccional"><input type="checkbox" value="{{ p }}"> {{ p }}</label>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="campo full"><label>Adjunto (opcional, imagen/PDF/Word, hasta 5 MB)</label>
+          <input name="adjunto" type="file" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,.doc,.docx">
+        </div>
+      </div>
+      <div id="notif-valores-hidden"></div>
+      <div id="notif-preview-box" class="oculto" style="margin:12px 0; padding:11px 14px; background:#f4f2ec; border-radius:8px; font-size:13.5px;"></div>
+      <button type="button" id="notif-btn-preview" onclick="previsualizarNotificacion()">Vista previa</button>
+      <button type="submit" id="notif-btn-enviar" class="oculto" style="margin-left:8px;">Confirmar y enviar</button>
+    </form>
+  </div>
+
+  <h2>Notificaciones enviadas ({{ notificaciones|length }})</h2>
+  <table>
+    <tr><th>Fecha</th><th>Remitente</th><th>Mensaje</th><th>Destino</th><th>Leídos</th><th></th></tr>
+    {% for n in notificaciones %}
+    <tr>
+      <td class="muted">{{ n.enviado_en }}</td>
+      <td>{{ n.remitente or '—' }}{% if n.origen == 'sistema' %}<br><span class="tag" style="background:#eee;color:#888;">sistema</span>{% endif %}</td>
+      <td>{{ n.texto[:80] }}{% if n.texto|length > 80 %}…{% endif %}</td>
+      <td class="muted">{{ CRITERIO_LABELS.get(n.criterio, n.criterio) }}</td>
+      <td class="muted">{{ n.leidos }}/{{ n.cantidad_destinatarios }}</td>
+      <td style="white-space:nowrap; text-align:right;">
+        <button type="button" class="mini" onclick="verDestinatariosNotificacion({{ n.id }})">Ver</button>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="muted">Todavía no enviaste ninguna notificación.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+  {% endif %}
+
   <div class="panel" id="panel-seccionales">
   <!-- ============ SECCIONALES ============ -->
   <h2 id="seccionales-titulo">Dar de alta una seccional</h2>
@@ -890,6 +971,78 @@ function verEnvio(id, cuil, periodo) {
   abrirModalRecibo('Recibo de ' + cuil + ' — ' + periodo, 'envio-' + id);
 }
 
+// ---------- Notificaciones ----------
+function cambiarCriterioNotif() {
+  const val = document.getElementById('notif-criterio').value;
+  ['cuil', 'cuit_empleador', 'seccional', 'provincia'].forEach(c => {
+    const el = document.getElementById('notif-valores-' + c);
+    if (el) el.classList.toggle('oculto', c !== val);
+  });
+  document.getElementById('notif-preview-box').classList.add('oculto');
+  document.getElementById('notif-btn-enviar').classList.add('oculto');
+}
+function splitComas(s) { return (s || '').split(',').map(v => v.trim()).filter(Boolean); }
+function valoresNotifActuales() {
+  const criterio = document.getElementById('notif-criterio').value;
+  if (criterio === 'cuil') return splitComas(document.getElementById('notif-valores-cuil-input').value);
+  if (criterio === 'cuit_empleador') return splitComas(document.getElementById('notif-valores-cuit_empleador-input').value);
+  if (criterio === 'seccional') return Array.from(document.querySelectorAll('#notif-check-seccionales input:checked')).map(c => c.value);
+  if (criterio === 'provincia') return Array.from(document.querySelectorAll('#notif-check-provincias input:checked')).map(c => c.value);
+  return [];
+}
+async function previsualizarNotificacion() {
+  const criterio = document.getElementById('notif-criterio').value;
+  const valores = valoresNotifActuales();
+  const box = document.getElementById('notif-preview-box');
+  const btnEnviar = document.getElementById('notif-btn-enviar');
+  box.classList.remove('oculto');
+  btnEnviar.classList.add('oculto');
+  if (!valores.length) {
+    box.textContent = 'Elegí al menos un destinatario.';
+    return;
+  }
+  const fd = new FormData();
+  fd.append('criterio', criterio);
+  valores.forEach(v => fd.append('valores', v));
+  box.textContent = 'Calculando…';
+  try {
+    const r = await fetch('/admin/notificacion/preview', { method: 'POST', body: fd });
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    box.textContent = data.cantidad > 0
+      ? `Se enviará a ${data.cantidad} trabajador${data.cantidad === 1 ? '' : 'es'}.`
+      : 'Nadie matchea ese destino todavía.';
+    const cont = document.getElementById('notif-valores-hidden');
+    cont.innerHTML = '';
+    valores.forEach(v => {
+      const inp = document.createElement('input');
+      inp.type = 'hidden'; inp.name = 'valores'; inp.value = v;
+      cont.appendChild(inp);
+    });
+    if (data.cantidad > 0) {
+      btnEnviar.textContent = `Confirmar y enviar (${data.cantidad})`;
+      btnEnviar.classList.remove('oculto');
+    }
+  } catch (e) {
+    box.textContent = 'No se pudo calcular la vista previa.';
+  }
+}
+function verDestinatariosNotificacion(id) {
+  document.getElementById('modal-recibo-titulo').textContent = 'Destinatarios';
+  document.getElementById('modal-recibo-contenido').innerHTML = 'Cargando…';
+  document.getElementById('modal-recibo-overlay').classList.add('abierto');
+  fetch('/admin/notificacion/' + id + '/destinatarios').then(r => r.json()).then(data => {
+    const filas = data.destinatarios.map(d =>
+      `<div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #eee; font-size:13px;">
+        <span>${d.cuil}${d.nombre ? ' — ' + d.nombre : ''}</span>
+        <span class="muted">${d.leida_en ? 'Leído ' + d.leida_en : 'No leído'}</span>
+      </div>`).join('') || '<span class="muted">Sin destinatarios.</span>';
+    document.getElementById('modal-recibo-contenido').innerHTML = filas;
+  }).catch(() => {
+    document.getElementById('modal-recibo-contenido').innerHTML = 'No se pudo cargar.';
+  });
+}
+
 // ---------- Editar trabajador ----------
 function editarTrab(t) {
   document.getElementById('trab-id').value = t.id;
@@ -904,6 +1057,7 @@ function editarTrab(t) {
   document.getElementById('trab-mail').value = t.mail || '';
   document.getElementById('trab-vigencia').value = t.vigencia_credencial || '';
   document.getElementById('trab-seccional').value = t.seccional_id || '';
+  document.getElementById('trab-cuit-empleador').value = t.cuit_empleador || '';
   document.getElementById('trab-submit').textContent = 'Guardar cambios';
   document.getElementById('trab-cancelar').style.display = 'inline-block';
   // pasar a la sub-pestaña de alta manual
