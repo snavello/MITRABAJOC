@@ -54,6 +54,11 @@
   .card h3 { font-size:14px; color:var(--tinta); margin-bottom:14px; }
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   .campo { display:flex; flex-direction:column; gap:4px; }
+  .check-modulos { display:flex; flex-wrap:wrap; gap:4px 14px; padding:9px 11px;
+    border:1px solid #ccc; border-radius:7px; background:#fbfaf7; }
+  .chk-modulo { display:flex; align-items:center; gap:5px; font-size:13px; font-weight:400;
+    color:#333; cursor:pointer; }
+  .chk-modulo input { width:auto; padding:0; }
   .campo.full { grid-column:1 / -1; }
   label { font-size:12.5px; color:var(--gris); }
   input, textarea, select { padding:9px 11px; border:1px solid #ccc; border-radius:7px; font-size:14px; font-family:inherit; width:100%; }
@@ -116,7 +121,7 @@
       <td><button type="button" class="link-num" onclick="verAdmins({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.usuarios }}</button></td>
       <td><button type="button" class="link-num" onclick="verTrabajadores({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.trabajadores }}</button></td>
       <td style="white-space:nowrap; text-align:right;">
-        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base} | tojson }})'>Editar</button>
+        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base,"modulos_habilitados":i.s.modulos_habilitados} | tojson }})'>Editar</button>
         <button type="button" class="mini borrar" onclick="borrarSind({{ i.s.id }}, '{{ i.s.nombre }}', {{ i.usuarios }}, {{ i.trabajadores }})">Borrar</button>
       </td>
     </tr>
@@ -202,6 +207,16 @@
         <label>Firma de la autoridad (PNG con fondo transparente, ideal)</label>
         <input type="file" name="firma" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
         <span class="muted" style="font-size:11px;">Aparece en la credencial sindical del trabajador, debajo del nombre de la autoridad.</span>
+      </div>
+
+      <div class="campo" style="margin-top:14px;">
+        <label>Módulos habilitados</label>
+        <div class="check-modulos" id="sind-modulos">
+          {% for clave, nombre in catalogo_modulos.items() %}
+          <label class="chk-modulo"><input type="checkbox" name="modulos_habilitados" value="{{ clave }}" {% if clave in modulos_iniciales %}checked{% endif %}> {{ nombre }}</label>
+          {% endfor %}
+        </div>
+        <span class="muted" style="font-size:11px;">Qué tarjetas ve el trabajador y qué pestañas ve el admin de este sindicato. Tildado = disponible.</span>
       </div>
 
       <button type="submit">Crear sindicato</button>
@@ -497,6 +512,10 @@ function editarSind(s) {
   f.color_secundario.value = s.color_secundario || '#1a7a6b';
   f.color_acento.value = s.color_acento || '#b23a2e';
   f.color_base.value = s.color_base || '#0f1b2d';
+  const modulosSet = new Set((s.modulos_habilitados || []).map(String));
+  document.querySelectorAll('#sind-modulos input[type=checkbox]').forEach(chk => {
+    chk.checked = modulosSet.has(chk.value);
+  });
   document.getElementById('form-sind-titulo').textContent = 'Editar sindicato: ' + s.nombre;
   f.querySelector('button[type=submit]').textContent = 'Guardar cambios';
   activarTab('nuevo');

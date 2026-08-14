@@ -7,6 +7,7 @@ import db
 from db import Sindicato, UsuarioSindicato, Concepto, Formula, Trabajador
 from sqlmodel import select
 import auth
+from modulos import MODULOS_INICIALES
 
 # Aseguramos el esquema SIN sembrar AEFIP. La demo arranca desde cero:
 # en SQLite creamos tablas; en Postgres el esquema ya lo aplicó Alembic.
@@ -78,6 +79,7 @@ with db.get_session() as s:
             cuit=d["cuit"], mail=d["mail"], autoridad=d["autoridad"],
             cargo_autoridad=d["cargo_autoridad"], color_primario=d["color_primario"],
             color_secundario=d["color_secundario"], color_acento=d["color_acento"],
+            modulos_habilitados=list(MODULOS_INICIALES),
         )
         s.add(sind); s.commit(); s.refresh(sind)
         u, cl = d["admin"]

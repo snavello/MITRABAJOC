@@ -15,13 +15,14 @@ os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 import db
 import auth
 from db import Sindicato, Trabajador, UsuarioSindicato
+from modulos import MODULOS_INICIALES
 import main
 import extractor
 from fastapi.testclient import TestClient
 
 db.crear_tablas()
 with db.get_session() as s:
-    sind = Sindicato(nombre="UOM Uso IA", slug="uom-uso-ia")
+    sind = Sindicato(nombre="UOM Uso IA", slug="uom-uso-ia", modulos_habilitados=list(MODULOS_INICIALES))
     s.add(sind); s.commit(); s.refresh(sind)
     SID = sind.id
     s.add(Trabajador(sindicato_id=SID, cuil="20111111119", nombre="Juan",

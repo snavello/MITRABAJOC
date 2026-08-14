@@ -14,6 +14,7 @@ os.environ["DB_PATH"] = DB_FILE
 import db
 import auth
 from db import Sindicato, Trabajador
+from modulos import MODULOS_INICIALES
 import main
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
@@ -21,9 +22,11 @@ from sqlmodel import Session, select
 db.crear_tablas()
 with db.get_session() as s:
     uom = Sindicato(nombre="UOM Portada Test", slug="uom-portada-test",
-                     color_base="#0f1b2d", color_acento="#e8a33d")
+                     color_base="#0f1b2d", color_acento="#e8a33d",
+                     modulos_habilitados=list(MODULOS_INICIALES))
     fega = Sindicato(nombre="Gastronomica Portada Test", slug="fega-portada-test",
-                      color_base="#0d2027", color_acento="#5fd6b4")
+                      color_base="#0d2027", color_acento="#5fd6b4",
+                      modulos_habilitados=list(MODULOS_INICIALES))
     s.add(uom); s.add(fega); s.commit(); s.refresh(uom); s.refresh(fega)
     SID_UOM, SID_FEGA = uom.id, fega.id
     s.add(Trabajador(sindicato_id=SID_UOM, cuil="20111111119", nombre="Juan Perez",

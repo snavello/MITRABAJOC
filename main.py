@@ -46,6 +46,7 @@ from filigrana import filigrana_svg
 from qr import qr_svg, url_verificacion
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
 from version import VERSION_TRABAJADOR, VERSION_ADMIN, VERSION_PLATAFORMA, FECHA_VERSION
+from modulos import MODULOS, MODULOS_INICIALES
 
 app = FastAPI(title="Mi Trabajo — validador de recibos")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -197,6 +198,9 @@ def home(request: Request):
     return templates.TemplateResponse("trabajador.html", {
         "request": request, "sindicato": db.nombre_sindicato(),
         "marca_plataforma": db.marca_plataforma(),
+        # Demo anónima sin sindicato real: solo tiene sentido mostrar "Tu
+        # recibo" -- las demás pestañas dependen de un sindicato/login.
+        "modulos": {"recibos"},
     })
 
 
@@ -495,6 +499,7 @@ def admin(request: Request):
         "noticias": db.noticias_del_sindicato(sid),
         "beneficios": db.beneficios_del_sindicato(sid),
         "seccionales": seccionales, "seccional_por_id": seccional_por_id,
+        "modulos": _modulos_de(sid),
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
 
@@ -797,6 +802,7 @@ async def abm_noticia(
     destino_seccionales: list[str] = Form(default=[]),
 ):
     sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "noticias")
     with db.get_session() as s:
         destinos = _destinos_validos(s, destino_seccionales, sid)
         if id:
@@ -836,6 +842,7 @@ async def abm_noticia(
 @app.post("/admin/noticia/borrar")
 def borrar_noticia(request: Request, id: int = Form(...)):
     sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "noticias")
     with db.get_session() as s:
         n = s.get(Noticia, id)
         if n and n.sindicato_id == sid:
@@ -852,6 +859,7 @@ async def abm_beneficio(
     imagen: UploadFile = File(None), destino_seccionales: list[str] = Form(default=[]),
 ):
     sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "beneficios")
     with db.get_session() as s:
         destinos = _destinos_validos(s, destino_seccionales, sid)
         if id:
@@ -883,6 +891,7 @@ async def abm_beneficio(
 @app.post("/admin/beneficio/borrar")
 def borrar_beneficio(request: Request, id: int = Form(...)):
     sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "beneficios")
     with db.get_session() as s:
         b = s.get(Beneficio, id)
         if b and b.sindicato_id == sid:
@@ -934,6 +943,7 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
     nuevos, deduplicados por (código, CUIT del empleador) — el mismo código
     crudo de dos empleadores distintos puede significar cosas distintas."""
     sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "recibos")
     conceptos_actuales = db.conceptos_como_dicts(sid)
     genericos_actuales = [c for c in conceptos_actuales if not c.get("cuit_empleador")]
     acumulados = {}
@@ -1004,6 +1014,7 @@ def aprender_aplicar(request: Request, payload: dict):
     venir con cuit_empleador (propuesto en /admin/aprender) y codigo_generico
     (que el admin haya confirmado o cambiado en la revisión del lote)."""
     sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "recibos")
     aprobados = payload.get("aprobados", [])
     altas = 0
     with db.get_session() as s:
@@ -1088,6 +1099,7 @@ def plataforma(request: Request):
         "sindicatos_uso_ia": sorted({u["sindicato"] for u in uso_ia}),
         "modelos_uso_ia": sorted({u["modelo"] for u in uso_ia}),
         "recibos_sospechosos": db.recibos_sospechosos_listado(),
+        "catalogo_modulos": MODULOS, "modulos_iniciales": MODULOS_INICIALES,
         "version": VERSION_PLATAFORMA, "fecha_version": FECHA_VERSION,
     })
 
@@ -1165,6 +1177,7 @@ async def plataforma_alta_sindicato(
     color_acento: str = Form("#b23a2e"),
     color_base: str = Form("#0f1b2d"),
     logo: UploadFile = File(None), firma: UploadFile = File(None),
+    modulos_habilitados: list[str] = Form(default=[]),
 ):
     ses = sesion_actual(request)
     if not ses or ses.get("rol") != "plataforma":
@@ -1172,6 +1185,7 @@ async def plataforma_alta_sindicato(
     color_base = color_base or "#0f1b2d"
     if not _es_oscuro(color_base):
         return RedirectResponse("/plataforma?error=colorbase#sindicatos", status_code=303)
+    modulos_validos = [m for m in modulos_habilitados if m in MODULOS]
     slug = slugify(nombre)
     logo_datos, logo_mime, logo_flag = (None, "", "")
     if logo and logo.filename:
@@ -1190,6 +1204,7 @@ async def plataforma_alta_sindicato(
             color_secundario=color_secundario or "#1a7a6b",
             color_acento=color_acento or "#b23a2e",
             color_base=color_base,
+            modulos_habilitados=modulos_validos,
         )
         s.add(sind); s.commit(); s.refresh(sind)
         sind_id = sind.id
@@ -1231,6 +1246,22 @@ def _destinos_validos(s, destino_seccionales: list[str], sid: int) -> list[int]:
         if sec_id in ids_del_sindicato:
             resultado.append(sec_id)
     return resultado
+
+
+def _modulos_de(sid: int) -> set:
+    """Módulos habilitados de un sindicato, para el contexto de portada/
+    trabajador/admin (ver modulos.py). Set vacío si sid es 0/None."""
+    if not sid:
+        return set()
+    return set(db.modulos_habilitados(sid))
+
+
+def _exigir_modulo(sid: int, modulo: str) -> None:
+    """403 si el sindicato no tiene ESE módulo habilitado. Esconder el botón
+    en la UI no alcanza: la ruta tiene que rechazar igual (mismo criterio
+    defensivo que _destinos_validos para seccionales ajenas)."""
+    if not db.modulo_habilitado(sid, modulo):
+        raise HTTPException(403, "Este módulo no está habilitado para tu sindicato.")
 
 
 def _leer_logo(archivo: UploadFile):
@@ -1280,6 +1311,7 @@ async def plataforma_editar_sindicato(
     color_acento: str = Form("#b23a2e"), color_base: str = Form("#0f1b2d"),
     logo: UploadFile = File(None),
     firma: UploadFile = File(None),
+    modulos_habilitados: list[str] = Form(default=[]),
 ):
     ses = sesion_actual(request)
     if not ses or ses.get("rol") != "plataforma":
@@ -1287,6 +1319,7 @@ async def plataforma_editar_sindicato(
     color_base = color_base or "#0f1b2d"
     if not _es_oscuro(color_base):
         return RedirectResponse("/plataforma?error=colorbase#sindicatos", status_code=303)
+    modulos_validos = [m for m in modulos_habilitados if m in MODULOS]
     with db.get_session() as s:
         sind = s.get(Sindicato, id)
         if sind:
@@ -1297,6 +1330,7 @@ async def plataforma_editar_sindicato(
             sind.color_secundario = color_secundario or "#1a7a6b"
             sind.color_acento = color_acento or "#b23a2e"
             sind.color_base = color_base
+            sind.modulos_habilitados = modulos_validos
             if logo and logo.filename:
                 datos, mime, flag = _leer_logo(logo)
                 if datos:
@@ -1555,6 +1589,7 @@ def app_trabajador(request: Request):
             "semaforo_guardado": db.semaforo_guardado(cuil, sid_activo),
             "noticias": _con_antiguedad(db.noticias_vigentes(
                 sid_activo, seccional_id=db.seccional_de_trabajador(cuil, sid_activo))),
+            "modulos": _modulos_de(sid_activo),
         }
         # El QR (y la verificación pública que hay detrás) solo tiene sentido
         # una vez que el sindicato generó el código real de la credencial.
@@ -1607,6 +1642,7 @@ def app_portada(request: Request):
             "perfil": db.perfil_trabajador(cuil, sid_activo),
             "noticias": _con_antiguedad(db.noticias_vigentes(sid_activo, seccional_id=seccional_id, limite=3)),
             "beneficios": db.beneficios_vigentes(sid_activo, seccional_id=seccional_id),
+            "modulos": _modulos_de(sid_activo),
             "version": VERSION_TRABAJADOR, "fecha_version": FECHA_VERSION,
         })
     # Varios y no eligió → selector (mismo criterio que /app)

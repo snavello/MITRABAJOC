@@ -51,6 +51,7 @@
   </div>
 
   <div class="tarjetas" style="margin-top: 18px;">
+    {% if 'recibos' in modulos %}
     <a class="acceso destacada" href="/app">
       <svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg>
       <div>
@@ -58,6 +59,8 @@
         <div class="estado">Revisá tus aportes</div>
       </div>
     </a>
+    {% endif %}
+    {% if 'aportes' in modulos %}
     <a class="acceso" href="/app?tab=aportes">
       <svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg>
       <div>
@@ -65,6 +68,8 @@
         <div class="estado">Semáforo de aportes</div>
       </div>
     </a>
+    {% endif %}
+    {% if 'credencial' in modulos %}
     <a class="acceso" href="/app?tab=credencial">
       <svg viewBox="0 0 24 24"><use href="#ic-cred"/></svg>
       <div>
@@ -72,6 +77,8 @@
         <div class="estado">{{ 'Tu carnet digital' if credencial_generada else 'Todavía no generada' }}</div>
       </div>
     </a>
+    {% endif %}
+    {% if 'capacitacion' in modulos %}
     <a class="acceso" href="/app?tab=capacitacion">
       <svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg>
       <div>
@@ -79,8 +86,10 @@
         <div class="estado">Próximamente</div>
       </div>
     </a>
+    {% endif %}
   </div>
 
+  {% if 'noticias' in modulos %}
   <div class="sec">
     <div class="sech"><b>Novedades</b>{% if noticias %}<a href="/app?tab=novedades">Ver todas</a>{% endif %}</div>
     {% if noticias %}
@@ -97,7 +106,9 @@
     <div class="vacio-sec">Acá vas a ver los mensajes y avisos de tu sindicato. Muy pronto.</div>
     {% endif %}
   </div>
+  {% endif %}
 
+  {% if 'beneficios' in modulos %}
   <div class="sec">
     <div class="sech"><b>Beneficios</b></div>
     {% if beneficios %}
@@ -121,6 +132,7 @@
     <div class="vacio-sec">Próximamente vas a tener descuentos y beneficios para afiliados.</div>
     {% endif %}
   </div>
+  {% endif %}
 
   <div style="text-align:center; margin-top:18px;">
     <button onclick="abrirAcerca()" style="background:none; border:none; color:var(--sobre-base-mute); opacity:.5; font-size:11px; cursor:pointer; padding:6px;">Acerca de</button>

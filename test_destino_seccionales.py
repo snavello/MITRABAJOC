@@ -14,13 +14,14 @@ os.environ["DB_PATH"] = DB_FILE
 import db
 import auth
 from db import Sindicato, UsuarioSindicato, Trabajador, Seccional, Noticia, Beneficio
+from modulos import MODULOS_INICIALES
 import main
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 db.crear_tablas()
 with db.get_session() as s:
-    uom = Sindicato(nombre="UOM Destino", slug="uom-destino")
+    uom = Sindicato(nombre="UOM Destino", slug="uom-destino", modulos_habilitados=list(MODULOS_INICIALES))
     s.add(uom); s.commit(); s.refresh(uom)
     SID = uom.id
     s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111110", nombre="Admin",

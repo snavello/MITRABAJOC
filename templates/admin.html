@@ -223,18 +223,19 @@
 
 <div class="wrap">
   <nav>
-    <button class="tab-btn activa" data-panel="reportes">Reportes</button>
-    <button class="tab-btn" data-panel="formulas">Fórmulas</button>
-    <button class="tab-btn" data-panel="conceptos">Conceptos</button>
+    {% if 'recibos' in modulos %}<button class="tab-btn" data-panel="reportes">Reportes</button>{% endif %}
+    {% if 'recibos' in modulos %}<button class="tab-btn" data-panel="formulas">Fórmulas</button>{% endif %}
+    {% if 'recibos' in modulos %}<button class="tab-btn" data-panel="conceptos">Conceptos</button>{% endif %}
     <button class="tab-btn" data-panel="trabajadores">Trabajadores</button>
-    <button class="tab-btn" data-panel="aprendizaje">Aprendizaje</button>
-    <button class="tab-btn" data-panel="cotizantes">Afiliados cotizantes</button>
-    <button class="tab-btn" data-panel="noticias">Noticias</button>
-    <button class="tab-btn" data-panel="beneficios">Beneficios</button>
+    {% if 'recibos' in modulos %}<button class="tab-btn" data-panel="aprendizaje">Aprendizaje</button>{% endif %}
+    {% if 'recibos' in modulos %}<button class="tab-btn" data-panel="cotizantes">Afiliados cotizantes</button>{% endif %}
+    {% if 'noticias' in modulos %}<button class="tab-btn" data-panel="noticias">Noticias</button>{% endif %}
+    {% if 'beneficios' in modulos %}<button class="tab-btn" data-panel="beneficios">Beneficios</button>{% endif %}
     <button class="tab-btn" data-panel="seccionales">Seccionales</button>
   </nav>
 
-  <div class="panel activo" id="panel-reportes">
+  {% if 'recibos' in modulos %}
+  <div class="panel" id="panel-reportes">
   <!-- ============ REPORTES ============ -->
   <h2 id="reportes">Reportes de trabajadores</h2>
   <div class="filtros">
@@ -262,6 +263,8 @@
   </table>
 
   </div>
+  {% endif %}
+  {% if 'recibos' in modulos %}
   <div class="panel" id="panel-formulas">
   <!-- ============ FÓRMULAS ============ -->
   <h2 id="formulas">Fórmulas a validar</h2>
@@ -317,6 +320,8 @@
   {% if not genericos %}<p class="muted">Primero dá de alta al menos un concepto genérico (pestaña "Conceptos", sin CUIT de empleador) para poder elegirlo acá.</p>{% endif %}
 
   </div>
+  {% endif %}
+  {% if 'recibos' in modulos %}
   <div class="panel" id="panel-conceptos">
   <!-- ============ CONCEPTOS ============ -->
   <h2 id="conceptos">Conceptos ({{ conceptos|length }})</h2>
@@ -427,6 +432,7 @@
   </form>
 
   </div>
+  {% endif %}
   <div class="panel" id="panel-trabajadores">
   <!-- ============ TRABAJADORES ============ -->
   <h2 id="trabajadores">Trabajadores ({{ trabajadores|selectattr('activo')|list|length }} activos)</h2>
@@ -535,6 +541,7 @@
 
   </div>
 
+  {% if 'recibos' in modulos %}
   <div class="panel" id="panel-aprendizaje">
   <!-- ============ APRENDIZAJE ============ -->
   <h2 id="aprendizaje">Aprendizaje — incorporar conceptos desde recibos</h2>
@@ -586,7 +593,9 @@
     {% endfor %}
   </table>
   </div>
+  {% endif %}
 
+  {% if 'noticias' in modulos %}
   <div class="panel" id="panel-noticias">
   <!-- ============ NOTICIAS ============ -->
   <h2 id="noticias-titulo">Dar de alta una noticia</h2>
@@ -642,7 +651,9 @@
     {% endfor %}
   </table>
   </div>
+  {% endif %}
 
+  {% if 'beneficios' in modulos %}
   <div class="panel" id="panel-beneficios">
   <!-- ============ BENEFICIOS ============ -->
   <h2 id="beneficios-titulo">Dar de alta un beneficio</h2>
@@ -697,6 +708,7 @@
     {% endfor %}
   </table>
   </div>
+  {% endif %}
 
   <div class="panel" id="panel-seccionales">
   <!-- ============ SECCIONALES ============ -->

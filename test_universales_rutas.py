@@ -12,6 +12,7 @@ os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db
 from db import Sindicato, Concepto, Formula, UsuarioSindicato
+from modulos import MODULOS_INICIALES
 import auth
 import main
 from fastapi.testclient import TestClient
@@ -27,6 +28,7 @@ def test_alta_sindicato_autocarga_3_conceptos_y_formulas():
         "nombre": "Sindicato Test Universales", "descripcion": "", "cuit": "", "direccion": "",
         "mail": "", "telefonos": "", "autoridad": "", "cargo_autoridad": "",
         "color_primario": "#152238", "color_secundario": "#1a7a6b", "color_acento": "#b23a2e",
+        "modulos_habilitados": list(MODULOS_INICIALES),
     }, follow_redirects=False)
     assert r.status_code == 303
 

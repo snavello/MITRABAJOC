@@ -337,7 +337,8 @@
 <div class="cont">
 
   <!-- ============ PESTAÑA: TU RECIBO ============ -->
-  <div class="tpanel activo" id="tp-recibo">
+  {% if 'recibos' in modulos %}
+  <div class="tpanel" id="tp-recibo">
     <!-- Paso 0: inicio -->
     <div id="inicio">
       <h1>Revisá tu recibo</h1>
@@ -386,8 +387,10 @@
     <div id="resultado"></div>
     <p class="nota">Es una verificación orientativa, no un dictamen legal. Tu recibo se procesa para esta revisión; no lo compartimos con terceros.</p>
   </div>
+  {% endif %}
 
   <!-- ============ PESTAÑA: NOVEDADES ============ -->
+  {% if 'noticias' in modulos %}
   <div class="tpanel" id="tp-novedades">
     {% if noticias %}
       <h1 style="margin-bottom:16px;">Novedades</h1>
@@ -408,8 +411,10 @@
     </div>
     {% endif %}
   </div>
+  {% endif %}
 
   <!-- ============ PESTAÑA: MIS APORTES ============ -->
+  {% if 'aportes' in modulos %}
   <div class="tpanel" id="tp-aportes">
     <div class="sem-card">
       <div class="sem-head">
@@ -419,8 +424,10 @@
       <div id="sem-cuerpo"></div>
     </div>
   </div>
+  {% endif %}
 
   <!-- ============ PESTAÑA: CAPACITACIÓN ============ -->
+  {% if 'capacitacion' in modulos %}
   <div class="tpanel" id="tp-capacitacion">
     <div class="card">
       <h2>Entendé tu nuevo recibo de sueldo</h2>
@@ -440,10 +447,11 @@
       <p>Si algo que figura como "contribución patronal" también te aparece descontado de tu neto, o si la suma de tus descuentos no da lo que dice el recibo, conviene reportarlo desde la pestaña "Tu Recibo".</p>
     </div>
   </div>
+  {% endif %}
 
   <!-- ============ PESTAÑA: CREDENCIAL ============ -->
   {# Solo con sesión de trabajador: la ruta / (demo sin login) no tiene marca. #}
-  {% if marca %}
+  {% if marca and 'credencial' in modulos %}
   <div class="tpanel" id="tp-credencial">
     <div class="cred">
       <div class="cred-fondo">{{ filigrana|safe }}</div>
@@ -548,11 +556,11 @@
 
 <!-- Barra de pestañas -->
 <nav class="tabbar">
-  <button class="tab-t activa" data-tp="recibo"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg></span>Tu Recibo</button>
-  {% if marca %}<button class="tab-t" data-tp="credencial"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-cred"/></svg></span>Credencial</button>{% endif %}
-  <button class="tab-t" data-tp="novedades"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-nov"/></svg></span>Novedades</button>
-  <button class="tab-t" data-tp="aportes"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg></span>Mis Aportes</button>
-  <button class="tab-t" data-tp="capacitacion"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg></span>Capacitación</button>
+  {% if 'recibos' in modulos %}<button class="tab-t" data-tp="recibo"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg></span>Tu Recibo</button>{% endif %}
+  {% if marca and 'credencial' in modulos %}<button class="tab-t" data-tp="credencial"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-cred"/></svg></span>Credencial</button>{% endif %}
+  {% if 'noticias' in modulos %}<button class="tab-t" data-tp="novedades"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-nov"/></svg></span>Novedades</button>{% endif %}
+  {% if 'aportes' in modulos %}<button class="tab-t" data-tp="aportes"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg></span>Mis Aportes</button>{% endif %}
+  {% if 'capacitacion' in modulos %}<button class="tab-t" data-tp="capacitacion"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg></span>Capacitación</button>{% endif %}
 </nav>
 
 <script>
@@ -571,11 +579,19 @@ document.querySelectorAll('.tab-t').forEach(btn => {
     window.scrollTo(0, 0);
   });
 });
-// Deep-link desde la portada (/app?tab=aportes, etc.) -- salta directo a esa
-// pestaña al cargar, sin esperar un click.
+// Pestaña inicial: deep-link desde la portada (/app?tab=aportes, etc.) si
+// vino uno y existe; si no (o si el módulo pedido está deshabilitado), la
+// primera pestaña habilitada -- ya no asumimos que "Tu Recibo" es la default,
+// puede estar apagada para este sindicato.
 {
   const tabPedida = new URLSearchParams(location.search).get('tab');
-  if (tabPedida) activarPestana(tabPedida);
+  const btnPedido = tabPedida && document.querySelector('.tab-t[data-tp="' + tabPedida + '"]');
+  if (btnPedido) {
+    activarPestana(tabPedida);
+  } else {
+    const primerBtn = document.querySelector('.tab-t');
+    if (primerBtn) activarPestana(primerBtn.dataset.tp);
+  }
 }
 
 let archivo = null, datosLeidos = null;

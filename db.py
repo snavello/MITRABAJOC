@@ -75,6 +75,10 @@ class Sindicato(SQLModel, table=True):
     firma_datos: Optional[bytes] = Field(default=None)
     firma_mime: str = ""
     activo: bool = True
+    # Qué módulos tiene disponibles este sindicato (ver modulos.py). Controla
+    # qué tarjetas ve el trabajador y qué pestañas ve el admin del sindicato
+    # -- pensado para distintos modelos comerciales, no todos adoptan todo.
+    modulos_habilitados: list = Field(default=[], sa_column=Column(JSON))
 
 
 class Seccional(SQLModel, table=True):
@@ -521,6 +525,33 @@ def marca_sindicato(sindicato_id: int) -> dict:
             "firma": sind.firma,
             "direccion": sind.direccion, "telefonos": sind.telefonos,
         }
+
+
+def modulos_habilitados(sindicato_id: int) -> list:
+    """Módulos que tiene disponibles este sindicato (ver modulos.py). Lista
+    vacía si el sindicato no existe -- no rompe, simplemente no muestra nada."""
+    with Session(engine) as s:
+        sind = s.get(Sindicato, sindicato_id)
+        return list(sind.modulos_habilitados or []) if sind else []
+
+
+def modulo_habilitado(sindicato_id: int, modulo: str) -> bool:
+    return modulo in modulos_habilitados(sindicato_id)
+
+
+def set_modulos_sindicato(sindicato_id: int, modulos: list) -> None:
+    """Persiste la lista de módulos habilitados, descartando cualquier valor
+    que no esté en el catálogo (defensivo, mismo criterio que
+    _destinos_validos en main.py para seccionales ajenas)."""
+    from modulos import MODULOS
+    validos = [m for m in (modulos or []) if m in MODULOS]
+    with Session(engine) as s:
+        sind = s.get(Sindicato, sindicato_id)
+        if not sind:
+            return
+        sind.modulos_habilitados = validos
+        s.add(sind)
+        s.commit()
 
 
 # ---------- Configuración de plataforma ----------
