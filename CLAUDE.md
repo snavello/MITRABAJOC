@@ -105,6 +105,15 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   mismo y sube la captura/PDF; la IA la lee. NO se automatiza el captcha (frágil y
   zona gris legal). ARCA cubre jubilación y obra social, NO ART. Parser hecho y
   probado (estados pagado/parcial/impago/no_presentada/no_declarado).
+- **Tamaño de logos, unificado en 76px (2026-08-14):** el logo de plataforma
+  en los 4 logins (`admin_login.html`, `plataforma_login.html`,
+  `trabajador_login.html`, `elegir_sindicato.html`, clase `.logo-recuadro`)
+  y el logo del sindicato en el resto de las pantallas (`portada.html` vía
+  `.enc .logo`/`.enc .logo-fallback` en marca.css, `verificar_credencial.html`)
+  comparten el mismo tamaño de 76px. En trabajador.html y admin.html, donde
+  el logo de plataforma y el del sindicato conviven en el mismo header
+  (`.logo-plataforma-header` + `.sind`), se agrandaron los DOS juntos para
+  que no queden desparejos entre sí.
 
 ## Estado actual
 Migración a Postgres COMPLETA y desplegada en Render, mergeada a main. Verificado
@@ -210,7 +219,16 @@ targetear "por empresa".
   vía `GET /api/mis-notificaciones`; cada card es un acordeón simple —
   expandirla (`toggleNotificacion`) marca leída en el momento
   (`POST /api/notificacion/{id}/leer`) y decrementa el badge en vivo, sin
-  recargar. El texto pasa por `_texto_con_links` (mismo autolink+escape que
+  recargar. **Estética propia (2026-08-14)**: a diferencia de los demás
+  modales de la portada (perfil/noticia/beneficio/acerca, que se quedan con
+  el estilo oscuro compartido `.modal-hoja` de marca.css porque conviven con
+  el fondo oscuro de la portada), el de Notificaciones usa clases propias
+  (`.modal-notif-caja`/`.modal-notif-enc`/`.modal-cerrar-clara`, definidas
+  en el `<style>` de portada.html): fondo blanco para el contenido, encabezado
+  y acentos (remitente sin leer, links, "Ver adjunto") con los colores de
+  marca del sindicato (`var(--marca-base)`/`var(--marca-primario)`/
+  `var(--marca-acento)`) en vez de los tokens oscuros `--sup-1`/`--sobre-base`.
+  El texto pasa por `_texto_con_links` (mismo autolink+escape que
   Noticia/Beneficio) antes de inyectarse como HTML.
 - **Aislamiento**: `marcar_notificacion_leida` solo toca la fila
   `(notificacion_id, cuil)` exacta — el CUIL sale de la cookie de sesión del
@@ -296,6 +314,25 @@ escribe ahí, llamado desde alta/cambio de estado/cada nota).
   existe en el DOM cuando el sindicato no tiene el módulo habilitado — un
   acceso sin guardar ahí rompe TODO el `<script>` de admin.html a partir de
   esa línea, no solo la función de Trámites.
+- **Bug real encontrado y corregido (2026-08-14)**: los campos tipo
+  "archivo" del formulario dinámico de trabajador.html se guardaban bien
+  del lado del admin, pero el trabajador no veía ninguna forma de subir el
+  archivo — solo la etiqueta. Causa: `input[type=file] { display:none; }`
+  es una regla GLOBAL de trabajador.html (pensada para el flujo de Tu
+  Recibo, que dispara el input oculto con un `<label class="btn" for=...>`
+  estilizado) y también ocultaba, sin querer, los inputs de archivo
+  generados dinámicamente para Trámites. Se arregló agregando el mismo
+  patrón label+input oculto (con nombre de archivo mostrado aparte) tanto
+  al campo tipo "archivo" del formulario como al adjunto de la respuesta
+  del trabajador a una nota.
+- **Rediseño "recuadro" (2026-08-14)**: las pantallas de Trámites en
+  trabajador.html (elegir tipo, formulario dinámico, detalle/consulta) se
+  reorganizaron en un componente `.tram-box` — encabezado con
+  `var(--marca-base)` (mismo criterio que el resto de la app: header oscuro
+  con el color del sindicato) y cuerpo de fondo claro, con los campos/filas
+  ocupando el ancho completo del recuadro de forma consistente. Los inputs
+  de texto/número/fecha comparten la clase `.tram-input` (antes no tenían
+  `width:100%` explícito y quedaban angostos).
 
 ## Pendientes (features)
 1. Capacitación — "próximamente". Falta contenido: índice de documentos y

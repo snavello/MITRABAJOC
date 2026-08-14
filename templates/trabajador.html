@@ -35,8 +35,8 @@
     display:flex; align-items:center; justify-content:space-between; gap:12px;
     position:sticky; top:0; z-index:10;
   }
-  .logo-plataforma-header { width:43px; height:43px; object-fit:contain; background:#fff; border-radius:6px; padding:2px; flex-shrink:0; }
-  .sind { max-height:38px; max-width:110px; object-fit:contain; }
+  .logo-plataforma-header { width:76px; height:76px; object-fit:contain; background:#fff; border-radius:6px; padding:2px; flex-shrink:0; }
+  .sind { max-height:76px; max-width:200px; object-fit:contain; }
   /* Botones flotantes inicio/salir: fondo base del sindicato, ícono acento
      (mismo color que el botón principal y la pestaña activa). */
   .btn-flotante { position:fixed; bottom:84px; width:42px; height:42px; border-radius:50%;
@@ -132,6 +132,21 @@
   .fila { display:flex; justify-content:space-between; gap:12px; padding:11px 15px; border-top:1px solid #f0eee8; font-size:14px; }
   .fila .imp { font-variant-numeric:tabular-nums; }
   .fila .imp.neg { color:var(--alerta); }
+
+  /* ---------- Recuadro con encabezado de marca (Trámites) ---------- */
+  .tram-box { margin-top:16px; background:var(--card); border:1px solid var(--linea);
+    border-radius:14px; overflow:hidden; }
+  .tram-box-enc { background:var(--marca-base); padding:15px 18px; }
+  .tram-box-enc .tit { color:#fff; font-size:15.5px; font-weight:600; line-height:1.3; }
+  .tram-box-enc .sub { color:rgba(255,255,255,.78); margin-top:3px; font-size:12.5px; }
+  .tram-box-body { padding:18px; }
+  .tram-input { display:block; width:100%; padding:11px 12px; border:1px solid var(--linea);
+    border-radius:10px; font-family:inherit; font-size:14px; background:#fff; color:var(--tinta); }
+  .campo-tram { margin-bottom:14px; }
+  .campo-tram label { display:block; font-size:12.5px; color:var(--gris); margin-bottom:6px; }
+  .archivo-trigger { display:flex; align-items:center; justify-content:center; gap:6px; width:100%;
+    padding:11px; margin-top:0; }
+  .archivo-nombre { font-size:12px; color:var(--gris); margin-top:6px; min-height:14px; overflow-wrap:anywhere; }
   .nuevos {
     margin-top:16px; background:#fdf6e8; border:1px solid #e8d9b0;
     border-radius:14px; padding:14px 15px;
@@ -516,13 +531,15 @@
       <p class="sub">Formularios de tu sindicato y seguimiento de tus expedientes.</p>
       <button class="btn" id="tram-nuevo">Iniciar un trámite nuevo</button>
 
-      <div class="card" style="margin-top:16px; padding:14px 15px;">
-        <h2 style="padding:0 0 8px;">Consultar por número de expediente</h2>
-        <div style="display:flex; gap:8px;">
-          <input type="text" id="tram-buscar-input" placeholder="Ej: F01AEFIP-2026-000123" style="flex:1; min-width:0; padding:11px 12px; border:1px solid var(--linea); border-radius:10px; font-family:inherit; font-size:14px;">
-          <button class="btn sec" id="tram-buscar-btn" style="width:auto; margin-top:0; padding:0 16px;">Buscar</button>
+      <div class="tram-box">
+        <div class="tram-box-enc"><div class="tit">Consultar por número de expediente</div></div>
+        <div class="tram-box-body">
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="tram-buscar-input" class="tram-input" placeholder="Ej: F01AEFIP-2026-000123" style="flex:1; min-width:0;">
+            <button class="btn sec" id="tram-buscar-btn" style="width:auto; margin-top:0; padding:0 16px;">Buscar</button>
+          </div>
+          <div id="tram-buscar-error" class="muted" style="margin-top:8px; font-size:12.5px;"></div>
         </div>
-        <div id="tram-buscar-error" class="muted" style="margin-top:8px; font-size:12.5px;"></div>
       </div>
 
       <h2 style="margin-top:22px; padding:0 0 8px;">Mis trámites</h2>
@@ -530,25 +547,43 @@
     </div>
 
     <div id="tram-tipos" style="display:none;">
-      <h1>Iniciar un trámite</h1>
-      <p class="sub">Elegí qué tipo de trámite querés presentar.</p>
-      <div id="tram-tipos-lista" style="margin-top:16px;"></div>
+      <div class="tram-box">
+        <div class="tram-box-enc">
+          <div class="tit">Iniciar un trámite</div>
+          <div class="sub">Elegí qué tipo de trámite querés presentar.</div>
+        </div>
+        <div class="tram-box-body">
+          <div id="tram-tipos-lista"></div>
+        </div>
+      </div>
       <button class="btn sec" id="tram-tipos-volver" style="margin-top:16px;">Volver</button>
     </div>
 
     <div id="tram-form" style="display:none;">
-      <h1 id="tram-form-titulo">Trámite</h1>
-      <p class="sub" id="tram-form-codigo"></p>
-      <div id="tram-form-error" class="banner mal" style="display:none;"></div>
-      <div id="tram-form-campos" style="margin-top:16px;"></div>
-      <button class="btn" id="tram-form-enviar">Enviar trámite</button>
-      <button class="btn sec" id="tram-form-volver">Cancelar</button>
+      <div class="tram-box">
+        <div class="tram-box-enc">
+          <div class="tit" id="tram-form-titulo">Trámite</div>
+          <div class="sub" id="tram-form-codigo"></div>
+        </div>
+        <div class="tram-box-body">
+          <div id="tram-form-error" class="banner mal" style="display:none;"></div>
+          <div id="tram-form-campos"></div>
+          <button class="btn" id="tram-form-enviar">Enviar trámite</button>
+        </div>
+      </div>
+      <button class="btn sec" id="tram-form-volver" style="margin-top:16px;">Cancelar</button>
     </div>
 
     <div id="tram-detalle" style="display:none;">
-      <h1 id="tram-det-expediente">Trámite</h1>
-      <p class="sub" id="tram-det-tipo"></p>
-      <div id="tram-det-contenido" style="margin-top:12px;"></div>
+      <div class="tram-box">
+        <div class="tram-box-enc">
+          <div class="tit" id="tram-det-expediente">Trámite</div>
+          <div class="sub" id="tram-det-tipo"></div>
+        </div>
+        <div class="tram-box-body">
+          <div id="tram-det-contenido"></div>
+        </div>
+      </div>
       <button class="btn sec" id="tram-det-volver" style="margin-top:16px;">Volver</button>
     </div>
 
@@ -1187,12 +1222,16 @@ if (document.getElementById('tp-tramites')) {
     const id = 'tc_' + c.id;
     if (c.tipo_dato === 'archivo') {
       const accept = (c.tipos_archivo_permitidos || '').split(',').map(e => e.trim()).filter(Boolean).map(e => '.' + e).join(',');
-      return `<input type="file" id="${id}" ${accept ? `accept="${accept}"` : ''}>`;
+      // input[type=file] está oculto globalmente (lo dispara el <label for>,
+      // igual que "Elegí recibo" en Tu Recibo) -- si no, el campo no se ve.
+      return `<label class="btn sec archivo-trigger" for="${id}">📎 Elegir archivo</label>
+        <input type="file" id="${id}" ${accept ? `accept="${accept}"` : ''} onchange="document.getElementById('${id}-nombre').textContent = this.files[0] ? this.files[0].name : '';">
+        <div class="archivo-nombre" id="${id}-nombre"></div>`;
     }
-    if (c.tipo_dato === 'fecha') return `<input type="date" id="${id}">`;
-    if (c.tipo_dato === 'numero') return `<input type="text" inputmode="decimal" id="${id}" placeholder="${c.decimales ? 'Ej: 1234.56' : 'Ej: 1234'}">`;
+    if (c.tipo_dato === 'fecha') return `<input type="date" class="tram-input" id="${id}">`;
+    if (c.tipo_dato === 'numero') return `<input type="text" inputmode="decimal" class="tram-input" id="${id}" placeholder="${c.decimales ? 'Ej: 1234.56' : 'Ej: 1234'}">`;
     const maxlen = c.longitud_exacta || c.longitud_maxima;
-    return `<input type="text" id="${id}" ${maxlen ? `maxlength="${maxlen}"` : ''} placeholder="${c.longitud_exacta ? c.longitud_exacta + ' caracteres' : ''}">`;
+    return `<input type="text" class="tram-input" id="${id}" ${maxlen ? `maxlength="${maxlen}"` : ''} placeholder="${c.longitud_exacta ? c.longitud_exacta + ' caracteres' : ''}">`;
   }
 
   window.abrirFormularioTramite = function (tipo) {
@@ -1201,8 +1240,8 @@ if (document.getElementById('tp-tramites')) {
     document.getElementById('tram-form-codigo').textContent = tipo.codigo;
     document.getElementById('tram-form-error').style.display = 'none';
     document.getElementById('tram-form-campos').innerHTML = tipo.campos.map(c => `
-      <div class="campo" style="margin-bottom:14px;">
-        <label style="display:block; font-size:12.5px; color:var(--gris); margin-bottom:5px;">${escTram(c.etiqueta)}${c.obligatorio ? ' *' : ''}</label>
+      <div class="campo-tram">
+        <label>${escTram(c.etiqueta)}${c.obligatorio ? ' *' : ''}</label>
         ${campoInputHtml(c)}
       </div>`).join('');
     verTram('tram-form');
@@ -1277,7 +1316,8 @@ if (document.getElementById('tp-tramites')) {
         </div>`).join('');
 
       const notasHtml = d.notas.map(n => `
-        <div class="card" style="margin-top:8px; padding:10px 13px; border-left:3px solid ${n.autor === 'admin' ? 'var(--marca-primario)' : 'var(--agua)'};">
+        <div style="margin-top:8px; padding:10px 13px; border-radius:9px; background:var(--papel);
+                    border-left:3px solid ${n.autor === 'admin' ? 'var(--marca-primario)' : 'var(--agua)'};">
           <div class="muted" style="font-size:11px;">${n.autor === 'admin' ? 'Tu sindicato' : 'Vos'} · ${n.creado}</div>
           ${n.texto ? `<div style="margin-top:4px; font-size:13.5px;">${escTram(n.texto)}</div>` : ''}
           ${n.tiene_adjunto ? `<div style="margin-top:4px;"><a href="/tramite-nota-adjunto/${n.id}" target="_blank" rel="noopener" style="font-size:12.5px;">📎 ${escTram(n.adjunto_nombre)}</a></div>` : ''}
@@ -1286,22 +1326,22 @@ if (document.getElementById('tp-tramites')) {
       const logHtml = d.log.map(l => `<div class="fila" style="padding:6px 0; font-size:12.5px;"><span class="muted">${l.creado}</span><span>${escTram(l.detalle)}</span></div>`).join('');
 
       document.getElementById('tram-det-contenido').innerHTML = `
-        <div class="card" style="padding:6px 15px;">
-          <div class="fila" style="border:none;"><span class="muted">Estado</span><span>${tagEstado(d.estado, d.estado_label)}</span></div>
-        </div>
-        <h2 style="margin-top:18px; padding:0 0 8px;">Datos presentados</h2>
-        <div class="card" style="padding:2px 15px;">${respuestasHtml}</div>
-        <h2 style="margin-top:18px; padding:0 0 8px;">Notas</h2>
+        <div class="fila" style="border:none; padding:0 0 14px;"><span class="muted">Estado</span><span>${tagEstado(d.estado, d.estado_label)}</span></div>
+        <h2 style="font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; padding:14px 0 8px; border-top:1px solid #f0eee8;">Datos presentados</h2>
+        <div>${respuestasHtml}</div>
+        <h2 style="font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; margin-top:18px; padding:0 0 8px;">Notas</h2>
         ${notasHtml}
         <form id="tram-nota-form" style="margin-top:10px;">
-          <textarea id="tram-nota-texto" rows="2" placeholder="Responder a tu sindicato…" style="width:100%; padding:10px; border:1px solid var(--linea); border-radius:10px; font-family:inherit; font-size:13.5px;"></textarea>
+          <textarea id="tram-nota-texto" rows="2" class="tram-input" placeholder="Responder a tu sindicato…" style="resize:vertical;"></textarea>
           <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
-            <input type="file" id="tram-nota-adjunto" style="font-size:12.5px; flex:1; min-width:0;">
-            <button type="submit" class="btn sec" style="width:auto; margin-top:0; padding:0 16px; min-height:40px;">Enviar</button>
+            <label class="btn sec" for="tram-nota-adjunto" style="width:auto; margin-top:0; padding:0 14px; min-height:40px; display:flex; align-items:center; gap:5px; white-space:nowrap;">📎 Adjuntar</label>
+            <input type="file" id="tram-nota-adjunto" onchange="document.getElementById('tram-nota-adjunto-nombre').textContent = this.files[0] ? this.files[0].name : '';">
+            <button type="submit" class="btn" style="width:auto; margin-top:0; padding:0 16px; min-height:40px; flex:1;">Enviar</button>
           </div>
+          <div class="archivo-nombre" id="tram-nota-adjunto-nombre"></div>
         </form>
-        <h2 style="margin-top:18px; padding:0 0 8px;">Historial</h2>
-        <div class="card" style="padding:2px 15px;">${logHtml}</div>
+        <h2 style="font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; margin-top:18px; padding:0 0 8px;">Historial</h2>
+        <div>${logHtml}</div>
       `;
       document.getElementById('tram-nota-form').onsubmit = (ev) => {
         ev.preventDefault();
