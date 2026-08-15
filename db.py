@@ -79,6 +79,11 @@ class Sindicato(SQLModel, table=True):
     # qué tarjetas ve el trabajador y qué pestañas ve el admin del sindicato
     # -- pensado para distintos modelos comerciales, no todos adoptan todo.
     modulos_habilitados: list = Field(default=[], sa_column=Column(JSON))
+    # Portada del trabajador: oscura (default, regla histórica) o clara.
+    # El encabezado (.enc) sigue siendo oscuro en las dos variantes -- lo
+    # que cambia es el fondo del cuerpo y las tarjetas. Default False =
+    # ningún sindicato existente cambia de aspecto el día del deploy.
+    portada_clara: bool = Field(default=False)
 
 
 class Seccional(SQLModel, table=True):
@@ -637,6 +642,7 @@ def marca_sindicato(sindicato_id: int) -> dict:
             "color_secundario": sind.color_secundario,
             "color_acento": sind.color_acento,
             "color_base": sind.color_base,
+            "portada_clara": sind.portada_clara,
             # Para la credencial sindical del trabajador
             "autoridad": sind.autoridad, "cargo_autoridad": sind.cargo_autoridad,
             "firma": sind.firma,

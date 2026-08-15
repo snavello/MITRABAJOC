@@ -1626,6 +1626,7 @@ async def plataforma_alta_sindicato(
     color_base: str = Form("#0f1b2d"),
     logo: UploadFile = File(None), firma: UploadFile = File(None),
     modulos_habilitados: list[str] = Form(default=[]),
+    portada_clara: bool = Form(False),
 ):
     ses = sesion_actual(request)
     if not ses or ses.get("rol") != "plataforma":
@@ -1653,6 +1654,7 @@ async def plataforma_alta_sindicato(
             color_acento=color_acento or "#b23a2e",
             color_base=color_base,
             modulos_habilitados=modulos_validos,
+            portada_clara=portada_clara,
         )
         s.add(sind); s.commit(); s.refresh(sind)
         sind_id = sind.id
@@ -1760,6 +1762,7 @@ async def plataforma_editar_sindicato(
     logo: UploadFile = File(None),
     firma: UploadFile = File(None),
     modulos_habilitados: list[str] = Form(default=[]),
+    portada_clara: bool = Form(False),
 ):
     ses = sesion_actual(request)
     if not ses or ses.get("rol") != "plataforma":
@@ -1779,6 +1782,7 @@ async def plataforma_editar_sindicato(
             sind.color_acento = color_acento or "#b23a2e"
             sind.color_base = color_base
             sind.modulos_habilitados = modulos_validos
+            sind.portada_clara = portada_clara
             if logo and logo.filename:
                 datos, mime, flag = _leer_logo(logo)
                 if datos:
