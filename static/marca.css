@@ -48,13 +48,16 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
 /* ---------- Encabezado oscuro (portada e interiores) ---------- */
 .enc { background: var(--marca-base); color: var(--sobre-base); padding: 13px 15px;
        display: flex; align-items: center; gap: 10px; }
-.enc .logo { width: 76px; height: 76px; border-radius: 9px; background: var(--blanco);
-             object-fit: contain; padding: 3px; }
+.enc .logo { width: 76px; height: 76px; object-fit: contain; }
 .enc .logo-fallback { width: 76px; height: 76px; border-radius: 9px; background: var(--marca-acento);
              color: var(--marca-base); display: flex; align-items: center; justify-content: center;
              font-weight: 800; font-size: 26px; }
 .enc .nom { font-size: 14.5px; font-weight: 600; line-height: 1.15; }
 .enc .sub { font-size: 10px; color: var(--sobre-base-mute); letter-spacing: 1.1px; text-transform: uppercase; }
+@media (max-width: 600px) {
+  .enc .logo, .enc .logo-fallback { width: 61px; height: 61px; }
+  .enc .logo-fallback { font-size: 21px; }
+}
 .enc .usuario { margin-left: auto; font-size: 10.5px; color: var(--sobre-base-mute); }
 
 /* ---------- Tarjetas de acceso (portada) ---------- */

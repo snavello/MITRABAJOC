@@ -82,11 +82,15 @@
   header { background:var(--marca-base); border-bottom:1px solid var(--linea); padding:14px 22px;
            display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
            position:sticky; top:0; z-index:20; }
-  .logo-plataforma-header { width:76px; height:76px; object-fit:contain; background:#fff; border-radius:6px; padding:2px; flex-shrink:0; }
+  .logo-plataforma-header { width:76px; height:76px; object-fit:contain; flex-shrink:0; }
   header .rol { color:rgba(255,255,255,.85) !important; }
   .sind-wrap { display:flex; align-items:center; gap:14px; }
-  .sind-wrap img.sind { max-height:76px; max-width:220px; object-fit:contain; background:#fff; border-radius:6px; padding:2px; }
+  .sind-wrap img.sind { max-height:76px; max-width:220px; object-fit:contain; }
   .sind-wrap .sind-nombre { font-size:14px; color:rgba(255,255,255,.9); }
+  @media (max-width:600px) {
+    .logo-plataforma-header { width:61px; height:61px; }
+    .sind-wrap img.sind { max-height:61px; max-width:170px; }
+  }
   .btn-cerrar { position:fixed; bottom:20px; right:20px; width:44px; height:44px; border-radius:50%;
     background:var(--marca-base); display:flex; align-items:center; justify-content:center;
     text-decoration:none; border:1px solid rgba(255,255,255,.14);

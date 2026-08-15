@@ -35,8 +35,12 @@
     display:flex; align-items:center; justify-content:space-between; gap:12px;
     position:sticky; top:0; z-index:10;
   }
-  .logo-plataforma-header { width:76px; height:76px; object-fit:contain; background:#fff; border-radius:6px; padding:2px; flex-shrink:0; }
+  .logo-plataforma-header { width:76px; height:76px; object-fit:contain; flex-shrink:0; }
   .sind { max-height:76px; max-width:200px; object-fit:contain; }
+  @media (max-width:600px) {
+    .logo-plataforma-header { width:61px; height:61px; }
+    .sind { max-height:61px; max-width:160px; }
+  }
   /* Botones flotantes inicio/salir: fondo base del sindicato, ícono acento
      (mismo color que el botón principal y la pestaña activa). */
   .btn-flotante { position:fixed; bottom:84px; width:42px; height:42px; border-radius:50%;
@@ -192,8 +196,7 @@
   .cred-head, .cred-body, .cred-pie { position:relative; z-index:1; }
   .cred-head { background:var(--marca-base); padding:18px 20px;
     display:flex; align-items:center; gap:12px; }
-  .cred-logo { max-height:46px; max-width:110px; object-fit:contain;
-    background:#fff; border-radius:8px; padding:4px; }
+  .cred-logo { max-height:46px; max-width:110px; object-fit:contain; }
   .cred-sind { color:#fff; font-size:16px; font-weight:600; line-height:1.25; }
   .cred-body { padding:20px; }
   .cred-top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }

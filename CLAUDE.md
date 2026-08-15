@@ -114,6 +114,19 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   el logo de plataforma y el del sindicato conviven en el mismo header
   (`.logo-plataforma-header` + `.sind`), se agrandaron los DOS juntos para
   que no queden desparejos entre sí.
+- **Sin fondo blanco forzado + reducción en mobile (2026-08-15):** todas las
+  clases de logo de plataforma/sindicato (`.logo-recuadro`, `.enc .logo`,
+  `.logo-plataforma-header`, `.sind`/`.sind-wrap img.sind`, `.cred-logo`,
+  `.head img` de `verificar_credencial.html`, `header img` de
+  `plataforma.html`) perdieron el `background:#fff`/`border-radius`/`padding`
+  que traían — un PNG con fondo transparente ahora se ve transparente de
+  verdad. Si un sindicato quiere que su logo tenga un fondo de color, lo tiene
+  que subir ya con ese fondo incluido en el archivo. Excepción a propósito:
+  `.enc .logo-fallback` (el círculo con iniciales que se muestra cuando NO hay
+  logo cargado) conserva su fondo — no es un logo real, es un placeholder.
+  También se agregó `@media (max-width:600px)` a las clases que forman parte
+  del set de 76px (no a `.cred-logo` ni a `header img` de `plataforma.html`,
+  que quedaron fuera de esa unificación): en mobile bajan a 61px (76×0.8).
 
 ## Estado actual
 Migración a Postgres COMPLETA y desplegada en Render, mergeada a main. Verificado
