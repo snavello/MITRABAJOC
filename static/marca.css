@@ -4,6 +4,18 @@
    Todo lo demás es fijo para todos los sindicatos.
    ============================================================ */
 
+/* Condensada para títulos/saludo/encabezados de sección únicamente -- el
+   cuerpo de texto sigue en system-ui en todos lados (regla fija de la skill
+   de diseño). Alojada en static/fonts/ (licencia SIL OFL) para que se vea
+   igual en cualquier dispositivo, sin depender de un CDN externo. */
+@font-face {
+  font-family: "Barlow Condensed";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/static/fonts/barlow-condensed-bold.woff2") format("woff2");
+}
+
 :root {
   /* --- Marca del sindicato (se inyecta desde Jinja) --- */
   --marca-base:      #0f1b2d;  /* base oscura: portada, encabezados */
@@ -32,6 +44,7 @@
   /* --- Fijo: tipografía --- */
   --fuente: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --fuente-num: ui-monospace, Consolas, "SF Mono", monospace;
+  --fuente-display: "Barlow Condensed", "Arial Narrow", sans-serif;
 
   /* --- Fijo: radios --- */
   --r-card: 12px;
@@ -187,5 +200,35 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
 .chip-ok, .chip-error, .chip-aviso {
   display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
   padding: 6px 11px; border-radius: var(--r-chip); }
+
+/* ---------- Grano (textura sutil, guiño a imprenta/afiche gremial) ----------
+   SVG feTurbulence en data-URI, sin imágenes externas. .grano-osc para
+   fondos oscuros (más marcado), .grano-clara para fondos claros (sutil). */
+.grano { position: relative; }
+.grano::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.grano-osc::before { opacity: .07; mix-blend-mode: overlay; }
+.grano-clara::before { opacity: .05; mix-blend-mode: multiply; }
+
+/* ---------- Vidrio (tarjetas/filas con degradé + brillo diagonal, en vez
+   de sombra) -- variantes oscura (portada) y clara (portada clara,
+   pantallas interiores). Se agregan como modificador sobre las clases
+   existentes, no reemplazan su estructura. ---------- */
+.vidrio { position: relative; overflow: hidden;
+  background: linear-gradient(155deg, rgba(255,255,255,.14), rgba(255,255,255,.02) 55%, rgba(255,255,255,.06));
+  border: 1px solid rgba(255,255,255,.14) !important; backdrop-filter: blur(3px) saturate(1.1); }
+.vidrio::after { content: ""; position: absolute; top: -60%; left: -30%; width: 90%; height: 90%;
+  background: linear-gradient(120deg, rgba(255,255,255,.22), transparent 60%); transform: rotate(-18deg);
+  pointer-events: none; }
+.vidrio.destacada, .vidrio.acceso.destacada {
+  background: linear-gradient(155deg, color-mix(in srgb, var(--marca-acento) 92%, white), color-mix(in srgb, var(--marca-acento) 60%, #7a4f10)) !important;
+  border-color: transparent !important; }
+
+.vidrio-claro { position: relative; overflow: hidden;
+  background: linear-gradient(160deg, #ffffff, var(--sup-1)); border: 1px solid var(--sup-2) !important;
+  box-shadow: 0 1px 0 rgba(20,15,5,.03); }
+.vidrio-claro.destacada, .vidrio-claro.acceso.destacada {
+  background: linear-gradient(155deg, color-mix(in srgb, var(--marca-acento) 95%, white), color-mix(in srgb, var(--marca-acento) 55%, white)) !important;
+  border-color: transparent !important; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

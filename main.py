@@ -49,6 +49,9 @@ from semaforo import calcular_semaforo, advertencia_ultimo_deposito
 from version import VERSION_TRABAJADOR, VERSION_ADMIN, VERSION_PLATAFORMA, FECHA_VERSION
 from modulos import MODULOS, MODULOS_INICIALES
 
+import mimetypes
+mimetypes.add_type("font/woff2", ".woff2")  # algunos Windows no lo traen registrado -> se servía como text/plain
+
 app = FastAPI(title="Mi Trabajo — validador de recibos")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
