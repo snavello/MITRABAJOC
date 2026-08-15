@@ -137,3 +137,28 @@ plataforma), y deep-linking desde la portada a una pestaña específica de `/app
 Subí este documento y decí: "Seguimos con Mi Trabajo. El rediseño de interfaz
 está en la rama rediseno-ui, probado localmente; el próximo paso es [probarlo /
 mergearlo a main / seguir con X pantalla]."
+
+**Nota:** las secciones de arriba están desactualizadas — el rediseño de
+interfaz, módulos habilitables, notificaciones y trámites ya se mergearon a
+`main` hace varias sesiones (ver `CLAUDE.md`, que sí se mantiene al día). No
+se reescribió este documento por completo; abajo se suma solo lo último.
+
+## 9. Topes de base imponible (rama `topes-base-imponible`)
+Corrige un bug real: el validador calculaba jubilación/INSSJP/obra social
+sobre la remuneración completa, sin el tope máximo ni el piso mínimo de la
+base imponible de la seguridad social (art. 9 Ley 24.241) — todo trabajador
+que superaba el tope recibía discrepancias falsas. Detalle completo en
+`CLAUDE.md` → "Topes de base imponible". 4 fases, todas en la rama:
+tabla `TopeBaseImponible` (nacional, administrada desde `/plataforma`) +
+`Formula.sujeto_a_tope`, lógica en `validador.py`, panel de plataforma y
+checkbox en `/admin` → Fórmulas.
+
+**Mantenimiento mensual obligatorio**: ANSES actualiza el tope todos los
+meses — hay que cargar el valor nuevo en `/plataforma` → "Topes SS" cada
+mes. 14 valores (enero 2025–febrero 2026) quedaron marcados `SOSPECHOSO`,
+pendientes de verificar contra las resoluciones oficiales antes de confiar
+en el resultado para ese tramo.
+
+Pendiente antes de mergear a `main`: verificar contra los 10 recibos de
+prueba (5 debajo del tope, 5 por encima, 5 con errores plantados) que pasó
+el usuario, con la guía de qué debería detectar cada uno.

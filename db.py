@@ -9,10 +9,11 @@ La primera vez que arranca, si la base está vacía, se cargan los conceptos
 y fórmulas iniciales desde data/seed_aefip.json (solo como semilla).
 """
 import os
+import csv
 import json
 from pathlib import Path
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON
 
@@ -207,6 +208,33 @@ class Formula(SQLModel, table=True):
     # valida en el alta/edición (ver validador.rangos_se_superponen).
     fecha_desde: Optional[str] = Field(default=None)
     fecha_hasta: Optional[str] = Field(default=None)
+    # Base imponible de la seguridad social (art. 9 Ley 24.241): si está en
+    # True, el motor de validación (validador.tope_vigente_en) recorta la
+    # base_remunerativa al tope máximo y la eleva al piso mínimo vigentes en
+    # el período del recibo antes de evaluar esta fórmula. Por defecto True
+    # solo en jubilación/INSSJP/obra social (ver crear_conceptos_universales);
+    # el admin del sindicato lo puede cambiar libremente.
+    sujeto_a_tope: bool = False
+
+
+class TopeBaseImponible(SQLModel, table=True):
+    """Tope máximo y piso mínimo de la base imponible de la seguridad
+    social, por vigencia mensual (art. 9 Ley 24.241, actualizado todos los
+    meses por IPC/movilidad desde el Decreto 274/2024). Tabla NACIONAL, sin
+    sindicato_id -- un solo valor rige para todos los sindicatos, se
+    administra desde /plataforma. No tiene fecha_hasta: cada fila rige
+    hasta que empieza la siguiente (ver validador.tope_vigente_en)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    vigencia_desde: str = Field(index=True)   # "AAAA-MM", único
+    tope_maximo: float
+    base_minima: float
+    # Cuánto se puede confiar en este valor: "verificado" (contrastado
+    # contra resolución oficial), "derivado" (calculado por movilidad, con
+    # control cruzado), "por_verificar" (cargado sin contrastar) o
+    # "SOSPECHOSO" (inconsistente con valores verificados -- se muestra
+    # igual pero el validador avisa que el resultado puede no ser confiable).
+    estado: str = "por_verificar"
+    fuente: str = ""
 
 
 class Noticia(SQLModel, table=True):
@@ -529,6 +557,7 @@ def init_db():
     if not USANDO_POSTGRES:
         crear_tablas()
     cargar_seed_si_vacio()
+    sembrar_topes_si_vacio()
 
 
 # ---------- Accesos de conveniencia ----------
@@ -570,7 +599,8 @@ def formulas_como_dicts(sindicato_id: int = None) -> list:
         return [
             {"target": f.target, "descripcion": f.descripcion,
              "expr": f.expr, "tolerancia": f.tolerancia,
-             "fecha_desde": f.fecha_desde, "fecha_hasta": f.fecha_hasta}
+             "fecha_desde": f.fecha_desde, "fecha_hasta": f.fecha_hasta,
+             "sujeto_a_tope": f.sujeto_a_tope}
             for f in s.exec(q).all() if f.activa
         ]
 
@@ -609,12 +639,117 @@ def crear_conceptos_universales(sindicato_id: int) -> list:
                     sindicato_id=sindicato_id, target=c["codigo"],
                     descripcion=c["descripcion_formula"],
                     expr=f"{c['pct']} * base_remunerativa", tolerancia=1.0,
+                    sujeto_a_tope=True,
                 ))
                 algo_nuevo = True
             if algo_nuevo:
                 agregados.append(c["codigo"])
         s.commit()
     return agregados
+
+
+# ---------- Topes de base imponible (jubilación, INSSJP, obra social) ----------
+def topes_como_dicts() -> list:
+    """Todos los topes, en el formato que espera el validador (sin filtro
+    de sindicato: es una tabla nacional)."""
+    with Session(engine) as s:
+        return [
+            {"vigencia_desde": t.vigencia_desde, "tope_maximo": t.tope_maximo,
+             "base_minima": t.base_minima, "estado": t.estado, "fuente": t.fuente}
+            for t in s.exec(select(TopeBaseImponible)).all()
+        ]
+
+
+def topes_listado() -> list:
+    """Para la pantalla de /plataforma: los SOSPECHOSO/por_verificar de los
+    últimos 12 meses primero (son los períodos que los trabajadores
+    realmente suben, hay que corregirlos antes), el resto por vigencia
+    descendente."""
+    hace_12_meses = (datetime.now().replace(day=1) - timedelta(days=365)).strftime("%Y-%m")
+    with Session(engine) as s:
+        topes = s.exec(select(TopeBaseImponible)).all()
+        return _ordenar_topes(topes, hace_12_meses)
+
+
+def _ordenar_topes(topes: list, hace_12_meses: str) -> list:
+    urgentes = sorted(
+        [t for t in topes if t.estado in ("SOSPECHOSO", "por_verificar") and t.vigencia_desde >= hace_12_meses],
+        key=lambda t: t.vigencia_desde, reverse=True)
+    resto = sorted(
+        [t for t in topes if not (t.estado in ("SOSPECHOSO", "por_verificar") and t.vigencia_desde >= hace_12_meses)],
+        key=lambda t: t.vigencia_desde, reverse=True)
+    return urgentes + resto
+
+
+def tope_anterior_a(vigencia_desde: str, excluir_id: int = None) -> Optional[dict]:
+    """El tope con vigencia_desde más reciente ANTERIOR al dado (para la
+    validación de "no debería bajar de un período al siguiente"). None si
+    no hay ninguno anterior."""
+    with Session(engine) as s:
+        q = select(TopeBaseImponible).where(TopeBaseImponible.vigencia_desde < vigencia_desde)
+        if excluir_id is not None:
+            q = q.where(TopeBaseImponible.id != excluir_id)
+        anteriores = s.exec(q).all()
+        if not anteriores:
+            return None
+        t = max(anteriores, key=lambda x: x.vigencia_desde)
+        return {"vigencia_desde": t.vigencia_desde, "tope_maximo": t.tope_maximo, "base_minima": t.base_minima}
+
+
+def crear_tope(vigencia_desde: str, tope_maximo: float, base_minima: float, estado: str, fuente: str) -> bool:
+    """False si ya existe un tope con esa vigencia (para cambiar un período
+    existente se edita, no se agrega otro)."""
+    with Session(engine) as s:
+        if s.exec(select(TopeBaseImponible).where(TopeBaseImponible.vigencia_desde == vigencia_desde)).first():
+            return False
+        s.add(TopeBaseImponible(vigencia_desde=vigencia_desde, tope_maximo=tope_maximo,
+                                 base_minima=base_minima, estado=estado, fuente=fuente))
+        s.commit()
+        return True
+
+
+def editar_tope(tope_id: int, tope_maximo: float, base_minima: float, estado: str, fuente: str) -> bool:
+    with Session(engine) as s:
+        t = s.get(TopeBaseImponible, tope_id)
+        if not t:
+            return False
+        t.tope_maximo, t.base_minima, t.estado, t.fuente = tope_maximo, base_minima, estado, fuente
+        s.add(t)
+        s.commit()
+        return True
+
+
+def borrar_tope(tope_id: int) -> None:
+    with Session(engine) as s:
+        t = s.get(TopeBaseImponible, tope_id)
+        if t:
+            s.delete(t)
+            s.commit()
+
+
+def sembrar_topes_si_vacio() -> None:
+    """Si la tabla de topes está vacía, la carga desde data/topes_ss.csv
+    (mismo criterio que cargar_seed_si_vacio con el seed de AEFIP) --
+    corre en cada arranque, tanto en SQLite local como en Postgres/Render,
+    así que no hace falta sembrar los datos desde la migración misma."""
+    csv_path = Path("data/topes_ss.csv")
+    if not csv_path.exists():
+        return
+    try:
+        with Session(engine) as s:
+            if s.exec(select(TopeBaseImponible)).first():
+                return  # ya hay datos, no tocar
+            with open(csv_path, newline="", encoding="utf-8") as f:
+                for fila in csv.DictReader(f):
+                    s.add(TopeBaseImponible(
+                        vigencia_desde=fila["vigencia_desde"],
+                        tope_maximo=float(fila["tope_maximo"]),
+                        base_minima=float(fila["base_minima"]),
+                        estado=fila["estado"], fuente=fila["fuente"],
+                    ))
+            s.commit()
+    except Exception:
+        pass  # semilla opcional, no debe romper el arranque de la app
 
 
 # ---------- Trabajadores: cuenta única + empadronamiento por sindicato ----------

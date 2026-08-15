@@ -299,7 +299,7 @@ def api_validar(request: Request, payload: dict):
     # de la cookie (identidad real), no de lo que haya leído la IA del recibo.
     resultado = validar(db.conceptos_como_dicts(sid), db.formulas_como_dicts(sid), recibo,
                          tope_sindical_pct=db.obtener_tope_sindical(),
-                         cuil_sesion=cuil_sesion)
+                         cuil_sesion=cuil_sesion, topes=db.topes_como_dicts())
 
     # Historial privado del trabajador: se registra CADA verificación, esté todo
     # en orden o no.
@@ -764,6 +764,7 @@ def abm_formula(
     id: str = Form(""), target: str = Form(...), descripcion: str = Form(...),
     expr: str = Form(...), tolerancia: float = Form(1.0),
     fecha_desde: str = Form(""), fecha_hasta: str = Form(""),
+    sujeto_a_tope: bool = Form(False),
 ):
     sid = exigir_sindicato(request)
     fecha_desde = fecha_desde or None
@@ -784,11 +785,13 @@ def abm_formula(
             if f and f.sindicato_id == sid:
                 f.target, f.descripcion, f.expr, f.tolerancia = target, descripcion, expr, tolerancia
                 f.fecha_desde, f.fecha_hasta = fecha_desde, fecha_hasta
+                f.sujeto_a_tope = sujeto_a_tope
                 s.add(f)
         else:
             s.add(Formula(sindicato_id=sid, target=target, descripcion=descripcion,
                           expr=expr, tolerancia=tolerancia,
-                          fecha_desde=fecha_desde, fecha_hasta=fecha_hasta))
+                          fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
+                          sujeto_a_tope=sujeto_a_tope))
         s.commit()
     return RedirectResponse("/admin#formulas", status_code=303)
 
@@ -1539,6 +1542,9 @@ def plataforma(request: Request):
                 Trabajador.sindicato_id == sind.id)).all())
             info.append({"s": sind, "usuarios": n_users, "trabajadores": n_trab})
     uso_ia = db.uso_ia_listado()
+    topes = db.topes_listado()
+    topes_json = [{"id": t.id, "vigencia_desde": t.vigencia_desde,
+                   "tope_maximo": t.tope_maximo, "base_minima": t.base_minima} for t in topes]
     return templates.TemplateResponse("plataforma.html", {
         "request": request, "sindicatos": info,
         "tope_sindical_pct": db.obtener_tope_sindical(),
@@ -1548,6 +1554,7 @@ def plataforma(request: Request):
         "modelos_uso_ia": sorted({u["modelo"] for u in uso_ia}),
         "recibos_sospechosos": db.recibos_sospechosos_listado(),
         "catalogo_modulos": MODULOS, "modulos_iniciales": MODULOS_INICIALES,
+        "topes": topes, "topes_json": topes_json,
         "version": VERSION_PLATAFORMA, "fecha_version": FECHA_VERSION,
     })
 
@@ -1586,6 +1593,51 @@ def plataforma_config(request: Request, tope_sindical_pct: float = Form(...)):
         raise HTTPException(403, "No autorizado")
     db.set_tope_sindical(tope_sindical_pct)
     return RedirectResponse("/plataforma?config=ok", status_code=303)
+
+
+ESTADOS_TOPE = ("verificado", "derivado", "por_verificar", "SOSPECHOSO")
+
+
+@app.post("/plataforma/tope")
+def plataforma_tope(
+    request: Request,
+    id: str = Form(""), vigencia_desde: str = Form(...),
+    tope_maximo: float = Form(...), base_minima: float = Form(...),
+    estado: str = Form("por_verificar"), fuente: str = Form(""),
+    confirmado: str = Form(""),
+):
+    """Alta/edición de un tope de base imponible (un solo endpoint, mismo
+    patrón que /admin/formula). El JS del panel ya avisa con un confirm()
+    si el valor es menor al del período anterior -- acá se vuelve a
+    chequear igual del lado del servidor (esconder/advertir en el cliente
+    no alcanza, mismo criterio que el resto de la app)."""
+    ses = sesion_actual(request)
+    if not ses or ses.get("rol") != "plataforma":
+        raise HTTPException(403, "No autorizado")
+    if estado not in ESTADOS_TOPE:
+        estado = "por_verificar"
+    tope_id = int(id) if id else None
+    anterior = db.tope_anterior_a(vigencia_desde, excluir_id=tope_id)
+    if anterior and confirmado != "1" and (
+        tope_maximo < anterior["tope_maximo"] or base_minima < anterior["base_minima"]
+    ):
+        return RedirectResponse("/plataforma?error=topebajo#topes", status_code=303)
+    if tope_id:
+        if not db.editar_tope(tope_id, tope_maximo, base_minima, estado, fuente):
+            return RedirectResponse("/plataforma?error=topenoexiste#topes", status_code=303)
+    else:
+        if not db.crear_tope(vigencia_desde, tope_maximo, base_minima, estado, fuente):
+            return RedirectResponse("/plataforma?error=topeduplicado#topes", status_code=303)
+    return RedirectResponse("/plataforma#topes", status_code=303)
+
+
+@app.post("/plataforma/tope/borrar")
+def plataforma_tope_borrar(request: Request, id: int = Form(...)):
+    ses = sesion_actual(request)
+    if not ses or ses.get("rol") != "plataforma":
+        raise HTTPException(403, "No autorizado")
+    db.borrar_tope(id)
+    return RedirectResponse("/plataforma#topes", status_code=303)
 
 
 @app.post("/plataforma/marca")
