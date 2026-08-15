@@ -15,10 +15,54 @@
     --marca-acento: {{ marca.color_acento }};
     --marca-apoyo: {{ marca.color_secundario }};
   }
-  body { background: var(--marca-base); min-height: 100vh; }
+  body { min-height: 100vh; }
+  body.oscuro { background: radial-gradient(circle at 30% -10%, color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base)) 0%, var(--marca-base) 46%); }
+  body.claro { background: var(--papel); }
   .fila-hola { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .hola { font-size: 22px; letter-spacing: -.4px; color: var(--sobre-base); margin-top: 4px; }
+  .hola { font-family: var(--fuente-display); font-weight: 700; font-size: 30px; letter-spacing: .002em;
+    color: var(--sobre-base); margin-top: 6px; }
+  body.claro .hola { color: var(--tinta); }
   .hola em { font-style: normal; color: var(--marca-acento); }
+
+  /* ---------- Vidrio (tarjetas/filas) + tipografía condensada en
+     encabezados de sección -- variantes oscura/clara según body.oscuro/
+     body.claro. Ver también .grano/.grano-osc/.grano-clara en marca.css,
+     aplicadas al <body> (el .enc y el .pad tienen position+z-index en
+     marca.css para quedar por encima del grano). ---------- */
+  .sech b { font-family: var(--fuente-display); font-weight: 700; font-size: 15px;
+    letter-spacing: .015em; text-transform: uppercase; }
+  body.claro .sech b { color: var(--tinta); }
+  body.claro .sech a { color: var(--gris); }
+
+  body.oscuro .tarjetas .acceso { position: relative; overflow: hidden;
+    background: linear-gradient(155deg, rgba(255,255,255,.14), rgba(255,255,255,.02) 55%, rgba(255,255,255,.06));
+    border-color: rgba(255,255,255,.14); backdrop-filter: blur(3px) saturate(1.1); }
+  body.oscuro .tarjetas .acceso::after { content: ""; position: absolute; top: -60%; left: -30%;
+    width: 90%; height: 90%; background: linear-gradient(120deg, rgba(255,255,255,.22), transparent 60%);
+    transform: rotate(-18deg); pointer-events: none; }
+  body.oscuro .tarjetas .acceso.destacada {
+    background: linear-gradient(155deg, color-mix(in srgb, var(--marca-acento) 92%, white), color-mix(in srgb, var(--marca-acento) 60%, #7a4f10));
+    border-color: transparent; }
+
+  body.claro .tarjetas .acceso { position: relative; overflow: hidden; color: var(--tinta);
+    background: linear-gradient(160deg, #ffffff, var(--papel)); border-color: var(--linea);
+    box-shadow: 0 1px 0 rgba(20,15,5,.03); }
+  body.claro .tarjetas .acceso .estado { color: var(--gris); opacity: 1; }
+  body.claro .tarjetas .acceso.destacada {
+    background: linear-gradient(155deg, color-mix(in srgb, var(--marca-acento) 95%, white), color-mix(in srgb, var(--marca-acento) 55%, white));
+    border-color: transparent; color: var(--marca-base); }
+
+  body.claro .noticia-card { background: linear-gradient(160deg, #ffffff, var(--papel));
+    border-color: var(--linea); color: var(--tinta); }
+  body.claro .noticia-card .baj { color: var(--gris); opacity: 1; }
+  body.claro .vacio-sec { background: var(--papel); border-color: var(--linea); color: var(--gris); }
+  body.claro .carrusel { border-color: var(--linea); background: var(--papel); }
+  body.claro .carrusel-slide { background: var(--papel); }
+  body.claro .carrusel-slide img { background: var(--linea); }
+
+  .btn-acerca { background: none; border: none; opacity: .5; font-size: 11px; cursor: pointer;
+    padding: 6px; color: var(--sobre-base-mute); }
+  body.claro .btn-acerca { color: var(--gris); }
 
   /* ---------- Notificaciones ---------- */
   .badge-noleidas { position: absolute; top: -6px; right: -6px; background: #e5484d; color: #fff;
@@ -57,7 +101,7 @@
   .notif-vacio { text-align: center; padding: 34px 10px; color: var(--gris); font-size: 13px; }
 </style>
 </head>
-<body class="oscuro">
+<body class="{{ 'claro' if marca.portada_clara else 'oscuro' }} grano {{ 'grano-clara' if marca.portada_clara else 'grano-osc' }}">
 
 <div class="enc">
   {% if marca.logo %}
@@ -190,7 +234,7 @@
   {% endif %}
 
   <div style="text-align:center; margin-top:18px;">
-    <button onclick="abrirAcerca()" style="background:none; border:none; color:var(--sobre-base-mute); opacity:.5; font-size:11px; cursor:pointer; padding:6px;">Acerca de</button>
+    <button class="btn-acerca" onclick="abrirAcerca()">Acerca de</button>
   </div>
 </div>
 

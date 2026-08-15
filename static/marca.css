@@ -60,7 +60,7 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
 
 /* ---------- Encabezado oscuro (portada e interiores) ---------- */
 .enc { background: var(--marca-base); color: var(--sobre-base); padding: 13px 15px;
-       display: flex; align-items: center; gap: 10px; }
+       display: flex; align-items: center; gap: 10px; position: relative; z-index: 1; }
 .enc .logo { width: 76px; height: 76px; object-fit: contain; }
 .enc .logo-fallback { width: 76px; height: 76px; border-radius: 9px; background: var(--marca-acento);
              color: var(--marca-base); display: flex; align-items: center; justify-content: center;
@@ -105,7 +105,7 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
 .btn.sec { background: transparent; color: var(--tinta); border: 1px solid var(--linea); }
 
 /* ---------- Contenido con padding (portada y pantallas oscuras) ---------- */
-.pad { padding: 16px 15px 100px; }
+.pad { padding: 16px 15px 100px; position: relative; z-index: 1; }
 
 /* ---------- Secciones con título + "Ver todas" opcional ---------- */
 .sec { margin-top: 22px; }
