@@ -32,6 +32,25 @@ CATEGORIAS_UNIVERSALES = {
     "cuota_sindical": "CUOTA_SINDICAL",
 }
 
+# Aclaraciones en lenguaje llano para discrepancias de aportes sujetos a
+# tope de base imponible (ver TopeSS_contexto.md, puntos 2.3 y 2.5) -- se
+# agregan al `detalle` de la discrepancia, no son un campo aparte: así el
+# frontend (que ya renderiza discrepancia.detalle tal cual) no necesita
+# ningún cambio para mostrarlas.
+NOTA_LIQUIDACIONES_MULTIPLES = (
+    "Este aporte tiene un tope máximo mensual. Si tuviste más de un recibo "
+    "este mes (por ejemplo, un adelanto y una liquidación complementaria, "
+    "o más de un empleador), es posible que el tope ya se haya alcanzado "
+    "con el otro recibo y que este esté bien igual. No podemos confirmarlo "
+    "mirando un solo recibo."
+)
+NOTA_PISO_PROPORCIONAL = (
+    "Además, el monto mínimo sobre el que se calculan estos aportes se "
+    "reduce si trabajaste jornada parcial o no trabajaste el mes completo "
+    "(por ejemplo, si empezaste o dejaste el trabajo a mitad de mes). Si es "
+    "tu caso, el cálculo del recibo puede ser correcto igual."
+)
+
 # Los 3 que se autocargan al crear un sindicato (ver db.crear_conceptos_universales).
 CONCEPTOS_UNIVERSALES = [
     {"codigo": "JUBILACION", "nombre": "Aporte jubilatorio (SIPA)", "pct": 0.11,
@@ -75,6 +94,26 @@ def formula_vigente_en(formula: dict, periodo: str) -> bool:
     if hasta and (not mp or mp > _mes(hasta)):
         return False
     return True
+
+
+def tope_vigente_en(topes: list, periodo: str) -> dict | None:
+    """El tope de base imponible de la seguridad social vigente en el
+    período (AAAA-MM) del recibo, o None si no hay ninguno cargado para esa
+    fecha o antes -- a propósito NO se usa el más cercano (ni anterior ni
+    posterior): si no hay dato, no se inventa uno.
+
+    A diferencia de formula_vigente_en (que compara contra un rango
+    desde/hasta), acá cada tope no tiene "hasta": rige desde su
+    vigencia_desde hasta que empieza el siguiente. Es una búsqueda "as of":
+    entre los que ya regían en el período (vigencia_desde <= período), el
+    vigente es el de vigencia_desde más reciente."""
+    mp = _mes(periodo)
+    if not mp:
+        return None
+    candidatos = [t for t in topes if t.get("vigencia_desde") and t["vigencia_desde"] <= mp]
+    if not candidatos:
+        return None
+    return max(candidatos, key=lambda t: t["vigencia_desde"])
 
 
 def rangos_se_superponen(desde1, hasta1, desde2, hasta2) -> bool:
@@ -182,7 +221,7 @@ def _resultado_bloqueado_por_cuil(recibo: dict, cuil_sesion: str) -> dict:
 
 
 def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: float = 2.0,
-            cuil_sesion: str = None) -> dict:
+            cuil_sesion: str = None, topes: list = None) -> dict:
     # El CUIL que leyó la IA del recibo tiene que ser el mismo que el de la
     # sesión (no el que diga el trabajador). Si no coincide, se corta ACÁ: no
     # se matchea, no se evalúa ninguna fórmula, no se detecta ninguna
@@ -245,18 +284,40 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
         formulas_por_target[f["target"]].append(f)
     periodo_recibo = recibo.get("periodo")
 
+    # Base imponible con tope: el mismo tope (vigente en el período de ESTE
+    # recibo) se usa para todas las fórmulas sujetas a tope, así que se
+    # busca una sola vez, no por fórmula. Sin tope cargado para el período
+    # no se usa el más cercano (ver tope_vigente_en): se evalúa igual con
+    # la base sin topear, y se avisa después del loop (alertas).
+    topes = topes or []
+    tope_periodo = tope_vigente_en(topes, periodo_recibo)
+    conceptos_con_tope = []  # descripciones de las fórmulas sujetas a tope evaluadas, para las alertas
+
     for target, fs in formulas_por_target.items():
         f = next((x for x in fs if formula_vigente_en(x, periodo_recibo)), None)
         if f is None:
             continue
         codigo = f["target"]
+        sujeto_a_tope = bool(f.get("sujeto_a_tope"))
+        if sujeto_a_tope:
+            conceptos_con_tope.append(f["descripcion"])
         if codigo not in importe_por_codigo:
+            detalle = f"El recibo no incluye '{f['descripcion']}'."
+            if sujeto_a_tope:
+                detalle += " " + NOTA_LIQUIDACIONES_MULTIPLES
             discrepancias.append({
-                "tipo": "concepto_faltante", "codigo": codigo,
-                "detalle": f"El recibo no incluye '{f['descripcion']}'.",
+                "tipo": "concepto_faltante", "codigo": codigo, "detalle": detalle,
             })
             continue
-        esperado = _evaluar(f["expr"], variables)
+
+        variables_f = variables
+        aplico_piso = False
+        if sujeto_a_tope and tope_periodo:
+            base_topeada = min(max(base_remunerativa, tope_periodo["base_minima"]), tope_periodo["tope_maximo"])
+            aplico_piso = base_remunerativa < tope_periodo["base_minima"]
+            variables_f = dict(variables, base_remunerativa=base_topeada)
+
+        esperado = _evaluar(f["expr"], variables_f)
         real = abs(importe_por_codigo[codigo])  # los descuentos figuran en negativo
         dif = round(real - esperado, 2)
         ok = abs(dif) <= f.get("tolerancia", 1.0)
@@ -267,10 +328,14 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
             "chequeo_automatico": codigo in codigos_automaticos,
         })
         if not ok:
+            detalle = (f"{f['descripcion']}: esperado ${esperado:,.2f}, "
+                       f"figura ${real:,.2f} (diferencia ${dif:,.2f}).")
+            if sujeto_a_tope:
+                detalle += " " + NOTA_LIQUIDACIONES_MULTIPLES
+                if aplico_piso:
+                    detalle += " " + NOTA_PISO_PROPORCIONAL
             discrepancias.append({
-                "tipo": "formula", "codigo": codigo,
-                "detalle": f"{f['descripcion']}: esperado ${esperado:,.2f}, "
-                           f"figura ${real:,.2f} (diferencia ${dif:,.2f}).",
+                "tipo": "formula", "codigo": codigo, "detalle": detalle,
             })
 
     # Consistencia interna: la suma de líneas debe coincidir con los totales impresos.
@@ -296,10 +361,37 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
         "importe": ln.get("importe"),
     } for ln in desconocidas]
 
+    alertas = []
+
+    # Tope de base imponible de la seguridad social: si hubo al menos una
+    # fórmula sujeta a tope evaluada este recibo, se avisa cuando el dato de
+    # referencia no es confiable -- sin tope cargado para el período (no se
+    # topeó nada, se comparó contra el sueldo completo) o con el tope
+    # marcado SOSPECHOSO (se topeó, pero el valor todavía no está
+    # verificado contra la resolución oficial de ANSES).
+    if conceptos_con_tope:
+        lista_conceptos = ", ".join(conceptos_con_tope)
+        if tope_periodo is None:
+            alertas.append({
+                "tipo": "tope_no_verificable",
+                "detalle": f"No tenemos cargado el tope de aportes de la seguridad social "
+                           f"para {periodo_recibo}, así que {lista_conceptos} se compararon "
+                           "contra el sueldo completo, sin aplicar el tope. Si tu remuneración "
+                           "de ese mes superó el tope vigente, el resultado de estos conceptos "
+                           "puede no ser correcto.",
+            })
+        elif tope_periodo.get("estado") == "SOSPECHOSO":
+            alertas.append({
+                "tipo": "tope_sospechoso",
+                "detalle": f"El valor de referencia que usamos para el tope de aportes de "
+                           f"{periodo_recibo} todavía está pendiente de verificación contra la "
+                           "resolución oficial de ANSES. Si más adelante se corrige, el "
+                           f"resultado de {lista_conceptos} para este recibo podría cambiar.",
+            })
+
     # Ley 27.802 art. 133 / Dto 407/2026: tope global a las cargas sindicales de
     # convenio (cuota solidaria, fondos convencionales). NO es un error de cálculo:
     # es una advertencia de posible retención en exceso, separada de discrepancias.
-    alertas = []
     cargas_convenio = sum(
         abs(m.get("importe", 0) or 0) for m in matcheadas
         if m.get("tipo") == "aporte_trabajador" and m["concepto"].get("categoria_sindical") == "convenio"

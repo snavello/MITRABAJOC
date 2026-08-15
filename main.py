@@ -299,7 +299,7 @@ def api_validar(request: Request, payload: dict):
     # de la cookie (identidad real), no de lo que haya leído la IA del recibo.
     resultado = validar(db.conceptos_como_dicts(sid), db.formulas_como_dicts(sid), recibo,
                          tope_sindical_pct=db.obtener_tope_sindical(),
-                         cuil_sesion=cuil_sesion)
+                         cuil_sesion=cuil_sesion, topes=db.topes_como_dicts())
 
     # Historial privado del trabajador: se registra CADA verificación, esté todo
     # en orden o no.
