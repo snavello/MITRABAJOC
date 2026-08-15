@@ -764,6 +764,7 @@ def abm_formula(
     id: str = Form(""), target: str = Form(...), descripcion: str = Form(...),
     expr: str = Form(...), tolerancia: float = Form(1.0),
     fecha_desde: str = Form(""), fecha_hasta: str = Form(""),
+    sujeto_a_tope: bool = Form(False),
 ):
     sid = exigir_sindicato(request)
     fecha_desde = fecha_desde or None
@@ -784,11 +785,13 @@ def abm_formula(
             if f and f.sindicato_id == sid:
                 f.target, f.descripcion, f.expr, f.tolerancia = target, descripcion, expr, tolerancia
                 f.fecha_desde, f.fecha_hasta = fecha_desde, fecha_hasta
+                f.sujeto_a_tope = sujeto_a_tope
                 s.add(f)
         else:
             s.add(Formula(sindicato_id=sid, target=target, descripcion=descripcion,
                           expr=expr, tolerancia=tolerancia,
-                          fecha_desde=fecha_desde, fecha_hasta=fecha_hasta))
+                          fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
+                          sujeto_a_tope=sujeto_a_tope))
         s.commit()
     return RedirectResponse("/admin#formulas", status_code=303)
 

@@ -372,6 +372,42 @@ def test_ruta_borrar_tope():
             s.delete(t); s.commit()
 
 
+# ---------- Fase 4: checkbox "Sujeto a tope" en Fórmulas de admin.html ----------
+
+def test_ruta_admin_formula_persiste_sujeto_a_tope():
+    from db import UsuarioSindicato
+    import auth
+    with db.get_session() as s:
+        s.add(UsuarioSindicato(sindicato_id=SID, usuario="20999999990", nombre="Admin Topes",
+                                clave_hash=auth.hashear_clave("topes-demo"), debe_cambiar_clave=False))
+        s.commit()
+    admin_client = TestClient(main.app)
+    admin_client.post("/admin/login", data={"usuario": "20999999990", "clave": "topes-demo"})
+    # Target nuevo (no "SINDMET", que ya existe de un test anterior) para no
+    # chocar con la validación de vigencias superpuestas del mismo target.
+    r = admin_client.post("/admin/formula", data={
+        "id": "", "target": "CUOTATEST", "descripcion": "Cuota de prueba", "expr": "0.02 * base_remunerativa",
+        "tolerancia": "1.0", "sujeto_a_tope": "true",
+    }, follow_redirects=False)
+    assert r.status_code == 303, r.headers.get("location")
+    formulas = {f["target"]: f for f in db.formulas_como_dicts(SID)}
+    assert formulas["CUOTATEST"]["sujeto_a_tope"] is True
+
+    # Editar sin tildar el checkbox -> vuelve a False (el checkbox no
+    # tildado no manda el campo, Form(False) cubre la ausencia).
+    with Session(db.engine) as s:
+        f = s.exec(select(Formula).where(Formula.sindicato_id == SID, Formula.target == "CUOTATEST")).first()
+        fid = f.id
+    r = admin_client.post("/admin/formula", data={
+        "id": str(fid), "target": "CUOTATEST", "descripcion": "Cuota de prueba", "expr": "0.02 * base_remunerativa",
+        "tolerancia": "1.0",
+    }, follow_redirects=False)
+    assert r.status_code == 303, r.headers.get("location")
+    formulas = {f["target"]: f for f in db.formulas_como_dicts(SID)}
+    assert formulas["CUOTATEST"]["sujeto_a_tope"] is False
+    print("OK  test_ruta_admin_formula_persiste_sujeto_a_tope")
+
+
 if __name__ == "__main__":
     test_sembrado_carga_59_filas_respetando_estado()
     test_sembrado_no_duplica_si_ya_hay_datos()
@@ -404,5 +440,8 @@ if __name__ == "__main__":
     test_ruta_edicion_no_se_compara_consigo_misma()
     test_ruta_borrar_tope()
     print("Tests de Fase 3 (rutas de plataforma) pasaron.")
+
+    test_ruta_admin_formula_persiste_sujeto_a_tope()
+    print("Tests de Fase 4 (checkbox en admin.html) pasaron.")
 
     print("\nTodos los tests de topes pasaron.")

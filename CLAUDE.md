@@ -389,6 +389,61 @@ escribe ahí, llamado desde alta/cambio de estado/cada nota).
   de texto/número/fecha comparten la clase `.tram-input` (antes no tenían
   `width:100%` explícito y quedaban angostos).
 
+## Topes de base imponible (jubilación, INSSJP, obra social)
+El validador aplicaba el % de cada aporte sobre la base remunerativa
+completa del recibo, sin el tope máximo ni el piso mínimo de la base
+imponible de la seguridad social (art. 9 Ley 24.241) — todo trabajador que
+superaba el tope recibía discrepancias falsas. Corregido en la rama
+`topes-base-imponible` (4 fases).
+
+- **Modelo**: tabla nueva `TopeBaseImponible` (db.py) — **nacional, sin
+  `sindicato_id`**, un solo valor rige para toda la plataforma, administrada
+  desde `/plataforma` → pestaña "Topes SS". Campos: `vigencia_desde`
+  ("AAAA-MM", sin fecha_hasta — cada fila rige hasta que empieza la
+  siguiente), `tope_maximo`, `base_minima`, `estado`
+  (`verificado`/`derivado`/`por_verificar`/`SOSPECHOSO`) y `fuente`. Se
+  siembra desde `data/topes_ss.csv` (59 vigencias, enero 2015 a agosto
+  2026) vía `db.sembrar_topes_si_vacio()`, llamada desde `init_db()` —
+  mismo criterio que el seed histórico de AEFIP, corre en cada arranque
+  tanto en SQLite local como en Postgres/Render.
+- **`Formula.sujeto_a_tope`** (bool, default `False`): marca por fórmula
+  si está sujeta al tope, editable por el admin del sindicato en `/admin`
+  → Fórmulas. Por defecto `True` solo en jubilación/INSSJP/obra social al
+  autocargarse (`db.crear_conceptos_universales`); la migración también
+  marcó `sujeto_a_tope=true` en las fórmulas de esos 3 códigos que ya
+  existían en sindicatos previos a este cambio (grandfathering — sin eso
+  el fix no corregía nada para nadie hasta tildar el checkbox a mano).
+- **Motor** (`validador.py`): `tope_vigente_en()` busca, entre los topes
+  con `vigencia_desde <= período del recibo`, el de vigencia más reciente
+  (sin fallback al más cercano si no hay ninguno). Para las fórmulas
+  `sujeto_a_tope`, se evalúa con `base_remunerativa` recortada a
+  `min(max(base, base_minima), tope_maximo)`; el resto sigue con la base
+  completa. Sin tope cargado para el período, o con el tope `SOSPECHOSO`,
+  se evalúa igual (no se salta el chequeo) y se agrega una `alerta`
+  avisando que el resultado puede no ser confiable. Cuando una fórmula
+  `sujeto_a_tope` termina en discrepancia, el `detalle` suma en lenguaje
+  llano la aclaración de que puede deberse a liquidaciones múltiples/
+  pluriempleo en el mismo mes (la app analiza un recibo a la vez, no puede
+  descartarlo) y, si se aplicó el piso mínimo, también la de jornada
+  parcial/mes incompleto (no se toca `extractor.py`: sin campo de días
+  trabajados en lo que ya extrae la IA, esta aclaración se agrega siempre
+  que se dé la condición, no se intenta proporcionar el mínimo).
+- **Validación al guardar un tope**: si el valor es menor al del período
+  anterior (no debería pasar, los topes solo suben), el panel de
+  plataforma pide confirmación explícita antes de guardar — chequeado en
+  el cliente (JS) y de nuevo en el servidor (`/plataforma/tope`).
+
+**Mantenimiento mensual obligatorio**: ANSES actualiza el tope y la base
+mínima todos los meses (Decreto 274/2024, movilidad/IPC) — hay que cargar
+el valor nuevo en `/plataforma` → "Topes SS" cada mes para que el chequeo
+de ese período funcione. Los valores `por_verificar`/`SOSPECHOSO` de los
+últimos 12 meses aparecen primero en el listado a propósito, porque son
+los períodos que los trabajadores realmente suben. **14 valores quedaron
+marcados `SOSPECHOSO`** (enero 2025 a febrero 2026, por una discontinuidad
+detectada en el CSV original entre febrero y marzo 2026) — pendientes de
+verificar contra las resoluciones oficiales de ANSES antes de confiar en
+el resultado para ese tramo.
+
 ## Pendientes (features)
 1. Capacitación — "próximamente". Falta contenido: índice de documentos y
    links de formación.
@@ -396,6 +451,9 @@ escribe ahí, llamado desde alta/cambio de estado/cada nota).
    producción (permite cambiar la clave de cualquier usuario; está marcada con una
    advertencia visible). Es un riesgo de seguridad, sacar antes de usuarios reales.
    Se deja a propósito mientras dure la etapa de demos y pruebas (2026-08-05).
+3. Verificar contra las resoluciones oficiales de ANSES los 14 topes de base
+   imponible marcados `SOSPECHOSO` (enero 2025 a febrero 2026) — ver sección
+   "Topes de base imponible" más arriba.
 
 ## Noticias (sindicato → trabajador)
 Reemplaza el placeholder "próximamente" de Novedades. Modelo `Noticia`
