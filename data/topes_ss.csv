@@ -1,0 +1,60 @@
+vigencia_desde,tope_maximo,base_minima,estado,fuente
+2015-01,37191.95,1144.38,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2015-03,43202.17,1329.31,verificado,Res. ANSES 44/2015
+2015-09,48728.14,1499.34,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2016-03,56354.74,1734.02,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2016-09,67720.29,2083.72,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2017-03,76442.12,2352.11,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2017-09,81918.55,2520.6,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2018-01,91011.04,2664.52,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2018-06,96169.45,2959.13,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2018-09,103242.54,3155.27,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2019-03,117694.47,3621.46,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2019-06,130421.12,4013.11,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2019-09,146393.25,4504.53,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2019-12,159020.32,4893.02,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2020-03,178625.28,5496.28,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2020-06,189559.38,5832.71,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2020-09,203882.51,6273.43,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2020-12,208289.32,6409.03,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2021-03,225487.03,6938.2,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2021-06,252901.36,7781.73,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2021-09,284343.91,8749.18,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2021-12,315350.62,9703.24,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2022-03,354103.39,10895.49,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2022-06,407215.41,12529.71,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2022-09,470401.35,14474.13,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2022-12,546650.48,16820.4,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2023-03,641631.81,19742.91,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2023-06,775594.43,23864.85,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2023-09,955954.18,29414.4,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2023-12,1180741.75,36331.48,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2024-01,1858804.13,45211.15,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2024-04,2222827.03,68396.65,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2024-05,2467433.52,75922.65,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2024-06,2684992.3,82617.14,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2024-07,2808272.33,86417.04,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2024-08,2920871.56,89873.4,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2024-09,3037915.02,93473.14,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2024-10,3164622.34,97371.11,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2024-11,3297354.12,101455.42,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2025-01,3470127.3,106774.69,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
+2025-02,3546123.08,109117.13,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
+2025-03,3620730.12,111411.35,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
+2025-04,3708821.11,114120.55,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
+2025-05,3806143.15,117112.41,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
+2025-06,3906841.4,120211.11,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
+2025-07,3975940.21,122341.12,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
+2025-08,4055511.1,124789.12,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
+2025-09,4132314.4,127151.1,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
+2025-10,4218841.1,129810.4,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
+2025-11,4300090.15,132311.12,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
+2025-12,4381390.2,134811.4,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
+2026-01,4467152.3,137452.1,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
+2026-02,4542012.15,139754.12,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
+2026-03,4045590.45,124481.49,verificado,Res. ANSES 38/2026
+2026-04,4162912.57,128091.45,verificado,Res. ANSES 74/2026
+2026-05,4303619.01,132420.94,verificado,Res. ANSES 110/2026
+2026-06,4414652.38,135837.4,derivado,"derivado +2,58% (control OK contra julio)"
+2026-07,4509567.41,138757.9,verificado,"ANSES movilidad 2,15%"
+2026-08,4594798.23,141380.42,verificado,"ANSES movilidad 1,89%"
