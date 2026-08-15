@@ -11,10 +11,13 @@ from datetime import datetime, timedelta
 
 DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
 os.environ["DB_PATH"] = DB_FILE
+os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db
-from db import Sindicato, TopeBaseImponible
+from db import Sindicato, TopeBaseImponible, Formula
 import validador
+import main
+from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 db.crear_tablas()
@@ -23,6 +26,9 @@ with db.get_session() as s:
     sind = Sindicato(nombre="Sindicato Test Topes", color_base="#0f1b2d")
     s.add(sind); s.commit(); s.refresh(sind)
     SID = sind.id
+
+plataforma_client = TestClient(main.app)
+plataforma_client.post("/plataforma/login", data={"cuit": "20000000000", "clave": "test-plataforma"})
 
 
 # ---------- Fase 1: semilla + CRUD ----------
@@ -282,6 +288,90 @@ def test_sin_topes_pasados_no_rompe_y_avisa():
     print("OK  test_sin_topes_pasados_no_rompe_y_avisa")
 
 
+# ---------- Fase 3: rutas de plataforma ----------
+
+def test_ruta_alta_tope_ok():
+    r = plataforma_client.post("/plataforma/tope", data={
+        "id": "", "vigencia_desde": "2027-01", "tope_maximo": 5000000, "base_minima": 150000,
+        "estado": "verificado", "fuente": "test ruta",
+    }, follow_redirects=False)
+    assert r.status_code == 303
+    assert "error" not in r.headers["location"]
+    with Session(db.engine) as s:
+        t = s.exec(select(TopeBaseImponible).where(TopeBaseImponible.vigencia_desde == "2027-01")).first()
+        assert t is not None and t.tope_maximo == 5000000
+    print("OK  test_ruta_alta_tope_ok")
+
+
+def test_ruta_alta_tope_duplicado_rechaza():
+    r = plataforma_client.post("/plataforma/tope", data={
+        "id": "", "vigencia_desde": "2027-01", "tope_maximo": 6000000, "base_minima": 160000,
+        "estado": "verificado", "fuente": "test dup",
+    }, follow_redirects=False)
+    assert r.status_code == 303
+    assert "error=topeduplicado" in r.headers["location"]
+    print("OK  test_ruta_alta_tope_duplicado_rechaza")
+
+
+def test_ruta_alta_menor_al_anterior_sin_confirmar_rechaza():
+    r = plataforma_client.post("/plataforma/tope", data={
+        "id": "", "vigencia_desde": "2027-02", "tope_maximo": 100, "base_minima": 10,
+        "estado": "por_verificar", "fuente": "test bajo",
+    }, follow_redirects=False)
+    assert r.status_code == 303
+    assert "error=topebajo" in r.headers["location"]
+    with Session(db.engine) as s:
+        assert s.exec(select(TopeBaseImponible).where(TopeBaseImponible.vigencia_desde == "2027-02")).first() is None
+    print("OK  test_ruta_alta_menor_al_anterior_sin_confirmar_rechaza")
+
+
+def test_ruta_alta_menor_al_anterior_confirmado_guarda():
+    r = plataforma_client.post("/plataforma/tope", data={
+        "id": "", "vigencia_desde": "2027-02", "tope_maximo": 100, "base_minima": 10,
+        "estado": "por_verificar", "fuente": "test bajo confirmado", "confirmado": "1",
+    }, follow_redirects=False)
+    assert r.status_code == 303
+    assert "error" not in r.headers["location"]
+    with Session(db.engine) as s:
+        assert s.exec(select(TopeBaseImponible).where(TopeBaseImponible.vigencia_desde == "2027-02")).first() is not None
+    print("OK  test_ruta_alta_menor_al_anterior_confirmado_guarda")
+
+
+def test_ruta_edicion_no_se_compara_consigo_misma():
+    # Editar 2027-01 SIN cambiar el valor no debe disparar "menor al anterior"
+    # comparándose contra sí misma.
+    with Session(db.engine) as s:
+        t = s.exec(select(TopeBaseImponible).where(TopeBaseImponible.vigencia_desde == "2027-01")).first()
+        tid = t.id
+    r = plataforma_client.post("/plataforma/tope", data={
+        "id": str(tid), "vigencia_desde": "2027-01", "tope_maximo": 5000000, "base_minima": 150000,
+        "estado": "SOSPECHOSO", "fuente": "editado",
+    }, follow_redirects=False)
+    assert r.status_code == 303
+    assert "error" not in r.headers["location"]
+    with Session(db.engine) as s:
+        t = s.get(TopeBaseImponible, tid)
+        assert t.estado == "SOSPECHOSO"
+    print("OK  test_ruta_edicion_no_se_compara_consigo_misma")
+
+
+def test_ruta_borrar_tope():
+    with Session(db.engine) as s:
+        t = s.exec(select(TopeBaseImponible).where(TopeBaseImponible.vigencia_desde == "2027-02")).first()
+        tid = t.id
+    r = plataforma_client.post("/plataforma/tope/borrar", data={"id": tid}, follow_redirects=False)
+    assert r.status_code == 303
+    with Session(db.engine) as s:
+        assert s.get(TopeBaseImponible, tid) is None
+    print("OK  test_ruta_borrar_tope")
+
+    # limpiar el otro tope de prueba (2027-01) para no ensuciar el resto de la corrida
+    with Session(db.engine) as s:
+        t = s.exec(select(TopeBaseImponible).where(TopeBaseImponible.vigencia_desde == "2027-01")).first()
+        if t:
+            s.delete(t); s.commit()
+
+
 if __name__ == "__main__":
     test_sembrado_carga_59_filas_respetando_estado()
     test_sembrado_no_duplica_si_ya_hay_datos()
@@ -306,5 +396,13 @@ if __name__ == "__main__":
     test_tope_vigente_en_con_vigencias_no_contiguas()
     test_sin_topes_pasados_no_rompe_y_avisa()
     print("Tests de Fase 2 (motor de validación) pasaron.")
+
+    test_ruta_alta_tope_ok()
+    test_ruta_alta_tope_duplicado_rechaza()
+    test_ruta_alta_menor_al_anterior_sin_confirmar_rechaza()
+    test_ruta_alta_menor_al_anterior_confirmado_guarda()
+    test_ruta_edicion_no_se_compara_consigo_misma()
+    test_ruta_borrar_tope()
+    print("Tests de Fase 3 (rutas de plataforma) pasaron.")
 
     print("\nTodos los tests de topes pasaron.")

@@ -73,6 +73,13 @@
   .badge { font-size:11px; background:#e3f2ee; color:var(--agua); padding:2px 8px; border-radius:8px; }
   details { margin-top:14px; }
   summary { cursor:pointer; font-size:14px; color:var(--tinta); font-weight:500; padding:6px 0; }
+  button.sec { background:#fff; color:var(--gris); border:1px solid var(--linea); }
+  .oculto { display:none; }
+  .chip-estado { display:inline-block; font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; text-transform:capitalize; white-space:nowrap; }
+  .chip-estado.verificado { background:#e3f2ee; color:#0f6e56; }
+  .chip-estado.derivado { background:#e2eef7; color:#1a5f8a; }
+  .chip-estado.por_verificar { background:#fdf3e7; color:#8a5a1a; }
+  .chip-estado.sospechoso { background:#f8e5e2; color:#b23a2e; }
 </style>
 </head>
 <body>
@@ -99,6 +106,7 @@
     <button class="ptab" data-pp="config">Configuración legal</button>
     <button class="ptab" data-pp="usoia">Uso de IA</button>
     <button class="ptab" data-pp="sospechosos">Recibos con alerta</button>
+    <button class="ptab" data-pp="topes">Topes SS</button>
   </nav>
 
   <div class="ppanel activo" id="pp-lista">
@@ -391,6 +399,65 @@
     {% endfor %}
   </table>
   </div>
+
+  <div class="ppanel" id="pp-topes">
+  <h2>Topes de la seguridad social ({{ topes|length }})</h2>
+  <p class="muted" style="margin-bottom:14px; max-width:680px;">Tope máximo y piso mínimo de la base imponible de jubilación, INSSJP y obra social (art. 9 Ley 24.241) — se actualiza todos los meses por resolución de ANSES. El estado indica cuánto se puede confiar en cada valor; los pendientes de verificar de los últimos 12 meses aparecen primero, porque son los períodos que los trabajadores realmente suben.</p>
+  {% if request.query_params.get('error') == 'topebajo' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El valor que intentaste guardar es menor al del período anterior — eso no debería pasar (los topes solo suben). Si estás seguro de que es correcto, confirmá el aviso del navegador antes de guardar.</div>
+  {% elif request.query_params.get('error') == 'topeduplicado' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Ya existe un tope cargado para ese período. Para cambiarlo, editá el existente en vez de agregar otro.</div>
+  {% elif request.query_params.get('error') == 'topenoexiste' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se encontró el tope que intentabas editar.</div>
+  {% endif %}
+  <table>
+    <tr><th>Vigencia</th><th>Tope máximo</th><th>Base mínima</th><th>Estado</th><th>Fuente</th><th></th></tr>
+    {% for t in topes %}
+    <tr>
+      <td><code>{{ t.vigencia_desde }}</code></td>
+      <td class="num">${{ '{:,.2f}'.format(t.tope_maximo) }}</td>
+      <td class="num">${{ '{:,.2f}'.format(t.base_minima) }}</td>
+      <td><span class="chip-estado {{ 'sospechoso' if t.estado == 'SOSPECHOSO' else t.estado }}">{{ t.estado.replace('_', ' ') }}</span></td>
+      <td class="muted">{{ t.fuente or '—' }}</td>
+      <td class="acc" style="white-space:nowrap; text-align:right;">
+        <button class="mini" type="button"
+          onclick='editarTope({{ {"id":t.id,"vigencia_desde":t.vigencia_desde,"tope_maximo":t.tope_maximo,"base_minima":t.base_minima,"estado":t.estado,"fuente":t.fuente} | tojson }})'>Editar</button>
+        <form method="post" action="/plataforma/tope/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar el tope de {{ t.vigencia_desde }}?')">
+          <input type="hidden" name="id" value="{{ t.id }}">
+          <button class="mini borrar" type="submit">Borrar</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="muted">No hay topes cargados todavía.</td></tr>
+    {% endfor %}
+  </table>
+
+  <div class="card">
+    <h3 id="form-tope-titulo">Agregar un tope</h3>
+    <form method="post" action="/plataforma/tope" id="form-tope" onsubmit="return prepararEnvioTope(this)">
+      <input type="hidden" name="id" id="t-id">
+      <input type="hidden" name="confirmado" id="t-confirmado" value="">
+      <div class="grid">
+        <div class="campo"><label>Vigencia desde *</label><input type="month" name="vigencia_desde" id="t-vigencia" required></div>
+        <div class="campo"><label>Tope máximo *</label><input type="number" step="0.01" min="0" name="tope_maximo" id="t-maximo" required></div>
+        <div class="campo"><label>Base mínima *</label><input type="number" step="0.01" min="0" name="base_minima" id="t-minima" required></div>
+        <div class="campo">
+          <label>Estado</label>
+          <select name="estado" id="t-estado">
+            <option value="por_verificar">Por verificar</option>
+            <option value="verificado">Verificado</option>
+            <option value="derivado">Derivado</option>
+            <option value="SOSPECHOSO">Sospechoso</option>
+          </select>
+        </div>
+        <div class="campo full"><label>Fuente</label><input name="fuente" id="t-fuente" placeholder="Ej: Res. ANSES 38/2026"></div>
+      </div>
+      <button type="submit" id="t-btn">Agregar tope</button>
+      <button type="button" class="sec oculto" id="t-cancel" onclick="resetTopeForm()">Cancelar</button>
+    </form>
+  </div>
+  </div>
 </div>
 
 <div style="text-align:center; padding:0 0 20px;">
@@ -550,6 +617,66 @@ function borrarSind(id, nombre, nAdmins, nTrab) {
     document.getElementById('borrar-id').value = id;
     document.getElementById('form-borrar').submit();
   }
+}
+
+// ---------- Topes de la seguridad social ----------
+const TOPES_TODOS = {{ topes_json | tojson }};
+
+function editarTope(t) {
+  const f = document.getElementById('form-tope');
+  document.getElementById('t-id').value = t.id;
+  document.getElementById('t-vigencia').value = t.vigencia_desde;
+  document.getElementById('t-maximo').value = t.tope_maximo;
+  document.getElementById('t-minima').value = t.base_minima;
+  document.getElementById('t-estado').value = t.estado;
+  document.getElementById('t-fuente').value = t.fuente || '';
+  document.getElementById('t-confirmado').value = '';
+  document.getElementById('form-tope-titulo').textContent = 'Editar tope: ' + t.vigencia_desde;
+  document.getElementById('t-btn').textContent = 'Guardar cambios';
+  document.getElementById('t-cancel').classList.remove('oculto');
+  activarTab('topes');
+  window.scrollTo(0, 0);
+}
+
+function resetTopeForm() {
+  const f = document.getElementById('form-tope');
+  f.reset();
+  document.getElementById('t-id').value = '';
+  document.getElementById('t-confirmado').value = '';
+  document.getElementById('form-tope-titulo').textContent = 'Agregar un tope';
+  document.getElementById('t-btn').textContent = 'Agregar tope';
+  document.getElementById('t-cancel').classList.add('oculto');
+}
+
+// Antes de mandar el form, busca el tope con vigencia_desde más reciente
+// ANTERIOR al que se está guardando y, si el nuevo valor es menor (no
+// debería pasar -- los topes solo suben por IPC/movilidad), pide
+// confirmación explícita antes de dejarlo pasar. El servidor vuelve a
+// chequear esto igual (ver /plataforma/tope): esto es solo para no hacer
+// ida y vuelta si el admin ya sabe que el valor es correcto.
+function prepararEnvioTope(form) {
+  const idActual = document.getElementById('t-id').value;
+  const vigencia = document.getElementById('t-vigencia').value;
+  const maximo = parseFloat(document.getElementById('t-maximo').value);
+  const minima = parseFloat(document.getElementById('t-minima').value);
+  const anteriores = TOPES_TODOS.filter(t =>
+    t.vigencia_desde < vigencia && String(t.id) !== String(idActual));
+  if (anteriores.length) {
+    const anterior = anteriores.reduce((a, b) => a.vigencia_desde > b.vigencia_desde ? a : b);
+    if (maximo < anterior.tope_maximo || minima < anterior.base_minima) {
+      const msg = 'El tope de ' + vigencia + ' que estás cargando es MENOR al de ' +
+        anterior.vigencia_desde + ' (el período anterior). Los topes solo deberían subir. ' +
+        '¿Confirmás que este valor es correcto igual?';
+      if (!confirm(msg)) return false;
+      document.getElementById('t-confirmado').value = '1';
+    }
+  }
+  return true;
+}
+
+if (location.hash === '#topes' ||
+    ['topebajo', 'topeduplicado', 'topenoexiste'].includes(new URLSearchParams(location.search).get('error'))) {
+  activarTab('topes');
 }
 </script>
 </body>
