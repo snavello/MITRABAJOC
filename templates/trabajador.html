@@ -137,13 +137,27 @@
   .fila .imp { font-variant-numeric:tabular-nums; }
   .fila .imp.neg { color:var(--alerta); }
 
-  /* ---------- Recuadro con encabezado de marca (Trámites) ---------- */
-  .tram-box { margin-top:16px; background:var(--card); border:1px solid var(--linea);
-    border-radius:14px; overflow:hidden; }
-  .tram-box-enc { background:var(--marca-base); padding:15px 18px; }
-  .tram-box-enc .tit { color:#fff; font-size:15.5px; font-weight:600; line-height:1.3; }
-  .tram-box-enc .sub { color:rgba(255,255,255,.78); margin-top:3px; font-size:12.5px; }
+  /* ---------- Recuadro con encabezado de marca (Trámites) ----------
+     Vidrio + grano + condensada (Fase D del rediseño): el recuadro entero
+     usa un degradé claro en vez de un color plano, el encabezado suma
+     grano sutil (el .tit/.sub necesitan position+z-index para quedar por
+     encima, mismo criterio que .enc/.pad en marca.css). */
+  #tp-tramites h1, #tp-tramites h2 { font-family:var(--fuente-display); font-weight:700; letter-spacing:.005em; }
+  .tram-box { position:relative; overflow:hidden; margin-top:16px;
+    background:linear-gradient(160deg, #ffffff, var(--papel)); border:1px solid var(--linea);
+    border-radius:14px; }
+  .tram-box-enc { position:relative; overflow:hidden; padding:15px 18px;
+    background:var(--marca-base);
+    background-image:linear-gradient(120deg, var(--marca-base), color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base))); }
+  .tram-box-enc::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity:.07; mix-blend-mode:overlay; }
+  .tram-box-enc .tit { position:relative; z-index:1; color:#fff;
+    font-family:var(--fuente-display); font-weight:700; font-size:19px; letter-spacing:.008em; line-height:1.25; }
+  .tram-box-enc .sub { position:relative; z-index:1; color:rgba(255,255,255,.78); margin-top:3px; font-size:12.5px; }
   .tram-box-body { padding:18px; }
+  .tram-item { position:relative; overflow:hidden;
+    background:linear-gradient(160deg, #ffffff, var(--papel)) !important; }
   .tram-input { display:block; width:100%; padding:11px 12px; border:1px solid var(--linea);
     border-radius:10px; font-family:inherit; font-size:14px; background:#fff; color:var(--tinta); }
   .campo-tram { margin-bottom:14px; }
@@ -1192,7 +1206,7 @@ if (document.getElementById('tp-tramites')) {
       const data = await r.json();
       if (!data.tramites.length) { cont.innerHTML = '<p class="muted">Todavía no presentaste ningún trámite.</p>'; return; }
       cont.innerHTML = data.tramites.map(t => `
-        <div class="card" style="margin-top:10px; padding:13px 15px; cursor:pointer;" onclick="abrirTramiteDetalleTrab('${t.numero_expediente}')">
+        <div class="card tram-item" style="margin-top:10px; padding:13px 15px; cursor:pointer;" onclick="abrirTramiteDetalleTrab('${t.numero_expediente}')">
           <div class="fila" style="border:none; padding:0;">
             <span><b>${escTram(t.tipo_titulo)}</b><br><span class="muted" style="font-size:12px;"><code>${t.numero_expediente}</code></span></span>
             <span>${tagEstado(t.estado, t.estado_label)}</span>
@@ -1212,7 +1226,7 @@ if (document.getElementById('tp-tramites')) {
       const data = await r.json();
       if (!data.tipos.length) { cont.innerHTML = '<p class="muted">Tu sindicato todavía no cargó ningún tipo de trámite.</p>'; return; }
       cont.innerHTML = data.tipos.map(t => `
-        <button type="button" class="card" style="width:100%; text-align:left; margin-top:10px; padding:13px 15px; border:1px solid var(--linea); cursor:pointer; font-family:inherit;" onclick='abrirFormularioTramite(${JSON.stringify(t)})'>
+        <button type="button" class="card tram-item" style="width:100%; text-align:left; margin-top:10px; padding:13px 15px; border:1px solid var(--linea); cursor:pointer; font-family:inherit;" onclick='abrirFormularioTramite(${JSON.stringify(t)})'>
           <b>${escTram(t.titulo)}</b><br><span class="muted" style="font-size:12.5px;">${escTram(t.codigo)}</span>
         </button>`).join('');
     } catch (e) {

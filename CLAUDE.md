@@ -168,33 +168,42 @@ encabezado oscuro. 4 colores por sindicato en vez de 3 (ver "Decisiones tomadas"
 - Sin tocar: `validador.py`, `semaforo.py`, ninguna lógica de cálculo — el
   rediseño es 100% presentación + la columna `color_base`.
 
-## Rediseño visual "modelo Nike" (en curso)
+## Rediseño visual "modelo Nike" (COMPLETO)
 Segunda vuelta de dirección visual, explorada primero en un Artifact fuera
 del repo ("Portada en Dos Tonos") y aprobada por el usuario. Traduce algunos
 principios de Nike (contraste tipográfico extremo, disciplina geométrica, una
 sola idea de profundidad) a este contexto — **no** son elementos tomados
 literalmente de Nike: vidrio/degradé en vez de fotografía, tipografía
 condensada, grano sutil (guiño a imprenta/afiche gremial, no al modelo Nike).
-Plan completo (4 fases) en la sesión que lo inició; estado por fase:
+Las 4 fases del plan, en main:
 
-- **Fase A (COMPLETA)**: cimientos puramente aditivos en `static/marca.css` —
-  fuente `Barlow Condensed` Bold alojada en `static/fonts/` (licencia SIL OFL,
-  sin CDN externo, token `--fuente-display`, solo para títulos/encabezados —
-  el cuerpo sigue en `system-ui`), clases de grano (`.grano-osc`/`.grano-clara`,
+- **Fase A**: cimientos puramente aditivos en `static/marca.css` — fuente
+  `Barlow Condensed` Bold alojada en `static/fonts/` (licencia SIL OFL, sin
+  CDN externo, token `--fuente-display`, solo para títulos/encabezados — el
+  cuerpo sigue en `system-ui`), clases de grano (`.grano-osc`/`.grano-clara`,
   SVG `feTurbulence` inline) y variantes vidrio (`.vidrio`/`.vidrio-claro`).
-  Nada de esto se aplica todavía a ninguna pantalla real.
-- **Fase B (COMPLETA)**: `Sindicato.portada_clara` (bool, default `False`) —
-  la portada del trabajador pasa a poder ser oscura (default, sin cambios) o
-  clara, elegida por el admin de **plataforma** al dar de alta/editar un
-  sindicato (checkbox "Portada clara" en `plataforma.html`, junto al grupo de
-  módulos). El encabezado (`.enc`) sigue oscuro en las dos variantes — lo que
-  cambia es el fondo del cuerpo y las tarjetas. **No** toca `_es_oscuro()`:
-  `--marca-base` sigue siendo obligatoriamente oscuro siempre, en las dos
-  variantes de portada.
-- **Fase C (pendiente)**: aplicar el tratamiento a `portada.html` (oscura y
-  clara), leyendo `marca.portada_clara`.
-- **Fase D (pendiente)**: aplicar el tratamiento a la pestaña Trámites de
-  `trabajador.html` (listado + formulario).
+  De paso: `mimetypes.add_type("font/woff2", ".woff2")` en `main.py` —
+  algunos Windows no traen ese tipo registrado y `StaticFiles` lo servía
+  como `text/plain`.
+- **Fase B**: `Sindicato.portada_clara` (bool, default `False`) — la portada
+  del trabajador pasa a poder ser oscura (default, sin cambios) o clara,
+  elegida por el admin de **plataforma** al dar de alta/editar un sindicato
+  (checkbox "Portada clara" en `plataforma.html`, junto al grupo de
+  módulos). El encabezado (`.enc`) sigue oscuro en las dos variantes — lo
+  que cambia es el fondo del cuerpo y las tarjetas. **No** toca
+  `_es_oscuro()`: `--marca-base` sigue siendo obligatoriamente oscuro
+  siempre, en las dos variantes de portada.
+- **Fase C**: `portada.html` — fondo con degradé radial (oscura) o papel
+  (clara, según `marca.portada_clara`), vidrio en tarjetas/noticia-card,
+  grano en `<body>`, condensada en el saludo y encabezados de sección.
+  `.enc`/`.pad` suman `position:relative; z-index:1;` en `marca.css` para
+  quedar por encima del grano (el pseudo-elemento del grano pinta encima
+  del contenido estático si no se le da una capa propia).
+- **Fase D**: pestaña Trámites de `trabajador.html` (listado "Mis trámites",
+  selección de tipo, formulario dinámico, detalle) — mismo tratamiento:
+  `.tram-box`/`.tram-box-enc` con vidrio + grano + condensada, clase nueva
+  `.tram-item` (capa aparte de `.card`, que es compartida por otras
+  pantallas de Tu Recibo — no se tocó `.card` en general).
 
 El sun/moon toggle de modo claro/oscuro en tiempo real para el trabajador
 quedó explícitamente pospuesto (no es parte de este plan) — lo que sí es
