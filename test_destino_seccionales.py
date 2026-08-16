@@ -40,11 +40,11 @@ admin_client = TestClient(main.app)
 admin_client.post("/admin/login", data={"usuario": "20111111110", "clave": "uom-demo"})
 
 trab_norte = TestClient(main.app)
-trab_norte.cookies.set(main.COOKIE, auth.crear_sesion("trabajador", sindicato_id=0))
+trab_norte.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
 trab_norte.cookies.set("cuil_trab", "20111111119")
 
 trab_sin_seccional = TestClient(main.app)
-trab_sin_seccional.cookies.set(main.COOKIE, auth.crear_sesion("trabajador", sindicato_id=0))
+trab_sin_seccional.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
 trab_sin_seccional.cookies.set("cuil_trab", "27222222224")
 
 

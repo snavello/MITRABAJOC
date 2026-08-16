@@ -74,6 +74,18 @@ def _panel_de(path: str) -> str | None:
     return None
 
 
+def _rol_de(path: str) -> str | None:
+    """Qué rol de sesión corresponde a esa área -- mismo mapeo que
+    _panel_de, para saber qué cookie de sesión mirar."""
+    if path.startswith("/plataforma"):
+        return "plataforma"
+    if path.startswith("/admin"):
+        return "sindicato"
+    if path.startswith("/app") or path.startswith("/api"):
+        return "trabajador"
+    return None
+
+
 @app.exception_handler(Exception)
 async def error_no_manejado(request: Request, exc: Exception):
     """Red de seguridad: sin esto, cualquier excepción no prevista devuelve
@@ -110,13 +122,17 @@ async def sesion_vencida_o_denegada(request: Request, exc: HTTPException):
     403/401 con el HTTPException de siempre, el navegador reemplazaba TODA
     la pantalla por el JSON crudo de FastAPI -- "error técnico feo en
     pantalla negra" que solo se arreglaba reingresando a mano. Para ese
-    caso puntual (sesión inválida + navegación de página, no una llamada
+    caso puntual (sesión inválida o del rol equivocado -- ej. otra pestaña
+    logueada como trabajador pisó la cookie que esta pantalla necesitaba,
+    ver COOKIES_POR_ROL -- + navegación de página, no una llamada
     fetch/JS) se redirige a la pantalla de login correspondiente en vez de
-    mostrar el JSON. Un 403 con sesión VÁLIDA (ej. módulo no habilitado,
-    CUIL ajeno) sigue devolviendo JSON como siempre -- no es este caso."""
-    if exc.status_code in (401, 403) and _es_navegacion_de_pagina(request) and not sesion_actual(request):
+    mostrar el JSON. Un 403 con sesión VÁLIDA del rol correcto (ej. módulo
+    no habilitado, CUIL ajeno) sigue devolviendo JSON como siempre -- no es
+    este caso."""
+    if exc.status_code in (401, 403) and _es_navegacion_de_pagina(request):
+        rol = _rol_de(request.url.path)
         destino = _panel_de(request.url.path)
-        if destino:
+        if destino and (not rol or not sesion_actual(request, rol)):
             return RedirectResponse(destino, status_code=303)
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
@@ -143,19 +159,29 @@ async def renovar_sesion_por_actividad(request: Request, call_next):
     OJO: si la propia ruta (login/logout/elegir sindicato) ya puso un
     Set-Cookie para este nombre, hay que respetarlo tal cual y NO pisarlo
     con el valor que traía el request -- si no, un login nunca "prendería"
-    de verdad: esta renovación reemitiría la sesión VIEJA por encima."""
+    de verdad: esta renovación reemitiría la sesión VIEJA por encima.
+
+    Recorre las TRES cookies de rol (ver COOKIES_POR_ROL): un mismo
+    request puede traer más de una sesión válida a la vez (ej. una pestaña
+    de trabajador manda igual la cookie de sindicato si esa sesión sigue
+    viva en el navegador) -- se renuevan todas las que estén presentes y
+    vigentes, no solo la del rol que esa ruta puntual necesita."""
     respuesta = await call_next(request)
 
     def _ya_seteada(nombre: str) -> bool:
         prefijo = f"{nombre}=".encode()
         return any(k == b"set-cookie" and v.startswith(prefijo) for k, v in respuesta.raw_headers)
 
-    token = request.cookies.get(COOKIE, "")
-    payload = auth.leer_sesion(token) if token else None
-    if payload:
-        if not _ya_seteada(COOKIE):
-            nuevo = auth.crear_sesion(payload.get("rol", ""), payload.get("uid", 0), payload.get("sid", 0))
-            respuesta.set_cookie(COOKIE, nuevo, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    hubo_sesion_valida = False
+    for rol, nombre_cookie in COOKIES_POR_ROL.items():
+        token = request.cookies.get(nombre_cookie, "")
+        payload = auth.leer_sesion(token) if token else None
+        if payload and payload.get("rol") == rol:
+            hubo_sesion_valida = True
+            if not _ya_seteada(nombre_cookie):
+                nuevo = auth.crear_sesion(rol, payload.get("uid", 0), payload.get("sid", 0))
+                respuesta.set_cookie(nombre_cookie, nuevo, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    if hubo_sesion_valida:
         for cookie_extra in ("cuil_trab", "sind_elegido"):
             valor = request.cookies.get(cookie_extra)
             if valor and not _ya_seteada(cookie_extra):
@@ -499,16 +525,24 @@ def api_beneficio(beneficio_id: int, request: Request):
 # ================= Panel del sindicato =================
 def exigir_sindicato(request: Request) -> int:
     """Devuelve el sindicato_id de la sesión, o lanza 403 si no hay sesión válida."""
-    ses = sesion_actual(request)
-    if not ses or ses.get("rol") != "sindicato":
+    ses = sesion_actual(request, "sindicato")
+    if not ses:
         raise HTTPException(403, "Necesitás iniciar sesión como administrador del sindicato.")
     return ses.get("sid", 0)
 
 
+def exigir_plataforma(request: Request) -> None:
+    """Lanza 403 si no hay sesión válida de plataforma. Mismo patrón que
+    exigir_sindicato -- reemplaza el chequeo `if not ses or ses.get("rol")
+    != "plataforma"` que estaba repetido literal en cada ruta de plataforma."""
+    if not sesion_actual(request, "plataforma"):
+        raise HTTPException(403, "Necesitás iniciar sesión como administrador de plataforma.")
+
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin(request: Request):
-    ses = sesion_actual(request)
-    if not ses or ses.get("rol") != "sindicato":
+    ses = sesion_actual(request, "sindicato")
+    if not ses:
         return templates.TemplateResponse("admin_login.html", {
             "request": request, "marca_plataforma": db.marca_plataforma()})
 
@@ -567,8 +601,8 @@ def admin(request: Request):
 
 @app.get("/admin/inicio", response_class=HTMLResponse)
 def admin_inicio(request: Request):
-    ses = sesion_actual(request)
-    if not ses or ses.get("rol") != "sindicato":
+    ses = sesion_actual(request, "sindicato")
+    if not ses:
         return templates.TemplateResponse("admin_login.html", {
             "request": request, "marca_plataforma": db.marca_plataforma()})
 
@@ -600,14 +634,14 @@ def admin_login(usuario: str = Form(...), clave: str = Form(...)):
             return RedirectResponse("/admin?error=1", status_code=303)
         token = auth.crear_sesion("sindicato", id_usuario=user.id, sindicato_id=user.sindicato_id)
     resp = RedirectResponse("/admin/inicio", status_code=303)
-    resp.set_cookie(COOKIE, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    resp.set_cookie(COOKIE_SINDICATO, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     return resp
 
 
 @app.get("/admin/salir")
 def admin_salir():
     resp = RedirectResponse("/admin", status_code=303)
-    resp.delete_cookie(COOKIE)
+    resp.delete_cookie(COOKIE_SINDICATO)
     return resp
 
 
@@ -1143,7 +1177,7 @@ async def crear_notificacion(
 ):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "notificaciones")
-    ses = sesion_actual(request)
+    ses = sesion_actual(request, "sindicato")
     adjunto_datos, adjunto_mime, adjunto_nombre = None, "", ""
     if adjunto and adjunto.filename:
         adjunto_datos, adjunto_mime, adjunto_nombre = _leer_adjunto_notificacion(adjunto)
@@ -1174,11 +1208,12 @@ def servir_adjunto_notificacion(notificacion_id: int, request: Request):
         n = s.get(Notificacion, notificacion_id)
         if not n or not n.adjunto_datos:
             raise HTTPException(404, "Sin adjunto")
-        ses = sesion_actual(request)
+        ses_sind = sesion_actual(request, "sindicato")
+        ses_trab = sesion_actual(request, "trabajador")
         autorizado = False
-        if ses and ses.get("rol") == "sindicato" and ses.get("sid") == n.sindicato_id:
+        if ses_sind and ses_sind.get("sid") == n.sindicato_id:
             autorizado = True
-        elif ses and ses.get("rol") == "trabajador":
+        elif ses_trab:
             cuil = request.cookies.get("cuil_trab", "")
             if cuil and s.exec(select(NotificacionDestinatario).where(
                     NotificacionDestinatario.notificacion_id == notificacion_id,
@@ -1194,9 +1229,9 @@ def servir_adjunto_notificacion(notificacion_id: int, request: Request):
 
 @app.get("/api/mis-notificaciones")
 def api_mis_notificaciones(request: Request):
-    ses = sesion_actual(request)
+    ses = sesion_actual(request, "trabajador")
     cuil = request.cookies.get("cuil_trab", "")
-    if not ses or ses.get("rol") != "trabajador" or not cuil:
+    if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_trabajador(request)
     if not sid:
@@ -1209,9 +1244,9 @@ def api_mis_notificaciones(request: Request):
 
 @app.post("/api/notificacion/{notificacion_id}/leer")
 def api_marcar_notificacion_leida(notificacion_id: int, request: Request):
-    ses = sesion_actual(request)
+    ses = sesion_actual(request, "trabajador")
     cuil = request.cookies.get("cuil_trab", "")
-    if not ses or ses.get("rol") != "trabajador" or not cuil:
+    if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     ok = db.marcar_notificacion_leida(notificacion_id, cuil)
     if not ok:
@@ -1396,12 +1431,11 @@ def servir_adjunto_nota_tramite(nota_id: int, request: Request):
 def _autorizado_para_tramite(request: Request, tr) -> bool:
     if not tr:
         return False
-    ses = sesion_actual(request)
-    if not ses:
-        return False
-    if ses.get("rol") == "sindicato" and ses.get("sid") == tr.sindicato_id:
+    ses_sind = sesion_actual(request, "sindicato")
+    if ses_sind and ses_sind.get("sid") == tr.sindicato_id:
         return True
-    if ses.get("rol") == "trabajador":
+    ses_trab = sesion_actual(request, "trabajador")
+    if ses_trab:
         cuil = request.cookies.get("cuil_trab", "")
         if cuil and cuil == tr.cuil:
             return True
@@ -1410,9 +1444,9 @@ def _autorizado_para_tramite(request: Request, tr) -> bool:
 
 @app.get("/api/tramites/tipos")
 def api_tipos_tramite(request: Request):
-    ses = sesion_actual(request)
+    ses = sesion_actual(request, "trabajador")
     cuil = request.cookies.get("cuil_trab", "")
-    if not ses or ses.get("rol") != "trabajador" or not cuil:
+    if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_trabajador(request)
     return {"tipos": db.tipos_tramite_del_sindicato(sid, solo_activos=True) if sid else []}
@@ -1420,9 +1454,9 @@ def api_tipos_tramite(request: Request):
 
 @app.get("/api/tramites/mios")
 def api_mis_tramites(request: Request):
-    ses = sesion_actual(request)
+    ses = sesion_actual(request, "trabajador")
     cuil = request.cookies.get("cuil_trab", "")
-    if not ses or ses.get("rol") != "trabajador" or not cuil:
+    if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_trabajador(request)
     return {"tramites": db.tramites_de_trabajador(cuil, sid) if sid else []}
@@ -1430,9 +1464,9 @@ def api_mis_tramites(request: Request):
 
 @app.get("/api/tramite/{numero_expediente}")
 def api_consultar_tramite(numero_expediente: str, request: Request):
-    ses = sesion_actual(request)
+    ses = sesion_actual(request, "trabajador")
     cuil = request.cookies.get("cuil_trab", "")
-    if not ses or ses.get("rol") != "trabajador" or not cuil:
+    if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     detalle = db.tramite_por_numero_expediente(numero_expediente.strip().upper())
     if not detalle or detalle["cuil"] != cuil:
@@ -1447,9 +1481,9 @@ async def api_enviar_tramite(request: Request):
     vez de declarar parámetros fijos. Valida obligatorios/longitud/tipo de
     archivo server-side -- el formulario del cliente ya valida lo mismo,
     pero esto es lo que realmente decide qué se persiste."""
-    ses = sesion_actual(request)
+    ses = sesion_actual(request, "trabajador")
     cuil = request.cookies.get("cuil_trab", "")
-    if not ses or ses.get("rol") != "trabajador" or not cuil:
+    if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_trabajador(request)
     if not sid:
@@ -1519,9 +1553,9 @@ async def api_enviar_tramite(request: Request):
 @app.post("/api/tramite/{tramite_id}/nota")
 async def api_nota_tramite_trabajador(tramite_id: int, request: Request, texto: str = Form(""),
                                        adjunto: UploadFile = File(None)):
-    ses = sesion_actual(request)
+    ses = sesion_actual(request, "trabajador")
     cuil = request.cookies.get("cuil_trab", "")
-    if not ses or ses.get("rol") != "trabajador" or not cuil:
+    if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     detalle = db.tramite_detalle(tramite_id)
     if not detalle or detalle["cuil"] != cuil:
@@ -1640,7 +1674,22 @@ def aprender_aplicar(request: Request, payload: dict):
 
 
 # ================= Admin de plataforma =================
-COOKIE = "sesion_mitrabajo"
+# Una cookie POR ROL (antes había una sola, "sesion_mitrabajo", compartida
+# entre los tres) -- con una sola cookie, loguearse como trabajador en OTRA
+# pestaña del mismo navegador pisaba en silencio la sesión de admin/
+# plataforma que la primera pestaña necesitaba (bug real, 2026-08-16: "abro
+# la app del trabajador en otra pestaña, vuelvo a la de admin a los 2
+# minutos y me pide loguearme"). Con una cookie por rol, un mismo navegador
+# puede tener las tres sesiones activas a la vez, cada una en su pestaña,
+# sin pisarse.
+COOKIE_SINDICATO = "sesion_sindicato"
+COOKIE_PLATAFORMA = "sesion_plataforma"
+COOKIE_TRABAJADOR = "sesion_trabajador"
+COOKIES_POR_ROL = {
+    "sindicato": COOKIE_SINDICATO,
+    "plataforma": COOKIE_PLATAFORMA,
+    "trabajador": COOKIE_TRABAJADOR,
+}
 
 
 def sindicato_activo_trabajador(request: Request) -> int:
@@ -1661,8 +1710,14 @@ def sindicato_activo_trabajador(request: Request) -> int:
     return 0
 
 
-def sesion_actual(request: Request) -> dict | None:
-    return auth.leer_sesion(request.cookies.get(COOKIE, ""))
+def sesion_actual(request: Request, rol: str) -> dict | None:
+    """Sesión vigente para ESE rol puntual -- cada rol tiene su propia
+    cookie (ver COOKIES_POR_ROL), así que hace falta pedir cuál se
+    necesita; no hay más una sesión "genérica" del navegador."""
+    payload = auth.leer_sesion(request.cookies.get(COOKIES_POR_ROL[rol], ""))
+    if payload and payload.get("rol") == rol:
+        return payload
+    return None
 
 
 def slugify(nombre: str) -> str:
@@ -1677,8 +1732,7 @@ def slugify(nombre: str) -> str:
 
 @app.get("/plataforma", response_class=HTMLResponse)
 def plataforma(request: Request):
-    ses = sesion_actual(request)
-    if not ses or ses.get("rol") != "plataforma":
+    if not sesion_actual(request, "plataforma"):
         return templates.TemplateResponse("plataforma_login.html", {
             "request": request, "marca_plataforma": db.marca_plataforma()})
     with db.get_session() as s:
@@ -1711,8 +1765,7 @@ def plataforma(request: Request):
 
 @app.get("/plataforma/inicio", response_class=HTMLResponse)
 def plataforma_inicio(request: Request):
-    ses = sesion_actual(request)
-    if not ses or ses.get("rol") != "plataforma":
+    if not sesion_actual(request, "plataforma"):
         return templates.TemplateResponse("plataforma_login.html", {
             "request": request, "marca_plataforma": db.marca_plataforma()})
     return templates.TemplateResponse("plataforma_portada.html", {
@@ -1725,9 +1778,7 @@ def plataforma_inicio(request: Request):
 def servir_recibo_sospechoso(recibo_id: int, request: Request):
     """Archivo original (imagen o PDF) de un recibo marcado con posible
     adulteración -- solo lo puede ver el admin de plataforma."""
-    ses = sesion_actual(request)
-    if not ses or ses.get("rol") != "plataforma":
-        raise HTTPException(403, "No autorizado")
+    exigir_plataforma(request)
     with db.get_session() as s:
         r = s.get(ReciboSospechoso, recibo_id)
         if not r:
@@ -1744,15 +1795,13 @@ def plataforma_login(response: Response, cuit: str = Form(...), clave: str = For
         return RedirectResponse("/plataforma?error=1", status_code=303)
     token = auth.crear_sesion("plataforma")
     resp = RedirectResponse("/plataforma/inicio", status_code=303)
-    resp.set_cookie(COOKIE, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    resp.set_cookie(COOKIE_PLATAFORMA, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     return resp
 
 
 @app.post("/plataforma/config")
 def plataforma_config(request: Request, tope_sindical_pct: float = Form(...)):
-    ses = sesion_actual(request)
-    if not ses or ses.get("rol") != "plataforma":
-        raise HTTPException(403, "No autorizado")
+    exigir_plataforma(request)
     db.set_tope_sindical(tope_sindical_pct)
     return RedirectResponse("/plataforma?config=ok", status_code=303)
 
@@ -1785,9 +1834,7 @@ def plataforma_tope(
     si el valor es menor al del período anterior -- acá se vuelve a
     chequear igual del lado del servidor (esconder/advertir en el cliente
     no alcanza, mismo criterio que el resto de la app)."""
-    ses = sesion_actual(request)
-    if not ses or ses.get("rol") != "plataforma":
-        raise HTTPException(403, "No autorizado")
+    exigir_plataforma(request)
     if estado not in ESTADOS_TOPE:
         estado = "por_verificar"
     try:
@@ -1812,9 +1859,7 @@ def plataforma_tope(
 
 @app.post("/plataforma/tope/borrar")
 def plataforma_tope_borrar(request: Request, id: int = Form(...)):
-    ses = sesion_actual(request)
-    if not ses or ses.get("rol") != "plataforma":
-        raise HTTPException(403, "No autorizado")
+    exigir_plataforma(request)
     db.borrar_tope(id)
     return RedirectResponse("/plataforma#topes", status_code=303)
 
@@ -1828,9 +1873,7 @@ async def plataforma_marca(
 ):
     """Marca de 'Mi Trabajo' (logins y panel de plataforma) — mismo patrón que
     la marca de un sindicato, pero para la plataforma misma."""
-    ses = sesion_actual(request)
-    if not ses or ses.get("rol") != "plataforma":
-        raise HTTPException(403, "No autorizado")
+    exigir_plataforma(request)
     logo_datos, logo_mime, logo_flag = (None, "", "")
     if logo and logo.filename:
         logo_datos, logo_mime, logo_flag = _leer_logo(logo)
@@ -1842,7 +1885,7 @@ async def plataforma_marca(
 @app.get("/plataforma/salir")
 def plataforma_salir():
     resp = RedirectResponse("/plataforma", status_code=303)
-    resp.delete_cookie(COOKIE)
+    resp.delete_cookie(COOKIE_PLATAFORMA)
     return resp
 
 
@@ -1861,9 +1904,7 @@ async def plataforma_alta_sindicato(
     portada_clara: bool = Form(False),
     admin_portada_clara: bool = Form(False),
 ):
-    ses = sesion_actual(request)
-    if not ses or ses.get("rol") != "plataforma":
-        raise HTTPException(403, "No autorizado")
+    exigir_plataforma(request)
     color_base = color_base or "#0f1b2d"
     if not _es_oscuro(color_base):
         return RedirectResponse("/plataforma?error=colorbase#sindicatos", status_code=303)
@@ -1972,9 +2013,7 @@ def plataforma_alta_usuario(
     sindicato_id: int = Form(...), usuario: str = Form(...),
     nombre: str = Form(""), clave_inicial: str = Form(...),
 ):
-    ses = sesion_actual(request)
-    if not ses or ses.get("rol") != "plataforma":
-        raise HTTPException(403, "No autorizado")
+    exigir_plataforma(request)
     with db.get_session() as s:
         s.add(UsuarioSindicato(
             sindicato_id=sindicato_id, usuario=_norm_cuil(usuario), nombre=nombre,
@@ -1999,9 +2038,7 @@ async def plataforma_editar_sindicato(
     portada_clara: bool = Form(False),
     admin_portada_clara: bool = Form(False),
 ):
-    ses = sesion_actual(request)
-    if not ses or ses.get("rol") != "plataforma":
-        raise HTTPException(403, "No autorizado")
+    exigir_plataforma(request)
     color_base = color_base or "#0f1b2d"
     if not _es_oscuro(color_base):
         return RedirectResponse("/plataforma?error=colorbase#sindicatos", status_code=303)
@@ -2035,9 +2072,7 @@ async def plataforma_editar_sindicato(
 def plataforma_borrar_sindicato(request: Request, id: int = Form(...)):
     """Borra un sindicato y TODOS sus datos asociados (conceptos, fórmulas,
     reportes, trabajadores, admins). Operación destructiva."""
-    ses = sesion_actual(request)
-    if not ses or ses.get("rol") != "plataforma":
-        raise HTTPException(403, "No autorizado")
+    exigir_plataforma(request)
     with db.get_session() as s:
         for c in s.exec(select(Concepto).where(Concepto.sindicato_id == id)).all(): s.delete(c)
         for f in s.exec(select(Formula).where(Formula.sindicato_id == id)).all(): s.delete(f)
@@ -2053,9 +2088,7 @@ def plataforma_borrar_sindicato(request: Request, id: int = Form(...)):
 @app.get("/plataforma/admins/{sindicato_id}")
 def plataforma_ver_admins(sindicato_id: int, request: Request):
     """Devuelve la lista de admins de un sindicato (para mostrar al clickear el número)."""
-    ses = sesion_actual(request)
-    if not ses or ses.get("rol") != "plataforma":
-        raise HTTPException(403, "No autorizado")
+    exigir_plataforma(request)
     with db.get_session() as s:
         admins = s.exec(select(UsuarioSindicato).where(
             UsuarioSindicato.sindicato_id == sindicato_id)).all()
@@ -2068,9 +2101,7 @@ def plataforma_ver_admins(sindicato_id: int, request: Request):
 def plataforma_ver_trabajadores(sindicato_id: int, request: Request):
     """Devuelve la lista de trabajadores empadronados en un sindicato (para
     mostrar al clickear el número, mismo patrón que plataforma_ver_admins)."""
-    ses = sesion_actual(request)
-    if not ses or ses.get("rol") != "plataforma":
-        raise HTTPException(403, "No autorizado")
+    exigir_plataforma(request)
     with db.get_session() as s:
         trabajadores = s.exec(select(Trabajador).where(
             Trabajador.sindicato_id == sindicato_id).order_by(
@@ -2088,9 +2119,7 @@ def plataforma_reset_clave(
     """TRANSITORIO (para pruebas): el admin de plataforma cambia la clave de
     cualquier usuario. tipo = 'sindicato' (admin) o 'trabajador' (cuenta).
     ⚠️ Sacar o reemplazar por recuperación segura antes de producción."""
-    ses = sesion_actual(request)
-    if not ses or ses.get("rol") != "plataforma":
-        raise HTTPException(403, "No autorizado")
+    exigir_plataforma(request)
     ident = _norm_cuil(identificador)
     hasheada = auth.hashear_clave(clave_nueva)
     with db.get_session() as s:
@@ -2213,7 +2242,7 @@ def trabajador_login(request: Request, cuil: str = Form(...), clave: str = Form(
     token = auth.crear_sesion("trabajador", id_usuario=cuenta_id, sindicato_id=0)
     # sindicato_id 0 = todavía no eligió; se define en /elegir o directo si hay uno solo
     resp = RedirectResponse("/app/inicio", status_code=303)
-    resp.set_cookie(COOKIE, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    resp.set_cookie(COOKIE_TRABAJADOR, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     resp.set_cookie("cuil_trab", cuil, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     return resp
 
@@ -2237,7 +2266,7 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
         s.commit()
     token = auth.crear_sesion("trabajador", sindicato_id=0)
     resp = RedirectResponse("/app/inicio", status_code=303)
-    resp.set_cookie(COOKIE, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    resp.set_cookie(COOKIE_TRABAJADOR, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     resp.set_cookie("cuil_trab", cuil, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     return resp
 
@@ -2245,9 +2274,9 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
 @app.get("/app", response_class=HTMLResponse)
 def app_trabajador(request: Request):
     """La app del trabajador. Si está en varios sindicatos y no eligió, muestra el selector."""
-    ses = sesion_actual(request)
+    ses = sesion_actual(request, "trabajador")
     cuil = request.cookies.get("cuil_trab", "")
-    if not ses or ses.get("rol") != "trabajador" or not cuil:
+    if not ses or not cuil:
         return RedirectResponse("/ingresar", status_code=303)
 
     sinds = db.sindicatos_de_cuil(cuil)
@@ -2298,9 +2327,9 @@ def app_portada(request: Request):
     """Portada del trabajador: pantalla de bienvenida con accesos rápidos.
     No reemplaza /app (Tu Recibo, sigue intacta) -- misma resolución de
     sindicato activo, landing previa a la que apuntan login/registro/elegir."""
-    ses = sesion_actual(request)
+    ses = sesion_actual(request, "trabajador")
     cuil = request.cookies.get("cuil_trab", "")
-    if not ses or ses.get("rol") != "trabajador" or not cuil:
+    if not ses or not cuil:
         return RedirectResponse("/ingresar", status_code=303)
 
     sinds = db.sindicatos_de_cuil(cuil)
@@ -2371,7 +2400,7 @@ def verificar_credencial(token: str, request: Request):
 @app.get("/trabajador/salir")
 def trabajador_salir():
     resp = RedirectResponse("/ingresar", status_code=303)
-    resp.delete_cookie(COOKIE)
+    resp.delete_cookie(COOKIE_TRABAJADOR)
     resp.delete_cookie("cuil_trab")
     resp.delete_cookie("sind_elegido")
     return resp

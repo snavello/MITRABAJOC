@@ -29,7 +29,7 @@ with db.get_session() as s:
     s.commit()
 
 client = TestClient(main.app, raise_server_exceptions=False)
-client.cookies.set(main.COOKIE, auth.crear_sesion("trabajador", sindicato_id=0))
+client.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
 client.cookies.set("cuil_trab", "20111111119")
 
 
@@ -60,7 +60,7 @@ def test_httpexception_normal_no_se_pisa():
     """Una HTTPException a propósito (ej. sindicato no resuelto) tiene que
     seguir devolviendo SU status/detail -- el handler global no se mete."""
     client_sin_sid = TestClient(main.app, raise_server_exceptions=False)
-    client_sin_sid.cookies.set(main.COOKIE, auth.crear_sesion("trabajador", sindicato_id=0))
+    client_sin_sid.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
     # sin cuil_trab: sindicato_activo_trabajador() no resuelve nada -> 400 a propósito
     r = client_sin_sid.post("/api/validar", json={"recibo": {}, "conceptos_nuevos": []})
     assert r.status_code == 400

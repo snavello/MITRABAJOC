@@ -27,7 +27,7 @@ with db.get_session() as s:
     s.commit()
 
 client = TestClient(main.app)
-client.cookies.set(main.COOKIE, auth.crear_sesion("trabajador", sindicato_id=0))
+client.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
 client.cookies.set("cuil_trab", "20111111119")
 
 DATOS_SEMAFORO = {

@@ -42,7 +42,7 @@ with db.get_session() as s:
     s.commit()
 
 client = TestClient(main.app)
-client.cookies.set(main.COOKIE, auth.crear_sesion("sindicato", sindicato_id=SID))
+client.cookies.set(main.COOKIE_SINDICATO, auth.crear_sesion("sindicato", sindicato_id=SID))
 
 
 def test_fusion_mueve_alias_repunta_formula_y_borra_provisorio():

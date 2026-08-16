@@ -30,6 +30,25 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   (main.py) reemite la cookie en cada request autenticado; un usuario activo
   nunca se desloguea solo.
   NO se usa auth de terceros.
+  **Cookie de sesión separada por rol (fix 2026-08-16)**: los tres roles
+  (`sindicato`, `plataforma`, `trabajador`) usaban una única cookie
+  (`sesion_mitrabajo`) para los tres. Una cookie es del navegador entero, no
+  de una pestaña: loguearse con un rol en una pestaña pisaba en silencio la
+  cookie que otra pestaña, con otro rol, necesitaba -- reportado como "vuelvo
+  a la pestaña de admin después de un rato y me dice que tengo que loguearme,
+  aunque activo". **Esta era la causa real** del síntoma que se había
+  atribuido (sin confirmar) a un corte de conexión de Postgres en Render, ver
+  más abajo. Fix: `COOKIES_POR_ROL` (main.py) mapea cada rol a su propia
+  cookie (`sesion_sindicato`/`sesion_plataforma`/`sesion_trabajador`);
+  `sesion_actual(request, rol)` pide el rol explícito y lee solo esa cookie
+  (ya no hay una sesión "genérica" del navegador); `exigir_sindicato`/
+  `exigir_plataforma` son los helpers que las rutas usan para exigir sesión
+  de un rol puntual. El middleware de renovación recorre las tres cookies y
+  renueva cada una que esté presente y vigente, así una request de cualquier
+  pestaña mantiene vivas TODAS las sesiones de rol que el navegador tenga
+  activas a la vez, no solo la de esa pestaña. Efecto colateral esperado,
+  una sola vez al deployar: quien tuviera una sesión activa con la cookie
+  vieja queda desloguead@ (hay que volver a entrar).
   **JSON crudo en pantalla al fallar un POST de página completa (fix
   2026-08-16, 2 rondas)**: los `<form>` de `/admin` y `/plataforma` son POST
   de página completa, no fetch. Si la ruta respondía con una excepción --
@@ -38,28 +57,27 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   pantalla por el JSON crudo de FastAPI ("error técnico feo en pantalla
   negra"). Dos manejadores nuevos en main.py, usando el mismo criterio
   (`_es_navegacion_de_pagina`: pide `text/html`, no es una llamada fetch/JS
-  que ya sabe leer el JSON con `await r.json()`; y `_panel_de(path)`, a qué
-  pantalla volver según el prefijo de la ruta):
+  que ya sabe leer el JSON con `await r.json()`; y `_panel_de(path)`/
+  `_rol_de(path)`, a qué pantalla y rol corresponden según el prefijo de la
+  ruta):
   - `sesion_vencida_o_denegada` (`@app.exception_handler(HTTPException)`):
-    con sesión inválida/inexistente Y navegación real, redirige a `/admin` o
-    `/plataforma` (login) en vez del JSON. Un 403 legítimo con sesión
-    VÁLIDA (módulo no habilitado, CUIL ajeno, etc.) no se toca.
+    con sesión inválida/inexistente del rol que esa pantalla necesita Y
+    navegación real, redirige a `/admin` o `/plataforma` (login) en vez del
+    JSON. Un 403 legítimo con sesión VÁLIDA del rol correcto (módulo no
+    habilitado, CUIL ajeno, etc.) no se toca.
   - `error_no_manejado` (`@app.exception_handler(Exception)`, ya existía
     para garantizar JSON siempre): con navegación real, además redirige al
     panel (`/admin?error=guardado` o `/plataforma?error=guardado`, con un
     aviso "No se pudo guardar, probá de nuevo") en vez del JSON crudo.
-  - **Ojo — esto no arregla la causa de fondo del 500 en sí**, solo evita
-    que se vea feo: reportado por el sindicato como "se corta a los 2-3
-    minutos de inactividad, no a los 15" y específicamente al guardar/
-    enviar (no al navegar/recargar) -- eso descarta que sea la sesión
-    vencida de verdad (una recarga hubiera fallado igual) y apunta a algo
-    puntual del request de escritura, sospecha fundada: Postgres en Render
-    puede cortar conexiones ociosas. El engine (db.py) ya usa
-    `pool_pre_ping=True` + `pool_recycle=300` para mitigarlo, pero no
-    está confirmado que sea la causa exacta -- **pendiente**: la próxima
-    vez que pase, revisar los logs de Render (el traceback completo se
-    imprime con `traceback.print_exc()` en `error_no_manejado`) para
-    confirmar la causa real y corregirla de raíz.
+  - **Ojo**: originalmente se sospechaba que el 500 intermitente reportado
+    ("se corta a los 2-3 minutos, específicamente al guardar") era Postgres
+    en Render cortando conexiones ociosas -- el engine (db.py) usa
+    `pool_pre_ping=True` + `pool_recycle=300` + keepalives de TCP por las
+    dudas, mitigación que se mantiene por las dudas pero **no era la causa
+    real**: un repro concreto del usuario (dos pestañas, roles distintos)
+    apuntó a la cookie compartida de arriba. Si vuelve a aparecer un 500 sin
+    relación a pestañas/roles, revisar los logs de Render (traceback
+    completo con `traceback.print_exc()` en `error_no_manejado`).
 - **Python 3.12** fijado con .python-version (3.12.8) + variable PYTHON_VERSION en
   Render. Python 3.14 rompe SQLModel ("Field 'id' requires a type annotation").
 - **Deploy:** GitHub + Render. Render sigue la rama main y redeploya con cada push.
@@ -562,24 +580,13 @@ eran `SOSPECHOSO`.
 3. Los topes de base imponible previos a 2025 siguen marcados
    `por_verificar` (menor urgencia, sin inconsistencia detectada) — ver
    sección "Topes de base imponible" más arriba.
-4. Causa real de los 500 intermitentes al guardar/enviar en `/admin` y
-   `/plataforma` (reportado 2026-08-16, "se corta a los 2-3 minutos,
-   específicamente al guardar, no al navegar"): mitigado, no 100%
-   confirmado todavía. Investigado a fondo: el código en sí está limpio
-   (ninguna ruta mantiene una sesión de base abierta mientras espera algo
-   lento, como la IA). El sospechoso más fuerte encontrado: un bug conocido
-   de SQLAlchemy + psycopg contra Postgres gestionado — si un proxy/NAT
-   intermedio corta una conexión ociosa en silencio, el propio
-   `pool_pre_ping` puede quedar COLGADO hasta 15-20 min (timeout de TCP por
-   defecto del SO) en vez de fallar rápido y reconectar
-   (github.com/sqlalchemy/sqlalchemy/discussions/13032) — coincide con el
-   patrón reportado. Mitigación aplicada en `db.py` (`connect_args` con
-   `keepalives_idle=30`/`keepalives_interval=10`/`keepalives_count=3`):
-   fuerza a detectar una conexión muerta en ~60 segundos en vez de minutos.
-   **Pendiente real**: no hay traceback real que confirme que ESTA era la
-   causa (el bug es intermitente) — revisar los logs de Render la próxima
-   vez que pase, para confirmar que ya no ocurre o, si ocurre, ver qué
-   excepción tira ahora.
+4. ~~Causa real de los 500 intermitentes al guardar/enviar~~ — **resuelto
+   2026-08-16**: no era Postgres, era la cookie de sesión compartida entre
+   roles (ver "Auth" más arriba, "Cookie de sesión separada por rol"). Un
+   repro concreto del usuario (sindicato en una pestaña, trabajador en
+   otra) confirmó la causa real. La mitigación de keepalives TCP en `db.py`
+   se mantiene (es una mejora real e independiente), pero ya no es la
+   sospecha principal de este síntoma puntual.
 
 ## Noticias (sindicato → trabajador)
 Reemplaza el placeholder "próximamente" de Novedades. Modelo `Noticia`

@@ -42,7 +42,7 @@ client = TestClient(main.app)
 
 def _sesion(cuil):
     c = TestClient(main.app)
-    c.cookies.set(main.COOKIE, auth.crear_sesion("trabajador", sindicato_id=0))
+    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
     c.cookies.set("cuil_trab", cuil)
     return c
 

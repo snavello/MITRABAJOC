@@ -20,17 +20,20 @@ os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db
 import auth
-from db import Sindicato, UsuarioSindicato
+from db import Sindicato, UsuarioSindicato, Trabajador, CuentaTrabajador
 import main
 from fastapi.testclient import TestClient
 
 db.crear_tablas()
+CUIL_TRAB = "20111111119"
 with db.get_session() as s:
     sind = Sindicato(nombre="Test Sesion", slug="test-sesion")
     s.add(sind); s.commit(); s.refresh(sind)
     SID = sind.id
     s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111110", nombre="Admin",
                             clave_hash=auth.hashear_clave("clave-test"), debe_cambiar_clave=False))
+    s.add(Trabajador(sindicato_id=SID, cuil=CUIL_TRAB, nombre="Juan Trabajador", activo=True))
+    s.add(CuentaTrabajador(cuil=CUIL_TRAB, clave_hash=auth.hashear_clave("demo1234")))
     s.commit()
 
 
@@ -42,25 +45,26 @@ def test_actividad_reemite_el_token():
     # corrió: el response tiene que traer un Set-Cookie para la sesión.
     client = TestClient(main.app)
     client.post("/admin/login", data={"usuario": "20111111110", "clave": "clave-test"})
-    assert client.cookies.get(main.COOKIE)
+    assert client.cookies.get(main.COOKIE_SINDICATO)
 
     r = client.get("/admin")
     set_cookie = r.headers.get("set-cookie", "")
-    assert set_cookie.startswith(f"{main.COOKIE}="), "la renovación tiene que reemitir la cookie de sesión"
+    assert set_cookie.startswith(f"{main.COOKIE_SINDICATO}="), "la renovación tiene que reemitir la cookie de sesión"
     print("OK  test_actividad_reemite_el_token")
 
 
 def test_login_no_se_pisa_con_la_sesion_vieja():
-    """Regresión del bug real: loguearse como plataforma y DESPUÉS como
-    sindicato, en el mismo cliente (mismo navegador), tiene que dejar
-    activo el rol nuevo -- no el viejo reemitido por encima."""
+    """Loguearse como plataforma y DESPUÉS como sindicato, en el mismo
+    cliente (mismo navegador), tiene que dejar el rol nuevo funcionando --
+    y con cookies separadas por rol (ver COOKIES_POR_ROL), la sesión de
+    plataforma también sigue viva, no se pisan entre sí."""
     client = TestClient(main.app)
     client.post("/plataforma/login", data={"cuit": "20000000000", "clave": "test-plataforma"})
     r_plataforma = client.get("/plataforma")
     assert "Ingreso" not in r_plataforma.text or "Administración" in r_plataforma.text
 
     client.post("/admin/login", data={"usuario": "20111111110", "clave": "clave-test"})
-    payload = auth.leer_sesion(client.cookies.get(main.COOKIE))
+    payload = auth.leer_sesion(client.cookies.get(main.COOKIE_SINDICATO))
     assert payload["rol"] == "sindicato", payload
     r_admin = client.get("/admin")
     assert r_admin.status_code == 200
@@ -68,11 +72,50 @@ def test_login_no_se_pisa_con_la_sesion_vieja():
     print("OK  test_login_no_se_pisa_con_la_sesion_vieja")
 
 
+def test_dos_pestanas_sindicato_y_trabajador_conviven():
+    """Regresión del bug real reportado: admin de sindicato logueado en una
+    pestaña, trabajador logueado en OTRA pestaña del mismo navegador (mismo
+    "frasco" de cookies acá). Antes del fix de cookies separadas por rol,
+    el segundo login pisaba la única cookie compartida y la pestaña de
+    admin quedaba con sesión "perdida" al volver a usarla."""
+    client = TestClient(main.app)
+    client.post("/admin/login", data={"usuario": "20111111110", "clave": "clave-test"})
+    r_admin_antes = client.get("/admin")
+    assert r_admin_antes.status_code == 200 and "Reportes" in r_admin_antes.text
+
+    client.post("/trabajador/login", data={"cuil": CUIL_TRAB, "clave": "demo1234"},
+                follow_redirects=False)
+    assert client.cookies.get(main.COOKIE_TRABAJADOR), "el login de trabajador tiene que haber prendido"
+
+    r_admin_despues = client.get("/admin")
+    assert r_admin_despues.status_code == 200, r_admin_despues.text
+    assert "Reportes" in r_admin_despues.text, "la sesión de sindicato no debería haberse perdido"
+    print("OK  test_dos_pestanas_sindicato_y_trabajador_conviven")
+
+
+def test_dos_pestanas_plataforma_y_trabajador_conviven():
+    """Mismo caso reportado, con plataforma en vez de sindicato."""
+    client = TestClient(main.app)
+    client.post("/plataforma/login", data={"cuit": "20000000000", "clave": "test-plataforma"})
+    r_plat_antes = client.get("/plataforma")
+    assert r_plat_antes.status_code == 200
+    assert "Ingreso" not in r_plat_antes.text or "Administración" in r_plat_antes.text
+
+    client.post("/trabajador/login", data={"cuil": CUIL_TRAB, "clave": "demo1234"},
+                follow_redirects=False)
+    assert client.cookies.get(main.COOKIE_TRABAJADOR), "el login de trabajador tiene que haber prendido"
+
+    r_plat_despues = client.get("/plataforma")
+    assert r_plat_despues.status_code == 200
+    assert "Ingreso" not in r_plat_despues.text or "Administración" in r_plat_despues.text
+    print("OK  test_dos_pestanas_plataforma_y_trabajador_conviven")
+
+
 def test_logout_no_se_revive():
     client = TestClient(main.app)
     client.post("/admin/login", data={"usuario": "20111111110", "clave": "clave-test"})
     client.get("/admin/salir", follow_redirects=False)
-    payload = auth.leer_sesion(client.cookies.get(main.COOKIE, ""))
+    payload = auth.leer_sesion(client.cookies.get(main.COOKIE_SINDICATO, ""))
     assert payload is None, "logout tiene que dejar la sesión inválida, no reemitida"
     print("OK  test_logout_no_se_revive")
 
@@ -146,6 +189,8 @@ def test_403_legitimo_con_sesion_valida_no_redirige():
 if __name__ == "__main__":
     test_actividad_reemite_el_token()
     test_login_no_se_pisa_con_la_sesion_vieja()
+    test_dos_pestanas_sindicato_y_trabajador_conviven()
+    test_dos_pestanas_plataforma_y_trabajador_conviven()
     test_logout_no_se_revive()
     test_expira_pasados_15_minutos_sin_uso()
     test_form_post_con_sesion_vencida_redirige_a_login_admin()
