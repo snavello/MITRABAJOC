@@ -155,10 +155,9 @@ checkbox en `/admin` → Fórmulas.
 
 **Mantenimiento mensual obligatorio**: ANSES actualiza el tope todos los
 meses — hay que cargar el valor nuevo en `/plataforma` → "Topes SS" cada
-mes. Quedan 12 valores (octubre 2025–febrero 2026) marcados `SOSPECHOSO`,
-pendientes de verificar contra las resoluciones oficiales antes de confiar
-en el resultado para ese tramo (enero y febrero 2026 ya se corrigieron el
-2026-08-15 con datos reales aportados por el sindicato).
+mes. Ya no quedan valores `SOSPECHOSO` (los 14 de enero 2025–febrero 2026
+se corrigieron con datos reales del sindicato el 2026-08-15/16); siguen
+`por_verificar` las vigencias previas a 2025, sin inconsistencia detectada.
 
 Pendiente antes de mergear a `main`: verificar contra los 10 recibos de
 prueba (5 debajo del tope, 5 por encima, 5 con errores plantados) que pasó

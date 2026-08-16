@@ -38,18 +38,18 @@ vigencia_desde,tope_maximo,base_minima,estado,fuente
 2024-09,3037915.02,93473.14,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
 2024-10,3164622.34,97371.11,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
 2024-11,3297354.12,101455.42,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
-2025-01,3470127.3,106774.69,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
-2025-02,3546123.08,109117.13,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
-2025-03,3620730.12,111411.35,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
-2025-04,3708821.11,114120.55,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
-2025-05,3806143.15,117112.41,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
-2025-06,3906841.4,120211.11,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
-2025-07,3975940.21,122341.12,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
-2025-08,4055511.1,124789.12,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
-2025-09,4132314.4,127151.1,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
-2025-10,4218841.1,129810.4,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
-2025-11,4300090.15,132311.12,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
-2025-12,4381390.2,134811.4,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
+2025-01,2910574.49,89557.43,verificado,Res. ANSES 1247/2024
+2025-02,2989160.0,91975.48,verificado,Res. ANSES 66/2025
+2025-03,3055220.44,94008.14,verificado,Res. ANSES 145/2025
+2025-04,3128545.73,96264.34,verificado,Res. ANSES 179/2025
+2025-05,3245240.49,99855.0,verificado,Res. ANSES 211/2025
+2025-06,3335458.18,102630.97,verificado,Res. ANSES 237/2025
+2025-07,3385490.05,104170.43,verificado,Res. ANSES 251/2025
+2025-08,3440334.99,105857.99,verificado,Res. ANSES 278/2025
+2025-09,3505701.35,107869.29,verificado,Res. ANSES 298/2025
+2025-10,3571608.54,109897.23,verificado,Res. ANSES 318/2025
+2025-11,3645898.0,112183.09,verificado,Res. ANSES 344/2025
+2025-12,3731212.01,114808.17,verificado,Res. ANSES 359/2025
 2026-01,3823372.95,117643.93,verificado,"valor confirmado por el sindicato, corrige discontinuidad vs. marzo 2026"
 2026-02,3932339.08,120996.78,verificado,"valor confirmado por el sindicato, corrige discontinuidad vs. marzo 2026"
 2026-03,4045590.45,124481.49,verificado,Res. ANSES 38/2026
