@@ -32,24 +32,18 @@ CATEGORIAS_UNIVERSALES = {
     "cuota_sindical": "CUOTA_SINDICAL",
 }
 
-# Aclaraciones en lenguaje llano para discrepancias de aportes sujetos a
-# tope de base imponible (ver TopeSS_contexto.md, puntos 2.3 y 2.5) -- se
-# agregan al `detalle` de la discrepancia, no son un campo aparte: así el
-# frontend (que ya renderiza discrepancia.detalle tal cual) no necesita
-# ningún cambio para mostrarlas.
-NOTA_LIQUIDACIONES_MULTIPLES = (
-    "Este aporte tiene un tope máximo mensual. Si tuviste más de un recibo "
-    "este mes (por ejemplo, un adelanto y una liquidación complementaria, "
-    "o más de un empleador), es posible que el tope ya se haya alcanzado "
-    "con el otro recibo y que este esté bien igual. No podemos confirmarlo "
+# Aclaración en lenguaje llano para discrepancias de aportes sujetos a tope
+# de base imponible (ver TopeSS_contexto.md, puntos 2.3 y 2.5). A diferencia
+# de las demás notas de discrepancia, ésta NO se agrega al `detalle` de cada
+# concepto (se repetiría una vez por cada aporte con tope afectado, jubilación
+# + PAMI + obra social) -- se junta una sola vez por recibo en una `alerta`
+# (ver más abajo, tope_posible_explicacion).
+NOTA_TOPE_DISCREPANCIA = (
+    "puede deberse a que tuviste más de un recibo este mes (otro empleador, "
+    "un adelanto) y el tope se alcanzó entre los dos -- no se puede confirmar "
     "mirando un solo recibo."
 )
-NOTA_PISO_PROPORCIONAL = (
-    "Además, el monto mínimo sobre el que se calculan estos aportes se "
-    "reduce si trabajaste jornada parcial o no trabajaste el mes completo "
-    "(por ejemplo, si empezaste o dejaste el trabajo a mitad de mes). Si es "
-    "tu caso, el cálculo del recibo puede ser correcto igual."
-)
+NOTA_PISO_PROPORCIONAL = " También puede deberse a jornada parcial o mes incompleto."
 
 # Los 3 que se autocargan al crear un sindicato (ver db.crear_conceptos_universales).
 CONCEPTOS_UNIVERSALES = [
@@ -292,6 +286,8 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
     topes = topes or []
     tope_periodo = tope_vigente_en(topes, periodo_recibo)
     conceptos_con_tope = []  # descripciones de las fórmulas sujetas a tope evaluadas, para las alertas
+    conceptos_con_discrepancia_tope = []  # subset de los de arriba que dieron discrepancia
+    aplico_piso_en_discrepancia = False
 
     for target, fs in formulas_por_target.items():
         f = next((x for x in fs if formula_vigente_en(x, periodo_recibo)), None)
@@ -302,11 +298,11 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
         if sujeto_a_tope:
             conceptos_con_tope.append(f["descripcion"])
         if codigo not in importe_por_codigo:
-            detalle = f"El recibo no incluye '{f['descripcion']}'."
             if sujeto_a_tope:
-                detalle += " " + NOTA_LIQUIDACIONES_MULTIPLES
+                conceptos_con_discrepancia_tope.append(f["descripcion"])
             discrepancias.append({
-                "tipo": "concepto_faltante", "codigo": codigo, "detalle": detalle,
+                "tipo": "concepto_faltante", "codigo": codigo,
+                "detalle": f"El recibo no incluye '{f['descripcion']}'.",
             })
             continue
 
@@ -328,14 +324,13 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
             "chequeo_automatico": codigo in codigos_automaticos,
         })
         if not ok:
-            detalle = (f"{f['descripcion']}: esperado ${esperado:,.2f}, "
-                       f"figura ${real:,.2f} (diferencia ${dif:,.2f}).")
             if sujeto_a_tope:
-                detalle += " " + NOTA_LIQUIDACIONES_MULTIPLES
-                if aplico_piso:
-                    detalle += " " + NOTA_PISO_PROPORCIONAL
+                conceptos_con_discrepancia_tope.append(f["descripcion"])
+                aplico_piso_en_discrepancia = aplico_piso_en_discrepancia or aplico_piso
             discrepancias.append({
-                "tipo": "formula", "codigo": codigo, "detalle": detalle,
+                "tipo": "formula", "codigo": codigo,
+                "detalle": (f"{f['descripcion']}: esperado ${esperado:,.2f}, "
+                            f"figura ${real:,.2f} (diferencia ${dif:,.2f})."),
             })
 
     # Consistencia interna: la suma de líneas debe coincidir con los totales impresos.
@@ -388,6 +383,15 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
                            "resolución oficial de ANSES. Si más adelante se corrige, el "
                            f"resultado de {lista_conceptos} para este recibo podría cambiar.",
             })
+
+    # Aclaración de las discrepancias en conceptos con tope (una sola vez por
+    # recibo, no repetida por cada concepto -- ver NOTA_TOPE_DISCREPANCIA).
+    if conceptos_con_discrepancia_tope:
+        lista_disc = ", ".join(conceptos_con_discrepancia_tope)
+        detalle = f"La diferencia en {lista_disc} {NOTA_TOPE_DISCREPANCIA}"
+        if aplico_piso_en_discrepancia:
+            detalle += NOTA_PISO_PROPORCIONAL
+        alertas.append({"tipo": "tope_posible_explicacion", "detalle": detalle})
 
     # Ley 27.802 art. 133 / Dto 407/2026: tope global a las cargas sindicales de
     # convenio (cuota solidaria, fondos convencionales). NO es un error de cálculo:

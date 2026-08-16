@@ -207,35 +207,56 @@ def test_tope_sospechoso_se_aplica_igual_y_avisa():
     print("OK  test_tope_sospechoso_se_aplica_igual_y_avisa")
 
 
-def test_discrepancia_real_incluye_aclaracion_de_liquidaciones_multiples():
-    # JUB figura muy por debajo de lo esperado sobre el tope -> discrepancia real,
-    # pero con la aclaración de que puede deberse a liquidaciones múltiples.
+def test_discrepancia_real_agrega_una_sola_alerta_de_explicacion():
+    # JUB figura muy por debajo de lo esperado sobre el tope -> discrepancia real.
+    # El detalle del concepto queda corto; la aclaración va aparte, en una alerta.
     recibo = _recibo("2015-05", 44975.40, jub=100.0, pami=1296.07, os_=1296.07)
     r = validador.validar(CONCEPTOS_TOPE, FORMULAS_TOPE, recibo, topes=[TOPE_MAY_2015], cuil_sesion="20111111119")
     assert r["estado"] == "CON_DISCREPANCIAS"
     disc_jub = next(d for d in r["discrepancias"] if d["codigo"] == "JUBILACION")
-    assert "tope máximo mensual" in disc_jub["detalle"]
-    assert "jornada parcial" not in disc_jub["detalle"]  # no se aplicó el piso acá
-    print("OK  test_discrepancia_real_incluye_aclaracion_de_liquidaciones_multiples")
+    assert "esperado" in disc_jub["detalle"] and "tope" not in disc_jub["detalle"]
+    alertas = [a for a in r["alertas"] if a["tipo"] == "tope_posible_explicacion"]
+    assert len(alertas) == 1, r["alertas"]
+    assert "Aporte jubilatorio (SIPA)" in alertas[0]["detalle"]
+    assert "jornada parcial" not in alertas[0]["detalle"]  # no se aplicó el piso acá
+    print("OK  test_discrepancia_real_agrega_una_sola_alerta_de_explicacion")
 
 
-def test_discrepancia_con_piso_aplicado_incluye_las_dos_aclaraciones():
-    minima = TOPE_AGO_2026["base_minima"]
+def test_discrepancia_con_varios_conceptos_agrega_una_sola_alerta():
+    # Los 3 aportes con tope figuran mal en el mismo recibo -> una sola alerta
+    # agrupando los 3, no una por concepto (antes se repetía el texto largo
+    # en cada discrepancia).
+    recibo = _recibo("2015-05", 44975.40, jub=100.0, pami=100.0, os_=100.0)
+    r = validador.validar(CONCEPTOS_TOPE, FORMULAS_TOPE, recibo, topes=[TOPE_MAY_2015], cuil_sesion="20111111119")
+    assert len(r["discrepancias"]) == 3
+    alertas = [a for a in r["alertas"] if a["tipo"] == "tope_posible_explicacion"]
+    assert len(alertas) == 1, r["alertas"]
+    for desc in ("Aporte jubilatorio (SIPA)", "Ley 19.032 (PAMI)", "Obra Social"):
+        assert desc in alertas[0]["detalle"]
+    print("OK  test_discrepancia_con_varios_conceptos_agrega_una_sola_alerta")
+
+
+def test_discrepancia_con_piso_aplicado_menciona_jornada_parcial():
     recibo = _recibo("2026-08", 80000.0, jub=100.0, pami=4241.41, os_=4241.41)
     r = validador.validar(CONCEPTOS_TOPE, FORMULAS_TOPE, recibo, topes=[TOPE_AGO_2026], cuil_sesion="20111111119")
     disc_jub = next(d for d in r["discrepancias"] if d["codigo"] == "JUBILACION")
-    assert "tope máximo mensual" in disc_jub["detalle"]
-    assert "jornada parcial" in disc_jub["detalle"]
-    print("OK  test_discrepancia_con_piso_aplicado_incluye_las_dos_aclaraciones")
+    assert "tope" not in disc_jub["detalle"]
+    alertas = [a for a in r["alertas"] if a["tipo"] == "tope_posible_explicacion"]
+    assert len(alertas) == 1
+    assert "jornada parcial" in alertas[0]["detalle"]
+    print("OK  test_discrepancia_con_piso_aplicado_menciona_jornada_parcial")
 
 
-def test_concepto_faltante_sujeto_a_tope_incluye_aclaracion():
+def test_concepto_faltante_sujeto_a_tope_agrega_alerta():
     recibo = _recibo("2015-05", 44975.40, pami=1296.07, os_=1296.07)  # sin línea de JUBILACION
     r = validador.validar(CONCEPTOS_TOPE, FORMULAS_TOPE, recibo, topes=[TOPE_MAY_2015], cuil_sesion="20111111119")
     disc_jub = next(d for d in r["discrepancias"] if d["codigo"] == "JUBILACION")
     assert disc_jub["tipo"] == "concepto_faltante"
-    assert "tope máximo mensual" in disc_jub["detalle"]
-    print("OK  test_concepto_faltante_sujeto_a_tope_incluye_aclaracion")
+    assert disc_jub["detalle"] == "El recibo no incluye 'Aporte jubilatorio (SIPA)'."
+    alertas = [a for a in r["alertas"] if a["tipo"] == "tope_posible_explicacion"]
+    assert len(alertas) == 1
+    assert "Aporte jubilatorio (SIPA)" in alertas[0]["detalle"]
+    print("OK  test_concepto_faltante_sujeto_a_tope_agrega_alerta")
 
 
 def test_formula_no_sujeta_a_tope_sigue_sobre_base_completa():
@@ -445,9 +466,10 @@ if __name__ == "__main__":
     test_remuneracion_por_debajo_del_piso_minimo_usa_el_minimo()
     test_periodo_sin_tope_cargado_evalua_igual_y_avisa()
     test_tope_sospechoso_se_aplica_igual_y_avisa()
-    test_discrepancia_real_incluye_aclaracion_de_liquidaciones_multiples()
-    test_discrepancia_con_piso_aplicado_incluye_las_dos_aclaraciones()
-    test_concepto_faltante_sujeto_a_tope_incluye_aclaracion()
+    test_discrepancia_real_agrega_una_sola_alerta_de_explicacion()
+    test_discrepancia_con_varios_conceptos_agrega_una_sola_alerta()
+    test_discrepancia_con_piso_aplicado_menciona_jornada_parcial()
+    test_concepto_faltante_sujeto_a_tope_agrega_alerta()
     test_formula_no_sujeta_a_tope_sigue_sobre_base_completa()
     test_tope_vigente_en_con_vigencias_no_contiguas()
     test_sin_topes_pasados_no_rompe_y_avisa()
