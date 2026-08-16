@@ -16,9 +16,15 @@
   body { min-height: 100vh; }
   body.oscuro { background: radial-gradient(circle at 30% -10%, color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base)) 0%, var(--marca-base) 46%); }
   body.claro { background: var(--papel); }
-  .titulo-sec { font-family: var(--fuente-display); font-weight: 700; font-size: 22px;
-    letter-spacing: .002em; color: var(--sobre-base); margin-top: 6px; }
-  body.claro .titulo-sec { color: var(--tinta); }
+  .hola { font-family: var(--fuente-display); font-weight: 700; font-size: 30px; letter-spacing: .002em;
+    color: var(--sobre-base); margin-top: 6px; }
+  body.claro .hola { color: var(--tinta); }
+  .hola em { font-style: normal; color: var(--marca-acento); }
+
+  .badge-noleidas { position: absolute; top: -6px; right: -6px; background: #e5484d; color: #fff;
+    font-size: 10.5px; font-weight: 700; min-width: 19px; height: 19px; border-radius: 999px;
+    display: flex; align-items: center; justify-content: center; padding: 0 4px;
+    border: 2px solid var(--marca-base); }
 
   body.oscuro .tarjetas .acceso { position: relative; overflow: hidden;
     background: linear-gradient(155deg, rgba(255,255,255,.14), rgba(255,255,255,.02) 55%, rgba(255,255,255,.06));
@@ -37,7 +43,7 @@
   body.claro .btn-acerca { color: var(--gris); }
 </style>
 </head>
-<body class="{{ 'claro' if marca.portada_clara else 'oscuro' }} grano {{ 'grano-clara' if marca.portada_clara else 'grano-osc' }}">
+<body class="{{ 'claro' if marca.admin_portada_clara else 'oscuro' }} grano {{ 'grano-clara' if marca.admin_portada_clara else 'grano-osc' }}">
 
 <div class="enc">
   {% if marca.logo %}
@@ -56,7 +62,7 @@
 </a>
 
 <div class="pad">
-  <div class="titulo-sec">¿Qué querés hacer?</div>
+  <div class="hola">Hola, <em>{{ primer_nombre }}</em></div>
 
   <div class="tarjetas" style="margin-top: 18px;">
     {% if 'recibos' in modulos %}
@@ -139,12 +145,13 @@
     </a>
     {% endif %}
     {% if 'tramites' in modulos %}
-    <a class="acceso" href="/admin#tramites">
+    <a class="acceso" style="position:relative;" href="/admin#tramites">
       <svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg>
       <div>
         <div class="titulo">Trámites</div>
         <div class="estado">Formularios y seguimiento</div>
       </div>
+      {% if tramites_nuevos %}<span class="badge-noleidas">{{ tramites_nuevos }}</span>{% endif %}
     </a>
     {% endif %}
     <a class="acceso" href="/admin#seccionales">

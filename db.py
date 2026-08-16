@@ -85,6 +85,10 @@ class Sindicato(SQLModel, table=True):
     # que cambia es el fondo del cuerpo y las tarjetas. Default False =
     # ningún sindicato existente cambia de aspecto el día del deploy.
     portada_clara: bool = Field(default=False)
+    # Portada de /admin (ver admin_portada.html): independiente de la del
+    # trabajador -- un sindicato puede querer, por ejemplo, oscura para el
+    # trabajador y clara para el admin. Mismo criterio visual, elegida aparte.
+    admin_portada_clara: bool = Field(default=False)
 
 
 class Seccional(SQLModel, table=True):
@@ -325,6 +329,12 @@ class ConfiguracionPlataforma(SQLModel, table=True):
     logo: str = ""
     logo_datos: Optional[bytes] = Field(default=None)
     logo_mime: str = ""
+    # Portada de /plataforma (ver plataforma_portada.html): oscura (default)
+    # o clara, mismo criterio que Sindicato.portada_clara -- pero acá NO hay
+    # un color_base aparte validado como oscuro, se reusa color_primario tal
+    # cual (a diferencia de Sindicato: la plataforma es una única instancia,
+    # no multi-tenant, así que no hace falta la misma red de seguridad).
+    portada_clara: bool = Field(default=False)
 
 
 class EnvioSindicato(SQLModel, table=True):
@@ -767,6 +777,7 @@ def marca_sindicato(sindicato_id: int) -> dict:
             "color_acento": sind.color_acento,
             "color_base": sind.color_base,
             "portada_clara": sind.portada_clara,
+            "admin_portada_clara": sind.admin_portada_clara,
             # Para la credencial sindical del trabajador
             "autoridad": sind.autoridad, "cargo_autoridad": sind.cargo_autoridad,
             "firma": sind.firma,
@@ -826,17 +837,20 @@ def marca_plataforma() -> dict:
         cfg = s.get(ConfiguracionPlataforma, 1)
         if not cfg:
             return {"logo": "", "color_primario": "#152238",
-                    "color_secundario": "#1a7a6b", "color_acento": "#b23a2e"}
+                    "color_secundario": "#1a7a6b", "color_acento": "#b23a2e",
+                    "portada_clara": False}
         return {
             "logo": cfg.logo,
             "color_primario": cfg.color_primario or "#152238",
             "color_secundario": cfg.color_secundario or "#1a7a6b",
             "color_acento": cfg.color_acento or "#b23a2e",
+            "portada_clara": cfg.portada_clara,
         }
 
 
 def set_marca_plataforma(color_primario: str, color_secundario: str, color_acento: str,
-                          logo_datos: bytes = None, logo_mime: str = "", logo_flag: str = ""):
+                          logo_datos: bytes = None, logo_mime: str = "", logo_flag: str = "",
+                          portada_clara: bool = False):
     with Session(engine) as s:
         cfg = s.get(ConfiguracionPlataforma, 1)
         if not cfg:
@@ -844,6 +858,7 @@ def set_marca_plataforma(color_primario: str, color_secundario: str, color_acent
         cfg.color_primario = color_primario or "#152238"
         cfg.color_secundario = color_secundario or "#1a7a6b"
         cfg.color_acento = color_acento or "#b23a2e"
+        cfg.portada_clara = portada_clara
         if logo_datos:
             cfg.logo_datos, cfg.logo_mime, cfg.logo = logo_datos, logo_mime, logo_flag
         s.add(cfg)
@@ -1503,6 +1518,14 @@ def tramites_del_sindicato(sindicato_id: int, estado: str = None, tipo_tramite_i
         titulos_tipo = {t.id: t.titulo for t in s.exec(
             select(TipoTramite).where(TipoTramite.sindicato_id == sindicato_id)).all()}
         return [_tramite_resumen(s, tr, titulos_tipo) for tr in tramites]
+
+
+def contar_tramites_nuevos(sindicato_id: int) -> int:
+    """Trámites recién presentados (estado "enviado", el admin todavía no
+    los tocó) -- para el globo de notificación de la portada de admin."""
+    with Session(engine) as s:
+        return len(s.exec(select(Tramite).where(
+            Tramite.sindicato_id == sindicato_id, Tramite.estado == "enviado")).all())
 
 
 def tramites_de_trabajador(cuil: str, sindicato_id: int) -> list:

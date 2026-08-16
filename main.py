@@ -521,11 +521,18 @@ def admin_inicio(request: Request):
 
     sid = ses.get("sid", 0)
     marca = db.marca_sindicato(sid)
+    with db.get_session() as s:
+        usuario = s.get(UsuarioSindicato, ses.get("uid", 0))
+    nombre_admin = (usuario.nombre if usuario else "") or ""
+    modulos = _modulos_de(sid)
+    tramites_nuevos = db.contar_tramites_nuevos(sid) if "tramites" in modulos else 0
     return templates.TemplateResponse("admin_portada.html", {
         "request": request, "sindicato": marca.get("nombre", ""),
         "marca": marca, "marca_plataforma": db.marca_plataforma(),
         "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
-        "modulos": _modulos_de(sid),
+        "primer_nombre": nombre_admin.split(" ")[0] or "Admin",
+        "tramites_nuevos": tramites_nuevos,
+        "modulos": modulos,
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
 
@@ -1577,6 +1584,18 @@ def plataforma(request: Request):
     })
 
 
+@app.get("/plataforma/inicio", response_class=HTMLResponse)
+def plataforma_inicio(request: Request):
+    ses = sesion_actual(request)
+    if not ses or ses.get("rol") != "plataforma":
+        return templates.TemplateResponse("plataforma_login.html", {
+            "request": request, "marca_plataforma": db.marca_plataforma()})
+    return templates.TemplateResponse("plataforma_portada.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "version": VERSION_PLATAFORMA, "fecha_version": FECHA_VERSION,
+    })
+
+
 @app.get("/plataforma/recibos-sospechosos/{recibo_id}/archivo")
 def servir_recibo_sospechoso(recibo_id: int, request: Request):
     """Archivo original (imagen o PDF) de un recibo marcado con posible
@@ -1599,7 +1618,7 @@ def plataforma_login(response: Response, cuit: str = Form(...), clave: str = For
     if not auth.verificar_plataforma(clave, cuit):
         return RedirectResponse("/plataforma?error=1", status_code=303)
     token = auth.crear_sesion("plataforma")
-    resp = RedirectResponse("/plataforma", status_code=303)
+    resp = RedirectResponse("/plataforma/inicio", status_code=303)
     resp.set_cookie(COOKIE, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     return resp
 
@@ -1680,6 +1699,7 @@ async def plataforma_marca(
     request: Request,
     color_primario: str = Form("#152238"), color_secundario: str = Form("#1a7a6b"),
     color_acento: str = Form("#b23a2e"), logo: UploadFile = File(None),
+    portada_clara: bool = Form(False),
 ):
     """Marca de 'Mi Trabajo' (logins y panel de plataforma) — mismo patrón que
     la marca de un sindicato, pero para la plataforma misma."""
@@ -1690,7 +1710,7 @@ async def plataforma_marca(
     if logo and logo.filename:
         logo_datos, logo_mime, logo_flag = _leer_logo(logo)
     db.set_marca_plataforma(color_primario, color_secundario, color_acento,
-                             logo_datos, logo_mime, logo_flag)
+                             logo_datos, logo_mime, logo_flag, portada_clara)
     return RedirectResponse("/plataforma?marca=ok", status_code=303)
 
 
@@ -1714,6 +1734,7 @@ async def plataforma_alta_sindicato(
     logo: UploadFile = File(None), firma: UploadFile = File(None),
     modulos_habilitados: list[str] = Form(default=[]),
     portada_clara: bool = Form(False),
+    admin_portada_clara: bool = Form(False),
 ):
     ses = sesion_actual(request)
     if not ses or ses.get("rol") != "plataforma":
@@ -1742,6 +1763,7 @@ async def plataforma_alta_sindicato(
             color_base=color_base,
             modulos_habilitados=modulos_validos,
             portada_clara=portada_clara,
+            admin_portada_clara=admin_portada_clara,
         )
         s.add(sind); s.commit(); s.refresh(sind)
         sind_id = sind.id
@@ -1850,6 +1872,7 @@ async def plataforma_editar_sindicato(
     firma: UploadFile = File(None),
     modulos_habilitados: list[str] = Form(default=[]),
     portada_clara: bool = Form(False),
+    admin_portada_clara: bool = Form(False),
 ):
     ses = sesion_actual(request)
     if not ses or ses.get("rol") != "plataforma":
@@ -1870,6 +1893,7 @@ async def plataforma_editar_sindicato(
             sind.color_base = color_base
             sind.modulos_habilitados = modulos_validos
             sind.portada_clara = portada_clara
+            sind.admin_portada_clara = admin_portada_clara
             if logo and logo.filename:
                 datos, mime, flag = _leer_logo(logo)
                 if datos:

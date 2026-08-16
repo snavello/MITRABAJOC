@@ -171,29 +171,59 @@ encabezado oscuro. 4 colores por sindicato en vez de 3 (ver "Decisiones tomadas"
 - Sin tocar: `validador.py`, `semaforo.py`, ninguna lógica de cálculo — el
   rediseño es 100% presentación + la columna `color_base`.
 
-## Portada de /admin (2026-08-16)
-`templates/admin_portada.html`, ruta `GET /admin/inicio`. Las 11 secciones
-del panel de sindicato (Reportes, Fórmulas, Conceptos, Trabajadores,
-Aprendizaje, Afiliados cotizantes, Noticias, Beneficios, Notificaciones,
-Trámites, Seccionales) ya no entraban en una sola línea de pestañas. El
-login de `/admin` ahora redirige acá primero: mismo lenguaje visual que la
-portada del trabajador (vidrio + grano + tipografía condensada, oscura o
-clara según `Sindicato.portada_clara`, mismos 4 colores de marca), una
-tarjeta por sección (filtradas por `modulos`, mismo criterio que ya usaba
-la barra de pestañas; Trabajadores y Seccionales siempre visibles). Cada
-tarjeta linkea a `/admin#<panel>` — reusa tal cual el deep-link por hash
-que ya existía en `admin.html` (`abrirDesdeHash()`), cero cambios ahí.
-`/admin` en sí (el panel con los 11 `<div class="panel">` y toda su
-lógica) no cambió de comportamiento; lo único que cambió ahí es la
-navegación: la barra de pestañas, que antes hacía *wrap* a 2-3 líneas,
-ahora es una tira horizontal deslizable (`.nav-strip`, una sola línea,
-ícono + texto chico) pegada debajo del header oscuro, más un botón
-flotante "Inicio" (al lado del "Salir" que ya existía) para volver a
-`/admin/inicio`. Todos los `RedirectResponse("/admin#...")` que ya usan
-las rutas POST de cada acción (alta de trabajador, guardar fórmula, etc.)
-siguen apuntando a `/admin` sin cambios — solo el login inicial cambió de
-destino. No se tocó `/plataforma` (pedido explícitamente scopeado a admin
-de sindicato).
+## Portada de /admin y /plataforma (2026-08-16)
+Mismo patrón aplicado a los tres logins: una landing con tarjetas (vidrio +
+grano + tipografía condensada, colores de marca) antes de entrar al panel
+de siempre, que a su vez cambia su barra de pestañas por una tira
+horizontal deslizable con ícono + texto chico. Ninguno de los paneles en
+sí (los `<div class="panel">`/`<div class="ppanel">` y su lógica) cambió
+de comportamiento — es 100% navegación + presentación, igual que el
+rediseño del trabajador.
+
+- **`/admin`** — `templates/admin_portada.html`, ruta `GET /admin/inicio`.
+  Las 11 secciones (Reportes, Fórmulas, Conceptos, Trabajadores,
+  Aprendizaje, Afiliados cotizantes, Noticias, Beneficios, Notificaciones,
+  Trámites, Seccionales) ya no entraban en una sola línea de pestañas. El
+  login de `/admin` redirige acá primero; tarjetas filtradas por `modulos`
+  (mismo criterio que ya usaba la barra), Trabajadores y Seccionales
+  siempre visibles, cada una linkea a `/admin#<panel>` reusando el
+  deep-link por hash que ya existía en `admin.html` (`abrirDesdeHash()`).
+  Encabezado "Hola, {{ primer_nombre }}" con el nombre del `UsuarioSindicato`
+  logueado (no del sindicato, que ya está arriba en el `.enc`) — mismo
+  patrón que la portada del trabajador. La tarjeta Trámites suma un globo
+  rojo (`.badge-noleidas`, mismo componente que Notificaciones en la
+  portada del trabajador) con `db.contar_tramites_nuevos()`: cuenta los
+  trámites en estado `enviado` (recién presentados, el admin todavía no
+  los tocó) de ese sindicato. Dentro de `/admin`, la barra de pestañas
+  pasa a `.nav-strip` (una sola línea deslizable) + botón flotante
+  "Inicio" al lado del "Salir" que ya existía. Los `RedirectResponse
+  ("/admin#...")` de las rutas POST de cada acción no cambian — solo el
+  login inicial cambió de destino.
+- **`/plataforma`** — `templates/plataforma_portada.html`, ruta
+  `GET /plataforma/inicio`, mismos colores que la marca de la plataforma
+  (`color_primario` como base, sin un color_base aparte validado como
+  oscuro: es una única instancia, no multi-tenant, no hace falta esa red
+  de seguridad). 7 tarjetas: "Sindicatos" agrupa las 3 pestañas de alta/
+  gestión (Sindicatos, Nuevo sindicato, Nuevo administrador — quedan
+  dentro, en la tira de pestañas, pero comparten una sola tarjeta en la
+  portada porque son todas gestión de sindicatos), más Cambiar clave,
+  Marca de la plataforma, Configuración legal, Uso de IA, Recibos con
+  alerta, Topes SS. Sin saludo por nombre (el login de plataforma es una
+  clave compartida, no hay un usuario individual con nombre propio como
+  en `UsuarioSindicato`). **Bug encontrado y corregido de paso**:
+  `plataforma.html` NO tenía un `abrirDesdeHash()` genérico como
+  `admin.html` — solo un caso especial para `#topes` (agregado durante la
+  feature de Topes SS) — así que las tarjetas nuevas no abrían la pestaña
+  correcta. Se generalizó ese bloque a cualquier `data-pp`, conservando el
+  caso especial de los errores de topes.
+- **Portadas independientes por rol**: `Sindicato.portada_clara`
+  (trabajador) y `Sindicato.admin_portada_clara` (admin) son dos columnas
+  separadas — un sindicato puede tener, por ejemplo, portada oscura para
+  el trabajador y clara para el admin. Las dos se eligen desde `/plataforma`
+  → "Sindicatos" (dos checkboxes independientes en el alta/edición).
+  `ConfiguracionPlataforma.portada_clara` es una tercera, para la portada
+  de `/plataforma` misma, elegida desde `/plataforma` → "Marca de la
+  plataforma".
 
 ## Rediseño visual "modelo Nike" (COMPLETO)
 Segunda vuelta de dirección visual, explorada primero en un Artifact fuera

@@ -23,19 +23,28 @@
     padding:14px 22px; display:flex; align-items:center; gap:16px; position:sticky; top:0; z-index:20; }
   header img { width:40px; height:40px; object-fit:contain; }
   header .rol { font-size:13px; color:rgba(255,255,255,.7); }
-  .btn-cerrar { position:fixed; bottom:20px; right:20px; width:44px; height:44px; border-radius:50%;
+  .btn-cerrar, .btn-home { position:fixed; bottom:20px; width:44px; height:44px; border-radius:50%;
     background:var(--marca-base); display:flex; align-items:center; justify-content:center;
     text-decoration:none; border:1px solid rgba(255,255,255,.14);
     box-shadow:0 2px 10px rgba(0,0,0,.25); z-index:40; }
-  .btn-cerrar svg { width:19px; height:19px; stroke:#fff; stroke-width:2.6; fill:none; }
-  .btn-cerrar:hover { opacity:.85; }
+  .btn-cerrar { right:20px; }
+  .btn-home { right:74px; }
+  .btn-cerrar svg, .btn-home svg { width:19px; height:19px; stroke:#fff; stroke-width:2.6; fill:none; }
+  .btn-home svg { stroke-width:2.2; }
+  .btn-cerrar:hover, .btn-home:hover { opacity:.85; }
   .wrap { max-width:1000px; margin:0 auto; padding:24px 22px 60px; }
   h2 { font-size:17px; margin:30px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--tinta); }
-  nav.tabs { display:flex; gap:6px; margin-bottom:22px; flex-wrap:wrap; }
-  nav.tabs button { padding:9px 18px; border-radius:8px; color:var(--gris); font-size:14px;
-    font-weight:500; background:#fff; border:1px solid var(--linea); cursor:pointer; font-family:inherit; }
-  nav.tabs button:hover { background:#f0eee8; }
-  nav.tabs button.activa { background:var(--tinta); color:#fff; border-color:var(--tinta); }
+  /* Tira de pestañas: una sola línea deslizable, ícono + texto chico,
+     pegada debajo del header (mismo criterio que admin.html). */
+  .nav-strip { display:flex; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch;
+    padding:10px 14px; background:#fff; border-bottom:1px solid var(--linea); }
+  .ptab { display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0;
+    padding:7px 11px; border-radius:9px; color:var(--gris); font-size:10.5px;
+    font-weight:500; background:#fff; border:1px solid var(--linea);
+    cursor:pointer; font-family:inherit; white-space:nowrap; }
+  .ptab svg { width:17px; height:17px; stroke:currentColor; stroke-width:1.7; fill:none; }
+  .ptab:hover { background:#f0eee8; }
+  .ptab.activa { background:var(--tinta); color:#fff; border-color:var(--tinta); }
   .ppanel { display:none; }
   .ppanel.activo { display:block; }
   .ppanel h2:first-child { margin-top:0; }
@@ -90,6 +99,36 @@
 <a class="btn-cerrar" href="/plataforma/salir" title="Salir" aria-label="Salir">
   <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
 </a>
+<a class="btn-home" href="/plataforma/inicio" title="Inicio" aria-label="Inicio">
+  <svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg>
+</a>
+
+<nav class="nav-strip">
+  <button class="ptab activa" data-pp="lista"><svg viewBox="0 0 24 24"><use href="#ic-sindicatos"/></svg><span>Sindicatos</span></button>
+  <button class="ptab" data-pp="nuevo"><svg viewBox="0 0 24 24"><use href="#ic-nuevo-sind"/></svg><span>Nuevo sindicato</span></button>
+  <button class="ptab" data-pp="admin"><svg viewBox="0 0 24 24"><use href="#ic-nuevo-admin"/></svg><span>Nuevo admin</span></button>
+  <button class="ptab" data-pp="clave"><svg viewBox="0 0 24 24"><use href="#ic-clave"/></svg><span>Cambiar clave</span></button>
+  <button class="ptab" data-pp="marca"><svg viewBox="0 0 24 24"><use href="#ic-marca"/></svg><span>Marca</span></button>
+  <button class="ptab" data-pp="config"><svg viewBox="0 0 24 24"><use href="#ic-config-legal"/></svg><span>Config. legal</span></button>
+  <button class="ptab" data-pp="usoia"><svg viewBox="0 0 24 24"><use href="#ic-usoia"/></svg><span>Uso de IA</span></button>
+  <button class="ptab" data-pp="sospechosos"><svg viewBox="0 0 24 24"><use href="#ic-sospechosos"/></svg><span>Con alerta</span></button>
+  <button class="ptab" data-pp="topes"><svg viewBox="0 0 24 24"><use href="#ic-topes"/></svg><span>Topes SS</span></button>
+</nav>
+
+<!-- Íconos SVG de línea (mismos que plataforma_portada.html, + 2 propios) -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <g id="ic-sindicatos"><path d="M4 21h16"/><path d="M5 21V10"/><path d="M19 21V10"/><path d="M4 10 12 4l8 6"/><path d="M9 21v-7"/><path d="M15 21v-7"/></g>
+    <g id="ic-nuevo-sind"><path d="M4 21h16"/><path d="M5 21V10"/><path d="M19 21V10"/><path d="M4 10 12 4l8 6"/><line x1="12" y1="13" x2="12" y2="18"/><line x1="9.5" y1="15.5" x2="14.5" y2="15.5"/></g>
+    <g id="ic-nuevo-admin"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><line x1="18" y1="7" x2="18" y2="13"/><line x1="15" y1="10" x2="21" y2="10"/></g>
+    <g id="ic-clave"><circle cx="7" cy="16" r="3"/><path d="m9.5 13.5 8-8"/><path d="m14 9 2.5 2.5"/><path d="m16.5 6.5 2.5 2.5"/></g>
+    <g id="ic-marca"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.9 1.9-1.9H16a5 5 0 0 0 5-5c0-3.9-4-6.5-9-6.5z"/><circle cx="7.5" cy="10.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="10.5" cy="7.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="7.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="17" cy="10.5" r="1.1" fill="currentColor" stroke="none"/></g>
+    <g id="ic-config-legal"><line x1="12" y1="3" x2="12" y2="21"/><line x1="5" y1="7" x2="19" y2="7"/><path d="M5 7 2 13a3 3 0 0 0 6 0z"/><path d="M19 7l-3 6a3 3 0 0 0 6 0z"/><path d="M8 21h8"/></g>
+    <g id="ic-usoia"><rect x="6" y="6" width="12" height="12" rx="2"/><line x1="6" y1="10" x2="3" y2="10"/><line x1="6" y1="14" x2="3" y2="14"/><line x1="18" y1="10" x2="21" y2="10"/><line x1="18" y1="14" x2="21" y2="14"/><line x1="10" y1="6" x2="10" y2="3"/><line x1="14" y1="6" x2="14" y2="3"/><line x1="10" y1="18" x2="10" y2="21"/><line x1="14" y1="18" x2="14" y2="21"/></g>
+    <g id="ic-sospechosos"><path d="M12 4 3 20h18z"/><line x1="12" y1="9.5" x2="12" y2="14"/><circle cx="12" cy="16.8" r="0.9" fill="currentColor" stroke="none"/></g>
+    <g id="ic-topes"><path d="M4 16a8 8 0 0 1 16 0"/><line x1="12" y1="16" x2="16" y2="10"/><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/></g>
+  </defs>
+</svg>
 
 <div class="wrap">
   {% set reset = request.query_params.get('reset') %}
@@ -97,17 +136,6 @@
   {% elif reset == 'nohay' %}<div style="background:#f8e5e2; border:1px solid #e0c4c0; color:#b23a2e; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">No se encontró un usuario con ese CUIT/CUIL.</div>{% endif %}
   {% if request.query_params.get('config') == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Configuración actualizada.</div>{% endif %}
   {% if request.query_params.get('marca') == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Marca de la plataforma actualizada.</div>{% endif %}
-  <nav class="tabs">
-    <button class="ptab activa" data-pp="lista">Sindicatos</button>
-    <button class="ptab" data-pp="nuevo">Nuevo sindicato</button>
-    <button class="ptab" data-pp="admin">Nuevo administrador</button>
-    <button class="ptab" data-pp="clave">Cambiar clave</button>
-    <button class="ptab" data-pp="marca">Marca de la plataforma</button>
-    <button class="ptab" data-pp="config">Configuración legal</button>
-    <button class="ptab" data-pp="usoia">Uso de IA</button>
-    <button class="ptab" data-pp="sospechosos">Recibos con alerta</button>
-    <button class="ptab" data-pp="topes">Topes SS</button>
-  </nav>
 
   <div class="ppanel activo" id="pp-lista">
   <h2>Sindicatos en la plataforma ({{ sindicatos|length }})</h2>
@@ -129,7 +157,7 @@
       <td><button type="button" class="link-num" onclick="verAdmins({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.usuarios }}</button></td>
       <td><button type="button" class="link-num" onclick="verTrabajadores({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.trabajadores }}</button></td>
       <td style="white-space:nowrap; text-align:right;">
-        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base,"modulos_habilitados":i.s.modulos_habilitados,"portada_clara":i.s.portada_clara} | tojson }})'>Editar</button>
+        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base,"modulos_habilitados":i.s.modulos_habilitados,"portada_clara":i.s.portada_clara,"admin_portada_clara":i.s.admin_portada_clara} | tojson }})'>Editar</button>
         <button type="button" class="mini borrar" onclick="borrarSind({{ i.s.id }}, '{{ i.s.nombre }}', {{ i.usuarios }}, {{ i.trabajadores }})">Borrar</button>
       </td>
     </tr>
@@ -228,8 +256,13 @@
       </div>
 
       <div class="campo" style="margin-top:14px;">
-        <label class="chk-modulo"><input type="checkbox" name="portada_clara" value="true" id="sind-portada-clara"> Portada clara</label>
+        <label class="chk-modulo"><input type="checkbox" name="portada_clara" value="true" id="sind-portada-clara"> Portada clara (trabajador)</label>
         <span class="muted" style="font-size:11px;">Por defecto la portada del trabajador es oscura. Tildado: fondo claro (el encabezado sigue oscuro, con el color base).</span>
+      </div>
+
+      <div class="campo" style="margin-top:8px;">
+        <label class="chk-modulo"><input type="checkbox" name="admin_portada_clara" value="true" id="sind-admin-portada-clara"> Portada clara (admin)</label>
+        <span class="muted" style="font-size:11px;">Independiente de la del trabajador -- por ejemplo, se puede dejar oscura para el trabajador y clara para el admin.</span>
       </div>
 
       <button type="submit">Crear sindicato</button>
@@ -323,6 +356,10 @@
         {% endif %}
         <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
         <span class="muted" style="font-size:11px;">Se muestra en los logins y en el encabezado de este panel. Si no subís uno nuevo, se mantiene el actual.</span>
+      </div>
+      <div class="campo" style="margin-top:14px;">
+        <label class="chk-modulo"><input type="checkbox" name="portada_clara" value="true" {% if marca_plataforma and marca_plataforma.portada_clara %}checked{% endif %}> Portada clara</label>
+        <span class="muted" style="font-size:11px;">Para la portada de /plataforma (ver "Inicio"). Por defecto oscura. Tildado: fondo claro con el color primario tal cual (acá no hay un color de base aparte, asegurate de que sea oscuro si dejás esta opción sin marcar).</span>
       </div>
       <button type="submit">Guardar marca</button>
     </form>
@@ -591,6 +628,7 @@ function editarSind(s) {
     chk.checked = modulosSet.has(chk.value);
   });
   document.getElementById('sind-portada-clara').checked = !!s.portada_clara;
+  document.getElementById('sind-admin-portada-clara').checked = !!s.admin_portada_clara;
   document.getElementById('form-sind-titulo').textContent = 'Editar sindicato: ' + s.nombre;
   f.querySelector('button[type=submit]').textContent = 'Guardar cambios';
   activarTab('nuevo');
@@ -685,10 +723,18 @@ function prepararEnvioTope(form) {
   return true;
 }
 
-if (location.hash === '#topes' ||
-    ['topebajo', 'topeduplicado', 'topenoexiste', 'topeformato'].includes(new URLSearchParams(location.search).get('error'))) {
-  activarTab('topes');
-}
+// Si la URL trae un ancla (ej. #marca desde una tarjeta de /plataforma/inicio,
+// o #topes tras un alta) o un error de topes, abrir esa pestaña -- mismo
+// patrón que abrirDesdeHash() en admin.html.
+(function abrirDesdeHash() {
+  const h = (location.hash || '').replace('#', '');
+  const errorTope = new URLSearchParams(location.search).get('error');
+  const destino = h || (['topebajo', 'topeduplicado', 'topenoexiste', 'topeformato'].includes(errorTope) ? 'topes' : '');
+  if (destino) {
+    const btn = document.querySelector('.ptab[data-pp="' + destino + '"]');
+    if (btn) btn.click();
+  }
+})();
 </script>
 </body>
 </html>

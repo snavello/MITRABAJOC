@@ -105,10 +105,46 @@ def test_marca_sindicato_expone_portada_clara():
     print("OK  test_marca_sindicato_expone_portada_clara")
 
 
+# ---------- admin_portada_clara: independiente de portada_clara ----------
+
+def test_admin_portada_clara_independiente_de_la_del_trabajador():
+    # Trabajador oscuro (no tildado), admin claro (tildado) en la misma alta.
+    r = plataforma_client.post("/plataforma/sindicato", data=_datos_base(
+        nombre="Sindicato Test Admin Portada Clara", admin_portada_clara="true",
+    ), follow_redirects=False)
+    assert r.status_code == 303
+    with Session(db.engine) as s:
+        sind = s.exec(select(Sindicato).where(Sindicato.nombre == "Sindicato Test Admin Portada Clara")).first()
+        assert sind.portada_clara is False        # trabajador: sin tocar
+        assert sind.admin_portada_clara is True    # admin: tildado
+    marca = db.marca_sindicato(sind.id)
+    assert marca["admin_portada_clara"] is True
+    print("OK  test_admin_portada_clara_independiente_de_la_del_trabajador")
+
+
+def test_edicion_cambia_admin_portada_clara_sin_tocar_la_del_trabajador():
+    with Session(db.engine) as s:
+        sind = s.exec(select(Sindicato).where(Sindicato.nombre == "Sindicato Test Admin Portada Clara")).first()
+        sid = sind.id
+
+    # Edición: tilda portada_clara (trabajador) pero destilda admin_portada_clara.
+    r = plataforma_client.post("/plataforma/sindicato/editar", data=_datos_base(
+        id=sid, nombre="Sindicato Test Admin Portada Clara", portada_clara="true",
+    ), follow_redirects=False)
+    assert r.status_code == 303
+    with Session(db.engine) as s:
+        sind = s.get(Sindicato, sid)
+        assert sind.portada_clara is True
+        assert sind.admin_portada_clara is False
+    print("OK  test_edicion_cambia_admin_portada_clara_sin_tocar_la_del_trabajador")
+
+
 if __name__ == "__main__":
     test_grandfathering_sindicato_previo_queda_en_falso()
     test_alta_sin_tildar_portada_clara_queda_en_falso()
     test_alta_tildando_portada_clara_queda_en_true()
     test_edicion_cambia_portada_clara()
     test_marca_sindicato_expone_portada_clara()
+    test_admin_portada_clara_independiente_de_la_del_trabajador()
+    test_edicion_cambia_admin_portada_clara_sin_tocar_la_del_trabajador()
     print("Todos los tests de portada_clara pasaron.")

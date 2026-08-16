@@ -15,7 +15,7 @@ os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db
 import auth
-from db import Sindicato, UsuarioSindicato
+from db import Sindicato, UsuarioSindicato, TipoTramite, Tramite
 from modulos import MODULOS
 import main
 from fastapi.testclient import TestClient
@@ -31,10 +31,19 @@ with db.get_session() as s:
     s.commit(); s.refresh(full); s.refresh(solo_recibos)
     SID_FULL, SID_RECIBOS = full.id, solo_recibos.id
 
-    s.add(UsuarioSindicato(sindicato_id=SID_FULL, usuario="20777777770", nombre="Admin Full",
+    s.add(UsuarioSindicato(sindicato_id=SID_FULL, usuario="20777777770", nombre="Juan Pérez",
                             clave_hash=auth.hashear_clave("full-demo"), debe_cambiar_clave=False))
     s.add(UsuarioSindicato(sindicato_id=SID_RECIBOS, usuario="20888888880", nombre="Admin Recibos",
                             clave_hash=auth.hashear_clave("recibos-demo"), debe_cambiar_clave=False))
+    s.commit()
+
+    tipo = TipoTramite(sindicato_id=SID_FULL, titulo="Reintegro", codigo="F01")
+    s.add(tipo); s.commit(); s.refresh(tipo)
+    for i in range(2):
+        s.add(Tramite(sindicato_id=SID_FULL, tipo_tramite_id=tipo.id,
+                       numero_expediente=f"F01-2026-00000{i}", cuil="20111111119", estado="enviado"))
+    s.add(Tramite(sindicato_id=SID_FULL, tipo_tramite_id=tipo.id,
+                   numero_expediente="F01-2026-000002", cuil="20111111119", estado="terminado"))
     s.commit()
 
 
@@ -86,9 +95,34 @@ def test_sindicato_solo_recibos_no_ve_modulos_apagados_pero_si_los_fijos():
     print("OK  test_sindicato_solo_recibos_no_ve_modulos_apagados_pero_si_los_fijos")
 
 
+def test_saluda_con_el_nombre_del_admin_logueado():
+    c = _admin_client("20777777770", "full-demo")
+    r = c.get("/admin/inicio")
+    assert "Hola, <em>Juan</em>" in r.text
+    print("OK  test_saluda_con_el_nombre_del_admin_logueado")
+
+
+def test_globo_de_tramites_nuevos_cuenta_solo_estado_enviado():
+    c = _admin_client("20777777770", "full-demo")
+    r = c.get("/admin/inicio")
+    assert db.contar_tramites_nuevos(SID_FULL) == 2
+    assert '<span class="badge-noleidas">2</span>' in r.text
+    print("OK  test_globo_de_tramites_nuevos_cuenta_solo_estado_enviado")
+
+
+def test_sin_tramites_no_muestra_globo():
+    c = _admin_client("20888888880", "recibos-demo")  # módulo 'tramites' apagado
+    r = c.get("/admin/inicio")
+    assert '<span class="badge-noleidas">' not in r.text
+    print("OK  test_sin_tramites_no_muestra_globo")
+
+
 if __name__ == "__main__":
     test_sin_sesion_sirve_login()
     test_login_exitoso_redirige_a_inicio()
     test_sindicato_con_todos_los_modulos_ve_las_11_tarjetas()
     test_sindicato_solo_recibos_no_ve_modulos_apagados_pero_si_los_fijos()
+    test_saluda_con_el_nombre_del_admin_logueado()
+    test_globo_de_tramites_nuevos_cuenta_solo_estado_enviado()
+    test_sin_tramites_no_muestra_globo()
     print("\nTodos los tests de admin_portada pasaron.")

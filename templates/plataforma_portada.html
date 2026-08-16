@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="{{ marca_plataforma.color_primario if marca_plataforma else '#152238' }}">
+<title>Panel de plataforma — Mi Trabajo</title>
+<link rel="stylesheet" href="/static/marca.css">
+<style>
+  :root {
+    --marca-base: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
+    --marca-primario: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
+    --marca-acento: {{ marca_plataforma.color_acento if marca_plataforma else '#b23a2e' }};
+    --marca-apoyo: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
+  }
+  body { min-height: 100vh; }
+  body.oscuro { background: radial-gradient(circle at 30% -10%, color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base)) 0%, var(--marca-base) 46%); }
+  body.claro { background: var(--papel); }
+  .hola { font-family: var(--fuente-display); font-weight: 700; font-size: 30px; letter-spacing: .002em;
+    color: var(--sobre-base); margin-top: 6px; }
+  body.claro .hola { color: var(--tinta); }
+
+  body.oscuro .tarjetas .acceso { position: relative; overflow: hidden;
+    background: linear-gradient(155deg, rgba(255,255,255,.14), rgba(255,255,255,.02) 55%, rgba(255,255,255,.06));
+    border-color: rgba(255,255,255,.14); backdrop-filter: blur(3px) saturate(1.1); }
+  body.oscuro .tarjetas .acceso::after { content: ""; position: absolute; top: -60%; left: -30%;
+    width: 90%; height: 90%; background: linear-gradient(120deg, rgba(255,255,255,.22), transparent 60%);
+    transform: rotate(-18deg); pointer-events: none; }
+
+  body.claro .tarjetas .acceso { position: relative; overflow: hidden; color: var(--tinta);
+    background: linear-gradient(160deg, #ffffff, var(--papel)); border-color: var(--linea);
+    box-shadow: 0 1px 0 rgba(20,15,5,.03); }
+  body.claro .tarjetas .acceso .estado { color: var(--gris); opacity: 1; }
+
+  .btn-acerca { background: none; border: none; opacity: .5; font-size: 11px; cursor: pointer;
+    padding: 6px; color: var(--sobre-base-mute); }
+  body.claro .btn-acerca { color: var(--gris); }
+</style>
+</head>
+<body class="{{ 'claro' if marca_plataforma.portada_clara else 'oscuro' }} grano {{ 'grano-clara' if marca_plataforma.portada_clara else 'grano-osc' }}">
+
+<div class="enc">
+  <img class="logo" src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo">
+  <div>
+    <div class="nom">Mi Trabajo</div>
+    <div class="sub">Panel de plataforma</div>
+  </div>
+</div>
+
+<a class="btn-flotante btn-cerrar" href="/plataforma/salir" title="Salir" aria-label="Salir">
+  <svg viewBox="0 0 24 24"><use href="#ic-x"/></svg>
+</a>
+
+<div class="pad">
+  <div class="hola">¿Qué querés hacer?</div>
+
+  <div class="tarjetas" style="margin-top: 18px;">
+    <a class="acceso" href="/plataforma#lista">
+      <svg viewBox="0 0 24 24"><use href="#ic-sindicatos"/></svg>
+      <div>
+        <div class="titulo">Sindicatos</div>
+        <div class="estado">Alta, edición y administradores</div>
+      </div>
+    </a>
+    <a class="acceso" href="/plataforma#clave">
+      <svg viewBox="0 0 24 24"><use href="#ic-clave"/></svg>
+      <div>
+        <div class="titulo">Cambiar clave</div>
+        <div class="estado">De cualquier usuario</div>
+      </div>
+    </a>
+    <a class="acceso" href="/plataforma#marca">
+      <svg viewBox="0 0 24 24"><use href="#ic-marca"/></svg>
+      <div>
+        <div class="titulo">Marca de la plataforma</div>
+        <div class="estado">Logo y colores de Mi Trabajo</div>
+      </div>
+    </a>
+    <a class="acceso" href="/plataforma#config">
+      <svg viewBox="0 0 24 24"><use href="#ic-config-legal"/></svg>
+      <div>
+        <div class="titulo">Configuración legal</div>
+        <div class="estado">Tope sindical (Ley 27.802)</div>
+      </div>
+    </a>
+    <a class="acceso" href="/plataforma#usoia">
+      <svg viewBox="0 0 24 24"><use href="#ic-usoia"/></svg>
+      <div>
+        <div class="titulo">Uso de IA</div>
+        <div class="estado">Consumo por sindicato</div>
+      </div>
+    </a>
+    <a class="acceso" href="/plataforma#sospechosos">
+      <svg viewBox="0 0 24 24"><use href="#ic-sospechosos"/></svg>
+      <div>
+        <div class="titulo">Recibos con alerta</div>
+        <div class="estado">Posible adulteración</div>
+      </div>
+    </a>
+    <a class="acceso" href="/plataforma#topes">
+      <svg viewBox="0 0 24 24"><use href="#ic-topes"/></svg>
+      <div>
+        <div class="titulo">Topes SS</div>
+        <div class="estado">Base imponible de la seguridad social</div>
+      </div>
+    </a>
+  </div>
+
+  <div style="text-align:center; margin-top:18px;">
+    <button class="btn-acerca" onclick="abrirAcerca()">Acerca de</button>
+  </div>
+</div>
+
+<!-- Overlay: acerca de -->
+<div class="overlay" id="overlay-acerca" onclick="if (event.target === this) cerrarAcerca()">
+  <div class="modal-hoja">
+    <button class="modal-cerrar" onclick="cerrarAcerca()" aria-label="Cerrar"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
+    <h3>Acerca de</h3>
+    <div class="modal-fila"><span class="k">Versión</span><span class="v">{{ version }}</span></div>
+    <div class="modal-fila"><span class="k">Fecha</span><span class="v">{{ fecha_version }}</span></div>
+  </div>
+</div>
+
+<!-- Íconos SVG de línea -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <g id="ic-x"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g>
+    <g id="ic-sindicatos"><path d="M4 21h16"/><path d="M5 21V10"/><path d="M19 21V10"/><path d="M4 10 12 4l8 6"/><path d="M9 21v-7"/><path d="M15 21v-7"/></g>
+    <g id="ic-clave"><circle cx="7" cy="16" r="3"/><path d="m9.5 13.5 8-8"/><path d="m14 9 2.5 2.5"/><path d="m16.5 6.5 2.5 2.5"/></g>
+    <g id="ic-marca"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.9 1.9-1.9H16a5 5 0 0 0 5-5c0-3.9-4-6.5-9-6.5z"/><circle cx="7.5" cy="10.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="10.5" cy="7.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="7.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="17" cy="10.5" r="1.1" fill="currentColor" stroke="none"/></g>
+    <g id="ic-config-legal"><line x1="12" y1="3" x2="12" y2="21"/><line x1="5" y1="7" x2="19" y2="7"/><path d="M5 7 2 13a3 3 0 0 0 6 0z"/><path d="M19 7l-3 6a3 3 0 0 0 6 0z"/><path d="M8 21h8"/></g>
+    <g id="ic-usoia"><rect x="6" y="6" width="12" height="12" rx="2"/><line x1="6" y1="10" x2="3" y2="10"/><line x1="6" y1="14" x2="3" y2="14"/><line x1="18" y1="10" x2="21" y2="10"/><line x1="18" y1="14" x2="21" y2="14"/><line x1="10" y1="6" x2="10" y2="3"/><line x1="14" y1="6" x2="14" y2="3"/><line x1="10" y1="18" x2="10" y2="21"/><line x1="14" y1="18" x2="14" y2="21"/></g>
+    <g id="ic-sospechosos"><path d="M12 4 3 20h18z"/><line x1="12" y1="9.5" x2="12" y2="14"/><circle cx="12" cy="16.8" r="0.9" fill="currentColor" stroke="none"/></g>
+    <g id="ic-topes"><path d="M4 16a8 8 0 0 1 16 0"/><line x1="12" y1="16" x2="16" y2="10"/><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/></g>
+  </defs>
+</svg>
+
+<script>
+function abrirAcerca() { document.getElementById('overlay-acerca').classList.add('abierto'); }
+function cerrarAcerca() { document.getElementById('overlay-acerca').classList.remove('abierto'); }
+</script>
+
+</body>
+</html>
