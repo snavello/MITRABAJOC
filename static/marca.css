@@ -75,6 +75,12 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
 
 /* ---------- Tarjetas de acceso (portada) ---------- */
 .tarjetas { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+/* En desktop, sin un ancho máximo para .pad, 2 columnas dejaban cada
+   tarjeta enorme (ícono + texto ocupando un tercio del ancho). 3 columnas
+   arriba de este breakpoint, mobile queda igual que antes. */
+@media (min-width: 700px) {
+  .tarjetas { grid-template-columns: 1fr 1fr 1fr; }
+}
 .acceso { background: var(--sup-1); border: 1px solid var(--sup-2); border-radius: 13px;
           padding: 13px 12px 14px; min-height: 88px; color: var(--sobre-base);
           display: flex; flex-direction: column; justify-content: space-between;
