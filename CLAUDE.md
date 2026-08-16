@@ -55,7 +55,10 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 1. Admin de plataforma — /plataforma con CUIT + PLATAFORMA_PASSWORD. Da de alta
    sindicatos (con marca y logo) y sus admins.
 2. Admin de sindicato — /admin con CUIT + clave. Gestiona conceptos, fórmulas,
-   trabajadores y reportes SOLO de su sindicato (aislamiento total).
+   trabajadores y reportes SOLO de su sindicato (aislamiento total). El login
+   redirige a /admin/inicio, una portada de tarjetas (ver "Rediseño de
+   interfaz" más abajo); desde ahí se entra a /admin, que sigue siendo el
+   panel de siempre con sus 11 secciones.
 3. Trabajador — /ingresar con CUIL + clave. Identidad única (un CUIL para toda la
    plataforma). Empadronamiento por sindicato: si el CUIL está en varios, elige;
    la app se pinta con la marca del elegido. Después de elegir (o directo, si
@@ -167,6 +170,30 @@ encabezado oscuro. 4 colores por sindicato en vez de 3 (ver "Decisiones tomadas"
   de cada panel (tablas, formularios, tabs) sigue claro, sin cambios de fondo.
 - Sin tocar: `validador.py`, `semaforo.py`, ninguna lógica de cálculo — el
   rediseño es 100% presentación + la columna `color_base`.
+
+## Portada de /admin (2026-08-16)
+`templates/admin_portada.html`, ruta `GET /admin/inicio`. Las 11 secciones
+del panel de sindicato (Reportes, Fórmulas, Conceptos, Trabajadores,
+Aprendizaje, Afiliados cotizantes, Noticias, Beneficios, Notificaciones,
+Trámites, Seccionales) ya no entraban en una sola línea de pestañas. El
+login de `/admin` ahora redirige acá primero: mismo lenguaje visual que la
+portada del trabajador (vidrio + grano + tipografía condensada, oscura o
+clara según `Sindicato.portada_clara`, mismos 4 colores de marca), una
+tarjeta por sección (filtradas por `modulos`, mismo criterio que ya usaba
+la barra de pestañas; Trabajadores y Seccionales siempre visibles). Cada
+tarjeta linkea a `/admin#<panel>` — reusa tal cual el deep-link por hash
+que ya existía en `admin.html` (`abrirDesdeHash()`), cero cambios ahí.
+`/admin` en sí (el panel con los 11 `<div class="panel">` y toda su
+lógica) no cambió de comportamiento; lo único que cambió ahí es la
+navegación: la barra de pestañas, que antes hacía *wrap* a 2-3 líneas,
+ahora es una tira horizontal deslizable (`.nav-strip`, una sola línea,
+ícono + texto chico) pegada debajo del header oscuro, más un botón
+flotante "Inicio" (al lado del "Salir" que ya existía) para volver a
+`/admin/inicio`. Todos los `RedirectResponse("/admin#...")` que ya usan
+las rutas POST de cada acción (alta de trabajador, guardar fórmula, etc.)
+siguen apuntando a `/admin` sin cambios — solo el login inicial cambió de
+destino. No se tocó `/plataforma` (pedido explícitamente scopeado a admin
+de sindicato).
 
 ## Rediseño visual "modelo Nike" (COMPLETO)
 Segunda vuelta de dirección visual, explorada primero en un Artifact fuera

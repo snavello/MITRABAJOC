@@ -512,6 +512,24 @@ def admin(request: Request):
     })
 
 
+@app.get("/admin/inicio", response_class=HTMLResponse)
+def admin_inicio(request: Request):
+    ses = sesion_actual(request)
+    if not ses or ses.get("rol") != "sindicato":
+        return templates.TemplateResponse("admin_login.html", {
+            "request": request, "marca_plataforma": db.marca_plataforma()})
+
+    sid = ses.get("sid", 0)
+    marca = db.marca_sindicato(sid)
+    return templates.TemplateResponse("admin_portada.html", {
+        "request": request, "sindicato": marca.get("nombre", ""),
+        "marca": marca, "marca_plataforma": db.marca_plataforma(),
+        "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
+        "modulos": _modulos_de(sid),
+        "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
+    })
+
+
 @app.post("/admin/login")
 def admin_login(usuario: str = Form(...), clave: str = Form(...)):
     cuit = _norm_cuil(usuario)   # todos los usuarios se identifican con CUIT/CUIL
@@ -521,7 +539,7 @@ def admin_login(usuario: str = Form(...), clave: str = Form(...)):
         if not user or not auth.verificar_clave(clave, user.clave_hash):
             return RedirectResponse("/admin?error=1", status_code=303)
         token = auth.crear_sesion("sindicato", id_usuario=user.id, sindicato_id=user.sindicato_id)
-    resp = RedirectResponse("/admin", status_code=303)
+    resp = RedirectResponse("/admin/inicio", status_code=303)
     resp.set_cookie(COOKIE, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     return resp
 

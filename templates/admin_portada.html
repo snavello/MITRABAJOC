@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="{{ marca.color_base }}">
+<title>Panel de administración — {{ sindicato }}</title>
+<link rel="stylesheet" href="/static/marca.css">
+<style>
+  :root {
+    --marca-base: {{ marca.color_base }};
+    --marca-primario: {{ marca.color_primario }};
+    --marca-acento: {{ marca.color_acento }};
+    --marca-apoyo: {{ marca.color_secundario }};
+  }
+  body { min-height: 100vh; }
+  body.oscuro { background: radial-gradient(circle at 30% -10%, color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base)) 0%, var(--marca-base) 46%); }
+  body.claro { background: var(--papel); }
+  .titulo-sec { font-family: var(--fuente-display); font-weight: 700; font-size: 22px;
+    letter-spacing: .002em; color: var(--sobre-base); margin-top: 6px; }
+  body.claro .titulo-sec { color: var(--tinta); }
+
+  body.oscuro .tarjetas .acceso { position: relative; overflow: hidden;
+    background: linear-gradient(155deg, rgba(255,255,255,.14), rgba(255,255,255,.02) 55%, rgba(255,255,255,.06));
+    border-color: rgba(255,255,255,.14); backdrop-filter: blur(3px) saturate(1.1); }
+  body.oscuro .tarjetas .acceso::after { content: ""; position: absolute; top: -60%; left: -30%;
+    width: 90%; height: 90%; background: linear-gradient(120deg, rgba(255,255,255,.22), transparent 60%);
+    transform: rotate(-18deg); pointer-events: none; }
+
+  body.claro .tarjetas .acceso { position: relative; overflow: hidden; color: var(--tinta);
+    background: linear-gradient(160deg, #ffffff, var(--papel)); border-color: var(--linea);
+    box-shadow: 0 1px 0 rgba(20,15,5,.03); }
+  body.claro .tarjetas .acceso .estado { color: var(--gris); opacity: 1; }
+
+  .btn-acerca { background: none; border: none; opacity: .5; font-size: 11px; cursor: pointer;
+    padding: 6px; color: var(--sobre-base-mute); }
+  body.claro .btn-acerca { color: var(--gris); }
+</style>
+</head>
+<body class="{{ 'claro' if marca.portada_clara else 'oscuro' }} grano {{ 'grano-clara' if marca.portada_clara else 'grano-osc' }}">
+
+<div class="enc">
+  {% if marca.logo %}
+  <img class="logo" src="/logo/{{ marca.id }}" alt="{{ sindicato }}">
+  {% else %}
+  <div class="logo-fallback">{{ iniciales }}</div>
+  {% endif %}
+  <div>
+    <div class="nom">{{ sindicato }}</div>
+    <div class="sub">Panel de administración</div>
+  </div>
+</div>
+
+<a class="btn-flotante btn-cerrar" href="/admin/salir" title="Salir" aria-label="Salir">
+  <svg viewBox="0 0 24 24"><use href="#ic-x"/></svg>
+</a>
+
+<div class="pad">
+  <div class="titulo-sec">¿Qué querés hacer?</div>
+
+  <div class="tarjetas" style="margin-top: 18px;">
+    {% if 'recibos' in modulos %}
+    <a class="acceso" href="/admin#reportes">
+      <svg viewBox="0 0 24 24"><use href="#ic-reportes"/></svg>
+      <div>
+        <div class="titulo">Reportes</div>
+        <div class="estado">Recibos verificados por trabajadores</div>
+      </div>
+    </a>
+    {% endif %}
+    {% if 'recibos' in modulos %}
+    <a class="acceso" href="/admin#formulas">
+      <svg viewBox="0 0 24 24"><use href="#ic-formulas"/></svg>
+      <div>
+        <div class="titulo">Fórmulas</div>
+        <div class="estado">Cálculo de cada aporte</div>
+      </div>
+    </a>
+    {% endif %}
+    {% if 'recibos' in modulos %}
+    <a class="acceso" href="/admin#conceptos">
+      <svg viewBox="0 0 24 24"><use href="#ic-conceptos"/></svg>
+      <div>
+        <div class="titulo">Conceptos</div>
+        <div class="estado">Catálogo del recibo</div>
+      </div>
+    </a>
+    {% endif %}
+    <a class="acceso" href="/admin#trabajadores">
+      <svg viewBox="0 0 24 24"><use href="#ic-trabajadores"/></svg>
+      <div>
+        <div class="titulo">Trabajadores</div>
+        <div class="estado">Alta, baja y datos de afiliados</div>
+      </div>
+    </a>
+    {% if 'recibos' in modulos %}
+    <a class="acceso" href="/admin#aprendizaje">
+      <svg viewBox="0 0 24 24"><use href="#ic-aprendizaje"/></svg>
+      <div>
+        <div class="titulo">Aprendizaje</div>
+        <div class="estado">Corregir sugerencias de la IA</div>
+      </div>
+    </a>
+    {% endif %}
+    {% if 'recibos' in modulos %}
+    <a class="acceso" href="/admin#cotizantes">
+      <svg viewBox="0 0 24 24"><use href="#ic-cotizantes"/></svg>
+      <div>
+        <div class="titulo">Afiliados cotizantes</div>
+        <div class="estado">Recibos enviados al sindicato</div>
+      </div>
+    </a>
+    {% endif %}
+    {% if 'noticias' in modulos %}
+    <a class="acceso" href="/admin#noticias">
+      <svg viewBox="0 0 24 24"><use href="#ic-noticias"/></svg>
+      <div>
+        <div class="titulo">Noticias</div>
+        <div class="estado">Novedades para los afiliados</div>
+      </div>
+    </a>
+    {% endif %}
+    {% if 'beneficios' in modulos %}
+    <a class="acceso" href="/admin#beneficios">
+      <svg viewBox="0 0 24 24"><use href="#ic-beneficios"/></svg>
+      <div>
+        <div class="titulo">Beneficios</div>
+        <div class="estado">Descuentos para afiliados</div>
+      </div>
+    </a>
+    {% endif %}
+    {% if 'notificaciones' in modulos %}
+    <a class="acceso" href="/admin#notificaciones">
+      <svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg>
+      <div>
+        <div class="titulo">Notificaciones</div>
+        <div class="estado">Mensajes dirigidos a trabajadores</div>
+      </div>
+    </a>
+    {% endif %}
+    {% if 'tramites' in modulos %}
+    <a class="acceso" href="/admin#tramites">
+      <svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg>
+      <div>
+        <div class="titulo">Trámites</div>
+        <div class="estado">Formularios y seguimiento</div>
+      </div>
+    </a>
+    {% endif %}
+    <a class="acceso" href="/admin#seccionales">
+      <svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg>
+      <div>
+        <div class="titulo">Seccionales</div>
+        <div class="estado">Sedes y delegaciones</div>
+      </div>
+    </a>
+  </div>
+
+  <div style="text-align:center; margin-top:18px;">
+    <button class="btn-acerca" onclick="abrirAcerca()">Acerca de</button>
+  </div>
+</div>
+
+<!-- Overlay: acerca de -->
+<div class="overlay" id="overlay-acerca" onclick="if (event.target === this) cerrarAcerca()">
+  <div class="modal-hoja">
+    <button class="modal-cerrar" onclick="cerrarAcerca()" aria-label="Cerrar"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
+    <h3>Acerca de</h3>
+    <div class="modal-fila"><span class="k">Versión</span><span class="v">{{ version }}</span></div>
+    <div class="modal-fila"><span class="k">Fecha</span><span class="v">{{ fecha_version }}</span></div>
+  </div>
+</div>
+
+<!-- Íconos SVG de línea -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <g id="ic-x"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g>
+    <g id="ic-reportes"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 16v-4"/><path d="M12 16V8"/><path d="M16 16v-6"/></g>
+    <g id="ic-formulas"><circle cx="7.5" cy="7.5" r="2.3"/><circle cx="16.5" cy="16.5" r="2.3"/><line x1="18" y1="6" x2="6" y2="18"/></g>
+    <g id="ic-conceptos"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1.2"/><circle cx="4.5" cy="12" r="1.2"/><circle cx="4.5" cy="18" r="1.2"/></g>
+    <g id="ic-trabajadores"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.5" cy="9.5" r="2.3"/><path d="M15.3 14.5c2.1.5 3.7 2.4 3.9 4.8"/></g>
+    <g id="ic-aprendizaje"><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.4.9 1 .9 1.7V16h5.2v-.4c0-.7.3-1.3.9-1.7A6 6 0 0 0 12 3z"/><path d="M9.5 18.5h5"/><path d="M10.3 21h3.4"/></g>
+    <g id="ic-cotizantes"><path d="M5 12 6 5.4A2 2 0 0 1 8 3.6h8a2 2 0 0 1 2 1.8L19 12"/><path d="M3 12h4.5l2 3h5l2-3H21"/><path d="M3 12v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6"/></g>
+    <g id="ic-noticias"><rect x="3" y="5" width="14" height="14" rx="1.3"/><line x1="6.2" y1="9" x2="13.8" y2="9"/><line x1="6.2" y1="12" x2="13.8" y2="12"/><line x1="6.2" y1="15" x2="11" y2="15"/><path d="M17 8h1.5a2.5 2.5 0 0 1 2.5 2.5V17a2 2 0 0 1-2 2H9"/></g>
+    <g id="ic-beneficios"><path d="M20.6 12.3 12.7 3.4A2 2 0 0 0 11.2 3H5a2 2 0 0 0-2 2v6.2a2 2 0 0 0 .6 1.4l8.9 8.9a2 2 0 0 0 2.8 0l5.3-5.3a2 2 0 0 0 0-2.8Z"/><circle cx="8.5" cy="8.5" r="1.5"/></g>
+    <g id="ic-notif"><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></g>
+    <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
+    <g id="ic-seccionales"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></g>
+  </defs>
+</svg>
+
+<script>
+function abrirAcerca() { document.getElementById('overlay-acerca').classList.add('abierto'); }
+function cerrarAcerca() { document.getElementById('overlay-acerca').classList.remove('abierto'); }
+</script>
+
+</body>
+</html>
