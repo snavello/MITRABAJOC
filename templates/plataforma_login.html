@@ -12,9 +12,18 @@
   }
   * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
   body { background:var(--papel); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
-  .caja { background:#fff; border:1px solid var(--linea); border-radius:16px; padding:34px 30px; max-width:380px; width:100%; }
-  .logo-recuadro { display:block; width:76px; height:76px; object-fit:contain; margin:0 auto 18px; }
-  @media (max-width:600px) { .logo-recuadro { width:61px; height:61px; } }
+  /* Fondo gris con grano (en vez de blanco liso) para que el logo de Mi
+     Trabajo, agrandado acá un 40%, resalte más -- solo en las pantallas de
+     login, no en el resto de la app. ::before es el mismo patrón de grano
+     (feTurbulence inline) que usa marca.css; .caja > * lo pasa por encima. */
+  .caja { background:#9ea39e; border:1px solid var(--linea); border-radius:16px; padding:34px 30px;
+    max-width:380px; width:100%; position:relative; overflow:hidden; }
+  .caja::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity:.10; mix-blend-mode:overlay; }
+  .caja > * { position:relative; z-index:1; }
+  .logo-recuadro { display:block; width:106px; height:106px; object-fit:contain; margin:0 auto 18px; }
+  @media (max-width:600px) { .logo-recuadro { width:85px; height:85px; } }
   h1 { font-size:16px; color:var(--gris); font-weight:500; margin-bottom:22px; }
   label { display:block; font-size:13px; color:var(--gris); margin-bottom:6px; }
   input { width:100%; padding:11px 13px; border:1px solid #ccc; border-radius:9px; font-size:15px; font-family:inherit; }

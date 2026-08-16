@@ -129,13 +129,25 @@
   .tramite-subtab.activa { background:var(--marca-secundario); color:#fff; border-color:var(--marca-secundario); }
   .tramite-subpanel { display:none; }
   .tramite-subpanel.activo { display:block; }
+  /* Globo rojo, mismo componente que en las portadas (marca.css no está
+     importado acá) -- 30% más grande que la primera versión, y con
+     top/right propios porque este botón es chico, no una tarjeta. */
+  .badge-noleidas { position:absolute; top:-10px; right:-10px; background:#e5484d; color:#fff;
+    font-size:13.5px; font-weight:700; min-width:25px; height:25px; border-radius:999px;
+    display:flex; align-items:center; justify-content:center; padding:0 5px; border:2.5px solid #fff; }
   .campo-tramite-fila { display:grid; grid-template-columns:2fr 1fr 90px 90px 90px 1fr auto auto auto; gap:6px;
     align-items:center; padding:7px 0; border-bottom:1px solid var(--linea); font-size:12.5px; }
   .campo-tramite-fila input, .campo-tramite-fila select { padding:5px 6px; font-size:12.5px; }
   .campo-tramite-fila button { padding:4px 7px; font-size:11px; }
   .tramite-log { border-left:2px solid var(--linea); margin-left:6px; padding-left:14px; }
-  .tramite-log-item { position:relative; padding-bottom:14px; font-size:12.5px; }
-  .tramite-log-item::before { content:''; position:absolute; left:-18px; top:3px; width:8px; height:8px;
+  /* Cebra: cada paso alterna un tinte muy leve de los colores del sindicato,
+     para separar visualmente los eventos del historial de un vistazo. El
+     padding no mueve el borde izquierdo del item (solo el contenido), así
+     que el punto del ::before sigue alineado con la línea vertical. */
+  .tramite-log-item { position:relative; padding:5px 10px 14px 8px; border-radius:6px; font-size:12.5px; }
+  .tramite-log-item:nth-child(odd) { background:color-mix(in srgb, var(--marca-primario) 6%, transparent); }
+  .tramite-log-item:nth-child(even) { background:color-mix(in srgb, var(--marca-secundario) 6%, transparent); }
+  .tramite-log-item::before { content:''; position:absolute; left:-18px; top:8px; width:8px; height:8px;
     border-radius:50%; background:var(--marca-acento); }
   .tramite-nota { background:#faf9f6; border:1px solid var(--linea); border-radius:8px; padding:9px 11px; margin-bottom:8px; font-size:12.5px; }
   .tramite-nota.admin { border-left:3px solid var(--marca-primario); }
@@ -862,12 +874,45 @@
   {% endif %}
 
   <div class="subtabs">
-    <button type="button" class="tramite-subtab activa" data-tramite-sub="tipos" onclick="cambiarSubTramite('tipos')">Tipos de formulario</button>
-    <button type="button" class="tramite-subtab" data-tramite-sub="recibidos" onclick="cambiarSubTramite('recibidos')">Trámites recibidos</button>
+    <button type="button" class="tramite-subtab activa" data-tramite-sub="recibidos" onclick="cambiarSubTramite('recibidos')" style="position:relative;">
+      Ver trámites
+      {% if tramites_nuevos %}<span class="badge-noleidas">{{ tramites_nuevos }}</span>{% endif %}
+    </button>
+    <button type="button" class="tramite-subtab" data-tramite-sub="tipos" onclick="cambiarSubTramite('tipos')">Crear formularios</button>
+  </div>
+
+  <!-- Sub: TRÁMITES RECIBIDOS -->
+  <div class="tramite-subpanel activo" id="tramite-sub-recibidos">
+    <h2>Trámites recibidos ({{ tramites|length }})</h2>
+    <div class="filtros">
+      <input type="text" id="f-tramites-cuit" placeholder="Buscar por CUIL" oninput="filtrarTramites()">
+      <input type="text" id="f-tramites-nombre" placeholder="Buscar por N° de expediente" oninput="filtrarTramites()">
+      <select id="f-tramites-estado" onchange="filtrarTramites()">
+        <option value="">Todos los estados</option>
+        {% for e in estados_tramite %}<option value="{{ e }}">{{ estados_tramite_label[e] }}</option>{% endfor %}
+      </select>
+      <button type="button" class="sec mini" onclick="limpiarFiltroTramites()">Limpiar</button>
+      <span class="f-cant" id="f-tramites-cant"></span>
+    </div>
+    <table>
+      <tr><th>Expediente</th><th>CUIL</th><th>Tipo</th><th>Estado</th><th>Actualizado</th><th></th></tr>
+      {% for tr in tramites %}
+      <tr class="fila-tramite" id="tramite-fila-{{ tr.id }}" data-cuil="{{ tr.cuil }}" data-nombre="{{ tr.numero_expediente }}" data-estado="{{ tr.estado }}">
+        <td><code>{{ tr.numero_expediente }}</code></td>
+        <td>{{ tr.cuil }}</td>
+        <td>{{ tr.tipo_titulo }}</td>
+        <td><span class="tag {{ 'tag-si' if tr.estado == 'terminado' else 'tag-pend' }}">{{ tr.estado_label }}</span></td>
+        <td class="muted">{{ tr.actualizado }}</td>
+        <td style="text-align:right;"><button type="button" class="mini" onclick="abrirTramiteDetalle({{ tr.id }})">Ver</button></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="muted">Todavía no llegó ningún trámite.</td></tr>
+      {% endfor %}
+    </table>
   </div>
 
   <!-- Sub: TIPOS DE FORMULARIO -->
-  <div class="tramite-subpanel activo" id="tramite-sub-tipos">
+  <div class="tramite-subpanel" id="tramite-sub-tipos">
     <h2 id="tt-h2">Nuevo tipo de trámite</h2>
     <div class="card">
       <form method="post" action="/admin/tramite-tipo" id="form-tramite-tipo">
@@ -913,36 +958,6 @@
       </tr>
       {% else %}
       <tr><td colspan="6" class="muted">Todavía no cargaste ningún tipo de trámite.</td></tr>
-      {% endfor %}
-    </table>
-  </div>
-
-  <!-- Sub: TRÁMITES RECIBIDOS -->
-  <div class="tramite-subpanel" id="tramite-sub-recibidos">
-    <h2>Trámites recibidos ({{ tramites|length }})</h2>
-    <div class="filtros">
-      <input type="text" id="f-tramites-cuit" placeholder="Buscar por CUIL" oninput="filtrarTramites()">
-      <input type="text" id="f-tramites-nombre" placeholder="Buscar por N° de expediente" oninput="filtrarTramites()">
-      <select id="f-tramites-estado" onchange="filtrarTramites()">
-        <option value="">Todos los estados</option>
-        {% for e in estados_tramite %}<option value="{{ e }}">{{ estados_tramite_label[e] }}</option>{% endfor %}
-      </select>
-      <button type="button" class="sec mini" onclick="limpiarFiltroTramites()">Limpiar</button>
-      <span class="f-cant" id="f-tramites-cant"></span>
-    </div>
-    <table>
-      <tr><th>Expediente</th><th>CUIL</th><th>Tipo</th><th>Estado</th><th>Actualizado</th><th></th></tr>
-      {% for tr in tramites %}
-      <tr class="fila-tramite" id="tramite-fila-{{ tr.id }}" data-cuil="{{ tr.cuil }}" data-nombre="{{ tr.numero_expediente }}" data-estado="{{ tr.estado }}">
-        <td><code>{{ tr.numero_expediente }}</code></td>
-        <td>{{ tr.cuil }}</td>
-        <td>{{ tr.tipo_titulo }}</td>
-        <td><span class="tag {{ 'tag-si' if tr.estado == 'terminado' else 'tag-pend' }}">{{ tr.estado_label }}</span></td>
-        <td class="muted">{{ tr.actualizado }}</td>
-        <td style="text-align:right;"><button type="button" class="mini" onclick="abrirTramiteDetalle({{ tr.id }})">Ver</button></td>
-      </tr>
-      {% else %}
-      <tr><td colspan="6" class="muted">Todavía no llegó ningún trámite.</td></tr>
       {% endfor %}
     </table>
   </div>
@@ -1295,11 +1310,14 @@ function renderCamposTramite() {
         <option value="numero" ${c.tipo_dato==='numero'?'selected':''}>Número</option>
         <option value="fecha" ${c.tipo_dato==='fecha'?'selected':''}>Fecha</option>
         <option value="archivo" ${c.tipo_dato==='archivo'?'selected':''}>Archivo</option>
+        <option value="seleccion" ${c.tipo_dato==='seleccion'?'selected':''}>Selección fija</option>
       </select>
       <input type="number" min="0" placeholder="Long. máx." value="${c.longitud_maxima ?? ''}" ${c.tipo_dato!=='texto'?'disabled':''} oninput="actualizarCampoTramite(${i},'longitud_maxima',this.value)">
       <input type="number" min="0" placeholder="Long. exacta" value="${c.longitud_exacta ?? ''}" ${c.tipo_dato!=='texto'?'disabled':''} oninput="actualizarCampoTramite(${i},'longitud_exacta',this.value)">
       <input type="number" min="0" placeholder="Decimales" value="${c.decimales ?? ''}" ${c.tipo_dato!=='numero'?'disabled':''} oninput="actualizarCampoTramite(${i},'decimales',this.value)">
-      <input placeholder="Tipos de archivo (pdf,jpg)" value="${escHtml(c.tipos_archivo_permitidos)}" ${c.tipo_dato!=='archivo'?'disabled':''} oninput="actualizarCampoTramite(${i},'tipos_archivo_permitidos',this.value)">
+      ${c.tipo_dato==='seleccion'
+        ? `<input placeholder="Opciones separadas por coma" value="${escHtml(c.opciones)}" oninput="actualizarCampoTramite(${i},'opciones',this.value)">`
+        : `<input placeholder="Tipos de archivo (pdf,jpg)" value="${escHtml(c.tipos_archivo_permitidos)}" ${c.tipo_dato!=='archivo'?'disabled':''} oninput="actualizarCampoTramite(${i},'tipos_archivo_permitidos',this.value)">`}
       <label style="display:flex; align-items:center; gap:3px; white-space:nowrap;"><input type="checkbox" ${c.obligatorio?'checked':''} onchange="actualizarCampoTramite(${i},'obligatorio',this.checked)"> Oblig.</label>
       <button type="button" class="sec mini" ${i===0?'disabled':''} onclick="moverCampoTramite(${i},-1)" title="Subir">↑</button>
       <button type="button" class="sec mini" ${i===camposTramiteActuales.length-1?'disabled':''} onclick="moverCampoTramite(${i},1)" title="Bajar">↓</button>
@@ -1308,7 +1326,7 @@ function renderCamposTramite() {
   `).join('');
 }
 function agregarCampoTramite() {
-  camposTramiteActuales.push({etiqueta:'', tipo_dato:'texto', longitud_maxima:null, longitud_exacta:null, decimales:null, tipos_archivo_permitidos:'', obligatorio:true});
+  camposTramiteActuales.push({etiqueta:'', tipo_dato:'texto', longitud_maxima:null, longitud_exacta:null, decimales:null, tipos_archivo_permitidos:'', opciones:'', obligatorio:true});
   renderCamposTramite();
 }
 function actualizarCampoTramite(i, campo, valor) {
@@ -1420,20 +1438,23 @@ function refrescarTramiteDetalle(id) {
       ${respuestasHtml || '<p class="muted" style="font-size:12.5px;">Sin respuestas.</p>'}
 
       <h3 style="font-size:13.5px; margin-top:16px;">Estado</h3>
-      <div style="display:flex; gap:8px; align-items:center;">
-        <select id="mt-estado-select">${opcionesEstado}</select>
-        <button type="button" class="mini" onclick="cambiarEstadoTramiteAdmin(${d.id})">Actualizar</button>
-      </div>
+      ${d.estado === 'terminado'
+        ? '<p class="muted" style="font-size:12.5px;">Trámite terminado -- no se puede modificar.</p>'
+        : `<div style="display:flex; gap:8px; align-items:center;">
+             <select id="mt-estado-select">${opcionesEstado}</select>
+             <button type="button" class="mini" onclick="cambiarEstadoTramiteAdmin(${d.id})">Actualizar</button>
+           </div>`}
 
       <h3 style="font-size:13.5px; margin-top:16px;">Notas</h3>
       ${notasHtml}
+      ${d.estado === 'terminado' ? '' : `
       <form id="mt-form-nota" style="margin-top:8px;" onsubmit="return enviarNotaTramiteAdmin(event, ${d.id})">
         <textarea id="mt-nota-texto" rows="2" placeholder="Escribile una nota o pedile más información al trabajador…" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:7px; font-family:inherit; font-size:12.5px;"></textarea>
         <div style="display:flex; gap:8px; align-items:center; margin-top:6px;">
           <input type="file" id="mt-nota-adjunto" style="font-size:12px;">
           <button type="submit" class="mini">Enviar nota</button>
         </div>
-      </form>
+      </form>`}
 
       <h3 style="font-size:13.5px; margin-top:16px;">Historial</h3>
       <div class="tramite-log">${logHtml}</div>

@@ -12,9 +12,18 @@
   }
   * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
   body { background:var(--papel); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
-  .caja { background:#fff; border:1px solid var(--linea); border-radius:16px; padding:32px 26px; max-width:400px; width:100%; }
-  .logo-recuadro { display:block; width:76px; height:76px; object-fit:contain; margin:0 auto 18px; }
-  @media (max-width:600px) { .logo-recuadro { width:61px; height:61px; } }
+  /* Fondo gris con grano (en vez de blanco liso) para que el logo de Mi
+     Trabajo, agrandado acá un 40%, resalte más -- solo en las pantallas de
+     login, no en el resto de la app. ::before es el mismo patrón de grano
+     (feTurbulence inline) que usa marca.css; .caja > * lo pasa por encima. */
+  .caja { background:#9ea39e; border:1px solid var(--linea); border-radius:16px; padding:32px 26px;
+    max-width:400px; width:100%; position:relative; overflow:hidden; }
+  .caja::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity:.10; mix-blend-mode:overlay; }
+  .caja > * { position:relative; z-index:1; }
+  .logo-recuadro { display:block; width:106px; height:106px; object-fit:contain; margin:0 auto 18px; }
+  @media (max-width:600px) { .logo-recuadro { width:85px; height:85px; } }
   .tabs { display:flex; gap:6px; margin-bottom:20px; background:#f2f0ea; padding:4px; border-radius:10px; }
   .tab { flex:1; text-align:center; padding:9px; border-radius:7px; font-size:14px; font-weight:500; cursor:pointer; color:var(--gris); border:none; background:none; font-family:inherit; }
   .tab.activo { background:#fff; color:var(--tinta); box-shadow:0 1px 3px rgba(0,0,0,.08); }

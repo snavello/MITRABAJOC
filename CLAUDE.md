@@ -443,12 +443,20 @@ escribe ahí, llamado desde alta/cambio de estado/cada nota).
   exacta/máxima, formato numérico y extensión de archivo permitida
   server-side ANTES de persistir (el formulario del cliente valida lo
   mismo, pero eso es solo UX — la ruta es la que realmente decide).
-- **Estados**: `enviado → en_tratamiento → respondido → espera_info →
-  terminado` (`db.ESTADOS_TRAMITE`/`ESTADOS_TRAMITE_LABEL`). Cambiar el
-  estado o agregar una nota **desde el admin** dispara automáticamente una
-  Notificacion `origen="sistema"` al trabajador (Fase 2); una nota **del
-  trabajador** NO se auto-notifica (no tiene sentido notificarse a sí
-  mismo) — probado explícitamente en `test_tramites.py`.
+- **Estados**: `iniciado → en_tratamiento → respondido → espera_info →
+  terminado` (`db.ESTADOS_TRAMITE`/`ESTADOS_TRAMITE_LABEL` -- el primer
+  estado se llamaba "enviado" hasta el 2026-08-16, renombrado a "iniciado"
+  con migración de datos, ver más abajo). Cambiar el estado o agregar una
+  nota **desde el admin** dispara automáticamente una Notificacion
+  `origen="sistema"` al trabajador (Fase 2); una nota **del trabajador**
+  NO se auto-notifica (no tiene sentido notificarse a sí mismo) — probado
+  explícitamente en `test_tramites.py`. **`terminado` es un estado final**:
+  ni `db.cambiar_estado_tramite` ni `db.agregar_nota_tramite` (de cualquiera
+  de los dos lados) aceptan más cambios sobre un trámite ya terminado --
+  ambas funciones devuelven `False` (main.py lo traduce a 400 con mensaje
+  explícito); la UI (admin.html y trabajador.html) oculta el selector de
+  estado y la caja de notas cuando `estado === 'terminado'`, en vez de
+  dejarlos habilitados para que el servidor los rechace igual.
 - **UI trabajador** (`trabajador.html`, 6ta pestaña "Trámites", + tarjeta en
   `portada.html`): landing con "Mis trámites" + consulta por número de
   expediente → elegir tipo → formulario dinámico (un input por campo, según
@@ -459,12 +467,18 @@ escribe ahí, llamado desde alta/cambio de estado/cada nota).
   consulta por expediente NO es pública — pide sesión de trabajador y el
   CUIL de la sesión tiene que coincidir con el dueño del trámite
   (`GET /api/tramite/{numero}`).
-- **UI admin**: sub-pestaña "Trámites recibidos" con filtro por CUIL/N° de
-  expediente/estado (JS propio, no reusa `aplicarFiltro` porque ese helper
-  no compone bien con un filtro por `<select>` además de los de texto) y un
-  modal de detalle que permite cambiar el estado y agregar notas sin salir
-  de la pestaña — al confirmar, refresca el modal Y la fila de la tabla en
-  el mismo re-render (`refrescarTramiteDetalle`), sin recargar la página.
+- **UI admin**: sub-pestaña "Ver trámites" (primera, antes "Trámites
+  recibidos" iba segunda -- reordenado el 2026-08-16 porque es la que se
+  usa en el día a día; "Crear formularios", antes "Tipos de formulario",
+  quedó segunda) con filtro por CUIL/N° de expediente/estado (JS propio, no
+  reusa `aplicarFiltro` porque ese helper no compone bien con un filtro por
+  `<select>` además de los de texto) y un modal de detalle que permite
+  cambiar el estado y agregar notas sin salir de la pestaña — al confirmar,
+  refresca el modal Y la fila de la tabla en el mismo re-render
+  (`refrescarTramiteDetalle`), sin recargar la página. La pestaña "Ver
+  trámites" lleva el mismo globo rojo (`.badge-noleidas`) que ya usaba la
+  tarjeta de la portada de admin, contando `db.contar_tramites_nuevos` (
+  estado `iniciado`, el admin todavía no lo tocó).
 - **Quirk de implementación evitado a propósito**: las sub-pestañas de
   Trámites usan sus propias clases CSS (`.tramite-subtab`/`.tramite-
   subpanel`), NO las mismas `.subtab`/`.subpanel` que ya usa Trabajadores
@@ -496,6 +510,47 @@ escribe ahí, llamado desde alta/cambio de estado/cada nota).
   ocupando el ancho completo del recuadro de forma consistente. Los inputs
   de texto/número/fecha comparten la clase `.tram-input` (antes no tenían
   `width:100%` explícito y quedaban angostos).
+- **Tipo de campo "Selección fija" (2026-08-16)**: `CampoTramite.opciones`
+  (columna nueva, string, valores separados por coma) además de
+  `tipo_dato="seleccion"`. El admin las carga en el mismo input que ya
+  usaba "Tipos de archivo" en el constructor de campos (reusa el slot en
+  vez de sumar una columna más a una fila ya densa de 9-10 campos --
+  `admin.html::renderCamposTramite` cambia el placeholder/target según el
+  `tipo_dato` elegido). El trabajador ve un `<select>` con esas opciones
+  (`trabajador.html::campoInputHtml`). Validación server-side en
+  `main.api_enviar_tramite`: el valor recibido tiene que estar en la lista
+  de opciones (si hay opciones cargadas), igual que hoy se valida longitud/
+  tipo de archivo para los otros `tipo_dato`.
+- **Cebra en el historial (2026-08-16)**: `.tramite-log-item` (admin.html)
+  y `.tram-log-list .fila` (trabajador.html) alternan un tinte muy leve
+  (`color-mix(... 6%, transparent)`) entre dos colores de marca del
+  sindicato en vez de un fondo plano, para separar cada paso del historial
+  de un vistazo. El punto del timeline (`::before`) no se movió: el tinte
+  se logró con padding, no con margin, así el marcador circular sigue
+  centrado en la línea vertical.
+- **Globo del badge cortado por el borde de la tarjeta (fix 2026-08-16)**:
+  `.badge-noleidas` (notificaciones en portada.html, trámites en
+  admin_portada.html) se posicionaba `absolute` DENTRO de `.acceso`, que
+  tiene `overflow:hidden` (necesario para el brillo/vidrio de la tarjeta)
+  — el globo quedaba recortado en el borde en vez de sobresalir. Fix: un
+  `<div class="acceso-badge-wrap">` (sin `overflow:hidden`) envuelve la
+  tarjeta, y el badge pasa a ser hermano de `.acceso` dentro de ese wrap,
+  no hijo. De paso, 30% más grande (antes 19px/10.5px de fuente, ahora
+  25px/13.5px) en los dos lugares donde aparece, más el mismo globo nuevo
+  agregado a la sub-pestaña "Ver trámites" de `/admin` (ver más arriba).
+
+## Fondo de los logins (2026-08-16)
+Los 3 logins (`admin_login.html`, `plataforma_login.html`,
+`trabajador_login.html` -- NO `elegir_sindicato.html` ni
+`verificar_credencial.html`, que no son pantallas de login) cambiaron el
+fondo de `.caja` de blanco liso a gris medio (`#9ea39e`) con la misma
+textura de grano inline (`feTurbulence` en un `::before`, `.caja > *` con
+`z-index:1` para quedar por encima) que ya usa `marca.css` en la portada
+-- acá va inline porque estas 3 pantallas son standalone, no importan
+`marca.css`. El logo de plataforma (`.logo-recuadro`) se agrandó un 40%
+(76px→106px desktop, 61px→85px mobile) **solo en estas 3 pantallas** --
+en el resto de la app (headers de admin.html/trabajador.html, etc.) el
+tamaño de 76px unificado (ver "Decisiones tomadas") no cambió.
 
 ## Topes de base imponible (jubilación, INSSJP, obra social)
 El validador aplicaba el % de cada aporte sobre la base remunerativa

@@ -65,9 +65,13 @@
   body.claro .btn-acerca { color: var(--gris); }
 
   /* ---------- Notificaciones ---------- */
-  .badge-noleidas { position: absolute; top: -6px; right: -6px; background: #e5484d; color: #fff;
-    font-size: 10.5px; font-weight: 700; min-width: 19px; height: 19px; border-radius: 999px;
-    align-items: center; justify-content: center; padding: 0 4px; border: 2px solid var(--marca-base); }
+  /* El wrap (no la tarjeta .acceso, que tiene overflow:hidden para el brillo
+     de vidrio) es quien posiciona el globo -- así queda POR ARRIBA de la
+     tarjeta en vez de recortado en su borde. 30% más grande que la v1. */
+  .acceso-badge-wrap { position: relative; }
+  .badge-noleidas { position: absolute; top: -8px; right: -8px; background: #e5484d; color: #fff;
+    font-size: 13.5px; font-weight: 700; min-width: 25px; height: 25px; border-radius: 999px;
+    align-items: center; justify-content: center; padding: 0 5px; border: 2.5px solid var(--marca-base); z-index: 2; }
   /* Modal propio, sobre fondo claro con encabezado de marca -- a diferencia
      de perfil/noticia/beneficio/acerca, que se quedan con el estilo oscuro
      compartido (.modal-hoja) porque conviven con la portada oscura. */
@@ -168,14 +172,16 @@
     </a>
     {% endif %}
     {% if 'notificaciones' in modulos %}
-    <button type="button" class="acceso" style="position:relative; text-align:left; font-family:inherit; cursor:pointer;" onclick="abrirNotificaciones()">
-      <svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg>
-      <div>
-        <div class="titulo">Notificaciones</div>
-        <div class="estado">Mensajes de tu sindicato</div>
-      </div>
+    <div class="acceso-badge-wrap">
+      <button type="button" class="acceso" style="text-align:left; font-family:inherit; cursor:pointer; width:100%;" onclick="abrirNotificaciones()">
+        <svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg>
+        <div>
+          <div class="titulo">Notificaciones</div>
+          <div class="estado">Mensajes de tu sindicato</div>
+        </div>
+      </button>
       <span class="badge-noleidas" id="badge-notif" style="display:{{ 'flex' if notificaciones_no_leidas else 'none' }};">{{ notificaciones_no_leidas }}</span>
-    </button>
+    </div>
     {% endif %}
     {% if 'tramites' in modulos %}
     <a class="acceso" href="/app?tab=tramites">

@@ -41,7 +41,7 @@ with db.get_session() as s:
     s.add(tipo); s.commit(); s.refresh(tipo)
     for i in range(2):
         s.add(Tramite(sindicato_id=SID_FULL, tipo_tramite_id=tipo.id,
-                       numero_expediente=f"F01-2026-00000{i}", cuil="20111111119", estado="enviado"))
+                       numero_expediente=f"F01-2026-00000{i}", cuil="20111111119", estado="iniciado"))
     s.add(Tramite(sindicato_id=SID_FULL, tipo_tramite_id=tipo.id,
                    numero_expediente="F01-2026-000002", cuil="20111111119", estado="terminado"))
     s.commit()
@@ -103,12 +103,12 @@ def test_saluda_con_el_nombre_del_admin_logueado():
     print("OK  test_saluda_con_el_nombre_del_admin_logueado")
 
 
-def test_globo_de_tramites_nuevos_cuenta_solo_estado_enviado():
+def test_globo_de_tramites_nuevos_cuenta_solo_estado_iniciado():
     c = _admin_client("20777777770", "full-demo")
     r = c.get("/admin/inicio")
     assert db.contar_tramites_nuevos(SID_FULL) == 2
     assert '<span class="badge-noleidas">2</span>' in r.text
-    print("OK  test_globo_de_tramites_nuevos_cuenta_solo_estado_enviado")
+    print("OK  test_globo_de_tramites_nuevos_cuenta_solo_estado_iniciado")
 
 
 def test_sin_tramites_no_muestra_globo():
@@ -124,6 +124,6 @@ if __name__ == "__main__":
     test_sindicato_con_todos_los_modulos_ve_las_12_tarjetas()
     test_sindicato_solo_recibos_no_ve_modulos_apagados_pero_si_los_fijos()
     test_saluda_con_el_nombre_del_admin_logueado()
-    test_globo_de_tramites_nuevos_cuenta_solo_estado_enviado()
+    test_globo_de_tramites_nuevos_cuenta_solo_estado_iniciado()
     test_sin_tramites_no_muestra_globo()
     print("\nTodos los tests de admin_portada pasaron.")

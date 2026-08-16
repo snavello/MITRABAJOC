@@ -136,6 +136,10 @@
   .fila { display:flex; justify-content:space-between; gap:12px; padding:11px 15px; border-top:1px solid #f0eee8; font-size:14px; }
   .fila .imp { font-variant-numeric:tabular-nums; }
   .fila .imp.neg { color:var(--alerta); }
+  /* Cebra del historial de un trámite: tinte muy leve alternado con los
+     colores del sindicato, mismo criterio que admin.html. */
+  .tram-log-list .fila:nth-child(odd) { background:color-mix(in srgb, var(--marca-primario) 6%, transparent); }
+  .tram-log-list .fila:nth-child(even) { background:color-mix(in srgb, var(--marca-acento) 6%, transparent); }
 
   /* ---------- Recuadro con encabezado de marca (Trámites) ----------
      Vidrio + grano + condensada (Fase D del rediseño): el recuadro entero
@@ -1176,7 +1180,7 @@ if (document.getElementById('tp-tramites')) {
     });
   };
   const ESTADO_TAG_COLOR = {
-    enviado: ['#fdf3e7', '#8a5a1a'], en_tratamiento: ['#e8def5', '#5b3d8a'],
+    iniciado: ['#fdf3e7', '#8a5a1a'], en_tratamiento: ['#e8def5', '#5b3d8a'],
     respondido: ['#e3f2ee', 'var(--agua)'], espera_info: ['#f8e5e2', 'var(--alerta)'],
     terminado: ['#e3f2ee', 'var(--agua)'],
   };
@@ -1247,6 +1251,13 @@ if (document.getElementById('tp-tramites')) {
     }
     if (c.tipo_dato === 'fecha') return `<input type="date" class="tram-input" id="${id}">`;
     if (c.tipo_dato === 'numero') return `<input type="text" inputmode="decimal" class="tram-input" id="${id}" placeholder="${c.decimales ? 'Ej: 1234.56' : 'Ej: 1234'}">`;
+    if (c.tipo_dato === 'seleccion') {
+      const opciones = (c.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
+      return `<select class="tram-input" id="${id}">
+        <option value="">Elegí una opción</option>
+        ${opciones.map(o => `<option value="${escTram(o)}">${escTram(o)}</option>`).join('')}
+      </select>`;
+    }
     const maxlen = c.longitud_exacta || c.longitud_maxima;
     return `<input type="text" class="tram-input" id="${id}" ${maxlen ? `maxlength="${maxlen}"` : ''} placeholder="${c.longitud_exacta ? c.longitud_exacta + ' caracteres' : ''}">`;
   }
@@ -1341,13 +1352,7 @@ if (document.getElementById('tp-tramites')) {
         </div>`).join('') || '<p class="muted" style="font-size:12.5px; margin-top:8px;">Sin notas todavía.</p>';
 
       const logHtml = d.log.map(l => `<div class="fila" style="padding:6px 0; font-size:12.5px;"><span class="muted">${l.creado}</span><span>${escTram(l.detalle)}</span></div>`).join('');
-
-      document.getElementById('tram-det-contenido').innerHTML = `
-        <div class="fila" style="border:none; padding:0 0 14px;"><span class="muted">Estado</span><span>${tagEstado(d.estado, d.estado_label)}</span></div>
-        <h2 style="font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; padding:14px 0 8px; border-top:1px solid #f0eee8;">Datos presentados</h2>
-        <div>${respuestasHtml}</div>
-        <h2 style="font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; margin-top:18px; padding:0 0 8px;">Notas</h2>
-        ${notasHtml}
+      const notaFormHtml = d.estado === 'terminado' ? '<p class="muted" style="font-size:12.5px; margin-top:8px;">Trámite terminado -- no se pueden agregar más notas.</p>' : `
         <form id="tram-nota-form" style="margin-top:10px;">
           <textarea id="tram-nota-texto" rows="2" class="tram-input" placeholder="Responder a tu sindicato…" style="resize:vertical;"></textarea>
           <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
@@ -1356,11 +1361,20 @@ if (document.getElementById('tp-tramites')) {
             <button type="submit" class="btn" style="width:auto; margin-top:0; padding:0 16px; min-height:40px; flex:1;">Enviar</button>
           </div>
           <div class="archivo-nombre" id="tram-nota-adjunto-nombre"></div>
-        </form>
+        </form>`;
+
+      document.getElementById('tram-det-contenido').innerHTML = `
+        <div class="fila" style="border:none; padding:0 0 14px;"><span class="muted">Estado</span><span>${tagEstado(d.estado, d.estado_label)}</span></div>
+        <h2 style="font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; padding:14px 0 8px; border-top:1px solid #f0eee8;">Datos presentados</h2>
+        <div>${respuestasHtml}</div>
+        <h2 style="font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; margin-top:18px; padding:0 0 8px;">Notas</h2>
+        ${notasHtml}
+        ${notaFormHtml}
         <h2 style="font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; margin-top:18px; padding:0 0 8px;">Historial</h2>
-        <div>${logHtml}</div>
+        <div class="tram-log-list">${logHtml}</div>
       `;
-      document.getElementById('tram-nota-form').onsubmit = (ev) => {
+      const notaForm = document.getElementById('tram-nota-form');
+      if (notaForm) notaForm.onsubmit = (ev) => {
         ev.preventDefault();
         enviarNotaTramiteTrab(d.id, d.numero_expediente);
         return false;

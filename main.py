@@ -578,6 +578,7 @@ def admin(request: Request):
     codigos_efectivos = {c.codigo_generico or c.codigo for c in conceptos}
     seccionales = db.seccionales_del_sindicato(sid)
     seccional_por_id = {sec["id"]: sec["nombre"] for sec in seccionales}
+    modulos = _modulos_de(sid)
     return templates.TemplateResponse("admin.html", {
         "request": request, "sindicato": sind.nombre if sind else "",
         "marca": db.marca_sindicato(sid), "marca_plataforma": db.marca_plataforma(),
@@ -592,9 +593,10 @@ def admin(request: Request):
         "notificaciones": db.notificaciones_del_sindicato(sid),
         "tipos_tramite": db.tipos_tramite_del_sindicato(sid),
         "tramites": db.tramites_del_sindicato(sid),
+        "tramites_nuevos": db.contar_tramites_nuevos(sid) if "tramites" in modulos else 0,
         "estados_tramite": db.ESTADOS_TRAMITE, "estados_tramite_label": db.ESTADOS_TRAMITE_LABEL,
         "seccionales": seccionales, "seccional_por_id": seccional_por_id,
-        "modulos": _modulos_de(sid),
+        "modulos": modulos,
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
 
@@ -1297,7 +1299,7 @@ def _campos_tramite_validos(campos_crudos: list) -> list:
     for c in campos_crudos:
         if not isinstance(c, dict) or not str(c.get("etiqueta") or "").strip():
             continue
-        if c.get("tipo_dato") not in ("texto", "numero", "fecha", "archivo"):
+        if c.get("tipo_dato") not in ("texto", "numero", "fecha", "archivo", "seleccion"):
             continue
 
         def _entero(v):
@@ -1313,6 +1315,7 @@ def _campos_tramite_validos(campos_crudos: list) -> list:
             "longitud_exacta": _entero(c.get("longitud_exacta")),
             "decimales": _entero(c.get("decimales")),
             "tipos_archivo_permitidos": str(c.get("tipos_archivo_permitidos") or "").strip()[:200],
+            "opciones": str(c.get("opciones") or "").strip()[:500],
             "obligatorio": bool(c.get("obligatorio", True)),
         })
     return validos
@@ -1369,6 +1372,8 @@ def admin_cambiar_estado_tramite(tramite_id: int, request: Request, estado: str 
     detalle = db.tramite_detalle(tramite_id)
     if not detalle or detalle["sindicato_id"] != sid:
         raise HTTPException(404, "Trámite no encontrado")
+    if detalle["estado"] == "terminado":
+        raise HTTPException(400, "Este trámite está terminado y no se puede modificar.")
     if not db.cambiar_estado_tramite(tramite_id, sid, estado):
         raise HTTPException(400, "Estado inválido")
     nuevo_label = db.ESTADOS_TRAMITE_LABEL.get(estado, estado)
@@ -1385,6 +1390,8 @@ async def admin_nota_tramite(tramite_id: int, request: Request, texto: str = For
     detalle = db.tramite_detalle(tramite_id)
     if not detalle or detalle["sindicato_id"] != sid:
         raise HTTPException(404, "Trámite no encontrado")
+    if detalle["estado"] == "terminado":
+        raise HTTPException(400, "Este trámite está terminado y no se puede modificar.")
     adjunto_datos, adjunto_mime, adjunto_nombre = None, "", ""
     if adjunto and adjunto.filename:
         adjunto_datos, adjunto_mime, adjunto_nombre = _leer_archivo_tramite(adjunto)
@@ -1527,6 +1534,13 @@ async def api_enviar_tramite(request: Request):
             if campo["obligatorio"]:
                 errores.append(f'"{campo["etiqueta"]}" es obligatorio.')
             continue
+        if campo["tipo_dato"] == "seleccion":
+            opciones = [o.strip() for o in (campo.get("opciones") or "").split(",") if o.strip()]
+            if opciones and valor not in opciones:
+                errores.append(f'"{campo["etiqueta"]}": elegí una de las opciones permitidas.')
+                continue
+            respuestas.append({"campo_tramite_id": campo["id"], "valor_texto": valor})
+            continue
         if campo["tipo_dato"] == "numero":
             try:
                 float(valor.replace(",", "."))
@@ -1560,6 +1574,8 @@ async def api_nota_tramite_trabajador(tramite_id: int, request: Request, texto: 
     detalle = db.tramite_detalle(tramite_id)
     if not detalle or detalle["cuil"] != cuil:
         raise HTTPException(404, "Trámite no encontrado")
+    if detalle["estado"] == "terminado":
+        raise HTTPException(400, "Este trámite está terminado y no se puede modificar.")
     adjunto_datos, adjunto_mime, adjunto_nombre = None, "", ""
     if adjunto and adjunto.filename:
         adjunto_datos, adjunto_mime, adjunto_nombre = _leer_archivo_tramite(adjunto)

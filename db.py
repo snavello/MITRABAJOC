@@ -469,11 +469,12 @@ class CampoTramite(SQLModel, table=True):
     tipo_tramite_id: int = Field(foreign_key="tipotramite.id", index=True)
     orden: int = 0
     etiqueta: str
-    tipo_dato: str  # "texto" | "numero" | "fecha" | "archivo"
+    tipo_dato: str  # "texto" | "numero" | "fecha" | "archivo" | "seleccion"
     longitud_maxima: Optional[int] = Field(default=None)
     longitud_exacta: Optional[int] = Field(default=None)  # ej. CVU = 22
     decimales: Optional[int] = Field(default=None)        # solo si tipo_dato="numero"
     tipos_archivo_permitidos: str = ""                     # solo si tipo_dato="archivo"
+    opciones: str = ""                                      # solo si tipo_dato="seleccion", separadas por coma
     obligatorio: bool = True
 
 
@@ -486,7 +487,7 @@ class Tramite(SQLModel, table=True):
     tipo_tramite_id: int = Field(foreign_key="tipotramite.id", index=True)
     numero_expediente: str = Field(index=True, unique=True)  # "F01AEFIP-2026-000123"
     cuil: str = Field(index=True)
-    estado: str = "enviado"  # enviado | en_tratamiento | respondido | espera_info | terminado
+    estado: str = "iniciado"  # iniciado | en_tratamiento | respondido | espera_info | terminado
     creado: str = ""
     actualizado: str = ""
 
@@ -1334,7 +1335,7 @@ def _campo_tramite_a_dict(c: "CampoTramite") -> dict:
         "id": c.id, "orden": c.orden, "etiqueta": c.etiqueta, "tipo_dato": c.tipo_dato,
         "longitud_maxima": c.longitud_maxima, "longitud_exacta": c.longitud_exacta,
         "decimales": c.decimales, "tipos_archivo_permitidos": c.tipos_archivo_permitidos,
-        "obligatorio": c.obligatorio,
+        "opciones": c.opciones, "obligatorio": c.obligatorio,
     }
 
 
@@ -1350,7 +1351,7 @@ def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list
                 tipo_tramite_id=t.id, orden=i, etiqueta=c["etiqueta"], tipo_dato=c["tipo_dato"],
                 longitud_maxima=c.get("longitud_maxima"), longitud_exacta=c.get("longitud_exacta"),
                 decimales=c.get("decimales"), tipos_archivo_permitidos=c.get("tipos_archivo_permitidos", ""),
-                obligatorio=c.get("obligatorio", True),
+                opciones=c.get("opciones", ""), obligatorio=c.get("obligatorio", True),
             ))
         s.commit()
         return t.id
@@ -1375,7 +1376,7 @@ def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: st
                 tipo_tramite_id=tipo_id, orden=i, etiqueta=c["etiqueta"], tipo_dato=c["tipo_dato"],
                 longitud_maxima=c.get("longitud_maxima"), longitud_exacta=c.get("longitud_exacta"),
                 decimales=c.get("decimales"), tipos_archivo_permitidos=c.get("tipos_archivo_permitidos", ""),
-                obligatorio=c.get("obligatorio", True),
+                opciones=c.get("opciones", ""), obligatorio=c.get("obligatorio", True),
             ))
         s.commit()
         return True
@@ -1463,7 +1464,7 @@ def crear_tramite(sindicato_id: int, tipo_tramite_id: int, cuil: str, respuestas
         if not numero:
             raise RuntimeError("No se pudo generar un número de expediente único, reintentá.")
         tr = Tramite(sindicato_id=sindicato_id, tipo_tramite_id=tipo_tramite_id, cuil=cuil,
-                     numero_expediente=numero, estado="enviado", creado=ahora, actualizado=ahora)
+                     numero_expediente=numero, estado="iniciado", creado=ahora, actualizado=ahora)
         s.add(tr); s.commit(); s.refresh(tr)
         for r in respuestas:
             s.add(RespuestaTramite(
@@ -1476,19 +1477,22 @@ def crear_tramite(sindicato_id: int, tipo_tramite_id: int, cuil: str, respuestas
         return {"id": tr.id, "numero_expediente": numero}
 
 
-ESTADOS_TRAMITE = ["enviado", "en_tratamiento", "respondido", "espera_info", "terminado"]
+ESTADOS_TRAMITE = ["iniciado", "en_tratamiento", "respondido", "espera_info", "terminado"]
 ESTADOS_TRAMITE_LABEL = {
-    "enviado": "Enviado", "en_tratamiento": "En tratamiento", "respondido": "Respondido",
+    "iniciado": "Iniciado", "en_tratamiento": "En tratamiento", "respondido": "Respondido",
     "espera_info": "A la espera de información del afiliado", "terminado": "Terminado",
 }
 
 
 def cambiar_estado_tramite(tramite_id: int, sindicato_id: int, nuevo_estado: str) -> bool:
+    """False si el estado no es válido, el trámite no es de ese sindicato, o
+    el trámite YA está terminado -- un trámite terminado queda bloqueado,
+    no se puede reabrir ni cambiar de estado (ver también agregar_nota_tramite)."""
     if nuevo_estado not in ESTADOS_TRAMITE:
         return False
     with Session(engine) as s:
         tr = s.get(Tramite, tramite_id)
-        if not tr or tr.sindicato_id != sindicato_id:
+        if not tr or tr.sindicato_id != sindicato_id or tr.estado == "terminado":
             return False
         anterior = tr.estado
         tr.estado = nuevo_estado
@@ -1504,10 +1508,11 @@ def agregar_nota_tramite(tramite_id: int, autor: str, texto: str,
                           adjunto_datos: Optional[bytes] = None, adjunto_mime: str = "",
                           adjunto_nombre: str = "") -> bool:
     """`autor` es "admin" o "trabajador" -- la verificación de que quien
-    escribe tiene permiso sobre ESTE trámite la hace el caller (main.py)."""
+    escribe tiene permiso sobre ESTE trámite la hace el caller (main.py).
+    Un trámite terminado queda bloqueado para notas nuevas de cualquier lado."""
     with Session(engine) as s:
         tr = s.get(Tramite, tramite_id)
-        if not tr:
+        if not tr or tr.estado == "terminado":
             return False
         s.add(NotaTramite(
             tramite_id=tramite_id, autor=autor, texto=texto or "",
@@ -1548,11 +1553,12 @@ def tramites_del_sindicato(sindicato_id: int, estado: str = None, tipo_tramite_i
 
 
 def contar_tramites_nuevos(sindicato_id: int) -> int:
-    """Trámites recién presentados (estado "enviado", el admin todavía no
-    los tocó) -- para el globo de notificación de la portada de admin."""
+    """Trámites recién presentados (estado "iniciado", el admin todavía no
+    los tocó) -- para el globo de notificación de la portada de admin y de
+    la pestaña "Ver trámites" dentro de /admin."""
     with Session(engine) as s:
         return len(s.exec(select(Tramite).where(
-            Tramite.sindicato_id == sindicato_id, Tramite.estado == "enviado")).all())
+            Tramite.sindicato_id == sindicato_id, Tramite.estado == "iniciado")).all())
 
 
 def tramites_de_trabajador(cuil: str, sindicato_id: int) -> list:

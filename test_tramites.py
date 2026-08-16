@@ -140,7 +140,7 @@ def test_envio_tramite_completo_ok():
     global TRAMITE_ID, NUMERO_EXPEDIENTE
     TRAMITE_ID, NUMERO_EXPEDIENTE = data["id"], data["numero_expediente"]
     detalle = db.tramite_detalle(TRAMITE_ID)
-    assert detalle["estado"] == "enviado"
+    assert detalle["estado"] == "iniciado"
     assert len(detalle["respuestas"]) == 4
     archivo_resp = next(r for r in detalle["respuestas"] if r["etiqueta"] == "Comprobante")
     assert archivo_resp["tiene_archivo"]
@@ -207,6 +207,53 @@ def test_nota_admin_y_trabajador_en_thread_correcto():
     print("OK  test_nota_admin_y_trabajador_en_thread_correcto")
 
 
+def test_campo_seleccion_fija():
+    campos = [{"etiqueta": "Motivo", "tipo_dato": "seleccion", "opciones": "Salud, Estudio, Otro", "obligatorio": True}]
+    r = admin_uom.post("/admin/tramite-tipo", data={
+        "titulo": "Consulta", "codigo": "SEL", "campos_json": json.dumps(campos),
+    }, follow_redirects=False)
+    assert r.status_code == 303
+    with Session(db.engine) as s:
+        tipo = s.exec(select(TipoTramite).where(
+            TipoTramite.sindicato_id == SID_UOM, TipoTramite.codigo == "SEL")).first()
+        campo = s.exec(select(CampoTramite).where(CampoTramite.tipo_tramite_id == tipo.id)).first()
+        assert campo.opciones == "Salud, Estudio, Otro"
+        tipo_id, campo_id = tipo.id, campo.id
+
+    trab = _sesion_trabajador("20111111119")
+    r_malo = trab.post("/api/tramite", data={"tipo_tramite_id": tipo_id, f"campo_{campo_id}": "Vacaciones"})
+    assert r_malo.status_code == 422
+    r_ok = trab.post("/api/tramite", data={"tipo_tramite_id": tipo_id, f"campo_{campo_id}": "Salud"})
+    assert r_ok.status_code == 200
+    print("OK  test_campo_seleccion_fija")
+
+
+def test_terminado_bloquea_cambios():
+    trab = _sesion_trabajador("20111111119")
+    r = trab.post("/api/tramite", data={
+        "tipo_tramite_id": TIPO_ID,
+        f"campo_{_campo_id('Solicitud')}": "Otro pedido más",
+        f"campo_{_campo_id('CVU')}": "3" * 22,
+        f"campo_{_campo_id('Monto')}": "700",
+    }, files={f"archivo_{_campo_id('Comprobante')}": ("c.pdf", b"%PDF", "application/pdf")})
+    assert r.status_code == 200
+    tid = r.json()["id"]
+    r_term = admin_uom.post(f"/admin/tramite/{tid}/estado", data={"estado": "terminado"})
+    assert r_term.status_code == 200
+    assert db.tramite_detalle(tid)["estado"] == "terminado"
+
+    r_reabrir = admin_uom.post(f"/admin/tramite/{tid}/estado", data={"estado": "en_tratamiento"})
+    assert r_reabrir.status_code == 400
+    assert db.tramite_detalle(tid)["estado"] == "terminado"
+
+    r_nota_admin = admin_uom.post(f"/admin/tramite/{tid}/nota", data={"texto": "no debería poder"})
+    assert r_nota_admin.status_code == 400
+    r_nota_trab = trab.post(f"/api/tramite/{tid}/nota", data={"texto": "no debería poder"})
+    assert r_nota_trab.status_code == 400
+    assert db.tramite_detalle(tid)["notas"] == []
+    print("OK  test_terminado_bloquea_cambios")
+
+
 def test_aislamiento_entre_sindicatos():
     """Aísla la verificación de PERTENENCIA del trámite del gate de módulo
     (ya probado aparte): le prestamos el módulo a Fega solo para este test,
@@ -254,6 +301,8 @@ if __name__ == "__main__":
     test_numeracion_expediente_sin_colision()
     test_cambio_estado_dispara_log_y_notificacion()
     test_nota_admin_y_trabajador_en_thread_correcto()
+    test_campo_seleccion_fija()
+    test_terminado_bloquea_cambios()
     test_aislamiento_entre_sindicatos()
     test_bloqueo_403_si_modulo_apagado()
     print("\nTodo OK — trámites.")

@@ -21,10 +21,14 @@
   body.claro .hola { color: var(--tinta); }
   .hola em { font-style: normal; color: var(--marca-acento); }
 
-  .badge-noleidas { position: absolute; top: -6px; right: -6px; background: #e5484d; color: #fff;
-    font-size: 10.5px; font-weight: 700; min-width: 19px; height: 19px; border-radius: 999px;
-    display: flex; align-items: center; justify-content: center; padding: 0 4px;
-    border: 2px solid var(--marca-base); }
+  /* El wrap (no la tarjeta .acceso, que tiene overflow:hidden para el brillo
+     de vidrio) es quien posiciona el globo -- así queda POR ARRIBA de la
+     tarjeta en vez de recortado en su borde. 30% más grande que la v1. */
+  .acceso-badge-wrap { position: relative; }
+  .badge-noleidas { position: absolute; top: -8px; right: -8px; background: #e5484d; color: #fff;
+    font-size: 13.5px; font-weight: 700; min-width: 25px; height: 25px; border-radius: 999px;
+    display: flex; align-items: center; justify-content: center; padding: 0 5px;
+    border: 2.5px solid var(--marca-base); z-index: 2; }
 
   body.oscuro .tarjetas .acceso { position: relative; overflow: hidden;
     background: linear-gradient(155deg, rgba(255,255,255,.14), rgba(255,255,255,.02) 55%, rgba(255,255,255,.06));
@@ -145,14 +149,16 @@
     </a>
     {% endif %}
     {% if 'tramites' in modulos %}
-    <a class="acceso" style="position:relative;" href="/admin#tramites">
-      <svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg>
-      <div>
-        <div class="titulo">Trámites</div>
-        <div class="estado">Formularios y seguimiento</div>
-      </div>
+    <div class="acceso-badge-wrap">
+      <a class="acceso" href="/admin#tramites">
+        <svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg>
+        <div>
+          <div class="titulo">Trámites</div>
+          <div class="estado">Formularios y seguimiento</div>
+        </div>
+      </a>
       {% if tramites_nuevos %}<span class="badge-noleidas">{{ tramites_nuevos }}</span>{% endif %}
-    </a>
+    </div>
     {% endif %}
     <a class="acceso" href="/admin#seccionales">
       <svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg>
