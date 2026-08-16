@@ -313,6 +313,18 @@ def test_ancho_campos_y_nuevos_tipos_de_campo():
     print("OK  test_ancho_campos_y_nuevos_tipos_de_campo")
 
 
+def test_cantidad_nuevos_para_el_polling_del_globo():
+    """GET /admin/tramites-nuevos-cantidad -- el globo de "Ver trámites" en
+    admin.html lo consulta cada 30s para actualizarse sin recargar."""
+    r = admin_uom.get("/admin/tramites-nuevos-cantidad")
+    assert r.status_code == 200
+    esperado = db.contar_tramites_nuevos(SID_UOM)
+    assert r.json() == {"cantidad": esperado}
+    r_sin_sesion = TestClient(main.app).get("/admin/tramites-nuevos-cantidad")
+    assert r_sin_sesion.status_code == 403
+    print("OK  test_cantidad_nuevos_para_el_polling_del_globo")
+
+
 def test_aislamiento_entre_sindicatos():
     """Aísla la verificación de PERTENENCIA del trámite del gate de módulo
     (ya probado aparte): le prestamos el módulo a Fega solo para este test,
@@ -362,6 +374,7 @@ if __name__ == "__main__":
     test_nota_admin_y_trabajador_en_thread_correcto()
     test_campo_seleccion_fija()
     test_ancho_campos_y_nuevos_tipos_de_campo()
+    test_cantidad_nuevos_para_el_polling_del_globo()
     test_terminado_bloquea_cambios()
     test_aislamiento_entre_sindicatos()
     test_bloqueo_403_si_modulo_apagado()

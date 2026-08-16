@@ -110,12 +110,14 @@
      tarjeta clara para que los campos de formulario se lean bien. ---------- */
   .circulo-acento { overflow: hidden; }
   .circulo-acento img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-  .perfil-foto-wrap { position: relative; width: 84px; height: 84px; margin: 4px auto 18px; }
-  .perfil-foto-circulo { width: 84px; height: 84px; border-radius: 50%; overflow: hidden;
+  /* +20% (84px -> 101px) y borde color acento de marca (antes var(--linea)),
+     mismo criterio que el círculo de la portada. */
+  .perfil-foto-wrap { position: relative; width: 101px; height: 101px; margin: 4px auto 18px; }
+  .perfil-foto-circulo { width: 101px; height: 101px; border-radius: 50%; overflow: hidden;
     background: var(--papel); display: flex; align-items: center; justify-content: center;
-    cursor: pointer; border: 2px solid var(--linea); }
+    cursor: pointer; border: 2px solid var(--marca-acento); }
   .perfil-foto-circulo img { width: 100%; height: 100%; object-fit: cover; }
-  .perfil-foto-circulo svg { width: 38px; height: 38px; stroke: var(--gris); stroke-width: 1.5; fill: none; }
+  .perfil-foto-circulo svg { width: 44px; height: 44px; stroke: var(--gris); stroke-width: 1.5; fill: none; }
   .perfil-foto-lapiz { position: absolute; bottom: -2px; right: -2px; width: 27px; height: 27px;
     border-radius: 50%; background: var(--marca-acento); display: flex; align-items: center;
     justify-content: center; border: 2px solid #fff; cursor: pointer; }

@@ -539,7 +539,7 @@ escribe ahí, llamado desde alta/cambio de estado/cada nota).
   25px/13.5px) en los dos lugares donde aparece, más el mismo globo nuevo
   agregado a la sub-pestaña "Ver trámites" de `/admin` (ver más arriba).
 
-## Fondo de los logins (2026-08-16)
+## Fondo de los logins (2026-08-16, vidrio agregado 2026-08-17)
 Los 3 logins (`admin_login.html`, `plataforma_login.html`,
 `trabajador_login.html` -- NO `elegir_sindicato.html` ni
 `verificar_credencial.html`, que no son pantallas de login) cambiaron el
@@ -548,9 +548,28 @@ textura de grano inline (`feTurbulence` en un `::before`, `.caja > *` con
 `z-index:1` para quedar por encima) que ya usa `marca.css` en la portada
 -- acá va inline porque estas 3 pantallas son standalone, no importan
 `marca.css`. El logo de plataforma (`.logo-recuadro`) se agrandó un 40%
-(76px→106px desktop, 61px→85px mobile) **solo en estas 3 pantallas** --
-en el resto de la app (headers de admin.html/trabajador.html, etc.) el
-tamaño de 76px unificado (ver "Decisiones tomadas") no cambió.
+(76px→106px) **solo en estas 3 pantallas**, y el 2026-08-17 se le sumó
+otro +40% en desktop (106px→148px, mobile se queda en 85px) -- en el
+login es lo único que hay para mirar. En el resto de la app (headers de
+admin.html/trabajador.html, etc.) el tamaño de 76px unificado (ver
+"Decisiones tomadas") no cambió.
+
+**Vidrio (2026-08-17)**: `.caja` pasó de fondo plano a degradé
+(`linear-gradient(155deg, #a8ada8, #8d928c)`) + brillo diagonal
+(`::after`, mismo patrón que `.vidrio` de marca.css) -- "vidrio sutil",
+la opción que el usuario eligió entre tres mockups mostrados antes de
+implementar (los otros dos teñían el gris con el color del sindicato o
+usaban un degradé más oscuro/dramático; se descartaron). El grano
+(`::before`) y el degradé/brillo (`::after`) comparten `z-index:0`, el
+contenido real queda en `z-index:1` (`.caja > *`) -- mismo criterio que ya
+usa `.grano` en marca.css para que el contenido no quede tapado. Se sumó
+además `@font-face` de Barlow Condensed (la misma fuente condensada que ya
+usa la portada, referenciada por URL server-relativa ya que estas 3
+pantallas no importan marca.css) para el `<h1>` de `plataforma_login.html`
+(único de los 3 que tiene título) -- queda centrado y en la fuente
+condensada. `admin_login.html`/`trabajador_login.html` no tienen `<h1>` y
+no se les agregó uno (no era parte del pedido, solo centrar el que ya
+existiera).
 
 ## Constructor visual de Trámites (2026-08-16)
 El pedido original era un editor de lienzo libre (drag X/Y) para maquetar
@@ -605,6 +624,57 @@ que ya había (texto/numero/fecha/archivo/seleccion):
   de archivo" (`TIENE_OPCIONES_TRAMITE` decide qué placeholder/campo
   destino usar), no se agregó una columna nueva al layout ya denso del
   constructor.
+- **Globo del "Ver trámites" en vivo (2026-08-17)**: antes se calculaba
+  server-side solo al renderizar `/admin` -- si el panel quedaba abierto y
+  llegaba un trámite nuevo, el globo se quedaba desactualizado hasta
+  recargar. `GET /admin/tramites-nuevos-cantidad` (payload mínimo: un
+  número) + `setInterval` cada 30s en admin.html actualizan el globo sin
+  recargar la página. Solo corre si el sindicato tiene el módulo
+  `tramites` habilitado (`{% if 'tramites' in modulos %}` envuelve el
+  `setInterval`, no tiene sentido pedir el endpoint si el panel de
+  Trámites ni siquiera existe). `actualizarBadgeTramitesNuevos()` crea o
+  saca el `<span class="badge-noleidas">` del DOM según haga falta (el
+  span ni existe si `tramites_nuevos` era 0 al renderizar la página, así
+  que no alcanza con actualizar texto -- hay que poder crear el elemento
+  también). Alcance a propósito acotado a `/admin` (no a la portada de
+  admin ni a otras pantallas): es la pantalla que el pedido describía como
+  la que se queda abierta.
+
+## Ayuda contextual (ícono "H")
+Patrón para textos de ayuda largos (varias oraciones explicando qué
+significa cada campo de un formulario) que antes vivían como un
+`<p class="muted">` metido en el medio de la pantalla, ensuciándola. Se
+sacan del flujo normal y se mueven a un overlay que se abre con un botón
+flotante -- mismo lenguaje visual que `.btn-cerrar`/`.btn-home` (círculo
+oscuro, ícono/glifo blanco), agregado como `.btn-ayuda` (`right:128px` en
+admin.html, 54px a la izquierda de `.btn-home` que está en `right:74px`).
+El glifo es la letra "H" en `--fuente-display`, no un ícono SVG dibujado a
+mano.
+
+- **Solo aparece en las pantallas que lo necesitan** -- no es un botón
+  fijo global. En admin.html, `#btn-ayuda-tramites` arranca con la clase
+  `oculto` y se muestra/oculta en dos lugares: `cambiarSubTramite()`
+  (aparece solo en la sub-pestaña "Crear formularios" de Trámites, no en
+  "Ver trámites") y el handler de `.tab-btn` (se oculta apenas se navega a
+  cualquier otra pestaña principal que no sea Trámites). Los dos chequeos
+  hacen falta porque son dos ejes de navegación independientes
+  (pestaña principal + sub-pestaña de Trámites).
+- **Contenido**: diccionario JS `AYUDA_CONTENIDO` (clave → `{titulo,
+  texto}`), no vive en el HTML -- `abrirAyuda(clave)` arma el overlay al
+  vuelo con `innerHTML`. Hoy solo tiene una entrada
+  (`'tramites-campos'`, la explicación de "Longitud exacta"/"Tipos de
+  archivo"/"Opciones"/arrastrar/"Ancho" que antes estaba en el
+  constructor de Trámites) -- agregar una ayuda nueva en otra pantalla es
+  sumar una clave al diccionario + un botón `.btn-ayuda` con su propia
+  lógica de mostrar/ocultar, no hace falta tocar la estructura del
+  overlay.
+- **Overlay compartido**: `#overlay-ayuda`/`#overlay-ayuda-contenido`,
+  reutilizado por cualquier `abrirAyuda(clave)` -- no hay un overlay por
+  cada ayuda, uno solo que cambia de contenido.
+- Se evaluaron y descartaron otras ayudas largas del panel (Fórmulas,
+  varias pantallas de `/plataforma`) para esta pasada -- el pedido
+  puntual era la de Trámites; el patrón queda armado para sumar las demás
+  cuando haga falta, sin necesidad de rediseñarlo de nuevo.
 
 ## Topes de base imponible (jubilación, INSSJP, obra social)
 El validador aplicaba el % de cada aporte sobre la base remunerativa
@@ -865,6 +935,14 @@ ya usa Notificaciones -- reusa directamente sus clases (`.modal-notif-caja`/
   "Hola, {nombre}"): muestra la foto si existe (`tiene_foto_perfil`,
   calculado server-side), si no el ícono de silueta de siempre -- sin
   cambios de comportamiento para quien no cargó foto.
+- **Tamaño y borde (2026-08-17)**: los dos círculos (`.circulo-acento` en
+  la portada y `.perfil-foto-circulo` dentro del modal) se agrandaron un
+  20% (34px→41px y 84px→101px) y suman un borde de 2px color acento de la
+  marca del sindicato (antes `.circulo-acento` no tenía borde propio --
+  el fondo ya era del mismo acento así que no se notaba sin foto -- y el
+  del modal usaba `var(--linea)`, un gris neutro). Con una foto cargada,
+  el borde enmarca la imagen; sin foto, se sigue viendo igual que antes
+  (mismo color que el fondo/silueta).
 - **Lightbox al hacer clic en la foto DENTRO del modal**: `.overlay-foto-
   grande`, `max-width:25vw; max-height:25vh` -- tope explícito a un cuarto
   de pantalla, a propósito (pedido así): la foto ya es de muy baja

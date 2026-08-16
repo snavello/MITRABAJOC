@@ -91,15 +91,30 @@
     .logo-plataforma-header { width:61px; height:61px; }
     .sind-wrap img.sind { max-height:61px; max-width:170px; }
   }
-  .btn-cerrar, .btn-home { position:fixed; bottom:20px; width:44px; height:44px; border-radius:50%;
+  .btn-cerrar, .btn-home, .btn-ayuda { position:fixed; bottom:20px; width:44px; height:44px; border-radius:50%;
     background:var(--marca-base); display:flex; align-items:center; justify-content:center;
     text-decoration:none; border:1px solid rgba(255,255,255,.14);
-    box-shadow:0 2px 10px rgba(0,0,0,.25); z-index:40; }
+    box-shadow:0 2px 10px rgba(0,0,0,.25); z-index:40; cursor:pointer; }
   .btn-cerrar { right:20px; }
   .btn-home { right:74px; }
+  /* Solo aparece en las pantallas que tienen una ayuda larga -- no un botón
+     fijo en todos lados, para no ensuciar el resto del panel. */
+  .btn-ayuda { right:128px; }
+  .btn-ayuda.oculto { display:none; }
   .btn-cerrar svg, .btn-home svg { width:19px; height:19px; stroke:#fff; stroke-width:2.6; fill:none; }
   .btn-home svg { stroke-width:2.2; }
-  .btn-cerrar:hover, .btn-home:hover { opacity:.85; }
+  .btn-ayuda span { color:#fff; font-family:var(--fuente-display, inherit); font-weight:700; font-size:19px; line-height:1; }
+  .btn-cerrar:hover, .btn-home:hover, .btn-ayuda:hover { opacity:.85; }
+  .overlay-ayuda { position:fixed; inset:0; background:rgba(8,12,20,.55); z-index:200;
+    display:none; align-items:center; justify-content:center; padding:20px; }
+  .overlay-ayuda.abierto { display:flex; }
+  .overlay-ayuda-caja { background:#fff; border-radius:14px; max-width:420px; width:100%;
+    max-height:80vh; overflow-y:auto; padding:22px 24px; position:relative; }
+  .overlay-ayuda-caja h3 { font-size:15px; margin:0 0 10px; padding-right:26px; color:var(--marca-primario); }
+  .overlay-ayuda-caja p { font-size:13px; line-height:1.6; color:var(--tinta); margin:0; }
+  .overlay-ayuda-cerrar { position:absolute; top:14px; right:16px; background:none; border:none;
+    cursor:pointer; color:var(--gris); padding:4px; }
+  .overlay-ayuda-cerrar svg { width:18px; height:18px; stroke:currentColor; stroke-width:1.8; fill:none; }
   .wrap { max-width:1000px; margin:0 auto; padding:24px 22px 60px; }
   /* Tira de pestañas: una sola línea deslizable (11 secciones no entran
      fijas), ícono + texto chico, pegada debajo del header. */
@@ -291,6 +306,20 @@
 <a class="btn-home" href="/admin/inicio" title="Inicio" aria-label="Inicio">
   <svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg>
 </a>
+<button type="button" class="btn-ayuda oculto" id="btn-ayuda-tramites" onclick="abrirAyuda('tramites-campos')" title="Ayuda" aria-label="Ayuda">
+  <span>H</span>
+</button>
+
+<!-- Overlay: ayuda contextual -- solo se usa en las pantallas que tienen
+     una explicación larga, para no dejarla suelta en el medio del formulario. -->
+<div class="overlay-ayuda" id="overlay-ayuda" onclick="if (event.target === this) cerrarAyuda()">
+  <div class="overlay-ayuda-caja">
+    <button type="button" class="overlay-ayuda-cerrar" onclick="cerrarAyuda()" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+    </button>
+    <div id="overlay-ayuda-contenido"></div>
+  </div>
+</div>
 
 <nav class="nav-strip">
   {% if 'recibos' in modulos %}<button class="tab-btn" data-panel="reportes"><svg viewBox="0 0 24 24"><use href="#ic-reportes"/></svg><span>Reportes</span></button>{% endif %}
@@ -902,7 +931,7 @@
   <div class="subtabs">
     <button type="button" class="tramite-subtab activa" data-tramite-sub="recibidos" onclick="cambiarSubTramite('recibidos')" style="position:relative;">
       Ver trámites
-      {% if tramites_nuevos %}<span class="badge-noleidas">{{ tramites_nuevos }}</span>{% endif %}
+      {% if tramites_nuevos %}<span class="badge-noleidas" id="badge-tramites-nuevos">{{ tramites_nuevos }}</span>{% endif %}
     </button>
     <button type="button" class="tramite-subtab" data-tramite-sub="tipos" onclick="cambiarSubTramite('tipos')">Crear formularios</button>
   </div>
@@ -953,7 +982,6 @@
         </div>
 
         <h3 style="margin-top:18px; font-size:14px; color:var(--tinta);">Campos del formulario</h3>
-        <p class="muted" style="font-size:11.5px;">"Longitud exacta" es para datos de largo fijo (ej. CVU = 22). "Tipos de archivo" y "Opciones" van separados por coma (ej. pdf,jpg / Rojo,Verde,Azul) -- vacío = cualquiera. Arrastrá una fila del ☰ para reordenar; el "Ancho" decide cuánto ocupa cada campo en el formulario del trabajador (probalo en la vista previa de abajo).</p>
         <div id="tt-campos-lista"></div>
         <button type="button" class="sec mini" style="margin-top:8px;" onclick="agregarCampoTramite()">+ Agregar campo</button>
 
@@ -1141,8 +1169,59 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     });
     // recordar la pestaña por si se recarga (ej: tras alta con #ancla)
     history.replaceState(null, '', '#' + destino);
+    const btnAyuda = document.getElementById('btn-ayuda-tramites');
+    if (btnAyuda) {
+      const subActiva = document.querySelector('.tramite-subtab.activa');
+      btnAyuda.classList.toggle('oculto', !(destino === 'tramites' && subActiva && subActiva.dataset.tramiteSub === 'tipos'));
+    }
   });
 });
+
+// ---------- Ayuda contextual (icono H) ----------
+// Solo aparece en pantallas con una explicación larga -- el texto vive acá,
+// no metido en el medio del formulario, para no ensuciar la página.
+const AYUDA_CONTENIDO = {
+  'tramites-campos': {
+    titulo: 'Campos del formulario',
+    texto: '"Longitud exacta" es para datos de largo fijo (ej. CVU = 22). "Tipos de archivo" y "Opciones" van separados por coma (ej. pdf,jpg / Rojo,Verde,Azul) -- vacío = cualquiera. Arrastrá una fila del ☰ para reordenar; el "Ancho" decide cuánto ocupa cada campo en el formulario del trabajador (probalo en la vista previa de abajo).',
+  },
+};
+function abrirAyuda(clave) {
+  const d = AYUDA_CONTENIDO[clave];
+  if (!d) return;
+  document.getElementById('overlay-ayuda-contenido').innerHTML =
+    `<h3>${d.titulo}</h3><p>${d.texto}</p>`;
+  document.getElementById('overlay-ayuda').classList.add('abierto');
+}
+function cerrarAyuda() { document.getElementById('overlay-ayuda').classList.remove('abierto'); }
+
+{% if 'tramites' in modulos %}
+// ---------- Globo de "Ver trámites" en vivo ----------
+// Se calcula server-side solo al cargar la página -- si el admin deja el
+// panel abierto y llega un trámite nuevo, el globo se quedaba en 0 hasta
+// recargar. Un chequeo liviano cada 30s (un solo número, no la lista
+// entera) alcanza para mantenerlo al día sin recargar nada.
+function actualizarBadgeTramitesNuevos(cantidad) {
+  const btn = document.querySelector('.tramite-subtab[data-tramite-sub="recibidos"]');
+  if (!btn) return;
+  let badge = document.getElementById('badge-tramites-nuevos');
+  if (cantidad > 0) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'badge-noleidas';
+      badge.id = 'badge-tramites-nuevos';
+      btn.appendChild(badge);
+    }
+    badge.textContent = cantidad;
+  } else if (badge) {
+    badge.remove();
+  }
+}
+setInterval(() => {
+  fetch('/admin/tramites-nuevos-cantidad').then(r => r.ok ? r.json() : null)
+    .then(d => { if (d) actualizarBadgeTramitesNuevos(d.cantidad); }).catch(() => {});
+}, 30000);
+{% endif %}
 // Si la URL trae un ancla (ej. #conceptos tras un alta), abrir esa pestaña
 (function abrirDesdeHash() {
   const h = (location.hash || '').replace('#', '');
@@ -1322,6 +1401,8 @@ function escHtml(s) { const d = document.createElement('div'); d.textContent = s
 function cambiarSubTramite(dest) {
   document.querySelectorAll('.tramite-subtab').forEach(b => b.classList.toggle('activa', b.dataset.tramiteSub === dest));
   document.querySelectorAll('.tramite-subpanel').forEach(p => p.classList.toggle('activo', p.id === 'tramite-sub-' + dest));
+  const btnAyuda = document.getElementById('btn-ayuda-tramites');
+  if (btnAyuda) btnAyuda.classList.toggle('oculto', dest !== 'tipos');
 }
 
 let camposTramiteActuales = [];

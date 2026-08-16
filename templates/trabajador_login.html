@@ -5,25 +5,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mi Trabajo — Ingresar</title>
 <style>
+  @font-face {
+    font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal;
+    src: url('/static/fonts/barlow-condensed-bold.woff2') format('woff2');
+  }
   :root {
     --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
     --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
     --papel:#f7f5f0; --linea:#dcd8cf; --gris:#5c5a54; --alerta:#b23a2e;
+    --fuente-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   }
   * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
   body { background:var(--papel); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
-  /* Fondo gris con grano (en vez de blanco liso) para que el logo de Mi
-     Trabajo, agrandado acá un 40%, resalte más -- solo en las pantallas de
-     login, no en el resto de la app. ::before es el mismo patrón de grano
-     (feTurbulence inline) que usa marca.css; .caja > * lo pasa por encima. */
-  .caja { background:#9ea39e; border:1px solid var(--linea); border-radius:16px; padding:32px 26px;
+  /* Vidrio sutil, mismo criterio que las tarjetas de la portada (marca.css
+     .vidrio/.grano): degradé gris + brillo diagonal + grano -- todo inline
+     porque estas 3 pantallas son standalone, no importan marca.css. El
+     fondo gris de base ya estaba elegido; esto le suma la textura de vidrio. */
+  .caja { background: linear-gradient(155deg, #a8ada8 0%, #8d928c 100%);
+    border:1px solid rgba(255,255,255,.18); border-radius:16px; padding:32px 26px;
     max-width:400px; width:100%; position:relative; overflow:hidden; }
   .caja::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     opacity:.10; mix-blend-mode:overlay; }
+  .caja::after { content:""; position:absolute; top:-60%; left:-30%; width:90%; height:90%;
+    background: linear-gradient(120deg, rgba(255,255,255,.28), transparent 60%);
+    transform: rotate(-18deg); pointer-events:none; z-index:0; }
   .caja > * { position:relative; z-index:1; }
-  .logo-recuadro { display:block; width:106px; height:106px; object-fit:contain; margin:0 auto 18px; }
+  /* Logo: 106px ya era +40% sobre el resto de la app; en desktop se le suma
+     otro +40% (148px) porque en el login es lo único que hay para mirar --
+     en mobile se queda en el tamaño ya elegido (85px). */
+  .logo-recuadro { display:block; width:148px; height:148px; object-fit:contain; margin:0 auto 18px; }
   @media (max-width:600px) { .logo-recuadro { width:85px; height:85px; } }
+  h1 { font-family: var(--fuente-display); font-weight:700; font-size:19px; color:var(--tinta);
+    text-align:center; margin-bottom:22px; letter-spacing:.01em; }
   .tabs { display:flex; gap:6px; margin-bottom:20px; background:#f2f0ea; padding:4px; border-radius:10px; }
   .tab { flex:1; text-align:center; padding:9px; border-radius:7px; font-size:14px; font-weight:500; cursor:pointer; color:var(--gris); border:none; background:none; font-family:inherit; }
   .tab.activo { background:#fff; color:var(--tinta); box-shadow:0 1px 3px rgba(0,0,0,.08); }

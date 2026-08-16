@@ -3,8 +3,8 @@
 cada deploy -- el número lo indica el usuario en cada prompt de cambio.
 """
 
-VERSION_TRABAJADOR = "0.11.16"
-VERSION_ADMIN = "0.11.16"
-VERSION_PLATAFORMA = "0.11.16"
+VERSION_TRABAJADOR = "0.12.17"
+VERSION_ADMIN = "0.12.17"
+VERSION_PLATAFORMA = "0.12.17"
 
-FECHA_VERSION = "2026-08-17 09:30"
+FECHA_VERSION = "2026-08-17 11:00"

@@ -159,10 +159,14 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
 .noticia-card .ant { font-size: 10px; opacity: .65; margin-top: 5px; }
 
 /* ---------- Círculo de acento (perfil, avatar) ---------- */
-.circulo-acento { width: 34px; height: 34px; border-radius: 50%; background: var(--marca-acento);
-  display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;
+/* +20% (34px -> 41px) y borde color acento -- de fondo plano no se nota
+   (mismo color que el borde), pero enmarca la foto de perfil cuando hay
+   una cargada. */
+.circulo-acento { width: 41px; height: 41px; border-radius: 50%; background: var(--marca-acento);
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--marca-acento); cursor: pointer;
   flex-shrink: 0; padding: 0; }
-.circulo-acento svg { width: 18px; height: 18px; stroke: var(--marca-base); stroke-width: 1.8; fill: none; }
+.circulo-acento svg { width: 20px; height: 20px; stroke: var(--marca-base); stroke-width: 1.8; fill: none; }
 
 /* ---------- Overlay / hoja modal (perfil, detalle de noticia) ---------- */
 .overlay { position: fixed; inset: 0; background: rgba(8,12,20,.6); z-index: 100;

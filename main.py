@@ -1375,6 +1375,17 @@ def admin_ver_tramite(tramite_id: int, request: Request):
     return detalle
 
 
+@app.get("/admin/tramites-nuevos-cantidad")
+def admin_tramites_nuevos_cantidad(request: Request):
+    """Para el polling del globo de "Ver trámites" en admin.html -- si el
+    panel queda abierto y llega un trámite nuevo, el globo no se actualizaba
+    hasta recargar (se calculaba solo al renderizar la página). Payload
+    mínimo (un número), pensado para pedirse cada 30s sin peso real."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "tramites")
+    return {"cantidad": db.contar_tramites_nuevos(sid)}
+
+
 @app.post("/admin/tramite/{tramite_id}/estado")
 def admin_cambiar_estado_tramite(tramite_id: int, request: Request, estado: str = Form(...)):
     sid = exigir_sindicato(request)
