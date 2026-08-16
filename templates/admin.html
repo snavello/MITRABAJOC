@@ -266,6 +266,7 @@
   {% if 'notificaciones' in modulos %}<button class="tab-btn" data-panel="notificaciones"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg><span>Notificaciones</span></button>{% endif %}
   {% if 'tramites' in modulos %}<button class="tab-btn" data-panel="tramites"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg><span>Trámites</span></button>{% endif %}
   <button class="tab-btn" data-panel="seccionales"><svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg><span>Seccionales</span></button>
+  <button class="tab-btn" data-panel="administradores"><svg viewBox="0 0 24 24"><use href="#ic-admins"/></svg><span>Administradores</span></button>
 </nav>
 
 <!-- Íconos SVG de línea (mismos que admin_portada.html, ver esa plantilla) -->
@@ -282,6 +283,7 @@
     <g id="ic-notif"><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></g>
     <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
     <g id="ic-seccionales"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></g>
+    <g id="ic-admins"><path d="M12 3l7 3v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6z"/><circle cx="12" cy="10" r="2.3"/><path d="M8.4 15c.7-1.5 2-2.3 3.6-2.3s2.9.8 3.6 2.3"/></g>
   </defs>
 </svg>
 
@@ -995,6 +997,61 @@
     {% endfor %}
   </table>
   </div>
+
+  <div class="panel" id="panel-administradores">
+  <!-- ============ ADMINISTRADORES ============ -->
+  <h2 id="administradores-titulo">Dar de alta un administrador</h2>
+  <p class="muted">Los administradores que cargues acá pueden entrar a este panel con su CUIT/CUIL y la clave que les asignes -- van a tener que cambiarla en su primer ingreso. Para cambiarle la clave a uno ya existente, pedíselo a plataforma.</p>
+  {% if request.query_params.get('err') == 'usuarioexiste' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Ya existe un administrador con ese CUIT/CUIL en este sindicato.</div>
+  {% elif request.query_params.get('err') == 'ultimoadmin' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No podés dar de baja al último administrador activo del sindicato -- te quedarías sin nadie que pueda entrar a este panel.</div>
+  {% elif request.query_params.get('err') == 'datosadmin' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">CUIT/CUIL o clave inválidos.</div>
+  {% endif %}
+  <div class="card">
+    <form method="post" action="/admin/usuario" id="form-usuario">
+      <input type="hidden" name="id" id="usu-id">
+      <div class="grid2">
+        <div class="campo"><label>CUIT/CUIL *</label><input name="usuario" id="usu-usuario" required placeholder="20123456789"></div>
+        <div class="campo"><label>Nombre</label><input name="nombre" id="usu-nombre"></div>
+        <div class="campo" id="usu-clave-campo"><label>Clave inicial *</label><input name="clave_inicial" id="usu-clave" type="password" required></div>
+      </div>
+      <button type="submit" id="usu-submit">Dar de alta</button>
+      <button type="button" class="sec oculto" id="usu-cancel" onclick="cancelarUsuario()">Cancelar edición</button>
+    </form>
+  </div>
+
+  <h2>Administradores del sindicato ({{ usuarios_sindicato|selectattr('activo')|list|length }} activos)</h2>
+  <table>
+    <tr><th>CUIT/CUIL</th><th>Nombre</th><th>Estado</th><th></th></tr>
+    {% for u in usuarios_sindicato %}
+    <tr {% if not u.activo %}style="opacity:.5;"{% endif %}>
+      <td><code>{{ u.usuario }}</code></td>
+      <td>{{ u.nombre or '—' }}</td>
+      <td>
+        {% if not u.activo %}<span class="tag" style="background:#eee;color:#888;">baja</span>
+        {% elif u.debe_cambiar_clave %}<span class="tag tag-pend">clave pendiente</span>
+        {% else %}<span class="tag tag-si">activo</span>{% endif %}
+      </td>
+      <td style="white-space:nowrap; text-align:right;">
+        <button type="button" class="mini" onclick='editarUsuario({{ {"id":u.id,"usuario":u.usuario,"nombre":u.nombre} | tojson }})'>Editar</button>
+        {% if u.activo %}
+        <form method="post" action="/admin/usuario/baja" style="display:inline;" onsubmit="return confirm('¿Dar de baja a este administrador? Se puede reactivar después.');">
+          <input type="hidden" name="id" value="{{ u.id }}"><button class="mini borrar">Baja</button>
+        </form>
+        {% else %}
+        <form method="post" action="/admin/usuario/alta-logica" style="display:inline;">
+          <input type="hidden" name="id" value="{{ u.id }}"><button class="mini">Reactivar</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="muted">No hay administradores cargados.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
 </div>
 
 <!-- Modal: detalle de un recibo (Reportes y Afiliados cotizantes) -->
@@ -1552,6 +1609,38 @@ function cancelarSeccional() {
   document.getElementById('seccionales-titulo').textContent = 'Dar de alta una seccional';
   document.getElementById('form-seccional').querySelector('button[type=submit]').textContent = 'Guardar seccional';
   document.getElementById('sec-cancel').classList.add('oculto');
+}
+
+// ---------- Administradores del sindicato ----------
+// Editar solo cambia el nombre -- el CUIT/CUIL (usuario) y la clave inicial
+// no aplican en edición (cambiar la clave de uno ya existente sigue siendo
+// solo vía plataforma), así que ese campo se oculta y la ruta cambia a
+// /admin/usuario/editar en vez de /admin/usuario.
+function editarUsuario(u) {
+  const f = document.getElementById('form-usuario');
+  document.getElementById('usu-id').value = u.id;
+  document.getElementById('usu-usuario').value = u.usuario || '';
+  document.getElementById('usu-nombre').value = u.nombre || '';
+  document.getElementById('usu-usuario').disabled = true;
+  document.getElementById('usu-clave-campo').classList.add('oculto');
+  document.getElementById('usu-clave').required = false;
+  f.action = '/admin/usuario/editar';
+  document.getElementById('administradores-titulo').textContent = 'Editar administrador: ' + (u.nombre || u.usuario);
+  document.getElementById('usu-submit').textContent = 'Guardar cambios';
+  document.getElementById('usu-cancel').classList.remove('oculto');
+  f.scrollIntoView({behavior:'smooth', block:'center'});
+}
+function cancelarUsuario() {
+  const f = document.getElementById('form-usuario');
+  f.reset();
+  document.getElementById('usu-id').value = '';
+  document.getElementById('usu-usuario').disabled = false;
+  document.getElementById('usu-clave-campo').classList.remove('oculto');
+  document.getElementById('usu-clave').required = true;
+  f.action = '/admin/usuario';
+  document.getElementById('administradores-titulo').textContent = 'Dar de alta un administrador';
+  document.getElementById('usu-submit').textContent = 'Dar de alta';
+  document.getElementById('usu-cancel').classList.add('oculto');
 }
 
 // ---------- Aprendizaje ----------

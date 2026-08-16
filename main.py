@@ -71,6 +71,29 @@ async def error_no_manejado(request: Request, exc: Exception):
     )
 
 
+@app.exception_handler(HTTPException)
+async def sesion_vencida_o_denegada(request: Request, exc: HTTPException):
+    """Los formularios de /admin y /plataforma son POST de página completa
+    (no fetch): si la sesión venció (15 min sin uso) y la ruta responde
+    403/401 con el HTTPException de siempre, el navegador reemplazaba TODA
+    la pantalla por el JSON crudo de FastAPI -- "error técnico feo en
+    pantalla negra" que solo se arreglaba reingresando a mano. Para ese
+    caso puntual (sesión inválida + navegación de página, no una llamada
+    fetch/JS) se redirige a la pantalla de login correspondiente en vez de
+    mostrar el JSON. Un 403 con sesión VÁLIDA (ej. módulo no habilitado,
+    CUIL ajeno) sigue devolviendo JSON como siempre -- no es este caso."""
+    accept = request.headers.get("accept", "")
+    if exc.status_code in (401, 403) and "text/html" in accept and not sesion_actual(request):
+        path = request.url.path
+        if path.startswith("/plataforma"):
+            return RedirectResponse("/plataforma", status_code=303)
+        if path.startswith("/admin"):
+            return RedirectResponse("/admin", status_code=303)
+        if path.startswith("/app") or path.startswith("/api"):
+            return RedirectResponse("/ingresar", status_code=303)
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+
 @app.middleware("http")
 async def sin_cache_en_paneles(request: Request, call_next):
     """Los paneles se arman en el servidor con datos de la base. Sin esto el
@@ -474,6 +497,8 @@ def admin(request: Request):
                               .order_by(Trabajador.activo.desc(), Trabajador.nombre)).all()
         envios = s.exec(select(EnvioSindicato).where(EnvioSindicato.sindicato_id == sid)
                         .order_by(EnvioSindicato.periodo.desc(), EnvioSindicato.id.desc())).all()
+        usuarios_sindicato = s.exec(select(UsuarioSindicato).where(UsuarioSindicato.sindicato_id == sid)
+                                    .order_by(UsuarioSindicato.activo.desc(), UsuarioSindicato.nombre)).all()
     # Nombre por CUIL, para poder filtrar Reportes y Afiliados cotizantes por
     # nombre (esas tablas solo guardan el CUIL, no el nombre).
     nombres_por_cuil = {t.cuil: t.nombre for t in trabajadores}
@@ -498,6 +523,7 @@ def admin(request: Request):
         "conceptos": conceptos, "genericos": genericos, "codigos_efectivos": codigos_efectivos,
         "formulas": formulas, "reportes": reportes,
         "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR, "envios": envios,
+        "usuarios_sindicato": usuarios_sindicato,
         "nombres_por_cuil": nombres_por_cuil, "provisorios": provisorios,
         "debe_cambiar": ses.get("cambiar", False),
         "noticias": db.noticias_del_sindicato(sid),
@@ -668,6 +694,78 @@ def admin_trabajador_reactivar(request: Request, id: int = Form(...)):
             t.activo = True
             s.add(t); s.commit()
     return RedirectResponse("/admin#trabajadores", status_code=303)
+
+
+# ---------- ABM de administradores del propio sindicato ----------
+# Antes solo plataforma podía dar de alta/ver los UsuarioSindicato de un
+# sindicato (POST /plataforma/usuario, GET /plataforma/admins/{id}) -- un
+# sindicato no tenía forma de listar ni sumar administradores propios sin
+# pedírselo a plataforma. Alcance elegido a propósito (ver CLAUDE.md): alta
+# con clave inicial, editar nombre, activar/desactivar -- cambiarle la
+# clave a un admin YA EXISTENTE sigue siendo solo vía plataforma (mismo
+# criterio que el resto de la app: no ampliar ese flujo transitorio).
+
+@app.post("/admin/usuario")
+def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str = Form(""),
+                        clave_inicial: str = Form(...)):
+    """sindicato_id sale de la sesión, nunca de un campo del form -- un
+    admin no puede darse de alta a sí mismo en otro sindicato."""
+    sid = exigir_sindicato(request)
+    cuit = _norm_cuil(usuario)
+    if len(cuit) != 11 or not clave_inicial:
+        return RedirectResponse("/admin?err=datos#administradores", status_code=303)
+    with db.get_session() as s:
+        if s.exec(select(UsuarioSindicato).where(
+                UsuarioSindicato.sindicato_id == sid, UsuarioSindicato.usuario == cuit)).first():
+            return RedirectResponse("/admin?err=usuarioexiste#administradores", status_code=303)
+        s.add(UsuarioSindicato(
+            sindicato_id=sid, usuario=cuit, nombre=nombre,
+            clave_hash=auth.hashear_clave(clave_inicial), debe_cambiar_clave=True,
+        ))
+        s.commit()
+    return RedirectResponse("/admin#administradores", status_code=303)
+
+
+@app.post("/admin/usuario/editar")
+def admin_usuario_editar(request: Request, id: int = Form(...), nombre: str = Form("")):
+    sid = exigir_sindicato(request)
+    with db.get_session() as s:
+        u = s.get(UsuarioSindicato, id)
+        if u and u.sindicato_id == sid:
+            u.nombre = nombre
+            s.add(u); s.commit()
+    return RedirectResponse("/admin#administradores", status_code=303)
+
+
+@app.post("/admin/usuario/baja")
+def admin_usuario_baja(request: Request, id: int = Form(...)):
+    """Baja lógica -- bloqueada si es el último administrador activo del
+    sindicato (si no, un sindicato podría quedarse sin nadie que pueda
+    entrar a /admin, y solo plataforma podría reactivarlo a mano)."""
+    sid = exigir_sindicato(request)
+    with db.get_session() as s:
+        u = s.get(UsuarioSindicato, id)
+        if not u or u.sindicato_id != sid:
+            return RedirectResponse("/admin#administradores", status_code=303)
+        if u.activo:
+            activos = s.exec(select(UsuarioSindicato).where(
+                UsuarioSindicato.sindicato_id == sid, UsuarioSindicato.activo == True)).all()
+            if len(activos) <= 1:
+                return RedirectResponse("/admin?err=ultimoadmin#administradores", status_code=303)
+        u.activo = False
+        s.add(u); s.commit()
+    return RedirectResponse("/admin#administradores", status_code=303)
+
+
+@app.post("/admin/usuario/alta-logica")
+def admin_usuario_reactivar(request: Request, id: int = Form(...)):
+    sid = exigir_sindicato(request)
+    with db.get_session() as s:
+        u = s.get(UsuarioSindicato, id)
+        if u and u.sindicato_id == sid:
+            u.activo = True
+            s.add(u); s.commit()
+    return RedirectResponse("/admin#administradores", status_code=303)
 
 
 # ---------- ABM de conceptos ----------

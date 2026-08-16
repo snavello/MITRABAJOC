@@ -70,15 +70,15 @@ def test_login_exitoso_redirige_a_inicio():
     print("OK  test_login_exitoso_redirige_a_inicio")
 
 
-def test_sindicato_con_todos_los_modulos_ve_las_11_tarjetas():
+def test_sindicato_con_todos_los_modulos_ve_las_12_tarjetas():
     c = _admin_client("20777777770", "full-demo")
     r = c.get("/admin/inicio")
     assert r.status_code == 200
     for panel in ("reportes", "formulas", "conceptos", "trabajadores", "aprendizaje",
                   "cotizantes", "noticias", "beneficios", "notificaciones",
-                  "tramites", "seccionales"):
+                  "tramites", "seccionales", "administradores"):
         assert f'href="/admin#{panel}"' in r.text, panel
-    print("OK  test_sindicato_con_todos_los_modulos_ve_las_11_tarjetas")
+    print("OK  test_sindicato_con_todos_los_modulos_ve_las_12_tarjetas")
 
 
 def test_sindicato_solo_recibos_no_ve_modulos_apagados_pero_si_los_fijos():
@@ -89,9 +89,10 @@ def test_sindicato_solo_recibos_no_ve_modulos_apagados_pero_si_los_fijos():
         assert f'href="/admin#{panel}"' in r.text, panel
     for panel in ("noticias", "beneficios", "notificaciones", "tramites"):
         assert f'href="/admin#{panel}"' not in r.text, panel
-    # Trabajadores y Seccionales no dependen de ningún módulo.
+    # Trabajadores, Seccionales y Administradores no dependen de ningún módulo.
     assert 'href="/admin#trabajadores"' in r.text
     assert 'href="/admin#seccionales"' in r.text
+    assert 'href="/admin#administradores"' in r.text
     print("OK  test_sindicato_solo_recibos_no_ve_modulos_apagados_pero_si_los_fijos")
 
 
@@ -120,7 +121,7 @@ def test_sin_tramites_no_muestra_globo():
 if __name__ == "__main__":
     test_sin_sesion_sirve_login()
     test_login_exitoso_redirige_a_inicio()
-    test_sindicato_con_todos_los_modulos_ve_las_11_tarjetas()
+    test_sindicato_con_todos_los_modulos_ve_las_12_tarjetas()
     test_sindicato_solo_recibos_no_ve_modulos_apagados_pero_si_los_fijos()
     test_saluda_con_el_nombre_del_admin_logueado()
     test_globo_de_tramites_nuevos_cuenta_solo_estado_enviado()

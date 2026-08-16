@@ -27,6 +27,19 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   (main.py) reemite la cookie en cada request autenticado; un usuario activo
   nunca se desloguea solo.
   NO se usa auth de terceros.
+  **Sesión vencida en un POST de página completa (fix 2026-08-16)**: los
+  `<form>` de `/admin` y `/plataforma` son POST de página completa, no
+  fetch. Si la sesión venía inactiva 15+ min y se mandaba una acción, la ruta
+  tiraba `HTTPException(403)` y el navegador reemplazaba TODA la pantalla
+  por el JSON crudo de FastAPI ("error técnico feo en pantalla negra"), y
+  solo se arreglaba reingresando a mano. `main.sesion_vencida_o_denegada`
+  (`@app.exception_handler(HTTPException)`) redirige a `/admin` o
+  `/plataforma` (que ya renderizan el login) en vez del JSON crudo, pero
+  **solo** cuando la sesión es inválida/inexistente Y la request pide
+  `text/html` (navegación real de página, no una llamada `fetch()` desde
+  JS -- esas siguen recibiendo JSON como siempre, el código las lee con
+  `await r.json()`). Un 403 legítimo con sesión VÁLIDA (módulo no
+  habilitado, CUIL ajeno, etc.) no se toca, sigue siendo JSON.
 - **Python 3.12** fijado con .python-version (3.12.8) + variable PYTHON_VERSION en
   Render. Python 3.14 rompe SQLModel ("Field 'id' requires a type annotation").
 - **Deploy:** GitHub + Render. Render sigue la rama main y redeploya con cada push.
@@ -584,6 +597,22 @@ piden `seccional_id` (la del trabajador, resuelta con
 solo seccionales de SU sindicato — `main._destinos_validos()` descarta las
 ajenas o inventadas en silencio, mismo criterio que `seccional_id` del alta
 de trabajador.
+
+## Administradores del sindicato (self-service, 2026-08-16)
+Antes solo plataforma podía dar de alta o ver los `UsuarioSindicato` de un
+sindicato (`POST /plataforma/usuario`, `GET /plataforma/admins/{id}`) — un
+sindicato no tenía forma de listar ni sumar administradores propios sin
+pedírselo a plataforma. Ahora `/admin` → pestaña "Administradores" (siempre
+visible, no depende de ningún módulo, mismo criterio que Trabajadores y
+Seccionales) permite, scopeado SIEMPRE al `sindicato_id` de la sesión (nunca
+un campo del form): listar, dar de alta (con clave inicial —
+`debe_cambiar_clave=True`, mismo patrón que ya usa plataforma), editar el
+nombre, y activar/desactivar. Alcance elegido a propósito: **cambiarle la
+clave a un administrador YA EXISTENTE sigue siendo solo vía plataforma** —
+no se amplía ese flujo transitorio (ver "Pendientes"). Bloqueo real:
+`admin_usuario_baja` no deja desactivar al último administrador activo del
+sindicato (si no, un sindicato podría quedarse sin nadie que pueda entrar a
+`/admin`, y solo plataforma podría reactivarlo a mano).
 
 ## Confirmar concepto pendiente de revisión
 `Concepto.pendiente_revision` ya se limpiaba como efecto secundario de

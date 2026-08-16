@@ -91,9 +91,65 @@ def test_expira_pasados_15_minutos_sin_uso():
     print("OK  test_expira_pasados_15_minutos_sin_uso")
 
 
+# ---------- Pantalla fea al vencer la sesión (bug real, ver main.py:sesion_vencida_o_denegada) ----------
+# Un <form> de admin.html/plataforma.html es POST de página completa, no
+# fetch. Con la sesión vencida, la ruta tira 403 y el navegador reemplazaba
+# TODA la pantalla por el JSON crudo -- solo se arreglaba reingresando a
+# mano. El fix: con sesión inválida + navegación real (Accept: text/html),
+# redirigir a la pantalla de login en vez de devolver el JSON.
+
+def test_form_post_con_sesion_vencida_redirige_a_login_admin():
+    client = TestClient(main.app)  # sin login -- simula sesión ya vencida/inexistente
+    r = client.post("/admin/trabajador", data={"cuil": "20111111119", "nombre": "Juan"},
+                     headers={"accept": "text/html,application/xhtml+xml"}, follow_redirects=False)
+    assert r.status_code == 303
+    assert r.headers["location"] == "/admin"
+    print("OK  test_form_post_con_sesion_vencida_redirige_a_login_admin")
+
+
+def test_form_post_con_sesion_vencida_redirige_a_login_plataforma():
+    client = TestClient(main.app)
+    r = client.post("/plataforma/config", data={"tope_sindical_pct": "2.0"},
+                     headers={"accept": "text/html,application/xhtml+xml"}, follow_redirects=False)
+    assert r.status_code == 303
+    assert r.headers["location"] == "/plataforma"
+    print("OK  test_form_post_con_sesion_vencida_redirige_a_login_plataforma")
+
+
+def test_llamada_fetch_con_sesion_vencida_sigue_devolviendo_json():
+    # Sin Accept: text/html (fetch() sin headers manda "*/*" por default) --
+    # el JS que llama a esto sabe leer JSON, no hay que redirigirlo.
+    client = TestClient(main.app)
+    r = client.post("/admin/trabajador", data={"cuil": "20111111119", "nombre": "Juan"},
+                     follow_redirects=False)
+    assert r.status_code == 403
+    assert r.json().get("detail")
+    print("OK  test_llamada_fetch_con_sesion_vencida_sigue_devolviendo_json")
+
+
+def test_403_legitimo_con_sesion_valida_no_redirige():
+    # Sesión VÁLIDA pero acción no permitida por otro motivo (no por sesión
+    # vencida) -- sigue siendo JSON como siempre, aunque la navegación pida
+    # text/html: no es el caso que este fix tiene que tapar.
+    client = TestClient(main.app)
+    client.post("/admin/login", data={"usuario": "20111111110", "clave": "clave-test"})
+    r = client.post("/admin/noticia", data={
+        "titulo": "Aviso", "bajada": "", "texto_completo": "",
+        "fecha_desde": "2026-01-01", "fecha_hasta": "2026-12-31",
+    }, headers={"accept": "text/html,application/xhtml+xml"}, follow_redirects=False)
+    # Sindicato "Test Sesion" se creó sin módulos habilitados -> 403 real.
+    assert r.status_code == 403
+    assert r.json().get("detail")
+    print("OK  test_403_legitimo_con_sesion_valida_no_redirige")
+
+
 if __name__ == "__main__":
     test_actividad_reemite_el_token()
     test_login_no_se_pisa_con_la_sesion_vieja()
     test_logout_no_se_revive()
     test_expira_pasados_15_minutos_sin_uso()
+    test_form_post_con_sesion_vencida_redirige_a_login_admin()
+    test_form_post_con_sesion_vencida_redirige_a_login_plataforma()
+    test_llamada_fetch_con_sesion_vencida_sigue_devolviendo_json()
+    test_403_legitimo_con_sesion_valida_no_redirige()
     print("\nTodo OK — sesión por inactividad.")
