@@ -564,12 +564,22 @@ eran `SOSPECHOSO`.
    sección "Topes de base imponible" más arriba.
 4. Causa real de los 500 intermitentes al guardar/enviar en `/admin` y
    `/plataforma` (reportado 2026-08-16, "se corta a los 2-3 minutos,
-   específicamente al guardar, no al navegar"): sin confirmar todavía. Ya
-   no se ve feo en pantalla (ver "Auth" más arriba), pero sigue fallando
-   la acción en sí. Sospecha fundada, no confirmada: Postgres en Render
-   cortando conexiones ociosas a pesar de `pool_pre_ping`/`pool_recycle`.
-   Revisar el traceback completo en los logs de Render la próxima vez que
-   pase.
+   específicamente al guardar, no al navegar"): mitigado, no 100%
+   confirmado todavía. Investigado a fondo: el código en sí está limpio
+   (ninguna ruta mantiene una sesión de base abierta mientras espera algo
+   lento, como la IA). El sospechoso más fuerte encontrado: un bug conocido
+   de SQLAlchemy + psycopg contra Postgres gestionado — si un proxy/NAT
+   intermedio corta una conexión ociosa en silencio, el propio
+   `pool_pre_ping` puede quedar COLGADO hasta 15-20 min (timeout de TCP por
+   defecto del SO) en vez de fallar rápido y reconectar
+   (github.com/sqlalchemy/sqlalchemy/discussions/13032) — coincide con el
+   patrón reportado. Mitigación aplicada en `db.py` (`connect_args` con
+   `keepalives_idle=30`/`keepalives_interval=10`/`keepalives_count=3`):
+   fuerza a detectar una conexión muerta en ~60 segundos en vez de minutos.
+   **Pendiente real**: no hay traceback real que confirme que ESTA era la
+   causa (el bug es intermitente) — revisar los logs de Render la próxima
+   vez que pase, para confirmar que ya no ocurre o, si ocurre, ver qué
+   excepción tira ahora.
 
 ## Noticias (sindicato → trabajador)
 Reemplaza el placeholder "próximamente" de Novedades. Modelo `Noticia`

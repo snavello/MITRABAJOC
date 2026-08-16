@@ -46,6 +46,23 @@ if DATABASE_URL:
         pool_recycle=300,     # recicla conexiones cada 5 min (Render duerme el servicio en plan free)
         pool_size=5,
         max_overflow=5,
+        connect_args={
+            # TCP keepalives agresivos: sin esto, si un proxy/NAT intermedio
+            # corta una conexión ociosa en silencio (sin avisarle a Postgres
+            # ni a la app), el propio pool_pre_ping puede quedar COLGADO
+            # hasta 15-20 min (el timeout de TCP por defecto del SO) en vez
+            # de fallar rápido y reconectar -- bug conocido de SQLAlchemy +
+            # psycopg contra Postgres gestionado (ver
+            # github.com/sqlalchemy/sqlalchemy/discussions/13032). Con esto,
+            # una conexión muerta se detecta en ~60s (30 + 10*3) en vez de
+            # minutos: sospecha fundada para el "se corta a los 2-3 minutos,
+            # específicamente al guardar" reportado (ver CLAUDE.md
+            # "Pendientes" -- sigue sin confirmarse con un traceback real).
+            "keepalives": 1,
+            "keepalives_idle": 30,
+            "keepalives_interval": 10,
+            "keepalives_count": 3,
+        },
     )
     USANDO_POSTGRES = True
 else:
