@@ -37,7 +37,7 @@ def test_sembrado_carga_59_filas_respetando_estado():
     topes = db.topes_como_dicts()
     assert len(topes) == 59
     sospechosos = [t for t in topes if t["estado"] == "SOSPECHOSO"]
-    assert len(sospechosos) == 14
+    assert len(sospechosos) == 12
     marzo_2026 = next(t for t in topes if t["vigencia_desde"] == "2026-03")
     assert marzo_2026["estado"] == "verificado"
     assert marzo_2026["tope_maximo"] == 4045590.45

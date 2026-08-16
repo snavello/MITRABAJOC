@@ -50,11 +50,11 @@ vigencia_desde,tope_maximo,base_minima,estado,fuente
 2025-10,4218841.1,129810.4,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
 2025-11,4300090.15,132311.12,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
 2025-12,4381390.2,134811.4,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
-2026-01,4467152.3,137452.1,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
-2026-02,4542012.15,139754.12,SOSPECHOSO,serie inconsistente con marzo 2026 - REVISAR
+2026-01,3823372.95,117643.93,verificado,"valor confirmado por el sindicato, corrige discontinuidad vs. marzo 2026"
+2026-02,3932339.08,120996.78,verificado,"valor confirmado por el sindicato, corrige discontinuidad vs. marzo 2026"
 2026-03,4045590.45,124481.49,verificado,Res. ANSES 38/2026
 2026-04,4162912.57,128091.45,verificado,Res. ANSES 74/2026
 2026-05,4303619.01,132420.94,verificado,Res. ANSES 110/2026
-2026-06,4414652.38,135837.4,derivado,"derivado +2,58% (control OK contra julio)"
+2026-06,4414652.38,135837.4,verificado,"ANSES movilidad 2,58% (confirmado por el sindicato)"
 2026-07,4509567.41,138757.9,verificado,"ANSES movilidad 2,15%"
 2026-08,4594798.23,141380.42,verificado,"ANSES movilidad 1,89%"

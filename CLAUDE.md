@@ -451,11 +451,13 @@ superaba el tope recibía discrepancias falsas. Corregido en la rama
 **Mantenimiento mensual obligatorio**: ANSES actualiza el tope y la base
 mínima todos los meses (Decreto 274/2024, movilidad/IPC) — hay que cargar
 el valor nuevo en `/plataforma` → "Topes SS" cada mes para que el chequeo
-de ese período funcione. **14 valores quedaron marcados `SOSPECHOSO`**
-(enero 2025 a febrero 2026, por una discontinuidad detectada en el CSV
-original entre febrero y marzo 2026) — pendientes de verificar contra las
-resoluciones oficiales de ANSES antes de confiar en el resultado para ese
-tramo.
+de ese período funcione. **Quedan 12 valores marcados `SOSPECHOSO`**
+(octubre 2025 a diciembre 2025, más enero y febrero 2026 — la discontinuidad
+original detectada en el CSV entre febrero y marzo 2026 comprendía 14 meses;
+enero y febrero 2026 ya se corrigieron con los valores reales aportados por
+el sindicato el 2026-08-15, quedando `verificado`) — pendientes de verificar
+contra las resoluciones oficiales de ANSES antes de confiar en el resultado
+para ese tramo.
 
 ## Pendientes (features)
 1. Capacitación — "próximamente". Falta contenido: índice de documentos y
@@ -464,9 +466,9 @@ tramo.
    producción (permite cambiar la clave de cualquier usuario; está marcada con una
    advertencia visible). Es un riesgo de seguridad, sacar antes de usuarios reales.
    Se deja a propósito mientras dure la etapa de demos y pruebas (2026-08-05).
-3. Verificar contra las resoluciones oficiales de ANSES los 14 topes de base
-   imponible marcados `SOSPECHOSO` (enero 2025 a febrero 2026) — ver sección
-   "Topes de base imponible" más arriba.
+3. Verificar contra las resoluciones oficiales de ANSES los 12 topes de base
+   imponible que siguen marcados `SOSPECHOSO` (octubre 2025 a febrero 2026) —
+   ver sección "Topes de base imponible" más arriba.
 
 ## Noticias (sindicato → trabajador)
 Reemplaza el placeholder "próximamente" de Novedades. Modelo `Noticia`
