@@ -2404,6 +2404,8 @@ def app_portada(request: Request):
             "credencial_generada": bool(credencial.get("codigo")),
             "documento": _dni_de_cuil(cuil),
             "perfil": db.perfil_trabajador(cuil, sid_activo),
+            "provincias": db.PROVINCIAS_AR,
+            "tiene_foto_perfil": bool(db.foto_trabajador(cuil)),
             "noticias": _con_antiguedad(db.noticias_vigentes(sid_activo, seccional_id=seccional_id, limite=3)),
             "beneficios": db.beneficios_vigentes(sid_activo, seccional_id=seccional_id),
             "notificaciones_no_leidas": db.contar_notificaciones_no_leidas(cuil, sid_activo),
@@ -2414,6 +2416,65 @@ def app_portada(request: Request):
     return templates.TemplateResponse("elegir_sindicato.html", {
         "request": request, "sindicatos": sinds, "marca_plataforma": db.marca_plataforma(),
     })
+
+
+@app.post("/api/perfil")
+async def api_actualizar_perfil(request: Request, nombre: str = Form(...), calle: str = Form(""),
+                                 numero: str = Form(""), piso: str = Form(""), ciudad: str = Form(""),
+                                 provincia: str = Form(""), telefono: str = Form(""), mail: str = Form("")):
+    """El trabajador edita su propio perfil -- todo menos el CUIL. Actualiza
+    el empadronamiento del sindicato ACTIVO (ver actualizar_perfil_trabajador:
+    Trabajador es por sindicato, no hay un domicilio único de la persona)."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    if not nombre.strip():
+        raise HTTPException(400, "El nombre no puede estar vacío.")
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise HTTPException(403, "No autorizado")
+    if not db.actualizar_perfil_trabajador(cuil, sid, nombre, calle, numero, piso, ciudad, provincia, telefono, mail):
+        raise HTTPException(404, "No se encontró tu empadronamiento en este sindicato.")
+    nombre_guardado = db.nombre_trabajador(cuil, sid)
+    return {"ok": True, "nombre": nombre_guardado, "primer_nombre": nombre_guardado.split(" ")[0] or "Trabajador"}
+
+
+MAX_FOTO_PERFIL = 1 * 1024 * 1024  # 1 MB -- de sobra: el cliente ya la redimensiona a un JPEG chico antes de subirla
+MIMES_FOTO_PERFIL = {"image/jpeg", "image/png", "image/webp"}
+
+
+@app.post("/api/perfil/foto")
+async def api_subir_foto_perfil(request: Request, foto: UploadFile = File(...)):
+    """Foto de perfil, una por CUIL (no por sindicato). El achicado a muy
+    baja resolución lo hace el cliente (canvas -> JPEG chico) antes de subir
+    -- acá solo se valida tipo/tamaño, no se reprocesa la imagen de nuevo."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    if (foto.content_type or "") not in MIMES_FOTO_PERFIL:
+        raise HTTPException(400, "La foto tiene que ser JPEG, PNG o WEBP.")
+    datos = await foto.read()
+    if not datos or len(datos) > MAX_FOTO_PERFIL:
+        raise HTTPException(400, "Foto vacía o demasiado pesada.")
+    if not db.guardar_foto_trabajador(cuil, datos, foto.content_type):
+        raise HTTPException(404, "No se encontró tu cuenta.")
+    return {"ok": True}
+
+
+@app.get("/perfil-foto/{cuil}")
+def servir_foto_perfil(cuil: str, request: Request):
+    """Solo la puede ver el propio trabajador dueño -- no es pública como el
+    logo del sindicato."""
+    ses = sesion_actual(request, "trabajador")
+    if not ses or request.cookies.get("cuil_trab", "") != cuil:
+        raise HTTPException(403, "No autorizado")
+    foto = db.foto_trabajador(cuil)
+    if not foto:
+        raise HTTPException(404, "Sin foto")
+    return BinResponse(content=foto["datos"], media_type=foto["mime"],
+                        headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/app/elegir/{sindicato_id}")

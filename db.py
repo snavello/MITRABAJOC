@@ -141,11 +141,16 @@ class UsuarioSindicato(SQLModel, table=True):
 
 class CuentaTrabajador(SQLModel, table=True):
     """La identidad única del trabajador en toda la plataforma: CUIL + clave.
-    Con esto entra, sin importar en cuántos sindicatos esté empadronado."""
+    Con esto entra, sin importar en cuántos sindicatos esté empadronado.
+    La foto de perfil vive acá (no en Trabajador, que es por sindicato) --
+    es una sola por persona, la misma se ve sin importar el sindicato
+    activo. Bytes en la base, mismo patrón que el logo del sindicato."""
     id: Optional[int] = Field(default=None, primary_key=True)
     cuil: str = Field(index=True, unique=True)
     clave_hash: str = ""
     nombre: str = ""
+    foto_datos: Optional[bytes] = Field(default=None)
+    foto_mime: str = ""
 
 
 class Trabajador(SQLModel, table=True):
@@ -917,8 +922,8 @@ def nombre_trabajador(cuil: str, sindicato_id: int) -> str:
 
 
 def perfil_trabajador(cuil: str, sindicato_id: int) -> Optional[dict]:
-    """Datos propios del trabajador para mostrarle su perfil (solo lectura,
-    no se edita desde la app del trabajador)."""
+    """Datos propios del trabajador para mostrarle su perfil. Editable desde
+    /api/perfil (ver actualizar_perfil_trabajador) -- todo menos el CUIL."""
     with Session(engine) as s:
         t = s.exec(select(Trabajador).where(
             Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
@@ -930,6 +935,48 @@ def perfil_trabajador(cuil: str, sindicato_id: int) -> Optional[dict]:
             "ciudad": t.ciudad, "provincia": t.provincia,
             "telefono": t.telefono, "mail": t.mail,
         }
+
+
+def actualizar_perfil_trabajador(cuil: str, sindicato_id: int, nombre: str, calle: str, numero: str,
+                                  piso: str, ciudad: str, provincia: str, telefono: str, mail: str) -> bool:
+    """El trabajador edita sus propios datos -- todo menos el CUIL (identidad,
+    no se toca acá) y los campos de gestión del sindicato (seccional,
+    vigencia de credencial, etc.), que siguen siendo resorte del admin.
+    Actualiza SOLO el empadronamiento del sindicato activo -- Trabajador es
+    por sindicato (pluriempleo), no hay un domicilio único de la persona en
+    este modelo."""
+    with Session(engine) as s:
+        t = s.exec(select(Trabajador).where(
+            Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
+        if not t:
+            return False
+        t.nombre = (nombre or "").strip()[:200] or t.nombre
+        t.calle, t.numero, t.piso = calle.strip()[:200], numero.strip()[:20], piso.strip()[:20]
+        t.ciudad, t.provincia = ciudad.strip()[:100], provincia.strip()[:60]
+        t.telefono, t.mail = telefono.strip()[:40], mail.strip()[:200]
+        s.add(t)
+        s.commit()
+        return True
+
+
+def foto_trabajador(cuil: str) -> Optional[dict]:
+    """Foto de perfil (una por CUIL, no por sindicato -- ver CuentaTrabajador)."""
+    with Session(engine) as s:
+        c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if not c or not c.foto_datos:
+            return None
+        return {"datos": c.foto_datos, "mime": c.foto_mime or "image/jpeg"}
+
+
+def guardar_foto_trabajador(cuil: str, datos: bytes, mime: str) -> bool:
+    with Session(engine) as s:
+        c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if not c:
+            return False
+        c.foto_datos, c.foto_mime = datos, mime
+        s.add(c)
+        s.commit()
+        return True
 
 
 def token_credencial(cuil: str, sindicato_id: int) -> str:

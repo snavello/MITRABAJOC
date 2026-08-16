@@ -834,6 +834,48 @@ descartado). Mismo patrón que ya usan `editarNoticia`/`editarBeneficio` en
 este archivo: cuando un `onclick` recibe un valor con `|tojson`, el atributo
 tiene que ir con comillas simples (`onclick='...'`).
 
+## Perfil del trabajador (editable, con foto -- 2026-08-17)
+El modal "Tu perfil" (portada.html, botón `.circulo-acento`) pasó de ser
+solo lectura a editable, y pasó del `.modal-hoja` oscuro compartido (con
+noticia/beneficio/acerca) al mismo criterio claro+encabezado de marca que
+ya usa Notificaciones -- reusa directamente sus clases (`.modal-notif-caja`/
+`.modal-notif-enc`/`.modal-cerrar-clara`), no se duplicó CSS.
+
+- **Qué se edita**: todo menos el CUIL (identidad, no se toca). Nombre,
+  domicilio (calle/número/piso), localidad (ciudad/provincia -- mismo
+  `db.PROVINCIAS_AR` que ya usa el alta de trabajador en `/admin`),
+  teléfono, mail. `POST /api/perfil` → `db.actualizar_perfil_trabajador`.
+  **Ojo con el alcance**: `Trabajador` es por sindicato (pluriempleo, ver
+  "Decisiones tomadas"), así que esto edita el empadronamiento del
+  sindicato ACTIVO nada más -- no existe un domicilio único de la persona
+  en este modelo, no se tocó esa arquitectura para esta feature.
+- **Foto de perfil**: una sola por CUIL (no por sindicato -- se ve igual
+  sin importar qué sindicato esté activo), vive en
+  `CuentaTrabajador.foto_datos`/`foto_mime` (la identidad global, no
+  `Trabajador`). El achicado a **muy baja resolución** lo hace el
+  CLIENTE antes de subir: `redimensionarFotoPerfil()` dibuja la imagen en
+  un `<canvas>` recortada a cuadrado (cover, centrado) y la exporta a JPEG
+  160×160 calidad .75 (unos pocos KB) -- el servidor (`POST
+  /api/perfil/foto`) solo valida tipo (jpeg/png/webp) y tamaño (tope 1 MB,
+  de sobra), no reprocesa la imagen de nuevo. `GET /perfil-foto/{cuil}` la
+  sirve -- no es pública como el logo del sindicato, exige sesión de
+  trabajador Y que el CUIL de la sesión coincida con el de la URL (403
+  para cualquier otro, ver test_perfil_trabajador.py).
+- **Círculo de la portada** (`.circulo-acento`, arriba a la derecha de
+  "Hola, {nombre}"): muestra la foto si existe (`tiene_foto_perfil`,
+  calculado server-side), si no el ícono de silueta de siempre -- sin
+  cambios de comportamiento para quien no cargó foto.
+- **Lightbox al hacer clic en la foto DENTRO del modal**: `.overlay-foto-
+  grande`, `max-width:25vw; max-height:25vh` -- tope explícito a un cuarto
+  de pantalla, a propósito (pedido así): la foto ya es de muy baja
+  resolución, no tiene sentido agrandarla más que eso.
+- **Actualización en vivo sin recargar**: guardar el nombre actualiza
+  "Hola, {primer_nombre}" en el momento (la respuesta de `/api/perfil` ya
+  trae el nombre recalculado); subir una foto la muestra al instante con
+  un blob URL local (más rápido que esperar el round-trip de volver a
+  pedir `/perfil-foto/...`), que la seguridad de sesión de esa ruta no
+  necesita para la propia sesión.
+
 ## Versionado
 `version.py`: constantes `VERSION_TRABAJADOR`/`VERSION_ADMIN`/
 `VERSION_PLATAFORMA` (arrancan las tres en "0.01.00") + `FECHA_VERSION`. Se
