@@ -13,7 +13,7 @@ os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth
-from db import Sindicato, Trabajador
+from db import Sindicato, Trabajador, UsuarioSindicato
 import main
 from fastapi.testclient import TestClient
 
@@ -24,6 +24,8 @@ with db.get_session() as s:
     SID = sind.id
     s.add(Trabajador(sindicato_id=SID, cuil="20111111119", nombre="Juan",
                       activo=True, registrado=True))
+    s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111110", nombre="Admin",
+                            clave_hash=auth.hashear_clave("clave-test"), debe_cambiar_clave=False))
     s.commit()
 
 client = TestClient(main.app, raise_server_exceptions=False)
@@ -66,7 +68,56 @@ def test_httpexception_normal_no_se_pisa():
     print("OK  test_httpexception_normal_no_se_pisa")
 
 
+# ---------- 500 en un POST de página completa (bug real: JSON crudo en pantalla) ----------
+# Un <form> de /admin es página completa, no fetch. Si la ruta explota con
+# una excepción no prevista (ej. un hipo transitorio de la base), antes se
+# veía TODO el JSON crudo en pantalla -- ahora vuelve al panel con un aviso.
+
+def test_500_en_post_de_pagina_completa_redirige_con_aviso():
+    admin_client = TestClient(main.app, raise_server_exceptions=False)
+    admin_client.post("/admin/login", data={"usuario": "20111111110", "clave": "clave-test"})
+
+    original = db.get_session
+
+    def _get_session_roto():
+        raise ConnectionError("conexión a la base perdida (simulado)")
+    db.get_session = _get_session_roto
+    try:
+        r = admin_client.post("/admin/trabajador", data={"cuil": "20111111119", "nombre": "Juan"},
+                               headers={"accept": "text/html,application/xhtml+xml"}, follow_redirects=False)
+    finally:
+        db.get_session = original
+
+    assert r.status_code == 303
+    assert r.headers["location"] == "/admin?error=guardado"
+    print("OK  test_500_en_post_de_pagina_completa_redirige_con_aviso")
+
+
+def test_500_en_llamada_fetch_sigue_devolviendo_json():
+    # Sin Accept: text/html (fetch() sin headers manda "*/*") -- el JS que
+    # llama a esto sabe leer el JSON, no hay que redirigirlo a ningún lado.
+    admin_client = TestClient(main.app, raise_server_exceptions=False)
+    admin_client.post("/admin/login", data={"usuario": "20111111110", "clave": "clave-test"})
+
+    original = db.get_session
+
+    def _get_session_roto():
+        raise ConnectionError("conexión a la base perdida (simulado)")
+    db.get_session = _get_session_roto
+    try:
+        r = admin_client.post("/admin/trabajador", data={"cuil": "20111111119", "nombre": "Juan"},
+                               follow_redirects=False)
+    finally:
+        db.get_session = original
+
+    assert r.status_code == 500
+    assert r.json().get("detail")
+    print("OK  test_500_en_llamada_fetch_sigue_devolviendo_json")
+
+
 if __name__ == "__main__":
     test_excepcion_no_prevista_devuelve_json_no_texto_plano()
     test_httpexception_normal_no_se_pisa()
+    test_500_en_post_de_pagina_completa_redirige_con_aviso()
+    test_500_en_llamada_fetch_sigue_devolviendo_json()
     print("\nTodo OK — red de seguridad ante errores no manejados.")

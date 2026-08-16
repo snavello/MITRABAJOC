@@ -56,6 +56,24 @@ app = FastAPI(title="Mi Trabajo — validador de recibos")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
+def _es_navegacion_de_pagina(request: Request) -> bool:
+    """True si esto es un <form> de página completa (pide text/html), no una
+    llamada fetch/JS -- esas nunca mandan ese Accept y ya saben leer el JSON
+    de error (`await r.json()`), no hay que redirigirlas a ningún lado."""
+    return "text/html" in request.headers.get("accept", "")
+
+
+def _panel_de(path: str) -> str | None:
+    """A qué pantalla volver según el prefijo de la ruta que falló."""
+    if path.startswith("/plataforma"):
+        return "/plataforma"
+    if path.startswith("/admin"):
+        return "/admin"
+    if path.startswith("/app") or path.startswith("/api"):
+        return "/ingresar"
+    return None
+
+
 @app.exception_handler(Exception)
 async def error_no_manejado(request: Request, exc: Exception):
     """Red de seguridad: sin esto, cualquier excepción no prevista devuelve
@@ -63,8 +81,22 @@ async def error_no_manejado(request: Request, exc: Exception):
     siempre espera JSON (`await r.json()`), explota con "unexpected token"
     en vez de mostrar el banner de error de siempre. No reemplaza arreglar
     la causa real (se loguea completa para poder diagnosticarla después),
-    solo evita que una excepción cualquiera tire la pantalla abajo."""
+    solo evita que una excepción cualquiera tire la pantalla abajo.
+
+    Para un <form> de página completa (no fetch/JS), esto además evita el
+    mismo problema que sesion_vencida_o_denegada de acá abajo: un 500 crudo
+    reemplazaba TODA la pantalla por el JSON -- "error técnico feo en
+    pantalla negra" que un usuario ve igual con la sesión bien, si lo que
+    falló fue otra cosa (ej. un hipo transitorio de conexión a la base;
+    Postgres en Render puede cerrar conexiones ociosas -- el engine ya usa
+    pool_pre_ping + pool_recycle=300 para mitigarlo, pero no elimina un
+    error de red puntual en el medio de un request). Se vuelve al panel
+    con un aviso en vez del JSON crudo; la excepción se loguea igual."""
     traceback.print_exc()
+    if _es_navegacion_de_pagina(request):
+        destino = _panel_de(request.url.path)
+        if destino:
+            return RedirectResponse(f"{destino}?error=guardado", status_code=303)
     return JSONResponse(
         status_code=500,
         content={"detail": "No pudimos verificar este recibo. Probá con una foto más nítida o el PDF."},
@@ -82,15 +114,10 @@ async def sesion_vencida_o_denegada(request: Request, exc: HTTPException):
     fetch/JS) se redirige a la pantalla de login correspondiente en vez de
     mostrar el JSON. Un 403 con sesión VÁLIDA (ej. módulo no habilitado,
     CUIL ajeno) sigue devolviendo JSON como siempre -- no es este caso."""
-    accept = request.headers.get("accept", "")
-    if exc.status_code in (401, 403) and "text/html" in accept and not sesion_actual(request):
-        path = request.url.path
-        if path.startswith("/plataforma"):
-            return RedirectResponse("/plataforma", status_code=303)
-        if path.startswith("/admin"):
-            return RedirectResponse("/admin", status_code=303)
-        if path.startswith("/app") or path.startswith("/api"):
-            return RedirectResponse("/ingresar", status_code=303)
+    if exc.status_code in (401, 403) and _es_navegacion_de_pagina(request) and not sesion_actual(request):
+        destino = _panel_de(request.url.path)
+        if destino:
+            return RedirectResponse(destino, status_code=303)
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 

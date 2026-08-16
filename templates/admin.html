@@ -288,6 +288,9 @@
 </svg>
 
 <div class="wrap">
+  {% if request.query_params.get('error') == 'guardado' %}
+  <div class="msg" style="background:#fdf3e7;color:#8a5a1a;">No se pudo guardar -- probá de nuevo en un momento. Si se repite, puede ser un problema pasajero de conexión.</div>
+  {% endif %}
   {% if 'recibos' in modulos %}
   <div class="panel" id="panel-reportes">
   <!-- ============ REPORTES ============ -->

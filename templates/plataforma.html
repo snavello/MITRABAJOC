@@ -136,6 +136,7 @@
   {% elif reset == 'nohay' %}<div style="background:#f8e5e2; border:1px solid #e0c4c0; color:#b23a2e; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">No se encontró un usuario con ese CUIT/CUIL.</div>{% endif %}
   {% if request.query_params.get('config') == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Configuración actualizada.</div>{% endif %}
   {% if request.query_params.get('marca') == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Marca de la plataforma actualizada.</div>{% endif %}
+  {% if request.query_params.get('error') == 'guardado' %}<div style="background:#fdf3e7; border:1px solid #e8d9b0; color:#8a5a1a; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">No se pudo guardar -- probá de nuevo en un momento. Si se repite, puede ser un problema pasajero de conexión.</div>{% endif %}
 
   <div class="ppanel activo" id="pp-lista">
   <h2>Sindicatos en la plataforma ({{ sindicatos|length }})</h2>

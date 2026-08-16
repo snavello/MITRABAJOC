@@ -27,19 +27,36 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   (main.py) reemite la cookie en cada request autenticado; un usuario activo
   nunca se desloguea solo.
   NO se usa auth de terceros.
-  **Sesión vencida en un POST de página completa (fix 2026-08-16)**: los
-  `<form>` de `/admin` y `/plataforma` son POST de página completa, no
-  fetch. Si la sesión venía inactiva 15+ min y se mandaba una acción, la ruta
-  tiraba `HTTPException(403)` y el navegador reemplazaba TODA la pantalla
-  por el JSON crudo de FastAPI ("error técnico feo en pantalla negra"), y
-  solo se arreglaba reingresando a mano. `main.sesion_vencida_o_denegada`
-  (`@app.exception_handler(HTTPException)`) redirige a `/admin` o
-  `/plataforma` (que ya renderizan el login) en vez del JSON crudo, pero
-  **solo** cuando la sesión es inválida/inexistente Y la request pide
-  `text/html` (navegación real de página, no una llamada `fetch()` desde
-  JS -- esas siguen recibiendo JSON como siempre, el código las lee con
-  `await r.json()`). Un 403 legítimo con sesión VÁLIDA (módulo no
-  habilitado, CUIL ajeno, etc.) no se toca, sigue siendo JSON.
+  **JSON crudo en pantalla al fallar un POST de página completa (fix
+  2026-08-16, 2 rondas)**: los `<form>` de `/admin` y `/plataforma` son POST
+  de página completa, no fetch. Si la ruta respondía con una excepción --
+  sesión vencida (`HTTPException` 403/401) o cualquier otra sin manejar (ej.
+  un 500 por un hipo transitorio) -- el navegador reemplazaba TODA la
+  pantalla por el JSON crudo de FastAPI ("error técnico feo en pantalla
+  negra"). Dos manejadores nuevos en main.py, usando el mismo criterio
+  (`_es_navegacion_de_pagina`: pide `text/html`, no es una llamada fetch/JS
+  que ya sabe leer el JSON con `await r.json()`; y `_panel_de(path)`, a qué
+  pantalla volver según el prefijo de la ruta):
+  - `sesion_vencida_o_denegada` (`@app.exception_handler(HTTPException)`):
+    con sesión inválida/inexistente Y navegación real, redirige a `/admin` o
+    `/plataforma` (login) en vez del JSON. Un 403 legítimo con sesión
+    VÁLIDA (módulo no habilitado, CUIL ajeno, etc.) no se toca.
+  - `error_no_manejado` (`@app.exception_handler(Exception)`, ya existía
+    para garantizar JSON siempre): con navegación real, además redirige al
+    panel (`/admin?error=guardado` o `/plataforma?error=guardado`, con un
+    aviso "No se pudo guardar, probá de nuevo") en vez del JSON crudo.
+  - **Ojo — esto no arregla la causa de fondo del 500 en sí**, solo evita
+    que se vea feo: reportado por el sindicato como "se corta a los 2-3
+    minutos de inactividad, no a los 15" y específicamente al guardar/
+    enviar (no al navegar/recargar) -- eso descarta que sea la sesión
+    vencida de verdad (una recarga hubiera fallado igual) y apunta a algo
+    puntual del request de escritura, sospecha fundada: Postgres en Render
+    puede cortar conexiones ociosas. El engine (db.py) ya usa
+    `pool_pre_ping=True` + `pool_recycle=300` para mitigarlo, pero no
+    está confirmado que sea la causa exacta -- **pendiente**: la próxima
+    vez que pase, revisar los logs de Render (el traceback completo se
+    imprime con `traceback.print_exc()` en `error_no_manejado`) para
+    confirmar la causa real y corregirla de raíz.
 - **Python 3.12** fijado con .python-version (3.12.8) + variable PYTHON_VERSION en
   Render. Python 3.14 rompe SQLModel ("Field 'id' requires a type annotation").
 - **Deploy:** GitHub + Render. Render sigue la rama main y redeploya con cada push.
@@ -542,6 +559,14 @@ eran `SOSPECHOSO`.
 3. Los topes de base imponible previos a 2025 siguen marcados
    `por_verificar` (menor urgencia, sin inconsistencia detectada) — ver
    sección "Topes de base imponible" más arriba.
+4. Causa real de los 500 intermitentes al guardar/enviar en `/admin` y
+   `/plataforma` (reportado 2026-08-16, "se corta a los 2-3 minutos,
+   específicamente al guardar, no al navegar"): sin confirmar todavía. Ya
+   no se ve feo en pantalla (ver "Auth" más arriba), pero sigue fallando
+   la acción en sí. Sospecha fundada, no confirmada: Postgres en Render
+   cortando conexiones ociosas a pesar de `pool_pre_ping`/`pool_recycle`.
+   Revisar el traceback completo en los logs de Render la próxima vez que
+   pase.
 
 ## Noticias (sindicato → trabajador)
 Reemplaza el placeholder "próximamente" de Novedades. Modelo `Noticia`
