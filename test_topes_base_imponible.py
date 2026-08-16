@@ -32,21 +32,21 @@ plataforma_client.post("/plataforma/login", data={"cuit": "20000000000", "clave"
 
 # ---------- Fase 1: semilla + CRUD ----------
 
-def test_sembrado_carga_59_filas_respetando_estado():
+def test_sembrado_carga_78_filas_respetando_estado():
     db.sembrar_topes_si_vacio()
     topes = db.topes_como_dicts()
-    assert len(topes) == 59
+    assert len(topes) == 78
     sospechosos = [t for t in topes if t["estado"] == "SOSPECHOSO"]
     assert len(sospechosos) == 0
     marzo_2026 = next(t for t in topes if t["vigencia_desde"] == "2026-03")
     assert marzo_2026["estado"] == "verificado"
     assert marzo_2026["tope_maximo"] == 4045590.45
-    print("OK  test_sembrado_carga_59_filas_respetando_estado")
+    print("OK  test_sembrado_carga_78_filas_respetando_estado")
 
 
 def test_sembrado_no_duplica_si_ya_hay_datos():
     db.sembrar_topes_si_vacio()  # ya corrió arriba, esto no debería agregar nada más
-    assert len(db.topes_como_dicts()) == 59
+    assert len(db.topes_como_dicts()) == 78
     print("OK  test_sembrado_no_duplica_si_ya_hay_datos")
 
 
@@ -429,7 +429,7 @@ def test_ruta_admin_formula_persiste_sujeto_a_tope():
 
 
 if __name__ == "__main__":
-    test_sembrado_carga_59_filas_respetando_estado()
+    test_sembrado_carga_78_filas_respetando_estado()
     test_sembrado_no_duplica_si_ya_hay_datos()
     test_crear_tope_rechaza_vigencia_duplicada()
     test_tope_anterior_a()

@@ -21,23 +21,42 @@ vigencia_desde,tope_maximo,base_minima,estado,fuente
 2021-06,252901.36,7781.73,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
 2021-09,284343.91,8749.18,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
 2021-12,315350.62,9703.24,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
-2022-03,354103.39,10895.49,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
-2022-06,407215.41,12529.71,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
-2022-09,470401.35,14474.13,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
-2022-12,546650.48,16820.4,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
-2023-03,641631.81,19742.91,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
-2023-06,775594.43,23864.85,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
-2023-09,955954.18,29414.4,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
-2023-12,1180741.75,36331.48,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
-2024-01,1858804.13,45211.15,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
-2024-04,2222827.03,68396.65,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
-2024-05,2467433.52,75922.65,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
-2024-06,2684992.3,82617.14,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
-2024-07,2808272.33,86417.04,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
-2024-08,2920871.56,89873.4,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
-2024-09,3037915.02,93473.14,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
-2024-10,3164622.34,97371.11,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
-2024-11,3297354.12,101455.42,por_verificar,"CSV aportado, sin contrastar con fuente oficial"
+2022-01,318103.83,9787.95,verificado,Res. ANSES 247/2021
+2022-02,318103.83,9787.95,verificado,Res. ANSES 247/2021
+2022-03,357166.98,10989.91,verificado,Res. ANSES 32/2022
+2022-04,357166.98,10989.91,verificado,Res. ANSES 32/2022
+2022-05,357166.98,10989.91,verificado,Res. ANSES 32/2022
+2022-06,410742.03,12638.4,verificado,Res. ANSES 133/2022
+2022-07,410742.03,12638.4,verificado,Res. ANSES 133/2022
+2022-08,410742.03,12638.4,verificado,Res. ANSES 133/2022
+2022-09,474530.27,14601.05,verificado,Res. ANSES 201/2022
+2022-10,474530.27,14601.05,verificado,Res. ANSES 201/2022
+2022-11,474530.27,14601.05,verificado,Res. ANSES 201/2022
+2022-12,548651.9,16881.84,verificado,Res. ANSES 260/2022
+2023-01,642924.46,19782.46,verificado,Res. ANSES 260/2022
+2023-02,642924.46,19782.46,verificado,Res. ANSES 260/2022
+2023-03,752668.0,23159.32,verificado,Res. ANSES 36/2023
+2023-04,752668.0,23159.32,verificado,Res. ANSES 36/2023
+2023-05,752668.0,23159.32,verificado,Res. ANSES 36/2023
+2023-06,909789.95,27994.0,verificado,Res. ANSES 114/2023
+2023-07,909789.95,27994.0,verificado,Res. ANSES 114/2023
+2023-08,909789.95,27994.0,verificado,Res. ANSES 114/2023
+2023-09,957320.12,31456.43,verificado,Res. ANSES 190/2023
+2023-10,957320.12,31456.43,verificado,Res. ANSES 190/2023
+2023-11,957320.12,31456.43,verificado,Res. ANSES 190/2023
+2023-12,1059832.9,32610.67,verificado,Res. ANSES 222/2023
+2024-01,1059832.9,32610.67,verificado,Res. ANSES 222/2023
+2024-02,1059832.9,32610.67,verificado,Res. ANSES 222/2023
+2024-03,1454606.17,44757.98,verificado,Res. ANSES 39/2024
+2024-04,1854582.31,57065.22,verificado,Res. ANSES 62/2024
+2024-05,2058653.24,63344.42,verificado,Res. ANSES 97/2024
+2024-06,2240768.09,68948.01,verificado,Res. ANSES 188/2024
+2024-07,2335020.44,71848.39,verificado,Res. ANSES 320/2024
+2024-08,2442115.86,75143.15,verificado,Res. ANSES 389/2024
+2024-09,2540612.41,78173.08,verificado,Res. ANSES 588/2024
+2024-10,2646852.7,81442.21,verificado,Res. ANSES 798/2024
+2024-11,2738961.84,84277.15,verificado,Res. ANSES 936/2024
+2024-12,2812875.34,86551.33,verificado,Res. ANSES 1152/2024
 2025-01,2910574.49,89557.43,verificado,Res. ANSES 1247/2024
 2025-02,2989160.0,91975.48,verificado,Res. ANSES 66/2025
 2025-03,3055220.44,94008.14,verificado,Res. ANSES 145/2025

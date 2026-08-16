@@ -402,8 +402,10 @@ superaba el tope recibía discrepancias falsas. Corregido en la rama
   ("AAAA-MM", sin fecha_hasta — cada fila rige hasta que empieza la
   siguiente), `tope_maximo`, `base_minima`, `estado`
   (`verificado`/`derivado`/`por_verificar`/`SOSPECHOSO`) y `fuente`. Se
-  siembra desde `data/topes_ss.csv` (59 vigencias, enero 2015 a agosto
-  2026) vía `db.sembrar_topes_si_vacio()`, llamada desde `init_db()` —
+  siembra desde `data/topes_ss.csv` (78 vigencias, enero 2015 a agosto
+  2026 — 2022/2023/2024 con cobertura mensual completa desde 2026-08-16,
+  antes eran filas sueltas de muestra) vía `db.sembrar_topes_si_vacio()`,
+  llamada desde `init_db()` —
   mismo criterio que el seed histórico de AEFIP, corre en cada arranque
   tanto en SQLite local como en Postgres/Render.
 - **`Formula.sujeto_a_tope`** (bool, default `False`): marca por fórmula
