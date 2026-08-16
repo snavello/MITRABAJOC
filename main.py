@@ -1598,11 +1598,23 @@ def plataforma_config(request: Request, tope_sindical_pct: float = Form(...)):
 ESTADOS_TOPE = ("verificado", "derivado", "por_verificar", "SOSPECHOSO")
 
 
+def _parse_numero_tope(texto: str) -> float:
+    """Los montos de esta pantalla se escriben SIN separador de miles y con
+    coma para los decimales (ej. 4594798,23) -- convención argentina, para
+    que no choque con el separador de miles que usa Python al mostrarlos.
+    Un punto en el texto es un error de formato, no un separador válido acá
+    (evita el caso ambiguo de no saber si es de miles o decimal)."""
+    texto = (texto or "").strip()
+    if "." in texto:
+        raise ValueError("punto no permitido")
+    return float(texto.replace(",", "."))
+
+
 @app.post("/plataforma/tope")
 def plataforma_tope(
     request: Request,
     id: str = Form(""), vigencia_desde: str = Form(...),
-    tope_maximo: float = Form(...), base_minima: float = Form(...),
+    tope_maximo: str = Form(...), base_minima: str = Form(...),
     estado: str = Form("por_verificar"), fuente: str = Form(""),
     confirmado: str = Form(""),
 ):
@@ -1616,17 +1628,22 @@ def plataforma_tope(
         raise HTTPException(403, "No autorizado")
     if estado not in ESTADOS_TOPE:
         estado = "por_verificar"
+    try:
+        tope_maximo_val = _parse_numero_tope(tope_maximo)
+        base_minima_val = _parse_numero_tope(base_minima)
+    except ValueError:
+        return RedirectResponse("/plataforma?error=topeformato#topes", status_code=303)
     tope_id = int(id) if id else None
     anterior = db.tope_anterior_a(vigencia_desde, excluir_id=tope_id)
     if anterior and confirmado != "1" and (
-        tope_maximo < anterior["tope_maximo"] or base_minima < anterior["base_minima"]
+        tope_maximo_val < anterior["tope_maximo"] or base_minima_val < anterior["base_minima"]
     ):
         return RedirectResponse("/plataforma?error=topebajo#topes", status_code=303)
     if tope_id:
-        if not db.editar_tope(tope_id, tope_maximo, base_minima, estado, fuente):
+        if not db.editar_tope(tope_id, tope_maximo_val, base_minima_val, estado, fuente):
             return RedirectResponse("/plataforma?error=topenoexiste#topes", status_code=303)
     else:
-        if not db.crear_tope(vigencia_desde, tope_maximo, base_minima, estado, fuente):
+        if not db.crear_tope(vigencia_desde, tope_maximo_val, base_minima_val, estado, fuente):
             return RedirectResponse("/plataforma?error=topeduplicado#topes", status_code=303)
     return RedirectResponse("/plataforma#topes", status_code=303)
 

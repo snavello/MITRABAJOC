@@ -402,21 +402,23 @@
 
   <div class="ppanel" id="pp-topes">
   <h2>Topes de la seguridad social ({{ topes|length }})</h2>
-  <p class="muted" style="margin-bottom:14px; max-width:680px;">Tope máximo y piso mínimo de la base imponible de jubilación, INSSJP y obra social (art. 9 Ley 24.241) — se actualiza todos los meses por resolución de ANSES. El estado indica cuánto se puede confiar en cada valor; los pendientes de verificar de los últimos 12 meses aparecen primero, porque son los períodos que los trabajadores realmente suben.</p>
+  <p class="muted" style="margin-bottom:14px; max-width:680px;">Tope máximo y piso mínimo de la base imponible de jubilación, INSSJP y obra social (art. 9 Ley 24.241) — se actualiza todos los meses por resolución de ANSES. Ordenados del período más nuevo al más viejo; el estado (chip de color) indica cuánto se puede confiar en cada valor. <strong>Los montos van sin punto de separador de miles, con coma para los decimales</strong> (ej. 4594798,23).</p>
   {% if request.query_params.get('error') == 'topebajo' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El valor que intentaste guardar es menor al del período anterior — eso no debería pasar (los topes solo suben). Si estás seguro de que es correcto, confirmá el aviso del navegador antes de guardar.</div>
   {% elif request.query_params.get('error') == 'topeduplicado' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Ya existe un tope cargado para ese período. Para cambiarlo, editá el existente en vez de agregar otro.</div>
   {% elif request.query_params.get('error') == 'topenoexiste' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se encontró el tope que intentabas editar.</div>
+  {% elif request.query_params.get('error') == 'topeformato' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El tope máximo y la base mínima van sin punto de separador de miles — usá coma para los decimales (ej. 4594798,23).</div>
   {% endif %}
   <table>
     <tr><th>Vigencia</th><th>Tope máximo</th><th>Base mínima</th><th>Estado</th><th>Fuente</th><th></th></tr>
     {% for t in topes %}
     <tr>
       <td><code>{{ t.vigencia_desde }}</code></td>
-      <td class="num">${{ '{:,.2f}'.format(t.tope_maximo) }}</td>
-      <td class="num">${{ '{:,.2f}'.format(t.base_minima) }}</td>
+      <td class="num">${{ '%.2f'|format(t.tope_maximo)|replace('.', ',') }}</td>
+      <td class="num">${{ '%.2f'|format(t.base_minima)|replace('.', ',') }}</td>
       <td><span class="chip-estado {{ 'sospechoso' if t.estado == 'SOSPECHOSO' else t.estado }}">{{ t.estado.replace('_', ' ') }}</span></td>
       <td class="muted">{{ t.fuente or '—' }}</td>
       <td class="acc" style="white-space:nowrap; text-align:right;">
@@ -440,8 +442,8 @@
       <input type="hidden" name="confirmado" id="t-confirmado" value="">
       <div class="grid">
         <div class="campo"><label>Vigencia desde *</label><input type="month" name="vigencia_desde" id="t-vigencia" required></div>
-        <div class="campo"><label>Tope máximo *</label><input type="number" step="0.01" min="0" name="tope_maximo" id="t-maximo" required></div>
-        <div class="campo"><label>Base mínima *</label><input type="number" step="0.01" min="0" name="base_minima" id="t-minima" required></div>
+        <div class="campo"><label>Tope máximo *</label><input type="text" inputmode="decimal" pattern="[0-9]+([,][0-9]{1,2})?" placeholder="4594798,23" name="tope_maximo" id="t-maximo" required></div>
+        <div class="campo"><label>Base mínima *</label><input type="text" inputmode="decimal" pattern="[0-9]+([,][0-9]{1,2})?" placeholder="141380,42" name="base_minima" id="t-minima" required></div>
         <div class="campo">
           <label>Estado</label>
           <select name="estado" id="t-estado">
@@ -622,12 +624,18 @@ function borrarSind(id, nombre, nAdmins, nTrab) {
 // ---------- Topes de la seguridad social ----------
 const TOPES_TODOS = {{ topes_json | tojson }};
 
+// Los montos viajan como número JS (punto decimal) pero se muestran/cargan
+// en el form con coma, sin separador de miles -- ver prepararEnvioTope().
+function formatoTopeAr(n) {
+  return String(Number(n).toFixed(2)).replace('.', ',');
+}
+
 function editarTope(t) {
   const f = document.getElementById('form-tope');
   document.getElementById('t-id').value = t.id;
   document.getElementById('t-vigencia').value = t.vigencia_desde;
-  document.getElementById('t-maximo').value = t.tope_maximo;
-  document.getElementById('t-minima').value = t.base_minima;
+  document.getElementById('t-maximo').value = formatoTopeAr(t.tope_maximo);
+  document.getElementById('t-minima').value = formatoTopeAr(t.base_minima);
   document.getElementById('t-estado').value = t.estado;
   document.getElementById('t-fuente').value = t.fuente || '';
   document.getElementById('t-confirmado').value = '';
@@ -657,8 +665,11 @@ function resetTopeForm() {
 function prepararEnvioTope(form) {
   const idActual = document.getElementById('t-id').value;
   const vigencia = document.getElementById('t-vigencia').value;
-  const maximo = parseFloat(document.getElementById('t-maximo').value);
-  const minima = parseFloat(document.getElementById('t-minima').value);
+  // Coma decimal, sin separador de miles (ver _parse_numero_tope en main.py,
+  // que es quien realmente valida y convierte -- esto es solo para el
+  // aviso previo de "menor al anterior", no reemplaza esa validación).
+  const maximo = parseFloat(document.getElementById('t-maximo').value.replace(',', '.'));
+  const minima = parseFloat(document.getElementById('t-minima').value.replace(',', '.'));
   const anteriores = TOPES_TODOS.filter(t =>
     t.vigencia_desde < vigencia && String(t.id) !== String(idActual));
   if (anteriores.length) {
@@ -675,7 +686,7 @@ function prepararEnvioTope(form) {
 }
 
 if (location.hash === '#topes' ||
-    ['topebajo', 'topeduplicado', 'topenoexiste'].includes(new URLSearchParams(location.search).get('error'))) {
+    ['topebajo', 'topeduplicado', 'topenoexiste', 'topeformato'].includes(new URLSearchParams(location.search).get('error'))) {
   activarTab('topes');
 }
 </script>

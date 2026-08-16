@@ -13,7 +13,7 @@ import csv
 import json
 from pathlib import Path
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON
 
@@ -661,24 +661,13 @@ def topes_como_dicts() -> list:
 
 
 def topes_listado() -> list:
-    """Para la pantalla de /plataforma: los SOSPECHOSO/por_verificar de los
-    últimos 12 meses primero (son los períodos que los trabajadores
-    realmente suben, hay que corregirlos antes), el resto por vigencia
-    descendente."""
-    hace_12_meses = (datetime.now().replace(day=1) - timedelta(days=365)).strftime("%Y-%m")
+    """Para la pantalla de /plataforma: todos los topes por vigencia
+    descendente (el más nuevo primero) -- orden simple y predecible. Cuáles
+    hay que revisar se ve por el chip de estado (SOSPECHOSO/por_verificar),
+    no reordenando la tabla."""
     with Session(engine) as s:
         topes = s.exec(select(TopeBaseImponible)).all()
-        return _ordenar_topes(topes, hace_12_meses)
-
-
-def _ordenar_topes(topes: list, hace_12_meses: str) -> list:
-    urgentes = sorted(
-        [t for t in topes if t.estado in ("SOSPECHOSO", "por_verificar") and t.vigencia_desde >= hace_12_meses],
-        key=lambda t: t.vigencia_desde, reverse=True)
-    resto = sorted(
-        [t for t in topes if not (t.estado in ("SOSPECHOSO", "por_verificar") and t.vigencia_desde >= hace_12_meses)],
-        key=lambda t: t.vigencia_desde, reverse=True)
-    return urgentes + resto
+        return sorted(topes, key=lambda t: t.vigencia_desde, reverse=True)
 
 
 def tope_anterior_a(vigencia_desde: str, excluir_id: int = None) -> Optional[dict]:

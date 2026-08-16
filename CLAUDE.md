@@ -432,17 +432,30 @@ superaba el tope recibía discrepancias falsas. Corregido en la rama
   anterior (no debería pasar, los topes solo suben), el panel de
   plataforma pide confirmación explícita antes de guardar — chequeado en
   el cliente (JS) y de nuevo en el servidor (`/plataforma/tope`).
+- **Formato de los montos, a propósito distinto del resto de la app
+  (2026-08-16)**: `tope_maximo`/`base_minima` en el panel "Topes SS" se
+  escriben **sin punto de separador de miles, con coma para los
+  decimales** (ej. `4594798,23`) — convención argentina. El campo es
+  `type="text"` (no `type="number"`: el input nativo del navegador no
+  acepta coma como decimal, por eso al principio "no dejaba cargar" un
+  valor). `main._parse_numero_tope()` es quien valida/convierte del lado
+  del servidor — un punto en el texto se rechaza (`?error=topeformato`)
+  en vez de adivinar si era separador de miles o decimal. El listado
+  también se muestra en ese formato (no con `'{:,.2f}'`, que da al revés:
+  coma de miles y punto decimal).
+- **Orden del listado (2026-08-16)**: simple, por `vigencia_desde`
+  descendente (el más nuevo primero) — no hay reordenamiento por
+  prioridad; cuáles conviene revisar se ve por el chip de color del
+  estado, no por la posición en la tabla.
 
 **Mantenimiento mensual obligatorio**: ANSES actualiza el tope y la base
 mínima todos los meses (Decreto 274/2024, movilidad/IPC) — hay que cargar
 el valor nuevo en `/plataforma` → "Topes SS" cada mes para que el chequeo
-de ese período funcione. Los valores `por_verificar`/`SOSPECHOSO` de los
-últimos 12 meses aparecen primero en el listado a propósito, porque son
-los períodos que los trabajadores realmente suben. **14 valores quedaron
-marcados `SOSPECHOSO`** (enero 2025 a febrero 2026, por una discontinuidad
-detectada en el CSV original entre febrero y marzo 2026) — pendientes de
-verificar contra las resoluciones oficiales de ANSES antes de confiar en
-el resultado para ese tramo.
+de ese período funcione. **14 valores quedaron marcados `SOSPECHOSO`**
+(enero 2025 a febrero 2026, por una discontinuidad detectada en el CSV
+original entre febrero y marzo 2026) — pendientes de verificar contra las
+resoluciones oficiales de ANSES antes de confiar en el resultado para ese
+tramo.
 
 ## Pendientes (features)
 1. Capacitación — "próximamente". Falta contenido: índice de documentos y

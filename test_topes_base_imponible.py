@@ -7,7 +7,6 @@ Correr con: .venv/Scripts/python.exe test_topes_base_imponible.py
 """
 import os
 import tempfile
-from datetime import datetime, timedelta
 
 DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
 os.environ["DB_PATH"] = DB_FILE
@@ -85,18 +84,12 @@ def test_borrar_tope():
     print("OK  test_borrar_tope")
 
 
-def test_orden_prioridad_sospechosos_recientes_primero():
+def test_orden_mas_nuevo_primero():
     listado = db.topes_listado()
-    hace_12 = (datetime.now().replace(day=1) - timedelta(days=365)).strftime("%Y-%m")
-    urgentes_esperados = {t.vigencia_desde for t in listado
-                           if t.estado in ("SOSPECHOSO", "por_verificar") and t.vigencia_desde >= hace_12}
-    cantidad_urgentes = len(urgentes_esperados)
-    primeros = {t.vigencia_desde for t in listado[:cantidad_urgentes]}
-    assert primeros == urgentes_esperados, (primeros, urgentes_esperados)
-    # dentro del grupo urgente, el más reciente va primero
-    if cantidad_urgentes >= 2:
-        assert listado[0].vigencia_desde > listado[1].vigencia_desde
-    print("OK  test_orden_prioridad_sospechosos_recientes_primero")
+    vigencias = [t.vigencia_desde for t in listado]
+    assert vigencias == sorted(vigencias, reverse=True)
+    assert vigencias[0] == "2026-08"  # el más nuevo del CSV sembrado
+    print("OK  test_orden_mas_nuevo_primero")
 
 
 def test_crear_conceptos_universales_marca_sujeto_a_tope():
@@ -290,6 +283,33 @@ def test_sin_topes_pasados_no_rompe_y_avisa():
 
 # ---------- Fase 3: rutas de plataforma ----------
 
+def test_ruta_alta_tope_acepta_coma_decimal_sin_separador_de_miles():
+    r = plataforma_client.post("/plataforma/tope", data={
+        "id": "", "vigencia_desde": "2028-01", "tope_maximo": "4594798,23", "base_minima": "141380,42",
+        "estado": "verificado", "fuente": "test coma",
+    }, follow_redirects=False)
+    assert r.status_code == 303
+    assert "error" not in r.headers["location"]
+    with Session(db.engine) as s:
+        t = s.exec(select(TopeBaseImponible).where(TopeBaseImponible.vigencia_desde == "2028-01")).first()
+        assert t.tope_maximo == 4594798.23
+        assert t.base_minima == 141380.42
+        s.delete(t); s.commit()
+    print("OK  test_ruta_alta_tope_acepta_coma_decimal_sin_separador_de_miles")
+
+
+def test_ruta_alta_tope_rechaza_punto_como_separador():
+    r = plataforma_client.post("/plataforma/tope", data={
+        "id": "", "vigencia_desde": "2028-02", "tope_maximo": "4.594.798,23", "base_minima": "141380,42",
+        "estado": "verificado", "fuente": "test punto",
+    }, follow_redirects=False)
+    assert r.status_code == 303
+    assert "error=topeformato" in r.headers["location"]
+    with Session(db.engine) as s:
+        assert s.exec(select(TopeBaseImponible).where(TopeBaseImponible.vigencia_desde == "2028-02")).first() is None
+    print("OK  test_ruta_alta_tope_rechaza_punto_como_separador")
+
+
 def test_ruta_alta_tope_ok():
     r = plataforma_client.post("/plataforma/tope", data={
         "id": "", "vigencia_desde": "2027-01", "tope_maximo": 5000000, "base_minima": 150000,
@@ -415,7 +435,7 @@ if __name__ == "__main__":
     test_tope_anterior_a()
     test_editar_tope()
     test_borrar_tope()
-    test_orden_prioridad_sospechosos_recientes_primero()
+    test_orden_mas_nuevo_primero()
     test_crear_conceptos_universales_marca_sujeto_a_tope()
     test_formula_nueva_sin_tope_por_defecto()
     print("\nTests de Fase 1 (modelo de datos) pasaron.")
@@ -433,6 +453,8 @@ if __name__ == "__main__":
     test_sin_topes_pasados_no_rompe_y_avisa()
     print("Tests de Fase 2 (motor de validación) pasaron.")
 
+    test_ruta_alta_tope_acepta_coma_decimal_sin_separador_de_miles()
+    test_ruta_alta_tope_rechaza_punto_como_separador()
     test_ruta_alta_tope_ok()
     test_ruta_alta_tope_duplicado_rechaza()
     test_ruta_alta_menor_al_anterior_sin_confirmar_rechaza()
