@@ -135,10 +135,36 @@
   .badge-noleidas { position:absolute; top:-10px; right:-10px; background:#e5484d; color:#fff;
     font-size:13.5px; font-weight:700; min-width:25px; height:25px; border-radius:999px;
     display:flex; align-items:center; justify-content:center; padding:0 5px; border:2.5px solid #fff; }
-  .campo-tramite-fila { display:grid; grid-template-columns:2fr 1fr 90px 90px 90px 1fr auto auto auto; gap:6px;
-    align-items:center; padding:7px 0; border-bottom:1px solid var(--linea); font-size:12.5px; }
+  /* flex-wrap en vez de grid de columnas fijas: con el ancho + el manija de
+     arrastre sumados a lo que ya había (etiqueta/tipo/3 numéricos/extra/
+     obligatorio/subir/bajar/quitar), una fila de grid rígida obligaba a
+     contar tracks a mano cada vez que se agregaba un campo nuevo. */
+  .campo-tramite-fila { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+    padding:8px 6px; border-bottom:1px solid var(--linea); font-size:12.5px; border-radius:6px; }
+  .campo-tramite-fila.arrastrando { opacity:.4; }
+  .campo-tramite-fila.sobre-drop { border-top:2px solid var(--marca-primario); }
+  .campo-tramite-fila .drag-handle { cursor:grab; color:var(--gris); opacity:.55; font-size:15px;
+    padding:0 3px; user-select:none; flex:0 0 auto; }
   .campo-tramite-fila input, .campo-tramite-fila select { padding:5px 6px; font-size:12.5px; }
+  .campo-tramite-fila .ct-etiqueta { flex:2 1 140px; }
+  .campo-tramite-fila .ct-tipo { flex:1 1 118px; }
+  .campo-tramite-fila .ct-num { width:78px; flex:0 0 auto; }
+  .campo-tramite-fila .ct-extra { flex:1 1 150px; }
+  .campo-tramite-fila .ct-ancho { width:92px; flex:0 0 auto; }
   .campo-tramite-fila button { padding:4px 7px; font-size:11px; }
+  /* ---------- Vista previa (mismo criterio de ancho que trabajador.html) ---------- */
+  .tram-preview-box { background:var(--papel); border:1px dashed var(--linea); border-radius:10px; padding:14px; }
+  .tram-preview-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:10px; }
+  .tp-completo { grid-column:span 12; }
+  .tp-mitad { grid-column:span 6; }
+  .tp-tercio { grid-column:span 4; }
+  @media (max-width:600px) { .tp-mitad, .tp-tercio { grid-column:span 12; } }
+  .tp-campo label { display:block; font-size:11.5px; color:var(--gris); margin-bottom:4px; font-weight:500; }
+  .tp-campo input, .tp-campo select { width:100%; padding:8px 9px; border:1px solid var(--linea);
+    border-radius:7px; font-size:12.5px; background:#fff; color:var(--gris); pointer-events:none; }
+  .tp-campo .tp-opcion { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--tinta);
+    margin-bottom:3px; pointer-events:none; }
+  .tp-separador { grid-column:1 / -1; border:none; border-top:1px solid var(--linea); margin:2px 0 0; }
   .tramite-log { border-left:2px solid var(--linea); margin-left:6px; padding-left:14px; }
   /* Cebra: cada paso alterna un tinte muy leve de los colores del sindicato,
      para separar visualmente los eventos del historial de un vistazo. El
@@ -927,9 +953,13 @@
         </div>
 
         <h3 style="margin-top:18px; font-size:14px; color:var(--tinta);">Campos del formulario</h3>
-        <p class="muted" style="font-size:11.5px;">"Longitud exacta" es para datos de largo fijo (ej. CVU = 22). "Tipos de archivo" son extensiones separadas por coma (ej. pdf,jpg) -- vacío = cualquiera.</p>
+        <p class="muted" style="font-size:11.5px;">"Longitud exacta" es para datos de largo fijo (ej. CVU = 22). "Tipos de archivo" y "Opciones" van separados por coma (ej. pdf,jpg / Rojo,Verde,Azul) -- vacío = cualquiera. Arrastrá una fila del ☰ para reordenar; el "Ancho" decide cuánto ocupa cada campo en el formulario del trabajador (probalo en la vista previa de abajo).</p>
         <div id="tt-campos-lista"></div>
         <button type="button" class="sec mini" style="margin-top:8px;" onclick="agregarCampoTramite()">+ Agregar campo</button>
+
+        <h3 style="margin-top:22px; font-size:14px; color:var(--tinta);">Vista previa</h3>
+        <p class="muted" style="font-size:11.5px;">Así se va a ver el formulario para el trabajador (solo de referencia, no se puede completar acá).</p>
+        <div class="tram-preview-box" id="tt-vista-previa"></div>
 
         <div style="margin-top:16px;">
           <button type="submit" id="tt-submit">Crear tipo de trámite</button>
@@ -1296,42 +1326,61 @@ function cambiarSubTramite(dest) {
 
 let camposTramiteActuales = [];
 
+const TIPOS_DATO_TRAMITE_LABEL = {
+  texto: 'Texto', numero: 'Número', fecha: 'Fecha', archivo: 'Archivo',
+  seleccion: 'Selección fija (desplegable)', opcion_unica: 'Opción única (radio)',
+  multiple: 'Selección múltiple (checkbox)', booleano: 'Sí/No (marcado)', separador: 'Raya separadora',
+};
+const TIENE_OPCIONES_TRAMITE = new Set(['seleccion', 'opcion_unica', 'multiple']);
+
 function renderCamposTramite() {
   const cont = document.getElementById('tt-campos-lista');
   if (!camposTramiteActuales.length) {
     cont.innerHTML = '<p class="muted" style="font-size:12px;">Todavía no agregaste ningún campo.</p>';
+    renderVistaPreviaTramite();
     return;
   }
   cont.innerHTML = camposTramiteActuales.map((c, i) => `
-    <div class="campo-tramite-fila">
-      <input placeholder="Etiqueta" value="${escHtml(c.etiqueta)}" oninput="actualizarCampoTramite(${i},'etiqueta',this.value)">
-      <select onchange="actualizarCampoTramite(${i},'tipo_dato',this.value)">
-        <option value="texto" ${c.tipo_dato==='texto'?'selected':''}>Texto</option>
-        <option value="numero" ${c.tipo_dato==='numero'?'selected':''}>Número</option>
-        <option value="fecha" ${c.tipo_dato==='fecha'?'selected':''}>Fecha</option>
-        <option value="archivo" ${c.tipo_dato==='archivo'?'selected':''}>Archivo</option>
-        <option value="seleccion" ${c.tipo_dato==='seleccion'?'selected':''}>Selección fija</option>
+    <div class="campo-tramite-fila" draggable="true" data-idx="${i}"
+         ondragstart="dragCampoTramiteStart(event, ${i})" ondragover="dragCampoTramiteOver(event, ${i})"
+         ondrop="dragCampoTramiteDrop(event, ${i})" ondragend="dragCampoTramiteEnd(event)">
+      <span class="drag-handle" title="Arrastrá para reordenar">☰</span>
+      <input class="ct-etiqueta" placeholder="${c.tipo_dato==='separador' ? 'Etiqueta (opcional, solo referencia)' : 'Etiqueta'}"
+             value="${escHtml(c.etiqueta)}" oninput="actualizarCampoTramite(${i},'etiqueta',this.value)">
+      <select class="ct-tipo" onchange="actualizarCampoTramite(${i},'tipo_dato',this.value)">
+        ${Object.entries(TIPOS_DATO_TRAMITE_LABEL).map(([v, l]) =>
+          `<option value="${v}" ${c.tipo_dato===v?'selected':''}>${l}</option>`).join('')}
       </select>
-      <input type="number" min="0" placeholder="Long. máx." value="${c.longitud_maxima ?? ''}" ${c.tipo_dato!=='texto'?'disabled':''} oninput="actualizarCampoTramite(${i},'longitud_maxima',this.value)">
-      <input type="number" min="0" placeholder="Long. exacta" value="${c.longitud_exacta ?? ''}" ${c.tipo_dato!=='texto'?'disabled':''} oninput="actualizarCampoTramite(${i},'longitud_exacta',this.value)">
-      <input type="number" min="0" placeholder="Decimales" value="${c.decimales ?? ''}" ${c.tipo_dato!=='numero'?'disabled':''} oninput="actualizarCampoTramite(${i},'decimales',this.value)">
-      ${c.tipo_dato==='seleccion'
-        ? `<input placeholder="Opciones separadas por coma" value="${escHtml(c.opciones)}" oninput="actualizarCampoTramite(${i},'opciones',this.value)">`
-        : `<input placeholder="Tipos de archivo (pdf,jpg)" value="${escHtml(c.tipos_archivo_permitidos)}" ${c.tipo_dato!=='archivo'?'disabled':''} oninput="actualizarCampoTramite(${i},'tipos_archivo_permitidos',this.value)">`}
-      <label style="display:flex; align-items:center; gap:3px; white-space:nowrap;"><input type="checkbox" ${c.obligatorio?'checked':''} onchange="actualizarCampoTramite(${i},'obligatorio',this.checked)"> Oblig.</label>
+      <input class="ct-num" type="number" min="0" placeholder="Long. máx." value="${c.longitud_maxima ?? ''}" ${c.tipo_dato!=='texto'?'disabled':''} oninput="actualizarCampoTramite(${i},'longitud_maxima',this.value)">
+      <input class="ct-num" type="number" min="0" placeholder="Long. exacta" value="${c.longitud_exacta ?? ''}" ${c.tipo_dato!=='texto'?'disabled':''} oninput="actualizarCampoTramite(${i},'longitud_exacta',this.value)">
+      <input class="ct-num" type="number" min="0" placeholder="Decimales" value="${c.decimales ?? ''}" ${c.tipo_dato!=='numero'?'disabled':''} oninput="actualizarCampoTramite(${i},'decimales',this.value)">
+      ${TIENE_OPCIONES_TRAMITE.has(c.tipo_dato)
+        ? `<input class="ct-extra" placeholder="Opciones separadas por coma" value="${escHtml(c.opciones)}" oninput="actualizarCampoTramite(${i},'opciones',this.value)">`
+        : `<input class="ct-extra" placeholder="Tipos de archivo (pdf,jpg)" value="${escHtml(c.tipos_archivo_permitidos)}" ${c.tipo_dato!=='archivo'?'disabled':''} oninput="actualizarCampoTramite(${i},'tipos_archivo_permitidos',this.value)">`}
+      <select class="ct-ancho" ${c.tipo_dato==='separador'?'disabled':''} onchange="actualizarCampoTramite(${i},'ancho',this.value)" title="Ancho en el formulario">
+        <option value="completo" ${c.ancho==='completo'?'selected':''}>Ancho completo</option>
+        <option value="mitad" ${c.ancho==='mitad'?'selected':''}>Mitad</option>
+        <option value="tercio" ${c.ancho==='tercio'?'selected':''}>Un tercio</option>
+      </select>
+      <label style="display:flex; align-items:center; gap:3px; white-space:nowrap;" ${c.tipo_dato==='separador'?'class="oculto"':''}>
+        <input type="checkbox" ${c.obligatorio?'checked':''} ${c.tipo_dato==='separador'?'disabled':''} onchange="actualizarCampoTramite(${i},'obligatorio',this.checked)"> Oblig.
+      </label>
       <button type="button" class="sec mini" ${i===0?'disabled':''} onclick="moverCampoTramite(${i},-1)" title="Subir">↑</button>
       <button type="button" class="sec mini" ${i===camposTramiteActuales.length-1?'disabled':''} onclick="moverCampoTramite(${i},1)" title="Bajar">↓</button>
       <button type="button" class="peligro mini" onclick="quitarCampoTramite(${i})" title="Quitar">✕</button>
     </div>
   `).join('');
+  renderVistaPreviaTramite();
 }
 function agregarCampoTramite() {
-  camposTramiteActuales.push({etiqueta:'', tipo_dato:'texto', longitud_maxima:null, longitud_exacta:null, decimales:null, tipos_archivo_permitidos:'', opciones:'', obligatorio:true});
+  camposTramiteActuales.push({etiqueta:'', tipo_dato:'texto', longitud_maxima:null, longitud_exacta:null,
+    decimales:null, tipos_archivo_permitidos:'', opciones:'', ancho:'completo', obligatorio:true});
   renderCamposTramite();
 }
 function actualizarCampoTramite(i, campo, valor) {
   camposTramiteActuales[i][campo] = valor;
-  if (campo === 'tipo_dato') renderCamposTramite();
+  if (campo === 'tipo_dato') { if (valor === 'separador') camposTramiteActuales[i].ancho = 'completo'; renderCamposTramite(); }
+  else renderVistaPreviaTramite();
 }
 function moverCampoTramite(i, delta) {
   const j = i + delta;
@@ -1342,6 +1391,68 @@ function moverCampoTramite(i, delta) {
 function quitarCampoTramite(i) {
   camposTramiteActuales.splice(i, 1);
   renderCamposTramite();
+}
+
+// ---------- Reordenar arrastrando (HTML5 drag nativo, sin librerías) ----------
+let dragCampoTramiteOrigen = null;
+function dragCampoTramiteStart(ev, i) {
+  dragCampoTramiteOrigen = i;
+  ev.currentTarget.classList.add('arrastrando');
+  ev.dataTransfer.effectAllowed = 'move';
+}
+function dragCampoTramiteOver(ev, i) {
+  ev.preventDefault();
+  document.querySelectorAll('.campo-tramite-fila.sobre-drop').forEach(el => el.classList.remove('sobre-drop'));
+  if (i !== dragCampoTramiteOrigen) ev.currentTarget.classList.add('sobre-drop');
+}
+function dragCampoTramiteDrop(ev, i) {
+  ev.preventDefault();
+  if (dragCampoTramiteOrigen === null || i === dragCampoTramiteOrigen) return;
+  const [movido] = camposTramiteActuales.splice(dragCampoTramiteOrigen, 1);
+  camposTramiteActuales.splice(i, 0, movido);
+  dragCampoTramiteOrigen = null;
+  renderCamposTramite();
+}
+function dragCampoTramiteEnd() {
+  dragCampoTramiteOrigen = null;
+  document.querySelectorAll('.campo-tramite-fila.arrastrando, .campo-tramite-fila.sobre-drop')
+    .forEach(el => el.classList.remove('arrastrando', 'sobre-drop'));
+}
+
+// ---------- Vista previa en vivo (mismo layout de ancho que trabajador.html) ----------
+function renderVistaPreviaTramite() {
+  const cont = document.getElementById('tt-vista-previa');
+  if (!cont) return;
+  if (!camposTramiteActuales.length) {
+    cont.innerHTML = '<p class="muted" style="font-size:12px;">Agregá campos para ver la vista previa.</p>';
+    return;
+  }
+  cont.innerHTML = `<div class="tram-preview-grid">${camposTramiteActuales.map(c => {
+    if (c.tipo_dato === 'separador') return '<hr class="tp-separador">';
+    const etiqueta = escHtml(c.etiqueta) || '(sin etiqueta)';
+    let campo;
+    if (c.tipo_dato === 'booleano') {
+      campo = `<label class="tp-opcion"><input type="checkbox" disabled> ${etiqueta}${c.obligatorio ? ' *' : ''}</label>`;
+      return `<div class="tp-campo tp-${c.ancho}">${campo}</div>`;
+    }
+    const opciones = (c.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
+    if (c.tipo_dato === 'opcion_unica' || c.tipo_dato === 'multiple') {
+      const tipoInput = c.tipo_dato === 'opcion_unica' ? 'radio' : 'checkbox';
+      campo = (opciones.length ? opciones : ['(sin opciones cargadas)']).map(o =>
+        `<label class="tp-opcion"><input type="${tipoInput}" disabled> ${escHtml(o)}</label>`).join('');
+      return `<div class="tp-campo tp-${c.ancho}"><label>${etiqueta}${c.obligatorio ? ' *' : ''}</label>${campo}</div>`;
+    }
+    if (c.tipo_dato === 'seleccion') {
+      campo = `<select disabled><option>${opciones.length ? 'Elegí una opción' : '(sin opciones cargadas)'}</option></select>`;
+    } else if (c.tipo_dato === 'fecha') {
+      campo = `<input type="date" disabled>`;
+    } else if (c.tipo_dato === 'archivo') {
+      campo = `<input type="text" disabled placeholder="📎 Elegir archivo">`;
+    } else {
+      campo = `<input type="text" disabled placeholder="${c.tipo_dato === 'numero' ? 'Número' : 'Texto'}">`;
+    }
+    return `<div class="tp-campo tp-${c.ancho}"><label>${etiqueta}${c.obligatorio ? ' *' : ''}</label>${campo}</div>`;
+  }).join('')}</div>`;
 }
 
 const formTramiteTipo = document.getElementById('form-tramite-tipo');

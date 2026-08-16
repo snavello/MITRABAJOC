@@ -164,8 +164,22 @@
     background:linear-gradient(160deg, #ffffff, var(--papel)) !important; }
   .tram-input { display:block; width:100%; padding:11px 12px; border:1px solid var(--linea);
     border-radius:10px; font-family:inherit; font-size:14px; background:#fff; color:var(--tinta); }
+  /* Grilla de 12 columnas: cada campo ocupa el ancho que el sindicato eligió
+     al armar el formulario (mismo criterio que la vista previa de admin.html),
+     así un campo Sí/No no tiene por qué ocupar todo el ancho de la pantalla. */
+  #tram-form-campos { display:grid; grid-template-columns:repeat(12,1fr); gap:0 12px; }
+  .tp-completo { grid-column:span 12; }
+  .tp-mitad { grid-column:span 6; }
+  .tp-tercio { grid-column:span 4; }
+  @media (max-width:600px) { .tp-mitad, .tp-tercio { grid-column:span 12; } }
   .campo-tram { margin-bottom:14px; }
   .campo-tram label { display:block; font-size:12.5px; color:var(--gris); margin-bottom:6px; }
+  .campo-tram-separador { grid-column:1 / -1; border:none; border-top:1px solid var(--linea); margin:2px 0 12px; }
+  .campo-tram-opcion { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--tinta);
+    margin-bottom:8px; font-weight:400; }
+  .campo-tram-opcion input[type=radio], .campo-tram-opcion input[type=checkbox] { width:18px; height:18px; flex:0 0 auto; }
+  .campo-tram-bool { display:flex; align-items:center; gap:9px; font-size:14px; color:var(--tinta); font-weight:400; }
+  .campo-tram-bool input[type=checkbox] { width:20px; height:20px; flex:0 0 auto; }
   .archivo-trigger { display:flex; align-items:center; justify-content:center; gap:6px; width:100%;
     padding:11px; margin-top:0; }
   .archivo-nombre { font-size:12px; color:var(--gris); margin-top:6px; min-height:14px; overflow-wrap:anywhere; }
@@ -1258,6 +1272,17 @@ if (document.getElementById('tp-tramites')) {
         ${opciones.map(o => `<option value="${escTram(o)}">${escTram(o)}</option>`).join('')}
       </select>`;
     }
+    if (c.tipo_dato === 'booleano') {
+      return `<label class="campo-tram-bool"><input type="checkbox" id="${id}"> ${escTram(c.etiqueta)}</label>`;
+    }
+    if (c.tipo_dato === 'opcion_unica' || c.tipo_dato === 'multiple') {
+      const opciones = (c.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
+      const tipoInput = c.tipo_dato === 'opcion_unica' ? 'radio' : 'checkbox';
+      return opciones.map((o, idx) => `
+        <label class="campo-tram-opcion">
+          <input type="${tipoInput}" name="${id}" value="${escTram(o)}" id="${id}_${idx}"> ${escTram(o)}
+        </label>`).join('');
+    }
     const maxlen = c.longitud_exacta || c.longitud_maxima;
     return `<input type="text" class="tram-input" id="${id}" ${maxlen ? `maxlength="${maxlen}"` : ''} placeholder="${c.longitud_exacta ? c.longitud_exacta + ' caracteres' : ''}">`;
   }
@@ -1267,11 +1292,15 @@ if (document.getElementById('tp-tramites')) {
     document.getElementById('tram-form-titulo').textContent = tipo.titulo;
     document.getElementById('tram-form-codigo').textContent = tipo.codigo;
     document.getElementById('tram-form-error').style.display = 'none';
-    document.getElementById('tram-form-campos').innerHTML = tipo.campos.map(c => `
-      <div class="campo-tram">
+    document.getElementById('tram-form-campos').innerHTML = tipo.campos.map(c => {
+      if (c.tipo_dato === 'separador') return `<hr class="campo-tram-separador">`;
+      const anchoClass = 'tp-' + (c.ancho || 'completo');
+      if (c.tipo_dato === 'booleano') return `<div class="campo-tram ${anchoClass}">${campoInputHtml(c)}</div>`;
+      return `<div class="campo-tram ${anchoClass}">
         <label>${escTram(c.etiqueta)}${c.obligatorio ? ' *' : ''}</label>
         ${campoInputHtml(c)}
-      </div>`).join('');
+      </div>`;
+    }).join('');
     verTram('tram-form');
   };
 
@@ -1283,6 +1312,25 @@ if (document.getElementById('tp-tramites')) {
     fd.append('tipo_tramite_id', tipoTramiteActual.id);
     const faltan = [];
     tipoTramiteActual.campos.forEach(c => {
+      if (c.tipo_dato === 'separador') return;
+      if (c.tipo_dato === 'booleano') {
+        // Un checkbox sin marcar es "No", una respuesta válida -- nunca bloquea por obligatorio.
+        const el = document.getElementById('tc_' + c.id);
+        if (el && el.checked) fd.append('campo_' + c.id, 'on');
+        return;
+      }
+      if (c.tipo_dato === 'opcion_unica') {
+        const elegido = document.querySelector(`input[name="tc_${c.id}"]:checked`);
+        if (elegido) fd.append('campo_' + c.id, elegido.value);
+        else if (c.obligatorio) faltan.push(c.etiqueta);
+        return;
+      }
+      if (c.tipo_dato === 'multiple') {
+        const elegidos = document.querySelectorAll(`input[name="tc_${c.id}"]:checked`);
+        if (elegidos.length) elegidos.forEach(el => fd.append('campo_' + c.id, el.value));
+        else if (c.obligatorio) faltan.push(c.etiqueta);
+        return;
+      }
       const el = document.getElementById('tc_' + c.id);
       if (!el) return;
       if (c.tipo_dato === 'archivo') {

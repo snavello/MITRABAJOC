@@ -254,6 +254,65 @@ def test_terminado_bloquea_cambios():
     print("OK  test_terminado_bloquea_cambios")
 
 
+def test_ancho_campos_y_nuevos_tipos_de_campo():
+    campos = [
+        {"etiqueta": "Introducción", "tipo_dato": "separador", "obligatorio": False},
+        {"etiqueta": "Acepto términos", "tipo_dato": "booleano", "ancho": "mitad", "obligatorio": True},
+        {"etiqueta": "Turno preferido", "tipo_dato": "opcion_unica", "opciones": "Mañana, Tarde", "ancho": "tercio", "obligatorio": True},
+        {"etiqueta": "Días disponibles", "tipo_dato": "multiple", "opciones": "Lunes, Martes, Miércoles", "obligatorio": True},
+    ]
+    r = admin_uom.post("/admin/tramite-tipo", data={
+        "titulo": "Formulario nuevos tipos", "codigo": "NUEVOS", "campos_json": json.dumps(campos),
+    }, follow_redirects=False)
+    assert r.status_code == 303
+    with Session(db.engine) as s:
+        tipo = s.exec(select(TipoTramite).where(
+            TipoTramite.sindicato_id == SID_UOM, TipoTramite.codigo == "NUEVOS")).first()
+        campos_db = s.exec(select(CampoTramite).where(CampoTramite.tipo_tramite_id == tipo.id)
+                           .order_by(CampoTramite.orden)).all()
+        assert [c.tipo_dato for c in campos_db] == ["separador", "booleano", "opcion_unica", "multiple"]
+        assert campos_db[0].etiqueta == "Introducción"  # separador con etiqueta opcional cargada igual
+        assert campos_db[1].ancho == "mitad"
+        assert campos_db[2].ancho == "tercio"
+        assert campos_db[3].ancho == "completo"  # default cuando no se manda
+        id_bool, id_unica, id_multi = campos_db[1].id, campos_db[2].id, campos_db[3].id
+        tipo_id = tipo.id
+
+    trab = _sesion_trabajador("20111111119")
+
+    # Falta el radio obligatorio y el checkbox obligatorio -> 422, el booleano
+    # (sin marcar) NO debería aparecer en los errores.
+    r_falta = trab.post("/api/tramite", data={"tipo_tramite_id": tipo_id})
+    assert r_falta.status_code == 422
+    errores = r_falta.json()["errores"]
+    assert any("Turno preferido" in e for e in errores)
+    assert any("Días disponibles" in e for e in errores)
+    assert not any("Acepto" in e for e in errores)
+
+    # Opción fuera de la lista permitida -> rechazada.
+    r_mal = trab.post("/api/tramite", data={
+        "tipo_tramite_id": tipo_id, f"campo_{id_unica}": "Noche",
+        f"campo_{id_multi}": "Lunes",
+    })
+    assert r_mal.status_code == 422
+    assert any("Turno preferido" in e for e in r_mal.json()["errores"])
+
+    # Envío válido: booleano sin marcar (ni siquiera viaja en el form, como
+    # un checkbox real sin marcar), radio y 2 checkboxes marcados.
+    r_ok = trab.post("/api/tramite", data={
+        "tipo_tramite_id": tipo_id, f"campo_{id_unica}": "Mañana",
+        f"campo_{id_multi}": ["Lunes", "Miércoles"],
+    })
+    assert r_ok.status_code == 200, r_ok.text
+    detalle = db.tramite_detalle(r_ok.json()["id"])
+    resp_por_etiqueta = {r["etiqueta"]: r["valor_texto"] for r in detalle["respuestas"]}
+    assert resp_por_etiqueta["Acepto términos"] == "No"
+    assert resp_por_etiqueta["Turno preferido"] == "Mañana"
+    assert resp_por_etiqueta["Días disponibles"] == "Lunes, Miércoles"
+    assert "Introducción" not in resp_por_etiqueta  # el separador no junta respuesta
+    print("OK  test_ancho_campos_y_nuevos_tipos_de_campo")
+
+
 def test_aislamiento_entre_sindicatos():
     """Aísla la verificación de PERTENENCIA del trámite del gate de módulo
     (ya probado aparte): le prestamos el módulo a Fega solo para este test,
@@ -302,6 +361,7 @@ if __name__ == "__main__":
     test_cambio_estado_dispara_log_y_notificacion()
     test_nota_admin_y_trabajador_en_thread_correcto()
     test_campo_seleccion_fija()
+    test_ancho_campos_y_nuevos_tipos_de_campo()
     test_terminado_bloquea_cambios()
     test_aislamiento_entre_sindicatos()
     test_bloqueo_403_si_modulo_apagado()

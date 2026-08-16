@@ -464,17 +464,22 @@ class TipoTramite(SQLModel, table=True):
 class CampoTramite(SQLModel, table=True):
     """Un campo del formulario dinámico de un TipoTramite. El orden decide
     cómo se renderiza; longitud/decimales/tipos de archivo solo aplican
-    según tipo_dato (ver validación server-side en main.api_enviar_tramite)."""
+    según tipo_dato (ver validación server-side en main.api_enviar_tramite).
+
+    "separador" es un pseudo-campo (una raya horizontal): no junta
+    respuesta, existe solo para dividir visualmente el formulario -- se
+    valida y se salta explícitamente en main.api_enviar_tramite."""
     id: Optional[int] = Field(default=None, primary_key=True)
     tipo_tramite_id: int = Field(foreign_key="tipotramite.id", index=True)
     orden: int = 0
-    etiqueta: str
-    tipo_dato: str  # "texto" | "numero" | "fecha" | "archivo" | "seleccion"
+    etiqueta: str = ""  # obligatoria salvo para tipo_dato="separador"
+    tipo_dato: str  # texto|numero|fecha|archivo|seleccion|opcion_unica|multiple|booleano|separador
     longitud_maxima: Optional[int] = Field(default=None)
     longitud_exacta: Optional[int] = Field(default=None)  # ej. CVU = 22
     decimales: Optional[int] = Field(default=None)        # solo si tipo_dato="numero"
     tipos_archivo_permitidos: str = ""                     # solo si tipo_dato="archivo"
-    opciones: str = ""                                      # solo si tipo_dato="seleccion", separadas por coma
+    opciones: str = ""       # separadas por coma -- seleccion/opcion_unica/multiple
+    ancho: str = "completo"  # completo | mitad | tercio -- cuánto ocupa en el formulario
     obligatorio: bool = True
 
 
@@ -1335,7 +1340,7 @@ def _campo_tramite_a_dict(c: "CampoTramite") -> dict:
         "id": c.id, "orden": c.orden, "etiqueta": c.etiqueta, "tipo_dato": c.tipo_dato,
         "longitud_maxima": c.longitud_maxima, "longitud_exacta": c.longitud_exacta,
         "decimales": c.decimales, "tipos_archivo_permitidos": c.tipos_archivo_permitidos,
-        "opciones": c.opciones, "obligatorio": c.obligatorio,
+        "opciones": c.opciones, "ancho": c.ancho, "obligatorio": c.obligatorio,
     }
 
 
@@ -1351,7 +1356,8 @@ def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list
                 tipo_tramite_id=t.id, orden=i, etiqueta=c["etiqueta"], tipo_dato=c["tipo_dato"],
                 longitud_maxima=c.get("longitud_maxima"), longitud_exacta=c.get("longitud_exacta"),
                 decimales=c.get("decimales"), tipos_archivo_permitidos=c.get("tipos_archivo_permitidos", ""),
-                opciones=c.get("opciones", ""), obligatorio=c.get("obligatorio", True),
+                opciones=c.get("opciones", ""), ancho=c.get("ancho") or "completo",
+                obligatorio=c.get("obligatorio", True),
             ))
         s.commit()
         return t.id
@@ -1376,7 +1382,8 @@ def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: st
                 tipo_tramite_id=tipo_id, orden=i, etiqueta=c["etiqueta"], tipo_dato=c["tipo_dato"],
                 longitud_maxima=c.get("longitud_maxima"), longitud_exacta=c.get("longitud_exacta"),
                 decimales=c.get("decimales"), tipos_archivo_permitidos=c.get("tipos_archivo_permitidos", ""),
-                opciones=c.get("opciones", ""), obligatorio=c.get("obligatorio", True),
+                opciones=c.get("opciones", ""), ancho=c.get("ancho") or "completo",
+                obligatorio=c.get("obligatorio", True),
             ))
         s.commit()
         return True

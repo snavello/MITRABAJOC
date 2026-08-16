@@ -552,6 +552,60 @@ textura de grano inline (`feTurbulence` en un `::before`, `.caja > *` con
 en el resto de la app (headers de admin.html/trabajador.html, etc.) el
 tamaño de 76px unificado (ver "Decisiones tomadas") no cambió.
 
+## Constructor visual de Trámites (2026-08-16)
+El pedido original era un editor de lienzo libre (drag X/Y) para maquetar
+el formulario antes de publicarlo -- se evaluó y se descartó por costo
+(ver "Pendientes", punto 5). En su lugar, tres piezas más livianas que
+resuelven el mismo problema real (un campo SI/NO no debería ocupar todo
+el ancho de la pantalla):
+
+- **`CampoTramite.ancho`** (columna nueva: `completo`|`mitad`|`tercio`,
+  default `completo`). El formulario del trabajador (`trabajador.html`)
+  y la vista previa de admin usan la MISMA grilla CSS de 12 columnas
+  (`#tram-form-campos`/`.tram-preview-grid { grid-template-columns:repeat(12,1fr) }`,
+  clases `.tp-completo/.tp-mitad/.tp-tercio` con `grid-column:span
+  12/6/4`) -- dos campos "mitad" seguidos quedan uno al lado del otro
+  solos, sin que el admin tenga que calcular nada. En mobile (`max-width:
+  600px`) mitad/tercio colapsan a ancho completo -- no tiene sentido un
+  campo angosto en una pantalla de celular.
+- **Reordenar arrastrando** (`admin.html::renderCamposTramite`): cada fila
+  del constructor es `draggable="true"` con handlers HTML5 nativos
+  (`dragstart`/`dragover`/`drop`/`dragend`, sin librería externa, mismo
+  criterio del proyecto de no depender de CDNs) -- clases `.arrastrando`/
+  `.sobre-drop` dan feedback visual. Los botones ↑/↓ de antes se
+  mantuvieron como fallback accesible (teclado/lector de pantalla), no se
+  sacaron.
+- **Vista previa en vivo** (`#tt-vista-previa`, `renderVistaPreviaTramite()`):
+  reproduce con inputs deshabilitados (`pointer-events:none`) exactamente
+  cómo va a verse el formulario real -- misma función de mapeo tipo_dato→
+  HTML que usa el trabajador, no una aproximación aparte. Se re-renderiza
+  en cada cambio (agregar/quitar/reordenar/editar un campo).
+
+**Cuatro tipos de campo nuevos** (`CampoTramite.tipo_dato`), sumados a los
+que ya había (texto/numero/fecha/archivo/seleccion):
+- `separador`: raya horizontal (`<hr>`), pseudo-campo sin respuesta -- es
+  el único `tipo_dato` sin etiqueta obligatoria (`main._campos_tramite_validos`
+  la exceptúa explícitamente) y `main.api_enviar_tramite` lo salta al
+  principio del loop, antes de cualquier otro chequeo.
+- `booleano`: checkbox Sí/No. **Nunca bloquea por obligatorio** -- un
+  checkbox sin marcar es una respuesta válida ("No"), no un campo vacío;
+  el value que persiste es literalmente el string `"Sí"`/`"No"`.
+- `opcion_unica`: radio buttons, una sola opción -- misma validación
+  server-side que `seleccion` (el valor tiene que estar en `opciones`),
+  solo cambia el widget (radio en vez de `<select>`).
+- `multiple`: checkboxes, cero o más opciones -- el form manda varias
+  entradas con el mismo `campo_{id}`, `main.py` las lee con
+  `form.getlist()` (no `form.get()`) y valida cada una contra `opciones`;
+  se persisten unidas con `", "` en un solo `RespuestaTramite.valor_texto`
+  (no una fila por opción marcada -- simplifica el modelo, ya alcanza para
+  mostrar y para el historial).
+- `opcion_unica`/`multiple`/`seleccion` comparten la columna `CampoTramite
+  .opciones` (mismo formato: separadas por coma) -- en el constructor de
+  admin, el mismo input reutiliza el slot que antes solo mostraba "Tipos
+  de archivo" (`TIENE_OPCIONES_TRAMITE` decide qué placeholder/campo
+  destino usar), no se agregó una columna nueva al layout ya denso del
+  constructor.
+
 ## Topes de base imponible (jubilación, INSSJP, obra social)
 El validador aplicaba el % de cada aporte sobre la base remunerativa
 completa del recibo, sin el tope máximo ni el piso mínimo de la base
@@ -642,6 +696,20 @@ eran `SOSPECHOSO`.
    otra) confirmó la causa real. La mitigación de keepalives TCP en `db.py`
    se mantiene (es una mejora real e independiente), pero ya no es la
    sospecha principal de este síntoma puntual.
+5. **Editor visual de formularios de Trámites con lienzo libre (drag X/Y),
+   pospuesto (2026-08-16)**: el pedido original era una etapa de diseño
+   previa a publicar, con las "cajas" de cada campo arrastrables a
+   cualquier posición del lienzo (fondo/encabezados fijos, campos libres).
+   Se descartó por ahora por el costo real: hay que guardar coordenadas
+   (no solo orden), construir un editor de arrastre libre nuevo, y sobre
+   todo resolver cómo esa posición libre se traduce a la pantalla angosta
+   del celular del trabajador, donde hoy todo va apilado a lo ancho
+   completo a propósito. **Se implementó en su lugar** un camino más
+   liviano que cubre el mismo problema real (un campo SI/NO no debería
+   ocupar el ancho completo): ancho elegible por campo (completo/mitad/
+   tercio) + reordenar arrastrando en una lista (no en un lienzo) + vista
+   previa en vivo — ver sección "Constructor visual de Trámites" más abajo.
+   Revisar si en algún momento el lienzo libre justifica el costo extra.
 
 ## Noticias (sindicato → trabajador)
 Reemplaza el placeholder "próximamente" de Novedades. Modelo `Noticia`

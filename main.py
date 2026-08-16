@@ -1291,15 +1291,24 @@ def _notificar_cambio_tramite(sid: int, cuil: str, texto: str) -> None:
         db.crear_notificacion(sid, None, "Sistema", texto, "cuil", [cuil], origen="sistema")
 
 
+TIPOS_DATO_TRAMITE = ("texto", "numero", "fecha", "archivo", "seleccion",
+                       "opcion_unica", "multiple", "booleano", "separador")
+ANCHOS_CAMPO_TRAMITE = ("completo", "mitad", "tercio")
+
+
 def _campos_tramite_validos(campos_crudos: list) -> list:
     """Normaliza y descarta campos mal formados que pudieran llegar de un
     request armado a mano -- misma lógica de saneo defensivo que ya usan
-    _destinos_validos/_modulos_de para otros datos que vienen del cliente."""
+    _destinos_validos/_modulos_de para otros datos que vienen del cliente.
+    "separador" es el único tipo_dato sin etiqueta obligatoria (es una raya
+    visual, no junta respuesta)."""
     validos = []
     for c in campos_crudos:
-        if not isinstance(c, dict) or not str(c.get("etiqueta") or "").strip():
+        if not isinstance(c, dict):
             continue
-        if c.get("tipo_dato") not in ("texto", "numero", "fecha", "archivo", "seleccion"):
+        if c.get("tipo_dato") not in TIPOS_DATO_TRAMITE:
+            continue
+        if c.get("tipo_dato") != "separador" and not str(c.get("etiqueta") or "").strip():
             continue
 
         def _entero(v):
@@ -1309,13 +1318,14 @@ def _campos_tramite_validos(campos_crudos: list) -> list:
                 return None
 
         validos.append({
-            "etiqueta": str(c["etiqueta"]).strip()[:200],
+            "etiqueta": str(c.get("etiqueta") or "").strip()[:200],
             "tipo_dato": c["tipo_dato"],
             "longitud_maxima": _entero(c.get("longitud_maxima")),
             "longitud_exacta": _entero(c.get("longitud_exacta")),
             "decimales": _entero(c.get("decimales")),
             "tipos_archivo_permitidos": str(c.get("tipos_archivo_permitidos") or "").strip()[:200],
             "opciones": str(c.get("opciones") or "").strip()[:500],
+            "ancho": c.get("ancho") if c.get("ancho") in ANCHOS_CAMPO_TRAMITE else "completo",
             "obligatorio": bool(c.get("obligatorio", True)),
         })
     return validos
@@ -1508,6 +1518,27 @@ async def api_enviar_tramite(request: Request):
     errores = []
     respuestas = []
     for campo in tipo["campos"]:
+        if campo["tipo_dato"] == "separador":
+            continue  # raya visual, no junta respuesta
+        if campo["tipo_dato"] == "booleano":
+            # Un checkbox desmarcado ni siquiera viaja en el form -- "No" es
+            # una respuesta válida en sí misma, no aplica el chequeo de
+            # obligatorio genérico (una raya sin marcar no es "falta esto").
+            marcado = bool(form.get(f'campo_{campo["id"]}'))
+            respuestas.append({"campo_tramite_id": campo["id"], "valor_texto": "Sí" if marcado else "No"})
+            continue
+        if campo["tipo_dato"] == "multiple":
+            valores = [v.strip() for v in form.getlist(f'campo_{campo["id"]}') if str(v).strip()]
+            if not valores:
+                if campo["obligatorio"]:
+                    errores.append(f'"{campo["etiqueta"]}" es obligatorio.')
+                continue
+            opciones = [o.strip() for o in (campo.get("opciones") or "").split(",") if o.strip()]
+            if opciones and any(v not in opciones for v in valores):
+                errores.append(f'"{campo["etiqueta"]}": elegí solo entre las opciones permitidas.')
+                continue
+            respuestas.append({"campo_tramite_id": campo["id"], "valor_texto": ", ".join(valores)})
+            continue
         if campo["tipo_dato"] == "archivo":
             archivo = form.get(f'archivo_{campo["id"]}')
             if archivo is None or not getattr(archivo, "filename", ""):
@@ -1534,7 +1565,7 @@ async def api_enviar_tramite(request: Request):
             if campo["obligatorio"]:
                 errores.append(f'"{campo["etiqueta"]}" es obligatorio.')
             continue
-        if campo["tipo_dato"] == "seleccion":
+        if campo["tipo_dato"] in ("seleccion", "opcion_unica"):
             opciones = [o.strip() for o in (campo.get("opciones") or "").split(",") if o.strip()]
             if opciones and valor not in opciones:
                 errores.append(f'"{campo["etiqueta"]}": elegí una de las opciones permitidas.')
