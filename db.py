@@ -15,7 +15,17 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
+from dotenv import load_dotenv
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON
+
+# En Render, DATABASE_URL es una variable de entorno real (no hace falta
+# .env). Localmente vive en .env -- sin este load_dotenv() acá, cualquier
+# entrypoint que importe db.py ANTES de que algo más cargue el .env (ej.
+# `python -m alembic`, que importa db.py directo desde migrations/env.py,
+# sin pasar por main.py/auth.py) ve DATABASE_URL vacío y cae a SQLite en
+# silencio -- exactamente el bug que motivó pasar el desarrollo local a
+# Postgres (ver CLAUDE.md "Desarrollo local con Postgres").
+load_dotenv()
 
 
 # ---------- Ubicación de la base ----------

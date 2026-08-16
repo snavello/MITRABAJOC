@@ -768,13 +768,31 @@ pasa a ser IDÉNTICO al de producción: `alembic upgrade head` crea el
 esquema (no `crear_tablas()`), después `cargar_demo.py` siembra los 2
 sindicatos de demo.
 
+- **Bug real encontrado al hacer esto** (y la razón de por qué vale la
+  pena el cambio): `db.py` nunca llamaba a `load_dotenv()` — solo lo hacía
+  `auth.py`. Corriendo la app completa (`uvicorn main:app`) funcionaba por
+  el orden de imports, pero `python -m alembic upgrade head` importa
+  `db.py` directo desde `migrations/env.py`, sin pasar por nada que cargue
+  el `.env` antes — así que `DATABASE_URL` quedaba vacío y Alembic corría
+  contra SQLite en silencio. En Render nunca se notó porque ahí
+  `DATABASE_URL` es una variable de entorno real, no un `.env`. Fix: `db.py`
+  ahora llama a `load_dotenv()` él mismo, antes de leer `DATABASE_URL`.
+- Ese fix por sí solo hubiera roto el aislamiento de los tests (con
+  `DATABASE_URL` real en `.env`, cualquier `test_*.py` que hiciera
+  `import db` habría terminado apuntando al Postgres de Docker en vez de
+  su SQLite temporal). `conftest.py` (nuevo, raíz del repo) fuerza
+  `DATABASE_URL=""` ANTES de que pytest importe ningún `test_*.py` —
+  un solo archivo nuevo en vez de tocar los ~40 existentes.
 - SQLite sigue funcionando como fallback (sin Docker: comentar/borrar
   `DATABASE_URL` en `.env`) para quien no tenga Docker instalado, pero deja
   de ser el flujo recomendado.
-- Los tests (`test_*.py`) **NO cambian**: siguen usando SQLite en un
-  archivo temporal por proceso (rápido, aislado, sin depender de que el
+- Los tests (`test_*.py`) **NO cambian de motor**: siguen usando SQLite en
+  un archivo temporal por proceso (rápido, aislado, sin depender de que el
   contenedor esté corriendo) — el objetivo de este cambio es la paridad del
   *loop de desarrollo interactivo* con producción, no la suite de tests.
+- Confirmado corriendo `alembic upgrade head` contra el Postgres de Docker
+  desde cero (revisión `cbe17211376d` hasta la última): las 26 migraciones
+  de la historia completa del proyecto aplican limpio.
 - **Pendiente, para más adelante** (no urgente, no bloquea nada): un
   entorno de staging real (rama `desarrollo` + servicio + base Postgres
   aparte en Render) para probar el deploy completo — networking, variables
