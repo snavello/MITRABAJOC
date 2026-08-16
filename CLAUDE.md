@@ -14,12 +14,15 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 
 ## Stack y arquitectura
 - **Backend:** FastAPI + Jinja2.
-- **Base de datos:** Postgres en producción (Render gestionado). SQLite solo en
-  desarrollo local. El motor se elige solo: si existe la variable DATABASE_URL usa
-  Postgres; si no, cae a SQLite. Esa lógica está en db.py (variable USANDO_POSTGRES).
+- **Base de datos:** Postgres en producción (Render gestionado). El motor se
+  elige solo: si existe la variable DATABASE_URL usa Postgres; si no, cae a
+  SQLite. Esa lógica está en db.py (variable USANDO_POSTGRES). Desarrollo
+  local usa Postgres vía Docker por defecto desde 2026-08-16 (ver "Desarrollo
+  local con Postgres" más abajo) — SQLite queda como fallback sin Docker.
 - **Migraciones:** Alembic. El esquema lo administra Alembic, NO create_all. En
-  Postgres, los cambios de modelo se aplican con `alembic upgrade head` sin borrar
-  datos. En SQLite dev, db.crear_tablas() sigue creando tablas.
+  Postgres (producción y ahora también desarrollo local), los cambios de
+  modelo se aplican con `alembic upgrade head` sin borrar datos. Solo en
+  SQLite (fallback sin Docker) db.crear_tablas() sigue creando tablas.
 - **IA:** API de Anthropic (claude-sonnet-4-6) para leer recibos y comprobantes.
 - **Auth:** propia. Claves PBKDF2, sesiones como cookies firmadas HMAC (auth.py).
   Sesión por INACTIVIDAD, no por tiempo fijo desde el login: 15 minutos sin uso
@@ -739,8 +742,43 @@ en scripts de diagnóstico.
   resumen claro al final.
 
 ## Comandos útiles
-- Correr local (SQLite): `uvicorn main:app --reload`
+- Correr local (Postgres vía Docker — ver sección de abajo): `docker compose up -d`,
+  después `alembic upgrade head`, después `uvicorn main:app --reload`.
+- Correr local (SQLite, sin Docker — ver sección de abajo): `uvicorn main:app --reload`
+  (con `DATABASE_URL` comentado/ausente en `.env`).
 - Autodiagnóstico: `python chequeo.py`
 - Cargar demo: `python cargar_demo.py` (¡correr alembic upgrade head antes si es Postgres!)
 - Migraciones: `alembic upgrade head` (aplicar) / `alembic revision --autogenerate -m "msg"` (crear)
 - En la Shell de Render, si `alembic` no se encuentra: usar `python -m alembic upgrade head`
+- Reset completo de la base local Postgres: `docker compose down -v && docker compose up -d`
+  (espera a que el healthcheck pase) `&& alembic upgrade head && python cargar_demo.py`
+
+## Desarrollo local con Postgres (2026-08-16)
+**Decisión tomada**: desarrollo local pasa a usar Postgres (vía Docker) como
+motor por defecto, no SQLite. Motivo: la app veía cada vez más divergencia
+entre SQLite local (sin Alembic, `db.crear_tablas()` recreando todo desde
+los modelos actuales) y Postgres en producción (con Alembic real) — las
+migraciones nunca se probaban contra un Postgres de verdad antes de llegar
+a Render. `docker-compose.yml` (raíz del repo) levanta un Postgres 16 en
+`localhost:5432`, con usuario/base `mitrabajo`/`mitrabajo_dev` (credenciales
+de desarrollo, sin ningún secreto real). Con `DATABASE_URL` descomentado en
+`.env` (ver ese archivo), `db.py` detecta Postgres solo (misma lógica que
+ya elegía el motor en producción, sin cambios de código) y el flujo local
+pasa a ser IDÉNTICO al de producción: `alembic upgrade head` crea el
+esquema (no `crear_tablas()`), después `cargar_demo.py` siembra los 2
+sindicatos de demo.
+
+- SQLite sigue funcionando como fallback (sin Docker: comentar/borrar
+  `DATABASE_URL` en `.env`) para quien no tenga Docker instalado, pero deja
+  de ser el flujo recomendado.
+- Los tests (`test_*.py`) **NO cambian**: siguen usando SQLite en un
+  archivo temporal por proceso (rápido, aislado, sin depender de que el
+  contenedor esté corriendo) — el objetivo de este cambio es la paridad del
+  *loop de desarrollo interactivo* con producción, no la suite de tests.
+- **Pendiente, para más adelante** (no urgente, no bloquea nada): un
+  entorno de staging real (rama `desarrollo` + servicio + base Postgres
+  aparte en Render) para probar el deploy completo — networking, variables
+  de entorno de Render — antes de tocar la demo de producción. Tiene costo
+  real (no free tier: la base gratis de Render expira a los 30 días y el
+  servicio gratis se duerme), así que se decide cuándo tenga sentido el
+  gasto, no ahora.
