@@ -30,7 +30,7 @@
   <div class="caja">
     {% if datos %}
     <div class="head">
-      {% if marca and marca.logo %}<img src="/logo/{{ marca.id }}" alt="">{% endif %}
+      {% if marca and marca.logo %}<img src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="">{% endif %}
       <div class="nom">{{ datos.sindicato }}</div>
     </div>
     <div class="body">

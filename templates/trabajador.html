@@ -365,7 +365,7 @@
 <header>
   <img class="logo-plataforma-header" src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo">
   {% if marca and marca.logo %}
-  <img class="sind" src="/logo/{{ marca.id }}" alt="{{ sindicato }}">
+  <img class="sind" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
   {% else %}
   <span style="color:#fff; font-size:13px; font-weight:500; opacity:.95;">{{ sindicato }}</span>
   {% endif %}
@@ -507,7 +507,7 @@
       <div class="cred-fondo">{{ filigrana|safe }}</div>
       <div class="cred-head">
         {% if marca and marca.logo %}
-        <img class="cred-logo" src="/logo/{{ marca.id }}" alt="{{ sindicato }}">
+        <img class="cred-logo" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
         {% endif %}
         <div class="cred-sind">{{ sindicato }}</div>
       </div>
@@ -532,7 +532,7 @@
         <div class="cred-inferior">
           <div class="cred-firma">
             {% if marca and marca.firma %}
-            <img src="/firma/{{ marca.id }}" alt="Firma de la autoridad">
+            <img src="/firma/{{ marca.id }}?v={{ marca.firma_v }}" alt="Firma de la autoridad">
             {% endif %}
             <div class="cred-linea"></div>
             <div class="cred-autoridad">{{ marca.autoridad or '' }}</div>

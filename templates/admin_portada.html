@@ -51,7 +51,7 @@
 
 <div class="enc">
   {% if marca.logo %}
-  <img class="logo" src="/logo/{{ marca.id }}" alt="{{ sindicato }}">
+  <img class="logo" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
   {% else %}
   <div class="logo-fallback">{{ iniciales }}</div>
   {% endif %}

@@ -651,30 +651,82 @@ admin.html, 54px a la izquierda de `.btn-home` que está en `right:74px`).
 El glifo es la letra "H" en `--fuente-display`, no un ícono SVG dibujado a
 mano.
 
-- **Solo aparece en las pantallas que lo necesitan** -- no es un botón
-  fijo global. En admin.html, `#btn-ayuda-tramites` arranca con la clase
-  `oculto` y se muestra/oculta en dos lugares: `cambiarSubTramite()`
-  (aparece solo en la sub-pestaña "Crear formularios" de Trámites, no en
-  "Ver trámites") y el handler de `.tab-btn` (se oculta apenas se navega a
-  cualquier otra pestaña principal que no sea Trámites). Los dos chequeos
-  hacen falta porque son dos ejes de navegación independientes
-  (pestaña principal + sub-pestaña de Trámites).
-- **Contenido**: diccionario JS `AYUDA_CONTENIDO` (clave → `{titulo,
-  texto}`), no vive en el HTML -- `abrirAyuda(clave)` arma el overlay al
-  vuelo con `innerHTML`. Hoy solo tiene una entrada
-  (`'tramites-campos'`, la explicación de "Longitud exacta"/"Tipos de
-  archivo"/"Opciones"/arrastrar/"Ancho" que antes estaba en el
-  constructor de Trámites) -- agregar una ayuda nueva en otra pantalla es
-  sumar una clave al diccionario + un botón `.btn-ayuda` con su propia
-  lógica de mostrar/ocultar, no hace falta tocar la estructura del
-  overlay.
+- **Un solo botón, generalizado (2026-08-17)**: originalmente
+  `#btn-ayuda-tramites` era un botón fijo, exclusivo de Trámites. Se
+  generalizó a un único `#btn-ayuda` reutilizado por cualquier pestaña/
+  sub-pestaña con ayuda larga -- `contextoAyudaActual()` mira qué
+  `.tab-btn` está activo (y, si es Trámites, qué `.tramite-subtab`) y
+  devuelve la clave de `AYUDA_CONTENIDO` que corresponde (o `null` si esa
+  pantalla no tiene ayuda); `actualizarBtnAyuda()` aplica esa clave al
+  botón (mostrar/ocultar + qué `abrirAyuda()` dispara el click) y se llama
+  desde los dos ejes de navegación que existen (el handler de `.tab-btn` y
+  `cambiarSubTramite()`). Sumar una ayuda nueva en otra pantalla es
+  agregar una clave a `AYUDA_CONTENIDO` + una rama en
+  `contextoAyudaActual()` -- ya no hace falta un botón/id nuevo por
+  pantalla.
+- **Contenido con secciones, no un párrafo único (2026-08-17)**: cada
+  entrada de `AYUDA_CONTENIDO` tiene `titulo` + `secciones` (lista de
+  `{titulo, texto}`), y `abrirAyuda()` arma el overlay como un `<h3>`
+  (título general) seguido de un `<h4>`/`<p>` por sección -- mejora sobre
+  la primera versión (Trámites), que era un único párrafo largo sin
+  subdivisiones, con redacción más telegráfica. Tres pantallas cargadas
+  hoy: `conceptos` (genérico vs. por empleador -- el texto que antes vivía
+  como `<p class="muted">` en la pestaña Conceptos, ahora solo en la
+  ayuda), `formulas` (vigencia por período + "Sujeto a tope" -- los dos
+  párrafos largos que antes vivían sueltos arriba de la tabla de
+  Fórmulas), y `tramites-tipos` (Código/Longitud exacta/Tipos de archivo
+  y Opciones/Orden y ancho -- la explicación del constructor de Trámites,
+  reescrita con las mismas secciones separadas). El campo "Código" de un
+  tipo de trámite (el prefijo del número de expediente, ver sección
+  "Trámites") es texto libre a propósito -- no se agregó validación de
+  formato, solo la explicación de qué hace ese campo en la ayuda.
 - **Overlay compartido**: `#overlay-ayuda`/`#overlay-ayuda-contenido`,
   reutilizado por cualquier `abrirAyuda(clave)` -- no hay un overlay por
   cada ayuda, uno solo que cambia de contenido.
-- Se evaluaron y descartaron otras ayudas largas del panel (Fórmulas,
-  varias pantallas de `/plataforma`) para esta pasada -- el pedido
-  puntual era la de Trámites; el patrón queda armado para sumar las demás
-  cuando haga falta, sin necesidad de rediseñarlo de nuevo.
+- Quedan afuera de esta pasada, evaluadas y descartadas a propósito: las
+  ayudas largas de varias pantallas de `/plataforma` (marca de la
+  plataforma, tokens de IA, recibos con alerta, Topes SS) -- el patrón ya
+  generalizado hace que sumarlas sea barato cuando se pida, pero no se
+  tocó esa pantalla en esta pasada (el pedido fue puntual sobre admin.html).
+
+## Logo y firma del sindicato: preview al editar + cache-busting (2026-08-17)
+Bug real reportado: al editar un sindicato desde `/plataforma` → "Sindicatos",
+el form no mostraba el logo ni la firma ya cargados -- no había forma de saber,
+parado en el form de edición, si el sindicato ya tenía uno o si el archivo que
+se acababa de subir había reemplazado al anterior. Además, a veces la imagen
+nueva no se veía reflejada en el resto de la app después de guardar.
+
+- **Preview faltante**: se agregaron dos bloques (`#sind-logo-preview`/
+  `#sind-firma-preview` en `plataforma.html`, ocultos por default) con la
+  imagen actual + una leyenda ("Logo actual -- subí uno nuevo para
+  reemplazarlo"), justo arriba de cada `<input type=file>`. `editarSind()`
+  los puebla y los muestra solo si `s.logo`/`s.firma` están tildados (el
+  payload de cada fila, `i.s | tojson`, ahora incluye esos dos flags);
+  `resetSindForm()` los vuelve a ocultar al pasar a modo "alta". El `src`
+  usa `Date.now()` como sello de cache (no el tamaño del archivo): fuerza
+  a pedirle la imagen al servidor cada vez que se abre el form de edición,
+  así siempre se ve la versión actual, no una vieja cacheada por el
+  navegador.
+- **La imagen a veces no se actualizaba en el resto de la app -- causa
+  real**: `/logo/{id}` y `/firma/{id}` (main.py) devuelven
+  `Cache-Control: public, max-age=3600`, pero la URL era SIEMPRE la misma
+  (`/logo/{id}`) antes y después de reemplazar el archivo -- el navegador
+  seguía sirviendo la imagen vieja desde su caché hasta que expiraba sola,
+  sin importar que el admin acabara de subir una nueva. Fix: `db.marca_sindicato()`
+  ahora devuelve `logo_v`/`firma_v` (el largo en bytes del binario
+  guardado) y cada `<img>` que pinta el logo/firma de un sindicato
+  (`admin.html`, `admin_portada.html`, `portada.html`, `trabajador.html`
+  x3, `verificar_credencial.html`, más el ícono chico del listado de
+  `/plataforma`) le suma `?v={{ marca.logo_v }}` a la URL -- al cambiar el
+  archivo cambia el largo, cambia la URL, y el navegador la trata como una
+  imagen distinta en vez de reusar la cacheada. No se tocó el
+  `Cache-Control` de las rutas (sigue siendo válido: como la URL ya es
+  única por versión, cachear cada una por una hora no tiene contra).
+- Mismo patrón (`Cache-Control:max-age=3600` sin sello de versión en la
+  URL) existe también en `/logo-plataforma`, `/noticia-imagen/...` y
+  `/beneficio-imagen/...` -- no se tocaron en esta pasada porque no hubo
+  reporte de bug ahí, pero valdría aplicarles el mismo fix si aparece el
+  mismo síntoma.
 
 ## Topes de base imponible (jubilación, INSSJP, obra social)
 El validador aplicaba el % de cada aporte sobre la base remunerativa

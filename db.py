@@ -810,6 +810,12 @@ def marca_sindicato(sindicato_id: int) -> dict:
             return {}
         return {
             "id": sind.id, "nombre": sind.nombre, "logo": sind.logo,
+            # Sello de versión (largo del binario) para romper el cache del
+            # navegador cuando se reemplaza el logo/firma -- sin esto, /logo/{id}
+            # y /firma/{id} son la MISMA url antes y después de subir uno nuevo,
+            # y el Cache-Control:max-age=3600 de esas rutas seguía sirviendo la
+            # imagen vieja hasta que expiraba solo.
+            "logo_v": len(sind.logo_datos or b""), "firma_v": len(sind.firma_datos or b""),
             "color_primario": sind.color_primario,
             "color_secundario": sind.color_secundario,
             "color_acento": sind.color_acento,

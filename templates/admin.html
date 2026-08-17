@@ -110,7 +110,10 @@
   .overlay-ayuda.abierto { display:flex; }
   .overlay-ayuda-caja { background:#fff; border-radius:14px; max-width:420px; width:100%;
     max-height:80vh; overflow-y:auto; padding:22px 24px; position:relative; }
-  .overlay-ayuda-caja h3 { font-size:15px; margin:0 0 10px; padding-right:26px; color:var(--marca-primario); }
+  .overlay-ayuda-caja h3 { font-size:15px; margin:0 0 12px; padding-right:26px; color:var(--marca-primario); }
+  .overlay-ayuda-caja h4 { font-size:11.5px; margin:14px 0 4px; color:var(--marca-secundario);
+    text-transform:uppercase; letter-spacing:.03em; font-weight:700; }
+  .overlay-ayuda-caja h3 + h4 { margin-top:0; }
   .overlay-ayuda-caja p { font-size:13px; line-height:1.6; color:var(--tinta); margin:0; }
   .overlay-ayuda-cerrar { position:absolute; top:14px; right:16px; background:none; border:none;
     cursor:pointer; color:var(--gris); padding:4px; }
@@ -294,7 +297,7 @@
   <img class="logo-plataforma-header" src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo">
   <div class="sind-wrap">
     {% if marca and marca.logo %}
-    <img class="sind" src="/logo/{{ marca.id }}" alt="{{ sindicato }}">
+    <img class="sind" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
     {% else %}
     <span class="sind-nombre">{{ sindicato }}</span>
     {% endif %}
@@ -306,7 +309,7 @@
 <a class="btn-home" href="/admin/inicio" title="Inicio" aria-label="Inicio">
   <svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg>
 </a>
-<button type="button" class="btn-ayuda oculto" id="btn-ayuda-tramites" onclick="abrirAyuda('tramites-campos')" title="Ayuda" aria-label="Ayuda">
+<button type="button" class="btn-ayuda oculto" id="btn-ayuda" title="Ayuda" aria-label="Ayuda">
   <span>H</span>
 </button>
 
@@ -393,8 +396,6 @@
   <!-- ============ FÓRMULAS ============ -->
   <h2 id="formulas">Fórmulas a validar</h2>
   <p class="muted">La variable <code>base_remunerativa</code> es la suma de los ingresos marcados como remunerativos. También está <code>total_ingresos</code>.</p>
-  <p class="muted">Un recibo se valida con la fórmula vigente en SU período (no con la fórmula actual): podés cargar varias fórmulas históricas del mismo concepto mientras sus vigencias no se superpongan. "Hasta" vacío = sigue vigente. Si un período no tiene ninguna fórmula vigente para un concepto, ese concepto no se chequea (no se marca como discrepancia).</p>
-  <p class="muted">"Sujeto a tope" aplica el tope máximo y el piso mínimo de la base imponible de la seguridad social (jubilación, INSSJP, obra social) antes de calcular esta fórmula — el resto de los conceptos (cuota sindical, ganancias, etc.) se calcula sobre el remunerativo completo. Los topes se cargan desde el panel de plataforma.</p>
   {% if request.query_params.get('error') == 'superposicion' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">La vigencia que cargaste para <code>{{ request.query_params.get('target') }}</code> se superpone con otra fórmula existente de ese mismo concepto. Ajustá las fechas (o borrá/editá la otra) antes de guardar.</div>
   {% endif %}
@@ -505,7 +506,6 @@
     <span class="ref-cuadro" style="background:#f1efec; margin-left:10px;"></span> descuento
     <span class="ref-cuadro" style="background:#fdf6e8; margin-left:10px;"></span> por revisar
   </p>
-  <p class="muted">Un concepto sin CUIT es <strong>genérico</strong>: cualquier recibo del sindicato lo puede matchear, y es lo único que una fórmula puede controlar directamente. Si varios empleadores llaman distinto a lo mismo, cargá un concepto por CUIT y vinculalo a un "código genérico" — la fórmula de ese código los va a validar a todos.</p>
   <div class="filtros">
     <input type="text" id="f-conc-cuit" placeholder="Buscar por CUIT de empleador" oninput="aplicarFiltro('conc','.fila-concepto')">
     <input type="text" id="f-conc-nombre" placeholder="Buscar por nombre" oninput="aplicarFiltro('conc','.fila-concepto')">
@@ -1169,31 +1169,75 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     });
     // recordar la pestaña por si se recarga (ej: tras alta con #ancla)
     history.replaceState(null, '', '#' + destino);
-    const btnAyuda = document.getElementById('btn-ayuda-tramites');
-    if (btnAyuda) {
-      const subActiva = document.querySelector('.tramite-subtab.activa');
-      btnAyuda.classList.toggle('oculto', !(destino === 'tramites' && subActiva && subActiva.dataset.tramiteSub === 'tipos'));
-    }
+    actualizarBtnAyuda();
   });
 });
 
 // ---------- Ayuda contextual (icono H) ----------
-// Solo aparece en pantallas con una explicación larga -- el texto vive acá,
-// no metido en el medio del formulario, para no ensuciar la página.
+// Un solo botón flotante, reutilizado en cualquier pestaña/sub-pestaña que
+// tenga una explicación larga -- el texto vive acá, no metido en el medio
+// del formulario, para no ensuciar la página. actualizarBtnAyuda() decide,
+// según dónde está parado el admin, si corresponde mostrarlo y con qué
+// contenido; no es un botón fijo en todos lados.
 const AYUDA_CONTENIDO = {
-  'tramites-campos': {
-    titulo: 'Campos del formulario',
-    texto: '"Longitud exacta" es para datos de largo fijo (ej. CVU = 22). "Tipos de archivo" y "Opciones" van separados por coma (ej. pdf,jpg / Rojo,Verde,Azul) -- vacío = cualquiera. Arrastrá una fila del ☰ para reordenar; el "Ancho" decide cuánto ocupa cada campo en el formulario del trabajador (probalo en la vista previa de abajo).',
+  conceptos: {
+    titulo: 'Conceptos genéricos y por empleador',
+    secciones: [
+      { titulo: 'Concepto genérico',
+        texto: 'No tiene CUIT de empleador cargado. Cualquier recibo del sindicato lo puede matchear, y es el único tipo de concepto que una fórmula puede controlar directamente.' },
+      { titulo: 'Concepto por empleador',
+        texto: 'Tiene un CUIT cargado. Sirve para cuando distintos empleadores llaman distinto a lo mismo -- por ejemplo, "Aporte solidario" en uno y "Cuota gremial" en otro. Se carga un concepto por cada CUIT y se lo vincula, con "Código genérico", al concepto genérico correspondiente: la fórmula de ese código va a validar a todos los que apunten a él.' },
+    ],
+  },
+  formulas: {
+    titulo: 'Vigencia y tope de las fórmulas',
+    secciones: [
+      { titulo: 'Vigencia por período',
+        texto: 'Un recibo se valida con la fórmula vigente en SU período, no con la fórmula actual. Podés cargar varias fórmulas históricas del mismo concepto mientras sus vigencias no se superpongan -- "Hasta" vacío significa que sigue vigente. Si un período no tiene ninguna fórmula vigente para un concepto, ese concepto directamente no se chequea (no se marca como discrepancia).' },
+      { titulo: 'Sujeto a tope',
+        texto: 'Aplica el tope máximo y el piso mínimo de la base imponible de la seguridad social (jubilación, INSSJP, obra social) antes de calcular esta fórmula. El resto de los conceptos -- cuota sindical, ganancias, etc. -- se calcula sobre el remunerativo completo. Los valores de tope se cargan y se actualizan todos los meses desde el panel de plataforma.' },
+    ],
+  },
+  'tramites-tipos': {
+    titulo: 'Crear formularios de trámites',
+    secciones: [
+      { titulo: 'Código',
+        texto: 'Es el prefijo del número de expediente de cada trámite de este tipo -- con el código "F01AEFIP", por ejemplo, los expedientes salen "F01AEFIP-2026-000123". Se usa tal cual lo escribas, sin espacios, sin un largo fijo.' },
+      { titulo: 'Longitud exacta',
+        texto: 'Para datos de largo fijo, como un CVU (22 dígitos) o un CUIL (11). Dejalo vacío si el campo puede tener cualquier longitud.' },
+      { titulo: 'Tipos de archivo y Opciones',
+        texto: 'Van separados por coma -- "pdf,jpg" para los tipos de archivo que se aceptan, "Rojo,Verde,Azul" para las opciones de un selector. Vacío significa que se acepta cualquiera.' },
+      { titulo: 'Orden y ancho',
+        texto: 'Arrastrá una fila desde el ☰ para reordenarla. El "Ancho" -- completo, mitad o tercio -- decide cuánto lugar ocupa cada campo en el formulario del trabajador: probá el resultado en la vista previa de más abajo.' },
+    ],
   },
 };
 function abrirAyuda(clave) {
   const d = AYUDA_CONTENIDO[clave];
   if (!d) return;
-  document.getElementById('overlay-ayuda-contenido').innerHTML =
-    `<h3>${d.titulo}</h3><p>${d.texto}</p>`;
+  const cuerpo = d.secciones.map(s => `<h4>${s.titulo}</h4><p>${s.texto}</p>`).join('');
+  document.getElementById('overlay-ayuda-contenido').innerHTML = `<h3>${d.titulo}</h3>${cuerpo}`;
   document.getElementById('overlay-ayuda').classList.add('abierto');
 }
 function cerrarAyuda() { document.getElementById('overlay-ayuda').classList.remove('abierto'); }
+function contextoAyudaActual() {
+  const tabActiva = document.querySelector('.tab-btn.activa');
+  const destino = tabActiva ? tabActiva.dataset.panel : null;
+  if (destino === 'conceptos') return 'conceptos';
+  if (destino === 'formulas') return 'formulas';
+  if (destino === 'tramites') {
+    const subActiva = document.querySelector('.tramite-subtab.activa');
+    return (subActiva && subActiva.dataset.tramiteSub === 'tipos') ? 'tramites-tipos' : null;
+  }
+  return null;
+}
+function actualizarBtnAyuda() {
+  const btn = document.getElementById('btn-ayuda');
+  if (!btn) return;
+  const clave = contextoAyudaActual();
+  btn.classList.toggle('oculto', !clave);
+  btn.onclick = clave ? () => abrirAyuda(clave) : null;
+}
 
 {% if 'tramites' in modulos %}
 // ---------- Globo de "Ver trámites" en vivo ----------
@@ -1401,8 +1445,7 @@ function escHtml(s) { const d = document.createElement('div'); d.textContent = s
 function cambiarSubTramite(dest) {
   document.querySelectorAll('.tramite-subtab').forEach(b => b.classList.toggle('activa', b.dataset.tramiteSub === dest));
   document.querySelectorAll('.tramite-subpanel').forEach(p => p.classList.toggle('activo', p.id === 'tramite-sub-' + dest));
-  const btnAyuda = document.getElementById('btn-ayuda-tramites');
-  if (btnAyuda) btnAyuda.classList.toggle('oculto', dest !== 'tipos');
+  actualizarBtnAyuda();
 }
 
 let camposTramiteActuales = [];

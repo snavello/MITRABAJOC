@@ -145,7 +145,7 @@
     {% for i in sindicatos %}
     <tr>
       <td>
-        {% if i.s.logo %}<img src="/logo/{{ i.s.id }}" alt="" style="height:24px; vertical-align:-6px; margin-right:6px;">{% endif %}
+        {% if i.s.logo %}<img src="/logo/{{ i.s.id }}?v={{ i.s.logo_datos|length if i.s.logo_datos else 0 }}" alt="" style="height:24px; vertical-align:-6px; margin-right:6px;">{% endif %}
         <strong>{{ i.s.nombre }}</strong><br><span class="muted">{{ i.s.descripcion }}</span>
       </td>
       <td>{{ i.s.cuit or '—' }}</td>
@@ -158,7 +158,7 @@
       <td><button type="button" class="link-num" onclick="verAdmins({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.usuarios }}</button></td>
       <td><button type="button" class="link-num" onclick="verTrabajadores({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.trabajadores }}</button></td>
       <td style="white-space:nowrap; text-align:right;">
-        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base,"modulos_habilitados":i.s.modulos_habilitados,"portada_clara":i.s.portada_clara,"admin_portada_clara":i.s.admin_portada_clara} | tojson }})'>Editar</button>
+        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base,"modulos_habilitados":i.s.modulos_habilitados,"portada_clara":i.s.portada_clara,"admin_portada_clara":i.s.admin_portada_clara,"logo":i.s.logo,"firma":i.s.firma} | tojson }})'>Editar</button>
         <button type="button" class="mini borrar" onclick="borrarSind({{ i.s.id }}, '{{ i.s.nombre }}', {{ i.usuarios }}, {{ i.trabajadores }})">Borrar</button>
       </td>
     </tr>
@@ -236,12 +236,20 @@
 
       <div class="campo" style="margin-top:14px;">
         <label>Logo del sindicato (PNG, JPG o similar)</label>
+        <div id="sind-logo-preview" class="oculto" style="margin-bottom:8px;">
+          <img id="sind-logo-preview-img" src="" alt="Logo actual" style="height:36px; background:#fff; border:1px solid var(--linea); border-radius:6px; padding:3px;">
+          <span class="muted" style="font-size:11px; margin-left:6px;">Logo actual -- subí uno nuevo para reemplazarlo.</span>
+        </div>
         <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
         <span class="muted" style="font-size:11px;">Se mostrará en el encabezado de la app de los trabajadores.</span>
       </div>
 
       <div class="campo" style="margin-top:14px;">
         <label>Firma de la autoridad (PNG con fondo transparente, ideal)</label>
+        <div id="sind-firma-preview" class="oculto" style="margin-bottom:8px;">
+          <img id="sind-firma-preview-img" src="" alt="Firma actual" style="height:36px; background:#fff; border:1px solid var(--linea); border-radius:6px; padding:3px;">
+          <span class="muted" style="font-size:11px; margin-left:6px;">Firma actual -- subí una nueva para reemplazarla.</span>
+        </div>
         <input type="file" name="firma" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
         <span class="muted" style="font-size:11px;">Aparece en la credencial sindical del trabajador, debajo del nombre de la autoridad.</span>
       </div>
@@ -559,6 +567,8 @@ function resetSindForm() {
   f.reset();
   document.getElementById('form-sind-titulo').textContent = 'Dar de alta un sindicato';
   f.querySelector('button[type=submit]').textContent = 'Crear sindicato';
+  document.getElementById('sind-logo-preview').classList.add('oculto');
+  document.getElementById('sind-firma-preview').classList.add('oculto');
 }
 
 document.querySelectorAll('.ptab').forEach(btn => {
@@ -630,6 +640,25 @@ function editarSind(s) {
   });
   document.getElementById('sind-portada-clara').checked = !!s.portada_clara;
   document.getElementById('sind-admin-portada-clara').checked = !!s.admin_portada_clara;
+  // Preview del logo/firma YA cargados -- sin esto no había forma de saber,
+  // parado en el form de edición, si ya había una imagen ni si la que se
+  // acaba de subir reemplazó a la anterior. Date.now() como sello de cache
+  // (no el tamaño del archivo): fuerza a pedirle la imagen de nuevo al
+  // servidor cada vez que se abre el form, así siempre se ve la actual.
+  const logoBox = document.getElementById('sind-logo-preview');
+  if (s.logo) {
+    document.getElementById('sind-logo-preview-img').src = '/logo/' + s.id + '?v=' + Date.now();
+    logoBox.classList.remove('oculto');
+  } else {
+    logoBox.classList.add('oculto');
+  }
+  const firmaBox = document.getElementById('sind-firma-preview');
+  if (s.firma) {
+    document.getElementById('sind-firma-preview-img').src = '/firma/' + s.id + '?v=' + Date.now();
+    firmaBox.classList.remove('oculto');
+  } else {
+    firmaBox.classList.add('oculto');
+  }
   document.getElementById('form-sind-titulo').textContent = 'Editar sindicato: ' + s.nombre;
   f.querySelector('button[type=submit]').textContent = 'Guardar cambios';
   activarTab('nuevo');
