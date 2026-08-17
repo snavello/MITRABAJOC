@@ -150,6 +150,13 @@
   .tramite-subtab.activa { background:var(--marca-secundario); color:#fff; border-color:var(--marca-secundario); }
   .tramite-subpanel { display:none; }
   .tramite-subpanel.activo { display:block; }
+  /* Sub-pestañas de Empleadores: clases propias por el mismo motivo que
+     las de Trámites -- no comparten listener con .subtab ni .tramite-subtab. */
+  .emp-subtab { padding:6px 14px; border-radius:7px; font-size:13px; font-weight:500;
+    background:#f2f0ea; color:var(--gris); border:1px solid var(--linea); cursor:pointer; font-family:inherit; }
+  .emp-subtab.activa { background:var(--marca-secundario); color:#fff; border-color:var(--marca-secundario); }
+  .emp-subpanel { display:none; }
+  .emp-subpanel.activo { display:block; }
   /* Globo rojo, mismo componente que en las portadas (marca.css no está
      importado acá) -- 30% más grande que la primera versión, y con
      top/right propios porque este botón es chico, no una tarjeta. */
@@ -371,6 +378,7 @@
   {% if 'beneficios' in modulos %}<button class="tab-btn" data-panel="beneficios"><svg viewBox="0 0 24 24"><use href="#ic-beneficios"/></svg><span>Beneficios</span></button>{% endif %}
   {% if 'notificaciones' in modulos %}<button class="tab-btn" data-panel="notificaciones"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg><span>Notificaciones</span></button>{% endif %}
   {% if 'tramites' in modulos %}<button class="tab-btn" data-panel="tramites"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg><span>Trámites</span></button>{% endif %}
+  {% if 'empleadores' in modulos %}<button class="tab-btn" data-panel="empleadores"><svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg><span>Empleadores</span></button>{% endif %}
   <button class="tab-btn" data-panel="seccionales"><svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg><span>Seccionales</span></button>
   <button class="tab-btn" data-panel="administradores"><svg viewBox="0 0 24 24"><use href="#ic-admins"/></svg><span>Administradores</span></button>
 </nav>
@@ -390,6 +398,7 @@
     <g id="ic-notif"><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></g>
     <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
     <g id="ic-seccionales"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></g>
+    <g id="ic-empleadores"><rect x="4" y="9" width="16" height="12" rx="1.2"/><path d="M9 9V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4"/><circle cx="9" cy="14" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="0.9" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="0.9" fill="currentColor" stroke="none"/></g>
     <g id="ic-admins"><path d="M12 3l7 3v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6z"/><circle cx="12" cy="10" r="2.3"/><path d="M8.4 15c.7-1.5 2-2.3 3.6-2.3s2.9.8 3.6 2.3"/></g>
   </defs>
 </svg>
@@ -1078,6 +1087,94 @@
   </div>
   {% endif %}
 
+  {% if 'empleadores' in modulos %}
+  <div class="panel" id="panel-empleadores">
+  <!-- ============ EMPLEADORES ============ -->
+  {% if request.query_params.get('error') == 'cuit' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">CUIT inválido -- tiene que tener 11 dígitos.</div>
+  {% endif %}
+  {% if request.query_params.get('importados') %}
+  <div class="msg ok">✓ Se importaron {{ request.query_params.get('importados') }} empleador(es) nuevo(s) desde Conceptos.</div>
+  {% endif %}
+
+  <div class="subtabs">
+    <button type="button" class="emp-subtab activa" data-emp-sub="empresas" onclick="cambiarSubEmpleador('empresas')">Empresas</button>
+    <button type="button" class="emp-subtab" data-emp-sub="notificaciones" onclick="cambiarSubEmpleador('notificaciones')">Notificaciones</button>
+    <button type="button" class="emp-subtab" data-emp-sub="tramites" onclick="cambiarSubEmpleador('tramites')">Trámites</button>
+  </div>
+
+  <!-- Sub: EMPRESAS (CRUD) -->
+  <div class="emp-subpanel activo" id="emp-sub-empresas">
+    <h2 id="empleador-titulo">Dar de alta un empleador</h2>
+    <p class="muted">CUIT, razón social y datos de contacto de las empresas de este sindicato -- cargalos a mano o importá los CUIT que ya aparecen en Conceptos.</p>
+    <div class="card">
+      <form method="post" action="/admin/empleador" id="form-empleador">
+        <input type="hidden" name="id" id="emp-id">
+        <div class="grid2">
+          <div class="campo"><label>CUIT *</label><input name="cuit" id="emp-cuit" required placeholder="30123456789"></div>
+          <div class="campo"><label>Razón social</label><input name="razon_social" id="emp-razon"></div>
+          <div class="campo full"><label>Domicilio</label><input name="domicilio" id="emp-domicilio"></div>
+          <div class="campo"><label>Teléfono</label><input name="telefono" id="emp-telefono"></div>
+          <div class="campo">
+            <label>Provincia</label>
+            <select name="provincia" id="emp-provincia">
+              <option value="">(sin especificar)</option>
+              {% for p in provincias %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="campo full"><label>Mail</label><input name="mail" id="emp-mail" type="email"></div>
+        </div>
+        <button type="submit">Guardar empleador</button>
+        <button type="button" class="sec oculto" id="emp-cancel" onclick="cancelarEmpleador()">Cancelar edición</button>
+      </form>
+    </div>
+
+    <form method="post" action="/admin/empleador/importar-cuits" style="margin:14px 0;" onsubmit="return confirm('¿Importar los CUIT que ya aparecen en Conceptos y todavía no están cargados acá?');">
+      <button type="submit" class="sec mini">Importar CUITs de conceptos</button>
+    </form>
+
+    <h2>Empleadores cargados ({{ empleadores|length }})</h2>
+    <table>
+      <tr><th>CUIT</th><th>Razón social</th><th>Provincia</th><th>Estado</th><th></th></tr>
+      {% for e in empleadores %}
+      <tr>
+        <td><code>{{ e.cuit }}</code></td>
+        <td>{{ e.razon_social or '—' }}</td>
+        <td class="muted">{{ e.provincia or '—' }}</td>
+        <td>{% if e.activo %}<span class="tag tag-si">activo</span>{% else %}<span class="tag" style="background:#eee;color:#888;">inactivo</span>{% endif %}</td>
+        <td style="white-space:nowrap; text-align:right;">
+          <button type="button" class="mini" onclick='editarEmpleador({{ {"id":e.id,"cuit":e.cuit,"razon_social":e.razon_social,"domicilio":e.domicilio,"telefono":e.telefono,"provincia":e.provincia,"mail":e.mail} | tojson }})'>Editar</button>
+          {% if e.activo %}
+          <form method="post" action="/admin/empleador/baja" style="display:inline;" onsubmit="return confirm('¿Dar de baja este empleador?')">
+            <input type="hidden" name="id" value="{{ e.id }}">
+            <button class="peligro mini" type="submit">Baja</button>
+          </form>
+          {% else %}
+          <form method="post" action="/admin/empleador/alta-logica" style="display:inline;">
+            <input type="hidden" name="id" value="{{ e.id }}">
+            <button class="mini" type="submit">Reactivar</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="muted">Todavía no cargaste ningún empleador.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <!-- Sub: NOTIFICACIONES (placeholder hasta Fase 4) -->
+  <div class="emp-subpanel" id="emp-sub-notificaciones">
+    <p class="muted">Próximamente.</p>
+  </div>
+
+  <!-- Sub: TRÁMITES (placeholder hasta Fase 5) -->
+  <div class="emp-subpanel" id="emp-sub-tramites">
+    <p class="muted">Próximamente.</p>
+  </div>
+  </div>
+  {% endif %}
+
   <div class="panel" id="panel-seccionales">
   <!-- ============ SECCIONALES ============ -->
   <h2 id="seccionales-titulo">Dar de alta una seccional</h2>
@@ -1487,6 +1584,33 @@ function cambiarSubTramite(dest) {
   document.querySelectorAll('.tramite-subtab').forEach(b => b.classList.toggle('activa', b.dataset.tramiteSub === dest));
   document.querySelectorAll('.tramite-subpanel').forEach(p => p.classList.toggle('activo', p.id === 'tramite-sub-' + dest));
   actualizarBtnAyuda();
+}
+
+// ---------- Empleadores ----------
+function cambiarSubEmpleador(dest) {
+  document.querySelectorAll('.emp-subtab').forEach(b => b.classList.toggle('activa', b.dataset.empSub === dest));
+  document.querySelectorAll('.emp-subpanel').forEach(p => p.classList.toggle('activo', p.id === 'emp-sub-' + dest));
+  actualizarBtnAyuda();
+}
+function editarEmpleador(e) {
+  document.getElementById('emp-id').value = e.id;
+  document.getElementById('emp-cuit').value = e.cuit || '';
+  document.getElementById('emp-razon').value = e.razon_social || '';
+  document.getElementById('emp-domicilio').value = e.domicilio || '';
+  document.getElementById('emp-telefono').value = e.telefono || '';
+  document.getElementById('emp-provincia').value = e.provincia || '';
+  document.getElementById('emp-mail').value = e.mail || '';
+  document.getElementById('empleador-titulo').textContent = 'Editar empleador: ' + (e.razon_social || e.cuit);
+  document.getElementById('form-empleador').querySelector('button[type=submit]').textContent = 'Guardar cambios';
+  document.getElementById('emp-cancel').classList.remove('oculto');
+  document.getElementById('form-empleador').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function cancelarEmpleador() {
+  document.getElementById('form-empleador').reset();
+  document.getElementById('emp-id').value = '';
+  document.getElementById('empleador-titulo').textContent = 'Dar de alta un empleador';
+  document.getElementById('form-empleador').querySelector('button[type=submit]').textContent = 'Guardar empleador';
+  document.getElementById('emp-cancel').classList.add('oculto');
 }
 
 let camposTramiteActuales = [];

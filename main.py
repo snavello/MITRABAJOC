@@ -39,7 +39,8 @@ import auth
 from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador,
                 CuentaTrabajador, EnvioSindicato, ReciboVerificado, ConfiguracionPlataforma, Noticia,
                 Beneficio, Seccional, ReciboSospechoso, Notificacion, NotificacionDestinatario,
-                TipoTramite, CampoTramite, Tramite, RespuestaTramite, NotaTramite, TramiteLog)
+                TipoTramite, CampoTramite, Tramite, RespuestaTramite, NotaTramite, TramiteLog,
+                Empleador)
 from extractor import extraer, extraer_aportes
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, CATEGORIAS_UNIVERSALES)
@@ -560,6 +561,8 @@ def admin(request: Request):
                         .order_by(EnvioSindicato.periodo.desc(), EnvioSindicato.id.desc())).all()
         usuarios_sindicato = s.exec(select(UsuarioSindicato).where(UsuarioSindicato.sindicato_id == sid)
                                     .order_by(UsuarioSindicato.activo.desc(), UsuarioSindicato.nombre)).all()
+        empleadores = s.exec(select(Empleador).where(Empleador.sindicato_id == sid)
+                             .order_by(Empleador.activo.desc(), Empleador.razon_social)).all()
     # Nombre por CUIL, para poder filtrar Reportes y Afiliados cotizantes por
     # nombre (esas tablas solo guardan el CUIL, no el nombre).
     nombres_por_cuil = {t.cuil: t.nombre for t in trabajadores}
@@ -596,6 +599,7 @@ def admin(request: Request):
         "tramites_nuevos": db.contar_tramites_nuevos(sid) if "tramites" in modulos else 0,
         "estados_tramite": db.ESTADOS_TRAMITE, "estados_tramite_label": db.ESTADOS_TRAMITE_LABEL,
         "seccionales": seccionales, "seccional_por_id": seccional_por_id,
+        "empleadores": empleadores,
         "modulos": modulos,
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
@@ -1134,6 +1138,71 @@ def borrar_seccional(request: Request, id: int = Form(...)):
             s.delete(sec)
             s.commit()
     return RedirectResponse("/admin#seccionales", status_code=303)
+
+
+# ---------- Empleadores (CRUD de empresas del sindicato) ----------
+
+@app.post("/admin/empleador")
+def admin_empleador_alta(
+    request: Request,
+    id: str = Form(""), cuit: str = Form(...), razon_social: str = Form(""),
+    domicilio: str = Form(""), telefono: str = Form(""),
+    provincia: str = Form(""), mail: str = Form(""),
+):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    cuit_norm = _norm_cuil(cuit)
+    if len(cuit_norm) != 11:
+        return RedirectResponse("/admin?error=cuit#empleadores", status_code=303)
+    with db.get_session() as s:
+        if id:
+            e = s.get(Empleador, int(id))
+            if e and e.sindicato_id == sid:
+                e.cuit, e.razon_social = cuit_norm, razon_social.strip()
+                e.domicilio, e.telefono = domicilio, telefono
+                e.provincia, e.mail = provincia, mail
+                s.add(e)
+        else:
+            existe = s.exec(select(Empleador).where(
+                Empleador.sindicato_id == sid, Empleador.cuit == cuit_norm)).first()
+            if not existe:
+                s.add(Empleador(sindicato_id=sid, cuit=cuit_norm,
+                                 razon_social=razon_social.strip(), domicilio=domicilio,
+                                 telefono=telefono, provincia=provincia, mail=mail))
+        s.commit()
+    return RedirectResponse("/admin#empleadores", status_code=303)
+
+
+@app.post("/admin/empleador/baja")
+def admin_empleador_baja(request: Request, id: int = Form(...)):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    with db.get_session() as s:
+        e = s.get(Empleador, id)
+        if e and e.sindicato_id == sid:
+            e.activo = False
+            s.add(e); s.commit()
+    return RedirectResponse("/admin#empleadores", status_code=303)
+
+
+@app.post("/admin/empleador/alta-logica")
+def admin_empleador_reactivar(request: Request, id: int = Form(...)):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    with db.get_session() as s:
+        e = s.get(Empleador, id)
+        if e and e.sindicato_id == sid:
+            e.activo = True
+            s.add(e); s.commit()
+    return RedirectResponse("/admin#empleadores", status_code=303)
+
+
+@app.post("/admin/empleador/importar-cuits")
+def admin_empleador_importar(request: Request):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    agregados = db.importar_cuits_de_conceptos(sid)
+    return RedirectResponse(f"/admin?importados={agregados}#empleadores", status_code=303)
 
 
 # ---------- Notificaciones (Fase 2 de Módulos + Notificaciones + Trámites) ----------
