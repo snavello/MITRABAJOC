@@ -851,6 +851,21 @@ def importar_cuits_de_conceptos(sindicato_id: int) -> int:
         return len(nuevos)
 
 
+def sindicatos_de_cuit_empleador(cuit: str) -> list:
+    """Sindicatos donde este CUIT está dado de alta como Empleador activo --
+    mismo patrón que sindicatos_de_cuil, para la resolución de sesión y el
+    selector multisindicato del empleador."""
+    with Session(engine) as s:
+        altas = s.exec(select(Empleador).where(
+            Empleador.cuit == cuit, Empleador.activo == True)).all()
+        resultado = []
+        for e in altas:
+            sind = s.get(Sindicato, e.sindicato_id)
+            if sind and sind.activo:
+                resultado.append({"id": sind.id, "nombre": sind.nombre, "slug": sind.slug})
+        return resultado
+
+
 def marca_sindicato(sindicato_id: int) -> dict:
     """Devuelve la marca (nombre, logo, colores) de un sindicato para pintar la app."""
     with Session(engine) as s:

@@ -40,7 +40,7 @@ from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabaja
                 CuentaTrabajador, EnvioSindicato, ReciboVerificado, ConfiguracionPlataforma, Noticia,
                 Beneficio, Seccional, ReciboSospechoso, Notificacion, NotificacionDestinatario,
                 TipoTramite, CampoTramite, Tramite, RespuestaTramite, NotaTramite, TramiteLog,
-                Empleador)
+                Empleador, CuentaEmpleador)
 from extractor import extraer, extraer_aportes
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, CATEGORIAS_UNIVERSALES)
@@ -65,11 +65,16 @@ def _es_navegacion_de_pagina(request: Request) -> bool:
 
 
 def _panel_de(path: str) -> str | None:
-    """A qué pantalla volver según el prefijo de la ruta que falló."""
+    """A qué pantalla volver según el prefijo de la ruta que falló.
+    /empresa y /api/empresa se chequean ANTES que /app y /api genéricos --
+    si no, cualquier ruta de la API del empleador (que también empieza con
+    /api) caería en la rama de trabajador y redirigiría al login equivocado."""
     if path.startswith("/plataforma"):
         return "/plataforma"
     if path.startswith("/admin"):
         return "/admin"
+    if path.startswith("/empresa") or path.startswith("/api/empresa"):
+        return "/ingresar-empresa"
     if path.startswith("/app") or path.startswith("/api"):
         return "/ingresar"
     return None
@@ -82,6 +87,8 @@ def _rol_de(path: str) -> str | None:
         return "plataforma"
     if path.startswith("/admin"):
         return "sindicato"
+    if path.startswith("/empresa") or path.startswith("/api/empresa"):
+        return "empleador"
     if path.startswith("/app") or path.startswith("/api"):
         return "trabajador"
     return None
@@ -162,11 +169,17 @@ async def renovar_sesion_por_actividad(request: Request, call_next):
     con el valor que traía el request -- si no, un login nunca "prendería"
     de verdad: esta renovación reemitiría la sesión VIEJA por encima.
 
-    Recorre las TRES cookies de rol (ver COOKIES_POR_ROL): un mismo
+    Recorre las CUATRO cookies de rol (ver COOKIES_POR_ROL): un mismo
     request puede traer más de una sesión válida a la vez (ej. una pestaña
     de trabajador manda igual la cookie de sindicato si esa sesión sigue
     viva en el navegador) -- se renuevan todas las que estén presentes y
-    vigentes, no solo la del rol que esa ruta puntual necesita."""
+    vigentes, no solo la del rol que esa ruta puntual necesita.
+
+    OJO: las cookies "extra" (identidad + sindicato elegido, no la sesión
+    en sí) se renuevan en un tuple aparte, NO salen gratis de
+    COOKIES_POR_ROL -- si se agrega un rol nuevo con sus propias cookies
+    de identidad, hay que sumarlas ahí a mano o esa sesión pierde su
+    identidad/sindicato elegido a los 15 minutos aunque el rol siga vigente."""
     respuesta = await call_next(request)
 
     def _ya_seteada(nombre: str) -> bool:
@@ -183,7 +196,7 @@ async def renovar_sesion_por_actividad(request: Request, call_next):
                 nuevo = auth.crear_sesion(rol, payload.get("uid", 0), payload.get("sid", 0))
                 respuesta.set_cookie(nombre_cookie, nuevo, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     if hubo_sesion_valida:
-        for cookie_extra in ("cuil_trab", "sind_elegido"):
+        for cookie_extra in ("cuil_trab", "sind_elegido", "cuit_emp", "sind_elegido_emp"):
             valor = request.cookies.get(cookie_extra)
             if valor and not _ya_seteada(cookie_extra):
                 respuesta.set_cookie(cookie_extra, valor, httponly=True,
@@ -1812,11 +1825,32 @@ def aprender_aplicar(request: Request, payload: dict):
 COOKIE_SINDICATO = "sesion_sindicato"
 COOKIE_PLATAFORMA = "sesion_plataforma"
 COOKIE_TRABAJADOR = "sesion_trabajador"
+COOKIE_EMPLEADOR = "sesion_empleador"
 COOKIES_POR_ROL = {
     "sindicato": COOKIE_SINDICATO,
     "plataforma": COOKIE_PLATAFORMA,
     "trabajador": COOKIE_TRABAJADOR,
+    "empleador": COOKIE_EMPLEADOR,
 }
+
+
+def sindicato_activo_empleador(request: Request) -> int:
+    """Resuelve en qué sindicato está parado el empleador ahora -- mismo
+    patrón que sindicato_activo_trabajador, con cuit_emp/sind_elegido_emp
+    en vez de cuil_trab/sind_elegido (cookies propias, para que las dos
+    sesiones convivan sin pisarse en el mismo navegador)."""
+    cuit = request.cookies.get("cuit_emp", "")
+    if not cuit:
+        return 0
+    sinds = db.sindicatos_de_cuit_empleador(cuit)
+    if len(sinds) == 1:
+        return sinds[0]["id"]
+    elegido = request.cookies.get("sind_elegido_emp", "")
+    if elegido:
+        for sd in sinds:
+            if str(sd["id"]) == elegido:
+                return sd["id"]
+    return 0
 
 
 def sindicato_activo_trabajador(request: Request) -> int:
@@ -2591,4 +2625,121 @@ def trabajador_salir():
     resp.delete_cookie(COOKIE_TRABAJADOR)
     resp.delete_cookie("cuil_trab")
     resp.delete_cookie("sind_elegido")
+    return resp
+
+
+# ================= Empleadores: sesión, login y app =================
+# Mismo patrón que el trabajador (CuentaEmpleador/Empleador, cuit_emp/
+# sind_elegido_emp en vez de cuil_trab/sind_elegido) -- ver Fase 3 del
+# plan de Empleadores.
+
+@app.get("/ingresar-empresa", response_class=HTMLResponse)
+def ingresar_empresa(request: Request):
+    """Pantalla de login/registro del empleador."""
+    return templates.TemplateResponse("empresa_login.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma()})
+
+
+@app.post("/empresa/login")
+def empresa_login(request: Request, cuit: str = Form(...), clave: str = Form(...)):
+    cuit = _norm_cuil(cuit)
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == cuit)).first()
+        if not cuenta or not auth.verificar_clave(clave, cuenta.clave_hash):
+            return RedirectResponse("/ingresar-empresa?error=login", status_code=303)
+        cuenta_id = cuenta.id   # capturar el id ANTES de cerrar la sesión
+    sinds = db.sindicatos_de_cuit_empleador(cuit)
+    if not sinds:
+        return RedirectResponse("/ingresar-empresa?error=sinsind", status_code=303)
+    token = auth.crear_sesion("empleador", id_usuario=cuenta_id, sindicato_id=0)
+    resp = RedirectResponse("/empresa", status_code=303)
+    resp.set_cookie(COOKIE_EMPLEADOR, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    resp.set_cookie("cuit_emp", cuit, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    return resp
+
+
+@app.post("/empresa/registro")
+def empresa_registro(request: Request, cuit: str = Form(...), clave: str = Form(...)):
+    cuit = _norm_cuil(cuit)
+    # Validar que el CUIT esté dado de alta como Empleador activo en al menos un sindicato
+    sinds = db.sindicatos_de_cuit_empleador(cuit)
+    if not sinds:
+        return RedirectResponse("/ingresar-empresa?error=nohabilitado", status_code=303)
+    with db.get_session() as s:
+        existe = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == cuit)).first()
+        if existe:
+            return RedirectResponse("/ingresar-empresa?error=yaexiste", status_code=303)
+        s.add(CuentaEmpleador(cuit=cuit, clave_hash=auth.hashear_clave(clave)))
+        # marcar las altas de este CUIT como registradas
+        for e in s.exec(select(Empleador).where(Empleador.cuit == cuit)).all():
+            e.registrado = True
+            s.add(e)
+        s.commit()
+    token = auth.crear_sesion("empleador", sindicato_id=0)
+    resp = RedirectResponse("/empresa", status_code=303)
+    resp.set_cookie(COOKIE_EMPLEADOR, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    resp.set_cookie("cuit_emp", cuit, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    return resp
+
+
+@app.get("/empresa", response_class=HTMLResponse)
+def app_empresa(request: Request):
+    """La app del empleador -- una sola pantalla con tabbar (Notificaciones/
+    Trámites), sin una portada separada como tiene el trabajador (con solo
+    2 funcionalidades no hace falta esa capa extra). Si el CUIT está en
+    varios sindicatos y no eligió, muestra el selector."""
+    ses = sesion_actual(request, "empleador")
+    cuit = request.cookies.get("cuit_emp", "")
+    if not ses or not cuit:
+        return RedirectResponse("/ingresar-empresa", status_code=303)
+
+    sinds = db.sindicatos_de_cuit_empleador(cuit)
+    elegido = request.cookies.get("sind_elegido_emp", "")
+
+    sid_activo = None
+    if len(sinds) == 1:
+        sid_activo = sinds[0]["id"]
+    elif elegido:
+        for sd in sinds:
+            if str(sd["id"]) == elegido:
+                sid_activo = sd["id"]
+
+    if sid_activo:
+        marca = db.marca_sindicato(sid_activo)
+        with db.get_session() as s:
+            empleador = s.exec(select(Empleador).where(
+                Empleador.sindicato_id == sid_activo, Empleador.cuit == cuit)).first()
+        return templates.TemplateResponse("empresa.html", {
+            "request": request, "sindicato": marca["nombre"], "marca": marca,
+            "marca_plataforma": db.marca_plataforma(),
+            "cuit": cuit, "razon_social": empleador.razon_social if empleador else "",
+            "modulos": _modulos_de(sid_activo),
+        })
+    # Varios y no eligió → selector
+    return templates.TemplateResponse("elegir_sindicato_empresa.html", {
+        "request": request, "sindicatos": sinds, "marca_plataforma": db.marca_plataforma(),
+    })
+
+
+@app.get("/empresa/elegir/{sindicato_id}")
+def empresa_elegir(sindicato_id: int, request: Request):
+    resp = RedirectResponse("/empresa", status_code=303)
+    resp.set_cookie("sind_elegido_emp", str(sindicato_id), httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    return resp
+
+
+@app.get("/empresa/cambiar")
+def empresa_cambiar():
+    """Volver al selector de sindicato."""
+    resp = RedirectResponse("/empresa", status_code=303)
+    resp.delete_cookie("sind_elegido_emp")
+    return resp
+
+
+@app.get("/empresa/salir")
+def empresa_salir():
+    resp = RedirectResponse("/ingresar-empresa", status_code=303)
+    resp.delete_cookie(COOKIE_EMPLEADOR)
+    resp.delete_cookie("cuit_emp")
+    resp.delete_cookie("sind_elegido_emp")
     return resp
