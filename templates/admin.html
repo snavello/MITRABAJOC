@@ -79,9 +79,12 @@
     --marca-acento: {{ marca.color_acento if marca else '#b23a2e' }}; }
   * { box-sizing:border-box; margin:0; }
   body { font-family:system-ui,sans-serif; color:#1b1b1b; background:#faf9f6; line-height:1.5; }
+  /* El header y la tira de pestañas se pegan juntos como un solo bloque --
+     así la barra de navegación nunca se scrolea fuera de vista, sin tener
+     que calcular a mano la altura del header (que varía por breakpoint). */
+  .app-bar-fija { position:sticky; top:0; z-index:21; }
   header { background:var(--marca-base); border-bottom:1px solid var(--linea); padding:14px 22px;
-           display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-           position:sticky; top:0; z-index:20; }
+           display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
   .logo-plataforma-header { width:76px; height:76px; object-fit:contain; flex-shrink:0; }
   header .rol { color:rgba(255,255,255,.85) !important; }
   .sind-wrap { display:flex; align-items:center; gap:14px; }
@@ -158,11 +161,26 @@
      obligatorio/subir/bajar/quitar), una fila de grid rígida obligaba a
      contar tracks a mano cada vez que se agregaba un campo nuevo. */
   .campo-tramite-fila { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
-    padding:8px 6px; border-bottom:1px solid var(--linea); font-size:12.5px; border-radius:6px; }
-  .campo-tramite-fila.arrastrando { opacity:.4; }
-  .campo-tramite-fila.sobre-drop { border-top:2px solid var(--marca-primario); }
+    padding:8px 6px; border-bottom:1px solid var(--linea); font-size:12.5px; border-radius:6px;
+    border-top:2px solid transparent; transition:box-shadow .12s, transform .12s; }
+  /* La fila que se está arrastrando "se levanta" (sombra + achicada) en vez de
+     solo transparentarse -- y el punto de inserción es una línea de color
+     bien gruesa, no un borde de 2px casi invisible, para que quede claro
+     dónde va a caer al soltar. */
+  .campo-tramite-fila.arrastrando { opacity:.5; box-shadow:0 6px 16px rgba(0,0,0,.18); transform:scale(.99); }
+  .campo-tramite-fila.sobre-drop { border-top:3px solid var(--marca-acento);
+    box-shadow:0 -3px 0 -1px var(--marca-acento); }
   .campo-tramite-fila .drag-handle { cursor:grab; color:var(--gris); opacity:.55; font-size:15px;
     padding:0 3px; user-select:none; flex:0 0 auto; }
+  .campo-tramite-fila .drag-handle:active { cursor:grabbing; }
+  .campos-tramite-cabecera { display:flex; flex-wrap:wrap; gap:6px; padding:0 6px 4px 27px;
+    font-size:10.5px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.02em; }
+  .campos-tramite-cabecera span { flex:2 1 140px; }
+  .campos-tramite-cabecera span:nth-child(2) { flex:1 1 118px; }
+  .campos-tramite-cabecera span:nth-child(3), .campos-tramite-cabecera span:nth-child(4),
+  .campos-tramite-cabecera span:nth-child(5) { width:78px; flex:0 0 auto; }
+  .campos-tramite-cabecera span:nth-child(6) { flex:1 1 150px; }
+  .campos-tramite-cabecera span:nth-child(7) { width:92px; flex:0 0 auto; }
   .campo-tramite-fila input, .campo-tramite-fila select { padding:5px 6px; font-size:12.5px; }
   .campo-tramite-fila .ct-etiqueta { flex:2 1 140px; }
   .campo-tramite-fila .ct-tipo { flex:1 1 118px; }
@@ -170,19 +188,36 @@
   .campo-tramite-fila .ct-extra { flex:1 1 150px; }
   .campo-tramite-fila .ct-ancho { width:92px; flex:0 0 auto; }
   .campo-tramite-fila button { padding:4px 7px; font-size:11px; }
-  /* ---------- Vista previa (mismo criterio de ancho que trabajador.html) ---------- */
+  /* ---------- Vista previa ----------
+     Mismas clases y misma grilla que usa trabajador.html para el formulario
+     real (.tram-input/.campo-tram/.campo-tram-opcion/.campo-tram-bool) --
+     antes la vista previa tenía su propio set de clases (.tp-campo) que se
+     había ido desalineando del real (padding, tamaño de fuente y color de
+     texto distintos), así que se veía "mal" acá aunque en producción
+     estuviera bien. Los inputs quedan con pointer-events:none + :disabled
+     con el estilo forzado a verse igual que uno habilitado (si no, el
+     estilo nativo de "deshabilitado" del navegador los grisa). */
   .tram-preview-box { background:var(--papel); border:1px dashed var(--linea); border-radius:10px; padding:14px; }
-  .tram-preview-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:10px; }
+  .tram-preview-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:0 12px; }
   .tp-completo { grid-column:span 12; }
   .tp-mitad { grid-column:span 6; }
   .tp-tercio { grid-column:span 4; }
   @media (max-width:600px) { .tp-mitad, .tp-tercio { grid-column:span 12; } }
-  .tp-campo label { display:block; font-size:11.5px; color:var(--gris); margin-bottom:4px; font-weight:500; }
-  .tp-campo input, .tp-campo select { width:100%; padding:8px 9px; border:1px solid var(--linea);
-    border-radius:7px; font-size:12.5px; background:#fff; color:var(--gris); pointer-events:none; }
-  .tp-campo .tp-opcion { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--tinta);
-    margin-bottom:3px; pointer-events:none; }
-  .tp-separador { grid-column:1 / -1; border:none; border-top:1px solid var(--linea); margin:2px 0 0; }
+  .campo-tram { margin-bottom:14px; }
+  .campo-tram label { display:block; font-size:12.5px; color:var(--gris); margin-bottom:6px; }
+  .campo-tram-separador { grid-column:1 / -1; border:none; border-top:1px solid var(--linea); margin:2px 0 12px; }
+  .campo-tram-opcion { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--tinta);
+    margin-bottom:8px; font-weight:400; }
+  .campo-tram-opcion input { width:18px; height:18px; flex:0 0 auto; }
+  .campo-tram-bool { display:flex; align-items:center; gap:9px; font-size:14px; color:var(--tinta); font-weight:400; }
+  .campo-tram-bool input { width:20px; height:20px; flex:0 0 auto; }
+  .tram-input { display:block; width:100%; padding:11px 12px; border:1px solid var(--linea);
+    border-radius:10px; font-family:inherit; font-size:14px; background:#fff; color:var(--tinta); }
+  .tp-archivo { display:flex; align-items:center; justify-content:center; gap:6px; width:100%;
+    padding:11px; border:1px solid #b4b2a9; border-radius:10px; background:#fff; color:var(--tinta); font-size:14px; }
+  .tram-preview-grid input, .tram-preview-grid select { pointer-events:none; }
+  .tram-preview-grid input:disabled, .tram-preview-grid select:disabled {
+    opacity:1; -webkit-text-fill-color:var(--tinta); color:var(--tinta); cursor:default; }
   .tramite-log { border-left:2px solid var(--linea); margin-left:6px; padding-left:14px; }
   /* Cebra: cada paso alterna un tinte muy leve de los colores del sindicato,
      para separar visualmente los eventos del historial de un vistazo. El
@@ -293,6 +328,7 @@
 </style>
 </head>
 <body>
+<div class="app-bar-fija">
 <header>
   <img class="logo-plataforma-header" src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo">
   <div class="sind-wrap">
@@ -338,6 +374,7 @@
   <button class="tab-btn" data-panel="seccionales"><svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg><span>Seccionales</span></button>
   <button class="tab-btn" data-panel="administradores"><svg viewBox="0 0 24 24"><use href="#ic-admins"/></svg><span>Administradores</span></button>
 </nav>
+</div>
 
 <!-- Íconos SVG de línea (mismos que admin_portada.html, ver esa plantilla) -->
 <svg style="display:none" xmlns="http://www.w3.org/2000/svg">
@@ -982,6 +1019,10 @@
         </div>
 
         <h3 style="margin-top:18px; font-size:14px; color:var(--tinta);">Campos del formulario</h3>
+        <div class="campos-tramite-cabecera oculto" id="campos-tramite-cabecera">
+          <span>Etiqueta</span><span>Tipo</span><span>Long. máx.</span><span>Long. exacta</span>
+          <span>Decimales</span><span>Opciones / archivo</span><span>Ancho</span>
+        </div>
         <div id="tt-campos-lista"></div>
         <button type="button" class="sec mini" style="margin-top:8px;" onclick="agregarCampoTramite()">+ Agregar campo</button>
 
@@ -1459,6 +1500,8 @@ const TIENE_OPCIONES_TRAMITE = new Set(['seleccion', 'opcion_unica', 'multiple']
 
 function renderCamposTramite() {
   const cont = document.getElementById('tt-campos-lista');
+  const cabecera = document.getElementById('campos-tramite-cabecera');
+  cabecera.classList.toggle('oculto', !camposTramiteActuales.length);
   if (!camposTramiteActuales.length) {
     cont.innerHTML = '<p class="muted" style="font-size:12px;">Todavía no agregaste ningún campo.</p>';
     renderVistaPreviaTramite();
@@ -1552,30 +1595,31 @@ function renderVistaPreviaTramite() {
     return;
   }
   cont.innerHTML = `<div class="tram-preview-grid">${camposTramiteActuales.map(c => {
-    if (c.tipo_dato === 'separador') return '<hr class="tp-separador">';
+    if (c.tipo_dato === 'separador') return '<hr class="campo-tram-separador">';
     const etiqueta = escHtml(c.etiqueta) || '(sin etiqueta)';
+    const anchoClass = 'tp-' + (c.ancho || 'completo');
     let campo;
     if (c.tipo_dato === 'booleano') {
-      campo = `<label class="tp-opcion"><input type="checkbox" disabled> ${etiqueta}${c.obligatorio ? ' *' : ''}</label>`;
-      return `<div class="tp-campo tp-${c.ancho}">${campo}</div>`;
+      campo = `<label class="campo-tram-bool"><input type="checkbox" disabled> ${etiqueta}${c.obligatorio ? ' *' : ''}</label>`;
+      return `<div class="campo-tram ${anchoClass}">${campo}</div>`;
     }
     const opciones = (c.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
     if (c.tipo_dato === 'opcion_unica' || c.tipo_dato === 'multiple') {
       const tipoInput = c.tipo_dato === 'opcion_unica' ? 'radio' : 'checkbox';
       campo = (opciones.length ? opciones : ['(sin opciones cargadas)']).map(o =>
-        `<label class="tp-opcion"><input type="${tipoInput}" disabled> ${escHtml(o)}</label>`).join('');
-      return `<div class="tp-campo tp-${c.ancho}"><label>${etiqueta}${c.obligatorio ? ' *' : ''}</label>${campo}</div>`;
+        `<label class="campo-tram-opcion"><input type="${tipoInput}" disabled> ${escHtml(o)}</label>`).join('');
+      return `<div class="campo-tram ${anchoClass}"><label>${etiqueta}${c.obligatorio ? ' *' : ''}</label>${campo}</div>`;
     }
     if (c.tipo_dato === 'seleccion') {
-      campo = `<select disabled><option>${opciones.length ? 'Elegí una opción' : '(sin opciones cargadas)'}</option></select>`;
+      campo = `<select class="tram-input" disabled><option>${opciones.length ? 'Elegí una opción' : '(sin opciones cargadas)'}</option></select>`;
     } else if (c.tipo_dato === 'fecha') {
-      campo = `<input type="date" disabled>`;
+      campo = `<input type="date" class="tram-input" disabled>`;
     } else if (c.tipo_dato === 'archivo') {
-      campo = `<input type="text" disabled placeholder="📎 Elegir archivo">`;
+      campo = `<span class="tp-archivo">📎 Elegir archivo</span>`;
     } else {
-      campo = `<input type="text" disabled placeholder="${c.tipo_dato === 'numero' ? 'Número' : 'Texto'}">`;
+      campo = `<input type="text" class="tram-input" disabled placeholder="${c.tipo_dato === 'numero' ? 'Ej: 1234' : (c.longitud_exacta ? c.longitud_exacta + ' caracteres' : 'Texto')}">`;
     }
-    return `<div class="tp-campo tp-${c.ancho}"><label>${etiqueta}${c.obligatorio ? ' *' : ''}</label>${campo}</div>`;
+    return `<div class="campo-tram ${anchoClass}"><label>${etiqueta}${c.obligatorio ? ' *' : ''}</label>${campo}</div>`;
   }).join('')}</div>`;
 }
 

@@ -19,8 +19,12 @@
   }
   * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
   body { background:var(--papel); color:#1b1b1b; line-height:1.5; }
+  /* El header y la tira de pestañas se pegan juntos como un solo bloque --
+     así la barra de navegación nunca se scrolea fuera de vista, sin tener
+     que calcular a mano la altura del header. */
+  .app-bar-fija { position:sticky; top:0; z-index:21; }
   header { background:var(--marca-base); color:#fff; border-bottom:1px solid rgba(255,255,255,.12);
-    padding:14px 22px; display:flex; align-items:center; gap:16px; position:sticky; top:0; z-index:20; }
+    padding:14px 22px; display:flex; align-items:center; gap:16px; }
   header img { width:40px; height:40px; object-fit:contain; }
   header .rol { font-size:13px; color:rgba(255,255,255,.7); }
   .btn-cerrar, .btn-home { position:fixed; bottom:20px; width:44px; height:44px; border-radius:50%;
@@ -92,6 +96,7 @@
 </style>
 </head>
 <body>
+<div class="app-bar-fija">
 <header>
   <img src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo">
   <span class="rol">Administración de plataforma</span>
@@ -114,6 +119,7 @@
   <button class="ptab" data-pp="sospechosos"><svg viewBox="0 0 24 24"><use href="#ic-sospechosos"/></svg><span>Con alerta</span></button>
   <button class="ptab" data-pp="topes"><svg viewBox="0 0 24 24"><use href="#ic-topes"/></svg><span>Topes SS</span></button>
 </nav>
+</div>
 
 <!-- Íconos SVG de línea (mismos que plataforma_portada.html, + 2 propios) -->
 <svg style="display:none" xmlns="http://www.w3.org/2000/svg">

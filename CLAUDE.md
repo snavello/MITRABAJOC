@@ -728,6 +728,63 @@ nueva no se veía reflejada en el resto de la app después de guardar.
   reporte de bug ahí, pero valdría aplicarles el mismo fix si aparece el
   mismo síntoma.
 
+## Pulido visual: barra fija, QR, login, vista previa de Trámites (2026-08-17)
+Cinco ajustes puntuales de usabilidad reportados juntos, sin relación
+funcional entre sí.
+
+- **Barra de pestañas fija (`/admin`, `/plataforma`)**: `header` ya era
+  `position:sticky; top:0`, pero `.nav-strip` (la tira de pestañas debajo)
+  no lo era -- al scrollear el contenido, la tira de navegación
+  desaparecía de la pantalla junto con el resto. Fix: un wrapper nuevo
+  `.app-bar-fija` (`position:sticky; top:0`) engloba `<header>` +
+  `<nav class="nav-strip">` (más los botones flotantes y el overlay de
+  ayuda que quedan en el medio en el HTML, todos con `position:fixed` así
+  que no les afecta estar anidados adentro) -- así los dos se pegan juntos
+  como un solo bloque, sin tener que calcular a mano la altura del header
+  (que varía por breakpoint). `header` perdió su `position:sticky` propio,
+  ahora lo hereda del wrapper. Mismo patrón en los dos templates.
+- **QR de la credencial +25% (`trabajador.html`)**: `.cred-qr svg` pasó de
+  64px a 80px -- se reportó difícil de leer/escanear al tamaño anterior.
+  Sin cambios en el layout de `.cred-inferior` (flex con `flex-shrink:0`
+  en el QR), el espacio ya alcanzaba.
+- **Fondo de los logins más claro y con más contraste**: el degradé de
+  `.caja` (los 3 `*_login.html`) pasó de `#a8ada8 → #8d928c` a
+  `#bfc3bf → #9ea29d` -- se calculó aclarando el punto medio del degradé
+  un 20% hacia blanco y agrandando un 20% la distancia entre los dos
+  extremos respecto a ese punto medio (no un simple +20% por canal), para
+  que el pedido "20% más claro" y "20% más de contraste" fueran cambios
+  independientes y no se cancelaran entre sí.
+- **Vista previa de Trámites prolija (`admin.html`)**: la vista previa
+  vivía con su propio set de clases (`.tp-campo`, inputs con
+  `color:var(--gris)` y padding/font-size más chicos) que se había ido
+  desalineando de cómo se ve el formulario real en `trabajador.html`
+  (`.tram-input`/`.campo-tram`/`.campo-tram-opcion`/`.campo-tram-bool`) --
+  de ahí que "en producción se ve bien" pero la vista previa no. Fix: la
+  vista previa pasa a usar EXACTAMENTE las mismas clases que
+  `trabajador.html` (duplicadas en el `<style>` de `admin.html`, que no
+  importa el de trabajador), incluyendo la grilla `gap:0 12px` +
+  `margin-bottom` por campo en vez de un `gap` uniforme. Los inputs siguen
+  con `disabled` (no interactivos) pero con `:disabled { opacity:1; ... }`
+  para que no se vean grisados por el estilo nativo del navegador -- si
+  no, aunque las clases coincidieran, se seguirían viendo "apagados"
+  respecto a la versión real.
+- **Referencia visual al arrastrar un campo + cabecera de columnas
+  (`admin.html`)**: dos mejoras de descubribilidad para el constructor de
+  campos, que ya tenía ancho (mitad/tercio) y reordenar arrastrando pero
+  no era obvio ni qué columna hacía qué ni dónde iba a caer una fila
+  soltada. (1) `.campo-tramite-fila.arrastrando` ahora se "levanta" con
+  sombra + `scale(.99)` en vez de solo bajar opacidad, y
+  `.sobre-drop` (la fila sobre la que se está por soltar) pasa de un
+  borde de 2px casi invisible a 3px en el color de acento del sindicato +
+  sombra -- referencia gráfica de dónde va a caer. (2)
+  `.campos-tramite-cabecera` es una fila de etiquetas chicas (Etiqueta /
+  Tipo / Long. máx. / Long. exacta / Decimales / Opciones o archivo /
+  Ancho) alineada con las mismas columnas flex que usa cada
+  `.campo-tramite-fila`, oculta cuando la lista está vacía
+  (`renderCamposTramite()` la muestra/oculta) -- así la columna "Ancho"
+  (que ya elegía mitad/tercio) queda identificada todo el tiempo, no solo
+  cuando se abre el `<select>`.
+
 ## Topes de base imponible (jubilación, INSSJP, obra social)
 El validador aplicaba el % de cada aporte sobre la base remunerativa
 completa del recibo, sin el tope máximo ni el piso mínimo de la base
