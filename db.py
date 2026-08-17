@@ -198,6 +198,33 @@ class Trabajador(SQLModel, table=True):
     semaforo_actualizado: Optional[str] = Field(default=None)  # fecha ISO del último cálculo
 
 
+class CuentaEmpleador(SQLModel, table=True):
+    """La identidad única del empleador en toda la plataforma: CUIT + clave.
+    Mismo patrón que CuentaTrabajador -- con esto entra sin importar en
+    cuántos sindicatos esté dado de alta como Empleador ("multisindicato")."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cuit: str = Field(index=True, unique=True)
+    clave_hash: str = ""
+
+
+class Empleador(SQLModel, table=True):
+    """Alta de un CUIT como empleador en un sindicato -- el CRUD real que
+    administra el admin del sindicato (a mano, o precargado desde
+    Concepto.cuit_empleador, ver importar_cuits_de_conceptos). Mismo
+    patrón que Trabajador: un mismo CUIT puede tener varias filas (una
+    por sindicato donde está dado de alta)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    cuit: str = Field(index=True)          # obligatorio
+    razon_social: str = ""
+    domicilio: str = ""
+    telefono: str = ""
+    provincia: str = ""
+    mail: str = ""
+    registrado: bool = False               # True cuando el CUIT ya creó su CuentaEmpleador
+    activo: bool = True                    # baja lógica: False = dado de baja (recuperable)
+
+
 class Concepto(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     sindicato_id: int = Field(default=1, foreign_key="sindicato.id", index=True)
@@ -800,6 +827,28 @@ def sindicatos_de_cuil(cuil: str) -> list:
             if sind and sind.activo:
                 resultado.append({"id": sind.id, "nombre": sind.nombre, "slug": sind.slug})
         return resultado
+
+
+def importar_cuits_de_conceptos(sindicato_id: int) -> int:
+    """CUITs distintos de Concepto.cuit_empleador de ESTE sindicato que
+    todavía no tienen fila en Empleador -- crea una fila mínima (solo
+    cuit) por cada uno, registrado=False, activo=True. Idempotente: se
+    puede volver a correr cuando aparezcan CUITs nuevos en Conceptos
+    (botón "Importar CUITs de conceptos" en el CRUD). Devuelve cuántos
+    se agregaron."""
+    with Session(engine) as s:
+        conceptos = s.exec(select(Concepto).where(
+            Concepto.sindicato_id == sindicato_id)).all()
+        cuits_concepto = {
+            c.cuit_empleador.strip() for c in conceptos if (c.cuit_empleador or "").strip()
+        }
+        existentes = {e.cuit for e in s.exec(select(Empleador).where(
+            Empleador.sindicato_id == sindicato_id)).all()}
+        nuevos = cuits_concepto - existentes
+        for cuit in nuevos:
+            s.add(Empleador(sindicato_id=sindicato_id, cuit=cuit))
+        s.commit()
+        return len(nuevos)
 
 
 def marca_sindicato(sindicato_id: int) -> dict:

@@ -15,6 +15,10 @@ MODULOS = {
     "beneficios": "Beneficios",
     "notificaciones": "Notificaciones",
     "tramites": "Trámites",
+    # Un solo módulo gatea todo lo relacionado a empleadores: el CRUD de
+    # empresas, las notificaciones sindicato→empresa y los formularios de
+    # trámites externos -- no hay sub-toggles.
+    "empleadores": "Empleadores",
 }
 
 # Lo que existe HOY, para dar de alta un sindicato nuevo con todo tildado
