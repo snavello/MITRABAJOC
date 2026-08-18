@@ -161,13 +161,16 @@
     </div>
     {% endif %}
     {% if 'empleadores' in modulos %}
-    <a class="acceso" href="/admin#empleadores">
-      <svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg>
-      <div>
-        <div class="titulo">Empleadores</div>
-        <div class="estado">Empresas, notificaciones y trámites</div>
-      </div>
-    </a>
+    <div class="acceso-badge-wrap">
+      <a class="acceso" href="/admin#empleadores">
+        <svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg>
+        <div>
+          <div class="titulo">Empleadores</div>
+          <div class="estado">Empresas, notificaciones y trámites</div>
+        </div>
+      </a>
+      {% if tramites_empresa_nuevos %}<span class="badge-noleidas">{{ tramites_empresa_nuevos }}</span>{% endif %}
+    </div>
     {% endif %}
     <a class="acceso" href="/admin#seccionales">
       <svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg>

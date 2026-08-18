@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="{{ marca.color_base }}">
+<title>Empresa — {{ sindicato }}</title>
+<link rel="stylesheet" href="/static/marca.css">
+<style>
+  :root {
+    --marca-base: {{ marca.color_base }};
+    --marca-primario: {{ marca.color_primario }};
+    --marca-acento: {{ marca.color_acento }};
+    --marca-apoyo: {{ marca.color_secundario }};
+  }
+  body { min-height: 100vh; background: radial-gradient(circle at 30% -10%, color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base)) 0%, var(--marca-base) 46%); }
+  .hola { font-family: var(--fuente-display); font-weight: 700; font-size: 26px; letter-spacing: .002em;
+    color: var(--sobre-base); }
+  .hola em { font-style: normal; color: var(--marca-acento); }
+  .fila-hola { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; }
+
+  body .tarjetas .acceso { position: relative; overflow: hidden;
+    background: linear-gradient(155deg, rgba(255,255,255,.14), rgba(255,255,255,.02) 55%, rgba(255,255,255,.06));
+    border-color: rgba(255,255,255,.14); backdrop-filter: blur(3px) saturate(1.1); }
+  body .tarjetas .acceso::after { content: ""; position: absolute; top: -60%; left: -30%;
+    width: 90%; height: 90%; background: linear-gradient(120deg, rgba(255,255,255,.22), transparent 60%);
+    transform: rotate(-18deg); pointer-events: none; }
+
+  .acceso-badge-wrap { position: relative; }
+  .badge-noleidas { position: absolute; top: -8px; right: -8px; background: #e5484d; color: #fff;
+    font-size: 13.5px; font-weight: 700; min-width: 25px; height: 25px; border-radius: 999px;
+    display: flex; align-items: center; justify-content: center; padding: 0 5px;
+    border: 2.5px solid var(--marca-base); z-index: 2; }
+
+  /* ---------- Perfil: mismo criterio claro+marca que el resto de la app
+     (mirror de la Fase "Perfil del trabajador" de portada.html) -- estas
+     clases del modal son locales a cada plantilla, no viven en marca.css. ---------- */
+  .modal-notif-caja { position: relative; background: #fff; color: var(--tinta); width: 100%;
+    max-width: 480px; border-radius: var(--r-card) var(--r-card) 0 0; max-height: 82vh;
+    overflow-y: auto; overflow-wrap: anywhere; box-shadow: 0 -3px 14px rgba(0,0,0,.25); }
+  .modal-notif-enc { position: sticky; top: 0; background: var(--marca-base); color: #fff;
+    padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;
+    border-radius: var(--r-card) var(--r-card) 0 0; z-index: 1; }
+  .modal-notif-enc h3 { color: #fff; font-size: 17px; margin: 0; }
+  .modal-cerrar-clara { background: none; border: none; cursor: pointer; color: #fff; opacity: .85; padding: 2px; }
+  .modal-cerrar-clara:hover { opacity: 1; }
+  .modal-cerrar-clara svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.8; fill: none; }
+  .modal-notif-body { padding: 16px 20px calc(18px + env(safe-area-inset-bottom)); }
+  .circulo-acento { overflow: hidden; }
+  .circulo-acento img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .perfil-foto-wrap { position: relative; width: 101px; height: 101px; margin: 4px auto 18px; }
+  .perfil-foto-circulo { width: 101px; height: 101px; border-radius: 50%; overflow: hidden;
+    background: var(--papel); display: flex; align-items: center; justify-content: center;
+    cursor: pointer; border: 2px solid var(--marca-acento); }
+  .perfil-foto-circulo img { width: 100%; height: 100%; object-fit: cover; }
+  .perfil-foto-circulo svg { width: 44px; height: 44px; stroke: var(--gris); stroke-width: 1.5; fill: none; }
+  .perfil-foto-lapiz { position: absolute; bottom: -2px; right: -2px; width: 27px; height: 27px;
+    border-radius: 50%; background: var(--marca-acento); display: flex; align-items: center;
+    justify-content: center; border: 2px solid #fff; cursor: pointer; }
+  .perfil-foto-lapiz svg { width: 13px; height: 13px; stroke: #fff; stroke-width: 2; fill: none; }
+  .perfil-campo { margin-bottom: 12px; }
+  .perfil-campo label { display: block; font-size: 11.5px; color: var(--gris); margin-bottom: 4px; font-weight: 500; }
+  .perfil-campo input, .perfil-campo select { width: 100%; padding: 9px 10px; border: 1px solid var(--linea);
+    border-radius: 8px; font-size: 13.5px; font-family: inherit; background: #fff; color: var(--tinta); }
+  .perfil-campo input:disabled { background: var(--papel); color: var(--gris); }
+  .perfil-fila2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .perfil-guardar-btn { width: 100%; margin-top: 6px; padding: 12px; background: var(--marca-acento);
+    color: var(--marca-base); border: none; border-radius: 9px; font-size: 14px; font-weight: 650;
+    cursor: pointer; font-family: inherit; }
+  .perfil-guardar-msg { text-align: center; font-size: 12px; color: var(--marca-primario); margin-top: 8px;
+    min-height: 15px; }
+  .overlay-foto-grande { position: fixed; inset: 0; background: rgba(8,12,20,.7); z-index: 110;
+    display: none; align-items: center; justify-content: center; }
+  .overlay-foto-grande.abierto { display: flex; }
+  .overlay-foto-grande img { max-width: 25vw; max-height: 25vh; min-width: 140px; min-height: 140px;
+    object-fit: cover; border-radius: 14px; border: 3px solid #fff; }
+</style>
+</head>
+<body class="oscuro grano grano-osc">
+
+<div class="enc">
+  {% if marca.logo %}
+  <img class="logo" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
+  {% else %}
+  <div class="logo-fallback">{{ iniciales }}</div>
+  {% endif %}
+  <div>
+    <div class="nom">{{ sindicato }}</div>
+    <div class="sub">Panel de empleador</div>
+  </div>
+</div>
+
+<a class="btn-flotante btn-cerrar" href="/empresa/salir" title="Salir" aria-label="Salir">
+  <svg viewBox="0 0 24 24"><use href="#ic-x"/></svg>
+</a>
+
+<div class="pad">
+  <div class="fila-hola">
+    <div class="hola">Hola, <em>{{ razon_social or cuit }}</em></div>
+    <button class="circulo-acento" onclick="abrirPerfil()" aria-label="Tu perfil" title="Tu perfil">
+      {% if tiene_foto_perfil %}
+      <img id="circulo-foto-perfil" src="/perfil-empleador-foto/{{ cuit }}?v={{ range(1, 999999) | random }}" alt="">
+      {% else %}
+      <svg id="circulo-foto-perfil-svg" viewBox="0 0 24 24"><use href="#ic-perfil"/></svg>
+      {% endif %}
+    </button>
+  </div>
+
+  <div class="tarjetas" style="margin-top: 18px;">
+    <div class="acceso-badge-wrap">
+      <a class="acceso" href="/empresa#notificaciones">
+        <svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg>
+        <div>
+          <div class="titulo">Notificaciones</div>
+          <div class="estado">Mensajes de tu sindicato</div>
+        </div>
+      </a>
+      {% if notificaciones_no_leidas %}<span class="badge-noleidas">{{ notificaciones_no_leidas }}</span>{% endif %}
+    </div>
+    <a class="acceso" href="/empresa#tramites">
+      <svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg>
+      <div>
+        <div class="titulo">Trámites</div>
+        <div class="estado">Formularios y seguimiento</div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- Overlay: tu perfil (editable, mismo criterio que portada.html) -->
+<div class="overlay" id="overlay-perfil" onclick="if (event.target === this) cerrarPerfil()">
+  <div class="modal-notif-caja">
+    <div class="modal-notif-enc">
+      <h3>Tu perfil</h3>
+      <button class="modal-cerrar-clara" onclick="cerrarPerfil()" aria-label="Cerrar"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
+    </div>
+    <div class="modal-notif-body">
+      <div class="perfil-foto-wrap">
+        <div class="perfil-foto-circulo" id="perfil-foto-circulo" onclick="{{ 'abrirFotoGrande()' if tiene_foto_perfil else '' }}">
+          {% if tiene_foto_perfil %}
+          <img id="perfil-foto-img" src="/perfil-empleador-foto/{{ cuit }}?v={{ range(1, 999999) | random }}" alt="Foto de perfil">
+          {% else %}
+          <svg id="perfil-foto-svg" viewBox="0 0 24 24"><use href="#ic-perfil"/></svg>
+          {% endif %}
+        </div>
+        <label class="perfil-foto-lapiz" for="perfil-foto-input" title="Cambiar foto" aria-label="Cambiar foto">
+          <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </label>
+        <input type="file" id="perfil-foto-input" accept="image/*" capture="environment" style="display:none;" onchange="subirFotoPerfil(this)">
+      </div>
+
+      <form id="form-perfil" onsubmit="return guardarPerfil(event)">
+        <div class="perfil-campo">
+          <label>CUIT</label>
+          <input type="text" value="{{ cuit }}" disabled>
+        </div>
+        <div class="perfil-campo">
+          <label>Razón social</label>
+          <input type="text" id="pf-razon" value="{{ perfil.razon_social if perfil else razon_social }}" required>
+        </div>
+        <div class="perfil-campo">
+          <label>Domicilio</label>
+          <input type="text" id="pf-domicilio" value="{{ perfil.domicilio if perfil else '' }}">
+        </div>
+        <div class="perfil-campo perfil-fila2">
+          <div><label>Provincia</label>
+            <select id="pf-provincia">
+              <option value="">—</option>
+              {% for p in provincias %}<option value="{{ p }}" {{ 'selected' if perfil and perfil.provincia == p else '' }}>{{ p }}</option>{% endfor %}
+            </select>
+          </div>
+          <div><label>Teléfono</label><input type="text" id="pf-telefono" value="{{ perfil.telefono if perfil else '' }}"></div>
+        </div>
+        <div class="perfil-campo">
+          <label>Mail</label>
+          <input type="email" id="pf-mail" value="{{ perfil.mail if perfil else '' }}">
+        </div>
+        <button type="submit" class="perfil-guardar-btn" id="perfil-guardar-btn">Guardar cambios</button>
+        <div class="perfil-guardar-msg" id="perfil-guardar-msg"></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox: foto de perfil agrandada -->
+<div class="overlay-foto-grande" id="overlay-foto-grande" onclick="cerrarFotoGrande()">
+  <img id="foto-grande-img" src="" alt="Foto de perfil">
+</div>
+
+<!-- Íconos SVG de línea -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <g id="ic-x"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g>
+    <g id="ic-notif"><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></g>
+    <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
+    <g id="ic-perfil"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></g>
+  </defs>
+</svg>
+
+<script>
+function abrirPerfil() { document.getElementById('overlay-perfil').classList.add('abierto'); }
+function cerrarPerfil() { document.getElementById('overlay-perfil').classList.remove('abierto'); }
+
+async function guardarPerfil(ev) {
+  ev.preventDefault();
+  const btn = document.getElementById('perfil-guardar-btn');
+  const msg = document.getElementById('perfil-guardar-msg');
+  const razon_social = document.getElementById('pf-razon').value.trim();
+  if (!razon_social) { msg.textContent = 'La razón social no puede estar vacía.'; return false; }
+  const fd = new URLSearchParams({
+    razon_social, domicilio: document.getElementById('pf-domicilio').value,
+    provincia: document.getElementById('pf-provincia').value,
+    telefono: document.getElementById('pf-telefono').value, mail: document.getElementById('pf-mail').value,
+  });
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    const r = await fetch('/api/empresa/perfil', { method: 'POST', body: fd });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'No se pudo guardar.');
+    document.querySelector('.hola em').textContent = data.razon_social;
+    msg.textContent = 'Guardado ✓';
+    setTimeout(() => { msg.textContent = ''; }, 2500);
+  } catch (e) {
+    msg.textContent = e.message || 'No se pudo guardar. Probá de nuevo.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar cambios';
+  }
+  return false;
+}
+
+// Achica la foto a un cuadrado chico (recorte "cover" + JPEG comprimido)
+// ANTES de subirla -- mismo criterio que el perfil del trabajador.
+function redimensionarFotoPerfil(file, lado = 160, calidad = 0.75) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const min = Math.min(img.width, img.height);
+      const sx = (img.width - min) / 2, sy = (img.height - min) / 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = lado; canvas.height = lado;
+      canvas.getContext('2d').drawImage(img, sx, sy, min, min, 0, 0, lado, lado);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('No se pudo procesar la imagen.')), 'image/jpeg', calidad);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('No se pudo leer la imagen.')); };
+    img.src = url;
+  });
+}
+
+async function subirFotoPerfil(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const msg = document.getElementById('perfil-guardar-msg');
+  try {
+    const chico = await redimensionarFotoPerfil(file);
+    const fd = new FormData();
+    fd.append('foto', chico, 'perfil.jpg');
+    const r = await fetch('/api/empresa/perfil/foto', { method: 'POST', body: fd });
+    if (!r.ok) throw new Error((await r.json()).detail || 'No se pudo subir la foto.');
+    const urlFoto = URL.createObjectURL(chico);
+    [document.getElementById('circulo-foto-perfil'), document.getElementById('circulo-foto-perfil-svg')].forEach(el => {
+      if (el) el.outerHTML = `<img id="circulo-foto-perfil" src="${urlFoto}" alt="">`;
+    });
+    const circulo = document.getElementById('perfil-foto-circulo');
+    circulo.innerHTML = `<img id="perfil-foto-img" src="${urlFoto}" alt="Foto de perfil">`;
+    circulo.onclick = abrirFotoGrande;
+  } catch (e) {
+    msg.textContent = e.message || 'No se pudo subir la foto.';
+  } finally {
+    input.value = '';
+  }
+}
+
+function abrirFotoGrande() {
+  const img = document.getElementById('perfil-foto-img');
+  if (!img) return;
+  document.getElementById('foto-grande-img').src = img.src;
+  document.getElementById('overlay-foto-grande').classList.add('abierto');
+}
+function cerrarFotoGrande() { document.getElementById('overlay-foto-grande').classList.remove('abierto'); }
+</script>
+</body>
+</html>

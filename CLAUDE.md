@@ -897,10 +897,14 @@ resto de la plataforma entre sindicatos).
   dos sesiones tienen que convivir sin pisarse en el mismo navegador).
   Con el CUIT en varios sindicatos, `elegir_sindicato_empresa.html` deja
   elegir; con uno solo, entra directo.
-- **App del empleador: una sola pantalla** (`/empresa`), sin la capa de
-  portada que tiene el trabajador (`/app` + `/app/inicio`) — con solo 2
-  funcionalidades no hacía falta. Tabbar inferior de 2 pestañas:
-  Notificaciones y Trámites.
+- **App del empleador: `/empresa/inicio` (portada con tarjetas) +
+  `/empresa` (tabbar de 2 pestañas, Notificaciones y Trámites)** — mismo
+  patrón de dos capas que admin/trabajador (`/admin/inicio` + `/admin`,
+  `/app/inicio` + `/app`). Al principio de esta rama `/empresa` era la
+  única pantalla ("con solo 2 funcionalidades no hace falta esa capa
+  extra"); se agregó la portada después, ver "Portada de /empresa, perfil
+  del empleador y globos propagados" más abajo, para el círculo de perfil
+  y el formato de tarjetas.
 - **Notificaciones a empleadores**: tablas propias
   (`NotificacionEmpleador`/`NotificacionEmpleadorDestinatario`), mismas
   columnas y mismo flujo preview→confirmar→enviar que ya existe para
@@ -958,6 +962,62 @@ resto de la plataforma entre sindicatos).
   autorregistro es el flujo real) — solo imprime el CUIT a usar en
   `/ingresar-empresa`. Los 2 sindicatos de demo traen el módulo
   `"empleadores"` habilitado de una.
+
+## Portada de /empresa, perfil del empleador y globos propagados (2026-08-18)
+Construido directo en `main` sin plan formal, sobre la rama `empleadores`
+ya mergeada.
+
+- **`/empresa/inicio`** (`templates/empresa_portada.html`, nueva) — mismo
+  patrón de portada con tarjetas que ya usan `/admin/inicio` y `/app/inicio`
+  (reusa `static/marca.css`: `.enc`/`.pad`/`.hola`/`.tarjetas .acceso`/
+  `.acceso-badge-wrap`/`.badge-noleidas`/`.circulo-acento`/`.overlay`/
+  `.btn-flotante`, en vez de reinventar CSS como hace `empresa.html`, que
+  es standalone). Login/registro/`elegir`/`cambiar` del empleador ahora
+  redirigen acá (antes iban directo a `/empresa`, que sigue existiendo sin
+  cambios como la pantalla funcional con las 2 pestañas de siempre --
+  mismo criterio que `/admin/inicio` → `/admin`). Tarjetas: Notificaciones
+  (con `badge-noleidas` = no leídas) y Trámites -- ambas siempre visibles,
+  no hay gating por módulo propio del lado empleador (ya está gateado por
+  tener `empleadores` habilitado en el sindicato, condición para que
+  exista la fila `Empleador` en primer lugar). `empresa.html` suma
+  `abrirDesdeHash()` (mismo patrón que `admin.html`) para que las tarjetas
+  salten directo a la pestaña `#notificaciones`/`#tramites`, más un botón
+  flotante "Inicio" (`.btn-home`, `right:68px`) al lado del "Salir" que ya
+  existía.
+- **Perfil del empleador editable, con foto** -- mirror exacto de "Perfil
+  del trabajador" (ver esa sección más abajo), adaptado a los campos que
+  ya tiene `Empleador` (razón social, domicilio como campo único --no
+  separado en calle/número/piso como `Trabajador`--, provincia, teléfono,
+  mail; el CUIT nunca se toca). Foto en `CuentaEmpleador.foto_datos`/
+  `foto_mime` (nueva, migración `bd0236c61d6c`) -- una sola por CUIT, no
+  por sindicato, mismo criterio que `CuentaTrabajador.foto_datos`. Rutas
+  `POST /api/empresa/perfil`, `POST /api/empresa/perfil/foto`,
+  `GET /perfil-empleador-foto/{cuit}` (auth: sesión de empleador Y que el
+  CUIT de la sesión coincida con el de la URL, igual que el trabajador).
+  El redimensionado a baja resolución (160×160 JPEG) lo hace el cliente
+  con el mismo `redimensionarFotoPerfil()` copiado tal cual.
+- **Globos de notificaciones, propagados por la rama** -- hasta ahora el
+  globo de "Ver trámites" (trabajador y empleadores) solo vivía en la
+  sub-pestaña más profunda de `/admin`; no llegaba ni a la pestaña
+  principal del nav-strip ni a la tarjeta de la portada. Ahora se propaga
+  en cadena, mismo número en los tres niveles:
+  - Sub-pestaña "Ver trámites" (ya existía).
+  - `tab-btn` del nav-strip en `/admin` (`data-panel="tramites"` y
+    `data-panel="empleadores"`, nuevo) -- ambos con `position:relative`
+    inline para anclar el `badge-noleidas` como hijo directo, mismo truco
+    que ya usaba la sub-pestaña.
+  - Tarjeta de `/admin/inicio` (la de Trámites ya lo tenía; la de
+    Empleadores lo suma ahora, con `tramites_empresa_nuevos` agregado al
+    contexto de `admin_inicio()`).
+  El polling en vivo (cada 30s, ya existía) ahora actualiza los tres
+  lugares con una sola función helper (`_actualizarBadgeEn(selector,
+  idBadge, cantidad)`) en vez de tener la lógica de crear/actualizar/sacar
+  el `<span>` repetida -- **ojo**: el globo de la tarjeta de portada NO
+  tiene este polling (es una pantalla server-side aparte, sin JS de
+  actualización en vivo, mismo criterio que el resto de esa pantalla). Del
+  lado empleador, el nivel más alto es la tarjeta "Notificaciones" de
+  `/empresa/inicio` -- no hace falta propagar más porque ahí ya está el
+  número agregado de no leídas.
 
 ## Ajustes de recibos, aportes y trámites (2026-08-18)
 Tres cambios chicos, construidos directo en `main` sin plan formal.

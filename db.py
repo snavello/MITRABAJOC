@@ -201,10 +201,15 @@ class Trabajador(SQLModel, table=True):
 class CuentaEmpleador(SQLModel, table=True):
     """La identidad única del empleador en toda la plataforma: CUIT + clave.
     Mismo patrón que CuentaTrabajador -- con esto entra sin importar en
-    cuántos sindicatos esté dado de alta como Empleador ("multisindicato")."""
+    cuántos sindicatos esté dado de alta como Empleador ("multisindicato").
+    La foto de perfil vive acá (no en Empleador, que es por sindicato) --
+    una sola por CUIT, se ve igual sin importar el sindicato activo, mismo
+    patrón que CuentaTrabajador.foto_datos."""
     id: Optional[int] = Field(default=None, primary_key=True)
     cuit: str = Field(index=True, unique=True)
     clave_hash: str = ""
+    foto_datos: Optional[bytes] = Field(default=None)
+    foto_mime: str = ""
 
 
 class Empleador(SQLModel, table=True):
@@ -967,6 +972,60 @@ def sindicatos_de_cuit_empleador(cuit: str) -> list:
             if sind and sind.activo:
                 resultado.append({"id": sind.id, "nombre": sind.nombre, "slug": sind.slug})
         return resultado
+
+
+def perfil_empleador(cuit: str, sindicato_id: int) -> Optional[dict]:
+    """Datos propios de la empresa para mostrarle su perfil -- mismo criterio
+    que perfil_trabajador. Editable desde /api/empresa/perfil (ver
+    actualizar_perfil_empleador) -- todo menos el CUIT."""
+    with Session(engine) as s:
+        e = s.exec(select(Empleador).where(
+            Empleador.cuit == cuit, Empleador.sindicato_id == sindicato_id)).first()
+        if not e:
+            return None
+        return {
+            "razon_social": e.razon_social, "cuit": e.cuit, "domicilio": e.domicilio,
+            "telefono": e.telefono, "provincia": e.provincia, "mail": e.mail,
+        }
+
+
+def actualizar_perfil_empleador(cuit: str, sindicato_id: int, razon_social: str, domicilio: str,
+                                 telefono: str, provincia: str, mail: str) -> bool:
+    """La empresa edita sus propios datos -- todo menos el CUIT (identidad,
+    no se toca acá). Actualiza SOLO el alta del sindicato ACTIVO -- Empleador
+    es por sindicato (multisindicato), mismo criterio que
+    actualizar_perfil_trabajador."""
+    with Session(engine) as s:
+        e = s.exec(select(Empleador).where(
+            Empleador.cuit == cuit, Empleador.sindicato_id == sindicato_id)).first()
+        if not e:
+            return False
+        e.razon_social = (razon_social or "").strip()[:200] or e.razon_social
+        e.domicilio = domicilio.strip()[:200]
+        e.telefono, e.provincia, e.mail = telefono.strip()[:40], provincia.strip()[:60], mail.strip()[:200]
+        s.add(e)
+        s.commit()
+        return True
+
+
+def foto_empleador(cuit: str) -> Optional[dict]:
+    """Foto de perfil (una por CUIT, no por sindicato -- ver CuentaEmpleador)."""
+    with Session(engine) as s:
+        c = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == cuit)).first()
+        if not c or not c.foto_datos:
+            return None
+        return {"datos": c.foto_datos, "mime": c.foto_mime or "image/jpeg"}
+
+
+def guardar_foto_empleador(cuit: str, datos: bytes, mime: str) -> bool:
+    with Session(engine) as s:
+        c = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == cuit)).first()
+        if not c:
+            return False
+        c.foto_datos, c.foto_mime = datos, mime
+        s.add(c)
+        s.commit()
+        return True
 
 
 def marca_sindicato(sindicato_id: int) -> dict:

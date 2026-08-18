@@ -413,8 +413,8 @@
   {% if 'noticias' in modulos %}<button class="tab-btn" data-panel="noticias"><svg viewBox="0 0 24 24"><use href="#ic-noticias"/></svg><span>Noticias</span></button>{% endif %}
   {% if 'beneficios' in modulos %}<button class="tab-btn" data-panel="beneficios"><svg viewBox="0 0 24 24"><use href="#ic-beneficios"/></svg><span>Beneficios</span></button>{% endif %}
   {% if 'notificaciones' in modulos %}<button class="tab-btn" data-panel="notificaciones"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg><span>Notificaciones</span></button>{% endif %}
-  {% if 'tramites' in modulos %}<button class="tab-btn" data-panel="tramites"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg><span>Trámites</span></button>{% endif %}
-  {% if 'empleadores' in modulos %}<button class="tab-btn" data-panel="empleadores"><svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg><span>Empleadores</span></button>{% endif %}
+  {% if 'tramites' in modulos %}<button class="tab-btn" data-panel="tramites" style="position:relative;"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg><span>Trámites</span>{% if tramites_nuevos %}<span class="badge-noleidas" id="badge-tramites-nuevos-tab">{{ tramites_nuevos }}</span>{% endif %}</button>{% endif %}
+  {% if 'empleadores' in modulos %}<button class="tab-btn" data-panel="empleadores" style="position:relative;"><svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg><span>Empleadores</span>{% if tramites_empresa_nuevos %}<span class="badge-noleidas" id="badge-tramites-empresa-nuevos-tab">{{ tramites_empresa_nuevos }}</span>{% endif %}</button>{% endif %}
   <button class="tab-btn" data-panel="seccionales"><svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg><span>Seccionales</span></button>
   <button class="tab-btn" data-panel="administradores"><svg viewBox="0 0 24 24"><use href="#ic-admins"/></svg><span>Administradores</span></button>
 </nav>
@@ -1609,21 +1609,19 @@ function actualizarBtnAyuda() {
   btn.onclick = clave ? () => abrirAyuda(clave) : null;
 }
 
-{% if 'tramites' in modulos %}
-// ---------- Globo de "Ver trámites" en vivo ----------
-// Se calcula server-side solo al cargar la página -- si el admin deja el
-// panel abierto y llega un trámite nuevo, el globo se quedaba en 0 hasta
-// recargar. Un chequeo liviano cada 30s (un solo número, no la lista
-// entera) alcanza para mantenerlo al día sin recargar nada.
-function actualizarBadgeTramitesNuevos(cantidad) {
-  const btn = document.querySelector('.tramite-subtab[data-tramite-sub="recibidos"]');
+// Un globo puede vivir en varios lugares a la vez (la sub-pestaña más
+// profunda Y la pestaña principal del nav-strip que la contiene) -- se
+// actualizan todos juntos con el mismo número, así el globo se "propaga"
+// desde donde se calcula hasta el nivel más visible sin duplicar lógica.
+function _actualizarBadgeEn(selector, idBadge, cantidad) {
+  const btn = document.querySelector(selector);
   if (!btn) return;
-  let badge = document.getElementById('badge-tramites-nuevos');
+  let badge = document.getElementById(idBadge);
   if (cantidad > 0) {
     if (!badge) {
       badge = document.createElement('span');
       badge.className = 'badge-noleidas';
-      badge.id = 'badge-tramites-nuevos';
+      badge.id = idBadge;
       btn.appendChild(badge);
     }
     badge.textContent = cantidad;
@@ -1631,28 +1629,30 @@ function actualizarBadgeTramitesNuevos(cantidad) {
     badge.remove();
   }
 }
+
+{% if 'tramites' in modulos %}
+// ---------- Globo de "Ver trámites" en vivo ----------
+// Se calcula server-side solo al cargar la página -- si el admin deja el
+// panel abierto y llega un trámite nuevo, el globo se quedaba en 0 hasta
+// recargar. Un chequeo liviano cada 30s (un solo número, no la lista
+// entera) alcanza para mantenerlo al día sin recargar nada.
+function actualizarBadgeTramitesNuevos(cantidad) {
+  _actualizarBadgeEn('.tramite-subtab[data-tramite-sub="recibidos"]', 'badge-tramites-nuevos', cantidad);
+  _actualizarBadgeEn('.tab-btn[data-panel="tramites"]', 'badge-tramites-nuevos-tab', cantidad);
+}
 setInterval(() => {
   fetch('/admin/tramites-nuevos-cantidad').then(r => r.ok ? r.json() : null)
     .then(d => { if (d) actualizarBadgeTramitesNuevos(d.cantidad); }).catch(() => {});
 }, 30000);
 {% endif %}
 {% if 'empleadores' in modulos %}
-// Mismo patrón que arriba, para el globo de "Ver trámites" de Empleadores.
+// Mismo patrón que arriba, para el globo de "Ver trámites" de Empleadores
+// -- se propaga hasta la pestaña "Empleadores" del nav-strip (el globo de
+// la tarjeta "Empleadores" en /admin/inicio, en cambio, se calcula server-
+// side: esa portada es una pantalla aparte, sin este polling en vivo).
 function actualizarBadgeTramitesEmpresaNuevos(cantidad) {
-  const btn = document.querySelector('.emptram-subtab[data-emptram-sub="recibidos"]');
-  if (!btn) return;
-  let badge = document.getElementById('badge-tramites-empresa-nuevos');
-  if (cantidad > 0) {
-    if (!badge) {
-      badge = document.createElement('span');
-      badge.className = 'badge-noleidas';
-      badge.id = 'badge-tramites-empresa-nuevos';
-      btn.appendChild(badge);
-    }
-    badge.textContent = cantidad;
-  } else if (badge) {
-    badge.remove();
-  }
+  _actualizarBadgeEn('.emptram-subtab[data-emptram-sub="recibidos"]', 'badge-tramites-empresa-nuevos', cantidad);
+  _actualizarBadgeEn('.tab-btn[data-panel="empleadores"]', 'badge-tramites-empresa-nuevos-tab', cantidad);
 }
 setInterval(() => {
   fetch('/admin/tramites-empresa-nuevos-cantidad').then(r => r.ok ? r.json() : null)

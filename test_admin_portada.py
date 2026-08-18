@@ -15,7 +15,7 @@ os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db
 import auth
-from db import Sindicato, UsuarioSindicato, TipoTramite, Tramite
+from db import Sindicato, UsuarioSindicato, TipoTramite, Tramite, TipoTramiteEmpleador, TramiteEmpleador
 from modulos import MODULOS
 import main
 from fastapi.testclient import TestClient
@@ -44,6 +44,12 @@ with db.get_session() as s:
                        numero_expediente=f"F01-2026-00000{i}", cuil="20111111119", estado="iniciado"))
     s.add(Tramite(sindicato_id=SID_FULL, tipo_tramite_id=tipo.id,
                    numero_expediente="F01-2026-000002", cuil="20111111119", estado="terminado"))
+    s.commit()
+
+    tipo_emp = TipoTramiteEmpleador(sindicato_id=SID_FULL, titulo="Nómina", codigo="F01EMP")
+    s.add(tipo_emp); s.commit(); s.refresh(tipo_emp)
+    s.add(TramiteEmpleador(sindicato_id=SID_FULL, tipo_tramite_id=tipo_emp.id,
+                            numero_expediente="F01EMP-2026-000000", cuit="30111222339", estado="iniciado"))
     s.commit()
 
 
@@ -118,6 +124,17 @@ def test_sin_tramites_no_muestra_globo():
     print("OK  test_sin_tramites_no_muestra_globo")
 
 
+def test_globo_de_empleadores_se_propaga_a_la_tarjeta():
+    """El globo de "Ver trámites" de Empleadores (sub-pestaña más profunda,
+    ver test_tramites_empresa.py) también tiene que llegar hasta acá -- el
+    nivel más alto de la portada de admin."""
+    c = _admin_client("20777777770", "full-demo")
+    r = c.get("/admin/inicio")
+    assert db.contar_tramites_empleador_nuevos(SID_FULL) == 1
+    assert '<span class="badge-noleidas">1</span>' in r.text
+    print("OK  test_globo_de_empleadores_se_propaga_a_la_tarjeta")
+
+
 if __name__ == "__main__":
     test_sin_sesion_sirve_login()
     test_login_exitoso_redirige_a_inicio()
@@ -126,4 +143,5 @@ if __name__ == "__main__":
     test_saluda_con_el_nombre_del_admin_logueado()
     test_globo_de_tramites_nuevos_cuenta_solo_estado_iniciado()
     test_sin_tramites_no_muestra_globo()
+    test_globo_de_empleadores_se_propaga_a_la_tarjeta()
     print("\nTodos los tests de admin_portada pasaron.")

@@ -37,6 +37,8 @@
     box-shadow:0 2px 10px rgba(0,0,0,.25); z-index:40; }
   .btn-flotante svg { width:19px; height:19px; stroke:#fff; stroke-width:2.6; fill:none; }
   .btn-flotante:hover { opacity:.85; }
+  .btn-home { right:68px; }
+  .btn-home svg { stroke-width:2.2; }
   .cont { max-width:480px; margin:0 auto; padding:22px 20px 40px; padding-bottom:98px; }
   h1 { font-size:clamp(21px, 5.5vw, 26px); font-weight:600; letter-spacing:-0.5px; }
   .sub { color:var(--gris); margin-top:6px; font-size:15px; }
@@ -231,6 +233,9 @@
   <button class="tab-t" data-tp="tramites"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>Trámites</button>
 </nav>
 
+<a class="btn-flotante btn-home" href="/empresa/inicio" title="Inicio" aria-label="Inicio">
+  <svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg>
+</a>
 <a class="btn-flotante" href="/empresa/salir" title="Salir" aria-label="Salir">
   <svg viewBox="0 0 24 24"><use href="#ic-x"/></svg>
 </a>
@@ -254,6 +259,16 @@ document.querySelectorAll('.tab-t').forEach(btn => {
     });
   });
 });
+
+// Si la URL trae un ancla (ej. #tramites, desde una tarjeta de la portada),
+// abrir esa pestaña -- mismo patrón que abrirDesdeHash() en admin.html.
+(function abrirDesdeHash() {
+  const h = (location.hash || '').replace('#', '');
+  if (h) {
+    const btn = document.querySelector('.tab-t[data-tp="' + h + '"]');
+    if (btn) btn.click();
+  }
+})();
 
 // ---------- Notificaciones ----------
 function fmtFechaHora(s) {

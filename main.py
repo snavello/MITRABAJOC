@@ -657,12 +657,14 @@ def admin_inicio(request: Request):
     nombre_admin = (usuario.nombre if usuario else "") or ""
     modulos = _modulos_de(sid)
     tramites_nuevos = db.contar_tramites_nuevos(sid) if "tramites" in modulos else 0
+    tramites_empresa_nuevos = db.contar_tramites_empleador_nuevos(sid) if "empleadores" in modulos else 0
     return templates.TemplateResponse("admin_portada.html", {
         "request": request, "sindicato": marca.get("nombre", ""),
         "marca": marca, "marca_plataforma": db.marca_plataforma(),
         "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
         "primer_nombre": nombre_admin.split(" ")[0] or "Admin",
         "tramites_nuevos": tramites_nuevos,
+        "tramites_empresa_nuevos": tramites_empresa_nuevos,
         "modulos": modulos,
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
@@ -1463,6 +1465,62 @@ def api_marcar_notificacion_leida_empresa(notificacion_empleador_id: int, reques
     sid = sindicato_activo_empleador(request)
     no_leidas = db.contar_notificaciones_no_leidas_empleador(cuit, sid) if sid else 0
     return {"ok": True, "no_leidas": no_leidas}
+
+
+# ---------- Perfil del empleador (mirror del perfil de trabajador) ----------
+@app.post("/api/empresa/perfil")
+async def api_actualizar_perfil_empleador(request: Request, razon_social: str = Form(...),
+                                           domicilio: str = Form(""), telefono: str = Form(""),
+                                           provincia: str = Form(""), mail: str = Form("")):
+    """La empresa edita su propio perfil -- todo menos el CUIT. Actualiza el
+    alta del sindicato ACTIVO (Empleador es por sindicato, mismo criterio
+    que actualizar_perfil_trabajador)."""
+    ses = sesion_actual(request, "empleador")
+    cuit = request.cookies.get("cuit_emp", "")
+    if not ses or not cuit:
+        raise HTTPException(403, "No autorizado")
+    if not razon_social.strip():
+        raise HTTPException(400, "La razón social no puede estar vacía.")
+    sid = sindicato_activo_empleador(request)
+    if not sid:
+        raise HTTPException(403, "No autorizado")
+    if not db.actualizar_perfil_empleador(cuit, sid, razon_social, domicilio, telefono, provincia, mail):
+        raise HTTPException(404, "No se encontró tu alta en este sindicato.")
+    perfil = db.perfil_empleador(cuit, sid)
+    return {"ok": True, "razon_social": perfil["razon_social"] if perfil else razon_social}
+
+
+@app.post("/api/empresa/perfil/foto")
+async def api_subir_foto_perfil_empresa(request: Request, foto: UploadFile = File(...)):
+    """Foto de perfil, una por CUIT (no por sindicato). Mismo criterio que
+    api_subir_foto_perfil: el achicado a baja resolución lo hace el cliente
+    antes de subir, acá solo se valida tipo/tamaño."""
+    ses = sesion_actual(request, "empleador")
+    cuit = request.cookies.get("cuit_emp", "")
+    if not ses or not cuit:
+        raise HTTPException(403, "No autorizado")
+    if (foto.content_type or "") not in MIMES_FOTO_PERFIL:
+        raise HTTPException(400, "La foto tiene que ser JPEG, PNG o WEBP.")
+    datos = await foto.read()
+    if not datos or len(datos) > MAX_FOTO_PERFIL:
+        raise HTTPException(400, "Foto vacía o demasiado pesada.")
+    if not db.guardar_foto_empleador(cuit, datos, foto.content_type):
+        raise HTTPException(404, "No se encontró tu cuenta.")
+    return {"ok": True}
+
+
+@app.get("/perfil-empleador-foto/{cuit}")
+def servir_foto_perfil_empleador(cuit: str, request: Request):
+    """Solo la puede ver la propia empresa dueña -- no es pública como el
+    logo del sindicato."""
+    ses = sesion_actual(request, "empleador")
+    if not ses or request.cookies.get("cuit_emp", "") != cuit:
+        raise HTTPException(403, "No autorizado")
+    foto = db.foto_empleador(cuit)
+    if not foto:
+        raise HTTPException(404, "Sin foto")
+    return BinResponse(content=foto["datos"], media_type=foto["mime"],
+                        headers={"Cache-Control": "no-cache"})
 
 
 # ---------- Trámites (Fase 3 de Módulos + Notificaciones + Trámites) ----------
@@ -3078,7 +3136,7 @@ def empresa_login(request: Request, cuit: str = Form(...), clave: str = Form(...
     if not sinds:
         return RedirectResponse("/ingresar-empresa?error=sinsind", status_code=303)
     token = auth.crear_sesion("empleador", id_usuario=cuenta_id, sindicato_id=0)
-    resp = RedirectResponse("/empresa", status_code=303)
+    resp = RedirectResponse("/empresa/inicio", status_code=303)
     resp.set_cookie(COOKIE_EMPLEADOR, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     resp.set_cookie("cuit_emp", cuit, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     return resp
@@ -3102,10 +3160,49 @@ def empresa_registro(request: Request, cuit: str = Form(...), clave: str = Form(
             s.add(e)
         s.commit()
     token = auth.crear_sesion("empleador", sindicato_id=0)
-    resp = RedirectResponse("/empresa", status_code=303)
+    resp = RedirectResponse("/empresa/inicio", status_code=303)
     resp.set_cookie(COOKIE_EMPLEADOR, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     resp.set_cookie("cuit_emp", cuit, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     return resp
+
+
+@app.get("/empresa/inicio", response_class=HTMLResponse)
+def empresa_inicio(request: Request):
+    """Portada del empleador (mirror de admin_portada.html/portada.html):
+    tarjetas para lo que tenga habilitado + círculo de perfil editable con
+    foto. Sin capa de módulos propia -- Notificaciones y Trámites externos
+    siempre están, gatean juntos con el módulo "empleadores" del sindicato
+    (ya verificado para que exista la fila Empleador en primer lugar)."""
+    ses = sesion_actual(request, "empleador")
+    cuit = request.cookies.get("cuit_emp", "")
+    if not ses or not cuit:
+        return RedirectResponse("/ingresar-empresa", status_code=303)
+
+    sinds = db.sindicatos_de_cuit_empleador(cuit)
+    elegido = request.cookies.get("sind_elegido_emp", "")
+    sid_activo = None
+    if len(sinds) == 1:
+        sid_activo = sinds[0]["id"]
+    elif elegido:
+        for sd in sinds:
+            if str(sd["id"]) == elegido:
+                sid_activo = sd["id"]
+    if not sid_activo:
+        return templates.TemplateResponse("elegir_sindicato_empresa.html", {
+            "request": request, "sindicatos": sinds, "marca_plataforma": db.marca_plataforma(),
+        })
+
+    marca = db.marca_sindicato(sid_activo)
+    perfil = db.perfil_empleador(cuit, sid_activo)
+    return templates.TemplateResponse("empresa_portada.html", {
+        "request": request, "sindicato": marca["nombre"], "marca": marca,
+        "marca_plataforma": db.marca_plataforma(),
+        "cuit": cuit, "razon_social": perfil["razon_social"] if perfil else "",
+        "iniciales": _iniciales_sindicato(marca["nombre"]),
+        "perfil": perfil, "provincias": db.PROVINCIAS_AR,
+        "tiene_foto_perfil": bool(db.foto_empleador(cuit)),
+        "notificaciones_no_leidas": db.contar_notificaciones_no_leidas_empleador(cuit, sid_activo),
+    })
 
 
 @app.get("/empresa", response_class=HTMLResponse)
@@ -3149,7 +3246,7 @@ def app_empresa(request: Request):
 
 @app.get("/empresa/elegir/{sindicato_id}")
 def empresa_elegir(sindicato_id: int, request: Request):
-    resp = RedirectResponse("/empresa", status_code=303)
+    resp = RedirectResponse("/empresa/inicio", status_code=303)
     resp.set_cookie("sind_elegido_emp", str(sindicato_id), httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     return resp
 
@@ -3157,7 +3254,7 @@ def empresa_elegir(sindicato_id: int, request: Request):
 @app.get("/empresa/cambiar")
 def empresa_cambiar():
     """Volver al selector de sindicato."""
-    resp = RedirectResponse("/empresa", status_code=303)
+    resp = RedirectResponse("/empresa/inicio", status_code=303)
     resp.delete_cookie("sind_elegido_emp")
     return resp
 

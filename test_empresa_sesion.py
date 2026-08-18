@@ -58,7 +58,7 @@ def test_registro_ok_marca_empleador_registrado_true():
     c = _cliente()
     r = c.post("/empresa/registro", data={"cuit": "30700000002", "clave": "clave123"}, follow_redirects=False)
     assert r.status_code == 303
-    assert r.headers["location"] == "/empresa"
+    assert r.headers["location"] == "/empresa/inicio"
     with Session(db.engine) as s:
         cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == "30700000002")).first()
         assert cuenta is not None
@@ -80,8 +80,8 @@ def test_login_ok_redirige_a_empresa_y_un_solo_sindicato_entra_directo():
     c = _cliente()
     r = c.post("/empresa/login", data={"cuit": "30700000002", "clave": "clave123"}, follow_redirects=False)
     assert r.status_code == 303
-    assert r.headers["location"] == "/empresa"
-    r2 = c.get("/empresa")
+    assert r.headers["location"] == "/empresa/inicio"
+    r2 = c.get("/empresa/inicio")
     assert r2.status_code == 200
     assert "Metalúrgica Sur" in r2.text
     assert "UOM Empresa Sesion" in r2.text
