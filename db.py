@@ -481,6 +481,36 @@ class NotificacionDestinatario(SQLModel, table=True):
     leida_en: Optional[str] = Field(default=None)
 
 
+class NotificacionEmpleador(SQLModel, table=True):
+    """Mensaje dirigido del sindicato a un grupo de empleadores -- mismo
+    patrón que Notificacion (Fase 2), pero completamente separada por
+    decisión explícita: no mezclar identidades CUIL/CUIT en la misma tabla,
+    ni tocar el sistema de notificaciones al trabajador que ya funciona."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    remitente: str = ""
+    usuario_id: Optional[int] = Field(default=None, foreign_key="usuariosindicato.id")
+    texto: str = ""
+    adjunto_datos: Optional[bytes] = Field(default=None)
+    adjunto_mime: str = ""
+    adjunto_nombre: str = ""
+    criterio: str = ""             # "cuit" | "todos" | "provincia"
+    criterio_valores: list = Field(default=[], sa_column=Column(JSON))
+    origen: str = "manual"          # "manual" | "sistema" (Fase 5: cambio de trámite externo)
+    enviado_en: str = ""
+    cantidad_destinatarios: int = 0
+
+
+class NotificacionEmpleadorDestinatario(SQLModel, table=True):
+    """Una fila por CUIT que recibió una NotificacionEmpleador puntual --
+    separado de NotificacionEmpleador para marcar la lectura de cada
+    destinatario por su lado."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    notificacion_empleador_id: int = Field(foreign_key="notificacionempleador.id", index=True)
+    cuit: str = Field(index=True)
+    leida_en: Optional[str] = Field(default=None)
+
+
 class TipoTramite(SQLModel, table=True):
     """Tipo de trámite/formulario que el sindicato pone a disposición del
     trabajador (Fase 3 de Módulos + Notificaciones + Trámites), ej. "F01
@@ -1442,6 +1472,127 @@ def marcar_notificacion_leida(notificacion_id: int, cuil: str) -> bool:
         d = s.exec(select(NotificacionDestinatario).where(
             NotificacionDestinatario.notificacion_id == notificacion_id,
             NotificacionDestinatario.cuil == cuil)).first()
+        if not d:
+            return False
+        if not d.leida_en:
+            d.leida_en = datetime.now().strftime("%Y-%m-%d %H:%M")
+            s.add(d); s.commit()
+        return True
+
+
+# ---------- Notificaciones a empleadores (Fase 4 del plan de Empleadores) ----------
+# Mismo patrón que las notificaciones al trabajador, en tablas propias
+# (NotificacionEmpleador/NotificacionEmpleadorDestinatario) -- ver esas
+# clases más arriba para la razón de la separación.
+
+def resolver_destinatarios_empleador(sindicato_id: int, criterio: str, valores: list) -> list:
+    """CUITs de empleadores ACTIVOS de este sindicato que matchean el
+    criterio. "todos" ignora `valores` (no hace falta elegir nada puntual)."""
+    with Session(engine) as s:
+        empleadores = s.exec(select(Empleador).where(
+            Empleador.sindicato_id == sindicato_id, Empleador.activo == True)).all()
+    if criterio == "todos":
+        return sorted({e.cuit for e in empleadores})
+    valores = [str(v).strip() for v in (valores or []) if str(v).strip()]
+    if not valores:
+        return []
+    if criterio == "cuit":
+        objetivo = set(valores)
+        return sorted({e.cuit for e in empleadores if e.cuit in objetivo})
+    if criterio == "provincia":
+        objetivo = set(valores)
+        return sorted({e.cuit for e in empleadores if e.provincia in objetivo})
+    return []
+
+
+def crear_notificacion_empleador(sindicato_id: int, usuario_id: Optional[int], remitente: str, texto: str,
+                                  criterio: str, valores: list, adjunto_datos: Optional[bytes] = None,
+                                  adjunto_mime: str = "", adjunto_nombre: str = "",
+                                  origen: str = "manual") -> dict:
+    """Resuelve los destinatarios y los FIJA en el momento de enviar
+    (snapshot, mismo criterio que crear_notificacion)."""
+    cuits = resolver_destinatarios_empleador(sindicato_id, criterio, valores)
+    with Session(engine) as s:
+        n = NotificacionEmpleador(
+            sindicato_id=sindicato_id, remitente=remitente or "", usuario_id=usuario_id,
+            texto=texto or "", adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime or "",
+            adjunto_nombre=adjunto_nombre or "", criterio=criterio, criterio_valores=list(valores or []),
+            origen=origen, enviado_en=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            cantidad_destinatarios=len(cuits),
+        )
+        s.add(n); s.commit(); s.refresh(n)
+        for cuit in cuits:
+            s.add(NotificacionEmpleadorDestinatario(notificacion_empleador_id=n.id, cuit=cuit))
+        s.commit()
+        return {"id": n.id, "cantidad_destinatarios": len(cuits)}
+
+
+def notificaciones_empleador_del_sindicato(sindicato_id: int) -> list:
+    """Todas las notificaciones a empleadores de este sindicato, con el
+    resumen leídos/total, más recientes primero -- para el listado de admin."""
+    with Session(engine) as s:
+        filas = s.exec(select(NotificacionEmpleador).where(
+            NotificacionEmpleador.sindicato_id == sindicato_id)
+            .order_by(NotificacionEmpleador.id.desc())).all()
+        resultado = []
+        for n in filas:
+            dests = s.exec(select(NotificacionEmpleadorDestinatario).where(
+                NotificacionEmpleadorDestinatario.notificacion_empleador_id == n.id)).all()
+            leidos = sum(1 for d in dests if d.leida_en)
+            resultado.append({
+                "id": n.id, "remitente": n.remitente, "texto": n.texto,
+                "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+                "criterio": n.criterio, "criterio_valores": n.criterio_valores or [],
+                "origen": n.origen, "enviado_en": n.enviado_en,
+                "cantidad_destinatarios": n.cantidad_destinatarios,
+                "leidos": leidos,
+            })
+        return resultado
+
+
+def notificacion_empleador_destinatarios(notificacion_empleador_id: int) -> list:
+    """Detalle fila por fila (CUIT + razón social + si leyó y cuándo) de
+    una notificación a empleadores."""
+    with Session(engine) as s:
+        dests = s.exec(select(NotificacionEmpleadorDestinatario).where(
+            NotificacionEmpleadorDestinatario.notificacion_empleador_id == notificacion_empleador_id
+        ).order_by(NotificacionEmpleadorDestinatario.cuit)).all()
+        razones = {e.cuit: e.razon_social for e in s.exec(select(Empleador)).all()}
+        return [{
+            "cuit": d.cuit, "razon_social": razones.get(d.cuit, ""), "leida_en": d.leida_en,
+        } for d in dests]
+
+
+def notificaciones_de_empleador(cuit: str, sindicato_id: int) -> list:
+    """Notificaciones que le llegaron a este CUIT en este sindicato, más
+    nuevas primero -- para la pestaña Notificaciones de /empresa."""
+    with Session(engine) as s:
+        dests = s.exec(select(NotificacionEmpleadorDestinatario).where(
+            NotificacionEmpleadorDestinatario.cuit == cuit)).all()
+        if not dests:
+            return []
+        por_id = {d.notificacion_empleador_id: d for d in dests}
+        notifs = s.exec(select(NotificacionEmpleador).where(
+            NotificacionEmpleador.id.in_(por_id.keys()), NotificacionEmpleador.sindicato_id == sindicato_id)
+            .order_by(NotificacionEmpleador.id.desc())).all()
+        return [{
+            "id": n.id, "remitente": n.remitente, "texto": n.texto,
+            "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+            "enviado_en": n.enviado_en, "leida_en": por_id[n.id].leida_en,
+        } for n in notifs]
+
+
+def contar_notificaciones_no_leidas_empleador(cuit: str, sindicato_id: int) -> int:
+    return sum(1 for n in notificaciones_de_empleador(cuit, sindicato_id) if not n["leida_en"])
+
+
+def marcar_notificacion_leida_empleador(notificacion_empleador_id: int, cuit: str) -> bool:
+    """Marca como leída la copia de ESTE cuit (aislamiento: no toca la fila
+    de otro destinatario). Devuelve False si el cuit no era destinatario."""
+    with Session(engine) as s:
+        d = s.exec(select(NotificacionEmpleadorDestinatario).where(
+            NotificacionEmpleadorDestinatario.notificacion_empleador_id == notificacion_empleador_id,
+            NotificacionEmpleadorDestinatario.cuit == cuit)).first()
         if not d:
             return False
         if not d.leida_en:

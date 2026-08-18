@@ -1163,9 +1163,65 @@
     </table>
   </div>
 
-  <!-- Sub: NOTIFICACIONES (placeholder hasta Fase 4) -->
+  <!-- Sub: NOTIFICACIONES A EMPLEADORES -->
+  {% set CRITERIO_LABELS_EMP = {'cuit': 'CUIT', 'todos': 'Todos', 'provincia': 'Provincia'} %}
   <div class="emp-subpanel" id="emp-sub-notificaciones">
-    <p class="muted">Próximamente.</p>
+    <h2>Nueva notificación a empleadores</h2>
+    <div class="card">
+      <form method="post" action="/admin/notificacion-empresa" enctype="multipart/form-data" id="form-notificacion-emp">
+        <div class="grid2">
+          <div class="campo full"><label>Remitente</label><input name="remitente" id="notifemp-remitente" placeholder="Ej: Comisión Directiva"></div>
+          <div class="campo full"><label>Mensaje *</label>
+            <textarea name="texto" id="notifemp-texto" rows="5" required placeholder="Puede incluir URLs, se muestran como link"></textarea>
+          </div>
+          <div class="campo full"><label>Destinatarios *</label>
+            <select name="criterio" id="notifemp-criterio" onchange="cambiarCriterioNotifEmp()">
+              <option value="todos">Todos los empleadores activos</option>
+              <option value="cuit">Por CUIT puntual</option>
+              <option value="provincia">Por provincia</option>
+            </select>
+          </div>
+          <div class="campo full oculto" id="notifemp-valores-cuit">
+            <label>CUIT(s), separados por coma</label>
+            <input type="text" id="notifemp-valores-cuit-input" placeholder="30111222339, 30500000001">
+          </div>
+          <div class="campo full oculto" id="notifemp-valores-provincia">
+            <label>Provincias</label>
+            <div class="check-seccionales" id="notifemp-check-provincias">
+              {% for p in provincias %}
+              <label class="chk-seccional"><input type="checkbox" value="{{ p }}"> {{ p }}</label>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="campo full"><label>Adjunto (opcional, imagen/PDF/Word, hasta 5 MB)</label>
+            <input name="adjunto" type="file" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,.doc,.docx">
+          </div>
+        </div>
+        <div id="notifemp-valores-hidden"></div>
+        <div id="notifemp-preview-box" class="oculto" style="margin:12px 0; padding:11px 14px; background:#f4f2ec; border-radius:8px; font-size:13.5px;"></div>
+        <button type="button" id="notifemp-btn-preview" onclick="previsualizarNotificacionEmp()">Vista previa</button>
+        <button type="submit" id="notifemp-btn-enviar" class="oculto" style="margin-left:8px;">Confirmar y enviar</button>
+      </form>
+    </div>
+
+    <h2>Notificaciones enviadas ({{ notificaciones_empresa|length }})</h2>
+    <table>
+      <tr><th>Fecha</th><th>Remitente</th><th>Mensaje</th><th>Destino</th><th>Leídos</th><th></th></tr>
+      {% for n in notificaciones_empresa %}
+      <tr>
+        <td class="muted">{{ n.enviado_en }}</td>
+        <td>{{ n.remitente or '—' }}{% if n.origen == 'sistema' %}<br><span class="tag" style="background:#eee;color:#888;">sistema</span>{% endif %}</td>
+        <td>{{ n.texto[:80] }}{% if n.texto|length > 80 %}…{% endif %}</td>
+        <td class="muted">{{ CRITERIO_LABELS_EMP.get(n.criterio, n.criterio) }}</td>
+        <td class="muted">{{ n.leidos }}/{{ n.cantidad_destinatarios }}</td>
+        <td style="white-space:nowrap; text-align:right;">
+          <button type="button" class="mini" onclick="verDestinatariosNotificacionEmp({{ n.id }})">Ver</button>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="muted">Todavía no enviaste ninguna notificación a empleadores.</td></tr>
+      {% endfor %}
+    </table>
   </div>
 
   <!-- Sub: TRÁMITES (placeholder hasta Fase 5) -->
@@ -1569,6 +1625,76 @@ function verDestinatariosNotificacion(id) {
     const filas = data.destinatarios.map(d =>
       `<div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #eee; font-size:13px;">
         <span>${d.cuil}${d.nombre ? ' — ' + d.nombre : ''}</span>
+        <span class="muted">${d.leida_en ? 'Leído ' + d.leida_en : 'No leído'}</span>
+      </div>`).join('') || '<span class="muted">Sin destinatarios.</span>';
+    document.getElementById('modal-recibo-contenido').innerHTML = filas;
+  }).catch(() => {
+    document.getElementById('modal-recibo-contenido').innerHTML = 'No se pudo cargar.';
+  });
+}
+
+// ---------- Notificaciones a empleadores ----------
+function cambiarCriterioNotifEmp() {
+  const val = document.getElementById('notifemp-criterio').value;
+  ['cuit', 'provincia'].forEach(c => {
+    const el = document.getElementById('notifemp-valores-' + c);
+    if (el) el.classList.toggle('oculto', c !== val);
+  });
+  document.getElementById('notifemp-preview-box').classList.add('oculto');
+  document.getElementById('notifemp-btn-enviar').classList.add('oculto');
+}
+function valoresNotifEmpActuales() {
+  const criterio = document.getElementById('notifemp-criterio').value;
+  if (criterio === 'todos') return ['todos'];   // sentinel: el backend ignora valores para "todos"
+  if (criterio === 'cuit') return splitComas(document.getElementById('notifemp-valores-cuit-input').value);
+  if (criterio === 'provincia') return Array.from(document.querySelectorAll('#notifemp-check-provincias input:checked')).map(c => c.value);
+  return [];
+}
+async function previsualizarNotificacionEmp() {
+  const criterio = document.getElementById('notifemp-criterio').value;
+  const valores = valoresNotifEmpActuales();
+  const box = document.getElementById('notifemp-preview-box');
+  const btnEnviar = document.getElementById('notifemp-btn-enviar');
+  box.classList.remove('oculto');
+  btnEnviar.classList.add('oculto');
+  if (!valores.length) {
+    box.textContent = 'Elegí al menos un destinatario.';
+    return;
+  }
+  const fd = new FormData();
+  fd.append('criterio', criterio);
+  valores.forEach(v => fd.append('valores', v));
+  box.textContent = 'Calculando…';
+  try {
+    const r = await fetch('/admin/notificacion-empresa/preview', { method: 'POST', body: fd });
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    box.textContent = data.cantidad > 0
+      ? `Se enviará a ${data.cantidad} empleador${data.cantidad === 1 ? '' : 'es'}.`
+      : 'Nadie matchea ese destino todavía.';
+    const cont = document.getElementById('notifemp-valores-hidden');
+    cont.innerHTML = '';
+    valores.forEach(v => {
+      const inp = document.createElement('input');
+      inp.type = 'hidden'; inp.name = 'valores'; inp.value = v;
+      cont.appendChild(inp);
+    });
+    if (data.cantidad > 0) {
+      btnEnviar.textContent = `Confirmar y enviar (${data.cantidad})`;
+      btnEnviar.classList.remove('oculto');
+    }
+  } catch (e) {
+    box.textContent = 'No se pudo calcular la vista previa.';
+  }
+}
+function verDestinatariosNotificacionEmp(id) {
+  document.getElementById('modal-recibo-titulo').textContent = 'Destinatarios';
+  document.getElementById('modal-recibo-contenido').innerHTML = 'Cargando…';
+  document.getElementById('modal-recibo-overlay').classList.add('abierto');
+  fetch('/admin/notificacion-empresa/' + id + '/destinatarios').then(r => r.json()).then(data => {
+    const filas = data.destinatarios.map(d =>
+      `<div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #eee; font-size:13px;">
+        <span>${d.cuit}${d.razon_social ? ' — ' + d.razon_social : ''}</span>
         <span class="muted">${d.leida_en ? 'Leído ' + d.leida_en : 'No leído'}</span>
       </div>`).join('') || '<span class="muted">Sin destinatarios.</span>';
     document.getElementById('modal-recibo-contenido').innerHTML = filas;

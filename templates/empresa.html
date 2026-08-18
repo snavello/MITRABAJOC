@@ -61,6 +61,29 @@
   .tabbar button.activa { color:var(--marca-acento); }
   .tabbar button.activa .picon { background:color-mix(in srgb, var(--marca-acento) 15%, transparent); }
   .tabbar button.activa svg { stroke:var(--marca-acento); }
+  .tabbar button { position:relative; }
+  .tab-badge { position:absolute; top:2px; right:14px; background:#e5484d; color:#fff;
+    font-size:10px; font-weight:700; min-width:16px; height:16px; border-radius:999px;
+    display:flex; align-items:center; justify-content:center; padding:0 3px; }
+  /* ===== Notificaciones -- mismo patrón que portada.html (trabajador), sin
+     modal: acá la pestaña ya ES el contenido, no compite por espacio con
+     nada más en la pantalla. ===== */
+  .notif-item { background:var(--papel); border:1px solid var(--linea); border-left:3px solid transparent;
+    border-radius:10px; padding:11px 13px; margin-bottom:8px; cursor:pointer; }
+  .notif-item.no-leida { border-left-color:var(--marca-acento);
+    background:color-mix(in srgb, var(--marca-acento) 7%, var(--papel)); }
+  .notif-cab { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
+  .notif-remitente { font-size:12.5px; font-weight:650; color:var(--marca-primario); }
+  .notif-item.no-leida .notif-remitente { color:var(--marca-acento); }
+  .notif-fecha { font-size:10.5px; color:var(--gris); white-space:nowrap; }
+  .notif-snippet { font-size:12.5px; color:var(--gris); margin-top:4px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .notif-texto-full { font-size:13px; line-height:1.55; margin-top:8px; color:var(--tinta); display:none; }
+  .notif-item.expandido .notif-snippet { display:none; }
+  .notif-item.expandido .notif-texto-full { display:block; }
+  .notif-adjunto { display:inline-block; margin-top:9px; font-size:12px; color:var(--marca-primario);
+    text-decoration:none; font-weight:600; }
+  .notif-vacio { text-align:center; padding:34px 10px; color:var(--gris); font-size:13px; }
 </style>
 </head>
 <body>
@@ -79,11 +102,7 @@
 
   <!-- ============ PESTAÑA: NOTIFICACIONES ============ -->
   <div class="tpanel activo" id="tp-notificaciones">
-    <div class="proximamente">
-      <div class="ic-grande"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg></div>
-      <h2>Notificaciones</h2>
-      <p>Acá vas a ver los mensajes que te mande el sindicato.</p>
-    </div>
+    <div id="notif-lista"><div class="notif-vacio">Cargando…</div></div>
   </div>
 
   <!-- ============ PESTAÑA: TRÁMITES ============ -->
@@ -97,7 +116,11 @@
 </div>
 
 <nav class="tabbar">
-  <button class="tab-t activa" data-tp="notificaciones"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg></span>Notificaciones</button>
+  <button class="tab-t activa" data-tp="notificaciones">
+    <span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg></span>
+    Notificaciones
+    <span class="tab-badge" id="badge-notif-emp" style="display:none;"></span>
+  </button>
   <button class="tab-t" data-tp="tramites"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>Trámites</button>
 </nav>
 
@@ -124,6 +147,65 @@ document.querySelectorAll('.tab-t').forEach(btn => {
     });
   });
 });
+
+// ---------- Notificaciones ----------
+function fmtFechaHora(s) {
+  // "AAAA-MM-DD HH:MM" -> "DD/MM HH:MM"
+  const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})$/.exec(s || '');
+  return m ? `${m[3]}/${m[2]} ${m[4]}` : (s || '');
+}
+async function cargarNotificacionesEmpresa() {
+  const lista = document.getElementById('notif-lista');
+  try {
+    const r = await fetch('/api/empresa/notificaciones');
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    renderNotificacionesEmpresa(data.notificaciones);
+    actualizarBadgeNotifEmpresa(data.no_leidas);
+  } catch (e) {
+    lista.innerHTML = '<div class="notif-vacio">No se pudieron cargar las notificaciones.</div>';
+  }
+}
+function renderNotificacionesEmpresa(items) {
+  const lista = document.getElementById('notif-lista');
+  if (!items.length) {
+    lista.innerHTML = '<div class="notif-vacio">Todavía no tenés notificaciones.</div>';
+    return;
+  }
+  lista.innerHTML = items.map(n => `
+    <div class="notif-item ${n.leida_en ? '' : 'no-leida'}" data-id="${n.id}" onclick="toggleNotificacionEmpresa(${n.id})">
+      <div class="notif-cab">
+        <span class="notif-remitente">${(n.remitente || 'Tu sindicato').replace(/</g, '&lt;')}</span>
+        <span class="notif-fecha">${fmtFechaHora(n.enviado_en)}</span>
+      </div>
+      <div class="notif-snippet">${(n.texto || '').replace(/</g, '&lt;')}</div>
+      <div class="notif-texto-full">${n.texto_html}${n.tiene_adjunto ? `<br><a class="notif-adjunto" href="/notificacion-empresa-adjunto/${n.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📎 Ver adjunto</a>` : ''}</div>
+    </div>
+  `).join('');
+}
+async function toggleNotificacionEmpresa(id) {
+  const item = document.querySelector('.notif-item[data-id="' + id + '"]');
+  if (!item) return;
+  const yaExpandido = item.classList.contains('expandido');
+  document.querySelectorAll('.notif-item.expandido').forEach(el => el.classList.remove('expandido'));
+  if (yaExpandido) return;
+  item.classList.add('expandido');
+  if (item.classList.contains('no-leida')) {
+    item.classList.remove('no-leida');
+    try {
+      const r = await fetch('/api/empresa/notificacion/' + id + '/leer', { method: 'POST' });
+      const data = await r.json();
+      actualizarBadgeNotifEmpresa(data.no_leidas);
+    } catch (e) {}
+  }
+}
+function actualizarBadgeNotifEmpresa(n) {
+  const badge = document.getElementById('badge-notif-emp');
+  if (!badge) return;
+  if (n > 0) { badge.textContent = n; badge.style.display = 'flex'; }
+  else { badge.style.display = 'none'; }
+}
+cargarNotificacionesEmpresa();
 </script>
 </body>
 </html>

@@ -40,7 +40,7 @@ from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabaja
                 CuentaTrabajador, EnvioSindicato, ReciboVerificado, ConfiguracionPlataforma, Noticia,
                 Beneficio, Seccional, ReciboSospechoso, Notificacion, NotificacionDestinatario,
                 TipoTramite, CampoTramite, Tramite, RespuestaTramite, NotaTramite, TramiteLog,
-                Empleador, CuentaEmpleador)
+                Empleador, CuentaEmpleador, NotificacionEmpleador, NotificacionEmpleadorDestinatario)
 from extractor import extraer, extraer_aportes
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, CATEGORIAS_UNIVERSALES)
@@ -613,6 +613,7 @@ def admin(request: Request):
         "estados_tramite": db.ESTADOS_TRAMITE, "estados_tramite_label": db.ESTADOS_TRAMITE_LABEL,
         "seccionales": seccionales, "seccional_por_id": seccional_por_id,
         "empleadores": empleadores,
+        "notificaciones_empresa": db.notificaciones_empleador_del_sindicato(sid),
         "modulos": modulos,
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
@@ -1337,6 +1338,106 @@ def api_marcar_notificacion_leida(notificacion_id: int, request: Request):
         raise HTTPException(404, "No sos destinatario de esta notificación")
     sid = sindicato_activo_trabajador(request)
     no_leidas = db.contar_notificaciones_no_leidas(cuil, sid) if sid else 0
+    return {"ok": True, "no_leidas": no_leidas}
+
+
+# ---------- Notificaciones a empleadores (Fase 4 del plan de Empleadores) ----------
+# Mismo patrón que las rutas de notificaciones al trabajador (arriba), sobre
+# las tablas propias NotificacionEmpleador/NotificacionEmpleadorDestinatario.
+
+@app.post("/admin/notificacion-empresa/preview")
+def notificacion_empresa_preview(request: Request, criterio: str = Form(...), valores: list[str] = Form(default=[])):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    cuits = db.resolver_destinatarios_empleador(sid, criterio, valores)
+    return {"cantidad": len(cuits)}
+
+
+@app.post("/admin/notificacion-empresa")
+async def crear_notificacion_empresa(
+    request: Request,
+    remitente: str = Form(""), texto: str = Form(...),
+    criterio: str = Form(...), valores: list[str] = Form(default=[]),
+    adjunto: UploadFile = File(None),
+):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    ses = sesion_actual(request, "sindicato")
+    adjunto_datos, adjunto_mime, adjunto_nombre = None, "", ""
+    if adjunto and adjunto.filename:
+        adjunto_datos, adjunto_mime, adjunto_nombre = _leer_adjunto_notificacion(adjunto)
+        if not adjunto_datos:
+            return RedirectResponse("/admin?error=adjunto#empleadores", status_code=303)
+    db.crear_notificacion_empleador(
+        sid, ses.get("uid") or None, remitente, texto, criterio, valores,
+        adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime, adjunto_nombre=adjunto_nombre,
+    )
+    return RedirectResponse("/admin#empleadores", status_code=303)
+
+
+@app.get("/admin/notificacion-empresa/{notificacion_empleador_id}/destinatarios")
+def notificacion_empresa_ver_destinatarios(notificacion_empleador_id: int, request: Request):
+    sid = exigir_sindicato(request)
+    with db.get_session() as s:
+        n = s.get(NotificacionEmpleador, notificacion_empleador_id)
+        if not n or n.sindicato_id != sid:
+            raise HTTPException(403, "No autorizado")
+    return {"destinatarios": db.notificacion_empleador_destinatarios(notificacion_empleador_id)}
+
+
+@app.get("/notificacion-empresa-adjunto/{notificacion_empleador_id}")
+def servir_adjunto_notificacion_empresa(notificacion_empleador_id: int, request: Request):
+    """El adjunto lo puede ver el admin del sindicato que la mandó, o un
+    empleador que sea destinatario real -- no es público como el logo."""
+    with db.get_session() as s:
+        n = s.get(NotificacionEmpleador, notificacion_empleador_id)
+        if not n or not n.adjunto_datos:
+            raise HTTPException(404, "Sin adjunto")
+        ses_sind = sesion_actual(request, "sindicato")
+        ses_emp = sesion_actual(request, "empleador")
+        autorizado = False
+        if ses_sind and ses_sind.get("sid") == n.sindicato_id:
+            autorizado = True
+        elif ses_emp:
+            cuit = request.cookies.get("cuit_emp", "")
+            if cuit and s.exec(select(NotificacionEmpleadorDestinatario).where(
+                    NotificacionEmpleadorDestinatario.notificacion_empleador_id == notificacion_empleador_id,
+                    NotificacionEmpleadorDestinatario.cuit == cuit)).first():
+                autorizado = True
+        if not autorizado:
+            raise HTTPException(403, "No autorizado")
+        return BinResponse(
+            content=n.adjunto_datos, media_type=n.adjunto_mime or "application/octet-stream",
+            headers={"Content-Disposition": f'inline; filename="{n.adjunto_nombre or "adjunto"}"'},
+        )
+
+
+@app.get("/api/empresa/notificaciones")
+def api_mis_notificaciones_empresa(request: Request):
+    ses = sesion_actual(request, "empleador")
+    cuit = request.cookies.get("cuit_emp", "")
+    if not ses or not cuit:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_empleador(request)
+    if not sid:
+        return {"notificaciones": [], "no_leidas": 0}
+    notifs = db.notificaciones_de_empleador(cuit, sid)
+    for n in notifs:
+        n["texto_html"] = _texto_con_links(n["texto"])
+    return {"notificaciones": notifs, "no_leidas": sum(1 for n in notifs if not n["leida_en"])}
+
+
+@app.post("/api/empresa/notificacion/{notificacion_empleador_id}/leer")
+def api_marcar_notificacion_leida_empresa(notificacion_empleador_id: int, request: Request):
+    ses = sesion_actual(request, "empleador")
+    cuit = request.cookies.get("cuit_emp", "")
+    if not ses or not cuit:
+        raise HTTPException(403, "No autorizado")
+    ok = db.marcar_notificacion_leida_empleador(notificacion_empleador_id, cuit)
+    if not ok:
+        raise HTTPException(404, "No sos destinatario de esta notificación")
+    sid = sindicato_activo_empleador(request)
+    no_leidas = db.contar_notificaciones_no_leidas_empleador(cuit, sid) if sid else 0
     return {"ok": True, "no_leidas": no_leidas}
 
 
