@@ -150,6 +150,45 @@
   .tramite-subtab.activa { background:var(--marca-secundario); color:#fff; border-color:var(--marca-secundario); }
   .tramite-subpanel { display:none; }
   .tramite-subpanel.activo { display:block; }
+  /* Sub-pestañas de Empleadores: clases propias por el mismo motivo que
+     las de Trámites -- no comparten listener con .subtab ni .tramite-subtab. */
+  .emp-subtab { padding:6px 14px; border-radius:7px; font-size:13px; font-weight:500;
+    background:#f2f0ea; color:var(--gris); border:1px solid var(--linea); cursor:pointer; font-family:inherit; }
+  .emp-subtab.activa { background:var(--marca-secundario); color:#fff; border-color:var(--marca-secundario); }
+  .emp-subpanel { display:none; }
+  .emp-subpanel.activo { display:block; }
+  /* Sub-sub-pestañas de Trámites externos (dentro de Empleadores) -- mismo
+     motivo, namespace propio para no interferir con .tramite-subtab. */
+  .emptram-subtab { padding:6px 14px; border-radius:7px; font-size:13px; font-weight:500;
+    background:#f2f0ea; color:var(--gris); border:1px solid var(--linea); cursor:pointer; font-family:inherit; }
+  .emptram-subtab.activa { background:var(--marca-secundario); color:#fff; border-color:var(--marca-secundario); }
+  .emptram-subpanel { display:none; }
+  .emptram-subpanel.activo { display:block; }
+  /* Trámites externos: mismo layout que la vista previa de trabajador (grilla
+     de 12 columnas, tp-completo/mitad/tercio) pero con fondo "más intenso" --
+     tinte del color de marca -- para diferenciarse a simple vista de los
+     trámites internos del trabajador. */
+  .tramx-preview-box { background:color-mix(in srgb, var(--marca-primario) 14%, var(--papel));
+    border:1px dashed color-mix(in srgb, var(--marca-primario) 45%, var(--linea)); border-radius:10px; padding:14px; }
+  .tramx-preview-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:0 12px; }
+  .campo-tramx { margin-bottom:14px; }
+  .campo-tramx label { display:block; font-size:12.5px; color:var(--gris); margin-bottom:6px; }
+  .campo-tramx-separador { grid-column:1 / -1; border:none;
+    border-top:1px solid color-mix(in srgb, var(--marca-primario) 45%, var(--linea)); margin:2px 0 12px; }
+  .campo-tramx-opcion { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--tinta);
+    margin-bottom:8px; font-weight:400; }
+  .campo-tramx-opcion input { width:18px; height:18px; flex:0 0 auto; }
+  .campo-tramx-bool { display:flex; align-items:center; gap:9px; font-size:14px; color:var(--tinta); font-weight:400; }
+  .campo-tramx-bool input { width:20px; height:20px; flex:0 0 auto; }
+  .tramx-input { display:block; width:100%; padding:11px 12px;
+    border:1px solid color-mix(in srgb, var(--marca-primario) 35%, var(--linea)); border-radius:10px;
+    font-family:inherit; font-size:14px; background:color-mix(in srgb, var(--marca-primario) 8%, #fff); color:var(--tinta); }
+  .tramx-archivo { display:flex; align-items:center; justify-content:center; gap:6px; width:100%; padding:11px;
+    border:1px solid color-mix(in srgb, var(--marca-primario) 35%, var(--linea)); border-radius:10px;
+    background:color-mix(in srgb, var(--marca-primario) 8%, #fff); color:var(--tinta); font-size:14px; }
+  .tramx-preview-grid input, .tramx-preview-grid select { pointer-events:none; }
+  .tramx-preview-grid input:disabled, .tramx-preview-grid select:disabled {
+    opacity:1; -webkit-text-fill-color:var(--tinta); color:var(--tinta); cursor:default; }
   /* Globo rojo, mismo componente que en las portadas (marca.css no está
      importado acá) -- 30% más grande que la primera versión, y con
      top/right propios porque este botón es chico, no una tarjeta. */
@@ -371,6 +410,7 @@
   {% if 'beneficios' in modulos %}<button class="tab-btn" data-panel="beneficios"><svg viewBox="0 0 24 24"><use href="#ic-beneficios"/></svg><span>Beneficios</span></button>{% endif %}
   {% if 'notificaciones' in modulos %}<button class="tab-btn" data-panel="notificaciones"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg><span>Notificaciones</span></button>{% endif %}
   {% if 'tramites' in modulos %}<button class="tab-btn" data-panel="tramites"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg><span>Trámites</span></button>{% endif %}
+  {% if 'empleadores' in modulos %}<button class="tab-btn" data-panel="empleadores"><svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg><span>Empleadores</span></button>{% endif %}
   <button class="tab-btn" data-panel="seccionales"><svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg><span>Seccionales</span></button>
   <button class="tab-btn" data-panel="administradores"><svg viewBox="0 0 24 24"><use href="#ic-admins"/></svg><span>Administradores</span></button>
 </nav>
@@ -390,6 +430,7 @@
     <g id="ic-notif"><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></g>
     <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
     <g id="ic-seccionales"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></g>
+    <g id="ic-empleadores"><rect x="4" y="9" width="16" height="12" rx="1.2"/><path d="M9 9V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4"/><circle cx="9" cy="14" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="0.9" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="0.9" fill="currentColor" stroke="none"/></g>
     <g id="ic-admins"><path d="M12 3l7 3v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6z"/><circle cx="12" cy="10" r="2.3"/><path d="M8.4 15c.7-1.5 2-2.3 3.6-2.3s2.9.8 3.6 2.3"/></g>
   </defs>
 </svg>
@@ -1078,6 +1119,265 @@
   </div>
   {% endif %}
 
+  {% if 'empleadores' in modulos %}
+  <div class="panel" id="panel-empleadores">
+  <!-- ============ EMPLEADORES ============ -->
+  {% if request.query_params.get('error') == 'cuit' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">CUIT inválido -- tiene que tener 11 dígitos.</div>
+  {% endif %}
+  {% if request.query_params.get('importados') %}
+  <div class="msg ok">✓ Se importaron {{ request.query_params.get('importados') }} empleador(es) nuevo(s) desde Conceptos.</div>
+  {% endif %}
+
+  <div class="subtabs">
+    <button type="button" class="emp-subtab activa" data-emp-sub="empresas" onclick="cambiarSubEmpleador('empresas')">Empresas</button>
+    <button type="button" class="emp-subtab" data-emp-sub="notificaciones" onclick="cambiarSubEmpleador('notificaciones')">Notificaciones</button>
+    <button type="button" class="emp-subtab" data-emp-sub="tramites" onclick="cambiarSubEmpleador('tramites')">Trámites</button>
+  </div>
+
+  <!-- Sub: EMPRESAS (CRUD) -->
+  <div class="emp-subpanel activo" id="emp-sub-empresas">
+    <h2 id="empleador-titulo">Dar de alta un empleador</h2>
+    <p class="muted">CUIT, razón social y datos de contacto de las empresas de este sindicato -- cargalos a mano o importá los CUIT que ya aparecen en Conceptos.</p>
+    <div class="card">
+      <form method="post" action="/admin/empleador" id="form-empleador">
+        <input type="hidden" name="id" id="emp-id">
+        <div class="grid2">
+          <div class="campo"><label>CUIT *</label><input name="cuit" id="emp-cuit" required placeholder="30123456789"></div>
+          <div class="campo"><label>Razón social</label><input name="razon_social" id="emp-razon"></div>
+          <div class="campo full"><label>Domicilio</label><input name="domicilio" id="emp-domicilio"></div>
+          <div class="campo"><label>Teléfono</label><input name="telefono" id="emp-telefono"></div>
+          <div class="campo">
+            <label>Provincia</label>
+            <select name="provincia" id="emp-provincia">
+              <option value="">(sin especificar)</option>
+              {% for p in provincias %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="campo full"><label>Mail</label><input name="mail" id="emp-mail" type="email"></div>
+        </div>
+        <button type="submit">Guardar empleador</button>
+        <button type="button" class="sec oculto" id="emp-cancel" onclick="cancelarEmpleador()">Cancelar edición</button>
+      </form>
+    </div>
+
+    <form method="post" action="/admin/empleador/importar-cuits" style="margin:14px 0;" onsubmit="return confirm('¿Importar los CUIT que ya aparecen en Conceptos y todavía no están cargados acá?');">
+      <button type="submit" class="sec mini">Importar CUITs de conceptos</button>
+    </form>
+
+    <h2>Empleadores cargados ({{ empleadores|length }})</h2>
+    <table>
+      <tr><th>CUIT</th><th>Razón social</th><th>Provincia</th><th>Estado</th><th></th></tr>
+      {% for e in empleadores %}
+      <tr>
+        <td><code>{{ e.cuit }}</code></td>
+        <td>{{ e.razon_social or '—' }}</td>
+        <td class="muted">{{ e.provincia or '—' }}</td>
+        <td>{% if e.activo %}<span class="tag tag-si">activo</span>{% else %}<span class="tag" style="background:#eee;color:#888;">inactivo</span>{% endif %}</td>
+        <td style="white-space:nowrap; text-align:right;">
+          <button type="button" class="mini" onclick='editarEmpleador({{ {"id":e.id,"cuit":e.cuit,"razon_social":e.razon_social,"domicilio":e.domicilio,"telefono":e.telefono,"provincia":e.provincia,"mail":e.mail} | tojson }})'>Editar</button>
+          {% if e.activo %}
+          <form method="post" action="/admin/empleador/baja" style="display:inline;" onsubmit="return confirm('¿Dar de baja este empleador?')">
+            <input type="hidden" name="id" value="{{ e.id }}">
+            <button class="peligro mini" type="submit">Baja</button>
+          </form>
+          {% else %}
+          <form method="post" action="/admin/empleador/alta-logica" style="display:inline;">
+            <input type="hidden" name="id" value="{{ e.id }}">
+            <button class="mini" type="submit">Reactivar</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="muted">Todavía no cargaste ningún empleador.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <!-- Sub: NOTIFICACIONES A EMPLEADORES -->
+  {% set CRITERIO_LABELS_EMP = {'cuit': 'CUIT', 'todos': 'Todos', 'provincia': 'Provincia'} %}
+  <div class="emp-subpanel" id="emp-sub-notificaciones">
+    <h2>Nueva notificación a empleadores</h2>
+    <div class="card">
+      <form method="post" action="/admin/notificacion-empresa" enctype="multipart/form-data" id="form-notificacion-emp">
+        <div class="grid2">
+          <div class="campo full"><label>Remitente</label><input name="remitente" id="notifemp-remitente" placeholder="Ej: Comisión Directiva"></div>
+          <div class="campo full"><label>Mensaje *</label>
+            <textarea name="texto" id="notifemp-texto" rows="5" required placeholder="Puede incluir URLs, se muestran como link"></textarea>
+          </div>
+          <div class="campo full"><label>Destinatarios *</label>
+            <select name="criterio" id="notifemp-criterio" onchange="cambiarCriterioNotifEmp()">
+              <option value="todos">Todos los empleadores activos</option>
+              <option value="cuit">Por CUIT puntual</option>
+              <option value="provincia">Por provincia</option>
+            </select>
+          </div>
+          <div class="campo full oculto" id="notifemp-valores-cuit">
+            <label>CUIT(s), separados por coma</label>
+            <input type="text" id="notifemp-valores-cuit-input" placeholder="30111222339, 30500000001">
+          </div>
+          <div class="campo full oculto" id="notifemp-valores-provincia">
+            <label>Provincias</label>
+            <div class="check-seccionales" id="notifemp-check-provincias">
+              {% for p in provincias %}
+              <label class="chk-seccional"><input type="checkbox" value="{{ p }}"> {{ p }}</label>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="campo full"><label>Adjunto (opcional, imagen/PDF/Word, hasta 5 MB)</label>
+            <input name="adjunto" type="file" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,.doc,.docx">
+          </div>
+        </div>
+        <div id="notifemp-valores-hidden"></div>
+        <div id="notifemp-preview-box" class="oculto" style="margin:12px 0; padding:11px 14px; background:#f4f2ec; border-radius:8px; font-size:13.5px;"></div>
+        <button type="button" id="notifemp-btn-preview" onclick="previsualizarNotificacionEmp()">Vista previa</button>
+        <button type="submit" id="notifemp-btn-enviar" class="oculto" style="margin-left:8px;">Confirmar y enviar</button>
+      </form>
+    </div>
+
+    <h2>Notificaciones enviadas ({{ notificaciones_empresa|length }})</h2>
+    <table>
+      <tr><th>Fecha</th><th>Remitente</th><th>Mensaje</th><th>Destino</th><th>Leídos</th><th></th></tr>
+      {% for n in notificaciones_empresa %}
+      <tr>
+        <td class="muted">{{ n.enviado_en }}</td>
+        <td>{{ n.remitente or '—' }}{% if n.origen == 'sistema' %}<br><span class="tag" style="background:#eee;color:#888;">sistema</span>{% endif %}</td>
+        <td>{{ n.texto[:80] }}{% if n.texto|length > 80 %}…{% endif %}</td>
+        <td class="muted">{{ CRITERIO_LABELS_EMP.get(n.criterio, n.criterio) }}</td>
+        <td class="muted">{{ n.leidos }}/{{ n.cantidad_destinatarios }}</td>
+        <td style="white-space:nowrap; text-align:right;">
+          <button type="button" class="mini" onclick="verDestinatariosNotificacionEmp({{ n.id }})">Ver</button>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="muted">Todavía no enviaste ninguna notificación a empleadores.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <!-- Sub: TRÁMITES EXTERNOS -->
+  <div class="emp-subpanel" id="emp-sub-tramites">
+    {% if request.query_params.get('error') == 'campos' %}
+    <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Revisá los campos del formulario: necesita al menos uno con etiqueta y tipo de dato válidos.</div>
+    {% elif request.query_params.get('error') == 'tramitesenviados' %}
+    <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se puede borrar: ya hay trámites presentados contra este tipo. Desactivalo en su lugar (destildá "Activo" al editarlo).</div>
+    {% endif %}
+
+    <div class="subtabs">
+      <button type="button" class="emptram-subtab activa" data-emptram-sub="recibidos" onclick="cambiarSubEmpresaTramite('recibidos')" style="position:relative;">
+        Ver trámites
+        {% if tramites_empresa_nuevos %}<span class="badge-noleidas" id="badge-tramites-empresa-nuevos">{{ tramites_empresa_nuevos }}</span>{% endif %}
+      </button>
+      <button type="button" class="emptram-subtab" data-emptram-sub="tipos" onclick="cambiarSubEmpresaTramite('tipos')">Crear formularios</button>
+    </div>
+
+    <!-- Sub: TRÁMITES DE EMPRESA RECIBIDOS -->
+    <div class="emptram-subpanel activo" id="emptram-sub-recibidos">
+      <h2>Trámites recibidos ({{ tramites_empresa|length }})</h2>
+      <div class="filtros">
+        <input type="text" id="f-tramitesemp-cuit" placeholder="Buscar por CUIT" oninput="filtrarTramitesEmpresa()">
+        <input type="text" id="f-tramitesemp-nombre" placeholder="Buscar por N° de expediente" oninput="filtrarTramitesEmpresa()">
+        <select id="f-tramitesemp-estado" onchange="filtrarTramitesEmpresa()">
+          <option value="">Todos los estados</option>
+          {% for e in estados_tramite %}<option value="{{ e }}">{{ estados_tramite_label[e] }}</option>{% endfor %}
+        </select>
+        <button type="button" class="sec mini" onclick="limpiarFiltroTramitesEmpresa()">Limpiar</button>
+        <span class="f-cant" id="f-tramitesemp-cant"></span>
+      </div>
+      <table>
+        <tr><th>Expediente</th><th>CUIT</th><th>Tipo</th><th>Estado</th><th>Actualizado</th><th></th></tr>
+        {% for tr in tramites_empresa %}
+        <tr class="fila-tramite-emp" id="tramiteemp-fila-{{ tr.id }}" data-cuit="{{ tr.cuit }}" data-nombre="{{ tr.numero_expediente }}" data-estado="{{ tr.estado }}">
+          <td><code>{{ tr.numero_expediente }}</code></td>
+          <td>{{ tr.cuit }}</td>
+          <td>{{ tr.tipo_titulo }}</td>
+          <td><span class="tag {{ 'tag-si' if tr.estado == 'terminado' else 'tag-pend' }}">{{ tr.estado_label }}</span></td>
+          <td class="muted">{{ tr.actualizado }}</td>
+          <td style="text-align:right;"><button type="button" class="mini" onclick="abrirTramiteEmpresaDetalle({{ tr.id }})">Ver</button></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="muted">Todavía no llegó ningún trámite de una empresa.</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+
+    <!-- Sub: TIPOS DE FORMULARIO EXTERNO -->
+    <div class="emptram-subpanel" id="emptram-sub-tipos">
+      <h2 id="te-h2">Nuevo tipo de trámite externo</h2>
+      <div class="card">
+        <form method="post" action="/admin/tramite-tipo-empresa" id="form-tramite-tipo-empresa">
+          <input type="hidden" name="id" id="te-id">
+          <input type="hidden" name="campos_json" id="te-campos-json">
+          <div class="grid2">
+            <div class="campo"><label>Título *</label><input name="titulo" id="te-titulo" required placeholder="Ej: Nómina mensual"></div>
+            <div class="campo"><label>Código *</label><input name="codigo" id="te-codigo" required placeholder="Ej: F01 EMP"></div>
+          </div>
+          <div class="campo oculto" id="te-activo-campo" style="margin-top:10px;">
+            <label class="chk-seccional" style="width:fit-content;"><input type="checkbox" id="te-activo" checked> Activo (visible para la empresa)</label>
+          </div>
+
+          <h3 style="margin-top:18px; font-size:14px; color:var(--tinta);">Campos del formulario</h3>
+          <div class="campos-tramite-cabecera oculto" id="campos-tramite-empresa-cabecera">
+            <span>Etiqueta</span><span>Tipo</span><span>Long. máx.</span><span>Long. exacta</span>
+            <span>Decimales</span><span>Opciones / archivo</span><span>Ancho</span>
+          </div>
+          <div id="te-campos-lista"></div>
+          <button type="button" class="sec mini" style="margin-top:8px;" onclick="agregarCampoTramiteEmpresa()">+ Agregar campo</button>
+
+          <h3 style="margin-top:22px; font-size:14px; color:var(--tinta);">Vista previa</h3>
+          <p class="muted" style="font-size:11.5px;">Así se va a ver el formulario para la empresa (solo de referencia, no se puede completar acá).</p>
+          <div class="tramx-preview-box" id="te-vista-previa"></div>
+
+          <div style="margin-top:16px;">
+            <button type="submit" id="te-submit">Crear tipo de trámite</button>
+            <button type="button" class="sec oculto" id="te-cancel" onclick="cancelarTramiteTipoEmpresa()">Cancelar edición</button>
+          </div>
+        </form>
+      </div>
+
+      <h2>Tipos cargados ({{ tipos_tramite_empresa|length }})</h2>
+      <table>
+        <tr><th>Título</th><th>Código</th><th>Campos</th><th>Estado</th><th>Cargado</th><th></th></tr>
+        {% for t in tipos_tramite_empresa %}
+        <tr>
+          <td>{{ t.titulo }}</td>
+          <td><code>{{ t.codigo }}</code></td>
+          <td class="muted">{{ t.campos|length }}</td>
+          <td>{% if t.activo %}<span class="tag tag-si">activo</span>{% else %}<span class="tag" style="background:#eee;color:#888;">inactivo</span>{% endif %}</td>
+          <td class="muted">{{ t.creado }}</td>
+          <td style="white-space:nowrap; text-align:right;">
+            <button type="button" class="mini" onclick='editarTramiteTipoEmpresa({{ t | tojson }})'>Editar</button>
+            <form method="post" action="/admin/tramite-tipo-empresa/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar este tipo de trámite?')">
+              <input type="hidden" name="id" value="{{ t.id }}">
+              <button class="peligro mini" type="submit">Borrar</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="muted">Todavía no cargaste ningún tipo de trámite externo.</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+
+    <!-- Modal: detalle de trámite de empresa (admin) -->
+    <div class="modal-recibo-overlay" id="modal-tramiteemp-overlay" onclick="if (event.target === this) cerrarTramiteEmpresaDetalle()">
+      <div class="modal-recibo" style="max-width:640px;">
+        <div class="modal-recibo-enc">
+          <h3 id="mte-titulo"></h3>
+          <button type="button" class="modal-recibo-cerrar" onclick="cerrarTramiteEmpresaDetalle()" aria-label="Cerrar">
+            <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="modal-recibo-body">
+          <div class="modal-recibo-card" id="mte-contenido">Cargando…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+  {% endif %}
+
   <div class="panel" id="panel-seccionales">
   <!-- ============ SECCIONALES ============ -->
   <h2 id="seccionales-titulo">Dar de alta una seccional</h2>
@@ -1307,6 +1607,29 @@ setInterval(() => {
     .then(d => { if (d) actualizarBadgeTramitesNuevos(d.cantidad); }).catch(() => {});
 }, 30000);
 {% endif %}
+{% if 'empleadores' in modulos %}
+// Mismo patrón que arriba, para el globo de "Ver trámites" de Empleadores.
+function actualizarBadgeTramitesEmpresaNuevos(cantidad) {
+  const btn = document.querySelector('.emptram-subtab[data-emptram-sub="recibidos"]');
+  if (!btn) return;
+  let badge = document.getElementById('badge-tramites-empresa-nuevos');
+  if (cantidad > 0) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'badge-noleidas';
+      badge.id = 'badge-tramites-empresa-nuevos';
+      btn.appendChild(badge);
+    }
+    badge.textContent = cantidad;
+  } else if (badge) {
+    badge.remove();
+  }
+}
+setInterval(() => {
+  fetch('/admin/tramites-empresa-nuevos-cantidad').then(r => r.ok ? r.json() : null)
+    .then(d => { if (d) actualizarBadgeTramitesEmpresaNuevos(d.cantidad); }).catch(() => {});
+}, 30000);
+{% endif %}
 // Si la URL trae un ancla (ej. #conceptos tras un alta), abrir esa pestaña
 (function abrirDesdeHash() {
   const h = (location.hash || '').replace('#', '');
@@ -1480,6 +1803,76 @@ function verDestinatariosNotificacion(id) {
   });
 }
 
+// ---------- Notificaciones a empleadores ----------
+function cambiarCriterioNotifEmp() {
+  const val = document.getElementById('notifemp-criterio').value;
+  ['cuit', 'provincia'].forEach(c => {
+    const el = document.getElementById('notifemp-valores-' + c);
+    if (el) el.classList.toggle('oculto', c !== val);
+  });
+  document.getElementById('notifemp-preview-box').classList.add('oculto');
+  document.getElementById('notifemp-btn-enviar').classList.add('oculto');
+}
+function valoresNotifEmpActuales() {
+  const criterio = document.getElementById('notifemp-criterio').value;
+  if (criterio === 'todos') return ['todos'];   // sentinel: el backend ignora valores para "todos"
+  if (criterio === 'cuit') return splitComas(document.getElementById('notifemp-valores-cuit-input').value);
+  if (criterio === 'provincia') return Array.from(document.querySelectorAll('#notifemp-check-provincias input:checked')).map(c => c.value);
+  return [];
+}
+async function previsualizarNotificacionEmp() {
+  const criterio = document.getElementById('notifemp-criterio').value;
+  const valores = valoresNotifEmpActuales();
+  const box = document.getElementById('notifemp-preview-box');
+  const btnEnviar = document.getElementById('notifemp-btn-enviar');
+  box.classList.remove('oculto');
+  btnEnviar.classList.add('oculto');
+  if (!valores.length) {
+    box.textContent = 'Elegí al menos un destinatario.';
+    return;
+  }
+  const fd = new FormData();
+  fd.append('criterio', criterio);
+  valores.forEach(v => fd.append('valores', v));
+  box.textContent = 'Calculando…';
+  try {
+    const r = await fetch('/admin/notificacion-empresa/preview', { method: 'POST', body: fd });
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    box.textContent = data.cantidad > 0
+      ? `Se enviará a ${data.cantidad} empleador${data.cantidad === 1 ? '' : 'es'}.`
+      : 'Nadie matchea ese destino todavía.';
+    const cont = document.getElementById('notifemp-valores-hidden');
+    cont.innerHTML = '';
+    valores.forEach(v => {
+      const inp = document.createElement('input');
+      inp.type = 'hidden'; inp.name = 'valores'; inp.value = v;
+      cont.appendChild(inp);
+    });
+    if (data.cantidad > 0) {
+      btnEnviar.textContent = `Confirmar y enviar (${data.cantidad})`;
+      btnEnviar.classList.remove('oculto');
+    }
+  } catch (e) {
+    box.textContent = 'No se pudo calcular la vista previa.';
+  }
+}
+function verDestinatariosNotificacionEmp(id) {
+  document.getElementById('modal-recibo-titulo').textContent = 'Destinatarios';
+  document.getElementById('modal-recibo-contenido').innerHTML = 'Cargando…';
+  document.getElementById('modal-recibo-overlay').classList.add('abierto');
+  fetch('/admin/notificacion-empresa/' + id + '/destinatarios').then(r => r.json()).then(data => {
+    const filas = data.destinatarios.map(d =>
+      `<div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #eee; font-size:13px;">
+        <span>${d.cuit}${d.razon_social ? ' — ' + d.razon_social : ''}</span>
+        <span class="muted">${d.leida_en ? 'Leído ' + d.leida_en : 'No leído'}</span>
+      </div>`).join('') || '<span class="muted">Sin destinatarios.</span>';
+    document.getElementById('modal-recibo-contenido').innerHTML = filas;
+  }).catch(() => {
+    document.getElementById('modal-recibo-contenido').innerHTML = 'No se pudo cargar.';
+  });
+}
+
 // ---------- Trámites ----------
 function escHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
@@ -1487,6 +1880,33 @@ function cambiarSubTramite(dest) {
   document.querySelectorAll('.tramite-subtab').forEach(b => b.classList.toggle('activa', b.dataset.tramiteSub === dest));
   document.querySelectorAll('.tramite-subpanel').forEach(p => p.classList.toggle('activo', p.id === 'tramite-sub-' + dest));
   actualizarBtnAyuda();
+}
+
+// ---------- Empleadores ----------
+function cambiarSubEmpleador(dest) {
+  document.querySelectorAll('.emp-subtab').forEach(b => b.classList.toggle('activa', b.dataset.empSub === dest));
+  document.querySelectorAll('.emp-subpanel').forEach(p => p.classList.toggle('activo', p.id === 'emp-sub-' + dest));
+  actualizarBtnAyuda();
+}
+function editarEmpleador(e) {
+  document.getElementById('emp-id').value = e.id;
+  document.getElementById('emp-cuit').value = e.cuit || '';
+  document.getElementById('emp-razon').value = e.razon_social || '';
+  document.getElementById('emp-domicilio').value = e.domicilio || '';
+  document.getElementById('emp-telefono').value = e.telefono || '';
+  document.getElementById('emp-provincia').value = e.provincia || '';
+  document.getElementById('emp-mail').value = e.mail || '';
+  document.getElementById('empleador-titulo').textContent = 'Editar empleador: ' + (e.razon_social || e.cuit);
+  document.getElementById('form-empleador').querySelector('button[type=submit]').textContent = 'Guardar cambios';
+  document.getElementById('emp-cancel').classList.remove('oculto');
+  document.getElementById('form-empleador').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function cancelarEmpleador() {
+  document.getElementById('form-empleador').reset();
+  document.getElementById('emp-id').value = '';
+  document.getElementById('empleador-titulo').textContent = 'Dar de alta un empleador';
+  document.getElementById('form-empleador').querySelector('button[type=submit]').textContent = 'Guardar empleador';
+  document.getElementById('emp-cancel').classList.add('oculto');
 }
 
 let camposTramiteActuales = [];
@@ -1770,6 +2190,290 @@ function enviarNotaTramiteAdmin(ev, id) {
   fetch('/admin/tramite/' + id + '/nota', {method: 'POST', body: fd})
     .then(r => { if (!r.ok) throw new Error(); return r.json(); })
     .then(() => refrescarTramiteDetalle(id))
+    .catch(() => alert('No se pudo enviar la nota.'));
+  return false;
+}
+
+// ---------- Trámites externos a empleadores (namespace propio, sin
+// compartir funciones ni estado con el constructor de Trámites de arriba) ----------
+function cambiarSubEmpresaTramite(dest) {
+  document.querySelectorAll('.emptram-subtab').forEach(b => b.classList.toggle('activa', b.dataset.emptramSub === dest));
+  document.querySelectorAll('.emptram-subpanel').forEach(p => p.classList.toggle('activo', p.id === 'emptram-sub-' + dest));
+}
+
+let camposTramiteEmpActuales = [];
+
+function renderCamposTramiteEmpresa() {
+  const cont = document.getElementById('te-campos-lista');
+  const cabecera = document.getElementById('campos-tramite-empresa-cabecera');
+  cabecera.classList.toggle('oculto', !camposTramiteEmpActuales.length);
+  if (!camposTramiteEmpActuales.length) {
+    cont.innerHTML = '<p class="muted" style="font-size:12px;">Todavía no agregaste ningún campo.</p>';
+    renderVistaPreviaTramiteEmpresa();
+    return;
+  }
+  cont.innerHTML = camposTramiteEmpActuales.map((c, i) => `
+    <div class="campo-tramite-fila" draggable="true" data-idx="${i}"
+         ondragstart="dragCampoTramiteEmpStart(event, ${i})" ondragover="dragCampoTramiteEmpOver(event, ${i})"
+         ondrop="dragCampoTramiteEmpDrop(event, ${i})" ondragend="dragCampoTramiteEmpEnd(event)">
+      <span class="drag-handle" title="Arrastrá para reordenar">☰</span>
+      <input class="ct-etiqueta" placeholder="${c.tipo_dato==='separador' ? 'Etiqueta (opcional, solo referencia)' : 'Etiqueta'}"
+             value="${escHtml(c.etiqueta)}" oninput="actualizarCampoTramiteEmpresa(${i},'etiqueta',this.value)">
+      <select class="ct-tipo" onchange="actualizarCampoTramiteEmpresa(${i},'tipo_dato',this.value)">
+        ${Object.entries(TIPOS_DATO_TRAMITE_LABEL).map(([v, l]) =>
+          `<option value="${v}" ${c.tipo_dato===v?'selected':''}>${l}</option>`).join('')}
+      </select>
+      <input class="ct-num" type="number" min="0" placeholder="Long. máx." value="${c.longitud_maxima ?? ''}" ${c.tipo_dato!=='texto'?'disabled':''} oninput="actualizarCampoTramiteEmpresa(${i},'longitud_maxima',this.value)">
+      <input class="ct-num" type="number" min="0" placeholder="Long. exacta" value="${c.longitud_exacta ?? ''}" ${c.tipo_dato!=='texto'?'disabled':''} oninput="actualizarCampoTramiteEmpresa(${i},'longitud_exacta',this.value)">
+      <input class="ct-num" type="number" min="0" placeholder="Decimales" value="${c.decimales ?? ''}" ${c.tipo_dato!=='numero'?'disabled':''} oninput="actualizarCampoTramiteEmpresa(${i},'decimales',this.value)">
+      ${TIENE_OPCIONES_TRAMITE.has(c.tipo_dato)
+        ? `<input class="ct-extra" placeholder="Opciones separadas por coma" value="${escHtml(c.opciones)}" oninput="actualizarCampoTramiteEmpresa(${i},'opciones',this.value)">`
+        : `<input class="ct-extra" placeholder="Tipos de archivo (pdf,jpg)" value="${escHtml(c.tipos_archivo_permitidos)}" ${c.tipo_dato!=='archivo'?'disabled':''} oninput="actualizarCampoTramiteEmpresa(${i},'tipos_archivo_permitidos',this.value)">`}
+      <select class="ct-ancho" ${c.tipo_dato==='separador'?'disabled':''} onchange="actualizarCampoTramiteEmpresa(${i},'ancho',this.value)" title="Ancho en el formulario">
+        <option value="completo" ${c.ancho==='completo'?'selected':''}>Ancho completo</option>
+        <option value="mitad" ${c.ancho==='mitad'?'selected':''}>Mitad</option>
+        <option value="tercio" ${c.ancho==='tercio'?'selected':''}>Un tercio</option>
+      </select>
+      <label style="display:flex; align-items:center; gap:3px; white-space:nowrap;" ${c.tipo_dato==='separador'?'class="oculto"':''}>
+        <input type="checkbox" ${c.obligatorio?'checked':''} ${c.tipo_dato==='separador'?'disabled':''} onchange="actualizarCampoTramiteEmpresa(${i},'obligatorio',this.checked)"> Oblig.
+      </label>
+      <button type="button" class="sec mini" ${i===0?'disabled':''} onclick="moverCampoTramiteEmpresa(${i},-1)" title="Subir">↑</button>
+      <button type="button" class="sec mini" ${i===camposTramiteEmpActuales.length-1?'disabled':''} onclick="moverCampoTramiteEmpresa(${i},1)" title="Bajar">↓</button>
+      <button type="button" class="peligro mini" onclick="quitarCampoTramiteEmpresa(${i})" title="Quitar">✕</button>
+    </div>
+  `).join('');
+  renderVistaPreviaTramiteEmpresa();
+}
+function agregarCampoTramiteEmpresa() {
+  camposTramiteEmpActuales.push({etiqueta:'', tipo_dato:'texto', longitud_maxima:null, longitud_exacta:null,
+    decimales:null, tipos_archivo_permitidos:'', opciones:'', ancho:'completo', obligatorio:true});
+  renderCamposTramiteEmpresa();
+}
+function actualizarCampoTramiteEmpresa(i, campo, valor) {
+  camposTramiteEmpActuales[i][campo] = valor;
+  if (campo === 'tipo_dato') { if (valor === 'separador') camposTramiteEmpActuales[i].ancho = 'completo'; renderCamposTramiteEmpresa(); }
+  else renderVistaPreviaTramiteEmpresa();
+}
+function moverCampoTramiteEmpresa(i, delta) {
+  const j = i + delta;
+  if (j < 0 || j >= camposTramiteEmpActuales.length) return;
+  [camposTramiteEmpActuales[i], camposTramiteEmpActuales[j]] = [camposTramiteEmpActuales[j], camposTramiteEmpActuales[i]];
+  renderCamposTramiteEmpresa();
+}
+function quitarCampoTramiteEmpresa(i) {
+  camposTramiteEmpActuales.splice(i, 1);
+  renderCamposTramiteEmpresa();
+}
+
+let dragCampoTramiteEmpOrigen = null;
+function dragCampoTramiteEmpStart(ev, i) {
+  dragCampoTramiteEmpOrigen = i;
+  ev.currentTarget.classList.add('arrastrando');
+  ev.dataTransfer.effectAllowed = 'move';
+}
+function dragCampoTramiteEmpOver(ev, i) {
+  ev.preventDefault();
+  document.querySelectorAll('.campo-tramite-fila.sobre-drop').forEach(el => el.classList.remove('sobre-drop'));
+  if (i !== dragCampoTramiteEmpOrigen) ev.currentTarget.classList.add('sobre-drop');
+}
+function dragCampoTramiteEmpDrop(ev, i) {
+  ev.preventDefault();
+  if (dragCampoTramiteEmpOrigen === null || i === dragCampoTramiteEmpOrigen) return;
+  const [movido] = camposTramiteEmpActuales.splice(dragCampoTramiteEmpOrigen, 1);
+  camposTramiteEmpActuales.splice(i, 0, movido);
+  dragCampoTramiteEmpOrigen = null;
+  renderCamposTramiteEmpresa();
+}
+function dragCampoTramiteEmpEnd() {
+  dragCampoTramiteEmpOrigen = null;
+  document.querySelectorAll('.campo-tramite-fila.arrastrando, .campo-tramite-fila.sobre-drop')
+    .forEach(el => el.classList.remove('arrastrando', 'sobre-drop'));
+}
+
+function renderVistaPreviaTramiteEmpresa() {
+  const cont = document.getElementById('te-vista-previa');
+  if (!cont) return;
+  if (!camposTramiteEmpActuales.length) {
+    cont.innerHTML = '<p class="muted" style="font-size:12px;">Agregá campos para ver la vista previa.</p>';
+    return;
+  }
+  cont.innerHTML = `<div class="tramx-preview-grid">${camposTramiteEmpActuales.map(c => {
+    if (c.tipo_dato === 'separador') return '<hr class="campo-tramx-separador">';
+    const etiqueta = escHtml(c.etiqueta) || '(sin etiqueta)';
+    const anchoClass = 'tp-' + (c.ancho || 'completo');
+    let campo;
+    if (c.tipo_dato === 'booleano') {
+      campo = `<label class="campo-tramx-bool"><input type="checkbox" disabled> ${etiqueta}${c.obligatorio ? ' *' : ''}</label>`;
+      return `<div class="campo-tramx ${anchoClass}">${campo}</div>`;
+    }
+    const opciones = (c.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
+    if (c.tipo_dato === 'opcion_unica' || c.tipo_dato === 'multiple') {
+      const tipoInput = c.tipo_dato === 'opcion_unica' ? 'radio' : 'checkbox';
+      campo = (opciones.length ? opciones : ['(sin opciones cargadas)']).map(o =>
+        `<label class="campo-tramx-opcion"><input type="${tipoInput}" disabled> ${escHtml(o)}</label>`).join('');
+      return `<div class="campo-tramx ${anchoClass}"><label>${etiqueta}${c.obligatorio ? ' *' : ''}</label>${campo}</div>`;
+    }
+    if (c.tipo_dato === 'seleccion') {
+      campo = `<select class="tramx-input" disabled><option>${opciones.length ? 'Elegí una opción' : '(sin opciones cargadas)'}</option></select>`;
+    } else if (c.tipo_dato === 'fecha') {
+      campo = `<input type="date" class="tramx-input" disabled>`;
+    } else if (c.tipo_dato === 'archivo') {
+      campo = `<span class="tramx-archivo">📎 Elegir archivo</span>`;
+    } else {
+      campo = `<input type="text" class="tramx-input" disabled placeholder="${c.tipo_dato === 'numero' ? 'Ej: 1234' : (c.longitud_exacta ? c.longitud_exacta + ' caracteres' : 'Texto')}">`;
+    }
+    return `<div class="campo-tramx ${anchoClass}"><label>${etiqueta}${c.obligatorio ? ' *' : ''}</label>${campo}</div>`;
+  }).join('')}</div>`;
+}
+
+const formTramiteTipoEmpresa = document.getElementById('form-tramite-tipo-empresa');
+if (formTramiteTipoEmpresa) {
+  formTramiteTipoEmpresa.addEventListener('submit', () => {
+    document.getElementById('te-campos-json').value = JSON.stringify(camposTramiteEmpActuales);
+  });
+}
+
+function editarTramiteTipoEmpresa(t) {
+  document.getElementById('te-id').value = t.id;
+  document.getElementById('te-titulo').value = t.titulo;
+  document.getElementById('te-codigo').value = t.codigo;
+  document.getElementById('te-activo-campo').classList.remove('oculto');
+  document.getElementById('te-activo').checked = t.activo;
+  camposTramiteEmpActuales = (t.campos || []).map(c => ({...c}));
+  renderCamposTramiteEmpresa();
+  document.getElementById('te-h2').textContent = 'Editar tipo de trámite';
+  document.getElementById('te-submit').textContent = 'Guardar cambios';
+  document.getElementById('te-cancel').classList.remove('oculto');
+  cambiarSubEmpresaTramite('tipos');
+  document.querySelector('.emp-subtab[data-emp-sub="tramites"]').click();
+  window.scrollTo(0, document.getElementById('panel-empleadores').offsetTop);
+}
+function cancelarTramiteTipoEmpresa() {
+  document.getElementById('form-tramite-tipo-empresa').reset();
+  document.getElementById('te-id').value = '';
+  document.getElementById('te-activo-campo').classList.add('oculto');
+  camposTramiteEmpActuales = [];
+  renderCamposTramiteEmpresa();
+  document.getElementById('te-h2').textContent = 'Nuevo tipo de trámite externo';
+  document.getElementById('te-submit').textContent = 'Crear tipo de trámite';
+  document.getElementById('te-cancel').classList.add('oculto');
+}
+if (document.getElementById('te-campos-lista')) renderCamposTramiteEmpresa();
+
+function filtrarTramitesEmpresa() {
+  const cuit = (document.getElementById('f-tramitesemp-cuit').value || '').replace(/\D/g, '');
+  const nombre = (document.getElementById('f-tramitesemp-nombre').value || '').toUpperCase().trim();
+  const estado = document.getElementById('f-tramitesemp-estado').value;
+  let visibles = 0;
+  document.querySelectorAll('.fila-tramite-emp').forEach(fila => {
+    let visible = true;
+    if (cuit && !fila.dataset.cuit.replace(/\D/g, '').includes(cuit)) visible = false;
+    if (visible && nombre && !fila.dataset.nombre.toUpperCase().includes(nombre)) visible = false;
+    if (visible && estado && fila.dataset.estado !== estado) visible = false;
+    fila.style.display = visible ? '' : 'none';
+    if (visible) visibles++;
+  });
+  document.getElementById('f-tramitesemp-cant').textContent = visibles + ' resultado' + (visibles === 1 ? '' : 's');
+}
+function limpiarFiltroTramitesEmpresa() {
+  document.getElementById('f-tramitesemp-cuit').value = '';
+  document.getElementById('f-tramitesemp-nombre').value = '';
+  document.getElementById('f-tramitesemp-estado').value = '';
+  filtrarTramitesEmpresa();
+}
+
+function abrirTramiteEmpresaDetalle(id) {
+  document.getElementById('mte-titulo').textContent = 'Trámite';
+  document.getElementById('mte-contenido').innerHTML = 'Cargando…';
+  document.getElementById('modal-tramiteemp-overlay').classList.add('abierto');
+  refrescarTramiteEmpresaDetalle(id);
+}
+function cerrarTramiteEmpresaDetalle() {
+  document.getElementById('modal-tramiteemp-overlay').classList.remove('abierto');
+}
+
+const EVENTO_LOG_LABEL_EMP = {creado:'Creado', cambio_estado:'Cambio de estado', nota_admin:'Nota del sindicato', nota_empresa:'Nota de la empresa'};
+
+function refrescarTramiteEmpresaDetalle(id) {
+  fetch('/admin/tramite-empresa/' + id).then(r => r.json()).then(d => {
+    document.getElementById('mte-titulo').textContent = d.numero_expediente + ' — ' + d.tipo_titulo;
+    const opcionesEstado = {{ estados_tramite | tojson }}.map(e =>
+      `<option value="${e}" ${e === d.estado ? 'selected' : ''}>${ {{ estados_tramite_label | tojson }}[e] }</option>`).join('');
+    const respuestasHtml = d.respuestas.map(r => `
+      <div class="modal-fila" style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eee; font-size:13px;">
+        <span class="muted">${escHtml(r.etiqueta)}</span>
+        <span>${r.tiene_archivo ? `<a href="/tramite-empresa-respuesta-archivo/${r.respuesta_id}" target="_blank" rel="noopener">📎 ${escHtml(r.archivo_nombre)}</a>` : escHtml(r.valor_texto)}</span>
+      </div>`).join('');
+    const logHtml = d.log.map(l => `
+      <div class="tramite-log-item"><b>${EVENTO_LOG_LABEL_EMP[l.evento] || l.evento}</b> — ${escHtml(l.detalle)}<br><span class="muted">${l.creado}</span></div>
+    `).join('');
+    const notasHtml = d.notas.map(n => `
+      <div class="tramite-nota ${n.autor}">
+        <b>${n.autor === 'admin' ? 'Sindicato' : 'Empresa'}</b> · <span class="muted">${n.creado}</span>
+        ${n.texto ? `<div style="margin-top:4px;">${escHtml(n.texto)}</div>` : ''}
+        ${n.tiene_adjunto ? `<div style="margin-top:4px;"><a href="/tramite-empresa-nota-adjunto/${n.id}" target="_blank" rel="noopener">📎 ${escHtml(n.adjunto_nombre)}</a></div>` : ''}
+      </div>`).join('') || '<p class="muted" style="font-size:12.5px;">Todavía no hay notas.</p>';
+    document.getElementById('mte-contenido').innerHTML = `
+      <div class="modal-fila" style="display:flex; justify-content:space-between; padding:4px 0; font-size:13px;">
+        <span class="muted">CUIT</span><span><code>${d.cuit}</code></span>
+      </div>
+      <h3 style="font-size:13.5px; margin-top:14px;">Respuestas del formulario</h3>
+      ${respuestasHtml || '<p class="muted" style="font-size:12.5px;">Sin respuestas.</p>'}
+
+      <h3 style="font-size:13.5px; margin-top:16px;">Estado</h3>
+      ${d.estado === 'terminado'
+        ? '<p class="muted" style="font-size:12.5px;">Trámite terminado -- no se puede modificar.</p>'
+        : `<div style="display:flex; gap:8px; align-items:center;">
+             <select id="mte-estado-select">${opcionesEstado}</select>
+             <button type="button" class="mini" onclick="cambiarEstadoTramiteEmpresaAdmin(${d.id})">Actualizar</button>
+           </div>`}
+
+      <h3 style="font-size:13.5px; margin-top:16px;">Notas</h3>
+      ${notasHtml}
+      ${d.estado === 'terminado' ? '' : `
+      <form id="mte-form-nota" style="margin-top:8px;" onsubmit="return enviarNotaTramiteEmpresaAdmin(event, ${d.id})">
+        <textarea id="mte-nota-texto" rows="2" placeholder="Escribile una nota o pedile más información a la empresa…" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:7px; font-family:inherit; font-size:12.5px;"></textarea>
+        <div style="display:flex; gap:8px; align-items:center; margin-top:6px;">
+          <input type="file" id="mte-nota-adjunto" style="font-size:12px;">
+          <button type="submit" class="mini">Enviar nota</button>
+        </div>
+      </form>`}
+
+      <h3 style="font-size:13.5px; margin-top:16px;">Historial</h3>
+      <div class="tramite-log">${logHtml}</div>
+    `;
+    const fila = document.getElementById('tramiteemp-fila-' + d.id);
+    if (fila) {
+      fila.dataset.estado = d.estado;
+      const tag = fila.querySelector('.tag');
+      if (tag) { tag.textContent = d.estado_label; tag.className = 'tag ' + (d.estado === 'terminado' ? 'tag-si' : 'tag-pend'); }
+      const celdas = fila.querySelectorAll('td');
+      if (celdas[4]) celdas[4].textContent = d.actualizado;
+    }
+  }).catch(() => {
+    document.getElementById('mte-contenido').innerHTML = 'No se pudo cargar el trámite.';
+  });
+}
+
+function cambiarEstadoTramiteEmpresaAdmin(id) {
+  const estado = document.getElementById('mte-estado-select').value;
+  const body = new URLSearchParams({estado});
+  fetch('/admin/tramite-empresa/' + id + '/estado', {method: 'POST', body})
+    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+    .then(() => refrescarTramiteEmpresaDetalle(id))
+    .catch(() => alert('No se pudo actualizar el estado.'));
+}
+
+function enviarNotaTramiteEmpresaAdmin(ev, id) {
+  ev.preventDefault();
+  const texto = document.getElementById('mte-nota-texto').value;
+  const archivo = document.getElementById('mte-nota-adjunto').files[0];
+  const fd = new FormData();
+  fd.append('texto', texto);
+  if (archivo) fd.append('adjunto', archivo);
+  fetch('/admin/tramite-empresa/' + id + '/nota', {method: 'POST', body: fd})
+    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+    .then(() => refrescarTramiteEmpresaDetalle(id))
     .catch(() => alert('No se pudo enviar la nota.'));
   return false;
 }

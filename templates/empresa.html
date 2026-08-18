@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="{{ marca.color_base if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238') }}">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Mi Trabajo — Empresa</title>
+<style>
+  :root {
+    --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e;
+    --papel:#f7f5f0; --linea:#dcd8cf; --gris:#5c5a54; --card:#ffffff;
+    --marca-base: {{ marca.color_base if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238') }};
+    --marca-primario: {{ marca.color_primario if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238') }};
+    --marca-acento: {{ marca.color_acento if marca else (marca_plataforma.color_acento if marca_plataforma else '#b23a2e') }};
+    --marca-apoyo: {{ marca.color_secundario if marca else (marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b') }};
+  }
+  * { box-sizing:border-box; margin:0; -webkit-tap-highlight-color:transparent; }
+  html { -webkit-text-size-adjust:100%; }
+  body { font-family:system-ui,-apple-system,sans-serif; background:var(--papel); color:var(--tinta);
+    line-height:1.5; min-height:100dvh; padding-bottom:env(safe-area-inset-bottom); }
+  header { background:var(--marca-base); border-bottom:1px solid var(--linea);
+    padding:12px 18px; padding-top:calc(12px + env(safe-area-inset-top));
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    position:sticky; top:0; z-index:10; }
+  .logo-plataforma-header { width:76px; height:76px; object-fit:contain; flex-shrink:0; }
+  .sind { max-height:76px; max-width:200px; object-fit:contain; }
+  @media (max-width:600px) {
+    .logo-plataforma-header { width:61px; height:61px; }
+    .sind { max-height:61px; max-width:160px; }
+  }
+  .sind-nombre-header { color:#fff; font-size:14px; font-weight:600; }
+  .btn-flotante { position:fixed; bottom:84px; right:18px; width:42px; height:42px; border-radius:50%;
+    background:var(--marca-base); display:flex; align-items:center; justify-content:center;
+    text-decoration:none; border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 2px 10px rgba(0,0,0,.25); z-index:40; }
+  .btn-flotante svg { width:19px; height:19px; stroke:#fff; stroke-width:2.6; fill:none; }
+  .btn-flotante:hover { opacity:.85; }
+  .cont { max-width:480px; margin:0 auto; padding:22px 20px 40px; padding-bottom:98px; }
+  h1 { font-size:clamp(21px, 5.5vw, 26px); font-weight:600; letter-spacing:-0.5px; }
+  .sub { color:var(--gris); margin-top:6px; font-size:15px; }
+  .card { background:var(--card); border:1px solid var(--linea); border-radius:12px; padding:16px 18px; margin-top:16px; }
+  .tpanel { display:none; }
+  .tpanel.activo { display:block; }
+  .proximamente { text-align:center; padding:60px 24px; color:var(--gris); }
+  .proximamente .ic-grande svg { width:52px; height:52px; stroke:var(--marca-apoyo); stroke-width:1.5; fill:none; opacity:.55; }
+  .proximamente h2 { font-size:18px; color:var(--tinta); margin:16px 0 8px; }
+  .proximamente p { font-size:14px; line-height:1.5; }
+  /* ===== Pestañas (barra inferior), mismo patrón que trabajador.html ===== */
+  .tabbar { position:fixed; bottom:0; left:0; right:0; background:#fff;
+    border-top:1px solid var(--linea); display:flex; z-index:30;
+    padding-bottom:env(safe-area-inset-bottom); }
+  .tabbar button { flex:1; background:none; border:none; padding:8px 2px 7px;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    font-family:inherit; cursor:pointer; color:#8a887f; font-size:11px; font-weight:500; }
+  .tabbar button .picon { width:42px; height:28px; border-radius:14px;
+    display:flex; align-items:center; justify-content:center; transition:background .15s; }
+  .tabbar button svg { width:22px; height:22px; stroke-width:1.7; fill:none;
+    stroke:#8a887f; transition:stroke .15s; }
+  .tabbar button.activa { color:var(--marca-acento); }
+  .tabbar button.activa .picon { background:color-mix(in srgb, var(--marca-acento) 15%, transparent); }
+  .tabbar button.activa svg { stroke:var(--marca-acento); }
+  .tabbar button { position:relative; }
+  .tab-badge { position:absolute; top:2px; right:14px; background:#e5484d; color:#fff;
+    font-size:10px; font-weight:700; min-width:16px; height:16px; border-radius:999px;
+    display:flex; align-items:center; justify-content:center; padding:0 3px; }
+  /* ===== Notificaciones -- mismo patrón que portada.html (trabajador), sin
+     modal: acá la pestaña ya ES el contenido, no compite por espacio con
+     nada más en la pantalla. ===== */
+  .notif-item { background:var(--papel); border:1px solid var(--linea); border-left:3px solid transparent;
+    border-radius:10px; padding:11px 13px; margin-bottom:8px; cursor:pointer; }
+  .notif-item.no-leida { border-left-color:var(--marca-acento);
+    background:color-mix(in srgb, var(--marca-acento) 7%, var(--papel)); }
+  .notif-cab { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
+  .notif-remitente { font-size:12.5px; font-weight:650; color:var(--marca-primario); }
+  .notif-item.no-leida .notif-remitente { color:var(--marca-acento); }
+  .notif-fecha { font-size:10.5px; color:var(--gris); white-space:nowrap; }
+  .notif-snippet { font-size:12.5px; color:var(--gris); margin-top:4px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .notif-texto-full { font-size:13px; line-height:1.55; margin-top:8px; color:var(--tinta); display:none; }
+  .notif-item.expandido .notif-snippet { display:none; }
+  .notif-item.expandido .notif-texto-full { display:block; }
+  .notif-adjunto { display:inline-block; margin-top:9px; font-size:12px; color:var(--marca-primario);
+    text-decoration:none; font-weight:600; }
+  .notif-vacio { text-align:center; padding:34px 10px; color:var(--gris); font-size:13px; }
+  /* ===== Trámites -- mismo componente estructural que .tram-box de
+     trabajador.html, pero con nombre propio (.tramx-*) y fondo con un tinte
+     del color de marca en vez de casi blanco: diferenciación visual "más
+     intensa" a propósito, pedida para que un trámite de empresa nunca se
+     confunda con uno de trabajador de un vistazo. ===== */
+  h1, h2 { font-weight:600; }
+  .sub2 { color:var(--gris); font-size:13px; margin-top:2px; }
+  .btn { display:block; width:100%; margin-top:14px; padding:0 16px; min-height:46px;
+    border:none; border-radius:12px; background:var(--marca-acento); color:#fff;
+    font-family:inherit; font-size:15px; font-weight:600; cursor:pointer; text-align:center; }
+  .btn.sec { background:#fff; color:var(--marca-primario); border:1px solid var(--linea); }
+  .btn:disabled { opacity:.6; }
+  .tramx-box { position:relative; overflow:hidden; margin-top:16px; border-radius:14px;
+    background:color-mix(in srgb, var(--marca-primario) 16%, #ffffff); border:1px solid var(--linea); }
+  .tramx-box-enc { padding:15px 18px; background:var(--marca-base); }
+  .tramx-box-enc .tit { color:#fff; font-weight:700; font-size:18px; line-height:1.25; }
+  .tramx-box-enc .sub { color:rgba(255,255,255,.78); margin-top:3px; font-size:12.5px; }
+  .tramx-box-body { padding:18px; }
+  .tramx-item { background:color-mix(in srgb, var(--marca-primario) 12%, #ffffff) !important; }
+  .tramx-input { display:block; width:100%; padding:11px 12px;
+    border:1px solid color-mix(in srgb, var(--marca-primario) 35%, var(--linea)); border-radius:10px;
+    font-family:inherit; font-size:14px; background:color-mix(in srgb, var(--marca-primario) 8%, #fff); color:var(--tinta); }
+  #tramx-form-campos { display:grid; grid-template-columns:repeat(12,1fr); gap:0 12px; }
+  .tp-completo { grid-column:span 12; }
+  .tp-mitad { grid-column:span 6; }
+  .tp-tercio { grid-column:span 4; }
+  @media (max-width:600px) { .tp-mitad, .tp-tercio { grid-column:span 12; } }
+  .campo-tramx { margin-bottom:14px; }
+  .campo-tramx label { display:block; font-size:12.5px; color:var(--gris); margin-bottom:6px; }
+  .campo-tramx-separador { grid-column:1 / -1; border:none;
+    border-top:1px solid color-mix(in srgb, var(--marca-primario) 45%, var(--linea)); margin:2px 0 12px; }
+  .campo-tramx-opcion { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--tinta);
+    margin-bottom:8px; font-weight:400; }
+  .campo-tramx-opcion input { width:18px; height:18px; flex:0 0 auto; }
+  .campo-tramx-bool { display:flex; align-items:center; gap:9px; font-size:14px; color:var(--tinta); font-weight:400; }
+  .campo-tramx-bool input { width:20px; height:20px; flex:0 0 auto; }
+  .archivo-trigger { display:flex; align-items:center; justify-content:center; gap:6px; width:100%; padding:11px; margin-top:0; }
+  .archivo-nombre { font-size:12px; color:var(--gris); margin-top:6px; min-height:14px; overflow-wrap:anywhere; }
+  input[type=file] { display:none; }
+  .cargando { display:flex; justify-content:center; }
+  .spin { width:26px; height:26px; border-radius:50%; border:3px solid var(--linea);
+    border-top-color:var(--marca-acento); animation:girar .7s linear infinite; }
+  @keyframes girar { to { transform:rotate(360deg); } }
+  .banner { margin-top:14px; padding:12px 14px; border-radius:10px; font-size:13.5px; display:flex; align-items:center; gap:8px; }
+  .banner.mal { background:#f8e5e2; color:var(--alerta); }
+  .fila { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:9px 0; border-top:1px solid #f0eee8; }
+  .fila:first-child { border-top:none; }
+  .tag { font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:8px; white-space:nowrap; }
+  .tram-log-list .fila:nth-child(odd) { background:color-mix(in srgb, var(--marca-primario) 6%, transparent); }
+  .tram-log-list .fila:nth-child(even) { background:color-mix(in srgb, var(--marca-acento) 6%, transparent); }
+</style>
+</head>
+<body>
+<header>
+  <img class="logo-plataforma-header" src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo">
+  {% if marca and marca.logo %}
+  <img class="sind" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
+  {% else %}
+  <span class="sind-nombre-header">{{ sindicato }}</span>
+  {% endif %}
+</header>
+
+<div class="cont">
+  <h1>{{ razon_social or cuit }}</h1>
+  <div class="sub">CUIT {{ cuit }} · {{ sindicato }}</div>
+
+  <!-- ============ PESTAÑA: NOTIFICACIONES ============ -->
+  <div class="tpanel activo" id="tp-notificaciones">
+    <div id="notif-lista"><div class="notif-vacio">Cargando…</div></div>
+  </div>
+
+  <!-- ============ PESTAÑA: TRÁMITES ============ -->
+  <div class="tpanel" id="tp-tramites">
+
+    <div id="trx-inicio">
+      <h1>Trámites</h1>
+      <p class="sub2">Formularios de tu sindicato y seguimiento de tus expedientes.</p>
+      <button class="btn" id="trx-nuevo">Iniciar un trámite nuevo</button>
+
+      <div class="tramx-box">
+        <div class="tramx-box-enc"><div class="tit">Consultar por número de expediente</div></div>
+        <div class="tramx-box-body">
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="trx-buscar-input" class="tramx-input" placeholder="Ej: F01EMP-2026-000123" style="flex:1; min-width:0;">
+            <button class="btn sec" id="trx-buscar-btn" style="width:auto; margin-top:0; padding:0 16px;">Buscar</button>
+          </div>
+          <div id="trx-buscar-error" class="sub2" style="margin-top:8px; font-size:12.5px;"></div>
+        </div>
+      </div>
+
+      <h2 style="margin-top:22px; padding:0 0 8px;">Mis trámites</h2>
+      <div id="trx-lista"><div class="cargando" style="padding:20px 0;"><div class="spin"></div></div></div>
+    </div>
+
+    <div id="trx-tipos" style="display:none;">
+      <div class="tramx-box">
+        <div class="tramx-box-enc">
+          <div class="tit">Iniciar un trámite</div>
+          <div class="sub">Elegí qué tipo de trámite querés presentar.</div>
+        </div>
+        <div class="tramx-box-body">
+          <div id="trx-tipos-lista"></div>
+        </div>
+      </div>
+      <button class="btn sec" id="trx-tipos-volver" style="margin-top:16px;">Volver</button>
+    </div>
+
+    <div id="trx-form" style="display:none;">
+      <div class="tramx-box">
+        <div class="tramx-box-enc">
+          <div class="tit" id="trx-form-titulo">Trámite</div>
+          <div class="sub" id="trx-form-codigo"></div>
+        </div>
+        <div class="tramx-box-body">
+          <div id="trx-form-error" class="banner mal" style="display:none;"></div>
+          <div id="trx-form-campos"></div>
+          <button class="btn" id="trx-form-enviar">Enviar trámite</button>
+        </div>
+      </div>
+      <button class="btn sec" id="trx-form-volver" style="margin-top:16px;">Cancelar</button>
+    </div>
+
+    <div id="trx-detalle" style="display:none;">
+      <div class="tramx-box">
+        <div class="tramx-box-enc">
+          <div class="tit" id="trx-det-expediente">Trámite</div>
+          <div class="sub" id="trx-det-tipo"></div>
+        </div>
+        <div class="tramx-box-body">
+          <div id="trx-det-contenido"></div>
+        </div>
+      </div>
+      <button class="btn sec" id="trx-det-volver" style="margin-top:16px;">Volver</button>
+    </div>
+
+  </div>
+</div>
+
+<nav class="tabbar">
+  <button class="tab-t activa" data-tp="notificaciones">
+    <span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg></span>
+    Notificaciones
+    <span class="tab-badge" id="badge-notif-emp" style="display:none;"></span>
+  </button>
+  <button class="tab-t" data-tp="tramites"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>Trámites</button>
+</nav>
+
+<a class="btn-flotante" href="/empresa/salir" title="Salir" aria-label="Salir">
+  <svg viewBox="0 0 24 24"><use href="#ic-x"/></svg>
+</a>
+
+<!-- Íconos SVG de línea -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <g id="ic-notif"><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></g>
+    <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
+    <g id="ic-x"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g>
+  </defs>
+</svg>
+
+<script>
+document.querySelectorAll('.tab-t').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const dest = btn.dataset.tp;
+    document.querySelectorAll('.tab-t').forEach(b => b.classList.toggle('activa', b === btn));
+    document.querySelectorAll('.tpanel').forEach(pan => {
+      pan.classList.toggle('activo', pan.id === 'tp-' + dest);
+    });
+  });
+});
+
+// ---------- Notificaciones ----------
+function fmtFechaHora(s) {
+  // "AAAA-MM-DD HH:MM" -> "DD/MM HH:MM"
+  const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})$/.exec(s || '');
+  return m ? `${m[3]}/${m[2]} ${m[4]}` : (s || '');
+}
+async function cargarNotificacionesEmpresa() {
+  const lista = document.getElementById('notif-lista');
+  try {
+    const r = await fetch('/api/empresa/notificaciones');
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    renderNotificacionesEmpresa(data.notificaciones);
+    actualizarBadgeNotifEmpresa(data.no_leidas);
+  } catch (e) {
+    lista.innerHTML = '<div class="notif-vacio">No se pudieron cargar las notificaciones.</div>';
+  }
+}
+function renderNotificacionesEmpresa(items) {
+  const lista = document.getElementById('notif-lista');
+  if (!items.length) {
+    lista.innerHTML = '<div class="notif-vacio">Todavía no tenés notificaciones.</div>';
+    return;
+  }
+  lista.innerHTML = items.map(n => `
+    <div class="notif-item ${n.leida_en ? '' : 'no-leida'}" data-id="${n.id}" onclick="toggleNotificacionEmpresa(${n.id})">
+      <div class="notif-cab">
+        <span class="notif-remitente">${(n.remitente || 'Tu sindicato').replace(/</g, '&lt;')}</span>
+        <span class="notif-fecha">${fmtFechaHora(n.enviado_en)}</span>
+      </div>
+      <div class="notif-snippet">${(n.texto || '').replace(/</g, '&lt;')}</div>
+      <div class="notif-texto-full">${n.texto_html}${n.tiene_adjunto ? `<br><a class="notif-adjunto" href="/notificacion-empresa-adjunto/${n.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📎 Ver adjunto</a>` : ''}</div>
+    </div>
+  `).join('');
+}
+async function toggleNotificacionEmpresa(id) {
+  const item = document.querySelector('.notif-item[data-id="' + id + '"]');
+  if (!item) return;
+  const yaExpandido = item.classList.contains('expandido');
+  document.querySelectorAll('.notif-item.expandido').forEach(el => el.classList.remove('expandido'));
+  if (yaExpandido) return;
+  item.classList.add('expandido');
+  if (item.classList.contains('no-leida')) {
+    item.classList.remove('no-leida');
+    try {
+      const r = await fetch('/api/empresa/notificacion/' + id + '/leer', { method: 'POST' });
+      const data = await r.json();
+      actualizarBadgeNotifEmpresa(data.no_leidas);
+    } catch (e) {}
+  }
+}
+function actualizarBadgeNotifEmpresa(n) {
+  const badge = document.getElementById('badge-notif-emp');
+  if (!badge) return;
+  if (n > 0) { badge.textContent = n; badge.style.display = 'flex'; }
+  else { badge.style.display = 'none'; }
+}
+cargarNotificacionesEmpresa();
+
+// ---------- Trámites (namespace propio, sin compartir funciones con el
+// de trabajador.html -- ver /admin#empleadores para el constructor) ----------
+if (document.getElementById('tp-tramites')) {
+  const verTrx = (id) => {
+    ['trx-inicio', 'trx-tipos', 'trx-form', 'trx-detalle'].forEach(s => {
+      document.getElementById(s).style.display = (s === id) ? 'block' : 'none';
+    });
+  };
+  const ESTADO_TAG_COLOR = {
+    iniciado: ['#fdf3e7', '#8a5a1a'], en_tratamiento: ['#e8def5', '#5b3d8a'],
+    respondido: ['#e3f2ee', 'var(--agua)'], espera_info: ['#f8e5e2', 'var(--alerta)'],
+    terminado: ['#e3f2ee', 'var(--agua)'],
+  };
+  function tagEstadoTrx(estado, label) {
+    const c = ESTADO_TAG_COLOR[estado] || ['#eee', '#888'];
+    return `<span class="tag" style="background:${c[0]}; color:${c[1]};">${label}</span>`;
+  }
+  function escTrx(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+  document.getElementById('trx-nuevo').onclick = () => { verTrx('trx-tipos'); cargarTiposTramiteEmpresa(); };
+  document.getElementById('trx-tipos-volver').onclick = () => verTrx('trx-inicio');
+  document.getElementById('trx-form-volver').onclick = () => verTrx('trx-inicio');
+  document.getElementById('trx-det-volver').onclick = () => { verTrx('trx-inicio'); cargarMisTramitesEmpresa(); };
+  document.getElementById('trx-buscar-btn').onclick = () => {
+    const numero = document.getElementById('trx-buscar-input').value.trim();
+    if (numero) abrirTramiteEmpresaDetalleTrx(numero);
+  };
+  document.getElementById('trx-buscar-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('trx-buscar-btn').click();
+  });
+
+  async function cargarMisTramitesEmpresa() {
+    const cont = document.getElementById('trx-lista');
+    cont.innerHTML = `<div class="cargando" style="padding:20px 0;"><div class="spin"></div></div>`;
+    try {
+      const r = await fetch('/api/empresa/tramites/mios');
+      const data = await r.json();
+      if (!data.tramites.length) { cont.innerHTML = '<p class="sub2">Todavía no presentaste ningún trámite.</p>'; return; }
+      cont.innerHTML = data.tramites.map(t => `
+        <div class="card tramx-item" style="margin-top:10px; padding:13px 15px; cursor:pointer;" onclick="abrirTramiteEmpresaDetalleTrx('${t.numero_expediente}')">
+          <div class="fila" style="border:none; padding:0;">
+            <span><b>${escTrx(t.tipo_titulo)}</b><br><span class="sub2" style="font-size:12px;"><code>${t.numero_expediente}</code></span></span>
+            <span>${tagEstadoTrx(t.estado, t.estado_label)}</span>
+          </div>
+        </div>`).join('');
+    } catch (e) {
+      cont.innerHTML = '<div class="banner mal">No pudimos cargar tus trámites.</div>';
+    }
+  }
+  cargarMisTramitesEmpresa();
+
+  async function cargarTiposTramiteEmpresa() {
+    const cont = document.getElementById('trx-tipos-lista');
+    cont.innerHTML = `<div class="cargando" style="padding:20px 0;"><div class="spin"></div></div>`;
+    try {
+      const r = await fetch('/api/empresa/tramites/tipos');
+      const data = await r.json();
+      if (!data.tipos.length) { cont.innerHTML = '<p class="sub2">Tu sindicato todavía no cargó ningún tipo de trámite.</p>'; return; }
+      cont.innerHTML = data.tipos.map(t => `
+        <button type="button" class="card tramx-item" style="width:100%; text-align:left; margin-top:10px; padding:13px 15px; border:1px solid var(--linea); cursor:pointer; font-family:inherit;" onclick='abrirFormularioTramiteEmpresa(${JSON.stringify(t)})'>
+          <b>${escTrx(t.titulo)}</b><br><span class="sub2" style="font-size:12.5px;">${escTrx(t.codigo)}</span>
+        </button>`).join('');
+    } catch (e) {
+      cont.innerHTML = '<div class="banner mal">No pudimos cargar los tipos de trámite.</div>';
+    }
+  }
+
+  let tipoTramiteEmpresaActual = null;
+  function campoInputHtmlTrx(c) {
+    const id = 'txc_' + c.id;
+    if (c.tipo_dato === 'archivo') {
+      const accept = (c.tipos_archivo_permitidos || '').split(',').map(e => e.trim()).filter(Boolean).map(e => '.' + e).join(',');
+      return `<label class="btn sec archivo-trigger" for="${id}">📎 Elegir archivo</label>
+        <input type="file" id="${id}" ${accept ? `accept="${accept}"` : ''} onchange="document.getElementById('${id}-nombre').textContent = this.files[0] ? this.files[0].name : '';">
+        <div class="archivo-nombre" id="${id}-nombre"></div>`;
+    }
+    if (c.tipo_dato === 'fecha') return `<input type="date" class="tramx-input" id="${id}">`;
+    if (c.tipo_dato === 'numero') return `<input type="text" inputmode="decimal" class="tramx-input" id="${id}" placeholder="${c.decimales ? 'Ej: 1234.56' : 'Ej: 1234'}">`;
+    if (c.tipo_dato === 'seleccion') {
+      const opciones = (c.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
+      return `<select class="tramx-input" id="${id}">
+        <option value="">Elegí una opción</option>
+        ${opciones.map(o => `<option value="${escTrx(o)}">${escTrx(o)}</option>`).join('')}
+      </select>`;
+    }
+    if (c.tipo_dato === 'booleano') {
+      return `<label class="campo-tramx-bool"><input type="checkbox" id="${id}"> ${escTrx(c.etiqueta)}</label>`;
+    }
+    if (c.tipo_dato === 'opcion_unica' || c.tipo_dato === 'multiple') {
+      const opciones = (c.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
+      const tipoInput = c.tipo_dato === 'opcion_unica' ? 'radio' : 'checkbox';
+      return opciones.map((o, idx) => `
+        <label class="campo-tramx-opcion">
+          <input type="${tipoInput}" name="${id}" value="${escTrx(o)}" id="${id}_${idx}"> ${escTrx(o)}
+        </label>`).join('');
+    }
+    const maxlen = c.longitud_exacta || c.longitud_maxima;
+    return `<input type="text" class="tramx-input" id="${id}" ${maxlen ? `maxlength="${maxlen}"` : ''} placeholder="${c.longitud_exacta ? c.longitud_exacta + ' caracteres' : ''}">`;
+  }
+
+  window.abrirFormularioTramiteEmpresa = function (tipo) {
+    tipoTramiteEmpresaActual = tipo;
+    document.getElementById('trx-form-titulo').textContent = tipo.titulo;
+    document.getElementById('trx-form-codigo').textContent = tipo.codigo;
+    document.getElementById('trx-form-error').style.display = 'none';
+    document.getElementById('trx-form-campos').innerHTML = tipo.campos.map(c => {
+      if (c.tipo_dato === 'separador') return `<hr class="campo-tramx-separador">`;
+      const anchoClass = 'tp-' + (c.ancho || 'completo');
+      if (c.tipo_dato === 'booleano') return `<div class="campo-tramx ${anchoClass}">${campoInputHtmlTrx(c)}</div>`;
+      return `<div class="campo-tramx ${anchoClass}">
+        <label>${escTrx(c.etiqueta)}${c.obligatorio ? ' *' : ''}</label>
+        ${campoInputHtmlTrx(c)}
+      </div>`;
+    }).join('');
+    verTrx('trx-form');
+  };
+
+  document.getElementById('trx-form-enviar').onclick = async () => {
+    if (!tipoTramiteEmpresaActual) return;
+    const errBox = document.getElementById('trx-form-error');
+    errBox.style.display = 'none';
+    const fd = new FormData();
+    fd.append('tipo_tramite_id', tipoTramiteEmpresaActual.id);
+    const faltan = [];
+    tipoTramiteEmpresaActual.campos.forEach(c => {
+      if (c.tipo_dato === 'separador') return;
+      if (c.tipo_dato === 'booleano') {
+        const el = document.getElementById('txc_' + c.id);
+        if (el && el.checked) fd.append('campo_' + c.id, 'on');
+        return;
+      }
+      if (c.tipo_dato === 'opcion_unica') {
+        const elegido = document.querySelector(`input[name="txc_${c.id}"]:checked`);
+        if (elegido) fd.append('campo_' + c.id, elegido.value);
+        else if (c.obligatorio) faltan.push(c.etiqueta);
+        return;
+      }
+      if (c.tipo_dato === 'multiple') {
+        const elegidos = document.querySelectorAll(`input[name="txc_${c.id}"]:checked`);
+        if (elegidos.length) elegidos.forEach(el => fd.append('campo_' + c.id, el.value));
+        else if (c.obligatorio) faltan.push(c.etiqueta);
+        return;
+      }
+      const el = document.getElementById('txc_' + c.id);
+      if (!el) return;
+      if (c.tipo_dato === 'archivo') {
+        if (el.files[0]) fd.append('archivo_' + c.id, el.files[0]);
+        else if (c.obligatorio) faltan.push(c.etiqueta);
+      } else {
+        if (!el.value.trim() && c.obligatorio) faltan.push(c.etiqueta);
+        fd.append('campo_' + c.id, el.value);
+      }
+    });
+    if (faltan.length) {
+      errBox.textContent = 'Completá: ' + faltan.join(', ');
+      errBox.style.display = 'flex';
+      return;
+    }
+    const btn = document.getElementById('trx-form-enviar');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    try {
+      const r = await fetch('/api/empresa/tramite', { method: 'POST', body: fd });
+      const data = await r.json();
+      if (!r.ok) {
+        errBox.innerHTML = (data.errores || ['No se pudo enviar el trámite.']).join('<br>');
+        errBox.style.display = 'flex';
+        return;
+      }
+      abrirTramiteEmpresaDetalleTrx(data.numero_expediente);
+    } catch (e) {
+      errBox.textContent = 'No se pudo enviar el trámite. Probá de nuevo.';
+      errBox.style.display = 'flex';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Enviar trámite';
+    }
+  };
+
+  window.abrirTramiteEmpresaDetalleTrx = async function (numero) {
+    verTrx('trx-detalle');
+    document.getElementById('trx-det-expediente').textContent = numero;
+    document.getElementById('trx-det-tipo').textContent = '';
+    document.getElementById('trx-det-contenido').innerHTML = `<div class="cargando" style="padding:20px 0;"><div class="spin"></div></div>`;
+    document.getElementById('trx-buscar-error').textContent = '';
+    await refrescarTramiteEmpresaDetalleTrx(numero);
+  };
+
+  async function refrescarTramiteEmpresaDetalleTrx(numero) {
+    try {
+      const r = await fetch('/api/empresa/tramite/' + encodeURIComponent(numero));
+      if (!r.ok) {
+        document.getElementById('trx-det-contenido').innerHTML = '<div class="banner mal">No encontramos un trámite tuyo con ese número.</div>';
+        return;
+      }
+      const d = await r.json();
+      document.getElementById('trx-det-expediente').textContent = d.numero_expediente;
+      document.getElementById('trx-det-tipo').textContent = d.tipo_titulo;
+
+      const respuestasHtml = d.respuestas.map(resp => `
+        <div class="fila" style="padding:9px 0;">
+          <span class="sub2">${escTrx(resp.etiqueta)}</span>
+          <span>${resp.tiene_archivo ? `<a href="/tramite-empresa-respuesta-archivo/${resp.respuesta_id}" target="_blank" rel="noopener">📎 archivo</a>` : escTrx(resp.valor_texto)}</span>
+        </div>`).join('');
+
+      const notasHtml = d.notas.map(n => `
+        <div style="margin-top:8px; padding:10px 13px; border-radius:9px; background:var(--papel);
+                    border-left:3px solid ${n.autor === 'admin' ? 'var(--marca-primario)' : 'var(--agua)'};">
+          <div class="sub2" style="font-size:11px;">${n.autor === 'admin' ? 'Tu sindicato' : 'Vos'} · ${n.creado}</div>
+          ${n.texto ? `<div style="margin-top:4px; font-size:13.5px;">${escTrx(n.texto)}</div>` : ''}
+          ${n.tiene_adjunto ? `<div style="margin-top:4px;"><a href="/tramite-empresa-nota-adjunto/${n.id}" target="_blank" rel="noopener" style="font-size:12.5px;">📎 ${escTrx(n.adjunto_nombre)}</a></div>` : ''}
+        </div>`).join('') || '<p class="sub2" style="font-size:12.5px; margin-top:8px;">Sin notas todavía.</p>';
+
+      const logHtml = d.log.map(l => `<div class="fila" style="padding:6px 0; font-size:12.5px;"><span class="sub2">${l.creado}</span><span>${escTrx(l.detalle)}</span></div>`).join('');
+      const notaFormHtml = d.estado === 'terminado' ? '<p class="sub2" style="font-size:12.5px; margin-top:8px;">Trámite terminado -- no se pueden agregar más notas.</p>' : `
+        <form id="trx-nota-form" style="margin-top:10px;">
+          <textarea id="trx-nota-texto" rows="2" class="tramx-input" placeholder="Responder a tu sindicato…" style="resize:vertical;"></textarea>
+          <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+            <label class="btn sec" for="trx-nota-adjunto" style="width:auto; margin-top:0; padding:0 14px; min-height:40px; display:flex; align-items:center; gap:5px; white-space:nowrap;">📎 Adjuntar</label>
+            <input type="file" id="trx-nota-adjunto" onchange="document.getElementById('trx-nota-adjunto-nombre').textContent = this.files[0] ? this.files[0].name : '';">
+            <button type="submit" class="btn" style="width:auto; margin-top:0; padding:0 16px; min-height:40px; flex:1;">Enviar</button>
+          </div>
+          <div class="archivo-nombre" id="trx-nota-adjunto-nombre"></div>
+        </form>`;
+
+      document.getElementById('trx-det-contenido').innerHTML = `
+        <div class="fila" style="border:none; padding:0 0 14px;"><span class="sub2">Estado</span><span>${tagEstadoTrx(d.estado, d.estado_label)}</span></div>
+        <h2 style="font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; padding:14px 0 8px; border-top:1px solid #f0eee8;">Datos presentados</h2>
+        <div>${respuestasHtml}</div>
+        <h2 style="font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; margin-top:18px; padding:0 0 8px;">Notas</h2>
+        ${notasHtml}
+        ${notaFormHtml}
+        <h2 style="font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; margin-top:18px; padding:0 0 8px;">Historial</h2>
+        <div class="tram-log-list">${logHtml}</div>
+      `;
+      const notaForm = document.getElementById('trx-nota-form');
+      if (notaForm) notaForm.onsubmit = (ev) => {
+        ev.preventDefault();
+        enviarNotaTramiteEmpresaTrx(d.id, d.numero_expediente);
+        return false;
+      };
+    } catch (e) {
+      document.getElementById('trx-det-contenido').innerHTML = '<div class="banner mal">No pudimos cargar el trámite.</div>';
+    }
+  }
+
+  async function enviarNotaTramiteEmpresaTrx(id, numero) {
+    const texto = document.getElementById('trx-nota-texto').value;
+    const archivo = document.getElementById('trx-nota-adjunto').files[0];
+    if (!texto.trim() && !archivo) return;
+    const fd = new FormData();
+    fd.append('texto', texto);
+    if (archivo) fd.append('adjunto', archivo);
+    try {
+      const r = await fetch('/api/empresa/tramite/' + id + '/nota', { method: 'POST', body: fd });
+      if (!r.ok) throw new Error();
+      refrescarTramiteEmpresaDetalleTrx(numero);
+    } catch (e) {
+      alert('No se pudo enviar la nota.');
+    }
+  }
+}
+</script>
+</body>
+</html>

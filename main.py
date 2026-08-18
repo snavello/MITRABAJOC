@@ -39,7 +39,10 @@ import auth
 from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador,
                 CuentaTrabajador, EnvioSindicato, ReciboVerificado, ConfiguracionPlataforma, Noticia,
                 Beneficio, Seccional, ReciboSospechoso, Notificacion, NotificacionDestinatario,
-                TipoTramite, CampoTramite, Tramite, RespuestaTramite, NotaTramite, TramiteLog)
+                TipoTramite, CampoTramite, Tramite, RespuestaTramite, NotaTramite, TramiteLog,
+                Empleador, CuentaEmpleador, NotificacionEmpleador, NotificacionEmpleadorDestinatario,
+                TipoTramiteEmpleador, CampoTramiteEmpleador, TramiteEmpleador, RespuestaTramiteEmpleador,
+                NotaTramiteEmpleador, TramiteEmpleadorLog)
 from extractor import extraer, extraer_aportes
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, CATEGORIAS_UNIVERSALES)
@@ -64,11 +67,16 @@ def _es_navegacion_de_pagina(request: Request) -> bool:
 
 
 def _panel_de(path: str) -> str | None:
-    """A qué pantalla volver según el prefijo de la ruta que falló."""
+    """A qué pantalla volver según el prefijo de la ruta que falló.
+    /empresa y /api/empresa se chequean ANTES que /app y /api genéricos --
+    si no, cualquier ruta de la API del empleador (que también empieza con
+    /api) caería en la rama de trabajador y redirigiría al login equivocado."""
     if path.startswith("/plataforma"):
         return "/plataforma"
     if path.startswith("/admin"):
         return "/admin"
+    if path.startswith("/empresa") or path.startswith("/api/empresa"):
+        return "/ingresar-empresa"
     if path.startswith("/app") or path.startswith("/api"):
         return "/ingresar"
     return None
@@ -81,6 +89,8 @@ def _rol_de(path: str) -> str | None:
         return "plataforma"
     if path.startswith("/admin"):
         return "sindicato"
+    if path.startswith("/empresa") or path.startswith("/api/empresa"):
+        return "empleador"
     if path.startswith("/app") or path.startswith("/api"):
         return "trabajador"
     return None
@@ -161,11 +171,17 @@ async def renovar_sesion_por_actividad(request: Request, call_next):
     con el valor que traía el request -- si no, un login nunca "prendería"
     de verdad: esta renovación reemitiría la sesión VIEJA por encima.
 
-    Recorre las TRES cookies de rol (ver COOKIES_POR_ROL): un mismo
+    Recorre las CUATRO cookies de rol (ver COOKIES_POR_ROL): un mismo
     request puede traer más de una sesión válida a la vez (ej. una pestaña
     de trabajador manda igual la cookie de sindicato si esa sesión sigue
     viva en el navegador) -- se renuevan todas las que estén presentes y
-    vigentes, no solo la del rol que esa ruta puntual necesita."""
+    vigentes, no solo la del rol que esa ruta puntual necesita.
+
+    OJO: las cookies "extra" (identidad + sindicato elegido, no la sesión
+    en sí) se renuevan en un tuple aparte, NO salen gratis de
+    COOKIES_POR_ROL -- si se agrega un rol nuevo con sus propias cookies
+    de identidad, hay que sumarlas ahí a mano o esa sesión pierde su
+    identidad/sindicato elegido a los 15 minutos aunque el rol siga vigente."""
     respuesta = await call_next(request)
 
     def _ya_seteada(nombre: str) -> bool:
@@ -182,7 +198,7 @@ async def renovar_sesion_por_actividad(request: Request, call_next):
                 nuevo = auth.crear_sesion(rol, payload.get("uid", 0), payload.get("sid", 0))
                 respuesta.set_cookie(nombre_cookie, nuevo, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     if hubo_sesion_valida:
-        for cookie_extra in ("cuil_trab", "sind_elegido"):
+        for cookie_extra in ("cuil_trab", "sind_elegido", "cuit_emp", "sind_elegido_emp"):
             valor = request.cookies.get(cookie_extra)
             if valor and not _ya_seteada(cookie_extra):
                 respuesta.set_cookie(cookie_extra, valor, httponly=True,
@@ -560,6 +576,8 @@ def admin(request: Request):
                         .order_by(EnvioSindicato.periodo.desc(), EnvioSindicato.id.desc())).all()
         usuarios_sindicato = s.exec(select(UsuarioSindicato).where(UsuarioSindicato.sindicato_id == sid)
                                     .order_by(UsuarioSindicato.activo.desc(), UsuarioSindicato.nombre)).all()
+        empleadores = s.exec(select(Empleador).where(Empleador.sindicato_id == sid)
+                             .order_by(Empleador.activo.desc(), Empleador.razon_social)).all()
     # Nombre por CUIL, para poder filtrar Reportes y Afiliados cotizantes por
     # nombre (esas tablas solo guardan el CUIL, no el nombre).
     nombres_por_cuil = {t.cuil: t.nombre for t in trabajadores}
@@ -596,6 +614,11 @@ def admin(request: Request):
         "tramites_nuevos": db.contar_tramites_nuevos(sid) if "tramites" in modulos else 0,
         "estados_tramite": db.ESTADOS_TRAMITE, "estados_tramite_label": db.ESTADOS_TRAMITE_LABEL,
         "seccionales": seccionales, "seccional_por_id": seccional_por_id,
+        "empleadores": empleadores,
+        "notificaciones_empresa": db.notificaciones_empleador_del_sindicato(sid),
+        "tipos_tramite_empresa": db.tipos_tramite_empleador_del_sindicato(sid),
+        "tramites_empresa": db.tramites_empleador_del_sindicato(sid),
+        "tramites_empresa_nuevos": db.contar_tramites_empleador_nuevos(sid) if "empleadores" in modulos else 0,
         "modulos": modulos,
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
@@ -1136,6 +1159,71 @@ def borrar_seccional(request: Request, id: int = Form(...)):
     return RedirectResponse("/admin#seccionales", status_code=303)
 
 
+# ---------- Empleadores (CRUD de empresas del sindicato) ----------
+
+@app.post("/admin/empleador")
+def admin_empleador_alta(
+    request: Request,
+    id: str = Form(""), cuit: str = Form(...), razon_social: str = Form(""),
+    domicilio: str = Form(""), telefono: str = Form(""),
+    provincia: str = Form(""), mail: str = Form(""),
+):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    cuit_norm = _norm_cuil(cuit)
+    if len(cuit_norm) != 11:
+        return RedirectResponse("/admin?error=cuit#empleadores", status_code=303)
+    with db.get_session() as s:
+        if id:
+            e = s.get(Empleador, int(id))
+            if e and e.sindicato_id == sid:
+                e.cuit, e.razon_social = cuit_norm, razon_social.strip()
+                e.domicilio, e.telefono = domicilio, telefono
+                e.provincia, e.mail = provincia, mail
+                s.add(e)
+        else:
+            existe = s.exec(select(Empleador).where(
+                Empleador.sindicato_id == sid, Empleador.cuit == cuit_norm)).first()
+            if not existe:
+                s.add(Empleador(sindicato_id=sid, cuit=cuit_norm,
+                                 razon_social=razon_social.strip(), domicilio=domicilio,
+                                 telefono=telefono, provincia=provincia, mail=mail))
+        s.commit()
+    return RedirectResponse("/admin#empleadores", status_code=303)
+
+
+@app.post("/admin/empleador/baja")
+def admin_empleador_baja(request: Request, id: int = Form(...)):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    with db.get_session() as s:
+        e = s.get(Empleador, id)
+        if e and e.sindicato_id == sid:
+            e.activo = False
+            s.add(e); s.commit()
+    return RedirectResponse("/admin#empleadores", status_code=303)
+
+
+@app.post("/admin/empleador/alta-logica")
+def admin_empleador_reactivar(request: Request, id: int = Form(...)):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    with db.get_session() as s:
+        e = s.get(Empleador, id)
+        if e and e.sindicato_id == sid:
+            e.activo = True
+            s.add(e); s.commit()
+    return RedirectResponse("/admin#empleadores", status_code=303)
+
+
+@app.post("/admin/empleador/importar-cuits")
+def admin_empleador_importar(request: Request):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    agregados = db.importar_cuits_de_conceptos(sid)
+    return RedirectResponse(f"/admin?importados={agregados}#empleadores", status_code=303)
+
+
 # ---------- Notificaciones (Fase 2 de Módulos + Notificaciones + Trámites) ----------
 MAX_ADJUNTO_NOTIFICACION = 5 * 1024 * 1024  # 5 MB, pedido explícito del plan
 
@@ -1255,6 +1343,106 @@ def api_marcar_notificacion_leida(notificacion_id: int, request: Request):
         raise HTTPException(404, "No sos destinatario de esta notificación")
     sid = sindicato_activo_trabajador(request)
     no_leidas = db.contar_notificaciones_no_leidas(cuil, sid) if sid else 0
+    return {"ok": True, "no_leidas": no_leidas}
+
+
+# ---------- Notificaciones a empleadores (Fase 4 del plan de Empleadores) ----------
+# Mismo patrón que las rutas de notificaciones al trabajador (arriba), sobre
+# las tablas propias NotificacionEmpleador/NotificacionEmpleadorDestinatario.
+
+@app.post("/admin/notificacion-empresa/preview")
+def notificacion_empresa_preview(request: Request, criterio: str = Form(...), valores: list[str] = Form(default=[])):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    cuits = db.resolver_destinatarios_empleador(sid, criterio, valores)
+    return {"cantidad": len(cuits)}
+
+
+@app.post("/admin/notificacion-empresa")
+async def crear_notificacion_empresa(
+    request: Request,
+    remitente: str = Form(""), texto: str = Form(...),
+    criterio: str = Form(...), valores: list[str] = Form(default=[]),
+    adjunto: UploadFile = File(None),
+):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    ses = sesion_actual(request, "sindicato")
+    adjunto_datos, adjunto_mime, adjunto_nombre = None, "", ""
+    if adjunto and adjunto.filename:
+        adjunto_datos, adjunto_mime, adjunto_nombre = _leer_adjunto_notificacion(adjunto)
+        if not adjunto_datos:
+            return RedirectResponse("/admin?error=adjunto#empleadores", status_code=303)
+    db.crear_notificacion_empleador(
+        sid, ses.get("uid") or None, remitente, texto, criterio, valores,
+        adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime, adjunto_nombre=adjunto_nombre,
+    )
+    return RedirectResponse("/admin#empleadores", status_code=303)
+
+
+@app.get("/admin/notificacion-empresa/{notificacion_empleador_id}/destinatarios")
+def notificacion_empresa_ver_destinatarios(notificacion_empleador_id: int, request: Request):
+    sid = exigir_sindicato(request)
+    with db.get_session() as s:
+        n = s.get(NotificacionEmpleador, notificacion_empleador_id)
+        if not n or n.sindicato_id != sid:
+            raise HTTPException(403, "No autorizado")
+    return {"destinatarios": db.notificacion_empleador_destinatarios(notificacion_empleador_id)}
+
+
+@app.get("/notificacion-empresa-adjunto/{notificacion_empleador_id}")
+def servir_adjunto_notificacion_empresa(notificacion_empleador_id: int, request: Request):
+    """El adjunto lo puede ver el admin del sindicato que la mandó, o un
+    empleador que sea destinatario real -- no es público como el logo."""
+    with db.get_session() as s:
+        n = s.get(NotificacionEmpleador, notificacion_empleador_id)
+        if not n or not n.adjunto_datos:
+            raise HTTPException(404, "Sin adjunto")
+        ses_sind = sesion_actual(request, "sindicato")
+        ses_emp = sesion_actual(request, "empleador")
+        autorizado = False
+        if ses_sind and ses_sind.get("sid") == n.sindicato_id:
+            autorizado = True
+        elif ses_emp:
+            cuit = request.cookies.get("cuit_emp", "")
+            if cuit and s.exec(select(NotificacionEmpleadorDestinatario).where(
+                    NotificacionEmpleadorDestinatario.notificacion_empleador_id == notificacion_empleador_id,
+                    NotificacionEmpleadorDestinatario.cuit == cuit)).first():
+                autorizado = True
+        if not autorizado:
+            raise HTTPException(403, "No autorizado")
+        return BinResponse(
+            content=n.adjunto_datos, media_type=n.adjunto_mime or "application/octet-stream",
+            headers={"Content-Disposition": f'inline; filename="{n.adjunto_nombre or "adjunto"}"'},
+        )
+
+
+@app.get("/api/empresa/notificaciones")
+def api_mis_notificaciones_empresa(request: Request):
+    ses = sesion_actual(request, "empleador")
+    cuit = request.cookies.get("cuit_emp", "")
+    if not ses or not cuit:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_empleador(request)
+    if not sid:
+        return {"notificaciones": [], "no_leidas": 0}
+    notifs = db.notificaciones_de_empleador(cuit, sid)
+    for n in notifs:
+        n["texto_html"] = _texto_con_links(n["texto"])
+    return {"notificaciones": notifs, "no_leidas": sum(1 for n in notifs if not n["leida_en"])}
+
+
+@app.post("/api/empresa/notificacion/{notificacion_empleador_id}/leer")
+def api_marcar_notificacion_leida_empresa(notificacion_empleador_id: int, request: Request):
+    ses = sesion_actual(request, "empleador")
+    cuit = request.cookies.get("cuit_emp", "")
+    if not ses or not cuit:
+        raise HTTPException(403, "No autorizado")
+    ok = db.marcar_notificacion_leida_empleador(notificacion_empleador_id, cuit)
+    if not ok:
+        raise HTTPException(404, "No sos destinatario de esta notificación")
+    sid = sindicato_activo_empleador(request)
+    no_leidas = db.contar_notificaciones_no_leidas_empleador(cuit, sid) if sid else 0
     return {"ok": True, "no_leidas": no_leidas}
 
 
@@ -1629,6 +1817,307 @@ async def api_nota_tramite_trabajador(tramite_id: int, request: Request, texto: 
     return {"ok": True}
 
 
+# ---------- Trámites externos a empleadores (Fase 5 del plan de Empleadores) ----------
+# Mirror de la sección de Trámites de arriba (cuil -> cuit, "trabajador" ->
+# "empresa") sobre las tablas propias Tipo/Campo/Tramite/Respuesta/Nota/Log
+# "...Empleador". Reusa las constantes y helpers sin estado de la sección de
+# trabajador (ARCHIVO_MIMES_TRAMITE, MAX_ARCHIVO_TRAMITE, _leer_archivo_tramite,
+# _campos_tramite_validos, TIPOS_DATO_TRAMITE, ANCHOS_CAMPO_TRAMITE) -- son
+# puramente de datos, no dependen de qué rol las llama.
+
+def _notificar_cambio_tramite_empleador(sid: int, cuit: str, texto: str) -> None:
+    """Mirror de _notificar_cambio_tramite -- avisa por el sistema de
+    notificaciones a EMPLEADORES (Fase 4), no el de trabajador."""
+    if db.modulo_habilitado(sid, "empleadores"):
+        db.crear_notificacion_empleador(sid, None, "Sistema", texto, "cuit", [cuit], origen="sistema")
+
+
+def _autorizado_para_tramite_empleador(request: Request, tr) -> bool:
+    if not tr:
+        return False
+    ses_sind = sesion_actual(request, "sindicato")
+    if ses_sind and ses_sind.get("sid") == tr.sindicato_id:
+        return True
+    ses_emp = sesion_actual(request, "empleador")
+    if ses_emp:
+        cuit = request.cookies.get("cuit_emp", "")
+        if cuit and cuit == tr.cuit:
+            return True
+    return False
+
+
+@app.post("/admin/tramite-tipo-empresa")
+async def abm_tramite_tipo_empresa(
+    request: Request,
+    id: str = Form(""), titulo: str = Form(...), codigo: str = Form(...),
+    activo: str = Form("si"), campos_json: str = Form(...),
+):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    import json
+    try:
+        campos_crudos = json.loads(campos_json)
+        assert isinstance(campos_crudos, list)
+    except Exception:
+        return RedirectResponse("/admin?error=campos#empleadores", status_code=303)
+    campos = _campos_tramite_validos(campos_crudos)
+    if not campos:
+        return RedirectResponse("/admin?error=campos#empleadores", status_code=303)
+    if id:
+        db.editar_tipo_tramite_empleador(int(id), sid, titulo, codigo, activo == "si", campos)
+    else:
+        db.crear_tipo_tramite_empleador(sid, titulo, codigo, campos)
+    return RedirectResponse("/admin#empleadores", status_code=303)
+
+
+@app.post("/admin/tramite-tipo-empresa/borrar")
+def borrar_tramite_tipo_empresa(request: Request, id: int = Form(...)):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    ok = db.borrar_tipo_tramite_empleador(id, sid)
+    if not ok:
+        return RedirectResponse("/admin?error=tramitesenviados#empleadores", status_code=303)
+    return RedirectResponse("/admin#empleadores", status_code=303)
+
+
+@app.get("/admin/tramite-empresa/{tramite_id}")
+def admin_ver_tramite_empresa(tramite_id: int, request: Request):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    detalle = db.tramite_empleador_detalle(tramite_id)
+    if not detalle or detalle["sindicato_id"] != sid:
+        raise HTTPException(404, "Trámite no encontrado")
+    return detalle
+
+
+@app.get("/admin/tramites-empresa-nuevos-cantidad")
+def admin_tramites_empresa_nuevos_cantidad(request: Request):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    return {"cantidad": db.contar_tramites_empleador_nuevos(sid)}
+
+
+@app.post("/admin/tramite-empresa/{tramite_id}/estado")
+def admin_cambiar_estado_tramite_empresa(tramite_id: int, request: Request, estado: str = Form(...)):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    detalle = db.tramite_empleador_detalle(tramite_id)
+    if not detalle or detalle["sindicato_id"] != sid:
+        raise HTTPException(404, "Trámite no encontrado")
+    if detalle["estado"] == "terminado":
+        raise HTTPException(400, "Este trámite está terminado y no se puede modificar.")
+    if not db.cambiar_estado_tramite_empleador(tramite_id, sid, estado):
+        raise HTTPException(400, "Estado inválido")
+    nuevo_label = db.ESTADOS_TRAMITE_LABEL.get(estado, estado)
+    _notificar_cambio_tramite_empleador(sid, detalle["cuit"],
+        f'Tu trámite {detalle["numero_expediente"]} cambió de estado: {nuevo_label}.')
+    return {"ok": True}
+
+
+@app.post("/admin/tramite-empresa/{tramite_id}/nota")
+async def admin_nota_tramite_empresa(tramite_id: int, request: Request, texto: str = Form(""),
+                                      adjunto: UploadFile = File(None)):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    detalle = db.tramite_empleador_detalle(tramite_id)
+    if not detalle or detalle["sindicato_id"] != sid:
+        raise HTTPException(404, "Trámite no encontrado")
+    if detalle["estado"] == "terminado":
+        raise HTTPException(400, "Este trámite está terminado y no se puede modificar.")
+    adjunto_datos, adjunto_mime, adjunto_nombre = None, "", ""
+    if adjunto and adjunto.filename:
+        adjunto_datos, adjunto_mime, adjunto_nombre = _leer_archivo_tramite(adjunto)
+        if not adjunto_datos:
+            raise HTTPException(400, "Adjunto inválido o supera el tamaño máximo (10 MB).")
+    if not texto.strip() and not adjunto_datos:
+        raise HTTPException(400, "La nota necesita texto o un adjunto.")
+    db.agregar_nota_tramite_empleador(tramite_id, "admin", texto, adjunto_datos, adjunto_mime, adjunto_nombre)
+    _notificar_cambio_tramite_empleador(sid, detalle["cuit"],
+        f'Tu sindicato agregó una nota a tu trámite {detalle["numero_expediente"]}.')
+    return {"ok": True}
+
+
+@app.get("/tramite-empresa-respuesta-archivo/{respuesta_id}")
+def servir_archivo_respuesta_tramite_empresa(respuesta_id: int, request: Request):
+    with db.get_session() as s:
+        r = s.get(RespuestaTramiteEmpleador, respuesta_id)
+        if not r or not r.archivo_datos:
+            raise HTTPException(404, "Sin archivo")
+        tr = s.get(TramiteEmpleador, r.tramite_id)
+        if not _autorizado_para_tramite_empleador(request, tr):
+            raise HTTPException(403, "No autorizado")
+        return BinResponse(
+            content=r.archivo_datos, media_type=r.archivo_mime or "application/octet-stream",
+            headers={"Content-Disposition": f'inline; filename="{r.archivo_nombre or "archivo"}"'},
+        )
+
+
+@app.get("/tramite-empresa-nota-adjunto/{nota_id}")
+def servir_adjunto_nota_tramite_empresa(nota_id: int, request: Request):
+    with db.get_session() as s:
+        n = s.get(NotaTramiteEmpleador, nota_id)
+        if not n or not n.adjunto_datos:
+            raise HTTPException(404, "Sin adjunto")
+        tr = s.get(TramiteEmpleador, n.tramite_id)
+        if not _autorizado_para_tramite_empleador(request, tr):
+            raise HTTPException(403, "No autorizado")
+        return BinResponse(
+            content=n.adjunto_datos, media_type=n.adjunto_mime or "application/octet-stream",
+            headers={"Content-Disposition": f'inline; filename="{n.adjunto_nombre or "adjunto"}"'},
+        )
+
+
+@app.get("/api/empresa/tramites/tipos")
+def api_tipos_tramite_empresa(request: Request):
+    ses = sesion_actual(request, "empleador")
+    cuit = request.cookies.get("cuit_emp", "")
+    if not ses or not cuit:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_empleador(request)
+    return {"tipos": db.tipos_tramite_empleador_del_sindicato(sid, solo_activos=True) if sid else []}
+
+
+@app.get("/api/empresa/tramites/mios")
+def api_mis_tramites_empresa(request: Request):
+    ses = sesion_actual(request, "empleador")
+    cuit = request.cookies.get("cuit_emp", "")
+    if not ses or not cuit:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_empleador(request)
+    return {"tramites": db.tramites_de_empresa(cuit, sid) if sid else []}
+
+
+@app.get("/api/empresa/tramite/{numero_expediente}")
+def api_consultar_tramite_empresa(numero_expediente: str, request: Request):
+    ses = sesion_actual(request, "empleador")
+    cuit = request.cookies.get("cuit_emp", "")
+    if not ses or not cuit:
+        raise HTTPException(403, "No autorizado")
+    detalle = db.tramite_empleador_por_numero_expediente(numero_expediente.strip().upper())
+    if not detalle or detalle["cuit"] != cuit:
+        raise HTTPException(404, "No encontramos un trámite tuyo con ese número.")
+    return detalle
+
+
+@app.post("/api/empresa/tramite")
+async def api_enviar_tramite_empresa(request: Request):
+    ses = sesion_actual(request, "empleador")
+    cuit = request.cookies.get("cuit_emp", "")
+    if not ses or not cuit:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_empleador(request)
+    if not sid:
+        raise HTTPException(403, "No autorizado")
+    _exigir_modulo(sid, "empleadores")
+    form = await request.form()
+    try:
+        tipo_tramite_id = int(form.get("tipo_tramite_id") or 0)
+    except ValueError:
+        raise HTTPException(400, "Tipo de trámite inválido")
+    tipo = db.tipo_tramite_empleador_por_id(tipo_tramite_id)
+    if not tipo or tipo["sindicato_id"] != sid or not tipo["activo"]:
+        raise HTTPException(404, "Tipo de trámite inválido")
+
+    errores = []
+    respuestas = []
+    for campo in tipo["campos"]:
+        if campo["tipo_dato"] == "separador":
+            continue
+        if campo["tipo_dato"] == "booleano":
+            marcado = bool(form.get(f'campo_{campo["id"]}'))
+            respuestas.append({"campo_tramite_id": campo["id"], "valor_texto": "Sí" if marcado else "No"})
+            continue
+        if campo["tipo_dato"] == "multiple":
+            valores = [v.strip() for v in form.getlist(f'campo_{campo["id"]}') if str(v).strip()]
+            if not valores:
+                if campo["obligatorio"]:
+                    errores.append(f'"{campo["etiqueta"]}" es obligatorio.')
+                continue
+            opciones = [o.strip() for o in (campo.get("opciones") or "").split(",") if o.strip()]
+            if opciones and any(v not in opciones for v in valores):
+                errores.append(f'"{campo["etiqueta"]}": elegí solo entre las opciones permitidas.')
+                continue
+            respuestas.append({"campo_tramite_id": campo["id"], "valor_texto": ", ".join(valores)})
+            continue
+        if campo["tipo_dato"] == "archivo":
+            archivo = form.get(f'archivo_{campo["id"]}')
+            if archivo is None or not getattr(archivo, "filename", ""):
+                if campo["obligatorio"]:
+                    errores.append(f'"{campo["etiqueta"]}" es obligatorio.')
+                continue
+            import os
+            ext = os.path.splitext(archivo.filename)[1].lower().lstrip(".")
+            permitidos = [e.strip().lower() for e in (campo["tipos_archivo_permitidos"] or "").split(",") if e.strip()]
+            if permitidos and ext not in permitidos:
+                errores.append(f'"{campo["etiqueta"]}": el archivo tiene que ser {", ".join(permitidos)}.')
+                continue
+            datos = await archivo.read()
+            if not datos or len(datos) > MAX_ARCHIVO_TRAMITE:
+                errores.append(f'"{campo["etiqueta"]}": archivo vacío o supera los 10 MB.')
+                continue
+            mime = ARCHIVO_MIMES_TRAMITE.get(f".{ext}", archivo.content_type or "application/octet-stream")
+            respuestas.append({"campo_tramite_id": campo["id"], "archivo_datos": datos,
+                                "archivo_mime": mime, "archivo_nombre": archivo.filename})
+            continue
+
+        valor = str(form.get(f'campo_{campo["id"]}') or "").strip()
+        if not valor:
+            if campo["obligatorio"]:
+                errores.append(f'"{campo["etiqueta"]}" es obligatorio.')
+            continue
+        if campo["tipo_dato"] in ("seleccion", "opcion_unica"):
+            opciones = [o.strip() for o in (campo.get("opciones") or "").split(",") if o.strip()]
+            if opciones and valor not in opciones:
+                errores.append(f'"{campo["etiqueta"]}": elegí una de las opciones permitidas.')
+                continue
+            respuestas.append({"campo_tramite_id": campo["id"], "valor_texto": valor})
+            continue
+        if campo["tipo_dato"] == "numero":
+            try:
+                float(valor.replace(",", "."))
+            except ValueError:
+                errores.append(f'"{campo["etiqueta"]}" tiene que ser un número.')
+                continue
+        if campo["longitud_exacta"] and len(valor) != campo["longitud_exacta"]:
+            errores.append(f'"{campo["etiqueta"]}" tiene que tener exactamente {campo["longitud_exacta"]} caracteres.')
+            continue
+        if campo["longitud_maxima"] and len(valor) > campo["longitud_maxima"]:
+            errores.append(f'"{campo["etiqueta"]}" supera el máximo de {campo["longitud_maxima"]} caracteres.')
+            continue
+        respuestas.append({"campo_tramite_id": campo["id"], "valor_texto": valor})
+
+    if errores:
+        return JSONResponse(status_code=422, content={"errores": errores})
+
+    resultado = db.crear_tramite_empleador(sid, tipo_tramite_id, cuit, respuestas)
+    if not resultado:
+        raise HTTPException(400, "No se pudo crear el trámite.")
+    return resultado
+
+
+@app.post("/api/empresa/tramite/{tramite_id}/nota")
+async def api_nota_tramite_empresa(tramite_id: int, request: Request, texto: str = Form(""),
+                                    adjunto: UploadFile = File(None)):
+    ses = sesion_actual(request, "empleador")
+    cuit = request.cookies.get("cuit_emp", "")
+    if not ses or not cuit:
+        raise HTTPException(403, "No autorizado")
+    detalle = db.tramite_empleador_detalle(tramite_id)
+    if not detalle or detalle["cuit"] != cuit:
+        raise HTTPException(404, "Trámite no encontrado")
+    if detalle["estado"] == "terminado":
+        raise HTTPException(400, "Este trámite está terminado y no se puede modificar.")
+    adjunto_datos, adjunto_mime, adjunto_nombre = None, "", ""
+    if adjunto and adjunto.filename:
+        adjunto_datos, adjunto_mime, adjunto_nombre = _leer_archivo_tramite(adjunto)
+        if not adjunto_datos:
+            raise HTTPException(400, "Adjunto inválido o supera el tamaño máximo (10 MB).")
+    if not texto.strip() and not adjunto_datos:
+        raise HTTPException(400, "La nota necesita texto o un adjunto.")
+    db.agregar_nota_tramite_empleador(tramite_id, "empresa", texto, adjunto_datos, adjunto_mime, adjunto_nombre)
+    return {"ok": True}
+
+
 # ---------- Aprendizaje: subir N recibos y proponer conceptos nuevos ----------
 @app.post("/admin/aprender")
 async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
@@ -1743,11 +2232,32 @@ def aprender_aplicar(request: Request, payload: dict):
 COOKIE_SINDICATO = "sesion_sindicato"
 COOKIE_PLATAFORMA = "sesion_plataforma"
 COOKIE_TRABAJADOR = "sesion_trabajador"
+COOKIE_EMPLEADOR = "sesion_empleador"
 COOKIES_POR_ROL = {
     "sindicato": COOKIE_SINDICATO,
     "plataforma": COOKIE_PLATAFORMA,
     "trabajador": COOKIE_TRABAJADOR,
+    "empleador": COOKIE_EMPLEADOR,
 }
+
+
+def sindicato_activo_empleador(request: Request) -> int:
+    """Resuelve en qué sindicato está parado el empleador ahora -- mismo
+    patrón que sindicato_activo_trabajador, con cuit_emp/sind_elegido_emp
+    en vez de cuil_trab/sind_elegido (cookies propias, para que las dos
+    sesiones convivan sin pisarse en el mismo navegador)."""
+    cuit = request.cookies.get("cuit_emp", "")
+    if not cuit:
+        return 0
+    sinds = db.sindicatos_de_cuit_empleador(cuit)
+    if len(sinds) == 1:
+        return sinds[0]["id"]
+    elegido = request.cookies.get("sind_elegido_emp", "")
+    if elegido:
+        for sd in sinds:
+            if str(sd["id"]) == elegido:
+                return sd["id"]
+    return 0
 
 
 def sindicato_activo_trabajador(request: Request) -> int:
@@ -2522,4 +3032,121 @@ def trabajador_salir():
     resp.delete_cookie(COOKIE_TRABAJADOR)
     resp.delete_cookie("cuil_trab")
     resp.delete_cookie("sind_elegido")
+    return resp
+
+
+# ================= Empleadores: sesión, login y app =================
+# Mismo patrón que el trabajador (CuentaEmpleador/Empleador, cuit_emp/
+# sind_elegido_emp en vez de cuil_trab/sind_elegido) -- ver Fase 3 del
+# plan de Empleadores.
+
+@app.get("/ingresar-empresa", response_class=HTMLResponse)
+def ingresar_empresa(request: Request):
+    """Pantalla de login/registro del empleador."""
+    return templates.TemplateResponse("empresa_login.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma()})
+
+
+@app.post("/empresa/login")
+def empresa_login(request: Request, cuit: str = Form(...), clave: str = Form(...)):
+    cuit = _norm_cuil(cuit)
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == cuit)).first()
+        if not cuenta or not auth.verificar_clave(clave, cuenta.clave_hash):
+            return RedirectResponse("/ingresar-empresa?error=login", status_code=303)
+        cuenta_id = cuenta.id   # capturar el id ANTES de cerrar la sesión
+    sinds = db.sindicatos_de_cuit_empleador(cuit)
+    if not sinds:
+        return RedirectResponse("/ingresar-empresa?error=sinsind", status_code=303)
+    token = auth.crear_sesion("empleador", id_usuario=cuenta_id, sindicato_id=0)
+    resp = RedirectResponse("/empresa", status_code=303)
+    resp.set_cookie(COOKIE_EMPLEADOR, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    resp.set_cookie("cuit_emp", cuit, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    return resp
+
+
+@app.post("/empresa/registro")
+def empresa_registro(request: Request, cuit: str = Form(...), clave: str = Form(...)):
+    cuit = _norm_cuil(cuit)
+    # Validar que el CUIT esté dado de alta como Empleador activo en al menos un sindicato
+    sinds = db.sindicatos_de_cuit_empleador(cuit)
+    if not sinds:
+        return RedirectResponse("/ingresar-empresa?error=nohabilitado", status_code=303)
+    with db.get_session() as s:
+        existe = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == cuit)).first()
+        if existe:
+            return RedirectResponse("/ingresar-empresa?error=yaexiste", status_code=303)
+        s.add(CuentaEmpleador(cuit=cuit, clave_hash=auth.hashear_clave(clave)))
+        # marcar las altas de este CUIT como registradas
+        for e in s.exec(select(Empleador).where(Empleador.cuit == cuit)).all():
+            e.registrado = True
+            s.add(e)
+        s.commit()
+    token = auth.crear_sesion("empleador", sindicato_id=0)
+    resp = RedirectResponse("/empresa", status_code=303)
+    resp.set_cookie(COOKIE_EMPLEADOR, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    resp.set_cookie("cuit_emp", cuit, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    return resp
+
+
+@app.get("/empresa", response_class=HTMLResponse)
+def app_empresa(request: Request):
+    """La app del empleador -- una sola pantalla con tabbar (Notificaciones/
+    Trámites), sin una portada separada como tiene el trabajador (con solo
+    2 funcionalidades no hace falta esa capa extra). Si el CUIT está en
+    varios sindicatos y no eligió, muestra el selector."""
+    ses = sesion_actual(request, "empleador")
+    cuit = request.cookies.get("cuit_emp", "")
+    if not ses or not cuit:
+        return RedirectResponse("/ingresar-empresa", status_code=303)
+
+    sinds = db.sindicatos_de_cuit_empleador(cuit)
+    elegido = request.cookies.get("sind_elegido_emp", "")
+
+    sid_activo = None
+    if len(sinds) == 1:
+        sid_activo = sinds[0]["id"]
+    elif elegido:
+        for sd in sinds:
+            if str(sd["id"]) == elegido:
+                sid_activo = sd["id"]
+
+    if sid_activo:
+        marca = db.marca_sindicato(sid_activo)
+        with db.get_session() as s:
+            empleador = s.exec(select(Empleador).where(
+                Empleador.sindicato_id == sid_activo, Empleador.cuit == cuit)).first()
+        return templates.TemplateResponse("empresa.html", {
+            "request": request, "sindicato": marca["nombre"], "marca": marca,
+            "marca_plataforma": db.marca_plataforma(),
+            "cuit": cuit, "razon_social": empleador.razon_social if empleador else "",
+            "modulos": _modulos_de(sid_activo),
+        })
+    # Varios y no eligió → selector
+    return templates.TemplateResponse("elegir_sindicato_empresa.html", {
+        "request": request, "sindicatos": sinds, "marca_plataforma": db.marca_plataforma(),
+    })
+
+
+@app.get("/empresa/elegir/{sindicato_id}")
+def empresa_elegir(sindicato_id: int, request: Request):
+    resp = RedirectResponse("/empresa", status_code=303)
+    resp.set_cookie("sind_elegido_emp", str(sindicato_id), httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    return resp
+
+
+@app.get("/empresa/cambiar")
+def empresa_cambiar():
+    """Volver al selector de sindicato."""
+    resp = RedirectResponse("/empresa", status_code=303)
+    resp.delete_cookie("sind_elegido_emp")
+    return resp
+
+
+@app.get("/empresa/salir")
+def empresa_salir():
+    resp = RedirectResponse("/ingresar-empresa", status_code=303)
+    resp.delete_cookie(COOKIE_EMPLEADOR)
+    resp.delete_cookie("cuit_emp")
+    resp.delete_cookie("sind_elegido_emp")
     return resp

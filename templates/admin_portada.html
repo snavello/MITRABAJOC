@@ -160,6 +160,15 @@
       {% if tramites_nuevos %}<span class="badge-noleidas">{{ tramites_nuevos }}</span>{% endif %}
     </div>
     {% endif %}
+    {% if 'empleadores' in modulos %}
+    <a class="acceso" href="/admin#empleadores">
+      <svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg>
+      <div>
+        <div class="titulo">Empleadores</div>
+        <div class="estado">Empresas, notificaciones y trámites</div>
+      </div>
+    </a>
+    {% endif %}
     <a class="acceso" href="/admin#seccionales">
       <svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg>
       <div>
@@ -206,6 +215,7 @@
     <g id="ic-notif"><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></g>
     <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
     <g id="ic-seccionales"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></g>
+    <g id="ic-empleadores"><rect x="4" y="9" width="16" height="12" rx="1.2"/><path d="M9 9V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4"/><circle cx="9" cy="14" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="0.9" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="0.9" fill="currentColor" stroke="none"/></g>
     <g id="ic-admins"><path d="M12 3l7 3v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6z"/><circle cx="12" cy="10" r="2.3"/><path d="M8.4 15c.7-1.5 2-2.3 3.6-2.3s2.9.8 3.6 2.3"/></g>
   </defs>
 </svg>

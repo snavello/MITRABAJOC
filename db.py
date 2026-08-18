@@ -198,6 +198,33 @@ class Trabajador(SQLModel, table=True):
     semaforo_actualizado: Optional[str] = Field(default=None)  # fecha ISO del último cálculo
 
 
+class CuentaEmpleador(SQLModel, table=True):
+    """La identidad única del empleador en toda la plataforma: CUIT + clave.
+    Mismo patrón que CuentaTrabajador -- con esto entra sin importar en
+    cuántos sindicatos esté dado de alta como Empleador ("multisindicato")."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cuit: str = Field(index=True, unique=True)
+    clave_hash: str = ""
+
+
+class Empleador(SQLModel, table=True):
+    """Alta de un CUIT como empleador en un sindicato -- el CRUD real que
+    administra el admin del sindicato (a mano, o precargado desde
+    Concepto.cuit_empleador, ver importar_cuits_de_conceptos). Mismo
+    patrón que Trabajador: un mismo CUIT puede tener varias filas (una
+    por sindicato donde está dado de alta)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    cuit: str = Field(index=True)          # obligatorio
+    razon_social: str = ""
+    domicilio: str = ""
+    telefono: str = ""
+    provincia: str = ""
+    mail: str = ""
+    registrado: bool = False               # True cuando el CUIT ya creó su CuentaEmpleador
+    activo: bool = True                    # baja lógica: False = dado de baja (recuperable)
+
+
 class Concepto(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     sindicato_id: int = Field(default=1, foreign_key="sindicato.id", index=True)
@@ -454,6 +481,36 @@ class NotificacionDestinatario(SQLModel, table=True):
     leida_en: Optional[str] = Field(default=None)
 
 
+class NotificacionEmpleador(SQLModel, table=True):
+    """Mensaje dirigido del sindicato a un grupo de empleadores -- mismo
+    patrón que Notificacion (Fase 2), pero completamente separada por
+    decisión explícita: no mezclar identidades CUIL/CUIT en la misma tabla,
+    ni tocar el sistema de notificaciones al trabajador que ya funciona."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    remitente: str = ""
+    usuario_id: Optional[int] = Field(default=None, foreign_key="usuariosindicato.id")
+    texto: str = ""
+    adjunto_datos: Optional[bytes] = Field(default=None)
+    adjunto_mime: str = ""
+    adjunto_nombre: str = ""
+    criterio: str = ""             # "cuit" | "todos" | "provincia"
+    criterio_valores: list = Field(default=[], sa_column=Column(JSON))
+    origen: str = "manual"          # "manual" | "sistema" (Fase 5: cambio de trámite externo)
+    enviado_en: str = ""
+    cantidad_destinatarios: int = 0
+
+
+class NotificacionEmpleadorDestinatario(SQLModel, table=True):
+    """Una fila por CUIT que recibió una NotificacionEmpleador puntual --
+    separado de NotificacionEmpleador para marcar la lectura de cada
+    destinatario por su lado."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    notificacion_empleador_id: int = Field(foreign_key="notificacionempleador.id", index=True)
+    cuit: str = Field(index=True)
+    leida_en: Optional[str] = Field(default=None)
+
+
 class TipoTramite(SQLModel, table=True):
     """Tipo de trámite/formulario que el sindicato pone a disposición del
     trabajador (Fase 3 de Módulos + Notificaciones + Trámites), ej. "F01
@@ -534,6 +591,79 @@ class TramiteLog(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     tramite_id: int = Field(foreign_key="tramite.id", index=True)
     evento: str  # "creado" | "cambio_estado" | "nota_admin" | "nota_trabajador"
+    detalle: str = ""
+    creado: str = ""
+
+
+class TipoTramiteEmpleador(SQLModel, table=True):
+    """Mirror de TipoTramite, para formularios "externos" que el sindicato
+    pone a disposición de las empresas (Fase 5 del plan de Empleadores) --
+    tablas completamente separadas de las de trabajador, a propósito."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    titulo: str
+    codigo: str
+    activo: bool = True
+    creado: str = ""
+
+
+class CampoTramiteEmpleador(SQLModel, table=True):
+    """Mirror de CampoTramite."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tipo_tramite_id: int = Field(foreign_key="tipotramiteempleador.id", index=True)
+    orden: int = 0
+    etiqueta: str = ""
+    tipo_dato: str
+    longitud_maxima: Optional[int] = Field(default=None)
+    longitud_exacta: Optional[int] = Field(default=None)
+    decimales: Optional[int] = Field(default=None)
+    tipos_archivo_permitidos: str = ""
+    opciones: str = ""
+    ancho: str = "completo"
+    obligatorio: bool = True
+
+
+class TramiteEmpleador(SQLModel, table=True):
+    """Mirror de Tramite, con `cuit` en vez de `cuil`. Numeración de
+    expediente correlativa por tipo, mismo criterio que Tramite."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    tipo_tramite_id: int = Field(foreign_key="tipotramiteempleador.id", index=True)
+    numero_expediente: str = Field(index=True, unique=True)
+    cuit: str = Field(index=True)
+    estado: str = "iniciado"
+    creado: str = ""
+    actualizado: str = ""
+
+
+class RespuestaTramiteEmpleador(SQLModel, table=True):
+    """Mirror de RespuestaTramite."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tramite_id: int = Field(foreign_key="tramiteempleador.id", index=True)
+    campo_tramite_id: int = Field(foreign_key="campotramiteempleador.id", index=True)
+    valor_texto: str = ""
+    archivo_datos: Optional[bytes] = Field(default=None)
+    archivo_mime: str = ""
+    archivo_nombre: str = ""
+
+
+class NotaTramiteEmpleador(SQLModel, table=True):
+    """Mirror de NotaTramite -- `autor` es "admin" | "empresa"."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tramite_id: int = Field(foreign_key="tramiteempleador.id", index=True)
+    autor: str
+    texto: str = ""
+    adjunto_datos: Optional[bytes] = Field(default=None)
+    adjunto_mime: str = ""
+    adjunto_nombre: str = ""
+    creado: str = ""
+
+
+class TramiteEmpleadorLog(SQLModel, table=True):
+    """Mirror de TramiteLog."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tramite_id: int = Field(foreign_key="tramiteempleador.id", index=True)
+    evento: str
     detalle: str = ""
     creado: str = ""
 
@@ -796,6 +926,43 @@ def sindicatos_de_cuil(cuil: str) -> list:
         empadronamientos = s.exec(select(Trabajador).where(Trabajador.cuil == cuil)).all()
         resultado = []
         for e in empadronamientos:
+            sind = s.get(Sindicato, e.sindicato_id)
+            if sind and sind.activo:
+                resultado.append({"id": sind.id, "nombre": sind.nombre, "slug": sind.slug})
+        return resultado
+
+
+def importar_cuits_de_conceptos(sindicato_id: int) -> int:
+    """CUITs distintos de Concepto.cuit_empleador de ESTE sindicato que
+    todavía no tienen fila en Empleador -- crea una fila mínima (solo
+    cuit) por cada uno, registrado=False, activo=True. Idempotente: se
+    puede volver a correr cuando aparezcan CUITs nuevos en Conceptos
+    (botón "Importar CUITs de conceptos" en el CRUD). Devuelve cuántos
+    se agregaron."""
+    with Session(engine) as s:
+        conceptos = s.exec(select(Concepto).where(
+            Concepto.sindicato_id == sindicato_id)).all()
+        cuits_concepto = {
+            c.cuit_empleador.strip() for c in conceptos if (c.cuit_empleador or "").strip()
+        }
+        existentes = {e.cuit for e in s.exec(select(Empleador).where(
+            Empleador.sindicato_id == sindicato_id)).all()}
+        nuevos = cuits_concepto - existentes
+        for cuit in nuevos:
+            s.add(Empleador(sindicato_id=sindicato_id, cuit=cuit))
+        s.commit()
+        return len(nuevos)
+
+
+def sindicatos_de_cuit_empleador(cuit: str) -> list:
+    """Sindicatos donde este CUIT está dado de alta como Empleador activo --
+    mismo patrón que sindicatos_de_cuil, para la resolución de sesión y el
+    selector multisindicato del empleador."""
+    with Session(engine) as s:
+        altas = s.exec(select(Empleador).where(
+            Empleador.cuit == cuit, Empleador.activo == True)).all()
+        resultado = []
+        for e in altas:
             sind = s.get(Sindicato, e.sindicato_id)
             if sind and sind.activo:
                 resultado.append({"id": sind.id, "nombre": sind.nombre, "slug": sind.slug})
@@ -1386,6 +1553,127 @@ def marcar_notificacion_leida(notificacion_id: int, cuil: str) -> bool:
         return True
 
 
+# ---------- Notificaciones a empleadores (Fase 4 del plan de Empleadores) ----------
+# Mismo patrón que las notificaciones al trabajador, en tablas propias
+# (NotificacionEmpleador/NotificacionEmpleadorDestinatario) -- ver esas
+# clases más arriba para la razón de la separación.
+
+def resolver_destinatarios_empleador(sindicato_id: int, criterio: str, valores: list) -> list:
+    """CUITs de empleadores ACTIVOS de este sindicato que matchean el
+    criterio. "todos" ignora `valores` (no hace falta elegir nada puntual)."""
+    with Session(engine) as s:
+        empleadores = s.exec(select(Empleador).where(
+            Empleador.sindicato_id == sindicato_id, Empleador.activo == True)).all()
+    if criterio == "todos":
+        return sorted({e.cuit for e in empleadores})
+    valores = [str(v).strip() for v in (valores or []) if str(v).strip()]
+    if not valores:
+        return []
+    if criterio == "cuit":
+        objetivo = set(valores)
+        return sorted({e.cuit for e in empleadores if e.cuit in objetivo})
+    if criterio == "provincia":
+        objetivo = set(valores)
+        return sorted({e.cuit for e in empleadores if e.provincia in objetivo})
+    return []
+
+
+def crear_notificacion_empleador(sindicato_id: int, usuario_id: Optional[int], remitente: str, texto: str,
+                                  criterio: str, valores: list, adjunto_datos: Optional[bytes] = None,
+                                  adjunto_mime: str = "", adjunto_nombre: str = "",
+                                  origen: str = "manual") -> dict:
+    """Resuelve los destinatarios y los FIJA en el momento de enviar
+    (snapshot, mismo criterio que crear_notificacion)."""
+    cuits = resolver_destinatarios_empleador(sindicato_id, criterio, valores)
+    with Session(engine) as s:
+        n = NotificacionEmpleador(
+            sindicato_id=sindicato_id, remitente=remitente or "", usuario_id=usuario_id,
+            texto=texto or "", adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime or "",
+            adjunto_nombre=adjunto_nombre or "", criterio=criterio, criterio_valores=list(valores or []),
+            origen=origen, enviado_en=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            cantidad_destinatarios=len(cuits),
+        )
+        s.add(n); s.commit(); s.refresh(n)
+        for cuit in cuits:
+            s.add(NotificacionEmpleadorDestinatario(notificacion_empleador_id=n.id, cuit=cuit))
+        s.commit()
+        return {"id": n.id, "cantidad_destinatarios": len(cuits)}
+
+
+def notificaciones_empleador_del_sindicato(sindicato_id: int) -> list:
+    """Todas las notificaciones a empleadores de este sindicato, con el
+    resumen leídos/total, más recientes primero -- para el listado de admin."""
+    with Session(engine) as s:
+        filas = s.exec(select(NotificacionEmpleador).where(
+            NotificacionEmpleador.sindicato_id == sindicato_id)
+            .order_by(NotificacionEmpleador.id.desc())).all()
+        resultado = []
+        for n in filas:
+            dests = s.exec(select(NotificacionEmpleadorDestinatario).where(
+                NotificacionEmpleadorDestinatario.notificacion_empleador_id == n.id)).all()
+            leidos = sum(1 for d in dests if d.leida_en)
+            resultado.append({
+                "id": n.id, "remitente": n.remitente, "texto": n.texto,
+                "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+                "criterio": n.criterio, "criterio_valores": n.criterio_valores or [],
+                "origen": n.origen, "enviado_en": n.enviado_en,
+                "cantidad_destinatarios": n.cantidad_destinatarios,
+                "leidos": leidos,
+            })
+        return resultado
+
+
+def notificacion_empleador_destinatarios(notificacion_empleador_id: int) -> list:
+    """Detalle fila por fila (CUIT + razón social + si leyó y cuándo) de
+    una notificación a empleadores."""
+    with Session(engine) as s:
+        dests = s.exec(select(NotificacionEmpleadorDestinatario).where(
+            NotificacionEmpleadorDestinatario.notificacion_empleador_id == notificacion_empleador_id
+        ).order_by(NotificacionEmpleadorDestinatario.cuit)).all()
+        razones = {e.cuit: e.razon_social for e in s.exec(select(Empleador)).all()}
+        return [{
+            "cuit": d.cuit, "razon_social": razones.get(d.cuit, ""), "leida_en": d.leida_en,
+        } for d in dests]
+
+
+def notificaciones_de_empleador(cuit: str, sindicato_id: int) -> list:
+    """Notificaciones que le llegaron a este CUIT en este sindicato, más
+    nuevas primero -- para la pestaña Notificaciones de /empresa."""
+    with Session(engine) as s:
+        dests = s.exec(select(NotificacionEmpleadorDestinatario).where(
+            NotificacionEmpleadorDestinatario.cuit == cuit)).all()
+        if not dests:
+            return []
+        por_id = {d.notificacion_empleador_id: d for d in dests}
+        notifs = s.exec(select(NotificacionEmpleador).where(
+            NotificacionEmpleador.id.in_(por_id.keys()), NotificacionEmpleador.sindicato_id == sindicato_id)
+            .order_by(NotificacionEmpleador.id.desc())).all()
+        return [{
+            "id": n.id, "remitente": n.remitente, "texto": n.texto,
+            "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+            "enviado_en": n.enviado_en, "leida_en": por_id[n.id].leida_en,
+        } for n in notifs]
+
+
+def contar_notificaciones_no_leidas_empleador(cuit: str, sindicato_id: int) -> int:
+    return sum(1 for n in notificaciones_de_empleador(cuit, sindicato_id) if not n["leida_en"])
+
+
+def marcar_notificacion_leida_empleador(notificacion_empleador_id: int, cuit: str) -> bool:
+    """Marca como leída la copia de ESTE cuit (aislamiento: no toca la fila
+    de otro destinatario). Devuelve False si el cuit no era destinatario."""
+    with Session(engine) as s:
+        d = s.exec(select(NotificacionEmpleadorDestinatario).where(
+            NotificacionEmpleadorDestinatario.notificacion_empleador_id == notificacion_empleador_id,
+            NotificacionEmpleadorDestinatario.cuit == cuit)).first()
+        if not d:
+            return False
+        if not d.leida_en:
+            d.leida_en = datetime.now().strftime("%Y-%m-%d %H:%M")
+            s.add(d); s.commit()
+        return True
+
+
 # ---------- Trámites (Fase 3 de Módulos + Notificaciones + Trámites) ----------
 
 def _campo_tramite_a_dict(c: "CampoTramite") -> dict:
@@ -1673,3 +1961,265 @@ def tramite_por_numero_expediente(numero_expediente: str) -> Optional[dict]:
     with Session(engine) as s:
         tr = s.exec(select(Tramite).where(Tramite.numero_expediente == numero_expediente)).first()
         return _tramite_detalle_completo(s, tr) if tr else None
+
+
+# ---------- Trámites externos a empleadores (Fase 5 del plan de Empleadores) ----------
+# Mirror 1:1 de la sección "Trámites" de arriba (cuil -> cuit, autor "empresa"
+# en vez de "trabajador") -- reusa ESTADOS_TRAMITE/ESTADOS_TRAMITE_LABEL, que
+# son constantes de datos sin estado propio, no específicas de trabajador.
+
+def _campo_tramite_empleador_a_dict(c: "CampoTramiteEmpleador") -> dict:
+    return {
+        "id": c.id, "orden": c.orden, "etiqueta": c.etiqueta, "tipo_dato": c.tipo_dato,
+        "longitud_maxima": c.longitud_maxima, "longitud_exacta": c.longitud_exacta,
+        "decimales": c.decimales, "tipos_archivo_permitidos": c.tipos_archivo_permitidos,
+        "opciones": c.opciones, "ancho": c.ancho, "obligatorio": c.obligatorio,
+    }
+
+
+def crear_tipo_tramite_empleador(sindicato_id: int, titulo: str, codigo: str, campos: list) -> int:
+    with Session(engine) as s:
+        t = TipoTramiteEmpleador(sindicato_id=sindicato_id, titulo=titulo, codigo=codigo,
+                                  creado=datetime.now().strftime("%Y-%m-%d %H:%M"))
+        s.add(t); s.commit(); s.refresh(t)
+        for i, c in enumerate(campos):
+            s.add(CampoTramiteEmpleador(
+                tipo_tramite_id=t.id, orden=i, etiqueta=c["etiqueta"], tipo_dato=c["tipo_dato"],
+                longitud_maxima=c.get("longitud_maxima"), longitud_exacta=c.get("longitud_exacta"),
+                decimales=c.get("decimales"), tipos_archivo_permitidos=c.get("tipos_archivo_permitidos", ""),
+                opciones=c.get("opciones", ""), ancho=c.get("ancho") or "completo",
+                obligatorio=c.get("obligatorio", True),
+            ))
+        s.commit()
+        return t.id
+
+
+def editar_tipo_tramite_empleador(tipo_id: int, sindicato_id: int, titulo: str, codigo: str,
+                                   activo: bool, campos: list) -> bool:
+    with Session(engine) as s:
+        t = s.get(TipoTramiteEmpleador, tipo_id)
+        if not t or t.sindicato_id != sindicato_id:
+            return False
+        t.titulo, t.codigo, t.activo = titulo, codigo, activo
+        s.add(t)
+        for viejo in s.exec(select(CampoTramiteEmpleador).where(
+                CampoTramiteEmpleador.tipo_tramite_id == tipo_id)).all():
+            s.delete(viejo)
+        s.commit()
+        for i, c in enumerate(campos):
+            s.add(CampoTramiteEmpleador(
+                tipo_tramite_id=tipo_id, orden=i, etiqueta=c["etiqueta"], tipo_dato=c["tipo_dato"],
+                longitud_maxima=c.get("longitud_maxima"), longitud_exacta=c.get("longitud_exacta"),
+                decimales=c.get("decimales"), tipos_archivo_permitidos=c.get("tipos_archivo_permitidos", ""),
+                opciones=c.get("opciones", ""), ancho=c.get("ancho") or "completo",
+                obligatorio=c.get("obligatorio", True),
+            ))
+        s.commit()
+        return True
+
+
+def borrar_tipo_tramite_empleador(tipo_id: int, sindicato_id: int) -> bool:
+    with Session(engine) as s:
+        t = s.get(TipoTramiteEmpleador, tipo_id)
+        if not t or t.sindicato_id != sindicato_id:
+            return False
+        if s.exec(select(TramiteEmpleador).where(TramiteEmpleador.tipo_tramite_id == tipo_id)).first():
+            return False
+        for c in s.exec(select(CampoTramiteEmpleador).where(
+                CampoTramiteEmpleador.tipo_tramite_id == tipo_id)).all():
+            s.delete(c)
+        s.delete(t)
+        s.commit()
+        return True
+
+
+def tipos_tramite_empleador_del_sindicato(sindicato_id: int, solo_activos: bool = False) -> list:
+    with Session(engine) as s:
+        q = select(TipoTramiteEmpleador).where(TipoTramiteEmpleador.sindicato_id == sindicato_id)
+        if solo_activos:
+            q = q.where(TipoTramiteEmpleador.activo == True)
+        tipos = s.exec(q.order_by(TipoTramiteEmpleador.creado.desc())).all()
+        resultado = []
+        for t in tipos:
+            campos = s.exec(select(CampoTramiteEmpleador).where(CampoTramiteEmpleador.tipo_tramite_id == t.id)
+                            .order_by(CampoTramiteEmpleador.orden)).all()
+            resultado.append({
+                "id": t.id, "titulo": t.titulo, "codigo": t.codigo, "activo": t.activo,
+                "creado": t.creado, "campos": [_campo_tramite_empleador_a_dict(c) for c in campos],
+            })
+        return resultado
+
+
+def tipo_tramite_empleador_por_id(tipo_id: int) -> Optional[dict]:
+    with Session(engine) as s:
+        t = s.get(TipoTramiteEmpleador, tipo_id)
+        if not t:
+            return None
+        campos = s.exec(select(CampoTramiteEmpleador).where(CampoTramiteEmpleador.tipo_tramite_id == tipo_id)
+                        .order_by(CampoTramiteEmpleador.orden)).all()
+        return {
+            "id": t.id, "sindicato_id": t.sindicato_id, "titulo": t.titulo, "codigo": t.codigo,
+            "activo": t.activo, "creado": t.creado,
+            "campos": [_campo_tramite_empleador_a_dict(c) for c in campos],
+        }
+
+
+def _log_tramite_empleador(s: Session, tramite_id: int, evento: str, detalle: str) -> None:
+    s.add(TramiteEmpleadorLog(
+        tramite_id=tramite_id, evento=evento, detalle=detalle,
+        creado=datetime.now().strftime("%Y-%m-%d %H:%M"),
+    ))
+
+
+def crear_tramite_empleador(sindicato_id: int, tipo_tramite_id: int, cuit: str, respuestas: list) -> Optional[dict]:
+    with Session(engine) as s:
+        tipo = s.get(TipoTramiteEmpleador, tipo_tramite_id)
+        if not tipo or tipo.sindicato_id != sindicato_id or not tipo.activo:
+            return None
+        prefijo = "".join(ch for ch in tipo.codigo.upper() if ch.isalnum()) or "TRAM"
+        anio = datetime.now().strftime("%Y")
+        ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
+        existentes = len(s.exec(select(TramiteEmpleador).where(
+            TramiteEmpleador.tipo_tramite_id == tipo_tramite_id)).all())
+        numero = None
+        for intento in range(25):
+            candidato = f"{prefijo}-{anio}-{(existentes + 1 + intento):06d}"
+            if not s.exec(select(TramiteEmpleador).where(TramiteEmpleador.numero_expediente == candidato)).first():
+                numero = candidato
+                break
+        if not numero:
+            raise RuntimeError("No se pudo generar un número de expediente único, reintentá.")
+        tr = TramiteEmpleador(sindicato_id=sindicato_id, tipo_tramite_id=tipo_tramite_id, cuit=cuit,
+                               numero_expediente=numero, estado="iniciado", creado=ahora, actualizado=ahora)
+        s.add(tr); s.commit(); s.refresh(tr)
+        for r in respuestas:
+            s.add(RespuestaTramiteEmpleador(
+                tramite_id=tr.id, campo_tramite_id=r["campo_tramite_id"],
+                valor_texto=r.get("valor_texto", ""), archivo_datos=r.get("archivo_datos"),
+                archivo_mime=r.get("archivo_mime", ""), archivo_nombre=r.get("archivo_nombre", ""),
+            ))
+        _log_tramite_empleador(s, tr.id, "creado", f"Trámite presentado por la empresa ({numero}).")
+        s.commit()
+        return {"id": tr.id, "numero_expediente": numero}
+
+
+def cambiar_estado_tramite_empleador(tramite_id: int, sindicato_id: int, nuevo_estado: str) -> bool:
+    if nuevo_estado not in ESTADOS_TRAMITE:
+        return False
+    with Session(engine) as s:
+        tr = s.get(TramiteEmpleador, tramite_id)
+        if not tr or tr.sindicato_id != sindicato_id or tr.estado == "terminado":
+            return False
+        anterior = tr.estado
+        tr.estado = nuevo_estado
+        tr.actualizado = datetime.now().strftime("%Y-%m-%d %H:%M")
+        s.add(tr)
+        _log_tramite_empleador(s, tramite_id, "cambio_estado",
+                     f"{ESTADOS_TRAMITE_LABEL.get(anterior, anterior)} → {ESTADOS_TRAMITE_LABEL.get(nuevo_estado, nuevo_estado)}")
+        s.commit()
+        return True
+
+
+def agregar_nota_tramite_empleador(tramite_id: int, autor: str, texto: str,
+                                    adjunto_datos: Optional[bytes] = None, adjunto_mime: str = "",
+                                    adjunto_nombre: str = "") -> bool:
+    with Session(engine) as s:
+        tr = s.get(TramiteEmpleador, tramite_id)
+        if not tr or tr.estado == "terminado":
+            return False
+        s.add(NotaTramiteEmpleador(
+            tramite_id=tramite_id, autor=autor, texto=texto or "",
+            adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime or "",
+            adjunto_nombre=adjunto_nombre or "", creado=datetime.now().strftime("%Y-%m-%d %H:%M"),
+        ))
+        tr.actualizado = datetime.now().strftime("%Y-%m-%d %H:%M")
+        s.add(tr)
+        _log_tramite_empleador(s, tramite_id, f"nota_{autor}", texto[:120] if texto else "(sin texto, con adjunto)")
+        s.commit()
+        return True
+
+
+def _tramite_empleador_resumen(s: Session, tr: "TramiteEmpleador", titulos_tipo: dict) -> dict:
+    return {
+        "id": tr.id, "numero_expediente": tr.numero_expediente, "cuit": tr.cuit,
+        "tipo_tramite_id": tr.tipo_tramite_id, "tipo_titulo": titulos_tipo.get(tr.tipo_tramite_id, "—"),
+        "estado": tr.estado, "estado_label": ESTADOS_TRAMITE_LABEL.get(tr.estado, tr.estado),
+        "creado": tr.creado, "actualizado": tr.actualizado,
+    }
+
+
+def tramites_empleador_del_sindicato(sindicato_id: int, estado: str = None, tipo_tramite_id: int = None,
+                                      cuit: str = None) -> list:
+    with Session(engine) as s:
+        q = select(TramiteEmpleador).where(TramiteEmpleador.sindicato_id == sindicato_id)
+        if estado:
+            q = q.where(TramiteEmpleador.estado == estado)
+        if tipo_tramite_id:
+            q = q.where(TramiteEmpleador.tipo_tramite_id == tipo_tramite_id)
+        if cuit:
+            q = q.where(TramiteEmpleador.cuit == cuit)
+        tramites = s.exec(q.order_by(TramiteEmpleador.id.desc())).all()
+        titulos_tipo = {t.id: t.titulo for t in s.exec(
+            select(TipoTramiteEmpleador).where(TipoTramiteEmpleador.sindicato_id == sindicato_id)).all()}
+        return [_tramite_empleador_resumen(s, tr, titulos_tipo) for tr in tramites]
+
+
+def contar_tramites_empleador_nuevos(sindicato_id: int) -> int:
+    with Session(engine) as s:
+        return len(s.exec(select(TramiteEmpleador).where(
+            TramiteEmpleador.sindicato_id == sindicato_id, TramiteEmpleador.estado == "iniciado")).all())
+
+
+def tramites_de_empresa(cuit: str, sindicato_id: int) -> list:
+    with Session(engine) as s:
+        tramites = s.exec(select(TramiteEmpleador).where(
+            TramiteEmpleador.cuit == cuit, TramiteEmpleador.sindicato_id == sindicato_id
+        ).order_by(TramiteEmpleador.id.desc())).all()
+        titulos_tipo = {t.id: t.titulo for t in s.exec(
+            select(TipoTramiteEmpleador).where(TipoTramiteEmpleador.sindicato_id == sindicato_id)).all()}
+        return [_tramite_empleador_resumen(s, tr, titulos_tipo) for tr in tramites]
+
+
+def _tramite_empleador_detalle_completo(s: Session, tr: "TramiteEmpleador") -> dict:
+    tipo = s.get(TipoTramiteEmpleador, tr.tipo_tramite_id)
+    campos = s.exec(select(CampoTramiteEmpleador).where(CampoTramiteEmpleador.tipo_tramite_id == tr.tipo_tramite_id)
+                    .order_by(CampoTramiteEmpleador.orden)).all()
+    campos_por_id = {c.id: c for c in campos}
+    respuestas = s.exec(select(RespuestaTramiteEmpleador).where(
+        RespuestaTramiteEmpleador.tramite_id == tr.id)).all()
+    notas = s.exec(select(NotaTramiteEmpleador).where(NotaTramiteEmpleador.tramite_id == tr.id)
+                   .order_by(NotaTramiteEmpleador.id)).all()
+    log = s.exec(select(TramiteEmpleadorLog).where(TramiteEmpleadorLog.tramite_id == tr.id)
+                 .order_by(TramiteEmpleadorLog.id)).all()
+    return {
+        "id": tr.id, "numero_expediente": tr.numero_expediente, "cuit": tr.cuit,
+        "sindicato_id": tr.sindicato_id, "estado": tr.estado,
+        "estado_label": ESTADOS_TRAMITE_LABEL.get(tr.estado, tr.estado),
+        "creado": tr.creado, "actualizado": tr.actualizado,
+        "tipo_titulo": tipo.titulo if tipo else "—", "tipo_codigo": tipo.codigo if tipo else "",
+        "respuestas": [{
+            "campo_id": r.campo_tramite_id,
+            "etiqueta": campos_por_id[r.campo_tramite_id].etiqueta if r.campo_tramite_id in campos_por_id else "—",
+            "tipo_dato": campos_por_id[r.campo_tramite_id].tipo_dato if r.campo_tramite_id in campos_por_id else "texto",
+            "valor_texto": r.valor_texto, "tiene_archivo": bool(r.archivo_datos),
+            "archivo_nombre": r.archivo_nombre, "respuesta_id": r.id,
+        } for r in respuestas],
+        "notas": [{
+            "id": n.id, "autor": n.autor, "texto": n.texto, "creado": n.creado,
+            "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+        } for n in notas],
+        "log": [{"evento": l.evento, "detalle": l.detalle, "creado": l.creado} for l in log],
+    }
+
+
+def tramite_empleador_detalle(tramite_id: int) -> Optional[dict]:
+    with Session(engine) as s:
+        tr = s.get(TramiteEmpleador, tramite_id)
+        return _tramite_empleador_detalle_completo(s, tr) if tr else None
+
+
+def tramite_empleador_por_numero_expediente(numero_expediente: str) -> Optional[dict]:
+    with Session(engine) as s:
+        tr = s.exec(select(TramiteEmpleador).where(
+            TramiteEmpleador.numero_expediente == numero_expediente)).first()
+        return _tramite_empleador_detalle_completo(s, tr) if tr else None
