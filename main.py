@@ -414,18 +414,37 @@ def api_validar(request: Request, payload: dict):
 def api_reportar(request: Request, payload: dict):
     """payload = {"recibo": {...}, "resultado": {...}} — se guarda el recibo
     completo, no solo el resultado, para que el sindicato pueda ver los
-    conceptos igual que los ve el trabajador en el preview."""
+    conceptos igual que los ve el trabajador en el preview.
+
+    Un recibo reportado (con inconsistencias) prueba igual que hubo
+    retención de cuota sindical, así que además del Reporte (para que el
+    sindicato lo revise) se registra como EnvioSindicato -- el mismo padrón
+    de afiliados cotizantes que ya arma /api/enviar-sindicato para los
+    recibos sin discrepancias. No reemplaza al Reporte, se suma."""
     sid = sindicato_activo_trabajador(request)
     if not sid:
         raise HTTPException(400, "No pudimos determinar tu sindicato. Volvé a ingresar.")
     resultado = payload.get("resultado") or {}
+    fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
+    monto = (resultado.get("retencion_sindical") or {}).get("total", 0.0)
     with db.get_session() as s:
         s.add(Reporte(
-            sindicato_id=sid,
-            fecha=datetime.now().strftime("%d/%m/%Y %H:%M"),
+            sindicato_id=sid, fecha=fecha,
             cuil=resultado.get("cuil", ""), periodo=resultado.get("periodo", ""),
             estado="nuevo", detalle=payload,
         ))
+        s.add(EnvioSindicato(
+            sindicato_id=sid, cuil=resultado.get("cuil", ""),
+            periodo=resultado.get("periodo", ""), monto_cuota=monto,
+            fecha=fecha, detalle=payload,
+        ))
+        recibo_id = resultado.get("recibo_verificado_id")
+        if recibo_id:
+            registro = s.get(ReciboVerificado, recibo_id)
+            if registro and registro.sindicato_id == sid:
+                registro.enviado_sindicato = True
+                registro.fecha_envio = fecha
+                s.add(registro)
         s.commit()
     return {"ok": True}
 

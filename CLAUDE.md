@@ -959,6 +959,45 @@ resto de la plataforma entre sindicatos).
   `/ingresar-empresa`. Los 2 sindicatos de demo traen el módulo
   `"empleadores"` habilitado de una.
 
+## Ajustes de recibos, aportes y trámites (2026-08-18)
+Tres cambios chicos, construidos directo en `main` sin plan formal.
+
+- **Recibos reportados también cuentan como afiliado cotizante**: antes,
+  al padrón/listado de "Afiliados cotizantes" (`EnvioSindicato`, ver art.
+  21 bis Dto 407/2026) solo llegaban los recibos SIN discrepancias
+  (enviados con el botón "Enviar a mi sindicato",
+  `POST /api/enviar-sindicato`) -- un recibo reportado con inconsistencias
+  (`POST /api/reportar`) solo quedaba en "Reportes", nunca en el padrón,
+  aunque el descuento de cuota sindical se haya hecho igual. Ahora
+  `api_reportar` (main.py), además del `Reporte` de siempre (para que el
+  sindicato lo revise), registra TAMBIÉN un `EnvioSindicato` -- mismo
+  padrón, no lo reemplaza -- y marca `ReciboVerificado.enviado_sindicato`,
+  igual que ya hacía el envío sin discrepancias.
+- **Estado "INFORMADO" del comprobante de aportes de ARCA**: además de
+  pagado/parcial/impago/no_presentada/no_declarado, algunos comprobantes
+  muestran "INFORMADO" -- el aporte está en regla pero se hizo a una Caja
+  previsional u organismo provincial en vez de ARCA directamente (pasa con
+  empleados públicos de la Provincia de Buenos Aires, caso real
+  reportado). No es un estado nuevo del semáforo: `ESQUEMA_APORTES`
+  (extractor.py) le aclara a la IA que "INFORMADO" mapea a "pagado"
+  (semáforo verde) y "NO INFORMADO" a "impago" (rojo) -- sin tocar
+  `semaforo.py`.
+- **Trámites: popup para elegir estado después de responder**: mandar una
+  nota (`agregar_nota_tramite`/`agregar_nota_tramite_empleador`) nunca
+  cambió el estado del trámite por sí solo -- pero como responder suele
+  implicar avanzarlo, ahora `admin.html` muestra un popup
+  (`#overlay-estado-tramite`, compartido entre Trámites de trabajador y de
+  empresa) justo después de enviar la nota, con el estado actual
+  preseleccionado, para que el admin lo confirme o lo cambie ahí mismo en
+  vez de tener que acordarse de ir a tocar el selector de Estado aparte;
+  "Dejar como está" lo cierra sin tocar nada. **Ojo con dónde vive en el
+  HTML**: tiene que estar FUERA de `.app-bar-fija` (position:sticky +
+  z-index:21) -- un z-index más alto puesto en un descendiente de ese
+  contenedor queda atrapado comparándose solo contra otros descendientes
+  de `.app-bar-fija`, así que nunca le gana en pantalla al modal de
+  detalle de trámite (z-index:250), que vive afuera. Se descubrió armando
+  esta misma feature: el popup quedaba tapado detrás del modal.
+
 ## Pendientes (features)
 1. Capacitación — "próximamente". Falta contenido: índice de documentos y
    links de formación.

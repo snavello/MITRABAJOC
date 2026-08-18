@@ -121,6 +121,10 @@
   .overlay-ayuda-cerrar { position:absolute; top:14px; right:16px; background:none; border:none;
     cursor:pointer; color:var(--gris); padding:4px; }
   .overlay-ayuda-cerrar svg { width:18px; height:18px; stroke:currentColor; stroke-width:1.8; fill:none; }
+  /* Este popup se abre ENCIMA del modal de detalle de trámite (z-index:250),
+     que a su vez ya está abierto cuando se manda una nota -- si no, quedaría
+     tapado detrás y parecería que no pasó nada al hacer click. */
+  #overlay-estado-tramite { z-index:260; }
   .wrap { max-width:1000px; margin:0 auto; padding:24px 22px 60px; }
   /* Tira de pestañas: una sola línea deslizable (11 secciones no entran
      fijas), ícono + texto chico, pegada debajo del header. */
@@ -1471,6 +1475,31 @@
   </div>
 </div>
 
+<!-- Overlay: preguntar estado después de enviar una nota de Trámites (ver
+     enviarNotaTramiteAdmin/enviarNotaTramiteEmpresaAdmin) -- enviar una nota
+     no cambia el estado por sí sola (nunca lo hizo), pero como responder
+     suele implicar avanzar el trámite, esto lo hace explícito en vez de que
+     el admin tenga que acordarse de ir a tocar el selector de Estado aparte.
+     Vive FUERA de .app-bar-fija a propósito: ese contenedor es
+     position:sticky + z-index:21, así que cualquier z-index más alto puesto
+     en un descendiente (como este popup) queda atrapado comparándose solo
+     contra otros descendientes de .app-bar-fija -- nunca le gana en la
+     pantalla al modal de detalle de trámite (z-index:250), que vive afuera. -->
+<div class="overlay-ayuda" id="overlay-estado-tramite" onclick="if (event.target === this) cerrarPopupEstadoTramite()">
+  <div class="overlay-ayuda-caja">
+    <button type="button" class="overlay-ayuda-cerrar" onclick="cerrarPopupEstadoTramite()" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+    </button>
+    <h3>Nota enviada</h3>
+    <p>¿Este trámite cambia de estado a partir de tu respuesta?</p>
+    <div style="display:flex; gap:8px; align-items:center; margin-top:14px;">
+      <select id="pop-estado-select" style="flex:1;"></select>
+      <button type="button" class="mini" onclick="confirmarPopupEstadoTramite()">Actualizar</button>
+    </div>
+    <button type="button" class="sec mini" style="margin-top:10px; width:100%;" onclick="cerrarPopupEstadoTramite()">Dejar como está</button>
+  </div>
+</div>
+
 <!-- Modal: detalle de un recibo (Reportes y Afiliados cotizantes) -->
 <div class="modal-recibo-overlay" id="modal-recibo-overlay" onclick="if (event.target === this) cerrarModalRecibo()">
   <div class="modal-recibo">
@@ -2110,7 +2139,7 @@ function cerrarTramiteDetalle() {
 
 const EVENTO_LOG_LABEL = {creado:'Creado', cambio_estado:'Cambio de estado', nota_admin:'Nota del sindicato', nota_trabajador:'Nota del trabajador'};
 
-function refrescarTramiteDetalle(id) {
+function refrescarTramiteDetalle(id, preguntarEstado) {
   fetch('/admin/tramite/' + id).then(r => r.json()).then(d => {
     document.getElementById('mt-titulo').textContent = d.numero_expediente + ' — ' + d.tipo_titulo;
     const opcionesEstado = {{ estados_tramite | tojson }}.map(e =>
@@ -2166,9 +2195,40 @@ function refrescarTramiteDetalle(id) {
       const celdas = fila.querySelectorAll('td');
       if (celdas[4]) celdas[4].textContent = d.actualizado;
     }
+    if (preguntarEstado && d.estado !== 'terminado') abrirPopupEstadoTramite(id, d.estado, 'trabajador');
   }).catch(() => {
     document.getElementById('mt-contenido').innerHTML = 'No se pudo cargar el trámite.';
   });
+}
+
+// ---------- Popup: elegir estado después de mandar una nota ----------
+// Enviar una nota nunca cambió el estado por sí sola -- este popup no
+// cambia esa regla, solo hace explícita la decisión en el momento en que
+// más importa (justo después de responder), en vez de depender de que el
+// admin se acuerde de ir a tocar el selector de Estado por separado.
+let popupEstadoTramiteCtx = null;
+function abrirPopupEstadoTramite(id, estadoActual, familia) {
+  popupEstadoTramiteCtx = {id, familia};
+  document.getElementById('pop-estado-select').innerHTML = {{ estados_tramite | tojson }}.map(e =>
+    `<option value="${e}" ${e === estadoActual ? 'selected' : ''}>${ {{ estados_tramite_label | tojson }}[e] }</option>`).join('');
+  document.getElementById('overlay-estado-tramite').classList.add('abierto');
+}
+function cerrarPopupEstadoTramite() {
+  document.getElementById('overlay-estado-tramite').classList.remove('abierto');
+  popupEstadoTramiteCtx = null;
+}
+function confirmarPopupEstadoTramite() {
+  if (!popupEstadoTramiteCtx) return;
+  const {id, familia} = popupEstadoTramiteCtx;
+  const estado = document.getElementById('pop-estado-select').value;
+  const url = familia === 'empresa' ? '/admin/tramite-empresa/' + id + '/estado' : '/admin/tramite/' + id + '/estado';
+  fetch(url, {method: 'POST', body: new URLSearchParams({estado})})
+    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+    .then(() => {
+      cerrarPopupEstadoTramite();
+      if (familia === 'empresa') refrescarTramiteEmpresaDetalle(id); else refrescarTramiteDetalle(id);
+    })
+    .catch(() => alert('No se pudo actualizar el estado.'));
 }
 
 function cambiarEstadoTramiteAdmin(id) {
@@ -2189,7 +2249,7 @@ function enviarNotaTramiteAdmin(ev, id) {
   if (archivo) fd.append('adjunto', archivo);
   fetch('/admin/tramite/' + id + '/nota', {method: 'POST', body: fd})
     .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-    .then(() => refrescarTramiteDetalle(id))
+    .then(() => refrescarTramiteDetalle(id, true))
     .catch(() => alert('No se pudo enviar la nota.'));
   return false;
 }
@@ -2394,7 +2454,7 @@ function cerrarTramiteEmpresaDetalle() {
 
 const EVENTO_LOG_LABEL_EMP = {creado:'Creado', cambio_estado:'Cambio de estado', nota_admin:'Nota del sindicato', nota_empresa:'Nota de la empresa'};
 
-function refrescarTramiteEmpresaDetalle(id) {
+function refrescarTramiteEmpresaDetalle(id, preguntarEstado) {
   fetch('/admin/tramite-empresa/' + id).then(r => r.json()).then(d => {
     document.getElementById('mte-titulo').textContent = d.numero_expediente + ' — ' + d.tipo_titulo;
     const opcionesEstado = {{ estados_tramite | tojson }}.map(e =>
@@ -2450,6 +2510,7 @@ function refrescarTramiteEmpresaDetalle(id) {
       const celdas = fila.querySelectorAll('td');
       if (celdas[4]) celdas[4].textContent = d.actualizado;
     }
+    if (preguntarEstado && d.estado !== 'terminado') abrirPopupEstadoTramite(id, d.estado, 'empresa');
   }).catch(() => {
     document.getElementById('mte-contenido').innerHTML = 'No se pudo cargar el trámite.';
   });
@@ -2473,7 +2534,7 @@ function enviarNotaTramiteEmpresaAdmin(ev, id) {
   if (archivo) fd.append('adjunto', archivo);
   fetch('/admin/tramite-empresa/' + id + '/nota', {method: 'POST', body: fd})
     .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-    .then(() => refrescarTramiteEmpresaDetalle(id))
+    .then(() => refrescarTramiteEmpresaDetalle(id, true))
     .catch(() => alert('No se pudo enviar la nota.'));
   return false;
 }

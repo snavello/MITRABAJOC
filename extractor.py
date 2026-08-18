@@ -181,6 +181,12 @@ Para cada mes, el estado de "jubilacion" (aportes de seguridad social) y
   "no_presentada" → si figura NO PRESENTADA (el empleador no presentó la DDJJ)
   "no_declarado"  → si figura NO DECLARADO
 
+Algunos comprobantes muestran "INFORMADO" en vez de PAGO -- significa que el
+aporte está en regla pero se realiza a una Caja previsional u organismo
+provincial en lugar de ARCA (pasa, por ejemplo, con empleados públicos de la
+Provincia de Buenos Aires). Si figura "INFORMADO", usá "pagado". Si figura
+"NO INFORMADO", usá "impago".
+
 Devolvé los 12 meses en orden. Si la imagen no es un comprobante de aportes
 de ARCA, poné confianza en "baja"."""
 
