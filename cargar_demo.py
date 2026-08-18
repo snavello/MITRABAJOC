@@ -4,7 +4,7 @@ Ejecutar UNA vez con el servidor apagado:  python cargar_demo.py
 Crea: 2 sindicatos con marca, sus admins, conceptos, fórmulas y trabajadores.
 """
 import db
-from db import Sindicato, UsuarioSindicato, Concepto, Formula, Trabajador
+from db import Sindicato, UsuarioSindicato, Concepto, Formula, Trabajador, Empleador
 from sqlmodel import select
 import auth
 from modulos import MODULOS_INICIALES
@@ -33,6 +33,10 @@ SINDICATOS = [
             ("SINDMET", "Cuota UOM = 2.5% del remunerativo", "0.025 * base_remunerativa", 1.0),
         ],
         "cuils": ["20111111119", "27222222224", "20333333336"],
+        "empleadores": [
+            ("30111222339", "Constructora Ejemplo SA"),
+            ("30999888776", "Metalúrgica del Sur SRL"),
+        ],
     },
     {
         "nombre": "Federación Gastronómica", "descripcion": "Trabajadores gastronómicos",
@@ -52,6 +56,10 @@ SINDICATOS = [
             ("SINDGAS", "Cuota gastronómica = 2% del remunerativo", "0.02 * base_remunerativa", 1.0),
         ],
         "cuils": ["27222222224", "20444444440"],  # el 222 también está en UOM (pluriempleo)
+        # el CUIT de "Constructora Ejemplo SA" también está en UOM -- mismo
+        # criterio que el CUIL de pluriempleo, para probar el selector
+        # multisindicato del lado del empleador.
+        "empleadores": [("30111222339", "Constructora Ejemplo SA")],
     },
 ]
 
@@ -62,6 +70,7 @@ with db.get_session() as s:
             for c in s.exec(select(Concepto).where(Concepto.sindicato_id == sind.id)).all(): s.delete(c)
             for f in s.exec(select(Formula).where(Formula.sindicato_id == sind.id)).all(): s.delete(f)
             for t in s.exec(select(Trabajador).where(Trabajador.sindicato_id == sind.id)).all(): s.delete(t)
+            for e in s.exec(select(Empleador).where(Empleador.sindicato_id == sind.id)).all(): s.delete(e)
             for u in s.exec(select(UsuarioSindicato).where(UsuarioSindicato.sindicato_id == sind.id)).all(): s.delete(u)
             s.delete(sind)
     s.commit()
@@ -79,7 +88,7 @@ with db.get_session() as s:
             cuit=d["cuit"], mail=d["mail"], autoridad=d["autoridad"],
             cargo_autoridad=d["cargo_autoridad"], color_primario=d["color_primario"],
             color_secundario=d["color_secundario"], color_acento=d["color_acento"],
-            modulos_habilitados=list(MODULOS_INICIALES),
+            modulos_habilitados=list(MODULOS_INICIALES) + ["empleadores"],
         )
         s.add(sind); s.commit(); s.refresh(sind)
         u, cl = d["admin"]
@@ -92,8 +101,14 @@ with db.get_session() as s:
             s.add(Formula(sindicato_id=sind.id, target=tgt, descripcion=desc, expr=expr, tolerancia=tol))
         for cuil in d["cuils"]:
             s.add(Trabajador(sindicato_id=sind.id, cuil=cuil, registrado=False))
+        # Empleadores de prueba -- NO se precrea CuentaEmpleador (el
+        # autorregistro es el flujo real): la empresa se registra sola en
+        # /ingresar-empresa con el CUIT que ya está dado de alta acá.
+        for cuit_emp, razon_social in d.get("empleadores", []):
+            s.add(Empleador(sindicato_id=sind.id, cuit=cuit_emp, razon_social=razon_social, activo=True))
         s.commit()
-        print(f"✓ {d['nombre']}: admin {u}/{cl}, {len(d['conceptos'])} conceptos, {len(d['cuils'])} trabajadores")
+        print(f"✓ {d['nombre']}: admin {u}/{cl}, {len(d['conceptos'])} conceptos, "
+              f"{len(d['cuils'])} trabajadores, {len(d.get('empleadores', []))} empleadores")
 
 print("\nDemo cargada. Accesos:")
 print("  Plataforma:  /plataforma  (clave en variable PLATAFORMA_PASSWORD)")
@@ -101,3 +116,5 @@ print("  UOM:         /admin  →  CUIT 20111111110 / uom-demo")
 print("  Gastronómica:/admin  →  CUIT 20222222220 / fega-demo")
 print("  Trabajador:  /ingresar  →  registrarse con un CUIL habilitado")
 print("  Pluriempleo: CUIL 27222222224 está en ambos sindicatos")
+print("  Empresa:     /ingresar-empresa  →  registrarse con un CUIT habilitado")
+print("  Empresa multisindicato: CUIT 30111222339 está en ambos sindicatos")

@@ -133,6 +133,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - Admin Gastronómica: CUIT 20222222220 / fega-demo.
 - Trabajador un solo sindicato: CUIL 20111111119 (UOM).
 - Trabajador pluriempleo (ambos): CUIL 27222222224.
+- Empresa un solo sindicato: CUIT 30999888776 (UOM) — registrarse en `/ingresar-empresa`.
+- Empresa multisindicato (ambos): CUIT 30111222339 — ver "Empleadores" más abajo.
 
 ## Decisiones tomadas (no rediscutir sin motivo)
 - **Motor: Render Postgres** (no Supabase). La app ya tiene auth propia, que es el
@@ -857,6 +859,105 @@ en dos tandas con datos reales aportados por el sindicato (2026-08-15,
 `por_verificar` (las más antiguas, previas a 2025) — menor urgencia porque
 no hay ninguna inconsistencia detectada en ellas, a diferencia de las que
 eran `SOSPECHOSO`.
+
+## Empleadores (CRUD, login propio, notificaciones y trámites externos)
+Cuarto actor de la plataforma, en rama `empleadores` (NO mergeada a `main`
+todavía — se pide aprobación explícita antes de mergear). Hasta ahora el
+empleador era solo un dato suelto (`Concepto.cuit_empleador`,
+`Trabajador.cuit_empleador`); esta rama le da identidad propia: CRUD desde
+`/admin`, login/autorregistro propio, mensajería sindicato→empresa y
+formularios/trámites "externos" — completamente separados de los sistemas
+homólogos del trabajador (aislamiento total, mismo criterio que ya usa el
+resto de la plataforma entre sindicatos).
+
+- **Identidad en dos niveles**, mismo patrón que
+  `CuentaTrabajador`/`Trabajador`: `CuentaEmpleador` (CUIT + clave, global,
+  funciona en cualquier sindicato) + `Empleador` (fila por sindicato: Cuit,
+  Razón Social, Domicilio, Teléfono, Provincia, Mail, `activo`,
+  `registrado`). Un mismo CUIT puede estar dado de alta en varios
+  sindicatos (multisindicato), igual que un CUIL en pluriempleo.
+- **Módulo `"empleadores"`** en `modulos.py` (en `MODULOS`, NO en
+  `MODULOS_INICIALES` — opt-in, ningún sindicato lo trae tildado por
+  default) gatea TODO lo de esta sección: CRUD, notificaciones y trámites
+  externos juntos, un solo interruptor.
+- **CRUD** (`/admin` → pestaña "Empleadores" → sub-tab "Empresas"): alta/
+  edición/baja lógica, aislado por sindicato como el resto del panel. Botón
+  "Importar CUITs de conceptos" (`db.importar_cuits_de_conceptos`, también
+  corrido una vez como migración de grandfathering al desplegar) crea
+  filas `Empleador` mínimas a partir de los CUIT que ya aparecen en
+  `Concepto.cuit_empleador` de ese sindicato — idempotente, reutilizable
+  cuando aparecen CUIT nuevos más adelante.
+- **Login: autorregistro**, igual que el trabajador — `/ingresar-empresa`,
+  CUIT + clave propia la primera vez. El CUIT tiene que existir ya como
+  `Empleador` activo en al menos un sindicato (mismo gate que
+  `trabajador_registro` contra `Trabajador`). Cookies propias
+  (`sesion_empleador`, `cuit_emp`, `sind_elegido_emp` — nombres
+  deliberadamente distintos de los del trabajador, mismo motivo que el fix
+  "Cookie de sesión separada por rol" descripto en "Auth" más arriba: las
+  dos sesiones tienen que convivir sin pisarse en el mismo navegador).
+  Con el CUIT en varios sindicatos, `elegir_sindicato_empresa.html` deja
+  elegir; con uno solo, entra directo.
+- **App del empleador: una sola pantalla** (`/empresa`), sin la capa de
+  portada que tiene el trabajador (`/app` + `/app/inicio`) — con solo 2
+  funcionalidades no hacía falta. Tabbar inferior de 2 pestañas:
+  Notificaciones y Trámites.
+- **Notificaciones a empleadores**: tablas propias
+  (`NotificacionEmpleador`/`NotificacionEmpleadorDestinatario`), mismas
+  columnas y mismo flujo preview→confirmar→enviar que ya existe para
+  trabajador (Fase 2 de "Módulos + Notificaciones + Trámites"), pero
+  **completamente separadas** — nunca comparten fila con las notificaciones
+  al trabajador, ni siquiera cuando el mismo número de identidad es CUIL de
+  un trabajador y CUIT de un empleador a la vez (verificado con test
+  explícito). Criterios de destinatarios: CUIT puntual, "todos los
+  empleadores activos", o por provincia — sin seccional ni cuit_empleador
+  (no aplican del lado empleador). UI del lado admin en la sub-tab
+  "Notificaciones" de "Empleadores"; del lado empleador, la pestaña
+  Notificaciones de `/empresa` es directamente la lista con acordeón (sin
+  modal, a diferencia del trabajador — acá la pestaña ya es el contenido).
+- **Trámites externos**: mirror completo del sistema de Trámites del
+  trabajador (Fase 3 de "Módulos + Notificaciones + Trámites") sobre 6
+  tablas propias (`TipoTramiteEmpleador`, `CampoTramiteEmpleador`,
+  `TramiteEmpleador`, `RespuestaTramiteEmpleador`, `NotaTramiteEmpleador`,
+  `TramiteEmpleadorLog`) — mismos tipos de campo, mismo ancho
+  completo/mitad/tercio, mismo constructor con arrastrar para reordenar y
+  vista previa en vivo, misma numeración de expediente con reintento ante
+  colisión, mismos 5 estados (`iniciado → en_tratamiento → respondido →
+  espera_info → terminado`, con `terminado` bloqueando cambios de
+  cualquier lado). El constructor vive en `/admin` → "Empleadores" →
+  sub-tab "Trámites", con sus propios 2 sub-sub-tabs ("Ver trámites"/"Crear
+  formularios", namespace `.emptram-subtab`/`cambiarSubEmpresaTramite`,
+  SIN compartir funciones ni listeners con el constructor de trabajador).
+  Cambiar el estado o agregar una nota **desde el admin** dispara
+  automáticamente una notificación al empleador (mismo criterio que
+  `_notificar_cambio_tramite` para trabajador); una nota de la empresa NO
+  se autonotifica.
+  - **Tratamiento visual "más intenso" a propósito**: tanto la vista
+    previa del constructor en admin como el formulario real en
+    `/empresa` usan clases propias (`.tramx-*`, no `.campo-tram`/
+    `.tram-input` que usa trabajador) con el fondo casi blanco
+    reemplazado por un `color-mix` con `--marca-primario` — se nota la
+    diferencia de un vistazo entre un trámite de trabajador y uno de
+    empresa, sin salirse de la paleta de marca del sindicato.
+- **Constantes reusadas sin duplicar**: `ESTADOS_TRAMITE`/
+  `ESTADOS_TRAMITE_LABEL` (db.py) y `TIPOS_DATO_TRAMITE`/
+  `ANCHOS_CAMPO_TRAMITE`/`ARCHIVO_MIMES_TRAMITE`/`_campos_tramite_validos`/
+  `_leer_archivo_tramite` (main.py) son datos/validación sin estado propio
+  de ningún rol — la duplicación deliberada de esta rama es de tablas y
+  rutas, no de esas constantes.
+- **Rutas bajo prefijo `/empresa`/`/api/empresa`** (no sufijo) — `_panel_de`/
+  `_rol_de` (main.py) resuelven el login correcto por prefijo de path para
+  los manejadores de excepción; si las rutas de API fueran sufijo,
+  caerían en la rama genérica `/api` → rol "trabajador" y un 403 de
+  empleador redirigiría al login equivocado.
+- **Datos de prueba** (`cargar_demo.py`): UOM tiene 2 empleadores
+  ("Constructora Ejemplo SA" CUIT 30111222339, "Metalúrgica del Sur SRL"
+  CUIT 30999888776); Gastronómica tiene el mismo CUIT 30111222339
+  ("Constructora Ejemplo SA") — mismo criterio que el CUIL de pluriempleo
+  27222222224, para poder probar el selector multisindicato del lado
+  empleador de una. El script NO precrea `CuentaEmpleador` (el
+  autorregistro es el flujo real) — solo imprime el CUIT a usar en
+  `/ingresar-empresa`. Los 2 sindicatos de demo traen el módulo
+  `"empleadores"` habilitado de una.
 
 ## Pendientes (features)
 1. Capacitación — "próximamente". Falta contenido: índice de documentos y
