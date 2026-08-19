@@ -13,7 +13,7 @@ os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth
-from db import Sindicato, Empleador, CuentaEmpleador
+from db import Sindicato, Empleador, CuentaEmpleador, UsuarioSindicato
 from modulos import MODULOS_INICIALES
 import main
 from fastapi.testclient import TestClient
@@ -23,12 +23,19 @@ db.crear_tablas()
 with db.get_session() as s:
     sind = Sindicato(nombre="Test Perfil Empleador", slug="test-perfil-empleador",
                       modulos_habilitados=list(MODULOS_INICIALES) + ["empleadores"])
-    s.add(sind); s.commit(); s.refresh(sind)
+    otro_sind = Sindicato(nombre="Test Perfil Empleador Otro", slug="test-perfil-empleador-otro",
+                           modulos_habilitados=list(MODULOS_INICIALES) + ["empleadores"])
+    s.add(sind); s.add(otro_sind); s.commit(); s.refresh(sind); s.refresh(otro_sind)
     SID = sind.id
+    SID_OTRO = otro_sind.id
     s.add(Empleador(sindicato_id=SID, cuit="30111222339", razon_social="Constructora A", activo=True))
     s.add(CuentaEmpleador(cuit="30111222339", clave_hash=auth.hashear_clave("demo1234")))
     s.add(Empleador(sindicato_id=SID, cuit="30999888776", razon_social="Metalúrgica B", activo=True))
     s.add(CuentaEmpleador(cuit="30999888776", clave_hash=auth.hashear_clave("demo1234")))
+    s.add(UsuarioSindicato(sindicato_id=SID, usuario="20777777770", nombre="Admin Test",
+                            clave_hash=auth.hashear_clave("admin-demo"), debe_cambiar_clave=False))
+    s.add(UsuarioSindicato(sindicato_id=SID_OTRO, usuario="20888888880", nombre="Admin Otro",
+                            clave_hash=auth.hashear_clave("admin-demo"), debe_cambiar_clave=False))
     s.commit()
 
 
@@ -36,6 +43,12 @@ def _sesion_empleador(cuit):
     c = TestClient(main.app)
     c.cookies.set(main.COOKIE_EMPLEADOR, auth.crear_sesion("empleador", sindicato_id=0))
     c.cookies.set("cuit_emp", cuit)
+    return c
+
+
+def _sesion_admin(usuario, clave):
+    c = TestClient(main.app)
+    c.post("/admin/login", data={"usuario": usuario, "clave": clave})
     return c
 
 
@@ -104,6 +117,25 @@ def test_sin_foto_devuelve_404():
     print("OK  test_sin_foto_devuelve_404")
 
 
+def test_admin_del_sindicato_puede_ver_la_foto_para_el_chat_de_tramites():
+    emp = _sesion_empleador("30111222339")
+    emp.post("/api/empresa/perfil/foto", files={"foto": ("f.jpg", b"foto para admin", "image/jpeg")})
+    admin = _sesion_admin("20777777770", "admin-demo")
+    r = admin.get("/perfil-empleador-foto/30111222339")
+    assert r.status_code == 200
+    assert r.content == b"foto para admin"
+    print("OK  test_admin_del_sindicato_puede_ver_la_foto_para_el_chat_de_tramites")
+
+
+def test_admin_de_otro_sindicato_no_puede_ver_la_foto():
+    emp = _sesion_empleador("30111222339")
+    emp.post("/api/empresa/perfil/foto", files={"foto": ("f.jpg", b"foto privada", "image/jpeg")})
+    admin_ajeno = _sesion_admin("20888888880", "admin-demo")
+    r = admin_ajeno.get("/perfil-empleador-foto/30111222339")
+    assert r.status_code == 403
+    print("OK  test_admin_de_otro_sindicato_no_puede_ver_la_foto")
+
+
 def test_portada_empresa_muestra_perfil_y_permite_ir_a_las_pestanas():
     emp = _sesion_empleador("30111222339")
     r = emp.get("/empresa/inicio")
@@ -122,5 +154,7 @@ if __name__ == "__main__":
     test_foto_rechaza_tipo_no_permitido()
     test_foto_solo_la_ve_el_dueno()
     test_sin_foto_devuelve_404()
+    test_admin_del_sindicato_puede_ver_la_foto_para_el_chat_de_tramites()
+    test_admin_de_otro_sindicato_no_puede_ver_la_foto()
     test_portada_empresa_muestra_perfil_y_permite_ir_a_las_pestanas()
     print("\nTodo OK — perfil del empleador.")

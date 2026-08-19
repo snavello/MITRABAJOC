@@ -136,10 +136,43 @@
   .fila { display:flex; justify-content:space-between; gap:12px; padding:11px 15px; border-top:1px solid #f0eee8; font-size:14px; }
   .fila .imp { font-variant-numeric:tabular-nums; }
   .fila .imp.neg { color:var(--alerta); }
-  /* Cebra del historial de un trámite: tinte muy leve alternado con los
-     colores del sindicato, mismo criterio que admin.html. */
-  .tram-log-list .fila:nth-child(odd) { background:color-mix(in srgb, var(--marca-primario) 6%, transparent); }
-  .tram-log-list .fila:nth-child(even) { background:color-mix(in srgb, var(--marca-acento) 6%, transparent); }
+  /* ---------- Chat de Trámites (estilo WhatsApp) ----------
+     Reemplaza la lista plana de Notas + el Historial (mostraban casi la
+     misma información dos veces): un solo hilo cronológico, mensajes
+     propios a la derecha / del sindicato a la izquierda, con avatar chico
+     para identificar de un vistazo. Los cambios de estado quedan como
+     "píldoras" de sistema centradas, intercaladas en el mismo hilo -- ya
+     no hay una sección "Historial" aparte. Texto resumido a 2 líneas +
+     ícono de clip si hay adjunto; el detalle completo y la respuesta se
+     dan en el modal compartido (#modal-recibo-overlay). */
+  .tram-chat { display:flex; flex-direction:column; gap:10px; margin-top:6px; }
+  .tram-chat-sistema { align-self:center; max-width:92%; text-align:center; font-size:11px;
+    color:var(--gris); background:var(--papel); border:1px solid var(--linea);
+    border-radius:20px; padding:5px 13px; }
+  .tram-chat-fila { display:flex; align-items:flex-end; gap:7px; max-width:86%; }
+  .tram-chat-fila.propio { flex-direction:row-reverse; align-self:flex-end; }
+  .tram-chat-fila.ajeno { align-self:flex-start; }
+  .tram-chat-avatar { width:28px; height:28px; border-radius:50%; flex-shrink:0; object-fit:cover;
+    border:1.5px solid var(--linea); }
+  .tram-chat-avatar-fallback { width:28px; height:28px; border-radius:50%; flex-shrink:0;
+    background:var(--marca-acento); display:flex; align-items:center; justify-content:center;
+    border:1.5px solid var(--marca-acento); }
+  .tram-chat-avatar-fallback svg { width:15px; height:15px; stroke:var(--marca-base); stroke-width:1.8; fill:none; }
+  .tram-chat-burbuja { border-radius:14px; padding:9px 12px; cursor:pointer; min-width:64px; }
+  .tram-chat-fila.propio .tram-chat-burbuja { background:color-mix(in srgb, var(--marca-acento) 24%, #fff); border-bottom-right-radius:4px; }
+  .tram-chat-fila.ajeno .tram-chat-burbuja { background:var(--card); border:1px solid var(--linea); border-bottom-left-radius:4px; }
+  .tram-chat-remitente { font-size:10.5px; font-weight:650; color:var(--marca-primario); margin-bottom:2px; }
+  .tram-chat-texto { font-size:13.5px; line-height:1.4; color:var(--tinta);
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .tram-chat-meta { display:flex; align-items:center; gap:5px; margin-top:4px; font-size:10px; color:var(--gris); }
+  .tram-chat-meta svg { width:11px; height:11px; stroke:var(--gris); stroke-width:2.2; fill:none; }
+  .tram-chat-vacio { text-align:center; padding:22px 0; color:var(--gris); font-size:12.5px; }
+  .tram-chat-responder { margin-top:4px; width:100%; text-align:left; padding:11px 13px; border-radius:12px;
+    border:1px dashed var(--linea); background:var(--card); color:var(--gris); font-size:13px;
+    font-family:inherit; cursor:pointer; }
+  .tram-msg-adjunto { display:inline-block; margin-top:8px; font-size:12.5px; color:var(--marca-primario); }
+  .tram-msg-responder textarea { width:100%; padding:9px 10px; border:1px solid var(--linea);
+    border-radius:9px; font-family:inherit; font-size:13.5px; resize:vertical; margin-top:10px; }
 
   /* ---------- Recuadro con encabezado de marca (Trámites) ----------
      Vidrio + grano + condensada (Fase D del rediseño): el recuadro entero
@@ -670,6 +703,8 @@
     <g id="ic-home"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></g>
     <g id="ic-x"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g>
     <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
+    <g id="ic-perfil"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></g>
+    <g id="ic-clip"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></g>
   </defs>
 </svg>
 
@@ -1374,6 +1409,57 @@ if (document.getElementById('tp-tramites')) {
     await refrescarTramiteDetalleTrab(numero);
   };
 
+  // ---------- Chat de Trámites (estilo WhatsApp) ----------
+  function fmtHoraCorta(s) {
+    const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})$/.exec(s || '');
+    return m ? m[4] : (s || '');
+  }
+  function avatarHtmlTrab(autor) {
+    if (autor === 'trabajador') {
+      return {{ 'true' if tiene_foto_perfil else 'false' }}
+        ? `<img class="tram-chat-avatar" src="/perfil-foto/{{ cuil }}?v={{ range(1, 999999) | random }}" alt="">`
+        : `<span class="tram-chat-avatar-fallback"><svg viewBox="0 0 24 24"><use href="#ic-perfil"/></svg></span>`;
+    }
+    return {{ 'true' if (marca and marca.logo) else 'false' }}
+      ? `<img class="tram-chat-avatar" src="/logo/{{ marca.id if marca else 0 }}?v={{ marca.logo_v if marca else 0 }}" alt="">`
+      : `<span class="tram-chat-avatar-fallback" style="background:var(--marca-base); border-color:var(--marca-base); color:#fff; font-size:10.5px; font-weight:700;">{{ iniciales or '?' }}</span>`;
+  }
+
+  let tramNotasActuales = [];
+  let tramitePanelActual = null;   // { id, numero, estado }
+
+  function renderChatTramite(d) {
+    tramNotasActuales = d.notas;
+    const eventos = d.log.filter(l => l.evento === 'creado' || l.evento === 'cambio_estado');
+    const items = [
+      ...d.notas.map((n, i) => ({ tipo: 'nota', idx: i, creado: n.creado, n })),
+      ...eventos.map(l => ({ tipo: 'sistema', creado: l.creado, l })),
+    ].sort((a, b) => a.creado.localeCompare(b.creado));
+
+    if (!items.length) return '<div class="tram-chat-vacio">Todavía no hay mensajes en este trámite.</div>';
+
+    return items.map(it => {
+      if (it.tipo === 'sistema') {
+        return `<div class="tram-chat-sistema">${escTram(it.l.detalle)} · ${fmtHoraCorta(it.creado)}</div>`;
+      }
+      const n = it.n;
+      const propio = n.autor === 'trabajador';
+      const texto = n.texto ? escTram(n.texto) : (n.tiene_adjunto ? '📎 Adjunto' : '');
+      return `
+        <div class="tram-chat-fila ${propio ? 'propio' : 'ajeno'}" onclick="abrirMensajeTramiteTrab(${it.idx})">
+          ${avatarHtmlTrab(n.autor)}
+          <div class="tram-chat-burbuja">
+            <div class="tram-chat-remitente">${n.autor === 'admin' ? 'Tu sindicato' : 'Vos'}</div>
+            <div class="tram-chat-texto">${texto}</div>
+            <div class="tram-chat-meta">
+              ${n.tiene_adjunto ? '<svg viewBox="0 0 24 24"><use href="#ic-clip"/></svg>' : ''}
+              <span>${fmtHoraCorta(n.creado)}</span>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
   async function refrescarTramiteDetalleTrab(numero) {
     try {
       const r = await fetch('/api/tramite/' + encodeURIComponent(numero));
@@ -1384,6 +1470,7 @@ if (document.getElementById('tp-tramites')) {
       const d = await r.json();
       document.getElementById('tram-det-expediente').textContent = d.numero_expediente;
       document.getElementById('tram-det-tipo').textContent = d.tipo_titulo;
+      tramitePanelActual = { id: d.id, numero: d.numero_expediente, estado: d.estado };
 
       const respuestasHtml = d.respuestas.map(resp => `
         <div class="fila" style="padding:9px 0;">
@@ -1391,61 +1478,77 @@ if (document.getElementById('tp-tramites')) {
           <span>${resp.tiene_archivo ? `<a href="/tramite-respuesta-archivo/${resp.respuesta_id}" target="_blank" rel="noopener">📎 archivo</a>` : escTram(resp.valor_texto)}</span>
         </div>`).join('');
 
-      const notasHtml = d.notas.map(n => `
-        <div style="margin-top:8px; padding:10px 13px; border-radius:9px; background:var(--papel);
-                    border-left:3px solid ${n.autor === 'admin' ? 'var(--marca-primario)' : 'var(--agua)'};">
-          <div class="muted" style="font-size:11px;">${n.autor === 'admin' ? 'Tu sindicato' : 'Vos'} · ${n.creado}</div>
-          ${n.texto ? `<div style="margin-top:4px; font-size:13.5px;">${escTram(n.texto)}</div>` : ''}
-          ${n.tiene_adjunto ? `<div style="margin-top:4px;"><a href="/tramite-nota-adjunto/${n.id}" target="_blank" rel="noopener" style="font-size:12.5px;">📎 ${escTram(n.adjunto_nombre)}</a></div>` : ''}
-        </div>`).join('') || '<p class="muted" style="font-size:12.5px; margin-top:8px;">Sin notas todavía.</p>';
-
-      const logHtml = d.log.map(l => `<div class="fila" style="padding:6px 0; font-size:12.5px;"><span class="muted">${l.creado}</span><span>${escTram(l.detalle)}</span></div>`).join('');
-      const notaFormHtml = d.estado === 'terminado' ? '<p class="muted" style="font-size:12.5px; margin-top:8px;">Trámite terminado -- no se pueden agregar más notas.</p>' : `
-        <form id="tram-nota-form" style="margin-top:10px;">
-          <textarea id="tram-nota-texto" rows="2" class="tram-input" placeholder="Responder a tu sindicato…" style="resize:vertical;"></textarea>
-          <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
-            <label class="btn sec" for="tram-nota-adjunto" style="width:auto; margin-top:0; padding:0 14px; min-height:40px; display:flex; align-items:center; gap:5px; white-space:nowrap;">📎 Adjuntar</label>
-            <input type="file" id="tram-nota-adjunto" onchange="document.getElementById('tram-nota-adjunto-nombre').textContent = this.files[0] ? this.files[0].name : '';">
-            <button type="submit" class="btn" style="width:auto; margin-top:0; padding:0 16px; min-height:40px; flex:1;">Enviar</button>
-          </div>
-          <div class="archivo-nombre" id="tram-nota-adjunto-nombre"></div>
-        </form>`;
-
       document.getElementById('tram-det-contenido').innerHTML = `
         <div class="fila" style="border:none; padding:0 0 14px;"><span class="muted">Estado</span><span>${tagEstado(d.estado, d.estado_label)}</span></div>
         <h2 style="font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; padding:14px 0 8px; border-top:1px solid #f0eee8;">Datos presentados</h2>
         <div>${respuestasHtml}</div>
-        <h2 style="font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; margin-top:18px; padding:0 0 8px;">Notas</h2>
-        ${notasHtml}
-        ${notaFormHtml}
-        <h2 style="font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; margin-top:18px; padding:0 0 8px;">Historial</h2>
-        <div class="tram-log-list">${logHtml}</div>
+        <h2 style="font-size:13px; font-weight:600; color:var(--gris); text-transform:uppercase; letter-spacing:.4px; margin-top:18px; padding:0 0 8px;">Conversación</h2>
+        <div class="tram-chat">${renderChatTramite(d)}</div>
+        ${d.estado === 'terminado' ? '<p class="muted" style="font-size:12.5px; margin-top:12px;">Trámite terminado -- no se pueden agregar más mensajes.</p>'
+          : '<button type="button" class="tram-chat-responder" onclick="abrirResponderTramiteTrab()">Escribir una respuesta a tu sindicato…</button>'}
       `;
-      const notaForm = document.getElementById('tram-nota-form');
-      if (notaForm) notaForm.onsubmit = (ev) => {
-        ev.preventDefault();
-        enviarNotaTramiteTrab(d.id, d.numero_expediente);
-        return false;
-      };
     } catch (e) {
       document.getElementById('tram-det-contenido').innerHTML = '<div class="banner mal">No pudimos cargar el trámite.</div>';
     }
   }
 
-  async function enviarNotaTramiteTrab(id, numero) {
+  // El detalle completo de un mensaje y la respuesta comparten el mismo
+  // modal (#modal-recibo-overlay, ya usado por "Mis recibos verificados") --
+  // clickear una burbuja lo abre con ese mensaje pinneado arriba; el botón
+  // "Escribir una respuesta" lo abre directo en modo compositor.
+  function abrirMensajeTramiteTrab(idx) {
+    const n = tramNotasActuales[idx];
+    _abrirModalTramiteTrab(n);
+  }
+  function abrirResponderTramiteTrab() {
+    _abrirModalTramiteTrab(null);
+  }
+  function _abrirModalTramiteTrab(n) {
+    if (!tramitePanelActual) return;
+    document.getElementById('modal-recibo-titulo').textContent = n ? (n.autor === 'admin' ? 'Tu sindicato' : 'Vos') : 'Responder';
+    const mensajeHtml = n ? `
+      <div class="tram-chat-remitente">${n.autor === 'admin' ? 'Tu sindicato' : 'Vos'} · ${n.creado}</div>
+      <div style="font-size:14px; line-height:1.5; margin-top:4px; white-space:pre-wrap;">${escTram(n.texto)}</div>
+      ${n.tiene_adjunto ? `<a class="tram-msg-adjunto" href="/tramite-nota-adjunto/${n.id}" target="_blank" rel="noopener">📎 ${escTram(n.adjunto_nombre)}</a>` : ''}
+    ` : '';
+    const terminado = tramitePanelActual.estado === 'terminado';
+    document.getElementById('modal-recibo-contenido').innerHTML = `
+      ${mensajeHtml}
+      ${terminado ? '<p class="muted" style="font-size:12.5px; margin-top:10px;">Trámite terminado -- no se pueden agregar más mensajes.</p>' : `
+      <form id="tram-nota-form" class="tram-msg-responder" onsubmit="return enviarNotaTramiteTrab(event)">
+        <textarea id="tram-nota-texto" rows="3" placeholder="Responder a tu sindicato…"></textarea>
+        <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+          <label class="btn sec" for="tram-nota-adjunto" style="width:auto; margin-top:0; padding:0 14px; min-height:40px; display:flex; align-items:center; gap:5px; white-space:nowrap;">📎 Adjuntar</label>
+          <input type="file" id="tram-nota-adjunto" onchange="document.getElementById('tram-nota-adjunto-nombre').textContent = this.files[0] ? this.files[0].name : '';">
+          <button type="submit" class="btn" style="width:auto; margin-top:0; padding:0 16px; min-height:40px; flex:1;">Enviar</button>
+        </div>
+        <div class="archivo-nombre" id="tram-nota-adjunto-nombre"></div>
+      </form>`}
+    `;
+    document.getElementById('modal-recibo-overlay').classList.add('abierto');
+  }
+
+  // window.___ = async function -- las funciones "async function" declaradas
+  // dentro de este bloque `if` NO se filtran al scope global (a diferencia de
+  // las "function" comunes, que sí lo hacen por semántica Annex B) -- sin
+  // esto, el onsubmit="...(event)" inline del formulario no la encuentra.
+  window.enviarNotaTramiteTrab = async function (ev) {
+    ev.preventDefault();
     const texto = document.getElementById('tram-nota-texto').value;
     const archivo = document.getElementById('tram-nota-adjunto').files[0];
-    if (!texto.trim() && !archivo) return;
+    if (!texto.trim() && !archivo) return false;
     const fd = new FormData();
     fd.append('texto', texto);
     if (archivo) fd.append('adjunto', archivo);
     try {
-      const r = await fetch('/api/tramite/' + id + '/nota', { method: 'POST', body: fd });
+      const r = await fetch('/api/tramite/' + tramitePanelActual.id + '/nota', { method: 'POST', body: fd });
       if (!r.ok) throw new Error();
-      refrescarTramiteDetalleTrab(numero);
+      cerrarModalRecibo();
+      refrescarTramiteDetalleTrab(tramitePanelActual.numero);
     } catch (e) {
       alert('No se pudo enviar la nota.');
     }
+    return false;
   }
 }
 </script>

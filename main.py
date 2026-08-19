@@ -619,6 +619,7 @@ def admin(request: Request):
     return templates.TemplateResponse("admin.html", {
         "request": request, "sindicato": sind.nombre if sind else "",
         "marca": db.marca_sindicato(sid), "marca_plataforma": db.marca_plataforma(),
+        "iniciales": _iniciales_sindicato(sind.nombre if sind else ""),
         "conceptos": conceptos, "genericos": genericos, "codigos_efectivos": codigos_efectivos,
         "formulas": formulas, "reportes": reportes,
         "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR, "envios": envios,
@@ -1511,11 +1512,19 @@ async def api_subir_foto_perfil_empresa(request: Request, foto: UploadFile = Fil
 
 @app.get("/perfil-empleador-foto/{cuit}")
 def servir_foto_perfil_empleador(cuit: str, request: Request):
-    """Solo la puede ver la propia empresa dueña -- no es pública como el
-    logo del sindicato."""
-    ses = sesion_actual(request, "empleador")
-    if not ses or request.cookies.get("cuit_emp", "") != cuit:
-        raise HTTPException(403, "No autorizado")
+    """La ve la propia empresa dueña, o el admin de un sindicato donde ese
+    CUIT esté dado de alta como Empleador (para el avatar en el chat de
+    Trámites externos) -- no es pública como el logo del sindicato."""
+    ses_emp = sesion_actual(request, "empleador")
+    if ses_emp and request.cookies.get("cuit_emp", "") == cuit:
+        pass
+    else:
+        ses_sind = sesion_actual(request, "sindicato")
+        with db.get_session() as s:
+            propio = ses_sind and s.exec(select(Empleador).where(
+                Empleador.cuit == cuit, Empleador.sindicato_id == ses_sind.get("sid"))).first()
+        if not propio:
+            raise HTTPException(403, "No autorizado")
     foto = db.foto_empleador(cuit)
     if not foto:
         raise HTTPException(404, "Sin foto")
@@ -2943,6 +2952,7 @@ def app_trabajador(request: Request):
         contexto = {
             "request": request, "sindicato": marca["nombre"], "marca": marca,
             "marca_plataforma": db.marca_plataforma(),
+            "iniciales": _iniciales_sindicato(marca["nombre"]),
             "cuil": cuil, "nombre_trab": db.nombre_trabajador(cuil, sid_activo),
             "documento": _dni_de_cuil(cuil),
             "codigo_credencial": codigo_cred,
@@ -2952,6 +2962,7 @@ def app_trabajador(request: Request):
             "noticias": _con_antiguedad(db.noticias_vigentes(
                 sid_activo, seccional_id=db.seccional_de_trabajador(cuil, sid_activo))),
             "modulos": _modulos_de(sid_activo),
+            "tiene_foto_perfil": bool(db.foto_trabajador(cuil)),
         }
         # El QR (y la verificación pública que hay detrás) solo tiene sentido
         # una vez que el sindicato generó el código real de la credencial.
@@ -3063,11 +3074,19 @@ async def api_subir_foto_perfil(request: Request, foto: UploadFile = File(...)):
 
 @app.get("/perfil-foto/{cuil}")
 def servir_foto_perfil(cuil: str, request: Request):
-    """Solo la puede ver el propio trabajador dueño -- no es pública como el
-    logo del sindicato."""
-    ses = sesion_actual(request, "trabajador")
-    if not ses or request.cookies.get("cuil_trab", "") != cuil:
-        raise HTTPException(403, "No autorizado")
+    """La ve el propio trabajador dueño, o el admin de un sindicato donde
+    ese CUIL esté empadronado (para el avatar en el chat de Trámites) --
+    no es pública como el logo del sindicato."""
+    ses_trab = sesion_actual(request, "trabajador")
+    if ses_trab and request.cookies.get("cuil_trab", "") == cuil:
+        pass
+    else:
+        ses_sind = sesion_actual(request, "sindicato")
+        with db.get_session() as s:
+            propio = ses_sind and s.exec(select(Trabajador).where(
+                Trabajador.cuil == cuil, Trabajador.sindicato_id == ses_sind.get("sid"))).first()
+        if not propio:
+            raise HTTPException(403, "No autorizado")
     foto = db.foto_trabajador(cuil)
     if not foto:
         raise HTTPException(404, "Sin foto")
@@ -3235,8 +3254,10 @@ def app_empresa(request: Request):
         return templates.TemplateResponse("empresa.html", {
             "request": request, "sindicato": marca["nombre"], "marca": marca,
             "marca_plataforma": db.marca_plataforma(),
+            "iniciales": _iniciales_sindicato(marca["nombre"]),
             "cuit": cuit, "razon_social": empleador.razon_social if empleador else "",
             "modulos": _modulos_de(sid_activo),
+            "tiene_foto_perfil": bool(db.foto_empleador(cuit)),
         })
     # Varios y no eligió → selector
     return templates.TemplateResponse("elegir_sindicato_empresa.html", {

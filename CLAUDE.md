@@ -1058,6 +1058,57 @@ Tres cambios chicos, construidos directo en `main` sin plan formal.
   detalle de trámite (z-index:250), que vive afuera. Se descubrió armando
   esta misma feature: el popup quedaba tapado detrás del modal.
 
+## Chat de Trámites estilo WhatsApp (2026-08-19)
+Rediseño visual de las 4 pantallas que muestran el detalle de un trámite
+(trabajador.html, empresa.html, y las dos ramas del modal de admin.html) --
+reemplaza la lista de "Notas" + el "Historial" aparte (mostraban casi la
+misma información dos veces, el segundo era prácticamente un eco del
+primero) por un solo hilo cronológico tipo chat: mensajes propios a la
+derecha, de la contraparte a la izquierda, avatar chico (foto de perfil o
+logo del sindicato) para identificar de un vistazo, texto recortado a 2
+líneas + ícono de clip si hay adjunto. Los cambios de estado (`log`,
+filtrado a solo `creado`/`cambio_estado` -- las entradas `nota_admin`/
+`nota_trabajador`/`nota_empresa` se descartan porque ya se ven como
+burbujas) quedan como píldoras de sistema centradas, intercaladas en el
+mismo hilo por fecha.
+
+- **Un solo modal para leer + responder + cambiar estado**: clickear
+  cualquier burbuja (o el botón "Responder"/"Responder o cambiar estado…"
+  al pie del chat cuando no hay nada para clickear todavía) abre un modal
+  con el mensaje completo, la caja de respuesta, y -- solo del lado admin
+  -- el selector de Estado + "Actualizar estado", todo junto. Esto
+  **reemplaza** el popup "¿Este trámite cambia de estado?" que aparecía
+  después de mandar una nota (agregado en la sesión anterior): ya no hace
+  falta, la decisión de estado vive en el mismo lugar que la respuesta en
+  vez de en un paso aparte.
+- **Avatar por foto de perfil**: trabajador.html usa `/perfil-foto/{cuil}`
+  (la propia, si `tiene_foto_perfil`) para sus propios mensajes y el logo
+  del sindicato (`/logo/{id}`, ya público) para los del sindicato; mismo
+  criterio invertido en empresa.html con `/perfil-empleador-foto/{cuit}`.
+  admin.html necesita ver la foto de la CONTRAPARTE (trabajador o
+  empleador), que antes solo la veía su propio dueño -- `GET /perfil-foto/
+  {cuil}` y `GET /perfil-empleador-foto/{cuit}` (main.py) ahora ADEMÁS
+  autorizan al admin de un sindicato donde ese CUIL/CUIT esté empadronado/
+  dado de alta (mismo criterio que ya usa `_autorizado_para_tramite` para
+  los adjuntos). Sin foto (403/404 o una imagen no decodificable), el
+  `<img onerror="...">` cae a un ícono/iniciales de respaldo -- no hace
+  falta un flag "tiene_foto" por mensaje, el fallback es puramente client-
+  side.
+- **Bug real encontrado y corregido armando esto**: las funciones
+  `async function` declaradas DENTRO de un bloque `if (...) { }` (como el
+  `if (document.getElementById('tp-tramites')) {...}` que envuelve todo el
+  JS de Trámites en trabajador.html/empresa.html) NO se filtran al scope
+  global por semántica Annex B del motor de JS -- a diferencia de las
+  `function` comunes, que sí lo hacen. Como el formulario de respuesta usa
+  `onsubmit="return enviarNotaTramiteTrab(event)"` (un atributo HTML
+  inline, que resuelve el nombre contra `window`), la función no se
+  encontraba y el formulario hacía un submit real de página completa en
+  vez de llamarla. Se corrigió asignando explícitamente
+  `window.enviarNotaTramiteTrab = async function (ev) {...}` -- mismo
+  patrón que el código ya usaba para `window.abrirTramiteDetalleTrab`.
+  Las funciones sync (`abrirMensajeTramiteTrab`, etc.) no tienen este
+  problema, sólo las `async`.
+
 ## Pendientes (features)
 1. Capacitación — "próximamente". Falta contenido: índice de documentos y
    links de formación.

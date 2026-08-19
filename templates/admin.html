@@ -121,10 +121,6 @@
   .overlay-ayuda-cerrar { position:absolute; top:14px; right:16px; background:none; border:none;
     cursor:pointer; color:var(--gris); padding:4px; }
   .overlay-ayuda-cerrar svg { width:18px; height:18px; stroke:currentColor; stroke-width:1.8; fill:none; }
-  /* Este popup se abre ENCIMA del modal de detalle de trámite (z-index:250),
-     que a su vez ya está abierto cuando se manda una nota -- si no, quedaría
-     tapado detrás y parecería que no pasó nada al hacer click. */
-  #overlay-estado-tramite { z-index:260; }
   .wrap { max-width:1000px; margin:0 auto; padding:24px 22px 60px; }
   /* Tira de pestañas: una sola línea deslizable (11 secciones no entran
      fijas), ícono + texto chico, pegada debajo del header. */
@@ -261,19 +257,45 @@
   .tram-preview-grid input, .tram-preview-grid select { pointer-events:none; }
   .tram-preview-grid input:disabled, .tram-preview-grid select:disabled {
     opacity:1; -webkit-text-fill-color:var(--tinta); color:var(--tinta); cursor:default; }
-  .tramite-log { border-left:2px solid var(--linea); margin-left:6px; padding-left:14px; }
-  /* Cebra: cada paso alterna un tinte muy leve de los colores del sindicato,
-     para separar visualmente los eventos del historial de un vistazo. El
-     padding no mueve el borde izquierdo del item (solo el contenido), así
-     que el punto del ::before sigue alineado con la línea vertical. */
-  .tramite-log-item { position:relative; padding:5px 10px 14px 8px; border-radius:6px; font-size:12.5px; }
-  .tramite-log-item:nth-child(odd) { background:color-mix(in srgb, var(--marca-primario) 6%, transparent); }
-  .tramite-log-item:nth-child(even) { background:color-mix(in srgb, var(--marca-secundario) 6%, transparent); }
-  .tramite-log-item::before { content:''; position:absolute; left:-18px; top:8px; width:8px; height:8px;
-    border-radius:50%; background:var(--marca-acento); }
-  .tramite-nota { background:#faf9f6; border:1px solid var(--linea); border-radius:8px; padding:9px 11px; margin-bottom:8px; font-size:12.5px; }
-  .tramite-nota.admin { border-left:3px solid var(--marca-primario); }
-  .tramite-nota.trabajador { border-left:3px solid var(--marca-secundario); }
+  /* ---------- Chat de Trámites (estilo WhatsApp) ----------
+     Reemplaza la lista de Notas + el Historial aparte (mismo criterio en
+     trabajador.html/empresa.html): un solo hilo cronológico, mensajes del
+     sindicato a la derecha (es la vista del admin) / de la contraparte a
+     la izquierda, avatar chico (foto de perfil o logo del sindicato) para
+     identificar de un vistazo. Los cambios de estado quedan como píldoras
+     de sistema centradas, intercaladas en el mismo hilo. Clickear una
+     burbuja (o "Responder") abre #modal-mensaje-tramite-overlay con el
+     mensaje completo, la respuesta y el cambio de estado juntos. */
+  .tram-chat { display:flex; flex-direction:column; gap:10px; margin-top:6px; }
+  .tram-chat-sistema { align-self:center; max-width:92%; text-align:center; font-size:11px;
+    color:var(--gris); background:#faf9f6; border:1px solid var(--linea); border-radius:20px; padding:5px 13px; }
+  .tram-chat-fila { display:flex; align-items:flex-end; gap:7px; max-width:86%; cursor:pointer; }
+  .tram-chat-fila.propio { flex-direction:row-reverse; align-self:flex-end; }
+  .tram-chat-fila.ajeno { align-self:flex-start; }
+  .tram-chat-avatar { width:28px; height:28px; border-radius:50%; flex-shrink:0; object-fit:cover;
+    border:1.5px solid var(--linea); }
+  .tram-chat-avatar-fallback { width:28px; height:28px; border-radius:50%; flex-shrink:0;
+    background:var(--marca-acento); display:flex; align-items:center; justify-content:center;
+    border:1.5px solid var(--marca-acento); }
+  .tram-chat-avatar-fallback svg { width:15px; height:15px; stroke:var(--marca-base); stroke-width:1.8; fill:none; }
+  .tram-chat-burbuja { border-radius:14px; padding:9px 12px; min-width:64px; }
+  .tram-chat-fila.propio .tram-chat-burbuja { background:color-mix(in srgb, var(--marca-acento) 20%, #fff); border-bottom-right-radius:4px; }
+  .tram-chat-fila.ajeno .tram-chat-burbuja { background:#fff; border:1px solid var(--linea); border-bottom-left-radius:4px; }
+  .tram-chat-remitente { font-size:10.5px; font-weight:650; color:var(--marca-primario); margin-bottom:2px; }
+  .tram-chat-texto { font-size:13.5px; line-height:1.4; color:var(--tinta);
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .tram-chat-meta { display:flex; align-items:center; gap:5px; margin-top:4px; font-size:10px; color:var(--gris); }
+  .tram-chat-meta svg { width:11px; height:11px; stroke:var(--gris); stroke-width:2.2; fill:none; }
+  .tram-chat-vacio { text-align:center; padding:22px 0; color:var(--gris); font-size:12.5px; }
+  .tram-chat-responder { margin-top:4px; width:100%; text-align:left; padding:11px 13px; border-radius:12px;
+    border:1px dashed var(--linea); background:#fff; color:var(--gris); font-size:13px;
+    font-family:inherit; cursor:pointer; }
+  .tram-msg-adjunto { display:inline-block; margin-top:8px; font-size:12.5px; color:var(--marca-primario); }
+  .tram-msg-responder textarea { width:100%; padding:9px 10px; border:1px solid var(--linea);
+    border-radius:9px; font-family:inherit; font-size:13.5px; resize:vertical; margin-top:10px; }
+  .tram-msg-estado { display:flex; gap:8px; align-items:center; margin-top:14px; padding-top:14px;
+    border-top:1px solid var(--linea); }
+  .tram-msg-estado select { flex:1; }
   .card { background:#fff; border:1px solid var(--linea); border-radius:10px; padding:18px 20px; margin-bottom:20px; }
   .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px 16px; }
   .grid2 .campo.full { grid-column:1 / -1; }
@@ -436,6 +458,8 @@
     <g id="ic-seccionales"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></g>
     <g id="ic-empleadores"><rect x="4" y="9" width="16" height="12" rx="1.2"/><path d="M9 9V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4"/><circle cx="9" cy="14" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="0.9" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="0.9" fill="currentColor" stroke="none"/></g>
     <g id="ic-admins"><path d="M12 3l7 3v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6z"/><circle cx="12" cy="10" r="2.3"/><path d="M8.4 15c.7-1.5 2-2.3 3.6-2.3s2.9.8 3.6 2.3"/></g>
+    <g id="ic-perfil"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></g>
+    <g id="ic-clip"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></g>
   </defs>
 </svg>
 
@@ -1475,28 +1499,22 @@
   </div>
 </div>
 
-<!-- Overlay: preguntar estado después de enviar una nota de Trámites (ver
-     enviarNotaTramiteAdmin/enviarNotaTramiteEmpresaAdmin) -- enviar una nota
-     no cambia el estado por sí sola (nunca lo hizo), pero como responder
-     suele implicar avanzar el trámite, esto lo hace explícito en vez de que
-     el admin tenga que acordarse de ir a tocar el selector de Estado aparte.
-     Vive FUERA de .app-bar-fija a propósito: ese contenedor es
-     position:sticky + z-index:21, así que cualquier z-index más alto puesto
-     en un descendiente (como este popup) queda atrapado comparándose solo
-     contra otros descendientes de .app-bar-fija -- nunca le gana en la
-     pantalla al modal de detalle de trámite (z-index:250), que vive afuera. -->
-<div class="overlay-ayuda" id="overlay-estado-tramite" onclick="if (event.target === this) cerrarPopupEstadoTramite()">
-  <div class="overlay-ayuda-caja">
-    <button type="button" class="overlay-ayuda-cerrar" onclick="cerrarPopupEstadoTramite()" aria-label="Cerrar">
-      <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-    </button>
-    <h3>Nota enviada</h3>
-    <p>¿Este trámite cambia de estado a partir de tu respuesta?</p>
-    <div style="display:flex; gap:8px; align-items:center; margin-top:14px;">
-      <select id="pop-estado-select" style="flex:1;"></select>
-      <button type="button" class="mini" onclick="confirmarPopupEstadoTramite()">Actualizar</button>
+<!-- Modal: detalle de un mensaje del chat de Trámites (trabajador y empresa)
+     + responder / cambiar estado -- reemplaza el popup "¿cambia de estado?"
+     que aparecía después de mandar una nota: ahora estado y respuesta viven
+     juntos en un solo modal, abierto al clickear cualquier burbuja del chat
+     o el botón "Responder". -->
+<div class="modal-recibo-overlay" id="modal-mensaje-tramite-overlay" onclick="if (event.target === this) cerrarMensajeTramite()">
+  <div class="modal-recibo" style="max-width:440px;">
+    <div class="modal-recibo-enc">
+      <h3 id="mmt-titulo">Mensaje</h3>
+      <button type="button" class="modal-recibo-cerrar" onclick="cerrarMensajeTramite()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
     </div>
-    <button type="button" class="sec mini" style="margin-top:10px; width:100%;" onclick="cerrarPopupEstadoTramite()">Dejar como está</button>
+    <div class="modal-recibo-body">
+      <div class="modal-recibo-card" id="mmt-contenido"></div>
+    </div>
   </div>
 </div>
 
@@ -2137,27 +2155,67 @@ function cerrarTramiteDetalle() {
   document.getElementById('modal-tramite-overlay').classList.remove('abierto');
 }
 
-const EVENTO_LOG_LABEL = {creado:'Creado', cambio_estado:'Cambio de estado', nota_admin:'Nota del sindicato', nota_trabajador:'Nota del trabajador'};
+// ---------- Chat de Trámites (estilo WhatsApp), compartido entre la rama
+// de trabajador y la de empresa -- ver también avatarHtmlAdmin/
+// renderChatTramiteAdmin/mensajeTramiteCtx más abajo (namespace común,
+// parametrizado por "familia" en vez de duplicado). ----------
+function fmtHoraCortaAdmin(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})$/.exec(s || '');
+  return m ? m[4] : (s || '');
+}
+function avatarFallbackAdmin(imgEl) {
+  imgEl.outerHTML = '<span class="tram-chat-avatar-fallback"><svg viewBox="0 0 24 24"><use href="#ic-perfil"/></svg></span>';
+}
+function avatarHtmlAdmin(autor, familia, contraparteId) {
+  if (autor === 'admin') {
+    return {{ 'true' if (marca and marca.logo) else 'false' }}
+      ? `<img class="tram-chat-avatar" src="/logo/{{ marca.id if marca else 0 }}?v={{ marca.logo_v if marca else 0 }}" alt="">`
+      : `<span class="tram-chat-avatar-fallback" style="background:var(--marca-base); border-color:var(--marca-base); color:#fff; font-size:10.5px; font-weight:700;">{{ iniciales or '?' }}</span>`;
+  }
+  const url = (familia === 'empresa' ? '/perfil-empleador-foto/' : '/perfil-foto/') + encodeURIComponent(contraparteId);
+  return `<img class="tram-chat-avatar" src="${url}" alt="" onerror="avatarFallbackAdmin(this)">`;
+}
+function renderChatTramiteAdmin(d, familia) {
+  const eventos = d.log.filter(l => l.evento === 'creado' || l.evento === 'cambio_estado');
+  const contraparteId = familia === 'empresa' ? d.cuit : d.cuil;
+  const items = [
+    ...d.notas.map((n, i) => ({ tipo: 'nota', idx: i, creado: n.creado, n })),
+    ...eventos.map(l => ({ tipo: 'sistema', creado: l.creado, l })),
+  ].sort((a, b) => a.creado.localeCompare(b.creado));
 
-function refrescarTramiteDetalle(id, preguntarEstado) {
+  if (!items.length) return '<div class="tram-chat-vacio">Todavía no hay mensajes en este trámite.</div>';
+
+  return items.map(it => {
+    if (it.tipo === 'sistema') {
+      return `<div class="tram-chat-sistema">${escHtml(it.l.detalle)} · ${fmtHoraCortaAdmin(it.creado)}</div>`;
+    }
+    const n = it.n;
+    const propio = n.autor === 'admin';
+    const texto = n.texto ? escHtml(n.texto) : (n.tiene_adjunto ? '📎 Adjunto' : '');
+    const etiquetaOtro = familia === 'empresa' ? 'Empresa' : 'Trabajador';
+    return `
+      <div class="tram-chat-fila ${propio ? 'propio' : 'ajeno'}" onclick="abrirMensajeTramiteAdmin(${it.idx})">
+        ${avatarHtmlAdmin(n.autor, familia, contraparteId)}
+        <div class="tram-chat-burbuja">
+          <div class="tram-chat-remitente">${propio ? 'Vos (sindicato)' : etiquetaOtro}</div>
+          <div class="tram-chat-texto">${texto}</div>
+          <div class="tram-chat-meta">
+            ${n.tiene_adjunto ? '<svg viewBox="0 0 24 24"><use href="#ic-clip"/></svg>' : ''}
+            <span>${fmtHoraCortaAdmin(n.creado)}</span>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function refrescarTramiteDetalle(id) {
   fetch('/admin/tramite/' + id).then(r => r.json()).then(d => {
     document.getElementById('mt-titulo').textContent = d.numero_expediente + ' — ' + d.tipo_titulo;
-    const opcionesEstado = {{ estados_tramite | tojson }}.map(e =>
-      `<option value="${e}" ${e === d.estado ? 'selected' : ''}>${ {{ estados_tramite_label | tojson }}[e] }</option>`).join('');
     const respuestasHtml = d.respuestas.map(r => `
       <div class="modal-fila" style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eee; font-size:13px;">
         <span class="muted">${escHtml(r.etiqueta)}</span>
         <span>${r.tiene_archivo ? `<a href="/tramite-respuesta-archivo/${r.respuesta_id}" target="_blank" rel="noopener">📎 ${escHtml(r.archivo_nombre)}</a>` : escHtml(r.valor_texto)}</span>
       </div>`).join('');
-    const logHtml = d.log.map(l => `
-      <div class="tramite-log-item"><b>${EVENTO_LOG_LABEL[l.evento] || l.evento}</b> — ${escHtml(l.detalle)}<br><span class="muted">${l.creado}</span></div>
-    `).join('');
-    const notasHtml = d.notas.map(n => `
-      <div class="tramite-nota ${n.autor}">
-        <b>${n.autor === 'admin' ? 'Sindicato' : 'Trabajador'}</b> · <span class="muted">${n.creado}</span>
-        ${n.texto ? `<div style="margin-top:4px;">${escHtml(n.texto)}</div>` : ''}
-        ${n.tiene_adjunto ? `<div style="margin-top:4px;"><a href="/tramite-nota-adjunto/${n.id}" target="_blank" rel="noopener">📎 ${escHtml(n.adjunto_nombre)}</a></div>` : ''}
-      </div>`).join('') || '<p class="muted" style="font-size:12.5px;">Todavía no hay notas.</p>';
     document.getElementById('mt-contenido').innerHTML = `
       <div class="modal-fila" style="display:flex; justify-content:space-between; padding:4px 0; font-size:13px;">
         <span class="muted">CUIL</span><span><code>${d.cuil}</code></span>
@@ -2165,27 +2223,10 @@ function refrescarTramiteDetalle(id, preguntarEstado) {
       <h3 style="font-size:13.5px; margin-top:14px;">Respuestas del formulario</h3>
       ${respuestasHtml || '<p class="muted" style="font-size:12.5px;">Sin respuestas.</p>'}
 
-      <h3 style="font-size:13.5px; margin-top:16px;">Estado</h3>
-      ${d.estado === 'terminado'
-        ? '<p class="muted" style="font-size:12.5px;">Trámite terminado -- no se puede modificar.</p>'
-        : `<div style="display:flex; gap:8px; align-items:center;">
-             <select id="mt-estado-select">${opcionesEstado}</select>
-             <button type="button" class="mini" onclick="cambiarEstadoTramiteAdmin(${d.id})">Actualizar</button>
-           </div>`}
-
-      <h3 style="font-size:13.5px; margin-top:16px;">Notas</h3>
-      ${notasHtml}
-      ${d.estado === 'terminado' ? '' : `
-      <form id="mt-form-nota" style="margin-top:8px;" onsubmit="return enviarNotaTramiteAdmin(event, ${d.id})">
-        <textarea id="mt-nota-texto" rows="2" placeholder="Escribile una nota o pedile más información al trabajador…" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:7px; font-family:inherit; font-size:12.5px;"></textarea>
-        <div style="display:flex; gap:8px; align-items:center; margin-top:6px;">
-          <input type="file" id="mt-nota-adjunto" style="font-size:12px;">
-          <button type="submit" class="mini">Enviar nota</button>
-        </div>
-      </form>`}
-
-      <h3 style="font-size:13.5px; margin-top:16px;">Historial</h3>
-      <div class="tramite-log">${logHtml}</div>
+      <h3 style="font-size:13.5px; margin-top:16px;">Conversación</h3>
+      <div class="tram-chat">${renderChatTramiteAdmin(d, 'trabajador')}</div>
+      ${d.estado === 'terminado' ? '<p class="muted" style="font-size:12.5px; margin-top:12px;">Trámite terminado -- no se puede modificar.</p>'
+        : '<button type="button" class="tram-chat-responder" onclick="abrirResponderTramiteAdmin()">Responder o cambiar estado…</button>'}
     `;
     const fila = document.getElementById('tramite-fila-' + d.id);
     if (fila) {
@@ -2195,63 +2236,85 @@ function refrescarTramiteDetalle(id, preguntarEstado) {
       const celdas = fila.querySelectorAll('td');
       if (celdas[4]) celdas[4].textContent = d.actualizado;
     }
-    if (preguntarEstado && d.estado !== 'terminado') abrirPopupEstadoTramite(id, d.estado, 'trabajador');
+    mensajeTramiteCtx = { familia: 'trabajador', id: d.id, estado: d.estado, notas: d.notas };
   }).catch(() => {
     document.getElementById('mt-contenido').innerHTML = 'No se pudo cargar el trámite.';
   });
 }
 
-// ---------- Popup: elegir estado después de mandar una nota ----------
-// Enviar una nota nunca cambió el estado por sí sola -- este popup no
-// cambia esa regla, solo hace explícita la decisión en el momento en que
-// más importa (justo después de responder), en vez de depender de que el
-// admin se acuerde de ir a tocar el selector de Estado por separado.
-let popupEstadoTramiteCtx = null;
-function abrirPopupEstadoTramite(id, estadoActual, familia) {
-  popupEstadoTramiteCtx = {id, familia};
-  document.getElementById('pop-estado-select').innerHTML = {{ estados_tramite | tojson }}.map(e =>
-    `<option value="${e}" ${e === estadoActual ? 'selected' : ''}>${ {{ estados_tramite_label | tojson }}[e] }</option>`).join('');
-  document.getElementById('overlay-estado-tramite').classList.add('abierto');
+// ---------- Modal compartido: detalle de un mensaje + responder/cambiar
+// estado (mismo modal para la rama de trabajador y la de empresa, ver
+// mensajeTramiteCtx.familia). Reemplaza el popup "¿cambia de estado?" que
+// aparecía después de mandar una nota -- ahora estado y respuesta viven
+// juntos en el mismo lugar donde se lee el mensaje completo. ----------
+let mensajeTramiteCtx = null;
+function abrirMensajeTramiteAdmin(idx) {
+  if (!mensajeTramiteCtx) return;
+  _abrirModalMensajeAdmin(mensajeTramiteCtx.notas[idx]);
 }
-function cerrarPopupEstadoTramite() {
-  document.getElementById('overlay-estado-tramite').classList.remove('abierto');
-  popupEstadoTramiteCtx = null;
+function abrirResponderTramiteAdmin() {
+  _abrirModalMensajeAdmin(null);
 }
-function confirmarPopupEstadoTramite() {
-  if (!popupEstadoTramiteCtx) return;
-  const {id, familia} = popupEstadoTramiteCtx;
-  const estado = document.getElementById('pop-estado-select').value;
-  const url = familia === 'empresa' ? '/admin/tramite-empresa/' + id + '/estado' : '/admin/tramite/' + id + '/estado';
-  fetch(url, {method: 'POST', body: new URLSearchParams({estado})})
-    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-    .then(() => {
-      cerrarPopupEstadoTramite();
-      if (familia === 'empresa') refrescarTramiteEmpresaDetalle(id); else refrescarTramiteDetalle(id);
-    })
-    .catch(() => alert('No se pudo actualizar el estado.'));
+function cerrarMensajeTramite() {
+  document.getElementById('modal-mensaje-tramite-overlay').classList.remove('abierto');
 }
-
-function cambiarEstadoTramiteAdmin(id) {
-  const estado = document.getElementById('mt-estado-select').value;
-  const body = new URLSearchParams({estado});
-  fetch('/admin/tramite/' + id + '/estado', {method: 'POST', body})
-    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-    .then(() => refrescarTramiteDetalle(id))
-    .catch(() => alert('No se pudo actualizar el estado.'));
+function _abrirModalMensajeAdmin(n) {
+  if (!mensajeTramiteCtx) return;
+  const familia = mensajeTramiteCtx.familia;
+  const etiquetaOtro = familia === 'empresa' ? 'Empresa' : 'Trabajador';
+  document.getElementById('mmt-titulo').textContent = n ? (n.autor === 'admin' ? 'Vos (sindicato)' : etiquetaOtro) : 'Responder';
+  const mensajeHtml = n ? `
+    <div class="tram-chat-remitente">${n.autor === 'admin' ? 'Vos (sindicato)' : etiquetaOtro} · ${n.creado}</div>
+    <div style="font-size:14px; line-height:1.5; margin-top:4px; white-space:pre-wrap;">${escHtml(n.texto)}</div>
+    ${n.tiene_adjunto ? `<a class="tram-msg-adjunto" href="${familia === 'empresa' ? '/tramite-empresa-nota-adjunto/' : '/tramite-nota-adjunto/'}${n.id}" target="_blank" rel="noopener">📎 ${escHtml(n.adjunto_nombre)}</a>` : ''}
+  ` : '';
+  const terminado = mensajeTramiteCtx.estado === 'terminado';
+  const opcionesEstado = {{ estados_tramite | tojson }}.map(e =>
+    `<option value="${e}" ${e === mensajeTramiteCtx.estado ? 'selected' : ''}>${ {{ estados_tramite_label | tojson }}[e] }</option>`).join('');
+  document.getElementById('mmt-contenido').innerHTML = `
+    ${mensajeHtml}
+    ${terminado ? '<p class="muted" style="font-size:12.5px; margin-top:10px;">Trámite terminado -- no se puede modificar.</p>' : `
+    <form id="mmt-form-nota" class="tram-msg-responder" onsubmit="return enviarNotaDesdeModalAdmin(event)">
+      <textarea id="mmt-nota-texto" rows="3" placeholder="Escribile una nota o pedile más información…"></textarea>
+      <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+        <input type="file" id="mmt-nota-adjunto" style="font-size:12px; flex:1;">
+        <button type="submit" class="mini">Enviar</button>
+      </div>
+    </form>
+    <div class="tram-msg-estado">
+      <select id="mmt-estado-select">${opcionesEstado}</select>
+      <button type="button" class="mini" onclick="cambiarEstadoDesdeModalAdmin()">Actualizar estado</button>
+    </div>`}
+  `;
+  document.getElementById('modal-mensaje-tramite-overlay').classList.add('abierto');
 }
-
-function enviarNotaTramiteAdmin(ev, id) {
+function _urlTramiteAdmin(sufijo) {
+  const base = mensajeTramiteCtx.familia === 'empresa' ? '/admin/tramite-empresa/' : '/admin/tramite/';
+  return base + mensajeTramiteCtx.id + sufijo;
+}
+function _refrescarTrasModalAdmin() {
+  if (mensajeTramiteCtx.familia === 'empresa') refrescarTramiteEmpresaDetalle(mensajeTramiteCtx.id);
+  else refrescarTramiteDetalle(mensajeTramiteCtx.id);
+}
+function enviarNotaDesdeModalAdmin(ev) {
   ev.preventDefault();
-  const texto = document.getElementById('mt-nota-texto').value;
-  const archivo = document.getElementById('mt-nota-adjunto').files[0];
+  const texto = document.getElementById('mmt-nota-texto').value;
+  const archivo = document.getElementById('mmt-nota-adjunto').files[0];
   const fd = new FormData();
   fd.append('texto', texto);
   if (archivo) fd.append('adjunto', archivo);
-  fetch('/admin/tramite/' + id + '/nota', {method: 'POST', body: fd})
+  fetch(_urlTramiteAdmin('/nota'), {method: 'POST', body: fd})
     .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-    .then(() => refrescarTramiteDetalle(id, true))
+    .then(() => { cerrarMensajeTramite(); _refrescarTrasModalAdmin(); })
     .catch(() => alert('No se pudo enviar la nota.'));
   return false;
+}
+function cambiarEstadoDesdeModalAdmin() {
+  const estado = document.getElementById('mmt-estado-select').value;
+  fetch(_urlTramiteAdmin('/estado'), {method: 'POST', body: new URLSearchParams({estado})})
+    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+    .then(() => { cerrarMensajeTramite(); _refrescarTrasModalAdmin(); })
+    .catch(() => alert('No se pudo actualizar el estado.'));
 }
 
 // ---------- Trámites externos a empleadores (namespace propio, sin
@@ -2452,27 +2515,14 @@ function cerrarTramiteEmpresaDetalle() {
   document.getElementById('modal-tramiteemp-overlay').classList.remove('abierto');
 }
 
-const EVENTO_LOG_LABEL_EMP = {creado:'Creado', cambio_estado:'Cambio de estado', nota_admin:'Nota del sindicato', nota_empresa:'Nota de la empresa'};
-
-function refrescarTramiteEmpresaDetalle(id, preguntarEstado) {
+function refrescarTramiteEmpresaDetalle(id) {
   fetch('/admin/tramite-empresa/' + id).then(r => r.json()).then(d => {
     document.getElementById('mte-titulo').textContent = d.numero_expediente + ' — ' + d.tipo_titulo;
-    const opcionesEstado = {{ estados_tramite | tojson }}.map(e =>
-      `<option value="${e}" ${e === d.estado ? 'selected' : ''}>${ {{ estados_tramite_label | tojson }}[e] }</option>`).join('');
     const respuestasHtml = d.respuestas.map(r => `
       <div class="modal-fila" style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eee; font-size:13px;">
         <span class="muted">${escHtml(r.etiqueta)}</span>
         <span>${r.tiene_archivo ? `<a href="/tramite-empresa-respuesta-archivo/${r.respuesta_id}" target="_blank" rel="noopener">📎 ${escHtml(r.archivo_nombre)}</a>` : escHtml(r.valor_texto)}</span>
       </div>`).join('');
-    const logHtml = d.log.map(l => `
-      <div class="tramite-log-item"><b>${EVENTO_LOG_LABEL_EMP[l.evento] || l.evento}</b> — ${escHtml(l.detalle)}<br><span class="muted">${l.creado}</span></div>
-    `).join('');
-    const notasHtml = d.notas.map(n => `
-      <div class="tramite-nota ${n.autor}">
-        <b>${n.autor === 'admin' ? 'Sindicato' : 'Empresa'}</b> · <span class="muted">${n.creado}</span>
-        ${n.texto ? `<div style="margin-top:4px;">${escHtml(n.texto)}</div>` : ''}
-        ${n.tiene_adjunto ? `<div style="margin-top:4px;"><a href="/tramite-empresa-nota-adjunto/${n.id}" target="_blank" rel="noopener">📎 ${escHtml(n.adjunto_nombre)}</a></div>` : ''}
-      </div>`).join('') || '<p class="muted" style="font-size:12.5px;">Todavía no hay notas.</p>';
     document.getElementById('mte-contenido').innerHTML = `
       <div class="modal-fila" style="display:flex; justify-content:space-between; padding:4px 0; font-size:13px;">
         <span class="muted">CUIT</span><span><code>${d.cuit}</code></span>
@@ -2480,27 +2530,10 @@ function refrescarTramiteEmpresaDetalle(id, preguntarEstado) {
       <h3 style="font-size:13.5px; margin-top:14px;">Respuestas del formulario</h3>
       ${respuestasHtml || '<p class="muted" style="font-size:12.5px;">Sin respuestas.</p>'}
 
-      <h3 style="font-size:13.5px; margin-top:16px;">Estado</h3>
-      ${d.estado === 'terminado'
-        ? '<p class="muted" style="font-size:12.5px;">Trámite terminado -- no se puede modificar.</p>'
-        : `<div style="display:flex; gap:8px; align-items:center;">
-             <select id="mte-estado-select">${opcionesEstado}</select>
-             <button type="button" class="mini" onclick="cambiarEstadoTramiteEmpresaAdmin(${d.id})">Actualizar</button>
-           </div>`}
-
-      <h3 style="font-size:13.5px; margin-top:16px;">Notas</h3>
-      ${notasHtml}
-      ${d.estado === 'terminado' ? '' : `
-      <form id="mte-form-nota" style="margin-top:8px;" onsubmit="return enviarNotaTramiteEmpresaAdmin(event, ${d.id})">
-        <textarea id="mte-nota-texto" rows="2" placeholder="Escribile una nota o pedile más información a la empresa…" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:7px; font-family:inherit; font-size:12.5px;"></textarea>
-        <div style="display:flex; gap:8px; align-items:center; margin-top:6px;">
-          <input type="file" id="mte-nota-adjunto" style="font-size:12px;">
-          <button type="submit" class="mini">Enviar nota</button>
-        </div>
-      </form>`}
-
-      <h3 style="font-size:13.5px; margin-top:16px;">Historial</h3>
-      <div class="tramite-log">${logHtml}</div>
+      <h3 style="font-size:13.5px; margin-top:16px;">Conversación</h3>
+      <div class="tram-chat">${renderChatTramiteAdmin(d, 'empresa')}</div>
+      ${d.estado === 'terminado' ? '<p class="muted" style="font-size:12.5px; margin-top:12px;">Trámite terminado -- no se puede modificar.</p>'
+        : '<button type="button" class="tram-chat-responder" onclick="abrirResponderTramiteAdmin()">Responder o cambiar estado…</button>'}
     `;
     const fila = document.getElementById('tramiteemp-fila-' + d.id);
     if (fila) {
@@ -2510,33 +2543,10 @@ function refrescarTramiteEmpresaDetalle(id, preguntarEstado) {
       const celdas = fila.querySelectorAll('td');
       if (celdas[4]) celdas[4].textContent = d.actualizado;
     }
-    if (preguntarEstado && d.estado !== 'terminado') abrirPopupEstadoTramite(id, d.estado, 'empresa');
+    mensajeTramiteCtx = { familia: 'empresa', id: d.id, estado: d.estado, notas: d.notas };
   }).catch(() => {
     document.getElementById('mte-contenido').innerHTML = 'No se pudo cargar el trámite.';
   });
-}
-
-function cambiarEstadoTramiteEmpresaAdmin(id) {
-  const estado = document.getElementById('mte-estado-select').value;
-  const body = new URLSearchParams({estado});
-  fetch('/admin/tramite-empresa/' + id + '/estado', {method: 'POST', body})
-    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-    .then(() => refrescarTramiteEmpresaDetalle(id))
-    .catch(() => alert('No se pudo actualizar el estado.'));
-}
-
-function enviarNotaTramiteEmpresaAdmin(ev, id) {
-  ev.preventDefault();
-  const texto = document.getElementById('mte-nota-texto').value;
-  const archivo = document.getElementById('mte-nota-adjunto').files[0];
-  const fd = new FormData();
-  fd.append('texto', texto);
-  if (archivo) fd.append('adjunto', archivo);
-  fetch('/admin/tramite-empresa/' + id + '/nota', {method: 'POST', body: fd})
-    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-    .then(() => refrescarTramiteEmpresaDetalle(id, true))
-    .catch(() => alert('No se pudo enviar la nota.'));
-  return false;
 }
 
 // ---------- Editar trabajador ----------
