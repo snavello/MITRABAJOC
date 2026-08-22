@@ -1078,18 +1078,31 @@
       <span class="f-cant" id="f-tramites-cant"></span>
     </div>
     <table>
-      <tr><th>Expediente</th><th>CUIL</th><th>Tipo</th><th>Estado</th><th>Actualizado</th><th></th></tr>
+      <tr><th>Expediente</th><th>CUIL</th><th>Tipo</th><th>Estado</th><th>A cargo</th><th>Actualizado</th><th></th></tr>
       {% for tr in tramites %}
       <tr class="fila-tramite" id="tramite-fila-{{ tr.id }}" data-cuil="{{ tr.cuil }}" data-nombre="{{ tr.numero_expediente }}" data-estado="{{ tr.estado }}">
         <td><code>{{ tr.numero_expediente }}</code></td>
         <td>{{ tr.cuil }}</td>
         <td>{{ tr.tipo_titulo }}</td>
         <td><span class="tag {{ 'tag-si' if tr.estado == 'terminado' else 'tag-pend' }}">{{ tr.estado_label }}</span></td>
+        <td style="font-size:12.5px;">
+          {% if tr.area_a_cargo %}{{ tr.area_a_cargo }}{% if not tr.puede_responder %} <span class="tag" style="background:#eee;color:#888;">solo lectura</span>{% endif %}
+          {% else %}<span class="muted">sin tomar</span>{% endif %}
+        </td>
         <td class="muted">{{ tr.actualizado }}</td>
-        <td style="text-align:right;"><button type="button" class="mini" onclick="abrirTramiteDetalle({{ tr.id }})">Ver</button></td>
+        <td style="white-space:nowrap; text-align:right;">
+          <button type="button" class="mini" onclick="abrirTramiteDetalle({{ tr.id }})">Ver</button>
+          {% if not es_super_admin and tr.estado != 'terminado' %}
+            {% if not tr.area_a_cargo_id %}
+            <button type="button" class="mini" onclick="tomarTramite({{ tr.id }})">Tomar</button>
+            {% elif tr.puede_responder %}
+            <button type="button" class="mini sec" onclick="liberarTramite({{ tr.id }})">Liberar</button>
+            {% endif %}
+          {% endif %}
+        </td>
       </tr>
       {% else %}
-      <tr><td colspan="6" class="muted">Todavía no llegó ningún trámite.</td></tr>
+      <tr><td colspan="7" class="muted">Todavía no llegó ningún trámite.</td></tr>
       {% endfor %}
     </table>
   </div>
@@ -1110,6 +1123,18 @@
         </div>
         <div class="campo oculto" id="tt-activo-campo" style="margin-top:10px;">
           <label class="chk-seccional" style="width:fit-content;"><input type="checkbox" id="tt-activo" checked> Activo (visible para el trabajador)</label>
+        </div>
+
+        <div class="campo" style="margin-top:12px;">
+          <label>Área(s) que reciben este trámite *</label>
+          <span class="muted" style="display:block; margin-bottom:5px;">Los trámites de este formulario los ven solo los usuarios de estas áreas. Si elegís más de una, todas lo ven y la primera que lo tome queda a cargo.</span>
+          {% if areas %}
+          <div class="check-seccionales">
+            {% for a in areas %}{% if a.activo %}
+            <label class="chk-seccional"><input type="checkbox" name="areas" value="{{ a.id }}" class="tt-area"> {{ a.nombre }}</label>
+            {% endif %}{% endfor %}
+          </div>
+          {% else %}<span class="muted">No hay áreas cargadas. Creá una en "Áreas y Usuarios" antes de armar un formulario.</span>{% endif %}
         </div>
 
         <h3 style="margin-top:18px; font-size:14px; color:var(--tinta);">Campos del formulario</h3>
@@ -1319,6 +1344,9 @@
   <!-- Sub: TRÁMITES EXTERNOS -->
   {% if 'emp_tramites_recibidos' in permisos or 'emp_tramites_formularios' in permisos %}
   <div class="emp-subpanel {% if 'emp_empresas' not in permisos and 'emp_notificaciones' not in permisos %}activo{% endif %}" id="emp-sub-tramites">
+    {% if request.query_params.get('error') == 'sinareadestino' %}
+    <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Elegí al menos un área que reciba este trámite.</div>
+    {% endif %}
     {% if request.query_params.get('error') == 'campos' %}
     <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Revisá los campos del formulario: necesita al menos uno con etiqueta y tipo de dato válidos.</div>
     {% elif request.query_params.get('error') == 'tramitesenviados' %}
@@ -1461,7 +1489,7 @@
         <div class="campo full"><label>Nombre *</label><input name="nombre" id="sec-nombre" required></div>
         <div class="campo full"><label>Dirección</label><input name="direccion" id="sec-direccion"></div>
         <div class="campo full">
-          <label style="font-weight:400;"><input type="checkbox" name="ve_todas" value="si" id="sec-ve-todas"> Ve todas las seccionales</label>
+          <label class="chk-seccional" style="width:fit-content;"><input type="checkbox" name="ve_todas" value="si" id="sec-ve-todas"> Ve todas las seccionales</label>
           <span class="muted" style="display:block; margin-top:2px;">Para la sede central o una regional que supervisa varias: sus usuarios alcanzan a los trabajadores de todo el sindicato.</span>
         </div>
       </div>
@@ -1534,11 +1562,11 @@
 
       <div class="campo" style="margin-top:4px;">
         <label>Tipo de usuario</label>
-        <label style="font-weight:400; display:block; margin:4px 0;">
+        <label class="chk-seccional" style="margin:4px 0;">
           <input type="radio" name="rol" value="area" id="usu-rol-area" checked onchange="usuarioRolCambio()">
           De área — solo las secciones que le des
         </label>
-        <label style="font-weight:400; display:block;">
+        <label class="chk-seccional">
           <input type="radio" name="rol" value="super" id="usu-rol-super" onchange="usuarioRolCambio()">
           Administrador general — todo el panel, incluida esta pantalla
         </label>
@@ -1628,15 +1656,15 @@
       <h3 style="margin-top:14px; font-size:14px;">Secciones del panel</h3>
       {% for grupo, items in grupos_permisos %}
       <div style="margin-top:10px;">
-        <label style="font-weight:600; font-size:13px;">
+        <label class="chk-seccional" style="font-weight:600; width:fit-content;">
           <input type="checkbox" class="area-grupo" data-grupo="{{ grupo }}" onchange="tildarGrupo(this)"> {{ grupo }}
         </label>
         <div style="padding-left:18px; margin-top:3px;">
-          {% for seccion, etiqueta in items %}
-          <label style="font-weight:400; display:inline-block; min-width:210px; font-size:13px;">
-            <input type="checkbox" name="permisos" value="{{ seccion }}" class="area-permiso" data-grupo="{{ grupo }}"> {{ etiqueta }}
-          </label>
-          {% endfor %}
+          <div class="check-seccionales">
+            {% for seccion, etiqueta in items %}
+            <label class="chk-seccional"><input type="checkbox" name="permisos" value="{{ seccion }}" class="area-permiso" data-grupo="{{ grupo }}"> {{ etiqueta }}</label>
+            {% endfor %}
+          </div>
         </div>
       </div>
       {% endfor %}
@@ -2279,6 +2307,7 @@ function editarTramiteTipo(t) {
   document.getElementById('tt-codigo').value = t.codigo;
   document.getElementById('tt-activo-campo').classList.remove('oculto');
   document.getElementById('tt-activo').checked = t.activo;
+  document.querySelectorAll('.tt-area').forEach(c => { c.checked = (t.areas || []).map(String).includes(c.value); });
   camposTramiteActuales = (t.campos || []).map(c => ({...c}));
   renderCamposTramite();
   document.getElementById('tt-h2').textContent = 'Editar tipo de trámite';
@@ -2298,6 +2327,20 @@ function cancelarTramiteTipo() {
   document.getElementById('tt-cancel').classList.add('oculto');
 }
 if (document.getElementById('tt-campos-lista')) renderCamposTramite();
+
+// ---------- Tomar / liberar un trámite ----------
+// El área que lo toma queda a cargo; las otras áreas destino lo siguen
+// viendo, pero en solo lectura. Así dos áreas no le contestan lo mismo al
+// trabajador.
+async function _tramiteAccion(id, accion) {
+  const r = await fetch(`/admin/tramite/${id}/${accion}`, { method: 'POST' });
+  if (!r.ok) { alert('No se pudo ' + accion + ' el trámite.'); return; }
+  const d = await r.json();
+  if (!d.ok) { alert('Otra área ya lo tomó. Actualizá la página para ver quién.'); return; }
+  location.reload();
+}
+function tomarTramite(id) { _tramiteAccion(id, 'tomar'); }
+function liberarTramite(id) { _tramiteAccion(id, 'liberar'); }
 
 function filtrarTramites() {
   const cuit = (document.getElementById('f-tramites-cuit').value || '').replace(/\D/g, '');

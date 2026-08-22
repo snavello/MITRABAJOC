@@ -304,6 +304,9 @@ aparece un sindicato "AEFIP" fantasma con id=1. No afecta producción
 - En la Shell de Render, si `alembic` no se encuentra: usar `python -m alembic upgrade head`
 - Reset completo de la base local Postgres: `docker compose down -v && docker compose up -d`
   (espera a que el healthcheck pase) `&& alembic upgrade head && python cargar_demo.py`
-- Tests: correr CADA `test_*.py` por separado (loop por archivo), nunca
-  `pytest -q` batcheado — módulos comparten estado de import y se
-  contaminan entre archivos si corren en el mismo proceso pytest.
+- Tests: `bash correr_suite.sh` — corre CADA `test_*.py` por separado,
+  nunca `pytest -q` batcheado (los módulos comparten estado de import y se
+  contaminan entre archivos si corren en el mismo proceso pytest).
+  **El chequeo mira `failed|error`, NO `passed`**: un archivo que termina en
+  `"13 failed, 1 passed"` contiene la palabra "passed", así que un patrón
+  ingenuo lo da por OK y esconde fallas reales. Ya pasó.

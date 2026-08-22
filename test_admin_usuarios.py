@@ -1,4 +1,5 @@
-"""Autogestión de administradores por el propio sindicato (antes solo
+"""Autogestión de usuarios por el propio sindicato (pestaña "Áreas y
+Usuarios" desde la Fase 3 de SPRINT_AREAS.md) (antes solo
 plataforma podía dar de alta/ver los UsuarioSindicato de un sindicato):
 alta con clave inicial, editar nombre, activar/desactivar, siempre scopeado
 al sindicato de la sesión -- y bloqueo de quedarse sin ningún admin activo.
@@ -45,6 +46,7 @@ def test_alta_de_un_segundo_admin_queda_en_el_sindicato_de_la_sesion():
     c = _admin_client("20111111110", "clave-a")
     r = c.post("/admin/usuario", data={
         "usuario": "20333333330", "nombre": "Admin Dos", "clave_inicial": "nueva-clave",
+        "rol": "super",
     }, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
@@ -61,6 +63,7 @@ def test_alta_duplicada_en_el_mismo_sindicato_rechaza():
     c = _admin_client("20111111110", "clave-a")
     r = c.post("/admin/usuario", data={
         "usuario": "20333333330", "nombre": "Otra vez", "clave_inicial": "x",
+        "rol": "super",
     }, follow_redirects=False)
     assert r.status_code == 303
     assert "err=usuarioexiste" in r.headers["location"]
@@ -82,7 +85,8 @@ def test_editar_solo_cambia_nombre():
         uid = u.id
 
     c = _admin_client("20111111110", "clave-a")
-    r = c.post("/admin/usuario/editar", data={"id": uid, "nombre": "Admin Dos Editado"}, follow_redirects=False)
+    r = c.post("/admin/usuario/editar", data={"id": uid, "nombre": "Admin Dos Editado",
+                                              "rol": "super"}, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
         u = s.get(UsuarioSindicato, uid)
@@ -97,7 +101,8 @@ def test_no_puede_editar_ni_dar_de_baja_admin_de_otro_sindicato():
         uid_b = u_b.id
 
     c = _admin_client("20111111110", "clave-a")  # admin del sindicato A
-    c.post("/admin/usuario/editar", data={"id": uid_b, "nombre": "Hackeado"}, follow_redirects=False)
+    c.post("/admin/usuario/editar", data={"id": uid_b, "nombre": "Hackeado",
+                                          "rol": "super"}, follow_redirects=False)
     c.post("/admin/usuario/baja", data={"id": uid_b}, follow_redirects=False)
     with Session(db.engine) as s:
         u_b = s.get(UsuarioSindicato, uid_b)

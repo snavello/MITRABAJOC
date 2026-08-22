@@ -283,7 +283,8 @@ def test_no_se_puede_desactivar_al_ultimo_super_admin():
 def test_se_puede_desactivar_un_super_admin_si_queda_otro():
     c = _cliente("20111111110", "jefa")
     r = c.post("/admin/usuario", data={
-        "usuario": "20111111112", "nombre": "Segunda Jefa", "clave_inicial": "otra"},
+        "usuario": "20111111112", "nombre": "Segunda Jefa", "clave_inicial": "otra",
+        "rol": "super"},
         follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:

@@ -15,7 +15,7 @@ os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth
-from db import Sindicato, UsuarioSindicato, Trabajador, TipoTramite, CampoTramite, Tramite, Notificacion
+from db import Area, Sindicato, UsuarioSindicato, Trabajador, TipoTramite, CampoTramite, Tramite, Notificacion
 from modulos import MODULOS_INICIALES
 import main
 from fastapi.testclient import TestClient
@@ -51,6 +51,14 @@ def _sesion_trabajador(cuil):
     return c
 
 
+# Desde la Fase 4 (SPRINT_AREAS.md) un tipo de trámite necesita al menos un
+# área receptora: sin eso, sus trámites no los vería nadie.
+with db.get_session() as _s:
+    _area = Area(sindicato_id=SID_UOM, nombre="Mesa de Entradas")
+    _s.add(_area); _s.commit(); _s.refresh(_area)
+    AREA_UOM = _area.id
+
+
 def test_alta_tipo_tramite_con_campos_de_cada_tipo_dato():
     campos = [
         {"etiqueta": "Solicitud", "tipo_dato": "texto", "longitud_maxima": 200, "obligatorio": True},
@@ -61,6 +69,7 @@ def test_alta_tipo_tramite_con_campos_de_cada_tipo_dato():
     ]
     r = admin_uom.post("/admin/tramite-tipo", data={
         "titulo": "Solicitud de Reintegro", "codigo": "F01 AEFIP", "campos_json": json.dumps(campos),
+        "areas": [str(AREA_UOM)],
     }, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
@@ -211,6 +220,7 @@ def test_campo_seleccion_fija():
     campos = [{"etiqueta": "Motivo", "tipo_dato": "seleccion", "opciones": "Salud, Estudio, Otro", "obligatorio": True}]
     r = admin_uom.post("/admin/tramite-tipo", data={
         "titulo": "Consulta", "codigo": "SEL", "campos_json": json.dumps(campos),
+        "areas": [str(AREA_UOM)],
     }, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
@@ -263,6 +273,7 @@ def test_ancho_campos_y_nuevos_tipos_de_campo():
     ]
     r = admin_uom.post("/admin/tramite-tipo", data={
         "titulo": "Formulario nuevos tipos", "codigo": "NUEVOS", "campos_json": json.dumps(campos),
+        "areas": [str(AREA_UOM)],
     }, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:

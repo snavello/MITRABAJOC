@@ -22,7 +22,8 @@ from sqlmodel import Session, select
 db.crear_tablas()
 
 with db.get_session() as s:
-    sind = Sindicato(nombre="Sindicato Test Topes", color_base="#0f1b2d")
+    sind = Sindicato(nombre="Sindicato Test Topes", color_base="#0f1b2d",
+                     modulos_habilitados=["recibos"])
     s.add(sind); s.commit(); s.refresh(sind)
     SID = sind.id
 

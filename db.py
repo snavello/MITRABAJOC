@@ -590,6 +590,19 @@ class TipoTramite(SQLModel, table=True):
     creado: str = ""
 
 
+class AreaTipoTramite(SQLModel, table=True):
+    """Área receptora de un tipo de trámite -- una fila por área, porque un
+    formulario puede ir dirigido a más de una.
+
+    Es lo que rutea el trámite: quien tiene el permiso de responder trámites
+    ve SOLO los de los tipos que apuntan a su área. Por eso "crear
+    formularios" es un permiso aparte de "responder": quien puede editar el
+    formulario elige el área receptora y podría autoasignarse trabajo."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tipo_tramite_id: int = Field(foreign_key="tipotramite.id", index=True)
+    area_id: int = Field(foreign_key="area.id", index=True)
+
+
 class CampoTramite(SQLModel, table=True):
     """Un campo del formulario dinámico de un TipoTramite. El orden decide
     cómo se renderiza; longitud/decimales/tipos de archivo solo aplican
@@ -624,6 +637,11 @@ class Tramite(SQLModel, table=True):
     estado: str = "iniciado"  # iniciado | en_tratamiento | respondido | espera_info | terminado
     creado: str = ""
     actualizado: str = ""
+    # Cuál de las áreas receptoras lo tomó. Mientras está en None, todas las
+    # áreas destino del tipo lo ven en su bandeja; al tomarlo, las demás
+    # pasan a solo lectura. Sirve para que dos áreas no le respondan lo
+    # mismo al trabajador (decisión 11 de SPRINT_AREAS.md).
+    area_a_cargo_id: Optional[int] = Field(default=None, foreign_key="area.id", index=True)
 
 
 class RespuestaTramite(SQLModel, table=True):
@@ -644,6 +662,11 @@ class NotaTramite(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     tramite_id: int = Field(foreign_key="tramite.id", index=True)
     autor: str  # "admin" | "trabajador"
+    # Quién del sindicato escribió, para poder mostrar el ÁREA al trabajador
+    # sin mostrar la persona (decisión 13 de SPRINT_AREAS.md): "respondió
+    # Secretaría Legal". En el panel sí se ve el nombre. None en las notas
+    # del trabajador y en las anteriores al sistema de Áreas.
+    usuario_sindicato_id: Optional[int] = Field(default=None, foreign_key="usuariosindicato.id")
     texto: str = ""
     adjunto_datos: Optional[bytes] = Field(default=None)
     adjunto_mime: str = ""
@@ -2074,13 +2097,19 @@ def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False) -
         if solo_activos:
             q = q.where(TipoTramite.activo == True)
         tipos = s.exec(q.order_by(TipoTramite.creado.desc())).all()
+        nombres_area = {a.id: a.nombre for a in s.exec(select(Area).where(
+            Area.sindicato_id == sindicato_id)).all()}
         resultado = []
         for t in tipos:
             campos = s.exec(select(CampoTramite).where(CampoTramite.tipo_tramite_id == t.id)
                             .order_by(CampoTramite.orden)).all()
+            areas = [r.area_id for r in s.exec(select(AreaTipoTramite).where(
+                AreaTipoTramite.tipo_tramite_id == t.id)).all()]
             resultado.append({
                 "id": t.id, "titulo": t.titulo, "codigo": t.codigo, "activo": t.activo,
                 "creado": t.creado, "campos": [_campo_tramite_a_dict(c) for c in campos],
+                "areas": areas,
+                "areas_nombres": [nombres_area.get(a, "") for a in areas],
             })
         return resultado
 
@@ -2173,7 +2202,7 @@ def cambiar_estado_tramite(tramite_id: int, sindicato_id: int, nuevo_estado: str
 
 def agregar_nota_tramite(tramite_id: int, autor: str, texto: str,
                           adjunto_datos: Optional[bytes] = None, adjunto_mime: str = "",
-                          adjunto_nombre: str = "") -> bool:
+                          adjunto_nombre: str = "", usuario_sindicato_id: int = None) -> bool:
     """`autor` es "admin" o "trabajador" -- la verificación de que quien
     escribe tiene permiso sobre ESTE trámite la hace el caller (main.py).
     Un trámite terminado queda bloqueado para notas nuevas de cualquier lado."""
@@ -2183,6 +2212,7 @@ def agregar_nota_tramite(tramite_id: int, autor: str, texto: str,
             return False
         s.add(NotaTramite(
             tramite_id=tramite_id, autor=autor, texto=texto or "",
+            usuario_sindicato_id=usuario_sindicato_id or None,
             adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime or "",
             adjunto_nombre=adjunto_nombre or "", creado=datetime.now().strftime("%Y-%m-%d %H:%M"),
         ))
@@ -2202,9 +2232,41 @@ def _tramite_resumen(s: Session, tr: "Tramite", titulos_tipo: dict) -> dict:
     }
 
 
+def _alcance_de_tramites(s: Session, usuario_id: int, sindicato_id: int):
+    """Qué trámites puede ver este usuario: (tipos_visibles, cuiles, area_id).
+
+    - `tipos_visibles` None = todos los tipos (Super Admin); si no, el set de
+      tipo_tramite_id cuyo formulario apunta a SU área.
+    - `cuiles` None = sin recorte por seccional; si no, el set de CUIL de
+      trabajadores de las seccionales que alcanza.
+    - `area_id` el área del usuario (None para el Super Admin), para saber
+      si puede tomar el trámite.
+
+    Los dos ejes se cruzan: un usuario ve un trámite si su área es destino
+    del tipo Y el trabajador cae en su alcance de seccional."""
+    u = s.get(UsuarioSindicato, usuario_id)
+    if not u or not u.activo or u.sindicato_id != sindicato_id:
+        return set(), set(), None   # falla cerrado: no ve nada
+    if u.es_super_admin:
+        return None, None, None
+    tipos = {r.tipo_tramite_id for r in s.exec(select(AreaTipoTramite).where(
+        AreaTipoTramite.area_id == u.area_id)).all()} if u.area_id else set()
+    alcance = alcance_seccional(usuario_id)
+    cuiles = None
+    if alcance is not None:
+        cuiles = {t.cuil for t in s.exec(select(Trabajador).where(
+            Trabajador.sindicato_id == sindicato_id,
+            Trabajador.seccional_id.in_(alcance))).all()} if alcance else set()
+    return tipos, cuiles, u.area_id
+
+
 def tramites_del_sindicato(sindicato_id: int, estado: str = None, tipo_tramite_id: int = None,
-                            cuil: str = None) -> list:
-    """Listado filtrable para el panel de admin, más recientes primero."""
+                            cuil: str = None, usuario_id: int = None) -> list:
+    """Listado filtrable para el panel de admin, más recientes primero.
+
+    Con `usuario_id`, recorta a lo que ESE usuario puede ver (área destino
+    del tipo + alcance de seccional). Sin él devuelve todo -- se deja así
+    para los llamados internos que no son "lo que ve una persona"."""
     with Session(engine) as s:
         q = select(Tramite).where(Tramite.sindicato_id == sindicato_id)
         if estado:
@@ -2214,18 +2276,121 @@ def tramites_del_sindicato(sindicato_id: int, estado: str = None, tipo_tramite_i
         if cuil:
             q = q.where(Tramite.cuil == cuil)
         tramites = s.exec(q.order_by(Tramite.id.desc())).all()
+        area_propia = None
+        if usuario_id:
+            tipos, cuiles, area_propia = _alcance_de_tramites(s, usuario_id, sindicato_id)
+            if tipos is not None:
+                tramites = [t for t in tramites if t.tipo_tramite_id in tipos]
+            if cuiles is not None:
+                tramites = [t for t in tramites if t.cuil in cuiles]
         titulos_tipo = {t.id: t.titulo for t in s.exec(
             select(TipoTramite).where(TipoTramite.sindicato_id == sindicato_id)).all()}
-        return [_tramite_resumen(s, tr, titulos_tipo) for tr in tramites]
+        areas = {a.id: a.nombre for a in s.exec(select(Area).where(
+            Area.sindicato_id == sindicato_id)).all()}
+        salida = []
+        for tr in tramites:
+            d = _tramite_resumen(s, tr, titulos_tipo)
+            d["area_a_cargo_id"] = tr.area_a_cargo_id
+            d["area_a_cargo"] = areas.get(tr.area_a_cargo_id, "")
+            # "Solo lectura" para el que no lo tomó: lo ve, pero responde el
+            # área que lo tiene a cargo. El Super Admin nunca queda afuera.
+            d["puede_responder"] = (
+                area_propia is None
+                or tr.area_a_cargo_id is None
+                or tr.area_a_cargo_id == area_propia)
+            salida.append(d)
+        return salida
 
 
-def contar_tramites_nuevos(sindicato_id: int) -> int:
+def contar_tramites_nuevos(sindicato_id: int, usuario_id: int = None) -> int:
     """Trámites recién presentados (estado "iniciado", el admin todavía no
     los tocó) -- para el globo de notificación de la portada de admin y de
-    la pestaña "Ver trámites" dentro de /admin."""
+    la pestaña "Ver trámites" dentro de /admin.
+
+    Con `usuario_id` cuenta solo los que ESE usuario ve: un globo que
+    incluyera trámites de otra área sería un número que nunca baja al
+    abrirlos, porque no aparecen en su bandeja."""
+    if usuario_id:
+        return len([t for t in tramites_del_sindicato(
+            sindicato_id, estado="iniciado", usuario_id=usuario_id)])
     with Session(engine) as s:
         return len(s.exec(select(Tramite).where(
             Tramite.sindicato_id == sindicato_id, Tramite.estado == "iniciado")).all())
+
+
+def puede_ver_tramite(tramite_id: int, usuario_id: int, sindicato_id: int) -> bool:
+    """Si ESE usuario puede abrir ESE trámite. El listado ya viene filtrado,
+    pero la ruta de detalle recibe un id armado a mano -- mismo criterio
+    defensivo que el resto del panel: esconderlo no es el control."""
+    with Session(engine) as s:
+        tr = s.get(Tramite, tramite_id)
+        if not tr or tr.sindicato_id != sindicato_id:
+            return False
+        tipos, cuiles, _ = _alcance_de_tramites(s, usuario_id, sindicato_id)
+        if tipos is not None and tr.tipo_tramite_id not in tipos:
+            return False
+        if cuiles is not None and tr.cuil not in cuiles:
+            return False
+        return True
+
+
+def tomar_tramite(tramite_id: int, usuario_id: int, sindicato_id: int) -> bool:
+    """El área del usuario se hace cargo del trámite. Falla si ya lo tomó
+    otra: el que llega segundo tiene que ver que ya está tomado, no
+    pisarlo."""
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        tr = s.get(Tramite, tramite_id)
+        if not u or not tr or tr.sindicato_id != sindicato_id or not u.area_id:
+            return False
+        if tr.area_a_cargo_id is not None:
+            return tr.area_a_cargo_id == u.area_id   # ya lo tenía: no es error
+        tr.area_a_cargo_id = u.area_id
+        s.add(tr)
+        area = s.get(Area, u.area_id)
+        # El log va ANTES del commit: _log_tramite no commitea, deja el
+        # evento en la misma transacción que el cambio que lo generó.
+        _log_tramite(s, tramite_id, "tomado", f"{area.nombre if area else 'un área'} tomó el trámite")
+        s.commit()
+        return True
+
+
+def liberar_tramite(tramite_id: int, usuario_id: int, sindicato_id: int) -> bool:
+    """Lo devuelve a la bandeja común de las áreas destino. Solo puede
+    liberarlo el área que lo tomó, o un Super Admin."""
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        tr = s.get(Tramite, tramite_id)
+        if not u or not tr or tr.sindicato_id != sindicato_id:
+            return False
+        if not u.es_super_admin and tr.area_a_cargo_id != u.area_id:
+            return False
+        tr.area_a_cargo_id = None
+        s.add(tr)
+        _log_tramite(s, tramite_id, "liberado", "el trámite volvió a la bandeja del área")
+        s.commit()
+        return True
+
+
+def areas_de_tipo_tramite(tipo_tramite_id: int) -> list:
+    with Session(engine) as s:
+        return sorted(r.area_id for r in s.exec(select(AreaTipoTramite).where(
+            AreaTipoTramite.tipo_tramite_id == tipo_tramite_id)).all())
+
+
+def set_areas_tipo_tramite(tipo_tramite_id: int, areas: list, sindicato_id: int) -> None:
+    """Reemplaza las áreas receptoras del formulario, descartando las que no
+    sean de este sindicato (el <select> viaja como campo del form)."""
+    with Session(engine) as s:
+        propias = {a.id for a in s.exec(select(Area).where(
+            Area.sindicato_id == sindicato_id)).all()}
+        for r in s.exec(select(AreaTipoTramite).where(
+                AreaTipoTramite.tipo_tramite_id == tipo_tramite_id)).all():
+            s.delete(r)
+        for area_id in dict.fromkeys(areas or []):
+            if int(area_id) in propias:
+                s.add(AreaTipoTramite(tipo_tramite_id=tipo_tramite_id, area_id=int(area_id)))
+        s.commit()
 
 
 def tramites_de_trabajador(cuil: str, sindicato_id: int) -> list:
@@ -2249,11 +2414,30 @@ def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:
                    .order_by(NotaTramite.id)).all()
     log = s.exec(select(TramiteLog).where(TramiteLog.tramite_id == tr.id)
                  .order_by(TramiteLog.id)).all()
+    # Área de cada respuesta del sindicato: el trabajador ve "Secretaría
+    # Legal", nunca el nombre de quien escribió (decisión 13).
+    autores = {u.id: u for u in s.exec(select(UsuarioSindicato).where(
+        UsuarioSindicato.id.in_({n.usuario_sindicato_id for n in notas
+                                 if n.usuario_sindicato_id}))).all()} if notas else {}
+    nombres_area = {a.id: a.nombre for a in s.exec(select(Area).where(
+        Area.sindicato_id == tr.sindicato_id)).all()}
+
+    def _area_de_nota(n):
+        u = autores.get(n.usuario_sindicato_id)
+        if not u:
+            return ""
+        return "" if u.es_super_admin else nombres_area.get(u.area_id, "")
+
     return {
         "id": tr.id, "numero_expediente": tr.numero_expediente, "cuil": tr.cuil,
         "sindicato_id": tr.sindicato_id, "estado": tr.estado,
         "estado_label": ESTADOS_TRAMITE_LABEL.get(tr.estado, tr.estado),
         "creado": tr.creado, "actualizado": tr.actualizado,
+        "area_a_cargo_id": tr.area_a_cargo_id,
+        "area_a_cargo": nombres_area.get(tr.area_a_cargo_id, ""),
+        "areas_destino": [nombres_area.get(r.area_id, "") for r in s.exec(
+            select(AreaTipoTramite).where(
+                AreaTipoTramite.tipo_tramite_id == tr.tipo_tramite_id)).all()],
         "tipo_titulo": tipo.titulo if tipo else "—", "tipo_codigo": tipo.codigo if tipo else "",
         "respuestas": [{
             "campo_id": r.campo_tramite_id,
@@ -2265,6 +2449,10 @@ def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:
         "notas": [{
             "id": n.id, "autor": n.autor, "texto": n.texto, "creado": n.creado,
             "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+            "area": _area_de_nota(n),
+            # Solo para el panel: al trabajador nunca se le manda el nombre.
+            "autor_nombre": (autores[n.usuario_sindicato_id].nombre
+                             if n.usuario_sindicato_id in autores else ""),
         } for n in notas],
         "log": [{"evento": l.evento, "detalle": l.detalle, "creado": l.creado} for l in log],
     }

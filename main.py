@@ -610,6 +610,8 @@ PERMISOS_RUTAS = {
     "/admin/tramite-tipo":                  "tramites_formularios",
     "/admin/tramite-tipo/borrar":           "tramites_formularios",
     "/admin/tramite/{tramite_id}":          "tramites_recibidos",
+    "/admin/tramite/{tramite_id}/tomar":    "tramites_recibidos",
+    "/admin/tramite/{tramite_id}/liberar":  "tramites_recibidos",
     "/admin/tramite/{tramite_id}/estado":   "tramites_recibidos",
     "/admin/tramite/{tramite_id}/nota":     "tramites_recibidos",
     "/admin/tramites-nuevos-cantidad":      "tramites_recibidos",
@@ -663,6 +665,28 @@ def _exigir_permiso_de_ruta(request: Request, ses: dict) -> None:
         return
     if not db.tiene_permiso(uid, seccion):
         raise HTTPException(403, "No tenés permiso para esta sección del panel.")
+
+
+def _uid(request: Request) -> int:
+    """id del usuario del panel que está en la sesión (0 si no hay)."""
+    return (sesion_actual(request, "sindicato") or {}).get("uid", 0)
+
+
+def _exigir_a_cargo(request: Request, tramite_id: int, sid: int) -> None:
+    """403 si el trámite lo tomó OTRA área. Ver el trámite y responderlo son
+    cosas distintas: si dos áreas son destino, las dos lo ven, pero contesta
+    la que lo tomó -- si no, el trabajador recibe dos respuestas distintas
+    al mismo planteo (decisión 11 de SPRINT_AREAS.md)."""
+    uid = _uid(request)
+    if db.es_super_admin(uid):
+        return
+    with db.get_session() as s:
+        tr = s.get(Tramite, tramite_id)
+        u = s.get(UsuarioSindicato, uid)
+        if not tr or not u:
+            raise HTTPException(403, "No podés responder este trámite.")
+        if tr.area_a_cargo_id is not None and tr.area_a_cargo_id != u.area_id:
+            raise HTTPException(403, "Este trámite lo tomó otra área. Pedile que lo libere.")
 
 
 def exigir_sindicato(request: Request) -> int:
@@ -771,8 +795,8 @@ def admin(request: Request):
         "notificaciones": db.notificaciones_del_sindicato(sid) if puede("notificaciones") else [],
         "tipos_tramite": db.tipos_tramite_del_sindicato(sid)
             if puede("tramites_formularios", "tramites_recibidos") else [],
-        "tramites": db.tramites_del_sindicato(sid) if puede("tramites_recibidos") else [],
-        "tramites_nuevos": db.contar_tramites_nuevos(sid) if puede("tramites_recibidos") else 0,
+        "tramites": db.tramites_del_sindicato(sid, usuario_id=uid) if puede("tramites_recibidos") else [],
+        "tramites_nuevos": db.contar_tramites_nuevos(sid, usuario_id=uid) if puede("tramites_recibidos") else 0,
         "estados_tramite": db.ESTADOS_TRAMITE, "estados_tramite_label": db.ESTADOS_TRAMITE_LABEL,
         "seccionales": seccionales, "seccional_por_id": seccional_por_id,
         "empleadores": empleadores,
@@ -1864,7 +1888,11 @@ async def abm_tramite_tipo(
     request: Request,
     id: str = Form(""), titulo: str = Form(...), codigo: str = Form(...),
     activo: str = Form("si"), campos_json: str = Form(...),
+    areas: list[str] = Form(default=[]),
 ):
+    """`areas` son las áreas receptoras (1..N). Es obligatorio al menos una:
+    un formulario sin área receptora genera trámites que no ve nadie salvo
+    el Super Admin -- exactamente el caso que la Fase 4 vino a evitar."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "tramites")
     import json
@@ -1876,11 +1904,39 @@ async def abm_tramite_tipo(
     campos = _campos_tramite_validos(campos_crudos)
     if not campos:
         return RedirectResponse("/admin?error=campos#tramites", status_code=303)
+    if not [a for a in areas if a]:
+        return RedirectResponse("/admin?error=sinareadestino#tramites", status_code=303)
     if id:
         db.editar_tipo_tramite(int(id), sid, titulo, codigo, activo == "si", campos)
+        tipo_id = int(id)
     else:
-        db.crear_tipo_tramite(sid, titulo, codigo, campos)
+        tipo_id = db.crear_tipo_tramite(sid, titulo, codigo, campos)
+    if tipo_id:
+        db.set_areas_tipo_tramite(tipo_id, areas, sid)
     return RedirectResponse("/admin#tramites", status_code=303)
+
+
+@app.post("/admin/tramite/{tramite_id}/tomar")
+def admin_tramite_tomar(tramite_id: int, request: Request):
+    """El área del usuario se hace cargo. A partir de acá las otras áreas
+    destino lo siguen viendo, pero en solo lectura."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "tramites")
+    uid = (sesion_actual(request, "sindicato") or {}).get("uid", 0)
+    if not db.puede_ver_tramite(tramite_id, uid, sid):
+        raise HTTPException(403, "Este trámite no está dirigido a tu área.")
+    return JSONResponse({"ok": db.tomar_tramite(tramite_id, uid, sid)})
+
+
+@app.post("/admin/tramite/{tramite_id}/liberar")
+def admin_tramite_liberar(tramite_id: int, request: Request):
+    """Lo devuelve a la bandeja común de las áreas destino."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "tramites")
+    uid = (sesion_actual(request, "sindicato") or {}).get("uid", 0)
+    if not db.puede_ver_tramite(tramite_id, uid, sid):
+        raise HTTPException(403, "Este trámite no está dirigido a tu área.")
+    return JSONResponse({"ok": db.liberar_tramite(tramite_id, uid, sid)})
 
 
 @app.post("/admin/tramite-tipo/borrar")
@@ -1900,6 +1956,11 @@ def admin_ver_tramite(tramite_id: int, request: Request):
     detalle = db.tramite_detalle(tramite_id)
     if not detalle or detalle["sindicato_id"] != sid:
         raise HTTPException(404, "Trámite no encontrado")
+    # El listado ya viene filtrado, pero acá el id llega por la URL: un
+    # usuario de área no puede abrir un trámite de otra área escribiéndolo
+    # a mano. Mismo criterio defensivo que el resto del panel.
+    if not db.puede_ver_tramite(tramite_id, _uid(request), sid):
+        raise HTTPException(403, "Este trámite no está dirigido a tu área.")
     return detalle
 
 
@@ -1911,7 +1972,7 @@ def admin_tramites_nuevos_cantidad(request: Request):
     mínimo (un número), pensado para pedirse cada 30s sin peso real."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "tramites")
-    return {"cantidad": db.contar_tramites_nuevos(sid)}
+    return {"cantidad": db.contar_tramites_nuevos(sid, usuario_id=_uid(request))}
 
 
 @app.post("/admin/tramite/{tramite_id}/estado")
@@ -1923,6 +1984,7 @@ def admin_cambiar_estado_tramite(tramite_id: int, request: Request, estado: str 
         raise HTTPException(404, "Trámite no encontrado")
     if detalle["estado"] == "terminado":
         raise HTTPException(400, "Este trámite está terminado y no se puede modificar.")
+    _exigir_a_cargo(request, tramite_id, sid)
     if not db.cambiar_estado_tramite(tramite_id, sid, estado):
         raise HTTPException(400, "Estado inválido")
     nuevo_label = db.ESTADOS_TRAMITE_LABEL.get(estado, estado)
@@ -1941,6 +2003,7 @@ async def admin_nota_tramite(tramite_id: int, request: Request, texto: str = For
         raise HTTPException(404, "Trámite no encontrado")
     if detalle["estado"] == "terminado":
         raise HTTPException(400, "Este trámite está terminado y no se puede modificar.")
+    _exigir_a_cargo(request, tramite_id, sid)
     adjunto_datos, adjunto_mime, adjunto_nombre = None, "", ""
     if adjunto and adjunto.filename:
         adjunto_datos, adjunto_mime, adjunto_nombre = _leer_archivo_tramite(adjunto)
@@ -1948,7 +2011,8 @@ async def admin_nota_tramite(tramite_id: int, request: Request, texto: str = For
             raise HTTPException(400, "Adjunto inválido o supera el tamaño máximo (10 MB).")
     if not texto.strip() and not adjunto_datos:
         raise HTTPException(400, "La nota necesita texto o un adjunto.")
-    db.agregar_nota_tramite(tramite_id, "admin", texto, adjunto_datos, adjunto_mime, adjunto_nombre)
+    db.agregar_nota_tramite(tramite_id, "admin", texto, adjunto_datos, adjunto_mime,
+                            adjunto_nombre, usuario_sindicato_id=_uid(request))
     _notificar_cambio_tramite(sid, detalle["cuil"],
         f'Tu sindicato agregó una nota a tu trámite {detalle["numero_expediente"]}.')
     return {"ok": True}
@@ -2018,6 +2082,22 @@ def api_mis_tramites(request: Request):
     return {"tramites": db.tramites_de_trabajador(cuil, sid) if sid else []}
 
 
+def _detalle_sin_datos_internos(detalle: dict) -> dict:
+    """Saca del detalle lo que es organización interna del sindicato antes de
+    mandárselo al trabajador (o a la empresa).
+
+    El acuerdo fue que vea el ÁREA que le respondió ("respondió Secretaría
+    Legal") pero NUNCA el nombre de la persona -- protege al empleado de
+    reclamos personales y mantiene la trazabilidad puertas adentro, donde el
+    panel sí muestra quién escribió cada mensaje. El ruteo (qué áreas son
+    destino, cuál lo tomó) tampoco le incumbe."""
+    limpio = {k: v for k, v in detalle.items()
+              if k not in ("area_a_cargo", "area_a_cargo_id", "areas_destino")}
+    limpio["notas"] = [{k: v for k, v in n.items() if k != "autor_nombre"}
+                       for n in detalle.get("notas", [])]
+    return limpio
+
+
 @app.get("/api/tramite/{numero_expediente}")
 def api_consultar_tramite(numero_expediente: str, request: Request):
     ses = sesion_actual(request, "trabajador")
@@ -2027,7 +2107,7 @@ def api_consultar_tramite(numero_expediente: str, request: Request):
     detalle = db.tramite_por_numero_expediente(numero_expediente.strip().upper())
     if not detalle or detalle["cuil"] != cuil:
         raise HTTPException(404, "No encontramos un trámite tuyo con ese número.")
-    return detalle
+    return _detalle_sin_datos_internos(detalle)
 
 
 @app.post("/api/tramite")

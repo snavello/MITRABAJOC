@@ -17,7 +17,7 @@ os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth
-from db import (Sindicato, UsuarioSindicato, Trabajador, Empleador,
+from db import (Sindicato, UsuarioSindicato, Trabajador, Empleador, Area,
                  TipoTramite, CampoTramite, Tramite,
                  TipoTramiteEmpleador, CampoTramiteEmpleador, TramiteEmpleador,
                  NotificacionEmpleador)
@@ -284,8 +284,13 @@ def test_tramites_de_trabajador_y_empresa_nunca_se_mezclan():
     (30111222339) a propósito -- confirmar que ninguno ve trámites del otro,
     y que las tablas TramiteEmpleador/Tramite nunca se cruzan."""
     campos = [{"etiqueta": "Campo", "tipo_dato": "texto", "obligatorio": True}]
+    with db.get_session() as s:
+        area = Area(sindicato_id=SID_UOM, nombre="Mesa de Entradas")
+        s.add(area); s.commit(); s.refresh(area)
+        area_id = area.id
     r_tipo_trab = admin_uom.post("/admin/tramite-tipo", data={
         "titulo": "Tipo trabajador", "codigo": "TRAB", "campos_json": json.dumps(campos),
+        "areas": [str(area_id)],
     }, follow_redirects=False)
     assert r_tipo_trab.status_code == 303
     with Session(db.engine) as s:
