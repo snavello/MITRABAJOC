@@ -1188,6 +1188,30 @@ def tiene_permiso(usuario_id: int, seccion: str) -> bool:
     return seccion in permisos_efectivos(usuario_id)
 
 
+def es_super_admin(usuario_id: int) -> bool:
+    """La llave de la gestión de áreas y usuarios. Se lee de la base en cada
+    request por lo mismo que los permisos: degradar a alguien tiene que
+    valer ya, no cuando se le venza la sesión."""
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        return bool(u and u.activo and u.es_super_admin)
+
+
+def contar_super_admins(sindicato_id: int, excluyendo: int = 0) -> int:
+    """Super Admins activos del sindicato, sin contar a `excluyendo`.
+
+    Existe para el guard del último: antes del sistema de Áreas alcanzaba
+    con contar usuarios activos, pero ahora un sindicato puede tener diez
+    usuarios de área y un solo Super Admin -- y si se lo desactiva o se lo
+    degrada, nadie puede volver a entrar a administrar."""
+    with Session(engine) as s:
+        filas = s.exec(select(UsuarioSindicato).where(
+            UsuarioSindicato.sindicato_id == sindicato_id,
+            UsuarioSindicato.activo == True,
+            UsuarioSindicato.es_super_admin == True)).all()
+        return len([u for u in filas if u.id != excluyendo])
+
+
 def alcance_seccional(usuario_id: int):
     """Sobre qué seccionales trabaja este usuario.
 

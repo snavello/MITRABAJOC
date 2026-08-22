@@ -97,12 +97,27 @@ def upgrade() -> None:
             SELECT 1 FROM seccional x
             WHERE x.sindicato_id = s.id AND x.nombre = '{SECCIONAL_CENTRAL}')
     """)
+    # El INSERT de arriba no corre para un sindicato que YA tenía una
+    # seccional llamada "Sede Central" (cargada a mano, o dejada por un
+    # downgrade previo de esta misma migración, que borra la columna pero
+    # no las filas). En ese caso la columna recién creada le queda en el
+    # default `false` y Sede Central se queda sin su poder de ver todas las
+    # seccionales, en silencio. Este UPDATE lo garantiza en los dos caminos.
+    op.execute(f"""
+        UPDATE seccional SET ve_todas = true WHERE nombre = '{SECCIONAL_CENTRAL}'
+    """)
+
     op.execute(f"""
         INSERT INTO area (sindicato_id, nombre, activo)
         SELECT s.id, '{AREA_INICIAL}', true FROM sindicato s
         WHERE NOT EXISTS (
             SELECT 1 FROM area x
             WHERE x.sindicato_id = s.id AND x.nombre = '{AREA_INICIAL}')
+    """)
+    # Mismo motivo que arriba: un área "Mesa de Entradas" preexistente y
+    # desactivada dejaría los trámites migrados en un área muerta.
+    op.execute(f"""
+        UPDATE area SET activo = true WHERE nombre = '{AREA_INICIAL}'
     """)
 
     # 3. Nadie queda sin seccional. Si un sindicato ya tenía "Sede Central"

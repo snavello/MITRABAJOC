@@ -21,13 +21,15 @@ from sqlmodel import select
 
 db.crear_tablas()
 with db.get_session() as s:
-    sind = Sindicato(nombre="Test")
+    sind = Sindicato(nombre="Test", modulos_habilitados=["recibos"])
     s.add(sind)
     s.commit()
     s.refresh(sind)
     SID = sind.id
-    s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111110",
-                           clave_hash=auth.hashear_clave("clave"), debe_cambiar_clave=False, es_super_admin=True))
+    admin = UsuarioSindicato(sindicato_id=SID, usuario="20111111110",
+                             clave_hash=auth.hashear_clave("clave"), debe_cambiar_clave=False,
+                             es_super_admin=True)
+    s.add(admin)
     real = Concepto(sindicato_id=SID, codigo="795-019", nombre="COMP. P/DEDICACION ESPECIAL",
                     tipo="ingreso", alias=["COMP. P/DEDICACION ESPECIAL"])
     prov = Concepto(sindicato_id=SID, codigo="NUEVO-COMP.P/DEDIC",
@@ -40,9 +42,14 @@ with db.get_session() as s:
     s.add(Formula(sindicato_id=SID, target="NUEVO-COMP.P/DEDIC",
                   descripcion="apunta al provisorio", expr="0.01 * base_remunerativa"))
     s.commit()
+    s.refresh(admin)
+    ADMIN_ID = admin.id
 
 client = TestClient(main.app)
-client.cookies.set(main.COOKIE_SINDICATO, auth.crear_sesion("sindicato", sindicato_id=SID))
+# La sesión lleva id_usuario: desde el sistema de Áreas el permiso se
+# resuelve por usuario, así que un token sin uid no habilita nada.
+client.cookies.set(main.COOKIE_SINDICATO,
+                   auth.crear_sesion("sindicato", id_usuario=ADMIN_ID, sindicato_id=SID))
 
 
 def test_fusion_mueve_alias_repunta_formula_y_borra_provisorio():

@@ -51,6 +51,7 @@ from qr import qr_svg, url_verificacion
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
 from version import VERSION_TRABAJADOR, VERSION_ADMIN, VERSION_PLATAFORMA, FECHA_VERSION
 from modulos import MODULOS, MODULOS_INICIALES
+from permisos import SECCION_SUPER_ADMIN
 
 import mimetypes
 mimetypes.add_type("font/woff2", ".woff2")  # algunos Windows no lo traen registrado -> se servía como text/plain
@@ -558,11 +559,121 @@ def api_beneficio(beneficio_id: int, request: Request):
 
 
 # ================= Panel del sindicato =================
+# Qué sección del panel exige cada ruta del admin (catálogo en permisos.py).
+#
+# El chequeo NO está copiado en cada ruta: exigir_sindicato() -- que las 46
+# rutas ya llamaban desde antes -- resuelve la sección mirando la ruta que
+# FastAPI acaba de matchear. Un solo lugar que gatea, en vez de 46 lugares
+# donde olvidarse. Y si una ruta nueva no se agrega acá, el acceso se
+# RECHAZA en vez de quedar abierta (falla cerrado); test_areas_rutas.py
+# recorre app.routes y avisa antes de que eso llegue a producción.
+PERMISOS_RUTAS = {
+    "/admin/trabajador":                    "trabajadores",
+    "/admin/trabajador/generar-credencial": "trabajadores",
+    "/admin/trabajador/masivo":             "trabajadores",
+    "/admin/trabajador/baja":               "trabajadores",
+    "/admin/trabajador/alta-logica":        "trabajadores",
+
+    # La gestión de usuarios es del Super Admin y de nadie más: no es una
+    # sección asignable (ver SECCION_SUPER_ADMIN en permisos.py).
+    "/admin/usuario":                       SECCION_SUPER_ADMIN,
+    "/admin/usuario/editar":                SECCION_SUPER_ADMIN,
+    "/admin/usuario/baja":                  SECCION_SUPER_ADMIN,
+    "/admin/usuario/alta-logica":           SECCION_SUPER_ADMIN,
+
+    "/admin/concepto":                      "conceptos",
+    "/admin/concepto/borrar":               "conceptos",
+    "/admin/concepto/confirmar":            "conceptos",
+    "/admin/concepto/fusionar":             "conceptos",
+    "/admin/conceptos-universales":         "conceptos",
+    "/admin/formula":                       "formulas",
+    "/admin/formula/borrar":                "formulas",
+    "/admin/aprender":                      "aprendizaje",
+    "/admin/aprender/aplicar":              "aprendizaje",
+
+    "/admin/noticia":                       "noticias",
+    "/admin/noticia/borrar":                "noticias",
+    "/admin/beneficio":                     "beneficios",
+    "/admin/beneficio/borrar":              "beneficios",
+    "/admin/seccional":                     "seccionales",
+    "/admin/seccional/borrar":              "seccionales",
+
+    "/admin/notificacion":                  "notificaciones",
+    "/admin/notificacion/preview":          "notificaciones",
+    "/admin/notificacion/{notificacion_id}/destinatarios": "notificaciones",
+
+    # Responder un trámite y diseñar el formulario son permisos distintos:
+    # quien edita el formulario elige el área receptora.
+    "/admin/tramite-tipo":                  "tramites_formularios",
+    "/admin/tramite-tipo/borrar":           "tramites_formularios",
+    "/admin/tramite/{tramite_id}":          "tramites_recibidos",
+    "/admin/tramite/{tramite_id}/estado":   "tramites_recibidos",
+    "/admin/tramite/{tramite_id}/nota":     "tramites_recibidos",
+    "/admin/tramites-nuevos-cantidad":      "tramites_recibidos",
+
+    # Las 3 subpestañas de Empleadores, cada una con su permiso.
+    "/admin/empleador":                     "emp_empresas",
+    "/admin/empleador/baja":                "emp_empresas",
+    "/admin/empleador/alta-logica":         "emp_empresas",
+    "/admin/empleador/importar-cuits":      "emp_empresas",
+    "/admin/notificacion-empresa":          "emp_notificaciones",
+    "/admin/notificacion-empresa/preview":  "emp_notificaciones",
+    "/admin/notificacion-empresa/{notificacion_empleador_id}/destinatarios": "emp_notificaciones",
+    "/admin/tramite-tipo-empresa":          "emp_tramites_formularios",
+    "/admin/tramite-tipo-empresa/borrar":   "emp_tramites_formularios",
+    "/admin/tramite-empresa/{tramite_id}":  "emp_tramites_recibidos",
+    "/admin/tramite-empresa/{tramite_id}/estado": "emp_tramites_recibidos",
+    "/admin/tramite-empresa/{tramite_id}/nota":   "emp_tramites_recibidos",
+    "/admin/tramites-empresa-nuevos-cantidad":    "emp_tramites_recibidos",
+}
+
+# Las únicas rutas de /admin que no exigen sección: entrar, salir, y las dos
+# pantallas que se arman con lo que cada uno puede ver. Gatearlas dejaría a
+# un usuario de área sin poder ni siquiera abrir el panel.
+#
+# Ojo para la Fase 3: /admin arma UNA página con todos los paneles adentro.
+# Esconder pestañas en el cliente no alcanza -- los datos viajan igual en el
+# HTML. Cada panel tiene que quedar dentro de un {% if %} por permiso Y la
+# ruta tiene que dejar de pasarle esos datos a la plantilla.
+RUTAS_ADMIN_SIN_PERMISO = {"/admin", "/admin/inicio", "/admin/login", "/admin/salir"}
+
+
+def _exigir_permiso_de_ruta(request: Request, ses: dict) -> None:
+    """Chequea que el usuario de la sesión pueda tocar ESTA ruta.
+
+    La sección sale de PERMISOS_RUTAS usando la ruta que FastAPI matcheó
+    (`request.scope["route"].path`), no la URL escrita: así
+    "/admin/tramite/57/nota" se resuelve por "/admin/tramite/{tramite_id}/nota"
+    y no hay que parsear nada a mano."""
+    ruta = getattr(request.scope.get("route"), "path", "")
+    if ruta in RUTAS_ADMIN_SIN_PERMISO:
+        return
+    seccion = PERMISOS_RUTAS.get(ruta)
+    if not seccion:
+        # Ruta sin clasificar: se rechaza. Es la mitad que importa del
+        # "falla cerrado" -- una ruta nueva nace cerrada, no abierta.
+        raise HTTPException(403, "Esta sección del panel no está habilitada.")
+    uid = ses.get("uid", 0)
+    if seccion == SECCION_SUPER_ADMIN:
+        if not db.es_super_admin(uid):
+            raise HTTPException(403, "Solo un administrador general del sindicato puede hacer esto.")
+        return
+    if not db.tiene_permiso(uid, seccion):
+        raise HTTPException(403, "No tenés permiso para esta sección del panel.")
+
+
 def exigir_sindicato(request: Request) -> int:
-    """Devuelve el sindicato_id de la sesión, o lanza 403 si no hay sesión válida."""
+    """Devuelve el sindicato_id de la sesión, o lanza 403 si no hay sesión
+    válida -- y, desde el sistema de Áreas, si el usuario no tiene el
+    permiso que esta ruta exige (ver PERMISOS_RUTAS).
+
+    Que el chequeo viva acá y no en cada ruta es a propósito: las 46 rutas
+    del panel ya llamaban a esta función, así que el gateo entró sin tocar
+    ninguna, y una ruta nueva que se olvide de clasificar falla cerrada."""
     ses = sesion_actual(request, "sindicato")
     if not ses:
         raise HTTPException(403, "Necesitás iniciar sesión como administrador del sindicato.")
+    _exigir_permiso_de_ruta(request, ses)
     return ses.get("sid", 0)
 
 
@@ -851,19 +962,21 @@ def admin_usuario_editar(request: Request, id: int = Form(...), nombre: str = Fo
 
 @app.post("/admin/usuario/baja")
 def admin_usuario_baja(request: Request, id: int = Form(...)):
-    """Baja lógica -- bloqueada si es el último administrador activo del
+    """Baja lógica -- bloqueada si es el último SUPER ADMIN activo del
     sindicato (si no, un sindicato podría quedarse sin nadie que pueda
-    entrar a /admin, y solo plataforma podría reactivarlo a mano)."""
+    entrar a /admin, y solo plataforma podría reactivarlo a mano).
+
+    Antes del sistema de Áreas este guard contaba usuarios activos a secas,
+    y eso ahora sería un agujero: un sindicato puede tener diez usuarios de
+    área y un solo Super Admin, así que "queda más de uno activo" dejaría
+    desactivar justamente al único que puede administrar."""
     sid = exigir_sindicato(request)
     with db.get_session() as s:
         u = s.get(UsuarioSindicato, id)
         if not u or u.sindicato_id != sid:
             return RedirectResponse("/admin#administradores", status_code=303)
-        if u.activo:
-            activos = s.exec(select(UsuarioSindicato).where(
-                UsuarioSindicato.sindicato_id == sid, UsuarioSindicato.activo == True)).all()
-            if len(activos) <= 1:
-                return RedirectResponse("/admin?err=ultimoadmin#administradores", status_code=303)
+        if u.activo and u.es_super_admin and db.contar_super_admins(sid, excluyendo=id) == 0:
+            return RedirectResponse("/admin?err=ultimoadmin#administradores", status_code=303)
         u.activo = False
         s.add(u); s.commit()
     return RedirectResponse("/admin#administradores", status_code=303)
