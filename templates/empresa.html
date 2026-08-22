@@ -617,7 +617,7 @@ if (document.getElementById('tp-tramites')) {
         <div class="tram-chat-fila ${propio ? 'propio' : 'ajeno'}" onclick="abrirMensajeTramiteTrx(${it.idx})">
           ${avatarHtmlTrx(n.autor)}
           <div class="tram-chat-burbuja">
-            <div class="tram-chat-remitente">${n.autor === 'admin' ? 'Tu sindicato' : 'Vos'}</div>
+            <div class="tram-chat-remitente">${n.autor === 'admin' ? (n.area || 'Tu sindicato') : 'Vos'}</div>
             <div class="tram-chat-texto">${texto}</div>
             <div class="tram-chat-meta">
               ${n.tiene_adjunto ? '<svg viewBox="0 0 24 24"><use href="#ic-clip"/></svg>' : ''}
@@ -673,7 +673,7 @@ if (document.getElementById('tp-tramites')) {
     if (!trxTramiteActual) return;
     document.getElementById('modal-recibo-titulo').textContent = n ? (n.autor === 'admin' ? 'Tu sindicato' : 'Vos') : 'Responder';
     const mensajeHtml = n ? `
-      <div class="tram-chat-remitente">${n.autor === 'admin' ? 'Tu sindicato' : 'Vos'} · ${n.creado}</div>
+      <div class="tram-chat-remitente">${n.autor === 'admin' ? (n.area || 'Tu sindicato') : 'Vos'} · ${n.creado}</div>
       <div style="font-size:14px; line-height:1.5; margin-top:4px; white-space:pre-wrap;">${escTrx(n.texto)}</div>
       ${n.tiene_adjunto ? `<a class="tram-msg-adjunto" href="/tramite-empresa-nota-adjunto/${n.id}" target="_blank" rel="noopener">📎 ${escTrx(n.adjunto_nombre)}</a>` : ''}
     ` : '';

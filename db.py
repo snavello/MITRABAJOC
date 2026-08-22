@@ -697,6 +697,15 @@ class TipoTramiteEmpleador(SQLModel, table=True):
     creado: str = ""
 
 
+class AreaTipoTramiteEmpleador(SQLModel, table=True):
+    """Mirror de AreaTipoTramite para los formularios externos a empresas.
+    Tabla aparte, no compartida, igual que el resto del sistema de
+    empleadores -- ver la decisión de aislamiento total en CLAUDE.md."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tipo_tramite_id: int = Field(foreign_key="tipotramiteempleador.id", index=True)
+    area_id: int = Field(foreign_key="area.id", index=True)
+
+
 class CampoTramiteEmpleador(SQLModel, table=True):
     """Mirror de CampoTramite."""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -724,6 +733,7 @@ class TramiteEmpleador(SQLModel, table=True):
     estado: str = "iniciado"
     creado: str = ""
     actualizado: str = ""
+    area_a_cargo_id: Optional[int] = Field(default=None, foreign_key="area.id", index=True)
 
 
 class RespuestaTramiteEmpleador(SQLModel, table=True):
@@ -742,6 +752,8 @@ class NotaTramiteEmpleador(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     tramite_id: int = Field(foreign_key="tramiteempleador.id", index=True)
     autor: str
+    # Mismo criterio que NotaTramite: la empresa ve el ÁREA, no la persona.
+    usuario_sindicato_id: Optional[int] = Field(default=None, foreign_key="usuariosindicato.id")
     texto: str = ""
     adjunto_datos: Optional[bytes] = Field(default=None)
     adjunto_mime: str = ""
@@ -2546,13 +2558,19 @@ def tipos_tramite_empleador_del_sindicato(sindicato_id: int, solo_activos: bool 
         if solo_activos:
             q = q.where(TipoTramiteEmpleador.activo == True)
         tipos = s.exec(q.order_by(TipoTramiteEmpleador.creado.desc())).all()
+        nombres_area = {a.id: a.nombre for a in s.exec(select(Area).where(
+            Area.sindicato_id == sindicato_id)).all()}
         resultado = []
         for t in tipos:
             campos = s.exec(select(CampoTramiteEmpleador).where(CampoTramiteEmpleador.tipo_tramite_id == t.id)
                             .order_by(CampoTramiteEmpleador.orden)).all()
+            areas = [r.area_id for r in s.exec(select(AreaTipoTramiteEmpleador).where(
+                AreaTipoTramiteEmpleador.tipo_tramite_id == t.id)).all()]
             resultado.append({
                 "id": t.id, "titulo": t.titulo, "codigo": t.codigo, "activo": t.activo,
                 "creado": t.creado, "campos": [_campo_tramite_empleador_a_dict(c) for c in campos],
+                "areas": areas,
+                "areas_nombres": [nombres_area.get(a, "") for a in areas],
             })
         return resultado
 
@@ -2629,13 +2647,14 @@ def cambiar_estado_tramite_empleador(tramite_id: int, sindicato_id: int, nuevo_e
 
 def agregar_nota_tramite_empleador(tramite_id: int, autor: str, texto: str,
                                     adjunto_datos: Optional[bytes] = None, adjunto_mime: str = "",
-                                    adjunto_nombre: str = "") -> bool:
+                                    adjunto_nombre: str = "", usuario_sindicato_id: int = None) -> bool:
     with Session(engine) as s:
         tr = s.get(TramiteEmpleador, tramite_id)
         if not tr or tr.estado == "terminado":
             return False
         s.add(NotaTramiteEmpleador(
             tramite_id=tramite_id, autor=autor, texto=texto or "",
+            usuario_sindicato_id=usuario_sindicato_id or None,
             adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime or "",
             adjunto_nombre=adjunto_nombre or "", creado=datetime.now().strftime("%Y-%m-%d %H:%M"),
         ))
@@ -2655,8 +2674,24 @@ def _tramite_empleador_resumen(s: Session, tr: "TramiteEmpleador", titulos_tipo:
     }
 
 
+def _alcance_de_tramites_empleador(s: Session, usuario_id: int, sindicato_id: int):
+    """Mirror de _alcance_de_tramites: (tipos_visibles, area_id).
+
+    NO devuelve recorte por seccional: una empresa no pertenece a una
+    seccional (a diferencia del trabajador, que sí tiene `seccional_id`).
+    El único eje de recorte acá es el área."""
+    u = s.get(UsuarioSindicato, usuario_id)
+    if not u or not u.activo or u.sindicato_id != sindicato_id:
+        return set(), None
+    if u.es_super_admin:
+        return None, None
+    tipos = {r.tipo_tramite_id for r in s.exec(select(AreaTipoTramiteEmpleador).where(
+        AreaTipoTramiteEmpleador.area_id == u.area_id)).all()} if u.area_id else set()
+    return tipos, u.area_id
+
+
 def tramites_empleador_del_sindicato(sindicato_id: int, estado: str = None, tipo_tramite_id: int = None,
-                                      cuit: str = None) -> list:
+                                      cuit: str = None, usuario_id: int = None) -> list:
     with Session(engine) as s:
         q = select(TramiteEmpleador).where(TramiteEmpleador.sindicato_id == sindicato_id)
         if estado:
@@ -2666,15 +2701,96 @@ def tramites_empleador_del_sindicato(sindicato_id: int, estado: str = None, tipo
         if cuit:
             q = q.where(TramiteEmpleador.cuit == cuit)
         tramites = s.exec(q.order_by(TramiteEmpleador.id.desc())).all()
+        area_propia = None
+        if usuario_id:
+            tipos, area_propia = _alcance_de_tramites_empleador(s, usuario_id, sindicato_id)
+            if tipos is not None:
+                tramites = [t for t in tramites if t.tipo_tramite_id in tipos]
         titulos_tipo = {t.id: t.titulo for t in s.exec(
             select(TipoTramiteEmpleador).where(TipoTramiteEmpleador.sindicato_id == sindicato_id)).all()}
-        return [_tramite_empleador_resumen(s, tr, titulos_tipo) for tr in tramites]
+        areas = {a.id: a.nombre for a in s.exec(select(Area).where(
+            Area.sindicato_id == sindicato_id)).all()}
+        salida = []
+        for tr in tramites:
+            d = _tramite_empleador_resumen(s, tr, titulos_tipo)
+            d["area_a_cargo_id"] = tr.area_a_cargo_id
+            d["area_a_cargo"] = areas.get(tr.area_a_cargo_id, "")
+            d["puede_responder"] = (
+                area_propia is None
+                or tr.area_a_cargo_id is None
+                or tr.area_a_cargo_id == area_propia)
+            salida.append(d)
+        return salida
 
 
-def contar_tramites_empleador_nuevos(sindicato_id: int) -> int:
+def contar_tramites_empleador_nuevos(sindicato_id: int, usuario_id: int = None) -> int:
+    if usuario_id:
+        return len(tramites_empleador_del_sindicato(
+            sindicato_id, estado="iniciado", usuario_id=usuario_id))
     with Session(engine) as s:
         return len(s.exec(select(TramiteEmpleador).where(
             TramiteEmpleador.sindicato_id == sindicato_id, TramiteEmpleador.estado == "iniciado")).all())
+
+
+def puede_ver_tramite_empleador(tramite_id: int, usuario_id: int, sindicato_id: int) -> bool:
+    with Session(engine) as s:
+        tr = s.get(TramiteEmpleador, tramite_id)
+        if not tr or tr.sindicato_id != sindicato_id:
+            return False
+        tipos, _ = _alcance_de_tramites_empleador(s, usuario_id, sindicato_id)
+        return tipos is None or tr.tipo_tramite_id in tipos
+
+
+def tomar_tramite_empleador(tramite_id: int, usuario_id: int, sindicato_id: int) -> bool:
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        tr = s.get(TramiteEmpleador, tramite_id)
+        if not u or not tr or tr.sindicato_id != sindicato_id or not u.area_id:
+            return False
+        if tr.area_a_cargo_id is not None:
+            return tr.area_a_cargo_id == u.area_id
+        tr.area_a_cargo_id = u.area_id
+        s.add(tr)
+        area = s.get(Area, u.area_id)
+        _log_tramite_empleador(s, tramite_id, "tomado",
+                               f"{area.nombre if area else 'un area'} tomo el tramite")
+        s.commit()
+        return True
+
+
+def liberar_tramite_empleador(tramite_id: int, usuario_id: int, sindicato_id: int) -> bool:
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        tr = s.get(TramiteEmpleador, tramite_id)
+        if not u or not tr or tr.sindicato_id != sindicato_id:
+            return False
+        if not u.es_super_admin and tr.area_a_cargo_id != u.area_id:
+            return False
+        tr.area_a_cargo_id = None
+        s.add(tr)
+        _log_tramite_empleador(s, tramite_id, "liberado",
+                               "el tramite volvio a la bandeja del area")
+        s.commit()
+        return True
+
+
+def areas_de_tipo_tramite_empleador(tipo_tramite_id: int) -> list:
+    with Session(engine) as s:
+        return sorted(r.area_id for r in s.exec(select(AreaTipoTramiteEmpleador).where(
+            AreaTipoTramiteEmpleador.tipo_tramite_id == tipo_tramite_id)).all())
+
+
+def set_areas_tipo_tramite_empleador(tipo_tramite_id: int, areas: list, sindicato_id: int) -> None:
+    with Session(engine) as s:
+        propias = {a.id for a in s.exec(select(Area).where(
+            Area.sindicato_id == sindicato_id)).all()}
+        for r in s.exec(select(AreaTipoTramiteEmpleador).where(
+                AreaTipoTramiteEmpleador.tipo_tramite_id == tipo_tramite_id)).all():
+            s.delete(r)
+        for area_id in dict.fromkeys(areas or []):
+            if int(area_id) in propias:
+                s.add(AreaTipoTramiteEmpleador(tipo_tramite_id=tipo_tramite_id, area_id=int(area_id)))
+        s.commit()
 
 
 def tramites_de_empresa(cuit: str, sindicato_id: int) -> list:
@@ -2698,11 +2814,30 @@ def _tramite_empleador_detalle_completo(s: Session, tr: "TramiteEmpleador") -> d
                    .order_by(NotaTramiteEmpleador.id)).all()
     log = s.exec(select(TramiteEmpleadorLog).where(TramiteEmpleadorLog.tramite_id == tr.id)
                  .order_by(TramiteEmpleadorLog.id)).all()
+    # Mismo criterio que en el detalle de trabajador: la empresa ve el AREA
+    # que le respondio, nunca el nombre de la persona.
+    autores = {u.id: u for u in s.exec(select(UsuarioSindicato).where(
+        UsuarioSindicato.id.in_({n.usuario_sindicato_id for n in notas
+                                 if n.usuario_sindicato_id}))).all()} if notas else {}
+    nombres_area = {a.id: a.nombre for a in s.exec(select(Area).where(
+        Area.sindicato_id == tr.sindicato_id)).all()}
+
+    def _area_de_nota(n):
+        u = autores.get(n.usuario_sindicato_id)
+        if not u:
+            return ""
+        return "" if u.es_super_admin else nombres_area.get(u.area_id, "")
+
     return {
         "id": tr.id, "numero_expediente": tr.numero_expediente, "cuit": tr.cuit,
         "sindicato_id": tr.sindicato_id, "estado": tr.estado,
         "estado_label": ESTADOS_TRAMITE_LABEL.get(tr.estado, tr.estado),
         "creado": tr.creado, "actualizado": tr.actualizado,
+        "area_a_cargo_id": tr.area_a_cargo_id,
+        "area_a_cargo": nombres_area.get(tr.area_a_cargo_id, ""),
+        "areas_destino": [nombres_area.get(r.area_id, "") for r in s.exec(
+            select(AreaTipoTramiteEmpleador).where(
+                AreaTipoTramiteEmpleador.tipo_tramite_id == tr.tipo_tramite_id)).all()],
         "tipo_titulo": tipo.titulo if tipo else "—", "tipo_codigo": tipo.codigo if tipo else "",
         "respuestas": [{
             "campo_id": r.campo_tramite_id,
@@ -2714,6 +2849,9 @@ def _tramite_empleador_detalle_completo(s: Session, tr: "TramiteEmpleador") -> d
         "notas": [{
             "id": n.id, "autor": n.autor, "texto": n.texto, "creado": n.creado,
             "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+            "area": _area_de_nota(n),
+            "autor_nombre": (autores[n.usuario_sindicato_id].nombre
+                             if n.usuario_sindicato_id in autores else ""),
         } for n in notas],
         "log": [{"evento": l.evento, "detalle": l.detalle, "creado": l.creado} for l in log],
     }

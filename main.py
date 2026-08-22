@@ -629,6 +629,8 @@ PERMISOS_RUTAS = {
     "/admin/tramite-empresa/{tramite_id}":  "emp_tramites_recibidos",
     "/admin/tramite-empresa/{tramite_id}/estado": "emp_tramites_recibidos",
     "/admin/tramite-empresa/{tramite_id}/nota":   "emp_tramites_recibidos",
+    "/admin/tramite-empresa/{tramite_id}/tomar":   "emp_tramites_recibidos",
+    "/admin/tramite-empresa/{tramite_id}/liberar": "emp_tramites_recibidos",
     "/admin/tramites-empresa-nuevos-cantidad":    "emp_tramites_recibidos",
 }
 
@@ -682,6 +684,20 @@ def _exigir_a_cargo(request: Request, tramite_id: int, sid: int) -> None:
         return
     with db.get_session() as s:
         tr = s.get(Tramite, tramite_id)
+        u = s.get(UsuarioSindicato, uid)
+        if not tr or not u:
+            raise HTTPException(403, "No podés responder este trámite.")
+        if tr.area_a_cargo_id is not None and tr.area_a_cargo_id != u.area_id:
+            raise HTTPException(403, "Este trámite lo tomó otra área. Pedile que lo libere.")
+
+
+def _exigir_a_cargo_empresa(request: Request, tramite_id: int, sid: int) -> None:
+    """Mirror de _exigir_a_cargo sobre TramiteEmpleador."""
+    uid = _uid(request)
+    if db.es_super_admin(uid):
+        return
+    with db.get_session() as s:
+        tr = s.get(TramiteEmpleador, tramite_id)
         u = s.get(UsuarioSindicato, uid)
         if not tr or not u:
             raise HTTPException(403, "No podés responder este trámite.")
@@ -804,9 +820,9 @@ def admin(request: Request):
             if puede("emp_notificaciones") else [],
         "tipos_tramite_empresa": db.tipos_tramite_empleador_del_sindicato(sid)
             if puede("emp_tramites_formularios", "emp_tramites_recibidos") else [],
-        "tramites_empresa": db.tramites_empleador_del_sindicato(sid)
+        "tramites_empresa": db.tramites_empleador_del_sindicato(sid, usuario_id=uid)
             if puede("emp_tramites_recibidos") else [],
-        "tramites_empresa_nuevos": db.contar_tramites_empleador_nuevos(sid)
+        "tramites_empresa_nuevos": db.contar_tramites_empleador_nuevos(sid, usuario_id=uid)
             if puede("emp_tramites_recibidos") else 0,
         "modulos": modulos,
         # Lo que la plantilla usa para armar la tira de pestañas y decidir
@@ -2271,7 +2287,10 @@ async def abm_tramite_tipo_empresa(
     request: Request,
     id: str = Form(""), titulo: str = Form(...), codigo: str = Form(...),
     activo: str = Form("si"), campos_json: str = Form(...),
+    areas: list[str] = Form(default=[]),
 ):
+    """Mismo criterio que el formulario de trabajador: al menos un area
+    receptora, si no sus tramites no los ve nadie salvo el Super Admin."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "empleadores")
     import json
@@ -2283,10 +2302,15 @@ async def abm_tramite_tipo_empresa(
     campos = _campos_tramite_validos(campos_crudos)
     if not campos:
         return RedirectResponse("/admin?error=campos#empleadores", status_code=303)
+    if not [a for a in areas if a]:
+        return RedirectResponse("/admin?error=sinareadestino#empleadores", status_code=303)
     if id:
         db.editar_tipo_tramite_empleador(int(id), sid, titulo, codigo, activo == "si", campos)
+        tipo_id = int(id)
     else:
-        db.crear_tipo_tramite_empleador(sid, titulo, codigo, campos)
+        tipo_id = db.crear_tipo_tramite_empleador(sid, titulo, codigo, campos)
+    if tipo_id:
+        db.set_areas_tipo_tramite_empleador(tipo_id, areas, sid)
     return RedirectResponse("/admin#empleadores", status_code=303)
 
 
@@ -2300,6 +2324,26 @@ def borrar_tramite_tipo_empresa(request: Request, id: int = Form(...)):
     return RedirectResponse("/admin#empleadores", status_code=303)
 
 
+@app.post("/admin/tramite-empresa/{tramite_id}/tomar")
+def admin_tramite_empresa_tomar(tramite_id: int, request: Request):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    uid = _uid(request)
+    if not db.puede_ver_tramite_empleador(tramite_id, uid, sid):
+        raise HTTPException(403, "Este trámite no está dirigido a tu área.")
+    return JSONResponse({"ok": db.tomar_tramite_empleador(tramite_id, uid, sid)})
+
+
+@app.post("/admin/tramite-empresa/{tramite_id}/liberar")
+def admin_tramite_empresa_liberar(tramite_id: int, request: Request):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    uid = _uid(request)
+    if not db.puede_ver_tramite_empleador(tramite_id, uid, sid):
+        raise HTTPException(403, "Este trámite no está dirigido a tu área.")
+    return JSONResponse({"ok": db.liberar_tramite_empleador(tramite_id, uid, sid)})
+
+
 @app.get("/admin/tramite-empresa/{tramite_id}")
 def admin_ver_tramite_empresa(tramite_id: int, request: Request):
     sid = exigir_sindicato(request)
@@ -2307,6 +2351,8 @@ def admin_ver_tramite_empresa(tramite_id: int, request: Request):
     detalle = db.tramite_empleador_detalle(tramite_id)
     if not detalle or detalle["sindicato_id"] != sid:
         raise HTTPException(404, "Trámite no encontrado")
+    if not db.puede_ver_tramite_empleador(tramite_id, _uid(request), sid):
+        raise HTTPException(403, "Este trámite no está dirigido a tu área.")
     return detalle
 
 
@@ -2314,7 +2360,7 @@ def admin_ver_tramite_empresa(tramite_id: int, request: Request):
 def admin_tramites_empresa_nuevos_cantidad(request: Request):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "empleadores")
-    return {"cantidad": db.contar_tramites_empleador_nuevos(sid)}
+    return {"cantidad": db.contar_tramites_empleador_nuevos(sid, usuario_id=_uid(request))}
 
 
 @app.post("/admin/tramite-empresa/{tramite_id}/estado")
@@ -2326,6 +2372,7 @@ def admin_cambiar_estado_tramite_empresa(tramite_id: int, request: Request, esta
         raise HTTPException(404, "Trámite no encontrado")
     if detalle["estado"] == "terminado":
         raise HTTPException(400, "Este trámite está terminado y no se puede modificar.")
+    _exigir_a_cargo_empresa(request, tramite_id, sid)
     if not db.cambiar_estado_tramite_empleador(tramite_id, sid, estado):
         raise HTTPException(400, "Estado inválido")
     nuevo_label = db.ESTADOS_TRAMITE_LABEL.get(estado, estado)
@@ -2344,6 +2391,7 @@ async def admin_nota_tramite_empresa(tramite_id: int, request: Request, texto: s
         raise HTTPException(404, "Trámite no encontrado")
     if detalle["estado"] == "terminado":
         raise HTTPException(400, "Este trámite está terminado y no se puede modificar.")
+    _exigir_a_cargo_empresa(request, tramite_id, sid)
     adjunto_datos, adjunto_mime, adjunto_nombre = None, "", ""
     if adjunto and adjunto.filename:
         adjunto_datos, adjunto_mime, adjunto_nombre = _leer_archivo_tramite(adjunto)
@@ -2351,7 +2399,8 @@ async def admin_nota_tramite_empresa(tramite_id: int, request: Request, texto: s
             raise HTTPException(400, "Adjunto inválido o supera el tamaño máximo (10 MB).")
     if not texto.strip() and not adjunto_datos:
         raise HTTPException(400, "La nota necesita texto o un adjunto.")
-    db.agregar_nota_tramite_empleador(tramite_id, "admin", texto, adjunto_datos, adjunto_mime, adjunto_nombre)
+    db.agregar_nota_tramite_empleador(tramite_id, "admin", texto, adjunto_datos, adjunto_mime,
+                                      adjunto_nombre, usuario_sindicato_id=_uid(request))
     _notificar_cambio_tramite_empleador(sid, detalle["cuit"],
         f'Tu sindicato agregó una nota a tu trámite {detalle["numero_expediente"]}.')
     return {"ok": True}
@@ -2416,7 +2465,7 @@ def api_consultar_tramite_empresa(numero_expediente: str, request: Request):
     detalle = db.tramite_empleador_por_numero_expediente(numero_expediente.strip().upper())
     if not detalle or detalle["cuit"] != cuit:
         raise HTTPException(404, "No encontramos un trámite tuyo con ese número.")
-    return detalle
+    return _detalle_sin_datos_internos(detalle)
 
 
 @app.post("/api/empresa/tramite")

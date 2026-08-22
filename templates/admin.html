@@ -1204,6 +1204,9 @@
   {% if request.query_params.get('error') == 'cuit' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">CUIT inválido -- tiene que tener 11 dígitos.</div>
   {% endif %}
+  {% if request.query_params.get('error') == 'sinareadestino' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Elegí al menos un área que reciba este trámite.</div>
+  {% endif %}
   {% if request.query_params.get('importados') %}
   <div class="msg ok">✓ Se importaron {{ request.query_params.get('importados') }} empleador(es) nuevo(s) desde Conceptos.</div>
   {% endif %}
@@ -1380,18 +1383,31 @@
         <span class="f-cant" id="f-tramitesemp-cant"></span>
       </div>
       <table>
-        <tr><th>Expediente</th><th>CUIT</th><th>Tipo</th><th>Estado</th><th>Actualizado</th><th></th></tr>
+        <tr><th>Expediente</th><th>CUIT</th><th>Tipo</th><th>Estado</th><th>A cargo</th><th>Actualizado</th><th></th></tr>
         {% for tr in tramites_empresa %}
         <tr class="fila-tramite-emp" id="tramiteemp-fila-{{ tr.id }}" data-cuit="{{ tr.cuit }}" data-nombre="{{ tr.numero_expediente }}" data-estado="{{ tr.estado }}">
           <td><code>{{ tr.numero_expediente }}</code></td>
           <td>{{ tr.cuit }}</td>
           <td>{{ tr.tipo_titulo }}</td>
           <td><span class="tag {{ 'tag-si' if tr.estado == 'terminado' else 'tag-pend' }}">{{ tr.estado_label }}</span></td>
+          <td style="font-size:12.5px;">
+            {% if tr.area_a_cargo %}{{ tr.area_a_cargo }}{% if not tr.puede_responder %} <span class="tag" style="background:#eee;color:#888;">solo lectura</span>{% endif %}
+            {% else %}<span class="muted">sin tomar</span>{% endif %}
+          </td>
           <td class="muted">{{ tr.actualizado }}</td>
-          <td style="text-align:right;"><button type="button" class="mini" onclick="abrirTramiteEmpresaDetalle({{ tr.id }})">Ver</button></td>
+          <td style="white-space:nowrap; text-align:right;">
+            <button type="button" class="mini" onclick="abrirTramiteEmpresaDetalle({{ tr.id }})">Ver</button>
+            {% if not es_super_admin and tr.estado != 'terminado' %}
+              {% if not tr.area_a_cargo_id %}
+              <button type="button" class="mini" onclick="tomarTramiteEmpresa({{ tr.id }})">Tomar</button>
+              {% elif tr.puede_responder %}
+              <button type="button" class="mini sec" onclick="liberarTramiteEmpresa({{ tr.id }})">Liberar</button>
+              {% endif %}
+            {% endif %}
+          </td>
         </tr>
         {% else %}
-        <tr><td colspan="6" class="muted">Todavía no llegó ningún trámite de una empresa.</td></tr>
+        <tr><td colspan="7" class="muted">Todavía no llegó ningún trámite de una empresa.</td></tr>
         {% endfor %}
       </table>
     </div>
@@ -1412,6 +1428,18 @@
           </div>
           <div class="campo oculto" id="te-activo-campo" style="margin-top:10px;">
             <label class="chk-seccional" style="width:fit-content;"><input type="checkbox" id="te-activo" checked> Activo (visible para la empresa)</label>
+          </div>
+
+          <div class="campo" style="margin-top:12px;">
+            <label>Área(s) que reciben este trámite *</label>
+            <span class="muted" style="display:block; margin-bottom:5px;">Los trámites de este formulario los ven solo los usuarios de estas áreas. Si elegís más de una, todas lo ven y la primera que lo tome queda a cargo.</span>
+            {% if areas %}
+            <div class="check-seccionales">
+              {% for a in areas %}{% if a.activo %}
+              <label class="chk-seccional"><input type="checkbox" name="areas" value="{{ a.id }}" class="te-area"> {{ a.nombre }}</label>
+              {% endif %}{% endfor %}
+            </div>
+            {% else %}<span class="muted">No hay áreas cargadas. Creá una en "Áreas y Usuarios" antes de armar un formulario.</span>{% endif %}
           </div>
 
           <h3 style="margin-top:18px; font-size:14px; color:var(--tinta);">Campos del formulario</h3>
@@ -2342,6 +2370,17 @@ async function _tramiteAccion(id, accion) {
 function tomarTramite(id) { _tramiteAccion(id, 'tomar'); }
 function liberarTramite(id) { _tramiteAccion(id, 'liberar'); }
 
+// Mismo par para los trámites de empresa (tablas espejo, ver CLAUDE.md).
+async function _tramiteEmpresaAccion(id, accion) {
+  const r = await fetch(`/admin/tramite-empresa/${id}/${accion}`, { method: 'POST' });
+  if (!r.ok) { alert('No se pudo ' + accion + ' el trámite.'); return; }
+  const d = await r.json();
+  if (!d.ok) { alert('Otra área ya lo tomó. Actualizá la página para ver quién.'); return; }
+  location.reload();
+}
+function tomarTramiteEmpresa(id) { _tramiteEmpresaAccion(id, 'tomar'); }
+function liberarTramiteEmpresa(id) { _tramiteEmpresaAccion(id, 'liberar'); }
+
 function filtrarTramites() {
   const cuit = (document.getElementById('f-tramites-cuit').value || '').replace(/\D/g, '');
   const nombre = (document.getElementById('f-tramites-nombre').value || '').toUpperCase().trim();
@@ -2681,6 +2720,7 @@ function editarTramiteTipoEmpresa(t) {
   document.getElementById('te-codigo').value = t.codigo;
   document.getElementById('te-activo-campo').classList.remove('oculto');
   document.getElementById('te-activo').checked = t.activo;
+  document.querySelectorAll('.te-area').forEach(c => { c.checked = (t.areas || []).map(String).includes(c.value); });
   camposTramiteEmpActuales = (t.campos || []).map(c => ({...c}));
   renderCamposTramiteEmpresa();
   document.getElementById('te-h2').textContent = 'Editar tipo de trámite';

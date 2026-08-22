@@ -46,6 +46,13 @@ with db.get_session() as s:
     s.add(Trabajador(sindicato_id=SID_UOM, cuil="30111222339", nombre="Coincidencia", activo=True, registrado=True))
     s.commit()
 
+# Desde la Fase 5 (SPRINT_AREAS.md) un tipo de trámite externo necesita al
+# menos un área receptora: sin eso, sus trámites no los vería nadie.
+with db.get_session() as _s:
+    _area = Area(sindicato_id=SID_UOM, nombre="Mesa de Entradas")
+    _s.add(_area); _s.commit(); _s.refresh(_area)
+    AREA_UOM = _area.id
+
 admin_uom = TestClient(main.app)
 admin_uom.post("/admin/login", data={"usuario": "20111111110", "clave": "uom-demo"})
 admin_fega = TestClient(main.app)
@@ -78,6 +85,7 @@ def test_alta_tipo_tramite_empresa_con_campos_de_cada_tipo_dato():
     ]
     r = admin_uom.post("/admin/tramite-tipo-empresa", data={
         "titulo": "Nómina mensual", "codigo": "F01 EMP", "campos_json": json.dumps(campos),
+        "areas": [str(AREA_UOM)],
     }, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
@@ -263,6 +271,7 @@ def test_bloqueo_403_si_modulo_apagado():
     r1 = admin_fega.post("/admin/tramite-tipo-empresa", data={
         "titulo": "No debería crearse", "codigo": "X", "campos_json": json.dumps([
             {"etiqueta": "Campo", "tipo_dato": "texto", "obligatorio": True}]),
+        "areas": [str(AREA_UOM)],
     })
     assert r1.status_code == 403
     r2 = admin_fega.post("/admin/tramite-tipo-empresa/borrar", data={"id": TIPO_ID})
@@ -284,13 +293,9 @@ def test_tramites_de_trabajador_y_empresa_nunca_se_mezclan():
     (30111222339) a propósito -- confirmar que ninguno ve trámites del otro,
     y que las tablas TramiteEmpleador/Tramite nunca se cruzan."""
     campos = [{"etiqueta": "Campo", "tipo_dato": "texto", "obligatorio": True}]
-    with db.get_session() as s:
-        area = Area(sindicato_id=SID_UOM, nombre="Mesa de Entradas")
-        s.add(area); s.commit(); s.refresh(area)
-        area_id = area.id
     r_tipo_trab = admin_uom.post("/admin/tramite-tipo", data={
         "titulo": "Tipo trabajador", "codigo": "TRAB", "campos_json": json.dumps(campos),
-        "areas": [str(area_id)],
+        "areas": [str(AREA_UOM)],
     }, follow_redirects=False)
     assert r_tipo_trab.status_code == 303
     with Session(db.engine) as s:
