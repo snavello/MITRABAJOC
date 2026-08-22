@@ -27,7 +27,7 @@ with db.get_session() as s:
     s.refresh(sind)
     SID = sind.id
     s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111110",
-                           clave_hash=auth.hashear_clave("clave"), debe_cambiar_clave=False))
+                           clave_hash=auth.hashear_clave("clave"), debe_cambiar_clave=False, es_super_admin=True))
     real = Concepto(sindicato_id=SID, codigo="795-019", nombre="COMP. P/DEDICACION ESPECIAL",
                     tipo="ingreso", alias=["COMP. P/DEDICACION ESPECIAL"])
     prov = Concepto(sindicato_id=SID, codigo="NUEVO-COMP.P/DEDIC",

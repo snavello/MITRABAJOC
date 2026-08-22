@@ -93,7 +93,8 @@ with db.get_session() as s:
         s.add(sind); s.commit(); s.refresh(sind)
         u, cl = d["admin"]
         s.add(UsuarioSindicato(sindicato_id=sind.id, usuario=u, nombre="Administrador",
-                               clave_hash=auth.hashear_clave(cl), debe_cambiar_clave=False))
+                               clave_hash=auth.hashear_clave(cl), debe_cambiar_clave=False,
+                               es_super_admin=True))
         for cod, nom, tipo, rem in d["conceptos"]:
             s.add(Concepto(sindicato_id=sind.id, codigo=cod, nombre=nom, tipo=tipo,
                            remunerativo=rem, alias=[nom]))

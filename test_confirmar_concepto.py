@@ -25,7 +25,7 @@ with db.get_session() as s:
     s.add(uom); s.add(fega); s.commit(); s.refresh(uom); s.refresh(fega)
     SID_UOM, SID_FEGA = uom.id, fega.id
     s.add(UsuarioSindicato(sindicato_id=SID_UOM, usuario="20111111110", nombre="Admin",
-                            clave_hash=auth.hashear_clave("uom-demo"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("uom-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(Concepto(sindicato_id=SID_UOM, codigo="X1", nombre="Nuevo concepto", tipo="ingreso",
                     remunerativo=True, alias=["Nuevo concepto"], pendiente_revision=True))
     s.add(Concepto(sindicato_id=SID_FEGA, codigo="Y1", nombre="Concepto de Fega", tipo="ingreso",

@@ -829,6 +829,10 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
         s.add(UsuarioSindicato(
             sindicato_id=sid, usuario=cuit, nombre=nombre,
             clave_hash=auth.hashear_clave(clave_inicial), debe_cambiar_clave=True,
+            # Fase 1: esta alta sigue creando Super Admins, igual que antes
+            # del sistema de Áreas. En la Fase 3 este formulario pasa a
+            # pedir área + permisos y deja de crear Super Admins por default.
+            es_super_admin=True,
         ))
         s.commit()
     return RedirectResponse("/admin#administradores", status_code=303)
@@ -2673,6 +2677,9 @@ def plataforma_alta_usuario(
             sindicato_id=sindicato_id, usuario=_norm_cuil(usuario), nombre=nombre,
             clave_hash=auth.hashear_clave(clave_inicial),
             debe_cambiar_clave=True,
+            # Plataforma da de alta al PRIMER usuario del sindicato: tiene
+            # que poder entrar a todo, incluida la gestión de áreas.
+            es_super_admin=True,
         ))
         s.commit()
     return RedirectResponse("/plataforma", status_code=303)

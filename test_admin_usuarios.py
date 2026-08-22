@@ -29,9 +29,9 @@ with db.get_session() as s:
     SID_A, SID_B = sind_a.id, sind_b.id
 
     s.add(UsuarioSindicato(sindicato_id=SID_A, usuario="20111111110", nombre="Admin Uno",
-                            clave_hash=auth.hashear_clave("clave-a"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("clave-a"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(UsuarioSindicato(sindicato_id=SID_B, usuario="20222222220", nombre="Admin B",
-                            clave_hash=auth.hashear_clave("clave-b"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("clave-b"), debe_cambiar_clave=False, es_super_admin=True))
     s.commit()
 
 

@@ -37,9 +37,9 @@ with db.get_session() as s:
     SID_UOM, SID_FEGA = uom.id, fega.id
 
     s.add(UsuarioSindicato(sindicato_id=SID_UOM, usuario="20111111110", nombre="Admin UOM",
-                            clave_hash=auth.hashear_clave("uom-demo"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("uom-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(UsuarioSindicato(sindicato_id=SID_FEGA, usuario="20222222220", nombre="Admin Fega",
-                            clave_hash=auth.hashear_clave("fega-demo"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("fega-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(Empleador(sindicato_id=SID_UOM, cuit="30111222339", razon_social="Constructora A", activo=True))
     # Un trabajador con el mismo "identificador" numérico que el empleador de
     # arriba -- para el test de que las dos tablas nunca se cruzan.
