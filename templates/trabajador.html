@@ -1098,10 +1098,18 @@ function renderHistorialDetalle(detalle) {
 }
 
 // ==================== Semáforo de aportes ====================
+// El div #sem-cuerpo se renderiza solo si el sindicato tiene el módulo
+// "aportes" (ver la pestaña Mis Aportes, más arriba). Si no lo tiene, el
+// elemento NO existe y las tres funciones que lo escriben -- semApagado,
+// semSubir y semRender -- tienen que ser no-ops.
+// Sin el guard, la excepción cortaba la ejecución del script a nivel de
+// módulo y se llevaba puesto TODO lo que viene después (pestañas,
+// credencial, trámites), no solo el semáforo.
 const semCuerpo = document.getElementById('sem-cuerpo');
 let semArcaCargado = false;
 
 function semApagado() {
+  if (!semCuerpo) return;
   const adv = datosLeidos && datosLeidos.advertencia_deposito;
   const avisoTemprano = adv ? `<div class="alerta-legal" style="margin:14px 18px 0;">
     <b>Señal temprana (no reemplaza a ARCA):</b> ${adv.mensaje}</div>` : '';
@@ -1124,6 +1132,7 @@ function semApagado() {
 }
 
 async function semSubir(e) {
+  if (!semCuerpo) return;
   const archivo = e.target.files[0];
   if (!archivo) return;
   semCuerpo.innerHTML = `<div class="cargando" style="padding:30px 0;"><div class="spin"></div>
@@ -1149,6 +1158,7 @@ function semBarra(meses, rubro) {
 }
 
 function semRender(d) {
+  if (!semCuerpo) return;
   semArcaCargado = true; // ARCA manda: ya no se muestra la señal temprana del recibo
   // Si viene de un dato guardado, mostrar la fecha real en que se consultó
   // -- no "hoy", que sería engañoso para un semáforo de hace varios días.
