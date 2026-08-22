@@ -75,6 +75,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - .claude/skills/diseno-mi-trabajo/ — skill con las reglas del sistema de diseño;
   .claude/skills/frontend-design/ — skill oficial de Anthropic para dirección visual general.
 - **HISTORIAL.md** — changelog técnico detallado, no se carga automático.
+- **BACKLOG.md** — hallazgos técnicos pendientes (bugs pre-existentes
+  encontrados al pasar, deudas, ideas evaluadas y pospuestas). No se carga
+  automático. Los pendientes de PRODUCTO siguen en "Pendientes (features)"
+  más abajo; BACKLOG.md es lo técnico. Al encontrar un bug fuera del
+  alcance del bloque en curso, anotarlo ahí en vez de desviar el trabajo.
 
 ## Los cuatro roles
 1. Admin de plataforma — /plataforma con CUIT + PLATAFORMA_PASSWORD. Da de alta
