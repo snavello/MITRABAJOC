@@ -1577,7 +1577,108 @@ def seccionales_del_sindicato(sindicato_id: int) -> list:
     with Session(engine) as s:
         seccionales = s.exec(select(Seccional).where(
             Seccional.sindicato_id == sindicato_id).order_by(Seccional.nombre)).all()
-        return [{"id": sec.id, "nombre": sec.nombre, "direccion": sec.direccion} for sec in seccionales]
+        return [{"id": sec.id, "nombre": sec.nombre, "direccion": sec.direccion,
+                 "ve_todas": sec.ve_todas} for sec in seccionales]
+
+
+# ---------- Áreas y permisos (CRUD del Super Admin) ----------
+
+def areas_del_sindicato(sindicato_id: int) -> list:
+    """Áreas del sindicato con sus permisos, para el CRUD y los <select>.
+
+    Trae los permisos en la misma pasada: la pantalla siempre los muestra
+    junto al área, y son pocas filas."""
+    with Session(engine) as s:
+        areas = s.exec(select(Area).where(
+            Area.sindicato_id == sindicato_id).order_by(Area.nombre)).all()
+        ids = [a.id for a in areas]
+        por_area = {i: [] for i in ids}
+        if ids:
+            for p in s.exec(select(PermisoArea).where(PermisoArea.area_id.in_(ids))).all():
+                por_area[p.area_id].append(p.seccion)
+        return [{"id": a.id, "nombre": a.nombre, "activo": a.activo,
+                 "permisos": sorted(por_area.get(a.id, []))} for a in areas]
+
+
+def set_permisos_area(area_id: int, secciones: list, sindicato_id: int) -> None:
+    """Reemplaza los permisos del área. Descarta cualquier sección que no
+    exista en el catálogo o que el sindicato no tenga contratada -- mismo
+    criterio defensivo que set_modulos_sindicato: no se guarda basura que
+    después haya que filtrar en cada lectura."""
+    from permisos import secciones_de_modulos
+    with Session(engine) as s:
+        area = s.get(Area, area_id)
+        if not area or area.sindicato_id != sindicato_id:
+            return
+        validas = set(secciones_de_modulos(modulos_habilitados(sindicato_id)))
+        for p in s.exec(select(PermisoArea).where(PermisoArea.area_id == area_id)).all():
+            s.delete(p)
+        for seccion in dict.fromkeys(secciones or []):   # sin repetidos, sin perder el orden
+            if seccion in validas:
+                s.add(PermisoArea(area_id=area_id, seccion=seccion))
+        s.commit()
+
+
+def permisos_individuales(usuario_id: int) -> dict:
+    """{"agregar": [...], "bloquear": [...]} del usuario, para pintar la
+    pantalla en sus tres estados (hereda / agregado / bloqueado)."""
+    with Session(engine) as s:
+        filas = s.exec(select(PermisoUsuario).where(
+            PermisoUsuario.usuario_id == usuario_id)).all()
+        return {
+            "agregar": sorted(p.seccion for p in filas if p.tipo == "agregar"),
+            "bloquear": sorted(p.seccion for p in filas if p.tipo == "bloquear"),
+        }
+
+
+def set_permisos_usuario(usuario_id: int, agregar: list, bloquear: list,
+                         sindicato_id: int) -> None:
+    """Reemplaza los ajustes individuales del usuario.
+
+    Si una sección viene en las dos listas gana BLOQUEAR, por lo mismo que
+    el bloqueo le gana al área en el cálculo: es el único orden que hace
+    que "bloqueado" signifique algo estable."""
+    from permisos import secciones_de_modulos
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        if not u or u.sindicato_id != sindicato_id:
+            return
+        validas = set(secciones_de_modulos(modulos_habilitados(sindicato_id)))
+        for p in s.exec(select(PermisoUsuario).where(
+                PermisoUsuario.usuario_id == usuario_id)).all():
+            s.delete(p)
+        bloqueadas = {x for x in (bloquear or []) if x in validas}
+        for seccion in bloqueadas:
+            s.add(PermisoUsuario(usuario_id=usuario_id, seccion=seccion, tipo="bloquear"))
+        for seccion in {x for x in (agregar or []) if x in validas} - bloqueadas:
+            s.add(PermisoUsuario(usuario_id=usuario_id, seccion=seccion, tipo="agregar"))
+        s.commit()
+
+
+def usuarios_del_sindicato(sindicato_id: int) -> list:
+    """Usuarios del panel con su área, seccional y ajustes individuales --
+    todo lo que la pantalla de "Áreas y Usuarios" necesita mostrar."""
+    with Session(engine) as s:
+        usuarios = s.exec(select(UsuarioSindicato).where(
+            UsuarioSindicato.sindicato_id == sindicato_id).order_by(
+            UsuarioSindicato.activo.desc(), UsuarioSindicato.nombre)).all()
+        areas = {a.id: a.nombre for a in s.exec(select(Area).where(
+            Area.sindicato_id == sindicato_id)).all()}
+        secs = {x.id: x.nombre for x in s.exec(select(Seccional).where(
+            Seccional.sindicato_id == sindicato_id)).all()}
+        salida = []
+        for u in usuarios:
+            ind = permisos_individuales(u.id)
+            salida.append({
+                "id": u.id, "usuario": u.usuario, "nombre": u.nombre, "activo": u.activo,
+                "debe_cambiar_clave": u.debe_cambiar_clave,
+                "es_super_admin": u.es_super_admin,
+                "area_id": u.area_id, "area": areas.get(u.area_id, ""),
+                "seccional_id": u.seccional_id, "seccional": secs.get(u.seccional_id, ""),
+                "agregados": ind["agregar"], "bloqueados": ind["bloquear"],
+                "efectivos": sorted(permisos_efectivos(u.id)),
+            })
+        return salida
 
 
 def seccional_de_trabajador(cuil: str, sindicato_id: int) -> Optional[int]:

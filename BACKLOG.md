@@ -43,18 +43,3 @@ Es el mismo comportamiento que ya tenía `_exigir_modulo`, así que no es una
 regresión, y desde la Fase 3 esos formularios ni se renderizan. Queda como
 deuda de prolijidad: convendría redirigir al panel con un aviso, como se
 hizo con `error_no_manejado`.
-
----
-
-## 3. El alta de usuarios del sindicato sigue creando Super Admins
-
-**Estado:** transitorio, se cierra en la Fase 3 de SPRINT_AREAS.md
-
-`main.py` (`/admin/usuario`) crea `UsuarioSindicato` con
-`es_super_admin=True` explícito, para no cambiar el comportamiento de hoy
-mientras el sistema de Áreas está a medio construir. En la Fase 3 ese
-formulario pasa a pedir área + permisos y deja de crear Super Admins por
-default.
-
-Si la Fase 3 se posterga, esto queda como una puerta abierta: cualquier
-Super Admin puede crear otro Super Admin sin pasar por plataforma.

@@ -157,6 +157,13 @@
   .emp-subtab.activa { background:var(--marca-secundario); color:#fff; border-color:var(--marca-secundario); }
   .emp-subpanel { display:none; }
   .emp-subpanel.activo { display:block; }
+  /* Sub-pestañas de Áreas y Usuarios: clases propias, mismo motivo que
+     las de Trámites -- no compartir listener global con .subtab. */
+  .area-subtab { padding:6px 14px; border-radius:7px; font-size:13px; font-weight:500;
+    background:#f2f0ea; color:var(--gris); border:1px solid var(--linea); cursor:pointer; font-family:inherit; }
+  .area-subtab.activa { background:var(--marca-secundario); color:#fff; border-color:var(--marca-secundario); }
+  .area-subpanel { display:none; }
+  .area-subpanel.activo { display:block; }
   /* Sub-sub-pestañas de Trámites externos (dentro de Empleadores) -- mismo
      motivo, namespace propio para no interferir con .tramite-subtab. */
   .emptram-subtab { padding:6px 14px; border-radius:7px; font-size:13px; font-weight:500;
@@ -426,19 +433,25 @@
 </div>
 
 <nav class="nav-strip">
-  {% if 'recibos' in modulos %}<button class="tab-btn" data-panel="reportes"><svg viewBox="0 0 24 24"><use href="#ic-reportes"/></svg><span>Reportes</span></button>{% endif %}
-  {% if 'recibos' in modulos %}<button class="tab-btn" data-panel="formulas"><svg viewBox="0 0 24 24"><use href="#ic-formulas"/></svg><span>Fórmulas</span></button>{% endif %}
-  {% if 'recibos' in modulos %}<button class="tab-btn" data-panel="conceptos"><svg viewBox="0 0 24 24"><use href="#ic-conceptos"/></svg><span>Conceptos</span></button>{% endif %}
-  <button class="tab-btn" data-panel="trabajadores"><svg viewBox="0 0 24 24"><use href="#ic-trabajadores"/></svg><span>Trabajadores</span></button>
-  {% if 'recibos' in modulos %}<button class="tab-btn" data-panel="aprendizaje"><svg viewBox="0 0 24 24"><use href="#ic-aprendizaje"/></svg><span>Aprendizaje</span></button>{% endif %}
-  {% if 'recibos' in modulos %}<button class="tab-btn" data-panel="cotizantes"><svg viewBox="0 0 24 24"><use href="#ic-cotizantes"/></svg><span>Cotizantes</span></button>{% endif %}
-  {% if 'noticias' in modulos %}<button class="tab-btn" data-panel="noticias"><svg viewBox="0 0 24 24"><use href="#ic-noticias"/></svg><span>Noticias</span></button>{% endif %}
-  {% if 'beneficios' in modulos %}<button class="tab-btn" data-panel="beneficios"><svg viewBox="0 0 24 24"><use href="#ic-beneficios"/></svg><span>Beneficios</span></button>{% endif %}
-  {% if 'notificaciones' in modulos %}<button class="tab-btn" data-panel="notificaciones"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg><span>Notificaciones</span></button>{% endif %}
-  {% if 'tramites' in modulos %}<button class="tab-btn" data-panel="tramites" style="position:relative;"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg><span>Trámites</span>{% if tramites_nuevos %}<span class="badge-noleidas" id="badge-tramites-nuevos-tab">{{ tramites_nuevos }}</span>{% endif %}</button>{% endif %}
-  {% if 'empleadores' in modulos %}<button class="tab-btn" data-panel="empleadores" style="position:relative;"><svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg><span>Empleadores</span>{% if tramites_empresa_nuevos %}<span class="badge-noleidas" id="badge-tramites-empresa-nuevos-tab">{{ tramites_empresa_nuevos }}</span>{% endif %}</button>{% endif %}
-  <button class="tab-btn" data-panel="seccionales"><svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg><span>Seccionales</span></button>
-  <button class="tab-btn" data-panel="administradores"><svg viewBox="0 0 24 24"><use href="#ic-admins"/></svg><span>Administradores</span></button>
+  {# Las pestañas se arman con los permisos EFECTIVOS del usuario, no con
+     los módulos del sindicato: los módulos ya están contemplados adentro
+     del cálculo (una sección de un módulo apagado no llega hasta acá).
+     El panel de cada pestaña está gateado con la misma condición, y la
+     ruta /admin ni siquiera le pasa los datos -- esconder el botón nunca
+     es el control. #}
+  {% if 'reportes' in permisos %}<button class="tab-btn" data-panel="reportes"><svg viewBox="0 0 24 24"><use href="#ic-reportes"/></svg><span>Reportes</span></button>{% endif %}
+  {% if 'formulas' in permisos %}<button class="tab-btn" data-panel="formulas"><svg viewBox="0 0 24 24"><use href="#ic-formulas"/></svg><span>Fórmulas</span></button>{% endif %}
+  {% if 'conceptos' in permisos %}<button class="tab-btn" data-panel="conceptos"><svg viewBox="0 0 24 24"><use href="#ic-conceptos"/></svg><span>Conceptos</span></button>{% endif %}
+  {% if 'trabajadores' in permisos %}<button class="tab-btn" data-panel="trabajadores"><svg viewBox="0 0 24 24"><use href="#ic-trabajadores"/></svg><span>Trabajadores</span></button>{% endif %}
+  {% if 'aprendizaje' in permisos %}<button class="tab-btn" data-panel="aprendizaje"><svg viewBox="0 0 24 24"><use href="#ic-aprendizaje"/></svg><span>Aprendizaje</span></button>{% endif %}
+  {% if 'cotizantes' in permisos %}<button class="tab-btn" data-panel="cotizantes"><svg viewBox="0 0 24 24"><use href="#ic-cotizantes"/></svg><span>Cotizantes</span></button>{% endif %}
+  {% if 'noticias' in permisos %}<button class="tab-btn" data-panel="noticias"><svg viewBox="0 0 24 24"><use href="#ic-noticias"/></svg><span>Noticias</span></button>{% endif %}
+  {% if 'beneficios' in permisos %}<button class="tab-btn" data-panel="beneficios"><svg viewBox="0 0 24 24"><use href="#ic-beneficios"/></svg><span>Beneficios</span></button>{% endif %}
+  {% if 'notificaciones' in permisos %}<button class="tab-btn" data-panel="notificaciones"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg><span>Notificaciones</span></button>{% endif %}
+  {% if 'tramites_recibidos' in permisos or 'tramites_formularios' in permisos %}<button class="tab-btn" data-panel="tramites" style="position:relative;"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg><span>Trámites</span>{% if tramites_nuevos %}<span class="badge-noleidas" id="badge-tramites-nuevos-tab">{{ tramites_nuevos }}</span>{% endif %}</button>{% endif %}
+  {% if 'emp_empresas' in permisos or 'emp_notificaciones' in permisos or 'emp_tramites_recibidos' in permisos or 'emp_tramites_formularios' in permisos %}<button class="tab-btn" data-panel="empleadores" style="position:relative;"><svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg><span>Empleadores</span>{% if tramites_empresa_nuevos %}<span class="badge-noleidas" id="badge-tramites-empresa-nuevos-tab">{{ tramites_empresa_nuevos }}</span>{% endif %}</button>{% endif %}
+  {% if 'seccionales' in permisos %}<button class="tab-btn" data-panel="seccionales"><svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg><span>Seccionales</span></button>{% endif %}
+  {% if es_super_admin %}<button class="tab-btn" data-panel="areas"><svg viewBox="0 0 24 24"><use href="#ic-admins"/></svg><span>Áreas y Usuarios</span></button>{% endif %}
 </nav>
 </div>
 
@@ -467,7 +480,7 @@
   {% if request.query_params.get('error') == 'guardado' %}
   <div class="msg" style="background:#fdf3e7;color:#8a5a1a;">No se pudo guardar -- probá de nuevo en un momento. Si se repite, puede ser un problema pasajero de conexión.</div>
   {% endif %}
-  {% if 'recibos' in modulos %}
+  {% if 'reportes' in permisos %}
   <div class="panel" id="panel-reportes">
   <!-- ============ REPORTES ============ -->
   <h2 id="reportes">Reportes de trabajadores</h2>
@@ -497,7 +510,7 @@
 
   </div>
   {% endif %}
-  {% if 'recibos' in modulos %}
+  {% if 'formulas' in permisos %}
   <div class="panel" id="panel-formulas">
   <!-- ============ FÓRMULAS ============ -->
   <h2 id="formulas">Fórmulas a validar</h2>
@@ -557,7 +570,7 @@
 
   </div>
   {% endif %}
-  {% if 'recibos' in modulos %}
+  {% if 'conceptos' in permisos %}
   <div class="panel" id="panel-conceptos">
   <!-- ============ CONCEPTOS ============ -->
   <h2 id="conceptos">Conceptos ({{ conceptos|length }})</h2>
@@ -668,6 +681,7 @@
 
   </div>
   {% endif %}
+  {% if 'trabajadores' in permisos %}
   <div class="panel" id="panel-trabajadores">
   <!-- ============ TRABAJADORES ============ -->
   <h2 id="trabajadores">Trabajadores ({{ trabajadores|selectattr('activo')|list|length }} activos)</h2>
@@ -777,8 +791,9 @@
   </div>
 
   </div>
+  {% endif %}
 
-  {% if 'recibos' in modulos %}
+  {% if 'aprendizaje' in permisos %}
   <div class="panel" id="panel-aprendizaje">
   <!-- ============ APRENDIZAJE ============ -->
   <h2 id="aprendizaje">Aprendizaje — incorporar conceptos desde recibos</h2>
@@ -797,7 +812,9 @@
   </form>
   <div id="ap-resultado"></div>
   </div>
+  {% endif %}
 
+  {% if 'cotizantes' in permisos %}
   <div class="panel" id="panel-cotizantes">
   <!-- ============ AFILIADOS COTIZANTES ============ -->
   <h2 id="cotizantes">Afiliados cotizantes ({{ envios|length }})</h2>
@@ -832,7 +849,7 @@
   </div>
   {% endif %}
 
-  {% if 'noticias' in modulos %}
+  {% if 'noticias' in permisos %}
   <div class="panel" id="panel-noticias">
   <!-- ============ NOTICIAS ============ -->
   <h2 id="noticias-titulo">Dar de alta una noticia</h2>
@@ -890,7 +907,7 @@
   </div>
   {% endif %}
 
-  {% if 'beneficios' in modulos %}
+  {% if 'beneficios' in permisos %}
   <div class="panel" id="panel-beneficios">
   <!-- ============ BENEFICIOS ============ -->
   <h2 id="beneficios-titulo">Dar de alta un beneficio</h2>
@@ -947,7 +964,7 @@
   </div>
   {% endif %}
 
-  {% if 'notificaciones' in modulos %}
+  {% if 'notificaciones' in permisos %}
   {% set CRITERIO_LABELS = {'cuil': 'CUIL', 'cuit_empleador': 'CUIT empresa', 'seccional': 'Seccional', 'provincia': 'Provincia'} %}
   <div class="panel" id="panel-notificaciones">
   <!-- ============ NOTIFICACIONES ============ -->
@@ -1025,7 +1042,7 @@
   </div>
   {% endif %}
 
-  {% if 'tramites' in modulos %}
+  {% if 'tramites_recibidos' in permisos or 'tramites_formularios' in permisos %}
   <div class="panel" id="panel-tramites">
   <!-- ============ TRÁMITES ============ -->
   {% if request.query_params.get('error') == 'campos' %}
@@ -1035,14 +1052,19 @@
   {% endif %}
 
   <div class="subtabs">
+    {% if 'tramites_recibidos' in permisos %}
     <button type="button" class="tramite-subtab activa" data-tramite-sub="recibidos" onclick="cambiarSubTramite('recibidos')" style="position:relative;">
       Ver trámites
       {% if tramites_nuevos %}<span class="badge-noleidas" id="badge-tramites-nuevos">{{ tramites_nuevos }}</span>{% endif %}
     </button>
-    <button type="button" class="tramite-subtab" data-tramite-sub="tipos" onclick="cambiarSubTramite('tipos')">Crear formularios</button>
+    {% endif %}
+    {% if 'tramites_formularios' in permisos %}
+    <button type="button" class="tramite-subtab {% if 'tramites_recibidos' not in permisos %}activa{% endif %}" data-tramite-sub="tipos" onclick="cambiarSubTramite('tipos')">Crear formularios</button>
+    {% endif %}
   </div>
 
   <!-- Sub: TRÁMITES RECIBIDOS -->
+  {% if 'tramites_recibidos' in permisos %}
   <div class="tramite-subpanel activo" id="tramite-sub-recibidos">
     <h2>Trámites recibidos ({{ tramites|length }})</h2>
     <div class="filtros">
@@ -1072,8 +1094,11 @@
     </table>
   </div>
 
+  {% endif %}
+
   <!-- Sub: TIPOS DE FORMULARIO -->
-  <div class="tramite-subpanel" id="tramite-sub-tipos">
+  {% if 'tramites_formularios' in permisos %}
+  <div class="tramite-subpanel {% if 'tramites_recibidos' not in permisos %}activo{% endif %}" id="tramite-sub-tipos">
     <h2 id="tt-h2">Nuevo tipo de trámite</h2>
     <div class="card">
       <form method="post" action="/admin/tramite-tipo" id="form-tramite-tipo">
@@ -1129,6 +1154,7 @@
       {% endfor %}
     </table>
   </div>
+  {% endif %}
 
   <!-- Modal: detalle de trámite (admin) -->
   <div class="modal-recibo-overlay" id="modal-tramite-overlay" onclick="if (event.target === this) cerrarTramiteDetalle()">
@@ -1147,7 +1173,7 @@
   </div>
   {% endif %}
 
-  {% if 'empleadores' in modulos %}
+  {% if 'emp_empresas' in permisos or 'emp_notificaciones' in permisos or 'emp_tramites_recibidos' in permisos or 'emp_tramites_formularios' in permisos %}
   <div class="panel" id="panel-empleadores">
   <!-- ============ EMPLEADORES ============ -->
   {% if request.query_params.get('error') == 'cuit' %}
@@ -1158,12 +1184,13 @@
   {% endif %}
 
   <div class="subtabs">
-    <button type="button" class="emp-subtab activa" data-emp-sub="empresas" onclick="cambiarSubEmpleador('empresas')">Empresas</button>
-    <button type="button" class="emp-subtab" data-emp-sub="notificaciones" onclick="cambiarSubEmpleador('notificaciones')">Notificaciones</button>
-    <button type="button" class="emp-subtab" data-emp-sub="tramites" onclick="cambiarSubEmpleador('tramites')">Trámites</button>
+    {% if 'emp_empresas' in permisos %}<button type="button" class="emp-subtab activa" data-emp-sub="empresas" onclick="cambiarSubEmpleador('empresas')">Empresas</button>{% endif %}
+    {% if 'emp_notificaciones' in permisos %}<button type="button" class="emp-subtab {% if 'emp_empresas' not in permisos %}activa{% endif %}" data-emp-sub="notificaciones" onclick="cambiarSubEmpleador('notificaciones')">Notificaciones</button>{% endif %}
+    {% if 'emp_tramites_recibidos' in permisos or 'emp_tramites_formularios' in permisos %}<button type="button" class="emp-subtab {% if 'emp_empresas' not in permisos and 'emp_notificaciones' not in permisos %}activa{% endif %}" data-emp-sub="tramites" onclick="cambiarSubEmpleador('tramites')">Trámites</button>{% endif %}
   </div>
 
   <!-- Sub: EMPRESAS (CRUD) -->
+  {% if 'emp_empresas' in permisos %}
   <div class="emp-subpanel activo" id="emp-sub-empresas">
     <h2 id="empleador-titulo">Dar de alta un empleador</h2>
     <p class="muted">CUIT, razón social y datos de contacto de las empresas de este sindicato -- cargalos a mano o importá los CUIT que ya aparecen en Conceptos.</p>
@@ -1223,9 +1250,12 @@
     </table>
   </div>
 
+  {% endif %}
+
   <!-- Sub: NOTIFICACIONES A EMPLEADORES -->
   {% set CRITERIO_LABELS_EMP = {'cuit': 'CUIT', 'todos': 'Todos', 'provincia': 'Provincia'} %}
-  <div class="emp-subpanel" id="emp-sub-notificaciones">
+  {% if 'emp_notificaciones' in permisos %}
+  <div class="emp-subpanel {% if 'emp_empresas' not in permisos %}activo{% endif %}" id="emp-sub-notificaciones">
     <h2>Nueva notificación a empleadores</h2>
     <div class="card">
       <form method="post" action="/admin/notificacion-empresa" enctype="multipart/form-data" id="form-notificacion-emp">
@@ -1284,8 +1314,11 @@
     </table>
   </div>
 
+  {% endif %}
+
   <!-- Sub: TRÁMITES EXTERNOS -->
-  <div class="emp-subpanel" id="emp-sub-tramites">
+  {% if 'emp_tramites_recibidos' in permisos or 'emp_tramites_formularios' in permisos %}
+  <div class="emp-subpanel {% if 'emp_empresas' not in permisos and 'emp_notificaciones' not in permisos %}activo{% endif %}" id="emp-sub-tramites">
     {% if request.query_params.get('error') == 'campos' %}
     <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Revisá los campos del formulario: necesita al menos uno con etiqueta y tipo de dato válidos.</div>
     {% elif request.query_params.get('error') == 'tramitesenviados' %}
@@ -1293,14 +1326,19 @@
     {% endif %}
 
     <div class="subtabs">
+      {% if 'emp_tramites_recibidos' in permisos %}
       <button type="button" class="emptram-subtab activa" data-emptram-sub="recibidos" onclick="cambiarSubEmpresaTramite('recibidos')" style="position:relative;">
         Ver trámites
         {% if tramites_empresa_nuevos %}<span class="badge-noleidas" id="badge-tramites-empresa-nuevos">{{ tramites_empresa_nuevos }}</span>{% endif %}
       </button>
-      <button type="button" class="emptram-subtab" data-emptram-sub="tipos" onclick="cambiarSubEmpresaTramite('tipos')">Crear formularios</button>
+      {% endif %}
+      {% if 'emp_tramites_formularios' in permisos %}
+      <button type="button" class="emptram-subtab {% if 'emp_tramites_recibidos' not in permisos %}activa{% endif %}" data-emptram-sub="tipos" onclick="cambiarSubEmpresaTramite('tipos')">Crear formularios</button>
+      {% endif %}
     </div>
 
     <!-- Sub: TRÁMITES DE EMPRESA RECIBIDOS -->
+    {% if 'emp_tramites_recibidos' in permisos %}
     <div class="emptram-subpanel activo" id="emptram-sub-recibidos">
       <h2>Trámites recibidos ({{ tramites_empresa|length }})</h2>
       <div class="filtros">
@@ -1330,8 +1368,11 @@
       </table>
     </div>
 
+    {% endif %}
+
     <!-- Sub: TIPOS DE FORMULARIO EXTERNO -->
-    <div class="emptram-subpanel" id="emptram-sub-tipos">
+    {% if 'emp_tramites_formularios' in permisos %}
+    <div class="emptram-subpanel {% if 'emp_tramites_recibidos' not in permisos %}activo{% endif %}" id="emptram-sub-tipos">
       <h2 id="te-h2">Nuevo tipo de trámite externo</h2>
       <div class="card">
         <form method="post" action="/admin/tramite-tipo-empresa" id="form-tramite-tipo-empresa">
@@ -1387,6 +1428,7 @@
         {% endfor %}
       </table>
     </div>
+    {% endif %}
 
     <!-- Modal: detalle de trámite de empresa (admin) -->
     <div class="modal-recibo-overlay" id="modal-tramiteemp-overlay" onclick="if (event.target === this) cerrarTramiteEmpresaDetalle()">
@@ -1403,19 +1445,25 @@
       </div>
     </div>
   </div>
+  {% endif %}
   </div>
   {% endif %}
 
+  {% if 'seccionales' in permisos %}
   <div class="panel" id="panel-seccionales">
   <!-- ============ SECCIONALES ============ -->
   <h2 id="seccionales-titulo">Dar de alta una seccional</h2>
-  <p class="muted">Las seccionales quedan disponibles para elegir en el alta/edición de trabajadores. Es un dato opcional y descriptivo, no afecta la validación de recibos.</p>
+  <p class="muted">Las seccionales quedan disponibles para elegir en el alta/edición de trabajadores y de usuarios del panel. Un usuario de área ve solo los trabajadores de SU seccional, salvo que la seccional tenga tildado "ve todas".</p>
   <div class="card">
     <form method="post" action="/admin/seccional" id="form-seccional">
       <input type="hidden" name="id" id="sec-id">
       <div class="grid2">
         <div class="campo full"><label>Nombre *</label><input name="nombre" id="sec-nombre" required></div>
         <div class="campo full"><label>Dirección</label><input name="direccion" id="sec-direccion"></div>
+        <div class="campo full">
+          <label style="font-weight:400;"><input type="checkbox" name="ve_todas" value="si" id="sec-ve-todas"> Ve todas las seccionales</label>
+          <span class="muted" style="display:block; margin-top:2px;">Para la sede central o una regional que supervisa varias: sus usuarios alcanzan a los trabajadores de todo el sindicato.</span>
+        </div>
       </div>
       <button type="submit">Guardar seccional</button>
       <button type="button" class="sec oculto" id="sec-cancel" onclick="cancelarSeccional()">Cancelar edición</button>
@@ -1424,11 +1472,12 @@
 
   <h2>Seccionales cargadas ({{ seccionales|length }})</h2>
   <table>
-    <tr><th>Nombre</th><th>Dirección</th><th></th></tr>
+    <tr><th>Nombre</th><th>Dirección</th><th>Alcance</th><th></th></tr>
     {% for sec in seccionales %}
     <tr>
       <td>{{ sec.nombre }}</td>
       <td class="muted">{{ sec.direccion or '—' }}</td>
+      <td>{% if sec.ve_todas %}<span class="tag tag-si">ve todas</span>{% else %}<span class="muted" style="font-size:12px;">solo la suya</span>{% endif %}</td>
       <td style="white-space:nowrap; text-align:right;">
         <button type="button" class="mini" onclick='editarSeccional({{ sec | tojson }})'>Editar</button>
         <form method="post" action="/admin/seccional/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar esta seccional? Los trabajadores que la tengan asignada quedan sin seccional.')">
@@ -1438,22 +1487,34 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="3" class="muted">Todavía no cargaste ninguna seccional.</td></tr>
+    <tr><td colspan="4" class="muted">Todavía no cargaste ninguna seccional.</td></tr>
     {% endfor %}
   </table>
   </div>
-
-  <div class="panel" id="panel-administradores">
-  <!-- ============ ADMINISTRADORES ============ -->
-  <h2 id="administradores-titulo">Dar de alta un administrador</h2>
-  <p class="muted">Los administradores que cargues acá pueden entrar a este panel con su CUIT/CUIL y la clave que les asignes -- van a tener que cambiarla en su primer ingreso. Para cambiarle la clave a uno ya existente, pedíselo a plataforma.</p>
-  {% if request.query_params.get('err') == 'usuarioexiste' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Ya existe un administrador con ese CUIT/CUIL en este sindicato.</div>
-  {% elif request.query_params.get('err') == 'ultimoadmin' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No podés dar de baja al último administrador activo del sindicato -- te quedarías sin nadie que pueda entrar a este panel.</div>
-  {% elif request.query_params.get('err') == 'datosadmin' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">CUIT/CUIL o clave inválidos.</div>
   {% endif %}
+
+  {% if es_super_admin %}
+  <div class="panel" id="panel-areas">
+  <!-- ============ ÁREAS Y USUARIOS ============ -->
+  {% if request.query_params.get('err') == 'usuarioexiste' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Ya existe un usuario con ese CUIT/CUIL en este sindicato.</div>
+  {% elif request.query_params.get('err') == 'ultimoadmin' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No podés dejar al sindicato sin ningún administrador general activo — nadie podría volver a entrar a administrar este panel.</div>
+  {% elif request.query_params.get('err') == 'sinarea' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Un usuario de área necesita tener un área asignada.</div>
+  {% elif request.query_params.get('err') == 'datos' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Faltan datos o el CUIT/CUIL es inválido.</div>
+  {% endif %}
+
+  <div class="subtabs">
+    <button type="button" class="area-subtab activa" data-area-sub="usuarios" onclick="cambiarSubArea('usuarios')">Usuarios</button>
+    <button type="button" class="area-subtab" data-area-sub="areas" onclick="cambiarSubArea('areas')">Áreas</button>
+  </div>
+
+  <!-- ---------- Sub: USUARIOS ---------- -->
+  <div class="area-subpanel activo" id="area-sub-usuarios">
+  <h2 id="usuarios-titulo">Dar de alta un usuario</h2>
+  <p class="muted">Entran a este panel con su CUIT/CUIL y la clave que les asignes — la cambian en su primer ingreso. Para cambiarle la clave a uno ya existente, pedíselo a plataforma.</p>
   <div class="card">
     <form method="post" action="/admin/usuario" id="form-usuario">
       <input type="hidden" name="id" id="usu-id">
@@ -1461,28 +1522,86 @@
         <div class="campo"><label>CUIT/CUIL *</label><input name="usuario" id="usu-usuario" required placeholder="20123456789"></div>
         <div class="campo"><label>Nombre</label><input name="nombre" id="usu-nombre"></div>
         <div class="campo" id="usu-clave-campo"><label>Clave inicial *</label><input name="clave_inicial" id="usu-clave" type="password" required></div>
+        <div class="campo">
+          <label>Seccional</label>
+          <select name="seccional_id" id="usu-seccional">
+            {% for sec in seccionales %}
+            <option value="{{ sec.id }}">{{ sec.nombre }}{% if sec.ve_todas %} (ve todas){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
-      <button type="submit" id="usu-submit">Dar de alta</button>
+
+      <div class="campo" style="margin-top:4px;">
+        <label>Tipo de usuario</label>
+        <label style="font-weight:400; display:block; margin:4px 0;">
+          <input type="radio" name="rol" value="area" id="usu-rol-area" checked onchange="usuarioRolCambio()">
+          De área — solo las secciones que le des
+        </label>
+        <label style="font-weight:400; display:block;">
+          <input type="radio" name="rol" value="super" id="usu-rol-super" onchange="usuarioRolCambio()">
+          Administrador general — todo el panel, incluida esta pantalla
+        </label>
+      </div>
+
+      <div id="usu-bloque-area">
+        <div class="campo">
+          <label>Área *</label>
+          <select name="area_id" id="usu-area" onchange="pintarHerencia()">
+            <option value="">— Elegí un área —</option>
+            {% for a in areas %}
+            <option value="{{ a.id }}">{{ a.nombre }}{% if not a.activo %} (desactivada){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <h3 style="margin-top:16px; font-size:14px;">Permisos</h3>
+        <p class="muted">Por defecto hereda los de su área. Acá se le puede dar algo de más, o bloquearle algo que el área sí tiene. El bloqueo siempre gana.</p>
+        <table style="margin-top:8px;">
+          <tr><th>Sección</th><th style="text-align:center;">Del área</th><th style="text-align:center;">Dar igual</th><th style="text-align:center;">Bloquear</th></tr>
+          {% for grupo, items in grupos_permisos %}
+          <tr><td colspan="4" style="background:#f6f4ef; font-weight:600; font-size:12.5px;">{{ grupo }}</td></tr>
+          {% for seccion, etiqueta in items %}
+          <tr>
+            <td>{{ etiqueta }}</td>
+            <td style="text-align:center;"><span class="usu-hereda" data-seccion="{{ seccion }}" style="color:var(--gris);">—</span></td>
+            <td style="text-align:center;"><input type="checkbox" name="agregar" value="{{ seccion }}" class="usu-agregar" data-seccion="{{ seccion }}"></td>
+            <td style="text-align:center;"><input type="checkbox" name="bloquear" value="{{ seccion }}" class="usu-bloquear" data-seccion="{{ seccion }}"></td>
+          </tr>
+          {% endfor %}
+          {% endfor %}
+        </table>
+      </div>
+
+      <button type="submit" id="usu-submit" style="margin-top:14px;">Dar de alta</button>
       <button type="button" class="sec oculto" id="usu-cancel" onclick="cancelarUsuario()">Cancelar edición</button>
     </form>
   </div>
 
-  <h2>Administradores del sindicato ({{ usuarios_sindicato|selectattr('activo')|list|length }} activos)</h2>
+  <h2>Usuarios del sindicato ({{ usuarios_sindicato|selectattr('activo')|list|length }} activos)</h2>
   <table>
-    <tr><th>CUIT/CUIL</th><th>Nombre</th><th>Estado</th><th></th></tr>
+    <tr><th>CUIT/CUIL</th><th>Nombre</th><th>Rol</th><th>Área / Seccional</th><th>Estado</th><th></th></tr>
     {% for u in usuarios_sindicato %}
     <tr {% if not u.activo %}style="opacity:.5;"{% endif %}>
       <td><code>{{ u.usuario }}</code></td>
       <td>{{ u.nombre or '—' }}</td>
+      <td>
+        {% if u.es_super_admin %}<span class="tag tag-si">general</span>
+        {% else %}<span class="tag">área</span>{% endif %}
+      </td>
+      <td style="font-size:12.5px;">
+        {% if u.es_super_admin %}<span class="muted">todo el sindicato</span>
+        {% else %}{{ u.area or '—' }}{% if u.seccional %} · {{ u.seccional }}{% endif %}{% endif %}
+      </td>
       <td>
         {% if not u.activo %}<span class="tag" style="background:#eee;color:#888;">baja</span>
         {% elif u.debe_cambiar_clave %}<span class="tag tag-pend">clave pendiente</span>
         {% else %}<span class="tag tag-si">activo</span>{% endif %}
       </td>
       <td style="white-space:nowrap; text-align:right;">
-        <button type="button" class="mini" onclick='editarUsuario({{ {"id":u.id,"usuario":u.usuario,"nombre":u.nombre} | tojson }})'>Editar</button>
+        <button type="button" class="mini" onclick='editarUsuario({{ u | tojson }})'>Editar</button>
         {% if u.activo %}
-        <form method="post" action="/admin/usuario/baja" style="display:inline;" onsubmit="return confirm('¿Dar de baja a este administrador? Se puede reactivar después.');">
+        <form method="post" action="/admin/usuario/baja" style="display:inline;" onsubmit="return confirm('¿Dar de baja a este usuario? Se puede reactivar después.');">
           <input type="hidden" name="id" value="{{ u.id }}"><button class="mini borrar">Baja</button>
         </form>
         {% else %}
@@ -1493,10 +1612,67 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="4" class="muted">No hay administradores cargados.</td></tr>
+    <tr><td colspan="6" class="muted">No hay usuarios cargados.</td></tr>
     {% endfor %}
   </table>
   </div>
+
+  <!-- ---------- Sub: ÁREAS ---------- -->
+  <div class="area-subpanel" id="area-sub-areas">
+  <h2 id="areas-titulo">Dar de alta un área</h2>
+  <p class="muted">Un área agrupa a los usuarios que hacen lo mismo (Secretaría Legal, Tesorería…). Lo que tildes acá lo heredan todos sus usuarios. Solo aparecen las secciones de los módulos que tiene el sindicato.</p>
+  <div class="card">
+    <form method="post" action="/admin/area" id="form-area">
+      <input type="hidden" name="id" id="area-id">
+      <div class="campo"><label>Nombre del área *</label><input name="nombre" id="area-nombre" required placeholder="Secretaría Legal"></div>
+      <h3 style="margin-top:14px; font-size:14px;">Secciones del panel</h3>
+      {% for grupo, items in grupos_permisos %}
+      <div style="margin-top:10px;">
+        <label style="font-weight:600; font-size:13px;">
+          <input type="checkbox" class="area-grupo" data-grupo="{{ grupo }}" onchange="tildarGrupo(this)"> {{ grupo }}
+        </label>
+        <div style="padding-left:18px; margin-top:3px;">
+          {% for seccion, etiqueta in items %}
+          <label style="font-weight:400; display:inline-block; min-width:210px; font-size:13px;">
+            <input type="checkbox" name="permisos" value="{{ seccion }}" class="area-permiso" data-grupo="{{ grupo }}"> {{ etiqueta }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+      <button type="submit" id="area-submit" style="margin-top:14px;">Dar de alta</button>
+      <button type="button" class="sec oculto" id="area-cancel" onclick="cancelarArea()">Cancelar edición</button>
+    </form>
+  </div>
+
+  <h2>Áreas cargadas ({{ areas|length }})</h2>
+  <table>
+    <tr><th>Área</th><th>Secciones</th><th>Estado</th><th></th></tr>
+    {% for a in areas %}
+    <tr {% if not a.activo %}style="opacity:.5;"{% endif %}>
+      <td>{{ a.nombre }}</td>
+      <td style="font-size:12.5px;">
+        {% if a.permisos %}{% for sec in a.permisos %}{{ etiquetas_seccion.get(sec, sec) }}{% if not loop.last %} · {% endif %}{% endfor %}
+        {% else %}<span class="muted">sin permisos</span>{% endif %}
+      </td>
+      <td>{% if a.activo %}<span class="tag tag-si">activa</span>{% else %}<span class="tag" style="background:#eee;color:#888;">desactivada</span>{% endif %}</td>
+      <td style="white-space:nowrap; text-align:right;">
+        <button type="button" class="mini" onclick='editarArea({{ a | tojson }})'>Editar</button>
+        <form method="post" action="/admin/area/estado" style="display:inline;"
+              {% if a.activo %}onsubmit="return confirm('¿Desactivar el área? Sus usuarios pierden el acceso a todo hasta que la reactives.');"{% endif %}>
+          <input type="hidden" name="id" value="{{ a.id }}">
+          <input type="hidden" name="activo" value="{{ 'no' if a.activo else 'si' }}">
+          <button class="mini {% if a.activo %}borrar{% endif %}">{{ 'Desactivar' if a.activo else 'Reactivar' }}</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="muted">Todavía no cargaste ninguna área.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+  </div>
+  {% endif %}
 </div>
 
 <!-- Modal: detalle de un mensaje del chat de Trámites (trabajador y empresa)
@@ -1648,7 +1824,7 @@ function _actualizarBadgeEn(selector, idBadge, cantidad) {
   }
 }
 
-{% if 'tramites' in modulos %}
+{% if 'tramites_recibidos' in permisos %}
 // ---------- Globo de "Ver trámites" en vivo ----------
 // Se calcula server-side solo al cargar la página -- si el admin deja el
 // panel abierto y llega un trámite nuevo, el globo se quedaba en 0 hasta
@@ -1663,7 +1839,7 @@ setInterval(() => {
     .then(d => { if (d) actualizarBadgeTramitesNuevos(d.cantidad); }).catch(() => {});
 }, 30000);
 {% endif %}
-{% if 'empleadores' in modulos %}
+{% if 'emp_tramites_recibidos' in permisos %}
 // Mismo patrón que arriba, para el globo de "Ver trámites" de Empleadores
 // -- se propaga hasta la pestaña "Empleadores" del nav-strip (el globo de
 // la tarjeta "Empleadores" en /admin/inicio, en cambio, se calcula server-
@@ -2676,6 +2852,7 @@ function editarSeccional(sec) {
   document.getElementById('sec-id').value = sec.id;
   document.getElementById('sec-nombre').value = sec.nombre || '';
   document.getElementById('sec-direccion').value = sec.direccion || '';
+  document.getElementById('sec-ve-todas').checked = !!sec.ve_todas;
   document.getElementById('seccionales-titulo').textContent = 'Editar seccional: ' + sec.nombre;
   document.getElementById('form-seccional').querySelector('button[type=submit]').textContent = 'Guardar cambios';
   document.getElementById('sec-cancel').classList.remove('oculto');
@@ -2694,6 +2871,73 @@ function cancelarSeccional() {
 // no aplican en edición (cambiar la clave de uno ya existente sigue siendo
 // solo vía plataforma), así que ese campo se oculta y la ruta cambia a
 // /admin/usuario/editar en vez de /admin/usuario.
+{% if es_super_admin %}
+// ---------- Áreas y Usuarios (solo Super Admin) ----------
+// Todo este bloque toca elementos que solo existen dentro del panel
+// #panel-areas, que se renderiza únicamente para el Super Admin. Sin el
+// guard de abajo, un usuario de área haría reventar el script acá y se
+// perdería todo lo que viene después.
+const PERMISOS_POR_AREA = {{ areas | tojson }};
+
+function _permisosDeArea(areaId) {
+  const a = PERMISOS_POR_AREA.find(x => String(x.id) === String(areaId));
+  return a ? a.permisos : [];
+}
+
+// Pinta la columna "Del área" según el área elegida, para que se vea qué
+// hereda antes de tocar ningún checkbox.
+function pintarHerencia() {
+  const sel = document.getElementById('usu-area');
+  if (!sel) return;
+  const heredados = _permisosDeArea(sel.value);
+  document.querySelectorAll('.usu-hereda').forEach(sp => {
+    const tiene = heredados.includes(sp.dataset.seccion);
+    sp.textContent = tiene ? '✓' : '—';
+    sp.style.color = tiene ? 'var(--agua)' : 'var(--gris)';
+  });
+}
+
+// Un administrador general tiene todo: los permisos finos no aplican.
+function usuarioRolCambio() {
+  const esSuper = document.getElementById('usu-rol-super');
+  const bloque = document.getElementById('usu-bloque-area');
+  if (!esSuper || !bloque) return;
+  bloque.classList.toggle('oculto', esSuper.checked);
+  const area = document.getElementById('usu-area');
+  if (area) area.required = !esSuper.checked;
+}
+
+function cambiarSubArea(dest) {
+  document.querySelectorAll('.area-subtab').forEach(b => b.classList.toggle('activa', b.dataset.areaSub === dest));
+  document.querySelectorAll('.area-subpanel').forEach(p => p.classList.toggle('activo', p.id === 'area-sub-' + dest));
+}
+
+function tildarGrupo(chk) {
+  document.querySelectorAll('.area-permiso[data-grupo="' + chk.dataset.grupo + '"]')
+    .forEach(c => { c.checked = chk.checked; });
+}
+
+function editarArea(a) {
+  const f = document.getElementById('form-area');
+  document.getElementById('area-id').value = a.id;
+  document.getElementById('area-nombre').value = a.nombre || '';
+  document.querySelectorAll('.area-permiso').forEach(c => { c.checked = (a.permisos || []).includes(c.value); });
+  document.querySelectorAll('.area-grupo').forEach(c => { c.checked = false; });
+  document.getElementById('areas-titulo').textContent = 'Editar área: ' + a.nombre;
+  document.getElementById('area-submit').textContent = 'Guardar cambios';
+  document.getElementById('area-cancel').classList.remove('oculto');
+  f.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function cancelarArea() {
+  const f = document.getElementById('form-area');
+  f.reset();
+  document.getElementById('area-id').value = '';
+  document.getElementById('areas-titulo').textContent = 'Dar de alta un área';
+  document.getElementById('area-submit').textContent = 'Dar de alta';
+  document.getElementById('area-cancel').classList.add('oculto');
+}
+
 function editarUsuario(u) {
   const f = document.getElementById('form-usuario');
   document.getElementById('usu-id').value = u.id;
@@ -2702,12 +2946,22 @@ function editarUsuario(u) {
   document.getElementById('usu-usuario').disabled = true;
   document.getElementById('usu-clave-campo').classList.add('oculto');
   document.getElementById('usu-clave').required = false;
+  document.getElementById('usu-rol-super').checked = !!u.es_super_admin;
+  document.getElementById('usu-rol-area').checked = !u.es_super_admin;
+  document.getElementById('usu-area').value = u.area_id || '';
+  document.getElementById('usu-seccional').value = u.seccional_id || '';
+  document.querySelectorAll('.usu-agregar').forEach(c => { c.checked = (u.agregados || []).includes(c.value); });
+  document.querySelectorAll('.usu-bloquear').forEach(c => { c.checked = (u.bloqueados || []).includes(c.value); });
+  usuarioRolCambio();
+  pintarHerencia();
   f.action = '/admin/usuario/editar';
-  document.getElementById('administradores-titulo').textContent = 'Editar administrador: ' + (u.nombre || u.usuario);
+  document.getElementById('usuarios-titulo').textContent = 'Editar usuario: ' + (u.nombre || u.usuario);
   document.getElementById('usu-submit').textContent = 'Guardar cambios';
   document.getElementById('usu-cancel').classList.remove('oculto');
+  cambiarSubArea('usuarios');
   f.scrollIntoView({behavior:'smooth', block:'center'});
 }
+
 function cancelarUsuario() {
   const f = document.getElementById('form-usuario');
   f.reset();
@@ -2716,12 +2970,23 @@ function cancelarUsuario() {
   document.getElementById('usu-clave-campo').classList.remove('oculto');
   document.getElementById('usu-clave').required = true;
   f.action = '/admin/usuario';
-  document.getElementById('administradores-titulo').textContent = 'Dar de alta un administrador';
+  document.getElementById('usuarios-titulo').textContent = 'Dar de alta un usuario';
   document.getElementById('usu-submit').textContent = 'Dar de alta';
   document.getElementById('usu-cancel').classList.add('oculto');
+  usuarioRolCambio();
+  pintarHerencia();
 }
 
+usuarioRolCambio();
+pintarHerencia();
+{% endif %}
+
+{% if 'aprendizaje' in permisos %}
 // ---------- Aprendizaje ----------
+// Este bloque hace init a nivel de módulo sobre elementos que viven dentro
+// del panel de Aprendizaje (#ap-drop, #ap-files...). Si el panel no se
+// renderiza, esos getElementById dan null y la excepción corta el script
+// entero. Por eso el bloque se emite solo cuando el permiso está.
 const apFiles = document.getElementById('ap-files');
 const apBtn = document.getElementById('ap-btn');
 const apCount = document.getElementById('ap-count');
@@ -2830,6 +3095,7 @@ async function aplicarAprendizaje() {
   document.getElementById('ap-final').innerHTML =
     `<div class="msg ok">Se dieron de alta ${data.altas} concepto(s). <a href="/admin#conceptos">Ver en la tabla de conceptos</a> (actualizá la página).</div>`;
 }
+{% endif %}
 </script>
 </body>
 </html>
