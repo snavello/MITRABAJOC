@@ -57,6 +57,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - main.py — servidor y todas las rutas.
 - db.py — modelos SQLModel, engine dual, acceso a datos, marca_sindicato().
 - auth.py — hash de claves y sesiones.
+- permisos.py — catálogo de secciones del panel y cálculo de permisos
+  efectivos (áreas y usuarios del sindicato).
 - extractor.py — lee recibos y comprobantes de aportes con IA.
 - validador.py — motor de validación de fórmulas.
 - semaforo.py — lógica del semáforo de aportes (ARCA).
@@ -85,10 +87,12 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 1. Admin de plataforma — /plataforma con CUIT + PLATAFORMA_PASSWORD. Da de alta
    sindicatos (con marca y logo) y sus admins. Login → `/plataforma/inicio`
    (portada de tarjetas) → `/plataforma` (panel de siempre).
-2. Admin de sindicato — /admin con CUIT + clave. Gestiona conceptos, fórmulas,
-   trabajadores, empleadores y reportes SOLO de su sindicato (aislamiento
-   total). Login → `/admin/inicio` (portada) → `/admin` (panel con 12
-   secciones en una tira de pestañas deslizable).
+2. Usuario de sindicato — /admin con CUIT + clave. Dos clases:
+   **Super Admin** (todo el panel, incluida la gestión de áreas y usuarios) y
+   **usuario de área** (solo las secciones que le da su área). Siempre SOLO
+   de su sindicato (aislamiento total). Login → `/admin/inicio` (portada) →
+   `/admin` (panel con la tira de pestañas armada según sus permisos).
+   Ver "Áreas y permisos" más abajo.
 3. Trabajador — /ingresar con CUIL + clave. Identidad única (un CUIL para toda la
    plataforma). Empadronamiento por sindicato: si el CUIL está en varios, elige;
    la app se pinta con la marca del elegido. Login/elección → `/app/inicio`
@@ -114,6 +118,9 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - Plataforma: CUIT 20000000000 + PLATAFORMA_PASSWORD.
 - Admin UOM: CUIT 20111111110 / uom-demo.
 - Admin Gastronómica: CUIT 20222222220 / fega-demo.
+- Usuario de área UOM: CUIT 20111111111 / legal-uom (Secretaría Legal, Rosario).
+- Usuario de área Gastronómica: CUIT 20222222221 / tesoreria-fega (Tesorería).
+  Entrar con uno de estos y con el admin muestra el mismo panel recortado distinto.
 - Trabajador un solo sindicato: CUIL 20111111119 (UOM).
 - Trabajador pluriempleo (ambos): CUIL 27222222224.
 - Empresa un solo sindicato: CUIT 30999888776 (UOM) — registrarse en `/ingresar-empresa`.
@@ -203,6 +210,10 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
 9. Portada de `/empresa` con tarjetas, perfil de empleador editable con foto, globos de notificaciones propagados por los 3 niveles de UI.
 10. Ajustes puntuales: recibos reportados también cuentan para el padrón de afiliados cotizantes; estado "INFORMADO" de ARCA; popup de cambio de estado en Trámites (reemplazado por el punto 11).
 11. **Chat de Trámites estilo WhatsApp** — reemplaza Notas+Historial por un hilo cronológico único con modal para leer/responder/cambiar estado.
+12. **Áreas y permisos del sindicato** (SPRINT_AREAS.md, 6 fases) — Super
+    Admin + usuarios de área con permisos por sección, alcance por
+    seccional, trámites ruteados por área receptora (trabajador y empresa) y
+    notificaciones acotadas. Ver "Áreas y permisos del sindicato" arriba.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -211,10 +222,19 @@ producción real, (c) verificar los topes SS previos a 2025, (d) evaluar si
 el editor de lienzo libre de Trámites llega a justificarse, (e) staging
 real en Render (sin urgencia, tiene costo).
 
-**Próximo paso**: no hay tarea de código en curso — el trabajo de esta
-sesión (commits `37c1825`/`5620c3a`/`7ca0364`) terminó, se probó y se
-pusheó. Lo único activo es contenido de marketing para el rebranding a
-"Colm3na" (documento aparte, no código, sin sección propia acá).
+**Ojo con el punto 12**: es lo único de la lista que NO está en `main`
+todavía. Vive en la rama `areas-permisos`, con las 6 fases commiteadas
+localmente y sin pushear. Todo lo demás sí está desplegado.
+
+**Próximo paso**: pushear `areas-permisos` y mergearla a `main`. Antes de
+eso, en Render hay que correr `python -m alembic upgrade head` — el sprint
+trae 3 migraciones y dos de ellas MUEVEN DATOS (los usuarios existentes
+pasan a Super Admin, se crea "Sede Central"/"Mesa de Entradas" por
+sindicato, y los trabajadores sin seccional se reasignan).
+
+Aparte del código: contenido de marketing para el rebranding a "Colm3na"
+(documento aparte, no código, sin sección propia acá). El rebranding
+todavía NO tocó nada de la app.
 
 ## Pendientes (features)
 1. Capacitación por-sindicato: hoy solo hay contenido FIJO de plataforma
@@ -238,6 +258,40 @@ pusheó. Lo único activo es contenido de marketing para el rebranding a
    aparte) para probar deploys completos antes de tocar la demo de
    producción — sin urgencia, tiene costo real (no hay free tier viable).
 
+## Áreas y permisos del sindicato
+El sindicato arma sus propios perfiles de acceso, sin pasar por plataforma.
+Plan completo y las 14 decisiones en [`SPRINT_AREAS.md`](SPRINT_AREAS.md);
+narrativa en HISTORIAL.md. Reglas vigentes:
+
+- **La unidad de permiso es la SECCIÓN del panel, no el módulo**
+  (`permisos.py`). Un módulo abre varias secciones: `recibos` abre cinco.
+  Los módulos del sindicato FILTRAN qué secciones se pueden ofrecer.
+- `Area` (organizativa) es independiente de `Seccional` (geográfica). El
+  usuario tiene una de cada una: "Legales de Rosario".
+- **La seccional acota lo que se ve**: trámites y notificaciones alcanzan
+  solo a trabajadores de la seccional del usuario. `Seccional.ve_todas` es
+  la excepción (nace tildada en "Sede Central"). Una sola regla de alcance
+  para todo el panel — `db.alcance_seccional()` / `db.cuiles_alcanzados()`.
+- **Permisos individuales suman Y restan** sobre los del área; el bloqueo
+  gana siempre (`permisos.calcular_efectivos`).
+- **Gateo en un solo lugar**: `exigir_sindicato()` resuelve la sección
+  mirando la ruta que FastAPI matcheó contra `PERMISOS_RUTAS` (main.py). Una
+  ruta `/admin/*` nueva que no se agregue ahí **nace cerrada**;
+  `test_areas_rutas.py` recorre `app.routes` y avisa.
+- **Los permisos se leen de la base en cada request**, nunca del token: si
+  viajaran en la cookie, revocar no tendría efecto hasta que venza la sesión.
+- **Esconder la pestaña NO es el control**: `/admin` arma una sola página
+  con todos los paneles adentro, así que la ruta tampoco le pasa a la
+  plantilla los datos de las secciones que el usuario no tiene.
+- **Trámites se rutea por área**: el formulario declara 1..N áreas
+  receptoras (obligatorio). Si hay dos, las dos lo ven y la primera que lo
+  toma queda a cargo; la otra pasa a solo lectura. Igual en los trámites de
+  empresa, con una diferencia a propósito: ahí NO hay recorte por seccional
+  (una empresa no pertenece a una seccional).
+- El trabajador/la empresa ven el **área** que respondió, nunca el nombre de
+  la persona (`_detalle_sin_datos_internos` en main.py). En el panel sí.
+- No es un módulo opt-in: es infraestructura del panel, siempre disponible.
+
 ## Noticias (sindicato → trabajador)
 Modelo `Noticia` (db.py): título, bajada, texto completo (con auto-link de
 URLs), vigencia por fecha_desde/fecha_hasta (ambas obligatorias), hasta 2
@@ -256,12 +310,13 @@ Modelo `Seccional` (db.py): sindicato_id, nombre, dirección. CRUD simple en
 Beneficios pueden dirigirse por seccional (`destino_seccionales`, lista
 vacía = todas) — detalle en HISTORIAL.md.
 
-## Administradores del sindicato (self-service)
-`/admin` → pestaña "Administradores" (siempre visible) permite al propio
-sindicato listar/dar de alta/editar/activar-desactivar sus
-`UsuarioSindicato`, scopeado siempre a su `sindicato_id`. Cambiar la clave
-de un admin YA EXISTENTE sigue siendo solo vía plataforma. No se puede
-desactivar al último administrador activo — detalle en HISTORIAL.md.
+## Áreas y Usuarios (self-service)
+`/admin` → pestaña "Áreas y Usuarios", visible **solo para el Super Admin**.
+Dos sub-pestañas: CRUD de áreas con sus permisos, y alta/edición de usuarios
+(rol, área, seccional y ajustes individuales). Todo scopeado a su
+`sindicato_id`. Cambiar la clave de un usuario YA EXISTENTE sigue siendo
+solo vía plataforma. **No se puede desactivar NI DEGRADAR al último Super
+Admin activo** — el sindicato quedaría sin nadie que pueda administrarlo.
 
 ## Alerta de posible adulteración en recibos
 `extractor.extraer()` evalúa señales de edición en totales/CUIL/CUIT/fechas

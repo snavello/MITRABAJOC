@@ -985,6 +985,108 @@ mismo hilo por fecha.
   Las funciones sync (`abrirMensajeTramiteTrab`, etc.) no tienen este
   problema, sólo las `async`.
 
+## Áreas y permisos del sindicato (2026-08-22)
+
+Sprint de 6 fases, rama `areas-permisos`, plan en `SPRINT_AREAS.md`.
+
+**El problema.** Todo `UsuarioSindicato` era omnipotente sobre los módulos
+contratados. "No es lo mismo crear trámites que crear usuarios o revisar
+errores en recibos": el sindicato necesitaba armar sus propios perfiles.
+
+### La decisión que cambió el diseño
+
+El pedido original era "asignarle de 1 a N módulos" a cada área. Al mapear
+los módulos contra las pestañas del panel apareció que **no cierran 1:1**:
+
+| Módulo | Pestañas de admin que abre |
+|---|---|
+| `recibos` | **5**: Reportes, Fórmulas, Conceptos, Aprendizaje, Cotizantes |
+| `noticias`, `beneficios`, `notificaciones`, `tramites`, `empleadores` | 1 c/u |
+| `aportes`, `credencial`, `capacitacion` | **ninguna** (son del trabajador) |
+| — | Trabajadores, Seccionales, Administradores (sin módulo) |
+
+Con el módulo como unidad, "revisá los reportes pero no toques las
+fórmulas" era inexpresable, y "no podés crear usuarios" tampoco, porque esa
+pestaña no tenía módulo. Por eso la unidad de permiso pasó a ser la
+**sección del panel** (`permisos.py`), con los módulos como filtro de qué se
+puede ofrecer. Dos aperturas más salieron de leer el panel: Trámites se
+abrió en "recibidos" / "crear formularios" (quien edita el formulario elige
+el área receptora, así que podría autoasignarse trabajo) y Empleadores en
+sus 3 subpestañas.
+
+### El gateo entró sin tocar 46 rutas
+
+Al mapear las rutas apareció una simetría que no se buscaba: las 46 llamadas
+a `exigir_sindicato()` están TODAS en rutas `/admin`, y las 4 rutas `/admin`
+que no la llaman son exactamente las que no deben gatearse (panel, portada,
+login, salir). Así que el chequeo entró dentro de esa función, que resuelve
+la sección mirando `request.scope["route"].path` contra `PERMISOS_RUTAS`. Un
+solo lugar que gatea en vez de 46 donde olvidarse, y una ruta nueva sin
+clasificar **nace cerrada**. `test_areas_rutas.py` recorre `app.routes` y
+falla si alguna quedó sin declarar.
+
+### Esconder la pestaña no es el control
+
+`/admin` arma UNA página con todos los paneles adentro. Si el permiso solo
+escondiera pestañas, los datos viajarían igual en el HTML y se leerían con
+Ver Código Fuente. Por eso cada consulta de la ruta se saltea si el usuario
+no tiene la sección. Medido sobre el mismo panel: **197 KB para el Super
+Admin, 115 KB para un usuario de área**. Hay un test que fija la diferencia.
+
+Lo mismo del lado del trabajador: el detalle interno de un trámite lleva
+`autor_nombre` y el ruteo, y la API se los devolvía enteros. No alcanza con
+no mostrarlo en pantalla si viaja en el JSON —
+`_detalle_sin_datos_internos()` los saca.
+
+### Bugs encontrados y su causa real
+
+- **La migración de la Fase 1 perdía `ve_todas` en silencio.** El
+  `downgrade` borra la columna pero no las filas; al re-aplicar, el
+  `INSERT ... WHERE NOT EXISTS` no insertaba nada y la columna quedaba en su
+  default `false`. "Sede Central" se quedaba sin su alcance total sin que
+  nada fallara. Pasaba igual con una seccional cargada a mano con ese
+  nombre. Fix: un `UPDATE` explícito después de cada `INSERT`. Lo destapó
+  probar el ciclo downgrade/upgrade con datos, no el upgrade solo.
+- **El gateo cerró un agujero pre-existente.** 26 rutas ya llamaban a
+  `_exigir_modulo`, pero `/admin/formula` y `/admin/concepto*` no: sus
+  pestañas se escondían con `{% if 'recibos' in modulos %}` y las rutas
+  quedaban abiertas — lo contrario de la regla del proyecto. Ahora exigen el
+  módulo como el resto.
+- **`semApagado()` y el bloque de Aprendizaje rompían todo el script.** Dos
+  casos del mismo patrón ya conocido: init a nivel de módulo sobre un panel
+  gateado por `{% if %}`. Con el panel ausente, `null.innerHTML` /
+  `null.onclick` cortaba la ejecución y se llevaba puesto TODO lo que venía
+  después (pestañas, credencial, trámites), no solo el panel en cuestión.
+  Los dos eran pre-existentes. En el semáforo no alcanzaba con guardar el
+  init: son tres las funciones que escriben `semCuerpo`, y una se dispara al
+  subir un recibo — un sindicato con `recibos` prendido y `aportes` apagado
+  habría vuelto a romper.
+- **El verificador de la suite estaba mal.** Clasificaba por `*passed*`, y
+  `"13 failed, 1 passed"` contiene "passed": los archivos con resultado
+  mixto se reportaban como OK. Al arreglarlo (`correr_suite.sh`, ahora mira
+  `failed|error`) aparecieron 5 archivos con fallas acumuladas de varias
+  fases. Documentado en CLAUDE.md.
+
+### El patrón que se repitió en cada fase
+
+Cada vez que un campo pasó a ser obligatorio (`es_super_admin`, `rol`, área
+receptora), **lo primero que se rompió fueron las fixtures de test viejas**.
+Pasó en las 5 fases. Dos causas típicas: fixtures que creaban sindicatos
+**sin ningún módulo** (que no es un caso real — el alta tilda
+`MODULOS_INICIALES`) y altas que no mandaban el campo nuevo. Conviene
+revisarlas al principio de cada cambio de este tipo, no al final.
+
+### Lo que quedó afuera a propósito
+
+- **Rederivar un trámite a otra área** (ver BACKLOG.md): el área la fija el
+  formulario y no se puede cambiar después.
+- **Recorte por seccional en trámites de empresa**: una empresa no
+  pertenece a una seccional (`Empleador` no tiene `seccional_id`), así que
+  ahí el único eje es el área. Hay un test que fija la decisión para que no
+  se "arregle" por simetría.
+- **El historial de notificaciones no está acotado** (ver BACKLOG.md): se
+  acotó a quién se le puede escribir, no qué historial se ve.
+
 ## Noticias (sindicato → trabajador)
 Reemplaza el placeholder "próximamente" de Novedades. Modelo `Noticia`
 (db.py): título, bajada, texto completo (URLs se auto-enlazan al mostrarse,

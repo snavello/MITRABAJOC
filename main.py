@@ -1570,7 +1570,8 @@ def notificacion_preview(request: Request, criterio: str = Form(...), valores: l
     admin lo usa para confirmar antes de mandar de verdad."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "notificaciones")
-    cuils = db.resolver_destinatarios(sid, criterio, valores)
+    # Con el usuario: el preview tiene que contar lo MISMO que va a salir.
+    cuils = db.resolver_destinatarios(sid, criterio, valores, usuario_id=_uid(request))
     return {"cantidad": len(cuils)}
 
 

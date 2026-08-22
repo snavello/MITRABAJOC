@@ -1786,18 +1786,30 @@ def recibos_sospechosos_listado() -> list:
 
 # ---------- Notificaciones (Fase 2 de Módulos + Notificaciones + Trámites) ----------
 
-def resolver_destinatarios(sindicato_id: int, criterio: str, valores: list) -> list:
+def resolver_destinatarios(sindicato_id: int, criterio: str, valores: list,
+                            usuario_id: int = None) -> list:
     """CUILs de trabajadores ACTIVOS de este sindicato que matchean el
     criterio -- usado tanto por el preview (solo cuenta) como por el envío
     real (que además fija la lista, ver crear_notificacion). El sindicato
     solo puede targetear su propia gente: un valor que no matchea ningún
-    trabajador de ESTE sindicato_id simplemente no suma destinatarios."""
+    trabajador de ESTE sindicato_id simplemente no suma destinatarios.
+
+    Con `usuario_id`, además recorta por el ALCANCE DE SECCIONAL de quien
+    envía: un usuario de área alcanza solo a los trabajadores de su
+    seccional (salvo que la seccional tenga ve_todas). Que el recorte viva
+    acá y no en la ruta es lo que hace que el preview y el envío no puedan
+    desincronizarse -- si el preview contara de más, el admin vería un
+    número y saldría otro."""
     valores = [str(v).strip() for v in (valores or []) if str(v).strip()]
     if not valores:
         return []
     with Session(engine) as s:
         trabajadores = s.exec(select(Trabajador).where(
             Trabajador.sindicato_id == sindicato_id, Trabajador.activo == True)).all()
+    if usuario_id:
+        alcanzados = cuiles_alcanzados(sindicato_id, usuario_id)
+        if alcanzados is not None:
+            trabajadores = [t for t in trabajadores if t.cuil in alcanzados]
     if criterio == "cuil":
         objetivo = set(valores)
         return sorted({t.cuil for t in trabajadores if t.cuil in objetivo})
@@ -1819,7 +1831,8 @@ def crear_notificacion(sindicato_id: int, usuario_id: Optional[int], remitente: 
                         origen: str = "manual") -> dict:
     """Resuelve los destinatarios y los FIJA en el momento de enviar (snapshot,
     ver Notificacion). Devuelve id y cantidad real, para la confirmación."""
-    cuils = resolver_destinatarios(sindicato_id, criterio, valores)
+    # El mismo usuario_id que queda como remitente acota los destinatarios.
+    cuils = resolver_destinatarios(sindicato_id, criterio, valores, usuario_id=usuario_id)
     with Session(engine) as s:
         n = Notificacion(
             sindicato_id=sindicato_id, remitente=remitente or "", usuario_id=usuario_id,
@@ -2242,6 +2255,24 @@ def _tramite_resumen(s: Session, tr: "Tramite", titulos_tipo: dict) -> dict:
         "estado": tr.estado, "estado_label": ESTADOS_TRAMITE_LABEL.get(tr.estado, tr.estado),
         "creado": tr.creado, "actualizado": tr.actualizado,
     }
+
+
+def cuiles_alcanzados(sindicato_id: int, usuario_id: int):
+    """CUILs de trabajadores que este usuario alcanza por su seccional.
+
+    None = sin recorte (Super Admin, o seccional con ve_todas). set() =
+    ninguno. Es la MISMA regla de alcance que usan los trámites: una sola
+    para todo el panel, así el usuario no tiene que aprender dos.
+    """
+    alcance = alcance_seccional(usuario_id)
+    if alcance is None:
+        return None
+    if not alcance:
+        return set()
+    with Session(engine) as s:
+        return {t.cuil for t in s.exec(select(Trabajador).where(
+            Trabajador.sindicato_id == sindicato_id,
+            Trabajador.seccional_id.in_(alcance))).all()}
 
 
 def _alcance_de_tramites(s: Session, usuario_id: int, sindicato_id: int):
