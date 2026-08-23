@@ -3,6 +3,16 @@
 Ejecutar UNA vez con el servidor apagado:  python cargar_demo.py
 Crea: 2 sindicatos con marca, sus admins, conceptos, fórmulas y trabajadores.
 """
+import sys
+# La consola de Windows usa cp1252 y no puede imprimir el ✓ ni las flechas
+# del resumen de accesos: el script moría con UnicodeEncodeError DESPUÉS de
+# haber escrito parte de los datos, dejando la demo cargada a medias con un
+# traceback que parecía una falla real y no lo era.
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 import db
 from db import Sindicato, UsuarioSindicato, Concepto, Formula, Trabajador, Empleador
 from sqlmodel import select
@@ -72,6 +82,12 @@ with db.get_session() as s:
             for t in s.exec(select(Trabajador).where(Trabajador.sindicato_id == sind.id)).all(): s.delete(t)
             for e in s.exec(select(Empleador).where(Empleador.sindicato_id == sind.id)).all(): s.delete(e)
             for u in s.exec(select(UsuarioSindicato).where(UsuarioSindicato.sindicato_id == sind.id)).all(): s.delete(u)
+            # Los hijos se confirman ANTES de borrar el sindicato. Los modelos
+            # declaran la FK como columna pero no como relationship(), así que
+            # SQLAlchemy no conoce el orden de dependencia y puede emitir el
+            # DELETE del sindicato antes que el de sus usuarios -- Postgres lo
+            # rechaza por FK. Con el commit intermedio el orden es explícito.
+            s.commit()
             s.delete(sind)
     s.commit()
 
