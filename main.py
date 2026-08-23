@@ -1792,6 +1792,35 @@ def api_consultar_tramite(numero_expediente: str, request: Request):
 
 # ---------- Consultas del trabajador sobre el convenio (bloque 3) ----------
 
+@app.get("/app/convenio", response_class=HTMLResponse)
+def pantalla_convenio(request: Request):
+    """Consultas sobre el convenio. NO figura en el menú del trabajador: se
+    llega solo con la URL directa (decisión de producto del piloto).
+
+    Que no esté listada NO es control de acceso -- exige sesión de trabajador
+    y el módulo, igual que cualquier otra pantalla. Lo no listado es para no
+    ensuciar la navegación mientras el piloto se prueba, no para esconderla
+    de nadie."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or not cuil:
+        return RedirectResponse("/ingresar", status_code=303)
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        return RedirectResponse("/ingresar", status_code=303)
+    _exigir_modulo(sid, "convenio")
+    sind = None
+    with db.get_session() as s:
+        sind = s.get(Sindicato, sid)
+    return templates.TemplateResponse("convenio.html", {
+        "request": request,
+        "sindicato": sind.nombre if sind else "",
+        "marca": db.marca_sindicato(sid),
+        "convenios": [c for c in db.convenios_del_sindicato(sid, solo_activos=True)
+                      if c["fragmentos_vigentes"] > 0],
+    })
+
+
 @app.get("/api/convenio/convenios")
 def api_convenios_del_trabajador(request: Request):
     """Los convenios que el trabajador puede consultar en su sindicato activo.

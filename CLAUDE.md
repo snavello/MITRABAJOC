@@ -60,6 +60,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - extractor.py — lee recibos y comprobantes de aportes con IA.
 - validador.py — motor de validación de fórmulas.
 - semaforo.py — lógica del semáforo de aportes (ARCA).
+- rag.py — piloto de consultas sobre el convenio: extracción de PDF,
+  troceo, embeddings locales e indexación en segundo plano.
 - cargar_demo.py — carga 2 sindicatos de demo desde cero (sin AEFIP).
 - chequeo.py — autodiagnóstico de la instalación.
 - migrations/ — Alembic (env.py + versions/).
@@ -232,6 +234,44 @@ pusheó. Lo único activo es contenido de marketing para el rebranding a
 5. Entorno de staging real en Render (rama + servicio + base Postgres
    aparte) para probar deploys completos antes de tocar la demo de
    producción — sin urgencia, tiene costo real (no hay free tier viable).
+
+## Consultas sobre el convenio (RAG) — piloto
+Módulo `convenio`, **opt-in** (fuera de `MODULOS_INICIALES`). El admin carga
+el CCT y sus actas en PDF; el trabajador pregunta en lenguaje natural y
+recibe una respuesta citando el artículo. Plan y las decisiones en
+[`PLAN_RAG_CONVENIO.md`](PLAN_RAG_CONVENIO.md); la medición que eligió el
+modelo, en `medicion_rag/`. Reglas vigentes:
+
+- **Embeddings LOCALES** con `fastembed` + ONNX, sin `torch`.
+  `intfloat/multilingual-e5-large`, `vector(1024)`. Elegido midiendo tres
+  modelos contra el convenio real: 94% de recall@8 contra 76% y 47%.
+- **`fastembed` va PINNEADO EXACTO** en requirements. Cambió el pooling de
+  ese mismo modelo entre versiones: si cambia la librería, los vectores
+  guardados dejan de ser comparables con las consultas nuevas Y NADA FALLA.
+  Por eso `db.MODELO_EMBEDDING` guarda librería + modelo, y se escribe en
+  cada fragmento.
+- **`passage_embed` / `query_embed`, nunca `embed()`**: e5 es asimétrico y
+  usa un prefijo distinto para documento y para pregunta.
+- **La indexación NO corre en el request**: tarda ~9 minutos por convenio.
+  Va en un hilo, de a lotes de 8, dejando el progreso en el documento. Al
+  arrancar, todo lo que haya quedado en `procesando` se marca como error —
+  ninguna indexación sobrevive a un reinicio.
+- **LA BARANDA DE "NO LO ENCONTRÉ" NO ES UN UMBRAL.** Se midió: una pregunta
+  que el convenio no contesta pero del mismo tema puntúa 0,816 y la peor
+  legítima 0,826 — no hay umbral que las separe. El umbral (0,79) es solo un
+  filtro barato para lo evidente. **El control real es el prompt**, y por eso
+  RAG usa `claude-opus-5` y no el `claude-sonnet-4-6` del extractor.
+- **Aislamiento en el WHERE**, no en un filtro posterior: `sindicato_id` +
+  `convenio_id` + documentos vigentes. Así un fragmento ajeno no puede llegar
+  a Claude aunque falle el código de arriba.
+- **Al trabajador se le muestran solo las fuentes CITADAS**, no las 8 que se
+  le pasaron al modelo.
+- Un sindicato puede tener **varios convenios** y **el trabajador elige**.
+- `/app/convenio` **no figura en el menú** (decisión de producto del piloto).
+  No estar listada NO es control de acceso: exige sesión y módulo igual.
+
+**Test de aceptación**: `medicion_rag/test_aceptacion_bloque3.py`. Hay que
+volver a correrlo cada vez que se toque el troceo, el modelo o el prompt.
 
 ## Noticias (sindicato → trabajador)
 Modelo `Noticia` (db.py): título, bajada, texto completo (con auto-link de

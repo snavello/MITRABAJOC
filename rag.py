@@ -394,6 +394,27 @@ REGLAS, en orden de importancia:
 Escribí en español rioplatense, tuteando. Sé breve: 2 a 5 oraciones salvo que la pregunta pida detalle."""
 
 
+def _fuentes_citadas(respuesta: str, fragmentos: list) -> list:
+    """Los fragmentos que la respuesta realmente citó.
+
+    Se matchea por número de artículo y no por la referencia completa, porque
+    el modelo escribe "(Artículo 46)" mientras el fragmento puede llamarse
+    "Artículo 46 (1/2)" por el sub-troceo. Si no se reconoce ninguna cita, se
+    devuelven todos: es preferible mostrar de más que dejar una respuesta sin
+    respaldo visible."""
+    numeros = set(re.findall(r"[Aa]rt[ií]culo\s+(\d+)", respuesta))
+    citadas = []
+    for f in fragmentos:
+        if f["tipo_fuente"] == "observacion":
+            if "sindicato" in respuesta.lower() or "observaci" in respuesta.lower():
+                citadas.append(f)
+            continue
+        m = re.match(r"Art[ií]culo\s+(\d+)", f["referencia"])
+        if m and m.group(1) in numeros:
+            citadas.append(f)
+    return citadas or fragmentos
+
+
 def _armar_contexto(fragmentos: list) -> str:
     partes = []
     for f in fragmentos:
@@ -450,6 +471,11 @@ def responder(pregunta: str, sindicato_id: int, convenio_id: int,
     if not hubo:
         texto = SIN_RESPUESTA
 
+    # Cuáles se CITARON de verdad. Al trabajador se le muestran solo esos:
+    # listar los 8 que se le pasaron al modelo bajo el rótulo "de dónde sale"
+    # es engañoso -- varios no se usaron, y esta es justo la parte que tiene
+    # que dar confianza.
+    citadas = _fuentes_citadas(texto, fragmentos)
     usados = [f["id"] for f in fragmentos]
     if registrar:
         db.registrar_consulta(sindicato_id, convenio_id, cuil, pregunta, hubo,
@@ -462,6 +488,9 @@ def responder(pregunta: str, sindicato_id: int, convenio_id: int,
         "fuentes": [{"referencia": f["referencia"], "seccion": f["seccion"],
                      "tipo_fuente": f["tipo_fuente"],
                      "similitud": round(f["similitud"], 3)}
-                    for f in fragmentos] if hubo else [],
+                    for f in citadas] if hubo else [],
+        # Todas las que se consideraron, para poder auditar un caso que salió
+        # mal. No se le muestran al trabajador.
+        "fuentes_consideradas": [f["referencia"] for f in fragmentos],
         "disclaimer": DISCLAIMER,
     }
