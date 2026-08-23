@@ -17,7 +17,7 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 from typing import Any
-from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON
+from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON, text
 from pgvector.sqlalchemy import Vector
 
 # En Render, DATABASE_URL es una variable de entorno real (no hace falta
@@ -996,6 +996,66 @@ def borrar_fragmentos_de_documento(documento_id: int) -> None:
             s.delete(f)
         s.commit()
 
+
+
+def buscar_fragmentos(sindicato_id: int, convenio_id: int, vector: list,
+                       k: int = 8) -> list:
+    """Los k fragmentos más parecidos a la pregunta, con su similitud.
+
+    El filtro por sindicato_id y convenio_id NO es opcional ni una
+    optimización: es el aislamiento. Va en el WHERE y no en un filtro
+    posterior, para que sea imposible que un fragmento ajeno llegue a
+    Claude aunque se equivoque el código de arriba.
+
+    Solo documentos VIGENTES: el admin marca como no vigente lo que un texto
+    ordenado nuevo ya absorbió, y esas cláusulas viejas no tienen que
+    contestarle a nadie.
+
+    k=8 sale de la medición: con el convenio real, recall@8 fue 94% y
+    recall@3 82%. Los artículos que hacen falta suelen estar entre los 8,
+    no entre los 3."""
+    with Session(engine) as s:
+        filas = s.exec(text("""
+            SELECT f.id, f.referencia, f.seccion, f.texto, f.tipo_fuente,
+                   f.notas_acta, d.titulo AS documento, d.fecha_documento,
+                   1 - (f.embedding <=> CAST(:v AS vector)) AS similitud
+            FROM fragmentoconvenio f
+            JOIN documentoconvenio d ON d.id = f.documento_id
+            WHERE f.sindicato_id = :sid
+              AND f.convenio_id = :cid
+              AND d.vigente = true
+              AND f.embedding IS NOT NULL
+            ORDER BY f.embedding <=> CAST(:v AS vector)
+            LIMIT :k
+        """).bindparams(v=str(vector), sid=sindicato_id, cid=convenio_id, k=k)).all()
+        return [{"id": r[0], "referencia": r[1], "seccion": r[2], "texto": r[3],
+                 "tipo_fuente": r[4], "notas_acta": r[5], "documento": r[6],
+                 "fecha_documento": r[7], "similitud": float(r[8])} for r in filas]
+
+
+def registrar_consulta(sindicato_id: int, convenio_id: int, cuil: str, pregunta: str,
+                        hubo_respuesta: bool, fragmentos_usados: list) -> None:
+    """Guarda cada pregunta. Es el único dato que dice si el troceo funciona
+    y dónde están los huecos de lo indexado -- por eso se registra desde el
+    principio, no al final del piloto."""
+    with Session(engine) as s:
+        s.add(ConsultaConvenio(
+            sindicato_id=sindicato_id, convenio_id=convenio_id, cuil=cuil or "",
+            pregunta=(pregunta or "")[:2000], hubo_respuesta=hubo_respuesta,
+            fragmentos_usados=list(fragmentos_usados or []),
+            creado=datetime.now().strftime("%Y-%m-%d %H:%M")))
+        s.commit()
+
+
+def consultas_del_sindicato(sindicato_id: int, limite: int = 200) -> list:
+    """Para que el admin vea qué preguntó la gente y dónde no hubo respuesta."""
+    with Session(engine) as s:
+        filas = s.exec(select(ConsultaConvenio).where(
+            ConsultaConvenio.sindicato_id == sindicato_id)
+            .order_by(ConsultaConvenio.id.desc()).limit(limite)).all()
+        return [{"id": c.id, "pregunta": c.pregunta, "cuil": c.cuil,
+                 "hubo_respuesta": c.hubo_respuesta, "creado": c.creado,
+                 "fragmentos_usados": c.fragmentos_usados or []} for c in filas]
 
 def rescatar_indexaciones_colgadas() -> int:
     """Marca como error los documentos que quedaron en "procesando".

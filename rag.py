@@ -338,3 +338,130 @@ def indexar_en_segundo_plano(documento_id: int, permitir_ocr: bool = True) -> No
     reinicio del servidor no quede esperando al hilo."""
     threading.Thread(target=indexar_documento, args=(documento_id, permitir_ocr),
                      daemon=True).start()
+
+
+# ---------- Responder la consulta del trabajador (bloque 3) ----------
+
+# Modelo propio, NO el de extractor.py. Acá la calidad del juicio ES la
+# baranda: el sistema no puede detectar solo cuándo no sabe (medido: el
+# margen entre una pregunta legítima y una que el convenio no contesta es de
+# 0,011, indistinguible por umbral), así que todo el peso de no inventar cae
+# sobre este modelo leyendo el material.
+MODELO_RESPUESTA = "claude-opus-5"
+
+# Cuántos fragmentos se le pasan. De la medición: recall@8 = 94%, recall@3 =
+# 82%. Con 3 se pierden las preguntas que necesitan varios artículos.
+FRAGMENTOS_CONTEXTO = 8
+
+# Filtro barato para lo evidente. En la medición, una pregunta ajena al
+# convenio ("¿cuánto vale el m² en Puerto Madero?") dio 0,766 y la peor
+# pregunta legítima 0,826. Este umbral corta esa clase de consulta sin gastar
+# una llamada a la API.
+#
+# NO es el control principal y no puede serlo: una pregunta ajena pero del
+# mismo tema ("¿cómo se afecta mi SIPES?") dio 0,816 y ningún umbral la
+# separa de las legítimas. Esa la tiene que rechazar el modelo leyendo.
+UMBRAL_DESCARTE = 0.79
+
+SIN_RESPUESTA = ("No encontré eso en el convenio que tenés cargado. "
+                 "Consultá con tu sindicato.")
+
+DISCLAIMER = ("Esta respuesta sale del texto del convenio y no es "
+              "asesoramiento legal. Ante una duda concreta, consultá con tu "
+              "sindicato.")
+
+INSTRUCCIONES = """Sos un asistente que responde preguntas de trabajadores sobre SU convenio colectivo.
+
+Vas a recibir fragmentos del convenio recuperados por una búsqueda automática. La búsqueda trae lo más PARECIDO a la pregunta, que no siempre es lo que la CONTESTA: puede traerte artículos del mismo tema que no responden nada.
+
+REGLAS, en orden de importancia:
+
+1. Respondé ÚNICAMENTE con lo que digan los fragmentos. No completes con conocimiento general sobre legislación laboral argentina, aunque estés seguro.
+
+2. Antes de responder, preguntate: ¿estos fragmentos CONTESTAN lo que se pregunta, o solo hablan del mismo tema? Si solo hablan del mismo tema, NO alcanza. Ejemplo: si preguntan por un adicional que se cobra por no faltar, y los fragmentos hablan de cómo se justifican las inasistencias, eso NO contesta la pregunta.
+
+3. Si los fragmentos no contestan, respondé EXACTAMENTE esto y nada más:
+   NO_ENCONTRADO
+
+4. Si contestan, escribí la respuesta en lenguaje claro, como se la explicarías a un compañero de trabajo. Cada afirmación tiene que llevar de dónde sale, entre paréntesis: (Artículo 44).
+
+5. Si un dato sale de un fragmento marcado como OBSERVACIÓN DEL SINDICATO, aclaralo en el texto: es una nota que cargó el sindicato, no el articulado del convenio.
+
+6. No inventes números de artículo. Usá exactamente las referencias que te doy.
+
+7. Si los fragmentos se contradicen entre sí, decilo en vez de elegir uno.
+
+Escribí en español rioplatense, tuteando. Sé breve: 2 a 5 oraciones salvo que la pregunta pida detalle."""
+
+
+def _armar_contexto(fragmentos: list) -> str:
+    partes = []
+    for f in fragmentos:
+        etiqueta = ("OBSERVACIÓN DEL SINDICATO" if f["tipo_fuente"] == "observacion"
+                    else f["referencia"])
+        cabecera = f"--- {etiqueta}"
+        if f.get("seccion"):
+            cabecera += f" | {f['seccion']}"
+        if f.get("documento"):
+            cabecera += f" | documento: {f['documento']}"
+        partes.append(f"{cabecera} ---\n{f['texto']}")
+    return "\n\n".join(partes)
+
+
+def responder(pregunta: str, sindicato_id: int, convenio_id: int,
+              cuil: str = "", registrar: bool = True) -> dict:
+    """Recupera, le pide a Claude que redacte, y devuelve la respuesta.
+
+    Devuelve: {respuesta, hubo_respuesta, fuentes, disclaimer}.
+
+    `fuentes` son los fragmentos que se le pasaron al modelo, para poder
+    auditar después de dónde salió cada cosa."""
+    pregunta = (pregunta or "").strip()
+    if not pregunta:
+        return {"respuesta": "Escribí una pregunta.", "hubo_respuesta": False,
+                "fuentes": [], "disclaimer": DISCLAIMER}
+
+    vector = generar_embedding_consulta(pregunta)
+    fragmentos = db.buscar_fragmentos(sindicato_id, convenio_id, vector,
+                                      k=FRAGMENTOS_CONTEXTO)
+
+    # Filtro barato: si ni el mejor llega al umbral, es una pregunta ajena al
+    # convenio y no vale la pena gastar una llamada a la API.
+    if not fragmentos or fragmentos[0]["similitud"] < UMBRAL_DESCARTE:
+        if registrar:
+            db.registrar_consulta(sindicato_id, convenio_id, cuil, pregunta, False, [])
+        return {"respuesta": SIN_RESPUESTA, "hubo_respuesta": False,
+                "fuentes": [], "disclaimer": DISCLAIMER}
+
+    from extractor import client
+    mensaje = client.messages.create(
+        model=MODELO_RESPUESTA,
+        max_tokens=1500,
+        thinking={"type": "adaptive"},
+        output_config={"effort": "medium"},
+        system=INSTRUCCIONES,
+        messages=[{"role": "user", "content":
+                   f"FRAGMENTOS DEL CONVENIO:\n\n{_armar_contexto(fragmentos)}\n\n"
+                   f"PREGUNTA DEL TRABAJADOR:\n{pregunta}"}],
+    )
+    texto = "".join(b.text for b in mensaje.content if b.type == "text").strip()
+
+    hubo = "NO_ENCONTRADO" not in texto.upper()
+    if not hubo:
+        texto = SIN_RESPUESTA
+
+    usados = [f["id"] for f in fragmentos]
+    if registrar:
+        db.registrar_consulta(sindicato_id, convenio_id, cuil, pregunta, hubo,
+                              usados if hubo else [])
+    return {
+        "respuesta": texto,
+        "hubo_respuesta": hubo,
+        # Solo lo que se citó importa mostrarlo, pero se devuelven todas las
+        # fuentes consideradas para poder auditar el caso en que falle.
+        "fuentes": [{"referencia": f["referencia"], "seccion": f["seccion"],
+                     "tipo_fuente": f["tipo_fuente"],
+                     "similitud": round(f["similitud"], 3)}
+                    for f in fragmentos] if hubo else [],
+        "disclaimer": DISCLAIMER,
+    }

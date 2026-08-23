@@ -1790,6 +1790,64 @@ def api_consultar_tramite(numero_expediente: str, request: Request):
     return detalle
 
 
+# ---------- Consultas del trabajador sobre el convenio (bloque 3) ----------
+
+@app.get("/api/convenio/convenios")
+def api_convenios_del_trabajador(request: Request):
+    """Los convenios que el trabajador puede consultar en su sindicato activo.
+
+    El trabajador ELIGE cuál: no se infiere de su empleador ni su categoría,
+    porque inferirlo mal y contestarle con el convenio equivocado es peor que
+    no contestarle."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_trabajador(request)
+    if not sid or "convenio" not in _modulos_de(sid):
+        return {"convenios": []}
+    return {"convenios": [
+        {"id": c["id"], "nombre": c["nombre"], "codigo": c["codigo"]}
+        for c in db.convenios_del_sindicato(sid, solo_activos=True)
+        if c["fragmentos_vigentes"] > 0]}
+
+
+@app.post("/api/convenio/consultar")
+async def api_consultar_convenio(request: Request):
+    """Recibe la pregunta, busca y responde citando la fuente.
+
+    Tarda unos segundos: la búsqueda vectorial son ~90 ms pero después hay
+    una llamada al modelo. Es un request normal, a diferencia de la
+    indexación."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise HTTPException(403, "No autorizado")
+    _exigir_modulo(sid, "convenio")
+
+    cuerpo = await request.json()
+    pregunta = (cuerpo.get("pregunta") or "").strip()
+    convenio_id = cuerpo.get("convenio_id")
+    if not pregunta:
+        raise HTTPException(400, "Escribí una pregunta.")
+    if len(pregunta) > 500:
+        raise HTTPException(400, "La pregunta es demasiado larga.")
+    if not convenio_id:
+        raise HTTPException(400, "Elegí un convenio.")
+
+    # El convenio tiene que ser DE SU SINDICATO: el id viaja en el body y se
+    # puede escribir a mano.
+    with db.get_session() as s:
+        c = s.get(Convenio, int(convenio_id))
+        if not c or c.sindicato_id != sid or not c.activo:
+            raise HTTPException(404, "Convenio no encontrado")
+
+    return rag.responder(pregunta, sid, int(convenio_id), cuil=cuil)
+
+
 @app.post("/api/tramite")
 async def api_enviar_tramite(request: Request):
     """Los campos vienen con nombre dinámico (campo_{id} / archivo_{id}) según
