@@ -1,6 +1,9 @@
 services:
   postgres-dev:
-    image: postgres:16
+    # pgvector/pgvector en vez de postgres:16 pelada: la imagen oficial NO
+    # trae la extensión vector (verificado: pg_available_extensions devolvía
+    # 0 filas). Misma versión de Postgres, solo suma la extensión.
+    image: pgvector/pgvector:pg16
     container_name: mitrabajo-postgres-dev
     restart: unless-stopped
     environment:

@@ -985,6 +985,104 @@ mismo hilo por fecha.
   Las funciones sync (`abrirMensajeTramiteTrab`, etc.) no tienen este
   problema, sólo las `async`.
 
+## Piloto de RAG sobre el convenio (2026-08-23)
+
+Rama `rag-convenio`, 4 bloques. Plan en `PLAN_RAG_CONVENIO.md`, medición en
+`medicion_rag/`. Objetivo declarado: **aprender el patrón RAG** en algo de
+bajo riesgo antes de aplicarlo a algo crítico.
+
+### Lo que se midió ANTES de escribir código
+
+La dimensión del vector queda fijada en la columna y cambiarla es migración
+más reindexado completo, así que el modelo se eligió con evidencia. Se midió
+con el convenio real de AEFIP (74 páginas, 174 artículos) y 18 preguntas —
+16 con artículo esperado y 2 que el convenio NO contesta:
+
+| Modelo | dim | recall@8 | margen |
+|---|---|---|---|
+| paraphrase-multilingual-MiniLM-L12-v2 | 384 | 76% | -0,029 |
+| paraphrase-multilingual-mpnet-base-v2 | 768 | 47% | -0,106 |
+| **intfloat/multilingual-e5-large** | **1024** | **94%** | **+0,011** |
+
+**mpnet perdió siendo el doble de grande que MiniLM.** No es tamaño, es
+familia: los `paraphrase-*` son de similitud SIMÉTRICA y RAG es asimétrico
+(pregunta corta contra párrafo largo). Regla para el futuro: elegir por
+familia antes que por dimensión.
+
+### El hallazgo central: la baranda no puede ser un número
+
+El margen de e5 es positivo pero de 0,011. La pregunta *"¿cómo se afecta mi
+SIPES si tengo inasistencias?"* — que el convenio no contesta — puntúa 0,816
+y recupera los artículos 63 y 64, porque la pregunta ES sobre inasistencias.
+La peor pregunta legítima puntúa 0,826.
+
+**Los vectores no distinguen "habla del tema" de "contesta la pregunta"**:
+esa diferencia es semántica, no geométrica. Así que el umbral quedó como
+filtro barato para lo evidente (Puerto Madero, 0,766) y la baranda real vive
+en el prompt, con el caso de las inasistencias escrito como ejemplo. Por lo
+mismo RAG usa `claude-opus-5`: acá el juicio del modelo ES la baranda.
+
+En el test de aceptación el sistema rechazó las dos negativas, incluida la
+difícil. 8 de 8.
+
+### Lo que el convenio real enseñó sobre el troceo
+
+Ninguno de los tres se hubiera visto con un documento de juguete:
+
+1. **Las notas de acta fuera del texto vectorizado.** Son ~116 con redacción
+   casi idéntica: adentro hacían que el 60% de los artículos se parecieran
+   por su boilerplate en vez de por su contenido.
+2. **Los encabezados de sección van al fragmento SIGUIENTE.** Están escritos
+   antes del marcador del artículo al que pertenecen. Caso real: "6)
+   INDEMNIZACIÓN ESPECIAL POR JUBILACIÓN" quedaba al final del artículo 23,
+   que habla de guarderías — y la búsqueda de jubilación traía ese.
+3. **Sub-trocear los artículos largos.** Van de 67 a 11.812 caracteres; los
+   29 que superaban el límite del modelo se truncaban EN SILENCIO.
+
+### Bugs encontrados al probar, y su causa real
+
+- **Un documento podía quedar en "procesando" para siempre.** Apareció al
+  cortarse el proceso a mitad de un reindexado. El manejo de excepciones no
+  cubre esto: no hay excepción, hay muerte del proceso — y en Render pasa con
+  CADA deploy que ocurra mientras alguien indexa. El arreglo aprovecha una
+  certeza: la indexación corre en un hilo de ESE proceso, así que ninguna
+  sobrevive a un reinicio; al arrancar, todo lo que esté en "procesando"
+  está muerto por definición.
+- **Memoria al indexar.** Embeber 246 fragmentos de una sola vez pide ~1 GB
+  en un array y tumba el proceso. De ahí los lotes de 8. **El pico al
+  INDEXAR supera al del modelo en reposo**: la instancia se dimensiona por la
+  carga, no por la consulta.
+- **"TITULO IESTATUTO".** La extracción pega el número romano con el nombre
+  de la sección; esa cadena entraba al texto vectorizado como token basura.
+- **"De dónde sale" mentía.** El pie listaba los 8 fragmentos que se le
+  pasaron al modelo, no los que citó. Se filtra por número de artículo
+  presente en la respuesta — justo la parte que tiene que dar confianza.
+
+### Números para dimensionar
+
+| | |
+|---|---|
+| Indexar un convenio de 74 páginas | ~9 min 15 s (247 fragmentos) |
+| Carga del modelo, ya descargado | 3,3 s |
+| Modelo en disco / RAM | 2,1 GB |
+| Una consulta del trabajador | 88 ms + la llamada al modelo |
+
+Para desplegar en Render hace falta **4 GB de RAM** y **pre-descargar el
+modelo en el Build Command** — el filesystem es efímero y bajar 2,1 GB en el
+primer request deja el servicio colgado ~75 s después de cada deploy.
+
+### Lo que quedó afuera y por qué
+
+- **Índice HNSW**: con pocos miles de fragmentos el escaneo secuencial gana,
+  y uno construido sobre tabla vacía hay que reconstruirlo igual.
+- **Gobernar la indexación desde plataforma** (ejecutarla fuera de horario
+  pico o agendada), para que los 9 minutos de CPU no degraden la app. Idea
+  acordada, sin implementar.
+- **El sub-troceo parte las tablas.** Lo detectó el propio modelo al
+  responder sobre el adicional técnico: avisó que su fragmento del cuadro de
+  porcentajes estaba cortado. No rompe nada — avisa honestamente — pero es el
+  próximo lugar donde mirar para mejorar calidad.
+
 ## Noticias (sindicato → trabajador)
 Reemplaza el placeholder "próximamente" de Novedades. Modelo `Noticia`
 (db.py): título, bajada, texto completo (URLs se auto-enlazan al mostrarse,

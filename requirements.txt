@@ -9,3 +9,10 @@ python-dotenv==1.0.1
 psycopg[binary]==3.2.3
 alembic==1.19.0
 segno==1.6.6
+# RAG del convenio. fastembed va PINNEADO EXACTO a propósito: cambió el
+# pooling de multilingual-e5-large entre versiones, y eso hace que los
+# vectores guardados dejen de ser comparables con las consultas nuevas, en
+# silencio. La versión es parte de la identidad del embedding.
+fastembed==0.8.0
+pgvector==0.4.2
+pypdf==6.16.1

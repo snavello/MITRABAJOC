@@ -19,6 +19,9 @@ MODULOS = {
     # empresas, las notificaciones sindicato→empresa y los formularios de
     # trámites externos -- no hay sub-toggles.
     "empleadores": "Empleadores",
+    # Piloto de RAG (ver PLAN_RAG_CONVENIO.md). Opt-in, fuera de
+    # MODULOS_INICIALES: ningún sindicato lo estrena sin pedirlo.
+    "convenio": "Consultas sobre el convenio",
 }
 
 # Lo que existe HOY, para dar de alta un sindicato nuevo con todo tildado

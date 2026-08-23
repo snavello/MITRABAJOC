@@ -1,0 +1,82 @@
+
+==============================================================================
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2  (dim 384)
+  recall@3: 65%   recall@8: 76%
+  similitud peor POSITIVA : 0.337
+  similitud mejor NEGATIVA: 0.366
+  MARGEN (positiva - negativa): -0.029   NO se puede separar
+   NO  ¿Cuántos días de licencia por enfermedad común   esperado=[44]         top3=[46, 43, 50] sim=0.599
+   OK  Me tuve que ir a mitad de jornada por enfermed   esperado=[45]         top3=[45, 47, 61] sim=0.584
+   OK  Tengo una enfermedad de tratamiento largo, ¿cu   esperado=[46]         top3=[46, 43, 46] sim=0.539
+   OK  Si mi enfermedad queda como incapacidad defini   esperado=[47]         top3=[46, 17, 46] sim=0.414
+   OK  ¿Cuánto me corresponde de licencia por materni   esperado=[48]         top3=[53, 49, 48] sim=0.669
+   OK  ¿Cómo se otorga la licencia anual ordinaria?     esperado=[43]         top3=[43, 43, 43] sim=0.735
+   NO  ¿Me justifican la inasistencia si dono sangre?   esperado=[63]         top3=[155, 157, 61] sim=0.337
+   NO  Si fallece un agente, ¿cobra algo la familia?    esperado=[18]         top3=[56, 154, 63] sim=0.575
+   OK  Si quedo con incapacidad absoluta por un accid   esperado=[17]         top3=[58, 17, 163] sim=0.417
+   OK  ¿Cómo se paga el adicional por antigüedad?       esperado=[105]        top3=[105, 151, 24] sim=0.591
+   OK  ¿Qué derechos tengo como trabajador según el c   esperado=[12]         top3=[12, 11, 2] sim=0.724
+   OK  ¿Los derechos de los casados valen para conviv   esperado=[13]         top3=[13, 49, 56] sim=0.707
+   OK  ¿Qué tipos de relación laboral hay en AFIP?      esperado=[3]          top3=[3, 1, 167] sim=0.729
+   OK  ¿A quiénes se aplica este convenio?              esperado=[1]          top3=[129, 2, 126] sim=0.645
+   NO  ¿Qué adicional técnico me corresponde?           esperado=[116, 115]   top3=[116, 108, 114] sim=0.444
+   OK  ¿Percibo alguna suma de dinero al jubilarme?     esperado=[24]         top3=[24, 25, 158] sim=0.568
+      ¿Cuánto cuesta el metro cuadrado en Puerto Mad   esperado=NEGATIVA     top3=[143, 86, 151] sim=0.366
+      ¿Cómo se afecta mi SIPES si tengo inasistencia   esperado=NEGATIVA     top3=[90, 8, 47] sim=0.351
+
+==============================================================================
+sentence-transformers/paraphrase-multilingual-mpnet-base-v2  (dim 768)
+  recall@3: 24%   recall@8: 47%
+  similitud peor POSITIVA : 0.389
+  similitud mejor NEGATIVA: 0.495
+  MARGEN (positiva - negativa): -0.106   NO se puede separar
+   OK  ¿Cuántos días de licencia por enfermedad común   esperado=[44]         top3=[44, 45, 46] sim=0.678
+   OK  Me tuve que ir a mitad de jornada por enfermed   esperado=[45]         top3=[45, 44, 58] sim=0.659
+   OK  Tengo una enfermedad de tratamiento largo, ¿cu   esperado=[46]         top3=[44, 58, 46] sim=0.691
+   NO  Si mi enfermedad queda como incapacidad defini   esperado=[47]         top3=[46, 33, 56] sim=0.511
+   OK  ¿Cuánto me corresponde de licencia por materni   esperado=[48]         top3=[53, 49, 49] sim=0.684
+   OK  ¿Cómo se otorga la licencia anual ordinaria?     esperado=[43]         top3=[62, 66, 35] sim=0.703
+   OK  ¿Me justifican la inasistencia si dono sangre?   esperado=[63]         top3=[63, 29, 48] sim=0.389
+   NO  Si fallece un agente, ¿cobra algo la familia?    esperado=[18]         top3=[26, 21, 19] sim=0.599
+   NO  Si quedo con incapacidad absoluta por un accid   esperado=[17]         top3=[18, 46, 58] sim=0.462
+   NO  ¿Cómo se paga el adicional por antigüedad?       esperado=[105]        top3=[18, 24, 136] sim=0.486
+   NO  ¿Qué derechos tengo como trabajador según el c   esperado=[12]         top3=[167, 68, 10] sim=0.746
+   OK  ¿Los derechos de los casados valen para conviv   esperado=[13]         top3=[56, 49, 52] sim=0.729
+   NO  ¿Qué tipos de relación laboral hay en AFIP?      esperado=[3]          top3=[31, 77, 1] sim=0.603
+   NO  ¿A quiénes se aplica este convenio?              esperado=[1]          top3=[68, 102, 101] sim=0.726
+   NO  ¿Qué adicional técnico me corresponde?           esperado=[116, 115]   top3=[114, 104, 34] sim=0.467
+   OK  ¿Percibo alguna suma de dinero al jubilarme?     esperado=[24]         top3=[26, 158, 25] sim=0.526
+      ¿Cuánto cuesta el metro cuadrado en Puerto Mad   esperado=NEGATIVA     top3=[131, 147, 103] sim=0.495
+      ¿Cómo se afecta mi SIPES si tengo inasistencia   esperado=NEGATIVA     top3=[17, 46, 33] sim=0.471
+
+==============================================================================
+intfloat/multilingual-e5-large  (dim 1024)
+  recall@3: 82%   recall@8: 94%
+  similitud peor POSITIVA : 0.826
+  similitud mejor NEGATIVA: 0.816
+  MARGEN (positiva - negativa): +0.011   hay umbral posible
+   OK  ¿Cuántos días de licencia por enfermedad común   esperado=[44]         top3=[45, 44, 46] sim=0.845
+   OK  Me tuve que ir a mitad de jornada por enfermed   esperado=[45]         top3=[45, 51, 58] sim=0.881
+   OK  Tengo una enfermedad de tratamiento largo, ¿cu   esperado=[46]         top3=[46, 45, 46] sim=0.866
+   NO  Si mi enfermedad queda como incapacidad defini   esperado=[47]         top3=[17, 46, 44] sim=0.836
+   OK  ¿Cuánto me corresponde de licencia por materni   esperado=[48]         top3=[48, 55, 53] sim=0.847
+   OK  ¿Cómo se otorga la licencia anual ordinaria?     esperado=[43]         top3=[43, 62, 48] sim=0.851
+   OK  ¿Me justifican la inasistencia si dono sangre?   esperado=[63]         top3=[64, 90, 63] sim=0.826
+   OK  Si fallece un agente, ¿cobra algo la familia?    esperado=[18]         top3=[21, 19, 26] sim=0.850
+   OK  Si quedo con incapacidad absoluta por un accid   esperado=[17]         top3=[17, 44, 46] sim=0.848
+   OK  ¿Cómo se paga el adicional por antigüedad?       esperado=[105]        top3=[105, 25, 110] sim=0.855
+   OK  ¿Qué derechos tengo como trabajador según el c   esperado=[12]         top3=[12, 55, 79] sim=0.834
+   OK  ¿Los derechos de los casados valen para conviv   esperado=[13]         top3=[13, 56, 52] sim=0.836
+   OK  ¿Qué tipos de relación laboral hay en AFIP?      esperado=[3]          top3=[3, 1, 10] sim=0.879
+   OK  ¿A quiénes se aplica este convenio?              esperado=[1]          top3=[17, 1, 2] sim=0.828
+   OK  ¿Qué adicional técnico me corresponde?           esperado=[116, 115]   top3=[114, 116, 108] sim=0.852
+   OK  ¿Percibo alguna suma de dinero al jubilarme?     esperado=[24]         top3=[25, 158, 24] sim=0.836
+      ¿Cuánto cuesta el metro cuadrado en Puerto Mad   esperado=NEGATIVA     top3=[105, 143, 143] sim=0.766
+      ¿Cómo se afecta mi SIPES si tengo inasistencia   esperado=NEGATIVA     top3=[63, 64, 25] sim=0.816
+
+
+=== RESUMEN ===
+modelo                                                     dim    r@3    r@8   margen
+e-transformers/paraphrase-multilingual-MiniLM-L12-v2       384   65%   76%   -0.029
+e-transformers/paraphrase-multilingual-mpnet-base-v2       768   24%   47%   -0.106
+intfloat/multilingual-e5-large                            1024   82%   94%   +0.011

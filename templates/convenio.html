@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mi Trabajo — Consultas sobre el convenio</title>
+<style>
+  :root {
+    --marca-base: {{ marca.color_base if marca else '#152238' }};
+    --marca-primario: {{ marca.color_primario if marca else '#1a3d6b' }};
+    --marca-acento: {{ marca.color_acento if marca else '#2fa88f' }};
+    --marca-apoyo: {{ marca.color_secundario if marca else '#e8b84b' }};
+    --tinta:#152238; --gris:#5b6478; --linea:#e4e7ec; --papel:#f6f7f9;
+    --alerta:#c0392b; --verde:#0d7a5f;
+  }
+  * { box-sizing:border-box; margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  body { background:var(--papel); color:var(--tinta); min-height:100vh; }
+
+  /* Encabezado oscuro compacto: pantalla interior, no portada. */
+  .barra { background:var(--marca-base); padding:14px 15px; display:flex; align-items:center;
+           gap:12px; position:sticky; top:0; z-index:10; }
+  .barra img { max-height:38px; max-width:120px; object-fit:contain; }
+  .barra .tit { color:#fff; font-size:15px; font-weight:600; line-height:1.2; }
+  .barra .sub { color:rgba(255,255,255,.62); font-size:11.5px; }
+  .barra .volver { margin-left:auto; color:rgba(255,255,255,.85); text-decoration:none;
+                   font-size:12.5px; border:1px solid rgba(255,255,255,.28);
+                   padding:6px 11px; border-radius:9px; }
+
+  .cuerpo { max-width:660px; margin:0 auto; padding:18px 15px 60px; }
+  .intro { font-size:13.5px; color:var(--gris); line-height:1.55; margin-bottom:16px; }
+
+  .campo { margin-bottom:12px; }
+  .campo label { display:block; font-size:12.5px; color:var(--gris); font-weight:500; margin-bottom:5px; }
+  select, textarea { width:100%; padding:11px 12px; border:1px solid var(--linea);
+                     border-radius:9px; font-size:15px; background:#fff; color:var(--tinta); }
+  textarea { resize:vertical; min-height:78px; line-height:1.5; }
+  select:focus, textarea:focus { outline:2px solid var(--marca-acento); outline-offset:-1px; border-color:transparent; }
+
+  .btn { background:var(--marca-acento); color:#fff; border:none; border-radius:9px;
+         padding:12px 20px; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; }
+  .btn:disabled { opacity:.5; cursor:default; }
+
+  .sugerencias { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 4px; }
+  .sug { background:color-mix(in srgb, var(--marca-apoyo) 20%, #fff);
+         border:1px solid color-mix(in srgb, var(--marca-apoyo) 45%, #fff);
+         color:var(--tinta); border-radius:20px; padding:6px 12px; font-size:12.5px;
+         cursor:pointer; font-family:inherit; }
+
+  .respuesta { background:#fff; border:1px solid var(--linea); border-radius:12px;
+               padding:16px 17px; margin-top:18px; }
+  .respuesta.vacia { border-style:dashed; }
+  .texto { font-size:15px; line-height:1.62; white-space:pre-wrap; }
+  .texto strong { font-weight:650; }
+  .fuentes { margin-top:14px; padding-top:12px; border-top:1px solid var(--linea); }
+  .fuentes .lbl { font-size:11px; text-transform:uppercase; letter-spacing:.6px;
+                  color:var(--gris); margin-bottom:6px; }
+  .chip { display:inline-block; background:var(--papel); border:1px solid var(--linea);
+          border-radius:20px; padding:4px 11px; font-size:12px; margin:0 5px 5px 0; }
+  .chip.obs { background:color-mix(in srgb, var(--marca-apoyo) 22%, #fff);
+              border-color:color-mix(in srgb, var(--marca-apoyo) 45%, #fff); }
+  .aviso { font-size:12px; color:var(--gris); line-height:1.5; margin-top:12px;
+           padding-top:10px; border-top:1px solid var(--linea); }
+
+  .cargando { display:flex; align-items:center; gap:9px; color:var(--gris); font-size:14px; }
+  .spin { width:15px; height:15px; border:2px solid var(--linea);
+          border-top-color:var(--marca-acento); border-radius:50%; animation:g .8s linear infinite; }
+  @keyframes g { to { transform:rotate(360deg); } }
+
+  .sin-convenio { background:#fff; border:1px dashed var(--linea); border-radius:12px;
+                  padding:24px 18px; text-align:center; color:var(--gris); font-size:14px; line-height:1.55; }
+</style>
+</head>
+<body>
+
+<div class="barra">
+  {% if marca and marca.logo %}<img src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">{% endif %}
+  <div>
+    <div class="tit">Consultas sobre el convenio</div>
+    <div class="sub">{{ sindicato }}</div>
+  </div>
+  <a class="volver" href="/app">Volver</a>
+</div>
+
+<div class="cuerpo">
+
+{% if not convenios %}
+  <div class="sin-convenio">
+    Tu sindicato todavía no cargó el convenio acá.<br>
+    Cuando lo cargue, vas a poder hacer consultas en esta pantalla.
+  </div>
+{% else %}
+
+  <p class="intro">
+    Preguntá lo que quieras sobre tu convenio y te contesto con lo que dice el
+    texto, indicando de qué artículo sale. Si no lo encuentro, te lo digo:
+    prefiero eso a inventarte una respuesta.
+  </p>
+
+  {% if convenios|length > 1 %}
+  <div class="campo">
+    <label for="convenio">¿Sobre cuál convenio?</label>
+    <select id="convenio">
+      {% for c in convenios %}
+      <option value="{{ c.id }}">{{ c.nombre }}{% if c.codigo %} · {{ c.codigo }}{% endif %}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% else %}
+  <input type="hidden" id="convenio" value="{{ convenios[0].id }}">
+  {% endif %}
+
+  <div class="campo">
+    <label for="pregunta">Tu pregunta</label>
+    <textarea id="pregunta" maxlength="500"
+              placeholder="Ej: ¿cuántos días de licencia por enfermedad me corresponden?"></textarea>
+  </div>
+
+  <div class="sugerencias">
+    <button type="button" class="sug" onclick="usarSugerencia(this)">¿Cuántos días de licencia por enfermedad tengo?</button>
+    <button type="button" class="sug" onclick="usarSugerencia(this)">¿Cómo se pide la licencia anual?</button>
+    <button type="button" class="sug" onclick="usarSugerencia(this)">¿Qué pasa si me jubilo?</button>
+  </div>
+
+  <button class="btn" id="btn-preguntar" onclick="preguntar()" style="margin-top:8px;">Preguntar</button>
+
+  <div id="salida"></div>
+
+{% endif %}
+
+</div>
+
+<script>
+{% if convenios %}
+const $ = id => document.getElementById(id);
+
+function usarSugerencia(btn) {
+  $('pregunta').value = btn.textContent.trim();
+  $('pregunta').focus();
+}
+
+function escapar(t) {
+  const d = document.createElement('div');
+  d.textContent = t;
+  return d.innerHTML;
+}
+
+// El modelo devuelve **negrita** de markdown. Se convierte DESPUÉS de
+// escapar: si se hiciera antes, la respuesta podría inyectar HTML.
+function formatear(t) {
+  return escapar(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
+async function preguntar() {
+  const pregunta = $('pregunta').value.trim();
+  if (!pregunta) { $('pregunta').focus(); return; }
+  const btn = $('btn-preguntar');
+  btn.disabled = true;
+  $('salida').innerHTML = `<div class="respuesta"><div class="cargando">
+      <div class="spin"></div><span>Buscando en tu convenio…</span></div></div>`;
+  try {
+    const r = await fetch('/api/convenio/consultar', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({pregunta, convenio_id: Number($('convenio').value)}),
+    });
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e.detail || 'No se pudo consultar.');
+    }
+    const d = await r.json();
+    const fuentes = (d.fuentes || []).length ? `
+      <div class="fuentes">
+        <div class="lbl">De dónde sale</div>
+        ${d.fuentes.map(f => `<span class="chip ${f.tipo_fuente === 'observacion' ? 'obs' : ''}">${
+          f.tipo_fuente === 'observacion' ? 'Nota del sindicato' : escapar(f.referencia)}</span>`).join('')}
+      </div>` : '';
+    $('salida').innerHTML = `
+      <div class="respuesta ${d.hubo_respuesta ? '' : 'vacia'}">
+        <div class="texto">${formatear(d.respuesta)}</div>
+        ${fuentes}
+        <div class="aviso">${escapar(d.disclaimer)}</div>
+      </div>`;
+  } catch (e) {
+    $('salida').innerHTML = `<div class="respuesta vacia"><div class="texto">${
+      escapar(e.message)}</div></div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Ctrl+Enter manda, como en cualquier caja de texto larga.
+$('pregunta').addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') preguntar();
+});
+{% endif %}
+</script>
+</body>
+</html>
