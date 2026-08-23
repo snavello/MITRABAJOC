@@ -291,9 +291,19 @@ def _startup():
     # Ninguna indexación de convenio sobrevive a un reinicio: corre en un
     # hilo de ESTE proceso. Lo que quedó en "procesando" está muerto y hay
     # que decirlo, o el admin ve un cartel que no avanza nunca.
-    colgadas = db.rescatar_indexaciones_colgadas()
-    if colgadas:
-        print(f"[convenio] {colgadas} indexacion(es) interrumpida(s) marcadas como error")
+    # try/except a propósito, y no por prolijidad: si el código nuevo llega a
+    # Render ANTES de que corra `alembic upgrade head`, la tabla todavía no
+    # existe y esta consulta tumba el arranque de TODA la app -- no solo de
+    # esta feature. Verificado: sin las tablas, el startup revienta con
+    # UndefinedTable y el servicio no levanta.
+    # El arranque nunca puede depender de una migración que quizá no corrió.
+    try:
+        colgadas = db.rescatar_indexaciones_colgadas()
+        if colgadas:
+            print(f"[convenio] {colgadas} indexacion(es) interrumpida(s) marcadas como error")
+    except Exception as e:
+        print(f"[convenio] no se pudo revisar indexaciones colgadas ({type(e).__name__}). "
+              f"Normal si la migración del convenio todavía no corrió.")
 
 
 # ================= App del trabajador =================
@@ -582,6 +592,26 @@ def exigir_plataforma(request: Request) -> None:
         raise HTTPException(403, "Necesitás iniciar sesión como administrador de plataforma.")
 
 
+def _contexto_convenio(sid: int, modulos: list) -> dict:
+    """Datos del piloto de convenio para el panel, o vacío.
+
+    El try/except cubre un caso concreto: que alguien prenda el módulo antes
+    de que corra la migración. Sin él, esas consultas tumban TODO /admin con
+    un 500 -- no solo la pestaña del convenio. Degradar a "no hay convenios"
+    es mucho mejor que dejar al admin sin panel."""
+    if "convenio" not in modulos:
+        return {"convenios": [], "documentos_convenio": {}}
+    try:
+        convenios = db.convenios_del_sindicato(sid)
+        return {"convenios": convenios,
+                "documentos_convenio": {c["id"]: db.documentos_del_convenio(c["id"])
+                                        for c in convenios}}
+    except Exception as e:
+        print(f"[convenio] no se pudieron leer los convenios ({type(e).__name__}). "
+              f"¿Corrió `alembic upgrade head`?")
+        return {"convenios": [], "documentos_convenio": {}}
+
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin(request: Request):
     ses = sesion_actual(request, "sindicato")
@@ -649,11 +679,7 @@ def admin(request: Request):
         "tramites_empresa_nuevos": db.contar_tramites_empleador_nuevos(sid) if "empleadores" in modulos else 0,
         "modulos": modulos,
         # Piloto de RAG: solo si el sindicato tiene el módulo habilitado.
-        "convenios": db.convenios_del_sindicato(sid) if "convenio" in modulos else [],
-        "documentos_convenio": {
-            c["id"]: db.documentos_del_convenio(c["id"])
-            for c in db.convenios_del_sindicato(sid)
-        } if "convenio" in modulos else {},
+        **_contexto_convenio(sid, modulos),
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
 
