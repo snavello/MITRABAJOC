@@ -2721,7 +2721,13 @@ function cancelarUsuario() {
   document.getElementById('usu-cancel').classList.add('oculto');
 }
 
+{% if 'recibos' in modulos %}
 // ---------- Aprendizaje ----------
+// Este bloque hace init a nivel de módulo sobre elementos que viven dentro
+// del panel de Aprendizaje (#ap-drop, #ap-files...), que solo se renderiza
+// si el sindicato tiene el módulo "recibos". Sin el panel, esos
+// getElementById dan null, la excepción corta la ejecución del script y se
+// lleva puesto TODO lo que viene después -- no solo Aprendizaje.
 const apFiles = document.getElementById('ap-files');
 const apBtn = document.getElementById('ap-btn');
 const apCount = document.getElementById('ap-count');
@@ -2830,6 +2836,7 @@ async function aplicarAprendizaje() {
   document.getElementById('ap-final').innerHTML =
     `<div class="msg ok">Se dieron de alta ${data.altas} concepto(s). <a href="/admin#conceptos">Ver en la tabla de conceptos</a> (actualizá la página).</div>`;
 }
+{% endif %}
 </script>
 </body>
 </html>

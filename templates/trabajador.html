@@ -749,11 +749,18 @@ document.querySelectorAll('.tab-t').forEach(btn => {
   }
 }
 
+// Fuera del bloque de recibos a propósito: Trámites también lo llama al
+// enviar una nota, y su modal no depende del módulo.
+function cerrarModalRecibo() {
+  document.getElementById('modal-recibo-overlay').classList.remove('abierto');
+}
+
 let archivo = null, datosLeidos = null;
 const $ = id => document.getElementById(id);
 const peso = n => '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:2});
 const ver = (id) => { for (const s of ['inicio','listo','preview','misrecibos']) $(s).style.display = (s===id)?'block':'none'; };
 
+{% if 'recibos' in modulos %}
 $('archivo').onchange = e => {
   archivo = e.target.files[0];
   if (!archivo) return;
@@ -1076,10 +1083,6 @@ function toggleHistorialItem(i) {
   $('modal-recibo-contenido').innerHTML = renderHistorialDetalle(r.detalle);
   $('modal-recibo-overlay').classList.add('abierto');
 }
-function cerrarModalRecibo() {
-  $('modal-recibo-overlay').classList.remove('abierto');
-}
-
 function renderHistorialDetalle(detalle) {
   const rec = (detalle && detalle.recibo) || {};
   const res = (detalle && detalle.resultado) || {};
@@ -1096,6 +1099,8 @@ function renderHistorialDetalle(detalle) {
   for (const al of (res.alertas || [])) h += `<div class="alerta-legal">${al.detalle}</div>`;
   return h;
 }
+
+{% endif %}
 
 // ==================== Semáforo de aportes ====================
 // El div #sem-cuerpo se renderiza solo si el sindicato tiene el módulo
