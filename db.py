@@ -16,7 +16,9 @@ from typing import Optional
 from datetime import datetime
 
 from dotenv import load_dotenv
+from typing import Any
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON
+from pgvector.sqlalchemy import Vector
 
 # En Render, DATABASE_URL es una variable de entorno real (no hace falta
 # .env). Localmente vive en .env -- sin este load_dotenv() acá, cualquier
@@ -674,6 +676,113 @@ class TramiteEmpleadorLog(SQLModel, table=True):
 
 
 # ---------- Inicialización ----------
+# ---------- Consultas sobre el convenio (RAG) -- ver PLAN_RAG_CONVENIO.md ----------
+# Módulo "convenio", opt-in por sindicato. Piloto: NO toca la validación de
+# recibos. Todo el aislamiento sigue el criterio del resto de la app.
+
+# Dimensión del vector. Sale de una medición con material real (convenio de
+# AEFIP, 18 preguntas): multilingual-e5-large ganó con 94% de recall@8 contra
+# 76% y 47% de los otros dos. Cambiar de modelo a uno de otra dimensión es
+# migración + reindexado completo -- ver medicion_rag/.
+DIM_EMBEDDING = 1024
+
+# Identidad COMPLETA del embedding: librería + modelo. La librería va incluida
+# a propósito -- fastembed cambió el pooling de este mismo modelo entre
+# versiones, y con solo el nombre del modelo el cambio pasaría inadvertido y
+# la búsqueda devolvería basura en silencio.
+MODELO_EMBEDDING = "fastembed-0.8.0/intfloat/multilingual-e5-large"
+
+
+class Convenio(SQLModel, table=True):
+    """Un convenio colectivo del sindicato. Un sindicato puede tener VARIOS
+    (uno general, otros por empresa o rama) y es el TRABAJADOR quien elige
+    cuál consultar: inferirlo del empleador o la categoría sería frágil, y
+    contestar con el convenio equivocado es peor que no contestar.
+
+    `nombre` es lo único que va a guiar al trabajador en el selector, así que
+    tiene que ser entendible ("Metalúrgicos - rama automotriz"), no el código
+    legal."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    nombre: str
+    codigo: str = ""              # "CCT 260/75", referencia formal
+    activo: bool = True
+    creado: str = ""
+
+
+class DocumentoConvenio(SQLModel, table=True):
+    """El PDF del convenio o de un acta, con lo que el admin declara sobre él.
+
+    LA VIGENCIA LA DECLARA EL ADMIN, no se calcula: un acta no dice de forma
+    confiable qué artículo modifica. `vigente` responde "¿entra en la búsqueda
+    hoy?" -- es lo que el admin marca cuando un texto ordenado absorbe actas
+    viejas. Las fechas responden "¿en qué período rigió?", que hace falta para
+    una consulta retroactiva y es imposible de reconstruir después."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    convenio_id: int = Field(foreign_key="convenio.id", index=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    tipo: str = "convenio"        # convenio | acta
+    titulo: str = ""
+    fecha_documento: str = ""
+    archivo_datos: Optional[bytes] = Field(default=None)
+    archivo_mime: str = ""
+    archivo_nombre: str = ""
+    # "Datos asociados": lo que el admin adjunta como relevante. SE INDEXA
+    # como fuente distinta (tipo_fuente="observacion") porque suele estar en
+    # lenguaje llano, más parecido a cómo pregunta un trabajador que el
+    # articulado formal.
+    observaciones: str = ""
+    observaciones_fecha: str = ""
+    vigente: bool = True
+    vigencia_desde: str = ""
+    vigencia_hasta: str = ""
+    origen_texto: str = ""        # nativo | ocr
+    caracteres_extraidos: int = 0
+    paginas: int = 0
+    creado: str = ""
+
+
+class FragmentoConvenio(SQLModel, table=True):
+    """Un trozo indexado, con su vector. Hereda la vigencia de su documento.
+
+    `sindicato_id` está desnormalizado a propósito: la búsqueda vectorial
+    filtra por él en el camino caliente y no queremos un join ahí.
+
+    `referencia` es texto libre ("Artículo 47", "Acta 2024-03") y no un número
+    estructurado: con actas que no siguen un formato fijo, forzar estructura
+    garantiza perderla. Lo que importa es que sea legible en la cita."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    documento_id: int = Field(foreign_key="documentoconvenio.id", index=True)
+    convenio_id: int = Field(foreign_key="convenio.id", index=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    orden: int = 0
+    texto: str = ""
+    referencia: str = ""
+    seccion: str = ""             # el TÍTULO del convenio donde cae
+    tipo_fuente: str = "convenio"  # convenio | acta | observacion
+    # Las notas "(Ex - Artículo N modificado por Acta...)" viven ACÁ y no en
+    # `texto`: son ~116 con redacción casi idéntica y dentro del embedding
+    # harían que el 60% de los artículos se parezcan por su boilerplate.
+    notas_acta: str = ""
+    embedding: Any = Field(default=None, sa_column=Column(Vector(DIM_EMBEDDING)))
+    modelo_embedding: str = ""
+    creado: str = ""
+
+
+class ConsultaConvenio(SQLModel, table=True):
+    """Cada pregunta que hizo un trabajador. Es el único dato que dice si el
+    troceo funciona y dónde están los huecos de lo indexado -- por eso se
+    registra desde el principio y no al final."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    convenio_id: Optional[int] = Field(default=None, foreign_key="convenio.id", index=True)
+    cuil: str = Field(default="", index=True)
+    pregunta: str = ""
+    hubo_respuesta: bool = False   # False = se contestó "no lo encontré"
+    fragmentos_usados: list = Field(default=[], sa_column=Column(JSON))
+    creado: str = ""
+
+
 def crear_tablas():
     SQLModel.metadata.create_all(engine)
 
