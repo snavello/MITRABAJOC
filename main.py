@@ -42,7 +42,8 @@ from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabaja
                 TipoTramite, CampoTramite, Tramite, RespuestaTramite, NotaTramite, TramiteLog,
                 Empleador, CuentaEmpleador, NotificacionEmpleador, NotificacionEmpleadorDestinatario,
                 TipoTramiteEmpleador, CampoTramiteEmpleador, TramiteEmpleador, RespuestaTramiteEmpleador,
-                NotaTramiteEmpleador, TramiteEmpleadorLog)
+                NotaTramiteEmpleador, TramiteEmpleadorLog,
+                Convenio, DocumentoConvenio, FragmentoConvenio, ConsultaConvenio)
 from extractor import extraer, extraer_aportes
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, CATEGORIAS_UNIVERSALES)
@@ -51,6 +52,7 @@ from qr import qr_svg, url_verificacion
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
 from version import VERSION_TRABAJADOR, VERSION_ADMIN, VERSION_PLATAFORMA, FECHA_VERSION
 from modulos import MODULOS, MODULOS_INICIALES
+import rag
 
 import mimetypes
 mimetypes.add_type("font/woff2", ".woff2")  # algunos Windows no lo traen registrado -> se servía como text/plain
@@ -286,6 +288,12 @@ templates = Jinja2Templates(directory="templates")
 @app.on_event("startup")
 def _startup():
     db.init_db()
+    # Ninguna indexación de convenio sobrevive a un reinicio: corre en un
+    # hilo de ESTE proceso. Lo que quedó en "procesando" está muerto y hay
+    # que decirlo, o el admin ve un cartel que no avanza nunca.
+    colgadas = db.rescatar_indexaciones_colgadas()
+    if colgadas:
+        print(f"[convenio] {colgadas} indexacion(es) interrumpida(s) marcadas como error")
 
 
 # ================= App del trabajador =================
@@ -640,6 +648,12 @@ def admin(request: Request):
         "tramites_empresa": db.tramites_empleador_del_sindicato(sid),
         "tramites_empresa_nuevos": db.contar_tramites_empleador_nuevos(sid) if "empleadores" in modulos else 0,
         "modulos": modulos,
+        # Piloto de RAG: solo si el sindicato tiene el módulo habilitado.
+        "convenios": db.convenios_del_sindicato(sid) if "convenio" in modulos else [],
+        "documentos_convenio": {
+            c["id"]: db.documentos_del_convenio(c["id"])
+            for c in db.convenios_del_sindicato(sid)
+        } if "convenio" in modulos else {},
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
 
@@ -2205,6 +2219,148 @@ async def api_nota_tramite_empresa(tramite_id: int, request: Request, texto: str
 
 
 # ---------- Aprendizaje: subir N recibos y proponer conceptos nuevos ----------
+# ---------- Convenio: carga e indexación (bloque 2 de PLAN_RAG_CONVENIO.md) ----------
+# Todo gateado por el módulo "convenio", opt-in por sindicato.
+
+MAX_PDF_CONVENIO = 30 * 1024 * 1024   # 30 MB
+
+
+@app.post("/admin/convenio")
+def abm_convenio(request: Request, id: str = Form(""), nombre: str = Form(...),
+                  codigo: str = Form(""), activo: str = Form("si")):
+    """Alta o edición de un convenio. `nombre` es lo único que va a guiar al
+    trabajador en el selector, así que conviene que sea entendible."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "convenio")
+    if not nombre.strip():
+        return RedirectResponse("/admin?error=datos#convenio", status_code=303)
+    if id:
+        db.editar_convenio(int(id), sid, nombre, codigo, activo == "si")
+    else:
+        db.crear_convenio(sid, nombre, codigo)
+    return RedirectResponse("/admin#convenio", status_code=303)
+
+
+@app.post("/admin/convenio/documento")
+async def subir_documento_convenio(
+    request: Request,
+    convenio_id: int = Form(...), tipo: str = Form("convenio"),
+    titulo: str = Form(""), fecha_documento: str = Form(""),
+    observaciones: str = Form(""), observaciones_fecha: str = Form(""),
+    vigencia_desde: str = Form(""), vigencia_hasta: str = Form(""),
+    confirmar_ocr: str = Form(""), archivo: UploadFile = File(...),
+):
+    """Guarda el PDF y dispara la indexación EN SEGUNDO PLANO.
+
+    No indexa acá: tarda ~9 minutos (medido) y ningún request sobrevive eso.
+    Devuelve enseguida con el id del documento; el panel consulta el progreso.
+
+    Si el PDF resulta ser un escaneo y el admin no confirmó el OCR, el
+    documento queda en "error" con el motivo -- OCRear cuesta plata y tiene
+    que poder enterarse antes, no después."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "convenio")
+    if not archivo or not archivo.filename:
+        return RedirectResponse("/admin?error=archivo#convenio", status_code=303)
+    contenido = await archivo.read()
+    if len(contenido) > MAX_PDF_CONVENIO:
+        return RedirectResponse("/admin?error=tamano#convenio", status_code=303)
+    if not archivo.filename.lower().endswith(".pdf"):
+        return RedirectResponse("/admin?error=formato#convenio", status_code=303)
+
+    doc_id = db.crear_documento_convenio(
+        convenio_id=convenio_id, sindicato_id=sid, tipo=tipo, titulo=titulo,
+        fecha_documento=fecha_documento, archivo_datos=contenido,
+        archivo_mime="application/pdf", archivo_nombre=archivo.filename,
+        observaciones=observaciones, observaciones_fecha=observaciones_fecha,
+        vigencia_desde=vigencia_desde, vigencia_hasta=vigencia_hasta)
+    if not doc_id:
+        return RedirectResponse("/admin?error=convenioajeno#convenio", status_code=303)
+
+    rag.indexar_en_segundo_plano(doc_id, permitir_ocr=(confirmar_ocr == "si"))
+    return RedirectResponse(f"/admin?indexando={doc_id}#convenio", status_code=303)
+
+
+@app.get("/admin/convenio/documento/{documento_id}/estado")
+def estado_documento_convenio(documento_id: int, request: Request):
+    """Progreso de la indexación, para que el panel lo consulte cada pocos
+    segundos. Payload mínimo, pensado para pedirse seguido."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "convenio")
+    with db.get_session() as s:
+        d = s.get(DocumentoConvenio, documento_id)
+        if not d or d.sindicato_id != sid:
+            raise HTTPException(404, "Documento no encontrado")
+        return {"estado": d.estado, "fragmentos": d.fragmentos_generados,
+                "error": d.error_detalle, "origen_texto": d.origen_texto,
+                "paginas": d.paginas}
+
+
+@app.get("/admin/convenio/documento/{documento_id}/fragmentos")
+def fragmentos_documento_convenio(documento_id: int, request: Request):
+    """Vista previa: devuelve TEXTO, no solo el conteo. Un troceo malo pasa
+    el "se detectaron N fragmentos" sin problema y arruina todo lo de abajo;
+    el admin tiene que poder leer los primeros y darse cuenta."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "convenio")
+    with db.get_session() as s:
+        d = s.get(DocumentoConvenio, documento_id)
+        if not d or d.sindicato_id != sid:
+            raise HTTPException(404, "Documento no encontrado")
+    return {"fragmentos": db.fragmentos_de_documento(documento_id, limite=8),
+            "total": d.fragmentos_generados}
+
+
+@app.post("/admin/convenio/documento/{documento_id}/vigencia")
+def vigencia_documento_convenio(documento_id: int, request: Request,
+                                 vigente: str = Form(...)):
+    """Marca un documento como vigente o no. Es lo que se usa cuando un texto
+    ordenado nuevo ya incorpora actas viejas: quedan guardadas pero salen de
+    la búsqueda."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "convenio")
+    db.set_vigencia_documento(documento_id, sid, vigente == "si")
+    return RedirectResponse("/admin#convenio", status_code=303)
+
+
+@app.post("/admin/convenio/documento/{documento_id}/borrar")
+def borrar_documento_convenio_ruta(documento_id: int, request: Request):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "convenio")
+    db.borrar_documento_convenio(documento_id, sid)
+    return RedirectResponse("/admin#convenio", status_code=303)
+
+
+@app.post("/admin/convenio/documento/{documento_id}/reindexar")
+def reindexar_documento_convenio(documento_id: int, request: Request,
+                                  confirmar_ocr: str = Form("")):
+    """Rehace el troceo y los embeddings. Se usa al iterar la estrategia de
+    troceo -- cuesta ~9 minutos pero no cuesta plata, que es justamente el
+    motivo por el que se eligieron embeddings locales."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "convenio")
+    with db.get_session() as s:
+        d = s.get(DocumentoConvenio, documento_id)
+        if not d or d.sindicato_id != sid:
+            raise HTTPException(404, "Documento no encontrado")
+    rag.indexar_en_segundo_plano(documento_id, permitir_ocr=(confirmar_ocr == "si"))
+    return RedirectResponse(f"/admin?indexando={documento_id}#convenio", status_code=303)
+
+
+@app.get("/admin/convenio/{convenio_id}/anteriores")
+def documentos_anteriores(convenio_id: int, request: Request, fecha: str = ""):
+    """Documentos vigentes anteriores a esa fecha. El panel lo consulta al
+    elegir la fecha de un documento nuevo, para avisar en el momento -- que
+    es cuando la persona tiene el contexto fresco."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "convenio")
+    with db.get_session() as s:
+        c = s.get(Convenio, convenio_id)
+        if not c or c.sindicato_id != sid:
+            raise HTTPException(404, "Convenio no encontrado")
+    return {"anteriores": db.documentos_anteriores_a(convenio_id, fecha)}
+
+
 @app.post("/admin/aprender")
 async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
     """Lee varios recibos (de uno o varios empleadores) y junta los conceptos

@@ -739,6 +739,13 @@ class DocumentoConvenio(SQLModel, table=True):
     origen_texto: str = ""        # nativo | ocr
     caracteres_extraidos: int = 0
     paginas: int = 0
+    # Indexar un convenio tarda ~9 minutos (medido: 246 fragmentos a 2,3 s
+    # cada uno). Ningún request HTTP sobrevive eso, así que corre en segundo
+    # plano y el documento lleva su propio estado para que el panel pueda
+    # mostrar en qué anda.
+    estado: str = "pendiente"     # pendiente | procesando | listo | error
+    fragmentos_generados: int = 0
+    error_detalle: str = ""
     creado: str = ""
 
 
@@ -782,6 +789,246 @@ class ConsultaConvenio(SQLModel, table=True):
     fragmentos_usados: list = Field(default=[], sa_column=Column(JSON))
     creado: str = ""
 
+
+
+# ---------- Consultas sobre el convenio: acceso a datos ----------
+
+def convenios_del_sindicato(sindicato_id: int, solo_activos: bool = False) -> list:
+    """Convenios del sindicato, con el resumen de lo que tienen indexado.
+
+    El conteo de fragmentos VIGENTES es lo que le importa al admin: un
+    convenio con documentos cargados pero todos marcados como no vigentes no
+    va a contestar nada, y eso tiene que verse."""
+    with Session(engine) as s:
+        q = select(Convenio).where(Convenio.sindicato_id == sindicato_id)
+        if solo_activos:
+            q = q.where(Convenio.activo == True)
+        convenios = s.exec(q.order_by(Convenio.nombre)).all()
+        salida = []
+        for c in convenios:
+            docs = s.exec(select(DocumentoConvenio).where(
+                DocumentoConvenio.convenio_id == c.id)).all()
+            ids_vigentes = [d.id for d in docs if d.vigente]
+            frags = 0
+            if ids_vigentes:
+                frags = len(s.exec(select(FragmentoConvenio).where(
+                    FragmentoConvenio.documento_id.in_(ids_vigentes))).all())
+            salida.append({
+                "id": c.id, "nombre": c.nombre, "codigo": c.codigo,
+                "activo": c.activo, "creado": c.creado,
+                "documentos": len(docs),
+                "documentos_vigentes": len(ids_vigentes),
+                "fragmentos_vigentes": frags,
+                "indexando": any(d.estado == "procesando" for d in docs),
+            })
+        return salida
+
+
+def documentos_del_convenio(convenio_id: int) -> list:
+    with Session(engine) as s:
+        docs = s.exec(select(DocumentoConvenio).where(
+            DocumentoConvenio.convenio_id == convenio_id)
+            .order_by(DocumentoConvenio.fecha_documento.desc(),
+                      DocumentoConvenio.id.desc())).all()
+        return [{
+            "id": d.id, "tipo": d.tipo, "titulo": d.titulo,
+            "fecha_documento": d.fecha_documento, "vigente": d.vigente,
+            "vigencia_desde": d.vigencia_desde, "vigencia_hasta": d.vigencia_hasta,
+            "observaciones": d.observaciones, "observaciones_fecha": d.observaciones_fecha,
+            "origen_texto": d.origen_texto, "paginas": d.paginas,
+            "caracteres_extraidos": d.caracteres_extraidos,
+            "estado": d.estado, "fragmentos_generados": d.fragmentos_generados,
+            "error_detalle": d.error_detalle, "creado": d.creado,
+            "archivo_nombre": d.archivo_nombre,
+        } for d in docs]
+
+
+def documentos_anteriores_a(convenio_id: int, fecha: str, excluir_id: int = 0) -> list:
+    """Documentos VIGENTES del convenio con fecha anterior a `fecha`.
+
+    Se usa para avisar al admin, en el momento de subir uno nuevo, que hay
+    documentos viejos que quizá quedaron absorbidos. Es cuando tiene el
+    contexto fresco -- mucho más barato que un recordatorio a 30 días."""
+    if not fecha:
+        return []
+    with Session(engine) as s:
+        docs = s.exec(select(DocumentoConvenio).where(
+            DocumentoConvenio.convenio_id == convenio_id,
+            DocumentoConvenio.vigente == True)).all()
+        return [{"id": d.id, "titulo": d.titulo or d.archivo_nombre,
+                 "fecha_documento": d.fecha_documento, "tipo": d.tipo}
+                for d in docs
+                if d.id != excluir_id and d.fecha_documento and d.fecha_documento < fecha]
+
+
+def fragmentos_de_documento(documento_id: int, limite: int = 0) -> list:
+    """Los fragmentos de un documento, para la vista previa del admin.
+
+    La vista previa muestra TEXTO y no solo el conteo a propósito: un troceo
+    malo pasa el "se detectaron N fragmentos" sin problema y arruina todo lo
+    que viene después."""
+    with Session(engine) as s:
+        q = select(FragmentoConvenio).where(
+            FragmentoConvenio.documento_id == documento_id).order_by(FragmentoConvenio.orden)
+        if limite:
+            q = q.limit(limite)
+        return [{"id": f.id, "orden": f.orden, "referencia": f.referencia,
+                 "seccion": f.seccion, "tipo_fuente": f.tipo_fuente,
+                 "texto": f.texto, "notas_acta": f.notas_acta,
+                 "modelo_embedding": f.modelo_embedding} for f in s.exec(q).all()]
+
+
+def crear_convenio(sindicato_id: int, nombre: str, codigo: str) -> int:
+    with Session(engine) as s:
+        c = Convenio(sindicato_id=sindicato_id, nombre=nombre.strip(),
+                     codigo=(codigo or "").strip(),
+                     creado=datetime.now().strftime("%Y-%m-%d %H:%M"))
+        s.add(c); s.commit(); s.refresh(c)
+        return c.id
+
+
+def editar_convenio(convenio_id: int, sindicato_id: int, nombre: str,
+                    codigo: str, activo: bool) -> bool:
+    with Session(engine) as s:
+        c = s.get(Convenio, convenio_id)
+        if not c or c.sindicato_id != sindicato_id:
+            return False
+        c.nombre, c.codigo, c.activo = nombre.strip(), (codigo or "").strip(), activo
+        s.add(c); s.commit()
+        return True
+
+
+def crear_documento_convenio(convenio_id: int, sindicato_id: int, tipo: str, titulo: str,
+                              fecha_documento: str, archivo_datos: bytes, archivo_mime: str,
+                              archivo_nombre: str, observaciones: str = "",
+                              observaciones_fecha: str = "", vigencia_desde: str = "",
+                              vigencia_hasta: str = "") -> Optional[int]:
+    """Guarda el documento en estado "pendiente". NO indexa: eso tarda ~9
+    minutos y corre aparte."""
+    with Session(engine) as s:
+        conv = s.get(Convenio, convenio_id)
+        if not conv or conv.sindicato_id != sindicato_id:
+            return None
+        d = DocumentoConvenio(
+            convenio_id=convenio_id, sindicato_id=sindicato_id, tipo=tipo,
+            titulo=titulo, fecha_documento=fecha_documento,
+            archivo_datos=archivo_datos, archivo_mime=archivo_mime,
+            archivo_nombre=archivo_nombre, observaciones=observaciones,
+            observaciones_fecha=observaciones_fecha, vigencia_desde=vigencia_desde,
+            vigencia_hasta=vigencia_hasta, estado="pendiente",
+            creado=datetime.now().strftime("%Y-%m-%d %H:%M"))
+        s.add(d); s.commit(); s.refresh(d)
+        return d.id
+
+
+def set_vigencia_documento(documento_id: int, sindicato_id: int, vigente: bool) -> bool:
+    """Marca un documento como vigente o no. Es lo que el admin usa cuando un
+    texto ordenado absorbe actas viejas: quedan guardadas pero salen de la
+    búsqueda."""
+    with Session(engine) as s:
+        d = s.get(DocumentoConvenio, documento_id)
+        if not d or d.sindicato_id != sindicato_id:
+            return False
+        d.vigente = vigente
+        s.add(d); s.commit()
+        return True
+
+
+def borrar_documento_convenio(documento_id: int, sindicato_id: int) -> bool:
+    """Borra el documento y sus fragmentos. Los fragmentos primero: los
+    modelos declaran la FK como columna pero no como relationship(), así que
+    SQLAlchemy no conoce el orden de dependencia y Postgres rechazaría."""
+    with Session(engine) as s:
+        d = s.get(DocumentoConvenio, documento_id)
+        if not d or d.sindicato_id != sindicato_id:
+            return False
+        for f in s.exec(select(FragmentoConvenio).where(
+                FragmentoConvenio.documento_id == documento_id)).all():
+            s.delete(f)
+        s.commit()
+        s.delete(d); s.commit()
+        return True
+
+
+def set_estado_documento(documento_id: int, estado: str, fragmentos: int = None,
+                          error: str = None, origen_texto: str = None,
+                          paginas: int = None, caracteres: int = None) -> None:
+    """Actualiza el progreso de la indexación. La llama el hilo de fondo."""
+    with Session(engine) as s:
+        d = s.get(DocumentoConvenio, documento_id)
+        if not d:
+            return
+        d.estado = estado
+        if fragmentos is not None:
+            d.fragmentos_generados = fragmentos
+        if error is not None:
+            d.error_detalle = error[:500]
+        if origen_texto is not None:
+            d.origen_texto = origen_texto
+        if paginas is not None:
+            d.paginas = paginas
+        if caracteres is not None:
+            d.caracteres_extraidos = caracteres
+        s.add(d); s.commit()
+
+
+def guardar_fragmentos(documento_id: int, convenio_id: int, sindicato_id: int,
+                        fragmentos: list, vectores: list, tipo_fuente: str = "convenio",
+                        desde_orden: int = 0) -> int:
+    """Guarda un lote de fragmentos ya vectorizados."""
+    ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
+    with Session(engine) as s:
+        for i, (f, v) in enumerate(zip(fragmentos, vectores)):
+            s.add(FragmentoConvenio(
+                documento_id=documento_id, convenio_id=convenio_id,
+                sindicato_id=sindicato_id, orden=desde_orden + i,
+                texto=f["texto"], referencia=f["referencia"], seccion=f.get("seccion", ""),
+                tipo_fuente=tipo_fuente, notas_acta=f.get("notas_acta", ""),
+                embedding=v, modelo_embedding=MODELO_EMBEDDING, creado=ahora))
+        s.commit()
+    return len(fragmentos)
+
+
+def borrar_fragmentos_de_documento(documento_id: int) -> None:
+    with Session(engine) as s:
+        for f in s.exec(select(FragmentoConvenio).where(
+                FragmentoConvenio.documento_id == documento_id)).all():
+            s.delete(f)
+        s.commit()
+
+
+def rescatar_indexaciones_colgadas() -> int:
+    """Marca como error los documentos que quedaron en "procesando".
+
+    La indexación corre en un hilo del proceso web: si el proceso muere a
+    mitad -- un deploy, un reinicio, un OOM -- el hilo se va con él y el
+    documento queda en "procesando" PARA SIEMPRE, sin nada que lo destrabe.
+    El manejo de excepciones no cubre esto: no hay excepción, hay muerte.
+
+    Como ninguna indexación sobrevive a un reinicio, al arrancar se puede
+    afirmar con certeza que todo lo que esté en "procesando" está muerto."""
+    with Session(engine) as s:
+        colgados = s.exec(select(DocumentoConvenio).where(
+            DocumentoConvenio.estado == "procesando")).all()
+        for d in colgados:
+            d.estado = "error"
+            d.error_detalle = ("La indexación se interrumpió (el servidor se reinició "
+                               "mientras corría). Volvé a indexar el documento.")
+            s.add(d)
+        s.commit()
+        return len(colgados)
+
+
+def documento_para_indexar(documento_id: int) -> Optional[dict]:
+    """Lo que el hilo de fondo necesita, en un dict: no se puede pasar un
+    objeto de SQLModel entre hilos con la sesión ya cerrada."""
+    with Session(engine) as s:
+        d = s.get(DocumentoConvenio, documento_id)
+        if not d:
+            return None
+        return {"id": d.id, "convenio_id": d.convenio_id, "sindicato_id": d.sindicato_id,
+                "archivo_datos": d.archivo_datos, "observaciones": d.observaciones,
+                "tipo": d.tipo, "titulo": d.titulo, "fecha_documento": d.fecha_documento}
 
 def crear_tablas():
     SQLModel.metadata.create_all(engine)

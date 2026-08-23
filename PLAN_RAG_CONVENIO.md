@@ -293,6 +293,41 @@ no confidencialidad del contenido. El texto de los convenios, por su parte,
 es público (se registra y publica en el Ministerio de Trabajo), así que no
 había nada que proteger de ese lado.
 
+## La indexación es pesada: medido y sus consecuencias
+
+Medido con el convenio de AEFIP (246 fragmentos) el 2026-08-23:
+
+| | |
+|---|---|
+| Carga del modelo, ya descargado | 3,3 s |
+| **Indexar el convenio entero** | **9 min 15 s** (2,3 s por fragmento) |
+| Una consulta del trabajador | **88 ms** |
+
+**Ningún request HTTP sobrevive 9 minutos**: la carga NO puede correr dentro
+del POST del admin. No es preferencia de diseño, es aritmética. Corre en
+segundo plano y el documento lleva su propio estado
+(`pendiente`/`procesando`/`listo`/`error`), que el panel consulta.
+
+El lado del trabajador está holgado: 88 ms por consulta.
+
+**Corrige un argumento de la decisión 1**: se eligió local en parte porque
+"reindexar sale gratis". Es cierto en plata, pero cuesta ~9 minutos de reloj
+por vuelta. Iterar el troceo cinco veces son 45 minutos de espera.
+
+### Pendiente de evaluar: gobernar la indexación desde plataforma
+
+Esos 9 minutos son CPU al palo dentro del servicio web de Render y pueden
+degradar la app para los demás usuarios mientras duran. Para un piloto con
+cargas esporádicas es tolerable.
+
+Si esto crece, la idea a evaluar (acordada con el usuario, 2026-08-23) es
+**mover el disparo de la indexación al panel de PLATAFORMA**: que el admin
+de plataforma la ejecute fuera de horario pico, o la deje agendada. Encaja
+con lo que plataforma ya hace —decide qué módulos tiene cada sindicato— y
+evita el worker aparte, que es la otra salida y cuesta más.
+
+No se resuelve en el piloto. Queda anotado acá para no perderlo.
+
 ## Riesgos y decisiones abiertas
 
 - ~~Calidad de recuperación en español jurídico~~ **RESUELTO**: 94%

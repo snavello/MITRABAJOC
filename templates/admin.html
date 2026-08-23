@@ -437,6 +437,7 @@
   {% if 'notificaciones' in modulos %}<button class="tab-btn" data-panel="notificaciones"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg><span>Notificaciones</span></button>{% endif %}
   {% if 'tramites' in modulos %}<button class="tab-btn" data-panel="tramites" style="position:relative;"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg><span>Trámites</span>{% if tramites_nuevos %}<span class="badge-noleidas" id="badge-tramites-nuevos-tab">{{ tramites_nuevos }}</span>{% endif %}</button>{% endif %}
   {% if 'empleadores' in modulos %}<button class="tab-btn" data-panel="empleadores" style="position:relative;"><svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg><span>Empleadores</span>{% if tramites_empresa_nuevos %}<span class="badge-noleidas" id="badge-tramites-empresa-nuevos-tab">{{ tramites_empresa_nuevos }}</span>{% endif %}</button>{% endif %}
+  {% if 'convenio' in modulos %}<button class="tab-btn" data-panel="convenio"><svg viewBox="0 0 24 24"><use href="#ic-conceptos"/></svg><span>Convenio</span></button>{% endif %}
   <button class="tab-btn" data-panel="seccionales"><svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg><span>Seccionales</span></button>
   <button class="tab-btn" data-panel="administradores"><svg viewBox="0 0 24 24"><use href="#ic-admins"/></svg><span>Administradores</span></button>
 </nav>
@@ -1403,6 +1404,135 @@
       </div>
     </div>
   </div>
+  </div>
+  {% endif %}
+
+  {% if 'convenio' in modulos %}
+  <div class="panel" id="panel-convenio">
+  <!-- ============ CONVENIO (RAG) ============ -->
+  {% if request.query_params.get('error') == 'formato' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El archivo tiene que ser un PDF.</div>
+  {% elif request.query_params.get('error') == 'tamano' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El PDF supera los 30 MB.</div>
+  {% elif request.query_params.get('error') == 'archivo' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Elegí un archivo PDF.</div>
+  {% elif request.query_params.get('error') == 'datos' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Falta el nombre del convenio.</div>
+  {% endif %}
+
+  <h2 id="convenio-titulo">Dar de alta un convenio</h2>
+  <p class="muted">El trabajador elige entre los convenios cargados acá, así que el nombre tiene que ser entendible para él — "Metalúrgicos, rama automotriz" y no solo el número de CCT.</p>
+  <div class="card">
+    <form method="post" action="/admin/convenio" id="form-convenio">
+      <input type="hidden" name="id" id="conv-id">
+      <div class="grid2">
+        <div class="campo"><label>Nombre *</label><input name="nombre" id="conv-nombre" required placeholder="Ej: Metalúrgicos - rama automotriz"></div>
+        <div class="campo"><label>Código / referencia</label><input name="codigo" id="conv-codigo" placeholder="Ej: CCT 260/75"></div>
+      </div>
+      <div class="campo oculto" id="conv-activo-campo" style="margin-top:10px;">
+        <label class="chk-seccional" style="width:fit-content;"><input type="checkbox" name="activo" value="si" id="conv-activo" checked> Activo (el trabajador lo puede consultar)</label>
+      </div>
+      <button type="submit" id="conv-submit" style="margin-top:12px;">Dar de alta</button>
+      <button type="button" class="sec oculto" id="conv-cancel" onclick="cancelarConvenio()">Cancelar edición</button>
+    </form>
+  </div>
+
+  <h2>Convenios cargados ({{ convenios|length }})</h2>
+  {% for c in convenios %}
+  <div class="card" style="margin-bottom:14px;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+      <div>
+        <strong>{{ c.nombre }}</strong>
+        {% if c.codigo %}<span class="muted"> · {{ c.codigo }}</span>{% endif %}
+        {% if not c.activo %}<span class="tag" style="background:#eee;color:#888;">inactivo</span>{% endif %}
+        <div class="muted" style="font-size:12.5px; margin-top:3px;">
+          {{ c.documentos }} documento(s), {{ c.documentos_vigentes }} vigente(s) ·
+          <strong>{{ c.fragmentos_vigentes }}</strong> fragmentos indexados
+          {% if c.fragmentos_vigentes == 0 %}
+          <span style="color:#b23a2e;">— sin fragmentos vigentes, no va a poder contestar nada</span>
+          {% endif %}
+        </div>
+      </div>
+      <button type="button" class="mini" onclick='editarConvenio({{ c | tojson }})'>Editar</button>
+    </div>
+
+    <h3 style="margin-top:14px; font-size:14px;">Documentos</h3>
+    <table>
+      <tr><th>Tipo</th><th>Título</th><th>Fecha</th><th>Estado</th><th>Vigencia</th><th></th></tr>
+      {% for d in documentos_convenio.get(c.id, []) %}
+      <tr {% if not d.vigente %}style="opacity:.55;"{% endif %}>
+        <td>{{ 'Convenio' if d.tipo == 'convenio' else 'Acta' }}</td>
+        <td>{{ d.titulo or d.archivo_nombre }}
+          {% if d.observaciones %}<br><span class="muted" style="font-size:11.5px;">Obs.: {{ d.observaciones[:70] }}{% if d.observaciones|length > 70 %}…{% endif %}</span>{% endif %}
+        </td>
+        <td class="muted">{{ d.fecha_documento or '—' }}</td>
+        <td id="estado-doc-{{ d.id }}">
+          {% if d.estado == 'listo' %}<span class="tag tag-si">{{ d.fragmentos_generados }} fragmentos</span>
+            <span class="muted" style="font-size:11px;">{{ d.origen_texto }}, {{ d.paginas }} pág.</span>
+          {% elif d.estado == 'procesando' %}<span class="tag tag-pend">indexando… {{ d.fragmentos_generados }}</span>
+          {% elif d.estado == 'error' %}<span class="tag" style="background:#f8e5e2;color:#b23a2e;">error</span>
+            <div class="muted" style="font-size:11px; max-width:260px;">{{ d.error_detalle }}</div>
+          {% else %}<span class="tag">pendiente</span>{% endif %}
+        </td>
+        <td>
+          {% if d.vigente %}<span class="tag tag-si">vigente</span>{% else %}<span class="tag" style="background:#eee;color:#888;">no vigente</span>{% endif %}
+        </td>
+        <td style="white-space:nowrap; text-align:right;">
+          {% if d.estado == 'listo' %}
+          <button type="button" class="mini" onclick="verFragmentos({{ d.id }})">Ver fragmentos</button>
+          {% endif %}
+          <form method="post" action="/admin/convenio/documento/{{ d.id }}/vigencia" style="display:inline;">
+            <input type="hidden" name="vigente" value="{{ 'no' if d.vigente else 'si' }}">
+            <button class="mini {% if d.vigente %}sec{% endif %}">{{ 'Marcar no vigente' if d.vigente else 'Marcar vigente' }}</button>
+          </form>
+          <form method="post" action="/admin/convenio/documento/{{ d.id }}/reindexar" style="display:inline;"
+                onsubmit="return confirm('Reindexar rehace el troceo y los embeddings. Tarda varios minutos. ¿Seguir?')">
+            <input type="hidden" name="confirmar_ocr" value="si">
+            <button class="mini">Reindexar</button>
+          </form>
+          <form method="post" action="/admin/convenio/documento/{{ d.id }}/borrar" style="display:inline;"
+                onsubmit="return confirm('¿Borrar el documento y sus fragmentos?')">
+            <button class="mini borrar">Borrar</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="muted">Todavía no cargaste ningún documento para este convenio.</td></tr>
+      {% endfor %}
+    </table>
+
+    <details style="margin-top:12px;">
+      <summary style="cursor:pointer; font-size:13.5px; font-weight:600;">Subir un documento a este convenio</summary>
+      <form method="post" action="/admin/convenio/documento" enctype="multipart/form-data" style="margin-top:10px;"
+            onsubmit="return avisarIndexacion(this)">
+        <input type="hidden" name="convenio_id" value="{{ c.id }}">
+        <div class="grid2">
+          <div class="campo">
+            <label>Tipo</label>
+            <select name="tipo"><option value="convenio">Convenio</option><option value="acta">Acta</option></select>
+          </div>
+          <div class="campo"><label>Título</label><input name="titulo" placeholder="Ej: Texto ordenado 2024"></div>
+          <div class="campo"><label>Fecha del documento</label>
+            <input name="fecha_documento" type="date" onchange="avisarAnteriores({{ c.id }}, this)"></div>
+          <div class="campo"><label>PDF *</label><input type="file" name="archivo" accept="application/pdf" required></div>
+          <div class="campo"><label>Vigencia desde</label><input name="vigencia_desde" type="date"></div>
+          <div class="campo"><label>Vigencia hasta</label><input name="vigencia_hasta" type="date"></div>
+          <div class="campo full"><label>Observaciones (se indexan y se pueden consultar)</label>
+            <textarea name="observaciones" rows="2" placeholder="Ej: esta acta actualiza la escala salarial de la categoría 4"></textarea></div>
+          <div class="campo"><label>Fecha de las observaciones</label><input name="observaciones_fecha" type="date"></div>
+        </div>
+        <label class="chk-seccional" style="width:fit-content; margin-top:8px;">
+          <input type="checkbox" name="confirmar_ocr" value="si"> Si el PDF es un escaneo, procesarlo con OCR
+        </label>
+        <span class="muted" style="display:block; font-size:11.5px;">El OCR usa IA y cuesta por página (~USD 0,012). Sin tildar esto, un PDF escaneado se rechaza en vez de generar el gasto.</span>
+        <div id="aviso-anteriores-{{ c.id }}" class="muted" style="margin-top:8px;"></div>
+        <button type="submit" style="margin-top:10px;">Subir e indexar</button>
+      </form>
+    </details>
+  </div>
+  {% else %}
+  <p class="muted">Todavía no cargaste ningún convenio.</p>
+  {% endfor %}
   </div>
   {% endif %}
 
@@ -2836,6 +2966,108 @@ async function aplicarAprendizaje() {
   document.getElementById('ap-final').innerHTML =
     `<div class="msg ok">Se dieron de alta ${data.altas} concepto(s). <a href="/admin#conceptos">Ver en la tabla de conceptos</a> (actualizá la página).</div>`;
 }
+{% endif %}
+
+{% if 'convenio' in modulos %}
+// ---------- Convenio (RAG) ----------
+// Todo este bloque toca elementos que solo existen con el módulo prendido.
+// Sin el guard, un init sobre null cortaría la ejecución del script entero
+// -- el mismo bug que ya apareció dos veces en este proyecto.
+function editarConvenio(c) {
+  document.getElementById('conv-id').value = c.id;
+  document.getElementById('conv-nombre').value = c.nombre || '';
+  document.getElementById('conv-codigo').value = c.codigo || '';
+  document.getElementById('conv-activo-campo').classList.remove('oculto');
+  document.getElementById('conv-activo').checked = !!c.activo;
+  document.getElementById('convenio-titulo').textContent = 'Editar convenio: ' + c.nombre;
+  document.getElementById('conv-submit').textContent = 'Guardar cambios';
+  document.getElementById('conv-cancel').classList.remove('oculto');
+  document.getElementById('form-convenio').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function cancelarConvenio() {
+  const f = document.getElementById('form-convenio');
+  f.reset();
+  document.getElementById('conv-id').value = '';
+  document.getElementById('conv-activo-campo').classList.add('oculto');
+  document.getElementById('convenio-titulo').textContent = 'Dar de alta un convenio';
+  document.getElementById('conv-submit').textContent = 'Dar de alta';
+  document.getElementById('conv-cancel').classList.add('oculto');
+}
+
+// Indexar tarda ~9 minutos: el admin tiene que saberlo ANTES de esperar
+// mirando la pantalla.
+function avisarIndexacion(form) {
+  return confirm('El documento se sube y se indexa en segundo plano. '
+    + 'Tarda varios minutos (un convenio de 70 páginas, cerca de 10). '
+    + 'Podés cerrar esta pantalla: el progreso queda guardado. ¿Seguir?');
+}
+
+// Al elegir la fecha, avisar si hay documentos anteriores que quizá quedaron
+// absorbidos. Es el momento en que la persona tiene el contexto fresco.
+async function avisarAnteriores(convenioId, input) {
+  const caja = document.getElementById('aviso-anteriores-' + convenioId);
+  if (!caja || !input.value) { if (caja) caja.textContent = ''; return; }
+  const r = await fetch(`/admin/convenio/${convenioId}/anteriores?fecha=${input.value}`);
+  if (!r.ok) return;
+  const d = await r.json();
+  if (!d.anteriores.length) { caja.textContent = ''; return; }
+  const lista = d.anteriores.map(x => `${x.titulo} (${x.fecha_documento})`).join(', ');
+  caja.innerHTML = `<strong style="color:#b23a2e;">Ojo:</strong> hay `
+    + `${d.anteriores.length} documento(s) vigente(s) anteriores a esa fecha: ${lista}. `
+    + `Si este texto ya los incorpora, marcalos como no vigentes después de subirlo `
+    + `— si no, la búsqueda va a traer la misma cláusula dos veces.`;
+}
+
+// Vista previa: muestra TEXTO, no el conteo. Un troceo malo pasa el
+// "se detectaron N fragmentos" sin problema.
+async function verFragmentos(docId) {
+  const r = await fetch(`/admin/convenio/documento/${docId}/fragmentos`);
+  if (!r.ok) { alert('No se pudieron cargar los fragmentos.'); return; }
+  const d = await r.json();
+  const html = d.fragmentos.map(f => `
+    <div style="border:1px solid var(--linea); border-radius:8px; padding:10px; margin-bottom:8px;">
+      <div style="font-weight:600; font-size:12.5px;">${f.referencia}
+        ${f.seccion ? `<span class="muted"> · ${f.seccion}</span>` : ''}
+        ${f.tipo_fuente === 'observacion' ? '<span class="tag">observación</span>' : ''}</div>
+      <div style="font-size:12.5px; margin-top:4px; white-space:pre-wrap;">${
+        f.texto.slice(0, 400)}${f.texto.length > 400 ? '…' : ''}</div>
+      ${f.notas_acta ? `<div class="muted" style="font-size:11px; margin-top:4px;">Nota: ${f.notas_acta.slice(0,160)}</div>` : ''}
+    </div>`).join('');
+  document.getElementById('modal-recibo-titulo').textContent =
+    `Primeros ${d.fragmentos.length} de ${d.total} fragmentos`;
+  document.getElementById('modal-recibo-contenido').innerHTML = html
+    || '<p class="muted">Sin fragmentos.</p>';
+  document.getElementById('modal-recibo-overlay').classList.add('abierto');
+}
+
+// Progreso de la indexación: se consulta solo si hay algo indexando, y se
+// corta solo cuando termina. Nada de un setInterval eterno.
+(function seguirIndexacion() {
+  const enCurso = [...document.querySelectorAll('[id^="estado-doc-"]')]
+    .filter(e => e.textContent.includes('indexando'))
+    .map(e => e.id.replace('estado-doc-', ''));
+  if (!enCurso.length) return;
+  const timer = setInterval(async () => {
+    let quedan = 0;
+    for (const id of enCurso) {
+      const r = await fetch(`/admin/convenio/documento/${id}/estado`);
+      if (!r.ok) continue;
+      const d = await r.json();
+      const celda = document.getElementById('estado-doc-' + id);
+      if (!celda) continue;
+      if (d.estado === 'procesando') {
+        quedan++;
+        celda.innerHTML = `<span class="tag tag-pend">indexando… ${d.fragmentos}</span>`;
+      } else if (d.estado === 'listo') {
+        celda.innerHTML = `<span class="tag tag-si">${d.fragmentos} fragmentos</span>`;
+      } else if (d.estado === 'error') {
+        celda.innerHTML = `<span class="tag" style="background:#f8e5e2;color:#b23a2e;">error</span>`
+          + `<div class="muted" style="font-size:11px; max-width:260px;">${d.error || ''}</div>`;
+      }
+    }
+    if (!quedan) clearInterval(timer);
+  }, 5000);
+})();
 {% endif %}
 </script>
 </body>
