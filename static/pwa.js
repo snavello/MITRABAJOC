@@ -100,8 +100,52 @@ function _pwaRenderBanner(onInstalar, textoBoton, textoAviso) {
   document.getElementById("pwa-btn-cerrar").addEventListener("click", () => _pwaDescartar(estado));
 }
 
+async function _pwaOfrecerInstalarAndroid() {
+  const banner = document.getElementById("pwa-banner");
+  if (banner) banner.remove();
+  if (!_pwaDeferredEvento) return null;
+  _pwaDeferredEvento.prompt();
+  const resultado = await _pwaDeferredEvento.userChoice;
+  if (resultado.outcome === "accepted") _pwaDeferredEvento = null;
+  return resultado;
+}
+
+function _pwaMostrarInstruccionesIOS() {
+  if (document.getElementById("pwa-banner")) return;
+  _pwaRenderBanner(
+    (est) => _pwaDescartar(est),
+    "Entendido",
+    'Instalá Colm3na: tocá <strong>Compartir</strong> (el ícono de la flecha hacia arriba) y elegí <strong>"Agregar a inicio"</strong>.'
+  );
+}
+
+// Camino manual, siempre disponible: si Chrome nunca llega a disparar
+// beforeinstallprompt (tiene su PROPIO enfriamiento interno después de un
+// primer descarte, aparte de la cadencia de este archivo -- puede pasar
+// que ni el banner ni el link automático vuelvan a activarse), el sitio
+// sigue siendo instalable igual desde el menú nativo de Chrome. Sin esto,
+// el link fijo quedaba mudo si el evento no llegaba a dispararse nunca.
+function _pwaMostrarInstruccionesManualesAndroid() {
+  if (document.getElementById("pwa-banner")) return;
+  _pwaRenderBanner(
+    (est) => _pwaDescartar(est),
+    "Entendido",
+    'Instalá Colm3na desde el menú de Chrome: tocá <strong>⋮</strong> (arriba a la derecha) y elegí <strong>"Instalar app"</strong> (o <strong>"Agregar a pantalla de inicio"</strong>).'
+  );
+}
+
+function _pwaAccionLinkFijo() {
+  if (_pwaEsIOS()) return _pwaMostrarInstruccionesIOS();
+  if (_pwaDeferredEvento) return _pwaOfrecerInstalarAndroid();
+  return _pwaMostrarInstruccionesManualesAndroid();
+}
+
 function initBannerInstalar() {
   if (_pwaYaInstalada() || !_pwaEsMovil()) return;
+
+  // El link fijo se muestra SIEMPRE (mobile + no instalada), sin esperar
+  // ningún evento -- ver por qué en _pwaAccionLinkFijo().
+  _pwaCrearLinkFijo(_pwaAccionLinkFijo);
 
   const estado = _pwaEstado();
   if (estado.descartes >= PWA_TOPE_DESCARTES) return;
@@ -110,43 +154,17 @@ function initBannerInstalar() {
   if (estado.ultimoAviso && diasPasados < intervaloDias) return;
 
   if (_pwaEsIOS()) {
-    const mostrarInstruccionesIOS = () => {
-      if (document.getElementById("pwa-banner")) return;
-      _pwaRenderBanner(
-        (est) => _pwaDescartar(est),
-        "Entendido",
-        'Instalá Colm3na: tocá <strong>Compartir</strong> (el ícono de la flecha hacia arriba) y elegí <strong>"Agregar a inicio"</strong>.'
-      );
-    };
-    // El link fijo queda disponible desde el principio -- en iOS no hay
-    // evento que esperar, la instrucción es siempre la misma.
-    _pwaCrearLinkFijo(mostrarInstruccionesIOS);
-    setTimeout(mostrarInstruccionesIOS, 1500);
+    setTimeout(_pwaMostrarInstruccionesIOS, 1500);
     return;
   }
 
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
     _pwaDeferredEvento = e;
-
-    const ofrecerInstalar = async () => {
-      const banner = document.getElementById("pwa-banner");
-      if (banner) banner.remove();
-      if (!_pwaDeferredEvento) return;
-      _pwaDeferredEvento.prompt();
-      const resultado = await _pwaDeferredEvento.userChoice;
-      if (resultado.outcome === "accepted") _pwaDeferredEvento = null;
-      return resultado;
-    };
-
-    // El link fijo recien se puede mostrar ahora que Chrome confirmó (con
-    // este evento) que la app es instalable -- antes no se sabe.
-    _pwaCrearLinkFijo(() => ofrecerInstalar());
-
     setTimeout(() => {
       _pwaRenderBanner(
         async (est) => {
-          const resultado = await ofrecerInstalar();
+          const resultado = await _pwaOfrecerInstalarAndroid();
           if (!resultado || resultado.outcome !== "accepted") _pwaDescartar(est);
         },
         "Instalar",

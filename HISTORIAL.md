@@ -1465,3 +1465,38 @@ agresivo para un descarte accidental tan temprano.
   `VERSION_PLATAFORMA` quedaron sin cambios a propósito, a diferencia de
   otras veces que las tres se movieron juntas por coincidir en el mismo
   deploy.
+
+**Límite real descubierto después de este deploy, con fix**: probando en
+un Android real, después del primer descarte del diálogo nativo, ni el
+banner ni el link fijo volvieron a aparecer -- con la versión nueva ya
+confirmada desplegada (`0.15.20` visible en "Acerca de") y la app
+efectivamente NO instalada. Causa: **Chrome tiene su propio enfriamiento
+interno para `beforeinstallprompt`**, separado por completo de la
+cadencia que maneja `pwa.js` -- después de que el usuario descarta el
+diálogo nativo de instalación, Chrome puede dejar de disparar ese evento
+en el origen por un tiempo (protección propia contra el spam de prompts),
+y además no lo dispara necesariamente apenas carga la página: en otra
+prueba del usuario apareció recién al navegar a "Ver mis recibos
+verificados", varios segundos después de entrar -- Chrome exige cierto
+"engagement" antes de decidir ofrecerlo, no es instantáneo. El bug real
+de diseño (no solo del navegador): tanto el banner como el link fijo
+dependían los dos de que ese evento se disparara -- si Chrome no lo
+dispara nunca en la sesión, el link quedaba mudo (invisible), sin ninguna
+forma de instalar.
+
+**Fix**: `_pwaCrearLinkFijo()` ahora se llama SIEMPRE al principio de
+`initBannerInstalar()` (mobile + no instalada), sin esperar ningún
+evento -- ya no vive adentro del listener de `beforeinstallprompt`. Su
+acción (`_pwaAccionLinkFijo()`) resuelve en tres pasos: iOS → instrucción
+de Compartir de siempre; Android con evento ya capturado
+(`_pwaDeferredEvento`) → dispara el diálogo nativo directo; Android SIN
+evento capturado (Chrome no lo disparó todavía, o nunca) → instrucción
+manual nueva ("tocá ⋮ y elegí 'Instalar app'"), que siempre funciona
+porque ese menú de Chrome no depende de `beforeinstallprompt` -- es la
+vía de instalación nativa del navegador, presente en cualquier sitio que
+cumpla los requisitos de instalabilidad (manifest + service worker +
+HTTPS), dispare o no el evento. Verificado en el navegador: el link
+aparece de inmediato al cargar la página SIN disparar el evento, y
+clickearlo sin evento capturado muestra la instrucción manual (antes,
+en ese mismo escenario, no pasaba nada -- el link ni siquiera existía en
+el DOM).
