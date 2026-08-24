@@ -312,6 +312,9 @@ con alerta" — detalle en HISTORIAL.md.
 usuario). **Regla para incrementar `release.patch`**: solo arreglos → +1 al
 patch; arreglos + funcionalidad nueva en el mismo deploy → +1 en los dos
 (ej. 0.02.01 → 0.03.01). Acordarse de esto SIN que el usuario lo pida.
+**`FECHA_VERSION`, la hora es real, no inventada**: Claude no tiene reloj
+propio — para no repetir el bug de poner "12:00" fijo a mano (encontrado
+2026-08-24), correr `date "+%Y-%m-%d %H:%M"` (Bash) y usar ese valor real.
 
 ## Hallazgo pendiente, no arreglado
 `db.cargar_seed_si_vacio()` sigue disparando el seed histórico de AEFIP al
