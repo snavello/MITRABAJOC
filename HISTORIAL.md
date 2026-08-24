@@ -1433,6 +1433,33 @@ toca `/admin`, `/plataforma` ni `/empresa`.
   header `Service-Worker-Allowed: /app` y content-type de JavaScript;
   `manifest.json` es JSON válido con `scope`/`start_url` correctos; los 3
   íconos que declara el manifest existen y responden 200.
+
+### Ajuste post-deploy (mismo día): cadencia más generosa + link fijo
+El usuario probó en un Android real: el banner apareció, tocó "Instalar",
+el diálogo nativo se cerró sin confirmar (probablemente sin querer) y el
+banner no volvió a aparecer -- comportamiento esperado del código original
+(7 días de enfriamiento desde el primer descarte), pero demasiado
+agresivo para un descarte accidental tan temprano.
+
+- **Cadencia en dos fases**: los primeros `PWA_TOPE_RAPIDO` (5) descartes
+  reintentan al día siguiente (`PWA_DIAS_RAPIDO`); de ahí en más pasa a
+  `PWA_DIAS_SEMANAL` (7 días), hasta un tope total `PWA_TOPE_DESCARTES` (8)
+  -- ya no cuesta una semana entera errarle al primer intento.
+- **Link fijo, independiente de la cadencia** (`#pwa-link-fijo`,
+  `_pwaCrearLinkFijo()`): pastilla chica y discreta, abajo a la izquierda
+  (simétrica a los botones flotantes de Inicio/Salir que ya viven abajo a
+  la derecha, sin superponerse), que NO depende de `localStorage` ni de la
+  cadencia -- una vez que Chrome dispara `beforeinstallprompt` (o siempre,
+  en iOS, que no tiene ese evento) queda ahí de forma permanente hasta que
+  la app se instala. Pedido explícito del usuario ("que le quede el link
+  por si le pasa lo mismo"): si el banner grande se cierra por error, el
+  trabajador conserva una forma de reintentar sin esperar la cadencia.
+  Reusa el mismo evento `beforeinstallprompt` guardado (`_pwaDeferredEvento`,
+  variable de módulo) que ya capturó el listener del banner automático --
+  no hace falta que el navegador lo dispare dos veces.
+- Verificado en el navegador: se cierra el banner grande (mismo flujo que
+  reportó el usuario) y se confirma que el link fijo sigue en pantalla y
+  que tocarlo dispara `prompt()` de nuevo sobre el mismo evento guardado.
 - **Versión**: solo `VERSION_TRABAJADOR` se incrementó (0.14.20 → 0.15.20)
   -- es la única de las tres apps que tocó esta feature; `VERSION_ADMIN`/
   `VERSION_PLATAFORMA` quedaron sin cambios a propósito, a diferencia de
