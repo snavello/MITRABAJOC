@@ -328,6 +328,94 @@ evita el worker aparte, que es la otra salida y cuesta más.
 
 No se resuelve en el piloto. Queda anotado acá para no perderlo.
 
+## Cómo prender el piloto en producción (checklist)
+
+El módulo sale a producción APAGADO. Con el módulo apagado la app se comporta
+igual que sin el piloto: el modelo no se carga nunca (la carga es perezosa) y
+no hace falta tocar la infraestructura.
+
+Para mostrarlo hace falta subir la instancia. Números verificados contra la
+página de precios de Render el 2026-08-23:
+
+| Instancia | Precio | RAM | CPU |
+|---|---|---|---|
+| Starter (la que usa el proyecto) | $7/mes | 512 MB | 0.5 |
+| Standard | $25/mes | 2 GB | 1 |
+| **Pro (mínimo para RAG)** | **$85/mes** | **4 GB** | 2 |
+
+**Standard NO alcanza**: el modelo solo pesa 2,1 GB. El salto es directo de
+Starter a Pro.
+
+Render prorratea por segundo, así que para una demo no hace falta pagar el
+mes: ~$2,60 por día, ~$18 por semana.
+
+### Antes (dos días antes, para tener margen)
+
+1. Settings → Instance Type → **Pro**. Esperar el reinicio.
+2. Build Command:
+   `pip install -r requirements.txt && python -c "from fastembed import TextEmbedding; TextEmbedding('intfloat/multilingual-e5-large')"`
+   y redeployar. Sin esto, el primer uso baja 2,1 GB y deja el servicio
+   colgado ~75 s.
+3. `alembic upgrade head` si no corrió antes (ya corrió el 2026-08-23).
+4. `/plataforma` → prender el módulo **Convenio** al sindicato.
+5. `/admin` → pestaña Convenio → crear el convenio y subir el PDF.
+   **Tarda ~9 minutos.** Nunca hacerlo en vivo.
+6. Probar `/app/convenio` como trabajador. El link no está en el menú.
+
+### Después, y EN ESTE ORDEN
+
+1. **Primero apagar el módulo** desde `/plataforma`.
+2. **Recién después** bajar la instancia a Starter.
+
+Si se baja con el módulo prendido, la primera consulta de cualquier
+trabajador intenta cargar 2,1 GB en 512 MB y **tumba el servicio**.
+
+## Qué escala con qué (para no volver a derivarlo)
+
+Los 2,1 GB son el MODELO, cargado una vez por proceso. **No crecen con la
+cantidad de convenios, sindicatos ni usuarios.**
+
+| Recurso | Crece con | A 10 sindicatos / 5.000 usuarios |
+|---|---|---|
+| RAM del modelo | nada, es fijo | los mismos 2,1 GB |
+| Vectores en Postgres | fragmentos (4 KB c/u) | ~10 MB, ruido |
+| CPU | consultas SIMULTÁNEAS | ~20 preguntas/s con 2 CPU |
+| **Llamadas a Claude** | consultas totales | **el costo real** |
+
+El costo que sí escala es la API: ~$0,02 por consulta. 10.000 consultas
+mensuales son ~$200 — independiente de Render. La palanca es
+`rag.MODELO_RESPUESTA`, pero bajarlo hay que medirlo con el test del SIPES:
+se eligió Opus porque el juicio del modelo ES la baranda contra inventar.
+
+Los 2,1 GB sí se multiplican por INSTANCIAS, no por clientes: escalar
+horizontalmente la app carga una copia del modelo en cada una.
+
+### Opción evaluada: un servicio aparte para RAG
+
+Idea del usuario (2026-08-23), con la matemática hecha para no rehacerla:
+poner RAG en un **Private Service** propio, y que la app le pida por la red
+privada de Render "vectorizá esto".
+
+| | Todo junto | Separado |
+|---|---|---|
+| 1 instancia | $85 | $92 |
+| 3 instancias de app | $255 | **$106** |
+| 5 instancias de app | $425 | **$120** |
+
+Con una instancia sale más caro; **desde la segunda gana, y la diferencia se
+abre rápido**, porque escalar la app deja de arrastrar el modelo en cada
+copia. Además aísla los 9 minutos de CPU de la indexación, que hoy degradan
+la app para todos mientras duran.
+
+El cambio está acotado porque `generar_embedding()` ya es un seam (decisión
+2): pasar a servicio separado es que esa función haga una llamada HTTP
+interna. Búsqueda, prompt, barandas, panel y pantalla no se tocan.
+
+**Cuándo hacerlo**, cualquiera de estas tres:
+1. Cuando haga falta más de una instancia de la app principal.
+2. Cuando la indexación moleste a usuarios reales.
+3. Cuando se quiera que RAG se caiga sin llevarse la validación de recibos.
+
 ## Riesgos y decisiones abiertas
 
 - ~~Calidad de recuperación en español jurídico~~ **RESUELTO**: 94%
