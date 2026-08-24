@@ -29,7 +29,7 @@ import traceback
 from datetime import datetime
 
 from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Cookie, Response
-from fastapi.responses import HTMLResponse, RedirectResponse, Response as BinResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response as BinResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlmodel import select
@@ -59,6 +59,15 @@ mimetypes.add_type("font/woff2", ".woff2")  # algunos Windows no lo traen regist
 
 app = FastAPI(title="Mi Trabajo — validador de recibos")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/sw.js")
+def service_worker():
+    """Servido desde la raíz (no /static/sw.js) a propósito: el scope
+    maximo permitido de un service worker es la carpeta donde vive el
+    archivo -- si estuviera bajo /static/, no podria pedir scope /app."""
+    return FileResponse("static/sw.js", media_type="application/javascript",
+                         headers={"Service-Worker-Allowed": "/app"})
 
 
 def _es_navegacion_de_pagina(request: Request) -> bool:

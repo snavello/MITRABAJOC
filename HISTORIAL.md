@@ -1330,3 +1330,111 @@ demo.
 - Confirmado corriendo `alembic upgrade head` contra el Postgres de Docker
   desde cero (revisión `cbe17211376d` hasta la última): las 26 migraciones
   de la historia completa del proyecto aplican limpio.
+
+## App del trabajador instalable (PWA) — 2026-08-24
+Pedido explícito del usuario, evaluado antes de construir (bajo riesgo,
+aditivo: manifest + íconos + JS de banner + un service worker mínimo, sin
+tocar rutas ni lógica existente). Alcance a propósito acotado a la app del
+**trabajador** (`/app/inicio` + `/app`, `scope` del manifest = `/app`) — no
+toca `/admin`, `/plataforma` ni `/empresa`.
+
+- **Ícono, Variante A**: hexágono central+derecho en línea blanca, hexágono
+  izquierdo relleno color miel, sobre fondo azul oscuro (`#152238`) — mockup
+  que pasó el usuario (dos variantes, A y B). Se previsualizaron ambas como
+  ícono recortado a distintos tamaños reales (40-56px) antes de elegir: la
+  B (las 3 solo con línea) perdía nitidez a tamaño chico, la A se mantenía
+  legible. El usuario confirmó la A.
+- **Generación de los PNG, sin librería de SVG disponible**: este entorno
+  de desarrollo no tiene Node.js, cairosvg, rsvg-convert ni Inkscape
+  instalados -- se generaron los 5 archivos (`static/icons/icon-192.png`,
+  `icon-512.png`, `icon-512-maskable.png`, `apple-touch-icon.png` 180px,
+  `favicon-64.png`) con un script Python de un solo uso (Pillow, ya
+  instalado en el Python del sistema) que dibuja los mismos polígonos
+  exactos del mockup aprobado -- NO una aproximación nueva, los mismos
+  puntos que se usaron en la vista previa que el usuario vio y confirmó.
+  El script vive solo en el scratchpad de la sesión, no en el repo (los
+  PNG resultantes sí se commitean, son el artefacto final).
+- **¿Por qué el ícono de Colm3na antes de terminar el rebranding
+  completo?**: el usuario está en pleno rebranding a "Colm3na" pero el
+  resto de la app (títulos, textos) todavía dice "Mi Trabajo" en todos
+  lados. Se usó igual el ícono/nombre "Colm3na" en el manifest y en
+  `apple-mobile-web-app-title` porque el usuario lo pidió explícitamente
+  ("todavía estamos en un entorno controlado, sabemos qué teléfonos
+  instalamos") -- transitorio, sabiendo que en Android el ícono se
+  actualiza solo cuando esté el definitivo, pero en iPhone cada usuario que
+  ya lo instaló va a tener que reinstalar a mano para ver el ícono nuevo
+  (limitación real de "Agregar a pantalla de inicio" de Safari, sin
+  solución del lado del servidor). Si en algún momento se define el ícono
+  definitivo de Colm3na, hay que avisarle a los usuarios de iPhone que
+  reinstalen -- no hay forma de forzarlo.
+- **`manifest.json`** (`static/manifest.json`): `name`/`short_name`
+  "Colm3na", `start_url` `/app/inicio` (la portada, entrada natural),
+  `scope` `/app`, `display` `standalone`, `background_color`/`theme_color`
+  fijos en `#152238` (el fondo del ícono) -- **no** toma el color de marca
+  del sindicato activo, a propósito: es un solo ícono/nombre para toda la
+  plataforma (decisión explícita del usuario sobre la alternativa de un
+  ícono por sindicato, que hubiera exigido generar el manifest de forma
+  dinámica según sesión -- mucho más complejo, con casos borde como qué
+  ícono mostrar en pluriempleo antes de elegir sindicato).
+- **Bug real encontrado armando esto: el service worker no podía pedir
+  scope `/app`**: un service worker registrado desde `/static/sw.js` tiene
+  como scope máximo permitido la carpeta donde vive el archivo
+  (`/static/`) -- pedir `{scope: "/app"}` desde ahí lo rechaza
+  (`SecurityError`, la promesa de `register()` rechaza sin caer a ningún
+  scope por default). Fix: ruta nueva `GET /sw.js` (main.py, servida desde
+  la raíz) que devuelve el mismo archivo `static/sw.js` con el header
+  `Service-Worker-Allowed: /app` -- `pwa.js` registra contra `/sw.js`, no
+  `/static/sw.js`. Confirmado con `navigator.serviceWorker.getRegistrations()`
+  en el navegador: `scope: ".../app", active: true`.
+- **El service worker NO cachea nada, a propósito**: solo existe para
+  cumplir el requisito de instalabilidad de Chrome/Android (manifest +
+  HTTPS + service worker registrado). Cada `fetch` hace pass-through
+  directo a la red (`event.respondWith(fetch(event.request))`). Se decidió
+  así porque Render redespliega con cada push -- un service worker que
+  cacheara el HTML/JS de la app dejaría a un trabajador "pegado" en una
+  versión vieja sin que se note, silenciosamente. Si en el futuro se
+  quiere soporte offline real, hay que diseñar la invalidación de cache
+  atada a la versión de deploy (`version.py`), no antes.
+- **Banner de instalación, discreto y con cadencia** (`static/pwa.js`,
+  cargado solo en `trabajador.html` -- la portada solo registra el service
+  worker, no muestra el banner, decisión explícita del usuario: "que ya
+  vio la app funcionando antes de que le pidan instalarla"):
+  - **Android/Chrome**: captura `beforeinstallprompt` (`e.preventDefault()`
+    + se guarda el evento), muestra a los 1.5s una barra fija angosta
+    arriba de la tabbar (`bottom:calc(76px + env(safe-area-inset-bottom))`
+    -- el primer intento la superponía a la tabbar, corregido) con texto +
+    botón "Instalar" (dispara `e.prompt()` real) + botón cerrar. Si el
+    usuario instala (`outcome === "accepted"`), no se cuenta como
+    descarte; si cierra o el prompt nativo se descarta, sí.
+  - **iPhone/Safari**: no existe `beforeinstallprompt` en iOS -- se
+    detecta por `navigator.userAgent` (`/iPhone|iPad|iPod/`) y se muestra
+    la misma barra pero con instrucciones manuales ("tocá Compartir y
+    elegí 'Agregar a inicio'") en vez de un botón que instale de verdad --
+    no hay forma de automatizar esa parte desde JS en Safari.
+  - **Cadencia**: `localStorage` (clave `colm3na_pwa_instalar`, sin tocar
+    la base de datos -- es puramente del lado del cliente, por diseño, no
+    hace falta que sobreviva a un cambio de dispositivo). Se vuelve a
+    mostrar recién a los 7 días del último aviso, y deja de mostrarse
+    después de 5 descartes en total (decisión del usuario: "cada semana,
+    con tope"). Si la app ya está instalada
+    (`matchMedia('(display-mode: standalone)')` o `navigator.standalone`
+    en iOS) no se muestra nunca, sin importar la cadencia.
+  - Solo corre en `/Android|iPhone|iPad|iPod/` -- en desktop no se ofrece
+    instalar (el pedido fue específicamente sobre el teléfono).
+- **Verificado en el navegador** (no simulado): registro real del service
+  worker con el scope correcto, `beforeinstallprompt` disparado a mano
+  (evento sintético con `prompt`/`userChoice` mockeados) mostrando el
+  banner de Android y confirmando que "Instalar" + descartar incrementa
+  `descartes`/actualiza `ultimoAviso` en `localStorage`; user-agent de
+  iPhone simulado mostrando la tarjeta instructiva; tope de 5 descartes
+  probado subiendo el contador a mano -- confirmado que a partir de ahí
+  no se vuelve a mostrar aunque se dispare el evento de nuevo.
+- **Test automatizado** (`test_pwa.py`): `/sw.js` responde 200 con el
+  header `Service-Worker-Allowed: /app` y content-type de JavaScript;
+  `manifest.json` es JSON válido con `scope`/`start_url` correctos; los 3
+  íconos que declara el manifest existen y responden 200.
+- **Versión**: solo `VERSION_TRABAJADOR` se incrementó (0.14.20 → 0.15.20)
+  -- es la única de las tres apps que tocó esta feature; `VERSION_ADMIN`/
+  `VERSION_PLATAFORMA` quedaron sin cambios a propósito, a diferencia de
+  otras veces que las tres se movieron juntas por coincidir en el mismo
+  deploy.

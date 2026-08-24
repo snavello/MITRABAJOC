@@ -200,6 +200,7 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
 9. Portada de `/empresa` con tarjetas, perfil de empleador editable con foto, globos de notificaciones propagados por los 3 niveles de UI.
 10. Ajustes puntuales: recibos reportados también cuentan para el padrón de afiliados cotizantes; estado "INFORMADO" de ARCA; popup de cambio de estado en Trámites (reemplazado por el punto 11).
 11. **Chat de Trámites estilo WhatsApp** — reemplaza Notas+Historial por un hilo cronológico único con modal para leer/responder/cambiar estado.
+12. **App del trabajador instalable (PWA)** — manifest + ícono transitorio de Colm3na + banner discreto de instalación, con fallback instructivo en iPhone — detalle en HISTORIAL.md.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -208,10 +209,11 @@ producción real, (c) verificar los topes SS previos a 2025, (d) evaluar si
 el editor de lienzo libre de Trámites llega a justificarse, (e) staging
 real en Render (sin urgencia, tiene costo).
 
-**Próximo paso**: no hay tarea de código en curso — el trabajo de esta
-sesión (commits `37c1825`/`5620c3a`/`7ca0364`) terminó, se probó y se
-pusheó. Lo único activo es contenido de marketing para el rebranding a
-"Colm3na" (documento aparte, no código, sin sección propia acá).
+**Próximo paso**: no hay tarea de código en curso — la instalabilidad PWA
+(punto 12) se probó en el navegador (Android e iPhone simulados) y quedó
+lista para commitear/pushear. El ícono usado es el transitorio de Colm3na
+que pasó el usuario — ver "Ícono de Colm3na, ¿por qué antes que el
+rebranding completo?" en HISTORIAL.md para el porqué de esa decisión.
 
 ## Pendientes (features)
 1. Capacitación por-sindicato: hoy solo hay contenido FIJO de plataforma
