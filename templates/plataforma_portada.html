@@ -40,7 +40,7 @@
 <body class="{{ 'claro' if marca_plataforma.portada_clara else 'oscuro' }} grano {{ 'grano-clara' if marca_plataforma.portada_clara else 'grano-osc' }}">
 
 <div class="enc">
-  <img class="logo" src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo">
+  <img class="logo" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Mi Trabajo">
   <div>
     <div class="nom">Mi Trabajo</div>
     <div class="sub">Panel de plataforma</div>

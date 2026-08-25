@@ -1500,3 +1500,83 @@ aparece de inmediato al cargar la página SIN disparar el evento, y
 clickearlo sin evento capturado muestra la instrucción manual (antes,
 en ese mismo escenario, no pasaba nada -- el link ni siquiera existía en
 el DOM).
+
+## Ícono oficial de Colm3na + logo de plataforma en dos versiones (2026-08-25)
+El usuario pasó el manual de marca real (`MANUAL DE MARCA COLM3NA.pdf`):
+paleta cerrada (`#001b3d` azul marino, `#ffffff` blanco, `#ffa100` naranja,
+"usar con alto contraste y sin degradados") y el logo principal (3
+hexágonos en naranja con nodos/líneas tipo circuito + wordmark "Colm3na",
+la "3" siempre en naranja) en dos usos permitidos: sobre blanco (texto
+navy) y sobre navy (texto blanco). Dos pedidos en uno: (1) reemplazar el
+ícono transitorio de la PWA por el oficial, y (2) que el logo de la
+plataforma pueda tener DOS versiones -- una para fondo claro, una para
+fondo oscuro -- según dónde se muestre.
+
+- **Extracción del arte real, no una aproximación a mano**: el logo del
+  PDF es más detallado que el mockup transitorio anterior (nodos
+  circulares + líneas conectando los hexágonos, sombreado sutil) --
+  reconstruirlo a mano con Pillow hubiera sido impreciso. Se usó
+  `pdftoppm -r 600` (poppler, ya instalado en el sistema) para renderizar
+  la página del manual a 600dpi, y un recorte programático con Pillow/
+  numpy: detección de la línea horizontal bajo cada título (para no
+  incluir el título en el recorte), bbox del contenido no blanco para el
+  logo sobre fondo claro, y chroma-key exacto del `#001b3d` (con
+  tolerancia de 30 en distancia de color, para no comerse los bordes
+  antialiaseados) para volver transparente el recuadro navy y quedarse
+  solo con el ícono + texto blanco. Confirmado visualmente componiendo el
+  resultado de vuelta sobre navy sólido -- sin flequillo de color raro en
+  los bordes del texto blanco.
+- **Ícono de la PWA**: mismo set de 5 tamaños de siempre
+  (`static/icons/icon-192.png`, `icon-512.png`, `icon-512-maskable.png`,
+  `apple-touch-icon.png`, `favicon-64.png`), ahora generados recortando
+  SOLO el glifo de hexágonos (sin el wordmark) del arte oficial extraído y
+  centrándolo en un cuadrado con fondo `#001b3d` -- reemplaza el ícono
+  transitorio "Variante A" hecho a mano en la sesión anterior. `manifest.json`
+  no cambió (mismos nombres de archivo, mismo `name`/`short_name` "Colm3na").
+- **Logo de plataforma, dos variantes** (`ConfiguracionPlataforma` en
+  db.py, migración `958e950a78f0`): se agregaron `logo_oscuro`/
+  `logo_datos_oscuro`/`logo_mime_oscuro` -- **sin renombrar** los campos
+  existentes (`logo`/`logo_datos`/`logo_mime`), que pasan a significar
+  implícitamente "para fondo claro". Menos riesgoso que una migración de
+  rename, y compatible con lo que ya hubiera cargado un sindicato antes de
+  esta feature. Ruta nueva `GET /logo-plataforma-oscuro` (mismo patrón que
+  la ya existente `GET /logo-plataforma`). `POST /plataforma/marca` ahora
+  acepta un segundo archivo (`logo_oscuro`), sin afectar al primero si no
+  se sube uno nuevo (`test_subir_logo_oscuro_no_toca_el_claro`).
+- **Dónde va cada variante, decidido por el fondo REAL de cada lugar, no
+  por conveniencia**: los 3 colores de encabezado en marca.css (`.enc`,
+  `header` de admin/plataforma) son siempre `var(--marca-base)`, que para
+  la plataforma es `color_primario` sin validar como oscuro pero
+  default `#152238` (dark) -- en la práctica siempre oscuro. Los 6 logins
+  (`admin_login.html`, `trabajador_login.html`, `empresa_login.html`,
+  `plataforma_login.html`, `elegir_sindicato.html`,
+  `elegir_sindicato_empresa.html`) comparten el mismo `.caja` con degradé
+  gris medio (`#bfc3bf → #9ea29d`), con luminancia percibida por encima
+  del umbral de "oscuro" que ya usa `_es_oscuro()` en main.py (140/255) --
+  se tratan como fondo claro. Resultado: 5 lugares con encabezado oscuro
+  (`admin.html`, `trabajador.html`, `empresa.html`, `plataforma.html`,
+  `plataforma_portada.html`) piden `/logo-plataforma-oscuro` con fallback
+  en cadena (oscuro → claro → SVG estático, para no romper nada si todavía
+  no se cargó la variante oscura); los 6 logins siguen pidiendo
+  `/logo-plataforma` sin cambios.
+- **Panel de plataforma** (`/plataforma` → "Marca de la plataforma"): dos
+  campos de carga separados, cada uno con su propia vista previa (la del
+  logo oscuro se previsualiza sobre una miniatura de fondo navy, no blanco,
+  para que se vea legible de entrada).
+- **Bug de metodología de tests redescubierto armando esto (no es nuevo,
+  pero no estaba documentado)**: correr un `test_*.py` con
+  `.venv/Scripts/python.exe test_x.py` DIRECTO (sin pytest) NO pasa por
+  `conftest.py` -- ese archivo solo se carga cuando pytest hace la
+  recolección de tests. Como este entorno tiene `DATABASE_URL` real
+  apuntando al Postgres de Docker en `.env` (ver "Desarrollo local con
+  Postgres" más abajo), y `db.py` carga `.env` él mismo, correr un test
+  directo así termina pegándole al Postgres de desarrollo real, no a un
+  SQLite temporal aislado -- se nota con tests que asumen un estado
+  "recién creado" (ej. `test_marca_por_defecto_sin_configurar`), que fallan
+  la segunda vez que se corren si una corrida anterior ya escribió datos
+  reales. Mitigación puntual (no un fix de código): anteponer
+  `DATABASE_URL=` (vacío) al comando cuando se corre un test directo así:
+  `DATABASE_URL= .venv/Scripts/python.exe test_x.py`. El `.venv` de este
+  proyecto tampoco tiene `pytest` instalado (sí lo tiene el Python del
+  sistema) -- por eso no alcanza con simplemente correr `pytest` en vez de
+  `python` para esquivar el problema.

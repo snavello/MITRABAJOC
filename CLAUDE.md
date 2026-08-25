@@ -200,7 +200,8 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
 9. Portada de `/empresa` con tarjetas, perfil de empleador editable con foto, globos de notificaciones propagados por los 3 niveles de UI.
 10. Ajustes puntuales: recibos reportados también cuentan para el padrón de afiliados cotizantes; estado "INFORMADO" de ARCA; popup de cambio de estado en Trámites (reemplazado por el punto 11).
 11. **Chat de Trámites estilo WhatsApp** — reemplaza Notas+Historial por un hilo cronológico único con modal para leer/responder/cambiar estado.
-12. **App del trabajador instalable (PWA)** — manifest + ícono transitorio de Colm3na + banner discreto de instalación, con fallback instructivo en iPhone — detalle en HISTORIAL.md.
+12. **App del trabajador instalable (PWA)** — manifest + ícono de Colm3na + banner discreto de instalación, con fallback instructivo en iPhone y link fijo independiente de la cadencia — detalle en HISTORIAL.md.
+13. **Logo de plataforma en dos versiones** (fondo claro/fondo oscuro) + ícono de la PWA reemplazado por el arte oficial del manual de marca — detalle en HISTORIAL.md.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -347,3 +348,10 @@ aparece un sindicato "AEFIP" fantasma con id=1. No afecta producción
 - Tests: correr CADA `test_*.py` por separado (loop por archivo), nunca
   `pytest -q` batcheado — módulos comparten estado de import y se
   contaminan entre archivos si corren en el mismo proceso pytest.
+- **Corriendo un test directo con `.venv/Scripts/python.exe test_x.py`
+  (sin pytest)**: `conftest.py` (que fuerza SQLite aislado) NO se carga en
+  ese modo — con `DATABASE_URL` real en `.env` (desarrollo local con
+  Postgres), el test pega contra el Postgres de Docker de verdad, no un
+  SQLite temporal. Anteponer `DATABASE_URL=` vacío al comando:
+  `DATABASE_URL= .venv/Scripts/python.exe test_x.py`. Detalle en
+  HISTORIAL.md, sección del ícono/logo de Colm3na.

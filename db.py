@@ -392,9 +392,19 @@ class ConfiguracionPlataforma(SQLModel, table=True):
     color_primario: str = "#152238"
     color_secundario: str = "#1a7a6b"
     color_acento: str = "#b23a2e"
+    # "logo" (sin sufijo) es la variante para FONDO CLARO (texto oscuro) --
+    # nombre heredado de cuando solo había un logo. "logo_oscuro" es la
+    # variante para FONDO OSCURO (texto blanco), sumada después para poder
+    # usar el logo correcto en encabezados oscuros (admin/trabajador/
+    # empresa/plataforma) vs. los logins (fondo gris claro). Si
+    # "logo_oscuro" no se cargó, las templates caen al logo claro (mismo
+    # criterio que ya usaban antes de esta feature).
     logo: str = ""
     logo_datos: Optional[bytes] = Field(default=None)
     logo_mime: str = ""
+    logo_oscuro: str = ""
+    logo_datos_oscuro: Optional[bytes] = Field(default=None)
+    logo_mime_oscuro: str = ""
     # Portada de /plataforma (ver plataforma_portada.html): oscura (default)
     # o clara, mismo criterio que Sindicato.portada_clara -- pero acá NO hay
     # un color_base aparte validado como oscuro, se reusa color_primario tal
@@ -1522,11 +1532,12 @@ def marca_plataforma() -> dict:
     with Session(engine) as s:
         cfg = s.get(ConfiguracionPlataforma, 1)
         if not cfg:
-            return {"logo": "", "color_primario": "#152238",
+            return {"logo": "", "logo_oscuro": "", "color_primario": "#152238",
                     "color_secundario": "#1a7a6b", "color_acento": "#b23a2e",
                     "portada_clara": False}
         return {
             "logo": cfg.logo,
+            "logo_oscuro": cfg.logo_oscuro,
             "color_primario": cfg.color_primario or "#152238",
             "color_secundario": cfg.color_secundario or "#1a7a6b",
             "color_acento": cfg.color_acento or "#b23a2e",
@@ -1536,7 +1547,9 @@ def marca_plataforma() -> dict:
 
 def set_marca_plataforma(color_primario: str, color_secundario: str, color_acento: str,
                           logo_datos: bytes = None, logo_mime: str = "", logo_flag: str = "",
-                          portada_clara: bool = False):
+                          portada_clara: bool = False,
+                          logo_datos_oscuro: bytes = None, logo_mime_oscuro: str = "",
+                          logo_oscuro_flag: str = ""):
     with Session(engine) as s:
         cfg = s.get(ConfiguracionPlataforma, 1)
         if not cfg:
@@ -1547,6 +1560,9 @@ def set_marca_plataforma(color_primario: str, color_secundario: str, color_acent
         cfg.portada_clara = portada_clara
         if logo_datos:
             cfg.logo_datos, cfg.logo_mime, cfg.logo = logo_datos, logo_mime, logo_flag
+        if logo_datos_oscuro:
+            cfg.logo_datos_oscuro, cfg.logo_mime_oscuro, cfg.logo_oscuro = (
+                logo_datos_oscuro, logo_mime_oscuro, logo_oscuro_flag)
         s.add(cfg)
         s.commit()
 

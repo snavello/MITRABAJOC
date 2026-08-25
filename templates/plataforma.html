@@ -98,7 +98,7 @@
 <body>
 <div class="app-bar-fija">
 <header>
-  <img src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo">
+  <img src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Mi Trabajo">
   <span class="rol">Administración de plataforma</span>
 </header>
 <a class="btn-cerrar" href="/plataforma/salir" title="Salir" aria-label="Salir">
@@ -365,12 +365,20 @@
         </div>
       </div>
       <div class="campo" style="margin-top:14px; max-width:360px;">
-        <label>Logo de la plataforma (PNG, JPG o similar)</label>
+        <label>Logo para fondo claro (logins)</label>
         {% if marca_plataforma and marca_plataforma.logo %}
         <div style="margin-bottom:8px;"><img src="/logo-plataforma" alt="Logo actual" style="height:36px; background:#fff; border:1px solid var(--linea); border-radius:6px; padding:3px;"></div>
         {% endif %}
         <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
-        <span class="muted" style="font-size:11px;">Se muestra en los logins y en el encabezado de este panel. Si no subís uno nuevo, se mantiene el actual.</span>
+        <span class="muted" style="font-size:11px;">Se muestra en los logins (fondo gris claro). Si no subís uno nuevo, se mantiene el actual.</span>
+      </div>
+      <div class="campo" style="margin-top:14px; max-width:360px;">
+        <label>Logo para fondo oscuro (encabezados)</label>
+        {% if marca_plataforma and marca_plataforma.logo_oscuro %}
+        <div style="margin-bottom:8px;"><img src="/logo-plataforma-oscuro" alt="Logo actual" style="height:36px; background:#152238; border:1px solid var(--linea); border-radius:6px; padding:3px;"></div>
+        {% endif %}
+        <input type="file" name="logo_oscuro" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
+        <span class="muted" style="font-size:11px;">Se muestra en los encabezados de admin/trabajador/empresa/plataforma (fondo oscuro). Si no se carga, esos encabezados usan el logo de fondo claro.</span>
       </div>
       <div class="campo" style="margin-top:14px;">
         <label class="chk-modulo"><input type="checkbox" name="portada_clara" value="true" {% if marca_plataforma and marca_plataforma.portada_clara %}checked{% endif %}> Portada clara</label>

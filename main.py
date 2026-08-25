@@ -279,7 +279,7 @@ def servir_imagen_beneficio(beneficio_id: int):
 
 @app.get("/logo-plataforma")
 def servir_logo_plataforma():
-    """Logo de 'Mi Trabajo' cargado por el admin de plataforma. Si no cargó
+    """Logo de la plataforma para FONDO CLARO (logins). Si no cargó
     ninguno, las templates caen al SVG estático de siempre (no se llama a
     esta ruta en ese caso)."""
     with db.get_session() as s:
@@ -289,6 +289,22 @@ def servir_logo_plataforma():
         return BinResponse(
             content=cfg.logo_datos,
             media_type=cfg.logo_mime or "application/octet-stream",
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+
+
+@app.get("/logo-plataforma-oscuro")
+def servir_logo_plataforma_oscuro():
+    """Logo de la plataforma para FONDO OSCURO (encabezados de admin/
+    trabajador/empresa/plataforma). Las templates que lo piden ya resuelven
+    el fallback al logo claro / SVG estático si este todavía no se cargó."""
+    with db.get_session() as s:
+        cfg = s.get(ConfiguracionPlataforma, 1)
+        if not cfg or not cfg.logo_datos_oscuro:
+            raise HTTPException(404, "Sin logo")
+        return BinResponse(
+            content=cfg.logo_datos_oscuro,
+            media_type=cfg.logo_mime_oscuro or "application/octet-stream",
             headers={"Cache-Control": "public, max-age=3600"},
         )
 templates = Jinja2Templates(directory="templates")
@@ -2801,16 +2817,22 @@ async def plataforma_marca(
     request: Request,
     color_primario: str = Form("#152238"), color_secundario: str = Form("#1a7a6b"),
     color_acento: str = Form("#b23a2e"), logo: UploadFile = File(None),
+    logo_oscuro: UploadFile = File(None),
     portada_clara: bool = Form(False),
 ):
     """Marca de 'Mi Trabajo' (logins y panel de plataforma) — mismo patrón que
-    la marca de un sindicato, pero para la plataforma misma."""
+    la marca de un sindicato, pero para la plataforma misma. Dos logos: uno
+    para fondo claro (logins) y uno para fondo oscuro (encabezados)."""
     exigir_plataforma(request)
     logo_datos, logo_mime, logo_flag = (None, "", "")
     if logo and logo.filename:
         logo_datos, logo_mime, logo_flag = _leer_logo(logo)
+    logo_datos_osc, logo_mime_osc, logo_flag_osc = (None, "", "")
+    if logo_oscuro and logo_oscuro.filename:
+        logo_datos_osc, logo_mime_osc, logo_flag_osc = _leer_logo(logo_oscuro)
     db.set_marca_plataforma(color_primario, color_secundario, color_acento,
-                             logo_datos, logo_mime, logo_flag, portada_clara)
+                             logo_datos, logo_mime, logo_flag, portada_clara,
+                             logo_datos_osc, logo_mime_osc, logo_flag_osc)
     return RedirectResponse("/plataforma?marca=ok", status_code=303)
 
 
