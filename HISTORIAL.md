@@ -462,6 +462,16 @@ entre los dos extremos respecto a ese punto medio (no un simple +20% por
 canal), para que el pedido "20% más claro" y "20% más de contraste" fueran
 cambios independientes y no se cancelaran entre sí.
 
+**Logo el doble de grande en mobile, +50% en desktop (2026-08-25)**:
+`.logo-recuadro` pasó de 148px→222px en desktop y de 85px→170px en mobile,
+en las 4 pantallas de login reales (`admin_login.html`,
+`empresa_login.html`, `plataforma_login.html`, `trabajador_login.html`) --
+**no** en `elegir_sindicato.html`/`elegir_sindicato_empresa.html`, que no
+son logins (son el selector de sindicato/empresa post-login en pluriempleo)
+y quedaron en su tamaño propio (76px/61px, el unificado del resto de la
+app). Verificado que 222px entra sin desbordar dentro de `.caja`
+(`max-width:380px`, padding 30px por lado → ~320px de ancho interno).
+
 ## Constructor visual de Trámites (2026-08-16)
 El pedido original era un editor de lienzo libre (drag X/Y) para maquetar
 el formulario antes de publicarlo -- se evaluó y se descartó por costo
