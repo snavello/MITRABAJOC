@@ -317,6 +317,32 @@ patch; arreglos + funcionalidad nueva en el mismo deploy → +1 en los dos
 propio — para no repetir el bug de poner "12:00" fijo a mano (encontrado
 2026-08-24), correr `date "+%Y-%m-%d %H:%M"` (Bash) y usar ese valor real.
 
+## Datos de la IA y fórmulas: nada se evalúa crudo
+Todo importe que llega de `extractor.py` pasa por `validador.a_numero()`
+antes de entrar a una cuenta (la salida de un modelo NO es un contrato: un
+`null` o un texto reventaban la suma y el trabajador veía el 500 genérico).
+Una línea sin importe legible queda AFUERA de los cálculos, con alerta
+`importe_ilegible`; nunca vale $0. Una fórmula que no evalúa saltea SU
+chequeo con alerta `formula_invalida`, no tumba el recibo. Y `/admin/formula`
+prueba la expresión con `validador.error_de_expresion()` antes de guardarla:
+una fórmula rota no se guarda, porque si no falla meses después en la
+pantalla del trabajador y no en la del admin que la escribió. El mensaje del
+handler global (`error_no_manejado`) es genérico a propósito: cubre TODA la
+app, no solo recibos. El catálogo del sindicato tampoco se toma como
+confiable: códigos y alias se normalizan (`_clave`, `_alias_de`) antes de
+matchear. Detalle en HISTORIAL.md, "el 500 genérico que mentía".
+
+## Códigos de error propios (`errores.py`)
+Todo error que ve una persona lleva un código (`raise ErrorApp("E-...")`),
+que viaja al frontend y se muestra debajo del mensaje. **Solo los errores
+reales de lectura pueden decir "probá con otra foto"** (E-RECIBO-01/02,
+E-APORTE-01/02) — hay un test que lo verifica sobre todo el catálogo.
+`E-INTERNO-00` es el único que admite no saber qué pasó, y por eso lleva un
+`ref` de 8 caracteres que se imprime junto al traceback en el log: con eso se
+encuentra el error exacto en Render. Un error nuevo se agrega a `MENSAJES`, y
+si una ruta puntual merece su propio código ante lo inesperado, va en
+`CODIGO_POR_RUTA`.
+
 ## Hallazgo pendiente, no arreglado
 `db.cargar_seed_si_vacio()` sigue disparando el seed histórico de AEFIP al
 recrear la base local desde cero sin correr `cargar_demo.py` antes —

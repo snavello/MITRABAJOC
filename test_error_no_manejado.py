@@ -89,7 +89,11 @@ def test_500_en_post_de_pagina_completa_redirige_con_aviso():
         db.get_session = original
 
     assert r.status_code == 303
-    assert r.headers["location"] == "/admin?error=guardado"
+    # la referencia (E-INTERNO-00 ref=...) viaja en la URL para que el aviso
+    # de la pantalla y el traceback del log se puedan cruzar -- ver errores.py
+    destino = r.headers["location"]
+    assert destino.startswith("/admin?error=guardado&ref="), destino
+    assert len(destino.rsplit("=", 1)[1]) == 8, destino
     print("OK  test_500_en_post_de_pagina_completa_redirige_con_aviso")
 
 

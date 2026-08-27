@@ -4,6 +4,7 @@ Sin dependencias externas: solo biblioteca estándar.
 Verificado contra recibos reales AEFIP (ago/sep 2024): diferencia 0.00.
 """
 import re
+import math
 import difflib
 import unicodedata
 from collections import defaultdict
@@ -56,14 +57,125 @@ CONCEPTOS_UNIVERSALES = [
 ]
 
 
-def normalizar(texto: str) -> str:
-    t = unicodedata.normalize("NFD", texto or "")
+def normalizar(texto) -> str:
+    # str() y no solo `texto or ""`: un código numérico (288 en vez de "288")
+    # o cualquier valor que no sea texto hacía explotar unicodedata.normalize
+    # con un TypeError. Tanto el recibo (lo devuelve un modelo) como el
+    # catálogo (lo carga una persona) pueden traer una forma inesperada.
+    if texto is None:
+        texto = ""
+    elif not isinstance(texto, str):
+        texto = str(texto)
+    t = unicodedata.normalize("NFD", texto)
     t = "".join(ch for ch in t if unicodedata.category(ch) != "Mn")
     return " ".join(t.upper().split())
 
 
 def _norm_cuil(cuil: str) -> str:
     return re.sub(r"[^0-9]", "", cuil or "")
+
+
+def a_numero(valor):
+    """Un importe tal como vino de la IA -> float, o None si no se puede leer.
+
+    El extractor tiene instruccion de devolver numeros y de poner null cuando
+    algo es ilegible, pero la salida de un modelo NO es un contrato: un null,
+    un "1.234,56" o cualquier texto llegaban crudos hasta las sumas de mas
+    abajo y reventaban con un TypeError. Como esa excepcion no la manejaba
+    nadie, el trabajador terminaba viendo el 500 generico de la app ("proba
+    con una foto mas nitida"), que no tenia nada que ver con la causa real.
+    Todo importe que entra al motor pasa primero por aca.
+
+    Los separadores se interpretan con el criterio argentino cuando no hay
+    ambiguedad posible: coma decimal si separa 1 o 2 digitos finales, y punto
+    de miles cuando hay mas de uno. Ante cualquier duda devuelve None (linea
+    ilegible, se avisa) en vez de arriesgar un numero equivocado: un importe
+    mal leido en silencio es peor que uno declarado ilegible.
+    """
+    if valor is None or isinstance(valor, bool):
+        return None
+    if isinstance(valor, (int, float)):
+        return float(valor) if math.isfinite(valor) else None
+    if not isinstance(valor, str):
+        return None
+    t = valor.strip().replace("\u00a0", "").replace(" ", "").replace("$", "")
+    if t.startswith("(") and t.endswith(")"):   # (1.234) = negativo
+        t = "-" + t[1:-1]
+    if not t:
+        return None
+    if "," in t and "." in t:                   # el ultimo separador es el decimal
+        decimal = "," if t.rfind(",") > t.rfind(".") else "."
+        t = t.replace("," if decimal == "." else ".", "").replace(decimal, ".")
+    elif "," in t:
+        entero, _, resto = t.rpartition(",")
+        t = f"{entero}.{resto}" if len(resto) in (1, 2) else t.replace(",", "")
+    elif t.count(".") > 1:                      # 1.234.567 -> puntos de miles
+        t = t.replace(".", "")
+    try:
+        n = float(t)
+    except ValueError:
+        return None
+    return n if math.isfinite(n) else None
+
+
+def lineas_legibles(recibo: dict) -> tuple[list, list]:
+    """Separa las lineas del recibo en (utilizables, ilegibles).
+
+    Una linea sin importe numerico no se puede sumar ni comparar: queda
+    afuera de los calculos y se informa aparte, en vez de contarla como $0
+    (inventaria discrepancias que el recibo no tiene) o de hacer explotar la
+    validacion entera por una sola linea que la IA no pudo leer.
+    """
+    utilizables, ilegibles = [], []
+    for ln in recibo.get("lineas") or []:
+        if not isinstance(ln, dict):
+            continue
+        importe = a_numero(ln.get("importe"))
+        if importe is None:
+            ilegibles.append(ln)
+        else:
+            utilizables.append({**ln, "importe": importe})
+    return utilizables, ilegibles
+
+
+# Valores de juguete para probar una expresion SIN un recibo real (ver
+# error_de_expresion). Los nombres son los mismos que ve una formula al
+# validar de verdad; si se agrega una variable al motor, va tambien aca.
+VARIABLES_DE_PRUEBA = {
+    "total_ingresos": 1000.0,
+    "base_remunerativa": 1000.0,
+    "c": lambda codigo: 0.0,
+}
+
+
+def error_de_expresion(expr: str) -> str | None:
+    """None si la expresion es evaluable; si no, el motivo en castellano.
+
+    Se usa al GUARDAR la formula (ver POST /admin/formula). Antes no se
+    probaba nada al guardar, y una formula mal escrita no fallaba ahi: se
+    guardaba lo mas tranquila y explotaba semanas despues en la pantalla del
+    TRABAJADOR, la primera vez que llegaba un recibo que trajera ese concepto
+    (una formula solo se evalua si su concepto esta en el recibo). El que veia
+    el error no era el que la habia cargado.
+    """
+    if not (expr or "").strip():
+        return "La expresión está vacía."
+    ayuda_coma = (" Ojo con las comas: el decimal se escribe con punto (0.015), "
+                  "no con coma.") if "," in expr else ""
+    try:
+        _evaluar(expr, dict(VARIABLES_DE_PRUEBA))
+    except SyntaxError:
+        return ("No es una expresión válida: usá punto decimal (0.015), * para "
+                "multiplicar, y no escribas el signo %." + ayuda_coma)
+    except NameError as e:
+        nombre = str(e).split("'")[1] if "'" in str(e) else "?"
+        return (f"No existe ninguna variable llamada '{nombre}'. Las que podés "
+                'usar son base_remunerativa, total_ingresos y c("CODIGO").')
+    except ZeroDivisionError:
+        return "La expresión divide por cero."
+    except Exception as e:
+        return f"No se pudo evaluar ({type(e).__name__})." + ayuda_coma
+    return None
 
 
 def _mes(fecha: str) -> str:
@@ -121,6 +233,31 @@ def rangos_se_superponen(desde1, hasta1, desde2, hasta2) -> bool:
     return cond1 and cond2
 
 
+def _clave(valor) -> str:
+    """El código tal cual, pasado a texto y sin espacios de más. Un código
+    puede venir como número (del recibo) o con un espacio al final (del
+    formulario del admin): sin esto, '288-001 ' y '288-001' son dos claves
+    distintas y el concepto cargado no matchea nunca."""
+    if valor is None:
+        return ""
+    return (valor if isinstance(valor, str) else str(valor)).strip()
+
+
+def _alias_de(concepto: dict) -> list:
+    """Los alias de un concepto, sea lo que sea que haya en la columna.
+
+    Es JSON en la base: si por lo que sea quedó un texto suelto en vez de una
+    lista, iterarlo devolvía LETRA POR LETRA y ensuciaba el índice de matcheo
+    con entradas de un caracter -- sin fallar, que es lo peor: una línea del
+    recibo podía matchear contra un concepto equivocado."""
+    alias = concepto.get("alias")
+    if isinstance(alias, str):
+        return [alias]
+    if not isinstance(alias, (list, tuple)):
+        return []
+    return list(alias)
+
+
 def indexar_conceptos(conceptos: list, cuit_empleador: str = None) -> dict:
     """{codigo o alias normalizado: concepto} para matchear líneas del recibo.
 
@@ -133,13 +270,18 @@ def indexar_conceptos(conceptos: list, cuit_empleador: str = None) -> dict:
     el catálogo genérico de siempre.
     """
     idx = {}
+    conceptos = [c for c in conceptos if isinstance(c, dict) and _clave(c.get("codigo"))]
     genericos = [c for c in conceptos if not c.get("cuit_empleador")]
     especificos = [c for c in conceptos if cuit_empleador and c.get("cuit_empleador") == cuit_empleador]
     for c in genericos + especificos:
-        idx[c["codigo"]] = c
-        idx[normalizar(c["nombre"])] = c
-        for a in c.get("alias", []):
-            idx[normalizar(a)] = c
+        idx[_clave(c["codigo"])] = c
+        nombre = normalizar(c.get("nombre"))
+        if nombre:
+            idx[nombre] = c
+        for a in _alias_de(c):
+            clave_alias = normalizar(a)
+            if clave_alias:
+                idx[clave_alias] = c
     return idx
 
 
@@ -148,7 +290,7 @@ def codigo_efectivo(concepto: dict) -> str:
     un concepto genérico, o `codigo_generico` para uno específico de un
     empleador (así todas las variantes de distintos empleadores para "lo
     mismo" se validan con una única fórmula por sindicato, sin duplicarlas)."""
-    return concepto.get("codigo_generico") or concepto["codigo"]
+    return _clave(concepto.get("codigo_generico")) or _clave(concepto.get("codigo"))
 
 
 def matchear_lineas(lineas: list, idx: dict):
@@ -162,7 +304,7 @@ def matchear_lineas(lineas: list, idx: dict):
     por el catálogo curado del sindicato."""
     matcheadas, desconocidas = [], []
     for ln in lineas:
-        concepto = idx.get(ln.get("codigo")) or idx.get(normalizar(ln.get("descripcion", "")))
+        concepto = idx.get(_clave(ln.get("codigo"))) or idx.get(normalizar(ln.get("descripcion")))
         automatico = False
         if not concepto:
             codigo_universal = CATEGORIAS_UNIVERSALES.get(ln.get("categoria_universal"))
@@ -226,7 +368,11 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
 
     cuit_empleador = _norm_cuil((recibo.get("empleador") or {}).get("cuit"))
     idx = indexar_conceptos(conceptos, cuit_empleador)
-    matcheadas, desconocidas = matchear_lineas(recibo["lineas"], idx)
+    # Nada de lo que devolvio la IA se usa crudo: los importes se pasan a
+    # numero y lo que no se pueda leer queda afuera (ver lineas_legibles).
+    lineas, lineas_ilegibles = lineas_legibles(recibo)
+    impresos = {k: a_numero(v) for k, v in (recibo.get("totales_impresos") or {}).items()}
+    matcheadas, desconocidas = matchear_lineas(lineas, idx)
 
     ingresos = [m for m in matcheadas if m["concepto"]["tipo"] == "ingreso"]
     descuentos = [m for m in matcheadas if m["concepto"]["tipo"] == "descuento"]
@@ -254,7 +400,7 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
     # base aproximada que compararlo todo contra cero.
     base_aproximada = False
     if not ingresos:
-        impreso_remuneraciones = (recibo.get("totales_impresos") or {}).get("remuneraciones")
+        impreso_remuneraciones = impresos.get("remuneraciones")
         if impreso_remuneraciones is not None:
             total_ingresos = impreso_remuneraciones
             base_remunerativa = impreso_remuneraciones
@@ -286,6 +432,7 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
     topes = topes or []
     tope_periodo = tope_vigente_en(topes, periodo_recibo)
     conceptos_con_tope = []  # descripciones de las fórmulas sujetas a tope evaluadas, para las alertas
+    formulas_rotas = []      # (descripción, motivo) de las que no se pudieron evaluar
     conceptos_con_discrepancia_tope = []  # subset de los de arriba que dieron discrepancia
     aplico_piso_en_discrepancia = False
 
@@ -308,15 +455,26 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
 
         variables_f = variables
         aplico_piso = False
-        if sujeto_a_tope and tope_periodo:
-            base_topeada = min(max(base_remunerativa, tope_periodo["base_minima"]), tope_periodo["tope_maximo"])
-            aplico_piso = base_remunerativa < tope_periodo["base_minima"]
+        piso = a_numero((tope_periodo or {}).get("base_minima"))
+        techo = a_numero((tope_periodo or {}).get("tope_maximo"))
+        if sujeto_a_tope and piso is not None and techo is not None:
+            base_topeada = min(max(base_remunerativa, piso), techo)
+            aplico_piso = base_remunerativa < piso
             variables_f = dict(variables, base_remunerativa=base_topeada)
 
-        esperado = _evaluar(f["expr"], variables_f)
+        # Una fórmula mal escrita (la carga un humano en /admin) NO puede
+        # tumbar la verificación entera del recibo: se saltea ese chequeo y se
+        # avisa cuál falló. Ver error_de_expresion(), que además ahora impide
+        # guardarla así.
+        try:
+            esperado = _evaluar(f["expr"], variables_f)
+        except Exception as e:
+            formulas_rotas.append((f.get("descripcion") or codigo, type(e).__name__))
+            continue
         real = abs(importe_por_codigo[codigo])  # los descuentos figuran en negativo
         dif = round(real - esperado, 2)
-        ok = abs(dif) <= f.get("tolerancia", 1.0)
+        tolerancia = a_numero(f.get("tolerancia"))
+        ok = abs(dif) <= (1.0 if tolerancia is None else tolerancia)
         resultados.append({
             "codigo": codigo, "descripcion": f["descripcion"],
             "esperado": round(esperado, 2), "en_recibo": round(real, 2),
@@ -333,8 +491,9 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
                             f"figura ${real:,.2f} (diferencia ${dif:,.2f})."),
             })
 
-    # Consistencia interna: la suma de líneas debe coincidir con los totales impresos.
-    impresos = recibo.get("totales_impresos") or {}
+    # Consistencia interna: la suma de líneas debe coincidir con los totales
+    # impresos (los que no se hayan podido leer como número valen None y ese
+    # chequeo se saltea, igual que cuando el recibo no los trae).
     checks = [
         ("remuneraciones", variables["total_ingresos"], impresos.get("remuneraciones")),
         ("descuentos", sum(m["importe"] for m in descuentos), impresos.get("descuentos")),
@@ -357,6 +516,33 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
     } for ln in desconocidas]
 
     alertas = []
+
+    # Líneas que la IA no pudo leer: quedaron afuera de todos los cálculos,
+    # así que hay que decirlo -- si no, el trabajador ve un "todo en orden"
+    # sacado con un recibo incompleto.
+    if lineas_ilegibles:
+        cuales = ", ".join(
+            (ln.get("descripcion") or ln.get("codigo") or "(sin descripción)")
+            for ln in lineas_ilegibles)
+        alertas.append({
+            "tipo": "importe_ilegible",
+            "detalle": f"No pudimos leer el importe de {len(lineas_ilegibles)} línea(s) "
+                       f"del recibo ({cuales}), así que quedaron afuera de los cálculos. "
+                       "Si el resultado no te cierra, probá con una foto más nítida o "
+                       "con el PDF original.",
+        })
+
+    # Fórmulas del sindicato que no se pudieron evaluar (mal escritas). Se
+    # avisa sin tecnicismos: el trabajador no puede hacer nada, pero tiene que
+    # saber que ESE aporte no se chequeó.
+    if formulas_rotas:
+        cuales = ", ".join(d for d, _ in formulas_rotas)
+        alertas.append({
+            "tipo": "formula_invalida",
+            "detalle": f"No pudimos chequear {cuales}: la fórmula que cargó tu "
+                       "sindicato tiene un error de escritura. El resto del recibo se "
+                       "verificó igual. Conviene avisarle al sindicato.",
+        })
 
     # Tope de base imponible de la seguridad social: si hubo al menos una
     # fórmula sujeta a tope evaluada este recibo, se avisa cuando el dato de
@@ -413,6 +599,8 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
         "total": round(cargas_convenio + cargas_afiliacion, 2),
     }
     base_remunerativa = variables["base_remunerativa"]
+    tope_sindical_pct = a_numero(tope_sindical_pct)
+    tope_sindical_pct = 2.0 if tope_sindical_pct is None else tope_sindical_pct
     if base_remunerativa > 0:
         tope_pesos = tope_sindical_pct / 100 * base_remunerativa
         if cargas_convenio > tope_pesos:
@@ -455,18 +643,23 @@ def detectar_nuevos(conceptos: list, lineas: list, cuit_empleador: str = None) -
     idx = indexar_conceptos(conceptos, cuit_empleador)
     nuevos, vistos = [], set()
     for ln in lineas:
-        concepto = idx.get(ln.get("codigo")) or idx.get(normalizar(ln.get("descripcion", "")))
+        if not isinstance(ln, dict):
+            continue
+        codigo = _clave(ln.get("codigo"))
+        concepto = idx.get(codigo) or idx.get(normalizar(ln.get("descripcion")))
         if concepto:
             continue
         # Clave para no duplicar si el mismo concepto nuevo aparece dos veces.
-        clave = ln.get("codigo") or normalizar(ln.get("descripcion", ""))
+        clave = codigo or normalizar(ln.get("descripcion"))
         if clave in vistos:
             continue
         vistos.add(clave)
-        importe = ln.get("importe", 0) or 0
+        importe = a_numero(ln.get("importe")) or 0
         nuevos.append({
-            "codigo": ln.get("codigo") or f"{PREFIJO_PROVISORIO}{clave[:12]}",
-            "descripcion": ln.get("descripcion", "(sin descripción)"),
+            "codigo": codigo or f"{PREFIJO_PROVISORIO}{clave[:12]}",
+            # a texto sí o sí: esta descripción termina como Concepto.nombre
+            # en la base, y una columna de texto no acepta un número.
+            "descripcion": str(ln.get("descripcion") or "(sin descripción)"),
             "importe": importe,
             "tipo": "descuento" if importe < 0 else "ingreso",
             "categoria_universal": ln.get("categoria_universal"),
@@ -500,7 +693,7 @@ def buscar_similar(nombre: str, conceptos: list, excluir_codigo=None) -> dict | 
             continue
         if excluir_codigo is not None and c.get("codigo") == excluir_codigo:
             continue
-        for candidato in [c.get("nombre", "")] + list(c.get("alias") or []):
+        for candidato in [c.get("nombre") or ""] + _alias_de(c):
             r = similitud(nombre, candidato)
             if r > mejor_ratio:
                 mejor, mejor_ratio = c, r

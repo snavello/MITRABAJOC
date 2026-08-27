@@ -1590,3 +1590,117 @@ fondo oscuro -- según dónde se muestre.
   proyecto tampoco tiene `pytest` instalado (sí lo tiene el Python del
   sistema) -- por eso no alcanza con simplemente correr `pytest` en vez de
   `python` para esquivar el problema.
+
+
+## "No pudimos verificar este recibo": el 500 genérico que mentía (2026-08-26)
+
+**Síntoma reportado**: un recibo se leía bien (la IA devolvía todos los datos
+y el preview los mostraba), y al tocar "Verificar" salía *"No pudimos
+verificar este recibo. Probá con una foto más nítida o el PDF."* — hablando
+de la foto, con un PDF nítido de una sola página. El mismo recibo había
+validado bien un rato antes; entre medio, el admin del sindicato había
+cargado el concepto de la cuota sindical que faltaba, más su fórmula.
+
+**Qué era ese mensaje**: no era el lector de recibos. Era el `detail` del
+handler global de excepciones (`error_no_manejado` en main.py), o sea el
+texto que sale ante CUALQUIER excepción no manejada, en CUALQUIER ruta de la
+app que responda por fetch. El frontend (`trabajador.html`) muestra el
+`detail` tal cual. `/api/leer` había andado perfecto; lo que reventaba era
+`/api/validar`, con un error de Python.
+
+**Las dos causas posibles, las dos reproducidas con TestClient**:
+
+1. **Un importe que la IA no pudo leer.** El extractor tiene instrucción de
+   poner `null` en lo ilegible, y `validador.validar()` sumaba eso directo:
+   `sum(m["importe"] for m in ingresos)` -> `TypeError: unsupported operand
+   type(s) for +: 'int' and 'NoneType'`. Lo mismo con un importe que venga
+   como texto, o si falta la clave `lineas`.
+
+2. **Una fórmula mal escrita.** `_evaluar()` corre `eval(expr)` sin red. Una
+   fórmula guardada como `0,015 * base_remunerativa` (coma decimal),
+   `1.5% * base_remunerativa` (el signo %) o con una variable inventada tira
+   SyntaxError/NameError/TypeError y tumba la verificación entera.
+
+**Por qué apareció justo después de cargar el concepto** (vale para las dos
+causas, y es lo que explica el "antes andaba"): una línea del recibo solo
+entra en las sumas si matchea contra el catálogo, y una fórmula solo se
+evalúa si su concepto está en el recibo (`if codigo not in importe_por_codigo:
+continue`). Mientras el concepto sindical no existía, esa línea era
+"desconocida" (iba a `avisos`, sin tocar ninguna cuenta) y la fórmula ni
+existía. Al cargar el concepto, la línea pasó a matchear y la fórmula a
+evaluarse: recién ahí el dato sucio o la expresión rota llegaron a ejecutarse.
+Un dato malo puede quedar dormido meses y detonar el día que alguien carga un
+concepto, que es el peor momento y en la pantalla equivocada — la del
+trabajador, no la del admin que lo cargó.
+
+**Lo que se arregló (v0.17.21 / 0.16.21)**:
+
+- `validador.a_numero()`: TODO importe que entra al motor pasa por ahí.
+  Convierte números y texto ("$ 1.234,56", "(1500)"), y ante cualquier
+  ambigüedad devuelve None en vez de arriesgar un número equivocado — un
+  importe mal leído en silencio es peor que uno declarado ilegible.
+- `validador.lineas_legibles()`: las líneas sin importe numérico quedan
+  AFUERA de los cálculos (no valen $0, que inventaría discrepancias falsas) y
+  se informan en una alerta nueva, `importe_ilegible`. Los totales impresos
+  ilegibles se saltean, igual que cuando el recibo no los trae.
+- El `_evaluar()` de cada fórmula va dentro de un try: si la expresión está
+  rota se saltea ESE chequeo con una alerta `formula_invalida` y el resto del
+  recibo se verifica igual. También se blindaron `tolerancia`, los valores del
+  tope y `tope_sindical_pct` contra un None en la base.
+- `validador.error_de_expresion()` + POST `/admin/formula`: la expresión se
+  prueba con valores de juguete ANTES de guardarla y, si no evalúa, no se
+  guarda: vuelve al panel con el motivo en castellano ("el decimal se escribe
+  con punto", "no existe la variable 'X'"). El error lo ve ahora el admin que
+  la escribe, en el momento en que la escribe.
+- El mensaje del handler global dejó de hablar de recibos y fotos: cubre toda
+  la app (trámites, notificaciones, aportes), así que ahora dice que hubo un
+  error inesperado. La excepción se sigue logueando completa.
+
+**Tests**: `test_validador_robusto.py` (datos sucios de la IA + fórmulas
+rotas) y `test_formula_expresion_ruta.py` (la ruta no guarda lo que no
+evalúa).
+
+**Detalle de datos que salió a la luz de paso**: la fórmula cargada tenía
+target `288-01` mientras la línea del recibo trae `288-001`. Con un código
+que no matchea, la fórmula no valida nada: reporta "el recibo no incluye
+ese concepto" aunque el concepto esté. El panel ya marca con un chip
+"⚠ código inexistente" las fórmulas cuyo target no existe en el catálogo,
+pero no puede detectar un código que existe y está mal tipeado.
+
+### Códigos de error propios (misma tanda)
+
+Pedido directo del usuario a partir de este bug: *"quiero saber si en
+cualquier caso de error no va a decir que no pudo leer el recibo... sugiero
+usar una lista de códigos de Error Propio que sepamos exactamente qué es"*.
+
+`errores.py` es el catálogo: código -> (status HTTP, mensaje). Se lanza con
+`raise ErrorApp("E-...")`, y el código viaja al frontend junto al mensaje;
+la pantalla lo muestra en chiquito debajo (`.cod-error`). Reglas:
+
+- **"Probá con otra foto" es exclusivo de los errores REALES de lectura**
+  (E-RECIBO-01/02 y E-APORTE-01/02). Ningún otro error puede sugerirlo.
+  Hay un test que lo verifica sobre el catálogo entero, así que un mensaje
+  nuevo mal redactado lo rompe.
+- **E-INTERNO-00 es el único que admite no saber qué pasó** y por eso es el
+  único que lleva `ref`: 8 caracteres que se imprimen junto al traceback en
+  el log (`[E-INTERNO-00 ref=xxxxxxxx] POST /ruta`) y se le muestran a la
+  persona. Con ese `ref` se encuentra el traceback exacto en Render sin
+  adivinar el horario. Los POST de página completa (`/admin`, `/plataforma`)
+  lo reciben en la URL del redirect y lo muestran en el aviso.
+- **`CODIGO_POR_RUTA`** permite que una excepción no prevista en una ruta
+  puntual diga algo cierto igual: `/api/validar` -> E-RECIBO-03 ("el recibo
+  se leyó bien, falló la verificación"), porque ahí mandar a sacar otra foto
+  sería mentira -- la lectura ya había pasado, en `/api/leer`.
+
+**El catálogo del sindicato también dejó de tomarse como confiable** (lo
+planteó el usuario: "quizá también haya que chequear el concepto y todos los
+datos, alias, códigos etc"). `_clave()` pasa todo código a texto y le saca
+espacios (un `"288-001 "` con un espacio al final no matcheaba NADA y no
+había forma de darse cuenta mirando la pantalla); `_alias_de()` aguanta que
+la columna JSON tenga un texto suelto en vez de una lista -- antes eso se
+iteraba LETRA POR LETRA y metía entradas de un caracter en el índice de
+matcheo, que es peor que fallar: hacía matchear líneas contra el concepto
+equivocado, en silencio. `normalizar()` acepta cualquier tipo, y las líneas
+que no son diccionario se ignoran.
+
+**Tests**: `test_codigos_error.py`.

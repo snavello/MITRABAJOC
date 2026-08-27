@@ -247,6 +247,9 @@
   .banner { margin-top:20px; padding:16px; border-radius:12px; font-weight:500; font-size:16px; display:flex; align-items:center; gap:8px; }
   .banner.ok { background:#e3f2ee; color:var(--agua); }
   .banner.mal { background:#f8e5e2; color:var(--alerta); }
+  /* el banner es flex: el código va en su propia línea, discreto */
+  .banner { flex-wrap:wrap; }
+  .cod-error { flex-basis:100%; font-size:12px; font-weight:400; opacity:.75; letter-spacing:.04em; }
   .lista { margin-top:16px; background:var(--card); border:1px solid var(--linea); border-radius:12px; overflow:hidden; }
   .lista .fila { border-top:1px solid #f0eee8; }
   .lista .fila:first-child { border-top:none; }
@@ -805,7 +808,7 @@ $('leer').onclick = async () => {
   const fd = new FormData(); fd.append('archivo', archivo);
   try {
     const r = await fetch('/api/leer', { method:'POST', body:fd });
-    if (!r.ok) { const e = await r.json(); throw new Error(e.detail); }
+    if (!r.ok) { const e = await r.json(); throw new Error(textoError(e)); }
     datosLeidos = await r.json();
     $('resultado').innerHTML = '';
     renderPreview(datosLeidos);
@@ -940,6 +943,17 @@ function setRemun(idx, valor, btn) {
   grupo.querySelector('.tg-no').classList.toggle('activo', !valor);
 }
 
+// Todo error que ve el trabajador viaja con su código propio (ver
+// errores.py). Se muestra en chiquito debajo del mensaje: no le dice nada a
+// él, pero es lo que permite que el sindicato (o nosotros) sepa exactamente
+// qué falló sin pedirle una captura. E-INTERNO-00 suma una referencia que
+// apunta al traceback exacto en el log del servidor.
+function textoError(e) {
+  const codigo = e && e.codigo ? e.codigo + (e.ref ? ' · ref ' + e.ref : '') : '';
+  const mensaje = (e && e.detail) || 'No se pudo completar la operación.';
+  return codigo ? `${mensaje}<span class="cod-error">Código ${codigo}</span>` : mensaje;
+}
+
 // Paso 2 → 3: confirmar y validar
 $('continuar').onclick = async () => {
   ver('preview'); $('preview').style.display = 'none';
@@ -949,7 +963,7 @@ $('continuar').onclick = async () => {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(datosLeidos)
     });
-    if (!r.ok) { const e = await r.json(); throw new Error(e.detail); }
+    if (!r.ok) { const e = await r.json(); throw new Error(textoError(e)); }
     renderResultado(await r.json());
   } catch (err) {
     $('resultado').innerHTML = `<div class="banner mal">${err.message}</div>
@@ -1149,7 +1163,7 @@ async function semSubir(e) {
   const fd = new FormData(); fd.append('archivo', archivo);
   try {
     const r = await fetch('/api/aportes', { method:'POST', body:fd });
-    if (!r.ok) { const err = await r.json(); throw new Error(err.detail); }
+    if (!r.ok) { const err = await r.json(); throw new Error(textoError(err)); }
     semRender(await r.json());
   } catch (err) {
     semCuerpo.innerHTML = `<div style="padding:16px;"><div class="banner mal">${err.message}</div>

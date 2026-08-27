@@ -466,7 +466,7 @@
 
 <div class="wrap">
   {% if request.query_params.get('error') == 'guardado' %}
-  <div class="msg" style="background:#fdf3e7;color:#8a5a1a;">No se pudo guardar -- probá de nuevo en un momento. Si se repite, puede ser un problema pasajero de conexión.</div>
+  <div class="msg" style="background:#fdf3e7;color:#8a5a1a;">No se pudo guardar -- probá de nuevo en un momento. Si se repite, puede ser un problema pasajero de conexión. {% if request.query_params.get('ref') %}<br><small style="opacity:.8;">Código E-INTERNO-00 · ref {{ request.query_params.get('ref') }}</small>{% endif %}</div>
   {% endif %}
   {% if 'recibos' in modulos %}
   <div class="panel" id="panel-reportes">
@@ -502,7 +502,11 @@
   <div class="panel" id="panel-formulas">
   <!-- ============ FÓRMULAS ============ -->
   <h2 id="formulas">Fórmulas a validar</h2>
-  <p class="muted">La variable <code>base_remunerativa</code> es la suma de los ingresos marcados como remunerativos. También está <code>total_ingresos</code>.</p>
+  <p class="muted">La variable <code>base_remunerativa</code> es la suma de los ingresos marcados como remunerativos. También está <code>total_ingresos</code>.
+  La expresión es una cuenta: punto decimal (<code>0.015</code>, no <code>0,015</code>), <code>*</code> para multiplicar y sin el signo <code>%</code>. Se prueba al guardar.</p>
+  {% if request.query_params.get('error') == 'formulaexpr' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó la fórmula: {{ request.query_params.get('motivo') }}</div>
+  {% endif %}
   {% if request.query_params.get('error') == 'superposicion' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">La vigencia que cargaste para <code>{{ request.query_params.get('target') }}</code> se superpone con otra fórmula existente de ese mismo concepto. Ajustá las fechas (o borrá/editá la otra) antes de guardar.</div>
   {% endif %}

@@ -26,7 +26,9 @@ Rutas de plataforma:
 Arrancar con:  uvicorn main:app --reload
 """
 import traceback
+import uuid
 from datetime import datetime
+from urllib.parse import quote
 
 from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Cookie, Response
 from fastapi.responses import HTMLResponse, RedirectResponse, Response as BinResponse, JSONResponse, FileResponse
@@ -36,6 +38,8 @@ from sqlmodel import select
 
 import db
 import auth
+import errores
+from errores import ErrorApp
 from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador,
                 CuentaTrabajador, EnvioSindicato, ReciboVerificado, ConfiguracionPlataforma, Noticia,
                 Beneficio, Seccional, ReciboSospechoso, Notificacion, NotificacionDestinatario,
@@ -46,7 +50,8 @@ from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabaja
                 Convenio, DocumentoConvenio, FragmentoConvenio, ConsultaConvenio)
 from extractor import extraer, extraer_aportes
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
-                        rangos_se_superponen, cuil_no_coincide, CATEGORIAS_UNIVERSALES)
+                        rangos_se_superponen, cuil_no_coincide, error_de_expresion,
+                        CATEGORIAS_UNIVERSALES)
 from filigrana import filigrana_svg
 from qr import qr_svg, url_verificacion
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
@@ -125,15 +130,27 @@ async def error_no_manejado(request: Request, exc: Exception):
     pool_pre_ping + pool_recycle=300 para mitigarlo, pero no elimina un
     error de red puntual en el medio de un request). Se vuelve al panel
     con un aviso en vez del JSON crudo; la excepción se loguea igual."""
+    # Referencia corta para poder encontrar ESTE error en el log del
+    # servidor: se imprime junto al traceback y se le muestra a la persona.
+    # Es lo único que hace rastreable un error que, por definición, no
+    # sabíamos que podía pasar (si supiéramos, tendría su propio código en
+    # errores.py y no llegaría hasta acá).
+    ref = uuid.uuid4().hex[:8]
+    codigo = errores.codigo_de_ruta(request.url.path)
+    print(f"[{codigo} ref={ref}] {request.method} {request.url.path}")
     traceback.print_exc()
     if _es_navegacion_de_pagina(request):
         destino = _panel_de(request.url.path)
         if destino:
-            return RedirectResponse(f"{destino}?error=guardado", status_code=303)
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "No pudimos verificar este recibo. Probá con una foto más nítida o el PDF."},
-    )
+            return RedirectResponse(f"{destino}?error=guardado&ref={ref}", status_code=303)
+    # El mensaje tiene que ser genérico DE VERDAD: este handler cubre TODAS
+    # las rutas de la app (recibos, trámites, notificaciones, aportes). Cuando
+    # decía "probá con una foto más nítida" mandaba a cualquiera a sacar la
+    # foto de nuevo por un error que no tenía nada que ver -- pasó con una
+    # fórmula mal cargada, que no se arregla con una foto mejor.
+    cuerpo = errores.cuerpo(codigo)
+    cuerpo["ref"] = ref
+    return JSONResponse(status_code=500, content=cuerpo)
 
 
 @app.exception_handler(HTTPException)
@@ -155,7 +172,9 @@ async def sesion_vencida_o_denegada(request: Request, exc: HTTPException):
         destino = _panel_de(request.url.path)
         if destino and (not rol or not sesion_actual(request, rol)):
             return RedirectResponse(destino, status_code=303)
-    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    return JSONResponse(status_code=exc.status_code,
+                        content={"detail": exc.detail,
+                                 "codigo": getattr(exc, "codigo", None)})
 
 
 @app.middleware("http")
@@ -349,14 +368,14 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
     try:
         recibo, uso = extraer(contenido, archivo.content_type)
     except Exception:
-        raise HTTPException(422, "No pudimos leer el recibo. Probá con una foto más nítida.")
+        raise ErrorApp("E-RECIBO-01")
     sid = sindicato_activo_trabajador(request)
     # Se registra apenas se llama a la IA -- el costo ya se generó, sea cual
     # sea el resultado (confianza baja, o si el trabajador nunca confirma).
     db.registrar_uso_ia(sid or None, request.cookies.get("cuil_trab", ""), "recibo",
                          uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"])
     if recibo.get("confianza") == "baja":
-        raise HTTPException(422, "La imagen no es clara. Sacá la foto de nuevo con buena luz.")
+        raise ErrorApp("E-RECIBO-02")
     # Alerta de posible adulteración (totales, CUIL, CUIT del empleador o
     # fechas): no bloquea el proceso, solo avisa y guarda una copia del
     # archivo original para que la plataforma la pueda revisar.
@@ -381,7 +400,7 @@ def api_validar(request: Request, payload: dict):
     nuevos = payload.get("conceptos_nuevos", [])
     sid = sindicato_activo_trabajador(request)
     if not sid:
-        raise HTTPException(400, "No pudimos determinar tu sindicato. Volvé a ingresar.")
+        raise ErrorApp("E-SESION-01")
 
     cuil_sesion = request.cookies.get("cuil_trab", "")
 
@@ -466,7 +485,7 @@ def api_reportar(request: Request, payload: dict):
     recibos sin discrepancias. No reemplaza al Reporte, se suma."""
     sid = sindicato_activo_trabajador(request)
     if not sid:
-        raise HTTPException(400, "No pudimos determinar tu sindicato. Volvé a ingresar.")
+        raise ErrorApp("E-SESION-01")
     resultado = payload.get("resultado") or {}
     fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
     monto = (resultado.get("retencion_sindical") or {}).get("total", 0.0)
@@ -502,7 +521,7 @@ def api_enviar_sindicato(request: Request, payload: dict):
     trae "recibo_verificado_id" del intento EXACTO que se está enviando."""
     sid = sindicato_activo_trabajador(request)
     if not sid:
-        raise HTTPException(400, "No pudimos determinar tu sindicato. Volvé a ingresar.")
+        raise ErrorApp("E-SESION-01")
     resultado = payload.get("resultado") or {}
     monto = (resultado.get("retencion_sindical") or {}).get("total", 0.0)
     fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
@@ -529,7 +548,7 @@ def api_mis_recibos(request: Request):
     estén enviados a su sindicato o no."""
     cuil = request.cookies.get("cuil_trab", "")
     if not cuil:
-        raise HTTPException(400, "No pudimos determinar tu identidad. Volvé a ingresar.")
+        raise ErrorApp("E-SESION-02")
     with db.get_session() as s:
         recibos = s.exec(select(ReciboVerificado).where(ReciboVerificado.cuil == cuil)
                          .order_by(ReciboVerificado.id.desc())).all()
@@ -551,13 +570,13 @@ async def api_aportes(request: Request, archivo: UploadFile = File(...)):
     try:
         datos, uso = extraer_aportes(contenido, archivo.content_type)
     except Exception:
-        raise HTTPException(422, "No pudimos leer el comprobante. Probá con una captura más nítida.")
+        raise ErrorApp("E-APORTE-01")
     cuil = request.cookies.get("cuil_trab", "")
     sid = sindicato_activo_trabajador(request)
     db.registrar_uso_ia(sid or None, cuil, "aportes",
                          uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"])
     if datos.get("confianza") == "baja" or not datos.get("meses"):
-        raise HTTPException(422, "No parece un comprobante de aportes de ARCA. Revisá la captura.")
+        raise ErrorApp("E-APORTE-02")
     resultado = calcular_semaforo(datos)
     if cuil and sid:
         db.guardar_semaforo(cuil, sid, resultado)
@@ -1065,6 +1084,15 @@ def abm_formula(
     sid = exigir_sindicato(request)
     fecha_desde = fecha_desde or None
     fecha_hasta = fecha_hasta or None
+    # La expresión se prueba ACÁ, con valores de juguete. Antes se guardaba sin
+    # mirarla: una fórmula mal escrita (coma decimal, un signo %, una variable
+    # inventada) no fallaba al cargarla sino meses después, en la pantalla del
+    # trabajador, la primera vez que llegaba un recibo con ese concepto -- y
+    # ahí reventaba la verificación entera del recibo. Ver error_de_expresion.
+    motivo = error_de_expresion(expr)
+    if motivo:
+        return RedirectResponse(
+            f"/admin?error=formulaexpr&motivo={quote(motivo)}#formulas", status_code=303)
     with db.get_session() as s:
         # Ninguna fórmula del mismo target puede tener una vigencia que se
         # pise con otra (si no, un mismo período tendría dos fórmulas
