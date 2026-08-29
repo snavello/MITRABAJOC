@@ -186,6 +186,11 @@ async def sin_cache_en_paneles(request: Request, call_next):
     respuesta = await call_next(request)
     if respuesta.headers.get("content-type", "").startswith("text/html"):
         respuesta.headers["Cache-Control"] = "no-store, must-revalidate"
+    elif request.url.path.startswith("/static/"):
+        # Assets vendoreados (Chart.js, dashboard.js, marca.css, fuentes):
+        # cache de una hora + sello ?v= en la URL para romperlo al deployar
+        # -- mismo patrón que /logo/{id} (docs/DASHBOARD.md §5.8).
+        respuesta.headers["Cache-Control"] = "public, max-age=3600"
     return respuesta
 
 
@@ -728,6 +733,30 @@ def admin(request: Request):
         "modulos": modulos,
         # Piloto de RAG: solo si el sindicato tiene el módulo habilitado.
         **_contexto_convenio(sid, modulos),
+        "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
+    })
+
+
+@app.get("/admin/dashboard", response_class=HTMLResponse)
+def admin_dashboard_pagina(request: Request):
+    """Página del Panel Sindical (docs/DASHBOARD.md, Fase 2). Los datos NO
+    viajan acá: los pide static/dashboard.js a los endpoints de agregados.
+    Sin sesión -> login; sin módulo -> de vuelta al panel."""
+    ses = sesion_actual(request, "sindicato")
+    if not ses:
+        return templates.TemplateResponse("admin_login.html", {
+            "request": request, "marca_plataforma": db.marca_plataforma()})
+    sid = ses.get("sid", 0)
+    if not db.modulo_habilitado(sid, "dashboard"):
+        return RedirectResponse("/admin", status_code=303)
+    marca = db.marca_sindicato(sid)
+    return templates.TemplateResponse("dashboard.html", {
+        "request": request, "sindicato": marca.get("nombre", ""),
+        "marca": marca, "marca_plataforma": db.marca_plataforma(),
+        "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
+        # El carril de consultas se decide en el SERVIDOR: con el flag
+        # apagado, ni el KPI ni el panel ni la pestaña llegan al HTML.
+        "consultas_bot": db.config_dashboard()["consultas_bot_habilitado"],
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
 
@@ -3113,16 +3142,13 @@ def dashboard_catalogo_filtros(request: Request):
             "SELECT DISTINCT categoria FROM reciboverificado "
             "WHERE sindicato_id = :sid AND categoria != '' ORDER BY categoria"
         ), {"sid": sid}).all()]
-        limites = s.execute(_text(
-            "SELECT MIN(bruto), MAX(bruto) FROM reciboverificado "
-            "WHERE sindicato_id = :sid AND bruto IS NOT NULL"
-        ), {"sid": sid}).one()
+    bruto_min, bruto_max = dashboard.limites_bruto(sid)
     return {
         "seccionales": secc,
         "empresas": [{"id": e["id"], "nombre": e["nombre"]}
                      for e in dashboard.catalogo_empresas(sid)],
         "categorias": categorias,
-        "bruto_min": limites[0], "bruto_max": limites[1],
+        "bruto_min": bruto_min, "bruto_max": bruto_max,
         "consultas_bot_habilitado": db.config_dashboard()["consultas_bot_habilitado"],
     }
 

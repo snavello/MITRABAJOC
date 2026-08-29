@@ -483,6 +483,54 @@ def test_catalogo_filtros():
     print("OK  test_catalogo_filtros")
 
 
+# ---------- Página del dashboard (Fase 2, server-rendered) ----------
+
+def test_pagina_dashboard():
+    r = admin_a.get("/admin/dashboard")
+    assert r.status_code == 200
+    assert "Panel Sindical" in r.text
+    assert "chart.umd.min.js" in r.text          # vendoreado, jamás un CDN
+    assert "cdn" not in r.text.lower()
+    assert "#E5188F" in r.text                    # --destacado inyectado
+    # Flag del bot APAGADO: el carril entero no llega al HTML.
+    assert "Consultas al asistente" not in r.text
+    assert 'data-t="consultas"' not in r.text
+    print("OK  test_pagina_dashboard")
+
+
+def test_pagina_dashboard_flag_prendido():
+    db.set_config_dashboard(35, 60, True)
+    try:
+        r = admin_a.get("/admin/dashboard")
+        assert "Consultas al asistente" in r.text
+        assert 'data-t="consultas"' in r.text
+    finally:
+        db.set_config_dashboard(35, 60, False)
+    print("OK  test_pagina_dashboard_flag_prendido")
+
+
+def test_chartjs_vendoreado_con_cache():
+    r = admin_a.get("/static/chart.umd.min.js?v=4.4.9")
+    assert r.status_code == 200
+    assert "Chart" in r.text[:3000]
+    assert r.headers.get("cache-control") == "public, max-age=3600"
+    print("OK  test_chartjs_vendoreado_con_cache")
+
+
+def test_pagina_dashboard_sin_modulo_redirige():
+    r = admin_c.get("/admin/dashboard", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/admin"
+    print("OK  test_pagina_dashboard_sin_modulo_redirige")
+
+
+def test_nav_muestra_dashboard_solo_con_modulo():
+    assert 'href="/admin/dashboard"' in admin_a.get("/admin").text
+    assert 'href="/admin/dashboard"' not in admin_c.get("/admin").text
+    assert 'href="/admin/dashboard"' in admin_a.get("/admin/inicio").text
+    assert 'href="/admin/dashboard"' not in admin_c.get("/admin/inicio").text
+    print("OK  test_nav_muestra_dashboard_solo_con_modulo")
+
+
 # ---------- Configuración de plataforma (§2.3) ----------
 
 def test_color_destacado_default_y_marca():
@@ -580,6 +628,11 @@ if __name__ == "__main__":
     test_explorador_notificaciones_agregado()
     test_explorador_fuente_desconocida_404()
     test_catalogo_filtros()
+    test_pagina_dashboard()
+    test_pagina_dashboard_flag_prendido()
+    test_chartjs_vendoreado_con_cache()
+    test_pagina_dashboard_sin_modulo_redirige()
+    test_nav_muestra_dashboard_solo_con_modulo()
     test_color_destacado_default_y_marca()
     test_plataforma_edita_color_destacado_y_umbrales()
     test_campos_analiticos()

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="{{ marca.color_base }}">
+<title>Panel Sindical — {{ sindicato }}</title>
+<link rel="stylesheet" href="/static/marca.css">
+<style>
+  :root {
+    --marca-base: {{ marca.color_base }};
+    --marca-primario: {{ marca.color_primario }};
+    --marca-acento: {{ marca.color_acento }};
+    --marca-apoyo: {{ marca.color_secundario }};
+    /* Color destacado (docs/DASHBOARD.md §4.1): EXCLUSIVO para selecciones
+       y filtros activos. Nada más se pinta con esto. */
+    --destacado: {{ marca.color_destacado }};
+    --destacado-suave: color-mix(in srgb, var(--destacado) 12%, white);
+    --destacado-borde: color-mix(in srgb, var(--destacado) 45%, white);
+    --destacado-osc: color-mix(in srgb, var(--destacado) 78%, black);
+  }
+  body { background: var(--papel); }
+
+  header.dash { background: linear-gradient(135deg, var(--marca-base) 0%, color-mix(in srgb, var(--marca-base) 55%, var(--marca-primario)) 100%);
+    color: var(--sobre-base); padding: 14px 18px 58px; }
+  .dash-top { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+  .dash-top img.logo-sind { max-height: 61px; max-width: 170px; object-fit: contain; }
+  .dash-top .logo-fallback { width: 46px; height: 46px; border-radius: 9px; background: var(--marca-acento);
+    color: var(--marca-base); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; }
+  .dash-top h1 { font-family: var(--fuente-display); font-size: 24px; line-height: 1.05; letter-spacing: .01em; }
+  .dash-top .sub { font-size: 11px; color: var(--sobre-base-mute); }
+  .dash-top .hoy { margin-left: auto; text-align: right; font-size: 11.5px; color: var(--sobre-base-mute); }
+  .dash-top .hoy strong { display: block; color: var(--sobre-base); font-size: 12.5px; text-transform: capitalize; }
+
+  main { max-width: 1280px; margin: 0 auto; padding: 0 14px 90px; }
+
+  /* ---------- Filtros ---------- */
+  .filtros-card { background: var(--blanco); border: 1px solid var(--linea); border-radius: var(--r-card);
+    box-shadow: 0 1px 2px rgba(21,34,56,.05), 0 8px 24px -14px rgba(21,34,56,.14);
+    padding: 13px 15px; margin-top: -44px; position: relative; }
+  .f-cabecera { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 11px; }
+  .f-titulo { font-family: var(--fuente-display); font-size: 16px; display: flex; align-items: center; gap: 7px; }
+  .f-titulo .numf { background: var(--destacado); color: #fff; border-radius: 99px; min-width: 20px; height: 20px;
+    display: none; place-items: center; font-size: 11px; padding: 0 6px; font-family: var(--fuente-num); }
+  .btn-reiniciar { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid var(--destacado);
+    color: var(--destacado); background: none; font-weight: 700; font-size: 12.5px; border-radius: 99px;
+    padding: 6px 14px; cursor: pointer; font-family: inherit; }
+  .btn-reiniciar:hover { background: var(--destacado); color: #fff; }
+  .f-fila { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+  .f-grupo { display: flex; flex-direction: column; gap: 6px; }
+  .f-label { font-size: 10.5px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; color: var(--gris); }
+  .presets, .seg { display: flex; background: var(--papel); border-radius: 10px; padding: 3px; gap: 2px; }
+  .presets button, .seg button { padding: 6px 12px; border: none; background: none; border-radius: 8px;
+    font-size: 12.5px; font-weight: 600; color: var(--gris); cursor: pointer; font-family: inherit; }
+  .presets button.act, .seg button.act { background: var(--destacado); color: #fff; }
+  .seg button.neutro.act { background: var(--blanco); color: var(--tinta); box-shadow: 0 1px 3px rgba(21,34,56,.14); }
+  select.f-select { border: 1.5px solid var(--linea); border-radius: var(--r-btn); padding: 7px 10px;
+    font-family: inherit; font-size: 12.5px; color: var(--tinta); background: var(--blanco); min-width: 150px; }
+  select.f-select.act { border-color: var(--destacado); background: var(--destacado-suave); color: var(--destacado-osc); font-weight: 600; }
+
+  .cal { border: 1.5px solid var(--linea); border-radius: var(--r-card); padding: 10px 12px; background: var(--blanco);
+    width: 252px; user-select: none; }
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+  .cal-nav b { font-family: var(--fuente-display); font-size: 14px; text-transform: capitalize; }
+  .cal-nav button { width: 26px; height: 26px; border: none; background: none; border-radius: 8px;
+    color: var(--marca-primario); font-weight: 800; font-size: 14px; cursor: pointer; }
+  .cal-nav button:hover { background: var(--papel); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; text-align: center; }
+  .cal-dow { font-size: 10px; font-weight: 700; color: var(--gris); padding: 3px 0; text-transform: uppercase; }
+  .cal-dia { height: 30px; border: none; background: none; border-radius: 8px; font-size: 12px; font-weight: 500;
+    display: grid; place-items: center; position: relative; cursor: pointer; font-family: var(--fuente-num); color: var(--tinta); }
+  .cal-dia:hover:not(:disabled) { background: var(--papel); }
+  .cal-dia:disabled { color: #c3c9d4; cursor: not-allowed; }
+  .cal-dia.fuera { color: #aab2c0; }
+  .cal-dia.hoyd::after { content: ""; position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: var(--marca-primario); }
+  .cal-dia.rango { background: var(--destacado-suave); color: var(--destacado-osc); border-radius: 0; font-weight: 600; }
+  .cal-dia.extremo { background: var(--destacado) !important; color: #fff !important; font-weight: 700; }
+  .cal-dia.extremo.ini { border-radius: 8px 0 0 8px; }
+  .cal-dia.extremo.fin { border-radius: 0 8px 8px 0; }
+  .cal-dia.extremo.solo { border-radius: 8px !important; }
+  .cal-ayuda { font-size: 10.5px; color: var(--gris); margin-top: 7px; text-align: center; }
+  .cal-ayuda b { color: var(--destacado); }
+
+  .multi-chips { display: flex; flex-wrap: wrap; gap: 6px; max-width: 340px; }
+  .m-chip { border: 1.5px solid var(--linea); background: var(--blanco); border-radius: var(--r-chip);
+    padding: 5px 12px; font-size: 12px; font-weight: 600; color: var(--gris); cursor: pointer; font-family: inherit; }
+  .m-chip:hover { border-color: var(--destacado-borde); color: var(--destacado); }
+  .m-chip.act { background: var(--destacado); border-color: var(--destacado); color: #fff; }
+
+  .slider-wrap { min-width: 210px; }
+  .slider-vals { display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 600;
+    color: var(--marca-primario); font-family: var(--fuente-num); }
+  .slider-vals.act { color: var(--destacado); }
+  .rango { position: relative; height: 26px; }
+  .rango input[type="range"] { position: absolute; left: 0; right: 0; top: 8px; width: 100%;
+    -webkit-appearance: none; appearance: none; background: none; pointer-events: none; height: 18px; }
+  .rango .pista { position: absolute; top: 14px; left: 0; right: 0; height: 5px; border-radius: 3px; background: var(--linea); }
+  .rango .relleno { position: absolute; top: 14px; height: 5px; border-radius: 3px; background: var(--marca-primario); }
+  .rango.act .relleno { background: var(--destacado); }
+  .rango input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 17px; height: 17px;
+    border-radius: 50%; background: #fff; border: 3px solid var(--marca-primario); box-shadow: 0 1px 4px rgba(0,0,0,.25);
+    pointer-events: auto; cursor: grab; }
+  .rango.act input[type="range"]::-webkit-slider-thumb { border-color: var(--destacado); }
+  .rango input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff;
+    border: 3px solid var(--marca-primario); pointer-events: auto; cursor: grab; }
+  .rango.act input[type="range"]::-moz-range-thumb { border-color: var(--destacado); }
+
+  .chips-activos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; padding-top: 11px; border-top: 1px dashed var(--linea); }
+  .chips-activos:empty { display: none; }
+  .chipf { display: inline-flex; align-items: center; gap: 6px; background: var(--destacado-suave); color: var(--destacado-osc);
+    border: 1px solid var(--destacado-borde); border-radius: 99px; padding: 4px 6px 4px 11px; font-size: 12px; font-weight: 600; }
+  .chipf button { width: 17px; height: 17px; border-radius: 50%; border: none; background: var(--destacado); color: #fff;
+    font-size: 10px; line-height: 1; display: grid; place-items: center; cursor: pointer; }
+  .hint-cross { font-size: 11.5px; color: var(--gris); margin-top: 9px; }
+  .hint-cross b { color: var(--destacado); }
+
+  /* ---------- KPIs ---------- */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; margin: 14px 0; }
+  .kpi { background: var(--blanco); border: 1px solid var(--linea); border-radius: var(--r-card);
+    padding: 12px 14px; position: relative; overflow: hidden; }
+  .kpi::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--kc, var(--marca-primario)); }
+  .kpi .et { font-size: 10.5px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--gris); }
+  .kpi .val { font-family: var(--fuente-display); font-size: 24px; margin: 3px 0 1px;
+    font-variant-numeric: tabular-nums; transition: opacity .15s; }
+  .kpi .val.flash { opacity: .25; }
+  .kpi .delta { font-size: 11px; font-weight: 600; font-family: var(--fuente-num); min-height: 15px; }
+  .delta.up { color: var(--ok); } .delta.down { color: var(--error); } .delta.neu { color: var(--gris); }
+
+  /* ---------- Paneles y grilla ---------- */
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(12, 1fr); }
+  .panel { background: var(--blanco); border: 1px solid var(--linea); border-radius: var(--r-card);
+    padding: 14px 16px; grid-column: span 12; position: relative; }
+  .panel h3 { font-family: var(--fuente-display); font-size: 16.5px; letter-spacing: .01em; }
+  .panel .sub { font-size: 11.5px; color: var(--gris); margin-bottom: 10px; }
+  .c-wrap { position: relative; height: 230px; }
+  .c-wrap.chica { height: 200px; }
+  @media (min-width: 860px) {
+    .span4 { grid-column: span 4; } .span5 { grid-column: span 5; } .span6 { grid-column: span 6; }
+    .span7 { grid-column: span 7; } .span8 { grid-column: span 8; }
+  }
+  .panel.cargando { opacity: .55; }
+  .panel-error { display: none; position: absolute; inset: 0; background: color-mix(in srgb, var(--blanco) 88%, transparent);
+    border-radius: var(--r-card); z-index: 3; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    font-size: 12.5px; color: var(--gris); text-align: center; padding: 12px; }
+  .panel.con-error .panel-error { display: flex; }
+  .panel-error button { border: 1px solid var(--linea); background: var(--blanco); border-radius: var(--r-btn);
+    padding: 6px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; color: var(--tinta); }
+
+  /* ---------- Semáforo ---------- */
+  .sem-resumen { display: flex; gap: 14px; margin-bottom: 8px; font-size: 12px; font-weight: 600; flex-wrap: wrap; }
+  .sem-resumen span { display: flex; align-items: center; gap: 5px; }
+  .punto { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .sem-lista { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+  .sem-item { display: flex; align-items: center; gap: 11px; padding: 8px 11px; border: 1px solid var(--linea); border-radius: 11px; }
+  .luz { width: 13px; height: 13px; border-radius: 50%; flex: none; background: var(--lc);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--lc) 18%, transparent); }
+  .sem-item .emp { font-weight: 600; font-size: 13px; }
+  .sem-item .emp span { font-weight: 400; color: var(--gris); }
+  .sem-item .dep { font-size: 11.5px; color: var(--gris); }
+  .sem-item .dias { margin-left: auto; font-family: var(--fuente-num); font-size: 12px; font-weight: 600; color: var(--lc); white-space: nowrap; }
+
+  /* ---------- Notificaciones: cajas resumen ---------- */
+  .notif-resumen { display: flex; gap: 10px; margin-bottom: 10px; }
+  .notif-caja { flex: 1; border: 1px solid var(--linea); border-radius: 11px; padding: 8px 12px; }
+  .notif-caja .n { font-family: var(--fuente-display); font-size: 20px; font-variant-numeric: tabular-nums; }
+  .notif-caja .t { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gris); }
+
+  /* ---------- Explorador ---------- */
+  .tabs-datos { display: flex; gap: 4px; background: var(--papel); border-radius: 11px; padding: 4px;
+    margin-bottom: 12px; overflow-x: auto; }
+  .tab-d { display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border: none; background: none;
+    border-radius: 8px; font-size: 12.5px; font-weight: 600; color: var(--gris); white-space: nowrap; cursor: pointer; font-family: inherit; }
+  .tab-d .cnt { background: var(--linea); border-radius: 99px; padding: 1px 7px; font-size: 10.5px;
+    font-family: var(--fuente-num); font-weight: 600; }
+  .tab-d.act { background: var(--destacado); color: #fff; }
+  .tab-d.act .cnt { background: rgba(255,255,255,.25); color: #fff; }
+  .tabla-scroll { overflow-x: auto; margin: 0 -16px; padding: 0 16px; }
+  table.tabla-exp { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 640px; }
+  .tabla-exp th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .6px; color: var(--gris);
+    font-weight: 700; padding: 8px 10px; border-bottom: 2px solid var(--linea); white-space: nowrap; }
+  .tabla-exp td { padding: 8px 10px; border-bottom: 1px solid var(--linea); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .tabla-exp tr:hover td { background: var(--papel); }
+  .tag { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+  .tag.ok { background: color-mix(in srgb, var(--ok) 12%, white); color: var(--ok); }
+  .tag.dif { background: color-mix(in srgb, var(--error) 10%, white); color: var(--error); }
+  .tag.rev { background: color-mix(in srgb, var(--aviso) 14%, white); color: var(--aviso); }
+  .tag.proc { background: color-mix(in srgb, var(--marca-apoyo) 16%, white); color: color-mix(in srgb, var(--marca-apoyo) 75%, black); }
+  .monto { font-family: var(--fuente-num); font-size: 12px; }
+  .barra-lectura { display: inline-block; width: 64px; height: 6px; border-radius: 3px; background: var(--linea);
+    vertical-align: middle; margin-right: 6px; overflow: hidden; }
+  .barra-lectura i { display: block; height: 100%; background: var(--marca-primario); }
+  .pie-tabla { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 12px; color: var(--gris); }
+  .pie-tabla button { border: none; background: none; color: var(--marca-primario); font-weight: 600; cursor: pointer; font-family: inherit; font-size: 12px; }
+  .vacio-exp { text-align: center; color: var(--gris); padding: 22px; }
+
+  footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-size: 11px; color: var(--gris); text-align: center; }
+  :focus-visible { outline: 2px solid var(--destacado); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<header class="dash">
+  <div class="dash-top">
+    {% if marca.logo %}
+    <img class="logo-sind" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
+    {% else %}
+    <div class="logo-fallback">{{ iniciales }}</div>
+    {% endif %}
+    <div>
+      <h1>Panel Sindical</h1>
+      <div class="sub">{{ sindicato }} · Mi Trabajo</div>
+    </div>
+    <div class="hoy"><strong id="hoy-fecha"></strong><span id="rango-texto"></span></div>
+  </div>
+</header>
+
+<main data-consultas="{{ '1' if consultas_bot else '0' }}">
+
+  <div class="filtros-card">
+    <div class="f-cabecera">
+      <div class="f-titulo">Filtros <span class="numf" id="num-filtros">0</span></div>
+      <button class="btn-reiniciar" id="btn-reiniciar" type="button">⟳ Reiniciar</button>
+    </div>
+    <div class="f-fila">
+      <div class="f-grupo">
+        <span class="f-label">Período rápido</span>
+        <div class="presets" id="presets">
+          <button type="button" data-p="hoy">Hoy</button>
+          <button type="button" data-p="7">7 días</button>
+          <button type="button" data-p="30">30 días</button>
+          <button type="button" data-p="90">90 días</button>
+        </div>
+        <span class="f-label" style="margin-top:8px">Formato de recibo</span>
+        <div class="seg" id="f-formato">
+          <button type="button" data-v="" class="neutro act">Todos</button>
+          <button type="button" data-v="viejo">Anterior</button>
+          <button type="button" data-v="nuevo">Ley 27.802</button>
+        </div>
+        <span class="f-label" style="margin-top:8px">Categoría</span>
+        <select id="f-categoria" class="f-select"><option value="">Todas</option></select>
+        <span class="f-label" style="margin-top:8px">Seccionales · múltiple</span>
+        <div class="multi-chips" id="secc-chips" style="max-width:260px"></div>
+      </div>
+
+      <div class="f-grupo">
+        <span class="f-label">Calendario · pintá el rango</span>
+        <div class="cal" id="cal">
+          <div class="cal-nav">
+            <button type="button" id="cal-prev" aria-label="Mes anterior">‹</button>
+            <b id="cal-mes"></b>
+            <button type="button" id="cal-next" aria-label="Mes siguiente">›</button>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+          <div class="cal-ayuda" id="cal-ayuda">Tocá el día <b>inicial</b> y luego el <b>final</b></div>
+        </div>
+      </div>
+
+      <div class="f-grupo">
+        <span class="f-label">Empresas · selección múltiple</span>
+        <div class="multi-chips" id="emp-chips"></div>
+        <div class="f-grupo slider-wrap" style="margin-top:12px">
+          <span class="f-label">Remuneración bruta (miles $)</span>
+          <div class="slider-vals" id="sal-vals"><span id="sal-min-l">—</span><span id="sal-max-l">—</span></div>
+          <div class="rango" id="rango-sal">
+            <div class="pista"></div><div class="relleno" id="sal-relleno"></div>
+            <input type="range" id="sal-min" aria-label="Remuneración bruta mínima">
+            <input type="range" id="sal-max" aria-label="Remuneración bruta máxima">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="chips-activos" id="chips"></div>
+    <div class="hint-cross">Tocá cualquier segmento o barra de los gráficos para filtrar todo el panel. Lo seleccionado se marca en <b>color destacado</b> y el detalle aparece abajo, en el explorador de datos.</div>
+  </div>
+
+  <section class="kpis" id="kpis">
+    <div class="kpi" style="--kc:var(--marca-primario)"><div class="et">Recibos analizados</div><div class="val" id="v-recibos">—</div><div class="delta neu" id="d-recibos"></div></div>
+    <div class="kpi" style="--kc:var(--error)"><div class="et">% con diferencias</div><div class="val" id="v-pdif">—</div><div class="delta neu"></div></div>
+    <div class="kpi" style="--kc:var(--error)"><div class="et">Monto observado</div><div class="val" id="v-monto">—</div><div class="delta neu"></div></div>
+    <div class="kpi" style="--kc:var(--marca-acento)"><div class="et">Enviados al sindicato</div><div class="val" id="v-enviados">—</div><div class="delta neu"></div></div>
+    <div class="kpi" style="--kc:var(--marca-primario)"><div class="et">Trámites del período</div><div class="val" id="v-tramites">—</div><div class="delta neu"></div></div>
+    <div class="kpi" style="--kc:var(--aviso)"><div class="et">Trámites sin resolver</div><div class="val" id="v-tabiertos">—</div><div class="delta neu"></div></div>
+    <div class="kpi" style="--kc:var(--marca-primario)"><div class="et">Notif. enviadas</div><div class="val" id="v-notif">—</div><div class="delta neu"></div></div>
+    <div class="kpi" style="--kc:var(--marca-acento)"><div class="et">Tasa de lectura</div><div class="val" id="v-lectura">—</div><div class="delta neu"></div></div>
+    <div class="kpi" style="--kc:var(--marca-apoyo)"><div class="et">Afiliados registrados</div><div class="val" id="v-padron">—</div><div class="delta neu" id="d-padron"></div></div>
+    {% if consultas_bot %}
+    <div class="kpi" style="--kc:var(--marca-primario)"><div class="et">Consultas al asistente</div><div class="val" id="v-bot">—</div><div class="delta neu"></div></div>
+    {% endif %}
+  </section>
+
+  <div class="grid">
+    <div class="panel span8" data-panel="serie">
+      <h3>Recibos procesados por día</h3>
+      <div class="sub">Volumen de recibos analizados por el validador</div>
+      <div class="c-wrap"><canvas id="ch-linea"></canvas></div>
+      <div class="panel-error"><span>No se pudo cargar este panel.</span><button type="button" data-reintentar>Reintentar</button></div>
+    </div>
+
+    <div class="panel span4" data-panel="validacion">
+      <h3>Resultado de validación</h3>
+      <div class="sub">Tocá un segmento para filtrar</div>
+      <div class="c-wrap"><canvas id="ch-dona"></canvas></div>
+      <div class="panel-error"><span>No se pudo cargar este panel.</span><button type="button" data-reintentar>Reintentar</button></div>
+    </div>
+
+    <div class="panel span7" data-panel="tramites">
+      <h3>Trámites por seccional y estado</h3>
+      <div class="sub">Tocá un segmento para filtrar seccional y estado a la vez</div>
+      <div class="c-wrap chica"><canvas id="ch-tramites"></canvas></div>
+      <div class="panel-error"><span>No se pudo cargar este panel.</span><button type="button" data-reintentar>Reintentar</button></div>
+    </div>
+
+    <div class="panel span5" data-panel="notif">
+      <h3>Notificaciones · leídas vs. no leídas</h3>
+      <div class="sub">Tocá una barra para ver el detalle de ese tipo</div>
+      <div class="notif-resumen" id="notif-resumen"></div>
+      <div class="c-wrap" style="height:150px"><canvas id="ch-notif"></canvas></div>
+      <div class="panel-error"><span>No se pudo cargar este panel.</span><button type="button" data-reintentar>Reintentar</button></div>
+    </div>
+
+    <div class="panel span6" data-panel="empresas">
+      <h3>Diferencias detectadas por empresa</h3>
+      <div class="sub">Top 6 · monto total observado · tocá para sumar al filtro</div>
+      <div class="c-wrap chica"><canvas id="ch-emp"></canvas></div>
+      <div class="panel-error"><span>No se pudo cargar este panel.</span><button type="button" data-reintentar>Reintentar</button></div>
+    </div>
+
+    {% if consultas_bot %}
+    <div class="panel span6" data-panel="bot">
+      <h3>Consultas al asistente</h3>
+      <div class="sub">Temas más consultados por los afiliados</div>
+      <div class="c-wrap chica"><canvas id="ch-bot"></canvas></div>
+      <div class="panel-error"><span>No se pudo cargar este panel.</span><button type="button" data-reintentar>Reintentar</button></div>
+    </div>
+    {% endif %}
+
+    <div class="panel span5" data-panel="semaforo">
+      <h3>Semáforo de aportes</h3>
+      <div class="sub">Días desde el último depósito informado por empresa</div>
+      <div class="sem-resumen" id="sem-resumen"></div>
+      <div class="sem-lista" id="sem-lista"></div>
+      <div class="panel-error"><span>No se pudo cargar este panel.</span><button type="button" data-reintentar>Reintentar</button></div>
+    </div>
+
+    <div class="panel span7" data-panel="formato">
+      <h3>Adopción del nuevo formato (Ley 27.802)</h3>
+      <div class="sub">Recibos por formato, semana a semana</div>
+      <div class="c-wrap chica"><canvas id="ch-formato"></canvas></div>
+      <div class="panel-error"><span>No se pudo cargar este panel.</span><button type="button" data-reintentar>Reintentar</button></div>
+    </div>
+
+    <div class="panel" data-panel="explorador">
+      <h3>Explorador de datos</h3>
+      <div class="sub" id="tabla-sub">El detalle responde a todos los filtros. Al tocar un gráfico, la pestaña correspondiente se abre sola.</div>
+      <div class="tabs-datos" id="tabs-datos" role="tablist">
+        <button type="button" class="tab-d act" data-t="recibos">Recibos <span class="cnt" id="cnt-recibos">0</span></button>
+        <button type="button" class="tab-d" data-t="tramites">Trámites <span class="cnt" id="cnt-tramites">0</span></button>
+        {% if consultas_bot %}
+        <button type="button" class="tab-d" data-t="consultas">Consultas <span class="cnt" id="cnt-consultas">0</span></button>
+        {% endif %}
+        <button type="button" class="tab-d" data-t="notificaciones">Notificaciones <span class="cnt" id="cnt-notificaciones">0</span></button>
+      </div>
+      <div class="tabla-scroll">
+        <table class="tabla-exp">
+          <thead id="tabla-head"></thead>
+          <tbody id="tabla-body"></tbody>
+        </table>
+      </div>
+      <div class="pie-tabla"><span id="tabla-total"></span><button type="button" id="ver-mas">Ver más</button></div>
+      <div class="panel-error"><span>No se pudo cargar el explorador.</span><button type="button" data-reintentar>Reintentar</button></div>
+    </div>
+  </div>
+</main>
+
+<a class="btn-flotante btn-home" href="/admin/inicio" title="Inicio" aria-label="Inicio">
+  <svg viewBox="0 0 24 24"><path d="M3 11.2 12 4l9 7.2"/><path d="M5.5 9.8V20h13V9.8"/></svg>
+</a>
+<a class="btn-flotante btn-cerrar" href="/admin/salir" title="Salir" aria-label="Salir">
+  <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+</a>
+
+<footer class="dash">Panel Sindical · versión {{ version }} · {{ fecha_version }}</footer>
+
+<script src="/static/chart.umd.min.js?v=4.4.9"></script>
+<script src="/static/dashboard.js?v={{ version }}"></script>
+</body>
+</html>

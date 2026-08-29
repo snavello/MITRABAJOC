@@ -184,6 +184,26 @@ def _rango_previo(f: dict) -> dict:
 
 # ---------- Catálogos del tenant (labels y resolución de filtros) ----------
 
+def limites_bruto(sid: int) -> tuple:
+    """Límites del slider de remuneración bruta (§4.3): percentiles 1 y 99
+    del tenant, para que un outlier no estire la escala. percentile_cont es
+    de Postgres; en SQLite (tests) se cae a MIN/MAX, que para bases chicas
+    es lo mismo."""
+    with db.get_session() as s:
+        if db.USANDO_POSTGRES:
+            fila = s.execute(text("""
+                SELECT percentile_cont(0.01) WITHIN GROUP (ORDER BY bruto),
+                       percentile_cont(0.99) WITHIN GROUP (ORDER BY bruto)
+                FROM reciboverificado
+                WHERE sindicato_id = :sid AND bruto IS NOT NULL"""),
+                {"sid": sid}).one()
+        else:
+            fila = s.execute(text(
+                "SELECT MIN(bruto), MAX(bruto) FROM reciboverificado "
+                "WHERE sindicato_id = :sid AND bruto IS NOT NULL"), {"sid": sid}).one()
+    return fila[0], fila[1]
+
+
 def catalogo_empresas(sid: int) -> list:
     """Empleadores del sindicato con su CUIT normalizado -- para poblar el
     filtro de empresas y para etiquetar cuits en gráficos/tablas."""

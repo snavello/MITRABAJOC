@@ -203,6 +203,7 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
 11. **Chat de Trámites estilo WhatsApp** — reemplaza Notas+Historial por un hilo cronológico único con modal para leer/responder/cambiar estado.
 12. **App del trabajador instalable (PWA)** — manifest + ícono de Colm3na + banner discreto de instalación, con fallback instructivo en iPhone y link fijo independiente de la cadencia — detalle en HISTORIAL.md.
 13. **Logo de plataforma en dos versiones** (fondo claro/fondo oscuro) + ícono de la PWA reemplazado por el arte oficial del manual de marca — detalle en HISTORIAL.md.
+14. **Panel Sindical (dashboard)** — la función estrella para el admin de sindicato: KPIs, gráficos con cross-filtering, calendario pintable, semáforo por empresa y explorador de datos paginado; módulo opt-in `"dashboard"` — ver sección propia y HISTORIAL.md.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -311,7 +312,16 @@ vigentes:
   umbrales del semáforo por empresa (`semaforo_verde_hasta_dias=35`,
   `semaforo_amarillo_hasta_dias=60`, en `ConfiguracionPlataforma`).
 - **Rendimiento**: `medir_dashboard.py` siembra 50.000 recibos sintéticos en
-  el Postgres local y cronometra cada endpoint (criterio < 1 s).
+  el Postgres local y cronometra cada endpoint (criterio < 1 s; medido 80 ms
+  el peor). El tenant sintético queda en la base local para desarrollo
+  (`--limpiar` lo borra).
+- **UI**: página propia `GET /admin/dashboard` (`templates/dashboard.html` +
+  `static/dashboard.js`), linkeada desde la tira de /admin y la portada,
+  gateada por módulo. Chart.js 4.4.9 VENDOREADO en `static/chart.umd.min.js`
+  (jamás CDN); `/static/` sale con `Cache-Control: public, max-age=3600` +
+  sello `?v=` (mismo patrón que /logo). Estado de filtros serializado en la
+  query string (link compartible). Debounce 250 ms + AbortController, error
+  por panel con reintento.
 
 ## Noticias (sindicato → trabajador)
 Modelo `Noticia` (db.py): título, bajada, texto completo (con auto-link de

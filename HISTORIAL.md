@@ -1704,3 +1704,106 @@ equivocado, en silencio. `normalizar()` acepta cualquier tipo, y las líneas
 que no son diccionario se ignoran.
 
 **Tests**: `test_codigos_error.py`.
+
+## Panel Sindical — dashboard del admin de organización (2026-08-29)
+
+Especificación rectora: `docs/DASHBOARD.md` + mockup navegable
+`docs/dashboard-sindical.html` (datos ficticios, paleta demostrativa).
+Branch `feature/dashboard-sindical`, dos fases estrictamente secuenciales.
+
+**Decisiones cerradas con Sd antes de codificar** (una pregunta por vez):
+1. Consultas del bot: se REUTILIZA `ConsultaConvenio` del piloto RAG
+   (+columna `tema`, NULL en lo ya registrado) en vez de crear la tabla
+   nueva que pedía el documento — el doc decía "el bot no existe" pero el
+   piloto ya registraba cada pregunta.
+2. Resultado de validación: DOS estados (OK / con diferencias). "En
+   revisión" no existe a nivel recibo (lo más parecido, `Reporte`, no tiene
+   FK al recibo) y se descartó en vez de inventarlo.
+3. Tipos de notificación: los reales (`origen` manual="Comunicaciones" /
+   sistema="Trámites"), no los 4 del mockup; siempre desglosado leídas vs.
+   no leídas (dato real en `NotificacionDestinatario.leida_en`).
+4. KPI "Usuarios activos" del mockup → "Afiliados registrados":
+   `registrado=True` sobre el padrón total. Es una foto (sin filtro de
+   fecha); seccional y empresa sí lo recortan.
+5. Módulo `"dashboard"` opt-in. A futuro habrá STD (KPIs+gráficos) y PRO
+   (además el explorador), EXCLUYENTES: por eso el explorador se gatea con
+   `_exigir_dashboard_detalle` (helper propio) — la diferenciación futura
+   es cambiar solo ese helper.
+
+**Fase 1 — datos.** El hueco grande era `ReciboVerificado`: todo lo
+analítico vivía adentro del JSON `detalle`, y `fecha` se guardaba como
+"dd/mm/AAAA HH:MM" (no ordenable — no se puede filtrar un rango con eso).
+Columnas nuevas backfilleadas parseando `detalle`: `procesado_en`
+(ordenable), `cuit_empleador` (normalizado a dígitos con
+`validador._norm_cuil`), `categoria` (texto libre del recibo, NO hay
+catálogo CCT: el filtro es por valor y el select se puebla con los
+distintos del tenant), `formato`, `bruto`, `monto_diferencia` (suma de
+|diferencia| de las fórmulas que no dieron — las discrepancias de texto no
+traen monto), `fecha_ultimo_deposito` (con eso el semáforo por empresa es
+`MAX()` por CUIT). `Tramite.resuelto_en` con backfill EXACTO desde
+`actualizado` (un trámite terminado queda bloqueado, su `actualizado`
+congelado ES la fecha de terminación). Estados del dashboard: iniciado →
+abierto; en_tratamiento/respondido/espera_info → en proceso; terminado →
+resuelto (CASE portable en SQL). 4 migraciones reversibles verificadas
+up/down/up. Índices compuestos `(sindicato_id, fecha)` en recibos/trámites/
+notificaciones/consultas + `(sindicato_id, cuil)` en trabajador (el join a
+seccional está en casi todo).
+
+**dashboard.py**: agregados 100% en SQL portable (SQLite para tests,
+Postgres real), fechas como strings ordenables comparadas por rango (usa el
+índice en los dos motores), `substr(col,1,10)` para agrupar por día,
+semanas plegadas en Python (≤366 filas). Aislamiento EN el WHERE: el
+`sindicato_id` sale siempre de la cookie; un id de seccional/empresa ajeno
+filtra a NADA (los ids de empresa se resuelven a CUITs DENTRO del tenant,
+y una lista que no resuelve mete un valor imposible, nunca "sin filtro").
+Privacidad en el CASE del SQL: `CASE WHEN enviado_sindicato THEN nombre
+ELSE NULL` — el dato de un recibo no enviado ni sale de la base.
+
+**Medición (criterio <1 s con 50.000 recibos)**: `medir_dashboard.py`
+siembra un tenant sintético en el Postgres local y mide por HTTP real.
+Peor endpoint: 80 ms. DOS bugs del propio script en el camino: (a) el
+usuario admin sintético era no-numérico y el login de /admin normaliza a
+dígitos → nunca matcheaba; (b) medir recién sembrado dio 5,7 s en UN
+endpoint porque el planificador no tenía estadísticas (autovacuum no había
+corrido) — con `ANALYZE` explícito, 40 ms. El EXPLAIN muestra el índice
+compuesto en rangos selectivos; con rangos que matchean ~76% del tenant el
+planificador elige seq scan y ahí ES la elección correcta.
+
+**Fase 2 — interfaz.** `templates/dashboard.html` + `static/dashboard.js`
++ Chart.js 4.4.9 VENDOREADO en `static/chart.umd.min.js` (nada de CDN;
+`Cache-Control: public, max-age=3600` para `/static/` vía el middleware
+existente + sello `?v=` en la URL, mismo patrón que /logo). Página propia
+`/admin/dashboard` (patrón: link en la tira de pestañas de /admin y
+tarjeta en /admin/inicio, gateados por módulo). Tipografía del sistema de
+diseño (system-ui + Barlow Condensed para cifras grandes, ui-monospace
+tabular para números), colores de marca del tenant, estados con los
+colores fijos, y `--destacado` (default #E5188F, editable por sindicato
+SOLO desde plataforma) EXCLUSIVAMENTE para selecciones/filtros activos.
+Un solo objeto de estado; cada cambio = UNA ronda de fetches en paralelo
+con debounce de 250 ms y AbortController; error por panel con "Reintentar"
+sin tumbar el resto; estado serializado en la query string (link
+compartible entre dirigentes, restaura filtros/pestaña/rango al abrirlo);
+carril de consultas decidido en el SERVIDOR (flag apagado → ni el KPI ni
+el panel ni la pestaña llegan al HTML). Contadores de pestañas del
+explorador: la activa con su página completa, las demás con `page_size=1`
+(solo el total). Cross-filtering igual al mockup, con dos adaptaciones:
+la dona tiene 2 segmentos, y la fila "Sin seccional" de trámites solo
+filtra estado (no hay valor de filtro para NULL).
+
+**Verificación en navegador** (server real + tenant de 50.000): vista
+inicial Hoy, presets, calendario pintando rangos que cruzan meses y
+futuros deshabilitados, cross-filtering de los 4 gráficos actualizando
+KPIs+chips+explorador+URL coherentes, "Ver más" paginando en servidor,
+quitar chips de a uno, Reiniciar dejando todo idéntico al estado inicial,
+estado vacío accionable, sin scroll horizontal en angosto y cero errores
+de consola. Detalle del entorno: con el panel del navegador oculto no
+corre requestAnimationFrame, así que Chart.js no anima y su hit-testing
+interno queda congelado — los clicks de canvas se verificaron invocando
+los handlers `onClick` como los llama la librería (con la página visible
+anima normal).
+
+**Tests**: `test_dashboard.py` (32) — privacidad y aislamiento
+innegociables (incluye manipulación de query params y barrido crudo del
+JSON de cada respuesta), validación de rangos, flag del bot (404 +
+invisible en HTML), paginación, agregados, config de plataforma, página y
+navegación gateadas, Chart.js vendoreado con cache.
