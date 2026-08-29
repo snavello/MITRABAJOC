@@ -57,6 +57,7 @@ from qr import qr_svg, url_verificacion
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
 from version import VERSION_TRABAJADOR, VERSION_ADMIN, VERSION_PLATAFORMA, FECHA_VERSION
 from modulos import MODULOS, MODULOS_INICIALES
+import dashboard
 import rag
 
 import mimetypes
@@ -185,6 +186,11 @@ async def sin_cache_en_paneles(request: Request, call_next):
     respuesta = await call_next(request)
     if respuesta.headers.get("content-type", "").startswith("text/html"):
         respuesta.headers["Cache-Control"] = "no-store, must-revalidate"
+    elif request.url.path.startswith("/static/"):
+        # Assets vendoreados (Chart.js, dashboard.js, marca.css, fuentes):
+        # cache de una hora + sello ?v= en la URL para romperlo al deployar
+        # -- mismo patrón que /logo/{id} (docs/DASHBOARD.md §5.8).
+        respuesta.headers["Cache-Control"] = "public, max-age=3600"
     return respuesta
 
 
@@ -464,6 +470,9 @@ def api_validar(request: Request, payload: dict):
             fecha=datetime.now().strftime("%d/%m/%Y %H:%M"),
             estado=resultado.get("estado", ""),
             detalle={"recibo": recibo, "resultado": resultado},
+            # Columnas analíticas del Panel Sindical (docs/DASHBOARD.md):
+            # lo mismo que ya viaja en `detalle`, pero consultable en SQL.
+            **dashboard.campos_analiticos(recibo, resultado),
         )
         s.add(registro)
         s.commit()
@@ -724,6 +733,30 @@ def admin(request: Request):
         "modulos": modulos,
         # Piloto de RAG: solo si el sindicato tiene el módulo habilitado.
         **_contexto_convenio(sid, modulos),
+        "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
+    })
+
+
+@app.get("/admin/dashboard", response_class=HTMLResponse)
+def admin_dashboard_pagina(request: Request):
+    """Página del Panel Sindical (docs/DASHBOARD.md, Fase 2). Los datos NO
+    viajan acá: los pide static/dashboard.js a los endpoints de agregados.
+    Sin sesión -> login; sin módulo -> de vuelta al panel."""
+    ses = sesion_actual(request, "sindicato")
+    if not ses:
+        return templates.TemplateResponse("admin_login.html", {
+            "request": request, "marca_plataforma": db.marca_plataforma()})
+    sid = ses.get("sid", 0)
+    if not db.modulo_habilitado(sid, "dashboard"):
+        return RedirectResponse("/admin", status_code=303)
+    marca = db.marca_sindicato(sid)
+    return templates.TemplateResponse("dashboard.html", {
+        "request": request, "sindicato": marca.get("nombre", ""),
+        "marca": marca, "marca_plataforma": db.marca_plataforma(),
+        "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
+        # El carril de consultas se decide en el SERVIDOR: con el flag
+        # apagado, ni el KPI ni el panel ni la pestaña llegan al HTML.
+        "consultas_bot": db.config_dashboard()["consultas_bot_habilitado"],
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
 
@@ -2728,6 +2761,7 @@ def plataforma(request: Request):
     return templates.TemplateResponse("plataforma.html", {
         "request": request, "sindicatos": info,
         "tope_sindical_pct": db.obtener_tope_sindical(),
+        "config_dashboard": db.config_dashboard(),
         "marca_plataforma": db.marca_plataforma(),
         "uso_ia": uso_ia,
         "sindicatos_uso_ia": sorted({u["sindicato"] for u in uso_ia}),
@@ -2780,6 +2814,22 @@ def plataforma_config(request: Request, tope_sindical_pct: float = Form(...)):
     exigir_plataforma(request)
     db.set_tope_sindical(tope_sindical_pct)
     return RedirectResponse("/plataforma?config=ok", status_code=303)
+
+
+@app.post("/plataforma/config-dashboard")
+def plataforma_config_dashboard(
+    request: Request,
+    semaforo_verde_hasta_dias: int = Form(...),
+    semaforo_amarillo_hasta_dias: int = Form(...),
+    dashboard_consultas_bot_habilitado: bool = Form(False),
+):
+    """Parámetros del Panel Sindical (docs/DASHBOARD.md §2.3), mismos para
+    todos los sindicatos. set_config_dashboard ignora umbrales incoherentes
+    (verde tiene que ser menor que amarillo)."""
+    exigir_plataforma(request)
+    db.set_config_dashboard(semaforo_verde_hasta_dias, semaforo_amarillo_hasta_dias,
+                             dashboard_consultas_bot_habilitado)
+    return RedirectResponse("/plataforma?config=ok#config", status_code=303)
 
 
 ESTADOS_TOPE = ("verificado", "derivado", "por_verificar", "SOSPECHOSO")
@@ -2881,6 +2931,7 @@ async def plataforma_alta_sindicato(
     color_secundario: str = Form("#1a7a6b"),
     color_acento: str = Form("#b23a2e"),
     color_base: str = Form("#0f1b2d"),
+    color_destacado: str = Form("#E5188F"),
     logo: UploadFile = File(None), firma: UploadFile = File(None),
     modulos_habilitados: list[str] = Form(default=[]),
     portada_clara: bool = Form(False),
@@ -2909,6 +2960,7 @@ async def plataforma_alta_sindicato(
             color_secundario=color_secundario or "#1a7a6b",
             color_acento=color_acento or "#b23a2e",
             color_base=color_base,
+            color_destacado=color_destacado or "#E5188F",
             modulos_habilitados=modulos_validos,
             portada_clara=portada_clara,
             admin_portada_clara=admin_portada_clara,
@@ -2971,6 +3023,136 @@ def _exigir_modulo(sid: int, modulo: str) -> None:
         raise HTTPException(403, "Este módulo no está habilitado para tu sindicato.")
 
 
+# ---------- Panel Sindical (docs/DASHBOARD.md) ----------
+# Todos los endpoints: sesión de admin de sindicato + módulo "dashboard". El
+# sindicato_id sale SIEMPRE de la cookie (exigir_sindicato) -- ninguna ruta
+# acepta un sindicato_id por parámetro, ese es el aislamiento de tenant.
+
+def _exigir_dashboard(request: Request) -> int:
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "dashboard")
+    return sid
+
+
+def _exigir_dashboard_detalle(request: Request) -> int:
+    """Gate del explorador de datos (el detalle caso por caso). Hoy exige lo
+    mismo que el resto del dashboard; cuando exista la diferenciación
+    STD/PRO (excluyentes), el módulo PRO se chequea SOLO acá -- por eso el
+    explorador no llama a _exigir_dashboard directo."""
+    return _exigir_dashboard(request)
+
+
+def _filtros_dashboard(request: Request) -> dict:
+    try:
+        return dashboard.parsear_filtros(request.query_params)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.get("/admin/dashboard/kpis")
+def dashboard_kpis(request: Request):
+    sid = _exigir_dashboard(request)
+    return dashboard.kpis(sid, _filtros_dashboard(request))
+
+
+@app.get("/admin/dashboard/serie-recibos")
+def dashboard_serie_recibos(request: Request):
+    sid = _exigir_dashboard(request)
+    return {"serie": dashboard.serie_recibos(sid, _filtros_dashboard(request))}
+
+
+@app.get("/admin/dashboard/validacion")
+def dashboard_validacion(request: Request):
+    sid = _exigir_dashboard(request)
+    return dashboard.validacion(sid, _filtros_dashboard(request))
+
+
+@app.get("/admin/dashboard/diferencias-empresa")
+def dashboard_diferencias_empresa(request: Request):
+    sid = _exigir_dashboard(request)
+    return {"empresas": dashboard.diferencias_empresa(sid, _filtros_dashboard(request))}
+
+
+@app.get("/admin/dashboard/tramites-seccional")
+def dashboard_tramites_seccional(request: Request):
+    sid = _exigir_dashboard(request)
+    return dashboard.tramites_seccional(sid, _filtros_dashboard(request))
+
+
+@app.get("/admin/dashboard/notificaciones")
+def dashboard_notificaciones(request: Request):
+    sid = _exigir_dashboard(request)
+    return dashboard.notificaciones(sid, _filtros_dashboard(request))
+
+
+@app.get("/admin/dashboard/formato-semana")
+def dashboard_formato_semana(request: Request):
+    sid = _exigir_dashboard(request)
+    return {"semanas": dashboard.formato_semana(sid, _filtros_dashboard(request))}
+
+
+@app.get("/admin/dashboard/semaforo")
+def dashboard_semaforo(request: Request):
+    sid = _exigir_dashboard(request)
+    return dashboard.semaforo(sid, _filtros_dashboard(request))
+
+
+@app.get("/admin/dashboard/consultas")
+def dashboard_consultas(request: Request):
+    sid = _exigir_dashboard(request)
+    # Feature flag de plataforma: mientras el bot no clasifique por tema, el
+    # carril entero no existe para afuera (404, no 403: no se revela nada).
+    if not db.config_dashboard()["consultas_bot_habilitado"]:
+        raise HTTPException(404, "No disponible.")
+    return {"temas": dashboard.consultas_por_tema(sid, _filtros_dashboard(request))}
+
+
+@app.get("/admin/dashboard/explorador/{fuente}")
+def dashboard_explorador(request: Request, fuente: str):
+    sid = _exigir_dashboard_detalle(request)
+    fuentes = {
+        "recibos": dashboard.explorador_recibos,
+        "tramites": dashboard.explorador_tramites,
+        "consultas": dashboard.explorador_consultas,
+        "notificaciones": dashboard.explorador_notificaciones,
+    }
+    if fuente not in fuentes:
+        raise HTTPException(404, "Fuente desconocida.")
+    if fuente == "consultas" and not db.config_dashboard()["consultas_bot_habilitado"]:
+        raise HTTPException(404, "No disponible.")
+    filtros = _filtros_dashboard(request)
+    try:
+        page, page_size = dashboard._paginacion(request.query_params)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return fuentes[fuente](sid, filtros, page, page_size)
+
+
+@app.get("/admin/dashboard/filtros")
+def dashboard_catalogo_filtros(request: Request):
+    """Catálogos para poblar los filtros: seccionales y empresas del tenant,
+    categorías vistas en los recibos, y límites del slider de bruto
+    (percentiles 1 y 99 del tenant, §4.3 -- se calculan en Fase 2 si hace
+    falta afinar; por ahora min/max reales)."""
+    sid = _exigir_dashboard(request)
+    with db.get_session() as s:
+        secc = db.seccionales_del_sindicato(sid)
+        from sqlalchemy import text as _text
+        categorias = [f[0] for f in s.execute(_text(
+            "SELECT DISTINCT categoria FROM reciboverificado "
+            "WHERE sindicato_id = :sid AND categoria != '' ORDER BY categoria"
+        ), {"sid": sid}).all()]
+    bruto_min, bruto_max = dashboard.limites_bruto(sid)
+    return {
+        "seccionales": secc,
+        "empresas": [{"id": e["id"], "nombre": e["nombre"]}
+                     for e in dashboard.catalogo_empresas(sid)],
+        "categorias": categorias,
+        "bruto_min": bruto_min, "bruto_max": bruto_max,
+        "consultas_bot_habilitado": db.config_dashboard()["consultas_bot_habilitado"],
+    }
+
+
 def _leer_logo(archivo: UploadFile):
     """Lee el logo subido y devuelve (datos, mime, nombre_flag).
     Guarda el binario en la base (Opción B), no en el disco efímero.
@@ -3014,6 +3196,7 @@ async def plataforma_editar_sindicato(
     telefonos: str = Form(""), autoridad: str = Form(""), cargo_autoridad: str = Form(""),
     color_primario: str = Form("#152238"), color_secundario: str = Form("#1a7a6b"),
     color_acento: str = Form("#b23a2e"), color_base: str = Form("#0f1b2d"),
+    color_destacado: str = Form("#E5188F"),
     logo: UploadFile = File(None),
     firma: UploadFile = File(None),
     modulos_habilitados: list[str] = Form(default=[]),
@@ -3035,6 +3218,7 @@ async def plataforma_editar_sindicato(
             sind.color_secundario = color_secundario or "#1a7a6b"
             sind.color_acento = color_acento or "#b23a2e"
             sind.color_base = color_base
+            sind.color_destacado = color_destacado or "#E5188F"
             sind.modulos_habilitados = modulos_validos
             sind.portada_clara = portada_clara
             sind.admin_portada_clara = admin_portada_clara

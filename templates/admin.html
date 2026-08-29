@@ -426,6 +426,9 @@
 </div>
 
 <nav class="nav-strip">
+  {# El Panel Sindical es una página propia (no un panel de esta tira): la
+     pestaña es un link. Va primera porque es la vista de conjunto. #}
+  {% if 'dashboard' in modulos %}<a class="tab-btn" style="text-decoration:none;" href="/admin/dashboard"><svg viewBox="0 0 24 24"><use href="#ic-reportes"/></svg><span>Panel Sindical</span></a>{% endif %}
   {% if 'recibos' in modulos %}<button class="tab-btn" data-panel="reportes"><svg viewBox="0 0 24 24"><use href="#ic-reportes"/></svg><span>Reportes</span></button>{% endif %}
   {% if 'recibos' in modulos %}<button class="tab-btn" data-panel="formulas"><svg viewBox="0 0 24 24"><use href="#ic-formulas"/></svg><span>Fórmulas</span></button>{% endif %}
   {% if 'recibos' in modulos %}<button class="tab-btn" data-panel="conceptos"><svg viewBox="0 0 24 24"><use href="#ic-conceptos"/></svg><span>Conceptos</span></button>{% endif %}

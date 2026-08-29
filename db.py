@@ -98,6 +98,11 @@ class Sindicato(SQLModel, table=True):
     color_secundario: str = "#1a7a6b"
     color_acento: str = "#b23a2e"
     color_base: str = "#0f1b2d"  # fondo oscuro de la portada del trabajador; debe ser oscuro
+    # Color "destacado" del Panel Sindical (docs/DASHBOARD.md §4.1): marca
+    # EXCLUSIVAMENTE selecciones y filtros activos del dashboard ("destacado
+    # = seleccionado" como regla visual absoluta). Lo edita SOLO el admin de
+    # plataforma, no el del sindicato.
+    color_destacado: str = "#E5188F"
     # Firma digitalizada de la autoridad, para la credencial sindical del
     # trabajador. Misma estrategia que el logo: el binario va en la base y se
     # sirve por /firma/{id}; `firma` es el flag "tiene firma cargada".
@@ -385,6 +390,16 @@ class ConfiguracionPlataforma(SQLModel, table=True):
     # Ley 27.802 art. 133 / Dto 407/2026: tope global a las cargas sindicales de
     # convenio, en % de la remuneración. Editable SOLO por el admin de plataforma.
     tope_sindical_pct: float = 2.0
+    # Panel Sindical (docs/DASHBOARD.md §2.3), mismo patrón que el tope:
+    # parámetros a nivel plataforma, iguales para todos los sindicatos.
+    # Umbrales del semáforo de aportes por empresa, en días desde el último
+    # depósito informado: verde hasta N días, amarillo hasta M, rojo después.
+    semaforo_verde_hasta_dias: int = 35
+    semaforo_amarillo_hasta_dias: int = 60
+    # Feature flag del carril "Consultas al asistente" del dashboard: apagado
+    # hasta que el bot (RAG) clasifique por tema. Con False, el endpoint de
+    # consultas devuelve 404 y la UI no muestra nada de ese carril.
+    dashboard_consultas_bot_habilitado: bool = False
     # Marca de la plataforma "Mi Trabajo" (pantallas de login y panel de
     # plataforma, antes de entrar a un sindicato en particular). Mismo patrón
     # que Sindicato: logo en la base (Opción B), colores editables. Si no se
@@ -442,6 +457,20 @@ class ReciboVerificado(SQLModel, table=True):
     enviado_sindicato: bool = False
     fecha_envio: str = ""
     detalle: dict = Field(default={}, sa_column=Column(JSON))
+    # ---- Columnas analíticas para el Panel Sindical (docs/DASHBOARD.md) ----
+    # Todo esto ya existía ADENTRO de `detalle` (JSON), pero los agregados del
+    # dashboard se calculan en SQL con índices y ahí un JSON no sirve. Se
+    # persisten al crear el registro (main.api_validar) y las filas viejas se
+    # backfillearon parseando `detalle` en la migración. `fecha` quedó como
+    # estaba ("dd/mm/AAAA HH:MM", NO ordenable) para no romper lo que la
+    # muestra; `procesado_en` es la MISMA fecha en formato ordenable.
+    procesado_en: Optional[str] = Field(default=None)   # "AAAA-MM-DD HH:MM"
+    cuit_empleador: str = ""                            # solo dígitos (validador._norm_cuil)
+    categoria: str = ""                                 # texto libre leído del recibo (no hay catálogo CCT)
+    formato: str = ""                                   # "clasico" | "nuevo" (Ley 27.802)
+    bruto: Optional[float] = Field(default=None)        # resultado.totales.ingresos
+    monto_diferencia: float = 0.0                       # suma de |diferencia| de las fórmulas que no dieron
+    fecha_ultimo_deposito: Optional[str] = Field(default=None)  # "AAAA-MM-DD", del recibo (semáforo por empresa)
 
 
 class ReciboSospechoso(SQLModel, table=True):
@@ -574,6 +603,11 @@ class Tramite(SQLModel, table=True):
     estado: str = "iniciado"  # iniciado | en_tratamiento | respondido | espera_info | terminado
     creado: str = ""
     actualizado: str = ""
+    # Cuándo pasó a "terminado" (NULL si sigue abierto). Lo setea
+    # cambiar_estado_tramite; para el dashboard (días de resolución). Las
+    # filas viejas ya terminadas se backfillearon desde `actualizado`, que es
+    # exacto: un trámite terminado queda bloqueado y no se actualiza más.
+    resuelto_en: Optional[str] = Field(default=None)  # "AAAA-MM-DD HH:MM"
 
 
 class RespuestaTramite(SQLModel, table=True):
@@ -798,6 +832,12 @@ class ConsultaConvenio(SQLModel, table=True):
     hubo_respuesta: bool = False   # False = se contestó "no lo encontré"
     fragmentos_usados: list = Field(default=[], sa_column=Column(JSON))
     creado: str = ""
+    # Tema de la consulta, para el gráfico "Consultas por tema" del Panel
+    # Sindical (docs/DASHBOARD.md). NULL en todo lo registrado hasta ahora:
+    # el piloto RAG todavía no clasifica por tema -- cuando lo haga, lo llena
+    # acá y el dashboard lo muestra (detrás del feature flag
+    # dashboard_consultas_bot_habilitado).
+    tema: Optional[str] = Field(default=None)
 
 
 
@@ -1472,6 +1512,7 @@ def marca_sindicato(sindicato_id: int) -> dict:
             "color_secundario": sind.color_secundario,
             "color_acento": sind.color_acento,
             "color_base": sind.color_base,
+            "color_destacado": sind.color_destacado or "#E5188F",
             "portada_clara": sind.portada_clara,
             "admin_portada_clara": sind.admin_portada_clara,
             # Para la credencial sindical del trabajador
@@ -1523,6 +1564,48 @@ def set_tope_sindical(valor: float):
         else:
             cfg = ConfiguracionPlataforma(id=1, tope_sindical_pct=valor)
         s.add(cfg)
+        s.commit()
+
+
+def config_dashboard() -> dict:
+    """Parámetros de plataforma del Panel Sindical (docs/DASHBOARD.md §2.3):
+    umbrales del semáforo de aportes y feature flag del carril de consultas.
+    Defaults si la fila de configuración todavía no existe."""
+    with Session(engine) as s:
+        cfg = s.get(ConfiguracionPlataforma, 1)
+        if not cfg:
+            return {"semaforo_verde_hasta_dias": 35, "semaforo_amarillo_hasta_dias": 60,
+                    "consultas_bot_habilitado": False}
+        return {
+            "semaforo_verde_hasta_dias": cfg.semaforo_verde_hasta_dias,
+            "semaforo_amarillo_hasta_dias": cfg.semaforo_amarillo_hasta_dias,
+            "consultas_bot_habilitado": cfg.dashboard_consultas_bot_habilitado,
+        }
+
+
+def set_config_dashboard(verde_hasta: int, amarillo_hasta: int, bot_habilitado: bool) -> None:
+    """Editable SOLO desde el panel de plataforma (mismo criterio que el tope
+    sindical). Se valida acá que verde < amarillo -- si no, se ignora el cambio."""
+    if not (0 < verde_hasta < amarillo_hasta):
+        return
+    with Session(engine) as s:
+        cfg = s.get(ConfiguracionPlataforma, 1) or ConfiguracionPlataforma(id=1)
+        cfg.semaforo_verde_hasta_dias = verde_hasta
+        cfg.semaforo_amarillo_hasta_dias = amarillo_hasta
+        cfg.dashboard_consultas_bot_habilitado = bot_habilitado
+        s.add(cfg)
+        s.commit()
+
+
+def set_color_destacado(sindicato_id: int, color: str) -> None:
+    """Color destacado del dashboard de UN sindicato -- lo edita solo el
+    admin de plataforma (docs/DASHBOARD.md §1.4)."""
+    with Session(engine) as s:
+        sind = s.get(Sindicato, sindicato_id)
+        if not sind:
+            return
+        sind.color_destacado = color
+        s.add(sind)
         s.commit()
 
 
@@ -2336,6 +2419,8 @@ def cambiar_estado_tramite(tramite_id: int, sindicato_id: int, nuevo_estado: str
         anterior = tr.estado
         tr.estado = nuevo_estado
         tr.actualizado = datetime.now().strftime("%Y-%m-%d %H:%M")
+        if nuevo_estado == "terminado":
+            tr.resuelto_en = tr.actualizado
         s.add(tr)
         _log_tramite(s, tramite_id, "cambio_estado",
                      f"{ESTADOS_TRAMITE_LABEL.get(anterior, anterior)} → {ESTADOS_TRAMITE_LABEL.get(nuevo_estado, nuevo_estado)}")
