@@ -22,6 +22,13 @@ MODULOS = {
     # Piloto de RAG (ver PLAN_RAG_CONVENIO.md). Opt-in, fuera de
     # MODULOS_INICIALES: ningún sindicato lo estrena sin pedirlo.
     "convenio": "Consultas sobre el convenio",
+    # Panel Sindical (docs/DASHBOARD.md). Opt-in, fuera de MODULOS_INICIALES.
+    # A futuro se diferenciará STD (KPIs + gráficos) de PRO (además, el
+    # explorador de datos), excluyentes entre sí -- por eso el gate del
+    # explorador en main.py pasa por su propio helper
+    # (_exigir_dashboard_detalle) y no por _exigir_modulo directo: cuando
+    # existan los dos módulos, se cambia solo ese helper.
+    "dashboard": "Panel Sindical",
 }
 
 # Lo que existe HOY, para dar de alta un sindicato nuevo con todo tildado

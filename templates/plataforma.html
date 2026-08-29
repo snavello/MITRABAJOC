@@ -238,6 +238,11 @@
           <input type="color" name="color_secundario" value="#1a7a6b">
           <span class="muted" style="font-size:11px;">chips, fondos suaves</span>
         </div>
+        <div class="col-item">
+          <label>Color destacado</label>
+          <input type="color" name="color_destacado" value="#E5188F">
+          <span class="muted" style="font-size:11px;">Panel Sindical: SOLO selecciones y filtros activos</span>
+        </div>
       </div>
 
       <div class="campo" style="margin-top:14px;">
@@ -403,6 +408,31 @@
         <label>Tope sindical (%)</label>
         <input type="number" name="tope_sindical_pct" step="0.1" min="0" required
                value="{{ tope_sindical_pct }}">
+      </div>
+      <button type="submit">Guardar</button>
+    </form>
+  </div>
+  <h2 style="margin-top:22px;">Panel Sindical</h2>
+  <div class="card">
+    <p class="muted" style="margin-bottom:14px; max-width:640px;">Parámetros del dashboard
+      del admin de sindicato, iguales para todas las organizaciones. El semáforo de aportes
+      pinta cada empresa según los días desde su último depósito informado: verde hasta el
+      primer umbral, amarillo hasta el segundo, rojo después.</p>
+    <form method="post" action="/plataforma/config-dashboard">
+      <div class="campo" style="max-width:260px;">
+        <label>Semáforo: verde hasta (días)</label>
+        <input type="number" name="semaforo_verde_hasta_dias" min="1" required
+               value="{{ config_dashboard.semaforo_verde_hasta_dias }}">
+      </div>
+      <div class="campo" style="max-width:260px;">
+        <label>Semáforo: amarillo hasta (días)</label>
+        <input type="number" name="semaforo_amarillo_hasta_dias" min="2" required
+               value="{{ config_dashboard.semaforo_amarillo_hasta_dias }}">
+      </div>
+      <div class="campo" style="margin-top:10px;">
+        <label class="chk-modulo"><input type="checkbox" name="dashboard_consultas_bot_habilitado" value="true"
+               {% if config_dashboard.consultas_bot_habilitado %}checked{% endif %}> Habilitar "Consultas al asistente" en el dashboard</label>
+        <span class="muted" style="font-size:11px;">Dejarlo apagado hasta que el bot de consultas clasifique por tema: con esto apagado, el carril entero no aparece en ningún dashboard.</span>
       </div>
       <button type="submit">Guardar</button>
     </form>
@@ -648,6 +678,7 @@ function editarSind(s) {
   f.color_secundario.value = s.color_secundario || '#1a7a6b';
   f.color_acento.value = s.color_acento || '#b23a2e';
   f.color_base.value = s.color_base || '#0f1b2d';
+  f.color_destacado.value = s.color_destacado || '#E5188F';
   const modulosSet = new Set((s.modulos_habilitados || []).map(String));
   document.querySelectorAll('#sind-modulos input[type=checkbox]').forEach(chk => {
     chk.checked = modulosSet.has(chk.value);

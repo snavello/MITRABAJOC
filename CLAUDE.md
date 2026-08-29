@@ -60,6 +60,7 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - extractor.py — lee recibos y comprobantes de aportes con IA.
 - validador.py — motor de validación de fórmulas.
 - semaforo.py — lógica del semáforo de aportes (ARCA).
+- dashboard.py — agregados SQL del Panel Sindical (ver sección propia).
 - rag.py — piloto de consultas sobre el convenio: extracción de PDF,
   troceo, embeddings locales e indexación en segundo plano.
 - cargar_demo.py — carga 2 sindicatos de demo desde cero (sin AEFIP).
@@ -275,6 +276,42 @@ modelo, en `medicion_rag/`. Reglas vigentes:
 
 **Test de aceptación**: `medicion_rag/test_aceptacion_bloque3.py`. Hay que
 volver a correrlo cada vez que se toque el troceo, el modelo o el prompt.
+
+## Panel Sindical (dashboard del admin de sindicato)
+Especificación rectora en [`docs/DASHBOARD.md`](docs/DASHBOARD.md) (+ mockup
+`docs/dashboard-sindical.html`); branch `feature/dashboard-sindical`. Módulo
+habilitable `"dashboard"` (opt-in, fuera de `MODULOS_INICIALES`). Reglas
+vigentes:
+
+- **Agregados 100% en SQL** (`dashboard.py`), con índices compuestos que
+  empiezan por `sindicato_id` + fecha. Columnas analíticas en
+  `ReciboVerificado` (`procesado_en` ordenable, `cuit_empleador`, `bruto`,
+  `monto_diferencia`, `formato`, `categoria`, `fecha_ultimo_deposito`) —
+  duplican lo que ya está en `detalle` (JSON) porque un JSON no agrega con
+  índices; las llena `dashboard.campos_analiticos()` en `/api/validar`.
+- **Endpoints** `GET /admin/dashboard/{kpis, serie-recibos, validacion,
+  diferencias-empresa, tramites-seccional, notificaciones, formato-semana,
+  semaforo, consultas, explorador/{fuente}, filtros}`. Sesión de admin +
+  módulo; el `sindicato_id` sale SIEMPRE de la cookie, jamás de un parámetro.
+- **Privacidad (test en `test_dashboard.py`)**: el detalle de recibos
+  muestra nombre/CUIL SOLO si `enviado_sindicato=true`; el CASE está en el
+  SQL, no en el frontend.
+- **Dos estados de validación** (OK / con diferencias): "en revisión" no
+  existe a nivel recibo (decisión de Sd 2026-08-29). Tipos de notificación
+  = `origen` real (manual/sistema). KPI "Afiliados registrados" =
+  `registrado=True` vs. padrón (foto, sin filtro de fecha).
+- **Consultas al bot**: se reutiliza `ConsultaConvenio` del piloto RAG
+  (+columna `tema`), todo el carril detrás del flag de plataforma
+  `dashboard_consultas_bot_habilitado=false` (apagado → 404, invisible).
+- **STD/PRO futuro**: el explorador se gatea con `_exigir_dashboard_detalle`
+  (main.py), separado a propósito — cuando existan los módulos STD y PRO
+  (excluyentes), se cambia solo ese helper.
+- **Config**: `Sindicato.color_destacado` (default `#E5188F`, SOLO
+  selecciones/filtros activos del dashboard, editable solo por plataforma) +
+  umbrales del semáforo por empresa (`semaforo_verde_hasta_dias=35`,
+  `semaforo_amarillo_hasta_dias=60`, en `ConfiguracionPlataforma`).
+- **Rendimiento**: `medir_dashboard.py` siembra 50.000 recibos sintéticos en
+  el Postgres local y cronometra cada endpoint (criterio < 1 s).
 
 ## Noticias (sindicato → trabajador)
 Modelo `Noticia` (db.py): título, bajada, texto completo (con auto-link de
