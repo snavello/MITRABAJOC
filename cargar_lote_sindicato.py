@@ -551,7 +551,10 @@ def sembrar_recibos(sid: int, ctx: dict, trabajadores: list):
     lote = []
     for _ in range(CANT_RECIBOS):
         trab = rnd.choice(verificadores)
-        dias_atras = int(rnd.triangular(0, DIAS_HISTORIA, 12))
+        # El volumen CRECE hacia hoy (curva de adopción de la app). Con el
+        # pico 12 días atrás quedaban ~4 recibos hoy contra ~80 en el medio, y
+        # el tablero -- que abre en "Hoy" -- parecía vacío al entrar.
+        dias_atras = min(DIAS_HISTORIA - 1, int(rnd.triangular(0, DIAS_HISTORIA, 0)))
         recibo, fecha_proceso = _armar_recibo(ctx, trab, conceptos, dias_atras)
 
         resultado = _autocorregir(recibo, conceptos, formulas, topes, tope_pct,

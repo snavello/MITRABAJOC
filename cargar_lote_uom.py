@@ -389,7 +389,9 @@ def sembrar_recibos(sid: int, trabajadores: list):
     lote = []
     for _ in range(5000):
         trab = rnd.choice(verificadores)
-        dias_atras = int(rnd.triangular(0, DIAS_HISTORIA, 12))
+        # Volumen creciente hacia hoy (ver cargar_lote_sindicato): con el pico
+        # 12 días atrás, el tablero abría casi vacío en su vista "Hoy".
+        dias_atras = min(DIAS_HISTORIA - 1, int(rnd.triangular(0, DIAS_HISTORIA, 0)))
         con_error = rnd.random() < 0.20
         recibo, fecha_proceso = _recibo_sintetico(trab, dias_atras, con_error)
 
