@@ -1,0 +1,8 @@
+# Dependencias SOLO de desarrollo/QA -- NO van a requirements.txt: Render
+# instala ese archivo en cada deploy y nada de esto se usa en producción.
+#
+# Instalación (una vez, con el venv activo):
+#   pip install -r requirements-dev.txt
+#   playwright install chromium
+playwright==1.62.0
+pytest-playwright==0.9.0

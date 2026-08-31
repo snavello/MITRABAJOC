@@ -418,6 +418,12 @@ aparece un sindicato "AEFIP" fantasma con id=1. No afecta producción
 - En la Shell de Render, si `alembic` no se encuentra: usar `python -m alembic upgrade head`
 - Reset completo de la base local Postgres: `docker compose down -v && docker compose up -d`
   (espera a que el healthcheck pase) `&& alembic upgrade head && python cargar_demo.py`
+- E2E con Playwright (`e2e/`, navegador real): necesita Docker + uvicorn
+  corriendo y el lote UOM cargado. Instalar una vez con
+  `pip install -r requirements-dev.txt && playwright install chromium`;
+  correr con `.venv/Scripts/python.exe -m pytest e2e/ -q`. Playwright es
+  dependencia de DESARROLLO: jamás sumarlo a requirements.txt (Render lo
+  instalaría al cuete en cada deploy).
 - Tests: correr CADA `test_*.py` por separado (loop por archivo), nunca
   `pytest -q` batcheado — módulos comparten estado de import y se
   contaminan entre archivos si corren en el mismo proceso pytest.
