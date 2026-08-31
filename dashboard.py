@@ -786,12 +786,33 @@ def detalle_tramite(sid: int, tramite_id: int) -> Optional[dict]:
     return d
 
 
+def _destino_legible(sid: int, criterio: str, valores: list) -> str:
+    """El destino de una Notificacion en palabras: a quién se dirigió el
+    envío, resolviendo ids de seccional y CUITs a sus nombres."""
+    valores = valores or []
+    if criterio == "cuil":
+        return f"{len(valores)} afiliado puntual" if len(valores) == 1 \
+            else f"{len(valores)} afiliados puntuales"
+    if criterio == "seccional":
+        nombres = _etiquetas_seccionales(sid)
+        etiquetas = [nombres.get(int(v), f"Seccional #{v}") for v in valores
+                     if str(v).lstrip("-").isdigit()]
+        return "Seccional " + ", ".join(etiquetas) if etiquetas else "Por seccional"
+    if criterio == "cuit_empleador":
+        empresas = _etiquetas_empresas(sid)
+        etiquetas = [empresas.get(_norm_cuil(str(v)), str(v)) for v in valores]
+        return "Empresa " + ", ".join(etiquetas) if etiquetas else "Por empresa"
+    if criterio == "provincia":
+        return "Provincia " + ", ".join(str(v) for v in valores)
+    return criterio or "—"
+
+
 def detalle_notificaciones_grupo(sid: int, dia: str, seccional_id: Optional[int],
                                  tipo: str) -> list:
     """Las notificaciones individuales que componen una fila agregada del
-    explorador (día × seccional × tipo): remitente, texto completo y lectura
-    DE ESA seccional (una misma notificación puede tener destinatarios en
-    varias seccionales; acá se cuenta solo la porción de la fila)."""
+    explorador (día × seccional × tipo): destino legible, mensaje completo,
+    lectura de ESTA seccional y total del envío completo (una misma
+    notificación puede tener destinatarios en varias seccionales)."""
     conds = ["n.sindicato_id = :sid", "substr(n.enviado_en, 1, 10) = :dia",
              "n.origen = :tipo"]
     params = {"sid": sid, "dia": dia, "tipo": tipo}
@@ -802,17 +823,63 @@ def detalle_notificaciones_grupo(sid: int, dia: str, seccional_id: Optional[int]
         conds.append("t.seccional_id IS NULL")
     with db.get_session() as s:
         filas = s.execute(text(f"""
-            SELECT n.id, n.remitente, n.texto, n.enviado_en, n.origen, COUNT(*),
+            SELECT n.id, COUNT(*),
                    COALESCE(SUM(CASE WHEN d.leida_en IS NOT NULL THEN 1 ELSE 0 END), 0)
             FROM notificaciondestinatario d
              JOIN notificacion n ON n.id = d.notificacion_id
              LEFT JOIN trabajador t ON t.sindicato_id = n.sindicato_id AND t.cuil = d.cuil
             WHERE {' AND '.join(conds)}
-            GROUP BY n.id, n.remitente, n.texto, n.enviado_en, n.origen
-            ORDER BY n.enviado_en DESC"""), params).all()
-    return [{"id": f[0], "remitente": f[1], "texto": f[2], "enviado_en": f[3],
-             "tipo": f[4], "etiqueta": TIPOS_NOTIF.get(f[4], f[4]),
-             "enviadas": f[5], "leidas": f[6], "sin_leer": f[5] - f[6]} for f in filas]
+            GROUP BY n.id"""), params).all()
+        porcion = {f[0]: (f[1], f[2]) for f in filas}
+        resultado = []
+        for nid in porcion:
+            n = s.get(db.Notificacion, nid)
+            if not n:
+                continue
+            total_leidas = s.execute(text(
+                "SELECT COUNT(*), COALESCE(SUM(CASE WHEN leida_en IS NOT NULL THEN 1 ELSE 0 END), 0) "
+                "FROM notificaciondestinatario WHERE notificacion_id = :nid"), {"nid": nid}).one()
+            resultado.append({
+                "id": nid, "remitente": n.remitente, "texto": n.texto,
+                "enviado_en": n.enviado_en, "tipo": n.origen,
+                "etiqueta": TIPOS_NOTIF.get(n.origen, n.origen),
+                "destino": _destino_legible(sid, n.criterio, n.criterio_valores),
+                "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+                "enviadas": porcion[nid][0], "leidas": porcion[nid][1],
+                "sin_leer": porcion[nid][0] - porcion[nid][1],
+                "total_enviadas": total_leidas[0], "total_leidas": total_leidas[1],
+            })
+    resultado.sort(key=lambda x: x["enviado_en"], reverse=True)
+    return resultado
+
+
+DESTINATARIOS_MAXIMOS = 500
+
+
+def destinatarios_notificacion(sid: int, notificacion_id: int) -> Optional[dict]:
+    """El último nivel del modal: persona por persona, quién recibió la
+    notificación y cuándo la leyó (NULL = sin leer). Los destinatarios de
+    una notificación NO se anonimizan: es la misma vista que el admin ya
+    tiene en su panel de Notificaciones."""
+    with db.get_session() as s:
+        propia = s.execute(text(
+            "SELECT id FROM notificacion WHERE id = :nid AND sindicato_id = :sid"),
+            {"nid": notificacion_id, "sid": sid}).first()
+        if not propia:
+            return None
+        filas = s.execute(text("""
+            SELECT d.cuil, t.nombre, sec.nombre, d.leida_en
+            FROM notificaciondestinatario d
+             LEFT JOIN trabajador t ON t.sindicato_id = :sid AND t.cuil = d.cuil
+             LEFT JOIN seccional sec ON sec.id = t.seccional_id
+            WHERE d.notificacion_id = :nid
+            ORDER BY d.leida_en IS NULL, t.nombre, d.cuil"""),
+            {"sid": sid, "nid": notificacion_id}).all()
+    items = [{"cuil": f[0], "nombre": f[1] or "—",
+              "seccional": f[2] or "Sin seccional", "leida_en": f[3]}
+             for f in filas[:DESTINATARIOS_MAXIMOS]]
+    return {"total": len(filas), "items": items,
+            "recortado": len(filas) > DESTINATARIOS_MAXIMOS}
 
 
 def detalle_consulta(sid: int, consulta_id: int) -> Optional[dict]:

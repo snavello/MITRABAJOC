@@ -4,7 +4,7 @@ cada deploy -- el número lo indica el usuario en cada prompt de cambio.
 """
 
 VERSION_TRABAJADOR = "0.18.21"
-VERSION_ADMIN = "0.19.21"
+VERSION_ADMIN = "0.19.22"
 VERSION_PLATAFORMA = "0.18.21"
 
-FECHA_VERSION = "2026-08-31 13:42"
+FECHA_VERSION = "2026-08-31 14:02"

@@ -616,10 +616,43 @@
     if (!lista.length) return h + '<div class="det-sub">Sin notificaciones.</div>';
     lista.forEach(function (n) {
       h += '<div class="det-nota admin" style="max-width:100%; margin-left:0">' +
-        '<div class="quien">' + esc(n.remitente || "—") + " · " + esc(n.etiqueta) + " · " +
-        fmtN(n.leidas) + "/" + fmtN(n.enviadas) + " leídas</div>" + esc(n.texto) + "</div>";
+        '<div class="quien">' + esc(n.remitente || "—") + " · " + esc(n.etiqueta) + " · " + fFecha(n.enviado_en) + "</div>" +
+        '<div class="quien" style="text-transform:none">Destino: ' + esc(n.destino) + " · " +
+        fmtN(n.total_leidas) + "/" + fmtN(n.total_enviadas) + " leídas en total" +
+        (n.total_enviadas !== n.enviadas ? " (" + fmtN(n.leidas) + "/" + fmtN(n.enviadas) + " en esta seccional)" : "") + "</div>" +
+        '<div style="margin:4px 0 6px">' + esc(n.texto) + "</div>" +
+        (n.tiene_adjunto ? '<div class="quien" style="text-transform:none">📎 ' + esc(n.adjunto_nombre || "adjunto") + "</div>" : "") +
+        '<button type="button" class="btn-ver" data-dest="' + n.id + '">Destinatarios (' + fmtN(n.total_enviadas) + ")</button>" +
+        '<div class="det-destinatarios" id="dest-' + n.id + '"></div></div>';
     });
     return h;
+  }
+
+  function verDestinatarios(btn) {
+    var nid = btn.dataset.dest;
+    var cont = $("dest-" + nid);
+    if (cont.dataset.cargado) {          // segundo click: mostrar/ocultar
+      cont.style.display = cont.style.display === "none" ? "block" : "none";
+      return;
+    }
+    btn.disabled = true;
+    fetch("/admin/dashboard/detalle/notificacion/" + nid + "/destinatarios")
+      .then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+      .then(function (d) {
+        var h = "";
+        d.items.forEach(function (p) {
+          h += '<div class="det-linea"><span>' + esc(p.nombre) + ' <span style="color:var(--gris)">· ' +
+            esc(p.cuil) + " · " + esc(p.seccional) + "</span></span>" +
+            '<span class="imp" style="color:' + (p.leida_en ? C.ok : C.gris) + '">' +
+            (p.leida_en ? "✓ Leída " + fFecha(p.leida_en) : "Sin leer") + "</span></div>";
+        });
+        if (d.recortado) h += '<div class="det-sub" style="margin-top:6px">Mostrando ' +
+          d.items.length + " de " + fmtN(d.total) + " destinatarios.</div>";
+        cont.innerHTML = h || '<div class="det-sub">Sin destinatarios.</div>';
+        cont.dataset.cargado = "1";
+      })
+      .catch(function () { cont.innerHTML = '<div class="det-sub">No se pudo cargar el listado.</div>'; })
+      .finally(function () { btn.disabled = false; });
   }
 
   function htmlConsulta(d) {
@@ -838,7 +871,9 @@
     });
     $("det-cerrar").onclick = cerrarModal;
     $("overlay-det").addEventListener("click", function (e) {
-      if (e.target === this) cerrarModal();
+      if (e.target === this) { cerrarModal(); return; }
+      var btn = e.target.closest("[data-dest]");
+      if (btn) verDestinatarios(btn);
     });
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape") cerrarModal();

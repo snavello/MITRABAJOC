@@ -137,11 +137,11 @@ with db.get_session() as s:
 
     # --- Notificaciones del sindicato A ---
     n1 = Notificacion(sindicato_id=SID_A, remitente="CD", texto="Aviso manual",
-                       criterio="cuil", origen="manual", enviado_en=_ts(3),
-                       cantidad_destinatarios=2)
+                       criterio="cuil", criterio_valores=[CUIL_1, CUIL_2],
+                       origen="manual", enviado_en=_ts(3), cantidad_destinatarios=2)
     n2 = Notificacion(sindicato_id=SID_A, remitente="Sistema", texto="Cambio de trámite",
-                       criterio="cuil", origen="sistema", enviado_en=_ts(1),
-                       cantidad_destinatarios=1)
+                       criterio="cuil", criterio_valores=[CUIL_1],
+                       origen="sistema", enviado_en=_ts(1), cantidad_destinatarios=1)
     s.add(n1); s.add(n2); s.commit(); s.refresh(n1); s.refresh(n2)
     s.add(NotificacionDestinatario(notificacion_id=n1.id, cuil=CUIL_1, leida_en=_ts(2)))
     s.add(NotificacionDestinatario(notificacion_id=n1.id, cuil=CUIL_2))
@@ -568,6 +568,21 @@ def test_detalle_notificaciones_grupo():
     assert len(lista) == 1
     assert lista[0]["texto"] == "Aviso manual" and lista[0]["remitente"] == "CD"
     assert lista[0]["enviadas"] == 1 and lista[0]["leidas"] == 1
+    # Destino legible + totales del envío completo (n1 fue a 2 personas,
+    # esta fila muestra solo la porción de Rosario).
+    assert lista[0]["destino"] == "2 afiliados puntuales"
+    assert lista[0]["total_enviadas"] == 2 and lista[0]["total_leidas"] == 1
+    # Último nivel: destinatarios persona por persona, con su lectura.
+    rd = admin_a.get(f"/admin/dashboard/detalle/notificacion/{lista[0]['id']}/destinatarios")
+    assert rd.status_code == 200, rd.text
+    dest = rd.json()
+    assert dest["total"] == 2
+    por_cuil = {p["cuil"]: p for p in dest["items"]}
+    assert por_cuil[CUIL_1]["nombre"] == "Juan Enviado" and por_cuil[CUIL_1]["leida_en"]
+    assert por_cuil[CUIL_2]["leida_en"] is None
+    # Aislamiento: el admin B no puede listar destinatarios de una notif de A.
+    assert admin_b.get(
+        f"/admin/dashboard/detalle/notificacion/{lista[0]['id']}/destinatarios").status_code == 404
     # Misma consulta desde el admin B: no ve nada de A.
     rb = admin_b.get("/admin/dashboard/detalle/notificaciones",
                      params={"dia": fila["fecha"], "seccional_id": fila["seccional_id"],

@@ -3162,6 +3162,17 @@ def dashboard_detalle_notificaciones(request: Request, dia: str, tipo: str,
         sid, dia, seccional_id or None, tipo)}
 
 
+@app.get("/admin/dashboard/detalle/notificacion/{notificacion_id}/destinatarios")
+def dashboard_detalle_notif_destinatarios(request: Request, notificacion_id: int):
+    """Último nivel del modal de notificaciones: quién la recibió y cuándo
+    la leyó, persona por persona."""
+    sid = _exigir_dashboard_detalle(request)
+    d = dashboard.destinatarios_notificacion(sid, notificacion_id)
+    if d is None:
+        raise HTTPException(404, "Notificación inexistente.")
+    return d
+
+
 @app.get("/admin/dashboard/detalle/consulta/{consulta_id}")
 def dashboard_detalle_consulta(request: Request, consulta_id: int):
     sid = _exigir_dashboard_detalle(request)
