@@ -1807,3 +1807,77 @@ innegociables (incluye manipulación de query params y barrido crudo del
 JSON de cada respuesta), validación de rangos, flag del bot (404 +
 invisible en HTML), paginación, agregados, config de plataforma, página y
 navegación gateadas, Chart.js vendoreado con cache.
+
+## Ajustes del Panel Sindical, lotes de datos y robots E2E (2026-08-31)
+
+Todo esto salió DESPUÉS de que el Panel Sindical ya estaba en producción,
+como pedidos sucesivos de Sd mientras lo usaba con datos reales.
+
+**Ajustes del tablero.** (a) La zona de filtros se confundía con los paneles
+de datos: ahora tiene fondo gris suave con trama de puntos, y dejó de
+solaparse con el encabezado (antes montaba 44px sobre él). (b) El semáforo de
+aportes NO se eliminó (primera reacción de Sd fue sacarlo por poco fiable):
+se aclaró en su subtítulo que se basa en la fecha de último depósito que solo
+imprimen los recibos del formato nuevo, todavía pocos en relación al total.
+
+**Modal "Ver" por fila del explorador.** El explorador mostraba filas pero no
+dejaba ver el caso. Endpoints nuevos (`detalle/recibo/{id}`,
+`detalle/tramite/{id}`, `detalle/notificaciones`,
+`detalle/notificacion/{id}/destinatarios`, `detalle/consulta/{id}`), todos
+detrás de `_exigir_dashboard_detalle` (el mismo gate que separará STD/PRO).
+Lo importante: **la privacidad se aplica también acá y en el servidor** — el
+detalle guardado de un recibo tiene la identidad adentro del JSON, así que
+`dashboard.detalle_recibo` borra nombre/CUIL/legajo antes de responder cuando
+el recibo no fue enviado voluntariamente; hay un test que planta esos datos en
+el JSON y verifica que no salen.
+
+El modal de notificaciones necesitó DOS rondas: la primera mostraba remitente
+y conteos, y Sd lo rechazó ("así no sirve") porque faltaba lo esencial — a
+quién se dirigió y qué decía. Quedó: destino legible (seccionales/CUILes/
+empresas resueltos a nombres), el mensaje completo, lecturas del envío total
+más la porción de esa seccional, y un último nivel "Destinatarios (N)" que
+lista persona por persona con su fecha de lectura.
+
+**Lotes de datos sintéticos.** Primero `cargar_lote_uom.py` (específico), y
+después `cargar_lote_sindicato.py` (cualquier sindicato, `--sindicato`). La
+decisión de diseño que los hace útiles: los recibos no se fabrican con
+números inventados, se arman con el catálogo real y se AUTOCORRIGEN contra el
+validador — se valida, se ajusta cada aporte al "esperado" que devolvió el
+motor, y se repite hasta 4 veces (por si una fórmula referencia a otra). Así
+el 80% "OK" sale OK con cualquier catálogo, y los errores del 20% se inyectan
+después sobre un recibo ya correcto. Medido contra AEFIP real (17 conceptos,
+4 fórmulas): 79,9% OK / 20,1% con discrepancias, sin tocar nada.
+
+La segunda ronda del lote fue por otro rechazo de Sd: los trámites tenían
+título pero formularios vacíos y ningún diálogo, así que servían para el
+tablero pero no para mostrar contenido. Ahora los 5 tipos tienen campos
+temáticos, respuestas coherentes con el tema, y el ida y vuelta
+sindicato↔afiliado según cuánto avanzó el trámite.
+
+**Bug latente encontrado acá** (anotado en BACKLOG, no arreglado): el
+`numero_expediente` es único en TODA la plataforma pero su prefijo sale del
+código del TipoTramite y el correlativo se cuenta por tipo — dos sindicatos
+que usen el mismo código ("F01") chocan y `db.crear_tramite` agota sus 25
+reintentos y revienta. El lote lo esquiva prefijando la sigla del sindicato.
+
+**Robots E2E con Playwright** (`e2e/`, ver su README). Tres peleas con el
+entorno, todas documentadas porque son del tipo que se vuelve a olvidar:
+
+1. *No se generaban video ni traza.* Los contextos creados a mano con
+   `browser.new_context()` (necesarios para simular dos personas) no heredan
+   la grabación que pytest-playwright arma para la fixture `page`. Fix: la
+   fixture `nuevo_actor`, que lee los flags y graba por actor.
+2. *"No veo nada en vivo".* Con `--headed` la ventana se abre DETRÁS y
+   `page.bring_to_front()` no alcanza: Windows impide que un proceso le robe
+   el primer plano a otro (ForegroundLockTimeout). Verificado midiendo
+   `GetForegroundWindow` durante una corrida. Fix: no pelear por el foco —
+   `e2e/ventanas.py` marca cada ventana TOPMOST y la ubica en su franja; con
+   dos actores, cada uno ocupa media pantalla y se ve el ida y vuelta.
+3. *El resultado era ilegible* ("4 passed" y nada más). Fix: fixture
+   `informe` con `paso()`/`dato()`, resumen por terminal y ficha
+   `e2e/resultados/informe.html` que se abre sola con `--headed`. El resumen
+   fuerza UTF-8 porque en cp1252 cada acento salía "?".
+
+**Robot vivo**: `test_robot_tramite_guarderia.py`, el ciclo completo de un
+trámite con dos actores (el trabajador lo presenta, el admin responde y lo
+cierra, el trabajador ve la respuesta) contra el lote de AEFIP.

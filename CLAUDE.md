@@ -64,6 +64,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - rag.py — piloto de consultas sobre el convenio: extracción de PDF,
   troceo, embeddings locales e indexación en segundo plano.
 - cargar_demo.py — carga 2 sindicatos de demo desde cero (sin AEFIP).
+- cargar_lote_sindicato.py — lote sintético completo para CUALQUIER sindicato
+  existente (`--sindicato "AEFIP"`); `cargar_lote_uom.py` es la versión
+  anterior, específica de la UOM. Ver "Lotes de datos sintéticos".
+- medir_dashboard.py — mide los endpoints del Panel Sindical con 50.000 recibos.
+- e2e/ — robots de QA con Playwright (ver `e2e/README.md`).
 - chequeo.py — autodiagnóstico de la instalación.
 - migrations/ — Alembic (env.py + versions/).
 - alembic.ini — config de Alembic.
@@ -172,7 +177,7 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   (`/app/inicio`+`/app`, `/admin/inicio`+`/admin`, `/empresa/inicio`+`/empresa`)
   — cualquier rol nuevo que se agregue debería seguir el mismo patrón.
 
-## Estado actual (actualizado 2026-08-22)
+## Estado actual (actualizado 2026-08-31)
 Todo lo listado acá está mergeado a `main` y desplegado (Render sigue `main`,
 cada push redeploya).
 
@@ -203,7 +208,9 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
 11. **Chat de Trámites estilo WhatsApp** — reemplaza Notas+Historial por un hilo cronológico único con modal para leer/responder/cambiar estado.
 12. **App del trabajador instalable (PWA)** — manifest + ícono de Colm3na + banner discreto de instalación, con fallback instructivo en iPhone y link fijo independiente de la cadencia — detalle en HISTORIAL.md.
 13. **Logo de plataforma en dos versiones** (fondo claro/fondo oscuro) + ícono de la PWA reemplazado por el arte oficial del manual de marca — detalle en HISTORIAL.md.
-14. **Panel Sindical (dashboard)** — la función estrella para el admin de sindicato: KPIs, gráficos con cross-filtering, calendario pintable, semáforo por empresa y explorador de datos paginado; módulo opt-in `"dashboard"` — ver sección propia y HISTORIAL.md.
+14. **Panel Sindical (dashboard)** — la función estrella para el admin de sindicato: KPIs, gráficos con cross-filtering, calendario pintable, semáforo por empresa y explorador de datos paginado, con modal "Ver" de detalle por fila; módulo opt-in `"dashboard"` — ver sección propia y HISTORIAL.md.
+15. **Lotes de datos sintéticos para demo** (`cargar_lote_sindicato.py`, y su antecesor específico `cargar_lote_uom.py`): pueblan un sindicato con padrón, 5.000 recibos validados por el motor real, trámites con formulario y diálogo, notificaciones, noticias y beneficios — ver sección propia.
+16. **Robots E2E con Playwright** (`e2e/`): pruebas de punta a punta contra la app real, con informe visual al final — ver sección propia.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -212,11 +219,12 @@ producción real, (c) verificar los topes SS previos a 2025, (d) evaluar si
 el editor de lienzo libre de Trámites llega a justificarse, (e) staging
 real en Render (sin urgencia, tiene costo).
 
-**Próximo paso**: no hay tarea de código en curso — la instalabilidad PWA
-(punto 12) se probó en el navegador (Android e iPhone simulados) y quedó
-lista para commitear/pushear. El ícono usado es el transitorio de Colm3na
-que pasó el usuario — ver "Ícono de Colm3na, ¿por qué antes que el
-rebranding completo?" en HISTORIAL.md para el porqué de esa decisión.
+**Próximo paso**: no hay tarea de código en curso. Todo está en `main` y
+desplegado (Admin 0.19.22). Lo anotado para retomar está en
+[`BACKLOG.md`](BACKLOG.md) — lo más concreto: los ajustes de selectores del
+dashboard que ya pidió Sd (sacar "Categoría", chip "TODOS" en Seccionales y
+Empresas, todo filtro siempre marcado con el color destacado) y el badge
+"NEW" en la tarjeta del Panel Sindical.
 
 ## Pendientes (features)
 1. Capacitación por-sindicato: hoy solo hay contenido FIJO de plataforma
@@ -292,11 +300,16 @@ vigentes:
   índices; las llena `dashboard.campos_analiticos()` en `/api/validar`.
 - **Endpoints** `GET /admin/dashboard/{kpis, serie-recibos, validacion,
   diferencias-empresa, tramites-seccional, notificaciones, formato-semana,
-  semaforo, consultas, explorador/{fuente}, filtros}`. Sesión de admin +
-  módulo; el `sindicato_id` sale SIEMPRE de la cookie, jamás de un parámetro.
+  semaforo, consultas, explorador/{fuente}, filtros}` + los del modal "Ver"
+  (`detalle/recibo/{id}`, `detalle/tramite/{id}`, `detalle/notificaciones`,
+  `detalle/notificacion/{id}/destinatarios`, `detalle/consulta/{id}`).
+  Sesión de admin + módulo; el `sindicato_id` sale SIEMPRE de la cookie,
+  jamás de un parámetro.
 - **Privacidad (test en `test_dashboard.py`)**: el detalle de recibos
   muestra nombre/CUIL SOLO si `enviado_sindicato=true`; el CASE está en el
-  SQL, no en el frontend.
+  SQL, no en el frontend. En el modal "Ver" de un recibo NO enviado, el
+  servidor además BORRA nombre/CUIL/legajo del JSON guardado antes de
+  responder (`dashboard.detalle_recibo`).
 - **Dos estados de validación** (OK / con diferencias): "en revisión" no
   existe a nivel recibo (decisión de Sd 2026-08-29). Tipos de notificación
   = `origen` real (manual/sistema). KPI "Afiliados registrados" =
@@ -322,6 +335,49 @@ vigentes:
   sello `?v=` (mismo patrón que /logo). Estado de filtros serializado en la
   query string (link compartible). Debounce 250 ms + AbortController, error
   por panel con reintento.
+
+## Lotes de datos sintéticos (para que la demo se luzca)
+`cargar_lote_sindicato.py --sindicato "NOMBRE"` puebla cualquier sindicato ya
+existente: 6 seccionales, ~12 empresas, 100 trabajadores con cuenta (**clave
+= los 5 primeros dígitos del CUIL**), 5.000 recibos, 5 tipos de trámite +
+2.000 trámites, 200 notificaciones, 30 noticias y 20 beneficios. Reglas:
+
+- **Los recibos NO se inventan**: se arman con el catálogo real del sindicato
+  y se AUTOCORRIGEN contra `validador.validar()` (hasta 4 pasadas, ajustando
+  cada aporte al "esperado" del motor) → ~80% OK con cualquier catálogo; los
+  errores del 20% se inyectan después, sobre un recibo ya correcto.
+- **Todo con contenido de verdad**: formularios temáticos respondidos, ida y
+  vuelta sindicato↔afiliado en los trámites que avanzaron, notificaciones de
+  sistema citando el expediente real. Nada de registros vacíos que solo
+  sirvan para el tablero.
+- Determinista por sindicato, idempotente (aborta si el lote ya está) y
+  `--limpiar` borra exactamente el lote sin tocar la demo original.
+- Le habilita al sindicato los módulos que el lote necesita (dashboard,
+  trámites, notificaciones, noticias, beneficios).
+- Los códigos de tipo de trámite van prefijados con la sigla del sindicato:
+  el `numero_expediente` es único en TODA la plataforma y su prefijo sale del
+  código del tipo, así que dos sindicatos con el mismo código chocan (bug
+  latente anotado en BACKLOG.md).
+
+## Robots E2E (Playwright) — ver `e2e/README.md`
+Pruebas de punta a punta contra la app real (servidor + Postgres + JS del
+frontend), separadas de la suite unitaria porque necesitan el entorno
+levantado. Playwright es dependencia de DESARROLLO (`requirements-dev.txt`),
+**jamás** en `requirements.txt`. Reglas vigentes:
+
+- Las páginas se piden con la fixture `nuevo_actor("nombre")`, nunca
+  `browser.new_context()` a mano: esa fixture es la que aplica video/traza y
+  acomoda las ventanas.
+- **Con `--headed` en Windows la ventana se abre DETRÁS y `bring_to_front()`
+  no alcanza** (el SO no deja robar el primer plano): se fija TOPMOST y en su
+  franja de pantalla, ver `e2e/ventanas.py`. Con dos actores, uno por mitad.
+- Cada robot narra lo que hace con `informe.paso()` / `informe.dato()`: al
+  final sale un resumen por terminal y la ficha `e2e/resultados/informe.html`
+  (se abre sola con `--headed`).
+- Los prerequisitos de datos van en fixtures idempotentes con `pytest.skip`
+  explicando cómo prepararlos, nunca fallando críptico.
+- El flujo de lectura por IA (`/api/leer`) NO se robotiza: gastaría créditos
+  de Anthropic en cada corrida.
 
 ## Noticias (sindicato → trabajador)
 Modelo `Noticia` (db.py): título, bajada, texto completo (con auto-link de
