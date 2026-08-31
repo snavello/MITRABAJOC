@@ -419,13 +419,16 @@ def _armar_recibo(ctx, trab, conceptos, dias_atras):
     genericos = [c for c in conceptos if not c.get("cuit_empleador")]
     ingresos = [c for c in genericos if c["tipo"] == "ingreso"]
     ingresos_rem = [c for c in ingresos if c.get("remunerativo", True)] or ingresos
-    if not ingresos_rem:
-        sys.exit("El sindicato no tiene conceptos de tipo ingreso: no se pueden armar recibos.")
 
     # Con perfil propio, las líneas las arma el convenio del sindicato.
     if ctx.get("perfil"):
         lineas = ctx["perfil"](rnd, trab, genericos, fecha_proceso)
         return _envoltorio_recibo(ctx, trab, lineas, periodo, fecha_proceso, dias_atras), fecha_proceso
+
+    if not ingresos_rem:
+        sys.exit("Este sindicato no tiene ningún concepto de tipo 'ingreso' cargado: sin\n"
+                 "catálogo no se pueden armar ni validar recibos. Cargá sus conceptos desde\n"
+                 "/admin → Conceptos (o con el script de alta del sindicato) y volvé a correr.")
 
     lineas = []
     principal = ingresos_rem[0]
@@ -799,9 +802,13 @@ if __name__ == "__main__":
         limpiar(sid, ctx)
         sys.exit(0)
 
+    # Mira los RECIBOS, no los trabajadores: si una corrida anterior se cortó
+    # después de sembrar la base, hay que poder retomarla (sembrar_base es
+    # idempotente).
     with db.get_session() as s:
-        ya = s.exec(select(Trabajador).where(Trabajador.sindicato_id == sid,
-                                             Trabajador.cuil == ctx["cuils"][0])).first()
+        ya = s.exec(select(ReciboVerificado).where(
+            ReciboVerificado.sindicato_id == sid,
+            ReciboVerificado.cuil.in_(ctx["cuils"][:5]))).first()
     if ya:
         sys.exit("El lote ya está cargado para este sindicato (usá --limpiar para regenerarlo).")
 

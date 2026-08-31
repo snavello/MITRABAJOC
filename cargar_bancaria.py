@@ -177,12 +177,52 @@ def componer_recibo_bancario(rnd, trab, conceptos, fecha_proceso):
     return lineas
 
 
+def _completar_catalogo(sid: int) -> tuple:
+    """Agrega los conceptos, fórmulas y el admin que FALTEN (por código), sin
+    tocar lo que el sindicato ya tenga cargado.
+
+    Existe porque el sindicato puede haberse creado antes a mano desde
+    /plataforma: si el script se limitaba a saltear la creación, quedaba sin
+    catálogo y los recibos no se podían armar ni validar."""
+    with db.get_session() as s:
+        codigos = {c.codigo for c in s.exec(select(Concepto).where(
+            Concepto.sindicato_id == sid)).all()}
+        nuevos_conceptos = 0
+        for codigo, nombre, tipo, remunerativo, categoria in CONCEPTOS:
+            if codigo in codigos:
+                continue
+            s.add(Concepto(sindicato_id=sid, codigo=codigo, nombre=nombre, tipo=tipo,
+                           remunerativo=remunerativo, alias=[nombre],
+                           categoria_sindical=categoria))
+            nuevos_conceptos += 1
+        targets = {f.target for f in s.exec(select(Formula).where(
+            Formula.sindicato_id == sid)).all()}
+        nuevas_formulas = 0
+        for target, descripcion, expr, tolerancia, tope in FORMULAS:
+            if target in targets:
+                continue
+            s.add(Formula(sindicato_id=sid, target=target, descripcion=descripcion,
+                          expr=expr, tolerancia=tolerancia, sujeto_a_tope=tope))
+            nuevas_formulas += 1
+        if not s.exec(select(UsuarioSindicato).where(
+                UsuarioSindicato.sindicato_id == sid,
+                UsuarioSindicato.usuario == ADMIN[0])).first():
+            s.add(UsuarioSindicato(sindicato_id=sid, usuario=ADMIN[0], nombre="Administrador",
+                                   clave_hash=auth.hashear_clave(ADMIN[1]),
+                                   debe_cambiar_clave=False))
+        s.commit()
+    return nuevos_conceptos, nuevas_formulas
+
+
 def crear_sindicato() -> int:
     with db.get_session() as s:
         existente = s.exec(select(Sindicato).where(Sindicato.nombre == NOMBRE)).first()
         if existente:
-            print(f"'{NOMBRE}' ya existe (id={existente.id}), no lo vuelvo a crear.")
-            return existente.id
+            sid = existente.id
+            print(f"'{NOMBRE}' ya existe (id={sid}): completo lo que falte.")
+            conceptos, formulas = _completar_catalogo(sid)
+            print(f"  Conceptos agregados: {conceptos} · fórmulas agregadas: {formulas}.")
+            return sid
         sind = Sindicato(
             nombre=NOMBRE, slug="la-bancaria",
             descripcion="Asociación Bancaria — Sociedad de Empleados de Banco (CCT 18/75)",
@@ -197,16 +237,7 @@ def crear_sindicato() -> int:
         )
         s.add(sind); s.commit(); s.refresh(sind)
         sid = sind.id
-        for codigo, nombre, tipo, remunerativo, categoria in CONCEPTOS:
-            s.add(Concepto(sindicato_id=sid, codigo=codigo, nombre=nombre, tipo=tipo,
-                           remunerativo=remunerativo, alias=[nombre],
-                           categoria_sindical=categoria))
-        for target, descripcion, expr, tolerancia, tope in FORMULAS:
-            s.add(Formula(sindicato_id=sid, target=target, descripcion=descripcion,
-                          expr=expr, tolerancia=tolerancia, sujeto_a_tope=tope))
-        s.add(UsuarioSindicato(sindicato_id=sid, usuario=ADMIN[0], nombre="Administrador",
-                               clave_hash=auth.hashear_clave(ADMIN[1]), debe_cambiar_clave=False))
-        s.commit()
+    _completar_catalogo(sid)
     print(f"'{NOMBRE}' creado (id={sid}): {len(CONCEPTOS)} conceptos, {len(FORMULAS)} fórmulas.")
     return sid
 
@@ -222,10 +253,14 @@ if __name__ == "__main__":
         lote.limpiar(sid, ctx)
         sys.exit(0)
 
+    # El corte mira los RECIBOS, no los trabajadores: si una corrida anterior
+    # se cortó después de sembrar la base, hay que poder retomarla (sembrar_base
+    # es idempotente).
     with db.get_session() as s:
-        from db import Trabajador
-        if s.exec(select(Trabajador).where(Trabajador.sindicato_id == sid,
-                                           Trabajador.cuil == ctx["cuils"][0])).first():
+        from db import ReciboVerificado
+        if s.exec(select(ReciboVerificado).where(
+                ReciboVerificado.sindicato_id == sid,
+                ReciboVerificado.cuil.in_(ctx["cuils"][:5]))).first():
             sys.exit("El lote de La Bancaria ya está cargado (usá --limpiar para regenerarlo).")
 
     print("Sembrando base (seccionales, bancos, 100 trabajadores con cuenta)...")
