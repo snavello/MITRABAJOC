@@ -214,6 +214,38 @@ def _completar_catalogo(sid: int) -> tuple:
     return nuevos_conceptos, nuevas_formulas
 
 
+def revisar_catalogo_ajeno(sid: int) -> None:
+    """Aborta si el sindicato tiene FÓRMULAS que no son de este convenio.
+
+    Pasó en producción: "La Bancaria" se había creado a mano y arrastraba un
+    concepto y una fórmula de AEFIP. Como la autocorrección agrega una línea
+    por cada fórmula del sindicato, ese concepto ajeno terminó en los 5.000
+    recibos y en los reportes. Una fórmula de más ensucia TODO el lote, así
+    que se corta antes de sembrar; los conceptos de más solo se avisan (no
+    generan líneas por sí solos)."""
+    codigos_convenio = {c[0] for c in CONCEPTOS}
+    with db.get_session() as s:
+        conceptos = {c.codigo: c.nombre for c in s.exec(select(Concepto).where(
+            Concepto.sindicato_id == sid)).all()}
+        formulas = {f.target: f.descripcion for f in s.exec(select(Formula).where(
+            Formula.sindicato_id == sid)).all()}
+    ajenas = {t: d for t, d in formulas.items() if t not in codigos_convenio}
+    if ajenas:
+        print("\nFÓRMULAS QUE NO SON DE ESTE CONVENIO:")
+        for target, descripcion in sorted(ajenas.items()):
+            print(f"   {target} — {descripcion}")
+        sys.exit(
+            "\nCada fórmula agrega su línea a TODOS los recibos: con estas, el lote\n"
+            "saldría con conceptos que no son de La Bancaria. Borralas desde\n"
+            "/admin → Fórmulas (y su concepto, si tampoco corresponde) y volvé a correr.")
+    ajenos = {c: n for c, n in conceptos.items() if c not in codigos_convenio}
+    if ajenos:
+        print("Aviso: hay conceptos fuera del CCT 18/75 (no afectan la simulación, "
+              "pero se ven en /admin → Conceptos):")
+        for codigo, nombre in sorted(ajenos.items()):
+            print(f"   {codigo} — {nombre}")
+
+
 def crear_sindicato() -> int:
     with db.get_session() as s:
         existente = s.exec(select(Sindicato).where(Sindicato.nombre == NOMBRE)).first()
@@ -252,6 +284,8 @@ if __name__ == "__main__":
     if "--limpiar" in sys.argv:
         lote.limpiar(sid, ctx)
         sys.exit(0)
+
+    revisar_catalogo_ajeno(sid)
 
     # El corte mira los RECIBOS, no los trabajadores: si una corrida anterior
     # se cortó después de sembrar la base, hay que poder retomarla (sembrar_base
