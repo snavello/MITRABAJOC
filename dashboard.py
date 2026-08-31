@@ -618,7 +618,7 @@ def explorador_recibos(sid: int, f: dict, page: int, page_size: int) -> dict:
                    r.formato, r.bruto, r.monto_diferencia, r.estado, r.enviado_sindicato,
                    CASE WHEN r.enviado_sindicato THEN t.nombre ELSE NULL END,
                    CASE WHEN r.enviado_sindicato THEN r.cuil ELSE NULL END,
-                   r.periodo
+                   r.periodo, r.id
             FROM reciboverificado r{joins} WHERE {where}
             ORDER BY r.monto_diferencia DESC, r.id DESC
             LIMIT :limite OFFSET :salto""", params_pagina), params_pagina).all()
@@ -631,7 +631,7 @@ def explorador_recibos(sid: int, f: dict, page: int, page_size: int) -> dict:
         "resultado": "con_diferencias" if fila[7] == "CON_DISCREPANCIAS" else "ok",
         "enviado": bool(fila[8]),
         "trabajador_nombre": fila[9], "trabajador_cuil": fila[10],
-        "periodo": fila[11],
+        "periodo": fila[11], "id": fila[12],
     } for fila in filas]
     return {"total": total, "page": page, "page_size": page_size, "items": items}
 
@@ -647,12 +647,12 @@ def explorador_tramites(sid: int, f: dict, page: int, page_size: int,
         params_pagina = dict(params, limite=page_size, salto=(page - 1) * page_size)
         filas = s.execute(_stmt(f"""
             SELECT tr.numero_expediente, tr.creado, sec.nombre, tt.titulo,
-                   {_CASE_ESTADO_TRAMITE}, tr.resuelto_en
+                   {_CASE_ESTADO_TRAMITE}, tr.resuelto_en, tr.id
             FROM tramite tr{joins} WHERE {where}
             ORDER BY tr.creado DESC, tr.id DESC
             LIMIT :limite OFFSET :salto""", params_pagina), params_pagina).all()
     items = []
-    for numero, creado, seccional, tipo, estado_d, resuelto_en in filas:
+    for numero, creado, seccional, tipo, estado_d, resuelto_en, tramite_id in filas:
         dias, sigue = None, estado_d != "resuelto"
         try:
             inicio = date.fromisoformat((creado or "")[:10])
@@ -662,7 +662,7 @@ def explorador_tramites(sid: int, f: dict, page: int, page_size: int,
             pass
         items.append({"numero": numero, "fecha_inicio": creado,
                       "seccional": seccional or "Sin seccional", "tipo": tipo or "—",
-                      "estado": estado_d, "dias": dias, "sigue": sigue})
+                      "estado": estado_d, "dias": dias, "sigue": sigue, "id": tramite_id})
     return {"total": total, "page": page, "page_size": page_size, "items": items}
 
 
@@ -674,13 +674,13 @@ def explorador_consultas(sid: int, f: dict, page: int, page_size: int) -> dict:
                      params)[0]
         params_pagina = dict(params, limite=page_size, salto=(page - 1) * page_size)
         filas = s.execute(_stmt(f"""
-            SELECT c.creado, sec.nombre, c.tema, c.hubo_respuesta
+            SELECT c.creado, sec.nombre, c.tema, c.hubo_respuesta, c.id
             FROM consultaconvenio c{joins} WHERE {where}
             ORDER BY c.creado DESC, c.id DESC
             LIMIT :limite OFFSET :salto""", params_pagina), params_pagina).all()
     items = [{"fecha": fila[0], "seccional": fila[1] or "Sin seccional",
               "tema": fila[2] or "Sin clasificar",
-              "resuelta_por_bot": bool(fila[3])} for fila in filas]
+              "resuelta_por_bot": bool(fila[3]), "id": fila[4]} for fila in filas]
     return {"total": total, "page": page, "page_size": page_size, "items": items}
 
 
@@ -707,7 +707,125 @@ def explorador_notificaciones(sid: int, f: dict, page: int, page_size: int) -> d
     for dia, secc_id, origen, enviadas, leidas in filas:
         items.append({
             "fecha": dia, "seccional": nombres.get(secc_id, "Sin seccional"),
+            "seccional_id": secc_id,
             "tipo": origen, "etiqueta": TIPOS_NOTIF.get(origen, origen),
             "enviadas": enviadas, "leidas": leidas, "sin_leer": enviadas - leidas,
             "tasa_lectura": round(leidas / enviadas * 100) if enviadas else 0})
     return {"total": total, "page": page, "page_size": page_size, "items": items}
+
+
+# ---------- Detalle por fila del explorador ("Ver" -> modal) ----------
+
+def detalle_recibo(sid: int, recibo_id: int) -> Optional[dict]:
+    """El recibo completo tal como quedó verificado (conceptos, totales,
+    discrepancias, alertas). PRIVACIDAD (§1.3, con test): si el trabajador NO
+    lo envió voluntariamente, el detalle sale ANONIMIZADO -- se borra todo lo
+    que identifique a la persona (nombre, CUIL, legajo, fecha de ingreso)
+    ANTES de que el dict llegue a la ruta; el frontend nunca lo recibe."""
+    import copy
+    with db.get_session() as s:
+        fila = s.execute(text(
+            "SELECT cuil, periodo, estado, enviado_sindicato, detalle, procesado_en, "
+            "cuit_empleador, categoria, formato, bruto, monto_diferencia "
+            "FROM reciboverificado WHERE id = :rid AND sindicato_id = :sid"),
+            {"rid": recibo_id, "sid": sid}).first()
+    if not fila:
+        return None
+    cuil, periodo, estado, enviado, detalle, procesado_en = fila[0], fila[1], fila[2], bool(fila[3]), fila[4], fila[5]
+    if isinstance(detalle, str):
+        import json
+        try:
+            detalle = json.loads(detalle)
+        except ValueError:
+            detalle = {}
+    detalle = copy.deepcopy(detalle or {})
+    recibo = detalle.get("recibo") or {}
+    resultado = detalle.get("resultado") or {}
+    nombre = None
+    if enviado:
+        with db.get_session() as s:
+            t = s.execute(text(
+                "SELECT nombre FROM trabajador WHERE sindicato_id = :sid AND cuil = :cuil"),
+                {"sid": sid, "cuil": cuil}).first()
+        nombre = (t[0] if t else None) or (recibo.get("empleado") or {}).get("apellido_nombre")
+    else:
+        empleado = recibo.get("empleado")
+        if isinstance(empleado, dict):
+            for clave in ("apellido_nombre", "cuil", "legajo", "fecha_ingreso"):
+                empleado.pop(clave, None)
+        resultado.pop("cuil", None)
+        cuil = None
+    etiquetas = _etiquetas_empresas(sid)
+    return {
+        "id": recibo_id, "enviado": enviado,
+        "estado": "con_diferencias" if estado == "CON_DISCREPANCIAS" else "ok",
+        "periodo": periodo, "procesado_en": procesado_en,
+        "empresa": etiquetas.get(fila[6]) or fila[6] or "—",
+        "categoria": fila[7] or "—", "formato": fila[8] or "",
+        "bruto": fila[9], "monto_diferencia": fila[10],
+        "trabajador_nombre": nombre, "trabajador_cuil": cuil,
+        "recibo": recibo, "resultado": resultado,
+    }
+
+
+def detalle_tramite(sid: int, tramite_id: int) -> Optional[dict]:
+    """El trámite con formulario respondido, hilo de conversación e historial
+    (reusa db.tramite_detalle). Los trámites NO se anonimizan: el sindicato
+    los gestiona identificados, igual que en su panel de siempre."""
+    d = db.tramite_detalle(tramite_id)
+    if not d or d.get("sindicato_id") != sid:
+        return None
+    with db.get_session() as s:
+        t = s.execute(text(
+            "SELECT tr.nombre, sec.nombre FROM trabajador tr "
+            "LEFT JOIN seccional sec ON sec.id = tr.seccional_id "
+            "WHERE tr.sindicato_id = :sid AND tr.cuil = :cuil"),
+            {"sid": sid, "cuil": d["cuil"]}).first()
+    d["trabajador_nombre"] = t[0] if t else ""
+    d["seccional"] = (t[1] if t else None) or "Sin seccional"
+    return d
+
+
+def detalle_notificaciones_grupo(sid: int, dia: str, seccional_id: Optional[int],
+                                 tipo: str) -> list:
+    """Las notificaciones individuales que componen una fila agregada del
+    explorador (día × seccional × tipo): remitente, texto completo y lectura
+    DE ESA seccional (una misma notificación puede tener destinatarios en
+    varias seccionales; acá se cuenta solo la porción de la fila)."""
+    conds = ["n.sindicato_id = :sid", "substr(n.enviado_en, 1, 10) = :dia",
+             "n.origen = :tipo"]
+    params = {"sid": sid, "dia": dia, "tipo": tipo}
+    if seccional_id:
+        conds.append("t.seccional_id = :secc")
+        params["secc"] = seccional_id
+    else:
+        conds.append("t.seccional_id IS NULL")
+    with db.get_session() as s:
+        filas = s.execute(text(f"""
+            SELECT n.id, n.remitente, n.texto, n.enviado_en, n.origen, COUNT(*),
+                   COALESCE(SUM(CASE WHEN d.leida_en IS NOT NULL THEN 1 ELSE 0 END), 0)
+            FROM notificaciondestinatario d
+             JOIN notificacion n ON n.id = d.notificacion_id
+             LEFT JOIN trabajador t ON t.sindicato_id = n.sindicato_id AND t.cuil = d.cuil
+            WHERE {' AND '.join(conds)}
+            GROUP BY n.id, n.remitente, n.texto, n.enviado_en, n.origen
+            ORDER BY n.enviado_en DESC"""), params).all()
+    return [{"id": f[0], "remitente": f[1], "texto": f[2], "enviado_en": f[3],
+             "tipo": f[4], "etiqueta": TIPOS_NOTIF.get(f[4], f[4]),
+             "enviadas": f[5], "leidas": f[6], "sin_leer": f[5] - f[6]} for f in filas]
+
+
+def detalle_consulta(sid: int, consulta_id: int) -> Optional[dict]:
+    with db.get_session() as s:
+        f = s.execute(text(
+            "SELECT c.creado, c.tema, c.pregunta, c.hubo_respuesta, sec.nombre "
+            "FROM consultaconvenio c "
+            "LEFT JOIN trabajador t ON t.sindicato_id = c.sindicato_id AND t.cuil = c.cuil "
+            "LEFT JOIN seccional sec ON sec.id = t.seccional_id "
+            "WHERE c.id = :cid AND c.sindicato_id = :sid"),
+            {"cid": consulta_id, "sid": sid}).first()
+    if not f:
+        return None
+    return {"id": consulta_id, "fecha": f[0], "tema": f[1] or "Sin clasificar",
+            "pregunta": f[2], "resuelta_por_bot": bool(f[3]),
+            "seccional": f[4] or "Sin seccional"}

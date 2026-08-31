@@ -22,7 +22,7 @@
   body { background: var(--papel); }
 
   header.dash { background: linear-gradient(135deg, var(--marca-base) 0%, color-mix(in srgb, var(--marca-base) 55%, var(--marca-primario)) 100%);
-    color: var(--sobre-base); padding: 14px 18px 58px; }
+    color: var(--sobre-base); padding: 14px 18px 22px; }
   .dash-top { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
   .dash-top img.logo-sind { max-height: 61px; max-width: 170px; object-fit: contain; }
   .dash-top .logo-fallback { width: 46px; height: 46px; border-radius: 9px; background: var(--marca-acento);
@@ -35,9 +35,15 @@
   main { max-width: 1280px; margin: 0 auto; padding: 0 14px 90px; }
 
   /* ---------- Filtros ---------- */
-  .filtros-card { background: var(--blanco); border: 1px solid var(--linea); border-radius: var(--r-card);
+  /* La zona de SELECTORES se distingue de los paneles de DATOS: fondo gris
+     suave con una trama de puntos sutil (los paneles de datos son blancos
+     lisos). Sin solaparse con el encabezado (pedido de Sd 2026-08-31). */
+  .filtros-card { background: color-mix(in srgb, var(--gris) 7%, var(--papel));
+    background-image: radial-gradient(color-mix(in srgb, var(--gris) 22%, transparent) 1px, transparent 1px);
+    background-size: 14px 14px;
+    border: 1px solid var(--linea); border-radius: var(--r-card);
     box-shadow: 0 1px 2px rgba(21,34,56,.05), 0 8px 24px -14px rgba(21,34,56,.14);
-    padding: 13px 15px; margin-top: -44px; position: relative; }
+    padding: 13px 15px; margin-top: 14px; position: relative; }
   .f-cabecera { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 11px; }
   .f-titulo { font-family: var(--fuente-display); font-size: 16px; display: flex; align-items: center; gap: 7px; }
   .f-titulo .numf { background: var(--destacado); color: #fff; border-radius: 99px; min-width: 20px; height: 20px;
@@ -49,7 +55,7 @@
   .f-fila { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
   .f-grupo { display: flex; flex-direction: column; gap: 6px; }
   .f-label { font-size: 10.5px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; color: var(--gris); }
-  .presets, .seg { display: flex; background: var(--papel); border-radius: 10px; padding: 3px; gap: 2px; }
+  .presets, .seg { display: flex; background: var(--blanco); border: 1px solid var(--linea); border-radius: 10px; padding: 3px; gap: 2px; }
   .presets button, .seg button { padding: 6px 12px; border: none; background: none; border-radius: 8px;
     font-size: 12.5px; font-weight: 600; color: var(--gris); cursor: pointer; font-family: inherit; }
   .presets button.act, .seg button.act { background: var(--destacado); color: #fff; }
@@ -192,6 +198,43 @@
   .pie-tabla { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 12px; color: var(--gris); }
   .pie-tabla button { border: none; background: none; color: var(--marca-primario); font-weight: 600; cursor: pointer; font-family: inherit; font-size: 12px; }
   .vacio-exp { text-align: center; color: var(--gris); padding: 22px; }
+
+  .btn-ver { border: 1px solid var(--linea); background: var(--blanco); border-radius: 99px;
+    padding: 3px 12px; font-size: 11.5px; font-weight: 600; color: var(--marca-primario);
+    cursor: pointer; font-family: inherit; }
+  .btn-ver:hover { border-color: var(--marca-primario); }
+
+  /* ---------- Modal de detalle ("Ver") ---------- */
+  .overlay-det { position: fixed; inset: 0; background: rgba(8,12,20,.55); z-index: 200;
+    display: none; align-items: center; justify-content: center; padding: 18px; }
+  .overlay-det.abierto { display: flex; }
+  .modal-det { position: relative; background: var(--blanco); border-radius: var(--r-card);
+    width: 100%; max-width: 620px; max-height: 86vh; overflow-y: auto;
+    padding: 20px 22px; overflow-wrap: anywhere; }
+  .modal-det h3 { font-family: var(--fuente-display); font-size: 19px; padding-right: 30px; }
+  .modal-det .det-sub { font-size: 12px; color: var(--gris); margin-bottom: 12px; }
+  .modal-det-cerrar { position: absolute; top: 12px; right: 14px; border: none; background: none;
+    cursor: pointer; color: var(--gris); font-size: 20px; line-height: 1; padding: 4px; }
+  .det-fila { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0;
+    border-bottom: 1px solid var(--linea); font-size: 13px; }
+  .det-fila .k { color: var(--gris); flex-shrink: 0; }
+  .det-fila .v { font-weight: 500; text-align: right; }
+  .det-sec { font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+    color: var(--gris); margin: 14px 0 5px; }
+  .det-linea { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0;
+    font-size: 12.5px; border-bottom: 1px dashed var(--linea); }
+  .det-linea .imp { font-family: var(--fuente-num); white-space: nowrap; }
+  .det-linea .imp.neg { color: var(--error); }
+  .det-lista { margin: 0; padding-left: 18px; font-size: 12.5px; line-height: 1.55; }
+  .det-lista li { margin-bottom: 4px; }
+  .det-nota { border: 1px solid var(--linea); border-radius: 11px; padding: 8px 12px;
+    margin-bottom: 7px; font-size: 12.5px; max-width: 88%; }
+  .det-nota.admin { background: color-mix(in srgb, var(--marca-primario) 7%, white); margin-left: auto; }
+  .det-nota.trabajador { background: var(--papel); }
+  .det-nota .quien { font-size: 10.5px; font-weight: 700; color: var(--gris); margin-bottom: 2px;
+    text-transform: uppercase; letter-spacing: .4px; }
+  .det-anonimo { background: color-mix(in srgb, var(--aviso) 10%, white); color: color-mix(in srgb, var(--aviso) 80%, black);
+    border-radius: 9px; padding: 8px 12px; font-size: 12px; margin-bottom: 10px; }
 
   footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-size: 11px; color: var(--gris); text-align: center; }
   :focus-visible { outline: 2px solid var(--destacado); outline-offset: 2px; }
@@ -336,7 +379,8 @@
 
     <div class="panel span5" data-panel="semaforo">
       <h3>Semáforo de aportes</h3>
-      <div class="sub">Días desde el último depósito informado por empresa</div>
+      <div class="sub">Días desde el último depósito que imprime el recibo (formato Ley 27.802 —
+        todavía son pocos recibos en relación al total, tomalo como indicativo)</div>
       <div class="sem-resumen" id="sem-resumen"></div>
       <div class="sem-lista" id="sem-lista"></div>
       <div class="panel-error"><span>No se pudo cargar este panel.</span><button type="button" data-reintentar>Reintentar</button></div>
@@ -371,6 +415,13 @@
     </div>
   </div>
 </main>
+
+<div class="overlay-det" id="overlay-det">
+  <div class="modal-det" role="dialog" aria-modal="true">
+    <button type="button" class="modal-det-cerrar" id="det-cerrar" aria-label="Cerrar">✕</button>
+    <div id="det-contenido"></div>
+  </div>
+</div>
 
 <a class="btn-flotante btn-home" href="/admin/inicio" title="Inicio" aria-label="Inicio">
   <svg viewBox="0 0 24 24"><path d="M3 11.2 12 4l9 7.2"/><path d="M5.5 9.8V20h13V9.8"/></svg>

@@ -88,14 +88,25 @@ with db.get_session() as s:
     s.add(ReciboVerificado(
         sindicato_id=SID_A, cuil=CUIL_1, periodo="2026-07", fecha="01/08/2026 10:00",
         estado="CON_DISCREPANCIAS", enviado_sindicato=True, fecha_envio=_ts(2),
-        detalle={}, procesado_en=_ts(2), cuit_empleador="30111111117",
+        detalle={"recibo": {"empleado": {"apellido_nombre": "Juan Enviado", "cuil": CUIL_1},
+                            "lineas": [{"descripcion": "Sueldo básico", "importe": 900000.0}]},
+                 "resultado": {"cuil": CUIL_1, "totales": {"ingresos": 900000.0},
+                               "discrepancias": [{"detalle": "Jubilación: esperado $99.000"}]}},
+        procesado_en=_ts(2), cuit_empleador="30111111117",
         categoria="Operario A", formato="nuevo", bruto=900000.0,
         monto_diferencia=5000.0, fecha_ultimo_deposito=_dia(10)))
-    # r2: con diferencias, NO enviado (debe salir anonimizado SIEMPRE).
+    # r2: con diferencias, NO enviado (debe salir anonimizado SIEMPRE) -- el
+    # detalle guardado SÍ tiene la identidad adentro: el test de privacidad
+    # verifica que el servidor la borre antes de responder.
     s.add(ReciboVerificado(
         sindicato_id=SID_A, cuil=CUIL_2, periodo="2026-07", fecha="02/08/2026 11:00",
         estado="CON_DISCREPANCIAS", enviado_sindicato=False,
-        detalle={}, procesado_en=_ts(1), cuit_empleador="30222222225",
+        detalle={"recibo": {"empleado": {"apellido_nombre": "Ana Privada", "cuil": CUIL_2,
+                                          "legajo": "0099", "categoria": "Administrativo"},
+                            "lineas": [{"descripcion": "Sueldo básico", "importe": 500000.0}]},
+                 "resultado": {"cuil": CUIL_2, "totales": {"ingresos": 500000.0},
+                               "discrepancias": [{"detalle": "Cuota sindical: figura de más"}]}},
+        procesado_en=_ts(1), cuit_empleador="30222222225",
         categoria="Administrativo", formato="clasico", bruto=500000.0,
         monto_diferencia=3000.0, fecha_ultimo_deposito=_dia(90)))
     # r3: OK.
@@ -483,6 +494,104 @@ def test_catalogo_filtros():
     print("OK  test_catalogo_filtros")
 
 
+# ---------- Detalle por fila ("Ver" -> modal) ----------
+
+def _ids_recibos():
+    r = admin_a.get("/admin/dashboard/explorador/recibos", params=RANGO).json()
+    return {item["diferencia"]: item["id"] for item in r["items"]}
+
+
+def test_detalle_recibo_enviado_identificado():
+    rid = _ids_recibos()[5000.0]
+    r = admin_a.get(f"/admin/dashboard/detalle/recibo/{rid}")
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert d["enviado"] is True
+    assert d["trabajador_nombre"] == "Juan Enviado" and d["trabajador_cuil"] == CUIL_1
+    assert d["recibo"]["lineas"][0]["descripcion"] == "Sueldo básico"
+    assert d["resultado"]["discrepancias"]
+    print("OK  test_detalle_recibo_enviado_identificado")
+
+
+def test_detalle_recibo_no_enviado_anonimizado():
+    """El detalle guardado TIENE nombre/CUIL/legajo adentro del JSON: el
+    servidor los borra antes de responder (regla §1.3 también en el modal)."""
+    rid = _ids_recibos()[3000.0]
+    r = admin_a.get(f"/admin/dashboard/detalle/recibo/{rid}")
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert d["enviado"] is False
+    assert d["trabajador_nombre"] is None and d["trabajador_cuil"] is None
+    assert CUIL_2 not in r.text
+    assert "Ana" not in r.text
+    assert "0099" not in r.text          # ni el legajo
+    # Pero el contenido NO identificatorio sí está (líneas, discrepancias).
+    assert d["recibo"]["lineas"][0]["importe"] == 500000.0
+    assert d["resultado"]["discrepancias"]
+    print("OK  test_detalle_recibo_no_enviado_anonimizado")
+
+
+def test_detalle_aislamiento_de_tenant():
+    # El recibo del tenant B, pedido con la sesión de A -> 404, y viceversa.
+    rb = admin_b.get("/admin/dashboard/explorador/recibos", params=RANGO).json()
+    rid_b = rb["items"][0]["id"]
+    assert admin_a.get(f"/admin/dashboard/detalle/recibo/{rid_b}").status_code == 404
+    rid_a = _ids_recibos()[5000.0]
+    assert admin_b.get(f"/admin/dashboard/detalle/recibo/{rid_a}").status_code == 404
+    # Ídem trámite.
+    ta = admin_a.get("/admin/dashboard/explorador/tramites", params=RANGO).json()["items"][0]["id"]
+    assert admin_b.get(f"/admin/dashboard/detalle/tramite/{ta}").status_code == 404
+    assert admin_a.get(f"/admin/dashboard/detalle/tramite/{ta}").status_code == 200
+    print("OK  test_detalle_aislamiento_de_tenant")
+
+
+def test_detalle_tramite_completo():
+    items = admin_a.get("/admin/dashboard/explorador/tramites", params=RANGO).json()["items"]
+    por_numero = {i["numero"]: i["id"] for i in items}
+    d = admin_a.get(f"/admin/dashboard/detalle/tramite/{por_numero['F01-2026-000002']}").json()
+    assert d["numero_expediente"] == "F01-2026-000002"
+    assert d["estado_label"] == "Terminado"
+    assert d["trabajador_nombre"] == "Ana Privada" and d["seccional"] == "Córdoba"
+    assert "respuestas" in d and "notas" in d and "log" in d
+    print("OK  test_detalle_tramite_completo")
+
+
+def test_detalle_notificaciones_grupo():
+    filas = admin_a.get("/admin/dashboard/explorador/notificaciones",
+                        params=RANGO).json()["items"]
+    fila = next(f for f in filas if f["tipo"] == "manual" and f["seccional"] == "Rosario")
+    r = admin_a.get("/admin/dashboard/detalle/notificaciones",
+                    params={"dia": fila["fecha"], "seccional_id": fila["seccional_id"],
+                            "tipo": "manual"})
+    assert r.status_code == 200, r.text
+    lista = r.json()["notificaciones"]
+    assert len(lista) == 1
+    assert lista[0]["texto"] == "Aviso manual" and lista[0]["remitente"] == "CD"
+    assert lista[0]["enviadas"] == 1 and lista[0]["leidas"] == 1
+    # Misma consulta desde el admin B: no ve nada de A.
+    rb = admin_b.get("/admin/dashboard/detalle/notificaciones",
+                     params={"dia": fila["fecha"], "seccional_id": fila["seccional_id"],
+                             "tipo": "manual"})
+    assert all(n["texto"] != "Aviso manual" for n in rb.json()["notificaciones"])
+    print("OK  test_detalle_notificaciones_grupo")
+
+
+def test_detalle_consulta_flag():
+    with db.get_session() as s:
+        from sqlmodel import select as _select
+        cid = s.exec(_select(ConsultaConvenio).where(
+            ConsultaConvenio.sindicato_id == SID_A)).first().id
+    assert admin_a.get(f"/admin/dashboard/detalle/consulta/{cid}").status_code == 404  # flag off
+    db.set_config_dashboard(35, 60, True)
+    try:
+        d = admin_a.get(f"/admin/dashboard/detalle/consulta/{cid}").json()
+        assert d["pregunta"] and d["tema"]
+        assert admin_b.get(f"/admin/dashboard/detalle/consulta/{cid}").status_code == 404
+    finally:
+        db.set_config_dashboard(35, 60, False)
+    print("OK  test_detalle_consulta_flag")
+
+
 # ---------- Página del dashboard (Fase 2, server-rendered) ----------
 
 def test_pagina_dashboard():
@@ -627,6 +736,12 @@ if __name__ == "__main__":
     test_explorador_tramites_dias()
     test_explorador_notificaciones_agregado()
     test_explorador_fuente_desconocida_404()
+    test_detalle_recibo_enviado_identificado()
+    test_detalle_recibo_no_enviado_anonimizado()
+    test_detalle_aislamiento_de_tenant()
+    test_detalle_tramite_completo()
+    test_detalle_notificaciones_grupo()
+    test_detalle_consulta_flag()
     test_catalogo_filtros()
     test_pagina_dashboard()
     test_pagina_dashboard_flag_prendido()

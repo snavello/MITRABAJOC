@@ -437,48 +437,52 @@
   var TABLAS = {
     recibos: {
       sub: "Recibos con diferencias · ordenados por monto observado · identificados solo si el trabajador los envió",
-      head: "<tr><th>Fecha</th><th>Seccional</th><th>Empresa</th><th>Categoría</th><th>Formato</th><th>Bruto</th><th>Dif. detectada</th><th>Enviado</th><th>Trabajador</th><th>CUIL</th></tr>",
-      cols: 10, total: function (n) { return n + " recibos observados"; },
+      head: "<tr><th>Fecha</th><th>Seccional</th><th>Empresa</th><th>Categoría</th><th>Formato</th><th>Bruto</th><th>Dif. detectada</th><th>Enviado</th><th>Trabajador</th><th>CUIL</th><th></th></tr>",
+      cols: 11, total: function (n) { return n + " recibos observados"; },
       fila: function (r) {
         return "<tr><td>" + fFecha(r.fecha) + "</td><td>" + esc(r.seccional) + "</td><td>" + esc(r.empresa) + "</td>" +
           "<td>" + esc(r.categoria) + "</td><td>" + (r.formato === "nuevo" ? "Ley 27.802" : (r.formato === "clasico" ? "Anterior" : "—")) + "</td>" +
           '<td class="monto">' + fmtM(r.bruto) + "</td>" +
           '<td class="monto" style="color:' + C.error + '">' + fmtM(r.diferencia) + "</td>" +
           "<td>" + (r.enviado ? "✓ Sí" : "—") + "</td>" +
-          "<td>" + esc(r.trabajador_nombre || "Anónimo") + "</td><td class=\"monto\">" + esc(r.trabajador_cuil || "—") + "</td></tr>";
+          "<td>" + esc(r.trabajador_nombre || "Anónimo") + "</td><td class=\"monto\">" + esc(r.trabajador_cuil || "—") + "</td>" +
+          '<td><button type="button" class="btn-ver" data-det="recibo" data-id="' + r.id + '">Ver</button></td></tr>';
       },
     },
     tramites: {
       sub: "Detalle de trámites del período · respetando seccional y estado seleccionados",
-      head: "<tr><th>N°</th><th>Fecha inicio</th><th>Seccional</th><th>Tipo de trámite</th><th>Estado</th><th>Días</th></tr>",
-      cols: 6, total: function (n) { return n + " trámites"; },
+      head: "<tr><th>N°</th><th>Fecha inicio</th><th>Seccional</th><th>Tipo de trámite</th><th>Estado</th><th>Días</th><th></th></tr>",
+      cols: 7, total: function (n) { return n + " trámites"; },
       fila: function (t) {
         var tags = { resuelto: ["ok", "Resuelto"], en_proceso: ["proc", "En proceso"], abierto: ["rev", "Abierto"] };
         var tg = tags[t.estado] || ["rev", t.estado];
         return '<tr><td class="monto">' + esc(t.numero) + "</td><td>" + fFecha(t.fecha_inicio) + "</td><td>" + esc(t.seccional) + "</td>" +
           "<td>" + esc(t.tipo) + '</td><td><span class="tag ' + tg[0] + '">' + tg[1] + "</span></td>" +
-          '<td class="monto">' + (t.dias === null ? "—" : t.dias + " d" + (t.sigue ? " y sigue" : "")) + "</td></tr>";
+          '<td class="monto">' + (t.dias === null ? "—" : t.dias + " d" + (t.sigue ? " y sigue" : "")) + "</td>" +
+          '<td><button type="button" class="btn-ver" data-det="tramite" data-id="' + t.id + '">Ver</button></td></tr>';
       },
     },
     consultas: {
       sub: "Consultas de los afiliados al asistente · el tema seleccionado en el gráfico filtra esta lista",
-      head: "<tr><th>Fecha</th><th>Seccional</th><th>Tema consultado</th><th>Resolución</th></tr>",
-      cols: 4, total: function (n) { return n + " consultas"; },
+      head: "<tr><th>Fecha</th><th>Seccional</th><th>Tema consultado</th><th>Resolución</th><th></th></tr>",
+      cols: 5, total: function (n) { return n + " consultas"; },
       fila: function (c) {
         return "<tr><td>" + fFecha(c.fecha) + "</td><td>" + esc(c.seccional) + "</td><td>" + esc(c.tema) + "</td>" +
           '<td><span class="tag ' + (c.resuelta_por_bot ? "ok" : "rev") + '">' +
-          (c.resuelta_por_bot ? "Resuelta por el bot" : "Derivada") + "</span></td></tr>";
+          (c.resuelta_por_bot ? "Resuelta por el bot" : "Derivada") + "</span></td>" +
+          '<td><button type="button" class="btn-ver" data-det="consulta" data-id="' + c.id + '">Ver</button></td></tr>';
       },
     },
     notificaciones: {
       sub: "Envíos diarios por seccional y tipo · el tipo seleccionado en el gráfico filtra esta lista",
-      head: "<tr><th>Fecha</th><th>Seccional</th><th>Tipo</th><th>Enviadas</th><th>Leídas</th><th>Sin leer</th><th>Tasa de lectura</th></tr>",
-      cols: 7, total: function (n) { return n + " filas (día × seccional × tipo)"; },
+      head: "<tr><th>Fecha</th><th>Seccional</th><th>Tipo</th><th>Enviadas</th><th>Leídas</th><th>Sin leer</th><th>Tasa de lectura</th><th></th></tr>",
+      cols: 8, total: function (n) { return n + " filas (día × seccional × tipo)"; },
       fila: function (n) {
         return "<tr><td>" + fFecha(n.fecha) + "</td><td>" + esc(n.seccional) + "</td><td>" + esc(n.etiqueta) + "</td>" +
           '<td class="monto">' + fmtN(n.enviadas) + '</td><td class="monto">' + fmtN(n.leidas) + "</td>" +
           '<td class="monto">' + fmtN(n.sin_leer) + "</td>" +
-          '<td><span class="barra-lectura"><i style="width:' + n.tasa_lectura + '%"></i></span><span class="monto">' + n.tasa_lectura + " %</span></td></tr>";
+          '<td><span class="barra-lectura"><i style="width:' + n.tasa_lectura + '%"></i></span><span class="monto">' + n.tasa_lectura + " %</span></td>" +
+          '<td><button type="button" class="btn-ver" data-det="notif" data-dia="' + n.fecha + '" data-secc="' + (n.seccional_id || 0) + '" data-tipo="' + n.tipo + '">Ver</button></td></tr>';
       },
     },
   };
@@ -517,6 +521,133 @@
         if (e.name === "AbortError") return;
         p.classList.remove("cargando"); p.classList.add("con-error");
       });
+  }
+
+  /* ================= Modal de detalle ("Ver") ================= */
+  function abrirModal(html) {
+    $("det-contenido").innerHTML = html;
+    $("overlay-det").classList.add("abierto");
+  }
+  function cerrarModal() { $("overlay-det").classList.remove("abierto"); }
+
+  function filaDet(k, v) {
+    return '<div class="det-fila"><span class="k">' + esc(k) + '</span><span class="v">' + v + "</span></div>";
+  }
+
+  function htmlRecibo(d) {
+    var h = "<h3>Recibo verificado</h3>" +
+      '<div class="det-sub">' + fFecha(d.procesado_en) + " · período " + esc(d.periodo || "—") + "</div>";
+    if (!d.enviado) {
+      h += '<div class="det-anonimo">Recibo anonimizado: el trabajador no lo envió al sindicato, ' +
+        "así que no se muestra ningún dato que lo identifique.</div>";
+    }
+    h += filaDet("Resultado", '<span class="tag ' + (d.estado === "ok" ? "ok" : "dif") + '">' +
+      (d.estado === "ok" ? "Sin diferencias" : "Con diferencias") + "</span>");
+    if (d.trabajador_nombre) h += filaDet("Trabajador", esc(d.trabajador_nombre) + " · CUIL " + esc(d.trabajador_cuil));
+    h += filaDet("Empresa", esc(d.empresa)) + filaDet("Categoría", esc(d.categoria)) +
+      filaDet("Formato", d.formato === "nuevo" ? "Ley 27.802 (Anexo III)" : "Anterior") +
+      filaDet("Remuneración bruta", '<span class="monto">' + fmtM(d.bruto) + "</span>");
+    var lineas = (d.recibo && d.recibo.lineas) || [];
+    if (lineas.length) {
+      h += '<div class="det-sec">Conceptos del recibo (' + lineas.length + ")</div>";
+      lineas.forEach(function (l) {
+        var imp = typeof l.importe === "number" ? l.importe : null;
+        h += '<div class="det-linea"><span>' + esc(l.descripcion || l.codigo || "—") + "</span>" +
+          '<span class="imp' + (imp !== null && imp < 0 ? " neg" : "") + '">' +
+          (imp === null ? "—" : fmtM(imp)) + "</span></div>";
+      });
+    }
+    var tot = (d.resultado && d.resultado.totales) || null;
+    if (tot) {
+      h += '<div class="det-sec">Totales</div>' +
+        filaDet("Ingresos", '<span class="monto">' + fmtM(tot.ingresos) + "</span>") +
+        filaDet("Descuentos", '<span class="monto">' + fmtM(tot.descuentos) + "</span>") +
+        filaDet("Neto", '<span class="monto">' + fmtM(tot.neto) + "</span>");
+    }
+    var disc = (d.resultado && d.resultado.discrepancias) || [];
+    if (disc.length) {
+      h += '<div class="det-sec" style="color:' + C.error + '">Discrepancias detectadas (' + disc.length + ')</div><ul class="det-lista">';
+      disc.forEach(function (x) { h += "<li>" + esc(x.detalle) + "</li>"; });
+      h += "</ul>";
+    }
+    var alertas = (d.resultado && d.resultado.alertas) || [];
+    if (alertas.length) {
+      h += '<div class="det-sec" style="color:' + C.aviso + '">Alertas</div><ul class="det-lista">';
+      alertas.forEach(function (x) { h += "<li>" + esc(x.detalle) + "</li>"; });
+      h += "</ul>";
+    }
+    return h;
+  }
+
+  function htmlTramite(d) {
+    var h = "<h3>" + esc(d.numero_expediente) + "</h3>" +
+      '<div class="det-sub">' + esc(d.tipo_titulo) + "</div>" +
+      filaDet("Estado", esc(d.estado_label)) +
+      filaDet("Trabajador", esc(d.trabajador_nombre || "—") + " · CUIL " + esc(d.cuil)) +
+      filaDet("Seccional", esc(d.seccional)) +
+      filaDet("Iniciado", fFecha(d.creado)) +
+      filaDet("Última actualización", fFecha(d.actualizado));
+    if ((d.respuestas || []).length) {
+      h += '<div class="det-sec">Formulario presentado</div>';
+      d.respuestas.forEach(function (r) {
+        h += filaDet(r.etiqueta, esc(r.valor_texto || (r.tiene_archivo ? "📎 " + (r.archivo_nombre || "archivo") : "—")));
+      });
+    }
+    if ((d.notas || []).length) {
+      h += '<div class="det-sec">Conversación (' + d.notas.length + ")</div>";
+      d.notas.forEach(function (n) {
+        h += '<div class="det-nota ' + (n.autor === "admin" ? "admin" : "trabajador") + '">' +
+          '<div class="quien">' + (n.autor === "admin" ? "Sindicato" : "Afiliado") + " · " + fFecha(n.creado) + "</div>" +
+          esc(n.texto) + (n.tiene_adjunto ? '<div class="quien" style="margin-top:3px">📎 ' + esc(n.adjunto_nombre) + "</div>" : "") + "</div>";
+      });
+    }
+    if ((d.log || []).length) {
+      h += '<div class="det-sec">Historial</div><ul class="det-lista">';
+      d.log.forEach(function (l) { h += "<li>" + fFecha(l.creado) + " — " + esc(l.detalle) + "</li>"; });
+      h += "</ul>";
+    }
+    return h;
+  }
+
+  function htmlNotifs(d, dia) {
+    var lista = d.notificaciones || [];
+    var h = "<h3>Notificaciones del " + fFecha(dia) + "</h3>" +
+      '<div class="det-sub">' + lista.length + " envío" + (lista.length === 1 ? "" : "s") + " en esta fila del explorador</div>";
+    if (!lista.length) return h + '<div class="det-sub">Sin notificaciones.</div>';
+    lista.forEach(function (n) {
+      h += '<div class="det-nota admin" style="max-width:100%; margin-left:0">' +
+        '<div class="quien">' + esc(n.remitente || "—") + " · " + esc(n.etiqueta) + " · " +
+        fmtN(n.leidas) + "/" + fmtN(n.enviadas) + " leídas</div>" + esc(n.texto) + "</div>";
+    });
+    return h;
+  }
+
+  function htmlConsulta(d) {
+    return "<h3>Consulta al asistente</h3>" +
+      '<div class="det-sub">' + fFecha(d.fecha) + " · " + esc(d.seccional) + "</div>" +
+      filaDet("Tema", esc(d.tema)) +
+      filaDet("Resolución", '<span class="tag ' + (d.resuelta_por_bot ? "ok" : "rev") + '">' +
+        (d.resuelta_por_bot ? "Resuelta por el bot" : "Derivada") + "</span>") +
+      '<div class="det-sec">Pregunta</div><div style="font-size:13px">' + esc(d.pregunta || "—") + "</div>";
+  }
+
+  function verDetalle(btn) {
+    var tipo = btn.dataset.det;
+    var ruta, render;
+    if (tipo === "recibo") { ruta = "detalle/recibo/" + btn.dataset.id; render = htmlRecibo; }
+    else if (tipo === "tramite") { ruta = "detalle/tramite/" + btn.dataset.id; render = htmlTramite; }
+    else if (tipo === "consulta") { ruta = "detalle/consulta/" + btn.dataset.id; render = htmlConsulta; }
+    else {
+      ruta = "detalle/notificaciones?dia=" + btn.dataset.dia + "&seccional_id=" + btn.dataset.secc +
+        "&tipo=" + btn.dataset.tipo;
+      render = function (d) { return htmlNotifs(d, btn.dataset.dia); };
+    }
+    btn.disabled = true;
+    fetch("/admin/dashboard/" + ruta)
+      .then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+      .then(function (d) { abrirModal(render(d)); })
+      .catch(function () { abrirModal("<h3>No se pudo cargar el detalle</h3><div class='det-sub'>Probá de nuevo en un momento.</div>"); })
+      .finally(function () { btn.disabled = false; });
   }
 
   /* ================= Calendario pintable ================= */
@@ -699,6 +830,18 @@
     });
     document.querySelectorAll("[data-reintentar]").forEach(function (b) {
       b.onclick = function () { refrescar(); };
+    });
+    // "Ver" es delegado: las filas se re-renderizan en cada refresco.
+    $("tabla-body").addEventListener("click", function (e) {
+      var btn = e.target.closest(".btn-ver");
+      if (btn) verDetalle(btn);
+    });
+    $("det-cerrar").onclick = cerrarModal;
+    $("overlay-det").addEventListener("click", function (e) {
+      if (e.target === this) cerrarModal();
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") cerrarModal();
     });
   }
 

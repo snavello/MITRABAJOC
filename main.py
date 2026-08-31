@@ -27,7 +27,7 @@ Arrancar con:  uvicorn main:app --reload
 """
 import traceback
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from urllib.parse import quote
 
 from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Cookie, Response
@@ -3126,6 +3126,51 @@ def dashboard_explorador(request: Request, fuente: str):
     except ValueError as e:
         raise HTTPException(422, str(e))
     return fuentes[fuente](sid, filtros, page, page_size)
+
+
+@app.get("/admin/dashboard/detalle/recibo/{recibo_id}")
+def dashboard_detalle_recibo(request: Request, recibo_id: int):
+    """Modal "Ver" del explorador. La anonimización de un recibo NO enviado
+    la hace dashboard.detalle_recibo en el servidor, no el frontend."""
+    sid = _exigir_dashboard_detalle(request)
+    d = dashboard.detalle_recibo(sid, recibo_id)
+    if not d:
+        raise HTTPException(404, "Recibo inexistente.")
+    return d
+
+
+@app.get("/admin/dashboard/detalle/tramite/{tramite_id}")
+def dashboard_detalle_tramite(request: Request, tramite_id: int):
+    sid = _exigir_dashboard_detalle(request)
+    d = dashboard.detalle_tramite(sid, tramite_id)
+    if not d:
+        raise HTTPException(404, "Trámite inexistente.")
+    return d
+
+
+@app.get("/admin/dashboard/detalle/notificaciones")
+def dashboard_detalle_notificaciones(request: Request, dia: str, tipo: str,
+                                      seccional_id: int = 0):
+    sid = _exigir_dashboard_detalle(request)
+    try:
+        date.fromisoformat(dia)
+    except ValueError:
+        raise HTTPException(422, "'dia' tiene que ser una fecha AAAA-MM-DD.")
+    if tipo not in dashboard.TIPOS_NOTIF:
+        raise HTTPException(422, "'tipo' admite 'manual' o 'sistema'.")
+    return {"notificaciones": dashboard.detalle_notificaciones_grupo(
+        sid, dia, seccional_id or None, tipo)}
+
+
+@app.get("/admin/dashboard/detalle/consulta/{consulta_id}")
+def dashboard_detalle_consulta(request: Request, consulta_id: int):
+    sid = _exigir_dashboard_detalle(request)
+    if not db.config_dashboard()["consultas_bot_habilitado"]:
+        raise HTTPException(404, "No disponible.")
+    d = dashboard.detalle_consulta(sid, consulta_id)
+    if not d:
+        raise HTTPException(404, "Consulta inexistente.")
+    return d
 
 
 @app.get("/admin/dashboard/filtros")
