@@ -13,6 +13,10 @@ from pathlib import Path
 
 import pytest
 
+# pytest agrega e2e/ al sys.path (import mode "prepend"), así que este
+# import simple funciona sin convertir la carpeta en paquete.
+import ventanas
+
 
 @pytest.fixture
 def nuevo_actor(browser, pytestconfig, request):
@@ -28,6 +32,7 @@ def nuevo_actor(browser, pytestconfig, request):
     """
     video_on = (pytestconfig.getoption("--video") or "off") != "off"
     trace_on = (pytestconfig.getoption("--tracing") or "off") != "off"
+    headed = bool(pytestconfig.getoption("--headed"))
     salida = Path(pytestconfig.getoption("--output") or "test-results")
     base = re.sub(r"[^A-Za-z0-9_.-]+", "-", request.node.name)
     creados = []
@@ -36,18 +41,24 @@ def nuevo_actor(browser, pytestconfig, request):
         kwargs = {}
         if video_on:
             kwargs["record_video_dir"] = str(salida / f"{base}-{nombre_actor}")
+        previas = ventanas.ventanas_del_navegador() if headed else set()
         ctx = browser.new_context(**kwargs)
         if trace_on:
             ctx.tracing.start(name=f"{base}-{nombre_actor}", screenshots=True,
                               snapshots=True, sources=True)
         creados.append((nombre_actor, ctx))
         page = ctx.new_page()
-        # Con --headed la ventana se abre DETRÁS de las demás y nadie ve
-        # nada: hay que traerla al frente a mano. En headless no hace nada.
-        try:
-            page.bring_to_front()
-        except Exception:
-            pass
+        if headed:
+            # La ventana se abre DETRÁS de todo y bring_to_front() no alcanza:
+            # Windows no deja robar el primer plano. Se la fija SIEMPRE ENCIMA
+            # y en su franja de pantalla (ver e2e/ventanas.py). Cada actor
+            # ocupa una mitad: se ve el ida y vuelta sin tocar nada.
+            hwnd = ventanas.esperar_ventana_nueva(previas)
+            ventanas.acomodar(hwnd, len(creados) - 1, total=2)
+            try:
+                page.bring_to_front()
+            except Exception:
+                pass
         return page
 
     yield crear

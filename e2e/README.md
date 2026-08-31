@@ -23,10 +23,15 @@ Instalación (una vez por máquina): `pip install -r requirements-dev.txt` y
 | Objetivo | Comando |
 |---|---|
 | Todos, rápido y sin ventana | `.venv/Scripts/python.exe -m pytest e2e/ -q` |
-| **Verlo en vivo** (abre el navegador) | `.venv/Scripts/python.exe -m pytest e2e/ --headed --slowmo 350` |
+| **Verlo en vivo** (abre el navegador) | `.venv/Scripts/python.exe -m pytest e2e/ --headed --slowmo 700` |
 | **Grabarlo** (video + traza por actor) | `.venv/Scripts/python.exe -m pytest e2e/ --video on --tracing on --output e2e/resultados` |
 | Solo un robot | agregar `e2e/test_robot_tramite_guarderia.py` |
 | Grabar solo lo que falla | `--video retain-on-failure --screenshot only-on-failure` |
+
+En vivo, cada actor ocupa media pantalla y su ventana queda fijada SIEMPRE
+ENCIMA: Windows no permite que un proceso le robe el primer plano a otro, así
+que `page.bring_to_front()` solo no alcanza y el robot corría invisible (ver
+`e2e/ventanas.py`).
 
 Los artefactos quedan en `e2e/resultados/` (ignorada por git: pesan MB por
 corrida y se regeneran solos).
