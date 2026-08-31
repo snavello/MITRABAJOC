@@ -32,12 +32,11 @@ RESPUESTA_ADMIN = ("Aprobado: el reintegro de guardería corresponde según el c
 JARDIN = "Jardín Rayito de Sol"
 
 
-def test_flujo_tramite_guarderia(browser, entorno_aefip):
-    # Dos sesiones de navegador independientes, como dos personas reales.
-    ctx_trab = browser.new_context()
-    ctx_admin = browser.new_context()
-    trab = ctx_trab.new_page()
-    admin = ctx_admin.new_page()
+def test_flujo_tramite_guarderia(nuevo_actor, entorno_aefip):
+    # Dos sesiones de navegador independientes, como dos personas reales
+    # (nuevo_actor las graba si se corre con --video / --tracing).
+    trab = nuevo_actor("trabajador")
+    admin = nuevo_actor("admin")
 
     # ================= ACTO 1: el trabajador presenta el trámite =========
     creds = entorno_aefip["trabajador"]
@@ -127,6 +126,3 @@ def test_flujo_tramite_guarderia(browser, entorno_aefip):
     expect(detalle).to_contain_text("Aprobado")          # la respuesta del sindicato
     # Trámite terminado: ya no se le ofrece seguir escribiendo.
     expect(trab.locator(".tram-chat-responder")).to_have_count(0)
-
-    ctx_trab.close()
-    ctx_admin.close()

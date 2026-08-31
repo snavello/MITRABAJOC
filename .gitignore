@@ -6,3 +6,8 @@ data/reportes.json
 data/validador.db
 
 disenos/
+
+# Artefactos de los robots E2E (videos, trazas, capturas): pesan MB por
+# corrida y se regeneran solos -- ver e2e/README.md
+e2e/resultados/
+test-results/

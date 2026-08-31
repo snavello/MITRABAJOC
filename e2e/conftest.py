@@ -8,8 +8,48 @@ servidor que están probando -- si no, las verificaciones y preparaciones
 de datos mirarían una base distinta a la de la app.
 """
 import os
+import re
+from pathlib import Path
 
 import pytest
+
+
+@pytest.fixture
+def nuevo_actor(browser, pytestconfig, request):
+    """Fábrica de "personas": cada llamada devuelve una página en su propio
+    contexto de navegador (sesión y cookies separadas, como dos usuarios
+    reales en dos máquinas).
+
+    Existe porque los contextos creados a mano con browser.new_context() NO
+    heredan la grabación que arma pytest-playwright para la fixture `page`:
+    con --video/--tracing, el robot no dejaba ningún artefacto. Acá se leen
+    esos flags y se aplican a cada actor, guardando video y traza en
+    --output con el nombre del test y del actor.
+    """
+    video_on = (pytestconfig.getoption("--video") or "off") != "off"
+    trace_on = (pytestconfig.getoption("--tracing") or "off") != "off"
+    salida = Path(pytestconfig.getoption("--output") or "test-results")
+    base = re.sub(r"[^A-Za-z0-9_.-]+", "-", request.node.name)
+    creados = []
+
+    def crear(nombre_actor: str):
+        kwargs = {}
+        if video_on:
+            kwargs["record_video_dir"] = str(salida / f"{base}-{nombre_actor}")
+        ctx = browser.new_context(**kwargs)
+        if trace_on:
+            ctx.tracing.start(name=f"{base}-{nombre_actor}", screenshots=True,
+                              snapshots=True, sources=True)
+        creados.append((nombre_actor, ctx))
+        return ctx.new_page()
+
+    yield crear
+
+    for nombre_actor, ctx in creados:
+        if trace_on:
+            salida.mkdir(parents=True, exist_ok=True)
+            ctx.tracing.stop(path=str(salida / f"{base}-{nombre_actor}-trace.zip"))
+        ctx.close()   # el video se escribe recién al cerrar el contexto
 
 
 @pytest.fixture(scope="session")
