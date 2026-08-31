@@ -39,6 +39,7 @@ def test_flujo_tramite_guarderia(nuevo_actor, entorno_aefip):
     admin = nuevo_actor("admin")
 
     # ================= ACTO 1: el trabajador presenta el trámite =========
+    trab.bring_to_front()   # con --headed, que se vea quién está actuando
     creds = entorno_aefip["trabajador"]
     trab.goto(f"{BASE}/ingresar")
     trab.fill('input[name="cuil"]', creds["cuil"])
@@ -78,6 +79,7 @@ def test_flujo_tramite_guarderia(nuevo_actor, entorno_aefip):
     assert "GUARD" in numero, f"El expediente no es del tipo guardería: {numero}"
 
     # ================= ACTO 2: el admin responde y cierra ================
+    admin.bring_to_front()
     creds = entorno_aefip["admin"]
     admin.goto(f"{BASE}/admin")
     admin.fill('input[name="usuario"]', creds["usuario"])
@@ -117,6 +119,7 @@ def test_flujo_tramite_guarderia(nuevo_actor, entorno_aefip):
     expect(fila).to_contain_text("Terminado")
 
     # ================= ACTO 3: el trabajador ve respuesta y cierre =======
+    trab.bring_to_front()
     trab.goto(f"{BASE}/app?tab=tramites")
     trab.fill("#tram-buscar-input", numero)
     trab.click("#tram-buscar-btn")

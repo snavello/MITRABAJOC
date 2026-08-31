@@ -41,7 +41,14 @@ def nuevo_actor(browser, pytestconfig, request):
             ctx.tracing.start(name=f"{base}-{nombre_actor}", screenshots=True,
                               snapshots=True, sources=True)
         creados.append((nombre_actor, ctx))
-        return ctx.new_page()
+        page = ctx.new_page()
+        # Con --headed la ventana se abre DETRÁS de las demás y nadie ve
+        # nada: hay que traerla al frente a mano. En headless no hace nada.
+        try:
+            page.bring_to_front()
+        except Exception:
+            pass
+        return page
 
     yield crear
 
