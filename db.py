@@ -2363,11 +2363,34 @@ def _log_tramite(s: Session, tramite_id: int, evento: str, detalle: str) -> None
     ))
 
 
+def _proximo_numero_expediente(s: Session, modelo, prefijo: str, anio: str) -> str:
+    """Siguiente correlativo LIBRE para ese prefijo+año, mirando los números
+    que YA existen (no la cantidad de trámites del tipo).
+
+    Por qué: `numero_expediente` es único en TODA la plataforma, pero el
+    prefijo sale del código del TipoTramite. Dos sindicatos que elijan el
+    mismo código ("F01") comparten espacio de numeración: contar los trámites
+    de UN tipo daba un correlativo ya usado por el otro sindicato, y los 25
+    reintentos se agotaban apenas el otro tenía más de 25 expedientes
+    (reventaba con RuntimeError -- encontrado sembrando el lote de AEFIP).
+    Mirando el máximo real la numeración salta al primer hueco libre y no
+    colisiona nunca, sin cambiar el formato ni tocar los números ya emitidos."""
+    patron = f"{prefijo}-{anio}-%"
+    numeros = s.exec(select(modelo.numero_expediente).where(
+        modelo.numero_expediente.like(patron))).all()
+    maximo = 0
+    for numero in numeros:
+        sufijo = str(numero).rsplit("-", 1)[-1]
+        if sufijo.isdigit():
+            maximo = max(maximo, int(sufijo))
+    return f"{prefijo}-{anio}-{(maximo + 1):06d}"
+
+
 def crear_tramite(sindicato_id: int, tipo_tramite_id: int, cuil: str, respuestas: list) -> Optional[dict]:
-    """Genera el número de expediente (correlativo por tipo, reintenta ante
-    colisión igual que generar_codigo_credencial) y persiste el trámite con
-    sus respuestas en una sola operación. `respuestas` es una lista de dicts
-    con campo_tramite_id/valor_texto/archivo_datos/archivo_mime/archivo_nombre,
+    """Genera el número de expediente (correlativo por prefijo+año, ver
+    _proximo_numero_expediente) y persiste el trámite con sus respuestas en
+    una sola operación. `respuestas` es una lista de dicts con
+    campo_tramite_id/valor_texto/archivo_datos/archivo_mime/archivo_nombre,
     ya validada por el llamador (ver main.api_enviar_tramite)."""
     with Session(engine) as s:
         tipo = s.get(TipoTramite, tipo_tramite_id)
@@ -2376,15 +2399,7 @@ def crear_tramite(sindicato_id: int, tipo_tramite_id: int, cuil: str, respuestas
         prefijo = "".join(ch for ch in tipo.codigo.upper() if ch.isalnum()) or "TRAM"
         anio = datetime.now().strftime("%Y")
         ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
-        existentes = len(s.exec(select(Tramite).where(Tramite.tipo_tramite_id == tipo_tramite_id)).all())
-        numero = None
-        for intento in range(25):
-            candidato = f"{prefijo}-{anio}-{(existentes + 1 + intento):06d}"
-            if not s.exec(select(Tramite).where(Tramite.numero_expediente == candidato)).first():
-                numero = candidato
-                break
-        if not numero:
-            raise RuntimeError("No se pudo generar un número de expediente único, reintentá.")
+        numero = _proximo_numero_expediente(s, Tramite, prefijo, anio)
         tr = Tramite(sindicato_id=sindicato_id, tipo_tramite_id=tipo_tramite_id, cuil=cuil,
                      numero_expediente=numero, estado="iniciado", creado=ahora, actualizado=ahora)
         s.add(tr); s.commit(); s.refresh(tr)
@@ -2655,16 +2670,10 @@ def crear_tramite_empleador(sindicato_id: int, tipo_tramite_id: int, cuit: str, 
         prefijo = "".join(ch for ch in tipo.codigo.upper() if ch.isalnum()) or "TRAM"
         anio = datetime.now().strftime("%Y")
         ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
-        existentes = len(s.exec(select(TramiteEmpleador).where(
-            TramiteEmpleador.tipo_tramite_id == tipo_tramite_id)).all())
-        numero = None
-        for intento in range(25):
-            candidato = f"{prefijo}-{anio}-{(existentes + 1 + intento):06d}"
-            if not s.exec(select(TramiteEmpleador).where(TramiteEmpleador.numero_expediente == candidato)).first():
-                numero = candidato
-                break
-        if not numero:
-            raise RuntimeError("No se pudo generar un número de expediente único, reintentá.")
+        # Mismo criterio que crear_tramite (ver _proximo_numero_expediente):
+        # la numeración de empleadores es su propio espacio, pero comparte el
+        # problema de prefijos repetidos entre sindicatos.
+        numero = _proximo_numero_expediente(s, TramiteEmpleador, prefijo, anio)
         tr = TramiteEmpleador(sindicato_id=sindicato_id, tipo_tramite_id=tipo_tramite_id, cuit=cuit,
                                numero_expediente=numero, estado="iniciado", creado=ahora, actualizado=ahora)
         s.add(tr); s.commit(); s.refresh(tr)

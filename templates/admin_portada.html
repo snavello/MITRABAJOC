@@ -45,6 +45,15 @@
   .btn-acerca { background: none; border: none; opacity: .5; font-size: 11px; cursor: pointer;
     padding: 6px; color: var(--sobre-base-mute); }
   body.claro .btn-acerca { color: var(--gris); }
+
+  /* Módulo recién estrenado: estrella en la esquina + etiqueta NUEVO. Se saca
+     a mano en un deploy posterior (no expira sola) -- ver BACKLOG.md. */
+  .acceso.destacada-new { position: relative; border-color: var(--marca-acento); }
+  .estrella-new { position: absolute; top: 8px; right: 9px; line-height: 0; }
+  .estrella-new svg { width: 17px; height: 17px; fill: var(--marca-acento); stroke: none; }
+  .tag-new { display: inline-block; vertical-align: middle; margin-left: 5px; padding: 1px 6px;
+    border-radius: 99px; background: var(--marca-acento); color: var(--marca-base);
+    font-size: 9px; font-weight: 800; letter-spacing: .5px; }
 </style>
 </head>
 <body class="{{ 'claro' if marca.admin_portada_clara else 'oscuro' }} grano {{ 'grano-clara' if marca.admin_portada_clara else 'grano-osc' }}">
@@ -70,10 +79,13 @@
 
   <div class="tarjetas" style="margin-top: 18px;">
     {% if 'dashboard' in modulos %}
-    <a class="acceso" href="/admin/dashboard">
+    <a class="acceso destacada-new" href="/admin/dashboard">
+      <span class="estrella-new" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><polygon points="12,2.6 14.9,9 21.8,9.7 16.6,14.3 18.1,21.1 12,17.6 5.9,21.1 7.4,14.3 2.2,9.7 9.1,9"/></svg>
+      </span>
       <svg viewBox="0 0 24 24"><use href="#ic-dashboard"/></svg>
       <div>
-        <div class="titulo">Panel Sindical</div>
+        <div class="titulo">Panel Sindical <span class="tag-new">NUEVO</span></div>
         <div class="estado">Indicadores y actividad en vivo</div>
       </div>
     </a>

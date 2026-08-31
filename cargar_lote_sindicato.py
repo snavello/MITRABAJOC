@@ -60,6 +60,14 @@ ORGANISMOS_FISCALES = [
     ("Depósito Fiscal Zárate", (68, 95)), ("Receptoría Tucumán", (70, 100)),
     ("Agencia Bahía Blanca", None), ("Aduana Ezeiza", (6, 24)),
 ]
+BANCOS = [
+    ("Banco de la Nación Argentina", (5, 18)), ("Banco de la Provincia de Buenos Aires", (5, 20)),
+    ("Banco Galicia", (5, 16)), ("Banco Santander Argentina", (6, 20)),
+    ("BBVA Argentina", (5, 18)), ("Banco Macro", (8, 24)),
+    ("Banco Credicoop", (10, 26)), ("Banco Ciudad de Buenos Aires", (6, 22)),
+    ("Banco Patagonia", (40, 58)), ("Banco Supervielle", (44, 62)),
+    ("Banco Comafi", (66, 96)), ("Banco Hipotecario", None),
+]
 EMPRESAS_GENERICAS = [
     ("Industrias del Litoral SA", (5, 22)), ("Servicios Federales SRL", (5, 20)),
     ("Compañía del Sur SA", (8, 25)), ("Talleres Asociados SRL", (10, 30)),
@@ -199,6 +207,12 @@ BENEFICIOS = [
 
 
 # ---------------------------------------------------------------- identidad del lote
+# Perfiles de recibo por sindicato: clave = fragmento del nombre en
+# MAYÚSCULAS, valor = función que arma las líneas de ingreso según SU
+# convenio. Lo llena quien lo necesite antes de sembrar (ver cargar_bancaria).
+PERFILES = {}
+
+
 def argumento(nombre: str) -> str:
     if nombre in sys.argv:
         i = sys.argv.index(nombre)
@@ -226,16 +240,29 @@ def contexto_lote(sid: int, nombre: str) -> dict:
     base_cuil = 65000000 + (sid % 40) * 1_000_000
     cuils = [f"{'20' if i % 3 else '27'}{base_cuil + i:08d}{(i * 7) % 10}"
              for i in range(CANT_TRABAJADORES)]
-    empresas_base = ORGANISMOS_FISCALES if any(p in nombre.upper() for p in ("AEFIP", "FISCAL")) \
-        else EMPRESAS_GENERICAS
+    if any(p in nombre.upper() for p in ("AEFIP", "FISCAL")):
+        empresas_base = ORGANISMOS_FISCALES
+    elif "BANCARIA" in nombre.upper() or "BANCARIO" in nombre.upper():
+        empresas_base = BANCOS
+    else:
+        empresas_base = EMPRESAS_GENERICAS
     cuits = [f"30{base_cuil + 900000 + j:08d}{(j * 3) % 10}" for j in range(len(empresas_base))]
     # El número de expediente es ÚNICO EN TODA LA PLATAFORMA y su prefijo
     # sale del código del tipo: si dos sindicatos usan el mismo código
     # ("F01"), sus expedientes chocan (hallazgo anotado en BACKLOG.md). Los
     # tipos del lote llevan la sigla del sindicato para no pisarse.
     sigla = "".join(ch for ch in nombre.upper() if ch.isalnum())[:4] or f"S{sid}"
+    # Perfil de recibo propio del sindicato (opcional): una función
+    # (rnd, trabajador, conceptos, fecha) -> lista de líneas de ingreso, para
+    # armar recibos fieles a SU convenio en vez del genérico. Lo registran
+    # scripts como cargar_bancaria.py en PERFILES antes de sembrar.
+    perfil = None
+    for clave, funcion in PERFILES.items():
+        if clave in nombre.upper():
+            perfil = funcion
+            break
     return {"rnd": rnd, "cuils": cuils, "empresas_base": empresas_base, "cuits": cuits,
-            "sigla": sigla,
+            "sigla": sigla, "perfil": perfil,
             "codigos_tipo": [f"{sigla}-{t['codigo']}" for t in TIPOS_TRAMITE]}
 
 
@@ -370,8 +397,12 @@ def sembrar_base(sid: int, ctx: dict):
             if not s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first():
                 s.add(CuentaTrabajador(cuil=cuil, nombre=nombre,
                                        clave_hash=auth.hashear_clave(cuil[:5])))
+            # `semilla` deja que un perfil derive rasgos ESTABLES del
+            # trabajador (antigüedad, función, título): tienen que ser los
+            # mismos en todos sus recibos, no sortearse en cada uno.
             trabajadores.append({"cuil": cuil, "nombre": nombre, "empresa": emp,
-                                 "sueldo": rnd.randint(900, 3200) * 1000})
+                                 "sueldo": rnd.randint(900, 3200) * 1000,
+                                 "semilla": int(cuil[-7:]), "antiguedad": rnd.randint(0, 38)})
         s.commit()
     return trabajadores, empresas, secc_ids
 
@@ -391,6 +422,11 @@ def _armar_recibo(ctx, trab, conceptos, dias_atras):
     if not ingresos_rem:
         sys.exit("El sindicato no tiene conceptos de tipo ingreso: no se pueden armar recibos.")
 
+    # Con perfil propio, las líneas las arma el convenio del sindicato.
+    if ctx.get("perfil"):
+        lineas = ctx["perfil"](rnd, trab, genericos, fecha_proceso)
+        return _envoltorio_recibo(ctx, trab, lineas, periodo, fecha_proceso, dias_atras), fecha_proceso
+
     lineas = []
     principal = ingresos_rem[0]
     sueldo = round(trab["sueldo"] * rnd.uniform(0.97, 1.06), 2)
@@ -407,18 +443,26 @@ def _armar_recibo(ctx, trab, conceptos, dias_atras):
         lineas.append({"codigo": c["codigo"], "descripcion": c["nombre"],
                        "importe": round(rnd.uniform(30000, 110000), 2),
                        "tipo": "remuneracion", "categoria_universal": None})
+    return _envoltorio_recibo(ctx, trab, lineas, periodo, fecha_proceso, dias_atras), fecha_proceso
+
+
+def _envoltorio_recibo(ctx, trab, lineas, periodo, fecha_proceso, dias_atras):
+    """El recibo alrededor de sus líneas (encabezado, período, formato). Lo
+    comparten el armado genérico y los perfiles por convenio."""
+    rnd = ctx["rnd"]
+    categoria = trab.get("categoria") or rnd.choice(CATEGORIAS)
     return {
         "formato": "nuevo" if rnd.random() < (0.25 + (DIAS_HISTORIA - dias_atras) / DIAS_HISTORIA * 0.65) else "clasico",
         "empleado": {"apellido_nombre": trab["nombre"], "cuil": trab["cuil"],
                      "legajo": str(rnd.randint(100, 9999)),
-                     "categoria": rnd.choice(CATEGORIAS), "fecha_ingreso": None},
+                     "categoria": categoria, "fecha_ingreso": None},
         "empleador": {"nombre": trab["empresa"]["razon"], "cuit": trab["empresa"]["cuit"]},
         "periodo": periodo, "fecha_pago": _fecha_ar(fecha_proceso),
         "lineas": lineas, "totales_impresos": {},
         "contribuciones_patronales": [], "costo_laboral_total": None,
         "ultimo_deposito": None, "confianza": "alta", "observaciones": None,
         "alerta_adulteracion": {"detectada": False, "motivo": None},
-    }, fecha_proceso
+    }
 
 
 def _cerrar_totales(recibo):

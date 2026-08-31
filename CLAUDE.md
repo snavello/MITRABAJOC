@@ -67,6 +67,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - cargar_lote_sindicato.py — lote sintético completo para CUALQUIER sindicato
   existente (`--sindicato "AEFIP"`); `cargar_lote_uom.py` es la versión
   anterior, específica de la UOM. Ver "Lotes de datos sintéticos".
+- cargar_bancaria.py — alta de "La Bancaria" con los conceptos del CCT 18/75
+  (ver `docs/cct-1875-bancarios.md`) + su lote.
 - medir_dashboard.py — mide los endpoints del Panel Sindical con 50.000 recibos.
 - e2e/ — robots de QA con Playwright (ver `e2e/README.md`).
 - chequeo.py — autodiagnóstico de la instalación.
@@ -121,6 +123,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - Trabajador pluriempleo (ambos): CUIL 27222222224.
 - Empresa un solo sindicato: CUIT 30999888776 (UOM) — registrarse en `/ingresar-empresa`.
 - Empresa multisindicato (ambos): CUIT 30111222339.
+- Admin La Bancaria: CUIT 20333444550 / bancaria-demo (sindicato con lote
+  sintético completo, recibos según CCT 18/75 — ver `cargar_bancaria.py`).
 
 ## Decisiones tomadas (no rediscutir sin motivo)
 - **Motor: Render Postgres** (no Supabase). La app ya tiene auth propia, que es el
@@ -354,10 +358,17 @@ existente: 6 seccionales, ~12 empresas, 100 trabajadores con cuenta (**clave
   `--limpiar` borra exactamente el lote sin tocar la demo original.
 - Le habilita al sindicato los módulos que el lote necesita (dashboard,
   trámites, notificaciones, noticias, beneficios).
-- Los códigos de tipo de trámite van prefijados con la sigla del sindicato:
-  el `numero_expediente` es único en TODA la plataforma y su prefijo sale del
-  código del tipo, así que dos sindicatos con el mismo código chocan (bug
-  latente anotado en BACKLOG.md).
+- Los códigos de tipo de trámite van prefijados con la sigla del sindicato
+  (el `numero_expediente` es único en TODA la plataforma y su prefijo sale
+  del código del tipo).
+- **Perfiles de recibo por convenio**: un sindicato puede registrar en
+  `cargar_lote_sindicato.PERFILES` una función que arma sus líneas de ingreso
+  según SU convenio, en vez del armado genérico. `cargar_bancaria.py` es el
+  ejemplo: reproduce el CCT 18/75 (adicionales como % del **sueldo inicial**,
+  antigüedad embebida en el básico, cajero función + falla de caja como dos
+  líneas). Los rasgos estables del trabajador (antigüedad, si es cajero,
+  título) salen de `trab["semilla"]`, derivada del CUIL — no se sortean en
+  cada recibo.
 
 ## Robots E2E (Playwright) — ver `e2e/README.md`
 Pruebas de punta a punta contra la app real (servidor + Postgres + JS del

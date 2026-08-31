@@ -58,8 +58,10 @@
   .presets, .seg { display: flex; background: var(--blanco); border: 1px solid var(--linea); border-radius: 10px; padding: 3px; gap: 2px; }
   .presets button, .seg button { padding: 6px 12px; border: none; background: none; border-radius: 8px;
     font-size: 12.5px; font-weight: 600; color: var(--gris); cursor: pointer; font-family: inherit; }
+  /* "Destacado = opción vigente": TODA la barra de filtros muestra siempre
+     cuál es la opción elegida, incluso en su estado por defecto ("Todos",
+     "TODAS"). Antes el default quedaba neutro y parecía sin elegir. */
   .presets button.act, .seg button.act { background: var(--destacado); color: #fff; }
-  .seg button.neutro.act { background: var(--blanco); color: var(--tinta); box-shadow: 0 1px 3px rgba(21,34,56,.14); }
   select.f-select { border: 1.5px solid var(--linea); border-radius: var(--r-btn); padding: 7px 10px;
     font-family: inherit; font-size: 12.5px; color: var(--tinta); background: var(--blanco); min-width: 150px; }
   select.f-select.act { border-color: var(--destacado); background: var(--destacado-suave); color: var(--destacado-osc); font-weight: 600; }
@@ -233,6 +235,31 @@
   .det-nota.trabajador { background: var(--papel); }
   .det-nota .quien { font-size: 10.5px; font-weight: 700; color: var(--gris); margin-bottom: 2px;
     text-transform: uppercase; letter-spacing: .4px; }
+
+  /* Chat del trámite: MISMAS clases y aspecto que el hilo de /admin y el de
+     la app del trabajador (pedido de Sd) -- si se toca el chat allá, tocarlo
+     también acá. */
+  .tram-chat { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+  .tram-chat-sistema { align-self: center; max-width: 92%; text-align: center; font-size: 11px;
+    color: var(--gris); background: var(--papel); border: 1px solid var(--linea);
+    border-radius: 20px; padding: 5px 13px; }
+  .tram-chat-fila { display: flex; align-items: flex-end; gap: 7px; max-width: 86%; }
+  .tram-chat-fila.propio { flex-direction: row-reverse; align-self: flex-end; }
+  .tram-chat-fila.ajeno { align-self: flex-start; }
+  .tram-chat-avatar-fallback { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    background: var(--marca-acento); display: flex; align-items: center; justify-content: center;
+    border: 1.5px solid var(--marca-acento); }
+  .tram-chat-avatar-fallback svg { width: 15px; height: 15px; stroke: var(--marca-base);
+    stroke-width: 1.8; fill: none; }
+  .tram-chat-burbuja { border-radius: 14px; padding: 9px 12px; min-width: 64px; }
+  .tram-chat-fila.propio .tram-chat-burbuja {
+    background: color-mix(in srgb, var(--marca-acento) 20%, #fff); border-bottom-right-radius: 4px; }
+  .tram-chat-fila.ajeno .tram-chat-burbuja {
+    background: #fff; border: 1px solid var(--linea); border-bottom-left-radius: 4px; }
+  .tram-chat-remitente { font-size: 10.5px; font-weight: 650; color: var(--marca-primario); margin-bottom: 2px; }
+  .tram-chat-texto { font-size: 13.5px; line-height: 1.4; color: var(--tinta); white-space: pre-wrap; }
+  .tram-chat-meta { display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 10px; color: var(--gris); }
+  .tram-chat-vacio { text-align: center; padding: 22px 0; color: var(--gris); font-size: 12.5px; }
   .det-anonimo { background: color-mix(in srgb, var(--aviso) 10%, white); color: color-mix(in srgb, var(--aviso) 80%, black);
     border-radius: 9px; padding: 8px 12px; font-size: 12px; margin-bottom: 10px; }
   .det-destinatarios { margin-top: 6px; max-height: 260px; overflow-y: auto; }
@@ -277,12 +304,10 @@
         </div>
         <span class="f-label" style="margin-top:8px">Formato de recibo</span>
         <div class="seg" id="f-formato">
-          <button type="button" data-v="" class="neutro act">Todos</button>
+          <button type="button" data-v="" class="act">Todos</button>
           <button type="button" data-v="viejo">Anterior</button>
           <button type="button" data-v="nuevo">Ley 27.802</button>
         </div>
-        <span class="f-label" style="margin-top:8px">Categoría</span>
-        <select id="f-categoria" class="f-select"><option value="">Todas</option></select>
         <span class="f-label" style="margin-top:8px">Seccionales · múltiple</span>
         <div class="multi-chips" id="secc-chips" style="max-width:260px"></div>
       </div>

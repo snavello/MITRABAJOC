@@ -82,7 +82,12 @@ def test_flujo_tramite_guarderia(nuevo_actor, entorno_aefip, informe):
     assert "GUARD" in numero, f"El expediente no es del tipo guardería: {numero}"
     informe.paso(f"Completó el formulario (hijo/a, edad, jardín, monto) y lo envió → {numero}")
     informe.dato("Expediente generado", numero)
-    informe.dato("Formulario", "Martina Gómez · 4 años · " + JARDIN + " · $185.000")
+    # El TIPO de trámite es genérico (lo define el sindicato una vez); lo de
+    # abajo es lo que tipeó ESTE trabajador en sus campos, no parte del
+    # formulario. Se distinguen a propósito en el informe.
+    informe.dato("Tipo de trámite (formulario del sindicato)", "Reintegro de guardería")
+    informe.dato("Datos que cargó el trabajador",
+                 "Martina Gómez · 4 años · " + JARDIN + " · $185.000")
 
     # ================= ACTO 2: el admin responde y cierra ================
     admin.bring_to_front()

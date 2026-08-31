@@ -52,12 +52,12 @@
   var S = {
     desde: new Date(HOY), hasta: new Date(HOY),
     seccionales: new Set(), empresas: new Set(),
-    categoria: "", formato: "", salMin: null, salMax: null,
+    formato: "", salMin: null, salMax: null,
     resultado: "", estadoTramite: "", tipoNotif: "", tema: "",
     tab: "recibos", paginas: 1,
   };
   var LIM = { min: null, max: null };        // límites del slider (en miles)
-  var CATALOGO = { seccionales: [], empresas: [], categorias: [] };
+  var CATALOGO = { seccionales: [], empresas: [] };
   var calVista = new Date(HOY.getFullYear(), HOY.getMonth(), 1);
   var calEligiendo = false;
 
@@ -67,7 +67,6 @@
     q.set("desde", fISO(S.desde)); q.set("hasta", fISO(S.hasta));
     S.seccionales.forEach(function (id) { q.append("seccionales", id); });
     S.empresas.forEach(function (id) { q.append("empresas", id); });
-    if (S.categoria) q.set("categoria", S.categoria);
     if (S.formato) q.set("formato", S.formato);
     if (S.salMin !== null && LIM.min !== null && S.salMin > LIM.min) q.set("sal_min", S.salMin * 1000);
     if (S.salMax !== null && LIM.max !== null && S.salMax < LIM.max) q.set("sal_max", S.salMax * 1000);
@@ -92,7 +91,6 @@
     } catch (e) { return; }
     q.getAll("seccionales").forEach(function (v) { if (+v) S.seccionales.add(+v); });
     q.getAll("empresas").forEach(function (v) { if (+v) S.empresas.add(+v); });
-    S.categoria = q.get("categoria") || "";
     S.formato = ["viejo", "nuevo"].indexOf(q.get("formato")) >= 0 ? q.get("formato") : "";
     if (q.get("sal_min")) S.salMin = Math.round(+q.get("sal_min") / 1000);
     if (q.get("sal_max")) S.salMax = Math.round(+q.get("sal_max") / 1000);
@@ -593,13 +591,31 @@
         h += filaDet(r.etiqueta, esc(r.valor_texto || (r.tiene_archivo ? "📎 " + (r.archivo_nombre || "archivo") : "—")));
       });
     }
-    if ((d.notas || []).length) {
-      h += '<div class="det-sec">Conversación (' + d.notas.length + ")</div>";
+    // Conversación con el MISMO aspecto que el hilo de /admin y el de la app
+    // del trabajador (burbujas estilo WhatsApp), no una lista de notas.
+    h += '<div class="det-sec">Conversación' +
+      ((d.notas || []).length ? " (" + d.notas.length + ")" : "") + "</div>";
+    if (!(d.notas || []).length) {
+      h += '<div class="tram-chat-vacio">Todavía no hay mensajes en este trámite.</div>';
+    } else {
+      h += '<div class="tram-chat">';
       d.notas.forEach(function (n) {
-        h += '<div class="det-nota ' + (n.autor === "admin" ? "admin" : "trabajador") + '">' +
-          '<div class="quien">' + (n.autor === "admin" ? "Sindicato" : "Afiliado") + " · " + fFecha(n.creado) + "</div>" +
-          esc(n.texto) + (n.tiene_adjunto ? '<div class="quien" style="margin-top:3px">📎 ' + esc(n.adjunto_nombre) + "</div>" : "") + "</div>";
+        var propio = n.autor === "admin";
+        h += '<div class="tram-chat-fila ' + (propio ? "propio" : "ajeno") + '">' +
+          '<span class="tram-chat-avatar-fallback"><svg viewBox="0 0 24 24">' +
+          (propio
+            ? '<path d="M12 3l7 3v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6z"/><circle cx="12" cy="10" r="2.3"/>'
+            : '<circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/>') +
+          "</svg></span>" +
+          '<div class="tram-chat-burbuja">' +
+          '<div class="tram-chat-remitente">' + (propio ? "Sindicato" : "Afiliado") + "</div>" +
+          '<div class="tram-chat-texto">' + esc(n.texto) + "</div>" +
+          '<div class="tram-chat-meta">' +
+          (n.tiene_adjunto ? "<span>📎 " + esc(n.adjunto_nombre || "adjunto") + "</span>" : "") +
+          "<span>" + fFecha(n.creado) + " " + esc((n.creado || "").slice(11, 16)) + "</span>" +
+          "</div></div></div>";
       });
+      h += "</div>";
     }
     if ((d.log || []).length) {
       h += '<div class="det-sec">Historial</div><ul class="det-lista">';
@@ -733,6 +749,13 @@
   function pintarMultiChips(idCont, items, set) {
     var cont = $(idCont);
     if (!cont.children.length) {
+      // Chip "TODAS" explícito: el conjunto vacío YA significa "todas", pero
+      // sin este chip el estado por defecto no se veía elegido (§ backlog).
+      var todas = document.createElement("button");
+      todas.type = "button"; todas.className = "m-chip"; todas.textContent = "TODAS";
+      todas.dataset.todas = "1";
+      todas.onclick = function () { set.clear(); cambio(); };
+      cont.appendChild(todas);
       items.forEach(function (it) {
         var b = document.createElement("button");
         b.type = "button"; b.className = "m-chip"; b.textContent = it.nombre; b.dataset.id = it.id;
@@ -744,7 +767,9 @@
         cont.appendChild(b);
       });
     }
-    cont.querySelectorAll(".m-chip").forEach(function (b) { b.classList.toggle("act", set.has(+b.dataset.id)); });
+    cont.querySelectorAll(".m-chip").forEach(function (b) {
+      b.classList.toggle("act", b.dataset.todas ? set.size === 0 : set.has(+b.dataset.id));
+    });
   }
 
   function pintarSlider() {
@@ -764,8 +789,6 @@
     var p = presetActivo();
     document.querySelectorAll("#presets button").forEach(function (b) { b.classList.toggle("act", b.dataset.p === p); });
     document.querySelectorAll("#f-formato button").forEach(function (b) { b.classList.toggle("act", b.dataset.v === S.formato); });
-    $("f-categoria").value = S.categoria;
-    $("f-categoria").classList.toggle("act", !!S.categoria);
     pintarMultiChips("secc-chips", CATALOGO.seccionales, S.seccionales);
     pintarMultiChips("emp-chips", CATALOGO.empresas, S.empresas);
     if (LIM.min !== null) {
@@ -791,7 +814,6 @@
     S.empresas.forEach(function (id) {
       agregar("Empresa: " + nombreDe(CATALOGO.empresas, id), function () { S.empresas.delete(id); });
     });
-    if (S.categoria) agregar("Categoría: " + S.categoria, function () { S.categoria = ""; });
     if (S.formato) agregar("Formato: " + (S.formato === "nuevo" ? "Ley 27.802" : "Anterior"), function () { S.formato = ""; });
     if (S.resultado) agregar("Resultado: " + (S.resultado === "ok" ? "Correctos" : "Con diferencias"), function () { S.resultado = ""; });
     if (S.estadoTramite) {
@@ -824,7 +846,7 @@
 
   function reiniciar() {
     S.seccionales.clear(); S.empresas.clear();
-    S.categoria = ""; S.formato = ""; S.resultado = ""; S.estadoTramite = ""; S.tipoNotif = ""; S.tema = "";
+    S.formato = ""; S.resultado = ""; S.estadoTramite = ""; S.tipoNotif = ""; S.tema = "";
     S.salMin = LIM.min; S.salMax = LIM.max;
     S.tab = "recibos"; S.paginas = 1;
     setPreset("hoy");
@@ -840,7 +862,6 @@
     document.querySelectorAll("#f-formato button").forEach(function (b) {
       b.onclick = function () { S.formato = b.dataset.v; cambio(); };
     });
-    $("f-categoria").onchange = function (e) { S.categoria = e.target.value; cambio(); };
     $("cal-prev").onclick = function () { calVista.setMonth(calVista.getMonth() - 1); pintarCalendario(); };
     $("cal-next").onclick = function () { calVista.setMonth(calVista.getMonth() + 1); pintarCalendario(); };
     $("btn-reiniciar").onclick = reiniciar;
@@ -886,8 +907,6 @@
       .then(function (d) {
         CATALOGO.seccionales = d.seccionales;
         CATALOGO.empresas = d.empresas;
-        var sel = $("f-categoria");
-        d.categorias.forEach(function (c) { sel.add(new Option(c, c)); });
         if (d.bruto_min !== null && d.bruto_max !== null && d.bruto_max > d.bruto_min) {
           LIM.min = Math.floor(d.bruto_min / 50000) * 50;   // miles, redondeado a 50k
           LIM.max = Math.ceil(d.bruto_max / 50000) * 50;
