@@ -7,8 +7,12 @@ nuevo con override: los E2E hablan con el MISMO Postgres local que usa el
 servidor que están probando -- si no, las verificaciones y preparaciones
 de datos mirarían una base distinta a la de la app.
 """
+import html
 import os
 import re
+import time
+import webbrowser
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -68,6 +72,193 @@ def nuevo_actor(browser, pytestconfig, request):
             salida.mkdir(parents=True, exist_ok=True)
             ctx.tracing.stop(path=str(salida / f"{base}-{nombre_actor}-trace.zip"))
         ctx.close()   # el video se escribe recién al cerrar el contexto
+
+
+# ---------------------------------------------------------------------------
+# Informe final: cada robot cuenta qué fue haciendo (informe.paso/dato) y al
+# terminar la corrida se arma una ficha HTML con el resultado, los pasos, los
+# datos que dejó en la app y los videos/trazas. Con --headed se abre sola.
+# ---------------------------------------------------------------------------
+_INFORMES = {}     # nodeid -> _Informe
+_RESULTADOS = {}   # nodeid -> {"estado", "duracion", "error"}
+
+
+class _Informe:
+    def __init__(self, nombre: str):
+        self.nombre = nombre
+        self.inicio = time.time()
+        self.pasos = []      # (segundos, texto)
+        self.datos = []      # (clave, valor)
+
+    def paso(self, texto: str):
+        """Un hito del guion, con el segundo en que ocurrió."""
+        self.pasos.append((time.time() - self.inicio, texto))
+
+    def dato(self, clave: str, valor):
+        """Un dato verificable que el robot dejó en la app (ej. el número de
+        expediente), para poder ir a mirarlo después."""
+        self.datos.append((clave, str(valor)))
+
+
+@pytest.fixture
+def informe(request):
+    inf = _Informe(request.node.name)
+    _INFORMES[request.node.nodeid] = inf
+    return inf
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_makereport(item, call):
+    reporte = yield
+    if reporte.when == "call":
+        _RESULTADOS[item.nodeid] = {
+            "estado": reporte.outcome,
+            "duracion": reporte.duration,
+            "error": (str(reporte.longrepr)[-1500:] if reporte.failed else ""),
+        }
+    return reporte
+
+
+_PLANTILLA = """<!doctype html>
+<meta charset="utf-8"><title>Robots E2E — Mi Trabajo</title>
+<style>
+ :root {{ --ok:#0d7a5f; --mal:#c0392b; --tinta:#152238; --gris:#5b6478;
+         --linea:#e4e7ec; --papel:#f6f7f9; }}
+ * {{ box-sizing:border-box; margin:0 }}
+ body {{ font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+         background:var(--papel); color:var(--tinta); line-height:1.5; padding:26px 18px 60px }}
+ .wrap {{ max-width:840px; margin:0 auto }}
+ h1 {{ font-size:26px; letter-spacing:-.01em }}
+ .sub {{ color:var(--gris); font-size:13px; margin-top:2px }}
+ .totales {{ display:flex; gap:10px; margin:18px 0 22px; flex-wrap:wrap }}
+ .caja {{ background:#fff; border:1px solid var(--linea); border-radius:12px;
+          padding:12px 16px; min-width:120px }}
+ .caja .n {{ font-size:26px; font-weight:700; font-variant-numeric:tabular-nums }}
+ .caja .t {{ font-size:10.5px; text-transform:uppercase; letter-spacing:.6px; color:var(--gris); font-weight:700 }}
+ .test {{ background:#fff; border:1px solid var(--linea); border-left:5px solid var(--lc);
+          border-radius:12px; padding:16px 18px; margin-bottom:14px }}
+ .test h2 {{ font-size:17px; display:flex; align-items:center; gap:9px; flex-wrap:wrap }}
+ .chip {{ font-size:11px; font-weight:700; padding:2px 10px; border-radius:99px; color:#fff; background:var(--lc) }}
+ .dur {{ font-size:12px; color:var(--gris); font-weight:400 }}
+ .sec {{ font-size:10.5px; text-transform:uppercase; letter-spacing:.6px;
+         color:var(--gris); font-weight:700; margin:15px 0 7px }}
+ ol {{ margin:0; padding-left:20px; font-size:13.5px }}
+ ol li {{ margin-bottom:5px }}
+ ol li span {{ color:var(--gris); font-family:ui-monospace,Consolas,monospace; font-size:11.5px }}
+ table {{ border-collapse:collapse; width:100%; font-size:13px }}
+ td {{ padding:5px 0; border-bottom:1px solid var(--linea); vertical-align:top }}
+ td:first-child {{ color:var(--gris); width:190px }}
+ td.v {{ font-family:ui-monospace,Consolas,monospace }}
+ a {{ color:#1a3d6b }}
+ pre {{ background:#fff5f4; border:1px solid #f0c8c2; border-radius:9px; padding:10px 12px;
+        font-size:11.5px; overflow-x:auto; white-space:pre-wrap; color:#8a2b1f }}
+ footer {{ color:var(--gris); font-size:11.5px; text-align:center; margin-top:26px }}
+</style>
+<div class="wrap">
+ <h1>Robots E2E — Mi Trabajo</h1>
+ <div class="sub">{fecha} · {modo}</div>
+ <div class="totales">
+  <div class="caja"><div class="n" style="color:{color_total}">{aprobados}/{total}</div><div class="t">Robots en verde</div></div>
+  <div class="caja"><div class="n">{duracion:.1f}s</div><div class="t">Duración total</div></div>
+ </div>
+ {cuerpo}
+ <footer>Generado por la flota E2E · e2e/README.md</footer>
+</div>
+"""
+
+
+def _bloque_test(nombre, res, inf, artefactos):
+    ok = res["estado"] == "passed"
+    color = "#0d7a5f" if ok else "#c0392b"
+    partes = [f'<div class="test" style="--lc:{color}">',
+              f'<h2>{html.escape(nombre)} <span class="chip">'
+              f'{"PASÓ" if ok else "FALLÓ"}</span>'
+              f'<span class="dur">{res["duracion"]:.1f}s</span></h2>']
+    if inf and inf.pasos:
+        partes.append('<div class="sec">Lo que hizo</div><ol>')
+        for segundos, texto in inf.pasos:
+            partes.append(f'<li>{html.escape(texto)} <span>({segundos:.1f}s)</span></li>')
+        partes.append("</ol>")
+    if inf and inf.datos:
+        partes.append('<div class="sec">Lo que dejó en la app</div><table>')
+        for clave, valor in inf.datos:
+            partes.append(f'<tr><td>{html.escape(clave)}</td>'
+                          f'<td class="v">{html.escape(valor)}</td></tr>')
+        partes.append("</table>")
+    if artefactos:
+        partes.append('<div class="sec">Grabaciones</div><table>')
+        for etiqueta, ruta in artefactos:
+            uri = Path(ruta).resolve().as_uri()
+            partes.append(f'<tr><td>{html.escape(etiqueta)}</td>'
+                          f'<td><a href="{uri}">{html.escape(Path(ruta).name)}</a></td></tr>')
+        partes.append("</table>")
+    if not ok and res["error"]:
+        partes.append('<div class="sec">Dónde se rompió</div>'
+                      f'<pre>{html.escape(res["error"])}</pre>')
+    partes.append("</div>")
+    return "\n".join(partes)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    if not _RESULTADOS:
+        return
+    config = session.config
+    salida = Path(config.getoption("--output") or "test-results")
+    headed = bool(config.getoption("--headed"))
+    total = len(_RESULTADOS)
+    aprobados = sum(1 for r in _RESULTADOS.values() if r["estado"] == "passed")
+    duracion = sum(r["duracion"] for r in _RESULTADOS.values())
+
+    cuerpo = []
+    for nodeid, res in _RESULTADOS.items():
+        inf = _INFORMES.get(nodeid)
+        nombre = inf.nombre if inf else nodeid.split("::")[-1]
+        base = re.sub(r"[^A-Za-z0-9_.-]+", "-", nombre)
+        artefactos = []
+        if salida.exists():
+            for ruta in sorted(salida.glob(f"{base}*/*.webm")):
+                artefactos.append((f"Video · {ruta.parent.name.split('--')[-1]}", ruta))
+            for ruta in sorted(salida.glob(f"{base}*-trace.zip")):
+                artefactos.append((f"Traza · {ruta.stem.split('--')[-1].replace('-trace', '')}", ruta))
+        cuerpo.append(_bloque_test(nombre, res, inf, artefactos))
+
+    salida.mkdir(parents=True, exist_ok=True)
+    destino = salida / "informe.html"
+    destino.write_text(_PLANTILLA.format(
+        fecha=datetime.now().strftime("%d/%m/%Y %H:%M"),
+        modo="con ventana visible" if headed else "modo silencioso",
+        aprobados=aprobados, total=total, duracion=duracion,
+        color_total="#0d7a5f" if aprobados == total else "#c0392b",
+        cuerpo="\n".join(cuerpo)), encoding="utf-8")
+
+    # Resumen en la terminal (siempre) + la ficha abierta (solo si mirabas).
+    # La consola de Windows usa cp1252: sin esto, cada acento del resumen
+    # sale como "?" (mismo problema que resuelven los scripts de la raíz).
+    import sys
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
+    def escribir(texto):
+        codificacion = sys.stdout.encoding or "utf-8"
+        print(texto.encode(codificacion, errors="replace").decode(codificacion))
+
+    escribir(f"\n{'=' * 62}\n  RESULTADO: {aprobados}/{total} robots en verde · {duracion:.1f}s")
+    for nodeid, res in _RESULTADOS.items():
+        inf = _INFORMES.get(nodeid)
+        marca = "OK   " if res["estado"] == "passed" else "FALLÓ"
+        escribir(f"  {marca} {inf.nombre if inf else nodeid.split('::')[-1]} ({res['duracion']:.1f}s)")
+        for segundos, texto in (inf.pasos if inf else []):
+            escribir(f"         · {texto}")
+        for clave, valor in (inf.datos if inf else []):
+            escribir(f"         {clave}: {valor}")
+    escribir(f"  Informe: {destino.resolve()}\n{'=' * 62}")
+    if headed:
+        try:
+            webbrowser.open(destino.resolve().as_uri())
+        except Exception:
+            pass
 
 
 @pytest.fixture(scope="session")

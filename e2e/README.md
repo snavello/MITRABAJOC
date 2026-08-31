@@ -36,6 +36,24 @@ que `page.bring_to_front()` solo no alcanza y el robot corría invisible (ver
 Los artefactos quedan en `e2e/resultados/` (ignorada por git: pesan MB por
 corrida y se regeneran solos).
 
+## El informe final
+
+Cada corrida termina con un resumen en la terminal (resultado, los pasos que
+dio cada robot y los datos que dejó en la app, ej. el número de expediente) y
+genera `e2e/resultados/informe.html` con lo mismo en formato ficha, más los
+enlaces a los videos y trazas. Con `--headed` la ficha se abre sola al final.
+
+Un robot cuenta lo que hace con la fixture `informe`:
+
+```python
+def test_algo(page, informe):
+    informe.paso("El trabajador entró a su app")        # un hito del guion
+    informe.dato("Expediente generado", numero)          # algo verificable
+```
+
+Si no la usa, igual aparece en el informe con su resultado y duración; los
+pasos son lo que lo hace legible para alguien que no leyó el código.
+
 ### Ver una traza (lo más útil para depurar)
 
 ```

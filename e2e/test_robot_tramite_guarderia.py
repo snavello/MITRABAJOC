@@ -32,7 +32,7 @@ RESPUESTA_ADMIN = ("Aprobado: el reintegro de guardería corresponde según el c
 JARDIN = "Jardín Rayito de Sol"
 
 
-def test_flujo_tramite_guarderia(nuevo_actor, entorno_aefip):
+def test_flujo_tramite_guarderia(nuevo_actor, entorno_aefip, informe):
     # Dos sesiones de navegador independientes, como dos personas reales
     # (nuevo_actor las graba si se corre con --video / --tracing).
     trab = nuevo_actor("trabajador")
@@ -46,6 +46,8 @@ def test_flujo_tramite_guarderia(nuevo_actor, entorno_aefip):
     trab.fill('input[name="clave"]', creds["clave"])
     trab.click('button[type="submit"]')
     trab.wait_for_url("**/app/inicio")
+    informe.paso(f"El trabajador ({creds['nombre']}) entró a su app con CUIL y clave")
+    informe.dato("Trabajador", f"{creds['nombre']} · CUIL {creds['cuil']}")
 
     trab.goto(f"{BASE}/app?tab=tramites")
     trab.click("#tram-nuevo")
@@ -54,6 +56,7 @@ def test_flujo_tramite_guarderia(nuevo_actor, entorno_aefip):
     tarjeta = trab.locator("#tram-tipos-lista button",
                            has_text=re.compile("guarder", re.I)).first
     tarjeta.wait_for(state="visible", timeout=10000)
+    informe.paso(f'Buscó y eligió el trámite de guardería: "{tarjeta.inner_text().splitlines()[0]}"')
     tarjeta.click()
 
     # Completa el formulario campo por campo, según la etiqueta.
@@ -77,6 +80,9 @@ def test_flujo_tramite_guarderia(nuevo_actor, entorno_aefip):
     encabezado = trab.locator("#tram-det-expediente").inner_text()
     numero = re.search(r"[A-Z0-9]+-\d{4}-\d{6}", encabezado).group(0)
     assert "GUARD" in numero, f"El expediente no es del tipo guardería: {numero}"
+    informe.paso(f"Completó el formulario (hijo/a, edad, jardín, monto) y lo envió → {numero}")
+    informe.dato("Expediente generado", numero)
+    informe.dato("Formulario", "Martina Gómez · 4 años · " + JARDIN + " · $185.000")
 
     # ================= ACTO 2: el admin responde y cierra ================
     admin.bring_to_front()
@@ -91,7 +97,9 @@ def test_flujo_tramite_guarderia(nuevo_actor, entorno_aefip):
     admin.goto(f"{BASE}/admin")
     badge = admin.locator("#badge-tramites-nuevos-tab")
     expect(badge).to_be_visible()
-    assert int(re.sub(r"[^0-9]", "", badge.inner_text()) or 0) >= 1
+    pendientes = int(re.sub(r"[^0-9]", "", badge.inner_text()) or 0)
+    assert pendientes >= 1
+    informe.paso(f"El admin entró y vio el globo de trámites nuevos ({pendientes} sin abrir)")
 
     # Entra a Trámites, encuentra el expediente recién presentado.
     admin.click('.tab-btn[data-panel="tramites"]')
@@ -104,12 +112,15 @@ def test_flujo_tramite_guarderia(nuevo_actor, entorno_aefip):
     # El detalle muestra el formulario que completó el trabajador.
     expect(admin.locator("#mt-contenido")).to_contain_text(JARDIN, timeout=10000)
     expect(admin.locator("#mt-contenido")).to_contain_text("Conversación")
+    informe.paso("Abrió el expediente y verificó que el formulario llegó completo")
 
     # Contesta afirmativamente por el chat...
     admin.click(".tram-chat-responder")
     admin.fill("#mmt-nota-texto", RESPUESTA_ADMIN)
     admin.locator('#mmt-form-nota button[type="submit"]').click()
     expect(admin.locator("#mt-contenido")).to_contain_text("Aprobado", timeout=10000)
+    informe.paso("Respondió afirmativamente por el chat del trámite")
+    informe.dato("Respuesta del sindicato", RESPUESTA_ADMIN)
 
     # ...y cierra el trámite.
     admin.click(".tram-chat-responder")
@@ -117,6 +128,7 @@ def test_flujo_tramite_guarderia(nuevo_actor, entorno_aefip):
     admin.get_by_role("button", name="Actualizar estado").click()
     expect(admin.locator("#mt-contenido")).to_contain_text("Trámite terminado", timeout=10000)
     expect(fila).to_contain_text("Terminado")
+    informe.paso("Cerró el expediente: el estado pasó a Terminado")
 
     # ================= ACTO 3: el trabajador ve respuesta y cierre =======
     trab.bring_to_front()
@@ -129,3 +141,6 @@ def test_flujo_tramite_guarderia(nuevo_actor, entorno_aefip):
     expect(detalle).to_contain_text("Aprobado")          # la respuesta del sindicato
     # Trámite terminado: ya no se le ofrece seguir escribiendo.
     expect(trab.locator(".tram-chat-responder")).to_have_count(0)
+    informe.paso("El trabajador volvió, buscó su expediente y vio la respuesta del sindicato")
+    informe.paso("Verificado que el trámite quedó cerrado (ya no puede seguir escribiendo)")
+    informe.dato("Estado final", "Terminado")
