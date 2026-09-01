@@ -255,6 +255,11 @@
     border-left:1.5px dashed #d8dde6; pointer-events:none; }
   .ct-ficha .campo-tramite-fila { background:#fff; border:none; border-bottom:1px solid var(--linea);
     border-radius:0; margin:0; padding:9px 10px 9px 0; }
+  /* Intercalado: los campos se funden entre sí sin una guía visual -- las
+     filas pares llevan un lavado apenas perceptible del primario de la
+     marca, para ver dónde empieza uno y termina el otro. */
+  .ct-ficha .campo-tramite-fila:nth-child(even) {
+    background:color-mix(in srgb, var(--marca-primario) 5%, #fff); }
   .ct-ficha .campo-tramite-fila:last-child { border-bottom:none; }
   .ct-orden { width:40px; flex:0 0 auto; text-align:center; font-family:var(--fuente-num);
     font-size:12px; color:#aab3c2; cursor:grab; user-select:none; }
@@ -1144,7 +1149,7 @@
       Ver trámites
       {% if tramites_nuevos %}<span class="badge-noleidas" id="badge-tramites-nuevos">{{ tramites_nuevos }}</span>{% endif %}
     </button>
-    <button type="button" class="tramite-subtab" data-tramite-sub="tipos" onclick="cambiarSubTramite('tipos')">Crear formularios</button>
+    <button type="button" class="tramite-subtab" data-tramite-sub="tipos" onclick="abrirCrearFormularios()">Crear formularios</button>
   </div>
 
   <!-- Sub: TRÁMITES RECIBIDOS -->
@@ -1424,7 +1429,7 @@
         Ver trámites
         {% if tramites_empresa_nuevos %}<span class="badge-noleidas" id="badge-tramites-empresa-nuevos">{{ tramites_empresa_nuevos }}</span>{% endif %}
       </button>
-      <button type="button" class="emptram-subtab" data-emptram-sub="tipos" onclick="cambiarSubEmpresaTramite('tipos')">Crear formularios</button>
+      <button type="button" class="emptram-subtab" data-emptram-sub="tipos" onclick="abrirCrearFormulariosEmpresa()">Crear formularios</button>
     </div>
 
     <!-- Sub: TRÁMITES DE EMPRESA RECIBIDOS -->
@@ -2562,6 +2567,14 @@ if (formTramiteTipo) {
   document.getElementById('tt-codigo').addEventListener('input', renderVistaPreviaTramite);
 }
 
+// El subtab "Crear formularios" tiene que abrir en blanco: si quedó un tipo
+// en edición (llegó por el botón "Editar" de la tabla), se limpia. Un
+// BORRADOR de alta (sin id) NO se toca: cambiar de subtab no puede comerse
+// lo que se estaba escribiendo.
+function abrirCrearFormularios() {
+  if (document.getElementById('tt-id').value) cancelarTramiteTipo();
+  cambiarSubTramite('tipos');
+}
 function editarTramiteTipo(t) {
   document.getElementById('tt-id').value = t.id;
   document.getElementById('tt-titulo').value = t.titulo;
@@ -3052,6 +3065,12 @@ if (formTramiteTipoEmpresa) {
   document.getElementById('te-codigo').addEventListener('input', renderVistaPreviaTramiteEmpresa);
 }
 
+// Espejo de abrirCrearFormularios (mismo criterio: edición se limpia,
+// borrador de alta se conserva).
+function abrirCrearFormulariosEmpresa() {
+  if (document.getElementById('te-id').value) cancelarTramiteTipoEmpresa();
+  cambiarSubEmpresaTramite('tipos');
+}
 function editarTramiteTipoEmpresa(t) {
   document.getElementById('te-id').value = t.id;
   document.getElementById('te-titulo').value = t.titulo;
