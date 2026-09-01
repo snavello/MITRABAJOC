@@ -77,18 +77,25 @@ CONCEPTOS = [
     ("MAQCON", "Adicional máquinas de contabilidad (art. 24)", "ingreso", True, ""),
     ("PORTAV", "Adicional portavalores (art. 39)", "ingreso", True, ""),
     ("ZONA", "Adicional por zona desfavorable (art. 25)", "ingreso", True, ""),
-    ("JUB", "Aporte jubilatorio (Ley 24.241)", "descuento", True, ""),
-    ("PAMI", "Aporte Ley 19.032 - INSSJP", "descuento", True, ""),
-    ("OSOC", "Aporte obra social", "descuento", True, ""),
+    # Los tres aportes de ley usan los códigos UNIVERSALES de la plataforma
+    # (validador.CONCEPTOS_UNIVERSALES): todo sindicato nuevo los recibe solo
+    # al darse de alta desde /plataforma. Inventarles un código propio los
+    # duplicaba —dos jubilaciones, dos obras sociales— y cada fórmula sumaba
+    # su línea a todos los recibos (visto en producción, 2026-08-31).
+    ("JUBILACION", "Aporte jubilatorio (SIPA)", "descuento", True, ""),
+    ("PAMI", "Ley 19.032 (PAMI)", "descuento", True, ""),
+    ("OBRASOCIAL", "Obra Social", "descuento", True, ""),
     ("CUOTA", "Cuota sindical Asociación Bancaria", "descuento", True, "afiliacion"),
 ]
 
 # Solo los aportes de LEY llevan fórmula: son los únicos con un porcentaje
-# exigible. La cuota sindical no la fija el CCT (ver encabezado).
+# exigible. La cuota sindical no la fija el CCT (ver encabezado). Coinciden
+# con las que crea db.crear_conceptos_universales, así que si el sindicato ya
+# existía no se agrega ninguna: se reutilizan las suyas.
 FORMULAS = [
-    ("JUB", "Jubilación = 11% de la remuneración", "0.11 * base_remunerativa", 1.0, True),
-    ("PAMI", "INSSJP (Ley 19.032) = 3% de la remuneración", "0.03 * base_remunerativa", 1.0, True),
-    ("OSOC", "Obra social = 3% de la remuneración", "0.03 * base_remunerativa", 1.0, True),
+    ("JUBILACION", "Jubilación (SIPA) = 11% del remunerativo", "0.11 * base_remunerativa", 1.0, True),
+    ("PAMI", "Ley 19.032 (PAMI) = 3% del remunerativo", "0.03 * base_remunerativa", 1.0, True),
+    ("OBRASOCIAL", "Obra Social = 3% del remunerativo", "0.03 * base_remunerativa", 1.0, True),
 ]
 
 # Art. 22: cajero. (función, falla de caja) como % del sueldo inicial.
@@ -214,6 +221,31 @@ def _completar_catalogo(sid: int) -> tuple:
     return nuevos_conceptos, nuevas_formulas
 
 
+# Códigos que este script usó ANTES para los aportes de ley, antes de
+# alinearse con los universales de la plataforma. Se borran solos: eran
+# duplicados (dos jubilaciones, dos obras sociales) y cada fórmula sumaba su
+# línea a todos los recibos.
+LEGACY = {"JUB": "JUBILACION", "OSOC": "OBRASOCIAL"}
+
+
+def quitar_duplicados_legacy(sid: int) -> None:
+    with db.get_session() as s:
+        formulas = [f for f in s.exec(select(Formula).where(
+            Formula.sindicato_id == sid)).all() if f.target in LEGACY]
+        conceptos = [c for c in s.exec(select(Concepto).where(
+            Concepto.sindicato_id == sid)).all() if c.codigo in LEGACY]
+        if not formulas and not conceptos:
+            return
+        for f in formulas:
+            s.delete(f)
+        for c in conceptos:
+            s.delete(c)
+        s.commit()
+    quitados = sorted({f.target for f in formulas} | {c.codigo for c in conceptos})
+    print("  Duplicados de aportes de ley eliminados (ahora se usan los códigos "
+          f"universales): {', '.join(quitados)}")
+
+
 def revisar_catalogo_ajeno(sid: int) -> None:
     """Aborta si el sindicato tiene FÓRMULAS que no son de este convenio.
 
@@ -252,6 +284,7 @@ def crear_sindicato() -> int:
         if existente:
             sid = existente.id
             print(f"'{NOMBRE}' ya existe (id={sid}): completo lo que falte.")
+            quitar_duplicados_legacy(sid)
             conceptos, formulas = _completar_catalogo(sid)
             print(f"  Conceptos agregados: {conceptos} · fórmulas agregadas: {formulas}.")
             return sid
