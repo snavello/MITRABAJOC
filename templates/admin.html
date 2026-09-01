@@ -259,7 +259,7 @@
      filas pares llevan un lavado apenas perceptible del primario de la
      marca, para ver dónde empieza uno y termina el otro. */
   .ct-ficha .campo-tramite-fila:nth-child(even) {
-    background:color-mix(in srgb, var(--marca-primario) 5%, #fff); }
+    background:color-mix(in srgb, var(--marca-primario) 9%, #fff); }
   .ct-ficha .campo-tramite-fila:last-child { border-bottom:none; }
   .ct-orden { width:40px; flex:0 0 auto; text-align:center; font-family:var(--fuente-num);
     font-size:12px; color:#aab3c2; cursor:grab; user-select:none; }
@@ -307,6 +307,9 @@
   .ttp-cuerpo { padding:12px; }
   .ttp-cuerpo .campo-tram label { font-size:10.5px; }
   .ttp-cuerpo .tram-input { padding:7px 9px; font-size:12px; }
+  .ttp-marca-v { position:absolute; right:10px; top:27px; font-size:13px; font-weight:800; color:#0d7a5f; }
+  .ttp-marca-v.mal { color:#c0392b; }
+  .ttp-cuerpo .campo-tram { position:relative; }
   .ttp-err { display:none; font-size:10px; color:#c0392b; font-weight:600; margin-top:3px; }
   .campo-tram.ttp-mal .ttp-err { display:block; }
   .campo-tram.ttp-mal .tram-input { border-color:#c0392b; box-shadow:0 0 0 3px rgba(192,57,43,.10); }
@@ -1149,7 +1152,7 @@
       Ver trámites
       {% if tramites_nuevos %}<span class="badge-noleidas" id="badge-tramites-nuevos">{{ tramites_nuevos }}</span>{% endif %}
     </button>
-    <button type="button" class="tramite-subtab" data-tramite-sub="tipos" onclick="abrirCrearFormularios()">Crear formularios</button>
+    <button type="button" class="tramite-subtab" data-tramite-sub="tipos" onclick="abrirCrearFormularios()">Crear / editar formularios</button>
   </div>
 
   <!-- Sub: TRÁMITES RECIBIDOS -->
@@ -1429,7 +1432,7 @@
         Ver trámites
         {% if tramites_empresa_nuevos %}<span class="badge-noleidas" id="badge-tramites-empresa-nuevos">{{ tramites_empresa_nuevos }}</span>{% endif %}
       </button>
-      <button type="button" class="emptram-subtab" data-emptram-sub="tipos" onclick="abrirCrearFormulariosEmpresa()">Crear formularios</button>
+      <button type="button" class="emptram-subtab" data-emptram-sub="tipos" onclick="abrirCrearFormulariosEmpresa()">Crear / editar formularios</button>
     </div>
 
     <!-- Sub: TRÁMITES DE EMPRESA RECIBIDOS -->
@@ -1870,8 +1873,12 @@ const AYUDA_CONTENIDO = {
     ],
   },
   'tramites-tipos': {
-    titulo: 'Crear formularios de trámites',
+    titulo: 'Crear / editar formularios de trámites',
     secciones: [
+      { titulo: 'Validaciones (Bloquea / Avisa)',
+        texto: 'Los campos de número y fecha pueden llevar controles: "Bloquea" impide enviar el trámite y le muestra tu mensaje a quien lo llena; "Avisa" deja enviar pero el trámite llega marcado con el aviso para el operador. En fechas, el límite puede ser una fecha fija o el DÍA DEL ENVÍO (con días de margen antes o después) -- por ejemplo "Fecha desde ≥ el día del envío" impide antedatar.' },
+      { titulo: 'Probar el formulario',
+        texto: 'El teléfono de la derecha se puede completar con datos de prueba: "Probar el formulario" corre exactamente los mismos controles que van a correr cuando llegue un trámite real, sin guardar nada.' },
       { titulo: 'Código',
         texto: 'Es el prefijo del número de expediente de cada trámite de este tipo -- con el código "F01AEFIP", por ejemplo, los expedientes salen "F01AEFIP-2026-000123". Se usa tal cual lo escribas, sin espacios, sin un largo fijo.' },
       { titulo: 'Longitud exacta',
@@ -2297,6 +2304,50 @@ function renderCamposTramite() {
 // envío o solo AVISA al operador. Compartido por los dos constructores
 // (recibe el sufijo del namespace: 'Tramite' / 'TramiteEmpresa').
 const OPERADORES_VALIDACION = { '<=': '≤', '>=': '≥', '<': '<', '>': '>', '==': '=', '!=': '≠' };
+// Registro mínimo para los handlers compartidos del límite de fecha (el
+// estado de cada constructor sigue en su namespace).
+const VT_NS = {
+  Tramite: { campos: () => camposTramiteActuales, render: () => renderCamposTramite() },
+  TramiteEmpresa: { campos: () => camposTramiteEmpActuales, render: () => renderCamposTramiteEmpresa() },
+};
+// Límite de una validación de fecha: una fecha fija, o dinámico contra el
+// día del ENVÍO ("hoy", "hoy+10", "hoy-3" -- lo resuelve el servidor al
+// evaluar). Ej.: "Fecha desde ≥ el día del envío" = no se puede antedatar.
+function vtModoValidacion(ns, i, vi, modo) {
+  const v = VT_NS[ns].campos()[i].validaciones[vi];
+  if (modo === 'fecha') v.valor = '';
+  else if (modo === 'hoy') v.valor = 'hoy';
+  else {
+    const n = (String(v.valor || '').match(/\d+/) || ['5'])[0];
+    v.valor = (modo === 'hoy+' ? 'hoy+' : 'hoy-') + n;
+  }
+  VT_NS[ns].render();
+}
+function vtOffsetValidacion(ns, i, vi, n) {
+  const v = VT_NS[ns].campos()[i].validaciones[vi];
+  const signo = String(v.valor || '').startsWith('hoy-') ? '-' : '+';
+  v.valor = 'hoy' + signo + Math.max(0, parseInt(n, 10) || 0);
+}
+function htmlValorValidacion(c, v, i, vi, ns) {
+  if (c.tipo_dato !== 'fecha') {
+    return `<input type="number" style="width:80px;" value="${escHtml(v.valor ?? '')}"
+             onchange="actualizarValidacion${ns}(${i},${vi},'valor',this.value)">`;
+  }
+  const val = String(v.valor || '');
+  const modo = /^hoy\+/.test(val) ? 'hoy+' : /^hoy-/.test(val) ? 'hoy-' : (val === 'hoy' ? 'hoy' : 'fecha');
+  const off = (val.match(/\d+/) || ['5'])[0];
+  const selector = `<select onchange="vtModoValidacion('${ns}',${i},${vi},this.value)">
+      <option value="fecha" ${modo==='fecha'?'selected':''}>una fecha</option>
+      <option value="hoy" ${modo==='hoy'?'selected':''}>el día del envío</option>
+      <option value="hoy+" ${modo==='hoy+'?'selected':''}>días después del envío</option>
+      <option value="hoy-" ${modo==='hoy-'?'selected':''}>días antes del envío</option>
+    </select>`;
+  if (modo === 'fecha') return selector + `<input type="date" style="width:130px;" value="${escHtml(val)}"
+      onchange="actualizarValidacion${ns}(${i},${vi},'valor',this.value)">`;
+  if (modo === 'hoy') return selector;
+  return selector + `<input type="number" min="0" style="width:64px;" value="${escHtml(off)}"
+      onchange="vtOffsetValidacion('${ns}',${i},${vi},this.value)">`;
+}
 function htmlValidacionesCampo(c, i, ns) {
   if (!['numero', 'fecha'].includes(c.tipo_dato)) return '';
   const filas = (c.validaciones || []).map((v, vi) => `
@@ -2306,8 +2357,7 @@ function htmlValidacionesCampo(c, i, ns) {
         ${Object.entries(OPERADORES_VALIDACION).map(([op, l]) =>
           `<option value="${op}" ${v.operador===op?'selected':''}>${l}</option>`).join('')}
       </select>
-      <input type="${c.tipo_dato==='fecha'?'date':'number'}" style="width:${c.tipo_dato==='fecha'?'130px':'80px'};" value="${escHtml(v.valor ?? '')}"
-             onchange="actualizarValidacion${ns}(${i},${vi},'valor',this.value)">
+      ${htmlValorValidacion(c, v, i, vi, ns)}
       <input class="ct-vmsj" placeholder="Mensaje si no pasa (opcional)" value="${escHtml(v.mensaje || '')}"
              oninput="actualizarValidacion${ns}(${i},${vi},'mensaje',this.value)">
       <span class="ct-sello-sw">
@@ -2510,7 +2560,19 @@ function htmlCampoPreview(c, i, ns) {
   } else {
     campo = `<input type="text" class="tram-input" id="${idp}" value="${valor}" placeholder="${c.longitud_exacta ? c.longitud_exacta + ' caracteres' : 'Texto'}" ${guarda}>`;
   }
-  return `<div class="campo-tram ${anchoClass}" id="${idp}_w"><label>${etiqueta}${c.obligatorio ? ' *' : ''}</label>${campo}${err}</div>`;
+  return `<div class="campo-tram ${anchoClass}" id="${idp}_w"><label>${etiqueta}${c.obligatorio ? ' *' : ''}</label>${campo}<span class="ttp-marca-v" id="${idp}_v"></span>${err}</div>`;
+}
+// Marcas ✓/✗ del banco de pruebas: tras "Probar", cada campo con valor
+// muestra su veredicto al lado del dato, no solo el mensaje.
+function pintarMarcasPrueba(ns, campos, valores, erroresCampos) {
+  campos.forEach((c, i) => {
+    const marca = document.getElementById(`ttp_${ns}_${i}_v`);
+    if (!marca) return;
+    if (String(valores[i] ?? '').trim() === '') { marca.textContent = ''; return; }
+    const mal = (erroresCampos || {})[String(i)] !== undefined;
+    marca.textContent = mal ? '✗' : '✓';
+    marca.classList.toggle('mal', mal);
+  });
 }
 function guardarValorPruebaTramite(i, valor) {
   valoresPruebaTramite.set(camposTramiteActuales[i], valor);
@@ -2519,6 +2581,7 @@ function limpiarResultadoPrueba(pref) {
   const res = document.getElementById(pref + '-probar-res');
   if (res) res.innerHTML = '';
   document.querySelectorAll(`[id^="ttp_"][id$="_w"].ttp-mal`).forEach(e => e.classList.remove('ttp-mal'));
+  document.querySelectorAll(`[id^="ttp_"][id$="_v"]`).forEach(e => { e.textContent = ''; e.classList.remove('mal'); });
 }
 async function probarFormularioTramite() {
   const valores = {};
@@ -2545,6 +2608,7 @@ async function probarFormularioTramite() {
     if (w) w.classList.add('ttp-mal');
     if (err) err.textContent = mensaje;
   });
+  pintarMarcasPrueba('Tramite', camposTramiteActuales, valores, data.errores_campos);
   const res = document.getElementById('tt-probar-res');
   res.innerHTML = (data.advertencias || []).map(a => `<div class="adv">Aviso al operador: ${escHtml(a)}</div>`).join('');
   const overlay = document.getElementById('tt-probar-sello');
@@ -2982,6 +3046,7 @@ async function probarFormularioTramiteEmpresa() {
     if (w) w.classList.add('ttp-mal');
     if (err) err.textContent = mensaje;
   });
+  pintarMarcasPrueba('TramiteEmpresa', camposTramiteEmpActuales, valores, data.errores_campos);
   const res = document.getElementById('te-probar-res');
   res.innerHTML = (data.advertencias || []).map(a => `<div class="adv">Aviso al operador: ${escHtml(a)}</div>`).join('');
   const overlay = document.getElementById('te-probar-sello');

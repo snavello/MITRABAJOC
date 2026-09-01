@@ -1719,6 +1719,11 @@ def _campos_tramite_validos(campos_crudos: list) -> list:
                 return None
 
         validos.append({
+            # id presente = campo que ya existe y se actualiza en el lugar
+            # (db.editar_tipo_tramite sincroniza por id; borrar y recrear
+            # rompía el FK de RespuestaTramite). Un id inventado no matchea
+            # ningún campo del tipo y termina creando uno nuevo, inocuo.
+            "id": _entero(c.get("id")),
             "etiqueta": str(c.get("etiqueta") or "").strip()[:200],
             "tipo_dato": c["tipo_dato"],
             "longitud_maxima": _entero(c.get("longitud_maxima")),

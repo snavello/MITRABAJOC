@@ -240,6 +240,8 @@
     transition:all .25s cubic-bezier(.2,1.6,.4,1); }
   .campo-tram.ok .tram-tick { opacity:1; transform:scale(1); }
   .campo-tram.ok .tram-input { border-color:color-mix(in srgb, var(--ok) 40%, white); }
+  /* La ✗ roja es simétrica al tilde: mismo lugar, mismo pop */
+  .campo-tram.mal .tram-tick { opacity:1; transform:scale(1); color:var(--error); }
   .campo-tram.mal .tram-input { border-color:var(--error); box-shadow:0 0 0 3px rgba(192,57,43,.10); }
   .campo-tram .tram-err { display:none; font-size:11px; color:var(--error); font-weight:600; margin-top:5px; }
   .campo-tram.mal .tram-err { display:block; }
@@ -1459,6 +1461,22 @@ if (document.getElementById('tp-tramites')) {
     if (tipoDato === 'fecha') return /^\d{4}-\d{2}-\d{2}$/.test(t) ? t : null;
     return null;
   }
+  // El LÍMITE de una validación de fecha puede ser dinámico ("hoy",
+  // "hoy+10", "hoy-3"): se resuelve al momento de validar, en hora LOCAL
+  // (nunca toISOString, que es UTC y de noche ya es "mañana"). Espejo de
+  // validaciones_tramite._limite_comparable.
+  function tvLimite(valor, tipoDato) {
+    if (tipoDato === 'fecha') {
+      const m = /^hoy([+-]\d+)?$/.exec(String(valor || '').trim().toLowerCase());
+      if (m) {
+        const d = new Date();
+        d.setDate(d.getDate() + parseInt(m[1] || '0', 10));
+        const p = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+      }
+    }
+    return tvComparable(valor, tipoDato);
+  }
   function tvCompara(a, op, b) {
     if (op === '<=') return a <= b;
     if (op === '>=') return a >= b;
@@ -1480,7 +1498,7 @@ if (document.getElementById('tp-tramites')) {
     if (v === null) return res;
     (c.validaciones || []).forEach(vd => {
       if (vd.fuente !== 'fija') return;
-      const lim = tvComparable(vd.valor, c.tipo_dato);
+      const lim = tvLimite(vd.valor, c.tipo_dato);
       if (lim === null || tvCompara(v, vd.operador, lim)) return;
       (vd.bloquea === false ? res.avisos : res.errores).push(vd.mensaje);
     });
@@ -1501,6 +1519,8 @@ if (document.getElementById('tp-tramites')) {
     const res = tvEvaluaCampo(tipo, c);
     cont.classList.remove('ok', 'mal', 'avs');
     if (errEl) errEl.textContent = ''; if (avsEl) avsEl.textContent = '';
+    const tick = cont.querySelector('.tram-tick');
+    if (tick) tick.textContent = res.errores.length ? '✗' : '✓';
     const v = tvComparable(tvValorCampo(c), c.tipo_dato);
     if (res.errores.length) {
       cont.classList.add('mal');
@@ -1522,6 +1542,8 @@ if (document.getElementById('tp-tramites')) {
       if (!cont) return;
       cont.classList.remove('ok', 'avs');
       cont.classList.add('mal');
+      const tick = cont.querySelector('.tram-tick');
+      if (tick) tick.textContent = '✗';
       if (errEl) errEl.textContent = mensaje;
     });
   }

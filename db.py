@@ -598,6 +598,10 @@ class CampoTramite(SQLModel, table=True):
     # saneadas en validaciones_tramite.validaciones_saneadas. Fase 1: solo
     # fuente "fija"; la forma ya contempla lista/sistema/externa.
     validaciones: list = Field(default=[], sa_column=Column(JSON))
+    # True = el admin lo quitó del formulario pero ya tenía respuestas: no
+    # se puede borrar (FK desde RespuestaTramite) y los trámites viejos
+    # necesitan su etiqueta. Sale de la búsqueda del formulario, nada más.
+    retirado: bool = False
 
 
 class Tramite(SQLModel, table=True):
@@ -687,6 +691,7 @@ class CampoTramiteEmpleador(SQLModel, table=True):
     ancho: str = "completo"
     obligatorio: bool = True
     validaciones: list = Field(default=[], sa_column=Column(JSON))  # mirror de CampoTramite
+    retirado: bool = False                                           # mirror de CampoTramite
 
 
 class TramiteEmpleador(SQLModel, table=True):
@@ -2302,9 +2307,15 @@ def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list
 
 def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: str,
                          activo: bool, campos: list, reglas: list = None) -> bool:
-    """Actualiza título/código/activo y REEMPLAZA los campos por los
-    enviados -- el constructor de campos en admin es "lo que ves es lo que
-    queda", como editar un formulario, no un merge campo por campo."""
+    """Actualiza título/código/activo y SINCRONIZA los campos por id: el
+    constructor sigue siendo "lo que ves es lo que queda", pero borrar y
+    recrear (como se hacía antes) reventaba con FK en cuanto el tipo tenía
+    trámites presentados -- RespuestaTramite referencia el campo, y Postgres
+    (a diferencia del SQLite de los tests) lo exige. Ahora: un campo que
+    vuelve con su id se ACTUALIZA en el lugar, uno nuevo se crea, y uno
+    quitado se borra solo si nadie lo respondió; si ya tiene respuestas se
+    marca `retirado` (sale del formulario, los trámites viejos conservan su
+    etiqueta)."""
     with Session(engine) as s:
         t = s.get(TipoTramite, tipo_id)
         if not t or t.sindicato_id != sindicato_id:
@@ -2312,18 +2323,36 @@ def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: st
         t.titulo, t.codigo, t.activo = titulo, codigo, activo
         t.reglas_consistencia = reglas or []
         s.add(t)
-        for viejo in s.exec(select(CampoTramite).where(CampoTramite.tipo_tramite_id == tipo_id)).all():
-            s.delete(viejo)
-        s.commit()
+        existentes = {c.id: c for c in s.exec(select(CampoTramite).where(
+            CampoTramite.tipo_tramite_id == tipo_id)).all()}
+        vistos = set()
         for i, c in enumerate(campos):
-            s.add(CampoTramite(
-                tipo_tramite_id=tipo_id, orden=i, etiqueta=c["etiqueta"], tipo_dato=c["tipo_dato"],
-                longitud_maxima=c.get("longitud_maxima"), longitud_exacta=c.get("longitud_exacta"),
-                decimales=c.get("decimales"), tipos_archivo_permitidos=c.get("tipos_archivo_permitidos", ""),
-                opciones=c.get("opciones", ""), ancho=c.get("ancho") or "completo",
-                obligatorio=c.get("obligatorio", True),
-                validaciones=c.get("validaciones") or [],
-            ))
+            fila = existentes.get(c.get("id"))
+            if fila is None:
+                fila = CampoTramite(tipo_tramite_id=tipo_id)
+            else:
+                vistos.add(fila.id)
+            fila.orden, fila.etiqueta, fila.tipo_dato = i, c["etiqueta"], c["tipo_dato"]
+            fila.longitud_maxima = c.get("longitud_maxima")
+            fila.longitud_exacta = c.get("longitud_exacta")
+            fila.decimales = c.get("decimales")
+            fila.tipos_archivo_permitidos = c.get("tipos_archivo_permitidos", "")
+            fila.opciones = c.get("opciones", "")
+            fila.ancho = c.get("ancho") or "completo"
+            fila.obligatorio = c.get("obligatorio", True)
+            fila.validaciones = c.get("validaciones") or []
+            fila.retirado = False
+            s.add(fila)
+        for fila in existentes.values():
+            if fila.id in vistos:
+                continue
+            respondido = s.exec(select(RespuestaTramite).where(
+                RespuestaTramite.campo_tramite_id == fila.id)).first()
+            if respondido:
+                fila.retirado = True
+                s.add(fila)
+            else:
+                s.delete(fila)
         s.commit()
         return True
 
@@ -2355,7 +2384,9 @@ def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False) -
         tipos = s.exec(q.order_by(TipoTramite.creado.desc())).all()
         resultado = []
         for t in tipos:
-            campos = s.exec(select(CampoTramite).where(CampoTramite.tipo_tramite_id == t.id)
+            campos = s.exec(select(CampoTramite)
+                            .where(CampoTramite.tipo_tramite_id == t.id,
+                                   CampoTramite.retirado == False)  # noqa: E712
                             .order_by(CampoTramite.orden)).all()
             resultado.append({
                 "id": t.id, "titulo": t.titulo, "codigo": t.codigo, "activo": t.activo,
@@ -2370,7 +2401,9 @@ def tipo_tramite_por_id(tipo_id: int) -> Optional[dict]:
         t = s.get(TipoTramite, tipo_id)
         if not t:
             return None
-        campos = s.exec(select(CampoTramite).where(CampoTramite.tipo_tramite_id == tipo_id)
+        campos = s.exec(select(CampoTramite)
+                        .where(CampoTramite.tipo_tramite_id == tipo_id,
+                               CampoTramite.retirado == False)  # noqa: E712
                         .order_by(CampoTramite.orden)).all()
         return {
             "id": t.id, "sindicato_id": t.sindicato_id, "titulo": t.titulo, "codigo": t.codigo,
@@ -2620,6 +2653,8 @@ def crear_tipo_tramite_empleador(sindicato_id: int, titulo: str, codigo: str, ca
 
 def editar_tipo_tramite_empleador(tipo_id: int, sindicato_id: int, titulo: str, codigo: str,
                                    activo: bool, campos: list, reglas: list = None) -> bool:
+    """Mirror de editar_tipo_tramite: sincroniza por id en vez de borrar y
+    recrear (mismo fix del FK con trámites ya presentados)."""
     with Session(engine) as s:
         t = s.get(TipoTramiteEmpleador, tipo_id)
         if not t or t.sindicato_id != sindicato_id:
@@ -2627,19 +2662,36 @@ def editar_tipo_tramite_empleador(tipo_id: int, sindicato_id: int, titulo: str, 
         t.titulo, t.codigo, t.activo = titulo, codigo, activo
         t.reglas_consistencia = reglas or []
         s.add(t)
-        for viejo in s.exec(select(CampoTramiteEmpleador).where(
-                CampoTramiteEmpleador.tipo_tramite_id == tipo_id)).all():
-            s.delete(viejo)
-        s.commit()
+        existentes = {c.id: c for c in s.exec(select(CampoTramiteEmpleador).where(
+            CampoTramiteEmpleador.tipo_tramite_id == tipo_id)).all()}
+        vistos = set()
         for i, c in enumerate(campos):
-            s.add(CampoTramiteEmpleador(
-                tipo_tramite_id=tipo_id, orden=i, etiqueta=c["etiqueta"], tipo_dato=c["tipo_dato"],
-                longitud_maxima=c.get("longitud_maxima"), longitud_exacta=c.get("longitud_exacta"),
-                decimales=c.get("decimales"), tipos_archivo_permitidos=c.get("tipos_archivo_permitidos", ""),
-                opciones=c.get("opciones", ""), ancho=c.get("ancho") or "completo",
-                obligatorio=c.get("obligatorio", True),
-                validaciones=c.get("validaciones") or [],
-            ))
+            fila = existentes.get(c.get("id"))
+            if fila is None:
+                fila = CampoTramiteEmpleador(tipo_tramite_id=tipo_id)
+            else:
+                vistos.add(fila.id)
+            fila.orden, fila.etiqueta, fila.tipo_dato = i, c["etiqueta"], c["tipo_dato"]
+            fila.longitud_maxima = c.get("longitud_maxima")
+            fila.longitud_exacta = c.get("longitud_exacta")
+            fila.decimales = c.get("decimales")
+            fila.tipos_archivo_permitidos = c.get("tipos_archivo_permitidos", "")
+            fila.opciones = c.get("opciones", "")
+            fila.ancho = c.get("ancho") or "completo"
+            fila.obligatorio = c.get("obligatorio", True)
+            fila.validaciones = c.get("validaciones") or []
+            fila.retirado = False
+            s.add(fila)
+        for fila in existentes.values():
+            if fila.id in vistos:
+                continue
+            respondido = s.exec(select(RespuestaTramiteEmpleador).where(
+                RespuestaTramiteEmpleador.campo_tramite_id == fila.id)).first()
+            if respondido:
+                fila.retirado = True
+                s.add(fila)
+            else:
+                s.delete(fila)
         s.commit()
         return True
 
@@ -2667,7 +2719,9 @@ def tipos_tramite_empleador_del_sindicato(sindicato_id: int, solo_activos: bool 
         tipos = s.exec(q.order_by(TipoTramiteEmpleador.creado.desc())).all()
         resultado = []
         for t in tipos:
-            campos = s.exec(select(CampoTramiteEmpleador).where(CampoTramiteEmpleador.tipo_tramite_id == t.id)
+            campos = s.exec(select(CampoTramiteEmpleador)
+                            .where(CampoTramiteEmpleador.tipo_tramite_id == t.id,
+                                   CampoTramiteEmpleador.retirado == False)  # noqa: E712
                             .order_by(CampoTramiteEmpleador.orden)).all()
             resultado.append({
                 "id": t.id, "titulo": t.titulo, "codigo": t.codigo, "activo": t.activo,
@@ -2682,7 +2736,9 @@ def tipo_tramite_empleador_por_id(tipo_id: int) -> Optional[dict]:
         t = s.get(TipoTramiteEmpleador, tipo_id)
         if not t:
             return None
-        campos = s.exec(select(CampoTramiteEmpleador).where(CampoTramiteEmpleador.tipo_tramite_id == tipo_id)
+        campos = s.exec(select(CampoTramiteEmpleador)
+                        .where(CampoTramiteEmpleador.tipo_tramite_id == tipo_id,
+                               CampoTramiteEmpleador.retirado == False)  # noqa: E712
                         .order_by(CampoTramiteEmpleador.orden)).all()
         return {
             "id": t.id, "sindicato_id": t.sindicato_id, "titulo": t.titulo, "codigo": t.codigo,

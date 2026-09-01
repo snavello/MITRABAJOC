@@ -1987,3 +1987,42 @@ formulario rediseñado. Flujo manual verificado en el navegador con el tipo
 "F07 UOM · Licencia por cuidado de familiar" sembrado en el Postgres local
 (validación en vivo, envío bloqueado, aviso ámbar, sello, advertencia en el
 modal del admin).
+
+## Validaciones de Trámites — ajustes post-estreno (2026-09-01, tarde)
+
+Reportados por Sd probando la Fase 1 recién desplegada:
+
+- **El 500 al editar un tipo con trámites presentados (E-INTERNO-00) era un
+  bug PREEXISTENTE de Trámites**, no de la Fase 1: `editar_tipo_tramite`
+  borraba y recreaba los campos, y con trámites ya enviados
+  `RespuestaTramite.campo_tramite_id` los referencia — Postgres rechaza el
+  DELETE por FK. Nunca se vio porque los tests corren en SQLite (que no
+  exige FKs sin PRAGMA) y nadie había editado un tipo con trámites. El fix:
+  la edición **sincroniza por id** (el campo que vuelve con su id se
+  actualiza en el lugar y conserva sus respuestas; el nuevo se crea), y un
+  campo quitado que ya tiene respuestas se marca **`retirado`** (columna
+  nueva, migración `b7e3d1a5c942`) en vez de borrarse: sale del formulario
+  pero el detalle de los trámites viejos conserva su etiqueta. El
+  constructor ya mandaba el id de cada campo; `_campos_tramite_validos`
+  ahora lo deja pasar (saneado como entero). Espejo completo en
+  empleadores. Test: `test_editar_tipo_con_tramites_no_rompe_fk`.
+- **Límite dinámico "hoy" en validaciones de fecha**: además de una fecha
+  fija, el límite puede ser el DÍA DEL ENVÍO con margen — se guarda como
+  `hoy` / `hoy+N` / `hoy-N` y se resuelve AL EVALUAR
+  (`_limite_comparable`), nunca al guardar (un "hoy" resuelto al guardar se
+  pudre solo). UI del constructor: selector "una fecha / el día del envío /
+  días después / días antes" + días. Casos: "Fecha desde ≥ el día del
+  envío" = no antedatar; "≥ 10 días después del envío" = anticipación
+  mínima. El espejo JS del trabajador resuelve la fecha en hora LOCAL
+  (nunca `toISOString`, que es UTC y de noche ya es "mañana"); el servidor
+  usa `date.today()` — en Render eso es UTC, con la ventana 21:00–00:00
+  argentina corriendo un día: mismo criterio que todo `datetime.now()` de
+  la app, anotado y aceptado.
+- **✗ roja simétrica al tilde**: en el formulario del trabajador el campo
+  inválido muestra la ✗ en el mismo lugar y con el mismo pop que la ✓; el
+  banco de pruebas del constructor también marca ✓/✗ por campo tras
+  "Probar".
+- **"Crear formularios" → "Crear / editar formularios"** (subtabs de los
+  dos constructores + título de la ayuda, que además ganó secciones sobre
+  validaciones y el banco de pruebas). El intercalado de filas subió de 5%
+  a 9% del primario para que se note.

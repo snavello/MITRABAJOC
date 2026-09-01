@@ -23,6 +23,7 @@ Sin acceso a base de datos a propósito: funciones puras, testeables solas
 """
 
 import re
+from datetime import date, timedelta
 
 # Operadores admitidos. Se guardan en ASCII; _OP_LEGIBLE es solo para armar
 # mensajes por defecto.
@@ -39,6 +40,11 @@ TIPOS_VALIDABLES = ("numero", "fecha")
 FUENTES = ("fija",)  # se amplía en fases siguientes: lista, sistema, externa
 
 _RE_FECHA = re.compile(r"^\d{4}-\d{2}-\d{2}$")  # lo que emite <input type=date>
+
+# Límite dinámico para validaciones de fecha: "hoy", "hoy+10", "hoy-3". Se
+# resuelve AL EVALUAR (la fecha del día en que la persona envía el trámite),
+# no al guardar: un límite fijo resuelto al guardar se pudre solo.
+_RE_HOY = re.compile(r"^hoy([+-]\d{1,4})?$")
 
 
 def _a_comparable(valor, tipo_dato):
@@ -76,8 +82,30 @@ def _compara(a, operador, b) -> bool:
     return True  # operador desconocido: no bloquear (ya se saneó al guardar)
 
 
+def _limite_comparable(valor, tipo_dato):
+    """El LÍMITE de una validación, comparable. Igual que _a_comparable,
+    más el límite dinámico 'hoy±N' para fechas (resuelto recién acá, al
+    momento de evaluar)."""
+    if tipo_dato == "fecha":
+        m = _RE_HOY.match(str(valor or "").strip().lower())
+        if m:
+            dias = int(m.group(1) or 0)
+            return (date.today() + timedelta(days=dias)).isoformat()
+    return _a_comparable(valor, tipo_dato)
+
+
 def _valor_legible(valor, tipo_dato):
-    """El límite como lo lee una persona en un mensaje ('180', '31/12/2026')."""
+    """El límite como lo lee una persona en un mensaje ('180', '31/12/2026',
+    'el día del envío', '10 días después del envío')."""
+    if tipo_dato == "fecha":
+        m = _RE_HOY.match(str(valor or "").strip().lower())
+        if m:
+            dias = int(m.group(1) or 0)
+            if dias == 0:
+                return "el día del envío"
+            rumbo = "después" if dias > 0 else "antes"
+            unidad = "día" if abs(dias) == 1 else "días"
+            return f"{abs(dias)} {unidad} {rumbo} del envío"
     if tipo_dato == "fecha" and _RE_FECHA.match(str(valor or "")):
         a, m, d = str(valor).split("-")
         return f"{d}/{m}/{a}"
@@ -105,7 +133,7 @@ def validaciones_saneadas(crudas, tipo_dato) -> list:
         if operador not in OPERADORES:
             continue
         valor = str(v.get("valor") or "").strip()
-        if _a_comparable(valor, tipo_dato) is None:
+        if _limite_comparable(valor, tipo_dato) is None:
             continue
         mensaje = str(v.get("mensaje") or "").strip()[:300]
         if not mensaje:
@@ -187,7 +215,7 @@ def evaluar_envio(campos, reglas, valores) -> dict:
         for v in campo.get("validaciones") or []:
             if v.get("fuente") != "fija":
                 continue  # fuentes de fases siguientes: todavía no evalúan
-            limite = _a_comparable(v.get("valor"), campo.get("tipo_dato"))
+            limite = _limite_comparable(v.get("valor"), campo.get("tipo_dato"))
             if limite is None:
                 continue
             if _compara(comparable, v.get("operador"), limite):

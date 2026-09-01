@@ -292,6 +292,76 @@ def test_espejo_empleadores():
     print("OK  test_espejo_empleadores")
 
 
+def test_limite_dinamico_hoy():
+    # "hoy±N" se acepta al guardar y se resuelve al evaluar (fecha del envío).
+    from datetime import date, timedelta
+    validas = vt.validaciones_saneadas([
+        {"fuente": "fija", "operador": ">=", "valor": "hoy"},
+        {"fuente": "fija", "operador": ">=", "valor": "hoy+10"},
+        {"fuente": "fija", "operador": "<=", "valor": "hoy-3"},
+        {"fuente": "fija", "operador": ">=", "valor": "pasado"},   # basura: afuera
+    ], "fecha")
+    assert [v["valor"] for v in validas] == ["hoy", "hoy+10", "hoy-3"]
+    assert "el día del envío" in validas[0]["mensaje"]
+    assert "10 días después del envío" in validas[1]["mensaje"]
+    # sobre números "hoy" no significa nada
+    assert vt.validaciones_saneadas(
+        [{"fuente": "fija", "operador": ">=", "valor": "hoy"}], "numero") == []
+
+    campos = [{"id": 1, "etiqueta": "Fecha de reserva", "tipo_dato": "fecha",
+               "validaciones": [{"fuente": "fija", "operador": ">=", "valor": "hoy",
+                                 "mensaje": "No se puede antedatar.", "bloquea": True}]}]
+    ayer = (date.today() - timedelta(days=1)).isoformat()
+    maniana = (date.today() + timedelta(days=1)).isoformat()
+    v = vt.evaluar_envio(campos, [], {1: ayer})
+    assert v["errores_campos"][1] == "No se puede antedatar."
+    v = vt.evaluar_envio(campos, [], {1: maniana})
+    assert v["errores"] == []
+    # hoy+10: reservar a 5 días no alcanza, a 15 sí
+    campos[0]["validaciones"][0].update({"valor": "hoy+10", "mensaje": "Mínimo 10 días de anticipación."})
+    v = vt.evaluar_envio(campos, [], {1: (date.today() + timedelta(days=5)).isoformat()})
+    assert v["errores_campos"][1] == "Mínimo 10 días de anticipación."
+    v = vt.evaluar_envio(campos, [], {1: (date.today() + timedelta(days=15)).isoformat()})
+    assert v["errores"] == []
+    print("OK  test_limite_dinamico_hoy")
+
+
+def test_editar_tipo_con_tramites_no_rompe_fk():
+    # Antes la edición borraba y recreaba los campos; con un trámite ya
+    # presentado, RespuestaTramite referencia esos campos y en Postgres el
+    # DELETE revienta (E-INTERNO-00 reportado por Sd). Ahora sincroniza por
+    # id: los campos que vuelven conservan SU id, uno quitado con respuestas
+    # queda `retirado` (fuera del formulario, etiqueta viva en el detalle).
+    tipo_antes = db.tipo_tramite_por_id(TIPO_ID)
+    ids_antes = {c["etiqueta"]: c["id"] for c in tipo_antes["campos"]}
+
+    # editar conservando los ids (como manda el constructor), sin "Fecha desde"
+    campos_editados = [dict(c) for c in tipo_antes["campos"] if c["etiqueta"] != "Fecha desde"]
+    campos_editados[0]["etiqueta"] = "Fecha hasta (renombrada)"
+    r = admin.post("/admin/tramite-tipo", data={
+        "id": TIPO_ID, "titulo": "Licencia editada", "codigo": "F07 UOM", "activo": "si",
+        "campos_json": json.dumps(campos_editados), "reglas_json": "[]",
+    }, follow_redirects=False)
+    assert r.status_code == 303 and "error" not in (r.headers.get("location") or "")
+
+    tipo_despues = db.tipo_tramite_por_id(TIPO_ID)
+    ids_despues = {c["etiqueta"]: c["id"] for c in tipo_despues["campos"]}
+    # el campo renombrado conservó su id (las respuestas viejas siguen suyas)
+    assert ids_despues["Fecha hasta (renombrada)"] == ids_antes["Fecha hasta"]
+    # "Fecha desde" ya no está en el formulario...
+    assert "Fecha desde" not in ids_despues
+    # ...pero como tenía respuestas quedó retirado, no borrado: el detalle
+    # del trámite viejo conserva su etiqueta
+    from db import CampoTramite
+    with Session(db.engine) as s:
+        fila = s.get(CampoTramite, ids_antes["Fecha desde"])
+        assert fila is not None and fila.retirado is True
+    tramites = db.tramites_de_trabajador("20111111119", SID)
+    detalle = db.tramite_detalle(tramites[0]["id"])
+    assert any(resp["etiqueta"] == "Fecha desde" for resp in detalle["respuestas"])
+    print("OK  test_editar_tipo_con_tramites_no_rompe_fk")
+
+
 if __name__ == "__main__":
     test_saneo_de_validaciones()
     test_saneo_de_reglas()
@@ -302,4 +372,6 @@ if __name__ == "__main__":
     test_banco_de_pruebas_misma_funcion()
     test_validacion_rota_no_se_guarda()
     test_espejo_empleadores()
+    test_limite_dinamico_hoy()
+    test_editar_tipo_con_tramites_no_rompe_fk()
     print("\nTodo OK — validaciones de trámites.")
