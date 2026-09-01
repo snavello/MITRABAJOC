@@ -567,6 +567,11 @@ class TipoTramite(SQLModel, table=True):
     codigo: str  # ej. "F01 AEFIP" -- prefijo del número de expediente
     activo: bool = True
     creado: str = ""
+    # Reglas de consistencia entre dos campos ({campo_a, operador, campo_b,
+    # mensaje, bloquea}), referenciando campos POR ORDEN y no por id porque
+    # editar el tipo REEMPLAZA los campos (ids nuevos en cada edición). Se
+    # sanean en validaciones_tramite.reglas_saneadas antes de llegar acá.
+    reglas_consistencia: list = Field(default=[], sa_column=Column(JSON))
 
 
 class CampoTramite(SQLModel, table=True):
@@ -589,6 +594,10 @@ class CampoTramite(SQLModel, table=True):
     opciones: str = ""       # separadas por coma -- seleccion/opcion_unica/multiple
     ancho: str = "completo"  # completo | mitad | tercio -- cuánto ocupa en el formulario
     obligatorio: bool = True
+    # Validaciones del campo ({fuente, operador, valor, mensaje, bloquea}),
+    # saneadas en validaciones_tramite.validaciones_saneadas. Fase 1: solo
+    # fuente "fija"; la forma ya contempla lista/sistema/externa.
+    validaciones: list = Field(default=[], sa_column=Column(JSON))
 
 
 class Tramite(SQLModel, table=True):
@@ -608,6 +617,10 @@ class Tramite(SQLModel, table=True):
     # filas viejas ya terminadas se backfillearon desde `actualizado`, que es
     # exacto: un trámite terminado queda bloqueado y no se actualiza más.
     resuelto_en: Optional[str] = Field(default=None)  # "AAAA-MM-DD HH:MM"
+    # Mensajes de validaciones con bloquea=False ("avisa") que el envío
+    # disparó: no frenan al trabajador, quedan para el operador del
+    # sindicato en el detalle del trámite.
+    advertencias: list = Field(default=[], sa_column=Column(JSON))
 
 
 class RespuestaTramite(SQLModel, table=True):
@@ -656,6 +669,7 @@ class TipoTramiteEmpleador(SQLModel, table=True):
     codigo: str
     activo: bool = True
     creado: str = ""
+    reglas_consistencia: list = Field(default=[], sa_column=Column(JSON))  # mirror de TipoTramite
 
 
 class CampoTramiteEmpleador(SQLModel, table=True):
@@ -672,6 +686,7 @@ class CampoTramiteEmpleador(SQLModel, table=True):
     opciones: str = ""
     ancho: str = "completo"
     obligatorio: bool = True
+    validaciones: list = Field(default=[], sa_column=Column(JSON))  # mirror de CampoTramite
 
 
 class TramiteEmpleador(SQLModel, table=True):
@@ -685,6 +700,7 @@ class TramiteEmpleador(SQLModel, table=True):
     estado: str = "iniciado"
     creado: str = ""
     actualizado: str = ""
+    advertencias: list = Field(default=[], sa_column=Column(JSON))  # mirror de Tramite
 
 
 class RespuestaTramiteEmpleador(SQLModel, table=True):
@@ -2256,14 +2272,19 @@ def _campo_tramite_a_dict(c: "CampoTramite") -> dict:
         "longitud_maxima": c.longitud_maxima, "longitud_exacta": c.longitud_exacta,
         "decimales": c.decimales, "tipos_archivo_permitidos": c.tipos_archivo_permitidos,
         "opciones": c.opciones, "ancho": c.ancho, "obligatorio": c.obligatorio,
+        "validaciones": c.validaciones or [],
     }
 
 
-def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list) -> int:
+def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list,
+                        reglas: list = None) -> int:
     """Crea el tipo y sus campos en un solo alta. `campos` es una lista de
-    dicts con las claves de CampoTramite (sin id/tipo_tramite_id)."""
+    dicts con las claves de CampoTramite (sin id/tipo_tramite_id); `reglas`
+    son las reglas de consistencia ya saneadas
+    (validaciones_tramite.reglas_saneadas)."""
     with Session(engine) as s:
         t = TipoTramite(sindicato_id=sindicato_id, titulo=titulo, codigo=codigo,
+                         reglas_consistencia=reglas or [],
                          creado=datetime.now().strftime("%Y-%m-%d %H:%M"))
         s.add(t); s.commit(); s.refresh(t)
         for i, c in enumerate(campos):
@@ -2273,13 +2294,14 @@ def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list
                 decimales=c.get("decimales"), tipos_archivo_permitidos=c.get("tipos_archivo_permitidos", ""),
                 opciones=c.get("opciones", ""), ancho=c.get("ancho") or "completo",
                 obligatorio=c.get("obligatorio", True),
+                validaciones=c.get("validaciones") or [],
             ))
         s.commit()
         return t.id
 
 
 def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: str,
-                         activo: bool, campos: list) -> bool:
+                         activo: bool, campos: list, reglas: list = None) -> bool:
     """Actualiza título/código/activo y REEMPLAZA los campos por los
     enviados -- el constructor de campos en admin es "lo que ves es lo que
     queda", como editar un formulario, no un merge campo por campo."""
@@ -2288,6 +2310,7 @@ def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: st
         if not t or t.sindicato_id != sindicato_id:
             return False
         t.titulo, t.codigo, t.activo = titulo, codigo, activo
+        t.reglas_consistencia = reglas or []
         s.add(t)
         for viejo in s.exec(select(CampoTramite).where(CampoTramite.tipo_tramite_id == tipo_id)).all():
             s.delete(viejo)
@@ -2299,6 +2322,7 @@ def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: st
                 decimales=c.get("decimales"), tipos_archivo_permitidos=c.get("tipos_archivo_permitidos", ""),
                 opciones=c.get("opciones", ""), ancho=c.get("ancho") or "completo",
                 obligatorio=c.get("obligatorio", True),
+                validaciones=c.get("validaciones") or [],
             ))
         s.commit()
         return True
@@ -2336,6 +2360,7 @@ def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False) -
             resultado.append({
                 "id": t.id, "titulo": t.titulo, "codigo": t.codigo, "activo": t.activo,
                 "creado": t.creado, "campos": [_campo_tramite_a_dict(c) for c in campos],
+                "reglas_consistencia": t.reglas_consistencia or [],
             })
         return resultado
 
@@ -2350,6 +2375,7 @@ def tipo_tramite_por_id(tipo_id: int) -> Optional[dict]:
         return {
             "id": t.id, "sindicato_id": t.sindicato_id, "titulo": t.titulo, "codigo": t.codigo,
             "activo": t.activo, "creado": t.creado, "campos": [_campo_tramite_a_dict(c) for c in campos],
+            "reglas_consistencia": t.reglas_consistencia or [],
         }
 
 
@@ -2386,7 +2412,8 @@ def _proximo_numero_expediente(s: Session, modelo, prefijo: str, anio: str) -> s
     return f"{prefijo}-{anio}-{(maximo + 1):06d}"
 
 
-def crear_tramite(sindicato_id: int, tipo_tramite_id: int, cuil: str, respuestas: list) -> Optional[dict]:
+def crear_tramite(sindicato_id: int, tipo_tramite_id: int, cuil: str, respuestas: list,
+                   advertencias: list = None) -> Optional[dict]:
     """Genera el número de expediente (correlativo por prefijo+año, ver
     _proximo_numero_expediente) y persiste el trámite con sus respuestas en
     una sola operación. `respuestas` es una lista de dicts con
@@ -2401,7 +2428,8 @@ def crear_tramite(sindicato_id: int, tipo_tramite_id: int, cuil: str, respuestas
         ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
         numero = _proximo_numero_expediente(s, Tramite, prefijo, anio)
         tr = Tramite(sindicato_id=sindicato_id, tipo_tramite_id=tipo_tramite_id, cuil=cuil,
-                     numero_expediente=numero, estado="iniciado", creado=ahora, actualizado=ahora)
+                     numero_expediente=numero, estado="iniciado", creado=ahora, actualizado=ahora,
+                     advertencias=advertencias or [])
         s.add(tr); s.commit(); s.refresh(tr)
         for r in respuestas:
             s.add(RespuestaTramite(
@@ -2526,6 +2554,7 @@ def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:
         "sindicato_id": tr.sindicato_id, "estado": tr.estado,
         "estado_label": ESTADOS_TRAMITE_LABEL.get(tr.estado, tr.estado),
         "creado": tr.creado, "actualizado": tr.actualizado,
+        "advertencias": tr.advertencias or [],
         "tipo_titulo": tipo.titulo if tipo else "—", "tipo_codigo": tipo.codigo if tipo else "",
         "respuestas": [{
             "campo_id": r.campo_tramite_id,
@@ -2565,12 +2594,15 @@ def _campo_tramite_empleador_a_dict(c: "CampoTramiteEmpleador") -> dict:
         "longitud_maxima": c.longitud_maxima, "longitud_exacta": c.longitud_exacta,
         "decimales": c.decimales, "tipos_archivo_permitidos": c.tipos_archivo_permitidos,
         "opciones": c.opciones, "ancho": c.ancho, "obligatorio": c.obligatorio,
+        "validaciones": c.validaciones or [],
     }
 
 
-def crear_tipo_tramite_empleador(sindicato_id: int, titulo: str, codigo: str, campos: list) -> int:
+def crear_tipo_tramite_empleador(sindicato_id: int, titulo: str, codigo: str, campos: list,
+                                  reglas: list = None) -> int:
     with Session(engine) as s:
         t = TipoTramiteEmpleador(sindicato_id=sindicato_id, titulo=titulo, codigo=codigo,
+                                  reglas_consistencia=reglas or [],
                                   creado=datetime.now().strftime("%Y-%m-%d %H:%M"))
         s.add(t); s.commit(); s.refresh(t)
         for i, c in enumerate(campos):
@@ -2580,18 +2612,20 @@ def crear_tipo_tramite_empleador(sindicato_id: int, titulo: str, codigo: str, ca
                 decimales=c.get("decimales"), tipos_archivo_permitidos=c.get("tipos_archivo_permitidos", ""),
                 opciones=c.get("opciones", ""), ancho=c.get("ancho") or "completo",
                 obligatorio=c.get("obligatorio", True),
+                validaciones=c.get("validaciones") or [],
             ))
         s.commit()
         return t.id
 
 
 def editar_tipo_tramite_empleador(tipo_id: int, sindicato_id: int, titulo: str, codigo: str,
-                                   activo: bool, campos: list) -> bool:
+                                   activo: bool, campos: list, reglas: list = None) -> bool:
     with Session(engine) as s:
         t = s.get(TipoTramiteEmpleador, tipo_id)
         if not t or t.sindicato_id != sindicato_id:
             return False
         t.titulo, t.codigo, t.activo = titulo, codigo, activo
+        t.reglas_consistencia = reglas or []
         s.add(t)
         for viejo in s.exec(select(CampoTramiteEmpleador).where(
                 CampoTramiteEmpleador.tipo_tramite_id == tipo_id)).all():
@@ -2604,6 +2638,7 @@ def editar_tipo_tramite_empleador(tipo_id: int, sindicato_id: int, titulo: str, 
                 decimales=c.get("decimales"), tipos_archivo_permitidos=c.get("tipos_archivo_permitidos", ""),
                 opciones=c.get("opciones", ""), ancho=c.get("ancho") or "completo",
                 obligatorio=c.get("obligatorio", True),
+                validaciones=c.get("validaciones") or [],
             ))
         s.commit()
         return True
@@ -2637,6 +2672,7 @@ def tipos_tramite_empleador_del_sindicato(sindicato_id: int, solo_activos: bool 
             resultado.append({
                 "id": t.id, "titulo": t.titulo, "codigo": t.codigo, "activo": t.activo,
                 "creado": t.creado, "campos": [_campo_tramite_empleador_a_dict(c) for c in campos],
+                "reglas_consistencia": t.reglas_consistencia or [],
             })
         return resultado
 
@@ -2652,6 +2688,7 @@ def tipo_tramite_empleador_por_id(tipo_id: int) -> Optional[dict]:
             "id": t.id, "sindicato_id": t.sindicato_id, "titulo": t.titulo, "codigo": t.codigo,
             "activo": t.activo, "creado": t.creado,
             "campos": [_campo_tramite_empleador_a_dict(c) for c in campos],
+            "reglas_consistencia": t.reglas_consistencia or [],
         }
 
 
@@ -2662,7 +2699,8 @@ def _log_tramite_empleador(s: Session, tramite_id: int, evento: str, detalle: st
     ))
 
 
-def crear_tramite_empleador(sindicato_id: int, tipo_tramite_id: int, cuit: str, respuestas: list) -> Optional[dict]:
+def crear_tramite_empleador(sindicato_id: int, tipo_tramite_id: int, cuit: str, respuestas: list,
+                             advertencias: list = None) -> Optional[dict]:
     with Session(engine) as s:
         tipo = s.get(TipoTramiteEmpleador, tipo_tramite_id)
         if not tipo or tipo.sindicato_id != sindicato_id or not tipo.activo:
@@ -2675,7 +2713,8 @@ def crear_tramite_empleador(sindicato_id: int, tipo_tramite_id: int, cuit: str, 
         # problema de prefijos repetidos entre sindicatos.
         numero = _proximo_numero_expediente(s, TramiteEmpleador, prefijo, anio)
         tr = TramiteEmpleador(sindicato_id=sindicato_id, tipo_tramite_id=tipo_tramite_id, cuit=cuit,
-                               numero_expediente=numero, estado="iniciado", creado=ahora, actualizado=ahora)
+                               numero_expediente=numero, estado="iniciado", creado=ahora, actualizado=ahora,
+                               advertencias=advertencias or [])
         s.add(tr); s.commit(); s.refresh(tr)
         for r in respuestas:
             s.add(RespuestaTramiteEmpleador(
@@ -2781,6 +2820,7 @@ def _tramite_empleador_detalle_completo(s: Session, tr: "TramiteEmpleador") -> d
         "sindicato_id": tr.sindicato_id, "estado": tr.estado,
         "estado_label": ESTADOS_TRAMITE_LABEL.get(tr.estado, tr.estado),
         "creado": tr.creado, "actualizado": tr.actualizado,
+        "advertencias": tr.advertencias or [],
         "tipo_titulo": tipo.titulo if tipo else "—", "tipo_codigo": tipo.codigo if tipo else "",
         "respuestas": [{
             "campo_id": r.campo_tramite_id,

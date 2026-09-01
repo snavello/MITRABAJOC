@@ -209,6 +209,64 @@
   .tp-mitad { grid-column:span 6; }
   .tp-tercio { grid-column:span 4; }
   @media (max-width:600px) { .tp-mitad, .tp-tercio { grid-column:span 12; } }
+  /* ---- Carátula del trámite (rediseño 2026-09-01): mismo vidrio/grano del
+     encabezado, pero con jerarquía de carátula -- título grande en
+     condensada, código como chip y el lugar del expediente en mono. ---- */
+  .tram-caratula { position:relative; overflow:hidden; padding:17px 18px 14px;
+    background:var(--marca-base);
+    background-image:linear-gradient(140deg, var(--marca-base) 30%, color-mix(in srgb, var(--marca-primario) 60%, var(--marca-base))); }
+  .tram-caratula::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity:.07; mix-blend-mode:overlay; }
+  .tram-caratula .tit { position:relative; z-index:1; color:#fff;
+    font-family:var(--fuente-display); font-weight:700; font-size:23px;
+    line-height:1.02; letter-spacing:.012em; text-transform:uppercase; }
+  .tram-caratula .meta { position:relative; z-index:1; display:flex; align-items:center; gap:9px;
+    margin-top:9px; flex-wrap:wrap; }
+  .tram-caratula .cod { font-family:var(--fuente-num); font-size:10.5px; color:#fff;
+    border:1px solid rgba(255,255,255,.34); border-radius:4px; padding:1px 8px; letter-spacing:1px; }
+  .tram-caratula .exp { font-family:var(--fuente-num); font-size:10px; color:rgba(255,255,255,.6); }
+  /* Progreso vivo del llenado */
+  .tram-prog { display:flex; align-items:center; gap:11px; margin-bottom:15px; }
+  .tram-prog span { font-size:11.5px; color:var(--gris); white-space:nowrap; }
+  .tram-prog span b { color:var(--tinta); font-family:var(--fuente-num); }
+  .tram-prog-bar { flex:1; height:5px; background:#e4e8ef; border-radius:3px; overflow:hidden; }
+  .tram-prog-bar i { display:block; height:100%; width:0; background:var(--marca-acento);
+    border-radius:3px; transition:width .4s ease; }
+  /* Validación al salir del campo: tilde verde o el mensaje del sindicato */
+  .campo-tram { position:relative; }
+  .campo-tram .tram-tick { position:absolute; right:11px; top:33px; font-size:14px; font-weight:800;
+    color:var(--ok); opacity:0; transform:scale(.4); pointer-events:none;
+    transition:all .25s cubic-bezier(.2,1.6,.4,1); }
+  .campo-tram.ok .tram-tick { opacity:1; transform:scale(1); }
+  .campo-tram.ok .tram-input { border-color:color-mix(in srgb, var(--ok) 40%, white); }
+  .campo-tram.mal .tram-input { border-color:var(--error); box-shadow:0 0 0 3px rgba(192,57,43,.10); }
+  .campo-tram .tram-err { display:none; font-size:11px; color:var(--error); font-weight:600; margin-top:5px; }
+  .campo-tram.mal .tram-err { display:block; }
+  .campo-tram .tram-err.avs { color:var(--aviso); }
+  .campo-tram.avs .tram-err.avs { display:block; }
+  @keyframes tramshake { 25% { transform:translateX(-4px); } 75% { transform:translateX(4px); } }
+  .tram-shake { animation:tramshake .22s ease 2; }
+  /* El sello: un expediente se sella al ingresar */
+  .tram-sello-overlay { position:absolute; inset:0; display:none; align-items:center;
+    justify-content:center; z-index:6; pointer-events:none; }
+  .tram-sello-overlay.on { display:flex; }
+  .tram-sello { border:4px solid var(--ok); border-radius:8px; padding:12px 24px;
+    color:var(--ok); background:rgba(255,255,255,.9); text-align:left;
+    font-family:var(--fuente-display); font-weight:700; font-size:27px; letter-spacing:2px;
+    text-transform:uppercase; transform:rotate(-8deg) scale(2.2); opacity:0; }
+  .tram-sello small { display:block; font-family:var(--fuente-num); font-weight:600;
+    font-size:11px; letter-spacing:.4px; text-transform:none; }
+  .tram-sello-overlay.on .tram-sello { animation:tramsello .5s cubic-bezier(.2,1.6,.35,1) forwards; }
+  @keyframes tramsello {
+    0% { transform:rotate(-8deg) scale(2.2); opacity:0; }
+    60% { transform:rotate(-8deg) scale(.96); opacity:1; }
+    100% { transform:rotate(-8deg) scale(1); opacity:1; }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    .tram-sello-overlay.on .tram-sello, .tram-shake { animation:none; }
+    .tram-sello-overlay.on .tram-sello { transform:rotate(-8deg) scale(1); opacity:1; }
+  }
   .campo-tram { margin-bottom:14px; }
   .campo-tram label { display:block; font-size:12.5px; color:var(--gris); margin-bottom:6px; }
   .campo-tram-separador { grid-column:1 / -1; border:none; border-top:1px solid var(--linea); margin:2px 0 12px; }
@@ -635,13 +693,23 @@
     </div>
 
     <div id="tram-form" style="display:none;">
-      <div class="tram-box">
-        <div class="tram-box-enc">
+      <div class="tram-box" style="position:relative;">
+        <!-- El sello de ENVIADO cae sobre el formulario (ver enviarTramiteOk) -->
+        <div class="tram-sello-overlay" id="tram-sello"></div>
+        <!-- Carátula de marca: el trámite tiene entidad, no es un formulario suelto -->
+        <div class="tram-caratula">
           <div class="tit" id="tram-form-titulo">Trámite</div>
-          <div class="sub" id="tram-form-codigo"></div>
+          <div class="meta">
+            <span class="cod" id="tram-form-codigo"></span>
+            <span class="exp" id="tram-form-exp">EXP — se numera al enviar</span>
+          </div>
         </div>
         <div class="tram-box-body">
           <div id="tram-form-error" class="banner mal" style="display:none;"></div>
+          <div class="tram-prog" id="tram-prog" style="display:none;">
+            <span>Completaste <b id="tram-prog-n">0 de 0</b></span>
+            <div class="tram-prog-bar"><i id="tram-prog-fill"></i></div>
+          </div>
           <div id="tram-form-campos"></div>
           <button class="btn" id="tram-form-enviar">Enviar trámite</button>
         </div>
@@ -1360,17 +1428,145 @@ if (document.getElementById('tp-tramites')) {
     document.getElementById('tram-form-titulo').textContent = tipo.titulo;
     document.getElementById('tram-form-codigo').textContent = tipo.codigo;
     document.getElementById('tram-form-error').style.display = 'none';
+    document.getElementById('tram-form-exp').textContent = 'EXP — se numera al enviar';
     document.getElementById('tram-form-campos').innerHTML = tipo.campos.map(c => {
       if (c.tipo_dato === 'separador') return `<hr class="campo-tram-separador">`;
       const anchoClass = 'tp-' + (c.ancho || 'completo');
-      if (c.tipo_dato === 'booleano') return `<div class="campo-tram ${anchoClass}">${campoInputHtml(c)}</div>`;
-      return `<div class="campo-tram ${anchoClass}">
+      if (c.tipo_dato === 'booleano') return `<div class="campo-tram ${anchoClass}" id="ctw_${c.id}">${campoInputHtml(c)}</div>`;
+      return `<div class="campo-tram ${anchoClass}" id="ctw_${c.id}">
         <label>${escTram(c.etiqueta)}${c.obligatorio ? ' *' : ''}</label>
         ${campoInputHtml(c)}
+        <span class="tram-tick">✓</span>
+        <div class="tram-err" id="ctw_${c.id}_err"></div>
+        <div class="tram-err avs" id="ctw_${c.id}_avs"></div>
       </div>`;
     }).join('');
+    iniciarValidacionTram(tipo);
     verTram('tram-form');
   };
+
+  /* ---- Validación en vivo (rediseño 2026-09-01) ----
+     Espejo JS de validaciones_tramite.evaluar_envio: fuente "fija" del
+     campo + reglas de consistencia del tipo. Es SOLO cortesía de UX -- el
+     servidor re-evalúa todo en /api/tramite y esa es la verdad. */
+  function tvComparable(valor, tipoDato) {
+    const t = String(valor || '').trim();
+    if (!t) return null;
+    if (tipoDato === 'numero') {
+      const n = parseFloat(t.replace(',', '.'));
+      return isNaN(n) ? null : n;
+    }
+    if (tipoDato === 'fecha') return /^\d{4}-\d{2}-\d{2}$/.test(t) ? t : null;
+    return null;
+  }
+  function tvCompara(a, op, b) {
+    if (op === '<=') return a <= b;
+    if (op === '>=') return a >= b;
+    if (op === '<') return a < b;
+    if (op === '>') return a > b;
+    if (op === '==') return a === b;
+    if (op === '!=') return a !== b;
+    return true;
+  }
+  function tvValorCampo(c) {
+    const el = document.getElementById('tc_' + c.id);
+    return el ? el.value : '';
+  }
+  // Errores/avisos de UN campo: sus validaciones fijas + las reglas de
+  // consistencia en las que participa como campo_a (el restringido).
+  function tvEvaluaCampo(tipo, c) {
+    const res = { errores: [], avisos: [] };
+    const v = tvComparable(tvValorCampo(c), c.tipo_dato);
+    if (v === null) return res;
+    (c.validaciones || []).forEach(vd => {
+      if (vd.fuente !== 'fija') return;
+      const lim = tvComparable(vd.valor, c.tipo_dato);
+      if (lim === null || tvCompara(v, vd.operador, lim)) return;
+      (vd.bloquea === false ? res.avisos : res.errores).push(vd.mensaje);
+    });
+    (tipo.reglas_consistencia || []).forEach(r => {
+      const ca = tipo.campos[r.campo_a], cb = tipo.campos[r.campo_b];
+      if (!ca || ca.id !== c.id || !cb) return;
+      const b = tvComparable(tvValorCampo(cb), cb.tipo_dato);
+      if (b === null || tvCompara(v, r.operador, b)) return;
+      (r.bloquea === false ? res.avisos : res.errores).push(r.mensaje);
+    });
+    return res;
+  }
+  function tvPintaCampo(tipo, c) {
+    const cont = document.getElementById('ctw_' + c.id);
+    if (!cont) return true;
+    const errEl = document.getElementById('ctw_' + c.id + '_err');
+    const avsEl = document.getElementById('ctw_' + c.id + '_avs');
+    const res = tvEvaluaCampo(tipo, c);
+    cont.classList.remove('ok', 'mal', 'avs');
+    if (errEl) errEl.textContent = ''; if (avsEl) avsEl.textContent = '';
+    const v = tvComparable(tvValorCampo(c), c.tipo_dato);
+    if (res.errores.length) {
+      cont.classList.add('mal');
+      if (errEl) errEl.textContent = res.errores[0];
+    } else if (res.avisos.length) {
+      cont.classList.add('avs');
+      if (avsEl) avsEl.textContent = res.avisos[0];
+    } else if (v !== null || (String(tvValorCampo(c)).trim() && ['texto', 'seleccion'].includes(c.tipo_dato))) {
+      cont.classList.add('ok');
+    }
+    return res.errores.length === 0;
+  }
+  // El error del servidor (422 con errores_campos) se pinta con la misma
+  // maquinaria: {campo_id: mensaje}.
+  function tvPintaErroresServidor(tipo, erroresCampos) {
+    Object.entries(erroresCampos || {}).forEach(([cid, mensaje]) => {
+      const cont = document.getElementById('ctw_' + cid);
+      const errEl = document.getElementById('ctw_' + cid + '_err');
+      if (!cont) return;
+      cont.classList.remove('ok', 'avs');
+      cont.classList.add('mal');
+      if (errEl) errEl.textContent = mensaje;
+    });
+  }
+  function tvCampoCompleto(c) {
+    if (c.tipo_dato === 'archivo') {
+      const el = document.getElementById('tc_' + c.id);
+      return !!(el && el.files && el.files[0]);
+    }
+    if (c.tipo_dato === 'opcion_unica' || c.tipo_dato === 'multiple') {
+      return !!document.querySelector(`input[name="tc_${c.id}"]:checked`);
+    }
+    return !!String(tvValorCampo(c)).trim();
+  }
+  function tvProgreso(tipo) {
+    // Cuentan los campos que juntan respuesta visible (separador y booleano
+    // afuera: el booleano siempre "está respondido" y solo inflaría la barra).
+    const cuentan = tipo.campos.filter(c => !['separador', 'booleano'].includes(c.tipo_dato));
+    const listos = cuentan.filter(c => tvCampoCompleto(c) &&
+      !document.getElementById('ctw_' + c.id)?.classList.contains('mal')).length;
+    document.getElementById('tram-prog-n').textContent = listos + ' de ' + cuentan.length;
+    document.getElementById('tram-prog-fill').style.width =
+      (cuentan.length ? listos / cuentan.length * 100 : 0) + '%';
+  }
+  function iniciarValidacionTram(tipo) {
+    document.getElementById('tram-prog').style.display = 'flex';
+    tipo.campos.forEach(c => {
+      if (c.tipo_dato === 'separador') return;
+      if (c.tipo_dato === 'opcion_unica' || c.tipo_dato === 'multiple') {
+        document.querySelectorAll(`input[name="tc_${c.id}"]`).forEach(el =>
+          el.addEventListener('change', () => tvProgreso(tipo)));
+        return;
+      }
+      const el = document.getElementById('tc_' + c.id);
+      if (!el) return;
+      el.addEventListener('blur', () => { tvPintaCampo(tipo, c); tvProgreso(tipo); });
+      el.addEventListener('change', () => { tvPintaCampo(tipo, c); tvProgreso(tipo); });
+      el.addEventListener('input', () => {
+        // mientras escribe solo se limpia un error viejo, no se lo apura
+        const cont = document.getElementById('ctw_' + c.id);
+        if (cont && cont.classList.contains('mal')) tvPintaCampo(tipo, c);
+        tvProgreso(tipo);
+      });
+    });
+    tvProgreso(tipo);
+  }
 
   document.getElementById('tram-form-enviar').onclick = async () => {
     if (!tipoTramiteActual) return;
@@ -1409,27 +1605,57 @@ if (document.getElementById('tp-tramites')) {
         fd.append('campo_' + c.id, el.value);
       }
     });
-    if (faltan.length) {
-      errBox.textContent = 'Completá: ' + faltan.join(', ');
-      errBox.style.display = 'flex';
+    const btn = document.getElementById('tram-form-enviar');
+    // Pasada completa de las validaciones en el cliente (cortesía: mismo
+    // resultado que va a dar el servidor, pero sin viaje).
+    let hayInvalidos = false;
+    tipoTramiteActual.campos.forEach(c => {
+      if (!tvPintaCampo(tipoTramiteActual, c)) hayInvalidos = true;
+    });
+    tvProgreso(tipoTramiteActual);
+    if (faltan.length || hayInvalidos) {
+      if (faltan.length) {
+        errBox.textContent = 'Completá: ' + faltan.join(', ');
+        errBox.style.display = 'flex';
+      } else {
+        errBox.style.display = 'none';
+      }
+      btn.classList.remove('tram-shake'); void btn.offsetWidth; btn.classList.add('tram-shake');
+      document.querySelector('#tram-form-campos .campo-tram.mal')
+        ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
       return;
     }
-    const btn = document.getElementById('tram-form-enviar');
     btn.disabled = true; btn.textContent = 'Enviando…';
     try {
       const r = await fetch('/api/tramite', { method: 'POST', body: fd });
       const data = await r.json();
       if (!r.ok) {
+        // El servidor manda errores_campos: se pintan donde corresponde,
+        // igual que la validación en vivo.
+        tvPintaErroresServidor(tipoTramiteActual, data.errores_campos);
         errBox.innerHTML = (data.errores || ['No se pudo enviar el trámite.']).join('<br>');
         errBox.style.display = 'flex';
+        document.querySelector('#tram-form-campos .campo-tram.mal')
+          ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
         return;
       }
-      abrirTramiteDetalleTrab(data.numero_expediente);
+      // El sello: el expediente queda sellado con su número real, y recién
+      // después se abre el detalle.
+      document.getElementById('tram-form-exp').textContent = 'EXP ' + data.numero_expediente;
+      const overlay = document.getElementById('tram-sello');
+      const hoy = new Date().toLocaleDateString('es-AR');
+      overlay.innerHTML = `<div class="tram-sello">Enviado<small>EXP ${escTram(data.numero_expediente)} · ${hoy}</small></div>`;
+      overlay.classList.add('on');
+      btn.textContent = 'Enviado ✓';
+      setTimeout(() => {
+        overlay.classList.remove('on');
+        abrirTramiteDetalleTrab(data.numero_expediente);
+      }, 2200);
     } catch (e) {
       errBox.textContent = 'No se pudo enviar el trámite. Probá de nuevo.';
       errBox.style.display = 'flex';
     } finally {
-      btn.disabled = false; btn.textContent = 'Enviar trámite';
+      setTimeout(() => { btn.disabled = false; btn.textContent = 'Enviar trámite'; }, 2300);
     }
   };
 

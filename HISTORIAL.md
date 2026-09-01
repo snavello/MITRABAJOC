@@ -1881,3 +1881,109 @@ entorno, todas documentadas porque son del tipo que se vuelve a olvidar:
 **Robot vivo**: `test_robot_tramite_guarderia.py`, el ciclo completo de un
 trámite con dos actores (el trabajador lo presenta, el admin responde y lo
 cierra, el trabajador ve la respuesta) contra el lote de AEFIP.
+
+## Validaciones en formularios de Trámites — Fase 1: fija + consistencia (2026-09-01)
+
+Primera fase de la capa de validaciones acordada con Sd: hasta acá un campo
+de trámite aceptaba cualquier valor que pasara el tipo de dato (180 días o
+9.000 días daban lo mismo). El diseño completo contempla cuatro FUENTES de
+validación — `fija` (contra un valor prefijado), `lista` (datos cargados por
+el admin), `sistema` (padrón/recibos/semáforo) y `externa` (API catalogada de
+un sistema del sindicato) — y esta fase implementa `fija` + las reglas de
+consistencia entre dos campos. Las fases siguientes están anotadas en
+BACKLOG.md con sus decisiones ya cerradas.
+
+### Decisiones de diseño (cerradas con Sd, no rediscutir)
+
+- **Las validaciones NO son tipos de dato** (la idea original DATA/APIDATA
+  se descartó): son una capa componible sobre el campo — un campo puede
+  tener N validaciones de fuentes distintas a la vez.
+- **`bloquea` vs `avisa`**: una validación bloqueante frena el envío con el
+  mensaje del admin; una de "avisa" deja pasar y guarda el mensaje en
+  `Tramite.advertencias`, visible para el operador en el modal del trámite
+  (caja ámbar "Avisos del formulario"). No todo control debe frenar al
+  trabajador: frenar de más lo empuja al teléfono, que es lo que Trámites
+  vino a evitar.
+- **En las listas se guardan hechos, no derivados** (regla para la fase
+  `lista`): fecha de afiliación y no "antigüedad", que se pudre sola.
+- **Validar tan cerca de la carga como se pueda**, pero el servidor decide:
+  el on-blur del cliente es cortesía; `/api/tramite` re-evalúa todo.
+
+### Dónde vive cada cosa
+
+- **`validaciones_tramite.py`** — motor puro, sin base de datos:
+  `validaciones_saneadas()` / `reglas_saneadas()` (saneo al GUARDAR: una
+  validación mal formada se descarta ahí, mismo criterio que
+  `error_de_expresion` con las fórmulas — no explota meses después en la
+  pantalla del trabajador) y `evaluar_envio()` (la única implementación de
+  la evaluación). Operadores en ASCII (`<=`, `>=`, `<`, `>`, `==`, `!=`);
+  solo campos `numero`/`fecha` son validables en esta fase; mensajes por
+  defecto generados al guardar si el admin no escribe uno.
+- **Modelo**: `CampoTramite.validaciones` (JSON, lista de
+  `{fuente, operador, valor, mensaje, bloquea}`),
+  `TipoTramite.reglas_consistencia` (JSON) y `Tramite.advertencias` (JSON)
+  + los tres espejos de empleador. Migración `a1f5c2d94b18`.
+- **Las reglas referencian campos POR ORDEN, no por id**: editar un tipo
+  REEMPLAZA sus campos (ids nuevos en cada edición, ver
+  `db.editar_tipo_tramite`) y una referencia por id quedaría colgada. En el
+  constructor JS las reglas guardan REFERENCIAS DE OBJETO a los campos y se
+  convierten a índice recién al serializar: sobreviven a reordenar y borrar
+  sin remapear nada.
+- **`POST /admin/tramite-tipo/probar`** — el banco de pruebas del
+  constructor ejecuta `evaluar_envio()`, LA MISMA función del envío real
+  (el criterio de `resolver_destinatarios` en Notificaciones: si el preview
+  y el envío validaran distinto, nadie los compara y el error es
+  silencioso). Sirve a los dos constructores; acepta módulo `tramites` o
+  `empleadores`.
+- **422 con `errores_campos`**: el envío rechazado devuelve, además de la
+  lista de errores, un mapa `{campo_id: mensaje}` para pintar el error
+  debajo del campo exacto.
+
+### Rediseño del constructor (estética "Expediente")
+
+Elegida por Sd entre 3 propuestas (mockup en
+`disenos/constructor-tramites-propuestas.html`, pestañas "Definitiva" y
+"Trabajador"): ficha con **lomo numerado** (el número es el orden real y es
+el agarre del drag), sellos BLOQUEA/AVISA, secciones en condensada, y a la
+derecha **el teléfono del afiliado** con el banco de pruebas integrado: los
+campos de la vista previa son EDITABLES con datos de prueba y "Probar el
+formulario" sella el veredicto sobre la pantalla del celular (rojo "No se
+puede enviar" con el primer error / verde "Listo para enviar", avisos en
+ámbar debajo). Se quitó el `pointer-events:none` que hacía inertes los
+inputs de la vista previa. Los dos constructores (trabajador y empresa)
+siguen en namespaces JS separados (decisión ya tomada); las funciones
+NUEVAS que solo renderizan (`htmlValidacionesCampo`, `htmlCampoPreview`)
+sí se comparten parametrizadas por sufijo, como el chat por `familia`.
+
+### Rediseño de la pantalla del trabajador
+
+Pedido explícito de Sd ("que no parezca un formulario sin diseño") +
+aplicar el sello. Dentro del lenguaje del trabajador (encabezado oscuro de
+marca, interior claro):
+
+- **Carátula**: gradiente base→primario con el grano del rediseño Nike,
+  título en condensada mayúscula, código como chip mono y "EXP — se numera
+  al enviar".
+- **Progreso vivo**: "Completaste N de M" con barra en acento (separador y
+  booleano no cuentan: el booleano siempre "está respondido" e inflaría).
+- **Validación al salir del campo**: espejo JS de `evaluar_envio` (fija +
+  consistencia), tilde verde con pop o el mensaje del sindicato en rojo;
+  los "avisa" se muestran en ámbar sin frenar. Enviar con errores sacude el
+  botón y scrollea al primer campo mal.
+- **El sello**: al enviar OK cae "ENVIADO · EXP … · fecha" sobre el
+  formulario (animación con `prefers-reduced-motion` contemplado) y el
+  número queda grabado en la carátula; después se abre el detalle.
+
+### Verificación
+
+`test_validaciones_tramite.py` (9 tests: motor puro, saneo, rutas de alta,
+envío 422 con `errores_campos`, advertencias persistidas, banco de pruebas,
+espejo empleador). Regresiones: `test_tramites.py`,
+`test_tramites_empresa.py`, `test_dashboard.py`, `test_modulos.py`,
+`test_codigos_error.py`, `test_notificaciones_empresa.py`,
+`test_cargar_demo_empleadores.py` — todos verdes. E2E `pytest e2e/ -q`:
+4/4, el robot completó el ciclo entero del trámite de guardería contra el
+formulario rediseñado. Flujo manual verificado en el navegador con el tipo
+"F07 UOM · Licencia por cuidado de familiar" sembrado en el Postgres local
+(validación en vivo, envío bloqueado, aviso ámbar, sello, advertencia en el
+modal del admin).

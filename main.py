@@ -38,6 +38,7 @@ from sqlmodel import select
 
 import db
 import auth
+import validaciones_tramite
 import errores
 from errores import ErrorApp
 from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador,
@@ -1727,6 +1728,10 @@ def _campos_tramite_validos(campos_crudos: list) -> list:
             "opciones": str(c.get("opciones") or "").strip()[:500],
             "ancho": c.get("ancho") if c.get("ancho") in ANCHOS_CAMPO_TRAMITE else "completo",
             "obligatorio": bool(c.get("obligatorio", True)),
+            # Una validación mal formada no se guarda (se descarta acá, no
+            # explota después en la pantalla del trabajador).
+            "validaciones": validaciones_tramite.validaciones_saneadas(
+                c.get("validaciones"), c["tipo_dato"]),
         })
     return validos
 
@@ -1736,6 +1741,7 @@ async def abm_tramite_tipo(
     request: Request,
     id: str = Form(""), titulo: str = Form(...), codigo: str = Form(...),
     activo: str = Form("si"), campos_json: str = Form(...),
+    reglas_json: str = Form("[]"),
 ):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "tramites")
@@ -1743,16 +1749,49 @@ async def abm_tramite_tipo(
     try:
         campos_crudos = json.loads(campos_json)
         assert isinstance(campos_crudos, list)
+        reglas_crudas = json.loads(reglas_json or "[]")
+        assert isinstance(reglas_crudas, list)
     except Exception:
         return RedirectResponse("/admin?error=campos#tramites", status_code=303)
     campos = _campos_tramite_validos(campos_crudos)
     if not campos:
         return RedirectResponse("/admin?error=campos#tramites", status_code=303)
+    reglas = validaciones_tramite.reglas_saneadas(reglas_crudas, campos)
     if id:
-        db.editar_tipo_tramite(int(id), sid, titulo, codigo, activo == "si", campos)
+        db.editar_tipo_tramite(int(id), sid, titulo, codigo, activo == "si", campos, reglas)
     else:
-        db.crear_tipo_tramite(sid, titulo, codigo, campos)
+        db.crear_tipo_tramite(sid, titulo, codigo, campos, reglas)
     return RedirectResponse("/admin#tramites", status_code=303)
+
+
+@app.post("/admin/tramite-tipo/probar")
+async def probar_tramite_tipo(request: Request):
+    """Banco de pruebas del constructor: evalúa datos de prueba contra las
+    validaciones del formulario TAL CUAL está en pantalla (aunque no esté
+    guardado). Ejecuta validaciones_tramite.evaluar_envio, la MISMA función
+    del envío real -- si acá diera distinto que al recibir un trámite, el
+    error sería silencioso porque nadie los compara (el criterio de
+    resolver_destinatarios en Notificaciones). Sirve para los dos
+    constructores (trabajador y empresa): la lógica es pura, no toca tablas,
+    por eso alcanza con tener habilitado cualquiera de los dos módulos."""
+    sid = exigir_sindicato(request)
+    if "tramites" not in _modulos_de(sid):
+        _exigir_modulo(sid, "empleadores")
+    cuerpo = await request.json()
+    campos = _campos_tramite_validos(cuerpo.get("campos") or [])
+    reglas = validaciones_tramite.reglas_saneadas(cuerpo.get("reglas") or [], campos)
+    # Los campos todavía no tienen id (no están guardados): se usa el índice
+    # como id, y el cliente referencia sus inputs de prueba igual.
+    for i, c in enumerate(campos):
+        c["id"] = i
+    crudos = cuerpo.get("valores") or {}
+    valores = {}
+    for clave, valor in crudos.items() if isinstance(crudos, dict) else []:
+        try:
+            valores[int(clave)] = str(valor)
+        except (TypeError, ValueError):
+            continue
+    return validaciones_tramite.evaluar_envio(campos, reglas, valores)
 
 
 @app.post("/admin/tramite-tipo/borrar")
@@ -2084,10 +2123,22 @@ async def api_enviar_tramite(request: Request):
             continue
         respuestas.append({"campo_tramite_id": campo["id"], "valor_texto": valor})
 
-    if errores:
-        return JSONResponse(status_code=422, content={"errores": errores})
+    # Capa de validaciones del formulario (fija + consistencia): corre
+    # SIEMPRE en el servidor aunque el cliente valide lo mismo en vivo --
+    # esto es lo que decide qué se persiste. "avisa" no frena: queda como
+    # advertencia para el operador en el detalle del trámite.
+    valores = {r["campo_tramite_id"]: r.get("valor_texto", "")
+               for r in respuestas if "valor_texto" in r}
+    veredicto = validaciones_tramite.evaluar_envio(
+        tipo["campos"], tipo.get("reglas_consistencia"), valores)
+    errores += veredicto["errores"]
 
-    resultado = db.crear_tramite(sid, tipo_tramite_id, cuil, respuestas)
+    if errores:
+        return JSONResponse(status_code=422, content={
+            "errores": errores, "errores_campos": veredicto["errores_campos"]})
+
+    resultado = db.crear_tramite(sid, tipo_tramite_id, cuil, respuestas,
+                                 advertencias=veredicto["advertencias"])
     if not resultado:
         raise HTTPException(400, "No se pudo crear el trámite.")
     return resultado
@@ -2150,6 +2201,7 @@ async def abm_tramite_tipo_empresa(
     request: Request,
     id: str = Form(""), titulo: str = Form(...), codigo: str = Form(...),
     activo: str = Form("si"), campos_json: str = Form(...),
+    reglas_json: str = Form("[]"),
 ):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "empleadores")
@@ -2157,15 +2209,18 @@ async def abm_tramite_tipo_empresa(
     try:
         campos_crudos = json.loads(campos_json)
         assert isinstance(campos_crudos, list)
+        reglas_crudas = json.loads(reglas_json or "[]")
+        assert isinstance(reglas_crudas, list)
     except Exception:
         return RedirectResponse("/admin?error=campos#empleadores", status_code=303)
     campos = _campos_tramite_validos(campos_crudos)
     if not campos:
         return RedirectResponse("/admin?error=campos#empleadores", status_code=303)
+    reglas = validaciones_tramite.reglas_saneadas(reglas_crudas, campos)
     if id:
-        db.editar_tipo_tramite_empleador(int(id), sid, titulo, codigo, activo == "si", campos)
+        db.editar_tipo_tramite_empleador(int(id), sid, titulo, codigo, activo == "si", campos, reglas)
     else:
-        db.crear_tipo_tramite_empleador(sid, titulo, codigo, campos)
+        db.crear_tipo_tramite_empleador(sid, titulo, codigo, campos, reglas)
     return RedirectResponse("/admin#empleadores", status_code=303)
 
 
@@ -2385,10 +2440,19 @@ async def api_enviar_tramite_empresa(request: Request):
             continue
         respuestas.append({"campo_tramite_id": campo["id"], "valor_texto": valor})
 
-    if errores:
-        return JSONResponse(status_code=422, content={"errores": errores})
+    # Misma capa de validaciones que api_enviar_tramite (mirror completo).
+    valores = {r["campo_tramite_id"]: r.get("valor_texto", "")
+               for r in respuestas if "valor_texto" in r}
+    veredicto = validaciones_tramite.evaluar_envio(
+        tipo["campos"], tipo.get("reglas_consistencia"), valores)
+    errores += veredicto["errores"]
 
-    resultado = db.crear_tramite_empleador(sid, tipo_tramite_id, cuit, respuestas)
+    if errores:
+        return JSONResponse(status_code=422, content={
+            "errores": errores, "errores_campos": veredicto["errores_campos"]})
+
+    resultado = db.crear_tramite_empleador(sid, tipo_tramite_id, cuit, respuestas,
+                                           advertencias=veredicto["advertencias"])
     if not resultado:
         raise HTTPException(400, "No se pudo crear el trámite.")
     return resultado

@@ -63,6 +63,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - dashboard.py — agregados SQL del Panel Sindical (ver sección propia).
 - rag.py — piloto de consultas sobre el convenio: extracción de PDF,
   troceo, embeddings locales e indexación en segundo plano.
+- validaciones_tramite.py — motor puro de validaciones de formularios de
+  Trámites (fija + consistencia; ver sección propia).
 - cargar_demo.py — carga 2 sindicatos de demo desde cero (sin AEFIP).
 - cargar_lote_sindicato.py — lote sintético completo para CUALQUIER sindicato
   existente (`--sindicato "AEFIP"`); `cargar_lote_uom.py` es la versión
@@ -215,6 +217,7 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
 14. **Panel Sindical (dashboard)** — la función estrella para el admin de sindicato: KPIs, gráficos con cross-filtering, calendario pintable, semáforo por empresa y explorador de datos paginado, con modal "Ver" de detalle por fila; módulo opt-in `"dashboard"` — ver sección propia y HISTORIAL.md.
 15. **Lotes de datos sintéticos para demo** (`cargar_lote_sindicato.py`, y su antecesor específico `cargar_lote_uom.py`): pueblan un sindicato con padrón, 5.000 recibos validados por el motor real, trámites con formulario y diálogo, notificaciones, noticias y beneficios — ver sección propia.
 16. **Robots E2E con Playwright** (`e2e/`): pruebas de punta a punta contra la app real, con informe visual al final — ver sección propia.
+17. **Validaciones en formularios de Trámites (Fase 1)** — capa de validaciones por campo (fuente `fija` + consistencia entre campos, bloquea/avisa) con rediseño "Expediente" del constructor y carátula+sello en la pantalla del trabajador — ver sección propia.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -223,12 +226,11 @@ producción real, (c) verificar los topes SS previos a 2025, (d) evaluar si
 el editor de lienzo libre de Trámites llega a justificarse, (e) staging
 real en Render (sin urgencia, tiene costo).
 
-**Próximo paso**: no hay tarea de código en curso. Todo está en `main` y
-desplegado (Admin 0.19.22). Lo anotado para retomar está en
-[`BACKLOG.md`](BACKLOG.md) — lo más concreto: los ajustes de selectores del
-dashboard que ya pidió Sd (sacar "Categoría", chip "TODOS" en Seccionales y
-Empresas, todo filtro siempre marcado con el color destacado) y el badge
-"NEW" en la tarjeta del Panel Sindical.
+**Próximo paso**: la Fase 1 de Validaciones de Trámites (punto 17) está
+codificada y verificada. Lo anotado para retomar está en
+[`BACKLOG.md`](BACKLOG.md): fases 2–4 de validaciones (sistema/lista/
+externa), el merge de `areas-permisos` (+5 líneas de PERMISOS_RUTAS para
+RAG) y el sprint "Admin de Seccional" (decisiones ya cerradas).
 
 ## Pendientes (features)
 1. Capacitación por-sindicato: hoy solo hay contenido FIJO de plataforma
@@ -251,6 +253,32 @@ Empresas, todo filtro siempre marcado con el color destacado) y el badge
 5. Entorno de staging real en Render (rama + servicio + base Postgres
    aparte) para probar deploys completos antes de tocar la demo de
    producción — sin urgencia, tiene costo real (no hay free tier viable).
+
+## Validaciones en formularios de Trámites
+Capa de validaciones acordada 2026-09-01, cuatro fuentes: `fija` (valor
+prefijado), `lista` (datos del admin), `sistema` (padrón/recibos), `externa`
+(API catalogada). **Fase 1 HECHA** (fija + consistencia entre dos campos);
+fases 2–4 anotadas en BACKLOG.md con decisiones cerradas. Reglas vigentes:
+
+- **No son tipos de dato**: capa componible sobre el campo (0..N por campo),
+  cada una con `bloquea` (frena con mensaje) o `avisa` (pasa y queda en
+  `Tramite.advertencias` para el operador).
+- **Motor en `validaciones_tramite.py`**, puro y sin DB. Una validación mal
+  formada NO se guarda (saneo en el alta, como `error_de_expresion`).
+- **`evaluar_envio()` es LA única implementación**: la usan el envío real
+  (`/api/tramite` y su espejo de empresa), el banco de pruebas del
+  constructor (`POST /admin/tramite-tipo/probar`) y su espejo JS en vivo del
+  trabajador (cortesía; el servidor decide).
+- **Reglas de consistencia referencian campos POR ORDEN, no por id** (editar
+  un tipo reemplaza los campos). En el constructor JS guardan referencias de
+  objeto y se convierten a índice al serializar.
+- **UI**: constructor con estética "Expediente" (lomo numerado, sellos
+  BLOQUEA/AVISA, teléfono del afiliado con banco de pruebas editable);
+  trabajador con carátula de marca, progreso, validación on-blur y sello
+  "ENVIADO" al presentar. Mockup rector en
+  `disenos/constructor-tramites-propuestas.html`.
+- En la fase `lista`: se guardan **hechos, no derivados** (fecha de
+  afiliación, no "antigüedad").
 
 ## Consultas sobre el convenio (RAG) — piloto
 Módulo `convenio`, **opt-in** (fuera de `MODULOS_INICIALES`). El admin carga

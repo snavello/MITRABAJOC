@@ -237,6 +237,101 @@
      con el estilo forzado a verse igual que uno habilitado (si no, el
      estilo nativo de "deshabilitado" del navegador los grisa). */
   .tram-preview-box { background:var(--papel); border:1px dashed var(--linea); border-radius:10px; padding:14px; }
+
+  /* ---- Constructor de Trámites, estética "Expediente" (2026-09-01) ----
+     Ficha con lomo numerado (el número ES el orden y es el agarre del
+     drag), sellos BLOQUEA/AVISA, y a la derecha el teléfono del afiliado
+     con banco de pruebas integrado. Compartido por los dos constructores
+     (mismas clases; el estado JS sigue en namespaces separados). */
+  .ct-layout { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:24px; align-items:start; }
+  @media (max-width:1000px) { .ct-layout { grid-template-columns:1fr; } }
+  .ct-secc { margin-top:18px; font-size:15px; color:var(--tinta);
+    font-family:var(--fuente-display); text-transform:uppercase; letter-spacing:.8px;
+    display:flex; align-items:center; gap:10px; }
+  .ct-secc::after { content:""; flex:1; height:1px; background:var(--linea); }
+  .ct-ficha { background:#fff; border:1px solid var(--linea); border-radius:4px; position:relative; }
+  .ct-ficha:empty { border:none; }
+  .ct-ficha::before { content:""; position:absolute; top:0; bottom:0; left:40px;
+    border-left:1.5px dashed #d8dde6; pointer-events:none; }
+  .ct-ficha .campo-tramite-fila { background:#fff; border:none; border-bottom:1px solid var(--linea);
+    border-radius:0; margin:0; padding:9px 10px 9px 0; }
+  .ct-ficha .campo-tramite-fila:last-child { border-bottom:none; }
+  .ct-orden { width:40px; flex:0 0 auto; text-align:center; font-family:var(--fuente-num);
+    font-size:12px; color:#aab3c2; cursor:grab; user-select:none; }
+  .ct-orden:active { cursor:grabbing; }
+  /* Validaciones del campo (solo números y fechas) */
+  .ct-valids { flex-basis:100%; margin:6px 0 2px 40px; display:flex; flex-direction:column; gap:5px; }
+  .ct-vrow { display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+    background:var(--papel); border:1px solid var(--linea); border-radius:8px; padding:5px 8px; }
+  .ct-vrow .ct-fuente { font-size:9px; font-weight:700; letter-spacing:1.2px; color:#98a2b3;
+    text-transform:uppercase; width:32px; flex:0 0 auto; }
+  .ct-vrow select, .ct-vrow input { padding:4px 6px; font-size:12px; }
+  .ct-vrow .ct-vmsj { flex:1 1 170px; }
+  .ct-sello-sw { display:inline-flex; border:1px solid var(--linea); border-radius:3px;
+    overflow:hidden; flex:0 0 auto; }
+  .ct-sello-sw b { padding:3px 8px; cursor:pointer; font-size:9px; font-weight:800;
+    letter-spacing:1.2px; text-transform:uppercase; color:var(--gris); background:#fff; }
+  .ct-sello-sw b.on-blq { background:var(--rojo, #c0392b); background:#c0392b; color:#fff; }
+  .ct-sello-sw b.on-avs { background:#b8860b; color:#fff; }
+  .ct-mas-valid { border:1px dashed #c3cbd8; background:none; color:var(--gris);
+    border-radius:8px; font-size:11px; padding:3px 9px; cursor:pointer; align-self:flex-start; }
+  .ct-mas-valid:hover { color:var(--tinta); border-color:var(--gris); }
+  /* Reglas de consistencia */
+  .ct-regla { display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+    background:#fff; border:1px solid var(--linea); border-radius:8px; padding:7px 10px; margin-bottom:6px; }
+  .ct-regla select, .ct-regla input { padding:4px 6px; font-size:12px; }
+  .ct-regla .ct-vmsj { flex:1 1 170px; }
+  .ct-regla-vacia { font-size:12px; color:var(--gris); }
+  /* Teléfono del afiliado con banco de pruebas */
+  .ct-der { position:sticky; top:12px; }
+  @media (max-width:1000px) { .ct-der { position:static; } }
+  .ttp-marco { background:var(--marca-base); border-radius:26px; padding:10px;
+    box-shadow:0 16px 38px rgba(15,27,45,.30); }
+  .ttp-pant { background:var(--papel); border-radius:18px; overflow:hidden; position:relative; }
+  .ttp-caratula { position:relative; overflow:hidden; color:#fff; padding:14px 14px 11px;
+    background:var(--marca-base);
+    background-image:linear-gradient(140deg, var(--marca-base) 30%, color-mix(in srgb, var(--marca-primario) 60%, var(--marca-base))); }
+  .ttp-caratula::before { content:""; position:absolute; inset:0; pointer-events:none; opacity:.07; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .ttp-caratula .tit { position:relative; font-family:var(--fuente-display); font-weight:700;
+    font-size:18px; line-height:1.02; letter-spacing:.012em; text-transform:uppercase; }
+  .ttp-caratula .meta { position:relative; display:flex; align-items:center; gap:8px; margin-top:7px; flex-wrap:wrap; }
+  .ttp-caratula .cod { font-family:var(--fuente-num); font-size:9.5px;
+    border:1px solid rgba(255,255,255,.34); border-radius:4px; padding:1px 7px; letter-spacing:1px; }
+  .ttp-caratula .exp { font-family:var(--fuente-num); font-size:9px; color:rgba(255,255,255,.6); }
+  .ttp-cuerpo { padding:12px; }
+  .ttp-cuerpo .campo-tram label { font-size:10.5px; }
+  .ttp-cuerpo .tram-input { padding:7px 9px; font-size:12px; }
+  .ttp-err { display:none; font-size:10px; color:#c0392b; font-weight:600; margin-top:3px; }
+  .campo-tram.ttp-mal .ttp-err { display:block; }
+  .campo-tram.ttp-mal .tram-input { border-color:#c0392b; box-shadow:0 0 0 3px rgba(192,57,43,.10); }
+  .ttp-probar { width:100%; background:var(--marca-acento); color:var(--marca-base); border:none;
+    border-radius:9px; padding:9px; font-weight:800; font-size:12.5px; cursor:pointer; margin-top:4px;
+    font-family:var(--fuente-display); letter-spacing:.8px; text-transform:uppercase; font-size:15px; }
+  .ttp-resultado { margin-top:9px; font-size:11px; color:var(--gris); display:flex;
+    flex-direction:column; gap:4px; }
+  .ttp-resultado .adv { color:#8a6d1f; background:#fdf6e8; border:1px solid #e8d9b0;
+    border-radius:7px; padding:5px 9px; }
+  .ttp-sello-overlay { position:absolute; inset:0; display:none; align-items:center;
+    justify-content:center; z-index:6; pointer-events:none; }
+  .ttp-sello-overlay.on { display:flex; }
+  .ttp-sello { border:4px solid; border-radius:8px; padding:9px 18px; text-align:left;
+    background:rgba(255,255,255,.9); font-family:var(--fuente-display); font-weight:700;
+    font-size:21px; letter-spacing:1.6px; text-transform:uppercase;
+    transform:rotate(-8deg) scale(2); opacity:0; }
+  .ttp-sello.mal { color:#c0392b; border-color:#c0392b; }
+  .ttp-sello.ok { color:#0d7a5f; border-color:#0d7a5f; }
+  .ttp-sello small { display:block; font-family:var(--fuente); font-weight:600; font-size:10px;
+    letter-spacing:.2px; text-transform:none; max-width:180px; }
+  .ttp-sello-overlay.on .ttp-sello { animation:ttpsello .45s cubic-bezier(.2,1.6,.35,1) forwards; }
+  @keyframes ttpsello {
+    0% { transform:rotate(-8deg) scale(2); opacity:0; }
+    60% { transform:rotate(-8deg) scale(.96); opacity:1; }
+    100% { transform:rotate(-8deg) scale(1); opacity:1; }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    .ttp-sello-overlay.on .ttp-sello { animation:none; transform:rotate(-8deg); opacity:1; }
+  }
   .tram-preview-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:0 12px; }
   .tp-completo { grid-column:span 12; }
   .tp-mitad { grid-column:span 6; }
@@ -254,7 +349,9 @@
     border-radius:10px; font-family:inherit; font-size:14px; background:#fff; color:var(--tinta); }
   .tp-archivo { display:flex; align-items:center; justify-content:center; gap:6px; width:100%;
     padding:11px; border:1px solid #b4b2a9; border-radius:10px; background:#fff; color:var(--tinta); font-size:14px; }
-  .tram-preview-grid input, .tram-preview-grid select { pointer-events:none; }
+  /* Los inputs del teléfono son EDITABLES (banco de pruebas, 2026-09-01):
+     antes eran inertes (pointer-events:none) porque la vista previa era
+     solo de referencia. */
   .tram-preview-grid input:disabled, .tram-preview-grid select:disabled {
     opacity:1; -webkit-text-fill-color:var(--tinta); color:var(--tinta); cursor:default; }
   /* ---------- Chat de Trámites (estilo WhatsApp) ----------
@@ -1095,21 +1192,43 @@
           <label class="chk-seccional" style="width:fit-content;"><input type="checkbox" id="tt-activo" checked> Activo (visible para el trabajador)</label>
         </div>
 
-        <h3 style="margin-top:18px; font-size:14px; color:var(--tinta);">Campos del formulario</h3>
-        <div class="campos-tramite-cabecera oculto" id="campos-tramite-cabecera">
-          <span>Etiqueta</span><span>Tipo</span><span>Long. máx.</span><span>Long. exacta</span>
-          <span>Decimales</span><span>Opciones / archivo</span><span>Ancho</span>
-        </div>
-        <div id="tt-campos-lista"></div>
-        <button type="button" class="sec mini" style="margin-top:8px;" onclick="agregarCampoTramite()">+ Agregar campo</button>
+        <input type="hidden" name="reglas_json" id="tt-reglas-json">
+        <div class="ct-layout">
+          <div class="ct-izq">
+            <h3 class="ct-secc">Campos del formulario</h3>
+            <div class="campos-tramite-cabecera oculto" id="campos-tramite-cabecera">
+              <span>Etiqueta</span><span>Tipo</span><span>Long. máx.</span><span>Long. exacta</span>
+              <span>Decimales</span><span>Opciones / archivo</span><span>Ancho</span>
+            </div>
+            <div class="ct-ficha" id="tt-campos-lista"></div>
+            <button type="button" class="sec mini" style="margin-top:8px;" onclick="agregarCampoTramite()">+ Agregar campo</button>
 
-        <h3 style="margin-top:22px; font-size:14px; color:var(--tinta);">Vista previa</h3>
-        <p class="muted" style="font-size:11.5px;">Así se va a ver el formulario para el trabajador (solo de referencia, no se puede completar acá).</p>
-        <div class="tram-preview-box" id="tt-vista-previa"></div>
+            <h3 class="ct-secc" style="margin-top:22px;">Consistencia al enviar</h3>
+            <p class="muted" style="font-size:11.5px;">Comparan dos campos entre sí (números o fechas) cuando el trabajador envía. La numeración es la de la ficha.</p>
+            <div id="tt-reglas-lista"></div>
+            <button type="button" class="sec mini" style="margin-top:8px;" onclick="agregarReglaTramite()">+ Agregar regla</button>
 
-        <div style="margin-top:16px;">
-          <button type="submit" id="tt-submit">Crear tipo de trámite</button>
-          <button type="button" class="sec oculto" id="tt-cancel" onclick="cancelarTramiteTipo()">Cancelar edición</button>
+            <div style="margin-top:18px;">
+              <button type="submit" id="tt-submit">Crear tipo de trámite</button>
+              <button type="button" class="sec oculto" id="tt-cancel" onclick="cancelarTramiteTipo()">Cancelar edición</button>
+            </div>
+          </div>
+          <div class="ct-der">
+            <h3 class="ct-secc">Vista del afiliado</h3>
+            <p class="muted" style="font-size:11.5px;">Editá los datos de prueba y probá el formulario: corren los MISMOS controles que al recibir un trámite real.</p>
+            <div class="ttp-marco"><div class="ttp-pant">
+              <div class="ttp-sello-overlay" id="tt-probar-sello"></div>
+              <div class="ttp-caratula">
+                <div class="tit" id="tt-prev-titulo">Trámite</div>
+                <div class="meta"><span class="cod" id="tt-prev-codigo">—</span><span class="exp">EXP — se numera al enviar</span></div>
+              </div>
+              <div class="ttp-cuerpo">
+                <div class="tram-preview-grid" id="tt-vista-previa"></div>
+                <button type="button" class="ttp-probar" onclick="probarFormularioTramite()">Probar el formulario</button>
+                <div class="ttp-resultado" id="tt-probar-res"></div>
+              </div>
+            </div></div>
+          </div>
         </div>
       </form>
     </div>
@@ -1353,21 +1472,43 @@
             <label class="chk-seccional" style="width:fit-content;"><input type="checkbox" id="te-activo" checked> Activo (visible para la empresa)</label>
           </div>
 
-          <h3 style="margin-top:18px; font-size:14px; color:var(--tinta);">Campos del formulario</h3>
-          <div class="campos-tramite-cabecera oculto" id="campos-tramite-empresa-cabecera">
-            <span>Etiqueta</span><span>Tipo</span><span>Long. máx.</span><span>Long. exacta</span>
-            <span>Decimales</span><span>Opciones / archivo</span><span>Ancho</span>
-          </div>
-          <div id="te-campos-lista"></div>
-          <button type="button" class="sec mini" style="margin-top:8px;" onclick="agregarCampoTramiteEmpresa()">+ Agregar campo</button>
+          <input type="hidden" name="reglas_json" id="te-reglas-json">
+          <div class="ct-layout">
+            <div class="ct-izq">
+              <h3 class="ct-secc">Campos del formulario</h3>
+              <div class="campos-tramite-cabecera oculto" id="campos-tramite-empresa-cabecera">
+                <span>Etiqueta</span><span>Tipo</span><span>Long. máx.</span><span>Long. exacta</span>
+                <span>Decimales</span><span>Opciones / archivo</span><span>Ancho</span>
+              </div>
+              <div class="ct-ficha" id="te-campos-lista"></div>
+              <button type="button" class="sec mini" style="margin-top:8px;" onclick="agregarCampoTramiteEmpresa()">+ Agregar campo</button>
 
-          <h3 style="margin-top:22px; font-size:14px; color:var(--tinta);">Vista previa</h3>
-          <p class="muted" style="font-size:11.5px;">Así se va a ver el formulario para la empresa (solo de referencia, no se puede completar acá).</p>
-          <div class="tramx-preview-box" id="te-vista-previa"></div>
+              <h3 class="ct-secc" style="margin-top:22px;">Consistencia al enviar</h3>
+              <p class="muted" style="font-size:11.5px;">Comparan dos campos entre sí (números o fechas) cuando la empresa envía. La numeración es la de la ficha.</p>
+              <div id="te-reglas-lista"></div>
+              <button type="button" class="sec mini" style="margin-top:8px;" onclick="agregarReglaTramiteEmpresa()">+ Agregar regla</button>
 
-          <div style="margin-top:16px;">
-            <button type="submit" id="te-submit">Crear tipo de trámite</button>
-            <button type="button" class="sec oculto" id="te-cancel" onclick="cancelarTramiteTipoEmpresa()">Cancelar edición</button>
+              <div style="margin-top:18px;">
+                <button type="submit" id="te-submit">Crear tipo de trámite</button>
+                <button type="button" class="sec oculto" id="te-cancel" onclick="cancelarTramiteTipoEmpresa()">Cancelar edición</button>
+              </div>
+            </div>
+            <div class="ct-der">
+              <h3 class="ct-secc">Vista de la empresa</h3>
+              <p class="muted" style="font-size:11.5px;">Editá los datos de prueba y probá el formulario: corren los MISMOS controles que al recibir un trámite real.</p>
+              <div class="ttp-marco"><div class="ttp-pant">
+                <div class="ttp-sello-overlay" id="te-probar-sello"></div>
+                <div class="ttp-caratula">
+                  <div class="tit" id="te-prev-titulo">Trámite</div>
+                  <div class="meta"><span class="cod" id="te-prev-codigo">—</span><span class="exp">EXP — se numera al enviar</span></div>
+                </div>
+                <div class="ttp-cuerpo">
+                  <div class="tram-preview-grid" id="te-vista-previa"></div>
+                  <button type="button" class="ttp-probar" onclick="probarFormularioTramiteEmpresa()">Probar el formulario</button>
+                  <div class="ttp-resultado" id="te-probar-res"></div>
+                </div>
+              </div></div>
+            </div>
           </div>
         </form>
       </div>
@@ -2115,7 +2256,7 @@ function renderCamposTramite() {
     <div class="campo-tramite-fila" draggable="true" data-idx="${i}"
          ondragstart="dragCampoTramiteStart(event, ${i})" ondragover="dragCampoTramiteOver(event, ${i})"
          ondrop="dragCampoTramiteDrop(event, ${i})" ondragend="dragCampoTramiteEnd(event)">
-      <span class="drag-handle" title="Arrastrá para reordenar">☰</span>
+      <span class="ct-orden" title="Arrastrá para reordenar">${String(i + 1).padStart(2, '0')}</span>
       <input class="ct-etiqueta" placeholder="${c.tipo_dato==='separador' ? 'Etiqueta (opcional, solo referencia)' : 'Etiqueta'}"
              value="${escHtml(c.etiqueta)}" oninput="actualizarCampoTramite(${i},'etiqueta',this.value)">
       <select class="ct-tipo" onchange="actualizarCampoTramite(${i},'tipo_dato',this.value)">
@@ -2139,18 +2280,140 @@ function renderCamposTramite() {
       <button type="button" class="sec mini" ${i===0?'disabled':''} onclick="moverCampoTramite(${i},-1)" title="Subir">↑</button>
       <button type="button" class="sec mini" ${i===camposTramiteActuales.length-1?'disabled':''} onclick="moverCampoTramite(${i},1)" title="Bajar">↓</button>
       <button type="button" class="peligro mini" onclick="quitarCampoTramite(${i})" title="Quitar">✕</button>
+      ${htmlValidacionesCampo(c, i, 'Tramite')}
     </div>
   `).join('');
+  renderReglasTramite();
   renderVistaPreviaTramite();
+}
+
+// ---------- Validaciones por campo (capa de la Fase 1: fuente "fija") ----------
+// Solo números y fechas llevan validaciones; el sello dice si BLOQUEA el
+// envío o solo AVISA al operador. Compartido por los dos constructores
+// (recibe el sufijo del namespace: 'Tramite' / 'TramiteEmpresa').
+const OPERADORES_VALIDACION = { '<=': '≤', '>=': '≥', '<': '<', '>': '>', '==': '=', '!=': '≠' };
+function htmlValidacionesCampo(c, i, ns) {
+  if (!['numero', 'fecha'].includes(c.tipo_dato)) return '';
+  const filas = (c.validaciones || []).map((v, vi) => `
+    <div class="ct-vrow">
+      <span class="ct-fuente">Fijo</span>
+      <select onchange="actualizarValidacion${ns}(${i},${vi},'operador',this.value)">
+        ${Object.entries(OPERADORES_VALIDACION).map(([op, l]) =>
+          `<option value="${op}" ${v.operador===op?'selected':''}>${l}</option>`).join('')}
+      </select>
+      <input type="${c.tipo_dato==='fecha'?'date':'number'}" style="width:${c.tipo_dato==='fecha'?'130px':'80px'};" value="${escHtml(v.valor ?? '')}"
+             onchange="actualizarValidacion${ns}(${i},${vi},'valor',this.value)">
+      <input class="ct-vmsj" placeholder="Mensaje si no pasa (opcional)" value="${escHtml(v.mensaje || '')}"
+             oninput="actualizarValidacion${ns}(${i},${vi},'mensaje',this.value)">
+      <span class="ct-sello-sw">
+        <b class="${v.bloquea!==false?'on-blq':''}" onclick="actualizarValidacion${ns}(${i},${vi},'bloquea',true)">Bloquea</b>
+        <b class="${v.bloquea===false?'on-avs':''}" onclick="actualizarValidacion${ns}(${i},${vi},'bloquea',false)">Avisa</b>
+      </span>
+      <button type="button" class="peligro mini" onclick="quitarValidacion${ns}(${i},${vi})" title="Quitar">✕</button>
+    </div>`).join('');
+  return `<div class="ct-valids">${filas}
+    <button type="button" class="ct-mas-valid" onclick="agregarValidacion${ns}(${i})">+ validación</button>
+  </div>`;
+}
+function agregarValidacionTramite(i) {
+  const c = camposTramiteActuales[i];
+  (c.validaciones = c.validaciones || []).push({ fuente: 'fija', operador: '<=', valor: '', mensaje: '', bloquea: true });
+  renderCamposTramite();
+}
+function actualizarValidacionTramite(i, vi, k, v) {
+  camposTramiteActuales[i].validaciones[vi][k] = v;
+  if (k === 'bloquea') renderCamposTramite();
+}
+function quitarValidacionTramite(i, vi) {
+  camposTramiteActuales[i].validaciones.splice(vi, 1);
+  renderCamposTramite();
+}
+
+// ---------- Reglas de consistencia entre dos campos ----------
+// Referencian los OBJETOS campo (no índices): sobreviven a reordenar y
+// borrar sin remapear nada; recién al serializar se convierten al índice,
+// que es como las guarda el servidor (ver validaciones_tramite.py).
+let reglasTramiteActuales = [];
+function camposComparables(lista) {
+  return lista.map((c, i) => ({ c, i })).filter(x => ['numero', 'fecha'].includes(x.c.tipo_dato));
+}
+function podarReglasTramite() {
+  reglasTramiteActuales = reglasTramiteActuales.filter(r =>
+    camposTramiteActuales.includes(r.a) && camposTramiteActuales.includes(r.b) &&
+    r.a.tipo_dato === r.b.tipo_dato && ['numero', 'fecha'].includes(r.a.tipo_dato));
+}
+function renderReglasTramite() {
+  const cont = document.getElementById('tt-reglas-lista');
+  if (!cont) return;
+  podarReglasTramite();
+  const comparables = camposComparables(camposTramiteActuales);
+  if (comparables.length < 2) {
+    cont.innerHTML = '<p class="ct-regla-vacia">Hacen falta al menos dos campos de número o fecha para comparar.</p>';
+    return;
+  }
+  const opciones = (r, cual) => comparables.map(x =>
+    `<option value="${x.i}" ${r[cual]===x.c?'selected':''}>${String(x.i+1).padStart(2,'0')} · ${escHtml(x.c.etiqueta || '(sin etiqueta)')}</option>`).join('');
+  cont.innerHTML = reglasTramiteActuales.map((r, ri) => `
+    <div class="ct-regla">
+      <select onchange="actualizarReglaTramite(${ri},'a',this.value)">${opciones(r, 'a')}</select>
+      <select onchange="actualizarReglaTramite(${ri},'operador',this.value)">
+        ${Object.entries(OPERADORES_VALIDACION).map(([op, l]) =>
+          `<option value="${op}" ${r.operador===op?'selected':''}>${l}</option>`).join('')}
+      </select>
+      <select onchange="actualizarReglaTramite(${ri},'b',this.value)">${opciones(r, 'b')}</select>
+      <input class="ct-vmsj" placeholder="Mensaje si no pasa (opcional)" value="${escHtml(r.mensaje || '')}"
+             oninput="actualizarReglaTramite(${ri},'mensaje',this.value)">
+      <span class="ct-sello-sw">
+        <b class="${r.bloquea!==false?'on-blq':''}" onclick="actualizarReglaTramite(${ri},'bloquea',true)">Bloquea</b>
+        <b class="${r.bloquea===false?'on-avs':''}" onclick="actualizarReglaTramite(${ri},'bloquea',false)">Avisa</b>
+      </span>
+      <button type="button" class="peligro mini" onclick="quitarReglaTramite(${ri})" title="Quitar">✕</button>
+    </div>`).join('') || '<p class="ct-regla-vacia">Sin reglas: cada campo se valida solo por lo suyo.</p>';
+}
+function agregarReglaTramite() {
+  const comparables = camposComparables(camposTramiteActuales);
+  if (comparables.length < 2) return;
+  // arranca con el primer par del MISMO tipo, si existe
+  let a = comparables[0], b = comparables.find(x => x !== a && x.c.tipo_dato === a.c.tipo_dato);
+  if (!b) { for (const x of comparables) { const y = comparables.find(z => z !== x && z.c.tipo_dato === x.c.tipo_dato); if (y) { a = x; b = y; break; } } }
+  if (!b) return;
+  reglasTramiteActuales.push({ a: a.c, operador: '>', b: b.c, mensaje: '', bloquea: true });
+  renderReglasTramite();
+}
+function actualizarReglaTramite(ri, k, v) {
+  const r = reglasTramiteActuales[ri];
+  if (k === 'a' || k === 'b') r[k] = camposTramiteActuales[parseInt(v, 10)];
+  else r[k] = v;
+  if (k === 'bloquea' || k === 'a' || k === 'b') renderReglasTramite();
+}
+function quitarReglaTramite(ri) {
+  reglasTramiteActuales.splice(ri, 1);
+  renderReglasTramite();
+}
+function serializarReglasTramite() {
+  podarReglasTramite();
+  return reglasTramiteActuales.map(r => ({
+    campo_a: camposTramiteActuales.indexOf(r.a), operador: r.operador,
+    campo_b: camposTramiteActuales.indexOf(r.b), mensaje: r.mensaje || '',
+    bloquea: r.bloquea !== false,
+  }));
 }
 function agregarCampoTramite() {
   camposTramiteActuales.push({etiqueta:'', tipo_dato:'texto', longitud_maxima:null, longitud_exacta:null,
-    decimales:null, tipos_archivo_permitidos:'', opciones:'', ancho:'completo', obligatorio:true});
+    decimales:null, tipos_archivo_permitidos:'', opciones:'', ancho:'completo', obligatorio:true,
+    validaciones:[]});
   renderCamposTramite();
 }
 function actualizarCampoTramite(i, campo, valor) {
   camposTramiteActuales[i][campo] = valor;
-  if (campo === 'tipo_dato') { if (valor === 'separador') camposTramiteActuales[i].ancho = 'completo'; renderCamposTramite(); }
+  if (campo === 'tipo_dato') {
+    if (valor === 'separador') camposTramiteActuales[i].ancho = 'completo';
+    // si dejó de ser número/fecha, sus validaciones ya no aplican; las
+    // reglas que lo referencian las poda renderReglasTramite
+    if (!['numero', 'fecha'].includes(valor)) camposTramiteActuales[i].validaciones = [];
+    renderCamposTramite();
+  }
+  else if (campo === 'etiqueta') { renderReglasTramite(); renderVistaPreviaTramite(); }
   else renderVistaPreviaTramite();
 }
 function moverCampoTramite(i, delta) {
@@ -2190,48 +2453,113 @@ function dragCampoTramiteEnd() {
     .forEach(el => el.classList.remove('arrastrando', 'sobre-drop'));
 }
 
-// ---------- Vista previa en vivo (mismo layout de ancho que trabajador.html) ----------
+// ---------- Vista del afiliado + banco de pruebas (2026-09-01) ----------
+// El teléfono muestra el formulario TAL CUAL lo va a ver el trabajador,
+// con datos de prueba EDITABLES. "Probar el formulario" evalúa contra
+// /admin/tramite-tipo/probar, que ejecuta la MISMA función del envío real.
+// Los valores de prueba se guardan por objeto campo (WeakMap): sobreviven
+// a re-renders y reordenamientos sin remapear índices.
+const valoresPruebaTramite = new WeakMap();
 function renderVistaPreviaTramite() {
   const cont = document.getElementById('tt-vista-previa');
   if (!cont) return;
+  const tit = document.getElementById('tt-prev-titulo');
+  const cod = document.getElementById('tt-prev-codigo');
+  if (tit) tit.textContent = document.getElementById('tt-titulo').value.trim() || 'Trámite';
+  if (cod) cod.textContent = document.getElementById('tt-codigo').value.trim() || '—';
+  limpiarResultadoPrueba('tt');
   if (!camposTramiteActuales.length) {
     cont.innerHTML = '<p class="muted" style="font-size:12px;">Agregá campos para ver la vista previa.</p>';
     return;
   }
-  cont.innerHTML = `<div class="tram-preview-grid">${camposTramiteActuales.map(c => {
-    if (c.tipo_dato === 'separador') return '<hr class="campo-tram-separador">';
-    const etiqueta = escHtml(c.etiqueta) || '(sin etiqueta)';
-    const anchoClass = 'tp-' + (c.ancho || 'completo');
-    let campo;
-    if (c.tipo_dato === 'booleano') {
-      campo = `<label class="campo-tram-bool"><input type="checkbox" disabled> ${etiqueta}${c.obligatorio ? ' *' : ''}</label>`;
-      return `<div class="campo-tram ${anchoClass}">${campo}</div>`;
-    }
-    const opciones = (c.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
-    if (c.tipo_dato === 'opcion_unica' || c.tipo_dato === 'multiple') {
-      const tipoInput = c.tipo_dato === 'opcion_unica' ? 'radio' : 'checkbox';
-      campo = (opciones.length ? opciones : ['(sin opciones cargadas)']).map(o =>
-        `<label class="campo-tram-opcion"><input type="${tipoInput}" disabled> ${escHtml(o)}</label>`).join('');
-      return `<div class="campo-tram ${anchoClass}"><label>${etiqueta}${c.obligatorio ? ' *' : ''}</label>${campo}</div>`;
-    }
-    if (c.tipo_dato === 'seleccion') {
-      campo = `<select class="tram-input" disabled><option>${opciones.length ? 'Elegí una opción' : '(sin opciones cargadas)'}</option></select>`;
-    } else if (c.tipo_dato === 'fecha') {
-      campo = `<input type="date" class="tram-input" disabled>`;
-    } else if (c.tipo_dato === 'archivo') {
-      campo = `<span class="tp-archivo">📎 Elegir archivo</span>`;
-    } else {
-      campo = `<input type="text" class="tram-input" disabled placeholder="${c.tipo_dato === 'numero' ? 'Ej: 1234' : (c.longitud_exacta ? c.longitud_exacta + ' caracteres' : 'Texto')}">`;
-    }
+  cont.innerHTML = camposTramiteActuales.map((c, i) => htmlCampoPreview(c, i, 'Tramite')).join('');
+}
+function htmlCampoPreview(c, i, ns) {
+  if (c.tipo_dato === 'separador') return '<hr class="campo-tram-separador">';
+  const etiqueta = escHtml(c.etiqueta) || '(sin etiqueta)';
+  const anchoClass = 'tp-' + (c.ancho || 'completo');
+  const idp = `ttp_${ns}_${i}`;
+  const valor = escHtml(valoresPruebaTramite.get(c) ?? '');
+  const err = `<div class="ttp-err" id="${idp}_err"></div>`;
+  const guarda = `onchange="guardarValorPrueba${ns}(${i}, this.value)"`;
+  let campo;
+  if (c.tipo_dato === 'booleano') {
+    return `<div class="campo-tram ${anchoClass}"><label class="campo-tram-bool"><input type="checkbox"> ${etiqueta}${c.obligatorio ? ' *' : ''}</label></div>`;
+  }
+  const opciones = (c.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
+  if (c.tipo_dato === 'opcion_unica' || c.tipo_dato === 'multiple') {
+    const tipoInput = c.tipo_dato === 'opcion_unica' ? 'radio' : 'checkbox';
+    campo = (opciones.length ? opciones : ['(sin opciones cargadas)']).map(o =>
+      `<label class="campo-tram-opcion"><input type="${tipoInput}" name="${idp}"> ${escHtml(o)}</label>`).join('');
     return `<div class="campo-tram ${anchoClass}"><label>${etiqueta}${c.obligatorio ? ' *' : ''}</label>${campo}</div>`;
-  }).join('')}</div>`;
+  }
+  if (c.tipo_dato === 'seleccion') {
+    campo = `<select class="tram-input" id="${idp}" ${guarda}><option value="">${opciones.length ? 'Elegí una opción' : '(sin opciones cargadas)'}</option>
+      ${opciones.map(o => `<option ${valor===escHtml(o)?'selected':''}>${escHtml(o)}</option>`).join('')}</select>`;
+  } else if (c.tipo_dato === 'fecha') {
+    campo = `<input type="date" class="tram-input" id="${idp}" value="${valor}" ${guarda}>`;
+  } else if (c.tipo_dato === 'archivo') {
+    campo = `<span class="tp-archivo">📎 Elegir archivo</span>`;
+  } else if (c.tipo_dato === 'numero') {
+    campo = `<input type="number" class="tram-input" id="${idp}" value="${valor}" placeholder="Ej: 1234" ${guarda}>`;
+  } else {
+    campo = `<input type="text" class="tram-input" id="${idp}" value="${valor}" placeholder="${c.longitud_exacta ? c.longitud_exacta + ' caracteres' : 'Texto'}" ${guarda}>`;
+  }
+  return `<div class="campo-tram ${anchoClass}" id="${idp}_w"><label>${etiqueta}${c.obligatorio ? ' *' : ''}</label>${campo}${err}</div>`;
+}
+function guardarValorPruebaTramite(i, valor) {
+  valoresPruebaTramite.set(camposTramiteActuales[i], valor);
+}
+function limpiarResultadoPrueba(pref) {
+  const res = document.getElementById(pref + '-probar-res');
+  if (res) res.innerHTML = '';
+  document.querySelectorAll(`[id^="ttp_"][id$="_w"].ttp-mal`).forEach(e => e.classList.remove('ttp-mal'));
+}
+async function probarFormularioTramite() {
+  const valores = {};
+  camposTramiteActuales.forEach((c, i) => {
+    const el = document.getElementById(`ttp_Tramite_${i}`);
+    if (el && el.value !== undefined) valores[i] = el.value;
+  });
+  limpiarResultadoPrueba('tt');
+  let data;
+  try {
+    const r = await fetch('/admin/tramite-tipo/probar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ campos: camposTramiteActuales, reglas: serializarReglasTramite(), valores }),
+    });
+    data = await r.json();
+    if (!r.ok) throw new Error();
+  } catch (e) {
+    document.getElementById('tt-probar-res').innerHTML = '<span>No se pudo probar. Recargá e intentá de nuevo.</span>';
+    return;
+  }
+  Object.entries(data.errores_campos || {}).forEach(([idx, mensaje]) => {
+    const w = document.getElementById(`ttp_Tramite_${idx}_w`);
+    const err = document.getElementById(`ttp_Tramite_${idx}_err`);
+    if (w) w.classList.add('ttp-mal');
+    if (err) err.textContent = mensaje;
+  });
+  const res = document.getElementById('tt-probar-res');
+  res.innerHTML = (data.advertencias || []).map(a => `<div class="adv">Aviso al operador: ${escHtml(a)}</div>`).join('');
+  const overlay = document.getElementById('tt-probar-sello');
+  const conErrores = (data.errores || []).length > 0;
+  overlay.innerHTML = conErrores
+    ? `<div class="ttp-sello mal">No se puede enviar<small>${escHtml(data.errores[0])}</small></div>`
+    : `<div class="ttp-sello ok">Listo para enviar<small>${(data.advertencias || []).length ? 'Con aviso al operador.' : 'Sin observaciones.'}</small></div>`;
+  overlay.classList.remove('on'); void overlay.offsetWidth; overlay.classList.add('on');
+  setTimeout(() => overlay.classList.remove('on'), 2600);
 }
 
 const formTramiteTipo = document.getElementById('form-tramite-tipo');
 if (formTramiteTipo) {
   formTramiteTipo.addEventListener('submit', () => {
     document.getElementById('tt-campos-json').value = JSON.stringify(camposTramiteActuales);
+    document.getElementById('tt-reglas-json').value = JSON.stringify(serializarReglasTramite());
   });
+  // la carátula del teléfono sigue en vivo al título y al código
+  document.getElementById('tt-titulo').addEventListener('input', renderVistaPreviaTramite);
+  document.getElementById('tt-codigo').addEventListener('input', renderVistaPreviaTramite);
 }
 
 function editarTramiteTipo(t) {
@@ -2240,7 +2568,16 @@ function editarTramiteTipo(t) {
   document.getElementById('tt-codigo').value = t.codigo;
   document.getElementById('tt-activo-campo').classList.remove('oculto');
   document.getElementById('tt-activo').checked = t.activo;
-  camposTramiteActuales = (t.campos || []).map(c => ({...c}));
+  // copia profunda: las validaciones son arrays anidados y editarlas no
+  // tiene que tocar el objeto original de la tabla
+  camposTramiteActuales = (t.campos || []).map(c => ({ ...c, validaciones: (c.validaciones || []).map(v => ({ ...v })) }));
+  // las reglas guardadas referencian campos por orden -> se convierten a
+  // referencias de objeto (ver comentario de reglasTramiteActuales)
+  reglasTramiteActuales = (t.reglas_consistencia || []).map(r => ({
+    a: camposTramiteActuales[r.campo_a], operador: r.operador,
+    b: camposTramiteActuales[r.campo_b], mensaje: r.mensaje || '',
+    bloquea: r.bloquea !== false,
+  })).filter(r => r.a && r.b);
   renderCamposTramite();
   document.getElementById('tt-h2').textContent = 'Editar tipo de trámite';
   document.getElementById('tt-submit').textContent = 'Guardar cambios';
@@ -2253,6 +2590,7 @@ function cancelarTramiteTipo() {
   document.getElementById('tt-id').value = '';
   document.getElementById('tt-activo-campo').classList.add('oculto');
   camposTramiteActuales = [];
+  reglasTramiteActuales = [];
   renderCamposTramite();
   document.getElementById('tt-h2').textContent = 'Nuevo tipo de trámite';
   document.getElementById('tt-submit').textContent = 'Crear tipo de trámite';
@@ -2280,6 +2618,16 @@ function limpiarFiltroTramites() {
   document.getElementById('f-tramites-nombre').value = '';
   document.getElementById('f-tramites-estado').value = '';
   filtrarTramites();
+}
+
+// Advertencias de las validaciones "avisa" que disparó el envío: no
+// frenaron a quien lo presentó, pero el operador tiene que verlas primero.
+function htmlAdvertenciasTramite(d) {
+  if (!(d.advertencias || []).length) return '';
+  return `<div style="background:#fdf6e8; border:1px solid #e8d9b0; border-radius:8px; padding:8px 12px; margin-top:8px;">
+    <div style="font-size:11px; font-weight:700; color:#8a6d1f; text-transform:uppercase; letter-spacing:.6px;">Avisos del formulario</div>
+    ${d.advertencias.map(a => `<div style="font-size:12.5px; color:#6b5a2f; margin-top:3px;">${escHtml(a)}</div>`).join('')}
+  </div>`;
 }
 
 function abrirTramiteDetalle(id) {
@@ -2357,6 +2705,7 @@ function refrescarTramiteDetalle(id) {
       <div class="modal-fila" style="display:flex; justify-content:space-between; padding:4px 0; font-size:13px;">
         <span class="muted">CUIL</span><span><code>${d.cuil}</code></span>
       </div>
+      ${htmlAdvertenciasTramite(d)}
       <h3 style="font-size:13.5px; margin-top:14px;">Respuestas del formulario</h3>
       ${respuestasHtml || '<p class="muted" style="font-size:12.5px;">Sin respuestas.</p>'}
 
@@ -2476,7 +2825,7 @@ function renderCamposTramiteEmpresa() {
     <div class="campo-tramite-fila" draggable="true" data-idx="${i}"
          ondragstart="dragCampoTramiteEmpStart(event, ${i})" ondragover="dragCampoTramiteEmpOver(event, ${i})"
          ondrop="dragCampoTramiteEmpDrop(event, ${i})" ondragend="dragCampoTramiteEmpEnd(event)">
-      <span class="drag-handle" title="Arrastrá para reordenar">☰</span>
+      <span class="ct-orden" title="Arrastrá para reordenar">${String(i + 1).padStart(2, '0')}</span>
       <input class="ct-etiqueta" placeholder="${c.tipo_dato==='separador' ? 'Etiqueta (opcional, solo referencia)' : 'Etiqueta'}"
              value="${escHtml(c.etiqueta)}" oninput="actualizarCampoTramiteEmpresa(${i},'etiqueta',this.value)">
       <select class="ct-tipo" onchange="actualizarCampoTramiteEmpresa(${i},'tipo_dato',this.value)">
@@ -2500,18 +2849,144 @@ function renderCamposTramiteEmpresa() {
       <button type="button" class="sec mini" ${i===0?'disabled':''} onclick="moverCampoTramiteEmpresa(${i},-1)" title="Subir">↑</button>
       <button type="button" class="sec mini" ${i===camposTramiteEmpActuales.length-1?'disabled':''} onclick="moverCampoTramiteEmpresa(${i},1)" title="Bajar">↓</button>
       <button type="button" class="peligro mini" onclick="quitarCampoTramiteEmpresa(${i})" title="Quitar">✕</button>
+      ${htmlValidacionesCampo(c, i, 'TramiteEmpresa')}
     </div>
   `).join('');
+  renderReglasTramiteEmpresa();
   renderVistaPreviaTramiteEmpresa();
 }
 function agregarCampoTramiteEmpresa() {
   camposTramiteEmpActuales.push({etiqueta:'', tipo_dato:'texto', longitud_maxima:null, longitud_exacta:null,
-    decimales:null, tipos_archivo_permitidos:'', opciones:'', ancho:'completo', obligatorio:true});
+    decimales:null, tipos_archivo_permitidos:'', opciones:'', ancho:'completo', obligatorio:true,
+    validaciones:[]});
   renderCamposTramiteEmpresa();
+}
+
+// Validaciones por campo -- espejo del namespace de Trámites de trabajador
+// (htmlValidacionesCampo es compartida; el estado no).
+function agregarValidacionTramiteEmpresa(i) {
+  const c = camposTramiteEmpActuales[i];
+  (c.validaciones = c.validaciones || []).push({ fuente: 'fija', operador: '<=', valor: '', mensaje: '', bloquea: true });
+  renderCamposTramiteEmpresa();
+}
+function actualizarValidacionTramiteEmpresa(i, vi, k, v) {
+  camposTramiteEmpActuales[i].validaciones[vi][k] = v;
+  if (k === 'bloquea') renderCamposTramiteEmpresa();
+}
+function quitarValidacionTramiteEmpresa(i, vi) {
+  camposTramiteEmpActuales[i].validaciones.splice(vi, 1);
+  renderCamposTramiteEmpresa();
+}
+
+// Reglas de consistencia -- espejo (referencias de objeto, ver el namespace
+// de trabajador).
+let reglasTramiteEmpActuales = [];
+function podarReglasTramiteEmpresa() {
+  reglasTramiteEmpActuales = reglasTramiteEmpActuales.filter(r =>
+    camposTramiteEmpActuales.includes(r.a) && camposTramiteEmpActuales.includes(r.b) &&
+    r.a.tipo_dato === r.b.tipo_dato && ['numero', 'fecha'].includes(r.a.tipo_dato));
+}
+function renderReglasTramiteEmpresa() {
+  const cont = document.getElementById('te-reglas-lista');
+  if (!cont) return;
+  podarReglasTramiteEmpresa();
+  const comparables = camposComparables(camposTramiteEmpActuales);
+  if (comparables.length < 2) {
+    cont.innerHTML = '<p class="ct-regla-vacia">Hacen falta al menos dos campos de número o fecha para comparar.</p>';
+    return;
+  }
+  const opciones = (r, cual) => comparables.map(x =>
+    `<option value="${x.i}" ${r[cual]===x.c?'selected':''}>${String(x.i+1).padStart(2,'0')} · ${escHtml(x.c.etiqueta || '(sin etiqueta)')}</option>`).join('');
+  cont.innerHTML = reglasTramiteEmpActuales.map((r, ri) => `
+    <div class="ct-regla">
+      <select onchange="actualizarReglaTramiteEmpresa(${ri},'a',this.value)">${opciones(r, 'a')}</select>
+      <select onchange="actualizarReglaTramiteEmpresa(${ri},'operador',this.value)">
+        ${Object.entries(OPERADORES_VALIDACION).map(([op, l]) =>
+          `<option value="${op}" ${r.operador===op?'selected':''}>${l}</option>`).join('')}
+      </select>
+      <select onchange="actualizarReglaTramiteEmpresa(${ri},'b',this.value)">${opciones(r, 'b')}</select>
+      <input class="ct-vmsj" placeholder="Mensaje si no pasa (opcional)" value="${escHtml(r.mensaje || '')}"
+             oninput="actualizarReglaTramiteEmpresa(${ri},'mensaje',this.value)">
+      <span class="ct-sello-sw">
+        <b class="${r.bloquea!==false?'on-blq':''}" onclick="actualizarReglaTramiteEmpresa(${ri},'bloquea',true)">Bloquea</b>
+        <b class="${r.bloquea===false?'on-avs':''}" onclick="actualizarReglaTramiteEmpresa(${ri},'bloquea',false)">Avisa</b>
+      </span>
+      <button type="button" class="peligro mini" onclick="quitarReglaTramiteEmpresa(${ri})" title="Quitar">✕</button>
+    </div>`).join('') || '<p class="ct-regla-vacia">Sin reglas: cada campo se valida solo por lo suyo.</p>';
+}
+function agregarReglaTramiteEmpresa() {
+  const comparables = camposComparables(camposTramiteEmpActuales);
+  if (comparables.length < 2) return;
+  let a = comparables[0], b = comparables.find(x => x !== a && x.c.tipo_dato === a.c.tipo_dato);
+  if (!b) { for (const x of comparables) { const y = comparables.find(z => z !== x && z.c.tipo_dato === x.c.tipo_dato); if (y) { a = x; b = y; break; } } }
+  if (!b) return;
+  reglasTramiteEmpActuales.push({ a: a.c, operador: '>', b: b.c, mensaje: '', bloquea: true });
+  renderReglasTramiteEmpresa();
+}
+function actualizarReglaTramiteEmpresa(ri, k, v) {
+  const r = reglasTramiteEmpActuales[ri];
+  if (k === 'a' || k === 'b') r[k] = camposTramiteEmpActuales[parseInt(v, 10)];
+  else r[k] = v;
+  if (k === 'bloquea' || k === 'a' || k === 'b') renderReglasTramiteEmpresa();
+}
+function quitarReglaTramiteEmpresa(ri) {
+  reglasTramiteEmpActuales.splice(ri, 1);
+  renderReglasTramiteEmpresa();
+}
+function serializarReglasTramiteEmpresa() {
+  podarReglasTramiteEmpresa();
+  return reglasTramiteEmpActuales.map(r => ({
+    campo_a: camposTramiteEmpActuales.indexOf(r.a), operador: r.operador,
+    campo_b: camposTramiteEmpActuales.indexOf(r.b), mensaje: r.mensaje || '',
+    bloquea: r.bloquea !== false,
+  }));
+}
+function guardarValorPruebaTramiteEmpresa(i, valor) {
+  valoresPruebaTramite.set(camposTramiteEmpActuales[i], valor);
+}
+async function probarFormularioTramiteEmpresa() {
+  const valores = {};
+  camposTramiteEmpActuales.forEach((c, i) => {
+    const el = document.getElementById(`ttp_TramiteEmpresa_${i}`);
+    if (el && el.value !== undefined) valores[i] = el.value;
+  });
+  limpiarResultadoPrueba('te');
+  let data;
+  try {
+    const r = await fetch('/admin/tramite-tipo/probar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ campos: camposTramiteEmpActuales, reglas: serializarReglasTramiteEmpresa(), valores }),
+    });
+    data = await r.json();
+    if (!r.ok) throw new Error();
+  } catch (e) {
+    document.getElementById('te-probar-res').innerHTML = '<span>No se pudo probar. Recargá e intentá de nuevo.</span>';
+    return;
+  }
+  Object.entries(data.errores_campos || {}).forEach(([idx, mensaje]) => {
+    const w = document.getElementById(`ttp_TramiteEmpresa_${idx}_w`);
+    const err = document.getElementById(`ttp_TramiteEmpresa_${idx}_err`);
+    if (w) w.classList.add('ttp-mal');
+    if (err) err.textContent = mensaje;
+  });
+  const res = document.getElementById('te-probar-res');
+  res.innerHTML = (data.advertencias || []).map(a => `<div class="adv">Aviso al operador: ${escHtml(a)}</div>`).join('');
+  const overlay = document.getElementById('te-probar-sello');
+  const conErrores = (data.errores || []).length > 0;
+  overlay.innerHTML = conErrores
+    ? `<div class="ttp-sello mal">No se puede enviar<small>${escHtml(data.errores[0])}</small></div>`
+    : `<div class="ttp-sello ok">Listo para enviar<small>${(data.advertencias || []).length ? 'Con aviso al operador.' : 'Sin observaciones.'}</small></div>`;
+  overlay.classList.remove('on'); void overlay.offsetWidth; overlay.classList.add('on');
+  setTimeout(() => overlay.classList.remove('on'), 2600);
 }
 function actualizarCampoTramiteEmpresa(i, campo, valor) {
   camposTramiteEmpActuales[i][campo] = valor;
-  if (campo === 'tipo_dato') { if (valor === 'separador') camposTramiteEmpActuales[i].ancho = 'completo'; renderCamposTramiteEmpresa(); }
+  if (campo === 'tipo_dato') {
+    if (valor === 'separador') camposTramiteEmpActuales[i].ancho = 'completo';
+    if (!['numero', 'fecha'].includes(valor)) camposTramiteEmpActuales[i].validaciones = [];
+    renderCamposTramiteEmpresa();
+  }
+  else if (campo === 'etiqueta') { renderReglasTramiteEmpresa(); renderVistaPreviaTramiteEmpresa(); }
   else renderVistaPreviaTramiteEmpresa();
 }
 function moverCampoTramiteEmpresa(i, delta) {
@@ -2553,44 +3028,28 @@ function dragCampoTramiteEmpEnd() {
 function renderVistaPreviaTramiteEmpresa() {
   const cont = document.getElementById('te-vista-previa');
   if (!cont) return;
+  const tit = document.getElementById('te-prev-titulo');
+  const cod = document.getElementById('te-prev-codigo');
+  if (tit) tit.textContent = document.getElementById('te-titulo').value.trim() || 'Trámite';
+  if (cod) cod.textContent = document.getElementById('te-codigo').value.trim() || '—';
+  limpiarResultadoPrueba('te');
   if (!camposTramiteEmpActuales.length) {
     cont.innerHTML = '<p class="muted" style="font-size:12px;">Agregá campos para ver la vista previa.</p>';
     return;
   }
-  cont.innerHTML = `<div class="tramx-preview-grid">${camposTramiteEmpActuales.map(c => {
-    if (c.tipo_dato === 'separador') return '<hr class="campo-tramx-separador">';
-    const etiqueta = escHtml(c.etiqueta) || '(sin etiqueta)';
-    const anchoClass = 'tp-' + (c.ancho || 'completo');
-    let campo;
-    if (c.tipo_dato === 'booleano') {
-      campo = `<label class="campo-tramx-bool"><input type="checkbox" disabled> ${etiqueta}${c.obligatorio ? ' *' : ''}</label>`;
-      return `<div class="campo-tramx ${anchoClass}">${campo}</div>`;
-    }
-    const opciones = (c.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
-    if (c.tipo_dato === 'opcion_unica' || c.tipo_dato === 'multiple') {
-      const tipoInput = c.tipo_dato === 'opcion_unica' ? 'radio' : 'checkbox';
-      campo = (opciones.length ? opciones : ['(sin opciones cargadas)']).map(o =>
-        `<label class="campo-tramx-opcion"><input type="${tipoInput}" disabled> ${escHtml(o)}</label>`).join('');
-      return `<div class="campo-tramx ${anchoClass}"><label>${etiqueta}${c.obligatorio ? ' *' : ''}</label>${campo}</div>`;
-    }
-    if (c.tipo_dato === 'seleccion') {
-      campo = `<select class="tramx-input" disabled><option>${opciones.length ? 'Elegí una opción' : '(sin opciones cargadas)'}</option></select>`;
-    } else if (c.tipo_dato === 'fecha') {
-      campo = `<input type="date" class="tramx-input" disabled>`;
-    } else if (c.tipo_dato === 'archivo') {
-      campo = `<span class="tramx-archivo">📎 Elegir archivo</span>`;
-    } else {
-      campo = `<input type="text" class="tramx-input" disabled placeholder="${c.tipo_dato === 'numero' ? 'Ej: 1234' : (c.longitud_exacta ? c.longitud_exacta + ' caracteres' : 'Texto')}">`;
-    }
-    return `<div class="campo-tramx ${anchoClass}"><label>${etiqueta}${c.obligatorio ? ' *' : ''}</label>${campo}</div>`;
-  }).join('')}</div>`;
+  // mismo teléfono + banco de pruebas que el constructor de trabajador
+  // (htmlCampoPreview es compartida; el estado sigue en este namespace)
+  cont.innerHTML = camposTramiteEmpActuales.map((c, i) => htmlCampoPreview(c, i, 'TramiteEmpresa')).join('');
 }
 
 const formTramiteTipoEmpresa = document.getElementById('form-tramite-tipo-empresa');
 if (formTramiteTipoEmpresa) {
   formTramiteTipoEmpresa.addEventListener('submit', () => {
     document.getElementById('te-campos-json').value = JSON.stringify(camposTramiteEmpActuales);
+    document.getElementById('te-reglas-json').value = JSON.stringify(serializarReglasTramiteEmpresa());
   });
+  document.getElementById('te-titulo').addEventListener('input', renderVistaPreviaTramiteEmpresa);
+  document.getElementById('te-codigo').addEventListener('input', renderVistaPreviaTramiteEmpresa);
 }
 
 function editarTramiteTipoEmpresa(t) {
@@ -2599,7 +3058,12 @@ function editarTramiteTipoEmpresa(t) {
   document.getElementById('te-codigo').value = t.codigo;
   document.getElementById('te-activo-campo').classList.remove('oculto');
   document.getElementById('te-activo').checked = t.activo;
-  camposTramiteEmpActuales = (t.campos || []).map(c => ({...c}));
+  camposTramiteEmpActuales = (t.campos || []).map(c => ({ ...c, validaciones: (c.validaciones || []).map(v => ({ ...v })) }));
+  reglasTramiteEmpActuales = (t.reglas_consistencia || []).map(r => ({
+    a: camposTramiteEmpActuales[r.campo_a], operador: r.operador,
+    b: camposTramiteEmpActuales[r.campo_b], mensaje: r.mensaje || '',
+    bloquea: r.bloquea !== false,
+  })).filter(r => r.a && r.b);
   renderCamposTramiteEmpresa();
   document.getElementById('te-h2').textContent = 'Editar tipo de trámite';
   document.getElementById('te-submit').textContent = 'Guardar cambios';
@@ -2613,6 +3077,7 @@ function cancelarTramiteTipoEmpresa() {
   document.getElementById('te-id').value = '';
   document.getElementById('te-activo-campo').classList.add('oculto');
   camposTramiteEmpActuales = [];
+  reglasTramiteEmpActuales = [];
   renderCamposTramiteEmpresa();
   document.getElementById('te-h2').textContent = 'Nuevo tipo de trámite externo';
   document.getElementById('te-submit').textContent = 'Crear tipo de trámite';
@@ -2664,6 +3129,7 @@ function refrescarTramiteEmpresaDetalle(id) {
       <div class="modal-fila" style="display:flex; justify-content:space-between; padding:4px 0; font-size:13px;">
         <span class="muted">CUIT</span><span><code>${d.cuit}</code></span>
       </div>
+      ${htmlAdvertenciasTramite(d)}
       <h3 style="font-size:13.5px; margin-top:14px;">Respuestas del formulario</h3>
       ${respuestasHtml || '<p class="muted" style="font-size:12.5px;">Sin respuestas.</p>'}
 
