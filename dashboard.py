@@ -602,11 +602,16 @@ def _paginacion(params) -> tuple:
 
 
 def explorador_recibos(sid: int, f: dict, page: int, page_size: int) -> dict:
-    """Detalle de recibos con diferencias, ordenado por monto observado desc.
-    PRIVACIDAD (§1.3, con test): nombre y CUIL van SOLO si el trabajador
-    envió voluntariamente el recibo al sindicato. El CASE está en el SQL: el
-    dato de un recibo no enviado ni siquiera sale de la base."""
-    joins, where, params = _sql_recibos(sid, f, extra_conds="r.estado != 'OK'",
+    """Detalle de recibos ordenado por monto observado desc. Sin filtro de
+    resultado muestra SOLO los con diferencias (el detalle por defecto es lo
+    accionable, §3.3); con el filtro puesto responde lo filtrado — antes el
+    recorte estaba clavado y elegir "OK" en la dona daba vacío (reportado
+    por Sd 2026-09-01). PRIVACIDAD (§1.3, con test): nombre y CUIL van SOLO
+    si el trabajador envió voluntariamente el recibo al sindicato. El CASE
+    está en el SQL: el dato de un recibo no enviado ni siquiera sale de la
+    base."""
+    solo_diferencias = "" if f.get("resultado") else "r.estado != 'OK'"
+    joins, where, params = _sql_recibos(sid, f, extra_conds=solo_diferencias,
                                         forzar_join=True)
     joins += " LEFT JOIN seccional sec ON sec.id = t.seccional_id"
     with db.get_session() as s:

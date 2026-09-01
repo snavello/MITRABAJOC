@@ -727,6 +727,23 @@ def test_campos_analiticos():
     print("OK  test_campos_analiticos")
 
 
+def test_explorador_recibos_filtrando_ok():
+    # Elegir "OK" en la dona tiene que mostrar los recibos OK en el
+    # explorador (antes el recorte "solo con diferencias" estaba clavado y
+    # la selección daba vacío). Sin filtro, el default sigue siendo el
+    # detalle accionable: solo los con diferencias.
+    r = admin_a.get("/admin/dashboard/explorador/recibos",
+                    params={**RANGO, "resultado": "ok"})
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert d["total"] >= 1
+    assert all(item["resultado"] == "ok" for item in d["items"])
+    r = admin_a.get("/admin/dashboard/explorador/recibos",
+                    params={**RANGO, "resultado": "con_diferencias"})
+    assert all(item["resultado"] == "con_diferencias" for item in r.json()["items"])
+    print("OK  test_explorador_recibos_filtrando_ok")
+
+
 if __name__ == "__main__":
     test_sin_sesion_403()
     test_sin_modulo_403()
@@ -766,4 +783,5 @@ if __name__ == "__main__":
     test_color_destacado_default_y_marca()
     test_plataforma_edita_color_destacado_y_umbrales()
     test_campos_analiticos()
+    test_explorador_recibos_filtrando_ok()
     print("\nTodos los tests del Panel Sindical (Fase 1) pasaron.")

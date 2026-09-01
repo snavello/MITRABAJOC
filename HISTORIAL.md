@@ -2026,3 +2026,24 @@ Reportados por Sd probando la Fase 1 recién desplegada:
   dos constructores + título de la ayuda, que además ganó secciones sobre
   validaciones y el banco de pruebas). El intercalado de filas subió de 5%
   a 9% del primario para que se note.
+
+## Dashboard: filtro OK en el explorador + vista del afiliado en Comunicación (2026-09-01)
+
+- **Elegir "OK" en la dona dejaba el explorador vacío**: `explorador_recibos`
+  tenía clavado `r.estado != 'OK'` (el detalle nació como "recibos con
+  diferencias", §3.3) y el filtro de resultado agregaba `r.estado = 'OK'` —
+  contradicción, cero filas. Ahora el recorte aplica SOLO cuando no hay
+  filtro de resultado: sin filtro el default sigue siendo el detalle
+  accionable (con diferencias), con filtro responde lo elegido. Test:
+  `test_explorador_recibos_filtrando_ok`; verificado contra el lote UOM
+  (3.971 OK + 1.029 con diferencias = 5.000).
+- **La estética del constructor de Trámites llegó a Noticias, Beneficios y
+  Notificaciones**: títulos de sección en condensada (`.ct-secc`) y layout
+  de dos columnas con **el teléfono del afiliado a la derecha** (`.vap-*`),
+  que refleja EN VIVO lo que el admin escribe — la noticia como se ve en
+  Novedades (con la imagen elegida vía FileReader), el beneficio como
+  tarjeta de carrusel con el rubro sobre la imagen, y la notificación como
+  le llega al trabajador (remitente, mensaje, chip de adjunto). Es solo
+  cómo se VE (no valida nada); editar/cancelar refrescan el teléfono. Las
+  imágenes ya guardadas no se cargan al editar (solo las recién elegidas) —
+  simplificación aceptada.
