@@ -1875,6 +1875,13 @@ if (document.getElementById('tp-tramites')) {
     } catch (e) { /* cosmético: el próximo render lo corrige */ }
   }
 
+  // Mismo criterio que la portada: la PWA que vuelve del background no
+  // recarga, así que el globo se refresca al volver a primer plano.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refrescarBadgeTramites();
+  });
+  window.addEventListener('pageshow', (e) => { if (e.persisted) refrescarBadgeTramites(); });
+
   async function refrescarTramiteDetalleTrab(numero) {
     try {
       const r = await fetch('/api/tramite/' + encodeURIComponent(numero));

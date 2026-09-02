@@ -2270,3 +2270,13 @@ abre el detalle directo (deep link nuevo `?tramite=EXP` en /app).
   desde un template se llama CON GUARDA.
 - test_push.py (apagado sin claves, CRUD de suscripción por ruta,
   endpoint inalcanzable no tumba el hilo).
+
+**Adenda del globo de Trámites (2026-09-02, noche)**: Sd reportó que el
+globito no aparecía en el teléfono tras probar el push. La lógica estaba
+bien (verificado local: render inicial con el globo puesto). Eran dos
+efectos de ciclo de vida: (a) tocar la notificación push abre el detalle
+por el deep link y eso CONSUME la novedad — comportamiento correcto; y
+(b) la PWA que vuelve del background no recarga, y los globos eran solo
+server-rendered. Fix de (b): al volver la página a primer plano
+(visibilitychange/pageshow) los globos de la portada (trámites +
+notificaciones) y el de la pestaña de /app se refrescan solos.

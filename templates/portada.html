@@ -256,7 +256,7 @@
         </div>
       </a>
       {# Novedades de trámites: reemplazan a las notificaciones de sistema #}
-      <span class="badge-noleidas" style="display:{{ 'flex' if tramites_novedades else 'none' }};">{{ tramites_novedades }}</span>
+      <span class="badge-noleidas" id="badge-tramites-portada" style="display:{{ 'flex' if tramites_novedades else 'none' }};">{{ tramites_novedades }}</span>
     </div>
     {% endif %}
   </div>
@@ -672,6 +672,28 @@ async function toggleNotificacion(id) {
     } catch (e) {}
   }
 }
+
+// Los globos se pintan del lado del servidor al cargar, pero una PWA que
+// vuelve del background NO recarga: cuando la página vuelve a primer
+// plano se refrescan solos (es exactamente el caso del teléfono que
+// recibió un push con la app ya abierta).
+async function refrescarGlobos() {
+  try {
+    const r = await fetch('/api/tramites/novedades');
+    const d = await r.json();
+    const b = document.getElementById('badge-tramites-portada');
+    if (b) { b.textContent = d.cantidad || ''; b.style.display = d.cantidad ? 'flex' : 'none'; }
+  } catch (e) {}
+  try {
+    const r = await fetch('/api/mis-notificaciones');
+    const d = await r.json();
+    actualizarBadgeNotif(d.no_leidas || 0);
+  } catch (e) {}
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') refrescarGlobos();
+});
+window.addEventListener('pageshow', (e) => { if (e.persisted) refrescarGlobos(); });
 
 function actualizarBadgeNotif(n) {
   const badge = document.getElementById('badge-notif');
