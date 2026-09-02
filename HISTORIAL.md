@@ -2047,3 +2047,64 @@ Reportados por Sd probando la Fase 1 recién desplegada:
   cómo se VE (no valida nada); editar/cancelar refrescan el teléfono. Las
   imágenes ya guardadas no se cargan al editar (solo las recién elegidas) —
   simplificación aceptada.
+
+## Formulario adjunto en el chat de Trámites (2026-09-01)
+
+Pedido de Sd: el sindicato aprueba una reserva de turismo y quiere mandarle
+al afiliado el formulario "Registro de pasajeros" desde el mismo chat, sin
+decirle "andá a Trámites y buscalo".
+
+- **`NotaTramite.formulario_id` (+ espejo empleador)**, migración
+  `c9a2e4f7d581`. Int SIN FK a propósito: un tipo se puede borrar y el chat
+  muestra "ya no disponible" en vez de impedir el borrado. El detalle
+  resuelve `formulario_titulo`/`formulario_activo` en el momento.
+- **Solo el admin adjunta**: en el modal de responder aparece un selector
+  con los tipos ACTIVOS de la familia (trabajador o empresa). El saneo
+  (`_formulario_para_chat` en main.py) descarta en silencio un id ajeno,
+  inactivo o basura — mismo criterio que `_destinos_validos`. Una nota
+  puede ir SOLO con el formulario (sin texto ni adjunto).
+- **La tarjeta en el chat**: el trabajador/la empresa ven "📋 Título +
+  botón Iniciar este trámite" que abre ese formulario directo (busca el
+  tipo en su endpoint de tipos activos — un id ajeno simplemente no está).
+  En el chat del admin la tarjeta queda como constancia de qué se mandó.
+  La notificación del sistema avisa "te mandó un formulario".
+- **Deep link** `/app?tab=tramites&formulario=<id>`: abre el formulario
+  directo (sesión + módulo + tipo activo del sindicato mediante). Botón
+  "Link" en la tabla de tipos del constructor para copiarlo — pensado para
+  pegar en una notificación o una noticia. (Solo trabajador; en empresa la
+  tarjeta del chat cubre el caso.)
+- Test `test_formulario_adjunto_en_chat` en test_tramites.py (alta, nota
+  solo-formulario, saneo de ids inválidos, tipo desactivado).
+
+Nota de entorno del mismo día: Docker Desktop local entró en un loop de
+"socket fantasma" (todo archivo de socket Unix creado queda imborrable:
+`dockerInference`, `engine.sock`, etc. — driver afunix de Windows trabado).
+Workaround: renombrar las carpetas `run`/`docker-secrets-engine` rotas; la
+solución real es reiniciar Windows. No afecta producción.
+
+## Formulario "para iniciar" en Noticias, Beneficios y Notificaciones (2026-09-01)
+
+Extensión del formulario adjunto del chat a los tres canales de
+comunicación (pedido de Sd: una noticia que abre una inscripción, un
+beneficio con reserva, una notificación que exige completar datos). El
+admin asocia un formulario y quien lo recibe ve **solo un ícono** (📋 en
+círculo de acento) — el "completá los datos haciendo click acá" lo escribe
+el admin en el propio texto, decisión explícita: sin campo de etiqueta.
+
+- `formulario_id` en Noticia/Beneficio/Notificacion/NotificacionEmpleador
+  (migración `d5b8c3e9f214`), int sin FK como en el chat. El saneo del alta
+  reusa `_formulario_para_chat`; `db.formulario_activo_de()` decide si el
+  ícono se muestra (tipo borrado/desactivado → desaparece, resuelto en cada
+  lectura, no al guardar).
+- Selector "Formulario para iniciar (opcional)" en los 4 formularios de
+  admin (noticia/beneficio/notificación/notificación-empresa, cada familia
+  con sus tipos) y el ícono visible en el teléfono del afiliado en vivo.
+- Render del ícono: overlay de noticia (portada Y pestaña Novedades),
+  overlay de beneficio, notificaciones del trabajador (modal de portada,
+  vía deep link `/app?tab=tramites&formulario=`) y notificaciones de la
+  empresa (apertura in-app con la maquinaria del chat).
+- Tests: `test_formulario_para_iniciar_en_noticia` /
+  `..._en_notificacion` (alta por ruta, exposición en API, tipo
+  desactivado → ícono afuera, id basura → sin referencia).
+- Verificado en vivo con el lote UOM: chat (adjuntar desde el modal →
+  tarjeta → botón abre F07), noticia con ícono → deep link → formulario.

@@ -609,6 +609,8 @@ def api_noticia(noticia_id: int, request: Request):
         "texto_completo_html": _texto_con_links(n["texto_completo"]),
         "antiguedad": _antiguedad(n["creada"]),
         "tiene_imagen1": n["tiene_imagen1"], "tiene_imagen2": n["tiene_imagen2"],
+        # solo si el formulario sigue activo: decide si se muestra el ícono
+        "formulario_id": db.formulario_activo_de(sid, n["formulario_id"]),
     }
 
 
@@ -626,6 +628,7 @@ def api_beneficio(beneficio_id: int, request: Request):
         "id": b["id"], "rubro": b["rubro"],
         "descripcion_html": _texto_con_links(b["descripcion"]),
         "link": b["link"], "tiene_imagen": b["tiene_imagen"],
+        "formulario_id": db.formulario_activo_de(sid, b["formulario_id"]),
     }
 
 
@@ -1172,9 +1175,11 @@ async def abm_noticia(
     texto_completo: str = Form(""), fecha_desde: str = Form(...), fecha_hasta: str = Form(...),
     imagen1: UploadFile = File(None), imagen2: UploadFile = File(None),
     destino_seccionales: list[str] = Form(default=[]),
+    formulario_id: str = Form(""),
 ):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "noticias")
+    formulario = _formulario_para_chat(sid, formulario_id, "trabajador")
     with db.get_session() as s:
         destinos = _destinos_validos(s, destino_seccionales, sid)
         if id:
@@ -1183,6 +1188,7 @@ async def abm_noticia(
                 n.titulo, n.bajada, n.texto_completo = titulo, bajada, texto_completo
                 n.fecha_desde, n.fecha_hasta = fecha_desde, fecha_hasta
                 n.destino_seccionales = destinos
+                n.formulario_id = formulario
                 if imagen1 and imagen1.filename:
                     datos, mime, _ = _leer_logo(imagen1)
                     if datos:
@@ -1205,7 +1211,7 @@ async def abm_noticia(
                 creada=datetime.now().strftime("%Y-%m-%d %H:%M"),
                 imagen1_datos=imagen1_datos, imagen1_mime=imagen1_mime,
                 imagen2_datos=imagen2_datos, imagen2_mime=imagen2_mime,
-                destino_seccionales=destinos,
+                destino_seccionales=destinos, formulario_id=formulario,
             ))
         s.commit()
     return RedirectResponse("/admin#noticias", status_code=303)
@@ -1229,9 +1235,11 @@ async def abm_beneficio(
     id: str = Form(""), rubro: str = Form(...), descripcion: str = Form(""),
     link: str = Form(""), fecha_desde: str = Form(...), fecha_hasta: str = Form(...),
     imagen: UploadFile = File(None), destino_seccionales: list[str] = Form(default=[]),
+    formulario_id: str = Form(""),
 ):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "beneficios")
+    formulario = _formulario_para_chat(sid, formulario_id, "trabajador")
     with db.get_session() as s:
         destinos = _destinos_validos(s, destino_seccionales, sid)
         if id:
@@ -1240,6 +1248,7 @@ async def abm_beneficio(
                 b.rubro, b.descripcion, b.link = rubro, descripcion, link
                 b.fecha_desde, b.fecha_hasta = fecha_desde, fecha_hasta
                 b.destino_seccionales = destinos
+                b.formulario_id = formulario
                 if imagen and imagen.filename:
                     datos, mime, _ = _leer_logo(imagen)
                     if datos:
@@ -1254,7 +1263,7 @@ async def abm_beneficio(
                 fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
                 creada=datetime.now().strftime("%Y-%m-%d %H:%M"),
                 imagen_datos=imagen_datos, imagen_mime=imagen_mime,
-                destino_seccionales=destinos,
+                destino_seccionales=destinos, formulario_id=formulario,
             ))
         s.commit()
     return RedirectResponse("/admin#beneficios", status_code=303)
@@ -1412,7 +1421,7 @@ async def crear_notificacion(
     request: Request,
     remitente: str = Form(""), texto: str = Form(...),
     criterio: str = Form(...), valores: list[str] = Form(default=[]),
-    adjunto: UploadFile = File(None),
+    adjunto: UploadFile = File(None), formulario_id: str = Form(""),
 ):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "notificaciones")
@@ -1425,6 +1434,7 @@ async def crear_notificacion(
     db.crear_notificacion(
         sid, ses.get("uid") or None, remitente, texto, criterio, valores,
         adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime, adjunto_nombre=adjunto_nombre,
+        formulario_id=_formulario_para_chat(sid, formulario_id, "trabajador"),
     )
     return RedirectResponse("/admin#notificaciones", status_code=303)
 
@@ -1512,7 +1522,7 @@ async def crear_notificacion_empresa(
     request: Request,
     remitente: str = Form(""), texto: str = Form(...),
     criterio: str = Form(...), valores: list[str] = Form(default=[]),
-    adjunto: UploadFile = File(None),
+    adjunto: UploadFile = File(None), formulario_id: str = Form(""),
 ):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "empleadores")
@@ -1525,6 +1535,7 @@ async def crear_notificacion_empresa(
     db.crear_notificacion_empleador(
         sid, ses.get("uid") or None, remitente, texto, criterio, valores,
         adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime, adjunto_nombre=adjunto_nombre,
+        formulario_id=_formulario_para_chat(sid, formulario_id, "empresa"),
     )
     return RedirectResponse("/admin#empleadores", status_code=303)
 
@@ -1847,9 +1858,27 @@ def admin_cambiar_estado_tramite(tramite_id: int, request: Request, estado: str 
     return {"ok": True}
 
 
+def _formulario_para_chat(sid: int, formulario_id: str, familia: str):
+    """Sanea el formulario que el admin adjunta en un mensaje del chat: tiene
+    que ser un tipo ACTIVO de SU sindicato (de la familia correcta), si no se
+    descarta en silencio -- mismo criterio defensivo que _destinos_validos."""
+    try:
+        fid = int(formulario_id or 0)
+    except (TypeError, ValueError):
+        return None
+    if not fid:
+        return None
+    tipo = (db.tipo_tramite_empleador_por_id(fid) if familia == "empresa"
+            else db.tipo_tramite_por_id(fid))
+    if not tipo or tipo["sindicato_id"] != sid or not tipo["activo"]:
+        return None
+    return fid
+
+
 @app.post("/admin/tramite/{tramite_id}/nota")
 async def admin_nota_tramite(tramite_id: int, request: Request, texto: str = Form(""),
-                              adjunto: UploadFile = File(None)):
+                              adjunto: UploadFile = File(None),
+                              formulario_id: str = Form("")):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "tramites")
     detalle = db.tramite_detalle(tramite_id)
@@ -1862,11 +1891,15 @@ async def admin_nota_tramite(tramite_id: int, request: Request, texto: str = For
         adjunto_datos, adjunto_mime, adjunto_nombre = _leer_archivo_tramite(adjunto)
         if not adjunto_datos:
             raise HTTPException(400, "Adjunto inválido o supera el tamaño máximo (10 MB).")
-    if not texto.strip() and not adjunto_datos:
-        raise HTTPException(400, "La nota necesita texto o un adjunto.")
-    db.agregar_nota_tramite(tramite_id, "admin", texto, adjunto_datos, adjunto_mime, adjunto_nombre)
-    _notificar_cambio_tramite(sid, detalle["cuil"],
-        f'Tu sindicato agregó una nota a tu trámite {detalle["numero_expediente"]}.')
+    formulario = _formulario_para_chat(sid, formulario_id, "trabajador")
+    if not texto.strip() and not adjunto_datos and not formulario:
+        raise HTTPException(400, "La nota necesita texto, un adjunto o un formulario.")
+    db.agregar_nota_tramite(tramite_id, "admin", texto, adjunto_datos, adjunto_mime,
+                            adjunto_nombre, formulario_id=formulario)
+    aviso = (f'Tu sindicato te mandó un formulario en tu trámite {detalle["numero_expediente"]}.'
+             if formulario else
+             f'Tu sindicato agregó una nota a tu trámite {detalle["numero_expediente"]}.')
+    _notificar_cambio_tramite(sid, detalle["cuil"], aviso)
     return {"ok": True}
 
 
@@ -2275,7 +2308,8 @@ def admin_cambiar_estado_tramite_empresa(tramite_id: int, request: Request, esta
 
 @app.post("/admin/tramite-empresa/{tramite_id}/nota")
 async def admin_nota_tramite_empresa(tramite_id: int, request: Request, texto: str = Form(""),
-                                      adjunto: UploadFile = File(None)):
+                                      adjunto: UploadFile = File(None),
+                                      formulario_id: str = Form("")):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "empleadores")
     detalle = db.tramite_empleador_detalle(tramite_id)
@@ -2288,11 +2322,15 @@ async def admin_nota_tramite_empresa(tramite_id: int, request: Request, texto: s
         adjunto_datos, adjunto_mime, adjunto_nombre = _leer_archivo_tramite(adjunto)
         if not adjunto_datos:
             raise HTTPException(400, "Adjunto inválido o supera el tamaño máximo (10 MB).")
-    if not texto.strip() and not adjunto_datos:
-        raise HTTPException(400, "La nota necesita texto o un adjunto.")
-    db.agregar_nota_tramite_empleador(tramite_id, "admin", texto, adjunto_datos, adjunto_mime, adjunto_nombre)
-    _notificar_cambio_tramite_empleador(sid, detalle["cuit"],
-        f'Tu sindicato agregó una nota a tu trámite {detalle["numero_expediente"]}.')
+    formulario = _formulario_para_chat(sid, formulario_id, "empresa")
+    if not texto.strip() and not adjunto_datos and not formulario:
+        raise HTTPException(400, "La nota necesita texto, un adjunto o un formulario.")
+    db.agregar_nota_tramite_empleador(tramite_id, "admin", texto, adjunto_datos, adjunto_mime,
+                                      adjunto_nombre, formulario_id=formulario)
+    aviso = (f'Tu sindicato te mandó un formulario en tu trámite {detalle["numero_expediente"]}.'
+             if formulario else
+             f'Tu sindicato agregó una nota a tu trámite {detalle["numero_expediente"]}.')
+    _notificar_cambio_tramite_empleador(sid, detalle["cuit"], aviso)
     return {"ok": True}
 
 

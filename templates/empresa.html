@@ -142,6 +142,24 @@
   .tram-chat { display:flex; flex-direction:column; gap:10px; margin-top:6px; }
   .tram-chat-sistema { align-self:center; max-width:92%; text-align:center; font-size:11px;
     color:var(--gris); background:#fff; border:1px solid var(--linea); border-radius:20px; padding:5px 13px; }
+  /* Ícono del formulario asociado a una notificación (mirror de portada) */
+  .cta-form { display:inline-flex; align-items:center; justify-content:center;
+    width:44px; height:44px; border-radius:50%; background:var(--marca-acento);
+    font-size:20px; text-decoration:none; border:none; cursor:pointer;
+    margin-top:10px; box-shadow:0 4px 12px rgba(0,0,0,.22); }
+  /* Formulario adjuntado por el sindicato en un mensaje del chat (mirror
+     de trabajador.html) */
+  .tram-chat-form { display:flex; flex-direction:column; gap:3px; margin-top:8px;
+    background:#fff; border:1px solid var(--linea); border-left:3px solid var(--marca-acento);
+    border-radius:10px; padding:9px 12px; font-size:13.5px; font-weight:650;
+    color:var(--tinta); cursor:pointer; }
+  .tram-chat-form.inactivo { cursor:default; color:var(--gris); font-weight:500;
+    border-left-color:var(--linea); }
+  .tram-chat-form .tcf-rotulo { font-size:9.5px; font-weight:600; color:var(--gris);
+    text-transform:uppercase; letter-spacing:.8px; }
+  .tram-chat-form .tcf-btn { margin-top:6px; background:var(--marca-acento);
+    color:var(--marca-base); border:none; border-radius:8px; padding:8px 10px;
+    font-weight:700; font-size:12.5px; cursor:pointer; width:100%; }
   .tram-chat-fila { display:flex; align-items:flex-end; gap:7px; max-width:86%; }
   .tram-chat-fila.propio { flex-direction:row-reverse; align-self:flex-end; }
   .tram-chat-fila.ajeno { align-self:flex-start; }
@@ -363,7 +381,7 @@ function renderNotificacionesEmpresa(items) {
         <span class="notif-fecha">${fmtFechaHora(n.enviado_en)}</span>
       </div>
       <div class="notif-snippet">${(n.texto || '').replace(/</g, '&lt;')}</div>
-      <div class="notif-texto-full">${n.texto_html}${n.tiene_adjunto ? `<br><a class="notif-adjunto" href="/notificacion-empresa-adjunto/${n.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📎 Ver adjunto</a>` : ''}</div>
+      <div class="notif-texto-full">${n.texto_html}${n.tiene_adjunto ? `<br><a class="notif-adjunto" href="/notificacion-empresa-adjunto/${n.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📎 Ver adjunto</a>` : ''}${n.formulario_id ? `<br><button type="button" class="cta-form" title="Completar el formulario" onclick="event.stopPropagation(); abrirFormularioDesdeChatTrx(${n.formulario_id})">📋</button>` : ''}</div>
     </div>
   `).join('');
 }
@@ -594,6 +612,37 @@ if (document.getElementById('tp-tramites')) {
   }
 
   let trxNotasActuales = [];
+
+  // Formulario adjuntado por el sindicato en un mensaje (mirror de
+  // trabajador.html): tarjeta con botón que abre ese formulario directo.
+  function htmlFormularioChatTrx(n) {
+    if (!n.formulario_id) return '';
+    if (!n.formulario_titulo || !n.formulario_activo) {
+      return `<div class="tram-chat-form inactivo">📋 Formulario ya no disponible</div>`;
+    }
+    return `
+      <div class="tram-chat-form" onclick="event.stopPropagation(); abrirFormularioDesdeChatTrx(${n.formulario_id})">
+        <span class="tcf-rotulo">Formulario para iniciar</span>
+        📋 ${escTrx(n.formulario_titulo)}
+        <button type="button" class="tcf-btn">Iniciar este trámite</button>
+      </div>`;
+  }
+  window.abrirFormularioDesdeChatTrx = async function (formularioId) {
+    try {
+      const r = await fetch('/api/empresa/tramites/tipos');
+      const data = await r.json();
+      const tipo = (data.tipos || []).find(t => t.id === formularioId);
+      if (!tipo) {
+        alert('Ese formulario ya no está disponible. Consultale a tu sindicato.');
+        return;
+      }
+      const overlay = document.getElementById('modal-recibo-overlay');
+      if (overlay) overlay.classList.remove('abierto');
+      abrirFormularioTramiteEmpresa(tipo);
+    } catch (e) {
+      alert('No se pudo abrir el formulario. Probá de nuevo.');
+    }
+  };
   let trxTramiteActual = null;   // { id, numero, estado }
 
   function renderChatTramiteTrx(d) {
@@ -619,6 +668,7 @@ if (document.getElementById('tp-tramites')) {
           <div class="tram-chat-burbuja">
             <div class="tram-chat-remitente">${n.autor === 'admin' ? 'Tu sindicato' : 'Vos'}</div>
             <div class="tram-chat-texto">${texto}</div>
+            ${htmlFormularioChatTrx(n)}
             <div class="tram-chat-meta">
               ${n.tiene_adjunto ? '<svg viewBox="0 0 24 24"><use href="#ic-clip"/></svg>' : ''}
               <span>${fmtHoraCortaTrx(n.creado)}</span>
@@ -676,6 +726,7 @@ if (document.getElementById('tp-tramites')) {
       <div class="tram-chat-remitente">${n.autor === 'admin' ? 'Tu sindicato' : 'Vos'} · ${n.creado}</div>
       <div style="font-size:14px; line-height:1.5; margin-top:4px; white-space:pre-wrap;">${escTrx(n.texto)}</div>
       ${n.tiene_adjunto ? `<a class="tram-msg-adjunto" href="/tramite-empresa-nota-adjunto/${n.id}" target="_blank" rel="noopener">📎 ${escTrx(n.adjunto_nombre)}</a>` : ''}
+      ${htmlFormularioChatTrx(n)}
     ` : '';
     const terminado = trxTramiteActual.estado === 'terminado';
     document.getElementById('modal-recibo-contenido').innerHTML = `

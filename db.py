@@ -331,6 +331,11 @@ class Noticia(SQLModel, table=True):
     imagen1_mime: str = ""
     imagen2_datos: Optional[bytes] = Field(default=None)
     imagen2_mime: str = ""
+    # Formulario "para iniciar" (TipoTramite) asociado: el trabajador ve un
+    # ícono que abre ese formulario ("completá los datos haciendo click
+    # acá" lo escribe el admin en el texto). Int SIN FK, mismo criterio que
+    # NotaTramite.formulario_id: un tipo borrado/inactivo esconde el ícono.
+    formulario_id: Optional[int] = None
     # Destino: lista de Seccional.id a la(s) que se dirige. Lista vacía (el
     # default) = todas las seccionales, incluidos los trabajadores sin
     # seccional asignada.
@@ -353,6 +358,7 @@ class Beneficio(SQLModel, table=True):
     creada: str = ""  # fecha y hora de alta ("AAAA-MM-DD HH:MM")
     imagen_datos: Optional[bytes] = Field(default=None)
     imagen_mime: str = ""
+    formulario_id: Optional[int] = None  # mismo criterio que Noticia.formulario_id
     # Destino: lista de Seccional.id a la(s) que se dirige. Lista vacía (el
     # default) = todas las seccionales, mismo criterio que Noticia.
     destino_seccionales: list = Field(default=[], sa_column=Column(JSON))
@@ -515,6 +521,7 @@ class Notificacion(SQLModel, table=True):
     origen: str = "manual"
     enviado_en: str = ""           # fecha/hora de envío ("AAAA-MM-DD HH:MM")
     cantidad_destinatarios: int = 0  # snapshot: cuántos matchearon al enviar
+    formulario_id: Optional[int] = None  # mismo criterio que Noticia.formulario_id
 
 
 class NotificacionDestinatario(SQLModel, table=True):
@@ -545,6 +552,7 @@ class NotificacionEmpleador(SQLModel, table=True):
     origen: str = "manual"          # "manual" | "sistema" (Fase 5: cambio de trámite externo)
     enviado_en: str = ""
     cantidad_destinatarios: int = 0
+    formulario_id: Optional[int] = None  # referencia TipoTramiteEmpleador (formularios de empresa)
 
 
 class NotificacionEmpleadorDestinatario(SQLModel, table=True):
@@ -650,6 +658,12 @@ class NotaTramite(SQLModel, table=True):
     adjunto_mime: str = ""
     adjunto_nombre: str = ""
     creado: str = ""
+    # Formulario adjuntado por el ADMIN en el mensaje: el trabajador ve una
+    # tarjeta "Iniciar este trámite" que abre ese formulario directo (ej.:
+    # aprueban la reserva de turismo y le mandan "Registro de pasajeros").
+    # Int pelado a propósito, sin FK: un tipo se puede borrar y el chat
+    # muestra "ya no disponible" en vez de impedir el borrado.
+    formulario_id: Optional[int] = None
 
 
 class TramiteLog(SQLModel, table=True):
@@ -729,6 +743,7 @@ class NotaTramiteEmpleador(SQLModel, table=True):
     adjunto_mime: str = ""
     adjunto_nombre: str = ""
     creado: str = ""
+    formulario_id: Optional[int] = None  # mirror de NotaTramite (referencia TipoTramiteEmpleador)
 
 
 class TramiteEmpleadorLog(SQLModel, table=True):
@@ -1870,7 +1885,21 @@ def _noticia_a_dict(n: "Noticia") -> dict:
         "fecha_desde": n.fecha_desde, "fecha_hasta": n.fecha_hasta, "creada": n.creada,
         "tiene_imagen1": bool(n.imagen1_datos), "tiene_imagen2": bool(n.imagen2_datos),
         "destino_seccionales": n.destino_seccionales or [],
+        "formulario_id": n.formulario_id,
     }
+
+
+def formulario_activo_de(sindicato_id: int, formulario_id: Optional[int],
+                          familia: str = "trabajador") -> Optional[int]:
+    """Devuelve el formulario_id solo si sigue siendo un tipo ACTIVO del
+    sindicato (de la familia correcta); None si fue borrado, desactivado o
+    es ajeno. Es lo que decide si el ícono "completá los datos" se muestra."""
+    if not formulario_id:
+        return None
+    with Session(engine) as s:
+        modelo = TipoTramiteEmpleador if familia == "empresa" else TipoTramite
+        t = s.get(modelo, formulario_id)
+        return formulario_id if (t and t.sindicato_id == sindicato_id and t.activo) else None
 
 
 def visible_para_seccional(destino_seccionales: list, seccional_id: Optional[int]) -> bool:
@@ -1921,6 +1950,7 @@ def _beneficio_a_dict(b: "Beneficio") -> dict:
         "fecha_desde": b.fecha_desde, "fecha_hasta": b.fecha_hasta, "creada": b.creada,
         "tiene_imagen": bool(b.imagen_datos),
         "destino_seccionales": b.destino_seccionales or [],
+        "formulario_id": b.formulario_id,
     }
 
 
@@ -2057,7 +2087,7 @@ def resolver_destinatarios(sindicato_id: int, criterio: str, valores: list) -> l
 def crear_notificacion(sindicato_id: int, usuario_id: Optional[int], remitente: str, texto: str,
                         criterio: str, valores: list, adjunto_datos: Optional[bytes] = None,
                         adjunto_mime: str = "", adjunto_nombre: str = "",
-                        origen: str = "manual") -> dict:
+                        origen: str = "manual", formulario_id: Optional[int] = None) -> dict:
     """Resuelve los destinatarios y los FIJA en el momento de enviar (snapshot,
     ver Notificacion). Devuelve id y cantidad real, para la confirmación."""
     cuils = resolver_destinatarios(sindicato_id, criterio, valores)
@@ -2067,7 +2097,7 @@ def crear_notificacion(sindicato_id: int, usuario_id: Optional[int], remitente: 
             texto=texto or "", adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime or "",
             adjunto_nombre=adjunto_nombre or "", criterio=criterio, criterio_valores=list(valores or []),
             origen=origen, enviado_en=datetime.now().strftime("%Y-%m-%d %H:%M"),
-            cantidad_destinatarios=len(cuils),
+            cantidad_destinatarios=len(cuils), formulario_id=formulario_id,
         )
         s.add(n); s.commit(); s.refresh(n)
         for cuil in cuils:
@@ -2122,10 +2152,17 @@ def notificaciones_de_trabajador(cuil: str, sindicato_id: int) -> list:
         notifs = s.exec(select(Notificacion).where(
             Notificacion.id.in_(por_id.keys()), Notificacion.sindicato_id == sindicato_id)
             .order_by(Notificacion.id.desc())).all()
+        # el ícono "completá los datos" solo se muestra si el formulario
+        # referido sigue siendo un tipo activo del sindicato
+        forms_ref = {n.formulario_id for n in notifs if n.formulario_id}
+        activos = {t.id for t in s.exec(select(TipoTramite).where(
+            TipoTramite.id.in_(forms_ref), TipoTramite.sindicato_id == sindicato_id,
+            TipoTramite.activo == True)).all()} if forms_ref else set()  # noqa: E712
         return [{
             "id": n.id, "remitente": n.remitente, "texto": n.texto,
             "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
             "enviado_en": n.enviado_en, "leida_en": por_id[n.id].leida_en,
+            "formulario_id": n.formulario_id if n.formulario_id in activos else None,
         } for n in notifs]
 
 
@@ -2176,7 +2213,7 @@ def resolver_destinatarios_empleador(sindicato_id: int, criterio: str, valores: 
 def crear_notificacion_empleador(sindicato_id: int, usuario_id: Optional[int], remitente: str, texto: str,
                                   criterio: str, valores: list, adjunto_datos: Optional[bytes] = None,
                                   adjunto_mime: str = "", adjunto_nombre: str = "",
-                                  origen: str = "manual") -> dict:
+                                  origen: str = "manual", formulario_id: Optional[int] = None) -> dict:
     """Resuelve los destinatarios y los FIJA en el momento de enviar
     (snapshot, mismo criterio que crear_notificacion)."""
     cuits = resolver_destinatarios_empleador(sindicato_id, criterio, valores)
@@ -2186,7 +2223,7 @@ def crear_notificacion_empleador(sindicato_id: int, usuario_id: Optional[int], r
             texto=texto or "", adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime or "",
             adjunto_nombre=adjunto_nombre or "", criterio=criterio, criterio_valores=list(valores or []),
             origen=origen, enviado_en=datetime.now().strftime("%Y-%m-%d %H:%M"),
-            cantidad_destinatarios=len(cuits),
+            cantidad_destinatarios=len(cuits), formulario_id=formulario_id,
         )
         s.add(n); s.commit(); s.refresh(n)
         for cuit in cuits:
@@ -2243,10 +2280,16 @@ def notificaciones_de_empleador(cuit: str, sindicato_id: int) -> list:
         notifs = s.exec(select(NotificacionEmpleador).where(
             NotificacionEmpleador.id.in_(por_id.keys()), NotificacionEmpleador.sindicato_id == sindicato_id)
             .order_by(NotificacionEmpleador.id.desc())).all()
+        forms_ref = {n.formulario_id for n in notifs if n.formulario_id}
+        activos = {t.id for t in s.exec(select(TipoTramiteEmpleador).where(
+            TipoTramiteEmpleador.id.in_(forms_ref),
+            TipoTramiteEmpleador.sindicato_id == sindicato_id,
+            TipoTramiteEmpleador.activo == True)).all()} if forms_ref else set()  # noqa: E712
         return [{
             "id": n.id, "remitente": n.remitente, "texto": n.texto,
             "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
             "enviado_en": n.enviado_en, "leida_en": por_id[n.id].leida_en,
+            "formulario_id": n.formulario_id if n.formulario_id in activos else None,
         } for n in notifs]
 
 
@@ -2506,10 +2549,12 @@ def cambiar_estado_tramite(tramite_id: int, sindicato_id: int, nuevo_estado: str
 
 def agregar_nota_tramite(tramite_id: int, autor: str, texto: str,
                           adjunto_datos: Optional[bytes] = None, adjunto_mime: str = "",
-                          adjunto_nombre: str = "") -> bool:
+                          adjunto_nombre: str = "", formulario_id: Optional[int] = None) -> bool:
     """`autor` es "admin" o "trabajador" -- la verificación de que quien
-    escribe tiene permiso sobre ESTE trámite la hace el caller (main.py).
-    Un trámite terminado queda bloqueado para notas nuevas de cualquier lado."""
+    escribe tiene permiso sobre ESTE trámite la hace el caller (main.py),
+    igual que la de que `formulario_id` (solo admin) sea un tipo activo del
+    sindicato. Un trámite terminado queda bloqueado para notas nuevas de
+    cualquier lado."""
     with Session(engine) as s:
         tr = s.get(Tramite, tramite_id)
         if not tr or tr.estado == "terminado":
@@ -2518,6 +2563,7 @@ def agregar_nota_tramite(tramite_id: int, autor: str, texto: str,
             tramite_id=tramite_id, autor=autor, texto=texto or "",
             adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime or "",
             adjunto_nombre=adjunto_nombre or "", creado=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            formulario_id=formulario_id,
         ))
         tr.actualizado = datetime.now().strftime("%Y-%m-%d %H:%M")
         s.add(tr)
@@ -2582,6 +2628,12 @@ def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:
                    .order_by(NotaTramite.id)).all()
     log = s.exec(select(TramiteLog).where(TramiteLog.tramite_id == tr.id)
                  .order_by(TramiteLog.id)).all()
+    # Título/estado de los formularios adjuntados en mensajes del chat: se
+    # resuelven acá (no hay FK, un tipo borrado se muestra "no disponible").
+    forms_ref = {n.formulario_id for n in notas if n.formulario_id}
+    formularios = {t.id: t for t in s.exec(select(TipoTramite).where(
+        TipoTramite.id.in_(forms_ref), TipoTramite.sindicato_id == tr.sindicato_id)).all()} \
+        if forms_ref else {}
     return {
         "id": tr.id, "numero_expediente": tr.numero_expediente, "cuil": tr.cuil,
         "sindicato_id": tr.sindicato_id, "estado": tr.estado,
@@ -2599,6 +2651,11 @@ def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:
         "notas": [{
             "id": n.id, "autor": n.autor, "texto": n.texto, "creado": n.creado,
             "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+            "formulario_id": n.formulario_id,
+            "formulario_titulo": formularios[n.formulario_id].titulo
+                if n.formulario_id in formularios else None,
+            "formulario_activo": formularios[n.formulario_id].activo
+                if n.formulario_id in formularios else False,
         } for n in notas],
         "log": [{"evento": l.evento, "detalle": l.detalle, "creado": l.creado} for l in log],
     }
@@ -2802,7 +2859,7 @@ def cambiar_estado_tramite_empleador(tramite_id: int, sindicato_id: int, nuevo_e
 
 def agregar_nota_tramite_empleador(tramite_id: int, autor: str, texto: str,
                                     adjunto_datos: Optional[bytes] = None, adjunto_mime: str = "",
-                                    adjunto_nombre: str = "") -> bool:
+                                    adjunto_nombre: str = "", formulario_id: Optional[int] = None) -> bool:
     with Session(engine) as s:
         tr = s.get(TramiteEmpleador, tramite_id)
         if not tr or tr.estado == "terminado":
@@ -2811,6 +2868,7 @@ def agregar_nota_tramite_empleador(tramite_id: int, autor: str, texto: str,
             tramite_id=tramite_id, autor=autor, texto=texto or "",
             adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime or "",
             adjunto_nombre=adjunto_nombre or "", creado=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            formulario_id=formulario_id,
         ))
         tr.actualizado = datetime.now().strftime("%Y-%m-%d %H:%M")
         s.add(tr)
@@ -2871,6 +2929,11 @@ def _tramite_empleador_detalle_completo(s: Session, tr: "TramiteEmpleador") -> d
                    .order_by(NotaTramiteEmpleador.id)).all()
     log = s.exec(select(TramiteEmpleadorLog).where(TramiteEmpleadorLog.tramite_id == tr.id)
                  .order_by(TramiteEmpleadorLog.id)).all()
+    forms_ref = {n.formulario_id for n in notas if n.formulario_id}
+    formularios = {t.id: t for t in s.exec(select(TipoTramiteEmpleador).where(
+        TipoTramiteEmpleador.id.in_(forms_ref),
+        TipoTramiteEmpleador.sindicato_id == tr.sindicato_id)).all()} \
+        if forms_ref else {}
     return {
         "id": tr.id, "numero_expediente": tr.numero_expediente, "cuit": tr.cuit,
         "sindicato_id": tr.sindicato_id, "estado": tr.estado,
@@ -2888,6 +2951,11 @@ def _tramite_empleador_detalle_completo(s: Session, tr: "TramiteEmpleador") -> d
         "notas": [{
             "id": n.id, "autor": n.autor, "texto": n.texto, "creado": n.creado,
             "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
+            "formulario_id": n.formulario_id,
+            "formulario_titulo": formularios[n.formulario_id].titulo
+                if n.formulario_id in formularios else None,
+            "formulario_activo": formularios[n.formulario_id].activo
+                if n.formulario_id in formularios else False,
         } for n in notas],
         "log": [{"evento": l.evento, "detalle": l.detalle, "creado": l.creado} for l in log],
     }

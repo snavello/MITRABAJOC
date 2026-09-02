@@ -153,6 +153,24 @@
   .tram-chat-sistema { align-self:center; max-width:92%; text-align:center; font-size:11px;
     color:var(--gris); background:var(--papel); border:1px solid var(--linea);
     border-radius:20px; padding:5px 13px; }
+  /* Ícono del formulario asociado a una noticia (mismo círculo que en la
+     portada; el "completá los datos haciendo click acá" va en el texto) */
+  .cta-form { display:inline-flex; align-items:center; justify-content:center;
+    width:44px; height:44px; border-radius:50%; background:var(--marca-acento);
+    font-size:20px; text-decoration:none; border:none; cursor:pointer;
+    margin-top:10px; box-shadow:0 4px 12px rgba(0,0,0,.22); }
+  /* Formulario adjuntado por el sindicato en un mensaje del chat */
+  .tram-chat-form { display:flex; flex-direction:column; gap:3px; margin-top:8px;
+    background:#fff; border:1px solid var(--linea); border-left:3px solid var(--marca-acento);
+    border-radius:10px; padding:9px 12px; font-size:13.5px; font-weight:650;
+    color:var(--tinta); cursor:pointer; }
+  .tram-chat-form.inactivo { cursor:default; color:var(--gris); font-weight:500;
+    border-left-color:var(--linea); }
+  .tram-chat-form .tcf-rotulo { font-size:9.5px; font-weight:600; color:var(--gris);
+    text-transform:uppercase; letter-spacing:.8px; }
+  .tram-chat-form .tcf-btn { margin-top:6px; background:var(--marca-acento);
+    color:var(--marca-base); border:none; border-radius:8px; padding:8px 10px;
+    font-weight:700; font-size:12.5px; cursor:pointer; width:100%; }
   .tram-chat-fila { display:flex; align-items:flex-end; gap:7px; max-width:86%; }
   .tram-chat-fila.propio { flex-direction:row-reverse; align-self:flex-end; }
   .tram-chat-fila.ajeno { align-self:flex-start; }
@@ -746,6 +764,7 @@
     <div class="ant" id="not-det-antiguedad" style="opacity:.6; font-size:11px; margin:8px 0 10px;"></div>
     <div id="not-det-texto" style="font-size:13.5px; line-height:1.6;"></div>
     <div id="not-det-imagenes" style="display:flex; gap:8px; margin-top:14px;"></div>
+    <div id="not-det-form"></div>
   </div>
 </div>
 
@@ -1301,6 +1320,7 @@ async function abrirNoticia(id) {
   document.getElementById('not-det-antiguedad').textContent = '';
   document.getElementById('not-det-texto').innerHTML = '';
   document.getElementById('not-det-imagenes').innerHTML = '';
+  document.getElementById('not-det-form').innerHTML = '';
   ov.classList.add('abierto');
   try {
     const r = await fetch('/api/noticia/' + id);
@@ -1313,6 +1333,11 @@ async function abrirNoticia(id) {
     const imgs = document.getElementById('not-det-imagenes');
     if (n.tiene_imagen1) imgs.innerHTML += `<img src="/noticia-imagen/${id}/1" onclick="abrirImagen('/noticia-imagen/${id}/1')" style="width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer;">`;
     if (n.tiene_imagen2) imgs.innerHTML += `<img src="/noticia-imagen/${id}/2" onclick="abrirImagen('/noticia-imagen/${id}/2')" style="width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer;">`;
+    // Ícono del formulario asociado: ya estamos en /app, abre el
+    // formulario directo con la maquinaria del chat de Trámites.
+    document.getElementById('not-det-form').innerHTML = n.formulario_id
+      ? `<button type="button" class="cta-form" title="Completar el formulario"
+           onclick="cerrarNoticia(); abrirFormularioDesdeChatTrab(${n.formulario_id})">📋</button>` : '';
   } catch (e) {
     document.getElementById('not-det-titulo').textContent = 'No se pudo cargar la noticia.';
   }
@@ -1344,6 +1369,19 @@ if (document.getElementById('tp-tramites')) {
 
   document.getElementById('tram-nuevo').onclick = () => { verTram('tram-tipos'); cargarTiposTramite(); };
   document.getElementById('tram-tipos-volver').onclick = () => verTram('tram-inicio');
+
+  // Deep link a un formulario puntual: /app?tab=tramites&formulario=<id>.
+  // Sirve para linkearlo desde una notificación o una noticia; la seguridad
+  // no cambia (exige sesión, y /api/tramites/tipos solo devuelve los tipos
+  // activos DEL sindicato del trabajador -- un id ajeno simplemente no está).
+  {
+    const formularioPedido = parseInt(new URLSearchParams(location.search).get('formulario') || '', 10);
+    // diferido: abrirFormularioDesdeChatTrab se asigna a window más abajo
+    // en este mismo script (window.___ = async function, ver comentario ahí)
+    if (formularioPedido) setTimeout(() => {
+      if (window.abrirFormularioDesdeChatTrab) abrirFormularioDesdeChatTrab(formularioPedido);
+    }, 0);
+  }
   document.getElementById('tram-form-volver').onclick = () => verTram('tram-inicio');
   document.getElementById('tram-det-volver').onclick = () => { verTram('tram-inicio'); cargarMisTramites(); };
   document.getElementById('tram-buscar-btn').onclick = () => {
@@ -1709,6 +1747,37 @@ if (document.getElementById('tp-tramites')) {
   let tramNotasActuales = [];
   let tramitePanelActual = null;   // { id, numero, estado }
 
+  // Formulario adjuntado por el sindicato en un mensaje: tarjeta con botón
+  // que abre ESE formulario directo, sin ir a buscarlo a la lista.
+  function htmlFormularioChatTrab(n) {
+    if (!n.formulario_id) return '';
+    if (!n.formulario_titulo || !n.formulario_activo) {
+      return `<div class="tram-chat-form inactivo">📋 Formulario ya no disponible</div>`;
+    }
+    return `
+      <div class="tram-chat-form" onclick="event.stopPropagation(); abrirFormularioDesdeChatTrab(${n.formulario_id})">
+        <span class="tcf-rotulo">Formulario para iniciar</span>
+        📋 ${escTram(n.formulario_titulo)}
+        <button type="button" class="tcf-btn">Iniciar este trámite</button>
+      </div>`;
+  }
+  window.abrirFormularioDesdeChatTrab = async function (formularioId) {
+    try {
+      const r = await fetch('/api/tramites/tipos');
+      const data = await r.json();
+      const tipo = (data.tipos || []).find(t => t.id === formularioId);
+      if (!tipo) {
+        alert('Ese formulario ya no está disponible. Consultale a tu sindicato.');
+        return;
+      }
+      const overlay = document.getElementById('modal-recibo-overlay');
+      if (overlay) overlay.classList.remove('abierto');
+      abrirFormularioTramite(tipo);
+    } catch (e) {
+      alert('No se pudo abrir el formulario. Probá de nuevo.');
+    }
+  };
+
   function renderChatTramite(d) {
     tramNotasActuales = d.notas;
     const eventos = d.log.filter(l => l.evento === 'creado' || l.evento === 'cambio_estado');
@@ -1725,13 +1794,14 @@ if (document.getElementById('tp-tramites')) {
       }
       const n = it.n;
       const propio = n.autor === 'trabajador';
-      const texto = n.texto ? escTram(n.texto) : (n.tiene_adjunto ? '📎 Adjunto' : '');
+      const texto = n.texto ? escTram(n.texto) : (n.tiene_adjunto ? '📎 Adjunto' : (n.formulario_id ? '' : ''));
       return `
         <div class="tram-chat-fila ${propio ? 'propio' : 'ajeno'}" onclick="abrirMensajeTramiteTrab(${it.idx})">
           ${avatarHtmlTrab(n.autor)}
           <div class="tram-chat-burbuja">
             <div class="tram-chat-remitente">${n.autor === 'admin' ? 'Tu sindicato' : 'Vos'}</div>
             <div class="tram-chat-texto">${texto}</div>
+            ${htmlFormularioChatTrab(n)}
             <div class="tram-chat-meta">
               ${n.tiene_adjunto ? '<svg viewBox="0 0 24 24"><use href="#ic-clip"/></svg>' : ''}
               <span>${fmtHoraCorta(n.creado)}</span>
@@ -1791,6 +1861,7 @@ if (document.getElementById('tp-tramites')) {
       <div class="tram-chat-remitente">${n.autor === 'admin' ? 'Tu sindicato' : 'Vos'} · ${n.creado}</div>
       <div style="font-size:14px; line-height:1.5; margin-top:4px; white-space:pre-wrap;">${escTram(n.texto)}</div>
       ${n.tiene_adjunto ? `<a class="tram-msg-adjunto" href="/tramite-nota-adjunto/${n.id}" target="_blank" rel="noopener">📎 ${escTram(n.adjunto_nombre)}</a>` : ''}
+      ${htmlFormularioChatTrab(n)}
     ` : '';
     const terminado = tramitePanelActual.estado === 'terminado';
     document.getElementById('modal-recibo-contenido').innerHTML = `

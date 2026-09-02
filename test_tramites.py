@@ -363,6 +363,55 @@ def test_bloqueo_403_si_modulo_apagado():
     print("OK  test_bloqueo_403_si_modulo_apagado")
 
 
+def test_formulario_adjunto_en_chat():
+    # El admin adjunta un formulario en un mensaje del chat: la nota guarda
+    # la referencia y el detalle la resuelve con titulo/activo para que el
+    # trabajador vea la tarjeta "Iniciar este tramite". Un formulario ajeno,
+    # inactivo o inexistente se descarta en silencio (saneo defensivo).
+    r = admin_uom.post("/admin/tramite-tipo", data={
+        "titulo": "Registro de pasajeros", "codigo": "F02 AEFIP",
+        "campos_json": json.dumps([{"etiqueta": "Nombre", "tipo_dato": "texto", "obligatorio": True}]),
+    }, follow_redirects=False)
+    assert r.status_code == 303
+    pasajeros = next(t for t in db.tipos_tramite_del_sindicato(SID_UOM)
+                     if t["codigo"] == "F02 AEFIP")
+
+    r = admin_uom.post(f"/admin/tramite/{TRAMITE_ID}/nota", data={
+        "texto": "Aprobado. Completá el registro de pasajeros.",
+        "formulario_id": str(pasajeros["id"]),
+    })
+    assert r.status_code == 200
+    detalle = db.tramite_detalle(TRAMITE_ID)
+    nota = detalle["notas"][-1]
+    assert nota["formulario_id"] == pasajeros["id"]
+    assert nota["formulario_titulo"] == "Registro de pasajeros"
+    assert nota["formulario_activo"] is True
+
+    # Nota SOLO con formulario (sin texto ni adjunto): valida.
+    r = admin_uom.post(f"/admin/tramite/{TRAMITE_ID}/nota",
+                       data={"formulario_id": str(pasajeros["id"])})
+    assert r.status_code == 200
+
+    # Formulario inexistente o basura: la nota entra sin referencia.
+    r = admin_uom.post(f"/admin/tramite/{TRAMITE_ID}/nota",
+                       data={"texto": "hola", "formulario_id": "999999"})
+    assert r.status_code == 200
+    assert db.tramite_detalle(TRAMITE_ID)["notas"][-1]["formulario_id"] is None
+    r = admin_uom.post(f"/admin/tramite/{TRAMITE_ID}/nota",
+                       data={"texto": "hola", "formulario_id": "basura"})
+    assert r.status_code == 200
+    assert db.tramite_detalle(TRAMITE_ID)["notas"][-1]["formulario_id"] is None
+
+    # Un tipo que despues se desactiva: la referencia queda pero el detalle
+    # lo marca inactivo (la tarjeta dice "ya no disponible").
+    db.editar_tipo_tramite(pasajeros["id"], SID_UOM, "Registro de pasajeros",
+                           "F02 AEFIP", False, pasajeros["campos"])
+    nota = db.tramite_detalle(TRAMITE_ID)["notas"][-3]
+    assert nota["formulario_id"] == pasajeros["id"] and nota["formulario_activo"] is False
+    print("OK  test_formulario_adjunto_en_chat")
+
+
+
 if __name__ == "__main__":
     test_alta_tipo_tramite_con_campos_de_cada_tipo_dato()
     test_validacion_obligatorio_falta_campo()
@@ -372,6 +421,7 @@ if __name__ == "__main__":
     test_numeracion_expediente_sin_colision()
     test_cambio_estado_dispara_log_y_notificacion()
     test_nota_admin_y_trabajador_en_thread_correcto()
+    test_formulario_adjunto_en_chat()
     test_campo_seleccion_fija()
     test_ancho_campos_y_nuevos_tipos_de_campo()
     test_cantidad_nuevos_para_el_polling_del_globo()

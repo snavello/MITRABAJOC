@@ -368,6 +368,11 @@
   .vap-adjunto { display:inline-flex; align-items:center; gap:5px; font-size:11px;
     background:var(--papel); border:1px solid var(--linea); border-radius:7px;
     padding:4px 9px; margin-top:7px; overflow-wrap:anywhere; }
+  /* Ícono del formulario asociado: círculo de acento, mismo que verá el
+     afiliado ("completá los datos haciendo click acá" va en el texto) */
+  .vap-form { display:inline-flex; align-items:center; justify-content:center;
+    width:38px; height:38px; border-radius:50%; background:var(--marca-acento);
+    font-size:17px; margin-top:8px; box-shadow:0 3px 8px rgba(0,0,0,.15); }
   .tram-preview-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:0 12px; }
   .tp-completo { grid-column:span 12; }
   .tp-mitad { grid-column:span 6; }
@@ -412,6 +417,12 @@
     border:1.5px solid var(--marca-acento); }
   .tram-chat-avatar-fallback svg { width:15px; height:15px; stroke:var(--marca-base); stroke-width:1.8; fill:none; }
   .tram-chat-burbuja { border-radius:14px; padding:9px 12px; min-width:64px; }
+  /* Formulario adjuntado en un mensaje del chat (constancia de qué se mandó) */
+  .tram-chat-form { display:flex; flex-direction:column; gap:1px; margin-top:7px;
+    background:#fff; border:1px solid var(--linea); border-left:3px solid var(--marca-acento);
+    border-radius:9px; padding:7px 11px; font-size:12.5px; font-weight:650; color:var(--tinta); }
+  .tram-chat-form span { font-size:10px; font-weight:500; color:var(--gris);
+    text-transform:uppercase; letter-spacing:.6px; }
   .tram-chat-fila.propio .tram-chat-burbuja { background:color-mix(in srgb, var(--marca-acento) 20%, #fff); border-bottom-right-radius:4px; }
   .tram-chat-fila.ajeno .tram-chat-burbuja { background:#fff; border:1px solid var(--linea); border-bottom-left-radius:4px; }
   .tram-chat-remitente { font-size:10.5px; font-weight:650; color:var(--marca-primario); margin-bottom:2px; }
@@ -991,6 +1002,16 @@
         <div class="campo"><label>Vigente hasta *</label><input name="fecha_hasta" id="not-hasta" type="date" required></div>
         <div class="campo"><label>Imagen 1 (opcional)</label><input name="imagen1" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
         <div class="campo"><label>Imagen 2 (opcional)</label><input name="imagen2" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
+        {% if 'tramites' in modulos and tipos_tramite %}
+        <div class="campo full">
+          <label>Formulario para iniciar (opcional)</label>
+          <select name="formulario_id" id="not-formulario">
+            <option value="">Sin formulario</option>
+            {% for t in tipos_tramite if t.activo %}<option value="{{ t.id }}">📋 {{ t.titulo }}</option>{% endfor %}
+          </select>
+          <span class="muted" style="font-size:11.5px;">El afiliado ve un ícono que le abre el formulario — escribí en el texto algo como "completá los datos haciendo click acá".</span>
+        </div>
+        {% endif %}
         {% if seccionales %}
         <div class="campo full">
           <label>Destino</label>
@@ -1017,6 +1038,7 @@
               <div class="vap-tit" id="pn-titulo">Título de la noticia</div>
               <div class="vap-baj" id="pn-bajada"></div>
               <div class="vap-txt" id="pn-texto">El texto completo se muestra al tocar la noticia.</div>
+              <span class="vap-form oculto" id="pn-form" title="Abre el formulario asociado">📋</span>
               <div class="vap-meta" id="pn-vigencia">Vigencia sin definir</div>
             </div>
           </div>
@@ -1066,6 +1088,16 @@
         <div class="campo"><label>Vigente desde *</label><input name="fecha_desde" id="ben-desde" type="date" required></div>
         <div class="campo"><label>Vigente hasta *</label><input name="fecha_hasta" id="ben-hasta" type="date" required></div>
         <div class="campo"><label>Imagen (se muestra en el carrusel)</label><input name="imagen" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></div>
+        {% if 'tramites' in modulos and tipos_tramite %}
+        <div class="campo full">
+          <label>Formulario para iniciar (opcional)</label>
+          <select name="formulario_id" id="ben-formulario">
+            <option value="">Sin formulario</option>
+            {% for t in tipos_tramite if t.activo %}<option value="{{ t.id }}">📋 {{ t.titulo }}</option>{% endfor %}
+          </select>
+          <span class="muted" style="font-size:11.5px;">El afiliado ve un ícono que le abre el formulario (ej.: la reserva del beneficio).</span>
+        </div>
+        {% endif %}
         {% if seccionales %}
         <div class="campo full">
           <label>Destino</label>
@@ -1092,6 +1124,7 @@
               <div class="vap-carrusel-rubro" id="pb-rubro">Rubro del beneficio</div>
             </div>
             <div class="vap-txt" id="pb-descripcion" style="margin-top:9px;">La descripción se muestra al tocar el beneficio.</div>
+            <span class="vap-form oculto" id="pb-form" title="Abre el formulario asociado">📋</span>
             <div class="vap-link oculto" id="pb-link"></div>
             <div class="vap-meta" id="pb-vigencia">Vigencia sin definir</div>
           </div>
@@ -1174,6 +1207,16 @@
         <div class="campo full"><label>Adjunto (opcional, imagen/PDF/Word, hasta 5 MB)</label>
           <input name="adjunto" type="file" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,.doc,.docx">
         </div>
+        {% if 'tramites' in modulos and tipos_tramite %}
+        <div class="campo full">
+          <label>Formulario para iniciar (opcional)</label>
+          <select name="formulario_id" id="notif-formulario">
+            <option value="">Sin formulario</option>
+            {% for t in tipos_tramite if t.activo %}<option value="{{ t.id }}">📋 {{ t.titulo }}</option>{% endfor %}
+          </select>
+          <span class="muted" style="font-size:11.5px;">El afiliado ve un ícono que le abre el formulario — escribí en el mensaje "completá los datos haciendo click acá".</span>
+        </div>
+        {% endif %}
       </div>
       <div id="notif-valores-hidden"></div>
       <div id="notif-preview-box" class="oculto" style="margin:12px 0; padding:11px 14px; background:#f4f2ec; border-radius:8px; font-size:13.5px;"></div>
@@ -1189,6 +1232,7 @@
             <div class="vap-card vap-notif">
               <div class="vap-remitente" id="pf-remitente">{{ marca.nombre if marca else 'Tu sindicato' }}</div>
               <div class="vap-txt" id="pf-mensaje">El mensaje se muestra acá.</div>
+              <span class="vap-form oculto" id="pf-form" title="Abre el formulario asociado">📋</span>
               <div class="vap-adjunto oculto" id="pf-adjunto"></div>
               <div class="vap-meta">Recibida recién · sin leer</div>
             </div>
@@ -1333,6 +1377,7 @@
         <td>{% if t.activo %}<span class="tag tag-si">activo</span>{% else %}<span class="tag" style="background:#eee;color:#888;">inactivo</span>{% endif %}</td>
         <td class="muted">{{ t.creado }}</td>
         <td style="white-space:nowrap; text-align:right;">
+          <button type="button" class="mini" onclick="copiarLinkFormulario({{ t.id }}, this)" title="Link directo al formulario, para pegar en una notificación o noticia">Link</button>
           <button type="button" class="mini" onclick='editarTramiteTipo({{ t | tojson }})'>Editar</button>
           <form method="post" action="/admin/tramite-tipo/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar este tipo de trámite?')">
             <input type="hidden" name="id" value="{{ t.id }}">
@@ -1472,6 +1517,16 @@
           <div class="campo full"><label>Adjunto (opcional, imagen/PDF/Word, hasta 5 MB)</label>
             <input name="adjunto" type="file" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,.doc,.docx">
           </div>
+          {% if tipos_tramite_empresa %}
+          <div class="campo full">
+            <label>Formulario para iniciar (opcional)</label>
+            <select name="formulario_id" id="notifemp-formulario">
+              <option value="">Sin formulario</option>
+              {% for t in tipos_tramite_empresa if t.activo %}<option value="{{ t.id }}">📋 {{ t.titulo }}</option>{% endfor %}
+            </select>
+            <span class="muted" style="font-size:11.5px;">La empresa ve un ícono que le abre el formulario — escribí en el mensaje "completá los datos haciendo click acá".</span>
+          </div>
+          {% endif %}
         </div>
         <div id="notifemp-valores-hidden"></div>
         <div id="notifemp-preview-box" class="oculto" style="margin:12px 0; padding:11px 14px; background:#f4f2ec; border-radius:8px; font-size:13.5px;"></div>
@@ -2712,6 +2767,19 @@ if (formTramiteTipo) {
   document.getElementById('tt-codigo').addEventListener('input', renderVistaPreviaTramite);
 }
 
+// Link directo a un formulario en la app del trabajador
+// (/app?tab=tramites&formulario=<id>): para pegar en una notificación o
+// una noticia. La seguridad no cambia: exige sesión de trabajador y el
+// formulario tiene que ser un tipo activo de SU sindicato.
+function copiarLinkFormulario(tipoId, btn) {
+  const url = location.origin + '/app?tab=tramites&formulario=' + tipoId;
+  navigator.clipboard.writeText(url).then(() => {
+    const original = btn.textContent;
+    btn.textContent = 'Copiado ✓';
+    setTimeout(() => { btn.textContent = original; }, 1600);
+  }).catch(() => prompt('Copialo a mano:', url));
+}
+
 // El subtab "Crear formularios" tiene que abrir en blanco: si quedó un tipo
 // en edición (llegó por el botón "Editar" de la tabla), se limpia. Un
 // BORRADOR de alta (sin id) NO se toca: cambiar de subtab no puede comerse
@@ -2842,6 +2910,7 @@ function renderChatTramiteAdmin(d, familia) {
         <div class="tram-chat-burbuja">
           <div class="tram-chat-remitente">${propio ? 'Vos (sindicato)' : etiquetaOtro}</div>
           <div class="tram-chat-texto">${texto}</div>
+          ${htmlTarjetaFormularioChat(n)}
           <div class="tram-chat-meta">
             ${n.tiene_adjunto ? '<svg viewBox="0 0 24 24"><use href="#ic-clip"/></svg>' : ''}
             <span>${fmtHoraCortaAdmin(n.creado)}</span>
@@ -2902,6 +2971,19 @@ function abrirResponderTramiteAdmin() {
 function cerrarMensajeTramite() {
   document.getElementById('modal-mensaje-tramite-overlay').classList.remove('abierto');
 }
+// Formularios activos por familia, para adjuntar en un mensaje del chat
+// (ej.: aprobás la reserva de turismo y le mandás "Registro de pasajeros").
+const FORMS_CHAT = {
+  trabajador: [{% for t in tipos_tramite | default([]) if t.activo %}{id: {{ t.id }}, titulo: {{ t.titulo | tojson }}},{% endfor %}],
+  empresa: [{% for t in tipos_tramite_empresa | default([]) if t.activo %}{id: {{ t.id }}, titulo: {{ t.titulo | tojson }}},{% endfor %}],
+};
+function htmlTarjetaFormularioChat(n) {
+  if (!n.formulario_id) return '';
+  const titulo = n.formulario_titulo
+    ? escHtml(n.formulario_titulo) + (n.formulario_activo ? '' : ' (desactivado)')
+    : 'Formulario ya no disponible';
+  return `<div class="tram-chat-form">📋 ${titulo}<span>Formulario para iniciar</span></div>`;
+}
 function _abrirModalMensajeAdmin(n) {
   if (!mensajeTramiteCtx) return;
   const familia = mensajeTramiteCtx.familia;
@@ -2911,7 +2993,9 @@ function _abrirModalMensajeAdmin(n) {
     <div class="tram-chat-remitente">${n.autor === 'admin' ? 'Vos (sindicato)' : etiquetaOtro} · ${n.creado}</div>
     <div style="font-size:14px; line-height:1.5; margin-top:4px; white-space:pre-wrap;">${escHtml(n.texto)}</div>
     ${n.tiene_adjunto ? `<a class="tram-msg-adjunto" href="${familia === 'empresa' ? '/tramite-empresa-nota-adjunto/' : '/tramite-nota-adjunto/'}${n.id}" target="_blank" rel="noopener">📎 ${escHtml(n.adjunto_nombre)}</a>` : ''}
+    ${htmlTarjetaFormularioChat(n)}
   ` : '';
+  const formsFamilia = FORMS_CHAT[familia] || [];
   const terminado = mensajeTramiteCtx.estado === 'terminado';
   const opcionesEstado = {{ estados_tramite | tojson }}.map(e =>
     `<option value="${e}" ${e === mensajeTramiteCtx.estado ? 'selected' : ''}>${ {{ estados_tramite_label | tojson }}[e] }</option>`).join('');
@@ -2920,6 +3004,11 @@ function _abrirModalMensajeAdmin(n) {
     ${terminado ? '<p class="muted" style="font-size:12.5px; margin-top:10px;">Trámite terminado -- no se puede modificar.</p>' : `
     <form id="mmt-form-nota" class="tram-msg-responder" onsubmit="return enviarNotaDesdeModalAdmin(event)">
       <textarea id="mmt-nota-texto" rows="3" placeholder="Escribile una nota o pedile más información…"></textarea>
+      ${formsFamilia.length ? `
+      <select id="mmt-nota-formulario" style="margin-top:8px; width:100%; font-size:12.5px;">
+        <option value="">Adjuntar un formulario para iniciar (opcional)</option>
+        ${formsFamilia.map(t => `<option value="${t.id}">📋 ${escHtml(t.titulo)}</option>`).join('')}
+      </select>` : ''}
       <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
         <input type="file" id="mmt-nota-adjunto" style="font-size:12px; flex:1;">
         <button type="submit" class="mini">Enviar</button>
@@ -2947,6 +3036,8 @@ function enviarNotaDesdeModalAdmin(ev) {
   const fd = new FormData();
   fd.append('texto', texto);
   if (archivo) fd.append('adjunto', archivo);
+  const selForm = document.getElementById('mmt-nota-formulario');
+  if (selForm && selForm.value) fd.append('formulario_id', selForm.value);
   fetch(_urlTramiteAdmin('/nota'), {method: 'POST', body: fd})
     .then(r => { if (!r.ok) throw new Error(); return r.json(); })
     .then(() => { cerrarMensajeTramite(); _refrescarTrasModalAdmin(); })
@@ -3434,6 +3525,7 @@ function actualizarPreviewNoticia() {
   g('pn-bajada').textContent = g('not-bajada').value.trim();
   g('pn-texto').textContent = g('not-texto').value.trim() || 'El texto completo se muestra al tocar la noticia.';
   g('pn-vigencia').textContent = _vigenciaVap(g('not-desde').value, g('not-hasta').value);
+  if (g('pn-form')) g('pn-form').classList.toggle('oculto', !(g('not-formulario') && g('not-formulario').value));
 }
 function actualizarPreviewBeneficio() {
   const g = id => document.getElementById(id);
@@ -3444,6 +3536,7 @@ function actualizarPreviewBeneficio() {
   g('pb-link').textContent = link;
   g('pb-link').classList.toggle('oculto', !link);
   g('pb-vigencia').textContent = _vigenciaVap(g('ben-desde').value, g('ben-hasta').value);
+  if (g('pb-form')) g('pb-form').classList.toggle('oculto', !(g('ben-formulario') && g('ben-formulario').value));
 }
 function actualizarPreviewNotificacion() {
   const g = id => document.getElementById(id);
@@ -3452,6 +3545,7 @@ function actualizarPreviewNotificacion() {
   if (remitente) g('pf-remitente').textContent = remitente;
   else if (g('pf-remitente').dataset.default) g('pf-remitente').textContent = g('pf-remitente').dataset.default;
   g('pf-mensaje').textContent = g('notif-texto').value.trim() || 'El mensaje se muestra acá.';
+  if (g('pf-form')) g('pf-form').classList.toggle('oculto', !(g('notif-formulario') && g('notif-formulario').value));
 }
 (function initVistasAfiliado() {
   // guardas por panel: cada módulo puede estar apagado y su form no existir
@@ -3460,6 +3554,7 @@ function actualizarPreviewNotificacion() {
       document.getElementById(id).addEventListener('input', actualizarPreviewNoticia));
     ['not-desde', 'not-hasta'].forEach(id =>
       document.getElementById(id).addEventListener('change', actualizarPreviewNoticia));
+    document.getElementById('not-formulario')?.addEventListener('change', actualizarPreviewNoticia);
     const img1 = document.querySelector('#form-noticia input[name=imagen1]');
     if (img1) img1.addEventListener('change', () => _imagenVap(img1, 'pn-img', true));
   }
@@ -3468,6 +3563,7 @@ function actualizarPreviewNotificacion() {
       document.getElementById(id).addEventListener('input', actualizarPreviewBeneficio));
     ['ben-desde', 'ben-hasta'].forEach(id =>
       document.getElementById(id).addEventListener('change', actualizarPreviewBeneficio));
+    document.getElementById('ben-formulario')?.addEventListener('change', actualizarPreviewBeneficio);
     const img = document.querySelector('#form-beneficio input[name=imagen]');
     if (img) img.addEventListener('change', () => _imagenVap(img, 'pb-img', false));
   }
@@ -3476,6 +3572,7 @@ function actualizarPreviewNotificacion() {
     rem.dataset.default = rem.textContent;
     ['notif-remitente', 'notif-texto'].forEach(id =>
       document.getElementById(id).addEventListener('input', actualizarPreviewNotificacion));
+    document.getElementById('notif-formulario')?.addEventListener('change', actualizarPreviewNotificacion);
     const adj = document.querySelector('#form-notificacion input[name=adjunto]');
     if (adj) adj.addEventListener('change', () => {
       const chip = document.getElementById('pf-adjunto');
@@ -3494,6 +3591,8 @@ function editarNoticia(n) {
   document.getElementById('not-desde').value = n.fecha_desde || '';
   document.getElementById('not-hasta').value = n.fecha_hasta || '';
   marcarDestino('not-destino', n.destino_seccionales);
+  const notForm = document.getElementById('not-formulario');
+  if (notForm) notForm.value = n.formulario_id || '';
   document.getElementById('noticias-titulo').textContent = 'Editar noticia: ' + n.titulo;
   document.getElementById('form-noticia').querySelector('button[type=submit]').textContent = 'Guardar cambios';
   document.getElementById('not-cancel').classList.remove('oculto');
@@ -3518,6 +3617,8 @@ function editarBeneficio(b) {
   document.getElementById('ben-desde').value = b.fecha_desde || '';
   document.getElementById('ben-hasta').value = b.fecha_hasta || '';
   marcarDestino('ben-destino', b.destino_seccionales);
+  const benForm = document.getElementById('ben-formulario');
+  if (benForm) benForm.value = b.formulario_id || '';
   document.getElementById('beneficios-titulo').textContent = 'Editar beneficio: ' + b.rubro;
   document.getElementById('form-beneficio').querySelector('button[type=submit]').textContent = 'Guardar cambios';
   document.getElementById('ben-cancel').classList.remove('oculto');

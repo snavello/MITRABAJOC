@@ -171,6 +171,41 @@ def test_borrar_noticia():
     print("OK  test_borrar_noticia")
 
 
+
+def test_formulario_para_iniciar_en_noticia():
+    # La noticia puede asociar un formulario de tramites: el trabajador ve
+    # un icono que lo abre. Solo llega al detalle si el tipo sigue ACTIVO
+    # del sindicato; un id ajeno o basura se descarta al guardar.
+    tid = db.crear_tipo_tramite(SID_UOM, "Inscripcion colonia", "COL UOM",
+                                 [{"etiqueta": "Nombre", "tipo_dato": "texto", "obligatorio": True}])
+    r = admin_client.post("/admin/noticia", data={
+        "titulo": "Abrio la colonia de vacaciones",
+        "texto_completo": "Completa los datos haciendo click aca.",
+        "fecha_desde": "2026-01-01", "fecha_hasta": "2026-12-31",
+        "formulario_id": str(tid),
+    }, follow_redirects=False)
+    assert r.status_code == 303
+    noticia = next(n for n in db.noticias_del_sindicato(SID_UOM)
+                   if n["titulo"].startswith("Abrio la colonia"))
+    assert noticia["formulario_id"] == tid
+    d = trab_client.get(f"/api/noticia/{noticia['id']}").json()
+    assert d["formulario_id"] == tid
+    # tipo desactivado -> el icono desaparece (formulario_id None en la API)
+    tipo = db.tipo_tramite_por_id(tid)
+    db.editar_tipo_tramite(tid, SID_UOM, tipo["titulo"], tipo["codigo"], False, tipo["campos"])
+    assert trab_client.get(f"/api/noticia/{noticia['id']}").json()["formulario_id"] is None
+    # id basura o ajeno: se guarda sin referencia
+    r = admin_client.post("/admin/noticia", data={
+        "titulo": "Sin formulario valido", "texto_completo": "x",
+        "fecha_desde": "2026-01-01", "fecha_hasta": "2026-12-31",
+        "formulario_id": "999999",
+    }, follow_redirects=False)
+    assert r.status_code == 303
+    n2 = next(n for n in db.noticias_del_sindicato(SID_UOM) if n["titulo"] == "Sin formulario valido")
+    assert n2["formulario_id"] is None
+    print("OK  test_formulario_para_iniciar_en_noticia")
+
+
 if __name__ == "__main__":
     test_vigencia_helper()
     test_alta_noticia_desde_admin()
@@ -181,4 +216,5 @@ if __name__ == "__main__":
     test_admin_no_edita_noticia_de_otro_sindicato()
     test_miniatura_se_ve_en_el_feed_si_tiene_imagen1()
     test_borrar_noticia()
+    test_formulario_para_iniciar_en_noticia()
     print("\nTodo OK — noticias.")

@@ -220,6 +220,26 @@ def test_adjunto_mayor_a_5mb_no_se_guarda():
     print("OK  test_adjunto_mayor_a_5mb_no_se_guarda")
 
 
+
+def test_formulario_para_iniciar_en_notificacion():
+    # La notificacion puede asociar un formulario: el destinatario ve el
+    # icono mientras el tipo siga activo.
+    tid = db.crear_tipo_tramite(SID_UOM, "Actualizacion de datos", "ACT UOM",
+                                 [{"etiqueta": "Telefono", "tipo_dato": "texto", "obligatorio": True}])
+    r = admin_uom.post("/admin/notificacion", data={
+        "remitente": "Padron", "texto": "Completa los datos haciendo click aca.",
+        "criterio": "cuil", "valores": ["20111111119"],
+        "formulario_id": str(tid),
+    }, follow_redirects=False)
+    assert r.status_code == 303
+    notifs = db.notificaciones_de_trabajador("20111111119", SID_UOM)
+    assert notifs[0]["formulario_id"] == tid
+    tipo = db.tipo_tramite_por_id(tid)
+    db.editar_tipo_tramite(tid, SID_UOM, tipo["titulo"], tipo["codigo"], False, tipo["campos"])
+    assert db.notificaciones_de_trabajador("20111111119", SID_UOM)[0]["formulario_id"] is None
+    print("OK  test_formulario_para_iniciar_en_notificacion")
+
+
 if __name__ == "__main__":
     test_resolver_destinatarios_por_cuil()
     test_resolver_destinatarios_por_cuit_empleador()
@@ -235,4 +255,5 @@ if __name__ == "__main__":
     test_bloqueo_403_si_modulo_apagado()
     test_origen_sistema_distinto_en_listado()
     test_adjunto_mayor_a_5mb_no_se_guarda()
+    test_formulario_para_iniciar_en_notificacion()
     print("\nTodo OK — notificaciones.")

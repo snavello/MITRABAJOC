@@ -107,6 +107,12 @@
   .notif-adjunto { display: inline-block; margin-top: 9px; font-size: 12px; color: var(--marca-primario);
     text-decoration: none; font-weight: 600; }
   .notif-vacio { text-align: center; padding: 34px 10px; color: var(--gris); font-size: 13px; }
+  /* Ícono del formulario asociado (deep link a Trámites): el texto de al
+     lado lo escribe el sindicato ("completá los datos haciendo click acá") */
+  .cta-form { display: inline-flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border-radius: 50%; background: var(--marca-acento);
+    font-size: 20px; text-decoration: none; margin-top: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.22); }
 
   /* ---------- Perfil: mismo criterio claro+marca que Notificaciones (arriba)
      -- antes usaba el .modal-hoja oscuro compartido con noticia/beneficio/
@@ -361,6 +367,7 @@
     <div class="ant" id="not-det-antiguedad" style="opacity:.6; font-size:11px; margin:8px 0 10px;"></div>
     <div id="not-det-texto" style="font-size:13.5px; line-height:1.6;"></div>
     <div id="not-det-imagenes" style="display:flex; gap:8px; margin-top:14px;"></div>
+    <div id="not-det-form"></div>
   </div>
 </div>
 
@@ -371,6 +378,7 @@
     <h3 id="ben-det-rubro"></h3>
     <div id="ben-det-texto" style="font-size:13.5px; line-height:1.6; margin-top:8px;"></div>
     <div id="ben-det-link" style="margin-top:14px;"></div>
+    <div id="ben-det-form"></div>
   </div>
 </div>
 
@@ -528,11 +536,22 @@ function reiniciarAutoplayCarrusel() {
 }
 reiniciarAutoplayCarrusel();
 
+// Ícono del formulario asociado ("completá los datos haciendo click acá"
+// lo escribe el sindicato en el texto): abre el formulario directo vía el
+// deep link de Trámites. Solo llega con formulario_id si el tipo sigue
+// activo (lo decide el servidor).
+function ctaFormularioHtml(formularioId) {
+  if (!formularioId) return '';
+  return `<a class="cta-form" href="/app?tab=tramites&formulario=${formularioId}"
+    title="Completar el formulario" onclick="event.stopPropagation()">📋</a>`;
+}
+
 async function abrirBeneficio(id) {
   const ov = document.getElementById('overlay-beneficio');
   document.getElementById('ben-det-rubro').textContent = 'Cargando…';
   document.getElementById('ben-det-texto').innerHTML = '';
   document.getElementById('ben-det-link').innerHTML = '';
+  document.getElementById('ben-det-form').innerHTML = '';
   ov.classList.add('abierto');
   try {
     const r = await fetch('/api/beneficio/' + id);
@@ -544,6 +563,7 @@ async function abrirBeneficio(id) {
       document.getElementById('ben-det-link').innerHTML =
         '<a href="' + b.link + '" target="_blank" rel="noopener" style="color:var(--marca-acento); font-weight:600; text-decoration:none;">Ver más →</a>';
     }
+    document.getElementById('ben-det-form').innerHTML = ctaFormularioHtml(b.formulario_id);
   } catch (e) {
     document.getElementById('ben-det-rubro').textContent = 'No se pudo cargar el beneficio.';
   }
@@ -557,6 +577,7 @@ async function abrirNoticia(id) {
   document.getElementById('not-det-antiguedad').textContent = '';
   document.getElementById('not-det-texto').innerHTML = '';
   document.getElementById('not-det-imagenes').innerHTML = '';
+  document.getElementById('not-det-form').innerHTML = '';
   ov.classList.add('abierto');
   try {
     const r = await fetch('/api/noticia/' + id);
@@ -569,6 +590,7 @@ async function abrirNoticia(id) {
     const imgs = document.getElementById('not-det-imagenes');
     if (n.tiene_imagen1) imgs.innerHTML += `<img src="/noticia-imagen/${id}/1" onclick="abrirImagen('/noticia-imagen/${id}/1')" style="width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer;">`;
     if (n.tiene_imagen2) imgs.innerHTML += `<img src="/noticia-imagen/${id}/2" onclick="abrirImagen('/noticia-imagen/${id}/2')" style="width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer;">`;
+    document.getElementById('not-det-form').innerHTML = ctaFormularioHtml(n.formulario_id);
   } catch (e) {
     document.getElementById('not-det-titulo').textContent = 'No se pudo cargar la noticia.';
   }
@@ -615,7 +637,7 @@ function renderNotificaciones(items) {
         <span class="notif-fecha">${fmtFechaHora(n.enviado_en)}</span>
       </div>
       <div class="notif-snippet">${(n.texto || '').replace(/</g, '&lt;')}</div>
-      <div class="notif-texto-full">${n.texto_html}${n.tiene_adjunto ? `<br><a class="notif-adjunto" href="/notificacion-adjunto/${n.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📎 Ver adjunto</a>` : ''}</div>
+      <div class="notif-texto-full">${n.texto_html}${n.tiene_adjunto ? `<br><a class="notif-adjunto" href="/notificacion-adjunto/${n.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📎 Ver adjunto</a>` : ''}${n.formulario_id ? '<br>' + ctaFormularioHtml(n.formulario_id) : ''}</div>
     </div>
   `).join('');
 }
