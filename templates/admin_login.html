@@ -9,56 +9,132 @@
     font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal;
     src: url('/static/fonts/barlow-condensed-bold.woff2') format('woff2');
   }
+  /* Rediseño "credencial viva sobre colmena nocturna" (2026-09-02, elegido
+     por Sd entre 4 propuestas): fondo oscuro de marca con el panal de
+     Colm3na respirando, y el formulario como una credencial con brillo y
+     tilt 3D leves. Todo inline: estas pantallas son standalone, no
+     importan marca.css. */
   :root {
     --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
     --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
-    --papel:#f7f5f0; --linea:#dcd8cf; --gris:#5c5a54; --alerta:#b23a2e;
+    --alerta: {{ marca_plataforma.color_acento if marca_plataforma else '#b23a2e' }};
+    /* La miel es el ámbar del panal del LOGO de Colm3na (contenido fijo,
+       no configurable): banda, chip de rol y botón armonizan con él. El
+       acento configurable queda para los errores. */
+    --miel:#f0a01e;
     --fuente-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   }
   * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
-  body { background:var(--papel); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
-  /* Vidrio sutil, mismo criterio que las tarjetas de la portada (marca.css
-     .vidrio/.grano): degradé gris + brillo diagonal + grano -- todo inline
-     porque estas 3 pantallas son standalone, no importan marca.css. El
-     fondo gris de base ya estaba elegido; esto le suma la textura de vidrio. */
-  .caja { background: linear-gradient(155deg, #bfc3bf 0%, #9ea29d 100%);
-    border:1px solid rgba(255,255,255,.18); border-radius:16px; padding:34px 30px;
-    max-width:380px; width:100%; position:relative; overflow:hidden; }
-  .caja::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    opacity:.10; mix-blend-mode:overlay; }
-  .caja::after { content:""; position:absolute; top:-60%; left:-30%; width:90%; height:90%;
-    background: linear-gradient(120deg, rgba(255,255,255,.28), transparent 60%);
-    transform: rotate(-18deg); pointer-events:none; z-index:0; }
-  .caja > * { position:relative; z-index:1; }
-  /* Logo: 106px ya era +40% sobre el resto de la app; en desktop se le suma
-     otro +40% (148px) porque en el login es lo único que hay para mirar --
-     en mobile se queda en el tamaño ya elegido (85px). */
-  .logo-recuadro { display:block; width:222px; height:222px; object-fit:contain; margin:0 auto 18px; }
-  @media (max-width:600px) { .logo-recuadro { width:170px; height:170px; } }
-  h1 { font-family: var(--fuente-display); font-weight:700; font-size:19px; color:var(--tinta);
-    text-align:center; margin-bottom:22px; letter-spacing:.01em; }
-  label { display:block; font-size:13px; color:var(--gris); margin-bottom:6px; margin-top:14px; }
+  body { min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:24px 18px; position:relative; overflow:hidden;
+    background:radial-gradient(900px 480px at 78% -10%, color-mix(in srgb, var(--agua) 26%, transparent), transparent 62%),
+               linear-gradient(160deg, #0d1626 20%, var(--tinta) 70%, color-mix(in srgb, var(--tinta) 72%, #4a6da8)); }
+  body::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.08; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .panal { position:fixed; pointer-events:none; z-index:0; animation:respira 9s ease-in-out infinite; }
+  .panal.a { top:-40px; right:-30px; }
+  .panal.b { bottom:-60px; left:-40px; animation-delay:-4s; }
+  @keyframes respira { 0%,100% { opacity:.10; } 50% { opacity:.2; } }
+  @keyframes entra { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+  @media (max-width:600px) { .panal { width:220px; height:auto; } }
+
+  .escena { perspective:1100px; position:relative; z-index:2; width:min(410px,100%); }
+  .cred { border-radius:20px; position:relative; transform-style:preserve-3d;
+    transition:transform .18s ease-out; padding:30px 30px 24px;
+    background:linear-gradient(150deg, color-mix(in srgb, var(--tinta) 78%, #4a6da8), var(--tinta) 55%, color-mix(in srgb, var(--tinta) 72%, var(--agua)));
+    border:1px solid rgba(255,255,255,.14); box-shadow:0 34px 80px rgba(0,0,0,.55);
+    animation:entra .6s ease both; }
+  .cred::before { content:""; position:absolute; inset:0; border-radius:20px; pointer-events:none;
+    background:radial-gradient(340px 200px at var(--mx,70%) var(--my,20%), rgba(255,255,255,.13), transparent 65%); }
+  .banda { position:absolute; top:0; left:24px; right:24px; height:5px; border-radius:0 0 5px 5px;
+    background:linear-gradient(90deg, var(--miel), var(--agua)); }
+  .logo { display:block; margin:6px auto 14px; max-width:220px; max-height:132px; width:auto; height:auto; object-fit:contain; }
+  @media (max-width:600px) { .logo { max-width:170px; max-height:100px; } }
+  .chip-rol { display:table; margin:0 auto 20px; font-family:var(--fuente-display); font-size:14px;
+    letter-spacing:2.4px; text-transform:uppercase; color:var(--miel);
+    border:1px solid color-mix(in srgb, var(--miel) 55%, transparent); border-radius:20px; padding:4px 14px; }
+  .tabs { display:flex; gap:6px; margin-bottom:18px; background:rgba(255,255,255,.07); padding:4px; border-radius:10px; }
+  .tab { flex:1; text-align:center; padding:9px; border-radius:7px; font-size:13.5px; font-weight:600;
+    cursor:pointer; color:rgba(255,255,255,.6); border:none; background:none; font-family:inherit; }
+  .tab.activo { background:rgba(255,255,255,.92); color:var(--tinta); }
+  label { display:block; font-size:10px; letter-spacing:1.6px; text-transform:uppercase; font-weight:600;
+    color:rgba(255,255,255,.55); margin-bottom:6px; margin-top:15px; }
   label:first-of-type { margin-top:0; }
-  input { width:100%; padding:11px 13px; border:1px solid #ccc; border-radius:9px; font-size:15px; font-family:inherit; }
-  input:focus { outline:2px solid #b9d6ce; border-color:var(--agua); }
-  button { width:100%; margin-top:20px; padding:12px; background:var(--tinta); color:#fff; border:none; border-radius:9px; font-size:15px; font-weight:500; cursor:pointer; font-family:inherit; }
-  .error { background:#f8e5e2; color:var(--alerta); font-size:13px; padding:10px 13px; border-radius:8px; margin-bottom:16px; }
+  input { width:100%; padding:13px 14px; border-radius:10px; font-size:16px; font-family:inherit;
+    background:rgba(9,15,26,.6); border:1px solid rgba(255,255,255,.14); color:#fff; }
+  input::placeholder { color:rgba(255,255,255,.3); }
+  input:focus { outline:none; border-color:var(--miel);
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--miel) 20%, transparent); }
+  button.enviar { width:100%; margin-top:20px; padding:14px; border:none; border-radius:10px; cursor:pointer;
+    font-family:var(--fuente-display); font-size:18px; letter-spacing:1.6px; text-transform:uppercase;
+    background:linear-gradient(90deg, var(--miel), color-mix(in srgb, var(--miel) 82%, #8a5f14)); color:#231a08; }
+  button.enviar:hover { filter:brightness(1.06); }
+  .error { background:color-mix(in srgb, var(--alerta) 20%, transparent);
+    border:1px solid color-mix(in srgb, var(--alerta) 55%, transparent);
+    color:#f2b8ae; font-size:13px; padding:11px 13px; border-radius:9px; margin-bottom:16px; line-height:1.4; }
+  .ayuda { font-size:12px; color:rgba(255,255,255,.5); margin-top:14px; line-height:1.5; text-align:center; }
+  .form { display:none; } .form.activo { display:block; }
+  .mrz { margin-top:20px; border-top:1px dashed rgba(255,255,255,.18); padding-top:10px;
+    font-family:ui-monospace,Consolas,monospace; font-size:9.5px; letter-spacing:2px;
+    color:rgba(255,255,255,.35); overflow:hidden; white-space:nowrap; }
+  .pie { position:fixed; bottom:14px; left:0; right:0; text-align:center; font-size:10px;
+    letter-spacing:2px; text-transform:uppercase; color:rgba(255,255,255,.35); z-index:1; }
+  @media (max-height:640px) { .pie { display:none; } }
+  @media (prefers-reduced-motion:reduce) { *, *::before { animation:none !important; transition:none !important; } }
 </style>
 </head>
 <body>
-  <div class="caja">
-    <img class="logo-recuadro" src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo">
+  <svg class="panal a" width="360" height="300" viewBox="0 0 360 300" fill="none" aria-hidden="true">
+    <g stroke="rgba(255,255,255,.9)" stroke-width="1.1">
+      <path d="M60 20 105 45v50L60 120 15 95V45zM165 20l45 25v50l-45 25-45-25V45zM270 20l45 25v50l-45 25-45-25V45zM112 105l45 25v50l-45 25-45-25v-50zM217 105l45 25v50l-45 25-45-25v-50zM322 105l45 25v50l-45 25-45-25v-50zM60 190l45 25v50l-45 25-45-25v-50zM165 190l45 25v50l-45 25-45-25v-50z"/>
+    </g>
+  </svg>
+  <svg class="panal b" width="300" height="260" viewBox="0 0 360 300" fill="none" aria-hidden="true">
+    <g stroke="rgba(255,255,255,.9)" stroke-width="1.1">
+      <path d="M60 20 105 45v50L60 120 15 95V45zM165 20l45 25v50l-45 25-45-25V45zM112 105l45 25v50l-45 25-45-25v-50zM217 105l45 25v50l-45 25-45-25v-50zM60 190l45 25v50l-45 25-45-25v-50z"/>
+    </g>
+  </svg>
+
+  <div class="escena">
+  <div class="cred" id="cred">
+    <div class="banda"></div>
+    <img class="logo" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Mi Trabajo">
+    <div class="chip-rol">Panel del sindicato</div>
     {% if request.query_params.get('error') %}
     <div class="error">Usuario o clave incorrectos.</div>
     {% endif %}
+
     <form method="post" action="/admin/login">
       <label for="usuario">CUIT / CUIL</label>
       <input type="text" id="usuario" name="usuario" inputmode="numeric" placeholder="20123456789" autofocus required>
       <label for="clave">Clave</label>
       <input type="password" id="clave" name="clave" required>
-      <button type="submit">Ingresar</button>
+      <button class="enviar" type="submit">Ingresar</button>
+      <div class="ayuda">El alta de administradores la hace tu organización.</div>
     </form>
+    <div class="mrz">MITRABAJO&lt;&lt;SINDICATO&lt;&lt;PANEL&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div>
   </div>
+  </div>
+  <div class="pie">Panel Sindical · Trámites · Comunicación con tus afiliados</div>
+
+<script>
+// Tilt 3D + brillo especular que siguen al mouse: 2-3 grados, solo desktop
+// con mouse real y sin reduced-motion. En mobile la credencial queda quieta.
+(function () {
+  const cred = document.getElementById('cred');
+  if (!window.matchMedia('(hover:hover)').matches ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  document.body.addEventListener('mousemove', ev => {
+    const r = cred.getBoundingClientRect();
+    // acotado a [0,1]: el mouse lejos de la credencial no la dispara a 45 grados
+    const x = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width));
+    const y = Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height));
+    cred.style.transform = `rotateX(${(0.5 - y) * 5}deg) rotateY(${(x - 0.5) * 6}deg)`;
+    cred.style.setProperty('--mx', (x * 100) + '%');
+    cred.style.setProperty('--my', (y * 100) + '%');
+  });
+  document.body.addEventListener('mouseleave', () => { cred.style.transform = ''; });
+})();
+</script>
 </body>
 </html>

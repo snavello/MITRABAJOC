@@ -2137,3 +2137,32 @@ desde noticia/beneficio/notificación NO vincula (decisión explícita).
 - Test `test_tramite_encadenado_desde_chat` (vínculo en ambos detalles +
   origen ajeno ignorado). Verificado en vivo: envío encadenado real desde
   el chat del F07, píldoras en las dos puntas y navegación entre ambos.
+
+## Rediseño de los logins: credencial viva sobre colmena nocturna (2026-09-02)
+
+Los 4 logins (trabajador, sindicato, empresa y plataforma) eran la cara de
+la suite y habían quedado atrás del resto de la UI. Sd eligió entre 4
+propuestas (mockup en `disenos/logins-propuestas.html`): la **credencial
+viva** (opción 4) sobre el **fondo de colmena nocturna** (opción 1).
+
+- **Fondo**: gradiente oscuro de la marca de plataforma con respiro verde
+  agua, grano, y el panal de Colm3na respirando (opacity 9s) en dos
+  esquinas. **Credencial**: banda superior miel→agua, logo real
+  (`/logo-plataforma-oscuro` con la cadena de fallback estándar), chip de
+  rol en condensada dorada, inputs oscuros con foco miel, botón ámbar en
+  condensada, tira MRZ en monoespaciada y pie con claims por rol.
+- **La miel (`#f0a01e`) es constante de Colm3na, NO el acento
+  configurable**: es el ámbar del panal del logo (contenido fijo — Sd pasó
+  el arte de referencia), y banda/chip/botón deben armonizar con él. El
+  acento configurable de plataforma queda para los errores. Tinta y agua
+  sí salen de la marca configurable.
+- **Tilt 3D + brillo especular** que siguen al mouse: máx 2.5°/3°
+  (CLAMP a [0,1] — sin él, el mouse lejos de la tarjeta la giraba 45°,
+  encontrado al verificar), solo con `hover:hover` y sin
+  `prefers-reduced-motion`; en mobile la credencial queda quieta. Entrada
+  con fade+lift una sola vez.
+- Los 4 archivos comparten el esqueleto (generado desde
+  trabajador_login.html); forms, names y bloques de error se preservaron
+  intactos — E2E 4/4 entrando por el login nuevo, y login real verificado
+  a mano en los 4 roles. `plataforma_login.html` también entró en el
+  rediseño aunque el pedido eran "las tres": dejarlo viejo desentonaba.
