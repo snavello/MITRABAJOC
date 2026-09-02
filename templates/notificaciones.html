@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi Trabajo — Notificaciones</title>
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
+<link rel="stylesheet" href="/static/marca.css">
+<style>
+  /* Bandeja de notificaciones (2026-09-02): página completa estilo casilla
+     de correo, reemplaza al modal de la portada. Agrupadas por día, leídas
+     atenuadas / no leídas destacadas, filtros arriba. */
+  :root {
+    --marca-base: {{ marca.color_base }};
+    --marca-primario: {{ marca.color_primario }};
+    --marca-acento: {{ marca.color_acento }};
+    --marca-apoyo: {{ marca.color_secundario }};
+  }
+  body { background: var(--papel); }
+  .volver { display:flex; align-items:center; gap:6px; color:var(--sobre-base-mute);
+    text-decoration:none; font-size:12.5px; margin-left:auto; }
+  .volver svg { width:16px; height:16px; stroke:currentColor; stroke-width:2.2; fill:none; }
+  .pad { max-width: 680px; margin: 0 auto; padding: 18px 15px 60px; }
+  h1 { font-family: var(--fuente-display); font-weight:700; font-size:26px;
+    text-transform:uppercase; letter-spacing:.5px; color:var(--tinta); }
+  .sub-cant { font-size:12.5px; color:var(--gris); margin-top:2px; }
+  /* filtros estilo chips */
+  .filtros { display:flex; gap:7px; margin:16px 0 6px; flex-wrap:wrap; align-items:center; }
+  .chip-f { border:1px solid var(--linea); background:#fff; color:var(--gris);
+    border-radius:20px; padding:6px 14px; font-size:12.5px; font-weight:600;
+    cursor:pointer; font-family:inherit; }
+  .chip-f.activo { background:var(--marca-base); border-color:var(--marca-base); color:#fff; }
+  .buscar { flex:1 1 160px; min-width:140px; border:1px solid var(--linea); border-radius:20px;
+    padding:7px 14px; font-size:13px; font-family:inherit; background:#fff; color:var(--tinta); }
+  .buscar:focus { outline:2px solid color-mix(in srgb, var(--marca-acento) 40%, white); }
+  /* agrupado por día */
+  .dia { font-family:var(--fuente-display); font-size:14px; letter-spacing:1.4px;
+    text-transform:uppercase; color:var(--gris); margin:20px 0 8px;
+    display:flex; align-items:center; gap:10px; }
+  .dia::after { content:""; flex:1; height:1px; background:var(--linea); }
+  /* fila estilo casilla de correo */
+  .notif { background:#fff; border:1px solid var(--linea); border-left:3px solid transparent;
+    border-radius:11px; padding:12px 15px; margin-bottom:7px; cursor:pointer;
+    transition: box-shadow .15s; }
+  .notif:hover { box-shadow:0 4px 14px rgba(21,34,56,.08); }
+  .notif.no-leida { border-left-color: var(--marca-acento);
+    background: color-mix(in srgb, var(--marca-acento) 6%, #fff); }
+  .n-cab { display:flex; align-items:baseline; gap:10px; }
+  .n-remitente { font-size:13px; font-weight:500; color:var(--gris); white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; max-width:38%; }
+  .notif.no-leida .n-remitente { font-weight:750; color:var(--tinta); }
+  .n-snippet { flex:1; font-size:13px; color:var(--gris); overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap; }
+  .notif.no-leida .n-snippet { color:var(--tinta); font-weight:550; }
+  .n-hora { font-size:11px; color:#98a2b3; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .notif.no-leida .n-hora { color:var(--marca-acento); font-weight:700; }
+  .n-cuerpo { display:none; font-size:13.5px; line-height:1.6; color:var(--tinta);
+    margin-top:10px; border-top:1px solid var(--linea); padding-top:10px; white-space:pre-line;
+    overflow-wrap:anywhere; }
+  .notif.abierta .n-cuerpo { display:block; }
+  .notif.abierta .n-snippet { display:none; }
+  .n-adjunto { display:inline-block; margin-top:9px; font-size:12.5px;
+    color:var(--marca-primario); text-decoration:none; font-weight:600; }
+  .cta-form { display:inline-flex; align-items:center; justify-content:center;
+    width:44px; height:44px; border-radius:50%; background:var(--marca-acento);
+    font-size:20px; text-decoration:none; margin-top:10px;
+    box-shadow:0 4px 12px rgba(0,0,0,.18); }
+  .vacio { text-align:center; padding:60px 20px; color:var(--gris); font-size:14px; }
+  .cargando { display:flex; justify-content:center; padding:50px 0; }
+  .spin { width:26px; height:26px; border:3px solid var(--linea);
+    border-top-color:var(--marca-acento); border-radius:50%; animation:g .8s linear infinite; }
+  @keyframes g { to { transform:rotate(360deg); } }
+  @media (prefers-reduced-motion:reduce) { .notif { transition:none; } }
+</style>
+</head>
+<body>
+
+<div class="enc">
+  {% if marca.logo %}
+  <img class="logo" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}" style="width:46px; height:46px;">
+  {% endif %}
+  <div>
+    <div class="nom">{{ sindicato }}</div>
+    <div class="sub">Notificaciones</div>
+  </div>
+  <a class="volver" href="/app/inicio"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg> Volver</a>
+</div>
+
+<div class="pad">
+  <h1>Notificaciones</h1>
+  <div class="sub-cant" id="cant"></div>
+
+  <div class="filtros">
+    <button class="chip-f activo" data-f="todas" onclick="filtrar('todas')">Todas</button>
+    <button class="chip-f" data-f="noleidas" onclick="filtrar('noleidas')">No leídas</button>
+    <button class="chip-f" data-f="leidas" onclick="filtrar('leidas')">Leídas</button>
+    <input class="buscar" id="buscar" placeholder="Buscar por texto o remitente" oninput="render()">
+  </div>
+
+  <div id="lista"><div class="cargando"><div class="spin"></div></div></div>
+</div>
+
+<script>
+let NOTIFS = [];
+let FILTRO = 'todas';
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+// "AAAA-MM-DD HH:MM" -> etiqueta de día (Hoy / Ayer / DD/MM/AAAA) y hora
+function etiquetaDia(fh) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(fh || '');
+  if (!m) return 'Sin fecha';
+  const hoy = new Date(); const p = n => String(n).padStart(2, '0');
+  const hoyISO = `${hoy.getFullYear()}-${p(hoy.getMonth() + 1)}-${p(hoy.getDate())}`;
+  const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1);
+  const ayerISO = `${ayer.getFullYear()}-${p(ayer.getMonth() + 1)}-${p(ayer.getDate())}`;
+  const fecha = `${m[1]}-${m[2]}-${m[3]}`;
+  if (fecha === hoyISO) return 'Hoy';
+  if (fecha === ayerISO) return 'Ayer';
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+function hora(fh) { const m = /(\d{2}:\d{2})$/.exec(fh || ''); return m ? m[1] : ''; }
+
+function filtrar(f) {
+  FILTRO = f;
+  document.querySelectorAll('.chip-f').forEach(c => c.classList.toggle('activo', c.dataset.f === f));
+  render();
+}
+
+function render() {
+  const q = (document.getElementById('buscar').value || '').toLowerCase().trim();
+  const visibles = NOTIFS.filter(n => {
+    if (FILTRO === 'noleidas' && n.leida_en) return false;
+    if (FILTRO === 'leidas' && !n.leida_en) return false;
+    if (q && !((n.texto || '').toLowerCase().includes(q) || (n.remitente || '').toLowerCase().includes(q))) return false;
+    return true;
+  });
+  const noLeidas = NOTIFS.filter(n => !n.leida_en).length;
+  document.getElementById('cant').textContent =
+    NOTIFS.length ? `${NOTIFS.length} en total · ${noLeidas} sin leer` : '';
+  const lista = document.getElementById('lista');
+  if (!visibles.length) {
+    lista.innerHTML = `<div class="vacio">${NOTIFS.length ? 'Nada que mostrar con este filtro.' : 'Todavía no tenés notificaciones.'}</div>`;
+    return;
+  }
+  let html = '', diaActual = null;
+  for (const n of visibles) {
+    const dia = etiquetaDia(n.enviado_en);
+    if (dia !== diaActual) { html += `<div class="dia">${dia}</div>`; diaActual = dia; }
+    html += `
+      <div class="notif ${n.leida_en ? '' : 'no-leida'}" data-id="${n.id}" onclick="toggleNotif(${n.id})">
+        <div class="n-cab">
+          <span class="n-remitente">${esc(n.remitente || 'Tu sindicato')}</span>
+          <span class="n-snippet">${esc(n.texto)}</span>
+          <span class="n-hora">${hora(n.enviado_en)}</span>
+        </div>
+        <div class="n-cuerpo">${n.texto_html}
+          ${n.tiene_adjunto ? `<br><a class="n-adjunto" href="/notificacion-adjunto/${n.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📎 Ver adjunto</a>` : ''}
+          ${n.formulario_id ? `<br><a class="cta-form" href="/app?tab=tramites&formulario=${n.formulario_id}" title="Completar el formulario" onclick="event.stopPropagation()">📋</a>` : ''}
+        </div>
+      </div>`;
+  }
+  lista.innerHTML = html;
+}
+
+async function toggleNotif(id) {
+  const item = document.querySelector(`.notif[data-id="${id}"]`);
+  if (!item) return;
+  const abrir = !item.classList.contains('abierta');
+  document.querySelectorAll('.notif.abierta').forEach(el => el.classList.remove('abierta'));
+  if (!abrir) return;
+  item.classList.add('abierta');
+  const n = NOTIFS.find(x => x.id === id);
+  if (n && !n.leida_en) {
+    n.leida_en = 'recien';                       // optimista: la fila se atenúa ya
+    item.classList.remove('no-leida');
+    try { await fetch(`/api/notificacion/${id}/leer`, { method: 'POST' }); } catch (e) {}
+    const noLeidas = NOTIFS.filter(x => !x.leida_en).length;
+    document.getElementById('cant').textContent = `${NOTIFS.length} en total · ${noLeidas} sin leer`;
+  }
+}
+
+(async function cargar() {
+  try {
+    const r = await fetch('/api/mis-notificaciones');
+    const data = await r.json();
+    NOTIFS = data.notificaciones || [];
+    render();
+  } catch (e) {
+    document.getElementById('lista').innerHTML = '<div class="vacio">No pudimos cargar tus notificaciones. Probá recargar.</div>';
+  }
+})();
+</script>
+</body>
+</html>

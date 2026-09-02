@@ -219,6 +219,13 @@
     font-family:var(--fuente-display); font-weight:700; font-size:19px; letter-spacing:.008em; line-height:1.25; }
   .tram-box-enc .sub { position:relative; z-index:1; color:rgba(255,255,255,.78); margin-top:3px; font-size:12.5px; }
   .tram-box-body { padding:18px; }
+  /* Globo de novedades en la pestaña Trámites (reemplaza a las
+     notificaciones de sistema por cambios de trámite) + punto en la fila */
+  .tab-badge-tram { position:absolute; top:2px; right:14px; background:#e5484d; color:#fff;
+    font-size:10px; font-weight:700; min-width:16px; height:16px; border-radius:999px;
+    display:flex; align-items:center; justify-content:center; padding:0 3px; }
+  .tram-item .punto-novedad { display:inline-block; width:9px; height:9px; border-radius:50%;
+    background:var(--marca-acento); margin-right:6px; vertical-align:1px; }
   .tram-item { position:relative; overflow:hidden;
     background:linear-gradient(160deg, #ffffff, var(--papel)) !important; }
   .tram-input { display:block; width:100%; padding:11px 12px; border:1px solid var(--linea);
@@ -815,7 +822,7 @@
   {% if 'noticias' in modulos %}<button class="tab-t" data-tp="novedades"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-nov"/></svg></span>Novedades</button>{% endif %}
   {% if 'aportes' in modulos %}<button class="tab-t" data-tp="aportes"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg></span>Mis Aportes</button>{% endif %}
   {% if 'capacitacion' in modulos %}<button class="tab-t" data-tp="capacitacion"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg></span>Capacitación</button>{% endif %}
-  {% if 'tramites' in modulos %}<button class="tab-t" data-tp="tramites"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>Trámites</button>{% endif %}
+  {% if 'tramites' in modulos %}<button class="tab-t" data-tp="tramites" style="position:relative;"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>Trámites<span class="tab-badge-tram" id="badge-tramites" style="display:{{ 'flex' if tramites_novedades else 'none' }};">{{ tramites_novedades or '' }}</span></button>{% endif %}
 </nav>
 
 <script>
@@ -1379,11 +1386,18 @@ if (document.getElementById('tp-tramites')) {
   // no cambia (exige sesión, y /api/tramites/tipos solo devuelve los tipos
   // activos DEL sindicato del trabajador -- un id ajeno simplemente no está).
   {
-    const formularioPedido = parseInt(new URLSearchParams(location.search).get('formulario') || '', 10);
+    const params = new URLSearchParams(location.search);
+    const formularioPedido = parseInt(params.get('formulario') || '', 10);
     // diferido: abrirFormularioDesdeChatTrab se asigna a window más abajo
     // en este mismo script (window.___ = async function, ver comentario ahí)
     if (formularioPedido) setTimeout(() => {
       if (window.abrirFormularioDesdeChatTrab) abrirFormularioDesdeChatTrab(formularioPedido);
+    }, 0);
+    // Deep link al detalle de un trámite (?tramite=EXP): lo usa el click
+    // de la notificación push ("Novedad en tu trámite ...").
+    const tramitePedido = (params.get('tramite') || '').trim();
+    if (tramitePedido) setTimeout(() => {
+      if (window.abrirTramiteDetalleTrab) abrirTramiteDetalleTrab(tramitePedido);
     }, 0);
   }
   document.getElementById('tram-form-volver').onclick = () => verTram('tram-inicio');
@@ -1406,7 +1420,7 @@ if (document.getElementById('tp-tramites')) {
       cont.innerHTML = data.tramites.map(t => `
         <div class="card tram-item" style="margin-top:10px; padding:13px 15px; cursor:pointer;" onclick="abrirTramiteDetalleTrab('${t.numero_expediente}')">
           <div class="fila" style="border:none; padding:0;">
-            <span><b>${escTram(t.tipo_titulo)}</b><br><span class="muted" style="font-size:12px;"><code>${t.numero_expediente}</code></span></span>
+            <span>${t.novedad ? '<span class="punto-novedad" title="Hay novedades"></span>' : ''}<b>${escTram(t.tipo_titulo)}</b><br><span class="muted" style="font-size:12px;"><code>${t.numero_expediente}</code></span></span>
             <span>${tagEstado(t.estado, t.estado_label)}</span>
           </div>
         </div>`).join('');
@@ -1848,6 +1862,19 @@ if (document.getElementById('tp-tramites')) {
     }).join('');
   }
 
+  // Abrir un detalle marca sus movimientos como vistos en el servidor: el
+  // globo de Trámites se refresca acá para reflejarlo sin recargar.
+  async function refrescarBadgeTramites() {
+    try {
+      const r = await fetch('/api/tramites/novedades');
+      const d = await r.json();
+      const badge = document.getElementById('badge-tramites');
+      if (!badge) return;
+      badge.textContent = d.cantidad || '';
+      badge.style.display = d.cantidad ? 'flex' : 'none';
+    } catch (e) { /* cosmético: el próximo render lo corrige */ }
+  }
+
   async function refrescarTramiteDetalleTrab(numero) {
     try {
       const r = await fetch('/api/tramite/' + encodeURIComponent(numero));
@@ -1856,6 +1883,7 @@ if (document.getElementById('tp-tramites')) {
         return;
       }
       const d = await r.json();
+      refrescarBadgeTramites();
       document.getElementById('tram-det-expediente').textContent = d.numero_expediente;
       document.getElementById('tram-det-tipo').textContent = d.tipo_titulo;
       tramitePanelActual = { id: d.id, numero: d.numero_expediente, estado: d.estado };
@@ -1941,7 +1969,8 @@ if (document.getElementById('tp-tramites')) {
   }
 }
 </script>
-<script src="/static/pwa.js"></script>
-<script>registrarSW(); initBannerInstalar();</script>
+{# sello ?v= para romper el cache de 1h al sumar funciones nuevas #}
+<script src="/static/pwa.js?v=2"></script>
+<script>registrarSW(); initBannerInstalar(); if (window.initPushTramites) initPushTramites();</script>
 </body>
 </html>

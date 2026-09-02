@@ -39,6 +39,7 @@ from sqlmodel import select
 import db
 import auth
 import validaciones_tramite
+import push
 import errores
 from errores import ErrorApp
 from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador,
@@ -1694,13 +1695,12 @@ def _leer_archivo_tramite(archivo: UploadFile):
     return datos, ARCHIVO_MIMES_TRAMITE[ext], archivo.filename
 
 
-def _notificar_cambio_tramite(sid: int, cuil: str, texto: str) -> None:
-    """Todo cambio de estado o nota ORIGINADA POR EL SINDICATO le avisa al
-    trabajador por el sistema de notificaciones de la Fase 2 -- una nota del
-    trabajador NO dispara esto (no tiene sentido notificarse a sí mismo).
-    No hace nada si el sindicato no tiene el módulo de notificaciones."""
-    if db.modulo_habilitado(sid, "notificaciones"):
-        db.crear_notificacion(sid, None, "Sistema", texto, "cuil", [cuil], origen="sistema")
+def _notificar_cambio_tramite(sid: int, cuil: str, numero: str, texto: str) -> None:
+    """Las novedades de un trámite NO generan Notificacion (decisión de Sd
+    2026-09-02): el aviso in-app viaja por el globo de Trámites (visto vs
+    NULL). Este gancho quedó para el canal PUSH: si las claves VAPID están
+    configuradas, el teléfono recibe la novedad; si no, no hace nada."""
+    push.notificar_tramite(cuil, numero, texto)
 
 
 TIPOS_DATO_TRAMITE = ("texto", "numero", "fecha", "archivo", "seleccion",
@@ -1853,8 +1853,8 @@ def admin_cambiar_estado_tramite(tramite_id: int, request: Request, estado: str 
     if not db.cambiar_estado_tramite(tramite_id, sid, estado):
         raise HTTPException(400, "Estado inválido")
     nuevo_label = db.ESTADOS_TRAMITE_LABEL.get(estado, estado)
-    _notificar_cambio_tramite(sid, detalle["cuil"],
-        f'Tu trámite {detalle["numero_expediente"]} cambió de estado: {nuevo_label}.')
+    _notificar_cambio_tramite(sid, detalle["cuil"], detalle["numero_expediente"],
+        f'Tu sindicato actualizó el estado: {nuevo_label}.')
     return {"ok": True}
 
 
@@ -1896,10 +1896,9 @@ async def admin_nota_tramite(tramite_id: int, request: Request, texto: str = For
         raise HTTPException(400, "La nota necesita texto, un adjunto o un formulario.")
     db.agregar_nota_tramite(tramite_id, "admin", texto, adjunto_datos, adjunto_mime,
                             adjunto_nombre, formulario_id=formulario)
-    aviso = (f'Tu sindicato te mandó un formulario en tu trámite {detalle["numero_expediente"]}.'
-             if formulario else
-             f'Tu sindicato agregó una nota a tu trámite {detalle["numero_expediente"]}.')
-    _notificar_cambio_tramite(sid, detalle["cuil"], aviso)
+    aviso = ('Tu sindicato te mandó un formulario para iniciar.' if formulario
+             else 'Tu sindicato te escribió en el chat.')
+    _notificar_cambio_tramite(sid, detalle["cuil"], detalle["numero_expediente"], aviso)
     return {"ok": True}
 
 
@@ -1976,7 +1975,97 @@ def api_consultar_tramite(numero_expediente: str, request: Request):
     detalle = db.tramite_por_numero_expediente(numero_expediente.strip().upper())
     if not detalle or detalle["cuil"] != cuil:
         raise HTTPException(404, "No encontramos un trámite tuyo con ese número.")
+    # abrir el detalle apaga la novedad de ESTE trámite en el globo
+    db.marcar_tramite_visto(detalle["id"], cuil)
     return detalle
+
+
+@app.get("/app/notificaciones", response_class=HTMLResponse)
+def pantalla_notificaciones(request: Request):
+    """Bandeja de notificaciones del trabajador (2026-09-02): reemplaza al
+    modal de la portada por una página completa estilo casilla de correo --
+    agrupadas por día, leídas/no leídas y filtros. Los datos los trae el
+    mismo /api/mis-notificaciones de siempre."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or not cuil:
+        return RedirectResponse("/ingresar", status_code=303)
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        return RedirectResponse("/ingresar", status_code=303)
+    _exigir_modulo(sid, "notificaciones")
+    marca = db.marca_sindicato(sid)
+    return templates.TemplateResponse("notificaciones.html", {
+        "request": request,
+        "sindicato": marca["nombre"],
+        "marca": marca,
+        "marca_plataforma": db.marca_plataforma(),
+    })
+
+
+# ---------- Web Push del trabajador (ver push.py) ----------
+# La ruta /sw.js y el registro del service worker ya existían (PWA,
+# main.service_worker + static/pwa.js): acá solo van la suscripción y la
+# clave pública.
+
+@app.get("/api/push/clave-publica")
+def api_push_clave_publica():
+    """Clave pública VAPID para suscribirse. Vacía = push apagado (sin
+    claves configuradas): el cliente no ofrece nada."""
+    return {"clave": push.VAPID_PUBLIC_KEY if push.habilitado() else ""}
+
+
+@app.post("/api/push/suscribir")
+async def api_push_suscribir(request: Request):
+    ses = sesion_actual(request, "trabajador")
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    cuerpo = await request.json()
+    endpoint = str(cuerpo.get("endpoint") or "")[:1000]
+    claves = cuerpo.get("keys") or {}
+    if not endpoint or not claves.get("p256dh") or not claves.get("auth"):
+        raise HTTPException(400, "Suscripción incompleta")
+    db.guardar_suscripcion_push(cuil, endpoint,
+                                str(claves["p256dh"])[:300], str(claves["auth"])[:300])
+    return {"ok": True}
+
+
+@app.post("/api/push/desuscribir")
+async def api_push_desuscribir(request: Request):
+    ses = sesion_actual(request, "trabajador")
+    if not ses:
+        raise HTTPException(403, "No autorizado")
+    cuerpo = await request.json()
+    db.borrar_suscripcion_push(str(cuerpo.get("endpoint") or ""))
+    return {"ok": True}
+
+
+@app.get("/api/tramites/novedades")
+def api_novedades_tramites(request: Request):
+    """Cantidad de trámites del trabajador con movimientos sin ver, para el
+    globo de Trámites (reemplaza a las notificaciones de sistema)."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        return {"cantidad": 0}
+    return {"cantidad": db.contar_tramites_con_novedades(cuil, sid)}
+
+
+@app.get("/api/empresa/tramites/novedades")
+def api_novedades_tramites_empresa(request: Request):
+    """Mirror para la empresa."""
+    ses = sesion_actual(request, "empleador")
+    cuit = request.cookies.get("cuit_emp", "")
+    if not ses or not cuit:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_empleador(request)
+    if not sid:
+        return {"cantidad": 0}
+    return {"cantidad": db.contar_tramites_empleador_con_novedades(cuit, sid)}
 
 
 # ---------- Consultas del trabajador sobre el convenio (bloque 3) ----------
@@ -2228,10 +2317,9 @@ async def api_nota_tramite_trabajador(tramite_id: int, request: Request, texto: 
 # puramente de datos, no dependen de qué rol las llama.
 
 def _notificar_cambio_tramite_empleador(sid: int, cuit: str, texto: str) -> None:
-    """Mirror de _notificar_cambio_tramite -- avisa por el sistema de
-    notificaciones a EMPLEADORES (Fase 4), no el de trabajador."""
-    if db.modulo_habilitado(sid, "empleadores"):
-        db.crear_notificacion_empleador(sid, None, "Sistema", texto, "cuit", [cuit], origen="sistema")
+    """Mirror de _notificar_cambio_tramite: DESACTIVADA (el aviso viaja por
+    el globo de Trámites de la empresa, ver visto_empresa_en)."""
+    return None
 
 
 def _autorizado_para_tramite_empleador(request: Request, tr) -> bool:
@@ -2407,6 +2495,7 @@ def api_consultar_tramite_empresa(numero_expediente: str, request: Request):
     detalle = db.tramite_empleador_por_numero_expediente(numero_expediente.strip().upper())
     if not detalle or detalle["cuit"] != cuit:
         raise HTTPException(404, "No encontramos un trámite tuyo con ese número.")
+    db.marcar_tramite_empleador_visto(detalle["id"], cuit)
     return detalle
 
 
@@ -3664,6 +3753,7 @@ def app_trabajador(request: Request):
                 sid_activo, seccional_id=db.seccional_de_trabajador(cuil, sid_activo))),
             "modulos": _modulos_de(sid_activo),
             "tiene_foto_perfil": bool(db.foto_trabajador(cuil)),
+            "tramites_novedades": db.contar_tramites_con_novedades(cuil, sid_activo),
         }
         # El QR (y la verificación pública que hay detrás) solo tiene sentido
         # una vez que el sindicato generó el código real de la credencial.
@@ -3719,6 +3809,7 @@ def app_portada(request: Request):
             "noticias": _con_antiguedad(db.noticias_vigentes(sid_activo, seccional_id=seccional_id, limite=3)),
             "beneficios": db.beneficios_vigentes(sid_activo, seccional_id=seccional_id),
             "notificaciones_no_leidas": db.contar_notificaciones_no_leidas(cuil, sid_activo),
+            "tramites_novedades": db.contar_tramites_con_novedades(cuil, sid_activo),
             "modulos": _modulos_de(sid_activo),
             "version": VERSION_TRABAJADOR, "fecha_version": FECHA_VERSION,
         })
@@ -3922,6 +4013,7 @@ def empresa_inicio(request: Request):
         "perfil": perfil, "provincias": db.PROVINCIAS_AR,
         "tiene_foto_perfil": bool(db.foto_empleador(cuit)),
         "notificaciones_no_leidas": db.contar_notificaciones_no_leidas_empleador(cuit, sid_activo),
+        "tramites_novedades": db.contar_tramites_empleador_con_novedades(cuit, sid_activo),
     })
 
 

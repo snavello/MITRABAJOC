@@ -65,6 +65,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   troceo, embeddings locales e indexación en segundo plano.
 - validaciones_tramite.py — motor puro de validaciones de formularios de
   Trámites (fija + consistencia; ver sección propia).
+- push.py — notificaciones Web Push a la PWA del trabajador (novedades de
+  trámites; apagado sin claves VAPID).
 - cargar_demo.py — carga 2 sindicatos de demo desde cero (sin AEFIP).
 - cargar_lote_sindicato.py — lote sintético completo para CUALQUIER sindicato
   existente (`--sindicato "AEFIP"`); `cargar_lote_uom.py` es la versión
@@ -116,6 +118,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - SESSION_SECRET — secreto para firmar cookies de sesión.
 - PYTHON_VERSION — 3.12.8 (redundante con .python-version, a propósito).
 - DB_PATH — solo dev local (SQLite). NO se usa en Render.
+- VAPID_PRIVATE_KEY / VAPID_PUBLIC_KEY / VAPID_CLAIM_EMAIL — Web Push de la
+  PWA (push.py); sin las tres, el canal queda apagado en silencio.
 
 ## Accesos de la demo
 - Plataforma: CUIT 20000000000 + PLATAFORMA_PASSWORD.

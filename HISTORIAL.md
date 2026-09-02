@@ -2207,3 +2207,66 @@ la regla de marca.css queda como refinamiento (19px en mobile). Ojo a
 futuro: cualquier feature cuyo CSS nuevo viva solo en marca.css tiene esta
 ventana de 1 hora — o se inline-a lo crítico, o se agrega sello de versión
 al link (pendiente de decidir como patrón general).
+
+## Bandeja de notificaciones + globo propio de Trámites (2026-09-02)
+
+Dos cambios funcionales pedidos por Sd:
+
+**1. La bandeja** (`/app/notificaciones`, `templates/notificaciones.html`):
+reemplaza al modal de la portada por una página completa estilo casilla de
+correo — agrupadas por día (Hoy/Ayer/fecha, encabezados en condensada),
+no leídas destacadas (filo de acento, remitente en negrita, hora en
+acento) y leídas atenuadas, filtros Todas/No leídas/Leídas + buscador por
+texto o remitente. Expandir una fila la marca leída (optimista + POST al
+endpoint de siempre); adjuntos y el ícono de formulario asociado se
+conservan. Los datos salen del mismo /api/mis-notificaciones. La tarjeta
+de la portada ahora es un link a la página; el modal viejo queda sin uso.
+La empresa sigue con su pestaña ("eventualmente" migra, dijo Sd).
+
+**2. Las novedades de un trámite ya no generan Notificacion**: el aviso va
+en un globo PROPIO de Trámites (tarjeta de portada, pestaña de /app y
+pestaña de /empresa) + punto de novedad en la fila del listado.
+Implementación: `Tramite.visto_trabajador_en` / `visto_empresa_en`
+(migración `f2a7b9c4d156`, backfill = visto). Semántica DETERMINISTA:
+**NULL = hay novedad** — un cambio del sindicato (estado o nota) lo pone
+en NULL; abrir el detalle o escribir una nota propia lo sella. Se descartó
+comparar `actualizado > visto`: `actualizado` tiene granularidad de
+MINUTO y dos eventos del mismo minuto se confunden (lo detectaron los
+tests). `_notificar_cambio_tramite(_empleador)` quedan como no-op
+documentado: son el gancho donde un canal push futuro se reconecta.
+Tests de trámites/empresa adaptados al criterio nuevo.
+
+## Notificaciones push a la PWA (2026-09-02)
+
+Canal Web Push para las novedades de trámites: "Novedad en tu trámite
+XXX — Tu sindicato actualizó el estado / te escribió en el chat". El click
+abre el detalle directo (deep link nuevo `?tramite=EXP` en /app).
+
+- **`push.py`**: módulo del canal. Se configura con 3 variables de entorno
+  (VAPID_PRIVATE_KEY/VAPID_PUBLIC_KEY/VAPID_CLAIM_EMAIL); SIN ellas es un
+  no-op silencioso (mismo criterio que ANTHROPIC_API_KEY ausente). El envío
+  corre EN UN HILO (pywebpush es HTTP sincrónico, ~100-300 ms por
+  suscripción, no puede colgar el request del admin) y una suscripción
+  muerta (404/410) se borra sola. `pywebpush==2.5.0` en requirements.
+- **`SuscripcionPush`** (migración `a9d4e7f2c831`): cuil + endpoint único +
+  claves; un CUIL puede tener varias (teléfono y compu). Rutas
+  `/api/push/clave-publica|suscribir|desuscribir`.
+- **El gancho es `_notificar_cambio_tramite`**: el mismo punto que antes
+  creaba Notificacion y quedó como no-op documentado esta mañana — ahora
+  dispara el push. Solo trabajador; el espejo de empresa sigue no-op.
+- **El service worker YA EXISTÍA** (instalabilidad de la PWA, /sw.js con
+  scope /app y registro en static/pwa.js): se le sumaron los handlers de
+  push y notificationclick sin tocar su decisión de NO cachear nada.
+- **Política de permiso (acordada con Sd)**: si está sin decidir, se pide
+  UNA vez cada 30 días, y siempre atado al PRIMER TOQUE en la página (iOS
+  y Chrome exigen gesto). Si el usuario lo bloqueó: silencio total (el
+  navegador tampoco permite re-preguntar). Con permiso dado, cada visita
+  re-sincroniza la suscripción (idempotente). iPhone: solo iOS 16.4+ y con
+  la PWA instalada; Android: instalada o en el navegador.
+- **Otra vez el cache de 1 hora**: `pwa.js` cacheado sin la función nueva
+  tiró ReferenceError en la llamada inline. Doble fix: sello `?v=2` en el
+  include Y llamada con guarda `if (window.initPushTramites)` — regla
+  aprendida: toda función nueva de un .js estático que se llama inline
+  desde un template se llama CON GUARDA.
+- test_push.py (apagado sin claves, CRUD de suscripción por ruta,
+  endpoint inalcanzable no tumba el hilo).

@@ -638,6 +638,13 @@ class Tramite(SQLModel, table=True):
     # muestran vinculados. Un formulario abierto desde una noticia/
     # beneficio/notificación NO vincula (decisión de Sd 2026-09-01).
     origen_tramite_id: Optional[int] = None
+    # NULL = hay novedad para el TRABAJADOR (globo en Trámites). Un cambio
+    # del sindicato (estado o nota) lo pone en NULL; abrir el detalle o
+    # escribir una nota propia lo sella con la hora. Deliberadamente NO se
+    # comparan timestamps: el minuto de granularidad de `actualizado` no
+    # distingue dos eventos del mismo minuto. (Decisión de Sd 2026-09-02:
+    # las novedades de un trámite ya no generan Notificacion.)
+    visto_trabajador_en: Optional[str] = None
 
 
 class RespuestaTramite(SQLModel, table=True):
@@ -669,6 +676,19 @@ class NotaTramite(SQLModel, table=True):
     # Int pelado a propósito, sin FK: un tipo se puede borrar y el chat
     # muestra "ya no disponible" en vez de impedir el borrado.
     formulario_id: Optional[int] = None
+
+
+class SuscripcionPush(SQLModel, table=True):
+    """Suscripción Web Push de un TRABAJADOR (la PWA instalada o el
+    navegador). Un CUIL puede tener varias (un teléfono y una compu); el
+    endpoint es único globalmente. Se borra sola cuando el servicio de push
+    responde 404/410 (suscripción muerta) -- ver push.py."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cuil: str = Field(index=True)
+    endpoint: str = Field(unique=True)
+    p256dh: str = ""
+    auth: str = ""
+    creado: str = ""
 
 
 class TramiteLog(SQLModel, table=True):
@@ -726,6 +746,7 @@ class TramiteEmpleador(SQLModel, table=True):
     actualizado: str = ""
     advertencias: list = Field(default=[], sa_column=Column(JSON))  # mirror de Tramite
     origen_tramite_id: Optional[int] = None                          # mirror de Tramite
+    visto_empresa_en: Optional[str] = None                           # mirror de visto_trabajador_en
 
 
 class RespuestaTramiteEmpleador(SQLModel, table=True):
@@ -2511,7 +2532,8 @@ def crear_tramite(sindicato_id: int, tipo_tramite_id: int, cuil: str, respuestas
         numero = _proximo_numero_expediente(s, Tramite, prefijo, anio)
         tr = Tramite(sindicato_id=sindicato_id, tipo_tramite_id=tipo_tramite_id, cuil=cuil,
                      numero_expediente=numero, estado="iniciado", creado=ahora, actualizado=ahora,
-                     advertencias=advertencias or [], origen_tramite_id=origen_tramite_id)
+                     advertencias=advertencias or [], origen_tramite_id=origen_tramite_id,
+                     visto_trabajador_en=ahora)
         s.add(tr); s.commit(); s.refresh(tr)
         for r in respuestas:
             s.add(RespuestaTramite(
@@ -2544,6 +2566,7 @@ def cambiar_estado_tramite(tramite_id: int, sindicato_id: int, nuevo_estado: str
         anterior = tr.estado
         tr.estado = nuevo_estado
         tr.actualizado = datetime.now().strftime("%Y-%m-%d %H:%M")
+        tr.visto_trabajador_en = None   # cambio del sindicato = novedad para el trabajador
         if nuevo_estado == "terminado":
             tr.resuelto_en = tr.actualizado
         s.add(tr)
@@ -2572,6 +2595,9 @@ def agregar_nota_tramite(tramite_id: int, autor: str, texto: str,
             formulario_id=formulario_id,
         ))
         tr.actualizado = datetime.now().strftime("%Y-%m-%d %H:%M")
+        # nota del sindicato = novedad para el trabajador; una nota propia
+        # sella el visto (ya está mirando el chat)
+        tr.visto_trabajador_en = None if autor == "admin" else tr.actualizado
         s.add(tr)
         _log_tramite(s, tramite_id, f"nota_{autor}", texto[:120] if texto else "(sin texto, con adjunto)")
         s.commit()
@@ -2584,7 +2610,57 @@ def _tramite_resumen(s: Session, tr: "Tramite", titulos_tipo: dict) -> dict:
         "tipo_tramite_id": tr.tipo_tramite_id, "tipo_titulo": titulos_tipo.get(tr.tipo_tramite_id, "—"),
         "estado": tr.estado, "estado_label": ESTADOS_TRAMITE_LABEL.get(tr.estado, tr.estado),
         "creado": tr.creado, "actualizado": tr.actualizado,
+        "novedad": not tr.visto_trabajador_en,
     }
+
+
+def guardar_suscripcion_push(cuil: str, endpoint: str, p256dh: str, auth: str) -> None:
+    """Alta idempotente: si el endpoint ya existe se reasigna al CUIL (el
+    mismo navegador puede cambiar de usuario logueado)."""
+    with Session(engine) as s:
+        sus = s.exec(select(SuscripcionPush).where(
+            SuscripcionPush.endpoint == endpoint)).first()
+        if sus:
+            sus.cuil, sus.p256dh, sus.auth = cuil, p256dh, auth
+        else:
+            sus = SuscripcionPush(cuil=cuil, endpoint=endpoint, p256dh=p256dh, auth=auth,
+                                   creado=datetime.now().strftime("%Y-%m-%d %H:%M"))
+        s.add(sus); s.commit()
+
+
+def suscripciones_push_de(cuil: str) -> list:
+    with Session(engine) as s:
+        return [{"endpoint": x.endpoint, "p256dh": x.p256dh, "auth": x.auth}
+                for x in s.exec(select(SuscripcionPush).where(
+                    SuscripcionPush.cuil == cuil)).all()]
+
+
+def borrar_suscripcion_push(endpoint: str) -> None:
+    with Session(engine) as s:
+        sus = s.exec(select(SuscripcionPush).where(
+            SuscripcionPush.endpoint == endpoint)).first()
+        if sus:
+            s.delete(sus); s.commit()
+
+
+def marcar_tramite_visto(tramite_id: int, cuil: str) -> None:
+    """El trabajador abrió el detalle: lo que había hasta acá está visto.
+    Apaga su parte del globo de Trámites."""
+    with Session(engine) as s:
+        tr = s.get(Tramite, tramite_id)
+        if tr and tr.cuil == cuil:
+            tr.visto_trabajador_en = datetime.now().strftime("%Y-%m-%d %H:%M")
+            s.add(tr); s.commit()
+
+
+def contar_tramites_con_novedades(cuil: str, sindicato_id: int) -> int:
+    """Trámites del trabajador con movimientos que todavía no vio
+    (actualizado > visto). Alimenta el globo de Trámites -- las novedades
+    de un trámite ya no generan Notificacion (decisión de Sd 2026-09-02)."""
+    with Session(engine) as s:
+        tramites = s.exec(select(Tramite).where(
+            Tramite.cuil == cuil, Tramite.sindicato_id == sindicato_id)).all()
+        return sum(1 for tr in tramites if not tr.visto_trabajador_en)
 
 
 def tramites_del_sindicato(sindicato_id: int, estado: str = None, tipo_tramite_id: int = None,
@@ -2847,7 +2923,8 @@ def crear_tramite_empleador(sindicato_id: int, tipo_tramite_id: int, cuit: str, 
         numero = _proximo_numero_expediente(s, TramiteEmpleador, prefijo, anio)
         tr = TramiteEmpleador(sindicato_id=sindicato_id, tipo_tramite_id=tipo_tramite_id, cuit=cuit,
                                numero_expediente=numero, estado="iniciado", creado=ahora, actualizado=ahora,
-                               advertencias=advertencias or [], origen_tramite_id=origen_tramite_id)
+                               advertencias=advertencias or [], origen_tramite_id=origen_tramite_id,
+                               visto_empresa_en=ahora)
         s.add(tr); s.commit(); s.refresh(tr)
         for r in respuestas:
             s.add(RespuestaTramiteEmpleador(
@@ -2870,6 +2947,7 @@ def cambiar_estado_tramite_empleador(tramite_id: int, sindicato_id: int, nuevo_e
         anterior = tr.estado
         tr.estado = nuevo_estado
         tr.actualizado = datetime.now().strftime("%Y-%m-%d %H:%M")
+        tr.visto_empresa_en = None      # cambio del sindicato = novedad para la empresa
         s.add(tr)
         _log_tramite_empleador(s, tramite_id, "cambio_estado",
                      f"{ESTADOS_TRAMITE_LABEL.get(anterior, anterior)} → {ESTADOS_TRAMITE_LABEL.get(nuevo_estado, nuevo_estado)}")
@@ -2891,6 +2969,7 @@ def agregar_nota_tramite_empleador(tramite_id: int, autor: str, texto: str,
             formulario_id=formulario_id,
         ))
         tr.actualizado = datetime.now().strftime("%Y-%m-%d %H:%M")
+        tr.visto_empresa_en = None if autor == "admin" else tr.actualizado
         s.add(tr)
         _log_tramite_empleador(s, tramite_id, f"nota_{autor}", texto[:120] if texto else "(sin texto, con adjunto)")
         s.commit()
@@ -2903,7 +2982,25 @@ def _tramite_empleador_resumen(s: Session, tr: "TramiteEmpleador", titulos_tipo:
         "tipo_tramite_id": tr.tipo_tramite_id, "tipo_titulo": titulos_tipo.get(tr.tipo_tramite_id, "—"),
         "estado": tr.estado, "estado_label": ESTADOS_TRAMITE_LABEL.get(tr.estado, tr.estado),
         "creado": tr.creado, "actualizado": tr.actualizado,
+        "novedad": not tr.visto_empresa_en,
     }
+
+
+def marcar_tramite_empleador_visto(tramite_id: int, cuit: str) -> None:
+    """Mirror de marcar_tramite_visto."""
+    with Session(engine) as s:
+        tr = s.get(TramiteEmpleador, tramite_id)
+        if tr and tr.cuit == cuit:
+            tr.visto_empresa_en = datetime.now().strftime("%Y-%m-%d %H:%M")
+            s.add(tr); s.commit()
+
+
+def contar_tramites_empleador_con_novedades(cuit: str, sindicato_id: int) -> int:
+    """Mirror de contar_tramites_con_novedades."""
+    with Session(engine) as s:
+        tramites = s.exec(select(TramiteEmpleador).where(
+            TramiteEmpleador.cuit == cuit, TramiteEmpleador.sindicato_id == sindicato_id)).all()
+        return sum(1 for tr in tramites if not tr.visto_empresa_en)
 
 
 def tramites_empleador_del_sindicato(sindicato_id: int, estado: str = None, tipo_tramite_id: int = None,

@@ -173,3 +173,68 @@ function initBannerInstalar() {
     }, 1500);
   });
 }
+
+// ============ Notificaciones push de trámites (2026-09-02) ============
+// Política acordada con Sd: si el permiso está sin decidir, se pide UNA
+// vez por mes -- y siempre atado al primer toque del usuario en la página
+// (iOS y las buenas prácticas de Chrome exigen gesto). Si el usuario lo
+// BLOQUEÓ, silencio total (el navegador tampoco permite re-preguntar).
+// Con permiso dado, cada visita re-sincroniza la suscripción al backend
+// (idempotente). Sin claves VAPID configuradas en el servidor, no se
+// ofrece nada.
+const PUSH_CLAVE = "colm3na_push_pedido";
+const PUSH_DIAS_ENTRE_PEDIDOS = 30;
+
+function _pushB64aBytes(base64) {
+  const relleno = "=".repeat((4 - (base64.length % 4)) % 4);
+  const crudo = atob((base64 + relleno).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(crudo, (c) => c.charCodeAt(0));
+}
+
+async function _pushSuscribir(clavePublica) {
+  const reg = await navigator.serviceWorker.ready;
+  let sus = await reg.pushManager.getSubscription();
+  if (!sus) {
+    sus = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: _pushB64aBytes(clavePublica),
+    });
+  }
+  await fetch("/api/push/suscribir", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(sus.toJSON()),
+  });
+}
+
+async function initPushTramites() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) ||
+      !("Notification" in window)) return;
+  let clave = "";
+  try {
+    const r = await fetch("/api/push/clave-publica");
+    clave = (await r.json()).clave || "";
+  } catch (e) { return; }
+  if (!clave) return;                       // push apagado en el servidor
+
+  if (Notification.permission === "granted") {
+    _pushSuscribir(clave).catch(() => {});  // re-sincroniza sin molestar
+    return;
+  }
+  if (Notification.permission !== "default") return;  // bloqueado: silencio
+
+  let ultimo = 0;
+  try { ultimo = parseInt(localStorage.getItem(PUSH_CLAVE) || "0", 10); } catch (e) {}
+  if (ultimo && (Date.now() - ultimo) / (1000 * 60 * 60 * 24) < PUSH_DIAS_ENTRE_PEDIDOS) return;
+
+  // pedirlo recién en el primer toque (gesto real, exigido por iOS)
+  const pedir = async () => {
+    document.removeEventListener("click", pedir);
+    try { localStorage.setItem(PUSH_CLAVE, String(Date.now())); } catch (e) {}
+    try {
+      const permiso = await Notification.requestPermission();
+      if (permiso === "granted") await _pushSuscribir(clave);
+    } catch (e) { /* sin permiso: se sigue sin decir nada */ }
+  };
+  document.addEventListener("click", pedir, { once: true });
+}

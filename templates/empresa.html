@@ -86,6 +86,8 @@
   .notif-adjunto { display:inline-block; margin-top:9px; font-size:12px; color:var(--marca-primario);
     text-decoration:none; font-weight:600; }
   .notif-vacio { text-align:center; padding:34px 10px; color:var(--gris); font-size:13px; }
+  .tramx-item .punto-novedad { display:inline-block; width:9px; height:9px; border-radius:50%;
+    background:var(--marca-acento); margin-right:6px; vertical-align:1px; }
   /* ===== Trámites -- mismo componente estructural que .tram-box de
      trabajador.html, pero con nombre propio (.tramx-*) y fondo con un tinte
      del color de marca en vez de casi blanco: diferenciación visual "más
@@ -296,7 +298,7 @@
     Notificaciones
     <span class="tab-badge" id="badge-notif-emp" style="display:none;"></span>
   </button>
-  <button class="tab-t" data-tp="tramites"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>Trámites</button>
+  <button class="tab-t" data-tp="tramites"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>Trámites<span class="tab-badge" id="badge-tramites-emp" style="display:{{ 'flex' if tramites_novedades else 'none' }};">{{ tramites_novedades or '' }}</span></button>
 </nav>
 
 <a class="btn-flotante btn-home" href="/empresa/inicio" title="Inicio" aria-label="Inicio">
@@ -453,7 +455,7 @@ if (document.getElementById('tp-tramites')) {
       cont.innerHTML = data.tramites.map(t => `
         <div class="card tramx-item" style="margin-top:10px; padding:13px 15px; cursor:pointer;" onclick="abrirTramiteEmpresaDetalleTrx('${t.numero_expediente}')">
           <div class="fila" style="border:none; padding:0;">
-            <span><b>${escTrx(t.tipo_titulo)}</b><br><span class="sub2" style="font-size:12px;"><code>${t.numero_expediente}</code></span></span>
+            <span>${t.novedad ? '<span class="punto-novedad" title="Hay novedades"></span>' : ''}<b>${escTrx(t.tipo_titulo)}</b><br><span class="sub2" style="font-size:12px;"><code>${t.numero_expediente}</code></span></span>
             <span>${tagEstadoTrx(t.estado, t.estado_label)}</span>
           </div>
         </div>`).join('');
@@ -710,6 +712,17 @@ if (document.getElementById('tp-tramites')) {
     }).join('');
   }
 
+  async function refrescarBadgeTramitesEmp() {
+    try {
+      const r = await fetch('/api/empresa/tramites/novedades');
+      const d = await r.json();
+      const badge = document.getElementById('badge-tramites-emp');
+      if (!badge) return;
+      badge.textContent = d.cantidad || '';
+      badge.style.display = d.cantidad ? 'flex' : 'none';
+    } catch (e) { /* cosmético */ }
+  }
+
   async function refrescarTramiteEmpresaDetalleTrx(numero) {
     try {
       const r = await fetch('/api/empresa/tramite/' + encodeURIComponent(numero));
@@ -718,6 +731,7 @@ if (document.getElementById('tp-tramites')) {
         return;
       }
       const d = await r.json();
+      refrescarBadgeTramitesEmp();  // el fetch de arriba ya marcó visto
       document.getElementById('trx-det-expediente').textContent = d.numero_expediente;
       document.getElementById('trx-det-tipo').textContent = d.tipo_titulo;
       trxTramiteActual = { id: d.id, numero: d.numero_expediente, estado: d.estado };

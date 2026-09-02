@@ -167,20 +167,27 @@ def test_numeracion_expediente_sin_colision():
 
 
 def test_cambio_estado_dispara_log_y_notificacion():
+    # Criterio 2026-09-02: un cambio de tramite YA NO genera Notificacion --
+    # el aviso viaja por el globo de Tramites (visto vs actualizado).
     with Session(db.engine) as s:
         antes = len(s.exec(select(Notificacion).where(Notificacion.sindicato_id == SID_UOM)).all())
+    assert db.contar_tramites_con_novedades("20111111119", SID_UOM) == 0
     r = admin_uom.post(f"/admin/tramite/{TRAMITE_ID}/estado", data={"estado": "en_tratamiento"})
     assert r.status_code == 200
     detalle = db.tramite_detalle(TRAMITE_ID)
     assert detalle["estado"] == "en_tratamiento"
     assert any(l["evento"] == "cambio_estado" for l in detalle["log"])
     with Session(db.engine) as s:
-        despues = s.exec(select(Notificacion).where(Notificacion.sindicato_id == SID_UOM)
-                         .order_by(Notificacion.id.desc())).first()
         cantidad = len(s.exec(select(Notificacion).where(Notificacion.sindicato_id == SID_UOM)).all())
-    assert cantidad == antes + 1
-    assert despues.origen == "sistema"
-    assert NUMERO_EXPEDIENTE in despues.texto
+    assert cantidad == antes  # sin Notificacion nueva
+    # el globo de Tramites SI se enciende...
+    assert db.contar_tramites_con_novedades("20111111119", SID_UOM) == 1
+    resumen = db.tramites_de_trabajador("20111111119", SID_UOM)
+    assert any(t["novedad"] for t in resumen)
+    # ...y abrir el detalle (la ruta del trabajador) lo apaga
+    trab = _sesion_trabajador("20111111119")
+    assert trab.get(f"/api/tramite/{NUMERO_EXPEDIENTE}").status_code == 200
+    assert db.contar_tramites_con_novedades("20111111119", SID_UOM) == 0
     print("OK  test_cambio_estado_dispara_log_y_notificacion")
 
 
@@ -202,8 +209,8 @@ def test_nota_admin_y_trabajador_en_thread_correcto():
 
     with Session(db.engine) as s:
         despues = len(s.exec(select(Notificacion).where(Notificacion.sindicato_id == SID_UOM)).all())
-    # Solo la nota del ADMIN notifica -- la del trabajador no se auto-notifica a sí mismo.
-    assert despues == antes + 1
+    # Criterio 2026-09-02: las notas tampoco generan Notificacion.
+    assert despues == antes
     print("OK  test_nota_admin_y_trabajador_en_thread_correcto")
 
 

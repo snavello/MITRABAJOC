@@ -165,12 +165,15 @@ def test_cambio_estado_dispara_log_y_notificacion_empresa():
     assert detalle["estado"] == "en_tratamiento"
     assert any(l["evento"] == "cambio_estado" for l in detalle["log"])
     with Session(db.engine) as s:
-        despues = s.exec(select(NotificacionEmpleador).where(NotificacionEmpleador.sindicato_id == SID_UOM)
-                         .order_by(NotificacionEmpleador.id.desc())).first()
         cantidad = len(s.exec(select(NotificacionEmpleador).where(NotificacionEmpleador.sindicato_id == SID_UOM)).all())
-    assert cantidad == antes + 1
-    assert despues.origen == "sistema"
-    assert NUMERO_EXPEDIENTE in despues.texto
+    # Criterio 2026-09-02: sin Notificacion nueva; el globo de Tramites de
+    # la empresa se enciende y abrir el detalle lo apaga.
+    assert cantidad == antes
+    assert db.contar_tramites_empleador_con_novedades('30111222339', SID_UOM) == 1
+    assert any(t["novedad"] for t in db.tramites_de_empresa('30111222339', SID_UOM))
+    emp = _sesion_empleador('30111222339')
+    assert emp.get(f"/api/empresa/tramite/{NUMERO_EXPEDIENTE}").status_code == 200
+    assert db.contar_tramites_empleador_con_novedades('30111222339', SID_UOM) == 0
     print("OK  test_cambio_estado_dispara_log_y_notificacion_empresa")
 
 
@@ -192,8 +195,8 @@ def test_nota_admin_y_empresa_en_thread_correcto():
 
     with Session(db.engine) as s:
         despues = len(s.exec(select(NotificacionEmpleador).where(NotificacionEmpleador.sindicato_id == SID_UOM)).all())
-    # Solo la nota del ADMIN notifica -- la de la empresa no se auto-notifica.
-    assert despues == antes + 1
+    # Criterio 2026-09-02: las notas tampoco generan Notificacion.
+    assert despues == antes
     print("OK  test_nota_admin_y_empresa_en_thread_correcto")
 
 

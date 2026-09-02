@@ -234,24 +234,30 @@
     {% endif %}
     {% if 'notificaciones' in modulos %}
     <div class="acceso-badge-wrap">
-      <button type="button" class="acceso" style="text-align:left; font-family:inherit; cursor:pointer; width:100%;" onclick="abrirNotificaciones()">
+      {# La tarjeta ahora lleva a la BANDEJA (página completa estilo casilla
+         de correo), reemplaza al modal -- decisión de Sd 2026-09-02. #}
+      <a class="acceso" href="/app/notificaciones">
         <svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg>
         <div>
           <div class="titulo">Notificaciones</div>
           <div class="estado">Mensajes de tu sindicato</div>
         </div>
-      </button>
+      </a>
       <span class="badge-noleidas" id="badge-notif" style="display:{{ 'flex' if notificaciones_no_leidas else 'none' }};">{{ notificaciones_no_leidas }}</span>
     </div>
     {% endif %}
     {% if 'tramites' in modulos %}
-    <a class="acceso" href="/app?tab=tramites">
-      <svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg>
-      <div>
-        <div class="titulo">Trámites</div>
-        <div class="estado">Formularios y seguimiento</div>
-      </div>
-    </a>
+    <div class="acceso-badge-wrap">
+      <a class="acceso" href="/app?tab=tramites">
+        <svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg>
+        <div>
+          <div class="titulo">Trámites</div>
+          <div class="estado">Formularios y seguimiento</div>
+        </div>
+      </a>
+      {# Novedades de trámites: reemplazan a las notificaciones de sistema #}
+      <span class="badge-noleidas" style="display:{{ 'flex' if tramites_novedades else 'none' }};">{{ tramites_novedades }}</span>
+    </div>
     {% endif %}
   </div>
 
@@ -675,8 +681,9 @@ function actualizarBadgeNotif(n) {
 }
 </script>
 
-<script src="/static/pwa.js"></script>
-<script>registrarSW();</script>
+{# sello ?v= para romper el cache de 1h al sumar funciones nuevas #}
+<script src="/static/pwa.js?v=2"></script>
+<script>registrarSW(); if (window.initPushTramites) initPushTramites();</script>
 
 </body>
 </html>
