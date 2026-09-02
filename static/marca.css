@@ -72,6 +72,11 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
   .enc .logo-fallback { font-size: 21px; }
 }
 .enc .usuario { margin-left: auto; font-size: 10.5px; color: var(--sobre-base-mute); }
+/* Logo de Colm3na a la derecha del encabezado de la portada del trabajador:
+   discreto a propósito (el gremio manda, la plataforma firma). */
+.enc .logo-colmena { margin-left: auto; height: 24px; width: auto; max-width: 128px;
+  object-fit: contain; opacity: .92; align-self: center; }
+@media (max-width: 600px) { .enc .logo-colmena { height: 19px; max-width: 100px; } }
 
 /* ---------- Tarjetas de acceso (portada) ---------- */
 .tarjetas { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }

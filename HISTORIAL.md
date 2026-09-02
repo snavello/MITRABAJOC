@@ -2166,3 +2166,20 @@ viva** (opción 4) sobre el **fondo de colmena nocturna** (opción 1).
   intactos — E2E 4/4 entrando por el login nuevo, y login real verificado
   a mano en los 4 roles. `plataforma_login.html` también entró en el
   rediseño aunque el pedido eran "las tres": dejarlo viejo desentonaba.
+
+## Logo de Colm3na en el encabezado de la portada del trabajador (2026-09-02)
+
+Pedido de Sd: la firma de la plataforma en la portada. Va a la DERECHA del
+encabezado, discreta (24px desktop / 19px mobile, `.enc .logo-colmena` en
+marca.css) — el gremio sigue mandando a la izquierda. SIEMPRE la versión
+del logo para fondo oscuro: el encabezado es oscuro aunque la portada del
+sindicato sea clara (probado con las dos variantes; el conditional por
+portada_clara fue un primer intento y mostraba el logo de texto oscuro
+invisible sobre el encabezado).
+
+El mismo día: "no pudimos cargar tus trámites" en producción con el
+usuario de prueba 27999999999 NO fue un bug de código — localmente la
+carga anda perfecta — sino las 3 migraciones de los deploys del 09-01
+(`c9a2e4f7d581`/`d5b8c3e9f214`/`e6c1d8f4a327`) sin aplicar en Render: el
+modelo consulta columnas que la base de producción aún no tenía. Se
+resuelve con `python -m alembic upgrade head` en la Shell de Render.
