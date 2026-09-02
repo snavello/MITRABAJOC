@@ -405,11 +405,15 @@
      burbuja (o "Responder") abre #modal-mensaje-tramite-overlay con el
      mensaje completo, la respuesta y el cambio de estado juntos. */
   .tram-chat { display:flex; flex-direction:column; gap:10px; margin-top:6px; }
-  /* Trámite encadenado: vínculo clickeable en el hilo del chat */
-  .tram-chat-vinculo { align-self:center; background:#fff; border:1px dashed var(--marca-primario);
-    color:var(--marca-primario); border-radius:20px; padding:6px 14px; font-size:11.5px;
-    cursor:pointer; font-family:inherit; max-width:92%; }
-  .tram-chat-vinculo b { font-family:var(--fuente-num); }
+  /* Trámite encadenado: misma tarjeta que el formulario adjunto del chat */
+  .tram-chat-form.vinculo { cursor:pointer; }
+  .tram-chat-form .tcf-rotulo { font-size:10px; font-weight:500; color:var(--gris);
+    text-transform:uppercase; letter-spacing:.6px; }
+  .tram-chat-form .tcf-linea { font-size:12.5px; font-weight:650; color:var(--tinta); }
+  .tram-chat-form .tvc-exp { font-family:var(--fuente-num); }
+  .tram-chat-form .tcf-btn { margin-top:6px; background:var(--marca-acento); color:var(--marca-base);
+    border:none; border-radius:8px; padding:7px 10px; font-weight:700; font-size:12px;
+    cursor:pointer; width:100%; }
   .tram-chat-sistema { align-self:center; max-width:92%; text-align:center; font-size:11px;
     color:var(--gris); background:#faf9f6; border:1px solid var(--linea); border-radius:20px; padding:5px 13px; }
   .tram-chat-fila { display:flex; align-items:flex-end; gap:7px; max-width:86%; cursor:pointer; }
@@ -2890,6 +2894,7 @@ function renderChatTramiteAdmin(d, familia) {
   const eventos = d.log.filter(l => l.evento === 'creado' || l.evento === 'cambio_estado');
   const contraparteId = familia === 'empresa' ? d.cuit : d.cuil;
   const abrir = familia === 'empresa' ? 'abrirTramiteEmpresaDetalle' : 'abrirTramiteDetalle';
+  const etiquetaOtro = familia === 'empresa' ? 'Empresa' : 'Trabajador';
   const items = [
     ...d.notas.map((n, i) => ({ tipo: 'nota', idx: i, creado: n.creado, n })),
     ...eventos.map(l => ({ tipo: 'sistema', creado: l.creado, l })),
@@ -2902,9 +2907,23 @@ function renderChatTramiteAdmin(d, familia) {
 
   return items.map(it => {
     if (it.tipo === 'vinculo') {
-      const rotulo = it.dir === 'origen' ? 'Iniciado desde' : 'Desde este chat se inició';
-      return `<button type="button" class="tram-chat-vinculo" onclick="${abrir}(${it.v.id})">
-        ⇄ ${rotulo}: <b>${escHtml(it.v.numero_expediente)}</b> · ${escHtml(it.v.tipo_titulo)}</button>`;
+      // El trámite encadenado lo presentó la contraparte: burbuja de SU
+      // lado con su avatar, con la tarjeta del formulario adjunto.
+      const rotulo = it.dir === 'origen' ? 'Iniciado desde el trámite' : 'Trámite iniciado desde este chat';
+      const autorVinculo = familia === 'empresa' ? 'empresa' : 'trabajador';
+      return `
+      <div class="tram-chat-fila ajeno">
+        ${avatarHtmlAdmin(autorVinculo, familia, contraparteId)}
+        <div class="tram-chat-burbuja">
+          <div class="tram-chat-remitente">${etiquetaOtro}</div>
+          <div class="tram-chat-form vinculo" onclick="${abrir}(${it.v.id})">
+            <span class="tcf-rotulo">${rotulo}</span>
+            <div class="tcf-linea">⇄ <b class="tvc-exp">${escHtml(it.v.numero_expediente)}</b> · ${escHtml(it.v.tipo_titulo)}</div>
+            <button type="button" class="tcf-btn">Abrir el trámite</button>
+          </div>
+          <div class="tram-chat-meta"><span>${fmtHoraCortaAdmin(it.creado)}</span></div>
+        </div>
+      </div>`;
     }
     if (it.tipo === 'sistema') {
       return `<div class="tram-chat-sistema">${escHtml(it.l.detalle)} · ${fmtHoraCortaAdmin(it.creado)}</div>`;
@@ -2912,7 +2931,6 @@ function renderChatTramiteAdmin(d, familia) {
     const n = it.n;
     const propio = n.autor === 'admin';
     const texto = n.texto ? escHtml(n.texto) : (n.tiene_adjunto ? '📎 Adjunto' : '');
-    const etiquetaOtro = familia === 'empresa' ? 'Empresa' : 'Trabajador';
     return `
       <div class="tram-chat-fila ${propio ? 'propio' : 'ajeno'}" onclick="abrirMensajeTramiteAdmin(${it.idx})">
         ${avatarHtmlAdmin(n.autor, familia, contraparteId)}

@@ -170,7 +170,10 @@
      gremio sigue mandando. SIEMPRE la versión para fondo oscuro: el
      encabezado es oscuro aunque la portada del sindicato sea clara (regla
      del sistema de diseño). Cadena de fallback estándar. #}
-  <img class="logo-colmena" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Colm3na">
+  {# El tamaño va INLINE y no solo en marca.css: la hoja se cachea 1 hora
+     sin sello de versión, y con el CSS viejo la imagen quedaba a tamaño
+     natural (gigante) — pasó en producción en mobile el 2026-09-02. #}
+  <img class="logo-colmena" style="margin-left:auto; height:24px; width:auto; max-width:128px; object-fit:contain; align-self:center;" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Colm3na">
 </div>
 
 <a class="btn-flotante btn-home" href="/app/inicio" title="Inicio" aria-label="Inicio">

@@ -2183,3 +2183,27 @@ carga anda perfecta — sino las 3 migraciones de los deploys del 09-01
 (`c9a2e4f7d581`/`d5b8c3e9f214`/`e6c1d8f4a327`) sin aplicar en Render: el
 modelo consulta columnas que la base de producción aún no tenía. Se
 resuelve con `python -m alembic upgrade head` en la Shell de Render.
+
+## Vínculo de trámites encadenados, rediseñado (2026-09-02)
+
+Feedback de Sd sobre la primera versión (la píldora gris centrada): "muy
+chico, muy insignificante" y sin respetar la regla del chat de que cada
+mensaje muestra el avatar de quien lo produjo. Ahora el vínculo es una
+BURBUJA del hilo: la presenta quien inició el trámite (el trabajador/la
+empresa, de su lado y con su avatar; en el chat del admin, del lado de la
+contraparte), y adentro va LA MISMA tarjeta del formulario adjunto
+(blanca, filo de acento, rótulo arriba, botón ámbar "Abrir el trámite") —
+concordancia gráfica por reutilización, con el expediente en monoespaciada.
+Al armarla salió un TDZ real en renderChatTramiteAdmin: `etiquetaOtro` se
+declaraba dentro del map después de mi uso — se subió al inicio de la
+función.
+
+**Adenda del mismo día — el logo gigante en mobile de producción**: el
+tamaño de `.logo-colmena` vivía solo en marca.css, que se sirve con
+`Cache-Control: max-age=3600` y SIN sello `?v=` — el navegador del celular
+usó la hoja cacheada vieja (sin la regla) y la imagen quedó a tamaño
+natural. El tamaño base ahora va INLINE en la plantilla (que no se cachea);
+la regla de marca.css queda como refinamiento (19px en mobile). Ojo a
+futuro: cualquier feature cuyo CSS nuevo viva solo en marca.css tiene esta
+ventana de 1 hora — o se inline-a lo crítico, o se agrega sello de versión
+al link (pendiente de decidir como patrón general).
