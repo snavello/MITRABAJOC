@@ -142,6 +142,11 @@
   .tram-chat { display:flex; flex-direction:column; gap:10px; margin-top:6px; }
   .tram-chat-sistema { align-self:center; max-width:92%; text-align:center; font-size:11px;
     color:var(--gris); background:#fff; border:1px solid var(--linea); border-radius:20px; padding:5px 13px; }
+  /* Trámite encadenado: vínculo clickeable en el hilo del chat */
+  .tram-chat-vinculo { align-self:center; background:#fff; border:1px dashed var(--marca-primario);
+    color:var(--marca-primario); border-radius:20px; padding:6px 14px; font-size:11.5px;
+    cursor:pointer; font-family:inherit; max-width:92%; }
+  .tram-chat-vinculo b { font-family:var(--fuente-num); }
   /* Ícono del formulario asociado a una notificación (mirror de portada) */
   .cta-form { display:inline-flex; align-items:center; justify-content:center;
     width:44px; height:44px; border-radius:50%; background:var(--marca-acento);
@@ -509,8 +514,12 @@ if (document.getElementById('tp-tramites')) {
     return `<input type="text" class="tramx-input" id="${id}" ${maxlen ? `maxlength="${maxlen}"` : ''} placeholder="${c.longitud_exacta ? c.longitud_exacta + ' caracteres' : ''}">`;
   }
 
+  // Trámite desde cuyo chat se abrió el formulario actual (encadena al
+  // enviar; una apertura normal o desde una notificación NO encadena).
+  let tramiteOrigenParaEnvioTrx = null;
   window.abrirFormularioTramiteEmpresa = function (tipo) {
     tipoTramiteEmpresaActual = tipo;
+    tramiteOrigenParaEnvioTrx = null;
     document.getElementById('trx-form-titulo').textContent = tipo.titulo;
     document.getElementById('trx-form-codigo').textContent = tipo.codigo;
     document.getElementById('trx-form-error').style.display = 'none';
@@ -532,6 +541,7 @@ if (document.getElementById('tp-tramites')) {
     errBox.style.display = 'none';
     const fd = new FormData();
     fd.append('tipo_tramite_id', tipoTramiteEmpresaActual.id);
+    if (tramiteOrigenParaEnvioTrx) fd.append('origen_tramite_id', tramiteOrigenParaEnvioTrx);
     const faltan = [];
     tipoTramiteEmpresaActual.campos.forEach(c => {
       if (c.tipo_dato === 'separador') return;
@@ -615,19 +625,22 @@ if (document.getElementById('tp-tramites')) {
 
   // Formulario adjuntado por el sindicato en un mensaje (mirror de
   // trabajador.html): tarjeta con botón que abre ese formulario directo.
-  function htmlFormularioChatTrx(n) {
+  // `tramiteId` como literal en el onclick (los handlers inline evalúan en
+  // scope global, no ven los `let` de este módulo -- mismo criterio que
+  // trabajador.html).
+  function htmlFormularioChatTrx(n, tramiteId) {
     if (!n.formulario_id) return '';
     if (!n.formulario_titulo || !n.formulario_activo) {
       return `<div class="tram-chat-form inactivo">📋 Formulario ya no disponible</div>`;
     }
     return `
-      <div class="tram-chat-form" onclick="event.stopPropagation(); abrirFormularioDesdeChatTrx(${n.formulario_id})">
+      <div class="tram-chat-form" onclick="event.stopPropagation(); abrirFormularioDesdeChatTrx(${n.formulario_id}, ${tramiteId || 'null'})">
         <span class="tcf-rotulo">Formulario para iniciar</span>
         📋 ${escTrx(n.formulario_titulo)}
         <button type="button" class="tcf-btn">Iniciar este trámite</button>
       </div>`;
   }
-  window.abrirFormularioDesdeChatTrx = async function (formularioId) {
+  window.abrirFormularioDesdeChatTrx = async function (formularioId, origenTramiteId) {
     try {
       const r = await fetch('/api/empresa/tramites/tipos');
       const data = await r.json();
@@ -639,6 +652,7 @@ if (document.getElementById('tp-tramites')) {
       const overlay = document.getElementById('modal-recibo-overlay');
       if (overlay) overlay.classList.remove('abierto');
       abrirFormularioTramiteEmpresa(tipo);
+      tramiteOrigenParaEnvioTrx = origenTramiteId || null;
     } catch (e) {
       alert('No se pudo abrir el formulario. Probá de nuevo.');
     }
@@ -651,11 +665,18 @@ if (document.getElementById('tp-tramites')) {
     const items = [
       ...d.notas.map((n, i) => ({ tipo: 'nota', idx: i, creado: n.creado, n })),
       ...eventos.map(l => ({ tipo: 'sistema', creado: l.creado, l })),
+      ...(d.origen_tramite ? [{ tipo: 'vinculo', creado: d.creado, dir: 'origen', v: d.origen_tramite }] : []),
+      ...(d.derivados || []).map(v => ({ tipo: 'vinculo', creado: v.creado, dir: 'derivado', v })),
     ].sort((a, b) => a.creado.localeCompare(b.creado));
 
     if (!items.length) return '<div class="tram-chat-vacio">Todavía no hay mensajes en este trámite.</div>';
 
     return items.map(it => {
+      if (it.tipo === 'vinculo') {
+        const rotulo = it.dir === 'origen' ? 'Iniciado desde' : 'Desde este chat se inició';
+        return `<button type="button" class="tram-chat-vinculo" onclick="abrirTramiteEmpresaDetalleTrx('${escTrx(it.v.numero_expediente)}')">
+          ⇄ ${rotulo}: <b>${escTrx(it.v.numero_expediente)}</b> · ${escTrx(it.v.tipo_titulo)}</button>`;
+      }
       if (it.tipo === 'sistema') {
         return `<div class="tram-chat-sistema">${escTrx(it.l.detalle)} · ${fmtHoraCortaTrx(it.creado)}</div>`;
       }
@@ -668,7 +689,7 @@ if (document.getElementById('tp-tramites')) {
           <div class="tram-chat-burbuja">
             <div class="tram-chat-remitente">${n.autor === 'admin' ? 'Tu sindicato' : 'Vos'}</div>
             <div class="tram-chat-texto">${texto}</div>
-            ${htmlFormularioChatTrx(n)}
+            ${htmlFormularioChatTrx(n, d.id)}
             <div class="tram-chat-meta">
               ${n.tiene_adjunto ? '<svg viewBox="0 0 24 24"><use href="#ic-clip"/></svg>' : ''}
               <span>${fmtHoraCortaTrx(n.creado)}</span>
@@ -726,7 +747,7 @@ if (document.getElementById('tp-tramites')) {
       <div class="tram-chat-remitente">${n.autor === 'admin' ? 'Tu sindicato' : 'Vos'} · ${n.creado}</div>
       <div style="font-size:14px; line-height:1.5; margin-top:4px; white-space:pre-wrap;">${escTrx(n.texto)}</div>
       ${n.tiene_adjunto ? `<a class="tram-msg-adjunto" href="/tramite-empresa-nota-adjunto/${n.id}" target="_blank" rel="noopener">📎 ${escTrx(n.adjunto_nombre)}</a>` : ''}
-      ${htmlFormularioChatTrx(n)}
+      ${htmlFormularioChatTrx(n, trxTramiteActual ? trxTramiteActual.id : null)}
     ` : '';
     const terminado = trxTramiteActual.estado === 'terminado';
     document.getElementById('modal-recibo-contenido').innerHTML = `

@@ -412,6 +412,41 @@ def test_formulario_adjunto_en_chat():
 
 
 
+def test_tramite_encadenado_desde_chat():
+    # Un tramite iniciado desde el formulario adjunto en el chat de otro
+    # queda vinculado: ambos detalles muestran el vinculo (origen/derivados).
+    trab = _sesion_trabajador("20111111119")
+    r = trab.post("/api/tramite", data={
+        "tipo_tramite_id": TIPO_ID,
+        "origen_tramite_id": str(TRAMITE_ID),
+        f"campo_{_campo_id('Solicitud')}": "Registro de pasajeros del grupo familiar",
+        f"campo_{_campo_id('CVU')}": "2" * 22,
+        f"campo_{_campo_id('Monto')}": "100",
+    }, files={f"archivo_{_campo_id('Comprobante')}": ("c.pdf", b"%PDF-1.4 x", "application/pdf")})
+    assert r.status_code == 200
+    hijo_id = r.json()["id"]
+    hijo = db.tramite_detalle(hijo_id)
+    assert hijo["origen_tramite"]["id"] == TRAMITE_ID
+    assert hijo["origen_tramite"]["numero_expediente"]
+    padre = db.tramite_detalle(TRAMITE_ID)
+    assert any(v["id"] == hijo_id for v in padre["derivados"])
+
+    # Origen ajeno (tramite de OTRO cuil): el vinculo se ignora en silencio.
+    with Session(db.engine) as s:
+        ajeno = s.exec(select(Tramite).where(Tramite.cuil != "20111111119")).first()
+    if ajeno:
+        r2 = trab.post("/api/tramite", data={
+            "tipo_tramite_id": TIPO_ID,
+            "origen_tramite_id": str(ajeno.id),
+            f"campo_{_campo_id('Solicitud')}": "x",
+            f"campo_{_campo_id('CVU')}": "3" * 22,
+            f"campo_{_campo_id('Monto')}": "1",
+        }, files={f"archivo_{_campo_id('Comprobante')}": ("c.pdf", b"%PDF-1.4 x", "application/pdf")})
+        assert r2.status_code == 200
+        assert db.tramite_detalle(r2.json()["id"])["origen_tramite"] is None
+    print("OK  test_tramite_encadenado_desde_chat")
+
+
 if __name__ == "__main__":
     test_alta_tipo_tramite_con_campos_de_cada_tipo_dato()
     test_validacion_obligatorio_falta_campo()
@@ -422,6 +457,7 @@ if __name__ == "__main__":
     test_cambio_estado_dispara_log_y_notificacion()
     test_nota_admin_y_trabajador_en_thread_correcto()
     test_formulario_adjunto_en_chat()
+    test_tramite_encadenado_desde_chat()
     test_campo_seleccion_fija()
     test_ancho_campos_y_nuevos_tipos_de_campo()
     test_cantidad_nuevos_para_el_polling_del_globo()

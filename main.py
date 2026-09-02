@@ -2175,8 +2175,22 @@ async def api_enviar_tramite(request: Request):
         return JSONResponse(status_code=422, content={
             "errores": errores, "errores_campos": veredicto["errores_campos"]})
 
+    # Trámite encadenado: si el formulario se abrió desde el CHAT de otro
+    # trámite, el nuevo queda vinculado. Solo vale un trámite DEL MISMO
+    # trabajador en el mismo sindicato; cualquier otra cosa se ignora.
+    origen_id = None
+    try:
+        candidato = int(form.get("origen_tramite_id") or 0)
+    except ValueError:
+        candidato = 0
+    if candidato:
+        origen = db.tramite_detalle(candidato)
+        if origen and origen["sindicato_id"] == sid and origen["cuil"] == cuil:
+            origen_id = candidato
+
     resultado = db.crear_tramite(sid, tipo_tramite_id, cuil, respuestas,
-                                 advertencias=veredicto["advertencias"])
+                                 advertencias=veredicto["advertencias"],
+                                 origen_tramite_id=origen_id)
     if not resultado:
         raise HTTPException(400, "No se pudo crear el trámite.")
     return resultado
@@ -2494,8 +2508,20 @@ async def api_enviar_tramite_empresa(request: Request):
         return JSONResponse(status_code=422, content={
             "errores": errores, "errores_campos": veredicto["errores_campos"]})
 
+    # Trámite encadenado (mirror de api_enviar_tramite).
+    origen_id = None
+    try:
+        candidato = int(form.get("origen_tramite_id") or 0)
+    except ValueError:
+        candidato = 0
+    if candidato:
+        origen = db.tramite_empleador_detalle(candidato)
+        if origen and origen["sindicato_id"] == sid and origen["cuit"] == cuit:
+            origen_id = candidato
+
     resultado = db.crear_tramite_empleador(sid, tipo_tramite_id, cuit, respuestas,
-                                           advertencias=veredicto["advertencias"])
+                                           advertencias=veredicto["advertencias"],
+                                           origen_tramite_id=origen_id)
     if not resultado:
         raise HTTPException(400, "No se pudo crear el trámite.")
     return resultado

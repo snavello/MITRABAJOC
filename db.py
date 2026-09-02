@@ -633,6 +633,11 @@ class Tramite(SQLModel, table=True):
     # disparó: no frenan al trabajador, quedan para el operador del
     # sindicato en el detalle del trámite.
     advertencias: list = Field(default=[], sa_column=Column(JSON))
+    # Trámite desde cuyo CHAT se inició este (el admin adjuntó un
+    # formulario y el trabajador lo abrió desde ahí): los dos chats se
+    # muestran vinculados. Un formulario abierto desde una noticia/
+    # beneficio/notificación NO vincula (decisión de Sd 2026-09-01).
+    origen_tramite_id: Optional[int] = None
 
 
 class RespuestaTramite(SQLModel, table=True):
@@ -720,6 +725,7 @@ class TramiteEmpleador(SQLModel, table=True):
     creado: str = ""
     actualizado: str = ""
     advertencias: list = Field(default=[], sa_column=Column(JSON))  # mirror de Tramite
+    origen_tramite_id: Optional[int] = None                          # mirror de Tramite
 
 
 class RespuestaTramiteEmpleador(SQLModel, table=True):
@@ -2489,7 +2495,7 @@ def _proximo_numero_expediente(s: Session, modelo, prefijo: str, anio: str) -> s
 
 
 def crear_tramite(sindicato_id: int, tipo_tramite_id: int, cuil: str, respuestas: list,
-                   advertencias: list = None) -> Optional[dict]:
+                   advertencias: list = None, origen_tramite_id: Optional[int] = None) -> Optional[dict]:
     """Genera el número de expediente (correlativo por prefijo+año, ver
     _proximo_numero_expediente) y persiste el trámite con sus respuestas en
     una sola operación. `respuestas` es una lista de dicts con
@@ -2505,7 +2511,7 @@ def crear_tramite(sindicato_id: int, tipo_tramite_id: int, cuil: str, respuestas
         numero = _proximo_numero_expediente(s, Tramite, prefijo, anio)
         tr = Tramite(sindicato_id=sindicato_id, tipo_tramite_id=tipo_tramite_id, cuil=cuil,
                      numero_expediente=numero, estado="iniciado", creado=ahora, actualizado=ahora,
-                     advertencias=advertencias or [])
+                     advertencias=advertencias or [], origen_tramite_id=origen_tramite_id)
         s.add(tr); s.commit(); s.refresh(tr)
         for r in respuestas:
             s.add(RespuestaTramite(
@@ -2634,12 +2640,25 @@ def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:
     formularios = {t.id: t for t in s.exec(select(TipoTramite).where(
         TipoTramite.id.in_(forms_ref), TipoTramite.sindicato_id == tr.sindicato_id)).all()} \
         if forms_ref else {}
+
+    # Trámites encadenados: el que ORIGINÓ este (el trabajador lo inició
+    # desde el formulario adjunto en aquel chat) y los DERIVADOS que se
+    # iniciaron desde este. Los dos chats muestran el vínculo clickeable.
+    def _vinculo(otro):
+        t_otro = s.get(TipoTramite, otro.tipo_tramite_id)
+        return {"id": otro.id, "numero_expediente": otro.numero_expediente,
+                "tipo_titulo": t_otro.titulo if t_otro else "—", "creado": otro.creado}
+    origen = s.get(Tramite, tr.origen_tramite_id) if tr.origen_tramite_id else None
+    derivados = s.exec(select(Tramite).where(Tramite.origen_tramite_id == tr.id)
+                       .order_by(Tramite.id)).all()
     return {
         "id": tr.id, "numero_expediente": tr.numero_expediente, "cuil": tr.cuil,
         "sindicato_id": tr.sindicato_id, "estado": tr.estado,
         "estado_label": ESTADOS_TRAMITE_LABEL.get(tr.estado, tr.estado),
         "creado": tr.creado, "actualizado": tr.actualizado,
         "advertencias": tr.advertencias or [],
+        "origen_tramite": _vinculo(origen) if origen else None,
+        "derivados": [_vinculo(d) for d in derivados],
         "tipo_titulo": tipo.titulo if tipo else "—", "tipo_codigo": tipo.codigo if tipo else "",
         "respuestas": [{
             "campo_id": r.campo_tramite_id,
@@ -2813,7 +2832,8 @@ def _log_tramite_empleador(s: Session, tramite_id: int, evento: str, detalle: st
 
 
 def crear_tramite_empleador(sindicato_id: int, tipo_tramite_id: int, cuit: str, respuestas: list,
-                             advertencias: list = None) -> Optional[dict]:
+                             advertencias: list = None,
+                             origen_tramite_id: Optional[int] = None) -> Optional[dict]:
     with Session(engine) as s:
         tipo = s.get(TipoTramiteEmpleador, tipo_tramite_id)
         if not tipo or tipo.sindicato_id != sindicato_id or not tipo.activo:
@@ -2827,7 +2847,7 @@ def crear_tramite_empleador(sindicato_id: int, tipo_tramite_id: int, cuit: str, 
         numero = _proximo_numero_expediente(s, TramiteEmpleador, prefijo, anio)
         tr = TramiteEmpleador(sindicato_id=sindicato_id, tipo_tramite_id=tipo_tramite_id, cuit=cuit,
                                numero_expediente=numero, estado="iniciado", creado=ahora, actualizado=ahora,
-                               advertencias=advertencias or [])
+                               advertencias=advertencias or [], origen_tramite_id=origen_tramite_id)
         s.add(tr); s.commit(); s.refresh(tr)
         for r in respuestas:
             s.add(RespuestaTramiteEmpleador(
@@ -2934,12 +2954,22 @@ def _tramite_empleador_detalle_completo(s: Session, tr: "TramiteEmpleador") -> d
         TipoTramiteEmpleador.id.in_(forms_ref),
         TipoTramiteEmpleador.sindicato_id == tr.sindicato_id)).all()} \
         if forms_ref else {}
+
+    def _vinculo(otro):
+        t_otro = s.get(TipoTramiteEmpleador, otro.tipo_tramite_id)
+        return {"id": otro.id, "numero_expediente": otro.numero_expediente,
+                "tipo_titulo": t_otro.titulo if t_otro else "—", "creado": otro.creado}
+    origen = s.get(TramiteEmpleador, tr.origen_tramite_id) if tr.origen_tramite_id else None
+    derivados = s.exec(select(TramiteEmpleador).where(
+        TramiteEmpleador.origen_tramite_id == tr.id).order_by(TramiteEmpleador.id)).all()
     return {
         "id": tr.id, "numero_expediente": tr.numero_expediente, "cuit": tr.cuit,
         "sindicato_id": tr.sindicato_id, "estado": tr.estado,
         "estado_label": ESTADOS_TRAMITE_LABEL.get(tr.estado, tr.estado),
         "creado": tr.creado, "actualizado": tr.actualizado,
         "advertencias": tr.advertencias or [],
+        "origen_tramite": _vinculo(origen) if origen else None,
+        "derivados": [_vinculo(d) for d in derivados],
         "tipo_titulo": tipo.titulo if tipo else "—", "tipo_codigo": tipo.codigo if tipo else "",
         "respuestas": [{
             "campo_id": r.campo_tramite_id,

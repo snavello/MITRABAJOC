@@ -2108,3 +2108,32 @@ el admin en el propio texto, decisión explícita: sin campo de etiqueta.
   desactivado → ícono afuera, id basura → sin referencia).
 - Verificado en vivo con el lote UOM: chat (adjuntar desde el modal →
   tarjeta → botón abre F07), noticia con ícono → deep link → formulario.
+
+## Trámites encadenados por chat (2026-09-01, noche)
+
+Pedido de Sd: si un trámite se SIGUE con otro formulario (aprueban la
+vacante de hotel → mandan "Registro de pasajeros" por el chat), los dos
+trámites tienen que verse vinculados en ambos chats, entre por el que
+entre — y tanto el trabajador como el sindicato. Un formulario INICIADO
+desde noticia/beneficio/notificación NO vincula (decisión explícita).
+
+- `Tramite.origen_tramite_id` (+ espejo empleador), migración
+  `e6c1d8f4a327`. Solo se setea cuando el formulario se abrió desde el
+  formulario adjunto en el CHAT de otro trámite; el servidor valida que el
+  origen sea un trámite del MISMO cuil/cuit y sindicato (cualquier otra
+  cosa se ignora).
+- El detalle expone `origen_tramite` y `derivados` (id, expediente,
+  título, creado) y los cuatro chats (trabajador/empresa × usuario/admin)
+  los insertan CRONOLÓGICAMENTE en el hilo como píldoras clickeables
+  "⇄ Iniciado desde: EXP…" / "⇄ Desde este chat se inició: EXP…" que
+  abren el otro trámite.
+- **Bug encontrado al verificar**: el onclick inline de la tarjeta del
+  chat referenciaba `tramitePanelActual` (un `let` del módulo) — los
+  handlers inline evalúan en scope GLOBAL y tiraba ReferenceError. El id
+  del trámite ahora viaja como literal en el render (variante nueva del
+  hallazgo ya anotado sobre JS init y scopes).
+- Se eliminaron los textos instructivos de los previews del admin ("Editá
+  los datos de prueba…", "Así se va a ver en…") a pedido de Sd.
+- Test `test_tramite_encadenado_desde_chat` (vínculo en ambos detalles +
+  origen ajeno ignorado). Verificado en vivo: envío encadenado real desde
+  el chat del F07, píldoras en las dos puntas y navegación entre ambos.

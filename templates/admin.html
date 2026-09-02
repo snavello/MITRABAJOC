@@ -405,6 +405,11 @@
      burbuja (o "Responder") abre #modal-mensaje-tramite-overlay con el
      mensaje completo, la respuesta y el cambio de estado juntos. */
   .tram-chat { display:flex; flex-direction:column; gap:10px; margin-top:6px; }
+  /* Trámite encadenado: vínculo clickeable en el hilo del chat */
+  .tram-chat-vinculo { align-self:center; background:#fff; border:1px dashed var(--marca-primario);
+    color:var(--marca-primario); border-radius:20px; padding:6px 14px; font-size:11.5px;
+    cursor:pointer; font-family:inherit; max-width:92%; }
+  .tram-chat-vinculo b { font-family:var(--fuente-num); }
   .tram-chat-sistema { align-self:center; max-width:92%; text-align:center; font-size:11px;
     color:var(--gris); background:#faf9f6; border:1px solid var(--linea); border-radius:20px; padding:5px 13px; }
   .tram-chat-fila { display:flex; align-items:flex-end; gap:7px; max-width:86%; cursor:pointer; }
@@ -1029,7 +1034,6 @@
       </div>
       <div class="ct-der">
         <h3 class="ct-secc">Vista del afiliado</h3>
-        <p class="muted" style="font-size:11.5px;">Así se va a ver en Novedades, en vivo mientras cargás.</p>
         <div class="ttp-marco"><div class="ttp-pant">
           <div class="vap-enc">Novedades</div>
           <div class="ttp-cuerpo">
@@ -1115,7 +1119,6 @@
       </div>
       <div class="ct-der">
         <h3 class="ct-secc">Vista del afiliado</h3>
-        <p class="muted" style="font-size:11.5px;">Así se va a ver en el carrusel de la portada, en vivo mientras cargás.</p>
         <div class="ttp-marco"><div class="ttp-pant">
           <div class="vap-enc">Beneficios</div>
           <div class="ttp-cuerpo">
@@ -1225,7 +1228,6 @@
       </div>
       <div class="ct-der">
         <h3 class="ct-secc">Vista del afiliado</h3>
-        <p class="muted" style="font-size:11.5px;">Así le va a llegar la notificación, en vivo mientras la escribís.</p>
         <div class="ttp-marco"><div class="ttp-pant">
           <div class="vap-enc">Notificaciones</div>
           <div class="ttp-cuerpo">
@@ -1348,7 +1350,6 @@
           </div>
           <div class="ct-der">
             <h3 class="ct-secc">Vista del afiliado</h3>
-            <p class="muted" style="font-size:11.5px;">Editá los datos de prueba y probá el formulario: corren los MISMOS controles que al recibir un trámite real.</p>
             <div class="ttp-marco"><div class="ttp-pant">
               <div class="ttp-sello-overlay" id="tt-probar-sello"></div>
               <div class="ttp-caratula">
@@ -1639,7 +1640,6 @@
             </div>
             <div class="ct-der">
               <h3 class="ct-secc">Vista de la empresa</h3>
-              <p class="muted" style="font-size:11.5px;">Editá los datos de prueba y probá el formulario: corren los MISMOS controles que al recibir un trámite real.</p>
               <div class="ttp-marco"><div class="ttp-pant">
                 <div class="ttp-sello-overlay" id="te-probar-sello"></div>
                 <div class="ttp-caratula">
@@ -2889,14 +2889,23 @@ function avatarHtmlAdmin(autor, familia, contraparteId) {
 function renderChatTramiteAdmin(d, familia) {
   const eventos = d.log.filter(l => l.evento === 'creado' || l.evento === 'cambio_estado');
   const contraparteId = familia === 'empresa' ? d.cuit : d.cuil;
+  const abrir = familia === 'empresa' ? 'abrirTramiteEmpresaDetalle' : 'abrirTramiteDetalle';
   const items = [
     ...d.notas.map((n, i) => ({ tipo: 'nota', idx: i, creado: n.creado, n })),
     ...eventos.map(l => ({ tipo: 'sistema', creado: l.creado, l })),
+    // trámites encadenados: el que originó este y los iniciados desde acá
+    ...(d.origen_tramite ? [{ tipo: 'vinculo', creado: d.creado, dir: 'origen', v: d.origen_tramite }] : []),
+    ...(d.derivados || []).map(v => ({ tipo: 'vinculo', creado: v.creado, dir: 'derivado', v })),
   ].sort((a, b) => a.creado.localeCompare(b.creado));
 
   if (!items.length) return '<div class="tram-chat-vacio">Todavía no hay mensajes en este trámite.</div>';
 
   return items.map(it => {
+    if (it.tipo === 'vinculo') {
+      const rotulo = it.dir === 'origen' ? 'Iniciado desde' : 'Desde este chat se inició';
+      return `<button type="button" class="tram-chat-vinculo" onclick="${abrir}(${it.v.id})">
+        ⇄ ${rotulo}: <b>${escHtml(it.v.numero_expediente)}</b> · ${escHtml(it.v.tipo_titulo)}</button>`;
+    }
     if (it.tipo === 'sistema') {
       return `<div class="tram-chat-sistema">${escHtml(it.l.detalle)} · ${fmtHoraCortaAdmin(it.creado)}</div>`;
     }
