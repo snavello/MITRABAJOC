@@ -123,6 +123,17 @@
     background:var(--marca-acento); color:var(--marca-base); border-radius:9px; }
   button.mini { border-radius:7px; }
   .card { border-radius:12px; }
+
+  /* ============ Esquema "Hilo", parte 3 (2026-09-03): chips como píldoras,
+     subtítulos como hitos, detalles plegables en condensada. Las tablas
+     siguen siendo tablas (mismo criterio que en /admin). ============ */
+  .badge, .chip-estado { display:inline-block; border-radius:20px; padding:2px 9px; font-size:10.5px; font-weight:700; white-space:nowrap; }
+  .card h3 { font-family:var(--fuente-display); font-weight:700; font-size:15px; letter-spacing:1.4px;
+    text-transform:uppercase; color:var(--gris); display:flex; align-items:center; gap:10px; }
+  .card h3::after { content:""; flex:1; height:1px; background:var(--linea); }
+  summary { font-family:var(--fuente-display); font-weight:700; font-size:15px; letter-spacing:1px; text-transform:uppercase; color:var(--gris); }
+  .link-num { font-family:var(--fuente-num); font-variant-numeric:tabular-nums; }
+  .msg { border-radius:10px; }
 </style>
 </head>
 <body>

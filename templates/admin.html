@@ -573,6 +573,32 @@
     background:var(--marca-acento); color:var(--marca-base); border-radius:9px; }
   button.mini { border-radius:7px; }
   .card { border-radius:12px; }
+
+  /* ============ Esquema "Hilo", parte 3 (2026-09-03): chips, modales,
+     subtítulos y filtros de las secciones. Las tablas siguen siendo tablas
+     (el admin es una herramienta de escritorio con datos densos): lo que se
+     unifica es el vocabulario -- etiquetas como píldoras, expediente/CUIL en
+     monoespaciada, encabezado de modal y subtítulos como hitos. ============ */
+  .tag { display:inline-block; border-radius:20px; padding:2px 9px; font-size:10.5px; font-weight:700; white-space:nowrap; }
+  .badge-noleidas { font-family:var(--fuente-num); }
+  .ct-secc, .card h3 { font-family:var(--fuente-display); font-weight:700; font-size:15px; letter-spacing:1.4px;
+    text-transform:uppercase; color:var(--gris); display:flex; align-items:center; gap:10px; }
+  .ct-secc::after, .card h3::after { content:""; flex:1; height:1px; background:var(--linea); }
+  .modal-recibo-enc { overflow:hidden; border-left:5px solid var(--marca-acento);
+    background-image:linear-gradient(150deg, var(--marca-base), color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base))); }
+  .modal-recibo-enc::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08;
+    mix-blend-mode:overlay; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .modal-recibo-enc > * { position:relative; z-index:1; }
+  .modal-recibo-enc h3 { font-family:var(--fuente-display); font-weight:700; font-size:20px; letter-spacing:.3px;
+    text-transform:uppercase; line-height:1.05; }
+  .overlay-ayuda-caja h3 { font-family:var(--fuente-display); font-weight:700; font-size:20px; letter-spacing:.3px;
+    text-transform:uppercase; line-height:1.05; color:var(--tinta); }
+  .overlay-ayuda-caja h4 { font-family:var(--fuente-display); font-size:13px; letter-spacing:1.4px; color:var(--gris); }
+  .filtros input, .filtros select { border-radius:20px; padding:7px 13px; background:#fff; }
+  .filtros .f-cant { font-family:var(--fuente-num); }
+  .tvc-exp, .mt-exp, td code, .rep-detalle code { font-family:var(--fuente-num); font-variant-numeric:tabular-nums; }
+  .rep-sub { font-family:var(--fuente-display); font-size:14px; letter-spacing:1.2px; text-transform:uppercase; color:var(--gris); }
+  .msg { border-radius:10px; }
 </style>
 </head>
 <body>

@@ -2407,3 +2407,18 @@ tracking; **botón principal en acento con texto en condensada** (los
 `.mini`, `.sec`, pestañas y el botón de ayuda quedan como estaban -- el
 selector los excluye explícitamente). Versiones: Admin 0.26.02 → 0.27.01,
 Plataforma 0.19.01 → 0.20.01.
+
+**Parte 3 — secciones (Admin 0.27.02 / Plataforma 0.20.02).** Decisión
+tomada al mirar las secciones con listas (Reportes, Trámites,
+Notificaciones, Noticias, Beneficios, Empleadores, Sindicatos, Recibos
+con alerta): **las tablas siguen siendo tablas**. El admin es una
+herramienta de escritorio con datos densos y filtros por columna; pasar
+esas filas a tarjetas del hilo (como en la app del trabajador) las haría
+más largas y menos comparables. Lo que se unifica es el vocabulario, otra
+vez solo con CSS: etiquetas de estado como píldoras (`.tag`, `.badge`,
+`.chip-estado`), subtítulos de sección y de tarjeta como hitos (`.ct-secc`,
+`.card h3`, `.rep-sub`), encabezado del modal de trámite/recibo con el
+degradé + grano + filo ámbar y título en condensada, la caja de ayuda con
+el mismo título, inputs de filtro como píldoras, y expediente/CUIL/cantidades
+en monoespaciada. Los `<details>` de plataforma llevan el resumen en
+condensada.
