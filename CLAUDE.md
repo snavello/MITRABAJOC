@@ -255,9 +255,10 @@ RAG) y el sprint "Admin de Seccional" (decisiones ya cerradas).
    vivo) que cubre el mismo problema real a menor costo — ver "Constructor
    visual de Trámites" en HISTORIAL.md. Revisar si en algún momento el
    lienzo libre se justifica.
-5. Entorno de staging real en Render (rama + servicio + base Postgres
-   aparte) para probar deploys completos antes de tocar la demo de
-   producción — sin urgencia, tiene costo real (no hay free tier viable).
+5. Entornos separados (Pruebas / Demo / Desarrollo en la nube / Prod):
+   plan por etapas acordado 2026-09-03 en [`PLAN_ENTORNOS.md`](PLAN_ENTORNOS.md)
+   — el servicio actual pasa a seguir la rama `demo` y se crea uno de
+   pruebas sobre `main` (~USD 14/mes). Etapa 0 (repo) y 1 (Render) primero.
 
 ## Validaciones en formularios de Trámites
 Capa de validaciones acordada 2026-09-01, cuatro fuentes: `fija` (valor
