@@ -1208,7 +1208,14 @@ def crear_tablas():
 
 
 def cargar_seed_si_vacio():
-    """Si no hay conceptos, carga los iniciales desde el JSON semilla."""
+    """Carga el seed histórico de AEFIP (data/seed_aefip.json) si no hay
+    conceptos. YA NO corre en el arranque (init_db): la demo arranca sin
+    AEFIP (CLAUDE.md, "Datos desde cero") y sembrarlo solo hacía aparecer
+    un sindicato fantasma con id=1 en toda base creada desde cero sin
+    cargar_demo.py antes -- exactamente el caso del entorno de Pruebas.
+    Queda disponible solo a pedido:
+        python -c "import db; db.cargar_seed_si_vacio()"
+    """
     seed_path = Path("data/seed_aefip.json")
     if not seed_path.exists():
         return
@@ -1262,13 +1269,14 @@ def init_db():
 
     - En SQLite (desarrollo): crea las tablas con create_all, como siempre.
     - En Postgres (producción): NO crea tablas; el esquema lo administra Alembic
-      (`alembic upgrade head` corre en el deploy). Si las tablas aún no existen,
-      cargar_seed_si_vacio no encontrará nada y no romperá.
-    El seed se carga si la base está vacía, en ambos motores.
+      (`alembic upgrade head` corre en el deploy).
+    NO siembra AEFIP: una base vacía queda vacía hasta que se corre
+    cargar_demo.py o se da de alta un sindicato desde /plataforma. Solo se
+    siembran los topes de la seguridad social (data/topes_ss.csv), que son
+    datos de ley y no de ningún sindicato.
     """
     if not USANDO_POSTGRES:
         crear_tablas()
-    cargar_seed_si_vacio()
     sembrar_topes_si_vacio()
 
 

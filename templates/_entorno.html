@@ -1,0 +1,7 @@
+{# Distintivo de entorno: solo en local/pruebas (entorno.py decide), nunca
+   en demo ni prod. Fijo abajo a la izquierda, sin capturar clics, para no
+   interferir con la UI ni con los robots E2E. Muestra la versión de la app
+   cuando la página la tiene en contexto. #}
+{% if distintivo_entorno %}
+<div id="distintivo-entorno" aria-hidden="true" style="position:fixed; left:10px; bottom:10px; z-index:9999; pointer-events:none; font:600 11px/1 ui-monospace, 'Cascadia Mono', Consolas, monospace; letter-spacing:.08em; text-transform:uppercase; color:#1b1508; background:#ffb020; border:1px solid #7a4d00; border-radius:999px; padding:6px 10px; box-shadow:0 2px 8px rgba(0,0,0,.25);">{{ entorno }}{% if version %} · v{{ version }}{% endif %}</div>
+{% endif %}

@@ -67,6 +67,7 @@
 </style>
 </head>
 <body class="{{ 'claro' if marca.admin_portada_clara else 'oscuro' }} grano {{ 'grano-clara' if marca.admin_portada_clara else 'grano-osc' }}">
+{% include "_entorno.html" %}
 
 <div class="enc">
   {% if marca.logo %}
@@ -232,7 +233,8 @@
     <h3>Acerca de</h3>
     <div class="modal-fila"><span class="k">Versión</span><span class="v">{{ version }}</span></div>
     <div class="modal-fila"><span class="k">Fecha</span><span class="v">{{ fecha_version }}</span></div>
-  </div>
+{% if entorno %}    <div class="modal-fila"><span class="k">Entorno</span><span class="v">{{ entorno }}</span></div>
+{% endif %}  </div>
 </div>
 
 <!-- Íconos SVG de línea -->

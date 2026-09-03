@@ -1,7 +1,7 @@
 """Servidor del validador de recibos — Mi Trabajo.
 
 Datos en SQLite (ver db.py). Conceptos, fórmulas y reportes viven en la base;
-seed_aefip.json solo siembra la base la primera vez.
+seed_aefip.json es histórico y NO se siembra solo (ver db.init_db).
 
 Rutas del trabajador:
   GET  /                    pantalla del trabajador
@@ -58,6 +58,7 @@ from filigrana import filigrana_svg
 from qr import qr_svg, url_verificacion
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
 from version import VERSION_TRABAJADOR, VERSION_ADMIN, VERSION_PLATAFORMA, FECHA_VERSION
+import entorno
 from modulos import MODULOS, MODULOS_INICIALES
 import dashboard
 import rag
@@ -335,6 +336,11 @@ def servir_logo_plataforma_oscuro():
             headers={"Cache-Control": "public, max-age=3600"},
         )
 templates = Jinja2Templates(directory="templates")
+# Entorno (local/pruebas/demo/prod) disponible en TODAS las plantillas sin
+# pasarlo en cada TemplateResponse: el distintivo de _entorno.html y la fila
+# del "Acerca de" lo leen de acá. Ver entorno.py.
+templates.env.globals["entorno"] = entorno.ENTORNO
+templates.env.globals["distintivo_entorno"] = entorno.MUESTRA_DISTINTIVO
 
 
 @app.on_event("startup")

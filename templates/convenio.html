@@ -71,6 +71,7 @@
 </style>
 </head>
 <body>
+{% include "_entorno.html" %}
 
 <div class="barra">
   {% if marca and marca.logo %}<img src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">{% endif %}

@@ -26,6 +26,7 @@
 </style>
 </head>
 <body>
+{% include "_entorno.html" %}
   <div class="caja">
     <img class="logo-recuadro" src="{{ '/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg' }}" alt="Mi Trabajo">
     <h1>Estás en varios sindicatos. ¿A cuál querés entrar?</h1>

@@ -602,6 +602,7 @@
 </style>
 </head>
 <body>
+{% include "_entorno.html" %}
 <div class="app-bar-fija">
 <header>
   <img class="logo-plataforma-header" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Mi Trabajo">
@@ -2025,7 +2026,8 @@
     <h3 style="margin-bottom:12px;">Acerca de</h3>
     <div style="display:flex; justify-content:space-between; padding:6px 0; font-size:13.5px;"><span class="muted">Versión</span><strong>{{ version }}</strong></div>
     <div style="display:flex; justify-content:space-between; padding:6px 0; font-size:13.5px;"><span class="muted">Fecha</span><strong>{{ fecha_version }}</strong></div>
-    <button type="button" class="mini" style="margin-top:10px;" onclick="document.getElementById('acerca-box').style.display='none'">Cerrar</button>
+{% if entorno %}    <div style="display:flex; justify-content:space-between; padding:6px 0; font-size:13.5px;"><span class="muted">Entorno</span><strong>{{ entorno }}</strong></div>
+{% endif %}    <button type="button" class="mini" style="margin-top:10px;" onclick="document.getElementById('acerca-box').style.display='none'">Cerrar</button>
   </div>
 </div>
 

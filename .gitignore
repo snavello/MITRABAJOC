@@ -11,3 +11,6 @@ disenos/
 # corrida y se regeneran solos -- ver e2e/README.md
 e2e/resultados/
 test-results/
+
+# Dumps de la base de demo que hace promover_demo.py antes de promover
+backups/
