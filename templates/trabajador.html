@@ -226,6 +226,96 @@
     display:flex; align-items:center; justify-content:center; padding:0 3px; }
   .tram-item .punto-novedad { display:inline-block; width:9px; height:9px; border-radius:50%;
     background:var(--marca-acento); margin-right:6px; vertical-align:1px; }
+  /* ---------- Inicio de Trámites, rediseño "Hilo" (2026-09-03) ----------
+     Elegido entre 3 propuestas (disenos/notificaciones-tramites-propuestas.html):
+     primero "Necesita tu atención" (el trámite con novedad y el último
+     mensaje del sindicato), después dos accesos grandes, chips por estado y
+     la lista con una barra de progreso por trámite. Prefijo th- para no
+     pisar el resto del panel. */
+  .th-aten { position:relative; overflow:hidden; margin-top:16px; color:#fff; border-radius:14px; padding:13px 14px;
+    border-left:5px solid var(--marca-acento);
+    background:linear-gradient(150deg, var(--marca-base), color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base))); }
+  .th-aten::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .th-aten > * { position:relative; z-index:1; }
+  .th-aten .k { font-size:10.5px; letter-spacing:1.6px; text-transform:uppercase; color:var(--marca-acento);
+    font-weight:700; display:flex; align-items:center; gap:7px; }
+  .th-punto { width:8px; height:8px; border-radius:50%; background:var(--marca-acento); display:inline-block; flex:none;
+    animation:th-pulso 1.8s ease-out infinite; }
+  @keyframes th-pulso { 0% { box-shadow:0 0 0 0 color-mix(in srgb, var(--marca-acento) 55%, transparent); }
+    100% { box-shadow:0 0 0 9px transparent; } }
+  .th-aten .tit { font-family:var(--fuente-display); font-weight:700; font-size:21px; line-height:1.05;
+    text-transform:uppercase; letter-spacing:.3px; margin-top:5px; color:#fff; }
+  .th-aten .exp { font-family:var(--fuente-num); font-size:11px; color:rgba(255,255,255,.65); margin-top:3px; }
+  .th-aten .msg { display:flex; gap:9px; margin-top:10px; background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:9px 10px; font-size:13px; line-height:1.4; }
+  .th-aten .msg .av { width:28px; height:28px; border-radius:50%; flex:none; background:var(--marca-apoyo);
+    display:flex; align-items:center; justify-content:center; }
+  .th-aten .msg .av svg { width:15px; height:15px; stroke:#fff; stroke-width:1.9; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .th-aten .msg b { display:block; font-size:11.5px; color:#fff; }
+  .th-aten .msg span { color:rgba(255,255,255,.82); display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+  .th-aten .bts { display:flex; gap:7px; margin-top:11px; }
+  .th-aten .bts button { flex:1; border-radius:9px; padding:10px; cursor:pointer; font-family:var(--fuente-display);
+    font-size:16px; letter-spacing:1px; text-transform:uppercase; font-weight:700;
+    border:1px solid rgba(255,255,255,.28); background:transparent; color:#fff; }
+  .th-aten .bts button.cta { background:var(--marca-acento); border-color:var(--marca-acento); color:var(--marca-base); }
+  .th-acc { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+  .th-tile { border-radius:12px; padding:13px 12px; display:flex; flex-direction:column; align-items:flex-start; gap:6px;
+    border:1px solid var(--linea); background:#fff; color:var(--tinta); cursor:pointer; font-family:inherit; text-align:left; }
+  .th-tile:active { transform:scale(.98); }
+  .th-tile.cta { background:var(--marca-acento); border-color:var(--marca-acento); color:var(--marca-base); }
+  .th-tile svg { width:22px; height:22px; stroke:currentColor; stroke-width:1.9; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .th-tile:not(.cta) svg { stroke:var(--marca-primario); }
+  .th-tile b { font-family:var(--fuente-display); font-size:17px; letter-spacing:.8px; text-transform:uppercase; line-height:1.05; }
+  .th-tile small { font-size:11px; color:var(--gris); }
+  .th-tile.cta small { color:color-mix(in srgb, var(--marca-base) 70%, transparent); }
+  .th-buscar { margin-top:10px; background:#fff; border:1px solid var(--linea); border-radius:12px; padding:12px; }
+  .th-buscar[hidden] { display:none; }
+  .th-fil { display:flex; gap:6px; margin-top:18px; align-items:center; flex-wrap:wrap; }
+  .th-fil button { border:1px solid var(--linea); background:#fff; border-radius:20px; padding:5px 12px; font-size:12px;
+    font-weight:600; color:var(--gris); cursor:pointer; font-family:inherit; }
+  .th-fil button i { font-style:normal; font-family:var(--fuente-num); font-size:10.5px; opacity:.7; margin-left:3px; }
+  .th-fil button.activo { background:var(--marca-base); border-color:var(--marca-base); color:#fff; }
+  .th-r { background:#fff; border:1px solid var(--linea); border-radius:12px; padding:12px 13px; margin-top:8px; cursor:pointer;
+    transition:box-shadow .15s; }
+  .th-r:hover { box-shadow:0 4px 14px rgba(21,34,56,.08); }
+  .th-r .fila-t { display:flex; align-items:center; gap:8px; }
+  .th-r .tit { font-weight:700; font-size:14px; flex:1; line-height:1.25; }
+  .th-r .exp { font-family:var(--fuente-num); font-size:11px; color:var(--gris); margin-top:2px; }
+  .th-tag { display:inline-block; border-radius:20px; padding:3px 9px; font-size:10.5px; font-weight:700; white-space:nowrap; }
+  .th-prog { display:flex; gap:3px; margin-top:10px; }
+  .th-prog i { flex:1; height:4px; border-radius:2px; background:var(--linea); }
+  .th-prog i.on { background:var(--marca-primario); }
+  .th-prog i.cur { background:var(--marca-acento); }
+  .th-prog i.al { background:var(--alerta); }
+  .th-r .pie { display:flex; justify-content:space-between; gap:10px; margin-top:6px; font-size:11.5px; color:var(--gris); }
+  .th-r .pie > span:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .th-r .pie > span:last-child { white-space:nowrap; flex:none; }
+  .th-r .pie b { color:var(--marca-primario); font-weight:600; }
+  .th-r .pie b.nov { color:var(--marca-acento); }
+  .th-r .pie b.esp { color:var(--alerta); }
+  @media (prefers-reduced-motion:reduce) { .th-punto { animation:none; } .th-r { transition:none; } }
+  /* El mismo esquema, trasladado a Tu Recibo y Credencial (2026-09-03) sin
+     tocar el contenido: la tarjeta oscura es ahora el "hero" de Tu Recibo
+     (reemplaza a la zona punteada), el historial usa las filas th-r y el
+     encabezado de la credencial toma el degradé + grano + condensada. */
+  .th-aten .k svg { width:15px; height:15px; stroke:currentColor; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .th-aten .bts label { flex:1; text-align:center; border-radius:9px; padding:10px; cursor:pointer;
+    font-family:var(--fuente-display); font-size:16px; letter-spacing:1px; text-transform:uppercase; font-weight:700;
+    background:var(--marca-acento); border:1px solid var(--marca-acento); color:var(--marca-base); margin:0; }
+  .th-aten .bts label:active, .th-aten .bts button:active { transform:scale(.98); }
+  .th-acc.una { grid-template-columns:1fr; }
+  .th-tile.fila-t { flex-direction:row; align-items:center; gap:12px; }
+  .th-tile.fila-t > div { display:flex; flex-direction:column; gap:2px; }
+  .th-r .tags { display:flex; gap:4px; flex-wrap:wrap; margin-top:8px; }
+  /* credencial: mismo encabezado que la tarjeta oscura */
+  .cred-head { background-image:linear-gradient(150deg, var(--marca-base), color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base)));
+    border-left:5px solid var(--marca-acento); position:relative; overflow:hidden; }
+  .cred-head::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .cred-head > * { position:relative; z-index:1; }
+  .cred-head .cred-k { font-size:10.5px; letter-spacing:1.6px; text-transform:uppercase; color:var(--marca-acento); font-weight:700; }
+  .cred-sind { font-family:var(--fuente-display); font-weight:700; font-size:20px; letter-spacing:.3px; text-transform:uppercase; line-height:1.05; }
   .tram-item { position:relative; overflow:hidden;
     background:linear-gradient(160deg, #ffffff, var(--papel)) !important; }
   .tram-input { display:block; width:100%; padding:11px 12px; border:1px solid var(--linea);
@@ -522,13 +612,20 @@
     <div id="inicio">
       <h1>Revisá tu recibo</h1>
       <p class="sub">Sacale una foto o subí el PDF y verificamos que los aportes estén bien calculados.</p>
-      <div class="zona">
-        <div class="ico">📄</div>
-        <p>Foto o PDF de tu último recibo</p>
+      <!-- Esquema "Hilo" (2026-09-03): la tarjeta oscura reemplaza a la zona
+           punteada; mismos textos y mismo input de siempre. -->
+      <div class="th-aten">
+        <div class="k"><svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg>Tu recibo</div>
+        <div class="tit">Foto o PDF de tu último recibo</div>
+        <div class="bts"><label for="archivo">Elegir recibo</label></div>
       </div>
-      <label class="btn" for="archivo">Elegir recibo</label>
       <input type="file" id="archivo" accept="image/*,application/pdf" capture="environment">
-      <button class="btn sec" id="ver-historial" style="margin-top:10px;">Ver mis recibos verificados</button>
+      <div class="th-acc una">
+        <button type="button" class="th-tile fila-t" id="ver-historial">
+          <svg viewBox="0 0 24 24"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+          <div><b>Ver mis recibos verificados</b><small>Historial privado</small></div>
+        </button>
+      </div>
     </div>
 
     <!-- Historial: mis recibos verificados -->
@@ -632,13 +729,14 @@
   {# Solo con sesión de trabajador: la ruta / (demo sin login) no tiene marca. #}
   {% if marca and 'credencial' in modulos %}
   <div class="tpanel" id="tp-credencial">
-    <div class="cred">
+    <h1>Credencial</h1>
+    <div class="cred" style="margin-top:16px;">
       <div class="cred-fondo">{{ filigrana|safe }}</div>
       <div class="cred-head">
         {% if marca and marca.logo %}
         <img class="cred-logo" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
         {% endif %}
-        <div class="cred-sind">{{ sindicato }}</div>
+        <div><div class="cred-k">Credencial digital</div><div class="cred-sind">{{ sindicato }}</div></div>
       </div>
       <div class="cred-body">
         <div class="cred-top">
@@ -693,20 +791,29 @@
     <div id="tram-inicio">
       <h1>Trámites</h1>
       <p class="sub">Formularios de tu sindicato y seguimiento de tus expedientes.</p>
-      <button class="btn" id="tram-nuevo">Iniciar un trámite nuevo</button>
 
-      <div class="tram-box">
-        <div class="tram-box-enc"><div class="tit">Consultar por número de expediente</div></div>
-        <div class="tram-box-body">
-          <div style="display:flex; gap:8px;">
-            <input type="text" id="tram-buscar-input" class="tram-input" placeholder="Ej: F01AEFIP-2026-000123" style="flex:1; min-width:0;">
-            <button class="btn sec" id="tram-buscar-btn" style="width:auto; margin-top:0; padding:0 16px;">Buscar</button>
-          </div>
-          <div id="tram-buscar-error" class="muted" style="margin-top:8px; font-size:12.5px;"></div>
+      <!-- "Necesita tu atención": el trámite con novedad más reciente (lo llena renderTramites) -->
+      <div id="tram-aten"></div>
+
+      <div class="th-acc">
+        <button type="button" class="th-tile cta" id="tram-nuevo">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          <b>Iniciar un trámite</b><small id="tram-nuevo-sub">Elegí el formulario</small>
+        </button>
+        <button type="button" class="th-tile" id="tram-buscar-toggle">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <b>Buscar expediente</b><small>Por número de expediente</small>
+        </button>
+      </div>
+      <div class="th-buscar" id="tram-buscar-box" hidden>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="tram-buscar-input" class="tram-input" placeholder="Ej: F01AEFIP-2026-000123" style="flex:1; min-width:0;">
+          <button class="btn sec" id="tram-buscar-btn" style="width:auto; margin-top:0; padding:0 16px; min-height:44px;">Buscar</button>
         </div>
+        <div id="tram-buscar-error" class="muted" style="margin-top:8px; font-size:12.5px;"></div>
       </div>
 
-      <h2 style="margin-top:22px; padding:0 0 8px;">Mis trámites</h2>
+      <div class="th-fil" id="tram-filtros"></div>
       <div id="tram-lista"><div class="cargando" style="padding:20px 0;"><div class="spin"></div></div></div>
     </div>
 
@@ -1179,15 +1286,14 @@ function renderHistorial(lista) {
   lista.forEach((r, i) => {
     const ok = r.estado === 'OK';
     const esReforma = r.detalle && r.detalle.recibo && r.detalle.recibo.formato === 'nuevo';
-    h += `<div class="card" style="margin-top:12px;">
-      <div class="fila" style="border:none; padding:0; cursor:pointer;" onclick="toggleHistorialItem(${i})">
-        <span><b>${fmtPeriodo(r.periodo)}</b> · ${r.sindicato}<br>
-          <span class="muted" style="font-size:12px;">${r.fecha}</span></span>
-        <span>
-          <span class="tag" style="background:${ok?'#e3f2ee':'#f8e5e2'}; color:${ok?'var(--agua)':'var(--alerta)'};">${ok?'Todo en orden':'Con discrepancias'}</span>
-          ${r.enviado ? '<span class="tag" style="background:#e3f2ee; color:var(--agua); margin-left:4px;">Enviado</span>' : ''}
-          ${esReforma ? '<span class="tag" style="background:#e8def5; color:#5b3d8a; margin-left:4px;">reforma</span>' : ''}
-        </span>
+    // Filas del esquema "Hilo" (mismos datos y etiquetas que antes)
+    h += `<div class="th-r" onclick="toggleHistorialItem(${i})">
+      <div class="tit">${fmtPeriodo(r.periodo)} · ${r.sindicato}</div>
+      <div class="exp">${r.fecha}</div>
+      <div class="tags">
+        <span class="th-tag" style="background:${ok?'#e3f2ee':'#f8e5e2'}; color:${ok?'var(--agua)':'var(--alerta)'};">${ok?'Todo en orden':'Con discrepancias'}</span>
+        ${r.enviado ? '<span class="th-tag" style="background:#e3f2ee; color:var(--agua);">Enviado</span>' : ''}
+        ${esReforma ? '<span class="th-tag" style="background:#e8def5; color:#5b3d8a;">reforma</span>' : ''}
       </div>
     </div>`;
   });
@@ -1410,25 +1516,137 @@ if (document.getElementById('tp-tramites')) {
     if (e.key === 'Enter') document.getElementById('tram-buscar-btn').click();
   });
 
+  // ---------- Inicio "Hilo": atención + accesos + filtros + lista ----------
+  let tramitesCache = [];
+  let filtroTram = 'todos';
+  // Barra de progreso de 4 tramos: iniciado → en tratamiento → respondido →
+  // terminado. "Esperan tu respuesta" es el tramo 2 en color de alerta.
+  const PROGRESO_TRAM = {
+    iniciado: ['cur', '', '', ''], en_tratamiento: ['on', 'cur', '', ''], espera_info: ['on', 'al', '', ''],
+    respondido: ['on', 'on', 'cur', ''], terminado: ['on', 'on', 'on', 'on'],
+  };
+  const ETIQUETA_CORTA = { espera_info: 'Esperan tu respuesta' };
+  function tagEstadoTh(estado, label) {
+    const c = ESTADO_TAG_COLOR[estado] || ['#eee', '#888'];
+    return `<span class="th-tag" style="background:${c[0]}; color:${c[1]};">${escTram(ETIQUETA_CORTA[estado] || label)}</span>`;
+  }
+  // "AAAA-MM-DD HH:MM" -> "hoy 07:40" / "ayer 16:20" / "26/08"
+  function fmtCuando(s) {
+    const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})$/.exec(s || '');
+    if (!m) return s || '';
+    const hoy = new Date(); const p = n => String(n).padStart(2, '0');
+    const iso = d => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1);
+    const f = `${m[1]}-${m[2]}-${m[3]}`;
+    if (f === iso(hoy)) return `hoy ${m[4]}`;
+    if (f === iso(ayer)) return `ayer ${m[4]}`;
+    return `${m[3]}/${m[2]}`;
+  }
+  function textoUltimoMensaje(u) {
+    if (!u) return '';
+    if (u.texto) return u.texto;
+    if (u.formulario_id) return 'Te mandó un formulario para iniciar.';
+    if (u.tiene_adjunto) return 'Te mandó un adjunto.';
+    return '';
+  }
+
+  document.getElementById('tram-buscar-toggle').onclick = () => {
+    const box = document.getElementById('tram-buscar-box');
+    box.hidden = !box.hidden;
+    if (!box.hidden) document.getElementById('tram-buscar-input').focus();
+  };
+
+  function renderAtencion() {
+    const cont = document.getElementById('tram-aten');
+    const t = tramitesCache.find(x => x.novedad);   // la lista viene más reciente primero
+    if (!t) { cont.innerHTML = ''; return; }
+    const u = t.ultimo_mensaje;
+    const delSindicato = u && u.autor === 'admin';
+    const msg = delSindicato
+      ? `<div class="msg"><div class="av"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></div>
+           <div><b>Tu sindicato · ${fmtCuando(u.creado)}</b><span>${escTram(textoUltimoMensaje(u))}</span></div></div>`
+      : `<div class="msg"><div class="av"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></div>
+           <div><b>Tu sindicato · ${fmtCuando(t.actualizado)}</b><span>Cambió el estado del trámite a "${escTram(t.estado_label)}".</span></div></div>`;
+    const puedeResponder = t.estado !== 'terminado';
+    cont.innerHTML = `
+      <div class="th-aten">
+        <div class="k"><i class="th-punto"></i>Necesita tu atención</div>
+        <div class="tit">${escTram(t.tipo_titulo)}</div>
+        <div class="exp">${escTram(t.numero_expediente)} · ${escTram(t.estado_label)}</div>
+        ${msg}
+        <div class="bts">
+          ${puedeResponder ? `<button type="button" class="cta" onclick="responderTramiteDesdeInicio('${escTram(t.numero_expediente)}')">Responder</button>` : ''}
+          <button type="button" onclick="abrirTramiteDetalleTrab('${escTram(t.numero_expediente)}')">Abrir el trámite</button>
+        </div>
+      </div>`;
+  }
+  // "Responder" abre el detalle y, ya cargado, el compositor del chat.
+  window.responderTramiteDesdeInicio = async function (numero) {
+    await abrirTramiteDetalleTrab(numero);
+    if (tramitePanelActual && tramitePanelActual.estado !== 'terminado') abrirResponderTramiteTrab();
+  };
+
+  function renderFiltros() {
+    const cont = document.getElementById('tram-filtros');
+    if (!tramitesCache.length) { cont.innerHTML = ''; return; }
+    const enCurso = tramitesCache.filter(t => t.estado !== 'terminado').length;
+    const term = tramitesCache.length - enCurso;
+    const chip = (k, lab, n) => `<button type="button" class="${filtroTram === k ? 'activo' : ''}" onclick="filtrarTramites('${k}')">${lab}<i>${n}</i></button>`;
+    cont.innerHTML = chip('todos', 'Todos', tramitesCache.length) + chip('curso', 'En curso', enCurso) + chip('terminados', 'Terminados', term);
+  }
+  window.filtrarTramites = function (k) { filtroTram = k; renderFiltros(); renderLista(); };
+
+  function renderLista() {
+    const cont = document.getElementById('tram-lista');
+    if (!tramitesCache.length) { cont.innerHTML = '<p class="muted" style="margin-top:14px;">Todavía no presentaste ningún trámite.</p>'; return; }
+    const visibles = tramitesCache.filter(t =>
+      filtroTram === 'todos' || (filtroTram === 'curso' ? t.estado !== 'terminado' : t.estado === 'terminado'));
+    if (!visibles.length) { cont.innerHTML = '<p class="muted" style="margin-top:14px;">Nada que mostrar con este filtro.</p>'; return; }
+    cont.innerHTML = visibles.map(t => {
+      const seg = (PROGRESO_TRAM[t.estado] || PROGRESO_TRAM.iniciado).map(c => `<i class="${c}"></i>`).join('');
+      const u = t.ultimo_mensaje;
+      let pie;
+      if (t.novedad) pie = '<b class="nov">Hay novedades del sindicato</b>';
+      else if (t.estado === 'espera_info') pie = '<b class="esp">Esperan tu respuesta</b>';
+      else if (u && textoUltimoMensaje(u)) pie = `<b>${u.autor === 'admin' ? 'Tu sindicato' : 'Vos'}:</b> ${escTram(textoUltimoMensaje(u))}`;
+      else pie = t.estado === 'terminado' ? 'Cerrado' : 'Presentado';
+      return `
+        <div class="th-r tram-item" onclick="abrirTramiteDetalleTrab('${escTram(t.numero_expediente)}')">
+          <div class="fila-t">
+            <div style="flex:1; min-width:0;"><div class="tit">${t.novedad ? '<span class="punto-novedad" title="Hay novedades"></span>' : ''}${escTram(t.tipo_titulo)}</div>
+              <div class="exp">${escTram(t.numero_expediente)}</div></div>
+            ${tagEstadoTh(t.estado, t.estado_label)}
+          </div>
+          <div class="th-prog">${seg}</div>
+          <div class="pie"><span>${pie}</span><span>${fmtCuando(t.actualizado || t.creado)}</span></div>
+        </div>`;
+    }).join('');
+  }
+  function renderTramites() { renderAtencion(); renderFiltros(); renderLista(); }
+
   async function cargarMisTramites() {
     const cont = document.getElementById('tram-lista');
     cont.innerHTML = `<div class="cargando" style="padding:20px 0;"><div class="spin"></div></div>`;
     try {
       const r = await fetch('/api/tramites/mios');
       const data = await r.json();
-      if (!data.tramites.length) { cont.innerHTML = '<p class="muted">Todavía no presentaste ningún trámite.</p>'; return; }
-      cont.innerHTML = data.tramites.map(t => `
-        <div class="card tram-item" style="margin-top:10px; padding:13px 15px; cursor:pointer;" onclick="abrirTramiteDetalleTrab('${t.numero_expediente}')">
-          <div class="fila" style="border:none; padding:0;">
-            <span>${t.novedad ? '<span class="punto-novedad" title="Hay novedades"></span>' : ''}<b>${escTram(t.tipo_titulo)}</b><br><span class="muted" style="font-size:12px;"><code>${t.numero_expediente}</code></span></span>
-            <span>${tagEstado(t.estado, t.estado_label)}</span>
-          </div>
-        </div>`).join('');
+      tramitesCache = data.tramites || [];
+      renderTramites();
     } catch (e) {
       cont.innerHTML = '<div class="banner mal">No pudimos cargar tus trámites.</div>';
     }
   }
   cargarMisTramites();
+  // Subtítulo del acceso "Iniciar un trámite": cuántos formularios hay.
+  (async () => {
+    try {
+      const r = await fetch('/api/tramites/tipos');
+      const d = await r.json();
+      const n = (d.tipos || []).length;
+      document.getElementById('tram-nuevo-sub').textContent =
+        n === 0 ? 'Sin formularios por ahora' : (n === 1 ? '1 formulario disponible' : `${n} formularios disponibles`);
+    } catch (e) { /* cosmético */ }
+  })();
 
   async function cargarTiposTramite() {
     const cont = document.getElementById('tram-tipos-lista');

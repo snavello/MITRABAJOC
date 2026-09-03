@@ -1506,6 +1506,20 @@ def api_marcar_notificacion_leida(notificacion_id: int, request: Request):
     return {"ok": True, "no_leidas": no_leidas}
 
 
+@app.post("/api/notificaciones/leer-todas")
+def api_marcar_todas_notificaciones_leidas(request: Request):
+    """Bandeja "Hilo" (2026-09-03): un solo toque deja todo leído."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        return {"ok": True, "marcadas": 0, "no_leidas": 0}
+    marcadas = db.marcar_todas_notificaciones_leidas(cuil, sid)
+    return {"ok": True, "marcadas": marcadas, "no_leidas": db.contar_notificaciones_no_leidas(cuil, sid)}
+
+
 # ---------- Notificaciones a empleadores (Fase 4 del plan de Empleadores) ----------
 # Mismo patrón que las rutas de notificaciones al trabajador (arriba), sobre
 # las tablas propias NotificacionEmpleador/NotificacionEmpleadorDestinatario.

@@ -2280,3 +2280,78 @@ por el deep link y eso CONSUME la novedad — comportamiento correcto; y
 server-rendered. Fix de (b): al volver la página a primer plano
 (visibilitychange/pageshow) los globos de la portada (trámites +
 notificaciones) y el de la pestaña de /app se refrescan solos.
+
+## Rediseño "Hilo" de Notificaciones y Trámites del trabajador (2026-09-03)
+
+Pedido de Sd: seguir la línea visual de los logins y el dashboard en las
+dos pantallas que faltaban. Se hicieron 3 mockups en
+`disenos/notificaciones-tramites-propuestas.html` (Casilla del gremio /
+Expediente / Hilo, con conmutador UOM–La Bancaria) y Sd eligió **Hilo**,
+la más "app" y la que mejor conversa con el push recién encendido.
+
+**Bandeja (`templates/notificaciones.html`, `/app/notificaciones`)**:
+franja oscura de marca bajo el encabezado con el título en condensada,
+"N sin leer de M" y el link "Marcar todas como leídas"; chips Todas / No
+leídas / Con adjunto + lupa que despliega el buscador. La lista es una
+línea de tiempo: riel vertical, los días como hitos hexagonales (guiño a
+la colmena) y cada aviso como burbuja con avatar del remitente
+(iniciales + color estable derivado del nombre, saltea "de"/"la"). Las no
+leídas laten con un punto de acento sobre el avatar. Expandir sigue
+marcando leída (optimista + POST de siempre); adjunto y formulario
+asociado van como acciones dentro de la burbuja. El filtro "Leídas" se
+reemplazó por "Con adjunto" (más útil para buscar el PDF de la paritaria
+que para ver lo ya leído).
+
+- **Nuevo `POST /api/notificaciones/leer-todas`** →
+  `db.marcar_todas_notificaciones_leidas(cuil, sid)`: solo las copias de
+  ESE cuil y solo notificaciones de ESE sindicato (pluriempleo: las del
+  otro gremio no se tocan). Test en `test_notificaciones.py`.
+
+**Inicio de Trámites (`#tram-inicio` en `templates/trabajador.html`)**:
+primero la tarjeta oscura **"Necesita tu atención"** con el trámite con
+novedad más reciente: tipo en condensada, expediente + estado, el último
+mensaje del sindicato (o "Cambió el estado a X" si lo último no fue un
+mensaje) y los botones Responder / Abrir el trámite. "Responder" abre el
+detalle y, ya cargado, el compositor del chat
+(`responderTramiteDesdeInicio`). Después dos accesos grandes (Iniciar un
+trámite, con la cantidad real de formularios; Buscar expediente, que
+despliega el buscador de siempre — **`#tram-buscar-input`/`#tram-buscar-btn`
+conservan sus ids**, el robot E2E solo suma el click al
+`#tram-buscar-toggle`), chips Todos / En curso / Terminados con
+cantidades, y la lista con barra de progreso de 4 tramos por trámite
+(iniciado → en tratamiento → respondido → terminado; "esperan tu
+respuesta" es el tramo 2 en color de alerta) y un pie con lo último que
+pasó ("Tu sindicato: …", "Hay novedades", "Esperan tu respuesta").
+
+- **`/api/tramites/mios` ahora trae `ultimo_mensaje`** (autor, texto,
+  creado, tiene_adjunto, formulario_id) o null: `tramites_de_trabajador`
+  resuelve las últimas notas de TODA la lista en una sola consulta y se
+  las pasa a `_tramite_resumen` (parámetro opcional, el espejo de empresa
+  no cambia). Test extendido en `test_tramites.py`.
+- Prefijo `th-` en todo el CSS nuevo del inicio, para no pisar el detalle,
+  el formulario ni el chat, que siguen iguales.
+- Colores de estado siguen siendo los fijos de `ESTADO_TAG_COLOR` (nunca
+  la marca); la etiqueta larga "A la espera de información del afiliado"
+  se muestra corta ("Esperan tu respuesta") solo en el inicio.
+
+Verificado a mano con el lote UOM (Lucía Gómez, 32 notificaciones / 18
+trámites): hilo completo, expandir → POST leer, contadores, Responder →
+modal con textarea, buscador plegado, filtros, y el globo de la pestaña
+se apaga al abrir el detalle. Tests: notificaciones 16/16, trámites
+16/16, espejos de empresa sin cambios (12/12 y 10/10).
+
+**Adenda del mismo día — Tu Recibo y Credencial, al mismo esquema, sin
+tocar contenido.** Pedido de Sd para dejar la app uniforme. En Tu Recibo,
+la zona punteada con emoji se convirtió en la misma tarjeta oscura del
+inicio de Trámites (kicker "Tu recibo", el texto "Foto o PDF de tu último
+recibo" en condensada y el botón ámbar "Elegir recibo", que sigue siendo
+el `<label for="archivo">` de siempre); "Ver mis recibos verificados" es
+un acceso grande de una columna; el historial usa las filas `th-r`
+(período · sindicato, fecha en monoespaciada y las mismas etiquetas de
+siempre, ahora en una línea propia debajo para que el título no se
+aplaste cuando hay tres). En Credencial se sumó el título "Credencial"
+(las otras pestañas ya lo tenían) y el encabezado de la tarjeta toma el
+degradé base→primario, el grano, el filo ámbar y el nombre del sindicato
+en condensada, con el kicker "Credencial digital"; datos, filigrana, firma
+y QR quedan idénticos. Preview, resultado de la verificación y el detalle
+en modal no cambian.

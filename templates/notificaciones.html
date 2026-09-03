@@ -9,9 +9,12 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
 <link rel="stylesheet" href="/static/marca.css">
 <style>
-  /* Bandeja de notificaciones (2026-09-02): página completa estilo casilla
-     de correo, reemplaza al modal de la portada. Agrupadas por día, leídas
-     atenuadas / no leídas destacadas, filtros arriba. */
+  /* Bandeja de notificaciones, rediseño "Hilo" (2026-09-03, elegido entre
+     3 propuestas -- disenos/notificaciones-tramites-propuestas.html):
+     línea de tiempo vertical con los días como hitos hexagonales (guiño a
+     la colmena) y cada aviso como burbuja con avatar del remitente. Las no
+     leídas laten con un punto de acento sobre el avatar. Los datos salen
+     del mismo /api/mis-notificaciones de siempre. */
   :root {
     --marca-base: {{ marca.color_base }};
     --marca-primario: {{ marca.color_primario }};
@@ -22,60 +25,90 @@
   .volver { display:flex; align-items:center; gap:6px; color:var(--sobre-base-mute);
     text-decoration:none; font-size:12.5px; margin-left:auto; }
   .volver svg { width:16px; height:16px; stroke:currentColor; stroke-width:2.2; fill:none; }
-  .pad { max-width: 680px; margin: 0 auto; padding: 18px 15px 60px; }
-  h1 { font-family: var(--fuente-display); font-weight:700; font-size:26px;
-    text-transform:uppercase; letter-spacing:.5px; color:var(--tinta); }
-  .sub-cant { font-size:12.5px; color:var(--gris); margin-top:2px; }
-  /* filtros estilo chips */
-  .filtros { display:flex; gap:7px; margin:16px 0 6px; flex-wrap:wrap; align-items:center; }
-  .chip-f { border:1px solid var(--linea); background:#fff; color:var(--gris);
-    border-radius:20px; padding:6px 14px; font-size:12.5px; font-weight:600;
-    cursor:pointer; font-family:inherit; }
-  .chip-f.activo { background:var(--marca-base); border-color:var(--marca-base); color:#fff; }
-  .buscar { flex:1 1 160px; min-width:140px; border:1px solid var(--linea); border-radius:20px;
-    padding:7px 14px; font-size:13px; font-family:inherit; background:#fff; color:var(--tinta); }
-  .buscar:focus { outline:2px solid color-mix(in srgb, var(--marca-acento) 40%, white); }
-  /* agrupado por día */
-  .dia { font-family:var(--fuente-display); font-size:14px; letter-spacing:1.4px;
-    text-transform:uppercase; color:var(--gris); margin:20px 0 8px;
-    display:flex; align-items:center; gap:10px; }
-  .dia::after { content:""; flex:1; height:1px; background:var(--linea); }
-  /* fila estilo casilla de correo */
-  .notif { background:#fff; border:1px solid var(--linea); border-left:3px solid transparent;
-    border-radius:11px; padding:12px 15px; margin-bottom:7px; cursor:pointer;
-    transition: box-shadow .15s; }
-  .notif:hover { box-shadow:0 4px 14px rgba(21,34,56,.08); }
-  .notif.no-leida { border-left-color: var(--marca-acento);
-    background: color-mix(in srgb, var(--marca-acento) 6%, #fff); }
-  .n-cab { display:flex; align-items:baseline; gap:10px; }
-  .n-remitente { font-size:13px; font-weight:500; color:var(--gris); white-space:nowrap;
-    overflow:hidden; text-overflow:ellipsis; max-width:38%; }
-  .notif.no-leida .n-remitente { font-weight:750; color:var(--tinta); }
-  .n-snippet { flex:1; font-size:13px; color:var(--gris); overflow:hidden;
-    text-overflow:ellipsis; white-space:nowrap; }
-  .notif.no-leida .n-snippet { color:var(--tinta); font-weight:550; }
-  .n-hora { font-size:11px; color:#98a2b3; white-space:nowrap; font-variant-numeric:tabular-nums; }
-  .notif.no-leida .n-hora { color:var(--marca-acento); font-weight:700; }
-  .n-cuerpo { display:none; font-size:13.5px; line-height:1.6; color:var(--tinta);
-    margin-top:10px; border-top:1px solid var(--linea); padding-top:10px; white-space:pre-line;
-    overflow-wrap:anywhere; }
-  .notif.abierta .n-cuerpo { display:block; }
-  .notif.abierta .n-snippet { display:none; }
-  .n-adjunto { display:inline-block; margin-top:9px; font-size:12.5px;
-    color:var(--marca-primario); text-decoration:none; font-weight:600; }
-  .cta-form { display:inline-flex; align-items:center; justify-content:center;
-    width:44px; height:44px; border-radius:50%; background:var(--marca-acento);
-    font-size:20px; text-decoration:none; margin-top:10px;
-    box-shadow:0 4px 12px rgba(0,0,0,.18); }
+  svg.ic { width:16px; height:16px; stroke:currentColor; stroke-width:1.9; fill:none;
+    stroke-linecap:round; stroke-linejoin:round; flex:none; }
+
+  /* ---- franja oscura bajo el encabezado: título, contador, chips ---- */
+  .top3 { background:var(--marca-base); color:#fff; padding:2px 15px 12px; position:relative; overflow:hidden; }
+  .top3::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .top3 > * { position:relative; z-index:1; }
+  .top3-in { max-width:680px; margin:0 auto; }
+  .top3 h1 { font-family:var(--fuente-display); font-weight:700; font-size:30px; line-height:1;
+    text-transform:uppercase; letter-spacing:.5px; color:#fff; }
+  .l2 { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px; min-height:18px; }
+  .l2 small { font-size:12.5px; color:var(--sobre-base-mute); }
+  .l2 small b { color:#fff; font-weight:600; }
+  .l2 button { background:none; border:none; padding:0; font-family:inherit; font-size:11.5px;
+    color:var(--marca-acento); font-weight:600; cursor:pointer; }
+  .l2 button[hidden] { display:none; }
+  .chips { display:flex; gap:6px; margin-top:11px; align-items:center; }
+  .chip { border:1px solid rgba(255,255,255,.18); background:none; border-radius:20px; padding:5px 12px;
+    font-size:12.5px; font-weight:600; color:rgba(255,255,255,.75); cursor:pointer; font-family:inherit; white-space:nowrap; }
+  .chip i { font-style:normal; font-family:var(--fuente-num); font-size:10.5px; opacity:.75; margin-left:3px; }
+  .chip.activo { background:var(--marca-acento); color:var(--marca-base); border-color:var(--marca-acento); }
+  .chip.lupa { margin-left:auto; padding:5px 9px; display:flex; align-items:center; }
+  .chip.lupa.activo svg { stroke:var(--marca-base); }
+  .busq-row { margin-top:9px; }
+  .busq-row[hidden] { display:none; }
+  .buscar { width:100%; border:1px solid rgba(255,255,255,.18); border-radius:10px; padding:8px 12px;
+    font-size:13.5px; font-family:inherit; background:rgba(255,255,255,.08); color:#fff; }
+  .buscar::placeholder { color:rgba(255,255,255,.5); }
+  .buscar:focus { outline:2px solid var(--marca-acento); }
+
+  /* ---- la línea de tiempo ---- */
+  .hilo { max-width:680px; margin:0 auto; padding:6px 15px 70px; position:relative; }
+  .hilo::before { content:""; position:absolute; left:31px; top:0; bottom:50px; width:2px; background:var(--linea); }
+  .hito { display:flex; align-items:center; gap:10px; margin:18px 0 10px; position:relative; }
+  .hito i { width:34px; text-align:center; flex:none; display:flex; justify-content:center; }
+  .hito i svg { width:18px; height:18px; fill:var(--papel); stroke:var(--gris); stroke-width:1.6; }
+  .hito span { font-family:var(--fuente-display); font-size:14px; letter-spacing:1.6px;
+    text-transform:uppercase; color:var(--gris); }
+  .m { display:flex; gap:8px; margin-bottom:9px; position:relative; cursor:pointer; }
+  .avatar { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-family:var(--fuente-display); font-size:13px; font-weight:700; letter-spacing:.5px; color:#fff; flex:none;
+    box-shadow:0 0 0 3px var(--papel); position:relative; margin-top:2px; }
+  .m.nl .avatar::after { content:""; position:absolute; right:-2px; bottom:-2px; width:11px; height:11px;
+    border-radius:50%; background:var(--marca-acento); border:2px solid var(--papel); animation:pulso 1.8s ease-out infinite; }
+  @keyframes pulso { 0% { box-shadow:0 0 0 0 color-mix(in srgb, var(--marca-acento) 55%, transparent); }
+    100% { box-shadow:0 0 0 9px transparent; } }
+  .bur { flex:1; min-width:0; background:#fff; border:1px solid var(--linea); border-radius:4px 14px 14px 14px;
+    padding:9px 12px 10px; transition:box-shadow .15s; }
+  .m:hover .bur { box-shadow:0 4px 14px rgba(21,34,56,.08); }
+  .m.nl .bur { border-color:color-mix(in srgb, var(--marca-acento) 50%, var(--linea));
+    background:color-mix(in srgb, var(--marca-acento) 5%, #fff); }
+  .cab { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .rem { font-size:12.5px; font-weight:700; color:var(--marca-primario); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .m.nl .rem { color:var(--tinta); }
+  .h { font-family:var(--fuente-num); font-size:10.5px; color:#98a2b3; white-space:nowrap; }
+  .m.nl .h { color:var(--marca-acento); font-weight:700; }
+  .tx { font-size:13px; color:var(--gris); margin-top:2px; overflow:hidden; text-overflow:ellipsis;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .m.nl .tx { color:var(--tinta); }
+  .cuerpo { display:none; font-size:13.5px; line-height:1.6; color:var(--tinta); margin-top:6px;
+    white-space:pre-line; overflow-wrap:anywhere; }
+  .m.abierta .tx { display:none; }
+  .m.abierta .cuerpo { display:block; }
+  .accs { display:flex; gap:6px; margin-top:9px; flex-wrap:wrap; }
+  .accs a { display:inline-flex; align-items:center; gap:5px; border-radius:9px; padding:7px 11px; font-size:12px;
+    font-weight:700; border:1px solid var(--linea); background:#fff; color:var(--marca-primario); text-decoration:none; }
+  .accs a.cta { background:var(--marca-acento); border-color:var(--marca-acento); color:var(--marca-base); }
   .vacio { text-align:center; padding:60px 20px; color:var(--gris); font-size:14px; }
   .cargando { display:flex; justify-content:center; padding:50px 0; }
   .spin { width:26px; height:26px; border:3px solid var(--linea);
     border-top-color:var(--marca-acento); border-radius:50%; animation:g .8s linear infinite; }
   @keyframes g { to { transform:rotate(360deg); } }
-  @media (prefers-reduced-motion:reduce) { .notif { transition:none; } }
+  @media (prefers-reduced-motion:reduce) { .m.nl .avatar::after { animation:none; } .bur { transition:none; } }
 </style>
 </head>
 <body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-hex" viewBox="0 0 24 24"><path d="M12 2.5 20 7v10l-8 4.5L4 17V7z"/></symbol>
+  <symbol id="i-lupa" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><path d="m21 11.5-8.5 8.5a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8"/></symbol>
+  <symbol id="i-form" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+</svg>
 
 <div class="enc">
   {% if marca.logo %}
@@ -88,23 +121,29 @@
   <a class="volver" href="/app/inicio"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg> Volver</a>
 </div>
 
-<div class="pad">
+<div class="top3"><div class="top3-in">
   <h1>Notificaciones</h1>
-  <div class="sub-cant" id="cant"></div>
-
-  <div class="filtros">
-    <button class="chip-f activo" data-f="todas" onclick="filtrar('todas')">Todas</button>
-    <button class="chip-f" data-f="noleidas" onclick="filtrar('noleidas')">No leídas</button>
-    <button class="chip-f" data-f="leidas" onclick="filtrar('leidas')">Leídas</button>
+  <div class="l2">
+    <small id="cant"></small>
+    <button type="button" id="btn-todas" hidden onclick="marcarTodasLeidas()">Marcar todas como leídas</button>
+  </div>
+  <div class="chips">
+    <button class="chip activo" data-f="todas" onclick="filtrar('todas')">Todas<i id="c-todas"></i></button>
+    <button class="chip" data-f="noleidas" onclick="filtrar('noleidas')">No leídas<i id="c-noleidas"></i></button>
+    <button class="chip" data-f="adjunto" onclick="filtrar('adjunto')">Con adjunto<i id="c-adjunto"></i></button>
+    <button class="chip lupa" id="btn-lupa" type="button" title="Buscar" onclick="toggleBuscar()"><svg class="ic" viewBox="0 0 24 24"><use href="#i-lupa"/></svg></button>
+  </div>
+  <div class="busq-row" id="busq-row" hidden>
     <input class="buscar" id="buscar" placeholder="Buscar por texto o remitente" oninput="render()">
   </div>
+</div></div>
 
-  <div id="lista"><div class="cargando"><div class="spin"></div></div></div>
-</div>
+<div class="hilo" id="lista"><div class="cargando"><div class="spin"></div></div></div>
 
 <script>
 let NOTIFS = [];
 let FILTRO = 'todas';
+const COLORES_AVATAR = ['var(--marca-primario)', 'var(--marca-apoyo)', '#5b3d8a', '#8a5a1a'];
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
@@ -123,23 +162,52 @@ function etiquetaDia(fh) {
 }
 function hora(fh) { const m = /(\d{2}:\d{2})$/.exec(fh || ''); return m ? m[1] : ''; }
 
+// Avatar del remitente: iniciales de las dos primeras palabras y un color
+// estable derivado del nombre (el mismo remitente siempre se ve igual).
+function iniciales(rem) {
+  const partes = (rem || '').trim().split(/\s+/).filter(Boolean);
+  const largas = partes.filter(p => p.length > 2);      // saltea "de", "la", "y"
+  const base = largas.length >= 2 ? largas : partes;
+  return (base.slice(0, 2).map(p => p[0]).join('') || 'S').toUpperCase();
+}
+function colorAvatar(rem) {
+  let h = 0; for (const ch of (rem || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return COLORES_AVATAR[h % COLORES_AVATAR.length];
+}
+
 function filtrar(f) {
   FILTRO = f;
-  document.querySelectorAll('.chip-f').forEach(c => c.classList.toggle('activo', c.dataset.f === f));
+  document.querySelectorAll('.chip[data-f]').forEach(c => c.classList.toggle('activo', c.dataset.f === f));
   render();
+}
+function toggleBuscar() {
+  const row = document.getElementById('busq-row');
+  row.hidden = !row.hidden;
+  document.getElementById('btn-lupa').classList.toggle('activo', !row.hidden);
+  if (!row.hidden) document.getElementById('buscar').focus();
+  else { document.getElementById('buscar').value = ''; render(); }
+}
+
+function actualizarContadores() {
+  const noLeidas = NOTIFS.filter(n => !n.leida_en).length;
+  const conAdj = NOTIFS.filter(n => n.tiene_adjunto || n.formulario_id).length;
+  document.getElementById('cant').innerHTML = NOTIFS.length
+    ? (noLeidas ? `<b>${noLeidas} sin leer</b> de ${NOTIFS.length}` : `Todo leído · ${NOTIFS.length} en total`) : '';
+  document.getElementById('c-todas').textContent = NOTIFS.length || '';
+  document.getElementById('c-noleidas').textContent = noLeidas || '';
+  document.getElementById('c-adjunto').textContent = conAdj || '';
+  document.getElementById('btn-todas').hidden = !noLeidas;
 }
 
 function render() {
   const q = (document.getElementById('buscar').value || '').toLowerCase().trim();
   const visibles = NOTIFS.filter(n => {
     if (FILTRO === 'noleidas' && n.leida_en) return false;
-    if (FILTRO === 'leidas' && !n.leida_en) return false;
+    if (FILTRO === 'adjunto' && !(n.tiene_adjunto || n.formulario_id)) return false;
     if (q && !((n.texto || '').toLowerCase().includes(q) || (n.remitente || '').toLowerCase().includes(q))) return false;
     return true;
   });
-  const noLeidas = NOTIFS.filter(n => !n.leida_en).length;
-  document.getElementById('cant').textContent =
-    NOTIFS.length ? `${NOTIFS.length} en total · ${noLeidas} sin leer` : '';
+  actualizarContadores();
   const lista = document.getElementById('lista');
   if (!visibles.length) {
     lista.innerHTML = `<div class="vacio">${NOTIFS.length ? 'Nada que mostrar con este filtro.' : 'Todavía no tenés notificaciones.'}</div>`;
@@ -148,17 +216,23 @@ function render() {
   let html = '', diaActual = null;
   for (const n of visibles) {
     const dia = etiquetaDia(n.enviado_en);
-    if (dia !== diaActual) { html += `<div class="dia">${dia}</div>`; diaActual = dia; }
+    if (dia !== diaActual) {
+      html += `<div class="hito"><i><svg viewBox="0 0 24 24"><use href="#i-hex"/></svg></i><span>${dia}</span></div>`;
+      diaActual = dia;
+    }
+    const rem = n.remitente || 'Tu sindicato';
+    const accs = (n.tiene_adjunto || n.formulario_id) ? `<div class="accs">
+        ${n.tiene_adjunto ? `<a href="/notificacion-adjunto/${n.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()"><svg class="ic" viewBox="0 0 24 24"><use href="#i-clip"/></svg>${esc(n.adjunto_nombre || 'Ver adjunto')}</a>` : ''}
+        ${n.formulario_id ? `<a class="cta" href="/app?tab=tramites&formulario=${n.formulario_id}" onclick="event.stopPropagation()"><svg class="ic" viewBox="0 0 24 24"><use href="#i-form"/></svg>Completar el formulario</a>` : ''}
+      </div>` : '';
     html += `
-      <div class="notif ${n.leida_en ? '' : 'no-leida'}" data-id="${n.id}" onclick="toggleNotif(${n.id})">
-        <div class="n-cab">
-          <span class="n-remitente">${esc(n.remitente || 'Tu sindicato')}</span>
-          <span class="n-snippet">${esc(n.texto)}</span>
-          <span class="n-hora">${hora(n.enviado_en)}</span>
-        </div>
-        <div class="n-cuerpo">${n.texto_html}
-          ${n.tiene_adjunto ? `<br><a class="n-adjunto" href="/notificacion-adjunto/${n.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📎 Ver adjunto</a>` : ''}
-          ${n.formulario_id ? `<br><a class="cta-form" href="/app?tab=tramites&formulario=${n.formulario_id}" title="Completar el formulario" onclick="event.stopPropagation()">📋</a>` : ''}
+      <div class="m ${n.leida_en ? '' : 'nl'}" data-id="${n.id}" onclick="toggleNotif(${n.id})">
+        <div class="avatar" style="background:${colorAvatar(rem)}">${esc(iniciales(rem))}</div>
+        <div class="bur">
+          <div class="cab"><span class="rem">${esc(rem)}</span><span class="h">${hora(n.enviado_en)}</span></div>
+          <div class="tx">${esc(n.texto)}</div>
+          <div class="cuerpo">${n.texto_html}</div>
+          ${accs}
         </div>
       </div>`;
   }
@@ -166,19 +240,31 @@ function render() {
 }
 
 async function toggleNotif(id) {
-  const item = document.querySelector(`.notif[data-id="${id}"]`);
+  const item = document.querySelector(`.m[data-id="${id}"]`);
   if (!item) return;
   const abrir = !item.classList.contains('abierta');
-  document.querySelectorAll('.notif.abierta').forEach(el => el.classList.remove('abierta'));
+  document.querySelectorAll('.m.abierta').forEach(el => el.classList.remove('abierta'));
   if (!abrir) return;
   item.classList.add('abierta');
   const n = NOTIFS.find(x => x.id === id);
   if (n && !n.leida_en) {
-    n.leida_en = 'recien';                       // optimista: la fila se atenúa ya
-    item.classList.remove('no-leida');
+    n.leida_en = 'recien';                       // optimista: la burbuja se atenúa ya
+    item.classList.remove('nl');
     try { await fetch(`/api/notificacion/${id}/leer`, { method: 'POST' }); } catch (e) {}
-    const noLeidas = NOTIFS.filter(x => !x.leida_en).length;
-    document.getElementById('cant').textContent = `${NOTIFS.length} en total · ${noLeidas} sin leer`;
+    actualizarContadores();
+  }
+}
+
+async function marcarTodasLeidas() {
+  const btn = document.getElementById('btn-todas');
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/notificaciones/leer-todas', { method: 'POST' });
+    if (!r.ok) throw new Error();
+    NOTIFS.forEach(n => { if (!n.leida_en) n.leida_en = 'recien'; });
+    render();
+  } catch (e) {
+    btn.disabled = false;
   }
 }
 

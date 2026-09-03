@@ -187,7 +187,7 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   (`/app/inicio`+`/app`, `/admin/inicio`+`/admin`, `/empresa/inicio`+`/empresa`)
   — cualquier rol nuevo que se agregue debería seguir el mismo patrón.
 
-## Estado actual (actualizado 2026-08-31)
+## Estado actual (actualizado 2026-09-03)
 Todo lo listado acá está mergeado a `main` y desplegado (Render sigue `main`,
 cada push redeploya).
 
@@ -222,6 +222,7 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
 15. **Lotes de datos sintéticos para demo** (`cargar_lote_sindicato.py`, y su antecesor específico `cargar_lote_uom.py`): pueblan un sindicato con padrón, 5.000 recibos validados por el motor real, trámites con formulario y diálogo, notificaciones, noticias y beneficios — ver sección propia.
 16. **Robots E2E con Playwright** (`e2e/`): pruebas de punta a punta contra la app real, con informe visual al final — ver sección propia.
 17. **Validaciones en formularios de Trámites (Fase 1)** — capa de validaciones por campo (fuente `fija` + consistencia entre campos, bloquea/avisa) con rediseño "Expediente" del constructor y carátula+sello en la pantalla del trabajador — ver sección propia.
+18. **Rediseño "Hilo" de Notificaciones y Trámites del trabajador** — bandeja como línea de tiempo (hitos por día, burbujas con avatar, "Marcar todas como leídas") e inicio de Trámites con "Necesita tu atención", accesos grandes, filtros y barra de progreso; mockups de las 3 propuestas en `disenos/notificaciones-tramites-propuestas.html` — detalle en HISTORIAL.md.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

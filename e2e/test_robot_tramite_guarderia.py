@@ -138,6 +138,7 @@ def test_flujo_tramite_guarderia(nuevo_actor, entorno_aefip, informe):
     # ================= ACTO 3: el trabajador ve respuesta y cierre =======
     trab.bring_to_front()
     trab.goto(f"{BASE}/app?tab=tramites")
+    trab.click("#tram-buscar-toggle")          # rediseño Hilo: el buscador está plegado
     trab.fill("#tram-buscar-input", numero)
     trab.click("#tram-buscar-btn")
     expect(trab.locator("#tram-det-expediente")).to_contain_text(numero, timeout=10000)

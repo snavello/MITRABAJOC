@@ -2193,6 +2193,29 @@ def notificaciones_de_trabajador(cuil: str, sindicato_id: int) -> list:
         } for n in notifs]
 
 
+def marcar_todas_notificaciones_leidas(cuil: str, sindicato_id: int) -> int:
+    """Marca leídas TODAS las copias de este cuil en este sindicato (botón
+    "Marcar todas como leídas" de la bandeja). Devuelve cuántas cambió.
+    Aislamiento: solo filas de este cuil, y solo notificaciones de este
+    sindicato -- las de otro sindicato del mismo CUIL (pluriempleo) no se
+    tocan."""
+    ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
+    with Session(engine) as s:
+        ids_sind = {n.id for n in s.exec(select(Notificacion).where(
+            Notificacion.sindicato_id == sindicato_id)).all()}
+        if not ids_sind:
+            return 0
+        pendientes = s.exec(select(NotificacionDestinatario).where(
+            NotificacionDestinatario.cuil == cuil,
+            NotificacionDestinatario.notificacion_id.in_(ids_sind),
+            NotificacionDestinatario.leida_en == None)).all()  # noqa: E711
+        for d in pendientes:
+            d.leida_en = ahora
+            s.add(d)
+        s.commit()
+        return len(pendientes)
+
+
 def contar_notificaciones_no_leidas(cuil: str, sindicato_id: int) -> int:
     return sum(1 for n in notificaciones_de_trabajador(cuil, sindicato_id) if not n["leida_en"])
 
@@ -2604,13 +2627,24 @@ def agregar_nota_tramite(tramite_id: int, autor: str, texto: str,
         return True
 
 
-def _tramite_resumen(s: Session, tr: "Tramite", titulos_tipo: dict) -> dict:
+def _tramite_resumen(s: Session, tr: "Tramite", titulos_tipo: dict,
+                     ultimas_notas: Optional[dict] = None) -> dict:
+    """`ultimas_notas` (tramite_id -> NotaTramite) lo pasa
+    tramites_de_trabajador para la tarjeta "Necesita tu atención" de la
+    pestaña Trámites (rediseño "Hilo", 2026-09-03): el último mensaje del
+    hilo, sin abrir el detalle. Se resuelve en UNA consulta para toda la
+    lista, no una por trámite."""
+    ultima = (ultimas_notas or {}).get(tr.id)
     return {
         "id": tr.id, "numero_expediente": tr.numero_expediente, "cuil": tr.cuil,
         "tipo_tramite_id": tr.tipo_tramite_id, "tipo_titulo": titulos_tipo.get(tr.tipo_tramite_id, "—"),
         "estado": tr.estado, "estado_label": ESTADOS_TRAMITE_LABEL.get(tr.estado, tr.estado),
         "creado": tr.creado, "actualizado": tr.actualizado,
         "novedad": not tr.visto_trabajador_en,
+        "ultimo_mensaje": {
+            "autor": ultima.autor, "texto": ultima.texto, "creado": ultima.creado,
+            "tiene_adjunto": bool(ultima.adjunto_datos), "formulario_id": ultima.formulario_id,
+        } if ultima else None,
     }
 
 
@@ -2697,7 +2731,14 @@ def tramites_de_trabajador(cuil: str, sindicato_id: int) -> list:
             Tramite.cuil == cuil, Tramite.sindicato_id == sindicato_id).order_by(Tramite.id.desc())).all()
         titulos_tipo = {t.id: t.titulo for t in s.exec(
             select(TipoTramite).where(TipoTramite.sindicato_id == sindicato_id)).all()}
-        return [_tramite_resumen(s, tr, titulos_tipo) for tr in tramites]
+        # último mensaje de cada hilo, en una sola consulta (ordenada por id:
+        # la última fila que se asigna por tramite_id es la más nueva)
+        ultimas: dict = {}
+        if tramites:
+            for n in s.exec(select(NotaTramite).where(
+                    NotaTramite.tramite_id.in_([t.id for t in tramites])).order_by(NotaTramite.id)).all():
+                ultimas[n.tramite_id] = n
+        return [_tramite_resumen(s, tr, titulos_tipo, ultimas) for tr in tramites]
 
 
 def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:

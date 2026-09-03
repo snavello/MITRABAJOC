@@ -206,6 +206,11 @@ def test_nota_admin_y_trabajador_en_thread_correcto():
     assert notas[-1]["autor"] == "trabajador" and "adjunté" in notas[-1]["texto"]
     eventos = [l["evento"] for l in detalle["log"]]
     assert "nota_admin" in eventos and "nota_trabajador" in eventos
+    # El resumen de "Mis trámites" trae el ÚLTIMO mensaje del hilo (tarjeta
+    # "Necesita tu atención" del rediseño Hilo) sin abrir el detalle.
+    resumen = next(t for t in db.tramites_de_trabajador("20111111119", SID_UOM) if t["id"] == TRAMITE_ID)
+    assert resumen["ultimo_mensaje"]["autor"] == "trabajador"
+    assert "adjunté" in resumen["ultimo_mensaje"]["texto"]
 
     with Session(db.engine) as s:
         despues = len(s.exec(select(Notificacion).where(Notificacion.sindicato_id == SID_UOM)).all())

@@ -153,6 +153,38 @@ def test_marcar_leida_actualiza_contador():
     print("OK  test_marcar_leida_actualiza_contador")
 
 
+def test_marcar_todas_leidas_solo_las_propias_y_del_sindicato():
+    # Dos notificaciones nuevas: una para Juan y Ana en UOM, otra de FEGA
+    # para el mismo CUIL de Juan -- "marcar todas" de Juan en UOM toca SOLO
+    # la copia de Juan en UOM.
+    with db.get_session() as s:
+        n1 = Notificacion(sindicato_id=SID_UOM, remitente="Tesorería", texto="Cuota acreditada.",
+                          criterio="cuil", enviado_en="2026-09-03 10:00", cantidad_destinatarios=2)
+        n2 = Notificacion(sindicato_id=SID_FEGA, remitente="Fega", texto="Aviso Fega.",
+                          criterio="cuil", enviado_en="2026-09-03 10:01", cantidad_destinatarios=1)
+        s.add(n1); s.add(n2); s.commit(); s.refresh(n1); s.refresh(n2)
+        s.add(NotificacionDestinatario(notificacion_id=n1.id, cuil="20111111119"))
+        s.add(NotificacionDestinatario(notificacion_id=n1.id, cuil="27222222224"))
+        s.add(NotificacionDestinatario(notificacion_id=n2.id, cuil="20111111119"))
+        s.commit()
+        N1, N2 = n1.id, n2.id
+    c = _sesion_trabajador("20111111119")
+    assert c.get("/api/mis-notificaciones").json()["no_leidas"] == 1
+    r = c.post("/api/notificaciones/leer-todas")
+    assert r.status_code == 200
+    assert r.json()["marcadas"] == 1 and r.json()["no_leidas"] == 0
+    assert c.get("/api/mis-notificaciones").json()["no_leidas"] == 0
+    with Session(db.engine) as s:
+        ana = s.exec(select(NotificacionDestinatario).where(
+            NotificacionDestinatario.notificacion_id == N1,
+            NotificacionDestinatario.cuil == "27222222224")).first()
+        assert ana.leida_en is None  # la copia de Ana sigue sin leer
+        fega = s.exec(select(NotificacionDestinatario).where(
+            NotificacionDestinatario.notificacion_id == N2)).first()
+        assert fega.leida_en is None  # la de otro sindicato tampoco se tocó
+    print("OK  test_marcar_todas_leidas_solo_las_propias_y_del_sindicato")
+
+
 def test_trabajador_sin_seccional_no_ve_notificacion_dirigida():
     c = _sesion_trabajador("20333333336")  # sin seccional asignada
     r = c.get("/api/mis-notificaciones")
@@ -249,6 +281,7 @@ if __name__ == "__main__":
     test_alta_notificacion_crea_destinatarios_y_snapshot()
     test_trabajador_ve_su_notificacion_y_contador()
     test_marcar_leida_actualiza_contador()
+    test_marcar_todas_leidas_solo_las_propias_y_del_sindicato()
     test_trabajador_sin_seccional_no_ve_notificacion_dirigida()
     test_no_se_puede_marcar_leida_notificacion_ajena()
     test_aislamiento_entre_sindicatos()
