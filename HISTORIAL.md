@@ -2355,3 +2355,17 @@ degradé base→primario, el grano, el filo ámbar y el nombre del sindicato
 en condensada, con el kicker "Credencial digital"; datos, filigrana, firma
 y QR quedan idénticos. Preview, resultado de la verificación y el detalle
 en modal no cambian.
+
+**Segunda adenda (v0.27.02) — Mis Aportes y Capacitación.** Encabezado
+oscuro compartido `.th-head` (degradé base→primario, grano, filo ámbar,
+kicker en acento y título en condensada) sobre la tarjeta del semáforo
+("Semáforo / Estado de tus aportes") y sobre la guía ("Guía / Entendé tu
+nuevo recibo de sueldo", con el mismo párrafo introductorio como
+subtítulo). Los dos pasos del semáforo apagado ("1 · Consultar en ARCA ↗"
+y "2 · Subir captura de ARCA") son ahora los dos accesos grandes en fila,
+con los mismos textos, el mismo link a ARCA y el mismo `<label
+for="arca-file">`. Los subtítulos de la guía toman el estilo de los hitos
+del hilo (condensada, tracking, línea) y las 4 secciones siguen como filas
+numeradas. Colores del semáforo (verde/amarillo/rojo/gris), barras por
+mes, leyenda y fuente: sin cambios. Título de pestaña "Mis aportes" /
+"Capacitación" sumado como en Credencial.

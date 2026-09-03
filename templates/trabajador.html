@@ -316,6 +316,32 @@
   .cred-head > * { position:relative; z-index:1; }
   .cred-head .cred-k { font-size:10.5px; letter-spacing:1.6px; text-transform:uppercase; color:var(--marca-acento); font-weight:700; }
   .cred-sind { font-family:var(--fuente-display); font-weight:700; font-size:20px; letter-spacing:.3px; text-transform:uppercase; line-height:1.05; }
+  /* Mis Aportes y Capacitación, mismo esquema (2026-09-03): encabezado
+     oscuro compartido (.th-head) para el semáforo y la guía; los colores
+     del semáforo siguen siendo los fijos de estado, nunca la marca. */
+  .th-head { position:relative; overflow:hidden; color:#fff; padding:14px 16px; border-left:5px solid var(--marca-acento);
+    background:var(--marca-base);
+    background-image:linear-gradient(150deg, var(--marca-base), color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base))); }
+  .th-head::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .th-head > * { position:relative; z-index:1; }
+  .th-head .k { font-size:10.5px; letter-spacing:1.6px; text-transform:uppercase; color:var(--marca-acento); font-weight:700; }
+  .th-head .tit { font-family:var(--fuente-display); font-weight:700; font-size:21px; line-height:1.05; text-transform:uppercase;
+    letter-spacing:.3px; margin-top:4px; color:#fff; }
+  .th-head .sub { color:rgba(255,255,255,.75); font-size:12.5px; margin-top:4px; }
+  .sem-card, .cap-card { margin-top:16px; }
+  .sem-acciones .th-acc { margin-top:0; }
+  .sem-acciones .th-tile { text-decoration:none; min-height:0; margin:0; }
+  .sem-acciones .th-tile b { font-size:15px; }
+  /* Capacitación: subtítulos como los hitos del hilo, filas numeradas como pasos */
+  .cap-card { background:var(--card); border:1px solid var(--linea); border-radius:16px; overflow:hidden; }
+  .cap-body { padding:6px 18px 18px; }
+  .cap-body h3 { font-family:var(--fuente-display); font-weight:700; font-size:14px; letter-spacing:1.4px; text-transform:uppercase;
+    color:var(--gris); margin:20px 0 8px; display:flex; align-items:center; gap:10px; }
+  .cap-body h3::after { content:""; flex:1; height:1px; background:var(--linea); }
+  .cap-body p { font-size:14px; line-height:1.55; }
+  .cap-body .fila { padding:10px 0; border-top:none; border-bottom:1px solid #f0eee8; }
+  .cap-body .fila:last-of-type { border-bottom:none; }
   .tram-item { position:relative; overflow:hidden;
     background:linear-gradient(160deg, #ffffff, var(--papel)) !important; }
   .tram-input { display:block; width:100%; padding:11px 12px; border:1px solid var(--linea);
@@ -692,10 +718,12 @@
   <!-- ============ PESTAÑA: MIS APORTES ============ -->
   {% if 'aportes' in modulos %}
   <div class="tpanel" id="tp-aportes">
+    <h1>Mis aportes</h1>
     <div class="sem-card">
-      <div class="sem-head">
-        <h2 class="sem-h2">Estado de tus aportes</h2>
-        <div class="sem-sub">Jubilación y obra social · últimos 12 meses</div>
+      <div class="th-head">
+        <div class="k">Semáforo</div>
+        <h2 class="tit">Estado de tus aportes</h2>
+        <div class="sub">Jubilación y obra social · últimos 12 meses</div>
       </div>
       <div id="sem-cuerpo"></div>
     </div>
@@ -705,22 +733,27 @@
   <!-- ============ PESTAÑA: CAPACITACIÓN ============ -->
   {% if 'capacitacion' in modulos %}
   <div class="tpanel" id="tp-capacitacion">
-    <div class="card">
-      <h2>Entendé tu nuevo recibo de sueldo</h2>
-      <p class="sub">Desde el 1/6/2026 rige un modelo único de recibo (Ley 27.802, Dto 407/2026). Esta guía es la misma para todos los sindicatos: es ley nacional, no depende de tu convenio.</p>
-
-      <h3 style="margin-top:18px; font-size:15px; color:var(--tinta);">Las 4 secciones del recibo nuevo</h3>
+    <h1>Capacitación</h1>
+    <div class="cap-card">
+      <div class="th-head">
+        <div class="k">Guía</div>
+        <h2 class="tit">Entendé tu nuevo recibo de sueldo</h2>
+        <div class="sub">Desde el 1/6/2026 rige un modelo único de recibo (Ley 27.802, Dto 407/2026). Esta guía es la misma para todos los sindicatos: es ley nacional, no depende de tu convenio.</div>
+      </div>
+      <div class="cap-body">
+      <h3>Las 4 secciones del recibo nuevo</h3>
       <div class="fila"><span>1 · Datos del empleador y el trabajador</span></div>
       <div class="fila"><span>2 · Contribuciones patronales y costo laboral total <span class="muted">(nueva)</span></span></div>
       <div class="fila"><span>3 · Remuneración bruta y tus descuentos</span></div>
       <div class="fila"><span>4 · Remuneración neta (lo que cobrás)</span></div>
 
-      <h3 style="margin-top:18px; font-size:15px; color:var(--tinta);">Lo más importante: aporte vs. contribución</h3>
+      <h3>Lo más importante: aporte vs. contribución</h3>
       <p><b>Tus aportes</b> (jubilación, obra social, cuota sindical) se descuentan de TU sueldo y bajan tu neto. <b>Las contribuciones patronales</b> (seguridad social, obra social, PAMI, ART, seguro de vida) las paga tu empleador aparte, por fuera de tu recibo: <b>nunca</b> te bajan el neto, aunque ahora se muestren impresas.</p>
       <p style="margin-top:10px;"><b>Regla simple:</b> tu neto = tu bruto − tus aportes. El "costo laboral total" (bruto + contribuciones) es lo que le cuesta tu puesto al empleador, no lo que cobrás vos.</p>
 
-      <h3 style="margin-top:18px; font-size:15px; color:var(--tinta);">Qué mirar para detectar un problema</h3>
+      <h3>Qué mirar para detectar un problema</h3>
       <p>Si algo que figura como "contribución patronal" también te aparece descontado de tu neto, o si la suma de tus descuentos no da lo que dice el recibo, conviene reportarlo desde la pestaña "Tu Recibo".</p>
+      </div>
     </div>
   </div>
   {% endif %}
@@ -1353,8 +1386,14 @@ function semApagado() {
     ${avisoTemprano}
     <div class="sem-acciones">
       <div class="sem-paso"><b>Cómo funciona:</b> abrí ARCA, resolvé el "no soy un robot" y guardá la captura de la tabla. Después subila acá y armamos tu semáforo.</div>
-      <a class="btn pri" href="https://serviciossegsoc.afip.gob.ar/MisAportes/app/basica.aspx" target="_blank" rel="noopener">1 · Consultar en ARCA ↗</a>
-      <label class="btn sec" for="arca-file">2 · Subir captura de ARCA</label>
+      <div class="th-acc">
+        <a class="th-tile cta" href="https://serviciossegsoc.afip.gob.ar/MisAportes/app/basica.aspx" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/></svg>
+          <b>1 · Consultar en ARCA ↗</b></a>
+        <label class="th-tile" for="arca-file">
+          <svg viewBox="0 0 24 24"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/></svg>
+          <b>2 · Subir captura de ARCA</b></label>
+      </div>
       <input type="file" id="arca-file" accept="image/*,application/pdf" capture="environment">
     </div>`;
   document.getElementById('arca-file').onchange = semSubir;
