@@ -51,7 +51,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   `_rol_de` como helpers. Detalle en HISTORIAL.md.
 - **Python 3.12** fijado con .python-version (3.12.8) + variable PYTHON_VERSION en
   Render. Python 3.14 rompe SQLModel ("Field 'id' requires a type annotation").
-- **Deploy:** GitHub + Render. Render sigue la rama main y redeploya con cada push.
+- **Deploy:** GitHub + Render, DOS servicios (desde 2026-09, ver
+  `DESPLIEGUE_RENDER.md` y `PLAN_ENTORNOS.md`): `mitrabajo-pruebas` sigue
+  `main` (cada push redeploya), `mitrabajo-demo` sigue `demo` y solo cambia
+  con `python promover_demo.py` (backup + merge + tag + push). Alembic corre
+  solo en cada deploy (Pre-Deploy Command). Sobre `demo` nunca se programa.
 
 ## Archivos principales
 - main.py — servidor y todas las rutas.
@@ -112,12 +116,18 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 
 ## Variables de entorno (Render)
 - DATABASE_URL — Internal Database URL del Postgres de Render. Si está, usa Postgres.
+- ENTORNO — `local`/`pruebas`/`demo`/`prod` (`entorno.py`). En `local` y
+  `pruebas` la app muestra un distintivo fijo con entorno + versión (para
+  no confundir pantallas en una presentación); en `demo`/`prod` y sin la
+  variable, nada. Va también en el "Acerca de".
 - ANTHROPIC_API_KEY — clave de la API de Anthropic.
 - PLATAFORMA_CUIT — CUIT del login de plataforma (default 20000000000).
 - PLATAFORMA_PASSWORD — clave del login de plataforma.
 - SESSION_SECRET — secreto para firmar cookies de sesión.
 - PYTHON_VERSION — 3.12.8 (redundante con .python-version, a propósito).
 - DB_PATH — solo dev local (SQLite). NO se usa en Render.
+- DEMO_DATABASE_URL — solo en el `.env` de la PC de quien promueve: External
+  Database URL de la base de demo, para el `pg_dump` de `promover_demo.py`.
 - VAPID_PRIVATE_KEY / VAPID_PUBLIC_KEY / VAPID_CLAIM_EMAIL — Web Push de la
   PWA (push.py); sin las tres, el canal queda apagado en silencio.
 
@@ -256,7 +266,10 @@ RAG) y el sprint "Admin de Seccional" (decisiones ya cerradas).
    visual de Trámites" en HISTORIAL.md. Revisar si en algún momento el
    lienzo libre se justifica.
 5. Entornos separados (Pruebas / Demo / Desarrollo en la nube / Prod):
-   plan por etapas acordado 2026-09-03 en [`PLAN_ENTORNOS.md`](PLAN_ENTORNOS.md)
+   plan por etapas acordado 2026-09-03 en [`PLAN_ENTORNOS.md`](PLAN_ENTORNOS.md).
+   **Etapa 0 (repo) HECHA** el mismo día: `ENTORNO` + distintivo,
+   `promover_demo.py`, seed de AEFIP apagado, guía de deploy nueva. Sigue
+   la Etapa 1 (Render)
    — el servicio actual pasa a seguir la rama `demo` y se crea uno de
    pruebas sobre `main` (~USD 14/mes), en 4 semanas hasta el traspaso de
    la operación diaria a dos devs. Etapa 0 (repo) y 1 (Render) primero.
@@ -492,11 +505,12 @@ encuentra el error exacto en Render. Un error nuevo se agrega a `MENSAJES`, y
 si una ruta puntual merece su propio código ante lo inesperado, va en
 `CODIGO_POR_RUTA`.
 
-## Hallazgo pendiente, no arreglado
-`db.cargar_seed_si_vacio()` sigue disparando el seed histórico de AEFIP al
-recrear la base local desde cero sin correr `cargar_demo.py` antes —
-aparece un sindicato "AEFIP" fantasma con id=1. No afecta producción
-(nunca se recrea la base de Render desde cero) — detalle en HISTORIAL.md.
+## Seed histórico de AEFIP: ya no se siembra solo
+`db.init_db()` NO llama más a `cargar_seed_si_vacio()` (arreglado 2026-09-03
+en la Etapa 0 de entornos): una base creada desde cero queda vacía hasta
+`cargar_demo.py` o un alta desde /plataforma. Antes aparecía un sindicato
+"AEFIP" fantasma con id=1, justo el caso de la base nueva de Pruebas. La
+función sigue existiendo solo a pedido explícito.
 
 ## Método de trabajo
 - Por bloques chicos, verificando la lógica de verdad (rutas y funciones), no
@@ -517,6 +531,8 @@ aparece un sindicato "AEFIP" fantasma con id=1. No afecta producción
 - Autodiagnóstico: `python chequeo.py`
 - Cargar demo: `python cargar_demo.py` (¡correr alembic upgrade head antes si es Postgres!)
 - Migraciones: `alembic upgrade head` (aplicar) / `alembic revision --autogenerate -m "msg"` (crear)
+- Promover a la demo: `python promover_demo.py` (o `--solo-pr`). Nunca
+  pushear a `demo` a mano.
 - En la Shell de Render, si `alembic` no se encuentra: usar `python -m alembic upgrade head`
 - Reset completo de la base local Postgres: `docker compose down -v && docker compose up -d`
   (espera a que el healthcheck pase) `&& alembic upgrade head && python cargar_demo.py`

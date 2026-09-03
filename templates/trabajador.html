@@ -637,6 +637,7 @@
 </style>
 </head>
 <body>
+{% include "_entorno.html" %}
 <header>
   <img class="logo-plataforma-header" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Mi Trabajo">
   {% if marca and marca.logo %}

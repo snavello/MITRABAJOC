@@ -2455,3 +2455,41 @@ queda dentro de `/empresa`, sin bandeja propia por ahora)**:
   buscador plegado detrás de `#trx-buscar-toggle`, chips por estado y barra
   de progreso. El tinte de marca en las filas (`.tramx-item`) se conserva:
   un trámite de empresa se sigue distinguiendo a simple vista.
+
+## Entornos separados, Etapa 0 (2026-09-03)
+
+Plan completo en `PLAN_ENTORNOS.md` (seis preguntas cerradas con Sd:
+servicio actual pasa a seguir la rama `demo`, se crea Pruebas sobre
+`main`, traspaso de la operación a dos devs en cuatro semanas). Lo que
+entró en el código en esta etapa:
+
+- **`entorno.py` + `templates/_entorno.html`**: `ENTORNO` se lee una vez al
+  importar y se inyecta como global de Jinja (`entorno`,
+  `distintivo_entorno`), sin tocar cada `TemplateResponse`. El include va
+  justo después del `<body>` de las 18 plantillas. El distintivo es una
+  píldora ámbar fija abajo a la izquierda, `pointer-events:none` (no
+  interfiere con la UI ni con los robots E2E), y muestra la versión de la
+  app cuando la página la tiene en contexto. **Solo en `local` y
+  `pruebas`**; en `demo`/`prod` nada, y sin la variable tampoco: el default
+  silencioso es deliberado para que el deploy de esta feature al servicio
+  actual no cambie lo que ven los sindicatos. Un valor desconocido se
+  trata como vacío (un typo no puede pintar un distintivo raro en la
+  demo). Fila "Entorno" en el "Acerca de" de admin, plataforma y portada
+  del trabajador, solo si está definido.
+- **`promover_demo.py`**: exige árbol limpio, trae `origin/main` y
+  `origin/demo`, lista los commits que van a la demo, hace `pg_dump` de la
+  base de demo (`DEMO_DATABASE_URL` del `.env`; `pg_dump` local o el del
+  Docker de desarrollo), mergea, etiqueta `demo-AAAA-MM-DD-vX.Y.Z` con la
+  versión de `version.py` del commit promovido, y pushea rama + tag.
+  `--solo-pr` imprime el link del PR en vez de mergear (para cuando las
+  reglas de rama exijan aprobación). Sin `DEMO_DATABASE_URL` aborta salvo
+  `--sin-backup`: nadie promueve sin copia por accidente.
+- **Seed de AEFIP apagado**: `db.init_db()` ya no llama a
+  `cargar_seed_si_vacio()`. El hallazgo pendiente desde 2026-08 (sindicato
+  fantasma id=1 en toda base creada desde cero) era exactamente el caso de
+  la base nueva de Pruebas. La función queda para uso explícito.
+- `DESPLIEGUE_RENDER.md` reescrito para dos servicios (Pre-Deploy Command,
+  variables por entorno, promoción, rollback, regenerar Pruebas, backup
+  manual). `backups/` en `.gitignore`.
+- Versiones 0.28.01 / 0.28.01 / 0.21.01 (funcionalidad nueva → sube el
+  minor y el patch vuelve a 01).
