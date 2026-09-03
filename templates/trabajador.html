@@ -12,7 +12,16 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
 <title>Mi Trabajo — Revisá tu recibo</title>
 <style>
+  /* La condensada y las variables de fuente viven en marca.css, que ESTA
+     plantilla no carga (tiene su propio CSS). Se declaran acá para que los
+     títulos del esquema "Hilo" se vean en condensada de verdad -- sin esto,
+     var(--fuente-display) era inválida y caía a system-ui (2026-09-03). */
+  @font-face { font-family:"Barlow Condensed"; font-style:normal; font-weight:700; font-display:swap;
+    src:url("/static/fonts/barlow-condensed-bold.woff2") format("woff2"); }
   :root {
+    --fuente:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --fuente-num:ui-monospace,Consolas,"SF Mono",monospace;
+    --fuente-display:"Barlow Condensed","Arial Narrow",sans-serif;
     --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e;
     --papel:#f7f5f0; --linea:#dcd8cf; --gris:#5c5a54; --card:#ffffff;
     /* Colores de marca del sindicato; sin sindicato activo, caen a la marca

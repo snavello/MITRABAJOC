@@ -58,15 +58,32 @@
     border-radius: 50%; background: var(--marca-acento); display: flex; align-items: center;
     justify-content: center; border: 2px solid #fff; cursor: pointer; }
   .perfil-foto-lapiz svg { width: 13px; height: 13px; stroke: #fff; stroke-width: 2; fill: none; }
+  /* Esquema "Hilo" (2026-09-03): títulos de acceso en condensada, kicker de
+     rol, encabezado del perfil con degradé + grano + filo ámbar. */
+  .tarjetas .acceso .titulo { font-family: var(--fuente-display); font-weight: 700; font-size: 16px;
+    letter-spacing: .8px; text-transform: uppercase; line-height: 1.05; }
+  .tarjetas .acceso .estado { margin-top: 5px; }
+  .kicker { font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--marca-acento);
+    font-weight: 700; margin-top: 4px; }
+  .modal-notif-enc { overflow: hidden; border-left: 5px solid var(--marca-acento);
+    background-image: linear-gradient(150deg, var(--marca-base), color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base))); }
+  .modal-notif-enc::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0; opacity: .08;
+    mix-blend-mode: overlay; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .modal-notif-enc > * { position: relative; z-index: 1; }
+  .modal-notif-enc .modal-k { font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase;
+    color: var(--marca-acento); font-weight: 700; }
+  .modal-notif-enc h3 { font-family: var(--fuente-display); font-weight: 700; font-size: 21px;
+    text-transform: uppercase; letter-spacing: .3px; line-height: 1.05; }
   .perfil-campo { margin-bottom: 12px; }
-  .perfil-campo label { display: block; font-size: 11.5px; color: var(--gris); margin-bottom: 4px; font-weight: 500; }
+  .perfil-campo label { display: block; font-size: 10.5px; color: var(--gris); margin-bottom: 4px; font-weight: 700;
+    letter-spacing: 1.2px; text-transform: uppercase; }
   .perfil-campo input, .perfil-campo select { width: 100%; padding: 9px 10px; border: 1px solid var(--linea);
     border-radius: 8px; font-size: 13.5px; font-family: inherit; background: #fff; color: var(--tinta); }
   .perfil-campo input:disabled { background: var(--papel); color: var(--gris); }
   .perfil-fila2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .perfil-guardar-btn { width: 100%; margin-top: 6px; padding: 12px; background: var(--marca-acento);
-    color: var(--marca-base); border: none; border-radius: 9px; font-size: 14px; font-weight: 650;
-    cursor: pointer; font-family: inherit; }
+    color: var(--marca-base); border: none; border-radius: 9px; cursor: pointer;
+    font-family: var(--fuente-display); font-weight: 700; font-size: 17px; letter-spacing: 1.2px; text-transform: uppercase; }
   .perfil-guardar-msg { text-align: center; font-size: 12px; color: var(--marca-primario); margin-top: 8px;
     min-height: 15px; }
   .overlay-foto-grande { position: fixed; inset: 0; background: rgba(8,12,20,.7); z-index: 110;
@@ -95,6 +112,7 @@
 </a>
 
 <div class="pad">
+  <div class="kicker">Panel de empleador</div>
   <div class="fila-hola">
     <div class="hola">Hola, <em>{{ razon_social or cuit }}</em></div>
     <button class="circulo-acento" onclick="abrirPerfil()" aria-label="Tu perfil" title="Tu perfil">
@@ -131,7 +149,7 @@
 <div class="overlay" id="overlay-perfil" onclick="if (event.target === this) cerrarPerfil()">
   <div class="modal-notif-caja">
     <div class="modal-notif-enc">
-      <h3>Tu perfil</h3>
+      <div><div class="modal-k">{{ sindicato }}</div><h3>Tu perfil</h3></div>
       <button class="modal-cerrar-clara" onclick="cerrarPerfil()" aria-label="Cerrar"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
     </div>
     <div class="modal-notif-body">

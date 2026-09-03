@@ -8,7 +8,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Mi Trabajo — Empresa</title>
 <style>
+  /* La condensada y las variables de fuente viven en marca.css, que ESTA
+     plantilla no carga (tiene su propio CSS). Se declaran acá para que los
+     títulos del esquema "Hilo" se vean en condensada de verdad -- sin esto,
+     var(--fuente-display) era inválida y caía a system-ui (2026-09-03). */
+  @font-face { font-family:"Barlow Condensed"; font-style:normal; font-weight:700; font-display:swap;
+    src:url("/static/fonts/barlow-condensed-bold.woff2") format("woff2"); }
   :root {
+    --fuente:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --fuente-num:ui-monospace,Consolas,"SF Mono",monospace;
+    --fuente-display:"Barlow Condensed","Arial Narrow",sans-serif;
     --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e;
     --papel:#f7f5f0; --linea:#dcd8cf; --gris:#5c5a54; --card:#ffffff;
     --marca-base: {{ marca.color_base if marca else (marca_plataforma.color_primario if marca_plataforma else '#152238') }};
@@ -204,6 +213,94 @@
   .modal-recibo-cerrar svg { width:19px; height:19px; stroke:#fff; stroke-width:2.2; fill:none; }
   .modal-recibo-body { padding:16px 18px; }
   .modal-recibo-card { background:color-mix(in srgb, var(--marca-primario) 12%, #fff); border-radius:9px; padding:12px 14px; }
+
+  /* ============ Esquema "Hilo" en la app de Empresa (2026-09-03): espejo de
+     lo hecho en /app -- encabezado con degradé + grano + filo ámbar,
+     notificaciones como hilo (hitos por día, burbujas con avatar), inicio de
+     Trámites con "Necesita tu atención", accesos grandes, filtros y barra de
+     progreso. Aislamiento: clases propias (nh-/tx-), sin compartir con el
+     trabajador. ============ */
+  header { position:relative; overflow:hidden; border-bottom:none; border-left:5px solid var(--marca-acento);
+    background-image:linear-gradient(150deg, var(--marca-base), color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base))); }
+  header::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08;
+    mix-blend-mode:overlay; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  header > * { position:relative; z-index:1; }
+  .sind-nombre-header { font-family:var(--fuente-display); font-weight:700; font-size:19px; letter-spacing:.5px; text-transform:uppercase; }
+  /* --- notificaciones como hilo --- */
+  .nh-hilo { position:relative; padding:4px 0 10px; }
+  .nh-hilo::before { content:""; position:absolute; left:16px; top:0; bottom:30px; width:2px; background:var(--linea); }
+  .nh-hito { display:flex; align-items:center; gap:10px; margin:16px 0 10px; position:relative; }
+  .nh-hito i { width:34px; display:flex; justify-content:center; flex:none; }
+  .nh-hito i svg { width:18px; height:18px; fill:var(--papel); stroke:var(--gris); stroke-width:1.6; }
+  .nh-hito span { font-family:var(--fuente-display); font-weight:700; font-size:14px; letter-spacing:1.6px; text-transform:uppercase; color:var(--gris); }
+  .notif-item { display:flex; gap:8px; margin-bottom:9px; background:none; border:none; padding:0; position:relative; }
+  .nh-av { width:34px; height:34px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center;
+    font-family:var(--fuente-display); font-size:13px; font-weight:700; letter-spacing:.5px; color:#fff;
+    box-shadow:0 0 0 3px var(--papel); margin-top:2px; position:relative; background:var(--marca-primario); }
+  .notif-item.no-leida .nh-av::after { content:""; position:absolute; right:-2px; bottom:-2px; width:11px; height:11px;
+    border-radius:50%; background:var(--marca-acento); border:2px solid var(--papel); animation:nh-pulso 1.8s ease-out infinite; }
+  @keyframes nh-pulso { 0% { box-shadow:0 0 0 0 color-mix(in srgb, var(--marca-acento) 55%, transparent); } 100% { box-shadow:0 0 0 9px transparent; } }
+  .nh-bur { flex:1; min-width:0; background:#fff; border:1px solid var(--linea); border-radius:4px 14px 14px 14px; padding:9px 12px 10px; }
+  .notif-item.no-leida .nh-bur { border-color:color-mix(in srgb, var(--marca-acento) 50%, var(--linea));
+    background:color-mix(in srgb, var(--marca-acento) 5%, #fff); }
+  .notif-item .notif-remitente { font-size:12.5px; font-weight:700; color:var(--marca-primario); }
+  .notif-item.no-leida .notif-remitente { color:var(--tinta); }
+  .notif-item .notif-fecha { font-family:var(--fuente-num); font-size:10.5px; color:#98a2b3; }
+  .notif-item.no-leida .notif-fecha { color:var(--marca-acento); font-weight:700; }
+  .notif-item .notif-snippet { font-size:13px; white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .notif-item.no-leida .notif-snippet { color:var(--tinta); }
+  .notif-item .cta-form, .notif-item .notif-adjunto { display:inline-flex; align-items:center; gap:5px; border-radius:9px; padding:7px 11px;
+    font-size:12px; font-weight:700; border:1px solid var(--linea); background:#fff; color:var(--marca-primario);
+    text-decoration:none; margin-top:9px; width:auto; height:auto; box-shadow:none; cursor:pointer; font-family:inherit; }
+  .notif-item .cta-form { background:var(--marca-acento); border-color:var(--marca-acento); color:var(--marca-base); }
+  /* --- inicio de Trámites --- */
+  #tp-tramites h1, #tp-tramites h2 { font-family:var(--fuente-display); font-weight:700; letter-spacing:.005em; }
+  .tx-aten { position:relative; overflow:hidden; margin-top:16px; color:#fff; border-radius:14px; padding:13px 14px;
+    border-left:5px solid var(--marca-acento);
+    background:linear-gradient(150deg, var(--marca-base), color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base))); }
+  .tx-aten::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08; mix-blend-mode:overlay; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .tx-aten > * { position:relative; z-index:1; }
+  .tx-aten .k { font-size:10.5px; letter-spacing:1.6px; text-transform:uppercase; color:var(--marca-acento); font-weight:700; display:flex; align-items:center; gap:7px; }
+  .tx-punto { width:8px; height:8px; border-radius:50%; background:var(--marca-acento); display:inline-block; flex:none; animation:nh-pulso 1.8s ease-out infinite; }
+  .tx-aten .tit { font-family:var(--fuente-display); font-weight:700; font-size:21px; line-height:1.05; text-transform:uppercase; letter-spacing:.3px; margin-top:5px; color:#fff; }
+  .tx-aten .exp { font-family:var(--fuente-num); font-size:11px; color:rgba(255,255,255,.65); margin-top:3px; }
+  .tx-aten .msg { margin-top:10px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:9px 10px; font-size:13px; line-height:1.4; color:rgba(255,255,255,.85); }
+  .tx-aten .bts { display:flex; gap:7px; margin-top:11px; }
+  .tx-aten .bts button { flex:1; border-radius:9px; padding:10px; cursor:pointer; font-family:var(--fuente-display); font-size:16px;
+    letter-spacing:1px; text-transform:uppercase; font-weight:700; border:1px solid rgba(255,255,255,.28); background:transparent; color:#fff; margin:0; min-height:0; }
+  .tx-aten .bts button.cta { background:var(--marca-acento); border-color:var(--marca-acento); color:var(--marca-base); }
+  .tx-acc { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+  .tx-tile { border-radius:12px; padding:13px 12px; display:flex; flex-direction:column; align-items:flex-start; gap:6px; margin:0; min-height:0;
+    border:1px solid var(--linea); background:#fff; color:var(--tinta); cursor:pointer; font-family:inherit; text-align:left; width:auto; }
+  .tx-tile.cta { background:var(--marca-acento); border-color:var(--marca-acento); color:var(--marca-base); }
+  .tx-tile svg { width:22px; height:22px; stroke:currentColor; stroke-width:1.9; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .tx-tile:not(.cta) svg { stroke:var(--marca-primario); }
+  .tx-tile b { font-family:var(--fuente-display); font-size:17px; letter-spacing:.8px; text-transform:uppercase; line-height:1.05; }
+  .tx-tile small { font-size:11px; color:var(--gris); }
+  .tx-tile.cta small { color:color-mix(in srgb, var(--marca-base) 70%, transparent); }
+  .tx-buscar { margin-top:10px; background:#fff; border:1px solid var(--linea); border-radius:12px; padding:12px; }
+  .tx-buscar[hidden] { display:none; }
+  .tx-fil { display:flex; gap:6px; margin-top:18px; align-items:center; flex-wrap:wrap; }
+  .tx-fil button { border:1px solid var(--linea); background:#fff; border-radius:20px; padding:5px 12px; font-size:12px; font-weight:600;
+    color:var(--gris); cursor:pointer; font-family:inherit; margin:0; min-height:0; width:auto; }
+  .tx-fil button i { font-style:normal; font-family:var(--fuente-num); font-size:10.5px; opacity:.7; margin-left:3px; }
+  .tx-fil button.activo { background:var(--marca-base); border-color:var(--marca-base); color:#fff; }
+  .tx-r { background:color-mix(in srgb, var(--marca-primario) 8%, #fff); border:1px solid var(--linea); border-radius:12px; padding:12px 13px; margin-top:8px; cursor:pointer; }
+  .tx-r .fila-t { display:flex; align-items:center; gap:8px; }
+  .tx-r .tit { font-weight:700; font-size:14px; flex:1; line-height:1.25; }
+  .tx-r .exp { font-family:var(--fuente-num); font-size:11px; color:var(--gris); margin-top:2px; }
+  .tx-tag { display:inline-block; border-radius:20px; padding:3px 9px; font-size:10.5px; font-weight:700; white-space:nowrap; }
+  .tx-prog { display:flex; gap:3px; margin-top:10px; }
+  .tx-prog i { flex:1; height:4px; border-radius:2px; background:var(--linea); }
+  .tx-prog i.on { background:var(--marca-primario); }
+  .tx-prog i.cur { background:var(--marca-acento); }
+  .tx-prog i.al { background:var(--alerta); }
+  .tx-r .pie { display:flex; justify-content:space-between; gap:10px; margin-top:6px; font-size:11.5px; color:var(--gris); }
+  .tx-r .pie > span:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .tx-r .pie > span:last-child { white-space:nowrap; flex:none; }
+  .tx-r .pie b.nov { color:var(--marca-acento); }
+  .tx-r .pie b.esp { color:var(--alerta); }
+  @media (prefers-reduced-motion:reduce) { .tx-punto, .notif-item.no-leida .nh-av::after { animation:none; } }
 </style>
 </head>
 <body>
@@ -231,20 +328,29 @@
     <div id="trx-inicio">
       <h1>Trámites</h1>
       <p class="sub2">Formularios de tu sindicato y seguimiento de tus expedientes.</p>
-      <button class="btn" id="trx-nuevo">Iniciar un trámite nuevo</button>
 
-      <div class="tramx-box">
-        <div class="tramx-box-enc"><div class="tit">Consultar por número de expediente</div></div>
-        <div class="tramx-box-body">
-          <div style="display:flex; gap:8px;">
-            <input type="text" id="trx-buscar-input" class="tramx-input" placeholder="Ej: F01EMP-2026-000123" style="flex:1; min-width:0;">
-            <button class="btn sec" id="trx-buscar-btn" style="width:auto; margin-top:0; padding:0 16px;">Buscar</button>
-          </div>
-          <div id="trx-buscar-error" class="sub2" style="margin-top:8px; font-size:12.5px;"></div>
+      <!-- "Necesita tu atención": el trámite con novedad más reciente (lo llena renderTramitesTrx) -->
+      <div id="trx-aten"></div>
+
+      <div class="tx-acc">
+        <button type="button" class="tx-tile cta" id="trx-nuevo">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          <b>Iniciar un trámite</b><small>Elegí el formulario</small>
+        </button>
+        <button type="button" class="tx-tile" id="trx-buscar-toggle">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <b>Buscar expediente</b><small>Por número de expediente</small>
+        </button>
+      </div>
+      <div class="tx-buscar" id="trx-buscar-box" hidden>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="trx-buscar-input" class="tramx-input" placeholder="Ej: F01EMP-2026-000123" style="flex:1; min-width:0;">
+          <button class="btn sec" id="trx-buscar-btn" style="width:auto; margin-top:0; padding:0 16px; min-height:44px;">Buscar</button>
         </div>
+        <div id="trx-buscar-error" class="sub2" style="margin-top:8px; font-size:12.5px;"></div>
       </div>
 
-      <h2 style="margin-top:22px; padding:0 0 8px;">Mis trámites</h2>
+      <div class="tx-fil" id="trx-filtros"></div>
       <div id="trx-lista"><div class="cargando" style="padding:20px 0;"><div class="spin"></div></div></div>
     </div>
 
@@ -379,16 +485,54 @@ function renderNotificacionesEmpresa(items) {
     lista.innerHTML = '<div class="notif-vacio">Todavía no tenés notificaciones.</div>';
     return;
   }
-  lista.innerHTML = items.map(n => `
+  // Hilo (esquema 2026-09-03): un hito por día, una burbuja por aviso con
+  // avatar del remitente. Mismas clases de estado (no-leida/expandido) que
+  // usa toggleNotificacionEmpresa, así el toggle no cambia.
+  let html = '', diaActual = null;
+  for (const n of items) {
+    const dia = etiquetaDiaNh(n.enviado_en);
+    if (dia !== diaActual) {
+      html += `<div class="nh-hito"><i><svg viewBox="0 0 24 24"><path d="M12 2.5 20 7v10l-8 4.5L4 17V7z"/></svg></i><span>${dia}</span></div>`;
+      diaActual = dia;
+    }
+    const rem = n.remitente || 'Tu sindicato';
+    html += `
     <div class="notif-item ${n.leida_en ? '' : 'no-leida'}" data-id="${n.id}" onclick="toggleNotificacionEmpresa(${n.id})">
-      <div class="notif-cab">
-        <span class="notif-remitente">${(n.remitente || 'Tu sindicato').replace(/</g, '&lt;')}</span>
-        <span class="notif-fecha">${fmtFechaHora(n.enviado_en)}</span>
+      <div class="nh-av" style="background:${colorAvatarNh(rem)}">${inicialesNh(rem)}</div>
+      <div class="nh-bur">
+        <div class="notif-cab">
+          <span class="notif-remitente">${rem.replace(/</g, '&lt;')}</span>
+          <span class="notif-fecha">${horaNh(n.enviado_en)}</span>
+        </div>
+        <div class="notif-snippet">${(n.texto || '').replace(/</g, '&lt;')}</div>
+        <div class="notif-texto-full">${n.texto_html}${n.tiene_adjunto ? `<br><a class="notif-adjunto" href="/notificacion-empresa-adjunto/${n.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📎 Ver adjunto</a>` : ''}${n.formulario_id ? `<br><button type="button" class="cta-form" title="Completar el formulario" onclick="event.stopPropagation(); abrirFormularioDesdeChatTrx(${n.formulario_id})">📋 Completar el formulario</button>` : ''}</div>
       </div>
-      <div class="notif-snippet">${(n.texto || '').replace(/</g, '&lt;')}</div>
-      <div class="notif-texto-full">${n.texto_html}${n.tiene_adjunto ? `<br><a class="notif-adjunto" href="/notificacion-empresa-adjunto/${n.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📎 Ver adjunto</a>` : ''}${n.formulario_id ? `<br><button type="button" class="cta-form" title="Completar el formulario" onclick="event.stopPropagation(); abrirFormularioDesdeChatTrx(${n.formulario_id})">📋</button>` : ''}</div>
-    </div>
-  `).join('');
+    </div>`;
+  }
+  lista.innerHTML = `<div class="nh-hilo">${html}</div>`;
+}
+function etiquetaDiaNh(fh) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(fh || '');
+  if (!m) return 'Sin fecha';
+  const hoy = new Date(); const p = n => String(n).padStart(2, '0');
+  const iso = d => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1);
+  const f = `${m[1]}-${m[2]}-${m[3]}`;
+  if (f === iso(hoy)) return 'Hoy';
+  if (f === iso(ayer)) return 'Ayer';
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+function horaNh(fh) { const m = /(\d{2}:\d{2})$/.exec(fh || ''); return m ? m[1] : ''; }
+function inicialesNh(rem) {
+  const partes = (rem || '').trim().split(/\s+/).filter(Boolean);
+  const largas = partes.filter(p => p.length > 2);
+  const base = largas.length >= 2 ? largas : partes;
+  return (base.slice(0, 2).map(p => p[0]).join('') || 'S').toUpperCase().replace(/</g, '');
+}
+function colorAvatarNh(rem) {
+  const colores = ['var(--marca-primario)', 'var(--marca-apoyo)', '#5b3d8a', '#8a5a1a'];
+  let h = 0; for (const ch of (rem || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return colores[h % colores.length];
 }
 async function toggleNotificacionEmpresa(id) {
   const item = document.querySelector('.notif-item[data-id="' + id + '"]');
@@ -445,20 +589,97 @@ if (document.getElementById('tp-tramites')) {
     if (e.key === 'Enter') document.getElementById('trx-buscar-btn').click();
   });
 
+  // ---------- Inicio "Hilo" (espejo de /app, con nombres propios) ----------
+  let tramitesTrxCache = [];
+  let filtroTrx = 'todos';
+  const PROGRESO_TRX = {
+    iniciado: ['cur', '', '', ''], en_tratamiento: ['on', 'cur', '', ''], espera_info: ['on', 'al', '', ''],
+    respondido: ['on', 'on', 'cur', ''], terminado: ['on', 'on', 'on', 'on'],
+  };
+  const ETIQUETA_CORTA_TRX = { espera_info: 'Esperan tu respuesta' };
+  function tagEstadoTx(estado, label) {
+    const c = ESTADO_TAG_COLOR[estado] || ['#eee', '#888'];
+    return `<span class="tx-tag" style="background:${c[0]}; color:${c[1]};">${escTrx(ETIQUETA_CORTA_TRX[estado] || label)}</span>`;
+  }
+  function fmtCuandoTrx(s) {
+    const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})$/.exec(s || '');
+    if (!m) return s || '';
+    const hoy = new Date(); const p = n => String(n).padStart(2, '0');
+    const iso = d => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1);
+    const f = `${m[1]}-${m[2]}-${m[3]}`;
+    if (f === iso(hoy)) return `hoy ${m[4]}`;
+    if (f === iso(ayer)) return `ayer ${m[4]}`;
+    return `${m[3]}/${m[2]}`;
+  }
+  document.getElementById('trx-buscar-toggle').onclick = () => {
+    const box = document.getElementById('trx-buscar-box');
+    box.hidden = !box.hidden;
+    if (!box.hidden) document.getElementById('trx-buscar-input').focus();
+  };
+  function renderAtencionTrx() {
+    const cont = document.getElementById('trx-aten');
+    const t = tramitesTrxCache.find(x => x.novedad);
+    if (!t) { cont.innerHTML = ''; return; }
+    const puedeResponder = t.estado !== 'terminado';
+    cont.innerHTML = `
+      <div class="tx-aten">
+        <div class="k"><i class="tx-punto"></i>Necesita tu atención</div>
+        <div class="tit">${escTrx(t.tipo_titulo)}</div>
+        <div class="exp">${escTrx(t.numero_expediente)} · ${escTrx(t.estado_label)}</div>
+        <div class="msg">Tu sindicato actualizó este trámite (${fmtCuandoTrx(t.actualizado)}). Abrilo para ver el estado y los mensajes nuevos.</div>
+        <div class="bts">
+          ${puedeResponder ? `<button type="button" class="cta" onclick="responderTramiteDesdeInicioTrx('${escTrx(t.numero_expediente)}')">Responder</button>` : ''}
+          <button type="button" onclick="abrirTramiteEmpresaDetalleTrx('${escTrx(t.numero_expediente)}')">Abrir el trámite</button>
+        </div>
+      </div>`;
+  }
+  window.responderTramiteDesdeInicioTrx = async function (numero) {
+    await abrirTramiteEmpresaDetalleTrx(numero);
+    if (trxTramiteActual && trxTramiteActual.estado !== 'terminado') abrirResponderTramiteTrx();
+  };
+  function renderFiltrosTrx() {
+    const cont = document.getElementById('trx-filtros');
+    if (!tramitesTrxCache.length) { cont.innerHTML = ''; return; }
+    const enCurso = tramitesTrxCache.filter(t => t.estado !== 'terminado').length;
+    const chip = (k, lab, n) => `<button type="button" class="${filtroTrx === k ? 'activo' : ''}" onclick="filtrarTramitesTrx('${k}')">${lab}<i>${n}</i></button>`;
+    cont.innerHTML = chip('todos', 'Todos', tramitesTrxCache.length) + chip('curso', 'En curso', enCurso) + chip('terminados', 'Terminados', tramitesTrxCache.length - enCurso);
+  }
+  window.filtrarTramitesTrx = function (k) { filtroTrx = k; renderFiltrosTrx(); renderListaTrx(); };
+  function renderListaTrx() {
+    const cont = document.getElementById('trx-lista');
+    if (!tramitesTrxCache.length) { cont.innerHTML = '<p class="sub2" style="margin-top:14px;">Todavía no presentaste ningún trámite.</p>'; return; }
+    const visibles = tramitesTrxCache.filter(t =>
+      filtroTrx === 'todos' || (filtroTrx === 'curso' ? t.estado !== 'terminado' : t.estado === 'terminado'));
+    if (!visibles.length) { cont.innerHTML = '<p class="sub2" style="margin-top:14px;">Nada que mostrar con este filtro.</p>'; return; }
+    cont.innerHTML = visibles.map(t => {
+      const seg = (PROGRESO_TRX[t.estado] || PROGRESO_TRX.iniciado).map(c => `<i class="${c}"></i>`).join('');
+      let pie;
+      if (t.novedad) pie = '<b class="nov">Hay novedades del sindicato</b>';
+      else if (t.estado === 'espera_info') pie = '<b class="esp">Esperan tu respuesta</b>';
+      else pie = t.estado === 'terminado' ? 'Cerrado' : 'Presentado';
+      return `
+        <div class="tx-r tramx-item" onclick="abrirTramiteEmpresaDetalleTrx('${escTrx(t.numero_expediente)}')">
+          <div class="fila-t">
+            <div style="flex:1; min-width:0;"><div class="tit">${t.novedad ? '<span class="punto-novedad" title="Hay novedades"></span>' : ''}${escTrx(t.tipo_titulo)}</div>
+              <div class="exp">${escTrx(t.numero_expediente)}</div></div>
+            ${tagEstadoTx(t.estado, t.estado_label)}
+          </div>
+          <div class="tx-prog">${seg}</div>
+          <div class="pie"><span>${pie}</span><span>${fmtCuandoTrx(t.actualizado || t.creado)}</span></div>
+        </div>`;
+    }).join('');
+  }
+  function renderTramitesTrx() { renderAtencionTrx(); renderFiltrosTrx(); renderListaTrx(); }
+
   async function cargarMisTramitesEmpresa() {
     const cont = document.getElementById('trx-lista');
     cont.innerHTML = `<div class="cargando" style="padding:20px 0;"><div class="spin"></div></div>`;
     try {
       const r = await fetch('/api/empresa/tramites/mios');
       const data = await r.json();
-      if (!data.tramites.length) { cont.innerHTML = '<p class="sub2">Todavía no presentaste ningún trámite.</p>'; return; }
-      cont.innerHTML = data.tramites.map(t => `
-        <div class="card tramx-item" style="margin-top:10px; padding:13px 15px; cursor:pointer;" onclick="abrirTramiteEmpresaDetalleTrx('${t.numero_expediente}')">
-          <div class="fila" style="border:none; padding:0;">
-            <span>${t.novedad ? '<span class="punto-novedad" title="Hay novedades"></span>' : ''}<b>${escTrx(t.tipo_titulo)}</b><br><span class="sub2" style="font-size:12px;"><code>${t.numero_expediente}</code></span></span>
-            <span>${tagEstadoTrx(t.estado, t.estado_label)}</span>
-          </div>
-        </div>`).join('');
+      tramitesTrxCache = data.tramites || [];
+      renderTramitesTrx();
     } catch (e) {
       cont.innerHTML = '<div class="banner mal">No pudimos cargar tus trámites.</div>';
     }

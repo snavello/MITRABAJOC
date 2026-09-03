@@ -77,6 +77,13 @@
   .sech a { font-size: 11px; font-weight: 600; }
   .noticia-card .tit { font-size: 13px; }
   .noticia-card .fecha { font-family: var(--fuente-num); opacity: 1; color: var(--marca-acento); }
+  /* Noticia sin imagen: ícono genérico del mismo tamaño que la miniatura,
+     así el título queda alineado con las que sí tienen foto (2026-09-03). */
+  .noticia-card .miniatura-ico { display: flex; align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--marca-primario) 70%, var(--marca-base)); }
+  .noticia-card .miniatura-ico svg { width: 20px; height: 20px; stroke: #fff; stroke-width: 1.8; fill: none;
+    stroke-linecap: round; }
+  body.claro .noticia-card .miniatura-ico { background: var(--marca-primario); }
   body.claro .noticia-card .fecha { color: var(--marca-primario); }
   .btn-acerca { background: none; border: none; opacity: .5; font-size: 11px; cursor: pointer;
     padding: 6px; color: var(--sobre-base-mute); }
@@ -294,7 +301,8 @@
     {% if noticias %}
       {% for n in noticias %}
       <button class="noticia-card" onclick="abrirNoticia({{ n.id }})">
-        {% if n.tiene_imagen1 %}<img class="miniatura" src="/noticia-imagen/{{ n.id }}/1" alt="">{% endif %}
+        {% if n.tiene_imagen1 %}<img class="miniatura" src="/noticia-imagen/{{ n.id }}/1" alt="">
+        {% else %}<span class="miniatura miniatura-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>{% endif %}
         <div class="contenido">
           <div class="fila-tit"><span class="tit">{{ n.titulo }}</span><span class="fecha">{{ n.fecha_hora }}</span></div>
           {% if n.bajada %}<div class="baj">{{ n.bajada }}</div>{% endif %}

@@ -2422,3 +2422,36 @@ degradé + grano + filo ámbar y título en condensada, la caja de ayuda con
 el mismo título, inputs de filtro como píldoras, y expediente/CUIL/cantidades
 en monoespaciada. Los `<details>` de plataforma llevan el resumen en
 condensada.
+
+## Esquema "Hilo" en la app de Empresa + dos arreglos (2026-09-03, v0.27.04)
+
+**Arreglo real encontrado de paso: `/app` y `/empresa` NO cargan
+marca.css** (tienen su propio CSS), así que `var(--fuente-display)` era
+inválida ahí y todos los títulos "en condensada" del esquema -- y los del
+`.tram-box` de la Fase D anterior -- caían a system-ui sin que nada
+fallara. Ahora las dos plantillas declaran el `@font-face` de Barlow
+Condensed y las tres variables de fuente (`--fuente`, `--fuente-num`,
+`--fuente-display`) al inicio de su `:root`. Lección: una variable CSS
+inexistente no rompe nada visible, hay que verificar la fuente computada.
+
+**Arreglo menor pedido por Sd**: en la portada del trabajador, una noticia
+sin imagen quedaba desalineada respecto de las que sí tienen; ahora lleva
+un ícono genérico (`.miniatura-ico`, mismo tamaño que la miniatura, fondo
+primario).
+
+**Empresa, solo esquema (decisión de Sd: la pestaña Notificaciones se
+queda dentro de `/empresa`, sin bandeja propia por ahora)**:
+- Portada: títulos de acceso en condensada, kicker "Panel de empleador",
+  modal de perfil con el encabezado del esquema (kicker con el nombre del
+  sindicato, título en condensada, etiquetas en mayúsculas, botón en
+  condensada).
+- Panel: encabezado con degradé + grano + filo ámbar; Notificaciones como
+  hilo (hito por día, burbuja con avatar de iniciales; el toggle
+  `toggleNotificacionEmpresa` no cambia porque conserva las clases
+  `notif-item`/`no-leida`/`expandido`); inicio de Trámites espejo del
+  trabajador con nombres propios (`tx-*`, `renderTramitesTrx`): "Necesita
+  tu atención" (sin último mensaje, porque el resumen de empresa no lo
+  trae -- muestra "tu sindicato actualizó este trámite"), accesos grandes,
+  buscador plegado detrás de `#trx-buscar-toggle`, chips por estado y barra
+  de progreso. El tinte de marca en las filas (`.tramx-item`) se conserva:
+  un trámite de empresa se sigue distinguiendo a simple vista.
