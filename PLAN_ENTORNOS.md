@@ -165,8 +165,11 @@ para mergear lo retenido.
    (el push queda apagado en Pruebas; se generan en la semana 3).
 6. Primer deploy de Pruebas: el Pre-Deploy corre Alembic y crea el
    esquema. Después, en la Shell de `mitrabajo-pruebas`:
-   `python cargar_demo.py`, `python cargar_lote_sindicato.py --sindicato "UOM"`,
-   `python cargar_bancaria.py`.
+   `python cargar_marca_plataforma.py`, `python cargar_demo.py`,
+   `python cargar_lote_sindicato.py --sindicato "Obrera"`,
+   `python cargar_bancaria.py`. El primero es el que deja la marca de
+   Colm3na (logo y colores viven en la base, no en el repo): sin él el
+   entorno arranca con el placeholder viejo.
 7. Projects → New Project "Mi Trabajo" con Environments "Demo" y
    "Pruebas"; mover cada servicio y base al suyo. Es organización, sin
    costo.

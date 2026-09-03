@@ -56,10 +56,15 @@ corre solo en cada deploy** (Pre-Deploy Command), ya no a mano.
    seed histórico de AEFIP ya no se siembra solo.
 4. Datos, desde la **Shell** del servicio `mitrabajo-pruebas`:
    ```
+   python cargar_marca_plataforma.py
    python cargar_demo.py
-   python cargar_lote_sindicato.py --sindicato "UOM"
+   python cargar_lote_sindicato.py --sindicato "Obrera"
    python cargar_bancaria.py
    ```
+   `cargar_marca_plataforma.py` va PRIMERO y no es opcional: el logo y los
+   colores de Colm3na viven en la base, no en el repo, así que sin él todas
+   las pantallas caen al placeholder `static/logo_mitrabajo.svg` y el
+   entorno no se ve como la demo.
 5. Projects → New Project "Mi Trabajo" → Environments "Demo" y "Pruebas";
    mover cada servicio y base al suyo (solo organización).
 
@@ -106,12 +111,14 @@ mergea a `demo` y enseguida `demo → main`.
 Pruebas se ensucia y se regenera, nunca se restaura desde demo como
 rutina. En la Shell de `mitrabajo-pruebas`:
 ```
-python cargar_lote_sindicato.py --sindicato "UOM" --limpiar
-python cargar_lote_sindicato.py --sindicato "UOM"
+python cargar_lote_sindicato.py --sindicato "Obrera" --limpiar
+python cargar_lote_sindicato.py --sindicato "Obrera"
 ```
 (y lo mismo con `cargar_bancaria.py`). Para empezar de cero de verdad:
 borrar y recrear `mitrabajo-pruebas-db`, actualizar `DATABASE_URL` y
-redeployar; el Pre-Deploy recrea el esquema.
+redeployar; el Pre-Deploy recrea el esquema. En ese caso volver a correr
+también `python cargar_marca_plataforma.py`, que es lo único que repone la
+marca de Colm3na.
 
 ## Backup manual de la base de demo
 Desde la PC de desarrollo, con el Docker local levantado (trae `pg_dump`
