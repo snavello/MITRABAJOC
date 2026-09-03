@@ -212,8 +212,11 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
   z-index: 0; opacity: .08; mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
 .modal-articulo-enc > * { position: relative; z-index: 1; }
+/* line-height propio: el nombre de un sindicato largo ("Asociación de
+   Empleados Fiscales AEFIP") ocupa dos líneas y con el interlineado de 1 se
+   apelmazaba contra el título. */
 .modal-articulo-enc .modal-k { font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase;
-  color: var(--marca-acento); font-weight: 700; }
+  color: var(--marca-acento); font-weight: 700; line-height: 1.35; }
 /* Sin uppercase, a diferencia del resto del esquema "Hilo": el título de una
    noticia es una frase larga, no una etiqueta de dos palabras. */
 .modal-articulo-enc h3 { font-family: var(--fuente-display); font-weight: 700; font-size: 22px;

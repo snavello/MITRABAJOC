@@ -38,7 +38,6 @@ pasa, este script deja de ser la herramienta correcta.
 """
 import argparse
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -46,6 +45,8 @@ from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+import pg_cliente
 
 load_dotenv()
 
@@ -93,47 +94,22 @@ def herramienta(nombre):
             "levantá `docker compose up -d`.")
 
 
-def _mayor(texto):
-    """Primer número de una cadena de versión ('16.15 (Debian...)' -> 16)."""
-    m = re.search(r"(\d+)", texto or "")
-    return int(m.group(1)) if m else 0
-
-
 def version_de_servidor(origen, destino):
-    """Versión mayor de Postgres de cada base. De paso confirma que las dos
-    responden ANTES de empezar: una URL mal copiada tiene que fallar acá y no
-    a mitad del dump. psql sí puede hablar con un servidor más nuevo que él,
-    así que para esta consulta alcanza con el cliente que haya."""
-    cmd_psql, _ = herramienta("psql")
-    versiones = {}
-    for etiqueta, url in (("demo", origen), ("pruebas", destino)):
-        r = subprocess.run([*cmd_psql, url, "-tAc", "SHOW server_version"],
-                           cwd=RAIZ, text=True, capture_output=True)
-        if r.returncode != 0:
-            ultima = (r.stderr or "").strip().splitlines()
-            abortar(f"no me puedo conectar a la base de {etiqueta}.\n"
-                    f"          Revisá que sea la External Database URL (no la Internal, que\n"
-                    f"          solo funciona dentro de Render). Dijo:\n"
-                    f"          {ultima[-1] if ultima else '?'}")
-        versiones[etiqueta] = _mayor(r.stdout)
-    return versiones
+    """Versión de Postgres de cada base, y de paso confirma que las dos
+    responden ANTES de empezar. La lógica vive en pg_cliente.py, compartida
+    con promover_demo.py."""
+    try:
+        return {"demo": pg_cliente.version_de_servidor(origen, "la base de demo", cwd=RAIZ),
+                "pruebas": pg_cliente.version_de_servidor(destino, "la base de pruebas", cwd=RAIZ)}
+    except pg_cliente.ErrorPg as e:
+        abortar(str(e))
 
 
 def cliente_para(nombre, version_servidor):
-    """Comando de pg_dump/pg_restore capaz de hablar con un servidor de esa
-    versión. pg_dump NO puede volcar un servidor más nuevo que él (aborta con
-    'server version mismatch'), y Render actualiza Postgres por su cuenta: en
-    vez de exigir que cada dev tenga el cliente justo instalado, se usa la
-    imagen oficial `postgres:<version>` de Docker, que siempre coincide."""
-    local = shutil.which(nombre)
-    if local:
-        salida = subprocess.run([local, "--version"], text=True, capture_output=True).stdout
-        if _mayor(salida.split("PostgreSQL")[-1]) >= version_servidor:
-            return [local], "local"
-    if shutil.which("docker"):
-        return ["docker", "run", "--rm", "-i", f"postgres:{version_servidor}", nombre], "docker"
-    abortar(f"hace falta un {nombre} de Postgres {version_servidor} (el servidor es esa "
-            f"versión) y no hay ni cliente local suficiente ni docker para traerlo.")
+    try:
+        return pg_cliente.cliente_para(nombre, version_servidor)
+    except pg_cliente.ErrorPg as e:
+        abortar(str(e))
 
 
 def main():
@@ -157,8 +133,7 @@ def main():
     version = max(versiones.values())
     print(f"- Postgres: demo {versiones['demo']}, pruebas {versiones['pruebas']}")
     cmd_dump, modo = cliente_para("pg_dump", version)
-    print(f"- Cliente pg_dump/pg_restore {version}: "
-          f"{'instalado' if modo == 'local' else 'imagen docker postgres:%d' % version}")
+    print(f"- Cliente pg_dump/pg_restore {version}: {modo}")
 
     if not args.si_borrar_pruebas:
         print("\nEnsayo: no se tocó nada.")

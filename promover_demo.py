@@ -21,20 +21,21 @@ Uso (desde la raíz del repo, en la PC con git configurado):
     python promover_demo.py --solo-pr     # solo backup + link del PR
     python promover_demo.py --sin-backup  # sin DEMO_DATABASE_URL a mano
 
-El pg_dump se busca primero en el PATH y, si no está, dentro del Postgres
-de Docker de desarrollo (`docker compose exec postgres-dev pg_dump`), que
-lo trae sin instalar nada. Los dumps quedan en backups/ (gitignored).
+El cliente de pg_dump lo elige `pg_cliente.py` segun la version del
+servidor de Render (usa el instalado si alcanza, si no la imagen oficial
+`postgres:<version>` de Docker). Los dumps quedan en backups/ (gitignored).
 """
 import argparse
 import os
 import re
-import shutil
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+import pg_cliente
 
 load_dotenv()
 
@@ -76,19 +77,22 @@ def backup_demo(sin_backup):
             return None
         abortar("DEMO_DATABASE_URL no está en el .env (External Database URL de la base de "
                 "demo en Render). Cargala, o pasá --sin-backup si de verdad no querés copia.")
+    # El pg_dump tiene que ser de la MISMA versión del servidor o más nuevo, o
+    # aborta con "server version mismatch". Render actualiza Postgres por su
+    # cuenta (hoy 18) y el contenedor de desarrollo es pg16: pg_cliente.py
+    # resuelve cuál usar. Sin esto el backup fallaba y la promoción se abortaba
+    # entera -- el mismo bug que apareció primero en clonar_demo_a_pruebas.py.
+    try:
+        version = pg_cliente.version_de_servidor(url, "la base de demo", cwd=RAIZ)
+        cmd_dump, de_donde = pg_cliente.cliente_para("pg_dump", version)
+    except pg_cliente.ErrorPg as e:
+        abortar(str(e))
     BACKUPS.mkdir(exist_ok=True)
     destino = BACKUPS / f"demo-{datetime.now():%Y-%m-%d-%H%M}.dump"
-    if shutil.which("pg_dump"):
-        cmd = ["pg_dump", url, "-Fc", "-f", str(destino)]
-        print(f"- Backup de la base de demo con pg_dump local -> {destino.name}")
-        r = subprocess.run(cmd, cwd=RAIZ)
-    elif shutil.which("docker"):
-        print(f"- Backup de la base de demo con el pg_dump del Docker de desarrollo -> {destino.name}")
-        r = subprocess.run(["docker", "compose", "exec", "-T", "postgres-dev",
-                            "pg_dump", url, "-Fc"], cwd=RAIZ, stdout=open(destino, "wb"))
-    else:
-        abortar("no hay pg_dump ni docker en el PATH para hacer el backup. "
-                "Instalá el cliente de Postgres, levantá `docker compose up -d`, o pasá --sin-backup.")
+    print(f"- Backup de la base de demo (Postgres {version}, {de_donde}) -> {destino.name}")
+    with open(destino, "wb") as salida:
+        r = subprocess.run([*cmd_dump, url, "-Fc", "--no-owner", "--no-privileges"],
+                           cwd=RAIZ, stdout=salida)
     if r.returncode != 0 or not destino.exists() or destino.stat().st_size == 0:
         abortar("el backup falló; no se promueve sin copia.")
     print(f"  {destino.stat().st_size // 1024} KB")
