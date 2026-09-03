@@ -120,6 +120,30 @@ redeployar; el Pre-Deploy recrea el esquema. En ese caso volver a correr
 también `python cargar_marca_plataforma.py`, que es lo único que repone la
 marca de Colm3na.
 
+### Copiar los datos de la demo a Pruebas (excepción)
+Cuando la demo tiene datos y usuarios que los scripts todavía no saben
+reproducir, se puede clonar entera. **Es la excepción, no la rutina**: lo
+normal es regenerar con los lotes, que no dependen de que otra base esté
+sana. Desde la PC, con `DEMO_DATABASE_URL` y `PRUEBAS_DATABASE_URL` en el
+`.env`:
+```
+python clonar_demo_a_pruebas.py                      # ensayo, no toca nada
+python clonar_demo_a_pruebas.py --si-borrar-pruebas  # lo hace
+```
+Lee la demo (solo lectura), guarda el dump en `backups/` y lo restaura
+sobre Pruebas. Después, `python -m alembic upgrade head` en la Shell de
+`mitrabajo-pruebas` por si la demo venía de una versión anterior.
+
+El script **solo copia demo → Pruebas y no se puede invertir**: el destino
+tiene que decir "pruebas" en su URL, el origen no, las dos tienen que ser
+distintas y hay que pasar `--si-borrar-pruebas` a propósito. Escribir un
+dump sobre la demo sería el peor accidente posible del proyecto y ninguna
+de esas guardas se saltea con un flag.
+
+**Antes de usarlo, mirar qué hay en la demo**: hoy son datos sintéticos. Con
+trabajadores reales, copiarlos a un entorno con otros secretos y más gente
+con acceso deja de ser inocuo — los recibos son datos personales.
+
 ## Backup manual de la base de demo
 Desde la PC de desarrollo, con el Docker local levantado (trae `pg_dump`
 sin instalar nada):

@@ -29,6 +29,19 @@ se hace.
     cuándo, para auditar. Ya hay un sindicato que pidió conectar un sistema
     propio (ej. scoring), especificación pendiente.
 
+- [ ] **Número de expediente con tilde** (2026-09-03): la sigla del tipo de
+  trámite toma los 4 primeros caracteres alfanuméricos del nombre del
+  sindicato, y `Ó` cuenta como alfanumérico — "Unión Obrera Metalúrgica" da
+  expedientes como `UNIÓF01-2026-000393`. Encontrado al verificar el entorno
+  de Pruebas; **ya pasa en la demo también**, no es de Pruebas. Un
+  identificador que viaja por URLs (`/api/tramite/{numero_expediente}`) y
+  eventualmente a sistemas de terceros no debería llevar acentos. Arreglo:
+  normalizar la sigla en `cargar_lote_sindicato.contexto_lote()` y en el alta
+  de tipos de trámite (quitar diacríticos, como hace `slug()` en
+  `cargar_demo.py`). Ojo: cambiar el prefijo de un sindicato que ya tiene
+  expedientes emitidos parte la serie — decidir si se normaliza solo para los
+  nuevos.
+
 - [ ] **Mergear `areas-permisos` a `main`** (2026-09-01): el sprint está
   terminado y probado; no se mergeó por la demo inminente. Al mergear,
   acordarse de las **5 líneas de `PERMISOS_RUTAS`** para las rutas de RAG

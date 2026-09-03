@@ -51,11 +51,13 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   `_rol_de` como helpers. Detalle en HISTORIAL.md.
 - **Python 3.12** fijado con .python-version (3.12.8) + variable PYTHON_VERSION en
   Render. Python 3.14 rompe SQLModel ("Field 'id' requires a type annotation").
-- **Deploy:** GitHub + Render, DOS servicios (desde 2026-09, ver
-  `DESPLIEGUE_RENDER.md` y `PLAN_ENTORNOS.md`): `mitrabajo-pruebas` sigue
-  `main` (cada push redeploya), `mitrabajo-demo` sigue `demo` y solo cambia
-  con `python promover_demo.py` (backup + merge + tag + push). Alembic corre
-  solo en cada deploy (Pre-Deploy Command). Sobre `demo` nunca se programa.
+- **Deploy:** GitHub + Render, DOS servicios (desde 2026-09; el ciclo de una
+  feature en una página está en [`FLUJO.md`](FLUJO.md), la infraestructura en
+  `DESPLIEGUE_RENDER.md` y el porqué en `PLAN_ENTORNOS.md`):
+  `mitrabajo-pruebas` sigue `main` (cada push redeploya), `mitrabajo-demo`
+  sigue `demo` y solo cambia con `python promover_demo.py` (backup + merge +
+  tag + push). Alembic corre solo en cada deploy (Pre-Deploy Command). Sobre
+  `demo` nunca se programa.
 
 ## Archivos principales
 - main.py — servidor y todas las rutas.
