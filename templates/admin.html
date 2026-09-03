@@ -543,6 +543,36 @@
   .msg.ok { background:#e3f2ee; color:var(--agua); }
   .muted { color:var(--gris); font-size:13px; }
   .veces { font-size:12px; color:var(--gris); }
+
+  /* ============ Esquema "Hilo" (2026-09-03): cromo común del panel ============
+     Solo CSS sobre el marcado existente: encabezado con degradé + grano +
+     filo ámbar, pestañas y sub-pestañas en condensada, títulos de sección
+     como hitos (condensada + línea), botón principal en acento, tablas con
+     cabecera en tracking. El contenido de cada sección no cambia. */
+  header { position:relative; overflow:hidden; border-bottom:none; border-left:5px solid var(--marca-acento);
+    background-image:linear-gradient(150deg, var(--marca-base), color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base))); }
+  header::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08;
+    mix-blend-mode:overlay; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  header > * { position:relative; z-index:1; }
+  header .rol, header .sind-nombre { font-family:var(--fuente-display); font-weight:700; font-size:19px !important;
+    letter-spacing:.5px; text-transform:uppercase; line-height:1.05; color:#fff !important; }
+  .nav-strip { background:var(--marca-base); border-bottom:1px solid rgba(255,255,255,.1); padding:9px 14px; }
+  .tab-btn { background:transparent; border-color:rgba(255,255,255,.16); color:rgba(255,255,255,.72);
+    font-family:var(--fuente-display); font-weight:700; font-size:12.5px; letter-spacing:.8px; text-transform:uppercase; }
+  .tab-btn:hover { background:rgba(255,255,255,.08); }
+  .tab-btn.activa { background:var(--marca-acento); color:var(--marca-base); border-color:var(--marca-acento); }
+  h2 { font-family:var(--fuente-display); font-weight:700; font-size:22px; letter-spacing:.4px; text-transform:uppercase;
+    line-height:1.05; border-bottom:none; padding-bottom:0; display:flex; align-items:center; gap:12px; color:var(--tinta); }
+  h2::after { content:""; flex:1; height:1px; background:var(--linea); }
+  h2 .badge, h2 .tag, h2 small { font-family:var(--fuente); letter-spacing:0; text-transform:none; }
+  .subtab, .tramite-subtab, .emp-subtab, .emptram-subtab { font-family:var(--fuente-display); font-weight:700; font-size:13px; letter-spacing:.8px;
+    text-transform:uppercase; background:#fff; border-radius:20px; }
+  th { font-size:10.5px; letter-spacing:1px; font-weight:700; color:var(--gris); background:#f4f2ec; }
+  button:not(.sec):not(.mini):not(.tab-btn):not(.ptab):not(.subtab):not(.tramite-subtab):not(.emp-subtab):not(.emptram-subtab):not(.btn-ayuda):not(.link-num) {
+    font-family:var(--fuente-display); font-weight:700; font-size:15px; letter-spacing:1px; text-transform:uppercase;
+    background:var(--marca-acento); color:var(--marca-base); border-radius:9px; }
+  button.mini { border-radius:7px; }
+  .card { border-radius:12px; }
 </style>
 </head>
 <body>
@@ -556,6 +586,7 @@
     <span class="sind-nombre">{{ sindicato }}</span>
     {% endif %}
   </div>
+  <span class="rol-kicker" style="margin-left:auto; font-size:10.5px; letter-spacing:1.6px; text-transform:uppercase; color:var(--marca-acento); font-weight:700;">Panel de administración</span>
 </header>
 <a class="btn-cerrar" href="/admin/salir" title="Salir" aria-label="Salir">
   <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>

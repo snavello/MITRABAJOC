@@ -35,6 +35,16 @@
   .btn-acerca { background: none; border: none; opacity: .5; font-size: 11px; cursor: pointer;
     padding: 6px; color: var(--sobre-base-mute); }
   body.claro .btn-acerca { color: var(--gris); }
+
+  /* ---------- Esquema "Hilo" (2026-09-03): mismo tratamiento que la portada
+     del trabajador -- títulos de acceso en condensada, subtítulo de rol como
+     kicker en acento. Vidrio y variante clara/oscura quedan. ---------- */
+  .tarjetas .acceso .titulo { font-family: var(--fuente-display); font-weight: 700; font-size: 16px;
+    letter-spacing: .8px; text-transform: uppercase; line-height: 1.05; }
+  .tarjetas .acceso .estado { margin-top: 5px; }
+  .kicker { font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--marca-acento);
+    font-weight: 700; margin-top: 4px; }
+  .hola { margin-top: 2px; }
 </style>
 </head>
 <body class="{{ 'claro' if marca_plataforma.portada_clara else 'oscuro' }} grano {{ 'grano-clara' if marca_plataforma.portada_clara else 'grano-osc' }}">
@@ -52,6 +62,7 @@
 </a>
 
 <div class="pad">
+  <div class="kicker">Panel de plataforma</div>
   <div class="hola">¿Qué querés hacer?</div>
 
   <div class="tarjetas" style="margin-top: 18px;">

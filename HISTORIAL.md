@@ -2385,3 +2385,25 @@ sindicato como kicker y "Tu perfil" en condensada), etiquetas de campo en
 mayúsculas con tracking y el botón "Guardar cambios" en condensada; los
 campos, la foto, el lightbox y `/api/perfil` no cambian. El mismo
 `.modal-notif-enc` lo hereda el modal viejo de notificaciones (sin uso).
+
+## Esquema "Hilo" en Admin y Plataforma — parte 1 y 2 (2026-09-03, tarde)
+
+Pedido de Sd: llevar el mismo esquema a todo Admin y Plataforma, por partes.
+
+**Parte 1 — portadas** (`admin_portada.html`, `plataforma_portada.html`):
+títulos de las tarjetas de acceso en condensada mayúscula, y un kicker en
+acento ("Panel de administración" / "Panel de plataforma") arriba del
+saludo. Vidrio, variante clara/oscura y la estrella "NUEVO" del Panel
+Sindical quedan iguales.
+
+**Parte 2 — cromo común de `/admin` y `/plataforma`** (CSS agregado al
+final del `<style>` de cada plantilla, sin tocar el marcado de las
+secciones): encabezado con degradé base→primario, grano y filo ámbar
+(en admin suma el kicker "Panel de administración" a la derecha); tira
+de pestañas oscura con pestañas en condensada y la activa en acento;
+títulos `h2` de sección como hitos (condensada + línea, sin el subrayado
+de tinta); sub-pestañas en condensada tipo píldora; cabeceras de tabla en
+tracking; **botón principal en acento con texto en condensada** (los
+`.mini`, `.sec`, pestañas y el botón de ayuda quedan como estaban -- el
+selector los excluye explícitamente). Versiones: Admin 0.26.02 → 0.27.01,
+Plataforma 0.19.01 → 0.20.01.

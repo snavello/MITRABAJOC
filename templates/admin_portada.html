@@ -54,6 +54,16 @@
   .tag-new { display: inline-block; vertical-align: middle; margin-left: 5px; padding: 1px 6px;
     border-radius: 99px; background: var(--marca-acento); color: var(--marca-base);
     font-size: 9px; font-weight: 800; letter-spacing: .5px; }
+
+  /* ---------- Esquema "Hilo" (2026-09-03): mismo tratamiento que la portada
+     del trabajador -- títulos de acceso en condensada, subtítulo de rol como
+     kicker en acento. Vidrio y variante clara/oscura quedan. ---------- */
+  .tarjetas .acceso .titulo { font-family: var(--fuente-display); font-weight: 700; font-size: 16px;
+    letter-spacing: .8px; text-transform: uppercase; line-height: 1.05; }
+  .tarjetas .acceso .estado { margin-top: 5px; }
+  .kicker { font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--marca-acento);
+    font-weight: 700; margin-top: 4px; }
+  .hola { margin-top: 2px; }
 </style>
 </head>
 <body class="{{ 'claro' if marca.admin_portada_clara else 'oscuro' }} grano {{ 'grano-clara' if marca.admin_portada_clara else 'grano-osc' }}">
@@ -75,6 +85,7 @@
 </a>
 
 <div class="pad">
+  <div class="kicker">Panel de administración</div>
   <div class="hola">Hola, <em>{{ primer_nombre }}</em></div>
 
   <div class="tarjetas" style="margin-top: 18px;">
