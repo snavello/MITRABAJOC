@@ -87,6 +87,41 @@
   .modal-cerrar { position:absolute; top:14px; right:18px; background:none; border:none;
     cursor:pointer; color:var(--gris); padding:4px; }
   .modal-cerrar svg { width:20px; height:20px; stroke:currentColor; stroke-width:1.8; fill:none; }
+  /* ---------- Modal de artículo (noticia) ----------
+     Copia de las mismas reglas de marca.css: ESTA plantilla no carga esa
+     hoja (ver el comentario del principio). Si se tocan allá, tocar acá:
+     el modal de una noticia tiene que verse igual abierto desde la portada
+     que desde la pestaña Novedades. */
+  .overlay.overlay-articulo { align-items:center; padding:16px; }
+  .modal-articulo { position:relative; background:var(--card); color:var(--tinta);
+    width:100%; max-width:520px; border-radius:16px; max-height:88vh;
+    overflow-y:auto; overflow-wrap:anywhere; box-shadow:0 14px 38px rgba(0,0,0,.34); }
+  .modal-articulo-enc { position:sticky; top:0; z-index:1; overflow:hidden;
+    display:flex; justify-content:space-between; align-items:flex-start; gap:12px;
+    padding:15px 18px; border-radius:16px 16px 0 0; color:#fff;
+    border-left:5px solid var(--marca-acento);
+    background-image:linear-gradient(150deg, var(--marca-base),
+      color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base))); }
+  .modal-articulo-enc::before { content:""; position:absolute; inset:0; pointer-events:none;
+    z-index:0; opacity:.08; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .modal-articulo-enc > * { position:relative; z-index:1; }
+  .modal-articulo-enc .modal-k { font-size:10.5px; letter-spacing:1.6px; text-transform:uppercase;
+    color:var(--marca-acento); font-weight:700; }
+  .modal-articulo-enc h3 { font-family:var(--fuente-display); font-weight:700; font-size:22px;
+    line-height:1.12; margin:3px 0 0; color:#fff; padding:0; }
+  .modal-cerrar-clara { background:none; border:none; cursor:pointer; color:#fff;
+    opacity:.85; padding:2px; flex-shrink:0; }
+  .modal-cerrar-clara:hover { opacity:1; }
+  .modal-cerrar-clara svg { width:20px; height:20px; stroke:currentColor; stroke-width:1.8; fill:none; }
+  .modal-articulo-body { padding:16px 18px calc(20px + env(safe-area-inset-bottom)); }
+  .modal-articulo-bajada { font-size:14px; color:var(--gris); line-height:1.5; }
+  .modal-articulo-ant { font-size:11px; opacity:.6; margin:10px 0 12px; }
+  .modal-articulo-texto { font-size:14.5px; line-height:1.65; }
+  .modal-articulo-texto a { color:var(--marca-acento); }
+  .modal-articulo-figuras { display:flex; flex-direction:column; gap:10px; margin-top:16px; }
+  .modal-articulo-figuras img { width:100%; height:auto; display:block;
+    border-radius:10px; cursor:zoom-in; }
   .modal-recibo-overlay { display:none; position:fixed; inset:0; background:rgba(8,12,20,.55);
     z-index:120; align-items:center; justify-content:center; padding:18px; }
   .modal-recibo-overlay.abierto { display:flex; }
@@ -944,15 +979,19 @@
 </div>
 
 <!-- Overlay: detalle de noticia -->
-<div class="overlay" id="overlay-noticia" onclick="if (event.target === this) cerrarNoticia()">
-  <div class="modal-hoja">
-    <button class="modal-cerrar" onclick="cerrarNoticia()" aria-label="Cerrar"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
-    <h3 id="not-det-titulo"></h3>
-    <div id="not-det-bajada" style="font-size:13px; color:var(--gris); margin-top:3px;"></div>
-    <div class="ant" id="not-det-antiguedad" style="opacity:.6; font-size:11px; margin:8px 0 10px;"></div>
-    <div id="not-det-texto" style="font-size:13.5px; line-height:1.6;"></div>
-    <div id="not-det-imagenes" style="display:flex; gap:8px; margin-top:14px;"></div>
-    <div id="not-det-form"></div>
+<div class="overlay overlay-articulo" id="overlay-noticia" onclick="if (event.target === this) cerrarNoticia()">
+  <div class="modal-articulo">
+    <div class="modal-articulo-enc">
+      <div><div class="modal-k">{{ sindicato }}</div><h3 id="not-det-titulo"></h3></div>
+      <button class="modal-cerrar-clara" onclick="cerrarNoticia()" aria-label="Cerrar"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
+    </div>
+    <div class="modal-articulo-body">
+      <div class="modal-articulo-bajada" id="not-det-bajada"></div>
+      <div class="modal-articulo-ant" id="not-det-antiguedad"></div>
+      <div class="modal-articulo-texto" id="not-det-texto"></div>
+      <div class="modal-articulo-figuras" id="not-det-imagenes"></div>
+      <div id="not-det-form"></div>
+    </div>
   </div>
 </div>
 
@@ -1523,9 +1562,12 @@ async function abrirNoticia(id) {
     document.getElementById('not-det-bajada').textContent = n.bajada || '';
     document.getElementById('not-det-antiguedad').textContent = n.antiguedad;
     document.getElementById('not-det-texto').innerHTML = n.texto_completo_html;
-    const imgs = document.getElementById('not-det-imagenes');
-    if (n.tiene_imagen1) imgs.innerHTML += `<img src="/noticia-imagen/${id}/1" onclick="abrirImagen('/noticia-imagen/${id}/1')" style="width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer;">`;
-    if (n.tiene_imagen2) imgs.innerHTML += `<img src="/noticia-imagen/${id}/2" onclick="abrirImagen('/noticia-imagen/${id}/2')" style="width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer;">`;
+    // Una sola asignación en vez de innerHTML += por imagen (que reparsea el
+    // contenedor). El tamaño lo pone .modal-articulo-figuras: ancho completo.
+    const figuras = [];
+    if (n.tiene_imagen1) figuras.push(`<img src="/noticia-imagen/${id}/1" alt="" onclick="abrirImagen('/noticia-imagen/${id}/1')">`);
+    if (n.tiene_imagen2) figuras.push(`<img src="/noticia-imagen/${id}/2" alt="" onclick="abrirImagen('/noticia-imagen/${id}/2')">`);
+    document.getElementById('not-det-imagenes').innerHTML = figuras.join('');
     // Ícono del formulario asociado: ya estamos en /app, abre el
     // formulario directo con la maquinaria del chat de Trámites.
     document.getElementById('not-det-form').innerHTML = n.formulario_id

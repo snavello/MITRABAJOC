@@ -192,6 +192,43 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
 .modal-fila .k { color: var(--sobre-base-mute); }
 .modal-fila .v { font-weight: 500; text-align: right; }
 
+/* ---------- Modal de artículo (noticia / beneficio) ----------
+   La hoja oscura .modal-hoja servía para el "Acerca de" (cuatro filas), pero
+   dejaba una noticia larga apretada contra el borde inferior y con las fotos
+   en miniaturas de 70px. Este modal se abre CENTRADO y completo, con la
+   tarjeta clara y el encabezado de marca del esquema "Hilo" -- el mismo
+   tratamiento que ya tenían Notificaciones y Perfil. */
+.overlay.overlay-articulo { align-items: center; padding: 16px; }
+.modal-articulo { position: relative; background: var(--card, #fff); color: var(--tinta);
+  width: 100%; max-width: 520px; border-radius: 16px; max-height: 88vh;
+  overflow-y: auto; overflow-wrap: anywhere; box-shadow: 0 14px 38px rgba(0,0,0,.34); }
+.modal-articulo-enc { position: sticky; top: 0; z-index: 1; overflow: hidden;
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  padding: 15px 18px; border-radius: 16px 16px 0 0; color: #fff;
+  border-left: 5px solid var(--marca-acento);
+  background-image: linear-gradient(150deg, var(--marca-base),
+    color-mix(in srgb, var(--marca-primario, var(--marca-base)) 55%, var(--marca-base))); }
+.modal-articulo-enc::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+  z-index: 0; opacity: .08; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.modal-articulo-enc > * { position: relative; z-index: 1; }
+.modal-articulo-enc .modal-k { font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase;
+  color: var(--marca-acento); font-weight: 700; }
+/* Sin uppercase, a diferencia del resto del esquema "Hilo": el título de una
+   noticia es una frase larga, no una etiqueta de dos palabras. */
+.modal-articulo-enc h3 { font-family: var(--fuente-display); font-weight: 700; font-size: 22px;
+  line-height: 1.12; margin: 3px 0 0; color: #fff; padding: 0; }
+.modal-articulo-body { padding: 16px 18px calc(20px + env(safe-area-inset-bottom)); }
+.modal-articulo-bajada { font-size: 14px; color: var(--gris, #5c5a54); line-height: 1.5; }
+.modal-articulo-ant { font-size: 11px; opacity: .6; margin: 10px 0 12px; }
+.modal-articulo-texto { font-size: 14.5px; line-height: 1.65; }
+.modal-articulo-texto a { color: var(--marca-acento); }
+/* Las fotos de la noticia, a ancho completo y apiladas: eran miniaturas de
+   70px, que es lo que hacía que el modal no se sintiera "completo". */
+.modal-articulo-figuras { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.modal-articulo-figuras img { width: 100%; height: auto; display: block;
+  border-radius: 10px; cursor: zoom-in; }
+
 /* ---------- Barra inferior ---------- */
 .tabbar { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: var(--blanco);
           border-top: 1px solid var(--linea); z-index: 30;

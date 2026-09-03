@@ -409,26 +409,35 @@
 </div>
 
 <!-- Overlay: detalle de noticia -->
-<div class="overlay" id="overlay-noticia" onclick="if (event.target === this) cerrarNoticia()">
-  <div class="modal-hoja">
-    <button class="modal-cerrar" onclick="cerrarNoticia()" aria-label="Cerrar"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
-    <h3 id="not-det-titulo"></h3>
-    <div id="not-det-bajada" style="font-size:13px; color:var(--sobre-base-mute); margin-top:3px;"></div>
-    <div class="ant" id="not-det-antiguedad" style="opacity:.6; font-size:11px; margin:8px 0 10px;"></div>
-    <div id="not-det-texto" style="font-size:13.5px; line-height:1.6;"></div>
-    <div id="not-det-imagenes" style="display:flex; gap:8px; margin-top:14px;"></div>
-    <div id="not-det-form"></div>
+<div class="overlay overlay-articulo" id="overlay-noticia" onclick="if (event.target === this) cerrarNoticia()">
+  <div class="modal-articulo">
+    <div class="modal-articulo-enc">
+      <div><div class="modal-k">{{ sindicato }}</div><h3 id="not-det-titulo"></h3></div>
+      <button class="modal-cerrar-clara" onclick="cerrarNoticia()" aria-label="Cerrar"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
+    </div>
+    <div class="modal-articulo-body">
+      <div class="modal-articulo-bajada" id="not-det-bajada"></div>
+      <div class="modal-articulo-ant" id="not-det-antiguedad"></div>
+      <div class="modal-articulo-texto" id="not-det-texto"></div>
+      <div class="modal-articulo-figuras" id="not-det-imagenes"></div>
+      <div id="not-det-form"></div>
+    </div>
   </div>
 </div>
 
 <!-- Overlay: detalle de beneficio -->
-<div class="overlay" id="overlay-beneficio" onclick="if (event.target === this) cerrarBeneficio()">
-  <div class="modal-hoja">
-    <button class="modal-cerrar" onclick="cerrarBeneficio()" aria-label="Cerrar"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
-    <h3 id="ben-det-rubro"></h3>
-    <div id="ben-det-texto" style="font-size:13.5px; line-height:1.6; margin-top:8px;"></div>
-    <div id="ben-det-link" style="margin-top:14px;"></div>
-    <div id="ben-det-form"></div>
+<div class="overlay overlay-articulo" id="overlay-beneficio" onclick="if (event.target === this) cerrarBeneficio()">
+  <div class="modal-articulo">
+    <div class="modal-articulo-enc">
+      <div><div class="modal-k">Beneficio</div><h3 id="ben-det-rubro"></h3></div>
+      <button class="modal-cerrar-clara" onclick="cerrarBeneficio()" aria-label="Cerrar"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
+    </div>
+    <div class="modal-articulo-body">
+      <div class="modal-articulo-figuras" id="ben-det-imagen"></div>
+      <div class="modal-articulo-texto" id="ben-det-texto" style="margin-top:14px;"></div>
+      <div id="ben-det-link" style="margin-top:16px;"></div>
+      <div id="ben-det-form"></div>
+    </div>
   </div>
 </div>
 
@@ -600,6 +609,7 @@ function ctaFormularioHtml(formularioId) {
 async function abrirBeneficio(id) {
   const ov = document.getElementById('overlay-beneficio');
   document.getElementById('ben-det-rubro').textContent = 'Cargando…';
+  document.getElementById('ben-det-imagen').innerHTML = '';
   document.getElementById('ben-det-texto').innerHTML = '';
   document.getElementById('ben-det-link').innerHTML = '';
   document.getElementById('ben-det-form').innerHTML = '';
@@ -609,6 +619,12 @@ async function abrirBeneficio(id) {
     if (!r.ok) throw new Error();
     const b = await r.json();
     document.getElementById('ben-det-rubro').textContent = b.rubro;
+    // La imagen del beneficio ya venía en la respuesta pero el modal nunca la
+    // mostraba: se veía sola en el carrusel y desaparecía al abrirlo.
+    if (b.tiene_imagen) {
+      document.getElementById('ben-det-imagen').innerHTML =
+        `<img src="/beneficio-imagen/${id}" alt="" onclick="abrirImagen('/beneficio-imagen/${id}')">`;
+    }
     document.getElementById('ben-det-texto').innerHTML = b.descripcion_html;
     if (b.link) {
       document.getElementById('ben-det-link').innerHTML =
@@ -638,9 +654,12 @@ async function abrirNoticia(id) {
     document.getElementById('not-det-bajada').textContent = n.bajada || '';
     document.getElementById('not-det-antiguedad').textContent = n.antiguedad;
     document.getElementById('not-det-texto').innerHTML = n.texto_completo_html;
-    const imgs = document.getElementById('not-det-imagenes');
-    if (n.tiene_imagen1) imgs.innerHTML += `<img src="/noticia-imagen/${id}/1" onclick="abrirImagen('/noticia-imagen/${id}/1')" style="width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer;">`;
-    if (n.tiene_imagen2) imgs.innerHTML += `<img src="/noticia-imagen/${id}/2" onclick="abrirImagen('/noticia-imagen/${id}/2')" style="width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer;">`;
+    // Una sola asignación en vez de innerHTML += por imagen (que reparsea el
+    // contenedor). El tamaño lo pone .modal-articulo-figuras: ancho completo.
+    const figuras = [];
+    if (n.tiene_imagen1) figuras.push(`<img src="/noticia-imagen/${id}/1" alt="" onclick="abrirImagen('/noticia-imagen/${id}/1')">`);
+    if (n.tiene_imagen2) figuras.push(`<img src="/noticia-imagen/${id}/2" alt="" onclick="abrirImagen('/noticia-imagen/${id}/2')">`);
+    document.getElementById('not-det-imagenes').innerHTML = figuras.join('');
     document.getElementById('not-det-form').innerHTML = ctaFormularioHtml(n.formulario_id);
   } catch (e) {
     document.getElementById('not-det-titulo').textContent = 'No se pudo cargar la noticia.';
