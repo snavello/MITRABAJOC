@@ -38,6 +38,7 @@ pasa, este script deja de ser la herramienta correcta.
 """
 import argparse
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -92,6 +93,49 @@ def herramienta(nombre):
             "levantá `docker compose up -d`.")
 
 
+def _mayor(texto):
+    """Primer número de una cadena de versión ('16.15 (Debian...)' -> 16)."""
+    m = re.search(r"(\d+)", texto or "")
+    return int(m.group(1)) if m else 0
+
+
+def version_de_servidor(origen, destino):
+    """Versión mayor de Postgres de cada base. De paso confirma que las dos
+    responden ANTES de empezar: una URL mal copiada tiene que fallar acá y no
+    a mitad del dump. psql sí puede hablar con un servidor más nuevo que él,
+    así que para esta consulta alcanza con el cliente que haya."""
+    cmd_psql, _ = herramienta("psql")
+    versiones = {}
+    for etiqueta, url in (("demo", origen), ("pruebas", destino)):
+        r = subprocess.run([*cmd_psql, url, "-tAc", "SHOW server_version"],
+                           cwd=RAIZ, text=True, capture_output=True)
+        if r.returncode != 0:
+            ultima = (r.stderr or "").strip().splitlines()
+            abortar(f"no me puedo conectar a la base de {etiqueta}.\n"
+                    f"          Revisá que sea la External Database URL (no la Internal, que\n"
+                    f"          solo funciona dentro de Render). Dijo:\n"
+                    f"          {ultima[-1] if ultima else '?'}")
+        versiones[etiqueta] = _mayor(r.stdout)
+    return versiones
+
+
+def cliente_para(nombre, version_servidor):
+    """Comando de pg_dump/pg_restore capaz de hablar con un servidor de esa
+    versión. pg_dump NO puede volcar un servidor más nuevo que él (aborta con
+    'server version mismatch'), y Render actualiza Postgres por su cuenta: en
+    vez de exigir que cada dev tenga el cliente justo instalado, se usa la
+    imagen oficial `postgres:<version>` de Docker, que siempre coincide."""
+    local = shutil.which(nombre)
+    if local:
+        salida = subprocess.run([local, "--version"], text=True, capture_output=True).stdout
+        if _mayor(salida.split("PostgreSQL")[-1]) >= version_servidor:
+            return [local], "local"
+    if shutil.which("docker"):
+        return ["docker", "run", "--rm", "-i", f"postgres:{version_servidor}", nombre], "docker"
+    abortar(f"hace falta un {nombre} de Postgres {version_servidor} (el servidor es esa "
+            f"versión) y no hay ni cliente local suficiente ni docker para traerlo.")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--si-borrar-pruebas", action="store_true",
@@ -106,34 +150,38 @@ def main():
     print(f"  origen : la base de demo (solo lectura)")
     print(f"  destino: {base_destino}  <- SE REEMPLAZA POR COMPLETO")
 
+    # Conectividad y versiones, ANTES de tocar nada: el ensayo sirve
+    # justamente para que una URL mal copiada o un cliente viejo fallen acá y
+    # no a mitad del dump.
+    versiones = version_de_servidor(origen, destino)
+    version = max(versiones.values())
+    print(f"- Postgres: demo {versiones['demo']}, pruebas {versiones['pruebas']}")
+    cmd_dump, modo = cliente_para("pg_dump", version)
+    print(f"- Cliente pg_dump/pg_restore {version}: "
+          f"{'instalado' if modo == 'local' else 'imagen docker postgres:%d' % version}")
+
     if not args.si_borrar_pruebas:
         print("\nEnsayo: no se tocó nada.")
-        print("Las guardas de dirección pasaron. Para hacerlo de verdad:")
+        print("Las guardas pasaron y las dos bases responden. Para hacerlo de verdad:")
         print("    python clonar_demo_a_pruebas.py --si-borrar-pruebas")
         return
 
     BACKUPS.mkdir(exist_ok=True)
     dump = BACKUPS / f"demo-{datetime.now():%Y-%m-%d-%H%M}.dump"
 
-    cmd_dump, en_docker = herramienta("pg_dump")
     print(f"\n1. Copiando la demo -> {dump.name}")
-    if en_docker:
+    with open(dump, "wb") as salida:
         r = subprocess.run([*cmd_dump, origen, "-Fc", "--no-owner", "--no-privileges"],
-                           cwd=RAIZ, stdout=open(dump, "wb"))
-    else:
-        r = subprocess.run([*cmd_dump, origen, "-Fc", "--no-owner", "--no-privileges",
-                            "-f", str(dump)], cwd=RAIZ)
+                           cwd=RAIZ, stdout=salida)
     if r.returncode != 0 or not dump.exists() or dump.stat().st_size == 0:
         abortar("el pg_dump de la demo falló. No se tocó Pruebas.")
     print(f"   {dump.stat().st_size // 1024} KB")
 
-    cmd_restore, en_docker_r = herramienta("pg_restore")
+    cmd_restore, _ = cliente_para("pg_restore", version)
     print(f"\n2. Restaurando sobre {base_destino}")
     opciones = ["--clean", "--if-exists", "--no-owner", "--no-privileges", "-d", destino]
-    if en_docker_r:
-        r = subprocess.run([*cmd_restore, *opciones], cwd=RAIZ, stdin=open(dump, "rb"))
-    else:
-        r = subprocess.run([*cmd_restore, *opciones, str(dump)], cwd=RAIZ)
+    with open(dump, "rb") as entrada:
+        r = subprocess.run([*cmd_restore, *opciones], cwd=RAIZ, stdin=entrada)
     # pg_restore devuelve 1 por avisos benignos (objetos que no existían para
     # el --clean); lo que importa es que el paso 3 confirme el esquema.
     if r.returncode not in (0, 1):
