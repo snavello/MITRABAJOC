@@ -96,10 +96,15 @@
   .modal-articulo { position:relative; background:var(--card); color:var(--tinta);
     width:100%; max-width:520px; border-radius:16px; max-height:88vh;
     overflow-y:auto; overflow-wrap:anywhere; box-shadow:0 14px 38px rgba(0,0,0,.34); }
+  /* El color sólido va SIEMPRE además del degradé: si el background-image no
+     se pinta (color-mix sin soporte, o el repaint del sticky en mobile), el
+     encabezado queda transparente y el título blanco se vuelve invisible
+     sobre la tarjeta clara. Paso en produccion el 2026-09-03. */
   .modal-articulo-enc { position:sticky; top:0; z-index:1; overflow:hidden;
     display:flex; justify-content:space-between; align-items:flex-start; gap:12px;
     padding:15px 18px; border-radius:16px 16px 0 0; color:#fff;
     border-left:5px solid var(--marca-acento);
+    background-color:var(--marca-base);
     background-image:linear-gradient(150deg, var(--marca-base),
       color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base))); }
   .modal-articulo-enc::before { content:""; position:absolute; inset:0; pointer-events:none;
@@ -121,9 +126,12 @@
   .modal-articulo-ant { font-size:11px; opacity:.6; margin:10px 0 12px; }
   .modal-articulo-texto { font-size:14.5px; line-height:1.65; }
   .modal-articulo-texto a { color:var(--marca-acento); }
-  .modal-articulo-figuras { display:flex; flex-direction:column; gap:10px; margin-top:16px; }
-  .modal-articulo-figuras img { width:100%; height:auto; display:block;
-    border-radius:10px; cursor:zoom-in; }
+  /* 80% y tope de alto: a ancho completo las fotos quedaban gigantes, sobre
+     todo en mobile con una imagen vertical. */
+  .modal-articulo-figuras { display:flex; flex-direction:column; align-items:center;
+    gap:10px; margin-top:16px; }
+  .modal-articulo-figuras img { width:80%; height:auto; max-height:300px;
+    object-fit:contain; display:block; border-radius:10px; cursor:zoom-in; }
   .modal-recibo-overlay { display:none; position:fixed; inset:0; background:rgba(8,12,20,.55);
     z-index:120; align-items:center; justify-content:center; padding:18px; }
   .modal-recibo-overlay.abierto { display:flex; }

@@ -28,6 +28,7 @@ Arrancar con:  uvicorn main:app --reload
 import traceback
 import uuid
 from datetime import date, datetime
+from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Cookie, Response
@@ -341,6 +342,30 @@ templates = Jinja2Templates(directory="templates")
 # del "Acerca de" lo leen de acá. Ver entorno.py.
 templates.env.globals["entorno"] = entorno.ENTORNO
 templates.env.globals["distintivo_entorno"] = entorno.MUESTRA_DISTINTIVO
+
+
+def _sello_static(nombre: str) -> str:
+    """Sello de versión de un archivo de /static, para romper la caché.
+
+    /static sale con Cache-Control de una hora. Sin sello, un cambio de CSS
+    tarda hasta 60 minutos en llegarle a quien ya visitó la app: mientras
+    tanto ve el HTML NUEVO con la hoja VIEJA, que es peor que ver la versión
+    anterior entera. Pasó de verdad el 2026-09-03 con marca.css: las clases
+    del modal de noticia no existían todavía en la hoja cacheada y el modal
+    salió sin fondo y con las fotos a tamaño natural.
+
+    El sello sale del archivo (mtime + tamaño), no de version.py: así cambia
+    aunque alguien toque el CSS sin subir la versión, y en desarrollo se
+    refresca sin reiniciar. El stat por request es despreciable.
+    """
+    try:
+        st = (Path("static") / nombre).stat()
+        return f"{int(st.st_mtime)}-{st.st_size}"
+    except OSError:
+        return ""
+
+
+templates.env.globals["sello_static"] = _sello_static
 
 
 @app.on_event("startup")
