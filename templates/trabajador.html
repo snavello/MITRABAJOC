@@ -342,6 +342,27 @@
   .cap-body p { font-size:14px; line-height:1.55; }
   .cap-body .fila { padding:10px 0; border-top:none; border-bottom:1px solid #f0eee8; }
   .cap-body .fila:last-of-type { border-bottom:none; }
+  /* Novedades como hilo (2026-09-03): mismo riel + hitos + burbujas que la
+     bandeja de notificaciones; el avatar es la imagen 1 de la noticia. */
+  .nv-hilo { position:relative; padding:4px 0 10px; }
+  .nv-hilo::before { content:""; position:absolute; left:16px; top:0; bottom:30px; width:2px; background:var(--linea); }
+  .nv-hito { display:flex; align-items:center; gap:10px; margin:16px 0 10px; position:relative; }
+  .nv-hito i { width:34px; display:flex; justify-content:center; flex:none; }
+  .nv-hito i svg { width:18px; height:18px; fill:var(--papel); stroke:var(--gris); stroke-width:1.6; }
+  .nv-hito span { font-family:var(--fuente-display); font-weight:700; font-size:14px; letter-spacing:1.6px; text-transform:uppercase; color:var(--gris); }
+  .nv-m { display:flex; gap:8px; margin-bottom:9px; width:100%; background:none; border:none; padding:0; text-align:left;
+    cursor:pointer; font-family:inherit; color:var(--tinta); position:relative; }
+  .nv-av { width:34px; height:34px; border-radius:50%; flex:none; overflow:hidden; background:var(--marca-primario);
+    display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 3px var(--papel); margin-top:2px; }
+  .nv-av img { width:100%; height:100%; object-fit:cover; }
+  .nv-av svg { width:17px; height:17px; stroke:#fff; stroke-width:1.8; fill:none; }
+  .nv-bur { flex:1; min-width:0; display:block; background:#fff; border:1px solid var(--linea);
+    border-radius:4px 14px 14px 14px; padding:9px 12px 10px; transition:box-shadow .15s; }
+  .nv-m:hover .nv-bur { box-shadow:0 4px 14px rgba(21,34,56,.08); }
+  .nv-cab { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .nv-tit { font-size:13.5px; font-weight:700; line-height:1.3; }
+  .nv-h { font-family:var(--fuente-num); font-size:10.5px; color:#98a2b3; white-space:nowrap; }
+  .nv-baj { display:block; font-size:12.5px; color:var(--gris); margin-top:3px; line-height:1.4; }
   .tram-item { position:relative; overflow:hidden;
     background:linear-gradient(160deg, #ffffff, var(--papel)) !important; }
   .tram-input { display:block; width:100%; padding:11px 12px; border:1px solid var(--linea);
@@ -695,16 +716,22 @@
   {% if 'noticias' in modulos %}
   <div class="tpanel" id="tp-novedades">
     {% if noticias %}
-      <h1 style="margin-bottom:16px;">Novedades</h1>
+      <h1 style="margin-bottom:6px;">Novedades</h1>
+      {# Hilo: un hito por día (fecha_hora es "DD/MM HH:MM"), una burbuja por noticia #}
+      <div class="nv-hilo">
       {% for n in noticias %}
-      <button class="noticia-card" onclick="abrirNoticia({{ n.id }})">
-        {% if n.tiene_imagen1 %}<img class="miniatura" src="/noticia-imagen/{{ n.id }}/1" alt="">{% endif %}
-        <div class="contenido">
-          <div class="fila-tit"><span class="tit">{{ n.titulo }}</span><span class="fecha">{{ n.fecha_hora }}</span></div>
-          {% if n.bajada %}<div class="baj">{{ n.bajada }}</div>{% endif %}
-        </div>
-      </button>
+        {% if loop.first or n.fecha_hora[:5] != loop.previtem.fecha_hora[:5] %}
+        <div class="nv-hito"><i><svg viewBox="0 0 24 24"><path d="M12 2.5 20 7v10l-8 4.5L4 17V7z"/></svg></i><span>{{ n.fecha_hora[:5] }}</span></div>
+        {% endif %}
+        <button type="button" class="nv-m" onclick="abrirNoticia({{ n.id }})">
+          <span class="nv-av">{% if n.tiene_imagen1 %}<img src="/noticia-imagen/{{ n.id }}/1" alt="">{% else %}<svg viewBox="0 0 24 24"><use href="#ic-nov"/></svg>{% endif %}</span>
+          <span class="nv-bur">
+            <span class="nv-cab"><span class="nv-tit">{{ n.titulo }}</span><span class="nv-h">{{ n.fecha_hora[6:] }}</span></span>
+            {% if n.bajada %}<span class="nv-baj">{{ n.bajada }}</span>{% endif %}
+          </span>
+        </button>
       {% endfor %}
+      </div>
     {% else %}
     <div class="proximamente">
       <div class="ic-grande"><svg viewBox="0 0 24 24"><use href="#ic-nov"/></svg></div>

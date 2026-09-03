@@ -2369,3 +2369,19 @@ del hilo (condensada, tracking, línea) y las 4 secciones siguen como filas
 numeradas. Colores del semáforo (verde/amarillo/rojo/gris), barras por
 mes, leyenda y fuente: sin cambios. Título de pestaña "Mis aportes" /
 "Capacitación" sumado como en Credencial.
+
+**Tercera adenda (v0.27.03) — Novedades, portada y perfil.** La pestaña
+Novedades de /app es ahora el mismo hilo que la bandeja: riel, un hito
+hexagonal por día (agrupado en Jinja por `fecha_hora[:5]`, que viene como
+"DD/MM HH:MM") y una burbuja por noticia con la imagen 1 como avatar (o el
+ícono de novedades si no tiene), título, hora en monoespaciada y bajada;
+mismo `abrirNoticia(id)` de siempre. En la portada se respetan el vidrio
+y la variante clara/oscura: los títulos de las tarjetas de acceso pasan a
+condensada en mayúsculas, los encabezados de sección ("Novedades",
+"Beneficios") toman el estilo de hito con línea, y la fecha de cada
+noticia va en monoespaciada color acento. El modal de perfil toma el
+encabezado del esquema (degradé, grano, filo ámbar, el nombre del
+sindicato como kicker y "Tu perfil" en condensada), etiquetas de campo en
+mayúsculas con tracking y el botón "Guardar cambios" en condensada; los
+campos, la foto, el lightbox y `/api/perfil` no cambian. El mismo
+`.modal-notif-enc` lo hereda el modal viejo de notificaciones (sin uso).
