@@ -2493,3 +2493,93 @@ entró en el código en esta etapa:
   manual). `backups/` en `.gitignore`.
 - Versiones 0.28.01 / 0.28.01 / 0.21.01 (funcionalidad nueva → sube el
   minor y el patch vuelve a 01).
+
+## Entornos separados: Pruebas y Demo (2026-09-03)
+
+Etapas 0 y 1 de `PLAN_ENTORNOS.md`, completas el mismo día. El resultado
+operativo está en `FLUJO.md`; acá va lo que se aprendió haciéndolo.
+
+**Lo que se montó**: el servicio original pasó a seguir la rama `demo`
+(conserva su URL, `mitrabajo.onrender.com`) y se creó `mitrabajo-pruebas`
+siguiendo `main`, con su propio Postgres. Alembic corre en el Pre-Deploy de
+los dos. Un push a `main` llega a Pruebas en ~90 s medidos y la demo no se
+entera; se verificó comparando un archivo estático servido por cada uno
+(200 en Pruebas, 404 en demo). El ciclo completo se estrenó tres veces.
+
+**La marca de la plataforma vivía SOLO en la base de demo.** El logo y los
+colores de Colm3na se cargan a mano desde `/plataforma` (patrón "Opción B",
+bytes en la base) y ningún script los reponía: Pruebas nació con el
+placeholder `static/logo_mitrabajo.svg` -- el maletín gris original del
+proyecto, de agosto -- y a Producción le iba a pasar igual. Se bajó el arte
+de la demo a `static/marca/` (versionado) y `cargar_marca_plataforma.py` lo
+siembra. Los colores tampoco eran los defaults: `#0a1421 / #a0030b /
+#7776a7`. Lección que excede al logo: **hay configuración que solo existe
+como filas en una base**, y conviene barrer `ConfiguracionPlataforma` entera
+con esa pregunta antes de armar Producción.
+
+**pg_dump no puede volcar un servidor más nuevo que él.** Las bases de
+Render son Postgres 18 y el contenedor de desarrollo es pg16: el dump aborta
+con "server version mismatch" a mitad de la operación. Apareció al clonar
+demo → Pruebas y `promover_demo.py` tenía exactamente el mismo bug, latente:
+la primera promoción real se habría abortado sin mergear. Por eso la lógica
+quedó en `pg_cliente.py`, compartida por los dos scripts, y usa la imagen
+oficial `postgres:<version>` de Docker cuando el cliente local no alcanza
+(Render sube de versión por su cuenta; exigir el cliente justo instalado en
+cada PC no era sostenible).
+
+**El clonado demo → Pruebas no se puede invertir.** `clonar_demo_a_pruebas.py`
+existe para la carga inicial, no como rutina: lo normal es regenerar Pruebas
+con los lotes, que no dependen de que otra base esté sana. Escribir un dump
+sobre la demo sería el peor accidente posible del proyecto, así que hay tres
+guardas que no se saltean con ningún flag (el destino tiene que decir
+"pruebas" en su URL, el origen no, y las dos tienen que ser distintas) más
+un `--si-borrar-pruebas` explícito. Probadas todas, incluido el caso de las
+variables invertidas en el `.env`. Al clonar, se verificó que la extensión
+`pgvector` sobrevive al `--clean` (si no, el RAG quedaría roto en silencio).
+
+**La base de demo se cayó sola**: el plan free de Postgres en Render vence a
+los 30 días. El síntoma fue `E-INTERNO-00` en todas las rutas con el
+servicio web vivo (`/static/` respondía 200) y `SSL connection has been
+closed unexpectedly` al conectar por fuera. No era autenticación ni DNS. Se
+resolvió pasando la base a plan pago.
+
+**El sello de `/static/` faltaba en `marca.css`, y eso rompió el modal de
+noticias en producción.** Ver la sección propia más abajo.
+
+## El modal de noticias que se rompió por caché (2026-09-03)
+
+Noticias y Beneficios eran los dos últimos modales con la estética vieja
+(`.modal-hoja`, la hoja oscura pegada al borde inferior, fotos en
+miniaturas de 70px). Se pasaron al patrón claro con encabezado de marca que
+ya tenían Notificaciones y Perfil. Verificado en local y en Pruebas, se
+promovió a la demo... y en el teléfono se veía roto: encabezado sin fondo,
+título blanco invisible, kicker "en el aire" y fotos gigantes.
+
+**La causa no era el modal: era la caché.** `/static/` sale con
+`Cache-Control: public, max-age=3600` y los 8 templates referenciaban
+`marca.css` SIN sello `?v=`, contra lo que el propio CLAUDE.md decía que
+había que hacer. Después del deploy, un navegador que ya había visitado la
+app servía el **HTML nuevo con la hoja vieja**: las clases `.modal-articulo`
+no existían todavía ahí, así que no había ni fondo ni tamaños. En desktop se
+veía bien solo porque ahí el CSS no estaba cacheado. El arreglo es
+`main._sello_static()`, un global de Jinja con mtime+tamaño del archivo --
+sale del archivo y no de `version.py`, así cambia aunque alguien toque el
+CSS sin subir la versión, y en desarrollo se refresca sin reiniciar.
+
+**Un segundo defecto, propio del modal nuevo**: `.modal-articulo-enc` copió
+el degradé de `.modal-notif-enc` pero NO su capa de `background` sólido. El
+original tiene dos capas por una razón: si el `background-image` no se pinta
+(`color-mix` sin soporte, o el repaint del sticky en algunos navegadores
+mobile), sin color sólido el encabezado queda transparente. Regla: **el
+color sólido va siempre además del degradé, nunca solo el degradé.**
+
+**Sobre cómo se verifica**: las capturas del navegador emulado no
+reprodujeron nada de esto, porque ahí el CSS nunca estuvo cacheado. Lo que
+sí lo detectó fue medir el estilo computado (`backgroundColor` pasó de
+`rgba(0, 0, 0, 0)` a `rgb(15, 27, 45)`, y la foto de 307px a 246px). Para un
+bug de CSS, medir vale más que mirar.
+
+Detalle menor: `trabajador.html` no carga `marca.css` (tiene su propio CSS),
+así que las reglas del modal están duplicadas en los dos lados con un
+comentario cruzado. Si se tocan en uno, hay que tocarlas en el otro o la
+noticia se ve distinta según se abra desde la portada o desde Novedades.

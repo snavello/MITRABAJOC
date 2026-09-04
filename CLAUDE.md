@@ -74,6 +74,13 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - push.py — notificaciones Web Push a la PWA del trabajador (novedades de
   trámites; apagado sin claves VAPID).
 - cargar_demo.py — carga 2 sindicatos de demo desde cero (sin AEFIP).
+- cargar_marca_plataforma.py — siembra el logo y los colores de Colm3na
+  (viven en la base, no en el código: sin esto un entorno nuevo arranca con
+  el placeholder `static/logo_mitrabajo.svg`). Va primero al poblar.
+- promover_demo.py / clonar_demo_a_pruebas.py / pg_cliente.py — operación de
+  entornos: promover `main` a la demo, clonar los datos de demo a Pruebas
+  (excepción, no rutina) y elegir un cliente de Postgres compatible con el
+  servidor. Ver `FLUJO.md`.
 - cargar_lote_sindicato.py — lote sintético completo para CUALQUIER sindicato
   existente (`--sindicato "AEFIP"`); `cargar_lote_uom.py` es la versión
   anterior, específica de la UOM. Ver "Lotes de datos sintéticos".
@@ -94,6 +101,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   "Topes de base imponible" en HISTORIAL.md).
 - .claude/skills/diseno-mi-trabajo/ — skill con las reglas del sistema de diseño;
   .claude/skills/frontend-design/ — skill oficial de Anthropic para dirección visual general.
+- **FLUJO.md** — el ciclo de un cambio en una página: de tu PC a Pruebas y de
+  Pruebas a la demo, con los comandos y las tres reglas.
 - **HISTORIAL.md** — changelog técnico detallado, no se carga automático.
 
 ## Los cuatro roles
@@ -155,6 +164,15 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   foto de perfil de trabajador/empleador, imágenes de noticias/beneficios,
   archivos adjuntos de notificaciones/trámites — todo bytes en la base, nunca
   disco (no hay disco persistente en Render).
+- **Todo lo que sale de `/static/` va con sello `?v=`, sin excepción.** Esa
+  ruta se sirve con `Cache-Control: public, max-age=3600`: sin sello, un
+  cambio tarda hasta una hora en llegarle a quien ya visitó la app, y
+  mientras tanto ve el HTML NUEVO con el archivo VIEJO — peor que ver la
+  versión anterior entera. `marca.css` quedó sin sello y así se rompió el
+  modal de noticias en producción (2026-09-03). El sello lo da
+  `main._sello_static(nombre)` (global de Jinja, mtime+tamaño del archivo, no
+  `version.py`: cambia aunque nadie suba la versión). Un archivo nuevo en
+  `/static/` que una plantilla referencie tiene que usarlo.
 - **JSON como JSONB en Postgres:** columnas alias (Concepto) y detalle (Reporte)
   son jsonb (indexables). En SQLite quedan JSON común.
 - **Aislamiento entre sindicatos: total.** Marca por sindicato: 4 colores
@@ -236,18 +254,31 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
 17. **Validaciones en formularios de Trámites (Fase 1)** — capa de validaciones por campo (fuente `fija` + consistencia entre campos, bloquea/avisa) con rediseño "Expediente" del constructor y carátula+sello en la pantalla del trabajador — ver sección propia.
 18. **Esquema visual "Hilo" en TODA la suite** (2026-09-03): nació en Notificaciones y Trámites del trabajador (bandeja como línea de tiempo, "Necesita tu atención", accesos grandes, barra de progreso; mockups de las 3 propuestas en `disenos/notificaciones-tramites-propuestas.html`) y después se extendió, sin tocar contenido, a las 6 pestañas de `/app`, portada y perfil del trabajador, y a Admin y Plataforma (portadas, cromo de los paneles, chips/modales/subtítulos). Vocabulario: tarjeta oscura con degradé base→primario + grano + filo ámbar, kicker en acento, títulos en condensada, hitos con línea, píldoras de estado, cifras en monoespaciada. En Admin/Plataforma las tablas siguen siendo tablas (decisión explícita). El Panel Sindical conserva su diseño propio — detalle por partes en HISTORIAL.md.
 
+19. **Entornos separados, Etapas 0 y 1 de [`PLAN_ENTORNOS.md`](PLAN_ENTORNOS.md)
+    COMPLETAS** (2026-09-03): `mitrabajo-demo` (URL de siempre) sigue la rama
+    `demo` y solo cambia al promover; `mitrabajo-pruebas` sigue `main` y
+    redeploya con cada push (~90 s), con su propio Postgres. Alembic corre
+    solo en el deploy (Pre-Deploy Command). El ciclo entero se estrenó tres
+    veces el mismo día. El flujo del día a día, en una página, está en
+    [`FLUJO.md`](FLUJO.md). Lo que quedó de código: `cargar_marca_plataforma.py`
+    (la marca vivía SOLO en la base de demo, así que todo entorno nuevo nacía
+    con el placeholder viejo), `clonar_demo_a_pruebas.py` (excepción, con
+    guardas que impiden invertir la dirección) y `pg_cliente.py`.
+
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
 plataforma), (b) sacar "Cambiar clave" transitorio de plataforma antes de
 producción real, (c) verificar los topes SS previos a 2025, (d) evaluar si
-el editor de lienzo libre de Trámites llega a justificarse, (e) staging
-real en Render (sin urgencia, tiene costo).
+el editor de lienzo libre de Trámites llega a justificarse, (e) las etapas
+2 a 4 de PLAN_ENTORNOS.md (organización de GitHub + CI, runbook y accesos,
+traspaso), que reemplazan al viejo pendiente de "staging en Render".
 
-**Próximo paso**: la Fase 1 de Validaciones de Trámites (punto 17) está
-codificada y verificada. Lo anotado para retomar está en
-[`BACKLOG.md`](BACKLOG.md): fases 2–4 de validaciones (sistema/lista/
-externa), el merge de `areas-permisos` (+5 líneas de PERMISOS_RUTAS para
-RAG) y el sprint "Admin de Seccional" (decisiones ya cerradas).
+**Próximo paso**: la Etapa 2 de `PLAN_ENTORNOS.md` (repo en una organización
+de GitHub, reglas de rama, CI que corra cada `test_*.py` por separado,
+devcontainer). En paralelo sigue vivo lo de [`BACKLOG.md`](BACKLOG.md):
+fases 2–4 de validaciones (sistema/lista/externa), el merge de
+`areas-permisos` (+5 líneas de PERMISOS_RUTAS para RAG) y el sprint "Admin
+de Seccional" (decisiones ya cerradas).
 
 ## Pendientes (features)
 1. Capacitación por-sindicato: hoy solo hay contenido FIJO de plataforma
