@@ -23,7 +23,8 @@ Uso (desde la raíz del repo, en la PC con git configurado):
 
 El cliente de pg_dump lo elige `pg_cliente.py` segun la version del
 servidor de Render (usa el instalado si alcanza, si no la imagen oficial
-`postgres:<version>` de Docker). Los dumps quedan en backups/ (gitignored).
+`postgres:<version>` de Docker). Los dumps quedan en backups/ (gitignored);
+se conservan los 5 mas nuevos y el resto se borra solo, avisando cual.
 """
 import argparse
 import os
@@ -99,6 +100,31 @@ def backup_demo(sin_backup):
     return destino
 
 
+DUMPS_A_CONSERVAR = 5
+
+
+def podar_backups(recien_creado):
+    """Deja solo los DUMPS_A_CONSERVAR dumps más nuevos y borra los demás.
+
+    Cada promoción crea un dump de ~37 MB y nadie se acuerda de limpiarlos.
+    Dos recaudos, porque borrar copias de la demo en silencio sería peor que
+    el desorden: el dump recién creado NUNCA se toca, y lo que se borra se
+    imprime en pantalla.
+    """
+    dumps = sorted(BACKUPS.glob("demo-*.dump"), key=lambda p: p.stat().st_mtime, reverse=True)
+    sobrantes = [d for d in dumps[DUMPS_A_CONSERVAR:] if d != recien_creado]
+    if not sobrantes:
+        return
+    print(f"- Podando backups viejos (se conservan los {DUMPS_A_CONSERVAR} más nuevos):")
+    for d in sobrantes:
+        mb = d.stat().st_size // (1024 * 1024)
+        try:
+            d.unlink()
+            print(f"    borrado {d.name} ({mb} MB)")
+        except OSError as e:
+            print(f"    NO se pudo borrar {d.name}: {e}")
+
+
 def url_del_pr():
     remoto = git("remote", "get-url", "origin")
     m = re.search(r"github\.com[:/]([^/]+)/([^/.]+)", remoto)
@@ -130,7 +156,9 @@ def main():
     for linea in cambios.splitlines():
         print(f"    {linea}")
 
-    backup_demo(args.sin_backup)
+    dump = backup_demo(args.sin_backup)
+    if dump:
+        podar_backups(dump)
 
     version = version_en("origin/main")
     tag = f"demo-{datetime.now():%Y-%m-%d}-v{version}"
