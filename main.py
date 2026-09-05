@@ -3340,11 +3340,21 @@ def dashboard_asistente(request: Request, cuerpo: dict = Body(default={})):
                                  f"{asistente.MAX_PREGUNTA} caracteres).")
     filtros = cuerpo.get("filtros") if isinstance(cuerpo.get("filtros"), dict) else {}
     historial = cuerpo.get("historial") if isinstance(cuerpo.get("historial"), list) else []
+    # Tope diario por sindicato: red de seguridad de costo, no de negocio.
+    if db.consultas_asistente_hoy(sid) >= asistente.TOPE_DIARIO:
+        raise HTTPException(429, f"El asistente llegó al tope de {asistente.TOPE_DIARIO} preguntas "
+                                 f"por día de tu sindicato. Mañana vuelve a estar disponible; los "
+                                 f"filtros del panel siguen funcionando a mano.")
     try:
         salida = asistente.responder(sid, pregunta, filtros, historial)
     except asistente.ErrorModelo as e:
         print(f"[asistente] sindicato {sid}: {e}")
         raise ErrorApp("E-ASISTENTE-01")
+    # Se registra todo lo que el modelo contestó, aplique o no (una
+    # repregunta también cuenta para el tope y para el set de frases).
+    uid = (sesion_actual(request, "sindicato") or {}).get("uid") or None
+    db.registrar_consulta_asistente(sid, uid, pregunta, salida["respuesta"], salida["filtros"],
+                                    salida["aplicar"], salida["uso"])
     return {"respuesta": salida["respuesta"], "filtros": salida["filtros"],
             "aplicar": salida["aplicar"], "afiliado": salida["afiliado"],
             "candidatos": salida["candidatos"], "filtros_pendientes": salida["filtros_pendientes"]}

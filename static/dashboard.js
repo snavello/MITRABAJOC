@@ -1011,18 +1011,32 @@
     return b;
   }
 
+  function irAlExplorador() {
+    panelDe("explorador").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // Pedido de Sd (2026-09-05): cada respuesta que filtra dice dónde está el
+  // detalle. Va fijo en el JS, no depende de que el modelo lo recuerde.
   function asistChipAplicado(burbuja, tab, previo) {
+    var nota = document.createElement("div");
+    nota.className = "nota-exp";
+    nota.textContent = "El detalle, caso por caso, está abajo en el explorador de datos, pestaña " +
+      (NOMBRE_TAB[tab] || tab) + ".";
     var fila = document.createElement("div");
     fila.className = "aplicado";
     var chip = document.createElement("b");
-    chip.textContent = "Filtros aplicados · " + (NOMBRE_TAB[tab] || tab);
+    chip.textContent = "Filtros aplicados";
+    var ver = document.createElement("button");
+    ver.type = "button"; ver.textContent = "Ver en el explorador";
+    ver.onclick = irAlExplorador;
     var btn = document.createElement("button");
     btn.type = "button"; btn.textContent = "Volver";
     btn.onclick = function () {
       btn.disabled = true; btn.textContent = "Restaurado";
       aplicarEstado(previo); refrescar();
     };
-    fila.appendChild(chip); fila.appendChild(btn);
+    fila.appendChild(chip); fila.appendChild(ver); fila.appendChild(btn);
+    burbuja.appendChild(nota);
     burbuja.appendChild(fila);
     $("asist-hilo").scrollTop = $("asist-hilo").scrollHeight;
   }
@@ -1048,9 +1062,7 @@
         var b2 = asistBurbuja("bot", "Listo, filtré por " + c.nombre + ".");
         ASIST_HIST.push({ pregunta: pregunta, respuesta: "Filtré por el afiliado elegido (id " + c.id + ").", filtros: filtros });
         asistChipAplicado(b2, filtros.tab, previo);
-        refrescar().then(function () {
-          panelDe("explorador").scrollIntoView({ behavior: "smooth", block: "start" });
-        });
+        refrescar().then(irAlExplorador);
       };
       fila.appendChild(btn);
     });
@@ -1096,9 +1108,7 @@
           if (res.d.afiliado) AFILIADOS[res.d.afiliado.id] = res.d.afiliado;
           aplicarEstado(res.d.filtros);
           asistChipAplicado(b, res.d.filtros.tab, previo);
-          refrescar().then(function () {
-            panelDe("explorador").scrollIntoView({ behavior: "smooth", block: "start" });
-          });
+          refrescar().then(irAlExplorador);
         }
       })
       .catch(function (e) {

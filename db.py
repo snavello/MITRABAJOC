@@ -903,6 +903,52 @@ class ConsultaConvenio(SQLModel, table=True):
     tema: Optional[str] = Field(default=None)
 
 
+class ConsultaAsistente(SQLModel, table=True):
+    """Cada pregunta al Asistente del Panel Sindical (docs/ASISTENTE_PANEL.md
+    §3): qué preguntó el admin, qué contestó el modelo, qué filtros quedaron
+    y cuánto costó. Sirve para el tope diario, para auditar y para armar el
+    set de frases de prueba con preguntas reales. Distinta de
+    ConsultaConvenio (el bot del convenio del trabajador) a propósito: no
+    comparten tabla ni código."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    usuario_id: Optional[int] = Field(default=None, foreign_key="usuariosindicato.id")
+    pregunta: str = ""
+    respuesta: str = ""
+    filtros: Optional[dict] = Field(default=None, sa_column=Column(JSON))   # None = no aplicó
+    tab: str = ""
+    aplicado: bool = False
+    modelo: str = ""
+    tokens_entrada: int = 0
+    tokens_salida: int = 0
+    llamadas: int = 0
+    creado: str = ""               # "AAAA-MM-DD HH:MM", como el resto de la base
+
+
+def registrar_consulta_asistente(sindicato_id: int, usuario_id: Optional[int], pregunta: str,
+                                 respuesta: str, filtros: Optional[dict], aplicado: bool,
+                                 uso: dict) -> int:
+    with Session(engine) as s:
+        fila = ConsultaAsistente(
+            sindicato_id=sindicato_id, usuario_id=usuario_id,
+            pregunta=pregunta[:500], respuesta=respuesta[:2000],
+            filtros=filtros, tab=(filtros or {}).get("tab", ""), aplicado=aplicado,
+            modelo=uso.get("modelo", ""), tokens_entrada=uso.get("tokens_entrada", 0),
+            tokens_salida=uso.get("tokens_salida", 0), llamadas=uso.get("llamadas", 0),
+            creado=datetime.now().strftime("%Y-%m-%d %H:%M"))
+        s.add(fila); s.commit(); s.refresh(fila)
+        return fila.id
+
+
+def consultas_asistente_hoy(sindicato_id: int) -> int:
+    """Para el tope diario del Asistente. `creado` es string ordenable, así
+    que "hoy" es todo lo que empieza con la fecha de hoy."""
+    hoy = datetime.now().strftime("%Y-%m-%d")
+    with Session(engine) as s:
+        return len(s.exec(select(ConsultaAsistente.id).where(
+            ConsultaAsistente.sindicato_id == sindicato_id,
+            ConsultaAsistente.creado >= hoy)).all())
+
 
 # ---------- Consultas sobre el convenio: acceso a datos ----------
 

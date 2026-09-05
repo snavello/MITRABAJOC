@@ -466,6 +466,53 @@ def test_basura_del_modelo_en_textos_cuenta_como_vacio():
     print("OK  test_basura_del_modelo_en_textos_cuenta_como_vacio")
 
 
+# ---------- Registro y tope diario (Bloque 5) ----------
+
+def _ultima_consulta():
+    from sqlmodel import select
+    from db import ConsultaAsistente
+    with db.get_session() as s:
+        return s.exec(select(ConsultaAsistente).order_by(ConsultaAsistente.id.desc())).first()
+
+
+def test_registro_de_cada_pregunta():
+    _guion(
+        _respuesta(_herramienta(_filtros(seccionales=[SECC_ROSARIO], tab="notificaciones"))),
+        _respuesta(_texto("Rosario: 2 sin leer.")),
+    )
+    assert _preguntar(admin_a, pregunta="notificaciones sin leer de rosario").status_code == 200
+    fila = _ultima_consulta()
+    assert fila.sindicato_id == SID_A and fila.usuario_id            # el admin logueado
+    assert fila.pregunta == "notificaciones sin leer de rosario" and fila.respuesta == "Rosario: 2 sin leer."
+    assert fila.aplicado is True and fila.tab == "notificaciones"
+    assert fila.filtros["seccionales"] == [SECC_ROSARIO]
+    assert fila.modelo == asistente.MODELO and fila.llamadas == 2
+    assert (fila.tokens_entrada, fila.tokens_salida) == (20, 10)      # 10+5 por llamada del falso
+    assert fila.creado[:10] == HOY.isoformat()
+    # Una repregunta sin filtros también queda, con aplicado=False.
+    _guion(_respuesta(_texto("¿Rosario la seccional o la empresa?")))
+    assert _preguntar(admin_a, pregunta="lo de rosario").status_code == 200
+    fila = _ultima_consulta()
+    assert fila.aplicado is False and fila.filtros is None and fila.tab == "" and fila.llamadas == 1
+    assert db.consultas_asistente_hoy(SID_A) >= 2 and db.consultas_asistente_hoy(SID_B) == 0
+    print("OK  test_registro_de_cada_pregunta")
+
+
+def test_tope_diario_429():
+    tope = asistente.TOPE_DIARIO
+    asistente.TOPE_DIARIO = db.consultas_asistente_hoy(SID_A)     # ya llegamos al tope
+    try:
+        falso = _guion(_respuesta(_texto("no debería llegar")))
+        r = _preguntar(admin_a)
+        assert r.status_code == 429 and "tope" in r.json()["detail"]
+        assert falso.llamadas == []                                 # no gastó una llamada
+    finally:
+        asistente.TOPE_DIARIO = tope
+    _guion(_respuesta(_texto("Sigo acá.")))
+    assert _preguntar(admin_a).status_code == 200                  # con el tope real, sigue
+    print("OK  test_tope_diario_429")
+
+
 def test_error_del_modelo_502_con_codigo():
     _guion(error=RuntimeError("se cayó la API"))
     r = _preguntar(admin_a)
@@ -493,5 +540,7 @@ if __name__ == "__main__":
     test_persona_no_encontrada_avisa_al_modelo()
     test_afiliado_elegido_se_conserva_y_el_ajeno_se_descarta()
     test_basura_del_modelo_en_textos_cuenta_como_vacio()
+    test_registro_de_cada_pregunta()
+    test_tope_diario_429()
     test_error_del_modelo_502_con_codigo()
     print("\nTodos los tests del Asistente pasaron.")

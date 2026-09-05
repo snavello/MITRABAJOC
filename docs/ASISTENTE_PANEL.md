@@ -169,8 +169,11 @@ frases de prueba con preguntas reales.
   filtros de la respuesta; después `urlCompartible()` + la ronda de fetches
   de siempre + cambio de pestaña del explorador. El link compartible sale
   gratis.
-- Cada respuesta con filtros aplicados muestra un chip "filtros aplicados"
-  con "volver" al estado anterior.
+- Cada respuesta con filtros aplicados muestra un chip "Filtros aplicados",
+  una nota fija "El detalle está abajo en el explorador de datos, pestaña
+  X", un botón "Ver en el explorador" que baja hasta ahí y "Volver" al
+  estado anterior. La nota va en el JS, no en el prompt: no depende de que
+  el modelo se acuerde (pedido de Sd, 2026-09-05).
 
 ## 5. Pruebas
 
@@ -223,7 +226,15 @@ frases de prueba con preguntas reales.
    el filtro sin volver al modelo; "y sus notificaciones?" conserva al
    afiliado por id y contesta "2 enviadas, 1 sin leer". El set de frases
    con preguntas por persona queda para el Bloque 7.
-5. Registro + tope diario + migración Alembic.
+5. Registro + tope diario + migración Alembic. **HECHO 2026-09-05**:
+   tabla `consultaasistente` (`db.ConsultaAsistente`,
+   `registrar_consulta_asistente`, `consultas_asistente_hoy`), tope en la
+   ruta (429 antes de gastar una llamada), migración `b7c3d9e1f204`
+   escrita a mano porque Docker estaba apagado: validada en modo offline
+   (`alembic upgrade a9d4e7f2c831:b7c3d9e1f204 --sql` genera el DDL de
+   Postgres con JSONB e índices) pero **sin correr contra un Postgres
+   real todavía**: correr `alembic upgrade head` con Docker levantado
+   antes de mergear a `main`, porque en Pruebas corre sola en el deploy.
 6. Voz (Web Speech API).
 7. Set de frases con la API real, ajustes de prompt, versión,
    `HISTORIAL.md`, promover a demo.
