@@ -2583,3 +2583,61 @@ Detalle menor: `trabajador.html` no carga `marca.css` (tiene su propio CSS),
 así que las reglas del modal están duplicadas en los dos lados con un
 comentario cruzado. Si se tocan en uno, hay que tocarlas en el otro o la
 noticia se ve distinta según se abra desde la portada o desde Novedades.
+
+## Asistente del Panel Sindical (2026-09-05)
+
+Pedido de Sd: un bot dentro del Panel Sindical, limitado a los datos y
+funciones del panel, que entienda lenguaje natural ("quiero las
+notificaciones no leídas de la sucursal Rosario"), aplique los filtros para
+que el tablero cambie y el explorador muestre los casos, y conteste
+resumido. Las decisiones vigentes viven en la ficha rectora
+`docs/ASISTENTE_PANEL.md` (contrato, prompt, privacidad, filtro por
+afiliado, medición). Acá, lo que se aprendió construyéndolo, en 7 bloques
+y un día, sobre la rama `feature/asistente-panel`.
+
+- **No es RAG ni el bot del convenio del trabajador**: no lee documentos,
+  no usa embeddings; solo la API de Anthropic (`claude-sonnet-5`, esfuerzo
+  bajo). Por eso se llama "Asistente del Panel" y nunca "bot": en el
+  dashboard "Consultas al bot" ya significa otra cosa.
+- **La pieza clave ya existía**: el estado de filtros del panel vive en la
+  query string con un vocabulario cerrado validado por
+  `dashboard.parsear_filtros`. El modelo traduce la pregunta a ese estado
+  con una herramienta estricta (`fijar_filtros`, siempre el estado
+  completo, nunca un delta), el servidor valida con la MISMA función que
+  usa el JS, calcula los agregados reales y el modelo redacta una o dos
+  frases. Nunca ve filas ni genera SQL; al modelo llegan nombres de
+  seccionales y empresas, la pregunta tal cual y totales.
+- **Filtro por afiliado en el panel**: nació de este pedido ("las
+  notificaciones del afiliado Galmarini"). Tres reglas que costaron
+  decidir: de los recibos cuentan SOLO los que la persona envió al
+  sindicato, también en los totales (si no, el KPI revela lo que la fila
+  esconde); las consultas al bot del convenio quedan afuera (son anónimas
+  a propósito, y el KPI da None, no 0); el padrón nunca viaja al modelo:
+  el servidor resuelve el nombre o CUIL, y los homónimos se eligen en el
+  cajón con un clic, sin volver al modelo.
+- **Bugs y hallazgos reales, por orden de aparición**:
+  1. `dashboard.js` se referenciaba con `?v={{ version }}` y no con
+     `sello_static`: el navegador servía el JS viejo hasta una hora
+     después de cada cambio. Es exactamente la regla de CLAUDE.md sobre
+     `/static/`; se notó porque el buscador nuevo "no respondía".
+  2. Con dos strings vacíos consecutivos en la herramienta (`tema` y
+     `persona`), Sonnet 5 emitió basura de su propio formato de llamada
+     (`</antml_parameter>\n<parameter name="persona">`) y el servidor
+     salió a buscar a esa "persona" tres veces. Los textos opcionales
+     pasaron a `null` y `asistente._texto_limpio()` descarta lo que huela
+     a etiqueta de herramienta. Hay un test que reproduce el caso.
+  3. El modelo se negaba a buscar por CUIL ("primero necesito identificar
+     a esa persona") hasta que el prompt dijo, con todas las letras, que
+     un CUIL va en `persona` igual que un nombre.
+  4. `load_dotenv()` sin ruta busca el `.env` desde la carpeta del script
+     que lo llama: un script de prueba fuera del repo no cargaba la clave
+     y la API devolvía 401 "invalid x-api-key".
+- **Medición** (`probar_asistente.py`, 25 frases): 25/25 tanto con
+  esfuerzo bajo como sin thinking; mediana 6,8 s, máximo 8,8 s contra
+  19,1 s sin thinking; US$ 0,0065 por pregunta. Queda esfuerzo bajo. Los
+  25 segundos de la primera prueba de humo fueron un arranque en frío.
+- **Pendiente al cerrar la rama**: correr la migración `b7c3d9e1f204`
+  contra un Postgres real (Docker estaba apagado; se validó en modo
+  offline), probar el dictado en Chrome con micrófono, y decidir si con el
+  panel en "Hoy" el asistente amplía solo el período cuando la pregunta no
+  lo menciona.

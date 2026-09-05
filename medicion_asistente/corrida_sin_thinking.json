@@ -1,0 +1,714 @@
+{
+ "fecha": "2026-09-05",
+ "modelo": "claude-sonnet-5",
+ "config": "sin thinking",
+ "aciertos": 25,
+ "total": 25,
+ "mediana_seg": 7.0,
+ "max_seg": 19.1,
+ "tokens_entrada": 24408,
+ "tokens_salida": 11540,
+ "costo_usd": 0.1642,
+ "resultados": [
+  {
+   "n": 1,
+   "pregunta": "notificaciones sin leer de rosario",
+   "ok": true,
+   "fallas": [],
+   "seg": 19.1,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1201,
+    "tokens_salida": 490,
+    "llamadas": 2
+   },
+   "respuesta": "En Rosario, del 06/08 al 05/09, se mandaron 3 notificaciones y quedaron 2 sin leer (tasa de lectura del 33,3%).",
+   "filtros": {
+    "desde": "2026-08-06",
+    "hasta": "2026-09-05",
+    "seccionales": [
+     1
+    ],
+    "empresas": [],
+    "formato": "",
+    "resultado": "",
+    "estado_tramite": "",
+    "tipo_notif": "",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "notificaciones",
+    "afiliado": null
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 2,
+   "pregunta": "quiero las notificaciones no leidas de la sucursal rosario",
+   "ok": true,
+   "fallas": [],
+   "seg": 18.9,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1216,
+    "tokens_salida": 486,
+    "llamadas": 2
+   },
+   "respuesta": "En Rosario, del 06/08 al 05/09, se enviaron 3 notificaciones y quedan 2 sin leer (tasa de lectura del 33,3%).",
+   "filtros": {
+    "desde": "2026-08-06",
+    "hasta": "2026-09-05",
+    "seccionales": [
+     1
+    ],
+    "empresas": [],
+    "formato": "",
+    "resultado": "",
+    "estado_tramite": "",
+    "tipo_notif": "",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "notificaciones",
+    "afiliado": null
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 3,
+   "pregunta": "cuantas comunicaciones no abrieron en cordoba este mes",
+   "ok": true,
+   "fallas": [],
+   "seg": 18.6,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1287,
+    "tokens_salida": 541,
+    "llamadas": 2
+   },
+   "respuesta": "En Córdoba este mes se mandó 1 comunicación y ya fue leída, así que no quedó ninguna sin abrir.",
+   "filtros": {
+    "desde": "2026-09-01",
+    "hasta": "2026-09-05",
+    "seccionales": [
+     2
+    ],
+    "empresas": [],
+    "formato": "",
+    "resultado": "",
+    "estado_tramite": "",
+    "tipo_notif": "manual",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "notificaciones",
+    "afiliado": null
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 4,
+   "pregunta": "recibos con diferencias del mes pasado",
+   "ok": true,
+   "fallas": [],
+   "seg": 19.0,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1077,
+    "tokens_salida": 494,
+    "llamadas": 2
+   },
+   "respuesta": "En agosto no hubo recibos con diferencias registrados: el panel muestra 0 recibos en ese estado para el período completo del mes pasado.",
+   "filtros": {
+    "desde": "2026-08-01",
+    "hasta": "2026-08-31",
+    "seccionales": [],
+    "empresas": [],
+    "formato": "",
+    "resultado": "con_diferencias",
+    "estado_tramite": "",
+    "tipo_notif": "",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "recibos",
+    "afiliado": null
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 5,
+   "pregunta": "boletas mal liquidadas de metalsur",
+   "ok": true,
+   "fallas": [],
+   "seg": 6.3,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1092,
+    "tokens_salida": 504,
+    "llamadas": 2
+   },
+   "respuesta": "En Metalsur SA no hay recibos con diferencias en este período (del 6/8 al 5/9): el conteo da cero tanto en total como en boletas observadas.",
+   "filtros": {
+    "desde": "2026-08-06",
+    "hasta": "2026-09-05",
+    "seccionales": [],
+    "empresas": [
+     1
+    ],
+    "formato": "",
+    "resultado": "con_diferencias",
+    "estado_tramite": "",
+    "tipo_notif": "",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "recibos",
+    "afiliado": null
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 6,
+   "pregunta": "recibos ok de textil sur en los ultimos 7 dias",
+   "ok": true,
+   "fallas": [],
+   "seg": 6.5,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1071,
+    "tokens_salida": 463,
+    "llamadas": 2
+   },
+   "respuesta": "En los últimos 7 días no hay ningún recibo OK cargado de Textil Sur, la cifra da directamente en cero.",
+   "filtros": {
+    "desde": "2026-08-29",
+    "hasta": "2026-09-05",
+    "seccionales": [],
+    "empresas": [
+     2
+    ],
+    "formato": "",
+    "resultado": "ok",
+    "estado_tramite": "",
+    "tipo_notif": "",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "recibos",
+    "afiliado": null
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 7,
+   "pregunta": "tramites abiertos",
+   "ok": true,
+   "fallas": [],
+   "seg": 7.2,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1052,
+    "tokens_salida": 494,
+    "llamadas": 2
+   },
+   "respuesta": "En este período (06/08 al 05/09) no hay trámites abiertos registrados en ninguna seccional, el total da 0.",
+   "filtros": {
+    "desde": "2026-08-06",
+    "hasta": "2026-09-05",
+    "seccionales": [],
+    "empresas": [],
+    "formato": "",
+    "resultado": "",
+    "estado_tramite": "abierto",
+    "tipo_notif": "",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "tramites",
+    "afiliado": null
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 8,
+   "pregunta": "expedientes resueltos de rosario el mes pasado",
+   "ok": true,
+   "fallas": [],
+   "seg": 6.1,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1066,
+    "tokens_salida": 489,
+    "llamadas": 2
+   },
+   "respuesta": "En agosto 2026, en la seccional Rosario no hubo expedientes resueltos: el conteo dio 0 trámites para ese período.",
+   "filtros": {
+    "desde": "2026-08-01",
+    "hasta": "2026-08-31",
+    "seccionales": [
+     1
+    ],
+    "empresas": [],
+    "formato": "",
+    "resultado": "",
+    "estado_tramite": "resuelto",
+    "tipo_notif": "",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "tramites",
+    "afiliado": null
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 9,
+   "pregunta": "reclamos en proceso de la delegacion cordoba",
+   "ok": true,
+   "fallas": [],
+   "seg": 6.8,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1068,
+    "tokens_salida": 484,
+    "llamadas": 2
+   },
+   "respuesta": "En Córdoba no hay trámites en proceso en el período del 6 de agosto al 5 de septiembre: la cifra es 0.",
+   "filtros": {
+    "desde": "2026-08-06",
+    "hasta": "2026-09-05",
+    "seccionales": [
+     2
+    ],
+    "empresas": [],
+    "formato": "",
+    "resultado": "",
+    "estado_tramite": "en_proceso",
+    "tipo_notif": "",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "tramites",
+    "afiliado": null
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 10,
+   "pregunta": "recibos del formato nuevo",
+   "ok": true,
+   "fallas": [],
+   "seg": 7.3,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1062,
+    "tokens_salida": 508,
+    "llamadas": 2
+   },
+   "respuesta": "No hay recibos con formato nuevo (Anexo III) cargados en este período del 6 de agosto al 5 de septiembre, ninguna seccional ni empresa registra este tipo de recibo por ahora.",
+   "filtros": {
+    "desde": "2026-08-06",
+    "hasta": "2026-09-05",
+    "seccionales": [],
+    "empresas": [],
+    "formato": "nuevo",
+    "resultado": "",
+    "estado_tramite": "",
+    "tipo_notif": "",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "recibos",
+    "afiliado": null
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 11,
+   "pregunta": "liquidaciones con el recibo de antes de la reforma",
+   "ok": true,
+   "fallas": [],
+   "seg": 7.0,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1084,
+    "tokens_salida": 506,
+    "llamadas": 2
+   },
+   "respuesta": "En ese período (06-08 al 05-09) no hay recibos con formato clásico (de antes de la reforma) cargados: el conteo dio 0, tanto en OK como en con diferencias.",
+   "filtros": {
+    "desde": "2026-08-06",
+    "hasta": "2026-09-05",
+    "seccionales": [],
+    "empresas": [],
+    "formato": "viejo",
+    "resultado": "",
+    "estado_tramite": "",
+    "tipo_notif": "",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "recibos",
+    "afiliado": null
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 12,
+   "pregunta": "recibos con bruto mayor a 800 mil",
+   "ok": true,
+   "fallas": [],
+   "seg": 6.5,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1078,
+    "tokens_salida": 516,
+    "llamadas": 2
+   },
+   "respuesta": "No hay recibos con sueldo bruto mayor a 800 mil en el período del 6/8 al 5/9: el filtro devuelve 0 recibos, así que no hay nada para reportar en OK ni en diferencias.",
+   "filtros": {
+    "desde": "2026-08-06",
+    "hasta": "2026-09-05",
+    "seccionales": [],
+    "empresas": [],
+    "formato": "",
+    "resultado": "",
+    "estado_tramite": "",
+    "tipo_notif": "",
+    "sal_min": 800000,
+    "sal_max": null,
+    "tema": "",
+    "tab": "recibos",
+    "afiliado": null
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 13,
+   "pregunta": "saca el filtro de seccional",
+   "ok": true,
+   "fallas": [],
+   "seg": 6.9,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1190,
+    "tokens_salida": 502,
+    "llamadas": 2
+   },
+   "respuesta": "Listo, saqué el filtro de seccional. Con todas las seccionales, del 06-08 al 05-09 se enviaron 4 notificaciones, 2 leídas y 2 sin leer (tasa de lectura del 50%).",
+   "filtros": {
+    "desde": "2026-08-06",
+    "hasta": "2026-09-05",
+    "seccionales": [],
+    "empresas": [],
+    "formato": "",
+    "resultado": "",
+    "estado_tramite": "",
+    "tipo_notif": "",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "notificaciones",
+    "afiliado": null
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 14,
+   "pregunta": "ahora solo el mes pasado",
+   "ok": true,
+   "fallas": [],
+   "seg": 6.9,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1205,
+    "tokens_salida": 504,
+    "llamadas": 2
+   },
+   "respuesta": "Listo, ya quedó filtrado agosto 2026 completo para Rosario: en ese período no hubo notificaciones enviadas (0), así que tampoco hay leídas ni pendientes.",
+   "filtros": {
+    "desde": "2026-08-01",
+    "hasta": "2026-08-31",
+    "seccionales": [
+     1
+    ],
+    "empresas": [],
+    "formato": "",
+    "resultado": "",
+    "estado_tramite": "",
+    "tipo_notif": "",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "notificaciones",
+    "afiliado": null
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 15,
+   "pregunta": "las notificaciones de ana rosarina",
+   "ok": true,
+   "fallas": [],
+   "seg": 8.6,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1352,
+    "tokens_salida": 630,
+    "llamadas": 2
+   },
+   "respuesta": "Encontré a Ana Rosarina en el padrón: en este período (06/08 al 05/09) recibió 1 notificación, del tipo comunicación manual, y todavía no la leyó (0% de lectura).",
+   "filtros": {
+    "desde": "2026-08-06",
+    "hasta": "2026-09-05",
+    "seccionales": [],
+    "empresas": [],
+    "formato": "",
+    "resultado": "",
+    "estado_tramite": "",
+    "tipo_notif": "",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "notificaciones",
+    "afiliado": 2
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 16,
+   "pregunta": "mostrame los recibos de juan rosarino",
+   "ok": true,
+   "fallas": [],
+   "seg": 4.7,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 157,
+    "tokens_salida": 433,
+    "llamadas": 1
+   },
+   "respuesta": "Encontré 2 afiliados que coinciden con «juan rosarino». Elegí a cuál te referís:",
+   "filtros": null,
+   "candidatos": 2
+  },
+  {
+   "n": 17,
+   "pregunta": "los tramites de juan rosarino que trabaja en textil sur",
+   "ok": true,
+   "fallas": [],
+   "seg": 7.5,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1131,
+    "tokens_salida": 541,
+    "llamadas": 2
+   },
+   "respuesta": "Encontré a Juan Rosarino en Textil Sur y en el período del 06/08 al 05/09 no tiene trámites registrados: el total da 0, sin ninguno pendiente de resolver.",
+   "filtros": {
+    "desde": "2026-08-06",
+    "hasta": "2026-09-05",
+    "seccionales": [],
+    "empresas": [
+     2
+    ],
+    "formato": "",
+    "resultado": "",
+    "estado_tramite": "",
+    "tipo_notif": "",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "tramites",
+    "afiliado": 4
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 18,
+   "pregunta": "que recibos mando el 20-22222222-7",
+   "ok": true,
+   "fallas": [],
+   "seg": 7.2,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1110,
+    "tokens_salida": 501,
+    "llamadas": 2
+   },
+   "respuesta": "En el último mes (06/08 al 05/09) esa persona no envió ningún recibo al sindicato: hay 0 registrados en el panel para ese período.",
+   "filtros": {
+    "desde": "2026-08-06",
+    "hasta": "2026-09-05",
+    "seccionales": [],
+    "empresas": [],
+    "formato": "",
+    "resultado": "",
+    "estado_tramite": "",
+    "tipo_notif": "",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "recibos",
+    "afiliado": 2
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 19,
+   "pregunta": "notificaciones de galmarini",
+   "ok": true,
+   "fallas": [],
+   "seg": 7.6,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 824,
+    "tokens_salida": 536,
+    "llamadas": 2
+   },
+   "respuesta": "No encontré a ningún afiliado llamado \"Galmarini\" en el padrón, así que no pude filtrar nada. ¿Podés confirmarme bien el nombre o pasarme el CUIL para buscarlo de nuevo?",
+   "filtros": null,
+   "candidatos": 0
+  },
+  {
+   "n": 20,
+   "pregunta": "y sus tramites?",
+   "ok": true,
+   "fallas": [],
+   "seg": 7.1,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1170,
+    "tokens_salida": 470,
+    "llamadas": 2
+   },
+   "respuesta": "En este período Ana no tiene trámites registrados: el total da 0.",
+   "filtros": {
+    "desde": "2026-08-06",
+    "hasta": "2026-09-05",
+    "seccionales": [],
+    "empresas": [],
+    "formato": "",
+    "resultado": "",
+    "estado_tramite": "",
+    "tipo_notif": "",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "tramites",
+    "afiliado": 2
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 21,
+   "pregunta": "quienes no leyeron el comunicado de la asamblea?",
+   "ok": true,
+   "fallas": [],
+   "seg": 2.4,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 162,
+    "tokens_salida": 86,
+    "llamadas": 1
+   },
+   "respuesta": "No puedo listar personas puntuales, el panel no muestra nombres ni quiénes abrieron o no una notificación específica; solo puedo darte la cifra total de \"sin leer\" para un filtro dado, si te sirve avisame y lo consulto.",
+   "filtros": null,
+   "candidatos": 0
+  },
+  {
+   "n": 22,
+   "pregunta": "cual es la empresa con mas diferencias?",
+   "ok": true,
+   "fallas": [],
+   "seg": 3.3,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 157,
+    "tokens_salida": 94,
+    "llamadas": 1
+   },
+   "respuesta": "No puedo armar ese ranking: el panel no ofrece un listado comparativo de empresas, solo puedo filtrar por una empresa a la vez y ver sus resultados. Si querés, te consulto los datos de Metalsur y Textil Sur por separado para comparar.",
+   "filtros": null,
+   "candidatos": 0
+  },
+  {
+   "n": 23,
+   "pregunta": "avisos automaticos de tramites de esta semana",
+   "ok": true,
+   "fallas": [],
+   "seg": 5.1,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1214,
+    "tokens_salida": 480,
+    "llamadas": 2
+   },
+   "respuesta": "Esta semana se mandó 1 aviso automático de trámites, y sigue sin leer (0% de lectura).",
+   "filtros": {
+    "desde": "2026-08-31",
+    "hasta": "2026-09-05",
+    "seccionales": [],
+    "empresas": [],
+    "formato": "",
+    "resultado": "",
+    "estado_tramite": "",
+    "tipo_notif": "sistema",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "notificaciones",
+    "afiliado": null
+   },
+   "candidatos": 0
+  },
+  {
+   "n": 24,
+   "pregunta": "recibos de mañana",
+   "ok": true,
+   "fallas": [],
+   "seg": 2.7,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 149,
+    "tokens_salida": 51,
+    "llamadas": 1
+   },
+   "respuesta": "No puedo mostrarte recibos de una fecha futura: el panel solo puede filtrar hasta el día de hoy, 2026-09-05.",
+   "filtros": null,
+   "candidatos": 0
+  },
+  {
+   "n": 25,
+   "pregunta": "todo lo de rosario",
+   "ok": true,
+   "fallas": [],
+   "seg": 9.9,
+   "uso": {
+    "modelo": "claude-sonnet-5",
+    "tokens_entrada": 1233,
+    "tokens_salida": 737,
+    "llamadas": 2
+   },
+   "respuesta": "Listo, para la seccional Rosario en el período del 06/08 al 05/09 no hay recibos verificados ni enviados al sindicato (0 en total, ni OK ni con diferencias). Si querés te muestro trámites o notificaciones de esa misma seccional, ahí sí hay algo de movimiento (3 notificaciones enviadas, con 33% de lectura).",
+   "filtros": {
+    "desde": "2026-08-06",
+    "hasta": "2026-09-05",
+    "seccionales": [
+     1
+    ],
+    "empresas": [],
+    "formato": "",
+    "resultado": "",
+    "estado_tramite": "",
+    "tipo_notif": "",
+    "sal_min": null,
+    "sal_max": null,
+    "tema": "",
+    "tab": "recibos",
+    "afiliado": null
+   },
+   "candidatos": 0
+  }
+ ]
+}

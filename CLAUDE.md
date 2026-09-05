@@ -73,6 +73,10 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   Trámites (fija + consistencia; ver sección propia).
 - push.py — notificaciones Web Push a la PWA del trabajador (novedades de
   trámites; apagado sin claves VAPID).
+- asistente.py — Asistente del Panel Sindical: pregunta en lenguaje
+  natural → filtros del panel + resumen (ficha: `docs/ASISTENTE_PANEL.md`).
+  `probar_asistente.py` + `medicion_asistente/` = set de aceptación del
+  prompt contra la API real (gasta créditos; a mano, nunca en CI).
 - cargar_demo.py — carga 2 sindicatos de demo desde cero (sin AEFIP).
 - cargar_marca_plataforma.py — siembra el logo y los colores de Colm3na
   (viven en la base, no en el código: sin esto un entorno nuevo arranca con
@@ -303,11 +307,15 @@ de Seccional" (decisiones ya cerradas).
    (repo) y 1 (Render) HECHAS** el 2026-09-03 (ver punto 19 de "Estado
    actual"). Quedan las etapas 2 a 4: organización de GitHub + CI, runbook
    y accesos, traspaso de la operación diaria a dos devs.
-6. **Asistente del Panel Sindical** (en construcción desde 2026-09-05, rama
-   `feature/asistente-panel`): chat en lenguaje natural que traduce la
-   pregunta del admin a los filtros que el panel ya tiene, los aplica y
-   resume con los números reales. NO es RAG ni el bot del convenio. Ficha
-   rectora con contrato, decisiones y bloques: [`docs/ASISTENTE_PANEL.md`](docs/ASISTENTE_PANEL.md).
+6. **Asistente del Panel Sindical** (construido 2026-09-05 en la rama
+   `feature/asistente-panel`, 7 bloques, **pendiente de mergear a `main`**):
+   chat en lenguaje natural que traduce la pregunta del admin a los filtros
+   que el panel ya tiene, los aplica y resume con los números reales, más
+   el filtro por afiliado del panel y el dictado por voz. NO es RAG ni el
+   bot del convenio. Ficha rectora con contrato, decisiones, privacidad y
+   medición: [`docs/ASISTENTE_PANEL.md`](docs/ASISTENTE_PANEL.md). Antes de
+   mergear: correr la migración `b7c3d9e1f204` contra Postgres (Docker) y
+   subir versión.
 
 ## Validaciones en formularios de Trámites
 Capa de validaciones acordada 2026-09-01, cuatro fuentes: `fija` (valor

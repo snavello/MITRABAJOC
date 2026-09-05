@@ -31,6 +31,9 @@ import db
 
 MODELO = "claude-sonnet-5"
 MAX_TOKENS = 1024
+# Cómo se llama al modelo. El set de aceptación (probar_asistente.py) lo
+# cambia para comparar esfuerzo bajo contra thinking desactivado.
+OPCIONES_MODELO = {"output_config": {"effort": "low"}}
 MAX_PREGUNTA = 500        # caracteres
 MAX_HISTORIAL = 4         # intercambios previos que viajan en cada pedido
 MAX_VUELTAS = 3           # llamadas al modelo por pregunta (herramienta + texto)
@@ -195,7 +198,7 @@ REGLAS DE LOS FILTROS
 - sal_min / sal_max: sueldo bruto en pesos enteros, o null si no se filtra.
 - tab: qué muestra el explorador: {pestanas}. Elegí la pestaña del tema de la pregunta.
 - tema: solo para la pestaña consultas; si no, null.
-- persona: nombre o CUIL del afiliado por el que pregunta ("las notificaciones de Pérez", "el 20-12345678-9"), tal cual lo escribió el admin, sin corregirlo ni completarlo; null si no pregunta por una persona nueva. Si además dice dónde trabaja ("que trabaja en el banco Galicia"), poné esa empresa en empresas: sirve para distinguir homónimos. El servidor busca en el padrón y te dice si la encontró; si hay varias coincidencias, el admin elige en pantalla.
+- persona: nombre o CUIL del afiliado por el que pregunta ("las notificaciones de Pérez", "qué recibos mandó el 20-12345678-9"), tal cual lo escribió el admin, sin corregirlo ni completarlo; null si no pregunta por una persona nueva. Un CUIL (11 dígitos, con o sin guiones) va en persona igual que un nombre: el servidor lo busca en el padrón. No hace falta "identificar" a la persona antes ni pedirle nada al admin: llamá la herramienta con persona y el servidor resuelve. Si además dice dónde trabaja ("que trabaja en el banco Galicia"), poné esa empresa en empresas: sirve para distinguir homónimos. Si hay varias coincidencias, el admin elige en pantalla.
 - afiliado: id del afiliado ya elegido en el panel (lo ves en el estado actual). Mantenelo si la pregunta sigue sobre la misma persona ("y sus trámites?"); null si pide otra persona (con persona) o si pide sacar ese filtro. Nunca inventes un id.
 
 QUÉ MIDE CADA PESTAÑA
@@ -409,10 +412,10 @@ def _llamar(cli, sistema: str, mensajes: list):
             model=MODELO, max_tokens=MAX_TOKENS,
             system=[{"type": "text", "text": sistema, "cache_control": {"type": "ephemeral"}}],
             tools=[HERRAMIENTA],
-            output_config={"effort": "low"},
             # Copia: la lista sigue creciendo en el bucle y cada pedido tiene
             # que quedar tal cual se mandó (los tests lo inspeccionan).
             messages=list(mensajes),
+            **OPCIONES_MODELO,
         )
     except Exception as e:  # red, cuota, 4xx/5xx: para el admin es lo mismo
         raise ErrorModelo(f"{type(e).__name__}: {e}") from e

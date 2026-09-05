@@ -242,16 +242,40 @@ frases de prueba con preguntas reales.
    el micrófono. En el navegador embebido se verificó que el botón aparece
    y cambia de estado; el dictado real hay que probarlo en Chrome con
    micrófono (pendiente de Sd).
-7. Set de frases con la API real, ajustes de prompt, versión,
-   `HISTORIAL.md`, promover a demo.
+7. Set de frases con la API real. **HECHO 2026-09-05**:
+   `medicion_asistente/frases.json` (25 frases, con tipeo descuidado,
+   sinónimos del gremio, períodos relativos, quitar/mantener filtros,
+   personas, homónimos, CUIL, fuera de alcance) + `probar_asistente.py`
+   (corre sobre el sindicato sintético de `test_asistente.py`, en
+   paralelo, y compara con lo esperado; `--sin-thinking`, `--solo`,
+   `--hilos`). Primera corrida 24/25: el modelo se negaba a buscar por
+   CUIL ("primero necesito identificar a esa persona"); se aclaró en el
+   prompt que un CUIL va en `persona` como un nombre. Después, 25/25 en
+   las dos configuraciones. Registro de cada corrida en
+   `medicion_asistente/corrida_*.json` (la última va a
+   `ultima_corrida.json`, ignorado por git).
+
+   | Configuración | Aciertos | Mediana | Máximo | Costo por pregunta |
+   |---|---|---|---|---|
+   | Esfuerzo bajo, thinking adaptativo (la real) | 25/25 | 6,8 s | 8,8 s | US$ 0,0065 |
+   | Thinking desactivado | 25/25 | 7,0 s | 19,1 s | US$ 0,0066 |
+
+   **Decisión: queda esfuerzo bajo.** Mismos aciertos y costo, máximo más
+   parejo, y evita los modos de falla conocidos del thinking desactivado
+   (la llamada a la herramienta escrita como texto). Los 25 s de la prueba
+   de humo del Bloque 1 fueron un arranque en frío, no la latencia normal.
+   Faltan, fuera de la rama: correr la migración contra Postgres, subir
+   versión, `HISTORIAL.md`, mergear a `main` y promover a demo.
 
 Cada bloque se verifica en local (Docker + uvicorn + lote UOM) y se
 commitea por separado, preguntando antes.
 
-## 7. Costo estimado
+## 7. Costo medido
 
-Sonnet 5, catálogo cacheado: menos de US$ 0,01 por pregunta. Con 20
-preguntas por día, entre US$ 3 y 6 por mes. Voz: US$ 0.
+Sonnet 5, esfuerzo bajo: **US$ 0,0065 por pregunta** medido sobre las 25
+frases del set (46 llamadas, 24.340 tokens de entrada y 11.378 de salida
+en total). Con 20 preguntas por día, unos US$ 4 por mes por sindicato. Voz:
+US$ 0. El tope diario de 300 acota el peor caso a menos de US$ 2 por día.
 
 ## 8. Fuera de alcance (v1)
 

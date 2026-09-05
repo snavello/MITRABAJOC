@@ -14,3 +14,4 @@ test-results/
 
 # Dumps de la base de demo que hace promover_demo.py antes de promover
 backups/
+medicion_asistente/ultima_corrida.json
