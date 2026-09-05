@@ -985,13 +985,33 @@
     etiquetarAfiliado();
   }
 
+  function esMovil() { return window.matchMedia("(max-width: 640px)").matches; }
+
   function asistAbrir(abrir) {
     var a = $("asist");
     if (!a) return;
     a.classList.toggle("abierto", abrir);
+    a.classList.remove("mini");
     a.setAttribute("aria-hidden", abrir ? "false" : "true");
     $("btn-asist").setAttribute("aria-expanded", abrir ? "true" : "false");
-    if (abrir) setTimeout(function () { $("asist-caja").focus(); }, 80);
+    // En el celular no se enfoca la caja al abrir: el teclado taparía la hoja.
+    if (abrir && !esMovil()) setTimeout(function () { $("asist-caja").focus(); }, 80);
+  }
+
+  // Celular (pedido de Sd tras probar en el teléfono): el cajón es una hoja
+  // inferior y, cuando aplica filtros, se achica a una barra con la última
+  // respuesta para que se vea el panel cambiar. En escritorio no hace falta.
+  function asistMinimizar(mini) {
+    var a = $("asist");
+    if (!a || !a.classList.contains("abierto")) return;
+    if (mini && !esMovil()) return;
+    a.classList.toggle("mini", !!mini);
+    if (mini) {
+      var bots = $("asist-hilo").querySelectorAll(".burb.bot");
+      var ultima = bots.length ? bots[bots.length - 1] : null;
+      var texto = ultima && ultima.firstChild ? (ultima.firstChild.textContent || "").trim() : "";
+      $("asist-mini-texto").textContent = texto || "Tocá para abrir";
+    }
   }
 
   function asistBurbuja(clase, texto) {
@@ -1012,6 +1032,7 @@
   }
 
   function irAlExplorador() {
+    asistMinimizar(true);          // en el celular, si no, la hoja tapa lo que se quiere mostrar
     panelDe("explorador").scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -1033,7 +1054,8 @@
     btn.type = "button"; btn.textContent = "Volver";
     btn.onclick = function () {
       btn.disabled = true; btn.textContent = "Restaurado";
-      aplicarEstado(previo); refrescar();
+      aplicarEstado(previo);
+      refrescar().then(function () { asistMinimizar(true); });
     };
     fila.appendChild(chip); fila.appendChild(ver); fila.appendChild(btn);
     burbuja.appendChild(nota);
@@ -1078,6 +1100,7 @@
   function asistPreguntar() {
     var caja = $("asist-caja"), pregunta = caja.value.trim();
     if (!pregunta || asistOcupado) return;
+    vozCancelarEnvio();
     caja.value = ""; asistAjustar(caja);
     asistBurbuja("yo", pregunta);
     var pensando = asistPensando();
@@ -1130,11 +1153,18 @@
 
   function initAsistente() {
     if (!ASISTENTE_ON || !$("asist")) return;   // sin API key el cajón no existe
-    $("btn-asist").onclick = function () { asistAbrir(!$("asist").classList.contains("abierto")); };
+    $("btn-asist").onclick = function () {
+      var a = $("asist");
+      if (a.classList.contains("mini")) { asistMinimizar(false); return; }
+      asistAbrir(!a.classList.contains("abierto"));
+    };
     $("asist-cerrar").onclick = function () { asistAbrir(false); };
+    $("asist-min").onclick = function () { asistMinimizar(true); };
+    $("asist-mini-bar").onclick = function () { asistMinimizar(false); };
     $("asist-form").onsubmit = function (e) { e.preventDefault(); asistPreguntar(); };
     var caja = $("asist-caja");
-    caja.oninput = function () { asistAjustar(caja); };
+    caja.oninput = function () { vozCancelarEnvio(); asistAjustar(caja); };
+    caja.onclick = vozCancelarEnvio;      // tocar el texto dictado = quiero corregirlo
     caja.onkeydown = function (e) {
       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); asistPreguntar(); }
     };
@@ -1143,8 +1173,31 @@
 
   // Voz con la Web Speech API del navegador (costo cero; Chrome, Edge y
   // Safari; en Firefox no existe y el botón ni aparece). Lo dictado cae en
-  // la caja y el admin confirma con Enter: el dictado se equivoca con los
-  // nombres propios, mejor que lo vea antes de mandar.
+  // la caja y se envía solo tras una pausa de unos segundos, con cuenta
+  // regresiva a la vista: tocar el texto o escribir la cancela (pedido de
+  // Sd tras probar en el celular: antes había que tocar "enviar" a mano).
+  var vozTimer = null;
+  var VOZ_SEGUNDOS = 4;
+
+  function vozCancelarEnvio() {
+    if (vozTimer) { clearInterval(vozTimer); vozTimer = null; }
+    var cuenta = $("asist-cuenta");
+    if (cuenta) cuenta.hidden = true;
+  }
+
+  function vozProgramarEnvio() {
+    vozCancelarEnvio();
+    var cuenta = $("asist-cuenta"), restan = VOZ_SEGUNDOS;
+    var pintar = function () { cuenta.textContent = "Enviando en " + restan + " s… tocá el texto para corregir"; };
+    cuenta.hidden = false; pintar();
+    vozTimer = setInterval(function () {
+      restan -= 1;
+      if (restan > 0) { pintar(); return; }
+      vozCancelarEnvio();
+      asistPreguntar();
+    }, 1000);
+  }
+
   function initVoz(caja) {
     var Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
     var mic = $("asist-mic");
@@ -1159,6 +1212,7 @@
       mic.setAttribute("aria-label", "Dictar");
     }
     mic.onclick = function () {
+      vozCancelarEnvio();
       if (rec) { rec.stop(); return; }
       rec = new Rec();
       rec.lang = "es-AR"; rec.interimResults = false; rec.maxAlternatives = 1;
@@ -1166,7 +1220,8 @@
         var dicho = (e.results[0] && e.results[0][0] ? e.results[0][0].transcript : "").trim();
         if (!dicho) return;
         caja.value = (caja.value.trim() ? caja.value.trim() + " " : "") + dicho;
-        asistAjustar(caja); caja.focus();
+        asistAjustar(caja);          // sin focus(): en el celular abriría el teclado
+        vozProgramarEnvio();
       };
       rec.onerror = function (e) {
         if (e.error === "not-allowed" || e.error === "service-not-allowed") {

@@ -44,6 +44,8 @@ def periodo_esperado(clave: str) -> list:
     (N días contando hoy, o N días hacia atrás)."""
     if clave == "conservar":
         return [(fx.ESTADO_BASE["desde"], fx.ESTADO_BASE["hasta"])]
+    if clave == "hoy":
+        return [(HOY.isoformat(), HOY.isoformat())]
     if clave == "este_mes":
         return [(HOY.replace(day=1).isoformat(), HOY.isoformat())]
     if clave == "mes_pasado":
@@ -79,6 +81,8 @@ def armar_estado(cat: dict, cambios: dict) -> dict:
             estado[clave] = _ids(cat, clave, valor)
         elif clave == "afiliado":
             estado["afiliado"] = _id_afiliado(valor)
+        elif clave == "periodo":
+            estado["desde"], estado["hasta"] = periodo_esperado(valor)[0]
         else:
             estado[clave] = valor
     return estado

@@ -50,10 +50,23 @@ Rosario") y el asistente:
 - **Tope de 300 preguntas por sindicato por día**, constante en v1
   (`asistente.TOPE_DIARIO`); pasa a `ConfiguracionPlataforma` solo si hace
   falta.
-- **Voz con la Web Speech API del navegador**, costo cero. El texto
-  reconocido se muestra en la caja y el admin confirma con Enter (el
-  dictado se equivoca con nombres propios). Sin transcripción en servidor
-  en v1. Botón oculto donde no hay `SpeechRecognition` (Firefox).
+- **Voz con la Web Speech API del navegador**, costo cero. Lo dictado cae
+  en la caja y **se envía solo tras una pausa de 4 segundos**, con cuenta
+  regresiva a la vista; tocar el texto o escribir la cancela (Sd, tras
+  probar en el celular, 2026-09-05: antes había que tocar "enviar" a
+  mano). Sin transcripción en servidor en v1. Botón oculto donde no hay
+  `SpeechRecognition` (Firefox).
+- **Período cuando la pregunta no lo menciona** (Sd, 2026-09-05): si el
+  panel está en "Hoy" (su arranque), el asistente se va solo a los últimos
+  30 días y lo dice en la respuesta; nunca pregunta ni ofrece ampliar. Si
+  el panel ya tiene otro período, lo conserva. "Hoy" explícito es hoy.
+  Regla en el prompt, cubierta por tres frases del set de aceptación.
+- **En el celular el cajón es una hoja inferior** (56% de alto, el panel
+  queda a la vista arriba) que **se achica sola a una barra** con la última
+  respuesta cuando aplica filtros, y también con "Ver en el explorador",
+  "Volver" o el botón de achicar; tocar la barra la vuelve a abrir. Sd
+  probó la versión anterior en vertical y el cajón tapaba todo: no se veía
+  el panel cambiar y los botones parecían no hacer nada.
 - **La API key es la misma `ANTHROPIC_API_KEY`.** Sin clave, el botón no
   aparece y el endpoint responde 503.
 
@@ -211,10 +224,9 @@ frases de prueba con preguntas reales.
    días" → mismo Rosario, 30 días, "3 enviadas, 2 sin leer"), chip
    "Filtros aplicados", "Volver" restaura el estado anterior y la URL
    compartible acompaña cada cambio. Sin errores de consola.
-   **Observación para el Bloque 5**: el panel arranca en "Hoy", así que la
-   primera pregunta sin período suele dar 0 y el modelo ofrece ampliar.
-   Decidir si, con el panel en "Hoy" y sin período en la pregunta, el
-   prompt debe ampliar solo a 30 días o seguir respetando el panel.
+   **Observación** (resuelta en el Bloque 8): el panel arranca en "Hoy",
+   así que la primera pregunta sin período daba 0 y el modelo ofrecía
+   ampliar. Sd decidió que se vaya solo a 30 días (ver §1).
 3. Filtro por afiliado en el panel (§9): vocabulario de filtros, reglas de
    privacidad, buscador, tabla de notificaciones por persona, 5 tests.
    **HECHO 2026-09-05**, verificado en el navegador (buscar "rosar", elegir
@@ -273,8 +285,21 @@ frases de prueba con preguntas reales.
    Juan Díaz, Juan Ruiz, Juan Gómez con seccional y empresa. Un ajuste
    salió de ahí: con el filtro de resultado puesto, el "% con diferencias"
    no viaja al modelo (da 100 por construcción y lo citaba como si fuera
-   de la seccional). Faltan, fuera de la rama: subir versión, mergear a
-   `main` y promover a demo.
+   de la seccional). Mergeado a `main` y desplegado en Pruebas el
+   2026-09-05 como Admin 0.29.01.
+8. Ajustes tras la prueba de Sd en el celular, sobre Pruebas (2026-09-05,
+   Admin 0.29.02): período por defecto de 30 días cuando la pregunta no lo
+   menciona y el panel está en "Hoy" (antes preguntaba); lo dictado se
+   envía solo tras 4 segundos de pausa, con cuenta regresiva cancelable;
+   en el celular el cajón es una hoja inferior que se achica a una barra al
+   aplicar filtros, y "Ver en el explorador" y "Volver" la achican antes de
+   actuar (antes tapaba todo y parecían no hacer nada). Verificado en el
+   navegador con viewport de celular contra el Postgres local con la UOM:
+   "notificaciones sin leer de avellaneda" con el panel en Hoy → 30 días,
+   Avellaneda, Notificaciones, hoja achicada con la respuesta en la barra.
+   Set de frases ampliado a 28 (tres sobre el período por defecto); el
+   prompt también fija que "mayor a 800 mil" es 800000 y no 800001, que
+   fue la única falla de la primera corrida.
 
 Cada bloque se verifica en local (Docker + uvicorn + lote UOM) y se
 commitea por separado, preguntando antes.

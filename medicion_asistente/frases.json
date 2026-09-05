@@ -1,5 +1,5 @@
 {
-  "descripcion": "Set de aceptación del prompt del Asistente del Panel (docs/ASISTENTE_PANEL.md §5). Corre sobre el sindicato sintético de test_asistente.py: seccionales Rosario y Córdoba; empresas Metalsur SA y Textil Sur; afiliados Juan Rosarino (Rosario, Metalsur), Ana Rosarina (Rosario, Metalsur), Beto Cordobés (Córdoba) y otro Juan Rosarino (Córdoba, Textil Sur). Frases escritas como las diría un dirigente, con errores de tipeo y sin tildes a propósito. `espera` solo lista lo que se controla; el resto no se mira. `periodo`: conservar | este_mes | mes_pasado | ultimos_7 | ultimos_30 | esta_semana.",
+  "descripcion": "Set de aceptación del prompt del Asistente del Panel (docs/ASISTENTE_PANEL.md §5). Corre sobre el sindicato sintético de test_asistente.py: seccionales Rosario y Córdoba; empresas Metalsur SA y Textil Sur; afiliados Juan Rosarino (Rosario, Metalsur), Ana Rosarina (Rosario, Metalsur), Beto Cordobés (Córdoba) y otro Juan Rosarino (Córdoba, Textil Sur). Frases escritas como las diría un dirigente, con errores de tipeo y sin tildes a propósito. `espera` solo lista lo que se controla; el resto no se mira. `periodo`: conservar | hoy | este_mes | mes_pasado | ultimos_7 | ultimos_30 | esta_semana. `estado` arranca en los últimos 30 días salvo que traiga `periodo` (por ejemplo `hoy`, el arranque real del panel: sin período en la pregunta, el asistente tiene que irse solo a 30 días, decisión de Sd 2026-09-05).",
   "frases": [
     {"pregunta": "notificaciones sin leer de rosario",
      "espera": {"seccionales": ["Rosario"], "tab": "notificaciones", "periodo": "conservar"}},
@@ -54,6 +54,15 @@
     {"pregunta": "recibos de mañana",
      "espera": {"aplicar": false}},
     {"pregunta": "todo lo de rosario",
-     "espera": {"seccionales": ["Rosario"], "periodo": "conservar"}}
+     "espera": {"seccionales": ["Rosario"], "periodo": "conservar"}},
+    {"pregunta": "notificaciones sin leer de rosario",
+     "estado": {"periodo": "hoy"},
+     "espera": {"seccionales": ["Rosario"], "tab": "notificaciones", "periodo": "ultimos_30"}},
+    {"pregunta": "recibos con diferencias de hoy",
+     "estado": {"periodo": "hoy"},
+     "espera": {"resultado": "con_diferencias", "tab": "recibos", "periodo": "hoy"}},
+    {"pregunta": "tramites abiertos",
+     "estado": {"periodo": "ultimos_7"},
+     "espera": {"estado_tramite": "abierto", "tab": "tramites", "periodo": "ultimos_7"}}
   ]
 }

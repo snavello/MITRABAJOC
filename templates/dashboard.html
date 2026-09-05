@@ -268,7 +268,32 @@
   .asist-btn.mic.grabando { background: var(--error); color: #fff; border-color: var(--error); animation: asist-mic 1.2s infinite; }
   @keyframes asist-mic { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--error) 45%, transparent); } 50% { box-shadow: 0 0 0 7px transparent; } }
   .asist-ayuda { font-size: 10.5px; color: var(--gris); margin-top: 7px; text-align: center; }
-  @media (max-width: 640px) { .asist { width: 100%; } .btn-asist span { display: none; } .btn-asist { padding: 8px 10px; } }
+  .asist-ayuda[hidden] { display: none; }
+  .asist-cuenta { color: var(--destacado-osc); font-weight: 700; }
+  /* "achicar": solo en celular; la barra chica reemplaza al cajón entero */
+  .asist-min { display: none; position: absolute; top: 12px; right: 50px; width: 30px; height: 30px; border: none; border-radius: 50%;
+    background: rgba(255,255,255,.14); color: #fff; cursor: pointer; place-items: center; }
+  .asist-min svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .asist-mini-bar { display: none; align-items: center; gap: 10px; width: 100%; height: 54px; padding: 0 14px; border: none; cursor: pointer;
+    text-align: left; font: inherit; color: var(--sobre-base);
+    background: linear-gradient(135deg, var(--marca-base) 0%, color-mix(in srgb, var(--marca-base) 55%, var(--marca-primario)) 100%); }
+  .asist-mini-bar .kicker { flex: none; font-size: 10.5px; font-weight: 700; letter-spacing: .9px; text-transform: uppercase; color: var(--marca-acento); }
+  .asist-mini-bar #asist-mini-texto { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12.5px; }
+  .asist-mini-bar svg { flex: none; width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  @media (max-width: 640px) {
+    .btn-asist span { display: none; } .btn-asist { padding: 8px 10px; }
+    /* Hoja inferior: ocupa la mitad de abajo, el panel sigue a la vista arriba */
+    .asist { top: auto; bottom: 0; width: 100%; height: 56vh; border-left: none; border-top: 1px solid var(--linea);
+      border-radius: 16px 16px 0 0; box-shadow: 0 -12px 40px rgba(8,12,20,.18); transform: translateY(105%); }
+    .asist.abierto { transform: none; }
+    .asist-cab { padding: 10px 92px 10px 14px; border-radius: 16px 16px 0 0; }
+    .asist-cab h2 { font-size: 19px; margin: 1px 0 0; }
+    .asist-cab p { display: none; }
+    .asist-min { display: grid; }
+    .asist.mini { height: 54px; }
+    .asist.mini .asist-cab, .asist.mini .asist-hilo, .asist.mini .asist-pie { display: none; }
+    .asist.mini .asist-mini-bar { display: flex; }
+  }
 
   .overlay-det { position: fixed; inset: 0; background: rgba(8,12,20,.55); z-index: 200;
     display: none; align-items: center; justify-content: center; padding: 18px; }
@@ -524,8 +549,16 @@
     <div class="kicker">Asistente del Panel</div>
     <h2>Preguntá como hablás</h2>
     <p>Traduzco tu pregunta a los filtros del panel y te resumo los números.</p>
+    <button type="button" class="asist-min" id="asist-min" aria-label="Achicar para ver el panel" title="Achicar">
+      <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
     <button type="button" class="asist-cerrar" id="asist-cerrar" aria-label="Cerrar">✕</button>
   </div>
+  <button type="button" class="asist-mini-bar" id="asist-mini-bar" aria-label="Abrir el asistente">
+    <span class="kicker">Asistente</span>
+    <span id="asist-mini-texto">Tocá para abrir</span>
+    <svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>
+  </button>
   <div class="asist-hilo" id="asist-hilo">
     <div class="burb bot" id="asist-hola">Hola. Decime qué querés ver y aplico los filtros del panel. Por ejemplo: «recibos con diferencias del mes pasado».</div>
   </div>
@@ -539,7 +572,8 @@
         <svg viewBox="0 0 24 24"><path d="M4 12h15"/><path d="M13 6l6 6-6 6"/></svg>
       </button>
     </form>
-    <div class="asist-ayuda">Enter envía · Shift+Enter agrega un renglón<span id="asist-ayuda-voz" hidden> · Dictá con el micrófono y confirmá con Enter</span></div>
+    <div class="asist-ayuda" id="asist-ayuda">Enter envía · Shift+Enter agrega un renglón<span id="asist-ayuda-voz" hidden> · Lo dictado se envía solo tras una pausa</span></div>
+    <div class="asist-ayuda asist-cuenta" id="asist-cuenta" hidden></div>
   </div>
 </aside>
 {% endif %}
