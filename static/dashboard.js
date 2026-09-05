@@ -1031,6 +1031,22 @@
     return b;
   }
 
+  // Ficha del afiliado elegido, armada con lo que ya devuelve el servidor
+  // para el chip: al modelo no le llega nada del padrón, pero el admin ve
+  // acá nombre, CUIL, seccional y empresa (pedido de Sd 2026-09-05: "¿dónde
+  // trabaja María Romero y en qué seccional está?" quedaba sin respuesta).
+  function asistFicha(burbuja, af) {
+    if (!af || !af.nombre) return;
+    var ficha = document.createElement("div");
+    ficha.className = "ficha-af";
+    var nombre = document.createElement("b");
+    nombre.textContent = af.nombre;
+    ficha.appendChild(nombre);
+    ficha.appendChild(document.createTextNode(" · " + [af.cuil, af.seccional ? "Seccional " + af.seccional : "", af.empresa]
+      .filter(Boolean).join(" · ")));
+    burbuja.appendChild(ficha);
+  }
+
   function irAlExplorador() {
     asistMinimizar(true);          // en el celular, si no, la hoja tapa lo que se quiere mostrar
     panelDe("explorador").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1083,6 +1099,7 @@
         aplicarEstado(filtros);
         var b2 = asistBurbuja("bot", "Listo, filtré por " + c.nombre + ".");
         ASIST_HIST.push({ pregunta: pregunta, respuesta: "Filtré por el afiliado elegido (id " + c.id + ").", filtros: filtros });
+        asistFicha(b2, c);
         asistChipAplicado(b2, filtros.tab, previo);
         refrescar().then(irAlExplorador);
       };
@@ -1128,7 +1145,7 @@
           return;
         }
         if (res.d.aplicar && res.d.filtros) {
-          if (res.d.afiliado) AFILIADOS[res.d.afiliado.id] = res.d.afiliado;
+          if (res.d.afiliado) { AFILIADOS[res.d.afiliado.id] = res.d.afiliado; asistFicha(b, res.d.afiliado); }
           aplicarEstado(res.d.filtros);
           asistChipAplicado(b, res.d.filtros.tab, previo);
           refrescar().then(irAlExplorador);

@@ -70,6 +70,8 @@
     {"pregunta": "recibos con diferencias de metalsur",
      "historial": [{"pregunta": "notificaciones sin leer de rosario", "respuesta": "En Rosario se enviaron 3 notificaciones y quedaron 2 sin leer."},
                    {"pregunta": "limpia los filtros", "respuesta": "Listo, reinicié los filtros: últimos 30 días, sin seccional, empresa ni afiliado."}],
-     "espera": {"seccionales": [], "empresas": ["Metalsur SA"], "resultado": "con_diferencias", "tab": "recibos"}}
+     "espera": {"seccionales": [], "empresas": ["Metalsur SA"], "resultado": "con_diferencias", "tab": "recibos"}},
+    {"pregunta": "donde trabaja ana rosarina y en que seccional esta?",
+     "espera": {"afiliado": "Ana Rosarina"}}
   ]
 }

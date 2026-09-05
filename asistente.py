@@ -225,7 +225,7 @@ REGLAS DE LOS FILTROS
 - sal_min / sal_max: sueldo bruto en pesos enteros, o null si no se filtra. Usá el número redondo que dijo el admin: "mayor a 800 mil" es sal_min 800000 y "menos de 2 millones" es sal_max 2000000, sin sumar ni restar uno.
 - tab: qué muestra el explorador: {pestanas}. Elegí la pestaña del tema de la pregunta.
 - tema: solo para la pestaña consultas; si no, null.
-- persona: nombre o CUIL del afiliado por el que pregunta ("las notificaciones de Pérez", "qué recibos mandó el 20-12345678-9"), tal cual lo escribió el admin, sin corregirlo ni completarlo; null si no pregunta por una persona nueva. Un CUIL (11 dígitos, con o sin guiones) va en persona igual que un nombre: el servidor lo busca en el padrón. No hace falta "identificar" a la persona antes ni pedirle nada al admin: llamá la herramienta con persona y el servidor resuelve. Si además dice dónde trabaja ("que trabaja en el banco Galicia"), poné esa empresa en empresas: sirve para distinguir homónimos. Si hay varias coincidencias, el admin elige en pantalla.
+- persona: nombre o CUIL del afiliado por el que pregunta ("las notificaciones de Pérez", "qué recibos mandó el 20-12345678-9"), tal cual lo escribió el admin, sin corregirlo ni completarlo; null si no pregunta por una persona nueva. Un CUIL (11 dígitos, con o sin guiones) va en persona igual que un nombre: el servidor lo busca en el padrón. No hace falta "identificar" a la persona antes ni pedirle nada al admin: llamá la herramienta con persona y el servidor resuelve. "¿Dónde trabaja Romero?", "¿en qué seccional está?" también son preguntas por persona: llamá la herramienta con persona; el panel muestra su ficha (seccional y empresa) junto a tu respuesta. Si además dice dónde trabaja ("que trabaja en el banco Galicia"), poné esa empresa en empresas: sirve para distinguir homónimos. Si hay varias coincidencias, el admin elige en pantalla.
 - afiliado: id del afiliado ya elegido en el panel (lo ves en el estado actual). Mantenelo si la pregunta sigue sobre la misma persona ("y sus trámites?"); null si pide otra persona (con persona) o si pide sacar ese filtro. Nunca inventes un id.
 
 QUÉ MIDE CADA PESTAÑA
@@ -396,8 +396,11 @@ def _agregados(sid: int, crudo: dict, f: dict, tab: str, cat: dict) -> dict:
             "estado_tramite": crudo["estado_tramite"] or "todos",
             "tipo_notif": crudo["tipo_notif"] or "todas",
             "bruto_min": crudo["sal_min"], "bruto_max": crudo["sal_max"],
-            "afiliado": (f"uno elegido (id {crudo['afiliado']}); de sus recibos se cuentan "
-                         "solo los que envió al sindicato" if crudo.get("afiliado") else "ninguno"),
+            "afiliado": (f"uno elegido (id {crudo['afiliado']}); de sus recibos se cuentan solo los "
+                         "que envió al sindicato. El panel muestra su nombre, CUIL, seccional y empresa "
+                         "en una ficha junto a tu respuesta: si preguntan dónde trabaja o en qué "
+                         "seccional está, remití a la ficha ('abajo tenés su seccional y su empresa'); "
+                         "nunca digas que no podés saberlo" if crudo.get("afiliado") else "ninguno"),
             "pestaña": tab,
         },
         "kpis_del_periodo": dashboard.kpis(sid, f)["actual"],

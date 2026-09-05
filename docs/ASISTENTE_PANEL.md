@@ -382,6 +382,16 @@ el panel gana un filtro por persona y el Asistente lo usa. Reglas:
   cuits=...)`: 0 → "no encontré"; 1 → aplica; varios → el cajón muestra
   los candidatos con seccional y empresa y el admin elige con un clic, sin
   pasar por el modelo (Bloque 4).
+- **Ficha determinista del afiliado** (Sd, 2026-09-05: "¿dónde trabaja
+  María Romero y en qué seccional está?" quedaba sin respuesta porque el
+  modelo no ve el padrón). Toda respuesta que aplica un afiliado muestra
+  debajo, armada por el JS con lo que el servidor ya devuelve para el chip,
+  una ficha con nombre, CUIL, seccional y empresa. Al modelo se le avisa en
+  el `tool_result` que la ficha está a la vista, para que remita a ella y
+  no diga "no puedo saberlo". Cualquier otro dato del padrón que se quiera
+  contestar va por el mismo camino: a la ficha, no al modelo. La opción de
+  contarle al modelo seccional y empresa de la persona (para que razone
+  con eso) quedó anotada y descartada por ahora: es un dato más que viaja.
 - **Bug encontrado de paso (corregido)**: `dashboard.js` se referenciaba
   con `?v={{ version }}` y no con `sello_static`, así que el navegador
   servía el JS viejo hasta una hora después de cada cambio, justo la regla

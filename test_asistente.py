@@ -388,6 +388,8 @@ def test_persona_unica_aplica_el_afiliado_sin_mandar_el_padron():
     datos = json.loads(_tool_results(falso.llamadas[1])[0]["content"])
     assert datos["notificaciones"]["enviadas"] == 1 and datos["notificaciones"]["sin_leer"] == 1
     assert datos["filtros_aplicados"]["afiliado"].startswith("uno elegido")
+    assert "ficha" in datos["filtros_aplicados"]["afiliado"]     # el modelo sabe que el panel la muestra
+    assert d["afiliado"]["seccional"] == "Rosario" and d["afiliado"]["empresa"] == "Metalsur SA"
     # Al modelo no le llega ni el nombre ni el CUIL de la persona resuelta.
     al_modelo = _tool_results(falso.llamadas[1])[0]["content"] + falso.llamadas[0]["system"][0]["text"]
     assert "Rosarina" not in al_modelo and CUIL_R2 not in al_modelo
