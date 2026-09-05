@@ -299,13 +299,15 @@ de Seccional" (decisiones ya cerradas).
    visual de Trámites" en HISTORIAL.md. Revisar si en algún momento el
    lienzo libre se justifica.
 5. Entornos separados (Pruebas / Demo / Desarrollo en la nube / Prod):
-   plan por etapas acordado 2026-09-03 en [`PLAN_ENTORNOS.md`](PLAN_ENTORNOS.md).
-   **Etapa 0 (repo) HECHA** el mismo día: `ENTORNO` + distintivo,
-   `promover_demo.py`, seed de AEFIP apagado, guía de deploy nueva. Sigue
-   la Etapa 1 (Render)
-   — el servicio actual pasa a seguir la rama `demo` y se crea uno de
-   pruebas sobre `main` (~USD 14/mes), en 4 semanas hasta el traspaso de
-   la operación diaria a dos devs. Etapa 0 (repo) y 1 (Render) primero.
+   plan por etapas en [`PLAN_ENTORNOS.md`](PLAN_ENTORNOS.md). **Etapas 0
+   (repo) y 1 (Render) HECHAS** el 2026-09-03 (ver punto 19 de "Estado
+   actual"). Quedan las etapas 2 a 4: organización de GitHub + CI, runbook
+   y accesos, traspaso de la operación diaria a dos devs.
+6. **Asistente del Panel Sindical** (en construcción desde 2026-09-05, rama
+   `feature/asistente-panel`): chat en lenguaje natural que traduce la
+   pregunta del admin a los filtros que el panel ya tiene, los aplica y
+   resume con los números reales. NO es RAG ni el bot del convenio. Ficha
+   rectora con contrato, decisiones y bloques: [`docs/ASISTENTE_PANEL.md`](docs/ASISTENTE_PANEL.md).
 
 ## Validaciones en formularios de Trámites
 Capa de validaciones acordada 2026-09-01, cuatro fuentes: `fija` (valor

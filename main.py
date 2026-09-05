@@ -31,7 +31,7 @@ from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Cookie, Response
+from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Cookie, Response, Body
 from fastapi.responses import HTMLResponse, RedirectResponse, Response as BinResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -62,6 +62,7 @@ from version import VERSION_TRABAJADOR, VERSION_ADMIN, VERSION_PLATAFORMA, FECHA
 import entorno
 from modulos import MODULOS, MODULOS_INICIALES
 import dashboard
+import asistente
 import rag
 
 import mimetypes
@@ -3314,6 +3315,35 @@ def _filtros_dashboard(request: Request) -> dict:
         return dashboard.parsear_filtros(request.query_params)
     except ValueError as e:
         raise HTTPException(422, str(e))
+
+
+@app.post("/admin/dashboard/asistente")
+def dashboard_asistente(request: Request, cuerpo: dict = Body(default={})):
+    """Asistente del Panel Sindical (docs/ASISTENTE_PANEL.md): una pregunta
+    en lenguaje natural -> los filtros del panel + un resumen con los
+    números reales. Mismo gate que el explorador (_exigir_dashboard_detalle):
+    es una función PRO del Panel, no un módulo aparte. El modelo no ve filas
+    ni genera SQL -- ver asistente.py."""
+    sid = _exigir_dashboard_detalle(request)
+    if not asistente.disponible():
+        raise HTTPException(503, "El asistente no está configurado en este entorno.")
+    if not isinstance(cuerpo, dict):
+        cuerpo = {}
+    pregunta = str(cuerpo.get("pregunta") or "").strip()
+    if not pregunta:
+        raise HTTPException(422, "Escribí una pregunta.")
+    if len(pregunta) > asistente.MAX_PREGUNTA:
+        raise HTTPException(422, f"La pregunta es demasiado larga (máximo "
+                                 f"{asistente.MAX_PREGUNTA} caracteres).")
+    filtros = cuerpo.get("filtros") if isinstance(cuerpo.get("filtros"), dict) else {}
+    historial = cuerpo.get("historial") if isinstance(cuerpo.get("historial"), list) else []
+    try:
+        salida = asistente.responder(sid, pregunta, filtros, historial)
+    except asistente.ErrorModelo as e:
+        print(f"[asistente] sindicato {sid}: {e}")
+        raise ErrorApp("E-ASISTENTE-01")
+    return {"respuesta": salida["respuesta"], "filtros": salida["filtros"],
+            "aplicar": salida["aplicar"]}
 
 
 @app.get("/admin/dashboard/kpis")

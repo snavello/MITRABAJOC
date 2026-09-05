@@ -49,6 +49,10 @@ MENSAJES = {
     "E-SESION-01": (400, "No pudimos determinar tu sindicato. Volvé a ingresar."),
     "E-SESION-02": (400, "No pudimos determinar tu identidad. Volvé a ingresar."),
 
+    # --- Asistente del Panel Sindical (docs/ASISTENTE_PANEL.md) -----------
+    "E-ASISTENTE-01": (502, "El asistente no pudo responder en este momento. Los filtros "
+                            "del panel siguen funcionando a mano; probá de nuevo en un rato."),
+
     # --- Red de seguridad --------------------------------------------------
     "E-INTERNO-00": (500, "Se produjo un error inesperado y no pudimos completar la "
                           "operación. Probá de nuevo en un momento; si vuelve a "

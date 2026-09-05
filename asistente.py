@@ -1,0 +1,399 @@
+"""Asistente del Panel Sindical (docs/ASISTENTE_PANEL.md).
+
+Traduce una pregunta en lenguaje natural del admin de sindicato ("quiero las
+notificaciones no leídas de la sucursal Rosario") a los filtros que el Panel
+Sindical YA tiene, los valida con el mismo `dashboard.parsear_filtros` que
+usa el frontend, calcula los agregados reales y le pide al modelo un resumen
+de una o dos frases.
+
+Reglas de este módulo:
+- El modelo NUNCA genera SQL ni ve filas. Recibe el catálogo del sindicato
+  (ids y nombres de seccionales y empresas), la pregunta tal cual la escribió
+  el admin y totales agregados. Ni CUIL ni nombres de trabajadores.
+- La única fuente de verdad de lo filtrable es `dashboard.parsear_filtros`:
+  acá no se inventan filtros nuevos. Si el panel no filtra algo, el prompt
+  le dice al modelo que lo diga en vez de inventar.
+- La herramienta devuelve SIEMPRE el estado completo de filtros, no un
+  delta: "sacá el filtro de empresa" funciona sin lógica de merge.
+- Los ids que no sean del sindicato se descartan ANTES de consultar
+  (además del WHERE por sindicato_id que ya tiene cada agregado).
+- El cliente de Anthropic se inyecta (`usar_cliente`) para probar todo el
+  circuito sin gastar créditos: ver test_asistente.py.
+"""
+import json
+import os
+from datetime import date
+
+from starlette.datastructures import QueryParams
+
+import dashboard
+import db
+
+MODELO = "claude-sonnet-5"
+MAX_TOKENS = 1024
+MAX_PREGUNTA = 500        # caracteres
+MAX_HISTORIAL = 4         # intercambios previos que viajan en cada pedido
+MAX_VUELTAS = 3           # llamadas al modelo por pregunta (herramienta + texto)
+TOPE_DIARIO = 300         # preguntas por sindicato por día (se aplica en el Bloque 3)
+PESTANAS = ["recibos", "tramites", "notificaciones", "consultas"]
+
+DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+
+
+class ErrorModelo(Exception):
+    """La API del modelo no respondió o respondió algo inusable. La ruta lo
+    traduce a E-ASISTENTE-01; el detalle va al log del servidor."""
+
+
+# ---------- Cliente ----------
+
+_cliente = None
+
+
+def usar_cliente(cliente) -> None:
+    """Inyecta el cliente de Anthropic: el real (main.py al arrancar no hace
+    falta, se crea solo con la API key) o uno falso en los tests."""
+    global _cliente
+    _cliente = cliente
+
+
+def cliente():
+    global _cliente
+    if _cliente is None and os.getenv("ANTHROPIC_API_KEY"):
+        from anthropic import Anthropic
+        _cliente = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    return _cliente
+
+
+def disponible() -> bool:
+    """Sin API key (ni cliente inyectado) el asistente no existe: el botón no
+    se muestra y la ruta responde 503."""
+    return cliente() is not None
+
+
+# ---------- Catálogo y herramienta ----------
+
+def catalogo(sid: int) -> dict:
+    """Lo único del sindicato que ve el modelo: nombres e ids."""
+    return {
+        "sindicato": db.marca_sindicato(sid).get("nombre", ""),
+        "seccionales": [{"id": s["id"], "nombre": s["nombre"]}
+                        for s in db.seccionales_del_sindicato(sid)],
+        "empresas": [{"id": e["id"], "nombre": e["nombre"], "cuit": e["cuit"]}
+                     for e in dashboard.catalogo_empresas(sid)],
+        "consultas": bool(db.config_dashboard()["consultas_bot_habilitado"]),
+    }
+
+
+def _enum(valores: list, descripcion: str) -> dict:
+    return {"type": "string", "enum": valores, "description": descripcion}
+
+
+_ENTERO_O_NULO = {"anyOf": [{"type": "integer"}, {"type": "null"}]}
+
+HERRAMIENTA = {
+    "name": "fijar_filtros",
+    "description": (
+        "Fija el estado COMPLETO de filtros del Panel Sindical y la pestaña del "
+        "explorador. Reemplaza todo el estado anterior: incluí también los "
+        "filtros que ya estaban y hay que conservar."),
+    "strict": True,
+    "input_schema": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["desde", "hasta", "seccionales", "empresas", "formato",
+                     "resultado", "estado_tramite", "tipo_notif", "sal_min",
+                     "sal_max", "tema", "tab", "motivo"],
+        "properties": {
+            "desde": {"type": "string", "description": "Inicio del período, AAAA-MM-DD."},
+            "hasta": {"type": "string", "description": "Fin del período, AAAA-MM-DD, nunca posterior a hoy."},
+            "seccionales": {"type": "array", "items": {"type": "integer"},
+                            "description": "Ids de seccionales del catálogo. Lista vacía = todas."},
+            "empresas": {"type": "array", "items": {"type": "integer"},
+                         "description": "Ids de empresas del catálogo. Lista vacía = todas."},
+            "formato": _enum(["", "viejo", "nuevo"],
+                             "Formato del recibo: '' todos, 'viejo' clásico, 'nuevo' Anexo III."),
+            "resultado": _enum(["", "ok", "con_diferencias"],
+                               "Resultado de la verificación: '' todos, 'ok' o 'con_diferencias'."),
+            "estado_tramite": _enum(["", "abierto", "en_proceso", "resuelto"],
+                                    "Estado del trámite: '' todos."),
+            "tipo_notif": _enum(["", "manual", "sistema"],
+                                "Tipo de notificación: '' todas, 'manual' comunicaciones del "
+                                "sindicato, 'sistema' avisos automáticos de trámites."),
+            "sal_min": {**_ENTERO_O_NULO, "description": "Sueldo bruto mínimo en pesos, o null."},
+            "sal_max": {**_ENTERO_O_NULO, "description": "Sueldo bruto máximo en pesos, o null."},
+            "tema": {"type": "string", "description": "Tema de consultas al bot del convenio; '' si no aplica."},
+            "tab": _enum(PESTANAS, "Pestaña que muestra el explorador: la del tema de la pregunta."),
+            "motivo": {"type": "string", "description": "Una frase: qué pidió el admin y cómo lo tradujiste."},
+        },
+    },
+}
+
+
+# ---------- Prompt ----------
+
+def prompt_sistema(cat: dict, hoy: date) -> str:
+    """Estable por sindicato (va con cache_control): rol, reglas, glosario y
+    catálogo. Lo volátil (estado actual del panel, pregunta) va en el mensaje
+    del usuario."""
+    seccionales = "\n".join(f"- {s['id']}: {s['nombre']}" for s in cat["seccionales"]) or "- (sin seccionales cargadas)"
+    empresas = "\n".join(f"- {e['id']}: {e['nombre']} (CUIT {e['cuit']})" for e in cat["empresas"]) or "- (sin empresas cargadas)"
+    pestanas = '"recibos", "tramites", "notificaciones"' + (' o "consultas"' if cat["consultas"] else "")
+    consultas = ("- consultas: preguntas que los trabajadores le hicieron al bot del convenio, "
+                 "contadas por tema.\n" if cat["consultas"] else "")
+    return f"""Sos el Asistente del Panel Sindical de {cat['sindicato']}. Ayudás al administrador del sindicato a mirar su tablero: traducís lo que pide a los filtros que el panel ya tiene y resumís los números que te devuelve.
+
+Hoy es {DIAS[hoy.weekday()]} {hoy.isoformat()}.
+
+QUÉ PODÉS HACER
+- Llamar a la herramienta fijar_filtros con el estado COMPLETO de filtros: período, seccionales, empresas, formato, resultado, estado de trámite, tipo de notificación, rango de sueldo bruto y pestaña. Reemplaza todo el estado anterior: si el admin pide agregar o sacar un filtro, mantené los demás como estaban.
+- Cuando recibas los números, contestar en una o dos frases, en castellano rioplatense, con las cifras tal cual llegaron. Sin listas, sin markdown, sin repetir la pregunta.
+
+QUÉ NO PODÉS HACER
+- Inventar números o filtros. Si lo que pide no se puede expresar con estos filtros (buscar una persona por nombre o CUIL, ver quiénes no leyeron, ordenar o rankear), decilo en una frase y NO llames a la herramienta.
+- Listar personas: el panel no muestra nombres.
+- Adivinar ante una ambigüedad real (un nombre que coincide con una seccional y con una empresa, o un período que no queda claro): preguntá en una frase, sin llamar a la herramienta.
+
+REGLAS DE LOS FILTROS
+- Fechas AAAA-MM-DD. "hasta" nunca es posterior a hoy. Rango máximo: {dashboard.RANGO_MAXIMO_DIAS} días. Si el admin no menciona período, conservá el que ya tiene el panel. "Este mes" = del 1 del mes actual a hoy; "el mes pasado" = el mes calendario anterior completo; "esta semana" = del lunes a hoy; "los últimos 30 días" = 30 días hasta hoy.
+- seccionales y empresas llevan ids del catálogo de abajo; lista vacía = todas. Aceptá nombres mal escritos, sin tilde o parciales cuando no hay duda de a cuál se refiere.
+- formato: "" (todos), "viejo" (recibo clásico) o "nuevo" (Anexo III de la reforma laboral).
+- resultado: "" (todos), "ok" (recibos bien liquidados) o "con_diferencias" (recibos con diferencias en los aportes).
+- estado_tramite: "" (todos), "abierto", "en_proceso" o "resuelto".
+- tipo_notif: "" (todas), "manual" (comunicaciones que mandó el sindicato) o "sistema" (avisos automáticos de trámites).
+- sal_min / sal_max: sueldo bruto en pesos enteros, o null si no se filtra.
+- tab: qué muestra el explorador: {pestanas}. Elegí la pestaña del tema de la pregunta.
+- tema: solo para la pestaña consultas; si no, "".
+
+QUÉ MIDE CADA PESTAÑA
+- recibos: recibos de sueldo que los trabajadores verificaron con la app: cuántos OK, cuántos con diferencias y el monto de esas diferencias.
+- tramites: expedientes iniciados por los afiliados, por seccional y estado.
+- notificaciones: comunicaciones que el sindicato mandó a los afiliados: enviadas, leídas y sin leer. "Sin leer" (también "no leídas", "pendientes de lectura", "que no abrieron") es una cifra que vas a recibir, no un filtro: para responderlo, filtrá por lo que pida (seccional, período, tipo) con tab "notificaciones" y leé la cifra sin_leer.
+{consultas}
+GLOSARIO (cómo habla la gente del gremio)
+- seccional = sucursal, delegación, filial, regional, sede.
+- recibo = boleta, liquidación, recibo de sueldo, recibo de haberes.
+- con diferencias = mal liquidados, con errores, con problemas, observados.
+- empresa = empleador, patronal, firma, fábrica, establecimiento.
+- trámite = expediente, gestión, reclamo, solicitud, pedido.
+- notificación = comunicado, aviso, mensaje, circular.
+- formato nuevo = Anexo III, recibo de la reforma, recibo nuevo.
+
+CATÁLOGO DE ESTE SINDICATO
+Seccionales (id: nombre):
+{seccionales}
+Empresas (id: nombre, CUIT):
+{empresas}"""
+
+
+# ---------- Estado de filtros ----------
+
+def _a_params(crudo: dict) -> QueryParams:
+    """Un dict con las claves del panel (listas incluidas) -> QueryParams, para
+    validarlo con EXACTAMENTE la misma función que usa el frontend."""
+    pares = []
+    for clave, valor in (crudo or {}).items():
+        if clave == "tab" or valor is None:
+            continue
+        if isinstance(valor, (list, tuple, set)):
+            pares.extend((clave, str(v)) for v in valor)
+        else:
+            pares.append((clave, str(valor)))
+    return QueryParams(pares)
+
+
+def _pestana(crudo: dict, cat: dict) -> str:
+    tab = str((crudo or {}).get("tab") or "")
+    if tab == "consultas" and not cat["consultas"]:
+        tab = ""
+    return tab if tab in PESTANAS else "recibos"
+
+
+def _validar(entrada: dict, cat: dict, hoy: date) -> tuple:
+    """Salida de la herramienta -> (estado crudo para el JS, filtros parseados
+    para dashboard.py, pestaña). Lanza ValueError con el mismo mensaje que ve
+    el frontend; el modelo lo recibe como error y corrige."""
+    ids_secc = {s["id"] for s in cat["seccionales"]}
+    ids_emp = {e["id"] for e in cat["empresas"]}
+    crudo = {
+        "desde": str(entrada.get("desde") or ""),
+        "hasta": str(entrada.get("hasta") or ""),
+        # Un id ajeno o inexistente se descarta en silencio: no es del tenant.
+        "seccionales": [i for i in _enteros(entrada.get("seccionales")) if i in ids_secc],
+        "empresas": [i for i in _enteros(entrada.get("empresas")) if i in ids_emp],
+        "formato": str(entrada.get("formato") or ""),
+        "resultado": str(entrada.get("resultado") or ""),
+        "estado_tramite": str(entrada.get("estado_tramite") or ""),
+        "tipo_notif": str(entrada.get("tipo_notif") or ""),
+        "sal_min": _entero_o_nulo(entrada.get("sal_min")),
+        "sal_max": _entero_o_nulo(entrada.get("sal_max")),
+        "tema": str(entrada.get("tema") or "").strip(),
+        "tab": _pestana(entrada, cat),
+    }
+    if crudo["tab"] != "consultas":
+        crudo["tema"] = ""
+    f = dashboard.parsear_filtros(_a_params(crudo), hoy)
+    return crudo, f, crudo["tab"]
+
+
+def _enteros(valores) -> list:
+    salida = []
+    for v in (valores or []):
+        try:
+            salida.append(int(v))
+        except (TypeError, ValueError):
+            continue
+    return salida
+
+
+def _entero_o_nulo(v):
+    try:
+        return int(v) if v not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
+def describir_filtros(crudo: dict, cat: dict, hoy: date) -> str:
+    """El estado actual del panel, en palabras, para el mensaje del usuario."""
+    try:
+        f = dashboard.parsear_filtros(_a_params(crudo), hoy)
+    except ValueError:
+        return "período por defecto del panel, sin filtros."
+    nombres_secc = {s["id"]: s["nombre"] for s in cat["seccionales"]}
+    nombres_emp = {e["id"]: e["nombre"] for e in cat["empresas"]}
+    partes = [f"período del {f['desde']} al {f['hasta']} ({f['dias']} días)"]
+    secc = [nombres_secc[i] for i in f["seccionales"] if i in nombres_secc]
+    emp = [nombres_emp[i] for i in f["empresas"] if i in nombres_emp]
+    partes.append("seccionales: " + (", ".join(secc) if secc else "todas"))
+    partes.append("empresas: " + (", ".join(emp) if emp else "todas"))
+    if f["formato"]:
+        partes.append("formato: " + ("viejo" if f["formato"] == "clasico" else "nuevo"))
+    if f["resultado"]:
+        partes.append("resultado: " + ("ok" if f["resultado"] == "OK" else "con_diferencias"))
+    if f["estado_tramite"]:
+        partes.append("estado de trámite: " + f["estado_tramite"])
+    if f["tipo_notif"]:
+        partes.append("tipo de notificación: " + f["tipo_notif"])
+    if f["sal_min"] is not None or f["sal_max"] is not None:
+        partes.append(f"bruto entre {f['sal_min'] or 'sin mínimo'} y {f['sal_max'] or 'sin máximo'}")
+    if f["tema"]:
+        partes.append("tema: " + f["tema"])
+    partes.append("pestaña: " + _pestana(crudo, cat))
+    return "; ".join(partes) + "."
+
+
+# ---------- Agregados que ve el modelo ----------
+
+def _agregados(sid: int, crudo: dict, f: dict, tab: str, cat: dict) -> dict:
+    """Solo números y nombres de seccional/empresa. Nada de personas."""
+    nombres_secc = {s["id"]: s["nombre"] for s in cat["seccionales"]}
+    nombres_emp = {e["id"]: e["nombre"] for e in cat["empresas"]}
+    datos = {
+        "filtros_aplicados": {
+            "desde": f["desde"], "hasta": f["hasta"], "dias": f["dias"],
+            "seccionales": [nombres_secc[i] for i in crudo["seccionales"]] or "todas",
+            "empresas": [nombres_emp[i] for i in crudo["empresas"]] or "todas",
+            "formato": crudo["formato"] or "todos",
+            "resultado": crudo["resultado"] or "todos",
+            "estado_tramite": crudo["estado_tramite"] or "todos",
+            "tipo_notif": crudo["tipo_notif"] or "todas",
+            "bruto_min": crudo["sal_min"], "bruto_max": crudo["sal_max"],
+            "pestaña": tab,
+        },
+        "kpis_del_periodo": dashboard.kpis(sid, f)["actual"],
+    }
+    if tab == "notificaciones":
+        datos["notificaciones"] = dashboard.notificaciones(sid, f)
+    elif tab == "tramites":
+        datos["tramites_por_seccional"] = dashboard.tramites_seccional(sid, f)["seccionales"]
+    elif tab == "consultas":
+        datos["consultas_por_tema"] = dashboard.consultas_por_tema(sid, f)
+    else:
+        datos["validacion_de_recibos"] = dashboard.validacion(sid, f)
+    return datos
+
+
+# ---------- Conversación ----------
+
+def _mensajes(pregunta: str, filtros_actuales: dict, historial: list, cat: dict, hoy: date) -> list:
+    validos = []
+    for previo in (historial or []):
+        if not isinstance(previo, dict):
+            continue
+        p, r = str(previo.get("pregunta") or "").strip(), str(previo.get("respuesta") or "").strip()
+        if p and r:
+            validos.append((p[:MAX_PREGUNTA], r[:MAX_TOKENS]))
+    mensajes = []
+    for p, r in validos[-MAX_HISTORIAL:]:
+        mensajes.append({"role": "user", "content": p})
+        mensajes.append({"role": "assistant", "content": r})
+    mensajes.append({"role": "user", "content": (
+        f"Estado actual del panel: {describir_filtros(filtros_actuales, cat, hoy)}\n\n"
+        f"Pregunta del administrador: {pregunta}")})
+    return mensajes
+
+
+def _llamar(cli, sistema: str, mensajes: list):
+    try:
+        return cli.messages.create(
+            model=MODELO, max_tokens=MAX_TOKENS,
+            system=[{"type": "text", "text": sistema, "cache_control": {"type": "ephemeral"}}],
+            tools=[HERRAMIENTA],
+            output_config={"effort": "low"},
+            # Copia: la lista sigue creciendo en el bucle y cada pedido tiene
+            # que quedar tal cual se mandó (los tests lo inspeccionan).
+            messages=list(mensajes),
+        )
+    except Exception as e:  # red, cuota, 4xx/5xx: para el admin es lo mismo
+        raise ErrorModelo(f"{type(e).__name__}: {e}") from e
+
+
+def responder(sid: int, pregunta: str, filtros_actuales: dict, historial: list,
+              hoy: date | None = None) -> dict:
+    """Una pregunta -> {"respuesta", "filtros" (o None), "aplicar", "uso"}.
+
+    Bucle de a lo sumo MAX_VUELTAS llamadas: el modelo llama la herramienta,
+    el servidor valida y calcula, el modelo redacta. Si contesta en texto sin
+    llamar la herramienta (repregunta, fuera de alcance), no se aplica nada."""
+    cli = cliente()
+    if cli is None:
+        raise ErrorModelo("sin cliente de Anthropic configurado")
+    hoy = hoy or date.today()
+    cat = catalogo(sid)
+    sistema = prompt_sistema(cat, hoy)
+    mensajes = _mensajes(pregunta, filtros_actuales, historial, cat, hoy)
+    uso = {"modelo": MODELO, "tokens_entrada": 0, "tokens_salida": 0, "llamadas": 0}
+    filtros_salida, texto = None, ""
+
+    for _ in range(MAX_VUELTAS):
+        msg = _llamar(cli, sistema, mensajes)
+        uso["llamadas"] += 1
+        uso["tokens_entrada"] += getattr(msg.usage, "input_tokens", 0) or 0
+        uso["tokens_salida"] += getattr(msg.usage, "output_tokens", 0) or 0
+        texto = "".join(b.text for b in msg.content if b.type == "text").strip()
+        usos = [b for b in msg.content if b.type == "tool_use"]
+        if not usos:
+            break
+        # El contenido de la respuesta vuelve tal cual (incluidos los bloques
+        # de razonamiento, si los hay): es lo que la API espera recibir.
+        mensajes.append({"role": "assistant", "content": msg.content})
+        resultados = []
+        for u in usos:
+            try:
+                crudo, f, tab = _validar(u.input or {}, cat, hoy)
+                datos = _agregados(sid, crudo, f, tab, cat)
+                filtros_salida = crudo
+                resultados.append({"type": "tool_result", "tool_use_id": u.id,
+                                   "content": json.dumps(datos, ensure_ascii=False, default=str)})
+            except ValueError as e:
+                resultados.append({"type": "tool_result", "tool_use_id": u.id,
+                                   "content": f"Filtros rechazados: {e} Corregí y volvé a llamar.",
+                                   "is_error": True})
+        mensajes.append({"role": "user", "content": resultados})
+        texto = ""
+
+    if not texto:
+        texto = ("Apliqué los filtros en el panel." if filtros_salida
+                 else "No pude resolver la consulta. Probá con una pregunta más simple.")
+    return {"respuesta": texto, "filtros": filtros_salida,
+            "aplicar": filtros_salida is not None, "uso": uso}
