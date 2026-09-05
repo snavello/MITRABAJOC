@@ -794,6 +794,9 @@ def admin_dashboard_pagina(request: Request):
         # El carril de consultas se decide en el SERVIDOR: con el flag
         # apagado, ni el KPI ni el panel ni la pestaña llegan al HTML.
         "consultas_bot": db.config_dashboard()["consultas_bot_habilitado"],
+        # Asistente del Panel (docs/ASISTENTE_PANEL.md): sin API key en el
+        # entorno, ni el botón ni el cajón llegan al HTML.
+        "asistente": asistente.disponible(),
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
 

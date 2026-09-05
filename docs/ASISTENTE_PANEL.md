@@ -185,7 +185,21 @@ frases de prueba con preguntas reales.
    un centavo de dólar), **25 segundos**: la latencia es el punto a medir en
    el Bloque 5 (comparar `effort: low` contra thinking desactivado; objetivo
    menos de 8 s).
-2. Frontend: cajón, aplicar estado, resumen, volver.
+2. Frontend: cajón, aplicar estado, resumen, volver. **HECHO 2026-09-05.**
+   Botón "Asistente" en el encabezado del panel + cajón lateral
+   (`templates/dashboard.html`), `estadoDeUrl()` partido en
+   `estadoDeParams(q)` + `aplicarEstado()` + `estadoPlano()` en
+   `static/dashboard.js`. Verificado en el navegador contra la API real
+   (servidor sobre la base SQLite de `test_asistente.py`, Docker apagado):
+   diálogo de dos turnos ("notificaciones no leidas de la sucursal rosario"
+   → Rosario + Notificaciones + "hoy: 0"; "si, ampliá a los últimos 30
+   días" → mismo Rosario, 30 días, "3 enviadas, 2 sin leer"), chip
+   "Filtros aplicados", "Volver" restaura el estado anterior y la URL
+   compartible acompaña cada cambio. Sin errores de consola.
+   **Observación para el Bloque 5**: el panel arranca en "Hoy", así que la
+   primera pregunta sin período suele dar 0 y el modelo ofrece ampliar.
+   Decidir si, con el panel en "Hoy" y sin período en la pregunta, el
+   prompt debe ampliar solo a 30 días o seguir respetando el panel.
 3. Registro + tope diario + migración Alembic.
 4. Voz (Web Speech API).
 5. Set de frases con la API real, ajustes de prompt, versión,

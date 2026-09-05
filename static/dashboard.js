@@ -10,6 +10,7 @@
   var HOY = new Date(); HOY.setHours(0, 0, 0, 0);
   var REDUCIR = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var CONSULTAS_ON = document.querySelector("main").dataset.consultas === "1";
+  var ASISTENTE_ON = document.querySelector("main").dataset.asistente === "1";
 
   var css = getComputedStyle(document.documentElement);
   function color(v) { return css.getPropertyValue(v).trim(); }
@@ -81,8 +82,11 @@
     if (S.tab !== "recibos") q.set("tab", S.tab);
     history.replaceState(null, "", location.pathname + "?" + q.toString());
   }
-  function estadoDeUrl() {
-    var q = new URLSearchParams(location.search);
+  function estadoDeUrl() { estadoDeParams(new URLSearchParams(location.search)); }
+
+  // Vuelca unos query params sobre el estado. Lo usan la URL al cargar y el
+  // Asistente al aplicar filtros: un solo camino para "estado desde afuera".
+  function estadoDeParams(q) {
     if (!q.get("desde") || !q.get("hasta")) return;
     try {
       var d = deISO(q.get("desde")), h = deISO(q.get("hasta"));
@@ -853,6 +857,155 @@
     refrescar();
   }
 
+  /* ================= Asistente del Panel (docs/ASISTENTE_PANEL.md) ================= */
+  var ASIST_HIST = [];          // últimos intercambios, en memoria (nunca localStorage)
+  var asistOcupado = false;
+  var NOMBRE_TAB = { recibos: "Recibos", tramites: "Trámites", notificaciones: "Notificaciones", consultas: "Consultas" };
+
+  // El estado del panel como lo espera el servidor: las mismas claves que la
+  // query string (bruto en pesos) más la pestaña.
+  function estadoPlano() {
+    var q = paramsDeEstado();
+    return {
+      desde: q.get("desde"), hasta: q.get("hasta"),
+      seccionales: q.getAll("seccionales").map(Number),
+      empresas: q.getAll("empresas").map(Number),
+      formato: q.get("formato") || "", resultado: q.get("resultado") || "",
+      estado_tramite: q.get("estado_tramite") || "", tipo_notif: q.get("tipo_notif") || "",
+      sal_min: q.get("sal_min") ? +q.get("sal_min") : null,
+      sal_max: q.get("sal_max") ? +q.get("sal_max") : null,
+      tema: q.get("tema") || "", tab: S.tab,
+    };
+  }
+
+  // Reemplaza TODO el estado por el que manda el servidor (o por una foto
+  // previa, al "Volver"): mismo camino que al cargar desde la URL.
+  function aplicarEstado(filtros) {
+    var q = new URLSearchParams();
+    Object.keys(filtros).forEach(function (k) {
+      var v = filtros[k];
+      if (v === null || v === undefined || v === "") return;
+      if (Array.isArray(v)) v.forEach(function (x) { q.append(k, x); });
+      else q.set(k, v);
+    });
+    S.seccionales.clear(); S.empresas.clear();
+    S.formato = ""; S.resultado = ""; S.estadoTramite = ""; S.tipoNotif = ""; S.tema = "";
+    S.salMin = LIM.min; S.salMax = LIM.max;
+    S.tab = "recibos"; S.paginas = 1;
+    calEligiendo = false;
+    estadoDeParams(q);
+    calVista = new Date(S.desde.getFullYear(), S.desde.getMonth(), 1);
+  }
+
+  function asistAbrir(abrir) {
+    var a = $("asist");
+    if (!a) return;
+    a.classList.toggle("abierto", abrir);
+    a.setAttribute("aria-hidden", abrir ? "false" : "true");
+    $("btn-asist").setAttribute("aria-expanded", abrir ? "true" : "false");
+    if (abrir) setTimeout(function () { $("asist-caja").focus(); }, 80);
+  }
+
+  function asistBurbuja(clase, texto) {
+    var hilo = $("asist-hilo");
+    var b = document.createElement("div");
+    b.className = "burb " + clase;
+    b.textContent = texto;
+    hilo.appendChild(b);
+    hilo.scrollTop = hilo.scrollHeight;
+    return b;
+  }
+
+  function asistPensando() {
+    var b = asistBurbuja("bot pensando", "");
+    b.setAttribute("aria-label", "Pensando");
+    for (var i = 0; i < 3; i++) b.appendChild(document.createElement("span"));
+    return b;
+  }
+
+  function asistChipAplicado(burbuja, tab, previo) {
+    var fila = document.createElement("div");
+    fila.className = "aplicado";
+    var chip = document.createElement("b");
+    chip.textContent = "Filtros aplicados · " + (NOMBRE_TAB[tab] || tab);
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.textContent = "Volver";
+    btn.onclick = function () {
+      btn.disabled = true; btn.textContent = "Restaurado";
+      aplicarEstado(previo); refrescar();
+    };
+    fila.appendChild(chip); fila.appendChild(btn);
+    burbuja.appendChild(fila);
+    $("asist-hilo").scrollTop = $("asist-hilo").scrollHeight;
+  }
+
+  function asistAjustar(caja) {
+    caja.style.height = "auto";
+    caja.style.height = Math.min(caja.scrollHeight, 96) + "px";
+  }
+
+  function asistPreguntar() {
+    var caja = $("asist-caja"), pregunta = caja.value.trim();
+    if (!pregunta || asistOcupado) return;
+    caja.value = ""; asistAjustar(caja);
+    asistBurbuja("yo", pregunta);
+    var pensando = asistPensando();
+    asistOcupado = true; $("asist-enviar").disabled = true;
+    var previo = estadoPlano();   // foto para "Volver"
+    fetch("/admin/dashboard/asistente", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pregunta: pregunta, filtros: previo, historial: ASIST_HIST.slice(-4) }),
+    })
+      .then(function (r) {
+        if (r.status === 403) { location.href = "/admin"; throw new Error("sesion"); }
+        return r.json().then(function (d) { return { ok: r.ok, d: d }; });
+      })
+      .then(function (res) {
+        pensando.remove();
+        if (!res.ok) {
+          var detalle = typeof res.d.detail === "string" ? res.d.detail : "No pude responder.";
+          asistBurbuja("bot error", detalle + (res.d.codigo ? "  " + res.d.codigo : ""));
+          return;
+        }
+        var b = asistBurbuja("bot", res.d.respuesta);
+        ASIST_HIST.push({ pregunta: pregunta, respuesta: res.d.respuesta, filtros: res.d.filtros });
+        if (res.d.aplicar && res.d.filtros) {
+          aplicarEstado(res.d.filtros);
+          asistChipAplicado(b, res.d.filtros.tab, previo);
+          refrescar().then(function () {
+            panelDe("explorador").scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+        }
+      })
+      .catch(function (e) {
+        if (e.message === "sesion") return;
+        pensando.remove();
+        asistBurbuja("bot error", "No pude conectarme con el servidor. Probá de nuevo.");
+      })
+      .then(function () { asistOcupado = false; $("asist-enviar").disabled = false; caja.focus(); });
+  }
+
+  // El saludo cita una seccional real del sindicato, para que el ejemplo
+  // sea uno que de verdad funciona.
+  function asistEjemplo() {
+    var hola = $("asist-hola");
+    if (!hola || !CATALOGO.seccionales.length) return;
+    hola.textContent = "Hola. Decime qué querés ver y aplico los filtros del panel. Por ejemplo: «notificaciones sin leer de " +
+      CATALOGO.seccionales[0].nombre + " este mes» o «recibos con diferencias del mes pasado».";
+  }
+
+  function initAsistente() {
+    if (!ASISTENTE_ON || !$("asist")) return;   // sin API key el cajón no existe
+    $("btn-asist").onclick = function () { asistAbrir(!$("asist").classList.contains("abierto")); };
+    $("asist-cerrar").onclick = function () { asistAbrir(false); };
+    $("asist-form").onsubmit = function (e) { e.preventDefault(); asistPreguntar(); };
+    var caja = $("asist-caja");
+    caja.oninput = function () { asistAjustar(caja); };
+    caja.onkeydown = function (e) {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); asistPreguntar(); }
+    };
+  }
+
   /* ================= Init ================= */
   function initControles() {
     $("hoy-fecha").textContent = HOY.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -897,7 +1050,7 @@
       if (btn) verDestinatarios(btn);
     });
     document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") cerrarModal();
+      if (e.key === "Escape") { cerrarModal(); asistAbrir(false); }
     });
   }
 
@@ -925,5 +1078,6 @@
   estadoDeUrl();
   crearCharts();
   initControles();
-  initCatalogo().then(refrescar);
+  initAsistente();
+  initCatalogo().then(function () { asistEjemplo(); return refrescar(); });
 })();
