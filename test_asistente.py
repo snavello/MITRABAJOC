@@ -447,6 +447,28 @@ def test_afiliado_elegido_se_conserva_y_el_ajeno_se_descarta():
     print("OK  test_afiliado_elegido_se_conserva_y_el_ajeno_se_descarta")
 
 
+def test_reinicio_de_filtros_sin_modelo():
+    """Visto por Sd en Pruebas: 'limpiá los filtros' contestado con 'listo'
+    sin llamar la herramienta dejaba la seccional puesta. El reinicio total
+    ahora es determinista: ni una llamada al modelo."""
+    for frase in ("limpiá los filtros", "Sacá todos los filtros.", "borra filtros", "empezá de nuevo",
+                  "arrancar de cero", "sin filtros", "reiniciar los filtros!"):
+        falso = _guion(_respuesta(_texto("no debería llegar")))
+        d = _preguntar(admin_a, pregunta=frase, filtros=dict(ESTADO_BASE, seccionales=[SECC_ROSARIO])).json()
+        assert falso.llamadas == [], frase
+        assert d["aplicar"] is True and d["filtros"]["seccionales"] == [] and d["filtros"]["afiliado"] is None, frase
+        assert d["filtros"]["desde"] == (HOY - timedelta(days=29)).isoformat() and d["filtros"]["tab"] == "recibos", frase
+        assert d["respuesta"].startswith("Listo, reinicié")
+    # Un pedido parcial sigue yendo al modelo, que es quien sabe qué conservar.
+    for frase in ("sacá el filtro de seccional", "quitá la empresa", "limpiá los filtros de rosario"):
+        falso = _guion(_respuesta(_texto("Hecho.")))
+        assert _preguntar(admin_a, pregunta=frase).status_code == 200
+        assert len(falso.llamadas) == 1, frase
+    fila = _ultima_consulta()
+    assert fila.pregunta == "limpiá los filtros de rosario"
+    print("OK  test_reinicio_de_filtros_sin_modelo")
+
+
 def test_con_filtro_de_resultado_no_viaja_el_porcentaje():
     """Con resultado=con_diferencias el % da 100 por construcción y el
     modelo lo citaba como porcentaje de la seccional (visto en Postgres
@@ -553,6 +575,7 @@ if __name__ == "__main__":
     test_persona_con_empresa_desempata_homonimos()
     test_persona_no_encontrada_avisa_al_modelo()
     test_afiliado_elegido_se_conserva_y_el_ajeno_se_descarta()
+    test_reinicio_de_filtros_sin_modelo()
     test_con_filtro_de_resultado_no_viaja_el_porcentaje()
     test_basura_del_modelo_en_textos_cuenta_como_vacio()
     test_registro_de_cada_pregunta()

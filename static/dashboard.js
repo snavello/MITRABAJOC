@@ -1132,6 +1132,12 @@
           aplicarEstado(res.d.filtros);
           asistChipAplicado(b, res.d.filtros.tab, previo);
           refrescar().then(irAlExplorador);
+        } else {
+          // Que se note cuando una respuesta NO tocó el panel (una repregunta,
+          // un "no puedo", o el modelo diciendo algo sin haber filtrado).
+          var nota = document.createElement("div");
+          nota.className = "nota-exp"; nota.textContent = "El panel quedó como estaba.";
+          b.appendChild(nota);
         }
       })
       .catch(function (e) {

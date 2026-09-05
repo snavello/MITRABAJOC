@@ -22,7 +22,8 @@ Reglas de este módulo:
 """
 import json
 import os
-from datetime import date
+import re
+from datetime import date, timedelta
 
 from starlette.datastructures import QueryParams
 
@@ -41,6 +42,31 @@ TOPE_DIARIO = 300         # preguntas por sindicato por día (se aplica en el Bl
 PESTANAS = ["recibos", "tramites", "notificaciones", "consultas"]
 
 DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+
+# Pedidos de reinicio total ("limpiá los filtros", "sacá todos los filtros",
+# "empezá de nuevo"): se resuelven acá, sin modelo. Sd vio en Pruebas que
+# ante ese pedido el modelo contestó "listo" sin llamar la herramienta: el
+# panel quedó con la seccional puesta y la búsqueda siguiente la conservó.
+# Un pedido parcial ("sacá el filtro de seccional") NO matchea y va al
+# modelo, que es quien sabe qué conservar.
+_REINICIO = re.compile(
+    r"^\s*(?:(?:limpi|borr|sac|quit|reinici|reset|elimin|anul)\w*\s+(?:todos?\s+)?(?:los\s+|las\s+)?filtros?"
+    r"|(?:empez|arranc|comenz)\w*\s+de\s+(?:nuevo|cero)|volv\w*\s+al\s+(?:inicio|principio)"
+    r"|sin\s+filtros?|filtros?\s+(?:limpios?|a\s+cero))\s*[.!]*\s*$",
+    re.IGNORECASE)
+
+
+def es_reinicio(pregunta: str) -> bool:
+    return bool(_REINICIO.match(_texto_limpio(pregunta)))
+
+
+def estado_inicial(hoy: date) -> dict:
+    """Lo mismo que el panel sin filtros, con el período por defecto del
+    asistente (últimos 30 días, decisión de Sd) y la pestaña de recibos."""
+    return {"desde": (hoy - timedelta(days=29)).isoformat(), "hasta": hoy.isoformat(),
+            "seccionales": [], "empresas": [], "formato": "", "resultado": "",
+            "estado_tramite": "", "tipo_notif": "", "sal_min": None, "sal_max": None,
+            "tema": "", "afiliado": None, "tab": "recibos"}
 
 
 class ErrorModelo(Exception):
@@ -184,6 +210,7 @@ QUÉ PODÉS HACER
 - Cuando recibas los números, contestar en una o dos frases, en castellano rioplatense, con las cifras tal cual llegaron. Sin listas, sin markdown, sin repetir la pregunta.
 
 QUÉ NO PODÉS HACER
+- Decir que aplicaste, sacaste o cambiaste un filtro sin haber llamado a la herramienta en esa misma respuesta: el panel SOLO cambia cuando la llamás. Si te piden sacar o cambiar filtros, llamá la herramienta con el estado completo resultante y recién después contá qué quedó. El estado actual del panel que recibís es la única verdad sobre qué filtros hay puestos; el historial es solo contexto.
 - Inventar números o filtros. Si lo que pide no se puede expresar con estos filtros (ver la LISTA de quiénes no leyeron, ordenar o rankear, comparar dos períodos entre sí), decilo en una frase y NO llames a la herramienta.
 - Listar personas: el panel no muestra nombres.
 - Adivinar ante una ambigüedad real (un nombre que coincide con una seccional y con una empresa, o un período que no queda claro): preguntá en una frase, sin llamar a la herramienta.
@@ -437,6 +464,11 @@ def responder(sid: int, pregunta: str, filtros_actuales: dict, historial: list,
     if cli is None:
         raise ErrorModelo("sin cliente de Anthropic configurado")
     hoy = hoy or date.today()
+    if es_reinicio(pregunta):
+        return {"respuesta": "Listo, reinicié los filtros: últimos 30 días, sin seccional, empresa ni afiliado.",
+                "filtros": estado_inicial(hoy), "aplicar": True, "afiliado": None,
+                "candidatos": [], "filtros_pendientes": None,
+                "uso": {"modelo": "", "tokens_entrada": 0, "tokens_salida": 0, "llamadas": 0}}
     cat = catalogo(sid)
     sistema = prompt_sistema(cat, hoy)
     mensajes = _mensajes(pregunta, filtros_actuales, historial, cat, hoy)

@@ -45,6 +45,15 @@ Rosario") y el asistente:
 - **La herramienta devuelve SIEMPRE el estado completo**, nunca un delta:
   así "sacá el filtro de empresa" o "ahora solo agosto" funcionan sin
   lógica de merge en el servidor.
+- **El reinicio total es determinista, sin modelo** (`asistente.es_reinicio`,
+  2026-09-05): "limpiá los filtros", "sacá todos los filtros", "empezá de
+  nuevo", "sin filtros" devuelven `estado_inicial()` (últimos 30 días, sin
+  filtros, pestaña recibos) sin llamar a la API. Sd vio en Pruebas que ante
+  ese pedido el modelo contestó "listo" sin llamar la herramienta: la
+  seccional quedó puesta y la búsqueda siguiente la conservó. Un pedido
+  parcial ("sacá el filtro de seccional") sí va al modelo. Además el prompt
+  le prohíbe decir que cambió algo sin haber llamado la herramienta, y el
+  cajón marca "El panel quedó como estaba" en toda respuesta que no aplica.
 - **Historial corto**: los últimos 4 intercambios viajan en cada pedido,
   en memoria del navegador (no `localStorage`).
 - **Tope de 300 preguntas por sindicato por día**, constante en v1
@@ -181,8 +190,14 @@ frases de prueba con preguntas reales.
   doradas como la colmena de Colm3na (dorados fijos del logo, no de la marca
   del sindicato) y la colmena dorada (`static/colmena_dorada.webp`, 256 px
   con transparencia real, recortada del render 3D) en vaivén de ±40° sobre
-  su eje vertical, 9 s ida y vuelta; quieta con `prefers-reduced-motion`.
-  En el celular, solo la colmena. Render aprobado antes de construir.
+  su eje vertical, 9 s ida y vuelta, **siempre**: Sd la vio quieta en su
+  celular por "reducir movimiento" del sistema y pidió que se anime igual.
+  Ojo: `marca.css` apaga TODA animación con `* { animation: none
+  !important }` bajo `prefers-reduced-motion`; la pastilla lleva una
+  excepción más específica, también con `!important`, solo para la
+  colmena (verificado con Playwright emulando `reduce`). Tamaño 36 px
+  (Sd pidió un 20 % más que los 30 iniciales). En el celular, solo la
+  colmena. Render aprobado antes de construir.
 - Cajón lateral con estética del panel: burbujas, caja de texto, botón
   enviar, botón micrófono (oculto sin `SpeechRecognition`), estado
   "pensando".
