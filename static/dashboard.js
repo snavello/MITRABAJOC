@@ -1071,7 +1071,7 @@
     btn.onclick = function () {
       btn.disabled = true; btn.textContent = "Restaurado";
       aplicarEstado(previo);
-      refrescar().then(function () { asistMinimizar(true); });
+      refrescar();
     };
     fila.appendChild(chip); fila.appendChild(ver); fila.appendChild(btn);
     burbuja.appendChild(nota);
@@ -1101,7 +1101,7 @@
         ASIST_HIST.push({ pregunta: pregunta, respuesta: "Filtré por el afiliado elegido (id " + c.id + ").", filtros: filtros });
         asistFicha(b2, c);
         asistChipAplicado(b2, filtros.tab, previo);
-        refrescar().then(irAlExplorador);
+        refrescar();
       };
       fila.appendChild(btn);
     });
@@ -1148,7 +1148,10 @@
           if (res.d.afiliado) { AFILIADOS[res.d.afiliado.id] = res.d.afiliado; asistFicha(b, res.d.afiliado); }
           aplicarEstado(res.d.filtros);
           asistChipAplicado(b, res.d.filtros.tab, previo);
-          refrescar().then(irAlExplorador);
+          // El panel se filtra detrás, en silencio: primero se lee la respuesta;
+          // achicar la hoja y bajar al explorador es solo con "Ver en el
+          // explorador" (pedido de Sd 2026-09-05: antes no se llegaba a leer).
+          refrescar();
         } else {
           // Que se note cuando una respuesta NO tocó el panel (una repregunta,
           // un "no puedo", o el modelo diciendo algo sin haber filtrado).

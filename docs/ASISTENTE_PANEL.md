@@ -71,11 +71,14 @@ Rosario") y el asistente:
   el panel ya tiene otro período, lo conserva. "Hoy" explícito es hoy.
   Regla en el prompt, cubierta por tres frases del set de aceptación.
 - **En el celular el cajón es una hoja inferior** (56% de alto, el panel
-  queda a la vista arriba) que **se achica sola a una barra** con la última
-  respuesta cuando aplica filtros, y también con "Ver en el explorador",
-  "Volver" o el botón de achicar; tocar la barra la vuelve a abrir. Sd
-  probó la versión anterior en vertical y el cajón tapaba todo: no se veía
-  el panel cambiar y los botones parecían no hacer nada.
+  queda a la vista arriba) que se achica a una barra con la última
+  respuesta **solo cuando el admin toca "Ver en el explorador"** o el
+  botón de achicar; tocar la barra la vuelve a abrir. Orden fijado por Sd
+  (2026-09-05, segunda vuelta): pregunta, respuesta que se lee en el
+  cajón, y recién después achicar y bajar al explorador si el admin lo
+  pide. La primera versión achicaba y bajaba sola al llegar la respuesta y
+  no se llegaba a leer. El panel se filtra detrás, en silencio, apenas
+  llega la respuesta; "Volver" restaura sin mover nada.
 - **La API key es la misma `ANTHROPIC_API_KEY`.** Sin clave, el botón no
   aparece y el endpoint responde 503.
 
