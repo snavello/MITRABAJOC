@@ -1138,6 +1138,46 @@
     caja.onkeydown = function (e) {
       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); asistPreguntar(); }
     };
+    initVoz(caja);
+  }
+
+  // Voz con la Web Speech API del navegador (costo cero; Chrome, Edge y
+  // Safari; en Firefox no existe y el botón ni aparece). Lo dictado cae en
+  // la caja y el admin confirma con Enter: el dictado se equivoca con los
+  // nombres propios, mejor que lo vea antes de mandar.
+  function initVoz(caja) {
+    var Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    var mic = $("asist-mic");
+    if (!Rec || !mic) return;
+    mic.hidden = false;
+    var ayuda = $("asist-ayuda-voz");
+    if (ayuda) ayuda.hidden = false;
+    var rec = null;
+    function parar() {
+      rec = null;
+      mic.classList.remove("grabando");
+      mic.setAttribute("aria-label", "Dictar");
+    }
+    mic.onclick = function () {
+      if (rec) { rec.stop(); return; }
+      rec = new Rec();
+      rec.lang = "es-AR"; rec.interimResults = false; rec.maxAlternatives = 1;
+      rec.onresult = function (e) {
+        var dicho = (e.results[0] && e.results[0][0] ? e.results[0][0].transcript : "").trim();
+        if (!dicho) return;
+        caja.value = (caja.value.trim() ? caja.value.trim() + " " : "") + dicho;
+        asistAjustar(caja); caja.focus();
+      };
+      rec.onerror = function (e) {
+        if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+          asistBurbuja("bot error", "El navegador no dejó usar el micrófono. Revisá el permiso en la barra de direcciones.");
+        }
+      };
+      rec.onend = parar;
+      mic.classList.add("grabando");
+      mic.setAttribute("aria-label", "Escuchando, tocá para parar");
+      try { rec.start(); } catch (err) { parar(); }
+    };
   }
 
   /* ================= Init ================= */

@@ -262,6 +262,11 @@
   .asist-btn { width: 34px; height: 34px; flex: none; border: none; border-radius: 50%; display: grid; place-items: center; cursor: pointer; background: var(--marca-acento); color: #fff; }
   .asist-btn:disabled { opacity: .5; cursor: default; }
   .asist-btn svg { width: 17px; height: 17px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .asist-btn[hidden] { display: none; }
+  /* micrófono (Web Speech API): gris en reposo, rojo latiendo mientras escucha */
+  .asist-btn.mic { background: var(--papel); color: var(--tinta); border: 1px solid var(--linea); }
+  .asist-btn.mic.grabando { background: var(--error); color: #fff; border-color: var(--error); animation: asist-mic 1.2s infinite; }
+  @keyframes asist-mic { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--error) 45%, transparent); } 50% { box-shadow: 0 0 0 7px transparent; } }
   .asist-ayuda { font-size: 10.5px; color: var(--gris); margin-top: 7px; text-align: center; }
   @media (max-width: 640px) { .asist { width: 100%; } .btn-asist span { display: none; } .btn-asist { padding: 8px 10px; } }
 
@@ -527,11 +532,14 @@
   <div class="asist-pie">
     <form class="asist-form" id="asist-form">
       <textarea id="asist-caja" rows="1" placeholder="Escribí tu pregunta…" maxlength="500" aria-label="Pregunta"></textarea>
+      <button type="button" class="asist-btn mic" id="asist-mic" aria-label="Dictar" title="Dictar la pregunta" hidden>
+        <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/><path d="M8.5 21h7"/></svg>
+      </button>
       <button type="submit" class="asist-btn" id="asist-enviar" aria-label="Enviar">
         <svg viewBox="0 0 24 24"><path d="M4 12h15"/><path d="M13 6l6 6-6 6"/></svg>
       </button>
     </form>
-    <div class="asist-ayuda">Enter envía · Shift+Enter agrega un renglón</div>
+    <div class="asist-ayuda">Enter envía · Shift+Enter agrega un renglón<span id="asist-ayuda-voz" hidden> · Dictá con el micrófono y confirmá con Enter</span></div>
   </div>
 </aside>
 {% endif %}

@@ -235,7 +235,13 @@ frases de prueba con preguntas reales.
    Postgres con JSONB e índices) pero **sin correr contra un Postgres
    real todavía**: correr `alembic upgrade head` con Docker levantado
    antes de mergear a `main`, porque en Pruebas corre sola en el deploy.
-6. Voz (Web Speech API).
+6. Voz (Web Speech API). **HECHO 2026-09-05**: botón de micrófono en el
+   cajón (`initVoz` en `dashboard.js`), oculto donde no existe
+   `SpeechRecognition`, `es-AR`, lo dictado cae en la caja y se confirma
+   con Enter; rojo latiendo mientras escucha; aviso si el navegador negó
+   el micrófono. En el navegador embebido se verificó que el botón aparece
+   y cambia de estado; el dictado real hay que probarlo en Chrome con
+   micrófono (pendiente de Sd).
 7. Set de frases con la API real, ajustes de prompt, versión,
    `HISTORIAL.md`, promover a demo.
 
