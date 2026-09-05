@@ -1027,6 +1027,37 @@
     $("asist-hilo").scrollTop = $("asist-hilo").scrollHeight;
   }
 
+  // Homónimos: el servidor manda los candidatos y el admin elige acá, con
+  // un clic; se aplican los filtros pendientes + el afiliado SIN volver al
+  // modelo (el padrón no viaja). En el historial queda solo el id.
+  function asistCandidatos(burbuja, candidatos, pendientes, pregunta) {
+    var fila = document.createElement("div");
+    fila.className = "candidatos";
+    candidatos.forEach(function (c) {
+      var btn = document.createElement("button");
+      btn.type = "button"; btn.className = "af-item"; btn.textContent = c.nombre;
+      var s = document.createElement("small");
+      s.textContent = [c.cuil, c.seccional, c.empresa].filter(Boolean).join(" · ");
+      btn.appendChild(s);
+      btn.onclick = function () {
+        fila.querySelectorAll("button").forEach(function (x) { x.disabled = true; });
+        var previo = estadoPlano();
+        AFILIADOS[c.id] = c;
+        var filtros = Object.assign({}, pendientes, { afiliado: c.id });
+        aplicarEstado(filtros);
+        var b2 = asistBurbuja("bot", "Listo, filtré por " + c.nombre + ".");
+        ASIST_HIST.push({ pregunta: pregunta, respuesta: "Filtré por el afiliado elegido (id " + c.id + ").", filtros: filtros });
+        asistChipAplicado(b2, filtros.tab, previo);
+        refrescar().then(function () {
+          panelDe("explorador").scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      };
+      fila.appendChild(btn);
+    });
+    burbuja.appendChild(fila);
+    $("asist-hilo").scrollTop = $("asist-hilo").scrollHeight;
+  }
+
   function asistAjustar(caja) {
     caja.style.height = "auto";
     caja.style.height = Math.min(caja.scrollHeight, 96) + "px";
@@ -1057,7 +1088,12 @@
         }
         var b = asistBurbuja("bot", res.d.respuesta);
         ASIST_HIST.push({ pregunta: pregunta, respuesta: res.d.respuesta, filtros: res.d.filtros });
+        if (res.d.candidatos && res.d.candidatos.length) {
+          asistCandidatos(b, res.d.candidatos, res.d.filtros_pendientes || {}, pregunta);
+          return;
+        }
         if (res.d.aplicar && res.d.filtros) {
+          if (res.d.afiliado) AFILIADOS[res.d.afiliado.id] = res.d.afiliado;
           aplicarEstado(res.d.filtros);
           asistChipAplicado(b, res.d.filtros.tab, previo);
           refrescar().then(function () {

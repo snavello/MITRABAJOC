@@ -251,6 +251,9 @@
   .burb .aplicado button { margin-left: auto; border: 1px solid var(--linea); background: var(--blanco); color: var(--tinta); border-radius: 99px;
     padding: 3px 10px; font-size: 11.5px; font-weight: 600; cursor: pointer; font-family: inherit; }
   .burb .aplicado button:disabled { opacity: .5; cursor: default; }
+  .burb .candidatos { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--linea); }
+  .burb .candidatos .af-item { border: 1px solid var(--linea); border-radius: 10px; }
+  .burb .candidatos .af-item:disabled { opacity: .5; cursor: default; }
   .asist-pie { border-top: 1px solid var(--linea); padding: 10px 12px 12px; background: var(--blanco); }
   .asist-form { display: flex; align-items: flex-end; gap: 8px; border: 1.5px solid var(--linea); border-radius: 14px; padding: 5px 5px 5px 12px; }
   .asist-form:focus-within { border-color: var(--marca-acento); }

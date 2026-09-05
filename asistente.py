@@ -45,6 +45,25 @@ class ErrorModelo(Exception):
     traduce a E-ASISTENTE-01; el detalle va al log del servidor."""
 
 
+class PersonaNoEncontrada(Exception):
+    """El admin nombró a alguien que no está en el padrón. Se le avisa al
+    modelo (como resultado, no como error) para que lo diga."""
+
+    def __init__(self, persona: str):
+        super().__init__(persona)
+        self.persona = persona
+
+
+class PersonaAmbigua(Exception):
+    """Varios afiliados coinciden. Se resuelve en el cajón, con un clic del
+    admin, SIN volver al modelo: los candidatos son padrón y el padrón no
+    viaja (docs/ASISTENTE_PANEL.md §9)."""
+
+    def __init__(self, persona: str, candidatos: list, filtros: dict):
+        super().__init__(persona)
+        self.persona, self.candidatos, self.filtros = persona, candidatos, filtros
+
+
 # ---------- Cliente ----------
 
 _cliente = None
@@ -103,7 +122,7 @@ HERRAMIENTA = {
         "additionalProperties": False,
         "required": ["desde", "hasta", "seccionales", "empresas", "formato",
                      "resultado", "estado_tramite", "tipo_notif", "sal_min",
-                     "sal_max", "tema", "tab", "motivo"],
+                     "sal_max", "tema", "persona", "afiliado", "tab", "motivo"],
         "properties": {
             "desde": {"type": "string", "description": "Inicio del período, AAAA-MM-DD."},
             "hasta": {"type": "string", "description": "Fin del período, AAAA-MM-DD, nunca posterior a hoy."},
@@ -122,7 +141,18 @@ HERRAMIENTA = {
                                 "sindicato, 'sistema' avisos automáticos de trámites."),
             "sal_min": {**_ENTERO_O_NULO, "description": "Sueldo bruto mínimo en pesos, o null."},
             "sal_max": {**_ENTERO_O_NULO, "description": "Sueldo bruto máximo en pesos, o null."},
-            "tema": {"type": "string", "description": "Tema de consultas al bot del convenio; '' si no aplica."},
+            # Los textos opcionales van como null, NO como "": con dos strings
+            # vacíos consecutivos Sonnet 5 llegó a emitir basura de su propio
+            # formato de llamada ("</antml_parameter>...") en esos campos.
+            "tema": {"anyOf": [{"type": "string"}, {"type": "null"}],
+                     "description": "Tema de consultas al bot del convenio; null si no aplica."},
+            "persona": {"anyOf": [{"type": "string"}, {"type": "null"}],
+                        "description": "Nombre o CUIL del afiliado por el que pregunta el admin, tal cual lo "
+                                       "escribió, sin corregir ni completar; null si no pregunta por una persona."},
+            "afiliado": {**_ENTERO_O_NULO,
+                         "description": "Id del afiliado YA elegido en el panel (viene en el estado actual), para "
+                                        "conservarlo; null si no hay, si pide otra persona (usá persona) o si pide "
+                                        "sacar ese filtro. Nunca inventes un id."},
             "tab": _enum(PESTANAS, "Pestaña que muestra el explorador: la del tema de la pregunta."),
             "motivo": {"type": "string", "description": "Una frase: qué pidió el admin y cómo lo tradujiste."},
         },
@@ -140,7 +170,8 @@ def prompt_sistema(cat: dict, hoy: date) -> str:
     empresas = "\n".join(f"- {e['id']}: {e['nombre']} (CUIT {e['cuit']})" for e in cat["empresas"]) or "- (sin empresas cargadas)"
     pestanas = '"recibos", "tramites", "notificaciones"' + (' o "consultas"' if cat["consultas"] else "")
     consultas = ("- consultas: preguntas que los trabajadores le hicieron al bot del convenio, "
-                 "contadas por tema.\n" if cat["consultas"] else "")
+                 "contadas por tema. Son anónimas: con un afiliado elegido no aplican.\n"
+                 if cat["consultas"] else "")
     return f"""Sos el Asistente del Panel Sindical de {cat['sindicato']}. Ayudás al administrador del sindicato a mirar su tablero: traducís lo que pide a los filtros que el panel ya tiene y resumís los números que te devuelve.
 
 Hoy es {DIAS[hoy.weekday()]} {hoy.isoformat()}.
@@ -150,7 +181,7 @@ QUÉ PODÉS HACER
 - Cuando recibas los números, contestar en una o dos frases, en castellano rioplatense, con las cifras tal cual llegaron. Sin listas, sin markdown, sin repetir la pregunta.
 
 QUÉ NO PODÉS HACER
-- Inventar números o filtros. Si lo que pide no se puede expresar con estos filtros (buscar una persona por nombre o CUIL, ver quiénes no leyeron, ordenar o rankear), decilo en una frase y NO llames a la herramienta.
+- Inventar números o filtros. Si lo que pide no se puede expresar con estos filtros (ver la LISTA de quiénes no leyeron, ordenar o rankear, comparar dos períodos entre sí), decilo en una frase y NO llames a la herramienta.
 - Listar personas: el panel no muestra nombres.
 - Adivinar ante una ambigüedad real (un nombre que coincide con una seccional y con una empresa, o un período que no queda claro): preguntá en una frase, sin llamar a la herramienta.
 
@@ -163,10 +194,12 @@ REGLAS DE LOS FILTROS
 - tipo_notif: "" (todas), "manual" (comunicaciones que mandó el sindicato) o "sistema" (avisos automáticos de trámites).
 - sal_min / sal_max: sueldo bruto en pesos enteros, o null si no se filtra.
 - tab: qué muestra el explorador: {pestanas}. Elegí la pestaña del tema de la pregunta.
-- tema: solo para la pestaña consultas; si no, "".
+- tema: solo para la pestaña consultas; si no, null.
+- persona: nombre o CUIL del afiliado por el que pregunta ("las notificaciones de Pérez", "el 20-12345678-9"), tal cual lo escribió el admin, sin corregirlo ni completarlo; null si no pregunta por una persona nueva. Si además dice dónde trabaja ("que trabaja en el banco Galicia"), poné esa empresa en empresas: sirve para distinguir homónimos. El servidor busca en el padrón y te dice si la encontró; si hay varias coincidencias, el admin elige en pantalla.
+- afiliado: id del afiliado ya elegido en el panel (lo ves en el estado actual). Mantenelo si la pregunta sigue sobre la misma persona ("y sus trámites?"); null si pide otra persona (con persona) o si pide sacar ese filtro. Nunca inventes un id.
 
 QUÉ MIDE CADA PESTAÑA
-- recibos: recibos de sueldo que los trabajadores verificaron con la app: cuántos OK, cuántos con diferencias y el monto de esas diferencias.
+- recibos: recibos de sueldo que los trabajadores verificaron con la app: cuántos OK, cuántos con diferencias y el monto de esas diferencias. Con un afiliado elegido se ven SOLO los recibos que esa persona envió al sindicato: los que verificó en privado no existen para el panel, y así hay que decirlo si pregunta.
 - tramites: expedientes iniciados por los afiliados, por seccional y estado.
 - notificaciones: comunicaciones que el sindicato mandó a los afiliados: enviadas, leídas y sin leer. "Sin leer" (también "no leídas", "pendientes de lectura", "que no abrieron") es una cifra que vas a recibir, no un filtro: para responderlo, filtrá por lo que pida (seccional, período, tipo) con tab "notificaciones" y leé la cifra sin_leer.
 {consultas}
@@ -209,10 +242,12 @@ def _pestana(crudo: dict, cat: dict) -> str:
     return tab if tab in PESTANAS else "recibos"
 
 
-def _validar(entrada: dict, cat: dict, hoy: date) -> tuple:
+def _validar(sid: int, entrada: dict, cat: dict, hoy: date) -> tuple:
     """Salida de la herramienta -> (estado crudo para el JS, filtros parseados
     para dashboard.py, pestaña). Lanza ValueError con el mismo mensaje que ve
-    el frontend; el modelo lo recibe como error y corrige."""
+    el frontend; el modelo lo recibe como error y corrige. `persona` se
+    resuelve acá contra el padrón (PersonaNoEncontrada / PersonaAmbigua):
+    el modelo nunca ve la lista."""
     ids_secc = {s["id"] for s in cat["seccionales"]}
     ids_emp = {e["id"] for e in cat["empresas"]}
     crudo = {
@@ -227,13 +262,43 @@ def _validar(entrada: dict, cat: dict, hoy: date) -> tuple:
         "tipo_notif": str(entrada.get("tipo_notif") or ""),
         "sal_min": _entero_o_nulo(entrada.get("sal_min")),
         "sal_max": _entero_o_nulo(entrada.get("sal_max")),
-        "tema": str(entrada.get("tema") or "").strip(),
+        "tema": _texto_limpio(entrada.get("tema")),
         "tab": _pestana(entrada, cat),
     }
     if crudo["tab"] != "consultas":
         crudo["tema"] = ""
+    persona = _texto_limpio(entrada.get("persona"))
+    afiliado = _entero_o_nulo(entrada.get("afiliado"))
+    crudo["afiliado"] = None
+    if persona:
+        # Las empresas ya filtradas acotan la búsqueda: "Pérez, el del banco
+        # Galicia" desempata homónimos sin que el modelo vea el padrón.
+        cuits = [e["cuit"] for e in cat["empresas"] if e["id"] in set(crudo["empresas"])] or None
+        candidatos = dashboard.buscar_afiliados(sid, persona, cuits=cuits, limite=6)
+        if not candidatos:
+            raise PersonaNoEncontrada(persona)
+        if len(candidatos) > 1:
+            raise PersonaAmbigua(persona, candidatos, crudo)
+        afiliado = candidatos[0]["id"]
+    elif afiliado and not dashboard.afiliado_por_id(sid, afiliado):
+        afiliado = None          # id ajeno o inexistente: no es de este sindicato
+    crudo["afiliado"] = afiliado
     f = dashboard.parsear_filtros(_a_params(crudo), hoy)
     return crudo, f, crudo["tab"]
+
+
+def _texto_limpio(v) -> str:
+    """Un campo de texto de la herramienta. La salida del modelo no es un
+    contrato: Sonnet 5 llegó a emitir basura de su propio formato de llamada
+    ("</antml_parameter>\\n<parameter name=...") en dos strings vacíos
+    consecutivos, y el servidor salió a buscar a esa "persona". Lo que huela
+    a etiqueta de herramienta cuenta como vacío."""
+    if not isinstance(v, str):
+        return ""
+    v = v.strip()
+    if "<" in v and ("parameter" in v or "antml" in v):
+        return ""
+    return v
 
 
 def _enteros(valores) -> list:
@@ -278,6 +343,9 @@ def describir_filtros(crudo: dict, cat: dict, hoy: date) -> str:
         partes.append(f"bruto entre {f['sal_min'] or 'sin mínimo'} y {f['sal_max'] or 'sin máximo'}")
     if f["tema"]:
         partes.append("tema: " + f["tema"])
+    if f.get("afiliado"):
+        # Solo el id: el nombre es padrón y el padrón no viaja al modelo.
+        partes.append(f"afiliado elegido: id {f['afiliado']}")
     partes.append("pestaña: " + _pestana(crudo, cat))
     return "; ".join(partes) + "."
 
@@ -298,6 +366,8 @@ def _agregados(sid: int, crudo: dict, f: dict, tab: str, cat: dict) -> dict:
             "estado_tramite": crudo["estado_tramite"] or "todos",
             "tipo_notif": crudo["tipo_notif"] or "todas",
             "bruto_min": crudo["sal_min"], "bruto_max": crudo["sal_max"],
+            "afiliado": (f"uno elegido (id {crudo['afiliado']}); de sus recibos se cuentan "
+                         "solo los que envió al sindicato" if crudo.get("afiliado") else "ninguno"),
             "pestaña": tab,
         },
         "kpis_del_periodo": dashboard.kpis(sid, f)["actual"],
@@ -380,11 +450,23 @@ def responder(sid: int, pregunta: str, filtros_actuales: dict, historial: list,
         resultados = []
         for u in usos:
             try:
-                crudo, f, tab = _validar(u.input or {}, cat, hoy)
+                crudo, f, tab = _validar(sid, u.input or {}, cat, hoy)
                 datos = _agregados(sid, crudo, f, tab, cat)
                 filtros_salida = crudo
                 resultados.append({"type": "tool_result", "tool_use_id": u.id,
                                    "content": json.dumps(datos, ensure_ascii=False, default=str)})
+            except PersonaNoEncontrada as e:
+                resultados.append({"type": "tool_result", "tool_use_id": u.id,
+                                   "content": f"No encontré ningún afiliado del padrón que coincida con "
+                                              f"«{e.persona}». No apliqué filtros: decíselo al admin y "
+                                              f"pedile que revise el nombre o el CUIL."})
+            except PersonaAmbigua as e:
+                # Se corta acá: el admin elige en el cajón y el JS aplica
+                # filtros_pendientes + afiliado sin volver a llamar al modelo.
+                return {"respuesta": f"Encontré {len(e.candidatos)} afiliados que coinciden con "
+                                     f"«{e.persona}». Elegí a cuál te referís:",
+                        "filtros": None, "aplicar": False, "afiliado": None,
+                        "candidatos": e.candidatos, "filtros_pendientes": e.filtros, "uso": uso}
             except ValueError as e:
                 resultados.append({"type": "tool_result", "tool_use_id": u.id,
                                    "content": f"Filtros rechazados: {e} Corregí y volvé a llamar.",
@@ -395,5 +477,8 @@ def responder(sid: int, pregunta: str, filtros_actuales: dict, historial: list,
     if not texto:
         texto = ("Apliqué los filtros en el panel." if filtros_salida
                  else "No pude resolver la consulta. Probá con una pregunta más simple.")
-    return {"respuesta": texto, "filtros": filtros_salida,
-            "aplicar": filtros_salida is not None, "uso": uso}
+    afiliado = None
+    if filtros_salida and filtros_salida.get("afiliado"):
+        afiliado = dashboard.afiliado_por_id(sid, filtros_salida["afiliado"])   # para el chip
+    return {"respuesta": texto, "filtros": filtros_salida, "aplicar": filtros_salida is not None,
+            "afiliado": afiliado, "candidatos": [], "filtros_pendientes": None, "uso": uso}

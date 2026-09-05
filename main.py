@@ -3346,7 +3346,8 @@ def dashboard_asistente(request: Request, cuerpo: dict = Body(default={})):
         print(f"[asistente] sindicato {sid}: {e}")
         raise ErrorApp("E-ASISTENTE-01")
     return {"respuesta": salida["respuesta"], "filtros": salida["filtros"],
-            "aplicar": salida["aplicar"]}
+            "aplicar": salida["aplicar"], "afiliado": salida["afiliado"],
+            "candidatos": salida["candidatos"], "filtros_pendientes": salida["filtros_pendientes"]}
 
 
 @app.get("/admin/dashboard/kpis")

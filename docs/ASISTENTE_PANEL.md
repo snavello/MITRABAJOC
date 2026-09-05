@@ -124,8 +124,20 @@ excepción va al log del servidor, nunca al admin.
 **Herramienta `fijar_filtros`** (`strict: true`, `additionalProperties:
 false`): `desde`, `hasta`, `seccionales[]`, `empresas[]`, `formato`,
 `resultado`, `estado_tramite`, `tipo_notif`, `sal_min`, `sal_max`, `tema`,
-`tab`, `motivo` (una frase, para el registro). Espejo exacto de
-`parsear_filtros` + la pestaña.
+`persona`, `afiliado`, `tab`, `motivo` (una frase, para el registro).
+Espejo exacto de `parsear_filtros` + la pestaña + la búsqueda de persona
+(§9).
+
+**Los textos opcionales de la herramienta van como `null`, nunca como
+`""`.** Visto en la prueba real del Bloque 4: con `tema` y `persona` como
+dos strings vacíos consecutivos, Sonnet 5 emitió basura de su propio
+formato de llamada (`</antml_parameter>\n<parameter name="persona">`) en
+esos campos, el servidor salió a buscar a esa "persona" y agotó las tres
+vueltas. Dos defensas: los campos admiten `null` en el esquema y el prompt
+lo pide así, y `asistente._texto_limpio()` descarta cualquier texto que
+huela a etiqueta de herramienta (la salida del modelo no es un contrato,
+misma regla que con el extractor). Test:
+`test_basura_del_modelo_en_textos_cuenta_como_vacio`.
 
 **Bucle** (máximo 3 vueltas):
 
@@ -205,7 +217,12 @@ frases de prueba con preguntas reales.
    **HECHO 2026-09-05**, verificado en el navegador (buscar "rosar", elegir
    a Juan Rosarino, chip + URL + KPIs + explorador por persona).
 4. Asistente con `persona`: resolución en el servidor, candidatos en el
-   cajón, prompt y set de frases con preguntas por persona.
+   cajón, prompt. **HECHO 2026-09-05**, 6 tests nuevos (19 en total) y
+   verificado con la API real: "mostrame los recibos de juan rosarino" →
+   dos candidatos en el cajón con CUIL, seccional y empresa; un clic aplica
+   el filtro sin volver al modelo; "y sus notificaciones?" conserva al
+   afiliado por id y contesta "2 enviadas, 1 sin leer". El set de frases
+   con preguntas por persona queda para el Bloque 7.
 5. Registro + tope diario + migración Alembic.
 6. Voz (Web Speech API).
 7. Set de frases con la API real, ajustes de prompt, versión,

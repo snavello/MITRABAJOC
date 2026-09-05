@@ -66,16 +66,22 @@ with db.get_session() as s:
     SECC_ROSARIO, SECC_CORDOBA, SECC_AJENA = rosario.id, cordoba.id, ajena.id
 
     emp = Empleador(sindicato_id=SID_A, cuit="30111111117", razon_social="Metalsur SA")
-    s.add(emp); s.commit(); s.refresh(emp)
-    EMP_METALSUR = emp.id
+    emp2 = Empleador(sindicato_id=SID_A, cuit="30222222225", razon_social="Textil Sur")
+    s.add(emp); s.add(emp2); s.commit(); s.refresh(emp); s.refresh(emp2)
+    EMP_METALSUR, EMP_TEXTIL = emp.id, emp2.id
 
     CUIL_R1, CUIL_R2, CUIL_C = "20111111119", "20222222227", "20333333335"
+    CUIL_R3, CUIL_AJENA = "20444444443", "20999999995"
     s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_R1, nombre="Juan Rosarino",
                       registrado=True, seccional_id=SECC_ROSARIO, cuit_empleador="30111111117"))
     s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_R2, nombre="Ana Rosarina",
                       registrado=True, seccional_id=SECC_ROSARIO, cuit_empleador="30111111117"))
     s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_C, nombre="Beto Cordobés",
                       registrado=False, seccional_id=SECC_CORDOBA))
+    # Homónimo de Juan en otra seccional y otra empresa: para desempatar.
+    s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_R3, nombre="Juan Rosarino",
+                      registrado=True, seccional_id=SECC_CORDOBA, cuit_empleador="30-22222222-5"))
+    s.add(Trabajador(sindicato_id=SID_B, cuil=CUIL_AJENA, nombre="Zoe Ajena", registrado=True))
 
     # n1 (manual, hace 3 días) a los tres: R1 y C la leyeron, R2 no.
     n1 = Notificacion(sindicato_id=SID_A, remitente="CD", texto="Asamblea",
@@ -96,7 +102,13 @@ with db.get_session() as s:
 # Todo el sindicato: 4 enviadas, 2 leídas -> 2 sin leer.
 ROSARIO_ENVIADAS, ROSARIO_SIN_LEER = 3, 2
 TOTAL_ENVIADAS = 4
-PERSONAS = ["Juan", "Ana", "Beto", CUIL_R1, CUIL_R2, CUIL_C]
+PERSONAS = ["Juan", "Ana", "Beto", "Zoe", CUIL_R1, CUIL_R2, CUIL_C, CUIL_R3, CUIL_AJENA]
+
+
+def _id_trabajador(cuil):
+    from sqlmodel import select
+    with db.get_session() as s:
+        return s.exec(select(Trabajador).where(Trabajador.cuil == cuil)).first().id
 
 
 def _login(usuario, clave):
@@ -155,8 +167,8 @@ def _filtros(**cambios):
     """Una entrada válida de la herramienta, con cambios puntuales."""
     base = {"desde": _dia(30), "hasta": _dia(0), "seccionales": [], "empresas": [],
             "formato": "", "resultado": "", "estado_tramite": "", "tipo_notif": "",
-            "sal_min": None, "sal_max": None, "tema": "", "tab": "recibos",
-            "motivo": "prueba"}
+            "sal_min": None, "sal_max": None, "tema": "", "persona": "", "afiliado": None,
+            "tab": "recibos", "motivo": "prueba"}
     base.update(cambios)
     return base
 
@@ -360,6 +372,100 @@ def test_historial_viaja_recortado():
     print("OK  test_historial_viaja_recortado")
 
 
+# ---------- Persona (docs/ASISTENTE_PANEL.md §9) ----------
+
+def test_persona_unica_aplica_el_afiliado_sin_mandar_el_padron():
+    ana = _id_trabajador(CUIL_R2)
+    falso = _guion(
+        _respuesta(_herramienta(_filtros(persona="ana rosarina", tab="notificaciones"))),
+        _respuesta(_texto("Tiene 1 notificación sin leer.")),
+    )
+    r = _preguntar(admin_a, pregunta="las notificaciones de ana rosarina")
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert d["aplicar"] is True and d["filtros"]["afiliado"] == ana
+    assert d["afiliado"]["nombre"] == "Ana Rosarina" and d["candidatos"] == []
+    datos = json.loads(_tool_results(falso.llamadas[1])[0]["content"])
+    assert datos["notificaciones"]["enviadas"] == 1 and datos["notificaciones"]["sin_leer"] == 1
+    assert datos["filtros_aplicados"]["afiliado"].startswith("uno elegido")
+    # Al modelo no le llega ni el nombre ni el CUIL de la persona resuelta.
+    al_modelo = _tool_results(falso.llamadas[1])[0]["content"] + falso.llamadas[0]["system"][0]["text"]
+    assert "Rosarina" not in al_modelo and CUIL_R2 not in al_modelo
+    print("OK  test_persona_unica_aplica_el_afiliado_sin_mandar_el_padron")
+
+
+def test_persona_homonima_devuelve_candidatos_sin_segunda_llamada():
+    falso = _guion(_respuesta(_herramienta(_filtros(persona="juan rosarino", tab="recibos"))))
+    r = _preguntar(admin_a, pregunta="los recibos de juan rosarino")
+    d = r.json()
+    assert r.status_code == 200 and d["aplicar"] is False and d["filtros"] is None
+    assert len(falso.llamadas) == 1                       # el padrón no vuelve al modelo
+    assert [c["nombre"] for c in d["candidatos"]] == ["Juan Rosarino", "Juan Rosarino"]
+    assert sorted(c["seccional"] for c in d["candidatos"]) == ["Córdoba", "Rosario"]
+    assert d["filtros_pendientes"]["tab"] == "recibos" and d["filtros_pendientes"]["afiliado"] is None
+    assert "2 afiliados" in d["respuesta"]
+    print("OK  test_persona_homonima_devuelve_candidatos_sin_segunda_llamada")
+
+
+def test_persona_con_empresa_desempata_homonimos():
+    juan_textil = _id_trabajador(CUIL_R3)
+    _guion(
+        _respuesta(_herramienta(_filtros(persona="juan rosarino", empresas=[EMP_TEXTIL], tab="tramites"))),
+        _respuesta(_texto("Listo.")),
+    )
+    d = _preguntar(admin_a, pregunta="los trámites de juan rosarino, el de textil sur").json()
+    assert d["aplicar"] is True and d["filtros"]["afiliado"] == juan_textil
+    assert d["afiliado"]["empresa"] == "Textil Sur" and d["afiliado"]["seccional"] == "Córdoba"
+    print("OK  test_persona_con_empresa_desempata_homonimos")
+
+
+def test_persona_no_encontrada_avisa_al_modelo():
+    falso = _guion(
+        _respuesta(_herramienta(_filtros(persona="galmarini"))),
+        _respuesta(_texto("No encontré a ningún afiliado llamado Galmarini.")),
+    )
+    d = _preguntar(admin_a, pregunta="las notificaciones de galmarini").json()
+    assert d["aplicar"] is False and d["filtros"] is None and d["candidatos"] == []
+    aviso = _tool_results(falso.llamadas[1])[0]
+    assert "No encontré" in aviso["content"] and "galmarini" in aviso["content"] and not aviso.get("is_error")
+    assert d["respuesta"].startswith("No encontré")
+    print("OK  test_persona_no_encontrada_avisa_al_modelo")
+
+
+def test_afiliado_elegido_se_conserva_y_el_ajeno_se_descarta():
+    juan, zoe = _id_trabajador(CUIL_R1), _id_trabajador(CUIL_AJENA)
+    falso = _guion(_respuesta(_herramienta(_filtros(afiliado=juan, tab="tramites"))),
+                   _respuesta(_texto("Listo.")))
+    r = _preguntar(admin_a, pregunta="y sus trámites?", filtros=dict(ESTADO_BASE, afiliado=juan))
+    assert r.json()["filtros"]["afiliado"] == juan and r.json()["afiliado"]["nombre"] == "Juan Rosarino"
+    # El estado actual le llega al modelo como "afiliado elegido: id N", nunca el nombre.
+    estado = falso.llamadas[0]["messages"][-1]["content"]
+    assert ("afiliado elegido: id %d" % juan) in estado and "Juan" not in estado
+    _guion(_respuesta(_herramienta(_filtros(afiliado=zoe))), _respuesta(_texto("Listo.")))
+    r = _preguntar(admin_a, pregunta="recibos de esa persona")
+    assert r.json()["filtros"]["afiliado"] is None and r.json()["afiliado"] is None
+    print("OK  test_afiliado_elegido_se_conserva_y_el_ajeno_se_descarta")
+
+
+def test_basura_del_modelo_en_textos_cuenta_como_vacio():
+    """Visto con Sonnet 5 en la prueba real: con dos strings vacíos seguidos
+    emitió '</antml_parameter>\\n<parameter name="persona">' en tema y persona,
+    y el servidor salió a buscar a esa "persona" tres veces. Ahora eso es
+    vacío: se aplica el afiliado ya elegido y listo."""
+    juan = _id_trabajador(CUIL_R1)
+    basura = '</antml_parameter>\n<parameter name="persona">'
+    falso = _guion(
+        _respuesta(_herramienta(_filtros(tema=basura, persona="</antml_parameter>\n", afiliado=juan,
+                                         tab="notificaciones"))),
+        _respuesta(_texto("Tiene 2 notificaciones, 1 sin leer.")),
+    )
+    d = _preguntar(admin_a, pregunta="y sus notificaciones?", filtros=dict(ESTADO_BASE, afiliado=juan)).json()
+    assert d["aplicar"] is True and d["filtros"]["afiliado"] == juan and d["filtros"]["tema"] == ""
+    assert len(falso.llamadas) == 2 and not _tool_results(falso.llamadas[1])[0].get("is_error")
+    assert asistente._texto_limpio(None) == "" and asistente._texto_limpio("  Pérez ") == "Pérez"
+    print("OK  test_basura_del_modelo_en_textos_cuenta_como_vacio")
+
+
 def test_error_del_modelo_502_con_codigo():
     _guion(error=RuntimeError("se cayó la API"))
     r = _preguntar(admin_a)
@@ -381,5 +487,11 @@ if __name__ == "__main__":
     test_respuesta_sin_herramienta_no_aplica_nada()
     test_vueltas_agotadas_devuelve_lo_ultimo_valido()
     test_historial_viaja_recortado()
+    test_persona_unica_aplica_el_afiliado_sin_mandar_el_padron()
+    test_persona_homonima_devuelve_candidatos_sin_segunda_llamada()
+    test_persona_con_empresa_desempata_homonimos()
+    test_persona_no_encontrada_avisa_al_modelo()
+    test_afiliado_elegido_se_conserva_y_el_ajeno_se_descarta()
+    test_basura_del_modelo_en_textos_cuenta_como_vacio()
     test_error_del_modelo_502_con_codigo()
     print("\nTodos los tests del Asistente pasaron.")
