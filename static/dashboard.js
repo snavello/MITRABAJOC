@@ -55,8 +55,10 @@
     seccionales: new Set(), empresas: new Set(),
     formato: "", salMin: null, salMax: null,
     resultado: "", estadoTramite: "", tipoNotif: "", tema: "",
+    afiliado: null,                            // id de Trabajador (nunca el CUIL)
     tab: "recibos", paginas: 1,
   };
+  var AFILIADOS = {};                          // id -> {nombre, cuil, seccional, empresa}, para etiquetar
   var LIM = { min: null, max: null };        // límites del slider (en miles)
   var CATALOGO = { seccionales: [], empresas: [] };
   var calVista = new Date(HOY.getFullYear(), HOY.getMonth(), 1);
@@ -75,6 +77,7 @@
     if (S.estadoTramite) q.set("estado_tramite", S.estadoTramite);
     if (S.tipoNotif) q.set("tipo_notif", S.tipoNotif);
     if (S.tema) q.set("tema", S.tema);
+    if (S.afiliado) q.set("afiliado", S.afiliado);
     return q;
   }
   function urlCompartible() {
@@ -102,6 +105,7 @@
     S.estadoTramite = ["abierto", "en_proceso", "resuelto"].indexOf(q.get("estado_tramite")) >= 0 ? q.get("estado_tramite") : "";
     S.tipoNotif = ["manual", "sistema"].indexOf(q.get("tipo_notif")) >= 0 ? q.get("tipo_notif") : "";
     S.tema = q.get("tema") || "";
+    S.afiliado = +q.get("afiliado") || null;
     var tabs = ["recibos", "tramites", "notificaciones"].concat(CONSULTAS_ON ? ["consultas"] : []);
     if (tabs.indexOf(q.get("tab")) >= 0) S.tab = q.get("tab");
   }
@@ -487,11 +491,32 @@
           '<td><button type="button" class="btn-ver" data-det="notif" data-dia="' + n.fecha + '" data-secc="' + (n.seccional_id || 0) + '" data-tipo="' + n.tipo + '">Ver</button></td></tr>';
       },
     },
+    // Con afiliado elegido el servidor manda una fila por notificación
+    // (modo "afiliado"), no el agregado diario.
+    notificaciones_afiliado: {
+      sub: "Notificaciones que recibió el afiliado elegido · una por fila, con leída o sin leer",
+      head: "<tr><th>Fecha</th><th>Tipo</th><th>Remitente</th><th>Texto</th><th>Lectura</th></tr>",
+      cols: 5, total: function (n) { return n + " notificaciones"; },
+      fila: function (n) {
+        var texto = n.texto.length > 120 ? n.texto.slice(0, 117) + "…" : n.texto;
+        return "<tr><td>" + fFecha(n.fecha) + "</td><td>" + esc(n.etiqueta) + "</td><td>" + esc(n.remitente || "—") + "</td>" +
+          '<td style="white-space:normal;max-width:420px" title="' + esc(n.texto) + '">' + esc(texto) + "</td>" +
+          '<td><span class="tag ' + (n.leida ? "ok" : "rev") + '">' + (n.leida ? "Leída el " + fFecha(n.leida_en) : "Sin leer") + "</span></td></tr>";
+      },
+    },
   };
   var tablaEstado = { total: 0, mostrando: 0 };
 
+  function subDe(def) {
+    if (!S.afiliado) return def.sub;
+    if (S.tab === "recibos") return "Todos los recibos que el afiliado envió al sindicato · los que verificó en privado no se muestran ni se cuentan";
+    if (S.tab === "consultas") return "Las consultas al bot son anónimas: el filtro por afiliado no aplica acá";
+    return def.sub;
+  }
+
   function pintarTabla(d, agregar) {
     var def = TABLAS[S.tab];
+    if (S.tab === "notificaciones" && d.modo === "afiliado") def = TABLAS.notificaciones_afiliado;
     $("tabla-head").innerHTML = def.head;
     var html = d.items.map(def.fila).join("");
     if (agregar) $("tabla-body").insertAdjacentHTML("beforeend", html);
@@ -500,7 +525,7 @@
     tablaEstado.total = d.total;
     tablaEstado.mostrando = (agregar ? tablaEstado.mostrando : 0) + d.items.length;
     $("tabla-total").textContent = "Mostrando " + fmtN(tablaEstado.mostrando) + " de " + fmtN(d.total) + " · " + def.total(fmtN(d.total));
-    $("tabla-sub").textContent = def.sub;
+    $("tabla-sub").textContent = subDe(def);
     $("cnt-" + S.tab).textContent = fmtN(d.total);
     $("ver-mas").style.visibility = tablaEstado.mostrando < d.total ? "visible" : "hidden";
     document.querySelectorAll("#tabs-datos .tab-d").forEach(function (b) {
@@ -826,6 +851,10 @@
     }
     if (S.tipoNotif) agregar("Notif.: " + (S.tipoNotif === "manual" ? "Comunicaciones" : "Trámites"), function () { S.tipoNotif = ""; });
     if (S.tema) agregar("Tema: " + S.tema, function () { S.tema = ""; });
+    if (S.afiliado) {
+      agregar("Afiliado: " + (AFILIADOS[S.afiliado] ? AFILIADOS[S.afiliado].nombre : "#" + S.afiliado),
+        function () { S.afiliado = null; });
+    }
     if (LIM.min !== null && S.salMin !== null && (S.salMin > LIM.min || S.salMax < LIM.max)) {
       agregar("Bruto: $" + fmtN(S.salMin) + "k – $" + fmtN(S.salMax) + "k", function () { S.salMin = LIM.min; S.salMax = LIM.max; });
     }
@@ -850,11 +879,69 @@
 
   function reiniciar() {
     S.seccionales.clear(); S.empresas.clear();
-    S.formato = ""; S.resultado = ""; S.estadoTramite = ""; S.tipoNotif = ""; S.tema = "";
+    S.formato = ""; S.resultado = ""; S.estadoTramite = ""; S.tipoNotif = ""; S.tema = ""; S.afiliado = null;
     S.salMin = LIM.min; S.salMax = LIM.max;
     S.tab = "recibos"; S.paginas = 1;
     setPreset("hoy");
     refrescar();
+  }
+
+  /* ================= Filtro por afiliado (docs/ASISTENTE_PANEL.md §9) ================= */
+  var afTimer = null, afAbort = null;
+
+  function elegirAfiliado(it) {
+    AFILIADOS[it.id] = it;
+    S.afiliado = it.id;
+    cambio();
+  }
+
+  // Un link con ?afiliado= (o el Asistente) trae el id sin el nombre: se
+  // pide al servidor para etiquetar el chip. Solo resuelve dentro del tenant.
+  function etiquetarAfiliado() {
+    if (!S.afiliado || AFILIADOS[S.afiliado]) return Promise.resolve();
+    return fetch("/admin/dashboard/afiliados?id=" + S.afiliado)
+      .then(function (r) { return r.ok ? r.json() : { items: [] }; })
+      .then(function (d) { if (d.items[0]) AFILIADOS[d.items[0].id] = d.items[0]; pintarChips(); })
+      .catch(function () { });
+  }
+
+  function initAfiliado() {
+    var caja = $("af-busqueda"), lista = $("af-lista");
+    if (!caja) return;
+    function cerrar() { lista.hidden = true; lista.innerHTML = ""; }
+    function pintar(items) {
+      lista.innerHTML = "";
+      if (!items.length) {
+        var v = document.createElement("div");
+        v.className = "af-vacio"; v.textContent = "No encontré a nadie con ese nombre o CUIL.";
+        lista.appendChild(v);
+      }
+      items.forEach(function (it) {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "af-item"; b.textContent = it.nombre;
+        var s = document.createElement("small");
+        s.textContent = [it.cuil, it.seccional, it.empresa].filter(Boolean).join(" · ");
+        b.appendChild(s);
+        b.onclick = function () { elegirAfiliado(it); caja.value = ""; cerrar(); };
+        lista.appendChild(b);
+      });
+      lista.hidden = false;
+    }
+    caja.oninput = function () {
+      clearTimeout(afTimer);
+      var q = caja.value.trim();
+      if (q.length < 2) { cerrar(); return; }
+      afTimer = setTimeout(function () {
+        if (afAbort) afAbort.abort();
+        afAbort = new AbortController();
+        fetch("/admin/dashboard/afiliados?q=" + encodeURIComponent(q), { signal: afAbort.signal })
+          .then(function (r) { return r.ok ? r.json() : { items: [] }; })
+          .then(function (d) { pintar(d.items); })
+          .catch(function () { });
+      }, 250);
+    };
+    caja.onkeydown = function (e) { if (e.key === "Escape") cerrar(); };
+    document.addEventListener("click", function (e) { if (!e.target.closest(".af-wrap")) cerrar(); });
   }
 
   /* ================= Asistente del Panel (docs/ASISTENTE_PANEL.md) ================= */
@@ -874,7 +961,7 @@
       estado_tramite: q.get("estado_tramite") || "", tipo_notif: q.get("tipo_notif") || "",
       sal_min: q.get("sal_min") ? +q.get("sal_min") : null,
       sal_max: q.get("sal_max") ? +q.get("sal_max") : null,
-      tema: q.get("tema") || "", tab: S.tab,
+      tema: q.get("tema") || "", afiliado: S.afiliado, tab: S.tab,
     };
   }
 
@@ -889,12 +976,13 @@
       else q.set(k, v);
     });
     S.seccionales.clear(); S.empresas.clear();
-    S.formato = ""; S.resultado = ""; S.estadoTramite = ""; S.tipoNotif = ""; S.tema = "";
+    S.formato = ""; S.resultado = ""; S.estadoTramite = ""; S.tipoNotif = ""; S.tema = ""; S.afiliado = null;
     S.salMin = LIM.min; S.salMax = LIM.max;
     S.tab = "recibos"; S.paginas = 1;
     calEligiendo = false;
     estadoDeParams(q);
     calVista = new Date(S.desde.getFullYear(), S.desde.getMonth(), 1);
+    etiquetarAfiliado();
   }
 
   function asistAbrir(abrir) {
@@ -1078,6 +1166,7 @@
   estadoDeUrl();
   crearCharts();
   initControles();
+  initAfiliado();
   initAsistente();
-  initCatalogo().then(function () { asistEjemplo(); return refrescar(); });
+  initCatalogo().then(function () { asistEjemplo(); etiquetarAfiliado(); return refrescar(); });
 })();

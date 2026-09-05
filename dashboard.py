@@ -20,6 +20,8 @@ Los nombres/etiquetas (seccionales, empresas) se resuelven en Python contra
 los catálogos del tenant (chicos), para no depender del formato con el que se
 haya cargado cada CUIT en el CRUD de Empleadores.
 """
+import re
+import unicodedata
 from datetime import date, datetime, timedelta
 from typing import Optional
 
@@ -169,6 +171,9 @@ def parsear_filtros(params, hoy: Optional[date] = None) -> dict:
         "estado_tramite": estado_tramite,
         "tipo_notif": tipo_notif,
         "tema": (params.get("tema") or "").strip(),
+        # Filtro por afiliado (docs/ASISTENTE_PANEL.md §9): id de Trabajador,
+        # nunca el CUIL, así la URL compartible no lo lleva.
+        "afiliado": _entero("afiliado") or None,
     }
 
 
@@ -224,6 +229,90 @@ def _cuits_de_empresas(sid: int, ids: list) -> Optional[list]:
     if not ids:
         return None
     return [e["cuit"] for e in catalogo_empresas(sid) if e["id"] in set(ids)]
+
+
+def _cuil_de_afiliado(sid: int, afiliado_id) -> Optional[str]:
+    """id de Trabajador (del PROPIO sindicato) -> CUIL. Mismo criterio que
+    _cuits_de_empresas: un id ajeno o inexistente resuelve a un CUIL
+    imposible y el filtro no matchea NADA (nunca "todo"). None = sin filtro."""
+    if not afiliado_id:
+        return None
+    with db.get_session() as s:
+        fila = s.execute(text(
+            "SELECT cuil FROM trabajador WHERE id = :id AND sindicato_id = :sid"
+        ), {"id": afiliado_id, "sid": sid}).first()
+    return _norm_cuil(fila[0]) if fila else "__nadie__"
+
+
+# Con filtro de afiliado, de los recibos cuentan SOLO los que esa persona
+# envió voluntariamente al sindicato: si el total incluyera los que verificó
+# en privado, el KPI revelaría lo que la fila esconde (§1.3, con test).
+_SOLO_ENVIADOS_DEL_AFILIADO = "r.cuil = :cuil_af AND r.enviado_sindicato"
+
+
+def _normalizar(texto: str) -> str:
+    """minúsculas, sin tildes, sin puntuación, espacios simples."""
+    sin_tildes = unicodedata.normalize("NFKD", texto or "").encode("ascii", "ignore").decode()
+    return " ".join(re.sub(r"[^a-z0-9 ]+", " ", sin_tildes.lower()).split())
+
+
+def buscar_afiliados(sid: int, texto: str, cuits: Optional[list] = None, limite: int = 10) -> list:
+    """Padrón del sindicato por CUIL (si lo que escribieron son dígitos) o por
+    nombre, tolerante a tildes, mayúsculas y orden de las palabras ("perez
+    juan" encuentra a "Juan Pablo Pérez"). `cuits` acota a esas empresas
+    (para desempatar homónimos: "Pérez, el del banco Galicia").
+
+    El matcheo fino va en Python sobre el padrón activo del tenant: un LIKE
+    en SQL no ignora tildes ni en SQLite ni en Postgres sin extensiones. Es
+    una lista de miles, no de millones; si algún padrón lo justifica, el
+    paso siguiente es una columna `nombre_normalizado` indexada."""
+    texto = (texto or "").strip()
+    if not texto:
+        return []
+    with db.get_session() as s:
+        filas = s.execute(text(
+            "SELECT id, nombre, cuil, seccional_id, cuit_empleador FROM trabajador "
+            "WHERE sindicato_id = :sid AND activo"), {"sid": sid}).all()
+    digitos = re.sub(r"\D", "", texto)
+    es_cuil = len(digitos) >= 6 and not re.search(r"[a-zA-Z]", texto)
+    tokens = _normalizar(texto).split()
+    candidatos = []
+    for tid, nombre, cuil, secc_id, cuit_emp in filas:
+        if cuits is not None and _norm_cuil(cuit_emp or "") not in cuits:
+            continue
+        if es_cuil:
+            if digitos not in _norm_cuil(cuil or ""):
+                continue
+            puntaje = 2
+        else:
+            nombre_n = _normalizar(nombre)
+            if not tokens or not all(t in nombre_n for t in tokens):
+                continue
+            palabras = nombre_n.split()
+            # Todas las palabras buscadas empiezan una palabra del nombre:
+            # "juan pe" pesa más que "an" perdido en "Juana Pena".
+            puntaje = 2 if all(any(p.startswith(t) for p in palabras) for t in tokens) else 1
+        candidatos.append((puntaje, len(nombre or ""), nombre or "", tid, cuil, secc_id, cuit_emp))
+    candidatos.sort(key=lambda c: (-c[0], c[1], c[2]))
+    seccionales = _etiquetas_seccionales(sid)
+    empresas = _etiquetas_empresas(sid)
+    return [{"id": tid, "nombre": nombre, "cuil": cuil,
+             "seccional": seccionales.get(secc_id) or "Sin seccional",
+             "empresa": empresas.get(_norm_cuil(cuit_emp or "")) or ""}
+            for _, _, nombre, tid, cuil, secc_id, cuit_emp in candidatos[:limite]]
+
+
+def afiliado_por_id(sid: int, afiliado_id: int) -> Optional[dict]:
+    """Para etiquetar el chip al cargar un link con ?afiliado=. Solo del tenant."""
+    with db.get_session() as s:
+        fila = s.execute(text(
+            "SELECT id, nombre, cuil, seccional_id, cuit_empleador FROM trabajador "
+            "WHERE id = :id AND sindicato_id = :sid"), {"id": afiliado_id, "sid": sid}).first()
+    if not fila:
+        return None
+    return {"id": fila[0], "nombre": fila[1], "cuil": fila[2],
+            "seccional": _etiquetas_seccionales(sid).get(fila[3]) or "Sin seccional",
+            "empresa": _etiquetas_empresas(sid).get(_norm_cuil(fila[4] or "")) or ""}
 
 
 def _etiquetas_empresas(sid: int) -> dict:
@@ -282,6 +371,10 @@ def _sql_recibos(sid: int, f: dict, extra_conds: str = "", forzar_join: bool = F
     if f["resultado"]:
         conds.append("r.estado = :resultado")
         params["resultado"] = f["resultado"]
+    cuil_af = _cuil_de_afiliado(sid, f.get("afiliado"))
+    if cuil_af is not None:
+        conds.append(_SOLO_ENVIADOS_DEL_AFILIADO)
+        params["cuil_af"] = cuil_af
     if extra_conds:
         conds.append(extra_conds)
     return joins, " AND ".join(conds), params
@@ -301,6 +394,10 @@ def _sql_tramites(sid: int, f: dict, forzar_join: bool = False):
     if f["estado_tramite"]:
         conds.append("tr.estado IN :estados")
         params["estados"] = ESTADOS_TRAMITE_DASHBOARD[f["estado_tramite"]]
+    cuil_af = _cuil_de_afiliado(sid, f.get("afiliado"))
+    if cuil_af is not None:
+        conds.append("tr.cuil = :cuil_af")
+        params["cuil_af"] = cuil_af
     return joins, " AND ".join(conds), params
 
 
@@ -321,6 +418,10 @@ def _sql_notificaciones(sid: int, f: dict, forzar_join: bool = False):
     if f["tipo_notif"]:
         conds.append("n.origen = :tipo_notif")
         params["tipo_notif"] = f["tipo_notif"]
+    cuil_af = _cuil_de_afiliado(sid, f.get("afiliado"))
+    if cuil_af is not None:
+        conds.append("d.cuil = :cuil_af")
+        params["cuil_af"] = cuil_af
     return joins, " AND ".join(conds), params
 
 
@@ -338,6 +439,11 @@ def _sql_consultas(sid: int, f: dict, forzar_join: bool = False):
     if f["tema"]:
         conds.append("c.tema = :tema")
         params["tema"] = f["tema"]
+    if f.get("afiliado"):
+        # Las consultas al bot son anónimas a propósito (explorador y detalle
+        # sin CUIL ni nombre). Filtrar por persona las desanonimizaría:
+        # con afiliado elegido, acá no hay nada que mostrar.
+        conds.append("1 = 0")
     return joins, " AND ".join(conds), params
 
 
@@ -402,6 +508,9 @@ def kpis(sid: int, f: dict) -> dict:
         if cuits is not None:
             conds.append("REPLACE(REPLACE(COALESCE(cuit_empleador, ''), '-', ''), ' ', '') IN :cuits")
             params["cuits"] = cuits or ["__ninguna__"]
+        if f.get("afiliado"):
+            conds.append("id = :afiliado")
+            params["afiliado"] = f["afiliado"]
         fila = _uno(s, f"""
             SELECT COUNT(*),
                    COALESCE(SUM(CASE WHEN registrado THEN 1 ELSE 0 END), 0)
@@ -409,7 +518,9 @@ def kpis(sid: int, f: dict) -> dict:
         padron_total, padron_registrados = fila
 
         consultas = None
-        if db.config_dashboard()["consultas_bot_habilitado"]:
+        # Con afiliado elegido el KPI de consultas no aplica (son anónimas):
+        # None, no 0 -- un 0 afirmaría "esta persona no consultó".
+        if db.config_dashboard()["consultas_bot_habilitado"] and not f.get("afiliado"):
             joins, where, params = _sql_consultas(sid, f)
             consultas = _uno(s, f"SELECT COUNT(*) FROM consultaconvenio c{joins} WHERE {where}",
                              params)[0]
@@ -552,6 +663,10 @@ def semaforo(sid: int, f: dict, hoy: Optional[date] = None) -> dict:
     if cuits is not None:
         conds.append("r.cuit_empleador IN :cuits")
         params["cuits"] = cuits or ["__ninguna__"]
+    cuil_af = _cuil_de_afiliado(sid, f.get("afiliado"))
+    if cuil_af is not None:
+        conds.append(_SOLO_ENVIADOS_DEL_AFILIADO)
+        params["cuil_af"] = cuil_af
     with db.get_session() as s:
         filas = s.execute(_stmt(f"""
             SELECT r.cuit_empleador, MAX(r.fecha_ultimo_deposito)
@@ -610,7 +725,9 @@ def explorador_recibos(sid: int, f: dict, page: int, page_size: int) -> dict:
     si el trabajador envió voluntariamente el recibo al sindicato. El CASE
     está en el SQL: el dato de un recibo no enviado ni siquiera sale de la
     base."""
-    solo_diferencias = "" if f.get("resultado") else "r.estado != 'OK'"
+    # Con afiliado elegido se listan TODOS sus recibos enviados, no solo los
+    # observados: la pregunta es "qué mandó esta persona", no "qué está mal".
+    solo_diferencias = "" if (f.get("resultado") or f.get("afiliado")) else "r.estado != 'OK'"
     joins, where, params = _sql_recibos(sid, f, extra_conds=solo_diferencias,
                                         forzar_join=True)
     joins += " LEFT JOIN seccional sec ON sec.id = t.seccional_id"
@@ -691,8 +808,15 @@ def explorador_consultas(sid: int, f: dict, page: int, page_size: int) -> dict:
 
 def explorador_notificaciones(sid: int, f: dict, page: int, page_size: int) -> dict:
     """Agregado diario por seccional y tipo: enviadas, leídas, sin leer y
-    tasa de lectura. La paginación es sobre las filas agregadas."""
+    tasa de lectura. La paginación es sobre las filas agregadas.
+
+    Con filtro de afiliado el agregado no dice nada (sería una fila por día
+    con 1 enviada): se listan SUS notificaciones una por una, con leída o
+    sin leer -- `modo: "afiliado"` le avisa al frontend que cambie las
+    columnas."""
     joins, where, params = _sql_notificaciones(sid, f, forzar_join=True)
+    if f.get("afiliado"):
+        return _explorador_notificaciones_de_afiliado(joins, where, params, page, page_size)
     grupos = "substr(n.enviado_en, 1, 10), t.seccional_id, n.origen"
     with db.get_session() as s:
         total = _uno(s, f"""
@@ -717,6 +841,24 @@ def explorador_notificaciones(sid: int, f: dict, page: int, page_size: int) -> d
             "enviadas": enviadas, "leidas": leidas, "sin_leer": enviadas - leidas,
             "tasa_lectura": round(leidas / enviadas * 100) if enviadas else 0})
     return {"total": total, "page": page, "page_size": page_size, "items": items}
+
+
+def _explorador_notificaciones_de_afiliado(joins, where, params, page, page_size) -> dict:
+    with db.get_session() as s:
+        total = _uno(s, f"SELECT COUNT(*) FROM notificaciondestinatario d{joins} WHERE {where}",
+                     params)[0]
+        params_pagina = dict(params, limite=page_size, salto=(page - 1) * page_size)
+        filas = s.execute(_stmt(f"""
+            SELECT n.enviado_en, n.origen, n.remitente, n.texto, d.leida_en, n.id
+            FROM notificaciondestinatario d{joins} WHERE {where}
+            ORDER BY n.enviado_en DESC, n.id DESC
+            LIMIT :limite OFFSET :salto""", params_pagina), params_pagina).all()
+    items = [{"fecha": fila[0], "tipo": fila[1], "etiqueta": TIPOS_NOTIF.get(fila[1], fila[1]),
+              "remitente": fila[2] or "", "texto": fila[3] or "",
+              "leida": fila[4] is not None, "leida_en": fila[4], "id": fila[5]}
+             for fila in filas]
+    return {"total": total, "page": page, "page_size": page_size, "items": items,
+            "modo": "afiliado"}
 
 
 # ---------- Detalle por fila del explorador ("Ver" -> modal) ----------

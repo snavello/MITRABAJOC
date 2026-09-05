@@ -94,6 +94,18 @@
     padding: 5px 12px; font-size: 12px; font-weight: 600; color: var(--gris); cursor: pointer; font-family: inherit; }
   .m-chip:hover { border-color: var(--destacado-borde); color: var(--destacado); }
   .m-chip.act { background: var(--destacado); border-color: var(--destacado); color: #fff; }
+  /* filtro por afiliado: buscador con lista desplegable */
+  .af-wrap { position: relative; max-width: 260px; }
+  .af-wrap input { width: 100%; box-sizing: border-box; border: 1.5px solid var(--linea); border-radius: 10px; padding: 7px 10px;
+    font: inherit; font-size: 12.5px; background: var(--blanco); color: var(--tinta); }
+  .af-wrap input:focus { outline: none; border-color: var(--destacado); }
+  .af-lista { position: absolute; top: 100%; left: 0; right: 0; z-index: 20; margin-top: 4px; background: var(--blanco);
+    border: 1px solid var(--linea); border-radius: 10px; box-shadow: 0 8px 24px rgba(8,12,20,.12); max-height: 240px; overflow-y: auto; }
+  .af-item { display: block; width: 100%; text-align: left; border: none; background: none; padding: 7px 10px; cursor: pointer;
+    font: inherit; font-size: 12.5px; font-weight: 600; color: var(--tinta); }
+  .af-item:hover, .af-item:focus { background: var(--papel); outline: none; }
+  .af-item small { display: block; font-weight: 400; color: var(--gris); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .af-vacio { padding: 8px 10px; color: var(--gris); font-size: 12px; }
 
   .slider-wrap { min-width: 210px; }
   .slider-vals { display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 600;
@@ -359,6 +371,11 @@
         </div>
         <span class="f-label" style="margin-top:8px">Seccionales · múltiple</span>
         <div class="multi-chips" id="secc-chips" style="max-width:260px"></div>
+        <span class="f-label" style="margin-top:8px">Afiliado</span>
+        <div class="af-wrap">
+          <input type="search" id="af-busqueda" placeholder="Nombre o CUIL" autocomplete="off" aria-label="Buscar afiliado">
+          <div class="af-lista" id="af-lista" hidden></div>
+        </div>
       </div>
 
       <div class="f-grupo">
@@ -532,6 +549,6 @@
 <footer class="dash">Panel Sindical · versión {{ version }} · {{ fecha_version }}</footer>
 
 <script src="/static/chart.umd.min.js?v=4.4.9"></script>
-<script src="/static/dashboard.js?v={{ version }}"></script>
+<script src="/static/dashboard.js?v={{ sello_static('dashboard.js') }}"></script>
 </body>
 </html>

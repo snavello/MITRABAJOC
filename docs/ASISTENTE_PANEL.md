@@ -200,9 +200,15 @@ frases de prueba con preguntas reales.
    primera pregunta sin período suele dar 0 y el modelo ofrece ampliar.
    Decidir si, con el panel en "Hoy" y sin período en la pregunta, el
    prompt debe ampliar solo a 30 días o seguir respetando el panel.
-3. Registro + tope diario + migración Alembic.
-4. Voz (Web Speech API).
-5. Set de frases con la API real, ajustes de prompt, versión,
+3. Filtro por afiliado en el panel (§9): vocabulario de filtros, reglas de
+   privacidad, buscador, tabla de notificaciones por persona, 5 tests.
+   **HECHO 2026-09-05**, verificado en el navegador (buscar "rosar", elegir
+   a Juan Rosarino, chip + URL + KPIs + explorador por persona).
+4. Asistente con `persona`: resolución en el servidor, candidatos en el
+   cajón, prompt y set de frases con preguntas por persona.
+5. Registro + tope diario + migración Alembic.
+6. Voz (Web Speech API).
+7. Set de frases con la API real, ajustes de prompt, versión,
    `HISTORIAL.md`, promover a demo.
 
 Cada bloque se verifica en local (Docker + uvicorn + lote UOM) y se
@@ -217,6 +223,52 @@ preguntas por día, entre US$ 3 y 6 por mes. Voz: US$ 0.
 
 - Preguntas de ranking ("qué empresa tiene más diferencias"): requiere
   pasarle al modelo el top-N de cada panel. Fácil de sumar después.
-- Listar las personas puntuales sin leer: el panel no tiene esa dimensión.
+- Listar QUIÉNES no leyeron una notificación (personas): sigue siendo el
+  modal "Ver" → destinatarios del explorador, no un filtro. Lo que sí hay
+  desde el Bloque 3 es el camino inverso: elegir una persona y ver sus
+  notificaciones (§9).
 - Transcripción de voz en servidor (Firefox, calidad) y respuesta por voz.
 - Permiso por usuario admin (llega con `areas-permisos`).
+
+## 9. Filtro por afiliado (acordado con Sd, 2026-09-05)
+
+Sd quiere preguntar "las notificaciones del afiliado Juan José Galmarini" o
+"los recibos de Juan Pablo Pérez que trabaja en el banco Galicia". Para eso
+el panel gana un filtro por persona y el Asistente lo usa. Reglas:
+
+- **`afiliado=<id de Trabajador>`** en el vocabulario de filtros
+  (`parsear_filtros`), nunca el CUIL: así la URL compartible no lo lleva.
+  Un id ajeno o inexistente no matchea NADA (`_cuil_de_afiliado`, mismo
+  criterio que `_cuits_de_empresas`).
+- **Recibos: solo los que esa persona envió al sindicato**, también en
+  totales, KPIs y semáforo (`_SOLO_ENVIADOS_DEL_AFILIADO`). Si el total
+  incluyera los que verificó en privado, el KPI revelaría lo que la fila
+  esconde. Con afiliado se listan TODOS sus enviados, no solo los
+  observados: la pregunta es "qué mandó", no "qué está mal". Test:
+  `test_afiliado_recibos_solo_los_enviados`.
+- **Consultas al bot del convenio: el filtro no aplica** (son anónimas a
+  propósito, sin CUIL ni nombre en explorador y detalle). Con afiliado, la
+  fuente devuelve vacío y el KPI es `None`, no 0: un 0 afirmaría "esta
+  persona no consultó". Test: `test_afiliado_no_aplica_a_consultas`.
+- **Trámites y notificaciones sí aplican**: son datos que el sindicato
+  generó o que el afiliado le inició. El explorador de notificaciones
+  cambia de modo (`modo: "afiliado"`): una fila por notificación con
+  leída/sin leer, en vez del agregado diario.
+- **Buscador** `GET /admin/dashboard/afiliados?q=` (nombre o CUIL,
+  tolerante a tildes, mayúsculas y orden de las palabras; `?id=` para
+  etiquetar el chip de un link con `?afiliado=`). Gate del explorador:
+  mirar a una persona es detalle. El matcheo fino va en Python sobre el
+  padrón activo del tenant, porque un LIKE no ignora tildes ni en SQLite ni
+  en Postgres sin extensiones; si un padrón enorme lo justifica, el paso
+  siguiente es una columna `nombre_normalizado` indexada.
+- **El padrón nunca viaja al modelo.** El nombre que escribe el admin sí,
+  porque es su pregunta. El modelo entrega `persona` tal cual y, si la
+  nombra, la empresa; el servidor resuelve con `buscar_afiliados(...,
+  cuits=...)`: 0 → "no encontré"; 1 → aplica; varios → el cajón muestra
+  los candidatos con seccional y empresa y el admin elige con un clic, sin
+  pasar por el modelo (Bloque 4).
+- **Bug encontrado de paso (corregido)**: `dashboard.js` se referenciaba
+  con `?v={{ version }}` y no con `sello_static`, así que el navegador
+  servía el JS viejo hasta una hora después de cada cambio, justo la regla
+  de CLAUDE.md sobre `/static/`. Se notó porque el buscador nuevo "no
+  respondía": el handler no existía en el archivo cacheado.

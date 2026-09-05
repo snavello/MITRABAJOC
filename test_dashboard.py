@@ -744,6 +744,96 @@ def test_explorador_recibos_filtrando_ok():
     print("OK  test_explorador_recibos_filtrando_ok")
 
 
+# ---------- Filtro por afiliado (docs/ASISTENTE_PANEL.md §9) ----------
+
+def _id_trabajador(cuil):
+    from sqlmodel import select
+    with db.get_session() as s:
+        return s.exec(select(Trabajador).where(Trabajador.cuil == cuil)).first().id
+
+
+def test_afiliado_recibos_solo_los_enviados():
+    """La regla de privacidad también vale para los totales: con afiliado
+    elegido cuentan SOLO los recibos que esa persona envió al sindicato."""
+    juan, ana = _id_trabajador(CUIL_1), _id_trabajador(CUIL_2)
+    # Juan: r1 enviado (con diferencias) + r3 OK no enviado -> cuenta 1.
+    k = admin_a.get("/admin/dashboard/kpis", params={**RANGO, "afiliado": juan}).json()["actual"]
+    assert k["recibos"] == 1 and k["enviados_sindicato"] == 1 and k["padron_total"] == 1
+    r = admin_a.get("/admin/dashboard/explorador/recibos", params={**RANGO, "afiliado": juan}).json()
+    assert r["total"] == 1 and r["items"][0]["trabajador_cuil"] == CUIL_1
+    assert len(admin_a.get("/admin/dashboard/semaforo", params={**RANGO, "afiliado": juan}).json()["empresas"]) == 1
+    # Ana: su único recibo NO fue enviado -> para el panel no existe, ni en el total.
+    k = admin_a.get("/admin/dashboard/kpis", params={**RANGO, "afiliado": ana}).json()["actual"]
+    assert k["recibos"] == 0 and k["padron_total"] == 1
+    assert admin_a.get("/admin/dashboard/explorador/recibos", params={**RANGO, "afiliado": ana}).json()["total"] == 0
+    assert admin_a.get("/admin/dashboard/validacion", params={**RANGO, "afiliado": ana}).json() == {"ok": 0, "con_diferencias": 0}
+    assert admin_a.get("/admin/dashboard/semaforo", params={**RANGO, "afiliado": ana}).json()["empresas"] == []
+    print("OK  test_afiliado_recibos_solo_los_enviados")
+
+
+def test_afiliado_tramites_y_notificaciones():
+    juan = _id_trabajador(CUIL_1)
+    t = admin_a.get("/admin/dashboard/explorador/tramites", params={**RANGO, "afiliado": juan}).json()
+    assert t["total"] == 1 and t["items"][0]["numero"] == "F01-2026-000001"
+    n = admin_a.get("/admin/dashboard/explorador/notificaciones", params={**RANGO, "afiliado": juan}).json()
+    assert n["modo"] == "afiliado" and n["total"] == 2
+    assert [i["leida"] for i in n["items"]] == [False, True]     # n2 (ayer, sin leer), n1 (leída)
+    assert n["items"][0]["texto"] == "Cambio de trámite" and n["items"][0]["etiqueta"] == "Trámites"
+    k = admin_a.get("/admin/dashboard/kpis", params={**RANGO, "afiliado": juan}).json()["actual"]
+    assert k["tramites"] == 1 and k["notif_enviadas"] == 2 and k["tasa_lectura"] == 50.0
+    resumen = admin_a.get("/admin/dashboard/notificaciones", params={**RANGO, "afiliado": juan}).json()
+    assert resumen["enviadas"] == 2 and resumen["sin_leer"] == 1
+    print("OK  test_afiliado_tramites_y_notificaciones")
+
+
+def test_afiliado_ajeno_o_inexistente_no_matchea_nada():
+    for af in (_id_trabajador(CUIL_B), 999999):
+        k = admin_a.get("/admin/dashboard/kpis", params={**RANGO, "afiliado": af}).json()["actual"]
+        assert (k["recibos"], k["tramites"], k["notif_enviadas"], k["padron_total"]) == (0, 0, 0, 0), af
+        for fuente in ("recibos", "tramites", "notificaciones"):
+            r = admin_a.get(f"/admin/dashboard/explorador/{fuente}", params={**RANGO, "afiliado": af}).json()
+            assert r["total"] == 0, (af, fuente)
+    assert admin_a.get("/admin/dashboard/kpis", params={**RANGO, "afiliado": "x"}).status_code == 422
+    print("OK  test_afiliado_ajeno_o_inexistente_no_matchea_nada")
+
+
+def test_afiliado_no_aplica_a_consultas():
+    """Las consultas al bot son anónimas: con afiliado, nada (y el KPI es
+    None, no 0 -- un 0 afirmaría "esta persona no consultó")."""
+    import dashboard
+    from starlette.datastructures import QueryParams
+    f = dashboard.parsear_filtros(QueryParams({**RANGO, "afiliado": str(_id_trabajador(CUIL_1))}))
+    assert dashboard.consultas_por_tema(SID_A, f) == []
+    assert dashboard.explorador_consultas(SID_A, f, 1, 10)["total"] == 0
+    assert dashboard.kpis(SID_A, f)["actual"]["consultas"] is None
+    print("OK  test_afiliado_no_aplica_a_consultas")
+
+
+def test_buscar_afiliados():
+    import dashboard
+    juan = _id_trabajador(CUIL_1)
+    r = admin_a.get("/admin/dashboard/afiliados", params={"q": "ENVIADO juan"}).json()["items"]
+    assert [i["id"] for i in r] == [juan]
+    assert r[0]["seccional"] == "Rosario" and r[0]["empresa"] == "Metalsur SA"
+    # Tildes y mayúsculas de más en lo que se escribe no molestan.
+    assert [i["nombre"] for i in admin_a.get("/admin/dashboard/afiliados", params={"q": "Ána Prívada"}).json()["items"]] == ["Ana Privada"]
+    # Por CUIL, con guiones.
+    assert [i["id"] for i in admin_a.get("/admin/dashboard/afiliados", params={"q": "20-11111111-9"}).json()["items"]] == [juan]
+    # Aislamiento: Beto no existe para A, Juan no existe para B; por id, lo mismo.
+    assert admin_a.get("/admin/dashboard/afiliados", params={"q": "beto"}).json()["items"] == []
+    assert admin_b.get("/admin/dashboard/afiliados", params={"q": "juan"}).json()["items"] == []
+    assert admin_a.get("/admin/dashboard/afiliados", params={"id": juan}).json()["items"][0]["nombre"] == "Juan Enviado"
+    assert admin_a.get("/admin/dashboard/afiliados", params={"id": _id_trabajador(CUIL_B)}).json()["items"] == []
+    # Acotado a una empresa (para desempatar homónimos).
+    assert dashboard.buscar_afiliados(SID_A, "juan", cuits=["30222222225"]) == []
+    assert [i["id"] for i in dashboard.buscar_afiliados(SID_A, "juan", cuits=["30111111117"])] == [juan]
+    assert dashboard.buscar_afiliados(SID_A, "   ") == []
+    # Gate: sesión + módulo.
+    assert TestClient(main.app).get("/admin/dashboard/afiliados", params={"q": "juan"}).status_code == 403
+    assert admin_c.get("/admin/dashboard/afiliados", params={"q": "juan"}).status_code == 403
+    print("OK  test_buscar_afiliados")
+
+
 if __name__ == "__main__":
     test_sin_sesion_403()
     test_sin_modulo_403()
@@ -784,4 +874,9 @@ if __name__ == "__main__":
     test_plataforma_edita_color_destacado_y_umbrales()
     test_campos_analiticos()
     test_explorador_recibos_filtrando_ok()
+    test_afiliado_recibos_solo_los_enviados()
+    test_afiliado_tramites_y_notificaciones()
+    test_afiliado_ajeno_o_inexistente_no_matchea_nada()
+    test_afiliado_no_aplica_a_consultas()
+    test_buscar_afiliados()
     print("\nTodos los tests del Panel Sindical (Fase 1) pasaron.")

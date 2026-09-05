@@ -3484,6 +3484,19 @@ def dashboard_detalle_consulta(request: Request, consulta_id: int):
     return d
 
 
+@app.get("/admin/dashboard/afiliados")
+def dashboard_buscar_afiliados(request: Request, q: str = "", id: int = 0):
+    """Buscador del filtro por afiliado (docs/ASISTENTE_PANEL.md §9): por
+    nombre o CUIL, hasta 10 del padrón del PROPIO sindicato. Con `id`
+    devuelve ese afiliado solo (para etiquetar el chip de un link con
+    ?afiliado=). Gate del explorador: mirar a una persona es detalle."""
+    sid = _exigir_dashboard_detalle(request)
+    if id:
+        uno = dashboard.afiliado_por_id(sid, id)
+        return {"items": [uno] if uno else []}
+    return {"items": dashboard.buscar_afiliados(sid, q[:80])}
+
+
 @app.get("/admin/dashboard/filtros")
 def dashboard_catalogo_filtros(request: Request):
     """Catálogos para poblar los filtros: seccionales y empresas del tenant,
