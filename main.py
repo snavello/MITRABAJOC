@@ -56,7 +56,7 @@ from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_si
                         rangos_se_superponen, cuil_no_coincide, error_de_expresion,
                         CATEGORIAS_UNIVERSALES)
 from filigrana import filigrana_svg
-from qr import qr_svg, url_verificacion
+from qr import qr_svg, url_verificacion, codigo_efimero, verificar_codigo_efimero, TTL_QR_SEGUNDOS
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
 from version import VERSION_TRABAJADOR, VERSION_ADMIN, VERSION_PLATAFORMA, FECHA_VERSION
 import entorno
@@ -3803,10 +3803,9 @@ def app_trabajador(request: Request):
         # El QR (y la verificación pública que hay detrás) solo tiene sentido
         # una vez que el sindicato generó el código real de la credencial.
         if codigo_cred:
-            contexto["qr_credencial"] = qr_svg(url_verificacion(
-                str(request.base_url), db.token_credencial(cuil, sid_activo),
-                db.nombre_trabajador(cuil, sid_activo), cuil, codigo_cred,
-            ))
+            svg, vence_en = _qr_credencial(request, cuil, sid_activo, codigo_cred)
+            contexto["qr_credencial"] = svg
+            contexto["qr_vence_en"] = vence_en
         return templates.TemplateResponse("trabajador.html", contexto)
     # Varios y no eligió → selector
     return templates.TemplateResponse("elegir_sindicato.html", {
@@ -3946,15 +3945,58 @@ def app_cambiar():
     return resp
 
 
+def _qr_credencial(request: Request, cuil: str, sindicato_id: int, codigo_cred: str):
+    """(svg, segundos_de_vida) del QR efímero de una credencial ya emitida.
+
+    Un solo lugar arma la URL para que la primera pintada del servidor y las
+    renovaciones de /api/credencial/qr no puedan divergir."""
+    token = db.token_credencial(cuil, sindicato_id)
+    codigo, vence_en = codigo_efimero(token)
+    url = url_verificacion(str(request.base_url), token,
+                            db.nombre_trabajador(cuil, sindicato_id), cuil,
+                            codigo_cred, codigo)
+    return qr_svg(url), vence_en
+
+
+@app.get("/api/credencial/qr")
+def api_qr_credencial(request: Request):
+    """Emite un QR nuevo para la credencial del trabajador logueado.
+
+    La app lo pide al abrir la pestaña Credencial y antes de cada vencimiento,
+    así el código que se ve en pantalla siempre está vigente y una captura
+    vieja no verifica."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or not cuil:
+        raise HTTPException(401, "Sesión vencida")
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise HTTPException(404, "Sin sindicato activo")
+    codigo_cred = (db.credencial_de(cuil, sid) or {}).get("codigo")
+    if not codigo_cred:
+        raise HTTPException(404, "La credencial todavía no está emitida")
+    svg, vence_en = _qr_credencial(request, cuil, sid, codigo_cred)
+    return {"svg": svg, "vence_en": vence_en}
+
+
 @app.get("/v/{token}", response_class=HTMLResponse)
-def verificar_credencial(token: str, request: Request):
+def verificar_credencial(token: str, request: Request, k: str = ""):
     """Página pública de verificación de una credencial (detrás del QR). No
-    requiere login: es lo que ve quien escanea. A propósito NO muestra el DNI."""
+    requiere login: es lo que ve quien escanea. A propósito NO muestra el DNI.
+
+    `k` es el código efímero que emitió la app al mostrar el QR. Sin un código
+    válido y vigente no se muestra NINGÚN dato: es lo que hace que la captura
+    de pantalla de un QR ajeno no sirva para hacerse pasar por el afiliado."""
+    if not verificar_codigo_efimero(token, k):
+        return templates.TemplateResponse("verificar_credencial.html", {
+            "request": request, "datos": None, "marca": None,
+            "motivo": "vencido", "minutos": TTL_QR_SEGUNDOS // 60,
+        })
     datos = db.credencial_por_token(token)
     if datos:
         datos["vigencia_credencial"] = _fmt_fecha_ar(datos.get("vigencia_credencial"))
     return templates.TemplateResponse("verificar_credencial.html", {
-        "request": request, "datos": datos,
+        "request": request, "datos": datos, "motivo": "",
         "marca": db.marca_sindicato(datos["sindicato_id"]) if datos else None,
     })
 

@@ -1,9 +1,26 @@
 """QR de verificación de la credencial sindical. Solo `segno` (Python puro,
 sin Pillow): genera el SVG como texto para embeber inline en la página.
+
+El QR es EFÍMERO: lo que va adentro no es solo el token permanente del
+trabajador, sino ese token más un código firmado que vence a los 10 minutos.
+Cada vez que el trabajador abre la credencial se emite uno nuevo, y la app lo
+renueva sola antes de que venza. Así una captura de pantalla del QR deja de
+verificar apenas pasa la ventana: sirve para mostrarlo en el momento, no para
+reenviarlo por mensaje.
 """
+import hashlib
+import hmac
 import io
 import re
+import time
 import segno
+
+import auth
+
+# Ventana de validez del código que viaja en el QR. Diez minutos: alcanza para
+# mostrar la credencial en una guardia o en la puerta de una obra, y es poco
+# para que la captura le sirva a otro.
+TTL_QR_SEGUNDOS = 600
 
 
 def qr_svg(datos: str, escala: int = 4) -> str:
@@ -29,16 +46,51 @@ def qr_svg(datos: str, escala: int = 4) -> str:
     return svg
 
 
-def url_verificacion(base_url: str, token: str, nombre: str, cuil: str, codigo_credencial: str) -> str:
+def codigo_efimero(token: str, ttl: int = TTL_QR_SEGUNDOS, ahora: float = None) -> tuple:
+    """Devuelve (codigo, segundos_de_vida) para meter en la URL del QR.
+
+    El código es `{vencimiento}.{firma}`, firmado con el mismo secreto de
+    sesión (auth.SECRETO). No se guarda nada: el servidor lo revalida
+    recalculando la firma, así que no hace falta tabla ni limpieza de códigos
+    viejos, y un reinicio no invalida las credenciales.
+    """
+    ahora = time.time() if ahora is None else ahora
+    vence = int(ahora) + ttl
+    return f"{vence}.{_firma(token, vence)}", ttl
+
+
+def verificar_codigo_efimero(token: str, codigo: str, ahora: float = None) -> bool:
+    """True solo si el código está bien firmado para ese token y no venció."""
+    if not token or not codigo or "." not in codigo:
+        return False
+    vence_txt, firma = codigo.split(".", 1)
+    if not vence_txt.isdigit():
+        return False
+    vence = int(vence_txt)
+    if vence < (time.time() if ahora is None else ahora):
+        return False
+    return hmac.compare_digest(firma, _firma(token, vence))
+
+
+def _firma(token: str, vence: int) -> str:
+    return hmac.new(auth.SECRETO.encode(), f"{token}.{vence}".encode(),
+                    hashlib.sha256).hexdigest()[:16]
+
+
+def url_verificacion(base_url: str, token: str, nombre: str, cuil: str,
+                      codigo_credencial: str, codigo: str = "") -> str:
     """URL que va adentro del QR. Doble propósito, a propósito:
     - Escaneada con conexión: /v/{token} muestra los datos verificados por
       el servidor (el token es lo único que se usa para buscar; los query
       params NO son de fiar, son solo el respaldo legible sin conexión).
+      El parámetro `k` es la excepción: no aporta datos, es el código
+      efímero firmado y sin él (o vencido) la página no muestra nada.
     - Leída como texto plano (sin abrir el link, ej. desde la vista previa
       de cualquier lector de QR): ya deja ver nombre/CUIL/N° de credencial.
     A propósito NO lleva el DNI: una foto de la credencial no debe filtrarlo.
     """
     from urllib.parse import urlencode
     base = base_url.rstrip("/")
-    query = urlencode({"n": nombre or "", "c": cuil or "", "num": codigo_credencial or ""})
+    query = urlencode({"n": nombre or "", "c": cuil or "",
+                        "num": codigo_credencial or "", "k": codigo or ""})
     return f"{base}/v/{token}?{query}"
