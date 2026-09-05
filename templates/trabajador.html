@@ -572,13 +572,19 @@
     color:var(--tinta); font-variant-numeric:tabular-nums; }
   .cred-nro .cred-val { font-size:14px; font-weight:600; color:var(--tinta); font-variant-numeric:tabular-nums; }
   .cred-inferior { margin-top:26px; display:flex; align-items:flex-end; justify-content:center; gap:14px; }
-  .cred-firma { text-align:center; flex:1; }
+  /* min-width:0 -- sin esto el bloque de firma no baja de su contenido más
+     ancho (la línea de 210px) y empuja el QR fuera de la tarjeta en pantallas
+     de 320px. Se veía ya con el QR de 80px; agrandarlo lo dejaba peor. */
+  .cred-firma { text-align:center; flex:1; min-width:0; }
   .cred-firma img { max-height:56px; max-width:200px; object-fit:contain; display:block; margin:0 auto -6px; }
-  .cred-linea { border-top:1px solid #c9c6bf; width:210px; margin:0 auto 6px; }
+  .cred-linea { border-top:1px solid #c9c6bf; width:100%; max-width:210px; margin:0 auto 6px; }
   .cred-autoridad { font-size:14px; font-weight:600; color:var(--tinta); }
   .cred-cargo { font-size:12.5px; color:var(--gris); }
   .cred-qr { flex-shrink:0; line-height:0; text-align:center; }
-  .cred-qr svg { width:80px; height:80px; display:block; }
+  /* 100px, no 80: a 80 el QR se escaneaba con esfuerzo desde la pantalla de
+     otro teléfono en un control. Un 25% más de lado es casi 60% más de área
+     de módulo, que es lo que mira la cámara. */
+  .cred-qr svg { width:100px; height:100px; display:block; }
   .cred-qr.renovando svg { opacity:.35; transition:opacity .2s; }
   .cred-vence { font-size:10.5px; line-height:1.3; color:var(--gris); margin-top:5px;
     font-variant-numeric:tabular-nums; }
