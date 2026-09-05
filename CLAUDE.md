@@ -313,9 +313,9 @@ de Seccional" (decisiones ya cerradas).
    que el panel ya tiene, los aplica y resume con los números reales, más
    el filtro por afiliado del panel y el dictado por voz. NO es RAG ni el
    bot del convenio. Ficha rectora con contrato, decisiones, privacidad y
-   medición: [`docs/ASISTENTE_PANEL.md`](docs/ASISTENTE_PANEL.md). Antes de
-   mergear: correr la migración `b7c3d9e1f204` contra Postgres (Docker) y
-   subir versión.
+   medición: [`docs/ASISTENTE_PANEL.md`](docs/ASISTENTE_PANEL.md). La
+   migración `b7c3d9e1f204` ya corrió en el Postgres local. Antes de
+   mergear: subir versión (funcionalidad nueva: release y patch).
 
 ## Validaciones en formularios de Trámites
 Capa de validaciones acordada 2026-09-01, cuatro fuentes: `fija` (valor

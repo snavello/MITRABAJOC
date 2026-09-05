@@ -447,6 +447,20 @@ def test_afiliado_elegido_se_conserva_y_el_ajeno_se_descarta():
     print("OK  test_afiliado_elegido_se_conserva_y_el_ajeno_se_descarta")
 
 
+def test_con_filtro_de_resultado_no_viaja_el_porcentaje():
+    """Con resultado=con_diferencias el % da 100 por construcción y el
+    modelo lo citaba como porcentaje de la seccional (visto en Postgres
+    con la UOM). Sin ese filtro, el % sí viaja."""
+    falso = _guion(_respuesta(_herramienta(_filtros(resultado="con_diferencias"))), _respuesta(_texto("Listo.")))
+    assert _preguntar(admin_a, pregunta="recibos con diferencias").status_code == 200
+    kpis = json.loads(_tool_results(falso.llamadas[1])[0]["content"])["kpis_del_periodo"]
+    assert "pct_con_diferencias" not in kpis and "recibos" in kpis
+    falso = _guion(_respuesta(_herramienta(_filtros())), _respuesta(_texto("Listo.")))
+    assert _preguntar(admin_a, pregunta="recibos del período").status_code == 200
+    assert "pct_con_diferencias" in json.loads(_tool_results(falso.llamadas[1])[0]["content"])["kpis_del_periodo"]
+    print("OK  test_con_filtro_de_resultado_no_viaja_el_porcentaje")
+
+
 def test_basura_del_modelo_en_textos_cuenta_como_vacio():
     """Visto con Sonnet 5 en la prueba real: con dos strings vacíos seguidos
     emitió '</antml_parameter>\\n<parameter name="persona">' en tema y persona,
@@ -539,6 +553,7 @@ if __name__ == "__main__":
     test_persona_con_empresa_desempata_homonimos()
     test_persona_no_encontrada_avisa_al_modelo()
     test_afiliado_elegido_se_conserva_y_el_ajeno_se_descarta()
+    test_con_filtro_de_resultado_no_viaja_el_porcentaje()
     test_basura_del_modelo_en_textos_cuenta_como_vacio()
     test_registro_de_cada_pregunta()
     test_tope_diario_429()

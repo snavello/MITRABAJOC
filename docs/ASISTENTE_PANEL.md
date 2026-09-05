@@ -232,9 +232,9 @@ frases de prueba con preguntas reales.
    ruta (429 antes de gastar una llamada), migración `b7c3d9e1f204`
    escrita a mano porque Docker estaba apagado: validada en modo offline
    (`alembic upgrade a9d4e7f2c831:b7c3d9e1f204 --sql` genera el DDL de
-   Postgres con JSONB e índices) pero **sin correr contra un Postgres
-   real todavía**: correr `alembic upgrade head` con Docker levantado
-   antes de mergear a `main`, porque en Pruebas corre sola en el deploy.
+   Postgres con JSONB e índices) y después, con Docker levantado, corrida
+   contra el Postgres local en las dos direcciones (`upgrade head`,
+   `downgrade -1`, `upgrade head`): OK, 2026-09-05.
 6. Voz (Web Speech API). **HECHO 2026-09-05**: botón de micrófono en el
    cajón (`initVoz` en `dashboard.js`), oculto donde no existe
    `SpeechRecognition`, `es-AR`, lo dictado cae en la caja y se confirma
@@ -264,8 +264,17 @@ frases de prueba con preguntas reales.
    parejo, y evita los modos de falla conocidos del thinking desactivado
    (la llamada a la herramienta escrita como texto). Los 25 s de la prueba
    de humo del Bloque 1 fueron un arranque en frío, no la latencia normal.
-   Faltan, fuera de la rama: correr la migración contra Postgres, subir
-   versión, `HISTORIAL.md`, mergear a `main` y promover a demo.
+   Cierre con Docker levantado (2026-09-05): migración en las dos
+   direcciones sobre el Postgres local, y una pregunta real contra los
+   datos de demo de la UOM ("recibos con diferencias de la seccional
+   Avellaneda en los ultimos 30 dias" → 26 recibos, $446.253 observados,
+   8,7 s), registrada en `consultaasistente` y leída con `filtros->>'tab'`
+   (JSONB). `buscar_afiliados("juan")` sobre el padrón real devuelve
+   Juan Díaz, Juan Ruiz, Juan Gómez con seccional y empresa. Un ajuste
+   salió de ahí: con el filtro de resultado puesto, el "% con diferencias"
+   no viaja al modelo (da 100 por construcción y lo citaba como si fuera
+   de la seccional). Faltan, fuera de la rama: subir versión, mergear a
+   `main` y promover a demo.
 
 Cada bloque se verifica en local (Docker + uvicorn + lote UOM) y se
 commitea por separado, preguntando antes.

@@ -375,6 +375,11 @@ def _agregados(sid: int, crudo: dict, f: dict, tab: str, cat: dict) -> dict:
         },
         "kpis_del_periodo": dashboard.kpis(sid, f)["actual"],
     }
+    if crudo["resultado"]:
+        # Con el filtro de resultado puesto, "% con diferencias" se calcula
+        # sobre lo filtrado y da 100% o 0% por construcción: el modelo lo
+        # citaba como si fuera el porcentaje de la seccional.
+        datos["kpis_del_periodo"].pop("pct_con_diferencias", None)
     if tab == "notificaciones":
         datos["notificaciones"] = dashboard.notificaciones(sid, f)
     elif tab == "tramites":
