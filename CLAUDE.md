@@ -314,8 +314,8 @@ de Seccional" (decisiones ya cerradas).
    el filtro por afiliado del panel y el dictado por voz. NO es RAG ni el
    bot del convenio. Ficha rectora con contrato, decisiones, privacidad y
    medición: [`docs/ASISTENTE_PANEL.md`](docs/ASISTENTE_PANEL.md). La
-   migración `b7c3d9e1f204` ya corrió en el Postgres local. Antes de
-   mergear: subir versión (funcionalidad nueva: release y patch).
+   migración `b7c3d9e1f204` ya corrió en el Postgres local. Mergeado a
+   `main` el 2026-09-05 como Admin 0.29.01.
 
 ## Validaciones en formularios de Trámites
 Capa de validaciones acordada 2026-09-01, cuatro fuentes: `fija` (valor
@@ -514,10 +514,13 @@ con alerta" — detalle en HISTORIAL.md.
 
 ## Versionado
 `version.py`: `VERSION_TRABAJADOR`/`VERSION_ADMIN`/`VERSION_PLATAFORMA` +
-`FECHA_VERSION`, actualizados a mano en cada deploy (el número lo indica el
-usuario). **Regla para incrementar `release.patch`**: solo arreglos → +1 al
-patch; arreglos + funcionalidad nueva en el mismo deploy → +1 en los dos
-(ej. 0.02.01 → 0.03.01). Acordarse de esto SIN que el usuario lo pida.
+`FECHA_VERSION`. **La versión se sube sola en el mismo commit** (regla 3 de
+`FLUJO.md`, reescrita 2026-09-05): solo arreglos → +1 al patch; funcionalidad
+nueva → +1 al minor y el patch vuelve a `01` (ej. 0.28.02 → 0.29.01). Sube
+SOLO la app que se tocó (Trabajador, Admin o Plataforma); las otras quedan.
+Sd decide solo cuando hay duda de si algo cuenta como funcionalidad nueva.
+Antes de escribir el número, `git fetch` y mirar `origin/main:version.py`:
+otra rama puede haber movido otra app.
 **`FECHA_VERSION`, la hora es real, no inventada**: Claude no tiene reloj
 propio — para no repetir el bug de poner "12:00" fijo a mano (encontrado
 2026-08-24), correr `date "+%Y-%m-%d %H:%M"` (Bash) y usar ese valor real.

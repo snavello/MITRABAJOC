@@ -2584,6 +2584,71 @@ así que las reglas del modal están duplicadas en los dos lados con un
 comentario cruzado. Si se tocan en uno, hay que tocarlas en el otro o la
 noticia se ve distinta según se abra desde la portada o desde Novedades.
 
+## Credencial: QR efímero de 10 minutos y retrato bajo la filigrana (2026-09-05)
+
+Dos cambios sobre la misma pantalla (`/app`, pestaña Credencial), pedidos
+juntos: que la credencial no se pueda "prestar" con una captura de pantalla,
+y que el retrato del afiliado esté en la tarjeta como marca de agua.
+
+### El QR vence a los 10 minutos
+
+Antes el QR encodeaba `/v/{token}` con el token permanente del trabajador.
+Era estable: una foto del QR servía para siempre y desde cualquier teléfono,
+así que alcanzaba con mandarla por mensaje para que otro se hiciera pasar por
+el afiliado en un control. Ahora la URL lleva además `k`, un código firmado
+con vencimiento (`qr.codigo_efimero` / `qr.verificar_codigo_efimero`).
+
+Decisiones:
+
+- **Firmado, no guardado.** El código es `{vencimiento}.{hmac(SESSION_SECRET,
+  token.vencimiento)[:16]}`. El servidor lo revalida recalculando la firma:
+  no hace falta tabla de códigos vivos ni limpieza de vencidos, y un reinicio
+  de Render no invalida ninguna credencial. La firma cubre el vencimiento, así
+  que correrlo a futuro no sirve (hay test).
+- **Diez minutos** (`qr.TTL_QR_SEGUNDOS`). Alcanza para mostrar la credencial
+  en una guardia o en la puerta de una obra; es poco para que la captura le
+  sirva a otro.
+- **Sin `k` tampoco verifica.** El link pelado `/v/{token}` ahora cae en el
+  estado "código vencido". Si siguiera funcionando, copiar la URL del QR una
+  sola vez daría un pase permanente — que es exactamente el agujero que se
+  venía a cerrar. Esto CAMBIA el comportamiento de `/v/{token}`: los tests de
+  `test_qr_credencial.py` que verificaban con el link pelado se actualizaron
+  para emitir un código vigente.
+- **El token permanente sigue siendo lo único que identifica.** `k` no aporta
+  ningún dato: solo habilita o no la página. Los query params `n`/`c`/`num`
+  siguen siendo respaldo legible sin conexión y el servidor los sigue
+  ignorando (test de siempre).
+- La página pública distingue ahora tres estados: válida, **código vencido**
+  (con la explicación de por qué y qué hacer) y no encontrada.
+
+En la app, `/api/credencial/qr` emite uno nuevo y el JS de `trabajador.html`
+lo pide 20 segundos antes de cada vencimiento, más al volver a la pestaña.
+Se renueva **solo con la credencial a la vista** (pestaña activa y documento
+visible): desde otra pestaña de la app no hace falta un QR fresco, y cada
+llamada renovaría además la sesión por inactividad, que se cuenta desde el
+último uso real. Debajo del QR hay un contador ("Se renueva en 9:59") para que
+el afiliado entienda que lo que ve es momentáneo. Sin conexión no se borra el
+QR en pantalla: puede seguir siendo válido hasta su vencimiento.
+
+### El retrato va debajo de la filigrana
+
+La foto de perfil (la misma de `/perfil-foto/{cuil}`, no una nueva) se pinta
+centrada en la tarjeta, en círculo, desaturada y al 30% de opacidad, con una
+máscara radial que difumina el borde. **La filigrana pasa por encima**, que es
+el punto: igual que el guilloche sobre el retrato de un billete, el entramado
+queda impreso sobre la cara y un recorte de la foto no se puede reusar limpio.
+
+El apilado son tres capas en `.cred` (`position:relative`): `.cred-retrato`
+(z-index 0) → `.cred-fondo` con la filigrana (z-index 1) → contenido (z-index
+2). La filigrana va con `mix-blend-mode:multiply` para que sus líneas oscurezcan
+sobre la foto sin ensuciar el blanco del resto de la tarjeta.
+
+Valores calibrados mirando la credencial renderizada, no a ojo en el código:
+`saturate(.38)` — se pidió baja saturación, no blanco y negro, y con `.15` la
+foto quedaba gris muerta — y opacidad `.30`, que deja el CUIL y el DNI
+perfectamente legibles por encima. Si el afiliado no cargó foto, la tarjeta
+queda como estaba (la filigrana sola).
+
 ## Asistente del Panel Sindical (2026-09-05)
 
 Pedido de Sd: un bot dentro del Panel Sindical, limitado a los datos y

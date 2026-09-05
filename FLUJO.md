@@ -73,8 +73,13 @@ Hace backup de la base de demo, mergea `main` en `demo`, crea el tag
    a `demo`, y enseguida `demo → main` para que no se pierda.
 2. **`main` siempre va adelante de `demo`.** Así, cuando algo se promueve,
    sus migraciones ya corrieron en Pruebas y no estrenan en la demo.
-3. **La versión la indica Sd** (`version.py`): solo arreglos, +1 al patch;
-   arreglos + funcionalidad nueva, +1 en los dos.
+3. **La versión se sube sola en el mismo commit** (`version.py`): solo
+   arreglos, +1 al patch; con funcionalidad nueva, +1 al minor y el patch
+   vuelve a `01` (así fue `0.27.04 -> 0.28.01`). Sube **solo la app que se
+   tocó**: un cambio en la pestaña Credencial mueve `VERSION_TRABAJADOR` y
+   deja Admin y Plataforma como estaban. `FECHA_VERSION` va con la fecha del
+   commit. Lo decide Sd solo cuando hay duda de si el cambio cuenta como
+   funcionalidad nueva.
 
 ## Cuando algo sale mal
 

@@ -48,6 +48,12 @@
       {% endif %}
       <p class="nota">Verificado por Mi Trabajo contra los datos de {{ datos.sindicato }}. Por privacidad, esta página no muestra el documento del afiliado.</p>
     </div>
+    {% elif motivo == 'vencido' %}
+    <div class="body">
+      <div class="estado mal">✗ Código QR vencido</div>
+      <p class="nota">El QR de la credencial cambia cada {{ minutos }} minutos, así una captura de pantalla no sirve para verificar a otra persona.
+        Pedile al afiliado que abra la pestaña <b>Credencial</b> en su app y volvé a escanear el QR que aparece en pantalla.</p>
+    </div>
     {% else %}
     <div class="body">
       <div class="estado mal">✗ Credencial no encontrada</div>

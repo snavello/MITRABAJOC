@@ -543,9 +543,21 @@
   /* ---- Credencial sindical ---- */
   .cred { background:#fff; border-radius:16px; overflow:hidden; margin-top:8px;
     box-shadow:0 3px 14px rgba(0,0,0,.10); border:1px solid var(--linea); position:relative; }
-  .cred-fondo { position:absolute; inset:0; z-index:0; pointer-events:none; }
+  /* Tres capas, de atrás hacia adelante: retrato -> filigrana -> contenido.
+     La filigrana pasa POR ARRIBA de la foto (como el guilloche sobre el
+     retrato de un billete): es lo que hace que una foto de la credencial no
+     se pueda recortar y reusar, porque el retrato sale con el entramado
+     encima. `multiply` deja las líneas oscuras sobre la foto y no toca el
+     blanco del resto de la tarjeta. */
+  .cred-retrato { position:absolute; inset:0; z-index:0; display:grid;
+    place-items:center; pointer-events:none; overflow:hidden; }
+  .cred-retrato img { width:46%; max-width:190px; aspect-ratio:1/1; border-radius:50%;
+    object-fit:cover; opacity:.30; filter:saturate(.38) contrast(.88) brightness(1.1);
+    -webkit-mask-image:radial-gradient(circle at 50% 50%, #000 52%, transparent 100%);
+    mask-image:radial-gradient(circle at 50% 50%, #000 52%, transparent 100%); }
+  .cred-fondo { position:absolute; inset:0; z-index:1; pointer-events:none; mix-blend-mode:multiply; }
   .cred-fondo svg { width:100%; height:100%; display:block; }
-  .cred-head, .cred-body, .cred-pie { position:relative; z-index:1; }
+  .cred-head, .cred-body, .cred-pie { position:relative; z-index:2; }
   .cred-head { background:var(--marca-base); padding:18px 20px;
     display:flex; align-items:center; gap:12px; }
   .cred-logo { max-height:46px; max-width:110px; object-fit:contain; }
@@ -560,13 +572,23 @@
     color:var(--tinta); font-variant-numeric:tabular-nums; }
   .cred-nro .cred-val { font-size:14px; font-weight:600; color:var(--tinta); font-variant-numeric:tabular-nums; }
   .cred-inferior { margin-top:26px; display:flex; align-items:flex-end; justify-content:center; gap:14px; }
-  .cred-firma { text-align:center; flex:1; }
+  /* min-width:0 -- sin esto el bloque de firma no baja de su contenido más
+     ancho (la línea de 210px) y empuja el QR fuera de la tarjeta en pantallas
+     de 320px. Se veía ya con el QR de 80px; agrandarlo lo dejaba peor. */
+  .cred-firma { text-align:center; flex:1; min-width:0; }
   .cred-firma img { max-height:56px; max-width:200px; object-fit:contain; display:block; margin:0 auto -6px; }
-  .cred-linea { border-top:1px solid #c9c6bf; width:210px; margin:0 auto 6px; }
+  .cred-linea { border-top:1px solid #c9c6bf; width:100%; max-width:210px; margin:0 auto 6px; }
   .cred-autoridad { font-size:14px; font-weight:600; color:var(--tinta); }
   .cred-cargo { font-size:12.5px; color:var(--gris); }
-  .cred-qr { flex-shrink:0; line-height:0; }
-  .cred-qr svg { width:80px; height:80px; display:block; }
+  .cred-qr { flex-shrink:0; line-height:0; text-align:center; }
+  /* 100px, no 80: a 80 el QR se escaneaba con esfuerzo desde la pantalla de
+     otro teléfono en un control. Un 25% más de lado es casi 60% más de área
+     de módulo, que es lo que mira la cámara. */
+  .cred-qr svg { width:100px; height:100px; display:block; }
+  .cred-qr.renovando svg { opacity:.35; transition:opacity .2s; }
+  .cred-vence { font-size:10.5px; line-height:1.3; color:var(--gris); margin-top:5px;
+    font-variant-numeric:tabular-nums; }
+  .cred-vence.vencido { color:#c0392b; font-weight:600; }
   .cred-pie { border-top:1px solid var(--linea); padding:9px 20px; font-size:11.5px;
     color:var(--gris); text-align:center; background:rgba(255,255,255,.7); }
   .cargando { text-align:center; padding:40px 0; }
@@ -846,6 +868,9 @@
   <div class="tpanel" id="tp-credencial">
     <h1>Credencial</h1>
     <div class="cred" style="margin-top:16px;">
+      {% if tiene_foto_perfil %}
+      <div class="cred-retrato"><img src="/perfil-foto/{{ cuil }}" alt="" aria-hidden="true"></div>
+      {% endif %}
       <div class="cred-fondo">{{ filigrana|safe }}</div>
       <div class="cred-head">
         {% if marca and marca.logo %}
@@ -881,7 +906,10 @@
             <div class="cred-cargo">{{ marca.cargo_autoridad or '' }}</div>
           </div>
           {% if qr_credencial %}
-          <div class="cred-qr" title="Escaneá para verificar esta credencial">{{ qr_credencial|safe }}</div>
+          <div class="cred-qr" id="cred-qr" data-vence="{{ qr_vence_en }}"
+               title="Escaneá para verificar esta credencial">{{ qr_credencial|safe }}
+            <div class="cred-vence" id="cred-vence"></div>
+          </div>
           {% endif %}
         </div>
       </div>
@@ -892,7 +920,8 @@
       {% endif %}
     </div>
     {% if codigo_credencial %}
-    <p class="nota" style="text-align:center;">Credencial digital emitida por {{ sindicato }}.</p>
+    <p class="nota" style="text-align:center;">Credencial digital emitida por {{ sindicato }}.
+      El QR se renueva solo: una captura de pantalla deja de verificar a los pocos minutos.</p>
     {% else %}
     <p class="nota" style="text-align:center;">Tu sindicato todavía no generó el código de tu credencial. El QR de verificación aparecerá cuando esté generado.</p>
     {% endif %}
@@ -2319,6 +2348,69 @@ if (document.getElementById('tp-tramites')) {
       alert('No se pudo enviar la nota.');
     }
     return false;
+  }
+}
+
+// ---------- QR efímero de la credencial ----------
+// El QR que pinta el servidor vence a los 10 minutos. Esto lo renueva antes
+// de que eso pase (y al volver a la pestaña / a la app), para que el afiliado
+// nunca muestre uno vencido y una captura vieja no le sirva a nadie más.
+{
+  const caja = document.getElementById('cred-qr');
+  if (caja) {
+    const leyenda = document.getElementById('cred-vence');
+    const MARGEN = 20;              // renovar 20 s antes del vencimiento real
+    let vence = Date.now() + (parseInt(caja.dataset.vence, 10) || 600) * 1000;
+    let renovando = false;
+    // Solo se renueva con la credencial a la vista: en otra pestaña de la app
+    // no hace falta un QR fresco, y cada llamada renovaría además la sesión
+    // por actividad (ver middleware), que se cuenta desde el último uso real.
+    const aLaVista = () => document.visibilityState === 'visible' &&
+      caja.closest('.tpanel')?.classList.contains('activo');
+
+    const mmss = ms => {
+      const t = Math.max(0, Math.round(ms / 1000));
+      return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
+    };
+
+    async function renovar() {
+      if (renovando) return;
+      renovando = true;
+      caja.classList.add('renovando');
+      try {
+        const r = await fetch('/api/credencial/qr', { headers: { 'Accept': 'application/json' } });
+        if (!r.ok) throw new Error(r.status);
+        const d = await r.json();
+        const svgViejo = caja.querySelector('svg');
+        if (svgViejo) svgViejo.remove();
+        caja.insertAdjacentHTML('afterbegin', d.svg);
+        vence = Date.now() + d.vence_en * 1000;
+      } catch (e) {
+        // Sin conexión no se puede renovar: el contador sigue corriendo y al
+        // llegar a cero avisa que hay que reabrir. No se borra el QR actual,
+        // que puede seguir siendo válido hasta su vencimiento.
+      } finally {
+        renovando = false;
+        caja.classList.remove('renovando');
+      }
+    }
+
+    function tic() {
+      const resta = vence - Date.now();
+      if (leyenda) {
+        const vencido = resta <= 0;
+        leyenda.classList.toggle('vencido', vencido);
+        leyenda.textContent = vencido ? 'QR vencido' : 'Se renueva en ' + mmss(resta);
+      }
+      if (resta <= MARGEN * 1000 && aLaVista()) renovar();
+    }
+
+    setInterval(tic, 1000);
+    tic();
+    // Volver a la app tras un rato: el QR puede haber vencido en segundo plano.
+    document.addEventListener('visibilitychange', () => {
+      if (aLaVista() && vence - Date.now() <= MARGEN * 1000) renovar();
+    });
   }
 }
 </script>
