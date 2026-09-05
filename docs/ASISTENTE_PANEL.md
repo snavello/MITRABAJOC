@@ -173,8 +173,16 @@ frases de prueba con preguntas reales.
 
 ## 4. Frontend (`templates/dashboard.html` + `static/dashboard.js`)
 
-- Botón "Asistente" en la barra del panel, solo si `ASISTENTE_ON` (módulo
-  habilitado + API key presente), mismo patrón que `CONSULTAS_ON`.
+- Pastilla "Asistente" en el ángulo superior derecho de la tarjeta de
+  Filtros (Sd, 2026-09-05; antes estaba en el encabezado), solo si
+  `ASISTENTE_ON` (módulo habilitado + API key presente), mismo patrón que
+  `CONSULTAS_ON`. Reiniciar bajó al ángulo inferior derecho de la tarjeta.
+  La pastilla lleva el degradé oscuro del encabezado de fondo, letras
+  doradas como la colmena de Colm3na (dorados fijos del logo, no de la marca
+  del sindicato) y la colmena dorada (`static/colmena_dorada.webp`, 256 px
+  con transparencia real, recortada del render 3D) en vaivén de ±40° sobre
+  su eje vertical, 9 s ida y vuelta; quieta con `prefers-reduced-motion`.
+  En el celular, solo la colmena. Render aprobado antes de construir.
 - Cajón lateral con estética del panel: burbujas, caja de texto, botón
   enviar, botón micrófono (oculto sin `SpeechRecognition`), estado
   "pensando".

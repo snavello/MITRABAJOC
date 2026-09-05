@@ -220,11 +220,24 @@
 
   /* ---------- Modal de detalle ("Ver") ---------- */
   /* ---- Asistente del Panel (docs/ASISTENTE_PANEL.md) ---- */
-  .btn-asist { margin-left: 14px; display: inline-flex; align-items: center; gap: 7px; padding: 8px 15px 8px 12px;
-    border: none; border-radius: 99px; background: var(--marca-acento); color: #fff; cursor: pointer;
-    font-family: var(--fuente-display); font-size: 15px; letter-spacing: .02em; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
-  .btn-asist svg { width: 17px; height: 17px; stroke: #fff; stroke-width: 1.9; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-  .btn-asist:hover { filter: brightness(1.08); }
+  /* Pastilla en la tarjeta de filtros: degradé del encabezado de fondo, letras
+     doradas como la colmena (dorados del logo de Colm3na, no de la marca del
+     sindicato), filo dorado, y la colmena en vaivén sobre su eje vertical. */
+  .f-pie { display: flex; justify-content: flex-end; margin-top: 10px; }
+  .btn-asist { display: inline-flex; align-items: center; gap: 9px; padding: 5px 16px 5px 7px; border-radius: 99px; cursor: pointer;
+    border: 1px solid rgba(245,176,42,.45);
+    background: linear-gradient(135deg, var(--marca-base) 0%, color-mix(in srgb, var(--marca-base) 55%, var(--marca-primario)) 100%);
+    box-shadow: 0 6px 18px rgba(15,27,45,.26), inset 0 1px 0 rgba(255,255,255,.07);
+    font-family: var(--fuente-display); font-size: 16px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; line-height: 1;
+    color: #f5b02a; transition: box-shadow .2s, border-color .2s, transform .2s; }
+  .btn-asist .palabra { background: linear-gradient(180deg, #ffd166, #f5b02a 55%, #f08c00); -webkit-background-clip: text; background-clip: text; color: transparent; padding-right: 2px; }
+  .btn-asist:hover { border-color: rgba(245,176,42,.9); transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(15,27,45,.32), 0 0 0 3px rgba(245,176,42,.16); }
+  .btn-asist .colmena { width: 30px; height: 30px; perspective: 260px; flex: none; }
+  .btn-asist .colmena img { width: 100%; height: 100%; display: block; transform-style: preserve-3d;
+    animation: vaiven 9s ease-in-out infinite; filter: drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
+  @keyframes vaiven { 0%, 100% { transform: rotateY(-40deg); } 50% { transform: rotateY(40deg); } }
+  @media (prefers-reduced-motion: reduce) { .btn-asist .colmena img { animation: none; } }
   .asist { position: fixed; top: 0; right: 0; bottom: 0; width: 390px; max-width: 100%; z-index: 150;
     display: flex; flex-direction: column; background: var(--blanco); border-left: 1px solid var(--linea);
     box-shadow: -12px 0 40px rgba(8,12,20,.18); transform: translateX(105%); transition: transform .28s ease; }
@@ -281,7 +294,7 @@
   .asist-mini-bar #asist-mini-texto { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12.5px; }
   .asist-mini-bar svg { flex: none; width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
   @media (max-width: 640px) {
-    .btn-asist span { display: none; } .btn-asist { padding: 8px 10px; }
+    .btn-asist .palabra { display: none; } .btn-asist { padding: 4px 5px; gap: 0; }
     /* Hoja inferior: ocupa la mitad de abajo, el panel sigue a la vista arriba */
     .asist { top: auto; bottom: 0; width: 100%; height: 56vh; border-left: none; border-top: 1px solid var(--linea);
       border-radius: 16px 16px 0 0; box-shadow: 0 -12px 40px rgba(8,12,20,.18); transform: translateY(105%); }
@@ -372,12 +385,6 @@
       <div class="sub">{{ sindicato }} · Mi Trabajo</div>
     </div>
     <div class="hoy"><strong id="hoy-fecha"></strong><span id="rango-texto"></span></div>
-    {% if asistente %}
-    <button type="button" class="btn-asist" id="btn-asist" aria-controls="asist" aria-expanded="false">
-      <svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></svg>
-      <span>Asistente</span>
-    </button>
-    {% endif %}
   </div>
 </header>
 
@@ -386,7 +393,13 @@
   <div class="filtros-card">
     <div class="f-cabecera">
       <div class="f-titulo">Filtros <span class="numf" id="num-filtros">0</span></div>
-      <button class="btn-reiniciar" id="btn-reiniciar" type="button">⟳ Reiniciar</button>
+      {% if asistente %}
+      {# Pastilla del Asistente (docs/ASISTENTE_PANEL.md §4): fondo con el degradé
+         del encabezado, letras doradas como la colmena, la colmena en vaivén. #}
+      <button type="button" class="btn-asist" id="btn-asist" aria-controls="asist" aria-expanded="false" title="Asistente del Panel">
+        <span class="colmena"><img src="/static/colmena_dorada.webp?v={{ sello_static('colmena_dorada.webp') }}" alt=""></span><span class="palabra">Asistente</span>
+      </button>
+      {% endif %}
     </div>
     <div class="f-fila">
       <div class="f-grupo">
@@ -441,6 +454,7 @@
     </div>
     <div class="chips-activos" id="chips"></div>
     <div class="hint-cross">Tocá cualquier segmento o barra de los gráficos para filtrar todo el panel. Lo seleccionado se marca en <b>color destacado</b> y el detalle aparece abajo, en el explorador de datos.</div>
+    <div class="f-pie"><button class="btn-reiniciar" id="btn-reiniciar" type="button">⟳ Reiniciar</button></div>
   </div>
 
   <section class="kpis" id="kpis">
