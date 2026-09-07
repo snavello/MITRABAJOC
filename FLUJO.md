@@ -16,6 +16,10 @@ cambio: dónde nace, dónde se ve primero, y cómo llega a la demo.
 Cada uno tiene su propia base de datos. Nada de lo que hagas en Pruebas
 puede tocar la demo.
 
+Para no equivocarse de entorno: **mitrabajo-pruebas.onrender.com/entornos**
+lista los 8 logins (Trabajador, Sindicato, Empresa y Plataforma, en Pruebas
+y en Demo) con la versión que corre en cada uno. Solo existe en Pruebas.
+
 ## El ciclo de una feature
 
 **1. Programás en tu PC, en una rama.**

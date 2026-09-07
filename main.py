@@ -4224,3 +4224,54 @@ def empresa_salir():
     resp.delete_cookie("cuit_emp")
     resp.delete_cookie("sind_elegido_emp")
     return resp
+
+
+# ================= Entornos: landing interna y versión =================
+# Pedido de Sd (2026-09-07): con Pruebas y Demo iguales a la vista es fácil
+# entrar al login equivocado. /entornos junta los 8 accesos (4 logins x
+# Pruebas/Demo), cada entorno con su color, y la versión que corre en cada
+# uno. Detalle en HISTORIAL.md, "Landing de entornos".
+
+ROLES_LOGIN = [
+    {"clave": "trabajador", "nombre": "Trabajador", "ruta": "/ingresar"},
+    {"clave": "admin", "nombre": "Sindicato", "ruta": "/admin"},
+    {"clave": "empresa", "nombre": "Empresa", "ruta": "/ingresar-empresa"},
+    {"clave": "plataforma", "nombre": "Plataforma", "ruta": "/plataforma"},
+]
+
+
+def _versiones():
+    """Las tres apps con versión propia en version.py. Empresa no lleva
+    una, y la landing lo dice en vez de inventarle un número."""
+    return {"trabajador": VERSION_TRABAJADOR, "admin": VERSION_ADMIN,
+            "plataforma": VERSION_PLATAFORMA, "fecha": FECHA_VERSION}
+
+
+@app.get("/api/version")
+def api_version():
+    """Versión de cada app y entorno de ESTE servicio, en JSON. Público y
+    con CORS abierto a propósito: la landing /entornos de Pruebas le
+    pregunta a la demo (otro origen) qué versión corre, sin entrar a ningún
+    "Acerca de". No cuenta nada que el distintivo o el "Acerca de" no
+    muestren ya."""
+    return JSONResponse({"entorno": entorno.ENTORNO, **_versiones()},
+                        headers={"Access-Control-Allow-Origin": "*",
+                                 "Cache-Control": "no-store"})
+
+
+@app.get("/entornos", response_class=HTMLResponse)
+def entornos(request: Request):
+    """Landing interna de accesos. Existe SOLO donde se muestra el
+    distintivo (local/pruebas, entorno.py): en la demo responde 404 aunque
+    el código llegue promovido, porque es una herramienta del equipo y no
+    algo para mostrarle a un sindicato. MUESTRA_DISTINTIVO se lee por
+    request (no al importar) para que un test pueda simular la demo."""
+    if not entorno.MUESTRA_DISTINTIVO:
+        raise HTTPException(404, "No existe en este entorno")
+    # Prellenar solo las versiones de este mismo servicio (las de Pruebas
+    # cuando se sirve desde Pruebas); las del otro entorno las trae el JS.
+    versiones = {entorno.ENTORNO: _versiones()} if entorno.ENTORNO in entorno.URLS else {}
+    return templates.TemplateResponse("entornos.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "urls": entorno.URLS, "roles": ROLES_LOGIN, "versiones": versiones,
+    })

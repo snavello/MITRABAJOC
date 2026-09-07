@@ -36,3 +36,11 @@ def muestra_distintivo(valor):
 
 ENTORNO = normalizar(os.getenv("ENTORNO"))
 MUESTRA_DISTINTIVO = muestra_distintivo(ENTORNO)
+
+# URL pública de cada entorno desplegado (DESPLIEGUE_RENDER.md). La landing
+# /entornos arma con esto sus 8 accesos, y le pide a cada uno /api/version
+# para mostrar qué corre ahí. El orden es el de la pantalla.
+URLS = {
+    "pruebas": "https://mitrabajo-pruebas.onrender.com",
+    "demo": "https://mitrabajo.onrender.com",
+}

@@ -2706,3 +2706,36 @@ y un día, sobre la rama `feature/asistente-panel`.
   offline), probar el dictado en Chrome con micrófono, y decidir si con el
   panel en "Hoy" el asistente amplía solo el período cuando la pregunta no
   lo menciona.
+
+## Landing de entornos: /entornos (2026-09-07)
+
+Pedido de Sd: con Pruebas y Demo idénticas a la vista es fácil entrar al
+login equivocado en una presentación. Una página interna con los 8 accesos
+(Trabajador, Sindicato, Empresa y Plataforma, en cada entorno), íconos
+grandes, los dos entornos distinguidos de forma inconfundible y la versión
+que corre en cada uno. URL: `mitrabajo-pruebas.onrender.com/entornos`.
+
+- **Solo existe donde se muestra el distintivo** (`entorno.MUESTRA_DISTINTIVO`,
+  local/pruebas): en la demo la ruta responde 404 aunque el código llegue
+  promovido. Es una herramienta del equipo: no se enlaza desde ningún lado
+  y lleva `noindex`. El chequeo se hace por request, no al importar, para
+  poder simular la demo en el test.
+- **Los colores son fijos y no se comparten con nada de la suite**: el ámbar
+  de Pruebas es exactamente el del distintivo de `_entorno.html` (así el
+  acceso y la pantalla que abre se reconocen iguales) y lleva rayas de obra
+  en la franja superior; la demo va en verde agua, lisa, con escudo, porque
+  es la que "no se rompe". Fondo, panal y grano son los de los logins
+  ("colmena nocturna"). Cuatro íconos de línea distintos, uno por rol.
+- **La versión sale de cada entorno, no de este servidor**: `/api/version`
+  (nuevo, público, `Access-Control-Allow-Origin: *`, `no-store`) devuelve
+  las tres versiones de `version.py` + `FECHA_VERSION` + entorno, y el JS
+  de la landing se lo pide a los dos hosts (`entorno.URLS`). Las del propio
+  servicio vienen prellenadas en el HTML. Hasta la próxima promoción la
+  demo no publica el endpoint y esos chips dicen "sin dato": el HTML de
+  otro origen no se puede leer desde el navegador y el "Acerca de" está
+  detrás del login, por eso hizo falta el endpoint y no un scraping.
+- **Empresa no tiene versión propia** en `version.py` (solo Trabajador,
+  Admin y Plataforma) y la landing lo dice en lugar de inventarle un número.
+- Test: `test_entornos.py`. Versión: Plataforma 0.21.02 → 0.22.01 (se tomó
+  como funcionalidad nueva de la app de plataforma, por ser una herramienta
+  transversal de administración; Sd puede reasignarlo).

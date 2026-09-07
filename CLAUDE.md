@@ -134,7 +134,10 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - ENTORNO — `local`/`pruebas`/`demo`/`prod` (`entorno.py`). En `local` y
   `pruebas` la app muestra un distintivo fijo con entorno + versión (para
   no confundir pantallas en una presentación); en `demo`/`prod` y sin la
-  variable, nada. Va también en el "Acerca de".
+  variable, nada. Va también en el "Acerca de". Donde hay distintivo existe
+  además `/entornos`: landing interna con los 8 accesos (4 logins x
+  Pruebas/Demo, hosts en `entorno.URLS`) y la versión que corre en cada
+  uno, que lee de `/api/version` (público, en todos los entornos).
 - ANTHROPIC_API_KEY — clave de la API de Anthropic.
 - PLATAFORMA_CUIT — CUIT del login de plataforma (default 20000000000).
 - PLATAFORMA_PASSWORD — clave del login de plataforma.
