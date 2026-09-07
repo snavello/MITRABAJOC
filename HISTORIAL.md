@@ -2841,3 +2841,66 @@ entra sin PIN.
 - Tests: `test_entornos.py` (puerta, PIN con guiones, espera tras cinco
   fallos, 404 en la demo) y `test_recursos.py` (todo exige el pase, incluida
   la miniatura). Versión: Plataforma 0.23.01 → 0.23.02.
+
+## PIN de la landing (2026-09-07)
+
+Pedido de Sd: una seguridad mínima para `/entornos`. Sin pase, la ruta
+devuelve solo la puerta (`entornos_pin.html`): un campo numérico en la
+misma colmena nocturna, sin un solo host ni `/recursos/` en el HTML.
+`POST /entornos/pin` compara los dígitos contra `entorno.PIN_LANDING`
+(variable `PIN_ENTORNOS`, default `09211999`) en tiempo constante y deja
+el mismo pase de 30 días que ya usaban los recursos (cookie
+`pase_entornos`). El PIN reemplazó a la clave de plataforma que pedía solo
+la sección Recursos: una única puerta para toda la página, miniaturas
+incluidas. Cinco fallos seguidos desde una IP (`X-Forwarded-For` en
+Render) hacen esperar un minuto, en memoria del proceso: no es un cerrojo
+serio, pero vuelve inútil el tanteo a mano. Cambiar el PIN no invalida los
+pases ya emitidos; para cortarlos hay que cambiar `SESSION_SECRET`. Una
+sesión de plataforma vigente entra sin PIN. Tests en `test_entornos.py` y
+`test_recursos.py`. Versión: Plataforma 0.23.01 → 0.23.02.
+
+## Documentación técnica generada del código (2026-09-07)
+
+Pedido de Sd: el artifact «Mi Trabajo — Documentación técnica» del 14 de
+agosto (v0.03) servía pero estaba viejo, y quería los gráficos con la
+estética actual. Se reemplazó por una página generada desde el código,
+para que no vuelva a quedar desactualizada por escribirla a mano.
+
+- **Tres scripts en `docs/generador/`.** `extraer.py` lee con `ast` los
+  modelos de `db.py` (tablas, columnas, FK, índices, JSON, bytes, vector),
+  las revisiones de `migrations/versions/` (id, padre, fecha, título,
+  tablas creadas) y las rutas de `main.py` (método, path, docstring), y deja
+  `datos.json`. `diagramas.py` dibuja los SVG inline (vista general, flujo
+  del recibo, multi-sindicato, RAG, Asistente, entornos, DER por áreas,
+  tira de migraciones, roles). `generar.py` arma
+  `recursos/documentacion-tecnica.html` con `contenido.py` (las
+  descripciones que no salen solas del código: qué es cada tabla, qué hace
+  cada ruta y con qué rol, módulos, scripts, plantillas) y `estilos.css`.
+  Regenerar: `python docs/generador/extraer.py && python
+  docs/generador/generar.py`; después actualizar `FECHA_DOC` y `COMMIT` en
+  `generar.py`, y la miniatura si cambió la portada.
+- **Misma familia visual que los planes** (Plan Maestro, Implementación):
+  encabezado oscuro con panal, pestañas pegadas, panel lateral con índice,
+  Barlow Condensed y Barlow, claro y oscuro. Los diagramas son SVG a mano
+  con `currentColor` y tres acentos con significado: miel para lo que
+  cruza a la IA, agua para la frontera del tenant, verde para persistencia.
+  El DER agrupa las 41 tablas por área del código y resume las 25 FK a
+  `sindicato` en un hexágono en vez de dibujar 25 líneas convergentes; las
+  relaciones por valor (CUIL, CUIT, `formula.target`) van punteadas.
+- **Cuatro pestañas**: Funcionalidades (los cuatro roles con sus pestañas,
+  módulos, transversal, qué cambió desde agosto), Arquitectura (stack,
+  vista general, flujo del recibo, auth, multi-sindicato, los tres modelos
+  de IA, RAG, Asistente, entornos, decisiones vigentes), Componentes
+  (módulos, scripts, las 172 rutas agrupadas y plegables, plantillas,
+  estáticos, tests, docs) y Modelo de datos (DER, relaciones por valor,
+  las 41 tablas columna por columna, las 49 migraciones con tira de tiempo,
+  la capa de datos).
+- Publicada sobre el mismo artifact de agosto (misma URL) y catalogada en
+  Recursos como `documentacion-tecnica` con miniatura de la portada.
+- **Lo que el relevamiento encontró desactualizado** y queda para
+  corregir aparte: `README.md` describe la PoC sin base de datos; los
+  docstrings de `db.py`, `main.py` y `auth.py` hablan de SQLite, de tres
+  roles y de sesiones en memoria; CLAUDE.md dice «12 secciones» en `/admin`
+  (son 15) y nombra un solo modelo de IA (son tres); `pytest` no está en
+  ningún requirements; la tarjeta Capacitación de la portada dice
+  «Próximamente» con la pestaña ya llena.

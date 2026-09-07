@@ -74,6 +74,12 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - recursos.py — Recursos de la landing `/entornos`: catálogo de la
   documentación del proyecto (los versionados en `recursos/` + los subidos
   a la base), el pase de 30 días que deja el PIN y la clasificación por tipo.
+- docs/generador/ — generador de la documentación técnica
+  (`recursos/documentacion-tecnica.html`): `extraer.py` lee el código con
+  `ast` y deja `datos.json`; `generar.py` arma el HTML con los diagramas SVG
+  de `diagramas.py` y los textos de `contenido.py`. Se corre a mano tras
+  cambios grandes: `python docs/generador/extraer.py && python
+  docs/generador/generar.py`.
 - push.py — notificaciones Web Push a la PWA del trabajador (novedades de
   trámites; apagado sin claves VAPID).
 - asistente.py — Asistente del Panel Sindical: pregunta en lenguaje

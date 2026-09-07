@@ -56,8 +56,20 @@ TIPOS = {
 # con la que conviene abrirlo. El archivo y la miniatura están en CARPETA.
 # El MP4 del video de difusión viene de la rama
 # claude/recibos-tramites-video-0v4zmo del repo MiTrabajo, donde quedó la
-# composición (HyperFrames) para regenerarlo; acá va solo el render.
+# composición (HyperFrames) para regenerarlo; acá va solo el render. La
+# documentación técnica se regenera con docs/generador/ (lee db.py, main.py
+# y migrations/); su miniatura es una captura de la portada.
 SEMILLA = [
+    {
+        "clave": "documentacion-tecnica",
+        "titulo": "Documentación técnica",
+        "descripcion": "Funcionalidades por rol, arquitectura con diagramas, componentes y rutas, "
+                       "y el modelo de datos completo. Generada del código.",
+        "fecha": date(2026, 9, 7),
+        "archivo": "documentacion-tecnica.html",
+        "miniatura": "documentacion-tecnica.jpg",
+        "fragmento": "",
+    },
     {
         "clave": "plan-maestro",
         "titulo": "Plan Maestro Colm3na",
