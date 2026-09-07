@@ -14,6 +14,7 @@ esta feature no cambia lo que ven los sindicatos en el servicio actual
 aunque a alguien se le olvide fijar ENTORNO=demo. Que el silencio sea el
 default seguro es a propósito.
 """
+import hmac
 import os
 
 ENTORNOS_VALIDOS = ("local", "pruebas", "demo", "prod")
@@ -44,3 +45,17 @@ URLS = {
     "pruebas": "https://mitrabajo-pruebas.onrender.com",
     "demo": "https://mitrabajo.onrender.com",
 }
+
+# PIN de la landing /entornos y de sus recursos: una puerta mínima para que
+# la página del equipo no quede abierta a cualquiera que adivine la URL.
+# Pedido de Sd (2026-09-07): ocho dígitos alcanzan por ahora. Se cambia con
+# la variable PIN_ENTORNOS, sin tocar código. Quien lo ingresa una vez queda
+# con un pase de 30 días en ese navegador (recursos.crear_pase).
+PIN_LANDING = os.getenv("PIN_ENTORNOS", "09211999")
+
+
+def verificar_pin(texto) -> bool:
+    """Compara solo los dígitos de lo tecleado (un espacio o un guion no
+    lo invalidan) en tiempo constante."""
+    digitos = "".join(ch for ch in (texto or "") if ch.isdigit())
+    return bool(digitos) and hmac.compare_digest(digitos, PIN_LANDING)

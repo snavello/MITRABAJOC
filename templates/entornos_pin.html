@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Colm3na — Entornos</title>
+<style>
+  @font-face {
+    font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal;
+    src: url('/static/fonts/barlow-condensed-bold.woff2?v={{ sello_static('fonts/barlow-condensed-bold.woff2') }}') format('woff2');
+  }
+  /* Puerta de la landing /entornos (2026-09-07): sin el PIN no se ve nada
+     de la página, ni accesos ni recursos. Misma colmena nocturna de
+     entornos.html, reducida a un solo campo. El PIN es de ocho dígitos
+     (entorno.PIN_LANDING); el pase que deja dura 30 días en el navegador. */
+  :root {
+    --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
+    --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
+    --pruebas: #ffb020;
+    --demo: #3ecfae;
+    --fuente-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  }
+  * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
+  body { min-height:100vh; padding:26px 16px 70px; position:relative; overflow-x:hidden; color:#fff; display:grid; place-items:center;
+    background:radial-gradient(900px 480px at 78% -10%, color-mix(in srgb, var(--agua) 26%, transparent), transparent 62%),
+               linear-gradient(160deg, #0d1626 20%, var(--tinta) 70%, color-mix(in srgb, var(--tinta) 72%, #4a6da8)); }
+  body::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.08; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .panal { position:fixed; pointer-events:none; z-index:0; animation:respira 9s ease-in-out infinite; }
+  .panal.a { top:-40px; right:-30px; }
+  .panal.b { bottom:-60px; left:-40px; animation-delay:-4s; }
+  @keyframes respira { 0%,100% { opacity:.10; } 50% { opacity:.2; } }
+  @keyframes entra { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+  @media (max-width:600px) { .panal { width:220px; height:auto; } }
+  @media (prefers-reduced-motion:reduce) { .panal, .puerta { animation:none; } }
+
+  .puerta { position:relative; z-index:2; width:min(100%, 420px); text-align:center; animation:entra .6s ease both; }
+  .puerta .logo { display:block; margin:0 auto 12px; max-width:200px; max-height:110px; width:auto; height:auto; object-fit:contain; }
+  .puerta h1 { font-family:var(--fuente-display); font-size:48px; line-height:.95; letter-spacing:2px; text-transform:uppercase; }
+  .puerta .lede { margin-top:8px; font-size:14px; color:rgba(255,255,255,.65); }
+  .tarjeta { margin-top:22px; padding:22px 20px 20px; border-radius:18px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); text-align:left; }
+  .tarjeta label { display:flex; align-items:center; gap:9px; font-family:var(--fuente-display); font-size:16px; letter-spacing:1.6px; text-transform:uppercase; color:rgba(255,255,255,.8); }
+  .tarjeta label svg { width:20px; height:20px; stroke:#fff; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; opacity:.85; }
+  .pin { display:block; width:100%; margin-top:10px; padding:12px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.3); background:rgba(0,0,0,.28); color:#fff;
+    font-family:var(--mono); font-size:28px; letter-spacing:.42em; text-align:center; }
+  .pin::placeholder { color:rgba(255,255,255,.28); letter-spacing:.42em; }
+  .pin:focus { outline:2px solid rgba(255,255,255,.7); outline-offset:0; }
+  .boton { display:block; width:100%; margin-top:12px; appearance:none; cursor:pointer; padding:12px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.7); background:#fff; color:var(--tinta);
+    font-family:var(--fuente-display); font-size:19px; letter-spacing:1.8px; text-transform:uppercase; }
+  .boton:hover, .boton:focus-visible { background:rgba(255,255,255,.88); outline:none; }
+  .aviso { margin-top:12px; padding:10px 12px; border-radius:10px; font-size:13.5px; text-align:center;
+    background:color-mix(in srgb, var(--pruebas) 12%, rgba(255,255,255,.04)); border:1px solid color-mix(in srgb, var(--pruebas) 60%, transparent); }
+  .nota { margin-top:14px; font-size:12px; color:rgba(255,255,255,.45); text-align:center; }
+</style>
+</head>
+<body>
+{% include "_entorno.html" %}
+  <svg class="panal a" width="360" height="300" viewBox="0 0 360 300" fill="none" aria-hidden="true">
+    <g stroke="rgba(255,255,255,.9)" stroke-width="1.1">
+      <path d="M60 20 105 45v50L60 120 15 95V45zM165 20l45 25v50l-45 25-45-25V45zM270 20l45 25v50l-45 25-45-25V45zM112 105l45 25v50l-45 25-45-25v-50zM217 105l45 25v50l-45 25-45-25v-50zM322 105l45 25v50l-45 25-45-25v-50zM60 190l45 25v50l-45 25-45-25v-50zM165 190l45 25v50l-45 25-45-25v-50z"/>
+    </g>
+  </svg>
+  <svg class="panal b" width="300" height="260" viewBox="0 0 360 300" fill="none" aria-hidden="true">
+    <g stroke="rgba(255,255,255,.9)" stroke-width="1.1">
+      <path d="M60 20 105 45v50L60 120 15 95V45zM165 20l45 25v50l-45 25-45-25V45zM112 105l45 25v50l-45 25-45-25v-50zM217 105l45 25v50l-45 25-45-25v-50zM60 190l45 25v50l-45 25-45-25v-50z"/>
+    </g>
+  </svg>
+
+  <main class="puerta">
+    <img class="logo" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Mi Trabajo">
+    <h1>Entornos</h1>
+    <p class="lede">Página interna del equipo. Ingresá el código para entrar.</p>
+    <form class="tarjeta" method="post" action="/entornos/pin" id="form-pin">
+      <label for="pin"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Código de acceso</label>
+      <input class="pin" type="password" name="pin" id="pin" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" minlength="8"
+             placeholder="••••••••" autocomplete="one-time-code" autofocus required aria-describedby="pin-nota">
+      <button class="boton" type="submit">Entrar</button>
+      {% if aviso == 'pin' %}
+      <p class="aviso" role="alert">Ese no es el código. Probá de nuevo.</p>
+      {% elif aviso == 'espera' %}
+      <p class="aviso" role="alert">Demasiados intentos. Esperá un minuto y probá de nuevo.</p>
+      {% endif %}
+      <p class="nota" id="pin-nota">Ocho dígitos. Se pide una vez por dispositivo; el pase dura 30 días.</p>
+    </form>
+  </main>
+</body>
+</html>

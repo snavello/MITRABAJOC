@@ -15,14 +15,14 @@ Dos orígenes, una sola lista:
   La miniatura la arma el navegador al subir (imágenes y videos) o la elige
   quien sube; sin miniatura, la landing dibuja una portada con el título.
 
-Quién ve y quién sube. La landing es pública donde existe (local/pruebas,
-mismo criterio que el distintivo), pero los archivos son documentación
-interna (modelo económico, plan de cuentas), así que abrirlos, subir y
-quitar piden una vez por dispositivo la clave de plataforma
-(PLATAFORMA_PASSWORD) y dejan un "pase" firmado en una cookie de 30 días.
-NO es una sesión de rol (COOKIES_POR_ROL en main.py): no se renueva por
-actividad ni vence a los 15 minutos, porque no abre ningún panel -- solo
-estos archivos. Una sesión de plataforma vigente también vale.
+Quién ve y quién sube. La landing entera (entornos y recursos) está
+detrás del PIN de entorno.PIN_LANDING: son documentos internos (modelo
+económico, plan de cuentas) en un host público. El PIN se ingresa una vez
+por dispositivo y deja un "pase" firmado en una cookie de 30 días, que es
+lo que abrir, subir y quitar recursos exigen. NO es una sesión de rol
+(COOKIES_POR_ROL en main.py): no se renueva por actividad ni vence a los
+15 minutos, porque no abre ningún panel -- solo esta landing. Una sesión
+de plataforma vigente también vale.
 """
 import hashlib
 import hmac
@@ -40,7 +40,7 @@ CARPETA = Path(__file__).resolve().parent / "recursos"
 # (Starlette lo recibe en disco temporal, pero la base lo guarda entero).
 TAMANIO_MAX = 30 * 1024 * 1024
 
-COOKIE_PASE = "acceso_recursos"
+COOKIE_PASE = "pase_entornos"
 PASE_SEGUNDOS = 30 * 24 * 3600
 
 # Tipos con los que la landing elige ícono, portada y cómo se sirve el
@@ -143,7 +143,7 @@ def normalizar_fragmento(texto: str) -> str:
     return texto if texto.startswith("#") else "#" + texto
 
 
-# ---------- Pase (clave de plataforma, una vez por dispositivo) ----------
+# ---------- Pase (el PIN de la landing, una vez por dispositivo) ----------
 def crear_pase() -> str:
     """Token "vence.firma": el vencimiento absoluto (30 días) firmado con
     SESSION_SECRET. Distinto de auth.crear_sesion a propósito: aquel vence

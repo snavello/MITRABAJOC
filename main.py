@@ -4269,18 +4269,79 @@ def entornos(request: Request):
     request (no al importar) para que un test pueda simular la demo."""
     if not entorno.MUESTRA_DISTINTIVO:
         raise HTTPException(404, "No existe en este entorno")
+    aviso = request.query_params.get("aviso", "")
+    # Sin pase no se ve nada: ni accesos ni recursos. Solo la pantalla del
+    # PIN (entorno.PIN_LANDING), que deja el pase de 30 días en la cookie.
+    if not _pase_landing(request):
+        return templates.TemplateResponse("entornos_pin.html", {
+            "request": request, "marca_plataforma": db.marca_plataforma(), "aviso": aviso,
+        })
     # Prellenar solo las versiones de este mismo servicio (las de Pruebas
     # cuando se sirve desde Pruebas); las del otro entorno las trae el JS.
     versiones = {entorno.ENTORNO: _versiones()} if entorno.ENTORNO in entorno.URLS else {}
     return templates.TemplateResponse("entornos.html", {
         "request": request, "marca_plataforma": db.marca_plataforma(),
         "urls": entorno.URLS, "roles": ROLES_LOGIN, "versiones": versiones,
-        # Recursos (recursos.py): el catálogo completo, si este navegador ya
-        # tiene el pase para abrirlos, y el aviso de la última acción.
-        "recursos": recursos.catalogo(), "pase": _pase_recursos(request),
-        "aviso": request.query_params.get("aviso", ""), "hoy": date.today().isoformat(),
+        # Recursos (recursos.py): el catálogo completo y el aviso de la
+        # última acción.
+        "recursos": recursos.catalogo(), "aviso": aviso, "hoy": date.today().isoformat(),
         "tamanio_max_mb": recursos.TAMANIO_MAX // (1024 * 1024),
     })
+
+
+# ---- PIN de la landing ----
+# Intentos fallidos por IP, en memoria del proceso: cinco seguidos y ese
+# origen espera un minuto. No es un cerrojo serio (se reinicia con cada
+# deploy y hay un solo proceso), pero vuelve inútil el tanteo a mano y le
+# da sentido a un PIN de ocho dígitos. Detalle en HISTORIAL.md.
+PIN_MAX_FALLOS = 5
+PIN_ESPERA_SEGUNDOS = 60
+_intentos_pin: dict[str, list] = {}     # ip -> [fallos, bloqueado_hasta]
+
+
+def _ip_de(request: Request) -> str:
+    """Render pone la IP real en X-Forwarded-For; sin proxy, la del socket."""
+    reenviada = request.headers.get("x-forwarded-for", "")
+    if reenviada:
+        return reenviada.split(",")[0].strip()
+    return request.client.host if request.client else "?"
+
+
+def _pin_bloqueado(ip: str) -> bool:
+    import time
+    estado = _intentos_pin.get(ip)
+    return bool(estado) and estado[1] > time.time()
+
+
+def _pin_fallo(ip: str) -> None:
+    import time
+    estado = _intentos_pin.setdefault(ip, [0, 0.0])
+    estado[0] += 1
+    if estado[0] >= PIN_MAX_FALLOS:
+        estado[0] = 0
+        estado[1] = time.time() + PIN_ESPERA_SEGUNDOS
+    # Que la tabla no crezca sin límite si alguien tantea desde muchas IPs.
+    if len(_intentos_pin) > 5000:
+        _intentos_pin.clear()
+
+
+@app.post("/entornos/pin")
+def entornos_pin(request: Request, pin: str = Form("")):
+    """El PIN de ocho dígitos, una vez por dispositivo: deja el pase de 30
+    días (recursos.crear_pase) en una cookie Lax, así un POST desde otro
+    sitio no la manda y el pase no sirve para subir o quitar desde afuera."""
+    _exigir_landing()
+    ip = _ip_de(request)
+    if _pin_bloqueado(ip):
+        return RedirectResponse("/entornos?aviso=espera", status_code=303)
+    if not entorno.verificar_pin(pin):
+        _pin_fallo(ip)
+        return RedirectResponse("/entornos?aviso=pin", status_code=303)
+    _intentos_pin.pop(ip, None)
+    resp = RedirectResponse("/entornos", status_code=303)
+    resp.set_cookie(recursos.COOKIE_PASE, recursos.crear_pase(), httponly=True,
+                    samesite="lax", max_age=recursos.PASE_SEGUNDOS)
+    return resp
 
 
 # ================= Recursos: la documentación del proyecto en la landing =================
@@ -4288,8 +4349,9 @@ def entornos(request: Request):
 # videos) estaban repartidos entre el celular, la nube y la PC. La landing
 # los junta bajo "Recursos", cada uno con miniatura, descripción de una
 # línea y fecha, y permite subir uno nuevo desde ahí mismo. Qué es un
-# recurso, de dónde salen y por qué piden clave está en recursos.py; el
-# detalle en HISTORIAL.md, "Recursos en la landing".
+# recurso, de dónde salen y por qué la landing pide un PIN está en
+# recursos.py y entorno.py; el detalle en HISTORIAL.md, "Recursos en la
+# landing" y "PIN de la landing".
 
 def _exigir_landing() -> None:
     """Las rutas de recursos existen donde existe la landing (local/
@@ -4298,22 +4360,22 @@ def _exigir_landing() -> None:
         raise HTTPException(404, "No existe en este entorno")
 
 
-def _pase_recursos(request: Request) -> bool:
-    """Puede abrir, subir y quitar recursos: pase de 30 días (la clave de
-    plataforma ingresada una vez en la landing) o sesión de plataforma
-    vigente en este navegador."""
+def _pase_landing(request: Request) -> bool:
+    """Puede ver la landing y abrir, subir y quitar recursos: pase de 30
+    días (el PIN ingresado una vez en este navegador) o sesión de
+    plataforma vigente."""
     return (recursos.pase_valido(request.cookies.get(recursos.COOKIE_PASE, ""))
             or bool(sesion_actual(request, "plataforma")))
 
 
-def _exigir_pase_recursos(request: Request):
-    """Sin pase: un <form> o un clic vuelven a la landing con el aviso de
-    que hace falta la clave; una llamada fetch recibe el 403 de siempre."""
-    if _pase_recursos(request):
+def _exigir_pase(request: Request):
+    """Sin pase: un <form> o un clic vuelven a la landing, que muestra la
+    pantalla del PIN; una llamada fetch recibe el 403 de siempre."""
+    if _pase_landing(request):
         return None
     if _es_navegacion_de_pagina(request):
-        return RedirectResponse("/entornos?aviso=pase#recursos", status_code=303)
-    raise HTTPException(403, "Ingresá la clave de plataforma en la landing para abrir los recursos.")
+        return RedirectResponse("/entornos", status_code=303)
+    raise HTTPException(403, "Ingresá el PIN de la landing para abrir los recursos.")
 
 
 def _error_recurso(request: Request, codigo: str, mensaje: str):
@@ -4349,24 +4411,6 @@ def _bytes_con_rango(request: Request, datos: bytes, mime: str, nombre: str,
     return BinResponse(content=datos, media_type=mime, headers=cabeceras)
 
 
-@app.post("/recursos/pase")
-def recursos_pase(request: Request, clave: str = Form("")):
-    """La clave de plataforma, una vez por dispositivo, deja el pase en una
-    cookie de 30 días (recursos.py). Lax a propósito: un POST desde otro
-    sitio no la manda, así el pase no sirve para subir o quitar desde afuera."""
-    _exigir_landing()
-    try:
-        ok = auth.verificar_plataforma(clave or "")
-    except TypeError:      # compare_digest no acepta texto no ASCII: es una clave equivocada
-        ok = False
-    if not ok:
-        return RedirectResponse("/entornos?aviso=clave#recursos", status_code=303)
-    resp = RedirectResponse("/entornos?aviso=pase-ok#recursos", status_code=303)
-    resp.set_cookie(recursos.COOKIE_PASE, recursos.crear_pase(), httponly=True,
-                    samesite="lax", max_age=recursos.PASE_SEGUNDOS)
-    return resp
-
-
 @app.post("/recursos")
 async def recursos_subir(
     request: Request,
@@ -4380,7 +4424,7 @@ async def recursos_subir(
     landing para imágenes y videos; para el resto la elige quien sube, o
     la landing dibuja una portada con el título."""
     _exigir_landing()
-    if (sin_pase := _exigir_pase_recursos(request)):
+    if (sin_pase := _exigir_pase(request)):
         return sin_pase
     titulo = (titulo or "").strip()
     url = (url or "").strip()
@@ -4431,7 +4475,7 @@ async def recursos_subir(
 def recursos_quitar(recurso_id: int, request: Request):
     """Solo los subidos: los del repositorio se quitan con un commit."""
     _exigir_landing()
-    if (sin_pase := _exigir_pase_recursos(request)):
+    if (sin_pase := _exigir_pase(request)):
         return sin_pase
     if not db.borrar_recurso(recurso_id):
         raise HTTPException(404, "No existe ese recurso")
@@ -4444,7 +4488,7 @@ def recursos_archivo(ref: str, request: Request):
     (recursos.SEMILLA) o el id de uno subido. Un enlace redirige a su URL.
     Pide el pase: son documentos internos."""
     _exigir_landing()
-    if (sin_pase := _exigir_pase_recursos(request)):
+    if (sin_pase := _exigir_pase(request)):
         return sin_pase
     if ref.isdigit():
         r = db.recurso(int(ref))
@@ -4465,10 +4509,11 @@ def recursos_archivo(ref: str, request: Request):
 
 
 @app.get("/recursos/{ref}/miniatura")
-def recursos_miniatura(ref: str):
-    """La miniatura no pide pase: es lo que la landing muestra en la
-    tarjeta, junto al título y la descripción, que tampoco lo piden."""
+def recursos_miniatura(ref: str, request: Request):
+    """Detrás del mismo pase que la landing que la muestra."""
     _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
     if ref.isdigit():
         r = db.recurso(int(ref))
         if not r or not r.miniatura_datos:

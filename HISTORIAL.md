@@ -2767,19 +2767,19 @@ rutas `/recursos/*` en main.py, tabla `Recurso` en db.py, plantilla
   `window.claude` de la página compartida no existe acá y el propio
   documento cae solo a "guardado solo en este navegador"). Las miniaturas
   se hicieron con una captura de Playwright a 1280x800 reducida a 640x400.
-- **Pase por dispositivo, no sesión.** La landing es pública donde existe,
-  pero estos archivos son documentación interna (modelo económico, plan de
-  cuentas), así que abrir, subir y quitar piden la clave de plataforma
-  (`auth.verificar_plataforma`) una vez: `POST /recursos/pase` deja la
-  cookie `acceso_recursos` (`vence.firma`, HMAC con `SESSION_SECRET`, 30
-  días, `SameSite=Lax` para que un POST desde otro sitio no la mande). No
-  entra en `COOKIES_POR_ROL`: no se renueva por actividad ni vence a los
-  15 minutos porque no abre ningún panel. Una sesión de plataforma vigente
-  también sirve. Sin pase, un clic sobre un recurso vuelve a la landing con
-  el aviso de que hace falta la clave (redirección solo si es navegación
-  de página, `_es_navegacion_de_pagina`; un fetch recibe 403); las
-  miniaturas, títulos y descripciones se ven igual, son lo que la tarjeta
-  muestra.
+- **Pase por dispositivo, no sesión.** Estos archivos son documentación
+  interna (modelo económico, plan de cuentas) en un host público, así que
+  abrir, subir y quitar exigen el pase que deja el PIN de la landing (ver
+  "PIN de la landing", más abajo): cookie `pase_entornos` (`vence.firma`,
+  HMAC con `SESSION_SECRET`, 30 días, `SameSite=Lax` para que un POST desde
+  otro sitio no la mande). No entra en `COOKIES_POR_ROL`: no se renueva por
+  actividad ni vence a los 15 minutos porque no abre ningún panel. Una
+  sesión de plataforma vigente también sirve. Sin pase, un clic sobre un
+  recurso vuelve a la landing, que muestra la puerta del PIN (redirección
+  solo si es navegación de página, `_es_navegacion_de_pagina`; un fetch
+  recibe 403). La primera versión pedía la clave de plataforma solo para
+  los recursos y dejaba el resto de la landing abierta; el PIN la
+  reemplazó el mismo día.
 - **Miniatura en el navegador.** Al elegir un archivo, el JS de la landing
   prellena título (del nombre) y fecha (`lastModified`) y arma la
   miniatura en un canvas de 640x400 con recorte "cover": para imágenes,
@@ -2814,3 +2814,30 @@ rutas `/recursos/*` en main.py, tabla `Recurso` en db.py, plantilla
 - Tests: `test_recursos.py` (catálogo y orden, pase y sesión de
   plataforma, alta con miniatura y ancla, enlace, rangos, validaciones,
   404 en la demo). Versión: Plataforma 0.22.01 → 0.23.01.
+
+## PIN de la landing: /entornos detrás de un código (2026-09-07)
+
+Pedido de Sd: "una mínima seguridad a la landing", ocho dígitos alcanzan
+por ahora. Sin el pase, `GET /entornos` devuelve `entornos_pin.html`: la
+misma colmena nocturna reducida a un campo numérico, y nada de la landing
+real viaja en ese HTML (ni los hosts de los entornos ni un solo `/recursos/`).
+`POST /entornos/pin` compara solo los dígitos de lo tecleado
+(`entorno.verificar_pin`, `compare_digest`) contra `entorno.PIN_LANDING`,
+que sale de la variable `PIN_ENTORNOS` con default `09211999`, y deja la
+cookie `pase_entornos` de 30 días (`recursos.crear_pase`); es el mismo pase
+que exigen los recursos y sus miniaturas. Una sesión de plataforma vigente
+entra sin PIN.
+
+- **Cinco fallos seguidos desde una IP hacen esperar un minuto**
+  (`_intentos_pin` en main.py, en memoria del proceso; la IP sale de
+  `X-Forwarded-For`, que es lo que pone Render). No es un cerrojo serio (se
+  reinicia con cada deploy y hay un solo proceso), pero vuelve inútil el
+  tanteo a mano y le da sentido a un PIN corto. Aviso `espera` en la puerta.
+- **Cambiar el PIN no corta los pases ya emitidos**: van firmados con
+  `SESSION_SECRET`, no con el PIN. Para invalidarlos, cambiar ese secreto
+  (que además desloguea a todos, como siempre).
+- `/api/version` sigue público: la landing de Pruebas se lo pide a la demo
+  desde el navegador y no cuenta nada que el "Acerca de" no muestre.
+- Tests: `test_entornos.py` (puerta, PIN con guiones, espera tras cinco
+  fallos, 404 en la demo) y `test_recursos.py` (todo exige el pase, incluida
+  la miniatura). Versión: Plataforma 0.23.01 → 0.23.02.

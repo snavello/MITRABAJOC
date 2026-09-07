@@ -1,7 +1,8 @@
 """Landing interna de entornos (GET /entornos) y la versión pública de cada
 servicio (GET /api/version): los 8 accesos (4 logins x Pruebas/Demo) con su
 versión, visible solo en local/pruebas (mismo criterio que el distintivo de
-entorno.py), nunca en la demo.
+entorno.py), nunca en la demo. La landing entera está detrás de un PIN de
+ocho dígitos (entorno.PIN_LANDING) que deja un pase de 30 días.
 
 Correr con: .venv/Scripts/python.exe test_entornos.py
 """
@@ -11,16 +12,66 @@ import tempfile
 DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
 os.environ["DB_PATH"] = DB_FILE
 os.environ["ENTORNO"] = "pruebas"   # antes de importar main: se lee al importar
+os.environ["PIN_ENTORNOS"] = "24681357"   # antes de importar entorno
 
 import entorno
+import recursos
 import db
 import main
 from fastapi.testclient import TestClient
 
 db.crear_tablas()
 client = TestClient(main.app)
+# El pase, una vez: el resto de los tests ven la landing entera.
+assert client.post("/entornos/pin", data={"pin": "24681357"}, follow_redirects=False).status_code == 303
+assert recursos.COOKIE_PASE in client.cookies
 
 LOGINS = ("/ingresar", "/admin", "/ingresar-empresa", "/plataforma")
+
+
+def test_sin_pin_solo_se_ve_la_puerta():
+    c = TestClient(main.app)
+    r = c.get("/entornos")
+    assert r.status_code == 200
+    assert 'action="/entornos/pin"' in r.text and 'inputmode="numeric"' in r.text
+    assert 'name="robots" content="noindex' in r.text
+    assert 'id="distintivo-entorno"' in r.text
+    # Nada de la landing real: ni un login ni un recurso.
+    for base in entorno.URLS.values():
+        assert base not in r.text
+    assert "/recursos/" not in r.text
+    # PIN equivocado: vuelve a la puerta con el aviso y sin cookie. Con
+    # espacios o guiones, el correcto igual entra.
+    r = c.post("/entornos/pin", data={"pin": "00000000"}, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/entornos?aviso=pin"
+    assert recursos.COOKIE_PASE not in r.cookies
+    assert "Ese no es el código" in c.get("/entornos?aviso=pin").text
+    r = c.post("/entornos/pin", data={"pin": "2468-1357"}, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/entornos"
+    assert recursos.COOKIE_PASE in r.cookies
+    assert entorno.URLS["demo"] in c.get("/entornos").text
+    print("OK  test_sin_pin_solo_se_ve_la_puerta")
+
+
+def test_cinco_fallos_seguidos_hacen_esperar(monkeypatch):
+    main._intentos_pin.clear()
+    c = TestClient(main.app)
+    for _ in range(main.PIN_MAX_FALLOS):
+        r = c.post("/entornos/pin", data={"pin": "11111111"}, follow_redirects=False)
+        assert r.headers["location"] == "/entornos?aviso=pin"
+    # El sexto, aunque sea el correcto, espera.
+    r = c.post("/entornos/pin", data={"pin": "24681357"}, follow_redirects=False)
+    assert r.headers["location"] == "/entornos?aviso=espera"
+    assert recursos.COOKIE_PASE not in r.cookies
+    assert "Demasiados intentos" in c.get("/entornos?aviso=espera").text
+    # Pasado el minuto, entra.
+    import time
+    ahora = time.time()
+    monkeypatch.setattr(time, "time", lambda: ahora + 10 ** 9)
+    r = c.post("/entornos/pin", data={"pin": "24681357"}, follow_redirects=False)
+    assert r.headers["location"] == "/entornos" and recursos.COOKIE_PASE in r.cookies
+    main._intentos_pin.clear()
+    print("OK  test_cinco_fallos_seguidos_hacen_esperar")
 
 
 def test_landing_con_los_ocho_accesos():
@@ -70,6 +121,7 @@ def test_en_la_demo_la_landing_no_existe_pero_la_version_si(monkeypatch):
     monkeypatch.setattr(entorno, "MUESTRA_DISTINTIVO", False)
     monkeypatch.setattr(entorno, "ENTORNO", "demo")
     assert client.get("/entornos").status_code == 404
+    assert client.post("/entornos/pin", data={"pin": "24681357"}).status_code == 404
     r = client.get("/api/version")               # esta sí: la landing de Pruebas la necesita
     assert r.status_code == 200 and r.json()["entorno"] == "demo"
     print("OK  test_en_la_demo_la_landing_no_existe_pero_la_version_si")

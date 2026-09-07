@@ -73,7 +73,7 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   Trámites (fija + consistencia; ver sección propia).
 - recursos.py — Recursos de la landing `/entornos`: catálogo de la
   documentación del proyecto (los versionados en `recursos/` + los subidos
-  a la base), el pase de 30 días y la clasificación por tipo.
+  a la base), el pase de 30 días que deja el PIN y la clasificación por tipo.
 - push.py — notificaciones Web Push a la PWA del trabajador (novedades de
   trámites; apagado sin claves VAPID).
 - asistente.py — Asistente del Panel Sindical: pregunta en lenguaje
@@ -144,9 +144,16 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   **Recursos** (`recursos.py`): la documentación del proyecto catalogada
   con miniatura, descripción y fecha -- los versionados en `recursos/`
   (`recursos.SEMILLA`) más los subidos desde la misma landing (tabla
-  `Recurso`, bytes en la base). Abrir, subir y quitar piden una vez por
-  dispositivo la clave de plataforma (cookie `acceso_recursos`, 30 días,
-  NO es una sesión de rol). Detalle en HISTORIAL.md, "Recursos en la landing".
+  `Recurso`, bytes en la base). **Toda la landing está detrás de un PIN**
+  de ocho dígitos (`PIN_ENTORNOS`, abajo) que se ingresa una vez por
+  dispositivo y deja un pase de 30 días (cookie `pase_entornos`, NO es una
+  sesión de rol); una sesión de plataforma vigente también entra. Detalle en
+  HISTORIAL.md, "Recursos en la landing" y "PIN de la landing".
+- PIN_ENTORNOS — PIN de ocho dígitos de la landing `/entornos` (`entorno.py`,
+  default `09211999`). Cinco intentos fallidos seguidos desde una IP hacen
+  esperar un minuto. Cambiarlo en Render no desloguea a nadie: los pases ya
+  emitidos siguen valiendo hasta sus 30 días (van firmados con SESSION_SECRET;
+  para cortarlos, cambiar ese secreto).
 - ANTHROPIC_API_KEY — clave de la API de Anthropic.
 - PLATAFORMA_CUIT — CUIT del login de plataforma (default 20000000000).
 - PLATAFORMA_PASSWORD — clave del login de plataforma.

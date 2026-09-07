@@ -113,13 +113,6 @@
     background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); }
   .aviso.ok { border-color:color-mix(in srgb, var(--demo) 55%, transparent); background:color-mix(in srgb, var(--demo) 14%, rgba(255,255,255,.04)); }
   .aviso.mal { border-color:color-mix(in srgb, var(--pruebas) 60%, transparent); background:color-mix(in srgb, var(--pruebas) 12%, rgba(255,255,255,.04)); }
-  .pase { display:grid; grid-template-columns:auto minmax(0,1fr); gap:6px 14px; align-items:center; margin-bottom:18px; padding:16px 18px; border-radius:16px;
-    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); }
-  .pase .ic { width:34px; height:34px; grid-row:1 / span 2; stroke:#fff; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; opacity:.85; }
-  .pase p { font-size:13.5px; color:rgba(255,255,255,.7); }
-  .pase form { display:flex; gap:8px; flex-wrap:wrap; }
-  .pase input { flex:1 1 180px; min-width:0; padding:9px 12px; border-radius:9px; border:1px solid rgba(255,255,255,.25); background:rgba(0,0,0,.25); color:#fff; font-size:14px; }
-  .pase input::placeholder { color:rgba(255,255,255,.4); }
   .boton { appearance:none; cursor:pointer; padding:9px 14px; border-radius:9px; border:1px solid rgba(255,255,255,.7); background:#fff; color:var(--tinta);
     font-family:var(--fuente-display); font-size:15px; letter-spacing:1.4px; text-transform:uppercase; white-space:nowrap; }
   .boton:hover, .boton:focus-visible { background:rgba(255,255,255,.88); outline:none; }
@@ -158,8 +151,6 @@
   .recurso .quitar { appearance:none; background:none; border:0; cursor:pointer; padding:2px 0; color:rgba(255,255,255,.5);
     font:inherit; letter-spacing:inherit; text-transform:inherit; text-decoration:underline; text-underline-offset:3px; }
   .recurso .quitar:hover { color:var(--pruebas); }
-  .tarjetas.cerrado .recurso .mini::after { content:""; position:absolute; right:10px; top:10px; width:26px; height:26px; border-radius:50%;
-    background:rgba(9,15,26,.72) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V7a4 4 0 0 1 8 0v4'/%3E%3C/svg%3E") center/14px no-repeat; border:1px solid rgba(255,255,255,.25); }
   .vacio { padding:22px; border-radius:16px; border:1px dashed rgba(255,255,255,.25); color:rgba(255,255,255,.6); font-size:14px; text-align:center; }
 
   .alta { margin-top:18px; border-radius:16px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); }
@@ -253,9 +244,6 @@
 
     {# ---- Recursos: la documentación del proyecto (recursos.py) ---- #}
     {% set avisos = {
-      'pase': ('mal', 'Ingresá la clave de plataforma para abrir los recursos.'),
-      'clave': ('mal', 'Esa no es la clave de plataforma. Probá de nuevo.'),
-      'pase-ok': ('ok', 'Listo: este dispositivo abre y sube recursos por 30 días.'),
       'agregado': ('ok', 'Recurso agregado al catálogo.'),
       'quitado': ('ok', 'Recurso quitado del catálogo.'),
       'titulo': ('mal', 'Falta el título.'),
@@ -279,19 +267,9 @@
       <p class="aviso {{ avisos[aviso][0] }}" role="status">{{ avisos[aviso][1] }}</p>
       {% endif %}
 
-      {% if not pase %}
-      <div class="pase">
-        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-candado"/></svg>
-        <p>Son documentos internos: para abrirlos o subir uno nuevo, ingresá la clave de plataforma. Una vez por dispositivo; el pase dura 30 días.</p>
-        <form method="post" action="/recursos/pase">
-          <input type="password" name="clave" placeholder="Clave de plataforma" autocomplete="current-password" required aria-label="Clave de plataforma">
-          <button class="boton" type="submit">Abrir recursos</button>
-        </form>
-      </div>
-      {% endif %}
 
       {% if recursos %}
-      <div class="tarjetas {{ '' if pase else 'cerrado' }}">
+      <div class="tarjetas">
       {% for r in recursos %}
         <article class="recurso {{ r.tipo }}" id="recurso-{{ r.ref }}">
           <a class="mini" href="{{ r.href }}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">
@@ -310,7 +288,7 @@
               {% if r.tamanio_legible %}<span>{{ r.tamanio_legible }}</span>{% endif %}
               {% if r.origen == 'repo' %}
               <span title="Versionado en recursos/ del repositorio: se cambia con un commit">del repositorio</span>
-              {% elif pase %}
+              {% else %}
               <form method="post" action="/recursos/{{ r.ref }}/quitar" onsubmit='return confirm({{ ("¿Quitar «" ~ r.titulo ~ "» del catálogo? No se puede deshacer.")|tojson }})'>
                 <button class="quitar" type="submit">Quitar</button>
               </form>
@@ -324,7 +302,6 @@
       <p class="vacio">Todavía no hay recursos. Subí el primero desde acá abajo.</p>
       {% endif %}
 
-      {% if pase %}
       <details class="alta" id="alta" {% if aviso in ('titulo', 'archivo', 'enlace', 'tamanio', 'vacio', 'miniatura') %}open{% endif %}>
         <summary><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-mas"/></svg>Agregar un recurso<small>archivo hasta {{ tamanio_max_mb }} MB · o un enlace</small></summary>
         <form method="post" action="/recursos" enctype="multipart/form-data" id="form-recurso">
@@ -368,7 +345,6 @@
           </div>
         </form>
       </details>
-      {% endif %}
     </section>
   </main>
 
