@@ -1,0 +1,564 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style></head><body>
+<title>Plan Maestro Colm3na</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+:root{
+  --tinta:#0a1421;--miel:#f0a01e;--agua:#a0030b;--verde:#0f8a6a;--azul:#2e5c8a;--violeta:#7a2e8f;
+  --papel:#f4f6f9;--blanco:#fff;--linea:#dbe2ea;--texto:#16243a;--texto2:#4c5d75;--suave:#eef2f7;--suave2:#f9fafc;
+  --hecho-bg:#f3faf6;--bloq-bg:#fdf5f4;--input:#fff;--sombra:0 1px 2px rgba(10,20,33,.05);
+  --display:'Barlow Condensed','Arial Narrow',sans-serif;--body:'Barlow',system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --papel:#0e1622;--blanco:#152030;--linea:#2a3748;--texto:#e6ecf4;--texto2:#a3b1c4;--suave:#1c2838;--suave2:#18222f;
+  --hecho-bg:#132a22;--bloq-bg:#2a1a1c;--input:#0f1826;--azul:#8db6e3;--verde:#3fbf98;color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --papel:#0e1622;--blanco:#152030;--linea:#2a3748;--texto:#e6ecf4;--texto2:#a3b1c4;--suave:#1c2838;--suave2:#18222f;
+  --hecho-bg:#132a22;--bloq-bg:#2a1a1c;--input:#0f1826;--azul:#8db6e3;--verde:#3fbf98;color-scheme:dark;}
+*{box-sizing:border-box;margin:0}
+body{background:var(--papel);color:var(--texto);font-family:var(--body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:var(--azul)}
+h1,h2,h3,h4{text-wrap:balance}
+.top{background:radial-gradient(900px 480px at 78% -10%,rgba(160,3,11,.28),transparent 62%),linear-gradient(160deg,#0d1626 20%,var(--tinta) 70%,#24354f);color:#fff;padding:26px clamp(18px,4vw,48px) 22px;position:relative;overflow:hidden}
+.top::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.12;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='104' viewBox='0 0 120 104'%3E%3Cpath d='M30 2l26 15v30L30 62 4 47V17zM90 2l26 15v30L90 62 64 47V17zM60 54l26 15v30L60 104 34 89V69z' fill='none' stroke='%23fff' stroke-width='1'/%3E%3C/svg%3E")}
+.top>*{position:relative;z-index:1}
+.eyebrow{font-family:var(--display);font-weight:600;letter-spacing:2.4px;text-transform:uppercase;color:var(--miel);font-size:13px}
+.top h1{font-family:var(--display);font-weight:700;font-size:clamp(30px,4.5vw,50px);line-height:1;margin:6px 0 10px}
+.top p{max-width:80ch;color:rgba(255,255,255,.8);font-size:15px}
+.top .datos{display:flex;flex-wrap:wrap;gap:18px 28px;margin-top:16px}
+.top .datos div{font-size:13px;color:rgba(255,255,255,.7)}
+.top .datos b{display:block;font-family:var(--display);font-size:20px;color:#fff;letter-spacing:.5px}
+nav.tabs{position:sticky;top:0;z-index:5;background:var(--blanco);border-bottom:1px solid var(--linea);display:flex;gap:2px;padding:0 clamp(10px,3vw,36px);overflow-x:auto;scrollbar-width:none}
+nav.tabs button{appearance:none;border:0;background:none;font-family:var(--display);font-size:15px;letter-spacing:1.4px;text-transform:uppercase;color:var(--texto2);padding:13px 14px 11px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+nav.tabs button.on{color:var(--agua);border-bottom-color:var(--agua)}
+nav.tabs button:focus-visible{outline:2px solid var(--miel);outline-offset:-2px}
+nav.tabs .sync{margin-left:auto;align-self:center;font-size:12px;color:var(--texto2);display:flex;align-items:center;gap:6px;white-space:nowrap;padding-right:6px}
+.sync::before{content:"";width:8px;height:8px;border-radius:50%;background:#c3ccd8;flex:none}
+.sync.on::before{background:var(--verde)}.sync.local::before{background:var(--miel)}
+.wrap{max-width:1180px;margin:0 auto;padding:24px clamp(14px,3vw,36px) 70px}
+.vista{display:none}.vista.on{display:block}
+.grid2{display:grid;grid-template-columns:270px minmax(0,1fr);gap:26px;align-items:start}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}.side{position:static!important}}
+.side{position:sticky;top:60px;display:grid;gap:12px}
+.panel{background:var(--blanco);border:1px solid var(--linea);border-radius:14px;padding:14px 16px;box-shadow:var(--sombra)}
+.panel h3{font-family:var(--display);font-size:15px;letter-spacing:1.8px;text-transform:uppercase;color:var(--texto2);margin-bottom:10px;font-weight:600}
+.total .n{font-family:var(--display);font-weight:700;font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
+.total .l{font-size:13px;color:var(--texto2)}
+.bar{height:8px;border-radius:5px;background:var(--suave);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--miel),var(--agua));width:0;transition:width .4s}
+.bar i.ok{background:var(--verde)}
+.blk{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--suave);cursor:pointer;text-decoration:none;color:inherit}
+.blk:first-child{border-top:0}
+.blk b{font-family:var(--display);font-size:15px;min-width:24px;color:var(--agua)}
+.blk span{flex:1;font-size:13.5px}
+.blk small{font-variant-numeric:tabular-nums;color:var(--texto2);font-size:12px;min-width:34px;text-align:right}
+.blk .mini{height:5px;width:48px;background:var(--suave);border-radius:4px;overflow:hidden;flex:none}
+.blk .mini i{display:block;height:100%;background:var(--verde);width:0}
+.filtros{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--linea);background:var(--blanco);border-radius:999px;padding:4px 10px;font-size:12.5px;cursor:pointer;font-family:var(--display);letter-spacing:1.2px;text-transform:uppercase;color:var(--texto2)}
+.chip.on{background:var(--tinta);color:#fff;border-color:var(--tinta)}
+/* documento */
+.doc{max-width:78ch}
+.doc h2{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.05;margin:34px 0 10px;color:var(--texto)}
+.doc h2:first-child{margin-top:0}
+.doc h3{font-family:var(--display);font-weight:600;font-size:20px;letter-spacing:.4px;margin:22px 0 6px}
+.doc p{margin:0 0 12px;color:var(--texto)}
+.doc ul,.doc ol{margin:0 0 12px 20px}
+.doc li{margin-bottom:5px}
+.doc .nota{border-left:3px solid var(--miel);background:var(--suave2);padding:10px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14.5px}
+.doc table{border-collapse:collapse;width:100%;font-size:14px;margin:10px 0 16px}
+.doc th,.doc td{border-bottom:1px solid var(--linea);padding:8px 10px;text-align:left;vertical-align:top}
+.doc th{font-family:var(--display);letter-spacing:1.2px;text-transform:uppercase;font-size:12.5px;color:var(--texto2)}
+.tabla-scroll{overflow-x:auto}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:10px 0 18px}
+.kpi{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;padding:12px 14px}
+.kpi b{font-family:var(--display);font-size:26px;display:block;line-height:1.05}
+.kpi span{font-size:13px;color:var(--texto2)}
+/* timeline */
+.tl{display:grid;grid-template-columns:150px repeat(14,1fr);gap:3px;font-size:12px;margin:12px 0 22px;min-width:760px}
+.tl .h{font-family:var(--display);letter-spacing:1px;text-transform:uppercase;color:var(--texto2);text-align:center;padding-bottom:4px;font-size:11.5px}
+.tl .lab{font-family:var(--display);font-size:14px;padding:5px 6px 5px 0;display:flex;align-items:center}
+.tl .cel{height:30px;border-radius:5px;background:var(--suave)}
+.tl .cel.e0{background:#8a94a6}.tl .cel.e1{background:var(--miel)}.tl .cel.e2{background:#d9782c}.tl .cel.e3{background:var(--agua)}.tl .cel.e4{background:var(--violeta)}.tl .cel.e5{background:var(--verde)}
+.tl .cel.hito{position:relative}.tl .cel.hito::after{content:"◆";position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:12px}
+/* items checklist */
+section.bloque{background:var(--blanco);border:1px solid var(--linea);border-radius:16px;margin-bottom:18px;overflow:hidden;scroll-margin-top:70px;box-shadow:var(--sombra)}
+.bh{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--linea);background:linear-gradient(90deg,var(--blanco),var(--suave2))}
+.bh .num{font-family:var(--display);font-weight:700;font-size:34px;color:var(--agua);line-height:1;min-width:44px}
+.bh h2{font-family:var(--display);font-weight:700;font-size:24px;line-height:1.05}
+.bh .sub{font-family:var(--display);font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:var(--texto2)}
+.bh p{color:var(--texto2);font-size:13.5px;margin-top:3px;max-width:80ch}
+.bh .prog{margin-left:auto;text-align:right;min-width:120px}
+.bh .prog b{font-family:var(--display);font-size:22px;font-variant-numeric:tabular-nums}
+.bh .prog .bar{width:120px}
+.bmeta{padding:12px 20px;border-bottom:1px solid var(--suave);background:var(--suave2);display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 18px;font-size:13.5px}
+.bmeta b{font-family:var(--display);letter-spacing:1.2px;text-transform:uppercase;font-size:11.5px;color:var(--texto2);display:block;margin-bottom:2px}
+.item{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:12px;padding:13px 20px;border-bottom:1px solid var(--suave);align-items:start}
+.item:last-child{border-bottom:0}
+.item.hecho{background:var(--hecho-bg)}.item.bloqueado{background:var(--bloq-bg)}
+.chk{width:26px;height:26px;border-radius:8px;border:2px solid #c3ccd8;display:grid;place-items:center;cursor:pointer;background:var(--input);margin-top:2px;font-size:15px;line-height:1;user-select:none;color:var(--texto)}
+.chk.hecho{background:var(--verde);border-color:var(--verde);color:#fff}
+.chk.en_curso{background:var(--miel);border-color:var(--miel);color:#231a08}
+.chk.bloqueado{background:var(--agua);border-color:var(--agua);color:#fff}
+.it-h{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.it-h .id{font-family:var(--display);font-weight:700;color:var(--agua);font-size:15px}
+.it-h .t{font-weight:600;font-size:15.5px}
+.badge{font-family:var(--display);font-size:11.5px;letter-spacing:1.4px;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid;font-weight:600;white-space:nowrap}
+.b-colm3na{color:#1f4b7a;border-color:#9fb8d3;background:#eaf1f9}
+.b-funcional{color:#0f6b52;border-color:#8fd0bb;background:#e8f7f1}
+.b-dev{color:#7a2e8f;border-color:#c9a3d6;background:#f5ecf8}
+.b-sindicato{color:#7a3d1c;border-color:#dcb49d;background:#fbeee6}
+.b-sistemas{color:#334155;border-color:#b6c2d1;background:#eef2f7}
+.b-comunicacion{color:#8a5a00;border-color:#e2c27e;background:#fff5e1}
+.b-legal{color:#5d5aa8;border-color:#bcbbe0;background:#efeffa}
+.b-bot{color:#8a1d3a;border-color:#dba3b4;background:#fbeaef}
+.b-todos{color:#0a1421;border-color:#c3ccd8;background:#f4f6f9}
+.fun{color:var(--texto2);font-size:14px;margin-top:5px;max-width:92ch}
+.ent{margin-top:6px;font-size:13px;color:var(--texto2)}
+.ent b{font-family:var(--display);letter-spacing:1.2px;text-transform:uppercase;font-size:11px;color:var(--verde)}
+.meta{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:160px}
+.meta select,.meta input{font-family:var(--body);font-size:13px;padding:5px 8px;border-radius:8px;border:1px solid var(--linea);background:var(--input);color:var(--texto)}
+.meta input{width:160px;font-size:12.5px}
+.meta small{font-size:11.5px;color:var(--texto2);text-align:right}
+.hidden{display:none!important}
+.leyenda{display:flex;flex-wrap:wrap;gap:10px 16px;font-size:12.5px;color:var(--texto2);align-items:center}
+.leyenda .chk{width:18px;height:18px;border-radius:5px;font-size:11px;cursor:default;margin:0}
+@media (max-width:640px){.item{grid-template-columns:34px 1fr}.meta{grid-column:2;align-items:flex-start}.meta small{text-align:left}}
+/* formularios */
+.form{background:var(--blanco);border:1px solid var(--linea);border-radius:16px;margin-bottom:18px;overflow:hidden;scroll-margin-top:70px;box-shadow:var(--sombra)}
+.fh{padding:16px 20px;border-bottom:1px solid var(--linea);display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.fh .num{font-family:var(--display);font-weight:700;font-size:30px;color:var(--agua);line-height:1;min-width:44px}
+.fh h2{font-family:var(--display);font-weight:700;font-size:23px;line-height:1.05}
+.fh p{color:var(--texto2);font-size:13.5px;margin-top:4px;max-width:80ch}
+.fh .est{margin-left:auto;text-align:right;font-size:12.5px;color:var(--texto2)}
+.fh .est b{font-family:var(--display);font-size:20px;display:block;font-variant-numeric:tabular-nums}
+.fb{padding:6px 20px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px 22px}
+.campo{display:grid;gap:4px;align-content:start}
+.campo.ancho{grid-column:1/-1}
+.campo label{font-weight:600;font-size:14px}
+.campo .ayuda{font-size:12.5px;color:var(--texto2)}
+.campo input,.campo textarea,.campo select{font-family:var(--body);font-size:14px;padding:8px 10px;border-radius:9px;border:1px solid var(--linea);background:var(--input);color:var(--texto);width:100%}
+.campo textarea{min-height:76px;resize:vertical}
+.campo input:focus,.campo textarea:focus,.campo select:focus{outline:2px solid var(--miel);outline-offset:0;border-color:var(--miel)}
+.opts{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:14px}
+.opts label{display:flex;gap:6px;align-items:center;font-weight:400}
+.ftitulo{grid-column:1/-1;font-family:var(--display);letter-spacing:1.6px;text-transform:uppercase;font-size:12.5px;color:var(--agua);margin-top:10px;padding-top:10px;border-top:1px dashed var(--linea)}
+.docs{grid-column:1/-1;display:grid;gap:6px}
+.docrow{display:grid;grid-template-columns:minmax(0,1fr) 150px minmax(120px,220px);gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--suave);font-size:14px}
+.docrow small{display:block;color:var(--texto2);font-size:12.5px}
+.docrow select,.docrow input{font-family:var(--body);font-size:13px;padding:5px 8px;border-radius:8px;border:1px solid var(--linea);background:var(--input);color:var(--texto);width:100%}
+@media (max-width:640px){.docrow{grid-template-columns:1fr}}
+.btn{appearance:none;border:1px solid var(--linea);background:var(--blanco);color:var(--texto);font-family:var(--display);letter-spacing:1.4px;text-transform:uppercase;font-size:13px;padding:8px 14px;border-radius:9px;cursor:pointer}
+.btn.pri{background:var(--tinta);color:#fff;border-color:var(--tinta)}
+.btn.miel{background:var(--miel);color:#231a08;border-color:var(--miel)}
+.btn:focus-visible{outline:2px solid var(--miel);outline-offset:2px}
+.acciones{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 18px}
+.acciones .msg{font-size:13px;color:var(--texto2)}
+/* decisiones */
+.dec{background:var(--blanco);border:1px solid var(--linea);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:grid;grid-template-columns:70px minmax(0,1fr);gap:6px 14px;box-shadow:var(--sombra)}
+.dec .n{font-family:var(--display);font-weight:700;font-size:22px;color:var(--agua)}
+.dec .f{font-size:12px;color:var(--texto2)}
+.dec h4{font-size:16px;font-weight:600}
+.dec .cuerpo{font-size:14px;color:var(--texto);display:grid;gap:4px}
+.dec .cuerpo b{font-family:var(--display);letter-spacing:1.2px;text-transform:uppercase;font-size:11px;color:var(--texto2);margin-right:6px}
+.dec .est{justify-self:start}
+.dec .quitar{justify-self:end;font-size:12px;color:var(--texto2);background:none;border:0;cursor:pointer;text-decoration:underline}
+.riesgo{display:grid;grid-template-columns:26px minmax(0,1fr);gap:10px;padding:10px 0;border-bottom:1px solid var(--linea);font-size:14px}
+.riesgo i{width:18px;height:18px;border-radius:50%;margin-top:3px;display:block}
+.riesgo i.alto{background:var(--agua)}.riesgo i.medio{background:var(--miel)}.riesgo i.bajo{background:var(--verde)}
+.riesgo b{display:block}
+.riesgo span{color:var(--texto2)}
+.foot{margin-top:30px;color:var(--texto2);font-size:12.5px;max-width:90ch}
+@media print{nav.tabs,.side,.acciones,.meta{display:none!important}.vista{display:block!important}.top{background:var(--tinta)!important}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+
+/* plan maestro */
+.p-sdn{color:#1f4b7a;border-color:#9fb8d3;background:#eaf1f9}
+.p-akg{color:#0f6b52;border-color:#8fd0bb;background:#e8f7f1}
+.p-ars{color:#7a2e8f;border-color:#c9a3d6;background:#f5ecf8}
+.p-doa{color:#8a5a00;border-color:#e2c27e;background:#fff5e1}
+.p-ext{color:#334155;border-color:#b6c2d1;background:#eef2f7}
+.p-sind{color:#7a3d1c;border-color:#dcb49d;background:#fbeee6}
+.p-bot{color:#8a1d3a;border-color:#dba3b4;background:#fbeaef}
+.p-ats{color:#5d5aa8;border-color:#bcbbe0;background:#efeffa}
+.equipo{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin:14px 0 22px}
+.persona{background:var(--blanco);border:1px solid var(--linea);border-radius:14px;padding:16px 18px;box-shadow:var(--sombra);border-top:4px solid var(--linea)}
+.persona.sdn{border-top-color:#2e5c8a}.persona.akg{border-top-color:#0f8a6a}.persona.ars{border-top-color:#7a2e8f}.persona.doa{border-top-color:#f0a01e}.persona.ext{border-top-color:#8a94a6}
+.persona .cod{font-family:var(--display);font-weight:700;font-size:34px;line-height:1}
+.persona .rol{font-family:var(--display);letter-spacing:1.4px;text-transform:uppercase;font-size:12px;color:var(--texto2);margin:2px 0 8px}
+.persona p{font-size:14px;margin:0 0 6px}
+.persona .ded{font-size:12.5px;color:var(--texto2);border-top:1px dashed var(--linea);padding-top:8px;margin-top:8px}
+.hitos{display:grid;gap:0;margin:14px 0 22px;position:relative}
+.hito{display:grid;grid-template-columns:110px 26px minmax(0,1fr);gap:0 12px;align-items:start;padding:10px 0}
+.hito .fecha{font-family:var(--display);font-weight:700;font-size:17px;text-align:right;line-height:1.15}
+.hito .fecha small{display:block;font-weight:600;font-size:11.5px;color:var(--texto2);letter-spacing:1px}
+.hito .pt{width:26px;display:grid;justify-items:center;position:relative}
+.hito .pt::before{content:"";position:absolute;top:-10px;bottom:-10px;left:12px;width:2px;background:var(--linea)}
+.hito:first-child .pt::before{top:14px}.hito:last-child .pt::before{bottom:auto;height:14px}
+.hito .pt i{width:14px;height:14px;border-radius:50%;background:var(--agua);border:3px solid var(--blanco);box-shadow:0 0 0 2px var(--agua);margin-top:5px;position:relative;z-index:1}
+.hito.eq .pt i{background:var(--azul);box-shadow:0 0 0 2px var(--azul)}
+.hito.gate .pt i{border-radius:3px;background:var(--verde);box-shadow:0 0 0 2px var(--verde)}
+.hito h4{font-size:16px;font-weight:600;margin:2px 0 2px}
+.hito p{font-size:13.5px;color:var(--texto2);margin:0}
+/* gantt */
+.gantt{display:grid;grid-template-columns:260px 92px repeat(14,minmax(34px,1fr));gap:2px 0;min-width:900px;font-size:12.5px;align-items:center}
+.gantt .gh{font-family:var(--display);letter-spacing:1px;text-transform:uppercase;color:var(--texto2);font-size:11px;text-align:center;padding:4px 0 6px;border-bottom:1px solid var(--linea)}
+.gantt .gh.l{text-align:left}
+.gantt .gh.now{color:var(--agua)}
+.gantt .grp{grid-column:1/-1;font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.5px;color:var(--agua);padding:14px 0 4px;border-bottom:1px solid var(--linea)}
+.gantt .gt{padding:5px 8px 5px 0;line-height:1.25}
+.gantt .gt small{display:block;color:var(--texto2);font-size:11.5px}
+.gantt .gw{display:flex;gap:3px;flex-wrap:wrap}
+.gantt .gw .badge{font-size:10px;padding:1px 6px;letter-spacing:1px}
+.gantt .gc{height:22px;border-radius:0;background:var(--suave2);border-bottom:1px solid var(--suave)}
+.gantt .gc.on{background:var(--azul);opacity:.85}
+.gantt .gc.on.eq{background:#8a94a6}.gantt .gc.on.sind{background:var(--miel)}.gantt .gc.on.conf{background:#d9782c}.gantt .gc.on.dev{background:var(--violeta)}.gantt .gc.on.infra{background:#334155}.gantt .gc.on.bot{background:#8a1d3a}.gantt .gc.on.ado{background:var(--verde)}.gantt .gc.on.cierre{background:var(--agua)}
+.gantt .gc.on.ini{border-radius:6px 0 0 6px}.gantt .gc.on.fin{border-radius:0 6px 6px 0}.gantt .gc.on.ini.fin{border-radius:6px}
+.gantt .gc.hito{position:relative}.gantt .gc.hito:not(.on){background:var(--suave)}.gantt .gc.hito::after{content:"◆";position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:11px}.gantt .gc.hito:not(.on)::after{color:var(--agua)}
+.raci td:not(:first-child){text-align:center;font-family:var(--display);font-weight:700;letter-spacing:1px}
+.raci .R{color:var(--agua)}.raci .A{color:var(--azul)}.raci .C{color:var(--texto2)}
+.fase{display:grid;grid-template-columns:150px repeat(4,minmax(0,1fr));gap:8px;font-size:13.5px;margin:10px 0 18px;min-width:760px}
+.fase .fh2{font-family:var(--display);letter-spacing:1.2px;text-transform:uppercase;font-size:11.5px;color:var(--texto2);padding-bottom:4px;border-bottom:1px solid var(--linea)}
+.fase .fl{font-family:var(--display);font-weight:600;font-size:14px;padding-top:6px}
+.fase .fc{background:var(--blanco);border:1px solid var(--linea);border-radius:10px;padding:8px 10px}
+.fase .fc b{display:block;font-family:var(--display);letter-spacing:1px;font-size:11px;text-transform:uppercase;margin-bottom:2px}
+.fase .fc.sdn b{color:#2e5c8a}.fase .fc.akg b{color:#0f8a6a}.fase .fc.ars b{color:#7a2e8f}.fase .fc.doa b{color:#8a5a00}
+</style>
+
+<header class="top">
+  <div class="eyebrow">Colm3na · Mi Trabajo · Plan maestro de implementación</div>
+  <h1>Plan maestro: primer sindicato, primer equipo</h1>
+  <p>Vista de conjunto para conducir la implementación en La Bancaria: quién es quién en las empresas y el equipo, los hitos con fecha, las tareas principales semana a semana, cómo SDN traspasa el desarrollo a ARS mientras AKG y DOA toman el frente del sindicato, cómo las cuentas pasan a ser de XP, y cuándo se recurre a horas externas. Es el mapa; el detalle operativo, los formularios y el checklist compartido viven en <b>Implementación La Bancaria</b> y en el <b>Anexo Interno</b>.</p>
+  <div class="datos">
+    <div><b>14 sep → 11 dic 2026</b>13 semanas + semana previa</div>
+    <div><b>2 empresas · 6 personas</b>XP: SDN, AKG, ARS, DOA · ATS: GCF, SCT (+ horas externas)</div>
+    <div><b>11 hitos</b>4 de equipo, 7 con el sindicato</div>
+    <div><b>SaaS 24 meses</b>Implementación en 13 semanas, operación después</div>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="on" data-v="equipo">Equipo</button>
+  <button data-v="hitos">Hitos</button>
+  <button data-v="gantt">Tareas por semana</button>
+  <button data-v="transicion">Transición y crecimiento</button>
+  <button data-v="gobierno">Gobierno y riesgos</button>
+</nav>
+
+<div class="wrap">
+
+<!-- ===== EQUIPO ===== -->
+<section class="vista on" id="v-equipo">
+<div class="doc" style="max-width:none">
+<h2>1. La organización y el primer equipo</h2>
+<p style="max-width:78ch">Detrás de Colm3na hay dos empresas. <b>ATS</b> es la que firma el contrato con los sindicatos, les factura, se ocupa de ventas, prospección y contactos, y contrata al proveedor del bot; el producto se vende como producto de ATS. <b>XP</b>, de AKG, es la proveedora del servicio completo: el equipo, las cuentas técnicas, la infraestructura y la operación. El software es de titularidad compartida; el dominio y la marca Colm3na / Mi Trabajo también, y la app no lleva logo de ATS (solo la documentación comercial). El equipo de trabajo tiene dos direcciones: <b>SDN</b> dirige lo técnico y el producto; <b>AKG</b> dirige lo funcional y lo administrativo. Ambos deciden juntos el alcance y los plazos; ninguno decide solo lo que le toca al otro. En ATS, <b>GCF</b> es el nexo con el equipo para coordinación, presentaciones y relación con el sindicato, y <b>SCT</b> lleva lo administrativo y legal.</p>
+<div class="nota"><b>Modelo económico, en una línea.</b> El sindicato paga una cuota mensual (SaaS) por 24 meses prorrogables, que incluye todo lo que el sistema tiene hoy y hasta 10.000 recibos leídos por mes. De ese ingreso se descuentan infraestructura y licencias, el precio fijo del bot y las horas de DOA y ARS; lo que queda se reparte en partes iguales entre ATS y XP. Consecuencia para el plan: las horas de DOA y ARS se registran desde el primer día, los costos de infraestructura se llevan mes a mes, y cualquier pedido de magnitud desequilibrante se acuerda con precio en una adenda, no se absorbe.</div>
+<div class="nota"><b>Principio de gradualidad.</b> No se puede asegurar disponibilidad total del personal del sindicato, y los relevamientos sirven tanto para explicar el producto como para relevar. Por eso ninguna puerta de etapa exige tener <i>todas</i> las definiciones funcionales a una fecha: entregables y pruebas son graduales y consensuados. Cada funcionalidad sube su propia escalera (definida → configurada → piloto → ampliada) a su ritmo. El orden real de uso lo marca el sindicato: <b>trámites</b> es lo que va a empezar usando más, con dos o tres tipos como máximo al inicio; <b>notificaciones, novedades y credencial</b> acompañan desde el piloto; <b>recibos</b> es mucho más gradual: primero se leen y se aprende con ellos, y el veredicto al trabajador se habilita por grupos cuando la calidad medida lo permite.</div>
+<p style="max-width:78ch">Hoy SDN concentra además el desarrollo y la titularidad personal de las cuentas de GitHub, Render, Claude Code y la API. El plan reparte el trabajo en cuatro personas en ocho semanas sin frenar la implementación, y en paralelo traslada la titularidad de las cuentas técnicas a XP con un plan propio (sección "Titularidad corporativa"): no es urgente, pero es lo que permite escalar sin dependencias personales. DOA y ARS no terminan con la implementación: siguen en soporte y evolución y, cuando lleguen más sindicatos, lideran pequeños grupos. Por eso todo lo que se produce acá se escribe para que otro lo repita.</p>
+<div class="equipo">
+  <div class="persona akg"><div class="cod">AKG</div><div class="rol">Dirección funcional y administrativa · XP</div>
+    <p>Dueña de XP. Administra económica y financieramente la empresa y el proyecto, contrata a ARS y DOA, y será la titular corporativa de las cuentas. En el proyecto: dirige el relevamiento (talleres F1–F8) y la configuración de la plataforma con el sindicato (conceptos, fórmulas, escalas, trámites, notificaciones), que ejecuta DOA; aprueba las pruebas de aceptación y las guías; resuelve el soporte de segundo nivel que DOA escala. Se forma en lo técnico mínimo: staging, carga masiva, Aprendizaje IA, lectura de errores y de uso de IA.</p>
+    <div class="ded">Dedicación parcial, a demanda: dirige, decide y aprueba; la ejecución diaria del relevamiento y la configuración la hace DOA con su supervisión. Compromiso de respuesta a aprobaciones en 48 h hábiles para no frenar al equipo. Contraparte de SCT en lo administrativo. Usa Claude Code para QA con un plan menor.</div></div>
+  <div class="persona sdn"><div class="cod">SDN</div><div class="rol">Dirección técnica y de producto</div>
+    <p>Decide arquitectura, versiones, qué entra del motor v2 y cómo se integra el bot. Presenta la solución al sindicato y mantiene el registro de decisiones técnicas. Hoy titular personal de las cuentas; las administra hasta que pasen a XP y sigue como administrador técnico después. Hasta que ARS esté operativo sigue desarrollando; después revisa PRs y define el rumbo del producto.</p>
+    <div class="ded">Dedicación en esta primera implementación: hasta 3 h por día hábil en horario del sindicato (coordinación, reuniones, traspaso), 2 h nocturnas para trabajo interno, 4 h los sábados; un domingo solo por urgencia. Unas 29 h semanales, de las cuales 15 caen en horario hábil. Delega el desarrollo diario en S9. En los próximos sindicatos: arquitectura, funcionalidades avanzadas, decisiones de último nivel y presentaciones.</div></div>
+  <div class="persona ars"><div class="cod">ARS</div><div class="rol">Desarrollador senior (contrata XP)</div>
+    <p>Toma las tareas de desarrollo de SDN: carga masiva, mejoras, integración con el bot, entornos, migraciones, monitoreo, soporte de tercer nivel. Segundo administrador técnico en GitHub y Render; acceso a claves de API vía variables de entorno, no a la consola de facturación. Reporta a SDN. Monotributista, factura a XP; sus horas son costo antes del reparto.</p>
+    <div class="ded">Dedicación parcial, unas 20 h semanales, trabajo híbrido. Objetivo: incorporado en S3, primer PR esa semana, dueño del desarrollo diario en S9 (H8). Sigue después de la implementación y lidera el grupo técnico cuando haya más sindicatos.</div></div>
+  <div class="persona doa"><div class="cod">DOA</div><div class="rol">Implementador funcional en el sindicato (contrata XP)</div>
+    <p>Presencia física en la sede y las seccionales: ejecuta los talleres y carga la configuración con el sindicato bajo la dirección de AKG, recoge documentos, organiza el grupo piloto, capacita a administradores y referentes, da soporte de primer nivel a trabajadores y es los ojos del equipo sobre la adopción real. Reporta a AKG. Monotributista, factura a XP; sus horas son costo antes del reparto.</p>
+    <div class="ded">Dedicación parcial, unas 20 h semanales de base, híbrido con presencia en el sindicato; perfil senior con 30 años en TI de sistemas corporativos masivos: opera el panel del sindicato con autonomía desde el primer día. Objetivo: incorporado en S1 (antes del segundo taller). Sigue después y lidera el grupo de implementación cuando haya más sindicatos.</div></div>
+  <div class="persona ext"><div class="cod">EXT</div><div class="rol">Horas externas: infra · base de datos · seguridad</div>
+    <p>Se contratan por horas cuando SDN y ARS no pueden o no saben. Tres usos previstos: revisión de seguridad antes del despliegue general (S9–S10), prueba de restauración de respaldos y afinado de Postgres si aparece un problema de rendimiento, y configuración de dominio/correo transaccional si se complica.</p>
+    <div class="ded">Presupuesto reservado desde S0; es costo antes del reparto. Lo pide SDN, lo aprueba AKG, se informa a SCT.</div></div>
+  <div class="persona ext" style="border-top-color:#8a1d3a"><div class="cod">GCF</div><div class="rol">ATS · Coordinación y relación con el sindicato</div>
+    <p>Nexo entre ATS y el equipo de XP. Conoce Colm3na. Participa de la presentación inicial, de la semanal con el sindicato y de los cierres de etapa; coordina con el proveedor del bot (que contrata ATS) y con la Comisión Directiva en lo comercial; trae los próximos sindicatos.</p>
+    <div class="ded">Participa en H1, en cada puerta de etapa y en la coordinación técnica con el bot. Recibe los indicadores mensuales.</div></div>
+  <div class="persona ext" style="border-top-color:#8a1d3a"><div class="cod">SCT</div><div class="rol">ATS · Administración y legal</div>
+    <p>Contrato con el sindicato (firma en menos de 15 días desde el acuerdo, 24 meses prorrogables), facturación mensual del SaaS, acuerdo de tratamiento de datos, contrato y pago del proveedor del bot, adendas por cambios de alcance. Contraparte de AKG en la liquidación mensual de costos y reparto.</p>
+    <div class="ded">Participa en H3 (contrato y acuerdo de datos), en las adendas y en el cierre mensual con AKG.</div></div>
+</div>
+
+<h3>Matriz de responsabilidades</h3>
+<p style="max-width:78ch"><b>R</b> hace el trabajo · <b>A</b> aprueba y responde por el resultado · <b>C</b> se lo consulta · <b>I</b> se lo informa. El sindicato aparece porque en varias áreas es quien decide.</p>
+<div class="tabla-scroll"><table class="raci">
+<tr><th>Área</th><th>SDN</th><th>AKG / XP</th><th>ARS</th><th>DOA</th><th>EXT</th><th>GCF / ATS</th><th>SCT / ATS</th><th>Sindicato</th><th>Bot</th></tr>
+<tr><td>Plan, alcance, prioridades, cambios de alcance</td><td class="A">A/R</td><td class="A">A/R</td><td class="C">C</td><td class="C">C</td><td>—</td><td class="C">C</td><td>I</td><td class="C">C</td><td>I</td></tr>
+<tr><td>Contrato con el sindicato, facturación y cobranza del SaaS, adendas</td><td class="C">C</td><td class="C">C</td><td>—</td><td>—</td><td>—</td><td class="C">C</td><td class="A">A/R</td><td class="A">A</td><td>—</td></tr>
+<tr><td>Administración de XP: costos, horas de DOA/ARS, liquidación mensual y reparto</td><td class="C">C</td><td class="A">A/R</td><td>I</td><td>I</td><td>—</td><td>I</td><td class="R">R</td><td>—</td><td>—</td></tr>
+<tr><td>Relación comercial, próximos sindicatos, contactos</td><td class="C">C</td><td class="C">C</td><td>—</td><td>I</td><td>—</td><td class="A">A/R</td><td class="C">C</td><td>—</td><td>—</td></tr>
+<tr><td>Contratación y administración de personas (ARS, DOA, EXT)</td><td class="C">C perfil técnico</td><td class="A">A/R</td><td>—</td><td>—</td><td>—</td><td>I</td><td>I</td><td>—</td><td>—</td></tr>
+<tr><td>Relación con la Comisión Directiva del sindicato</td><td class="R">R</td><td class="R">R</td><td>—</td><td class="C">C</td><td>—</td><td class="A">A/R</td><td class="C">C</td><td class="A">A</td><td>—</td></tr>
+<tr><td>Relevamiento (talleres, formularios, documentos)</td><td class="C">C</td><td class="A">A</td><td class="C">C</td><td class="R">R</td><td>—</td><td>I</td><td>—</td><td class="R">R</td><td class="C">C</td></tr>
+<tr><td>Reglas del gremio: conceptos, fórmulas, escalas</td><td class="C">C</td><td class="R">R define</td><td>—</td><td class="R">R carga</td><td>—</td><td>—</td><td>—</td><td class="A">A</td><td>—</td></tr>
+<tr><td>Configuración de la plataforma (marca, seccionales, admins, trámites, notificaciones)</td><td class="C">C</td><td class="A">A</td><td class="C">C</td><td class="R">R</td><td>—</td><td>—</td><td>—</td><td class="C">C</td><td>—</td></tr>
+<tr><td>Padrón: preparación, carga masiva, conciliación</td><td class="A">A</td><td class="C">C</td><td class="R">R</td><td class="C">C</td><td class="C">C</td><td>—</td><td>—</td><td class="R">R</td><td>—</td></tr>
+<tr><td>Arquitectura, desarrollo, versiones, integración técnica con el bot</td><td class="A">A</td><td>I</td><td class="R">R</td><td>I</td><td class="C">C</td><td class="C">C</td><td>—</td><td>I</td><td class="R">R</td></tr>
+<tr><td>Contrato, pago y confidencialidad con el proveedor del bot; restricciones de uso</td><td class="C">C</td><td class="C">C</td><td class="C">C</td><td>—</td><td>—</td><td class="R">R</td><td class="A">A/R</td><td>I</td><td class="R">R</td></tr>
+<tr><td>Entornos, base de datos, respaldos, monitoreo</td><td class="A">A</td><td>I</td><td class="R">R</td><td>—</td><td class="R">R</td><td>—</td><td>—</td><td>I</td><td>—</td></tr>
+<tr><td>Seguridad técnica y revisión externa</td><td class="A">A/R</td><td class="C">C</td><td class="R">R</td><td>I</td><td class="R">R</td><td>—</td><td>I</td><td>I</td><td class="C">C</td></tr>
+<tr><td>Datos personales: acuerdo con el sindicato (firma ATS, XP encargada), textos legales</td><td class="C">C</td><td class="R">R</td><td class="C">C</td><td>I</td><td>—</td><td class="C">C</td><td class="A">A/R</td><td class="A">A</td><td class="C">C</td></tr>
+<tr><td>Pruebas de aceptación y calidad</td><td>I</td><td class="A">A/R</td><td class="C">C</td><td class="R">R</td><td>—</td><td>I</td><td>—</td><td class="R">R</td><td>—</td></tr>
+<tr><td>Capacitación, guías, soporte de primer nivel</td><td>I</td><td class="A">A</td><td>—</td><td class="R">R</td><td>—</td><td>—</td><td>—</td><td class="R">R</td><td>—</td></tr>
+<tr><td>Comunicación y adopción (piloto, lanzamiento)</td><td class="C">C</td><td class="C">C</td><td>—</td><td class="R">R</td><td>—</td><td class="C">C</td><td>—</td><td class="A">A/R</td><td>—</td></tr>
+<tr><td>Cuentas técnicas: titularidad corporativa, licencias, facturación de servicios</td><td class="R">R hoy</td><td class="A">A · titular</td><td>I</td><td>—</td><td class="C">C</td><td>—</td><td>I</td><td>—</td><td>—</td></tr>
+<tr><td>Dominio y marca Colm3na / Mi Trabajo (compartidos)</td><td class="R">R administra</td><td class="A">A</td><td>—</td><td>—</td><td>—</td><td class="C">C</td><td class="A">A</td><td>—</td><td>—</td></tr>
+<tr><td>Cuentas: administración técnica, segundo admin, secretos</td><td class="A">A/R</td><td>I</td><td class="R">R</td><td>—</td><td class="C">C</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>Registro de decisiones y actas de etapa</td><td class="R">R técnicas</td><td class="A">A/R</td><td>I</td><td class="R">R</td><td>—</td><td class="R">R firma ATS</td><td>I</td><td class="C">C</td><td>I</td></tr>
+</table></div>
+
+<h3 id="titularidad">Titularidad corporativa de las cuentas</h3>
+<p style="max-width:78ch">Objetivo: que todas las cuentas y licencias del proyecto sean de XP, con facturación a XP, con SDN y ARS como administradores técnicos y con un segundo responsable en cada una. Se hace en tres pasos para no interrumpir la implementación: primero se elimina el riesgo (segundo administrador y secretos en el gestor), después se crean las organizaciones corporativas y se migra lo que se puede migrar sin corte, y por último se cambia la facturación. Cada paso se registra como decisión interna.</p>
+<div class="tabla-scroll"><table>
+<tr><th>Cuenta</th><th>Hoy</th><th>Destino</th><th>Cómo se migra</th><th>Cuándo</th></tr>
+<tr><td>GitHub</td><td>Repositorio MITRABAJOC en cuenta personal de SDN</td><td>Organización de XP en plan <b>GitHub Team</b> (ramas protegidas, revisores obligatorios, secretos de organización); AKG owner de facturación, SDN y ARS owners técnicos</td><td>Crear la organización a nombre de XP, transferir el repositorio (GitHub mantiene redirecciones), ajustar el remoto en Render y en las máquinas de desarrollo, mover las Actions y los secretos. Sin corte de servicio.</td><td>S4–S5, después de la aceptación de la configuración base</td></tr>
+<tr><td>Claude Code</td><td>Asiento personal de SDN</td><td><b>Claude Team</b> de XP, con asientos para SDN y ARS (AKG si lo usa para documentación) y facturación centralizada</td><td>Crear el equipo, invitar a los miembros, dar de baja el plan individual al cierre del ciclo de facturación. El historial de sesiones no migra; los planes de trabajo viven en el repositorio, no en la cuenta.</td><td>S3, al incorporarse ARS (evita pagar dos planes individuales)</td></tr>
+<tr><td>API Anthropic (consola)</td><td>Organización personal de SDN; claves usadas por producción</td><td>Organización de XP en la consola, con facturación, límites de gasto y alertas a nombre de XP; SDN y ARS como desarrolladores, AKG como facturación</td><td>Crear la organización de XP, generar claves nuevas por entorno, reemplazarlas en las variables de Render en una ventana de baja actividad, verificar una lectura de recibo y el asistente, revocar las viejas al día siguiente. Corte cero si se hace por variable de entorno.</td><td>S6, en semana sin cierre de mes</td></tr>
+<tr><td>Render</td><td>Cuenta personal de SDN con servicios web, Postgres y discos</td><td>Team de Render a nombre de XP, con tarjeta de XP; SDN y ARS administradores</td><td>Crear el team, transferir los servicios (Render permite mover servicios entre workspaces; verificar disco persistente y base antes), cambiar el método de pago. Si la transferencia del Postgres no fuera directa: respaldo, restauración en el team nuevo y cambio de DATABASE_URL en ventana anunciada.</td><td>S6–S7, con respaldo probado (C.1 del anexo) y fuera de fin de mes</td></tr>
+<tr><td>Dominio y DNS</td><td>Registrador a nombre de SDN</td><td>Activo compartido ATS–XP: cuenta del registrador administrada por XP (toca infraestructura), con acuerdo escrito de cotitularidad firmado por SCT y AKG; SDN y ARS con acceso técnico</td><td>Transferencia de titularidad dentro del mismo registrador (sin cambio de servidores DNS) para no tocar la resolución.</td><td>S8–S9</td></tr>
+<tr><td>Correo transaccional, monitoreo, errores, almacenamiento</td><td>A crear</td><td>Se crean directamente a nombre de XP</td><td>Nacen corporativas: correo de administración de XP como titular, SDN y ARS como técnicos.</td><td>S0–S2, al crearlas</td></tr>
+<tr><td>Gestor de contraseñas</td><td>A crear</td><td>Plan de equipo a nombre de XP; AKG dueña, SDN y ARS administradores; bóvedas por entorno y una funcional</td><td>Se crea corporativo desde el inicio. Es el primer paso de todo el plan: sin gestor no hay traspaso ordenado.</td><td>S0</td></tr>
+<tr><td>Marca Colm3na / Mi Trabajo</td><td>Sin registro formal</td><td>Registro compartido ATS–XP (INPI), en el mismo acuerdo de cotitularidad que el dominio</td><td>Lo tramita SCT con AKG; no afecta la operación. La app no muestra logo de ATS.</td><td>Antes del cierre (S13); no es requisito de ninguna etapa</td></tr>
+<tr><td>Plataforma Mi Trabajo (admin de plataforma)</td><td>CUIT de SDN</td><td>Cuentas de plataforma para SDN, AKG y ARS con su propio CUIT; la clave fija de plataforma rotada y guardada en el gestor</td><td>Alta de las cuentas y rotación de la clave. Sin cambio para el sindicato.</td><td>S0</td></tr>
+</table></div>
+<div class="nota"><b>Regla del traspaso.</b> Cada migración se hace en una semana sin cierre de mes, con respaldo verificado el día anterior, anunciada en la diaria, ejecutada por SDN con ARS mirando (o al revés a partir de S7), y cerrada con una prueba de humo: ingreso de un trabajador, lectura de un recibo, envío de una notificación. Después de cada una se actualiza el inventario de cuentas del anexo interno. Ninguna migración se hace la misma semana que una puerta de etapa.</div>
+
+<h3>Controles económicos que salen del modelo</h3>
+<div class="tabla-scroll"><table>
+<tr><th>Control</th><th>Qué se hace</th><th>Quién</th><th>Desde</th></tr>
+<tr><td>Registro de horas de DOA y ARS</td><td>Herramienta de XP (a definir en S0) con proyecto, tarea y etapa; corte mensual, aprobación de AKG (DOA) y SDN (ARS), factura de monotributo contra las horas aprobadas. Es costo antes del reparto, así que sin registro no hay liquidación.</td><td>AKG define; DOA y ARS cargan</td><td>S0 (antes del primer día de DOA)</td></tr>
+<tr><td>Costos de infraestructura y licencias</td><td>La tabla de costos del anexo pasa de estimación a registro mensual real: Render, Postgres, API, correo, monitoreo, Claude Team, gestor, dominio, precio fijo del bot. Se cierra con SCT cada mes para el reparto.</td><td>AKG con ARS (datos técnicos) y SCT</td><td>Primer cierre: fin de octubre</td></tr>
+<tr><td>Cota de 10.000 recibos por mes</td><td>Contador de recibos leídos por sindicato y mes en Plataforma, con aviso al 80 % a AKG y GCF; límite de gasto por clave de API alineado a la cota. No se va a alcanzar, pero el control existe desde el piloto.</td><td>ARS implementa; AKG mira</td><td>Piloto (S5)</td></tr>
+<tr><td>Restricciones de uso del bot</td><td>Definidas en el contrato técnico de integración (volumen, canales, horarios) para que el precio fijo no se desborde; se ajustan cuando se conozca el uso real.</td><td>ARS + proveedor; aprueba GCF</td><td>S3 (contrato de integración)</td></tr>
+<tr><td>Adendas por cambios desequilibrantes</td><td>Todo pedido del sindicato se clasifica; lo incluido se hace con flexibilidad (es la primera implementación y alimenta el producto para los próximos sindicatos); lo que desequilibra los recursos se estima y va a adenda con precio, firmada por ATS. Criterio orientativo: más de dos semanas de ARS o una funcionalidad nueva que no exista en el producto.</td><td>SDN y AKG proponen; SCT y GCF acuerdan con el sindicato</td><td>Desde S1</td></tr>
+</table></div>
+</div>
+</section>
+
+<!-- ===== HITOS ===== -->
+<section class="vista" id="v-hitos">
+<div class="doc">
+<h2>2. Hitos</h2>
+<p>Once hitos con fecha. Los azules son del equipo (contrataciones y traspasos); los verdes son puertas de etapa que exigen aceptación del sindicato; los rojos son eventos con el sindicato. GCF participa de todos los hitos con el sindicato; SCT de H3, de las adendas y de los cierres económicos mensuales. Si un hito de equipo se atrasa, la regla es explícita: SDN cubre el rol y se registra el costo en plazo. Las puertas de etapa tienen criterios <b>mínimos</b>, no de completitud: se abren con lo consensuado hasta ese momento y lo que falta pasa a la escalera de la etapa siguiente, registrado.</p>
+<div class="hitos">
+  <div class="hito eq"><div class="fecha">11 sep<small>S0 · vie</small></div><div class="pt"><i></i></div><div><h4>H0 · Equipo mínimo y base técnica listos</h4><p>AKG incorporada con accesos a staging y a los tableros. Búsqueda de ARS y DOA lanzada con perfiles escritos. Gestor de contraseñas corporativo de XP, claves de API rotadas y separadas por entorno, staging del sindicato creado, versión de producto congelada. Perfiles de ARS y DOA escritos por SDN y AKG; XP lanza la búsqueda. Presentación y kit de relevamiento revisados.</p></div></div>
+  <div class="hito"><div class="fecha">16 sep<small>S1 · mié</small></div><div class="pt"><i></i></div><div><h4>H1 · Presentación inicial al sindicato</h4><p>Comisión Directiva, secretarías y sistemas. Se presentan la suite, el plan, los roles que el sindicato debe nombrar y la página compartida. SDN presenta; AKG conduce la agenda de talleres; DOA participa si ya está incorporado.</p></div></div>
+  <div class="hito eq"><div class="fecha">18 sep<small>S1 · vie</small></div><div class="pt"><i></i></div><div><h4>H2 · DOA incorporado</h4><p>Antes del segundo taller. Primera semana en sede del sindicato con AKG. Recibe credenciales de admin del sindicato en staging, la guía de talleres y la lista de documentos F10.</p></div></div>
+  <div class="hito gate"><div class="fecha">25 sep<small>S2 · vie</small></div><div class="pt"><i></i></div><div><h4>H3 · Contrato definitivo y acuerdo de datos firmados; relevamiento cerrado</h4><p>Puerta de la etapa 1. ATS y el sindicato firman el contrato SaaS a 24 meses (previsto en menos de 15 días desde el acuerdo, es decir antes del 21 de septiembre) con las cláusulas de datos personales, la cota de recibos y el mecanismo de adendas; la primera cuota corre desde el inicio del relevamiento en firme. Además: formularios F1–F8 respondidos, documentos críticos recibidos, grupo piloto definido, canal de transferencia del padrón acordado. Sin contrato y acuerdo de datos firmados no se transfiere el padrón.</p></div></div>
+  <div class="hito eq"><div class="fecha">28 sep<small>S3 · lun</small></div><div class="pt"><i></i></div><div><h4>H4 · ARS incorporado; contrato de integración del bot acordado</h4><p>ARS con entorno local, accesos de segundo administrador técnico, asiento en el Claude Team de XP y primer PR (carga masiva del padrón) en la semana. Misma semana: Dev + Bot cierran el contrato de integración (identidad firmada, canal embebido, estadísticas) y queda registrado.</p></div></div>
+  <div class="hito gate"><div class="fecha">9 oct<small>S4 · vie</small></div><div class="pt"><i></i></div><div><h4>H5 · Aceptación de la configuración base (mínimo consensuado)</h4><p>Puerta de la etapa 2. Mínimo: marca, seccionales y administradores; padrón de al menos las seccionales piloto cargado y conciliado; dos o tres trámites construidos y probados de punta a punta con su circuito interno; remitentes y primera notificación; catálogo inicial de conceptos y fórmulas de ley. Recibos: los de muestra leídos con Aprendizaje y revisados, con la calidad medida e informada, sin exigir un porcentaje. Lo que no llegó (más trámites, escalas, fórmulas propias del convenio) queda en la escalera con fecha. Firma el referente funcional del sindicato.</p></div></div>
+  <div class="hito"><div class="fecha">13 oct<small>S5 · mar</small></div><div class="pt"><i></i></div><div><h4>H6 · Inicio del piloto</h4><p>Configuración pasada a producción; 30 a 50 trabajadores en dos seccionales con credenciales; administradores capacitados; notificación de bienvenida enviada. Arrancan trámites (2–3), notificaciones, novedades y credencial. Recibos en modo aprendizaje: el trabajador sube, el equipo y el sindicato revisan la lectura, el veredicto todavía no se muestra. DOA en las seccionales piloto la primera semana.</p></div></div>
+  <div class="hito gate"><div class="fecha">30 oct<small>S7 · vie</small></div><div class="pt"><i></i></div><div><h4>H7 · Cierre del piloto · primer cierre económico</h4><p>Puerta de la etapa 3. Mínimo: ≥ 70 % del grupo piloto ingresó; los trámites piloto se atendieron dentro del plazo acordado; incidencias críticas en cero; bot embebido probado en staging. Recibos: calidad de lectura medida sobre lo subido y decisión consensuada con el sindicato de habilitar el veredicto al grupo piloto (o de seguir aprendiendo). Misma semana: primer cierre mensual de costos y horas entre AKG y SCT.</p></div></div>
+  <div class="hito"><div class="fecha">13 nov<small>S9 · vie</small></div><div class="pt"><i></i></div><div><h4>H8 · Ampliación en marcha y bot en producción · ARS dueño del desarrollo diario</h4><p>Nuevos tipos de trámite según lo que el sindicato haya definido; bot nivel 1 en producción para las seccionales de la ampliación; beneficios y empleadores según avance; veredicto de recibos habilitado para los grupos donde la calidad lo permite. Hito de equipo: con 20 horas semanales de ARS el traspaso completo lleva seis semanas desde su ingreso, así que acá SDN deja de escribir código de producto; revisa y decide.</p></div></div>
+  <div class="hito gate"><div class="fecha">20 nov<small>S10 · vie</small></div><div class="pt"><i></i></div><div><h4>H9 · Cierre de la ampliación · revisión externa de seguridad</h4><p>Puerta de la etapa 4: seccionales de ampliación activas, circuito de trámites documentado, plan de comunicación aprobado. Informe de la revisión de seguridad externa (EXT) con hallazgos resueltos o con fecha antes del lanzamiento general.</p></div></div>
+  <div class="hito"><div class="fecha">23 nov<small>S11 · lun</small></div><div class="pt"><i></i></div><div><h4>H10 · Lanzamiento general</h4><p>Todo el padrón invitado por tandas de seccionales; mesa de ayuda reforzada dos semanas; bot nivel 2 en producción o decisión registrada de posponerlo.</p></div></div>
+  <div class="hito gate"><div class="fecha">11 dic<small>S13 · vie</small></div><div class="pt"><i></i></div><div><h4>H11 · Acta de cierre y acuerdo de soporte y evolución</h4><p>Puerta final: informe mensual de indicadores, guías finales, respaldo de configuración, traspaso a los administradores, acuerdo de soporte firmado, retrospectiva interna y plan v2 para el siguiente sindicato.</p></div></div>
+</div>
+<div class="nota"><b>Por qué estas fechas.</b> El contrato se firmó el 4 de septiembre y el inicio quedó a una semana. Trece semanas desde el 14 de septiembre terminan el 11 de diciembre, antes del receso de fin de año y antes de que los recibos de diciembre (aguinaldo) compliquen el arranque de la operación regular. Los cortes de etapa caen en viernes para que la demo de aceptación sea el cierre de la semana.</div>
+</div>
+</section>
+
+<!-- ===== GANTT ===== -->
+<section class="vista" id="v-gantt">
+<div class="doc" style="max-width:none">
+<h2>3. Tareas principales por semana</h2>
+<p style="max-width:78ch">Ocho frentes de trabajo y sus tareas principales, con la semana en que se hacen y quién responde. Cada barra corresponde a un grupo de tareas del checklist compartido; los rombos son hitos. El detalle, el estado y quién lo tiene se llevan en el checklist, no acá.</p>
+<div class="tabla-scroll"><div class="gantt" id="gantt"></div></div>
+<p class="foot">Semanas: S0 = 7–11 sep · S1 = 14 sep · S2 = 21 sep · S3 = 28 sep · S4 = 5 oct · S5 = 12 oct · S6 = 19 oct · S7 = 26 oct · S8 = 2 nov · S9 = 9 nov · S10 = 16 nov · S11 = 23 nov · S12 = 30 nov · S13 = 7–11 dic.</p>
+</div>
+</section>
+
+<!-- ===== TRANSICION ===== -->
+<section class="vista" id="v-transicion">
+<div class="doc" style="max-width:none">
+<h2>4. Transición de roles y crecimiento del equipo</h2>
+<p style="max-width:78ch">El riesgo principal de este plan no es técnico: es que SDN siga siendo el cuello de botella en la semana 8. Por eso el traspaso a ARS y el crecimiento técnico de AKG tienen fechas y criterios, igual que las etapas del sindicato.</p>
+<div class="tabla-scroll"><div class="fase">
+  <div class="fh2">Período</div><div class="fh2">SDN</div><div class="fh2">AKG</div><div class="fh2">ARS</div><div class="fh2">DOA</div>
+  <div class="fl">S0–S2<br><small style="font-weight:400;color:var(--texto2)">Arranque</small></div>
+  <div class="fc sdn"><b>Hace todo lo técnico</b>Anexo interno crítico, staging, claves, versión congelada, presentación. Escribe el perfil técnico y la prueba de ARS, entrevista con AKG. Escribe el documento de traspaso técnico (cómo corre la app, entornos, dónde está cada cosa).</div>
+  <div class="fc akg"><b>Dirige el frente funcional y contrata</b>Conduce el primer taller y define la agenda de los otros tres, que ejecuta DOA; decide qué reglas del gremio entran y cómo; define el grupo piloto con el sindicato. XP contrata a DOA y ARS, firma el acuerdo de datos y crea el gestor de contraseñas corporativo. Aprende a operar staging como admin de plataforma y de sindicato.</div>
+  <div class="fc ars"><b>Selección</b>Perfil: Python/FastAPI, Postgres, despliegues, criterio de seguridad, capacidad de trabajar con Claude Code y con planes escritos. Prueba técnica: leer CLAUDE.md y proponer cómo haría la carga masiva del padrón.</div>
+  <div class="fc doa"><b>Selección e ingreso en S1</b>Perfil: funcional con experiencia en organizaciones gremiales o de servicios, buena oralidad, orden documental. Primera semana pegado a AKG en los talleres.</div>
+
+  <div class="fl">S3–S4<br><small style="font-weight:400;color:var(--texto2)">Configuración</small></div>
+  <div class="fc sdn"><b>Desarrolla en paralelo con ARS</b>Sigue con lo que ya tiene en curso; ARS toma la carga masiva y la conciliación del padrón. SDN revisa cada PR de ARS y le entrega el mapa del código en sesiones cortas diarias. Decide fórmulas dudosas con AKG.</div>
+  <div class="fc akg"><b>Decide y aprueba la configuración</b>Define con el sindicato el catálogo de conceptos, las fórmulas y sus fuentes; DOA carga y documenta. Revisa el Aprendizaje con recibos reales, escribe el guion de pruebas de aceptación y lo ejecuta. Aprende a leer errores E-* y el panel de uso de IA.</div>
+  <div class="fc ars"><b>Primer mes</b>Entorno local, CI, primer PR (carga masiva), segundo PR (exportar/importar configuración staging→producción). Segundo administrador en GitHub y Render. Reunión técnica con el bot.</div>
+  <div class="fc doa"><b>Configura y prepara el piloto</b>Carga en staging lo definido por AKG (marca, seccionales, admins, catálogo, fórmulas, escalas, empleadores, noticias), persigue los documentos de F10, arma la lista del grupo piloto con las seccionales, prepara credenciales y capacitaciones.</div>
+
+  <div class="fl">S5–S7<br><small style="font-weight:400;color:var(--texto2)">Piloto</small></div>
+  <div class="fc sdn"><b>Desarrollo compartido</b>Sigue con el motor v2 y las migraciones de cuentas en horario nocturno y sábados; las versiones semanales del piloto las publica ARS con revisión de SDN. Lee el Panel Sindical con el sindicato. Las 15 horas hábiles van a reuniones, traspaso y decisiones.</div>
+  <div class="fc akg"><b>Calidad y decisiones funcionales</b>Aprueba en lote los conceptos pendientes que DOA y el referente del sindicato revisan a diario; clasifica incidencias con SDN; aprueba las guías v1. Prueba en staging cada versión antes de que suba.</div>
+  <div class="fc ars"><b>Toma el desarrollo diario</b>Versiones semanales, correcciones del piloto, bot embebido en staging (nivel 1), monitor de disponibilidad, prueba de carga de fin de mes. Propone qué bloques del motor v2 entran.</div>
+  <div class="fc doa"><b>En las seccionales piloto</b>Capacita administradores y referentes, acompaña primeros ingresos, revisa a diario con el referente del sindicato recibos con lectura incierta y conceptos pendientes, lleva el registro de incidencias de primer nivel y reporta adopción real en la semanal.</div>
+
+  <div class="fl">S8–S10<br><small style="font-weight:400;color:var(--texto2)">Ampliación</small></div>
+  <div class="fc sdn"><b>Última fase con código → dirección técnica</b>En S8 cierra lo suyo; en S9 (H8) deja de escribir código de producto. Decisiones de arquitectura y alcance técnico, coordinación de la revisión externa de seguridad, migración de dominio. Con AKG y SCT: adendas y acuerdo de soporte.</div>
+  <div class="fc akg"><b>Trámites, circuitos y cierre económico</b>Define con el sindicato los trámites prioritarios y su circuito interno (DOA los construye en el constructor de formularios), aprueba empleadores y beneficios, define el procedimiento de actualización del padrón con ARS. Como XP: cierre mensual de costos y horas con SCT, presupuesto de la revisión externa, seguimiento de la cota de recibos.</div>
+  <div class="fc ars"><b>Dueño del desarrollo</b>Bot a producción, mejoras de la ampliación, correcciones de la revisión de seguridad, retención de datos, exportación de configuración. Documenta variables y procedimientos.</div>
+  <div class="fc doa"><b>Ampliación y comunicación</b>Lanza seccionales por tandas, capacita referentes nuevos, coordina con Comunicación del sindicato el plan de lanzamiento, mantiene la mesa de ayuda de primer nivel.</div>
+
+  <div class="fl">S11–S13<br><small style="font-weight:400;color:var(--texto2)">General y cierre</small></div>
+  <div class="fc sdn"><b>Cierre y siguiente sindicato</b>Informe de indicadores, acta de cierre, acuerdo de soporte y evolución, retrospectiva, plan v2 y kit reutilizable. Con GCF: preparación del segundo sindicato, donde SDN pasa a arquitectura, funcionalidades avanzadas y presentaciones, y ARS y DOA lideran sus grupos.</div>
+  <div class="fc akg"><b>Consolidación</b>Guías finales, procedimiento de paritarias, traspaso a los administradores, lista de pedidos de evolución priorizada.</div>
+  <div class="fc ars"><b>Operación</b>Bot nivel 2, respaldo de configuración, monitoreo en régimen, guardia de los primeros días de diciembre, documentación técnica al día.</div>
+  <div class="fc doa"><b>Lanzamiento general</b>Todas las seccionales activas, soporte reforzado dos semanas, recoge la voz del afiliado para la retrospectiva.</div>
+</div></div>
+
+<h3>Criterios de traspaso SDN → ARS</h3>
+<p style="max-width:78ch">Calibrados para 20 horas semanales de ARS y 15 horas hábiles de SDN: seis semanas desde el ingreso hasta que ARS es el único que escribe código de producto. Si ARS pudiera dedicar más horas en S3–S6, el traspaso se adelanta a S7.</p>
+<div class="tabla-scroll"><table>
+<tr><th>Semana</th><th>ARS ya puede…</th><th>Se verifica con</th></tr>
+<tr><td>S3</td><td>Correr la app y los tests en local; publicar a staging; leer el código con el mapa que le dejó SDN.</td><td>Primer PR mergeado (carga masiva del padrón) con tests.</td></tr>
+<tr><td>S5</td><td>Correr una migración en staging y producción; volver atrás un despliegue en Render.</td><td>Migración de la exportación de configuración hecha por ARS con SDN mirando.</td></tr>
+<tr><td>S7</td><td>Publicar una versión semanal completa sin SDN en el teclado; atender un incidente de producción.</td><td>Dos versiones del piloto publicadas por ARS; un incidente resuelto y documentado.</td></tr>
+<tr><td>S9 (H8)</td><td>Ser el único que escribe código de producto; decidir con SDN qué entra del motor v2.</td><td>Decisión registrada; SDN pasa a revisar PRs.</td></tr>
+<tr><td>S10</td><td>Recibir y resolver los hallazgos de la revisión externa de seguridad.</td><td>Hallazgos cerrados o con fecha en el anexo interno.</td></tr>
+</table></div>
+
+<h3>Cuándo se llama a horas externas (EXT)</h3>
+<ul>
+<li><b>Seguridad (previsto, S9–S10):</b> revisión de dos a tres días sobre autenticación, aislamiento entre sindicatos y manejo de archivos, antes del lanzamiento general. Se contrata sí o sí; no depende de que "no sepamos".</li>
+<li><b>Base de datos (a demanda):</b> si la prueba de restauración de respaldos falla, si la carga del padrón real supera lo probado, o si el fin de mes muestra tiempos de respuesta inaceptables. Disparador: ARS lo pide, SDN valida, AKG aprueba el gasto.</li>
+<li><b>Infraestructura (a demanda):</b> dominio del sindicato, correo transaccional con SPF/DKIM o cambio de plan en Render que exceda lo que ARS resuelva en un día.</li>
+</ul>
+</div>
+</section>
+
+<!-- ===== GOBIERNO ===== -->
+<section class="vista" id="v-gobierno">
+<div class="doc">
+<h2>5. Ritmo, decisiones y riesgos del equipo</h2>
+<h3>Ritmo</h3>
+<ul>
+<li><b>Diaria de 15 minutos</b> (SDN, ARS, DOA por videollamada; AKG cuando puede, y recibe el resumen escrito): qué se hizo, qué se hace, qué bloquea. DOA reporta lo que ve en el sindicato. Las aprobaciones que necesita el equipo de AKG se listan acá y se responden en 48 h hábiles.</li>
+<li><b>Dirección SDN–AKG, semanal</b> (30 minutos): alcance, plazos, contrataciones, gastos, titularidades. GCF se suma cuando hay temas del sindicato, del bot o de próximos sindicatos.</li>
+<li><b>Cierre económico mensual AKG–SCT</b> (primeros días de cada mes): costos de infraestructura y licencias, horas aprobadas de DOA y ARS, precio del bot, facturación al sindicato y reparto.</li>
+<li><b>Semanal de 45 minutos con el sindicato</b> (SDN, AKG, DOA, GCF y los referentes; ARS y Bot cuando hay temas suyos): checklist de la etapa, bloqueos, decisiones pendientes.</li>
+<li><b>Demo quincenal</b>; la de cierre de etapa es la reunión de aceptación.</li>
+<li><b>Revisión técnica semanal SDN–ARS</b> (30 minutos, S3–S10): PRs, arquitectura, traspaso.</li>
+</ul>
+<h3>Quién decide qué</h3>
+<div class="tabla-scroll"><table>
+<tr><th>Tipo de decisión</th><th>Decide</th><th>Se registra en</th></tr>
+<tr><td>Reglas del gremio (cómo se calcula algo, quién firma, qué trámite existe)</td><td>Sindicato, con propuesta de AKG</td><td>Decisiones del plan compartido</td></tr>
+<tr><td>Alcance, prioridades, plazos</td><td>SDN y AKG en conjunto, informando al sindicato</td><td>Decisiones del plan compartido</td></tr>
+<tr><td>Contrato con el sindicato, facturación del SaaS, adendas con precio</td><td>SCT (ATS) con GCF; SDN y AKG proponen el contenido</td><td>Decisiones internas del anexo</td></tr>
+<tr><td>Contrataciones, horas, gastos de XP (incluidas horas externas y licencias)</td><td>AKG (XP)</td><td>Decisiones internas del anexo</td></tr>
+<tr><td>Qué pedido es "incluido" y cuál va a adenda</td><td>SDN y AKG clasifican; SCT y GCF cierran con el sindicato</td><td>Decisiones del plan compartido (el pedido) e internas (la adenda)</td></tr>
+<tr><td>Titularidad y migración de cuentas técnicas; cotitularidad de dominio y marca</td><td>AKG decide el cuándo, SDN el cómo; dominio y marca con SCT</td><td>Decisiones internas del anexo + inventario de cuentas</td></tr>
+<tr><td>Arquitectura, versiones, qué entra del motor v2</td><td>SDN con ARS</td><td>Decisiones internas del anexo</td></tr>
+<tr><td>Integración técnica del bot y sus restricciones de uso</td><td>ARS con el proveedor; SDN aprueba lo técnico, GCF lo contractual</td><td>Ambos registros</td></tr>
+<tr><td>Contratar horas externas</td><td>SDN lo pide, AKG aprueba</td><td>Decisiones internas del anexo</td></tr>
+<tr><td>Configuración diaria (un concepto, un texto, un formulario)</td><td>AKG con el referente del sindicato</td><td>La plataforma misma; no requiere registro</td></tr>
+</table></div>
+<h3>Riesgos propios del equipo</h3>
+<div id="riesgos"></div>
+<p class="foot">Colm3na · Plan maestro v1.4 · 7 de septiembre de 2026. Documento interno de dirección (XP · ATS); se itera sobre esta misma página. Complementa a "Implementación La Bancaria" (compartido con el sindicato) y al "Anexo Interno Colm3na".</p>
+</div>
+</section>
+</div>
+
+<script>
+document.getElementById('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('.vista').forEach(x=>x.classList.toggle('on',x.id==='v-'+b.dataset.v));window.scrollTo({top:0});});
+
+// Gantt: [grupo, clase color, [ [tarea, subtexto, [responsables], semanaInicio, semanaFin, hitoEnSemana|null] ]]
+const G=[
+ ['Equipo y cuentas','eq',[
+  ['Incorporar a AKG y darle accesos','staging, tableros, gestor',['SDN','AKG'],0,0,0],
+  ['Buscar y contratar a DOA','perfil AKG, contrata XP, ingreso S1',['AKG','SDN'],0,1,1],
+  ['Buscar y contratar a ARS','perfil y prueba técnica SDN, contrata XP, ingreso S3',['AKG','SDN'],0,3,3],
+  ['Gestor de contraseñas corporativo (XP), claves de API por entorno, versión congelada','anexo A y B',['SDN','AKG'],0,0,null],
+  ['Documento de traspaso técnico y onboarding de ARS','mapa del código, entornos, procedimientos',['SDN','ARS'],1,3,null],
+  ['Segundo administrador en GitHub, Render y dominio','ARS',['SDN','ARS'],3,3,null],
+  ['Traspaso del desarrollo diario a ARS','20 h/sem de ARS: seis semanas',['SDN','ARS'],3,9,9],
+  ['Registro de horas de DOA y ARS: herramienta y circuito mensual','antes del primer día de DOA',['AKG'],0,0,null],
+  ['Cierre económico mensual (costos, horas, bot, reparto)','AKG con SCT',['AKG'],7,7,null],
+  ['Titularidad a XP: Claude Team','al incorporarse ARS',['AKG','SDN'],3,3,null],
+  ['Titularidad a XP: organización GitHub Team y transferencia del repo','sin corte',['SDN','ARS','AKG'],4,5,null],
+  ['Titularidad a XP: consola API (claves nuevas) y team de Render','semana sin cierre de mes, respaldo probado',['SDN','ARS','AKG'],6,7,null],
+  ['Titularidad a XP: dominio y registrador','',['SDN','AKG'],8,9,null],
+  ['Contratar revisión externa de seguridad','EXT, 2–3 días; aprueba AKG',['SDN','AKG','EXT'],8,10,null],
+ ]],
+ ['Sindicato y relevamiento','sind',[
+  ['Presentación inicial','Comisión Directiva y equipo; GCF presenta con SDN',['SDN','AKG','GCF'],1,1,1],
+  ['Talleres 1 a 4 y formularios F1–F8','AKG dirige, DOA ejecuta',['DOA','AKG','SIND'],1,2,null],
+  ['Documentos F10 y grupo piloto','estatuto, CCT, escalas, recibos, formularios',['DOA','SIND'],1,3,null],
+  ['Contrato SaaS 24 meses y acuerdo de datos','firma ATS (SCT) antes del 21 sep',['SCT','AKG','SDN','SIND'],0,2,2],
+  ['Relevamiento incremental: nuevos trámites, reglas del convenio, beneficios','a medida que el sindicato dispone de tiempo',['DOA','AKG','SIND'],3,10,null],
+ ]],
+ ['Configuración de la plataforma','conf',[
+  ['Staging del sindicato, marca, seccionales, administradores','',['DOA','AKG'],0,3,null],
+  ['Padrón: preparación, carga masiva, conciliación','canal seguro, informe de calidad',['ARS','SIND'],3,4,null],
+  ['Trámites piloto (2–3) con circuito interno; luego nuevos tipos','constructor de formularios; DOA construye',['DOA','AKG','SIND'],3,10,4],
+  ['Conceptos y fórmulas de ley; escalas y fórmulas del convenio de forma incremental','AKG define, DOA carga',['AKG','DOA','SIND'],3,9,null],
+  ['Recibos: aprendizaje y calibración con recibos reales','muestra + los que suba el piloto; calidad medida',['DOA','AKG','ARS'],3,7,null],
+  ['Recibos: veredicto habilitado por grupos según calidad','decisión consensuada en H7',['AKG','SDN','SIND'],8,12,null],
+  ['Pasaje a producción y credenciales del piloto','',['ARS','AKG','DOA'],5,5,null],
+  ['Empleadores, beneficios, cotizantes','según avance del relevamiento',['DOA','AKG','SIND'],8,10,null],
+  ['Procedimiento de actualización del padrón','',['ARS','AKG','SIND'],9,10,null],
+ ]],
+ ['Producto y desarrollo','dev',[
+  ['Congelar versión; decidir bloques del motor v2 que entran','golden set con recibos bancarios',['SDN','ARS'],0,4,null],
+  ['Evaluador seguro de fórmulas, primer ingreso, recuperación de clave','antes del piloto',['SDN','ARS'],1,4,null],
+  ['Exportar/importar configuración staging → producción','',['ARS'],3,4,null],
+  ['Versiones semanales del piloto','mejoras menores agrupadas',['ARS','AKG'],5,7,null],
+  ['Versiones de la ampliación y hallazgos de seguridad','',['ARS'],8,10,null],
+  ['Respaldo de configuración y documentación técnica final','',['ARS'],11,13,null],
+ ]],
+ ['Infraestructura, datos y seguridad','infra',[
+  ['Staging, variables, CI, procedimiento de publicación','',['SDN','ARS'],0,3,null],
+  ['Respaldos con restauración probada; retención definida','EXT si falla',['ARS','EXT'],2,4,null],
+  ['Monitor de disponibilidad, errores, prueba de carga de fin de mes','',['ARS'],4,6,null],
+  ['Contador de recibos por sindicato contra la cota mensual y límite de gasto por clave','aviso al 80 %',['ARS','AKG'],4,5,null],
+  ['Revisión externa de seguridad y correcciones','antes del lanzamiento general',['EXT','ARS'],9,10,9],
+  ['Retención de datos y auditoría de acciones de admin','',['ARS'],8,11,null],
+ ]],
+ ['Bot conversacional','bot',[
+  ['Reunión técnica inicial y formulario F9','',['SDN','ARS','BOT'],0,1,null],
+  ['Contrato técnico de integración y restricciones de uso','identidad firmada, canal, estadísticas; contrato comercial lo firma ATS',['ARS','BOT','GCF'],3,3,3],
+  ['Bot embebido en staging (nivel 1)','',['ARS','BOT','AKG'],5,7,null],
+  ['Bot en producción (nivel 1)','',['ARS','BOT','SIND'],8,9,9],
+  ['Nivel 2: datos compartidos y estadísticas en el Panel Sindical','o decisión de posponer',['ARS','BOT'],11,12,null],
+ ]],
+ ['Capacitación, comunicación y adopción','ado',[
+  ['Guías del administrador y del trabajador','v0 S4, v1 S7, final S12',['AKG','DOA'],4,12,null],
+  ['Capacitación a administradores y referentes de seccional','',['DOA','AKG'],5,5,null],
+  ['Piloto: acompañamiento y mesa de ayuda de primer nivel','',['DOA','AKG'],5,7,null],
+  ['Plan de comunicación y ampliación por tandas','con Comunicación del sindicato',['DOA','SIND'],8,10,null],
+  ['Lanzamiento general y soporte reforzado','',['DOA','AKG','SIND'],11,12,11],
+ ]],
+ ['Gobierno y cierre','cierre',[
+  ['Semanal con el sindicato, demo quincenal, registro de decisiones','',['SDN','AKG'],1,13,null],
+  ['Actas de cierre de etapa','exportación de checklist y decisiones',['SDN','AKG'],2,13,null],
+  ['Informe mensual de indicadores','',['SDN','AKG'],12,13,null],
+  ['Traspaso, acuerdo de soporte y evolución, acta de cierre','firma ATS (SCT); GCF y AKG conducen',['AKG','SDN','GCF','SCT','SIND'],12,13,13],
+  ['Retrospectiva, plan v2 y kit para el siguiente sindicato','ARS y DOA como futuros líderes de grupo',['SDN','AKG','ARS','DOA','GCF'],13,13,null],
+ ]],
+];
+const PC={SDN:'p-sdn',AKG:'p-akg',ARS:'p-ars',DOA:'p-doa',EXT:'p-ext',SIND:'p-sind',BOT:'p-bot',GCF:'p-ats',SCT:'p-ats'};
+const PL={SIND:'Sindicato',BOT:'Bot'};
+(function(){const g=document.getElementById('gantt');let h='<div class="gh l">Tarea principal</div><div class="gh l">Quién</div>';for(let s=0;s<=13;s++)h+=`<div class="gh">S${s}</div>`;
+ for(const [grupo,cls,tareas] of G){h+=`<div class="grp">${grupo}</div>`;
+  for(const [t,sub,who,a,b,hito] of tareas){h+=`<div class="gt">${t}${sub?`<small>${sub}</small>`:''}</div><div class="gw">${who.map(w=>`<span class="badge ${PC[w]}">${PL[w]||w}</span>`).join('')}</div>`;
+   for(let s=0;s<=13;s++){const on=s>=a&&s<=b;h+=`<div class="gc ${on?'on '+cls:''} ${on&&s===a?'ini':''} ${on&&s===b?'fin':''} ${hito===s?'hito':''}"></div>`;}}}
+ g.innerHTML=h;})();
+
+const RIESGOS=[
+ {n:'alto',t:'Disponibilidad parcial del personal del sindicato',m:'Es un dato de entrada, no una sorpresa: talleres cortos y por tema, relevamiento incremental durante todo el plan, puertas con criterios mínimos, DOA presente en sede para aprovechar los huecos de agenda, y cada definición que no llega pasa a la escalera con fecha en vez de frenar la etapa.'},
+ {n:'alto',t:'ARS o DOA no se consiguen a tiempo',m:'La búsqueda arranca en S0 con perfiles escritos y una red de confianza. Si ARS llega después de S3, SDN sigue desarrollando y el traspaso se corre hacia S11, pero la etapa 2 no se atrasa. Si DOA llega después de S1, AKG cubre los talleres y DOA entra en la etapa 2 con la recolección de documentos y el grupo piloto.'},
+ {n:'alto',t:'SDN sigue siendo el cuello de botella en S9',m:'Criterios de traspaso con fecha (S3, S5, S7, S9, S10) calibrados para 20 h de ARS; revisión técnica semanal; documento de traspaso escrito en S1–S3; a partir de H8, SDN no escribe código de producto. Las 15 h hábiles de SDN se reservan para reuniones y traspaso; lo técnico de fondo va a noche y sábado.'},
+ {n:'medio',t:'Dedicación parcial de ARS y DOA (20 h) no alcanza en picos (cierre de mes, lanzamiento general)',m:'Picos previstos en el calendario; horas extra acordadas de antemano con AKG como costo del mes; SDN cubre lo técnico en su franja nocturna; DOA concentra presencia en el sindicato en las semanas de lanzamiento.'},
+ {n:'medio',t:'Costos y horas sin registro a tiempo distorsionan el reparto',m:'Herramienta de horas definida en S0 y obligatoria desde el primer día de DOA; tabla de costos mensual; primer cierre económico AKG–SCT al final del piloto (H7) para ajustar la mecánica antes del despliegue general.'},
+ {n:'alto',t:'AKG a demanda: las decisiones funcionales se demoran y frenan a DOA',m:'AKG dirige y aprueba, DOA ejecuta; lista de aprobaciones pendientes en la diaria con compromiso de 48 h hábiles; DOA decide lo operativo por su cuenta y escala solo reglas del gremio y alcance; si una decisión de reglas del gremio no llega, SDN la toma provisoriamente y queda registrada para que AKG la confirme.'},
+ {n:'medio',t:'Cuentas a nombre personal de SDN',m:'Primero se quita el riesgo (gestor corporativo en S0, segundo administrador en S3), después se migra la titularidad a XP por pasos (Claude Team S3, GitHub Team S4–S5, API y Render S6–S7, dominio S8–S9), nunca en semana de cierre de mes ni de puerta de etapa.'},
+ {n:'bajo',t:'Migración de cuentas interrumpe el servicio',m:'Cada paso con respaldo verificado, ventana anunciada, prueba de humo y vuelta atrás definida; API y base de datos se migran por variable de entorno, no por corte.'},
+ {n:'medio',t:'Conocimiento tácito de SDN no llega a ARS',m:'Traspaso por escrito (mapa del código, entornos, procedimientos, decisiones vigentes en CLAUDE.md e HISTORIAL.md) más sesiones cortas diarias en S3–S4.'},
+ {n:'bajo',t:'Horas externas mal usadas',m:'Solo con disparador y aprobación de SDN; la revisión de seguridad es la única prevista de antemano y tiene presupuesto reservado.'},
+];
+document.getElementById('riesgos').innerHTML=RIESGOS.map(r=>`<div class="riesgo"><i class="${r.n}" title="${r.n}"></i><div><b>${r.t}</b><span>${r.m}</span></div></div>`).join('');
+</script>
+
+</body></html>

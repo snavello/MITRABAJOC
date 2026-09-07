@@ -13,7 +13,7 @@ import csv
 import json
 from pathlib import Path
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date
 
 from dotenv import load_dotenv
 from typing import Any
@@ -780,6 +780,80 @@ class TramiteEmpleadorLog(SQLModel, table=True):
     evento: str
     detalle: str = ""
     creado: str = ""
+
+
+class Recurso(SQLModel, table=True):
+    """Documentación del proyecto subida desde la landing /entornos (ver
+    recursos.py, que también lista los recursos versionados en recursos/).
+    Los bytes van en la base, como los logos y los adjuntos: en Render no
+    hay disco persistente. Un recurso es un archivo O un enlace (url); la
+    miniatura es opcional y, si falta, la landing dibuja una portada con el
+    título. `fecha` es la del documento (el orden de la landing), `creado`
+    cuándo se subió."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    titulo: str
+    descripcion: str = ""            # una línea
+    fecha: date
+    tipo: str = "archivo"            # recursos.TIPOS: html/pdf/imagen/video/audio/enlace/archivo
+    url: str = ""                    # enlace externo, cuando no hay archivo
+    nombre_archivo: str = ""
+    mime: str = ""
+    tamanio: int = 0
+    archivo_datos: Optional[bytes] = Field(default=None)
+    miniatura_datos: Optional[bytes] = Field(default=None)
+    miniatura_mime: str = ""
+    fragmento: str = ""              # "#estrategia": ancla o pestaña con la que se abre
+    creado: str = ""                 # ISO
+
+
+# ---------- Recursos de la landing (recursos.py) ----------
+def listar_recursos() -> list[dict]:
+    """Metadatos de los recursos subidos, SIN los bytes: un video pesa
+    decenas de MB y la landing solo necesita título, fecha y si hay
+    miniatura. Del más nuevo al más viejo."""
+    with Session(engine) as s:
+        filas = s.exec(
+            select(Recurso.id, Recurso.titulo, Recurso.descripcion, Recurso.fecha, Recurso.tipo,
+                   Recurso.url, Recurso.nombre_archivo, Recurso.mime, Recurso.tamanio,
+                   Recurso.fragmento, Recurso.miniatura_mime)
+            .order_by(Recurso.fecha.desc(), Recurso.id.desc())
+        ).all()
+        claves = ("id", "titulo", "descripcion", "fecha", "tipo", "url", "nombre_archivo",
+                  "mime", "tamanio", "fragmento", "miniatura_mime")
+        return [dict(zip(claves, fila)) for fila in filas]
+
+
+def guardar_recurso(titulo: str, descripcion: str, fecha: date, tipo: str, url: str = "",
+                    nombre_archivo: str = "", mime: str = "", archivo_datos: bytes = None,
+                    miniatura_datos: bytes = None, miniatura_mime: str = "",
+                    fragmento: str = "") -> int:
+    with Session(engine) as s:
+        r = Recurso(
+            titulo=titulo, descripcion=descripcion, fecha=fecha, tipo=tipo, url=url,
+            nombre_archivo=nombre_archivo, mime=mime, tamanio=len(archivo_datos or b""),
+            archivo_datos=archivo_datos, miniatura_datos=miniatura_datos,
+            miniatura_mime=miniatura_mime, fragmento=fragmento,
+            creado=datetime.now().isoformat(timespec="seconds"),
+        )
+        s.add(r)
+        s.commit()
+        return r.id
+
+
+def recurso(recurso_id: int) -> Optional[Recurso]:
+    """El recurso entero, bytes incluidos: solo para servirlo."""
+    with Session(engine) as s:
+        return s.get(Recurso, recurso_id)
+
+
+def borrar_recurso(recurso_id: int) -> bool:
+    with Session(engine) as s:
+        r = s.get(Recurso, recurso_id)
+        if not r:
+            return False
+        s.delete(r)
+        s.commit()
+        return True
 
 
 # ---------- Inicialización ----------

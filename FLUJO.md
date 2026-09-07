@@ -19,6 +19,11 @@ puede tocar la demo.
 Para no equivocarse de entorno: **mitrabajo-pruebas.onrender.com/entornos**
 lista los 8 logins (Trabajador, Sindicato, Empresa y Plataforma, en Pruebas
 y en Demo) con la versión que corre en cada uno. Solo existe en Pruebas.
+Debajo, **Recursos**: la documentación del proyecto (planes, guías,
+videos, enlaces) en un solo lugar, con miniatura y fecha; se sube desde ahí
+mismo con la clave de plataforma. Un documento que tiene que viajar con el
+código (como los planes de implementación) va versionado en `recursos/` y
+se declara en `recursos.SEMILLA`; el resto se sube desde la landing.
 
 ## El ciclo de una feature
 

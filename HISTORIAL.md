@@ -2739,3 +2739,78 @@ que corre en cada uno. URL: `mitrabajo-pruebas.onrender.com/entornos`.
 - Test: `test_entornos.py`. Versión: Plataforma 0.21.02 → 0.22.01 (se tomó
   como funcionalidad nueva de la app de plataforma, por ser una herramienta
   transversal de administración; Sd puede reasignarlo).
+
+## Recursos en la landing: /entornos#recursos (2026-09-07)
+
+Pedido de Sd: los documentos del proyecto (planes en HTML exportados de
+Claude, videos, capturas, enlaces) estaban repartidos entre el celular, la
+nube y la PC, y eso no escala. La landing de entornos, que ya era el punto
+de entrada del equipo, suma debajo un título **Recursos** con la
+documentación catalogada: miniatura, título, descripción de una línea,
+fecha y tipo, de la más nueva a la más vieja, y un formulario para subir
+un archivo (o pegar un enlace) desde ahí mismo. Módulo `recursos.py`,
+rutas `/recursos/*` en main.py, tabla `Recurso` en db.py, plantilla
+`entornos.html`.
+
+- **Dos orígenes, una lista.** Los documentos que tienen que viajar con el
+  código van versionados en `recursos/` (archivo + miniatura JPG 640x400)
+  y se declaran en `recursos.SEMILLA` con clave, título, descripción,
+  fecha y ancla: no se siembran, no se pierden al regenerar o clonar la
+  base y se cambian con un commit. Lo demás se sube desde la landing y va
+  a la base como bytes (tabla `Recurso`, migración `9c4e2f7a1b3d`), igual
+  que logos y adjuntos: en Render no hay disco persistente. El catálogo los
+  mezcla ordenados por `fecha` (la del documento, no la de subida) y, a
+  igual fecha, lo subido último primero. Los primeros dos son el **Plan
+  Maestro Colm3na** (7 sep) y el **Plan de implementación en el
+  sindicato** (4 sep, se abre en `#estrategia`): son los artifacts
+  publicados desde Claude Code, guardados tal cual se exportan (el
+  `window.claude` de la página compartida no existe acá y el propio
+  documento cae solo a "guardado solo en este navegador"). Las miniaturas
+  se hicieron con una captura de Playwright a 1280x800 reducida a 640x400.
+- **Pase por dispositivo, no sesión.** La landing es pública donde existe,
+  pero estos archivos son documentación interna (modelo económico, plan de
+  cuentas), así que abrir, subir y quitar piden la clave de plataforma
+  (`auth.verificar_plataforma`) una vez: `POST /recursos/pase` deja la
+  cookie `acceso_recursos` (`vence.firma`, HMAC con `SESSION_SECRET`, 30
+  días, `SameSite=Lax` para que un POST desde otro sitio no la mande). No
+  entra en `COOKIES_POR_ROL`: no se renueva por actividad ni vence a los
+  15 minutos porque no abre ningún panel. Una sesión de plataforma vigente
+  también sirve. Sin pase, un clic sobre un recurso vuelve a la landing con
+  el aviso de que hace falta la clave (redirección solo si es navegación
+  de página, `_es_navegacion_de_pagina`; un fetch recibe 403); las
+  miniaturas, títulos y descripciones se ven igual, son lo que la tarjeta
+  muestra.
+- **Miniatura en el navegador.** Al elegir un archivo, el JS de la landing
+  prellena título (del nombre) y fecha (`lastModified`) y arma la
+  miniatura en un canvas de 640x400 con recorte "cover": para imágenes,
+  la imagen; para videos, el fotograma del segundo 1 (o el 10 % de la
+  duración). Viaja como `miniatura` en el mismo POST multipart. Para PDF,
+  HTML y el resto no hay cómo rasterizar en el navegador sin librerías y
+  en Render no hay Chromium: quien sube puede adjuntar una captura, y si
+  no, la tarjeta dibuja una portada sobre el fondo de marca con el ícono
+  del tipo y el host del enlace o la extensión del archivo (el título ya
+  va debajo; repetirlo era ruido). El alta va por fetch para mostrar el error al lado del
+  botón sin perder lo escrito (el servidor devuelve JSON con `ir` cuando
+  no es navegación de página, y redirige al `<form>` sin JS); la URL de
+  vuelta lleva `&n={id}` para que dos altas seguidas no queden en la misma
+  URL con solo el ancla distinta (eso no recarga).
+- **Servir desde la base con `Range`.** `_bytes_con_rango` responde 206 a
+  un rango simple, que es lo que manda el reproductor del navegador para
+  adelantar un video o un audio; sin eso se reproduce pero no se puede
+  saltar. Los archivos del repositorio van por `FileResponse`, que ya lo
+  hace. Las páginas se sirven siempre `text/html; charset=utf-8`. Tope de
+  subida `recursos.TAMANIO_MAX` (30 MB); miniatura hasta 2 MB y solo
+  imagen.
+- **La lista no carga los bytes** (`db.listar_recursos` selecciona
+  columnas): un video de 13 MB no tiene que pasar por memoria para dibujar
+  su tarjeta. `clonar_demo_a_pruebas.py` excluye la tabla `recurso` del
+  dump para que la clonación no pise el catálogo de Pruebas (la demo no
+  tiene nada ahí: la landing no existe en la demo, y sus rutas tampoco).
+- **Estilo.** Misma colmena nocturna de la landing; la sección es neutra
+  (blanco sobre el fondo de marca) a propósito, porque el ámbar y el verde
+  agua identifican a los entornos y no se comparten. Íconos de línea por
+  tipo (página, PDF, imagen, video, audio, enlace, archivo), chip de tipo
+  sobre la miniatura, candado sobre las tarjetas cuando no hay pase.
+- Tests: `test_recursos.py` (catálogo y orden, pase y sesión de
+  plataforma, alta con miniatura y ancla, enlace, rangos, validaciones,
+  404 en la demo). Versión: Plataforma 0.22.01 → 0.23.01.

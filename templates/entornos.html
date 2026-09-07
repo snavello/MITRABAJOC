@@ -96,6 +96,96 @@
     .acceso .ic { width:54px; height:54px; }
     .acceso .rol { font-size:22px; }
   }
+
+  /* ---- Recursos (2026-09-07): la documentación del proyecto, en la misma
+     colmena nocturna. Tarjetas con miniatura 16:10, título en la display
+     condensada, una línea de descripción y la fecha; sin miniatura, una
+     portada dibujada con el ícono del tipo y el título. Neutro a propósito
+     (blanco sobre el fondo de marca): el ámbar y el verde agua son de los
+     entornos y no se comparten. ---- */
+  .recursos { margin-top:42px; }
+  .rec-cab { display:flex; align-items:flex-start; gap:14px; margin-bottom:16px; flex-wrap:wrap; }
+  .rec-cab .rec-ic { width:44px; height:44px; flex:none; stroke:#fff; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; opacity:.9; margin-top:2px; }
+  .rec-cab h2 { font-family:var(--fuente-display); font-size:40px; line-height:.95; letter-spacing:2px; text-transform:uppercase; }
+  .rec-cab .rec-lede { font-size:13.5px; color:rgba(255,255,255,.6); margin-top:5px; }
+  .rec-cab .rec-cuenta { margin-left:auto; align-self:center; font-family:var(--mono); font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:rgba(255,255,255,.45); }
+  .aviso { display:flex; align-items:center; gap:10px; margin:0 0 14px; padding:10px 14px; border-radius:12px; font-size:13.5px;
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); }
+  .aviso.ok { border-color:color-mix(in srgb, var(--demo) 55%, transparent); background:color-mix(in srgb, var(--demo) 14%, rgba(255,255,255,.04)); }
+  .aviso.mal { border-color:color-mix(in srgb, var(--pruebas) 60%, transparent); background:color-mix(in srgb, var(--pruebas) 12%, rgba(255,255,255,.04)); }
+  .pase { display:grid; grid-template-columns:auto minmax(0,1fr); gap:6px 14px; align-items:center; margin-bottom:18px; padding:16px 18px; border-radius:16px;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); }
+  .pase .ic { width:34px; height:34px; grid-row:1 / span 2; stroke:#fff; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; opacity:.85; }
+  .pase p { font-size:13.5px; color:rgba(255,255,255,.7); }
+  .pase form { display:flex; gap:8px; flex-wrap:wrap; }
+  .pase input { flex:1 1 180px; min-width:0; padding:9px 12px; border-radius:9px; border:1px solid rgba(255,255,255,.25); background:rgba(0,0,0,.25); color:#fff; font-size:14px; }
+  .pase input::placeholder { color:rgba(255,255,255,.4); }
+  .boton { appearance:none; cursor:pointer; padding:9px 14px; border-radius:9px; border:1px solid rgba(255,255,255,.7); background:#fff; color:var(--tinta);
+    font-family:var(--fuente-display); font-size:15px; letter-spacing:1.4px; text-transform:uppercase; white-space:nowrap; }
+  .boton:hover, .boton:focus-visible { background:rgba(255,255,255,.88); outline:none; }
+  .boton:disabled { opacity:.55; cursor:default; }
+  .boton.suave { background:transparent; color:#fff; border-color:rgba(255,255,255,.35); }
+  .boton.suave:hover { background:rgba(255,255,255,.1); }
+
+  .tarjetas { display:grid; grid-template-columns:repeat(auto-fill, minmax(270px, 1fr)); gap:16px; }
+  .recurso { position:relative; display:flex; flex-direction:column; border-radius:16px; overflow:hidden; scroll-margin-top:16px;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+    transition:transform .12s ease, border-color .15s ease, background .15s ease; }
+  .recurso:hover, .recurso:focus-within { transform:translateY(-2px); border-color:rgba(255,255,255,.4); background:rgba(255,255,255,.09); }
+  .recurso:target { border-color:var(--demo); box-shadow:0 0 0 4px color-mix(in srgb, var(--demo) 30%, transparent); }
+  .recurso .mini { display:block; position:relative; aspect-ratio:16 / 10; background:#0d1626; border-bottom:1px solid rgba(255,255,255,.1); }
+  .recurso .mini img { display:block; width:100%; height:100%; object-fit:cover; object-position:top; }
+  .recurso .portada { position:absolute; inset:0; display:flex; flex-direction:column; justify-content:flex-end; gap:8px; padding:16px 18px;
+    background:linear-gradient(160deg, color-mix(in srgb, var(--tinta) 55%, #4a6da8), var(--tinta) 75%); }
+  .recurso .portada::before { content:""; position:absolute; inset:0; opacity:.14; pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='104' viewBox='0 0 120 104'%3E%3Cpath d='M30 2l26 15v30L30 62 4 47V17zM90 2l26 15v30L90 62 64 47V17zM60 54l26 15v30L60 104 34 89V69z' fill='none' stroke='%23fff' stroke-width='1'/%3E%3C/svg%3E"); }
+  .recurso .portada .ic { width:42px; height:42px; stroke:#fff; fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; opacity:.9; position:relative; }
+  .recurso .portada span { position:relative; font-family:var(--mono); font-size:15px; font-weight:600; line-height:1.2; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.75); overflow-wrap:anywhere; }
+  .recurso .tipo { position:absolute; top:10px; left:10px; display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border-radius:999px;
+    font-family:var(--mono); font-size:10.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:#fff;
+    background:rgba(9,15,26,.72); border:1px solid rgba(255,255,255,.25); backdrop-filter:blur(4px); }
+  .recurso .tipo svg { width:13px; height:13px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .recurso .cuerpo { display:flex; flex-direction:column; gap:6px; padding:13px 15px 12px; flex:1; }
+  .recurso h3 { font-family:var(--fuente-display); font-size:21px; line-height:1; letter-spacing:.8px; text-transform:uppercase; }
+  .recurso h3 a { color:#fff; text-decoration:none; }
+  .recurso h3 a::after { content:""; position:absolute; inset:0; }  /* toda la tarjeta abre el recurso */
+  .recurso h3 a:focus-visible { outline:none; }
+  .recurso p { font-size:13px; line-height:1.4; color:rgba(255,255,255,.65); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .recurso .pie { margin-top:auto; padding-top:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    font-family:var(--mono); font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:rgba(255,255,255,.45); }
+  .recurso .pie time { color:rgba(255,255,255,.75); font-weight:600; }
+  .recurso .pie form { margin-left:auto; position:relative; z-index:1; }
+  .recurso .quitar { appearance:none; background:none; border:0; cursor:pointer; padding:2px 0; color:rgba(255,255,255,.5);
+    font:inherit; letter-spacing:inherit; text-transform:inherit; text-decoration:underline; text-underline-offset:3px; }
+  .recurso .quitar:hover { color:var(--pruebas); }
+  .tarjetas.cerrado .recurso .mini::after { content:""; position:absolute; right:10px; top:10px; width:26px; height:26px; border-radius:50%;
+    background:rgba(9,15,26,.72) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V7a4 4 0 0 1 8 0v4'/%3E%3C/svg%3E") center/14px no-repeat; border:1px solid rgba(255,255,255,.25); }
+  .vacio { padding:22px; border-radius:16px; border:1px dashed rgba(255,255,255,.25); color:rgba(255,255,255,.6); font-size:14px; text-align:center; }
+
+  .alta { margin-top:18px; border-radius:16px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); }
+  .alta summary { list-style:none; cursor:pointer; display:flex; align-items:center; gap:12px; padding:14px 18px;
+    font-family:var(--fuente-display); font-size:22px; letter-spacing:1.4px; text-transform:uppercase; }
+  .alta summary::-webkit-details-marker { display:none; }
+  .alta summary .ic { width:30px; height:30px; stroke:#fff; fill:none; stroke-width:1.8; stroke-linecap:round; border:1px solid rgba(255,255,255,.4); border-radius:50%; padding:5px; transition:transform .15s ease; }
+  .alta[open] summary .ic { transform:rotate(45deg); }
+  .alta summary small { margin-left:auto; font-family:var(--mono); font-size:10.5px; letter-spacing:1.2px; color:rgba(255,255,255,.45); }
+  .alta form { display:grid; grid-template-columns:1fr 1fr; gap:14px 18px; padding:4px 18px 18px; border-top:1px solid rgba(255,255,255,.1); padding-top:16px; }
+  @media (max-width:640px) { .alta form { grid-template-columns:1fr; } }
+  .campo { display:grid; gap:5px; align-content:start; }
+  .campo.ancho { grid-column:1 / -1; }
+  .campo label { font-size:13px; font-weight:600; color:rgba(255,255,255,.85); }
+  .campo small { font-size:12px; color:rgba(255,255,255,.5); }
+  .campo input, .campo textarea { width:100%; padding:9px 12px; border-radius:9px; border:1px solid rgba(255,255,255,.25); background:rgba(0,0,0,.25); color:#fff; font-size:14px; }
+  .campo input::placeholder, .campo textarea::placeholder { color:rgba(255,255,255,.35); }
+  .campo input[type=file] { padding:7px 10px; }
+  .campo input[type=file]::file-selector-button { margin-right:10px; padding:5px 10px; border-radius:7px; border:1px solid rgba(255,255,255,.4); background:transparent; color:#fff; cursor:pointer; font-size:12.5px; }
+  .campo input[type=date] { color-scheme:dark; }
+  .campo input:focus, .campo textarea:focus { outline:2px solid rgba(255,255,255,.6); outline-offset:0; }
+  .campo .vista { display:block; width:100%; max-width:240px; aspect-ratio:16 / 10; object-fit:cover; border-radius:9px; border:1px solid rgba(255,255,255,.25); background:#0d1626; }
+  .campo .vista[hidden] { display:none; }   /* display:block le ganaba al [hidden] del navegador */
+  .alta .acciones { grid-column:1 / -1; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .alta .estado { font-size:13px; color:rgba(255,255,255,.7); }
+  @media (max-width:600px) { .rec-cab h2 { font-size:34px; } .rec-cab .rec-ic { width:36px; height:36px; } }
   @media (prefers-reduced-motion:reduce) { *, *::before { animation:none !important; transition:none !important; } }
 </style>
 </head>
@@ -160,6 +250,126 @@
       </section>
     {% endfor %}
     </div>
+
+    {# ---- Recursos: la documentación del proyecto (recursos.py) ---- #}
+    {% set avisos = {
+      'pase': ('mal', 'Ingresá la clave de plataforma para abrir los recursos.'),
+      'clave': ('mal', 'Esa no es la clave de plataforma. Probá de nuevo.'),
+      'pase-ok': ('ok', 'Listo: este dispositivo abre y sube recursos por 30 días.'),
+      'agregado': ('ok', 'Recurso agregado al catálogo.'),
+      'quitado': ('ok', 'Recurso quitado del catálogo.'),
+      'titulo': ('mal', 'Falta el título.'),
+      'archivo': ('mal', 'Elegí un archivo o pegá un enlace.'),
+      'enlace': ('mal', 'El enlace tiene que empezar con http:// o https://.'),
+      'tamanio': ('mal', 'El archivo supera los ' ~ tamanio_max_mb ~ ' MB.'),
+      'vacio': ('mal', 'El archivo está vacío.'),
+      'miniatura': ('mal', 'La miniatura tiene que ser una imagen de hasta 2 MB.'),
+    } %}
+    <section class="recursos" id="recursos" aria-labelledby="titulo-recursos">
+      <div class="rec-cab">
+        <svg class="rec-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-recursos"/></svg>
+        <div>
+          <h2 id="titulo-recursos">Recursos</h2>
+          <p class="rec-lede">La documentación del proyecto en un solo lugar, de la más nueva a la más vieja. Cada recurso abre en una pestaña nueva.</p>
+        </div>
+        <span class="rec-cuenta">{{ recursos|length }} recurso{{ '' if recursos|length == 1 else 's' }}</span>
+      </div>
+
+      {% if aviso in avisos %}
+      <p class="aviso {{ avisos[aviso][0] }}" role="status">{{ avisos[aviso][1] }}</p>
+      {% endif %}
+
+      {% if not pase %}
+      <div class="pase">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-candado"/></svg>
+        <p>Son documentos internos: para abrirlos o subir uno nuevo, ingresá la clave de plataforma. Una vez por dispositivo; el pase dura 30 días.</p>
+        <form method="post" action="/recursos/pase">
+          <input type="password" name="clave" placeholder="Clave de plataforma" autocomplete="current-password" required aria-label="Clave de plataforma">
+          <button class="boton" type="submit">Abrir recursos</button>
+        </form>
+      </div>
+      {% endif %}
+
+      {% if recursos %}
+      <div class="tarjetas {{ '' if pase else 'cerrado' }}">
+      {% for r in recursos %}
+        <article class="recurso {{ r.tipo }}" id="recurso-{{ r.ref }}">
+          <a class="mini" href="{{ r.href }}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">
+            {% if r.miniatura_url %}
+            <img src="{{ r.miniatura_url }}" alt="" loading="lazy" width="640" height="400">
+            {% else %}
+            <div class="portada"><svg class="ic" viewBox="0 0 24 24"><use href="#ic-tipo-{{ r.tipo }}"/></svg><span>{{ r.portada }}</span></div>
+            {% endif %}
+            <span class="tipo"><svg viewBox="0 0 24 24"><use href="#ic-tipo-{{ r.tipo }}"/></svg>{{ r.tipo_nombre }}</span>
+          </a>
+          <div class="cuerpo">
+            <h3><a href="{{ r.href }}" target="_blank" rel="noopener">{{ r.titulo }}</a></h3>
+            {% if r.descripcion %}<p>{{ r.descripcion }}</p>{% endif %}
+            <div class="pie">
+              <time datetime="{{ r.fecha_iso }}">{{ r.fecha_legible }}</time>
+              {% if r.tamanio_legible %}<span>{{ r.tamanio_legible }}</span>{% endif %}
+              {% if r.origen == 'repo' %}
+              <span title="Versionado en recursos/ del repositorio: se cambia con un commit">del repositorio</span>
+              {% elif pase %}
+              <form method="post" action="/recursos/{{ r.ref }}/quitar" onsubmit='return confirm({{ ("¿Quitar «" ~ r.titulo ~ "» del catálogo? No se puede deshacer.")|tojson }})'>
+                <button class="quitar" type="submit">Quitar</button>
+              </form>
+              {% endif %}
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+      </div>
+      {% else %}
+      <p class="vacio">Todavía no hay recursos. Subí el primero desde acá abajo.</p>
+      {% endif %}
+
+      {% if pase %}
+      <details class="alta" id="alta" {% if aviso in ('titulo', 'archivo', 'enlace', 'tamanio', 'vacio', 'miniatura') %}open{% endif %}>
+        <summary><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-mas"/></svg>Agregar un recurso<small>archivo hasta {{ tamanio_max_mb }} MB · o un enlace</small></summary>
+        <form method="post" action="/recursos" enctype="multipart/form-data" id="form-recurso">
+          <div class="campo">
+            <label for="rec-archivo">Archivo</label>
+            <input type="file" name="archivo" id="rec-archivo">
+            <small>Página HTML, PDF, imagen, video, audio o cualquier otro archivo.</small>
+          </div>
+          <div class="campo">
+            <label for="rec-url">…o un enlace</label>
+            <input type="url" name="url" id="rec-url" placeholder="https://" inputmode="url">
+            <small>Para lo que vive en la nube y no hace falta copiar.</small>
+          </div>
+          <div class="campo">
+            <label for="rec-titulo">Título</label>
+            <input type="text" name="titulo" id="rec-titulo" maxlength="200" required placeholder="Plan Maestro Colm3na">
+          </div>
+          <div class="campo">
+            <label for="rec-fecha">Fecha del documento</label>
+            <input type="date" name="fecha" id="rec-fecha" value="{{ hoy }}" required>
+            <small>Es el orden del catálogo, no la fecha de subida.</small>
+          </div>
+          <div class="campo ancho">
+            <label for="rec-descripcion">Descripción, en una línea</label>
+            <input type="text" name="descripcion" id="rec-descripcion" maxlength="200" placeholder="Qué es y para qué sirve.">
+          </div>
+          <div class="campo">
+            <label for="rec-fragmento">Abrir en (opcional)</label>
+            <input type="text" name="fragmento" id="rec-fragmento" placeholder="#estrategia" maxlength="80">
+            <small>Ancla o pestaña con la que conviene abrir la página.</small>
+          </div>
+          <div class="campo">
+            <label for="rec-miniatura">Miniatura (opcional)</label>
+            <input type="file" name="miniatura" id="rec-miniatura" accept="image/*">
+            <small>Para imágenes y videos se arma sola al elegir el archivo; para el resto, una captura o lo que quieras mostrar.</small>
+            <img class="vista" id="mini-vista" alt="" hidden>
+          </div>
+          <div class="acciones">
+            <button class="boton" type="submit" id="alta-boton">Agregar al catálogo</button>
+            <span class="estado" id="alta-estado" role="status"></span>
+          </div>
+        </form>
+      </details>
+      {% endif %}
+    </section>
   </main>
 
   <!-- Íconos SVG de línea: uno por rol y uno por entorno -->
@@ -170,6 +380,16 @@
       <g id="ic-empresa"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/><path d="M12 11v3"/></g>
       <g id="ic-plataforma"><path d="M12 3l7.8 4.5v9L12 21l-7.8-4.5v-9z"/><path d="M12 8l3.5 2v4L12 16l-3.5-2v-4z"/></g>
       <g id="ic-pruebas"><path d="M9 3h6"/><path d="M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2.2h12.4a1.5 1.5 0 0 0 1.3-2.2L14 9V3"/><path d="M7.5 15h9"/></g>
+      <g id="ic-recursos"><path d="M3 5h6l2 2h10v12H3z"/><path d="M3 10h18"/></g>
+      <g id="ic-candado"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></g>
+      <g id="ic-mas"><path d="M12 5v14"/><path d="M5 12h14"/></g>
+      <g id="ic-tipo-html"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="m10 12-2 2 2 2"/><path d="m14 12 2 2-2 2"/></g>
+      <g id="ic-tipo-pdf"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6"/><path d="M9 16h6"/></g>
+      <g id="ic-tipo-imagen"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 16-5-5-8 8"/></g>
+      <g id="ic-tipo-video"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></g>
+      <g id="ic-tipo-audio"><path d="M4 10v4h3l4 4V6L7 10z"/><path d="M15 9a4 4 0 0 1 0 6"/><path d="M17.5 6.5a8 8 0 0 1 0 11"/></g>
+      <g id="ic-tipo-enlace"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></g>
+      <g id="ic-tipo-archivo"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></g>
       <g id="ic-demo"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="m9 12 2 2 4-4"/></g>
     </defs>
   </svg>
@@ -206,6 +426,85 @@
         if (fecha(env) && fecha(env).textContent.trim() === '…') fecha(env).textContent = 'sin dato';
       });
   });
+})();
+</script>
+<script>
+// Alta de recursos: la miniatura se arma en el navegador para imágenes y
+// videos (canvas 640x400, recorte "cover") y viaja en el mismo POST; el
+// título y la fecha se prellenan desde el archivo. Sin JS el <form> sigue
+// funcionando igual, solo que sin miniatura automática. El envío va por
+// fetch para mostrar el error al lado del botón sin perder lo escrito.
+(function () {
+  const form = document.getElementById('form-recurso');
+  if (!form) return;
+  const archivo = form.elements.archivo, titulo = form.elements.titulo, fecha = form.elements.fecha,
+        miniatura = form.elements.miniatura, vista = document.getElementById('mini-vista'),
+        estado = document.getElementById('alta-estado'), boton = document.getElementById('alta-boton');
+  let miniAuto = null;
+  const ANCHO = 640, ALTO = 400;
+
+  function recortar(fuente, w, h) {
+    const c = document.createElement('canvas'); c.width = ANCHO; c.height = ALTO;
+    const ctx = c.getContext('2d'); ctx.fillStyle = '#0d1626'; ctx.fillRect(0, 0, ANCHO, ALTO);
+    if (w && h) { const k = Math.max(ANCHO / w, ALTO / h); ctx.drawImage(fuente, (ANCHO - w * k) / 2, (ALTO - h * k) / 2, w * k, h * k); }
+    return new Promise(res => c.toBlob(res, 'image/jpeg', 0.82));
+  }
+  function desdeImagen(f) {
+    return new Promise(res => {
+      const img = new Image();
+      img.onload = () => recortar(img, img.naturalWidth, img.naturalHeight).then(b => { URL.revokeObjectURL(img.src); res(b); });
+      img.onerror = () => res(null);
+      img.src = URL.createObjectURL(f);
+    });
+  }
+  function desdeVideo(f) {
+    return new Promise(res => {
+      const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'metadata';
+      const fin = b => { URL.revokeObjectURL(v.src); res(b); };
+      v.onerror = () => fin(null);
+      v.onloadedmetadata = () => { v.currentTime = Math.min(1, (v.duration || 2) / 10); };
+      v.onseeked = () => recortar(v, v.videoWidth, v.videoHeight).then(fin);
+      v.src = URL.createObjectURL(f);
+    });
+  }
+  function mostrar(blob) {
+    miniAuto = blob;
+    if (blob) { vista.src = URL.createObjectURL(blob); vista.hidden = false; } else { vista.hidden = true; }
+  }
+  archivo.addEventListener('change', async () => {
+    const f = archivo.files[0]; if (!f) return;
+    if (!titulo.value.trim()) titulo.value = f.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim();
+    if (f.lastModified) {
+      const d = new Date(f.lastModified);
+      fecha.value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    if (miniatura.files.length) return;
+    estado.textContent = '';
+    if (f.type.startsWith('image/')) mostrar(await desdeImagen(f));
+    else if (f.type.startsWith('video/')) mostrar(await desdeVideo(f));
+    else mostrar(null);
+  });
+  miniatura.addEventListener('change', () => {
+    const f = miniatura.files[0];
+    if (f) { miniAuto = null; vista.src = URL.createObjectURL(f); vista.hidden = false; }
+  });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    if (miniatura.files.length === 0) { if (miniAuto) fd.set('miniatura', miniAuto, 'miniatura.jpg'); else fd.delete('miniatura'); }
+    if (archivo.files.length === 0) fd.delete('archivo');
+    boton.disabled = true; estado.textContent = 'Subiendo…';
+    try {
+      const r = await fetch(form.action, { method: 'POST', body: fd });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.ir) { location.href = j.ir; return; }
+      estado.textContent = j.detail || ('No se pudo subir (' + r.status + ').');
+    } catch (err) {
+      estado.textContent = 'No se pudo subir: ' + err;
+    }
+    boton.disabled = false;
+  });
+  if (location.hash === '#alta') document.getElementById('alta').open = true;
 })();
 </script>
 </body>

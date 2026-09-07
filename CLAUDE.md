@@ -71,6 +71,9 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   troceo, embeddings locales e indexación en segundo plano.
 - validaciones_tramite.py — motor puro de validaciones de formularios de
   Trámites (fija + consistencia; ver sección propia).
+- recursos.py — Recursos de la landing `/entornos`: catálogo de la
+  documentación del proyecto (los versionados en `recursos/` + los subidos
+  a la base), el pase de 30 días y la clasificación por tipo.
 - push.py — notificaciones Web Push a la PWA del trabajador (novedades de
   trámites; apagado sin claves VAPID).
 - asistente.py — Asistente del Panel Sindical: pregunta en lenguaje
@@ -137,7 +140,13 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   variable, nada. Va también en el "Acerca de". Donde hay distintivo existe
   además `/entornos`: landing interna con los 8 accesos (4 logins x
   Pruebas/Demo, hosts en `entorno.URLS`) y la versión que corre en cada
-  uno, que lee de `/api/version` (público, en todos los entornos).
+  uno, que lee de `/api/version` (público, en todos los entornos). Debajo,
+  **Recursos** (`recursos.py`): la documentación del proyecto catalogada
+  con miniatura, descripción y fecha -- los versionados en `recursos/`
+  (`recursos.SEMILLA`) más los subidos desde la misma landing (tabla
+  `Recurso`, bytes en la base). Abrir, subir y quitar piden una vez por
+  dispositivo la clave de plataforma (cookie `acceso_recursos`, 30 días,
+  NO es una sesión de rol). Detalle en HISTORIAL.md, "Recursos en la landing".
 - ANTHROPIC_API_KEY — clave de la API de Anthropic.
 - PLATAFORMA_CUIT — CUIT del login de plataforma (default 20000000000).
 - PLATAFORMA_PASSWORD — clave del login de plataforma.

@@ -1,0 +1,848 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style></head><body>
+<title>Implementación La Bancaria</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+:root{
+  --tinta:#0a1421;--miel:#f0a01e;--agua:#a0030b;--verde:#0f8a6a;--azul:#2e5c8a;--violeta:#7a2e8f;
+  --papel:#f4f6f9;--blanco:#fff;--linea:#dbe2ea;--texto:#16243a;--texto2:#4c5d75;--suave:#eef2f7;--suave2:#f9fafc;
+  --hecho-bg:#f3faf6;--bloq-bg:#fdf5f4;--input:#fff;--sombra:0 1px 2px rgba(10,20,33,.05);
+  --display:'Barlow Condensed','Arial Narrow',sans-serif;--body:'Barlow',system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --papel:#0e1622;--blanco:#152030;--linea:#2a3748;--texto:#e6ecf4;--texto2:#a3b1c4;--suave:#1c2838;--suave2:#18222f;
+  --hecho-bg:#132a22;--bloq-bg:#2a1a1c;--input:#0f1826;--azul:#8db6e3;--verde:#3fbf98;color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --papel:#0e1622;--blanco:#152030;--linea:#2a3748;--texto:#e6ecf4;--texto2:#a3b1c4;--suave:#1c2838;--suave2:#18222f;
+  --hecho-bg:#132a22;--bloq-bg:#2a1a1c;--input:#0f1826;--azul:#8db6e3;--verde:#3fbf98;color-scheme:dark;}
+*{box-sizing:border-box;margin:0}
+body{background:var(--papel);color:var(--texto);font-family:var(--body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:var(--azul)}
+h1,h2,h3,h4{text-wrap:balance}
+.top{background:radial-gradient(900px 480px at 78% -10%,rgba(160,3,11,.28),transparent 62%),linear-gradient(160deg,#0d1626 20%,var(--tinta) 70%,#24354f);color:#fff;padding:26px clamp(18px,4vw,48px) 22px;position:relative;overflow:hidden}
+.top::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.12;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='104' viewBox='0 0 120 104'%3E%3Cpath d='M30 2l26 15v30L30 62 4 47V17zM90 2l26 15v30L90 62 64 47V17zM60 54l26 15v30L60 104 34 89V69z' fill='none' stroke='%23fff' stroke-width='1'/%3E%3C/svg%3E")}
+.top>*{position:relative;z-index:1}
+.eyebrow{font-family:var(--display);font-weight:600;letter-spacing:2.4px;text-transform:uppercase;color:var(--miel);font-size:13px}
+.top h1{font-family:var(--display);font-weight:700;font-size:clamp(30px,4.5vw,50px);line-height:1;margin:6px 0 10px}
+.top p{max-width:80ch;color:rgba(255,255,255,.8);font-size:15px}
+.top .datos{display:flex;flex-wrap:wrap;gap:18px 28px;margin-top:16px}
+.top .datos div{font-size:13px;color:rgba(255,255,255,.7)}
+.top .datos b{display:block;font-family:var(--display);font-size:20px;color:#fff;letter-spacing:.5px}
+nav.tabs{position:sticky;top:0;z-index:5;background:var(--blanco);border-bottom:1px solid var(--linea);display:flex;gap:2px;padding:0 clamp(10px,3vw,36px);overflow-x:auto;scrollbar-width:none}
+nav.tabs button{appearance:none;border:0;background:none;font-family:var(--display);font-size:15px;letter-spacing:1.4px;text-transform:uppercase;color:var(--texto2);padding:13px 14px 11px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+nav.tabs button.on{color:var(--agua);border-bottom-color:var(--agua)}
+nav.tabs button:focus-visible{outline:2px solid var(--miel);outline-offset:-2px}
+nav.tabs .sync{margin-left:auto;align-self:center;font-size:12px;color:var(--texto2);display:flex;align-items:center;gap:6px;white-space:nowrap;padding-right:6px}
+.sync::before{content:"";width:8px;height:8px;border-radius:50%;background:#c3ccd8;flex:none}
+.sync.on::before{background:var(--verde)}.sync.local::before{background:var(--miel)}
+.wrap{max-width:1180px;margin:0 auto;padding:24px clamp(14px,3vw,36px) 70px}
+.vista{display:none}.vista.on{display:block}
+.grid2{display:grid;grid-template-columns:270px minmax(0,1fr);gap:26px;align-items:start}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}.side{position:static!important}}
+.side{position:sticky;top:60px;display:grid;gap:12px}
+.panel{background:var(--blanco);border:1px solid var(--linea);border-radius:14px;padding:14px 16px;box-shadow:var(--sombra)}
+.panel h3{font-family:var(--display);font-size:15px;letter-spacing:1.8px;text-transform:uppercase;color:var(--texto2);margin-bottom:10px;font-weight:600}
+.total .n{font-family:var(--display);font-weight:700;font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
+.total .l{font-size:13px;color:var(--texto2)}
+.bar{height:8px;border-radius:5px;background:var(--suave);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--miel),var(--agua));width:0;transition:width .4s}
+.bar i.ok{background:var(--verde)}
+.blk{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--suave);cursor:pointer;text-decoration:none;color:inherit}
+.blk:first-child{border-top:0}
+.blk b{font-family:var(--display);font-size:15px;min-width:24px;color:var(--agua)}
+.blk span{flex:1;font-size:13.5px}
+.blk small{font-variant-numeric:tabular-nums;color:var(--texto2);font-size:12px;min-width:34px;text-align:right}
+.blk .mini{height:5px;width:48px;background:var(--suave);border-radius:4px;overflow:hidden;flex:none}
+.blk .mini i{display:block;height:100%;background:var(--verde);width:0}
+.filtros{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--linea);background:var(--blanco);border-radius:999px;padding:4px 10px;font-size:12.5px;cursor:pointer;font-family:var(--display);letter-spacing:1.2px;text-transform:uppercase;color:var(--texto2)}
+.chip.on{background:var(--tinta);color:#fff;border-color:var(--tinta)}
+/* documento */
+.doc{max-width:78ch}
+.doc h2{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.05;margin:34px 0 10px;color:var(--texto)}
+.doc h2:first-child{margin-top:0}
+.doc h3{font-family:var(--display);font-weight:600;font-size:20px;letter-spacing:.4px;margin:22px 0 6px}
+.doc p{margin:0 0 12px;color:var(--texto)}
+.doc ul,.doc ol{margin:0 0 12px 20px}
+.doc li{margin-bottom:5px}
+.doc .nota{border-left:3px solid var(--miel);background:var(--suave2);padding:10px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14.5px}
+.doc table{border-collapse:collapse;width:100%;font-size:14px;margin:10px 0 16px}
+.doc th,.doc td{border-bottom:1px solid var(--linea);padding:8px 10px;text-align:left;vertical-align:top}
+.doc th{font-family:var(--display);letter-spacing:1.2px;text-transform:uppercase;font-size:12.5px;color:var(--texto2)}
+.tabla-scroll{overflow-x:auto}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:10px 0 18px}
+.kpi{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;padding:12px 14px}
+.kpi b{font-family:var(--display);font-size:26px;display:block;line-height:1.05}
+.kpi span{font-size:13px;color:var(--texto2)}
+/* timeline */
+.tl{display:grid;grid-template-columns:150px repeat(14,1fr);gap:3px;font-size:12px;margin:12px 0 22px;min-width:760px}
+.tl .h{font-family:var(--display);letter-spacing:1px;text-transform:uppercase;color:var(--texto2);text-align:center;padding-bottom:4px;font-size:11.5px}
+.tl .lab{font-family:var(--display);font-size:14px;padding:5px 6px 5px 0;display:flex;align-items:center}
+.tl .cel{height:30px;border-radius:5px;background:var(--suave)}
+.tl .cel.e0{background:#8a94a6}.tl .cel.e1{background:var(--miel)}.tl .cel.e2{background:#d9782c}.tl .cel.e3{background:var(--agua)}.tl .cel.e4{background:var(--violeta)}.tl .cel.e5{background:var(--verde)}
+.tl .cel.hito{position:relative}.tl .cel.hito::after{content:"◆";position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:12px}
+/* items checklist */
+section.bloque{background:var(--blanco);border:1px solid var(--linea);border-radius:16px;margin-bottom:18px;overflow:hidden;scroll-margin-top:70px;box-shadow:var(--sombra)}
+.bh{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--linea);background:linear-gradient(90deg,var(--blanco),var(--suave2))}
+.bh .num{font-family:var(--display);font-weight:700;font-size:34px;color:var(--agua);line-height:1;min-width:44px}
+.bh h2{font-family:var(--display);font-weight:700;font-size:24px;line-height:1.05}
+.bh .sub{font-family:var(--display);font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:var(--texto2)}
+.bh p{color:var(--texto2);font-size:13.5px;margin-top:3px;max-width:80ch}
+.bh .prog{margin-left:auto;text-align:right;min-width:120px}
+.bh .prog b{font-family:var(--display);font-size:22px;font-variant-numeric:tabular-nums}
+.bh .prog .bar{width:120px}
+.bmeta{padding:12px 20px;border-bottom:1px solid var(--suave);background:var(--suave2);display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 18px;font-size:13.5px}
+.bmeta b{font-family:var(--display);letter-spacing:1.2px;text-transform:uppercase;font-size:11.5px;color:var(--texto2);display:block;margin-bottom:2px}
+.item{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:12px;padding:13px 20px;border-bottom:1px solid var(--suave);align-items:start}
+.item:last-child{border-bottom:0}
+.item.hecho{background:var(--hecho-bg)}.item.bloqueado{background:var(--bloq-bg)}
+.chk{width:26px;height:26px;border-radius:8px;border:2px solid #c3ccd8;display:grid;place-items:center;cursor:pointer;background:var(--input);margin-top:2px;font-size:15px;line-height:1;user-select:none;color:var(--texto)}
+.chk.hecho{background:var(--verde);border-color:var(--verde);color:#fff}
+.chk.en_curso{background:var(--miel);border-color:var(--miel);color:#231a08}
+.chk.bloqueado{background:var(--agua);border-color:var(--agua);color:#fff}
+.it-h{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.it-h .id{font-family:var(--display);font-weight:700;color:var(--agua);font-size:15px}
+.it-h .t{font-weight:600;font-size:15.5px}
+.badge{font-family:var(--display);font-size:11.5px;letter-spacing:1.4px;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid;font-weight:600;white-space:nowrap}
+.b-colm3na{color:#1f4b7a;border-color:#9fb8d3;background:#eaf1f9}
+.b-funcional{color:#0f6b52;border-color:#8fd0bb;background:#e8f7f1}
+.b-dev{color:#7a2e8f;border-color:#c9a3d6;background:#f5ecf8}
+.b-sindicato{color:#7a3d1c;border-color:#dcb49d;background:#fbeee6}
+.b-sistemas{color:#334155;border-color:#b6c2d1;background:#eef2f7}
+.b-comunicacion{color:#8a5a00;border-color:#e2c27e;background:#fff5e1}
+.b-legal{color:#5d5aa8;border-color:#bcbbe0;background:#efeffa}
+.b-bot{color:#8a1d3a;border-color:#dba3b4;background:#fbeaef}
+.b-todos{color:#0a1421;border-color:#c3ccd8;background:#f4f6f9}
+.fun{color:var(--texto2);font-size:14px;margin-top:5px;max-width:92ch}
+.ent{margin-top:6px;font-size:13px;color:var(--texto2)}
+.ent b{font-family:var(--display);letter-spacing:1.2px;text-transform:uppercase;font-size:11px;color:var(--verde)}
+.meta{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:160px}
+.meta select,.meta input{font-family:var(--body);font-size:13px;padding:5px 8px;border-radius:8px;border:1px solid var(--linea);background:var(--input);color:var(--texto)}
+.meta input{width:160px;font-size:12.5px}
+.meta small{font-size:11.5px;color:var(--texto2);text-align:right}
+.hidden{display:none!important}
+.leyenda{display:flex;flex-wrap:wrap;gap:10px 16px;font-size:12.5px;color:var(--texto2);align-items:center}
+.leyenda .chk{width:18px;height:18px;border-radius:5px;font-size:11px;cursor:default;margin:0}
+@media (max-width:640px){.item{grid-template-columns:34px 1fr}.meta{grid-column:2;align-items:flex-start}.meta small{text-align:left}}
+/* formularios */
+.form{background:var(--blanco);border:1px solid var(--linea);border-radius:16px;margin-bottom:18px;overflow:hidden;scroll-margin-top:70px;box-shadow:var(--sombra)}
+.fh{padding:16px 20px;border-bottom:1px solid var(--linea);display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.fh .num{font-family:var(--display);font-weight:700;font-size:30px;color:var(--agua);line-height:1;min-width:44px}
+.fh h2{font-family:var(--display);font-weight:700;font-size:23px;line-height:1.05}
+.fh p{color:var(--texto2);font-size:13.5px;margin-top:4px;max-width:80ch}
+.fh .est{margin-left:auto;text-align:right;font-size:12.5px;color:var(--texto2)}
+.fh .est b{font-family:var(--display);font-size:20px;display:block;font-variant-numeric:tabular-nums}
+.fb{padding:6px 20px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px 22px}
+.campo{display:grid;gap:4px;align-content:start}
+.campo.ancho{grid-column:1/-1}
+.campo label{font-weight:600;font-size:14px}
+.campo .ayuda{font-size:12.5px;color:var(--texto2)}
+.campo input,.campo textarea,.campo select{font-family:var(--body);font-size:14px;padding:8px 10px;border-radius:9px;border:1px solid var(--linea);background:var(--input);color:var(--texto);width:100%}
+.campo textarea{min-height:76px;resize:vertical}
+.campo input:focus,.campo textarea:focus,.campo select:focus{outline:2px solid var(--miel);outline-offset:0;border-color:var(--miel)}
+.opts{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:14px}
+.opts label{display:flex;gap:6px;align-items:center;font-weight:400}
+.ftitulo{grid-column:1/-1;font-family:var(--display);letter-spacing:1.6px;text-transform:uppercase;font-size:12.5px;color:var(--agua);margin-top:10px;padding-top:10px;border-top:1px dashed var(--linea)}
+.docs{grid-column:1/-1;display:grid;gap:6px}
+.docrow{display:grid;grid-template-columns:minmax(0,1fr) 150px minmax(120px,220px);gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--suave);font-size:14px}
+.docrow small{display:block;color:var(--texto2);font-size:12.5px}
+.docrow select,.docrow input{font-family:var(--body);font-size:13px;padding:5px 8px;border-radius:8px;border:1px solid var(--linea);background:var(--input);color:var(--texto);width:100%}
+@media (max-width:640px){.docrow{grid-template-columns:1fr}}
+.btn{appearance:none;border:1px solid var(--linea);background:var(--blanco);color:var(--texto);font-family:var(--display);letter-spacing:1.4px;text-transform:uppercase;font-size:13px;padding:8px 14px;border-radius:9px;cursor:pointer}
+.btn.pri{background:var(--tinta);color:#fff;border-color:var(--tinta)}
+.btn.miel{background:var(--miel);color:#231a08;border-color:var(--miel)}
+.btn:focus-visible{outline:2px solid var(--miel);outline-offset:2px}
+.acciones{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 18px}
+.acciones .msg{font-size:13px;color:var(--texto2)}
+/* decisiones */
+.dec{background:var(--blanco);border:1px solid var(--linea);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:grid;grid-template-columns:70px minmax(0,1fr);gap:6px 14px;box-shadow:var(--sombra)}
+.dec .n{font-family:var(--display);font-weight:700;font-size:22px;color:var(--agua)}
+.dec .f{font-size:12px;color:var(--texto2)}
+.dec h4{font-size:16px;font-weight:600}
+.dec .cuerpo{font-size:14px;color:var(--texto);display:grid;gap:4px}
+.dec .cuerpo b{font-family:var(--display);letter-spacing:1.2px;text-transform:uppercase;font-size:11px;color:var(--texto2);margin-right:6px}
+.dec .est{justify-self:start}
+.dec .quitar{justify-self:end;font-size:12px;color:var(--texto2);background:none;border:0;cursor:pointer;text-decoration:underline}
+.riesgo{display:grid;grid-template-columns:26px minmax(0,1fr);gap:10px;padding:10px 0;border-bottom:1px solid var(--linea);font-size:14px}
+.riesgo i{width:18px;height:18px;border-radius:50%;margin-top:3px;display:block}
+.riesgo i.alto{background:var(--agua)}.riesgo i.medio{background:var(--miel)}.riesgo i.bajo{background:var(--verde)}
+.riesgo b{display:block}
+.riesgo span{color:var(--texto2)}
+.foot{margin-top:30px;color:var(--texto2);font-size:12.5px;max-width:90ch}
+@media print{nav.tabs,.side,.acciones,.meta{display:none!important}.vista{display:block!important}.top{background:var(--tinta)!important}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<header class="top">
+  <div class="eyebrow">Colm3na · Mi Trabajo · Plan de implementación</div>
+  <h1>Implementación en el sindicato: de la presentación inicial a la operación regular</h1>
+  <p>Documento de trabajo compartido entre el equipo de Colm3na, el sindicato y el equipo del bot conversacional. Reúne la estrategia, el plan por etapas con su checklist, los formularios de relevamiento y el registro de decisiones. Lo que se tilda o se escribe acá queda guardado y lo ven todos los que abren la página.</p>
+  <div class="datos">
+    <div><b>13 semanas</b>Despliegue gradual en 3 meses</div>
+    <div><b>5 etapas + preparación</b>Cada una con criterio de salida</div>
+    <div><b>3 equipos</b>Colm3na · Sindicato · Bot</div>
+    <div><b id="hdr-avance">0 %</b>Avance del plan</div>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="on" data-v="estrategia">Estrategia</button>
+  <button data-v="plan">Plan por etapas</button>
+  <button data-v="relevamiento">Relevamiento</button>
+  <button data-v="bot">Bot</button>
+  <button data-v="decisiones">Decisiones</button>
+  <button data-v="riesgos">Riesgos e indicadores</button>
+  <span class="sync" id="sync">conectando…</span>
+</nav>
+
+<div class="wrap">
+<!-- ===== ESTRATEGIA ===== -->
+<section class="vista on" id="v-estrategia">
+<div class="grid2">
+<aside class="side">
+  <div class="panel"><h3>En esta sección</h3>
+    <a class="blk" href="#e-punto"><b>1</b><span>Punto de partida</span></a>
+    <a class="blk" href="#e-principios"><b>2</b><span>Principios de la implementación</span></a>
+    <a class="blk" href="#e-equipo"><b>3</b><span>Equipos y roles</span></a>
+    <a class="blk" href="#e-gob"><b>4</b><span>Gobernanza y ritmo</span></a>
+    <a class="blk" href="#e-alcance"><b>5</b><span>Alcance por oleadas</span></a>
+    <a class="blk" href="#e-calendario"><b>6</b><span>Calendario</span></a>
+    <a class="blk" href="#e-docs"><b>7</b><span>Cómo se documenta</span></a>
+  </div>
+  <div class="panel"><h3>Cómo usar esta página</h3>
+    <p style="font-size:13px;color:var(--texto2)">Leé <b>Estrategia</b> una vez. Trabajá todas las semanas en <b>Plan por etapas</b> (checklist) y, durante las dos primeras, en <b>Relevamiento</b> (formularios). Cada acuerdo que cambie algo va a <b>Decisiones</b>.</p>
+  </div>
+</aside>
+<div class="doc">
+<h2 id="e-punto">1. Punto de partida</h2>
+<p>El sindicato firmó el contrato de licencia de la suite Colm3na · Mi Trabajo y la implementación arranca en una semana. La plataforma ya existe y funciona en producción con casi todas las funcionalidades que se van a desplegar: la aplicación del trabajador (validación de recibos con IA, semáforo de aportes, credencial digital, novedades, beneficios, notificaciones y trámites), el panel del sindicato (tablero, fórmulas y conceptos del convenio, padrón, notificaciones segmentadas, constructor de trámites, empleadores, seccionales y administradores) y la aplicación para empleadores (trámites y notificaciones con las empresas). A esto se suma el bot conversacional sobre el convenio, que desarrolla un equipo aparte y se integra a la app del trabajador durante esta implementación.</p>
+<p>Por lo tanto, esto <b>no es un desarrollo a medida</b>: es la puesta en marcha de un producto existente en una organización concreta. El trabajo central es relevar cómo funciona el sindicato, cargar sus reglas y sus datos, probar con trabajadores reales, capacitar a quienes lo van a operar y acompañar la adopción. Las mejoras y modificaciones que surjan se administran con un procedimiento de cambios, no se improvisan.</p>
+<div class="nota"><b>Regla de oro de la plataforma:</b> el modelo lee, el código juzga y el sindicato es dueño de las reglas. Toda la configuración de conceptos, fórmulas, escalas, trámites y comunicaciones es del sindicato y la carga (o la valida) su gente. Colm3na acompaña, no decide por el gremio.</div>
+
+<h2 id="e-principios">2. Principios de la implementación</h2>
+<ol>
+<li><b>Gradual y con valor temprano.</b> A las cuatro semanas ya hay trabajadores reales usando la app en un grupo piloto. No se espera a tener todo configurado para mostrar algo.</li>
+<li><b>Ágil pero documentado.</b> Se trabaja en ciclos cortos de dos semanas con demo al sindicato. Cada decisión que cambia alcance, reglas o plazos se registra en la pestaña <b>Decisiones</b> con fecha, alternativas y quién decidió. Lo que no está registrado no se acordó.</li>
+<li><b>Criterios de salida por etapa.</b> Cada etapa termina cuando se cumple una lista concreta y verificable (no cuando pasa el tiempo). Si no se cumple, se decide explícitamente si se avanza igual y con qué riesgo.</li>
+<li><b>Participación activa del sindicato.</b> Hay referentes del sindicato con tareas asignadas en el checklist, incluido su personal técnico: quien va a operar el sistema lo configura acompañado, no lo recibe hecho.</li>
+<li><b>Datos personales con cuidado desde el primer día.</b> El padrón y los recibos son datos sensibles. Se acuerda antes de la primera carga cómo se transfieren, quién accede y cuánto se guarda, y se firma el acuerdo de tratamiento de datos.</li>
+<li><b>Un solo lugar para el estado del proyecto.</b> Esta página. El checklist es la fuente de verdad del avance; las reuniones se hacen mirándola.</li>
+</ol>
+
+<h2 id="e-equipo">3. Equipos y roles</h2>
+<p>Tres equipos, cada uno con referentes nombrados en el formulario F2 del relevamiento. En el checklist, cada tarea lleva la etiqueta de quién la hace.</p>
+<div class="tabla-scroll"><table>
+<tr><th>Etiqueta</th><th>Quién</th><th>Responsabilidad en la implementación</th></tr>
+<tr><td><span class="badge b-colm3na">Colm3na</span></td><td>Dirección del proyecto (Colm3na)</td><td>Conduce el plan, prioriza, negocia cambios de alcance, presenta al sindicato, mantiene este documento y el registro de decisiones.</td></tr>
+<tr><td><span class="badge b-funcional">Funcional</span></td><td>Analista funcional y QA (Colm3na)</td><td>Relevamiento, configuración de la plataforma junto al sindicato (conceptos, fórmulas, trámites, notificaciones), pruebas de aceptación, capacitación, manuales y mesa de ayuda de primer nivel.</td></tr>
+<tr><td><span class="badge b-dev">Dev</span></td><td>Desarrollo (Colm3na)</td><td>Carga masiva de datos, ajustes y mejoras de producto, integración con el bot, entornos, migraciones, monitoreo y soporte de segundo nivel.</td></tr>
+<tr><td><span class="badge b-sindicato">Sindicato</span></td><td>Referente funcional del sindicato (secretaría gremial / administración) y patrocinador de la Comisión Directiva</td><td>Decide reglas y prioridades del gremio, aporta convenio, escalas, padrón y formularios, valida la configuración, opera el panel, comunica a los afiliados.</td></tr>
+<tr><td><span class="badge b-sistemas">Sistemas</span></td><td>Referente técnico del sindicato</td><td>Entrega el padrón y otros datos en formato acordado, administra usuarios y seccionales, participa de pruebas, es contraparte técnica para dominio, correo y seguridad.</td></tr>
+<tr><td><span class="badge b-comunicacion">Comunicación</span></td><td>Prensa / comunicación del sindicato</td><td>Marca (logo, colores), textos de novedades y beneficios, plan de lanzamiento a los afiliados, material de difusión.</td></tr>
+<tr><td><span class="badge b-legal">Legal</span></td><td>Asesoría legal del sindicato (con Colm3na)</td><td>Acuerdo de tratamiento de datos, textos legales de la app, criterio sobre credencial digital y reclamos de aportes.</td></tr>
+<tr><td><span class="badge b-bot">Bot</span></td><td>Equipo desarrollador del bot conversacional</td><td>Construye y entrena el bot; acuerda con Dev el contrato de integración (identidad, canales, estadísticas) y con el sindicato el contenido.</td></tr>
+</table></div>
+<p>Colm3na podría sumar un especialista puntual (seguridad, base de datos, infraestructura) si alguna etapa lo exige; en principio las tres personas cubren el trabajo.</p>
+
+<h2 id="e-gob">4. Gobernanza y ritmo</h2>
+<h3>Ritmo de trabajo</h3>
+<ul>
+<li><b>Semanal (45 min), con el sindicato:</b> repaso del checklist de la etapa, bloqueos, decisiones pendientes. Participan Colm3na, Funcional y los referentes del sindicato; Dev y Bot cuando hay temas suyos.</li>
+<li><b>Quincenal, demo:</b> se muestra lo configurado o construido en el ciclo, con datos reales del sindicato, y se recogen ajustes. Al cierre de cada etapa la demo es la reunión de aceptación.</li>
+<li><b>Diaria interna (15 min), Colm3na:</b> coordinación de las tres personas.</li>
+<li><b>Con el equipo del bot:</b> una reunión técnica al inicio (contrato de integración), luego se suman a la semanal cuando hay hitos del bot.</li>
+</ul>
+<h3>Cómo se toman y registran las decisiones</h3>
+<p>Toda decisión que afecte alcance, reglas del convenio cargadas, plazos, datos personales o dinero se registra en <b>Decisiones</b> con: fecha, tema, qué se decidió, alternativas descartadas, quién decidió y a qué etapa impacta. Las decisiones sobre reglas del gremio (por ejemplo, cómo se calcula un adicional o quién firma la credencial) las toma el sindicato; las de producto y técnicas, Colm3na, informando al sindicato; las de integración del bot, Dev y Bot en conjunto.</p>
+<h3>Pedidos de cambio</h3>
+<p>Cualquier mejora o modificación que surja se anota primero como pedido y se clasifica en la semanal:</p>
+<ul>
+<li><b>Configuración:</b> se resuelve con las herramientas del panel (un concepto, una fórmula, un formulario de trámite, un texto). Lo hace Funcional con el sindicato, sin desarrollo. Se atiende en el ciclo en curso.</li>
+<li><b>Mejora menor:</b> requiere desarrollo pero no cambia el alcance (un campo, un filtro, un ajuste de pantalla). Entra a la lista de Dev y se prioriza en la semanal; se agrupa en versiones.</li>
+<li><b>Cambio de alcance:</b> una funcionalidad nueva o un cambio de comportamiento relevante. Se documenta, se estima y se decide si entra en esta implementación (desplazando algo) o queda para la evolución posterior. Siempre queda registrado en Decisiones.</li>
+</ul>
+
+<h2 id="e-alcance">5. Alcance por oleadas</h2>
+<p>Casi todas las funcionalidades actuales se despliegan, pero no todas a la vez. El orden responde a dos criterios: primero lo que da valor inmediato al afiliado con la menor configuración (recibo, aportes, credencial, novedades), después lo que exige más trabajo de relevamiento y circuito interno (trámites, empleadores) y lo que depende de terceros (bot).</p>
+<div class="tabla-scroll"><table>
+<tr><th>Oleada</th><th>Para el trabajador</th><th>Para el sindicato</th><th>Cuándo</th></tr>
+<tr><td><b>1 · Piloto</b></td><td>Validación de recibo, Mis aportes (semáforo ARCA), Credencial digital, Novedades, Notificaciones</td><td>Padrón, seccionales, administradores, conceptos y fórmulas del convenio, escalas, noticias, notificaciones, Panel Sindical, Aprendizaje IA</td><td>Etapa 3 · semanas 5–7, grupo piloto</td></tr>
+<tr><td><b>2 · Ampliación</b></td><td>Trámites con expediente y conversación, Beneficios, Bot (primera versión)</td><td>Constructor de trámites, Beneficios, Empleadores (empresas, trámites y notificaciones con bancos), Afiliados cotizantes</td><td>Etapa 4 · semanas 8–10, más seccionales</td></tr>
+<tr><td><b>3 · General</b></td><td>Todo el padrón; bot completo con estadísticas; Capacitación cuando el sindicato tenga contenido</td><td>Operación autónoma, indicadores, mesa de ayuda</td><td>Etapa 5 · semanas 11–13</td></tr>
+</table></div>
+<p><b>Queda fuera de esta implementación</b> (y se registra como decisión): cualquier funcionalidad para trabajadores no afiliados, integraciones con sistemas de cobranza de cuotas del sindicato y validaciones del recibo que requieran historial (Ganancias, monto de aguinaldo). Las mejoras del motor de lectura de recibos que Colm3na tiene en curso se incorporan en la medida en que estén probadas; la implementación no depende de ellas, pero los recibos reales del piloto (con consentimiento) alimentan su conjunto de prueba.</p>
+
+<h2 id="e-calendario">6. Calendario</h2>
+<p>Semana 0 es la semana previa al inicio (preparación interna de Colm3na). Los rombos marcan los hitos con el sindicato: presentación inicial, aceptación de la configuración base, inicio del piloto, ampliación y cierre.</p>
+<div class="tabla-scroll"><div class="tl" id="timeline"></div></div>
+<div class="tabla-scroll"><table>
+<tr><th>Etapa</th><th>Semanas</th><th>Hito de cierre (criterio de salida resumido)</th></tr>
+<tr><td>0 · Preparación</td><td>S0</td><td>Entornos, accesos y kit de relevamiento listos. Anexo interno de Colm3na completo.</td></tr>
+<tr><td>1 · Kick-off y relevamiento</td><td>S1–S2</td><td>Presentación hecha; referentes nombrados; formularios F1–F8 respondidos; documentos recibidos; acuerdo de datos firmado.</td></tr>
+<tr><td>2 · Configuración base</td><td>S3–S4</td><td>Sindicato, marca, seccionales, admins, padrón, empleadores, conceptos, fórmulas y escalas cargados; 20 recibos reales validan con resultado correcto; aceptación del sindicato.</td></tr>
+<tr><td>3 · Piloto controlado</td><td>S5–S7</td><td>Grupo piloto de 30 a 50 trabajadores en 2 seccionales usando la oleada 1; incidencias resueltas; admins capacitados; indicadores del piloto revisados.</td></tr>
+<tr><td>4 · Ampliación</td><td>S8–S10</td><td>Trámites, empleadores y beneficios operativos; bot integrado en primera versión; despliegue a más seccionales; plan de comunicación en marcha.</td></tr>
+<tr><td>5 · Despliegue general y operación</td><td>S11–S13</td><td>Todo el padrón invitado; mesa de ayuda funcionando; indicadores mensuales; acta de cierre y acuerdo de soporte y evolución.</td></tr>
+</table></div>
+
+<h2 id="e-docs">7. Cómo se documenta</h2>
+<ul>
+<li><b>Esta página:</b> plan, checklist con estado, formularios de relevamiento respondidos, decisiones y riesgos. Se puede exportar todo a un archivo desde cada pestaña para archivarlo con fecha.</li>
+<li><b>Acta de cada etapa:</b> al cerrar una etapa se exporta el checklist y las decisiones del período y se guarda como acta de aceptación en la carpeta compartida del proyecto (Utilidades de la plataforma).</li>
+<li><b>Manuales:</b> guía del administrador del sindicato y guía del trabajador (breve, con capturas) se entregan en la etapa 3 y se actualizan en la 5.</li>
+<li><b>Configuración cargada:</b> la plataforma misma es la documentación de conceptos, fórmulas, escalas y trámites; se exportan al cierre como respaldo.</li>
+<li><b>Lo técnico interno</b> (cuentas, entornos, base de datos, seguridad, costos) vive en el anexo interno de Colm3na, separado de este documento.</li>
+</ul>
+</div>
+</div>
+</section>
+
+<!-- ===== PLAN ===== -->
+<section class="vista" id="v-plan">
+<div class="grid2">
+<aside class="side">
+  <div class="panel total"><h3>Avance total</h3>
+    <div class="n" id="pct-total">0 %</div><div class="l" id="cnt-total">0 de 0 tareas hechas</div>
+    <div class="bar"><i id="bar-total"></i></div>
+  </div>
+  <div class="panel"><h3>Etapas</h3><div id="side-blocks"></div></div>
+  <div class="panel"><h3>Filtrar</h3>
+    <div class="filtros" id="filtros">
+      <span class="chip on" data-f="todos">Todos</span>
+      <span class="chip" data-f="pendiente">Pendientes</span>
+      <span class="chip" data-f="en_curso">En curso</span>
+      <span class="chip" data-f="bloqueado">Bloqueados</span>
+      <span class="chip" data-f="r:sindicato">Sindicato</span>
+      <span class="chip" data-f="r:sistemas">Sistemas</span>
+      <span class="chip" data-f="r:bot">Bot</span>
+      <span class="chip" data-f="r:funcional">Funcional</span>
+      <span class="chip" data-f="r:dev">Dev</span>
+    </div>
+    <div class="leyenda" style="margin-top:12px">
+      <span><span class="chk"></span> pendiente</span><span><span class="chk en_curso">›</span> en curso</span><span><span class="chk hecho">✓</span> hecho</span><span><span class="chk bloqueado">!</span> bloqueado</span>
+    </div>
+    <p style="font-size:12px;color:var(--texto2);margin-top:10px">Tocá el casillero para pasar de pendiente → en curso → hecho. El desplegable permite marcar bloqueado y anotar quién lo tiene.</p>
+    <div class="acciones" style="margin:12px 0 0"><button class="btn" data-exp="plan">Exportar checklist</button></div>
+  </div>
+</aside>
+<main id="plan-main"></main>
+</div>
+</section>
+
+<!-- ===== RELEVAMIENTO ===== -->
+<section class="vista" id="v-relevamiento">
+<div class="grid2">
+<aside class="side">
+  <div class="panel total"><h3>Relevamiento</h3>
+    <div class="n" id="pct-forms">0 %</div><div class="l" id="cnt-forms">0 de 0 campos respondidos</div>
+    <div class="bar"><i id="bar-forms"></i></div>
+  </div>
+  <div class="panel"><h3>Formularios</h3><div id="side-forms"></div></div>
+  <div class="panel"><h3>Cómo completarlos</h3>
+    <p style="font-size:13px;color:var(--texto2)">Cada formulario dice quién debería responderlo. Se guarda solo al escribir. Los documentos se marcan como recibidos y se anota dónde quedaron (carpeta compartida, correo, Utilidades). No pegues acá datos de personas: el padrón y los recibos se transfieren por el canal acordado en F8.</p>
+    <div class="acciones" style="margin:12px 0 0"><button class="btn" data-exp="forms">Exportar respuestas</button></div>
+  </div>
+</aside>
+<main id="forms-main"></main>
+</div>
+</section>
+
+<!-- ===== BOT ===== -->
+<section class="vista" id="v-bot">
+<div class="grid2">
+<aside class="side">
+  <div class="panel"><h3>En esta sección</h3>
+    <a class="blk" href="#b-modelo"><b>1</b><span>Qué se integra</span></a>
+    <a class="blk" href="#b-contrato"><b>2</b><span>Contrato de integración</span></a>
+    <a class="blk" href="#b-hitos"><b>3</b><span>Hitos</span></a>
+    <a class="blk" href="#f-F9"><b>4</b><span>Formulario para el equipo del bot</span></a>
+  </div>
+</aside>
+<div>
+<div class="doc">
+<h2 id="b-modelo">1. Qué se integra</h2>
+<p>El bot conversacional responde a los trabajadores sobre el convenio colectivo, condiciones laborales e información del gremio. El sindicato lo customiza: define canales de ingreso, carga información, lo entrena, genera preguntas frecuentes y obtiene estadísticas de temas, canales y usos. Lo desarrolla un equipo externo y se integra a la app del trabajador de Mi Trabajo.</p>
+<p>La integración se plantea en <b>dos niveles</b>, para que la primera versión llegue en la etapa 4 sin depender de la segunda:</p>
+<ol>
+<li><b>Nivel 1 · Embebido con identidad.</b> El bot aparece como una sección de la app del trabajador. Mi Trabajo le pasa, de forma firmada, quién es el trabajador (CUIL), a qué sindicato y seccional pertenece y en qué idioma/contexto está. El bot responde con su propio backend. El sindicato administra el contenido en la herramienta del bot.</li>
+<li><b>Nivel 2 · Datos compartidos.</b> El bot recibe de Mi Trabajo novedades, beneficios y trámites publicados para responder con información actualizada, y devuelve estadísticas (temas, volumen, canales, preguntas sin respuesta) que se muestran en el Panel Sindical. Si el trabajador pregunta por su recibo o sus aportes, el bot lo deriva a la sección correspondiente de la app.</li>
+</ol>
+<div class="nota">Punto a definir en la primera reunión técnica: si el bot corre en la infraestructura del equipo externo o dentro de la de Colm3na, y quién asume el costo del modelo de IA que consume. Ambas opciones son válidas; la decisión se registra.</div>
+
+<h2 id="b-contrato">2. Contrato de integración (borrador para discutir)</h2>
+<div class="tabla-scroll"><table>
+<tr><th>Aspecto</th><th>Propuesta inicial</th><th>Lo decide</th></tr>
+<tr><td>Identidad</td><td>Token firmado (JWT de vida corta) emitido por Mi Trabajo con CUIL, sindicato_id, seccional y rol. El bot lo verifica con clave pública. Nunca se comparte la contraseña del trabajador.</td><td>Dev + Bot</td></tr>
+<tr><td>Canal en la app</td><td>Sección "Consultas" en la app del trabajador: iframe o componente web servido por el bot, con la marca del sindicato (color primario) aplicada.</td><td>Dev + Bot + Comunicación</td></tr>
+<tr><td>Otros canales</td><td>Si el bot también atiende por WhatsApp u otro canal, la vinculación con el CUIL se hace desde la app (código de vinculación), no por número de teléfono suelto.</td><td>Sindicato + Bot</td></tr>
+<tr><td>Contenido</td><td>Convenio y acuerdos salariales, estatuto, preguntas frecuentes, novedades y beneficios publicados en Mi Trabajo (vía API de lectura), trámites disponibles con enlace directo.</td><td>Sindicato</td></tr>
+<tr><td>Límites</td><td>El bot no da resultados de validación de recibos ni de aportes: deriva a la app. No responde consultas legales individuales: deriva a un trámite de consulta gremial.</td><td>Sindicato + Legal</td></tr>
+<tr><td>Estadísticas</td><td>El bot expone un endpoint diario o webhook con conteos por tema, canal y hora, preguntas sin respuesta y satisfacción, sin texto de conversaciones identificables. Se muestra en el Panel Sindical.</td><td>Dev + Bot</td></tr>
+<tr><td>Datos personales</td><td>Las conversaciones quedan en el bot con retención acordada; Mi Trabajo no las guarda. Se incluye en el acuerdo de tratamiento de datos.</td><td>Legal</td></tr>
+<tr><td>Entornos</td><td>El bot ofrece un entorno de prueba apuntado al staging de Mi Trabajo antes de producción.</td><td>Dev + Bot</td></tr>
+</table></div>
+
+<h2 id="b-hitos">3. Hitos del bot dentro del plan</h2>
+<ul>
+<li><b>Semana 1:</b> reunión técnica Dev + Bot; formulario F9 respondido; decisión de dónde corre y quién paga el modelo.</li>
+<li><b>Semana 3:</b> contrato de integración acordado y registrado; entorno de prueba del bot disponible.</li>
+<li><b>Semana 6:</b> bot embebido en staging con identidad (nivel 1), probado por Funcional y por el referente del sindicato con el contenido inicial.</li>
+<li><b>Semana 9:</b> bot en producción para las seccionales de la ampliación; estadísticas básicas.</li>
+<li><b>Semana 12:</b> nivel 2 (datos compartidos y estadísticas en el Panel Sindical) o decisión documentada de posponerlo.</li>
+</ul>
+</div>
+<div id="form-bot" style="margin-top:22px"></div>
+</div>
+</div>
+</section>
+
+<!-- ===== DECISIONES ===== -->
+<section class="vista" id="v-decisiones">
+<div class="grid2">
+<aside class="side">
+  <div class="panel total"><h3>Registro</h3><div class="n" id="cnt-dec">0</div><div class="l">decisiones registradas</div></div>
+  <div class="panel"><h3>Qué va acá</h3>
+    <p style="font-size:13px;color:var(--texto2)">Todo lo que cambie alcance, reglas del convenio cargadas, plazos, datos personales o dinero. Una decisión por registro; si se revierte, se agrega una nueva que la reemplace, no se borra la anterior.</p>
+    <div class="acciones" style="margin:12px 0 0"><button class="btn" data-exp="dec">Exportar decisiones</button></div>
+  </div>
+</aside>
+<main>
+  <div class="form" id="dec-form">
+    <div class="fh"><div class="num">+</div><div><h2>Registrar una decisión</h2><p>Completá y guardá. Queda numerada, con fecha, y la ven todos.</p></div></div>
+    <div class="fb">
+      <div class="campo"><label>Tema</label><input id="d-tema" placeholder="p. ej. Fórmula de antigüedad bancaria"></div>
+      <div class="campo"><label>Etapa a la que impacta</label><select id="d-etapa"><option>0 · Preparación</option><option>1 · Kick-off y relevamiento</option><option selected>2 · Configuración base</option><option>3 · Piloto</option><option>4 · Ampliación</option><option>5 · Despliegue general</option><option>Evolución posterior</option></select></div>
+      <div class="campo ancho"><label>Qué se decidió</label><textarea id="d-que" placeholder="Enunciado claro y completo de la decisión."></textarea></div>
+      <div class="campo ancho"><label>Alternativas consideradas y por qué se descartaron</label><textarea id="d-alt"></textarea></div>
+      <div class="campo"><label>Quién decidió</label><input id="d-quien" placeholder="Nombre y equipo (Sindicato / Colm3na / Bot)"></div>
+      <div class="campo"><label>Tipo</label><select id="d-tipo"><option>Regla del gremio</option><option>Alcance</option><option>Producto / técnica</option><option>Integración bot</option><option>Datos personales</option><option>Plazos</option><option>Comercial</option></select></div>
+      <div class="campo ancho acciones" style="margin:4px 0 0"><button class="btn pri" id="d-guardar">Guardar decisión</button><span class="msg" id="d-msg"></span></div>
+    </div>
+  </div>
+  <div id="dec-lista"></div>
+</main>
+</div>
+</section>
+
+<!-- ===== RIESGOS ===== -->
+<section class="vista" id="v-riesgos">
+<div class="grid2">
+<aside class="side">
+  <div class="panel"><h3>En esta sección</h3>
+    <a class="blk" href="#r-riesgos"><b>1</b><span>Riesgos y cómo se contienen</span></a>
+    <a class="blk" href="#r-kpi"><b>2</b><span>Indicadores de éxito</span></a>
+    <a class="blk" href="#r-soporte"><b>3</b><span>Soporte durante y después</span></a>
+  </div>
+</aside>
+<div class="doc">
+<h2 id="r-riesgos">1. Riesgos y cómo se contienen</h2>
+<div id="riesgos"></div>
+<h2 id="r-kpi">2. Indicadores de éxito</h2>
+<p>Se miran en la semanal desde el inicio del piloto y se informan al sindicato al cierre de cada etapa. Los valores objetivo son la propuesta inicial; se ajustan en la etapa 3 con los primeros datos reales y quedan registrados como decisión.</p>
+<div class="tabla-scroll"><table>
+<tr><th>Indicador</th><th>Cómo se mide</th><th>Objetivo al cierre (S13)</th></tr>
+<tr><td>Adopción</td><td>Trabajadores que ingresaron al menos una vez / padrón invitado</td><td>≥ 40 % del padrón invitado; ≥ 70 % en el grupo piloto</td></tr>
+<tr><td>Uso del validador</td><td>Recibos verificados por mes / trabajadores activos</td><td>≥ 1 recibo por trabajador activo por mes</td></tr>
+<tr><td>Calidad de lectura</td><td>Recibos con lectura correcta (sin corrección ni error) / recibos subidos, sobre una muestra revisada</td><td>≥ 90 %; recibos rechazados por error de lectura ≤ 5 %</td></tr>
+<tr><td>Conceptos reconocidos</td><td>Líneas de recibo resueltas automáticamente contra el catálogo del sindicato</td><td>≥ 90 % de las líneas de los 20 conceptos más frecuentes</td></tr>
+<tr><td>Trámites</td><td>Trámites iniciados por la app y tiempo medio hasta la primera respuesta del sindicato</td><td>Primera respuesta ≤ 3 días hábiles en el 80 %</td></tr>
+<tr><td>Comunicación</td><td>Notificaciones leídas / enviadas, en 7 días</td><td>≥ 50 %</td></tr>
+<tr><td>Bot</td><td>Consultas resueltas sin derivación / total; preguntas sin respuesta revisadas por el sindicato</td><td>≥ 70 % resueltas; cola de sin respuesta revisada semanalmente</td></tr>
+<tr><td>Soporte</td><td>Incidencias abiertas por semana y tiempo de resolución</td><td>Tendencia descendente desde S8; críticas resueltas en 1 día hábil</td></tr>
+</table></div>
+<h2 id="r-soporte">3. Soporte durante y después</h2>
+<p>Durante la implementación, el primer nivel de soporte a trabajadores lo da el sindicato (referente funcional y seccionales) con la guía del trabajador; Funcional atiende al sindicato y resuelve configuración; Dev resuelve incidentes de la plataforma. Los pedidos se registran en un trámite interno del propio sistema ("Soporte Mi Trabajo") para no depender de mensajes sueltos y tener métricas.</p>
+<p>Al cierre (semana 13) se firma el acta de cierre de implementación y se pasa al acuerdo de soporte y evolución: canal, horarios, tiempos de respuesta por severidad, ciclo de versiones y cómo se priorizan mejoras. Los pedidos de cambio que quedaron como "evolución posterior" en Decisiones son la primera lista de trabajo de esa etapa.</p>
+<p class="foot">Colm3na · Mi Trabajo — Plan de implementación v1 · septiembre 2026. Este documento se comparte con el sindicato y con el equipo del bot. Las cuestiones internas de Colm3na (cuentas, infraestructura, costos) están en un anexo separado.</p>
+</div>
+</div>
+</section>
+</div>
+<script>
+// ===================== PLAN POR ETAPAS =====================
+// roles: colm3na, funcional, dev, sindicato, sistemas, comunicacion, legal, bot
+const ETAPAS=[
+ {id:'0',sem:'S0 · semana previa',titulo:'Preparación',desc:'Trabajo interno de Colm3na antes de sentarse con el sindicato. Nada de esto requiere al gremio, pero sin esto la primera semana se pierde en accesos y herramientas.',
+  objetivo:'Llegar a la presentación con entornos, accesos, materiales y kit de relevamiento listos.',salida:'Anexo interno completo; staging del sindicato creado; presentación y formularios revisados por las tres personas de Colm3na.',
+  items:[
+   {id:'0.1',t:'Completar el anexo interno de Colm3na',fun:'Cuentas, entornos, base de datos, claves de API, dominio, seguridad y costos. Es el checklist paralelo a este, de uso exclusivo del equipo.',roles:['colm3na','dev'],ent:'Anexo interno con todos los ítems críticos en verde'},
+   {id:'0.2',t:'Crear el entorno de pruebas (staging) para el sindicato',fun:'Una instancia separada de producción, con base de datos propia, donde se configura y se prueba todo antes de exponerlo a trabajadores reales. Con datos de demo hasta que llegue el padrón.',roles:['dev'],ent:'URL de staging con acceso para Funcional y, más adelante, para el referente del sindicato'},
+   {id:'0.3',t:'Dar de alta al sindicato en la plataforma (staging)',fun:'Alta desde Plataforma con nombre, datos institucionales provisorios y colores por defecto; primer administrador para Funcional. Se completa con la marca real en la etapa 2.',roles:['funcional'],ent:'Sindicato creado; admin de Funcional operativo'},
+   {id:'0.4',t:'Preparar la presentación inicial',fun:'Adaptar la presentación institucional al sindicato: su rubro, su convenio, sus problemas concretos, el plan de 13 semanas y qué se le va a pedir a cada referente. Sin nombres de programas en discusión.',roles:['colm3na','funcional'],ent:'Presentación lista para proyectar y dejar'},
+   {id:'0.5',t:'Revisar el kit de relevamiento',fun:'Leer los formularios F1 a F9 de esta página con ojos del sindicato: que las preguntas se entiendan, que no falte nada del convenio bancario y que quede claro quién responde cada uno.',roles:['funcional','colm3na'],ent:'Formularios ajustados'},
+   {id:'0.6',t:'Congelar la versión de producto para la implementación',fun:'Decidir qué versión de la plataforma es la base (rama principal estable) y qué mejoras en curso entran solo si están probadas. Evita que el piloto corra sobre código que cambia todos los días.',roles:['colm3na','dev'],ent:'Decisión registrada: versión base y política de actualizaciones durante el piloto'},
+   {id:'0.7',t:'Borrador del acuerdo de tratamiento de datos',fun:'Documento que fija qué datos personales entrega el sindicato (padrón) y generan los trabajadores (recibos), para qué se usan, quién accede, cuánto se guardan y cómo se transfieren. Se firma en la etapa 1.',roles:['colm3na','legal'],ent:'Borrador listo para enviar al sindicato'},
+   {id:'0.8',t:'Reunión técnica inicial con el equipo del bot',fun:'Primer contacto Dev + Bot: arquitectura actual del bot, canales, dónde corre, qué necesita de Mi Trabajo. Se les comparte el borrador del contrato de integración y el formulario F9.',roles:['dev','bot'],ent:'Minuta y F9 en curso'},
+  ]},
+ {id:'1',sem:'S1–S2',titulo:'Kick-off y relevamiento',desc:'Presentación a la Comisión Directiva y al equipo del sindicato, nombramiento de referentes y relevamiento completo: cómo funciona hoy el gremio, qué datos tiene, qué reglas aplica, qué comunica y qué trámites hace.',
+  objetivo:'Entender el sindicato lo suficiente para configurar la plataforma sin suposiciones, y dejar acordado quién hace qué.',salida:'Formularios F1 a F8 respondidos; documentos marcados como recibidos; referentes con acceso a esta página; acuerdo de datos firmado; canal de transferencia del padrón acordado.',
+  items:[
+   {id:'1.1',t:'Presentación inicial al sindicato',fun:'Reunión de arranque con la Comisión Directiva, secretarías involucradas y sistemas. Se presenta la suite, el plan de 13 semanas, los roles que necesita el sindicato y este documento. Se pide nombrar a los referentes en la misma reunión o dentro de la semana.',roles:['colm3na','sindicato'],ent:'Presentación hecha; minuta con asistentes y compromisos'},
+   {id:'1.2',t:'Nombrar referentes y darles acceso a esta página',fun:'Referente funcional, técnico, de comunicación y legal del sindicato (pueden coincidir en una persona). Se completa F2 y se comparte el enlace de esta página.',roles:['sindicato'],ent:'F2 completo; referentes viendo esta página'},
+   {id:'1.3',t:'Taller 1 · Institucional, estructura y comunicación',fun:'Dos horas con el referente funcional y comunicación. Se completan F1 (ficha institucional y marca), F2 (estructura, seccionales, perfiles) y F6 (comunicación). Se recogen logo, colores, firma del secretario general para la credencial.',roles:['funcional','sindicato','comunicacion'],ent:'F1, F2 y F6 completos; logo y firma recibidos'},
+   {id:'1.4',t:'Taller 2 · Convenio, liquidación y empleadores',fun:'Con quien más sabe de liquidación en el gremio. Se completan F4 (bancos empleadores) y F5 (convenio: conceptos, adicionales, cuota sindical, obra social, escalas y acuerdos vigentes). Se piden 30 a 60 recibos reales anonimizados o con consentimiento, de distintos bancos y formatos.',roles:['funcional','sindicato'],ent:'F4 y F5 completos; recibos de muestra recibidos'},
+   {id:'1.5',t:'Taller 3 · Trámites y circuitos internos',fun:'Con secretaría gremial y administración. Qué trámites hace hoy el afiliado (reclamos, consultas, certificados, subsidios, turismo…), con qué formulario, quién lo recibe, quién responde y en cuánto tiempo. Se completa F7 y se recogen los formularios en papel o PDF.',roles:['funcional','sindicato'],ent:'F7 completo; formularios actuales recibidos'},
+   {id:'1.6',t:'Taller 4 · Datos y tecnología',fun:'Con el referente técnico. Padrón: dónde está, qué campos tiene, calidad, cómo se actualiza (F3). Sistemas actuales, dominio, correo, conectividad de seccionales, políticas de seguridad (F8). Se acuerda el canal seguro para transferir el padrón.',roles:['funcional','dev','sistemas'],ent:'F3 y F8 completos; canal de transferencia acordado'},
+   {id:'1.7',t:'Firmar el acuerdo de tratamiento de datos',fun:'Revisión del borrador por legal del sindicato y firma. Antes de esto no se transfiere el padrón real.',roles:['legal','sindicato','colm3na'],ent:'Acuerdo firmado'},
+   {id:'1.8',t:'Recibir documentos y marcarlos en F10',fun:'Estatuto, logo, CCT y acuerdos salariales, escalas vigentes, lista de bancos, recibos de muestra, formularios de trámites, textos de beneficios, etc. Cada documento se marca como recibido con dónde quedó guardado.',roles:['sindicato','funcional'],ent:'F10 con todos los documentos críticos en "recibido"'},
+   {id:'1.9',t:'Definir el grupo piloto',fun:'Dos seccionales (una grande, una chica) y 30 a 50 trabajadores dispuestos a probar, con variedad de bancos. Se nombra un referente por seccional piloto.',roles:['sindicato','colm3na'],ent:'Lista del grupo piloto y referentes de seccional'},
+   {id:'1.10',t:'Registrar decisiones de alcance de la etapa 1',fun:'Lo que quedó fuera, lo que se prioriza, las reglas del gremio que requieren definición de la Comisión Directiva.',roles:['colm3na'],ent:'Decisiones registradas'},
+   {id:'1.11',t:'Demo de cierre de etapa 1',fun:'Se muestra al sindicato el staging con su nombre y colores, y se repasa el plan de la etapa 2 con lo relevado.',roles:['colm3na','funcional','sindicato'],ent:'Acta de cierre etapa 1 (exportación de checklist y decisiones)'},
+  ]},
+ {id:'2',sem:'S3–S4',titulo:'Configuración base',desc:'Se carga en staging todo lo relevado: identidad y marca, estructura, padrón, empleadores, catálogo de conceptos y fórmulas del convenio, escalas y topes. Se prueba con recibos reales hasta que el resultado sea correcto y el sindicato lo acepte.',
+  objetivo:'Que un trabajador del padrón pueda entrar, subir un recibo real y recibir una validación correcta con las reglas de su convenio.',salida:'20 recibos reales de al menos 4 bancos validan con resultado correcto revisado a mano; padrón cargado y conciliado; administradores del sindicato creados y con primer ingreso hecho; aceptación firmada por el referente funcional.',
+  items:[
+   {id:'2.1',t:'Identidad y marca del sindicato',fun:'Datos institucionales definitivos, logo en PNG, color primario (obligatorio) y secundario, firma del secretario general para la credencial digital, textos de portada.',roles:['funcional','comunicacion'],ent:'Pantallas con la marca del sindicato revisadas por Comunicación'},
+   {id:'2.2',t:'Seccionales y administradores',fun:'Alta de seccionales con su código y provincia; alta de administradores del sindicato (CUIT/CUIL, rol, seccional). Cada administrador hace su primer ingreso y cambia la clave.',roles:['funcional','sistemas'],ent:'Todas las seccionales cargadas; admins con primer ingreso hecho'},
+   {id:'2.3',t:'Preparar el padrón para la carga masiva',fun:'Del formato del sindicato al formato de carga de la plataforma (CUIL, nombre, dirección, provincia, teléfono, mail, seccional, empleador). Limpieza de CUIL inválidos, duplicados, mails vacíos. Se documenta cada regla de limpieza.',roles:['sistemas','dev'],ent:'Archivo de carga validado; informe de calidad (cantidad, rechazados, motivos)'},
+   {id:'2.4',t:'Cargar el padrón en staging y conciliar',fun:'Carga masiva, conteo por seccional y por empleador contra los totales del sindicato, corrección de diferencias.',roles:['dev','sistemas','sindicato'],ent:'Padrón cargado; conciliación firmada por Sistemas'},
+   {id:'2.5',t:'Empleadores (bancos)',fun:'Alta de las empresas empleadoras con CUIT, razón social, contacto y seccionales donde tienen trabajadores. Base para trámites y notificaciones con empleadores en la etapa 4.',roles:['funcional','sindicato'],ent:'Lista de empleadores cargada'},
+   {id:'2.6',t:'Catálogo de conceptos del convenio',fun:'Conceptos de ley (jubilación, obra social, PAMI, cuota sindical) más los propios del convenio bancario: básico, adicionales por antigüedad, por título, por función, presentismo, participación en ganancias, no remunerativos vigentes, etc. Con código, tipo, remunerativo sí/no y alias por banco según los recibos de muestra.',roles:['funcional','sindicato'],ent:'Catálogo aprobado por el referente del sindicato'},
+   {id:'2.7',t:'Fórmulas de verificación',fun:'Porcentajes de aportes de ley y de cuota sindical y obra social del gremio, con tolerancia, vigencia y tope. Fórmulas de adicionales del convenio que se puedan expresar con datos del propio recibo. Cada fórmula con su fuente (artículo del CCT o acuerdo).',roles:['funcional','sindicato'],ent:'Fórmulas cargadas con fuente citada; decisión registrada sobre las que no se verifican'},
+   {id:'2.8',t:'Escalas salariales y topes vigentes',fun:'Escala del convenio por categoría con vigencia desde/hasta y fuente (acta paritaria), topes y pisos de base imponible del período. Se define quién la mantiene en cada paritaria.',roles:['funcional','sindicato'],ent:'Escala vigente cargada; responsable de mantenimiento nombrado'},
+   {id:'2.9',t:'Aprendizaje con recibos reales',fun:'Se suben los recibos de muestra con la función Aprendizaje: la IA propone conceptos nuevos, el referente los aprueba en lote. Se revisa cada resultado de validación a mano contra el recibo.',roles:['funcional','sindicato'],ent:'20 recibos de al menos 4 bancos con resultado correcto; lista de casos que no cierran'},
+   {id:'2.10',t:'Recibos reales al conjunto de prueba del motor',fun:'Los recibos con consentimiento, anotados, pasan al conjunto de prueba de Colm3na para medir la lectura antes y después de cada mejora. Se guardan fuera del código, según el acuerdo de datos.',roles:['dev','funcional'],ent:'Recibos anotados incorporados; informe de línea de base'},
+   {id:'2.11',t:'Noticias y notificaciones iniciales',fun:'Primeras novedades del sindicato, remitentes (Comisión Directiva, Secretaría Gremial, Sistema) y una notificación de bienvenida segmentada por seccional lista para el piloto.',roles:['comunicacion','funcional'],ent:'Contenido inicial cargado'},
+   {id:'2.12',t:'Pruebas de aceptación de la configuración base',fun:'Funcional recorre el guion de pruebas (ingreso de trabajador, recibo, aportes, credencial, novedades, notificaciones, panel del sindicato) en staging con datos reales. Se corrige lo que falle.',roles:['funcional'],ent:'Guion de pruebas ejecutado; incidencias resueltas o registradas'},
+   {id:'2.13',t:'Guía del administrador (borrador)',fun:'Documento corto con capturas: cómo dar de alta trabajadores, aprobar conceptos, publicar novedades, enviar notificaciones, leer el Panel Sindical.',roles:['funcional'],ent:'Guía v0 entregada al referente'},
+   {id:'2.14',t:'Demo y aceptación de la configuración base',fun:'El referente funcional del sindicato recorre la app con recibos reales y firma la aceptación. Se decide la fecha de inicio del piloto.',roles:['colm3na','funcional','sindicato'],ent:'Acta de aceptación de la etapa 2'},
+  ]},
+ {id:'3',sem:'S5–S7',titulo:'Piloto controlado',desc:'Trabajadores reales de dos seccionales usan la oleada 1 (recibo, aportes, credencial, novedades, notificaciones) en producción. El equipo observa, corrige, capacita y mide. Es la etapa donde más se aprende.',
+  objetivo:'Validar con uso real que la configuración es correcta, la app se entiende y el sindicato puede operar el panel.',salida:'≥ 70 % del grupo piloto ingresó y ≥ 50 % validó un recibo; incidencias críticas en cero; administradores capacitados operando solos; indicadores del piloto revisados con el sindicato; decisiones de ajuste registradas.',
+  items:[
+   {id:'3.1',t:'Pasar la configuración a producción',fun:'Se replica en producción lo aceptado en staging (sindicato, marca, seccionales, admins, catálogo, fórmulas, escalas, empleadores) y se carga el padrón real. Staging queda para probar cambios.',roles:['dev','funcional'],ent:'Producción configurada; verificación cruzada con staging'},
+   {id:'3.2',t:'Credenciales del grupo piloto',fun:'Generación de credenciales de acceso para los 30 a 50 trabajadores piloto, con la política de primer ingreso y cambio de clave acordada. Se define cómo se entregan (referente de seccional, mail, presencial).',roles:['funcional','sistemas'],ent:'Credenciales entregadas; decisión registrada sobre el canal'},
+   {id:'3.3',t:'Capacitación a administradores y referentes de seccional',fun:'Dos encuentros de dos horas con la guía del administrador: panel, aprobación de conceptos pendientes, notificaciones, lectura del tablero. Referentes de seccional aprenden a acompañar al trabajador en el primer ingreso.',roles:['funcional','sindicato'],ent:'Asistencia registrada; dudas frecuentes anotadas para la guía'},
+   {id:'3.4',t:'Lanzamiento del piloto',fun:'Reunión o mensaje de la seccional a los trabajadores piloto, con la guía del trabajador de una página. Notificación de bienvenida enviada desde la plataforma.',roles:['sindicato','comunicacion'],ent:'Piloto lanzado en las dos seccionales'},
+   {id:'3.5',t:'Acompañamiento y mesa de ayuda del piloto',fun:'Canal directo con los referentes de seccional; Funcional revisa a diario recibos con lectura incierta, conceptos pendientes y trámites de soporte; Dev atiende incidentes.',roles:['funcional','dev','sindicato'],ent:'Registro de incidencias con clasificación (configuración / mejora menor / cambio de alcance)'},
+   {id:'3.6',t:'Revisión semanal de recibos y conceptos pendientes',fun:'Con el referente del sindicato: qué conceptos aparecieron, cómo los escribe cada banco, qué fórmulas dieron diferencias y si son reales o de configuración. Se ajusta el catálogo.',roles:['funcional','sindicato'],ent:'Cola de pendientes en cero al cierre de cada semana'},
+   {id:'3.7',t:'Ajustes de producto surgidos del piloto',fun:'Mejoras menores agrupadas en una versión por semana, probadas en staging antes de subir. Cambios de alcance van a Decisiones.',roles:['dev','colm3na'],ent:'Versiones publicadas con notas de cambios'},
+   {id:'3.8',t:'Primer informe del Panel Sindical al sindicato',fun:'Lectura conjunta del tablero: recibos por día, resultado de validación, diferencias por empresa, semáforo de aportes por empleador. Es el primer dato real que el gremio obtiene de la herramienta.',roles:['colm3na','sindicato'],ent:'Informe presentado; pedidos de nuevos cortes anotados'},
+   {id:'3.9',t:'Guía del trabajador y guía del administrador v1',fun:'Actualizadas con lo aprendido en el piloto.',roles:['funcional'],ent:'Guías publicadas en Utilidades'},
+   {id:'3.10',t:'Preparar la ampliación',fun:'Relevamiento fino de trámites (F7) con los formularios definitivos, prioridad de beneficios, seccionales de la siguiente oleada y plan de comunicación.',roles:['funcional','sindicato','comunicacion'],ent:'Lista de trámites a construir priorizada; seccionales de ampliación definidas'},
+   {id:'3.11',t:'Bot embebido en staging (nivel 1)',fun:'El bot aparece en la app del trabajador en staging con identidad firmada y la marca del sindicato; contenido inicial cargado por el sindicato en la herramienta del bot.',roles:['dev','bot','sindicato'],ent:'Bot probado por Funcional y por el referente del sindicato'},
+   {id:'3.12',t:'Cierre del piloto',fun:'Indicadores del piloto (adopción, uso, calidad de lectura, incidencias) revisados con el sindicato. Decisión de avanzar a la ampliación y con qué ajustes.',roles:['colm3na','sindicato'],ent:'Acta de cierre etapa 3'},
+  ]},
+ {id:'4',sem:'S8–S10',titulo:'Ampliación',desc:'Entran los módulos que requieren circuito interno (trámites con expediente, empleadores, beneficios) y el bot en producción. Se suman más seccionales y arranca el plan de comunicación a los afiliados.',
+  objetivo:'Que el sindicato atienda trámites reales por la plataforma y que la app tenga todo lo que se va a ofrecer al padrón completo.',salida:'Al menos 3 tipos de trámite operativos con respuestas dentro del plazo acordado; beneficios y empleadores cargados; bot en producción; seccionales de ampliación activas; plan de comunicación aprobado.',
+  items:[
+   {id:'4.1',t:'Construir los trámites prioritarios',fun:'Con el constructor de formularios: campos, reglas de consistencia, quién los recibe en el sindicato, estados y plantillas de respuesta. Se empieza por los 3 a 5 más frecuentes relevados en F7 (por ejemplo reclamo de aportes, consulta gremial, solicitud de certificado o subsidio).',roles:['funcional','sindicato'],ent:'Trámites publicados en staging y probados de punta a punta'},
+   {id:'4.2',t:'Definir el circuito interno de atención de trámites',fun:'Quién mira la bandeja cada día, quién responde, plazos internos por tipo, qué pasa cuando falta información. Se registra como decisión del gremio.',roles:['sindicato','funcional'],ent:'Circuito documentado; responsables nombrados'},
+   {id:'4.3',t:'Empleadores: trámites y notificaciones con los bancos',fun:'Alta de contactos por empresa, primer trámite o notificación con un banco de prueba, acuerdo del sindicato sobre qué se comunica por este canal.',roles:['funcional','sindicato'],ent:'App de empleadores probada con al menos un banco'},
+   {id:'4.4',t:'Beneficios',fun:'Carga del carrusel de beneficios por rubro con textos, imágenes y vigencia; responsable de mantenerlo.',roles:['comunicacion','funcional'],ent:'Beneficios publicados'},
+   {id:'4.5',t:'Afiliados cotizantes',fun:'Configuración del módulo de afiliados cotizantes según el criterio del sindicato y su asesoría legal.',roles:['funcional','legal','sindicato'],ent:'Módulo configurado o decisión de posponer registrada'},
+   {id:'4.6',t:'Bot en producción (nivel 1)',fun:'Pasaje del bot a producción para las seccionales activas, con monitoreo de las primeras conversaciones y revisión semanal de preguntas sin respuesta por el sindicato.',roles:['dev','bot','sindicato'],ent:'Bot en producción; rutina de revisión acordada'},
+   {id:'4.7',t:'Plan de comunicación a los afiliados',fun:'Mensajes, piezas y calendario para invitar a todo el padrón: qué es la app, para qué sirve, cómo se ingresa, dónde pedir ayuda. Colm3na aporta plantillas; el sindicato decide tono y canales.',roles:['comunicacion','colm3na'],ent:'Plan aprobado; piezas listas'},
+   {id:'4.8',t:'Ampliar a nuevas seccionales',fun:'Credenciales, capacitación breve a referentes de seccional y lanzamiento escalonado (una tanda por semana).',roles:['funcional','sindicato','sistemas'],ent:'Seccionales de ampliación activas'},
+   {id:'4.9',t:'Proceso de actualización del padrón',fun:'Cómo entran las altas, bajas y cambios de seccional o empleador después de la carga inicial: manual desde el panel, carga masiva periódica o ambas. Quién lo hace y con qué frecuencia.',roles:['sistemas','funcional'],ent:'Procedimiento documentado y probado'},
+   {id:'4.10',t:'Versiones de producto de la ampliación',fun:'Mejoras menores agrupadas; cambios de alcance decididos en la etapa 3 que se hayan aprobado.',roles:['dev'],ent:'Versiones publicadas con notas de cambios'},
+   {id:'4.11',t:'Demo y cierre de la ampliación',fun:'Revisión de trámites atendidos, bot, beneficios y adopción en las seccionales nuevas. Luz verde para el despliegue general.',roles:['colm3na','sindicato'],ent:'Acta de cierre etapa 4'},
+  ]},
+ {id:'5',sem:'S11–S13',titulo:'Despliegue general y operación regular',desc:'Se invita a todo el padrón, se completa la integración del bot, se consolida la mesa de ayuda y los indicadores mensuales, y se cierra la implementación con un acuerdo de soporte y evolución.',
+  objetivo:'Que el sindicato opere la plataforma de forma autónoma con Colm3na como soporte, y que quede claro cómo sigue.',salida:'Padrón completo invitado; indicadores del mes presentados; mesa de ayuda con procedimiento; guías finales; acta de cierre y acuerdo de soporte y evolución firmados.',
+  items:[
+   {id:'5.1',t:'Lanzamiento general a todo el padrón',fun:'Ejecución del plan de comunicación por tandas de seccionales; credenciales masivas; refuerzo de la mesa de ayuda las dos primeras semanas.',roles:['sindicato','comunicacion','funcional'],ent:'Todas las seccionales activas'},
+   {id:'5.2',t:'Bot nivel 2: datos compartidos y estadísticas',fun:'El bot lee novedades, beneficios y trámites publicados; sus estadísticas aparecen en el Panel Sindical. Si no está listo, se registra la decisión de posponerlo y su fecha.',roles:['dev','bot'],ent:'Nivel 2 en producción o decisión registrada'},
+   {id:'5.3',t:'Mesa de ayuda en régimen',fun:'Trámite interno "Soporte Mi Trabajo" como canal único; niveles de atención (seccional → referente del sindicato → Funcional → Dev); tiempos por severidad.',roles:['funcional','sindicato'],ent:'Procedimiento publicado; métricas de soporte en el tablero'},
+   {id:'5.4',t:'Primer informe mensual de indicadores',fun:'Adopción, uso del validador, calidad de lectura, trámites, comunicación, bot y soporte, con lectura conjunta y ajustes de objetivos.',roles:['colm3na','sindicato'],ent:'Informe presentado; objetivos ajustados registrados'},
+   {id:'5.5',t:'Guías y documentación finales',fun:'Guía del trabajador, guía del administrador, procedimiento de padrón, procedimiento de paritarias (escalas y fórmulas), circuito de trámites. Todo en Utilidades.',roles:['funcional'],ent:'Documentación publicada'},
+   {id:'5.6',t:'Respaldo de la configuración',fun:'Exportación de conceptos, fórmulas, escalas, trámites y notificaciones del sindicato como respaldo con fecha.',roles:['dev'],ent:'Respaldo guardado y compartido con Sistemas'},
+   {id:'5.7',t:'Traspaso al sindicato',fun:'Sesión de cierre con administradores: qué hacen solos, qué piden a Colm3na, cómo se piden mejoras. Se repasa el registro de decisiones y los pedidos que quedaron para evolución.',roles:['colm3na','funcional','sindicato'],ent:'Lista de pedidos de evolución priorizada'},
+   {id:'5.8',t:'Acuerdo de soporte y evolución',fun:'Canal, horarios, tiempos de respuesta por severidad, ciclo de versiones, cómo se priorizan mejoras y qué está incluido en la licencia.',roles:['colm3na','sindicato'],ent:'Acuerdo firmado'},
+   {id:'5.9',t:'Acta de cierre de la implementación',fun:'Exportación final del checklist, decisiones y formularios; firma de ambas partes.',roles:['colm3na','sindicato'],ent:'Acta firmada'},
+   {id:'5.10',t:'Retrospectiva interna de Colm3na',fun:'Qué funcionó y qué no, para la implementación en el próximo sindicato. Actualiza este plan y el kit de relevamiento.',roles:['colm3na','funcional','dev'],ent:'Plan de implementación v2 para el siguiente sindicato'},
+  ]},
+];
+
+// ===================== FORMULARIOS DE RELEVAMIENTO =====================
+// tipos: text, textarea, number, date, select, multi, si_no, docs
+const FORMS=[
+ {id:'F1',titulo:'Ficha institucional y marca',para:'Referente funcional + Comunicación (Taller 1)',intro:'Datos que aparecen en la app, la credencial digital y las comunicaciones. Lo que se carga acá lo ve el trabajador.',campos:[
+  {k:'nombre',l:'Nombre completo del sindicato',t:'text'},
+  {k:'sigla',l:'Sigla o nombre corto (como se lo conoce)',t:'text'},
+  {k:'cuit',l:'CUIT del sindicato',t:'text'},
+  {k:'domicilio',l:'Domicilio legal',t:'text'},
+  {k:'web',l:'Sitio web y redes',t:'text'},
+  {k:'contacto',l:'Correo y teléfono de contacto para afiliados',t:'text'},
+  {k:'_m',l:'Marca',t:'titulo'},
+  {k:'logo',l:'¿Tienen logo en PNG con fondo transparente, alta resolución?',t:'si_no',a:'Si no, indicar quién puede generarlo.'},
+  {k:'color1',l:'Color primario (código hex o referencia)',t:'text',a:'Va en encabezado y pie de todas las pantallas.'},
+  {k:'color2',l:'Color secundario (opcional)',t:'text'},
+  {k:'manual',l:'¿Existe manual de marca o restricciones de uso del logo?',t:'si_no'},
+  {k:'_c',l:'Credencial digital',t:'titulo'},
+  {k:'firma',l:'¿Quién firma la credencial? (cargo y nombre)',t:'text'},
+  {k:'firma_img',l:'¿Disponen de la firma digitalizada?',t:'si_no'},
+  {k:'cred_datos',l:'¿Qué datos debe mostrar la credencial además de nombre y CUIL?',t:'multi',o:['Seccional','Empleador','Nº de afiliado','Fecha de afiliación','Categoría','Foto']},
+  {k:'cred_uso',l:'¿Para qué se usa hoy la credencial (beneficios, turismo, ingreso a sedes)?',t:'textarea'},
+ ]},
+ {id:'F2',titulo:'Estructura, perfiles y referentes',para:'Referente funcional (Taller 1)',intro:'Cómo está organizado el sindicato y quiénes van a operar la plataforma. Define seccionales, administradores y remitentes.',campos:[
+  {k:'ref_func',l:'Referente funcional (nombre, cargo, contacto)',t:'text'},
+  {k:'ref_tec',l:'Referente técnico / sistemas',t:'text'},
+  {k:'ref_com',l:'Referente de comunicación / prensa',t:'text'},
+  {k:'ref_legal',l:'Referente legal',t:'text'},
+  {k:'sponsor',l:'Patrocinador en la Comisión Directiva (quién destraba decisiones)',t:'text'},
+  {k:'_s',l:'Seccionales',t:'titulo'},
+  {k:'secc_cant',l:'Cantidad de seccionales / delegaciones',t:'number'},
+  {k:'secc_lista',l:'Lista de seccionales con provincia y responsable (o indicar documento adjunto)',t:'textarea'},
+  {k:'secc_autonomia',l:'¿Las seccionales gestionan afiliados y trámites por su cuenta o todo pasa por la sede central?',t:'select',o:['Todo central','Mixto','Cada seccional gestiona lo suyo']},
+  {k:'_a',l:'Administradores del panel',t:'titulo'},
+  {k:'adm_cant',l:'¿Cuántas personas van a operar el panel del sindicato al inicio?',t:'number'},
+  {k:'adm_lista',l:'Administradores: nombre, CUIL, seccional, qué van a hacer (padrón, conceptos, notificaciones, trámites, tablero)',t:'textarea',a:'Uno por línea.'},
+  {k:'remitentes',l:'Remitentes de notificaciones que verá el trabajador',t:'multi',o:['Comisión Directiva','Secretaría Gremial','Secretaría de Prensa','Seccional','Obra social / mutual','Sistema']},
+  {k:'aprobacion',l:'¿Quién aprueba publicar una novedad o enviar una notificación masiva?',t:'text'},
+ ]},
+ {id:'F3',titulo:'Padrón de afiliados',para:'Referente técnico (Taller 4)',intro:'Fuente, formato y calidad del padrón que se va a cargar. No pegar datos de personas acá: solo describir. El archivo se transfiere por el canal acordado en F8.',campos:[
+  {k:'fuente',l:'¿Dónde está hoy el padrón?',t:'select',o:['Sistema propio','Sistema de un proveedor','Planilla Excel / Google Sheets','Varias fuentes','Otro']},
+  {k:'sistema',l:'Nombre del sistema o proveedor y quién lo administra',t:'text'},
+  {k:'cant',l:'Cantidad aproximada de afiliados activos',t:'number'},
+  {k:'campos',l:'Campos disponibles por afiliado',t:'multi',o:['CUIL','DNI','Apellido y nombre','Fecha de nacimiento','Domicilio','Provincia','Teléfono celular','Correo electrónico','Seccional','Empleador (banco)','CUIT del empleador','Sucursal','Categoría','Fecha de afiliación','Nº de afiliado','Estado (activo/baja)']},
+  {k:'calidad',l:'Calidad estimada de CUIL, celular y correo (porcentaje completo y confiable)',t:'textarea'},
+  {k:'export',l:'¿Pueden exportar a CSV/Excel? ¿Quién y con qué frecuencia?',t:'text'},
+  {k:'actualiza',l:'¿Cómo y cada cuánto se actualiza el padrón (altas, bajas, cambios de banco o seccional)?',t:'textarea'},
+  {k:'bajas',l:'¿Cómo se registran las bajas y las licencias?',t:'textarea'},
+  {k:'pluri',l:'¿Hay afiliados con más de un empleador o en más de una seccional?',t:'si_no'},
+  {k:'no_afil',l:'¿Tienen registro de trabajadores no afiliados del rubro (adherentes, contactos)? Solo para saberlo: no entra en esta implementación.',t:'si_no'},
+ ]},
+ {id:'F4',titulo:'Empleadores',para:'Referente funcional / liquidación (Taller 2)',intro:'Los bancos y otras empresas donde trabajan los afiliados. Cada empleador escribe los recibos a su manera; conocerlos permite entrenar el reconocimiento de conceptos.',campos:[
+  {k:'cant',l:'Cantidad de empleadores con afiliados',t:'number'},
+  {k:'lista',l:'Lista de empleadores principales (razón social, CUIT, cantidad aproximada de afiliados) o indicar documento adjunto',t:'textarea'},
+  {k:'formatos',l:'Formatos de recibo conocidos',t:'multi',o:['Recibo digital PDF','Recibo en portal del empleado','Papel','Formato nuevo con contribuciones patronales (Dto. 407/2026)','Recibo de dos o más páginas']},
+  {k:'muestra',l:'¿Pueden aportar recibos de muestra de cada banco (anonimizados o con consentimiento del trabajador)? ¿Cuántos?',t:'text'},
+  {k:'contactos',l:'¿Tienen contacto en RR.HH. de cada banco para trámites y notificaciones?',t:'si_no'},
+  {k:'relacion',l:'¿Qué comunicaciones formales mantienen hoy con los empleadores (intimaciones, pedidos de información, acuerdos)?',t:'textarea'},
+  {k:'conflictos',l:'¿Empleadores con problemas conocidos de aportes o de liquidación que convenga mirar primero?',t:'textarea'},
+ ]},
+ {id:'F5',titulo:'Convenio y liquidación',para:'Quien más sabe de liquidación en el gremio (Taller 2)',intro:'Las reglas con las que la plataforma verifica los recibos. Cada respuesta debe tener su fuente: artículo del convenio, acta paritaria, resolución.',campos:[
+  {k:'cct',l:'Convenio(s) colectivo(s) aplicable(s) (número y año)',t:'text'},
+  {k:'acuerdos',l:'Acuerdos salariales vigentes (fecha, vigencia, dónde está el texto)',t:'textarea'},
+  {k:'_ap',l:'Aportes y cuotas',t:'titulo'},
+  {k:'cuota',l:'Cuota sindical: porcentaje, base de cálculo, tope, cómo figura en el recibo',t:'textarea'},
+  {k:'os',l:'Obra social del gremio: porcentaje, adherentes, cómo figura',t:'textarea'},
+  {k:'otros_ap',l:'Otros descuentos gremiales o de convenio (mutual, seguro, fondo, aporte solidario) con porcentaje y base',t:'textarea'},
+  {k:'_co',l:'Conceptos del convenio',t:'titulo'},
+  {k:'basico',l:'¿Cómo se determina el básico? (categorías, escala única, por función)',t:'textarea'},
+  {k:'adicionales',l:'Adicionales habituales y su regla de cálculo (antigüedad, título, función, zona, presentismo, participación en ganancias, etc.)',t:'textarea'},
+  {k:'no_rem',l:'Conceptos no remunerativos vigentes y su vigencia',t:'textarea'},
+  {k:'escala',l:'Escala salarial vigente: ¿está en un documento con categorías y valores por período?',t:'si_no'},
+  {k:'paritaria',l:'¿Quién se enterará y cargará los cambios en cada paritaria?',t:'text'},
+  {k:'_v',l:'Verificaciones',t:'titulo'},
+  {k:'errores',l:'Errores de liquidación más frecuentes que ven hoy en los recibos',t:'textarea'},
+  {k:'prioridad',l:'¿Qué verificaciones son prioritarias para el gremio?',t:'multi',o:['Aportes de ley bien calculados','Cuota sindical y obra social bien calculadas','Básico según escala','Adicionales del convenio','Aportes efectivamente depositados (ARCA)','Conceptos no remunerativos indebidos','Topes de base imponible']},
+  {k:'tipos_liq',l:'Tipos de liquidación a contemplar además de la mensual',t:'multi',o:['Aguinaldo (SAC)','Vacaciones','Liquidación final','Quincenal','Gratificaciones']},
+  {k:'reclamo',l:'¿Qué hace hoy el afiliado cuando detecta un error en su recibo? ¿Qué debería hacer con la app?',t:'textarea'},
+ ]},
+ {id:'F6',titulo:'Comunicación con los afiliados',para:'Comunicación / prensa (Taller 1)',intro:'Cómo se comunica hoy el sindicato y cómo quiere usar Novedades, Notificaciones y Beneficios.',campos:[
+  {k:'canales',l:'Canales actuales',t:'multi',o:['WhatsApp (grupos o difusión)','Correo electrónico','Sitio web','Instagram','Facebook','X','Cartelera en el lugar de trabajo','Delegados','Revista o boletín']},
+  {k:'frecuencia',l:'Frecuencia de novedades (por semana)',t:'text'},
+  {k:'alcanza',l:'¿A qué porcentaje del padrón estiman que llegan hoy?',t:'text'},
+  {k:'segmentos',l:'¿Necesitan comunicar por segmentos? ¿Cuáles?',t:'multi',o:['Por seccional','Por provincia','Por empleador','Por categoría','A delegados','A toda la afiliación']},
+  {k:'adjuntos',l:'¿Qué tipo de adjuntos envían habitualmente (PDF, imágenes, formularios)?',t:'text'},
+  {k:'beneficios',l:'Beneficios que ofrecen hoy (turismo, descuentos, préstamos, capacitación, salud) y quién los administra',t:'textarea'},
+  {k:'lanzamiento',l:'Ideas para presentar la app a los afiliados (evento, video, delegados, mensaje del secretario general)',t:'textarea'},
+  {k:'tono',l:'Tono y estilo de los textos (formal, cercano, institucional)',t:'text'},
+ ]},
+ {id:'F7',titulo:'Trámites y circuitos internos',para:'Secretaría gremial y administración (Taller 3)',intro:'Qué gestiones hace el afiliado con el sindicato y cómo se resuelven puertas adentro. Es la base para construir los trámites con expediente.',campos:[
+  {k:'lista',l:'Trámites que el afiliado hace hoy (uno por línea: nombre, frecuencia mensual aproximada, quién lo recibe, quién responde, plazo habitual)',t:'textarea'},
+  {k:'formularios',l:'¿Existen formularios en papel o PDF? ¿Pueden entregarlos?',t:'si_no'},
+  {k:'prioridad',l:'Los 3 a 5 trámites por los que conviene empezar',t:'textarea'},
+  {k:'reclamo_aportes',l:'Circuito actual de un reclamo por aportes mal liquidados o no depositados (pasos, responsables, documentos)',t:'textarea'},
+  {k:'datos_req',l:'Datos y documentos que suele pedir cada trámite (recibo, DNI, certificado, nota)',t:'textarea'},
+  {k:'estados',l:'¿Los estados propuestos (Iniciado / En tratamiento / Respondido / A la espera de información / Terminado) alcanzan? ¿Cuáles faltan?',t:'textarea'},
+  {k:'bandeja',l:'¿Quién va a mirar la bandeja de trámites cada día y en qué horario?',t:'text'},
+  {k:'plazos',l:'Plazo de primera respuesta que el sindicato se compromete a cumplir',t:'text'},
+  {k:'empleadores',l:'Gestiones que hacen con los empleadores y podrían pasar por la app (pedidos de información, intimaciones, acuerdos)',t:'textarea'},
+ ]},
+ {id:'F8',titulo:'Tecnología, datos y seguridad',para:'Referente técnico (Taller 4)',intro:'Contexto técnico del sindicato y acuerdos para transferir datos con seguridad.',campos:[
+  {k:'sistemas',l:'Sistemas que usan hoy (padrón, contabilidad, cobranza de cuotas, obra social, web, correo) y proveedores',t:'textarea'},
+  {k:'dominio',l:'Dominio propio y quién lo administra (para un subdominio de la app y correo)',t:'text'},
+  {k:'correo',l:'Correo institucional (proveedor) y si pueden crear una casilla para envíos de la plataforma',t:'text'},
+  {k:'dispositivos',l:'Dispositivos y conectividad en sede y seccionales (PC, celulares, internet)',t:'textarea'},
+  {k:'celulares',l:'¿Los afiliados usan mayormente celular propio con datos? ¿Hay restricciones en los bancos para usar el celular en horario laboral?',t:'textarea'},
+  {k:'_d',l:'Datos personales',t:'titulo'},
+  {k:'politica',l:'¿Tienen política de protección de datos o responsable designado?',t:'si_no'},
+  {k:'transfer',l:'Canal acordado para transferir el padrón y los recibos de muestra',t:'select',o:['Carpeta cifrada compartida','Transferencia directa a Dev con cifrado','Carga por el propio referente en la plataforma','A definir']},
+  {k:'retencion',l:'Expectativa sobre cuánto tiempo se guardan los recibos y datos derivados',t:'text'},
+  {k:'acceso',l:'¿Quién del sindicato debe poder acceder a datos de todos los afiliados y quién solo a su seccional?',t:'textarea'},
+  {k:'incidentes',l:'¿A quién se avisa ante un incidente de seguridad y por qué canal?',t:'text'},
+  {k:'auditoria',l:'¿Necesitan registro de auditoría de quién hizo qué en el panel?',t:'si_no'},
+ ]},
+ {id:'F9',titulo:'Integración del bot conversacional',para:'Equipo desarrollador del bot, con Dev',intro:'Lo que Colm3na necesita saber del bot para acordar el contrato de integración. Ver la pestaña Bot para la propuesta.',campos:[
+  {k:'equipo',l:'Equipo: personas, roles y contacto técnico',t:'textarea'},
+  {k:'estado',l:'Estado actual del bot',t:'select',o:['En diseño','Prototipo','En producción con otro cliente','En producción con este sindicato']},
+  {k:'stack',l:'Tecnología (backend, modelo de IA, base de conocimiento, hosting)',t:'textarea'},
+  {k:'canales',l:'Canales que atiende o atenderá',t:'multi',o:['Web embebible (iframe/componente)','WhatsApp','Telegram','App propia','API']},
+  {k:'identidad',l:'¿Cómo identifican hoy al usuario? ¿Pueden verificar un token firmado emitido por Mi Trabajo?',t:'textarea'},
+  {k:'contenido',l:'Cómo carga y entrena el contenido el sindicato (herramienta, formatos)',t:'textarea'},
+  {k:'estadisticas',l:'Estadísticas que producen y cómo pueden exponerlas (API, exportación, webhook)',t:'textarea'},
+  {k:'datos',l:'Retención de conversaciones y política de datos personales',t:'textarea'},
+  {k:'entornos',l:'¿Tienen entorno de prueba? ¿Pueden apuntarlo al staging de Mi Trabajo?',t:'si_no'},
+  {k:'costos',l:'Quién asume el costo del modelo de IA y del hosting del bot',t:'text'},
+  {k:'marca',l:'¿Pueden aplicar la marca del sindicato (color primario, logo) en la interfaz embebida?',t:'si_no'},
+  {k:'plazos',l:'Fechas estimadas para: entorno de prueba, versión embebida, producción',t:'textarea'},
+ ]},
+ {id:'F10',titulo:'Documentos a recibir',para:'Referente funcional (con seguimiento de Funcional)',intro:'Marcá cada documento cuando llegue y anotá dónde quedó guardado (carpeta compartida, Utilidades de la plataforma, correo del día).',docs:[
+  {k:'estatuto',l:'Estatuto del sindicato',a:'Para textos institucionales y criterio de afiliación'},
+  {k:'logo',l:'Logo en PNG (fondo transparente, alta resolución)'},
+  {k:'firma',l:'Firma digitalizada de quien firma la credencial'},
+  {k:'cct',l:'Convenio colectivo de trabajo (texto completo)'},
+  {k:'acuerdos',l:'Acuerdos salariales y actas paritarias vigentes'},
+  {k:'escala',l:'Escala salarial vigente por categoría, con vigencias'},
+  {k:'seccionales',l:'Lista de seccionales con provincia y responsables'},
+  {k:'padron',l:'Padrón de afiliados (por el canal seguro acordado en F8)',a:'No se adjunta acá'},
+  {k:'empleadores',l:'Lista de empleadores con CUIT y contactos'},
+  {k:'recibos',l:'Recibos de muestra de cada banco (anonimizados o con consentimiento)',a:'Por el canal seguro'},
+  {k:'formularios',l:'Formularios actuales de trámites (papel o PDF)'},
+  {k:'beneficios',l:'Textos e imágenes de beneficios vigentes'},
+  {k:'legales',l:'Textos legales que el sindicato quiera incluir (términos, privacidad, aviso de credencial)'},
+  {k:'acuerdo_datos',l:'Acuerdo de tratamiento de datos firmado'},
+  {k:'piloto',l:'Lista del grupo piloto y referentes de seccional'},
+ ]},
+];
+
+const RIESGOS=[
+ {n:'alto',t:'El padrón llega tarde o con mala calidad',m:'Taller 4 en la semana 1; informe de calidad antes de cargar; el piloto puede arrancar con las dos seccionales piloto aunque el padrón completo no esté conciliado.'},
+ {n:'alto',t:'Reglas del convenio mal cargadas producen diferencias falsas y desconfianza',m:'Cada fórmula con fuente citada; 20 recibos reales revisados a mano antes de aceptar la etapa 2; lo que no se puede verificar se marca "no verificable", nunca se inventa.'},
+ {n:'alto',t:'Falta de tiempo de los referentes del sindicato',m:'Tareas del sindicato explícitas en el checklist con semana asignada; patrocinador en la Comisión Directiva; talleres agendados desde el kick-off.'},
+ {n:'medio',t:'Recibos de algún banco que la IA lee mal',m:'Recibos de muestra de todos los bancos en la etapa 2; Aprendizaje por lote; alias por empleador; casos que no cierran van a Decisiones con plan.'},
+ {n:'medio',t:'Pedidos de cambio desordenan el plan',m:'Clasificación semanal en configuración / mejora menor / cambio de alcance; versiones agrupadas; cambios de alcance decididos y registrados.'},
+ {n:'medio',t:'El bot no llega a tiempo o no puede verificar identidad',m:'Integración en dos niveles; nivel 1 alcanza para la etapa 4; hitos del bot con fechas; la implementación no depende del nivel 2.'},
+ {n:'medio',t:'Baja adopción de los trabajadores',m:'Piloto con referentes de seccional que acompañan; guía de una página; plan de comunicación del sindicato; indicadores semanales desde S5.'},
+ {n:'medio',t:'Incidente con datos personales',m:'Acuerdo de datos antes de la primera carga; canal cifrado; accesos por rol y seccional; retención definida; procedimiento de aviso acordado en F8.'},
+ {n:'bajo',t:'Equipo de Colm3na de tres personas con picos de trabajo',m:'Etapas con criterio de salida (no se apilan); posibilidad de sumar un especialista puntual; automatización de cargas masivas.'},
+ {n:'bajo',t:'Cambios de la plataforma durante el piloto rompen algo',m:'Versión congelada al inicio; staging para probar; versiones semanales con notas; vuelta atrás en Render.'},
+];
+
+const ROL_LABEL={colm3na:'Colm3na',funcional:'Funcional',dev:'Dev',sindicato:'Sindicato',sistemas:'Sistemas',comunicacion:'Comunicación',legal:'Legal',bot:'Bot'};
+const ESTADOS=['pendiente','en_curso','hecho','bloqueado'];
+const ICON={pendiente:'',en_curso:'›',hecho:'✓',bloqueado:'!'};
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+// ===================== ESTADO =====================
+let check={}, forms={}, decs={}, db=null, filtro='todos';
+const LS='implementacion-bancaria';
+try{const raw=localStorage.getItem(LS);if(raw){const o=JSON.parse(raw)||{};check=o.check||{};forms=o.forms||{};decs=o.decs||{};}}catch(e){}
+function guardarLocal(){try{localStorage.setItem(LS,JSON.stringify({check,forms,decs}))}catch(e){}}
+function setSync(cls,txt){const el=document.getElementById('sync');el.className='sync '+cls;el.textContent=txt;}
+const docId=id=>id.replace(/\./g,'_');
+async function dbSet(col,id,val){ if(!db) return; try{await db.doc(col+'/'+docId(id)).set(val);}catch(e){setSync('local','sin conexión compartida: guardado solo en este navegador');} }
+async function guardarCheck(id,patch){const cur=check[id]||{estado:'pendiente',quien:''};const nuevo={...cur,...patch,ts:new Date().toISOString()};check[id]=nuevo;guardarLocal();renderPlan();dbSet('check',id,nuevo);}
+let tForm={};
+function guardarForm(fid,k,val){forms[fid]=forms[fid]||{};forms[fid][k]=val;forms[fid]._ts=new Date().toISOString();guardarLocal();renderFormStats();clearTimeout(tForm[fid]);tForm[fid]=setTimeout(()=>dbSet('form',fid,forms[fid]),600);}
+
+// ===================== TABS =====================
+document.getElementById('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;mostrar(b.dataset.v);});
+function mostrar(v){document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x.dataset.v===v));document.querySelectorAll('.vista').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));try{history.replaceState(null,'','#'+v)}catch(e){}window.scrollTo({top:0});}
+document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#"]');if(!a)return;const id=a.getAttribute('href').slice(1);const t=document.getElementById(id);if(!t)return;e.preventDefault();const vista=t.closest('.vista');if(vista&&!vista.classList.contains('on'))mostrar(vista.id.slice(2));t.scrollIntoView({behavior:'smooth',block:'start'});});
+
+// ===================== TIMELINE =====================
+(function(){const tl=document.getElementById('timeline');let h='<div class="h"></div>';for(let s=0;s<=13;s++)h+=`<div class="h">S${s}</div>`;
+ const filas=[['0 · Preparación',[0],'e0',[0]],['1 · Kick-off y relevamiento',[1,2],'e1',[1]],['2 · Configuración base',[3,4],'e2',[4]],['3 · Piloto',[5,6,7],'e3',[5]],['4 · Ampliación',[8,9,10],'e4',[8]],['5 · Despliegue general',[11,12,13],'e5',[13]]];
+ for(const [lab,sems,cls,hitos] of filas){h+=`<div class="lab">${lab}</div>`;for(let s=0;s<=13;s++){const on=sems.includes(s);h+=`<div class="cel ${on?cls:''} ${on&&hitos.includes(s)?'hito':''}"></div>`;}}
+ tl.innerHTML=h;})();
+
+// ===================== PLAN =====================
+function stats(items){const h=items.filter(i=>(check[i.id]||{}).estado==='hecho').length;return{h,n:items.length,p:items.length?Math.round(h/items.length*100):0};}
+function visible(it){const st=(check[it.id]||{}).estado||'pendiente';if(filtro==='todos')return true;if(filtro.startsWith('r:'))return it.roles.includes(filtro.slice(2));return st===filtro;}
+function renderPlan(){
+  const main=document.getElementById('plan-main');let html='';let tot={h:0,n:0};
+  for(const b of ETAPAS){const s=stats(b.items);tot.h+=s.h;tot.n+=s.n;
+    html+=`<section class="bloque" id="et${b.id}"><div class="bh"><div class="num">${b.id}</div><div><div class="sub">Etapa ${b.id} · ${b.sem}</div><h2>${b.titulo}</h2><p>${b.desc}</p></div><div class="prog"><b>${s.h}/${s.n}</b><div class="bar"><i class="${s.p===100?'ok':''}" style="width:${s.p}%"></i></div></div></div>
+    <div class="bmeta"><div><b>Objetivo</b>${b.objetivo}</div><div><b>Criterio de salida</b>${b.salida}</div></div>`;
+    for(const it of b.items){const e=check[it.id]||{estado:'pendiente',quien:''};const st=e.estado||'pendiente';
+      html+=`<div class="item ${st} ${visible(it)?'':'hidden'}" data-id="${it.id}">
+        <div class="chk ${st}" data-act="ciclar" role="button" tabindex="0" title="Cambiar estado">${ICON[st]}</div>
+        <div><div class="it-h"><span class="id">${it.id}</span><span class="t">${it.t}</span>${it.roles.map(r=>`<span class="badge b-${r}">${ROL_LABEL[r]}</span>`).join('')}</div>
+          <div class="fun">${it.fun}</div>${it.ent?`<div class="ent"><b>Entregable</b> · ${it.ent}</div>`:''}</div>
+        <div class="meta"><select data-act="estado" aria-label="Estado">${ESTADOS.map(x=>`<option value="${x}" ${x===st?'selected':''}>${x.replace('_',' ')}</option>`).join('')}</select>
+          <input data-act="quien" placeholder="quién lo tiene / nota" value="${esc(e.quien)}">
+          ${e.ts?`<small>${new Date(e.ts).toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'})}</small>`:''}</div></div>`;}
+    html+='</section>';}
+  main.innerHTML=html;
+  const p=tot.n?Math.round(tot.h/tot.n*100):0;
+  document.getElementById('pct-total').textContent=p+' %';document.getElementById('hdr-avance').textContent=p+' %';
+  document.getElementById('cnt-total').textContent=`${tot.h} de ${tot.n} tareas hechas`;
+  const bt=document.getElementById('bar-total');bt.style.width=p+'%';bt.className=p===100?'ok':'';
+  document.getElementById('side-blocks').innerHTML=ETAPAS.map(b=>{const s=stats(b.items);return `<a class="blk" href="#et${b.id}"><b>${b.id}</b><span>${b.titulo}</span><span class="mini"><i style="width:${s.p}%"></i></span><small>${s.h}/${s.n}</small></a>`}).join('');
+}
+const planMain=document.getElementById('plan-main');
+planMain.addEventListener('click',e=>{const c=e.target.closest('[data-act="ciclar"]');if(!c)return;ciclar(c);});
+planMain.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.dataset.act==='ciclar'){e.preventDefault();ciclar(e.target);}});
+function ciclar(c){const id=c.closest('.item').dataset.id;const st=(check[id]||{}).estado||'pendiente';guardarCheck(id,{estado:{pendiente:'en_curso',en_curso:'hecho',hecho:'pendiente',bloqueado:'en_curso'}[st]});}
+planMain.addEventListener('change',e=>{const id=e.target.closest('.item')?.dataset.id;if(!id)return;if(e.target.dataset.act==='estado')guardarCheck(id,{estado:e.target.value});if(e.target.dataset.act==='quien')guardarCheck(id,{quien:e.target.value});});
+document.getElementById('filtros').addEventListener('click',e=>{const ch=e.target.closest('.chip');if(!ch)return;document.querySelectorAll('#filtros .chip').forEach(x=>x.classList.remove('on'));ch.classList.add('on');filtro=ch.dataset.f;renderPlan();});
+
+// ===================== FORMULARIOS =====================
+function campoHtml(f,c){const v=(forms[f.id]||{})[c.k];const name=`${f.id}.${c.k}`;
+  if(c.t==='titulo')return `<div class="ftitulo">${c.l}</div>`;
+  let inner='';
+  if(c.t==='text'||c.t==='number'||c.t==='date')inner=`<input type="${c.t}" data-f="${f.id}" data-k="${c.k}" value="${esc(v)}">`;
+  else if(c.t==='textarea')inner=`<textarea data-f="${f.id}" data-k="${c.k}">${esc(v)}</textarea>`;
+  else if(c.t==='select')inner=`<select data-f="${f.id}" data-k="${c.k}"><option value="">—</option>${c.o.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('')}</select>`;
+  else if(c.t==='si_no')inner=`<div class="opts">${['Sí','No','A confirmar'].map(o=>`<label><input type="radio" name="${name}" data-f="${f.id}" data-k="${c.k}" value="${o}" ${o===v?'checked':''}>${o}</label>`).join('')}</div>`;
+  else if(c.t==='multi'){const arr=Array.isArray(v)?v:[];inner=`<div class="opts">${c.o.map(o=>`<label><input type="checkbox" data-f="${f.id}" data-k="${c.k}" data-multi="1" value="${esc(o)}" ${arr.includes(o)?'checked':''}>${o}</label>`).join('')}</div>`;}
+  const ancho=(c.t==='textarea'||c.t==='multi'||c.t==='si_no')?'ancho':'';
+  return `<div class="campo ${ancho}"><label>${c.l}</label>${c.a?`<span class="ayuda">${c.a}</span>`:''}${inner}</div>`;}
+function docsHtml(f){return `<div class="docs">${f.docs.map(d=>{const v=(forms[f.id]||{})[d.k]||{};return `<div class="docrow"><div>${d.l}${d.a?`<small>${d.a}</small>`:''}</div>
+  <select data-f="${f.id}" data-k="${d.k}" data-sub="estado"><option value="">pendiente</option>${['recibido','parcial','no aplica'].map(o=>`<option ${v.estado===o?'selected':''}>${o}</option>`).join('')}</select>
+  <input data-f="${f.id}" data-k="${d.k}" data-sub="donde" placeholder="dónde quedó" value="${esc(v.donde)}"></div>`}).join('')}</div>`;}
+function formStats(f){if(f.docs){const n=f.docs.length,h=f.docs.filter(d=>((forms[f.id]||{})[d.k]||{}).estado).length;return{h,n};}
+  const cs=f.campos.filter(c=>c.t!=='titulo');const h=cs.filter(c=>{const v=(forms[f.id]||{})[c.k];return Array.isArray(v)?v.length:(v!==undefined&&v!=='');}).length;return{h,n:cs.length};}
+function formHtml(f){const s=formStats(f);return `<div class="form" id="f-${f.id}"><div class="fh"><div class="num">${f.id}</div><div><h2>${f.titulo}</h2><p><b>Responde:</b> ${f.para}. ${f.intro}</p></div><div class="est"><b>${s.h}/${s.n}</b>${f.docs?'documentos':'respondidos'}</div></div>
+  <div class="fb">${f.docs?docsHtml(f):f.campos.map(c=>campoHtml(f,c)).join('')}</div></div>`;}
+function renderForms(){document.getElementById('forms-main').innerHTML=FORMS.filter(f=>f.id!=='F9').map(formHtml).join('');document.getElementById('form-bot').innerHTML=formHtml(FORMS.find(f=>f.id==='F9'));renderFormStats();}
+function renderFormStats(){let H=0,N=0;for(const f of FORMS){const s=formStats(f);H+=s.h;N+=s.n;const e2=document.querySelector(`#f-${f.id} .est b`);if(e2)e2.textContent=`${s.h}/${s.n}`;}
+  const p=N?Math.round(H/N*100):0;document.getElementById('pct-forms').textContent=p+' %';document.getElementById('cnt-forms').textContent=`${H} de ${N} campos respondidos`;const b=document.getElementById('bar-forms');b.style.width=p+'%';b.className=p===100?'ok':'';
+  document.getElementById('side-forms').innerHTML=FORMS.map(f=>{const s=formStats(f);const p2=s.n?Math.round(s.h/s.n*100):0;return `<a class="blk" href="#f-${f.id}"><b>${f.id}</b><span>${f.titulo}</span><span class="mini"><i style="width:${p2}%"></i></span><small>${s.h}/${s.n}</small></a>`}).join('');}
+function onFormInput(e){const t=e.target;const fid=t.dataset.f,k=t.dataset.k;if(!fid||!k)return;
+  if(t.dataset.sub){const cur={...((forms[fid]||{})[k]||{})};cur[t.dataset.sub]=t.value;guardarForm(fid,k,cur);return;}
+  if(t.dataset.multi){const vals=[...document.querySelectorAll(`input[data-f="${fid}"][data-k="${k}"]:checked`)].map(x=>x.value);guardarForm(fid,k,vals);return;}
+  guardarForm(fid,k,t.value);}
+document.getElementById('forms-main').addEventListener('input',onFormInput);document.getElementById('forms-main').addEventListener('change',onFormInput);
+document.getElementById('form-bot').addEventListener('input',onFormInput);document.getElementById('form-bot').addEventListener('change',onFormInput);
+
+// ===================== DECISIONES =====================
+function renderDecs(){const lista=Object.values(decs).filter(d=>d&&!d.borrada).sort((a,b)=>(a.n||0)-(b.n||0));document.getElementById('cnt-dec').textContent=lista.length;
+  document.getElementById('dec-lista').innerHTML=lista.length?lista.map(d=>`<div class="dec"><div class="n">D${String(d.n).padStart(2,'0')}</div><div><h4>${esc(d.tema)}</h4><div class="f">${new Date(d.ts).toLocaleDateString('es-AR')} · ${esc(d.tipo)} · impacta en ${esc(d.etapa)} · decidió ${esc(d.quien)}</div></div>
+   <div></div><div class="cuerpo"><div><b>Decisión</b>${esc(d.que)}</div>${d.alt?`<div><b>Alternativas</b>${esc(d.alt)}</div>`:''}</div><div></div><button class="quitar" data-id="${d.id}">marcar como reemplazada</button></div>`).join(''):'<p style="color:var(--texto2)">Todavía no hay decisiones registradas. La primera suele ser la versión de producto congelada y el alcance de la etapa 1.</p>';}
+document.getElementById('d-guardar').addEventListener('click',()=>{const g=id=>document.getElementById(id).value.trim();const tema=g('d-tema'),que=g('d-que');const msg=document.getElementById('d-msg');
+  if(!tema||!que){msg.textContent='Falta el tema o la decisión.';return;}
+  const n=Math.max(0,...Object.values(decs).map(d=>d.n||0))+1;const id='d'+Date.now();const d={id,n,tema,que,alt:g('d-alt'),quien:g('d-quien'),etapa:g('d-etapa'),tipo:g('d-tipo'),ts:new Date().toISOString()};
+  decs[id]=d;guardarLocal();renderDecs();dbSet('decisiones',id,d);['d-tema','d-que','d-alt','d-quien'].forEach(i=>document.getElementById(i).value='');msg.textContent=`Guardada como D${String(n).padStart(2,'0')}.`;setTimeout(()=>msg.textContent='',4000);});
+document.getElementById('dec-lista').addEventListener('click',e=>{const b=e.target.closest('.quitar');if(!b)return;const d=decs[b.dataset.id];if(!d)return;d.borrada=true;d.ts_borrada=new Date().toISOString();guardarLocal();renderDecs();dbSet('decisiones',d.id,d);});
+
+// ===================== RIESGOS =====================
+document.getElementById('riesgos').innerHTML=RIESGOS.map(r=>`<div class="riesgo"><i class="${r.n}" title="${r.n}"></i><div><b>${r.t}</b><span>${r.m}</span></div></div>`).join('');
+
+// ===================== EXPORTAR =====================
+let downloads=null;
+async function exportar(que){const fecha=new Date().toISOString().slice(0,10);let data,nombre;
+  if(que==='plan'){data={exportado:new Date().toISOString(),etapas:ETAPAS.map(b=>({etapa:b.id,titulo:b.titulo,tareas:b.items.map(i=>({id:i.id,tarea:i.t,roles:i.roles,...(check[i.id]||{estado:'pendiente'})}))}))};nombre=`checklist-implementacion-${fecha}.json`;}
+  else if(que==='forms'){data={exportado:new Date().toISOString(),formularios:FORMS.map(f=>({id:f.id,titulo:f.titulo,respuestas:forms[f.id]||{}}))};nombre=`relevamiento-${fecha}.json`;}
+  else{data={exportado:new Date().toISOString(),decisiones:Object.values(decs).sort((a,b)=>(a.n||0)-(b.n||0))};nombre=`decisiones-${fecha}.json`;}
+  const txt=JSON.stringify(data,null,2);
+  if(downloads){try{await downloads.save({filename:nombre,data:txt});return;}catch(e){if(e&&e.code==='cancelled')return;}}
+  try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=nombre;document.body.appendChild(a);a.click();a.remove();}catch(e){}
+  try{await navigator.clipboard.writeText(txt);alert('Exportación copiada al portapapeles (pegala en un archivo .json).');}catch(e){}}
+document.querySelectorAll('[data-exp]').forEach(b=>b.addEventListener('click',()=>exportar(b.dataset.exp)));
+
+// ===================== INICIO =====================
+renderPlan();renderForms();renderDecs();
+if(location.hash){const v=location.hash.slice(1);if(document.getElementById('v-'+v))mostrar(v);}
+
+// ===================== DB COMPARTIDA =====================
+(async()=>{
+  try{
+    if(!window.claude||!window.claude.use){setSync('local','guardado solo en este navegador');return;}
+    db=await claude.use('db');
+    if(!db){setSync('local','guardado solo en este navegador');return;}
+    db.collection('check').onSnapshot(snap=>{snap.docs.forEach(d=>{const v=d.data();if(v)check[d.id.replace(/_/g,'.')]={estado:v.estado||'pendiente',quien:v.quien||'',ts:v.ts||''};});guardarLocal();renderPlan();setSync('on',snap.metadata&&snap.metadata.fromCache?'sincronizando…':'compartido con el equipo · al día');},()=>setSync('local','sin conexión compartida: guardado solo en este navegador'));
+    db.collection('form').onSnapshot(snap=>{let cambio=false;snap.docs.forEach(d=>{const v=d.data();if(!v)return;const loc=forms[d.id];if(!loc||!loc._ts||(v._ts&&v._ts>loc._ts)){forms[d.id]=v;cambio=true;}});if(cambio){guardarLocal();if(document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.f){renderFormStats();}else renderForms();}},()=>{});
+    db.collection('decisiones').onSnapshot(snap=>{snap.docs.forEach(d=>{const v=d.data();if(v)decs[d.id]=v;});guardarLocal();renderDecs();},()=>{});
+    downloads=await claude.use('downloads');
+  }catch(e){setSync('local','guardado solo en este navegador');}
+})();
+</script>
+
+
+</body></html>

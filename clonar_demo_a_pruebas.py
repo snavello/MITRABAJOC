@@ -145,8 +145,13 @@ def main():
     dump = BACKUPS / f"demo-{datetime.now():%Y-%m-%d-%H%M}.dump"
 
     print(f"\n1. Copiando la demo -> {dump.name}")
+    # La tabla `recurso` (documentación subida desde /entornos, que solo
+    # existe en Pruebas) queda fuera del dump: con --clean, pg_restore solo
+    # reemplaza lo que viene en el archivo, así el catálogo de Pruebas
+    # sobrevive a la clonación. La demo no tiene nada ahí de todos modos.
     with open(dump, "wb") as salida:
-        r = subprocess.run([*cmd_dump, origen, "-Fc", "--no-owner", "--no-privileges"],
+        r = subprocess.run([*cmd_dump, origen, "-Fc", "--no-owner", "--no-privileges",
+                            "--exclude-table=recurso", "--exclude-table=recurso_id_seq"],
                            cwd=RAIZ, stdout=salida)
     if r.returncode != 0 or not dump.exists() or dump.stat().st_size == 0:
         abortar("el pg_dump de la demo falló. No se tocó Pruebas.")

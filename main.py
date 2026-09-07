@@ -60,6 +60,7 @@ from qr import qr_svg, url_verificacion, codigo_efimero, verificar_codigo_efimer
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
 from version import VERSION_TRABAJADOR, VERSION_ADMIN, VERSION_PLATAFORMA, FECHA_VERSION
 import entorno
+import recursos
 from modulos import MODULOS, MODULOS_INICIALES
 import dashboard
 import asistente
@@ -4274,4 +4275,209 @@ def entornos(request: Request):
     return templates.TemplateResponse("entornos.html", {
         "request": request, "marca_plataforma": db.marca_plataforma(),
         "urls": entorno.URLS, "roles": ROLES_LOGIN, "versiones": versiones,
+        # Recursos (recursos.py): el catálogo completo, si este navegador ya
+        # tiene el pase para abrirlos, y el aviso de la última acción.
+        "recursos": recursos.catalogo(), "pase": _pase_recursos(request),
+        "aviso": request.query_params.get("aviso", ""), "hoy": date.today().isoformat(),
+        "tamanio_max_mb": recursos.TAMANIO_MAX // (1024 * 1024),
     })
+
+
+# ================= Recursos: la documentación del proyecto en la landing =================
+# Pedido de Sd (2026-09-07): los documentos del proyecto (planes, guías,
+# videos) estaban repartidos entre el celular, la nube y la PC. La landing
+# los junta bajo "Recursos", cada uno con miniatura, descripción de una
+# línea y fecha, y permite subir uno nuevo desde ahí mismo. Qué es un
+# recurso, de dónde salen y por qué piden clave está en recursos.py; el
+# detalle en HISTORIAL.md, "Recursos en la landing".
+
+def _exigir_landing() -> None:
+    """Las rutas de recursos existen donde existe la landing (local/
+    pruebas) y en ningún otro lado, igual que /entornos."""
+    if not entorno.MUESTRA_DISTINTIVO:
+        raise HTTPException(404, "No existe en este entorno")
+
+
+def _pase_recursos(request: Request) -> bool:
+    """Puede abrir, subir y quitar recursos: pase de 30 días (la clave de
+    plataforma ingresada una vez en la landing) o sesión de plataforma
+    vigente en este navegador."""
+    return (recursos.pase_valido(request.cookies.get(recursos.COOKIE_PASE, ""))
+            or bool(sesion_actual(request, "plataforma")))
+
+
+def _exigir_pase_recursos(request: Request):
+    """Sin pase: un <form> o un clic vuelven a la landing con el aviso de
+    que hace falta la clave; una llamada fetch recibe el 403 de siempre."""
+    if _pase_recursos(request):
+        return None
+    if _es_navegacion_de_pagina(request):
+        return RedirectResponse("/entornos?aviso=pase#recursos", status_code=303)
+    raise HTTPException(403, "Ingresá la clave de plataforma en la landing para abrir los recursos.")
+
+
+def _error_recurso(request: Request, codigo: str, mensaje: str):
+    """Errores de validación del alta: el <form> sin JS vuelve a la landing
+    con el aviso; el fetch del JS lee el JSON y lo muestra al lado del botón."""
+    if _es_navegacion_de_pagina(request):
+        return RedirectResponse(f"/entornos?aviso={codigo}#alta", status_code=303)
+    return JSONResponse(status_code=400, content={"detail": mensaje, "codigo": codigo})
+
+
+def _bytes_con_rango(request: Request, datos: bytes, mime: str, nombre: str,
+                     cache: str = "private, max-age=86400") -> BinResponse:
+    """Sirve bytes de la base respetando `Range` (un solo rango), que es lo
+    que el reproductor del navegador manda para adelantar un video o un
+    audio: sin 206 se puede reproducir pero no saltar. Los archivos del
+    repositorio no pasan por acá (FileResponse ya lo hace solo)."""
+    total = len(datos)
+    cabeceras = {"Cache-Control": cache, "Accept-Ranges": "bytes",
+                 "Content-Disposition": f"inline; filename*=UTF-8''{quote(nombre or 'recurso')}"}
+    rango = request.headers.get("range", "")
+    if rango.startswith("bytes=") and "," not in rango:
+        desde, _, hasta = rango[6:].partition("-")
+        try:
+            inicio = int(desde) if desde else max(0, total - int(hasta))
+            fin = min(int(hasta), total - 1) if (hasta and desde) else total - 1
+        except ValueError:
+            inicio, fin = 0, total - 1
+        if 0 <= inicio <= fin < total:
+            cabeceras["Content-Range"] = f"bytes {inicio}-{fin}/{total}"
+            return BinResponse(content=datos[inicio:fin + 1], media_type=mime,
+                               status_code=206, headers=cabeceras)
+        return BinResponse(status_code=416, headers={"Content-Range": f"bytes */{total}"})
+    return BinResponse(content=datos, media_type=mime, headers=cabeceras)
+
+
+@app.post("/recursos/pase")
+def recursos_pase(request: Request, clave: str = Form("")):
+    """La clave de plataforma, una vez por dispositivo, deja el pase en una
+    cookie de 30 días (recursos.py). Lax a propósito: un POST desde otro
+    sitio no la manda, así el pase no sirve para subir o quitar desde afuera."""
+    _exigir_landing()
+    try:
+        ok = auth.verificar_plataforma(clave or "")
+    except TypeError:      # compare_digest no acepta texto no ASCII: es una clave equivocada
+        ok = False
+    if not ok:
+        return RedirectResponse("/entornos?aviso=clave#recursos", status_code=303)
+    resp = RedirectResponse("/entornos?aviso=pase-ok#recursos", status_code=303)
+    resp.set_cookie(recursos.COOKIE_PASE, recursos.crear_pase(), httponly=True,
+                    samesite="lax", max_age=recursos.PASE_SEGUNDOS)
+    return resp
+
+
+@app.post("/recursos")
+async def recursos_subir(
+    request: Request,
+    titulo: str = Form(""), descripcion: str = Form(""), fecha: str = Form(""),
+    fragmento: str = Form(""), url: str = Form(""),
+    archivo: UploadFile = File(None), miniatura: UploadFile = File(None),
+):
+    """Alta desde la landing: un archivo (hasta recursos.TAMANIO_MAX) o un
+    enlace, con título, descripción de una línea, fecha del documento,
+    ancla opcional y miniatura opcional. La miniatura la arma el JS de la
+    landing para imágenes y videos; para el resto la elige quien sube, o
+    la landing dibuja una portada con el título."""
+    _exigir_landing()
+    if (sin_pase := _exigir_pase_recursos(request)):
+        return sin_pase
+    titulo = (titulo or "").strip()
+    url = (url or "").strip()
+    if not titulo:
+        return _error_recurso(request, "titulo", "Falta el título.")
+    if url and not (url.startswith("http://") or url.startswith("https://")):
+        return _error_recurso(request, "enlace", "El enlace tiene que empezar con http:// o https://.")
+    datos, nombre, mime = None, "", ""
+    if archivo and archivo.filename:
+        # El tamaño se mira antes de leer: un archivo enorme no tiene que
+        # pasar entero por memoria para ser rechazado.
+        if (archivo.size or 0) > recursos.TAMANIO_MAX:
+            return _error_recurso(request, "tamanio",
+                                  f"El archivo supera los {recursos.TAMANIO_MAX // (1024 * 1024)} MB.")
+        datos = await archivo.read()
+        if len(datos) > recursos.TAMANIO_MAX:
+            return _error_recurso(request, "tamanio",
+                                  f"El archivo supera los {recursos.TAMANIO_MAX // (1024 * 1024)} MB.")
+        if not datos:
+            return _error_recurso(request, "vacio", "El archivo está vacío.")
+        nombre = Path(archivo.filename).name
+        mime = recursos.mime_de(archivo.content_type, nombre)
+    if not datos and not url:
+        return _error_recurso(request, "archivo", "Elegí un archivo o pegá un enlace.")
+    mini_datos, mini_mime = None, ""
+    if miniatura and miniatura.filename:
+        mini_datos = await miniatura.read()
+        mini_mime = (miniatura.content_type or "").lower()
+        if not mini_datos or not mini_mime.startswith("image/") or len(mini_datos) > 2 * 1024 * 1024:
+            return _error_recurso(request, "miniatura", "La miniatura tiene que ser una imagen de hasta 2 MB.")
+    recurso_id = db.guardar_recurso(
+        titulo=titulo[:200], descripcion=(descripcion or "").strip()[:200],
+        fecha=recursos.leer_fecha(fecha),
+        tipo=recursos.tipo_de(mime, nombre, url) if datos else "enlace",
+        url=url if not datos else "", nombre_archivo=nombre, mime=mime, archivo_datos=datos,
+        miniatura_datos=mini_datos, miniatura_mime=mini_mime,
+        fragmento=recursos.normalizar_fragmento(fragmento),
+    )
+    # `n=` hace única la URL de cada alta: si la landing ya estaba en
+    # "?aviso=agregado", cambiar solo el #ancla no recargaría la página.
+    destino = f"/entornos?aviso=agregado&n={recurso_id}#recurso-{recurso_id}"
+    if _es_navegacion_de_pagina(request):
+        return RedirectResponse(destino, status_code=303)
+    return JSONResponse({"ok": True, "id": recurso_id, "ir": destino})
+
+
+@app.post("/recursos/{recurso_id}/quitar")
+def recursos_quitar(recurso_id: int, request: Request):
+    """Solo los subidos: los del repositorio se quitan con un commit."""
+    _exigir_landing()
+    if (sin_pase := _exigir_pase_recursos(request)):
+        return sin_pase
+    if not db.borrar_recurso(recurso_id):
+        raise HTTPException(404, "No existe ese recurso")
+    return RedirectResponse("/entornos?aviso=quitado#recursos", status_code=303)
+
+
+@app.get("/recursos/{ref}/archivo")
+def recursos_archivo(ref: str, request: Request):
+    """Abre el recurso: `ref` es la clave de uno del repositorio
+    (recursos.SEMILLA) o el id de uno subido. Un enlace redirige a su URL.
+    Pide el pase: son documentos internos."""
+    _exigir_landing()
+    if (sin_pase := _exigir_pase_recursos(request)):
+        return sin_pase
+    if ref.isdigit():
+        r = db.recurso(int(ref))
+        if not r:
+            raise HTTPException(404, "No existe ese recurso")
+        if not r.archivo_datos:
+            if r.url:
+                return RedirectResponse(r.url, status_code=303)
+            raise HTTPException(404, "Ese recurso no tiene archivo")
+        return _bytes_con_rango(request, r.archivo_datos, r.mime or "application/octet-stream",
+                                r.nombre_archivo)
+    item = recursos.del_repositorio_por_clave(ref)
+    if not item or not item["ruta"].exists():
+        raise HTTPException(404, "No existe ese recurso")
+    return FileResponse(item["ruta"], media_type=item["mime"], filename=item["nombre_archivo"],
+                        content_disposition_type="inline",
+                        headers={"Cache-Control": "private, no-cache"})
+
+
+@app.get("/recursos/{ref}/miniatura")
+def recursos_miniatura(ref: str):
+    """La miniatura no pide pase: es lo que la landing muestra en la
+    tarjeta, junto al título y la descripción, que tampoco lo piden."""
+    _exigir_landing()
+    if ref.isdigit():
+        r = db.recurso(int(ref))
+        if not r or not r.miniatura_datos:
+            raise HTTPException(404, "Sin miniatura")
+        return BinResponse(content=r.miniatura_datos, media_type=r.miniatura_mime or "image/jpeg",
+                           headers={"Cache-Control": "private, max-age=86400"})
+    item = recursos.del_repositorio_por_clave(ref)
+    if not item or not item["miniatura"] or not item["miniatura"].exists():
+        raise HTTPException(404, "Sin miniatura")
+    # La URL lleva ?v= (recursos._sello), así que se puede cachear una hora
+    # como /static/ (CLAUDE.md, "Todo lo que sale de /static/ va con sello").
+    return FileResponse(item["miniatura"], headers={"Cache-Control": "public, max-age=3600"})
