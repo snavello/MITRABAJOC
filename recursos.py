@@ -54,6 +54,9 @@ TIPOS = {
 # (/recursos/{clave}/archivo) y no cambia aunque cambie el título; `fecha`
 # es la del documento, no la del commit; `fragmento` es la ancla o pestaña
 # con la que conviene abrirlo. El archivo y la miniatura están en CARPETA.
+# El MP4 del video de difusión viene de la rama
+# claude/recibos-tramites-video-0v4zmo del repo MiTrabajo, donde quedó la
+# composición (HyperFrames) para regenerarlo; acá va solo el render.
 SEMILLA = [
     {
         "clave": "plan-maestro",
@@ -74,6 +77,16 @@ SEMILLA = [
         "archivo": "colm3na-plan-implementacion-sindicato.html",
         "miniatura": "colm3na-plan-implementacion-sindicato.jpg",
         "fragmento": "#estrategia",
+    },
+    {
+        "clave": "video-recibos-tramites",
+        "titulo": "Video: tu recibo y tus trámites, en tu bolsillo",
+        "descripcion": "Pieza de difusión para afiliados (55 s) sobre la verificación "
+                       "del recibo y los trámites on line, en criollo.",
+        "fecha": date(2026, 9, 5),
+        "archivo": "mi-trabajo-recibos-tramites.mp4",
+        "miniatura": "mi-trabajo-recibos-tramites.jpg",
+        "fragmento": "",
     },
 ]
 

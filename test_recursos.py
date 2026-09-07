@@ -82,6 +82,13 @@ def test_con_pase_se_sirven_los_del_repositorio():
     assert r.status_code == 200 and "Implementación en el sindicato" in r.text
     r = c.get("/recursos/plan-maestro/miniatura")
     assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg"
+    # El video versionado: se sirve como MP4 y acepta rangos (FileResponse),
+    # que es lo que el reproductor necesita para adelantar.
+    r = c.get("/recursos/video-recibos-tramites/archivo", headers={"Range": "bytes=0-99"})
+    assert r.status_code == 206 and r.headers["content-type"] == "video/mp4"
+    assert r.headers["content-range"].startswith("bytes 0-99/") and len(r.content) == 100
+    assert c.get("/recursos/video-recibos-tramites/miniatura").status_code == 200
+    assert '/recursos/video-recibos-tramites/archivo"' in c.get("/entornos").text
     assert c.get("/recursos/no-existe/miniatura").status_code == 404
     assert c.get("/recursos/no-existe/archivo").status_code == 404
     # El pase es un token propio, no una sesión de rol.
