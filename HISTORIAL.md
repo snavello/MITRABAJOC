@@ -2925,3 +2925,47 @@ el documento. Ahora la puerta se acuerda del destino.
   pierde en la vuelta si se entra por enlace directo sin pase; con pase el
   enlace abre directo y el fragmento sí funciona.
 - Plataforma 0.23.03.
+
+## Documentación puesta al día (2026-09-07)
+
+Al generar la documentación técnica desde el código quedó a la vista lo que
+la documentación escrita a mano ya no contaba. Sd pidió corregirla. Qué se
+hizo, archivo por archivo:
+
+- **`README.md`**, reescrito entero. Describía la prueba de concepto de
+  agosto (sin base de datos, `data/reportes.json`, un túnel de Cloudflare
+  para la demo, checklist del día de la demo). Ahora cuenta la plataforma
+  actual: los cuatro roles, el stack, cómo correrla en la PC con el
+  Postgres de Docker, cómo correr los tests (un archivo por proceso), los
+  tres entornos y el mapa del repo y de la documentación. Sin los accesos
+  de la demo (siguen en CLAUDE.md, un solo lugar).
+- **Docstrings de `db.py`, `main.py` y `auth.py`**. Decían "SQLite", "tres
+  roles" y "sesiones en memoria para la PoC". Ahora: motor dual con Alembic,
+  las áreas de tablas, la convención de bytes en la base; los grupos de
+  rutas por actor con puntero a la documentación generada para el listado
+  completo; los cuatro roles con su cookie, PBKDF2 y sesiones firmadas sin
+  estado en el servidor, vencimiento por inactividad.
+- **`CLAUDE.md`**: el panel de `/admin` tiene 15 entradas, no 12 (se
+  listan); la IA son tres modelos con un uso cada uno, no uno; el Asistente
+  figura mergeado (decía "pendiente de mergear" y "mergeado" en el mismo
+  punto); "Estado actual" al 2026-09-07 con el punto 20 (landing con PIN,
+  Recursos y documentación generada).
+- **`requirements-dev.txt`**: `pytest==9.1.1`. No estaba en ningún
+  requirements aunque toda la suite lo usa (y los `test_*.py` lo importan
+  en su `__main__`).
+- **Tarjeta Capacitación de la portada del trabajador**: decía
+  «Próximamente» desde antes del SPRINT_REFORMA, con la pestaña ya llena
+  con la guía del recibo nuevo. Ahora dice «Entendé tu nuevo recibo», como
+  las demás tarjetas describen lo que hay adentro. Trabajador 0.29.02.
+- **`ESTADO_DEL_PROYECTO.md`**: se conserva como documento histórico con
+  un aviso arriba que lo declara congelado (agosto de 2026) y manda a
+  CLAUDE.md "Estado actual", HISTORIAL.md y la documentación generada. No
+  se reescribió: la fuente de verdad del estado es CLAUDE.md.
+- **`docs/generador/generar.py`**: la fecha de la edición y el commit se
+  toman solos (hoy y `git rev-parse --short HEAD`) en vez de editarse a
+  mano, que era exactamente el mecanismo por el que la doc anterior quedó
+  vieja. La miniatura se rehizo con la portada nueva.
+
+Queda como estaba, a propósito: `SPRINT_REFORMA.md` (plan tal cual se
+escribió; CLAUDE.md dice qué se hizo) y los planes (`PLAN_*.md`), que
+documentan decisiones y no estado.

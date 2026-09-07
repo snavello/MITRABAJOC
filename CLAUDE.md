@@ -32,7 +32,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   Postgres (producción y ahora también desarrollo local), los cambios de
   modelo se aplican con `alembic upgrade head` sin borrar datos. Solo en
   SQLite (fallback sin Docker) db.crear_tablas() sigue creando tablas.
-- **IA:** API de Anthropic (claude-sonnet-4-6) para leer recibos y comprobantes.
+- **IA:** API de Anthropic, tres modelos con un uso cada uno:
+  `claude-sonnet-4-6` lee recibos y comprobantes (`extractor.py`),
+  `claude-opus-5` responde las consultas sobre el convenio (`rag.py`) y
+  `claude-sonnet-5` es el Asistente del Panel Sindical (`asistente.py`).
+  Cada llamada queda registrada en `UsoIA` (tipo, modelo, tokens).
 - **Auth:** propia. Claves PBKDF2, sesiones como cookies firmadas HMAC (auth.py).
   Sesión por INACTIVIDAD, no por tiempo fijo desde el login: 15 minutos sin uso
   (`auth.IDLE_TIMEOUT_SEGUNDOS`). El middleware `renovar_sesion_por_actividad`
@@ -124,8 +128,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
    (portada de tarjetas) → `/plataforma` (panel de siempre).
 2. Admin de sindicato — /admin con CUIT + clave. Gestiona conceptos, fórmulas,
    trabajadores, empleadores y reportes SOLO de su sindicato (aislamiento
-   total). Login → `/admin/inicio` (portada) → `/admin` (panel con 12
-   secciones en una tira de pestañas deslizable).
+   total). Login → `/admin/inicio` (portada) → `/admin` (panel con 15
+   entradas en una tira de pestañas deslizable: Panel Sindical, Reportes,
+   Fórmulas, Conceptos, Trabajadores, Aprendizaje, Cotizantes, Noticias,
+   Beneficios, Notificaciones, Trámites, Empleadores, Convenio, Seccionales
+   y Administradores; varias dependen de un módulo).
 3. Trabajador — /ingresar con CUIL + clave. Identidad única (un CUIL para toda la
    plataforma). Empadronamiento por sindicato: si el CUIL está en varios, elige;
    la app se pinta con la marca del elegido. Login/elección → `/app/inicio`
@@ -248,7 +255,7 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   (`/app/inicio`+`/app`, `/admin/inicio`+`/admin`, `/empresa/inicio`+`/empresa`)
   — cualquier rol nuevo que se agregue debería seguir el mismo patrón.
 
-## Estado actual (actualizado 2026-09-03)
+## Estado actual (actualizado 2026-09-07)
 Todo lo listado acá está mergeado a `main` y desplegado (Render sigue `main`,
 cada push redeploya).
 
@@ -295,6 +302,13 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     (la marca vivía SOLO en la base de demo, así que todo entorno nuevo nacía
     con el placeholder viejo), `clonar_demo_a_pruebas.py` (excepción, con
     guardas que impiden invertir la dirección) y `pg_cliente.py`.
+20. **Landing `/entornos` con PIN, Recursos y documentación técnica generada
+    del código** (2026-09-07): la landing entera detrás de un PIN de ocho
+    dígitos con pase de 30 días; debajo, Recursos (documentos versionados en
+    `recursos/` + subidos a la base, con miniatura y fecha); y la
+    documentación técnica reconstruida desde el código por
+    `docs/generador/`, catalogada ahí. Mismo día se puso al día README,
+    docstrings de db/main/auth y este archivo.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -334,15 +348,14 @@ de Seccional" (decisiones ya cerradas).
    (repo) y 1 (Render) HECHAS** el 2026-09-03 (ver punto 19 de "Estado
    actual"). Quedan las etapas 2 a 4: organización de GitHub + CI, runbook
    y accesos, traspaso de la operación diaria a dos devs.
-6. **Asistente del Panel Sindical** (construido 2026-09-05 en la rama
-   `feature/asistente-panel`, 7 bloques, **pendiente de mergear a `main`**):
+6. **Asistente del Panel Sindical** (construido 2026-09-05, 7 bloques,
+   mergeado a `main` el mismo día como Admin 0.29.01):
    chat en lenguaje natural que traduce la pregunta del admin a los filtros
    que el panel ya tiene, los aplica y resume con los números reales, más
    el filtro por afiliado del panel y el dictado por voz. NO es RAG ni el
    bot del convenio. Ficha rectora con contrato, decisiones, privacidad y
-   medición: [`docs/ASISTENTE_PANEL.md`](docs/ASISTENTE_PANEL.md). La
-   migración `b7c3d9e1f204` ya corrió en el Postgres local. Mergeado a
-   `main` el 2026-09-05 como Admin 0.29.01.
+   medición: [`docs/ASISTENTE_PANEL.md`](docs/ASISTENTE_PANEL.md). Lo que
+   sigue pendiente es la medición periódica del prompt (`probar_asistente.py`).
 
 ## Validaciones en formularios de Trámites
 Capa de validaciones acordada 2026-09-01, cuatro fuentes: `fija` (valor

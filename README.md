@@ -1,157 +1,159 @@
-# Validador de recibos — PoC (versión demo)
+# Mi Trabajo — plataforma multi-sindicato
 
-Prototipo que permite a un trabajador escanear su recibo de sueldo desde el
-celular, interpretarlo con IA y verificar que los aportes (sindical, obra
-social, jubilación, PAMI) estén bien calculados según las fórmulas del convenio.
+App web para que trabajadores sindicalizados argentinos verifiquen si su
+recibo de sueldo tiene bien calculados los aportes (jubilación, obra social,
+cuota sindical, etc.) según el convenio de su sindicato. El trabajador sube
+una foto o un PDF, una IA lo lee y el sistema valida los aportes contra las
+fórmulas del convenio. La misma app sirve a varios sindicatos, cada uno con
+su marca, su catálogo y sus trabajadores, en aislamiento total.
 
-Esta es la **versión demo**: sin base de datos. Los datos de referencia viven en
-`data/seed_aefip.json` y los reportes de los trabajadores se guardan en
-`data/reportes.json`. Pensada para mostrar funcionalidades; el proyecto en serio
-se rehace después con arquitectura robusta.
+Alrededor de esa función central hay cuatro aplicaciones, una por rol:
 
-## Qué hay en cada archivo
+| Rol | Entra por | Qué hace |
+|-----|-----------|----------|
+| Trabajador | `/ingresar` → `/app` | Tu recibo, Mis aportes (semáforo ARCA), Credencial con QR, Capacitación, Novedades, Trámites, Notificaciones, consultas sobre el convenio. Instalable como PWA. |
+| Sindicato | `/admin` | Panel de quince pestañas: padrón, conceptos y fórmulas, aprendizaje, cotizantes, noticias, beneficios, notificaciones, trámites, empleadores, convenio, seccionales, administradores y el Panel Sindical con Asistente. |
+| Empresa | `/ingresar-empresa` → `/empresa` | Notificaciones y trámites con el sindicato (solo si el sindicato tiene el módulo Empleadores). |
+| Plataforma | `/plataforma` | Alta de sindicatos con marca y logo, módulos habilitados por sindicato, topes, configuración. |
 
-- `chequeo.py` — autodiagnóstico de la instalación.
-- `main.py` — el servidor y las rutas web (app del trabajador + panel admin).
-- `extractor.py` — le pasa el recibo a la Claude API y recibe el JSON.
-- `validador.py` — motor que matchea conceptos y evalúa las fórmulas.
-- `data/seed_aefip.json` — conceptos y fórmulas del sindicato (editable a mano).
-- `data/reportes.json` — reportes que elevan los trabajadores.
-- `templates/trabajador.html` — pantalla móvil del empleado.
-- `templates/admin.html` — panel del sindicato.
+Qué ve cada sindicato se decide por **módulos habilitables** (`modulos.py`).
+El detalle de cada decisión vigente está en [`CLAUDE.md`](CLAUDE.md); la
+narrativa de cómo se llegó a cada una, en [`HISTORIAL.md`](HISTORIAL.md).
 
-## Dónde se ejecuta todo
+## Stack
 
-En **tu computadora**, en una terminal (PowerShell en Windows; Terminal en Mac/Linux).
+- **Backend:** FastAPI + Jinja2, Python 3.12 (`.python-version`).
+- **Datos:** SQLModel sobre **Postgres** (Render), esquema administrado por
+  **Alembic** (`migrations/`). Sin `DATABASE_URL` la app cae a SQLite, que
+  se usa para los tests y como fallback sin Docker. Todo binario (logos,
+  fotos, adjuntos, PDF) vive en la base, nunca en disco.
+- **IA:** API de Anthropic. Tres modelos con un uso cada uno:
+  `claude-sonnet-4-6` lee recibos y comprobantes (`extractor.py`),
+  `claude-opus-5` responde las consultas sobre el convenio (`rag.py`) y
+  `claude-sonnet-5` es el Asistente del Panel Sindical (`asistente.py`).
+  Los embeddings del convenio son locales (`fastembed` + `pgvector`).
+- **Auth propia:** claves con PBKDF2, sesiones como cookies firmadas, una
+  cookie por rol, vencimiento por inactividad (`auth.py`).
+- **Frontend:** plantillas Jinja2 + `static/marca.css` (sistema de diseño
+  compartido), PWA con Web Push para el trabajador.
 
----
+## Correr en tu PC
 
-## Paso 1 — Python
-`python --version` (o `python3 --version`). Necesitás 3.11+. Si no está,
-instalalo de python.org (en Windows tildá "Add Python to PATH").
+Requisitos: Python 3.12, Docker (para el Postgres local) y `poppler` para
+leer PDFs (`brew install poppler` / `apt install poppler-utils`; en Windows,
+agregar su carpeta `bin` al PATH).
 
-## Paso 2 — Entorno e instalación
-    cd validador-demo
-    python -m venv .venv
-    # Windows:
-    .venv\Scripts\activate
-    # Mac/Linux:
-    source .venv/bin/activate
-    pip install -r requirements.txt
+```
+python -m venv .venv
+.venv\Scripts\activate            # Windows   (Mac/Linux: source .venv/bin/activate)
+pip install -r requirements.txt
+cp .env.example .env              # y completar ANTHROPIC_API_KEY, SESSION_SECRET, PLATAFORMA_PASSWORD
+docker compose up -d              # Postgres local (esperar el healthcheck)
+alembic upgrade head              # crea o actualiza el esquema
+python cargar_marca_plataforma.py # logo y colores de la plataforma (viven en la base)
+python cargar_demo.py             # dos sindicatos de demo con sus accesos
+uvicorn main:app --reload
+```
 
-Para leer PDFs hace falta poppler:
-- Mac:    brew install poppler
-- Ubuntu: sudo apt install poppler-utils
-- Windows: descargar poppler y agregar su carpeta bin al PATH
-  (o, para la demo, usar fotos JPG en vez de PDF y saltear poppler).
+- Trabajador: http://localhost:8000/ingresar · Sindicato: /admin · Empresa:
+  /ingresar-empresa · Plataforma: /plataforma · Landing interna: /entornos.
+- `python chequeo.py` revisa la instalación (`--api` prueba la clave de
+  Anthropic; gasta créditos).
+- Sin Docker: dejá `DATABASE_URL` vacío o comentado en `.env` y la app usa
+  SQLite en `DB_PATH`. Sirve para mirar, no para probar migraciones.
+- Para poblar un sindicato con datos sintéticos realistas (padrón, 5.000
+  recibos, trámites, notificaciones): `python cargar_lote_sindicato.py
+  --sindicato "NOMBRE"`. Ver "Lotes de datos sintéticos" en `CLAUDE.md`.
+- Reset completo de la base local: `docker compose down -v && docker compose
+  up -d && alembic upgrade head && python cargar_demo.py`.
 
-## Paso 2.5 — Verificar la instalación
-    python chequeo.py
+Los accesos de la demo (CUIT y claves de cada rol) están en `CLAUDE.md`,
+"Accesos de la demo".
 
-Revisa que todo esté en su lugar y te dice qué falta. Para probar también
-la conexión con la API (consume créditos):  python chequeo.py --api
+## Tests
 
-## Paso 3 — API key
-    cp .env.example .env      # Windows: copy .env.example .env
-Editá `.env` y pegá tu ANTHROPIC_API_KEY (se saca en console.anthropic.com).
+Dependencias de desarrollo (pytest, Playwright): `pip install -r
+requirements-dev.txt`. Nunca van a `requirements.txt`: Render instala ese
+archivo en cada deploy.
 
-## Paso 4 — Arrancar
-    uvicorn main:app --reload
+- **Suite unitaria**: los `test_*.py` de la raíz corren contra un SQLite
+  temporal, sin nada levantado. **Cada archivo en su propio proceso**: los
+  módulos comparten estado de import y se contaminan si corren juntos.
 
-- App del trabajador:  http://localhost:8000
-- Panel del sindicato: http://localhost:8000/admin
+  ```
+  for f in test_*.py; do python -m pytest -q "$f" || break; done      # bash
+  Get-ChildItem test_*.py | ForEach-Object { python -m pytest -q $_.Name }   # PowerShell
+  ```
 
-## Paso 5 — Ver la versión móvil sin celular
-Abrí la app en Chrome, apretá F12, y activá el ícono de celular/tablet
-(arriba a la izquierda del panel). Elegí "iPhone" o "Galaxy".
+  Corriendo un test como script (`python test_x.py`) no se carga
+  `conftest.py`: con `DATABASE_URL` real en `.env` pega contra el Postgres
+  de Docker. Anteponer `DATABASE_URL=` vacío.
+- **Robots E2E** (`e2e/`, Playwright contra la app real): necesitan Docker,
+  `uvicorn` corriendo y un lote cargado. Ver [`e2e/README.md`](e2e/README.md).
+- Los sets que gastan créditos de la API (`probar_asistente.py`,
+  `medicion_rag/`) se corren a mano, nunca en CI.
 
----
+## Entornos y deploy
 
-## Objetivo A — Que esté disponible en internet (para la demo en el sindicato)
+| Dónde | Qué corre | Cómo cambia |
+|-------|-----------|-------------|
+| Tu PC | tu rama, tu Postgres de Docker | cada vez que guardás |
+| **Pruebas** — mitrabajo-pruebas.onrender.com | rama `main` | cada push a `main` redeploya (~90 s) |
+| **Demo** — mitrabajo.onrender.com | rama `demo` | solo con `python promover_demo.py` |
 
-La app corre en tu PC; un "túnel" la expone con un link público. En OTRA
-terminal (dejá `uvicorn` corriendo en la primera):
+Cada entorno tiene su propio Postgres; Alembic corre solo en cada deploy
+(Pre-Deploy Command). El ciclo de un cambio, en una página, está en
+[`FLUJO.md`](FLUJO.md); la infraestructura en
+[`DESPLIEGUE_RENDER.md`](DESPLIEGUE_RENDER.md); el porqué del modelo en
+[`PLAN_ENTORNOS.md`](PLAN_ENTORNOS.md).
 
-    # Mac: brew install cloudflared
-    # Windows: descargar cloudflared.exe de la web de Cloudflare
-    cloudflared tunnel --url http://localhost:8000
+En local y en Pruebas existe **`/entornos`**: una landing interna, detrás de
+un PIN de ocho dígitos (`PIN_ENTORNOS`), con los ocho accesos (cuatro roles
+× Pruebas/Demo), la versión que corre en cada uno y **Recursos**: la
+documentación del proyecto catalogada con miniatura y fecha. Los documentos
+que viajan con el código van en `recursos/` (`recursos.SEMILLA`); el resto se
+sube desde la misma landing y queda en la base.
 
-Te imprime un link https://algo.trycloudflare.com que funciona desde cualquier
-lado, con HTTPS (necesario para que la cámara del celular funcione).
+Variables de entorno: `DATABASE_URL`, `ANTHROPIC_API_KEY`, `SESSION_SECRET`,
+`PLATAFORMA_CUIT`, `PLATAFORMA_PASSWORD`, `ENTORNO`, `PIN_ENTORNOS`,
+`VAPID_*` (Web Push). El detalle, en `CLAUDE.md`, "Variables de entorno".
 
-El link cambia cada vez que reiniciás el túnel: generalo poco antes de la demo.
-Todo el tráfico pasa por tu PC, así que necesitás buena conexión ese día.
+## Mapa del repositorio
 
-Alternativa sin depender de tu conexión: subir el repo a GitHub y desplegar en
-render.com (Web Service, comando `uvicorn main:app --host 0.0.0.0 --port $PORT`,
-variable ANTHROPIC_API_KEY). Da un link .onrender.com fijo. Contra: en el plan
-gratis la app "duerme" y tarda ~30s en despertar la primera vez, y el
-reportes.json se reinicia (no persiste). Para una demo controlada, manejable.
+| Archivo | Qué es |
+|---------|--------|
+| `main.py` | servidor y todas las rutas, agrupadas por actor |
+| `db.py` | modelos SQLModel, motor dual, acceso a datos |
+| `auth.py` | hash de claves y sesiones firmadas |
+| `extractor.py` / `validador.py` / `semaforo.py` | lectura del recibo con IA, motor de fórmulas, semáforo de aportes |
+| `dashboard.py` / `asistente.py` | Panel Sindical (agregados SQL) y su Asistente |
+| `rag.py` | consultas sobre el convenio: PDF → fragmentos → embeddings → respuesta |
+| `validaciones_tramite.py` | validaciones de los formularios de Trámites |
+| `push.py` / `recursos.py` / `entorno.py` / `modulos.py` / `errores.py` / `version.py` | Web Push, Recursos de la landing, entorno y distintivo, módulos, códigos de error, versiones |
+| `migrations/` | Alembic |
+| `templates/` · `static/` | HTML de las cuatro apps · CSS, JS, fuentes, íconos |
+| `recursos/` | documentos versionados que muestra la landing |
+| `docs/generador/` | genera `recursos/documentacion-tecnica.html` leyendo el código |
+| `e2e/` | robots de QA con Playwright |
+| `cargar_*.py`, `promover_demo.py`, `clonar_demo_a_pruebas.py`, `pg_cliente.py`, `medir_dashboard.py` | operación: cargas, promoción a la demo, clonado de datos, mediciones |
 
-## Objetivo B — App del trabajador optimizada para móvil
+## Documentación
 
-Ya resuelto en `templates/trabajador.html`: viewport sin zoom accidental, altura
-correcta con la barra del navegador (100dvh), respeto del notch y la barra de
-gestos (safe-area), botones de 52px cómodos para el dedo, cámara trasera directa,
-y etiquetas para "Agregar a pantalla de inicio" (se instala como app).
-
----
-
-
-## Poner el logo del sindicato
-
-El encabezado de la app muestra, a la derecha, el logo del sindicato. Por
-defecto hay un placeholder. Para poner el logo real:
-
-1. Guardá la imagen del logo en la carpeta `static/`.
-2. Renombrala a `logo_sindicato.svg` (o .png), reemplazando el placeholder.
-3. Si es PNG en vez de SVG, editá `templates/trabajador.html` y cambiá
-   `logo_sindicato.svg` por `logo_sindicato.png` en la línea del encabezado.
-
-Formato ideal: horizontal, fondo transparente, alto de unos 40 px.
-
-## El flujo del trabajador (dos pasos)
-
-1. Elige el recibo y toca "Leer recibo" → la IA lo interpreta.
-2. Ve un **preview** con los datos detectados (empleado, CUIL, empresa, CUIT,
-   período, fecha de cobro y los conceptos con importes). Si el recibo trae
-   conceptos que no están en el catálogo, se muestran aparte como "nuevos".
-3. Toca "Continuar" → los conceptos nuevos se dan de alta como pendientes de
-   revisión (no afectan el cálculo) y corre la verificación de fórmulas.
-
-Los conceptos pendientes aparecen destacados en el panel `/admin` para que el
-sindicato les asigne tipo y remunerativo.
-
-## CHECKLIST DEL DÍA DE LA DEMO
-
-### La noche anterior
-- [ ] Corré la app y validá un recibo de prueba de punta a punta (que dé "Todo en orden").
-- [ ] Probá también un recibo con un dato cambiado, para mostrar el caso rojo con reporte.
-- [ ] Verificá que te queda saldo/créditos en la cuenta de Anthropic.
-- [ ] Cargá bien la batería de la notebook y del celular.
-- [ ] Anonimizá los recibos de prueba (tapá CUIL y nombre) si los vas a mostrar.
-
-### 15 minutos antes
-- [ ] Conectá la notebook a internet (probá que la conexión del sindicato ande, o usá tu datos móviles).
-- [ ] Terminal 1: `uvicorn main:app --host 0.0.0.0 --port 8000`
-- [ ] Terminal 2: `cloudflared tunnel --url http://localhost:8000`
-- [ ] Copiá el link https que aparece y abrilo en tu celular. Confirmá que carga.
-- [ ] Sacale una foto a un recibo desde el celular y verificá que valida bien.
-- [ ] Abrí también /admin en la notebook para mostrar el panel del sindicato.
-
-### Durante la demo
-- [ ] Mostrá primero la pantalla del trabajador en el celular (es la estrella).
-- [ ] Escaneá un recibo en vivo → mostrá el resultado "Todo en orden".
-- [ ] Escaneá el recibo con el error → mostrá la discrepancia y tocá "Reportar al sindicato".
-- [ ] Pasá a la notebook y mostrá el reporte recién llegado en /admin.
-- [ ] Mostrá en /admin las tablas de conceptos y fórmulas (el "cerebro" configurable).
-
-### Si algo falla
-- [ ] La cámara no abre → asegurate de estar entrando por el link https (no http).
-- [ ] "No pudimos leer el recibo" → probá con mejor luz o con el PDF en vez de la foto.
-- [ ] El link no carga → reiniciá el túnel (Terminal 2) y usá el link nuevo.
-- [ ] Todo se traba → tené a mano capturas de las pantallas como plan B.
-
-### Después
-- [ ] Cerrá el túnel (Ctrl+C en Terminal 2) para que el link deje de estar activo.
-- [ ] Revisá data/reportes.json: quedaron guardados los reportes de la demo.
+- [`CLAUDE.md`](CLAUDE.md) — contexto, reglas y estado actual. Se lee al
+  inicio de cada sesión de Claude Code; corto a propósito.
+- [`HISTORIAL.md`](HISTORIAL.md) — changelog técnico detallado: por qué se
+  hizo cada cosa, bugs y su causa.
+- **Documentación técnica generada del código** —
+  `recursos/documentacion-tecnica.html` (funcionalidades por rol,
+  arquitectura con diagramas, componentes y rutas, modelo de datos). Se ve
+  en `/entornos` → Recursos y se regenera con
+  `python docs/generador/extraer.py && python docs/generador/generar.py`.
+- Planes y fichas: [`FLUJO.md`](FLUJO.md), [`DESPLIEGUE_RENDER.md`](DESPLIEGUE_RENDER.md),
+  [`PLAN_ENTORNOS.md`](PLAN_ENTORNOS.md), [`PLAN_RAG_CONVENIO.md`](PLAN_RAG_CONVENIO.md),
+  [`BACKLOG.md`](BACKLOG.md), [`docs/DASHBOARD.md`](docs/DASHBOARD.md),
+  [`docs/ASISTENTE_PANEL.md`](docs/ASISTENTE_PANEL.md),
+  [`docs/cct-1875-bancarios.md`](docs/cct-1875-bancarios.md).
+- Históricos, congelados: [`SPRINT_REFORMA.md`](SPRINT_REFORMA.md) (plan de
+  la Reforma Laboral tal como se escribió; ya está completo) y
+  [`ESTADO_DEL_PROYECTO.md`](ESTADO_DEL_PROYECTO.md) (estado a la migración
+  a Postgres).

@@ -1,11 +1,16 @@
 # Mi Trabajo — Estado del proyecto
 
-Documento para retomar sin perder contexto. En un chat nuevo, subí este archivo
-junto con validador-demo.zip y pediá continuar desde "Próximo paso".
+> **Documento histórico, congelado en agosto de 2026** (última actualización:
+> migración a Postgres completa; rediseño de interfaz en curso en la rama
+> `rediseno-ui`, después mergeado). **No se actualiza más.** El estado vigente
+> del proyecto está en [`CLAUDE.md`](CLAUDE.md), sección "Estado actual"; la
+> narrativa técnica en [`HISTORIAL.md`](HISTORIAL.md); y la descripción
+> completa del sistema, generada del código, en
+> `recursos/documentacion-tecnica.html` (landing `/entornos` → Recursos).
+> Lo que sigue se conserva tal cual quedó.
 
-_Última actualización: migración a Postgres COMPLETA y en producción (mergeada a
-main hace tiempo). En curso: rediseño de interfaz en la rama `rediseno-ui`
-(portada oscura + 4to color de marca), sin mergear a main todavía._
+Fue el documento para retomar sin perder contexto. En un chat nuevo, se subía este archivo
+junto con validador-demo.zip y se pedía continuar desde "Próximo paso".
 
 ---
 

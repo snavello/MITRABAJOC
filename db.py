@@ -1,13 +1,28 @@
-"""Capa de datos con SQLModel (SQLite).
+"""Capa de datos: modelos SQLModel, motor y acceso a datos.
 
-Todo lo que la aplicación lee o modifica vive acá: conceptos, fórmulas,
-reportes. El archivo de base se ubica en la ruta que indique DB_PATH
-(por defecto data/validador.db). En Render, DB_PATH apunta al disco
-persistente para que los datos sobrevivan a los reinicios.
+Motor: Postgres cuando existe DATABASE_URL (Render y el desarrollo local con
+Docker); sin ella cae a SQLite en DB_PATH (los tests y el fallback sin
+Docker). `USANDO_POSTGRES` dice cuál quedó. El esquema lo administra Alembic (`migrations/`): en
+Postgres se aplica con `alembic upgrade head` y NUNCA con create_all;
+`crear_tablas()` queda solo para SQLite.
 
-La primera vez que arranca, si la base está vacía, se cargan los conceptos
-y fórmulas iniciales desde data/seed_aefip.json (solo como semilla).
+Acá viven todas las tablas de la plataforma, por área: sindicatos,
+seccionales y administradores; trabajadores y sus cuentas; empleadores y
+sus cuentas; catálogo (conceptos, fórmulas, topes de base imponible);
+recibos verificados, reportes, envíos al sindicato y recibos con alerta;
+noticias y beneficios; notificaciones y trámites, duplicados para
+trabajador y para empresa (aislamiento explícito, no un descuido);
+convenio y RAG (documentos, fragmentos con vector, consultas); consultas
+del Asistente y uso de IA; suscripciones push; configuración y marca de
+plataforma; recursos de la landing.
+
+Convenciones: todo binario (logos, fotos, adjuntos, PDF) va en columnas de
+bytes de la base, nunca a disco; JSON como JSONB en Postgres; cada consulta
+filtra por sindicato_id (aislamiento total entre sindicatos). `init_db()`
+ya NO siembra AEFIP: una base nueva queda vacía hasta `cargar_demo.py` o un
+alta desde /plataforma (`cargar_seed_si_vacio()` solo a pedido explícito).
 """
+
 import os
 import csv
 import json

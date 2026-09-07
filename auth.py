@@ -1,16 +1,23 @@
-"""Autenticación para la plataforma multi-sindicato.
+"""Autenticación propia de la plataforma multi-sindicato (sin terceros).
 
-Tres roles:
-  - plataforma : admin de plataforma (clave fija en variable de entorno)
-  - sindicato  : administrador de un sindicato (UsuarioSindicato)
-  - trabajador : trabajador registrado (Trabajador)
+Cuatro roles, cada uno con su login y su propia cookie (COOKIES_POR_ROL en
+main.py: sesion_plataforma / sesion_sindicato / sesion_trabajador /
+sesion_empleador; cada rol lee y renueva SOLO la suya):
+  - plataforma : admin de plataforma (CUIT + PLATAFORMA_PASSWORD, variables de entorno)
+  - sindicato  : administrador de un sindicato (UsuarioSindicato, CUIT + clave)
+  - trabajador : trabajador registrado (CuentaTrabajador, CUIL + clave)
+  - empleador  : empresa registrada (CuentaEmpleador, CUIT + clave)
 
-Las claves se guardan hasheadas (nunca en texto plano). Se usa hashlib con
-sal por usuario, de la biblioteca estándar, para no sumar dependencias.
-
-Las sesiones son tokens firmados guardados en una cookie. En memoria para la
-PoC; en producción irían a la base o a un store de sesiones.
+Las claves se guardan hasheadas con PBKDF2-HMAC-SHA256 y sal por usuario
+(biblioteca estándar, sin dependencias). Las sesiones son tokens firmados
+con HMAC (SESSION_SECRET) que viajan en la cookie: no hay estado de sesión
+en el servidor. Vencen por INACTIVIDAD (IDLE_TIMEOUT_SEGUNDOS, 15 minutos):
+el middleware `renovar_sesion_por_actividad` de main.py reemite la cookie en
+cada request autenticado, así un usuario activo nunca se desloguea solo.
+Quién es quién en cada request lo resuelve `sesion_actual(request, rol)`,
+en main.py.
 """
+
 import os
 import hmac
 import hashlib

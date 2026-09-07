@@ -155,7 +155,7 @@ details.tabla-det .tabla-scroll{padding:0 14px 6px}
 <header class="top">
   <div class="eyebrow">Colm3na · Mi Trabajo · Documentación técnica</div>
   <h1>Cómo está hecho Mi Trabajo</h1>
-  <p>Cuatro reportes generados desde el código real al 7 de septiembre de 2026 (rama <code>main</code>, commit <code>8d3a657</code>): qué hace cada rol, cómo se arma una respuesta, qué archivos componen el sistema y cómo se guardan los datos. Reemplaza la edición del 14 de agosto (versión 0.03).</p>
+  <p>Cuatro reportes generados desde el código real al 7 de septiembre de 2026 (rama <code>main</code>, commit <code>7b7a700</code>): qué hace cada rol, cómo se arma una respuesta, qué archivos componen el sistema y cómo se guardan los datos. Reemplaza la edición del 14 de agosto (versión 0.03).</p>
   <div class="datos">
 <div><b>0.29.01</b>Trabajador</div><div><b>0.29.06</b>Sindicato</div><div><b>0.23.02</b>Plataforma</div>
 <div><b>172</b>rutas HTTP</div><div><b>41</b>tablas</div><div><b>49</b>migraciones</div><div><b>61</b>archivos de test</div>
@@ -211,7 +211,7 @@ details.tabla-det .tabla-scroll{padding:0 14px 6px}
 <h2 id="f-pendientes">5. Lo que la doc anterior ya no cuenta y lo que sigue pendiente</h2>
 <ul>
 <li>Desde la versión 0.03 de agosto se sumaron: el cuarto rol (Empresa), notificaciones y trámites de los dos lados, empleadores, el Panel Sindical con Asistente, el RAG del convenio, Web Push, la credencial con QR efímero, seccionales, módulos por sindicato, los dos entornos con Alembic en el deploy y la landing con Recursos.</li>
-<li>La tarjeta Capacitación de la portada sigue diciendo «Próximamente» aunque la pestaña ya tiene contenido; el contenido propio por sindicato está pendiente.</li>
+<li>Capacitación tiene solo la guía fija de plataforma («Entendé tu nuevo recibo de sueldo», ley nacional); el contenido propio por sindicato sigue pendiente.</li>
 <li>«Cambiar clave» en plataforma es transitorio y hay que retirarlo antes de producción real.</li>
 <li>Pendientes de diseño: módulos STD y PRO del Panel Sindical (el explorador ya pasa por una guarda separada para ese momento), índice HNSW en pgvector cuando el volumen lo justifique, y la retención de datos identificatorios.</li>
 </ul>
@@ -438,7 +438,7 @@ details.tabla-det .tabla-scroll{padding:0 14px 6px}
 <li><b>Semilla.</b> Una base nueva queda vacía hasta <code>cargar_demo.py</code> o un alta desde plataforma; lo único que se siembra solo son los topes de seguridad social, que son de ley.</li>
 </ul>
 </div></div></section>
-<p class="foot">Colm3na · Mi Trabajo — Documentación técnica, edición del 7 de septiembre de 2026. Se genera con tres scripts (extraer, diagramar, generar) que leen db.py, main.py y migrations/; los textos de contexto se mantienen en contenido.py. Las cifras de esta página son del commit 8d3a657.</p>
+<p class="foot">Colm3na · Mi Trabajo — Documentación técnica, edición del 7 de septiembre de 2026. Se genera con tres scripts (extraer, diagramar, generar) que leen db.py, main.py y migrations/; los textos de contexto se mantienen en contenido.py. Las cifras de esta página son del commit 7b7a700.</p>
 </div>
 <script>
 (function(){

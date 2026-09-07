@@ -4,5 +4,8 @@
 # Instalación (una vez, con el venv activo):
 #   pip install -r requirements-dev.txt
 #   playwright install chromium
+# La suite unitaria (test_*.py, un archivo por proceso) y los robots E2E
+# corren con pytest; los test_*.py también se pueden correr como script.
+pytest==9.1.1
 playwright==1.62.0
 pytest-playwright==0.9.0

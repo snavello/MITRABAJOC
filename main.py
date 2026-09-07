@@ -1,30 +1,30 @@
-"""Servidor del validador de recibos — Mi Trabajo.
+"""Servidor de Mi Trabajo: la app y todas sus rutas (FastAPI + Jinja2).
 
-Datos en SQLite (ver db.py). Conceptos, fórmulas y reportes viven en la base;
-seed_aefip.json es histórico y NO se siembra solo (ver db.init_db).
+Los datos viven en Postgres (db.py; SQLite solo en tests). Las rutas están
+agrupadas por actor, cada grupo con su encabezado de comentario:
 
-Rutas del trabajador:
-  GET  /                    pantalla del trabajador
-  POST /api/leer            lee un recibo con IA y devuelve preview
-  POST /api/validar         valida el recibo confirmado, da de alta conceptos nuevos
-  POST /api/reportar        guarda un reporte
-  POST /api/enviar-sindicato  envío voluntario para acreditar afiliado cotizante
-  GET  /api/mis-recibos     historial de recibos verificados por el trabajador
+  Público y PWA   /, /sw.js, /logo/{id}, verificación pública de credencial,
+                  /api/version
+  Trabajador      /ingresar, /app/inicio, /app (Tu recibo, Mis aportes,
+                  Credencial, Capacitación, Novedades, Trámites),
+                  /app/notificaciones, /app/convenio, /api/leer,
+                  /api/validar, /api/reportar, /api/enviar-sindicato, ...
+  Sindicato       /admin/inicio, /admin (quince pestañas), /admin/dashboard
+                  (Panel Sindical + Asistente) y los ABM de padrón,
+                  catálogo, contenido, notificaciones, trámites, empleadores
+                  y convenio
+  Empresa         /ingresar-empresa, /empresa/inicio, /empresa
+  Plataforma      /plataforma (sindicatos, módulos, marca, configuración)
+  Interno         /entornos (landing con PIN) y /recursos/...
 
-Rutas del sindicato (admin):
-  GET  /admin               panel
-  POST /admin/concepto      alta/edición de concepto (ABM)
-  POST /admin/concepto/borrar
-  POST /admin/formula       alta/edición de fórmula (ABM)
-  POST /admin/formula/borrar
-  POST /admin/aprender      sube N recibos y devuelve conceptos nuevos propuestos
-  POST /admin/aprender/aplicar   da de alta en lote los conceptos aprobados
+Cada rol tiene su cookie (COOKIES_POR_ROL) y el sindicato de cada request
+sale SIEMPRE de la cookie, nunca de un parámetro. El listado completo de
+rutas, con rol y descripción, está en la documentación técnica generada
+(`recursos/documentacion-tecnica.html`, pestaña Componentes).
 
-Rutas de plataforma:
-  POST /plataforma/config   edita el tope sindical del 2% (Ley 27.802 art. 133)
-
-Arrancar con:  uvicorn main:app --reload
+Arrancar con:  uvicorn main:app --reload   (ver README.md)
 """
+
 import traceback
 import uuid
 from datetime import date, datetime

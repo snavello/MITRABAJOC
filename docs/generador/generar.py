@@ -4,10 +4,13 @@ raíz del repo:
 
     python docs/generador/extraer.py && python docs/generador/generar.py
 
-Después, actualizar FECHA_DOC y COMMIT acá, y la miniatura en recursos/ si
-cambió la portada (ver HISTORIAL.md, "Documentación técnica generada")."""
+La fecha de la edición y el commit se toman solos (hoy y `git rev-parse`).
+Si cambió la portada, rehacer la miniatura en recursos/ (ver HISTORIAL.md,
+"Documentación técnica generada")."""
 import json
+import subprocess
 from collections import defaultdict
+from datetime import date
 from html import escape as e
 from pathlib import Path
 
@@ -21,8 +24,26 @@ POR_TABLA = {t["tabla"]: t for t in TABLAS}
 N_COL = sum(len(t["columnas"]) for t in TABLAS)
 N_BYTES = sum(1 for t in TABLAS for c in t["columnas"] if c["bytes"])
 N_JSON = sum(1 for t in TABLAS for c in t["columnas"] if c["json"])
-FECHA_DOC = "7 de septiembre de 2026"
-COMMIT = "8d3a657"
+MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+         "septiembre", "octubre", "noviembre", "diciembre"]
+
+
+def _fecha_de_hoy() -> str:
+    d = date.today()
+    return f"{d.day} de {MESES[d.month - 1]} de {d.year}"
+
+
+def _commit_actual() -> str:
+    """Hash corto del commit desde el que se genera; "local" si no hay git."""
+    try:
+        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"],
+                                       cwd=AQUI, text=True, stderr=subprocess.DEVNULL).strip()
+    except Exception:
+        return "local"
+
+
+FECHA_DOC = _fecha_de_hoy()
+COMMIT = _commit_actual()
 
 
 # ---------- helpers de HTML ----------
@@ -125,7 +146,7 @@ def vista_funcionalidades():
 <h2 id="f-pendientes">5. Lo que la doc anterior ya no cuenta y lo que sigue pendiente</h2>
 <ul>
 <li>Desde la versión 0.03 de agosto se sumaron: el cuarto rol (Empresa), notificaciones y trámites de los dos lados, empleadores, el Panel Sindical con Asistente, el RAG del convenio, Web Push, la credencial con QR efímero, seccionales, módulos por sindicato, los dos entornos con Alembic en el deploy y la landing con Recursos.</li>
-<li>La tarjeta Capacitación de la portada sigue diciendo «Próximamente» aunque la pestaña ya tiene contenido; el contenido propio por sindicato está pendiente.</li>
+<li>Capacitación tiene solo la guía fija de plataforma («Entendé tu nuevo recibo de sueldo», ley nacional); el contenido propio por sindicato sigue pendiente.</li>
 <li>«Cambiar clave» en plataforma es transitorio y hay que retirarlo antes de producción real.</li>
 <li>Pendientes de diseño: módulos STD y PRO del Panel Sindical (el explorador ya pasa por una guarda separada para ese momento), índice HNSW en pgvector cuando el volumen lo justifique, y la retención de datos identificatorios.</li>
 </ul>
