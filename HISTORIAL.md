@@ -2969,3 +2969,35 @@ hizo, archivo por archivo:
 Queda como estaba, a propósito: `SPRINT_REFORMA.md` (plan tal cual se
 escribió; CLAUDE.md dice qué se hizo) y los planes (`PLAN_*.md`), que
 documentan decisiones y no estado.
+
+## Anexo Servicios Mensuales (2026-09-07)
+
+Pedido de Sd: rehacer la evaluación de costos mensuales (Render, Postgres,
+S3, API de Claude con 10.000 recibos, GitHub Team, Claude Team) contra los
+precios vigentes de cada proveedor, recordar lo que faltaba y dejarlo como
+anexo en el formato HTML de los planes. Las decisiones se tomaron de a una
+(alcance, instancias, Postgres, S3, volumen de IA, asientos, faltantes,
+moneda, formato, titularidad) y quedan en la pestaña "Supuestos".
+
+- `recursos/anexo-servicios-mensuales.html` (+ miniatura), catalogado en
+  `recursos.SEMILLA`. Cuatro pestañas: Resumen, Detalle por rubro, IA por
+  uso, Supuestos y fuentes. Dos escenarios: arranque USD 1.031 (2 web
+  Standard + worker Pro para el RAG, Postgres Pro con alta disponibilidad,
+  Pruebas y Demo, 4 asientos) y tope USD 1.125 (5 instancias, correo Pro,
+  Codespaces). La IA va a tope de contrato (10.000 recibos × USD 0,028).
+- Lo que faltaba en la lista original: Pruebas y Demo, el tamaño de
+  instancia que exige la indexación del convenio (~1 GB, Standard mínimo),
+  S3 solo como backup (la app no lo usa), dominio, correo transaccional,
+  monitoreo, la consola de la API aparte de los asientos de Claude Team,
+  impuestos sobre servicios del exterior.
+- Hallazgos de precios: Render pasó a tarifa plana por workspace (USD 25)
+  en abril de 2026, ya no USD 19 por usuario como decía PLAN_ENTORNOS; el
+  Pro-4gb de Postgres figura a USD 55 en una fuente y 97 en otra (se
+  confirma al contratar); GitHub muestra "USD 4 los primeros 12 meses".
+- El Anexo Interno de la landing (subido a la base) se reemplazó por una
+  copia con un panel "Resumen" que enlaza a este anexo, un renglón GitHub
+  Team en su tabla de costos y los valores precargados (total 1.031, sigue
+  editable y guardado en el navegador).
+- Este documento se armó con `scratchpad/anexo/armar.py` (fuera del repo):
+  los montos se calculan de una lista de rubros, no a mano. Para rehacerlo
+  con precios nuevos conviene volver a partir de esa lista.

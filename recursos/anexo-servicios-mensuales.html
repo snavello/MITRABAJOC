@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Servicios Mensuales Colm3na</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+:root{
+  --tinta:#0a1421;--miel:#f0a01e;--agua:#a0030b;--verde:#0f8a6a;--azul:#2e5c8a;
+  --papel:#f4f6f9;--blanco:#fff;--linea:#dbe2ea;--texto:#16243a;--texto2:#4c5d75;--suave:#eef2f7;--suave2:#f9fafc;
+  --sombra:0 1px 2px rgba(10,20,33,.05);
+  --display:'Barlow Condensed','Arial Narrow',sans-serif;--body:'Barlow',system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --papel:#0e1622;--blanco:#152030;--linea:#2a3748;--texto:#e6ecf4;--texto2:#a3b1c4;--suave:#1c2838;--suave2:#18222f;--azul:#8db6e3;--verde:#3fbf98;color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --papel:#0e1622;--blanco:#152030;--linea:#2a3748;--texto:#e6ecf4;--texto2:#a3b1c4;--suave:#1c2838;--suave2:#18222f;--azul:#8db6e3;--verde:#3fbf98;color-scheme:dark;}
+*{box-sizing:border-box;margin:0}
+body{background:var(--papel);color:var(--texto);font-family:var(--body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:var(--azul)}
+h1,h2,h3{text-wrap:balance}
+.top{background:radial-gradient(900px 480px at 78% -10%,rgba(160,3,11,.28),transparent 62%),linear-gradient(160deg,#0d1626 20%,var(--tinta) 70%,#24354f);color:#fff;padding:26px clamp(18px,4vw,48px) 22px;position:relative}
+.top::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.12;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='104' viewBox='0 0 120 104'%3E%3Cpath d='M30 2l26 15v30L30 62 4 47V17zM90 2l26 15v30L90 62 64 47V17zM60 54l26 15v30L60 104 34 89V69z' fill='none' stroke='%23fff' stroke-width='1'/%3E%3C/svg%3E")}
+.top>*{position:relative;z-index:1}
+.eyebrow{font-family:var(--display);font-weight:600;letter-spacing:2.4px;text-transform:uppercase;color:var(--miel);font-size:13px}
+.top h1{font-family:var(--display);font-weight:700;font-size:clamp(30px,4.5vw,50px);line-height:1;margin:6px 0 10px}
+.top p{max-width:80ch;color:rgba(255,255,255,.8);font-size:15px}
+.top .datos{display:flex;flex-wrap:wrap;gap:18px 28px;margin-top:16px}
+.top .datos div{font-size:13px;color:rgba(255,255,255,.7)}
+.top .datos b{display:block;font-family:var(--display);font-size:22px;color:#fff;letter-spacing:.5px;font-variant-numeric:tabular-nums}
+.top .datos b em{font-style:normal;color:var(--miel);font-size:14px;letter-spacing:1.2px;margin-right:4px}
+nav.tabs{position:sticky;top:0;z-index:5;background:var(--blanco);border-bottom:1px solid var(--linea);display:flex;gap:2px;padding:0 clamp(10px,3vw,36px);overflow-x:auto;scrollbar-width:none}
+nav.tabs button{appearance:none;border:0;background:none;font-family:var(--display);font-size:15px;letter-spacing:1.4px;text-transform:uppercase;color:var(--texto2);padding:13px 14px 11px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+nav.tabs button.on{color:var(--agua);border-bottom-color:var(--agua)}
+nav.tabs button:focus-visible{outline:2px solid var(--miel);outline-offset:-2px}
+nav.tabs .sync{margin-left:auto;align-self:center;font-size:12px;color:var(--texto2);white-space:nowrap;padding-right:6px}
+.wrap{max-width:1180px;margin:0 auto;padding:24px clamp(14px,3vw,36px) 60px}
+.vista{display:none}.vista.on{display:block}
+.doc{max-width:80ch}
+.doc h2{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.05;margin:30px 0 10px}
+.doc h2:first-child,.vista>h2:first-child{margin-top:0}
+.doc h3{font-family:var(--display);font-weight:600;font-size:20px;letter-spacing:.4px;margin:22px 0 6px}
+.doc p{margin:0 0 12px}
+.doc ul{margin:0 0 12px 20px}.doc li{margin-bottom:5px}
+.nota{border-left:3px solid var(--miel);background:var(--suave2);padding:10px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14.5px;max-width:80ch}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:4px 0 20px}
+.kpi{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;padding:12px 14px;box-shadow:var(--sombra)}
+.kpi b{font-family:var(--display);font-size:28px;display:block;line-height:1.05;font-variant-numeric:tabular-nums}
+.kpi b small{font-size:14px;color:var(--texto2);font-weight:600;letter-spacing:1px;margin-right:3px}
+.kpi span{font-size:13px;color:var(--texto2)}
+.tabla-scroll{overflow-x:auto;background:var(--blanco);border:1px solid var(--linea);border-radius:14px;box-shadow:var(--sombra);margin:10px 0 18px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border-bottom:1px solid var(--linea);padding:9px 12px;text-align:left;vertical-align:top}
+thead th{font-family:var(--display);letter-spacing:1.2px;text-transform:uppercase;font-size:12.5px;color:var(--texto2);background:var(--suave2);white-space:nowrap}
+th.n,td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.r{font-weight:600;min-width:180px}
+td.que{min-width:250px}
+td.tit{font-family:var(--display);font-size:13.5px;letter-spacing:.4px;color:var(--texto2);white-space:nowrap}
+td.nota{color:var(--texto2);font-size:13px;min-width:220px}
+tr.grupo th{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:.3px;text-transform:none;color:var(--agua);background:var(--suave);padding-top:11px}
+tr.grupo th span{font-weight:600;font-size:12.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--texto2);margin-left:8px}
+tr.sub td{font-family:var(--display);font-weight:600;letter-spacing:.3px;background:var(--suave2)}
+tr.total td{font-family:var(--display);font-weight:700;font-size:17px;background:var(--tinta);color:#fff;border-bottom:0}
+tr.total td.n{color:var(--miel)}
+.dos{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px 28px;align-items:start}
+.fuentes li{margin-bottom:8px}
+.fuentes small{display:block;color:var(--texto2);font-size:12.5px}
+.foot{margin-top:30px;color:var(--texto2);font-size:12.5px;max-width:90ch}
+@media (max-width:640px){.top .datos{gap:12px 18px}}
+@media print{nav.tabs{display:none}.vista{display:block!important;break-inside:avoid}.top{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="eyebrow">Colm3na · Mi Trabajo · Anexo interno</div>
+  <h1>Servicios mensuales</h1>
+  <p>Cuánto cuesta por mes tener la plataforma en producción con un sindicato, más los entornos de Pruebas y Demo, la IA por uso y las licencias del equipo. Precios de lista en dólares de cada proveedor, verificados el 7 de septiembre de 2026. Complementa la tabla de costos del Anexo Interno y la titularidad corporativa del Plan Maestro.</p>
+  <div class="datos">
+    <div><b><em>USD</em>1.031</b>al mes, arranque</div>
+    <div><b><em>USD</em>1.125</b>al mes, a tope</div>
+    <div><b><em>USD</em>0,028</b>por recibo leído</div>
+    <div><b>18</b>servicios</div>
+    <div><b>4</b>asientos de Claude Team</div>
+  </div>
+</header>
+<nav class="tabs" id="tabs">
+  <button data-v="resumen" class="on">Resumen</button>
+  <button data-v="detalle">Detalle por rubro</button>
+  <button data-v="ia">IA por uso</button>
+  <button data-v="supuestos">Supuestos y fuentes</button>
+  <span class="sync">edición 7 de septiembre de 2026</span>
+</nav>
+<div class="wrap">
+
+<section class="vista on" id="v-resumen">
+  <div class="kpis">
+    <div class="kpi"><b><small>USD</small>1.031</b><span>Arranque: 2 web Standard + 1 worker Pro, Postgres Pro con alta disponibilidad, 4 asientos</span></div>
+    <div class="kpi"><b><small>USD</small>1.125</b><span>Tope: 4 web Standard + 1 worker Pro, correo Pro y Codespaces</span></div>
+    <div class="kpi"><b><small>USD</small>299–351</b><span>Solo infraestructura, incluidos Pruebas y Demo</span></div>
+    <div class="kpi"><b><small>USD</small>388</b><span>IA a tope de contrato: 10.000 recibos por mes</span></div>
+  </div>
+  <div class="tabla-scroll"><table>
+    <thead><tr><th>Grupo</th><th>Qué incluye</th><th class="n">Arranque USD/mes</th><th class="n">Tope USD/mes</th></tr></thead>
+    <tbody><tr><td class="r">Infraestructura</td><td>Render y respaldo</td><td class="n">299</td><td class="n">351</td></tr>
+<tr><td class="r">IA por uso</td><td>API de Anthropic</td><td class="n">388</td><td class="n">388</td></tr>
+<tr><td class="r">Licencias del equipo</td><td>GitHub y Claude</td><td class="n">316</td><td class="n">338</td></tr>
+<tr><td class="r">Operación</td><td>dominio, correo y monitoreo</td><td class="n">28</td><td class="n">48</td></tr>
+<tr class="total"><td colspan="2">Total mensual aproximado</td><td class="n">1.031</td><td class="n">1.125</td></tr></tbody>
+  </table></div>
+  <div class="dos">
+    <div class="doc">
+      <h3>Cómo leer los dos escenarios</h3>
+      <p><b>Arranque</b> es lo que se contrata el primer día con un sindicato real: tres instancias en producción (dos web Standard y un worker Pro para indexar el convenio), la base Pro con réplica, Pruebas y Demo como hoy, y las cuatro licencias del equipo. <b>Tope</b> agrega las dos instancias web que faltan para llegar a cinco, el plan pago de correo y Codespaces. La IA se presupuesta en los dos a tope de contrato, porque no depende de las instancias sino de los recibos leídos.</p>
+      <p>Sin licencias ni IA, la infraestructura queda en USD 299 a 351: dentro del rango de USD 330 a 550 que estimaba <code>PLAN_ENTORNOS.md</code>, y por debajo porque Render dejó de cobrar asientos por usuario.</p>
+    </div>
+    <div class="doc">
+      <h3>Lo que no está en la tabla</h3>
+      <ul>
+        <li><b>Bot de WhatsApp:</b> precio fijo del proveedor externo, se acuerda por adenda (Plan Maestro).</li>
+        <li><b>Reserva de especialistas externos</b> y <b>gestor de contraseñas</b> (Bitwarden Teams, USD 4 por usuario): quedan en el Anexo Interno como decisión aparte.</li>
+        <li><b>Transferencia de Render</b> por encima de los 25 GB del workspace: USD 0,15 por GB.</li>
+        <li><b>Impuestos:</b> los servicios del exterior pagados con tarjeta de la empresa suman IVA y las percepciones vigentes; lo define el contador de XP/ATS.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="vista" id="v-detalle">
+  <div class="tabla-scroll"><table>
+    <thead><tr><th>Rubro</th><th>Qué se contrata</th><th class="n">Arranque USD/mes</th><th class="n">Tope USD/mes</th><th>Titular hoy → destino</th><th>Fuente / nota</th></tr></thead>
+    <tbody><tr class="grupo"><th colspan="6">Infraestructura <span>Render y respaldo</span></th></tr>
+<tr><td class="r">Render · workspace Pro</td><td class="que">Asientos ilimitados para el equipo y 25 GB de transferencia; hoy Hobby, gratis, en cuenta personal</td><td class="n">25</td><td class="n">25</td><td class="tit">SDN → XP/ATS</td><td class="nota">Tarifa plana por workspace desde abril de 2026 (antes USD 19 por usuario)</td></tr>
+<tr><td class="r">Producción · servicio web</td><td class="que">Instancias Standard (2 GB RAM, 1 CPU) a USD 25: dos al arranque, cuatro a tope</td><td class="n">50</td><td class="n">100</td><td class="tit">SDN → XP/ATS</td><td class="nota">Mínimo que soporta la app con el módulo de convenio; Starter (512 MB) no alcanza</td></tr>
+<tr><td class="r">Producción · worker del convenio (RAG)</td><td class="que">Una instancia Pro (4 GB, 2 CPU) que indexa convenios fuera del servicio web</td><td class="n">85</td><td class="n">85</td><td class="tit">SDN → XP/ATS</td><td class="nota">La indexación pide cerca de 1 GB en pico; con más de una instancia web tiene que salir del web (PLAN_ENTORNOS)</td></tr>
+<tr><td class="r">Producción · Postgres</td><td class="que">Pro-4gb con CPU dedicada y alta disponibilidad (2 × USD 55); recuperación a un punto en el tiempo de 7 días</td><td class="n">110</td><td class="n">110</td><td class="tit">SDN → XP/ATS</td><td class="nota">Disco por encima del incluido: USD 0,30 por GB</td></tr>
+<tr><td class="r">Pruebas · web + Postgres</td><td class="que">Starter USD 7 + Basic-256mb USD 6, como hoy</td><td class="n">13</td><td class="n">13</td><td class="tit">SDN → XP/ATS</td><td class="nota"></td></tr>
+<tr><td class="r">Demo · web + Postgres</td><td class="que">Starter USD 7 + Basic-256mb USD 6, como hoy</td><td class="n">13</td><td class="n">13</td><td class="tit">SDN → XP/ATS</td><td class="nota"></td></tr>
+<tr><td class="r">Backups fuera de Render (S3)</td><td class="que">Volcado diario cifrado con 30 a 90 días de retención (30 a 90 GB)</td><td class="n">3</td><td class="n">5</td><td class="tit">a crear en XP/ATS</td><td class="nota">S3 Standard USD 0,023 por GB al mes; requiere el Cron Job de pg_dump previsto en PLAN_ENTORNOS</td></tr>
+<tr class="sub"><td colspan="2">Subtotal · Infraestructura</td><td class="n">299</td><td class="n">351</td><td colspan="2"></td></tr>
+<tr class="grupo"><th colspan="6">IA por uso <span>API de Anthropic</span></th></tr>
+<tr><td class="r">Lectura de recibos</td><td class="que">10.000 recibos por mes × USD 0,028 (Claude Sonnet 4.6)</td><td class="n">280</td><td class="n">280</td><td class="tit">SDN → XP/ATS (consola)</td><td class="nota">Tope del contrato SaaS; USD 0,023 por recibo con caché del prompt</td></tr>
+<tr><td class="r">Comprobantes de aportes (ARCA)</td><td class="que">1.000 por mes × USD 0,028 (Claude Sonnet 4.6)</td><td class="n">28</td><td class="n">28</td><td class="tit">ídem</td><td class="nota">Supuesto: 10 % de los recibos</td></tr>
+<tr><td class="r">Consultas sobre el convenio</td><td class="que">2.000 por mes × USD 0,035 (Claude Opus 5)</td><td class="n">70</td><td class="n">70</td><td class="tit">ídem</td><td class="nota">Los embeddings son locales: sin costo de API</td></tr>
+<tr><td class="r">Asistente del Panel Sindical</td><td class="que">500 por mes × USD 0,02 (Claude Sonnet 5, esfuerzo bajo)</td><td class="n">10</td><td class="n">10</td><td class="tit">ídem</td><td class="nota"></td></tr>
+<tr class="sub"><td colspan="2">Subtotal · IA por uso</td><td class="n">388</td><td class="n">388</td><td colspan="2"></td></tr>
+<tr class="grupo"><th colspan="6">Licencias del equipo <span>GitHub y Claude</span></th></tr>
+<tr><td class="r">GitHub Team</td><td class="que">4 usuarios × USD 4</td><td class="n">16</td><td class="n">16</td><td class="tit">SDN → XP/ATS (organización)</td><td class="nota">Ramas protegidas, revisores obligatorios, 3.000 minutos de Actions</td></tr>
+<tr><td class="r">Claude Team</td><td class="que">2 asientos Premium × USD 125 + 2 Estándar × USD 25, facturación mensual</td><td class="n">300</td><td class="n">300</td><td class="tit">SDN (individual) → XP/ATS</td><td class="nota">Anual: USD 240. Incluye Claude Code; no incluye consumo de API</td></tr>
+<tr><td class="r">Codespaces (opcional)</td><td class="que">Por uso, con tope: 2 devs × 60 h × USD 0,18</td><td class="n">0</td><td class="n">22</td><td class="tit">XP/ATS</td><td class="nota">Solo si un desarrollador no puede correr Docker en su PC</td></tr>
+<tr class="sub"><td colspan="2">Subtotal · Licencias del equipo</td><td class="n">316</td><td class="n">338</td><td colspan="2"></td></tr>
+<tr class="grupo"><th colspan="6">Operación <span>dominio, correo y monitoreo</span></th></tr>
+<tr><td class="r">Dominio propio</td><td class="que">Un .com (USD 15 a 25 al año) o .com.ar en NIC Argentina, prorrateado</td><td class="n">2</td><td class="n">2</td><td class="tit">a crear en XP/ATS</td><td class="nota">Los certificados TLS los emite Render sin cargo</td></tr>
+<tr><td class="r">Correo transaccional (Resend)</td><td class="que">Recuperar clave y avisos. Free: 3.000 mails por mes (100 por día); Pro USD 20</td><td class="n">0</td><td class="n">20</td><td class="tit">a crear en XP/ATS</td><td class="nota">Hoy la app no manda mails; hace falta antes de usuarios reales</td></tr>
+<tr><td class="r">Errores (Sentry Team)</td><td class="que">50.000 eventos por mes, usuarios ilimitados</td><td class="n">26</td><td class="n">26</td><td class="tit">a crear en XP/ATS</td><td class="nota">El código E-INTERNO-00 lleva la referencia al evento</td></tr>
+<tr><td class="r">Disponibilidad (UptimeRobot)</td><td class="que">Free: 50 monitores cada 5 minutos; Solo USD 12 cada 60 segundos</td><td class="n">0</td><td class="n">0</td><td class="tit">a crear en XP/ATS</td><td class="nota"></td></tr>
+<tr class="sub"><td colspan="2">Subtotal · Operación</td><td class="n">28</td><td class="n">48</td><td colspan="2"></td></tr>
+<tr class="total"><td colspan="2">Total mensual aproximado</td><td class="n">1.031</td><td class="n">1.125</td><td colspan="2">USD de lista, sin impuestos</td></tr></tbody>
+  </table></div>
+  <div class="nota"><b>Titularidad.</b> Hoy todas las cuentas están a nombre de SDN en planes personales. El destino es una cuenta corporativa, XP o ATS a acordar, con SDN y ARS como administradores técnicos y un segundo responsable en cada una; el orden y la semana de cada migración están en el Plan Maestro, "Titularidad corporativa de las cuentas".</div>
+</section>
+
+<section class="vista" id="v-ia">
+  <div class="doc">
+    <h2>Qué cuesta cada llamada</h2>
+    <p>La app hace cuatro tipos de llamada a la API de Anthropic, cada una con su modelo. Los tokens por llamada salen del código (tamaño de las instrucciones, imagen a 150 dpi, largo típico de la respuesta) y los precios de la tabla oficial al 7 de septiembre de 2026. Cada llamada real queda registrada en Plataforma → Uso de IA: ese panel es la fuente para reemplazar estas estimaciones por el promedio medido.</p>
+  </div>
+  <div class="tabla-scroll"><table>
+    <thead><tr><th>Uso</th><th>Modelo</th><th class="n">Tokens entrada</th><th class="n">Tokens salida</th><th class="n">USD por llamada</th><th class="n">Volumen mensual</th><th class="n">USD/mes</th></tr></thead>
+    <tbody>
+      <tr><td class="r">Lectura de recibos</td><td>Claude Sonnet 4.6 (USD 3 / 15 por millón)</td><td class="n">4.400</td><td class="n">1.000</td><td class="n">0,028</td><td class="n">10.000</td><td class="n">280</td></tr>
+      <tr><td class="r">Comprobantes de aportes</td><td>Claude Sonnet 4.6</td><td class="n">4.000</td><td class="n">800</td><td class="n">0,028</td><td class="n">1.000</td><td class="n">28</td></tr>
+      <tr><td class="r">Consultas sobre el convenio</td><td>Claude Opus 5 (USD 5 / 25 por millón)</td><td class="n">4.500</td><td class="n">500</td><td class="n">0,035</td><td class="n">2.000</td><td class="n">70</td></tr>
+      <tr><td class="r">Asistente del panel</td><td>Claude Sonnet 5 (USD 2 / 10 por millón), dos llamadas</td><td class="n">7.000</td><td class="n">800</td><td class="n">0,020</td><td class="n">500</td><td class="n">10</td></tr>
+      <tr class="total"><td colspan="6">Total IA por uso</td><td class="n">388</td></tr>
+    </tbody>
+  </table></div>
+  <div class="dos">
+    <div class="doc">
+      <h3>Sensibilidad</h3>
+      <ul>
+        <li>Cada 1.000 recibos más o menos por mes mueven USD 28.</li>
+        <li>Con caché del prompt (las instrucciones son 2.000 tokens iguales en cada llamada) el recibo baja a USD 0,023 y los 10.000 a USD 230. Es un cambio de código chico.</li>
+        <li>La imagen es la mitad de la entrada: un PDF A4 a 150 dpi pesa unos 2.300 tokens; una foto de celular, parecido. Mandar el PDF como documento en vez de imagen no cambia el orden de magnitud.</li>
+        <li>Los recibos llegan concentrados los primeros días del mes: el tope de gasto de la consola tiene que contemplar el pico, no el promedio.</li>
+      </ul>
+    </div>
+    <div class="doc">
+      <h3>Controles</h3>
+      <ul>
+        <li>Un workspace por entorno en la consola de Anthropic (Producción, Pruebas, Desarrollo) con tope mensual y alerta al 70 %.</li>
+        <li>La clave de producción vive solo en las variables de Render; nunca la misma clave en dos entornos.</li>
+        <li>Revisión semanal del panel de Uso de IA durante el primer trimestre; después, mensual con el cierre económico.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="vista" id="v-supuestos">
+  <div class="dos">
+    <div class="doc">
+      <h2>Supuestos</h2>
+      <ul>
+        <li>Alcance: producción más Pruebas y Demo, que siguen como hoy.</li>
+        <li>Producción: dos servicios web Standard y un worker Pro para el convenio al arranque; hasta cinco instancias a tope (cuatro web y el worker).</li>
+        <li>Postgres de producción: Pro-4gb con alta disponibilidad, recuperación a un punto en el tiempo de 7 días y volcado diario a S3.</li>
+        <li>S3 solo para backups; los archivos de la app siguen en Postgres.</li>
+        <li>IA: 10.000 recibos por mes como tope de contrato, 1.000 comprobantes, 2.000 consultas al convenio y 500 al Asistente.</li>
+        <li>Licencias: GitHub Team para 4 usuarios; Claude Team con 2 asientos Premium y 2 Estándar, facturación mensual.</li>
+        <li>Se suman dominio, correo transaccional, Sentry y UptimeRobot; Codespaces solo en el escenario tope.</li>
+        <li>Todo en dólares de lista, sin impuestos ni tipo de cambio.</li>
+        <li>Titularidad: hoy SDN en cuentas personales; destino XP o ATS a acordar.</li>
+      </ul>
+      <h3>Mantenimiento</h3>
+      <p>Revisar los precios al contratar cada servicio y después una vez por trimestre; los proveedores cambian de plan sin aviso (Render pasó de asientos por usuario a tarifa plana en abril de 2026; Sonnet 5 mantuvo el precio de lanzamiento). Cuando exista un mes real de operación, la tabla de costos del Anexo Interno pasa de estimación a registro y este anexo se corrige con lo facturado.</p>
+    </div>
+    <div class="doc">
+      <h2>Fuentes</h2>
+      <ul class="fuentes">
+        <li><a href="https://render.com/pricing">render.com/pricing</a><small>Instancias Starter 7, Standard 25, Pro 85; Postgres Basic-256mb 6, Pro-4gb 55; disco 0,30 por GB; workspace Pro 25 por workspace. Contrastado con dos relevamientos de julio y agosto de 2026 porque la página no muestra la tabla sin JavaScript.</small></li>
+        <li><a href="https://render.com/docs/postgresql-backups">render.com/docs/postgresql-backups</a><small>Recuperación a un punto en el tiempo: 3 días en Hobby, 7 en Pro; backups lógicos con 7 días de retención.</small></li>
+        <li><a href="https://platform.claude.com/docs/en/about-claude/pricing">platform.claude.com/docs/en/about-claude/pricing</a><small>Sonnet 4.6: 3 / 15; Opus 5: 5 / 25; Sonnet 5: 2 / 10 por millón de tokens; caché al 10 % de la entrada; lote al 50 %.</small></li>
+        <li><a href="https://claude.com/pricing">claude.com/pricing</a><small>Team: Estándar USD 25 mensual o 20 anual; Premium USD 125 mensual o 100 anual; equipos de 2 a 150; incluye Claude Code.</small></li>
+        <li><a href="https://github.com/pricing">github.com/pricing</a><small>Team USD 4 por usuario y mes; 3.000 minutos de Actions; Codespaces desde USD 0,18 la hora.</small></li>
+        <li><a href="https://aws.amazon.com/s3/pricing/">aws.amazon.com/s3/pricing</a><small>S3 Standard USD 0,023 por GB al mes (US East, primeros 50 TB).</small></li>
+        <li><a href="https://sentry.io/pricing/">sentry.io/pricing</a> · <a href="https://uptimerobot.com/pricing/">uptimerobot.com/pricing</a> · <a href="https://resend.com/pricing">resend.com/pricing</a><small>Sentry Team USD 26 con 50.000 eventos; UptimeRobot Free 50 monitores cada 5 minutos, Solo USD 12; Resend Free 3.000 mails, Pro USD 20.</small></li>
+        <li>Documentos del proyecto<small><code>PLAN_ENTORNOS.md</code> (producción y presupuesto de transición), Plan Maestro (titularidad corporativa y modelo económico), Anexo Interno (tabla de costos e inventario de cuentas).</small></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</div>
+<footer class="foot">Colm3na · Mi Trabajo — Anexo Servicios Mensuales, edición del 7 de septiembre de 2026. Estimación de trabajo, no cotización: los montos son precios de lista de cada proveedor al día indicado y se confirman al contratar.</footer>
+<script>
+(function(){
+  var botones=document.querySelectorAll('#tabs button'),vistas=document.querySelectorAll('.vista');
+  function ir(v){botones.forEach(function(b){b.classList.toggle('on',b.dataset.v===v)});vistas.forEach(function(s){s.classList.toggle('on',s.id==='v-'+v)});}
+  botones.forEach(function(b){b.addEventListener('click',function(){ir(b.dataset.v);history.replaceState(null,'','#'+b.dataset.v);})});
+  var h=location.hash.replace('#','');if(h&&document.getElementById('v-'+h))ir(h);
+})();
+</script>
+</body>
+</html>

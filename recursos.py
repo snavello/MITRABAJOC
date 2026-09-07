@@ -61,6 +61,16 @@ TIPOS = {
 # y migrations/); su miniatura es una captura de la portada.
 SEMILLA = [
     {
+        "clave": "anexo-servicios-mensuales",
+        "titulo": "Anexo Servicios Mensuales",
+        "descripcion": "Costo mensual aproximado de operar la plataforma: Render, Postgres, "
+                       "S3, IA por uso, licencias y operación, con fuentes y titularidad.",
+        "fecha": date(2026, 9, 7),
+        "archivo": "anexo-servicios-mensuales.html",
+        "miniatura": "anexo-servicios-mensuales.jpg",
+        "fragmento": "",
+    },
+    {
         "clave": "documentacion-tecnica",
         "titulo": "Documentación técnica",
         "descripcion": "Funcionalidades por rol, arquitectura con diagramas, componentes y rutas, "
