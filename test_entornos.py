@@ -53,6 +53,41 @@ def test_sin_pin_solo_se_ve_la_puerta():
     print("OK  test_sin_pin_solo_se_ve_la_puerta")
 
 
+def test_enlace_directo_pide_el_pin_y_despues_abre_ese_documento():
+    # Compartir https://.../recursos/plan-maestro/archivo con alguien que
+    # tiene el PIN: el clic cae en la puerta, que recuerda el destino, y el
+    # PIN correcto abre el documento en vez de la landing.
+    c = TestClient(main.app)
+    navegador = {"Accept": "text/html,application/xhtml+xml"}
+    r = c.get("/recursos/plan-maestro/archivo", headers=navegador, follow_redirects=False)
+    assert r.status_code == 303
+    puerta = r.headers["location"]
+    assert puerta == "/entornos?siguiente=%2Frecursos%2Fplan-maestro%2Farchivo"
+    r = c.get(puerta)
+    assert r.status_code == 200
+    assert 'name="siguiente" value="/recursos/plan-maestro/archivo"' in r.text
+    assert "Después se abre el documento que pediste" in r.text
+    # PIN equivocado: vuelve a la puerta y NO pierde el destino.
+    r = c.post("/entornos/pin", data={"pin": "00000000", "siguiente": "/recursos/plan-maestro/archivo"},
+               follow_redirects=False)
+    assert r.headers["location"] == "/entornos?aviso=pin&siguiente=%2Frecursos%2Fplan-maestro%2Farchivo"
+    assert 'name="siguiente" value="/recursos/plan-maestro/archivo"' in c.get(r.headers["location"]).text
+    # PIN correcto: pase puesto y directo al documento.
+    r = c.post("/entornos/pin", data={"pin": "24681357", "siguiente": "/recursos/plan-maestro/archivo"},
+               follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/recursos/plan-maestro/archivo"
+    assert recursos.COOKIE_PASE in r.cookies
+    assert c.get("/recursos/plan-maestro/archivo").status_code == 200
+    # La puerta no es una redirección abierta: solo /recursos/... de esta
+    # app; cualquier otro destino se ignora y se va a la landing.
+    for raro in ("https://otro.sitio/x", "//otro.sitio/x", "/recursos//otro.sitio", "/plataforma", "recursos/1/archivo"):
+        c2 = TestClient(main.app)
+        assert 'name="siguiente"' not in c2.get("/entornos", params={"siguiente": raro}).text, raro
+        r = c2.post("/entornos/pin", data={"pin": "24681357", "siguiente": raro}, follow_redirects=False)
+        assert r.headers["location"] == "/entornos", raro
+    print("OK  test_enlace_directo_pide_el_pin_y_despues_abre_ese_documento")
+
+
 def test_cinco_fallos_seguidos_hacen_esperar(monkeypatch):
     main._intentos_pin.clear()
     c = TestClient(main.app)

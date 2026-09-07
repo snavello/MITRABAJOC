@@ -4275,6 +4275,9 @@ def entornos(request: Request):
     if not _pase_landing(request):
         return templates.TemplateResponse("entornos_pin.html", {
             "request": request, "marca_plataforma": db.marca_plataforma(), "aviso": aviso,
+            # A dónde ir después del PIN: el recurso que se pidió por enlace
+            # directo (_exigir_pase lo manda acá con ?siguiente=).
+            "siguiente": _siguiente_seguro(request.query_params.get("siguiente", "")),
         })
     # Prellenar solo las versiones de este mismo servicio (las de Pruebas
     # cuando se sirve desde Pruebas); las del otro entorno las trae el JS.
@@ -4326,19 +4329,24 @@ def _pin_fallo(ip: str) -> None:
 
 
 @app.post("/entornos/pin")
-def entornos_pin(request: Request, pin: str = Form("")):
+def entornos_pin(request: Request, pin: str = Form(""), siguiente: str = Form("")):
     """El PIN de ocho dígitos, una vez por dispositivo: deja el pase de 30
     días (recursos.crear_pase) en una cookie Lax, así un POST desde otro
-    sitio no la manda y el pase no sirve para subir o quitar desde afuera."""
+    sitio no la manda y el pase no sirve para subir o quitar desde afuera.
+    `siguiente`: el recurso pedido por enlace directo antes del PIN; con el
+    pase puesto se abre ese documento en vez de la landing, así un enlace
+    a /recursos/.../archivo se puede compartir con solo el PIN."""
     _exigir_landing()
     ip = _ip_de(request)
+    siguiente = _siguiente_seguro(siguiente)
+    cola = f"&siguiente={quote(siguiente, safe='')}" if siguiente else ""
     if _pin_bloqueado(ip):
-        return RedirectResponse("/entornos?aviso=espera", status_code=303)
+        return RedirectResponse(f"/entornos?aviso=espera{cola}", status_code=303)
     if not entorno.verificar_pin(pin):
         _pin_fallo(ip)
-        return RedirectResponse("/entornos?aviso=pin", status_code=303)
+        return RedirectResponse(f"/entornos?aviso=pin{cola}", status_code=303)
     _intentos_pin.pop(ip, None)
-    resp = RedirectResponse("/entornos", status_code=303)
+    resp = RedirectResponse(siguiente or "/entornos", status_code=303)
     resp.set_cookie(recursos.COOKIE_PASE, recursos.crear_pase(), httponly=True,
                     samesite="lax", max_age=recursos.PASE_SEGUNDOS)
     return resp
@@ -4370,12 +4378,25 @@ def _pase_landing(request: Request) -> bool:
 
 def _exigir_pase(request: Request):
     """Sin pase: un <form> o un clic vuelven a la landing, que muestra la
-    pantalla del PIN; una llamada fetch recibe el 403 de siempre."""
+    pantalla del PIN; una llamada fetch recibe el 403 de siempre. Si lo que
+    se pidió fue abrir un recurso (GET), la puerta se acuerda del destino y
+    después del PIN abre ese documento: un enlace directo a
+    /recursos/.../archivo funciona con solo el PIN."""
     if _pase_landing(request):
         return None
     if _es_navegacion_de_pagina(request):
-        return RedirectResponse("/entornos", status_code=303)
+        destino = _siguiente_seguro(request.url.path) if request.method == "GET" else ""
+        cola = f"?siguiente={quote(destino, safe='')}" if destino else ""
+        return RedirectResponse(f"/entornos{cola}", status_code=303)
     raise HTTPException(403, "Ingresá el PIN de la landing para abrir los recursos.")
+
+
+def _siguiente_seguro(destino: str) -> str:
+    """Solo se vuelve a un recurso de esta misma app: un path que empiece
+    con /recursos/ (sin esquema ni host, para que nadie use la puerta del
+    PIN como redirección abierta hacia otro sitio). Cualquier otra cosa
+    equivale a "sin destino" y se va a la landing."""
+    return destino if destino.startswith("/recursos/") and not destino.startswith("/recursos//") else ""
 
 
 def _error_recurso(request: Request, codigo: str, mensaje: str):

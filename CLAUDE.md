@@ -153,7 +153,9 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   `Recurso`, bytes en la base). **Toda la landing está detrás de un PIN**
   de ocho dígitos (`PIN_ENTORNOS`, abajo) que se ingresa una vez por
   dispositivo y deja un pase de 30 días (cookie `pase_entornos`, NO es una
-  sesión de rol); una sesión de plataforma vigente también entra. Detalle en
+  sesión de rol); una sesión de plataforma vigente también entra. Un enlace directo a
+  `/recursos/.../archivo` sin pase cae en la puerta y, con el PIN, abre ese
+  documento (`?siguiente=`, solo paths `/recursos/`). Detalle en
   HISTORIAL.md, "Recursos en la landing" y "PIN de la landing".
 - PIN_ENTORNOS — PIN de ocho dígitos de la landing `/entornos` (`entorno.py`,
   default `09211999`). Cinco intentos fallidos seguidos desde una IP hacen

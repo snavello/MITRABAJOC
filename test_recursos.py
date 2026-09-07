@@ -61,6 +61,11 @@ def test_sin_pase_nada_se_abre():
     # Un clic (navegación) vuelve a la landing, que pide el PIN; un fetch
     # recibe 403. La miniatura tampoco: está detrás del mismo pase.
     r = sin_pase.get("/recursos/plan-maestro/archivo", headers=NAVEGADOR, follow_redirects=False)
+    assert r.status_code == 303
+    assert r.headers["location"] == "/entornos?siguiente=%2Frecursos%2Fplan-maestro%2Farchivo"
+    # Un <form> sin pase (subir/quitar) vuelve a la landing a secas: un POST
+    # no se puede "reanudar" después del PIN.
+    r = sin_pase.post("/recursos", data={"titulo": "x"}, headers=NAVEGADOR, follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == "/entornos"
     assert sin_pase.get("/recursos/plan-maestro/archivo").status_code == 403
     assert sin_pase.get("/recursos/plan-maestro/miniatura").status_code == 403

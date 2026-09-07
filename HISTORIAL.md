@@ -2904,3 +2904,24 @@ para que no vuelva a quedar desactualizada por escribirla a mano.
   (son 15) y nombra un solo modelo de IA (son tres); `pytest` no está en
   ningún requirements; la tarjeta Capacitación de la portada dice
   «Próximamente» con la pestaña ya llena.
+
+## Enlaces directos a un recurso, con solo el PIN (2026-09-07)
+
+Sd quería abrir la documentación desde la landing con el PIN y nada más
+(los enlaces a claude.ai piden sesión de Claude). Los recursos ya se servían
+así, pero un enlace directo a `/recursos/<ref>/archivo` sin pase caía en la
+puerta del PIN y, después del PIN, en la landing: había que volver a buscar
+el documento. Ahora la puerta se acuerda del destino.
+
+- `_exigir_pase` redirige a `/entornos?siguiente=<path>` cuando la
+  navegación es un GET; un POST sin pase (subir, quitar) sigue yendo a la
+  landing a secas porque no se puede reanudar. La puerta lleva el destino
+  en un campo oculto, lo conserva si el PIN falla y `POST /entornos/pin`
+  redirige ahí con el pase puesto.
+- `_siguiente_seguro`: solo paths que empiecen con `/recursos/` (sin
+  esquema, host ni `//`), para que la puerta no sirva de redirección
+  abierta hacia otro sitio. Cualquier otro destino equivale a "sin destino".
+- El `#fragmento` (p. ej. `#estrategia`) no viaja al servidor, así que se
+  pierde en la vuelta si se entra por enlace directo sin pase; con pase el
+  enlace abre directo y el fragmento sí funciona.
+- Plataforma 0.23.03.

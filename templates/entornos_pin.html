@@ -73,6 +73,7 @@
     <h1>Entornos</h1>
     <p class="lede">Página interna del equipo. Ingresá el código para entrar.</p>
     <form class="tarjeta" method="post" action="/entornos/pin" id="form-pin">
+      {% if siguiente %}<input type="hidden" name="siguiente" value="{{ siguiente }}">{% endif %}
       <label for="pin"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Código de acceso</label>
       <input class="pin" type="password" name="pin" id="pin" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" minlength="8"
              placeholder="••••••••" autocomplete="one-time-code" autofocus required aria-describedby="pin-nota">
@@ -82,7 +83,7 @@
       {% elif aviso == 'espera' %}
       <p class="aviso" role="alert">Demasiados intentos. Esperá un minuto y probá de nuevo.</p>
       {% endif %}
-      <p class="nota" id="pin-nota">Ocho dígitos. Se pide una vez por dispositivo; el pase dura 30 días.</p>
+      <p class="nota" id="pin-nota">Ocho dígitos. Se pide una vez por dispositivo; el pase dura 30 días.{% if siguiente %} Después se abre el documento que pediste.{% endif %}</p>
     </form>
   </main>
 </body>
