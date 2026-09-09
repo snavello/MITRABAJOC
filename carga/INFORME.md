@@ -184,7 +184,32 @@ que no se puede afirmar con certeza que sea 100% producto de la carga.
 
 ## E. Recomendaciones para HOY (plan actual, sin gastar más)
 
-Ordenadas por costo, para la instalación actual de Pruebas:
+**Actualización 2026-09-09, con un experimento real:** se probó `--workers
+2` en el servicio de Pruebas (mismo 0,5 vCPU, sin cambiar de plan) y se
+repitió el Test 1. El resultado **no confirmó la hipótesis original de
+este informe** -- de hecho, la contradijo:
+
+| Escalón | p95 con 1 worker | p95 con 2 workers | Errores 1 worker | Errores 2 workers |
+|---|---|---|---|---|
+| 50 | 4,2 s | 5,2 s | 0% | 0% |
+| 100 | 13,8 s | 19,4 s | 0% | 0,18% |
+| 200 | 29,9 s | **42,3 s** | 0,07% | **3,49%** |
+
+(Los escalones 400 y 800 de esa corrida quedaron contaminados por un
+despliegue que coincidió a mitad de test y no se incluyen -- ver el
+detalle en `carga/log/2026-09-09_2workers/`.)
+
+**Con 2 workers, la latencia empeoró y aparecieron errores donde antes no
+había.** La explicación: sumar workers reparte el trabajo en paralelo
+SOLO si hay CPU de sobra para repartir. Acá la instancia tiene 0,5 vCPU
+en total -- dos procesos compitiendo por media unidad de procesador no
+ganan paralelismo real, y sí suman costo (cambio de contexto entre
+procesos, el doble de memoria base por tener dos procesos en vez de uno;
+la RAM del servicio también fue más alta en esta corrida).
+
+**Conclusión corregida: en el plan actual, sumar workers sin sumar CPU
+real no ayuda -- y puede empeorar.** El orden de las recomendaciones de
+abajo queda así, revisado:
 
 1. **Código -- hacer asíncrona la llamada a Anthropic** (o correrla en un
    "threadpool" -- un grupo de hilos aparte del principal -- mientras se
@@ -192,26 +217,22 @@ Ordenadas por costo, para la instalación actual de Pruebas:
    `extractor.py` y sus dos puntos de uso en `main.py`. Efecto esperado:
    una subida de recibo deja de trabar el resto del tráfico mientras
    dura -- resuelve el agravante de "recibos simultáneos", no el techo
-   general de concurrencia (ver el punto 2).
-2. **Configuración -- sumar `--workers N` al comando de arranque en
-   Render** (probar con N=2 primero, dado el 0,5 vCPU actual). Costo
-   bajo: es un cambio de configuración en el dashboard de Render, sin
-   tocar una línea de código. **Este es el cambio de mayor impacto sobre
-   la baranda principal** (usuarios concurrentes con latencia sana):
-   reparte el tráfico entre procesos en vez de servirlo todo por un solo
-   hilo. Conviene repetir el Test 1 con este cambio solo, antes de tocar
-   el código de la IA, para medir su efecto por separado.
-3. **Infraestructura -- subir el plan de Postgres**, en cuanto los dos
-   puntos anteriores permitan que la concurrencia real le llegue a la
-   base. Ya con apenas 10-15 conexiones su CPU tocó el 100% de su
-   asignación (0,1 vCPU) -- la RAM, en cambio, se quedó en 55-63% de
-   sus 256 MB (ver Diagnóstico). **Al elegir el próximo plan, priorizar
-   CPU sobre RAM.** Costo medio: cambio de plan en Render, sin tocar
-   código.
-4. **Infraestructura -- subir el plan del servicio web**, solo si
-   después de 1 y 2 sigue sin alcanzar para 300 concurrentes con latencia
-   sana. Costo más alto; conviene dejarlo último porque el punto 2, solo,
-   puede resolver la mayor parte del problema a un costo mucho menor.
+   general de concurrencia (ver el punto 2). Es el único cambio de esta
+   lista que el experimento de arriba no puso en duda.
+2. **Infraestructura -- subir a un plan con vCPU entera** (1 vCPU o más)
+   antes de volver a tocar `--workers`. El experimento de arriba muestra
+   que en 0,5 vCPU no hay margen para repartir; recién con una CPU
+   completa (o más) sumar workers va a significar paralelismo real, no
+   solo más procesos compitiendo por lo mismo. Costo medio: cambio de
+   plan en Render. **Repetir el Test 1 después de este cambio, con
+   `--workers` vuelto a 1 primero** (para medir el efecto de la CPU sola)
+   y **después con `--workers 2` sobre esa misma CPU nueva** (para medir
+   el efecto de los workers ya con margen real) -- son dos variables
+   distintas y conviene no mezclarlas en una sola corrida, como pasó acá.
+3. **Infraestructura -- subir el plan de Postgres**, en paralelo al punto
+   2. Ya con apenas 10-15 conexiones su CPU tocó el 100% de su asignación
+   (0,1 vCPU) -- la RAM, en cambio, se quedó en 55-63% de sus 256 MB (ver
+   Diagnóstico). **Al elegir el próximo plan, priorizar CPU sobre RAM.**
 
 ## F. Extrapolación para producción: ¿pocas instancias grandes o muchas chicas?
 
@@ -233,7 +254,12 @@ pero se la sigue arrancando con 1 solo worker (como corre Pruebas hoy),
 la segunda CPU queda sin usar -- el cuello de botella descripto en el
 Diagnóstico sigue exactamente igual. Hace falta sumar `--workers N` para
 que la instancia reparta el trabajo entre varios procesos y aproveche esa
-CPU de más.
+CPU de más. **Y la recíproca también es cierta, confirmada con un
+experimento real (ver Recomendaciones, punto 2 revisado):** sumar
+workers SIN sumar CPU tampoco ayuda -- probado en Pruebas con
+`--workers 2` sobre el mismo 0,5 vCPU de siempre, la latencia empeoró en
+vez de mejorar. Los workers y la CPU real tienen que subir juntos; ninguno
+de los dos solo alcanza.
 
 Dicho esto, la pregunta deja de ser "más CPU por máquina" contra "más
 máquinas" en el sentido de la potencia bruta -- los dos caminos necesitan
