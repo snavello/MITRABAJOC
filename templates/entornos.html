@@ -123,9 +123,11 @@
   .server-dato .v { font-family:var(--fuente-num, var(--mono)); font-size:22px; font-weight:700; margin-top:2px; }
   .server-dato .v.chico { font-size:15px; font-weight:600; }
   .tests-lista { display:flex; flex-direction:column; gap:10px; }
-  .test-fila { border-radius:14px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); overflow:hidden; }
-  .test-fila summary { list-style:none; cursor:pointer; display:flex; align-items:center; gap:12px; padding:12px 16px; flex-wrap:wrap; }
-  .test-fila summary::-webkit-details-marker { display:none; }
+  .test-fila-link { border-radius:14px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12);
+    display:flex; align-items:center; gap:12px; padding:12px 16px; flex-wrap:wrap; text-decoration:none; color:#fff;
+    transition:background .15s ease, border-color .15s ease; }
+  .test-fila-link:hover, .test-fila-link:focus-visible { background:rgba(255,255,255,.09); border-color:rgba(255,255,255,.3); outline:none; }
+  .test-ver { font-family:var(--mono); font-size:12px; color:var(--pruebas); white-space:nowrap; }
   .test-estado { font-family:var(--mono); font-size:10.5px; letter-spacing:1px; text-transform:uppercase; padding:4px 10px; border-radius:999px; }
   .test-estado.pendiente, .test-estado.corriendo { background:color-mix(in srgb, var(--pruebas) 25%, transparent); color:var(--pruebas); }
   .test-estado.listo { background:color-mix(in srgb, var(--demo) 25%, transparent); color:var(--demo); }
@@ -133,7 +135,6 @@
   .test-tabla { width:100%; border-collapse:collapse; font-size:13px; margin-top:6px; }
   .test-tabla th, .test-tabla td { padding:6px 10px; text-align:right; border-bottom:1px solid rgba(255,255,255,.1); font-family:var(--mono); }
   .test-tabla th:first-child, .test-tabla td:first-child { text-align:left; }
-  .test-detalle { padding:0 16px 16px; border-top:1px solid rgba(255,255,255,.1); padding-top:12px; }
 
   /* ---- Actividad (2026-09-09): Pruebas y Demo lado a lado, mismo cromo
      por color de entorno que .entorno (franja arriba). */
@@ -605,18 +606,12 @@
   function pintarTests(tests) {
     const cont = document.getElementById('tests-lista');
     if (!tests.length) { cont.innerHTML = '<div class="vacio">Todavía no se corrió ningún test desde acá.</div>'; return; }
-    cont.innerHTML = tests.map(t => {
-      const filas = (t.resumen || []).map(f =>
-        '<tr><td>' + f.escalon + '</td><td>' + (f.p50 ?? '') + '</td><td>' + (f.p95 ?? '') + '</td><td>' +
-        (f.p99 ?? '') + '</td><td>' + (f.errores_pct ?? '') + '</td><td>' + (f.rps ?? '') + '</td></tr>').join('');
-      const tabla = filas ? '<table class="test-tabla"><thead><tr><th>Escalón</th><th>p50</th><th>p95</th><th>p99</th><th>Errores %</th><th>rps</th></tr></thead><tbody>' + filas + '</tbody></table>' : '';
-      const error = t.error_detalle ? '<p style="color:#ff9d9d;">' + t.error_detalle + '</p>' : '';
-      return '<details class="test-fila" data-test-id="' + t.id + '"><summary>' +
-        '<span class="test-estado ' + t.estado + '">' + t.estado + '</span> <b>#' + t.id + '</b> · ' + t.tipo + ' · ' + t.creado_en +
-        '<span style="margin-left:auto; opacity:.6; font-size:12.5px;">' + (t.avance || '') + '</span></summary>' +
-        '<div class="test-detalle">' + tabla + error +
-        '<p style="opacity:.6; font-size:12px; margin-top:8px;">Job de Render: <code>' + (t.render_job_id || '—') + '</code></p></div></details>';
-    }).join('');
+    cont.innerHTML = tests.map(t =>
+      '<a class="test-fila-link" data-test-id="' + t.id + '" href="/entornos/tests/' + t.id + '">' +
+      '<span class="test-estado ' + t.estado + '">' + t.estado + '</span> <b>#' + t.id + '</b> · ' + t.tipo + ' · ' + t.creado_en +
+      '<span style="margin-left:auto; opacity:.6; font-size:12.5px;">' + (t.avance || '') + '</span>' +
+      '<span class="test-ver">Ver informe →</span></a>'
+    ).join('');
   }
 
   function actualizar() {

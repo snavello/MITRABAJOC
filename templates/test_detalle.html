@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Test #{{ t.id }} · Colm3na</title>
+<style>
+  @font-face {
+    font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal;
+    src: url('/static/fonts/barlow-condensed-bold.woff2?v={{ sello_static('fonts/barlow-condensed-bold.woff2') }}') format('woff2');
+  }
+  :root {
+    --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
+    --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
+    --pruebas: #ffb020; --demo: #3ecfae;
+    --exito: #3ecfae; --alerta: #ff8a70;
+    --fuente-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; font-family: system-ui, sans-serif; }
+  body { min-height: 100vh; padding: 26px 16px 70px; color: #fff;
+    background: radial-gradient(900px 480px at 78% -10%, color-mix(in srgb, var(--agua) 22%, transparent), transparent 62%),
+                linear-gradient(160deg, #0d1626 20%, var(--tinta) 70%, color-mix(in srgb, var(--tinta) 72%, #4a6da8)); }
+  .pagina { max-width: 760px; margin: 0 auto; }
+  .volver { display: inline-block; color: rgba(255,255,255,.6); text-decoration: none; font-size: 13px;
+    margin-bottom: 18px; border-bottom: 1px dotted rgba(255,255,255,.3); }
+  .volver:hover { color: #fff; }
+  .cab { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
+  h1 { font-family: var(--fuente-display); font-size: 40px; letter-spacing: 1px; text-transform: uppercase; }
+  .estado { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    padding: 5px 12px; border-radius: 999px; }
+  .estado.listo { background: color-mix(in srgb, var(--exito) 25%, transparent); color: var(--exito); }
+  .estado.corriendo, .estado.pendiente { background: color-mix(in srgb, var(--pruebas) 25%, transparent); color: var(--pruebas); }
+  .estado.error { background: rgba(220,80,80,.25); color: #ff9d9d; }
+  .meta { font-family: var(--mono); font-size: 12.5px; color: rgba(255,255,255,.55); margin-bottom: 28px; }
+
+  .seccion { margin: 30px 0; }
+  .seccion h2 { font-family: var(--fuente-display); font-size: 24px; letter-spacing: .5px; text-transform: uppercase;
+    color: var(--pruebas); margin-bottom: 12px; }
+
+  .grilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .dato { padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); }
+  .dato .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: 1.1px; text-transform: uppercase; color: rgba(255,255,255,.5); }
+  .dato .v { font-family: var(--mono); font-size: 19px; font-weight: 700; margin-top: 3px; }
+
+  .conclusion { padding: 18px 20px; border-radius: 14px; border-left: 4px solid var(--pruebas);
+    background: rgba(255,255,255,.06); font-size: 15px; line-height: 1.55; }
+  .conclusion b { color: var(--pruebas); }
+  .conclusion.ok { border-left-color: var(--exito); } .conclusion.ok b { color: var(--exito); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 9px 12px; text-align: right; border-bottom: 1px solid rgba(255,255,255,.12); font-family: var(--mono); }
+  th:first-child, td:first-child { text-align: left; }
+  th { font-family: var(--fuente-display); letter-spacing: .06em; text-transform: uppercase; font-size: 12px; color: rgba(255,255,255,.5); }
+  .cumple { font-size: 15px; }
+  .cumple.si { color: var(--exito); } .cumple.no { color: var(--alerta); }
+  .wrap-tabla { overflow-x: auto; border-radius: 12px; background: rgba(255,255,255,.04); padding: 4px 6px; }
+
+  .glosario { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 10px; margin-top: 14px; }
+  .termino { padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); font-size: 12.5px; }
+  .termino b { color: var(--pruebas); font-family: var(--fuente-display); letter-spacing: .3px; }
+
+  .enlaces { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
+  .enlaces a { color: var(--demo); font-size: 13.5px; }
+  code { font-family: var(--mono); background: rgba(255,255,255,.08); padding: .1em .4em; border-radius: 5px; }
+  .error-caja { padding: 14px 16px; border-radius: 12px; background: rgba(220,80,80,.12); border: 1px solid rgba(220,80,80,.35); color: #ffb3a8; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <a class="volver" href="/entornos#tests-pruebas">&larr; Volver a Tests</a>
+  <div class="cab">
+    <h1>Test #{{ t.id }}</h1>
+    <span class="estado {{ t.estado }}">{{ t.estado }}</span>
+  </div>
+  <div class="meta">{{ t.tipo }} · creado {{ t.creado_en }}{% if t.terminado_en %} · terminado {{ t.terminado_en }}{% endif %} · Job de Render <code>{{ t.render_job_id or '—' }}</code></div>
+
+  {% if t.error_detalle %}
+  <div class="seccion">
+    <div class="error-caja">{{ t.error_detalle }}</div>
+  </div>
+  {% endif %}
+
+  <div class="seccion">
+    <h2>Configuración con la que corrió</h2>
+    {% set cfg = t.parametros.config or {} %}
+    <div class="grilla">
+      <div class="dato"><div class="k">Workers uvicorn</div><div class="v">{{ cfg.workers_uvicorn if cfg.workers_uvicorn is not none else '—' }}</div></div>
+      <div class="dato"><div class="k">Pool Postgres</div><div class="v">{{ cfg.pool_size if cfg.pool_size is not none else '?' }} + {{ cfg.max_overflow if cfg.max_overflow is not none else '?' }}</div></div>
+      <div class="dato"><div class="k">Plan web</div><div class="v" style="font-size:14px;">{{ cfg.plan_web or '—' }}</div></div>
+      <div class="dato"><div class="k">Plan Postgres</div><div class="v" style="font-size:14px;">{{ cfg.plan_db or '—' }}</div></div>
+      <div class="dato"><div class="k">Escalones</div><div class="v" style="font-size:15px;">{{ t.parametros.escalones|join(', ') }}</div></div>
+      <div class="dato"><div class="k">Duración/escalón</div><div class="v">{{ t.parametros.duracion_seg }}s</div></div>
+    </div>
+    {% if not cfg %}
+    <p style="font-size:12.5px; color:rgba(255,255,255,.5); margin-top:8px;">Este test corrió antes de que se empezara a guardar la config -- no queda registro de los workers que tenía en ese momento.</p>
+    {% endif %}
+  </div>
+
+  {% if analisis.filas %}
+  <div class="seccion">
+    <h2>Resultados</h2>
+    {% if analisis.ultimo_sano %}
+    <div class="conclusion ok">Cumplió el objetivo (p95 &lt; 1s, errores &lt; 1%) hasta <b>{{ analisis.ultimo_sano }}</b> {{ 'concurrentes' if t.tipo == 'lecturas' else 'recibos simultáneos' }}.</div>
+    {% else %}
+    <div class="conclusion">Ningún escalón probado cumplió el objetivo (p95 &lt; 1s y errores &lt; 1%) -- ver <a href="https://github.com/snavello/MITRABAJOC/blob/main/carga/INFORME.md" style="color:var(--pruebas)">el informe completo</a> para el diagnóstico de por qué.</div>
+    {% endif %}
+    <p style="font-size:12.5px; color:rgba(255,255,255,.5); margin-top:4px;">Los tiempos (p50/p95/p99) están en milisegundos (ms) -- 1.000 ms = 1 segundo.</p>
+    <div class="wrap-tabla" style="margin-top:10px;">
+    <table>
+      <thead><tr><th>Escalón</th><th>p50 (ms)</th><th>p95 (ms)</th><th>p99 (ms)</th><th>Errores %</th><th>rps</th><th>Objetivo</th></tr></thead>
+      <tbody>
+      {% for f in analisis.filas %}
+        <tr>
+          <td>{{ f.escalon }}</td><td>{{ f.p50 }}</td><td>{{ f.p95 }}</td><td>{{ f.p99 }}</td>
+          <td>{{ f.errores_pct }}</td><td>{{ f.rps }}</td>
+          <td><span class="cumple {{ 'si' if f.cumple else 'no' }}">{{ '✓' if f.cumple else '✗' }}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <div class="glosario">
+      <div class="termino"><b>p50</b> — de cada 100 pedidos de ese escalón, 50 tardaron menos que este valor. Es la experiencia típica.</div>
+      <div class="termino"><b>p95</b> — de cada 100 pedidos, 95 tardaron menos que este valor (los otros 5 tardaron más). El número que define si la app se siente bien.</div>
+      <div class="termino"><b>p99</b> — de cada 100 pedidos, 99 tardaron menos que este valor. El peor caso, la cola extrema.</div>
+    </div>
+  </div>
+  {% elif t.estado in ('pendiente', 'corriendo') %}
+  <div class="seccion">
+    <div class="conclusion">{{ t.avance or 'Arrancando...' }} — esta página no se refresca sola, volvé a entrar en un rato.</div>
+  </div>
+  {% endif %}
+
+  <div class="seccion">
+    <h2>Para más contexto</h2>
+    <p style="font-size:14px; color:rgba(255,255,255,.75); line-height:1.5;">Este test es un chequeo rápido. La corrida de referencia rigurosa (50 a 800 concurrentes, con ráfagas de recibos) y el diagnóstico completo -- por qué pasa esto y cómo escalar para producción -- están en el informe del repositorio.</p>
+    <div class="enlaces">
+      <a href="https://github.com/snavello/MITRABAJOC/blob/main/carga/INFORME.md" target="_blank" rel="noopener">Ver INFORME.md en GitHub →</a>
+    </div>
+  </div>
+</div>
+</body>
+</html>

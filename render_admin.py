@@ -64,14 +64,42 @@ def _ultimo_valor(resource_id: str, endpoint: str, minutos: int = 2):
     return total if alguno else None
 
 
+def _workers_del_start_command(web_id: str):
+    """Lee el Start Command REAL del servicio y le busca "--workers N" --
+    nunca hardcodeado, porque es justo el número que estamos ajustando
+    para resolver el cuello de botella del informe. Sin la bandera,
+    uvicorn arranca con 1 (el default), así que ese es el resultado."""
+    try:
+        detalle = _peticion(f"/services/{web_id}")
+    except Exception:
+        return None, None
+    cmd = (detalle.get("serviceDetails", {}).get("envSpecificDetails", {})
+           .get("startCommand", ""))
+    import re
+    m = re.search(r"--workers[= ](\d+)", cmd)
+    workers = int(m.group(1)) if m else 1
+    plan = detalle.get("serviceDetails", {}).get("plan", "")
+    return workers, plan
+
+
+def _plan_postgres(db_id: str):
+    try:
+        detalle = _peticion(f"/postgres/{db_id}")
+    except Exception:
+        return None
+    return detalle.get("plan", "")
+
+
 def estado_servidor() -> dict:
-    """CPU/RAM actuales del web service y de la base, más lo que el propio
-    repo ya sabe de configuración (workers, pool de Postgres) -- para el
-    panel de detalle de la pestaña Tests. Los valores en None son huecos
-    (sin RENDER_API_KEY o falló la llamada) que la plantilla muestra como
-    "no disponible", nunca como cero."""
+    """CPU/RAM actuales del web service y de la base, más la configuración
+    real leída de la API (workers del Start Command, plan de cada uno) --
+    para el panel de detalle de la pestaña Tests. Los valores en None son
+    huecos (sin RENDER_API_KEY o falló la llamada) que la plantilla
+    muestra como "no disponible", nunca como cero."""
     web_id = os.getenv("RENDER_WEB_SERVICE_ID", "")
     db_id = os.getenv("RENDER_DB_ID", "")
+    workers, plan_web = (_workers_del_start_command(web_id)
+                          if (configurado() and web_id) else (None, None))
     return {
         "configurado": configurado(),
         "cpu_web": _ultimo_valor(web_id, "cpu") if configurado() else None,
@@ -79,9 +107,11 @@ def estado_servidor() -> dict:
         "cpu_db": _ultimo_valor(db_id, "cpu") if (configurado() and db_id) else None,
         "ram_db_bytes": _ultimo_valor(db_id, "memory") if (configurado() and db_id) else None,
         "conexiones_db": _ultimo_valor(db_id, "active-connections") if (configurado() and db_id) else None,
-        # Config que no cambia entre corridas -- de db.py y del comando de
-        # arranque, no de la API (Render no expone "workers" como métrica).
-        "pool_size": 5, "max_overflow": 5, "workers_uvicorn": 1,
+        "workers_uvicorn": workers,
+        "plan_web": plan_web,
+        "plan_db": _plan_postgres(db_id) if (configurado() and db_id) else None,
+        # Esto sí es constante del código (db.py), no de la API.
+        "pool_size": 5, "max_overflow": 5,
     }
 
 

@@ -41,28 +41,12 @@
 
 <div class="tests-lista" id="tests-lista" aria-label="Tests corridos">
   {% for t in tests_recientes %}
-  <details class="test-fila" data-test-id="{{ t.id }}">
-    <summary>
-      <span class="test-estado {{ t.estado }}">{{ t.estado }}</span>
-      <b>#{{ t.id }}</b> · {{ t.tipo }} · {{ t.creado_en }}
-      <span style="margin-left:auto; opacity:.6; font-size:12.5px;" data-avance>{{ t.avance }}</span>
-    </summary>
-    <div class="test-detalle" data-detalle>
-      {% if t.resumen %}
-      <table class="test-tabla">
-        <thead><tr><th>Escalón</th><th>p50</th><th>p95</th><th>p99</th><th>Errores %</th><th>rps</th></tr></thead>
-        <tbody>
-        {% for fila in t.resumen %}
-          <tr><td>{{ fila.escalon }}</td><td>{{ fila.p50 }}</td><td>{{ fila.p95 }}</td><td>{{ fila.p99 }}</td>
-              <td>{{ fila.errores_pct }}</td><td>{{ fila.rps }}</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
-      {% endif %}
-      {% if t.error_detalle %}<p style="color:#ff9d9d;">{{ t.error_detalle }}</p>{% endif %}
-      <p style="opacity:.6; font-size:12px; margin-top:8px;">Job de Render: <code>{{ t.render_job_id or '—' }}</code> · Parámetros: <code>{{ t.parametros }}</code></p>
-    </div>
-  </details>
+  <a class="test-fila-link" data-test-id="{{ t.id }}" href="/entornos/tests/{{ t.id }}">
+    <span class="test-estado {{ t.estado }}">{{ t.estado }}</span>
+    <b>#{{ t.id }}</b> · {{ t.tipo }} · {{ t.creado_en }}
+    <span style="margin-left:auto; opacity:.6; font-size:12.5px;" data-avance>{{ t.avance }}</span>
+    <span class="test-ver">Ver informe →</span>
+  </a>
   {% else %}
   <div class="vacio">Todavía no se corrió ningún test desde acá.</div>
   {% endfor %}

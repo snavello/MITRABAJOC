@@ -31,20 +31,22 @@ degradación, en vez de solo confirmar si el sistema aguanta o no un
 número fijo de golpe.
 
 Para cada escalón se mide, entre otras cosas, el tiempo que tarda el
-servidor en responder cada pedido, y se resume en tres números:
+servidor en responder cada pedido, y se resume en tres números. **Los
+tres están en milisegundos (ms) -- 1.000 ms = 1 segundo.** Los tres se
+leen con la misma pregunta ("de cada 100 pedidos, cuántos tardaron menos
+que este valor"), solo cambia el corte:
 
-- **p50 (la mediana)**: de todos los pedidos de ese escalón, la mitad
-  fueron más rápidos que este valor y la mitad más lentos. Es la
-  experiencia "típica" de un usuario cualquiera.
-- **p95**: el 95% de los pedidos fueron más rápidos que este valor --
-  dicho al revés, **1 de cada 20 pedidos fue más lento**. Es el número
-  que de verdad define si la app se siente bien, porque un promedio (o
-  incluso la mediana) esconde a la gente que peor la pasa: si el p95 es
-  malo, 1 de cada 20 clics de cualquier usuario, todo el tiempo, se
-  siente lento.
-- **p99**: 1 de cada 100 pedidos fue más lento que este valor. Es la cola
-  extrema, el peor caso -- útil para saber qué tan mal puede llegar a
-  estar alguien con mala suerte en el peor momento.
+- **p50 (la mediana)**: de cada 100 pedidos de ese escalón, 50 tardaron
+  menos que este valor (y 50 tardaron más). Es la experiencia "típica"
+  de un usuario cualquiera.
+- **p95**: de cada 100 pedidos, 95 tardaron menos que este valor -- los
+  otros 5 tardaron más. Es el número que de verdad define si la app se
+  siente bien, porque un promedio (o incluso la mediana) esconde a la
+  gente que peor la pasa: si el p95 es malo, hay una posibilidad real de
+  1 en 20 de que cualquier clic, en cualquier momento, se sienta lento.
+- **p99**: de cada 100 pedidos, 99 tardaron menos que este valor. Es la
+  cola extrema, el peor caso -- útil para saber qué tan mal puede llegar
+  a estar alguien con mala suerte en el peor momento.
 
 Por qué importan los tres juntos: si p50 fuera bueno pero p95 malo,
 significaría que el sistema anda bien la mayoría del tiempo con "baches"

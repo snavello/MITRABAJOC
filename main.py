@@ -4443,7 +4443,16 @@ def entornos_tests_correr(request: Request, tipo: str = Form("lecturas"),
     default = ESCALONES_DEFAULT_LECTURAS if tipo == "lecturas" else ESCALONES_DEFAULT_RECIBOS
     escalones_ok = _parsear_escalones(escalones, default)
     duracion_seg = max(30, min(duracion_seg, 600))  # entre 30s y 10 min por escalón, cordura
-    test_id = db.crear_test_carga(tipo, {"escalones": escalones_ok, "duracion_seg": duracion_seg})
+    # Snapshot de la config AL MOMENTO de lanzar (workers, plan, pool): sin
+    # esto, la página de detalle de un test viejo mostraría la config de
+    # HOY, no la que tenía cuando corrió -- justo lo que hace falta para
+    # comparar corridas con distinta cantidad de workers.
+    config_al_correr = render_admin.estado_servidor()
+    test_id = db.crear_test_carga(tipo, {
+        "escalones": escalones_ok, "duracion_seg": duracion_seg,
+        "config": {k: config_al_correr.get(k) for k in
+                   ("workers_uvicorn", "plan_web", "plan_db", "pool_size", "max_overflow")},
+    })
     resultado = render_admin.crear_job(f"python carga/correr_job.py {test_id}")
     if "error" in resultado:
         db.actualizar_test_carga(test_id, estado="error", error_detalle=resultado["error"])
@@ -4469,6 +4478,44 @@ def api_entornos_test_detalle(request: Request, test_id: int):
     if not fila:
         raise HTTPException(404, "No existe ese test.")
     return fila
+
+
+def _analisis_resumen(resumen: list) -> dict:
+    """Marca cada escalón contra el objetivo (p95 < 1000ms y errores <1%,
+    el mismo criterio de carga/INFORME.md) y busca el último que lo
+    cumple -- para que la página de detalle diga la baranda de ESE test
+    en una frase, no solo la tabla cruda."""
+    filas = []
+    ultimo_sano = None
+    for f in resumen or []:
+        p95 = f.get("p95")
+        err = f.get("errores_pct") or 0
+        cumple = p95 is not None and p95 < 1000 and err < 1
+        if cumple:
+            ultimo_sano = f.get("escalon")
+        filas.append({**f, "cumple": cumple})
+    return {"filas": filas, "ultimo_sano": ultimo_sano}
+
+
+@app.get("/entornos/tests/{test_id}", response_class=HTMLResponse)
+def entornos_test_detalle(request: Request, test_id: int):
+    """Página de detalle de UN test corrido: config real que tenía el
+    servidor en ese momento, parámetros, resultados y si cumplió el
+    objetivo -- lo que carga/INFORME.md explica para la corrida de
+    referencia, pero por cada corrida rápida disparada desde acá."""
+    _exigir_landing()
+    if not _pase_landing(request):
+        # _siguiente_seguro solo reconoce /recursos/... -- sin pase, vuelve
+        # a la landing general (con el PIN puesto, la lista de tests queda
+        # ahí mismo para volver a entrar).
+        return RedirectResponse("/entornos#tests-pruebas", status_code=303)
+    fila = db.test_carga_por_id(test_id)
+    if not fila:
+        raise HTTPException(404, "No existe ese test.")
+    return templates.TemplateResponse("test_detalle.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "t": fila, "analisis": _analisis_resumen(fila.get("resumen")),
+    })
 
 
 # ================= Recursos: la documentación del proyecto en la landing =================
