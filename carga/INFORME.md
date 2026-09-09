@@ -145,17 +145,40 @@ esas 2 subidas. Con 10 o 20 subidas simultáneas, tanto las subidas como
 las lecturas superan el minuto de espera para una fracción grande de los
 pedidos.
 
-**Postgres (0,1 vCPU / 256 MB) no llegó a ser el límite en esta corrida**:
-las conexiones activas se mantuvieron en 10-15 (dentro de lo que permite
-hoy el pool de la app) y no mostró señales claras de saturación en los
-datos capturados -- pero es, de lejos, la pieza más chica de toda la
-instalación, y es esperable que empiece a pesar apenas se resuelva el
+**Postgres (0,1 vCPU / 256 MB) no fue el límite GENERAL de esta corrida
+-- pero en su propia CPU sí llegó al techo, y con evidencia real, no
+solo razonamiento.** Cruzando las muestras de `servidor.log` de las dos
+corridas con métricas de servidor:
+
+| Corrida | CPU máxima de Postgres | RAM máxima de Postgres |
+|---|---|---|
+| Test 2 (primera) | **0,10 de 0,10 vCPU → 100%** | 142 MB de 256 MB → 55% |
+| Test 2 (repetido) | **0,10 de 0,10 vCPU → 100%** | 162 MB de 256 MB → 63% |
+
+La CPU tocó el techo de su asignación en las dos corridas, con apenas
+10 a 15 conexiones activas -- bastante antes de que la concurrencia real
+le llegara a la base, porque el cuello de botella del único worker web
+frenaba el tráfico mucho antes. La RAM, en cambio, nunca pasó de dos
+tercios de sus 256 MB. Esto tiene sentido con el tipo de trabajo que
+hace esta base: consultas cortas y simples (filtros por `sindicato_id`,
+inserts, algún `GROUP BY` en Actividad), no consultas que necesiten
+mucha memoria de trabajo por conexión -- lo que sí cuesta es el volumen
+de conexiones abriéndose, cerrándose y ejecutando esas consultas cortas
+una tras otra en una sola décima parte de un núcleo.
+
+**Conclusión para elegir plan de Postgres: prioridad a la CPU, no a la
+RAM.** Los planes de Render suben las dos juntas (no se puede pedir más
+CPU sin más RAM), así que en la práctica esto se traduce en no quedarse
+en un plan asumiendo que la RAM alcanza -- la CPU es la que se va a
+quedar corta primero, y ya lo hizo con una fracción chica de la
+concurrencia real. Es esperable que esto pese más apenas se resuelva el
 cuello de botella del worker único y la concurrencia real le empiece a
-llegar de verdad (ver la sección de escalado más abajo). La RAM del
-servicio web sí llegó a 594 MB en un momento del Test 2 repetido --por
-encima de los 512 MB del plan actual-- aunque coincide con la ventana del
-reinicio mencionado arriba, así que no se puede afirmar con certeza que
-sea 100% producto de la carga.
+llegar de verdad a la base (ver la sección de escalado más abajo).
+
+La RAM del servicio **web** (no la de Postgres) sí llegó a 594 MB en un
+momento del Test 2 repetido -- por encima de los 512 MB del plan actual
+-- aunque coincide con la ventana del reinicio mencionado arriba, así
+que no se puede afirmar con certeza que sea 100% producto de la carga.
 
 ## E. Recomendaciones para HOY (plan actual, sin gastar más)
 
@@ -178,8 +201,10 @@ Ordenadas por costo, para la instalación actual de Pruebas:
    el código de la IA, para medir su efecto por separado.
 3. **Infraestructura -- subir el plan de Postgres**, en cuanto los dos
    puntos anteriores permitan que la concurrencia real le llegue a la
-   base (con un solo worker, Postgres nunca se puso a prueba de verdad
-   en esta corrida). Costo medio: cambio de plan en Render, sin tocar
+   base. Ya con apenas 10-15 conexiones su CPU tocó el 100% de su
+   asignación (0,1 vCPU) -- la RAM, en cambio, se quedó en 55-63% de
+   sus 256 MB (ver Diagnóstico). **Al elegir el próximo plan, priorizar
+   CPU sobre RAM.** Costo medio: cambio de plan en Render, sin tocar
    código.
 4. **Infraestructura -- subir el plan del servicio web**, solo si
    después de 1 y 2 sigue sin alcanzar para 300 concurrentes con latencia
@@ -237,9 +262,12 @@ Usar las 3 a 5 instancias chicas para el **servicio web**, cada una con
 con redundancia real, contra el proceso único de hoy: un salto de 6 a 10
 veces la capacidad de servir tráfico en paralelo. Reservar la instancia
 de 2 vCPU/4GB (o las dos) para **Postgres**, no para más web: hoy la base
-corre con 0,1 vCPU, la pieza más chica de toda la instalación, y recién
-va a empezar a sentir la concurrencia real una vez resuelto el cuello de
-botella del worker único.
+corre con 0,1 vCPU, la pieza más chica de toda la instalación, y ya tocó
+el 100% de esa CPU con apenas 10-15 conexiones (ver Diagnóstico) -- va a
+empezar a sentir la concurrencia real mucho antes de lo que parece, en
+cuanto se resuelva el cuello de botella del worker único. Al elegir ese
+plan, priorizar CPU sobre RAM: en los datos capturados, la CPU de
+Postgres se saturó mientras su RAM todavía tenía margen (55-63% de uso).
 
 **Un detalle que se acopla directo a esta decisión**: cada worker abre
 hasta 10 conexiones a Postgres (`pool_size=5` + `max_overflow=5`). Con 6
