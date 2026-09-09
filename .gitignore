@@ -18,3 +18,7 @@ medicion_asistente/ultima_corrida.json
 
 # Intermedio del generador de documentación técnica (lo rehace extraer.py)
 docs/generador/datos.json
+
+# Test de carga (carga/): artefactos generados por corridas, no versionar
+carga/usuarios.csv
+carga/log/

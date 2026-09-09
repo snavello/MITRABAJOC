@@ -1,14 +1,80 @@
-"""Extrae los datos de un recibo (imagen o PDF) usando la Claude API."""
+"""Extrae los datos de un recibo (imagen o PDF) usando la Claude API.
+
+Modo simulado para pruebas de carga (`carga/`, ver `carga/README.md`):
+con MOCK_EXTRACTOR=1 ninguna de las dos funciones públicas llama a la API
+de Anthropic ni decodifica el archivo recibido -- esperan
+MOCK_EXTRACTOR_LATENCIA segundos (default 15, la demora típica de la
+llamada real) y devuelven un recibo/comprobante de demo fijo. Así el test
+de carga ejercita todo el resto del camino (auth, Postgres, validador,
+render de plantillas) sin gastar créditos de la API real ni depender de
+su latencia variable. NUNCA activar esto en `demo` ni en producción -- es
+para el servicio de Pruebas exclusivamente, y a propósito no hay ningún
+valor por defecto que lo active solo.
+"""
 import os
 import io
 import json
+import time
 import base64
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
 load_dotenv()
 
-client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY")) if os.getenv("MOCK_EXTRACTOR") != "1" else None
+
+
+def _mock_activo() -> bool:
+    return os.getenv("MOCK_EXTRACTOR") == "1"
+
+
+def _mock_latencia() -> float:
+    try:
+        return float(os.getenv("MOCK_EXTRACTOR_LATENCIA", "15"))
+    except ValueError:
+        return 15.0
+
+
+# Recibo "clásico" de demo, con datos plausibles y autoconsistentes (un
+# jubilatorio real haría fallar el validador contra CUALQUIER catálogo real
+# si los números no cierran ni remotamente) -- alcanza para ejercitar todo
+# el camino de /api/leer sin que la respuesta sea obviamente basura.
+_RECIBO_MOCK = {
+    "formato": "clasico",
+    "empleado": {"apellido_nombre": "Demo Carga, Trabajador", "cuil": None,
+                 "legajo": "0000", "categoria": "Administrativo", "fecha_ingreso": "2020-01-01"},
+    "empleador": {"nombre": "Empleador de Prueba SA", "cuit": "30000000000"},
+    "periodo": "2026-08",
+    "fecha_pago": "2026-09-01",
+    "lineas": [
+        {"codigo": "1", "descripcion": "Sueldo básico", "cantidad": None, "unidad": None,
+         "importe": 1000000, "tipo": "remuneracion", "categoria_universal": None},
+        {"codigo": "2", "descripcion": "Jubilación", "cantidad": None, "unidad": None,
+         "importe": -110000, "tipo": "aporte_trabajador", "categoria_universal": "jubilacion"},
+        {"codigo": "3", "descripcion": "Ley 19032/PAMI", "cantidad": None, "unidad": None,
+         "importe": -30000, "tipo": "aporte_trabajador", "categoria_universal": "pami"},
+        {"codigo": "4", "descripcion": "Obra Social", "cantidad": None, "unidad": None,
+         "importe": -30000, "tipo": "aporte_trabajador", "categoria_universal": "obra_social"},
+        {"codigo": "5", "descripcion": "Cuota sindical", "cantidad": None, "unidad": None,
+         "importe": -20000, "tipo": "aporte_trabajador", "categoria_universal": "cuota_sindical"},
+    ],
+    "totales_impresos": {"remuneraciones": 1000000, "descuentos": -190000, "neto": 810000},
+    "contribuciones_patronales": [],
+    "costo_laboral_total": None,
+    "ultimo_deposito": {"fecha": "2026-09-05", "periodo": "2026-08", "banco": "Banco de Prueba"},
+    "confianza": "alta",
+    "observaciones": None,
+    "alerta_adulteracion": {"detectada": False, "motivo": None},
+}
+
+_APORTES_MOCK = {
+    "cuil": None,
+    "desde": "10/2025",
+    "hasta": "09/2026",
+    "meses": [{"periodo": f"{m:02d}/2026" if m <= 9 else f"{m - 9:02d}/2025",
+               "jubilacion": "pagado", "obra_social": "pagado"} for m in range(1, 13)],
+    "confianza": "alta",
+}
 
 SYSTEM = (
     "Sos un extractor de datos de recibos de sueldo argentinos. Devolvés "
@@ -129,6 +195,10 @@ MODELO = "claude-sonnet-4-6"
 def extraer(contenido: bytes, content_type: str) -> tuple[dict, dict]:
     """Devuelve (datos_del_recibo, uso) -- uso trae modelo/tokens_entrada/
     tokens_salida de esta llamada puntual, para registrar el costo real."""
+    if _mock_activo():
+        time.sleep(_mock_latencia())
+        return json.loads(json.dumps(_RECIBO_MOCK)), {
+            "modelo": "mock", "tokens_entrada": 0, "tokens_salida": 0}
     if content_type == "application/pdf":
         b64, media = _imagen_desde_pdf(contenido)
     else:
@@ -194,6 +264,10 @@ de ARCA, poné confianza en "baja"."""
 def extraer_aportes(contenido: bytes, content_type: str) -> tuple[dict, dict]:
     """Lee un comprobante de aportes de ARCA (imagen o PDF) y devuelve
     (estado_mensual, uso) -- mismo criterio que extraer()."""
+    if _mock_activo():
+        time.sleep(_mock_latencia())
+        return json.loads(json.dumps(_APORTES_MOCK)), {
+            "modelo": "mock", "tokens_entrada": 0, "tokens_salida": 0}
     if content_type == "application/pdf":
         b64, media = _imagen_desde_pdf(contenido)
     else:
