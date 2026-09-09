@@ -24,6 +24,7 @@ import sys
 import time
 import urllib.request
 import urllib.error
+import urllib.parse
 from datetime import datetime, timezone, timedelta
 
 API = "https://api.render.com/v1"
@@ -45,8 +46,14 @@ def _ultimo_valor(api_key: str, resource_id: str, endpoint: str):
     "value"}], "unit": "..."}] -- una serie por resource/instance."""
     hasta = datetime.now(timezone.utc)
     desde = hasta - timedelta(minutes=2)
-    qs = (f"resource={resource_id}&startTime={desde.isoformat()}"
-          f"&endTime={hasta.isoformat()}&resolutionSeconds=30")
+    # OJO: Render exige RFC3339 con sufijo "Z" y SIN microsegundos --
+    # datetime.isoformat() de un datetime con tz da "...+00:00" con
+    # microsegundos, y la API lo rechaza (400 "could not parse input").
+    fmt = "%Y-%m-%dT%H:%M:%SZ"
+    qs = urllib.parse.urlencode({
+        "resource": resource_id, "startTime": desde.strftime(fmt),
+        "endTime": hasta.strftime(fmt), "resolutionSeconds": 30,
+    })
     try:
         series = _get(f"/metrics/{endpoint}?{qs}", api_key)
     except urllib.error.HTTPError as e:

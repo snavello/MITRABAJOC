@@ -17,3 +17,6 @@ fastembed==0.8.0
 pgvector==0.4.2
 pypdf==6.16.1
 pywebpush==2.5.0
+# Cliente async para carga/correr_job.py (el generador de carga que corre
+# en un Job de Render, disparado desde la pestaña "Tests" de /entornos).
+httpx==0.28.1

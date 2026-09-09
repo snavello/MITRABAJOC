@@ -61,6 +61,7 @@ from semaforo import calcular_semaforo, advertencia_ultimo_deposito
 from version import VERSION_TRABAJADOR, VERSION_ADMIN, VERSION_PLATAFORMA, FECHA_VERSION
 import entorno
 import recursos
+import render_admin
 from modulos import MODULOS, MODULOS_INICIALES
 import dashboard
 import asistente
@@ -4289,6 +4290,14 @@ def entornos(request: Request):
         # última acción.
         "recursos": recursos.catalogo(), "aviso": aviso, "hoy": date.today().isoformat(),
         "tamanio_max_mb": recursos.TAMANIO_MAX // (1024 * 1024),
+        # Tests: el detalle de servidor y la lista se piden también por JS
+        # (polling), pero se prellenan acá para que la pestaña no arranque
+        # vacía si alguien entra directo con #tests.
+        "entorno_actual": entorno.ENTORNO,
+        "tests_recientes": db.tests_carga_recientes(20) if entorno.ENTORNO == "pruebas" else [],
+        "render_estado": render_admin.estado_servidor() if entorno.ENTORNO == "pruebas" else None,
+        "escalones_default_lecturas": ",".join(map(str, ESCALONES_DEFAULT_LECTURAS)),
+        "escalones_default_recibos": ",".join(map(str, ESCALONES_DEFAULT_RECIBOS)),
     })
 
 
@@ -4350,6 +4359,71 @@ def entornos_pin(request: Request, pin: str = Form(""), siguiente: str = Form(""
     resp.set_cookie(recursos.COOKIE_PASE, recursos.crear_pase(), httponly=True,
                     samesite="lax", max_age=recursos.PASE_SEGUNDOS)
     return resp
+
+
+# ================= Tests: pestaña de test de estrés en /entornos =================
+# Pedido de Sd (2026-09-09): correr el test de estrés (carga/, ver
+# carga/README.md) desde un botón en vez de la terminal, y ver ahí mismo
+# cómo está configurado el servidor. El botón NO corre el generador en este
+# mismo proceso -- competiría por su propia CPU/red con el servidor que
+# está midiendo y los números saldrían falsos -- sino que crea un Job de
+# Render (contenedor aparte, mismo código y variables de entorno) que corre
+# carga/correr_job.py. Ese Job y esta página no comparten proceso ni
+# filesystem: se comunican solo a través de la tabla TestCarga (db.py).
+# Mismo gate que el resto de /entornos (PIN o sesión de plataforma) -- sin
+# login propio por ahora, a reforzar después (ver BACKLOG.md).
+ESCALONES_DEFAULT_LECTURAS = [50, 100, 200, 400, 800]
+ESCALONES_DEFAULT_RECIBOS = [2, 5, 10, 20]
+
+
+def _parsear_escalones(texto: str, default: list) -> list:
+    try:
+        vals = [int(x.strip()) for x in texto.split(",") if x.strip()]
+        vals = [v for v in vals if 0 < v <= 1000]
+        return vals or default
+    except ValueError:
+        return default
+
+
+@app.post("/entornos/tests/correr")
+def entornos_tests_correr(request: Request, tipo: str = Form("lecturas"),
+                          escalones: str = Form(""), duracion_seg: int = Form(120)):
+    _exigir_landing()
+    if not _pase_landing(request):
+        raise HTTPException(403, "Ingresá el PIN de la landing.")
+    if entorno.ENTORNO != "pruebas":
+        raise HTTPException(400, "El test de carga solo corre en Pruebas.")
+    if tipo not in ("lecturas", "recibos"):
+        raise HTTPException(400, "Tipo de test inválido.")
+    default = ESCALONES_DEFAULT_LECTURAS if tipo == "lecturas" else ESCALONES_DEFAULT_RECIBOS
+    escalones_ok = _parsear_escalones(escalones, default)
+    duracion_seg = max(30, min(duracion_seg, 600))  # entre 30s y 10 min por escalón, cordura
+    test_id = db.crear_test_carga(tipo, {"escalones": escalones_ok, "duracion_seg": duracion_seg})
+    resultado = render_admin.crear_job(f"python carga/correr_job.py {test_id}")
+    if "error" in resultado:
+        db.actualizar_test_carga(test_id, estado="error", error_detalle=resultado["error"])
+    else:
+        db.fijar_job_test_carga(test_id, resultado.get("id", ""))
+    return RedirectResponse("/entornos?aviso=test_lanzado#tests", status_code=303)
+
+
+@app.get("/api/entornos/tests")
+def api_entornos_tests(request: Request):
+    """Lista para el polling de la sección Tests -- se refresca sola cada
+    pocos segundos mientras haya alguno corriendo."""
+    if not _pase_landing(request):
+        raise HTTPException(403, "Ingresá el PIN de la landing.")
+    return {"tests": db.tests_carga_recientes(20), "servidor": render_admin.estado_servidor()}
+
+
+@app.get("/api/entornos/tests/{test_id}")
+def api_entornos_test_detalle(request: Request, test_id: int):
+    if not _pase_landing(request):
+        raise HTTPException(403, "Ingresá el PIN de la landing.")
+    fila = db.test_carga_por_id(test_id)
+    if not fila:
+        raise HTTPException(404, "No existe ese test.")
+    return fila
 
 
 # ================= Recursos: la documentación del proyecto en la landing =================

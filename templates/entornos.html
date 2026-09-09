@@ -97,6 +97,44 @@
     .acceso .rol { font-size:22px; }
   }
 
+  /* ---- Pestañas de sección (2026-09-09): Accesos / Tests en Pruebas /
+     Tests en Demo. Mismo cromo que .acceso .ver (píldora sólida cuando
+     está activa), sin pisar nada de .etab* de otras pantallas -- namespace
+     propio de esta página. */
+  .entornos-tabs { display:flex; gap:8px; margin:22px 0 20px; flex-wrap:wrap; }
+  .etab { appearance:none; cursor:pointer; padding:9px 16px; border-radius:999px; border:1px solid rgba(255,255,255,.25);
+    background:rgba(255,255,255,.06); color:rgba(255,255,255,.75);
+    font-family:var(--fuente-display); font-size:15px; letter-spacing:1.2px; text-transform:uppercase; }
+  .etab:hover:not(:disabled) { background:rgba(255,255,255,.12); }
+  .etab.activa { background:#fff; color:var(--tinta); border-color:#fff; }
+  .etab:disabled { opacity:.4; cursor:default; }
+  .panel-etab[hidden] { display:none; }
+
+  /* ---- Tests (2026-09-09): correr carga/ desde un botón. Reusa .boton,
+     .campo, .aviso, .vacio de Recursos -- misma familia visual, sin
+     duplicar tokens. */
+  .test-form { display:grid; grid-template-columns:repeat(3, 1fr) auto; gap:14px 18px; align-items:end;
+    padding:16px 18px; border-radius:16px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); margin-bottom:18px; }
+  @media (max-width:760px) { .test-form { grid-template-columns:1fr 1fr; } }
+  .test-form select { width:100%; padding:9px 12px; border-radius:9px; border:1px solid rgba(255,255,255,.25); background:rgba(0,0,0,.25); color:#fff; font-size:14px; }
+  .server-config { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:22px; }
+  .server-dato { padding:12px 14px; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); }
+  .server-dato .k { font-family:var(--mono); font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,.45); }
+  .server-dato .v { font-family:var(--fuente-num, var(--mono)); font-size:22px; font-weight:700; margin-top:2px; }
+  .server-dato .v.chico { font-size:15px; font-weight:600; }
+  .tests-lista { display:flex; flex-direction:column; gap:10px; }
+  .test-fila { border-radius:14px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); overflow:hidden; }
+  .test-fila summary { list-style:none; cursor:pointer; display:flex; align-items:center; gap:12px; padding:12px 16px; flex-wrap:wrap; }
+  .test-fila summary::-webkit-details-marker { display:none; }
+  .test-estado { font-family:var(--mono); font-size:10.5px; letter-spacing:1px; text-transform:uppercase; padding:4px 10px; border-radius:999px; }
+  .test-estado.pendiente, .test-estado.corriendo { background:color-mix(in srgb, var(--pruebas) 25%, transparent); color:var(--pruebas); }
+  .test-estado.listo { background:color-mix(in srgb, var(--demo) 25%, transparent); color:var(--demo); }
+  .test-estado.error { background:rgba(220,80,80,.25); color:#ff9d9d; }
+  .test-tabla { width:100%; border-collapse:collapse; font-size:13px; margin-top:6px; }
+  .test-tabla th, .test-tabla td { padding:6px 10px; text-align:right; border-bottom:1px solid rgba(255,255,255,.1); font-family:var(--mono); }
+  .test-tabla th:first-child, .test-tabla td:first-child { text-align:left; }
+  .test-detalle { padding:0 16px 16px; border-top:1px solid rgba(255,255,255,.1); padding-top:12px; }
+
   /* ---- Recursos (2026-09-07): la documentación del proyecto, en la misma
      colmena nocturna. Tarjetas con miniatura 16:10, título en la display
      condensada, una línea de descripción y la fecha; sin miniatura, una
@@ -200,6 +238,13 @@
       <p class="lede">Primero el entorno, después el rol. Cada acceso abre en una pestaña nueva.</p>
     </header>
 
+    <nav class="entornos-tabs" role="tablist" aria-label="Secciones">
+      <button type="button" class="etab activa" role="tab" aria-selected="true" data-tab="accesos">Accesos</button>
+      <button type="button" class="etab" role="tab" aria-selected="false" data-tab="tests-pruebas">Tests en Pruebas</button>
+      <button type="button" class="etab" role="tab" aria-selected="false" data-tab="tests-demo" disabled title="Todavía no disponible">Tests en Demo</button>
+    </nav>
+
+    <div class="panel-etab" data-panel="accesos">
     <div class="entornos">
     {% for env, base in urls.items() %}
       {% set propias = versiones.get(env) %}
@@ -240,6 +285,19 @@
         </div>
       </section>
     {% endfor %}
+    </div>
+    </div>{# /panel-etab accesos #}
+
+    <div class="panel-etab" data-panel="tests-pruebas" hidden>
+    {% if entorno_actual == 'pruebas' %}
+      {% include "_tests_carga.html" %}
+    {% else %}
+      <div class="vacio">La pestaña Tests corre solo desde el servicio de Pruebas -- esto es {{ entorno_actual or 'este entorno' }}.</div>
+    {% endif %}
+    </div>
+
+    <div class="panel-etab" data-panel="tests-demo" hidden>
+      <div class="vacio">Todavía no disponible. La demo no corre tests de carga -- es la versión estable que ven sindicatos e inversor.</div>
     </div>
 
     {# ---- Recursos: la documentación del proyecto (recursos.py) ---- #}
@@ -481,6 +539,83 @@
     boton.disabled = false;
   });
   if (location.hash === '#alta') document.getElementById('alta').open = true;
+})();
+</script>
+<script>
+// Pestañas Accesos / Tests en Pruebas / Tests en Demo -- toggle simple con
+// [hidden], sin frameworks (mismo criterio que el resto de la página).
+(function () {
+  const tabs = document.querySelectorAll('.etab');
+  const paneles = document.querySelectorAll('.panel-etab');
+  function activar(nombre) {
+    tabs.forEach(t => t.classList.toggle('activa', t.dataset.tab === nombre));
+    tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === nombre ? 'true' : 'false'));
+    paneles.forEach(p => { p.hidden = p.dataset.panel !== nombre; });
+    if (nombre !== 'accesos') location.hash = nombre; else history.replaceState(null, '', location.pathname + location.search);
+  }
+  tabs.forEach(t => t.addEventListener('click', () => { if (!t.disabled) activar(t.dataset.tab); }));
+  const inicial = location.hash.replace('#', '');
+  if (['tests-pruebas', 'tests-demo'].includes(inicial)) activar(inicial);
+})();
+
+// Tests de carga: el <select> de tipo sugiere los escalones default de ESE
+// tipo (lecturas: 50..800: recibos: 2..20 -- son magnitudes MUY distintas),
+// y el panel de servidor + la lista se refrescan solos mientras algo esté
+// "corriendo", con backoff simple para no pedir por minutos si ya terminó.
+(function () {
+  const form = document.getElementById('form-correr-test');
+  if (!form) return;  // "Tests en Demo" no lo tiene
+  const tipoSel = document.getElementById('tf-tipo');
+  const escalonesInput = document.getElementById('tf-escalones');
+  tipoSel.addEventListener('change', () => {
+    const def = tipoSel.value === 'recibos' ? escalonesInput.dataset.defaultRecibos : escalonesInput.dataset.defaultLecturas;
+    escalonesInput.placeholder = def;
+    if (!escalonesInput.value) escalonesInput.value = '';
+  });
+
+  const fmtBytes = (b) => b == null ? '…' : (b / (1024 * 1024)).toFixed(0) + ' MB';
+  const fmtCpu = (c) => c == null ? '…' : (c * 100).toFixed(0) + '%';
+
+  function pintarServidor(srv) {
+    if (!srv) return;
+    const set = (campo, valor) => { const el = document.querySelector('[data-srv="' + campo + '"]'); if (el) el.textContent = valor; };
+    set('workers_uvicorn', srv.workers_uvicorn ?? '…');
+    set('pool', (srv.pool_size ?? '?') + ' + ' + (srv.max_overflow ?? '?') + ' overflow');
+    set('cpu_web', srv.configurado ? fmtCpu(srv.cpu_web) : 'sin API key');
+    set('ram_web', fmtBytes(srv.ram_web_bytes));
+    set('cpu_db', srv.configurado ? fmtCpu(srv.cpu_db) : 'sin API key');
+    set('conexiones_db', srv.conexiones_db ?? '…');
+  }
+
+  function pintarTests(tests) {
+    const cont = document.getElementById('tests-lista');
+    if (!tests.length) { cont.innerHTML = '<div class="vacio">Todavía no se corrió ningún test desde acá.</div>'; return; }
+    cont.innerHTML = tests.map(t => {
+      const filas = (t.resumen || []).map(f =>
+        '<tr><td>' + f.escalon + '</td><td>' + (f.p50 ?? '') + '</td><td>' + (f.p95 ?? '') + '</td><td>' +
+        (f.p99 ?? '') + '</td><td>' + (f.errores_pct ?? '') + '</td><td>' + (f.rps ?? '') + '</td></tr>').join('');
+      const tabla = filas ? '<table class="test-tabla"><thead><tr><th>Escalón</th><th>p50</th><th>p95</th><th>p99</th><th>Errores %</th><th>rps</th></tr></thead><tbody>' + filas + '</tbody></table>' : '';
+      const error = t.error_detalle ? '<p style="color:#ff9d9d;">' + t.error_detalle + '</p>' : '';
+      return '<details class="test-fila" data-test-id="' + t.id + '"><summary>' +
+        '<span class="test-estado ' + t.estado + '">' + t.estado + '</span> <b>#' + t.id + '</b> · ' + t.tipo + ' · ' + t.creado_en +
+        '<span style="margin-left:auto; opacity:.6; font-size:12.5px;">' + (t.avance || '') + '</span></summary>' +
+        '<div class="test-detalle">' + tabla + error +
+        '<p style="opacity:.6; font-size:12px; margin-top:8px;">Job de Render: <code>' + (t.render_job_id || '—') + '</code></p></div></details>';
+    }).join('');
+  }
+
+  function actualizar() {
+    fetch('/api/entornos/tests', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(d => {
+        pintarServidor(d.servidor);
+        pintarTests(d.tests);
+        const hayCorriendo = d.tests.some(t => t.estado === 'pendiente' || t.estado === 'corriendo');
+        if (hayCorriendo) setTimeout(actualizar, 8000);
+      })
+      .catch(() => {});
+  }
+  actualizar();
 })();
 </script>
 </body>

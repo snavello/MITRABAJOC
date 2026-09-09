@@ -46,14 +46,25 @@ MONITOR_PID=$!
 trap 'kill $MONITOR_PID 2>/dev/null || true' EXIT
 
 echo "=== Test 1: lecturas (50 -> 800 concurrentes, ~21 min) ==="
+# k6 devuelve código != 0 cuando un threshold se cruza -- ESPERABLE a alta
+# concurrencia, no es una falla del script. set -e está activo, así que hay
+# que capturar el código sin dejar que mate el resto de la corrida.
+set +e
 BASE_URL="$BASE_URL" k6 run --out "json=$CARPETA/test1_lecturas.json" \
   --summary-export "$CARPETA/test1_resumen_k6.json" \
   k6/test1_lecturas.js 2>&1 | tee "$CARPETA/test1_stdout.log"
+RC1=${PIPESTATUS[0]}
+set -e
+echo "(Test 1 terminó con código $RC1 -- 0 = sin thresholds cruzados, no 0 = alguno se cruzó, ver resumen.csv)"
 
 echo "=== Test 2: recibos (200 lectores + ráfagas 2/5/10/20, ~17 min) ==="
+set +e
 BASE_URL="$BASE_URL" k6 run --out "json=$CARPETA/test2_recibos.json" \
   --summary-export "$CARPETA/test2_resumen_k6.json" \
   k6/test2_recibos.js 2>&1 | tee "$CARPETA/test2_stdout.log"
+RC2=${PIPESTATUS[0]}
+set -e
+echo "(Test 2 terminó con código $RC2 -- 0 = sin thresholds cruzados, no 0 = alguno se cruzó, ver resumen.csv)"
 
 kill "$MONITOR_PID" 2>/dev/null || true
 trap - EXIT

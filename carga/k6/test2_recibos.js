@@ -29,12 +29,14 @@ const usuarios = new SharedArray('usuarios', function () {
 });
 
 // 20 imagenes de recibo sintéticas (carga/recibos/) -- MOCK_EXTRACTOR no
-// lee el contenido, así que no importa cuál le toque a cada VU.
-const imagenes = new SharedArray('imagenes', function () {
-  const nombres = [];
-  for (let i = 0; i < 20; i++) nombres.push(`recibo_demo_${String(i).padStart(2, '0')}.jpg`);
-  return nombres;
-});
+// lee el contenido, así que no importa cuál le toque a cada VU. open() solo
+// se puede llamar en el scope de init (una vez por VU, no por iteración) --
+// por eso se leen acá arriba, no adentro de subirRecibo().
+const imagenesBin = [];
+for (let i = 0; i < 20; i++) {
+  const nombre = `recibo_demo_${String(i).padStart(2, '0')}.jpg`;
+  imagenesBin.push({ nombre, datos: open(`../recibos/${nombre}`, 'b') });
+}
 
 function pausa() {
   sleep(2 + Math.random() * 3);
@@ -78,8 +80,8 @@ function subirRecibo() {
     erroresRecibo.add(true);
     return;
   }
-  const nombre = imagenes[__ITER % imagenes.length];
-  const datos = http.file(open(`../recibos/${nombre}`, 'b'), nombre, 'image/jpeg');
+  const img = imagenesBin[__ITER % imagenesBin.length];
+  const datos = http.file(img.datos, img.nombre, 'image/jpeg');
   const res = http.post(
     `${BASE_URL}/api/leer`,
     { archivo: datos },

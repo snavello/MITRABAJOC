@@ -1029,6 +1029,66 @@ def registrar_consulta_asistente(sindicato_id: int, usuario_id: Optional[int], p
         return fila.id
 
 
+class TestCarga(SQLModel, table=True):
+    """Una corrida del test de estrés (carga/, ver carga/README.md),
+    disparada desde la pestaña "Tests" de /entornos. El generador corre en
+    un Job de Render aparte (no en este proceso -- si compitiera por CPU/red
+    con el propio servidor que está testeando, los números saldrían
+    falsos), así que esta tabla es el ÚNICO canal entre ese Job y la página
+    que lo muestra: el Job escribe acá su avance y su resultado final."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    entorno: str = "pruebas"                 # "pruebas" únicamente por ahora (demo: no disponible)
+    tipo: str = "lecturas"                    # "lecturas" | "recibos"
+    estado: str = "pendiente"                 # pendiente -> corriendo -> listo | error
+    parametros: dict = Field(default={}, sa_column=Column(JSON))
+    resumen: Optional[list] = Field(default=None, sa_column=Column(JSON))  # filas tipo resumen.csv
+    avance: str = ""                          # último progreso corto ("escalón 200, 00m30s")
+    error_detalle: str = ""
+    render_job_id: str = ""
+    creado_en: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    terminado_en: str = ""
+
+
+def crear_test_carga(tipo: str, parametros: dict) -> int:
+    with Session(engine) as s:
+        t = TestCarga(tipo=tipo, parametros=parametros)
+        s.add(t); s.commit(); s.refresh(t)
+        return t.id
+
+
+def fijar_job_test_carga(test_id: int, render_job_id: str) -> None:
+    with Session(engine) as s:
+        t = s.get(TestCarga, test_id)
+        if t:
+            t.render_job_id = render_job_id
+            t.estado = "corriendo"
+            s.add(t); s.commit()
+
+
+def actualizar_test_carga(test_id: int, **campos) -> None:
+    """Lo llama el Job (proceso aparte, misma base) para dejar avance,
+    resumen final, error o estado. Solo pisa los campos que le pasan."""
+    with Session(engine) as s:
+        t = s.get(TestCarga, test_id)
+        if not t:
+            return
+        for k, v in campos.items():
+            setattr(t, k, v)
+        s.add(t); s.commit()
+
+
+def tests_carga_recientes(limite: int = 20) -> list:
+    with Session(engine) as s:
+        filas = s.exec(select(TestCarga).order_by(TestCarga.id.desc()).limit(limite)).all()
+        return [f.model_dump() for f in filas]
+
+
+def test_carga_por_id(test_id: int) -> Optional[dict]:
+    with Session(engine) as s:
+        t = s.get(TestCarga, test_id)
+        return t.model_dump() if t else None
+
+
 def consultas_asistente_hoy(sindicato_id: int) -> int:
     """Para el tope diario del Asistente. `creado` es string ordenable, así
     que "hoy" es todo lo que empieza con la fecha de hoy."""
