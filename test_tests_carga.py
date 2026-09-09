@@ -162,6 +162,7 @@ def test_pagina_detalle_de_test_muestra_config_resultados_y_analisis():
     # 50 cumple el objetivo (p95<1000, err<1%), 800 no -- el análisis lo dice en una frase.
     assert "50</b>" in r.text or ">50<" in r.text
     assert "milisegundos" in r.text or "ms" in r.text  # unidad de los tiempos, no dada por sabida
+    assert "github.com" not in r.text.lower()  # el informe completo va a una página propia, no a un repo privado
     print("OK  test_pagina_detalle_de_test_muestra_config_resultados_y_analisis")
 
 

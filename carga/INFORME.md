@@ -48,6 +48,14 @@ que este valor"), solo cambia el corte:
   cola extrema, el peor caso -- útil para saber qué tan mal puede llegar
   a estar alguien con mala suerte en el peor momento.
 
+**Cómo se calcula, para que no quede ambiguo**: se ordenan los tiempos de
+ese escalón de más rápido a más lento. El p95 es el que queda en la
+posición 95 de cada 100 -- todo lo anterior en esa fila (95 mediciones)
+es igual de rápido o más, y solo lo que queda después (las últimas 5) es
+más lento. Un p95 **bajo** es una buena noticia (la gran mayoría anduvo
+rápido); un p95 **alto** es grave, porque no describe un caso raro --
+describe lo que le pasó al 95% de la gente, casi a todos.
+
 Por qué importan los tres juntos: si p50 fuera bueno pero p95 malo,
 significaría que el sistema anda bien la mayoría del tiempo con "baches"
 frecuentes. Lo que se ve en esta corrida es distinto: **p50 y p95 suben

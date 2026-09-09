@@ -104,7 +104,7 @@
     {% if analisis.ultimo_sano %}
     <div class="conclusion ok">Cumplió el objetivo (p95 &lt; 1s, errores &lt; 1%) hasta <b>{{ analisis.ultimo_sano }}</b> {{ 'concurrentes' if t.tipo == 'lecturas' else 'recibos simultáneos' }}.</div>
     {% else %}
-    <div class="conclusion">Ningún escalón probado cumplió el objetivo (p95 &lt; 1s y errores &lt; 1%) -- ver <a href="https://github.com/snavello/MITRABAJOC/blob/main/carga/INFORME.md" style="color:var(--pruebas)">el informe completo</a> para el diagnóstico de por qué.</div>
+    <div class="conclusion">Ningún escalón probado cumplió el objetivo (p95 &lt; 1s y errores &lt; 1%) -- ver <a href="{{ url_informe }}" style="color:var(--pruebas)">el informe completo</a> para el diagnóstico de por qué.</div>
     {% endif %}
     <p style="font-size:12.5px; color:rgba(255,255,255,.5); margin-top:4px;">Los tiempos (p50/p95/p99) están en milisegundos (ms) -- 1.000 ms = 1 segundo.</p>
     <div class="wrap-tabla" style="margin-top:10px;">
@@ -126,6 +126,7 @@
       <div class="termino"><b>p95</b> — de cada 100 pedidos, 95 tardaron menos que este valor (los otros 5 tardaron más). El número que define si la app se siente bien.</div>
       <div class="termino"><b>p99</b> — de cada 100 pedidos, 99 tardaron menos que este valor. El peor caso, la cola extrema.</div>
     </div>
+    <p style="font-size:12px; color:rgba(255,255,255,.45); margin-top:10px; line-height:1.5;">Cómo se calcula, para que no quede ambiguo: se ordenan los tiempos de ese escalón de más rápido a más lento; el p95 es el que queda en la posición 95 de cada 100 -- todo lo anterior en la fila (95 mediciones) es igual de rápido o más, y solo lo que queda después (las últimas 5) es más lento. Un p95 <em>bajo</em> es una buena noticia: la gran mayoría de los pedidos anduvo rápido.</p>
   </div>
   {% elif t.estado in ('pendiente', 'corriendo') %}
   <div class="seccion">
@@ -135,9 +136,9 @@
 
   <div class="seccion">
     <h2>Para más contexto</h2>
-    <p style="font-size:14px; color:rgba(255,255,255,.75); line-height:1.5;">Este test es un chequeo rápido. La corrida de referencia rigurosa (50 a 800 concurrentes, con ráfagas de recibos) y el diagnóstico completo -- por qué pasa esto y cómo escalar para producción -- están en el informe del repositorio.</p>
+    <p style="font-size:14px; color:rgba(255,255,255,.75); line-height:1.5;">Este test es un chequeo rápido. La corrida de referencia rigurosa (50 a 800 concurrentes, con ráfagas de recibos) y el diagnóstico completo -- por qué pasa esto y cómo escalar para producción -- están en el informe completo, con gráfico y glosario.</p>
     <div class="enlaces">
-      <a href="https://github.com/snavello/MITRABAJOC/blob/main/carga/INFORME.md" target="_blank" rel="noopener">Ver INFORME.md en GitHub →</a>
+      <a href="{{ url_informe }}" target="_blank" rel="noopener">Ver el informe completo →</a>
     </div>
   </div>
 </div>

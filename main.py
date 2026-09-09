@@ -4419,6 +4419,12 @@ def entornos_pin(request: Request, pin: str = Form(""), siguiente: str = Form(""
 # login propio por ahora, a reforzar después (ver BACKLOG.md).
 ESCALONES_DEFAULT_LECTURAS = [50, 100, 200, 400, 800]
 ESCALONES_DEFAULT_RECIBOS = [2, 5, 10, 20]
+# El informe completo (gráfico, glosario, diagnóstico) vive publicado como
+# página propia, NO en el repositorio de GitHub -- ese es privado y un
+# link ahí adentro le pide a quien lo abre iniciar sesión con una cuenta
+# que tenga acceso, lo que no tiene sentido para una pantalla pensada para
+# mirar rápido. Si se vuelve a publicar en otra URL, actualizar acá.
+URL_INFORME_COMPLETO = "https://claude.ai/code/artifact/fd5b32ab-57b1-4349-87eb-5802f71bba69"
 
 
 def _parsear_escalones(texto: str, default: list) -> list:
@@ -4515,6 +4521,7 @@ def entornos_test_detalle(request: Request, test_id: int):
     return templates.TemplateResponse("test_detalle.html", {
         "request": request, "marca_plataforma": db.marca_plataforma(),
         "t": fila, "analisis": _analisis_resumen(fila.get("resumen")),
+        "url_informe": URL_INFORME_COMPLETO,
     })
 
 
