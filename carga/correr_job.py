@@ -50,12 +50,17 @@ def percentil(valores, p):
 
 
 def cargar_usuarios():
+    """carga/usuarios.csv si existe (corrida manual, mismo filesystem que
+    preparar_datos.py) -- si no, los mismos usuarios pero leídos de la base
+    (db.usuarios_carga_estres): un Job de Render es un contenedor efímero
+    que no ve el CSV que otro Job escribió en el suyo."""
     ruta = Path(__file__).resolve().parent / "usuarios.csv"
-    if not ruta.exists():
-        return []
-    with open(ruta, encoding="utf-8") as f:
-        filas = [l.strip().split(",") for l in f.readlines()[1:] if l.strip()]
-    return [(c, clave) for c, clave in filas]
+    if ruta.exists():
+        with open(ruta, encoding="utf-8") as f:
+            filas = [l.strip().split(",") for l in f.readlines()[1:] if l.strip()]
+        if filas:
+            return [(c, clave) for c, clave in filas]
+    return db.usuarios_carga_estres()
 
 
 async def _paso(cliente, metodo, url, resultados, nombre, **kw):
@@ -140,8 +145,9 @@ async def main(test_id: int):
     duracion_seg = int(params.get("duracion_seg", 120))
     usuarios = cargar_usuarios()
     if not usuarios:
-        db.actualizar_test_carga(test_id, estado="error",
-                                  error_detalle="carga/usuarios.csv no existe -- correr preparar_datos.py primero")
+        db.actualizar_test_carga(
+            test_id, estado="error",
+            error_detalle="No hay usuarios sembrados -- correr preparar_datos.py contra esta base primero")
         sys.exit(1)
 
     imagen_bytes = None

@@ -24,6 +24,22 @@ client = TestClient(main.app)
 assert client.post("/entornos/pin", data={"pin": "13571357"}, follow_redirects=False).status_code == 303
 
 
+def test_usuarios_carga_estres_lee_de_la_base_no_de_un_csv():
+    """carga/correr_job.py corre en un Job de Render (contenedor efímero,
+    sin el CSV que otro Job haya escrito) -- tiene que poder armar la lista
+    de usuarios leyendo directo de la base."""
+    from db import Sindicato, Trabajador
+    with db.get_session() as s:
+        sind = Sindicato(nombre="Carga Estres Test", slug="carga-estres")
+        s.add(sind); s.commit(); s.refresh(sind)
+        s.add(Trabajador(sindicato_id=sind.id, cuil="20900000001", nombre="Uno"))
+        s.add(Trabajador(sindicato_id=sind.id, cuil="20900000002", nombre="Dos"))
+        s.commit()
+    usuarios = db.usuarios_carga_estres()
+    assert set(usuarios) == {("20900000001", "1234"), ("20900000002", "1234")}
+    print("OK  test_usuarios_carga_estres_lee_de_la_base_no_de_un_csv")
+
+
 def test_modelo_test_carga_alta_actualizacion_y_lectura():
     tid = db.crear_test_carga("lecturas", {"escalones": [50, 100], "duracion_seg": 120})
     fila = db.test_carga_por_id(tid)
@@ -126,6 +142,7 @@ def test_entornos_renderiza_la_pestana_tests_con_datos_reales():
 
 
 if __name__ == "__main__":
+    test_usuarios_carga_estres_lee_de_la_base_no_de_un_csv()
     test_modelo_test_carga_alta_actualizacion_y_lectura()
     test_sin_pase_no_se_puede_correr_ni_listar()
 

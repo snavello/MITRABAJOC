@@ -1029,6 +1029,21 @@ def registrar_consulta_asistente(sindicato_id: int, usuario_id: Optional[int], p
         return fila.id
 
 
+def usuarios_carga_estres() -> list:
+    """CUIL + clave fija ("1234") de los 1.000 trabajadores sintéticos que
+    siembra carga/preparar_datos.py, leídos de la base -- no de
+    carga/usuarios.csv. Los Jobs de Render (carga/correr_job.py) son
+    contenedores efímeros que no comparten filesystem entre sí ni con el
+    servicio web, así que un CSV generado por otro Job ya no está ahí; la
+    base sí es compartida y es la fuente de verdad."""
+    with Session(engine) as s:
+        sind = s.exec(select(Sindicato).where(Sindicato.slug == "carga-estres")).first()
+        if not sind:
+            return []
+        cuils = s.exec(select(Trabajador.cuil).where(Trabajador.sindicato_id == sind.id)).all()
+        return [(c, "1234") for c in cuils]
+
+
 class TestCarga(SQLModel, table=True):
     """Una corrida del test de estrés (carga/, ver carga/README.md),
     disparada desde la pestaña "Tests" de /entornos. El generador corre en
