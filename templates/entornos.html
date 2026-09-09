@@ -135,6 +135,16 @@
   .test-tabla th:first-child, .test-tabla td:first-child { text-align:left; }
   .test-detalle { padding:0 16px 16px; border-top:1px solid rgba(255,255,255,.1); padding-top:12px; }
 
+  /* ---- Actividad (2026-09-09): Pruebas y Demo lado a lado, mismo cromo
+     por color de entorno que .entorno (franja arriba). */
+  .act-envs { display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+  @media (max-width:820px) { .act-envs { grid-template-columns:1fr; } }
+  .act-entorno { border-radius:16px; padding:18px 16px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05); position:relative; overflow:hidden; }
+  .act-entorno::before { content:""; position:absolute; top:0; left:0; right:0; height:6px; }
+  .act-entorno.pruebas::before { background:var(--pruebas); }
+  .act-entorno.demo::before { background:var(--demo); }
+  .act-entorno h3 { font-family:var(--fuente-display); font-size:24px; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:12px; }
+
   /* ---- Recursos (2026-09-07): la documentación del proyecto, en la misma
      colmena nocturna. Tarjetas con miniatura 16:10, título en la display
      condensada, una línea de descripción y la fecha; sin miniatura, una
@@ -242,6 +252,7 @@
       <button type="button" class="etab activa" role="tab" aria-selected="true" data-tab="accesos">Accesos</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="tests-pruebas">Tests en Pruebas</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="tests-demo" disabled title="Todavía no disponible">Tests en Demo</button>
+      <button type="button" class="etab" role="tab" aria-selected="false" data-tab="actividad">Actividad</button>
     </nav>
 
     <div class="panel-etab" data-panel="accesos">
@@ -298,6 +309,10 @@
 
     <div class="panel-etab" data-panel="tests-demo" hidden>
       <div class="vacio">Todavía no disponible. La demo no corre tests de carga -- es la versión estable que ven sindicatos e inversor.</div>
+    </div>
+
+    <div class="panel-etab" data-panel="actividad" hidden>
+      {% include "_actividad.html" %}
     </div>
 
     {# ---- Recursos: la documentación del proyecto (recursos.py) ---- #}
@@ -616,6 +631,76 @@
       .catch(() => {});
   }
   actualizar();
+})();
+</script>
+<script>
+// Actividad: pinta ESTE entorno con los datos ya renderizados (sin round-
+// trip) y pide el OTRO por HTTPS a su propio host (api_entornos_actividad
+// es público con CORS abierto -- las cookies de sesión no cruzan de
+// dominio, mismo motivo que /api/version más arriba). Refresco cada 10 min.
+(function () {
+  const cont = document.getElementById('act-envs');
+  if (!cont) return;
+  const URLS = {{ urls|tojson }};
+  const ENTORNO_ACTUAL = {{ (entorno_actual or '')|tojson }};
+  const localJson = document.getElementById('actividad-local-json');
+  const renderJson = document.getElementById('render-estado-local-json');
+  const datosLocales = localJson ? JSON.parse(localJson.textContent) : null;
+  const renderLocal = renderJson ? JSON.parse(renderJson.textContent) : null;
+
+  const fmtBytes = (b) => b == null ? '…' : (b / (1024 * 1024)).toFixed(0) + ' MB';
+  const fmtCpu = (c) => c == null ? '…' : (c * 100).toFixed(0) + '%';
+
+  function pintar(env, datos, servidor) {
+    const sec = cont.querySelector('[data-act-env="' + env + '"]');
+    if (!sec || !datos) return;
+    const t = datos.totales || {};
+    const set = (campo, valor) => { const el = sec.querySelector('[data-act="' + campo + '"]'); if (el) el.textContent = valor; };
+    set('tramites', t.tramites ?? '…');
+    set('recibos', t.recibos ?? '…');
+    set('notificaciones', (t.notificaciones_leidas ?? 0) + ' leídas / ' + (t.notificaciones_enviadas ?? 0));
+    set('tokens_ia', (t.tokens_ia ?? 0).toLocaleString('es-AR') + ' (' + (t.llamadas_ia ?? 0) + ' llamadas)');
+    const porRol = t.accesos_por_rol || {};
+    set('accesos', (t.accesos ?? 0) + ' · ' + Object.entries(porRol).map(([r, n]) => r + ':' + n).join(' '));
+    if (servidor && servidor.configurado) {
+      set('servidor', fmtCpu(servidor.cpu_web) + ' / ' + fmtBytes(servidor.ram_web_bytes));
+    } else {
+      set('servidor', 'sin API key');
+    }
+    const tbody = sec.querySelector('[data-act-tabla] tbody');
+    const filas = datos.sindicatos || [];
+    tbody.innerHTML = filas.length ? filas.map(f =>
+      '<tr><td>' + f.nombre + '</td><td>' + f.tramites + '</td><td>' + f.recibos + '</td><td>' +
+      f.notificaciones_leidas + '</td><td>' + f.tokens_ia.toLocaleString('es-AR') + '</td><td>' + f.accesos + '</td></tr>'
+    ).join('') : '<tr><td colspan="6" style="text-align:center; opacity:.5;">sin sindicatos activos</td></tr>';
+  }
+
+  function actualizar() {
+    if (ENTORNO_ACTUAL && datosLocales) pintar(ENTORNO_ACTUAL, datosLocales, renderLocal);
+    Object.keys(URLS).forEach(env => {
+      if (env === ENTORNO_ACTUAL) return;  // el propio ya se pintó sin red
+      fetch(URLS[env] + '/api/entornos/actividad', { cache: 'no-store' })
+        .then(r => r.ok ? r.json() : Promise.reject(r.status))
+        .then(d => pintar(env, d, d.servidor))
+        .catch(() => { const sec = cont.querySelector('[data-act-env="' + env + '"]'); if (sec) sec.querySelectorAll('[data-act]').forEach(el => { if (el.textContent === '…') el.textContent = 'sin dato'; }); });
+    });
+  }
+  actualizar();
+  setInterval(function () {
+    // Repinta el propio con un fetch fresco (los datos embebidos son del
+    // momento en que se cargó la página) + el ajeno, cada 10 min.
+    fetch('/api/entornos/actividad', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(d => pintar(ENTORNO_ACTUAL, d, d.servidor))
+      .catch(() => {});
+    Object.keys(URLS).forEach(env => {
+      if (env === ENTORNO_ACTUAL) return;
+      fetch(URLS[env] + '/api/entornos/actividad', { cache: 'no-store' })
+        .then(r => r.ok ? r.json() : Promise.reject(r.status))
+        .then(d => pintar(env, d, d.servidor))
+        .catch(() => {});
+    });
+  }, 10 * 60 * 1000);
 })();
 </script>
 </body>

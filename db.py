@@ -28,7 +28,7 @@ import csv
 import json
 from pathlib import Path
 from typing import Optional
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 from dotenv import load_dotenv
 from typing import Any
@@ -1087,6 +1087,93 @@ def test_carga_por_id(test_id: int) -> Optional[dict]:
     with Session(engine) as s:
         t = s.get(TestCarga, test_id)
         return t.model_dump() if t else None
+
+
+class AccesoLog(SQLModel, table=True):
+    """Un login exitoso de cualquiera de los 4 roles -- para el dashboard
+    de Actividad de /entornos ("cantidad de accesos por app"). Nada de esto
+    existía antes: se registra desde main.py, en cada ruta de login, justo
+    después de validar la clave. `sindicato_id` queda NULL cuando el rol no
+    tiene uno resuelto en ese momento (plataforma; trabajador con
+    pluriempleo, antes de elegir) -- el resumen los cuenta aparte, no los
+    descarta."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    rol: str                                   # trabajador | admin | empresa | plataforma
+    sindicato_id: Optional[int] = Field(default=None, foreign_key="sindicato.id", index=True)
+    fecha: str = Field(default="", index=True)  # "AAAA-MM-DD HH:MM"
+
+
+def registrar_acceso(rol: str, sindicato_id: Optional[int] = None) -> None:
+    with Session(engine) as s:
+        s.add(AccesoLog(rol=rol, sindicato_id=sindicato_id,
+                         fecha=datetime.now().strftime("%Y-%m-%d %H:%M")))
+        s.commit()
+
+
+def actividad_resumen(dias: int = 30) -> dict:
+    """Agregados de actividad de ESTE entorno para el dashboard de
+    Actividad (/entornos): trámites, notificaciones enviadas/leídas,
+    recibos verificados, tokens de IA y accesos, por sindicato y totales.
+    Todo en SQL agrupado (mismo criterio que dashboard.py) -- nunca se
+    traen filas crudas para sumar en Python. `dias` acota accesos y tokens
+    de IA a una ventana reciente (por defecto 30 días); trámites/recibos/
+    notificaciones son acumulados históricos, como el resto de la
+    plataforma los muestra."""
+    desde = (datetime.now() - timedelta(days=dias)).strftime("%Y-%m-%d %H:%M")
+    with Session(engine) as s:
+        sindicatos = {sd.id: sd.nombre for sd in
+                      s.exec(select(Sindicato).where(Sindicato.activo == True)).all()}
+        por_sind = {sid: {"id": sid, "nombre": nombre, "tramites": 0, "recibos": 0,
+                           "notificaciones_enviadas": 0, "notificaciones_leidas": 0,
+                           "tokens_ia": 0, "llamadas_ia": 0, "accesos": 0}
+                    for sid, nombre in sindicatos.items()}
+
+        def volcar(filas, campo):
+            for sid, valor in filas:
+                if sid in por_sind:
+                    por_sind[sid][campo] = valor or 0
+
+        volcar(s.execute(text(
+            "SELECT sindicato_id, COUNT(*) FROM tramite GROUP BY sindicato_id")).all(), "tramites")
+        volcar(s.execute(text(
+            "SELECT sindicato_id, COUNT(*) FROM reciboverificado GROUP BY sindicato_id")).all(), "recibos")
+        volcar(s.execute(text(
+            "SELECT sindicato_id, COUNT(*) FROM notificacion GROUP BY sindicato_id"
+        )).all(), "notificaciones_enviadas")
+        volcar(s.execute(text(
+            "SELECT n.sindicato_id, COUNT(*) FROM notificaciondestinatario nd "
+            "JOIN notificacion n ON n.id = nd.notificacion_id "
+            "WHERE nd.leida_en IS NOT NULL GROUP BY n.sindicato_id"
+        )).all(), "notificaciones_leidas")
+        volcar(s.execute(text(
+            "SELECT sindicato_id, SUM(tokens_entrada + tokens_salida) FROM usoia "
+            "WHERE fecha >= :desde GROUP BY sindicato_id"), {"desde": desde}).all(), "tokens_ia")
+        volcar(s.execute(text(
+            "SELECT sindicato_id, COUNT(*) FROM usoia WHERE fecha >= :desde GROUP BY sindicato_id"
+        ), {"desde": desde}).all(), "llamadas_ia")
+        volcar(s.execute(text(
+            "SELECT sindicato_id, COUNT(*) FROM accesolog "
+            "WHERE fecha >= :desde AND sindicato_id IS NOT NULL GROUP BY sindicato_id"
+        ), {"desde": desde}).all(), "accesos")
+
+        accesos_por_rol = dict(s.execute(text(
+            "SELECT rol, COUNT(*) FROM accesolog WHERE fecha >= :desde GROUP BY rol"
+        ), {"desde": desde}).all())
+        accesos_sin_sindicato = s.execute(text(
+            "SELECT COUNT(*) FROM accesolog WHERE fecha >= :desde AND sindicato_id IS NULL"
+        ), {"desde": desde}).one()[0] or 0
+
+        totales = {"tramites": 0, "recibos": 0, "notificaciones_enviadas": 0,
+                   "notificaciones_leidas": 0, "tokens_ia": 0, "llamadas_ia": 0, "accesos": 0}
+        for fila in por_sind.values():
+            for k in totales:
+                totales[k] += fila[k]
+        totales["accesos"] += accesos_sin_sindicato
+        totales["accesos_por_rol"] = accesos_por_rol
+        totales["sindicatos_activos"] = len(sindicatos)
+
+        return {"sindicatos": sorted(por_sind.values(), key=lambda f: f["nombre"]),
+                "totales": totales, "dias": dias, "actualizado": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
 
 def consultas_asistente_hoy(sindicato_id: int) -> int:
