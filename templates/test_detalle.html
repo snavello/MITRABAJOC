@@ -207,16 +207,16 @@
       <div class="cargas">
         <div class="carga">
           <div class="quien">Servicio web</div>
-          <div class="linea"><span>CPU</span><span>{{ w.cpu_usado }} de {{ w.cpu_nominal }} vCPU · {{ w.cpu_pct }}%</span></div>
+          <div class="linea"><span>CPU</span><span>{{ w.cpu_txt }}</span></div>
           <div class="barra"><i class="{{ 'alto' if w.cpu_pct >= 85 else ('medio' if w.cpu_pct >= 50 else '') }}" style="width:{{ [w.cpu_pct, 100]|min }}%"></i></div>
-          <div class="linea"><span>RAM</span><span>{{ w.ram_mb }} de {{ w.ram_nominal_mb }} MB · {{ w.ram_pct }}%</span></div>
+          <div class="linea"><span>RAM</span><span>{{ w.ram_txt }}</span></div>
           <div class="barra"><i class="{{ 'alto' if w.ram_pct >= 85 else ('medio' if w.ram_pct >= 50 else '') }}" style="width:{{ [w.ram_pct, 100]|min }}%"></i></div>
         </div>
         <div class="carga">
           <div class="quien">Postgres</div>
-          <div class="linea"><span>CPU</span><span>{{ d.cpu_usado }} de {{ d.cpu_nominal }} vCPU · {{ d.cpu_pct }}%</span></div>
+          <div class="linea"><span>CPU</span><span>{{ d.cpu_txt }}</span></div>
           <div class="barra"><i class="{{ 'alto' if d.cpu_pct >= 85 else ('medio' if d.cpu_pct >= 50 else '') }}" style="width:{{ [d.cpu_pct, 100]|min }}%"></i></div>
-          <div class="linea"><span>RAM</span><span>{{ d.ram_mb }} de {{ d.ram_nominal_mb }} MB · {{ d.ram_pct }}%</span></div>
+          <div class="linea"><span>RAM</span><span>{{ d.ram_txt }}</span></div>
           <div class="barra"><i class="{{ 'alto' if d.ram_pct >= 85 else ('medio' if d.ram_pct >= 50 else '') }}" style="width:{{ [d.ram_pct, 100]|min }}%"></i></div>
           <div class="linea"><span>Conexiones</span><span>{{ d.conexiones }}</span></div>
         </div>

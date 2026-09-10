@@ -97,7 +97,9 @@
             "cpu_pct": null,
             "ram_mb": null,
             "ram_nominal_mb": 512,
-            "ram_pct": null
+            "ram_pct": null,
+            "cpu_txt": "no medido",
+            "ram_txt": "no medido"
           },
           "db": {
             "cpu_usado": null,
@@ -106,6 +108,8 @@
             "ram_mb": null,
             "ram_nominal_mb": 256,
             "ram_pct": null,
+            "cpu_txt": "no medido",
+            "ram_txt": "no medido",
             "conexiones": null
           }
         },
@@ -175,7 +179,9 @@
             "cpu_pct": 100.0,
             "ram_mb": 319,
             "ram_nominal_mb": 512,
-            "ram_pct": 62.3
+            "ram_pct": 62.3,
+            "cpu_txt": "0,5 de 0,5 vCPU · 100,0%",
+            "ram_txt": "319 de 512 MB · 62,3%"
           },
           "db": {
             "cpu_usado": 0.1,
@@ -184,6 +190,8 @@
             "ram_mb": 142,
             "ram_nominal_mb": 256,
             "ram_pct": 55.5,
+            "cpu_txt": "0,1 de 0,1 vCPU · 100,0%",
+            "ram_txt": "142 de 256 MB · 55,5%",
             "conexiones": 10
           }
         },
@@ -253,7 +261,9 @@
             "cpu_pct": 100.0,
             "ram_mb": 567,
             "ram_nominal_mb": 512,
-            "ram_pct": 110.7
+            "ram_pct": 110.7,
+            "cpu_txt": "0,5 de 0,5 vCPU · 100,0%",
+            "ram_txt": "567 de 512 MB · 110,7%"
           },
           "db": {
             "cpu_usado": 0.1,
@@ -262,6 +272,8 @@
             "ram_mb": 162,
             "ram_nominal_mb": 256,
             "ram_pct": 63.3,
+            "cpu_txt": "0,1 de 0,1 vCPU · 100,0%",
+            "ram_txt": "162 de 256 MB · 63,3%",
             "conexiones": 15
           }
         },
@@ -331,7 +343,9 @@
             "cpu_pct": 100.0,
             "ram_mb": 567,
             "ram_nominal_mb": 512,
-            "ram_pct": 110.7
+            "ram_pct": 110.7,
+            "cpu_txt": "0,5 de 0,5 vCPU · 100,0%",
+            "ram_txt": "567 de 512 MB · 110,7%"
           },
           "db": {
             "cpu_usado": 0.1,
@@ -340,6 +354,8 @@
             "ram_mb": 162,
             "ram_nominal_mb": 256,
             "ram_pct": 63.3,
+            "cpu_txt": "0,1 de 0,1 vCPU · 100,0%",
+            "ram_txt": "162 de 256 MB · 63,3%",
             "conexiones": 15
           }
         },
@@ -444,12 +460,14 @@
         "carga": {
           "muestras": 40,
           "web": {
-            "cpu_usado": 0.804,
+            "cpu_usado": 0.8044,
             "cpu_nominal": 0.5,
             "cpu_pct": 160.9,
             "ram_mb": 886,
             "ram_nominal_mb": 512,
-            "ram_pct": 173.0
+            "ram_pct": 173.0,
+            "cpu_txt": "0,8044 de 0,5 vCPU · 160,9%",
+            "ram_txt": "886 de 512 MB · 173,0%"
           },
           "db": {
             "cpu_usado": 0.1,
@@ -458,6 +476,8 @@
             "ram_mb": 249,
             "ram_nominal_mb": 256,
             "ram_pct": 97.3,
+            "cpu_txt": "0,1 de 0,1 vCPU · 100,0%",
+            "ram_txt": "249 de 256 MB · 97,3%",
             "conexiones": 21
           }
         },
@@ -565,7 +585,9 @@
             "cpu_pct": 100.0,
             "ram_mb": 338,
             "ram_nominal_mb": 512,
-            "ram_pct": 66.0
+            "ram_pct": 66.0,
+            "cpu_txt": "0,5 de 0,5 vCPU · 100,0%",
+            "ram_txt": "338 de 512 MB · 66,0%"
           },
           "db": {
             "cpu_usado": 0.1617,
@@ -574,6 +596,8 @@
             "ram_mb": 116,
             "ram_nominal_mb": 4096,
             "ram_pct": 2.8,
+            "cpu_txt": "0,1617 de 2 vCPU · 8,1%",
+            "ram_txt": "116 de 4096 MB · 2,8%",
             "conexiones": 11
           }
         },
@@ -643,7 +667,9 @@
             "cpu_pct": 100.0,
             "ram_mb": 361,
             "ram_nominal_mb": 512,
-            "ram_pct": 70.5
+            "ram_pct": 70.5,
+            "cpu_txt": "0,5 de 0,5 vCPU · 100,0%",
+            "ram_txt": "361 de 512 MB · 70,5%"
           },
           "db": {
             "cpu_usado": 0.1839,
@@ -652,6 +678,8 @@
             "ram_mb": 118,
             "ram_nominal_mb": 4096,
             "ram_pct": 2.9,
+            "cpu_txt": "0,1839 de 2 vCPU · 9,2%",
+            "ram_txt": "118 de 4096 MB · 2,9%",
             "conexiones": 11
           }
         },
@@ -721,7 +749,9 @@
             "cpu_pct": 100.0,
             "ram_mb": 361,
             "ram_nominal_mb": 512,
-            "ram_pct": 70.5
+            "ram_pct": 70.5,
+            "cpu_txt": "0,5 de 0,5 vCPU · 100,0%",
+            "ram_txt": "361 de 512 MB · 70,5%"
           },
           "db": {
             "cpu_usado": 0.1839,
@@ -730,6 +760,8 @@
             "ram_mb": 118,
             "ram_nominal_mb": 4096,
             "ram_pct": 2.9,
+            "cpu_txt": "0,1839 de 2 vCPU · 9,2%",
+            "ram_txt": "118 de 4096 MB · 2,9%",
             "conexiones": 11
           }
         },
@@ -838,7 +870,9 @@
             "cpu_pct": 100.0,
             "ram_mb": 638,
             "ram_nominal_mb": 4096,
-            "ram_pct": 15.6
+            "ram_pct": 15.6,
+            "cpu_txt": "2 de 2 vCPU · 100,0%",
+            "ram_txt": "638 de 4096 MB · 15,6%"
           },
           "db": {
             "cpu_usado": 0.5869,
@@ -847,6 +881,8 @@
             "ram_mb": 165,
             "ram_nominal_mb": 4096,
             "ram_pct": 4.0,
+            "cpu_txt": "0,5869 de 2 vCPU · 29,3%",
+            "ram_txt": "165 de 4096 MB · 4,0%",
             "conexiones": 20
           }
         },
@@ -916,7 +952,9 @@
             "cpu_pct": 100.0,
             "ram_mb": 686,
             "ram_nominal_mb": 4096,
-            "ram_pct": 16.7
+            "ram_pct": 16.7,
+            "cpu_txt": "2 de 2 vCPU · 100,0%",
+            "ram_txt": "686 de 4096 MB · 16,7%"
           },
           "db": {
             "cpu_usado": 0.4903,
@@ -925,6 +963,8 @@
             "ram_mb": 162,
             "ram_nominal_mb": 4096,
             "ram_pct": 4.0,
+            "cpu_txt": "0,4903 de 2 vCPU · 24,5%",
+            "ram_txt": "162 de 4096 MB · 4,0%",
             "conexiones": 20
           }
         },
@@ -994,7 +1034,9 @@
             "cpu_pct": 100.0,
             "ram_mb": 686,
             "ram_nominal_mb": 4096,
-            "ram_pct": 16.7
+            "ram_pct": 16.7,
+            "cpu_txt": "2 de 2 vCPU · 100,0%",
+            "ram_txt": "686 de 4096 MB · 16,7%"
           },
           "db": {
             "cpu_usado": 0.4903,
@@ -1003,6 +1045,8 @@
             "ram_mb": 162,
             "ram_nominal_mb": 4096,
             "ram_pct": 4.0,
+            "cpu_txt": "0,4903 de 2 vCPU · 24,5%",
+            "ram_txt": "162 de 4096 MB · 4,0%",
             "conexiones": 20
           }
         },

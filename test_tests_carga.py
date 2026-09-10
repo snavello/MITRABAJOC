@@ -236,10 +236,13 @@ def _experimento_de_prueba(numero=1):
                         "valido": True, "cumple": False}],
             "carga": {"muestras": 39,
                        "web": {"cpu_usado": 0.5, "cpu_nominal": 0.5, "cpu_pct": 100.0,
-                               "ram_mb": 319, "ram_nominal_mb": 512, "ram_pct": 62.3},
+                               "ram_mb": 319, "ram_nominal_mb": 512, "ram_pct": 62.3,
+                               "cpu_txt": "0,5 de 0,5 vCPU · 100,0%",
+                               "ram_txt": "319 de 512 MB · 62,3%"},
                        "db": {"cpu_usado": 0.1, "cpu_nominal": 0.1, "cpu_pct": 100.0,
                               "ram_mb": 142, "ram_nominal_mb": 256, "ram_pct": 55.5,
-                              "conexiones": 10}},
+                              "cpu_txt": "0,1 de 0,1 vCPU · 100,0%",
+                              "ram_txt": "142 de 256 MB · 55,5%", "conexiones": 10}},
         }],
     }
 
@@ -280,10 +283,12 @@ def test_fase_sin_metricas_no_inventa_numeros():
     exp["resumen"][0]["carga_medida"] = False
     exp["resumen"][0]["carga"] = {
         "muestras": 40,
-        "web": {"cpu_usado": None, "cpu_nominal": 0.5, "cpu_pct": None,
-                "ram_mb": None, "ram_nominal_mb": 512, "ram_pct": None},
-        "db": {"cpu_usado": None, "cpu_nominal": 0.1, "cpu_pct": None,
-               "ram_mb": None, "ram_nominal_mb": 256, "ram_pct": None, "conexiones": None},
+        "web": {"cpu_usado": None, "cpu_nominal": 0.5, "cpu_pct": None, "ram_mb": None,
+                "ram_nominal_mb": 512, "ram_pct": None,
+                "cpu_txt": "no medido", "ram_txt": "no medido"},
+        "db": {"cpu_usado": None, "cpu_nominal": 0.1, "cpu_pct": None, "ram_mb": None,
+               "ram_nominal_mb": 256, "ram_pct": None, "conexiones": None,
+               "cpu_txt": "no medido", "ram_txt": "no medido"},
     }
     tid = client.post("/entornos/tests/publicar", json=exp).json()["id"]
     p = client.get(f"/entornos/tests/{tid}")

@@ -108,28 +108,33 @@ def _pct(valor, nominal):
     return round(100 * valor / nominal, 1)
 
 
+def _lado(cpu, ram_bytes, plan: dict) -> dict:
+    """Los máximos de un servicio contra el nominal de su plan. Se guardan
+    también ya formateados (`cpu_txt`, `ram_txt`) para que la página no
+    tenga que dar formato por su cuenta: si la cabecera dice "2 vCPU" y la
+    barra dijera "2.0 vCPU", se lee como si fueran dos cosas distintas."""
+    ram_mb = round(ram_bytes / MiB) if ram_bytes is not None else None
+    cpu_usado = round(cpu, 4) if cpu is not None else None
+    cpu_pct = _pct(cpu, plan.get("vcpu"))
+    ram_pct = _pct(ram_mb, plan.get("ram_mb"))
+    return {
+        "cpu_usado": cpu_usado, "cpu_nominal": plan.get("vcpu"), "cpu_pct": cpu_pct,
+        "ram_mb": ram_mb, "ram_nominal_mb": plan.get("ram_mb"), "ram_pct": ram_pct,
+        "cpu_txt": (f"{fmt_vcpu(cpu_usado)} de {fmt_vcpu(plan.get('vcpu'))} vCPU · "
+                     f"{fmt_pct(cpu_pct)}") if cpu_usado is not None else "no medido",
+        "ram_txt": (f"{ram_mb} de {plan.get('ram_mb')} MB · {fmt_pct(ram_pct)}"
+                     ) if ram_mb is not None else "no medido",
+    }
+
+
 def carga_legible(m: dict, plan_web: str, plan_db: str) -> dict:
     """Traduce los máximos crudos a "X de Y (Z%)" para web y para Postgres."""
     pw, pd = PLANES.get(plan_web, {}), PLANES.get(plan_db, {})
-    ram_web_mb = round(m["ram_web"] / MiB) if m["ram_web"] is not None else None
-    ram_db_mb = round(m["ram_db"] / MiB) if m["ram_db"] is not None else None
     return {
         "muestras": m["muestras"],
-        "web": {
-            "cpu_usado": round(m["cpu_web"], 3) if m["cpu_web"] is not None else None,
-            "cpu_nominal": pw.get("vcpu"),
-            "cpu_pct": _pct(m["cpu_web"], pw.get("vcpu")),
-            "ram_mb": ram_web_mb,
-            "ram_nominal_mb": pw.get("ram_mb"),
-            "ram_pct": _pct(ram_web_mb, pw.get("ram_mb")),
-        },
+        "web": _lado(m["cpu_web"], m["ram_web"], pw),
         "db": {
-            "cpu_usado": round(m["cpu_db"], 4) if m["cpu_db"] is not None else None,
-            "cpu_nominal": pd.get("vcpu"),
-            "cpu_pct": _pct(m["cpu_db"], pd.get("vcpu")),
-            "ram_mb": ram_db_mb,
-            "ram_nominal_mb": pd.get("ram_mb"),
-            "ram_pct": _pct(ram_db_mb, pd.get("ram_mb")),
+            **_lado(m["cpu_db"], m["ram_db"], pd),
             "conexiones": int(m["conexiones_db"]) if m["conexiones_db"] is not None else None,
         },
     }
