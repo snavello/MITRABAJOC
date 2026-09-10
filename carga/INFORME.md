@@ -190,6 +190,48 @@ momento del Test 2 repetido -- por encima de los 512 MB del plan actual
 -- aunque coincide con la ventana del reinicio mencionado arriba, así
 que no se puede afirmar con certeza que sea 100% producto de la carga.
 
+### Tercer experimento: Postgres a 2 vCPU / 4 GB (2026-09-10)
+
+Se subió Postgres al plan `2c-4g` (sin alta disponibilidad), dejando el
+servicio web sin cambios (0,5 vCPU, 1 worker), y se repitieron el Test 1
+y el Test 2 completos -- esta vez sin ningún despliegue de por medio.
+**Postgres dejó de ser un factor**: su CPU llegó a un máximo de 9,2% de
+los 2 vCPU nuevos (antes tocaba el 100% de 0,1 vCPU) y su RAM a 2,9% de
+los 4 GB.
+
+Efecto en el Test 1 (lecturas), contra la línea base (Postgres chico, 1
+worker):
+
+| Escalón | p95 antes | p95 con Postgres grande | Diferencia |
+|---|---|---|---|
+| 50 | 4,2 s | **1,6 s** | -62% |
+| 100 | 13,8 s | **9,6 s** | -30% |
+| 200 | 29,9 s | **24,4 s** | -18% |
+| 400 | 54,3 s | 51,7 s | sin cambio real |
+| 800 | 60 s (timeout) | 60 s (timeout) | sin cambio |
+
+**Postgres sí estaba aportando al problema en la zona baja-media de
+concurrencia** (50-200): subir su plan mejoró la latencia de verdad ahí,
+y también el throughput (17-18 rps contra 12 antes). **A partir de 400
+concurrentes, el techo no se mueve**: sigue siendo el único worker del
+servicio web, sin cambios en esta corrida.
+
+**Importante para no repetir el error del segundo experimento**: esta
+mejora es de la CPU de **Postgres**, no del servicio **web**. Volver a
+probar `--workers N` sin subir también el plan del servicio web
+(seguiría en 0,5 vCPU) daría el mismo resultado malo que el segundo
+experimento -- la variable que hace falta subir para que los workers
+ayuden es la CPU del servicio que los corre, no la de la base de datos.
+Datos crudos en `carga/log/2026-09-10_postgres2c4g/`.
+
+**Nota sobre el tamaño del plan**: con 9,2% de uso pico en 2 vCPU, es
+probable que un escalón intermedio (0,5 o 1 vCPU) ya hubiera alcanzado
+para esta misma carga -- no se probó un tamaño intermedio, así que esto
+es una inferencia, no una medición. Para el volumen de producción (300+
+concurrentes) puede hacer falta más que lo que se vio acá; vale la pena
+probar un escalón intermedio si el costo de 2 vCPU/4GB para Postgres es
+una preocupación real, en vez de asumir directamente el más grande.
+
 ## E. Recomendaciones para HOY (plan actual, sin gastar más)
 
 **Actualización 2026-09-09, con un experimento real:** se probó `--workers
@@ -217,30 +259,39 @@ la RAM del servicio también fue más alta en esta corrida).
 
 **Conclusión corregida: en el plan actual, sumar workers sin sumar CPU
 real no ayuda -- y puede empeorar.** El orden de las recomendaciones de
-abajo queda así, revisado:
+abajo queda así, revisado, e incorpora el tercer experimento (Postgres a
+2 vCPU/4GB) de más arriba:
 
-1. **Código -- hacer asíncrona la llamada a Anthropic** (o correrla en un
+1. **Infraestructura -- subir el plan de Postgres. Ya hecho y confirmado**
+   con el tercer experimento: su CPU pasó de tocar el 100% de 0,1 vCPU a
+   un máximo de 9,2% de 2 vCPU, y el p95 del Test 1 mejoró de verdad en
+   50-200 concurrentes (-62%, -30%, -18%). Es la única recomendación de
+   esta lista con una corrida real, limpia, que la confirma -- no una
+   hipótesis. Costo medio (además prorrateado por Render si se prueba
+   temporalmente y se revierte después). **Al elegir el plan, priorizar
+   CPU sobre RAM**, como ya mostraba el segundo experimento.
+2. **Código -- hacer asíncrona la llamada a Anthropic** (o correrla en un
    "threadpool" -- un grupo de hilos aparte del principal -- mientras se
    migra al cliente async de Anthropic). Costo bajo, cambio acotado a
    `extractor.py` y sus dos puntos de uso en `main.py`. Efecto esperado:
    una subida de recibo deja de trabar el resto del tráfico mientras
    dura -- resuelve el agravante de "recibos simultáneos", no el techo
-   general de concurrencia (ver el punto 2). Es el único cambio de esta
-   lista que el experimento de arriba no puso en duda.
-2. **Infraestructura -- subir a un plan con vCPU entera** (1 vCPU o más)
-   antes de volver a tocar `--workers`. El experimento de arriba muestra
-   que en 0,5 vCPU no hay margen para repartir; recién con una CPU
-   completa (o más) sumar workers va a significar paralelismo real, no
-   solo más procesos compitiendo por lo mismo. Costo medio: cambio de
-   plan en Render. **Repetir el Test 1 después de este cambio, con
-   `--workers` vuelto a 1 primero** (para medir el efecto de la CPU sola)
-   y **después con `--workers 2` sobre esa misma CPU nueva** (para medir
-   el efecto de los workers ya con margen real) -- son dos variables
-   distintas y conviene no mezclarlas en una sola corrida, como pasó acá.
-3. **Infraestructura -- subir el plan de Postgres**, en paralelo al punto
-   2. Ya con apenas 10-15 conexiones su CPU tocó el 100% de su asignación
-   (0,1 vCPU) -- la RAM, en cambio, se quedó en 55-63% de sus 256 MB (ver
-   Diagnóstico). **Al elegir el próximo plan, priorizar CPU sobre RAM.**
+   general de concurrencia (ver el punto 3). Ningún experimento lo puso
+   en duda todavía porque no se probó -- sigue siendo una hipótesis
+   razonada, no una medición.
+3. **Infraestructura -- subir el servicio WEB a un plan con vCPU entera**
+   (1 vCPU o más) antes de volver a tocar `--workers`. El segundo
+   experimento (arriba) muestra que en 0,5 vCPU no hay margen para
+   repartir; recién con una CPU completa (o más) sumar workers va a
+   significar paralelismo real. **Esta es la única palanca que puede
+   mover el techo de 400-800 concurrentes** -- el tercer experimento
+   confirmó que Postgres grande, solo, no lo mueve. Costo medio: cambio
+   de plan en Render. **Repetir el Test 1 después de este cambio, con
+   `--workers` vuelto a 1 primero** (para medir el efecto de la CPU sola
+   del web) y **después con `--workers 2` sobre esa misma CPU nueva**
+   (para medir el efecto de los workers ya con margen real) -- son dos
+   variables distintas y conviene no mezclarlas en una sola corrida, como
+   pasó en el segundo experimento.
 
 ## F. Extrapolación para producción: ¿pocas instancias grandes o muchas chicas?
 
