@@ -309,10 +309,20 @@ OBJETIVO_ERRORES_PCT = 1.0
 MUESTRAS_MINIMAS = 30
 
 
+# El test corta cada pedido a los 60 s. Un p95 en ese valor no es un tiempo
+# de respuesta: es "no respondió". Decirlo como "60,0 s" haría creer que la
+# app contestó, tarde -- y en las tablas del informe eso figura como
+# "timeout", así que la prosa tiene que decir lo mismo.
+TIMEOUT_MS = 59000
+TIMEOUT_SEG = 60
+
+
 def fmt_ms(v) -> str:
     """1.607,9 ms -> "1,6 s"; 190,7 ms -> "191 ms". Coma decimal."""
     if v is None:
         return "n/d"
+    if v >= TIMEOUT_MS:
+        return f"más de {TIMEOUT_SEG} s"
     if v >= 1000:
         return f"{v / 1000:.1f}".replace(".", ",") + " s"
     return f"{v:.0f} ms"

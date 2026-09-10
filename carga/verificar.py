@@ -96,8 +96,9 @@ def vocabulario_de(exp: dict, base: dict) -> set:
                         ok.add(C.delta(f["p95"], fb["p95"]).lstrip("+-").rstrip("%"))
 
     # Constantes del criterio y redondeos de una cifra que el texto usa al
-    # hablar en prosa ("cuatro veces más CPU" -> 4, "1 s", "1%").
-    ok |= {"1", "0", "100", "4", "95", "99", "50", "1000"}
+    # hablar en prosa ("cuatro veces más CPU" -> 4, "1 s", "1%"), más el
+    # corte del test ("más de 60 s").
+    ok |= {"1", "0", "100", "4", "95", "99", "50", "1000", str(C.TIMEOUT_SEG)}
     return ok
 
 
@@ -179,6 +180,57 @@ def main():
             revisar(exp["config"].get(k) == esperado,
                     f"{etiqueta}: config['{k}'] publicada {exp['config'].get(k)!r} "
                     f"y definida {esperado!r}.")
+
+    # 5. El informe general (los 4 tests comparados) y el INFORME.md salen
+    # del mismo dict; se revisa que sus tablas repitan exactamente los p95
+    # del dataset y que no cite ninguna cifra ajena en sus hallazgos.
+    import informe as INF
+    inf = INF.construir()
+    revisar(len(inf["experimentos"]) == 4, "El informe general no cubre los 4 tests.")
+    for clave, comp, escalones in (("lecturas", inf["comparativa_lecturas"], INF.ESCALONES_LECTURAS),
+                                   ("recibos", inf["comparativa_recibos"], INF.ESCALONES_RECIBOS)):
+        for fila in comp:
+            for exp, celda in zip(inf["experimentos"], fila["celdas"]):
+                real = None
+                for f in exp["fases"]:
+                    if f["clave"] != clave:
+                        continue
+                    for x in f["filas"]:
+                        if x["escalon"] == fila["escalon"]:
+                            real = x
+                if real is None:
+                    revisar(not celda["hay"],
+                            f"Informe/{clave} {fila['escalon']} test {exp['numero']}: "
+                            f"muestra dato donde no hubo corrida.")
+                elif not real.get("valido", True):
+                    revisar(not celda["hay"],
+                            f"Informe/{clave} {fila['escalon']} test {exp['numero']}: "
+                            f"usa un dato contaminado como válido.")
+                else:
+                    revisar(celda.get("p95") == real["p95"],
+                            f"Informe/{clave} {fila['escalon']} test {exp['numero']}: "
+                            f"p95 {celda.get('p95')} y en el dataset {real['p95']}.")
+    todo_vocab = set()
+    for e in datos:
+        todo_vocab |= vocabulario_de(e, base)
+    for h in inf["hallazgos"]:
+        for numero in numeros_del_texto(h["texto"]):
+            revisar(numero in todo_vocab,
+                    f"Informe/hallazgo '{h['titulo'][:38]}...' cita '{numero}', "
+                    f"que no sale de los datos.")
+    for r in inf["recomendaciones"]:
+        for numero in numeros_del_texto(r["texto"]):
+            revisar(numero in todo_vocab,
+                    f"Informe/recomendación '{r['titulo'][:38]}...' cita '{numero}', "
+                    f"que no sale de los datos.")
+    for numero in numeros_del_texto(inf["resumen"]):
+        revisar(numero in todo_vocab, f"Informe/resumen cita '{numero}', que no sale de los datos.")
+
+    # 6. El INFORME.md del repo tiene que estar regenerado, no editado a mano.
+    import generar_md
+    md = BASE / "INFORME.md"
+    revisar(md.exists() and md.read_text(encoding="utf-8") == generar_md.construir_md(),
+            "carga/INFORME.md quedó desactualizado: correr python carga/generar_md.py")
 
     print(f"{chequeos} chequeos sobre {len(datos)} experimentos.")
     if fallos:

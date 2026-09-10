@@ -770,7 +770,7 @@
       }
     ],
     "veredicto": "Ningún escalón cumplió el objetivo (p95 por debajo de 1 s y menos de 1% de errores).",
-    "conclusion": "Postgres dejó de ser un límite: su CPU pasó del 100,0% de 0,1 vCPU al 8,1% de 2 vCPU, y la RAM al 2,8%. Eso mejoró de verdad la zona baja y media de lecturas: 50 concurrentes 4,2 s → 1,6 s (-61,9%); 100 concurrentes 13,8 s → 9,6 s (-30,4%); 200 concurrentes 29,9 s → 24,4 s (-18,6%). Pero de 400 concurrentes en adelante el techo no se movió (400 sigue en 51,7 s; 800 sigue en 60,0 s), porque ahí el límite es el servicio web, que siguió clavado en el 100,0% de sus 0,5 vCPU. Las ráfagas de recibos tampoco mejoraron. Queda demostrado que la base era parte del problema, pero no la parte que pone el techo."
+    "conclusion": "Postgres dejó de ser un límite: su CPU pasó del 100,0% de 0,1 vCPU al 8,1% de 2 vCPU, y la RAM al 2,8%. Eso mejoró de verdad la zona baja y media de lecturas: 50 concurrentes 4,2 s → 1,6 s (-61,9%); 100 concurrentes 13,8 s → 9,6 s (-30,4%); 200 concurrentes 29,9 s → 24,4 s (-18,6%). Pero de 400 concurrentes en adelante el techo no se movió (400 sigue en 51,7 s; 800 sigue en más de 60 s), porque ahí el límite es el servicio web, que siguió clavado en el 100,0% de sus 0,5 vCPU. Las ráfagas de recibos tampoco mejoraron. Queda demostrado que la base era parte del problema, pero no la parte que pone el techo."
   },
   {
     "numero": 4,
@@ -1055,6 +1055,6 @@
       }
     ],
     "veredicto": "Cumple el objetivo (p95 por debajo de 1 s y menos de 1% de errores) hasta 100 usuarios concurrentes.",
-    "conclusion": "Primera configuración que cumple el objetivo: 50 concurrentes en 191 ms y 100 en 690 ms, las dos con 0,0% de error. A 800 concurrentes pasó de 60,0 s con 100,0% de error en la línea base a 19,1 s con 0,0%. El web volvió a ser el límite (100,0% de sus 2 vCPU) pero ahora con cuatro veces más CPU, y Postgres quedó holgado (29,3% de CPU, 4,0% de RAM). Lo que NO mejoró son las ráfagas de recibos: con 10 simultáneos falla el 15,4% y con 20 el 48,6%, contra 27,3% de la línea base en el mismo escalón de 10 — sin mejora real pese a toda la CPU agregada. La causa no es CPU: cada subida bloqueaba un worker entero durante los 15 segundos de la llamada a la IA. Eso es lo que motivó el cambio de código del 2026-09-10, que todavía no tiene un test que lo confirme."
+    "conclusion": "Primera configuración que cumple el objetivo: 50 concurrentes en 191 ms y 100 en 690 ms, las dos con 0,0% de error. A 800 concurrentes pasó de más de 60 s con 100,0% de error en la línea base a 19,1 s con 0,0%. El web volvió a ser el límite (100,0% de sus 2 vCPU) pero ahora con cuatro veces más CPU, y Postgres quedó holgado (29,3% de CPU, 4,0% de RAM). Lo que NO mejoró son las ráfagas de recibos: con 10 simultáneos falla el 15,4% y con 20 el 48,6%, contra 27,3% de la línea base en el mismo escalón de 10 — sin mejora real pese a toda la CPU agregada. La causa no es CPU: cada subida bloqueaba un worker entero durante los 15 segundos de la llamada a la IA. Eso es lo que motivó el cambio de código del 2026-09-10, que todavía no tiene un test que lo confirme."
   }
 ]

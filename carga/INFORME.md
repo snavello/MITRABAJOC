@@ -1,497 +1,184 @@
-# Informe de test de estrés -- app del trabajador (staging real)
+# Test de estrés de la app del trabajador — los cuatro tests comparados
 
-Corrido de punta a punta contra `https://mitrabajo-pruebas.onrender.com`
-entre el 2026-09-09 y el 2026-09-10, en cuatro configuraciones distintas.
-Este documento está escrito para leerse sin necesitar el código al lado:
-cada término técnico se explica la primera vez que aparece, y hay un
-glosario al final por si hace falta volver a algo.
+> **Este archivo se genera solo.** Sale de `carga/experimentos.json`, que a su vez
+> se arma con `carga/consolidar.py` desde los datos crudos de cada corrida
+> (`carga/log/`). No editar a mano: corregir el dato de origen y volver a correr
+> `python carga/consolidar.py && python carga/generar_md.py`. La misma información,
+> con gráfico, se sirve en `/entornos/informe` del sitio de Pruebas.
 
-**Resultado final, para quien solo lea esto**: con el servicio web en
-2 vCPU + `--workers 2` y Postgres en 2 vCPU, el p95 en 50 y 100
-concurrentes bajó a 190 ms y 690 ms -- la primera vez que se cumple el
-objetivo (p95 < 1 s, errores < 1%) en las cuatro corridas -- y a 800
-concurrentes pasó de un timeout total (60 s) a 19,1 s. La única
-recomendación que **no** mejoró con esta infraestructura fue la subida
-de recibos con ráfagas grandes (10-20 simultáneos): ahí seguía haciendo
-falta el cambio de código (IA en un hilo aparte), **implementado el
-2026-09-10 y pendiente de confirmar con un Test 2 nuevo** -- ver el
-cuarto experimento y la sección E.
+Servicio medido: `mitrabajo-pruebas.onrender.com`. Objetivo fijado para los cuatro
+tests: **p95 por debajo de 1 s con menos de 1% de errores**. Horarios en hora de
+Buenos Aires. Los tiempos están en milisegundos salvo donde se indique.
 
-Carpetas de datos crudos, si alguien quiere revisar los números fila por
-fila: `carga/log/2026-09-09_2034_test1_ok_test2_bug/` (Test 1 completo +
-Test 2 solo lectores) y `carga/log/2026-09-09_2100_test2_retry/` (Test 2
-repetido, con las ráfagas de recibos reales).
+## El resultado, en un párrafo
 
-**Aviso sobre Test 2 (repetido):** a mitad de esa corrida se desplegó una
-funcionalidad nueva (la pestaña Tests que se describe al final de este
-informe), lo que reinició el proceso del servidor. Los números de los
-primeros escalones (2 y 5 recibos simultáneos) no deberían verse
-afectados; los de 10 y 20 pueden traer algo de ruido extra por ese
-reinicio. Se dejan igual porque son consistentes con el resto de la
-evidencia (ver Diagnóstico), pero si en algún momento se necesita el
-número exacto para justificar un gasto de infraestructura, conviene
-repetir esa corrida sola, sin desplegar nada en el medio.
+De las cuatro configuraciones probadas, solo la última cumple el objetivo de p95 por debajo de 1 s con menos de 1% de errores, y lo hace hasta 100 usuarios concurrentes (191 ms con 50 y 690 ms con 100). En el otro extremo, con 800 concurrentes se pasó de timeout con 100,0% de error en la línea base a 19,1 s con 0,0%. Lo que sigue sin resolverse son las ráfagas de subida de recibos: con 20 simultáneas falla el 48,6% incluso con la mejor infraestructura, porque es un problema de código y no de recursos.
 
-## Cómo leer este informe
+## A. Los cuatro tests
 
-Cada test avanza en **escalones**: un número fijo de usuarios simulados
-atacando el sistema al mismo tiempo (por ejemplo, 200), sostenido varios
-minutos seguidos con un comportamiento realista (login, mirar páginas,
-pausas de unos segundos entre clic y clic), antes de subir al escalón
-siguiente. Subir de a escalones deja ver en qué punto EXACTO empieza la
-degradación, en vez de solo confirmar si el sistema aguanta o no un
-número fijo de golpe.
+Cada uno cambió *una* cosa respecto del anterior, para poder atribuir la mejora o el
+empeoramiento a esa cosa y no a una mezcla.
 
-Para cada escalón se mide, entre otras cosas, el tiempo que tarda el
-servidor en responder cada pedido, y se resume en tres números. **Los
-tres están en milisegundos (ms) -- 1.000 ms = 1 segundo.** Los tres se
-leen con la misma pregunta ("de cada 100 pedidos, cuántos tardaron menos
-que este valor"), solo cambia el corte:
+| # | Test | Cuándo | Servicio web | Postgres | Workers | Resultado |
+|---|---|---|---|---|---|---|
+| 1 | Línea base | 2026-09-09 17:34 a 18:40 | 0,5 vCPU / 512 MB | 0,1 vCPU / 256 MB | 1 | no cumple |
+| 2 | Más workers, misma CPU | 2026-09-09 19:46 a 20:07 | 0,5 vCPU / 512 MB | 0,1 vCPU / 256 MB | 2 | no cumple |
+| 3 | Postgres grande | 2026-09-09 20:41 a 21:21 | 0,5 vCPU / 512 MB | 2 vCPU / 4 GB | 1 | no cumple |
+| 4 | Web grande + Postgres grande | 2026-09-09 21:34 a 22:14 | 2 vCPU / 4 GB | 2 vCPU / 4 GB | 2 | cumple |
 
-- **p50 (la mediana)**: de cada 100 pedidos de ese escalón, 50 tardaron
-  menos que este valor (y 50 tardaron más). Es la experiencia "típica"
-  de un usuario cualquiera.
-- **p95**: de cada 100 pedidos, 95 tardaron menos que este valor -- los
-  otros 5 tardaron más. Es el número que de verdad define si la app se
-  siente bien, porque un promedio (o incluso la mediana) esconde a la
-  gente que peor la pasa: si el p95 es malo, hay una posibilidad real de
-  1 en 20 de que cualquier clic, en cualquier momento, se sienta lento.
-- **p99**: de cada 100 pedidos, 99 tardaron menos que este valor. Es la
-  cola extrema, el peor caso -- útil para saber qué tan mal puede llegar
-  a estar alguien con mala suerte en el peor momento.
+**Test 1 — Línea base.** Medir el punto de partida: hasta dónde aguanta la configuración más barata posible, sin tocar nada. Ningún escalón cumplió el objetivo (p95 por debajo de 1 s y menos de 1% de errores).
 
-**Cómo se calcula, para que no quede ambiguo**: se ordenan los tiempos de
-ese escalón de más rápido a más lento. El p95 es el que queda en la
-posición 95 de cada 100 -- todo lo anterior en esa fila (95 mediciones)
-es igual de rápido o más, y solo lo que queda después (las últimas 5) es
-más lento. Un p95 **bajo** es una buena noticia (la gran mayoría anduvo
-rápido); un p95 **alto** es grave, porque no describe un caso raro --
-describe lo que le pasó al 95% de la gente, casi a todos.
+El cuello de botella es el servicio web, no la IA: con 200 lectores puros —sin subir un solo recibo, sin tocar la IA— el p95 ya queda entre 26,7 s y 29,6 s, prácticamente lo mismo que el escalón de 200 del test de lecturas (29,9 s). Los dos servicios estaban al tope de su CPU: el web al 100,0% de sus 0,5 vCPU y Postgres al 100,0% de sus 0,1 vCPU con apenas 10 conexiones, mientras la RAM de la base no pasó del 55,5% — para esta app hace falta CPU en la base, no memoria. Las ráfagas de recibos revientan temprano: con 10 simultáneos ya falla el 27,3% de las subidas.
 
-Por qué importan los tres juntos: si p50 fuera bueno pero p95 malo,
-significaría que el sistema anda bien la mayoría del tiempo con "baches"
-frecuentes. Lo que se ve en esta corrida es distinto: **p50 y p95 suben
-juntos y parejo** a medida que crece la carga. Eso dice que el problema
-no son casos raros -- es el sistema entero poniéndose lento parejo,
-consistente con que todos los pedidos están haciendo cola detrás de un
-único proceso que los atiende de a uno.
+**Test 2 — Más workers, misma CPU.** Probar si repartir el trabajo en dos procesos mejora la concurrencia sin gastar un peso más de infraestructura. Ningún escalón cumplió el objetivo (p95 por debajo de 1 s y menos de 1% de errores).
 
-También se mide el **% de errores** (pedidos que directamente fallaron o
-tardaron tanto que se los dio por caídos) y el **rps** (requests por
-segundo que el servidor efectivamente pudo procesar en ese escalón --
-cuánto "rinde" en la práctica, más allá de cuánta gente está esperando).
+Empeoró, y por eso se descartó. Contra la línea base, en todos los escalones válidos el tiempo subió: 50 concurrentes 4,2 s → 5,2 s (+24,2%); 100 concurrentes 13,8 s → 19,4 s (+40,3%); 200 concurrentes 29,9 s → 42,3 s (+41,2%). Los errores a 200 concurrentes pasaron de 0,07% a 3,5%. Dos procesos peleando por media vCPU no dan paralelismo real: solo agregan cambio de contexto y memoria. La conclusión que deja es que workers y CPU tienen que subir juntos — sumar uno solo de los dos no sirve. Se volvió a 1 worker inmediatamente después.
 
-## A. Configuración probada
+**Test 3 — Postgres grande.** Aislar cuánto del problema venía de la base de datos: se sube solo Postgres y se deja el web exactamente como estaba. Ningún escalón cumplió el objetivo (p95 por debajo de 1 s y menos de 1% de errores).
 
-| Ítem | Valor | Qué significa |
-|---|---|---|
-| Plan del servicio web | 0,5 vCPU / **512 MB** de RAM, 1 instancia | Media unidad de procesador y medio gigabyte de memoria -- el escalón más chico que ofrece Render para un servicio que atiende tráfico. |
-| Plan de Postgres | **0,1 vCPU / 256 MB** | La base de datos. Es la pieza MÁS chica de toda la instalación -- una décima parte de un procesador. |
-| Comando de arranque | `uvicorn main:app --host 0.0.0.0 --port $PORT` | Así arranca el servidor. No tiene `--workers`, así que arranca con el valor por defecto: **uno solo**. |
-| Workers de uvicorn | **1** | Un "worker" es un proceso independiente del servidor, capaz de atender pedidos en paralelo con los demás workers. Con 1 solo, todo pasa por el mismo proceso, uno atrás del otro. |
-| Pool de Postgres | `pool_size=5` + `max_overflow=5` → máx. 10 conexiones **por worker** | Cuántas conversaciones simultáneas con la base puede tener abiertas cada proceso del servidor. Con 1 worker, el límite de la app hoy es 10 conexiones en total. |
-| Llamada a la IA (Anthropic) | **Síncrona**, sin threadpool, dentro de una ruta que debería ser asíncrona | La función que lee un recibo con IA bloquea todo el proceso mientras espera la respuesta -- nadie más puede ser atendido en ese rato. |
-| Latencia de IA simulada (`MOCK_EXTRACTOR_LATENCIA`) | 15 s | Para no gastar créditos reales ni depender de la velocidad variable de la API, el test usó una espera fija de 15 s en vez de llamar a Anthropic de verdad -- el tiempo típico real de esa llamada. |
+Postgres dejó de ser un límite: su CPU pasó del 100,0% de 0,1 vCPU al 8,1% de 2 vCPU, y la RAM al 2,8%. Eso mejoró de verdad la zona baja y media de lecturas: 50 concurrentes 4,2 s → 1,6 s (-61,9%); 100 concurrentes 13,8 s → 9,6 s (-30,4%); 200 concurrentes 29,9 s → 24,4 s (-18,6%). Pero de 400 concurrentes en adelante el techo no se movió (400 sigue en 51,7 s; 800 sigue en más de 60 s), porque ahí el límite es el servicio web, que siguió clavado en el 100,0% de sus 0,5 vCPU. Las ráfagas de recibos tampoco mejoraron. Queda demostrado que la base era parte del problema, pero no la parte que pone el techo.
 
-### El hallazgo que domina todo lo demás
+**Test 4 — Web grande + Postgres grande.** Probar la configuración prevista para el arranque de producción: CPU entera en el web, un worker por núcleo, y la base ya holgada. Cumple el objetivo (p95 por debajo de 1 s y menos de 1% de errores) hasta 100 usuarios concurrentes.
 
-Un solo worker de uvicorn atiende **todo** el tráfico, uno por vez, en un
-único hilo de ejecución. Cuando llega la subida de un recibo,
-`POST /api/leer` bloquea ese único proceso durante toda la espera de la
-IA (15 s con la simulación, unos segundos menos con la real) -- mientras
-tanto, ningún otro pedido se atiende: ni un login, ni un `/app/inicio`,
-ni otra subida.
+Primera configuración que cumple el objetivo: 50 concurrentes en 191 ms y 100 en 690 ms, las dos con 0,0% de error. A 800 concurrentes pasó de más de 60 s con 100,0% de error en la línea base a 19,1 s con 0,0%. El web volvió a ser el límite (100,0% de sus 2 vCPU) pero ahora con cuatro veces más CPU, y Postgres quedó holgado (29,3% de CPU, 4,0% de RAM). Lo que NO mejoró son las ráfagas de recibos: con 10 simultáneos falla el 15,4% y con 20 el 48,6%, contra 27,3% de la línea base en el mismo escalón de 10 — sin mejora real pese a toda la CPU agregada. La causa no es CPU: cada subida bloqueaba un worker entero durante los 15 segundos de la llamada a la IA. Eso es lo que motivó el cambio de código del 2026-09-10, que todavía no tiene un test que lo confirme.
 
-Pero acá está el punto más importante de todo este informe: **el Test 1,
-que no sube ningún recibo y no toca la IA para nada, ya muestra
-degradación seria a partir de 100 usuarios concurrentes**. Y el Test 2
-reprodujo el mismo techo con 200 lectores solos, sin ninguna subida de
-recibo encima: el p95 dio prácticamente el mismo número (27,7 s) que el
-escalón equivalente del Test 1 (29,9 s), con una carga de trabajo
-completamente distinta.
+## B. Navegación: p95 según cuánta gente hay
 
-**Esa coincidencia es la prueba de que el límite real es el único
-worker, no la IA síncrona.** La IA agrava el problema cuando además hay
-subidas de recibo (lo empeora bastante, como se ve en la sección de
-Diagnóstico), pero el techo de cuántos usuarios puede atender bien el
-sistema ya está puesto por tener un solo proceso sirviendo todo, aun sin
-IA de por medio.
+La prueba que no sube ningún recibo y no toca la IA: mide el techo puro del servidor.
+En negrita, los escalones que cumplen el objetivo.
 
-## B. Barandas obtenidas
-
-| Baranda pedida | Resultado |
-|---|---|
-| Máx. usuarios concurrentes con p95 < 1 s y errores < 1% | **Ninguno de los escalones probados la cumple.** Ya a 50 concurrentes el p95 es 4,2 s (más de 4 veces el objetivo), aunque con 0% de error. |
-| Máx. concurrentes con errores < 1% (sin exigir el p95) | 200 (0,07% de error; a 400 salta a 25,4%). Es decir, el sistema "no se cae" hasta 200, pero tarda muchísimo en responder. |
-| Máx. recibos simultáneos sin que los lectores superen p95 de 1 s | **Ninguno.** Con 200 lectores solos, sin ninguna subida, el p95 ya es 27,7 s. Con apenas 2 subidas de recibo simultáneas encima, sube a 47,4 s. |
-| Accesos por día equivalentes | Usando el techo real (200 concurrentes, el último escalón con menos de 1% de error) con la fórmula pedida (concurrencia × 60/duración de sesión × horas activas): 200 × (60 / 20 min de sesión estimada) × 10 h activas ≈ **6.000 accesos por día**. Muy por debajo de lo cómodo para una base de 5.000 usuarios activos si una fracción relevante entra en simultáneo (un feriado de pago, por ejemplo). |
-| Logins por minuto máximos | En el escalón de 200 concurrentes, el servidor sostuvo unos 12 pedidos por segundo en total (cada usuario simulado hace 6 pasos por vuelta: entrar, loguearse, home, novedades, recibo, credencial) ⇒ aproximadamente **120 logins por minuto** antes de que el error empiece a crecer feo. Bajo una carga sostenida real (no un test de laboratorio), es esperable que aguante menos. |
-
-## C. Comparación con la carga esperada
-
-Referencia dada: 5.000 usuarios activos, pico de notificación de ~300
-concurrentes y ~100 logins/min, fin de mes con 5 a 10 recibos
-simultáneos.
-
-| Escenario esperado | Cobertura actual |
-|---|---|
-| Pico de notificación: ~300 concurrentes | **No se cubre.** El servicio ya degrada mal a 200 y colapsa parcialmente a 400 (25% de error) y totalmente a 800 (100%). 300 cae justo en la zona de degradación seria, no de funcionamiento sano. |
-| ~100 logins/min | Al límite: el escalón de 200 concurrentes sostiene el equivalente a ~120 logins/min, pero ya con una latencia de decenas de segundos -- técnicamente "no se cae", pero la app se siente rota. |
-| Fin de mes, 5-10 recibos simultáneos | **No se cubre con margen.** Con 10 recibos simultáneos sobre 200 lectores, el 27% de esas subidas falla (se agota el tiempo de espera) y los lectores tienen 22,6% de error. Con 20 recibos simultáneos, la mitad de todo falla. |
-| 5.000 usuarios activos (base total) | No es directamente comparable con estos tests (miden concurrencia, no usuarios totales por día), pero el techo de accesos/día estimado arriba (~6.000) sugiere que ni siquiera esa base total es cómoda si la actividad no está bien repartida en el tiempo. |
-
-**Conclusión de esta sección: ningún escenario esperado se cubre hoy con
-margen.** El más cercano (100 logins/min) se sostiene solo si se acepta
-una latencia de decenas de segundos, muy lejos de lo que un trabajador
-esperaría al abrir la app.
-
-## D. Diagnóstico
-
-**El único worker de uvicorn es el cuello de botella dominante,
-confirmado de dos formas independientes:**
-
-1. El Test 1 (sin ninguna IA de por medio) ya muestra el p95 subiendo a
-   13,8 s a 100 concurrentes y a 29,9 s a 200, con 0% y 0,07% de error
-   respectivamente -- el sistema no se cae, pero cada pedido espera su
-   turno detrás de todos los anteriores en el mismo hilo.
-2. El Test 2, con 200 lectores solos y sin ninguna subida de recibo, dio
-   un p95 de 27,7 s -- prácticamente el mismo número que el escalón de
-   200 del Test 1, con una carga de trabajo distinta. Esa coincidencia
-   confirma que el límite es el proceso entero, no una ruta puntual.
-
-**La IA síncrona agrava el problema en cuanto hay subidas de recibo
-encima:** con 200 lectores + apenas 2 subidas simultáneas (cada una
-bloqueando el único proceso 15 s), el p95 de los LECTORES (que no
-subieron ningún recibo) sube de 27,7 s a 47,4 s solo por la presencia de
-esas 2 subidas. Con 10 o 20 subidas simultáneas, tanto las subidas como
-las lecturas superan el minuto de espera para una fracción grande de los
-pedidos.
-
-**Postgres (0,1 vCPU / 256 MB) no fue el límite GENERAL de esta corrida
--- pero en su propia CPU sí llegó al techo, y con evidencia real, no
-solo razonamiento.** Cruzando las muestras de `servidor.log` de las dos
-corridas con métricas de servidor:
-
-| Corrida | CPU máxima de Postgres | RAM máxima de Postgres |
-|---|---|---|
-| Test 2 (primera) | **0,10 de 0,10 vCPU → 100%** | 142 MB de 256 MB → 55% |
-| Test 2 (repetido) | **0,10 de 0,10 vCPU → 100%** | 162 MB de 256 MB → 63% |
-
-La CPU tocó el techo de su asignación en las dos corridas, con apenas
-10 a 15 conexiones activas -- bastante antes de que la concurrencia real
-le llegara a la base, porque el cuello de botella del único worker web
-frenaba el tráfico mucho antes. La RAM, en cambio, nunca pasó de dos
-tercios de sus 256 MB. Esto tiene sentido con el tipo de trabajo que
-hace esta base: consultas cortas y simples (filtros por `sindicato_id`,
-inserts, algún `GROUP BY` en Actividad), no consultas que necesiten
-mucha memoria de trabajo por conexión -- lo que sí cuesta es el volumen
-de conexiones abriéndose, cerrándose y ejecutando esas consultas cortas
-una tras otra en una sola décima parte de un núcleo.
-
-**Conclusión para elegir plan de Postgres: prioridad a la CPU, no a la
-RAM.** Los planes de Render suben las dos juntas (no se puede pedir más
-CPU sin más RAM), así que en la práctica esto se traduce en no quedarse
-en un plan asumiendo que la RAM alcanza -- la CPU es la que se va a
-quedar corta primero, y ya lo hizo con una fracción chica de la
-concurrencia real. Es esperable que esto pese más apenas se resuelva el
-cuello de botella del worker único y la concurrencia real le empiece a
-llegar de verdad a la base (ver la sección de escalado más abajo).
-
-La RAM del servicio **web** (no la de Postgres) sí llegó a 594 MB en un
-momento del Test 2 repetido -- por encima de los 512 MB del plan actual
--- aunque coincide con la ventana del reinicio mencionado arriba, así
-que no se puede afirmar con certeza que sea 100% producto de la carga.
-
-### Tercer experimento: Postgres a 2 vCPU / 4 GB (2026-09-10)
-
-Se subió Postgres al plan `2c-4g` (sin alta disponibilidad), dejando el
-servicio web sin cambios (0,5 vCPU, 1 worker), y se repitieron el Test 1
-y el Test 2 completos -- esta vez sin ningún despliegue de por medio.
-**Postgres dejó de ser un factor**: su CPU llegó a un máximo de 9,2% de
-los 2 vCPU nuevos (antes tocaba el 100% de 0,1 vCPU) y su RAM a 2,9% de
-los 4 GB.
-
-Efecto en el Test 1 (lecturas), contra la línea base (Postgres chico, 1
-worker):
-
-| Escalón | p95 antes | p95 con Postgres grande | Diferencia |
-|---|---|---|---|
-| 50 | 4,2 s | **1,6 s** | -62% |
-| 100 | 13,8 s | **9,6 s** | -30% |
-| 200 | 29,9 s | **24,4 s** | -18% |
-| 400 | 54,3 s | 51,7 s | sin cambio real |
-| 800 | 60 s (timeout) | 60 s (timeout) | sin cambio |
-
-**Postgres sí estaba aportando al problema en la zona baja-media de
-concurrencia** (50-200): subir su plan mejoró la latencia de verdad ahí,
-y también el throughput (17-18 rps contra 12 antes). **A partir de 400
-concurrentes, el techo no se mueve**: sigue siendo el único worker del
-servicio web, sin cambios en esta corrida.
-
-**Importante para no repetir el error del segundo experimento**: esta
-mejora es de la CPU de **Postgres**, no del servicio **web**. Volver a
-probar `--workers N` sin subir también el plan del servicio web
-(seguiría en 0,5 vCPU) daría el mismo resultado malo que el segundo
-experimento -- la variable que hace falta subir para que los workers
-ayuden es la CPU del servicio que los corre, no la de la base de datos.
-Datos crudos en `carga/log/2026-09-10_postgres2c4g/`.
-
-**Nota sobre el tamaño del plan**: con 9,2% de uso pico en 2 vCPU, es
-probable que un escalón intermedio (0,5 o 1 vCPU) ya hubiera alcanzado
-para esta misma carga -- no se probó un tamaño intermedio, así que esto
-es una inferencia, no una medición. Para el volumen de producción (300+
-concurrentes) puede hacer falta más que lo que se vio acá; vale la pena
-probar un escalón intermedio si el costo de 2 vCPU/4GB para Postgres es
-una preocupación real, en vez de asumir directamente el más grande.
-
-### Cuarto experimento: web a 2 vCPU/4GB + `--workers 2`, Postgres 2 vCPU/4GB (2026-09-10)
-
-Con Postgres ya en `2c-4g`, se subió también el servicio **web** al mismo
-plan y se lo arrancó con `--workers 2` (1 worker por núcleo, sin
-sobre-suscribir como en el segundo experimento). Se repitieron el Test 1
-y el Test 2 completos.
-
-**Test 1 (lecturas) -- p95 en las cuatro configuraciones probadas hasta
-ahora:**
-
-| Escalón | Base (0,5vCPU/1w/PG chico) | +2 workers (0,5vCPU/PG chico) | +Postgres grande (0,5vCPU/1w) | **Web 2vCPU+2w / Postgres grande** |
+| Usuarios concurrentes | 1. Línea base | 2. Más workers, misma CPU | 3. Postgres grande | 4. Web grande + Postgres grande |
 |---|---|---|---|---|
-| 50 | 4,2 s | 5,2 s | 1,6 s | **190 ms ✓** |
-| 100 | 13,8 s | 19,4 s | 9,6 s | **690 ms ✓** |
-| 200 | 29,9 s | 42,3 s | 24,4 s | **4,7 s** |
-| 400 | 54,3 s | (contaminado) | 51,7 s | **14,6 s** |
-| 800 | 60 s (timeout) | (contaminado) | 60 s (timeout) | **19,1 s** |
+| 50 | 4,2 s | 5,2 s | 1,6 s | **191 ms** |
+| 100 | 13,8 s | 19,4 s | 9,6 s | **690 ms** |
+| 200 | 29,9 s | 42,3 s | 24,4 s | 4,7 s |
+| 400 | 54,3 s | n/d | 51,7 s | 14,6 s |
+| 800 | timeout | n/d | timeout | 19,1 s |
 
-**Por primera vez en las cuatro corridas, dos escalones cumplen el
-objetivo completo** (p95 < 1 s y errores < 1%): 50 concurrentes (190 ms)
-y 100 concurrentes (690 ms). El throughput también saltó de 12-18 rps a
-20-68 rps. Esto confirma con una medición limpia lo que el segundo
-experimento ya sugería por la negativa: **los workers dan paralelismo
-real solo cuando hay CPU de sobra para repartir -- y con la CPU
-correcta, el efecto es grande, no marginal.**
+`n/d` son los escalones del test 2 que quedaron contaminados por un despliegue a mitad
+de corrida: se descartan. `timeout` quiere decir que los pedidos no respondieron dentro
+de los 60 segundos que espera el test — el valor real es "más de 60 s", no 60.
 
-**Test 2 (recibos) -- mejoró mucho menos.** Con ráfagas de 10 y 20
-recibos simultáneos, la latencia y los errores siguen siendo malos (p95
-de 60 s, 15-49% de error), muy parecido a las corridas anteriores.
-Tiene sentido: cada subida sigue bloqueando un worker entero durante los
-15 segundos de la IA simulada (síncrona, sin threadpool -- ver
-Diagnóstico); con solo 2 workers, una ráfaga de 10 o 20 subidas simuladas
-igual forma cola, sin importar cuánta CPU haya de sobra. **Esto confirma
-que la Recomendación de código (hacer async la llamada a la IA) sigue
-siendo necesaria -- la infraestructura sola no la resuelve**, y a esta
-altura es la única recomendación de esta lista sin confirmar con una
-medición real. Datos crudos en
-`carga/log/2026-09-10_web2c4g_2workers/`.
+## C. Subida de recibos
 
-**Nota de campo**: mientras corría este experimento, una visita manual al
-sitio se sintió notablemente lenta (hasta para volver al menú de inicio)
--- coincide con la ventana del test y es exactamente la degradación que
-estos números documentan, no un problema aparte.
+Tiempo de cada subida cuando llegan varias a la vez. El test 2 no corrió esta fase.
 
-## E. Recomendaciones para HOY (plan actual, sin gastar más)
-
-**Actualización 2026-09-09, con un experimento real:** se probó `--workers
-2` en el servicio de Pruebas (mismo 0,5 vCPU, sin cambiar de plan) y se
-repitió el Test 1. El resultado **no confirmó la hipótesis original de
-este informe** -- de hecho, la contradijo:
-
-| Escalón | p95 con 1 worker | p95 con 2 workers | Errores 1 worker | Errores 2 workers |
+| Recibos simultáneos | 1. Línea base | 2. Más workers, misma CPU | 3. Postgres grande | 4. Web grande + Postgres grande |
 |---|---|---|---|---|
-| 50 | 4,2 s | 5,2 s | 0% | 0% |
-| 100 | 13,8 s | 19,4 s | 0% | 0,18% |
-| 200 | 29,9 s | **42,3 s** | 0,07% | **3,49%** |
+| 2 | 15,7 s | — | 15,6 s | 15,2 s |
+| 5 | 45,4 s | — | 40,0 s | 40,7 s |
+| 10 | timeout | — | timeout | timeout |
+| 20 | timeout | — | 45,4 s | timeout |
 
-(Los escalones 400 y 800 de esa corrida quedaron contaminados por un
-despliegue que coincidió a mitad de test y no se incluyen -- ver el
-detalle en `carga/log/2026-09-09_2workers/`.)
+**Cuidado al leer esta tabla:** cada escalón tiene entre 6 y 37 subidas completadas, así
+que su p95 es prácticamente el peor caso observado y no un percentil sólido. Sirve para
+el orden de magnitud, no para comparar diferencias finas entre escalones. Por eso el test
+3 muestra 20 simultáneos "mejor" que 10: es ruido de muestra chica, no una mejora.
 
-**Con 2 workers, la latencia empeoró y aparecieron errores donde antes no
-había.** La explicación: sumar workers reparte el trabajo en paralelo
-SOLO si hay CPU de sobra para repartir. Acá la instancia tiene 0,5 vCPU
-en total -- dos procesos compitiendo por media unidad de procesador no
-ganan paralelismo real, y sí suman costo (cambio de contexto entre
-procesos, el doble de memoria base por tener dos procesos en vez de uno;
-la RAM del servicio también fue más alta en esta corrida).
+## D. Qué mostró cada test
 
-**Conclusión corregida: en el plan actual, sumar workers sin sumar CPU
-real no ayuda -- y puede empeorar.** El orden de las recomendaciones de
-abajo queda así, revisado, e incorpora el tercer experimento (Postgres a
-2 vCPU/4GB) de más arriba:
+### El techo lo pone el servicio web, no la llamada a la IA
 
-1. **Infraestructura -- subir el plan de Postgres. Ya hecho y confirmado**
-   con el tercer experimento: su CPU pasó de tocar el 100% de 0,1 vCPU a
-   un máximo de 9,2% de 2 vCPU, y el p95 del Test 1 mejoró de verdad en
-   50-200 concurrentes (-62%, -30%, -18%). Es la única recomendación de
-   esta lista con una corrida real, limpia, que la confirma -- no una
-   hipótesis. Costo medio (además prorrateado por Render si se prueba
-   temporalmente y se revierte después). **Al elegir el plan, priorizar
-   CPU sobre RAM**, como ya mostraba el segundo experimento.
-2. **Infraestructura -- subir el servicio web a un plan con vCPU entera
-   (1 o más) y `--workers` igual a los núcleos. Ya hecho y confirmado**
-   con el cuarto experimento: web a 2 vCPU + `--workers 2` (junto con el
-   Postgres del punto 1) le bajó el p95 del Test 1 de decenas de segundos
-   a **190 ms en 50 concurrentes y 690 ms en 100** -- las dos primeras
-   veces que se cumple el objetivo completo en las cuatro corridas -- y a
-   19,1 s en 800 (contra 60 s de timeout antes). Es la palanca que mueve
-   el techo de 400-800, tal como se esperaba. Costo alto pero es, junto
-   con el punto 1, la única recomendación de esta lista confirmada dos
-   veces con medición real.
-3. **Código -- correr la llamada a Anthropic en un hilo aparte
-   (`run_in_threadpool`). Implementado el 2026-09-10** en
-   `main.py` (`/api/leer`, `/api/aportes`, `/aprender`) -- cambio de bajo
-   costo, sin tocar `extractor.py`. **Es la única recomendación de esta
-   lista que el cuarto experimento mostró que seguía haciendo falta**:
-   con toda la CPU de los puntos 1 y 2 ya puesta, el Test 2 (recibos)
-   casi no mejoró en las ráfagas de 10 y 20 -- p95 de 60 s y hasta 49% de
-   error, muy parecido a antes de subir nada. Cada subida bloqueaba un
-   worker entero los 15 segundos de la IA síncrona, sin importar cuánta
-   CPU hubiera de sobra. Efecto esperado: una subida de recibo deja de
-   trabar el resto del tráfico mientras dura. **Pendiente de confirmar
-   con un Test 2 nuevo** (implementado y con tests unitarios en verde,
-   pero sin corrida de carga real todavía).
+*Medido en el test 1.*
 
-### Backlog (no confirmado con test, no priorizado para HOY)
+En el test 1 se midieron 200 lectores puros, sin subir un solo recibo y sin tocar la IA: el p95 quedó entre 26,7 s y 29,6 s. El escalón de 200 del test de lecturas, que es otra carga de trabajo distinta, dio 29,9 s. Que dos pruebas independientes choquen contra el mismo número muestra que el límite es el proceso que atiende, no lo que hace cada pedido.
 
-- **Automatizar la baja/suba de plan por horario (madrugada y fines de
-  semana con hasta 20x menos tráfico).** Render no tiene una función
-  nativa para programar cambios de plan por horario -- el autoscaling
-  requiere workspace Pro+ y escala por métrica (CPU/RAM), no por
-  calendario, y no cubre Postgres. Sí expone una API
-  (`PATCH /services/{id}`, la misma que usa `render_admin.py` en este
-  repo) para cambiar de plan por código. Propuesta: un Render Cron Job
-  (o GitHub Action programada) que baje el plan de web y Postgres de
-  madrugada/fin de semana y lo vuelva a subir en horario hábil. Postgres
-  cambia en caliente; el servicio web se reinicia (~1-2 min de downtime)
-  en cada cambio -- a aceptar como costo del ahorro. Sin estimar todavía.
+### Postgres se saturó en CPU y nunca en memoria
 
-## F. Extrapolación para producción: ¿pocas instancias grandes o muchas chicas?
+*Medido en los tests 1 y 3.*
 
-Este apartado responde a la pregunta concreta para cuando arranque
-producción: un presupuesto de 3 a 5 instancias de 1 vCPU / 2 GB (plan de
-USD 25/mes cada una) más 1 o 2 instancias de 2 vCPU / 4 GB (USD 85/mes)
-si hiciera falta. Es una extrapolación razonada a partir de lo medido acá,
-no una medición directa -- al final de esta sección se explica cómo
-confirmarla antes de comprometer el gasto.
+Con el plan más chico, la base llegó al 100,0% de su CPU con apenas 10 conexiones abiertas, mientras su memoria no pasó del 55,5%. Al subirla en el test 3, la CPU cayó al 8,1% y la RAM al 2,8%. Para esta app, al elegir plan de base de datos manda la CPU: la memoria sobra en los dos casos.
 
-### El hecho técnico que ordena la decisión
+### Sumar workers sin sumar CPU empeora las cosas
 
-Un proceso de Python -- aunque use `async`, como esta app -- usa
-efectivamente **un solo núcleo de procesador**, sin importar cuántos
-tenga la máquina donde corre. Esto tiene una consecuencia directa y poco
-intuitiva: **comprar una instancia con más CPU, sin cambiar nada más, no
-mejora en nada la concurrencia**. Si se contrata una instancia de 2 vCPU
-pero se la sigue arrancando con 1 solo worker (como corre Pruebas hoy),
-la segunda CPU queda sin usar -- el cuello de botella descripto en el
-Diagnóstico sigue exactamente igual. Hace falta sumar `--workers N` para
-que la instancia reparta el trabajo entre varios procesos y aproveche esa
-CPU de más. **Y la recíproca también es cierta, confirmada con un
-experimento real (ver Recomendaciones, punto 2 revisado):** sumar
-workers SIN sumar CPU tampoco ayuda -- probado en Pruebas con
-`--workers 2` sobre el mismo 0,5 vCPU de siempre, la latencia empeoró en
-vez de mejorar. Los workers y la CPU real tienen que subir juntos; ninguno
-de los dos solo alcanza.
+*Medido en el test 2.*
 
-Dicho esto, la pregunta deja de ser "más CPU por máquina" contra "más
-máquinas" en el sentido de la potencia bruta -- los dos caminos necesitan
-ajustar `--workers` igual. La diferencia real está en otro lado:
+El test 2 probó dos workers sobre la misma media vCPU y todos los escalones válidos empeoraron: 50 concurrentes 4,2 s → 5,2 s (+24,2%); 100 concurrentes 13,8 s → 19,4 s (+40,3%); 200 concurrentes 29,9 s → 42,3 s (+41,2%). Los errores a 200 concurrentes pasaron de 0,07% a 3,5%. Dos procesos compitiendo por el mismo medio núcleo no dan paralelismo: agregan cambio de contexto y memoria. Workers y CPU se suben juntos.
 
-- **Muchas instancias chicas** (las 3 a 5 de 1 vCPU/2GB del plan
-  propuesto): Render las reparte solo, con su propio balanceador de
-  carga. Y como esta app guarda la sesión de cada usuario en una cookie
-  firmada, **sin ningún estado guardado en el servidor** (confirmado en
-  el código, `auth.py`), no hay ningún problema de "pegajosidad" --
-  cualquier instancia puede atender a cualquier usuario en cualquier
-  momento, sin coordinación especial. Se gana redundancia real: si una
-  instancia se cae o se reinicia (como pasó, sin querer, durante este
-  mismo test), las demás siguen sirviendo tráfico sin que nadie lo note.
-  Es también el camino más simple de operar: activar más instancias es
-  un control en el dashboard de Render, no una decisión de ingeniería.
-- **Pocas instancias grandes** (1 o 2 de 2 vCPU/4GB): mismo total
-  aproximado de CPU, pero si una se cae, se pierde una porción mucho más
-  grande de la capacidad de golpe. Tiene sentido cuando una carga
-  necesita mucha memoria en un solo proceso -- no es el caso de esta app:
-  la RAM nunca fue el factor limitante en esta corrida, salvo un pico
-  puntual que coincide con el reinicio ya mencionado.
+### Con CPU entera y un worker por núcleo, el techo se corre de golpe
 
-### Recomendación concreta con el presupuesto propuesto
+*Medido en el test 4.*
 
-Usar las 3 a 5 instancias chicas para el **servicio web**, cada una con
-1 a 2 workers según su CPU -- entre 6 y 10 procesos sirviendo en paralelo
-con redundancia real, contra el proceso único de hoy: un salto de 6 a 10
-veces la capacidad de servir tráfico en paralelo. Reservar la instancia
-de 2 vCPU/4GB (o las dos) para **Postgres**, no para más web: hoy la base
-corre con 0,1 vCPU, la pieza más chica de toda la instalación, y ya tocó
-el 100% de esa CPU con apenas 10-15 conexiones (ver Diagnóstico) -- va a
-empezar a sentir la concurrencia real mucho antes de lo que parece, en
-cuanto se resuelva el cuello de botella del worker único. Al elegir ese
-plan, priorizar CPU sobre RAM: en los datos capturados, la CPU de
-Postgres se saturó mientras su RAM todavía tenía margen (55-63% de uso).
+El test 4 subió el web a 2 vCPU con 2 workers, sobre la base ya grande del test 3: 50 concurrentes 4,2 s → 191 ms; 100 concurrentes 13,8 s → 690 ms; 200 concurrentes 29,9 s → 4,7 s; 800 concurrentes timeout → 19,1 s. Es la única configuración probada que cumple el objetivo. El web volvió a quedar al 100,0% de su CPU —sigue siendo el límite— pero ahora con cuatro veces más para repartir, y la base quedó holgada en 29,3%.
 
-**Un detalle que se acopla directo a esta decisión**: cada worker abre
-hasta 10 conexiones a Postgres (`pool_size=5` + `max_overflow=5`). Con 6
-a 10 workers en total, eso son entre 60 y 100 conexiones simultáneas
-posibles -- hay que confirmar que el plan de Postgres elegido las
-soporte (se ve en el panel de Render, "Max Connections"), o bajar ese
-número por worker si no.
+### Las ráfagas de recibos no mejoran con más CPU
 
-### Cómo confirmarlo antes de gastar
+*Medido en los tests 1 y 4.*
 
-Esto es una extrapolación razonada a partir de una sola causa raíz clara
-(un solo proceso sirviendo todo), no una medición de la configuración
-real de producción. Antes de comprometer el gasto mensual, lo más
-honesto es aprovechar la pestaña **Tests** que quedó funcionando en
-`/entornos` (ver más abajo) para correr el mismo test de estrés contra
-la configuración real, una vez provisionada -- con las instancias y los
-workers ya configurados como se piensa dejarlos en producción.
+Con 10 recibos simultáneos, la línea base falló el 27,3% de las subidas y el test 4 —con cuatro veces más CPU— el 15,4%; con 20, 50,0% contra 48,6%. La causa no es CPU: cada subida ocupaba un worker completo durante los 15 segundos que tarda la llamada a la IA, y mientras tanto ese worker no atendía a nadie más. Es un problema de código, no de infraestructura.
 
-## Qué repetir después de aplicar cada recomendación
+### Cuántas conexiones a la base consume cada worker
 
-Repetir Test 1 y Test 2 completos (no solo el escalón que falló) después
-de cada cambio, en este orden: primero el punto 2 de la sección E (sumar
-workers, más barato y de mayor impacto), después el punto 1 (IA
-asíncrona), y recién después cualquier cambio de plan. Comparar cada
-corrida contra los números de este informe. Evitar desplegar otros
-cambios mientras corre el test (ver el aviso al principio sobre el
-reinicio de esta misma corrida).
+*Medido en el test 4.*
 
----
+Cada worker abre hasta 5 conexiones más 5 de reserva, o sea 10. Con 2 workers, la cuenta da 20 y lo medido en el test 4 fueron 20 conexiones como máximo: la cuenta cierra. Sirve para dimensionar: al multiplicar instancias hay que multiplicar también este número y contrastarlo con el límite del plan de Postgres elegido.
 
-## Herramientas para repetirlo, ya en el repo y probadas contra el servicio real
+## E. Qué hacer
 
-- **`carga/`** (k6 + Python): la corrida de referencia rigurosa descripta
-  en todo este informe. Ver `carga/README.md` para los pasos.
-- **Pestaña "Tests" en `/entornos`** (nueva, en producción): un botón Run
-  con parámetros configurables (tipo de test, escalones, duración) que
-  dispara un test en un contenedor aparte de Render (para no falsear los
-  números compitiendo por CPU con el propio servidor que se está
-  midiendo). Pensada para chequeos rápidos entre despliegues -- no
-  reemplaza la corrida de referencia de `carga/` para sacar barandas
-  finas, pero es justamente la herramienta para confirmar la
-  extrapolación de la sección F contra una configuración real. Muestra
-  también la configuración actual del servidor: workers, pool de
-  Postgres, CPU y RAM en vivo. Verificada de punta a punta contra el
-  servicio real.
-- **Pestaña "Actividad" en `/entornos`** (nueva, en producción): panel de
-  monitoreo con trámites, recibos verificados, notificaciones, tokens de
-  IA consumidos y accesos, por sindicato y totales, Pruebas y Demo lado a
-  lado, con CPU y RAM del servidor. Se actualiza sola cada 10 minutos.
-  Los accesos se cuentan desde ahora en adelante (no hay historial previo
-  a este cambio).
+1. **Subir Postgres a una vCPU entera, priorizando CPU sobre memoria** — *confirmado, costo medio · infraestructura.* Medido en el test 3: la CPU de la base pasó del 100,0% al 8,1% y la latencia de lecturas mejoró de verdad hasta 200 concurrentes. La memoria nunca fue el problema (2,8% de uso).
 
-## Glosario
+2. **Subir el servicio web a CPU entera y poner un worker por núcleo** — *confirmado, costo alto · infraestructura.* Medido en el test 4: es lo que llevó el p95 a 191 ms en 50 concurrentes y 690 ms en 100, los únicos escalones que cumplen el objetivo en las cuatro corridas. Las dos cosas van juntas: el test 2 probó que los workers solos empeoran.
 
-- **Escalón**: un nivel de carga sostenido varios minutos (cuántos
-  usuarios simulados atacan el sistema al mismo tiempo) antes de subir al
-  siguiente.
-- **p50 / p95 / p99**: ver "Cómo leer este informe" al principio.
-- **rps**: pedidos por segundo que el servidor efectivamente procesó en
-  ese escalón.
-- **Worker**: un proceso independiente del servidor, capaz de atender
-  pedidos en paralelo con los demás workers del mismo servicio.
-- **Pool de conexiones**: cuántas conversaciones simultáneas con la base
-  de datos puede tener abiertas cada worker a la vez.
-- **MOCK_EXTRACTOR**: modo de prueba que evita llamar a la IA real
-  durante el test (para no gastar créditos ni depender de su velocidad
-  variable), simulando su demora típica con una espera fija.
-- **vCPU**: "CPU virtual" -- la unidad con la que Render mide cuánto
-  procesador tiene contratado un servicio (0,5 vCPU es media unidad).
+3. **Correr la llamada a la IA en un hilo aparte** — *implementado sin confirmar, costo bajo · código.* Es lo único que queda para las ráfagas de recibos, que con toda la CPU del test 4 siguieron fallando el 48,6% con 20 subidas simultáneas. El cambio se implementó el 2026-09-10 en las tres rutas que llaman a la IA y tiene sus tests unitarios en verde, pero todavía no se corrió un test de carga que mida la mejora: hasta que eso pase, es una corrección esperada, no un resultado.
+
+## F. Para el arranque en producción
+
+> **Esto es razonamiento, no medición.** Todo lo anterior son números medidos contra el
+> servicio de Pruebas; esta sección extrapola hacia una infraestructura que todavía no se
+> probó. Antes de comprometer el gasto conviene correr el mismo test contra la
+> configuración real ya contratada.
+
+**El hecho técnico que ordena la decisión.** Un proceso de Python usa efectivamente un
+solo núcleo, aunque el código sea asincrónico como el de esta app y aunque la máquina
+tenga más. De ahí las dos mitades de la misma regla, las dos con evidencia acá: comprar
+CPU sin sumar `--workers` deja los núcleos nuevos sin usar, y sumar workers sin CPU real
+empeora las cosas (test 2). Van juntos: un worker por núcleo.
+
+**Muchas instancias chicas o pocas grandes.** Para el servicio web conviene repartir en
+varias instancias: las sesiones viajan en una cookie firmada y no hay estado en el
+servidor, así que cualquier instancia atiende a cualquiera sin configuración extra; una
+caída se lleva una porción más chica; y ningún proceso necesita mucha memoria propia
+(en el test 4 el web usó 638 MB de los 4 GB disponibles).
+
+**Cómo se hace en Render.** Para el servicio web no se crean servicios separados: es un
+solo servicio con su pestaña *Scaling*, donde se fija el número de instancias; cada una
+corre el mismo plan y Render reparte el tráfico con su propio balanceador. El autoscaling
+automático existe pero requiere plan Pro o superior del workspace y escala por métrica de
+CPU/memoria, no por horario.
+
+**Postgres es distinto.** No existen varias instancias que se repartan la escritura: lo
+que Render ofrece son réplicas de lectura (hasta cinco, de solo lectura, con retraso de
+replicación y su propia URL de conexión), lo que obliga a separar en el código qué
+consultas van a cada una. Hoy la app no hace esa separación. Si el objetivo es aguantar
+más carga, la palanca real sigue siendo subir el plan de la única instancia — que es
+justo lo que se midió en el test 3.
+
+**La cuenta que no hay que olvidar.** Las conexiones a la base se multiplican por
+instancia. Cada worker abre hasta 10 conexiones y el test 4 lo confirmó midiendo
+exactamente 20 con 2 workers. Al escalar hay que multiplicar por la cantidad total de
+workers y contrastarlo contra el límite del plan de Postgres elegido.
+
+## G. Lo que hay que tener en cuenta de estas mediciones
+
+- **Test 1:** El monitor de servidor todavía tenía un error de formato de fecha contra la API de Render y no pudo tomar ninguna métrica durante la fase de lecturas: ahí CPU y RAM figuran como no medidos. Se arregló antes de las fases siguientes y de los demás experimentos.
+- **Test 1:** A mitad de la fase de recibos se desplegó código nuevo, lo que reinició el servidor. Los escalones de 2 y 5 recibos no deberían verse afectados; los de 10 y 20 pueden traer ruido extra.
+- **Test 2:** A mitad de la corrida se desplegó código nuevo y el servidor se reinició. Los escalones de 400 y 800 quedaron contaminados (80% y 49% de error, con tiempos que no son comparables) y NO se usan para ninguna conclusión: solo se muestran marcados como inválidos.
+- **Test 2:** Por ese mismo despliegue convivieron dos juegos de procesos durante unos minutos, así que los picos de CPU y RAM del web de esta corrida están inflados y no describen el costo real de dos workers.
+- **Test 2:** Solo se corrió la fase de lecturas. No hay fase de recibos en este experimento.
+- **Test 4:** Corrió ANTES del cambio de código que pasa la llamada a la IA a un hilo aparte (2026-09-10). Los números de la fase de recibos son los de la IA todavía bloqueando el worker.
+- La llamada a la IA se simuló con una espera fija de 15 segundos, para no depender de
+  la velocidad variable del servicio real ni gastar créditos. Es la demora típica
+  observada, pero es una simulación.
+- Todos los tiempos se cortan a los 60 segundos: donde dice `timeout`, el pedido nunca
+  respondió.
+
+## Cómo se reproduce
+
+```
+python carga/consolidar.py            # reconstruye el dataset desde carga/log/
+python carga/verificar.py             # audita cada cifra contra los datos crudos
+python carga/generar_md.py            # regenera este archivo
+PIN_ENTORNOS=... BASE_URL=... python carga/publicar_experimentos.py   # publica en el sitio
+```
+
+Para correr un test nuevo, ver `carga/README.md`.

@@ -326,8 +326,37 @@ def test_informe_completo_se_sirve_desde_el_sitio_sin_github():
     assert r.status_code == 200
     assert "github.com" not in r.text.lower()
     assert "claude.ai" not in r.text.lower()
-    assert "Un solo worker" in r.text
     print("OK  test_informe_completo_se_sirve_desde_el_sitio_sin_github")
+
+
+def test_el_informe_general_sale_de_los_mismos_datos_que_los_tests():
+    """El informe se arma desde carga/experimentos.json, no de HTML
+    escrito a mano: los cuatro tests, sus configuraciones y las cifras
+    tienen que aparecer tal como están en el dataset."""
+    from carga import informe as informe_carga
+    inf = informe_carga.construir()
+    r = client.get("/entornos/informe")
+    assert r.status_code == 200
+    for e in inf["experimentos"]:
+        assert e["nombre"] in r.text, f"falta el test {e['numero']} en el informe"
+        assert f'href="/entornos/tests/{e["numero"]}"' in r.text
+        assert e["config"]["plan_web_etiqueta"] in r.text
+    assert inf["resumen"][:70] in r.text
+    for h in inf["hallazgos"]:
+        assert h["titulo"] in r.text
+    for rec in inf["recomendaciones"]:
+        assert rec["titulo"] in r.text
+    print("OK  test_el_informe_general_sale_de_los_mismos_datos_que_los_tests")
+
+
+def test_el_informe_no_presenta_como_medido_lo_que_es_inferencia():
+    """La sección de producción extrapola: tiene que estar rotulada como
+    tal, para no leerse como si fuera otro resultado medido."""
+    r = client.get("/entornos/informe")
+    assert "Esto es razonamiento, no medición" in r.text
+    # Y los escalones descartados no pueden figurar como números buenos.
+    assert "n/d" in r.text and "contaminados" in r.text
+    print("OK  test_el_informe_no_presenta_como_medido_lo_que_es_inferencia")
 
 
 def test_informe_completo_sin_pase_no_se_expone():

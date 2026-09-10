@@ -4646,13 +4646,18 @@ def entornos_test_detalle(request: Request, test_id: int):
 
 @app.get("/entornos/informe", response_class=HTMLResponse)
 def entornos_informe(request: Request):
-    """El informe completo de referencia (gráfico, glosario, diagnóstico,
-    las cuatro corridas comparadas) -- página propia, mismo gate de PIN
-    que el resto de /entornos, sin depender de nada externo."""
+    """Los cuatro tests comparados: tablas, gráfico, diagnóstico y
+    recomendaciones. TODO se genera desde carga/experimentos.json (ver
+    carga/informe.py), los mismos datos que muestran las páginas de cada
+    test -- antes era HTML escrito a mano que se parchaba después de cada
+    corrida y terminó contradiciéndose entre secciones."""
     _exigir_landing()
     if not _pase_landing(request):
         return RedirectResponse("/entornos#tests-pruebas", status_code=303)
-    return templates.TemplateResponse("informe_completo.html", {"request": request})
+    from carga import informe as informe_carga
+    return templates.TemplateResponse("informe_completo.html", {
+        "request": request, "inf": informe_carga.construir(),
+    })
 
 
 # ================= Recursos: la documentación del proyecto en la landing =================
