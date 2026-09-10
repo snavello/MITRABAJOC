@@ -48,9 +48,11 @@ def revisar(condicion, mensaje):
 
 
 def numeros_del_texto(texto: str) -> list:
-    """Las cifras que aparecen en una frase, normalizadas. Se sacan antes
-    las fechas (2026-09-10) y los años, que no son mediciones."""
+    """Las cifras que aparecen en una frase, normalizadas. Antes de
+    extraerlas se sacan las fechas (2026-09-10) y las referencias a otro
+    test ("el test 6"), que son identificadores y no mediciones."""
     texto = re.sub(r"\d{4}-\d{2}-\d{2}", " ", texto)
+    texto = re.sub(r"\btests?\s+\d+", " ", texto, flags=re.IGNORECASE)
     return re.findall(r"\d+(?:,\d+)?", texto)
 
 
@@ -129,9 +131,9 @@ def main():
     porcodigo = {e["numero"]: e for e in datos}
     base = porcodigo[1]
 
-    revisar(len(datos) == 6, f"Se esperaban 6 experimentos y hay {len(datos)}.")
-    revisar(sorted(porcodigo) == [1, 2, 3, 4, 5, 6],
-            f"La numeración tiene que ser 1..6 y es {sorted(porcodigo)}.")
+    revisar(len(datos) == 7, f"Se esperaban 7 experimentos y hay {len(datos)}.")
+    revisar(sorted(porcodigo) == [1, 2, 3, 4, 5, 6, 7],
+            f"La numeración tiene que ser 1..7 y es {sorted(porcodigo)}.")
 
     # Reconstrucción independiente desde las fuentes crudas.
     definiciones = {e["numero"]: e for e in C.EXPERIMENTOS}
@@ -196,7 +198,7 @@ def main():
         # 3. Ninguna cifra inventada en veredicto ni conclusión.
         # El test 5 aísla un cambio de código: compara contra el 4, que
         # corrió con la misma infraestructura, no contra la línea base.
-        referencia = porcodigo.get(exp["numero"] - 1) if exp["numero"] in (5, 6) else None
+        referencia = porcodigo.get(exp["numero"] - 1) if exp["numero"] in (5, 6, 7) else None
         vocab = vocabulario_de(exp, base, referencia)
         for campo in ("veredicto", "conclusion"):
             for numero in numeros_del_texto(exp[campo]):
@@ -214,7 +216,7 @@ def main():
     # del dataset y que no cite ninguna cifra ajena en sus hallazgos.
     import informe as INF
     inf = INF.construir()
-    revisar(len(inf["experimentos"]) == 6, "El informe general no cubre los 6 tests.")
+    revisar(len(inf["experimentos"]) == 7, "El informe general no cubre los 7 tests.")
     for clave, comp, escalones in (("lecturas", inf["comparativa_lecturas"], INF.ESCALONES_LECTURAS),
                                    ("recibos", inf["comparativa_recibos"], INF.ESCALONES_RECIBOS)):
         for fila in comp:

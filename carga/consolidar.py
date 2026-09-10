@@ -48,6 +48,7 @@ PLANES = {
     "0.5c-512mb": {"vcpu": 0.5, "ram_mb": 512, "etiqueta": "0,5 vCPU / 512 MB"},
     "0.1c-256mb": {"vcpu": 0.1, "ram_mb": 256, "etiqueta": "0,1 vCPU / 256 MB"},
     "2c-4g": {"vcpu": 2.0, "ram_mb": 4096, "etiqueta": "2 vCPU / 4 GB"},
+    "4c-8g": {"vcpu": 4.0, "ram_mb": 8192, "etiqueta": "4 vCPU / 8 GB"},
     "4c-16g": {"vcpu": 4.0, "ram_mb": 16384, "etiqueta": "4 vCPU / 16 GB"},
     "8c-16g": {"vcpu": 8.0, "ram_mb": 16384, "etiqueta": "8 vCPU / 16 GB"},
 }
@@ -404,6 +405,42 @@ EXPERIMENTOS = [
              "k6": "test2_recibos.json", "log": "servidor.log", "unidad": "recibos simultáneos en paralelo"},
         ],
     },
+    {
+        "numero": 7,
+        "nombre": "Cuatro núcleos",
+        "subtitulo": "La mitad de la CPU del test 6: web a 4 vCPU / 8 GB con 4 workers, misma base",
+        "objetivo": "Probar si la mitad de la CPU alcanza. El test 6 terminó con margen "
+                    "(61% de pico), así que la sospecha era que 8 núcleos sobraban para el "
+                    "arranque y se podía contratar la mitad.",
+        "config": {
+            "plan_web": "4c-8g", "plan_db": "4c-16g", "workers_uvicorn": 4,
+            "pool_size": 5, "max_overflow": 5, "ia": "en hilo aparte", "ia_latencia_seg": 15,
+        },
+        "advertencias": [
+            "Corrida limpia: sin despliegues ni reinicios a mitad de test.",
+            "Única diferencia contra el test 6: la CPU del web (de 8 a 4 vCPU, con 4 workers "
+            "en vez de 8) y su memoria (de 16 a 8 GB). La base quedó igual, así que la "
+            "comparación entre los dos aísla el efecto del tamaño del servicio web.",
+            "El escalón de 800 no es comparable contra el test 6: allá el servidor terminó "
+            "con CPU de sobra y el techo probablemente lo puso el generador de carga, "
+            "mientras que acá el servidor sí saturó. Los escalones de hasta 400 sí son "
+            "comparables: en los dos casos la medición refleja al servidor.",
+        ],
+        "fases": [
+            {"clave": "lecturas", "titulo": "Lecturas (navegación, sin subir nada)",
+             "detalle": "Usuarios concurrentes haciendo login y recorriendo la app. No toca la IA.",
+             "carpeta": "2026-09-10_2139", "serie": "lecturas",
+             "k6": "test1_lecturas.json", "log": "servidor.log", "unidad": "usuarios concurrentes"},
+            {"clave": "recibos", "titulo": "Subida de recibos (ráfagas simultáneas)",
+             "detalle": "Tiempo de cada subida de recibo, con 200 lectores navegando en paralelo.",
+             "carpeta": "2026-09-10_2139", "serie": "recibos",
+             "k6": "test2_recibos.json", "log": "servidor.log", "unidad": "recibos simultáneos"},
+            {"clave": "lectores_durante_recibos", "titulo": "Lectores mientras se suben recibos",
+             "detalle": "Los 200 lectores en paralelo, medidos durante las ráfagas.",
+             "carpeta": "2026-09-10_2139", "serie": "lectores_durante_recibos",
+             "k6": "test2_recibos.json", "log": "servidor.log", "unidad": "recibos simultáneos en paralelo"},
+        ],
+    },
 ]
 
 OBJETIVO_P95_MS = 1000
@@ -660,6 +697,35 @@ def armar_conclusion(exp_num: int, fases: list, base: list, previos: dict = None
             f"El pico de CPU del web en la fase de lecturas fue {fmt_pct(cl['web']['cpu_pct'])} "
             f"y el de la base {fmt_pct(cl['db']['cpu_pct'])}: a diferencia de todos los "
             f"tests anteriores, esta configuración termina la corrida con margen."
+        )
+
+    if exp_num == 7:
+        t6 = (previos or {}).get(6, [])
+        comp = []
+        for esc in (50, 100, 200, 400):
+            a, b = _fila(t6, "lecturas", esc), _fila(fases, "lecturas", esc)
+            comp.append(f"{esc}: {fmt_ms(a['p95'])} contra {fmt_ms(b['p95'])}")
+        f200 = _fila(fases, "lecturas", 200)
+        f400 = _fila(fases, "lecturas", 400)
+        c6 = _fase(t6, "lecturas")["carga"]["web"]
+        c7 = _fase(fases, "lecturas")["carga"]["web"]
+        r20 = _fila(fases, "recibos", 20)
+        l20 = _fila(fases, "lectores_durante_recibos", 20)
+        return (
+            f"La mitad de la CPU rinde lo mismo hasta 400 concurrentes. Comparando el p95 "
+            f"del test 6 (8 núcleos) contra este (4 núcleos), escalón por escalón: "
+            f"{'; '.join(comp)} -- diferencias que entran en la variación entre corridas. "
+            f"El objetivo se cumple hasta {f200['escalon']} concurrentes con "
+            f"{fmt_ms(f200['p95'])} y {fmt_pct(f200['errores_pct'])} de error, igual que con "
+            f"el doble de máquina, y a {f400['escalon']} responde en {fmt_ms(f400['p95'])} "
+            f"con {fmt_pct(f400['errores_pct'])}. "
+            f"Las ráfagas de recibos también quedaron iguales: {fmt_ms(r20['p95'])} con "
+            f"{r20['escalon']} simultáneas, y los lectores en paralelo en "
+            f"{fmt_ms(l20['p95'])}. "
+            f"La diferencia real está en el margen, no en la respuesta: el web llegó al "
+            f"{fmt_pct(c7['cpu_pct'])} de su CPU contra el {fmt_pct(c6['cpu_pct'])} del "
+            f"test 6. Con 4 núcleos la carga esperada se atiende igual de rápido, pero sin "
+            f"colchón para un pico por encima de 400."
         )
     return ""
 

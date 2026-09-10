@@ -198,21 +198,33 @@ def hallazgos(exps):
             f"atendía a nadie más. Es un problema de código, no de infraestructura."),
     })
 
-    # 6. Cuenta de conexiones, verificada contra la medición.
-    cfg4 = t4["config"]
-    por_worker = cfg4["pool_size"] + cfg4["max_overflow"]
-    esperadas = por_worker * cfg4["workers_uvicorn"]
-    medidas = _fase(t4, "lecturas")["carga"]["db"]["conexiones"]
+    # 6. Conexiones: lo que se creía y lo que muestran los datos.
+    filas_conex = []
+    for e in exps:
+        w = e["config"]["workers_uvicorn"]
+        techo = (e["config"]["pool_size"] + e["config"]["max_overflow"]) * w
+        medido = max((f["carga"]["db"]["conexiones"] or 0) for f in e["fases"])
+        filas_conex.append(f"test {e['numero']} ({w} worker{'s' if w > 1 else ''}): "
+                           f"tope teórico {techo}, medido {medido}")
+    por_worker = exps[0]["config"]["pool_size"] + exps[0]["config"]["max_overflow"]
     out.append({
-        "titulo": "Cuántas conexiones a la base consume cada worker",
-        "tests": [4],
+        "titulo": "Las conexiones a la base siguen a la saturación, no a la cantidad de workers",
+        "tests": [n["numero"] for n in exps],
         "texto": (
-            f"Cada worker abre hasta {cfg4['pool_size']} conexiones más "
-            f"{cfg4['max_overflow']} de reserva, o sea {por_worker}. Con "
-            f"{cfg4['workers_uvicorn']} workers, la cuenta da {esperadas} y lo medido en el "
-            f"test 4 fueron {medidas} conexiones como máximo: la cuenta cierra. "
-            f"Sirve para dimensionar: al multiplicar instancias hay que multiplicar también "
-            f"este número y contrastarlo con el límite del plan de Postgres elegido."),
+            f"Por configuración, cada worker abre hasta {por_worker} conexiones "
+            f"(pool de {exps[0]['config']['pool_size']} más "
+            f"{exps[0]['config']['max_overflow']} de reserva), así que el tope debería ser "
+            f"ese número por la cantidad de workers. Los datos no lo respaldan: "
+            + "; ".join(filas_conex) + ". "
+            "Un test con ocho workers y CPU de sobra usó menos conexiones que otro con "
+            "cuatro workers y la CPU saturada, y varias corridas superaron su tope teórico. "
+            "Lo que sí se ve con claridad es que el número sube cuando el servicio web se "
+            "satura —los pedidos se apilan y retienen su conexión más tiempo— y baja cuando "
+            "hay margen. Por qué se pasa del máximo del pool no está explicado: puede ser "
+            "que la métrica de Render cuente también conexiones en cierre o el proceso "
+            "maestro de uvicorn. Hasta entenderlo, para dimensionar conviene medirlo en la "
+            "configuración real en vez de calcularlo, y dejar holgura contra el límite del "
+            "plan de Postgres."),
     })
     return out
 

@@ -1,4 +1,4 @@
-# Test de estrés de la app del trabajador — los 6 tests comparados
+# Test de estrés de la app del trabajador — los 7 tests comparados
 
 > **Este archivo se genera solo.** Sale de `carga/experimentos.json`, que a su vez
 > se arma con `carga/consolidar.py` desde los datos crudos de cada corrida
@@ -6,15 +6,15 @@
 > `python carga/consolidar.py && python carga/generar_md.py`. La misma información,
 > con gráfico, se sirve en `/entornos/informe` del sitio de Pruebas.
 
-Servicio medido: `mitrabajo-pruebas.onrender.com`. Objetivo fijado para los 6
+Servicio medido: `mitrabajo-pruebas.onrender.com`. Objetivo fijado para los 7
 tests: **p95 por debajo de 1 s con menos de 1% de errores**. Horarios en hora de
 Buenos Aires. Los tiempos están en milisegundos salvo donde se indique.
 
 ## El resultado, en un párrafo
 
-Se probaron 6 configuraciones. Hoy la navegación cumple el objetivo —p95 por debajo de 1 s con menos de 1% de errores— hasta 200 usuarios concurrentes, con 213 ms y 0,0% de error; en la línea base, ese mismo escalón daba 21,8 s. A 800 concurrentes se pasó de timeout con 69,0% de error a 8,8 s con 0,0%. La subida de recibos no se arregló con hardware sino con código: con 20 subidas simultáneas los errores pasaron de 48,6% a 0,37% sin tocar la infraestructura —lo único que cambió fue sacar la llamada a la IA de adentro del worker—. En la última corrida esas mismas ráfagas quedaron en 15,2 s con 0,0% de error, que es el piso que impone la propia IA, y los lectores que navegan mientras tanto bajaron a 248 ms.
+Se probaron 7 configuraciones. Hoy la navegación cumple el objetivo —p95 por debajo de 1 s con menos de 1% de errores— hasta 200 usuarios concurrentes, con 205 ms y 0,0% de error; en la línea base, ese mismo escalón daba 21,8 s. A 800 concurrentes se pasó de timeout con 69,0% de error a 14,8 s con 0,02%. La subida de recibos no se arregló con hardware sino con código: con 20 subidas simultáneas los errores pasaron de 48,6% a 0,37% sin tocar la infraestructura —lo único que cambió fue sacar la llamada a la IA de adentro del worker—. En la última corrida esas mismas ráfagas quedaron en 15,2 s con 0,32% de error, que es el piso que impone la propia IA, y los lectores que navegan mientras tanto bajaron a 237 ms.
 
-## A. Los 6 tests
+## A. Los 7 tests
 
 Cada uno cambió *una* cosa respecto del anterior, para poder atribuir la mejora o el
 empeoramiento a esa cosa y no a una mezcla.
@@ -27,6 +27,7 @@ empeoramiento a esa cosa y no a una mezcla.
 | 4 | Web grande + Postgres grande | 2026-09-09 21:34 a 22:14 | 2 vCPU / 4 GB | 2 vCPU / 4 GB | 2 | cumple |
 | 5 | IA fuera del worker | 2026-09-10 12:42 a 13:21 | 2 vCPU / 4 GB | 2 vCPU / 4 GB | 2 | cumple |
 | 6 | Ocho núcleos | 2026-09-10 17:29 a 18:09 | 8 vCPU / 16 GB | 4 vCPU / 16 GB | 8 | cumple |
+| 7 | Cuatro núcleos | 2026-09-10 18:39 a 19:19 | 4 vCPU / 8 GB | 4 vCPU / 16 GB | 4 | cumple |
 
 **Test 1 — Línea base.** Medir el punto de partida: hasta dónde aguanta la configuración más barata posible, sin tocar nada. Ningún escalón cumplió el objetivo (p95 por debajo de 1 s y menos de 1% de errores).
 
@@ -52,18 +53,22 @@ El cambio de código resolvió lo que ni cuadruplicar la CPU había movido. Las 
 
 Con ocho núcleos y un worker por núcleo, el objetivo se cumple hasta 200 usuarios concurrentes: 213 ms con 0,0% de error, contra los 1,4 s del test 5. La mejora se ve en toda la curva de navegación: 100 concurrentes 324 ms → 203 ms; 200 concurrentes 1,4 s → 213 ms; 400 concurrentes 8,2 s → 2,1 s. El throughput subió a 76,1 pedidos por segundo en 200 concurrentes y 120,1 en 400. Las subidas de recibos quedaron planas en 15,2 s con 0,0% de error hasta 20 simultáneas -- prácticamente el piso que impone la IA, que no baja por agregar CPU. Y los lectores que navegan durante esas ráfagas bajaron a menos de un cuarto de segundo (10: 2,3 s → 245 ms; 20: 2,4 s → 248 ms), la primera vez que también ellos cumplen el objetivo. El pico de CPU del web en la fase de lecturas fue 60,8% y el de la base 25,4%: a diferencia de todos los tests anteriores, esta configuración termina la corrida con margen.
 
+**Test 7 — Cuatro núcleos.** Probar si la mitad de la CPU alcanza. El test 6 terminó con margen (61% de pico), así que la sospecha era que 8 núcleos sobraban para el arranque y se podía contratar la mitad. Cumple el objetivo (p95 por debajo de 1 s y menos de 1% de errores) hasta 200 usuarios concurrentes.
+
+La mitad de la CPU rinde lo mismo hasta 400 concurrentes. Comparando el p95 del test 6 (8 núcleos) contra este (4 núcleos), escalón por escalón: 50: 202 ms contra 195 ms; 100: 203 ms contra 196 ms; 200: 213 ms contra 205 ms; 400: 2,1 s contra 2,2 s -- diferencias que entran en la variación entre corridas. El objetivo se cumple hasta 200 concurrentes con 205 ms y 0,0% de error, igual que con el doble de máquina, y a 400 responde en 2,2 s con 0,0%. Las ráfagas de recibos también quedaron iguales: 15,2 s con 20 simultáneas, y los lectores en paralelo en 237 ms. La diferencia real está en el margen, no en la respuesta: el web llegó al 100,0% de su CPU contra el 60,8% del test 6. Con 4 núcleos la carga esperada se atiende igual de rápido, pero sin colchón para un pico por encima de 400.
+
 ## B. Navegación: p95 según cuánta gente hay
 
 La prueba que no sube ningún recibo y no toca la IA: mide el techo puro del servidor.
 En negrita, los escalones que cumplen el objetivo.
 
-| Usuarios concurrentes | 1. Línea base | 2. Más workers, misma CPU | 3. Postgres grande | 4. Web grande + Postgres grande | 5. IA fuera del worker | 6. Ocho núcleos |
-|---|---|---|---|---|---|---|
-| 50 | 3,6 s | 4,6 s | 1,0 s | **190 ms** | **326 ms** | **202 ms** |
-| 100 | 11,6 s | 16,6 s | 6,9 s | **198 ms** | **324 ms** | **203 ms** |
-| 200 | 21,8 s | 33,6 s | 12,9 s | 1,0 s | 1,4 s | **213 ms** |
-| 400 | 43,0 s | n/d | 26,0 s | 7,2 s | 8,2 s | 2,1 s |
-| 800 | timeout | n/d | timeout | 18,2 s | 17,2 s | 8,8 s |
+| Usuarios concurrentes | 1. Línea base | 2. Más workers, misma CPU | 3. Postgres grande | 4. Web grande + Postgres grande | 5. IA fuera del worker | 6. Ocho núcleos | 7. Cuatro núcleos |
+|---|---|---|---|---|---|---|---|
+| 50 | 3,6 s | 4,6 s | 1,0 s | **190 ms** | **326 ms** | **202 ms** | **195 ms** |
+| 100 | 11,6 s | 16,6 s | 6,9 s | **198 ms** | **324 ms** | **203 ms** | **196 ms** |
+| 200 | 21,8 s | 33,6 s | 12,9 s | 1,0 s | 1,4 s | **213 ms** | **205 ms** |
+| 400 | 43,0 s | n/d | 26,0 s | 7,2 s | 8,2 s | 2,1 s | 2,2 s |
+| 800 | timeout | n/d | timeout | 18,2 s | 17,2 s | 8,8 s | 14,8 s |
 
 `n/d` son los escalones del test 2 que quedaron contaminados por un despliegue a mitad
 de corrida: se descartan. `timeout` quiere decir que los pedidos no respondieron dentro
@@ -73,12 +78,12 @@ de los 60 segundos que espera el test — el valor real es "más de 60 s", no 60
 
 Tiempo de cada subida cuando llegan varias a la vez. El test 2 no corrió esta fase.
 
-| Recibos simultáneos | 1. Línea base | 2. Más workers, misma CPU | 3. Postgres grande | 4. Web grande + Postgres grande | 5. IA fuera del worker | 6. Ocho núcleos |
-|---|---|---|---|---|---|---|
-| 2 | 15,7 s | — | 15,6 s | 15,2 s | 16,1 s | 15,2 s |
-| 5 | 45,4 s | — | 40,0 s | 40,7 s | 15,8 s | 15,2 s |
-| 10 | timeout | — | timeout | timeout | 16,1 s | 15,2 s |
-| 20 | timeout | — | 45,4 s | timeout | 16,3 s | 15,2 s |
+| Recibos simultáneos | 1. Línea base | 2. Más workers, misma CPU | 3. Postgres grande | 4. Web grande + Postgres grande | 5. IA fuera del worker | 6. Ocho núcleos | 7. Cuatro núcleos |
+|---|---|---|---|---|---|---|---|
+| 2 | 15,7 s | — | 15,6 s | 15,2 s | 16,1 s | 15,2 s | 15,2 s |
+| 5 | 45,4 s | — | 40,0 s | 40,7 s | 15,8 s | 15,2 s | 15,2 s |
+| 10 | timeout | — | timeout | timeout | 16,1 s | 15,2 s | 15,2 s |
+| 20 | timeout | — | 45,4 s | timeout | 16,3 s | 15,2 s | 15,2 s |
 
 **Cuidado al leer esta tabla:** cada escalón tiene entre 6 y 37 subidas completadas, así
 que su p95 es prácticamente el peor caso observado y no un percentil sólido. Sirve para
@@ -117,11 +122,11 @@ El test 4 subió el web a 2 vCPU con 2 workers, sobre la base ya grande del test
 
 Con 10 recibos simultáneos, la línea base falló el 27,3% de las subidas y el test 4 —con cuatro veces más CPU— el 15,4%; con 20, 50,0% contra 48,6%. La causa no es CPU: cada subida ocupaba un worker completo durante los 15 segundos que tarda la llamada a la IA, y mientras tanto ese worker no atendía a nadie más. Es un problema de código, no de infraestructura.
 
-### Cuántas conexiones a la base consume cada worker
+### Las conexiones a la base siguen a la saturación, no a la cantidad de workers
 
-*Medido en el test 4.*
+*Medido en los tests 1 y 2 y 3 y 4 y 5 y 6 y 7.*
 
-Cada worker abre hasta 5 conexiones más 5 de reserva, o sea 10. Con 2 workers, la cuenta da 20 y lo medido en el test 4 fueron 20 conexiones como máximo: la cuenta cierra. Sirve para dimensionar: al multiplicar instancias hay que multiplicar también este número y contrastarlo con el límite del plan de Postgres elegido.
+Por configuración, cada worker abre hasta 10 conexiones (pool de 5 más 5 de reserva), así que el tope debería ser ese número por la cantidad de workers. Los datos no lo respaldan: test 1 (1 worker): tope teórico 10, medido 15; test 2 (2 workers): tope teórico 20, medido 21; test 3 (1 worker): tope teórico 10, medido 11; test 4 (2 workers): tope teórico 20, medido 20; test 5 (2 workers): tope teórico 20, medido 20; test 6 (8 workers): tope teórico 80, medido 21; test 7 (4 workers): tope teórico 40, medido 80. Un test con ocho workers y CPU de sobra usó menos conexiones que otro con cuatro workers y la CPU saturada, y varias corridas superaron su tope teórico. Lo que sí se ve con claridad es que el número sube cuando el servicio web se satura —los pedidos se apilan y retienen su conexión más tiempo— y baja cuando hay margen. Por qué se pasa del máximo del pool no está explicado: puede ser que la métrica de Render cuente también conexiones en cierre o el proceso maestro de uvicorn. Hasta entenderlo, para dimensionar conviene medirlo en la configuración real en vez de calcularlo, y dejar holgura contra el límite del plan de Postgres.
 
 ## E. Qué hacer
 
@@ -163,10 +168,12 @@ consultas van a cada una. Hoy la app no hace esa separación. Si el objetivo es 
 más carga, la palanca real sigue siendo subir el plan de la única instancia — que es
 justo lo que se midió en el test 3.
 
-**La cuenta que no hay que olvidar.** Las conexiones a la base se multiplican por
-instancia. Cada worker abre hasta 10 conexiones y el test 4 lo confirmó midiendo
-exactamente 20 con 2 workers. Al escalar hay que multiplicar por la cantidad total de
-workers y contrastarlo contra el límite del plan de Postgres elegido.
+**Las conexiones no se pueden calcular, hay que medirlas.** Se multiplican por
+instancia, pero las siete corridas muestran que el número sigue a la saturación del
+servicio web y no a la cantidad de workers, y que se pasa del máximo que el pool
+debería permitir (ver el hallazgo correspondiente). Hasta entender por qué, la única
+forma seria de dimensionarlo es medirlo en la configuración real ya provisionada y
+dejar holgura contra el límite del plan de Postgres elegido.
 
 ## G. Lo que hay que tener en cuenta de estas mediciones
 
@@ -179,6 +186,8 @@ workers y contrastarlo contra el límite del plan de Postgres elegido.
 - **Test 5:** Única diferencia contra el test 4: la llamada a la IA se corre en un hilo aparte (run_in_threadpool) en vez de bloquear al worker. Planes, workers, pool y latencia simulada de la IA son idénticos, y se verificaron contra la API de Render antes de arrancar. Por eso la fase de lecturas sirve de control: no toca ese código y debería dar parecido.
 - **Test 6:** Cambia dos cosas a la vez respecto del test 5: la CPU del web (de 2 a 8 vCPU, con 8 workers en vez de 2) y la de la base (de 2 a 4 vCPU). Sirve para saber qué rinde el conjunto que se va a contratar, pero si algo saliera raro no se podría atribuir a una de las dos por separado.
 - **Test 6:** A 800 concurrentes el generador de carga corre en un contenedor de 4 CPU y pudo haber sido él, y no el servidor, el que puso el techo: la CPU del web bajó respecto del escalón de 400 en vez de subir. El dato de 800 se lee como cota inferior de lo que aguanta el servidor, no como su límite.
+- **Test 7:** Única diferencia contra el test 6: la CPU del web (de 8 a 4 vCPU, con 4 workers en vez de 8) y su memoria (de 16 a 8 GB). La base quedó igual, así que la comparación entre los dos aísla el efecto del tamaño del servicio web.
+- **Test 7:** El escalón de 800 no es comparable contra el test 6: allá el servidor terminó con CPU de sobra y el techo probablemente lo puso el generador de carga, mientras que acá el servidor sí saturó. Los escalones de hasta 400 sí son comparables: en los dos casos la medición refleja al servidor.
 - **Todas las corridas:** Los números de navegación de este informe se recalcularon el 2026-09-10. Hasta entonces, la ventana de medición de cada escalón estaba corrida y se comía la rampa de aceleración del escalón siguiente, así que los tiempos salían peores que los reales, y cada vez más a medida que subía la carga: el escalón de 200 del test 6 figuraba en 1.455 ms cuando su tramo sostenido dio 213 ms. El error afectaba a las seis corridas por igual y siempre en contra, así que las comparaciones entre tests seguían siendo válidas, pero los valores absolutos estaban inflados. Se corrigió en carga/resumen.py y se regeneraron todas las corridas desde sus datos crudos.
 - **Todas las corridas:** La llamada a la IA se simuló con una espera fija de 15 segundos, para no depender de la velocidad variable del servicio real ni gastar créditos. Es la demora típica observada, pero es una simulación.
 - **Todas las corridas:** Todos los tiempos se cortan a los 60 segundos: donde dice timeout, el pedido nunca respondió, y el valor real es "más de 60 s", no 60.
