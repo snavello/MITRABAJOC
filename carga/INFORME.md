@@ -12,9 +12,10 @@ concurrentes bajó a 190 ms y 690 ms -- la primera vez que se cumple el
 objetivo (p95 < 1 s, errores < 1%) en las cuatro corridas -- y a 800
 concurrentes pasó de un timeout total (60 s) a 19,1 s. La única
 recomendación que **no** mejoró con esta infraestructura fue la subida
-de recibos con ráfagas grandes (10-20 simultáneos): ahí sigue haciendo
-falta el cambio de código pendiente (IA asíncrona) -- ver el cuarto
-experimento y la sección E.
+de recibos con ráfagas grandes (10-20 simultáneos): ahí seguía haciendo
+falta el cambio de código (IA en un hilo aparte), **implementado el
+2026-09-10 y pendiente de confirmar con un Test 2 nuevo** -- ver el
+cuarto experimento y la sección E.
 
 Carpetas de datos crudos, si alguien quiere revisar los números fila por
 fila: `carga/log/2026-09-09_2034_test1_ok_test2_bug/` (Test 1 completo +
@@ -335,20 +336,33 @@ abajo queda así, revisado, e incorpora el tercer experimento (Postgres a
    el techo de 400-800, tal como se esperaba. Costo alto pero es, junto
    con el punto 1, la única recomendación de esta lista confirmada dos
    veces con medición real.
-3. **Código -- hacer asíncrona la llamada a Anthropic** (o correrla en un
-   "threadpool" -- un grupo de hilos aparte del principal -- mientras se
-   migra al cliente async de Anthropic). Costo bajo, cambio acotado a
-   `extractor.py` y sus dos puntos de uso en `main.py`. **Es la única
-   recomendación de esta lista que el cuarto experimento mostró que
-   sigue haciendo falta**: con toda la CPU de los puntos 1 y 2 ya puesta,
-   el Test 2 (recibos) casi no mejoró en las ráfagas de 10 y 20 -- p95 de
-   60 s y hasta 49% de error, muy parecido a antes de subir nada. Cada
-   subida sigue bloqueando un worker entero los 15 segundos de la IA
-   síncrona, sin importar cuánta CPU haya de sobra. Efecto esperado: una
-   subida de recibo deja de trabar el resto del tráfico mientras dura.
-   Sigue siendo hipótesis razonada, no medición -- pero ahora es la única
-   sin confirmar, y la evidencia de por qué hace falta es más fuerte que
-   antes.
+3. **Código -- correr la llamada a Anthropic en un hilo aparte
+   (`run_in_threadpool`). Implementado el 2026-09-10** en
+   `main.py` (`/api/leer`, `/api/aportes`, `/aprender`) -- cambio de bajo
+   costo, sin tocar `extractor.py`. **Es la única recomendación de esta
+   lista que el cuarto experimento mostró que seguía haciendo falta**:
+   con toda la CPU de los puntos 1 y 2 ya puesta, el Test 2 (recibos)
+   casi no mejoró en las ráfagas de 10 y 20 -- p95 de 60 s y hasta 49% de
+   error, muy parecido a antes de subir nada. Cada subida bloqueaba un
+   worker entero los 15 segundos de la IA síncrona, sin importar cuánta
+   CPU hubiera de sobra. Efecto esperado: una subida de recibo deja de
+   trabar el resto del tráfico mientras dura. **Pendiente de confirmar
+   con un Test 2 nuevo** (implementado y con tests unitarios en verde,
+   pero sin corrida de carga real todavía).
+
+### Backlog (no confirmado con test, no priorizado para HOY)
+
+- **Automatizar la baja/suba de plan por horario (madrugada y fines de
+  semana con hasta 20x menos tráfico).** Render no tiene una función
+  nativa para programar cambios de plan por horario -- el autoscaling
+  requiere workspace Pro+ y escala por métrica (CPU/RAM), no por
+  calendario, y no cubre Postgres. Sí expone una API
+  (`PATCH /services/{id}`, la misma que usa `render_admin.py` en este
+  repo) para cambiar de plan por código. Propuesta: un Render Cron Job
+  (o GitHub Action programada) que baje el plan de web y Postgres de
+  madrugada/fin de semana y lo vuelva a subir en horario hábil. Postgres
+  cambia en caliente; el servicio web se reinicia (~1-2 min de downtime)
+  en cada cambio -- a aceptar como costo del ahorro. Sin estimar todavía.
 
 ## F. Extrapolación para producción: ¿pocas instancias grandes o muchas chicas?
 
