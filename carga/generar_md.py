@@ -38,7 +38,7 @@ def construir_md() -> str:
     p = []
     a = p.append
 
-    a("# Test de estrés de la app del trabajador — los cuatro tests comparados")
+    a(f"# Test de estrés de la app del trabajador — los {len(exps)} tests comparados")
     a("")
     a("> **Este archivo se genera solo.** Sale de `carga/experimentos.json`, que a su vez")
     a("> se arma con `carga/consolidar.py` desde los datos crudos de cada corrida")
@@ -46,7 +46,7 @@ def construir_md() -> str:
     a("> `python carga/consolidar.py && python carga/generar_md.py`. La misma información,")
     a("> con gráfico, se sirve en `/entornos/informe` del sitio de Pruebas.")
     a("")
-    a(f"Servicio medido: `mitrabajo-pruebas.onrender.com`. Objetivo fijado para los cuatro")
+    a(f"Servicio medido: `mitrabajo-pruebas.onrender.com`. Objetivo fijado para los {len(exps)}")
     a(f"tests: **p95 por debajo de 1 s con menos de 1% de errores**. Horarios en hora de")
     a("Buenos Aires. Los tiempos están en milisegundos salvo donde se indique.")
     a("")
@@ -55,7 +55,7 @@ def construir_md() -> str:
     a(inf["resumen"])
     a("")
 
-    a("## A. Los cuatro tests")
+    a(f"## A. Los {len(exps)} tests")
     a("")
     a("Cada uno cambió *una* cosa respecto del anterior, para poder atribuir la mejora o el")
     a("empeoramiento a esa cosa y no a una mezcla.")

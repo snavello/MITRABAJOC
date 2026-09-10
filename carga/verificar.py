@@ -49,10 +49,25 @@ def numeros_del_texto(texto: str) -> list:
     return re.findall(r"\d+(?:,\d+)?", texto)
 
 
-def vocabulario_de(exp: dict, base: dict) -> set:
+def vocabulario_de(exp: dict, base: dict, *referencias) -> set:
     """Todas las cifras que este test PUEDE citar: las de sus propias
-    tablas y cargas, más las comparaciones válidas contra la línea base."""
+    tablas y cargas, más las comparaciones válidas contra la línea base y
+    contra los tests que su conclusión compara explícitamente (el 5 se
+    compara contra el 4, no contra el 1)."""
     ok = set()
+    for ref in referencias:
+        if ref:
+            ok |= vocabulario_de(ref, ref)
+            # Proporciones entre corridas ("7.3 veces más subidas").
+            for fa in exp["fases"]:
+                for fb in ref["fases"]:
+                    if fa["clave"] != fb["clave"]:
+                        continue
+                    for x in fa["filas"]:
+                        for y in fb["filas"]:
+                            if x["escalon"] == y["escalon"] and y["n"]:
+                                ok.add(f'{x["n"] / y["n"]:.1f}'.replace(".", ","))
+                                ok.add(C.delta(x["p95"], y["p95"]).lstrip("+-").rstrip("%"))
 
     def agregar(*vals):
         for v in vals:
@@ -109,9 +124,9 @@ def main():
     porcodigo = {e["numero"]: e for e in datos}
     base = porcodigo[1]
 
-    revisar(len(datos) == 4, f"Se esperaban 4 experimentos y hay {len(datos)}.")
-    revisar(sorted(porcodigo) == [1, 2, 3, 4],
-            f"La numeración tiene que ser 1..4 y es {sorted(porcodigo)}.")
+    revisar(len(datos) == 5, f"Se esperaban 5 experimentos y hay {len(datos)}.")
+    revisar(sorted(porcodigo) == [1, 2, 3, 4, 5],
+            f"La numeración tiene que ser 1..5 y es {sorted(porcodigo)}.")
 
     # Reconstrucción independiente desde las fuentes crudas.
     definiciones = {e["numero"]: e for e in C.EXPERIMENTOS}
@@ -169,7 +184,10 @@ def main():
                 f"{etiqueta}: el veredicto no coincide con recalcularlo.")
 
         # 3. Ninguna cifra inventada en veredicto ni conclusión.
-        vocab = vocabulario_de(exp, base)
+        # El test 5 aísla un cambio de código: compara contra el 4, que
+        # corrió con la misma infraestructura, no contra la línea base.
+        referencia = porcodigo.get(4) if exp["numero"] == 5 else None
+        vocab = vocabulario_de(exp, base, referencia)
         for campo in ("veredicto", "conclusion"):
             for numero in numeros_del_texto(exp[campo]):
                 revisar(numero in vocab,
@@ -186,7 +204,7 @@ def main():
     # del dataset y que no cite ninguna cifra ajena en sus hallazgos.
     import informe as INF
     inf = INF.construir()
-    revisar(len(inf["experimentos"]) == 4, "El informe general no cubre los 4 tests.")
+    revisar(len(inf["experimentos"]) == 5, "El informe general no cubre los 5 tests.")
     for clave, comp, escalones in (("lecturas", inf["comparativa_lecturas"], INF.ESCALONES_LECTURAS),
                                    ("recibos", inf["comparativa_recibos"], INF.ESCALONES_RECIBOS)):
         for fila in comp:
@@ -210,9 +228,12 @@ def main():
                     revisar(celda.get("p95") == real["p95"],
                             f"Informe/{clave} {fila['escalon']} test {exp['numero']}: "
                             f"p95 {celda.get('p95')} y en el dataset {real['p95']}.")
+    # El informe compara entre tests, así que su vocabulario es la unión de
+    # todos, incluidas las proporciones de cada uno contra los demás.
     todo_vocab = set()
     for e in datos:
-        todo_vocab |= vocabulario_de(e, base)
+        for otro in datos:
+            todo_vocab |= vocabulario_de(e, base, otro if otro is not e else None)
     for h in inf["hallazgos"]:
         for numero in numeros_del_texto(h["texto"]):
             revisar(numero in todo_vocab,

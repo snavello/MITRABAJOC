@@ -297,6 +297,41 @@ EXPERIMENTOS = [
              "k6": "test2_recibos.json", "log": "servidor.log", "unidad": "recibos simultáneos en paralelo"},
         ],
     },
+    {
+        "numero": 5,
+        "nombre": "IA fuera del worker",
+        "subtitulo": "Misma infraestructura que el test 4, con la llamada a la IA en un hilo aparte",
+        "objetivo": "Aislar el efecto del cambio de código: es la única diferencia contra el "
+                    "test 4, que corrió con exactamente los mismos planes y workers.",
+        "config": {
+            "plan_web": "2c-4g", "plan_db": "2c-4g", "workers_uvicorn": 2,
+            "pool_size": 5, "max_overflow": 5, "ia": "en hilo aparte", "ia_latencia_seg": 15,
+        },
+        "advertencias": [
+            "Corrida limpia: sin despliegues ni reinicios a mitad de test.",
+            "Única diferencia contra el test 4: la llamada a la IA se corre en un hilo aparte "
+            "(run_in_threadpool) en vez de bloquear al worker. Planes, workers, pool y latencia "
+            "simulada de la IA son idénticos, y se verificaron contra la API de Render antes de "
+            "arrancar. Por eso la fase de lecturas sirve de control: no toca ese código y "
+            "debería dar parecido.",
+        ],
+        "fases": [
+            {"clave": "lecturas", "titulo": "Lecturas (navegación, sin subir nada)",
+             "detalle": "Grupo de control: este recorrido no sube recibos ni llama a la IA, "
+                        "así que el cambio de código no debería moverlo.",
+             "carpeta": "2026-09-10_1541", "serie": "lecturas",
+             "k6": "test1_lecturas.json", "log": "servidor.log", "unidad": "usuarios concurrentes"},
+            {"clave": "recibos", "titulo": "Subida de recibos (ráfagas simultáneas)",
+             "detalle": "Tiempo de cada subida de recibo, con 200 lectores navegando en paralelo.",
+             "carpeta": "2026-09-10_1541", "serie": "recibos",
+             "k6": "test2_recibos.json", "log": "servidor.log", "unidad": "recibos simultáneos"},
+            {"clave": "lectores_durante_recibos", "titulo": "Lectores mientras se suben recibos",
+             "detalle": "Los 200 lectores en paralelo, medidos durante las ráfagas. Es la medida "
+                        "de si una subida en curso ensucia la experiencia del resto.",
+             "carpeta": "2026-09-10_1541", "serie": "lectores_durante_recibos",
+             "k6": "test2_recibos.json", "log": "servidor.log", "unidad": "recibos simultáneos en paralelo"},
+        ],
+    },
 ]
 
 OBJETIVO_P95_MS = 1000
@@ -336,6 +371,11 @@ def fmt_pct(v) -> str:
     if 0 < v < 1:
         return f"{v:.2f}".replace(".", ",") + "%"
     return f"{v:.1f}".replace(".", ",") + "%"
+
+
+def fmt_num(v) -> str:
+    """Un decimal con coma, para proporciones como "7,3 veces más"."""
+    return f"{v:.1f}".replace(".", ",")
 
 
 def fmt_vcpu(v) -> str:
@@ -388,7 +428,7 @@ def veredicto(fases: list) -> str:
             f"hasta {max(ok)} usuarios concurrentes.")
 
 
-def armar_conclusion(exp_num: int, fases: list, base: list) -> str:
+def armar_conclusion(exp_num: int, fases: list, base: list, previos: dict = None) -> str:
     """Redacta la conclusión de cada experimento A PARTIR de los números ya
     consolidados. No hay texto con cifras escritas a mano: si el dato de
     origen cambia, la conclusión cambia con él y no puede contradecir a la
@@ -479,7 +519,40 @@ def armar_conclusion(exp_num: int, fases: list, base: list) -> str:
             f"base en el mismo escalón de {b10['escalon']} — sin mejora real pese a toda la "
             f"CPU agregada. La causa no es CPU: cada subida bloqueaba un worker entero "
             f"durante los {15} segundos de la llamada a la IA. Eso es lo que motivó el "
-            "cambio de código del 2026-09-10, que todavía no tiene un test que lo confirme."
+            "cambio de código del 2026-09-10, que el test 5 mide."
+        )
+
+    if exp_num == 5:
+        # La comparación relevante acá es contra el test 4: misma
+        # infraestructura, única diferencia el cambio de código.
+        t4 = (previos or {}).get(4, [])
+        subidas, lectores, ctrl = [], [], []
+        for esc in (5, 10, 20):
+            a, b = _fila(t4, "recibos", esc), _fila(fases, "recibos", esc)
+            subidas.append(f"con {esc} simultáneos, de {fmt_ms(a['p95'])} y "
+                           f"{fmt_pct(a['errores_pct'])} de error a {fmt_ms(b['p95'])} y "
+                           f"{fmt_pct(b['errores_pct'])}")
+            la = _fila(t4, "lectores_durante_recibos", esc)
+            lb = _fila(fases, "lectores_durante_recibos", esc)
+            lectores.append(f"{esc}: {fmt_ms(la['p95'])} → {fmt_ms(lb['p95'])}")
+        r20_t4, r20 = _fila(t4, "recibos", 20), _fila(fases, "recibos", 20)
+        veces = fmt_num(r20["n"] / r20_t4["n"]) if r20_t4["n"] else "0"
+        for esc in (50, 100):
+            a, b = _fila(t4, "lecturas", esc), _fila(fases, "lecturas", esc)
+            ctrl.append(f"{esc} concurrentes {fmt_ms(a['p95'])} → {fmt_ms(b['p95'])}")
+        return (
+            f"El cambio de código resolvió lo que ni cuadruplicar la CPU había movido. "
+            f"Las subidas: {'; '.join(subidas)}. El p95 se queda plano alrededor de los "
+            f"{fmt_ms(r20['p95'])} sin importar cuántas lleguen juntas, que es exactamente lo "
+            f"esperado: cada subida sigue tardando lo que tarda la IA, pero ahora se procesan "
+            f"en paralelo en vez de hacer cola. En la misma ventana se completaron "
+            f"{r20['n']} subidas contra {r20_t4['n']} del test 4, {veces} veces más. "
+            f"Lo más importante para el trabajador que no está subiendo nada: los lectores en "
+            f"paralelo dejaron de sufrir ({'; '.join(lectores)}). "
+            f"El grupo de control se movió poco y dentro del mismo régimen "
+            f"({'; '.join(ctrl)}): ese recorrido no toca el código que cambió, la diferencia "
+            f"entra en la variación normal entre corridas y los dos escalones siguen "
+            f"cumpliendo el objetivo."
         )
     return ""
 
@@ -538,9 +611,10 @@ def construir() -> list:
     # experimentos consolidados: las de la 2 en adelante comparan contra la
     # línea base y necesitan sus números.
     base = salida[0]["fases"]
+    previos = {e["numero"]: e["fases"] for e in salida}
     for e in salida:
         e["veredicto"] = veredicto(e["fases"])
-        e["conclusion"] = armar_conclusion(e["numero"], e["fases"], base)
+        e["conclusion"] = armar_conclusion(e["numero"], e["fases"], base, previos)
     return salida
 
 

@@ -109,7 +109,9 @@ def serie_grafico(exps, clave, escalones):
 def hallazgos(exps):
     """Los hechos que sostienen las recomendaciones, cada uno con los
     números que lo prueban y de qué test salen."""
-    t1, t2, t3, t4 = exps
+    por_num = {e["numero"]: e for e in exps}
+    t1, t2, t3, t4 = (por_num[n] for n in (1, 2, 3, 4))
+    t5 = por_num.get(5)
     out = []
 
     # 1. El techo lo pone el servicio web, no la IA.
@@ -216,7 +218,9 @@ def hallazgos(exps):
 
 
 def recomendaciones(exps):
-    t1, t2, t3, t4 = exps
+    por_num = {e["numero"]: e for e in exps}
+    t1, t2, t3, t4 = (por_num[n] for n in (1, 2, 3, 4))
+    t5 = por_num.get(5)
     c3 = _fase(t3, "lecturas")["carga"]["db"]
     cb = _fase(t1, "lectores_solos")["carga"]["db"]
     f50, f100 = _fila(t4, "lecturas", 50), _fila(t4, "lecturas", 100)
@@ -239,40 +243,78 @@ def recomendaciones(exps):
                       f"que cumplen el objetivo en las cuatro corridas. Las dos cosas van "
                       f"juntas: el test 2 probó que los workers solos empeoran."),
         },
-        {
+        _reco_ia(t4, t5, r4_20),
+    ]
+
+
+def _reco_ia(t4, t5, r4_20):
+    """La recomendación del cambio de código: pasa de "pendiente" a
+    "confirmado" en cuanto existe el test que la mide."""
+    if not t5:
+        return {
             "titulo": "Correr la llamada a la IA en un hilo aparte",
             "estado": "implementado sin confirmar", "costo": "bajo · código",
             "texto": (f"Es lo único que queda para las ráfagas de recibos, que con toda la "
                       f"CPU del test 4 siguieron fallando el {_fmt_pct(r4_20['errores_pct'])} "
-                      f"con {r4_20['escalon']} subidas simultáneas. El cambio se implementó "
-                      f"el 2026-09-10 en las tres rutas que llaman a la IA y tiene sus "
-                      f"tests unitarios en verde, pero todavía no se corrió un test de carga "
-                      f"que mida la mejora: hasta que eso pase, es una corrección esperada, "
-                      f"no un resultado."),
-        },
-    ]
+                      f"con {r4_20['escalon']} subidas simultáneas. Implementado el "
+                      f"2026-09-10, sin test de carga que mida la mejora todavía."),
+        }
+    r5_20 = _fila(t5, "recibos", 20)
+    l4_20 = _fila(t4, "lectores_durante_recibos", 20)
+    l5_20 = _fila(t5, "lectores_durante_recibos", 20)
+    veces = f'{r5_20["n"] / r4_20["n"]:.1f}'.replace(".", ",") if r4_20["n"] else "0"
+    return {
+        "titulo": "Correr la llamada a la IA en un hilo aparte",
+        "estado": "confirmado", "costo": "bajo · código",
+        "texto": (f"Medido en el test 5, contra el 4 y con la misma infraestructura exacta: "
+                  f"con {r5_20['escalon']} subidas simultáneas, los errores pasaron de "
+                  f"{_fmt_pct(r4_20['errores_pct'])} a {_fmt_pct(r5_20['errores_pct'])} y el "
+                  f"p95 de {_fmt_ms(r4_20['p95'])} a {_fmt_ms(r5_20['p95'])}, con "
+                  f"{veces} veces más subidas completadas en la misma ventana. Los lectores "
+                  f"que navegaban en paralelo pasaron de {_fmt_ms(l4_20['p95'])} y "
+                  f"{_fmt_pct(l4_20['errores_pct'])} de error a {_fmt_ms(l5_20['p95'])} y "
+                  f"{_fmt_pct(l5_20['errores_pct'])}. Es la corrección más barata de las tres "
+                  f"y la que más cambió el comportamiento bajo ráfaga."),
+    }
 
 
 def construir(ruta: Path = None) -> dict:
     exps = json.loads((ruta or DATOS).read_text(encoding="utf-8"))
     exps.sort(key=lambda e: e["numero"])
-    t4 = exps[3]
-    f50, f100 = _fila(t4, "lecturas", 50), _fila(t4, "lecturas", 100)
-    n800_1, n800_4 = _fila(exps[0], "lecturas", 800), _fila(t4, "lecturas", 800)
+    por_num = {e["numero"]: e for e in exps}
+    t1, t4 = por_num[1], por_num[4]
+    ultimo = exps[-1]
+    f50, f100 = _fila(ultimo, "lecturas", 50), _fila(ultimo, "lecturas", 100)
+    n800_1, n800_u = _fila(t1, "lecturas", 800), _fila(ultimo, "lecturas", 800)
     r4_20 = _fila(t4, "recibos", 20)
+    r5_20 = _fila(por_num[5], "recibos", 20) if 5 in por_num else None
+    l4_20 = _fila(t4, "lectores_durante_recibos", 20)
+    l5_20 = _fila(por_num[5], "lectores_durante_recibos", 20) if 5 in por_num else None
 
     resumen = (
-        f"De las cuatro configuraciones probadas, solo la última cumple el objetivo de "
-        f"p95 por debajo de 1 s con menos de 1% de errores, y lo hace hasta "
-        f"{f100['escalon']} usuarios concurrentes ({_fmt_ms(f50['p95'])} con "
-        f"{f50['escalon']} y {_fmt_ms(f100['p95'])} con {f100['escalon']}). En el otro "
-        f"extremo, con {n800_4['escalon']} concurrentes se pasó de "
+        f"Se probaron {len(exps)} configuraciones. La navegación quedó resuelta subiendo "
+        f"infraestructura: hoy se cumple el objetivo de p95 por debajo de 1 s con menos de "
+        f"1% de errores hasta {f100['escalon']} usuarios concurrentes "
+        f"({_fmt_ms(f50['p95'])} con {f50['escalon']} y {_fmt_ms(f100['p95'])} con "
+        f"{f100['escalon']}), y a {n800_u['escalon']} concurrentes se pasó de "
         f"{_fmt_ms(n800_1['p95'])} con {_fmt_pct(n800_1['errores_pct'])} de error en la "
-        f"línea base a {_fmt_ms(n800_4['p95'])} con {_fmt_pct(n800_4['errores_pct'])}. "
-        f"Lo que sigue sin resolverse son las ráfagas de subida de recibos: con "
-        f"{r4_20['escalon']} simultáneas falla el {_fmt_pct(r4_20['errores_pct'])} incluso "
-        f"con la mejor infraestructura, porque es un problema de código y no de recursos."
+        f"línea base a {_fmt_ms(n800_u['p95'])} con {_fmt_pct(n800_u['errores_pct'])}."
     )
+    if r5_20:
+        resumen += (
+            f" La subida de recibos, en cambio, no se arregló con hardware sino con código: "
+            f"con {r5_20['escalon']} subidas simultáneas los errores pasaron de "
+            f"{_fmt_pct(r4_20['errores_pct'])} a {_fmt_pct(r5_20['errores_pct'])} y los "
+            f"lectores que navegaban en paralelo, de {_fmt_ms(l4_20['p95'])} a "
+            f"{_fmt_ms(l5_20['p95'])}, con la misma infraestructura exacta — lo único que "
+            f"cambió fue sacar la llamada a la IA de adentro del worker."
+        )
+    else:
+        resumen += (
+            f" Lo que sigue sin resolverse son las ráfagas de subida de recibos: con "
+            f"{r4_20['escalon']} simultáneas falla el {_fmt_pct(r4_20['errores_pct'])} "
+            f"incluso con la mejor infraestructura."
+        )
 
     return {
         "experimentos": exps,

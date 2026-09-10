@@ -42,9 +42,9 @@ def test_el_json_consolidado_esta_al_dia_con_los_datos_crudos():
     print("OK  test_el_json_consolidado_esta_al_dia_con_los_datos_crudos")
 
 
-def test_son_cuatro_experimentos_numerados_del_1_al_4():
+def test_los_experimentos_estan_numerados_sin_huecos():
     datos = json.loads((CARGA / "experimentos.json").read_text(encoding="utf-8"))
-    assert [e["numero"] for e in sorted(datos, key=lambda x: x["numero"])] == [1, 2, 3, 4]
+    assert [e["numero"] for e in sorted(datos, key=lambda x: x["numero"])] == list(range(1, len(datos) + 1))
     for e in datos:
         assert e["conclusion"], f"Al experimento {e['numero']} le falta la conclusión."
         assert e["veredicto"], f"Al experimento {e['numero']} le falta el veredicto."
@@ -52,7 +52,7 @@ def test_son_cuatro_experimentos_numerados_del_1_al_4():
         # Cada fase declara la carga de los DOS servicios, aunque sea sin medir.
         for f in e["fases"]:
             assert "web" in f["carga"] and "db" in f["carga"]
-    print("OK  test_son_cuatro_experimentos_numerados_del_1_al_4")
+    print("OK  test_los_experimentos_estan_numerados_sin_huecos")
 
 
 def test_las_fechas_estan_en_hora_de_buenos_aires():
@@ -68,6 +68,6 @@ def test_las_fechas_estan_en_hora_de_buenos_aires():
 if __name__ == "__main__":
     test_la_auditoria_de_consistencia_pasa()
     test_el_json_consolidado_esta_al_dia_con_los_datos_crudos()
-    test_son_cuatro_experimentos_numerados_del_1_al_4()
+    test_los_experimentos_estan_numerados_sin_huecos()
     test_las_fechas_estan_en_hora_de_buenos_aires()
-    print("Todo OK — los 4 experimentos publicados cierran con los datos crudos.")
+    print("Todo OK — los experimentos publicados cierran con los datos crudos.")

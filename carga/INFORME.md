@@ -1,4 +1,4 @@
-# Test de estrés de la app del trabajador — los cuatro tests comparados
+# Test de estrés de la app del trabajador — los 5 tests comparados
 
 > **Este archivo se genera solo.** Sale de `carga/experimentos.json`, que a su vez
 > se arma con `carga/consolidar.py` desde los datos crudos de cada corrida
@@ -6,15 +6,15 @@
 > `python carga/consolidar.py && python carga/generar_md.py`. La misma información,
 > con gráfico, se sirve en `/entornos/informe` del sitio de Pruebas.
 
-Servicio medido: `mitrabajo-pruebas.onrender.com`. Objetivo fijado para los cuatro
+Servicio medido: `mitrabajo-pruebas.onrender.com`. Objetivo fijado para los 5
 tests: **p95 por debajo de 1 s con menos de 1% de errores**. Horarios en hora de
 Buenos Aires. Los tiempos están en milisegundos salvo donde se indique.
 
 ## El resultado, en un párrafo
 
-De las cuatro configuraciones probadas, solo la última cumple el objetivo de p95 por debajo de 1 s con menos de 1% de errores, y lo hace hasta 100 usuarios concurrentes (191 ms con 50 y 690 ms con 100). En el otro extremo, con 800 concurrentes se pasó de timeout con 100,0% de error en la línea base a 19,1 s con 0,0%. Lo que sigue sin resolverse son las ráfagas de subida de recibos: con 20 simultáneas falla el 48,6% incluso con la mejor infraestructura, porque es un problema de código y no de recursos.
+Se probaron 5 configuraciones. La navegación quedó resuelta subiendo infraestructura: hoy se cumple el objetivo de p95 por debajo de 1 s con menos de 1% de errores hasta 100 usuarios concurrentes (337 ms con 50 y 817 ms con 100), y a 800 concurrentes se pasó de timeout con 100,0% de error en la línea base a 17,9 s con 0,0%. La subida de recibos, en cambio, no se arregló con hardware sino con código: con 20 subidas simultáneas los errores pasaron de 48,6% a 0,37% y los lectores que navegaban en paralelo, de timeout a 2,4 s, con la misma infraestructura exacta — lo único que cambió fue sacar la llamada a la IA de adentro del worker.
 
-## A. Los cuatro tests
+## A. Los 5 tests
 
 Cada uno cambió *una* cosa respecto del anterior, para poder atribuir la mejora o el
 empeoramiento a esa cosa y no a una mezcla.
@@ -25,6 +25,7 @@ empeoramiento a esa cosa y no a una mezcla.
 | 2 | Más workers, misma CPU | 2026-09-09 19:46 a 20:07 | 0,5 vCPU / 512 MB | 0,1 vCPU / 256 MB | 2 | no cumple |
 | 3 | Postgres grande | 2026-09-09 20:41 a 21:21 | 0,5 vCPU / 512 MB | 2 vCPU / 4 GB | 1 | no cumple |
 | 4 | Web grande + Postgres grande | 2026-09-09 21:34 a 22:14 | 2 vCPU / 4 GB | 2 vCPU / 4 GB | 2 | cumple |
+| 5 | IA fuera del worker | 2026-09-10 12:42 a 13:21 | 2 vCPU / 4 GB | 2 vCPU / 4 GB | 2 | cumple |
 
 **Test 1 — Línea base.** Medir el punto de partida: hasta dónde aguanta la configuración más barata posible, sin tocar nada. Ningún escalón cumplió el objetivo (p95 por debajo de 1 s y menos de 1% de errores).
 
@@ -40,20 +41,24 @@ Postgres dejó de ser un límite: su CPU pasó del 100,0% de 0,1 vCPU al 8,1% de
 
 **Test 4 — Web grande + Postgres grande.** Probar la configuración prevista para el arranque de producción: CPU entera en el web, un worker por núcleo, y la base ya holgada. Cumple el objetivo (p95 por debajo de 1 s y menos de 1% de errores) hasta 100 usuarios concurrentes.
 
-Primera configuración que cumple el objetivo: 50 concurrentes en 191 ms y 100 en 690 ms, las dos con 0,0% de error. A 800 concurrentes pasó de más de 60 s con 100,0% de error en la línea base a 19,1 s con 0,0%. El web volvió a ser el límite (100,0% de sus 2 vCPU) pero ahora con cuatro veces más CPU, y Postgres quedó holgado (29,3% de CPU, 4,0% de RAM). Lo que NO mejoró son las ráfagas de recibos: con 10 simultáneos falla el 15,4% y con 20 el 48,6%, contra 27,3% de la línea base en el mismo escalón de 10 — sin mejora real pese a toda la CPU agregada. La causa no es CPU: cada subida bloqueaba un worker entero durante los 15 segundos de la llamada a la IA. Eso es lo que motivó el cambio de código del 2026-09-10, que todavía no tiene un test que lo confirme.
+Primera configuración que cumple el objetivo: 50 concurrentes en 191 ms y 100 en 690 ms, las dos con 0,0% de error. A 800 concurrentes pasó de más de 60 s con 100,0% de error en la línea base a 19,1 s con 0,0%. El web volvió a ser el límite (100,0% de sus 2 vCPU) pero ahora con cuatro veces más CPU, y Postgres quedó holgado (29,3% de CPU, 4,0% de RAM). Lo que NO mejoró son las ráfagas de recibos: con 10 simultáneos falla el 15,4% y con 20 el 48,6%, contra 27,3% de la línea base en el mismo escalón de 10 — sin mejora real pese a toda la CPU agregada. La causa no es CPU: cada subida bloqueaba un worker entero durante los 15 segundos de la llamada a la IA. Eso es lo que motivó el cambio de código del 2026-09-10, que el test 5 mide.
+
+**Test 5 — IA fuera del worker.** Aislar el efecto del cambio de código: es la única diferencia contra el test 4, que corrió con exactamente los mismos planes y workers. Cumple el objetivo (p95 por debajo de 1 s y menos de 1% de errores) hasta 100 usuarios concurrentes.
+
+El cambio de código resolvió lo que ni cuadruplicar la CPU había movido. Las subidas: con 5 simultáneos, de 40,7 s y 0,0% de error a 15,8 s y 0,0%; con 10 simultáneos, de más de 60 s y 15,4% de error a 16,1 s y 0,0%; con 20 simultáneos, de más de 60 s y 48,6% de error a 16,3 s y 0,37%. El p95 se queda plano alrededor de los 16,3 s sin importar cuántas lleguen juntas, que es exactamente lo esperado: cada subida sigue tardando lo que tarda la IA, pero ahora se procesan en paralelo en vez de hacer cola. En la misma ventana se completaron 270 subidas contra 37 del test 4, 7,3 veces más. Lo más importante para el trabajador que no está subiendo nada: los lectores en paralelo dejaron de sufrir (5: 37,6 s → 2,1 s; 10: más de 60 s → 2,3 s; 20: más de 60 s → 2,4 s). El grupo de control se movió poco y dentro del mismo régimen (50 concurrentes 191 ms → 337 ms; 100 concurrentes 690 ms → 817 ms): ese recorrido no toca el código que cambió, la diferencia entra en la variación normal entre corridas y los dos escalones siguen cumpliendo el objetivo.
 
 ## B. Navegación: p95 según cuánta gente hay
 
 La prueba que no sube ningún recibo y no toca la IA: mide el techo puro del servidor.
 En negrita, los escalones que cumplen el objetivo.
 
-| Usuarios concurrentes | 1. Línea base | 2. Más workers, misma CPU | 3. Postgres grande | 4. Web grande + Postgres grande |
-|---|---|---|---|---|
-| 50 | 4,2 s | 5,2 s | 1,6 s | **191 ms** |
-| 100 | 13,8 s | 19,4 s | 9,6 s | **690 ms** |
-| 200 | 29,9 s | 42,3 s | 24,4 s | 4,7 s |
-| 400 | 54,3 s | n/d | 51,7 s | 14,6 s |
-| 800 | timeout | n/d | timeout | 19,1 s |
+| Usuarios concurrentes | 1. Línea base | 2. Más workers, misma CPU | 3. Postgres grande | 4. Web grande + Postgres grande | 5. IA fuera del worker |
+|---|---|---|---|---|---|
+| 50 | 4,2 s | 5,2 s | 1,6 s | **191 ms** | **337 ms** |
+| 100 | 13,8 s | 19,4 s | 9,6 s | **690 ms** | **817 ms** |
+| 200 | 29,9 s | 42,3 s | 24,4 s | 4,7 s | 5,3 s |
+| 400 | 54,3 s | n/d | 51,7 s | 14,6 s | 14,9 s |
+| 800 | timeout | n/d | timeout | 19,1 s | 17,9 s |
 
 `n/d` son los escalones del test 2 que quedaron contaminados por un despliegue a mitad
 de corrida: se descartan. `timeout` quiere decir que los pedidos no respondieron dentro
@@ -63,12 +68,12 @@ de los 60 segundos que espera el test — el valor real es "más de 60 s", no 60
 
 Tiempo de cada subida cuando llegan varias a la vez. El test 2 no corrió esta fase.
 
-| Recibos simultáneos | 1. Línea base | 2. Más workers, misma CPU | 3. Postgres grande | 4. Web grande + Postgres grande |
-|---|---|---|---|---|
-| 2 | 15,7 s | — | 15,6 s | 15,2 s |
-| 5 | 45,4 s | — | 40,0 s | 40,7 s |
-| 10 | timeout | — | timeout | timeout |
-| 20 | timeout | — | 45,4 s | timeout |
+| Recibos simultáneos | 1. Línea base | 2. Más workers, misma CPU | 3. Postgres grande | 4. Web grande + Postgres grande | 5. IA fuera del worker |
+|---|---|---|---|---|---|
+| 2 | 15,7 s | — | 15,6 s | 15,2 s | 16,1 s |
+| 5 | 45,4 s | — | 40,0 s | 40,7 s | 15,8 s |
+| 10 | timeout | — | timeout | timeout | 16,1 s |
+| 20 | timeout | — | 45,4 s | timeout | 16,3 s |
 
 **Cuidado al leer esta tabla:** cada escalón tiene entre 6 y 37 subidas completadas, así
 que su p95 es prácticamente el peor caso observado y no un percentil sólido. Sirve para
@@ -119,7 +124,7 @@ Cada worker abre hasta 5 conexiones más 5 de reserva, o sea 10. Con 2 workers, 
 
 2. **Subir el servicio web a CPU entera y poner un worker por núcleo** — *confirmado, costo alto · infraestructura.* Medido en el test 4: es lo que llevó el p95 a 191 ms en 50 concurrentes y 690 ms en 100, los únicos escalones que cumplen el objetivo en las cuatro corridas. Las dos cosas van juntas: el test 2 probó que los workers solos empeoran.
 
-3. **Correr la llamada a la IA en un hilo aparte** — *implementado sin confirmar, costo bajo · código.* Es lo único que queda para las ráfagas de recibos, que con toda la CPU del test 4 siguieron fallando el 48,6% con 20 subidas simultáneas. El cambio se implementó el 2026-09-10 en las tres rutas que llaman a la IA y tiene sus tests unitarios en verde, pero todavía no se corrió un test de carga que mida la mejora: hasta que eso pase, es una corrección esperada, no un resultado.
+3. **Correr la llamada a la IA en un hilo aparte** — *confirmado, costo bajo · código.* Medido en el test 5, contra el 4 y con la misma infraestructura exacta: con 20 subidas simultáneas, los errores pasaron de 48,6% a 0,37% y el p95 de timeout a 16,3 s, con 7,3 veces más subidas completadas en la misma ventana. Los lectores que navegaban en paralelo pasaron de timeout y 28,8% de error a 2,4 s y 0,12%. Es la corrección más barata de las tres y la que más cambió el comportamiento bajo ráfaga.
 
 ## F. Para el arranque en producción
 
@@ -166,6 +171,7 @@ workers y contrastarlo contra el límite del plan de Postgres elegido.
 - **Test 2:** Por ese mismo despliegue convivieron dos juegos de procesos durante unos minutos, así que los picos de CPU y RAM del web de esta corrida están inflados y no describen el costo real de dos workers.
 - **Test 2:** Solo se corrió la fase de lecturas. No hay fase de recibos en este experimento.
 - **Test 4:** Corrió ANTES del cambio de código que pasa la llamada a la IA a un hilo aparte (2026-09-10). Los números de la fase de recibos son los de la IA todavía bloqueando el worker.
+- **Test 5:** Única diferencia contra el test 4: la llamada a la IA se corre en un hilo aparte (run_in_threadpool) en vez de bloquear al worker. Planes, workers, pool y latencia simulada de la IA son idénticos, y se verificaron contra la API de Render antes de arrancar. Por eso la fase de lecturas sirve de control: no toca ese código y debería dar parecido.
 - La llamada a la IA se simuló con una espera fija de 15 segundos, para no depender de
   la velocidad variable del servicio real ni gastar créditos. Es la demora típica
   observada, pero es una simulación.
