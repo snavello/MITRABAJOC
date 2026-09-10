@@ -4423,12 +4423,14 @@ def entornos_pin(request: Request, pin: str = Form(""), siguiente: str = Form(""
 # login propio por ahora, a reforzar después (ver BACKLOG.md).
 ESCALONES_DEFAULT_LECTURAS = [50, 100, 200, 400, 800]
 ESCALONES_DEFAULT_RECIBOS = [2, 5, 10, 20]
-# El informe completo (gráfico, glosario, diagnóstico) vive publicado como
-# página propia, NO en el repositorio de GitHub -- ese es privado y un
-# link ahí adentro le pide a quien lo abre iniciar sesión con una cuenta
-# que tenga acceso, lo que no tiene sentido para una pantalla pensada para
-# mirar rápido. Si se vuelve a publicar en otra URL, actualizar acá.
-URL_INFORME_COMPLETO = "https://claude.ai/code/artifact/fd5b32ab-57b1-4349-87eb-5802f71bba69"
+# El informe completo (gráfico, glosario, diagnóstico) se sirve DESDE ACÁ
+# mismo (/entornos/informe, templates/informe_completo.html) -- pedido
+# explícito de Sd (2026-09-10): "lo quiero todo en el sitio". Antes vivía
+# como Artifact externo de claude.ai, pero ese link exigía iniciar sesión
+# (vía GitHub) para verlo -- el mismo problema que ya se había resuelto
+# una vez sacando los links directos a GitHub. Ruta relativa: funciona
+# igual en Pruebas y Demo, sin hardcodear el dominio.
+URL_INFORME_COMPLETO = "/entornos/informe"
 
 
 def _parsear_escalones(texto: str, default: list) -> list:
@@ -4563,6 +4565,17 @@ def entornos_test_detalle(request: Request, test_id: int):
         "t": fila, "analisis": _analisis_resumen(fila.get("resumen")),
         "url_informe": URL_INFORME_COMPLETO,
     })
+
+
+@app.get("/entornos/informe", response_class=HTMLResponse)
+def entornos_informe(request: Request):
+    """El informe completo de referencia (gráfico, glosario, diagnóstico,
+    las cuatro corridas comparadas) -- página propia, mismo gate de PIN
+    que el resto de /entornos, sin depender de nada externo."""
+    _exigir_landing()
+    if not _pase_landing(request):
+        return RedirectResponse("/entornos#tests-pruebas", status_code=303)
+    return templates.TemplateResponse("informe_completo.html", {"request": request})
 
 
 # ================= Recursos: la documentación del proyecto en la landing =================

@@ -212,6 +212,28 @@ def test_publicar_sin_resumen_rechaza():
     print("OK  test_publicar_sin_resumen_rechaza")
 
 
+def test_informe_completo_se_sirve_desde_el_sitio_sin_github():
+    """El link "Ver el informe completo" de test_detalle.html tiene que
+    quedar DENTRO del sitio -- pedido explícito de Sd (2026-09-10): antes
+    apuntaba a un Artifact externo de claude.ai que pedía iniciar sesión
+    (vía GitHub) para verlo, el mismo problema que ya se había resuelto
+    una vez con los links directos a GitHub."""
+    assert main.URL_INFORME_COMPLETO == "/entornos/informe"
+    r = client.get("/entornos/informe")  # `client`: TestClient con pase de PIN puesto
+    assert r.status_code == 200
+    assert "github.com" not in r.text.lower()
+    assert "claude.ai" not in r.text.lower()
+    assert "Un solo worker" in r.text
+    print("OK  test_informe_completo_se_sirve_desde_el_sitio_sin_github")
+
+
+def test_informe_completo_sin_pase_no_se_expone():
+    c = TestClient(main.app)  # sin pase de PIN
+    r = c.get("/entornos/informe", follow_redirects=False)
+    assert r.status_code == 303
+    print("OK  test_informe_completo_sin_pase_no_se_expone")
+
+
 if __name__ == "__main__":
     test_usuarios_carga_estres_lee_de_la_base_no_de_un_csv()
     test_modelo_test_carga_alta_actualizacion_y_lectura()

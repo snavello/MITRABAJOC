@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Un solo worker · Informe de test de estrés · Colm3na</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --tinta: #152238;
+    --tinta-2: #24344f;
+    --papel: #f7f5f0;
+    --papel-2: #efece3;
+    --linea: #dcd8cf;
+    --texto: #1e2534;
+    --gris: #62605a;
+    --pruebas: #c97a12;
+    --pruebas-fondo: #fbead0;
+    --exito: #1a7a6b;
+    --exito-fondo: #e2f0ec;
+    --alerta: #a33a2e;
+    --alerta-fondo: #f7e3df;
+    --card: #ffffff;
+    --sombra: 0 1px 2px rgba(21,34,56,.06), 0 8px 24px -12px rgba(21,34,56,.18);
+    --display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    --cuerpo: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --tinta: #e8ecf5; --tinta-2: #c7d0e2;
+      --papel: #14181f; --papel-2: #1b2029;
+      --linea: #2c323e; --texto: #dfe3ec; --gris: #9099ab;
+      --pruebas: #e8a23f; --pruebas-fondo: #2c2314;
+      --exito: #4fb59e; --exito-fondo: #142621;
+      --alerta: #e08174; --alerta-fondo: #2b1a17;
+      --card: #1a1f28;
+      --sombra: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --tinta: #e8ecf5; --tinta-2: #c7d0e2;
+    --papel: #14181f; --papel-2: #1b2029;
+    --linea: #2c323e; --texto: #dfe3ec; --gris: #9099ab;
+    --pruebas: #e8a23f; --pruebas-fondo: #2c2314;
+    --exito: #4fb59e; --exito-fondo: #142621;
+    --alerta: #e08174; --alerta-fondo: #2b1a17;
+    --card: #1a1f28;
+    --sombra: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--papel); color: var(--texto);
+    font-family: var(--cuerpo); font-size: 17px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--pruebas-fondo); color: var(--tinta); }
+
+  .franja {
+    height: 10px;
+    background: repeating-linear-gradient(-45deg, var(--pruebas) 0 14px, var(--tinta) 14px 28px);
+  }
+
+  header.masthead {
+    max-width: 800px; margin: 0 auto; padding: 40px 24px 20px;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
+  }
+  .sello-pruebas {
+    flex: none; font-family: var(--display); font-weight: 800; font-size: 13px;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--pruebas);
+    background: var(--pruebas-fondo); border: 1px solid color-mix(in srgb, var(--pruebas) 45%, transparent);
+    border-radius: 999px; padding: 5px 12px;
+  }
+  h1 {
+    font-family: var(--display); font-weight: 800; font-size: clamp(40px, 7vw, 64px);
+    line-height: .92; letter-spacing: .2px; color: var(--tinta); margin: 0;
+    text-wrap: balance;
+  }
+  .dek {
+    max-width: 800px; margin: 0 auto; padding: 0 24px 8px;
+    font-size: 19px; color: var(--gris); text-wrap: balance;
+  }
+  .meta-linea {
+    max-width: 800px; margin: 0 auto; padding: 18px 24px 0;
+    display: flex; gap: 18px; flex-wrap: wrap; font-family: var(--mono); font-size: 12.5px;
+    color: var(--gris); letter-spacing: .02em; border-top: 1px solid var(--linea); padding-top: 14px;
+  }
+  .meta-linea b { color: var(--tinta); font-weight: 600; }
+
+  main { max-width: 800px; margin: 0 auto; padding: 8px 24px 90px; }
+
+  .aviso {
+    display: flex; gap: 12px; margin: 34px 0; padding: 16px 18px; border-radius: 12px;
+    background: var(--pruebas-fondo); border: 1px solid color-mix(in srgb, var(--pruebas) 40%, transparent);
+    font-size: 15px; line-height: 1.55;
+  }
+  .aviso .ic { flex: none; width: 20px; height: 20px; margin-top: 2px; stroke: var(--pruebas); fill: none; stroke-width: 2; }
+  .aviso b { color: var(--tinta); }
+
+  h2 {
+    font-family: var(--display); font-weight: 800; font-size: 32px; letter-spacing: .3px;
+    color: var(--tinta); margin: 56px 0 6px; text-wrap: balance;
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  h2 .num { font-family: var(--mono); font-size: 16px; font-weight: 600; color: var(--pruebas); }
+  h3 {
+    font-family: var(--display); font-weight: 700; font-size: 21px; letter-spacing: .2px;
+    color: var(--tinta-2); margin: 30px 0 4px;
+  }
+  p { margin: 14px 0; max-width: 66ch; }
+  strong { color: var(--tinta); font-weight: 600; }
+  code {
+    font-family: var(--mono); font-size: .88em; background: var(--papel-2);
+    padding: .1em .38em; border-radius: 5px; color: var(--tinta-2);
+  }
+
+  /* ---- Glosario: caja de definiciones, no prosa corrida ---- */
+  .glosario {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px;
+    margin: 22px 0 8px;
+  }
+  .termino {
+    background: var(--card); border: 1px solid var(--linea); border-radius: 12px;
+    padding: 14px 16px; box-shadow: var(--sombra);
+  }
+  .termino .t { font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--tinta); letter-spacing: .2px; }
+  .termino .d { font-size: 14.5px; color: var(--gris); margin-top: 3px; line-height: 1.45; }
+  .termino.clave { border-color: color-mix(in srgb, var(--pruebas) 50%, var(--linea)); }
+  .termino.clave .t { color: var(--pruebas); }
+
+  /* ---- Tabla de configuración ---- */
+  .config-tabla { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 15px; }
+  .config-tabla th {
+    text-align: left; font-family: var(--display); font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; font-size: 12px; color: var(--gris); padding: 0 14px 8px 0;
+    border-bottom: 2px solid var(--tinta);
+  }
+  .config-tabla td { padding: 11px 14px 11px 0; border-bottom: 1px solid var(--linea); vertical-align: top; }
+  .config-tabla td:first-child { font-weight: 600; color: var(--tinta); white-space: nowrap; }
+  .config-tabla .val { font-family: var(--mono); font-size: 14.5px; color: var(--tinta-2); white-space: nowrap; }
+  .config-tabla .critico .val { color: var(--alerta); font-weight: 600; }
+  .wrap-tabla { overflow-x: auto; }
+
+  /* ---- Callout de hallazgo ---- */
+  .hallazgo {
+    background: var(--card); border-left: 4px solid var(--pruebas); border-radius: 4px 12px 12px 4px;
+    padding: 20px 22px; margin: 26px 0; box-shadow: var(--sombra);
+  }
+  .hallazgo .kicker {
+    font-family: var(--display); font-weight: 800; font-size: 13px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--pruebas); margin-bottom: 6px;
+  }
+
+  /* ---- Chart ---- */
+  .chart-caja {
+    background: var(--card); border: 1px solid var(--linea); border-radius: 14px;
+    padding: 22px 22px 14px; margin: 24px 0; box-shadow: var(--sombra);
+  }
+  .chart-caja h4 {
+    font-family: var(--display); font-weight: 700; font-size: 18px; color: var(--tinta);
+    margin: 0 0 2px; letter-spacing: .2px;
+  }
+  .chart-caja .sub { font-size: 13.5px; color: var(--gris); margin-bottom: 10px; }
+  #chart { display: block; width: 100%; height: auto; }
+  .leyenda { display: flex; gap: 18px; flex-wrap: wrap; font-family: var(--mono); font-size: 12.5px; margin-top: 6px; color: var(--gris); }
+  .leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+  .leyenda i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+
+  /* ---- Barandas: tarjetas con estado ---- */
+  .barandas { display: grid; gap: 12px; margin: 18px 0; }
+  .baranda {
+    display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; align-items: center;
+    background: var(--card); border: 1px solid var(--linea); border-radius: 12px;
+    padding: 14px 18px; box-shadow: var(--sombra);
+  }
+  .baranda .pedida { font-size: 14.5px; color: var(--gris); grid-column: 1; }
+  .baranda .resultado { font-family: var(--display); font-weight: 700; font-size: 15.5px; grid-column: 1; margin-top: 2px; }
+  .pill {
+    grid-column: 2; grid-row: 1 / 3; font-family: var(--display); font-weight: 800; font-size: 12px;
+    letter-spacing: .08em; text-transform: uppercase; padding: 5px 12px; border-radius: 999px; white-space: nowrap;
+  }
+  .pill.no { background: var(--alerta-fondo); color: var(--alerta); }
+  .pill.parcial { background: var(--pruebas-fondo); color: var(--pruebas); }
+  .pill.si { background: var(--exito-fondo); color: var(--exito); }
+
+  /* ---- Comparación tabla ---- */
+  .comp-tabla { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14.5px; }
+  .comp-tabla th {
+    text-align: left; font-family: var(--display); font-weight: 700; letter-spacing: .04em;
+    text-transform: uppercase; font-size: 11.5px; color: var(--gris); padding: 0 12px 8px 0;
+    border-bottom: 2px solid var(--tinta);
+  }
+  .comp-tabla td { padding: 12px 12px 12px 0; border-bottom: 1px solid var(--linea); }
+  .comp-tabla td:first-child { font-weight: 600; color: var(--tinta); max-width: 22ch; }
+
+  /* ---- Escalado: dos columnas ---- */
+  .versus { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+  @media (max-width: 620px) { .versus { grid-template-columns: 1fr; } }
+  .via {
+    background: var(--card); border: 1px solid var(--linea); border-radius: 14px;
+    padding: 18px 20px; box-shadow: var(--sombra); position: relative; overflow: hidden;
+  }
+  .via.elegida { border-color: color-mix(in srgb, var(--exito) 45%, var(--linea)); }
+  .via .cinta {
+    position: absolute; top: 12px; right: -30px; transform: rotate(38deg);
+    background: var(--exito); color: #fff; font-family: var(--display); font-weight: 800;
+    font-size: 11px; letter-spacing: .1em; text-transform: uppercase; padding: 3px 34px;
+  }
+  .via h4 { font-family: var(--display); font-weight: 700; font-size: 19px; color: var(--tinta); margin: 0 0 8px; }
+  .via ul { margin: 0; padding-left: 20px; font-size: 14.5px; color: var(--texto); }
+  .via li { margin: 6px 0; }
+
+  .recomendaciones { counter-reset: paso; margin: 20px 0; display: grid; gap: 12px; }
+  .paso {
+    counter-increment: paso; position: relative; padding: 16px 18px 16px 56px;
+    background: var(--card); border: 1px solid var(--linea); border-radius: 12px; box-shadow: var(--sombra);
+  }
+  .paso::before {
+    content: counter(paso); position: absolute; left: 16px; top: 16px;
+    width: 28px; height: 28px; border-radius: 50%; background: var(--tinta); color: var(--papel);
+    font-family: var(--display); font-weight: 800; font-size: 15px; display: flex; align-items: center; justify-content: center;
+  }
+  .paso .costo {
+    font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--gris); margin-bottom: 2px;
+  }
+  .paso b { color: var(--tinta); }
+
+  .toc {
+    display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 22px 0 0; padding: 0; list-style: none;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .toc a { color: var(--gris); text-decoration: none; border-bottom: 1px dotted var(--linea); }
+  .toc a:hover { color: var(--pruebas); border-color: var(--pruebas); }
+
+  .volver { display: block; max-width: 800px; margin: 0 auto; padding: 14px 24px 0; }
+  .volver a { color: var(--gris); text-decoration: none; font-family: var(--mono); font-size: 12.5px; border-bottom: 1px dotted var(--linea); }
+  .volver a:hover { color: var(--pruebas); border-color: var(--pruebas); }
+
+  footer {
+    max-width: 800px; margin: 0 auto; padding: 30px 24px 60px; border-top: 1px solid var(--linea);
+    font-size: 13.5px; color: var(--gris); font-family: var(--mono);
+  }
+  a { color: var(--exito); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .hallazgo, .baranda, .via, .paso, .termino { animation: entra .5s ease both; }
+  }
+  @keyframes entra { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<div class="franja"></div>
+<div class="volver"><a href="/entornos#tests-pruebas">&larr; Volver a Tests</a></div>
+<header class="masthead">
+  <span class="sello-pruebas">Pruebas · 2026-09-09</span>
+  <h1>Un solo worker</h1>
+</header>
+<p class="dek">Por qué <code>mitrabajo-pruebas</code> se degrada mucho antes de lo esperado, qué cubre y qué no de la carga de producción, y cómo repartir el presupuesto de escalado entre instancias y base de datos.</p>
+<div class="meta-linea">
+  <span><b>Servicio:</b> mitrabajo-pruebas.onrender.com</span>
+  <span><b>Escenario:</b> 5.000 usuarios activos, 300 conc. en notificación, 100 logins/min</span>
+  <span><b>Herramienta:</b> k6 + Python, IA simulada</span>
+</div>
+
+<main>
+  <ul class="toc">
+    <li><a href="#leer">Cómo leer esto</a></li>
+    <li><a href="#config">A · Configuración</a></li>
+    <li><a href="#barandas">B · Barandas</a></li>
+    <li><a href="#comparacion">C · Comparación</a></li>
+    <li><a href="#diagnostico">D · Diagnóstico</a></li>
+    <li><a href="#hoy">E · Para hoy</a></li>
+    <li><a href="#produccion">F · Producción</a></li>
+    <li><a href="#herramientas">Herramientas</a></li>
+  </ul>
+
+  <div class="hallazgo" style="border-left-color:var(--exito); margin-top:24px;">
+    <div class="kicker" style="color:var(--exito);">Resultado final, para quien solo lea esto</div>
+    <p style="margin:0;">Con el servicio web en 2 vCPU + <code>--workers 2</code> y Postgres en 2 vCPU, el p95 en 50 y 100 concurrentes bajó a <strong>190 ms y 690 ms</strong> — la primera vez que se cumple el objetivo (p95 &lt; 1 s, errores &lt; 1%) en las cuatro corridas — y a 800 concurrentes pasó de timeout total (60 s) a <strong>19,1 s</strong>. Lo único que <strong>no</strong> mejoró con esa infraestructura: las ráfagas grandes de recibos (10-20 simultáneos) — ahí hacía falta el cambio de código (IA en un hilo aparte), <strong>implementado el 2026-09-10 y pendiente de confirmar con un test nuevo</strong>.</p>
+  </div>
+
+  <div class="aviso">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div><b>A mitad del segundo Test 2 se desplegó una funcionalidad nueva</b>, lo que reinició el servidor. Los escalones de 2 y 5 recibos simultáneos no deberían verse afectados; los de 10 y 20 pueden traer algo de ruido extra. Quedan igual porque son consistentes con el resto de la evidencia — pero si se necesita el número exacto para justificar un gasto, conviene repetir esa corrida sola.</div>
+  </div>
+
+  <h2 id="leer"><span class="num">00</span> Cómo leer esto</h2>
+  <p>Cada test avanza en <strong>escalones</strong>: un número fijo de usuarios simulados atacando el sistema al mismo tiempo, sostenido varios minutos con un comportamiento realista — login, mirar páginas, pausas de unos segundos entre clic y clic — antes de subir al escalón siguiente. Subir de a escalones deja ver en qué punto exacto empieza la degradación, no solo si el sistema aguanta o no un número fijo de golpe.</p>
+  <p style="font-size:14.5px; color:var(--gris);">Los tiempos de esta página están en <strong>milisegundos (ms)</strong> — 1.000&nbsp;ms&nbsp;=&nbsp;1&nbsp;segundo. Los tres percentiles se leen con la misma pregunta ("de cada 100 pedidos, cuántos tardaron menos que este valor"); solo cambia el corte.</p>
+  <div class="glosario">
+    <div class="termino clave"><div class="t">p50</div><div class="d">De cada 100 pedidos, 50 tardaron menos que este valor. La experiencia "típica".</div></div>
+    <div class="termino clave"><div class="t">p95</div><div class="d">De cada 100 pedidos, 95 tardaron menos que este valor (los otros 5, más). El número que define si la app se siente bien.</div></div>
+    <div class="termino clave"><div class="t">p99</div><div class="d">De cada 100 pedidos, 99 tardaron menos que este valor. La cola extrema, el peor caso.</div></div>
+    <div class="termino"><div class="t">rps</div><div class="d">Pedidos por segundo que el servidor efectivamente pudo procesar en ese escalón.</div></div>
+  </div>
+  <p style="font-size:14px; color:var(--gris);"><strong>Cómo se calcula, para que no quede ambiguo:</strong> se ordenan los tiempos de ese escalón de más rápido a más lento. El p95 es el que queda en la posición 95 de cada 100 — todo lo anterior en esa fila (95 mediciones) es igual de rápido o más, y solo lo que queda después (las últimas 5) es más lento. Un p95 <strong>bajo</strong> es buena noticia; uno <strong>alto</strong> es grave, porque no describe un caso raro — describe lo que le pasó a casi todo el mundo.</p>
+  <p>Por qué importan los tres juntos: si p50 fuera bueno pero p95 malo, el sistema andaría bien la mayoría del tiempo con baches frecuentes. Lo que se ve en esta corrida es distinto: <strong>p50 y p95 suben juntos y parejo</strong> a medida que crece la carga — el sistema entero se pone lento parejo, consistente con que todos los pedidos hacen cola detrás de un único proceso.</p>
+
+  <h2 id="config"><span class="num">A</span> Configuración probada</h2>
+  <div class="wrap-tabla">
+  <table class="config-tabla">
+    <tr><th>Ítem</th><th>Valor</th><th>Qué significa</th></tr>
+    <tr><td>Servicio web</td><td class="val">0,5 vCPU / 512 MB</td><td>El escalón más chico que ofrece Render para un servicio que atiende tráfico.</td></tr>
+    <tr class="critico"><td>Postgres</td><td class="val">0,1 vCPU / 256 MB</td><td>La pieza más chica de <em>toda</em> la instalación.</td></tr>
+    <tr class="critico"><td>Workers de uvicorn</td><td class="val">1</td><td>Un proceso independiente, capaz de atender en paralelo con otros. Con 1, todo pasa uno atrás del otro.</td></tr>
+    <tr><td>Pool de Postgres</td><td class="val">5 + 5 overflow</td><td>Hasta 10 conexiones simultáneas a la base, por worker.</td></tr>
+    <tr class="critico"><td>Llamada a la IA</td><td class="val">síncrona</td><td>Bloquea todo el proceso mientras espera la respuesta — sin threadpool.</td></tr>
+    <tr><td>Latencia de IA simulada</td><td class="val">15 s</td><td>Tiempo típico real de esa llamada, sin gastar créditos ni depender de su velocidad variable.</td></tr>
+  </table>
+  </div>
+
+  <div class="hallazgo">
+    <div class="kicker">El hallazgo que domina todo lo demás</div>
+    <p style="margin-top:0">El <strong>Test 1</strong> —que no sube ningún recibo, no toca la IA para nada— ya muestra degradación seria desde 100 usuarios concurrentes. Y el <strong>Test 2</strong> reprodujo el mismo techo con 200 lectores solos, sin ninguna subida de recibo encima: p95 de <strong>27,7 s</strong>, casi el mismo número que el escalón equivalente del Test 1 (29,9 s), con una carga de trabajo completamente distinta.</p>
+    <p style="margin-bottom:0">Esa coincidencia es la prueba de que el límite real es <strong>el único worker</strong>, no la IA síncrona. La IA agrava el problema cuando además hay subidas de recibo — pero el techo de concurrencia ya está puesto por tener un solo proceso sirviendo todo, aun sin IA de por medio.</p>
+  </div>
+
+  <div class="chart-caja">
+    <h4>Latencia vs. concurrencia — Test de lecturas</h4>
+    <div class="sub">Escala logarítmica. La línea punteada marca el objetivo (p95 &lt; 1 s).</div>
+    <svg id="chart" viewBox="0 0 640 320" width="100%" role="img" aria-label="Gráfico de p50, p95 y p99 subiendo con la concurrencia, de 50 a 800 usuarios"></svg>
+    <div class="leyenda">
+      <span><i style="background:var(--exito)"></i>p50</span>
+      <span><i style="background:var(--pruebas)"></i>p95</span>
+      <span><i style="background:var(--alerta)"></i>p99</span>
+      <span><i style="background:var(--gris);opacity:.5"></i>objetivo (1 s)</span>
+    </div>
+  </div>
+
+  <div class="chart-caja">
+    <h4>p95 en las cuatro configuraciones probadas</h4>
+    <div class="sub">Escala logarítmica. Cada línea es una corrida completa distinta -- ver el detalle en Diagnóstico y en la sección E.</div>
+    <svg id="chart2" viewBox="0 0 640 320" width="100%" role="img" aria-label="Cuatro líneas de p95 mostrando cómo cada configuración movió el techo de concurrencia"></svg>
+    <div class="leyenda">
+      <span><i style="background:var(--alerta)"></i>Base (0,5vCPU/1w/PG chico)</span>
+      <span><i style="background:var(--pruebas)"></i>+2 workers (0,5vCPU)</span>
+      <span><i style="background:#8a7ec9"></i>+Postgres 2vCPU (web sin cambios)</span>
+      <span><i style="background:var(--exito)"></i>Web 2vCPU+2w / Postgres 2vCPU</span>
+    </div>
+  </div>
+
+  <h2 id="barandas"><span class="num">B</span> Barandas obtenidas</h2>
+  <div class="barandas">
+    <div class="baranda">
+      <div class="pedida">Concurrentes con p95 &lt; 1 s y errores &lt; 1%</div>
+      <div class="resultado">50 y 100 usuarios (cuarto experimento)</div>
+      <span class="pill si">Se cumple</span>
+    </div>
+    <div class="baranda">
+      <div class="pedida">Concurrentes con errores &lt; 1% (sin exigir el p95)</div>
+      <div class="resultado">800 usuarios, en el cuarto experimento</div>
+      <span class="pill parcial">Parcial</span>
+    </div>
+    <div class="baranda">
+      <div class="pedida">Recibos simultáneos sin que los lectores superen p95 de 1 s</div>
+      <div class="resultado">Ninguno — sigue sin cumplirse, ni con la mejor infraestructura</div>
+      <span class="pill no">No se cumple</span>
+    </div>
+    <div class="baranda">
+      <div class="pedida">Accesos por día equivalentes</div>
+      <div class="resultado">≈ 6.000/día con la config base — mucho más alto con la del cuarto experimento</div>
+      <span class="pill parcial">Mejoró, no recalculado a fondo</span>
+    </div>
+    <div class="baranda">
+      <div class="pedida">Logins por minuto máximos</div>
+      <div class="resultado">≈ 120 / min con la config base; muy por encima con la del cuarto experimento</div>
+      <span class="pill si">Mejoró</span>
+    </div>
+  </div>
+
+  <h2 id="comparacion"><span class="num">C</span> Comparación con la carga esperada</h2>
+  <div class="wrap-tabla">
+  <table class="comp-tabla">
+    <tr><th>Escenario esperado</th><th>Cobertura con la config base (0,5vCPU/1w/PG chico)</th></tr>
+    <tr><td>Pico de notificación: ~300 concurrentes</td><td><span class="pill no" style="grid-column:auto">No cubierto</span> — 300 cae en plena zona de degradación seria (200 ya degrada, 400 da 25% de error).</td></tr>
+    <tr><td>~100 logins/min</td><td><span class="pill parcial" style="grid-column:auto">Al límite</span> — se sostiene, pero con decenas de segundos de espera.</td></tr>
+    <tr><td>Fin de mes: 5–10 recibos simultáneos</td><td><span class="pill no" style="grid-column:auto">No cubierto</span> — con 10, el 27% de las subidas falla y los lectores tienen 22,6% de error.</td></tr>
+    <tr><td>5.000 usuarios activos (base total)</td><td><span class="pill parcial" style="grid-column:auto">Ajustado</span> — el techo de ~6.000 accesos/día deja poco margen si la actividad no está repartida en el tiempo.</td></tr>
+  </table>
+  </div>
+  <p><strong>Con la config base, ningún escenario esperado se cubre con margen.</strong> Con la del cuarto experimento (web 2vCPU+2w, Postgres 2vCPU), lecturas y logins mejoran mucho -- las ráfagas grandes de recibos siguen sin cubrirse, ver sección E.</p>
+
+  <h2 id="diagnostico"><span class="num">D</span> Diagnóstico</h2>
+  <p>El único worker de uvicorn es el cuello de botella dominante, confirmado de dos formas independientes: el Test 1 sube a 29,9 s de p95 a 200 concurrentes <em>sin ninguna IA de por medio</em>, y el Test 2 reprodujo ese mismo número (27,7 s) con 200 lectores solos. La IA síncrona agrava el problema en cuanto hay subidas encima: con apenas 2 recibos simultáneos, el p95 de lectores que <em>no subieron nada</em> pasa de 27,7 s a 47,4 s.</p>
+  <p>Postgres no fue el límite <em>general</em> de esta corrida — pero en su propia CPU sí llegó al techo, con evidencia real, no solo razonamiento: cruzando las muestras de servidor de las dos corridas de Test 2, la CPU tocó el 100% de su asignación (0,1 vCPU) en las dos, con apenas 10–15 conexiones activas, mientras la RAM nunca pasó de dos tercios de sus 256 MB.</p>
+  <div class="wrap-tabla">
+  <table class="config-tabla">
+    <tr><th>Corrida</th><th>CPU máx. Postgres</th><th>RAM máx. Postgres</th></tr>
+    <tr class="critico"><td>Test 2 (primera)</td><td class="val">0,10 de 0,10 vCPU → 100%</td><td class="val">142 MB de 256 → 55%</td></tr>
+    <tr class="critico"><td>Test 2 (repetido)</td><td class="val">0,10 de 0,10 vCPU → 100%</td><td class="val">162 MB de 256 → 63%</td></tr>
+  </table>
+  </div>
+  <p>Tiene sentido con el tipo de trabajo de esta base: consultas cortas y simples, no las que necesitan mucha memoria por conexión — lo que cuesta es el volumen de conexiones abriéndose y ejecutando esas consultas una tras otra en una sola décima parte de un núcleo. <strong>Para elegir el próximo plan de Postgres: prioridad a la CPU, no a la RAM.</strong> La RAM del servicio <em>web</em> (no la de Postgres) sí llegó a 594 MB en un momento del Test 2 repetido, por encima de los 512 MB del plan, aunque coincide con la ventana del reinicio ya mencionado.</p>
+
+  <h2 id="hoy"><span class="num">E</span> Recomendaciones para hoy</h2>
+  <div class="hallazgo">
+    <div class="kicker">Actualización · experimento real</div>
+    <p style="margin-top:0">Se probó <code>--workers 2</code> en Pruebas, mismo 0,5 vCPU de siempre, y se repitió el Test 1. <strong>El resultado contradijo la hipótesis original:</strong> a 200 concurrentes, el p95 pasó de 29,9 s (1 worker) a <strong>42,3 s</strong> (2 workers), y los errores de 0,07% a 3,49%. Sumar workers sin sumar CPU real no reparte trabajo en paralelo — dos procesos compitiendo por media unidad de procesador solo suman costo de cambio de contexto y más memoria base.</p>
+    <p style="margin-bottom:0"><strong>Conclusión corregida: workers y CPU real tienen que subir juntos — ninguno de los dos solo alcanza.</strong> Se revirtió a 1 worker en Pruebas tras esta prueba.</p>
+  </div>
+  <div class="hallazgo" style="border-left-color:var(--exito);">
+    <div class="kicker" style="color:var(--exito);">Actualización · tercer experimento (2026-09-10)</div>
+    <p style="margin-top:0">Se subió Postgres a 2 vCPU/4GB (sin tocar el web) y se repitieron los dos tests completos. <strong>Postgres dejó de ser un factor</strong>: su CPU pasó de tocar el 100% de 0,1 vCPU a un máximo de <strong>9,2% de 2 vCPU</strong>. El p95 del Test 1 mejoró de verdad en la zona baja-media: 50 concurrentes de 4,2 s a <strong>1,6 s</strong> (-62%), 100 de 13,8 s a 9,6 s (-30%), 200 de 29,9 s a 24,4 s (-18%).</p>
+    <p style="margin-bottom:0">A partir de 400 concurrentes el techo no se movió (sigue en ~52-60 s) — confirma que ahí el límite es el servicio <strong>web</strong>, no Postgres. Con 9,2% de uso pico, es probable que un plan intermedio (0,5-1 vCPU) ya alcanzara para esta carga; no probado, es inferencia.</p>
+  </div>
+  <div class="hallazgo" style="border-left-color:var(--exito);">
+    <div class="kicker" style="color:var(--exito);">Actualización · cuarto experimento (2026-09-10)</div>
+    <p style="margin-top:0">Con Postgres ya en 2 vCPU, se subió también el servicio <strong>web</strong> a 2 vCPU y se lo arrancó con <code>--workers 2</code> (1 por núcleo). <strong>Por primera vez en las cuatro corridas, dos escalones cumplen el objetivo completo</strong> (p95 &lt; 1 s, errores &lt; 1%): 50 concurrentes en <strong>190 ms</strong> y 100 en <strong>690 ms</strong>. A 800 concurrentes, de timeout total (60 s) a <strong>19,1 s</strong>. El throughput saltó de 12-18 a 20-68 rps.</p>
+    <p style="margin-bottom:0"><strong>Lo único que no mejoró: las ráfagas de 10-20 recibos simultáneos</strong> (p95 de 60 s, hasta 49% de error, casi igual que antes de subir nada) — cada subida seguía bloqueando un worker entero los 15 s de la IA síncrona, sin importar cuánta CPU hubiera de sobra.</p>
+  </div>
+  <div class="hallazgo" style="border-left-color:var(--exito);">
+    <div class="kicker" style="color:var(--exito);">Actualización · fix de código (2026-09-10)</div>
+    <p style="margin:0">La llamada a la IA en <code>/api/leer</code>, <code>/api/aportes</code> y <code>/aprender</code> ahora corre en un hilo aparte (<code>run_in_threadpool</code>) en vez de bloquear el worker entero. Implementado y con los tests unitarios en verde -- <strong>pendiente de confirmar con un Test 2 nuevo contra la infraestructura del cuarto experimento</strong>, todavía no corrido.</p>
+  </div>
+  <div class="recomendaciones">
+    <div class="paso"><div class="costo">Costo medio · infraestructura · ✓ confirmado dos veces</div>Subir <b>Postgres</b> a vCPU entera. Ya hecho: su CPU bajó de 100% a 9,2% de uso pico. Priorizar CPU sobre RAM al elegir el plan.</div>
+    <div class="paso"><div class="costo">Costo alto · infraestructura · ✓ confirmado con medición real</div>Subir el <b>servicio web</b> a vCPU entera + <code>--workers</code> igual a los núcleos. Ya hecho: 2 vCPU + 2 workers bajó el p95 de decenas de segundos a 190 ms (50 conc.) y 690 ms (100 conc.) — las dos primeras veces que se cumple el objetivo — y a 19,1 s en 800 (contra 60 s de timeout). Junto con Postgres, es la única recomendación confirmada dos veces con medición real.</div>
+    <div class="paso"><div class="costo">Costo bajo · código · implementado, sin confirmar con test</div>Correr la llamada a Anthropic en un <b>hilo aparte</b> (<code>run_in_threadpool</code>). El cuarto experimento mostró que hacía falta: con toda la CPU de los dos puntos anteriores puesta, las ráfagas de 10-20 recibos simultáneos casi no mejoraron (p95 de 60 s, hasta 49% de error) — cada subida bloqueaba un worker entero los 15 s de la IA síncrona, sin importar cuánta CPU hubiera de sobra. Ya está en <code>main.py</code>; falta repetir el Test 2 para confirmar la mejora real.</div>
+  </div>
+
+  <h2 id="produccion"><span class="num">F</span> Extrapolación para producción</h2>
+  <p>Presupuesto propuesto: 3 a 5 instancias de 1 vCPU / 2 GB (USD 25/mes c/u) más 1 o 2 de 2 vCPU / 4 GB (USD 85/mes) si hiciera falta. Es una extrapolación razonada, no una medición directa — al final se explica cómo confirmarla.</p>
+  <p><strong>El hecho técnico que ordena la decisión:</strong> un proceso de Python —aunque use <code>async</code>, como esta app— usa efectivamente un solo núcleo de procesador, sin importar cuántos tenga la máquina. <strong>Comprar más CPU sin sumar <code>--workers</code> no mejora en nada la concurrencia</strong> — la segunda CPU queda sin usar. <strong>Y la recíproca también es cierta</strong>, confirmada con el experimento de la sección E: sumar workers sin sumar CPU real tampoco ayuda. Los dos tienen que subir juntos.</p>
+
+  <div class="versus">
+    <div class="via elegida">
+      <span class="cinta">recomendada</span>
+      <h4>Muchas instancias chicas</h4>
+      <ul>
+        <li>Render las reparte solo, con su propio balanceador</li>
+        <li>Sesiones en cookie firmada, <b>sin estado en el servidor</b> — cualquier instancia atiende a cualquiera</li>
+        <li>Redundancia real: una caída no tira todo el servicio</li>
+        <li>Más simple de operar: es un control en el dashboard</li>
+      </ul>
+    </div>
+    <div class="via">
+      <h4>Pocas instancias grandes</h4>
+      <ul>
+        <li>Mismo total aproximado de CPU</li>
+        <li>Una caída pierde una porción mucho más grande de golpe</li>
+        <li>Tiene sentido si un proceso necesita mucha RAM propia — no es el caso acá</li>
+        <li>Igual necesita <code>--workers</code> ajustado por instancia</li>
+      </ul>
+    </div>
+  </div>
+
+  <p><strong>Recomendación concreta:</strong> las 3–5 instancias chicas para el <b>servicio web</b> (1–2 workers c/u → 6–10 procesos en paralelo, un salto de 6 a 10× sobre hoy). La instancia de 2 vCPU/4GB, reservarla para <b>Postgres</b> —ya tocó el 100% de su CPU con apenas 10-15 conexiones (ver Diagnóstico)— en vez de sumar más web, y al elegirla priorizar CPU sobre RAM. Ojo con el acople: cada worker abre hasta 10 conexiones (pool 5 + overflow 5); con 6–10 workers son 60–100 conexiones a confirmar contra el plan de Postgres elegido.</p>
+  <p style="color:var(--gris); font-size:15px;">Antes de comprometer el gasto: correr el mismo test contra la configuración real ya provisionada, con la pestaña <b>Tests</b> de <code>/entornos</code> (ver abajo) — es una extrapolación razonada a partir de una causa raíz clara, no un reemplazo de la medición real.</p>
+  <p style="color:var(--gris); font-size:15px;"><strong>Nota sobre escalado horizontal en Render:</strong> "más instancias" del servicio web no son servicios separados -- es una sola configuración de "Number of Instances" en la pestaña Scaling de ese mismo servicio; cada instancia corre el mismo plan (CPU/RAM) que ya elegiste, y Render reparte el tráfico solo. Postgres es distinto: no hay "más instancias" que repartan escrituras -- solo réplicas de lectura (hasta 5, de solo lectura, con retraso de replicación), que requieren un string de conexión separado y separar en código qué consultas van a cada una. Para "aguantar más carga en general" en Postgres, la palanca real sigue siendo subir el plan de la única instancia, como ya se probó acá.</p>
+
+  <h2 id="herramientas">Herramientas, ya en el repo y probadas contra el servicio real</h2>
+  <p><b>carga/</b> (k6 + Python) — la corrida de referencia de todo este informe. <b>Pestaña "Tests" en /entornos</b> — un botón Run con parámetros configurables que dispara un test en un contenedor aparte de Render, para no falsear los números compitiendo con el propio servidor; muestra también workers, pool y CPU/RAM en vivo, y cualquier test corrido con <code>carga/correr.sh</code> se publica solo ahí. <b>Pestaña "Actividad" en /entornos</b> — trámites, recibos, notificaciones, tokens de IA y accesos por sindicato y totales, Pruebas y Demo lado a lado, refrescada sola cada 10 minutos.</p>
+</main>
+
+<footer>
+  Test de estrés · mitrabajo-pruebas.onrender.com · última actualización 2026-09-10 · datos crudos en <code>carga/log/</code> del repo
+</footer>
+
+<script>
+(function () {
+  var datos = [
+    { x: 50,  p50: 1715.6,  p95: 4215.1,  p99: 6427.9 },
+    { x: 100, p50: 6126.8,  p95: 13836.2, p99: 17913.2 },
+    { x: 200, p50: 16101.3, p95: 29938.9, p99: 33339.7 },
+    { x: 400, p50: 31862.9, p95: 54328.2, p99: 60000.7 },
+    { x: 800, p50: 60000.7, p95: 60001.1, p99: 60001.3 }
+  ];
+  var svg = document.getElementById('chart');
+  var W = 640, H = 320, ML = 54, MR = 16, MT = 14, MB = 34;
+  var plotW = W - ML - MR, plotH = H - MT - MB;
+
+  var xs = datos.map(function (d) { return d.x; });
+  function xPix(x) {
+    var i = xs.indexOf(x);
+    return ML + (i / (xs.length - 1)) * plotW;
+  }
+  var yMin = 100, yMax = 70000; // ms, escala log
+  function yPix(v) {
+    var t = (Math.log10(v) - Math.log10(yMin)) / (Math.log10(yMax) - Math.log10(yMin));
+    return MT + plotH - t * plotH;
+  }
+  function ns(tag) { return document.createElementNS('http://www.w3.org/2000/svg', tag); }
+
+  var col = getComputedStyle(document.documentElement);
+  var cGris = col.getPropertyValue('--gris').trim() || '#62605a';
+  var cLinea = col.getPropertyValue('--linea').trim() || '#dcd8cf';
+
+  var yTicks = [100, 1000, 10000, 60000];
+  yTicks.forEach(function (v) {
+    var y = yPix(v);
+    var line = ns('line');
+    line.setAttribute('x1', ML); line.setAttribute('x2', W - MR);
+    line.setAttribute('y1', y); line.setAttribute('y2', y);
+    line.setAttribute('stroke', cLinea); line.setAttribute('stroke-width', 1);
+    svg.appendChild(line);
+    var label = ns('text');
+    label.setAttribute('x', ML - 8); label.setAttribute('y', y + 4);
+    label.setAttribute('text-anchor', 'end'); label.setAttribute('font-size', 11);
+    label.setAttribute('font-family', 'JetBrains Mono, monospace'); label.setAttribute('fill', cGris);
+    label.textContent = v >= 1000 ? (v / 1000) + 's' : v + 'ms';
+    svg.appendChild(label);
+  });
+
+  var obj = ns('line');
+  obj.setAttribute('x1', ML); obj.setAttribute('x2', W - MR);
+  obj.setAttribute('y1', yPix(1000)); obj.setAttribute('y2', yPix(1000));
+  obj.setAttribute('stroke', cGris); obj.setAttribute('stroke-width', 1.5);
+  obj.setAttribute('stroke-dasharray', '4 4'); obj.setAttribute('opacity', 0.55);
+  svg.appendChild(obj);
+
+  xs.forEach(function (x) {
+    var label = ns('text');
+    label.setAttribute('x', xPix(x)); label.setAttribute('y', H - MB + 20);
+    label.setAttribute('text-anchor', 'middle'); label.setAttribute('font-size', 11.5);
+    label.setAttribute('font-family', 'JetBrains Mono, monospace'); label.setAttribute('fill', cGris);
+    label.textContent = x;
+    svg.appendChild(label);
+  });
+  var xTitle = ns('text');
+  xTitle.setAttribute('x', ML + plotW / 2); xTitle.setAttribute('y', H - 4);
+  xTitle.setAttribute('text-anchor', 'middle'); xTitle.setAttribute('font-size', 11);
+  xTitle.setAttribute('font-family', 'JetBrains Mono, monospace'); xTitle.setAttribute('fill', cGris);
+  xTitle.textContent = 'usuarios concurrentes';
+  svg.appendChild(xTitle);
+
+  var series = [
+    { key: 'p50', color: col.getPropertyValue('--exito').trim() || '#1a7a6b' },
+    { key: 'p95', color: col.getPropertyValue('--pruebas').trim() || '#c97a12' },
+    { key: 'p99', color: col.getPropertyValue('--alerta').trim() || '#a33a2e' }
+  ];
+  series.forEach(function (s) {
+    var d = datos.map(function (pt, i) {
+      return (i === 0 ? 'M' : 'L') + xPix(pt.x) + ',' + yPix(pt[s.key]);
+    }).join(' ');
+    var path = ns('path');
+    path.setAttribute('d', d); path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', s.color); path.setAttribute('stroke-width', 2.5);
+    path.setAttribute('stroke-linejoin', 'round'); path.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(path);
+    datos.forEach(function (pt) {
+      var c = ns('circle');
+      c.setAttribute('cx', xPix(pt.x)); c.setAttribute('cy', yPix(pt[s.key]));
+      c.setAttribute('r', 3.5); c.setAttribute('fill', s.color);
+      svg.appendChild(c);
+    });
+  });
+})();
+</script>
+<script>
+(function () {
+  var svg = document.getElementById('chart2');
+  if (!svg) return;
+  var W = 640, H = 320, ML = 54, MR = 16, MT = 14, MB = 34;
+  var plotW = W - ML - MR, plotH = H - MT - MB;
+  var xs = [50, 100, 200, 400, 800];
+  function xPix(i) { return ML + (i / (xs.length - 1)) * plotW; }
+  var yMin = 100, yMax = 70000;
+  function yPix(v) {
+    var t = (Math.log10(v) - Math.log10(yMin)) / (Math.log10(yMax) - Math.log10(yMin));
+    return MT + plotH - t * plotH;
+  }
+  function ns(tag) { return document.createElementNS('http://www.w3.org/2000/svg', tag); }
+  var col = getComputedStyle(document.documentElement);
+  var cGris = col.getPropertyValue('--gris').trim() || '#62605a';
+  var cLinea = col.getPropertyValue('--linea').trim() || '#dcd8cf';
+
+  [100, 1000, 10000, 60000].forEach(function (v) {
+    var y = yPix(v);
+    var line = ns('line');
+    line.setAttribute('x1', ML); line.setAttribute('x2', W - MR);
+    line.setAttribute('y1', y); line.setAttribute('y2', y);
+    line.setAttribute('stroke', cLinea); line.setAttribute('stroke-width', 1);
+    svg.appendChild(line);
+    var label = ns('text');
+    label.setAttribute('x', ML - 8); label.setAttribute('y', y + 4);
+    label.setAttribute('text-anchor', 'end'); label.setAttribute('font-size', 11);
+    label.setAttribute('font-family', 'JetBrains Mono, monospace'); label.setAttribute('fill', cGris);
+    label.textContent = v >= 1000 ? (v / 1000) + 's' : v + 'ms';
+    svg.appendChild(label);
+  });
+  var obj = ns('line');
+  obj.setAttribute('x1', ML); obj.setAttribute('x2', W - MR);
+  obj.setAttribute('y1', yPix(1000)); obj.setAttribute('y2', yPix(1000));
+  obj.setAttribute('stroke', cGris); obj.setAttribute('stroke-width', 1.5);
+  obj.setAttribute('stroke-dasharray', '4 4'); obj.setAttribute('opacity', 0.55);
+  svg.appendChild(obj);
+  xs.forEach(function (x, i) {
+    var label = ns('text');
+    label.setAttribute('x', xPix(i)); label.setAttribute('y', H - MB + 20);
+    label.setAttribute('text-anchor', 'middle'); label.setAttribute('font-size', 11.5);
+    label.setAttribute('font-family', 'JetBrains Mono, monospace'); label.setAttribute('fill', cGris);
+    label.textContent = x;
+    svg.appendChild(label);
+  });
+  var xTitle = ns('text');
+  xTitle.setAttribute('x', ML + plotW / 2); xTitle.setAttribute('y', H - 4);
+  xTitle.setAttribute('text-anchor', 'middle'); xTitle.setAttribute('font-size', 11);
+  xTitle.setAttribute('font-family', 'JetBrains Mono, monospace'); xTitle.setAttribute('fill', cGris);
+  xTitle.textContent = 'usuarios concurrentes';
+  svg.appendChild(xTitle);
+
+  var series = [
+    { valores: [4215.1, 13836.2, 29938.9, 54328.2, 60000.9], color: col.getPropertyValue('--alerta').trim() || '#a33a2e' },
+    { valores: [5234.3, 19405.8, 42267.5, null, null], color: col.getPropertyValue('--pruebas').trim() || '#c97a12' },
+    { valores: [1607.9, 9632.1, 24380.6, 51662.7, 60000.7], color: '#8a7ec9' },
+    { valores: [190.7, 690.2, 4669.8, 14599.9, 19087.1], color: col.getPropertyValue('--exito').trim() || '#1a7a6b' }
+  ];
+  series.forEach(function (s) {
+    var puntos = s.valores.map(function (v, i) { return v == null ? null : [xPix(i), yPix(v)]; }).filter(Boolean);
+    var d = puntos.map(function (p, i) { return (i === 0 ? 'M' : 'L') + p[0] + ',' + p[1]; }).join(' ');
+    var path = ns('path');
+    path.setAttribute('d', d); path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', s.color); path.setAttribute('stroke-width', 2.5);
+    path.setAttribute('stroke-linejoin', 'round'); path.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(path);
+    puntos.forEach(function (p) {
+      var c = ns('circle');
+      c.setAttribute('cx', p[0]); c.setAttribute('cy', p[1]);
+      c.setAttribute('r', 3.5); c.setAttribute('fill', s.color);
+      svg.appendChild(c);
+    });
+  });
+})();
+</script>
+</body>
+</html>
