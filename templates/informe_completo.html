@@ -312,8 +312,9 @@
     {% for e in inf.experimentos %}{% for a in e.advertencias %}{% if not a.startswith('Corrida limpia') %}
       <tr><td><strong>{{ e.numero }}</strong></td><td style="font-size:14.5px;">{{ a }}</td></tr>
     {% endif %}{% endfor %}{% endfor %}
-      <tr><td>—</td><td style="font-size:14.5px;">La llamada a la IA se simuló con una espera fija de {{ inf.experimentos[0].config.ia_latencia_seg }} segundos, para no depender de la velocidad variable del servicio real ni gastar créditos. Es la demora típica observada, pero es una simulación.</td></tr>
-      <tr><td>—</td><td style="font-size:14.5px;">Todos los tiempos se cortan a los 60 segundos: donde dice <em>timeout</em>, el pedido nunca respondió, y el valor real es "más de 60 s", no 60.</td></tr>
+      {% for n in inf.notas_metodo %}
+      <tr><td>todos</td><td style="font-size:14.5px;">{{ n }}</td></tr>
+      {% endfor %}
     </tbody>
   </table>
   </div>

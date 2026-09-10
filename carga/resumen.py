@@ -13,11 +13,21 @@ import statistics
 import sys
 from pathlib import Path
 
-# Ventanas de medición "en régimen" de cada escalón: (nombre_escalon,
-# offset_inicio_seg, offset_fin_seg) tomado de los 30s de rampa + 3m30s de
-# sostén de carga/k6/test1_lecturas.js -- se mide solo el tramo sostenido.
+# Ventanas de medición "en régimen" de cada escalón de k6/test1_lecturas.js:
+# por escalón hay 30s de rampa y 3m30s de sostén, y se mide SOLO el sostén.
+#
+# Se derivan de las etapas en vez de escribirse a mano porque escritas a mano
+# estuvieron mal hasta el 2026-09-10: cada ventana empezaba y terminaba 30s
+# más tarde que la anterior, así que se iba corriendo y terminaba metiendo la
+# RAMPA DEL ESCALÓN SIGUIENTE adentro de la medición. El efecto era grande y
+# siempre en contra: el escalón de 200 del test 6 figuraba con p95 de
+# 1.455 ms cuando su sostén real dio 213 ms, y el de 400 con 7.766 ms cuando
+# fueron 2.124 ms. Si se cambian las etapas del script, cambiar acá también.
+RAMPA_SEG, SOSTEN_SEG = 30, 210
+_CICLO = RAMPA_SEG + SOSTEN_SEG
 ESCALONES_TEST1 = [
-    (50, 30, 270), (100, 300, 540), (200, 570, 810), (400, 840, 1080), (800, 1110, 1350),
+    (esc, i * _CICLO + RAMPA_SEG, (i + 1) * _CICLO)
+    for i, esc in enumerate([50, 100, 200, 400, 800])
 ]
 # Ráfagas de test2_recibos.js: (tamaño, offset_inicio_seg, offset_fin_seg) --
 # constant-vus, sin rampa, toda la ventana de 4 min es válida.

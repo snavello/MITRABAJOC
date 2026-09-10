@@ -1,0 +1,2 @@
+BASE_URL=https://mitrabajo-pruebas.onrender.com
+fecha_utc=2026-09-10T20:29:32+00:00

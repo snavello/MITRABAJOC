@@ -159,12 +159,8 @@ def construir_md() -> str:
         for adv in e["advertencias"]:
             if not adv.startswith("Corrida limpia"):
                 a(f"- **Test {e['numero']}:** {adv}")
-    ia = exps[0]["config"]["ia_latencia_seg"]
-    a(f"- La llamada a la IA se simuló con una espera fija de {ia} segundos, para no depender de")
-    a("  la velocidad variable del servicio real ni gastar créditos. Es la demora típica")
-    a("  observada, pero es una simulación.")
-    a("- Todos los tiempos se cortan a los 60 segundos: donde dice `timeout`, el pedido nunca")
-    a("  respondió.")
+    for n in inf["notas_metodo"]:
+        a(f"- **Todas las corridas:** {n}")
     a("")
 
     a("## Cómo se reproduce")

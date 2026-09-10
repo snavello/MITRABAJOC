@@ -48,6 +48,8 @@ PLANES = {
     "0.5c-512mb": {"vcpu": 0.5, "ram_mb": 512, "etiqueta": "0,5 vCPU / 512 MB"},
     "0.1c-256mb": {"vcpu": 0.1, "ram_mb": 256, "etiqueta": "0,1 vCPU / 256 MB"},
     "2c-4g": {"vcpu": 2.0, "ram_mb": 4096, "etiqueta": "2 vCPU / 4 GB"},
+    "4c-16g": {"vcpu": 4.0, "ram_mb": 16384, "etiqueta": "4 vCPU / 16 GB"},
+    "8c-16g": {"vcpu": 8.0, "ram_mb": 16384, "etiqueta": "8 vCPU / 16 GB"},
 }
 
 
@@ -364,6 +366,44 @@ EXPERIMENTOS = [
              "k6": "test2_recibos.json", "log": "servidor.log", "unidad": "recibos simultáneos en paralelo"},
         ],
     },
+    {
+        "numero": 6,
+        "nombre": "Ocho núcleos",
+        "subtitulo": "Web a 8 vCPU / 16 GB con 8 workers, Postgres a 4 vCPU / 16 GB",
+        "objetivo": "Medir la configuración que se evalúa contratar para producción, ya con "
+                    "el cambio de código puesto: cuánta concurrencia aguanta una sola "
+                    "instancia grande y dónde queda el nuevo techo.",
+        "config": {
+            "plan_web": "8c-16g", "plan_db": "4c-16g", "workers_uvicorn": 8,
+            "pool_size": 5, "max_overflow": 5, "ia": "en hilo aparte", "ia_latencia_seg": 15,
+        },
+        "advertencias": [
+            "Corrida limpia: sin despliegues ni reinicios a mitad de test.",
+            "Cambia dos cosas a la vez respecto del test 5: la CPU del web (de 2 a 8 vCPU, "
+            "con 8 workers en vez de 2) y la de la base (de 2 a 4 vCPU). Sirve para saber "
+            "qué rinde el conjunto que se va a contratar, pero si algo saliera raro no se "
+            "podría atribuir a una de las dos por separado.",
+            "A 800 concurrentes el generador de carga corre en un contenedor de 4 CPU y pudo "
+            "haber sido él, y no el servidor, el que puso el techo: la CPU del web bajó "
+            "respecto del escalón de 400 en vez de subir. El dato de 800 se lee como cota "
+            "inferior de lo que aguanta el servidor, no como su límite.",
+        ],
+        "fases": [
+            {"clave": "lecturas", "titulo": "Lecturas (navegación, sin subir nada)",
+             "detalle": "Usuarios concurrentes haciendo login y recorriendo la app. No toca la IA.",
+             "carpeta": "2026-09-10_2029", "serie": "lecturas",
+             "k6": "test1_lecturas.json", "log": "servidor.log", "unidad": "usuarios concurrentes"},
+            {"clave": "recibos", "titulo": "Subida de recibos (ráfagas simultáneas)",
+             "detalle": "Tiempo de cada subida de recibo, con 200 lectores navegando en paralelo.",
+             "carpeta": "2026-09-10_2029", "serie": "recibos",
+             "k6": "test2_recibos.json", "log": "servidor.log", "unidad": "recibos simultáneos"},
+            {"clave": "lectores_durante_recibos", "titulo": "Lectores mientras se suben recibos",
+             "detalle": "Los 200 lectores en paralelo, medidos durante las ráfagas. Es la medida "
+                        "de si una subida en curso ensucia la experiencia del resto.",
+             "carpeta": "2026-09-10_2029", "serie": "lectores_durante_recibos",
+             "k6": "test2_recibos.json", "log": "servidor.log", "unidad": "recibos simultáneos en paralelo"},
+        ],
+    },
 ]
 
 OBJETIVO_P95_MS = 1000
@@ -585,6 +625,41 @@ def armar_conclusion(exp_num: int, fases: list, base: list, previos: dict = None
             f"({'; '.join(ctrl)}): ese recorrido no toca el código que cambió, la diferencia "
             f"entra en la variación normal entre corridas y los dos escalones siguen "
             f"cumpliendo el objetivo."
+        )
+
+    if exp_num == 6:
+        # Contra el test 5: mismo código, cuatro veces la CPU del web.
+        t5 = (previos or {}).get(5, [])
+        lect, lectores = [], []
+        for esc in (100, 200, 400):
+            a, b = _fila(t5, "lecturas", esc), _fila(fases, "lecturas", esc)
+            lect.append(f"{esc} concurrentes {fmt_ms(a['p95'])} → {fmt_ms(b['p95'])}")
+        for esc in (10, 20):
+            a = _fila(t5, "lectores_durante_recibos", esc)
+            b = _fila(fases, "lectores_durante_recibos", esc)
+            lectores.append(f"{esc}: {fmt_ms(a['p95'])} → {fmt_ms(b['p95'])}")
+        f200 = _fila(fases, "lecturas", 200)
+        f400 = _fila(fases, "lecturas", 400)
+        r20 = _fila(fases, "recibos", 20)
+        cl = _fase(fases, "lecturas")["carga"]
+        rps200 = fmt_num(_fila(fases, "lecturas", 200)["rps"])
+        rps400 = fmt_num(_fila(fases, "lecturas", 400)["rps"])
+        return (
+            f"Con ocho núcleos y un worker por núcleo, el objetivo se cumple hasta "
+            f"{f200['escalon']} usuarios concurrentes: {fmt_ms(f200['p95'])} con "
+            f"{fmt_pct(f200['errores_pct'])} de error, contra los {fmt_ms(_fila(t5, 'lecturas', 200)['p95'])} "
+            f"del test 5. La mejora se ve en toda la curva de navegación: "
+            f"{'; '.join(lect)}. El throughput subió a {rps200} pedidos por segundo en 200 "
+            f"concurrentes y {rps400} en 400. "
+            f"Las subidas de recibos quedaron planas en {fmt_ms(r20['p95'])} con "
+            f"{fmt_pct(r20['errores_pct'])} de error hasta {r20['escalon']} simultáneas -- "
+            f"prácticamente el piso que impone la IA, que no baja por agregar CPU. "
+            f"Y los lectores que navegan durante esas ráfagas bajaron a menos de un cuarto "
+            f"de segundo ({'; '.join(lectores)}), la primera vez que también ellos cumplen "
+            f"el objetivo. "
+            f"El pico de CPU del web en la fase de lecturas fue {fmt_pct(cl['web']['cpu_pct'])} "
+            f"y el de la base {fmt_pct(cl['db']['cpu_pct'])}: a diferencia de todos los "
+            f"tests anteriores, esta configuración termina la corrida con margen."
         )
     return ""
 

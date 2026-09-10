@@ -129,9 +129,9 @@ def main():
     porcodigo = {e["numero"]: e for e in datos}
     base = porcodigo[1]
 
-    revisar(len(datos) == 5, f"Se esperaban 5 experimentos y hay {len(datos)}.")
-    revisar(sorted(porcodigo) == [1, 2, 3, 4, 5],
-            f"La numeración tiene que ser 1..5 y es {sorted(porcodigo)}.")
+    revisar(len(datos) == 6, f"Se esperaban 6 experimentos y hay {len(datos)}.")
+    revisar(sorted(porcodigo) == [1, 2, 3, 4, 5, 6],
+            f"La numeración tiene que ser 1..6 y es {sorted(porcodigo)}.")
 
     # Reconstrucción independiente desde las fuentes crudas.
     definiciones = {e["numero"]: e for e in C.EXPERIMENTOS}
@@ -196,7 +196,7 @@ def main():
         # 3. Ninguna cifra inventada en veredicto ni conclusión.
         # El test 5 aísla un cambio de código: compara contra el 4, que
         # corrió con la misma infraestructura, no contra la línea base.
-        referencia = porcodigo.get(4) if exp["numero"] == 5 else None
+        referencia = porcodigo.get(exp["numero"] - 1) if exp["numero"] in (5, 6) else None
         vocab = vocabulario_de(exp, base, referencia)
         for campo in ("veredicto", "conclusion"):
             for numero in numeros_del_texto(exp[campo]):
@@ -214,7 +214,7 @@ def main():
     # del dataset y que no cite ninguna cifra ajena en sus hallazgos.
     import informe as INF
     inf = INF.construir()
-    revisar(len(inf["experimentos"]) == 5, "El informe general no cubre los 5 tests.")
+    revisar(len(inf["experimentos"]) == 6, "El informe general no cubre los 6 tests.")
     for clave, comp, escalones in (("lecturas", inf["comparativa_lecturas"], INF.ESCALONES_LECTURAS),
                                    ("recibos", inf["comparativa_recibos"], INF.ESCALONES_RECIBOS)):
         for fila in comp:

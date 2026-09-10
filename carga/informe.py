@@ -291,29 +291,44 @@ def construir(ruta: Path = None) -> dict:
     l4_20 = _fila(t4, "lectores_durante_recibos", 20)
     l5_20 = _fila(por_num[5], "lectores_durante_recibos", 20) if 5 in por_num else None
 
-    resumen = (
-        f"Se probaron {len(exps)} configuraciones. La navegación quedó resuelta subiendo "
-        f"infraestructura: hoy se cumple el objetivo de p95 por debajo de 1 s con menos de "
-        f"1% de errores hasta {f100['escalon']} usuarios concurrentes "
-        f"({_fmt_ms(f50['p95'])} con {f50['escalon']} y {_fmt_ms(f100['p95'])} con "
-        f"{f100['escalon']}), y a {n800_u['escalon']} concurrentes se pasó de "
-        f"{_fmt_ms(n800_1['p95'])} con {_fmt_pct(n800_1['errores_pct'])} de error en la "
-        f"línea base a {_fmt_ms(n800_u['p95'])} con {_fmt_pct(n800_u['errores_pct'])}."
-    )
-    if r5_20:
-        resumen += (
-            f" La subida de recibos, en cambio, no se arregló con hardware sino con código: "
-            f"con {r5_20['escalon']} subidas simultáneas los errores pasaron de "
-            f"{_fmt_pct(r4_20['errores_pct'])} a {_fmt_pct(r5_20['errores_pct'])} y los "
-            f"lectores que navegaban en paralelo, de {_fmt_ms(l4_20['p95'])} a "
-            f"{_fmt_ms(l5_20['p95'])}, con la misma infraestructura exacta — lo único que "
-            f"cambió fue sacar la llamada a la IA de adentro del worker."
+    # El último escalón de navegación que CUMPLE en la corrida más reciente:
+    # escribirlo a mano fue un error una vez (decía "hasta 100" cuando el
+    # test 6 ya llegaba a 200), así que se calcula.
+    cumplen = [x["escalon"] for x in _fase(ultimo, "lecturas")["filas"] if x["cumple"]]
+    tope = max(cumplen) if cumplen else None
+    f_tope = _fila(ultimo, "lecturas", tope) if tope else None
+    r_u20 = _fila(ultimo, "recibos", 20)
+    l_u20 = _fila(ultimo, "lectores_durante_recibos", 20)
+
+    if tope:
+        resumen = (
+            f"Se probaron {len(exps)} configuraciones. Hoy la navegación cumple el objetivo "
+            f"—p95 por debajo de 1 s con menos de 1% de errores— hasta {tope} usuarios "
+            f"concurrentes, con {_fmt_ms(f_tope['p95'])} y "
+            f"{_fmt_pct(f_tope['errores_pct'])} de error; en la línea base, ese mismo escalón "
+            f"daba {_fmt_ms(_fila(t1, 'lecturas', tope)['p95'])}. A "
+            f"{n800_u['escalon']} concurrentes se pasó de {_fmt_ms(n800_1['p95'])} con "
+            f"{_fmt_pct(n800_1['errores_pct'])} de error a {_fmt_ms(n800_u['p95'])} con "
+            f"{_fmt_pct(n800_u['errores_pct'])}."
         )
     else:
+        resumen = (f"Se probaron {len(exps)} configuraciones y ninguna cumple todavía el "
+                   f"objetivo de p95 por debajo de 1 s con menos de 1% de errores.")
+
+    if r5_20:
         resumen += (
-            f" Lo que sigue sin resolverse son las ráfagas de subida de recibos: con "
-            f"{r4_20['escalon']} simultáneas falla el {_fmt_pct(r4_20['errores_pct'])} "
-            f"incluso con la mejor infraestructura."
+            f" La subida de recibos no se arregló con hardware sino con código: con "
+            f"{r4_20['escalon']} subidas simultáneas los errores pasaron de "
+            f"{_fmt_pct(r4_20['errores_pct'])} a {_fmt_pct(r5_20['errores_pct'])} sin tocar "
+            f"la infraestructura —lo único que cambió fue sacar la llamada a la IA de adentro "
+            f"del worker—."
+        )
+    if r_u20 and l_u20:
+        resumen += (
+            f" En la última corrida esas mismas ráfagas quedaron en {_fmt_ms(r_u20['p95'])} "
+            f"con {_fmt_pct(r_u20['errores_pct'])} de error, que es el piso que impone la "
+            f"propia IA, y los lectores que navegan mientras tanto bajaron a "
+            f"{_fmt_ms(l_u20['p95'])}."
         )
 
     return {
@@ -328,4 +343,30 @@ def construir(ruta: Path = None) -> dict:
         "recomendaciones": recomendaciones(exps),
         "advertencias": [a for e in exps for a in e["advertencias"]
                          if not a.startswith("Corrida limpia")],
+        "notas_metodo": notas_metodo(exps),
     }
+
+
+def notas_metodo(exps):
+    """Salvedades que valen para TODAS las corridas, no para una sola."""
+    ia = exps[0]["config"]["ia_latencia_seg"]
+    return [
+        ("Los números de navegación de este informe se recalcularon el 2026-09-10. "
+         "Hasta entonces, la ventana de medición de cada escalón estaba corrida y se "
+         "comía la rampa de aceleración del escalón siguiente, así que los tiempos "
+         "salían peores que los reales, y cada vez más a medida que subía la carga: "
+         "el escalón de 200 del test 6 figuraba en 1.455 ms cuando su tramo sostenido "
+         "dio 213 ms. El error afectaba a las seis corridas por igual y siempre en "
+         "contra, así que las comparaciones entre tests seguían siendo válidas, pero "
+         "los valores absolutos estaban inflados. Se corrigió en carga/resumen.py y se "
+         "regeneraron todas las corridas desde sus datos crudos."),
+        (f"La llamada a la IA se simuló con una espera fija de {ia} segundos, para no "
+         f"depender de la velocidad variable del servicio real ni gastar créditos. Es "
+         f"la demora típica observada, pero es una simulación."),
+        ("Todos los tiempos se cortan a los 60 segundos: donde dice timeout, el pedido "
+         "nunca respondió, y el valor real es \"más de 60 s\", no 60."),
+        ("El generador de carga corre en un contenedor de 4 CPU. En los escalones más "
+         "altos puede ser él, y no el servidor, el que ponga el techo: cuando la CPU "
+         "del servidor baja en vez de subir al pasar a más usuarios, ese escalón se "
+         "lee como cota inferior de lo que aguanta, no como su límite."),
+    ]
