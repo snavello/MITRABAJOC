@@ -174,6 +174,44 @@ def test_sin_pase_la_pagina_de_detalle_no_expone_nada():
     print("OK  test_sin_pase_la_pagina_de_detalle_no_expone_nada")
 
 
+def test_publicar_sin_pase_ni_pin_de_header_rechaza():
+    c = TestClient(main.app)  # sin cookie de pase
+    r = c.post("/entornos/tests/publicar", json={"tipo": "lecturas", "resumen": [{"escalon": 50}]})
+    assert r.status_code == 403
+    print("OK  test_publicar_sin_pase_ni_pin_de_header_rechaza")
+
+
+def test_publicar_con_pin_de_header_crea_test_listo():
+    """Correr.sh no tiene cookie de sesión -- se autentica con el PIN en
+    el header, no con el pase de landing."""
+    c = TestClient(main.app)  # sin cookie de pase, a propósito
+    resumen = [{"escalon": 50, "p50": 110.5, "p95": 190.7, "p99": 297.3, "errores_pct": 0.0, "rps": 20.12},
+               {"escalon": 100, "p50": 125.8, "p95": 690.2, "p99": 1170.7, "errores_pct": 0.0, "rps": 44.39}]
+    r = c.post("/entornos/tests/publicar", json={
+        "tipo": "lecturas", "duracion_seg": 240,
+        "config": {"workers_uvicorn": 2, "plan_web": "2c-4g", "plan_db": "2c-4g"},
+        "resumen": resumen, "terminado_en": "2026-09-10 01:14:00",
+    }, headers={"X-Pin-Entornos": "13571357"})
+    assert r.status_code == 200
+    tid = r.json()["id"]
+    fila = db.test_carga_por_id(tid)
+    assert fila["estado"] == "listo"
+    assert fila["resumen"] == resumen
+    assert fila["parametros"]["config"]["plan_web"] == "2c-4g"
+    # Publicado, aparece en la lista -- lo que faltaba antes con correr.sh.
+    assert any(f["id"] == tid for f in db.tests_carga_recientes(50))
+    print("OK  test_publicar_con_pin_de_header_crea_test_listo")
+
+
+def test_publicar_sin_resumen_rechaza():
+    c = TestClient(main.app)
+    r = c.post("/entornos/tests/publicar",
+               json={"tipo": "lecturas", "resumen": []},
+               headers={"X-Pin-Entornos": "13571357"})
+    assert r.status_code == 400
+    print("OK  test_publicar_sin_resumen_rechaza")
+
+
 if __name__ == "__main__":
     test_usuarios_carga_estres_lee_de_la_base_no_de_un_csv()
     test_modelo_test_carga_alta_actualizacion_y_lectura()

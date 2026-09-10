@@ -31,7 +31,7 @@ from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Cookie, Response, Body
+from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Cookie, Response, Body, Header
 from fastapi.responses import HTMLResponse, RedirectResponse, Response as BinResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -4469,6 +4469,42 @@ def entornos_tests_correr(request: Request, tipo: str = Form("lecturas"),
     else:
         db.fijar_job_test_carga(test_id, resultado.get("id", ""))
     return RedirectResponse("/entornos?aviso=test_lanzado#tests", status_code=303)
+
+
+@app.post("/entornos/tests/publicar")
+def entornos_tests_publicar(request: Request, payload: dict = Body(...),
+                             x_pin_entornos: str = Header(default="")):
+    """Publica en la lista de Tests un test ya corrido AFUERA de la app
+    (por ejemplo `carga/correr.sh` con k6, corrido a mano para un
+    experimento de infraestructura) -- sin esto, esos resultados solo
+    quedan en `carga/log/` y en el informe, y no aparecen en
+    /entornos#tests-pruebas junto a los disparados con el botón. Pedido
+    explícito de Sd (2026-09-10): "que terminado el test, todos sean
+    publicados", sea cual sea la herramienta que lo corrió.
+    Acepta el mismo pase de cookie que el resto de /entornos (para
+    publicar a mano desde el navegador/curl con sesión) O el PIN en el
+    header X-Pin-Entornos (para que `correr.sh` lo llame de punta a punta
+    sin login interactivo)."""
+    _exigir_landing()
+    if not (_pase_landing(request) or entorno.verificar_pin(x_pin_entornos)):
+        raise HTTPException(403, "Ingresá el PIN de la landing (cookie o header X-Pin-Entornos).")
+    if entorno.ENTORNO != "pruebas":
+        raise HTTPException(400, "El test de carga solo corre en Pruebas.")
+    tipo = payload.get("tipo")
+    if tipo not in ("lecturas", "recibos"):
+        raise HTTPException(400, "Tipo de test inválido.")
+    resumen = payload.get("resumen") or []
+    if not resumen:
+        raise HTTPException(400, "Falta el resumen del test (lista de escalones).")
+    test_id = db.crear_test_carga(tipo, {
+        "escalones": payload.get("escalones") or [f.get("escalon") for f in resumen],
+        "duracion_seg": payload.get("duracion_seg"),
+        "config": payload.get("config") or {},
+    })
+    db.actualizar_test_carga(
+        test_id, estado="listo", resumen=resumen,
+        terminado_en=payload.get("terminado_en") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    return {"id": test_id}
 
 
 @app.get("/api/entornos/tests")

@@ -6,10 +6,16 @@
 # Uso:
 #   BASE_URL=https://mitrabajo-pruebas.onrender.com \
 #   RENDER_API_KEY=rnd_xxx RENDER_WEB_SERVICE_ID=srv-xxx RENDER_DB_ID=dpg-xxx \
+#   PIN_ENTORNOS=xxxxxxxx CONFIG_JSON='{"workers_uvicorn":2,"plan_web":"2c-4g","plan_db":"2c-4g"}' \
 #   ./carga/correr.sh
 # RENDER_API_KEY/RENDER_WEB_SERVICE_ID/RENDER_DB_ID son opcionales -- sin
 # ellos, servidor.log queda con los campos de CPU/RAM/conexiones en null y
 # el informe deja marcado el hueco (pedir capturas de Metrics).
+# PIN_ENTORNOS también es opcional -- sin ella, al final NO se publica el
+# resultado en /entornos#tests-pruebas (solo queda en carga/log/ y hay que
+# avisar para que se agregue a mano, ver carga/publicar.py). Con ella
+# puesta, correr.sh publica solo apenas termina -- pedido de Sd
+# (2026-09-10): todo test corrido tiene que quedar visible ahí.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -71,5 +77,10 @@ trap - EXIT
 
 echo "=== Armando resumen.csv ==="
 python3 resumen.py "$CARPETA"
+
+echo "=== Publicando en /entornos#tests-pruebas ==="
+# Sin PIN_ENTORNOS, publicar.py avisa y no corta nada -- el resumen.csv y
+# el informe local ya quedaron armados igual arriba.
+BASE_URL="$BASE_URL" python3 publicar.py "$CARPETA" --config "${CONFIG_JSON:-{\}}"
 
 echo "Listo. Revisar $CARPETA/resumen.csv y completar carga/INFORME.md."
