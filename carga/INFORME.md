@@ -1,9 +1,20 @@
 # Informe de test de estrés -- app del trabajador (staging real)
 
-Corrido de punta a punta contra `https://mitrabajo-pruebas.onrender.com` el
-2026-09-09. Este documento está escrito para leerse sin necesitar el
-código al lado: cada término técnico se explica la primera vez que
-aparece, y hay un glosario al final por si hace falta volver a algo.
+Corrido de punta a punta contra `https://mitrabajo-pruebas.onrender.com`
+entre el 2026-09-09 y el 2026-09-10, en cuatro configuraciones distintas.
+Este documento está escrito para leerse sin necesitar el código al lado:
+cada término técnico se explica la primera vez que aparece, y hay un
+glosario al final por si hace falta volver a algo.
+
+**Resultado final, para quien solo lea esto**: con el servicio web en
+2 vCPU + `--workers 2` y Postgres en 2 vCPU, el p95 en 50 y 100
+concurrentes bajó a 190 ms y 690 ms -- la primera vez que se cumple el
+objetivo (p95 < 1 s, errores < 1%) en las cuatro corridas -- y a 800
+concurrentes pasó de un timeout total (60 s) a 19,1 s. La única
+recomendación que **no** mejoró con esta infraestructura fue la subida
+de recibos con ráfagas grandes (10-20 simultáneos): ahí sigue haciendo
+falta el cambio de código pendiente (IA asíncrona) -- ver el cuarto
+experimento y la sección E.
 
 Carpetas de datos crudos, si alguien quiere revisar los números fila por
 fila: `carga/log/2026-09-09_2034_test1_ok_test2_bug/` (Test 1 completo +
@@ -232,6 +243,50 @@ concurrentes) puede hacer falta más que lo que se vio acá; vale la pena
 probar un escalón intermedio si el costo de 2 vCPU/4GB para Postgres es
 una preocupación real, en vez de asumir directamente el más grande.
 
+### Cuarto experimento: web a 2 vCPU/4GB + `--workers 2`, Postgres 2 vCPU/4GB (2026-09-10)
+
+Con Postgres ya en `2c-4g`, se subió también el servicio **web** al mismo
+plan y se lo arrancó con `--workers 2` (1 worker por núcleo, sin
+sobre-suscribir como en el segundo experimento). Se repitieron el Test 1
+y el Test 2 completos.
+
+**Test 1 (lecturas) -- p95 en las cuatro configuraciones probadas hasta
+ahora:**
+
+| Escalón | Base (0,5vCPU/1w/PG chico) | +2 workers (0,5vCPU/PG chico) | +Postgres grande (0,5vCPU/1w) | **Web 2vCPU+2w / Postgres grande** |
+|---|---|---|---|---|
+| 50 | 4,2 s | 5,2 s | 1,6 s | **190 ms ✓** |
+| 100 | 13,8 s | 19,4 s | 9,6 s | **690 ms ✓** |
+| 200 | 29,9 s | 42,3 s | 24,4 s | **4,7 s** |
+| 400 | 54,3 s | (contaminado) | 51,7 s | **14,6 s** |
+| 800 | 60 s (timeout) | (contaminado) | 60 s (timeout) | **19,1 s** |
+
+**Por primera vez en las cuatro corridas, dos escalones cumplen el
+objetivo completo** (p95 < 1 s y errores < 1%): 50 concurrentes (190 ms)
+y 100 concurrentes (690 ms). El throughput también saltó de 12-18 rps a
+20-68 rps. Esto confirma con una medición limpia lo que el segundo
+experimento ya sugería por la negativa: **los workers dan paralelismo
+real solo cuando hay CPU de sobra para repartir -- y con la CPU
+correcta, el efecto es grande, no marginal.**
+
+**Test 2 (recibos) -- mejoró mucho menos.** Con ráfagas de 10 y 20
+recibos simultáneos, la latencia y los errores siguen siendo malos (p95
+de 60 s, 15-49% de error), muy parecido a las corridas anteriores.
+Tiene sentido: cada subida sigue bloqueando un worker entero durante los
+15 segundos de la IA simulada (síncrona, sin threadpool -- ver
+Diagnóstico); con solo 2 workers, una ráfaga de 10 o 20 subidas simuladas
+igual forma cola, sin importar cuánta CPU haya de sobra. **Esto confirma
+que la Recomendación de código (hacer async la llamada a la IA) sigue
+siendo necesaria -- la infraestructura sola no la resuelve**, y a esta
+altura es la única recomendación de esta lista sin confirmar con una
+medición real. Datos crudos en
+`carga/log/2026-09-10_web2c4g_2workers/`.
+
+**Nota de campo**: mientras corría este experimento, una visita manual al
+sitio se sintió notablemente lenta (hasta para volver al menú de inicio)
+-- coincide con la ventana del test y es exactamente la degradación que
+estos números documentan, no un problema aparte.
+
 ## E. Recomendaciones para HOY (plan actual, sin gastar más)
 
 **Actualización 2026-09-09, con un experimento real:** se probó `--workers
@@ -270,28 +325,30 @@ abajo queda así, revisado, e incorpora el tercer experimento (Postgres a
    hipótesis. Costo medio (además prorrateado por Render si se prueba
    temporalmente y se revierte después). **Al elegir el plan, priorizar
    CPU sobre RAM**, como ya mostraba el segundo experimento.
-2. **Código -- hacer asíncrona la llamada a Anthropic** (o correrla en un
+2. **Infraestructura -- subir el servicio web a un plan con vCPU entera
+   (1 o más) y `--workers` igual a los núcleos. Ya hecho y confirmado**
+   con el cuarto experimento: web a 2 vCPU + `--workers 2` (junto con el
+   Postgres del punto 1) le bajó el p95 del Test 1 de decenas de segundos
+   a **190 ms en 50 concurrentes y 690 ms en 100** -- las dos primeras
+   veces que se cumple el objetivo completo en las cuatro corridas -- y a
+   19,1 s en 800 (contra 60 s de timeout antes). Es la palanca que mueve
+   el techo de 400-800, tal como se esperaba. Costo alto pero es, junto
+   con el punto 1, la única recomendación de esta lista confirmada dos
+   veces con medición real.
+3. **Código -- hacer asíncrona la llamada a Anthropic** (o correrla en un
    "threadpool" -- un grupo de hilos aparte del principal -- mientras se
    migra al cliente async de Anthropic). Costo bajo, cambio acotado a
-   `extractor.py` y sus dos puntos de uso en `main.py`. Efecto esperado:
-   una subida de recibo deja de trabar el resto del tráfico mientras
-   dura -- resuelve el agravante de "recibos simultáneos", no el techo
-   general de concurrencia (ver el punto 3). Ningún experimento lo puso
-   en duda todavía porque no se probó -- sigue siendo una hipótesis
-   razonada, no una medición.
-3. **Infraestructura -- subir el servicio WEB a un plan con vCPU entera**
-   (1 vCPU o más) antes de volver a tocar `--workers`. El segundo
-   experimento (arriba) muestra que en 0,5 vCPU no hay margen para
-   repartir; recién con una CPU completa (o más) sumar workers va a
-   significar paralelismo real. **Esta es la única palanca que puede
-   mover el techo de 400-800 concurrentes** -- el tercer experimento
-   confirmó que Postgres grande, solo, no lo mueve. Costo medio: cambio
-   de plan en Render. **Repetir el Test 1 después de este cambio, con
-   `--workers` vuelto a 1 primero** (para medir el efecto de la CPU sola
-   del web) y **después con `--workers 2` sobre esa misma CPU nueva**
-   (para medir el efecto de los workers ya con margen real) -- son dos
-   variables distintas y conviene no mezclarlas en una sola corrida, como
-   pasó en el segundo experimento.
+   `extractor.py` y sus dos puntos de uso en `main.py`. **Es la única
+   recomendación de esta lista que el cuarto experimento mostró que
+   sigue haciendo falta**: con toda la CPU de los puntos 1 y 2 ya puesta,
+   el Test 2 (recibos) casi no mejoró en las ráfagas de 10 y 20 -- p95 de
+   60 s y hasta 49% de error, muy parecido a antes de subir nada. Cada
+   subida sigue bloqueando un worker entero los 15 segundos de la IA
+   síncrona, sin importar cuánta CPU haya de sobra. Efecto esperado: una
+   subida de recibo deja de trabar el resto del tráfico mientras dura.
+   Sigue siendo hipótesis razonada, no medición -- pero ahora es la única
+   sin confirmar, y la evidencia de por qué hace falta es más fuerte que
+   antes.
 
 ## F. Extrapolación para producción: ¿pocas instancias grandes o muchas chicas?
 
