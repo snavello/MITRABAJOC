@@ -301,17 +301,29 @@
   <p>Por qué importan los tres juntos: si p50 fuera bueno pero p95 malo, el sistema andaría bien la mayoría del tiempo con baches frecuentes. Lo que se ve en esta corrida es distinto: <strong>p50 y p95 suben juntos y parejo</strong> a medida que crece la carga — el sistema entero se pone lento parejo, consistente con que todos los pedidos hacen cola detrás de un único proceso.</p>
 
   <h2 id="config"><span class="num">A</span> Configuración probada</h2>
+  <p style="font-size:14.5px; color:var(--gris);">Este informe cubre <strong>cuatro corridas con infraestructura distinta</strong>, no una sola -- la tabla de abajo es la <strong>línea base</strong> (primer experimento, 2026-09-09), el punto de partida antes de subir nada. Los cambios de cada experimento posterior están en la sección E, con su propia tabla comparativa.</p>
   <div class="wrap-tabla">
   <table class="config-tabla">
-    <tr><th>Ítem</th><th>Valor</th><th>Qué significa</th></tr>
+    <tr><th>Ítem</th><th>Valor (línea base)</th><th>Qué significa</th></tr>
     <tr><td>Servicio web</td><td class="val">0,5 vCPU / 512 MB</td><td>El escalón más chico que ofrece Render para un servicio que atiende tráfico.</td></tr>
     <tr class="critico"><td>Postgres</td><td class="val">0,1 vCPU / 256 MB</td><td>La pieza más chica de <em>toda</em> la instalación.</td></tr>
     <tr class="critico"><td>Workers de uvicorn</td><td class="val">1</td><td>Un proceso independiente, capaz de atender en paralelo con otros. Con 1, todo pasa uno atrás del otro.</td></tr>
     <tr><td>Pool de Postgres</td><td class="val">5 + 5 overflow</td><td>Hasta 10 conexiones simultáneas a la base, por worker.</td></tr>
-    <tr class="critico"><td>Llamada a la IA</td><td class="val">síncrona</td><td>Bloquea todo el proceso mientras espera la respuesta — sin threadpool.</td></tr>
+    <tr class="critico"><td>Llamada a la IA</td><td class="val">síncrona</td><td>Bloquea todo el proceso mientras espera la respuesta — sin threadpool. Así estaba en esta línea base; corregido en la sección E.</td></tr>
     <tr><td>Latencia de IA simulada</td><td class="val">15 s</td><td>Tiempo típico real de esa llamada, sin gastar créditos ni depender de su velocidad variable.</td></tr>
   </table>
   </div>
+
+  <div class="wrap-tabla">
+  <table class="comp-tabla" style="margin-top:22px;">
+    <tr><th>Experimento</th><th>Web</th><th>Postgres</th><th>Workers</th><th>Tests publicados</th></tr>
+    <tr><td>1. Línea base (2026-09-09)</td><td class="val">0,5 vCPU/512MB</td><td class="val">0,1 vCPU/256MB</td><td class="val">1</td><td><a href="/entornos/tests/1">#1</a> · <a href="/entornos/tests/2">#2</a></td></tr>
+    <tr><td>2. +workers, sin CPU (descartado)</td><td class="val">0,5 vCPU/512MB</td><td class="val">0,1 vCPU/256MB</td><td class="val">2</td><td>no publicado, solo en el texto de abajo</td></tr>
+    <tr><td>3. Postgres grande</td><td class="val">0,5 vCPU/512MB</td><td class="val">2 vCPU/4GB</td><td class="val">1</td><td><a href="/entornos/tests/3">#3</a> · <a href="/entornos/tests/4">#4</a></td></tr>
+    <tr><td>4. Web grande + Postgres grande</td><td class="val">2 vCPU/4GB</td><td class="val">2 vCPU/4GB</td><td class="val">2</td><td><a href="/entornos/tests/5">#5</a> · <a href="/entornos/tests/6">#6</a></td></tr>
+  </table>
+  </div>
+  <p style="font-size:13px; color:var(--gris);">El experimento 2 (sumar workers sin sumar CPU) salió mal -- ver el primer recuadro de la sección E -- y por eso nunca se publicó como test en la lista: se probó, se descartó y se revirtió en la misma sesión.</p>
 
   <div class="hallazgo">
     <div class="kicker">El hallazgo que domina todo lo demás</div>
