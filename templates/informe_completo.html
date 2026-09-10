@@ -199,7 +199,7 @@
       <div class="n">{{ e.numero }}</div>
       <div class="nombre">{{ e.nombre }}</div>
       <span class="pill {{ 'si' if 'Cumple' in e.veredicto else 'no' }}">{{ 'Cumple' if 'Cumple' in e.veredicto else 'No cumple' }}</span>
-      <div class="cfg">web {{ e.config.plan_web_etiqueta }} · base {{ e.config.plan_db_etiqueta }} · {{ e.config.workers_uvicorn }} worker{{ 's' if e.config.workers_uvicorn > 1 }} · {{ e.inicio_ba }} a {{ e.fin_ba }}</div>
+      <div class="cfg">web {{ e.config.plan_web_etiqueta }} · base {{ e.config.plan_db_etiqueta }} · {{ e.config.workers_etiqueta or e.config.workers_uvicorn }} worker{{ 's' if e.config.workers_uvicorn > 1 }} · {{ e.inicio_ba }} a {{ e.fin_ba }}</div>
     </a>
     {% endfor %}
   </div>

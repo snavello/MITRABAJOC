@@ -201,7 +201,9 @@ def hallazgos(exps):
     # 6. Conexiones: lo que se creía y lo que muestran los datos.
     filas_conex = []
     for e in exps:
-        w = e["config"]["workers_uvicorn"]
+        # `--workers` es por instancia: lo que le importa a la base es la
+        # cantidad total de procesos, no la de cada instancia.
+        w = e["config"]["workers_uvicorn"] * e["config"].get("instancias", 1)
         techo = (e["config"]["pool_size"] + e["config"]["max_overflow"]) * w
         medido = max((f["carga"]["db"]["conexiones"] or 0) for f in e["fases"])
         filas_conex.append(f"test {e['numero']} ({w} worker{'s' if w > 1 else ''}): "

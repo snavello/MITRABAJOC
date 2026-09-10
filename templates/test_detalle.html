@@ -139,7 +139,7 @@
     <div class="grilla">
       <div class="dato"><div class="k">Servicio web</div><div class="v" style="font-size:14px;">{{ cfg.plan_web_etiqueta or cfg.plan_web or '—' }}</div></div>
       <div class="dato"><div class="k">Postgres</div><div class="v" style="font-size:14px;">{{ cfg.plan_db_etiqueta or cfg.plan_db or '—' }}</div></div>
-      <div class="dato"><div class="k">Workers uvicorn</div><div class="v">{{ cfg.workers_uvicorn if cfg.workers_uvicorn is not none else '—' }}</div></div>
+      <div class="dato"><div class="k">Workers uvicorn</div><div class="v" style="font-size:14px;">{{ cfg.workers_etiqueta or (cfg.workers_uvicorn if cfg.workers_uvicorn is not none else '—') }}</div></div>
       <div class="dato"><div class="k">Pool Postgres</div><div class="v">{% if cfg.pool_size is not none %}{{ cfg.pool_size }} + {{ cfg.max_overflow }}{% else %}—{% endif %}</div></div>
       <div class="dato"><div class="k">Llamada a la IA</div><div class="v" style="font-size:14px;">{{ cfg.ia or '—' }}</div></div>
       <div class="dato"><div class="k">Latencia IA simulada</div><div class="v">{% if cfg.ia_latencia_seg %}{{ cfg.ia_latencia_seg }} s{% else %}—{% endif %}</div></div>

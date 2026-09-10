@@ -143,6 +143,33 @@ def _pct(valor, nominal):
     return round(100 * valor / nominal, 1)
 
 
+def plan_escalado(clave: str, instancias: int = 1) -> dict:
+    """El nominal de un plan multiplicado por la cantidad de instancias.
+
+    El monitor SUMA la CPU y la RAM de todas las instancias del servicio
+    (ver monitor_servidor.py), así que con dos instancias de 4 vCPU el pico
+    medido puede llegar a 8. Contra el nominal de una sola instancia daría
+    un 200% sin sentido: el techo real del servicio es la suma."""
+    base = PLANES.get(clave, {})
+    if not base:
+        return {}
+    n = max(1, int(instancias or 1))
+    etiqueta = base["etiqueta"] if n == 1 else f"{base['etiqueta']} × {n} instancias"
+    return {"vcpu": round(base["vcpu"] * n, 4), "ram_mb": base["ram_mb"] * n,
+            "etiqueta": etiqueta}
+
+
+def etiqueta_workers(workers, instancias: int = 1) -> str:
+    """`--workers` es por instancia: con dos instancias de 4 workers corren
+    8 procesos en total. Mostrar solo "4" sería engañoso."""
+    if workers is None:
+        return "—"
+    n = max(1, int(instancias or 1))
+    if n == 1:
+        return str(workers)
+    return f"{workers} por instancia ({workers * n} en total)"
+
+
 def _lado(cpu, ram_bytes, plan: dict) -> dict:
     """Los máximos de un servicio contra el nominal de su plan. Se guardan
     también ya formateados (`cpu_txt`, `ram_txt`) para que la página no
@@ -162,9 +189,12 @@ def _lado(cpu, ram_bytes, plan: dict) -> dict:
     }
 
 
-def carga_legible(m: dict, plan_web: str, plan_db: str) -> dict:
-    """Traduce los máximos crudos a "X de Y (Z%)" para web y para Postgres."""
-    pw, pd = PLANES.get(plan_web, {}), PLANES.get(plan_db, {})
+def carga_legible(m: dict, plan_web: str, plan_db: str, instancias: int = 1) -> dict:
+    """Traduce los máximos crudos a "X de Y (Z%)" para web y para Postgres.
+
+    `instancias` es la cantidad de instancias del servicio web: su nominal
+    se multiplica por ese número (la base es siempre una sola instancia)."""
+    pw, pd = plan_escalado(plan_web, instancias), PLANES.get(plan_db, {})
     return {
         "muestras": m["muestras"],
         "web": _lado(m["cpu_web"], m["ram_web"], pw),
@@ -761,7 +791,8 @@ def construir() -> list:
                 "duracion_min": round((hasta - desde).total_seconds() / 60, 1),
                 "filas": filas,
                 "muestras_bajas": n_max < MUESTRAS_MINIMAS,
-                "carga": carga_legible(m, cfg["plan_web"], cfg["plan_db"]),
+                "carga": carga_legible(m, cfg["plan_web"], cfg["plan_db"],
+                                       cfg.get("instancias", 1)),
                 "carga_medida": m["cpu_web"] is not None or m["cpu_db"] is not None,
                 "fuente": f"carga/log/{f['carpeta']}/",
             })
@@ -773,9 +804,13 @@ def construir() -> list:
             "inicio_ba": inicio.astimezone(BUENOS_AIRES).strftime("%Y-%m-%d %H:%M"),
             "fin_ba": fin.astimezone(BUENOS_AIRES).strftime("%H:%M"),
             "config": {
+                "instancias": 1,
                 **cfg,
-                "plan_web_etiqueta": PLANES[cfg["plan_web"]]["etiqueta"],
+                "plan_web_etiqueta": plan_escalado(
+                    cfg["plan_web"], cfg.get("instancias", 1))["etiqueta"],
                 "plan_db_etiqueta": PLANES[cfg["plan_db"]]["etiqueta"],
+                "workers_etiqueta": etiqueta_workers(
+                    cfg.get("workers_uvicorn"), cfg.get("instancias", 1)),
             },
             "advertencias": exp["advertencias"],
             "fases": fases,

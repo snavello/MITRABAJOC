@@ -8,6 +8,7 @@
     "inicio_ba": "2026-09-09 17:34",
     "fin_ba": "18:40",
     "config": {
+      "instancias": 1,
       "plan_web": "0.5c-512mb",
       "plan_db": "0.1c-256mb",
       "workers_uvicorn": 1,
@@ -16,7 +17,8 @@
       "ia": "síncrona",
       "ia_latencia_seg": 15,
       "plan_web_etiqueta": "0,5 vCPU / 512 MB",
-      "plan_db_etiqueta": "0,1 vCPU / 256 MB"
+      "plan_db_etiqueta": "0,1 vCPU / 256 MB",
+      "workers_etiqueta": "1"
     },
     "advertencias": [
       "El monitor de servidor todavía tenía un error de formato de fecha contra la API de Render y no pudo tomar ninguna métrica durante la fase de lecturas: ahí CPU y RAM figuran como no medidos. Se arregló antes de las fases siguientes y de los demás experimentos.",
@@ -375,6 +377,7 @@
     "inicio_ba": "2026-09-09 19:46",
     "fin_ba": "20:07",
     "config": {
+      "instancias": 1,
       "plan_web": "0.5c-512mb",
       "plan_db": "0.1c-256mb",
       "workers_uvicorn": 2,
@@ -383,7 +386,8 @@
       "ia": "síncrona",
       "ia_latencia_seg": 15,
       "plan_web_etiqueta": "0,5 vCPU / 512 MB",
-      "plan_db_etiqueta": "0,1 vCPU / 256 MB"
+      "plan_db_etiqueta": "0,1 vCPU / 256 MB",
+      "workers_etiqueta": "2"
     },
     "advertencias": [
       "A mitad de la corrida se desplegó código nuevo y el servidor se reinició. Los escalones de 400 y 800 quedaron contaminados (80% y 49% de error, con tiempos que no son comparables) y NO se usan para ninguna conclusión: solo se muestran marcados como inválidos.",
@@ -497,6 +501,7 @@
     "inicio_ba": "2026-09-09 20:41",
     "fin_ba": "21:21",
     "config": {
+      "instancias": 1,
       "plan_web": "0.5c-512mb",
       "plan_db": "2c-4g",
       "workers_uvicorn": 1,
@@ -505,7 +510,8 @@
       "ia": "síncrona",
       "ia_latencia_seg": 15,
       "plan_web_etiqueta": "0,5 vCPU / 512 MB",
-      "plan_db_etiqueta": "2 vCPU / 4 GB"
+      "plan_db_etiqueta": "2 vCPU / 4 GB",
+      "workers_etiqueta": "1"
     },
     "advertencias": [
       "Corrida limpia: sin despliegues ni reinicios a mitad de test."
@@ -781,6 +787,7 @@
     "inicio_ba": "2026-09-09 21:34",
     "fin_ba": "22:14",
     "config": {
+      "instancias": 1,
       "plan_web": "2c-4g",
       "plan_db": "2c-4g",
       "workers_uvicorn": 2,
@@ -789,7 +796,8 @@
       "ia": "síncrona",
       "ia_latencia_seg": 15,
       "plan_web_etiqueta": "2 vCPU / 4 GB",
-      "plan_db_etiqueta": "2 vCPU / 4 GB"
+      "plan_db_etiqueta": "2 vCPU / 4 GB",
+      "workers_etiqueta": "2"
     },
     "advertencias": [
       "Corrida limpia: sin despliegues ni reinicios a mitad de test.",
@@ -1066,6 +1074,7 @@
     "inicio_ba": "2026-09-10 12:42",
     "fin_ba": "13:21",
     "config": {
+      "instancias": 1,
       "plan_web": "2c-4g",
       "plan_db": "2c-4g",
       "workers_uvicorn": 2,
@@ -1074,7 +1083,8 @@
       "ia": "en hilo aparte",
       "ia_latencia_seg": 15,
       "plan_web_etiqueta": "2 vCPU / 4 GB",
-      "plan_db_etiqueta": "2 vCPU / 4 GB"
+      "plan_db_etiqueta": "2 vCPU / 4 GB",
+      "workers_etiqueta": "2"
     },
     "advertencias": [
       "Corrida limpia: sin despliegues ni reinicios a mitad de test.",
@@ -1351,6 +1361,7 @@
     "inicio_ba": "2026-09-10 17:29",
     "fin_ba": "18:09",
     "config": {
+      "instancias": 1,
       "plan_web": "8c-16g",
       "plan_db": "4c-16g",
       "workers_uvicorn": 8,
@@ -1359,7 +1370,8 @@
       "ia": "en hilo aparte",
       "ia_latencia_seg": 15,
       "plan_web_etiqueta": "8 vCPU / 16 GB",
-      "plan_db_etiqueta": "4 vCPU / 16 GB"
+      "plan_db_etiqueta": "4 vCPU / 16 GB",
+      "workers_etiqueta": "8"
     },
     "advertencias": [
       "Corrida limpia: sin despliegues ni reinicios a mitad de test.",
@@ -1637,6 +1649,7 @@
     "inicio_ba": "2026-09-10 18:39",
     "fin_ba": "19:19",
     "config": {
+      "instancias": 1,
       "plan_web": "4c-8g",
       "plan_db": "4c-16g",
       "workers_uvicorn": 4,
@@ -1645,7 +1658,8 @@
       "ia": "en hilo aparte",
       "ia_latencia_seg": 15,
       "plan_web_etiqueta": "4 vCPU / 8 GB",
-      "plan_db_etiqueta": "4 vCPU / 16 GB"
+      "plan_db_etiqueta": "4 vCPU / 16 GB",
+      "workers_etiqueta": "4"
     },
     "advertencias": [
       "Corrida limpia: sin despliegues ni reinicios a mitad de test.",

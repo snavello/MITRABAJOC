@@ -98,8 +98,11 @@ def vocabulario_de(exp: dict, base: dict, *referencias) -> set:
             agregar(d["cpu_usado"], d["cpu_nominal"], d["cpu_pct"],
                     d["ram_mb"], d["ram_nominal_mb"], d["ram_pct"], d.get("conexiones"))
         agregar(c["muestras"])
+    inst = exp["config"].get("instancias", 1)
     agregar(exp["config"].get("ia_latencia_seg"), exp["config"].get("workers_uvicorn"),
-            exp["config"].get("pool_size"), exp["config"].get("max_overflow"))
+            exp["config"].get("pool_size"), exp["config"].get("max_overflow"), inst)
+    if exp["config"].get("workers_uvicorn") is not None:
+        agregar(exp["config"]["workers_uvicorn"] * inst)
 
     # Comparaciones contra la línea base: el valor viejo y la variación.
     for fase_b in base["fases"]:

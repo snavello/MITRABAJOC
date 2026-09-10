@@ -66,7 +66,7 @@ def construir_md() -> str:
         cumple = "cumple" if "Cumple" in e["veredicto"] else "no cumple"
         a(f"| {e['numero']} | {e['nombre']} | {e['inicio_ba']} a {e['fin_ba']} | "
           f"{e['config']['plan_web_etiqueta']} | {e['config']['plan_db_etiqueta']} | "
-          f"{e['config']['workers_uvicorn']} | {cumple} |")
+          f"{e['config'].get('workers_etiqueta') or e['config']['workers_uvicorn']} | {cumple} |")
     a("")
     for e in exps:
         a(f"**Test {e['numero']} — {e['nombre']}.** {e['objetivo']} {e['veredicto']}")
