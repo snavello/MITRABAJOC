@@ -35,6 +35,7 @@ from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Coo
 from fastapi.responses import HTMLResponse, RedirectResponse, Response as BinResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 from sqlmodel import select
 
 import db
@@ -408,7 +409,10 @@ def home(request: Request):
 async def api_leer(request: Request, archivo: UploadFile = File(...)):
     contenido = await archivo.read()
     try:
-        recibo, uso = extraer(contenido, archivo.content_type)
+        # La llamada a la IA es sincrónica y puede tardar varios segundos --
+        # se corre en un hilo aparte para no bloquear el worker de FastAPI
+        # (y con él, a todos los demás pedidos) mientras se espera la respuesta.
+        recibo, uso = await run_in_threadpool(extraer, contenido, archivo.content_type)
     except Exception:
         raise ErrorApp("E-RECIBO-01")
     sid = sindicato_activo_trabajador(request)
@@ -613,7 +617,7 @@ async def api_aportes(request: Request, archivo: UploadFile = File(...)):
     resuelto) para que no se pierda al navegar o recargar la página."""
     contenido = await archivo.read()
     try:
-        datos, uso = extraer_aportes(contenido, archivo.content_type)
+        datos, uso = await run_in_threadpool(extraer_aportes, contenido, archivo.content_type)
     except Exception:
         raise ErrorApp("E-APORTE-01")
     cuil = request.cookies.get("cuil_trab", "")
@@ -2849,7 +2853,7 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
     for archivo in archivos:
         contenido = await archivo.read()
         try:
-            recibo, uso = extraer(contenido, archivo.content_type)
+            recibo, uso = await run_in_threadpool(extraer, contenido, archivo.content_type)
         except Exception:
             fallidos += 1
             continue
