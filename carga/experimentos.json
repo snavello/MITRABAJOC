@@ -1,0 +1,1016 @@
+[
+  {
+    "numero": 1,
+    "nombre": "Línea base",
+    "subtitulo": "Todo en el plan más chico, un solo worker",
+    "objetivo": "Medir el punto de partida: hasta dónde aguanta la configuración más barata posible, sin tocar nada.",
+    "fecha_ba": "2026-09-09",
+    "inicio_ba": "2026-09-09 17:34",
+    "fin_ba": "18:40",
+    "config": {
+      "plan_web": "0.5c-512mb",
+      "plan_db": "0.1c-256mb",
+      "workers_uvicorn": 1,
+      "pool_size": 5,
+      "max_overflow": 5,
+      "ia": "síncrona",
+      "ia_latencia_seg": 15,
+      "plan_web_etiqueta": "0,5 vCPU / 512 MB",
+      "plan_db_etiqueta": "0,1 vCPU / 256 MB"
+    },
+    "advertencias": [
+      "El monitor de servidor todavía tenía un error de formato de fecha contra la API de Render y no pudo tomar ninguna métrica durante la fase de lecturas: ahí CPU y RAM figuran como no medidos. Se arregló antes de las fases siguientes y de los demás experimentos.",
+      "A mitad de la fase de recibos se desplegó código nuevo, lo que reinició el servidor. Los escalones de 2 y 5 recibos no deberían verse afectados; los de 10 y 20 pueden traer ruido extra."
+    ],
+    "fases": [
+      {
+        "clave": "lecturas",
+        "titulo": "Lecturas (navegación, sin subir nada)",
+        "detalle": "Usuarios concurrentes haciendo login y recorriendo la app. No toca la IA.",
+        "unidad": "usuarios concurrentes",
+        "inicio_ba": "2026-09-09 17:34",
+        "fin_ba": "17:55",
+        "duracion_min": 20.7,
+        "filas": [
+          {
+            "escalon": 50,
+            "p50": 1715.6,
+            "p95": 4215.1,
+            "p99": 6427.9,
+            "errores_pct": 0.0,
+            "rps": 11.82,
+            "n": 2836,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 100,
+            "p50": 6126.8,
+            "p95": 13836.2,
+            "p99": 17913.2,
+            "errores_pct": 0.0,
+            "rps": 11.97,
+            "n": 2873,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 200,
+            "p50": 16101.3,
+            "p95": 29938.9,
+            "p99": 33339.7,
+            "errores_pct": 0.07,
+            "rps": 12.04,
+            "n": 2889,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 400,
+            "p50": 31862.9,
+            "p95": 54328.2,
+            "p99": 60000.7,
+            "errores_pct": 25.4,
+            "rps": 14.6,
+            "n": 3504,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 800,
+            "p50": 60000.7,
+            "p95": 60001.1,
+            "p99": 60001.3,
+            "errores_pct": 100.0,
+            "rps": 6.06,
+            "n": 1454,
+            "valido": true,
+            "cumple": false
+          }
+        ],
+        "muestras_bajas": false,
+        "carga": {
+          "muestras": 40,
+          "web": {
+            "cpu_usado": null,
+            "cpu_nominal": 0.5,
+            "cpu_pct": null,
+            "ram_mb": null,
+            "ram_nominal_mb": 512,
+            "ram_pct": null
+          },
+          "db": {
+            "cpu_usado": null,
+            "cpu_nominal": 0.1,
+            "cpu_pct": null,
+            "ram_mb": null,
+            "ram_nominal_mb": 256,
+            "ram_pct": null,
+            "conexiones": null
+          }
+        },
+        "carga_medida": false,
+        "fuente": "carga/log/2026-09-09_2034_test1_ok_test2_bug/"
+      },
+      {
+        "clave": "lectores_solos",
+        "titulo": "200 lectores solos (sin ninguna subida)",
+        "detalle": "Corrida en la que, por un error del script, no se subió ningún recibo: quedaron 200 lectores puros. Sirve como control -- mide el techo del servidor sin la IA de por medio.",
+        "unidad": "ráfaga prevista (no hubo subidas)",
+        "inicio_ba": "2026-09-09 18:00",
+        "fin_ba": "18:19",
+        "duracion_min": 19.0,
+        "filas": [
+          {
+            "escalon": 2,
+            "p50": 20548.3,
+            "p95": 29560.9,
+            "p99": 34438.7,
+            "errores_pct": 0.0,
+            "rps": 4.86,
+            "n": 1167,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 5,
+            "p50": 18711.7,
+            "p95": 27056.8,
+            "p99": 31642.0,
+            "errores_pct": 0.0,
+            "rps": 5.15,
+            "n": 1236,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 10,
+            "p50": 18826.6,
+            "p95": 26695.5,
+            "p99": 32409.2,
+            "errores_pct": 0.08,
+            "rps": 5.47,
+            "n": 1314,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 20,
+            "p50": 19883.1,
+            "p95": 27667.9,
+            "p99": 33995.8,
+            "errores_pct": 0.0,
+            "rps": 5.2,
+            "n": 1247,
+            "valido": true,
+            "cumple": false
+          }
+        ],
+        "muestras_bajas": false,
+        "carga": {
+          "muestras": 37,
+          "web": {
+            "cpu_usado": 0.5,
+            "cpu_nominal": 0.5,
+            "cpu_pct": 100.0,
+            "ram_mb": 319,
+            "ram_nominal_mb": 512,
+            "ram_pct": 62.3
+          },
+          "db": {
+            "cpu_usado": 0.1,
+            "cpu_nominal": 0.1,
+            "cpu_pct": 100.0,
+            "ram_mb": 142,
+            "ram_nominal_mb": 256,
+            "ram_pct": 55.5,
+            "conexiones": 10
+          }
+        },
+        "carga_medida": true,
+        "fuente": "carga/log/2026-09-09_2034_test1_ok_test2_bug/"
+      },
+      {
+        "clave": "recibos",
+        "titulo": "Subida de recibos (ráfagas simultáneas)",
+        "detalle": "Tiempo de cada subida de recibo, con 200 lectores navegando en paralelo.",
+        "unidad": "recibos simultáneos",
+        "inicio_ba": "2026-09-09 18:21",
+        "fin_ba": "18:40",
+        "duracion_min": 19.0,
+        "filas": [
+          {
+            "escalon": 2,
+            "p50": 15256.5,
+            "p95": 15707.6,
+            "p99": 15813.9,
+            "errores_pct": 0.0,
+            "rps": 0.03,
+            "n": 6,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 5,
+            "p50": 15254.9,
+            "p95": 45381.0,
+            "p99": 45381.3,
+            "errores_pct": 0.0,
+            "rps": 0.04,
+            "n": 10,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 10,
+            "p50": 15300.8,
+            "p95": 60000.5,
+            "p99": 60000.6,
+            "errores_pct": 27.27,
+            "rps": 0.05,
+            "n": 11,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 20,
+            "p50": 45132.1,
+            "p95": 60000.9,
+            "p99": 60000.9,
+            "errores_pct": 50.0,
+            "rps": 0.04,
+            "n": 10,
+            "valido": true,
+            "cumple": false
+          }
+        ],
+        "muestras_bajas": true,
+        "carga": {
+          "muestras": 37,
+          "web": {
+            "cpu_usado": 0.5,
+            "cpu_nominal": 0.5,
+            "cpu_pct": 100.0,
+            "ram_mb": 567,
+            "ram_nominal_mb": 512,
+            "ram_pct": 110.7
+          },
+          "db": {
+            "cpu_usado": 0.1,
+            "cpu_nominal": 0.1,
+            "cpu_pct": 100.0,
+            "ram_mb": 162,
+            "ram_nominal_mb": 256,
+            "ram_pct": 63.3,
+            "conexiones": 15
+          }
+        },
+        "carga_medida": true,
+        "fuente": "carga/log/2026-09-09_2100_test2_retry/"
+      },
+      {
+        "clave": "lectores_durante_recibos",
+        "titulo": "Lectores mientras se suben recibos",
+        "detalle": "Los mismos 200 lectores de arriba, pero medidos durante las ráfagas: muestra cuánto le pega al resto del tráfico una subida en curso.",
+        "unidad": "recibos simultáneos en paralelo",
+        "inicio_ba": "2026-09-09 18:21",
+        "fin_ba": "18:40",
+        "duracion_min": 19.0,
+        "filas": [
+          {
+            "escalon": 2,
+            "p50": 31927.5,
+            "p95": 47379.5,
+            "p99": 58094.8,
+            "errores_pct": 1.57,
+            "rps": 2.12,
+            "n": 508,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 5,
+            "p50": 31871.4,
+            "p95": 60000.8,
+            "p99": 60001.1,
+            "errores_pct": 12.82,
+            "rps": 2.8,
+            "n": 671,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 10,
+            "p50": 33661.9,
+            "p95": 60000.9,
+            "p99": 60001.1,
+            "errores_pct": 22.61,
+            "rps": 2.17,
+            "n": 522,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 20,
+            "p50": 52488.5,
+            "p95": 60001.0,
+            "p99": 60001.1,
+            "errores_pct": 44.92,
+            "rps": 1.85,
+            "n": 443,
+            "valido": true,
+            "cumple": false
+          }
+        ],
+        "muestras_bajas": false,
+        "carga": {
+          "muestras": 37,
+          "web": {
+            "cpu_usado": 0.5,
+            "cpu_nominal": 0.5,
+            "cpu_pct": 100.0,
+            "ram_mb": 567,
+            "ram_nominal_mb": 512,
+            "ram_pct": 110.7
+          },
+          "db": {
+            "cpu_usado": 0.1,
+            "cpu_nominal": 0.1,
+            "cpu_pct": 100.0,
+            "ram_mb": 162,
+            "ram_nominal_mb": 256,
+            "ram_pct": 63.3,
+            "conexiones": 15
+          }
+        },
+        "carga_medida": true,
+        "fuente": "carga/log/2026-09-09_2100_test2_retry/"
+      }
+    ],
+    "veredicto": "Ningún escalón cumplió el objetivo (p95 por debajo de 1 s y menos de 1% de errores).",
+    "conclusion": "El cuello de botella es el servicio web, no la IA: con 200 lectores puros —sin subir un solo recibo, sin tocar la IA— el p95 ya queda entre 26,7 s y 29,6 s, prácticamente lo mismo que el escalón de 200 del test de lecturas (29,9 s). Los dos servicios estaban al tope de su CPU: el web al 100,0% de sus 0,5 vCPU y Postgres al 100,0% de sus 0,1 vCPU con apenas 10 conexiones, mientras la RAM de la base no pasó del 55,5% — para esta app hace falta CPU en la base, no memoria. Las ráfagas de recibos revientan temprano: con 10 simultáneos ya falla el 27,3% de las subidas."
+  },
+  {
+    "numero": 2,
+    "nombre": "Más workers, misma CPU",
+    "subtitulo": "Dos workers sobre los mismos 0,5 vCPU",
+    "objetivo": "Probar si repartir el trabajo en dos procesos mejora la concurrencia sin gastar un peso más de infraestructura.",
+    "fecha_ba": "2026-09-09",
+    "inicio_ba": "2026-09-09 19:46",
+    "fin_ba": "20:07",
+    "config": {
+      "plan_web": "0.5c-512mb",
+      "plan_db": "0.1c-256mb",
+      "workers_uvicorn": 2,
+      "pool_size": 5,
+      "max_overflow": 5,
+      "ia": "síncrona",
+      "ia_latencia_seg": 15,
+      "plan_web_etiqueta": "0,5 vCPU / 512 MB",
+      "plan_db_etiqueta": "0,1 vCPU / 256 MB"
+    },
+    "advertencias": [
+      "A mitad de la corrida se desplegó código nuevo y el servidor se reinició. Los escalones de 400 y 800 quedaron contaminados (80% y 49% de error, con tiempos que no son comparables) y NO se usan para ninguna conclusión: solo se muestran marcados como inválidos.",
+      "Por ese mismo despliegue convivieron dos juegos de procesos durante unos minutos, así que los picos de CPU y RAM del web de esta corrida están inflados y no describen el costo real de dos workers.",
+      "Solo se corrió la fase de lecturas. No hay fase de recibos en este experimento."
+    ],
+    "fases": [
+      {
+        "clave": "lecturas",
+        "titulo": "Lecturas (navegación, sin subir nada)",
+        "detalle": "Mismo recorrido que la línea base, para comparar contra ella.",
+        "unidad": "usuarios concurrentes",
+        "inicio_ba": "2026-09-09 19:46",
+        "fin_ba": "20:07",
+        "duracion_min": 20.7,
+        "filas": [
+          {
+            "escalon": 50,
+            "p50": 1865.1,
+            "p95": 5234.3,
+            "p99": 7607.9,
+            "errores_pct": 0.0,
+            "rps": 11.09,
+            "n": 2662,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 100,
+            "p50": 5951.3,
+            "p95": 19405.8,
+            "p99": 27646.4,
+            "errores_pct": 0.18,
+            "rps": 11.35,
+            "n": 2724,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 200,
+            "p50": 21640.4,
+            "p95": 42267.5,
+            "p99": 48811.9,
+            "errores_pct": 3.49,
+            "rps": 11.33,
+            "n": 2719,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 400,
+            "p50": 644.4,
+            "p95": 51362.3,
+            "p99": 60000.6,
+            "errores_pct": 80.34,
+            "rps": 43.48,
+            "n": 10434,
+            "valido": false,
+            "cumple": false
+          },
+          {
+            "escalon": 800,
+            "p50": 43556.9,
+            "p95": 60000.9,
+            "p99": 60001.1,
+            "errores_pct": 48.97,
+            "rps": 8.09,
+            "n": 1942,
+            "valido": false,
+            "cumple": false
+          }
+        ],
+        "muestras_bajas": false,
+        "carga": {
+          "muestras": 40,
+          "web": {
+            "cpu_usado": 0.804,
+            "cpu_nominal": 0.5,
+            "cpu_pct": 160.9,
+            "ram_mb": 886,
+            "ram_nominal_mb": 512,
+            "ram_pct": 173.0
+          },
+          "db": {
+            "cpu_usado": 0.1,
+            "cpu_nominal": 0.1,
+            "cpu_pct": 100.0,
+            "ram_mb": 249,
+            "ram_nominal_mb": 256,
+            "ram_pct": 97.3,
+            "conexiones": 21
+          }
+        },
+        "carga_medida": true,
+        "fuente": "carga/log/2026-09-09_2workers/"
+      }
+    ],
+    "veredicto": "Ningún escalón cumplió el objetivo (p95 por debajo de 1 s y menos de 1% de errores).",
+    "conclusion": "Empeoró, y por eso se descartó. Contra la línea base, en todos los escalones válidos el tiempo subió: 50 concurrentes 4,2 s → 5,2 s (+24,2%); 100 concurrentes 13,8 s → 19,4 s (+40,3%); 200 concurrentes 29,9 s → 42,3 s (+41,2%). Los errores a 200 concurrentes pasaron de 0,07% a 3,5%. Dos procesos peleando por media vCPU no dan paralelismo real: solo agregan cambio de contexto y memoria. La conclusión que deja es que workers y CPU tienen que subir juntos — sumar uno solo de los dos no sirve. Se volvió a 1 worker inmediatamente después."
+  },
+  {
+    "numero": 3,
+    "nombre": "Postgres grande",
+    "subtitulo": "Base de datos a 2 vCPU / 4 GB, servicio web sin tocar",
+    "objetivo": "Aislar cuánto del problema venía de la base de datos: se sube solo Postgres y se deja el web exactamente como estaba.",
+    "fecha_ba": "2026-09-09",
+    "inicio_ba": "2026-09-09 20:41",
+    "fin_ba": "21:21",
+    "config": {
+      "plan_web": "0.5c-512mb",
+      "plan_db": "2c-4g",
+      "workers_uvicorn": 1,
+      "pool_size": 5,
+      "max_overflow": 5,
+      "ia": "síncrona",
+      "ia_latencia_seg": 15,
+      "plan_web_etiqueta": "0,5 vCPU / 512 MB",
+      "plan_db_etiqueta": "2 vCPU / 4 GB"
+    },
+    "advertencias": [
+      "Corrida limpia: sin despliegues ni reinicios a mitad de test."
+    ],
+    "fases": [
+      {
+        "clave": "lecturas",
+        "titulo": "Lecturas (navegación, sin subir nada)",
+        "detalle": "Mismo recorrido que la línea base, para comparar contra ella.",
+        "unidad": "usuarios concurrentes",
+        "inicio_ba": "2026-09-09 20:41",
+        "fin_ba": "21:02",
+        "duracion_min": 20.7,
+        "filas": [
+          {
+            "escalon": 50,
+            "p50": 189.5,
+            "p95": 1607.9,
+            "p99": 3522.6,
+            "errores_pct": 0.05,
+            "rps": 17.79,
+            "n": 4269,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 100,
+            "p50": 3310.3,
+            "p95": 9632.1,
+            "p99": 12773.3,
+            "errores_pct": 0.0,
+            "rps": 17.25,
+            "n": 4139,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 200,
+            "p50": 9529.5,
+            "p95": 24380.6,
+            "p99": 27958.0,
+            "errores_pct": 0.0,
+            "rps": 17.2,
+            "n": 4127,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 400,
+            "p50": 22675.1,
+            "p95": 51662.7,
+            "p99": 59998.2,
+            "errores_pct": 11.95,
+            "rps": 18.41,
+            "n": 4418,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 800,
+            "p50": 50342.7,
+            "p95": 60000.7,
+            "p99": 60001.0,
+            "errores_pct": 36.29,
+            "rps": 8.7,
+            "n": 2089,
+            "valido": true,
+            "cumple": false
+          }
+        ],
+        "muestras_bajas": false,
+        "carga": {
+          "muestras": 42,
+          "web": {
+            "cpu_usado": 0.5,
+            "cpu_nominal": 0.5,
+            "cpu_pct": 100.0,
+            "ram_mb": 338,
+            "ram_nominal_mb": 512,
+            "ram_pct": 66.0
+          },
+          "db": {
+            "cpu_usado": 0.1617,
+            "cpu_nominal": 2.0,
+            "cpu_pct": 8.1,
+            "ram_mb": 116,
+            "ram_nominal_mb": 4096,
+            "ram_pct": 2.8,
+            "conexiones": 11
+          }
+        },
+        "carga_medida": true,
+        "fuente": "carga/log/2026-09-10_postgres2c4g/"
+      },
+      {
+        "clave": "recibos",
+        "titulo": "Subida de recibos (ráfagas simultáneas)",
+        "detalle": "Tiempo de cada subida de recibo, con 200 lectores navegando en paralelo.",
+        "unidad": "recibos simultáneos",
+        "inicio_ba": "2026-09-09 21:02",
+        "fin_ba": "21:21",
+        "duracion_min": 19.0,
+        "filas": [
+          {
+            "escalon": 2,
+            "p50": 15384.3,
+            "p95": 15559.6,
+            "p99": 15581.0,
+            "errores_pct": 0.0,
+            "rps": 0.03,
+            "n": 8,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 5,
+            "p50": 15441.5,
+            "p95": 40020.0,
+            "p99": 45025.4,
+            "errores_pct": 0.0,
+            "rps": 0.04,
+            "n": 9,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 10,
+            "p50": 45233.3,
+            "p95": 60000.9,
+            "p99": 60001.0,
+            "errores_pct": 50.0,
+            "rps": 0.04,
+            "n": 10,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 20,
+            "p50": 31085.8,
+            "p95": 45378.9,
+            "p99": 45380.0,
+            "errores_pct": 0.0,
+            "rps": 0.03,
+            "n": 7,
+            "valido": true,
+            "cumple": false
+          }
+        ],
+        "muestras_bajas": true,
+        "carga": {
+          "muestras": 38,
+          "web": {
+            "cpu_usado": 0.5,
+            "cpu_nominal": 0.5,
+            "cpu_pct": 100.0,
+            "ram_mb": 361,
+            "ram_nominal_mb": 512,
+            "ram_pct": 70.5
+          },
+          "db": {
+            "cpu_usado": 0.1839,
+            "cpu_nominal": 2.0,
+            "cpu_pct": 9.2,
+            "ram_mb": 118,
+            "ram_nominal_mb": 4096,
+            "ram_pct": 2.9,
+            "conexiones": 11
+          }
+        },
+        "carga_medida": true,
+        "fuente": "carga/log/2026-09-10_postgres2c4g/"
+      },
+      {
+        "clave": "lectores_durante_recibos",
+        "titulo": "Lectores mientras se suben recibos",
+        "detalle": "Los 200 lectores en paralelo, medidos durante las ráfagas.",
+        "unidad": "recibos simultáneos en paralelo",
+        "inicio_ba": "2026-09-09 21:02",
+        "fin_ba": "21:21",
+        "duracion_min": 19.0,
+        "filas": [
+          {
+            "escalon": 2,
+            "p50": 23523.2,
+            "p95": 39196.7,
+            "p99": 43207.6,
+            "errores_pct": 1.22,
+            "rps": 3.42,
+            "n": 822,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 5,
+            "p50": 34291.4,
+            "p95": 60000.7,
+            "p99": 60001.1,
+            "errores_pct": 11.39,
+            "rps": 1.98,
+            "n": 474,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 10,
+            "p50": 37780.8,
+            "p95": 60001.0,
+            "p99": 60001.1,
+            "errores_pct": 34.72,
+            "rps": 1.61,
+            "n": 386,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 20,
+            "p50": 57844.7,
+            "p95": 60001.1,
+            "p99": 60001.1,
+            "errores_pct": 52.02,
+            "rps": 0.72,
+            "n": 173,
+            "valido": true,
+            "cumple": false
+          }
+        ],
+        "muestras_bajas": false,
+        "carga": {
+          "muestras": 38,
+          "web": {
+            "cpu_usado": 0.5,
+            "cpu_nominal": 0.5,
+            "cpu_pct": 100.0,
+            "ram_mb": 361,
+            "ram_nominal_mb": 512,
+            "ram_pct": 70.5
+          },
+          "db": {
+            "cpu_usado": 0.1839,
+            "cpu_nominal": 2.0,
+            "cpu_pct": 9.2,
+            "ram_mb": 118,
+            "ram_nominal_mb": 4096,
+            "ram_pct": 2.9,
+            "conexiones": 11
+          }
+        },
+        "carga_medida": true,
+        "fuente": "carga/log/2026-09-10_postgres2c4g/"
+      }
+    ],
+    "veredicto": "Ningún escalón cumplió el objetivo (p95 por debajo de 1 s y menos de 1% de errores).",
+    "conclusion": "Postgres dejó de ser un límite: su CPU pasó del 100,0% de 0,1 vCPU al 8,1% de 2 vCPU, y la RAM al 2,8%. Eso mejoró de verdad la zona baja y media de lecturas: 50 concurrentes 4,2 s → 1,6 s (-61,9%); 100 concurrentes 13,8 s → 9,6 s (-30,4%); 200 concurrentes 29,9 s → 24,4 s (-18,6%). Pero de 400 concurrentes en adelante el techo no se movió (400 sigue en 51,7 s; 800 sigue en 60,0 s), porque ahí el límite es el servicio web, que siguió clavado en el 100,0% de sus 0,5 vCPU. Las ráfagas de recibos tampoco mejoraron. Queda demostrado que la base era parte del problema, pero no la parte que pone el techo."
+  },
+  {
+    "numero": 4,
+    "nombre": "Web grande + Postgres grande",
+    "subtitulo": "Servicio web a 2 vCPU / 4 GB con 2 workers, Postgres a 2 vCPU / 4 GB",
+    "objetivo": "Probar la configuración prevista para el arranque de producción: CPU entera en el web, un worker por núcleo, y la base ya holgada.",
+    "fecha_ba": "2026-09-09",
+    "inicio_ba": "2026-09-09 21:34",
+    "fin_ba": "22:14",
+    "config": {
+      "plan_web": "2c-4g",
+      "plan_db": "2c-4g",
+      "workers_uvicorn": 2,
+      "pool_size": 5,
+      "max_overflow": 5,
+      "ia": "síncrona",
+      "ia_latencia_seg": 15,
+      "plan_web_etiqueta": "2 vCPU / 4 GB",
+      "plan_db_etiqueta": "2 vCPU / 4 GB"
+    },
+    "advertencias": [
+      "Corrida limpia: sin despliegues ni reinicios a mitad de test.",
+      "Corrió ANTES del cambio de código que pasa la llamada a la IA a un hilo aparte (2026-09-10). Los números de la fase de recibos son los de la IA todavía bloqueando el worker."
+    ],
+    "fases": [
+      {
+        "clave": "lecturas",
+        "titulo": "Lecturas (navegación, sin subir nada)",
+        "detalle": "Mismo recorrido que la línea base, para comparar contra ella.",
+        "unidad": "usuarios concurrentes",
+        "inicio_ba": "2026-09-09 21:34",
+        "fin_ba": "21:55",
+        "duracion_min": 20.7,
+        "filas": [
+          {
+            "escalon": 50,
+            "p50": 116.9,
+            "p95": 190.7,
+            "p99": 297.3,
+            "errores_pct": 0.0,
+            "rps": 20.12,
+            "n": 4829,
+            "valido": true,
+            "cumple": true
+          },
+          {
+            "escalon": 100,
+            "p50": 125.8,
+            "p95": 690.2,
+            "p99": 1170.7,
+            "errores_pct": 0.0,
+            "rps": 44.39,
+            "n": 10653,
+            "valido": true,
+            "cumple": true
+          },
+          {
+            "escalon": 200,
+            "p50": 585.6,
+            "p95": 4669.8,
+            "p99": 6264.3,
+            "errores_pct": 0.01,
+            "rps": 67.79,
+            "n": 16269,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 400,
+            "p50": 5697.4,
+            "p95": 14599.9,
+            "p99": 16252.6,
+            "errores_pct": 0.01,
+            "rps": 65.38,
+            "n": 15691,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 800,
+            "p50": 4529.4,
+            "p95": 19087.1,
+            "p99": 20496.3,
+            "errores_pct": 0.0,
+            "rps": 32.79,
+            "n": 7869,
+            "valido": true,
+            "cumple": false
+          }
+        ],
+        "muestras_bajas": false,
+        "carga": {
+          "muestras": 42,
+          "web": {
+            "cpu_usado": 2.0,
+            "cpu_nominal": 2.0,
+            "cpu_pct": 100.0,
+            "ram_mb": 638,
+            "ram_nominal_mb": 4096,
+            "ram_pct": 15.6
+          },
+          "db": {
+            "cpu_usado": 0.5869,
+            "cpu_nominal": 2.0,
+            "cpu_pct": 29.3,
+            "ram_mb": 165,
+            "ram_nominal_mb": 4096,
+            "ram_pct": 4.0,
+            "conexiones": 20
+          }
+        },
+        "carga_medida": true,
+        "fuente": "carga/log/2026-09-10_web2c4g_2workers/"
+      },
+      {
+        "clave": "recibos",
+        "titulo": "Subida de recibos (ráfagas simultáneas)",
+        "detalle": "Tiempo de cada subida de recibo, con 200 lectores navegando en paralelo.",
+        "unidad": "recibos simultáneos",
+        "inicio_ba": "2026-09-09 21:55",
+        "fin_ba": "22:14",
+        "duracion_min": 18.8,
+        "filas": [
+          {
+            "escalon": 2,
+            "p50": 15168.1,
+            "p95": 15219.4,
+            "p99": 15221.2,
+            "errores_pct": 0.0,
+            "rps": 0.09,
+            "n": 21,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 5,
+            "p50": 15217.0,
+            "p95": 40712.0,
+            "p99": 45249.5,
+            "errores_pct": 0.0,
+            "rps": 0.11,
+            "n": 27,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 10,
+            "p50": 15277.3,
+            "p95": 60000.9,
+            "p99": 60001.0,
+            "errores_pct": 15.38,
+            "rps": 0.11,
+            "n": 26,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 20,
+            "p50": 45440.4,
+            "p95": 60000.9,
+            "p99": 60001.0,
+            "errores_pct": 48.65,
+            "rps": 0.15,
+            "n": 37,
+            "valido": true,
+            "cumple": false
+          }
+        ],
+        "muestras_bajas": false,
+        "carga": {
+          "muestras": 37,
+          "web": {
+            "cpu_usado": 2.0,
+            "cpu_nominal": 2.0,
+            "cpu_pct": 100.0,
+            "ram_mb": 686,
+            "ram_nominal_mb": 4096,
+            "ram_pct": 16.7
+          },
+          "db": {
+            "cpu_usado": 0.4903,
+            "cpu_nominal": 2.0,
+            "cpu_pct": 24.5,
+            "ram_mb": 162,
+            "ram_nominal_mb": 4096,
+            "ram_pct": 4.0,
+            "conexiones": 20
+          }
+        },
+        "carga_medida": true,
+        "fuente": "carga/log/2026-09-10_web2c4g_2workers/"
+      },
+      {
+        "clave": "lectores_durante_recibos",
+        "titulo": "Lectores mientras se suben recibos",
+        "detalle": "Los 200 lectores en paralelo, medidos durante las ráfagas.",
+        "unidad": "recibos simultáneos en paralelo",
+        "inicio_ba": "2026-09-09 21:55",
+        "fin_ba": "22:14",
+        "duracion_min": 18.8,
+        "filas": [
+          {
+            "escalon": 2,
+            "p50": 566.7,
+            "p95": 15486.8,
+            "p99": 17584.9,
+            "errores_pct": 0.0,
+            "rps": 17.1,
+            "n": 4103,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 5,
+            "p50": 13126.2,
+            "p95": 37554.6,
+            "p99": 43146.6,
+            "errores_pct": 0.05,
+            "rps": 8.23,
+            "n": 1976,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 10,
+            "p50": 13085.5,
+            "p95": 60000.4,
+            "p99": 60001.0,
+            "errores_pct": 6.99,
+            "rps": 5.6,
+            "n": 1345,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 20,
+            "p50": 54462.2,
+            "p95": 60001.0,
+            "p99": 60001.1,
+            "errores_pct": 28.82,
+            "rps": 2.18,
+            "n": 524,
+            "valido": true,
+            "cumple": false
+          }
+        ],
+        "muestras_bajas": false,
+        "carga": {
+          "muestras": 37,
+          "web": {
+            "cpu_usado": 2.0,
+            "cpu_nominal": 2.0,
+            "cpu_pct": 100.0,
+            "ram_mb": 686,
+            "ram_nominal_mb": 4096,
+            "ram_pct": 16.7
+          },
+          "db": {
+            "cpu_usado": 0.4903,
+            "cpu_nominal": 2.0,
+            "cpu_pct": 24.5,
+            "ram_mb": 162,
+            "ram_nominal_mb": 4096,
+            "ram_pct": 4.0,
+            "conexiones": 20
+          }
+        },
+        "carga_medida": true,
+        "fuente": "carga/log/2026-09-10_web2c4g_2workers/"
+      }
+    ],
+    "veredicto": "Cumple el objetivo (p95 por debajo de 1 s y menos de 1% de errores) hasta 100 usuarios concurrentes.",
+    "conclusion": "Primera configuración que cumple el objetivo: 50 concurrentes en 191 ms y 100 en 690 ms, las dos con 0,0% de error. A 800 concurrentes pasó de 60,0 s con 100,0% de error en la línea base a 19,1 s con 0,0%. El web volvió a ser el límite (100,0% de sus 2 vCPU) pero ahora con cuatro veces más CPU, y Postgres quedó holgado (29,3% de CPU, 4,0% de RAM). Lo que NO mejoró son las ráfagas de recibos: con 10 simultáneos falla el 15,4% y con 20 el 48,6%, contra 27,3% de la línea base en el mismo escalón de 10 — sin mejora real pese a toda la CPU agregada. La causa no es CPU: cada subida bloqueaba un worker entero durante los 15 segundos de la llamada a la IA. Eso es lo que motivó el cambio de código del 2026-09-10, que todavía no tiene un test que lo confirme."
+  }
+]

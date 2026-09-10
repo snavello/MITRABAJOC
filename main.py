@@ -4493,20 +4493,44 @@ def entornos_tests_publicar(request: Request, payload: dict = Body(...),
     if entorno.ENTORNO != "pruebas":
         raise HTTPException(400, "El test de carga solo corre en Pruebas.")
     tipo = payload.get("tipo")
-    if tipo not in ("lecturas", "recibos"):
+    if tipo not in ("lecturas", "recibos", "experimento"):
         raise HTTPException(400, "Tipo de test inválido.")
     resumen = payload.get("resumen") or []
     if not resumen:
-        raise HTTPException(400, "Falta el resumen del test (lista de escalones).")
-    test_id = db.crear_test_carga(tipo, {
-        "escalones": payload.get("escalones") or [f.get("escalon") for f in resumen],
-        "duracion_seg": payload.get("duracion_seg"),
-        "config": payload.get("config") or {},
-    })
+        raise HTTPException(400, "Falta el resumen del test.")
+    if tipo == "experimento":
+        # Un experimento completo: varias fases (lecturas, recibos, lectores
+        # en paralelo), cada una con sus escalones y la carga medida de web
+        # y de Postgres. Lo arma carga/consolidar.py desde los datos crudos.
+        if not all(isinstance(f, dict) and "filas" in f for f in resumen):
+            raise HTTPException(400, "Un experimento espera fases con 'filas'.")
+        parametros = {k: payload.get(k) for k in
+                      ("numero", "nombre", "subtitulo", "objetivo", "config",
+                       "advertencias", "veredicto", "conclusion", "inicio_ba", "fin_ba")}
+    else:
+        parametros = {
+            "escalones": payload.get("escalones") or [f.get("escalon") for f in resumen],
+            "duracion_seg": payload.get("duracion_seg"),
+            "config": payload.get("config") or {},
+        }
+    test_id = db.crear_test_carga(tipo, parametros)
     db.actualizar_test_carga(
         test_id, estado="listo", resumen=resumen,
         terminado_en=payload.get("terminado_en") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     return {"id": test_id}
+
+
+@app.post("/entornos/tests/borrar-todo")
+def entornos_tests_borrar_todo(request: Request, x_pin_entornos: str = Header(default="")):
+    """Vacía la lista de tests y reinicia la numeración en 1. Se usa para
+    republicar la serie completa desde carga/experimentos.json cuando el
+    contenido cambió de forma (ver db.borrar_todos_los_tests_carga)."""
+    _exigir_landing()
+    if not (_pase_landing(request) or entorno.verificar_pin(x_pin_entornos)):
+        raise HTTPException(403, "Ingresá el PIN de la landing (cookie o header X-Pin-Entornos).")
+    if entorno.ENTORNO != "pruebas":
+        raise HTTPException(400, "Solo en Pruebas.")
+    return {"borrados": db.borrar_todos_los_tests_carga()}
 
 
 @app.get("/api/entornos/tests")
@@ -4545,6 +4569,60 @@ def _analisis_resumen(resumen: list) -> dict:
     return {"filas": filas, "ultimo_sano": ultimo_sano}
 
 
+def _vista_test(fila: dict) -> dict:
+    """Normaliza para la plantilla las DOS formas que puede tener un test:
+
+    - Experimento publicado desde carga/experimentos.json: el resumen ya
+      viene como fases (lecturas, recibos, lectores en paralelo), cada una
+      con sus escalones y la carga medida de web y de Postgres, más el
+      veredicto y la conclusión ya redactados desde esos mismos números.
+    - Test rápido disparado con el botón (carga/correr_job.py): el resumen
+      es una lista plana de escalones de un solo tipo, sin métricas de
+      servidor. Se envuelve en una fase única para que la página sea una
+      sola, sin dos plantillas que puedan divergir."""
+    resumen = fila.get("resumen") or []
+    params = fila.get("parametros") or {}
+    es_experimento = bool(resumen) and isinstance(resumen[0], dict) and "filas" in resumen[0]
+    if es_experimento:
+        return {
+            "es_experimento": True,
+            "fases": resumen,
+            "config": params.get("config") or {},
+            "veredicto": params.get("veredicto") or "",
+            "conclusion": params.get("conclusion") or "",
+            "objetivo": params.get("objetivo") or "",
+            "advertencias": params.get("advertencias") or [],
+            "titulo": params.get("nombre") or f"Test #{fila.get('id')}",
+            "subtitulo": params.get("subtitulo") or "",
+            "inicio_ba": params.get("inicio_ba") or "",
+            "fin_ba": params.get("fin_ba") or "",
+        }
+    analisis = _analisis_resumen(resumen)
+    unidad = "recibos simultáneos" if fila.get("tipo") == "recibos" else "usuarios concurrentes"
+    fase = {
+        "clave": fila.get("tipo") or "lecturas",
+        "titulo": "Recibos" if fila.get("tipo") == "recibos" else "Lecturas",
+        "detalle": "", "unidad": unidad, "filas": analisis["filas"],
+        "carga": None, "carga_medida": False, "muestras_bajas": False,
+        "inicio_ba": "", "fin_ba": "", "duracion_min": None,
+    }
+    if analisis["ultimo_sano"]:
+        veredicto = (f"Cumple el objetivo (p95 por debajo de 1 s y menos de 1% de "
+                     f"errores) hasta {analisis['ultimo_sano']} {unidad}.")
+    else:
+        veredicto = ("Ningún escalón cumplió el objetivo (p95 por debajo de 1 s y "
+                     "menos de 1% de errores).")
+    return {
+        "es_experimento": False,
+        "fases": [fase] if analisis["filas"] else [],
+        "config": params.get("config") or {},
+        "veredicto": veredicto if analisis["filas"] else "",
+        "conclusion": "", "objetivo": "", "advertencias": [],
+        "titulo": f"Test #{fila.get('id')}", "subtitulo": "",
+        "inicio_ba": fila.get("creado_en") or "", "fin_ba": "",
+    }
+
+
 @app.get("/entornos/tests/{test_id}", response_class=HTMLResponse)
 def entornos_test_detalle(request: Request, test_id: int):
     """Página de detalle de UN test corrido: config real que tenía el
@@ -4562,8 +4640,7 @@ def entornos_test_detalle(request: Request, test_id: int):
         raise HTTPException(404, "No existe ese test.")
     return templates.TemplateResponse("test_detalle.html", {
         "request": request, "marca_plataforma": db.marca_plataforma(),
-        "t": fila, "analisis": _analisis_resumen(fila.get("resumen")),
-        "url_informe": URL_INFORME_COMPLETO,
+        "t": fila, "v": _vista_test(fila), "url_informe": URL_INFORME_COMPLETO,
     })
 
 

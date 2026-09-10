@@ -1104,6 +1104,34 @@ def test_carga_por_id(test_id: int) -> Optional[dict]:
         return t.model_dump() if t else None
 
 
+def borrar_todos_los_tests_carga() -> int:
+    """Vacía la tabla y reinicia el contador de id, para que la próxima
+    publicación arranque otra vez en 1. Hace falta porque la lista de
+    /entornos se rearmó desde cero -- una entrada por experimento real, no
+    una por tipo de test -- y los números tienen que coincidir con los del
+    informe: test 1 = primer experimento, y así.
+
+    Es destructivo a propósito. Los datos de origen viven en carga/log/ y
+    carga/experimentos.json, así que la lista siempre se puede regenerar
+    con carga/publicar_experimentos.py."""
+    with Session(engine) as s:
+        n = len(s.exec(select(TestCarga)).all())
+        s.execute(text("DELETE FROM testcarga"))
+        # Reiniciar el contador es propio de cada motor: Postgres usa una
+        # secuencia; SQLite lo lleva en sqlite_sequence (que solo existe si
+        # la tabla tuvo filas alguna vez).
+        try:
+            if USANDO_POSTGRES:
+                s.execute(text("ALTER SEQUENCE testcarga_id_seq RESTART WITH 1"))
+            else:
+                s.execute(text("DELETE FROM sqlite_sequence WHERE name='testcarga'"))
+        except Exception:
+            # Si el contador no se pudo reiniciar, el borrado igual vale.
+            pass
+        s.commit()
+        return n
+
+
 class AccesoLog(SQLModel, table=True):
     """Un login exitoso de cualquiera de los 4 roles -- para el dashboard
     de Actividad de /entornos ("cantidad de accesos por app"). Nada de esto

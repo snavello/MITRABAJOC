@@ -212,6 +212,104 @@ def test_publicar_sin_resumen_rechaza():
     print("OK  test_publicar_sin_resumen_rechaza")
 
 
+def _experimento_de_prueba(numero=1):
+    """Un experimento con la misma forma que produce carga/consolidar.py."""
+    return {
+        "tipo": "experimento", "numero": numero, "nombre": "Línea base",
+        "subtitulo": "Todo en el plan más chico", "objetivo": "Medir el punto de partida.",
+        "config": {"plan_web": "0.5c-512mb", "plan_web_etiqueta": "0,5 vCPU / 512 MB",
+                    "plan_db": "0.1c-256mb", "plan_db_etiqueta": "0,1 vCPU / 256 MB",
+                    "workers_uvicorn": 1, "pool_size": 5, "max_overflow": 5,
+                    "ia": "síncrona", "ia_latencia_seg": 15},
+        "advertencias": ["Corrida limpia: sin despliegues a mitad de test."],
+        "veredicto": "Ningún escalón cumplió el objetivo.",
+        "conclusion": "El cuello de botella es el servicio web.",
+        "inicio_ba": "2026-09-09 17:34", "fin_ba": "18:40",
+        "terminado_en": "2026-09-09 18:40",
+        "resumen": [{
+            "clave": "lecturas", "titulo": "Lecturas", "detalle": "Navegación.",
+            "unidad": "usuarios concurrentes", "inicio_ba": "2026-09-09 17:34",
+            "fin_ba": "17:55", "duracion_min": 20.7, "muestras_bajas": False,
+            "carga_medida": True,
+            "filas": [{"escalon": 50, "p50": 1715.6, "p95": 4215.1, "p99": 6427.9,
+                        "errores_pct": 0.0, "rps": 11.82, "n": 2836,
+                        "valido": True, "cumple": False}],
+            "carga": {"muestras": 39,
+                       "web": {"cpu_usado": 0.5, "cpu_nominal": 0.5, "cpu_pct": 100.0,
+                               "ram_mb": 319, "ram_nominal_mb": 512, "ram_pct": 62.3},
+                       "db": {"cpu_usado": 0.1, "cpu_nominal": 0.1, "cpu_pct": 100.0,
+                              "ram_mb": 142, "ram_nominal_mb": 256, "ram_pct": 55.5,
+                              "conexiones": 10}},
+        }],
+    }
+
+
+def test_publicar_experimento_guarda_fases_config_y_conclusion():
+    c = TestClient(main.app)
+    r = c.post("/entornos/tests/publicar", json=_experimento_de_prueba(),
+               headers={"X-Pin-Entornos": "13571357"})
+    assert r.status_code == 200
+    fila = db.test_carga_por_id(r.json()["id"])
+    assert fila["tipo"] == "experimento"
+    assert fila["parametros"]["conclusion"].startswith("El cuello de botella")
+    assert fila["resumen"][0]["carga"]["db"]["cpu_pct"] == 100.0
+    print("OK  test_publicar_experimento_guarda_fases_config_y_conclusion")
+
+
+def test_pagina_de_experimento_muestra_cpu_ram_de_web_y_postgres():
+    """Lo que se pidió ver en cada test: condiciones técnicas, resultados,
+    las cargas de web Y de Postgres, y la conclusión."""
+    r = client.post("/entornos/tests/publicar", json=_experimento_de_prueba(2))
+    tid = r.json()["id"]
+    p = client.get(f"/entornos/tests/{tid}")
+    assert p.status_code == 200
+    assert "Línea base" in p.text
+    assert "0,5 vCPU / 512 MB" in p.text and "0,1 vCPU / 256 MB" in p.text
+    assert "Servicio web" in p.text and "Postgres" in p.text
+    assert "319" in p.text and "142" in p.text          # RAM de web y de la base
+    assert "Conexiones" in p.text and ">10<" in p.text
+    assert "El cuello de botella es el servicio web." in p.text
+    assert "Buenos Aires" in p.text                      # la fecha se declara en hora de BA
+    print("OK  test_pagina_de_experimento_muestra_cpu_ram_de_web_y_postgres")
+
+
+def test_fase_sin_metricas_no_inventa_numeros():
+    """Cuando el monitor no pudo medir (pasó en la primera corrida), la
+    página tiene que decirlo, no mostrar los valores de otra fase."""
+    exp = _experimento_de_prueba(3)
+    exp["resumen"][0]["carga_medida"] = False
+    exp["resumen"][0]["carga"] = {
+        "muestras": 40,
+        "web": {"cpu_usado": None, "cpu_nominal": 0.5, "cpu_pct": None,
+                "ram_mb": None, "ram_nominal_mb": 512, "ram_pct": None},
+        "db": {"cpu_usado": None, "cpu_nominal": 0.1, "cpu_pct": None,
+               "ram_mb": None, "ram_nominal_mb": 256, "ram_pct": None, "conexiones": None},
+    }
+    tid = client.post("/entornos/tests/publicar", json=exp).json()["id"]
+    p = client.get(f"/entornos/tests/{tid}")
+    assert p.status_code == 200
+    assert "no se pudieron medir" in p.text
+    print("OK  test_fase_sin_metricas_no_inventa_numeros")
+
+
+def test_borrar_todo_vacia_la_lista_y_reinicia_la_numeracion():
+    for _ in range(3):
+        client.post("/entornos/tests/publicar", json=_experimento_de_prueba())
+    assert db.tests_carga_recientes(50)
+    r = client.post("/entornos/tests/borrar-todo")
+    assert r.status_code == 200 and r.json()["borrados"] > 0
+    assert db.tests_carga_recientes(50) == []
+    nuevo = client.post("/entornos/tests/publicar", json=_experimento_de_prueba()).json()["id"]
+    assert nuevo == 1, f"tras el borrado la numeración tiene que arrancar en 1, dio {nuevo}"
+    print("OK  test_borrar_todo_vacia_la_lista_y_reinicia_la_numeracion")
+
+
+def test_borrar_todo_sin_pin_rechaza():
+    c = TestClient(main.app)
+    assert c.post("/entornos/tests/borrar-todo").status_code == 403
+    print("OK  test_borrar_todo_sin_pin_rechaza")
+
+
 def test_informe_completo_se_sirve_desde_el_sitio_sin_github():
     """El link "Ver el informe completo" de test_detalle.html tiene que
     quedar DENTRO del sitio -- pedido explícito de Sd (2026-09-10): antes
