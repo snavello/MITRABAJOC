@@ -1927,5 +1927,294 @@
     ],
     "veredicto": "Cumple el objetivo (p95 por debajo de 1 s y menos de 1% de errores) hasta 200 usuarios concurrentes.",
     "conclusion": "La mitad de la CPU rinde lo mismo hasta 400 concurrentes. Comparando el p95 del test 6 (8 núcleos) contra este (4 núcleos), escalón por escalón: 50: 202 ms contra 195 ms; 100: 203 ms contra 196 ms; 200: 213 ms contra 205 ms; 400: 2,1 s contra 2,2 s -- diferencias que entran en la variación entre corridas. El objetivo se cumple hasta 200 concurrentes con 205 ms y 0,0% de error, igual que con el doble de máquina, y a 400 responde en 2,2 s con 0,0%. Las ráfagas de recibos también quedaron iguales: 15,2 s con 20 simultáneas, y los lectores en paralelo en 237 ms. La diferencia real está en el margen, no en la respuesta: el web llegó al 100,0% de su CPU contra el 60,8% del test 6. Con 4 núcleos la carga esperada se atiende igual de rápido, pero sin colchón para un pico por encima de 400."
+  },
+  {
+    "numero": 8,
+    "nombre": "Dos instancias",
+    "subtitulo": "La misma CPU del test 6 pero repartida: dos instancias de 4 vCPU / 8 GB con 4 workers cada una, misma base",
+    "objetivo": "Probar si repartir el servicio web en dos instancias en vez de agrandar una sola cambia algo. Es la forma de crecer que conviene por disponibilidad —una caída se lleva la mitad y no todo—, pero nunca se había medido: las siete corridas anteriores fueron con una instancia. También era la ocasión de ver cuántas conexiones abre la base cuando los workers están repartidos en dos máquinas.",
+    "fecha_ba": "2026-09-10",
+    "inicio_ba": "2026-09-10 20:07",
+    "fin_ba": "20:46",
+    "config": {
+      "instancias": 2,
+      "plan_web": "4c-8g",
+      "plan_db": "4c-16g",
+      "workers_uvicorn": 4,
+      "pool_size": 5,
+      "max_overflow": 5,
+      "ia": "en hilo aparte",
+      "ia_latencia_seg": 15,
+      "plan_web_etiqueta": "4 vCPU / 8 GB × 2 instancias",
+      "plan_db_etiqueta": "4 vCPU / 16 GB",
+      "workers_etiqueta": "4 por instancia (8 en total)"
+    },
+    "advertencias": [
+      "Corrida limpia: sin despliegues ni reinicios a mitad de test.",
+      "Única diferencia contra el test 7: la cantidad de instancias del servicio web (de una a dos, con el mismo plan de 4 vCPU / 8 GB cada una y 4 workers cada una). La base quedó igual. Contra el test 6 la CPU total es la misma —ocho núcleos— pero repartida en dos máquinas en vez de concentrada en una.",
+      "La CPU y la RAM del servicio web son la SUMA de las dos instancias, que es lo que informa la API de métricas de Render, y por eso se comparan contra el nominal de las dos juntas. El porcentaje no dice cuán cargada está cada instancia por separado: si el balanceo repartiera mal, el promedio lo escondería.",
+      "Es la primera corrida en la que el escalón de 800 mide al servidor y no al generador de carga: el servidor llegó a saturar mientras la máquina que genera el tráfico quedó con margen. En los tests 6 y 7 ese escalón quedó marcado como cota inferior por esa razón."
+    ],
+    "fases": [
+      {
+        "clave": "lecturas",
+        "titulo": "Lecturas (navegación, sin subir nada)",
+        "detalle": "Usuarios concurrentes haciendo login y recorriendo la app. No toca la IA.",
+        "unidad": "usuarios concurrentes",
+        "inicio_ba": "2026-09-10 20:07",
+        "fin_ba": "20:27",
+        "duracion_min": 20.7,
+        "filas": [
+          {
+            "escalon": 50,
+            "p50": 114.3,
+            "p95": 200.2,
+            "p99": 234.6,
+            "errores_pct": 0.15,
+            "rps": 19.06,
+            "n": 4003,
+            "valido": true,
+            "cumple": true
+          },
+          {
+            "escalon": 100,
+            "p50": 112.1,
+            "p95": 193.0,
+            "p99": 224.1,
+            "errores_pct": 0.05,
+            "rps": 38.29,
+            "n": 8040,
+            "valido": true,
+            "cumple": true
+          },
+          {
+            "escalon": 200,
+            "p50": 112.3,
+            "p95": 195.4,
+            "p99": 226.6,
+            "errores_pct": 0.23,
+            "rps": 75.7,
+            "n": 15897,
+            "valido": true,
+            "cumple": true
+          },
+          {
+            "escalon": 400,
+            "p50": 117.0,
+            "p95": 210.5,
+            "p99": 253.7,
+            "errores_pct": 0.05,
+            "rps": 151.62,
+            "n": 31840,
+            "valido": true,
+            "cumple": true
+          },
+          {
+            "escalon": 800,
+            "p50": 164.7,
+            "p95": 628.8,
+            "p99": 1124.0,
+            "errores_pct": 0.0,
+            "rps": 291.73,
+            "n": 61264,
+            "valido": true,
+            "cumple": true
+          }
+        ],
+        "muestras_bajas": false,
+        "carga": {
+          "muestras": 41,
+          "web": {
+            "cpu_usado": 7.8649,
+            "cpu_nominal": 8.0,
+            "cpu_pct": 98.3,
+            "ram_mb": 1492,
+            "ram_nominal_mb": 16384,
+            "ram_pct": 9.1,
+            "cpu_txt": "7,8649 de 8 vCPU · 98,3%",
+            "ram_txt": "1492 de 16384 MB · 9,1%"
+          },
+          "db": {
+            "cpu_usado": 2.191,
+            "cpu_nominal": 4.0,
+            "cpu_pct": 54.8,
+            "ram_mb": 376,
+            "ram_nominal_mb": 16384,
+            "ram_pct": 2.3,
+            "cpu_txt": "2,191 de 4 vCPU · 54,8%",
+            "ram_txt": "376 de 16384 MB · 2,3%",
+            "conexiones": 50
+          }
+        },
+        "carga_medida": true,
+        "fuente": "carga/log/2026-09-10_2307/"
+      },
+      {
+        "clave": "recibos",
+        "titulo": "Subida de recibos (ráfagas simultáneas)",
+        "detalle": "Tiempo de cada subida de recibo, con 200 lectores navegando en paralelo.",
+        "unidad": "recibos simultáneos",
+        "inicio_ba": "2026-09-10 20:27",
+        "fin_ba": "20:46",
+        "duracion_min": 18.8,
+        "filas": [
+          {
+            "escalon": 2,
+            "p50": 15136.4,
+            "p95": 15196.8,
+            "p99": 15245.5,
+            "errores_pct": 0.0,
+            "rps": 0.12,
+            "n": 30,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 5,
+            "p50": 15111.9,
+            "p95": 15196.0,
+            "p99": 15227.1,
+            "errores_pct": 0.0,
+            "rps": 0.32,
+            "n": 77,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 10,
+            "p50": 15112.0,
+            "p95": 15198.4,
+            "p99": 15214.0,
+            "errores_pct": 0.0,
+            "rps": 0.65,
+            "n": 155,
+            "valido": true,
+            "cumple": false
+          },
+          {
+            "escalon": 20,
+            "p50": 15122.4,
+            "p95": 15205.2,
+            "p99": 15217.3,
+            "errores_pct": 0.0,
+            "rps": 1.29,
+            "n": 310,
+            "valido": true,
+            "cumple": false
+          }
+        ],
+        "muestras_bajas": false,
+        "carga": {
+          "muestras": 37,
+          "web": {
+            "cpu_usado": 7.8649,
+            "cpu_nominal": 8.0,
+            "cpu_pct": 98.3,
+            "ram_mb": 1532,
+            "ram_nominal_mb": 16384,
+            "ram_pct": 9.4,
+            "cpu_txt": "7,8649 de 8 vCPU · 98,3%",
+            "ram_txt": "1532 de 16384 MB · 9,4%"
+          },
+          "db": {
+            "cpu_usado": 2.0764,
+            "cpu_nominal": 4.0,
+            "cpu_pct": 51.9,
+            "ram_mb": 376,
+            "ram_nominal_mb": 16384,
+            "ram_pct": 2.3,
+            "cpu_txt": "2,0764 de 4 vCPU · 51,9%",
+            "ram_txt": "376 de 16384 MB · 2,3%",
+            "conexiones": 48
+          }
+        },
+        "carga_medida": true,
+        "fuente": "carga/log/2026-09-10_2307/"
+      },
+      {
+        "clave": "lectores_durante_recibos",
+        "titulo": "Lectores mientras se suben recibos",
+        "detalle": "Los 200 lectores en paralelo, medidos durante las ráfagas. Es la medida de si una subida en curso ensucia la experiencia del resto.",
+        "unidad": "recibos simultáneos en paralelo",
+        "inicio_ba": "2026-09-10 20:27",
+        "fin_ba": "20:46",
+        "duracion_min": 18.8,
+        "filas": [
+          {
+            "escalon": 2,
+            "p50": 130.6,
+            "p95": 212.0,
+            "p99": 260.1,
+            "errores_pct": 0.0,
+            "rps": 40.55,
+            "n": 9732,
+            "valido": true,
+            "cumple": true
+          },
+          {
+            "escalon": 5,
+            "p50": 127.9,
+            "p95": 209.9,
+            "p99": 249.4,
+            "errores_pct": 0.0,
+            "rps": 40.81,
+            "n": 9795,
+            "valido": true,
+            "cumple": true
+          },
+          {
+            "escalon": 10,
+            "p50": 128.1,
+            "p95": 207.4,
+            "p99": 248.3,
+            "errores_pct": 0.0,
+            "rps": 40.97,
+            "n": 9832,
+            "valido": true,
+            "cumple": true
+          },
+          {
+            "escalon": 20,
+            "p50": 128.0,
+            "p95": 207.6,
+            "p99": 245.1,
+            "errores_pct": 0.0,
+            "rps": 41.03,
+            "n": 9848,
+            "valido": true,
+            "cumple": true
+          }
+        ],
+        "muestras_bajas": false,
+        "carga": {
+          "muestras": 37,
+          "web": {
+            "cpu_usado": 7.8649,
+            "cpu_nominal": 8.0,
+            "cpu_pct": 98.3,
+            "ram_mb": 1532,
+            "ram_nominal_mb": 16384,
+            "ram_pct": 9.4,
+            "cpu_txt": "7,8649 de 8 vCPU · 98,3%",
+            "ram_txt": "1532 de 16384 MB · 9,4%"
+          },
+          "db": {
+            "cpu_usado": 2.0764,
+            "cpu_nominal": 4.0,
+            "cpu_pct": 51.9,
+            "ram_mb": 376,
+            "ram_nominal_mb": 16384,
+            "ram_pct": 2.3,
+            "cpu_txt": "2,0764 de 4 vCPU · 51,9%",
+            "ram_txt": "376 de 16384 MB · 2,3%",
+            "conexiones": 48
+          }
+        },
+        "carga_medida": true,
+        "fuente": "carga/log/2026-09-10_2307/"
+      }
+    ],
+    "veredicto": "Cumple el objetivo (p95 por debajo de 1 s y menos de 1% de errores) hasta 800 usuarios concurrentes.",
+    "conclusion": "Es la primera configuración que cumple el objetivo en los cinco escalones, incluido el de 800 concurrentes: 629 ms de p95 con 0,0% de errores. Ninguna de las siete corridas anteriores había pasado de 400. Contra el test 7 (la misma máquina pero una sola instancia), escalón por escalón: 200: 205 ms contra 195 ms; 400: 2,2 s contra 210 ms; 800: 14,8 s contra 629 ms. Repartir en dos instancias no hace que la app responda más rápido en los escalones que el test 7 ya atendía bien —los tiempos son prácticamente los mismos—: lo que cambia es hasta dónde llega. El web terminó al 98,3% de sus 8 vCPU sumadas, contra el 100,0% del test 7 con la mitad de núcleos y el 60,8% del test 6, que tenía los mismos ocho núcleos en una sola instancia. La memoria no fue nunca el límite: 1492 de 16384 MB · 9,1%. Las ráfagas de recibos siguen dominadas por la espera de la IA y no por la infraestructura: 15,2 s con 20 simultáneas y 0,0% de errores, mientras los lectores en paralelo ni se enteran (208 ms). Sobre las conexiones a la base: con 50 de pico y ocho workers repartidos en dos instancias, el número quedó por debajo del que midió el test 7 con cuatro workers en una sola (80) — otra vez sigue a la carga y no a la cantidad de procesos."
   }
 ]

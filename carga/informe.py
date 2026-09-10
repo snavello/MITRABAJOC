@@ -112,6 +112,7 @@ def hallazgos(exps):
     por_num = {e["numero"]: e for e in exps}
     t1, t2, t3, t4 = (por_num[n] for n in (1, 2, 3, 4))
     t5 = por_num.get(5)
+    t7, t8 = por_num.get(7), por_num.get(8)
     out = []
 
     # 1. El techo lo pone el servicio web, no la IA.
@@ -228,6 +229,39 @@ def hallazgos(exps):
             "configuración real en vez de calcularlo, y dejar holgura contra el límite del "
             "plan de Postgres."),
     })
+    # 7. Dos instancias: la única corrida con el web repartido.
+    if t8 and t7:
+        f8 = _fase(t8, "lecturas")
+        f7 = _fase(t7, "lecturas")
+        cumple8 = [x["escalon"] for x in f8["filas"] if x["cumple"]]
+        cumple7 = [x["escalon"] for x in f7["filas"] if x["cumple"]]
+        e8 = _fila(t8, "lecturas", max(cumple8)) if cumple8 else None
+        w8 = f8["carga"]["web"]
+        w7 = f7["carga"]["web"]
+        out.append({
+            "titulo": "Repartir el web en dos instancias corre el techo sin cambiar los tiempos",
+            "tests": [7, 8],
+            "texto": (
+                f"El test 8 corrió el mismo plan del test 7 ({t8['config']['plan_web']}) pero en "
+                f"dos instancias en vez de una, con {t8['config']['workers_uvicorn']} workers en "
+                f"cada una. En los escalones que el test 7 ya atendía bien los tiempos son "
+                f"prácticamente iguales —a 200 concurrentes "
+                f"{_fmt_ms(_fila(t7, 'lecturas', 200)['p95'])} contra "
+                f"{_fmt_ms(_fila(t8, 'lecturas', 200)['p95'])}, a 400 "
+                f"{_fmt_ms(_fila(t7, 'lecturas', 400)['p95'])} contra "
+                f"{_fmt_ms(_fila(t8, 'lecturas', 400)['p95'])}—, así que repartir no acelera "
+                f"nada de lo que ya andaba. Lo que cambia es hasta dónde llega: el test 7 "
+                f"cumplía el objetivo hasta {max(cumple7)} concurrentes y el 8 lo cumple hasta "
+                f"{e8['escalon']}, con {_fmt_ms(e8['p95'])} y {_fmt_pct(e8['errores_pct'])} de "
+                f"error. La CPU del web —la suma de las dos instancias— llegó al "
+                f"{_fmt_pct(w8['cpu_pct'])} de sus {w8['cpu_nominal']} vCPU, contra el "
+                f"{_fmt_pct(w7['cpu_pct'])} de las {w7['cpu_nominal']} del test 7. "
+                f"La memoria nunca fue el límite: {w8['ram_txt']}. "
+                f"El porcentaje de CPU es un promedio de las dos instancias y no prueba que el "
+                f"balanceo reparta parejo; lo que sí prueba es que el servicio entero tiene "
+                f"margen donde antes no lo tenía."),
+        })
+
     return out
 
 
@@ -358,6 +392,44 @@ def construir(ruta: Path = None) -> dict:
         "advertencias": [a for e in exps for a in e["advertencias"]
                          if not a.startswith("Corrida limpia")],
         "notas_metodo": notas_metodo(exps),
+        "produccion": produccion(exps),
+    }
+
+
+def produccion(exps):
+    """Los dos párrafos de la sección de producción que llevan números.
+    Estaban escritos a mano en el HTML y en el .md por separado, con la
+    cantidad de corridas hardcodeada: se desactualizaron solos. Ahora salen
+    del dataset como todo lo demás."""
+    por_num = {e["numero"]: e for e in exps}
+    ult = exps[-1]
+    web = _fase(ult, "lecturas")["carga"]["web"]
+    t8 = por_num.get(8)
+    medido = ""
+    if t8:
+        f8 = _fase(t8, "lecturas")
+        cumple = [x["escalon"] for x in f8["filas"] if x["cumple"]]
+        if cumple:
+            medido = (f" Y a esta altura ya no es solo un argumento de diseño: el test 8 es "
+                      f"el único que corrió con el web repartido en dos instancias, y es el "
+                      f"único que cumple el objetivo hasta {max(cumple)} concurrentes.")
+    return {
+        "instancias": (
+            "Para el servicio web conviene repartir en varias instancias antes que "
+            "concentrar en una sola grande, por tres motivos que ya están dados en esta "
+            "app: las sesiones viajan en una cookie firmada y no hay estado en el "
+            "servidor, así que cualquier instancia puede atender a cualquiera sin "
+            "configuración extra; una caída se lleva una porción más chica del servicio; "
+            "y ninguna parte del sistema necesita mucha memoria en un mismo proceso — en "
+            f"la última corrida el web usó {web['ram_txt']} de lo contratado." + medido),
+        "conexiones": (
+            f"Las conexiones a la base se multiplican por instancia, pero no se pueden "
+            f"calcular: las {len(exps)} corridas muestran que el número sigue a la "
+            f"saturación del servicio web y no a la cantidad de workers, y que se pasa del "
+            f"máximo que el pool debería permitir (ver el hallazgo correspondiente). Hasta "
+            f"entender por qué, la única forma seria de dimensionarlo es medirlo en la "
+            f"configuración real ya provisionada y dejar holgura contra el límite del plan "
+            f"de Postgres elegido, en vez de confiar en una multiplicación."),
     }
 
 
@@ -382,5 +454,7 @@ def notas_metodo(exps):
         ("El generador de carga corre en un contenedor de 4 CPU. En los escalones más "
          "altos puede ser él, y no el servidor, el que ponga el techo: cuando la CPU "
          "del servidor baja en vez de subir al pasar a más usuarios, ese escalón se "
-         "lee como cota inferior de lo que aguanta, no como su límite."),
+         "lee como cota inferior de lo que aguanta, no como su límite. En el test 8 "
+         "eso no pasó: el servidor saturó mientras el generador quedó con margen, así "
+         "que ahí el escalón más alto sí mide al servidor."),
     ]

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Test de estrés · los cuatro tests comparados · Colm3na</title>
+<title>Test de estrés · los {{ inf.experimentos|length }} tests comparados · Colm3na</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
@@ -191,7 +191,7 @@
     <p style="margin:0">{{ inf.resumen }}</p>
   </div>
 
-  <h2 id="tests"><span class="num">A</span> Los cuatro tests</h2>
+  <h2 id="tests"><span class="num">A</span> Los {{ inf.experimentos|length }} tests</h2>
   <p>Cada uno cambió <em>una</em> cosa respecto del anterior, para poder atribuir la mejora o el empeoramiento a esa cosa y no a una mezcla. Entrá a cualquiera para ver sus tablas completas y la carga de CPU y RAM que se midió.</p>
   <div class="tests-grid">
     {% for e in inf.experimentos %}
@@ -205,7 +205,7 @@
   </div>
 
   <h2 id="lecturas"><span class="num">B</span> Navegación: cuánto tarda según cuánta gente hay</h2>
-  <p>El p95 de cada escalón, en los cuatro tests. Esta es la prueba que no sube ningún recibo y no toca la IA: mide el techo puro del servidor.</p>
+  <p>El p95 de cada escalón, en los {{ inf.experimentos|length }} tests. Esta es la prueba que no sube ningún recibo y no toca la IA: mide el techo puro del servidor.</p>
   <div class="wrap-tabla">
   <table>
     <thead><tr>
@@ -284,14 +284,14 @@
   <p>Un proceso de Python usa efectivamente <strong>un solo núcleo</strong>, aunque el código sea asincrónico como el de esta app y aunque la máquina tenga más. De ahí salen las dos mitades de la misma regla, las dos con evidencia acá: comprar CPU sin sumar <code>--workers</code> deja los núcleos nuevos sin usar, y sumar workers sin CPU real empeora las cosas (test 2). <strong>Van juntos: un worker por núcleo.</strong></p>
 
   <h3>Muchas instancias chicas o pocas grandes</h3>
-  <p>Para el servicio web conviene repartir en varias instancias antes que concentrar en una sola grande, por tres motivos que ya están dados en esta app: las sesiones viajan en una cookie firmada y <strong>no hay estado en el servidor</strong>, así que cualquier instancia puede atender a cualquiera sin configuración extra; una caída se lleva una porción más chica del servicio; y ninguna parte del sistema necesita mucha memoria en un mismo proceso — en el test 4 el web usó 638 MB de los 4 GB disponibles.</p>
+  <p>{{ inf.produccion.instancias }}</p>
 
   <h3>Cómo se hace efectivamente en Render</h3>
   <p><strong>Servicio web:</strong> no se crean servicios separados. Es un solo servicio con su pestaña <em>Scaling</em>, donde se fija el número de instancias; cada una corre el mismo plan de CPU y RAM que ya elegiste, y Render reparte el tráfico entre ellas con su propio balanceador, sin configuración adicional. El autoscaling automático existe pero requiere plan Pro o superior del workspace y escala por métrica (CPU/memoria), no por horario.</p>
   <p><strong>Postgres es distinto y conviene saberlo antes de presupuestar:</strong> no existen "varias instancias que se reparten la escritura". Lo que Render ofrece son <em>réplicas de lectura</em> — hasta cinco, de solo lectura, que se sincronizan con retraso y tienen su propia URL de conexión, lo que obliga a separar en el código qué consultas van a la réplica y cuáles a la principal. Hoy la app no hace esa separación. Si el objetivo es simplemente aguantar más carga, la palanca real sigue siendo subir el plan de la única instancia, que es justo lo que se midió en el test 3.</p>
 
   <h3>La cuenta que no hay que olvidar</h3>
-  <p>Las conexiones a la base se multiplican por instancia, pero <strong>no se pueden calcular</strong>: las siete corridas muestran que el número sigue a la saturación del servicio web y no a la cantidad de workers, y que se pasa del máximo que el pool debería permitir (ver el hallazgo correspondiente más arriba). Hasta entender por qué, la única forma seria de dimensionarlo es medirlo en la configuración real ya provisionada y dejar holgura contra el límite del plan de Postgres elegido, en vez de confiar en una multiplicación.</p>
+  <p>{{ inf.produccion.conexiones }}</p>
 
   <h2 id="leer"><span class="num">G</span> Cómo leer los números</h2>
   <p>Cada test avanza por <strong>escalones</strong>: una cantidad fija de usuarios simulados golpeando el sistema al mismo tiempo, sostenida varios minutos con un comportamiento realista —login, mirar páginas, pausas de segundos entre clic y clic— antes de subir al siguiente. Subir de a escalones deja ver <em>en qué punto</em> empieza a degradarse, no solo si aguanta o no.</p>

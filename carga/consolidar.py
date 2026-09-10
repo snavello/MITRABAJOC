@@ -471,6 +471,54 @@ EXPERIMENTOS = [
              "k6": "test2_recibos.json", "log": "servidor.log", "unidad": "recibos simultáneos en paralelo"},
         ],
     },
+    {
+        "numero": 8,
+        "nombre": "Dos instancias",
+        "subtitulo": "La misma CPU del test 6 pero repartida: dos instancias de 4 vCPU / 8 GB "
+                     "con 4 workers cada una, misma base",
+        "objetivo": "Probar si repartir el servicio web en dos instancias en vez de "
+                    "agrandar una sola cambia algo. Es la forma de crecer que conviene "
+                    "por disponibilidad —una caída se lleva la mitad y no todo—, pero "
+                    "nunca se había medido: las siete corridas anteriores fueron con una "
+                    "instancia. También era la ocasión de ver cuántas conexiones abre la "
+                    "base cuando los workers están repartidos en dos máquinas.",
+        "config": {
+            "plan_web": "4c-8g", "instancias": 2, "plan_db": "4c-16g", "workers_uvicorn": 4,
+            "pool_size": 5, "max_overflow": 5, "ia": "en hilo aparte", "ia_latencia_seg": 15,
+        },
+        "advertencias": [
+            "Corrida limpia: sin despliegues ni reinicios a mitad de test.",
+            "Única diferencia contra el test 7: la cantidad de instancias del servicio web "
+            "(de una a dos, con el mismo plan de 4 vCPU / 8 GB cada una y 4 workers cada "
+            "una). La base quedó igual. Contra el test 6 la CPU total es la misma —ocho "
+            "núcleos— pero repartida en dos máquinas en vez de concentrada en una.",
+            "La CPU y la RAM del servicio web son la SUMA de las dos instancias, que es "
+            "lo que informa la API de métricas de Render, y por eso se comparan contra el "
+            "nominal de las dos juntas. El porcentaje no dice cuán cargada está cada "
+            "instancia por separado: si el balanceo repartiera mal, el promedio lo "
+            "escondería.",
+            "Es la primera corrida en la que el escalón de 800 mide al servidor y no al "
+            "generador de carga: el servidor llegó a saturar mientras la máquina que "
+            "genera el tráfico quedó con margen. En los tests 6 y 7 ese escalón quedó "
+            "marcado como cota inferior por esa razón.",
+        ],
+        "fases": [
+            {"clave": "lecturas", "titulo": "Lecturas (navegación, sin subir nada)",
+             "detalle": "Usuarios concurrentes haciendo login y recorriendo la app. No toca la IA.",
+             "carpeta": "2026-09-10_2307", "serie": "lecturas",
+             "k6": "test1_lecturas.json", "log": "servidor.log", "unidad": "usuarios concurrentes"},
+            {"clave": "recibos", "titulo": "Subida de recibos (ráfagas simultáneas)",
+             "detalle": "Tiempo de cada subida de recibo, con 200 lectores navegando en paralelo.",
+             "carpeta": "2026-09-10_2307", "serie": "recibos",
+             "k6": "test2_recibos.json", "log": "servidor.log", "unidad": "recibos simultáneos"},
+            {"clave": "lectores_durante_recibos", "titulo": "Lectores mientras se suben recibos",
+             "detalle": "Los 200 lectores en paralelo, medidos durante las ráfagas. Es la medida "
+                        "de si una subida en curso ensucia la experiencia del resto.",
+             "carpeta": "2026-09-10_2307", "serie": "lectores_durante_recibos",
+             "k6": "test2_recibos.json", "log": "servidor.log",
+             "unidad": "recibos simultáneos en paralelo"},
+        ],
+    },
 ]
 
 OBJETIVO_P95_MS = 1000
@@ -756,6 +804,46 @@ def armar_conclusion(exp_num: int, fases: list, base: list, previos: dict = None
             f"{fmt_pct(c7['cpu_pct'])} de su CPU contra el {fmt_pct(c6['cpu_pct'])} del "
             f"test 6. Con 4 núcleos la carga esperada se atiende igual de rápido, pero sin "
             f"colchón para un pico por encima de 400."
+        )
+
+    if exp_num == 8:
+        t6 = (previos or {}).get(6, [])
+        t7 = (previos or {}).get(7, [])
+        comp = []
+        for esc in (200, 400, 800):
+            a, b = _fila(t7, "lecturas", esc), _fila(fases, "lecturas", esc)
+            comp.append(f"{esc}: {fmt_ms(a['p95'])} contra {fmt_ms(b['p95'])}")
+        f800 = _fila(fases, "lecturas", 800)
+        c8 = _fase(fases, "lecturas")["carga"]
+        c6 = _fase(t6, "lecturas")["carga"]
+        c7 = _fase(t7, "lecturas")["carga"]
+        r20 = _fila(fases, "recibos", 20)
+        l20 = _fila(fases, "lectores_durante_recibos", 20)
+        return (
+            f"Es la primera configuración que cumple el objetivo en los cinco escalones, "
+            f"incluido el de {f800['escalon']} concurrentes: {fmt_ms(f800['p95'])} de p95 con "
+            f"{fmt_pct(f800['errores_pct'])} de errores. Ninguna de las siete corridas "
+            f"anteriores había pasado de 400. "
+            f"Contra el test 7 (la misma máquina pero una sola instancia), escalón por "
+            f"escalón: {'; '.join(comp)}. "
+            f"Repartir en dos instancias no hace que la app responda más rápido en los "
+            f"escalones que el test 7 ya atendía bien —los tiempos son prácticamente los "
+            f"mismos—: lo que cambia es hasta dónde llega. "
+            f"El web terminó al {fmt_pct(c8['web']['cpu_pct'])} de sus "
+            f"{fmt_vcpu(c8['web']['cpu_nominal'])} vCPU sumadas, contra el "
+            f"{fmt_pct(c7['web']['cpu_pct'])} del test 7 con la mitad de núcleos y el "
+            f"{fmt_pct(c6['web']['cpu_pct'])} del test 6, que tenía los mismos ocho "
+            f"núcleos en una sola instancia. "
+            f"La memoria no fue nunca el límite: {c8['web']['ram_txt']}. "
+            f"Las ráfagas de recibos siguen dominadas por la espera de la IA y no por la "
+            f"infraestructura: {fmt_ms(r20['p95'])} con {r20['escalon']} simultáneas y "
+            f"{fmt_pct(r20['errores_pct'])} de errores, mientras los lectores en paralelo "
+            f"ni se enteran ({fmt_ms(l20['p95'])}). "
+            f"Sobre las conexiones a la base: con {c8['db']['conexiones']} de pico y ocho "
+            f"workers repartidos en dos instancias, el número quedó por debajo del que "
+            f"midió el test 7 con cuatro workers en una sola "
+            f"({_fase(t7, 'lecturas')['carga']['db']['conexiones']}) — otra vez sigue a la "
+            f"carga y no a la cantidad de procesos."
         )
     return ""
 

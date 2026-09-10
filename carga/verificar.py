@@ -127,6 +127,10 @@ def vocabulario_de(exp: dict, base: dict, *referencias) -> set:
     return ok
 
 
+# Contra qué tests puede comparar la conclusión de cada uno.
+COMPARACIONES = {5: (4,), 6: (5,), 7: (6,), 8: (7, 6)}
+
+
 def main():
     if not DATOS.exists():
         sys.exit("Falta carga/experimentos.json -- correr python carga/consolidar.py")
@@ -134,9 +138,11 @@ def main():
     porcodigo = {e["numero"]: e for e in datos}
     base = porcodigo[1]
 
-    revisar(len(datos) == 7, f"Se esperaban 7 experimentos y hay {len(datos)}.")
-    revisar(sorted(porcodigo) == [1, 2, 3, 4, 5, 6, 7],
-            f"La numeración tiene que ser 1..7 y es {sorted(porcodigo)}.")
+    esperados = [e["numero"] for e in C.EXPERIMENTOS]
+    revisar(len(datos) == len(esperados),
+            f"Se esperaban {len(esperados)} experimentos y hay {len(datos)}.")
+    revisar(sorted(porcodigo) == list(range(1, len(esperados) + 1)),
+            f"La numeración tiene que ser 1..{len(esperados)} y es {sorted(porcodigo)}.")
 
     # Reconstrucción independiente desde las fuentes crudas.
     definiciones = {e["numero"]: e for e in C.EXPERIMENTOS}
@@ -173,7 +179,8 @@ def main():
                 fases_con_cache += 1
             v = C.ventana_k6(carpeta / fd["k6"])
             m = C.metricas_servidor(carpeta / fd["log"], v[0], v[1])
-            esperada = C.carga_legible(m, d["config"]["plan_web"], d["config"]["plan_db"])
+            esperada = C.carga_legible(m, d["config"]["plan_web"], d["config"]["plan_db"],
+                                       d["config"].get("instancias", 1))
             revisar(fase["carga"] == esperada,
                     f"{nombre}: la carga publicada no coincide con recalcularla del log.")
             revisar(fase["carga_medida"] == (m["cpu_web"] is not None or m["cpu_db"] is not None),
@@ -201,8 +208,14 @@ def main():
         # 3. Ninguna cifra inventada en veredicto ni conclusión.
         # El test 5 aísla un cambio de código: compara contra el 4, que
         # corrió con la misma infraestructura, no contra la línea base.
-        referencia = porcodigo.get(exp["numero"] - 1) if exp["numero"] in (5, 6, 7) else None
-        vocab = vocabulario_de(exp, base, referencia)
+        # Cada conclusión declara acá contra qué corridas se compara, y el
+        # auditor solo le permite citar cifras de esas. El 5 aísla un cambio
+        # de código y compara contra el 4, que corrió con la misma
+        # infraestructura, no contra la línea base; el 8 compara contra el 7
+        # (misma máquina, una instancia) y contra el 6 (los mismos ocho
+        # núcleos en una sola instancia).
+        refs = [porcodigo[n] for n in COMPARACIONES.get(exp["numero"], ()) if n in porcodigo]
+        vocab = vocabulario_de(exp, base, *refs)
         for campo in ("veredicto", "conclusion"):
             for numero in numeros_del_texto(exp[campo]):
                 revisar(numero in vocab,
@@ -219,7 +232,8 @@ def main():
     # del dataset y que no cite ninguna cifra ajena en sus hallazgos.
     import informe as INF
     inf = INF.construir()
-    revisar(len(inf["experimentos"]) == 7, "El informe general no cubre los 7 tests.")
+    revisar(len(inf["experimentos"]) == len(esperados),
+            f"El informe general no cubre los {len(esperados)} tests.")
     for clave, comp, escalones in (("lecturas", inf["comparativa_lecturas"], INF.ESCALONES_LECTURAS),
                                    ("recibos", inf["comparativa_recibos"], INF.ESCALONES_RECIBOS)):
         for fila in comp:
