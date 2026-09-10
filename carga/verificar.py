@@ -33,6 +33,11 @@ DATOS = BASE / "experimentos.json"
 
 fallos = []
 chequeos = 0
+# Cuántas fases se pudieron contrastar contra el NDJSON crudo de k6 y
+# cuántas usaron la ventana cacheada en ventanas.json (el crudo pesa
+# cientos de MB y no se versiona -- ver .gitignore).
+fases_con_crudo = 0
+fases_con_cache = 0
 
 
 def revisar(condicion, mensaje):
@@ -156,6 +161,11 @@ def main():
                             f"y en el CSV {c[campo]}.")
 
             # 2. Cargas de servidor recalculadas desde el log crudo.
+            global fases_con_crudo, fases_con_cache
+            if (carpeta / fd["k6"]).exists():
+                fases_con_crudo += 1
+            else:
+                fases_con_cache += 1
             v = C.ventana_k6(carpeta / fd["k6"])
             m = C.metricas_servidor(carpeta / fd["log"], v[0], v[1])
             esperada = C.carga_legible(m, d["config"]["plan_web"], d["config"]["plan_db"])
@@ -254,6 +264,15 @@ def main():
             "carga/INFORME.md quedó desactualizado: correr python carga/generar_md.py")
 
     print(f"{chequeos} chequeos sobre {len(datos)} experimentos.")
+    if fases_con_cache:
+        print(f"Ventanas de tiempo: {fases_con_crudo} verificadas contra el NDJSON crudo de "
+              f"k6 y {fases_con_cache} tomadas de ventanas.json, porque ese NDJSON no está "
+              f"en este clon (pesa cientos de MB y no se versiona). Los tiempos por escalón "
+              f"y las cargas de CPU/RAM se verifican siempre contra resumen.csv y "
+              f"servidor*.log, que sí están versionados.")
+    else:
+        print(f"Ventanas de tiempo: las {fases_con_crudo} verificadas contra el NDJSON crudo "
+              f"de k6, que está presente en este clon.")
     if fallos:
         print(f"\n{len(fallos)} INCONSISTENCIAS:")
         for f in fallos:

@@ -65,9 +65,49 @@ def test_las_fechas_estan_en_hora_de_buenos_aires():
     print("OK  test_las_fechas_estan_en_hora_de_buenos_aires")
 
 
+def test_se_puede_reconstruir_sin_los_ndjson_crudos_de_k6():
+    """Los NDJSON que escribe k6 pesan ~1 GB entre todas las corridas y no
+    se versionan; lo único que hace falta de ellos son las ventanas de
+    tiempo de cada fase, cacheadas en carga/ventanas.json. Sin esa entrada,
+    un clon limpio no podría regenerar el informe -- y los datos crudos
+    viven en un contenedor efímero, así que se perderían para siempre."""
+    import sys
+    sys.path.insert(0, str(CARGA))
+    import consolidar
+
+    ventanas = json.loads((CARGA / "ventanas.json").read_text(encoding="utf-8"))
+    faltan = []
+    for exp in consolidar.EXPERIMENTOS:
+        for f in exp["fases"]:
+            clave = f"{f['carpeta']}/{f['k6']}"
+            if clave not in ventanas:
+                faltan.append(clave)
+    assert not faltan, ("Sin ventana cacheada, estas fases no se pueden reconstruir "
+                        f"desde un clon limpio: {sorted(set(faltan))}")
+    print("OK  test_se_puede_reconstruir_sin_los_ndjson_crudos_de_k6")
+
+
+def test_los_datos_chicos_de_cada_corrida_estan_versionados():
+    """resumen.csv y servidor.log son la fuente que audita verificar.py.
+    Si quedaran fuera del repo (como estuvieron hasta el 2026-09-10, con
+    todo carga/log/ ignorado), el informe publicado dejaría de ser
+    verificable en cuanto se recicle el contenedor donde se corrió."""
+    r = subprocess.run(["git", "check-ignore", "carga/log/2026-09-10_1541/resumen.csv",
+                        "carga/log/2026-09-10_1541/servidor.log"],
+                       cwd=RAIZ, capture_output=True, text=True)
+    assert r.returncode != 0, f"Estos archivos están ignorados por git y no deberían:\n{r.stdout}"
+    # Y los pesados sí tienen que seguir afuera.
+    r = subprocess.run(["git", "check-ignore", "carga/log/2026-09-10_1541/test1_lecturas.json"],
+                       cwd=RAIZ, capture_output=True, text=True)
+    assert r.returncode == 0, "El NDJSON crudo de k6 (cientos de MB) tiene que seguir ignorado."
+    print("OK  test_los_datos_chicos_de_cada_corrida_estan_versionados")
+
+
 if __name__ == "__main__":
     test_la_auditoria_de_consistencia_pasa()
     test_el_json_consolidado_esta_al_dia_con_los_datos_crudos()
     test_los_experimentos_estan_numerados_sin_huecos()
     test_las_fechas_estan_en_hora_de_buenos_aires()
+    test_se_puede_reconstruir_sin_los_ndjson_crudos_de_k6()
+    test_los_datos_chicos_de_cada_corrida_estan_versionados()
     print("Todo OK — los experimentos publicados cierran con los datos crudos.")

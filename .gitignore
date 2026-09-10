@@ -21,4 +21,12 @@ docs/generador/datos.json
 
 # Test de carga (carga/): artefactos generados por corridas, no versionar
 carga/usuarios.csv
-carga/log/
+# Datos crudos del test de carga. Los NDJSON que escribe k6 pesan cientos de
+# MB por corrida y NO van al repo; todo lo demás de carga/log/ (resumen.csv,
+# servidor*.log, los summaries y el stdout de k6) SÍ se versiona: es la
+# fuente contra la que audita carga/verificar.py, y sin ella el informe
+# publicado deja de ser reproducible desde un clon limpio. Las ventanas de
+# tiempo que hacían falta del NDJSON quedan cacheadas en carga/ventanas.json.
+carga/log/*/test1_lecturas.json
+carga/log/*/test2_recibos.json
+carga/log/*/*.ndjson

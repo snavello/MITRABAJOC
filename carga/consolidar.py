@@ -27,6 +27,9 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent
 LOG = BASE / "log"
 SALIDA = BASE / "experimentos.json"
+# Las ventanas de tiempo de cada fase, extraídas del NDJSON crudo de k6 (que
+# no se versiona por tamaño). Ver ventana_k6().
+VENTANAS = BASE / "ventanas.json"
 
 BUENOS_AIRES = timezone(timedelta(hours=-3))
 
@@ -52,9 +55,32 @@ def _parse_ts(ts: str) -> datetime:
     return datetime.fromisoformat(ts.replace("Z", "+00:00"))
 
 
+def _leer_ventanas() -> dict:
+    if VENTANAS.exists():
+        return json.loads(VENTANAS.read_text(encoding="utf-8"))
+    return {}
+
+
 def ventana_k6(ruta: Path):
-    """(inicio, fin) en UTC del NDJSON crudo de k6: el primer y el último
-    punto medido. Es la ventana real de la fase, no la teórica."""
+    """(inicio, fin) en UTC de una fase: el primer y el último punto que
+    midió k6. Es la ventana real, no la teórica.
+
+    El NDJSON crudo de k6 pesa cientos de MB por corrida y NO se versiona
+    (ver .gitignore). Lo único que hace falta de él para reconstruir el
+    informe son estos dos timestamps, así que se cachean en
+    carga/ventanas.json, que sí va al repo: desde un clon limpio, sin los
+    archivos gigantes, `consolidar.py` sigue produciendo el mismo dataset.
+    Cuando el crudo está presente manda él y el cache se actualiza."""
+    clave = f"{ruta.parent.name}/{ruta.name}"
+    cache = _leer_ventanas()
+    if not ruta.exists():
+        guardada = cache.get(clave)
+        if not guardada:
+            raise SystemExit(
+                f"Falta {ruta} y su ventana tampoco está en {VENTANAS.name}. "
+                f"Sin una de las dos no se puede reconstruir esa fase.")
+        return _parse_ts(guardada[0]), _parse_ts(guardada[1])
+
     tiempos = []
     with open(ruta, encoding="utf-8") as f:
         for linea in f:
@@ -69,7 +95,13 @@ def ventana_k6(ruta: Path):
                 tiempos.append(o["data"]["time"])
     if not tiempos:
         return None
-    return _parse_ts(min(tiempos)), _parse_ts(max(tiempos))
+    desde, hasta = _parse_ts(min(tiempos)), _parse_ts(max(tiempos))
+    par = [desde.isoformat(), hasta.isoformat()]
+    if cache.get(clave) != par:
+        cache[clave] = par
+        VENTANAS.write_text(json.dumps(cache, ensure_ascii=False, indent=2, sort_keys=True),
+                            encoding="utf-8")
+    return desde, hasta
 
 
 def metricas_servidor(ruta: Path, desde: datetime, hasta: datetime) -> dict:
