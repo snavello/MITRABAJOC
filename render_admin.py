@@ -141,3 +141,160 @@ def estado_job(job_id: str) -> dict:
         return _peticion(f"/services/{web_id}/jobs/{job_id}")
     except Exception as e:
         return {"error": str(e)}
+
+
+# ===================== Planes: leer y cambiar =====================
+# Lo que sigue es lo que usa la solapa "Planes" de /entornos. Dos reglas que
+# valen para todo el bloque:
+#
+# 1. Nunca se manda a la API un plan que no esté en el catálogo
+#    (render_planes.py, que sale de la propia página de precios de Render).
+#    Un identificador inventado sería un 400 en el mejor caso y un plan
+#    equivocado en el peor -- pasó en la sesión del 2026-09-10, cuando pedir
+#    "starter" mandó el servicio a un plan viejo distinto del que tenía.
+# 2. Cambiar el plan del servicio web lo REINICIA, y cambiar el de Postgres
+#    lo deja un minuto sin atender. Eso no se puede evitar, pero sí avisarlo:
+#    las funciones devuelven qué se cambió para que la pantalla lo diga.
+
+def _web_id() -> str:
+    return os.getenv("RENDER_WEB_SERVICE_ID", "")
+
+
+def _db_id() -> str:
+    return os.getenv("RENDER_DB_ID", "")
+
+
+def _start_command_con_workers(cmd: str, workers: int) -> str:
+    """Reemplaza `--workers N` en el Start Command, o lo agrega si no está.
+    Se edita el comando REAL leído de la API en vez de reescribirlo entero:
+    así no se pierde ninguna otra bandera que alguien haya puesto a mano."""
+    import re
+    if re.search(r"--workers[= ]\d+", cmd):
+        return re.sub(r"--workers[= ]\d+", f"--workers {workers}", cmd)
+    return f"{cmd.rstrip()} --workers {workers}"
+
+
+def estado_planes() -> dict:
+    """Lo que la solapa muestra al entrar: plan actual, si el servicio está
+    activo, cuántas instancias y cuántos workers. Cada valor que no se pudo
+    leer queda en None y la pantalla lo muestra como "no disponible"."""
+    if not configurado():
+        return {"configurado": False, "web": None, "db": None,
+                "error": "Falta RENDER_API_KEY o RENDER_WEB_SERVICE_ID."}
+    web = db = None
+    error = ""
+    try:
+        s = _peticion(f"/services/{_web_id()}")
+        det = s.get("serviceDetails", {}) or {}
+        import re
+        cmd = (det.get("envSpecificDetails", {}) or {}).get("startCommand", "") or ""
+        m = re.search(r"--workers[= ](\d+)", cmd)
+        web = {
+            "id": s.get("id", ""), "nombre": s.get("name", ""),
+            "plan": det.get("plan", ""),
+            "instancias": det.get("numInstances"),
+            "workers": int(m.group(1)) if m else 1,
+            "start_command": cmd,
+            "suspendido": s.get("suspended") != "not_suspended",
+            "activo": s.get("suspended") == "not_suspended",
+            "actualizado": s.get("updatedAt", ""),
+            "panel": s.get("dashboardUrl", ""),
+        }
+    except Exception as e:
+        error = f"No se pudo leer el servicio web ({type(e).__name__})."
+    if _db_id():
+        try:
+            d = _peticion(f"/postgres/{_db_id()}")
+            db = {
+                "id": d.get("id", ""), "nombre": d.get("name", ""),
+                "plan": d.get("plan", ""),
+                "estado": d.get("status", ""),
+                # "available" es el único estado en el que la base atiende;
+                # durante un cambio de plan pasa por "updating_instance" y
+                # la app entera devuelve error 500 mientras tanto.
+                "activo": d.get("status") == "available",
+                "suspendido": d.get("suspended") != "not_suspended",
+                "disco_gb": d.get("diskSizeGB"),
+                "version": d.get("version", ""),
+                "panel": d.get("dashboardUrl", ""),
+            }
+        except Exception as e:
+            error = (error + " " if error else "") + \
+                f"No se pudo leer la base ({type(e).__name__})."
+    return {"configurado": True, "web": web, "db": db, "error": error}
+
+
+def aplicar_plan_web(plan: str, instancias: int = None, workers: int = None) -> dict:
+    """Cambia plan / instancias / workers del servicio web.
+
+    ORDEN IMPORTANTE: si el plan baja, los workers se bajan ANTES; si sube,
+    DESPUÉS. Dejar muchos workers sobre poca CPU es la peor combinación
+    medida (test 2 del informe de carga: peor que la línea base con el doble
+    de workers sobre media vCPU), así que el servicio nunca debe pasar por
+    ese estado intermedio, ni siquiera unos minutos."""
+    import render_planes
+    if not configurado() or not _web_id():
+        return {"error": "Falta RENDER_API_KEY o RENDER_WEB_SERVICE_ID."}
+    destino = render_planes.buscar("web", plan)
+    if not destino:
+        return {"error": f"El plan '{plan}' no está en el catálogo de Render."}
+    try:
+        actual = _peticion(f"/services/{_web_id()}")
+    except Exception as e:
+        return {"error": f"No se pudo leer el estado actual ({type(e).__name__})."}
+    det = actual.get("serviceDetails", {}) or {}
+    plan_actual = det.get("plan", "")
+    cmd = (det.get("envSpecificDetails", {}) or {}).get("startCommand", "") or ""
+    vcpu_actual = (render_planes.buscar("web", plan_actual) or {}).get("vcpu", 0)
+    baja = destino["vcpu"] < (vcpu_actual or 0)
+    hechos = []
+
+    def _poner_workers():
+        if workers is None:
+            return
+        nuevo = _start_command_con_workers(cmd, workers)
+        if nuevo == cmd:
+            return
+        _peticion(f"/services/{_web_id()}", metodo="PATCH", body={
+            "serviceDetails": {"envSpecificDetails": {"startCommand": nuevo}}})
+        hechos.append(f"workers a {workers}")
+
+    try:
+        if baja:
+            _poner_workers()
+        if plan != plan_actual:
+            _peticion(f"/services/{_web_id()}", metodo="PATCH",
+                      body={"serviceDetails": {"plan": plan}})
+            hechos.append(f"plan a {plan}")
+        if instancias is not None and instancias != det.get("numInstances"):
+            _peticion(f"/services/{_web_id()}/scale", metodo="POST",
+                      body={"numInstances": int(instancias)})
+            hechos.append(f"instancias a {instancias}")
+        if not baja:
+            _poner_workers()
+    except urllib.error.HTTPError as e:
+        return {"error": f"Render devolvió HTTP {e.code}.", "hechos": hechos}
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {e}", "hechos": hechos}
+    return {"ok": True, "hechos": hechos, "reinicia": bool(hechos)}
+
+
+def aplicar_plan_db(plan: str) -> dict:
+    """Cambia el plan de Postgres. El disco NO se achica nunca (Render no lo
+    permite), así que bajar de plan reduce CPU y RAM pero no lo que se paga
+    por almacenamiento."""
+    import render_planes
+    if not configurado() or not _db_id():
+        return {"error": "Falta RENDER_API_KEY o RENDER_DB_ID."}
+    if not render_planes.buscar("db", plan):
+        return {"error": f"El plan '{plan}' no está en el catálogo de Render."}
+    try:
+        actual = _peticion(f"/postgres/{_db_id()}")
+        if actual.get("plan") == plan:
+            return {"ok": True, "hechos": [], "reinicia": False}
+        _peticion(f"/postgres/{_db_id()}", metodo="PATCH", body={"plan": plan})
+    except urllib.error.HTTPError as e:
+        return {"error": f"Render devolvió HTTP {e.code}."}
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {e}"}
+    return {"ok": True, "hechos": [f"plan de la base a {plan}"], "reinicia": True}

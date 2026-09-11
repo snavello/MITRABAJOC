@@ -1,0 +1,108 @@
+{# Solapa "Planes" de /entornos. Solo se incluye en Pruebas (main.py):
+   cambiar de plan reinicia el servicio web y deja la base un minuto sin
+   atender, así que en Demo la solapa aparece deshabilitada.
+
+   Todo el contenido lo carga el JS desde /api/entornos/planes -- lo primero
+   que se ve al entrar es el plan actual y si el servicio está activo, que es
+   justo lo que se pidió. Los precios salen de data/render_planes.json, que
+   genera actualizar_planes_render.py leyendo render.com/pricing; acá no hay
+   ni un número escrito a mano. #}
+<div class="rec-cab" style="margin-top:0;">
+  <svg class="rec-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-recursos"/></svg>
+  <div>
+    <h2>Planes de Render</h2>
+    <p class="rec-lede">Subir y bajar el plan del servicio web y de Postgres, ahora o en un horario fijo. Render prorratea por segundo, así que tener el plan grande solo las horas que hace falta se paga por lo que se usa.</p>
+  </div>
+</div>
+
+<div id="planes-aviso" class="aviso" hidden></div>
+
+{# ---------- 1. Estado actual ---------- #}
+<h3 class="planes-titulo">Ahora mismo</h3>
+<div class="planes-estado" id="planes-estado">
+  <div class="vacio">Consultando a Render…</div>
+</div>
+
+{# ---------- 2. Cambiar ahora ---------- #}
+<h3 class="planes-titulo">Cambiar ahora</h3>
+<div class="planes-cols">
+  <form class="plan-tarjeta" data-destino="web">
+    <div class="plan-cab"><b>Servicio web</b><span class="plan-actual" data-actual>…</span></div>
+    <div class="campo">
+      <label for="plan-web-sel">Plan</label>
+      <select id="plan-web-sel" data-select-plan></select>
+    </div>
+    <div class="campo">
+      <label for="plan-web-inst">Instancias</label>
+      <input type="number" id="plan-web-inst" data-instancias min="1" max="10" step="1">
+      <small>El plan se cobra <b>por instancia</b>: dos de 4 vCPU cuestan el doble que una.</small>
+    </div>
+    <label class="plan-check">
+      <input type="checkbox" data-ajustar-workers checked>
+      <span>Ajustar <code>--workers</code> al plan (uno por núcleo)</span>
+    </label>
+    <p class="plan-nota">El test 2 midió que sumar workers sin CPU empeora los tiempos, y el 6 que sumar CPU sin workers deja núcleos sin usar. Destildar esto solo si sabés por qué.</p>
+    <div class="plan-costo" data-costo></div>
+    <button type="submit" class="boton" data-aplicar>Aplicar ahora</button>
+    <p class="plan-nota aviso-corte">Reinicia el servicio: unos minutos de indisponibilidad.</p>
+  </form>
+
+  <form class="plan-tarjeta" data-destino="db">
+    <div class="plan-cab"><b>Postgres</b><span class="plan-actual" data-actual>…</span></div>
+    <div class="campo">
+      <label for="plan-db-sel">Plan</label>
+      <select id="plan-db-sel" data-select-plan></select>
+    </div>
+    <p class="plan-nota">El <b>disco no se achica</b>: bajar de plan reduce CPU y RAM, no lo que se paga por almacenamiento.</p>
+    <div class="plan-costo" data-costo></div>
+    <button type="submit" class="boton" data-aplicar>Aplicar ahora</button>
+    <p class="plan-nota aviso-corte">La base queda cerca de un minuto sin atender y la app devuelve error mientras tanto.</p>
+  </form>
+</div>
+
+{# ---------- 3. Programación semanal ---------- #}
+<h3 class="planes-titulo">Cambios programados</h3>
+<p class="rec-lede" style="margin:-6px 0 14px;">Reglas semanales en hora de Buenos Aires. Las aplica la propia app, así que si el servicio web está caído justo a esa hora, ese disparo se pierde (hay 10 minutos de tolerancia para cubrir un reinicio).</p>
+
+<form class="test-form plan-programar" id="form-programar">
+  <div class="campo">
+    <label for="pr-destino">Servicio</label>
+    <select id="pr-destino">
+      <option value="web">Servicio web</option>
+      <option value="db">Postgres</option>
+    </select>
+  </div>
+  <div class="campo">
+    <label for="pr-plan">Plan a poner</label>
+    <select id="pr-plan"></select>
+  </div>
+  <div class="campo">
+    <label for="pr-hora">Hora (Buenos Aires)</label>
+    <input type="time" id="pr-hora" value="08:00" required>
+  </div>
+  <div class="campo" id="pr-campo-inst">
+    <label for="pr-inst">Instancias</label>
+    <input type="number" id="pr-inst" min="1" max="10" placeholder="no tocar">
+  </div>
+  <div class="campo ancho">
+    <label>Días</label>
+    <div class="plan-dias" id="pr-dias">
+      {% for d, n in [(1,'Lun'),(2,'Mar'),(3,'Mié'),(4,'Jue'),(5,'Vie'),(6,'Sáb'),(7,'Dom')] %}
+      <label class="plan-dia"><input type="checkbox" value="{{ d }}" {{ 'checked' if d <= 5 }}><span>{{ n }}</span></label>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="campo ancho">
+    <label for="pr-nota">Nota (opcional)</label>
+    <input type="text" id="pr-nota" maxlength="200" placeholder="Ej: mañanas de liquidación">
+  </div>
+  <button type="submit" class="boton">Programar</button>
+</form>
+
+<div class="tests-lista" id="planes-programados"></div>
+
+{# ---------- 4. Bitácora ---------- #}
+<h3 class="planes-titulo">Últimos cambios</h3>
+<div class="tests-lista" id="planes-historial"></div>
+
+<p class="plan-pie" id="planes-fuente"></p>

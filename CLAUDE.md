@@ -357,6 +357,40 @@ de Seccional" (decisiones ya cerradas).
    medición: [`docs/ASISTENTE_PANEL.md`](docs/ASISTENTE_PANEL.md). Lo que
    sigue pendiente es la medición periódica del prompt (`probar_asistente.py`).
 
+## Planes de Render desde la app (solapa "Planes" de `/entornos`)
+
+Sube y baja el plan del servicio web y de Postgres, ahora o en un horario
+fijo. Existe porque el tráfico de esta app es muy desparejo (días de
+liquidación contra fines de semana con veinte veces menos gente) y Render
+prorratea por segundo: tener el plan grande solo las horas que hace falta es
+plata real. Antes se hacía a mano en la consola de Render.
+
+**Solo en Pruebas.** Cambiar de plan reinicia el web y deja la base cerca de
+un minuto devolviendo error; en Demo la solapa aparece deshabilitada y las
+rutas rechazan el intento aunque se las llame a mano.
+
+- `actualizar_planes_render.py` → `data/render_planes.json`: el catálogo con
+  precios, leído de render.com/pricing. **Ningún precio está escrito a
+  mano**, y el archivo guarda la fecha de lectura, que la pantalla muestra.
+  Si Render cambia el maquetado, el script falla y deja el JSON anterior
+  intacto en vez de inventar. Para refrescarlo: `python actualizar_planes_render.py`.
+- `render_planes.py`: carga ese catálogo y le da formato. `workers_para()`
+  traduce plan → `--workers` (uno por núcleo).
+- `render_admin.py`: `estado_planes()`, `aplicar_plan_web()`,
+  `aplicar_plan_db()`. **Al bajar de plan los workers bajan primero; al
+  subir, después** — el estado intermedio "muchos workers sobre poca CPU" es
+  la peor combinación medida en todo el informe de carga (test 2).
+- `planificador.py`: hilo que aplica las reglas semanales. Corre adentro de
+  la app y no en un Cron Job de Render (un servicio más que se factura,
+  justo lo que se quiere ahorrar). Contrapartida dicha en la pantalla: si el
+  web está caído a esa hora, ese disparo se pierde; hay 10 minutos de
+  gracia para cubrir un reinicio. Seguro con varias instancias: el reclamo
+  de cada regla es un UPDATE condicional (`db.reclamar_plan_programado`).
+- Tablas `PlanProgramado` y `CambioPlan` (migración `c5f1a2d70b39`). La
+  bitácora importa: para las bases de datos Render **no expone historial de
+  planes**, así que sin ella no habría cómo saber por qué cambió el gasto.
+- Tests: `test_planes_render.py` (24, sin tocar la API real).
+
 ## Validaciones en formularios de Trámites
 Capa de validaciones acordada 2026-09-01, cuatro fuentes: `fija` (valor
 prefijado), `lista` (datos del admin), `sistema` (padrón/recibos), `externa`

@@ -1,0 +1,247 @@
+{
+  "fuente": "https://render.com/pricing",
+  "leido_utc": "2026-09-11 00:47",
+  "moneda": "USD",
+  "web": [
+    {
+      "id": "0.5c-512mb",
+      "vcpu": 0.5,
+      "ram_mb": 512,
+      "usd_mes": 7.0
+    },
+    {
+      "id": "1c-2g",
+      "vcpu": 1.0,
+      "ram_mb": 2048,
+      "usd_mes": 25.0
+    },
+    {
+      "id": "2c-4g",
+      "vcpu": 2.0,
+      "ram_mb": 4096,
+      "usd_mes": 85.0
+    },
+    {
+      "id": "2c-8g",
+      "vcpu": 2.0,
+      "ram_mb": 8192,
+      "usd_mes": 135.0
+    },
+    {
+      "id": "4c-8g",
+      "vcpu": 4.0,
+      "ram_mb": 8192,
+      "usd_mes": 175.0
+    },
+    {
+      "id": "2c-16g",
+      "vcpu": 2.0,
+      "ram_mb": 16384,
+      "usd_mes": 200.0
+    },
+    {
+      "id": "4c-16g",
+      "vcpu": 4.0,
+      "ram_mb": 16384,
+      "usd_mes": 225.0
+    },
+    {
+      "id": "8c-16g",
+      "vcpu": 8.0,
+      "ram_mb": 16384,
+      "usd_mes": 300.0
+    },
+    {
+      "id": "4c-32g",
+      "vcpu": 4.0,
+      "ram_mb": 32768,
+      "usd_mes": 350.0
+    },
+    {
+      "id": "8c-32g",
+      "vcpu": 8.0,
+      "ram_mb": 32768,
+      "usd_mes": 450.0
+    },
+    {
+      "id": "12c-24g",
+      "vcpu": 12.0,
+      "ram_mb": 24576,
+      "usd_mes": 450.0
+    },
+    {
+      "id": "12c-48g",
+      "vcpu": 12.0,
+      "ram_mb": 49152,
+      "usd_mes": 800.0
+    },
+    {
+      "id": "8c-64g",
+      "vcpu": 8.0,
+      "ram_mb": 65536,
+      "usd_mes": 1000.0
+    },
+    {
+      "id": "12c-96g",
+      "vcpu": 12.0,
+      "ram_mb": 98304,
+      "usd_mes": 1500.0
+    }
+  ],
+  "db": [
+    {
+      "id": "0.1c-256mb",
+      "vcpu": 0.1,
+      "ram_mb": 256,
+      "usd_mes": 6.0,
+      "conexiones_max": 100
+    },
+    {
+      "id": "0.5c-1g",
+      "vcpu": 0.5,
+      "ram_mb": 1024,
+      "usd_mes": 19.0,
+      "conexiones_max": 100
+    },
+    {
+      "id": "1c-2g",
+      "vcpu": 1.0,
+      "ram_mb": 2048,
+      "usd_mes": 40.0,
+      "conexiones_max": 100
+    },
+    {
+      "id": "1c-4g",
+      "vcpu": 1.0,
+      "ram_mb": 4096,
+      "usd_mes": 55.0,
+      "conexiones_max": 100
+    },
+    {
+      "id": "2c-4g",
+      "vcpu": 2.0,
+      "ram_mb": 4096,
+      "usd_mes": 75.0,
+      "conexiones_max": 100
+    },
+    {
+      "id": "2c-8g",
+      "vcpu": 2.0,
+      "ram_mb": 8192,
+      "usd_mes": 100.0,
+      "conexiones_max": 200
+    },
+    {
+      "id": "2c-16g",
+      "vcpu": 2.0,
+      "ram_mb": 16384,
+      "usd_mes": 160.0,
+      "conexiones_max": 400
+    },
+    {
+      "id": "4c-16g",
+      "vcpu": 4.0,
+      "ram_mb": 16384,
+      "usd_mes": 200.0,
+      "conexiones_max": 400
+    },
+    {
+      "id": "4c-32g",
+      "vcpu": 4.0,
+      "ram_mb": 32768,
+      "usd_mes": 350.0,
+      "conexiones_max": 500
+    },
+    {
+      "id": "8c-32g",
+      "vcpu": 8.0,
+      "ram_mb": 32768,
+      "usd_mes": 400.0,
+      "conexiones_max": 500
+    },
+    {
+      "id": "8c-64g",
+      "vcpu": 8.0,
+      "ram_mb": 65536,
+      "usd_mes": 750.0,
+      "conexiones_max": 500
+    },
+    {
+      "id": "16c-64g",
+      "vcpu": 16.0,
+      "ram_mb": 65536,
+      "usd_mes": 800.0,
+      "conexiones_max": 500
+    },
+    {
+      "id": "16c-128g",
+      "vcpu": 16.0,
+      "ram_mb": 131072,
+      "usd_mes": 1500.0,
+      "conexiones_max": 500
+    },
+    {
+      "id": "32c-128g",
+      "vcpu": 32.0,
+      "ram_mb": 131072,
+      "usd_mes": 1700.0,
+      "conexiones_max": 500
+    },
+    {
+      "id": "32c-256g",
+      "vcpu": 32.0,
+      "ram_mb": 262144,
+      "usd_mes": 2500.0,
+      "conexiones_max": 500
+    },
+    {
+      "id": "48c-192g",
+      "vcpu": 48.0,
+      "ram_mb": 196608,
+      "usd_mes": 2500.0,
+      "conexiones_max": 500
+    },
+    {
+      "id": "64c-256g",
+      "vcpu": 64.0,
+      "ram_mb": 262144,
+      "usd_mes": 3000.0,
+      "conexiones_max": 500
+    },
+    {
+      "id": "48c-384g",
+      "vcpu": 48.0,
+      "ram_mb": 393216,
+      "usd_mes": 4500.0,
+      "conexiones_max": 500
+    },
+    {
+      "id": "96c-384g",
+      "vcpu": 96.0,
+      "ram_mb": 393216,
+      "usd_mes": 4600.0,
+      "conexiones_max": 500
+    },
+    {
+      "id": "64c-512g",
+      "vcpu": 64.0,
+      "ram_mb": 524288,
+      "usd_mes": 6000.0,
+      "conexiones_max": 500
+    },
+    {
+      "id": "128c-512g",
+      "vcpu": 128.0,
+      "ram_mb": 524288,
+      "usd_mes": 6200.0,
+      "conexiones_max": 500
+    },
+    {
+      "id": "128c-1024g",
+      "vcpu": 128.0,
+      "ram_mb": 1048576,
+      "usd_mes": 11000.0,
+      "conexiones_max": 500
+    }
+  ]
+}

@@ -122,6 +122,53 @@
   .server-dato .k { font-family:var(--mono); font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,.45); }
   .server-dato .v { font-family:var(--fuente-num, var(--mono)); font-size:22px; font-weight:700; margin-top:2px; }
   .server-dato .v.chico { font-size:15px; font-weight:600; }
+  /* ---- Planes (2026-09-11): subir/bajar plan de Render y programarlo.
+     Reusa .boton, .campo, .aviso, .vacio, .test-form y .tests-lista -- solo
+     agrega lo que no existía. */
+  .planes-titulo { font-family:var(--fuente-display); font-size:16px; letter-spacing:1.4px; text-transform:uppercase;
+    color:rgba(255,255,255,.6); margin:26px 0 12px; }
+  .planes-estado { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:14px; }
+  .planes-cols { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:14px; }
+  .plan-tarjeta { display:grid; gap:12px; align-content:start; padding:16px 18px; border-radius:16px;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); }
+  .plan-tarjeta select, .plan-tarjeta input[type=number] { width:100%; padding:9px 12px; border-radius:9px;
+    border:1px solid rgba(255,255,255,.25); background:rgba(0,0,0,.25); color:#fff; font-size:14px; }
+  .plan-cab { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .plan-cab b { font-size:17px; }
+  .plan-actual { font-family:var(--mono); font-size:12px; color:rgba(255,255,255,.6); margin-left:auto; }
+  .plan-check { display:flex; gap:9px; align-items:flex-start; font-size:13.5px; color:rgba(255,255,255,.85); }
+  .plan-nota { font-size:12px; color:rgba(255,255,255,.5); margin:0; line-height:1.45; }
+  .plan-nota.aviso-corte { color:#ffc9a3; }
+  .plan-costo { font-family:var(--mono); font-size:13px; color:rgba(255,255,255,.8);
+    padding:9px 12px; border-radius:10px; background:rgba(0,0,0,.22); }
+  .plan-costo b { color:#fff; }
+  .plan-costo .sube { color:#ffb3b3; }
+  .plan-costo .baja { color:#a8e6b0; }
+  .plan-estado-tarjeta { padding:14px 16px; border-radius:14px; background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.12); display:grid; gap:6px; }
+  .plan-estado-tarjeta .k { font-family:var(--mono); font-size:10.5px; letter-spacing:1.2px;
+    text-transform:uppercase; color:rgba(255,255,255,.45); }
+  .plan-estado-tarjeta .grande { font-size:20px; font-weight:700; }
+  .plan-estado-tarjeta .linea { font-size:13px; color:rgba(255,255,255,.7); }
+  .plan-semaforo { font-family:var(--mono); font-size:10.5px; letter-spacing:1px; text-transform:uppercase;
+    padding:3px 9px; border-radius:999px; display:inline-block; }
+  .plan-semaforo.ok { background:color-mix(in srgb, var(--demo) 25%, transparent); color:var(--demo); }
+  .plan-semaforo.mal { background:rgba(220,80,80,.25); color:#ff9d9d; }
+  .plan-dias { display:flex; gap:7px; flex-wrap:wrap; }
+  .plan-dia { display:flex; align-items:center; gap:6px; padding:7px 11px; border-radius:999px;
+    border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.05); font-size:13px; cursor:pointer; }
+  .plan-dia:has(input:checked) { background:#fff; color:var(--tinta); border-color:#fff; }
+  .plan-programar { grid-template-columns:repeat(4, 1fr) auto; }
+  @media (max-width:900px) { .plan-programar { grid-template-columns:1fr 1fr; } }
+  .plan-regla { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 16px; border-radius:14px;
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); font-size:13.5px; }
+  .plan-regla.inactiva { opacity:.5; }
+  .plan-regla .cuando { font-family:var(--mono); font-size:12.5px; color:var(--pruebas); }
+  .plan-regla .acciones { margin-left:auto; display:flex; gap:8px; }
+  .plan-regla .acciones button { appearance:none; cursor:pointer; font-size:12px; padding:5px 11px; border-radius:8px;
+    border:1px solid rgba(255,255,255,.28); background:transparent; color:#fff; }
+  .plan-regla .acciones button:hover { background:rgba(255,255,255,.12); }
+  .plan-pie { font-size:12px; color:rgba(255,255,255,.45); margin-top:20px; }
   .tests-lista { display:flex; flex-direction:column; gap:10px; }
   .test-fila-link { border-radius:14px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12);
     display:flex; align-items:center; gap:12px; padding:12px 16px; flex-wrap:wrap; text-decoration:none; color:#fff;
@@ -253,6 +300,7 @@
       <button type="button" class="etab activa" role="tab" aria-selected="true" data-tab="accesos">Accesos</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="tests-pruebas">Tests en Pruebas</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="tests-demo" disabled title="Todavía no disponible">Tests en Demo</button>
+      <button type="button" class="etab" role="tab" aria-selected="false" data-tab="planes"{% if entorno_actual != 'pruebas' %} disabled title="Cambiar de plan reinicia el servicio: se administra solo desde Pruebas"{% endif %}>Planes</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="actividad">Actividad</button>
     </nav>
 
@@ -310,6 +358,14 @@
 
     <div class="panel-etab" data-panel="tests-demo" hidden>
       <div class="vacio">Todavía no disponible. La demo no corre tests de carga -- es la versión estable que ven sindicatos e inversor.</div>
+    </div>
+
+    <div class="panel-etab" data-panel="planes" hidden>
+    {% if entorno_actual == 'pruebas' %}
+      {% include "_planes.html" %}
+    {% else %}
+      <div class="vacio">Los planes se administran solo desde Pruebas -- esto es {{ entorno_actual or 'este entorno' }}. Cambiar de plan reinicia el servicio, y Demo la ven sindicatos e inversor.</div>
+    {% endif %}
     </div>
 
     <div class="panel-etab" data-panel="actividad" hidden>
@@ -571,7 +627,265 @@
   }
   tabs.forEach(t => t.addEventListener('click', () => { if (!t.disabled) activar(t.dataset.tab); }));
   const inicial = location.hash.replace('#', '');
-  if (['tests-pruebas', 'tests-demo'].includes(inicial)) activar(inicial);
+  if (['tests-pruebas', 'tests-demo', 'planes'].includes(inicial)) activar(inicial);
+})();
+
+// Planes de Render (2026-09-11): estado actual, cambio inmediato y reglas
+// semanales. Todo contra /api/entornos/planes, sin frameworks. Lo primero
+// que se pinta es el estado actual, que es lo que se pidió ver al entrar.
+(function () {
+  const raiz = document.getElementById('planes-estado');
+  if (!raiz) return;  // en Demo la solapa no se incluye
+  const DIAS = {1:'Lun',2:'Mar',3:'Mié',4:'Jue',5:'Vie',6:'Sáb',7:'Dom'};
+  const aviso = document.getElementById('planes-aviso');
+  let datos = null;
+
+  const esc = t => String(t ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  // Los montos se muestran con coma decimal y punto de miles, como todo el
+  // resto del sitio.
+  const plata = n => 'US$ ' + Number(n).toLocaleString('es-AR',
+    {minimumFractionDigits: 0, maximumFractionDigits: 2});
+
+  function decir(texto, mal) {
+    aviso.hidden = !texto;
+    aviso.textContent = texto || '';
+    aviso.className = 'aviso' + (mal ? ' mal' : ' ok');
+  }
+
+  const plan = (tipo, id) => (datos?.catalogo?.[tipo] || []).find(p => p.id === id) || null;
+
+  // Lo que se paga de verdad por el servicio web: el plan es POR INSTANCIA.
+  const mensual = (tipo, id, instancias) =>
+    (plan(tipo, id)?.usd_mes || 0) * (tipo === 'web' ? (instancias || 1) : 1);
+
+  function pintarEstado() {
+    const e = datos.estado || {};
+    if (!e.configurado) {
+      raiz.innerHTML = '<div class="vacio">Falta configurar RENDER_API_KEY en las variables de entorno del servicio.</div>';
+      return;
+    }
+    const partes = [];
+    const filaWeb = e.web, filaDb = e.db;
+    if (filaWeb) {
+      const p = plan('web', filaWeb.plan);
+      const inst = filaWeb.instancias || 1;
+      partes.push(`<div class="plan-estado-tarjeta">
+        <div class="k">Servicio web</div>
+        <div class="grande">${esc(p ? p.etiqueta : filaWeb.plan || 'no disponible')}</div>
+        <div class="linea">${inst} instancia${inst === 1 ? '' : 's'} · ${filaWeb.workers} worker${filaWeb.workers === 1 ? '' : 's'} por instancia${inst > 1 ? ` (${filaWeb.workers * inst} en total)` : ''}</div>
+        <div class="linea">${p ? plata(p.usd_mes * inst) + '/mes' : 'precio no disponible'}</div>
+        <div><span class="plan-semaforo ${filaWeb.activo ? 'ok' : 'mal'}">${filaWeb.activo ? 'activo' : 'suspendido'}</span></div>
+      </div>`);
+    }
+    if (filaDb) {
+      const p = plan('db', filaDb.plan);
+      partes.push(`<div class="plan-estado-tarjeta">
+        <div class="k">Postgres</div>
+        <div class="grande">${esc(p ? p.etiqueta : filaDb.plan || 'no disponible')}</div>
+        <div class="linea">${p ? esc(p.conexiones_txt) : '—'} · disco ${filaDb.disco_gb ?? '—'} GB</div>
+        <div class="linea">${p ? plata(p.usd_mes) + '/mes' : 'precio no disponible'}</div>
+        <div><span class="plan-semaforo ${filaDb.activo ? 'ok' : 'mal'}">${esc(filaDb.estado || (filaDb.activo ? 'activo' : 'no disponible'))}</span></div>
+      </div>`);
+    }
+    const total = mensual('web', filaWeb?.plan, filaWeb?.instancias) + mensual('db', filaDb?.plan);
+    if (total) {
+      partes.push(`<div class="plan-estado-tarjeta">
+        <div class="k">Lo que corre hoy</div>
+        <div class="grande">${plata(total)}<span style="font-size:14px;font-weight:400;">/mes</span></div>
+        <div class="linea">Equivalente mensual de los planes activos ahora. Render cobra por segundo, así que lo real depende de cuánto tiempo estén puestos.</div>
+      </div>`);
+    }
+    raiz.innerHTML = partes.join('') ||
+      '<div class="vacio">' + esc(e.error || 'No se pudo leer el estado en Render.') + '</div>';
+    if (e.error) decir(e.error, true);
+  }
+
+  function opciones(tipo, seleccionado) {
+    return (datos.catalogo?.[tipo] || []).map(p =>
+      `<option value="${esc(p.id)}"${p.id === seleccionado ? ' selected' : ''}>` +
+      `${esc(p.etiqueta)} — ${esc(p.precio_txt)}${tipo === 'db' ? ' · ' + esc(p.conexiones_txt) : ''}</option>`
+    ).join('');
+  }
+
+  function pintarCosto(tarjeta) {
+    const tipo = tarjeta.dataset.destino;
+    const caja = tarjeta.querySelector('[data-costo]');
+    const elegido = tarjeta.querySelector('[data-select-plan]').value;
+    const instEl = tarjeta.querySelector('[data-instancias]');
+    const inst = instEl ? Math.max(1, parseInt(instEl.value || '1', 10)) : 1;
+    const p = plan(tipo, elegido);
+    if (!p) { caja.textContent = ''; return; }
+    const actualFila = datos.estado?.[tipo] || {};
+    const hoy = mensual(tipo, actualFila.plan, actualFila.instancias);
+    const nuevo = p.usd_mes * (tipo === 'web' ? inst : 1);
+    const dif = nuevo - hoy;
+    const signo = dif > 0 ? 'sube' : (dif < 0 ? 'baja' : '');
+    caja.innerHTML = `<b>${plata(nuevo)}/mes</b>` +
+      (tipo === 'web' && inst > 1 ? ` (${plata(p.usd_mes)} × ${inst} instancias)` : '') +
+      ` · ${esc(p.usd_hora_txt)}` +
+      (dif ? ` · <span class="${signo}">${dif > 0 ? '+' : '−'}${plata(Math.abs(dif))}/mes</span>` : ' · sin cambio');
+  }
+
+  function pintarTarjetas() {
+    document.querySelectorAll('.plan-tarjeta').forEach(tarjeta => {
+      const tipo = tarjeta.dataset.destino;
+      const actual = datos.estado?.[tipo] || {};
+      const sel = tarjeta.querySelector('[data-select-plan]');
+      const previo = sel.value;
+      sel.innerHTML = opciones(tipo, previo || actual.plan);
+      const p = plan(tipo, actual.plan);
+      tarjeta.querySelector('[data-actual]').textContent =
+        'ahora: ' + (p ? p.etiqueta : (actual.plan || 'no disponible'));
+      const instEl = tarjeta.querySelector('[data-instancias]');
+      if (instEl && !instEl.value) instEl.value = actual.instancias || 1;
+      pintarCosto(tarjeta);
+    });
+    const prPlan = document.getElementById('pr-plan');
+    if (prPlan) {
+      const dest = document.getElementById('pr-destino').value;
+      prPlan.innerHTML = opciones(dest, prPlan.value);
+      document.getElementById('pr-campo-inst').hidden = dest !== 'web';
+    }
+  }
+
+  function pintarProgramados() {
+    const caja = document.getElementById('planes-programados');
+    const reglas = datos.programados || [];
+    if (!reglas.length) {
+      caja.innerHTML = '<div class="vacio">Todavía no hay ningún cambio programado.</div>';
+      return;
+    }
+    caja.innerHTML = reglas.map(r => {
+      const p = plan(r.destino, r.plan);
+      const dias = r.dias.map(d => DIAS[d]).join(' ');
+      return `<div class="plan-regla${r.activo ? '' : ' inactiva'}">
+        <span class="cuando">${esc(dias)} · ${esc(r.hora)}</span>
+        <span>${r.destino === 'web' ? 'Servicio web' : 'Postgres'} →
+          <b>${esc(p ? p.etiqueta : r.plan)}</b>${p ? ' · ' + esc(p.precio_txt) : ''}${r.destino === 'web' && r.instancias ? ' · ' + r.instancias + ' instancia' + (r.instancias === 1 ? '' : 's') : ''}</span>
+        ${r.nota ? `<span style="opacity:.6;">${esc(r.nota)}</span>` : ''}
+        ${r.ultimo_disparo ? `<span style="opacity:.5;font-size:12px;">último: ${esc(r.ultimo_disparo)}</span>` : ''}
+        <span class="acciones">
+          <button type="button" data-alternar="${r.id}" data-activo="${r.activo ? '0' : '1'}">${r.activo ? 'Pausar' : 'Activar'}</button>
+          <button type="button" data-borrar="${r.id}">Borrar</button>
+        </span>
+      </div>`;
+    }).join('');
+  }
+
+  function pintarHistorial() {
+    const caja = document.getElementById('planes-historial');
+    const filas = datos.historial || [];
+    if (!filas.length) {
+      caja.innerHTML = '<div class="vacio">Sin cambios registrados todavía.</div>';
+      return;
+    }
+    caja.innerHTML = filas.map(c => `<div class="plan-regla">
+      <span class="cuando">${esc(c.cuando)}</span>
+      <span class="plan-semaforo ${c.ok ? 'ok' : 'mal'}">${c.ok ? c.origen : (c.error === 'en curso' ? 'en curso' : 'falló')}</span>
+      <span>${c.destino === 'web' ? 'Web' : 'Postgres'}: ${esc(c.plan_anterior || '—')} → <b>${esc(c.plan_nuevo)}</b></span>
+      <span style="opacity:.6;">${esc(c.error && c.error !== 'en curso' ? c.error : c.detalle)}</span>
+    </div>`).join('');
+  }
+
+  function pintarFuente() {
+    const c = datos.catalogo || {};
+    document.getElementById('planes-fuente').textContent = c.disponible
+      ? `Precios y planes leídos de ${c.fuente} el ${c.leido_utc} UTC. Para actualizarlos: python actualizar_planes_render.py`
+      : 'Falta data/render_planes.json: correr python actualizar_planes_render.py. Sin ese archivo no se muestran precios (no se inventan).';
+  }
+
+  async function cargar() {
+    try {
+      const r = await fetch('/api/entornos/planes');
+      if (!r.ok) { decir('No se pudo consultar (' + r.status + ').', true); return; }
+      datos = await r.json();
+      pintarEstado(); pintarTarjetas(); pintarProgramados(); pintarHistorial(); pintarFuente();
+    } catch (err) {
+      decir('No se pudo consultar: ' + err, true);
+    }
+  }
+
+  async function pedir(url, opciones) {
+    const r = await fetch(url, {headers: {'Content-Type': 'application/json'}, ...opciones});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.detail || ('HTTP ' + r.status));
+    return j;
+  }
+
+  document.querySelectorAll('.plan-tarjeta').forEach(tarjeta => {
+    tarjeta.addEventListener('change', () => pintarCosto(tarjeta));
+    tarjeta.addEventListener('input', () => pintarCosto(tarjeta));
+    tarjeta.addEventListener('submit', async ev => {
+      ev.preventDefault();
+      const tipo = tarjeta.dataset.destino;
+      const elegido = tarjeta.querySelector('[data-select-plan]').value;
+      const p = plan(tipo, elegido);
+      const instEl = tarjeta.querySelector('[data-instancias]');
+      const inst = instEl ? Math.max(1, parseInt(instEl.value || '1', 10)) : null;
+      const corte = tipo === 'web'
+        ? 'El servicio web se reinicia y queda unos minutos sin atender.'
+        : 'La base queda cerca de un minuto sin atender y la app va a devolver error mientras tanto.';
+      if (!confirm(`Poner ${tipo === 'web' ? 'el servicio web' : 'Postgres'} en ${p.etiqueta} ` +
+                   `(${plata(p.usd_mes * (tipo === 'web' ? (inst || 1) : 1))}/mes).\n\n${corte}\n\n¿Aplicar ahora?`)) return;
+      const boton = tarjeta.querySelector('[data-aplicar]');
+      boton.disabled = true; boton.textContent = 'Aplicando…';
+      try {
+        const j = await pedir('/entornos/planes/aplicar', {method: 'POST', body: JSON.stringify({
+          destino: tipo, plan: elegido, instancias: inst,
+          ajustar_workers: tarjeta.querySelector('[data-ajustar-workers]')?.checked ?? true,
+        })});
+        decir('Listo: ' + (j.hechos.length ? j.hechos.join(', ') : 'ya estaba en ese plan') +
+              '. El cambio tarda un rato en verse reflejado en Render.', false);
+      } catch (err) {
+        decir('No se pudo aplicar: ' + err.message, true);
+      }
+      boton.disabled = false; boton.textContent = 'Aplicar ahora';
+      // Render tarda unos segundos en reflejar el cambio en su propia API.
+      setTimeout(cargar, 4000);
+    });
+  });
+
+  document.getElementById('pr-destino').addEventListener('change', pintarTarjetas);
+
+  document.getElementById('form-programar').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const dias = [...document.querySelectorAll('#pr-dias input:checked')].map(i => +i.value);
+    if (!dias.length) { decir('Elegí al menos un día.', true); return; }
+    const inst = document.getElementById('pr-inst').value;
+    try {
+      await pedir('/entornos/planes/programados', {method: 'POST', body: JSON.stringify({
+        destino: document.getElementById('pr-destino').value,
+        plan: document.getElementById('pr-plan').value,
+        hora: document.getElementById('pr-hora').value,
+        dias, instancias: inst ? +inst : null,
+        nota: document.getElementById('pr-nota').value,
+      })});
+      document.getElementById('pr-nota').value = '';
+      decir('Regla programada.', false);
+      cargar();
+    } catch (err) { decir('No se pudo programar: ' + err.message, true); }
+  });
+
+  document.getElementById('planes-programados').addEventListener('click', async ev => {
+    const alternar = ev.target.closest('[data-alternar]');
+    const borrar = ev.target.closest('[data-borrar]');
+    try {
+      if (alternar) {
+        await pedir(`/entornos/planes/programados/${alternar.dataset.alternar}/activo`,
+          {method: 'POST', body: JSON.stringify({activo: alternar.dataset.activo === '1'})});
+      } else if (borrar) {
+        if (!confirm('¿Borrar esta regla programada?')) return;
+        await pedir(`/entornos/planes/programados/${borrar.dataset.borrar}`, {method: 'DELETE'});
+      } else { return; }
+      cargar();
+    } catch (err) { decir('No se pudo: ' + err.message, true); }
+  });
+
+  cargar();
+  // Refresco lento: el estado cambia solo cuando dispara una regla
+  // programada, así que no hace falta molestar a la API de Render seguido.
+  setInterval(cargar, 60000);
 })();
 
 // Tests de carga: el <select> de tipo sugiere los escalones default de ESE

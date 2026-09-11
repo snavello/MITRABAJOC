@@ -3473,3 +3473,149 @@ def tramite_empleador_por_numero_expediente(numero_expediente: str) -> Optional[
         tr = s.exec(select(TramiteEmpleador).where(
             TramiteEmpleador.numero_expediente == numero_expediente)).first()
         return _tramite_empleador_detalle_completo(s, tr) if tr else None
+
+
+# ==================== Planes de Render: programación y bitácora ====================
+class PlanProgramado(SQLModel, table=True):
+    """Una regla semanal: "los días D, a las HH:MM de Buenos Aires, poné el
+    servicio X en el plan P".
+
+    Existe porque el tráfico de esta app es muy desparejo -- días de
+    liquidación contra fines de semana con veinte veces menos gente -- y
+    Render prorratea por segundo, así que subir de plan solo las horas que
+    hace falta es plata real. Hasta ahora eso se hacía a mano en la consola
+    de Render y dependía de que alguien se acordara.
+
+    `ultimo_disparo` no es informativo: es el candado. El planificador
+    reclama la regla con un UPDATE condicional sobre este campo, así que si
+    el servicio web corre en varias instancias, solo una puede ganar el
+    reclamo y el cambio se aplica una sola vez."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    activo: bool = True
+    destino: str = "web"                  # "web" | "db"
+    # Días ISO separados por coma: 1 = lunes ... 7 = domingo.
+    dias: str = "1,2,3,4,5"
+    hora: str = "08:00"                   # HH:MM en hora de Buenos Aires
+    plan: str = ""                        # identificador de Render ("4c-8g")
+    instancias: Optional[int] = None      # solo para "web"; None = no tocar
+    ajustar_workers: bool = True          # un worker por núcleo al aplicar
+    nota: str = ""
+    ultimo_disparo: str = ""              # "AAAA-MM-DD HH:MM" (BA) ya aplicado
+    creado_en: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+
+class CambioPlan(SQLModel, table=True):
+    """Bitácora de todo cambio de plan, manual o programado. Sin esto, la
+    única forma de saber por qué cambió el gasto sería el historial de
+    Render, que para las bases de datos ni siquiera existe."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cuando: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    origen: str = "manual"                # "manual" | "programado"
+    programado_id: Optional[int] = None
+    destino: str = "web"
+    plan_anterior: str = ""
+    plan_nuevo: str = ""
+    detalle: str = ""
+    ok: bool = True
+    error: str = ""
+
+
+def planes_programados() -> list:
+    with Session(engine) as s:
+        filas = s.exec(select(PlanProgramado).order_by(
+            PlanProgramado.hora, PlanProgramado.id)).all()
+        return [{
+            "id": p.id, "activo": p.activo, "destino": p.destino,
+            "dias": [int(d) for d in p.dias.split(",") if d.strip().isdigit()],
+            "hora": p.hora, "plan": p.plan, "instancias": p.instancias,
+            "ajustar_workers": p.ajustar_workers, "nota": p.nota,
+            "ultimo_disparo": p.ultimo_disparo, "creado_en": p.creado_en,
+        } for p in filas]
+
+
+def crear_plan_programado(destino: str, dias: list, hora: str, plan: str,
+                          instancias: int = None, ajustar_workers: bool = True,
+                          nota: str = "") -> int:
+    with Session(engine) as s:
+        p = PlanProgramado(
+            destino=destino, dias=",".join(str(int(d)) for d in sorted(set(dias))),
+            hora=hora, plan=plan, instancias=instancias,
+            ajustar_workers=ajustar_workers, nota=nota)
+        s.add(p); s.commit(); s.refresh(p)
+        return p.id
+
+
+def borrar_plan_programado(regla_id: int) -> bool:
+    with Session(engine) as s:
+        p = s.get(PlanProgramado, regla_id)
+        if not p:
+            return False
+        s.delete(p); s.commit()
+        return True
+
+
+def alternar_plan_programado(regla_id: int, activo: bool) -> bool:
+    with Session(engine) as s:
+        p = s.get(PlanProgramado, regla_id)
+        if not p:
+            return False
+        p.activo = activo
+        s.add(p); s.commit()
+        return True
+
+
+def reclamar_plan_programado(regla_id: int, marca: str) -> bool:
+    """Intenta quedarse con el derecho a aplicar esta regla en esta marca de
+    tiempo. Devuelve True solo si GANÓ el reclamo.
+
+    Es un UPDATE condicional, no un SELECT seguido de UPDATE: la condición y
+    la escritura viajan en la misma sentencia, así que dos instancias del
+    servicio web que despierten en el mismo minuto no pueden aplicar las dos
+    -- la segunda actualiza cero filas y se va. Funciona igual en Postgres y
+    en SQLite, sin locks explícitos."""
+    with Session(engine) as s:
+        r = s.exec(text(
+            "UPDATE planprogramado SET ultimo_disparo = :marca "
+            "WHERE id = :id AND activo = :si AND ultimo_disparo <> :marca"
+        ).bindparams(marca=marca, id=regla_id, si=True))
+        s.commit()
+        return (r.rowcount or 0) == 1
+
+
+def registrar_cambio_plan(destino: str, plan_anterior: str, plan_nuevo: str,
+                          detalle: str, ok: bool = True, error: str = "",
+                          origen: str = "manual", programado_id: int = None) -> int:
+    with Session(engine) as s:
+        c = CambioPlan(origen=origen, programado_id=programado_id, destino=destino,
+                       plan_anterior=plan_anterior, plan_nuevo=plan_nuevo,
+                       detalle=detalle, ok=ok, error=error)
+        s.add(c); s.commit(); s.refresh(c)
+        return c.id
+
+
+def cambios_de_plan(limite: int = 20) -> list:
+    with Session(engine) as s:
+        filas = s.exec(select(CambioPlan).order_by(
+            CambioPlan.id.desc()).limit(limite)).all()
+        return [{"id": c.id, "cuando": c.cuando, "origen": c.origen,
+                 "destino": c.destino, "plan_anterior": c.plan_anterior,
+                 "plan_nuevo": c.plan_nuevo, "detalle": c.detalle,
+                 "ok": c.ok, "error": c.error} for c in filas]
+
+
+def actualizar_cambio_plan(cambio_id: int, ok: bool, detalle: str = "",
+                           error: str = "") -> bool:
+    """Cierra una entrada de bitácora abierta. El planificador anota el
+    cambio ANTES de pedírselo a Render y lo cierra después: si el proceso
+    muere en el medio -- que es justo lo que pasa al cambiar el plan del
+    propio servicio web, porque Render lo reinicia -- la entrada queda
+    marcada como "en curso" en vez de desaparecer sin dejar rastro."""
+    with Session(engine) as s:
+        c = s.get(CambioPlan, cambio_id)
+        if not c:
+            return False
+        c.ok, c.error = ok, error
+        if detalle:
+            c.detalle = detalle
+        s.add(c); s.commit()
+        return True

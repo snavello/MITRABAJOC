@@ -63,6 +63,8 @@ from version import VERSION_TRABAJADOR, VERSION_ADMIN, VERSION_PLATAFORMA, FECHA
 import entorno
 import recursos
 import render_admin
+import render_planes
+import planificador
 from modulos import MODULOS, MODULOS_INICIALES
 import dashboard
 import asistente
@@ -384,6 +386,16 @@ def _startup():
     # esta feature. Verificado: sin las tablas, el startup revienta con
     # UndefinedTable y el servicio no levanta.
     # El arranque nunca puede depender de una migración que quizá no corrió.
+    # El planificador de planes de Render: un hilo que aplica las reglas
+    # programadas en la solapa "Planes". Solo en Pruebas, que es el único
+    # entorno donde esa solapa existe.
+    if entorno.ENTORNO == "pruebas":
+        try:
+            if planificador.arrancar():
+                print("[planificador] hilo de planes programados en marcha")
+        except Exception as e:
+            print(f"[planificador] no arrancó ({type(e).__name__}: {e})")
+
     try:
         colgadas = db.rescatar_indexaciones_colgadas()
         if colgadas:
@@ -4531,6 +4543,120 @@ def entornos_tests_borrar_todo(request: Request, x_pin_entornos: str = Header(de
     if entorno.ENTORNO != "pruebas":
         raise HTTPException(400, "Solo en Pruebas.")
     return {"borrados": db.borrar_todos_los_tests_carga()}
+
+
+# ==================== Solapa "Planes": subir y bajar de plan ====================
+# Cambiar de plan corta el servicio: el web se reinicia y la base queda un
+# minuto devolviendo error. Por eso todo esto vive SOLO en Pruebas, igual que
+# los tests -- en Demo la solapa aparece deshabilitada con el motivo a la
+# vista, y estas rutas rechazan cualquier intento aunque alguien las llame a
+# mano.
+
+
+def _exigir_planes(request: Request):
+    _exigir_landing()
+    if not _pase_landing(request):
+        raise HTTPException(403, "Ingresá el PIN de la landing.")
+    if entorno.ENTORNO != "pruebas":
+        raise HTTPException(
+            400, "Los planes se administran solo desde Pruebas: cambiar de plan "
+                 "reinicia el servicio y Demo la ven sindicatos e inversor.")
+
+
+@app.get("/api/entornos/planes")
+def api_entornos_planes(request: Request):
+    """Lo que la solapa pide al abrirse y cada vez que se aplica algo: plan
+    actual de cada servicio, si están activos, el catálogo con precios y las
+    reglas programadas. Todo en una sola llamada para que la pantalla no
+    muestre mitad vieja y mitad nueva."""
+    _exigir_planes(request)
+    return {
+        "estado": render_admin.estado_planes(),
+        "catalogo": render_planes.catalogo(),
+        "programados": db.planes_programados(),
+        "historial": db.cambios_de_plan(15),
+    }
+
+
+@app.post("/entornos/planes/aplicar")
+def entornos_planes_aplicar(request: Request, payload: dict = Body(...)):
+    """El botón "Aplicar ahora". `destino` es "web" o "db"."""
+    _exigir_planes(request)
+    destino = payload.get("destino")
+    plan = (payload.get("plan") or "").strip()
+    if destino not in ("web", "db"):
+        raise HTTPException(400, "Destino inválido.")
+    if not render_planes.buscar(destino, plan):
+        raise HTTPException(400, f"El plan '{plan}' no está en el catálogo de Render.")
+
+    estado = render_admin.estado_planes()
+    anterior = ((estado.get(destino) or {}).get("plan")) or ""
+    cambio_id = db.registrar_cambio_plan(
+        destino=destino, plan_anterior=anterior, plan_nuevo=plan,
+        detalle="aplicado a mano desde /entornos", ok=False, error="en curso")
+
+    if destino == "db":
+        res = render_admin.aplicar_plan_db(plan)
+    else:
+        # Los workers acompañan al plan salvo que se pida lo contrario: la
+        # combinación "muchos workers, poca CPU" es la peor medida de todo
+        # el informe de carga, y quedó puesta por olvido dos veces durante
+        # las pruebas del 2026-09-10.
+        workers = (render_planes.workers_para(plan)
+                   if payload.get("ajustar_workers", True) else None)
+        instancias = payload.get("instancias")
+        res = render_admin.aplicar_plan_web(
+            plan, instancias=int(instancias) if instancias else None, workers=workers)
+
+    hechos = ", ".join(res.get("hechos") or []) or "sin cambios (ya estaba así)"
+    db.actualizar_cambio_plan(cambio_id, ok=not res.get("error"),
+                              detalle=f"a mano desde /entornos: {hechos}",
+                              error=res.get("error", ""))
+    if res.get("error"):
+        raise HTTPException(502, res["error"])
+    return {"ok": True, "hechos": res.get("hechos") or [], "cambio_id": cambio_id}
+
+
+@app.post("/entornos/planes/programados")
+def entornos_planes_programar(request: Request, payload: dict = Body(...)):
+    """Alta de una regla semanal. Los días son ISO: 1 = lunes, 7 = domingo."""
+    _exigir_planes(request)
+    destino = payload.get("destino")
+    plan = (payload.get("plan") or "").strip()
+    hora = (payload.get("hora") or "").strip()
+    dias = payload.get("dias") or []
+    if destino not in ("web", "db"):
+        raise HTTPException(400, "Destino inválido.")
+    if not render_planes.buscar(destino, plan):
+        raise HTTPException(400, f"El plan '{plan}' no está en el catálogo de Render.")
+    import re
+    if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", hora):
+        raise HTTPException(400, "La hora tiene que ser HH:MM, de 00:00 a 23:59.")
+    dias = [int(d) for d in dias if str(d).isdigit() and 1 <= int(d) <= 7]
+    if not dias:
+        raise HTTPException(400, "Elegí al menos un día.")
+    regla_id = db.crear_plan_programado(
+        destino=destino, dias=dias, hora=hora, plan=plan,
+        instancias=int(payload["instancias"]) if payload.get("instancias") else None,
+        ajustar_workers=bool(payload.get("ajustar_workers", True)),
+        nota=(payload.get("nota") or "").strip()[:200])
+    return {"id": regla_id}
+
+
+@app.post("/entornos/planes/programados/{regla_id}/activo")
+def entornos_planes_alternar(request: Request, regla_id: int, payload: dict = Body(...)):
+    _exigir_planes(request)
+    if not db.alternar_plan_programado(regla_id, bool(payload.get("activo"))):
+        raise HTTPException(404, "No existe esa regla.")
+    return {"ok": True}
+
+
+@app.delete("/entornos/planes/programados/{regla_id}")
+def entornos_planes_borrar(request: Request, regla_id: int):
+    _exigir_planes(request)
+    if not db.borrar_plan_programado(regla_id):
+        raise HTTPException(404, "No existe esa regla.")
+    return {"ok": True}
 
 
 @app.get("/api/entornos/tests")
