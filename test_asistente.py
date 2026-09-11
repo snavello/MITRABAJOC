@@ -54,9 +54,9 @@ with db.get_session() as s:
     SID_A, SID_B, SID_C = sind_a.id, sind_b.id, sind_c.id
 
     s.add(UsuarioSindicato(sindicato_id=SID_A, usuario="20111111110", nombre="Admin A",
-                            clave_hash=auth.hashear_clave("a-demo"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("a-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(UsuarioSindicato(sindicato_id=SID_C, usuario="20333333330", nombre="Admin C",
-                            clave_hash=auth.hashear_clave("c-demo"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("c-demo"), debe_cambiar_clave=False, es_super_admin=True))
 
     rosario = Seccional(sindicato_id=SID_A, nombre="Rosario")
     cordoba = Seccional(sindicato_id=SID_A, nombre="Córdoba")

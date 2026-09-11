@@ -32,9 +32,9 @@ with db.get_session() as s:
     SID_FULL, SID_RECIBOS = full.id, solo_recibos.id
 
     s.add(UsuarioSindicato(sindicato_id=SID_FULL, usuario="20777777770", nombre="Juan Pérez",
-                            clave_hash=auth.hashear_clave("full-demo"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("full-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(UsuarioSindicato(sindicato_id=SID_RECIBOS, usuario="20888888880", nombre="Admin Recibos",
-                            clave_hash=auth.hashear_clave("recibos-demo"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("recibos-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.commit()
 
     tipo = TipoTramite(sindicato_id=SID_FULL, titulo="Reintegro", codigo="F01")

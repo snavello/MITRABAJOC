@@ -54,7 +54,7 @@ def test_aprender_sugiere_generico_por_categoria_universal():
     (igual que test_extractor_bi_formato.py) para no depender de la API real."""
     with Session(db.engine) as s:
         s.add(UsuarioSindicato(sindicato_id=SID, usuario="20333333330", nombre="Admin",
-                                clave_hash=auth.hashear_clave("clave-test"), debe_cambiar_clave=False))
+                                clave_hash=auth.hashear_clave("clave-test"), debe_cambiar_clave=False, es_super_admin=True))
         s.commit()
     client.post("/admin/login", data={"usuario": "20333333330", "clave": "clave-test"})
 
@@ -119,11 +119,11 @@ def test_boton_completa_sindicato_previo_a_la_funcion():
     """Simula un sindicato dado de alta ANTES de que existiera la autocarga:
     se crea sin llamar a crear_conceptos_universales, y el botón lo completa."""
     with Session(db.engine) as s:
-        sind = Sindicato(nombre="Sindicato Anterior", slug="sindicato-anterior")
+        sind = Sindicato(nombre="Sindicato Anterior", slug="sindicato-anterior", modulos_habilitados=["recibos"])
         s.add(sind); s.commit(); s.refresh(sind)
         sid_previo = sind.id
         s.add(UsuarioSindicato(sindicato_id=sid_previo, usuario="20555555550", nombre="Admin Previo",
-                                clave_hash=auth.hashear_clave("clave-previa"), debe_cambiar_clave=False))
+                                clave_hash=auth.hashear_clave("clave-previa"), debe_cambiar_clave=False, es_super_admin=True))
         s.commit()
 
     client.post("/admin/login", data={"usuario": "20555555550", "clave": "clave-previa"})

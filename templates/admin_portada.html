@@ -90,7 +90,7 @@
   <div class="hola">Hola, <em>{{ primer_nombre }}</em></div>
 
   <div class="tarjetas" style="margin-top: 18px;">
-    {% if 'dashboard' in modulos %}
+    {% if 'dashboard' in modulos and 'dashboard' in permisos %}
     <a class="acceso destacada-new" href="/admin/dashboard">
       <span class="estrella-new" aria-hidden="true">
         <svg viewBox="0 0 24 24"><polygon points="12,2.6 14.9,9 21.8,9.7 16.6,14.3 18.1,21.1 12,17.6 5.9,21.1 7.4,14.3 2.2,9.7 9.1,9"/></svg>
@@ -102,7 +102,7 @@
       </div>
     </a>
     {% endif %}
-    {% if 'recibos' in modulos %}
+    {% if 'recibos' in modulos and 'reportes' in permisos %}
     <a class="acceso" href="/admin#reportes">
       <svg viewBox="0 0 24 24"><use href="#ic-reportes"/></svg>
       <div>
@@ -111,7 +111,7 @@
       </div>
     </a>
     {% endif %}
-    {% if 'recibos' in modulos %}
+    {% if 'recibos' in modulos and 'formulas' in permisos %}
     <a class="acceso" href="/admin#formulas">
       <svg viewBox="0 0 24 24"><use href="#ic-formulas"/></svg>
       <div>
@@ -120,7 +120,7 @@
       </div>
     </a>
     {% endif %}
-    {% if 'recibos' in modulos %}
+    {% if 'recibos' in modulos and 'conceptos' in permisos %}
     <a class="acceso" href="/admin#conceptos">
       <svg viewBox="0 0 24 24"><use href="#ic-conceptos"/></svg>
       <div>
@@ -129,6 +129,7 @@
       </div>
     </a>
     {% endif %}
+    {% if 'trabajadores' in permisos %}
     <a class="acceso" href="/admin#trabajadores">
       <svg viewBox="0 0 24 24"><use href="#ic-trabajadores"/></svg>
       <div>
@@ -136,7 +137,8 @@
         <div class="estado">Alta, baja y datos de afiliados</div>
       </div>
     </a>
-    {% if 'recibos' in modulos %}
+    {% endif %}
+    {% if 'recibos' in modulos and 'aprendizaje' in permisos %}
     <a class="acceso" href="/admin#aprendizaje">
       <svg viewBox="0 0 24 24"><use href="#ic-aprendizaje"/></svg>
       <div>
@@ -145,7 +147,7 @@
       </div>
     </a>
     {% endif %}
-    {% if 'recibos' in modulos %}
+    {% if 'recibos' in modulos and 'cotizantes' in permisos %}
     <a class="acceso" href="/admin#cotizantes">
       <svg viewBox="0 0 24 24"><use href="#ic-cotizantes"/></svg>
       <div>
@@ -154,7 +156,7 @@
       </div>
     </a>
     {% endif %}
-    {% if 'noticias' in modulos %}
+    {% if 'noticias' in modulos and 'noticias' in permisos %}
     <a class="acceso" href="/admin#noticias">
       <svg viewBox="0 0 24 24"><use href="#ic-noticias"/></svg>
       <div>
@@ -163,7 +165,7 @@
       </div>
     </a>
     {% endif %}
-    {% if 'beneficios' in modulos %}
+    {% if 'beneficios' in modulos and 'beneficios' in permisos %}
     <a class="acceso" href="/admin#beneficios">
       <svg viewBox="0 0 24 24"><use href="#ic-beneficios"/></svg>
       <div>
@@ -172,7 +174,7 @@
       </div>
     </a>
     {% endif %}
-    {% if 'notificaciones' in modulos %}
+    {% if 'notificaciones' in modulos and 'notificaciones' in permisos %}
     <a class="acceso" href="/admin#notificaciones">
       <svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg>
       <div>
@@ -181,7 +183,7 @@
       </div>
     </a>
     {% endif %}
-    {% if 'tramites' in modulos %}
+    {% if 'tramites' in modulos and ('tramites_recibidos' in permisos or 'tramites_formularios' in permisos) %}
     <div class="acceso-badge-wrap">
       <a class="acceso" href="/admin#tramites">
         <svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg>
@@ -193,7 +195,7 @@
       {% if tramites_nuevos %}<span class="badge-noleidas">{{ tramites_nuevos }}</span>{% endif %}
     </div>
     {% endif %}
-    {% if 'empleadores' in modulos %}
+    {% if 'empleadores' in modulos and ('emp_empresas' in permisos or 'emp_notificaciones' in permisos or 'emp_tramites_recibidos' in permisos or 'emp_tramites_formularios' in permisos) %}
     <div class="acceso-badge-wrap">
       <a class="acceso" href="/admin#empleadores">
         <svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg>
@@ -205,6 +207,7 @@
       {% if tramites_empresa_nuevos %}<span class="badge-noleidas">{{ tramites_empresa_nuevos }}</span>{% endif %}
     </div>
     {% endif %}
+    {% if 'seccionales' in permisos %}
     <a class="acceso" href="/admin#seccionales">
       <svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg>
       <div>
@@ -212,13 +215,16 @@
         <div class="estado">Sedes y delegaciones</div>
       </div>
     </a>
+    {% endif %}
+    {% if es_super_admin %}
     <a class="acceso" href="/admin#administradores">
       <svg viewBox="0 0 24 24"><use href="#ic-admins"/></svg>
       <div>
-        <div class="titulo">Administradores</div>
-        <div class="estado">Quién puede entrar a este panel</div>
+        <div class="titulo">Áreas y Usuarios</div>
+        <div class="estado">Quién entra y qué puede tocar</div>
       </div>
     </a>
+    {% endif %}
   </div>
 
   <div style="text-align:center; margin-top:18px;">

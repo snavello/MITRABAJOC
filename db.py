@@ -142,23 +142,123 @@ class Sindicato(SQLModel, table=True):
 
 class Seccional(SQLModel, table=True):
     """Delegación/seccional de un sindicato (ej. por zona geográfica). El
-    admin las da de alta y las asigna a trabajadores en el alta/edición --
-    es un dato descriptivo, no afecta validación de recibos ni aislamiento."""
+    admin las da de alta y las asigna a trabajadores en el alta/edición.
+
+    Desde el sistema de Áreas dejó de ser un dato meramente descriptivo:
+    ACOTA lo que ve un usuario de área (sus trámites y a quién puede
+    notificar). Sigue sin afectar la validación de recibos ni el
+    aislamiento entre sindicatos.
+
+    `ve_todas` es la excepción a ese recorte: los usuarios de una seccional
+    tildada alcanzan TODAS las seccionales del sindicato. Nace tildada en
+    "Sede Central"; el Super Admin la puede tildar en otra (ej. una regional
+    que supervisa varias). Ver SPRINT_AREAS.md, decisión 5."""
     id: Optional[int] = Field(default=None, primary_key=True)
     sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
     nombre: str
     direccion: str = ""
+    ve_todas: bool = False
+
+
+class Area(SQLModel, table=True):
+    """Área organizativa DE UNA SECCIONAL (Secretaría Legal de Rosario,
+    Tesorería de Sede Central...).
+
+    El área dice QUÉ hace un usuario; la seccional a la que pertenece dice
+    SOBRE QUIÉNES. En la primera tanda el área colgaba del sindicato y los
+    dos ejes eran independientes; ahora el área vive DENTRO de una seccional
+    (decisión N2 de SPRINT_AREAS_V2.md), que es lo que permite que cada
+    delegación arme su propia estructura sin pisarle el nombre a otra: puede
+    haber una "Legales" por seccional y son áreas distintas.
+
+    De ahí sale la regla de coherencia que fuerzan las rutas: un usuario y
+    su área tienen que ser de la MISMA seccional. Si no, "Legales de
+    Rosario" con alcance Córdoba sería un usuario que nadie sabe qué ve.
+
+    Los permisos se asignan al área (PermisoArea) y los heredan todos sus
+    usuarios; el ajuste fino por persona va en PermisoUsuario.
+
+    Un área NO se borra, se desactiva: los usuarios seguirían apuntando a un
+    área inexistente, y desactivarla es además la forma de cortarle el
+    acceso a todo un equipo sin tocar usuario por usuario."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    seccional_id: int = Field(foreign_key="seccional.id", index=True)
+    nombre: str
+    activo: bool = True
+
+
+class PermisoArea(SQLModel, table=True):
+    """Una sección del panel habilitada para un área -- una fila por sección
+    (ver permisos.py). Lo que heredan todos los usuarios del área."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    area_id: int = Field(foreign_key="area.id", index=True)
+    seccion: str
+
+
+class PermisoUsuario(SQLModel, table=True):
+    """Ajuste individual sobre lo que hereda del área.
+
+    `tipo` es "agregar" o "bloquear", y el bloqueo le gana al área Y al
+    agregado (ver permisos.calcular_efectivos). Sin el bloqueo no habría
+    forma de decir "es de Legales pero a él no le doy Notificaciones" sin
+    inventarle un área propia."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    usuario_id: int = Field(foreign_key="usuariosindicato.id", index=True)
+    seccion: str
+    tipo: str = "agregar"   # agregar | bloquear
 
 
 class UsuarioSindicato(SQLModel, table=True):
-    """Administrador de un sindicato. Lo da de alta el admin de plataforma."""
+    """Usuario del panel de un sindicato.
+
+    Tres clases:
+    - Super Admin (`es_super_admin`), el administrador de Sede Central: todo
+      el panel sobre TODAS las seccionales, incluida la gestión de áreas y
+      usuarios y el alta de seccionales. Es lo que era TODO usuario antes
+      del sistema de Áreas (los que ya existían quedaron con la bandera
+      prendida en la migración).
+    - Admin de Seccional (`es_admin_seccional`): las mismas atribuciones
+      sobre SU seccional y nada más -- "el admin grande en chiquito". Arma
+      las áreas de su delegación y les asigna gente sin depender de central.
+      No puede crear seccionales, ni otorgar Super Admin, ni tocar nada de
+      otra seccional (ver `_exigir_alcance_*` en main.py).
+    - Usuario de área: ve solo las secciones que le den su área y sus
+      permisos individuales, y solo sobre su alcance de seccional.
+
+    Las dos banderas arrancan en False: un usuario que se dé de alta sin
+    declarar rol nace SIN poder, no con todo. Y `es_admin_seccional` es
+    opt-in por diseño -- un sindicato centralizado ni se entera del rol.
+
+    El primer Super Admin de cada sindicato lo sigue dando de alta el admin
+    de plataforma; de ahí en más los crea el propio sindicato."""
     id: Optional[int] = Field(default=None, primary_key=True)
     sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
-    usuario: str = Field(index=True)            # mail o nombre de usuario
+    usuario: str = Field(index=True)            # con lo que INICIA SESIÓN
+    # CUIL de la persona, normalizado a 11 dígitos. Hoy coincide con
+    # `usuario` porque el alta pide el CUIT/CUIL como nombre de usuario,
+    # pero son dos cosas distintas y conviene tenerlas separadas: `usuario`
+    # es con lo que entra (mañana podría ser un mail) y `cuil` es QUIÉN ES.
+    # Si se guardara uno solo, habilitar el login por mail borraría la
+    # identidad de la persona.
+    cuil: str = Field(default="", index=True)
+    # Vínculo OPCIONAL con su fila del padrón, cuando el empleado del
+    # sindicato es además afiliado. Se resuelve por CUIL en el alta; queda
+    # en NULL para quien trabaja en el gremio sin estar afiliado a él, que
+    # es un caso real y no un error.
+    trabajador_id: Optional[int] = Field(default=None, foreign_key="trabajador.id", index=True)
     nombre: str = ""
     clave_hash: str = ""
     debe_cambiar_clave: bool = True             # la primera clave la pone el admin de plataforma
     activo: bool = True
+    # Default False a propósito: si alguna alta se olvida de setearlo, el
+    # usuario nace SIN poder, no con todo. Los tres lugares que crean Super
+    # Admins de verdad (alta desde plataforma, alta desde el propio
+    # sindicato, cargar_demo) lo pasan explícito.
+    es_super_admin: bool = False
+    es_admin_seccional: bool = False
+    area_id: Optional[int] = Field(default=None, foreign_key="area.id", index=True)
+    seccional_id: Optional[int] = Field(default=None, foreign_key="seccional.id", index=True)
 
 
 class CuentaTrabajador(SQLModel, table=True):
@@ -209,6 +309,15 @@ class Trabajador(SQLModel, table=True):
     # Seccional del sindicato a la que pertenece (opcional -- no todos los
     # sindicatos cargan seccionales, y un trabajador puede quedar sin asignar).
     seccional_id: Optional[int] = Field(default=None, foreign_key="seccional.id", index=True)
+    # Marca de EMPLEADO DEL SINDICATO: este afiliado además trabaja en el
+    # gremio y opera el panel (decisión N1 de SPRINT_AREAS_V2.md). No la
+    # pone el admin a mano: se prende sola cuando se le da de alta un
+    # usuario del panel con este mismo CUIL, y se apaga cuando ese usuario
+    # deja de existir. Guardarla acá y no deducirla en cada consulta es lo
+    # que permite filtrar el padrón por "empleados" sin un JOIN en cada
+    # pantalla -- y lo que hace que la marca siga estando aunque mañana el
+    # vínculo se rompa por una baja.
+    es_empleado_sindicato: bool = False
     # CUIT del empleador (opcional, lo carga el admin en el alta/edición
     # manual -- NO está en el alta masiva, mismo criterio que seccional_id).
     # Permite dirigir una Notificacion "por empresa" (ver Notificacion).
@@ -595,6 +704,69 @@ class TipoTramite(SQLModel, table=True):
     # editar el tipo REEMPLAZA los campos (ids nuevos en cada edición). Se
     # sanean en validaciones_tramite.reglas_saneadas antes de llegar acá.
     reglas_consistencia: list = Field(default=[], sa_column=Column(JSON))
+    # NULL = formulario GLOBAL, lo ve todo el sindicato. Con seccional, solo
+    # lo ven los trabajadores de esa seccional y solo su admin local lo
+    # edita (decisión N7 de SPRINT_AREAS_V2.md).
+    seccional_id: Optional[int] = Field(default=None, foreign_key="seccional.id", index=True)
+    # Si este formulario habilita el PASE entre áreas (decisión N8). Sin el
+    # tilde, el área que lo recibe solo puede contestarle al trabajador.
+    # Default False: un formulario que no diga nada no habilita circuitos.
+    permite_pase: bool = False
+    # A qué ÁREA cae el trámite cuando la seccional del trabajador no está
+    # mapeada en DestinoTipoTramite. Es OBLIGATORIO: sin él, una seccional
+    # nueva dejaría trámites sin dueño, y el error sería silencioso -- nadie
+    # los vería en ninguna bandeja (decisión N6, "destino por defecto").
+    area_destino_default_id: Optional[int] = Field(
+        default=None, foreign_key="area.id", index=True)
+
+
+class PaseTipoTramite(SQLModel, table=True):
+    """Un área a la que ESTE formulario se puede derivar.
+
+    La lista es CERRADA y se declara al armar el formulario (decisión N8):
+    el circuito queda diseñado de antemano y es auditable. Sin filas, el
+    área que recibe el trámite solo puede contestarle al trabajador.
+
+    No incluye al área destino: derivar al que ya lo tiene no es un pase."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tipo_tramite_id: int = Field(foreign_key="tipotramite.id", index=True)
+    area_id: int = Field(foreign_key="area.id", index=True)
+
+
+class PaseTramite(SQLModel, table=True):
+    """Un movimiento de un trámite entre áreas.
+
+    Es lo que hace posible que el área que derivó CONSERVE LECTURA: el
+    permiso de ver no sale solo de area_a_cargo_id sino también de haber
+    sido origen de algún pase (ver puede_ver_tramite). Sin este registro,
+    derivar sería perder de vista para siempre lo que uno pasó.
+
+    Guarda además quién lo hizo, que el panel muestra y el trabajador no
+    (misma regla que las notas: al afiliado se le dice el ÁREA, nunca la
+    persona)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tramite_id: int = Field(foreign_key="tramite.id", index=True)
+    area_origen_id: Optional[int] = Field(default=None, foreign_key="area.id", index=True)
+    area_destino_id: int = Field(foreign_key="area.id", index=True)
+    usuario_id: Optional[int] = Field(default=None, foreign_key="usuariosindicato.id")
+    motivo: str = ""
+    creado: str = ""
+
+
+class DestinoTipoTramite(SQLModel, table=True):
+    """El mapa "esta seccional -> esta área" de un formulario.
+
+    Es la decisión N6: el destino se declara seccional por seccional en vez
+    de derivarse de una jerarquía de áreas. Gana precisión (cada delegación
+    decide quién atiende qué) a costa de mantener el mapa; el destino por
+    defecto de TipoTramite es lo que evita que ese mantenimiento se vuelva
+    obligatorio -- una seccional que nadie mapeó funciona igual.
+
+    Una fila por seccional mapeada. Las que no están, caen al default."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tipo_tramite_id: int = Field(foreign_key="tipotramite.id", index=True)
+    seccional_id: int = Field(foreign_key="seccional.id", index=True)
+    area_id: int = Field(foreign_key="area.id", index=True)
 
 
 class CampoTramite(SQLModel, table=True):
@@ -637,6 +809,11 @@ class Tramite(SQLModel, table=True):
     numero_expediente: str = Field(index=True, unique=True)  # "F01AEFIP-2026-000123"
     cuil: str = Field(index=True)
     estado: str = "iniciado"  # iniciado | en_tratamiento | respondido | espera_info | terminado
+    # El área que lo tiene. Se resuelve AL CREARLO (ver area_destino_para) y
+    # queda escrito en la fila: si se recalculara en cada consulta, cambiar
+    # el mapa del formulario movería de bandeja trámites ya presentados, y
+    # el que lo venía trabajando lo perdería de vista sin enterarse.
+    area_a_cargo_id: Optional[int] = Field(default=None, foreign_key="area.id", index=True)
     creado: str = ""
     actualizado: str = ""
     # Cuándo pasó a "terminado" (NULL si sigue abierto). Lo setea
@@ -681,6 +858,15 @@ class NotaTramite(SQLModel, table=True):
     tramite_id: int = Field(foreign_key="tramite.id", index=True)
     autor: str  # "admin" | "trabajador"
     texto: str = ""
+    # El estado que fijó ESTE mensaje (decisión N9). Vacío = el mensaje no
+    # movió el estado, que es siempre el caso del trabajador.
+    #
+    # Vive ACÁ y no en una tabla aparte a propósito: responder y cambiar el
+    # estado son UN SOLO ACTO, y guardarlos separados es lo que hacía que el
+    # chat mostrara dos movimientos por una sola cosa. Con el estado dentro
+    # del mensaje no hay forma de que se desincronicen -- no existe un
+    # cambio de estado sin su mensaje ni un mensaje cuyo estado se perdió.
+    estado_nuevo: str = ""
     adjunto_datos: Optional[bytes] = Field(default=None)
     adjunto_mime: str = ""
     adjunto_nombre: str = ""
@@ -1945,6 +2131,137 @@ def set_modulos_sindicato(sindicato_id: int, modulos: list) -> None:
         s.commit()
 
 
+# ---------- Permisos del panel del sindicato (ver permisos.py) ----------
+
+def permisos_efectivos(usuario_id: int) -> set:
+    """Secciones del panel que este usuario puede tocar, ahora mismo.
+
+    Se calcula CONTRA LA BASE en cada llamada y nunca se guarda en la
+    cookie de sesión: si los permisos viajaran en el token firmado,
+    quitarle un permiso a alguien no tendría efecto hasta que se le venciera
+    la sesión. El middleware ya reemite la cookie en cada request, así que
+    el costo real es una consulta más.
+
+    Devuelve set() para un usuario inexistente o dado de baja -- sin
+    excepción: quien llama decide si eso es un 403 o simplemente no mostrar
+    nada."""
+    from permisos import calcular_efectivos, secciones_de_modulos
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        if not u or not u.activo:
+            return set()
+        mods = modulos_habilitados(u.sindicato_id)
+        # El Super Admin tiene todo lo que el sindicato tenga contratado --
+        # pero pasa por el mismo filtro de módulos que los demás, así un
+        # módulo apagado no le deja secciones colgadas.
+        #
+        # El Admin de Seccional tiene EXACTAMENTE LAS MISMAS SECCIONES: es
+        # "el admin grande en chiquito", y lo que lo achica no es la lista
+        # de secciones sino el ALCANCE (alcance_seccional) y los chequeos de
+        # las rutas que administran áreas y usuarios. Separar las dos cosas
+        # es lo que hace que no haya dos catálogos que mantener.
+        if u.es_super_admin or u.es_admin_seccional:
+            return set(secciones_de_modulos(mods))
+        del_area = []
+        if u.area_id:
+            area = s.get(Area, u.area_id)
+            # Un área desactivada no da permisos: es la forma de cortarle el
+            # acceso a todo un equipo de una, sin tocar usuario por usuario.
+            if area and area.sindicato_id == u.sindicato_id and area.activo:
+                del_area = [x.seccion for x in s.exec(
+                    select(PermisoArea).where(PermisoArea.area_id == u.area_id)).all()]
+        individuales = s.exec(select(PermisoUsuario).where(
+            PermisoUsuario.usuario_id == usuario_id)).all()
+        agregados = [x.seccion for x in individuales if x.tipo == "agregar"]
+        bloqueados = [x.seccion for x in individuales if x.tipo == "bloquear"]
+        return calcular_efectivos(del_area, agregados, bloqueados, mods)
+
+
+def tiene_permiso(usuario_id: int, seccion: str) -> bool:
+    return seccion in permisos_efectivos(usuario_id)
+
+
+def es_super_admin(usuario_id: int) -> bool:
+    """La llave de la gestión de áreas y usuarios. Se lee de la base en cada
+    request por lo mismo que los permisos: degradar a alguien tiene que
+    valer ya, no cuando se le venza la sesión."""
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        return bool(u and u.activo and u.es_super_admin)
+
+
+def es_admin_seccional(usuario_id: int) -> bool:
+    """El rol intermedio: administra su seccional y nada más."""
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        return bool(u and u.activo and u.es_admin_seccional and not u.es_super_admin)
+
+
+def administra_areas_y_usuarios(usuario_id: int) -> bool:
+    """Quién puede entrar a la pantalla de Áreas y Usuarios.
+
+    Los dos roles de administrador, no solo el Super Admin. Lo que los
+    distingue NO es el acceso a la pantalla sino el ALCANCE de lo que ven y
+    pueden tocar ahí adentro, que lo imponen las rutas (ver
+    _exigir_alcance_area / _exigir_alcance_usuario en main.py).
+
+    Existe como función propia y no como `es_super_admin or
+    es_admin_seccional` escrito en cada lado: cuando mañana haya que sumar
+    o sacar un rol, se cambia acá y no en ocho rutas."""
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        return bool(u and u.activo and (u.es_super_admin or u.es_admin_seccional))
+
+
+def contar_super_admins(sindicato_id: int, excluyendo: int = 0) -> int:
+    """Super Admins activos del sindicato, sin contar a `excluyendo`.
+
+    Existe para el guard del último: antes del sistema de Áreas alcanzaba
+    con contar usuarios activos, pero ahora un sindicato puede tener diez
+    usuarios de área y un solo Super Admin -- y si se lo desactiva o se lo
+    degrada, nadie puede volver a entrar a administrar."""
+    with Session(engine) as s:
+        filas = s.exec(select(UsuarioSindicato).where(
+            UsuarioSindicato.sindicato_id == sindicato_id,
+            UsuarioSindicato.activo == True,
+            UsuarioSindicato.es_super_admin == True)).all()
+        return len([u for u in filas if u.id != excluyendo])
+
+
+def alcance_seccional(usuario_id: int):
+    """Sobre qué seccionales trabaja este usuario.
+
+    - `None`  = todas (Super Admin, o seccional con ve_todas tildado).
+    - `{id}`  = solo esa seccional.
+    - `set()` = ninguna.
+
+    El set vacío es el caso defensivo del usuario de área al que le falta la
+    seccional: desde el sistema de Áreas la seccional es obligatoria, así
+    que si igual falta preferimos que no vea NADA antes que verlo todo --
+    un dato incompleto no puede terminar en más permisos de los que
+    corresponden. Devolver None ahí sería justamente eso.
+
+    Se usa para recortar tanto los trámites que ve como los trabajadores a
+    los que puede notificar: una sola regla de alcance para todo el panel."""
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        if not u or not u.activo:
+            return set()
+        if u.es_super_admin:
+            return None
+        if not u.seccional_id:
+            return set()
+        sec = s.get(Seccional, u.seccional_id)
+        if not sec or sec.sindicato_id != u.sindicato_id:
+            return set()
+        # Vale la MISMA regla para el admin de seccional que para un usuario
+        # de área: su alcance es su seccional, salvo que esa seccional tenga
+        # ve_todas. Un admin local de una regional que supervisa a otras
+        # alcanza a todas, y eso es lo correcto -- una sola regla de alcance
+        # para todo el panel, no una por rol.
+        return None if sec.ve_todas else {u.seccional_id}
+
+
 # ---------- Configuración de plataforma ----------
 def obtener_tope_sindical() -> float:
     with Session(engine) as s:
@@ -2344,7 +2661,228 @@ def seccionales_del_sindicato(sindicato_id: int) -> list:
     with Session(engine) as s:
         seccionales = s.exec(select(Seccional).where(
             Seccional.sindicato_id == sindicato_id).order_by(Seccional.nombre)).all()
-        return [{"id": sec.id, "nombre": sec.nombre, "direccion": sec.direccion} for sec in seccionales]
+        return [{"id": sec.id, "nombre": sec.nombre, "direccion": sec.direccion,
+                 "ve_todas": sec.ve_todas} for sec in seccionales]
+
+
+# ---------- Identidad del empleado del sindicato (decisión N1) ----------
+
+def _trabajador_por_cuil(s: Session, sindicato_id: int, cuil: str):
+    """La fila del padrón de ESE sindicato para ese CUIL, o None.
+
+    Se busca solo dentro del sindicato a propósito: el mismo CUIL puede
+    estar empadronado en varios gremios (ver Trabajador), y el empleado de
+    uno no tiene nada que ver con su afiliación a otro."""
+    if not cuil:
+        return None
+    return s.exec(select(Trabajador).where(
+        Trabajador.sindicato_id == sindicato_id, Trabajador.cuil == cuil)).first()
+
+
+def sincronizar_empleado(usuario_id: int) -> Optional[int]:
+    """Rearma el vínculo usuario <-> padrón y deja la marca al día.
+
+    Se llama después de cada alta, edición y baja de usuario, y hace las
+    tres cosas de una porque separarlas es lo que las desincroniza:
+
+    1. Busca en el padrón del sindicato el CUIL del usuario y lo vincula
+       (o lo deja en NULL si no está: trabajar en el gremio sin estar
+       afiliado a él es un caso real).
+    2. Prende `es_empleado_sindicato` en esa fila del padrón.
+    3. APAGA la marca de la fila que el usuario tenía antes, si ya no le
+       corresponde -- pero solo si ningún OTRO usuario activo sigue
+       apuntando a ese trabajador. Sin ese chequeo, dar de baja a uno de dos
+       empleados con el mismo CUIL (que puede pasar: dos altas, un typo)
+       apagaría la marca del que sigue trabajando.
+
+    Devuelve el id del trabajador vinculado, o None.
+    """
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        if not u:
+            return None
+        anterior = u.trabajador_id
+        nuevo = None
+        if u.activo:
+            t = _trabajador_por_cuil(s, u.sindicato_id, u.cuil)
+            nuevo = t.id if t else None
+        u.trabajador_id = nuevo
+        s.add(u)
+        if nuevo:
+            t = s.get(Trabajador, nuevo)
+            if t and not t.es_empleado_sindicato:
+                t.es_empleado_sindicato = True
+                s.add(t)
+        if anterior and anterior != nuevo:
+            quedan = s.exec(select(UsuarioSindicato).where(
+                UsuarioSindicato.trabajador_id == anterior,
+                UsuarioSindicato.activo == True,
+                UsuarioSindicato.id != usuario_id)).first()
+            if not quedan:
+                viejo = s.get(Trabajador, anterior)
+                if viejo:
+                    viejo.es_empleado_sindicato = False
+                    s.add(viejo)
+        s.commit()
+        return nuevo
+
+
+def sincronizar_por_cuil(sindicato_id: int, cuil: str) -> None:
+    """El camino INVERSO: se acaba de tocar una fila del padrón, hay que ver
+    si ese CUIL tiene usuario del panel.
+
+    Hace falta porque las dos altas pueden venir en cualquier orden. Lo
+    normal es dar de alta al empleado en el padrón y después darle usuario,
+    pero al revés pasa igual -- y sin esto, el que ya tenía usuario quedaría
+    en el padrón sin la marca y sin vínculo, en silencio."""
+    if not cuil:
+        return
+    with Session(engine) as s:
+        usuarios = s.exec(select(UsuarioSindicato).where(
+            UsuarioSindicato.sindicato_id == sindicato_id,
+            UsuarioSindicato.cuil == cuil)).all()
+        ids = [u.id for u in usuarios]
+    for uid in ids:
+        sincronizar_empleado(uid)
+
+
+def empleados_del_sindicato(sindicato_id: int) -> list:
+    """CUILs del padrón marcados como empleados del sindicato. Lo usa la
+    pantalla de Trabajadores para distinguirlos de un afiliado común."""
+    with Session(engine) as s:
+        return sorted({t.cuil for t in s.exec(select(Trabajador).where(
+            Trabajador.sindicato_id == sindicato_id,
+            Trabajador.es_empleado_sindicato == True)).all()})
+
+
+# ---------- Áreas y permisos (CRUD del Super Admin) ----------
+
+def areas_del_sindicato(sindicato_id: int, alcance=None) -> list:
+    """Áreas del sindicato con su seccional y sus permisos, para el CRUD y
+    los <select>.
+
+    `alcance` es lo que devuelve alcance_seccional(): None = todas (Super
+    Admin), un set = solo las áreas de esas seccionales. Filtrar ACÁ y no en
+    la plantilla es a propósito -- si el recorte viviera en el HTML, las
+    áreas de otras seccionales viajarían igual en la página.
+
+    Trae los permisos en la misma pasada: la pantalla siempre los muestra
+    junto al área, y son pocas filas."""
+    with Session(engine) as s:
+        consulta = select(Area).where(Area.sindicato_id == sindicato_id)
+        if alcance is not None:
+            if not alcance:
+                return []
+            consulta = consulta.where(Area.seccional_id.in_(list(alcance)))
+        areas = s.exec(consulta.order_by(Area.nombre)).all()
+        ids = [a.id for a in areas]
+        por_area = {i: [] for i in ids}
+        if ids:
+            for x in s.exec(select(PermisoArea).where(PermisoArea.area_id.in_(ids))).all():
+                por_area[x.area_id].append(x.seccion)
+        secs = {x.id: x.nombre for x in s.exec(select(Seccional).where(
+            Seccional.sindicato_id == sindicato_id)).all()}
+        return [{"id": a.id, "nombre": a.nombre, "activo": a.activo,
+                 "seccional_id": a.seccional_id,
+                 "seccional": secs.get(a.seccional_id, ""),
+                 "permisos": sorted(por_area.get(a.id, []))} for a in areas]
+
+
+def set_permisos_area(area_id: int, secciones: list, sindicato_id: int) -> None:
+    """Reemplaza los permisos del área. Descarta cualquier sección que no
+    exista en el catálogo o que el sindicato no tenga contratada -- mismo
+    criterio defensivo que set_modulos_sindicato: no se guarda basura que
+    después haya que filtrar en cada lectura."""
+    from permisos import secciones_de_modulos
+    with Session(engine) as s:
+        area = s.get(Area, area_id)
+        if not area or area.sindicato_id != sindicato_id:
+            return
+        validas = set(secciones_de_modulos(modulos_habilitados(sindicato_id)))
+        for x in s.exec(select(PermisoArea).where(PermisoArea.area_id == area_id)).all():
+            s.delete(x)
+        for seccion in dict.fromkeys(secciones or []):   # sin repetidos, sin perder el orden
+            if seccion in validas:
+                s.add(PermisoArea(area_id=area_id, seccion=seccion))
+        s.commit()
+
+
+def permisos_individuales(usuario_id: int) -> dict:
+    """{"agregar": [...], "bloquear": [...]} del usuario, para pintar la
+    pantalla en sus tres estados (hereda / agregado / bloqueado)."""
+    with Session(engine) as s:
+        filas = s.exec(select(PermisoUsuario).where(
+            PermisoUsuario.usuario_id == usuario_id)).all()
+        return {
+            "agregar": sorted(x.seccion for x in filas if x.tipo == "agregar"),
+            "bloquear": sorted(x.seccion for x in filas if x.tipo == "bloquear"),
+        }
+
+
+def set_permisos_usuario(usuario_id: int, agregar: list, bloquear: list,
+                         sindicato_id: int) -> None:
+    """Reemplaza los ajustes individuales del usuario.
+
+    Si una sección viene en las dos listas gana BLOQUEAR, por lo mismo que
+    el bloqueo le gana al área en el cálculo: es el único orden que hace
+    que "bloqueado" signifique algo estable."""
+    from permisos import secciones_de_modulos
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        if not u or u.sindicato_id != sindicato_id:
+            return
+        validas = set(secciones_de_modulos(modulos_habilitados(sindicato_id)))
+        for x in s.exec(select(PermisoUsuario).where(
+                PermisoUsuario.usuario_id == usuario_id)).all():
+            s.delete(x)
+        bloqueadas = {x for x in (bloquear or []) if x in validas}
+        for seccion in bloqueadas:
+            s.add(PermisoUsuario(usuario_id=usuario_id, seccion=seccion, tipo="bloquear"))
+        for seccion in {x for x in (agregar or []) if x in validas} - bloqueadas:
+            s.add(PermisoUsuario(usuario_id=usuario_id, seccion=seccion, tipo="agregar"))
+        s.commit()
+
+
+def usuarios_del_sindicato(sindicato_id: int, alcance=None) -> list:
+    """Usuarios del panel con su rol, área, seccional y ajustes individuales
+    -- todo lo que la pantalla de "Áreas y Usuarios" necesita mostrar.
+
+    `alcance` recorta igual que en areas_del_sindicato, y por el mismo
+    motivo: un admin de seccional no tiene por qué recibir en el HTML los
+    CUIT de los usuarios de otra delegación. Los Super Admin quedan SIEMPRE
+    fuera del recorte -- no pertenecen a una sola seccional, y esconderlos
+    haría que el admin local no entienda quién más administra el sindicato.
+    """
+    with Session(engine) as s:
+        consulta = select(UsuarioSindicato).where(
+            UsuarioSindicato.sindicato_id == sindicato_id)
+        if alcance is not None:
+            if not alcance:
+                return []
+            consulta = consulta.where(
+                UsuarioSindicato.seccional_id.in_(list(alcance)))
+        usuarios = s.exec(consulta.order_by(
+            UsuarioSindicato.activo.desc(), UsuarioSindicato.nombre)).all()
+        areas = {a.id: a.nombre for a in s.exec(select(Area).where(
+            Area.sindicato_id == sindicato_id)).all()}
+        secs = {x.id: x.nombre for x in s.exec(select(Seccional).where(
+            Seccional.sindicato_id == sindicato_id)).all()}
+        salida = []
+        for u in usuarios:
+            ind = permisos_individuales(u.id)
+            salida.append({
+                "id": u.id, "usuario": u.usuario, "nombre": u.nombre, "activo": u.activo,
+                "cuil": u.cuil, "trabajador_id": u.trabajador_id,
+                "es_afiliado": bool(u.trabajador_id),
+                "debe_cambiar_clave": u.debe_cambiar_clave,
+                "es_super_admin": u.es_super_admin,
+                "es_admin_seccional": u.es_admin_seccional,
+                "area_id": u.area_id, "area": areas.get(u.area_id, ""),
+                "seccional_id": u.seccional_id, "seccional": secs.get(u.seccional_id, ""),
+                "agregados": ind["agregar"], "bloqueados": ind["bloquear"],
+                "efectivos": sorted(permisos_efectivos(u.id)),
+            })
+        return salida
 
 
 def seccional_de_trabajador(cuil: str, sindicato_id: int) -> Optional[int]:
@@ -2417,18 +2955,38 @@ def recibos_sospechosos_listado() -> list:
 
 # ---------- Notificaciones (Fase 2 de Módulos + Notificaciones + Trámites) ----------
 
-def resolver_destinatarios(sindicato_id: int, criterio: str, valores: list) -> list:
+def resolver_destinatarios(sindicato_id: int, criterio: str, valores: list,
+                            usuario_id: Optional[int] = None) -> list:
     """CUILs de trabajadores ACTIVOS de este sindicato que matchean el
     criterio -- usado tanto por el preview (solo cuenta) como por el envío
     real (que además fija la lista, ver crear_notificacion). El sindicato
     solo puede targetear su propia gente: un valor que no matchea ningún
-    trabajador de ESTE sindicato_id simplemente no suma destinatarios."""
+    trabajador de ESTE sindicato_id simplemente no suma destinatarios.
+
+    Con `usuario_id` se recorta además por el ALCANCE DE SECCIONAL de quien
+    envía (decisión N10): Prensa de Sede Central le escribe a todo el país,
+    Prensa de Córdoba solo a Córdoba.
+
+    El recorte vive ACÁ y no en la ruta a propósito: esta es la MISMA
+    función que usan el preview y el envío real. Si el recorte estuviera en
+    la ruta, el preview podría contar de más y el admin vería un número
+    distinto del que sale -- y el error sería silencioso, porque nadie
+    compara los dos.
+
+    Se aplica a TODOS los criterios, no solo a "cuil": por provincia o
+    pidiendo otra seccional se llegaría igual a gente de afuera."""
     valores = [str(v).strip() for v in (valores or []) if str(v).strip()]
     if not valores:
         return []
+    alcance = alcance_seccional(usuario_id) if usuario_id else None
+    if alcance is not None and not alcance:
+        return []
     with Session(engine) as s:
-        trabajadores = s.exec(select(Trabajador).where(
-            Trabajador.sindicato_id == sindicato_id, Trabajador.activo == True)).all()
+        q = select(Trabajador).where(
+            Trabajador.sindicato_id == sindicato_id, Trabajador.activo == True)
+        if alcance is not None:
+            q = q.where(Trabajador.seccional_id.in_(list(alcance)))
+        trabajadores = s.exec(q).all()
     if criterio == "cuil":
         objetivo = set(valores)
         return sorted({t.cuil for t in trabajadores if t.cuil in objetivo})
@@ -2449,8 +3007,13 @@ def crear_notificacion(sindicato_id: int, usuario_id: Optional[int], remitente: 
                         adjunto_mime: str = "", adjunto_nombre: str = "",
                         origen: str = "manual", formulario_id: Optional[int] = None) -> dict:
     """Resuelve los destinatarios y los FIJA en el momento de enviar (snapshot,
-    ver Notificacion). Devuelve id y cantidad real, para la confirmación."""
-    cuils = resolver_destinatarios(sindicato_id, criterio, valores)
+    ver Notificacion). Devuelve id y cantidad real, para la confirmación.
+
+    `usuario_id` no es solo para registrar quién mandó: se le pasa a
+    resolver_destinatarios para que el ALCANCE recorte a quién le llega
+    (decisión N10). Es la misma función que usa el preview, así que el
+    número que el admin confirmó es el que sale."""
+    cuils = resolver_destinatarios(sindicato_id, criterio, valores, usuario_id=usuario_id)
     with Session(engine) as s:
         n = Notificacion(
             sindicato_id=sindicato_id, remitente=remitente or "", usuario_id=usuario_id,
@@ -2466,12 +3029,32 @@ def crear_notificacion(sindicato_id: int, usuario_id: Optional[int], remitente: 
         return {"id": n.id, "cantidad_destinatarios": len(cuils)}
 
 
-def notificaciones_del_sindicato(sindicato_id: int) -> list:
-    """Todas las notificaciones enviadas por este sindicato, con el resumen
-    leídos/total, más recientes primero -- para el listado de admin."""
+def notificaciones_del_sindicato(sindicato_id: int, usuario_id: Optional[int] = None) -> list:
+    """Notificaciones enviadas por este sindicato, con el resumen
+    leídos/total, más recientes primero -- para el listado de admin.
+
+    Con `usuario_id` se recorta a las que tienen AL MENOS UN destinatario
+    dentro de su alcance: cada uno ve el historial de aquellos a quienes
+    podría escribirle (decisión N10). Una notificación que salió a todo el
+    país la ve también el admin de Córdoba, porque incluye a su gente -- lo
+    que no ve son las que fueron solo a otras delegaciones.
+
+    Y la lista de destinatarios se recorta también, en
+    destinatarios_de_notificacion: sin eso, el resumen ocultaría lo ajeno
+    pero el detalle lo mostraría igual."""
+    alcance = alcance_seccional(usuario_id) if usuario_id else None
+    if alcance is not None and not alcance:
+        return []
     with Session(engine) as s:
         filas = s.exec(select(Notificacion).where(Notificacion.sindicato_id == sindicato_id)
                        .order_by(Notificacion.id.desc())).all()
+        if alcance is not None:
+            propios = {t.cuil for t in s.exec(select(Trabajador).where(
+                Trabajador.sindicato_id == sindicato_id,
+                Trabajador.seccional_id.in_(list(alcance)))).all()}
+            visibles = {d.notificacion_id for d in s.exec(
+                select(NotificacionDestinatario)).all() if d.cuil in propios}
+            filas = [n for n in filas if n.id in visibles]
         resultado = []
         for n in filas:
             dests = s.exec(select(NotificacionDestinatario).where(
@@ -2488,12 +3071,26 @@ def notificaciones_del_sindicato(sindicato_id: int) -> list:
         return resultado
 
 
-def notificacion_destinatarios(notificacion_id: int) -> list:
-    """Detalle fila por fila (CUIL + si leyó y cuándo) de una notificación."""
+def notificacion_destinatarios(notificacion_id: int, usuario_id: Optional[int] = None) -> list:
+    """Detalle fila por fila (CUIL + si leyó y cuándo) de una notificación.
+
+    Con `usuario_id` se recorta a los destinatarios de SU alcance
+    (decisión N10). Es la otra mitad del recorte del historial: sin esto,
+    el listado escondería las notificaciones ajenas pero el detalle de una
+    compartida entregaría igual los CUIL de todas las delegaciones."""
+    alcance = alcance_seccional(usuario_id) if usuario_id else None
+    if alcance is not None and not alcance:
+        return []
     with Session(engine) as s:
         dests = s.exec(select(NotificacionDestinatario).where(
             NotificacionDestinatario.notificacion_id == notificacion_id).order_by(
             NotificacionDestinatario.cuil)).all()
+        if alcance is not None:
+            n = s.get(Notificacion, notificacion_id)
+            propios = {t.cuil for t in s.exec(select(Trabajador).where(
+                Trabajador.sindicato_id == (n.sindicato_id if n else 0),
+                Trabajador.seccional_id.in_(list(alcance)))).all()}
+            dests = [d for d in dests if d.cuil in propios]
         nombres = {t.cuil: t.nombre for t in s.exec(select(Trabajador)).all()}
         return [{
             "cuil": d.cuil, "nombre": nombres.get(d.cuil, ""), "leida_en": d.leida_en,
@@ -2708,7 +3305,8 @@ def _campo_tramite_a_dict(c: "CampoTramite") -> dict:
 
 
 def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list,
-                        reglas: list = None) -> int:
+                        reglas: list = None, area_destino_default_id: int = None,
+                        seccional_id: int = None, permite_pase: bool = False) -> int:
     """Crea el tipo y sus campos en un solo alta. `campos` es una lista de
     dicts con las claves de CampoTramite (sin id/tipo_tramite_id); `reglas`
     son las reglas de consistencia ya saneadas
@@ -2716,6 +3314,8 @@ def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list
     with Session(engine) as s:
         t = TipoTramite(sindicato_id=sindicato_id, titulo=titulo, codigo=codigo,
                          reglas_consistencia=reglas or [],
+                         area_destino_default_id=area_destino_default_id,
+                         seccional_id=seccional_id, permite_pase=permite_pase,
                          creado=datetime.now().strftime("%Y-%m-%d %H:%M"))
         s.add(t); s.commit(); s.refresh(t)
         for i, c in enumerate(campos):
@@ -2732,7 +3332,9 @@ def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list
 
 
 def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: str,
-                         activo: bool, campos: list, reglas: list = None) -> bool:
+                         activo: bool, campos: list, reglas: list = None,
+                         area_destino_default_id: int = None,
+                         permite_pase: Optional[bool] = None) -> bool:
     """Actualiza título/código/activo y SINCRONIZA los campos por id: el
     constructor sigue siendo "lo que ves es lo que queda", pero borrar y
     recrear (como se hacía antes) reventaba con FK en cuanto el tipo tenía
@@ -2747,6 +3349,14 @@ def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: st
         if not t or t.sindicato_id != sindicato_id:
             return False
         t.titulo, t.codigo, t.activo = titulo, codigo, activo
+        # La SECCIONAL de un formulario no se edita: cambiarla le sacaría
+        # el trámite de la vista a los trabajadores que ya lo tenían
+        # disponible. El destino, en cambio, sí -- es la configuración
+        # que el sindicato va a querer ajustar con el uso.
+        if area_destino_default_id is not None:
+            t.area_destino_default_id = area_destino_default_id
+        if permite_pase is not None:
+            t.permite_pase = permite_pase
         t.reglas_consistencia = reglas or []
         s.add(t)
         existentes = {c.id: c for c in s.exec(select(CampoTramite).where(
@@ -2800,13 +3410,26 @@ def borrar_tipo_tramite(tipo_id: int, sindicato_id: int) -> bool:
         return True
 
 
-def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False) -> list:
+def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False,
+                                 seccional_id: Optional[int] = "todas") -> list:
     """Tipos de trámite del sindicato con sus campos, para el constructor de
-    admin y el listado que ve el trabajador (con solo_activos=True)."""
+    admin y el listado que ve el trabajador (con solo_activos=True).
+
+    `seccional_id` recorta a lo que ve un TRABAJADOR de esa seccional: los
+    formularios globales más los de su seccional (decisión N7). El default
+    "todas" -- y no None, que es un valor con significado propio: "sin
+    seccional cargada" -- deja la consulta sin recortar, que es lo que
+    necesita el panel."""
     with Session(engine) as s:
         q = select(TipoTramite).where(TipoTramite.sindicato_id == sindicato_id)
         if solo_activos:
             q = q.where(TipoTramite.activo == True)
+        if seccional_id != "todas":
+            # Un trabajador SIN seccional ve solo los globales: no hay
+            # ninguna seccional cuyos formularios le correspondan.
+            q = q.where((TipoTramite.seccional_id == None) |  # noqa: E711
+                        (TipoTramite.seccional_id == seccional_id)) \
+                if seccional_id else q.where(TipoTramite.seccional_id == None)  # noqa: E711
         tipos = s.exec(q.order_by(TipoTramite.creado.desc())).all()
         resultado = []
         for t in tipos:
@@ -2818,8 +3441,96 @@ def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False) -
                 "id": t.id, "titulo": t.titulo, "codigo": t.codigo, "activo": t.activo,
                 "creado": t.creado, "campos": [_campo_tramite_a_dict(c) for c in campos],
                 "reglas_consistencia": t.reglas_consistencia or [],
+                "seccional_id": t.seccional_id,
+                "area_destino_default_id": t.area_destino_default_id,
+                "permite_pase": t.permite_pase,
+                "areas_pase": sorted({x.area_id for x in s.exec(
+                    select(PaseTipoTramite).where(
+                        PaseTipoTramite.tipo_tramite_id == t.id)).all()}),
+                "destinos": {d.seccional_id: d.area_id for d in s.exec(
+                    select(DestinoTipoTramite).where(
+                        DestinoTipoTramite.tipo_tramite_id == t.id)).all()},
             })
         return resultado
+
+
+# ---------- Ruteo de trámites por área (decisión N6) ----------
+
+def area_destino_para(tipo_tramite_id: int, seccional_id: Optional[int]) -> Optional[int]:
+    """A qué área cae un trámite de ESE formulario presentado por alguien de
+    ESA seccional.
+
+    Dos pasos y en este orden: si la seccional está mapeada, gana el mapa;
+    si no, el destino por defecto del formulario. El default es obligatorio
+    justamente para que este segundo paso nunca devuelva None -- una
+    seccional nueva, o un trabajador sin seccional cargada, tienen que caer
+    en algún lado. Si aun así devuelve None es porque el formulario se
+    guardó sin default, y eso las rutas ya no lo permiten.
+    """
+    with Session(engine) as s:
+        if seccional_id:
+            destino = s.exec(select(DestinoTipoTramite).where(
+                DestinoTipoTramite.tipo_tramite_id == tipo_tramite_id,
+                DestinoTipoTramite.seccional_id == seccional_id)).first()
+            if destino:
+                return destino.area_id
+        tipo = s.get(TipoTramite, tipo_tramite_id)
+        return tipo.area_destino_default_id if tipo else None
+
+
+def destinos_de_tipo_tramite(tipo_tramite_id: int) -> dict:
+    """{seccional_id: area_id} del mapa, para pintar el constructor."""
+    with Session(engine) as s:
+        return {d.seccional_id: d.area_id for d in s.exec(select(DestinoTipoTramite).where(
+            DestinoTipoTramite.tipo_tramite_id == tipo_tramite_id)).all()}
+
+
+def set_destinos_tipo_tramite(tipo_tramite_id: int, mapa: dict, sindicato_id: int) -> None:
+    """Reemplaza el mapa del formulario.
+
+    Descarta las seccionales y áreas que no sean de ESTE sindicato, mismo
+    criterio defensivo que set_permisos_area: no se guarda basura que
+    después haya que filtrar en cada lectura. Una seccional mapeada a
+    "ninguna área" simplemente se saca del mapa -- cae al default, que es
+    exactamente lo que significa."""
+    with Session(engine) as s:
+        tipo = s.get(TipoTramite, tipo_tramite_id)
+        if not tipo or tipo.sindicato_id != sindicato_id:
+            return
+        secs = {x.id for x in s.exec(select(Seccional).where(
+            Seccional.sindicato_id == sindicato_id)).all()}
+        areas = {a.id for a in s.exec(select(Area).where(
+            Area.sindicato_id == sindicato_id)).all()}
+        for d in s.exec(select(DestinoTipoTramite).where(
+                DestinoTipoTramite.tipo_tramite_id == tipo_tramite_id)).all():
+            s.delete(d)
+        for sec_id, area_id in (mapa or {}).items():
+            if sec_id in secs and area_id in areas:
+                s.add(DestinoTipoTramite(tipo_tramite_id=tipo_tramite_id,
+                                         seccional_id=sec_id, area_id=area_id))
+        s.commit()
+
+
+def alcance_de_tramites(usuario_id: int):
+    """(areas, seccionales) sobre las que este usuario ve trámites.
+
+    None en cualquiera de los dos = sin recorte por ese eje. Son DOS EJES
+    QUE SE CRUZAN, no uno: el área dice qué trámites le tocan y la seccional
+    sobre qué trabajadores. Dos usuarios de "Legales" en seccionales
+    distintas tienen el mismo permiso y ven cosas distintas.
+
+    Los administradores (general y de seccional) no se recortan por área --
+    administran, no atienden una ventanilla -- pero el de seccional sí
+    arrastra su recorte de seccional, que sale de alcance_seccional().
+    """
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        if not u or not u.activo:
+            return set(), set()
+        if u.es_super_admin or u.es_admin_seccional:
+            return None, alcance_seccional(usuario_id)
+        areas = {u.area_id} if u.area_id else set()
+        return areas, alcance_seccional(usuario_id)
 
 
 def tipo_tramite_por_id(tipo_id: int) -> Optional[dict]:
@@ -2835,6 +3546,8 @@ def tipo_tramite_por_id(tipo_id: int) -> Optional[dict]:
             "id": t.id, "sindicato_id": t.sindicato_id, "titulo": t.titulo, "codigo": t.codigo,
             "activo": t.activo, "creado": t.creado, "campos": [_campo_tramite_a_dict(c) for c in campos],
             "reglas_consistencia": t.reglas_consistencia or [],
+            "seccional_id": t.seccional_id,
+            "area_destino_default_id": t.area_destino_default_id,
         }
 
 
@@ -2886,8 +3599,16 @@ def crear_tramite(sindicato_id: int, tipo_tramite_id: int, cuil: str, respuestas
         anio = datetime.now().strftime("%Y")
         ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
         numero = _proximo_numero_expediente(s, Tramite, prefijo, anio)
+        # El área se resuelve ACÁ, contra la seccional del trabajador, y
+        # queda escrita en la fila. Ver el comentario de Tramite.area_a_cargo_id:
+        # recalcularla en cada consulta haría que editar el mapa del
+        # formulario moviera de bandeja trámites ya presentados.
+        trab = s.exec(select(Trabajador).where(
+            Trabajador.sindicato_id == sindicato_id, Trabajador.cuil == cuil)).first()
+        area_id = area_destino_para(tipo_tramite_id, trab.seccional_id if trab else None)
         tr = Tramite(sindicato_id=sindicato_id, tipo_tramite_id=tipo_tramite_id, cuil=cuil,
                      numero_expediente=numero, estado="iniciado", creado=ahora, actualizado=ahora,
+                     area_a_cargo_id=area_id,
                      advertencias=advertencias or [], origen_tramite_id=origen_tramite_id,
                      visto_trabajador_en=ahora)
         s.add(tr); s.commit(); s.refresh(tr)
@@ -2910,9 +3631,18 @@ ESTADOS_TRAMITE_LABEL = {
 
 
 def cambiar_estado_tramite(tramite_id: int, sindicato_id: int, nuevo_estado: str) -> bool:
-    """False si el estado no es válido, el trámite no es de ese sindicato, o
-    el trámite YA está terminado -- un trámite terminado queda bloqueado,
-    no se puede reabrir ni cambiar de estado (ver también agregar_nota_tramite)."""
+    """SIN USO desde la decisión N9 -- se deja porque cargar_demo y los
+    scripts de datos la usan para armar trámites en un estado dado sin
+    inventar un mensaje. Desde el panel NO se llega acá: responder y cambiar
+    el estado son un solo acto y pasan por agregar_nota_tramite.
+
+    Si mañana alguien la llama desde una ruta nueva, el estado volvería a
+    moverse sin mensaje y el chat volvería a mentir. Esto no es un guard --
+    es un cartel.
+
+    False si el estado no es válido, el trámite no es de ese sindicato, o el
+    trámite YA está terminado -- un trámite terminado queda bloqueado, no se
+    puede reabrir ni cambiar de estado (ver también agregar_nota_tramite)."""
     if nuevo_estado not in ESTADOS_TRAMITE:
         return False
     with Session(engine) as s:
@@ -2934,28 +3664,55 @@ def cambiar_estado_tramite(tramite_id: int, sindicato_id: int, nuevo_estado: str
 
 def agregar_nota_tramite(tramite_id: int, autor: str, texto: str,
                           adjunto_datos: Optional[bytes] = None, adjunto_mime: str = "",
-                          adjunto_nombre: str = "", formulario_id: Optional[int] = None) -> bool:
+                          adjunto_nombre: str = "", formulario_id: Optional[int] = None,
+                          estado_nuevo: str = "") -> bool:
     """`autor` es "admin" o "trabajador" -- la verificación de que quien
     escribe tiene permiso sobre ESTE trámite la hace el caller (main.py),
     igual que la de que `formulario_id` (solo admin) sea un tipo activo del
     sindicato. Un trámite terminado queda bloqueado para notas nuevas de
-    cualquier lado."""
+    cualquier lado.
+
+    `estado_nuevo` (solo del admin) mueve el estado EN LA MISMA OPERACIÓN y
+    en la misma transacción que el mensaje: es la decisión N9. Antes eran
+    dos rutas y cada una escribía su línea en el chat, así que un solo acto
+    del admin aparecía DOS VECES del lado del trabajador. Ahora el estado
+    viaja dentro del mensaje y el log lleva un evento por acto real.
+
+    Un estado inválido se ignora y la nota se manda igual: escribir es lo
+    que el admin quiso hacer, y perderle el mensaje por un valor mal formado
+    sería peor que no mover el estado."""
     with Session(engine) as s:
         tr = s.get(Tramite, tramite_id)
         if not tr or tr.estado == "terminado":
             return False
+        ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
+        cambia = bool(estado_nuevo) and estado_nuevo in ESTADOS_TRAMITE \
+            and estado_nuevo != tr.estado and autor == "admin"
         s.add(NotaTramite(
             tramite_id=tramite_id, autor=autor, texto=texto or "",
             adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime or "",
-            adjunto_nombre=adjunto_nombre or "", creado=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            adjunto_nombre=adjunto_nombre or "", creado=ahora,
             formulario_id=formulario_id,
+            estado_nuevo=estado_nuevo if cambia else "",
         ))
-        tr.actualizado = datetime.now().strftime("%Y-%m-%d %H:%M")
+        anterior = tr.estado
+        if cambia:
+            tr.estado = estado_nuevo
+            if estado_nuevo == "terminado":
+                tr.resuelto_en = ahora
+        tr.actualizado = ahora
         # nota del sindicato = novedad para el trabajador; una nota propia
         # sella el visto (ya está mirando el chat)
         tr.visto_trabajador_en = None if autor == "admin" else tr.actualizado
         s.add(tr)
-        _log_tramite(s, tramite_id, f"nota_{autor}", texto[:120] if texto else "(sin texto, con adjunto)")
+        # UN evento por acto, con el cambio de estado en el mismo renglón:
+        # es lo que hace que el chat deje de mostrar dos movimientos por una
+        # sola respuesta.
+        detalle = texto[:120] if texto else "(sin texto, con adjunto)"
+        if cambia:
+            detalle += (f" · Estado: {ESTADOS_TRAMITE_LABEL.get(anterior, anterior)}"
+                        f" → {ESTADOS_TRAMITE_LABEL.get(estado_nuevo, estado_nuevo)}")
+        _log_tramite(s, tramite_id, f"nota_{autor}", detalle)
         s.commit()
         return True
 
@@ -3030,9 +3787,49 @@ def contar_tramites_con_novedades(cuil: str, sindicato_id: int) -> int:
         return sum(1 for tr in tramites if not tr.visto_trabajador_en)
 
 
+def _recortar_tramites(s: Session, q, sindicato_id: int, usuario_id: Optional[int]):
+    """Aplica los DOS EJES del alcance a una consulta de trámites.
+
+    Sin `usuario_id` no recorta nada -- lo usan las consultas internas y los
+    scripts. Con usuario, cruza área y seccional: el área dice qué trámites
+    le tocan, la seccional sobre qué trabajadores. Recortar por seccional
+    obliga a resolver qué CUILs entran, así que se hace con una subconsulta
+    sobre el padrón y no con un JOIN -- Tramite guarda el CUIL, no el id del
+    trabajador."""
+    if not usuario_id:
+        return q
+    areas, secs = alcance_de_tramites(usuario_id)
+    if areas is not None:
+        if not areas:
+            return q.where(False)
+        # El área a cargo O una que lo haya derivado: la que pasó el trámite
+        # lo sigue viendo en su bandeja (en solo lectura) para saber en qué
+        # terminó. Si solo se filtrara por area_a_cargo_id, derivar sería
+        # perderlo de vista y nadie podría seguirle el rastro.
+        derivados = select(PaseTramite.tramite_id).where(
+            PaseTramite.area_origen_id.in_(list(areas)))
+        q = q.where(Tramite.area_a_cargo_id.in_(list(areas)) |
+                    Tramite.id.in_(derivados))
+    if secs is not None:
+        if not secs:
+            return q.where(False)
+        cuiles = [t.cuil for t in s.exec(select(Trabajador).where(
+            Trabajador.sindicato_id == sindicato_id,
+            Trabajador.seccional_id.in_(list(secs)))).all()]
+        if not cuiles:
+            return q.where(False)
+        q = q.where(Tramite.cuil.in_(cuiles))
+    return q
+
+
 def tramites_del_sindicato(sindicato_id: int, estado: str = None, tipo_tramite_id: int = None,
-                            cuil: str = None) -> list:
-    """Listado filtrable para el panel de admin, más recientes primero."""
+                            cuil: str = None, usuario_id: Optional[int] = None) -> list:
+    """Listado filtrable para el panel de admin, más recientes primero.
+
+    Con `usuario_id` se recorta al alcance de ese usuario (ver
+    _recortar_tramites). El recorte va en la CONSULTA y no en la plantilla,
+    por lo mismo de siempre: en el HTML los trámites de otras áreas
+    viajarían igual."""
     with Session(engine) as s:
         q = select(Tramite).where(Tramite.sindicato_id == sindicato_id)
         if estado:
@@ -3041,19 +3838,195 @@ def tramites_del_sindicato(sindicato_id: int, estado: str = None, tipo_tramite_i
             q = q.where(Tramite.tipo_tramite_id == tipo_tramite_id)
         if cuil:
             q = q.where(Tramite.cuil == cuil)
+        q = _recortar_tramites(s, q, sindicato_id, usuario_id)
         tramites = s.exec(q.order_by(Tramite.id.desc())).all()
         titulos_tipo = {t.id: t.titulo for t in s.exec(
             select(TipoTramite).where(TipoTramite.sindicato_id == sindicato_id)).all()}
         return [_tramite_resumen(s, tr, titulos_tipo) for tr in tramites]
 
 
-def contar_tramites_nuevos(sindicato_id: int) -> int:
+# ---------- Pase entre áreas (decisión N8) ----------
+
+def areas_de_pase_de_tipo(tipo_tramite_id: int) -> list:
+    """Los ids de área a los que ESTE formulario habilita derivar."""
+    with Session(engine) as s:
+        return sorted({x.area_id for x in s.exec(select(PaseTipoTramite).where(
+            PaseTipoTramite.tipo_tramite_id == tipo_tramite_id)).all()})
+
+
+def set_areas_de_pase(tipo_tramite_id: int, areas: list, sindicato_id: int) -> None:
+    """Reemplaza la lista cerrada de destinos de pase del formulario.
+
+    Descarta áreas de otro sindicato, mismo criterio defensivo que el resto
+    de los set_*: no se guarda basura que después haya que filtrar."""
+    with Session(engine) as s:
+        tipo = s.get(TipoTramite, tipo_tramite_id)
+        if not tipo or tipo.sindicato_id != sindicato_id:
+            return
+        propias = {a.id for a in s.exec(select(Area).where(
+            Area.sindicato_id == sindicato_id)).all()}
+        for x in s.exec(select(PaseTipoTramite).where(
+                PaseTipoTramite.tipo_tramite_id == tipo_tramite_id)).all():
+            s.delete(x)
+        for area_id in dict.fromkeys(areas or []):
+            if area_id in propias:
+                s.add(PaseTipoTramite(tipo_tramite_id=tipo_tramite_id, area_id=area_id))
+        s.commit()
+
+
+def areas_a_las_que_puede_pasar(tramite_id: int) -> list:
+    """[{id, nombre, seccional}] de los destinos VÁLIDOS ahora mismo.
+
+    Se saca el área que ya lo tiene -- derivarle al que lo tiene no es un
+    pase -- y las áreas desactivadas, que no pueden recibir trabajo. La
+    lista sale de aplicar las dos cosas a los destinos que declara el
+    formulario; si el formulario no permite pase, es vacía."""
+    with Session(engine) as s:
+        tr = s.get(Tramite, tramite_id)
+        if not tr:
+            return []
+        tipo = s.get(TipoTramite, tr.tipo_tramite_id)
+        if not tipo or not tipo.permite_pase:
+            return []
+        ids = {x.area_id for x in s.exec(select(PaseTipoTramite).where(
+            PaseTipoTramite.tipo_tramite_id == tr.tipo_tramite_id)).all()}
+        ids.discard(tr.area_a_cargo_id)
+        if not ids:
+            return []
+        areas = s.exec(select(Area).where(Area.id.in_(list(ids)),
+                                          Area.activo == True)).all()
+        secs = {x.id: x.nombre for x in s.exec(select(Seccional).where(
+            Seccional.sindicato_id == tr.sindicato_id)).all()}
+        return sorted(({"id": a.id, "nombre": a.nombre,
+                        "seccional": secs.get(a.seccional_id, "")} for a in areas),
+                      key=lambda a: (a["seccional"], a["nombre"]))
+
+
+def areas_que_vieron(tramite_id: int) -> set:
+    """Las áreas que tuvieron el trámite alguna vez: la que lo tiene ahora
+    más todas las que lo derivaron. Es el conjunto que conserva LECTURA."""
+    with Session(engine) as s:
+        tr = s.get(Tramite, tramite_id)
+        if not tr:
+            return set()
+        pasados = {x.area_origen_id for x in s.exec(select(PaseTramite).where(
+            PaseTramite.tramite_id == tramite_id)).all() if x.area_origen_id}
+        if tr.area_a_cargo_id:
+            pasados.add(tr.area_a_cargo_id)
+        return pasados
+
+
+def pasar_tramite(tramite_id: int, area_destino_id: int, usuario_id: int,
+                   sindicato_id: int, motivo: str = "") -> bool:
+    """Deriva el trámite a otra área. False si no corresponde.
+
+    Chequea TODO acá adentro y no en la ruta, a propósito: es una operación
+    que cambia quién puede responder, y dejar la mitad de las condiciones en
+    el llamador es la forma de que un camino nuevo se olvide de alguna.
+
+    Un trámite TERMINADO no se deriva: está cerrado, igual que no admite
+    notas ni cambios de estado."""
+    with Session(engine) as s:
+        tr = s.get(Tramite, tramite_id)
+        if not tr or tr.sindicato_id != sindicato_id or tr.estado == "terminado":
+            return False
+        tipo = s.get(TipoTramite, tr.tipo_tramite_id)
+        if not tipo or not tipo.permite_pase:
+            return False
+        # El destino tiene que estar en la lista CERRADA del formulario, ser
+        # de este sindicato, estar activo, y no ser el que ya lo tiene.
+        permitidas = {x.area_id for x in s.exec(select(PaseTipoTramite).where(
+            PaseTipoTramite.tipo_tramite_id == tr.tipo_tramite_id)).all()}
+        destino = s.get(Area, area_destino_id)
+        if (area_destino_id not in permitidas or not destino
+                or destino.sindicato_id != sindicato_id or not destino.activo
+                or area_destino_id == tr.area_a_cargo_id):
+            return False
+        origen = s.get(Area, tr.area_a_cargo_id) if tr.area_a_cargo_id else None
+        ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
+        s.add(PaseTramite(tramite_id=tramite_id, area_origen_id=tr.area_a_cargo_id,
+                          area_destino_id=area_destino_id, usuario_id=usuario_id,
+                          motivo=motivo, creado=ahora))
+        tr.area_a_cargo_id = area_destino_id
+        tr.actualizado = ahora
+        # Un pase es actividad del sindicato sobre el expediente: al
+        # trabajador le cuenta como novedad, igual que una respuesta.
+        tr.visto_trabajador_en = None
+        s.add(tr)
+        # El movimiento queda en el chat nombrando ÁREAS, nunca personas:
+        # es lo que ve el trabajador (misma regla que las respuestas).
+        detalle = f"Pasó de {origen.nombre} a {destino.nombre}." if origen \
+            else f"Pasó a {destino.nombre}."
+        if motivo:
+            detalle += f" Motivo: {motivo}"
+        _log_tramite(s, tramite_id, "pase", detalle)
+        s.commit()
+        return True
+
+
+def puede_responder_tramite(tramite_id: int, usuario_id: int, sindicato_id: int) -> bool:
+    """Ver y RESPONDER son cosas distintas desde que existe el pase.
+
+    El área que derivó conserva lectura -- para saber en qué terminó lo que
+    pasó -- pero ya no escribe. Si las dos pudieran, el trabajador podría
+    recibir dos respuestas distintas al mismo planteo, que es justo lo que
+    "siempre hay exactamente un área responsable" evita.
+
+    Los administradores no quedan afuera: no atienden una ventanilla."""
+    if not puede_ver_tramite(tramite_id, usuario_id, sindicato_id):
+        return False
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        if not u or not u.activo:
+            return False
+        if u.es_super_admin or u.es_admin_seccional:
+            return True
+        tr = s.get(Tramite, tramite_id)
+        return bool(tr and tr.area_a_cargo_id == u.area_id)
+
+
+def puede_ver_tramite(tramite_id: int, usuario_id: int, sindicato_id: int) -> bool:
+    """Si ESTE usuario alcanza ESE trámite, por los dos ejes.
+
+    No alcanza con filtrar el listado: en el detalle, la nota y el estado el
+    id llega por la URL o el form y se puede escribir a mano. Cada una de
+    esas rutas chequea por separado -- esconder una fila de una tabla nunca
+    fue un control de acceso."""
+    with Session(engine) as s:
+        tr = s.get(Tramite, tramite_id)
+        if not tr or tr.sindicato_id != sindicato_id:
+            return False
+        areas, secs = alcance_de_tramites(usuario_id)
+        if areas is not None:
+            # No alcanza con el área a cargo: la que DERIVÓ conserva lectura,
+            # para poder saber en qué terminó lo que pasó (decisión N8).
+            if not (areas & areas_que_vieron(tramite_id)):
+                return False
+        if secs is not None:
+            trab = s.exec(select(Trabajador).where(
+                Trabajador.sindicato_id == sindicato_id, Trabajador.cuil == tr.cuil)).first()
+            # Un trámite de alguien que no está en el padrón, o que quedó sin
+            # seccional, no lo alcanza nadie acotado. Es el lado seguro: un
+            # dato incompleto no puede terminar en más acceso del que toca.
+            if not trab or trab.seccional_id not in secs:
+                return False
+        return True
+
+
+def contar_tramites_nuevos(sindicato_id: int, usuario_id: Optional[int] = None) -> int:
     """Trámites recién presentados (estado "iniciado", el admin todavía no
     los tocó) -- para el globo de notificación de la portada de admin y de
-    la pestaña "Ver trámites" dentro de /admin."""
+    la pestaña "Ver trámites" dentro de /admin.
+
+    Se recorta con el MISMO alcance que la bandeja, y no es un detalle: un
+    globo que contara trámites de otra área nunca bajaría a cero, porque al
+    abrir la pestaña esos trámites no aparecen. El usuario vería un número
+    que no puede hacer desaparecer."""
     with Session(engine) as s:
-        return len(s.exec(select(Tramite).where(
-            Tramite.sindicato_id == sindicato_id, Tramite.estado == "iniciado")).all())
+        q = select(Tramite).where(Tramite.sindicato_id == sindicato_id,
+                                  Tramite.estado == "iniciado")
+        q = _recortar_tramites(s, q, sindicato_id, usuario_id)
+        return len(s.exec(q).all())
 
 
 def tramites_de_trabajador(cuil: str, sindicato_id: int) -> list:
@@ -3074,6 +4047,40 @@ def tramites_de_trabajador(cuil: str, sindicato_id: int) -> list:
         return [_tramite_resumen(s, tr, titulos_tipo, ultimas) for tr in tramites]
 
 
+def _orden_de_notas(notas: list, log: list) -> dict:
+    """{id de nota -> id de su fila en el log}: el reloj fino del chat.
+
+    El hilo mezcla notas y eventos, y los dos guardan la hora AL MINUTO.
+    Dentro del mismo minuto el empate lo rompía el orden en que el cliente
+    concatena las dos listas, así que un pase y la respuesta que lo motivó
+    salían al revés -- se ve enseguida cuando el sindicato contesta y deriva
+    seguido, que es el caso normal.
+
+    La tabla de log ya es una secuencia global (toda nota escribe su fila),
+    así que su id ordena las dos listas con precisión de acto, sin tocar el
+    formato de las fechas ni agregar una columna. La k-ésima fila
+    "nota_<autor>" es la k-ésima nota de ese autor: `_log_tramite` es el
+    único punto que escribe ahí y una nota no se guarda sin su fila.
+
+    Sirve igual para el mirror de empleadores (autor "empresa" en vez de
+    "trabajador"), por eso el autor sale del propio evento.
+    """
+    pendientes: dict = {}
+    for n in notas:
+        pendientes.setdefault(n.autor, []).append(n.id)
+    orden, vistas = {}, {}
+    for l in log:
+        if not (l.evento or "").startswith("nota_"):
+            continue
+        autor = l.evento[len("nota_"):]
+        i = vistas.get(autor, 0)
+        cola = pendientes.get(autor, [])
+        if i < len(cola):
+            orden[cola[i]] = l.id
+        vistas[autor] = i + 1
+    return orden
+
+
 def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:
     tipo = s.get(TipoTramite, tr.tipo_tramite_id)
     campos = s.exec(select(CampoTramite).where(CampoTramite.tipo_tramite_id == tr.tipo_tramite_id)
@@ -3090,6 +4097,8 @@ def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:
     formularios = {t.id: t for t in s.exec(select(TipoTramite).where(
         TipoTramite.id.in_(forms_ref), TipoTramite.sindicato_id == tr.sindicato_id)).all()} \
         if forms_ref else {}
+
+    orden_de_nota = _orden_de_notas(notas, log)
 
     # Trámites encadenados: el que ORIGINÓ este (el trabajador lo inició
     # desde el formulario adjunto en aquel chat) y los DERIVADOS que se
@@ -3119,21 +4128,42 @@ def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:
         } for r in respuestas],
         "notas": [{
             "id": n.id, "autor": n.autor, "texto": n.texto, "creado": n.creado,
+            "orden": orden_de_nota.get(n.id, 0),
             "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
             "formulario_id": n.formulario_id,
+            # El estado que fijó ESE mensaje (N9): el chat lo pinta pegado a
+            # la burbuja en vez de como un movimiento aparte.
+            "estado_nuevo": n.estado_nuevo,
+            "estado_nuevo_label": ESTADOS_TRAMITE_LABEL.get(n.estado_nuevo, ""),
             "formulario_titulo": formularios[n.formulario_id].titulo
                 if n.formulario_id in formularios else None,
             "formulario_activo": formularios[n.formulario_id].activo
                 if n.formulario_id in formularios else False,
         } for n in notas],
-        "log": [{"evento": l.evento, "detalle": l.detalle, "creado": l.creado} for l in log],
+        "log": [{"evento": l.evento, "detalle": l.detalle, "creado": l.creado,
+                  "orden": l.id} for l in log],
+        "area_a_cargo_id": tr.area_a_cargo_id,
+        "area_a_cargo": (s.get(Area, tr.area_a_cargo_id).nombre
+                         if tr.area_a_cargo_id and s.get(Area, tr.area_a_cargo_id) else ""),
     }
 
 
-def tramite_detalle(tramite_id: int) -> Optional[dict]:
+def tramite_detalle(tramite_id: int, usuario_id: Optional[int] = None) -> Optional[dict]:
+    """Con `usuario_id`, el detalle informa además si ESE usuario puede
+    responder y a qué áreas puede derivar. Van juntos y no en un endpoint
+    aparte porque la pantalla los necesita a la vez: sin saber si puede
+    escribir, el chat no sabe si mostrar el cajón de respuesta."""
     with Session(engine) as s:
         tr = s.get(Tramite, tramite_id)
-        return _tramite_detalle_completo(s, tr) if tr else None
+        if not tr:
+            return None
+        detalle = _tramite_detalle_completo(s, tr)
+    if usuario_id:
+        detalle["puede_responder"] = puede_responder_tramite(
+            tramite_id, usuario_id, detalle["sindicato_id"])
+        detalle["areas_pase"] = areas_a_las_que_puede_pasar(tramite_id) \
+            if detalle["puede_responder"] else []
+    return detalle
 
 
 def tramite_por_numero_expediente(numero_expediente: str) -> Optional[dict]:
@@ -3420,6 +4450,7 @@ def _tramite_empleador_detalle_completo(s: Session, tr: "TramiteEmpleador") -> d
                    .order_by(NotaTramiteEmpleador.id)).all()
     log = s.exec(select(TramiteEmpleadorLog).where(TramiteEmpleadorLog.tramite_id == tr.id)
                  .order_by(TramiteEmpleadorLog.id)).all()
+    orden_de_nota = _orden_de_notas(notas, log)
     forms_ref = {n.formulario_id for n in notas if n.formulario_id}
     formularios = {t.id: t for t in s.exec(select(TipoTramiteEmpleador).where(
         TipoTramiteEmpleador.id.in_(forms_ref),
@@ -3451,6 +4482,7 @@ def _tramite_empleador_detalle_completo(s: Session, tr: "TramiteEmpleador") -> d
         } for r in respuestas],
         "notas": [{
             "id": n.id, "autor": n.autor, "texto": n.texto, "creado": n.creado,
+            "orden": orden_de_nota.get(n.id, 0),
             "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
             "formulario_id": n.formulario_id,
             "formulario_titulo": formularios[n.formulario_id].titulo
@@ -3458,7 +4490,8 @@ def _tramite_empleador_detalle_completo(s: Session, tr: "TramiteEmpleador") -> d
             "formulario_activo": formularios[n.formulario_id].activo
                 if n.formulario_id in formularios else False,
         } for n in notas],
-        "log": [{"evento": l.evento, "detalle": l.detalle, "creado": l.creado} for l in log],
+        "log": [{"evento": l.evento, "detalle": l.detalle, "creado": l.creado,
+                  "orden": l.id} for l in log],
     }
 
 

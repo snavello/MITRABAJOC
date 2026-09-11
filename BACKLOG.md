@@ -42,44 +42,21 @@ se hace.
   expedientes emitidos parte la serie — decidir si se normaliza solo para los
   nuevos.
 
-- [ ] **Mergear `areas-permisos` a `main`** (2026-09-01): el sprint está
-  terminado y probado; no se mergeó por la demo inminente. Al mergear,
-  acordarse de las **5 líneas de `PERMISOS_RUTAS`** para las rutas de RAG
-  (`/admin/convenio*`) que llegaron a `main` después — sin eso el panel de
-  carga del convenio se rechaza con un error inexplicable (avisado en
-  PLAN_RAG_CONVENIO.md, "Interacción con la rama areas-permisos").
-
-- [ ] **Sprint "Admin de Seccional"** (2026-09-01): rol intermedio de máxima
-  autonomía para las delegaciones, encima de `areas-permisos` (requiere el
-  merge de arriba primero). Decisiones YA CERRADAS con Sd, no re-preguntar:
-  1. **El admin local ve TODA su seccional** (todas las áreas, no solo la
-     suya) — es "el admin grande en chiquito".
-  2. **Áreas locales con ADHESIÓN OBLIGATORIA (opción B)**: el admin local
-     puede crear áreas, pero el alta exige colgarlas de un **área troncal**
-     del Super Admin (`Area.area_madre_id` + `Area.seccional_id`). El nombre
-     local es libre ("Jurídica" puede colgar de "Legales"): **la vertical
-     viaja por la FK, nunca por el nombre**. Sin islas: no existen áreas
-     locales sin madre (eso sería la opción C, descartada; si algún día hace
-     falta, es soltar la obligatoriedad, no rediseñar).
-  3. Alcance vertical: "Legales central" (seccional con `ve_todas`) ve su
-     área troncal ∪ todas sus hijas, en todas las seccionales. Un solo
-     nivel, sin anidamiento.
-  4. **Anti-escalada**: el admin local no otorga super admin ni `ve_todas`,
-     no toca usuarios de otras seccionales, y solo puede dar secciones que
-     él mismo tiene.
-  5. Noticias/beneficios del admin local: destino recortado a su alcance
-     (misma regla que Notificaciones, Fase 6 de areas-permisos; hoy
-     `_destinos_validos` solo filtra por sindicato).
-  6. **Formularios de trámite por seccional**: `TipoTramite.seccional_id`
-     nullable (null = global); el trabajador ve globales + los de su
-     seccional; el admin local crea solo locales y no edita globales.
-  7. **Trámites de empresa quedan centrales**: `Empleador` no tiene
-     seccional; mapear empresa→seccional sería otro sprint.
-  8. El flag `es_admin_seccional` arranca en `False` para todos — opt-in,
-     un sindicato centralizado ni se entera.
-  Costo estimado: ~4 fases (la mitad del sprint areas-permisos original).
-
 ## Hecho
+
+- [x] **Mergear `areas-permisos` a `main`** y **Sprint "Admin de Seccional"**
+  (2026-09-11): los absorbió `SPRINT_AREAS_V2.md`, hecho en la rama
+  `areas-permisos-v2`. La rama vieja quedó 126 commits atrás y se **portó**
+  sobre `main` en vez de mergearse (medido: 8 archivos en conflicto y 28
+  rutas sin clasificar, no las "5 líneas de PERMISOS_RUTAS" que anotaba este
+  backlog — hoy son 73 rutas clasificadas, RAG y dashboard incluidos). De
+  las decisiones cerradas del sprint "Admin de Seccional" entraron todas
+  menos la 2: la **adhesión obligatoria** a un área troncal
+  (`Area.area_madre_id`) se reemplazó por un mapa explícito
+  seccional→área por formulario más un destino por defecto obligatorio
+  (decisión N6), que resuelve el mismo problema sin la vertical implícita.
+  La 5 (noticias/beneficios recortados al alcance) y la 6 (formularios por
+  seccional) están hechas y con tests.
 
 - [x] **Colisión de números de expediente entre sindicatos** (2026-08-31):
   el correlativo salía de contar los trámites de UN tipo, y con prefijos

@@ -21,13 +21,14 @@ from sqlmodel import select
 
 db.crear_tablas()
 with db.get_session() as s:
-    sind = Sindicato(nombre="Test")
+    sind = Sindicato(nombre="Test", modulos_habilitados=["recibos"])
     s.add(sind)
     s.commit()
     s.refresh(sind)
     SID = sind.id
-    s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111110",
-                           clave_hash=auth.hashear_clave("clave"), debe_cambiar_clave=False))
+    usuario_admin = UsuarioSindicato(sindicato_id=SID, usuario="20111111110",
+                           clave_hash=auth.hashear_clave("clave"), debe_cambiar_clave=False, es_super_admin=True)
+    s.add(usuario_admin)
     real = Concepto(sindicato_id=SID, codigo="795-019", nombre="COMP. P/DEDICACION ESPECIAL",
                     tipo="ingreso", alias=["COMP. P/DEDICACION ESPECIAL"])
     prov = Concepto(sindicato_id=SID, codigo="NUEVO-COMP.P/DEDIC",
@@ -37,12 +38,17 @@ with db.get_session() as s:
     s.commit()
     s.refresh(real); s.refresh(prov)
     ID_REAL, ID_PROV = real.id, prov.id
+    s.refresh(usuario_admin)
+    UID_ADMIN = usuario_admin.id
     s.add(Formula(sindicato_id=SID, target="NUEVO-COMP.P/DEDIC",
                   descripcion="apunta al provisorio", expr="0.01 * base_remunerativa"))
     s.commit()
 
 client = TestClient(main.app)
-client.cookies.set(main.COOKIE_SINDICATO, auth.crear_sesion("sindicato", sindicato_id=SID))
+# id_usuario NO es opcional acá: los permisos del panel se resuelven por
+# uid contra la base, así que una cookie sin usuario no da acceso a nada.
+client.cookies.set(main.COOKIE_SINDICATO,
+                   auth.crear_sesion("sindicato", id_usuario=UID_ADMIN, sindicato_id=SID))
 
 
 def test_fusion_mueve_alias_repunta_formula_y_borra_provisorio():
@@ -61,7 +67,7 @@ def test_fusion_mueve_alias_repunta_formula_y_borra_provisorio():
 
 def test_no_fusiona_conceptos_de_otro_sindicato():
     with db.get_session() as s:
-        otro = Sindicato(nombre="Otro")
+        otro = Sindicato(nombre="Otro", modulos_habilitados=["recibos"])
         s.add(otro); s.commit(); s.refresh(otro)
         ajeno = Concepto(sindicato_id=otro.id, codigo="AJENO", nombre="De otro sindicato", tipo="ingreso")
         propio = Concepto(sindicato_id=SID, codigo="NUEVO-PROPIO", nombre="Propio", tipo="ingreso")

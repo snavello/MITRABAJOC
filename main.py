@@ -44,7 +44,7 @@ import validaciones_tramite
 import push
 import errores
 from errores import ErrorApp
-from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador,
+from db import (Area, Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador,
                 CuentaTrabajador, EnvioSindicato, ReciboVerificado, ConfiguracionPlataforma, Noticia,
                 Beneficio, Seccional, ReciboSospechoso, Notificacion, NotificacionDestinatario,
                 TipoTramite, CampoTramite, Tramite, RespuestaTramite, NotaTramite, TramiteLog,
@@ -61,6 +61,8 @@ from qr import qr_svg, url_verificacion, codigo_efimero, verificar_codigo_efimer
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
 from version import VERSION_TRABAJADOR, VERSION_ADMIN, VERSION_PLATAFORMA, FECHA_VERSION
 import entorno
+import permisos as permisos_mod
+from permisos import SECCION_SUPER_ADMIN
 import recursos
 import render_admin
 import render_planes
@@ -175,14 +177,29 @@ async def sesion_vencida_o_denegada(request: Request, exc: HTTPException):
     logueada como trabajador pisó la cookie que esta pantalla necesitaba,
     ver COOKIES_POR_ROL -- + navegación de página, no una llamada
     fetch/JS) se redirige a la pantalla de login correspondiente en vez de
-    mostrar el JSON. Un 403 con sesión VÁLIDA del rol correcto (ej. módulo
-    no habilitado, CUIL ajeno) sigue devolviendo JSON como siempre -- no es
-    este caso."""
+    mostrar el JSON.
+
+    Y desde el sistema de Áreas, el mismo tratamiento para un 403 con sesión
+    VÁLIDA al que le falta el PERMISO (entrada 2 del BACKLOG): con muchos
+    más usuarios acotados, la chance de que alguien llegue a un formulario
+    que no le corresponde subió bastante, y comerse el JSON crudo en
+    pantalla completa es la peor forma de enterarse. Vuelve al panel con un
+    aviso legible.
+
+    El resto de los 403 con sesión válida (módulo no habilitado, CUIL ajeno,
+    llamadas fetch/JS) sigue devolviendo JSON como siempre: ahí el JSON es
+    la respuesta correcta, porque quien la lee es código."""
     if exc.status_code in (401, 403) and _es_navegacion_de_pagina(request):
         rol = _rol_de(request.url.path)
         destino = _panel_de(request.url.path)
         if destino and (not rol or not sesion_actual(request, rol)):
             return RedirectResponse(destino, status_code=303)
+        # Sesión válida pero sin PERMISO de sección: al panel con un aviso.
+        # Se distingue por el código y no por el status, porque un 403 puede
+        # venir de otras cosas (módulo no habilitado, CUIL ajeno) donde el
+        # JSON es la respuesta correcta -- hay un test que lo fija.
+        if destino and getattr(exc, "codigo", None) == "sinpermiso":
+            return RedirectResponse(f"{destino}?err=sinpermiso", status_code=303)
     return JSONResponse(status_code=exc.status_code,
                         content={"detail": exc.detail,
                                  "codigo": getattr(exc, "codigo", None)})
@@ -684,11 +701,180 @@ def api_beneficio(beneficio_id: int, request: Request):
 
 
 # ================= Panel del sindicato =================
+# Qué sección del panel exige cada ruta de /admin (ver permisos.py). El
+# chequeo vive DENTRO de exigir_sindicato(), que todas estas rutas ya
+# llamaban desde antes -- resuelve la sección mirando la ruta que FastAPI
+# acaba de matchear. Un solo lugar que gatea, en vez de 73 lugares donde
+# olvidarse. Y si una ruta nueva no se agrega acá, el acceso se RECHAZA en
+# vez de quedar abierta (falla cerrado); test_areas_rutas.py recorre
+# app.routes y avisa antes de que eso llegue a producción.
+PERMISOS_RUTAS = {
+    "/admin/trabajador":                    "trabajadores",
+    "/admin/trabajador/generar-credencial": "trabajadores",
+    "/admin/trabajador/masivo":             "trabajadores",
+    "/admin/trabajador/baja":               "trabajadores",
+    "/admin/trabajador/alta-logica":        "trabajadores",
+
+    # La gestión de usuarios es del Super Admin y de nadie más: no es una
+    # sección asignable (ver SECCION_SUPER_ADMIN en permisos.py).
+    "/admin/usuario":                       SECCION_SUPER_ADMIN,
+    "/admin/usuario/editar":                SECCION_SUPER_ADMIN,
+    "/admin/usuario/baja":                  SECCION_SUPER_ADMIN,
+    "/admin/usuario/alta-logica":           SECCION_SUPER_ADMIN,
+    "/admin/area":                          SECCION_SUPER_ADMIN,
+    "/admin/area/estado":                   SECCION_SUPER_ADMIN,
+
+    "/admin/concepto":                      "conceptos",
+    "/admin/concepto/borrar":               "conceptos",
+    "/admin/concepto/confirmar":            "conceptos",
+    "/admin/concepto/fusionar":             "conceptos",
+    "/admin/conceptos-universales":         "conceptos",
+    "/admin/formula":                       "formulas",
+    "/admin/formula/borrar":                "formulas",
+    "/admin/aprender":                      "aprendizaje",
+    "/admin/aprender/aplicar":              "aprendizaje",
+
+    "/admin/noticia":                       "noticias",
+    "/admin/noticia/borrar":                "noticias",
+    "/admin/beneficio":                     "beneficios",
+    "/admin/beneficio/borrar":              "beneficios",
+    "/admin/seccional":                     "seccionales",
+    "/admin/seccional/borrar":              "seccionales",
+
+    "/admin/notificacion":                  "notificaciones",
+    "/admin/notificacion/preview":          "notificaciones",
+    "/admin/notificacion/{notificacion_id}/destinatarios": "notificaciones",
+
+    # Responder un trámite y diseñar el formulario son permisos distintos:
+    # quien edita el formulario elige el área receptora.
+    "/admin/tramite-tipo":                  "tramites_formularios",
+    "/admin/tramite-tipo/probar":           "tramites_formularios",
+    "/admin/tramite-tipo/borrar":           "tramites_formularios",
+    "/admin/tramite/{tramite_id}":          "tramites_recibidos",
+    "/admin/tramite/{tramite_id}/nota":     "tramites_recibidos",
+    # Derivar es parte de atender el trámite, no de diseñar el formulario:
+    # va con "recibidos". Quién puede hacerlo de verdad lo decide además
+    # _exigir_responder_tramite (solo el área que lo tiene).
+    "/admin/tramite/{tramite_id}/pase":     "tramites_recibidos",
+    "/admin/tramites-nuevos-cantidad":      "tramites_recibidos",
+
+    # Las 3 subpestañas de Empleadores, cada una con su permiso.
+    "/admin/empleador":                     "emp_empresas",
+    "/admin/empleador/baja":                "emp_empresas",
+    "/admin/empleador/alta-logica":         "emp_empresas",
+    "/admin/empleador/importar-cuits":      "emp_empresas",
+    "/admin/notificacion-empresa":          "emp_notificaciones",
+    "/admin/notificacion-empresa/preview":  "emp_notificaciones",
+    "/admin/notificacion-empresa/{notificacion_empleador_id}/destinatarios": "emp_notificaciones",
+    "/admin/tramite-tipo-empresa":          "emp_tramites_formularios",
+    "/admin/tramite-tipo-empresa/borrar":   "emp_tramites_formularios",
+    "/admin/tramite-empresa/{tramite_id}":  "emp_tramites_recibidos",
+    "/admin/tramite-empresa/{tramite_id}/estado": "emp_tramites_recibidos",
+    "/admin/tramite-empresa/{tramite_id}/nota":   "emp_tramites_recibidos",
+    "/admin/tramites-empresa-nuevos-cantidad":    "emp_tramites_recibidos",
+
+    # Convenio (RAG). Cargar y reindexar documentos es tarea de quien
+    # administra el contenido, no de quien contesta trámites.
+    "/admin/convenio":                                  "convenio",
+    "/admin/convenio/documento":                        "convenio",
+    "/admin/convenio/documento/{documento_id}/estado":     "convenio",
+    "/admin/convenio/documento/{documento_id}/fragmentos": "convenio",
+    "/admin/convenio/documento/{documento_id}/vigencia":   "convenio",
+    "/admin/convenio/documento/{documento_id}/borrar":     "convenio",
+    "/admin/convenio/documento/{documento_id}/reindexar":  "convenio",
+    "/admin/convenio/{convenio_id}/anteriores":            "convenio",
+
+    # Panel Sindical. Son todos endpoints de agregados que alimentan la
+    # misma página; no tiene sentido partirlos en permisos distintos. El
+    # explorador conserva ADEMÁS su gate de módulo propio
+    # (_exigir_dashboard_detalle), que existe para el día que dashboard se
+    # parta en STD y PRO -- son dos ejes: el módulo dice qué contrató el
+    # sindicato, la sección quién puede entrar.
+    "/admin/dashboard/asistente":              "dashboard",
+    "/admin/dashboard/kpis":                   "dashboard",
+    "/admin/dashboard/serie-recibos":          "dashboard",
+    "/admin/dashboard/validacion":             "dashboard",
+    "/admin/dashboard/diferencias-empresa":    "dashboard",
+    "/admin/dashboard/tramites-seccional":     "dashboard",
+    "/admin/dashboard/notificaciones":         "dashboard",
+    "/admin/dashboard/formato-semana":         "dashboard",
+    "/admin/dashboard/semaforo":               "dashboard",
+    "/admin/dashboard/consultas":              "dashboard",
+    "/admin/dashboard/explorador/{fuente}":    "dashboard",
+    "/admin/dashboard/afiliados":              "dashboard",
+    "/admin/dashboard/filtros":                "dashboard",
+    "/admin/dashboard/detalle/recibo/{recibo_id}":    "dashboard",
+    "/admin/dashboard/detalle/tramite/{tramite_id}":  "dashboard",
+    "/admin/dashboard/detalle/notificaciones":        "dashboard",
+    "/admin/dashboard/detalle/notificacion/{notificacion_id}/destinatarios": "dashboard",
+    "/admin/dashboard/detalle/consulta/{consulta_id}": "dashboard",
+}
+
+# Las únicas rutas de /admin que no exigen sección: entrar, salir, y las
+# páginas que se arman con lo que cada uno puede ver. Gatearlas dejaría a un
+# usuario de área sin poder ni siquiera abrir el panel.
+#
+# /admin/dashboard está acá por la misma razón que /admin, no por descuido:
+# es una PÁGINA, y ya resuelve la falta de módulo mandando de vuelta al
+# panel en vez de tirar 403. Su permiso se chequea adentro del handler, con
+# el mismo criterio -- una pantalla que redirige es mejor que un 403 seco.
+# Sus endpoints de datos (/admin/dashboard/*) sí están todos gateados.
+RUTAS_ADMIN_SIN_PERMISO = {"/admin", "/admin/inicio", "/admin/login", "/admin/salir",
+                           "/admin/dashboard"}
+
+
+def _exigir_permiso_de_ruta(request: Request, ses: dict) -> None:
+    """Chequea que el usuario de la sesión pueda tocar ESTA ruta.
+
+    La sección sale de PERMISOS_RUTAS usando la ruta que FastAPI matcheó
+    (`request.scope["route"].path`), no la URL escrita: así
+    "/admin/tramite/57/nota" se resuelve por "/admin/tramite/{tramite_id}/nota"
+    y no hay que parsear nada a mano."""
+    ruta = getattr(request.scope.get("route"), "path", "")
+    if ruta in RUTAS_ADMIN_SIN_PERMISO:
+        return
+    seccion = PERMISOS_RUTAS.get(ruta)
+    if not seccion:
+        # Ruta sin clasificar: se rechaza. Es la mitad que importa del
+        # "falla cerrado" -- una ruta nueva nace cerrada, no abierta.
+        raise _sin_permiso("Esta sección del panel no está habilitada.")
+    uid = ses.get("uid", 0)
+
+    def _sin_permiso(mensaje: str) -> HTTPException:
+        """403 marcado como "falta el permiso de sección", para que el
+        handler lo mande al panel con un aviso en vez de dejar el JSON crudo
+        en pantalla completa (entrada 2 del BACKLOG)."""
+        e = HTTPException(403, mensaje)
+        e.codigo = "sinpermiso"
+        return e
+
+    if seccion == SECCION_SUPER_ADMIN:
+        # Entran los DOS administradores: el general y el de seccional. Lo
+        # que los distingue no es la puerta sino el ALCANCE de lo que
+        # pueden tocar del otro lado, que lo imponen las rutas con
+        # _exigir_alcance_area / _exigir_alcance_usuario. Si el corte fuera
+        # acá, el admin local no podría administrar nada de su delegación,
+        # que es todo el sentido del rol.
+        if not db.administra_areas_y_usuarios(uid):
+            raise _sin_permiso("Solo un administrador del sindicato puede hacer esto.")
+        return
+    if not db.tiene_permiso(uid, seccion):
+        raise _sin_permiso("No tenés permiso para esta sección del panel.")
+
+
 def exigir_sindicato(request: Request) -> int:
-    """Devuelve el sindicato_id de la sesión, o lanza 403 si no hay sesión válida."""
+    """Devuelve el sindicato_id de la sesión, o lanza 403 si no hay sesión
+    válida -- y, desde el sistema de Áreas, si el usuario no tiene el
+    permiso que esta ruta exige (ver PERMISOS_RUTAS).
+
+    Que el chequeo viva acá y no en cada ruta es a propósito: las 73 rutas
+    del panel ya llamaban a esta función (algunas vía _exigir_dashboard),
+    así que el gateo entró sin tocar ninguna, y una ruta nueva que se olvide
+    de clasificar falla cerrada."""
     ses = sesion_actual(request, "sindicato")
     if not ses:
         raise HTTPException(403, "Necesitás iniciar sesión como administrador del sindicato.")
+    _exigir_permiso_de_ruta(request, ses)
     return ses.get("sid", 0)
 
 
@@ -728,21 +914,44 @@ def admin(request: Request):
             "request": request, "marca_plataforma": db.marca_plataforma()})
 
     sid = ses.get("sid", 0)
+    uid = ses.get("uid", 0)
+    # El panel es UNA página con todos los paneles adentro: esconder pestañas
+    # en el cliente NO es ningún control, porque los datos viajarían igual en
+    # el HTML y se leen con Ver Código Fuente. Por eso cada consulta se
+    # saltea si el usuario no tiene la sección -- queda la lista vacía y la
+    # plantilla directamente no la renderiza.
+    permisos = db.permisos_efectivos(uid)
+    es_super_admin = db.es_super_admin(uid)
+    # Los dos administradores entran a Áreas y Usuarios; lo que cambia es
+    # cuánto ven ahí adentro (ver `alcance` más abajo).
+    administra = db.administra_areas_y_usuarios(uid)
+
+    def puede(*secciones) -> bool:
+        return any(x in permisos for x in secciones)
+
     with db.get_session() as s:
         sind = s.get(Sindicato, sid)
+        # Los conceptos alimentan además los <select> de Fórmulas y el panel
+        # de Aprendizaje, así que hacen falta para cualquiera de las tres.
         conceptos = s.exec(select(Concepto).where(Concepto.sindicato_id == sid)
-                           .order_by(Concepto.codigo)).all()
-        formulas = s.exec(select(Formula).where(Formula.sindicato_id == sid)).all()
+                           .order_by(Concepto.codigo)).all() \
+            if puede("conceptos", "formulas", "aprendizaje") else []
+        formulas = s.exec(select(Formula).where(Formula.sindicato_id == sid)).all() \
+            if puede("formulas") else []
         reportes = s.exec(select(Reporte).where(Reporte.sindicato_id == sid)
-                          .order_by(Reporte.id.desc())).all()
+                          .order_by(Reporte.id.desc())).all() \
+            if puede("reportes") else []
+        # El padrón se usa también para resolver nombres por CUIL en Reportes
+        # y en Cotizantes, que solo guardan el CUIL.
         trabajadores = s.exec(select(Trabajador).where(Trabajador.sindicato_id == sid)
-                              .order_by(Trabajador.activo.desc(), Trabajador.nombre)).all()
+                              .order_by(Trabajador.activo.desc(), Trabajador.nombre)).all() \
+            if puede("trabajadores", "reportes", "cotizantes") else []
         envios = s.exec(select(EnvioSindicato).where(EnvioSindicato.sindicato_id == sid)
-                        .order_by(EnvioSindicato.periodo.desc(), EnvioSindicato.id.desc())).all()
-        usuarios_sindicato = s.exec(select(UsuarioSindicato).where(UsuarioSindicato.sindicato_id == sid)
-                                    .order_by(UsuarioSindicato.activo.desc(), UsuarioSindicato.nombre)).all()
+                        .order_by(EnvioSindicato.periodo.desc(), EnvioSindicato.id.desc())).all() \
+            if puede("cotizantes") else []
         empleadores = s.exec(select(Empleador).where(Empleador.sindicato_id == sid)
-                             .order_by(Empleador.activo.desc(), Empleador.razon_social)).all()
+                             .order_by(Empleador.activo.desc(), Empleador.razon_social)).all() \
+            if puede("emp_empresas") else []
     # Nombre por CUIL, para poder filtrar Reportes y Afiliados cotizantes por
     # nombre (esas tablas solo guardan el CUIL, no el nombre).
     nombres_por_cuil = {t.cuil: t.nombre for t in trabajadores}
@@ -759,9 +968,42 @@ def admin(request: Request):
     # fórmula aunque ningún concepto lo tenga como codigo propio.
     genericos = [c for c in conceptos if not c.cuit_empleador]
     codigos_efectivos = {c.codigo_generico or c.codigo for c in conceptos}
-    seccionales = db.seccionales_del_sindicato(sid)
+    # Las seccionales aparecen en su propio CRUD y además como <select> de
+    # destino en el alta de trabajador, Noticias, Beneficios y
+    # Notificaciones: hace falta para cualquiera de esas.
+    seccionales = db.seccionales_del_sindicato(sid) \
+        if puede("seccionales", "trabajadores", "noticias", "beneficios",
+                 "notificaciones", "tramites_formularios") or administra else []
     seccional_por_id = {sec["id"]: sec["nombre"] for sec in seccionales}
     modulos = _modulos_de(sid)
+    # Áreas y Usuarios: la pantalla es de los dos administradores, así que
+    # ni la lista de usuarios ni la de áreas se consultan para los demás.
+    # Y para el admin de seccional se recortan a su alcance EN LA CONSULTA,
+    # no en la plantilla: si el recorte viviera en el HTML, las áreas y los
+    # CUIT de las otras delegaciones viajarían igual en la página.
+    alcance = db.alcance_seccional(uid) if administra else set()
+    # Las áreas las necesita además el constructor de Trámites, para elegir
+    # el destino: quien arma formularios tiene que poder ver a qué áreas
+    # rutear, aunque no administre usuarios. Su alcance sale igual de
+    # alcance_seccional, así que un admin local no ve áreas de otras.
+    arma_formularios = puede("tramites_formularios")
+    alcance_areas = alcance if administra else (
+        db.alcance_seccional(uid) if arma_formularios else set())
+    areas = db.areas_del_sindicato(sid, alcance_areas) \
+        if (administra or arma_formularios) else []
+    usuarios_sindicato = db.usuarios_del_sindicato(sid, alcance) if administra else []
+    # Las seccionales sobre las que puede crear áreas y asignar gente.
+    seccionales_alcance = [x for x in seccionales
+                           if alcance_areas is None or x["id"] in (alcance_areas or set())] \
+        if (administra or arma_formularios) else []
+    # El catálogo que se le ofrece al armar un perfil: solo las secciones que
+    # los módulos contratados habilitan, agrupadas para la pantalla. Se
+    # recorta además a lo que el que asigna tiene -- nadie da lo que no
+    # tiene, y ofrecérselo en pantalla para después descartarlo en el POST
+    # sería mentirle.
+    catalogo_permisos = permisos_mod.agrupar_para_ui(
+        [x for x in permisos_mod.secciones_de_modulos(modulos) if x in permisos]
+    ) if administra else []
     return templates.TemplateResponse("admin.html", {
         "request": request, "sindicato": sind.nombre if sind else "",
         "marca": db.marca_sindicato(sid), "marca_plataforma": db.marca_plataforma(),
@@ -770,24 +1012,38 @@ def admin(request: Request):
         "formulas": formulas, "reportes": reportes,
         "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR, "envios": envios,
         "usuarios_sindicato": usuarios_sindicato,
+        "permisos": permisos, "es_super_admin": es_super_admin,
+        "administra_areas": administra,
+        "seccionales_alcance": seccionales_alcance,
+        "areas": areas, "catalogo_permisos": catalogo_permisos,
+        "etiquetas_secciones": {k: v[0] for k, v in permisos_mod.SECCIONES.items()},
         "nombres_por_cuil": nombres_por_cuil, "provisorios": provisorios,
         "debe_cambiar": ses.get("cambiar", False),
-        "noticias": db.noticias_del_sindicato(sid),
-        "beneficios": db.beneficios_del_sindicato(sid),
-        "notificaciones": db.notificaciones_del_sindicato(sid),
-        "tipos_tramite": db.tipos_tramite_del_sindicato(sid),
-        "tramites": db.tramites_del_sindicato(sid),
-        "tramites_nuevos": db.contar_tramites_nuevos(sid) if "tramites" in modulos else 0,
+        "noticias": db.noticias_del_sindicato(sid) if puede("noticias") else [],
+        "beneficios": db.beneficios_del_sindicato(sid) if puede("beneficios") else [],
+        "notificaciones": db.notificaciones_del_sindicato(sid, usuario_id=uid)
+                          if puede("notificaciones") else [],
+        "tipos_tramite": db.tipos_tramite_del_sindicato(sid)
+                         if puede("tramites_formularios", "tramites_recibidos") else [],
+        "tramites": db.tramites_del_sindicato(sid, usuario_id=uid)
+                    if puede("tramites_recibidos") else [],
+        "tramites_nuevos": db.contar_tramites_nuevos(sid, uid)
+                           if "tramites" in modulos and puede("tramites_recibidos") else 0,
         "estados_tramite": db.ESTADOS_TRAMITE, "estados_tramite_label": db.ESTADOS_TRAMITE_LABEL,
         "seccionales": seccionales, "seccional_por_id": seccional_por_id,
         "empleadores": empleadores,
-        "notificaciones_empresa": db.notificaciones_empleador_del_sindicato(sid),
-        "tipos_tramite_empresa": db.tipos_tramite_empleador_del_sindicato(sid),
-        "tramites_empresa": db.tramites_empleador_del_sindicato(sid),
-        "tramites_empresa_nuevos": db.contar_tramites_empleador_nuevos(sid) if "empleadores" in modulos else 0,
+        "notificaciones_empresa": db.notificaciones_empleador_del_sindicato(sid)
+                                  if puede("emp_notificaciones") else [],
+        "tipos_tramite_empresa": db.tipos_tramite_empleador_del_sindicato(sid)
+                                 if puede("emp_tramites_formularios", "emp_tramites_recibidos") else [],
+        "tramites_empresa": db.tramites_empleador_del_sindicato(sid)
+                            if puede("emp_tramites_recibidos") else [],
+        "tramites_empresa_nuevos": db.contar_tramites_empleador_nuevos(sid)
+                                   if "empleadores" in modulos and puede("emp_tramites_recibidos") else 0,
         "modulos": modulos,
         # Piloto de RAG: solo si el sindicato tiene el módulo habilitado.
-        **_contexto_convenio(sid, modulos),
+        **(_contexto_convenio(sid, modulos) if puede("convenio")
+           else {"convenios": [], "documentos_convenio": {}}),
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
 
@@ -802,7 +1058,11 @@ def admin_dashboard_pagina(request: Request):
         return templates.TemplateResponse("admin_login.html", {
             "request": request, "marca_plataforma": db.marca_plataforma()})
     sid = ses.get("sid", 0)
-    if not db.modulo_habilitado(sid, "dashboard"):
+    # Módulo Y sección: el módulo dice qué contrató el sindicato, la sección
+    # quién de adentro puede entrar. Redirige en vez de tirar 403 porque es
+    # una pantalla, no un endpoint -- mismo criterio que la falta de módulo.
+    if not db.modulo_habilitado(sid, "dashboard") \
+            or not db.tiene_permiso(ses.get("uid", 0), "dashboard"):
         return RedirectResponse("/admin", status_code=303)
     marca = db.marca_sindicato(sid)
     return templates.TemplateResponse("dashboard.html", {
@@ -832,9 +1092,17 @@ def admin_inicio(request: Request):
         usuario = s.get(UsuarioSindicato, ses.get("uid", 0))
     nombre_admin = (usuario.nombre if usuario else "") or ""
     modulos = _modulos_de(sid)
-    tramites_nuevos = db.contar_tramites_nuevos(sid) if "tramites" in modulos else 0
-    tramites_empresa_nuevos = db.contar_tramites_empleador_nuevos(sid) if "empleadores" in modulos else 0
+    # La portada es una pantalla exenta del gateo (si no, un usuario de área
+    # no podría ni entrar), pero sus tarjetas sí se recortan: mostrar un
+    # acceso que al tocarlo rebota con 403 es peor que no mostrarlo.
+    permisos = db.permisos_efectivos(ses.get("uid", 0))
+    es_super_admin = db.es_super_admin(ses.get("uid", 0))
+    tramites_nuevos = db.contar_tramites_nuevos(sid, ses.get("uid", 0)) \
+        if "tramites" in modulos and "tramites_recibidos" in permisos else 0
+    tramites_empresa_nuevos = db.contar_tramites_empleador_nuevos(sid) \
+        if "empleadores" in modulos and "emp_tramites_recibidos" in permisos else 0
     return templates.TemplateResponse("admin_portada.html", {
+        "permisos": permisos, "es_super_admin": es_super_admin,
         "request": request, "sindicato": marca.get("nombre", ""),
         "marca": marca, "marca_plataforma": db.marca_plataforma(),
         "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
@@ -910,6 +1178,11 @@ def admin_trabajador_alta(
                     vigencia_credencial=vigencia_credencial or None, seccional_id=sec_id,
                     cuit_empleador=cuit_empleador.strip() or None))
         s.commit()
+    # Las dos altas pueden venir en cualquier orden: si a este CUIL ya se le
+    # había dado usuario del panel, acá se arma el vínculo y se prende la
+    # marca de empleado. Sin esto quedaría en el padrón sin marca, en
+    # silencio.
+    db.sincronizar_por_cuil(sid, cuil_norm)
     return RedirectResponse("/admin#trabajadores", status_code=303)
 
 
@@ -991,53 +1264,175 @@ def admin_trabajador_reactivar(request: Request, id: int = Form(...)):
 
 @app.post("/admin/usuario")
 def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str = Form(""),
-                        clave_inicial: str = Form(...)):
+                        clave_inicial: str = Form(...), rol: str = Form("area"),
+                        area_id: str = Form(""), seccional_id: str = Form(""),
+                        agregar: list[str] = Form(default=[]),
+                        bloquear: list[str] = Form(default=[])):
     """sindicato_id sale de la sesión, nunca de un campo del form -- un
-    admin no puede darse de alta a sí mismo en otro sindicato."""
+    admin no puede darse de alta a sí mismo en otro sindicato.
+
+    `rol` se pide EXPLÍCITO y su default es "area", no "super": si el campo
+    llegara a faltar, el usuario nace SIN poder en vez de con todo. Antes
+    de las Áreas todo usuario nacía omnipotente, que es lo que este default
+    corrige."""
     sid = exigir_sindicato(request)
     cuit = _norm_cuil(usuario)
     if len(cuit) != 11 or not clave_inicial:
         return RedirectResponse("/admin?err=datos#administradores", status_code=303)
+    es_super = (rol == "super")
+    es_admin_local = (rol == "seccional")
+    # Otorgar Super Admin es del administrador general y de nadie más: si un
+    # admin local pudiera, se fabricaría un usuario sin techo y el alcance
+    # local dejaría de significar algo.
+    if es_super:
+        _exigir_super_admin(request)
+    with db.get_session() as s:
+        area = _id_propio(s, Area, area_id, sid)
+        seccional = _id_propio(s, Seccional, seccional_id, sid)
+        area_seccional = s.get(Area, area).seccional_id if area else None
+    # Un usuario de área SIN área no puede hacer nada: se crearía mudo y sin
+    # que nada lo explique. Se rechaza con un aviso en vez de dejarlo pasar.
+    # Un id de otro sindicato cae acá también: _id_propio lo devuelve None.
+    if not es_super and not es_admin_local and not area:
+        return RedirectResponse("/admin?err=sinarea#administradores", status_code=303)
+    # Un administrador de seccional SIN seccional sería un admin sin
+    # alcance: no administra nada y nadie entiende por qué.
+    if es_admin_local and not seccional:
+        return RedirectResponse("/admin?err=sinseccional#administradores", status_code=303)
+    # El área y el usuario tienen que ser de la MISMA seccional. "Legales de
+    # Rosario" con alcance Córdoba es un usuario que nadie sabe qué ve.
+    if area and seccional and area_seccional != seccional:
+        return RedirectResponse("/admin?err=areaajena#administradores", status_code=303)
+    if area and not seccional:
+        seccional = area_seccional      # la seccional la fija el área
+    # Nadie crea usuarios fuera de su alcance.
+    if not es_super:
+        _exigir_alcance_seccional(request, seccional)
     with db.get_session() as s:
         if s.exec(select(UsuarioSindicato).where(
                 UsuarioSindicato.sindicato_id == sid, UsuarioSindicato.usuario == cuit)).first():
             return RedirectResponse("/admin?err=usuarioexiste#administradores", status_code=303)
-        s.add(UsuarioSindicato(
+        u = UsuarioSindicato(
             sindicato_id=sid, usuario=cuit, nombre=nombre,
+            # Hoy el login ES el CUIL, pero se guardan por separado: si
+            # mañana se habilita entrar con mail, `usuario` cambia y la
+            # identidad de la persona sigue en pie.
+            cuil=cuit,
             clave_hash=auth.hashear_clave(clave_inicial), debe_cambiar_clave=True,
-        ))
-        s.commit()
+            es_super_admin=es_super,
+            es_admin_seccional=es_admin_local,
+            # Ni un Super Admin ni un admin de seccional cuelgan de un área:
+            # los dos tienen todo lo contratado, así que un área lo único
+            # que haría es mentir en la pantalla.
+            area_id=None if (es_super or es_admin_local) else area,
+            seccional_id=seccional,
+        )
+        s.add(u); s.commit(); s.refresh(u)
+        nuevo_id = u.id
+    # El vínculo con el padrón se resuelve POR CUIL, no con un buscador: el
+    # padrón puede tener miles de filas y un <select> con todas sería
+    # impracticable. Si ese CUIL está empadronado en este sindicato, el
+    # usuario queda vinculado y la fila del padrón marcada como empleado;
+    # si no está, se crea igual -- trabajar en el gremio sin estar afiliado
+    # a él es un caso real.
+    db.sincronizar_empleado(nuevo_id)
+    if not es_super and not es_admin_local:
+        db.set_permisos_usuario(nuevo_id, _secciones_que_puede_dar(request, agregar),
+                                _secciones_que_puede_dar(request, bloquear), sid)
     return RedirectResponse("/admin#administradores", status_code=303)
 
 
 @app.post("/admin/usuario/editar")
-def admin_usuario_editar(request: Request, id: int = Form(...), nombre: str = Form("")):
+def admin_usuario_editar(request: Request, id: int = Form(...), nombre: str = Form(""),
+                          rol: str = Form("area"), area_id: str = Form(""),
+                          seccional_id: str = Form(""),
+                          agregar: list[str] = Form(default=[]),
+                          bloquear: list[str] = Form(default=[])):
+    """Edita nombre, rol, área, seccional y los ajustes individuales.
+
+    No se puede degradar al último Super Admin activo, por el mismo motivo
+    que no se lo puede desactivar: el sindicato quedaría sin nadie que pueda
+    administrarlo y solo plataforma podría arreglarlo a mano.
+
+    Un admin de seccional solo edita gente de SU seccional, y nunca a un
+    Super Admin: si pudiera, le cambiaría el rol al de arriba y se quedaría
+    con el sindicato."""
     sid = exigir_sindicato(request)
+    quiere_super = (rol == "super")
+    quiere_admin_local = (rol == "seccional")
+    if quiere_super:
+        _exigir_super_admin(request)
     with db.get_session() as s:
         u = s.get(UsuarioSindicato, id)
-        if u and u.sindicato_id == sid:
-            u.nombre = nombre
-            s.add(u); s.commit()
+        if not u or u.sindicato_id != sid:
+            return RedirectResponse("/admin#administradores", status_code=303)
+        # A un Super Admin solo lo toca otro Super Admin.
+        if u.es_super_admin:
+            _exigir_super_admin(request)
+        else:
+            _exigir_alcance_seccional(request, u.seccional_id)
+        if u.es_super_admin and not quiere_super and db.contar_super_admins(sid, excluyendo=id) == 0:
+            return RedirectResponse("/admin?err=ultimoadmin#administradores", status_code=303)
+        # Los ids viajan en el form (son <select>), así que se valida que
+        # sean de ESTE sindicato: uno ajeno mandado a mano no entra.
+        area = _id_propio(s, Area, area_id, sid)
+        seccional = _id_propio(s, Seccional, seccional_id, sid)
+        area_seccional = s.get(Area, area).seccional_id if area else None
+        if not quiere_super and not quiere_admin_local and not area:
+            return RedirectResponse("/admin?err=sinarea#administradores", status_code=303)
+        if quiere_admin_local and not seccional:
+            return RedirectResponse("/admin?err=sinseccional#administradores", status_code=303)
+        if area and seccional and area_seccional != seccional:
+            return RedirectResponse("/admin?err=areaajena#administradores", status_code=303)
+        if area and not seccional:
+            seccional = area_seccional
+        # Tampoco se puede mandar a alguien a una seccional que no alcanzo:
+        # sería sacárselo de encima al de al lado.
+        if not quiere_super:
+            _exigir_alcance_seccional(request, seccional)
+        u.nombre = nombre
+        u.es_super_admin = quiere_super
+        u.es_admin_seccional = quiere_admin_local
+        u.area_id = None if (quiere_super or quiere_admin_local) else area
+        u.seccional_id = seccional
+        s.add(u); s.commit()
+    db.sincronizar_empleado(id)
+    # Un administrador (general o local) no lleva ajustes individuales: los
+    # suyos se borran para que no reaparezcan si mañana lo degradan a
+    # usuario de área.
+    sin_ajustes = quiere_super or quiere_admin_local
+    db.set_permisos_usuario(
+        id,
+        [] if sin_ajustes else _secciones_que_puede_dar(request, agregar),
+        [] if sin_ajustes else _secciones_que_puede_dar(request, bloquear), sid)
     return RedirectResponse("/admin#administradores", status_code=303)
 
 
 @app.post("/admin/usuario/baja")
 def admin_usuario_baja(request: Request, id: int = Form(...)):
-    """Baja lógica -- bloqueada si es el último administrador activo del
+    """Baja lógica -- bloqueada si es el último SUPER ADMIN activo del
     sindicato (si no, un sindicato podría quedarse sin nadie que pueda
-    entrar a /admin, y solo plataforma podría reactivarlo a mano)."""
+    entrar a administrar, y solo plataforma podría reactivarlo a mano).
+
+    Contar usuarios activos a secas ya no alcanza: un sindicato puede tener
+    diez usuarios de área y un solo Super Admin, y "queda más de uno
+    activo" habría dejado desactivar justamente al único que administra."""
     sid = exigir_sindicato(request)
     with db.get_session() as s:
         u = s.get(UsuarioSindicato, id)
         if not u or u.sindicato_id != sid:
             return RedirectResponse("/admin#administradores", status_code=303)
-        if u.activo:
-            activos = s.exec(select(UsuarioSindicato).where(
-                UsuarioSindicato.sindicato_id == sid, UsuarioSindicato.activo == True)).all()
-            if len(activos) <= 1:
-                return RedirectResponse("/admin?err=ultimoadmin#administradores", status_code=303)
+        if u.es_super_admin:
+            _exigir_super_admin(request)
+        else:
+            _exigir_alcance_seccional(request, u.seccional_id)
+        if u.activo and u.es_super_admin and db.contar_super_admins(sid, excluyendo=id) == 0:
+            return RedirectResponse("/admin?err=ultimoadmin#administradores", status_code=303)
         u.activo = False
         s.add(u); s.commit()
+    # Dar de baja al empleado le saca la marca a su fila del padrón, pero
+    # solo si no queda otro usuario activo apuntando a la misma persona.
+    db.sincronizar_empleado(id)
     return RedirectResponse("/admin#administradores", status_code=303)
 
 
@@ -1047,8 +1442,181 @@ def admin_usuario_reactivar(request: Request, id: int = Form(...)):
     with db.get_session() as s:
         u = s.get(UsuarioSindicato, id)
         if u and u.sindicato_id == sid:
+            if u.es_super_admin:
+                _exigir_super_admin(request)
+            else:
+                _exigir_alcance_seccional(request, u.seccional_id)
             u.activo = True
             s.add(u); s.commit()
+    db.sincronizar_empleado(id)
+    return RedirectResponse("/admin#administradores", status_code=303)
+
+
+# ---------- Áreas del sindicato (Super Admin) ----------
+
+def _ids_int(valores) -> list:
+    """Lista de ids enteros, descartando lo que no lo sea. Los <select> y los
+    checkbox viajan como texto y se pueden escribir a mano; quien recibe
+    esta lista ya filtra por sindicato, así que acá alcanza con sanear el
+    tipo."""
+    salida = []
+    for v in (valores or []):
+        try:
+            salida.append(int(v))
+        except (TypeError, ValueError):
+            continue
+    return salida
+
+
+def _exigir_responder_tramite(request: Request, tramite_id: int, sid: int) -> None:
+    """403 si este usuario puede VER el trámite pero no responderlo.
+
+    Pasa con el área que lo derivó: conserva lectura y pierde la escritura.
+    Son dos permisos distintos desde que existe el pase, y confundirlos
+    dejaría a dos áreas contestándole lo mismo al trabajador."""
+    if not db.puede_responder_tramite(tramite_id, _uid_sesion(request), sid):
+        raise HTTPException(403, "Este trámite lo tiene otra área. Vos podés verlo, no responderlo.")
+
+
+def _exigir_alcance_tramite(request: Request, tramite_id: int, sid: int) -> None:
+    """403 si el trámite es de otra área o de otra seccional.
+
+    Filtrar el listado no alcanza: acá el id llega por la URL (el detalle) o
+    por el form (la nota, el estado) y se puede escribir a mano. Esconder
+    una fila de una tabla nunca fue un control de acceso."""
+    if not db.puede_ver_tramite(tramite_id, _uid_sesion(request), sid):
+        raise HTTPException(403, "Este trámite es de otra área.")
+
+
+def _alcance_de(request: Request):
+    """El alcance de seccionales de quien está en la sesión (ver
+    db.alcance_seccional): None = todas, un set = esas, set() = ninguna."""
+    return db.alcance_seccional(_uid_sesion(request))
+
+
+def _uid_sesion(request: Request) -> int:
+    return (sesion_actual(request, "sindicato") or {}).get("uid", 0)
+
+
+def _en_alcance(alcance, seccional_id) -> bool:
+    """None alcanza todo; un set alcanza solo lo que contiene. Una fila sin
+    seccional NO la alcanza nadie salvo quien tiene alcance total -- es el
+    lado seguro: un dato incompleto no puede terminar en más permisos."""
+    if alcance is None:
+        return True
+    return bool(seccional_id) and seccional_id in alcance
+
+
+def _exigir_alcance_seccional(request: Request, seccional_id) -> None:
+    """403 si esa seccional está fuera del alcance de quien pide.
+
+    Es el chequeo que convierte al Admin de Seccional en local: sin él
+    tendría las mismas secciones que el Super Admin (que es a propósito) y
+    además podría usarlas sobre cualquier delegación."""
+    if not _en_alcance(_alcance_de(request), seccional_id):
+        raise HTTPException(403, "Esto es de otra seccional.")
+
+
+def _exigir_super_admin(request: Request) -> None:
+    """Para lo que es del administrador general y de nadie más: crear o
+    borrar seccionales, tildar `ve_todas`, y otorgar el rol de Super Admin.
+    Los tres son escalada de privilegio si los pudiera hacer un admin local
+    -- con `ve_todas` sobre su propia seccional se daría alcance total."""
+    if not db.es_super_admin(_uid_sesion(request)):
+        raise HTTPException(403, "Solo el administrador general del sindicato puede hacer esto.")
+
+
+def _secciones_que_puede_dar(request: Request, secciones: list) -> list:
+    """Recorta una lista de secciones a las que el que asigna YA tiene.
+
+    Anti-escalada: nadie puede dar lo que no tiene. Hoy los dos
+    administradores tienen todas las secciones contratadas, así que no
+    recorta nada -- existe para que el día que un administrador quede
+    acotado, el recorte ya esté puesto y no haya que acordarse."""
+    propias = db.permisos_efectivos(_uid_sesion(request))
+    return [x for x in (secciones or []) if x in propias]
+
+
+def _id_propio(s, modelo, valor: str, sid: int):
+    """int(valor) solo si esa fila existe y es de ESTE sindicato; si no, None.
+
+    Los <select> de área y seccional viajan como campos del form, así que un
+    id de otro sindicato se puede mandar a mano. Devolver None en vez de
+    fallar es a propósito: el usuario queda sin área/seccional, que es el
+    estado más restrictivo (ver db.alcance_seccional, que sin seccional no
+    alcanza a nadie)."""
+    if not valor:
+        return None
+    try:
+        fila = s.get(modelo, int(valor))
+    except (TypeError, ValueError):
+        return None
+    return fila.id if fila and fila.sindicato_id == sid else None
+
+
+@app.post("/admin/area")
+def admin_area_abm(request: Request, id: str = Form(""), nombre: str = Form(...),
+                    seccional_id: str = Form(""), secciones: list[str] = Form(default=[])):
+    """Alta/edición de un área con sus permisos en la misma operación: la
+    pantalla los muestra juntos y separarlos obligaría a guardar dos veces.
+
+    El área pertenece a UNA seccional (decisión N2), así que el alta la pide
+    y la edición no la deja cambiar: mover un área de seccional le
+    cambiaría el alcance a todos sus usuarios de golpe y en silencio. Para
+    eso se desactiva y se crea la nueva donde corresponde.
+
+    Las secciones se sanean dos veces y las dos hacen falta: acá se recortan
+    a las que el que asigna YA TIENE (nadie da lo que no tiene), y en
+    db.set_permisos_area se descarta lo inventado o lo de un módulo no
+    contratado."""
+    sid = exigir_sindicato(request)
+    nombre = (nombre or "").strip()
+    if not nombre:
+        return RedirectResponse("/admin?err=datosarea#administradores", status_code=303)
+    secciones = _secciones_que_puede_dar(request, secciones)
+    with db.get_session() as s:
+        if id:
+            area = s.get(Area, int(id))
+            # El chequeo de sindicato no es decorativo: el id viaja en el
+            # form y se puede escribir a mano.
+            if not area or area.sindicato_id != sid:
+                return RedirectResponse("/admin#administradores", status_code=303)
+            # Y el de alcance tampoco: sin él un admin local podría
+            # renombrar y repermisar las áreas de otra delegación.
+            _exigir_alcance_seccional(request, area.seccional_id)
+            area.nombre = nombre
+            s.add(area); s.commit()
+            area_id = area.id
+        else:
+            destino = _id_propio(s, Seccional, seccional_id, sid)
+            if not destino:
+                return RedirectResponse("/admin?err=datosarea#administradores", status_code=303)
+            _exigir_alcance_seccional(request, destino)
+            area = Area(sindicato_id=sid, seccional_id=destino, nombre=nombre)
+            s.add(area); s.commit(); s.refresh(area)
+            area_id = area.id
+    db.set_permisos_area(area_id, secciones, sid)
+    return RedirectResponse("/admin#administradores", status_code=303)
+
+
+@app.post("/admin/area/estado")
+def admin_area_estado(request: Request, id: int = Form(...), activo: str = Form("")):
+    """Un área NO se borra, se desactiva: sus usuarios seguirían apuntando a
+    un área inexistente. Desactivarla es además la forma de cortarle el
+    acceso a todo un equipo de una, sin tocar usuario por usuario.
+
+    El valor se compara contra una lista de afirmativos y NO con bool(): un
+    string cualquiera es truthy en Python, así que `activo="no"` habría
+    activado el área. Cualquier cosa que no sea un sí explícito desactiva,
+    que es el lado seguro."""
+    sid = exigir_sindicato(request)
+    queda_activa = (activo or "").strip().lower() in ("1", "true", "on", "si", "sí")
+    with db.get_session() as s:
+        area = s.get(Area, id)
+        if area and area.sindicato_id == sid:
+            _exigir_alcance_seccional(request, area.seccional_id)
+            area.activo = queda_activa
+            s.add(area); s.commit()
     return RedirectResponse("/admin#administradores", status_code=303)
 
 
@@ -1236,7 +1804,7 @@ async def abm_noticia(
     _exigir_modulo(sid, "noticias")
     formulario = _formulario_para_chat(sid, formulario_id, "trabajador")
     with db.get_session() as s:
-        destinos = _destinos_validos(s, destino_seccionales, sid)
+        destinos = _destinos_de_publicacion(request, s, destino_seccionales, sid)
         if id:
             n = s.get(Noticia, int(id))
             if n and n.sindicato_id == sid:
@@ -1296,7 +1864,7 @@ async def abm_beneficio(
     _exigir_modulo(sid, "beneficios")
     formulario = _formulario_para_chat(sid, formulario_id, "trabajador")
     with db.get_session() as s:
-        destinos = _destinos_validos(s, destino_seccionales, sid)
+        destinos = _destinos_de_publicacion(request, s, destino_seccionales, sid)
         if id:
             b = s.get(Beneficio, int(id))
             if b and b.sindicato_id == sid:
@@ -1340,16 +1908,35 @@ def borrar_beneficio(request: Request, id: int = Form(...)):
 def abm_seccional(
     request: Request,
     id: str = Form(""), nombre: str = Form(...), direccion: str = Form(""),
+    ve_todas: str = Form(""),
 ):
+    """`ve_todas` define el ALCANCE de los usuarios de esta seccional: con el
+    check puesto, alcanzan a los trabajadores de todas las seccionales del
+    sindicato (es lo que hace que Sede Central sea "central"). Llega como
+    checkbox, así que su ausencia es False.
+
+    CREAR una seccional es del administrador general y de nadie más -- el
+    mapa de delegaciones del sindicato no lo dibuja una delegación. Y tocar
+    `ve_todas` también: un admin local que pudiera tildarlo sobre su propia
+    seccional se daría alcance sobre todo el sindicato de un clic, que es
+    exactamente la escalada que el rol tiene que impedir. Editar nombre y
+    dirección de una seccional del propio alcance, en cambio, sí puede."""
     sid = exigir_sindicato(request)
+    todas = bool(ve_todas)
+    if not id:
+        _exigir_super_admin(request)
     with db.get_session() as s:
         if id:
             sec = s.get(Seccional, int(id))
             if sec and sec.sindicato_id == sid:
-                sec.nombre, sec.direccion = nombre, direccion
+                _exigir_alcance_seccional(request, sec.id)
+                if todas != sec.ve_todas:
+                    _exigir_super_admin(request)
+                sec.nombre, sec.direccion, sec.ve_todas = nombre, direccion, todas
                 s.add(sec)
         else:
-            s.add(Seccional(sindicato_id=sid, nombre=nombre, direccion=direccion))
+            s.add(Seccional(sindicato_id=sid, nombre=nombre, direccion=direccion,
+                            ve_todas=todas))
         s.commit()
     return RedirectResponse("/admin#seccionales", status_code=303)
 
@@ -1357,8 +1944,14 @@ def abm_seccional(
 @app.post("/admin/seccional/borrar")
 def borrar_seccional(request: Request, id: int = Form(...)):
     """Al borrar una seccional, los trabajadores que la tenían asignada
-    quedan sin seccional (es un dato opcional, no se bloquea el borrado)."""
+    quedan sin seccional (es un dato opcional, no se bloquea el borrado).
+
+    Solo el administrador general: borrar la seccional propia sería, para un
+    admin local, borrarse el alcance a sí mismo y dejar a sus trabajadores
+    sin seccional -- que desde el sistema de Áreas significa que ningún
+    usuario de área los alcanza."""
     sid = exigir_sindicato(request)
+    _exigir_super_admin(request)
     with db.get_session() as s:
         sec = s.get(Seccional, id)
         if sec and sec.sindicato_id == sid:
@@ -1467,7 +2060,11 @@ def notificacion_preview(request: Request, criterio: str = Form(...), valores: l
     admin lo usa para confirmar antes de mandar de verdad."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "notificaciones")
-    cuils = db.resolver_destinatarios(sid, criterio, valores)
+    # Con el usuario: el preview tiene que contar EXACTAMENTE lo que va a
+    # salir. Si contara de más, el admin confirmaría un número y saldría
+    # otro, y el error sería silencioso porque nadie los compara.
+    cuils = db.resolver_destinatarios(sid, criterio, valores,
+                                      usuario_id=_uid_sesion(request))
     return {"cantidad": len(cuils)}
 
 
@@ -1501,7 +2098,8 @@ def notificacion_ver_destinatarios(notificacion_id: int, request: Request):
         n = s.get(Notificacion, notificacion_id)
         if not n or n.sindicato_id != sid:
             raise HTTPException(403, "No autorizado")
-    return {"destinatarios": db.notificacion_destinatarios(notificacion_id)}
+    return {"destinatarios": db.notificacion_destinatarios(
+        notificacion_id, usuario_id=_uid_sesion(request))}
 
 
 @app.get("/notificacion-adjunto/{notificacion_id}")
@@ -1826,7 +2424,13 @@ async def abm_tramite_tipo(
     id: str = Form(""), titulo: str = Form(...), codigo: str = Form(...),
     activo: str = Form("si"), campos_json: str = Form(...),
     reglas_json: str = Form("[]"),
+    area_destino_default_id: str = Form(""), seccional_id: str = Form(""),
+    destinos_json: str = Form("{}"),
+    permite_pase: str = Form(""), areas_pase: list[str] = Form(default=[]),
 ):
+    """El formulario declara su RUTEO además de sus campos (decisiones N6 y
+    N7): a qué área cae por defecto, el mapa seccional -> área, y si es
+    global o de una seccional."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "tramites")
     import json
@@ -1835,16 +2439,50 @@ async def abm_tramite_tipo(
         assert isinstance(campos_crudos, list)
         reglas_crudas = json.loads(reglas_json or "[]")
         assert isinstance(reglas_crudas, list)
+        destinos_crudos = json.loads(destinos_json or "{}")
+        assert isinstance(destinos_crudos, dict)
     except Exception:
         return RedirectResponse("/admin?error=campos#tramites", status_code=303)
     campos = _campos_tramite_validos(campos_crudos)
     if not campos:
         return RedirectResponse("/admin?error=campos#tramites", status_code=303)
     reglas = validaciones_tramite.reglas_saneadas(reglas_crudas, campos)
+    with db.get_session() as s:
+        destino_default = _id_propio(s, Area, area_destino_default_id, sid)
+        del_seccional = _id_propio(s, Seccional, seccional_id, sid)
+    # El destino por defecto es OBLIGATORIO: sin él, una seccional que nadie
+    # mapeó dejaría trámites sin dueño y nadie los vería en ninguna bandeja.
+    if not destino_default:
+        return RedirectResponse("/admin?error=sindestino#tramites", status_code=303)
+    # Un admin local solo arma formularios DE su seccional, y su destino y
+    # su mapa tienen que caer dentro de su alcance.
+    if del_seccional:
+        _exigir_alcance_seccional(request, del_seccional)
+    mapa = {}
+    for k, v in destinos_crudos.items():
+        try:
+            mapa[int(k)] = int(v)
+        except (TypeError, ValueError):
+            continue    # "sin área": esa seccional cae al default
     if id:
-        db.editar_tipo_tramite(int(id), sid, titulo, codigo, activo == "si", campos, reglas)
+        tipo = db.tipo_tramite_por_id(int(id))
+        if not tipo or tipo["sindicato_id"] != sid:
+            return RedirectResponse("/admin#tramites", status_code=303)
+        # La seccional de un formulario no se edita (ver editar_tipo_tramite).
+        if tipo.get("seccional_id"):
+            _exigir_alcance_seccional(request, tipo["seccional_id"])
+        db.editar_tipo_tramite(int(id), sid, titulo, codigo, activo == "si", campos, reglas,
+                               area_destino_default_id=destino_default,
+                               permite_pase=bool(permite_pase))
+        db.set_destinos_tipo_tramite(int(id), mapa, sid)
+        db.set_areas_de_pase(int(id), _ids_int(areas_pase), sid)
     else:
-        db.crear_tipo_tramite(sid, titulo, codigo, campos, reglas)
+        nuevo_id = db.crear_tipo_tramite(sid, titulo, codigo, campos, reglas,
+                                         area_destino_default_id=destino_default,
+                                         seccional_id=del_seccional,
+                                         permite_pase=bool(permite_pase))
+        db.set_destinos_tipo_tramite(nuevo_id, mapa, sid)
+        db.set_areas_de_pase(nuevo_id, _ids_int(areas_pase), sid)
     return RedirectResponse("/admin#tramites", status_code=303)
 
 
@@ -1892,9 +2530,13 @@ def borrar_tramite_tipo(request: Request, id: int = Form(...)):
 def admin_ver_tramite(tramite_id: int, request: Request):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "tramites")
-    detalle = db.tramite_detalle(tramite_id)
+    # Con el usuario: el detalle informa si puede responder y a qué áreas
+    # puede derivar. La pantalla los necesita a la vez -- sin saber si puede
+    # escribir, el chat no sabe si mostrar el cajón de respuesta.
+    detalle = db.tramite_detalle(tramite_id, usuario_id=_uid_sesion(request))
     if not detalle or detalle["sindicato_id"] != sid:
         raise HTTPException(404, "Trámite no encontrado")
+    _exigir_alcance_tramite(request, tramite_id, sid)
     return detalle
 
 
@@ -1906,24 +2548,9 @@ def admin_tramites_nuevos_cantidad(request: Request):
     mínimo (un número), pensado para pedirse cada 30s sin peso real."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "tramites")
-    return {"cantidad": db.contar_tramites_nuevos(sid)}
-
-
-@app.post("/admin/tramite/{tramite_id}/estado")
-def admin_cambiar_estado_tramite(tramite_id: int, request: Request, estado: str = Form(...)):
-    sid = exigir_sindicato(request)
-    _exigir_modulo(sid, "tramites")
-    detalle = db.tramite_detalle(tramite_id)
-    if not detalle or detalle["sindicato_id"] != sid:
-        raise HTTPException(404, "Trámite no encontrado")
-    if detalle["estado"] == "terminado":
-        raise HTTPException(400, "Este trámite está terminado y no se puede modificar.")
-    if not db.cambiar_estado_tramite(tramite_id, sid, estado):
-        raise HTTPException(400, "Estado inválido")
-    nuevo_label = db.ESTADOS_TRAMITE_LABEL.get(estado, estado)
-    _notificar_cambio_tramite(sid, detalle["cuil"], detalle["numero_expediente"],
-        f'Tu sindicato actualizó el estado: {nuevo_label}.')
-    return {"ok": True}
+    # Con el usuario: el globo en vivo tiene que contar lo MISMO que la
+    # bandeja, o mostraría un número que al abrir la pestaña no baja.
+    return {"cantidad": db.contar_tramites_nuevos(sid, _uid_sesion(request))}
 
 
 def _formulario_para_chat(sid: int, formulario_id: str, familia: str):
@@ -1943,15 +2570,44 @@ def _formulario_para_chat(sid: int, formulario_id: str, familia: str):
     return fid
 
 
-@app.post("/admin/tramite/{tramite_id}/nota")
-async def admin_nota_tramite(tramite_id: int, request: Request, texto: str = Form(""),
-                              adjunto: UploadFile = File(None),
-                              formulario_id: str = Form("")):
+@app.post("/admin/tramite/{tramite_id}/pase")
+def admin_pasar_tramite(tramite_id: int, request: Request,
+                         area_destino_id: int = Form(...), motivo: str = Form("")):
+    """Deriva el trámite a otra área de las que el formulario declara.
+
+    Solo puede derivar quien puede RESPONDER: el área que lo tiene. La que
+    ya lo derivó conserva lectura pero no vuelve a moverlo -- si no, dos
+    áreas se lo pasarían de vuelta entre sí sin que nadie lo resuelva."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "tramites")
     detalle = db.tramite_detalle(tramite_id)
     if not detalle or detalle["sindicato_id"] != sid:
         raise HTTPException(404, "Trámite no encontrado")
+    _exigir_alcance_tramite(request, tramite_id, sid)
+    _exigir_responder_tramite(request, tramite_id, sid)
+    if not db.pasar_tramite(tramite_id, area_destino_id, _uid_sesion(request), sid,
+                            (motivo or "").strip()):
+        raise HTTPException(400, "No se puede derivar este trámite a esa área.")
+    return {"ok": True}
+
+
+@app.post("/admin/tramite/{tramite_id}/nota")
+async def admin_nota_tramite(tramite_id: int, request: Request, texto: str = Form(""),
+                              adjunto: UploadFile = File(None),
+                              formulario_id: str = Form(""), estado: str = Form("")):
+    """Responder y cambiar el estado son UN SOLO ACTO (decisión N9).
+
+    La ruta /admin/tramite/{id}/estado dejó de existir: no hay forma de
+    mover el estado sin decirle algo al trabajador. Antes eran dos rutas y
+    cada una escribía su línea en el chat, así que una sola respuesta del
+    sindicato aparecía dos veces del lado del afiliado."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "tramites")
+    detalle = db.tramite_detalle(tramite_id)
+    if not detalle or detalle["sindicato_id"] != sid:
+        raise HTTPException(404, "Trámite no encontrado")
+    _exigir_alcance_tramite(request, tramite_id, sid)
+    _exigir_responder_tramite(request, tramite_id, sid)
     if detalle["estado"] == "terminado":
         raise HTTPException(400, "Este trámite está terminado y no se puede modificar.")
     adjunto_datos, adjunto_mime, adjunto_nombre = None, "", ""
@@ -1963,9 +2619,17 @@ async def admin_nota_tramite(tramite_id: int, request: Request, texto: str = For
     if not texto.strip() and not adjunto_datos and not formulario:
         raise HTTPException(400, "La nota necesita texto, un adjunto o un formulario.")
     db.agregar_nota_tramite(tramite_id, "admin", texto, adjunto_datos, adjunto_mime,
-                            adjunto_nombre, formulario_id=formulario)
-    aviso = ('Tu sindicato te mandó un formulario para iniciar.' if formulario
-             else 'Tu sindicato te escribió en el chat.')
+                            adjunto_nombre, formulario_id=formulario,
+                            estado_nuevo=estado)
+    # El aviso también es UNO: si el estado se movió, se lo cuenta en el
+    # mismo mensaje en vez de mandarle dos notificaciones por un solo acto.
+    if formulario:
+        aviso = 'Tu sindicato te mandó un formulario para iniciar.'
+    elif estado and estado != detalle["estado"]:
+        etiqueta = db.ESTADOS_TRAMITE_LABEL.get(estado, estado)
+        aviso = f'Tu sindicato te respondió. Estado: {etiqueta}.'
+    else:
+        aviso = 'Tu sindicato te escribió en el chat.'
     _notificar_cambio_tramite(sid, detalle["cuil"], detalle["numero_expediente"], aviso)
     return {"ok": True}
 
@@ -2021,7 +2685,13 @@ def api_tipos_tramite(request: Request):
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_trabajador(request)
-    return {"tipos": db.tipos_tramite_del_sindicato(sid, solo_activos=True) if sid else []}
+    if not sid:
+        return {"tipos": []}
+    # Los formularios GLOBALES más los de SU seccional (decisión N7). El
+    # recorte va en la consulta: si se hiciera en el cliente, los
+    # formularios de otras delegaciones viajarían igual en el JSON.
+    return {"tipos": db.tipos_tramite_del_sindicato(
+        sid, solo_activos=True, seccional_id=db.seccional_de_trabajador(cuil, sid))}
 
 
 @app.get("/api/tramites/mios")
@@ -2245,6 +2915,11 @@ async def api_enviar_tramite(request: Request):
         raise HTTPException(400, "Tipo de trámite inválido")
     tipo = db.tipo_tramite_por_id(tipo_tramite_id)
     if not tipo or tipo["sindicato_id"] != sid or not tipo["activo"]:
+        raise HTTPException(404, "Tipo de trámite inválido")
+    # Un formulario DE OTRA SECCIONAL no se puede usar aunque se mande el id
+    # a mano: que la lista no lo ofrezca no es un control, es una comodidad.
+    if tipo.get("seccional_id") and \
+            tipo["seccional_id"] != db.seccional_de_trabajador(cuil, sid):
         raise HTTPException(404, "Tipo de trámite inválido")
 
     errores = []
@@ -3281,10 +3956,20 @@ def _es_oscuro(color_hex: str) -> bool:
     return luminancia < 140
 
 
-def _destinos_validos(s, destino_seccionales: list[str], sid: int) -> list[int]:
+def _destinos_validos(s, destino_seccionales: list[str], sid: int,
+                      alcance=None) -> list[int]:
     """Convierte los ids de seccional tildados en el form a int, descartando
     los que no sean de ESTE sindicato (ajenos o inventados) -- mismo criterio
-    defensivo que el seccional_id del alta de trabajador."""
+    defensivo que el seccional_id del alta de trabajador.
+
+    `alcance` (ver db.alcance_seccional) descarta además las que estén fuera
+    del alcance de quien publica: Prensa de Córdoba no le publica a todo el
+    país (decisión N10). None = sin recorte.
+
+    Una lista VACÍA significa "a todas las seccionales", así que para alguien
+    acotado hay que traducirla a su alcance explícito en vez de dejarla
+    vacía: si no, un admin local publicaría a todo el sindicato sin tildar
+    nada. Eso lo hace _destinos_de_publicacion."""
     ids_del_sindicato = {sec.id for sec in s.exec(
         select(Seccional).where(Seccional.sindicato_id == sid)).all()}
     resultado = []
@@ -3293,9 +3978,25 @@ def _destinos_validos(s, destino_seccionales: list[str], sid: int) -> list[int]:
             sec_id = int(valor)
         except (TypeError, ValueError):
             continue
-        if sec_id in ids_del_sindicato:
+        if sec_id in ids_del_sindicato and (alcance is None or sec_id in alcance):
             resultado.append(sec_id)
     return resultado
+
+
+def _destinos_de_publicacion(request: Request, s, destino_seccionales: list[str],
+                             sid: int) -> list[int]:
+    """Los destinos de una Noticia o un Beneficio, ya recortados al alcance
+    de quien publica.
+
+    El caso que hay que atajar es el de la lista VACÍA, que en este modelo
+    significa "a todas las seccionales": dejarla vacía para un admin local
+    sería darle exactamente lo que el alcance le niega. Se la reemplaza por
+    su alcance explícito."""
+    alcance = _alcance_de(request)
+    destinos = _destinos_validos(s, destino_seccionales, sid, alcance)
+    if not destinos and alcance is not None:
+        return sorted(alcance)
+    return destinos
 
 
 def _modulos_de(sid: int) -> set:
@@ -3581,10 +4282,15 @@ def plataforma_alta_usuario(
     with db.get_session() as s:
         s.add(UsuarioSindicato(
             sindicato_id=sindicato_id, usuario=_norm_cuil(usuario), nombre=nombre,
+            cuil=_norm_cuil(usuario),
             clave_hash=auth.hashear_clave(clave_inicial),
             debe_cambiar_clave=True,
+            # Es el PRIMER usuario del sindicato: si no naciera Super Admin,
+            # nadie podría entrar a crear las áreas ni los demás usuarios.
+            es_super_admin=True,
         ))
         s.commit()
+    db.sincronizar_por_cuil(sindicato_id, _norm_cuil(usuario))
     return RedirectResponse("/plataforma", status_code=303)
 
 

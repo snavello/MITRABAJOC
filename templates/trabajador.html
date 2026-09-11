@@ -244,6 +244,9 @@
   .tram-chat-remitente { font-size:10.5px; font-weight:650; color:var(--marca-primario); margin-bottom:2px; }
   .tram-chat-texto { font-size:13.5px; line-height:1.4; color:var(--tinta);
     display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .tram-chat-estado { display:inline-block; margin-top:6px; padding:2px 8px; border-radius:999px;
+    font-size:10.5px; font-weight:700; letter-spacing:.3px; text-transform:uppercase;
+    background:color-mix(in srgb, var(--marca-secundario) 18%, #fff); color:var(--marca-secundario); }
   .tram-chat-meta { display:flex; align-items:center; gap:5px; margin-top:4px; font-size:10px; color:var(--gris); }
   .tram-chat-meta svg { width:11px; height:11px; stroke:var(--gris); stroke-width:2.2; fill:none; }
   .tram-chat-vacio { text-align:center; padding:22px 0; color:var(--gris); font-size:12.5px; }
@@ -2129,6 +2132,14 @@ if (document.getElementById('tp-tramites')) {
   };
 
   // ---------- Chat de Trámites (estilo WhatsApp) ----------
+  function htmlEstadoDeMensaje(n) {
+    // El estado que fijó ESTE mensaje, pegado a su burbuja (decisión N9).
+    // Antes era un movimiento aparte en el hilo, así que una sola respuesta
+    // del sindicato se veía dos veces.
+    if (!n.estado_nuevo_label) return '';
+    return `<div class="tram-chat-estado">${n.estado_nuevo_label}</div>`;
+  }
+
   function fmtHoraCorta(s) {
     const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})$/.exec(s || '');
     return m ? m[4] : (s || '');
@@ -2184,14 +2195,21 @@ if (document.getElementById('tp-tramites')) {
 
   function renderChatTramite(d) {
     tramNotasActuales = d.notas;
-    const eventos = d.log.filter(l => l.evento === 'creado' || l.evento === 'cambio_estado');
+    // El pase es un MOVIMIENTO del expediente y va al chat como cualquier
+    // otro (decisión N8). El detalle ya viene redactado nombrando ÁREAS y
+    // nunca personas, así que sirve igual acá que del lado del afiliado.
+    const eventos = d.log.filter(l => l.evento === 'creado' || l.evento === 'cambio_estado'
+                                     || l.evento === 'pase');
     const items = [
-      ...d.notas.map((n, i) => ({ tipo: 'nota', idx: i, creado: n.creado, n })),
-      ...eventos.map(l => ({ tipo: 'sistema', creado: l.creado, l })),
+      ...d.notas.map((n, i) => ({ tipo: 'nota', idx: i, creado: n.creado, orden: n.orden || 0, n })),
+      ...eventos.map(l => ({ tipo: 'sistema', creado: l.creado, orden: l.orden || 0, l })),
       // trámites encadenados: el que originó este y los iniciados desde acá
       ...(d.origen_tramite ? [{ tipo: 'vinculo', creado: d.creado, dir: 'origen', v: d.origen_tramite }] : []),
       ...(d.derivados || []).map(v => ({ tipo: 'vinculo', creado: v.creado, dir: 'derivado', v })),
-    ].sort((a, b) => a.creado.localeCompare(b.creado));
+    ].sort((a, b) => a.creado.localeCompare(b.creado)
+               // Empate dentro del mismo minuto: manda el orden real de los
+               // actos (id del log). Los vínculos no tienen y quedan al frente.
+               || (a.orden || 0) - (b.orden || 0));
 
     if (!items.length) return '<div class="tram-chat-vacio">Todavía no hay mensajes en este trámite.</div>';
 
@@ -2228,6 +2246,7 @@ if (document.getElementById('tp-tramites')) {
             <div class="tram-chat-remitente">${n.autor === 'admin' ? 'Tu sindicato' : 'Vos'}</div>
             <div class="tram-chat-texto">${texto}</div>
             ${htmlFormularioChatTrab(n, d.id)}
+            ${htmlEstadoDeMensaje(n)}
             <div class="tram-chat-meta">
               ${n.tiene_adjunto ? '<svg viewBox="0 0 24 24"><use href="#ic-clip"/></svg>' : ''}
               <span>${fmtHoraCorta(n.creado)}</span>

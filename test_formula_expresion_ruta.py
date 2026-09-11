@@ -22,11 +22,11 @@ from sqlmodel import Session, select
 
 db.crear_tablas()
 with db.get_session() as s:
-    sind = Sindicato(nombre="Test Expresion", slug="test-expresion")
+    sind = Sindicato(nombre="Test Expresion", slug="test-expresion", modulos_habilitados=["recibos"])
     s.add(sind); s.commit(); s.refresh(sind)
     SID = sind.id
     s.add(UsuarioSindicato(sindicato_id=SID, usuario="20999999999", nombre="Admin",
-                            clave_hash=auth.hashear_clave("test-demo"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("test-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.commit()
 
 client = TestClient(main.app)

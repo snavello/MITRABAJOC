@@ -28,7 +28,7 @@ with db.get_session() as s:
     s.add(Trabajador(sindicato_id=SID, cuil="20111111119", nombre="Juan",
                       activo=True, registrado=True))
     s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111110", nombre="Admin",
-                            clave_hash=auth.hashear_clave("clave-test"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("clave-test"), debe_cambiar_clave=False, es_super_admin=True))
     s.commit()
 
 trab_client = TestClient(main.app)

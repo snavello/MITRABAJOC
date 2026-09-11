@@ -15,7 +15,7 @@ os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth
-from db import Sindicato, UsuarioSindicato, Trabajador, TipoTramite, CampoTramite, Tramite, Notificacion
+from db import Sindicato, UsuarioSindicato, Trabajador, TipoTramite, CampoTramite, Tramite, Notificacion, Seccional, Area
 from modulos import MODULOS_INICIALES
 import main
 from fastapi.testclient import TestClient
@@ -32,10 +32,18 @@ with db.get_session() as s:
     SID_UOM, SID_FEGA = uom.id, fega.id
 
     s.add(UsuarioSindicato(sindicato_id=SID_UOM, usuario="20111111110", nombre="Admin UOM",
-                            clave_hash=auth.hashear_clave("uom-demo"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("uom-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(UsuarioSindicato(sindicato_id=SID_FEGA, usuario="20222222220", nombre="Admin Fega",
-                            clave_hash=auth.hashear_clave("fega-demo"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("fega-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(Trabajador(sindicato_id=SID_UOM, cuil="20111111119", nombre="Juan", activo=True, registrado=True))
+    # Desde la Fase 3 el formulario declara a qué ÁREA cae el trámite, y el
+    # destino por defecto es obligatorio (decisión N6): sin él el alta se
+    # rechaza, porque un trámite sin área no lo ve nadie en ninguna bandeja.
+    sec_uom = Seccional(sindicato_id=SID_UOM, nombre="Sede Central", ve_todas=True)
+    s.add(sec_uom); s.commit(); s.refresh(sec_uom)
+    mesa = Area(sindicato_id=SID_UOM, seccional_id=sec_uom.id, nombre="Mesa de Entradas")
+    s.add(mesa); s.commit(); s.refresh(mesa)
+    AREA_UOM = mesa.id
     s.commit()
 
 admin_uom = TestClient(main.app)
@@ -60,7 +68,7 @@ def test_alta_tipo_tramite_con_campos_de_cada_tipo_dato():
         {"etiqueta": "Comprobante", "tipo_dato": "archivo", "tipos_archivo_permitidos": "pdf,jpg", "obligatorio": True},
     ]
     r = admin_uom.post("/admin/tramite-tipo", data={
-        "titulo": "Solicitud de Reintegro", "codigo": "F01 AEFIP", "campos_json": json.dumps(campos),
+        "titulo": "Solicitud de Reintegro", "codigo": "F01 AEFIP", "campos_json": json.dumps(campos), "area_destino_default_id": str(AREA_UOM),
     }, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
@@ -172,11 +180,21 @@ def test_cambio_estado_dispara_log_y_notificacion():
     with Session(db.engine) as s:
         antes = len(s.exec(select(Notificacion).where(Notificacion.sindicato_id == SID_UOM)).all())
     assert db.contar_tramites_con_novedades("20111111119", SID_UOM) == 0
-    r = admin_uom.post(f"/admin/tramite/{TRAMITE_ID}/estado", data={"estado": "en_tratamiento"})
+    r = admin_uom.post(f"/admin/tramite/{TRAMITE_ID}/nota",
+                       data={"texto": "lo estamos viendo", "estado": "en_tratamiento"})
     assert r.status_code == 200
     detalle = db.tramite_detalle(TRAMITE_ID)
     assert detalle["estado"] == "en_tratamiento"
-    assert any(l["evento"] == "cambio_estado" for l in detalle["log"])
+    # Desde la decisión N9 el cambio de estado NO tiene evento propio: viaja
+    # en el mismo renglón del mensaje que lo hizo. Antes eran dos eventos, y
+    # el chat del trabajador mostraba dos movimientos por un solo acto.
+    assert not any(l["evento"] == "cambio_estado" for l in detalle["log"]), \
+        "el estado ya no se mueve solo"
+    evento = [l for l in detalle["log"] if l["evento"] == "nota_admin"][-1]
+    assert "lo estamos viendo" in evento["detalle"]
+    assert "En tratamiento" in evento["detalle"], evento["detalle"]
+    # Y la nota guarda el estado que fijó, para pintarlo pegado a la burbuja.
+    assert detalle["notas"][-1]["estado_nuevo"] == "en_tratamiento"
     with Session(db.engine) as s:
         cantidad = len(s.exec(select(Notificacion).where(Notificacion.sindicato_id == SID_UOM)).all())
     assert cantidad == antes  # sin Notificacion nueva
@@ -222,7 +240,7 @@ def test_nota_admin_y_trabajador_en_thread_correcto():
 def test_campo_seleccion_fija():
     campos = [{"etiqueta": "Motivo", "tipo_dato": "seleccion", "opciones": "Salud, Estudio, Otro", "obligatorio": True}]
     r = admin_uom.post("/admin/tramite-tipo", data={
-        "titulo": "Consulta", "codigo": "SEL", "campos_json": json.dumps(campos),
+        "titulo": "Consulta", "codigo": "SEL", "campos_json": json.dumps(campos), "area_destino_default_id": str(AREA_UOM),
     }, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
@@ -250,11 +268,13 @@ def test_terminado_bloquea_cambios():
     }, files={f"archivo_{_campo_id('Comprobante')}": ("c.pdf", b"%PDF", "application/pdf")})
     assert r.status_code == 200
     tid = r.json()["id"]
-    r_term = admin_uom.post(f"/admin/tramite/{tid}/estado", data={"estado": "terminado"})
+    r_term = admin_uom.post(f"/admin/tramite/{tid}/nota",
+                            data={"texto": "resuelto", "estado": "terminado"})
     assert r_term.status_code == 200
     assert db.tramite_detalle(tid)["estado"] == "terminado"
 
-    r_reabrir = admin_uom.post(f"/admin/tramite/{tid}/estado", data={"estado": "en_tratamiento"})
+    r_reabrir = admin_uom.post(f"/admin/tramite/{tid}/nota",
+                               data={"texto": "lo reabro", "estado": "en_tratamiento"})
     assert r_reabrir.status_code == 400
     assert db.tramite_detalle(tid)["estado"] == "terminado"
 
@@ -262,7 +282,12 @@ def test_terminado_bloquea_cambios():
     assert r_nota_admin.status_code == 400
     r_nota_trab = trab.post(f"/api/tramite/{tid}/nota", data={"texto": "no debería poder"})
     assert r_nota_trab.status_code == 400
-    assert db.tramite_detalle(tid)["notas"] == []
+    # Queda SOLO el mensaje con el que se terminó: desde N9 terminar un
+    # trámite es responder, así que su nota es parte del cierre y no una
+    # nota "de más". Lo que se prueba es que no entró ninguna DESPUÉS.
+    notas = db.tramite_detalle(tid)["notas"]
+    assert [n["texto"] for n in notas] == ["resuelto"], notas
+    assert notas[0]["estado_nuevo"] == "terminado"
     print("OK  test_terminado_bloquea_cambios")
 
 
@@ -274,7 +299,7 @@ def test_ancho_campos_y_nuevos_tipos_de_campo():
         {"etiqueta": "Días disponibles", "tipo_dato": "multiple", "opciones": "Lunes, Martes, Miércoles", "obligatorio": True},
     ]
     r = admin_uom.post("/admin/tramite-tipo", data={
-        "titulo": "Formulario nuevos tipos", "codigo": "NUEVOS", "campos_json": json.dumps(campos),
+        "titulo": "Formulario nuevos tipos", "codigo": "NUEVOS", "campos_json": json.dumps(campos), "area_destino_default_id": str(AREA_UOM),
     }, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
@@ -348,7 +373,8 @@ def test_aislamiento_entre_sindicatos():
     try:
         r = admin_fega.get(f"/admin/tramite/{TRAMITE_ID}")
         assert r.status_code == 404
-        r2 = admin_fega.post(f"/admin/tramite/{TRAMITE_ID}/estado", data={"estado": "terminado"})
+        r2 = admin_fega.post(f"/admin/tramite/{TRAMITE_ID}/nota",
+                             data={"texto": "ajeno", "estado": "terminado"})
         assert r2.status_code == 404
     finally:
         with Session(db.engine) as s:
@@ -361,7 +387,7 @@ def test_aislamiento_entre_sindicatos():
 def test_bloqueo_403_si_modulo_apagado():
     r1 = admin_fega.post("/admin/tramite-tipo", data={
         "titulo": "No debería crearse", "codigo": "X", "campos_json": json.dumps([
-            {"etiqueta": "Campo", "tipo_dato": "texto", "obligatorio": True}]),
+            {"etiqueta": "Campo", "tipo_dato": "texto", "obligatorio": True}]), "area_destino_default_id": str(AREA_UOM),
     })
     assert r1.status_code == 403
     r2 = admin_fega.post("/admin/tramite-tipo/borrar", data={"id": TIPO_ID})
@@ -382,7 +408,7 @@ def test_formulario_adjunto_en_chat():
     # inactivo o inexistente se descarta en silencio (saneo defensivo).
     r = admin_uom.post("/admin/tramite-tipo", data={
         "titulo": "Registro de pasajeros", "codigo": "F02 AEFIP",
-        "campos_json": json.dumps([{"etiqueta": "Nombre", "tipo_dato": "texto", "obligatorio": True}]),
+        "campos_json": json.dumps([{"etiqueta": "Nombre", "tipo_dato": "texto", "obligatorio": True}]), "area_destino_default_id": str(AREA_UOM),
     }, follow_redirects=False)
     assert r.status_code == 303
     pasajeros = next(t for t in db.tipos_tramite_del_sindicato(SID_UOM)

@@ -18,6 +18,7 @@ os.environ["DB_PATH"] = DB_FILE
 import db
 import auth
 from db import (Sindicato, UsuarioSindicato, Trabajador, Empleador,
+                 Seccional, Area,
                  TipoTramite, CampoTramite, Tramite,
                  TipoTramiteEmpleador, CampoTramiteEmpleador, TramiteEmpleador,
                  NotificacionEmpleador)
@@ -37,14 +38,22 @@ with db.get_session() as s:
     SID_UOM, SID_FEGA = uom.id, fega.id
 
     s.add(UsuarioSindicato(sindicato_id=SID_UOM, usuario="20111111110", nombre="Admin UOM",
-                            clave_hash=auth.hashear_clave("uom-demo"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("uom-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(UsuarioSindicato(sindicato_id=SID_FEGA, usuario="20222222220", nombre="Admin Fega",
-                            clave_hash=auth.hashear_clave("fega-demo"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("fega-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(Empleador(sindicato_id=SID_UOM, cuit="30111222339", razon_social="Constructora A", activo=True))
     # Un trabajador con el mismo "identificador" numérico que el empleador de
     # arriba -- para el test de que las dos tablas nunca se cruzan.
     s.add(Trabajador(sindicato_id=SID_UOM, cuil="30111222339", nombre="Coincidencia", activo=True, registrado=True))
     s.commit()
+    # El formulario DEL TRABAJADOR que usa este archivo necesita área destino
+    # desde la Fase 3 (decisión N6). Los de EMPRESA siguen sin ruteo por
+    # área: quedaron fuera de esta tanda a propósito (decisión N11).
+    sec = Seccional(sindicato_id=SID_UOM, nombre="Sede Central", ve_todas=True)
+    s.add(sec); s.commit(); s.refresh(sec)
+    mesa = Area(sindicato_id=SID_UOM, seccional_id=sec.id, nombre="Mesa de Entradas")
+    s.add(mesa); s.commit(); s.refresh(mesa)
+    AREA_UOM = mesa.id
 
 admin_uom = TestClient(main.app)
 admin_uom.post("/admin/login", data={"usuario": "20111111110", "clave": "uom-demo"})
@@ -289,6 +298,7 @@ def test_tramites_de_trabajador_y_empresa_nunca_se_mezclan():
     campos = [{"etiqueta": "Campo", "tipo_dato": "texto", "obligatorio": True}]
     r_tipo_trab = admin_uom.post("/admin/tramite-tipo", data={
         "titulo": "Tipo trabajador", "codigo": "TRAB", "campos_json": json.dumps(campos),
+        "area_destino_default_id": str(AREA_UOM),
     }, follow_redirects=False)
     assert r_tipo_trab.status_code == 303
     with Session(db.engine) as s:
