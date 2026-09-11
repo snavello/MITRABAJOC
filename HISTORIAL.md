@@ -3001,3 +3001,238 @@ moneda, formato, titularidad) y quedan en la pestaña "Supuestos".
 - Este documento se armó con `scratchpad/anexo/armar.py` (fuera del repo):
   los montos se calculan de una lista de rubros, no a mano. Para rehacerlo
   con precios nuevos conviene volver a partir de esa lista.
+
+## Áreas, permisos granulares y ruteo de trámites — Áreas V2 (2026-09-11)
+
+Rama `areas-permisos-v2`. Plan previo en `SPRINT_AREAS_V2.md` (decisiones
+N1–N11, escritas antes de tocar código y no actualizadas retroactivamente).
+Siete fases, seis migraciones, 149 tests nuevos en 10 archivos.
+
+### Por qué se portó en vez de mergear
+
+La primera tanda (`areas-permisos`, agosto) estaba terminada y probada pero
+había quedado **126 commits detrás de `main`**: 0.14.20 del 22-ago contra
+0.29.x del 07-sep, con RAG del convenio, Asistente, Panel Sindical, PWA,
+validaciones de trámites y la landing de entornos en el medio.
+
+No se estimó, se midió: el merge daba **8 archivos en conflicto** (`db.py`
+14 hunks, `main.py` 12, `templates/admin.html` 10) y dejaba **28 rutas
+`/admin/*` sin clasificar** que el fail-closed de la Fase 2 habría
+rechazado con un error inexplicable — todo `/admin/dashboard*`,
+`/admin/convenio*`, `/admin/tramite-tipo/probar`. El BACKLOG anotaba "5
+líneas de `PERMISOS_RUTAS` para RAG"; eran 28 rutas y tres secciones nuevas
+del catálogo. Como además los requerimientos nuevos cambiaban el modelo de
+`Area` (pasa a colgar de una seccional) y el ruteo de trámites, la Fase 0
+es la primera tanda **reescrita sobre el código de hoy**, y recién después
+entran las decisiones nuevas.
+
+### La premisa que ordenó todo el sprint
+
+"Los administradores de hoy conservan exactamente los accesos de hoy". No
+es una nota al pie: es lo que decidió que `es_super_admin` naciera en
+`True` para todos los `UsuarioSindicato` existentes (migración
+`c1a7d40be913`), que la sección "Áreas y Usuarios" quedara **fuera** de
+`SECCIONES` para que nadie pueda asignarla, y que `es_admin_seccional`
+arranque en `False` — un sindicato centralizado ni se entera de que el rol
+existe. Un sindicato que no configura nada no nota el cambio.
+
+### Los dos ejes, y por qué el área cuelga de la seccional
+
+El **área** dice QUÉ hace un usuario; la **seccional**, SOBRE QUIÉNES. En
+la primera tanda `Area` colgaba del sindicato y los dos ejes eran
+independientes; en V2 el área vive DENTRO de una seccional (`N2`), que es
+lo que permite que cada delegación arme su estructura sin pisarle el nombre
+a otra: puede haber una "Legales" por seccional y son áreas distintas. De
+ahí sale la regla de coherencia que fuerzan las rutas: **un usuario y su
+área tienen que ser de la misma seccional**. Si no, "Legales de Rosario"
+con alcance Córdoba sería un usuario del que nadie sabe qué ve.
+
+El alcance es un solo concepto (`db.alcance_seccional`) con tres valores:
+`None` = todas, `{id}` = esa sola, `set()` = ninguna (defensivo, para el
+usuario sin seccional). Se aplica **dentro de la consulta**, no filtrando
+después: `areas_del_sindicato(sid, alcance)`,
+`usuarios_del_sindicato(sid, alcance)`, `_recortar_tramites`. Filtrar
+después es la forma de que un camino nuevo se olvide.
+
+### `modulos.py` no es `permisos.py`
+
+La distinción es la decisión central y se repite en el código porque cuesta
+retenerla: `modulos.py` dice qué **contrató** el sindicato (lo decide
+plataforma), `permisos.py` qué puede **tocar** cada usuario dentro de eso
+(lo decide el Super Admin). Un módulo abre varias secciones — "recibos"
+abre seis — así que el permiso se guarda por sección: si la unidad fuera el
+módulo, no habría forma de decir "mirá los reportes pero no toques las
+fórmulas", que es el caso que motivó todo esto.
+
+El efectivo es `((área + agregados) - bloqueados) ∩ secciones_de_modulos`.
+El bloqueo le gana al área **y** a un agregado individual: es el único
+orden en que "bloqueado" significa algo. La intersección final con los
+módulos es la red de seguridad — si plataforma apaga un módulo, los
+permisos viejos dejan de valer solos, sin salir a limpiar filas.
+
+En la UI eso se pintó como una tabla de **tres estados** con dos columnas
+de checkbox (hereda / agregado / bloqueado) en vez de un checkbox simple:
+con uno solo no se puede distinguir "no lo tiene porque el área no se lo
+da" de "no lo tiene porque se lo bloquearon a él".
+
+### Gateo fail-closed de las 73 rutas
+
+`main.PERMISOS_RUTAS` mapea cada ruta `/admin/*` a su sección, y se resuelve
+**dentro de `exigir_sindicato()`** usando `request.scope["route"].path` —
+no en cada handler, que es donde se olvidan. Una ruta que nadie clasificó
+**se rechaza**: el olvido se nota en la primera prueba en vez de filtrarse
+en silencio. Las únicas exentas están en `RUTAS_ADMIN_SIN_PERMISO` (login,
+salir, portada, panel, dashboard); las 22 rutas del dashboard entran por
+`_exigir_dashboard`.
+
+Medido después de la Fase 0b, para confirmar que el recorte era real y no
+solo visual: el panel pesa **229,7 KB** para un Super Admin y **146,6 KB**
+para un usuario de área, y de los 14 paneles solo 2 le llegan al usuario de
+área. El dato importa porque el `{% if %}` en la plantilla no es cosmético
+— lo que no se renderiza no viaja.
+
+### Identidad: el operador del panel y el afiliado son la misma persona
+
+`UsuarioSindicato` gana `cuil` (QUIÉN ES) separado de `usuario` (con lo que
+INICIA SESIÓN). Si se guardara uno solo, habilitar mañana el login por mail
+borraría la identidad de la persona.
+
+`sincronizar_empleado(usuario_id)` hace tres cosas de una porque separarlas
+es lo que las desincroniza: vincula por CUIL contra el padrón, prende
+`Trabajador.es_empleado_sindicato`, y apaga la marca de la fila anterior
+**solo si ningún otro usuario activo sigue apuntando ahí** — sin ese
+chequeo, dar de baja a uno de dos empleados con el mismo CUIL (dos altas,
+un typo) apagaba la marca del que sigue trabajando.
+`sincronizar_por_cuil(sid, cuil)` es el camino inverso, porque las dos
+altas pueden venir en cualquier orden.
+
+Trabajar en el gremio **sin estar afiliado a él** es un caso real: el
+vínculo queda en NULL y no es un error. La demo lo muestra a propósito
+(Elena Vidal, Prensa, no está en el padrón).
+
+### Ruteo de trámites y pase entre áreas
+
+El formulario declara a qué área cae el trámite: mapa explícito
+seccional→área (`DestinoTipoTramite`, decisión N6) y, para las seccionales
+que nadie mapeó, un `area_destino_default_id` **obligatorio**. El default
+es lo que evita que el mantenimiento del mapa se vuelva obligatorio: una
+seccional nueva funciona igual. Sin él, dejaría trámites sin dueño y el
+error sería silencioso — nadie los vería en ninguna bandeja.
+
+Esto reemplazó a la decisión 2 del viejo sprint "Admin de Seccional"
+(adhesión obligatoria a un área troncal vía `Area.area_madre_id`):
+resuelve el mismo problema sin una vertical implícita que hay que
+mantener.
+
+El **pase** solo existe si el formulario lo declara (`permite_pase`) y solo
+hacia la lista **cerrada** de `PaseTipoTramite`: el circuito queda diseñado
+de antemano y es auditable. Si el formulario no lo declara, el área que
+recibe el trámite solo puede contestarle al trabajador. El área que derivó
+conserva **lectura** (`areas_que_vieron`) pero no escritura — por eso
+`puede_ver_tramite` y `puede_responder_tramite` están partidos. Todos los
+chequeos viven dentro de `pasar_tramite()` y no en la ruta, a propósito: es
+una operación que cambia quién puede responder, y dejar la mitad de las
+condiciones en el llamador es la forma de que un camino nuevo se olvide de
+alguna. El movimiento va al chat nombrando **áreas, nunca personas**, misma
+regla que las respuestas.
+
+### Responder y cambiar el estado, un solo acto
+
+Pedido textual del usuario: "en el chat del trabajador un solo acto está
+reflejado dos veces". Se **borró** la ruta `/admin/tramite/{id}/estado` y el
+estado pasó a ser un parámetro de la nota:
+`agregar_nota_tramite(..., estado_nuevo="")` deja UN evento en el log, con
+el cambio de estado adosado al detalle. Borrar la ruta (en vez de dejarla
+"por compatibilidad") es lo que garantiza que no vuelva a haber dos
+caminos.
+
+### Bugs encontrados, y su causa real
+
+- **`loop.parent` no existe en Jinja2** (es de Django). La plantilla
+  *compilaba* y explotaba recién al renderizar: 11 archivos de test en rojo
+  de golpe. Se arregló con `{% set gidx = loop.index %}`. La lección quedó
+  en el commit: **compilar una plantilla no es probarla**.
+- **`bool(activo)` sobre un checkbox**: `activo="no"` es truthy, así que
+  desactivar un área la activaba. Se normaliza con
+  `(activo or "").strip().lower() in ("1","true","on","si","sí")`.
+- **Las guardas de JS había que EXTENDERLAS, no agregarlas.** Los bloques
+  de Aprendizaje, Convenio y el polling de empresas ya estaban guardados
+  por módulo; ahora el panel puede faltar además **por permiso**. Los
+  cuatro chequean las dos cosas.
+- **`.subtab-au` con colores inventados**: texto blanco sobre blanco, la
+  sub-pestaña "Usuarios" se veía vacía. El mismo error que había cometido
+  el sprint de agosto con los checkboxes. Se arregló copiando el patrón de
+  tokens que el proyecto ya tiene.
+- **El pase no llegaba al chat.** El log lo tenía, `tramite_detalle` lo
+  devolvía, pero el filtro del lado del cliente solo dejaba pasar
+  `'creado'` y `'cambio_estado'`. El requerimiento del usuario ("todas las
+  derivaciones van al chat") quedaba incumplido y **ningún test de base lo
+  podía atrapar**: el bug vivía en el renderizado. Se arregló en las tres
+  plantillas (`admin.html`, `trabajador.html`, `empresa.html`) y se sumó un
+  test **de plantilla**, que es la categoría que faltaba.
+- **El 403 por permiso mostraba JSON crudo.** El primer arreglo redirigía
+  todo 403 al panel, lo que rompía las respuestas de API. Se acotó con un
+  marcador (`e.codigo = "sinpermiso"`) y, sobre todo, se reescribió el test
+  alrededor del discriminador real: **navegación de página vs fetch**. El
+  test original fallaba porque su sindicato de fixture no tiene módulos, así
+  que su 403 también venía del gate de permisos.
+- **El hilo se leía al revés dentro del mismo minuto.** Apareció recién al
+  armar la demo: el sindicato contesta y deriva seguido — el caso normal —
+  y las dos cosas caen en el mismo minuto, que es la granularidad con la
+  que el chat guarda las fechas. Con solo la fecha, el empate lo rompía el
+  orden en que el cliente concatena las listas, así que **el pase salía
+  siempre después de todas las respuestas**. Es anterior al sprint (ya
+  pasaba entre "creado" y las notas), pero el pase lo volvió visible. Arreglo
+  sin tocar el formato de las fechas ni agregar columnas: la tabla de log
+  ya es una secuencia global — toda nota escribe su fila — así que
+  `db._orden_de_notas` devuelve, para cada nota, el id de su fila de log, y
+  el `.sort` del cliente desempata por ahí. Vale igual para el mirror de
+  empleadores. Con test de base (un pase entre dos respuestas del mismo
+  minuto) y de plantilla (que el `.sort` no vuelva a mirar solo la fecha).
+- **Un test propio indexaba usuarios por CUIL** en un dict, justo después de
+  otro test que crea dos usuarios con el mismo CUIL a propósito. Reindexado
+  por id.
+
+### Mutation testing: el agujero estaba en mis tests
+
+Se corrió mutación sobre las guardas de cada fase. En la Fase 3 encontró
+algo real: los tests de ruteo comparaban a Ana (Rosario) contra Beto
+(Córdoba), así que **el filtro de seccional solo ya los separaba** —
+quitar el filtro de área seguía pasando. Se agregó
+`test_dos_areas_de_la_MISMA_seccional_no_se_ven_entre_si`, que es el caso
+que de verdad prueba el eje del área.
+
+### Migraciones
+
+Seis, todas verificadas en Postgres real con datos y con el ciclo completo
+downgrade/upgrade: `c1a7d40be913` (áreas y permisos, portada, con el fix
+del `UPDATE` de `ve_todas` que la versión de agosto tenía mal en el
+downgrade), `d4f18a2c7b30` (áreas por seccional + admin local),
+`e7b2c9d41f85` (identidad del empleado), `f8a3d05e2c17` (ruteo por área),
+`a2e6f1b83d40` (pase entre áreas), `b5c8e30a91f6` (estado dentro del
+mensaje). Disciplina de siempre: nullable → backfill → NOT NULL.
+
+### `cargar_demo.py`: la estructura completa, y un bug viejo que salió a la luz
+
+La demo pasó a cargar seccionales, áreas con **perfiles distintos** (si
+todas heredan lo mismo, la pantalla de permisos parece decorativa), un
+Admin de Seccional en una delegación (uno de Sede Central sería
+indistinguible del Super Admin), usuarios de área, la marca de empleado de
+sindicato y formularios ruteados —con y sin pase, para que se vea el
+contraste en el chat. Los dos sindicatos quedaron deliberadamente
+distintos: la UOM federada (3 seccionales, 7 áreas, pase entre áreas) y la
+Gastronómica centralizada (1 seccional, 1 área, sin Admin de Seccional),
+porque sin el contraste no se ve que el rol es opt-in.
+
+Al correrlo contra el Postgres de desarrollo apareció un bug que estaba
+desde antes y que este sprint destapó: la limpieza de sindicatos previos
+**enumeraba las tablas a mano** y se quedaba corta cada vez que el esquema
+crecía. Se podía correr dos veces solo si nadie había *usado* la demo; con
+un trámite presentado, Postgres rechazaba el DELETE por FK y el script
+moría a mitad de camino, dejando la demo cargada a medias — justo lo que el
+resto del archivo se cuida de evitar. Ahora el orden **no se escribe, se
+deduce**: `SQLModel.metadata.sorted_tables` viene ordenado por dependencia,
+así que una pasada hacia adelante marca todo lo que cuelga del sindicato
+(cuando llega el turno de una tabla, sus padres ya están marcados) y la
+pasada inversa lo borra de hijo a padre. Una tabla nueva con su FK entra
+sola. Verificado corriendo el script tres veces seguidas contra Postgres.

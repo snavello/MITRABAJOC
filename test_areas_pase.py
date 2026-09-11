@@ -302,6 +302,52 @@ def test_el_chat_de_las_tres_apps_muestra_el_pase():
     print("OK  test_el_chat_de_las_tres_apps_muestra_el_pase")
 
 
+def test_el_chat_ordena_el_pase_y_la_respuesta_del_mismo_minuto():
+    """Contestar y derivar seguido es el caso normal, y las dos cosas caen en
+    el mismo minuto: las fechas del chat se guardan a esa granularidad. Con
+    solo la fecha, el empate lo rompía el orden en que el cliente concatena
+    notas y eventos, así que el pase salía SIEMPRE después de todas las
+    respuestas. `orden` (el id del log, que es la secuencia real de actos)
+    es lo que arregla el hilo."""
+    tipo = _crear_tipo("F_ORDEN", True, (A_TES,))
+    tr = _presentar(tipo)
+    c = _cli("20111111111")
+    c.post(f"/admin/tramite/{tr}/nota", data={"texto": "Primero contesto.",
+                                              "estado": "en_tratamiento"})
+    c.post(f"/admin/tramite/{tr}/pase", data={"area_destino_id": str(A_TES)})
+    _cli("20111111112").post(f"/admin/tramite/{tr}/nota",
+                             data={"texto": "Y después sigo yo.",
+                                   "estado": "respondido"})
+    d = db.tramite_detalle(tr)
+
+    hilo = sorted(
+        [("nota", n["texto"], n["creado"], n["orden"]) for n in d["notas"]]
+        + [("log", l["evento"], l["creado"], l["orden"]) for l in d["log"]
+           if l["evento"] in ("creado", "pase")],
+        key=lambda x: (x[2], x[3]))
+    assert [x[1] for x in hilo] == [
+        "creado", "Primero contesto.", "pase", "Y después sigo yo."], hilo
+    # Y el `orden` es lo único que los separa: las fechas empatan.
+    assert len({x[2] for x in hilo}) == 1, "el test no prueba nada si cambian de minuto"
+    # De paso: cada mensaje llevó SU estado (N9), no uno suelto en el hilo.
+    assert [n["estado_nuevo"] for n in d["notas"]] == ["en_tratamiento", "respondido"]
+    assert d["estado"] == "respondido"
+    print("OK  test_el_chat_ordena_el_pase_y_la_respuesta_del_mismo_minuto")
+
+
+def test_las_tres_plantillas_desempatan_por_orden():
+    """De plantilla, misma razón que el test del filtro de arriba: el hilo se
+    arma en el cliente. Si el `.sort` vuelve a mirar solo la fecha, el pase
+    se va otra vez al final del minuto y ningún test contra db lo ve."""
+    for archivo in ("templates/admin.html", "templates/trabajador.html",
+                    "templates/empresa.html"):
+        with open(archivo, encoding="utf-8") as f:
+            html = f.read()
+        assert "(a.orden || 0) - (b.orden || 0)" in html, \
+            f"{archivo} ordena el chat solo por fecha"
+    print("OK  test_las_tres_plantillas_desempatan_por_orden")
+
+
 def test_el_trabajador_ve_el_movimiento_sin_saber_quien_lo_movio():
     """Lo que le llega al afiliado por su propio endpoint. El área sí, la
     persona no -- protege al empleado de reclamos personales y mantiene la
@@ -341,5 +387,7 @@ if __name__ == "__main__":
     test_un_tramite_terminado_no_se_deriva()
     test_el_detalle_le_dice_a_cada_uno_que_puede_hacer()
     test_el_chat_de_las_tres_apps_muestra_el_pase()
+    test_el_chat_ordena_el_pase_y_la_respuesta_del_mismo_minuto()
+    test_las_tres_plantillas_desempatan_por_orden()
     test_el_trabajador_ve_el_movimiento_sin_saber_quien_lo_movio()
     print("\nTodos los tests del pase pasaron.")

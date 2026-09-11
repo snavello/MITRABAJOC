@@ -2955,18 +2955,38 @@ def recibos_sospechosos_listado() -> list:
 
 # ---------- Notificaciones (Fase 2 de Módulos + Notificaciones + Trámites) ----------
 
-def resolver_destinatarios(sindicato_id: int, criterio: str, valores: list) -> list:
+def resolver_destinatarios(sindicato_id: int, criterio: str, valores: list,
+                            usuario_id: Optional[int] = None) -> list:
     """CUILs de trabajadores ACTIVOS de este sindicato que matchean el
     criterio -- usado tanto por el preview (solo cuenta) como por el envío
     real (que además fija la lista, ver crear_notificacion). El sindicato
     solo puede targetear su propia gente: un valor que no matchea ningún
-    trabajador de ESTE sindicato_id simplemente no suma destinatarios."""
+    trabajador de ESTE sindicato_id simplemente no suma destinatarios.
+
+    Con `usuario_id` se recorta además por el ALCANCE DE SECCIONAL de quien
+    envía (decisión N10): Prensa de Sede Central le escribe a todo el país,
+    Prensa de Córdoba solo a Córdoba.
+
+    El recorte vive ACÁ y no en la ruta a propósito: esta es la MISMA
+    función que usan el preview y el envío real. Si el recorte estuviera en
+    la ruta, el preview podría contar de más y el admin vería un número
+    distinto del que sale -- y el error sería silencioso, porque nadie
+    compara los dos.
+
+    Se aplica a TODOS los criterios, no solo a "cuil": por provincia o
+    pidiendo otra seccional se llegaría igual a gente de afuera."""
     valores = [str(v).strip() for v in (valores or []) if str(v).strip()]
     if not valores:
         return []
+    alcance = alcance_seccional(usuario_id) if usuario_id else None
+    if alcance is not None and not alcance:
+        return []
     with Session(engine) as s:
-        trabajadores = s.exec(select(Trabajador).where(
-            Trabajador.sindicato_id == sindicato_id, Trabajador.activo == True)).all()
+        q = select(Trabajador).where(
+            Trabajador.sindicato_id == sindicato_id, Trabajador.activo == True)
+        if alcance is not None:
+            q = q.where(Trabajador.seccional_id.in_(list(alcance)))
+        trabajadores = s.exec(q).all()
     if criterio == "cuil":
         objetivo = set(valores)
         return sorted({t.cuil for t in trabajadores if t.cuil in objetivo})
@@ -2987,8 +3007,13 @@ def crear_notificacion(sindicato_id: int, usuario_id: Optional[int], remitente: 
                         adjunto_mime: str = "", adjunto_nombre: str = "",
                         origen: str = "manual", formulario_id: Optional[int] = None) -> dict:
     """Resuelve los destinatarios y los FIJA en el momento de enviar (snapshot,
-    ver Notificacion). Devuelve id y cantidad real, para la confirmación."""
-    cuils = resolver_destinatarios(sindicato_id, criterio, valores)
+    ver Notificacion). Devuelve id y cantidad real, para la confirmación.
+
+    `usuario_id` no es solo para registrar quién mandó: se le pasa a
+    resolver_destinatarios para que el ALCANCE recorte a quién le llega
+    (decisión N10). Es la misma función que usa el preview, así que el
+    número que el admin confirmó es el que sale."""
+    cuils = resolver_destinatarios(sindicato_id, criterio, valores, usuario_id=usuario_id)
     with Session(engine) as s:
         n = Notificacion(
             sindicato_id=sindicato_id, remitente=remitente or "", usuario_id=usuario_id,
@@ -3004,12 +3029,32 @@ def crear_notificacion(sindicato_id: int, usuario_id: Optional[int], remitente: 
         return {"id": n.id, "cantidad_destinatarios": len(cuils)}
 
 
-def notificaciones_del_sindicato(sindicato_id: int) -> list:
-    """Todas las notificaciones enviadas por este sindicato, con el resumen
-    leídos/total, más recientes primero -- para el listado de admin."""
+def notificaciones_del_sindicato(sindicato_id: int, usuario_id: Optional[int] = None) -> list:
+    """Notificaciones enviadas por este sindicato, con el resumen
+    leídos/total, más recientes primero -- para el listado de admin.
+
+    Con `usuario_id` se recorta a las que tienen AL MENOS UN destinatario
+    dentro de su alcance: cada uno ve el historial de aquellos a quienes
+    podría escribirle (decisión N10). Una notificación que salió a todo el
+    país la ve también el admin de Córdoba, porque incluye a su gente -- lo
+    que no ve son las que fueron solo a otras delegaciones.
+
+    Y la lista de destinatarios se recorta también, en
+    destinatarios_de_notificacion: sin eso, el resumen ocultaría lo ajeno
+    pero el detalle lo mostraría igual."""
+    alcance = alcance_seccional(usuario_id) if usuario_id else None
+    if alcance is not None and not alcance:
+        return []
     with Session(engine) as s:
         filas = s.exec(select(Notificacion).where(Notificacion.sindicato_id == sindicato_id)
                        .order_by(Notificacion.id.desc())).all()
+        if alcance is not None:
+            propios = {t.cuil for t in s.exec(select(Trabajador).where(
+                Trabajador.sindicato_id == sindicato_id,
+                Trabajador.seccional_id.in_(list(alcance)))).all()}
+            visibles = {d.notificacion_id for d in s.exec(
+                select(NotificacionDestinatario)).all() if d.cuil in propios}
+            filas = [n for n in filas if n.id in visibles]
         resultado = []
         for n in filas:
             dests = s.exec(select(NotificacionDestinatario).where(
@@ -3026,12 +3071,26 @@ def notificaciones_del_sindicato(sindicato_id: int) -> list:
         return resultado
 
 
-def notificacion_destinatarios(notificacion_id: int) -> list:
-    """Detalle fila por fila (CUIL + si leyó y cuándo) de una notificación."""
+def notificacion_destinatarios(notificacion_id: int, usuario_id: Optional[int] = None) -> list:
+    """Detalle fila por fila (CUIL + si leyó y cuándo) de una notificación.
+
+    Con `usuario_id` se recorta a los destinatarios de SU alcance
+    (decisión N10). Es la otra mitad del recorte del historial: sin esto,
+    el listado escondería las notificaciones ajenas pero el detalle de una
+    compartida entregaría igual los CUIL de todas las delegaciones."""
+    alcance = alcance_seccional(usuario_id) if usuario_id else None
+    if alcance is not None and not alcance:
+        return []
     with Session(engine) as s:
         dests = s.exec(select(NotificacionDestinatario).where(
             NotificacionDestinatario.notificacion_id == notificacion_id).order_by(
             NotificacionDestinatario.cuil)).all()
+        if alcance is not None:
+            n = s.get(Notificacion, notificacion_id)
+            propios = {t.cuil for t in s.exec(select(Trabajador).where(
+                Trabajador.sindicato_id == (n.sindicato_id if n else 0),
+                Trabajador.seccional_id.in_(list(alcance)))).all()}
+            dests = [d for d in dests if d.cuil in propios]
         nombres = {t.cuil: t.nombre for t in s.exec(select(Trabajador)).all()}
         return [{
             "cuil": d.cuil, "nombre": nombres.get(d.cuil, ""), "leida_en": d.leida_en,
@@ -3988,6 +4047,40 @@ def tramites_de_trabajador(cuil: str, sindicato_id: int) -> list:
         return [_tramite_resumen(s, tr, titulos_tipo, ultimas) for tr in tramites]
 
 
+def _orden_de_notas(notas: list, log: list) -> dict:
+    """{id de nota -> id de su fila en el log}: el reloj fino del chat.
+
+    El hilo mezcla notas y eventos, y los dos guardan la hora AL MINUTO.
+    Dentro del mismo minuto el empate lo rompía el orden en que el cliente
+    concatena las dos listas, así que un pase y la respuesta que lo motivó
+    salían al revés -- se ve enseguida cuando el sindicato contesta y deriva
+    seguido, que es el caso normal.
+
+    La tabla de log ya es una secuencia global (toda nota escribe su fila),
+    así que su id ordena las dos listas con precisión de acto, sin tocar el
+    formato de las fechas ni agregar una columna. La k-ésima fila
+    "nota_<autor>" es la k-ésima nota de ese autor: `_log_tramite` es el
+    único punto que escribe ahí y una nota no se guarda sin su fila.
+
+    Sirve igual para el mirror de empleadores (autor "empresa" en vez de
+    "trabajador"), por eso el autor sale del propio evento.
+    """
+    pendientes: dict = {}
+    for n in notas:
+        pendientes.setdefault(n.autor, []).append(n.id)
+    orden, vistas = {}, {}
+    for l in log:
+        if not (l.evento or "").startswith("nota_"):
+            continue
+        autor = l.evento[len("nota_"):]
+        i = vistas.get(autor, 0)
+        cola = pendientes.get(autor, [])
+        if i < len(cola):
+            orden[cola[i]] = l.id
+        vistas[autor] = i + 1
+    return orden
+
+
 def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:
     tipo = s.get(TipoTramite, tr.tipo_tramite_id)
     campos = s.exec(select(CampoTramite).where(CampoTramite.tipo_tramite_id == tr.tipo_tramite_id)
@@ -4004,6 +4097,8 @@ def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:
     formularios = {t.id: t for t in s.exec(select(TipoTramite).where(
         TipoTramite.id.in_(forms_ref), TipoTramite.sindicato_id == tr.sindicato_id)).all()} \
         if forms_ref else {}
+
+    orden_de_nota = _orden_de_notas(notas, log)
 
     # Trámites encadenados: el que ORIGINÓ este (el trabajador lo inició
     # desde el formulario adjunto en aquel chat) y los DERIVADOS que se
@@ -4033,6 +4128,7 @@ def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:
         } for r in respuestas],
         "notas": [{
             "id": n.id, "autor": n.autor, "texto": n.texto, "creado": n.creado,
+            "orden": orden_de_nota.get(n.id, 0),
             "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
             "formulario_id": n.formulario_id,
             # El estado que fijó ESE mensaje (N9): el chat lo pinta pegado a
@@ -4044,7 +4140,8 @@ def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:
             "formulario_activo": formularios[n.formulario_id].activo
                 if n.formulario_id in formularios else False,
         } for n in notas],
-        "log": [{"evento": l.evento, "detalle": l.detalle, "creado": l.creado} for l in log],
+        "log": [{"evento": l.evento, "detalle": l.detalle, "creado": l.creado,
+                  "orden": l.id} for l in log],
         "area_a_cargo_id": tr.area_a_cargo_id,
         "area_a_cargo": (s.get(Area, tr.area_a_cargo_id).nombre
                          if tr.area_a_cargo_id and s.get(Area, tr.area_a_cargo_id) else ""),
@@ -4353,6 +4450,7 @@ def _tramite_empleador_detalle_completo(s: Session, tr: "TramiteEmpleador") -> d
                    .order_by(NotaTramiteEmpleador.id)).all()
     log = s.exec(select(TramiteEmpleadorLog).where(TramiteEmpleadorLog.tramite_id == tr.id)
                  .order_by(TramiteEmpleadorLog.id)).all()
+    orden_de_nota = _orden_de_notas(notas, log)
     forms_ref = {n.formulario_id for n in notas if n.formulario_id}
     formularios = {t.id: t for t in s.exec(select(TipoTramiteEmpleador).where(
         TipoTramiteEmpleador.id.in_(forms_ref),
@@ -4384,6 +4482,7 @@ def _tramite_empleador_detalle_completo(s: Session, tr: "TramiteEmpleador") -> d
         } for r in respuestas],
         "notas": [{
             "id": n.id, "autor": n.autor, "texto": n.texto, "creado": n.creado,
+            "orden": orden_de_nota.get(n.id, 0),
             "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
             "formulario_id": n.formulario_id,
             "formulario_titulo": formularios[n.formulario_id].titulo
@@ -4391,7 +4490,8 @@ def _tramite_empleador_detalle_completo(s: Session, tr: "TramiteEmpleador") -> d
             "formulario_activo": formularios[n.formulario_id].activo
                 if n.formulario_id in formularios else False,
         } for n in notas],
-        "log": [{"evento": l.evento, "detalle": l.detalle, "creado": l.creado} for l in log],
+        "log": [{"evento": l.evento, "detalle": l.detalle, "creado": l.creado,
+                  "orden": l.id} for l in log],
     }
 
 

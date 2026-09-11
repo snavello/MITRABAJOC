@@ -126,13 +126,17 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 1. Admin de plataforma — /plataforma con CUIT + PLATAFORMA_PASSWORD. Da de alta
    sindicatos (con marca y logo) y sus admins. Login → `/plataforma/inicio`
    (portada de tarjetas) → `/plataforma` (panel de siempre).
-2. Admin de sindicato — /admin con CUIT + clave. Gestiona conceptos, fórmulas,
+2. Usuario de sindicato — /admin con CUIT + clave. Gestiona conceptos, fórmulas,
    trabajadores, empleadores y reportes SOLO de su sindicato (aislamiento
    total). Login → `/admin/inicio` (portada) → `/admin` (panel con 15
    entradas en una tira de pestañas deslizable: Panel Sindical, Reportes,
    Fórmulas, Conceptos, Trabajadores, Aprendizaje, Cotizantes, Noticias,
    Beneficios, Notificaciones, Trámites, Empleadores, Convenio, Seccionales
-   y Administradores; varias dependen de un módulo).
+   y Áreas y Usuarios; varias dependen de un módulo). Desde el sprint de
+   Áreas V2 no es un rol sino **tres** (ver "Áreas, permisos y ruteo"):
+   Super Admin (= Admin de Sede Central, el de siempre, ve las 15),
+   Admin de Seccional (lo mismo pero solo sobre SU seccional) y usuario de
+   área (solo las secciones que le dé su área, y solo sobre su alcance).
 3. Trabajador — /ingresar con CUIL + clave. Identidad única (un CUIL para toda la
    plataforma). Empadronamiento por sindicato: si el CUIL está en varios, elige;
    la app se pinta con la marca del elegido. Login/elección → `/app/inicio`
@@ -182,8 +186,15 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 
 ## Accesos de la demo
 - Plataforma: CUIT 20000000000 + PLATAFORMA_PASSWORD.
-- Admin UOM: CUIT 20111111110 / uom-demo.
-- Admin Gastronómica: CUIT 20222222220 / fega-demo.
+- Admin UOM: CUIT 20111111110 / uom-demo (Super Admin).
+- Admin Gastronómica: CUIT 20222222220 / fega-demo (Super Admin).
+- UOM, Admin de Seccional de Rosario: 20555555553 / rosario-demo.
+- UOM, un usuario por área (la lista completa la imprime `cargar_demo.py`
+  al terminar). Los dos que muestran el contraste de un vistazo:
+  27777777774 / prensa-demo (Prensa de Sede Central, alcanza a todo el
+  país) y 20888888887 / prensacba-demo (el mismo perfil, recortado a
+  Córdoba). El de Prensa central, además, NO está en el padrón a propósito:
+  trabaja en el gremio sin estar afiliado.
 - Trabajador un solo sindicato: CUIL 20111111119 (UOM).
 - Trabajador pluriempleo (ambos): CUIL 27222222224.
 - Empresa un solo sindicato: CUIT 30999888776 (UOM) — registrarse en `/ingresar-empresa`.
@@ -255,9 +266,10 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   (`/app/inicio`+`/app`, `/admin/inicio`+`/admin`, `/empresa/inicio`+`/empresa`)
   — cualquier rol nuevo que se agregue debería seguir el mismo patrón.
 
-## Estado actual (actualizado 2026-09-07)
+## Estado actual (actualizado 2026-09-11)
 Todo lo listado acá está mergeado a `main` y desplegado (Render sigue `main`,
-cada push redeploya).
+cada push redeploya) **salvo el punto 21**, que vive en la rama
+`areas-permisos-v2` y todavía no se mergeó ni se desplegó.
 
 **SPRINT_REFORMA.md (adaptación a la Reforma Laboral, Dto 407/2026) —
 COMPLETO**, los 5 puntos de los dos sprints originales: extractor bi-formato
@@ -309,6 +321,19 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     documentación técnica reconstruida desde el código por
     `docs/generador/`, catalogada ahí. Mismo día se puso al día README,
     docstrings de db/main/auth y este archivo.
+21. **Áreas, permisos granulares y ruteo de trámites (`SPRINT_AREAS_V2.md`)**
+    (2026-09-11, rama `areas-permisos-v2`, **sin desplegar**): el panel del
+    sindicato deja de ser todo-o-nada. Tres roles (Super Admin = Admin de
+    Sede Central, Admin de Seccional, usuario de área), el área colgando de
+    una seccional, catálogo de 18 secciones (`permisos.py`) separado de los
+    módulos contratados, gateo fail-closed de las 73 rutas `/admin/*`,
+    identidad del operador vinculada al padrón por CUIL (marca "empleado de
+    sindicato"), trámites ruteados al área que declara el formulario, pase
+    entre áreas por lista cerrada con todo el movimiento en el chat del
+    trabajador, y responder + cambiar estado como un solo acto. La premisa
+    se cumplió: los admins de hoy migran a Super Admin y no pierden nada.
+    Siete fases, seis migraciones verificadas en Postgres con datos, 149
+    tests nuevos en 10 archivos — ver la sección propia y HISTORIAL.md.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -318,12 +343,14 @@ el editor de lienzo libre de Trámites llega a justificarse, (e) las etapas
 2 a 4 de PLAN_ENTORNOS.md (organización de GitHub + CI, runbook y accesos,
 traspaso), que reemplazan al viejo pendiente de "staging en Render".
 
-**Próximo paso**: la Etapa 2 de `PLAN_ENTORNOS.md` (repo en una organización
-de GitHub, reglas de rama, CI que corra cada `test_*.py` por separado,
-devcontainer). En paralelo sigue vivo lo de [`BACKLOG.md`](BACKLOG.md):
-fases 2–4 de validaciones (sistema/lista/externa), el merge de
-`areas-permisos` (+5 líneas de PERMISOS_RUTAS para RAG) y el sprint "Admin
-de Seccional" (decisiones ya cerradas).
+**Próximo paso**: mergear `areas-permisos-v2` y desplegarla a pruebas
+(punto 21). Después, la Etapa 2 de `PLAN_ENTORNOS.md` (repo en una
+organización de GitHub, reglas de rama, CI que corra cada `test_*.py` por
+separado, devcontainer). En paralelo sigue vivo lo de
+[`BACKLOG.md`](BACKLOG.md): fases 2–4 de validaciones
+(sistema/lista/externa). El merge de `areas-permisos` y el sprint "Admin de
+Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
+126 commits atrás y se portó sobre `main` en vez de mergearse.
 
 ## Pendientes (features)
 1. Capacitación por-sindicato: hoy solo hay contenido FIJO de plataforma
@@ -567,18 +594,72 @@ Modelo `Beneficio` (db.py): rubro, descripción, link opcional, vigencia
 trabajador (`.carrusel-wrap`/`.carrusel-track` en marca.css) — detalle en
 HISTORIAL.md.
 
-## Seccionales del sindicato
-Modelo `Seccional` (db.py): sindicato_id, nombre, dirección. CRUD simple en
-`/admin` → Seccionales. `Trabajador.seccional_id` opcional. Noticias y
-Beneficios pueden dirigirse por seccional (`destino_seccionales`, lista
-vacía = todas) — detalle en HISTORIAL.md.
+## Áreas, permisos y ruteo de trámites (Áreas V2)
+Rama `areas-permisos-v2`, **sin desplegar todavía**. Plan completo en
+[`SPRINT_AREAS_V2.md`](SPRINT_AREAS_V2.md) (decisiones N1–N11); narrativa en
+HISTORIAL.md. Lo esencial:
 
-## Administradores del sindicato (self-service)
-`/admin` → pestaña "Administradores" (siempre visible) permite al propio
-sindicato listar/dar de alta/editar/activar-desactivar sus
-`UsuarioSindicato`, scopeado siempre a su `sindicato_id`. Cambiar la clave
-de un admin YA EXISTENTE sigue siendo solo vía plataforma. No se puede
-desactivar al último administrador activo — detalle en HISTORIAL.md.
+**Dos ejes que se cruzan.** El **área** dice QUÉ hace un usuario (qué
+secciones del panel toca, qué trámites le caen); la **seccional** dice
+SOBRE QUIÉNES (qué padrón, qué trámites, a quién puede notificar). Un
+usuario y su área tienen que ser de la MISMA seccional — lo fuerzan las
+rutas.
+
+**`modulos.py` vs `permisos.py`.** No son lo mismo y es la decisión central:
+`modulos.py` dice qué **contrató** el sindicato (lo decide plataforma);
+`permisos.py` dice qué puede **tocar** cada usuario dentro de eso (lo decide
+el Super Admin). Un módulo abre varias secciones — "recibos" abre seis — por
+eso el permiso se guarda por sección, no por módulo. El efectivo es
+`((área + agregados) - bloqueados) ∩ secciones_de_modulos`: el bloqueo le
+gana al área y también a un agregado individual.
+
+**Gateo fail-closed de las rutas.** `main.PERMISOS_RUTAS` mapea las 73 rutas
+`/admin/*` a su sección y se resuelve dentro de `exigir_sindicato()` por
+`request.scope["route"].path`. Una ruta que nadie clasificó **se rechaza**:
+el olvido se nota, no se filtra. Las únicas exentas están en
+`RUTAS_ADMIN_SIN_PERMISO` (login, salir, portada, panel, dashboard).
+
+**Alcance de seccional** (`db.alcance_seccional`): `None` = todas,
+`{id}` = esa sola, `set()` = ninguna (defensivo). Una sola regla para los
+tres roles, y se aplica **dentro de la consulta**, no filtrando después.
+
+**Ruteo de trámites.** El formulario declara a qué área cae: mapa explícito
+por seccional (`DestinoTipoTramite`) y, para las seccionales que nadie
+mapeó, un `area_destino_default_id` **obligatorio** — sin él una seccional
+nueva dejaría trámites sin dueño y en silencio.
+
+**Pase entre áreas.** Solo si el formulario lo declara (`permite_pase`) y
+solo hacia la lista **cerrada** de `PaseTipoTramite`: el circuito se diseña
+de antemano y es auditable. El área que derivó conserva LECTURA. Todo pase
+va al chat del trabajador nombrando **áreas, nunca personas**.
+
+**Responder y cambiar el estado son un solo acto.** No hay ruta separada de
+cambio de estado: `agregar_nota_tramite(..., estado_nuevo=...)` deja UN solo
+evento en el chat. Antes, un mismo acto aparecía dos veces.
+
+## Seccionales del sindicato
+Modelo `Seccional` (db.py): sindicato_id, nombre, dirección, `ve_todas`.
+CRUD simple en `/admin` → Seccionales (solo Super Admin).
+`Trabajador.seccional_id` opcional. Noticias y Beneficios pueden dirigirse
+por seccional (`destino_seccionales`, lista vacía = todas) — detalle en
+HISTORIAL.md.
+
+Desde Áreas V2 dejó de ser un dato descriptivo: la seccional **acota** lo
+que un usuario ve (sus trámites, a quién puede notificar, qué padrón toca).
+`ve_todas` es la excepción — nace tildada en "Sede Central" y sus usuarios
+alcanzan todas las seccionales del sindicato.
+
+## Áreas y Usuarios del sindicato (self-service)
+`/admin` → pestaña "Áreas y Usuarios" (antes "Administradores"), con dos
+sub-pestañas: **Áreas** (alta, perfil de permisos y activación) y
+**Usuarios** (alta/edición/activación de `UsuarioSindicato`, con su rol,
+seccional y área). Scopeada siempre al `sindicato_id`, y para un Admin de
+Seccional además a SU seccional. Solo la ven los dos roles de administrador
+— es la única sección que NO se puede asignar a un área
+(`permisos.SECCION_SUPER_ADMIN`, a propósito fuera de `SECCIONES`).
+Cambiar la clave de un usuario YA EXISTENTE sigue siendo solo vía
+plataforma. No se puede desactivar al último administrador activo —
+detalle en HISTORIAL.md.
 
 ## Alerta de posible adulteración en recibos
 `extractor.extraer()` evalúa señales de edición en totales/CUIL/CUIT/fechas

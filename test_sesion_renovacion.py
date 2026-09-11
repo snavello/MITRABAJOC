@@ -171,19 +171,45 @@ def test_llamada_fetch_con_sesion_vencida_sigue_devolviendo_json():
 
 
 def test_403_legitimo_con_sesion_valida_no_redirige():
-    # Sesión VÁLIDA pero acción no permitida por otro motivo (no por sesión
-    # vencida) -- sigue siendo JSON como siempre, aunque la navegación pida
-    # text/html: no es el caso que este fix tiene que tapar.
+    """Sesión VÁLIDA pero acción no permitida: el redirect de sesión vencida
+    no puede tragarse un 403 real.
+
+    El discriminador es si la petición es una NAVEGACIÓN DE PÁGINA o una
+    llamada de JS, no el status. Una llamada fetch tiene que seguir viendo
+    el JSON: quien la lee es código, no una persona.
+
+    (Antes este test usaba una navegación de página, y desde el sistema de
+    Áreas ese caso cambió a propósito -- ver el test de abajo. El sindicato
+    de la fixture no tiene módulos, así que su 403 viene del gateo por
+    permiso y ya no es distinguible de "le falta el permiso".)"""
+    client = TestClient(main.app)
+    client.post("/admin/login", data={"usuario": "20111111110", "clave": "clave-test"})
+    r = client.post("/admin/noticia", data={
+        "titulo": "Aviso", "bajada": "", "texto_completo": "",
+        "fecha_desde": "2026-01-01", "fecha_hasta": "2026-12-31",
+    }, headers={"accept": "application/json", "x-requested-with": "fetch"},
+       follow_redirects=False)
+    assert r.status_code == 403
+    assert r.json().get("detail")
+    print("OK  test_403_legitimo_con_sesion_valida_no_redirige")
+
+
+def test_falta_de_permiso_en_navegacion_vuelve_al_panel_con_aviso():
+    """Entrada 2 del BACKLOG, cerrada por la Fase 6 de SPRINT_AREAS_V2.md.
+
+    Un POST de página completa rechazado por falta de PERMISO devolvía el
+    JSON de FastAPI a pantalla completa. Con muchos más usuarios acotados,
+    la chance de que alguien llegue a un formulario que no le corresponde
+    subió bastante, y comerse el JSON crudo es la peor forma de enterarse."""
     client = TestClient(main.app)
     client.post("/admin/login", data={"usuario": "20111111110", "clave": "clave-test"})
     r = client.post("/admin/noticia", data={
         "titulo": "Aviso", "bajada": "", "texto_completo": "",
         "fecha_desde": "2026-01-01", "fecha_hasta": "2026-12-31",
     }, headers={"accept": "text/html,application/xhtml+xml"}, follow_redirects=False)
-    # Sindicato "Test Sesion" se creó sin módulos habilitados -> 403 real.
-    assert r.status_code == 403
-    assert r.json().get("detail")
-    print("OK  test_403_legitimo_con_sesion_valida_no_redirige")
+    assert r.status_code == 303
+    assert "err=sinpermiso" in r.headers.get("location", "")
+    print("OK  test_falta_de_permiso_en_navegacion_vuelve_al_panel_con_aviso")
 
 
 if __name__ == "__main__":
@@ -197,4 +223,5 @@ if __name__ == "__main__":
     test_form_post_con_sesion_vencida_redirige_a_login_plataforma()
     test_llamada_fetch_con_sesion_vencida_sigue_devolviendo_json()
     test_403_legitimo_con_sesion_valida_no_redirige()
+    test_falta_de_permiso_en_navegacion_vuelve_al_panel_con_aviso()
     print("\nTodo OK — sesión por inactividad.")

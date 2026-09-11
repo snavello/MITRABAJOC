@@ -177,14 +177,29 @@ async def sesion_vencida_o_denegada(request: Request, exc: HTTPException):
     logueada como trabajador pisó la cookie que esta pantalla necesitaba,
     ver COOKIES_POR_ROL -- + navegación de página, no una llamada
     fetch/JS) se redirige a la pantalla de login correspondiente en vez de
-    mostrar el JSON. Un 403 con sesión VÁLIDA del rol correcto (ej. módulo
-    no habilitado, CUIL ajeno) sigue devolviendo JSON como siempre -- no es
-    este caso."""
+    mostrar el JSON.
+
+    Y desde el sistema de Áreas, el mismo tratamiento para un 403 con sesión
+    VÁLIDA al que le falta el PERMISO (entrada 2 del BACKLOG): con muchos
+    más usuarios acotados, la chance de que alguien llegue a un formulario
+    que no le corresponde subió bastante, y comerse el JSON crudo en
+    pantalla completa es la peor forma de enterarse. Vuelve al panel con un
+    aviso legible.
+
+    El resto de los 403 con sesión válida (módulo no habilitado, CUIL ajeno,
+    llamadas fetch/JS) sigue devolviendo JSON como siempre: ahí el JSON es
+    la respuesta correcta, porque quien la lee es código."""
     if exc.status_code in (401, 403) and _es_navegacion_de_pagina(request):
         rol = _rol_de(request.url.path)
         destino = _panel_de(request.url.path)
         if destino and (not rol or not sesion_actual(request, rol)):
             return RedirectResponse(destino, status_code=303)
+        # Sesión válida pero sin PERMISO de sección: al panel con un aviso.
+        # Se distingue por el código y no por el status, porque un 403 puede
+        # venir de otras cosas (módulo no habilitado, CUIL ajeno) donde el
+        # JSON es la respuesta correcta -- hay un test que lo fija.
+        if destino and getattr(exc, "codigo", None) == "sinpermiso":
+            return RedirectResponse(f"{destino}?err=sinpermiso", status_code=303)
     return JSONResponse(status_code=exc.status_code,
                         content={"detail": exc.detail,
                                  "codigo": getattr(exc, "codigo", None)})
@@ -822,8 +837,17 @@ def _exigir_permiso_de_ruta(request: Request, ses: dict) -> None:
     if not seccion:
         # Ruta sin clasificar: se rechaza. Es la mitad que importa del
         # "falla cerrado" -- una ruta nueva nace cerrada, no abierta.
-        raise HTTPException(403, "Esta sección del panel no está habilitada.")
+        raise _sin_permiso("Esta sección del panel no está habilitada.")
     uid = ses.get("uid", 0)
+
+    def _sin_permiso(mensaje: str) -> HTTPException:
+        """403 marcado como "falta el permiso de sección", para que el
+        handler lo mande al panel con un aviso en vez de dejar el JSON crudo
+        en pantalla completa (entrada 2 del BACKLOG)."""
+        e = HTTPException(403, mensaje)
+        e.codigo = "sinpermiso"
+        return e
+
     if seccion == SECCION_SUPER_ADMIN:
         # Entran los DOS administradores: el general y el de seccional. Lo
         # que los distingue no es la puerta sino el ALCANCE de lo que
@@ -832,10 +856,10 @@ def _exigir_permiso_de_ruta(request: Request, ses: dict) -> None:
         # acá, el admin local no podría administrar nada de su delegación,
         # que es todo el sentido del rol.
         if not db.administra_areas_y_usuarios(uid):
-            raise HTTPException(403, "Solo un administrador del sindicato puede hacer esto.")
+            raise _sin_permiso("Solo un administrador del sindicato puede hacer esto.")
         return
     if not db.tiene_permiso(uid, seccion):
-        raise HTTPException(403, "No tenés permiso para esta sección del panel.")
+        raise _sin_permiso("No tenés permiso para esta sección del panel.")
 
 
 def exigir_sindicato(request: Request) -> int:
@@ -997,7 +1021,8 @@ def admin(request: Request):
         "debe_cambiar": ses.get("cambiar", False),
         "noticias": db.noticias_del_sindicato(sid) if puede("noticias") else [],
         "beneficios": db.beneficios_del_sindicato(sid) if puede("beneficios") else [],
-        "notificaciones": db.notificaciones_del_sindicato(sid) if puede("notificaciones") else [],
+        "notificaciones": db.notificaciones_del_sindicato(sid, usuario_id=uid)
+                          if puede("notificaciones") else [],
         "tipos_tramite": db.tipos_tramite_del_sindicato(sid)
                          if puede("tramites_formularios", "tramites_recibidos") else [],
         "tramites": db.tramites_del_sindicato(sid, usuario_id=uid)
@@ -1779,7 +1804,7 @@ async def abm_noticia(
     _exigir_modulo(sid, "noticias")
     formulario = _formulario_para_chat(sid, formulario_id, "trabajador")
     with db.get_session() as s:
-        destinos = _destinos_validos(s, destino_seccionales, sid)
+        destinos = _destinos_de_publicacion(request, s, destino_seccionales, sid)
         if id:
             n = s.get(Noticia, int(id))
             if n and n.sindicato_id == sid:
@@ -1839,7 +1864,7 @@ async def abm_beneficio(
     _exigir_modulo(sid, "beneficios")
     formulario = _formulario_para_chat(sid, formulario_id, "trabajador")
     with db.get_session() as s:
-        destinos = _destinos_validos(s, destino_seccionales, sid)
+        destinos = _destinos_de_publicacion(request, s, destino_seccionales, sid)
         if id:
             b = s.get(Beneficio, int(id))
             if b and b.sindicato_id == sid:
@@ -2035,7 +2060,11 @@ def notificacion_preview(request: Request, criterio: str = Form(...), valores: l
     admin lo usa para confirmar antes de mandar de verdad."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "notificaciones")
-    cuils = db.resolver_destinatarios(sid, criterio, valores)
+    # Con el usuario: el preview tiene que contar EXACTAMENTE lo que va a
+    # salir. Si contara de más, el admin confirmaría un número y saldría
+    # otro, y el error sería silencioso porque nadie los compara.
+    cuils = db.resolver_destinatarios(sid, criterio, valores,
+                                      usuario_id=_uid_sesion(request))
     return {"cantidad": len(cuils)}
 
 
@@ -2069,7 +2098,8 @@ def notificacion_ver_destinatarios(notificacion_id: int, request: Request):
         n = s.get(Notificacion, notificacion_id)
         if not n or n.sindicato_id != sid:
             raise HTTPException(403, "No autorizado")
-    return {"destinatarios": db.notificacion_destinatarios(notificacion_id)}
+    return {"destinatarios": db.notificacion_destinatarios(
+        notificacion_id, usuario_id=_uid_sesion(request))}
 
 
 @app.get("/notificacion-adjunto/{notificacion_id}")
@@ -3926,10 +3956,20 @@ def _es_oscuro(color_hex: str) -> bool:
     return luminancia < 140
 
 
-def _destinos_validos(s, destino_seccionales: list[str], sid: int) -> list[int]:
+def _destinos_validos(s, destino_seccionales: list[str], sid: int,
+                      alcance=None) -> list[int]:
     """Convierte los ids de seccional tildados en el form a int, descartando
     los que no sean de ESTE sindicato (ajenos o inventados) -- mismo criterio
-    defensivo que el seccional_id del alta de trabajador."""
+    defensivo que el seccional_id del alta de trabajador.
+
+    `alcance` (ver db.alcance_seccional) descarta además las que estén fuera
+    del alcance de quien publica: Prensa de Córdoba no le publica a todo el
+    país (decisión N10). None = sin recorte.
+
+    Una lista VACÍA significa "a todas las seccionales", así que para alguien
+    acotado hay que traducirla a su alcance explícito en vez de dejarla
+    vacía: si no, un admin local publicaría a todo el sindicato sin tildar
+    nada. Eso lo hace _destinos_de_publicacion."""
     ids_del_sindicato = {sec.id for sec in s.exec(
         select(Seccional).where(Seccional.sindicato_id == sid)).all()}
     resultado = []
@@ -3938,9 +3978,25 @@ def _destinos_validos(s, destino_seccionales: list[str], sid: int) -> list[int]:
             sec_id = int(valor)
         except (TypeError, ValueError):
             continue
-        if sec_id in ids_del_sindicato:
+        if sec_id in ids_del_sindicato and (alcance is None or sec_id in alcance):
             resultado.append(sec_id)
     return resultado
+
+
+def _destinos_de_publicacion(request: Request, s, destino_seccionales: list[str],
+                             sid: int) -> list[int]:
+    """Los destinos de una Noticia o un Beneficio, ya recortados al alcance
+    de quien publica.
+
+    El caso que hay que atajar es el de la lista VACÍA, que en este modelo
+    significa "a todas las seccionales": dejarla vacía para un admin local
+    sería darle exactamente lo que el alcance le niega. Se la reemplaza por
+    su alcance explícito."""
+    alcance = _alcance_de(request)
+    destinos = _destinos_validos(s, destino_seccionales, sid, alcance)
+    if not destinos and alcance is not None:
+        return sorted(alcance)
+    return destinos
 
 
 def _modulos_de(sid: int) -> set:
