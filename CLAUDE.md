@@ -401,6 +401,12 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    bot del convenio. Ficha rectora con contrato, decisiones, privacidad y
    medición: [`docs/ASISTENTE_PANEL.md`](docs/ASISTENTE_PANEL.md). Lo que
    sigue pendiente es la medición periódica del prompt (`probar_asistente.py`).
+7. **Módulo Encuestas** (anónimas y nominales al padrón): plan acordado
+   decisión por decisión el 2026-09-11, **antes de tocar código**, en
+   [`SPRINT_ENCUESTAS.md`](SPRINT_ENCUESTAS.md) — 24 decisiones, modelo de
+   datos, seis fases y los cuatro tests de privacidad. Todavía no empezado.
+   Lo central: el anonimato se sostiene por la FORMA de las tablas (padrón
+   y urna separados, sin vínculo posible), no por un cartel.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 
