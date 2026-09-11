@@ -404,7 +404,10 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
 7. **Módulo Encuestas** (anónimas y nominales al padrón): plan acordado
    decisión por decisión el 2026-09-11, **antes de tocar código**, en
    [`SPRINT_ENCUESTAS.md`](SPRINT_ENCUESTAS.md) — 24 decisiones, modelo de
-   datos, seis fases y los cuatro tests de privacidad. Todavía no empezado.
+   datos, seis fases y los cuatro tests de privacidad. **Fase 0 HECHA**
+   (modelo, migración, módulo `encuestas` opt-in y las dos secciones de
+   permiso): no hay ninguna ruta todavía y el módulo nace apagado para
+   todos, así que no se ve nada. Siguen las fases 1 a 6.
    Lo central: el anonimato se sostiene por la FORMA de las tablas (padrón
    y urna separados, sin vínculo posible), no por un cartel.
 

@@ -29,6 +29,11 @@ MODULOS = {
     # (_exigir_dashboard_detalle) y no por _exigir_modulo directo: cuando
     # existan los dos módulos, se cambia solo ese helper.
     "dashboard": "Panel Sindical",
+    # Encuestas (SPRINT_ENCUESTAS.md). Opt-in, fuera de MODULOS_INICIALES:
+    # ningún sindicato lo estrena sin pedirlo. Abre DOS secciones en
+    # permisos.py -- armar la encuesta y leer los resultados no es lo mismo,
+    # igual que en Trámites.
+    "encuestas": "Encuestas",
 }
 
 # Lo que existe HOY, para dar de alta un sindicato nuevo con todo tildado

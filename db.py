@@ -34,6 +34,7 @@ from dotenv import load_dotenv
 from typing import Any
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON, text
 
+import encuestas
 import fechas
 from pgvector.sqlalchemy import Vector
 
@@ -462,6 +463,9 @@ class Noticia(SQLModel, table=True):
     # acá" lo escribe el admin en el texto). Int SIN FK, mismo criterio que
     # NotaTramite.formulario_id: un tipo borrado/inactivo esconde el ícono.
     formulario_id: Optional[int] = None
+    # Encuesta asociada: la noticia que anuncia una encuesta lleva el botón
+    # para responderla. Int SIN FK, mismo criterio que formulario_id.
+    encuesta_id: Optional[int] = None
     # Destino: lista de Seccional.id a la(s) que se dirige. Lista vacía (el
     # default) = todas las seccionales, incluidos los trabajadores sin
     # seccional asignada.
@@ -532,6 +536,11 @@ class ConfiguracionPlataforma(SQLModel, table=True):
     # hasta que el bot (RAG) clasifique por tema. Con False, el endpoint de
     # consultas devuelve 404 y la UI no muestra nada de ese carril.
     dashboard_consultas_bot_habilitado: bool = False
+    # Encuestas (SPRINT_ENCUESTAS.md, N1): por debajo de esta cantidad de
+    # respuestas, un grupo no se muestra ni se exporta. Cada encuesta se
+    # lleva el valor vigente al publicarse, así cambiarlo no altera lo que
+    # una encuesta ya cerrada venía mostrando.
+    encuestas_umbral_minimo: int = 5
     # Marca de la plataforma "Mi Trabajo" (pantallas de login y panel de
     # plataforma, antes de entrar a un sindicato en particular). Mismo patrón
     # que Sindicato: logo en la base (Opción B), colores editables. Si no se
@@ -648,6 +657,10 @@ class Notificacion(SQLModel, table=True):
     enviado_en: str = ""           # fecha/hora de envío ("AAAA-MM-DD HH:MM")
     cantidad_destinatarios: int = 0  # snapshot: cuántos matchearon al enviar
     formulario_id: Optional[int] = None  # mismo criterio que Noticia.formulario_id
+    # Encuesta que la generó: el aviso de lanzamiento y cada recordatorio.
+    # Una encuesta puede tener varias (N15), y de acá sale el "leídas / no
+    # leídas" del dashboard. Int SIN FK, mismo criterio que formulario_id.
+    encuesta_id: Optional[int] = Field(default=None, index=True)
 
 
 class NotificacionDestinatario(SQLModel, table=True):
@@ -4662,3 +4675,181 @@ def actualizar_cambio_plan(cambio_id: int, ok: bool, detalle: str = "",
             c.detalle = detalle
         s.add(c); s.commit()
         return True
+
+
+# ==================== Encuestas (SPRINT_ENCUESTAS.md) ====================
+# El catálogo, los estados y el disclaimer viven en `encuestas.py`, que no
+# toca la base. Acá está solo el modelo.
+#
+# LA FORMA DE ESTAS TABLAS ES LA GARANTÍA DE ANONIMATO, no un cartel en la
+# pantalla. Son cuatro cosas que solo sirven juntas (decisión N2):
+#
+#   1. Las filas de EncuestaParticipante (el PADRÓN) se crean AL PUBLICAR,
+#      una por destinatario; responder solo prende un booleano. Su orden de
+#      id es el del padrón, no el de las respuestas.
+#   2. RespuestaEncuesta (la URNA) guarda el DÍA, nunca la hora: sin
+#      timestamp fino no hay forma de ordenar las respuestas en el tiempo
+#      para alinearlas con nada.
+#   3. El padrón NO guarda cuándo respondió cada uno. La curva de ritmo del
+#      dashboard sale del día que guarda la urna.
+#   4. La urna no tiene ninguna columna que apunte a una persona: ni cuil,
+#      ni id de participante, ni sesión.
+#
+# Sacá una sola de las cuatro y el orden de inserción alcanza para
+# reconstruir quién contestó qué. Hay tests que las verifican una por una
+# (test_encuestas.py); no se tocan sin leer SPRINT_ENCUESTAS.md.
+class Encuesta(SQLModel, table=True):
+    """Una encuesta del sindicato a un grupo de su padrón.
+
+    No es un trámite: no tiene número de expediente, no cae en ningún área,
+    no tiene estados de gestión ni chat. Se responde una vez y se cuenta.
+    El `estado` (borrador/programada/abierta/cerrada) NO se guarda: lo
+    deriva `encuestas.estado()` de `publicada` y las dos fechas.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    titulo: str
+    descripcion: str = ""
+    # "nominal" = la respuesta queda asociada al CUIL; "anonima" = no.
+    modo: str = "nominal"
+    # Qué atributos se guardan pegados a cada respuesta para poder filtrar
+    # (subconjunto de encuestas.CORTES). En una anónima los tilda el admin;
+    # en una nominal están todos. Lista vacía en una anónima = solo totales.
+    cortes: list = Field(default=[], sa_column=Column(JSON))
+    # Mínimo de respuestas para mostrar un grupo. Se copia de
+    # ConfiguracionPlataforma AL PUBLICAR: si plataforma lo cambia después,
+    # una encuesta ya cerrada no empieza a mostrar u ocultar cosas distintas.
+    umbral_minimo: int = encuestas.UMBRAL_MINIMO_DEFAULT
+    fecha_desde: str = ""   # AAAA-MM-DD, obligatorias las dos (como Noticia)
+    fecha_hasta: str = ""
+    publicada: bool = False
+    publicada_en: str = ""  # "AAAA-MM-DD HH:MM"
+    # Cierre anticipado (N7). Vacío = cierra sola por fecha_hasta. Una
+    # encuesta cerrada NO se puede reabrir: si hace falta más gente, se
+    # duplica y se lanza otra ronda, que queda como un hecho separado.
+    cerrada_en: str = ""
+    # Si al cerrarse el afiliado ve los totales generales (N12). Nunca los
+    # cortes: es por ahí por donde se identifica gente.
+    mostrar_resultados: bool = False
+    # A quién se dirigió, con los mismos criterios que Notificacion.
+    criterio: str = ""      # "cuil" | "cuit_empleador" | "seccional" | "provincia"
+    criterio_valores: list = Field(default=[], sa_column=Column(JSON))
+    # Snapshot: cuántos quedaron en el padrón al publicar. Es el
+    # denominador de la participación, y por eso no se recalcula.
+    cantidad_destinatarios: int = 0
+    usuario_id: Optional[int] = Field(default=None, foreign_key="usuariosindicato.id")
+    # Seccional de quien la creó, para que una seccional vea las suyas y las
+    # centrales recortadas a su gente (N18). NULL = la lanzó sede central.
+    seccional_id: Optional[int] = Field(default=None, foreign_key="seccional.id", index=True)
+    # De qué encuesta se duplicó (N23), para comparar tomas sucesivas de la
+    # misma encuesta en el tiempo. Int SIN FK, mismo criterio que
+    # Noticia.formulario_id: si la original se borra, la copia sigue viva.
+    origen_id: Optional[int] = Field(default=None, index=True)
+    creada: str = ""
+
+
+class PreguntaEncuesta(SQLModel, table=True):
+    """Una pregunta de una Encuesta. El orden decide cómo se renderiza.
+
+    Mismo vocabulario de tipos que CampoTramite (más escala y ranking, menos
+    archivo en las anónimas), pero sin validaciones: una encuesta no valida
+    nada contra el padrón ni frena a nadie, solo pregunta.
+
+    Con respuestas ya cargadas las preguntas se CONGELAN (N5): se puede
+    corregir la redacción -- queda registrado en EventoEncuesta -- pero no
+    agregar, borrar, reordenar ni cambiar el tipo o las opciones.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    encuesta_id: int = Field(foreign_key="encuesta.id", index=True)
+    orden: int = 0
+    etiqueta: str = ""      # obligatoria salvo para tipo_dato="separador"
+    tipo_dato: str          # ver encuestas.TIPOS_PREGUNTA
+    opciones: str = ""      # separadas por coma -- seleccion/opcion_unica/multiple/ranking
+    escala_min: Optional[int] = Field(default=None)   # solo tipo_dato="escala"
+    escala_max: Optional[int] = Field(default=None)
+    etiqueta_min: str = ""  # "Muy en desacuerdo"
+    etiqueta_max: str = ""  # "Muy de acuerdo"
+    ancho: str = "completo"  # completo | mitad | tercio
+    obligatorio: bool = True
+
+
+class RespuestaEncuesta(SQLModel, table=True):
+    """LA URNA: una respuesta, sin dueño.
+
+    Una fila por opción elegida (una sola en opción única o escala, varias
+    en múltiple y en ranking) o una por valor libre. Así los gráficos se
+    agregan en SQL con un GROUP BY y no leyendo JSON, mismo criterio que las
+    columnas analíticas de ReciboVerificado en el dashboard.
+
+    **No tiene ninguna columna que lleve a una persona**, y guarda el DÍA y
+    no la hora, a propósito (ver el bloque de arriba). Los ids consecutivos
+    sí permiten saber qué respuestas entraron juntas, es decir cuáles son de
+    una misma persona anónima -- eso es inevitable y no identifica a nadie
+    mientras el padrón no se pueda alinear con la urna, que es justamente lo
+    que garantizan los puntos 1 a 3.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    encuesta_id: int = Field(foreign_key="encuesta.id", index=True)
+    pregunta_id: int = Field(foreign_key="preguntaencuesta.id", index=True)
+    # Para las preguntas con opciones: el índice de la opción elegida en
+    # PreguntaEncuesta.opciones. Por índice y no por texto, para que corregir
+    # una errata de redacción (lo único editable) no huerfanice respuestas.
+    opcion_indice: Optional[int] = Field(default=None)
+    # Ranking: en qué lugar quedó esa opción (1 = primera prioridad).
+    posicion: Optional[int] = Field(default=None)
+    valor_texto: str = ""
+    valor_numero: Optional[float] = Field(default=None)   # número y escala
+    valor_fecha: str = ""
+    # El día en que se respondió, "AAAA-MM-DD". SIN hora: es lo que alimenta
+    # la curva de ritmo del dashboard sin dejar un rastro fino que se pueda
+    # cruzar con nada.
+    dia: str = Field(default="", index=True)
+    # Los cortes que la encuesta habilitó, copiados al responder. En una
+    # anónima, los que el admin tildó; en una nominal, todos. Se copian y no
+    # se resuelven después a propósito: si el afiliado cambia de seccional,
+    # su respuesta tiene que seguir contando donde estaba cuando respondió.
+    seccional_id: Optional[int] = Field(default=None, index=True)
+    provincia: str = ""
+    cuit_empleador: str = ""
+
+
+class EncuestaParticipante(SQLModel, table=True):
+    """EL PADRÓN: quién puede responder, y si ya lo hizo.
+
+    Las filas se crean AL PUBLICAR, una por destinatario (N10): la lista se
+    fija en ese momento y no se recalcula, así el "620 de 1.000" significa
+    algo. `respondio` se prende al recibir la respuesta; la fila es la misma
+    y conserva su id, que es lo que impide alinear este orden con el de la
+    urna.
+
+    NO guarda cuándo respondió cada uno, a propósito: una fecha acá, por
+    gruesa que fuera, volvería a abrir la puerta a cruzarla con la urna.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    encuesta_id: int = Field(foreign_key="encuesta.id", index=True)
+    cuil: str = Field(index=True)
+    respondio: bool = False
+
+
+class EventoEncuesta(SQLModel, table=True):
+    """El historial de una encuesta: todo lo que alguien hizo con ella.
+
+    Una sola tabla para los cinco: corrección de una errata (N5), prórroga y
+    cierre anticipado (N7), envío de un recordatorio (N14) y descarga de
+    resultados (N20). La descarga está acá y no en un log del servidor que
+    nadie mira: si alguna vez circula una planilla que no debía, hay a quién
+    preguntarle.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    encuesta_id: int = Field(foreign_key="encuesta.id", index=True)
+    usuario_id: Optional[int] = Field(default=None, foreign_key="usuariosindicato.id")
+    evento: str = ""    # edicion | prorroga | cierre | recordatorio | descarga
+    detalle: str = ""
+    fecha: str = ""     # "AAAA-MM-DD HH:MM"
+
+
+def umbral_encuestas() -> int:
+    """El mínimo de respuestas por grupo que fija plataforma."""
+    with Session(engine) as s:
+        c = s.get(ConfiguracionPlataforma, 1)
+        return int(c.encuestas_umbral_minimo) if c else encuestas.UMBRAL_MINIMO_DEFAULT

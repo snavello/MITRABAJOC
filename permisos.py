@@ -45,6 +45,13 @@ SECCIONES = {
     "noticias":                 ("Noticias",                 "noticias",       "Comunicación"),
     "beneficios":               ("Beneficios",               "beneficios",     "Comunicación"),
     "notificaciones":           ("Notificaciones",           "notificaciones", "Comunicación"),
+    # Encuestas se abre en dos por el mismo motivo que Trámites: armar la
+    # encuesta y publicarla a nombre del sindicato no es lo mismo que leer
+    # los resultados. En un gremio grande lo hacen personas distintas
+    # (Prensa lanza, la conducción lee). Exportar va dentro de "resultados":
+    # es la misma decisión de confianza que ver el tablero.
+    "encuestas":                ("Encuestas",                "encuestas",      "Comunicación"),
+    "encuestas_resultados":     ("Resultados de encuestas",  "encuestas",      "Comunicación"),
     # Trámites se abre en dos: responder no es lo mismo que diseñar el
     # formulario. Quien puede editar el formulario elige el área receptora,
     # así que podría autoasignarse trámites -- por eso "crear formularios"
