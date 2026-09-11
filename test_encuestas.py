@@ -30,6 +30,28 @@ db.crear_tablas()
 HOY = "2026-09-15"
 
 
+def _sindicato_de_prueba() -> int:
+    """Un sindicato de verdad, no un id inventado.
+
+    Las FK se respetan porque el motor real (Postgres) las hace cumplir: un
+    `sindicato_id=1` que no existe pasa desapercibido en SQLite y revienta
+    en producción. Los tests de esta suite arman sus datos igual que
+    test_noticias.py.
+    """
+    with db.get_session() as s:
+        existente = s.exec(db.select(db.Sindicato).where(
+            db.Sindicato.slug == "uom-encuestas")).first()
+        if existente:
+            return existente.id
+        sind = db.Sindicato(nombre="UOM Encuestas", slug="uom-encuestas",
+                            modulos_habilitados=list(modulos.MODULOS_INICIALES) + ["encuestas"])
+        s.add(sind); s.commit(); s.refresh(sind)
+        return sind.id
+
+
+SID = _sindicato_de_prueba()
+
+
 # ==================== Catálogo: estados ====================
 def test_estado_borrador_mientras_no_se_publica():
     assert encuestas.estado(False, "2026-09-01", "2026-09-30", HOY) == encuestas.BORRADOR
@@ -205,7 +227,7 @@ def test_el_padron_se_prende_sin_mover_la_fila():
     # al responder) es lo que hace que el orden de los id sea el del padrón
     # y no el de las respuestas.
     with db.get_session() as s:
-        enc = db.Encuesta(sindicato_id=1, titulo="Clima laboral",
+        enc = db.Encuesta(sindicato_id=SID, titulo="Clima laboral",
                           fecha_desde="2026-09-01", fecha_hasta="2026-09-30")
         s.add(enc); s.commit(); s.refresh(enc)
         for cuil in ("20111111119", "27222222224", "20333333330"):
@@ -213,7 +235,10 @@ def test_el_padron_se_prende_sin_mover_la_fila():
         s.commit()
 
         # El tercero responde primero: su fila NO cambia de lugar.
+        # Acotado a ESTA encuesta: el mismo CUIL puede estar en el padrón de
+        # varias, y una base que no se tira después de cada corrida lo tiene.
         tercero = s.exec(db.select(db.EncuestaParticipante).where(
+            db.EncuestaParticipante.encuesta_id == enc.id,
             db.EncuestaParticipante.cuil == "20333333330")).one()
         id_antes = tercero.id
         tercero.respondio = True
@@ -233,16 +258,30 @@ def test_la_encuesta_se_cuelga_de_noticias_y_notificaciones():
 
 
 def test_el_umbral_sale_de_plataforma_con_default_propio():
-    assert db.umbral_encuestas() == encuestas.UMBRAL_MINIMO_DEFAULT  # sin fila de config
+    # El test arma su propio estado en vez de suponer una base recién
+    # nacida: contra Postgres la fila de configuración puede existir de
+    # antes, y suponer que no existía es lo que hace que un test pase en un
+    # SQLite descartable y falle en el motor de verdad.
+    with db.get_session() as s:
+        fila = s.get(db.ConfiguracionPlataforma, 1)
+        if fila:
+            s.delete(fila); s.commit()
+    assert db.umbral_encuestas() == encuestas.UMBRAL_MINIMO_DEFAULT  # sin fila
+
     with db.get_session() as s:
         s.add(db.ConfiguracionPlataforma(id=1, encuestas_umbral_minimo=8))
         s.commit()
     assert db.umbral_encuestas() == 8
 
+    with db.get_session() as s:
+        fila = s.get(db.ConfiguracionPlataforma, 1)
+        fila.encuestas_umbral_minimo = encuestas.UMBRAL_MINIMO_DEFAULT
+        s.add(fila); s.commit()
+
 
 def test_una_encuesta_nace_en_borrador_y_nominal():
     with db.get_session() as s:
-        enc = db.Encuesta(sindicato_id=1, titulo="Paritaria 2026",
+        enc = db.Encuesta(sindicato_id=SID, titulo="Paritaria 2026",
                           fecha_desde="2026-10-01", fecha_hasta="2026-10-15")
         s.add(enc); s.commit(); s.refresh(enc)
         assert enc.modo == encuestas.NOMINAL       # el modo seguro es el default
