@@ -3476,6 +3476,20 @@ def tramite_empleador_por_numero_expediente(numero_expediente: str) -> Optional[
 
 
 # ==================== Planes de Render: programación y bitácora ====================
+def _ahora_ba() -> str:
+    """La hora de Buenos Aires, en texto.
+
+    El servidor corre en UTC, así que datetime.now() da tres horas de más.
+    En estas dos tablas eso no es un detalle: la hora programada de una
+    regla SIEMPRE es hora de Buenos Aires (es lo que el usuario escribe en
+    la pantalla), y verla al lado de una bitácora en UTC hace parecer que
+    el cambio se aplicó tres horas tarde. Pasó en la prueba de punta a punta
+    del 2026-09-11: la regla decía 22:02 y la bitácora 01:02."""
+    from zoneinfo import ZoneInfo
+    return datetime.now(ZoneInfo("America/Argentina/Buenos_Aires")).strftime(
+        "%Y-%m-%d %H:%M:%S")
+
+
 class PlanProgramado(SQLModel, table=True):
     """Una regla semanal: "los días D, a las HH:MM de Buenos Aires, poné el
     servicio X en el plan P".
@@ -3501,7 +3515,7 @@ class PlanProgramado(SQLModel, table=True):
     ajustar_workers: bool = True          # un worker por núcleo al aplicar
     nota: str = ""
     ultimo_disparo: str = ""              # "AAAA-MM-DD HH:MM" (BA) ya aplicado
-    creado_en: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    creado_en: str = Field(default_factory=_ahora_ba)   # hora de Buenos Aires
 
 
 class CambioPlan(SQLModel, table=True):
@@ -3509,7 +3523,7 @@ class CambioPlan(SQLModel, table=True):
     única forma de saber por qué cambió el gasto sería el historial de
     Render, que para las bases de datos ni siquiera existe."""
     id: Optional[int] = Field(default=None, primary_key=True)
-    cuando: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    cuando: str = Field(default_factory=_ahora_ba)      # hora de Buenos Aires
     origen: str = "manual"                # "manual" | "programado"
     programado_id: Optional[int] = None
     destino: str = "web"

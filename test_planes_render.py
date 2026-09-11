@@ -337,6 +337,19 @@ def test_el_tick_aplica_y_anota_en_la_bitacora(monkeypatch):
     db.borrar_plan_programado(rid)
 
 
+def test_la_bitacora_y_las_reglas_hablan_la_misma_hora():
+    """El servidor corre en UTC y las reglas se escriben en hora de Buenos
+    Aires. Si la bitácora guardara UTC, una regla de las 22:02 figuraría
+    aplicada a las 01:02 y parecería tres horas tarde -- justo lo que se vio
+    en la prueba de punta a punta del 2026-09-11."""
+    from datetime import datetime as dt
+    db.registrar_cambio_plan("web", "0.5c-512mb", "4c-8g", "prueba de hora")
+    cuando = dt.strptime(db.cambios_de_plan(1)[0]["cuando"], "%Y-%m-%d %H:%M:%S")
+    ahora_ba = planificador.ahora_ba().replace(tzinfo=None)
+    assert abs((ahora_ba - cuando).total_seconds()) < 120, (
+        f"la bitácora dice {cuando} y en Buenos Aires son las {ahora_ba}")
+
+
 def test_el_planificador_no_arranca_sin_credenciales_de_render(monkeypatch):
     monkeypatch.delenv("PLANIFICADOR", raising=False)
     monkeypatch.setattr(render_admin, "configurado", lambda: False)
