@@ -809,10 +809,17 @@ def armar_conclusion(exp_num: int, fases: list, base: list, previos: dict = None
     if exp_num == 8:
         t6 = (previos or {}).get(6, [])
         t7 = (previos or {}).get(7, [])
-        comp = []
-        for esc in (200, 400, 800):
+        iguales, distintos = [], []
+        for esc in (50, 100, 200):
             a, b = _fila(t7, "lecturas", esc), _fila(fases, "lecturas", esc)
-            comp.append(f"{esc}: {fmt_ms(a['p95'])} contra {fmt_ms(b['p95'])}")
+            iguales.append(f"{esc}: {fmt_ms(a['p95'])} contra {fmt_ms(b['p95'])}")
+        for esc in (400, 800):
+            a6 = _fila(t6, "lecturas", esc)
+            a7 = _fila(t7, "lecturas", esc)
+            b = _fila(fases, "lecturas", esc)
+            distintos.append(f"{esc}: {fmt_ms(a6['p95'])} en el test 6 y "
+                             f"{fmt_ms(a7['p95'])} en el test 7, contra "
+                             f"{fmt_ms(b['p95'])} acá")
         f800 = _fila(fases, "lecturas", 800)
         c8 = _fase(fases, "lecturas")["carga"]
         c6 = _fase(t6, "lecturas")["carga"]
@@ -824,16 +831,19 @@ def armar_conclusion(exp_num: int, fases: list, base: list, previos: dict = None
             f"incluido el de {f800['escalon']} concurrentes: {fmt_ms(f800['p95'])} de p95 con "
             f"{fmt_pct(f800['errores_pct'])} de errores. Ninguna de las siete corridas "
             f"anteriores había pasado de 400. "
-            f"Contra el test 7 (la misma máquina pero una sola instancia), escalón por "
-            f"escalón: {'; '.join(comp)}. "
-            f"Repartir en dos instancias no hace que la app responda más rápido en los "
-            f"escalones que el test 7 ya atendía bien —los tiempos son prácticamente los "
-            f"mismos—: lo que cambia es hasta dónde llega. "
-            f"El web terminó al {fmt_pct(c8['web']['cpu_pct'])} de sus "
-            f"{fmt_vcpu(c8['web']['cpu_nominal'])} vCPU sumadas, contra el "
-            f"{fmt_pct(c7['web']['cpu_pct'])} del test 7 con la mitad de núcleos y el "
-            f"{fmt_pct(c6['web']['cpu_pct'])} del test 6, que tenía los mismos ocho "
-            f"núcleos en una sola instancia. "
+            f"Hasta 200 concurrentes no cambia nada: {'; '.join(iguales)} contra el test 7. "
+            f"De 400 en adelante la diferencia es de otro orden: {'; '.join(distintos)}. "
+            f"Lo importante es contra QUÉ se compara ese salto. El test 6 tenía los mismos "
+            f"ocho núcleos y los mismos ocho workers que este, solo que en una única "
+            f"instancia, y a 400 concurrentes no llegaba: "
+            f"{fmt_ms(_fila(t6, 'lecturas', 400)['p95'])}, con el web al "
+            f"{fmt_pct(c6['web']['cpu_pct'])} de su CPU. No era falta de máquina —le sobraba "
+            f"casi el 40%— sino que no lograba usarla. Repartida en dos instancias, la misma "
+            f"cantidad de CPU se usa: el web llegó al {fmt_pct(c8['web']['cpu_pct'])} de sus "
+            f"{fmt_vcpu(c8['web']['cpu_nominal'])} vCPU sumadas (el test 7, con la mitad de "
+            f"núcleos en una sola instancia, ya estaba al {fmt_pct(c7['web']['cpu_pct'])}). "
+            f"Por qué una sola instancia no aprovecha sus ocho núcleos es una pregunta "
+            f"abierta: la medición lo muestra, pero no lo explica. "
             f"La memoria no fue nunca el límite: {c8['web']['ram_txt']}. "
             f"Las ráfagas de recibos siguen dominadas por la espera de la IA y no por la "
             f"infraestructura: {fmt_ms(r20['p95'])} con {r20['escalon']} simultáneas y "

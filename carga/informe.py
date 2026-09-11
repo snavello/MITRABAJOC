@@ -230,36 +230,46 @@ def hallazgos(exps):
             "plan de Postgres."),
     })
     # 7. Dos instancias: la única corrida con el web repartido.
-    if t8 and t7:
+    t6 = por_num.get(6)
+    if t8 and t7 and t6:
         f8 = _fase(t8, "lecturas")
-        f7 = _fase(t7, "lecturas")
         cumple8 = [x["escalon"] for x in f8["filas"] if x["cumple"]]
-        cumple7 = [x["escalon"] for x in f7["filas"] if x["cumple"]]
+        cumple7 = [x["escalon"] for x in _fase(t7, "lecturas")["filas"] if x["cumple"]]
+        cumple6 = [x["escalon"] for x in _fase(t6, "lecturas")["filas"] if x["cumple"]]
         e8 = _fila(t8, "lecturas", max(cumple8)) if cumple8 else None
         w8 = f8["carga"]["web"]
-        w7 = f7["carga"]["web"]
+        w6 = _fase(t6, "lecturas")["carga"]["web"]
         out.append({
-            "titulo": "Repartir el web en dos instancias corre el techo sin cambiar los tiempos",
-            "tests": [7, 8],
+            "titulo": "Ocho núcleos en dos instancias rinden mucho más que los mismos ocho en una",
+            "tests": [6, 8],
             "texto": (
-                f"El test 8 corrió el mismo plan del test 7 ({t8['config']['plan_web']}) pero en "
-                f"dos instancias en vez de una, con {t8['config']['workers_uvicorn']} workers en "
-                f"cada una. En los escalones que el test 7 ya atendía bien los tiempos son "
-                f"prácticamente iguales —a 200 concurrentes "
-                f"{_fmt_ms(_fila(t7, 'lecturas', 200)['p95'])} contra "
-                f"{_fmt_ms(_fila(t8, 'lecturas', 200)['p95'])}, a 400 "
-                f"{_fmt_ms(_fila(t7, 'lecturas', 400)['p95'])} contra "
-                f"{_fmt_ms(_fila(t8, 'lecturas', 400)['p95'])}—, así que repartir no acelera "
-                f"nada de lo que ya andaba. Lo que cambia es hasta dónde llega: el test 7 "
-                f"cumplía el objetivo hasta {max(cumple7)} concurrentes y el 8 lo cumple hasta "
-                f"{e8['escalon']}, con {_fmt_ms(e8['p95'])} y {_fmt_pct(e8['errores_pct'])} de "
-                f"error. La CPU del web —la suma de las dos instancias— llegó al "
-                f"{_fmt_pct(w8['cpu_pct'])} de sus {w8['cpu_nominal']} vCPU, contra el "
-                f"{_fmt_pct(w7['cpu_pct'])} de las {w7['cpu_nominal']} del test 7. "
-                f"La memoria nunca fue el límite: {w8['ram_txt']}. "
-                f"El porcentaje de CPU es un promedio de las dos instancias y no prueba que el "
-                f"balanceo reparta parejo; lo que sí prueba es que el servicio entero tiene "
-                f"margen donde antes no lo tenía."),
+                f"Los tests 6 y 8 corrieron con la misma CPU total y la misma cantidad de "
+                f"workers —ocho de cada cosa—; la única diferencia es que el 6 los tenía en "
+                f"una sola instancia y el 8 en dos de "
+                f"{t8['config']['plan_web']} con {t8['config']['workers_uvicorn']} workers "
+                f"cada una. Hasta 200 concurrentes dan lo mismo "
+                f"({_fmt_ms(_fila(t6, 'lecturas', 200)['p95'])} contra "
+                f"{_fmt_ms(_fila(t8, 'lecturas', 200)['p95'])}). A 400 se separan: "
+                f"{_fmt_ms(_fila(t6, 'lecturas', 400)['p95'])} contra "
+                f"{_fmt_ms(_fila(t8, 'lecturas', 400)['p95'])}. A 800, "
+                f"{_fmt_ms(_fila(t6, 'lecturas', 800)['p95'])} contra "
+                f"{_fmt_ms(_fila(t8, 'lecturas', 800)['p95'])}. El test 6 cumplía el objetivo "
+                f"hasta {max(cumple6)} concurrentes, el 7 hasta {max(cumple7)} y el 8 hasta "
+                f"{e8['escalon']}, con {_fmt_ms(e8['p95'])} y "
+                f"{_fmt_pct(e8['errores_pct'])} de error.\n\n"
+                f"El dato que ordena la lectura es la CPU. Cuando el test 6 fallaba a 400, el "
+                f"web estaba al {_fmt_pct(w6['cpu_pct'])} de sus {w6['cpu_nominal']} vCPU: le "
+                f"sobraba máquina y no la usaba. El test 8, con esa misma CPU repartida, "
+                f"llegó al {_fmt_pct(w8['cpu_pct'])}. O sea que el problema del test 6 no era "
+                f"quedarse corto de hardware sino no poder aprovechar el que tenía. Por qué "
+                f"pasa eso dentro de una instancia grande es una pregunta abierta: la "
+                f"medición lo muestra pero no lo explica, y conviene no inventar la causa. "
+                f"Para decidir alcanza con el hecho: a igual gasto, repartido rinde más.\n\n"
+                f"Dos salvedades. El porcentaje de CPU del test 8 es la suma de las dos "
+                f"instancias, así que no prueba que el balanceo reparta parejo entre ellas. Y "
+                f"el escalón de 800 del test 6 estaba marcado como cota inferior porque ahí el "
+                f"techo podía ponerlo el generador de carga; el de 400, en cambio, no tiene "
+                f"esa salvedad, y ya alcanza para ver la diferencia."),
         })
 
     return out
@@ -292,7 +302,33 @@ def recomendaciones(exps):
                       f"juntas: el test 2 probó que los workers solos empeoran."),
         },
         _reco_ia(t4, t5, r4_20),
-    ]
+    ] + _reco_instancias(por_num)
+
+
+def _reco_instancias(por_num):
+    """Recomendación de repartir el web en varias instancias: aparece recién
+    cuando hay una corrida que la mide contra la alternativa de concentrar."""
+    t6, t8 = por_num.get(6), por_num.get(8)
+    if not (t6 and t8):
+        return []
+    w6 = _fase(t6, "lecturas")["carga"]["web"]
+    w8 = _fase(t8, "lecturas")["carga"]["web"]
+    c8 = [x["escalon"] for x in _fase(t8, "lecturas")["filas"] if x["cumple"]]
+    c6 = [x["escalon"] for x in _fase(t6, "lecturas")["filas"] if x["cumple"]]
+    return [{
+        "titulo": "Repartir el servicio web en varias instancias en vez de agrandar una sola",
+        "estado": "confirmado", "costo": "ninguno · es la misma CPU contratada",
+        "texto": (f"Medido en el test 8 contra el 6, que corrió con la misma CPU total y la "
+                  f"misma cantidad de workers pero concentrados en una instancia. Concentrado "
+                  f"cumplía el objetivo hasta {max(c6)} concurrentes; repartido en dos "
+                  f"instancias, hasta {max(c8)}. A 400 concurrentes la diferencia es "
+                  f"{_fmt_ms(_fila(t6, 'lecturas', 400)['p95'])} contra "
+                  f"{_fmt_ms(_fila(t8, 'lecturas', 400)['p95'])}. No cuesta nada: es el mismo "
+                  f"gasto acomodado distinto. Y no era falta de máquina —el test 6 fallaba con "
+                  f"el web al {_fmt_pct(w6['cpu_pct'])} de su CPU, mientras el 8 llegó al "
+                  f"{_fmt_pct(w8['cpu_pct'])}—, lo que además suma la ventaja conocida de que "
+                  f"una caída se lleva la mitad del servicio y no todo."),
+    }]
 
 
 def _reco_ia(t4, t5, r4_20):
@@ -410,9 +446,18 @@ def produccion(exps):
         f8 = _fase(t8, "lecturas")
         cumple = [x["escalon"] for x in f8["filas"] if x["cumple"]]
         if cumple:
-            medido = (f" Y a esta altura ya no es solo un argumento de diseño: el test 8 es "
-                      f"el único que corrió con el web repartido en dos instancias, y es el "
-                      f"único que cumple el objetivo hasta {max(cumple)} concurrentes.")
+            t6 = por_num.get(6)
+            extra = ""
+            if t6:
+                w6 = _fase(t6, "lecturas")["carga"]["web"]
+                c6 = [x["escalon"] for x in _fase(t6, "lecturas")["filas"] if x["cumple"]]
+                extra = (f" El test 6 tenía esa misma CPU en una sola instancia y solo llegaba "
+                         f"a {max(c6)}, fallando con el web al {_fmt_pct(w6['cpu_pct'])} de su "
+                         f"capacidad: el problema no era el tamaño de la máquina sino no poder "
+                         f"usarla entera.")
+            medido = (f" Y a esta altura ya no es solo un argumento de diseño: el test 8 es el "
+                      f"único que corrió con el web repartido en dos instancias, y es el único "
+                      f"que cumple el objetivo hasta {max(cumple)} concurrentes." + extra)
     return {
         "instancias": (
             "Para el servicio web conviene repartir en varias instancias antes que "
