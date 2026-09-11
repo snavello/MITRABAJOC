@@ -736,7 +736,6 @@ PERMISOS_RUTAS = {
     "/admin/tramite-tipo/probar":           "tramites_formularios",
     "/admin/tramite-tipo/borrar":           "tramites_formularios",
     "/admin/tramite/{tramite_id}":          "tramites_recibidos",
-    "/admin/tramite/{tramite_id}/estado":   "tramites_recibidos",
     "/admin/tramite/{tramite_id}/nota":     "tramites_recibidos",
     # Derivar es parte de atender el trámite, no de diseñar el formulario:
     # va con "recibidos". Quién puede hacerlo de verdad lo decide además
@@ -2524,25 +2523,6 @@ def admin_tramites_nuevos_cantidad(request: Request):
     return {"cantidad": db.contar_tramites_nuevos(sid, _uid_sesion(request))}
 
 
-@app.post("/admin/tramite/{tramite_id}/estado")
-def admin_cambiar_estado_tramite(tramite_id: int, request: Request, estado: str = Form(...)):
-    sid = exigir_sindicato(request)
-    _exigir_modulo(sid, "tramites")
-    detalle = db.tramite_detalle(tramite_id)
-    if not detalle or detalle["sindicato_id"] != sid:
-        raise HTTPException(404, "Trámite no encontrado")
-    _exigir_alcance_tramite(request, tramite_id, sid)
-    _exigir_responder_tramite(request, tramite_id, sid)
-    if detalle["estado"] == "terminado":
-        raise HTTPException(400, "Este trámite está terminado y no se puede modificar.")
-    if not db.cambiar_estado_tramite(tramite_id, sid, estado):
-        raise HTTPException(400, "Estado inválido")
-    nuevo_label = db.ESTADOS_TRAMITE_LABEL.get(estado, estado)
-    _notificar_cambio_tramite(sid, detalle["cuil"], detalle["numero_expediente"],
-        f'Tu sindicato actualizó el estado: {nuevo_label}.')
-    return {"ok": True}
-
-
 def _formulario_para_chat(sid: int, formulario_id: str, familia: str):
     """Sanea el formulario que el admin adjunta en un mensaje del chat: tiene
     que ser un tipo ACTIVO de SU sindicato (de la familia correcta), si no se
@@ -2584,7 +2564,13 @@ def admin_pasar_tramite(tramite_id: int, request: Request,
 @app.post("/admin/tramite/{tramite_id}/nota")
 async def admin_nota_tramite(tramite_id: int, request: Request, texto: str = Form(""),
                               adjunto: UploadFile = File(None),
-                              formulario_id: str = Form("")):
+                              formulario_id: str = Form(""), estado: str = Form("")):
+    """Responder y cambiar el estado son UN SOLO ACTO (decisión N9).
+
+    La ruta /admin/tramite/{id}/estado dejó de existir: no hay forma de
+    mover el estado sin decirle algo al trabajador. Antes eran dos rutas y
+    cada una escribía su línea en el chat, así que una sola respuesta del
+    sindicato aparecía dos veces del lado del afiliado."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "tramites")
     detalle = db.tramite_detalle(tramite_id)
@@ -2603,9 +2589,17 @@ async def admin_nota_tramite(tramite_id: int, request: Request, texto: str = For
     if not texto.strip() and not adjunto_datos and not formulario:
         raise HTTPException(400, "La nota necesita texto, un adjunto o un formulario.")
     db.agregar_nota_tramite(tramite_id, "admin", texto, adjunto_datos, adjunto_mime,
-                            adjunto_nombre, formulario_id=formulario)
-    aviso = ('Tu sindicato te mandó un formulario para iniciar.' if formulario
-             else 'Tu sindicato te escribió en el chat.')
+                            adjunto_nombre, formulario_id=formulario,
+                            estado_nuevo=estado)
+    # El aviso también es UNO: si el estado se movió, se lo cuenta en el
+    # mismo mensaje en vez de mandarle dos notificaciones por un solo acto.
+    if formulario:
+        aviso = 'Tu sindicato te mandó un formulario para iniciar.'
+    elif estado and estado != detalle["estado"]:
+        etiqueta = db.ESTADOS_TRAMITE_LABEL.get(estado, estado)
+        aviso = f'Tu sindicato te respondió. Estado: {etiqueta}.'
+    else:
+        aviso = 'Tu sindicato te escribió en el chat.'
     _notificar_cambio_tramite(sid, detalle["cuil"], detalle["numero_expediente"], aviso)
     return {"ok": True}
 

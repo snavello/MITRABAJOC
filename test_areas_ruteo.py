@@ -299,7 +299,8 @@ def test_abrir_por_url_un_tramite_de_otra_area_da_403():
     assert r.status_code == 403, r.status_code
     r = c.post(f"/admin/tramite/{del_cordobes.id}/nota", data={"texto": "me colé"})
     assert r.status_code == 403
-    r = c.post(f"/admin/tramite/{del_cordobes.id}/estado", data={"estado": "terminado"})
+    r = c.post(f"/admin/tramite/{del_cordobes.id}/nota",
+               data={"texto": "me colé", "estado": "terminado"})
     assert r.status_code == 403
     # Y el suyo sí lo abre, para que el 403 no venga de otra cosa.
     with Session(db.engine) as s:

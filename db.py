@@ -858,6 +858,15 @@ class NotaTramite(SQLModel, table=True):
     tramite_id: int = Field(foreign_key="tramite.id", index=True)
     autor: str  # "admin" | "trabajador"
     texto: str = ""
+    # El estado que fijó ESTE mensaje (decisión N9). Vacío = el mensaje no
+    # movió el estado, que es siempre el caso del trabajador.
+    #
+    # Vive ACÁ y no en una tabla aparte a propósito: responder y cambiar el
+    # estado son UN SOLO ACTO, y guardarlos separados es lo que hacía que el
+    # chat mostrara dos movimientos por una sola cosa. Con el estado dentro
+    # del mensaje no hay forma de que se desincronicen -- no existe un
+    # cambio de estado sin su mensaje ni un mensaje cuyo estado se perdió.
+    estado_nuevo: str = ""
     adjunto_datos: Optional[bytes] = Field(default=None)
     adjunto_mime: str = ""
     adjunto_nombre: str = ""
@@ -3563,9 +3572,18 @@ ESTADOS_TRAMITE_LABEL = {
 
 
 def cambiar_estado_tramite(tramite_id: int, sindicato_id: int, nuevo_estado: str) -> bool:
-    """False si el estado no es válido, el trámite no es de ese sindicato, o
-    el trámite YA está terminado -- un trámite terminado queda bloqueado,
-    no se puede reabrir ni cambiar de estado (ver también agregar_nota_tramite)."""
+    """SIN USO desde la decisión N9 -- se deja porque cargar_demo y los
+    scripts de datos la usan para armar trámites en un estado dado sin
+    inventar un mensaje. Desde el panel NO se llega acá: responder y cambiar
+    el estado son un solo acto y pasan por agregar_nota_tramite.
+
+    Si mañana alguien la llama desde una ruta nueva, el estado volvería a
+    moverse sin mensaje y el chat volvería a mentir. Esto no es un guard --
+    es un cartel.
+
+    False si el estado no es válido, el trámite no es de ese sindicato, o el
+    trámite YA está terminado -- un trámite terminado queda bloqueado, no se
+    puede reabrir ni cambiar de estado (ver también agregar_nota_tramite)."""
     if nuevo_estado not in ESTADOS_TRAMITE:
         return False
     with Session(engine) as s:
@@ -3587,28 +3605,55 @@ def cambiar_estado_tramite(tramite_id: int, sindicato_id: int, nuevo_estado: str
 
 def agregar_nota_tramite(tramite_id: int, autor: str, texto: str,
                           adjunto_datos: Optional[bytes] = None, adjunto_mime: str = "",
-                          adjunto_nombre: str = "", formulario_id: Optional[int] = None) -> bool:
+                          adjunto_nombre: str = "", formulario_id: Optional[int] = None,
+                          estado_nuevo: str = "") -> bool:
     """`autor` es "admin" o "trabajador" -- la verificación de que quien
     escribe tiene permiso sobre ESTE trámite la hace el caller (main.py),
     igual que la de que `formulario_id` (solo admin) sea un tipo activo del
     sindicato. Un trámite terminado queda bloqueado para notas nuevas de
-    cualquier lado."""
+    cualquier lado.
+
+    `estado_nuevo` (solo del admin) mueve el estado EN LA MISMA OPERACIÓN y
+    en la misma transacción que el mensaje: es la decisión N9. Antes eran
+    dos rutas y cada una escribía su línea en el chat, así que un solo acto
+    del admin aparecía DOS VECES del lado del trabajador. Ahora el estado
+    viaja dentro del mensaje y el log lleva un evento por acto real.
+
+    Un estado inválido se ignora y la nota se manda igual: escribir es lo
+    que el admin quiso hacer, y perderle el mensaje por un valor mal formado
+    sería peor que no mover el estado."""
     with Session(engine) as s:
         tr = s.get(Tramite, tramite_id)
         if not tr or tr.estado == "terminado":
             return False
+        ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
+        cambia = bool(estado_nuevo) and estado_nuevo in ESTADOS_TRAMITE \
+            and estado_nuevo != tr.estado and autor == "admin"
         s.add(NotaTramite(
             tramite_id=tramite_id, autor=autor, texto=texto or "",
             adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime or "",
-            adjunto_nombre=adjunto_nombre or "", creado=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            adjunto_nombre=adjunto_nombre or "", creado=ahora,
             formulario_id=formulario_id,
+            estado_nuevo=estado_nuevo if cambia else "",
         ))
-        tr.actualizado = datetime.now().strftime("%Y-%m-%d %H:%M")
+        anterior = tr.estado
+        if cambia:
+            tr.estado = estado_nuevo
+            if estado_nuevo == "terminado":
+                tr.resuelto_en = ahora
+        tr.actualizado = ahora
         # nota del sindicato = novedad para el trabajador; una nota propia
         # sella el visto (ya está mirando el chat)
         tr.visto_trabajador_en = None if autor == "admin" else tr.actualizado
         s.add(tr)
-        _log_tramite(s, tramite_id, f"nota_{autor}", texto[:120] if texto else "(sin texto, con adjunto)")
+        # UN evento por acto, con el cambio de estado en el mismo renglón:
+        # es lo que hace que el chat deje de mostrar dos movimientos por una
+        # sola respuesta.
+        detalle = texto[:120] if texto else "(sin texto, con adjunto)"
+        if cambia:
+            detalle += (f" · Estado: {ESTADOS_TRAMITE_LABEL.get(anterior, anterior)}"
+                        f" → {ESTADOS_TRAMITE_LABEL.get(estado_nuevo, estado_nuevo)}")
+        _log_tramite(s, tramite_id, f"nota_{autor}", detalle)
         s.commit()
         return True
 
@@ -3990,6 +4035,10 @@ def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:
             "id": n.id, "autor": n.autor, "texto": n.texto, "creado": n.creado,
             "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
             "formulario_id": n.formulario_id,
+            # El estado que fijó ESE mensaje (N9): el chat lo pinta pegado a
+            # la burbuja en vez de como un movimiento aparte.
+            "estado_nuevo": n.estado_nuevo,
+            "estado_nuevo_label": ESTADOS_TRAMITE_LABEL.get(n.estado_nuevo, ""),
             "formulario_titulo": formularios[n.formulario_id].titulo
                 if n.formulario_id in formularios else None,
             "formulario_activo": formularios[n.formulario_id].activo

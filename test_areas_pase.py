@@ -183,7 +183,8 @@ def test_la_que_derivo_no_puede_escribir_aunque_mande_el_post_a_mano():
     assert lea.post(f"/admin/tramite/{tr}/pase",
                     data={"area_destino_id": str(A_TES)}).status_code == 200
     assert lea.post(f"/admin/tramite/{tr}/nota", data={"texto": "igual contesto"}).status_code == 403
-    assert lea.post(f"/admin/tramite/{tr}/estado", data={"estado": "terminado"}).status_code == 403
+    assert lea.post(f"/admin/tramite/{tr}/nota",
+                    data={"texto": "termino", "estado": "terminado"}).status_code == 403
     # Pero SÍ puede abrirlo.
     assert lea.get(f"/admin/tramite/{tr}").status_code == 200
     print("OK  test_la_que_derivo_no_puede_escribir_aunque_mande_el_post_a_mano")
@@ -262,8 +263,10 @@ def test_el_pase_queda_en_el_chat_nombrando_areas_y_no_personas():
 def test_un_tramite_terminado_no_se_deriva():
     tipo = _crear_tipo("F_FIN", True, (A_TES,))
     tr = _presentar(tipo)
-    assert _cli("20111111111").post(f"/admin/tramite/{tr}/estado",
-                                    data={"estado": "terminado"}).status_code == 200
+    # El estado ya no se mueve solo: viaja con el mensaje (decisión N9).
+    assert _cli("20111111111").post(
+        f"/admin/tramite/{tr}/nota",
+        data={"texto": "listo", "estado": "terminado"}).status_code == 200
     r = _cli("20111111111").post(f"/admin/tramite/{tr}/pase",
                                  data={"area_destino_id": str(A_TES)})
     assert r.status_code == 400

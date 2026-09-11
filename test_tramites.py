@@ -180,11 +180,21 @@ def test_cambio_estado_dispara_log_y_notificacion():
     with Session(db.engine) as s:
         antes = len(s.exec(select(Notificacion).where(Notificacion.sindicato_id == SID_UOM)).all())
     assert db.contar_tramites_con_novedades("20111111119", SID_UOM) == 0
-    r = admin_uom.post(f"/admin/tramite/{TRAMITE_ID}/estado", data={"estado": "en_tratamiento"})
+    r = admin_uom.post(f"/admin/tramite/{TRAMITE_ID}/nota",
+                       data={"texto": "lo estamos viendo", "estado": "en_tratamiento"})
     assert r.status_code == 200
     detalle = db.tramite_detalle(TRAMITE_ID)
     assert detalle["estado"] == "en_tratamiento"
-    assert any(l["evento"] == "cambio_estado" for l in detalle["log"])
+    # Desde la decisión N9 el cambio de estado NO tiene evento propio: viaja
+    # en el mismo renglón del mensaje que lo hizo. Antes eran dos eventos, y
+    # el chat del trabajador mostraba dos movimientos por un solo acto.
+    assert not any(l["evento"] == "cambio_estado" for l in detalle["log"]), \
+        "el estado ya no se mueve solo"
+    evento = [l for l in detalle["log"] if l["evento"] == "nota_admin"][-1]
+    assert "lo estamos viendo" in evento["detalle"]
+    assert "En tratamiento" in evento["detalle"], evento["detalle"]
+    # Y la nota guarda el estado que fijó, para pintarlo pegado a la burbuja.
+    assert detalle["notas"][-1]["estado_nuevo"] == "en_tratamiento"
     with Session(db.engine) as s:
         cantidad = len(s.exec(select(Notificacion).where(Notificacion.sindicato_id == SID_UOM)).all())
     assert cantidad == antes  # sin Notificacion nueva
@@ -258,11 +268,13 @@ def test_terminado_bloquea_cambios():
     }, files={f"archivo_{_campo_id('Comprobante')}": ("c.pdf", b"%PDF", "application/pdf")})
     assert r.status_code == 200
     tid = r.json()["id"]
-    r_term = admin_uom.post(f"/admin/tramite/{tid}/estado", data={"estado": "terminado"})
+    r_term = admin_uom.post(f"/admin/tramite/{tid}/nota",
+                            data={"texto": "resuelto", "estado": "terminado"})
     assert r_term.status_code == 200
     assert db.tramite_detalle(tid)["estado"] == "terminado"
 
-    r_reabrir = admin_uom.post(f"/admin/tramite/{tid}/estado", data={"estado": "en_tratamiento"})
+    r_reabrir = admin_uom.post(f"/admin/tramite/{tid}/nota",
+                               data={"texto": "lo reabro", "estado": "en_tratamiento"})
     assert r_reabrir.status_code == 400
     assert db.tramite_detalle(tid)["estado"] == "terminado"
 
@@ -270,7 +282,12 @@ def test_terminado_bloquea_cambios():
     assert r_nota_admin.status_code == 400
     r_nota_trab = trab.post(f"/api/tramite/{tid}/nota", data={"texto": "no debería poder"})
     assert r_nota_trab.status_code == 400
-    assert db.tramite_detalle(tid)["notas"] == []
+    # Queda SOLO el mensaje con el que se terminó: desde N9 terminar un
+    # trámite es responder, así que su nota es parte del cierre y no una
+    # nota "de más". Lo que se prueba es que no entró ninguna DESPUÉS.
+    notas = db.tramite_detalle(tid)["notas"]
+    assert [n["texto"] for n in notas] == ["resuelto"], notas
+    assert notas[0]["estado_nuevo"] == "terminado"
     print("OK  test_terminado_bloquea_cambios")
 
 
@@ -356,7 +373,8 @@ def test_aislamiento_entre_sindicatos():
     try:
         r = admin_fega.get(f"/admin/tramite/{TRAMITE_ID}")
         assert r.status_code == 404
-        r2 = admin_fega.post(f"/admin/tramite/{TRAMITE_ID}/estado", data={"estado": "terminado"})
+        r2 = admin_fega.post(f"/admin/tramite/{TRAMITE_ID}/nota",
+                             data={"texto": "ajeno", "estado": "terminado"})
         assert r2.status_code == 404
     finally:
         with Session(db.engine) as s:
