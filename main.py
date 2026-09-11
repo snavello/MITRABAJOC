@@ -946,7 +946,7 @@ def admin(request: Request):
     # Notificaciones: hace falta para cualquiera de esas.
     seccionales = db.seccionales_del_sindicato(sid) \
         if puede("seccionales", "trabajadores", "noticias", "beneficios",
-                 "notificaciones") or administra else []
+                 "notificaciones", "tramites_formularios") or administra else []
     seccional_por_id = {sec["id"]: sec["nombre"] for sec in seccionales}
     modulos = _modulos_de(sid)
     # Áreas y Usuarios: la pantalla es de los dos administradores, así que
@@ -955,12 +955,20 @@ def admin(request: Request):
     # no en la plantilla: si el recorte viviera en el HTML, las áreas y los
     # CUIT de las otras delegaciones viajarían igual en la página.
     alcance = db.alcance_seccional(uid) if administra else set()
-    areas = db.areas_del_sindicato(sid, alcance) if administra else []
+    # Las áreas las necesita además el constructor de Trámites, para elegir
+    # el destino: quien arma formularios tiene que poder ver a qué áreas
+    # rutear, aunque no administre usuarios. Su alcance sale igual de
+    # alcance_seccional, así que un admin local no ve áreas de otras.
+    arma_formularios = puede("tramites_formularios")
+    alcance_areas = alcance if administra else (
+        db.alcance_seccional(uid) if arma_formularios else set())
+    areas = db.areas_del_sindicato(sid, alcance_areas) \
+        if (administra or arma_formularios) else []
     usuarios_sindicato = db.usuarios_del_sindicato(sid, alcance) if administra else []
     # Las seccionales sobre las que puede crear áreas y asignar gente.
     seccionales_alcance = [x for x in seccionales
-                           if alcance is None or x["id"] in (alcance or set())] \
-        if administra else []
+                           if alcance_areas is None or x["id"] in (alcance_areas or set())] \
+        if (administra or arma_formularios) else []
     # El catálogo que se le ofrece al armar un perfil: solo las secciones que
     # los módulos contratados habilitan, agrupadas para la pantalla. Se
     # recorta además a lo que el que asigna tiene -- nadie da lo que no
@@ -989,8 +997,9 @@ def admin(request: Request):
         "notificaciones": db.notificaciones_del_sindicato(sid) if puede("notificaciones") else [],
         "tipos_tramite": db.tipos_tramite_del_sindicato(sid)
                          if puede("tramites_formularios", "tramites_recibidos") else [],
-        "tramites": db.tramites_del_sindicato(sid) if puede("tramites_recibidos") else [],
-        "tramites_nuevos": db.contar_tramites_nuevos(sid)
+        "tramites": db.tramites_del_sindicato(sid, usuario_id=uid)
+                    if puede("tramites_recibidos") else [],
+        "tramites_nuevos": db.contar_tramites_nuevos(sid, uid)
                            if "tramites" in modulos and puede("tramites_recibidos") else 0,
         "estados_tramite": db.ESTADOS_TRAMITE, "estados_tramite_label": db.ESTADOS_TRAMITE_LABEL,
         "seccionales": seccionales, "seccional_por_id": seccional_por_id,
@@ -1060,7 +1069,7 @@ def admin_inicio(request: Request):
     # acceso que al tocarlo rebota con 403 es peor que no mostrarlo.
     permisos = db.permisos_efectivos(ses.get("uid", 0))
     es_super_admin = db.es_super_admin(ses.get("uid", 0))
-    tramites_nuevos = db.contar_tramites_nuevos(sid) \
+    tramites_nuevos = db.contar_tramites_nuevos(sid, ses.get("uid", 0)) \
         if "tramites" in modulos and "tramites_recibidos" in permisos else 0
     tramites_empresa_nuevos = db.contar_tramites_empleador_nuevos(sid) \
         if "empleadores" in modulos and "emp_tramites_recibidos" in permisos else 0
@@ -1416,6 +1425,16 @@ def admin_usuario_reactivar(request: Request, id: int = Form(...)):
 
 
 # ---------- Áreas del sindicato (Super Admin) ----------
+
+def _exigir_alcance_tramite(request: Request, tramite_id: int, sid: int) -> None:
+    """403 si el trámite es de otra área o de otra seccional.
+
+    Filtrar el listado no alcanza: acá el id llega por la URL (el detalle) o
+    por el form (la nota, el estado) y se puede escribir a mano. Esconder
+    una fila de una tabla nunca fue un control de acceso."""
+    if not db.puede_ver_tramite(tramite_id, _uid_sesion(request), sid):
+        raise HTTPException(403, "Este trámite es de otra área.")
+
 
 def _alcance_de(request: Request):
     """El alcance de seccionales de quien está en la sesión (ver
@@ -2348,7 +2367,12 @@ async def abm_tramite_tipo(
     id: str = Form(""), titulo: str = Form(...), codigo: str = Form(...),
     activo: str = Form("si"), campos_json: str = Form(...),
     reglas_json: str = Form("[]"),
+    area_destino_default_id: str = Form(""), seccional_id: str = Form(""),
+    destinos_json: str = Form("{}"),
 ):
+    """El formulario declara su RUTEO además de sus campos (decisiones N6 y
+    N7): a qué área cae por defecto, el mapa seccional -> área, y si es
+    global o de una seccional."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "tramites")
     import json
@@ -2357,16 +2381,46 @@ async def abm_tramite_tipo(
         assert isinstance(campos_crudos, list)
         reglas_crudas = json.loads(reglas_json or "[]")
         assert isinstance(reglas_crudas, list)
+        destinos_crudos = json.loads(destinos_json or "{}")
+        assert isinstance(destinos_crudos, dict)
     except Exception:
         return RedirectResponse("/admin?error=campos#tramites", status_code=303)
     campos = _campos_tramite_validos(campos_crudos)
     if not campos:
         return RedirectResponse("/admin?error=campos#tramites", status_code=303)
     reglas = validaciones_tramite.reglas_saneadas(reglas_crudas, campos)
+    with db.get_session() as s:
+        destino_default = _id_propio(s, Area, area_destino_default_id, sid)
+        del_seccional = _id_propio(s, Seccional, seccional_id, sid)
+    # El destino por defecto es OBLIGATORIO: sin él, una seccional que nadie
+    # mapeó dejaría trámites sin dueño y nadie los vería en ninguna bandeja.
+    if not destino_default:
+        return RedirectResponse("/admin?error=sindestino#tramites", status_code=303)
+    # Un admin local solo arma formularios DE su seccional, y su destino y
+    # su mapa tienen que caer dentro de su alcance.
+    if del_seccional:
+        _exigir_alcance_seccional(request, del_seccional)
+    mapa = {}
+    for k, v in destinos_crudos.items():
+        try:
+            mapa[int(k)] = int(v)
+        except (TypeError, ValueError):
+            continue    # "sin área": esa seccional cae al default
     if id:
-        db.editar_tipo_tramite(int(id), sid, titulo, codigo, activo == "si", campos, reglas)
+        tipo = db.tipo_tramite_por_id(int(id))
+        if not tipo or tipo["sindicato_id"] != sid:
+            return RedirectResponse("/admin#tramites", status_code=303)
+        # La seccional de un formulario no se edita (ver editar_tipo_tramite).
+        if tipo.get("seccional_id"):
+            _exigir_alcance_seccional(request, tipo["seccional_id"])
+        db.editar_tipo_tramite(int(id), sid, titulo, codigo, activo == "si", campos, reglas,
+                               area_destino_default_id=destino_default)
+        db.set_destinos_tipo_tramite(int(id), mapa, sid)
     else:
-        db.crear_tipo_tramite(sid, titulo, codigo, campos, reglas)
+        nuevo_id = db.crear_tipo_tramite(sid, titulo, codigo, campos, reglas,
+                                         area_destino_default_id=destino_default,
+                                         seccional_id=del_seccional)
+        db.set_destinos_tipo_tramite(nuevo_id, mapa, sid)
     return RedirectResponse("/admin#tramites", status_code=303)
 
 
@@ -2417,6 +2471,7 @@ def admin_ver_tramite(tramite_id: int, request: Request):
     detalle = db.tramite_detalle(tramite_id)
     if not detalle or detalle["sindicato_id"] != sid:
         raise HTTPException(404, "Trámite no encontrado")
+    _exigir_alcance_tramite(request, tramite_id, sid)
     return detalle
 
 
@@ -2428,7 +2483,9 @@ def admin_tramites_nuevos_cantidad(request: Request):
     mínimo (un número), pensado para pedirse cada 30s sin peso real."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "tramites")
-    return {"cantidad": db.contar_tramites_nuevos(sid)}
+    # Con el usuario: el globo en vivo tiene que contar lo MISMO que la
+    # bandeja, o mostraría un número que al abrir la pestaña no baja.
+    return {"cantidad": db.contar_tramites_nuevos(sid, _uid_sesion(request))}
 
 
 @app.post("/admin/tramite/{tramite_id}/estado")
@@ -2438,6 +2495,7 @@ def admin_cambiar_estado_tramite(tramite_id: int, request: Request, estado: str 
     detalle = db.tramite_detalle(tramite_id)
     if not detalle or detalle["sindicato_id"] != sid:
         raise HTTPException(404, "Trámite no encontrado")
+    _exigir_alcance_tramite(request, tramite_id, sid)
     if detalle["estado"] == "terminado":
         raise HTTPException(400, "Este trámite está terminado y no se puede modificar.")
     if not db.cambiar_estado_tramite(tramite_id, sid, estado):
@@ -2474,6 +2532,7 @@ async def admin_nota_tramite(tramite_id: int, request: Request, texto: str = For
     detalle = db.tramite_detalle(tramite_id)
     if not detalle or detalle["sindicato_id"] != sid:
         raise HTTPException(404, "Trámite no encontrado")
+    _exigir_alcance_tramite(request, tramite_id, sid)
     if detalle["estado"] == "terminado":
         raise HTTPException(400, "Este trámite está terminado y no se puede modificar.")
     adjunto_datos, adjunto_mime, adjunto_nombre = None, "", ""
@@ -2543,7 +2602,13 @@ def api_tipos_tramite(request: Request):
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_trabajador(request)
-    return {"tipos": db.tipos_tramite_del_sindicato(sid, solo_activos=True) if sid else []}
+    if not sid:
+        return {"tipos": []}
+    # Los formularios GLOBALES más los de SU seccional (decisión N7). El
+    # recorte va en la consulta: si se hiciera en el cliente, los
+    # formularios de otras delegaciones viajarían igual en el JSON.
+    return {"tipos": db.tipos_tramite_del_sindicato(
+        sid, solo_activos=True, seccional_id=db.seccional_de_trabajador(cuil, sid))}
 
 
 @app.get("/api/tramites/mios")
@@ -2767,6 +2832,11 @@ async def api_enviar_tramite(request: Request):
         raise HTTPException(400, "Tipo de trámite inválido")
     tipo = db.tipo_tramite_por_id(tipo_tramite_id)
     if not tipo or tipo["sindicato_id"] != sid or not tipo["activo"]:
+        raise HTTPException(404, "Tipo de trámite inválido")
+    # Un formulario DE OTRA SECCIONAL no se puede usar aunque se mande el id
+    # a mano: que la lista no lo ofrezca no es un control, es una comodidad.
+    if tipo.get("seccional_id") and \
+            tipo["seccional_id"] != db.seccional_de_trabajador(cuil, sid):
         raise HTTPException(404, "Tipo de trámite inválido")
 
     errores = []

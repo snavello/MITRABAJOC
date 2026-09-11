@@ -704,6 +704,32 @@ class TipoTramite(SQLModel, table=True):
     # editar el tipo REEMPLAZA los campos (ids nuevos en cada edición). Se
     # sanean en validaciones_tramite.reglas_saneadas antes de llegar acá.
     reglas_consistencia: list = Field(default=[], sa_column=Column(JSON))
+    # NULL = formulario GLOBAL, lo ve todo el sindicato. Con seccional, solo
+    # lo ven los trabajadores de esa seccional y solo su admin local lo
+    # edita (decisión N7 de SPRINT_AREAS_V2.md).
+    seccional_id: Optional[int] = Field(default=None, foreign_key="seccional.id", index=True)
+    # A qué ÁREA cae el trámite cuando la seccional del trabajador no está
+    # mapeada en DestinoTipoTramite. Es OBLIGATORIO: sin él, una seccional
+    # nueva dejaría trámites sin dueño, y el error sería silencioso -- nadie
+    # los vería en ninguna bandeja (decisión N6, "destino por defecto").
+    area_destino_default_id: Optional[int] = Field(
+        default=None, foreign_key="area.id", index=True)
+
+
+class DestinoTipoTramite(SQLModel, table=True):
+    """El mapa "esta seccional -> esta área" de un formulario.
+
+    Es la decisión N6: el destino se declara seccional por seccional en vez
+    de derivarse de una jerarquía de áreas. Gana precisión (cada delegación
+    decide quién atiende qué) a costa de mantener el mapa; el destino por
+    defecto de TipoTramite es lo que evita que ese mantenimiento se vuelva
+    obligatorio -- una seccional que nadie mapeó funciona igual.
+
+    Una fila por seccional mapeada. Las que no están, caen al default."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tipo_tramite_id: int = Field(foreign_key="tipotramite.id", index=True)
+    seccional_id: int = Field(foreign_key="seccional.id", index=True)
+    area_id: int = Field(foreign_key="area.id", index=True)
 
 
 class CampoTramite(SQLModel, table=True):
@@ -746,6 +772,11 @@ class Tramite(SQLModel, table=True):
     numero_expediente: str = Field(index=True, unique=True)  # "F01AEFIP-2026-000123"
     cuil: str = Field(index=True)
     estado: str = "iniciado"  # iniciado | en_tratamiento | respondido | espera_info | terminado
+    # El área que lo tiene. Se resuelve AL CREARLO (ver area_destino_para) y
+    # queda escrito en la fila: si se recalculara en cada consulta, cambiar
+    # el mapa del formulario movería de bandeja trámites ya presentados, y
+    # el que lo venía trabajando lo perdería de vista sin enterarse.
+    area_a_cargo_id: Optional[int] = Field(default=None, foreign_key="area.id", index=True)
     creado: str = ""
     actualizado: str = ""
     # Cuándo pasó a "terminado" (NULL si sigue abierto). Lo setea
@@ -3169,7 +3200,8 @@ def _campo_tramite_a_dict(c: "CampoTramite") -> dict:
 
 
 def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list,
-                        reglas: list = None) -> int:
+                        reglas: list = None, area_destino_default_id: int = None,
+                        seccional_id: int = None) -> int:
     """Crea el tipo y sus campos en un solo alta. `campos` es una lista de
     dicts con las claves de CampoTramite (sin id/tipo_tramite_id); `reglas`
     son las reglas de consistencia ya saneadas
@@ -3177,6 +3209,8 @@ def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list
     with Session(engine) as s:
         t = TipoTramite(sindicato_id=sindicato_id, titulo=titulo, codigo=codigo,
                          reglas_consistencia=reglas or [],
+                         area_destino_default_id=area_destino_default_id,
+                         seccional_id=seccional_id,
                          creado=datetime.now().strftime("%Y-%m-%d %H:%M"))
         s.add(t); s.commit(); s.refresh(t)
         for i, c in enumerate(campos):
@@ -3193,7 +3227,8 @@ def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list
 
 
 def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: str,
-                         activo: bool, campos: list, reglas: list = None) -> bool:
+                         activo: bool, campos: list, reglas: list = None,
+                         area_destino_default_id: int = None) -> bool:
     """Actualiza título/código/activo y SINCRONIZA los campos por id: el
     constructor sigue siendo "lo que ves es lo que queda", pero borrar y
     recrear (como se hacía antes) reventaba con FK en cuanto el tipo tenía
@@ -3208,6 +3243,12 @@ def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: st
         if not t or t.sindicato_id != sindicato_id:
             return False
         t.titulo, t.codigo, t.activo = titulo, codigo, activo
+        # La SECCIONAL de un formulario no se edita: cambiarla le sacaría
+        # el trámite de la vista a los trabajadores que ya lo tenían
+        # disponible. El destino, en cambio, sí -- es la configuración
+        # que el sindicato va a querer ajustar con el uso.
+        if area_destino_default_id is not None:
+            t.area_destino_default_id = area_destino_default_id
         t.reglas_consistencia = reglas or []
         s.add(t)
         existentes = {c.id: c for c in s.exec(select(CampoTramite).where(
@@ -3261,13 +3302,26 @@ def borrar_tipo_tramite(tipo_id: int, sindicato_id: int) -> bool:
         return True
 
 
-def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False) -> list:
+def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False,
+                                 seccional_id: Optional[int] = "todas") -> list:
     """Tipos de trámite del sindicato con sus campos, para el constructor de
-    admin y el listado que ve el trabajador (con solo_activos=True)."""
+    admin y el listado que ve el trabajador (con solo_activos=True).
+
+    `seccional_id` recorta a lo que ve un TRABAJADOR de esa seccional: los
+    formularios globales más los de su seccional (decisión N7). El default
+    "todas" -- y no None, que es un valor con significado propio: "sin
+    seccional cargada" -- deja la consulta sin recortar, que es lo que
+    necesita el panel."""
     with Session(engine) as s:
         q = select(TipoTramite).where(TipoTramite.sindicato_id == sindicato_id)
         if solo_activos:
             q = q.where(TipoTramite.activo == True)
+        if seccional_id != "todas":
+            # Un trabajador SIN seccional ve solo los globales: no hay
+            # ninguna seccional cuyos formularios le correspondan.
+            q = q.where((TipoTramite.seccional_id == None) |  # noqa: E711
+                        (TipoTramite.seccional_id == seccional_id)) \
+                if seccional_id else q.where(TipoTramite.seccional_id == None)  # noqa: E711
         tipos = s.exec(q.order_by(TipoTramite.creado.desc())).all()
         resultado = []
         for t in tipos:
@@ -3279,8 +3333,92 @@ def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False) -
                 "id": t.id, "titulo": t.titulo, "codigo": t.codigo, "activo": t.activo,
                 "creado": t.creado, "campos": [_campo_tramite_a_dict(c) for c in campos],
                 "reglas_consistencia": t.reglas_consistencia or [],
+                "seccional_id": t.seccional_id,
+                "area_destino_default_id": t.area_destino_default_id,
+                "destinos": {d.seccional_id: d.area_id for d in s.exec(
+                    select(DestinoTipoTramite).where(
+                        DestinoTipoTramite.tipo_tramite_id == t.id)).all()},
             })
         return resultado
+
+
+# ---------- Ruteo de trámites por área (decisión N6) ----------
+
+def area_destino_para(tipo_tramite_id: int, seccional_id: Optional[int]) -> Optional[int]:
+    """A qué área cae un trámite de ESE formulario presentado por alguien de
+    ESA seccional.
+
+    Dos pasos y en este orden: si la seccional está mapeada, gana el mapa;
+    si no, el destino por defecto del formulario. El default es obligatorio
+    justamente para que este segundo paso nunca devuelva None -- una
+    seccional nueva, o un trabajador sin seccional cargada, tienen que caer
+    en algún lado. Si aun así devuelve None es porque el formulario se
+    guardó sin default, y eso las rutas ya no lo permiten.
+    """
+    with Session(engine) as s:
+        if seccional_id:
+            destino = s.exec(select(DestinoTipoTramite).where(
+                DestinoTipoTramite.tipo_tramite_id == tipo_tramite_id,
+                DestinoTipoTramite.seccional_id == seccional_id)).first()
+            if destino:
+                return destino.area_id
+        tipo = s.get(TipoTramite, tipo_tramite_id)
+        return tipo.area_destino_default_id if tipo else None
+
+
+def destinos_de_tipo_tramite(tipo_tramite_id: int) -> dict:
+    """{seccional_id: area_id} del mapa, para pintar el constructor."""
+    with Session(engine) as s:
+        return {d.seccional_id: d.area_id for d in s.exec(select(DestinoTipoTramite).where(
+            DestinoTipoTramite.tipo_tramite_id == tipo_tramite_id)).all()}
+
+
+def set_destinos_tipo_tramite(tipo_tramite_id: int, mapa: dict, sindicato_id: int) -> None:
+    """Reemplaza el mapa del formulario.
+
+    Descarta las seccionales y áreas que no sean de ESTE sindicato, mismo
+    criterio defensivo que set_permisos_area: no se guarda basura que
+    después haya que filtrar en cada lectura. Una seccional mapeada a
+    "ninguna área" simplemente se saca del mapa -- cae al default, que es
+    exactamente lo que significa."""
+    with Session(engine) as s:
+        tipo = s.get(TipoTramite, tipo_tramite_id)
+        if not tipo or tipo.sindicato_id != sindicato_id:
+            return
+        secs = {x.id for x in s.exec(select(Seccional).where(
+            Seccional.sindicato_id == sindicato_id)).all()}
+        areas = {a.id for a in s.exec(select(Area).where(
+            Area.sindicato_id == sindicato_id)).all()}
+        for d in s.exec(select(DestinoTipoTramite).where(
+                DestinoTipoTramite.tipo_tramite_id == tipo_tramite_id)).all():
+            s.delete(d)
+        for sec_id, area_id in (mapa or {}).items():
+            if sec_id in secs and area_id in areas:
+                s.add(DestinoTipoTramite(tipo_tramite_id=tipo_tramite_id,
+                                         seccional_id=sec_id, area_id=area_id))
+        s.commit()
+
+
+def alcance_de_tramites(usuario_id: int):
+    """(areas, seccionales) sobre las que este usuario ve trámites.
+
+    None en cualquiera de los dos = sin recorte por ese eje. Son DOS EJES
+    QUE SE CRUZAN, no uno: el área dice qué trámites le tocan y la seccional
+    sobre qué trabajadores. Dos usuarios de "Legales" en seccionales
+    distintas tienen el mismo permiso y ven cosas distintas.
+
+    Los administradores (general y de seccional) no se recortan por área --
+    administran, no atienden una ventanilla -- pero el de seccional sí
+    arrastra su recorte de seccional, que sale de alcance_seccional().
+    """
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        if not u or not u.activo:
+            return set(), set()
+        if u.es_super_admin or u.es_admin_seccional:
+            return None, alcance_seccional(usuario_id)
+        areas = {u.area_id} if u.area_id else set()
+        return areas, alcance_seccional(usuario_id)
 
 
 def tipo_tramite_por_id(tipo_id: int) -> Optional[dict]:
@@ -3296,6 +3434,8 @@ def tipo_tramite_por_id(tipo_id: int) -> Optional[dict]:
             "id": t.id, "sindicato_id": t.sindicato_id, "titulo": t.titulo, "codigo": t.codigo,
             "activo": t.activo, "creado": t.creado, "campos": [_campo_tramite_a_dict(c) for c in campos],
             "reglas_consistencia": t.reglas_consistencia or [],
+            "seccional_id": t.seccional_id,
+            "area_destino_default_id": t.area_destino_default_id,
         }
 
 
@@ -3347,8 +3487,16 @@ def crear_tramite(sindicato_id: int, tipo_tramite_id: int, cuil: str, respuestas
         anio = datetime.now().strftime("%Y")
         ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
         numero = _proximo_numero_expediente(s, Tramite, prefijo, anio)
+        # El área se resuelve ACÁ, contra la seccional del trabajador, y
+        # queda escrita en la fila. Ver el comentario de Tramite.area_a_cargo_id:
+        # recalcularla en cada consulta haría que editar el mapa del
+        # formulario moviera de bandeja trámites ya presentados.
+        trab = s.exec(select(Trabajador).where(
+            Trabajador.sindicato_id == sindicato_id, Trabajador.cuil == cuil)).first()
+        area_id = area_destino_para(tipo_tramite_id, trab.seccional_id if trab else None)
         tr = Tramite(sindicato_id=sindicato_id, tipo_tramite_id=tipo_tramite_id, cuil=cuil,
                      numero_expediente=numero, estado="iniciado", creado=ahora, actualizado=ahora,
+                     area_a_cargo_id=area_id,
                      advertencias=advertencias or [], origen_tramite_id=origen_tramite_id,
                      visto_trabajador_en=ahora)
         s.add(tr); s.commit(); s.refresh(tr)
@@ -3491,9 +3639,42 @@ def contar_tramites_con_novedades(cuil: str, sindicato_id: int) -> int:
         return sum(1 for tr in tramites if not tr.visto_trabajador_en)
 
 
+def _recortar_tramites(s: Session, q, sindicato_id: int, usuario_id: Optional[int]):
+    """Aplica los DOS EJES del alcance a una consulta de trámites.
+
+    Sin `usuario_id` no recorta nada -- lo usan las consultas internas y los
+    scripts. Con usuario, cruza área y seccional: el área dice qué trámites
+    le tocan, la seccional sobre qué trabajadores. Recortar por seccional
+    obliga a resolver qué CUILs entran, así que se hace con una subconsulta
+    sobre el padrón y no con un JOIN -- Tramite guarda el CUIL, no el id del
+    trabajador."""
+    if not usuario_id:
+        return q
+    areas, secs = alcance_de_tramites(usuario_id)
+    if areas is not None:
+        if not areas:
+            return q.where(False)
+        q = q.where(Tramite.area_a_cargo_id.in_(list(areas)))
+    if secs is not None:
+        if not secs:
+            return q.where(False)
+        cuiles = [t.cuil for t in s.exec(select(Trabajador).where(
+            Trabajador.sindicato_id == sindicato_id,
+            Trabajador.seccional_id.in_(list(secs)))).all()]
+        if not cuiles:
+            return q.where(False)
+        q = q.where(Tramite.cuil.in_(cuiles))
+    return q
+
+
 def tramites_del_sindicato(sindicato_id: int, estado: str = None, tipo_tramite_id: int = None,
-                            cuil: str = None) -> list:
-    """Listado filtrable para el panel de admin, más recientes primero."""
+                            cuil: str = None, usuario_id: Optional[int] = None) -> list:
+    """Listado filtrable para el panel de admin, más recientes primero.
+
+    Con `usuario_id` se recorta al alcance de ese usuario (ver
+    _recortar_tramites). El recorte va en la CONSULTA y no en la plantilla,
+    por lo mismo de siempre: en el HTML los trámites de otras áreas
+    viajarían igual."""
     with Session(engine) as s:
         q = select(Tramite).where(Tramite.sindicato_id == sindicato_id)
         if estado:
@@ -3502,19 +3683,52 @@ def tramites_del_sindicato(sindicato_id: int, estado: str = None, tipo_tramite_i
             q = q.where(Tramite.tipo_tramite_id == tipo_tramite_id)
         if cuil:
             q = q.where(Tramite.cuil == cuil)
+        q = _recortar_tramites(s, q, sindicato_id, usuario_id)
         tramites = s.exec(q.order_by(Tramite.id.desc())).all()
         titulos_tipo = {t.id: t.titulo for t in s.exec(
             select(TipoTramite).where(TipoTramite.sindicato_id == sindicato_id)).all()}
         return [_tramite_resumen(s, tr, titulos_tipo) for tr in tramites]
 
 
-def contar_tramites_nuevos(sindicato_id: int) -> int:
+def puede_ver_tramite(tramite_id: int, usuario_id: int, sindicato_id: int) -> bool:
+    """Si ESTE usuario alcanza ESE trámite, por los dos ejes.
+
+    No alcanza con filtrar el listado: en el detalle, la nota y el estado el
+    id llega por la URL o el form y se puede escribir a mano. Cada una de
+    esas rutas chequea por separado -- esconder una fila de una tabla nunca
+    fue un control de acceso."""
+    with Session(engine) as s:
+        tr = s.get(Tramite, tramite_id)
+        if not tr or tr.sindicato_id != sindicato_id:
+            return False
+        areas, secs = alcance_de_tramites(usuario_id)
+        if areas is not None and tr.area_a_cargo_id not in areas:
+            return False
+        if secs is not None:
+            trab = s.exec(select(Trabajador).where(
+                Trabajador.sindicato_id == sindicato_id, Trabajador.cuil == tr.cuil)).first()
+            # Un trámite de alguien que no está en el padrón, o que quedó sin
+            # seccional, no lo alcanza nadie acotado. Es el lado seguro: un
+            # dato incompleto no puede terminar en más acceso del que toca.
+            if not trab or trab.seccional_id not in secs:
+                return False
+        return True
+
+
+def contar_tramites_nuevos(sindicato_id: int, usuario_id: Optional[int] = None) -> int:
     """Trámites recién presentados (estado "iniciado", el admin todavía no
     los tocó) -- para el globo de notificación de la portada de admin y de
-    la pestaña "Ver trámites" dentro de /admin."""
+    la pestaña "Ver trámites" dentro de /admin.
+
+    Se recorta con el MISMO alcance que la bandeja, y no es un detalle: un
+    globo que contara trámites de otra área nunca bajaría a cero, porque al
+    abrir la pestaña esos trámites no aparecen. El usuario vería un número
+    que no puede hacer desaparecer."""
     with Session(engine) as s:
-        return len(s.exec(select(Tramite).where(
-            Tramite.sindicato_id == sindicato_id, Tramite.estado == "iniciado")).all())
+        q = select(Tramite).where(Tramite.sindicato_id == sindicato_id,
+                                  Tramite.estado == "iniciado")
+        q = _recortar_tramites(s, q, sindicato_id, usuario_id)
+        return len(s.exec(q).all())
 
 
 def tramites_de_trabajador(cuil: str, sindicato_id: int) -> list:

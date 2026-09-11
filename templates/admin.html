@@ -1367,6 +1367,8 @@
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Revisá los campos del formulario: necesita al menos uno con etiqueta y tipo de dato válidos.</div>
   {% elif request.query_params.get('error') == 'tramitesenviados' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se puede borrar: ya hay trámites presentados contra este tipo. Desactivalo en su lugar (destildá "Activo" al editarlo).</div>
+  {% elif request.query_params.get('error') == 'sindestino' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Elegí el área que recibe este trámite por defecto. Sin eso, un trámite de una seccional sin mapear no caería en ninguna bandeja.</div>
   {% endif %}
 
   <div class="subtabs">
@@ -1430,6 +1432,47 @@
         <div class="campo oculto" id="tt-activo-campo" style="margin-top:10px;">
           <label class="chk-seccional" style="width:fit-content;"><input type="checkbox" id="tt-activo" checked> Activo (visible para el trabajador)</label>
         </div>
+
+        {# ---------- Ruteo (decisiones N6 y N7) ---------- #}
+        <input type="hidden" name="destinos_json" id="tt-destinos-json">
+        <h3 class="ct-secc" style="margin-top:18px;">¿Quién recibe este trámite?</h3>
+        <div class="grid2">
+          <div class="campo"><label>Área que lo recibe por defecto *</label>
+            <select name="area_destino_default_id" id="tt-area-default" required>
+              <option value="">— elegí un área —</option>
+              {% for a in areas %}{% if a.activo %}<option value="{{ a.id }}">{{ a.nombre }} · {{ a.seccional }}</option>{% endif %}{% endfor %}
+            </select>
+            <span class="muted" style="font-size:11.5px;">Es obligatoria: las seccionales que no mapees abajo caen acá, y una seccional nueva funciona desde el día uno sin tocar nada.</span>
+          </div>
+          <div class="campo" id="tt-seccional-campo"><label>¿Quién lo ve?</label>
+            <select name="seccional_id" id="tt-seccional">
+              <option value="">Todas las seccionales (global)</option>
+              {% for sec in seccionales_alcance %}<option value="{{ sec.id }}">Solo {{ sec.nombre }}</option>{% endfor %}
+            </select>
+            <span class="muted" style="font-size:11.5px;">No se puede cambiar después: al trabajador que ya lo tenía disponible se le sacaría de la vista.</span>
+          </div>
+        </div>
+
+        <details style="margin-top:10px;">
+          <summary class="muted" style="cursor:pointer;">Mapa por seccional (opcional) — mandá cada seccional a un área distinta</summary>
+          <p class="muted" style="font-size:11.5px; margin:8px 0;">Sirve cuando cada delegación atiende lo suyo: el trámite de un trabajador de Rosario cae en el área de Rosario. Lo que dejes en "— por defecto —" usa el área de arriba.</p>
+          <table style="font-size:13px;">
+            <tr><th>Seccional</th><th>Área que lo recibe</th></tr>
+            {% for sec in seccionales_alcance %}
+            <tr>
+              <td>{{ sec.nombre }}</td>
+              <td>
+                <select class="tt-destino" data-seccional="{{ sec.id }}">
+                  <option value="">— por defecto —</option>
+                  {% for a in areas %}{% if a.activo %}<option value="{{ a.id }}">{{ a.nombre }} · {{ a.seccional }}</option>{% endif %}{% endfor %}
+                </select>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="2" class="muted">No hay seccionales cargadas.</td></tr>
+            {% endfor %}
+          </table>
+        </details>
 
         <input type="hidden" name="reglas_json" id="tt-reglas-json">
         <div class="ct-layout">
@@ -3058,6 +3101,13 @@ if (formTramiteTipo) {
   formTramiteTipo.addEventListener('submit', () => {
     document.getElementById('tt-campos-json').value = JSON.stringify(camposTramiteActuales);
     document.getElementById('tt-reglas-json').value = JSON.stringify(serializarReglasTramite());
+    // El mapa viaja como {seccional_id: area_id}. Las que quedaron en
+    // "— por defecto —" NO se mandan: no mandarlas ES elegir el default.
+    const mapa = {};
+    document.querySelectorAll('.tt-destino').forEach(sel => {
+      if (sel.value) mapa[sel.dataset.seccional] = sel.value;
+    });
+    document.getElementById('tt-destinos-json').value = JSON.stringify(mapa);
   });
   // la carátula del teléfono sigue en vivo al título y al código
   document.getElementById('tt-titulo').addEventListener('input', renderVistaPreviaTramite);
@@ -3102,6 +3152,16 @@ function editarTramiteTipo(t) {
     bloquea: r.bloquea !== false,
   })).filter(r => r.a && r.b);
   renderCamposTramite();
+  document.getElementById('tt-area-default').value = t.area_destino_default_id || '';
+  // La seccional de un formulario no se edita (ver editar_tipo_tramite en
+  // db.py): se muestra como dato y el <select> sale del medio.
+  const selSec = document.getElementById('tt-seccional');
+  selSec.value = t.seccional_id || '';
+  selSec.disabled = true;
+  const destinos = t.destinos || {};
+  document.querySelectorAll('.tt-destino').forEach(sel => {
+    sel.value = destinos[sel.dataset.seccional] || '';
+  });
   document.getElementById('tt-h2').textContent = 'Editar tipo de trámite';
   document.getElementById('tt-submit').textContent = 'Guardar cambios';
   document.getElementById('tt-cancel').classList.remove('oculto');
@@ -3112,6 +3172,7 @@ function cancelarTramiteTipo() {
   document.getElementById('form-tramite-tipo').reset();
   document.getElementById('tt-id').value = '';
   document.getElementById('tt-activo-campo').classList.add('oculto');
+  document.getElementById('tt-seccional').disabled = false;
   camposTramiteActuales = [];
   reglasTramiteActuales = [];
   renderCamposTramite();

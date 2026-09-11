@@ -18,7 +18,7 @@ os.environ["DB_PATH"] = DB_FILE
 import db
 import auth
 import validaciones_tramite as vt
-from db import Sindicato, UsuarioSindicato, Trabajador, Empleador
+from db import Sindicato, UsuarioSindicato, Trabajador, Empleador, Seccional, Area
 from modulos import MODULOS_INICIALES
 import main
 from fastapi.testclient import TestClient
@@ -37,6 +37,12 @@ with db.get_session() as s:
                             clave_hash=auth.hashear_clave("uom-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(Trabajador(sindicato_id=SID, cuil="20111111119", nombre="Juan",
                      activo=True, registrado=True))
+    # El destino por defecto es obligatorio desde la Fase 3 (decisión N6).
+    sec = Seccional(sindicato_id=SID, nombre="Sede Central", ve_todas=True)
+    s.add(sec); s.commit(); s.refresh(sec)
+    mesa = Area(sindicato_id=SID, seccional_id=sec.id, nombre="Mesa de Entradas")
+    s.add(mesa); s.commit(); s.refresh(mesa)
+    AREA = mesa.id
     s.commit()
 
 admin = TestClient(main.app)
@@ -154,7 +160,7 @@ REGLAS_UI = [{"campo_a": 1, "operador": ">", "campo_b": 0,
 def test_alta_tipo_con_validaciones_y_reglas():
     r = admin.post("/admin/tramite-tipo", data={
         "titulo": "Licencia por cuidado de familiar", "codigo": "F07 UOM",
-        "campos_json": json.dumps(CAMPOS_UI), "reglas_json": json.dumps(REGLAS_UI),
+        "campos_json": json.dumps(CAMPOS_UI), "area_destino_default_id": str(AREA), "reglas_json": json.dumps(REGLAS_UI),
     }, follow_redirects=False)
     assert r.status_code == 303
     tipos = db.tipos_tramite_del_sindicato(SID)
@@ -243,7 +249,7 @@ def test_validacion_rota_no_se_guarda():
                    {"fuente": "fija", "operador": ">=", "valor": "100"},
                ]}]
     r = admin.post("/admin/tramite-tipo", data={
-        "titulo": "Saneo", "codigo": "F99 UOM", "campos_json": json.dumps(campos),
+        "titulo": "Saneo", "codigo": "F99 UOM", "campos_json": json.dumps(campos), "area_destino_default_id": str(AREA),
         "reglas_json": json.dumps([{"campo_a": 0, "operador": ">", "campo_b": 5}]),
     }, follow_redirects=False)
     assert r.status_code == 303
@@ -261,7 +267,7 @@ def test_espejo_empleadores():
         s.commit()
     r = admin.post("/admin/tramite-tipo-empresa", data={
         "titulo": "Declaración de nómina", "codigo": "E01 UOM",
-        "campos_json": json.dumps(CAMPOS_UI), "reglas_json": json.dumps(REGLAS_UI),
+        "campos_json": json.dumps(CAMPOS_UI), "area_destino_default_id": str(AREA), "reglas_json": json.dumps(REGLAS_UI),
     }, follow_redirects=False)
     assert r.status_code == 303
     tipo = next(t for t in db.tipos_tramite_empleador_del_sindicato(SID)
@@ -340,7 +346,7 @@ def test_editar_tipo_con_tramites_no_rompe_fk():
     campos_editados[0]["etiqueta"] = "Fecha hasta (renombrada)"
     r = admin.post("/admin/tramite-tipo", data={
         "id": TIPO_ID, "titulo": "Licencia editada", "codigo": "F07 UOM", "activo": "si",
-        "campos_json": json.dumps(campos_editados), "reglas_json": "[]",
+        "campos_json": json.dumps(campos_editados), "area_destino_default_id": str(AREA), "reglas_json": "[]",
     }, follow_redirects=False)
     assert r.status_code == 303 and "error" not in (r.headers.get("location") or "")
 
