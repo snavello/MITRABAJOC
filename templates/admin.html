@@ -662,7 +662,7 @@
   {% if 'empleadores' in modulos and ('emp_empresas' in permisos or 'emp_notificaciones' in permisos or 'emp_tramites_recibidos' in permisos or 'emp_tramites_formularios' in permisos) %}<button class="tab-btn" data-panel="empleadores" style="position:relative;"><svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg><span>Empleadores</span>{% if tramites_empresa_nuevos %}<span class="badge-noleidas" id="badge-tramites-empresa-nuevos-tab">{{ tramites_empresa_nuevos }}</span>{% endif %}</button>{% endif %}
   {% if 'convenio' in modulos and 'convenio' in permisos %}<button class="tab-btn" data-panel="convenio"><svg viewBox="0 0 24 24"><use href="#ic-conceptos"/></svg><span>Convenio</span></button>{% endif %}
   {% if 'seccionales' in permisos %}<button class="tab-btn" data-panel="seccionales"><svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg><span>Seccionales</span></button>{% endif %}
-  {% if es_super_admin %}<button class="tab-btn" data-panel="administradores"><svg viewBox="0 0 24 24"><use href="#ic-admins"/></svg><span>Áreas y Usuarios</span></button>{% endif %}
+  {% if administra_areas %}<button class="tab-btn" data-panel="administradores"><svg viewBox="0 0 24 24"><use href="#ic-admins"/></svg><span>Áreas y Usuarios</span></button>{% endif %}
 </nav>
 </div>
 
@@ -1970,11 +1970,17 @@
         <div class="campo full"><label>Nombre *</label><input name="nombre" id="sec-nombre" required></div>
         <div class="campo full"><label>Dirección</label><input name="direccion" id="sec-direccion"></div>
       </div>
+      {# Tildar "ve todas" es escalada de privilegio si lo pudiera hacer un
+         admin local: se daría alcance sobre todo el sindicato de un clic.
+         Por eso el check solo se le muestra (y solo se le acepta) al
+         administrador general. #}
+      {% if es_super_admin %}
       <label class="chk-seccional" style="margin-top:10px;">
         <input type="checkbox" name="ve_todas" id="sec-ve-todas" value="1">
         Sus usuarios ven <b>todas</b> las seccionales
       </label>
       <p class="muted" style="margin:4px 0 10px;">Es lo que hace que una sede sea "central". Tildalo también en una regional que supervise a otras. Sin el tilde, sus usuarios alcanzan solo a los trabajadores de esta seccional.</p>
+      {% endif %}
       <button type="submit">Guardar seccional</button>
       <button type="button" class="sec oculto" id="sec-cancel" onclick="cancelarSeccional()">Cancelar edición</button>
     </form>
@@ -2003,7 +2009,7 @@
   </div>
   {% endif %}
 
-  {% if es_super_admin %}
+  {% if administra_areas %}
   <div class="panel" id="panel-administradores">
   <!-- ============ ADMINISTRADORES ============ -->
   <h2 id="administradores-titulo">Áreas y Usuarios</h2>
@@ -2017,14 +2023,29 @@
   <!-- Sub: ÁREAS -->
   <div class="au-subpanel activo" id="au-sub-areas">
   {% if request.query_params.get('err') == 'datosarea' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El área necesita un nombre.</div>
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El área necesita un nombre y una seccional.</div>
+  {% elif request.query_params.get('err') == 'sinseccional' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Un administrador de seccional tiene que tener una seccional asignada.</div>
+  {% elif request.query_params.get('err') == 'areaajena' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El área y la seccional del usuario tienen que ser la misma. Elegí un área de esa seccional.</div>
   {% endif %}
   <h2 id="area-titulo">Dar de alta un área</h2>
   <p class="muted">Tildá las secciones del panel que puede tocar. Solo aparecen las de los módulos que el sindicato tiene contratados.</p>
   <div class="card">
     <form method="post" action="/admin/area" id="form-area">
       <input type="hidden" name="id" id="area-id">
-      <div class="campo"><label>Nombre del área *</label><input name="nombre" id="area-nombre" required placeholder="Secretaría Legal"></div>
+      <div class="grid2">
+        <div class="campo"><label>Nombre del área *</label><input name="nombre" id="area-nombre" required placeholder="Secretaría Legal"></div>
+        <div class="campo"><label>Seccional *</label>
+          {# La seccional se elige en el ALTA y no se puede cambiar después:
+             mover un área de seccional le cambiaría el alcance a todos sus
+             usuarios de golpe y en silencio. #}
+          <select name="seccional_id" id="area-seccional" required>
+            {% for sec in seccionales_alcance %}<option value="{{ sec.id }}">{{ sec.nombre }}</option>{% endfor %}
+          </select>
+          <span class="muted oculto" id="area-seccional-fija" style="font-size:12px;"></span>
+        </div>
+      </div>
       <div id="area-permisos" style="margin-top:14px;">
         {% for grupo, items in catalogo_permisos %}
         {# El índice del grupo se guarda en una variable: en Jinja NO existe
@@ -2050,10 +2071,11 @@
 
   <h2>Áreas del sindicato ({{ areas|selectattr('activo')|list|length }} activas)</h2>
   <table>
-    <tr><th>Área</th><th>Secciones</th><th>Estado</th><th></th></tr>
+    <tr><th>Área</th><th>Seccional</th><th>Secciones</th><th>Estado</th><th></th></tr>
     {% for a in areas %}
     <tr {% if not a.activo %}style="opacity:.5;"{% endif %}>
       <td><b>{{ a.nombre }}</b></td>
+      <td>{{ a.seccional }}</td>
       <td class="muted">{% for sec in a.permisos %}{{ etiquetas_secciones.get(sec, sec) }}{% if not loop.last %} · {% endif %}{% else %}—{% endfor %}</td>
       <td>{% if a.activo %}<span class="tag tag-si">activa</span>{% else %}<span class="tag" style="background:#eee;color:#888;">inactiva</span>{% endif %}</td>
       <td style="white-space:nowrap; text-align:right;">
@@ -2067,7 +2089,7 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="4" class="muted">No hay áreas cargadas.</td></tr>
+    <tr><td colspan="5" class="muted">No hay áreas cargadas.</td></tr>
     {% endfor %}
   </table>
   </div>
@@ -2093,19 +2115,26 @@
         <div class="campo"><label>Rol</label>
           <select name="rol" id="usu-rol" onchange="cambioRolUsuario()">
             <option value="area">Usuario de área</option>
-            <option value="super">Administrador general</option>
+            <option value="seccional">Administrador de seccional</option>
+            {# Otorgar el rol general es del administrador general: si lo
+               pudiera dar un admin local, se fabricaría un usuario sin
+               techo y el alcance local dejaría de significar algo. #}
+            {% if es_super_admin %}<option value="super">Administrador general</option>{% endif %}
+          </select>
+          <span class="muted" style="font-size:12px;" id="usu-rol-ayuda"></span>
+        </div>
+        <div class="campo"><label>Seccional</label>
+          {# Se elige PRIMERO: define qué áreas se ofrecen, porque el área y
+             el usuario tienen que ser de la misma. #}
+          <select name="seccional_id" id="usu-seccional" onchange="filtrarAreasPorSeccional()">
+            <option value="">— elegí una seccional —</option>
+            {% for sec in seccionales_alcance %}<option value="{{ sec.id }}">{{ sec.nombre }}{% if sec.ve_todas %} (ve todas){% endif %}</option>{% endfor %}
           </select>
         </div>
         <div class="campo"><label>Área</label>
           <select name="area_id" id="usu-area" onchange="pintarPermisosDelArea()">
             <option value="">— sin área —</option>
-            {% for a in areas %}{% if a.activo %}<option value="{{ a.id }}">{{ a.nombre }}</option>{% endif %}{% endfor %}
-          </select>
-        </div>
-        <div class="campo"><label>Seccional</label>
-          <select name="seccional_id" id="usu-seccional">
-            <option value="">— sin seccional —</option>
-            {% for sec in seccionales %}<option value="{{ sec.id }}">{{ sec.nombre }}{% if sec.ve_todas %} (ve todas){% endif %}</option>{% endfor %}
+            {% for a in areas %}{% if a.activo %}<option value="{{ a.id }}" data-seccional="{{ a.seccional_id }}">{{ a.nombre }} · {{ a.seccional }}</option>{% endif %}{% endfor %}
           </select>
         </div>
       </div>
@@ -2145,7 +2174,9 @@
     <tr {% if not u.activo %}style="opacity:.5;"{% endif %}>
       <td><code>{{ u.usuario }}</code></td>
       <td>{{ u.nombre or '—' }}</td>
-      <td>{% if u.es_super_admin %}<span class="tag tag-si">general</span>{% else %}<span class="tag">de área</span>{% endif %}</td>
+      <td>{% if u.es_super_admin %}<span class="tag tag-si">general</span>
+          {% elif u.es_admin_seccional %}<span class="tag tag-pend">de seccional</span>
+          {% else %}<span class="tag">de área</span>{% endif %}</td>
       <td>{{ u.area or '—' }}</td>
       <td>{{ u.seccional or '—' }}</td>
       <td>
@@ -3937,7 +3968,7 @@ function cancelarSeccional() {
 // no aplican en edición (cambiar la clave de uno ya existente sigue siendo
 // solo vía plataforma), así que ese campo se oculta y la ruta cambia a
 // /admin/usuario/editar en vez de /admin/usuario.
-{% if es_super_admin %}
+{% if administra_areas %}
 // ---------- Áreas y Usuarios ----------
 // TODO este bloque toca elementos del panel de Áreas y Usuarios, que solo
 // se renderiza para el Super Admin. Sin el guard, un init sobre null
@@ -3965,6 +3996,14 @@ function editarArea(a) {
   const f = document.getElementById('form-area');
   document.getElementById('area-id').value = a.id;
   document.getElementById('area-nombre').value = a.nombre || '';
+  // La seccional de un área no se cambia (ver el comentario del form): se
+  // muestra como dato y el <select> se saca del medio.
+  const combo = document.getElementById('area-seccional');
+  const fija = document.getElementById('area-seccional-fija');
+  combo.closest('.campo').querySelector('label').textContent = 'Seccional';
+  combo.classList.add('oculto'); combo.required = false;
+  fija.classList.remove('oculto');
+  fija.textContent = a.seccional + ' — no se puede mover de seccional';
   const tiene = new Set(a.permisos || []);
   f.querySelectorAll('input[name="secciones"]').forEach(c => { c.checked = tiene.has(c.value); });
   f.querySelectorAll('.chk-grupo').forEach(c => { c.checked = false; });
@@ -3978,6 +4017,9 @@ function cancelarArea() {
   const f = document.getElementById('form-area');
   f.reset();
   document.getElementById('area-id').value = '';
+  const combo = document.getElementById('area-seccional');
+  combo.classList.remove('oculto'); combo.required = true;
+  document.getElementById('area-seccional-fija').classList.add('oculto');
   document.getElementById('area-titulo').textContent = 'Dar de alta un área';
   document.getElementById('area-submit').textContent = 'Dar de alta';
   document.getElementById('area-cancel').classList.add('oculto');
@@ -3996,11 +4038,40 @@ function pintarPermisosDelArea() {
   });
 }
 
+function filtrarAreasPorSeccional() {
+  // El área y el usuario tienen que ser de la MISMA seccional, así que el
+  // combo de áreas solo ofrece las de la seccional elegida. Si no, el POST
+  // rebotaría con "areaajena" y el admin no entendería por qué.
+  const sec = document.getElementById('usu-seccional').value;
+  const combo = document.getElementById('usu-area');
+  let sigueValiendo = false;
+  combo.querySelectorAll('option').forEach(o => {
+    if (!o.value) { o.hidden = false; return; }         // el "sin área"
+    const suya = !sec || o.dataset.seccional === sec;
+    o.hidden = !suya;
+    if (suya && o.value === combo.value) sigueValiendo = true;
+  });
+  if (!sigueValiendo) combo.value = '';
+  pintarPermisosDelArea();
+}
+
+const AYUDA_ROL = {
+  area:     'Ve solo las secciones que le dé su área, y solo sobre los trabajadores de su seccional.',
+  seccional:'Administra TODA su seccional: crea sus áreas y sus usuarios. No crea seccionales ni otorga el rol general.',
+  super:    'Administra el sindicato entero, todas las seccionales incluidas.',
+};
+
 function cambioRolUsuario() {
-  // Un administrador general tiene todo lo contratado: área y ajustes no
-  // le cambian nada, así que se ocultan en vez de mentir.
-  const esSuper = document.getElementById('usu-rol').value === 'super';
-  document.getElementById('usu-permisos-caja').classList.toggle('oculto', esSuper);
+  // Los dos administradores tienen todo lo contratado: área y ajustes no
+  // les cambian nada, así que se ocultan en vez de mentir. El de seccional
+  // SÍ necesita su seccional -- es lo que define su alcance.
+  const rol = document.getElementById('usu-rol').value;
+  const esAdmin = (rol === 'super' || rol === 'seccional');
+  document.getElementById('usu-permisos-caja').classList.toggle('oculto', esAdmin);
+  document.getElementById('usu-area').closest('.campo').classList.toggle('oculto', esAdmin);
+  document.getElementById('usu-seccional').closest('.campo')
+    .classList.toggle('oculto', rol === 'super');
+  document.getElementById('usu-rol-ayuda').textContent = AYUDA_ROL[rol] || '';
 }
 
 function editarUsuario(u) {
@@ -4011,9 +4082,11 @@ function editarUsuario(u) {
   document.getElementById('usu-usuario').disabled = true;
   document.getElementById('usu-clave-campo').classList.add('oculto');
   document.getElementById('usu-clave').required = false;
-  document.getElementById('usu-rol').value = u.es_super_admin ? 'super' : 'area';
-  document.getElementById('usu-area').value = u.area_id || '';
+  document.getElementById('usu-rol').value =
+    u.es_super_admin ? 'super' : (u.es_admin_seccional ? 'seccional' : 'area');
   document.getElementById('usu-seccional').value = u.seccional_id || '';
+  filtrarAreasPorSeccional();
+  document.getElementById('usu-area').value = u.area_id || '';
   const agregados = new Set(u.agregados || []);
   const bloqueados = new Set(u.bloqueados || []);
   f.querySelectorAll('input[name="agregar"]').forEach(c => { c.checked = agregados.has(c.value); });
@@ -4043,7 +4116,7 @@ function cancelarUsuario() {
   cambioRolUsuario();
 }
 
-pintarPermisosDelArea();
+filtrarAreasPorSeccional();
 cambioRolUsuario();
 {% endif %}
 

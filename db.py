@@ -161,11 +161,19 @@ class Seccional(SQLModel, table=True):
 
 
 class Area(SQLModel, table=True):
-    """Área organizativa del sindicato (Secretaría Legal, Tesorería...).
+    """Área organizativa DE UNA SECCIONAL (Secretaría Legal de Rosario,
+    Tesorería de Sede Central...).
 
-    NO es lo mismo que Seccional y son ejes independientes: el área dice QUÉ
-    hace un usuario, la seccional dice SOBRE QUIÉNES. Un usuario tiene una
-    de cada una, y así se expresa "Legales de Rosario".
+    El área dice QUÉ hace un usuario; la seccional a la que pertenece dice
+    SOBRE QUIÉNES. En la primera tanda el área colgaba del sindicato y los
+    dos ejes eran independientes; ahora el área vive DENTRO de una seccional
+    (decisión N2 de SPRINT_AREAS_V2.md), que es lo que permite que cada
+    delegación arme su propia estructura sin pisarle el nombre a otra: puede
+    haber una "Legales" por seccional y son áreas distintas.
+
+    De ahí sale la regla de coherencia que fuerzan las rutas: un usuario y
+    su área tienen que ser de la MISMA seccional. Si no, "Legales de
+    Rosario" con alcance Córdoba sería un usuario que nadie sabe qué ve.
 
     Los permisos se asignan al área (PermisoArea) y los heredan todos sus
     usuarios; el ajuste fino por persona va en PermisoUsuario.
@@ -175,6 +183,7 @@ class Area(SQLModel, table=True):
     acceso a todo un equipo sin tocar usuario por usuario."""
     id: Optional[int] = Field(default=None, primary_key=True)
     sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    seccional_id: int = Field(foreign_key="seccional.id", index=True)
     nombre: str
     activo: bool = True
 
@@ -203,12 +212,23 @@ class PermisoUsuario(SQLModel, table=True):
 class UsuarioSindicato(SQLModel, table=True):
     """Usuario del panel de un sindicato.
 
-    Dos clases, distinguidas por `es_super_admin`:
-    - Super Admin: todo el panel, incluida la gestión de áreas y usuarios.
-      Es lo que era TODO usuario antes del sistema de Áreas (los que ya
-      existían quedaron con la bandera prendida en la migración).
+    Tres clases:
+    - Super Admin (`es_super_admin`), el administrador de Sede Central: todo
+      el panel sobre TODAS las seccionales, incluida la gestión de áreas y
+      usuarios y el alta de seccionales. Es lo que era TODO usuario antes
+      del sistema de Áreas (los que ya existían quedaron con la bandera
+      prendida en la migración).
+    - Admin de Seccional (`es_admin_seccional`): las mismas atribuciones
+      sobre SU seccional y nada más -- "el admin grande en chiquito". Arma
+      las áreas de su delegación y les asigna gente sin depender de central.
+      No puede crear seccionales, ni otorgar Super Admin, ni tocar nada de
+      otra seccional (ver `_exigir_alcance_*` en main.py).
     - Usuario de área: ve solo las secciones que le den su área y sus
       permisos individuales, y solo sobre su alcance de seccional.
+
+    Las dos banderas arrancan en False: un usuario que se dé de alta sin
+    declarar rol nace SIN poder, no con todo. Y `es_admin_seccional` es
+    opt-in por diseño -- un sindicato centralizado ni se entera del rol.
 
     El primer Super Admin de cada sindicato lo sigue dando de alta el admin
     de plataforma; de ahí en más los crea el propio sindicato."""
@@ -224,6 +244,7 @@ class UsuarioSindicato(SQLModel, table=True):
     # Admins de verdad (alta desde plataforma, alta desde el propio
     # sindicato, cargar_demo) lo pasan explícito.
     es_super_admin: bool = False
+    es_admin_seccional: bool = False
     area_id: Optional[int] = Field(default=None, foreign_key="area.id", index=True)
     seccional_id: Optional[int] = Field(default=None, foreign_key="seccional.id", index=True)
 
@@ -2035,7 +2056,13 @@ def permisos_efectivos(usuario_id: int) -> set:
         # El Super Admin tiene todo lo que el sindicato tenga contratado --
         # pero pasa por el mismo filtro de módulos que los demás, así un
         # módulo apagado no le deja secciones colgadas.
-        if u.es_super_admin:
+        #
+        # El Admin de Seccional tiene EXACTAMENTE LAS MISMAS SECCIONES: es
+        # "el admin grande en chiquito", y lo que lo achica no es la lista
+        # de secciones sino el ALCANCE (alcance_seccional) y los chequeos de
+        # las rutas que administran áreas y usuarios. Separar las dos cosas
+        # es lo que hace que no haya dos catálogos que mantener.
+        if u.es_super_admin or u.es_admin_seccional:
             return set(secciones_de_modulos(mods))
         del_area = []
         if u.area_id:
@@ -2063,6 +2090,29 @@ def es_super_admin(usuario_id: int) -> bool:
     with Session(engine) as s:
         u = s.get(UsuarioSindicato, usuario_id)
         return bool(u and u.activo and u.es_super_admin)
+
+
+def es_admin_seccional(usuario_id: int) -> bool:
+    """El rol intermedio: administra su seccional y nada más."""
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        return bool(u and u.activo and u.es_admin_seccional and not u.es_super_admin)
+
+
+def administra_areas_y_usuarios(usuario_id: int) -> bool:
+    """Quién puede entrar a la pantalla de Áreas y Usuarios.
+
+    Los dos roles de administrador, no solo el Super Admin. Lo que los
+    distingue NO es el acceso a la pantalla sino el ALCANCE de lo que ven y
+    pueden tocar ahí adentro, que lo imponen las rutas (ver
+    _exigir_alcance_area / _exigir_alcance_usuario en main.py).
+
+    Existe como función propia y no como `es_super_admin or
+    es_admin_seccional` escrito en cada lado: cuando mañana haya que sumar
+    o sacar un rol, se cambia acá y no en ocho rutas."""
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        return bool(u and u.activo and (u.es_super_admin or u.es_admin_seccional))
 
 
 def contar_super_admins(sindicato_id: int, excluyendo: int = 0) -> int:
@@ -2106,6 +2156,11 @@ def alcance_seccional(usuario_id: int):
         sec = s.get(Seccional, u.seccional_id)
         if not sec or sec.sindicato_id != u.sindicato_id:
             return set()
+        # Vale la MISMA regla para el admin de seccional que para un usuario
+        # de área: su alcance es su seccional, salvo que esa seccional tenga
+        # ve_todas. Un admin local de una regional que supervisa a otras
+        # alcanza a todas, y eso es lo correcto -- una sola regla de alcance
+        # para todo el panel, no una por rol.
         return None if sec.ve_todas else {u.seccional_id}
 
 
@@ -2514,20 +2569,34 @@ def seccionales_del_sindicato(sindicato_id: int) -> list:
 
 # ---------- Áreas y permisos (CRUD del Super Admin) ----------
 
-def areas_del_sindicato(sindicato_id: int) -> list:
-    """Áreas del sindicato con sus permisos, para el CRUD y los <select>.
+def areas_del_sindicato(sindicato_id: int, alcance=None) -> list:
+    """Áreas del sindicato con su seccional y sus permisos, para el CRUD y
+    los <select>.
+
+    `alcance` es lo que devuelve alcance_seccional(): None = todas (Super
+    Admin), un set = solo las áreas de esas seccionales. Filtrar ACÁ y no en
+    la plantilla es a propósito -- si el recorte viviera en el HTML, las
+    áreas de otras seccionales viajarían igual en la página.
 
     Trae los permisos en la misma pasada: la pantalla siempre los muestra
     junto al área, y son pocas filas."""
     with Session(engine) as s:
-        areas = s.exec(select(Area).where(
-            Area.sindicato_id == sindicato_id).order_by(Area.nombre)).all()
+        consulta = select(Area).where(Area.sindicato_id == sindicato_id)
+        if alcance is not None:
+            if not alcance:
+                return []
+            consulta = consulta.where(Area.seccional_id.in_(list(alcance)))
+        areas = s.exec(consulta.order_by(Area.nombre)).all()
         ids = [a.id for a in areas]
         por_area = {i: [] for i in ids}
         if ids:
             for x in s.exec(select(PermisoArea).where(PermisoArea.area_id.in_(ids))).all():
                 por_area[x.area_id].append(x.seccion)
+        secs = {x.id: x.nombre for x in s.exec(select(Seccional).where(
+            Seccional.sindicato_id == sindicato_id)).all()}
         return [{"id": a.id, "nombre": a.nombre, "activo": a.activo,
+                 "seccional_id": a.seccional_id,
+                 "seccional": secs.get(a.seccional_id, ""),
                  "permisos": sorted(por_area.get(a.id, []))} for a in areas]
 
 
@@ -2586,12 +2655,25 @@ def set_permisos_usuario(usuario_id: int, agregar: list, bloquear: list,
         s.commit()
 
 
-def usuarios_del_sindicato(sindicato_id: int) -> list:
-    """Usuarios del panel con su área, seccional y ajustes individuales --
-    todo lo que la pantalla de "Áreas y Usuarios" necesita mostrar."""
+def usuarios_del_sindicato(sindicato_id: int, alcance=None) -> list:
+    """Usuarios del panel con su rol, área, seccional y ajustes individuales
+    -- todo lo que la pantalla de "Áreas y Usuarios" necesita mostrar.
+
+    `alcance` recorta igual que en areas_del_sindicato, y por el mismo
+    motivo: un admin de seccional no tiene por qué recibir en el HTML los
+    CUIT de los usuarios de otra delegación. Los Super Admin quedan SIEMPRE
+    fuera del recorte -- no pertenecen a una sola seccional, y esconderlos
+    haría que el admin local no entienda quién más administra el sindicato.
+    """
     with Session(engine) as s:
-        usuarios = s.exec(select(UsuarioSindicato).where(
-            UsuarioSindicato.sindicato_id == sindicato_id).order_by(
+        consulta = select(UsuarioSindicato).where(
+            UsuarioSindicato.sindicato_id == sindicato_id)
+        if alcance is not None:
+            if not alcance:
+                return []
+            consulta = consulta.where(
+                UsuarioSindicato.seccional_id.in_(list(alcance)))
+        usuarios = s.exec(consulta.order_by(
             UsuarioSindicato.activo.desc(), UsuarioSindicato.nombre)).all()
         areas = {a.id: a.nombre for a in s.exec(select(Area).where(
             Area.sindicato_id == sindicato_id)).all()}
@@ -2604,6 +2686,7 @@ def usuarios_del_sindicato(sindicato_id: int) -> list:
                 "id": u.id, "usuario": u.usuario, "nombre": u.nombre, "activo": u.activo,
                 "debe_cambiar_clave": u.debe_cambiar_clave,
                 "es_super_admin": u.es_super_admin,
+                "es_admin_seccional": u.es_admin_seccional,
                 "area_id": u.area_id, "area": areas.get(u.area_id, ""),
                 "seccional_id": u.seccional_id, "seccional": secs.get(u.seccional_id, ""),
                 "agregados": ind["agregar"], "bloqueados": ind["bloquear"],

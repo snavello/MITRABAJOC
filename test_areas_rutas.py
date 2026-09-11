@@ -44,7 +44,7 @@ with db.get_session() as s:
     s.add(central); s.commit(); s.refresh(central)
     SEC = central.id
 
-    legales = Area(sindicato_id=SID, nombre="Secretaría Legal")
+    legales = Area(sindicato_id=SID, seccional_id=SEC, nombre="Secretaría Legal")
     s.add(legales); s.commit(); s.refresh(legales)
     AREA = legales.id
     # Puede responder trámites y tocar el padrón. NADA más: ni fórmulas, ni

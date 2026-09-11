@@ -48,10 +48,20 @@ with db.get_session() as s:
     s.commit(); s.refresh(central); s.refresh(rosario); s.refresh(cordoba)
     SEC_CENTRAL, SEC_ROSARIO, SEC_CORDOBA = central.id, rosario.id, cordoba.id
 
-    legales = Area(sindicato_id=SID_A, nombre="Secretaría Legal")
-    tesoreria = Area(sindicato_id=SID_A, nombre="Tesorería")
-    disuelta = Area(sindicato_id=SID_A, nombre="Área Vieja", activo=False)
-    legales_b = Area(sindicato_id=SID_B, nombre="Legales Fega")
+    # Seccional del OTRO sindicato: la necesitan tanto el área de B como el
+    # usuario al que después se le asigna a mano para probar que una
+    # seccional ajena no habilita nada.
+    sec_ajena = Seccional(sindicato_id=SID_B, nombre="Seccional Fega", ve_todas=True)
+    s.add(sec_ajena); s.commit(); s.refresh(sec_ajena)
+    SEC_B = sec_ajena.id
+
+    # Desde la Fase 1 el área pertenece a una seccional (decisión N2), así
+    # que la fixture tiene que decir a cuál: "Legales" de Sede Central y
+    # "Legales" de Rosario son áreas distintas.
+    legales = Area(sindicato_id=SID_A, seccional_id=SEC_CENTRAL, nombre="Secretaría Legal")
+    tesoreria = Area(sindicato_id=SID_A, seccional_id=SEC_CENTRAL, nombre="Tesorería")
+    disuelta = Area(sindicato_id=SID_A, seccional_id=SEC_CENTRAL, nombre="Área Vieja", activo=False)
+    legales_b = Area(sindicato_id=SID_B, seccional_id=SEC_B, nombre="Legales Fega")
     s.add(legales); s.add(tesoreria); s.add(disuelta); s.add(legales_b)
     s.commit()
     s.refresh(legales); s.refresh(tesoreria); s.refresh(disuelta); s.refresh(legales_b)
@@ -97,10 +107,8 @@ with db.get_session() as s:
     U_AJENO, U_FEGA = ajeno.id, fega.id
 
     # Seccional de OTRO sindicato asignada a mano: no debería habilitar nada.
-    sec_ajena = Seccional(sindicato_id=SID_B, nombre="Seccional Fega", ve_todas=True)
-    s.add(sec_ajena); s.commit(); s.refresh(sec_ajena)
     u = s.get(UsuarioSindicato, U_AJENO)
-    u.seccional_id = sec_ajena.id
+    u.seccional_id = SEC_B
     s.add(u); s.commit()
 
 

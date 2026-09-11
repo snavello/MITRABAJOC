@@ -822,8 +822,14 @@ def _exigir_permiso_de_ruta(request: Request, ses: dict) -> None:
         raise HTTPException(403, "Esta sección del panel no está habilitada.")
     uid = ses.get("uid", 0)
     if seccion == SECCION_SUPER_ADMIN:
-        if not db.es_super_admin(uid):
-            raise HTTPException(403, "Solo un administrador general del sindicato puede hacer esto.")
+        # Entran los DOS administradores: el general y el de seccional. Lo
+        # que los distingue no es la puerta sino el ALCANCE de lo que
+        # pueden tocar del otro lado, que lo imponen las rutas con
+        # _exigir_alcance_area / _exigir_alcance_usuario. Si el corte fuera
+        # acá, el admin local no podría administrar nada de su delegación,
+        # que es todo el sentido del rol.
+        if not db.administra_areas_y_usuarios(uid):
+            raise HTTPException(403, "Solo un administrador del sindicato puede hacer esto.")
         return
     if not db.tiene_permiso(uid, seccion):
         raise HTTPException(403, "No tenés permiso para esta sección del panel.")
@@ -889,6 +895,9 @@ def admin(request: Request):
     # plantilla directamente no la renderiza.
     permisos = db.permisos_efectivos(uid)
     es_super_admin = db.es_super_admin(uid)
+    # Los dos administradores entran a Áreas y Usuarios; lo que cambia es
+    # cuánto ven ahí adentro (ver `alcance` más abajo).
+    administra = db.administra_areas_y_usuarios(uid)
 
     def puede(*secciones) -> bool:
         return any(x in permisos for x in secciones)
@@ -937,17 +946,29 @@ def admin(request: Request):
     # Notificaciones: hace falta para cualquiera de esas.
     seccionales = db.seccionales_del_sindicato(sid) \
         if puede("seccionales", "trabajadores", "noticias", "beneficios",
-                 "notificaciones") or es_super_admin else []
+                 "notificaciones") or administra else []
     seccional_por_id = {sec["id"]: sec["nombre"] for sec in seccionales}
     modulos = _modulos_de(sid)
-    # Áreas y Usuarios: la pantalla entera es del Super Admin, así que ni la
-    # lista de usuarios ni la de áreas se consultan para los demás.
-    areas = db.areas_del_sindicato(sid) if es_super_admin else []
-    usuarios_sindicato = db.usuarios_del_sindicato(sid) if es_super_admin else []
+    # Áreas y Usuarios: la pantalla es de los dos administradores, así que
+    # ni la lista de usuarios ni la de áreas se consultan para los demás.
+    # Y para el admin de seccional se recortan a su alcance EN LA CONSULTA,
+    # no en la plantilla: si el recorte viviera en el HTML, las áreas y los
+    # CUIT de las otras delegaciones viajarían igual en la página.
+    alcance = db.alcance_seccional(uid) if administra else set()
+    areas = db.areas_del_sindicato(sid, alcance) if administra else []
+    usuarios_sindicato = db.usuarios_del_sindicato(sid, alcance) if administra else []
+    # Las seccionales sobre las que puede crear áreas y asignar gente.
+    seccionales_alcance = [x for x in seccionales
+                           if alcance is None or x["id"] in (alcance or set())] \
+        if administra else []
     # El catálogo que se le ofrece al armar un perfil: solo las secciones que
-    # los módulos contratados habilitan, agrupadas para la pantalla.
+    # los módulos contratados habilitan, agrupadas para la pantalla. Se
+    # recorta además a lo que el que asigna tiene -- nadie da lo que no
+    # tiene, y ofrecérselo en pantalla para después descartarlo en el POST
+    # sería mentirle.
     catalogo_permisos = permisos_mod.agrupar_para_ui(
-        permisos_mod.secciones_de_modulos(modulos)) if es_super_admin else []
+        [x for x in permisos_mod.secciones_de_modulos(modulos) if x in permisos]
+    ) if administra else []
     return templates.TemplateResponse("admin.html", {
         "request": request, "sindicato": sind.nombre if sind else "",
         "marca": db.marca_sindicato(sid), "marca_plataforma": db.marca_plataforma(),
@@ -957,6 +978,8 @@ def admin(request: Request):
         "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR, "envios": envios,
         "usuarios_sindicato": usuarios_sindicato,
         "permisos": permisos, "es_super_admin": es_super_admin,
+        "administra_areas": administra,
+        "seccionales_alcance": seccionales_alcance,
         "areas": areas, "catalogo_permisos": catalogo_permisos,
         "etiquetas_secciones": {k: v[0] for k, v in permisos_mod.SECCIONES.items()},
         "nombres_por_cuil": nombres_por_cuil, "provisorios": provisorios,
@@ -1215,14 +1238,34 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
     if len(cuit) != 11 or not clave_inicial:
         return RedirectResponse("/admin?err=datos#administradores", status_code=303)
     es_super = (rol == "super")
+    es_admin_local = (rol == "seccional")
+    # Otorgar Super Admin es del administrador general y de nadie más: si un
+    # admin local pudiera, se fabricaría un usuario sin techo y el alcance
+    # local dejaría de significar algo.
+    if es_super:
+        _exigir_super_admin(request)
     with db.get_session() as s:
         area = _id_propio(s, Area, area_id, sid)
         seccional = _id_propio(s, Seccional, seccional_id, sid)
+        area_seccional = s.get(Area, area).seccional_id if area else None
     # Un usuario de área SIN área no puede hacer nada: se crearía mudo y sin
     # que nada lo explique. Se rechaza con un aviso en vez de dejarlo pasar.
     # Un id de otro sindicato cae acá también: _id_propio lo devuelve None.
-    if not es_super and not area:
+    if not es_super and not es_admin_local and not area:
         return RedirectResponse("/admin?err=sinarea#administradores", status_code=303)
+    # Un administrador de seccional SIN seccional sería un admin sin
+    # alcance: no administra nada y nadie entiende por qué.
+    if es_admin_local and not seccional:
+        return RedirectResponse("/admin?err=sinseccional#administradores", status_code=303)
+    # El área y el usuario tienen que ser de la MISMA seccional. "Legales de
+    # Rosario" con alcance Córdoba es un usuario que nadie sabe qué ve.
+    if area and seccional and area_seccional != seccional:
+        return RedirectResponse("/admin?err=areaajena#administradores", status_code=303)
+    if area and not seccional:
+        seccional = area_seccional      # la seccional la fija el área
+    # Nadie crea usuarios fuera de su alcance.
+    if not es_super:
+        _exigir_alcance_seccional(request, seccional)
     with db.get_session() as s:
         if s.exec(select(UsuarioSindicato).where(
                 UsuarioSindicato.sindicato_id == sid, UsuarioSindicato.usuario == cuit)).first():
@@ -1231,15 +1274,18 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
             sindicato_id=sid, usuario=cuit, nombre=nombre,
             clave_hash=auth.hashear_clave(clave_inicial), debe_cambiar_clave=True,
             es_super_admin=es_super,
-            # Un Super Admin no cuelga de un área: tiene todo lo contratado,
-            # así que un área lo único que haría es mentir en la pantalla.
-            area_id=None if es_super else area,
+            es_admin_seccional=es_admin_local,
+            # Ni un Super Admin ni un admin de seccional cuelgan de un área:
+            # los dos tienen todo lo contratado, así que un área lo único
+            # que haría es mentir en la pantalla.
+            area_id=None if (es_super or es_admin_local) else area,
             seccional_id=seccional,
         )
         s.add(u); s.commit(); s.refresh(u)
         nuevo_id = u.id
-    if not es_super:
-        db.set_permisos_usuario(nuevo_id, agregar, bloquear, sid)
+    if not es_super and not es_admin_local:
+        db.set_permisos_usuario(nuevo_id, _secciones_que_puede_dar(request, agregar),
+                                _secciones_que_puede_dar(request, bloquear), sid)
     return RedirectResponse("/admin#administradores", status_code=303)
 
 
@@ -1253,29 +1299,58 @@ def admin_usuario_editar(request: Request, id: int = Form(...), nombre: str = Fo
 
     No se puede degradar al último Super Admin activo, por el mismo motivo
     que no se lo puede desactivar: el sindicato quedaría sin nadie que pueda
-    administrarlo y solo plataforma podría arreglarlo a mano."""
+    administrarlo y solo plataforma podría arreglarlo a mano.
+
+    Un admin de seccional solo edita gente de SU seccional, y nunca a un
+    Super Admin: si pudiera, le cambiaría el rol al de arriba y se quedaría
+    con el sindicato."""
     sid = exigir_sindicato(request)
     quiere_super = (rol == "super")
+    quiere_admin_local = (rol == "seccional")
+    if quiere_super:
+        _exigir_super_admin(request)
     with db.get_session() as s:
         u = s.get(UsuarioSindicato, id)
         if not u or u.sindicato_id != sid:
             return RedirectResponse("/admin#administradores", status_code=303)
+        # A un Super Admin solo lo toca otro Super Admin.
+        if u.es_super_admin:
+            _exigir_super_admin(request)
+        else:
+            _exigir_alcance_seccional(request, u.seccional_id)
         if u.es_super_admin and not quiere_super and db.contar_super_admins(sid, excluyendo=id) == 0:
             return RedirectResponse("/admin?err=ultimoadmin#administradores", status_code=303)
         # Los ids viajan en el form (son <select>), así que se valida que
         # sean de ESTE sindicato: uno ajeno mandado a mano no entra.
         area = _id_propio(s, Area, area_id, sid)
-        if not quiere_super and not area:
+        seccional = _id_propio(s, Seccional, seccional_id, sid)
+        area_seccional = s.get(Area, area).seccional_id if area else None
+        if not quiere_super and not quiere_admin_local and not area:
             return RedirectResponse("/admin?err=sinarea#administradores", status_code=303)
+        if quiere_admin_local and not seccional:
+            return RedirectResponse("/admin?err=sinseccional#administradores", status_code=303)
+        if area and seccional and area_seccional != seccional:
+            return RedirectResponse("/admin?err=areaajena#administradores", status_code=303)
+        if area and not seccional:
+            seccional = area_seccional
+        # Tampoco se puede mandar a alguien a una seccional que no alcanzo:
+        # sería sacárselo de encima al de al lado.
+        if not quiere_super:
+            _exigir_alcance_seccional(request, seccional)
         u.nombre = nombre
         u.es_super_admin = quiere_super
-        u.area_id = None if quiere_super else area
-        u.seccional_id = _id_propio(s, Seccional, seccional_id, sid)
+        u.es_admin_seccional = quiere_admin_local
+        u.area_id = None if (quiere_super or quiere_admin_local) else area
+        u.seccional_id = seccional
         s.add(u); s.commit()
-    # Un Super Admin no lleva ajustes individuales: los suyos se borran para
-    # que no reaparezcan si mañana lo degradan a usuario de área.
-    db.set_permisos_usuario(id, [] if quiere_super else agregar,
-                            [] if quiere_super else bloquear, sid)
+    # Un administrador (general o local) no lleva ajustes individuales: los
+    # suyos se borran para que no reaparezcan si mañana lo degradan a
+    # usuario de área.
+    sin_ajustes = quiere_super or quiere_admin_local
+    db.set_permisos_usuario(
+        id,
+        [] if sin_ajustes else _secciones_que_puede_dar(request, agregar),
+        [] if sin_ajustes else _secciones_que_puede_dar(request, bloquear), sid)
     return RedirectResponse("/admin#administradores", status_code=303)
 
 
@@ -1293,6 +1368,10 @@ def admin_usuario_baja(request: Request, id: int = Form(...)):
         u = s.get(UsuarioSindicato, id)
         if not u or u.sindicato_id != sid:
             return RedirectResponse("/admin#administradores", status_code=303)
+        if u.es_super_admin:
+            _exigir_super_admin(request)
+        else:
+            _exigir_alcance_seccional(request, u.seccional_id)
         if u.activo and u.es_super_admin and db.contar_super_admins(sid, excluyendo=id) == 0:
             return RedirectResponse("/admin?err=ultimoadmin#administradores", status_code=303)
         u.activo = False
@@ -1306,12 +1385,65 @@ def admin_usuario_reactivar(request: Request, id: int = Form(...)):
     with db.get_session() as s:
         u = s.get(UsuarioSindicato, id)
         if u and u.sindicato_id == sid:
+            if u.es_super_admin:
+                _exigir_super_admin(request)
+            else:
+                _exigir_alcance_seccional(request, u.seccional_id)
             u.activo = True
             s.add(u); s.commit()
     return RedirectResponse("/admin#administradores", status_code=303)
 
 
 # ---------- Áreas del sindicato (Super Admin) ----------
+
+def _alcance_de(request: Request):
+    """El alcance de seccionales de quien está en la sesión (ver
+    db.alcance_seccional): None = todas, un set = esas, set() = ninguna."""
+    return db.alcance_seccional(_uid_sesion(request))
+
+
+def _uid_sesion(request: Request) -> int:
+    return (sesion_actual(request, "sindicato") or {}).get("uid", 0)
+
+
+def _en_alcance(alcance, seccional_id) -> bool:
+    """None alcanza todo; un set alcanza solo lo que contiene. Una fila sin
+    seccional NO la alcanza nadie salvo quien tiene alcance total -- es el
+    lado seguro: un dato incompleto no puede terminar en más permisos."""
+    if alcance is None:
+        return True
+    return bool(seccional_id) and seccional_id in alcance
+
+
+def _exigir_alcance_seccional(request: Request, seccional_id) -> None:
+    """403 si esa seccional está fuera del alcance de quien pide.
+
+    Es el chequeo que convierte al Admin de Seccional en local: sin él
+    tendría las mismas secciones que el Super Admin (que es a propósito) y
+    además podría usarlas sobre cualquier delegación."""
+    if not _en_alcance(_alcance_de(request), seccional_id):
+        raise HTTPException(403, "Esto es de otra seccional.")
+
+
+def _exigir_super_admin(request: Request) -> None:
+    """Para lo que es del administrador general y de nadie más: crear o
+    borrar seccionales, tildar `ve_todas`, y otorgar el rol de Super Admin.
+    Los tres son escalada de privilegio si los pudiera hacer un admin local
+    -- con `ve_todas` sobre su propia seccional se daría alcance total."""
+    if not db.es_super_admin(_uid_sesion(request)):
+        raise HTTPException(403, "Solo el administrador general del sindicato puede hacer esto.")
+
+
+def _secciones_que_puede_dar(request: Request, secciones: list) -> list:
+    """Recorta una lista de secciones a las que el que asigna YA tiene.
+
+    Anti-escalada: nadie puede dar lo que no tiene. Hoy los dos
+    administradores tienen todas las secciones contratadas, así que no
+    recorta nada -- existe para que el día que un administrador quede
+    acotado, el recorte ya esté puesto y no haya que acordarse."""
+    propias = db.permisos_efectivos(_uid_sesion(request))
+    return [x for x in (secciones or []) if x in propias]
+
 
 def _id_propio(s, modelo, valor: str, sid: int):
     """int(valor) solo si esa fila existe y es de ESTE sindicato; si no, None.
@@ -1332,17 +1464,24 @@ def _id_propio(s, modelo, valor: str, sid: int):
 
 @app.post("/admin/area")
 def admin_area_abm(request: Request, id: str = Form(""), nombre: str = Form(...),
-                    secciones: list[str] = Form(default=[])):
+                    seccional_id: str = Form(""), secciones: list[str] = Form(default=[])):
     """Alta/edición de un área con sus permisos en la misma operación: la
     pantalla los muestra juntos y separarlos obligaría a guardar dos veces.
 
-    Las secciones se sanean en db.set_permisos_area -- una sección
-    inventada, o de un módulo que el sindicato no contrató, se descarta en
-    vez de guardarse para filtrarla después en cada lectura."""
+    El área pertenece a UNA seccional (decisión N2), así que el alta la pide
+    y la edición no la deja cambiar: mover un área de seccional le
+    cambiaría el alcance a todos sus usuarios de golpe y en silencio. Para
+    eso se desactiva y se crea la nueva donde corresponde.
+
+    Las secciones se sanean dos veces y las dos hacen falta: acá se recortan
+    a las que el que asigna YA TIENE (nadie da lo que no tiene), y en
+    db.set_permisos_area se descarta lo inventado o lo de un módulo no
+    contratado."""
     sid = exigir_sindicato(request)
     nombre = (nombre or "").strip()
     if not nombre:
         return RedirectResponse("/admin?err=datosarea#administradores", status_code=303)
+    secciones = _secciones_que_puede_dar(request, secciones)
     with db.get_session() as s:
         if id:
             area = s.get(Area, int(id))
@@ -1350,11 +1489,18 @@ def admin_area_abm(request: Request, id: str = Form(""), nombre: str = Form(...)
             # form y se puede escribir a mano.
             if not area or area.sindicato_id != sid:
                 return RedirectResponse("/admin#administradores", status_code=303)
+            # Y el de alcance tampoco: sin él un admin local podría
+            # renombrar y repermisar las áreas de otra delegación.
+            _exigir_alcance_seccional(request, area.seccional_id)
             area.nombre = nombre
             s.add(area); s.commit()
             area_id = area.id
         else:
-            area = Area(sindicato_id=sid, nombre=nombre)
+            destino = _id_propio(s, Seccional, seccional_id, sid)
+            if not destino:
+                return RedirectResponse("/admin?err=datosarea#administradores", status_code=303)
+            _exigir_alcance_seccional(request, destino)
+            area = Area(sindicato_id=sid, seccional_id=destino, nombre=nombre)
             s.add(area); s.commit(); s.refresh(area)
             area_id = area.id
     db.set_permisos_area(area_id, secciones, sid)
@@ -1376,6 +1522,7 @@ def admin_area_estado(request: Request, id: int = Form(...), activo: str = Form(
     with db.get_session() as s:
         area = s.get(Area, id)
         if area and area.sindicato_id == sid:
+            _exigir_alcance_seccional(request, area.seccional_id)
             area.activo = queda_activa
             s.add(area); s.commit()
     return RedirectResponse("/admin#administradores", status_code=303)
@@ -1674,13 +1821,25 @@ def abm_seccional(
     """`ve_todas` define el ALCANCE de los usuarios de esta seccional: con el
     check puesto, alcanzan a los trabajadores de todas las seccionales del
     sindicato (es lo que hace que Sede Central sea "central"). Llega como
-    checkbox, así que su ausencia es False."""
+    checkbox, así que su ausencia es False.
+
+    CREAR una seccional es del administrador general y de nadie más -- el
+    mapa de delegaciones del sindicato no lo dibuja una delegación. Y tocar
+    `ve_todas` también: un admin local que pudiera tildarlo sobre su propia
+    seccional se daría alcance sobre todo el sindicato de un clic, que es
+    exactamente la escalada que el rol tiene que impedir. Editar nombre y
+    dirección de una seccional del propio alcance, en cambio, sí puede."""
     sid = exigir_sindicato(request)
     todas = bool(ve_todas)
+    if not id:
+        _exigir_super_admin(request)
     with db.get_session() as s:
         if id:
             sec = s.get(Seccional, int(id))
             if sec and sec.sindicato_id == sid:
+                _exigir_alcance_seccional(request, sec.id)
+                if todas != sec.ve_todas:
+                    _exigir_super_admin(request)
                 sec.nombre, sec.direccion, sec.ve_todas = nombre, direccion, todas
                 s.add(sec)
         else:
@@ -1693,8 +1852,14 @@ def abm_seccional(
 @app.post("/admin/seccional/borrar")
 def borrar_seccional(request: Request, id: int = Form(...)):
     """Al borrar una seccional, los trabajadores que la tenían asignada
-    quedan sin seccional (es un dato opcional, no se bloquea el borrado)."""
+    quedan sin seccional (es un dato opcional, no se bloquea el borrado).
+
+    Solo el administrador general: borrar la seccional propia sería, para un
+    admin local, borrarse el alcance a sí mismo y dejar a sus trabajadores
+    sin seccional -- que desde el sistema de Áreas significa que ningún
+    usuario de área los alcanza."""
     sid = exigir_sindicato(request)
+    _exigir_super_admin(request)
     with db.get_session() as s:
         sec = s.get(Seccional, id)
         if sec and sec.sindicato_id == sid:

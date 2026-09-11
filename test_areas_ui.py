@@ -41,7 +41,7 @@ with db.get_session() as s:
     s.commit(); s.refresh(central); s.refresh(ajena)
     SEC, SEC_AJENA = central.id, ajena.id
 
-    area_ajena = Area(sindicato_id=SID_OTRO, nombre="Área Ajena")
+    area_ajena = Area(sindicato_id=SID_OTRO, seccional_id=SEC_AJENA, nombre="Área Ajena")
     s.add(area_ajena); s.commit(); s.refresh(area_ajena)
     AREA_AJENA = area_ajena.id
 
@@ -60,8 +60,11 @@ def _sa():
     return c
 
 
-def _crear_area(c, nombre, permisos):
-    r = c.post("/admin/area", data={"nombre": nombre, "secciones": permisos},
+def _crear_area(c, nombre, permisos, seccional=None):
+    """El alta de área pide seccional desde la Fase 1: el área pertenece a
+    una (decisión N2) y sin eso no se guarda."""
+    r = c.post("/admin/area", data={"nombre": nombre, "secciones": permisos,
+                                    "seccional_id": str(seccional or SEC)},
                follow_redirects=False)
     assert r.status_code == 303, r.text
     with Session(db.engine) as s:
@@ -85,7 +88,8 @@ def test_edicion_reemplaza_los_permisos_no_los_suma():
     c = _sa()
     aid = _crear_area(c, "Tesorería", ["reportes", "cotizantes"])
     r = c.post("/admin/area", data={"id": str(aid), "nombre": "Tesorería",
-                                    "secciones": ["reportes"]}, follow_redirects=False)
+                                    "secciones": ["reportes"],
+                                    "seccional_id": str(SEC)}, follow_redirects=False)
     assert r.status_code == 303
     area = [a for a in db.areas_del_sindicato(SID) if a["id"] == aid][0]
     assert area["permisos"] == ["reportes"], "editar reemplaza, no acumula"
@@ -113,8 +117,12 @@ def test_no_se_guarda_una_seccion_de_modulo_no_contratado():
     c = TestClient(main.app)
     c.post("/admin/login", data={"usuario": "20222222220", "clave": "otro"},
            follow_redirects=False)
+    # SEC_AJENA y no SEC: la seccional tiene que ser de SU sindicato. Con la
+    # del sindicato de al lado el alta se rechaza -- que está bien, pero no
+    # es lo que este test quiere probar.
     r = c.post("/admin/area", data={"nombre": "Legales Otro",
-                                    "secciones": ["reportes", "emp_empresas"]},
+                                    "secciones": ["reportes", "emp_empresas"],
+                                    "seccional_id": str(SEC_AJENA)},
                follow_redirects=False)
     assert r.status_code == 303
     area = [a for a in db.areas_del_sindicato(SID_OTRO) if a["nombre"] == "Legales Otro"][0]
@@ -135,7 +143,8 @@ def test_desactivar_y_reactivar_area():
 def test_no_se_puede_tocar_un_area_de_otro_sindicato():
     c = _sa()
     r = c.post("/admin/area", data={"id": str(AREA_AJENA), "nombre": "Robada",
-                                    "secciones": ["reportes"]}, follow_redirects=False)
+                                    "secciones": ["reportes"],
+                                    "seccional_id": str(SEC)}, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
         assert s.get(Area, AREA_AJENA).nombre == "Área Ajena", "no se tocó"
