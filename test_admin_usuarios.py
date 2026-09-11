@@ -3,6 +3,11 @@ plataforma podía dar de alta/ver los UsuarioSindicato de un sindicato):
 alta con clave inicial, editar nombre, activar/desactivar, siempre scopeado
 al sindicato de la sesión -- y bloqueo de quedarse sin ningún admin activo.
 
+Desde el sistema de Áreas el alta pide el ROL explícito ("super" o "area"),
+con default "area": si el campo faltara, el usuario nace SIN poder en vez de
+con todo. Por eso los posts de acá mandan rol="super" -- son administradores
+generales, que es lo que este archivo prueba.
+
 Correr con: .venv/Scripts/python.exe test_admin_usuarios.py
 """
 import os
@@ -45,6 +50,7 @@ def test_alta_de_un_segundo_admin_queda_en_el_sindicato_de_la_sesion():
     c = _admin_client("20111111110", "clave-a")
     r = c.post("/admin/usuario", data={
         "usuario": "20333333330", "nombre": "Admin Dos", "clave_inicial": "nueva-clave",
+        "rol": "super",
     }, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
@@ -61,6 +67,7 @@ def test_alta_duplicada_en_el_mismo_sindicato_rechaza():
     c = _admin_client("20111111110", "clave-a")
     r = c.post("/admin/usuario", data={
         "usuario": "20333333330", "nombre": "Otra vez", "clave_inicial": "x",
+        "rol": "super",
     }, follow_redirects=False)
     assert r.status_code == 303
     assert "err=usuarioexiste" in r.headers["location"]
@@ -82,7 +89,11 @@ def test_editar_solo_cambia_nombre():
         uid = u.id
 
     c = _admin_client("20111111110", "clave-a")
-    r = c.post("/admin/usuario/editar", data={"id": uid, "nombre": "Admin Dos Editado"}, follow_redirects=False)
+    # El rol viaja en la edición: sin mandarlo, el default "area" degradaría
+    # al usuario (y al no tener área, la edición se rechazaría).
+    r = c.post("/admin/usuario/editar",
+               data={"id": uid, "nombre": "Admin Dos Editado", "rol": "super"},
+               follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
         u = s.get(UsuarioSindicato, uid)

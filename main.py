@@ -44,7 +44,7 @@ import validaciones_tramite
 import push
 import errores
 from errores import ErrorApp
-from db import (Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador,
+from db import (Area, Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, Trabajador,
                 CuentaTrabajador, EnvioSindicato, ReciboVerificado, ConfiguracionPlataforma, Noticia,
                 Beneficio, Seccional, ReciboSospechoso, Notificacion, NotificacionDestinatario,
                 TipoTramite, CampoTramite, Tramite, RespuestaTramite, NotaTramite, TramiteLog,
@@ -61,6 +61,7 @@ from qr import qr_svg, url_verificacion, codigo_efimero, verificar_codigo_efimer
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
 from version import VERSION_TRABAJADOR, VERSION_ADMIN, VERSION_PLATAFORMA, FECHA_VERSION
 import entorno
+import permisos as permisos_mod
 from permisos import SECCION_SUPER_ADMIN
 import recursos
 import render_admin
@@ -705,6 +706,8 @@ PERMISOS_RUTAS = {
     "/admin/usuario/editar":                SECCION_SUPER_ADMIN,
     "/admin/usuario/baja":                  SECCION_SUPER_ADMIN,
     "/admin/usuario/alta-logica":           SECCION_SUPER_ADMIN,
+    "/admin/area":                          SECCION_SUPER_ADMIN,
+    "/admin/area/estado":                   SECCION_SUPER_ADMIN,
 
     "/admin/concepto":                      "conceptos",
     "/admin/concepto/borrar":               "conceptos",
@@ -878,21 +881,41 @@ def admin(request: Request):
             "request": request, "marca_plataforma": db.marca_plataforma()})
 
     sid = ses.get("sid", 0)
+    uid = ses.get("uid", 0)
+    # El panel es UNA página con todos los paneles adentro: esconder pestañas
+    # en el cliente NO es ningún control, porque los datos viajarían igual en
+    # el HTML y se leen con Ver Código Fuente. Por eso cada consulta se
+    # saltea si el usuario no tiene la sección -- queda la lista vacía y la
+    # plantilla directamente no la renderiza.
+    permisos = db.permisos_efectivos(uid)
+    es_super_admin = db.es_super_admin(uid)
+
+    def puede(*secciones) -> bool:
+        return any(x in permisos for x in secciones)
+
     with db.get_session() as s:
         sind = s.get(Sindicato, sid)
+        # Los conceptos alimentan además los <select> de Fórmulas y el panel
+        # de Aprendizaje, así que hacen falta para cualquiera de las tres.
         conceptos = s.exec(select(Concepto).where(Concepto.sindicato_id == sid)
-                           .order_by(Concepto.codigo)).all()
-        formulas = s.exec(select(Formula).where(Formula.sindicato_id == sid)).all()
+                           .order_by(Concepto.codigo)).all() \
+            if puede("conceptos", "formulas", "aprendizaje") else []
+        formulas = s.exec(select(Formula).where(Formula.sindicato_id == sid)).all() \
+            if puede("formulas") else []
         reportes = s.exec(select(Reporte).where(Reporte.sindicato_id == sid)
-                          .order_by(Reporte.id.desc())).all()
+                          .order_by(Reporte.id.desc())).all() \
+            if puede("reportes") else []
+        # El padrón se usa también para resolver nombres por CUIL en Reportes
+        # y en Cotizantes, que solo guardan el CUIL.
         trabajadores = s.exec(select(Trabajador).where(Trabajador.sindicato_id == sid)
-                              .order_by(Trabajador.activo.desc(), Trabajador.nombre)).all()
+                              .order_by(Trabajador.activo.desc(), Trabajador.nombre)).all() \
+            if puede("trabajadores", "reportes", "cotizantes") else []
         envios = s.exec(select(EnvioSindicato).where(EnvioSindicato.sindicato_id == sid)
-                        .order_by(EnvioSindicato.periodo.desc(), EnvioSindicato.id.desc())).all()
-        usuarios_sindicato = s.exec(select(UsuarioSindicato).where(UsuarioSindicato.sindicato_id == sid)
-                                    .order_by(UsuarioSindicato.activo.desc(), UsuarioSindicato.nombre)).all()
+                        .order_by(EnvioSindicato.periodo.desc(), EnvioSindicato.id.desc())).all() \
+            if puede("cotizantes") else []
         empleadores = s.exec(select(Empleador).where(Empleador.sindicato_id == sid)
-                             .order_by(Empleador.activo.desc(), Empleador.razon_social)).all()
+                             .order_by(Empleador.activo.desc(), Empleador.razon_social)).all() \
+            if puede("emp_empresas") else []
     # Nombre por CUIL, para poder filtrar Reportes y Afiliados cotizantes por
     # nombre (esas tablas solo guardan el CUIL, no el nombre).
     nombres_por_cuil = {t.cuil: t.nombre for t in trabajadores}
@@ -909,9 +932,22 @@ def admin(request: Request):
     # fórmula aunque ningún concepto lo tenga como codigo propio.
     genericos = [c for c in conceptos if not c.cuit_empleador]
     codigos_efectivos = {c.codigo_generico or c.codigo for c in conceptos}
-    seccionales = db.seccionales_del_sindicato(sid)
+    # Las seccionales aparecen en su propio CRUD y además como <select> de
+    # destino en el alta de trabajador, Noticias, Beneficios y
+    # Notificaciones: hace falta para cualquiera de esas.
+    seccionales = db.seccionales_del_sindicato(sid) \
+        if puede("seccionales", "trabajadores", "noticias", "beneficios",
+                 "notificaciones") or es_super_admin else []
     seccional_por_id = {sec["id"]: sec["nombre"] for sec in seccionales}
     modulos = _modulos_de(sid)
+    # Áreas y Usuarios: la pantalla entera es del Super Admin, así que ni la
+    # lista de usuarios ni la de áreas se consultan para los demás.
+    areas = db.areas_del_sindicato(sid) if es_super_admin else []
+    usuarios_sindicato = db.usuarios_del_sindicato(sid) if es_super_admin else []
+    # El catálogo que se le ofrece al armar un perfil: solo las secciones que
+    # los módulos contratados habilitan, agrupadas para la pantalla.
+    catalogo_permisos = permisos_mod.agrupar_para_ui(
+        permisos_mod.secciones_de_modulos(modulos)) if es_super_admin else []
     return templates.TemplateResponse("admin.html", {
         "request": request, "sindicato": sind.nombre if sind else "",
         "marca": db.marca_sindicato(sid), "marca_plataforma": db.marca_plataforma(),
@@ -920,24 +956,34 @@ def admin(request: Request):
         "formulas": formulas, "reportes": reportes,
         "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR, "envios": envios,
         "usuarios_sindicato": usuarios_sindicato,
+        "permisos": permisos, "es_super_admin": es_super_admin,
+        "areas": areas, "catalogo_permisos": catalogo_permisos,
+        "etiquetas_secciones": {k: v[0] for k, v in permisos_mod.SECCIONES.items()},
         "nombres_por_cuil": nombres_por_cuil, "provisorios": provisorios,
         "debe_cambiar": ses.get("cambiar", False),
-        "noticias": db.noticias_del_sindicato(sid),
-        "beneficios": db.beneficios_del_sindicato(sid),
-        "notificaciones": db.notificaciones_del_sindicato(sid),
-        "tipos_tramite": db.tipos_tramite_del_sindicato(sid),
-        "tramites": db.tramites_del_sindicato(sid),
-        "tramites_nuevos": db.contar_tramites_nuevos(sid) if "tramites" in modulos else 0,
+        "noticias": db.noticias_del_sindicato(sid) if puede("noticias") else [],
+        "beneficios": db.beneficios_del_sindicato(sid) if puede("beneficios") else [],
+        "notificaciones": db.notificaciones_del_sindicato(sid) if puede("notificaciones") else [],
+        "tipos_tramite": db.tipos_tramite_del_sindicato(sid)
+                         if puede("tramites_formularios", "tramites_recibidos") else [],
+        "tramites": db.tramites_del_sindicato(sid) if puede("tramites_recibidos") else [],
+        "tramites_nuevos": db.contar_tramites_nuevos(sid)
+                           if "tramites" in modulos and puede("tramites_recibidos") else 0,
         "estados_tramite": db.ESTADOS_TRAMITE, "estados_tramite_label": db.ESTADOS_TRAMITE_LABEL,
         "seccionales": seccionales, "seccional_por_id": seccional_por_id,
         "empleadores": empleadores,
-        "notificaciones_empresa": db.notificaciones_empleador_del_sindicato(sid),
-        "tipos_tramite_empresa": db.tipos_tramite_empleador_del_sindicato(sid),
-        "tramites_empresa": db.tramites_empleador_del_sindicato(sid),
-        "tramites_empresa_nuevos": db.contar_tramites_empleador_nuevos(sid) if "empleadores" in modulos else 0,
+        "notificaciones_empresa": db.notificaciones_empleador_del_sindicato(sid)
+                                  if puede("emp_notificaciones") else [],
+        "tipos_tramite_empresa": db.tipos_tramite_empleador_del_sindicato(sid)
+                                 if puede("emp_tramites_formularios", "emp_tramites_recibidos") else [],
+        "tramites_empresa": db.tramites_empleador_del_sindicato(sid)
+                            if puede("emp_tramites_recibidos") else [],
+        "tramites_empresa_nuevos": db.contar_tramites_empleador_nuevos(sid)
+                                   if "empleadores" in modulos and puede("emp_tramites_recibidos") else 0,
         "modulos": modulos,
         # Piloto de RAG: solo si el sindicato tiene el módulo habilitado.
-        **_contexto_convenio(sid, modulos),
+        **(_contexto_convenio(sid, modulos) if puede("convenio")
+           else {"convenios": [], "documentos_convenio": {}}),
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
 
@@ -986,9 +1032,17 @@ def admin_inicio(request: Request):
         usuario = s.get(UsuarioSindicato, ses.get("uid", 0))
     nombre_admin = (usuario.nombre if usuario else "") or ""
     modulos = _modulos_de(sid)
-    tramites_nuevos = db.contar_tramites_nuevos(sid) if "tramites" in modulos else 0
-    tramites_empresa_nuevos = db.contar_tramites_empleador_nuevos(sid) if "empleadores" in modulos else 0
+    # La portada es una pantalla exenta del gateo (si no, un usuario de área
+    # no podría ni entrar), pero sus tarjetas sí se recortan: mostrar un
+    # acceso que al tocarlo rebota con 403 es peor que no mostrarlo.
+    permisos = db.permisos_efectivos(ses.get("uid", 0))
+    es_super_admin = db.es_super_admin(ses.get("uid", 0))
+    tramites_nuevos = db.contar_tramites_nuevos(sid) \
+        if "tramites" in modulos and "tramites_recibidos" in permisos else 0
+    tramites_empresa_nuevos = db.contar_tramites_empleador_nuevos(sid) \
+        if "empleadores" in modulos and "emp_tramites_recibidos" in permisos else 0
     return templates.TemplateResponse("admin_portada.html", {
+        "permisos": permisos, "es_super_admin": es_super_admin,
         "request": request, "sindicato": marca.get("nombre", ""),
         "marca": marca, "marca_plataforma": db.marca_plataforma(),
         "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
@@ -1145,7 +1199,10 @@ def admin_trabajador_reactivar(request: Request, id: int = Form(...)):
 
 @app.post("/admin/usuario")
 def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str = Form(""),
-                        clave_inicial: str = Form(...), rol: str = Form("area")):
+                        clave_inicial: str = Form(...), rol: str = Form("area"),
+                        area_id: str = Form(""), seccional_id: str = Form(""),
+                        agregar: list[str] = Form(default=[]),
+                        bloquear: list[str] = Form(default=[])):
     """sindicato_id sale de la sesión, nunca de un campo del form -- un
     admin no puede darse de alta a sí mismo en otro sindicato.
 
@@ -1157,27 +1214,68 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
     cuit = _norm_cuil(usuario)
     if len(cuit) != 11 or not clave_inicial:
         return RedirectResponse("/admin?err=datos#administradores", status_code=303)
+    es_super = (rol == "super")
+    with db.get_session() as s:
+        area = _id_propio(s, Area, area_id, sid)
+        seccional = _id_propio(s, Seccional, seccional_id, sid)
+    # Un usuario de área SIN área no puede hacer nada: se crearía mudo y sin
+    # que nada lo explique. Se rechaza con un aviso en vez de dejarlo pasar.
+    # Un id de otro sindicato cae acá también: _id_propio lo devuelve None.
+    if not es_super and not area:
+        return RedirectResponse("/admin?err=sinarea#administradores", status_code=303)
     with db.get_session() as s:
         if s.exec(select(UsuarioSindicato).where(
                 UsuarioSindicato.sindicato_id == sid, UsuarioSindicato.usuario == cuit)).first():
             return RedirectResponse("/admin?err=usuarioexiste#administradores", status_code=303)
-        s.add(UsuarioSindicato(
+        u = UsuarioSindicato(
             sindicato_id=sid, usuario=cuit, nombre=nombre,
             clave_hash=auth.hashear_clave(clave_inicial), debe_cambiar_clave=True,
-            es_super_admin=(rol == "super"),
-        ))
-        s.commit()
+            es_super_admin=es_super,
+            # Un Super Admin no cuelga de un área: tiene todo lo contratado,
+            # así que un área lo único que haría es mentir en la pantalla.
+            area_id=None if es_super else area,
+            seccional_id=seccional,
+        )
+        s.add(u); s.commit(); s.refresh(u)
+        nuevo_id = u.id
+    if not es_super:
+        db.set_permisos_usuario(nuevo_id, agregar, bloquear, sid)
     return RedirectResponse("/admin#administradores", status_code=303)
 
 
 @app.post("/admin/usuario/editar")
-def admin_usuario_editar(request: Request, id: int = Form(...), nombre: str = Form("")):
+def admin_usuario_editar(request: Request, id: int = Form(...), nombre: str = Form(""),
+                          rol: str = Form("area"), area_id: str = Form(""),
+                          seccional_id: str = Form(""),
+                          agregar: list[str] = Form(default=[]),
+                          bloquear: list[str] = Form(default=[])):
+    """Edita nombre, rol, área, seccional y los ajustes individuales.
+
+    No se puede degradar al último Super Admin activo, por el mismo motivo
+    que no se lo puede desactivar: el sindicato quedaría sin nadie que pueda
+    administrarlo y solo plataforma podría arreglarlo a mano."""
     sid = exigir_sindicato(request)
+    quiere_super = (rol == "super")
     with db.get_session() as s:
         u = s.get(UsuarioSindicato, id)
-        if u and u.sindicato_id == sid:
-            u.nombre = nombre
-            s.add(u); s.commit()
+        if not u or u.sindicato_id != sid:
+            return RedirectResponse("/admin#administradores", status_code=303)
+        if u.es_super_admin and not quiere_super and db.contar_super_admins(sid, excluyendo=id) == 0:
+            return RedirectResponse("/admin?err=ultimoadmin#administradores", status_code=303)
+        # Los ids viajan en el form (son <select>), así que se valida que
+        # sean de ESTE sindicato: uno ajeno mandado a mano no entra.
+        area = _id_propio(s, Area, area_id, sid)
+        if not quiere_super and not area:
+            return RedirectResponse("/admin?err=sinarea#administradores", status_code=303)
+        u.nombre = nombre
+        u.es_super_admin = quiere_super
+        u.area_id = None if quiere_super else area
+        u.seccional_id = _id_propio(s, Seccional, seccional_id, sid)
+        s.add(u); s.commit()
+    # Un Super Admin no lleva ajustes individuales: los suyos se borran para
+    # que no reaparezcan si mañana lo degradan a usuario de área.
+    db.set_permisos_usuario(id, [] if quiere_super else agregar,
+                            [] if quiere_super else bloquear, sid)
     return RedirectResponse("/admin#administradores", status_code=303)
 
 
@@ -1210,6 +1308,76 @@ def admin_usuario_reactivar(request: Request, id: int = Form(...)):
         if u and u.sindicato_id == sid:
             u.activo = True
             s.add(u); s.commit()
+    return RedirectResponse("/admin#administradores", status_code=303)
+
+
+# ---------- Áreas del sindicato (Super Admin) ----------
+
+def _id_propio(s, modelo, valor: str, sid: int):
+    """int(valor) solo si esa fila existe y es de ESTE sindicato; si no, None.
+
+    Los <select> de área y seccional viajan como campos del form, así que un
+    id de otro sindicato se puede mandar a mano. Devolver None en vez de
+    fallar es a propósito: el usuario queda sin área/seccional, que es el
+    estado más restrictivo (ver db.alcance_seccional, que sin seccional no
+    alcanza a nadie)."""
+    if not valor:
+        return None
+    try:
+        fila = s.get(modelo, int(valor))
+    except (TypeError, ValueError):
+        return None
+    return fila.id if fila and fila.sindicato_id == sid else None
+
+
+@app.post("/admin/area")
+def admin_area_abm(request: Request, id: str = Form(""), nombre: str = Form(...),
+                    secciones: list[str] = Form(default=[])):
+    """Alta/edición de un área con sus permisos en la misma operación: la
+    pantalla los muestra juntos y separarlos obligaría a guardar dos veces.
+
+    Las secciones se sanean en db.set_permisos_area -- una sección
+    inventada, o de un módulo que el sindicato no contrató, se descarta en
+    vez de guardarse para filtrarla después en cada lectura."""
+    sid = exigir_sindicato(request)
+    nombre = (nombre or "").strip()
+    if not nombre:
+        return RedirectResponse("/admin?err=datosarea#administradores", status_code=303)
+    with db.get_session() as s:
+        if id:
+            area = s.get(Area, int(id))
+            # El chequeo de sindicato no es decorativo: el id viaja en el
+            # form y se puede escribir a mano.
+            if not area or area.sindicato_id != sid:
+                return RedirectResponse("/admin#administradores", status_code=303)
+            area.nombre = nombre
+            s.add(area); s.commit()
+            area_id = area.id
+        else:
+            area = Area(sindicato_id=sid, nombre=nombre)
+            s.add(area); s.commit(); s.refresh(area)
+            area_id = area.id
+    db.set_permisos_area(area_id, secciones, sid)
+    return RedirectResponse("/admin#administradores", status_code=303)
+
+
+@app.post("/admin/area/estado")
+def admin_area_estado(request: Request, id: int = Form(...), activo: str = Form("")):
+    """Un área NO se borra, se desactiva: sus usuarios seguirían apuntando a
+    un área inexistente. Desactivarla es además la forma de cortarle el
+    acceso a todo un equipo de una, sin tocar usuario por usuario.
+
+    El valor se compara contra una lista de afirmativos y NO con bool(): un
+    string cualquiera es truthy en Python, así que `activo="no"` habría
+    activado el área. Cualquier cosa que no sea un sí explícito desactiva,
+    que es el lado seguro."""
+    sid = exigir_sindicato(request)
+    queda_activa = (activo or "").strip().lower() in ("1", "true", "on", "si", "sí")
+    with db.get_session() as s:
+        area = s.get(Area, id)
+        if area and area.sindicato_id == sid:
+            area.activo = queda_activa
+            s.add(area); s.commit()
     return RedirectResponse("/admin#administradores", status_code=303)
 
 
@@ -1501,16 +1669,23 @@ def borrar_beneficio(request: Request, id: int = Form(...)):
 def abm_seccional(
     request: Request,
     id: str = Form(""), nombre: str = Form(...), direccion: str = Form(""),
+    ve_todas: str = Form(""),
 ):
+    """`ve_todas` define el ALCANCE de los usuarios de esta seccional: con el
+    check puesto, alcanzan a los trabajadores de todas las seccionales del
+    sindicato (es lo que hace que Sede Central sea "central"). Llega como
+    checkbox, así que su ausencia es False."""
     sid = exigir_sindicato(request)
+    todas = bool(ve_todas)
     with db.get_session() as s:
         if id:
             sec = s.get(Seccional, int(id))
             if sec and sec.sindicato_id == sid:
-                sec.nombre, sec.direccion = nombre, direccion
+                sec.nombre, sec.direccion, sec.ve_todas = nombre, direccion, todas
                 s.add(sec)
         else:
-            s.add(Seccional(sindicato_id=sid, nombre=nombre, direccion=direccion))
+            s.add(Seccional(sindicato_id=sid, nombre=nombre, direccion=direccion,
+                            ve_todas=todas))
         s.commit()
     return RedirectResponse("/admin#seccionales", status_code=303)
 
