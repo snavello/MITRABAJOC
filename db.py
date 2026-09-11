@@ -142,16 +142,76 @@ class Sindicato(SQLModel, table=True):
 
 class Seccional(SQLModel, table=True):
     """Delegación/seccional de un sindicato (ej. por zona geográfica). El
-    admin las da de alta y las asigna a trabajadores en el alta/edición --
-    es un dato descriptivo, no afecta validación de recibos ni aislamiento."""
+    admin las da de alta y las asigna a trabajadores en el alta/edición.
+
+    Desde el sistema de Áreas dejó de ser un dato meramente descriptivo:
+    ACOTA lo que ve un usuario de área (sus trámites y a quién puede
+    notificar). Sigue sin afectar la validación de recibos ni el
+    aislamiento entre sindicatos.
+
+    `ve_todas` es la excepción a ese recorte: los usuarios de una seccional
+    tildada alcanzan TODAS las seccionales del sindicato. Nace tildada en
+    "Sede Central"; el Super Admin la puede tildar en otra (ej. una regional
+    que supervisa varias). Ver SPRINT_AREAS.md, decisión 5."""
     id: Optional[int] = Field(default=None, primary_key=True)
     sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
     nombre: str
     direccion: str = ""
+    ve_todas: bool = False
+
+
+class Area(SQLModel, table=True):
+    """Área organizativa del sindicato (Secretaría Legal, Tesorería...).
+
+    NO es lo mismo que Seccional y son ejes independientes: el área dice QUÉ
+    hace un usuario, la seccional dice SOBRE QUIÉNES. Un usuario tiene una
+    de cada una, y así se expresa "Legales de Rosario".
+
+    Los permisos se asignan al área (PermisoArea) y los heredan todos sus
+    usuarios; el ajuste fino por persona va en PermisoUsuario.
+
+    Un área NO se borra, se desactiva: los usuarios seguirían apuntando a un
+    área inexistente, y desactivarla es además la forma de cortarle el
+    acceso a todo un equipo sin tocar usuario por usuario."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    nombre: str
+    activo: bool = True
+
+
+class PermisoArea(SQLModel, table=True):
+    """Una sección del panel habilitada para un área -- una fila por sección
+    (ver permisos.py). Lo que heredan todos los usuarios del área."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    area_id: int = Field(foreign_key="area.id", index=True)
+    seccion: str
+
+
+class PermisoUsuario(SQLModel, table=True):
+    """Ajuste individual sobre lo que hereda del área.
+
+    `tipo` es "agregar" o "bloquear", y el bloqueo le gana al área Y al
+    agregado (ver permisos.calcular_efectivos). Sin el bloqueo no habría
+    forma de decir "es de Legales pero a él no le doy Notificaciones" sin
+    inventarle un área propia."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    usuario_id: int = Field(foreign_key="usuariosindicato.id", index=True)
+    seccion: str
+    tipo: str = "agregar"   # agregar | bloquear
 
 
 class UsuarioSindicato(SQLModel, table=True):
-    """Administrador de un sindicato. Lo da de alta el admin de plataforma."""
+    """Usuario del panel de un sindicato.
+
+    Dos clases, distinguidas por `es_super_admin`:
+    - Super Admin: todo el panel, incluida la gestión de áreas y usuarios.
+      Es lo que era TODO usuario antes del sistema de Áreas (los que ya
+      existían quedaron con la bandera prendida en la migración).
+    - Usuario de área: ve solo las secciones que le den su área y sus
+      permisos individuales, y solo sobre su alcance de seccional.
+
+    El primer Super Admin de cada sindicato lo sigue dando de alta el admin
+    de plataforma; de ahí en más los crea el propio sindicato."""
     id: Optional[int] = Field(default=None, primary_key=True)
     sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
     usuario: str = Field(index=True)            # mail o nombre de usuario
@@ -159,6 +219,13 @@ class UsuarioSindicato(SQLModel, table=True):
     clave_hash: str = ""
     debe_cambiar_clave: bool = True             # la primera clave la pone el admin de plataforma
     activo: bool = True
+    # Default False a propósito: si alguna alta se olvida de setearlo, el
+    # usuario nace SIN poder, no con todo. Los tres lugares que crean Super
+    # Admins de verdad (alta desde plataforma, alta desde el propio
+    # sindicato, cargar_demo) lo pasan explícito.
+    es_super_admin: bool = False
+    area_id: Optional[int] = Field(default=None, foreign_key="area.id", index=True)
+    seccional_id: Optional[int] = Field(default=None, foreign_key="seccional.id", index=True)
 
 
 class CuentaTrabajador(SQLModel, table=True):
@@ -1945,6 +2012,103 @@ def set_modulos_sindicato(sindicato_id: int, modulos: list) -> None:
         s.commit()
 
 
+# ---------- Permisos del panel del sindicato (ver permisos.py) ----------
+
+def permisos_efectivos(usuario_id: int) -> set:
+    """Secciones del panel que este usuario puede tocar, ahora mismo.
+
+    Se calcula CONTRA LA BASE en cada llamada y nunca se guarda en la
+    cookie de sesión: si los permisos viajaran en el token firmado,
+    quitarle un permiso a alguien no tendría efecto hasta que se le venciera
+    la sesión. El middleware ya reemite la cookie en cada request, así que
+    el costo real es una consulta más.
+
+    Devuelve set() para un usuario inexistente o dado de baja -- sin
+    excepción: quien llama decide si eso es un 403 o simplemente no mostrar
+    nada."""
+    from permisos import calcular_efectivos, secciones_de_modulos
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        if not u or not u.activo:
+            return set()
+        mods = modulos_habilitados(u.sindicato_id)
+        # El Super Admin tiene todo lo que el sindicato tenga contratado --
+        # pero pasa por el mismo filtro de módulos que los demás, así un
+        # módulo apagado no le deja secciones colgadas.
+        if u.es_super_admin:
+            return set(secciones_de_modulos(mods))
+        del_area = []
+        if u.area_id:
+            area = s.get(Area, u.area_id)
+            # Un área desactivada no da permisos: es la forma de cortarle el
+            # acceso a todo un equipo de una, sin tocar usuario por usuario.
+            if area and area.sindicato_id == u.sindicato_id and area.activo:
+                del_area = [x.seccion for x in s.exec(
+                    select(PermisoArea).where(PermisoArea.area_id == u.area_id)).all()]
+        individuales = s.exec(select(PermisoUsuario).where(
+            PermisoUsuario.usuario_id == usuario_id)).all()
+        agregados = [x.seccion for x in individuales if x.tipo == "agregar"]
+        bloqueados = [x.seccion for x in individuales if x.tipo == "bloquear"]
+        return calcular_efectivos(del_area, agregados, bloqueados, mods)
+
+
+def tiene_permiso(usuario_id: int, seccion: str) -> bool:
+    return seccion in permisos_efectivos(usuario_id)
+
+
+def es_super_admin(usuario_id: int) -> bool:
+    """La llave de la gestión de áreas y usuarios. Se lee de la base en cada
+    request por lo mismo que los permisos: degradar a alguien tiene que
+    valer ya, no cuando se le venza la sesión."""
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        return bool(u and u.activo and u.es_super_admin)
+
+
+def contar_super_admins(sindicato_id: int, excluyendo: int = 0) -> int:
+    """Super Admins activos del sindicato, sin contar a `excluyendo`.
+
+    Existe para el guard del último: antes del sistema de Áreas alcanzaba
+    con contar usuarios activos, pero ahora un sindicato puede tener diez
+    usuarios de área y un solo Super Admin -- y si se lo desactiva o se lo
+    degrada, nadie puede volver a entrar a administrar."""
+    with Session(engine) as s:
+        filas = s.exec(select(UsuarioSindicato).where(
+            UsuarioSindicato.sindicato_id == sindicato_id,
+            UsuarioSindicato.activo == True,
+            UsuarioSindicato.es_super_admin == True)).all()
+        return len([u for u in filas if u.id != excluyendo])
+
+
+def alcance_seccional(usuario_id: int):
+    """Sobre qué seccionales trabaja este usuario.
+
+    - `None`  = todas (Super Admin, o seccional con ve_todas tildado).
+    - `{id}`  = solo esa seccional.
+    - `set()` = ninguna.
+
+    El set vacío es el caso defensivo del usuario de área al que le falta la
+    seccional: desde el sistema de Áreas la seccional es obligatoria, así
+    que si igual falta preferimos que no vea NADA antes que verlo todo --
+    un dato incompleto no puede terminar en más permisos de los que
+    corresponden. Devolver None ahí sería justamente eso.
+
+    Se usa para recortar tanto los trámites que ve como los trabajadores a
+    los que puede notificar: una sola regla de alcance para todo el panel."""
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        if not u or not u.activo:
+            return set()
+        if u.es_super_admin:
+            return None
+        if not u.seccional_id:
+            return set()
+        sec = s.get(Seccional, u.seccional_id)
+        if not sec or sec.sindicato_id != u.sindicato_id:
+            return set()
+        return None if sec.ve_todas else {u.seccional_id}
+
+
 # ---------- Configuración de plataforma ----------
 def obtener_tope_sindical() -> float:
     with Session(engine) as s:
@@ -2344,7 +2508,108 @@ def seccionales_del_sindicato(sindicato_id: int) -> list:
     with Session(engine) as s:
         seccionales = s.exec(select(Seccional).where(
             Seccional.sindicato_id == sindicato_id).order_by(Seccional.nombre)).all()
-        return [{"id": sec.id, "nombre": sec.nombre, "direccion": sec.direccion} for sec in seccionales]
+        return [{"id": sec.id, "nombre": sec.nombre, "direccion": sec.direccion,
+                 "ve_todas": sec.ve_todas} for sec in seccionales]
+
+
+# ---------- Áreas y permisos (CRUD del Super Admin) ----------
+
+def areas_del_sindicato(sindicato_id: int) -> list:
+    """Áreas del sindicato con sus permisos, para el CRUD y los <select>.
+
+    Trae los permisos en la misma pasada: la pantalla siempre los muestra
+    junto al área, y son pocas filas."""
+    with Session(engine) as s:
+        areas = s.exec(select(Area).where(
+            Area.sindicato_id == sindicato_id).order_by(Area.nombre)).all()
+        ids = [a.id for a in areas]
+        por_area = {i: [] for i in ids}
+        if ids:
+            for x in s.exec(select(PermisoArea).where(PermisoArea.area_id.in_(ids))).all():
+                por_area[x.area_id].append(x.seccion)
+        return [{"id": a.id, "nombre": a.nombre, "activo": a.activo,
+                 "permisos": sorted(por_area.get(a.id, []))} for a in areas]
+
+
+def set_permisos_area(area_id: int, secciones: list, sindicato_id: int) -> None:
+    """Reemplaza los permisos del área. Descarta cualquier sección que no
+    exista en el catálogo o que el sindicato no tenga contratada -- mismo
+    criterio defensivo que set_modulos_sindicato: no se guarda basura que
+    después haya que filtrar en cada lectura."""
+    from permisos import secciones_de_modulos
+    with Session(engine) as s:
+        area = s.get(Area, area_id)
+        if not area or area.sindicato_id != sindicato_id:
+            return
+        validas = set(secciones_de_modulos(modulos_habilitados(sindicato_id)))
+        for x in s.exec(select(PermisoArea).where(PermisoArea.area_id == area_id)).all():
+            s.delete(x)
+        for seccion in dict.fromkeys(secciones or []):   # sin repetidos, sin perder el orden
+            if seccion in validas:
+                s.add(PermisoArea(area_id=area_id, seccion=seccion))
+        s.commit()
+
+
+def permisos_individuales(usuario_id: int) -> dict:
+    """{"agregar": [...], "bloquear": [...]} del usuario, para pintar la
+    pantalla en sus tres estados (hereda / agregado / bloqueado)."""
+    with Session(engine) as s:
+        filas = s.exec(select(PermisoUsuario).where(
+            PermisoUsuario.usuario_id == usuario_id)).all()
+        return {
+            "agregar": sorted(x.seccion for x in filas if x.tipo == "agregar"),
+            "bloquear": sorted(x.seccion for x in filas if x.tipo == "bloquear"),
+        }
+
+
+def set_permisos_usuario(usuario_id: int, agregar: list, bloquear: list,
+                         sindicato_id: int) -> None:
+    """Reemplaza los ajustes individuales del usuario.
+
+    Si una sección viene en las dos listas gana BLOQUEAR, por lo mismo que
+    el bloqueo le gana al área en el cálculo: es el único orden que hace
+    que "bloqueado" signifique algo estable."""
+    from permisos import secciones_de_modulos
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        if not u or u.sindicato_id != sindicato_id:
+            return
+        validas = set(secciones_de_modulos(modulos_habilitados(sindicato_id)))
+        for x in s.exec(select(PermisoUsuario).where(
+                PermisoUsuario.usuario_id == usuario_id)).all():
+            s.delete(x)
+        bloqueadas = {x for x in (bloquear or []) if x in validas}
+        for seccion in bloqueadas:
+            s.add(PermisoUsuario(usuario_id=usuario_id, seccion=seccion, tipo="bloquear"))
+        for seccion in {x for x in (agregar or []) if x in validas} - bloqueadas:
+            s.add(PermisoUsuario(usuario_id=usuario_id, seccion=seccion, tipo="agregar"))
+        s.commit()
+
+
+def usuarios_del_sindicato(sindicato_id: int) -> list:
+    """Usuarios del panel con su área, seccional y ajustes individuales --
+    todo lo que la pantalla de "Áreas y Usuarios" necesita mostrar."""
+    with Session(engine) as s:
+        usuarios = s.exec(select(UsuarioSindicato).where(
+            UsuarioSindicato.sindicato_id == sindicato_id).order_by(
+            UsuarioSindicato.activo.desc(), UsuarioSindicato.nombre)).all()
+        areas = {a.id: a.nombre for a in s.exec(select(Area).where(
+            Area.sindicato_id == sindicato_id)).all()}
+        secs = {x.id: x.nombre for x in s.exec(select(Seccional).where(
+            Seccional.sindicato_id == sindicato_id)).all()}
+        salida = []
+        for u in usuarios:
+            ind = permisos_individuales(u.id)
+            salida.append({
+                "id": u.id, "usuario": u.usuario, "nombre": u.nombre, "activo": u.activo,
+                "debe_cambiar_clave": u.debe_cambiar_clave,
+                "es_super_admin": u.es_super_admin,
+                "area_id": u.area_id, "area": areas.get(u.area_id, ""),
+                "seccional_id": u.seccional_id, "seccional": secs.get(u.seccional_id, ""),
+                "agregados": ind["agregar"], "bloqueados": ind["bloquear"],
+                "efectivos": sorted(permisos_efectivos(u.id)),
+            })
+        return salida
 
 
 def seccional_de_trabajador(cuil: str, sindicato_id: int) -> Optional[int]:

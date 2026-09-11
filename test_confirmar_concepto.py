@@ -20,12 +20,12 @@ from sqlmodel import Session, select
 
 db.crear_tablas()
 with db.get_session() as s:
-    uom = Sindicato(nombre="UOM Confirmar", slug="uom-confirmar")
-    fega = Sindicato(nombre="Fega Confirmar", slug="fega-confirmar")
+    uom = Sindicato(nombre="UOM Confirmar", slug="uom-confirmar", modulos_habilitados=["recibos"])
+    fega = Sindicato(nombre="Fega Confirmar", slug="fega-confirmar", modulos_habilitados=["recibos"])
     s.add(uom); s.add(fega); s.commit(); s.refresh(uom); s.refresh(fega)
     SID_UOM, SID_FEGA = uom.id, fega.id
     s.add(UsuarioSindicato(sindicato_id=SID_UOM, usuario="20111111110", nombre="Admin",
-                            clave_hash=auth.hashear_clave("uom-demo"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("uom-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(Concepto(sindicato_id=SID_UOM, codigo="X1", nombre="Nuevo concepto", tipo="ingreso",
                     remunerativo=True, alias=["Nuevo concepto"], pendiente_revision=True))
     s.add(Concepto(sindicato_id=SID_FEGA, codigo="Y1", nombre="Concepto de Fega", tipo="ingreso",

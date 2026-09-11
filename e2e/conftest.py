@@ -291,7 +291,7 @@ def entorno_aefip():
         if not admin:
             s.add(UsuarioSindicato(sindicato_id=sid, usuario="20999000019", nombre="Admin AEFIP",
                                    clave_hash=auth.hashear_clave("aefip-demo"),
-                                   debe_cambiar_clave=False))
+                                   debe_cambiar_clave=False, es_super_admin=True))
             s.commit()
             admin_usuario, admin_clave = "20999000019", "aefip-demo"
         elif admin.usuario == "20999000019":

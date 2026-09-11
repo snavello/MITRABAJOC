@@ -61,6 +61,7 @@ from qr import qr_svg, url_verificacion, codigo_efimero, verificar_codigo_efimer
 from semaforo import calcular_semaforo, advertencia_ultimo_deposito
 from version import VERSION_TRABAJADOR, VERSION_ADMIN, VERSION_PLATAFORMA, FECHA_VERSION
 import entorno
+from permisos import SECCION_SUPER_ADMIN
 import recursos
 import render_admin
 import render_planes
@@ -684,11 +685,160 @@ def api_beneficio(beneficio_id: int, request: Request):
 
 
 # ================= Panel del sindicato =================
+# Qué sección del panel exige cada ruta de /admin (ver permisos.py). El
+# chequeo vive DENTRO de exigir_sindicato(), que todas estas rutas ya
+# llamaban desde antes -- resuelve la sección mirando la ruta que FastAPI
+# acaba de matchear. Un solo lugar que gatea, en vez de 73 lugares donde
+# olvidarse. Y si una ruta nueva no se agrega acá, el acceso se RECHAZA en
+# vez de quedar abierta (falla cerrado); test_areas_rutas.py recorre
+# app.routes y avisa antes de que eso llegue a producción.
+PERMISOS_RUTAS = {
+    "/admin/trabajador":                    "trabajadores",
+    "/admin/trabajador/generar-credencial": "trabajadores",
+    "/admin/trabajador/masivo":             "trabajadores",
+    "/admin/trabajador/baja":               "trabajadores",
+    "/admin/trabajador/alta-logica":        "trabajadores",
+
+    # La gestión de usuarios es del Super Admin y de nadie más: no es una
+    # sección asignable (ver SECCION_SUPER_ADMIN en permisos.py).
+    "/admin/usuario":                       SECCION_SUPER_ADMIN,
+    "/admin/usuario/editar":                SECCION_SUPER_ADMIN,
+    "/admin/usuario/baja":                  SECCION_SUPER_ADMIN,
+    "/admin/usuario/alta-logica":           SECCION_SUPER_ADMIN,
+
+    "/admin/concepto":                      "conceptos",
+    "/admin/concepto/borrar":               "conceptos",
+    "/admin/concepto/confirmar":            "conceptos",
+    "/admin/concepto/fusionar":             "conceptos",
+    "/admin/conceptos-universales":         "conceptos",
+    "/admin/formula":                       "formulas",
+    "/admin/formula/borrar":                "formulas",
+    "/admin/aprender":                      "aprendizaje",
+    "/admin/aprender/aplicar":              "aprendizaje",
+
+    "/admin/noticia":                       "noticias",
+    "/admin/noticia/borrar":                "noticias",
+    "/admin/beneficio":                     "beneficios",
+    "/admin/beneficio/borrar":              "beneficios",
+    "/admin/seccional":                     "seccionales",
+    "/admin/seccional/borrar":              "seccionales",
+
+    "/admin/notificacion":                  "notificaciones",
+    "/admin/notificacion/preview":          "notificaciones",
+    "/admin/notificacion/{notificacion_id}/destinatarios": "notificaciones",
+
+    # Responder un trámite y diseñar el formulario son permisos distintos:
+    # quien edita el formulario elige el área receptora.
+    "/admin/tramite-tipo":                  "tramites_formularios",
+    "/admin/tramite-tipo/probar":           "tramites_formularios",
+    "/admin/tramite-tipo/borrar":           "tramites_formularios",
+    "/admin/tramite/{tramite_id}":          "tramites_recibidos",
+    "/admin/tramite/{tramite_id}/estado":   "tramites_recibidos",
+    "/admin/tramite/{tramite_id}/nota":     "tramites_recibidos",
+    "/admin/tramites-nuevos-cantidad":      "tramites_recibidos",
+
+    # Las 3 subpestañas de Empleadores, cada una con su permiso.
+    "/admin/empleador":                     "emp_empresas",
+    "/admin/empleador/baja":                "emp_empresas",
+    "/admin/empleador/alta-logica":         "emp_empresas",
+    "/admin/empleador/importar-cuits":      "emp_empresas",
+    "/admin/notificacion-empresa":          "emp_notificaciones",
+    "/admin/notificacion-empresa/preview":  "emp_notificaciones",
+    "/admin/notificacion-empresa/{notificacion_empleador_id}/destinatarios": "emp_notificaciones",
+    "/admin/tramite-tipo-empresa":          "emp_tramites_formularios",
+    "/admin/tramite-tipo-empresa/borrar":   "emp_tramites_formularios",
+    "/admin/tramite-empresa/{tramite_id}":  "emp_tramites_recibidos",
+    "/admin/tramite-empresa/{tramite_id}/estado": "emp_tramites_recibidos",
+    "/admin/tramite-empresa/{tramite_id}/nota":   "emp_tramites_recibidos",
+    "/admin/tramites-empresa-nuevos-cantidad":    "emp_tramites_recibidos",
+
+    # Convenio (RAG). Cargar y reindexar documentos es tarea de quien
+    # administra el contenido, no de quien contesta trámites.
+    "/admin/convenio":                                  "convenio",
+    "/admin/convenio/documento":                        "convenio",
+    "/admin/convenio/documento/{documento_id}/estado":     "convenio",
+    "/admin/convenio/documento/{documento_id}/fragmentos": "convenio",
+    "/admin/convenio/documento/{documento_id}/vigencia":   "convenio",
+    "/admin/convenio/documento/{documento_id}/borrar":     "convenio",
+    "/admin/convenio/documento/{documento_id}/reindexar":  "convenio",
+    "/admin/convenio/{convenio_id}/anteriores":            "convenio",
+
+    # Panel Sindical. Son todos endpoints de agregados que alimentan la
+    # misma página; no tiene sentido partirlos en permisos distintos. El
+    # explorador conserva ADEMÁS su gate de módulo propio
+    # (_exigir_dashboard_detalle), que existe para el día que dashboard se
+    # parta en STD y PRO -- son dos ejes: el módulo dice qué contrató el
+    # sindicato, la sección quién puede entrar.
+    "/admin/dashboard/asistente":              "dashboard",
+    "/admin/dashboard/kpis":                   "dashboard",
+    "/admin/dashboard/serie-recibos":          "dashboard",
+    "/admin/dashboard/validacion":             "dashboard",
+    "/admin/dashboard/diferencias-empresa":    "dashboard",
+    "/admin/dashboard/tramites-seccional":     "dashboard",
+    "/admin/dashboard/notificaciones":         "dashboard",
+    "/admin/dashboard/formato-semana":         "dashboard",
+    "/admin/dashboard/semaforo":               "dashboard",
+    "/admin/dashboard/consultas":              "dashboard",
+    "/admin/dashboard/explorador/{fuente}":    "dashboard",
+    "/admin/dashboard/afiliados":              "dashboard",
+    "/admin/dashboard/filtros":                "dashboard",
+    "/admin/dashboard/detalle/recibo/{recibo_id}":    "dashboard",
+    "/admin/dashboard/detalle/tramite/{tramite_id}":  "dashboard",
+    "/admin/dashboard/detalle/notificaciones":        "dashboard",
+    "/admin/dashboard/detalle/notificacion/{notificacion_id}/destinatarios": "dashboard",
+    "/admin/dashboard/detalle/consulta/{consulta_id}": "dashboard",
+}
+
+# Las únicas rutas de /admin que no exigen sección: entrar, salir, y las
+# páginas que se arman con lo que cada uno puede ver. Gatearlas dejaría a un
+# usuario de área sin poder ni siquiera abrir el panel.
+#
+# /admin/dashboard está acá por la misma razón que /admin, no por descuido:
+# es una PÁGINA, y ya resuelve la falta de módulo mandando de vuelta al
+# panel en vez de tirar 403. Su permiso se chequea adentro del handler, con
+# el mismo criterio -- una pantalla que redirige es mejor que un 403 seco.
+# Sus endpoints de datos (/admin/dashboard/*) sí están todos gateados.
+RUTAS_ADMIN_SIN_PERMISO = {"/admin", "/admin/inicio", "/admin/login", "/admin/salir",
+                           "/admin/dashboard"}
+
+
+def _exigir_permiso_de_ruta(request: Request, ses: dict) -> None:
+    """Chequea que el usuario de la sesión pueda tocar ESTA ruta.
+
+    La sección sale de PERMISOS_RUTAS usando la ruta que FastAPI matcheó
+    (`request.scope["route"].path`), no la URL escrita: así
+    "/admin/tramite/57/nota" se resuelve por "/admin/tramite/{tramite_id}/nota"
+    y no hay que parsear nada a mano."""
+    ruta = getattr(request.scope.get("route"), "path", "")
+    if ruta in RUTAS_ADMIN_SIN_PERMISO:
+        return
+    seccion = PERMISOS_RUTAS.get(ruta)
+    if not seccion:
+        # Ruta sin clasificar: se rechaza. Es la mitad que importa del
+        # "falla cerrado" -- una ruta nueva nace cerrada, no abierta.
+        raise HTTPException(403, "Esta sección del panel no está habilitada.")
+    uid = ses.get("uid", 0)
+    if seccion == SECCION_SUPER_ADMIN:
+        if not db.es_super_admin(uid):
+            raise HTTPException(403, "Solo un administrador general del sindicato puede hacer esto.")
+        return
+    if not db.tiene_permiso(uid, seccion):
+        raise HTTPException(403, "No tenés permiso para esta sección del panel.")
+
+
 def exigir_sindicato(request: Request) -> int:
-    """Devuelve el sindicato_id de la sesión, o lanza 403 si no hay sesión válida."""
+    """Devuelve el sindicato_id de la sesión, o lanza 403 si no hay sesión
+    válida -- y, desde el sistema de Áreas, si el usuario no tiene el
+    permiso que esta ruta exige (ver PERMISOS_RUTAS).
+
+    Que el chequeo viva acá y no en cada ruta es a propósito: las 73 rutas
+    del panel ya llamaban a esta función (algunas vía _exigir_dashboard),
+    así que el gateo entró sin tocar ninguna, y una ruta nueva que se olvide
+    de clasificar falla cerrada."""
     ses = sesion_actual(request, "sindicato")
     if not ses:
         raise HTTPException(403, "Necesitás iniciar sesión como administrador del sindicato.")
+    _exigir_permiso_de_ruta(request, ses)
     return ses.get("sid", 0)
 
 
@@ -802,7 +952,11 @@ def admin_dashboard_pagina(request: Request):
         return templates.TemplateResponse("admin_login.html", {
             "request": request, "marca_plataforma": db.marca_plataforma()})
     sid = ses.get("sid", 0)
-    if not db.modulo_habilitado(sid, "dashboard"):
+    # Módulo Y sección: el módulo dice qué contrató el sindicato, la sección
+    # quién de adentro puede entrar. Redirige en vez de tirar 403 porque es
+    # una pantalla, no un endpoint -- mismo criterio que la falta de módulo.
+    if not db.modulo_habilitado(sid, "dashboard") \
+            or not db.tiene_permiso(ses.get("uid", 0), "dashboard"):
         return RedirectResponse("/admin", status_code=303)
     marca = db.marca_sindicato(sid)
     return templates.TemplateResponse("dashboard.html", {
@@ -991,9 +1145,14 @@ def admin_trabajador_reactivar(request: Request, id: int = Form(...)):
 
 @app.post("/admin/usuario")
 def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str = Form(""),
-                        clave_inicial: str = Form(...)):
+                        clave_inicial: str = Form(...), rol: str = Form("area")):
     """sindicato_id sale de la sesión, nunca de un campo del form -- un
-    admin no puede darse de alta a sí mismo en otro sindicato."""
+    admin no puede darse de alta a sí mismo en otro sindicato.
+
+    `rol` se pide EXPLÍCITO y su default es "area", no "super": si el campo
+    llegara a faltar, el usuario nace SIN poder en vez de con todo. Antes
+    de las Áreas todo usuario nacía omnipotente, que es lo que este default
+    corrige."""
     sid = exigir_sindicato(request)
     cuit = _norm_cuil(usuario)
     if len(cuit) != 11 or not clave_inicial:
@@ -1005,6 +1164,7 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
         s.add(UsuarioSindicato(
             sindicato_id=sid, usuario=cuit, nombre=nombre,
             clave_hash=auth.hashear_clave(clave_inicial), debe_cambiar_clave=True,
+            es_super_admin=(rol == "super"),
         ))
         s.commit()
     return RedirectResponse("/admin#administradores", status_code=303)
@@ -1023,19 +1183,20 @@ def admin_usuario_editar(request: Request, id: int = Form(...), nombre: str = Fo
 
 @app.post("/admin/usuario/baja")
 def admin_usuario_baja(request: Request, id: int = Form(...)):
-    """Baja lógica -- bloqueada si es el último administrador activo del
+    """Baja lógica -- bloqueada si es el último SUPER ADMIN activo del
     sindicato (si no, un sindicato podría quedarse sin nadie que pueda
-    entrar a /admin, y solo plataforma podría reactivarlo a mano)."""
+    entrar a administrar, y solo plataforma podría reactivarlo a mano).
+
+    Contar usuarios activos a secas ya no alcanza: un sindicato puede tener
+    diez usuarios de área y un solo Super Admin, y "queda más de uno
+    activo" habría dejado desactivar justamente al único que administra."""
     sid = exigir_sindicato(request)
     with db.get_session() as s:
         u = s.get(UsuarioSindicato, id)
         if not u or u.sindicato_id != sid:
             return RedirectResponse("/admin#administradores", status_code=303)
-        if u.activo:
-            activos = s.exec(select(UsuarioSindicato).where(
-                UsuarioSindicato.sindicato_id == sid, UsuarioSindicato.activo == True)).all()
-            if len(activos) <= 1:
-                return RedirectResponse("/admin?err=ultimoadmin#administradores", status_code=303)
+        if u.activo and u.es_super_admin and db.contar_super_admins(sid, excluyendo=id) == 0:
+            return RedirectResponse("/admin?err=ultimoadmin#administradores", status_code=303)
         u.activo = False
         s.add(u); s.commit()
     return RedirectResponse("/admin#administradores", status_code=303)
@@ -3583,6 +3744,9 @@ def plataforma_alta_usuario(
             sindicato_id=sindicato_id, usuario=_norm_cuil(usuario), nombre=nombre,
             clave_hash=auth.hashear_clave(clave_inicial),
             debe_cambiar_clave=True,
+            # Es el PRIMER usuario del sindicato: si no naciera Super Admin,
+            # nadie podría entrar a crear las áreas ni los demás usuarios.
+            es_super_admin=True,
         ))
         s.commit()
     return RedirectResponse("/plataforma", status_code=303)

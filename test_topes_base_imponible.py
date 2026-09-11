@@ -22,7 +22,7 @@ from sqlmodel import Session, select
 db.crear_tablas()
 
 with db.get_session() as s:
-    sind = Sindicato(nombre="Sindicato Test Topes", color_base="#0f1b2d")
+    sind = Sindicato(nombre="Sindicato Test Topes", color_base="#0f1b2d", modulos_habilitados=["recibos"])
     s.add(sind); s.commit(); s.refresh(sind)
     SID = sind.id
 
@@ -420,7 +420,7 @@ def test_ruta_admin_formula_persiste_sujeto_a_tope():
     import auth
     with db.get_session() as s:
         s.add(UsuarioSindicato(sindicato_id=SID, usuario="20999999990", nombre="Admin Topes",
-                                clave_hash=auth.hashear_clave("topes-demo"), debe_cambiar_clave=False))
+                                clave_hash=auth.hashear_clave("topes-demo"), debe_cambiar_clave=False, es_super_admin=True))
         s.commit()
     admin_client = TestClient(main.app)
     admin_client.post("/admin/login", data={"usuario": "20999999990", "clave": "topes-demo"})

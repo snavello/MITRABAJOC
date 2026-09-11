@@ -216,7 +216,7 @@ def _completar_catalogo(sid: int) -> tuple:
                 UsuarioSindicato.usuario == ADMIN[0])).first():
             s.add(UsuarioSindicato(sindicato_id=sid, usuario=ADMIN[0], nombre="Administrador",
                                    clave_hash=auth.hashear_clave(ADMIN[1]),
-                                   debe_cambiar_clave=False))
+                                   debe_cambiar_clave=False, es_super_admin=True))
         s.commit()
     return nuevos_conceptos, nuevas_formulas
 

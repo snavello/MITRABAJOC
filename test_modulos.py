@@ -35,11 +35,11 @@ with db.get_session() as s:
     SID_FULL, SID_NOTICIAS, SID_RECIBOS = full.id, solo_noticias.id, solo_recibos.id
 
     s.add(UsuarioSindicato(sindicato_id=SID_FULL, usuario="20111111110", nombre="Admin Full",
-                            clave_hash=auth.hashear_clave("full-demo"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("full-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(UsuarioSindicato(sindicato_id=SID_NOTICIAS, usuario="20222222220", nombre="Admin Noticias",
-                            clave_hash=auth.hashear_clave("noticias-demo"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("noticias-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(UsuarioSindicato(sindicato_id=SID_RECIBOS, usuario="20333333330", nombre="Admin Recibos",
-                            clave_hash=auth.hashear_clave("recibos-demo"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("recibos-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(Trabajador(sindicato_id=SID_FULL, cuil="20111111119", nombre="Juan Full",
                       activo=True, registrado=True))
     s.add(Trabajador(sindicato_id=SID_NOTICIAS, cuil="20444444440", nombre="Ana Noticias",

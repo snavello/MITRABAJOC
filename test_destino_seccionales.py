@@ -25,7 +25,7 @@ with db.get_session() as s:
     s.add(uom); s.commit(); s.refresh(uom)
     SID = uom.id
     s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111110", nombre="Admin",
-                            clave_hash=auth.hashear_clave("uom-demo"), debe_cambiar_clave=False))
+                            clave_hash=auth.hashear_clave("uom-demo"), debe_cambiar_clave=False, es_super_admin=True))
     norte = Seccional(sindicato_id=SID, nombre="Norte")
     sur = Seccional(sindicato_id=SID, nombre="Sur")
     s.add(norte); s.add(sur); s.commit(); s.refresh(norte); s.refresh(sur)
