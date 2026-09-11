@@ -1453,6 +1453,22 @@
           </div>
         </div>
 
+        <div style="margin-top:12px;">
+          <label class="chk-seccional" style="width:fit-content;">
+            <input type="checkbox" name="permite_pase" id="tt-permite-pase" value="1" onchange="cambioPermitePase()">
+            Permitir <b>pase</b> a otra área
+          </label>
+          <p class="muted" style="font-size:11.5px; margin:4px 0;">Sin esto, el área que lo recibe solo puede contestarle al trabajador. Con esto, puede derivarlo a alguna de las áreas que elijas -- y la que lo reciba puede volver a derivarlo dentro de esa misma lista, incluso devolverlo.</p>
+          <div id="tt-pase-areas" class="oculto">
+            <label style="font-weight:700; font-size:13px;">¿A qué áreas se puede derivar?</label>
+            <div class="check-seccionales">
+              {% for a in areas %}{% if a.activo %}
+              <label class="chk-seccional"><input type="checkbox" name="areas_pase" value="{{ a.id }}"> {{ a.nombre }} · {{ a.seccional }}</label>
+              {% endif %}{% endfor %}
+            </div>
+          </div>
+        </div>
+
         <details style="margin-top:10px;">
           <summary class="muted" style="cursor:pointer;">Mapa por seccional (opcional) — mandá cada seccional a un área distinta</summary>
           <p class="muted" style="font-size:11.5px; margin:8px 0;">Sirve cuando cada delegación atiende lo suyo: el trámite de un trabajador de Rosario cae en el área de Rosario. Lo que dejes en "— por defecto —" usa el área de arriba.</p>
@@ -3153,6 +3169,12 @@ function editarTramiteTipo(t) {
   })).filter(r => r.a && r.b);
   renderCamposTramite();
   document.getElementById('tt-area-default').value = t.area_destino_default_id || '';
+  document.getElementById('tt-permite-pase').checked = !!t.permite_pase;
+  const conPase = new Set((t.areas_pase || []).map(String));
+  document.querySelectorAll('input[name="areas_pase"]').forEach(c => {
+    c.checked = conPase.has(c.value);
+  });
+  cambioPermitePase();
   // La seccional de un formulario no se edita (ver editar_tipo_tramite en
   // db.py): se muestra como dato y el <select> sale del medio.
   const selSec = document.getElementById('tt-seccional');
@@ -3173,6 +3195,7 @@ function cancelarTramiteTipo() {
   document.getElementById('tt-id').value = '';
   document.getElementById('tt-activo-campo').classList.add('oculto');
   document.getElementById('tt-seccional').disabled = false;
+  cambioPermitePase();
   camposTramiteActuales = [];
   reglasTramiteActuales = [];
   renderCamposTramite();
@@ -3214,6 +3237,47 @@ function htmlAdvertenciasTramite(d) {
   </div>`;
 }
 
+function htmlAreaACargo(d) {
+  // Quién lo tiene ahora. Se muestra siempre que haya área: en un panel con
+  // varias, "de quién es esto" es lo primero que se pregunta el que abre.
+  if (!d.area_a_cargo) return '';
+  return `<div class="modal-fila" style="display:flex; justify-content:space-between; padding:4px 0; font-size:13px;">
+    <span class="muted">Área a cargo</span><span><b>${d.area_a_cargo}</b></span></div>`;
+}
+
+function htmlBotonPase(d) {
+  // Solo si el formulario habilita el pase Y quedan áreas a las que ir: un
+  // botón que abre una lista vacía es peor que no tenerlo.
+  if (!d.areas_pase || !d.areas_pase.length) return '';
+  const opciones = d.areas_pase.map(a =>
+    `<option value="${a.id}">${a.nombre} · ${a.seccional}</option>`).join('');
+  return `<div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--linea);">
+    <label style="font-size:12.5px; font-weight:700;">Pasar a otra área</label>
+    <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;">
+      <select id="pase-area" style="flex:1; min-width:180px;">${opciones}</select>
+      <input id="pase-motivo" placeholder="Motivo (opcional)" style="flex:2; min-width:180px;">
+      <button type="button" class="sec" onclick="pasarTramite(${d.id})">Pasar</button>
+    </div>
+    <p class="muted" style="font-size:11.5px; margin-top:6px;">El área que lo reciba pasa a ser la única que puede responder. Vos vas a poder seguir viéndolo.</p>
+  </div>`;
+}
+
+async function pasarTramite(id) {
+  const area = document.getElementById('pase-area').value;
+  const motivo = document.getElementById('pase-motivo').value || '';
+  if (!area) return;
+  if (!confirm('Al pasarlo, el área que lo reciba queda a cargo y vos ya no vas a poder responderlo. ¿Seguimos?')) return;
+  const body = new FormData();
+  body.append('area_destino_id', area);
+  body.append('motivo', motivo);
+  const r = await fetch(`/admin/tramite/${id}/pase`, { method: 'POST', body });
+  if (!r.ok) { alert('No se pudo derivar el trámite.'); return; }
+  refrescarTramiteDetalle(id);
+  // El globo se refresca solo con su polling de 30s. No se lo fuerza acá a
+  // propósito: la función de recarga vive dentro del bloque gateado por el
+  // permiso de trámites, y llamarla desde afuera sería un ReferenceError.
+}
+
 function abrirTramiteDetalle(id) {
   document.getElementById('mt-titulo').textContent = 'Trámite';
   document.getElementById('mt-contenido').innerHTML = 'Cargando…';
@@ -3245,7 +3309,11 @@ function avatarHtmlAdmin(autor, familia, contraparteId) {
   return `<img class="tram-chat-avatar" src="${url}" alt="" onerror="avatarFallbackAdmin(this)">`;
 }
 function renderChatTramiteAdmin(d, familia) {
-  const eventos = d.log.filter(l => l.evento === 'creado' || l.evento === 'cambio_estado');
+  // El pase es un MOVIMIENTO del expediente y va al chat como cualquier
+  // otro (decisión N8). El detalle ya viene redactado nombrando ÁREAS y
+  // nunca personas, así que sirve igual acá que del lado del afiliado.
+  const eventos = d.log.filter(l => l.evento === 'creado' || l.evento === 'cambio_estado'
+                                   || l.evento === 'pase');
   const contraparteId = familia === 'empresa' ? d.cuit : d.cuil;
   const abrir = familia === 'empresa' ? 'abrirTramiteEmpresaDetalle' : 'abrirTramiteDetalle';
   const etiquetaOtro = familia === 'empresa' ? 'Empresa' : 'Trabajador';
@@ -3317,10 +3385,14 @@ function refrescarTramiteDetalle(id) {
       <h3 style="font-size:13.5px; margin-top:14px;">Respuestas del formulario</h3>
       ${respuestasHtml || '<p class="muted" style="font-size:12.5px;">Sin respuestas.</p>'}
 
+      ${htmlAreaACargo(d)}
       <h3 style="font-size:13.5px; margin-top:16px;">Conversación</h3>
       <div class="tram-chat">${renderChatTramiteAdmin(d, 'trabajador')}</div>
       ${d.estado === 'terminado' ? '<p class="muted" style="font-size:12.5px; margin-top:12px;">Trámite terminado -- no se puede modificar.</p>'
-        : '<button type="button" class="tram-chat-responder" onclick="abrirResponderTramiteAdmin()">Responder o cambiar estado…</button>'}
+        : (d.puede_responder === false
+            ? '<p class="muted" style="font-size:12.5px; margin-top:12px;">Este trámite lo tiene otra área. Podés verlo, no responderlo.</p>'
+            : '<button type="button" class="tram-chat-responder" onclick="abrirResponderTramiteAdmin()">Responder o cambiar estado…</button>'
+              + htmlBotonPase(d))}
     `;
     const fila = document.getElementById('tramite-fila-' + d.id);
     if (fila) {
@@ -4108,6 +4180,13 @@ function pintarPermisosDelArea() {
     sp.textContent = hay ? 'sí' : '—';
     sp.style.color = hay ? 'var(--marca-secundario)' : '#888';
   });
+}
+
+function cambioPermitePase() {
+  // La lista de destinos solo tiene sentido con el pase habilitado:
+  // mostrarla apagada invita a tildar áreas que no van a hacer nada.
+  const on = document.getElementById('tt-permite-pase').checked;
+  document.getElementById('tt-pase-areas').classList.toggle('oculto', !on);
 }
 
 function filtrarAreasPorSeccional() {

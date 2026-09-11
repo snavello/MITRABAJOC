@@ -738,6 +738,10 @@ PERMISOS_RUTAS = {
     "/admin/tramite/{tramite_id}":          "tramites_recibidos",
     "/admin/tramite/{tramite_id}/estado":   "tramites_recibidos",
     "/admin/tramite/{tramite_id}/nota":     "tramites_recibidos",
+    # Derivar es parte de atender el trámite, no de diseñar el formulario:
+    # va con "recibidos". Quién puede hacerlo de verdad lo decide además
+    # _exigir_responder_tramite (solo el área que lo tiene).
+    "/admin/tramite/{tramite_id}/pase":     "tramites_recibidos",
     "/admin/tramites-nuevos-cantidad":      "tramites_recibidos",
 
     # Las 3 subpestañas de Empleadores, cada una con su permiso.
@@ -1425,6 +1429,30 @@ def admin_usuario_reactivar(request: Request, id: int = Form(...)):
 
 
 # ---------- Áreas del sindicato (Super Admin) ----------
+
+def _ids_int(valores) -> list:
+    """Lista de ids enteros, descartando lo que no lo sea. Los <select> y los
+    checkbox viajan como texto y se pueden escribir a mano; quien recibe
+    esta lista ya filtra por sindicato, así que acá alcanza con sanear el
+    tipo."""
+    salida = []
+    for v in (valores or []):
+        try:
+            salida.append(int(v))
+        except (TypeError, ValueError):
+            continue
+    return salida
+
+
+def _exigir_responder_tramite(request: Request, tramite_id: int, sid: int) -> None:
+    """403 si este usuario puede VER el trámite pero no responderlo.
+
+    Pasa con el área que lo derivó: conserva lectura y pierde la escritura.
+    Son dos permisos distintos desde que existe el pase, y confundirlos
+    dejaría a dos áreas contestándole lo mismo al trabajador."""
+    if not db.puede_responder_tramite(tramite_id, _uid_sesion(request), sid):
+        raise HTTPException(403, "Este trámite lo tiene otra área. Vos podés verlo, no responderlo.")
+
 
 def _exigir_alcance_tramite(request: Request, tramite_id: int, sid: int) -> None:
     """403 si el trámite es de otra área o de otra seccional.
@@ -2369,6 +2397,7 @@ async def abm_tramite_tipo(
     reglas_json: str = Form("[]"),
     area_destino_default_id: str = Form(""), seccional_id: str = Form(""),
     destinos_json: str = Form("{}"),
+    permite_pase: str = Form(""), areas_pase: list[str] = Form(default=[]),
 ):
     """El formulario declara su RUTEO además de sus campos (decisiones N6 y
     N7): a qué área cae por defecto, el mapa seccional -> área, y si es
@@ -2414,13 +2443,17 @@ async def abm_tramite_tipo(
         if tipo.get("seccional_id"):
             _exigir_alcance_seccional(request, tipo["seccional_id"])
         db.editar_tipo_tramite(int(id), sid, titulo, codigo, activo == "si", campos, reglas,
-                               area_destino_default_id=destino_default)
+                               area_destino_default_id=destino_default,
+                               permite_pase=bool(permite_pase))
         db.set_destinos_tipo_tramite(int(id), mapa, sid)
+        db.set_areas_de_pase(int(id), _ids_int(areas_pase), sid)
     else:
         nuevo_id = db.crear_tipo_tramite(sid, titulo, codigo, campos, reglas,
                                          area_destino_default_id=destino_default,
-                                         seccional_id=del_seccional)
+                                         seccional_id=del_seccional,
+                                         permite_pase=bool(permite_pase))
         db.set_destinos_tipo_tramite(nuevo_id, mapa, sid)
+        db.set_areas_de_pase(nuevo_id, _ids_int(areas_pase), sid)
     return RedirectResponse("/admin#tramites", status_code=303)
 
 
@@ -2468,7 +2501,10 @@ def borrar_tramite_tipo(request: Request, id: int = Form(...)):
 def admin_ver_tramite(tramite_id: int, request: Request):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "tramites")
-    detalle = db.tramite_detalle(tramite_id)
+    # Con el usuario: el detalle informa si puede responder y a qué áreas
+    # puede derivar. La pantalla los necesita a la vez -- sin saber si puede
+    # escribir, el chat no sabe si mostrar el cajón de respuesta.
+    detalle = db.tramite_detalle(tramite_id, usuario_id=_uid_sesion(request))
     if not detalle or detalle["sindicato_id"] != sid:
         raise HTTPException(404, "Trámite no encontrado")
     _exigir_alcance_tramite(request, tramite_id, sid)
@@ -2496,6 +2532,7 @@ def admin_cambiar_estado_tramite(tramite_id: int, request: Request, estado: str 
     if not detalle or detalle["sindicato_id"] != sid:
         raise HTTPException(404, "Trámite no encontrado")
     _exigir_alcance_tramite(request, tramite_id, sid)
+    _exigir_responder_tramite(request, tramite_id, sid)
     if detalle["estado"] == "terminado":
         raise HTTPException(400, "Este trámite está terminado y no se puede modificar.")
     if not db.cambiar_estado_tramite(tramite_id, sid, estado):
@@ -2523,6 +2560,27 @@ def _formulario_para_chat(sid: int, formulario_id: str, familia: str):
     return fid
 
 
+@app.post("/admin/tramite/{tramite_id}/pase")
+def admin_pasar_tramite(tramite_id: int, request: Request,
+                         area_destino_id: int = Form(...), motivo: str = Form("")):
+    """Deriva el trámite a otra área de las que el formulario declara.
+
+    Solo puede derivar quien puede RESPONDER: el área que lo tiene. La que
+    ya lo derivó conserva lectura pero no vuelve a moverlo -- si no, dos
+    áreas se lo pasarían de vuelta entre sí sin que nadie lo resuelva."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "tramites")
+    detalle = db.tramite_detalle(tramite_id)
+    if not detalle or detalle["sindicato_id"] != sid:
+        raise HTTPException(404, "Trámite no encontrado")
+    _exigir_alcance_tramite(request, tramite_id, sid)
+    _exigir_responder_tramite(request, tramite_id, sid)
+    if not db.pasar_tramite(tramite_id, area_destino_id, _uid_sesion(request), sid,
+                            (motivo or "").strip()):
+        raise HTTPException(400, "No se puede derivar este trámite a esa área.")
+    return {"ok": True}
+
+
 @app.post("/admin/tramite/{tramite_id}/nota")
 async def admin_nota_tramite(tramite_id: int, request: Request, texto: str = Form(""),
                               adjunto: UploadFile = File(None),
@@ -2533,6 +2591,7 @@ async def admin_nota_tramite(tramite_id: int, request: Request, texto: str = For
     if not detalle or detalle["sindicato_id"] != sid:
         raise HTTPException(404, "Trámite no encontrado")
     _exigir_alcance_tramite(request, tramite_id, sid)
+    _exigir_responder_tramite(request, tramite_id, sid)
     if detalle["estado"] == "terminado":
         raise HTTPException(400, "Este trámite está terminado y no se puede modificar.")
     adjunto_datos, adjunto_mime, adjunto_nombre = None, "", ""

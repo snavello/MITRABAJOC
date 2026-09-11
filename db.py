@@ -708,12 +708,49 @@ class TipoTramite(SQLModel, table=True):
     # lo ven los trabajadores de esa seccional y solo su admin local lo
     # edita (decisión N7 de SPRINT_AREAS_V2.md).
     seccional_id: Optional[int] = Field(default=None, foreign_key="seccional.id", index=True)
+    # Si este formulario habilita el PASE entre áreas (decisión N8). Sin el
+    # tilde, el área que lo recibe solo puede contestarle al trabajador.
+    # Default False: un formulario que no diga nada no habilita circuitos.
+    permite_pase: bool = False
     # A qué ÁREA cae el trámite cuando la seccional del trabajador no está
     # mapeada en DestinoTipoTramite. Es OBLIGATORIO: sin él, una seccional
     # nueva dejaría trámites sin dueño, y el error sería silencioso -- nadie
     # los vería en ninguna bandeja (decisión N6, "destino por defecto").
     area_destino_default_id: Optional[int] = Field(
         default=None, foreign_key="area.id", index=True)
+
+
+class PaseTipoTramite(SQLModel, table=True):
+    """Un área a la que ESTE formulario se puede derivar.
+
+    La lista es CERRADA y se declara al armar el formulario (decisión N8):
+    el circuito queda diseñado de antemano y es auditable. Sin filas, el
+    área que recibe el trámite solo puede contestarle al trabajador.
+
+    No incluye al área destino: derivar al que ya lo tiene no es un pase."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tipo_tramite_id: int = Field(foreign_key="tipotramite.id", index=True)
+    area_id: int = Field(foreign_key="area.id", index=True)
+
+
+class PaseTramite(SQLModel, table=True):
+    """Un movimiento de un trámite entre áreas.
+
+    Es lo que hace posible que el área que derivó CONSERVE LECTURA: el
+    permiso de ver no sale solo de area_a_cargo_id sino también de haber
+    sido origen de algún pase (ver puede_ver_tramite). Sin este registro,
+    derivar sería perder de vista para siempre lo que uno pasó.
+
+    Guarda además quién lo hizo, que el panel muestra y el trabajador no
+    (misma regla que las notas: al afiliado se le dice el ÁREA, nunca la
+    persona)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tramite_id: int = Field(foreign_key="tramite.id", index=True)
+    area_origen_id: Optional[int] = Field(default=None, foreign_key="area.id", index=True)
+    area_destino_id: int = Field(foreign_key="area.id", index=True)
+    usuario_id: Optional[int] = Field(default=None, foreign_key="usuariosindicato.id")
+    motivo: str = ""
+    creado: str = ""
 
 
 class DestinoTipoTramite(SQLModel, table=True):
@@ -3201,7 +3238,7 @@ def _campo_tramite_a_dict(c: "CampoTramite") -> dict:
 
 def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list,
                         reglas: list = None, area_destino_default_id: int = None,
-                        seccional_id: int = None) -> int:
+                        seccional_id: int = None, permite_pase: bool = False) -> int:
     """Crea el tipo y sus campos en un solo alta. `campos` es una lista de
     dicts con las claves de CampoTramite (sin id/tipo_tramite_id); `reglas`
     son las reglas de consistencia ya saneadas
@@ -3210,7 +3247,7 @@ def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list
         t = TipoTramite(sindicato_id=sindicato_id, titulo=titulo, codigo=codigo,
                          reglas_consistencia=reglas or [],
                          area_destino_default_id=area_destino_default_id,
-                         seccional_id=seccional_id,
+                         seccional_id=seccional_id, permite_pase=permite_pase,
                          creado=datetime.now().strftime("%Y-%m-%d %H:%M"))
         s.add(t); s.commit(); s.refresh(t)
         for i, c in enumerate(campos):
@@ -3228,7 +3265,8 @@ def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list
 
 def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: str,
                          activo: bool, campos: list, reglas: list = None,
-                         area_destino_default_id: int = None) -> bool:
+                         area_destino_default_id: int = None,
+                         permite_pase: Optional[bool] = None) -> bool:
     """Actualiza título/código/activo y SINCRONIZA los campos por id: el
     constructor sigue siendo "lo que ves es lo que queda", pero borrar y
     recrear (como se hacía antes) reventaba con FK en cuanto el tipo tenía
@@ -3249,6 +3287,8 @@ def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: st
         # que el sindicato va a querer ajustar con el uso.
         if area_destino_default_id is not None:
             t.area_destino_default_id = area_destino_default_id
+        if permite_pase is not None:
+            t.permite_pase = permite_pase
         t.reglas_consistencia = reglas or []
         s.add(t)
         existentes = {c.id: c for c in s.exec(select(CampoTramite).where(
@@ -3335,6 +3375,10 @@ def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False,
                 "reglas_consistencia": t.reglas_consistencia or [],
                 "seccional_id": t.seccional_id,
                 "area_destino_default_id": t.area_destino_default_id,
+                "permite_pase": t.permite_pase,
+                "areas_pase": sorted({x.area_id for x in s.exec(
+                    select(PaseTipoTramite).where(
+                        PaseTipoTramite.tipo_tramite_id == t.id)).all()}),
                 "destinos": {d.seccional_id: d.area_id for d in s.exec(
                     select(DestinoTipoTramite).where(
                         DestinoTipoTramite.tipo_tramite_id == t.id)).all()},
@@ -3654,7 +3698,14 @@ def _recortar_tramites(s: Session, q, sindicato_id: int, usuario_id: Optional[in
     if areas is not None:
         if not areas:
             return q.where(False)
-        q = q.where(Tramite.area_a_cargo_id.in_(list(areas)))
+        # El área a cargo O una que lo haya derivado: la que pasó el trámite
+        # lo sigue viendo en su bandeja (en solo lectura) para saber en qué
+        # terminó. Si solo se filtrara por area_a_cargo_id, derivar sería
+        # perderlo de vista y nadie podría seguirle el rastro.
+        derivados = select(PaseTramite.tramite_id).where(
+            PaseTramite.area_origen_id.in_(list(areas)))
+        q = q.where(Tramite.area_a_cargo_id.in_(list(areas)) |
+                    Tramite.id.in_(derivados))
     if secs is not None:
         if not secs:
             return q.where(False)
@@ -3690,6 +3741,146 @@ def tramites_del_sindicato(sindicato_id: int, estado: str = None, tipo_tramite_i
         return [_tramite_resumen(s, tr, titulos_tipo) for tr in tramites]
 
 
+# ---------- Pase entre áreas (decisión N8) ----------
+
+def areas_de_pase_de_tipo(tipo_tramite_id: int) -> list:
+    """Los ids de área a los que ESTE formulario habilita derivar."""
+    with Session(engine) as s:
+        return sorted({x.area_id for x in s.exec(select(PaseTipoTramite).where(
+            PaseTipoTramite.tipo_tramite_id == tipo_tramite_id)).all()})
+
+
+def set_areas_de_pase(tipo_tramite_id: int, areas: list, sindicato_id: int) -> None:
+    """Reemplaza la lista cerrada de destinos de pase del formulario.
+
+    Descarta áreas de otro sindicato, mismo criterio defensivo que el resto
+    de los set_*: no se guarda basura que después haya que filtrar."""
+    with Session(engine) as s:
+        tipo = s.get(TipoTramite, tipo_tramite_id)
+        if not tipo or tipo.sindicato_id != sindicato_id:
+            return
+        propias = {a.id for a in s.exec(select(Area).where(
+            Area.sindicato_id == sindicato_id)).all()}
+        for x in s.exec(select(PaseTipoTramite).where(
+                PaseTipoTramite.tipo_tramite_id == tipo_tramite_id)).all():
+            s.delete(x)
+        for area_id in dict.fromkeys(areas or []):
+            if area_id in propias:
+                s.add(PaseTipoTramite(tipo_tramite_id=tipo_tramite_id, area_id=area_id))
+        s.commit()
+
+
+def areas_a_las_que_puede_pasar(tramite_id: int) -> list:
+    """[{id, nombre, seccional}] de los destinos VÁLIDOS ahora mismo.
+
+    Se saca el área que ya lo tiene -- derivarle al que lo tiene no es un
+    pase -- y las áreas desactivadas, que no pueden recibir trabajo. La
+    lista sale de aplicar las dos cosas a los destinos que declara el
+    formulario; si el formulario no permite pase, es vacía."""
+    with Session(engine) as s:
+        tr = s.get(Tramite, tramite_id)
+        if not tr:
+            return []
+        tipo = s.get(TipoTramite, tr.tipo_tramite_id)
+        if not tipo or not tipo.permite_pase:
+            return []
+        ids = {x.area_id for x in s.exec(select(PaseTipoTramite).where(
+            PaseTipoTramite.tipo_tramite_id == tr.tipo_tramite_id)).all()}
+        ids.discard(tr.area_a_cargo_id)
+        if not ids:
+            return []
+        areas = s.exec(select(Area).where(Area.id.in_(list(ids)),
+                                          Area.activo == True)).all()
+        secs = {x.id: x.nombre for x in s.exec(select(Seccional).where(
+            Seccional.sindicato_id == tr.sindicato_id)).all()}
+        return sorted(({"id": a.id, "nombre": a.nombre,
+                        "seccional": secs.get(a.seccional_id, "")} for a in areas),
+                      key=lambda a: (a["seccional"], a["nombre"]))
+
+
+def areas_que_vieron(tramite_id: int) -> set:
+    """Las áreas que tuvieron el trámite alguna vez: la que lo tiene ahora
+    más todas las que lo derivaron. Es el conjunto que conserva LECTURA."""
+    with Session(engine) as s:
+        tr = s.get(Tramite, tramite_id)
+        if not tr:
+            return set()
+        pasados = {x.area_origen_id for x in s.exec(select(PaseTramite).where(
+            PaseTramite.tramite_id == tramite_id)).all() if x.area_origen_id}
+        if tr.area_a_cargo_id:
+            pasados.add(tr.area_a_cargo_id)
+        return pasados
+
+
+def pasar_tramite(tramite_id: int, area_destino_id: int, usuario_id: int,
+                   sindicato_id: int, motivo: str = "") -> bool:
+    """Deriva el trámite a otra área. False si no corresponde.
+
+    Chequea TODO acá adentro y no en la ruta, a propósito: es una operación
+    que cambia quién puede responder, y dejar la mitad de las condiciones en
+    el llamador es la forma de que un camino nuevo se olvide de alguna.
+
+    Un trámite TERMINADO no se deriva: está cerrado, igual que no admite
+    notas ni cambios de estado."""
+    with Session(engine) as s:
+        tr = s.get(Tramite, tramite_id)
+        if not tr or tr.sindicato_id != sindicato_id or tr.estado == "terminado":
+            return False
+        tipo = s.get(TipoTramite, tr.tipo_tramite_id)
+        if not tipo or not tipo.permite_pase:
+            return False
+        # El destino tiene que estar en la lista CERRADA del formulario, ser
+        # de este sindicato, estar activo, y no ser el que ya lo tiene.
+        permitidas = {x.area_id for x in s.exec(select(PaseTipoTramite).where(
+            PaseTipoTramite.tipo_tramite_id == tr.tipo_tramite_id)).all()}
+        destino = s.get(Area, area_destino_id)
+        if (area_destino_id not in permitidas or not destino
+                or destino.sindicato_id != sindicato_id or not destino.activo
+                or area_destino_id == tr.area_a_cargo_id):
+            return False
+        origen = s.get(Area, tr.area_a_cargo_id) if tr.area_a_cargo_id else None
+        ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
+        s.add(PaseTramite(tramite_id=tramite_id, area_origen_id=tr.area_a_cargo_id,
+                          area_destino_id=area_destino_id, usuario_id=usuario_id,
+                          motivo=motivo, creado=ahora))
+        tr.area_a_cargo_id = area_destino_id
+        tr.actualizado = ahora
+        # Un pase es actividad del sindicato sobre el expediente: al
+        # trabajador le cuenta como novedad, igual que una respuesta.
+        tr.visto_trabajador_en = None
+        s.add(tr)
+        # El movimiento queda en el chat nombrando ÁREAS, nunca personas:
+        # es lo que ve el trabajador (misma regla que las respuestas).
+        detalle = f"Pasó de {origen.nombre} a {destino.nombre}." if origen \
+            else f"Pasó a {destino.nombre}."
+        if motivo:
+            detalle += f" Motivo: {motivo}"
+        _log_tramite(s, tramite_id, "pase", detalle)
+        s.commit()
+        return True
+
+
+def puede_responder_tramite(tramite_id: int, usuario_id: int, sindicato_id: int) -> bool:
+    """Ver y RESPONDER son cosas distintas desde que existe el pase.
+
+    El área que derivó conserva lectura -- para saber en qué terminó lo que
+    pasó -- pero ya no escribe. Si las dos pudieran, el trabajador podría
+    recibir dos respuestas distintas al mismo planteo, que es justo lo que
+    "siempre hay exactamente un área responsable" evita.
+
+    Los administradores no quedan afuera: no atienden una ventanilla."""
+    if not puede_ver_tramite(tramite_id, usuario_id, sindicato_id):
+        return False
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        if not u or not u.activo:
+            return False
+        if u.es_super_admin or u.es_admin_seccional:
+            return True
+        tr = s.get(Tramite, tramite_id)
+        return bool(tr and tr.area_a_cargo_id == u.area_id)
+
+
 def puede_ver_tramite(tramite_id: int, usuario_id: int, sindicato_id: int) -> bool:
     """Si ESTE usuario alcanza ESE trámite, por los dos ejes.
 
@@ -3702,8 +3893,11 @@ def puede_ver_tramite(tramite_id: int, usuario_id: int, sindicato_id: int) -> bo
         if not tr or tr.sindicato_id != sindicato_id:
             return False
         areas, secs = alcance_de_tramites(usuario_id)
-        if areas is not None and tr.area_a_cargo_id not in areas:
-            return False
+        if areas is not None:
+            # No alcanza con el área a cargo: la que DERIVÓ conserva lectura,
+            # para poder saber en qué terminó lo que pasó (decisión N8).
+            if not (areas & areas_que_vieron(tramite_id)):
+                return False
         if secs is not None:
             trab = s.exec(select(Trabajador).where(
                 Trabajador.sindicato_id == sindicato_id, Trabajador.cuil == tr.cuil)).first()
@@ -3802,13 +3996,28 @@ def _tramite_detalle_completo(s: Session, tr: "Tramite") -> dict:
                 if n.formulario_id in formularios else False,
         } for n in notas],
         "log": [{"evento": l.evento, "detalle": l.detalle, "creado": l.creado} for l in log],
+        "area_a_cargo_id": tr.area_a_cargo_id,
+        "area_a_cargo": (s.get(Area, tr.area_a_cargo_id).nombre
+                         if tr.area_a_cargo_id and s.get(Area, tr.area_a_cargo_id) else ""),
     }
 
 
-def tramite_detalle(tramite_id: int) -> Optional[dict]:
+def tramite_detalle(tramite_id: int, usuario_id: Optional[int] = None) -> Optional[dict]:
+    """Con `usuario_id`, el detalle informa además si ESE usuario puede
+    responder y a qué áreas puede derivar. Van juntos y no en un endpoint
+    aparte porque la pantalla los necesita a la vez: sin saber si puede
+    escribir, el chat no sabe si mostrar el cajón de respuesta."""
     with Session(engine) as s:
         tr = s.get(Tramite, tramite_id)
-        return _tramite_detalle_completo(s, tr) if tr else None
+        if not tr:
+            return None
+        detalle = _tramite_detalle_completo(s, tr)
+    if usuario_id:
+        detalle["puede_responder"] = puede_responder_tramite(
+            tramite_id, usuario_id, detalle["sindicato_id"])
+        detalle["areas_pase"] = areas_a_las_que_puede_pasar(tramite_id) \
+            if detalle["puede_responder"] else []
+    return detalle
 
 
 def tramite_por_numero_expediente(numero_expediente: str) -> Optional[dict]:

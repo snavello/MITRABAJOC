@@ -883,7 +883,11 @@ if (document.getElementById('tp-tramites')) {
 
   function renderChatTramiteTrx(d) {
     trxNotasActuales = d.notas;
-    const eventos = d.log.filter(l => l.evento === 'creado' || l.evento === 'cambio_estado');
+    // El pase es un MOVIMIENTO del expediente y va al chat como cualquier
+    // otro (decisión N8). El detalle ya viene redactado nombrando ÁREAS y
+    // nunca personas, así que sirve igual acá que del lado del afiliado.
+    const eventos = d.log.filter(l => l.evento === 'creado' || l.evento === 'cambio_estado'
+                                     || l.evento === 'pase');
     const items = [
       ...d.notas.map((n, i) => ({ tipo: 'nota', idx: i, creado: n.creado, n })),
       ...eventos.map(l => ({ tipo: 'sistema', creado: l.creado, l })),
