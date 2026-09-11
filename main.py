@@ -38,6 +38,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
 from sqlmodel import select
 
+import fechas
 import db
 import auth
 import validaciones_tramite
@@ -536,7 +537,7 @@ def api_validar(request: Request, payload: dict):
         registro = ReciboVerificado(
             sindicato_id=sid, cuil=cuil_sesion or resultado.get("cuil", ""),
             periodo=resultado.get("periodo", ""),
-            fecha=datetime.now().strftime("%d/%m/%Y %H:%M"),
+            fecha=fechas.ahora().strftime("%d/%m/%Y %H:%M"),
             estado=resultado.get("estado", ""),
             detalle={"recibo": recibo, "resultado": resultado},
             # Columnas analíticas del Panel Sindical (docs/DASHBOARD.md):
@@ -565,7 +566,7 @@ def api_reportar(request: Request, payload: dict):
     if not sid:
         raise ErrorApp("E-SESION-01")
     resultado = payload.get("resultado") or {}
-    fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
+    fecha = fechas.ahora().strftime("%d/%m/%Y %H:%M")
     monto = (resultado.get("retencion_sindical") or {}).get("total", 0.0)
     with db.get_session() as s:
         s.add(Reporte(
@@ -602,7 +603,7 @@ def api_enviar_sindicato(request: Request, payload: dict):
         raise ErrorApp("E-SESION-01")
     resultado = payload.get("resultado") or {}
     monto = (resultado.get("retencion_sindical") or {}).get("total", 0.0)
-    fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
+    fecha = fechas.ahora().strftime("%d/%m/%Y %H:%M")
     with db.get_session() as s:
         s.add(EnvioSindicato(
             sindicato_id=sid, cuil=resultado.get("cuil", ""),
@@ -1831,7 +1832,7 @@ async def abm_noticia(
             s.add(Noticia(
                 sindicato_id=sid, titulo=titulo, bajada=bajada, texto_completo=texto_completo,
                 fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
-                creada=datetime.now().strftime("%Y-%m-%d %H:%M"),
+                creada=fechas.ahora_texto(),
                 imagen1_datos=imagen1_datos, imagen1_mime=imagen1_mime,
                 imagen2_datos=imagen2_datos, imagen2_mime=imagen2_mime,
                 destino_seccionales=destinos, formulario_id=formulario,
@@ -1884,7 +1885,7 @@ async def abm_beneficio(
             s.add(Beneficio(
                 sindicato_id=sid, rubro=rubro, descripcion=descripcion, link=link,
                 fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
-                creada=datetime.now().strftime("%Y-%m-%d %H:%M"),
+                creada=fechas.ahora_texto(),
                 imagen_datos=imagen_datos, imagen_mime=imagen_mime,
                 destino_seccionales=destinos, formulario_id=formulario,
             ))
@@ -4456,7 +4457,7 @@ def _antiguedad(creada: str) -> str:
     dt = _parsear_creada(creada)
     if not dt:
         return creada or ""
-    dias = (datetime.now().date() - dt.date()).days
+    dias = (fechas.hoy() - dt.date()).days
     if dias <= 0:
         return "Hoy"
     if dias == 1:
@@ -5046,7 +5047,7 @@ def entornos(request: Request):
         "urls": entorno.URLS, "roles": ROLES_LOGIN, "versiones": versiones,
         # Recursos (recursos.py): el catálogo completo y el aviso de la
         # última acción.
-        "recursos": recursos.catalogo(), "aviso": aviso, "hoy": date.today().isoformat(),
+        "recursos": recursos.catalogo(), "aviso": aviso, "hoy": fechas.hoy().isoformat(),
         "tamanio_max_mb": recursos.TAMANIO_MAX // (1024 * 1024),
         # Tests: el detalle de servidor y la lista se piden también por JS
         # (polling), pero se prellenan acá para que la pestaña no arranque
@@ -5234,7 +5235,7 @@ def entornos_tests_publicar(request: Request, payload: dict = Body(...),
     test_id = db.crear_test_carga(tipo, parametros)
     db.actualizar_test_carga(
         test_id, estado="listo", resumen=resumen,
-        terminado_en=payload.get("terminado_en") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        terminado_en=payload.get("terminado_en") or fechas.ahora_con_segundos())
     return {"id": test_id}
 
 

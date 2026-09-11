@@ -27,6 +27,7 @@ from datetime import date, timedelta
 
 from starlette.datastructures import QueryParams
 
+import fechas
 import dashboard
 import db
 
@@ -466,7 +467,7 @@ def responder(sid: int, pregunta: str, filtros_actuales: dict, historial: list,
     cli = cliente()
     if cli is None:
         raise ErrorModelo("sin cliente de Anthropic configurado")
-    hoy = hoy or date.today()
+    hoy = hoy or fechas.hoy()
     if es_reinicio(pregunta):
         return {"respuesta": "Listo, reinicié los filtros: últimos 30 días, sin seccional, empresa ni afiliado.",
                 "filtros": estado_inicial(hoy), "aplicar": True, "afiliado": None,

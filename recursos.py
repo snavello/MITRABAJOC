@@ -31,6 +31,7 @@ import time
 from datetime import date
 from pathlib import Path
 
+import fechas
 import auth
 
 CARPETA = Path(__file__).resolve().parent / "recursos"
@@ -167,7 +168,7 @@ def leer_fecha(texto: str) -> date:
     try:
         return date.fromisoformat((texto or "").strip())
     except ValueError:
-        return date.today()
+        return fechas.hoy()
 
 
 def normalizar_fragmento(texto: str) -> str:

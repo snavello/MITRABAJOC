@@ -23,7 +23,9 @@ Sin acceso a base de datos a propósito: funciones puras, testeables solas
 """
 
 import re
-from datetime import date, timedelta
+from datetime import timedelta
+
+import fechas
 
 # Operadores admitidos. Se guardan en ASCII; _OP_LEGIBLE es solo para armar
 # mensajes por defecto.
@@ -90,7 +92,7 @@ def _limite_comparable(valor, tipo_dato):
         m = _RE_HOY.match(str(valor or "").strip().lower())
         if m:
             dias = int(m.group(1) or 0)
-            return (date.today() + timedelta(days=dias)).isoformat()
+            return (fechas.hoy() + timedelta(days=dias)).isoformat()
     return _a_comparable(valor, tipo_dato)
 
 

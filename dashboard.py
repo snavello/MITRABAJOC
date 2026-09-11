@@ -27,6 +27,7 @@ from typing import Optional
 
 from sqlalchemy import bindparam, text
 
+import fechas
 import db
 from validador import _norm_cuil, a_numero
 
@@ -79,7 +80,7 @@ def campos_analiticos(recibo: dict, resultado: dict) -> dict:
                 monto += abs(dif)
     totales = resultado.get("totales") or {}
     return {
-        "procesado_en": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "procesado_en": fechas.ahora_texto(),
         "cuit_empleador": _norm_cuil((recibo.get("empleador") or {}).get("cuit")),
         "categoria": ((recibo.get("empleado") or {}).get("categoria") or "").strip(),
         "formato": recibo.get("formato") or "",
@@ -98,7 +99,7 @@ def parsear_filtros(params, hoy: Optional[date] = None) -> dict:
     `params` es un QueryParams de Starlette (o cualquier cosa con .get y
     .getlist). Lanza ValueError con mensaje mostrable si algo no cierra.
     Cada endpoint después usa solo las claves que le aplican."""
-    hoy = hoy or date.today()
+    hoy = hoy or fechas.hoy()
 
     def _fecha(nombre):
         crudo = params.get(nombre)
@@ -649,7 +650,7 @@ def semaforo(sid: int, f: dict, hoy: Optional[date] = None) -> dict:
     """Por empresa del tenant: MAX(fecha_ultimo_deposito) sobre sus recibos,
     días transcurridos y estado según umbrales de plataforma. Es una foto del
     estado ACTUAL: el rango de fechas no le aplica (sí seccional/empresa)."""
-    hoy = hoy or date.today()
+    hoy = hoy or fechas.hoy()
     conds = ["r.sindicato_id = :sid", "r.fecha_ultimo_deposito IS NOT NULL",
              "r.cuit_empleador != ''"]
     params = {"sid": sid}
@@ -760,7 +761,7 @@ def explorador_recibos(sid: int, f: dict, page: int, page_size: int) -> dict:
 
 def explorador_tramites(sid: int, f: dict, page: int, page_size: int,
                         hoy: Optional[date] = None) -> dict:
-    hoy = hoy or date.today()
+    hoy = hoy or fechas.hoy()
     joins, where, params = _sql_tramites(sid, f, forzar_join=True)
     joins += (" LEFT JOIN seccional sec ON sec.id = t.seccional_id"
               " LEFT JOIN tipotramite tt ON tt.id = tr.tipo_tramite_id")

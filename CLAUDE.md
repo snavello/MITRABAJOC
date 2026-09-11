@@ -271,6 +271,18 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - **Patrón portada + panel interno**, repetido para los 3 roles con login
   (`/app/inicio`+`/app`, `/admin/inicio`+`/admin`, `/empresa/inicio`+`/empresa`)
   — cualquier rol nuevo que se agregue debería seguir el mismo patrón.
+- **La hora de la app es la de Buenos Aires, no la del servidor**
+  (`fechas.py`, 2026-09-11). Render corre en UTC: `datetime.now()` da tres
+  horas de más y `date.today()` cambia de día a las 21:00 de Argentina, así
+  que toda vigencia por fecha terminaba tres horas antes de lo que decía
+  (una noticia "hasta el 30" desaparecía a las 21:00 del 30) y los sellos de
+  tiempo posteriores a esa hora quedaban con la fecha del día siguiente. En
+  el código de la app **no se llama más a `datetime.now()` ni a
+  `date.today()`**: se usa `fechas.ahora()/hoy()/hoy_texto()/ahora_texto()`.
+  Lo verifica `test_fechas.py`, que recorre los módulos y falla nombrando al
+  que se saltee la regla — fail-closed, un archivo nuevo entra solo a la
+  lista. Los datos escritos ANTES del fix quedaron en UTC: no se migraron
+  (detalle en HISTORIAL.md).
 
 ## Estado actual (actualizado 2026-09-11)
 Todo lo listado acá está mergeado a `main` y desplegado (Render sigue `main`,

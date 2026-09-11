@@ -3236,3 +3236,58 @@ así que una pasada hacia adelante marca todo lo que cuelga del sindicato
 (cuando llega el turno de una tabla, sus padres ya están marcados) y la
 pasada inversa lo borra de hijo a padre. Una tabla nueva con su FK entra
 sola. Verificado corriendo el script tres veces seguidas contra Postgres.
+
+
+## La hora de Buenos Aires en toda la app (2026-09-11)
+
+El servidor de Render corre en UTC. Apareció medido ese mismo día probando
+los planes de Render de punta a punta: **la regla decía 22:02 y la bitácora
+01:02**. Se arregló ahí nomás para esas dos tablas (`PlanProgramado` y
+`CambioPlan`) con un helper local, `db._ahora_ba()`, y quedó anotado que el
+resto de la app seguía igual.
+
+El resto de la app era 54 llamadas a `datetime.now()` y `date.today()`
+repartidas en `db.py` (39), `main.py` (8), `dashboard.py` (4),
+`asistente.py`, `recursos.py` y `validaciones_tramite.py`. Como toda la app
+compara fechas **como texto** ("AAAA-MM-DD"), esas tres horas se traducían
+en bugs silenciosos de vigencia:
+
+- una `Noticia` vigente "hasta el 30" dejaba de mostrarse a las 21:00 del
+  30, no a medianoche; lo mismo `Beneficio` y cualquier `fecha_hasta`;
+- una notificación enviada a las 22:30 quedaba guardada con la fecha del día
+  siguiente, y lo mismo los sellos de trámites y el `procesado_en` de
+  recibos que alimenta las series del dashboard.
+
+Se notaba poco porque solo ocurre entre las 21:00 y la medianoche.
+
+**El fix.** Un módulo nuevo, `fechas.py`, con `ahora()`, `hoy()`,
+`hoy_texto()`, `ahora_texto()` y `ahora_con_segundos()`, y el reemplazo
+mecánico de las 54 llamadas. `db._ahora_ba()` se borró: sus dos usos apuntan
+ahora a `fechas.ahora_con_segundos()`, y el porqué de aquella primera
+corrección quedó como comentario donde estaba la función.
+
+**`ahora()` devuelve un datetime SIN zona (naive) con la hora de Buenos
+Aires**, decisión explícita. Un datetime con `tzinfo` arrastraría el offset
+a `isoformat()` ("...-03:00") y rompería el formato de los valores ya
+escritos en la base con ese método (`Recurso.creado`), además de reventar
+cualquier comparación contra un datetime naive parseado de la base. La zona
+acá es un dato de entrada para saber qué hora es, no algo que viaje con el
+valor.
+
+**Los datos viejos no se migraron.** Todo lo escrito antes del fix está en
+UTC y ahí queda: reescribir a mano columnas de texto con formatos distintos,
+en tablas donde algunas filas (las de planes de Render) ya estaban
+corregidas, es bastante más riesgoso que convivir con un salto de tres horas
+en los registros anteriores a esta fecha. En la práctica solo se nota
+mirando sellos viejos de hora.
+
+**El test que importa** no es ninguno de los que comprueban el helper, sino
+`test_fechas.test_ningun_modulo_de_la_app_le_pide_la_hora_al_servidor`:
+recorre los `.py` de la raíz —excluyendo la suite, los scripts que corren en
+la PC del desarrollador y el propio `fechas.py`— y falla nombrando archivo y
+línea del que vuelva a usar la hora del servidor. Es **fail-closed**, igual
+que `PERMISOS_RUTAS`: un módulo nuevo entra a la lista solo, sin que nadie
+se acuerde de agregarlo. Mira el árbol de sintaxis y no el texto, así un
+comentario que nombre `datetime.now()` no lo hace fallar, y no toca
+`datetime.now(ZONA)` ni `datetime.now(timezone.utc)`, que son usos
+legítimos y explícitos (`planificador.py`, `render_admin.py`).

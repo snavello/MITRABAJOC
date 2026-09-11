@@ -28,11 +28,13 @@ import csv
 import json
 from pathlib import Path
 from typing import Optional
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 
 from dotenv import load_dotenv
 from typing import Any
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON, text
+
+import fechas
 from pgvector.sqlalchemy import Vector
 
 # En Render, DATABASE_URL es una variable de entorno real (no hace falta
@@ -1034,7 +1036,7 @@ def guardar_recurso(titulo: str, descripcion: str, fecha: date, tipo: str, url: 
             nombre_archivo=nombre_archivo, mime=mime, tamanio=len(archivo_datos or b""),
             archivo_datos=archivo_datos, miniatura_datos=miniatura_datos,
             miniatura_mime=miniatura_mime, fragmento=fragmento,
-            creado=datetime.now().isoformat(timespec="seconds"),
+            creado=fechas.ahora().isoformat(timespec="seconds"),
         )
         s.add(r)
         s.commit()
@@ -1210,7 +1212,7 @@ def registrar_consulta_asistente(sindicato_id: int, usuario_id: Optional[int], p
             filtros=filtros, tab=(filtros or {}).get("tab", ""), aplicado=aplicado,
             modelo=uso.get("modelo", ""), tokens_entrada=uso.get("tokens_entrada", 0),
             tokens_salida=uso.get("tokens_salida", 0), llamadas=uso.get("llamadas", 0),
-            creado=datetime.now().strftime("%Y-%m-%d %H:%M"))
+            creado=fechas.ahora_texto())
         s.add(fila); s.commit(); s.refresh(fila)
         return fila.id
 
@@ -1246,7 +1248,7 @@ class TestCarga(SQLModel, table=True):
     avance: str = ""                          # último progreso corto ("escalón 200, 00m30s")
     error_detalle: str = ""
     render_job_id: str = ""
-    creado_en: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    creado_en: str = Field(default_factory=fechas.ahora_con_segundos)
     terminado_en: str = ""
 
 
@@ -1335,7 +1337,7 @@ class AccesoLog(SQLModel, table=True):
 def registrar_acceso(rol: str, sindicato_id: Optional[int] = None) -> None:
     with Session(engine) as s:
         s.add(AccesoLog(rol=rol, sindicato_id=sindicato_id,
-                         fecha=datetime.now().strftime("%Y-%m-%d %H:%M")))
+                         fecha=fechas.ahora_texto()))
         s.commit()
 
 
@@ -1348,7 +1350,7 @@ def actividad_resumen(dias: int = 30) -> dict:
     de IA a una ventana reciente (por defecto 30 días); trámites/recibos/
     notificaciones son acumulados históricos, como el resto de la
     plataforma los muestra."""
-    desde = (datetime.now() - timedelta(days=dias)).strftime("%Y-%m-%d %H:%M")
+    desde = (fechas.ahora() - timedelta(days=dias)).strftime("%Y-%m-%d %H:%M")
     with Session(engine) as s:
         sindicatos = {sd.id: sd.nombre for sd in
                       s.exec(select(Sindicato).where(Sindicato.activo == True)).all()}
@@ -1402,13 +1404,13 @@ def actividad_resumen(dias: int = 30) -> dict:
         totales["sindicatos_activos"] = len(sindicatos)
 
         return {"sindicatos": sorted(por_sind.values(), key=lambda f: f["nombre"]),
-                "totales": totales, "dias": dias, "actualizado": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+                "totales": totales, "dias": dias, "actualizado": fechas.ahora_con_segundos()}
 
 
 def consultas_asistente_hoy(sindicato_id: int) -> int:
     """Para el tope diario del Asistente. `creado` es string ordenable, así
     que "hoy" es todo lo que empieza con la fecha de hoy."""
-    hoy = datetime.now().strftime("%Y-%m-%d")
+    hoy = fechas.hoy_texto()
     with Session(engine) as s:
         return len(s.exec(select(ConsultaAsistente.id).where(
             ConsultaAsistente.sindicato_id == sindicato_id,
@@ -1506,7 +1508,7 @@ def crear_convenio(sindicato_id: int, nombre: str, codigo: str) -> int:
     with Session(engine) as s:
         c = Convenio(sindicato_id=sindicato_id, nombre=nombre.strip(),
                      codigo=(codigo or "").strip(),
-                     creado=datetime.now().strftime("%Y-%m-%d %H:%M"))
+                     creado=fechas.ahora_texto())
         s.add(c); s.commit(); s.refresh(c)
         return c.id
 
@@ -1540,7 +1542,7 @@ def crear_documento_convenio(convenio_id: int, sindicato_id: int, tipo: str, tit
             archivo_nombre=archivo_nombre, observaciones=observaciones,
             observaciones_fecha=observaciones_fecha, vigencia_desde=vigencia_desde,
             vigencia_hasta=vigencia_hasta, estado="pendiente",
-            creado=datetime.now().strftime("%Y-%m-%d %H:%M"))
+            creado=fechas.ahora_texto())
         s.add(d); s.commit(); s.refresh(d)
         return d.id
 
@@ -1600,7 +1602,7 @@ def guardar_fragmentos(documento_id: int, convenio_id: int, sindicato_id: int,
                         fragmentos: list, vectores: list, tipo_fuente: str = "convenio",
                         desde_orden: int = 0) -> int:
     """Guarda un lote de fragmentos ya vectorizados."""
-    ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
+    ahora = fechas.ahora_texto()
     with Session(engine) as s:
         for i, (f, v) in enumerate(zip(fragmentos, vectores)):
             s.add(FragmentoConvenio(
@@ -1667,7 +1669,7 @@ def registrar_consulta(sindicato_id: int, convenio_id: int, cuil: str, pregunta:
             sindicato_id=sindicato_id, convenio_id=convenio_id, cuil=cuil or "",
             pregunta=(pregunta or "")[:2000], hubo_respuesta=hubo_respuesta,
             fragmentos_usados=list(fragmentos_usados or []),
-            creado=datetime.now().strftime("%Y-%m-%d %H:%M")))
+            creado=fechas.ahora_texto()))
         s.commit()
 
 
@@ -2513,7 +2515,7 @@ def guardar_semaforo(cuil: str, sindicato_id: int, datos: dict) -> None:
         if not t:
             return
         t.semaforo_datos = datos
-        t.semaforo_actualizado = datetime.now().strftime("%Y-%m-%d")
+        t.semaforo_actualizado = fechas.hoy_texto()
         s.add(t)
         s.commit()
 
@@ -2599,7 +2601,7 @@ def noticias_del_sindicato(sindicato_id: int) -> list:
 def noticias_vigentes(sindicato_id: int, seccional_id: Optional[int] = None, limite: int = None) -> list:
     """Noticias vigentes HOY de un sindicato, dirigidas a la seccional del
     trabajador (o a todas), más recientes primero."""
-    hoy = datetime.now().strftime("%Y-%m-%d")
+    hoy = fechas.hoy_texto()
     todas = noticias_del_sindicato(sindicato_id)
     vigentes = [n for n in todas if noticia_vigente(n, hoy)
                 and visible_para_seccional(n["destino_seccionales"], seccional_id)]
@@ -2643,7 +2645,7 @@ def beneficios_del_sindicato(sindicato_id: int) -> list:
 def beneficios_vigentes(sindicato_id: int, seccional_id: Optional[int] = None) -> list:
     """Beneficios vigentes HOY de un sindicato, dirigidos a la seccional del
     trabajador (o a todos), más recientes primero."""
-    hoy = datetime.now().strftime("%Y-%m-%d")
+    hoy = fechas.hoy_texto()
     todos = beneficios_del_sindicato(sindicato_id)
     return [b for b in todos if beneficio_vigente(b, hoy)
             and visible_para_seccional(b["destino_seccionales"], seccional_id)]
@@ -2904,7 +2906,7 @@ def registrar_uso_ia(sindicato_id: Optional[int], cuil: str, tipo: str,
         s.add(UsoIA(
             sindicato_id=sindicato_id, cuil=cuil, tipo=tipo, modelo=modelo,
             tokens_entrada=tokens_entrada, tokens_salida=tokens_salida,
-            fecha=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            fecha=fechas.ahora_texto(),
         ))
         s.commit()
 
@@ -2933,7 +2935,7 @@ def registrar_recibo_sospechoso(sindicato_id: Optional[int], cuil: str, periodo:
     with Session(engine) as s:
         s.add(ReciboSospechoso(
             sindicato_id=sindicato_id or None, cuil=cuil, periodo=periodo or "", motivo=motivo or "",
-            fecha=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            fecha=fechas.ahora_texto(),
             archivo_datos=archivo_datos, archivo_mime=archivo_mime or "",
             archivo_nombre=archivo_nombre or "",
         ))
@@ -3019,7 +3021,7 @@ def crear_notificacion(sindicato_id: int, usuario_id: Optional[int], remitente: 
             sindicato_id=sindicato_id, remitente=remitente or "", usuario_id=usuario_id,
             texto=texto or "", adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime or "",
             adjunto_nombre=adjunto_nombre or "", criterio=criterio, criterio_valores=list(valores or []),
-            origen=origen, enviado_en=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            origen=origen, enviado_en=fechas.ahora_texto(),
             cantidad_destinatarios=len(cuils), formulario_id=formulario_id,
         )
         s.add(n); s.commit(); s.refresh(n)
@@ -3129,7 +3131,7 @@ def marcar_todas_notificaciones_leidas(cuil: str, sindicato_id: int) -> int:
     Aislamiento: solo filas de este cuil, y solo notificaciones de este
     sindicato -- las de otro sindicato del mismo CUIL (pluriempleo) no se
     tocan."""
-    ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
+    ahora = fechas.ahora_texto()
     with Session(engine) as s:
         ids_sind = {n.id for n in s.exec(select(Notificacion).where(
             Notificacion.sindicato_id == sindicato_id)).all()}
@@ -3160,7 +3162,7 @@ def marcar_notificacion_leida(notificacion_id: int, cuil: str) -> bool:
         if not d:
             return False
         if not d.leida_en:
-            d.leida_en = datetime.now().strftime("%Y-%m-%d %H:%M")
+            d.leida_en = fechas.ahora_texto()
             s.add(d); s.commit()
         return True
 
@@ -3202,7 +3204,7 @@ def crear_notificacion_empleador(sindicato_id: int, usuario_id: Optional[int], r
             sindicato_id=sindicato_id, remitente=remitente or "", usuario_id=usuario_id,
             texto=texto or "", adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime or "",
             adjunto_nombre=adjunto_nombre or "", criterio=criterio, criterio_valores=list(valores or []),
-            origen=origen, enviado_en=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            origen=origen, enviado_en=fechas.ahora_texto(),
             cantidad_destinatarios=len(cuits), formulario_id=formulario_id,
         )
         s.add(n); s.commit(); s.refresh(n)
@@ -3287,7 +3289,7 @@ def marcar_notificacion_leida_empleador(notificacion_empleador_id: int, cuit: st
         if not d:
             return False
         if not d.leida_en:
-            d.leida_en = datetime.now().strftime("%Y-%m-%d %H:%M")
+            d.leida_en = fechas.ahora_texto()
             s.add(d); s.commit()
         return True
 
@@ -3316,7 +3318,7 @@ def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list
                          reglas_consistencia=reglas or [],
                          area_destino_default_id=area_destino_default_id,
                          seccional_id=seccional_id, permite_pase=permite_pase,
-                         creado=datetime.now().strftime("%Y-%m-%d %H:%M"))
+                         creado=fechas.ahora_texto())
         s.add(t); s.commit(); s.refresh(t)
         for i, c in enumerate(campos):
             s.add(CampoTramite(
@@ -3557,7 +3559,7 @@ def _log_tramite(s: Session, tramite_id: int, evento: str, detalle: str) -> None
     que lo generó (alta, cambio de estado, nota)."""
     s.add(TramiteLog(
         tramite_id=tramite_id, evento=evento, detalle=detalle,
-        creado=datetime.now().strftime("%Y-%m-%d %H:%M"),
+        creado=fechas.ahora_texto(),
     ))
 
 
@@ -3596,8 +3598,8 @@ def crear_tramite(sindicato_id: int, tipo_tramite_id: int, cuil: str, respuestas
         if not tipo or tipo.sindicato_id != sindicato_id or not tipo.activo:
             return None
         prefijo = "".join(ch for ch in tipo.codigo.upper() if ch.isalnum()) or "TRAM"
-        anio = datetime.now().strftime("%Y")
-        ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
+        anio = fechas.ahora().strftime("%Y")
+        ahora = fechas.ahora_texto()
         numero = _proximo_numero_expediente(s, Tramite, prefijo, anio)
         # El área se resuelve ACÁ, contra la seccional del trabajador, y
         # queda escrita en la fila. Ver el comentario de Tramite.area_a_cargo_id:
@@ -3651,7 +3653,7 @@ def cambiar_estado_tramite(tramite_id: int, sindicato_id: int, nuevo_estado: str
             return False
         anterior = tr.estado
         tr.estado = nuevo_estado
-        tr.actualizado = datetime.now().strftime("%Y-%m-%d %H:%M")
+        tr.actualizado = fechas.ahora_texto()
         tr.visto_trabajador_en = None   # cambio del sindicato = novedad para el trabajador
         if nuevo_estado == "terminado":
             tr.resuelto_en = tr.actualizado
@@ -3685,7 +3687,7 @@ def agregar_nota_tramite(tramite_id: int, autor: str, texto: str,
         tr = s.get(Tramite, tramite_id)
         if not tr or tr.estado == "terminado":
             return False
-        ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
+        ahora = fechas.ahora_texto()
         cambia = bool(estado_nuevo) and estado_nuevo in ESTADOS_TRAMITE \
             and estado_nuevo != tr.estado and autor == "admin"
         s.add(NotaTramite(
@@ -3748,7 +3750,7 @@ def guardar_suscripcion_push(cuil: str, endpoint: str, p256dh: str, auth: str) -
             sus.cuil, sus.p256dh, sus.auth = cuil, p256dh, auth
         else:
             sus = SuscripcionPush(cuil=cuil, endpoint=endpoint, p256dh=p256dh, auth=auth,
-                                   creado=datetime.now().strftime("%Y-%m-%d %H:%M"))
+                                   creado=fechas.ahora_texto())
         s.add(sus); s.commit()
 
 
@@ -3773,7 +3775,7 @@ def marcar_tramite_visto(tramite_id: int, cuil: str) -> None:
     with Session(engine) as s:
         tr = s.get(Tramite, tramite_id)
         if tr and tr.cuil == cuil:
-            tr.visto_trabajador_en = datetime.now().strftime("%Y-%m-%d %H:%M")
+            tr.visto_trabajador_en = fechas.ahora_texto()
             s.add(tr); s.commit()
 
 
@@ -3943,7 +3945,7 @@ def pasar_tramite(tramite_id: int, area_destino_id: int, usuario_id: int,
                 or area_destino_id == tr.area_a_cargo_id):
             return False
         origen = s.get(Area, tr.area_a_cargo_id) if tr.area_a_cargo_id else None
-        ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
+        ahora = fechas.ahora_texto()
         s.add(PaseTramite(tramite_id=tramite_id, area_origen_id=tr.area_a_cargo_id,
                           area_destino_id=area_destino_id, usuario_id=usuario_id,
                           motivo=motivo, creado=ahora))
@@ -4192,7 +4194,7 @@ def crear_tipo_tramite_empleador(sindicato_id: int, titulo: str, codigo: str, ca
     with Session(engine) as s:
         t = TipoTramiteEmpleador(sindicato_id=sindicato_id, titulo=titulo, codigo=codigo,
                                   reglas_consistencia=reglas or [],
-                                  creado=datetime.now().strftime("%Y-%m-%d %H:%M"))
+                                  creado=fechas.ahora_texto())
         s.add(t); s.commit(); s.refresh(t)
         for i, c in enumerate(campos):
             s.add(CampoTramiteEmpleador(
@@ -4307,7 +4309,7 @@ def tipo_tramite_empleador_por_id(tipo_id: int) -> Optional[dict]:
 def _log_tramite_empleador(s: Session, tramite_id: int, evento: str, detalle: str) -> None:
     s.add(TramiteEmpleadorLog(
         tramite_id=tramite_id, evento=evento, detalle=detalle,
-        creado=datetime.now().strftime("%Y-%m-%d %H:%M"),
+        creado=fechas.ahora_texto(),
     ))
 
 
@@ -4319,8 +4321,8 @@ def crear_tramite_empleador(sindicato_id: int, tipo_tramite_id: int, cuit: str, 
         if not tipo or tipo.sindicato_id != sindicato_id or not tipo.activo:
             return None
         prefijo = "".join(ch for ch in tipo.codigo.upper() if ch.isalnum()) or "TRAM"
-        anio = datetime.now().strftime("%Y")
-        ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
+        anio = fechas.ahora().strftime("%Y")
+        ahora = fechas.ahora_texto()
         # Mismo criterio que crear_tramite (ver _proximo_numero_expediente):
         # la numeración de empleadores es su propio espacio, pero comparte el
         # problema de prefijos repetidos entre sindicatos.
@@ -4350,7 +4352,7 @@ def cambiar_estado_tramite_empleador(tramite_id: int, sindicato_id: int, nuevo_e
             return False
         anterior = tr.estado
         tr.estado = nuevo_estado
-        tr.actualizado = datetime.now().strftime("%Y-%m-%d %H:%M")
+        tr.actualizado = fechas.ahora_texto()
         tr.visto_empresa_en = None      # cambio del sindicato = novedad para la empresa
         s.add(tr)
         _log_tramite_empleador(s, tramite_id, "cambio_estado",
@@ -4369,10 +4371,10 @@ def agregar_nota_tramite_empleador(tramite_id: int, autor: str, texto: str,
         s.add(NotaTramiteEmpleador(
             tramite_id=tramite_id, autor=autor, texto=texto or "",
             adjunto_datos=adjunto_datos, adjunto_mime=adjunto_mime or "",
-            adjunto_nombre=adjunto_nombre or "", creado=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            adjunto_nombre=adjunto_nombre or "", creado=fechas.ahora_texto(),
             formulario_id=formulario_id,
         ))
-        tr.actualizado = datetime.now().strftime("%Y-%m-%d %H:%M")
+        tr.actualizado = fechas.ahora_texto()
         tr.visto_empresa_en = None if autor == "admin" else tr.actualizado
         s.add(tr)
         _log_tramite_empleador(s, tramite_id, f"nota_{autor}", texto[:120] if texto else "(sin texto, con adjunto)")
@@ -4395,7 +4397,7 @@ def marcar_tramite_empleador_visto(tramite_id: int, cuit: str) -> None:
     with Session(engine) as s:
         tr = s.get(TramiteEmpleador, tramite_id)
         if tr and tr.cuit == cuit:
-            tr.visto_empresa_en = datetime.now().strftime("%Y-%m-%d %H:%M")
+            tr.visto_empresa_en = fechas.ahora_texto()
             s.add(tr); s.commit()
 
 
@@ -4509,18 +4511,12 @@ def tramite_empleador_por_numero_expediente(numero_expediente: str) -> Optional[
 
 
 # ==================== Planes de Render: programación y bitácora ====================
-def _ahora_ba() -> str:
-    """La hora de Buenos Aires, en texto.
-
-    El servidor corre en UTC, así que datetime.now() da tres horas de más.
-    En estas dos tablas eso no es un detalle: la hora programada de una
-    regla SIEMPRE es hora de Buenos Aires (es lo que el usuario escribe en
-    la pantalla), y verla al lado de una bitácora en UTC hace parecer que
-    el cambio se aplicó tres horas tarde. Pasó en la prueba de punta a punta
-    del 2026-09-11: la regla decía 22:02 y la bitácora 01:02."""
-    from zoneinfo import ZoneInfo
-    return datetime.now(ZoneInfo("America/Argentina/Buenos_Aires")).strftime(
-        "%Y-%m-%d %H:%M:%S")
+# La hora de estas dos tablas sale de fechas.ahora_con_segundos(), como la
+# del resto de la app. Acá nació la regla: la hora programada de un plan
+# SIEMPRE es hora de Buenos Aires (es lo que el usuario escribe en la
+# pantalla), y verla al lado de una bitácora en UTC hacía parecer que el
+# cambio se aplicó tres horas tarde -- la regla decía 22:02 y la bitácora
+# 01:02 (prueba de punta a punta del 2026-09-11).
 
 
 class PlanProgramado(SQLModel, table=True):
@@ -4548,7 +4544,7 @@ class PlanProgramado(SQLModel, table=True):
     ajustar_workers: bool = True          # un worker por núcleo al aplicar
     nota: str = ""
     ultimo_disparo: str = ""              # "AAAA-MM-DD HH:MM" (BA) ya aplicado
-    creado_en: str = Field(default_factory=_ahora_ba)   # hora de Buenos Aires
+    creado_en: str = Field(default_factory=fechas.ahora_con_segundos)   # hora de Buenos Aires
 
 
 class CambioPlan(SQLModel, table=True):
@@ -4556,7 +4552,7 @@ class CambioPlan(SQLModel, table=True):
     única forma de saber por qué cambió el gasto sería el historial de
     Render, que para las bases de datos ni siquiera existe."""
     id: Optional[int] = Field(default=None, primary_key=True)
-    cuando: str = Field(default_factory=_ahora_ba)      # hora de Buenos Aires
+    cuando: str = Field(default_factory=fechas.ahora_con_segundos)      # hora de Buenos Aires
     origen: str = "manual"                # "manual" | "programado"
     programado_id: Optional[int] = None
     destino: str = "web"
