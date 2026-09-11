@@ -22,6 +22,12 @@ sindicatos, cada uno con su marca, conceptos y trabajadores, en aislamiento tota
 Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 
 ## Stack y arquitectura
+- **Repositorio:** `snavello/mitrabajoC` (github.com/snavello/mitrabajoc) es el
+  ÚNICO repo del proyecto: todo se lee, se desarrolla y se pushea acá. El repo
+  viejo `snavello/MiTrabajo` es un PoC descartado, escrito en **Streamlit**:
+  está abandonado, no se lee, no se toca y no se porta NADA de ahí. **Streamlit
+  no se usa más en ningún caso** — si algo sugiere Streamlit, está mirando el
+  repo equivocado.
 - **Backend:** FastAPI + Jinja2.
 - **Base de datos:** Postgres en producción (Render gestionado). El motor se
   elige solo: si existe la variable DATABASE_URL usa Postgres; si no, cae a
