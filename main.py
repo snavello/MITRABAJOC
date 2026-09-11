@@ -1141,6 +1141,11 @@ def admin_trabajador_alta(
                     vigencia_credencial=vigencia_credencial or None, seccional_id=sec_id,
                     cuit_empleador=cuit_empleador.strip() or None))
         s.commit()
+    # Las dos altas pueden venir en cualquier orden: si a este CUIL ya se le
+    # había dado usuario del panel, acá se arma el vínculo y se prende la
+    # marca de empleado. Sin esto quedaría en el padrón sin marca, en
+    # silencio.
+    db.sincronizar_por_cuil(sid, cuil_norm)
     return RedirectResponse("/admin#trabajadores", status_code=303)
 
 
@@ -1272,6 +1277,10 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
             return RedirectResponse("/admin?err=usuarioexiste#administradores", status_code=303)
         u = UsuarioSindicato(
             sindicato_id=sid, usuario=cuit, nombre=nombre,
+            # Hoy el login ES el CUIL, pero se guardan por separado: si
+            # mañana se habilita entrar con mail, `usuario` cambia y la
+            # identidad de la persona sigue en pie.
+            cuil=cuit,
             clave_hash=auth.hashear_clave(clave_inicial), debe_cambiar_clave=True,
             es_super_admin=es_super,
             es_admin_seccional=es_admin_local,
@@ -1283,6 +1292,13 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
         )
         s.add(u); s.commit(); s.refresh(u)
         nuevo_id = u.id
+    # El vínculo con el padrón se resuelve POR CUIL, no con un buscador: el
+    # padrón puede tener miles de filas y un <select> con todas sería
+    # impracticable. Si ese CUIL está empadronado en este sindicato, el
+    # usuario queda vinculado y la fila del padrón marcada como empleado;
+    # si no está, se crea igual -- trabajar en el gremio sin estar afiliado
+    # a él es un caso real.
+    db.sincronizar_empleado(nuevo_id)
     if not es_super and not es_admin_local:
         db.set_permisos_usuario(nuevo_id, _secciones_que_puede_dar(request, agregar),
                                 _secciones_que_puede_dar(request, bloquear), sid)
@@ -1343,6 +1359,7 @@ def admin_usuario_editar(request: Request, id: int = Form(...), nombre: str = Fo
         u.area_id = None if (quiere_super or quiere_admin_local) else area
         u.seccional_id = seccional
         s.add(u); s.commit()
+    db.sincronizar_empleado(id)
     # Un administrador (general o local) no lleva ajustes individuales: los
     # suyos se borran para que no reaparezcan si mañana lo degradan a
     # usuario de área.
@@ -1376,6 +1393,9 @@ def admin_usuario_baja(request: Request, id: int = Form(...)):
             return RedirectResponse("/admin?err=ultimoadmin#administradores", status_code=303)
         u.activo = False
         s.add(u); s.commit()
+    # Dar de baja al empleado le saca la marca a su fila del padrón, pero
+    # solo si no queda otro usuario activo apuntando a la misma persona.
+    db.sincronizar_empleado(id)
     return RedirectResponse("/admin#administradores", status_code=303)
 
 
@@ -1391,6 +1411,7 @@ def admin_usuario_reactivar(request: Request, id: int = Form(...)):
                 _exigir_alcance_seccional(request, u.seccional_id)
             u.activo = True
             s.add(u); s.commit()
+    db.sincronizar_empleado(id)
     return RedirectResponse("/admin#administradores", status_code=303)
 
 
@@ -4082,6 +4103,7 @@ def plataforma_alta_usuario(
     with db.get_session() as s:
         s.add(UsuarioSindicato(
             sindicato_id=sindicato_id, usuario=_norm_cuil(usuario), nombre=nombre,
+            cuil=_norm_cuil(usuario),
             clave_hash=auth.hashear_clave(clave_inicial),
             debe_cambiar_clave=True,
             # Es el PRIMER usuario del sindicato: si no naciera Super Admin,
@@ -4089,6 +4111,7 @@ def plataforma_alta_usuario(
             es_super_admin=True,
         ))
         s.commit()
+    db.sincronizar_por_cuil(sindicato_id, _norm_cuil(usuario))
     return RedirectResponse("/plataforma", status_code=303)
 
 

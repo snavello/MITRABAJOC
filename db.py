@@ -234,7 +234,19 @@ class UsuarioSindicato(SQLModel, table=True):
     de plataforma; de ahí en más los crea el propio sindicato."""
     id: Optional[int] = Field(default=None, primary_key=True)
     sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
-    usuario: str = Field(index=True)            # mail o nombre de usuario
+    usuario: str = Field(index=True)            # con lo que INICIA SESIÓN
+    # CUIL de la persona, normalizado a 11 dígitos. Hoy coincide con
+    # `usuario` porque el alta pide el CUIT/CUIL como nombre de usuario,
+    # pero son dos cosas distintas y conviene tenerlas separadas: `usuario`
+    # es con lo que entra (mañana podría ser un mail) y `cuil` es QUIÉN ES.
+    # Si se guardara uno solo, habilitar el login por mail borraría la
+    # identidad de la persona.
+    cuil: str = Field(default="", index=True)
+    # Vínculo OPCIONAL con su fila del padrón, cuando el empleado del
+    # sindicato es además afiliado. Se resuelve por CUIL en el alta; queda
+    # en NULL para quien trabaja en el gremio sin estar afiliado a él, que
+    # es un caso real y no un error.
+    trabajador_id: Optional[int] = Field(default=None, foreign_key="trabajador.id", index=True)
     nombre: str = ""
     clave_hash: str = ""
     debe_cambiar_clave: bool = True             # la primera clave la pone el admin de plataforma
@@ -297,6 +309,15 @@ class Trabajador(SQLModel, table=True):
     # Seccional del sindicato a la que pertenece (opcional -- no todos los
     # sindicatos cargan seccionales, y un trabajador puede quedar sin asignar).
     seccional_id: Optional[int] = Field(default=None, foreign_key="seccional.id", index=True)
+    # Marca de EMPLEADO DEL SINDICATO: este afiliado además trabaja en el
+    # gremio y opera el panel (decisión N1 de SPRINT_AREAS_V2.md). No la
+    # pone el admin a mano: se prende sola cuando se le da de alta un
+    # usuario del panel con este mismo CUIL, y se apaga cuando ese usuario
+    # deja de existir. Guardarla acá y no deducirla en cada consulta es lo
+    # que permite filtrar el padrón por "empleados" sin un JOIN en cada
+    # pantalla -- y lo que hace que la marca siga estando aunque mañana el
+    # vínculo se rompa por una baja.
+    es_empleado_sindicato: bool = False
     # CUIT del empleador (opcional, lo carga el admin en el alta/edición
     # manual -- NO está en el alta masiva, mismo criterio que seccional_id).
     # Permite dirigir una Notificacion "por empresa" (ver Notificacion).
@@ -2567,6 +2588,96 @@ def seccionales_del_sindicato(sindicato_id: int) -> list:
                  "ve_todas": sec.ve_todas} for sec in seccionales]
 
 
+# ---------- Identidad del empleado del sindicato (decisión N1) ----------
+
+def _trabajador_por_cuil(s: Session, sindicato_id: int, cuil: str):
+    """La fila del padrón de ESE sindicato para ese CUIL, o None.
+
+    Se busca solo dentro del sindicato a propósito: el mismo CUIL puede
+    estar empadronado en varios gremios (ver Trabajador), y el empleado de
+    uno no tiene nada que ver con su afiliación a otro."""
+    if not cuil:
+        return None
+    return s.exec(select(Trabajador).where(
+        Trabajador.sindicato_id == sindicato_id, Trabajador.cuil == cuil)).first()
+
+
+def sincronizar_empleado(usuario_id: int) -> Optional[int]:
+    """Rearma el vínculo usuario <-> padrón y deja la marca al día.
+
+    Se llama después de cada alta, edición y baja de usuario, y hace las
+    tres cosas de una porque separarlas es lo que las desincroniza:
+
+    1. Busca en el padrón del sindicato el CUIL del usuario y lo vincula
+       (o lo deja en NULL si no está: trabajar en el gremio sin estar
+       afiliado a él es un caso real).
+    2. Prende `es_empleado_sindicato` en esa fila del padrón.
+    3. APAGA la marca de la fila que el usuario tenía antes, si ya no le
+       corresponde -- pero solo si ningún OTRO usuario activo sigue
+       apuntando a ese trabajador. Sin ese chequeo, dar de baja a uno de dos
+       empleados con el mismo CUIL (que puede pasar: dos altas, un typo)
+       apagaría la marca del que sigue trabajando.
+
+    Devuelve el id del trabajador vinculado, o None.
+    """
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        if not u:
+            return None
+        anterior = u.trabajador_id
+        nuevo = None
+        if u.activo:
+            t = _trabajador_por_cuil(s, u.sindicato_id, u.cuil)
+            nuevo = t.id if t else None
+        u.trabajador_id = nuevo
+        s.add(u)
+        if nuevo:
+            t = s.get(Trabajador, nuevo)
+            if t and not t.es_empleado_sindicato:
+                t.es_empleado_sindicato = True
+                s.add(t)
+        if anterior and anterior != nuevo:
+            quedan = s.exec(select(UsuarioSindicato).where(
+                UsuarioSindicato.trabajador_id == anterior,
+                UsuarioSindicato.activo == True,
+                UsuarioSindicato.id != usuario_id)).first()
+            if not quedan:
+                viejo = s.get(Trabajador, anterior)
+                if viejo:
+                    viejo.es_empleado_sindicato = False
+                    s.add(viejo)
+        s.commit()
+        return nuevo
+
+
+def sincronizar_por_cuil(sindicato_id: int, cuil: str) -> None:
+    """El camino INVERSO: se acaba de tocar una fila del padrón, hay que ver
+    si ese CUIL tiene usuario del panel.
+
+    Hace falta porque las dos altas pueden venir en cualquier orden. Lo
+    normal es dar de alta al empleado en el padrón y después darle usuario,
+    pero al revés pasa igual -- y sin esto, el que ya tenía usuario quedaría
+    en el padrón sin la marca y sin vínculo, en silencio."""
+    if not cuil:
+        return
+    with Session(engine) as s:
+        usuarios = s.exec(select(UsuarioSindicato).where(
+            UsuarioSindicato.sindicato_id == sindicato_id,
+            UsuarioSindicato.cuil == cuil)).all()
+        ids = [u.id for u in usuarios]
+    for uid in ids:
+        sincronizar_empleado(uid)
+
+
+def empleados_del_sindicato(sindicato_id: int) -> list:
+    """CUILs del padrón marcados como empleados del sindicato. Lo usa la
+    pantalla de Trabajadores para distinguirlos de un afiliado común."""
+    with Session(engine) as s:
+        return sorted({t.cuil for t in s.exec(select(Trabajador).where(
+            Trabajador.sindicato_id == sindicato_id,
+            Trabajador.es_empleado_sindicato == True)).all()})
+
+
 # ---------- Áreas y permisos (CRUD del Super Admin) ----------
 
 def areas_del_sindicato(sindicato_id: int, alcance=None) -> list:
@@ -2684,6 +2795,8 @@ def usuarios_del_sindicato(sindicato_id: int, alcance=None) -> list:
             ind = permisos_individuales(u.id)
             salida.append({
                 "id": u.id, "usuario": u.usuario, "nombre": u.nombre, "activo": u.activo,
+                "cuil": u.cuil, "trabajador_id": u.trabajador_id,
+                "es_afiliado": bool(u.trabajador_id),
                 "debe_cambiar_clave": u.debe_cambiar_clave,
                 "es_super_admin": u.es_super_admin,
                 "es_admin_seccional": u.es_admin_seccional,

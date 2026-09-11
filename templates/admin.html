@@ -935,6 +935,11 @@
           {% if not t.activo %}<span class="tag" style="background:#eee;color:#888;">baja</span>
           {% elif t.registrado %}<span class="tag tag-si">registrado</span>
           {% else %}<span class="muted">sin registrar</span>{% endif %}
+          {# La marca no se edita acá: la prende y la apaga el alta o la
+             baja de su usuario del panel (ver "Áreas y Usuarios"). Que sea
+             de solo lectura es a propósito -- si se pudiera tildar a mano,
+             habría padrones diciendo "empleado" sin nadie que pueda entrar. #}
+          {% if t.es_empleado_sindicato %}<br><span class="tag tag-pend" title="Además opera el panel del sindicato">empleado del sindicato</span>{% endif %}
         </td>
         <td class="muted" style="white-space:nowrap;">
           {% if t.codigo_credencial %}
@@ -2097,7 +2102,8 @@
   <!-- Sub: USUARIOS -->
   <div class="au-subpanel" id="au-sub-usuarios">
   <h2>Dar de alta un usuario</h2>
-  <p class="muted">Entra a este panel con su CUIT/CUIL y la clave que le asignes -- va a tener que cambiarla en su primer ingreso. Para cambiarle la clave a uno ya existente, pedíselo a plataforma.</p>
+  <p class="muted">Entra a este panel con su CUIT/CUIL y la clave que le asignes -- va a tener que cambiarla en su primer ingreso. Para cambiarle la clave a uno ya existente, pedíselo a plataforma.<br>
+  Si ese CUIL además está en el padrón del sindicato, el sistema lo vincula solo y lo marca como <b>empleado del sindicato</b> en Trabajadores. No hace falta elegir nada, y el orden no importa: funciona igual si primero se carga en el padrón o si primero se le da el usuario.</p>
   {% if request.query_params.get('err') == 'usuarioexiste' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Ya existe un administrador con ese CUIT/CUIL en este sindicato.</div>
   {% elif request.query_params.get('err') == 'ultimoadmin' %}
@@ -2169,7 +2175,7 @@
 
   <h2>Usuarios del sindicato ({{ usuarios_sindicato|selectattr('activo')|list|length }} activos)</h2>
   <table>
-    <tr><th>CUIT/CUIL</th><th>Nombre</th><th>Rol</th><th>Área</th><th>Seccional</th><th>Estado</th><th></th></tr>
+    <tr><th>CUIT/CUIL</th><th>Nombre</th><th>Rol</th><th>Área</th><th>Seccional</th><th>En el padrón</th><th>Estado</th><th></th></tr>
     {% for u in usuarios_sindicato %}
     <tr {% if not u.activo %}style="opacity:.5;"{% endif %}>
       <td><code>{{ u.usuario }}</code></td>
@@ -2179,6 +2185,11 @@
           {% else %}<span class="tag">de área</span>{% endif %}</td>
       <td>{{ u.area or '—' }}</td>
       <td>{{ u.seccional or '—' }}</td>
+      {# El vínculo con el padrón se resuelve solo, por CUIL: no hay nada
+         que elegir acá, esta columna solo informa si esa persona además
+         está empadronada en el sindicato. #}
+      <td>{% if u.es_afiliado %}<span class="tag tag-si">afiliado</span>
+          {% else %}<span class="muted">no empadronado</span>{% endif %}</td>
       <td>
         {% if not u.activo %}<span class="tag" style="background:#eee;color:#888;">baja</span>
         {% elif u.debe_cambiar_clave %}<span class="tag tag-pend">clave pendiente</span>
@@ -2198,7 +2209,7 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="7" class="muted">No hay usuarios cargados.</td></tr>
+    <tr><td colspan="8" class="muted">No hay usuarios cargados.</td></tr>
     {% endfor %}
   </table>
   </div>
