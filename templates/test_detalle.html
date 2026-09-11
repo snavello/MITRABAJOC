@@ -158,7 +158,7 @@
   <div class="seccion">
     <h2>Resultado contra el objetivo</h2>
     <div class="veredicto {{ 'ok' if 'Cumple' in v.veredicto else '' }}">{{ v.veredicto }}</div>
-    <p class="ayuda" style="margin-top:10px;">El objetivo es el mismo para los cuatro tests: <b>p95 por debajo de 1.000 ms y menos de 1% de errores</b>. Todos los tiempos de esta página están en milisegundos (1.000 ms = 1 segundo).</p>
+    <p class="ayuda" style="margin-top:10px;">El objetivo es el mismo para todos los tests: <b>p95 por debajo de 1.000 ms y menos de 1% de errores</b>. Todos los tiempos de esta página están en milisegundos (1.000 ms = 1 segundo).</p>
   </div>
   {% endif %}
 
@@ -254,7 +254,7 @@
     </div>
     <p class="ayuda" style="margin-top:12px;">Un p95 <b>bajo</b> es buena noticia. Uno <b>alto</b> es grave, porque no describe un caso raro: describe lo que le pasó a casi todo el mundo.</p>
     <div class="enlaces">
-      <a href="{{ url_informe }}">Ver el informe completo, con los cuatro tests comparados →</a>
+      <a href="{{ url_informe }}">Ver el informe completo, con todos los tests comparados →</a>
     </div>
   </div>
 </div>

@@ -227,6 +227,21 @@ def main():
                     f"{etiqueta}: config['{k}'] publicada {exp['config'].get(k)!r} "
                     f"y definida {esperado!r}.")
 
+    # 4e. Ninguna plantilla puede fijar a mano la cantidad de tests: se
+    # desactualiza sola en cuanto se corre uno nuevo (pasó dos veces, con
+    # "los cuatro tests" y con "las siete corridas").
+    CUENTAS = ("dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez")
+    for plantilla in ("informe_completo.html", "test_detalle.html"):
+        ruta = BASE.parent / "templates" / plantilla
+        if not ruta.exists():
+            continue
+        texto = ruta.read_text(encoding="utf-8")
+        for palabra in CUENTAS:
+            for sustantivo in ("tests", "corridas", "experimentos"):
+                revisar(f"{palabra} {sustantivo}" not in texto,
+                        f"templates/{plantilla} fija a mano \"{palabra} {sustantivo}\": "
+                        f"tiene que salir del dataset.")
+
     # 5. El informe general (los 4 tests comparados) y el INFORME.md salen
     # del mismo dict; se revisa que sus tablas repitan exactamente los p95
     # del dataset y que no cite ninguna cifra ajena en sus hallazgos.
