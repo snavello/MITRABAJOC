@@ -164,9 +164,12 @@
   .emptram-subtab.activa { background:var(--marca-secundario); color:#fff; border-color:var(--marca-secundario); }
   .emptram-subpanel { display:none; }
   .emptram-subpanel.activo { display:block; }
-  /* Áreas y Usuarios: namespace propio, mismo motivo que las de arriba. */
+  /* Áreas y Usuarios: namespace propio, mismo motivo que las de arriba, y
+     los MISMOS valores -- son tokens del proyecto (--gris, --linea), no
+     colores sueltos. Sin `color`, el texto heredaba blanco sobre blanco y
+     la pestaña inactiva se veía vacía. */
   .subtab-au { padding:6px 14px; border-radius:7px; font-size:13px; font-weight:500;
-               background:#fff; border:1px solid #d8d8d8; cursor:pointer; }
+    background:#f2f0ea; color:var(--gris); border:1px solid var(--linea); cursor:pointer; font-family:inherit; }
   .subtab-au.activa { background:var(--marca-secundario); color:#fff; border-color:var(--marca-secundario); }
   .au-subpanel { display:none; }
   .au-subpanel.activo { display:block; }
