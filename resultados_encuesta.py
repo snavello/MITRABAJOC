@@ -53,6 +53,13 @@ TIPOS_UNA_FILA = ("seleccion", "opcion_unica", "escala", "numero",
 # Cuántas respuestas de texto libre se devuelven. No se grafican: se leen.
 MAX_TEXTOS = 300
 
+# Debajo de esta cantidad de respuestas, un grupo del cruce se muestra pero
+# NO se lee como una tendencia: "el 100% de este empleador" con una sola
+# persona encabezaba la lista como si fuera un hallazgo. No es el umbral de
+# anonimato --ese esconde el grupo entero y solo rige en las anónimas--,
+# es una cuestión de precisión: un porcentaje sobre uno no compara nada.
+MINIMO_PARA_COMPARAR = 5
+
 
 def filtros_saneados(e: dict, pedidos: dict, alcance=None) -> dict:
     """Los filtros que de verdad se pueden aplicar a ESTA encuesta.
@@ -1105,7 +1112,11 @@ def _cruce_por_corte(s, e: dict, pregunta: dict, condicion, filtros: dict,
             continue
         crudo.append({"valor": valor, "cantidad": cuantos, "base": total_bucket,
                       "dentro": _porcentaje(cuantos, total_bucket),
-                      "del_grupo": _porcentaje(cuantos, sum(elegidos.values()))})
+                      "del_grupo": _porcentaje(cuantos, sum(elegidos.values())),
+                      # `poco` no esconde nada: avisa que ese porcentaje sale
+                      # de tan pocas respuestas que no se puede leer como
+                      # una tendencia.
+                      "poco": total_bucket < MINIMO_PARA_COMPARAR})
     con_nombre = _con_etiquetas(s, corte, [(x["valor"], x["cantidad"]) for x in crudo],
                                 e["sindicato_id"])
     etiquetas = {x["valor"]: x["etiqueta"] for x in con_nombre}
@@ -1115,8 +1126,11 @@ def _cruce_por_corte(s, e: dict, pregunta: dict, condicion, filtros: dict,
         # Cuánto se despega del promedio: es lo que hace que un número
         # sirva para decidir a dónde ir.
         x["diferencia"] = round(x["dentro"] - general, 1)
-    crudo.sort(key=lambda x: -x["dentro"])
+    # Los grupos chicos van al final: arriba tiene que estar lo que de
+    # verdad se despega, no el 100% de una persona sola.
+    crudo.sort(key=lambda x: (x["poco"], -x["dentro"]))
     return {"general": general, "filas": crudo,
+            "minimo_para_comparar": MINIMO_PARA_COMPARAR,
             "escondidos": len(totales) - len(crudo)}
 
 

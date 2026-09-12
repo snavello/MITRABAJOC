@@ -668,15 +668,27 @@ function pintarCruce(d) {
     html += `<h4>Por ${esc(nombre.toLowerCase())}</h4>
       <div class="sub">Qué porcentaje eligió «${esc(d.opcion)}» en cada uno.
         El general es ${bloque.general}%.</div>`;
+    let avisoChicos = false;
     bloque.filas.forEach(f => {
-      const signo = f.diferencia > 0 ? 'mas' : f.diferencia < 0 ? 'menos' : 'igual';
-      html += `<div class="cr-fila">
+      // Un grupo de una o dos personas se muestra, pero sin el chip de
+      // diferencia: un porcentaje sobre uno no compara nada, y leído como
+      // tendencia manda al sindicato a mirar donde no hay nada.
+      const signo = f.poco ? 'igual'
+        : f.diferencia > 0 ? 'mas' : f.diferencia < 0 ? 'menos' : 'igual';
+      if (f.poco) avisoChicos = true;
+      html += `<div class="cr-fila ${f.poco ? 'flojo' : ''}">
           <span class="nom">${esc(f.etiqueta)}<small>${f.cantidad} de ${f.base} respuestas</small></span>
           <span class="pct">${f.dentro}%</span>
-          <span class="cr-dif ${signo}">${f.diferencia > 0 ? '+' : ''}${f.diferencia}</span>
+          <span class="cr-dif ${signo}">${f.poco ? 'pocas'
+            : (f.diferencia > 0 ? '+' : '') + f.diferencia}</span>
           <span class="cr-barra"><i style="width:${Math.min(f.dentro, 100)}%"></i></span>
         </div>`;
     });
+    if (avisoChicos) {
+      html += `<div class="sub" style="margin-top:6px;">«Pocas» = menos de
+        ${bloque.minimo_para_comparar} respuestas en ese grupo: el porcentaje es real,
+        pero no alcanza para leerlo como una tendencia.</div>`;
+    }
     if (bloque.escondidos) {
       html += `<div class="sub" style="margin-top:6px;">${bloque.escondidos}
         grupo${bloque.escondidos === 1 ? '' : 's'} no se muestra${bloque.escondidos === 1 ? '' : 'n'}:

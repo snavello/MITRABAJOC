@@ -1958,3 +1958,40 @@ def test_el_csv_dice_lo_mismo_que_la_pantalla_con_un_rango_de_fechas():
     # Y no se cuela nadie del otro día.
     for cuil in b:
         assert cuil not in archivo
+
+
+def test_un_grupo_de_una_persona_no_se_lee_como_una_tendencia():
+    """"El 100% de este empleador" con una sola persona encabezaba la lista
+    como si fuera un hallazgo. El porcentaje es real; leerlo como tendencia
+    manda al sindicato a mirar donde no hay nada."""
+    sid, uid = _sindicato_con(["encuestas", "notificaciones"], "cruce-chicos")
+    grande, chica = _seccional(sid, "Grande"), _seccional(sid, "Chica")
+    muchos = [f"20{sid:05d}{n:04d}" for n in range(12)]
+    uno = [f"27{sid:05d}0001"]
+    _padron(sid, muchos, seccional_id=grande)
+    _padron(sid, uno, seccional_id=chica)
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    _alta(modo="nominal", cortes=("seccional",), preguntas=PREG_CRUCE,
+          desde=(hoy - timedelta(days=1)).isoformat(),
+          hasta=(hoy + timedelta(days=10)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                 follow_redirects=False)
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    for n, c in enumerate(muchos + uno):
+        _sesion_trabajador(c, sid)
+        # El único de la seccional chica elige la opción 1; de los doce, 3.
+        cliente.post(f"/api/encuesta/{eid}", json={"respuestas": {
+            str(pids[0]): 1 if (c in uno or n < 3) else 0, str(pids[1]): "si"}})
+
+    _sesion(sid, uid)
+    d = cliente.get("/admin/encuesta/cruce",
+                    params={"id": eid, "pregunta": pids[0], "opcion": 1}).json()
+    filas = d["cortes"]["seccional"]["filas"]
+    por_nombre = {f["etiqueta"]: f for f in filas}
+    assert por_nombre["Chica"]["dentro"] == 100.0 and por_nombre["Chica"]["poco"] is True
+    assert por_nombre["Grande"]["poco"] is False
+    # Y va ÚLTIMA, aunque su porcentaje sea el más alto.
+    assert filas[-1]["etiqueta"] == "Chica"
+    assert d["cortes"]["seccional"]["minimo_para_comparar"] == 5
