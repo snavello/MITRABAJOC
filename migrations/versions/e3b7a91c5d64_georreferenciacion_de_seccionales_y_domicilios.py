@@ -129,8 +129,34 @@ def upgrade() -> None:
         batch_op.create_index(batch_op.f('ix_geocache_consulta_normalizada'),
                               ['consulta_normalizada'], unique=True)
 
+    # ---------- avance de la georreferenciación masiva del padrón ----------
+    # En la base y no en memoria del proceso: Render corre un worker por
+    # núcleo, el hilo que trabaja está en uno y la pantalla que pregunta el
+    # avance puede caer en otro. Ver db.GeoPadron.
+    op.create_table('geopadron',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('sindicato_id', sa.Integer(), nullable=False),
+        sa.Column('corriendo', sa.Boolean(), nullable=False, server_default=sa.text('false')),
+        sa.Column('total', sa.Integer(), nullable=False, server_default='0'),
+        sa.Column('hechos', sa.Integer(), nullable=False, server_default='0'),
+        sa.Column('ubicados', sa.Integer(), nullable=False, server_default='0'),
+        sa.Column('iniciado', sqlmodel.sql.sqltypes.AutoString(), nullable=False,
+                  server_default=''),
+        sa.Column('actualizado', sqlmodel.sql.sqltypes.AutoString(), nullable=False,
+                  server_default=''),
+        sa.ForeignKeyConstraint(['sindicato_id'], ['sindicato.id'], ),
+        sa.PrimaryKeyConstraint('id'),
+    )
+    with op.batch_alter_table('geopadron', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_geopadron_sindicato_id'),
+                              ['sindicato_id'], unique=True)
+
 
 def downgrade() -> None:
+    with op.batch_alter_table('geopadron', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_geopadron_sindicato_id'))
+    op.drop_table('geopadron')
+
     with op.batch_alter_table('geocache', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_geocache_consulta_normalizada'))
     op.drop_table('geocache')

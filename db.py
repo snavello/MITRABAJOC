@@ -29,12 +29,12 @@ import csv
 import json
 from pathlib import Path
 from typing import Optional
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from dotenv import load_dotenv
 from typing import Any
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON, text
-from sqlalchemy import or_
+from sqlalchemy import or_, bindparam
 from sqlalchemy.exc import IntegrityError
 
 import encuestas
@@ -2840,6 +2840,143 @@ def seccional_del_sindicato(sindicato_id: int, seccional_id: int) -> Optional[di
             Seccional.id == seccional_id,
             Seccional.sindicato_id == sindicato_id)).first()
         return _seccional_a_dict(sec) if sec else None
+
+
+class GeoPadron(SQLModel, table=True):
+    """Avance de la georreferenciación masiva del padrón de UN sindicato.
+
+    Vive en la base y no en memoria del proceso porque Render corre un
+    worker por núcleo: el hilo que trabaja está en uno y la pantalla que
+    pregunta el avance puede caer en otro, y con un diccionario en memoria
+    vería cero para siempre. Es el mismo motivo por el que los planes
+    programados se coordinan con un UPDATE condicional y no con un flag.
+
+    Una fila por sindicato, reutilizada en cada corrida."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True, unique=True)
+    corriendo: bool = False
+    total: int = 0
+    hechos: int = 0
+    ubicados: int = 0
+    iniciado: str = ""
+    actualizado: str = ""
+
+
+# Si una corrida no dio señales en este tiempo, se la da por muerta. Sin
+# esto, un proceso que se cae (o un redeploy en el medio) deja `corriendo`
+# en true para siempre y nadie puede volver a lanzar la georreferenciación.
+MINUTOS_GEO_MUERTA = 15
+
+
+def _geo_padron(s: Session, sindicato_id: int) -> "GeoPadron":
+    fila = s.exec(select(GeoPadron).where(GeoPadron.sindicato_id == sindicato_id)).first()
+    if not fila:
+        fila = GeoPadron(sindicato_id=sindicato_id)
+        s.add(fila); s.commit(); s.refresh(fila)
+    return fila
+
+
+def iniciar_georreferenciacion(sindicato_id: int) -> bool:
+    """Reclama la corrida. False si ya hay una viva: el segundo clic no
+    arranca un segundo hilo pidiéndole a Nominatim al doble de velocidad."""
+    ahora = fechas.ahora_texto()
+    with Session(engine) as s:
+        fila = _geo_padron(s, sindicato_id)
+        if fila.corriendo and not _geo_esta_muerta(fila):
+            return False
+        pendientes = s.execute(text(
+            "SELECT COUNT(*) FROM trabajador WHERE sindicato_id = :sid AND activo "
+            "AND latitud IS NULL AND localidad != ''"), {"sid": sindicato_id}).one()[0]
+        fila.corriendo, fila.total = True, pendientes
+        fila.hechos, fila.ubicados = 0, 0
+        fila.iniciado, fila.actualizado = ahora, ahora
+        s.add(fila); s.commit()
+        return True
+
+
+def _geo_esta_muerta(fila: "GeoPadron") -> bool:
+    try:
+        ultimo = datetime.strptime((fila.actualizado or "")[:16], "%Y-%m-%d %H:%M")
+    except ValueError:
+        return True
+    return ultimo < fechas.ahora() - timedelta(minutes=MINUTOS_GEO_MUERTA)
+
+
+def avanzar_georreferenciacion(sindicato_id: int, ubicado: bool) -> None:
+    with Session(engine) as s:
+        fila = _geo_padron(s, sindicato_id)
+        fila.hechos += 1
+        fila.ubicados += 1 if ubicado else 0
+        fila.actualizado = fechas.ahora_texto()
+        s.add(fila); s.commit()
+
+
+def terminar_georreferenciacion(sindicato_id: int) -> None:
+    with Session(engine) as s:
+        fila = _geo_padron(s, sindicato_id)
+        fila.corriendo = False
+        fila.actualizado = fechas.ahora_texto()
+        s.add(fila); s.commit()
+
+
+def estado_georreferenciacion(sindicato_id: int) -> dict:
+    """Lo que lee la barra de progreso."""
+    with Session(engine) as s:
+        fila = _geo_padron(s, sindicato_id)
+        corriendo = fila.corriendo and not _geo_esta_muerta(fila)
+        return {"corriendo": corriendo, "total": fila.total, "hechos": fila.hechos,
+                "ubicados": fila.ubicados, "iniciado": fila.iniciado,
+                "actualizado": fila.actualizado}
+
+
+def trabajadores_sin_geo(sindicato_id: int, alcance=None, limite: int = 2000) -> list:
+    """(id, domicilio) de los afiliados activos sin coordenadas y CON localidad.
+
+    Sin localidad no hay nada que preguntarle a Georef, así que esas filas
+    no se cuentan ni se intentan: gastarían un pedido para devolver siempre
+    lo mismo. El alcance de seccional se aplica EN la consulta."""
+    conds = ["sindicato_id = :sid", "activo", "latitud IS NULL", "localidad != ''"]
+    params = {"sid": sindicato_id, "limite": limite}
+    if alcance is not None:
+        if not alcance:
+            return []
+        conds.append("seccional_id IN :secs")
+        params["secs"] = list(alcance)
+    sql = (f"SELECT id, calle, numero, piso_depto, localidad, provincia, codigo_postal "
+           f"FROM trabajador WHERE {' AND '.join(conds)} ORDER BY id LIMIT :limite")
+    stmt = text(sql)
+    if alcance is not None:
+        stmt = stmt.bindparams(bindparam("secs", expanding=True))
+    with Session(engine) as s:
+        filas = s.execute(stmt, params).all()
+    return [(f[0], {"calle": f[1], "numero": f[2], "piso_depto": f[3],
+                    "localidad": f[4], "provincia": f[5], "codigo_postal": f[6]})
+            for f in filas]
+
+
+def guardar_geo_trabajador(sindicato_id: int, trabajador_id: int, domicilio: dict) -> None:
+    """Escribe el bloque de domicilio de UN afiliado. El `sindicato_id` va en
+    el WHERE aunque el id ya sea único: una función que escribe por id suelto
+    es la que un día se llama con el id equivocado."""
+    with Session(engine) as s:
+        t = s.exec(select(Trabajador).where(
+            Trabajador.id == trabajador_id,
+            Trabajador.sindicato_id == sindicato_id)).first()
+        if not t:
+            return
+        for campo, valor in (domicilio or {}).items():
+            if campo in geo.CAMPOS_DOMICILIO:
+                setattr(t, campo, valor)
+        s.add(t); s.commit()
+
+
+def contar_afiliados_de_seccional(sindicato_id: int, seccional_id: int) -> int:
+    """Cuántos afiliados activos tiene esa seccional. Para la ficha."""
+    with Session(engine) as s:
+        return s.execute(text(
+            "SELECT COUNT(*) FROM trabajador WHERE sindicato_id = :sid "
+            "AND seccional_id = :sec AND activo"
+        ), {"sid": sindicato_id, "sec": seccional_id}).one()[0]
 
 
 def seccionales_ubicadas(sindicato_id: int, limite: int = 500) -> list:

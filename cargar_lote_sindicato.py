@@ -39,6 +39,7 @@ from sqlmodel import select
 import auth
 import dashboard
 import db
+import geo
 from db import (Sindicato, Seccional, Empleador, Trabajador, CuentaTrabajador,
                 ReciboVerificado, EnvioSindicato, Reporte, TipoTramite, CampoTramite,
                 Tramite, RespuestaTramite, NotaTramite, TramiteLog,
@@ -361,8 +362,14 @@ def sembrar_base(sid: int, ctx: dict):
                 break
             if any(sec.nombre == nombre for sec in existentes):
                 continue
+            # Sin coordenadas a propósito: una seccional genérica del
+            # lote no tiene domicilio real, y un globo inventado en el mapa
+            # del Panel es peor que la marca honesta de "sin ubicar". Las
+            # seccionales de verdad del sindicato ya vienen georreferenciadas.
             sec = Seccional(sindicato_id=sid, nombre=nombre,
-                            direccion=f"Av. Rivadavia {rnd.randint(100, 4500)}")
+                            **geo.campos_para_guardar(
+                                {"calle": "Av. Rivadavia", "numero": str(rnd.randint(100, 4500)),
+                                 "localidad": nombre}, precision="sin_geo"))
             s.add(sec); s.commit(); s.refresh(sec)
             secc_ids.append(sec.id)
 

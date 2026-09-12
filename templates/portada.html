@@ -12,6 +12,11 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
 <title>Mi Trabajo — {{ sindicato }}</title>
 <link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
+{# Leaflet vendoreado. Las teselas de OSM no se cachean (su política), así
+   que sin conexión el mapa no dibuja y se ve la dirección en texto. #}
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css?v={{ sello_static('vendor/leaflet/leaflet.css') }}">
+<script src="/static/vendor/leaflet/leaflet.js?v={{ sello_static('vendor/leaflet/leaflet.js') }}"></script>
+<script src="/static/mapa.js?v={{ sello_static('mapa.js') }}"></script>
 <style>
   :root {
     --marca-base: {{ marca.color_base }};
@@ -178,6 +183,45 @@
     font-family: var(--fuente-display); font-weight: 700; font-size: 17px; letter-spacing: 1.2px; text-transform: uppercase; }
   .perfil-guardar-msg { text-align: center; font-size: 12px; color: var(--marca-primario); margin-top: 8px;
     min-height: 15px; }
+
+  /* ---- Domicilio con mapa y bloque "Mi seccional" ----
+     Móvil primero: el mapa chico son 220px de alto, que entra en una
+     pantalla de teléfono sin empujar el botón de guardar fuera de vista. */
+  .mini-mapa { height: 220px; border-radius: 12px; border: 1px solid var(--linea);
+    background: var(--papel); cursor: pointer; }
+  .pf-mapa-btn { width: 100%; padding: 10px; background: #fff; color: var(--marca-primario);
+    border: 1px solid var(--linea); border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 600; }
+  .pf-mapa-btn:disabled { opacity: .6; }
+  .pf-geo-nota { font-size: 11.5px; color: var(--gris); margin-top: 6px; line-height: 1.5; }
+  .pf-cands { display: flex; flex-direction: column; gap: 5px; margin-top: 7px; }
+  .pf-cands button { text-align: left; background: #fff; border: 1px solid var(--linea);
+    border-radius: 9px; padding: 8px 10px; font-size: 11.5px; line-height: 1.45; cursor: pointer;
+    color: var(--tinta); }
+  .pf-cands button.elegido { border-color: var(--marca-acento); }
+
+  .mi-secc { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--linea); }
+  /* El encabezado del bloque y los botones toman la marca del sindicato;
+     el globo del mapa NO -- es el mismo en toda la plataforma. */
+  .mi-secc h4 { margin: 0 0 10px; font-family: var(--fuente-display); font-size: 17px;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--marca-primario); }
+  .mi-secc-nombre { font-weight: 700; font-size: 15px; color: var(--tinta); }
+  .mi-secc-dir { font-size: 13px; color: var(--gris); margin-top: 3px; line-height: 1.5; }
+  .mi-secc .mini-mapa { margin-top: 10px; }
+  .mi-secc-aviso { font-size: 13px; color: var(--gris); background: var(--papel);
+    border: 1px solid var(--linea); border-radius: 10px; padding: 11px 13px; margin-top: 10px; line-height: 1.55; }
+  .mi-secc-botones { display: flex; gap: 7px; margin-top: 11px; flex-wrap: wrap; }
+  .mi-secc-btn { flex: 1; min-width: 92px; text-align: center; padding: 10px 8px; border-radius: 9px;
+    background: var(--marca-acento); color: var(--marca-base); text-decoration: none;
+    font-weight: 700; font-size: 12.5px; }
+  .mi-secc-otras { width: 100%; margin-top: 8px; padding: 10px; background: none;
+    border: 1px solid var(--linea); border-radius: 9px; color: var(--marca-primario);
+    font-size: 13px; font-weight: 600; cursor: pointer; }
+  .cerca-item { display: block; width: 100%; text-align: left; border: 1px solid var(--linea);
+    border-radius: 12px; padding: 12px 13px; margin-bottom: 9px; background: #fff; }
+  .cerca-item.propia { border-color: var(--marca-acento); border-width: 2px; }
+  .cerca-km { float: right; font-family: ui-monospace, Consolas, monospace;
+    font-variant-numeric: tabular-nums; font-size: 12.5px; color: var(--marca-primario); font-weight: 700; }
+  .cerca-permiso { font-size: 13px; color: var(--gris); line-height: 1.6; margin-bottom: 12px; }
   /* Lightbox de la foto: clic en la foto del modal la agranda un poco, sin
      pasar de un cuarto de pantalla -- ya es de muy baja resolución, no tiene
      sentido mostrarla más grande. */
@@ -395,25 +439,107 @@
         <div class="perfil-campo perfil-fila3">
           <div><label>Calle</label><input type="text" id="pf-calle" value="{{ perfil.calle if perfil else '' }}"></div>
           <div><label>Número</label><input type="text" id="pf-numero" value="{{ perfil.numero if perfil else '' }}"></div>
-          <div><label>Piso</label><input type="text" id="pf-piso" value="{{ perfil.piso if perfil else '' }}"></div>
+          <div><label>Piso / depto</label><input type="text" id="pf-piso" value="{{ perfil.piso_depto if perfil else '' }}"></div>
         </div>
         <div class="perfil-campo perfil-fila2">
-          <div><label>Ciudad</label><input type="text" id="pf-ciudad" value="{{ perfil.ciudad if perfil else '' }}"></div>
+          <div><label>Localidad</label>
+            <input type="text" id="pf-localidad" list="pf-localidades" autocomplete="off"
+                   value="{{ perfil.localidad if perfil else '' }}" oninput="pfLocalidades()">
+            <datalist id="pf-localidades"></datalist>
+          </div>
           <div><label>Provincia</label>
-            <select id="pf-provincia">
+            <select id="pf-provincia" onchange="pfLocalidades()">
               <option value="">—</option>
               {% for p in provincias %}<option value="{{ p }}" {{ 'selected' if perfil and perfil.provincia == p else '' }}>{{ p }}</option>{% endfor %}
             </select>
           </div>
         </div>
         <div class="perfil-campo perfil-fila2">
+          <div><label>Código postal</label><input type="text" id="pf-cp" value="{{ perfil.codigo_postal if perfil else '' }}"></div>
           <div><label>Teléfono</label><input type="text" id="pf-telefono" value="{{ perfil.telefono if perfil else '' }}"></div>
-          <div><label>Mail</label><input type="email" id="pf-mail" value="{{ perfil.mail if perfil else '' }}"></div>
         </div>
+        <div class="perfil-campo">
+          <label>Mail</label><input type="email" id="pf-mail" value="{{ perfil.mail if perfil else '' }}">
+        </div>
+
+        {# Ubicar el domicilio es opcional y bajo demanda: el mapa no se
+           dibuja hasta que la persona lo pide. Sirve para que el sindicato
+           sepa dónde vive su gente y para ordenar las seccionales por
+           cercanía sin pedirle el GPS cada vez. #}
+        <input type="hidden" id="pf-lat" value="{{ perfil.latitud if perfil and perfil.latitud is not none else '' }}">
+        <input type="hidden" id="pf-lon" value="{{ perfil.longitud if perfil and perfil.longitud is not none else '' }}">
+        <input type="hidden" id="pf-precision" value="{{ perfil.precision_geo if perfil else 'sin_geo' }}">
+        <div class="perfil-campo">
+          <button type="button" class="pf-mapa-btn" onclick="pfBuscar()" id="pf-btn-buscar">Ubicar mi domicilio en el mapa</button>
+          <div class="pf-geo-nota" id="pf-geo-nota"></div>
+          <div id="pf-mapa-caja" style="display:none; margin-top:8px;">
+            <div class="mini-mapa" id="pf-mapa"></div>
+            <div id="pf-candidatos" class="pf-cands"></div>
+          </div>
+        </div>
+
         <button type="submit" class="perfil-guardar-btn" id="perfil-guardar-btn">Guardar cambios</button>
         <div class="perfil-guardar-msg" id="perfil-guardar-msg"></div>
       </form>
+
+      {# ---------- Mi seccional (solo lectura) ----------
+         La seccional la asigna ÚNICAMENTE el sindicato: acá no hay botón ni
+         enlace para pedir un cambio, y no existe ningún trámite para eso. #}
+      <div class="mi-secc">
+        <h4>Mi seccional</h4>
+        {% if mi_seccional %}
+        <div class="mi-secc-nombre">{{ mi_seccional.nombre }}</div>
+        {% if mi_seccional.direccion_texto %}<div class="mi-secc-dir">{{ mi_seccional.direccion_texto }}</div>{% endif %}
+        {% if mi_seccional.horario_atencion %}<div class="mi-secc-dir">{{ mi_seccional.horario_atencion }}</div>{% endif %}
+
+        {% if mi_seccional.latitud is not none and mi_seccional.longitud is not none %}
+        <div class="mini-mapa" id="secc-mapa"
+             data-lat="{{ mi_seccional.latitud }}" data-lon="{{ mi_seccional.longitud }}"
+             data-nombre="{{ mi_seccional.nombre }}" data-dir="{{ mi_seccional.direccion_texto }}"
+             onclick="abrirMapaGrande()" title="Tocá para verlo en pantalla completa"></div>
+        {% else %}
+        <div class="mi-secc-aviso">Tu seccional todavía no está ubicada en el mapa.</div>
+        {% endif %}
+
+        <div class="mi-secc-botones">
+          {% if mi_seccional.telefono %}<a class="mi-secc-btn" href="tel:{{ mi_seccional.telefono }}">Llamar</a>{% endif %}
+          {% if mi_seccional.whatsapp %}<a class="mi-secc-btn" id="secc-wa" href="#" target="_blank" rel="noopener" data-tel="{{ mi_seccional.whatsapp }}">WhatsApp</a>{% endif %}
+          {% if mi_seccional.latitud is not none %}<a class="mi-secc-btn" id="secc-ir" href="#" target="_blank" rel="noopener">Cómo llegar</a>{% endif %}
+        </div>
+        <button type="button" class="mi-secc-otras" onclick="abrirCerca()">Ver otras seccionales cerca</button>
+        {% else %}
+        <div class="mi-secc-aviso">Tu sindicato todavía no te asignó una seccional.</div>
+        {% endif %}
+      </div>
     </div>
+  </div>
+</div>
+
+<!-- Mapa en pantalla completa, al tocar el mapa chico -->
+<div class="overlay" id="overlay-mapa" onclick="if (event.target === this) cerrarMapaGrande()">
+  <div class="modal-notif-caja" style="max-width:92vw;">
+    <div class="modal-notif-enc">
+      <div><div class="modal-k">{{ sindicato }}</div><h3 id="mg-titulo">Seccional</h3></div>
+      <button class="modal-cerrar-clara" onclick="cerrarMapaGrande()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div style="padding:14px;">
+      <div id="mg-mapa" style="height:62vh; border-radius:12px; border:1px solid var(--linea);"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Seccionales cerca de mí -->
+<div class="overlay" id="overlay-cerca" onclick="if (event.target === this) cerrarCerca()">
+  <div class="modal-notif-caja">
+    <div class="modal-notif-enc">
+      <div><div class="modal-k">{{ sindicato }}</div><h3>Seccionales cerca</h3></div>
+      <button class="modal-cerrar-clara" onclick="cerrarCerca()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div style="padding:16px;" id="cerca-body"></div>
   </div>
 </div>
 
@@ -512,8 +638,14 @@ async function guardarPerfil(ev) {
   if (!nombre) { msg.textContent = 'El nombre no puede estar vacío.'; return false; }
   const fd = new URLSearchParams({
     nombre, calle: document.getElementById('pf-calle').value,
-    numero: document.getElementById('pf-numero').value, piso: document.getElementById('pf-piso').value,
-    ciudad: document.getElementById('pf-ciudad').value, provincia: document.getElementById('pf-provincia').value,
+    numero: document.getElementById('pf-numero').value,
+    piso_depto: document.getElementById('pf-piso').value,
+    localidad: document.getElementById('pf-localidad').value,
+    provincia: document.getElementById('pf-provincia').value,
+    codigo_postal: document.getElementById('pf-cp').value,
+    latitud: document.getElementById('pf-lat').value,
+    longitud: document.getElementById('pf-lon').value,
+    precision_geo: document.getElementById('pf-precision').value,
     telefono: document.getElementById('pf-telefono').value, mail: document.getElementById('pf-mail').value,
   });
   btn.disabled = true; btn.textContent = 'Guardando…';
@@ -781,6 +913,247 @@ function actualizarBadgeNotif(n) {
   if (n > 0) { badge.textContent = n; badge.style.display = 'flex'; }
   else { badge.style.display = 'none'; }
 }
+
+// ================= Domicilio, Mi seccional y "cerca de mí" =================
+// La geocodificación del domicilio va contra /api/geocodificar (ruta propia
+// del trabajador, separada de la del admin). La posición del teléfono, en
+// cambio, NO SALE DE ACÁ: se pide con permiso, se usa para ordenar la lista
+// y se descarta al cerrar. Nunca se manda al servidor ni se guarda.
+var pfMapa = null, pfCands = [], pfLocTimer = null;
+
+function pfLocalidades() {
+  clearTimeout(pfLocTimer);
+  pfLocTimer = setTimeout(function () {
+    var prov = document.getElementById('pf-provincia').value;
+    var q = document.getElementById('pf-localidad').value;
+    if (q.length < 2) return;
+    fetch('/api/localidades?provincia=' + encodeURIComponent(prov) + '&q=' + encodeURIComponent(q))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        document.getElementById('pf-localidades').innerHTML =
+          (d.localidades || []).map(function (l) {
+            return '<option value="' + l.nombre.replace(/"/g, '&quot;') + '"></option>';
+          }).join('');
+      }).catch(function () {});
+  }, 300);
+}
+
+function pfBuscar() {
+  var btn = document.getElementById('pf-btn-buscar');
+  var caja = document.getElementById('pf-mapa-caja');
+  var nota = document.getElementById('pf-geo-nota');
+  btn.disabled = true; btn.textContent = 'Buscando…';
+  nota.textContent = '';
+  fetch('/api/geocodificar', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      provincia: document.getElementById('pf-provincia').value,
+      localidad: document.getElementById('pf-localidad').value,
+      calle: document.getElementById('pf-calle').value,
+      numero: document.getElementById('pf-numero').value
+    })
+  }).then(function (r) {
+    if (r.status === 429) throw new Error('Hiciste muchas búsquedas seguidas. Probá en un rato.');
+    return r.json();
+  }).then(function (d) {
+    pfCands = d.candidatos || [];
+    if (!pfCands.length) {
+      nota.textContent = d.aviso || 'No encontramos ese domicilio. Podés guardar igual.';
+      return;
+    }
+    if (d.provincia) document.getElementById('pf-provincia').value = d.provincia;
+    if (d.localidad) document.getElementById('pf-localidad').value = d.localidad;
+    caja.style.display = 'block';
+    document.getElementById('pf-candidatos').innerHTML = pfCands.map(function (c, i) {
+      return '<button type="button" class="' + (i === 0 ? 'elegido' : '') +
+             '" onclick="pfElegir(' + i + ')">' + c.etiqueta.replace(/</g, '&lt;') + '</button>';
+    }).join('');
+    pfElegir(0, d.aviso);
+  }).catch(function (e) {
+    nota.textContent = (e.message || 'No pudimos buscar el domicilio.') + ' Podés guardar igual.';
+  }).finally(function () {
+    btn.disabled = false; btn.textContent = 'Ubicar mi domicilio en el mapa';
+  });
+}
+
+function pfElegir(i, aviso) {
+  var c = pfCands[i];
+  if (!c) return;
+  document.querySelectorAll('#pf-candidatos button').forEach(function (b, j) {
+    b.classList.toggle('elegido', i === j);
+  });
+  pfFijar(c.lat, c.lon, c.precision, aviso);
+  if (c.codigo_postal) document.getElementById('pf-cp').value = c.codigo_postal;
+  if (!pfMapa) {
+    pfMapa = MapaMT.crear('pf-mapa', {
+      lat: c.lat, lon: c.lon, zoom: 17, arrastrable: true,
+      alMover: function (lat, lon) { pfFijar(lat, lon, 'manual'); }
+    });
+    if (pfMapa) pfMapa.refrescar();
+  } else {
+    pfMapa.ir(c.lat, c.lon, 17);
+  }
+}
+
+function pfFijar(lat, lon, precision, aviso) {
+  document.getElementById('pf-lat').value = lat;
+  document.getElementById('pf-lon').value = lon;
+  document.getElementById('pf-precision').value = precision;
+  document.getElementById('pf-geo-nota').textContent = aviso ||
+    (precision === 'exacta' ? 'Encontramos tu dirección. Arrastrá el globo si no está en la puerta.'
+                            : 'Arrastrá el globo hasta tu casa para ajustarlo.');
+}
+
+// ---------- Mi seccional ----------
+var seccMapa = null, mapaGrande = null;
+function seccDatos() {
+  var el = document.getElementById('secc-mapa');
+  if (!el) return null;
+  return {lat: parseFloat(el.dataset.lat), lon: parseFloat(el.dataset.lon),
+          nombre: el.dataset.nombre, dir: el.dataset.dir};
+}
+
+function pintarMiSeccional() {
+  var d = seccDatos();
+  var wa = document.getElementById('secc-wa');
+  if (wa) wa.href = MapaMT.whatsappUrl(wa.dataset.tel);
+  if (!d) return;
+  var ir = document.getElementById('secc-ir');
+  if (ir) ir.href = MapaMT.enlaceComoLlegar(d.lat, d.lon, d.nombre);
+  if (!seccMapa) {
+    // scrollWheelZoom apagado: el mapa vive dentro de un modal que se
+    // scrollea, y la rueda tiene que mover la pantalla, no hacer zoom.
+    seccMapa = MapaMT.crear('secc-mapa', {lat: d.lat, lon: d.lon, zoom: 15, rueda: false});
+    if (seccMapa) seccMapa.refrescar();
+  }
+}
+
+function abrirMapaGrande() {
+  var d = seccDatos();
+  if (!d) return;
+  document.getElementById('mg-titulo').textContent = d.nombre;
+  document.getElementById('overlay-mapa').classList.add('abierto');
+  if (!mapaGrande) {
+    mapaGrande = MapaMT.crear('mg-mapa', {
+      lat: d.lat, lon: d.lon, zoom: 16,
+      popup: '<b>' + d.nombre + '</b>' + (d.dir ? '<br>' + d.dir : '')
+    });
+  }
+  if (mapaGrande) { mapaGrande.refrescar(); if (mapaGrande.globo) mapaGrande.globo.openPopup(); }
+}
+function cerrarMapaGrande() { document.getElementById('overlay-mapa').classList.remove('abierto'); }
+
+// ---------- Seccionales cerca de mí ----------
+// El permiso de ubicación se pide SOLO al tocar el enlace, nunca al abrir la
+// app, y con un texto que explica para qué antes de que aparezca el diálogo
+// del navegador. Si la persona dice que no, la pantalla sigue sirviendo: la
+// lista ordenada por distancia a su domicilio guardado, y si no lo tiene,
+// por provincia y localidad.
+var cercaMapa = null, cercaDatos = null;
+
+function abrirCerca() {
+  document.getElementById('overlay-cerca').classList.add('abierto');
+  var body = document.getElementById('cerca-body');
+  body.innerHTML = '<p class="cerca-permiso">Podemos ordenar las seccionales por ' +
+    'cercanía usando la ubicación de tu teléfono. <b>No se guarda ni se envía ' +
+    'a nadie</b>: se usa en esta pantalla y se descarta.</p>' +
+    '<button class="mi-secc-otras" onclick="cercaConGPS()">Usar mi ubicación</button>' +
+    '<button class="mi-secc-otras" onclick="cercaSinGPS()">Ver la lista sin ubicarme</button>';
+}
+function cerrarCerca() {
+  document.getElementById('overlay-cerca').classList.remove('abierto');
+  cercaMapa = null;
+}
+
+function cercaTraer() {
+  if (cercaDatos) return Promise.resolve(cercaDatos);
+  return fetch('/api/seccionales').then(function (r) { return r.json(); })
+    .then(function (d) { cercaDatos = d; return d; });
+}
+
+function cercaConGPS() {
+  var body = document.getElementById('cerca-body');
+  if (!navigator.geolocation) return cercaSinGPS();
+  body.innerHTML = '<p class="cerca-permiso">Buscando tu ubicación…</p>';
+  navigator.geolocation.getCurrentPosition(
+    function (pos) { cercaPintar(pos.coords.latitude, pos.coords.longitude, 'tu ubicación'); },
+    function () { cercaSinGPS(); },
+    {timeout: 10000, maximumAge: 60000}
+  );
+}
+
+function cercaSinGPS() {
+  // Sin GPS se mide desde el domicilio GUARDADO, si lo hay. Se aclara de
+  // dónde sale la distancia para que nadie crea que le tomamos la posición.
+  var lat = parseFloat(document.getElementById('pf-lat').value);
+  var lon = parseFloat(document.getElementById('pf-lon').value);
+  if (!isNaN(lat) && !isNaN(lon)) return cercaPintar(lat, lon, 'tu domicilio');
+  cercaPintar(null, null, null);
+}
+
+function cercaPintar(lat, lon, origen) {
+  var body = document.getElementById('cerca-body');
+  cercaTraer().then(function (d) {
+    var lista = (d.seccionales || []).slice();
+    if (!lista.length) {
+      body.innerHTML = '<p class="cerca-permiso">Tu sindicato todavía no cargó la ubicación de sus seccionales.</p>';
+      return;
+    }
+    var hayOrigen = lat !== null && lon !== null;
+    if (hayOrigen) {
+      lista.forEach(function (s) { s._km = MapaMT.distanciaKm(lat, lon, s.latitud, s.longitud); });
+      lista.sort(function (a, b) { return a._km - b._km; });
+    } else {
+      lista.sort(function (a, b) {
+        return (a.provincia + a.localidad).localeCompare(b.provincia + b.localidad, 'es');
+      });
+    }
+    var html = hayOrigen
+      ? '<p class="cerca-permiso">Distancias medidas desde ' + origen + '.</p>' +
+        '<div class="mini-mapa" id="cerca-mapa" style="cursor:default; margin-bottom:12px;"></div>'
+      : '<p class="cerca-permiso">Sin tu ubicación ni tu domicilio cargado, te mostramos ' +
+        'todas las seccionales ordenadas por provincia.</p>';
+    html += lista.slice(0, hayOrigen ? 5 : lista.length).map(function (s) {
+      var propia = d.mi_seccional_id === s.id;
+      return '<div class="cerca-item' + (propia ? ' propia' : '') + '">' +
+        (s._km != null ? '<span class="cerca-km">' + s._km + ' km</span>' : '') +
+        '<b>' + s.nombre + '</b>' + (propia ? ' <span style="font-size:11px;">· tu seccional</span>' : '') +
+        (s.direccion_texto ? '<div class="mi-secc-dir">' + s.direccion_texto + '</div>' : '') +
+        (s.horario_atencion ? '<div class="mi-secc-dir">' + s.horario_atencion + '</div>' : '') +
+        '<div class="mi-secc-botones">' +
+        (s.telefono ? '<a class="mi-secc-btn" href="tel:' + s.telefono + '">Llamar</a>' : '') +
+        (s.whatsapp ? '<a class="mi-secc-btn" target="_blank" rel="noopener" href="' +
+          MapaMT.whatsappUrl(s.whatsapp) + '">WhatsApp</a>' : '') +
+        '<a class="mi-secc-btn" target="_blank" rel="noopener" href="' +
+        MapaMT.enlaceComoLlegar(s.latitud, s.longitud, s.nombre) + '">Cómo llegar</a>' +
+        '</div></div>';
+    }).join('');
+    body.innerHTML = html;
+
+    if (hayOrigen) {
+      cercaMapa = MapaMT.crear('cerca-mapa', {lat: lat, lon: lon, zoom: 12, rueda: false});
+      if (cercaMapa) {
+        // El globo de la persona va en azul para que no se confunda con los
+        // de las seccionales, que usan el globo por default de Leaflet.
+        L.circleMarker([lat, lon], {radius: 8, color: '#1d6ff2', fillColor: '#1d6ff2',
+                                     fillOpacity: .9, weight: 2}).addTo(cercaMapa.mapa);
+        var puntos = [[lat, lon]];
+        lista.slice(0, 5).forEach(function (s) {
+          L.marker([s.latitud, s.longitud]).addTo(cercaMapa.mapa)
+            .bindPopup('<b>' + s.nombre + '</b>' +
+                       (s.direccion_texto ? '<br>' + s.direccion_texto : ''));
+          puntos.push([s.latitud, s.longitud]);
+        });
+        cercaMapa.refrescar();
+        cercaMapa.encuadrar(puntos);
+      }
+    }
+  }).catch(function () {
+    body.innerHTML = '<p class="cerca-permiso">No pudimos traer las seccionales. Probá de nuevo.</p>';
+  });
+}
+
+document.addEventListener('DOMContentLoaded', pintarMiSeccional);
 </script>
 
 {# sello ?v= para romper el cache de 1h al sumar funciones nuevas #}

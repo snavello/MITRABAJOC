@@ -69,6 +69,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mi Trabajo — {{ sindicato }}</title>
 <link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
+{# Leaflet VENDOREADO (nunca CDN, mismo criterio que Chart.js). Las teselas
+   sí salen a openstreetmap.org: no se pueden cachear, es su política. #}
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css?v={{ sello_static('vendor/leaflet/leaflet.css') }}">
+<script src="/static/vendor/leaflet/leaflet.js?v={{ sello_static('vendor/leaflet/leaflet.js') }}"></script>
+<script src="/static/mapa.js?v={{ sello_static('mapa.js') }}"></script>
 <style>
   :root { --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e; --linea:#e2ded5; --gris:#5c5a54;
     /* color_base es el único color validado como oscuro -- el encabezado usa
@@ -695,6 +700,57 @@
   .enc-chip.programada { background:#e7effb; color:#2a5aa0; }
   .enc-chip.abierta { background:#e6f5ec; color:#1c7a45; }
   .enc-chip.cerrada { background:#f3e9e7; color:#8a4033; }
+  .boton-enlace { display:inline-block; padding:7px 13px; border-radius:9px; font-size:12.5px;
+    text-decoration:none; background:#fff; border:1px solid var(--linea); color:var(--marca-primario); }
+  .boton-enlace:hover { border-color:var(--marca-acento); }
+
+  /* ---- Georreferenciación de seccionales y domicilios ----
+     El asistente muestra un paso por vez: la pantalla vieja era un form de
+     dos campos y meterle diez de golpe la volvía un formulario largo, que
+     es exactamente lo que hace que nadie complete la dirección. */
+  .geo-pasos { display:flex; gap:6px; margin:0 0 16px; flex-wrap:wrap; }
+  .geo-paso-n { display:flex; align-items:center; gap:7px; padding:7px 13px; border-radius:20px;
+    background:var(--papel); border:1px solid var(--linea); font-size:12.5px; color:var(--gris); }
+  .geo-paso-n.activo { background:var(--marca-acento); border-color:var(--marca-acento); color:#fff; font-weight:600; }
+  .geo-paso-n.hecho { background:#fff; border-color:var(--marca-acento); color:var(--marca-primario); }
+  .geo-paso-n b { display:inline-flex; width:18px; height:18px; border-radius:50%; background:rgba(0,0,0,.12);
+    align-items:center; justify-content:center; font-size:11px; }
+  .geo-paso { display:none; }
+  .geo-paso.activo { display:block; }
+  .geo-mapa { height:330px; border-radius:10px; border:1px solid var(--linea); margin-bottom:10px; }
+  .geo-mapa-chico { height:220px; border-radius:10px; border:1px solid var(--linea); }
+  .geo-con-lista { display:grid; grid-template-columns:1fr 260px; gap:14px; }
+  .geo-candidatos { max-height:330px; overflow:auto; display:flex; flex-direction:column; gap:6px; }
+  .geo-cand { text-align:left; background:#fff; border:1px solid var(--linea); border-radius:9px;
+    padding:9px 11px; font-size:12px; cursor:pointer; color:var(--tinta); line-height:1.45; }
+  .geo-cand:hover { border-color:var(--marca-acento); }
+  .geo-cand.elegido { border-color:var(--marca-acento); background:color-mix(in srgb, var(--marca-acento) 8%, #fff); }
+  .geo-ayuda { font-size:12.5px; line-height:1.55; padding:9px 12px; border-radius:9px; margin-bottom:10px; }
+  .geo-ayuda.exacta { background:#e6f5ec; color:#0d7a5f; border:1px solid #bfe3cf; }
+  .geo-ayuda.aproximada, .geo-ayuda.manual { background:#fdf3e7; color:#8a5a1a; border:1px solid #e8c89a; }
+  .geo-ayuda.sin_geo { background:var(--papel); color:var(--gris); border:1px solid var(--linea); }
+  /* El punto de estado usa los colores FIJOS de estado, nunca la marca del
+     sindicato: verde/ámbar/gris significan lo mismo en toda la plataforma. */
+  .geo-punto { display:inline-flex; align-items:center; gap:6px; font-size:12px; white-space:nowrap; }
+  .geo-punto i { width:9px; height:9px; border-radius:50%; flex:none; }
+  .geo-punto.exacta i { background:#0d7a5f; }
+  .geo-punto.aproximada i, .geo-punto.manual i { background:#b8860b; }
+  .geo-punto.sin_geo i { background:#b6bdc9; }
+  .geo-punto.sin_geo { color:var(--gris); }
+  .geo-resumen { background:var(--papel); border:1px solid var(--linea); border-radius:10px;
+    padding:13px 15px; font-size:13px; line-height:1.7; margin-bottom:14px; }
+  .geo-resumen b { color:var(--marca-primario); }
+  .geo-barra { height:7px; background:var(--linea); border-radius:99px; overflow:hidden; margin:8px 0 4px; }
+  .geo-barra i { display:block; height:100%; background:var(--marca-acento); transition:width .3s; }
+  .ficha-dato { display:grid; grid-template-columns:120px 1fr; gap:4px 12px; font-size:13px;
+    padding:7px 0; border-bottom:1px solid var(--linea); }
+  .ficha-dato:last-child { border-bottom:none; }
+  .ficha-dato span { color:var(--gris); font-size:11.5px; text-transform:uppercase;
+    letter-spacing:.05em; font-weight:700; padding-top:2px; }
+  @media (max-width: 760px) {
+    .geo-con-lista { grid-template-columns:1fr; }
+    .geo-candidatos { max-height:none; }
+  }
 </style>
 </head>
 <body>
@@ -1017,7 +1073,8 @@
       <tr class="fila-trabajador" data-cuil="{{ t.cuil }}" data-nombre="{{ t.nombre }}" {% if not t.activo %}style="opacity:.5;"{% endif %}>
         <td><code>{{ t.cuil }}</code></td>
         <td>{{ t.nombre or '—' }}</td>
-        <td class="muted">{{ t.ciudad }}{% if t.provincia %}, {{ t.provincia }}{% endif %}</td>
+        <td class="muted">{{ t.localidad }}{% if t.provincia %}, {{ t.provincia }}{% endif %}
+          {% if t.localidad %}<br><span class="geo-punto {{ t.precision_geo }}" style="font-size:11px;"><i></i>{{ etiquetas_precision.get(t.precision_geo, 'Sin ubicar') }}</span>{% endif %}</td>
         <td class="muted">{{ seccional_por_id.get(t.seccional_id, '—') }}</td>
         <td class="muted">{{ t.cuit_empleador or '—' }}</td>
         <td>
@@ -1037,7 +1094,7 @@
         </td>
         <td style="white-space:nowrap; text-align:right;">
           <button type="button" class="mini"
-            onclick='editarTrab({{ {"id":t.id,"cuil":t.cuil,"nombre":t.nombre,"calle":t.calle,"numero":t.numero,"piso":t.piso,"ciudad":t.ciudad,"provincia":t.provincia,"telefono":t.telefono,"mail":t.mail,"vigencia_credencial":t.vigencia_credencial,"seccional_id":t.seccional_id,"cuit_empleador":t.cuit_empleador} | tojson }})'>Editar</button>
+            onclick='editarTrab({{ {"id":t.id,"cuil":t.cuil,"nombre":t.nombre,"calle":t.calle,"numero":t.numero,"piso_depto":t.piso_depto,"localidad":t.localidad,"provincia":t.provincia,"codigo_postal":t.codigo_postal,"latitud":t.latitud,"longitud":t.longitud,"precision_geo":t.precision_geo,"telefono":t.telefono,"mail":t.mail,"vigencia_credencial":t.vigencia_credencial,"seccional_id":t.seccional_id,"cuit_empleador":t.cuit_empleador} | tojson }})'>Editar</button>
           <form method="post" action="/admin/trabajador/generar-credencial" style="display:inline;" onsubmit="return confirm('{% if t.codigo_credencial %}¿Regenerar el código de credencial? El anterior deja de ser válido.{% else %}¿Generar el código de credencial?{% endif %}');">
             <input type="hidden" name="id" value="{{ t.id }}"><button class="mini">{% if t.codigo_credencial %}Regenerar{% else %}Generar{% endif %} credencial</button>
           </form>
@@ -1067,14 +1124,19 @@
         <div class="campo"><label>Nombre *</label><input name="nombre" id="trab-nombre" required></div>
         <div class="campo"><label>Calle</label><input name="calle" id="trab-calle"></div>
         <div class="campo"><label>Número</label><input name="numero" id="trab-numero"></div>
-        <div class="campo"><label>Piso / Depto</label><input name="piso" id="trab-piso"></div>
-        <div class="campo"><label>Ciudad</label><input name="ciudad" id="trab-ciudad"></div>
+        <div class="campo"><label>Piso / Depto</label><input name="piso_depto" id="trab-piso"></div>
+        <div class="campo"><label>Localidad</label>
+          <input name="localidad" id="trab-localidad" list="trab-localidades" autocomplete="off"
+                 oninput="trabLocalidades()">
+          <datalist id="trab-localidades"></datalist>
+        </div>
         <div class="campo"><label>Provincia</label>
-          <select name="provincia" id="trab-provincia">
+          <select name="provincia" id="trab-provincia" onchange="trabLocalidades()">
             <option value="">—</option>
             {% for p in provincias %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
           </select>
         </div>
+        <div class="campo"><label>Código postal</label><input name="codigo_postal" id="trab-cp"></div>
         <div class="campo"><label>Teléfono</label><input name="telefono" id="trab-telefono"></div>
         <div class="campo"><label>Mail</label><input name="mail" id="trab-mail" type="email"></div>
         <div class="campo"><label>Vigencia de credencial</label><input name="vigencia_credencial" id="trab-vigencia" type="date"></div>
@@ -1085,6 +1147,21 @@
           </select>
         </div>
         <div class="campo"><label>CUIT del empleador</label><input name="cuit_empleador" id="trab-cuit-empleador" placeholder="Para notificar por empresa"></div>
+      </div>
+      <input type="hidden" name="latitud" id="trab-lat">
+      <input type="hidden" name="longitud" id="trab-lon">
+      <input type="hidden" name="precision_geo" id="trab-precision" value="sin_geo">
+      <div style="margin-top:12px;">
+        <button type="button" class="sec" onclick="trabBuscar()" id="trab-btn-buscar">Ubicar el domicilio en el mapa</button>
+        <span class="muted" id="trab-geo-estado" style="font-size:12px; margin-left:8px;"></span>
+      </div>
+      <div id="trab-geo-caja" class="oculto" style="margin-top:10px;">
+        <div class="geo-ayuda sin_geo" id="trab-ayuda"></div>
+        <div class="geo-con-lista">
+          <div class="geo-mapa" id="trab-mapa"></div>
+          <div class="geo-candidatos" id="trab-candidatos"></div>
+        </div>
+        <p class="muted" style="font-size:12px; margin:8px 0 0;">Arrastrá el globo si el domicilio no quedó bien ubicado.</p>
       </div>
       <div style="margin-top:12px;">
         <button type="submit" id="trab-submit">Agregar trabajador</button>
@@ -1097,12 +1174,22 @@
   <div class="subpanel" id="sub-masivo">
     <p class="muted">Pegá una línea por trabajador, con los campos separados por coma, en este orden:</p>
     <p class="muted" style="font-family:Consolas,monospace; font-size:12.5px; background:#f4f2ec; padding:8px 10px; border-radius:6px;">
-      cuil, nombre, calle, numero, piso, ciudad, provincia, telefono, mail</p>
-    <p class="muted">Solo <b>cuil</b> y <b>nombre</b> son obligatorios; el resto puede ir vacío (pero respetá las comas si querés cargar un campo posterior).</p>
+      cuil, nombre, calle, numero, piso, localidad, provincia, telefono, mail, cp, seccional</p>
+    <p class="muted">Solo <b>cuil</b> y <b>nombre</b> son obligatorios; el resto puede ir vacío (pero respetá las comas si querés cargar un campo posterior). La <b>seccional</b> va por nombre, tal como figura en la pestaña Seccionales: si no coincide con ninguna, el trabajador queda sin asignar.</p>
     <form method="post" action="/admin/trabajador/masivo">
-      <textarea name="lista" rows="6" placeholder="20123456789, Juan Pérez, Av. Siempreviva, 742, , Springfield, Buenos Aires, 11-5555-5555, juan@mail.com&#10;27987654321, Ana López" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:7px; font-family:Consolas,monospace; font-size:13px;"></textarea>
+      <textarea name="lista" rows="6" placeholder="20123456789, Juan Pérez, Av. Siempreviva, 742, , Rosario, Santa Fe, 341-555-5555, juan@mail.com, 2000, Rosario&#10;27987654321, Ana López" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:7px; font-family:Consolas,monospace; font-size:13px;"></textarea>
       <button type="submit" style="margin-top:10px;">Cargar lista</button>
     </form>
+
+    {# Nadie se geocodifica en el alta: cien direcciones a un pedido por
+       segundo son cien segundos con el navegador colgado. El proceso corre
+       después, en segundo plano y de a uno. #}
+    <div class="card" style="margin-top:18px;">
+      <h3 style="margin:0 0 6px; font-size:14.5px;">Ubicar domicilios en el mapa</h3>
+      <p class="muted" style="font-size:12.5px; margin:0 0 10px;">Los trabajadores cargados por lista quedan sin ubicación. Este proceso los ubica de a uno, respetando el límite de un pedido por segundo del servicio de mapas: un padrón de 500 personas tarda unos diez minutos. Podés cerrar esta pantalla, sigue corriendo.</p>
+      <button type="button" class="sec" onclick="georreferenciarPendientes()" id="geo-pend-btn">Georreferenciar pendientes</button>
+      <div id="geo-pend-estado" style="margin-top:10px;"></div>
+    </div>
   </div>
 
   </div>
@@ -2397,38 +2484,103 @@
   <!-- ============ SECCIONALES ============ -->
   <h2 id="seccionales-titulo">Dar de alta una seccional</h2>
   <p class="muted">Las seccionales quedan disponibles para elegir en el alta/edición de trabajadores, y además <b>acotan lo que ve cada usuario del panel</b>: un usuario de área trabaja sobre los trabajadores de su seccional. No afectan la validación de recibos.</p>
+
   <div class="card">
+    <div class="geo-pasos">
+      <div class="geo-paso-n activo" data-paso-n="1"><b>1</b> Dirección</div>
+      <div class="geo-paso-n" data-paso-n="2"><b>2</b> Confirmar en el mapa</div>
+      <div class="geo-paso-n" data-paso-n="3"><b>3</b> Contacto y guardar</div>
+    </div>
+
     <form method="post" action="/admin/seccional" id="form-seccional">
       <input type="hidden" name="id" id="sec-id">
-      <div class="grid2">
-        <div class="campo full"><label>Nombre *</label><input name="nombre" id="sec-nombre" required></div>
-        <div class="campo full"><label>Dirección</label><input name="direccion" id="sec-direccion"></div>
+      <input type="hidden" name="latitud" id="sec-lat">
+      <input type="hidden" name="longitud" id="sec-lon">
+      <input type="hidden" name="precision_geo" id="sec-precision" value="sin_geo">
+
+      <!-- ---------- Paso 1: dirección ---------- -->
+      <div class="geo-paso activo" data-paso="1">
+        <div class="grid2">
+          <div class="campo full"><label>Nombre *</label><input name="nombre" id="sec-nombre" required></div>
+          <div class="campo"><label>Provincia</label>
+            <select name="provincia" id="sec-provincia" onchange="secLocalidades()">
+              <option value="">Elegí una provincia</option>
+              {% for p in provincias %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="campo"><label>Localidad</label>
+            {# Las sugerencias salen de Georef, que SÍ permite consultarlo
+               mientras se escribe. A Nominatim no se lo toca tecla a tecla:
+               su política pide un pedido por segundo y se geocodifica solo
+               al apretar "Buscar". #}
+            <input name="localidad" id="sec-localidad" list="sec-localidades" autocomplete="off"
+                   oninput="secLocalidades()" placeholder="Empezá a escribir">
+            <datalist id="sec-localidades"></datalist>
+          </div>
+          <div class="campo"><label>Calle</label><input name="calle" id="sec-calle"></div>
+          <div class="campo"><label>Número</label><input name="numero" id="sec-numero"></div>
+          <div class="campo"><label>Piso / depto</label><input name="piso_depto" id="sec-piso"></div>
+          <div class="campo"><label>Código postal</label><input name="codigo_postal" id="sec-cp"></div>
+        </div>
+        {% if es_super_admin %}
+        <label class="chk-seccional" style="margin-top:10px;">
+          <input type="checkbox" name="ve_todas" id="sec-ve-todas" value="1">
+          Sus usuarios ven <b>todas</b> las seccionales
+        </label>
+        <p class="muted" style="margin:4px 0 10px;">Es lo que hace que una sede sea "central". Tildalo también en una regional que supervise a otras. Sin el tilde, sus usuarios alcanzan solo a los trabajadores de esta seccional.</p>
+        {% endif %}
+        <button type="button" onclick="secBuscar()" id="sec-btn-buscar">Buscar en el mapa</button>
+        <button type="button" class="sec" onclick="secPaso(3)">Seguir sin ubicar</button>
+        <button type="button" class="sec oculto" id="sec-cancel" onclick="cancelarSeccional()">Cancelar edición</button>
       </div>
-      {# Tildar "ve todas" es escalada de privilegio si lo pudiera hacer un
-         admin local: se daría alcance sobre todo el sindicato de un clic.
-         Por eso el check solo se le muestra (y solo se le acepta) al
-         administrador general. #}
-      {% if es_super_admin %}
-      <label class="chk-seccional" style="margin-top:10px;">
-        <input type="checkbox" name="ve_todas" id="sec-ve-todas" value="1">
-        Sus usuarios ven <b>todas</b> las seccionales
-      </label>
-      <p class="muted" style="margin:4px 0 10px;">Es lo que hace que una sede sea "central". Tildalo también en una regional que supervise a otras. Sin el tilde, sus usuarios alcanzan solo a los trabajadores de esta seccional.</p>
-      {% endif %}
-      <button type="submit">Guardar seccional</button>
-      <button type="button" class="sec oculto" id="sec-cancel" onclick="cancelarSeccional()">Cancelar edición</button>
+
+      <!-- ---------- Paso 2: confirmar en el mapa ---------- -->
+      <div class="geo-paso" data-paso="2">
+        <div class="geo-ayuda sin_geo" id="sec-ayuda">Buscando…</div>
+        <div class="geo-con-lista">
+          <div class="geo-mapa" id="sec-mapa"></div>
+          <div class="geo-candidatos" id="sec-candidatos"></div>
+        </div>
+        <p class="muted" style="font-size:12px; margin:8px 0 12px;">Arrastrá el globo hasta la puerta de la seccional si no quedó bien. Al moverlo, la ubicación pasa a estar puesta a mano.</p>
+        <button type="button" class="sec" onclick="secPaso(1)">Volver</button>
+        <button type="button" onclick="secPaso(3)">Continuar</button>
+      </div>
+
+      <!-- ---------- Paso 3: contacto y guardar ---------- -->
+      <div class="geo-paso" data-paso="3">
+        <div class="geo-resumen" id="sec-resumen"></div>
+        <div class="grid2">
+          <div class="campo"><label>Teléfono</label><input name="telefono" id="sec-telefono"></div>
+          <div class="campo"><label>WhatsApp</label><input name="whatsapp" id="sec-whatsapp" placeholder="341 555 1234"></div>
+          <div class="campo"><label>Mail</label><input name="mail" id="sec-mail" type="email"></div>
+          <div class="campo"><label>Horario de atención</label><input name="horario_atencion" id="sec-horario" placeholder="Lunes a viernes de 9 a 17"></div>
+        </div>
+        <button type="button" class="sec" onclick="secPaso(1)">Volver a la dirección</button>
+        <button type="submit">Guardar seccional</button>
+      </div>
     </form>
   </div>
 
+  {# El aviso solo aparece si hay algo que hacer, y recién después de que
+     exista al menos una seccional: en un sindicato nuevo sería ruido. #}
+  {% set sin_ubicar = seccionales | rejectattr('latitud') | list %}
+  {% if sin_ubicar %}
+  <div class="msg" style="background:#fdf3e7; color:#8a5a1a;">
+    {{ sin_ubicar|length }} seccional{{ 'es' if sin_ubicar|length > 1 else '' }} sin ubicación: no aparece{{ 'n' if sin_ubicar|length > 1 else '' }} en el mapa del Panel Sindical ni en la app del afiliado. Editala{{ 's' if sin_ubicar|length > 1 else '' }} y usá "Buscar en el mapa".
+  </div>
+  {% endif %}
+
   <h2>Seccionales cargadas ({{ seccionales|length }})</h2>
   <table>
-    <tr><th>Nombre</th><th>Dirección</th><th>Alcance</th><th></th></tr>
+    <tr><th>Nombre</th><th>Dirección</th><th>Ubicación</th><th>Alcance</th><th></th></tr>
     {% for sec in seccionales %}
     <tr>
       <td>{{ sec.nombre }}</td>
-      <td class="muted">{{ sec.direccion or '—' }}</td>
+      <td class="muted">{{ sec.direccion_texto or '—' }}</td>
+      <td><span class="geo-punto {{ sec.precision_geo }}"><i></i>{{ etiquetas_precision.get(sec.precision_geo, 'Sin ubicar') }}</span></td>
       <td>{% if sec.ve_todas %}<span class="tag tag-si">ve todas</span>{% else %}<span class="muted">solo la suya</span>{% endif %}</td>
       <td style="white-space:nowrap; text-align:right;">
+        <button type="button" class="mini" onclick="verSeccional({{ sec.id }})">Ver</button>
         <button type="button" class="mini" onclick='editarSeccional({{ sec | tojson }})'>Editar</button>
         <form method="post" action="/admin/seccional/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar esta seccional? Los trabajadores que la tengan asignada quedan sin seccional.')">
           <input type="hidden" name="id" value="{{ sec.id }}">
@@ -2437,9 +2589,24 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="4" class="muted">Todavía no cargaste ninguna seccional.</td></tr>
+    <tr><td colspan="5" class="muted">Todavía no cargaste ninguna seccional.</td></tr>
     {% endfor %}
   </table>
+
+  <!-- Ficha de consulta. Modal y no página aparte: el panel es una sola
+       pantalla con pestañas, y sacar al admin de ahí para leer cuatro datos
+       le hace perder el contexto en el que estaba. -->
+  <div class="modal-recibo-overlay" id="modal-seccional" onclick="if (event.target === this) cerrarFichaSeccional()">
+    <div class="modal-recibo" style="max-width:600px;">
+      <div class="modal-recibo-enc">
+        <h3 id="fs-titulo">Seccional</h3>
+        <button type="button" class="modal-recibo-cerrar" onclick="cerrarFichaSeccional()" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="modal-recibo-body" id="fs-body">Cargando…</div>
+    </div>
+  </div>
   </div>
   {% endif %}
 
@@ -2698,6 +2865,11 @@
 </div>
 
 <script>
+// Textos de precisión de ubicación. Los arma el SERVIDOR (geo.py) y se
+// declaran acá arriba, fuera de todo bloque condicional: los usan
+// Trabajadores y Seccionales, que son dos secciones con permisos distintos.
+var AYUDA_PRECISION = {{ ayuda_precision | tojson }};
+var ETIQUETAS_PRECISION = {{ etiquetas_precision | tojson }};
 // ---------- Navegación por pestañas ----------
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -4267,14 +4439,19 @@ function editarTrab(t) {
   document.getElementById('trab-nombre').value = t.nombre || '';
   document.getElementById('trab-calle').value = t.calle || '';
   document.getElementById('trab-numero').value = t.numero || '';
-  document.getElementById('trab-piso').value = t.piso || '';
-  document.getElementById('trab-ciudad').value = t.ciudad || '';
+  document.getElementById('trab-piso').value = t.piso_depto || '';
+  document.getElementById('trab-localidad').value = t.localidad || '';
   document.getElementById('trab-provincia').value = t.provincia || '';
+  document.getElementById('trab-cp').value = t.codigo_postal || '';
   document.getElementById('trab-telefono').value = t.telefono || '';
   document.getElementById('trab-mail').value = t.mail || '';
   document.getElementById('trab-vigencia').value = t.vigencia_credencial || '';
   document.getElementById('trab-seccional').value = t.seccional_id || '';
   document.getElementById('trab-cuit-empleador').value = t.cuit_empleador || '';
+  document.getElementById('trab-lat').value = t.latitud == null ? '' : t.latitud;
+  document.getElementById('trab-lon').value = t.longitud == null ? '' : t.longitud;
+  document.getElementById('trab-precision').value = t.precision_geo || 'sin_geo';
+  trabEstadoGeo();
   document.getElementById('trab-submit').textContent = 'Guardar cambios';
   document.getElementById('trab-cancelar').style.display = 'inline-block';
   // pasar a la sub-pestaña de alta manual
@@ -4284,8 +4461,161 @@ function editarTrab(t) {
 function resetTrab() {
   document.querySelector('.form-trab').reset();
   document.getElementById('trab-id').value = '';
+  document.getElementById('trab-precision').value = 'sin_geo';
   document.getElementById('trab-submit').textContent = 'Agregar trabajador';
   document.getElementById('trab-cancelar').style.display = 'none';
+  document.getElementById('trab-geo-caja').classList.add('oculto');
+  trabCands = [];
+  trabEstadoGeo();
+}
+
+// ---------- Domicilio del trabajador: misma carga guiada que la seccional ----------
+// Es literalmente el mismo servicio y los mismos textos de precisión. Lo
+// único distinto es que acá el mapa aparece bajo demanda, porque el alta de
+// un afiliado se usa mucho más seguido que la de una seccional y no puede
+// costar tres pasos.
+var trabMapa = null, trabCands = [], trabLocTimer = null;
+
+function trabEstadoGeo() {
+  var p = document.getElementById('trab-precision').value || 'sin_geo';
+  var el = document.getElementById('trab-geo-estado');
+  el.innerHTML = '<span class="geo-punto ' + p + '"><i></i>' +
+                 (ETIQUETAS_PRECISION[p] || 'Sin ubicar') + '</span>';
+}
+
+function trabLocalidades() {
+  clearTimeout(trabLocTimer);
+  trabLocTimer = setTimeout(function () {
+    var prov = document.getElementById('trab-provincia').value;
+    var q = document.getElementById('trab-localidad').value;
+    if (q.length < 2) return;
+    fetch('/admin/seccionales/localidades?provincia=' + encodeURIComponent(prov) +
+          '&q=' + encodeURIComponent(q))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        document.getElementById('trab-localidades').innerHTML =
+          (d.localidades || []).map(function (l) {
+            return '<option value="' + l.nombre.replace(/"/g, '&quot;') + '"></option>';
+          }).join('');
+      }).catch(function () {});
+  }, 300);
+}
+
+function trabBuscar() {
+  var caja = document.getElementById('trab-geo-caja');
+  var btn = document.getElementById('trab-btn-buscar');
+  caja.classList.remove('oculto');
+  btn.disabled = true; btn.textContent = 'Buscando…';
+  document.getElementById('trab-ayuda').className = 'geo-ayuda sin_geo';
+  document.getElementById('trab-ayuda').textContent = 'Buscando la dirección…';
+  fetch('/admin/seccionales/geocodificar', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      provincia: document.getElementById('trab-provincia').value,
+      localidad: document.getElementById('trab-localidad').value,
+      calle: document.getElementById('trab-calle').value,
+      numero: document.getElementById('trab-numero').value
+    })
+  }).then(function (r) {
+    if (r.status === 429) throw new Error('Hiciste muchas búsquedas seguidas. Probá en un rato.');
+    return r.json();
+  }).then(function (d) {
+    trabCands = d.candidatos || [];
+    var ayuda = document.getElementById('trab-ayuda');
+    if (!trabCands.length) {
+      ayuda.className = 'geo-ayuda sin_geo';
+      ayuda.textContent = d.aviso || 'No encontramos ese domicilio. Se puede guardar sin ubicar.';
+      document.getElementById('trab-candidatos').innerHTML = '';
+      return;
+    }
+    if (d.provincia) document.getElementById('trab-provincia').value = d.provincia;
+    if (d.localidad) document.getElementById('trab-localidad').value = d.localidad;
+    document.getElementById('trab-candidatos').innerHTML = trabCands.map(function (c, i) {
+      return '<button type="button" class="geo-cand' + (i === 0 ? ' elegido' : '') +
+             '" onclick="trabElegir(' + i + ')">' +
+             '<b>' + (c.precision === 'exacta' ? 'Dirección exacta' : 'Aproximada') + '</b><br>' +
+             c.etiqueta.replace(/</g, '&lt;') + '</button>';
+    }).join('');
+    trabElegir(0, d.aviso);
+  }).catch(function (e) {
+    document.getElementById('trab-ayuda').className = 'geo-ayuda sin_geo';
+    document.getElementById('trab-ayuda').textContent =
+      (e.message || 'No pudimos buscar.') + ' Se puede guardar sin ubicar.';
+  }).finally(function () {
+    btn.disabled = false; btn.textContent = 'Ubicar el domicilio en el mapa';
+  });
+}
+
+function trabElegir(i, aviso) {
+  var c = trabCands[i];
+  if (!c) return;
+  document.querySelectorAll('#trab-candidatos .geo-cand').forEach(function (b, j) {
+    b.classList.toggle('elegido', i === j);
+  });
+  trabFijar(c.lat, c.lon, c.precision, aviso);
+  if (c.codigo_postal) document.getElementById('trab-cp').value = c.codigo_postal;
+  if (!trabMapa) {
+    trabMapa = MapaMT.crear('trab-mapa', {
+      lat: c.lat, lon: c.lon, zoom: 17, arrastrable: true,
+      alMover: function (lat, lon) { trabFijar(lat, lon, 'manual'); }
+    });
+    if (trabMapa) trabMapa.refrescar();
+  } else {
+    trabMapa.ir(c.lat, c.lon, 17);
+  }
+}
+
+function trabFijar(lat, lon, precision, aviso) {
+  document.getElementById('trab-lat').value = lat;
+  document.getElementById('trab-lon').value = lon;
+  document.getElementById('trab-precision').value = precision;
+  var ayuda = document.getElementById('trab-ayuda');
+  ayuda.className = 'geo-ayuda ' + precision;
+  ayuda.textContent = aviso || AYUDA_PRECISION[precision] || '';
+  trabEstadoGeo();
+}
+
+// ---------- Georreferenciar el padrón cargado por lista ----------
+// El proceso vive en el servidor y su avance también (tabla geopadron), así
+// que esta pantalla solo pregunta cada tres segundos. Si alguien la cierra y
+// vuelve, ve el avance igual: no hay estado en el navegador.
+var geoPendTimer = null;
+function georreferenciarPendientes() {
+  var btn = document.getElementById('geo-pend-btn');
+  btn.disabled = true;
+  fetch('/admin/trabajador/georreferenciar-pendientes', {method: 'POST'})
+    .then(function (r) { return r.json(); })
+    .then(function (d) { geoPendPintar(d); geoPendSeguir(); })
+    .catch(function () {
+      document.getElementById('geo-pend-estado').textContent = 'No se pudo iniciar el proceso.';
+      btn.disabled = false;
+    });
+}
+function geoPendSeguir() {
+  clearTimeout(geoPendTimer);
+  geoPendTimer = setTimeout(function () {
+    fetch('/admin/trabajador/georreferenciar-pendientes')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        geoPendPintar(d);
+        if (d.corriendo) geoPendSeguir();
+        else document.getElementById('geo-pend-btn').disabled = false;
+      }).catch(function () { document.getElementById('geo-pend-btn').disabled = false; });
+  }, 3000);
+}
+function geoPendPintar(d) {
+  var pct = d.total ? Math.round(d.hechos / d.total * 100) : 100;
+  var caja = document.getElementById('geo-pend-estado');
+  if (!d.total && !d.corriendo) {
+    caja.innerHTML = '<span class="muted" style="font-size:12.5px;">' +
+      (d.detalle || 'No hay domicilios pendientes de ubicar.') + '</span>';
+    return;
+  }
+  caja.innerHTML =
+    '<div class="geo-barra"><i style="width:' + pct + '%"></i></div>' +
+    '<span class="muted" style="font-size:12.5px;">' + d.hechos + ' de ' + d.total +
+    ' · ' + d.ubicados + ' ubicados' +
+    (d.corriendo ? ' · en curso' : ' · terminado') + '</span>';
 }
 
 // ---------- ABM fórmulas ----------
@@ -4488,22 +4818,247 @@ function cancelarBeneficio() {
   if (pbImg) pbImg.style.backgroundImage = '';
 }
 
+// ---------- Seccionales: asistente de 3 pasos con mapa ----------
+// El mapa se crea UNA vez y después se le mueve el globo. Crearlo y
+// destruirlo en cada búsqueda hace que Leaflet pida las teselas de nuevo,
+// que es exactamente lo que la política de OSM pide no hacer.
+var secMapa = null, secCands = [], secPasoActual = 1;
+
+function secPaso(n) {
+  secPasoActual = n;
+  document.querySelectorAll('#panel-seccionales .geo-paso').forEach(function (p) {
+    p.classList.toggle('activo', p.dataset.paso == n);
+  });
+  document.querySelectorAll('#panel-seccionales .geo-paso-n').forEach(function (p) {
+    p.classList.toggle('activo', p.dataset.pasoN == n);
+    p.classList.toggle('hecho', Number(p.dataset.pasoN) < n);
+  });
+  // Leaflet mide el contenedor al crearse: si el mapa nació en un paso
+  // oculto queda de tamaño 0 y se ve gris hasta que se lo redibuja.
+  if (n === 2 && secMapa) secMapa.refrescar();
+  if (n === 3) secResumen();
+}
+
+var secLocTimer = null;
+function secLocalidades() {
+  // Georef permite consultarlo mientras se escribe; igual se espera a que
+  // la persona deje de tipear para no mandar un pedido por tecla.
+  clearTimeout(secLocTimer);
+  secLocTimer = setTimeout(function () {
+    var prov = document.getElementById('sec-provincia').value;
+    var q = document.getElementById('sec-localidad').value;
+    if (q.length < 2) return;
+    fetch('/admin/seccionales/localidades?provincia=' + encodeURIComponent(prov) +
+          '&q=' + encodeURIComponent(q))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var dl = document.getElementById('sec-localidades');
+        dl.innerHTML = (d.localidades || []).map(function (l) {
+          return '<option value="' + l.nombre.replace(/"/g, '&quot;') + '">' +
+                 (prov ? '' : l.provincia) + '</option>';
+        }).join('');
+      })
+      .catch(function () { /* sugerencias: si fallan, se escribe a mano */ });
+  }, 300);
+}
+
+function secBuscar() {
+  var btn = document.getElementById('sec-btn-buscar');
+  btn.disabled = true; btn.textContent = 'Buscando…';
+  secPaso(2);
+  document.getElementById('sec-ayuda').className = 'geo-ayuda sin_geo';
+  document.getElementById('sec-ayuda').textContent = 'Buscando la dirección…';
+  fetch('/admin/seccionales/geocodificar', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      provincia: document.getElementById('sec-provincia').value,
+      localidad: document.getElementById('sec-localidad').value,
+      calle: document.getElementById('sec-calle').value,
+      numero: document.getElementById('sec-numero').value
+    })
+  }).then(function (r) {
+    if (r.status === 429) throw new Error('Hiciste muchas búsquedas seguidas. Probá en un rato.');
+    return r.json();
+  }).then(function (d) {
+    secCands = d.candidatos || [];
+    secPintarCandidatos(d);
+  }).catch(function (e) {
+    // Que la búsqueda falle NUNCA bloquea el alta: se puede seguir y
+    // guardar sin ubicar.
+    document.getElementById('sec-ayuda').className = 'geo-ayuda sin_geo';
+    document.getElementById('sec-ayuda').textContent =
+      (e.message || 'No pudimos buscar la dirección.') + ' Podés continuar y guardar sin ubicar.';
+    document.getElementById('sec-candidatos').innerHTML = '';
+  }).finally(function () {
+    btn.disabled = false; btn.textContent = 'Buscar en el mapa';
+  });
+}
+
+function secPintarCandidatos(d) {
+  var caja = document.getElementById('sec-candidatos');
+  var ayuda = document.getElementById('sec-ayuda');
+  if (!secCands.length) {
+    ayuda.className = 'geo-ayuda sin_geo';
+    ayuda.textContent = d.aviso || 'No encontramos esa dirección. Podés guardar sin ubicar.';
+    caja.innerHTML = '';
+    return;
+  }
+  // Georef devuelve el nombre oficial: se escribe en el form para que lo
+  // que se guarde sea el canónico y no "rosario" en minúscula.
+  if (d.provincia) document.getElementById('sec-provincia').value = d.provincia;
+  if (d.localidad) document.getElementById('sec-localidad').value = d.localidad;
+  caja.innerHTML = secCands.map(function (c, i) {
+    return '<button type="button" class="geo-cand' + (i === 0 ? ' elegido' : '') +
+           '" onclick="secElegir(' + i + ')">' +
+           '<b>' + (c.precision === 'exacta' ? 'Dirección exacta' : 'Aproximada') + '</b><br>' +
+           c.etiqueta.replace(/</g, '&lt;') + '</button>';
+  }).join('');
+  secElegir(0, d.aviso);
+}
+
+function secElegir(i, aviso) {
+  var c = secCands[i];
+  if (!c) return;
+  document.querySelectorAll('#sec-candidatos .geo-cand').forEach(function (b, j) {
+    b.classList.toggle('elegido', i === j);
+  });
+  secFijar(c.lat, c.lon, c.precision, aviso);
+  if (c.codigo_postal) document.getElementById('sec-cp').value = c.codigo_postal;
+  if (!secMapa) {
+    secMapa = MapaMT.crear('sec-mapa', {
+      lat: c.lat, lon: c.lon, zoom: 17, arrastrable: true,
+      // Mover el globo es una decisión humana: la ubicación pasa a `manual`
+      // y deja de decir que la resolvió el geocodificador.
+      alMover: function (lat, lon) { secFijar(lat, lon, 'manual'); }
+    });
+    secMapa.refrescar();
+  } else {
+    secMapa.ir(c.lat, c.lon, 17);
+  }
+}
+
+function secFijar(lat, lon, precision, aviso) {
+  document.getElementById('sec-lat').value = lat;
+  document.getElementById('sec-lon').value = lon;
+  document.getElementById('sec-precision').value = precision;
+  var ayuda = document.getElementById('sec-ayuda');
+  ayuda.className = 'geo-ayuda ' + precision;
+  ayuda.textContent = aviso || AYUDA_PRECISION[precision] || '';
+}
+
+function secResumen() {
+  var v = function (id) { return document.getElementById(id).value.trim(); };
+  var partes = [v('sec-calle'), v('sec-numero')].filter(Boolean).join(' ');
+  var loc = [v('sec-localidad'), v('sec-provincia')].filter(Boolean).join(', ');
+  var precision = document.getElementById('sec-precision').value;
+  document.getElementById('sec-resumen').innerHTML =
+    '<b>' + (v('sec-nombre') || 'Sin nombre') + '</b><br>' +
+    (partes || loc ? [partes, v('sec-piso'), loc].filter(Boolean).join(', ') + '<br>' : '') +
+    '<span class="geo-punto ' + precision + '"><i></i>' +
+    (ETIQUETAS_PRECISION[precision] || 'Sin ubicar') + '</span>';
+}
+
 function editarSeccional(sec) {
   document.getElementById('sec-id').value = sec.id;
   document.getElementById('sec-nombre').value = sec.nombre || '';
-  document.getElementById('sec-direccion').value = sec.direccion || '';
-  document.getElementById('sec-ve-todas').checked = !!sec.ve_todas;
+  document.getElementById('sec-provincia').value = sec.provincia || '';
+  document.getElementById('sec-localidad').value = sec.localidad || '';
+  document.getElementById('sec-calle').value = sec.calle || '';
+  document.getElementById('sec-numero').value = sec.numero || '';
+  document.getElementById('sec-piso').value = sec.piso_depto || '';
+  document.getElementById('sec-cp').value = sec.codigo_postal || '';
+  document.getElementById('sec-telefono').value = sec.telefono || '';
+  document.getElementById('sec-whatsapp').value = sec.whatsapp || '';
+  document.getElementById('sec-mail').value = sec.mail || '';
+  document.getElementById('sec-horario').value = sec.horario_atencion || '';
+  document.getElementById('sec-lat').value = sec.latitud == null ? '' : sec.latitud;
+  document.getElementById('sec-lon').value = sec.longitud == null ? '' : sec.longitud;
+  document.getElementById('sec-precision').value = sec.precision_geo || 'sin_geo';
+  var chk = document.getElementById('sec-ve-todas');
+  if (chk) chk.checked = !!sec.ve_todas;
   document.getElementById('seccionales-titulo').textContent = 'Editar seccional: ' + sec.nombre;
   document.getElementById('form-seccional').querySelector('button[type=submit]').textContent = 'Guardar cambios';
   document.getElementById('sec-cancel').classList.remove('oculto');
+  // En edición se abre en el paso 2 con el globo ya puesto -- que es lo que
+  // se viene a hacer casi siempre: corregir dónde está. Si nunca se ubicó,
+  // no hay nada que confirmar y se arranca por la dirección.
+  if (sec.latitud != null && sec.longitud != null) {
+    secCands = [{lat: sec.latitud, lon: sec.longitud, precision: sec.precision_geo,
+                 etiqueta: sec.direccion_texto || sec.nombre, codigo_postal: sec.codigo_postal || ''}];
+    secPaso(2);
+    secPintarCandidatos({provincia: sec.provincia, localidad: sec.localidad});
+  } else {
+    secPaso(1);
+  }
   document.getElementById('form-seccional').scrollIntoView({behavior:'smooth', block:'center'});
 }
+
 function cancelarSeccional() {
   document.getElementById('form-seccional').reset();
   document.getElementById('sec-id').value = '';
+  document.getElementById('sec-precision').value = 'sin_geo';
   document.getElementById('seccionales-titulo').textContent = 'Dar de alta una seccional';
   document.getElementById('form-seccional').querySelector('button[type=submit]').textContent = 'Guardar seccional';
   document.getElementById('sec-cancel').classList.add('oculto');
+  secCands = [];
+  secPaso(1);
+}
+
+// ---------- Ficha de consulta de una seccional ----------
+var fichaMapa = null;
+function verSeccional(id) {
+  document.getElementById('modal-seccional').classList.add('abierto');
+  document.getElementById('fs-body').innerHTML = 'Cargando…';
+  fichaMapa = null;
+  fetch('/admin/seccional/' + id + '/ficha')
+    .then(function (r) { if (!r.ok) throw new Error('No se pudo leer la seccional.'); return r.json(); })
+    .then(function (s) {
+      document.getElementById('fs-titulo').textContent = s.nombre;
+      var dato = function (k, v) {
+        return v ? '<div class="ficha-dato"><span>' + k + '</span><div>' + v + '</div></div>' : '';
+      };
+      var ubicada = s.latitud != null && s.longitud != null;
+      var html = '';
+      if (ubicada) {
+        html += '<div class="geo-mapa-chico" id="fs-mapa" style="margin-bottom:14px;"></div>';
+      } else {
+        html += '<div class="geo-ayuda sin_geo" style="margin-bottom:14px;">' +
+                'Esta seccional no está ubicada en el mapa: no aparece en el Panel Sindical ' +
+                'ni en la app del afiliado. Cerrá esta ficha y usá "Editar" para ubicarla.</div>';
+      }
+      html += dato('Dirección', s.direccion_texto ? s.direccion_texto.replace(/</g, '&lt;') : '') +
+              dato('Ubicación', '<span class="geo-punto ' + s.precision_geo + '"><i></i>' +
+                   s.etiqueta_precision + '</span>' +
+                   (s.geo_actualizado ? ' <span class="muted" style="font-size:11.5px;">· ' +
+                    s.geo_actualizado + '</span>' : '')) +
+              dato('Teléfono', s.telefono) +
+              dato('WhatsApp', s.whatsapp) +
+              dato('Mail', s.mail) +
+              dato('Horario', s.horario_atencion) +
+              dato('Afiliados', s.afiliados + (s.ve_todas ? ' · sus usuarios ven todas las seccionales' : ''));
+      if (ubicada) {
+        html += '<div style="margin-top:14px;">' +
+                '<a class="boton-enlace" target="_blank" rel="noopener" href="' +
+                MapaMT.enlaceVerEnMapa(s.latitud, s.longitud) + '">Abrir en Google Maps</a> ' +
+                '<a class="boton-enlace" target="_blank" rel="noopener" href="' +
+                'https://www.openstreetmap.org/?mlat=' + s.latitud + '&mlon=' + s.longitud +
+                '#map=17/' + s.latitud + '/' + s.longitud + '">Abrir en OpenStreetMap</a></div>';
+      }
+      document.getElementById('fs-body').innerHTML = html;
+      if (ubicada) {
+        fichaMapa = MapaMT.crear('fs-mapa', {
+          lat: s.latitud, lon: s.longitud, zoom: 16, rueda: false,
+          popup: '<b>' + s.nombre + '</b><br>' + (s.direccion_texto || '')
+        });
+        if (fichaMapa) { fichaMapa.refrescar(); if (fichaMapa.globo) fichaMapa.globo.openPopup(); }
+      }
+    })
+    .catch(function (e) {
+      document.getElementById('fs-body').textContent = e.message || 'No se pudo cargar.';
+    });
+}
+function cerrarFichaSeccional() {
+  document.getElementById('modal-seccional').classList.remove('abierto');
 }
 
 // ---------- Administradores del sindicato ----------

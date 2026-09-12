@@ -36,6 +36,7 @@ from sqlmodel import select
 import auth
 import dashboard
 import db
+import geo
 from db import (Sindicato, Seccional, Empleador, Trabajador, CuentaTrabajador,
                 ReciboVerificado, EnvioSindicato, Reporte, TipoTramite, CampoTramite,
                 Tramite, RespuestaTramite, NotaTramite, TramiteLog,
@@ -252,7 +253,10 @@ def sembrar_base(sid: int):
                                                  Seccional.nombre == nombre)).first()
             if not sec:
                 sec = Seccional(sindicato_id=sid, nombre=nombre,
-                                direccion=f"Av. de los Metalúrgicos {rnd.randint(100, 4500)}")
+                                **geo.campos_para_guardar(
+                                    {"calle": "Av. de los Metalúrgicos",
+                                     "numero": str(rnd.randint(100, 4500)), "localidad": nombre},
+                                    precision="sin_geo"))
                 s.add(sec); s.commit(); s.refresh(sec)
             secc_ids[nombre] = sec.id
 

@@ -95,6 +95,21 @@ def test_armar_direccion_texto_tolera_huecos():
     print("OK  test_armar_direccion_texto_tolera_huecos")
 
 
+def test_caba_no_se_escribe_dos_veces():
+    """En CABA la localidad y la provincia son la misma cosa, y la primera
+    versión daba "…, Ciudad Autónoma de Buenos Aires, Ciudad Autónoma de
+    Buenos Aires". Apareció al cargar la demo, no en un test."""
+    texto = geo.armar_direccion_texto({
+        "calle": "La Rioja", "numero": "1975",
+        "localidad": "Ciudad Autónoma de Buenos Aires",
+        "provincia": "Ciudad Autónoma de Buenos Aires"})
+    assert texto == "La Rioja 1975, Ciudad Autónoma de Buenos Aires"
+    # Una localidad distinta de la provincia sí se escribe.
+    assert geo.armar_direccion_texto({"localidad": "Rosario", "provincia": "Santa Fe"}) \
+        == "Rosario, Santa Fe"
+    print("OK  test_caba_no_se_escribe_dos_veces")
+
+
 def test_clave_cache_normaliza():
     # Si la clave no normalizara, la caché no ahorraría nada: nadie escribe
     # dos veces la misma dirección igual.

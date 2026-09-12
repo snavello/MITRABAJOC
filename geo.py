@@ -175,6 +175,11 @@ def armar_direccion_texto(datos: dict) -> str:
     calle_y_altura = " ".join(x for x in (calle, numero) if x)
     if piso:
         calle_y_altura = f"{calle_y_altura}, {piso}" if calle_y_altura else piso
+    # En CABA la localidad y la provincia son la misma cosa ("Ciudad Autónoma
+    # de Buenos Aires"), y repetirla daba direcciones que decían el nombre dos
+    # veces. Pasa igual en cualquier ciudad homónima de su provincia.
+    if localidad and _norm(localidad) == _norm(provincia):
+        localidad = ""
     localidad_y_prov = ", ".join(x for x in (localidad, provincia) if x)
     if cp and localidad_y_prov:
         localidad_y_prov = f"{localidad_y_prov} (CP {cp})"
@@ -593,6 +598,54 @@ def normalizar_direccion(provincia: str, localidad: str, calle: str = "",
     return {"candidatos": candidatos, "aviso": aviso,
             "provincia": prov["nombre"],
             "localidad": loc["nombre"] if loc else (localidad or "").strip()}
+
+
+def georreferenciar_padron_en_segundo_plano(sindicato_id: int, alcance) -> dict:
+    """Ubica en el mapa a los afiliados cargados sin coordenadas.
+
+    Va en un hilo por lo mismo que la indexación del convenio (rag.py): a un
+    pedido por segundo, un padrón de 500 personas son más de ocho minutos y
+    ningún navegador espera eso. `daemon=True` para que un reinicio de Render
+    no quede esperando al hilo.
+
+    Solo toca filas `sin_geo` CON localidad cargada, así que volver a
+    apretarlo no rehace lo ya hecho ni pisa una ubicación puesta a mano.
+    """
+    import db
+    if not db.iniciar_georreferenciacion(sindicato_id):
+        estado = db.estado_georreferenciacion(sindicato_id)
+        estado["detalle"] = "Ya hay una georreferenciación en curso."
+        return estado
+    threading.Thread(target=_georreferenciar_padron,
+                     args=(sindicato_id, alcance), daemon=True).start()
+    return db.estado_georreferenciacion(sindicato_id)
+
+
+def _georreferenciar_padron(sindicato_id: int, alcance) -> None:
+    """El hilo. Cada fila se guarda apenas se resuelve, no todas juntas al
+    final: si el proceso se corta a la mitad (un redeploy de Render, que
+    pasa seguido), lo hecho queda hecho y la próxima corrida sigue desde
+    ahí, porque la lista de pendientes se recalcula sola."""
+    import db
+    try:
+        for trabajador_id, datos in db.trabajadores_sin_geo(sindicato_id, alcance):
+            elegido = None
+            try:
+                r = normalizar_direccion(datos["provincia"], datos["localidad"],
+                                         datos["calle"], datos["numero"])
+                elegido = (r["candidatos"] or [None])[0]
+                if elegido:
+                    db.guardar_geo_trabajador(sindicato_id, trabajador_id, campos_para_guardar(
+                        datos, elegido["precision"], elegido["lat"], elegido["lon"]))
+            except Exception:
+                # Una dirección que rompe no puede cortar el lote entero:
+                # queda sin ubicar y se sigue con la siguiente.
+                elegido = None
+            db.avanzar_georreferenciacion(sindicato_id, ubicado=bool(elegido))
+    finally:
+        # Pase lo que pase el proceso queda cerrado: si no, un error deja el
+        # flag en "corriendo" y nadie puede volver a lanzarlo.
+        db.terminar_georreferenciacion(sindicato_id)
 
 
 def campos_para_guardar(datos: dict, precision: str, lat=None, lon=None) -> dict:
