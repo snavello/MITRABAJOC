@@ -52,6 +52,21 @@ DIAS_HISTORIA = 120
 CANT_TRABAJADORES, CANT_RECIBOS, CANT_TRAMITES, CANT_NOTIFS = 100, 5000, 2000, 200
 
 SECCIONALES_GENERICAS = ["Buenos Aires", "Rosario", "Córdoba", "Mendoza", "Tucumán", "Bahía Blanca"]
+
+# Centroide REAL de cada una de esas ciudades, leído de Georef una vez (el
+# 2026-09-12) y guardado acá para que el lote no dependa de la red. Se marcan
+# `aproximada` y no `exacta` porque es exactamente lo que son: el centro de la
+# localidad, no la puerta de una seccional -- la calle y la altura del lote
+# son inventadas. Sin esto un sindicato poblado solo por el lote (La Bancaria)
+# tendría el mapa del Panel Sindical vacío en una demostración.
+CENTROS_GENERICOS = {
+    "Buenos Aires": ("Ciudad de Buenos Aires", "Ciudad Autónoma de Buenos Aires", -34.608416, -58.372135),
+    "Rosario": ("Rosario", "Santa Fe", -32.947213, -60.633176),
+    "Córdoba": ("Córdoba", "Córdoba", -31.415046, -64.179114),
+    "Mendoza": ("Mendoza", "Mendoza", -32.889733, -68.844444),
+    "Tucumán": ("San Miguel de Tucumán", "Tucumán", -26.830389, -65.203780),
+    "Bahía Blanca": ("Bahía Blanca", "Buenos Aires", -38.722770, -62.272742),
+}
 CATEGORIAS = ["Auxiliar", "Administrativo", "Técnico", "Profesional", "Supervisor", "Jefe de sección"]
 
 ORGANISMOS_FISCALES = [
@@ -354,22 +369,27 @@ def sembrar_base(sid: int, ctx: dict):
         db.set_modulos_sindicato(sid, list(dict.fromkeys(
             actuales + ["dashboard", "tramites", "notificaciones", "noticias", "beneficios"])))
 
-        # Seccionales: usa las reales; completa con genéricas hasta tener 4+.
+        # Seccionales: usa las reales; completa con genéricas hasta tener 6.
+        # Si el sindicato YA tiene 4 o más cargadas (la UOM y la Gastronómica
+        # de la demo), no se le suma ninguna: agregarle "Bahía Blanca" a un
+        # gremio que ya tiene sus cuatro delegaciones de verdad ensucia la
+        # demo en vez de enriquecerla.
         existentes = s.exec(select(Seccional).where(Seccional.sindicato_id == sid)).all()
         secc_ids = [sec.id for sec in existentes]
+        tope = 0 if len(secc_ids) >= 4 else 6
         for nombre in SECCIONALES_GENERICAS:
-            if len(secc_ids) >= 6:
+            if len(secc_ids) >= tope:
                 break
             if any(sec.nombre == nombre for sec in existentes):
                 continue
-            # Sin coordenadas a propósito: una seccional genérica del
-            # lote no tiene domicilio real, y un globo inventado en el mapa
-            # del Panel es peor que la marca honesta de "sin ubicar". Las
-            # seccionales de verdad del sindicato ya vienen georreferenciadas.
+            localidad, provincia, lat, lon = CENTROS_GENERICOS[nombre]
             sec = Seccional(sindicato_id=sid, nombre=nombre,
+                            telefono=f"11 4{rnd.randint(100, 999)} {rnd.randint(1000, 9999)}",
+                            horario_atencion="Lunes a viernes de 9 a 17",
                             **geo.campos_para_guardar(
                                 {"calle": "Av. Rivadavia", "numero": str(rnd.randint(100, 4500)),
-                                 "localidad": nombre}, precision="sin_geo"))
+                                 "localidad": localidad, "provincia": provincia},
+                                precision="aproximada", lat=lat, lon=lon))
             s.add(sec); s.commit(); s.refresh(sec)
             secc_ids.append(sec.id)
 
