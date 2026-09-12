@@ -126,16 +126,38 @@ def test_el_disclaimer_nombra_exactamente_lo_que_se_guarda():
         encuestas.disclaimer(encuestas.ANONIMA, ["seccional"], umbral=8)).lower()
 
 
-def test_la_nominal_avisa_que_no_es_anonima():
-    texto = " ".join(encuestas.disclaimer(encuestas.NOMINAL)).lower()
-    assert "nominal" in texto and "cuil" in texto
+def test_la_nominal_no_lleva_disclaimer():
+    # Una encuesta nominal es el caso por defecto: el afiliado entró con su
+    # CUIL y no espera otra cosa. Un cartel explicando lo obvio le resta
+    # peso al que SÍ importa, el de las anónimas.
+    assert encuestas.disclaimer(encuestas.NOMINAL) == []
+    assert encuestas.disclaimer(encuestas.NOMINAL, ["seccional"]) == []
 
 
-def test_ningun_modo_ofrece_editar_la_respuesta_despues():
-    # N11: nadie edita, ni en nominal ni en anónima. El aviso está en los dos.
-    for modo in (encuestas.ANONIMA, encuestas.NOMINAL):
-        texto = " ".join(encuestas.disclaimer(modo, ["seccional"])).lower()
-        assert "no vas a poder modificar tu respuesta" in texto
+def test_la_anonima_avisa_que_no_se_puede_editar():
+    # N11: nadie edita, en ningún modo. En la anónima además es la prueba de
+    # que el anonimato es real -- el sistema no sabe cuál fue tu respuesta.
+    # En la nominal lo dice el pie de la pantalla, no el disclaimer.
+    texto = " ".join(encuestas.disclaimer(encuestas.ANONIMA, ["seccional"])).lower()
+    assert "no vas a poder modificar tu respuesta" in texto
+
+
+def test_cada_tipo_de_pregunta_dice_que_hacer():
+    # "Opción única" y "múltiple" se ven casi igual (un círculo o un
+    # cuadrado): sin esta línea nadie sabe si puede marcar una o varias.
+    assert "una opción" in encuestas.ayuda_de("opcion_unica")
+    assert "varias" in encuestas.ayuda_de("multiple")
+    assert "escala" in encuestas.ayuda_de("escala")
+    assert "ordená" in encuestas.ayuda_de("ranking").lower()
+    assert encuestas.ayuda_de("separador") == ""      # no se responde
+    # Una pregunta opcional lo dice, en vez de dejarlo a la interpretación
+    # de un asterisco que no está.
+    assert "dejarla en blanco" in encuestas.ayuda_de("texto", obligatorio=False)
+    assert "dejarla en blanco" not in encuestas.ayuda_de("texto")
+    # Todos los tipos del catálogo tienen su línea (menos el separador).
+    faltan = [t for t in encuestas.TIPOS_PREGUNTA
+              if t not in encuestas.TIPOS_SIN_RESPUESTA and not encuestas.ayuda_de(t)]
+    assert not faltan, faltan
 
 
 # ==================== Módulo y permisos ====================

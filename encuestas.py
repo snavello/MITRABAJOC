@@ -77,6 +77,35 @@ TIPOS_SIN_RESPUESTA = {"separador"}
 # Los que se responden eligiendo una o más opciones de una lista.
 TIPOS_CON_OPCIONES = {"seleccion", "opcion_unica", "multiple", "ranking"}
 
+# Qué tiene que HACER el afiliado en cada pregunta. Vive acá y no en la
+# plantilla por lo mismo que el disclaimer: el constructor y la pantalla del
+# trabajador tienen que decir exactamente lo mismo, y una sola frase escrita
+# dos veces se desincroniza sola. "Opción única" y "múltiple" se ven casi
+# igual (un círculo o un cuadrado), así que sin esta línea nadie sabe si
+# puede marcar una o varias hasta que lo intenta.
+AYUDA_POR_TIPO = {
+    "texto":        "Escribí tu respuesta.",
+    "numero":       "Escribí un número.",
+    "fecha":        "Elegí una fecha.",
+    "seleccion":    "Elegí una opción de la lista.",
+    "opcion_unica": "Seleccioná una opción.",
+    "multiple":     "Podés seleccionar varias opciones.",
+    "booleano":     "Elegí Sí o No.",
+    "escala":       "Elegí un número de la escala.",
+    "ranking":      "Ordená las opciones arrastrándolas: primero la más importante.",
+    "archivo":      "Adjuntá un archivo.",
+    "separador":    "",
+}
+
+
+def ayuda_de(tipo: str, obligatorio: bool = True) -> str:
+    """La línea de ayuda de una pregunta, con el aviso de opcional si va."""
+    base = AYUDA_POR_TIPO.get(tipo, "")
+    if not base:
+        return ""
+    return base if obligatorio else base + " Podés dejarla en blanco."
+
+
 ESCALA_MIN_DEFAULT = 1
 ESCALA_MAX_DEFAULT = 5
 
@@ -158,11 +187,12 @@ def disclaimer(modo: str, cortes=None, umbral: int = UMBRAL_MINIMO_DEFAULT) -> l
     aparte, sin ninguna forma de unirla con las respuestas.
     """
     if modo == NOMINAL:
-        return [
-            "Esta encuesta es NOMINAL: tus respuestas quedan asociadas a tu "
-            "nombre y tu CUIL, y el sindicato las puede ver una por una.",
-            "No vas a poder modificar tu respuesta después de enviarla.",
-        ]
+        # Nada. Una encuesta nominal es el caso por defecto -- el afiliado
+        # entró con su CUIL y no espera otra cosa --, y un cartel explicando
+        # lo obvio le resta peso al que SÍ importa, el de las anónimas. Que
+        # se responde una sola vez lo dice el pie de la pantalla, en los dos
+        # modos.
+        return []
 
     lineas = [
         "Esta encuesta es ANÓNIMA. Queda registrado que participaste, nunca "

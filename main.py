@@ -1039,6 +1039,7 @@ def admin(request: Request):
         "encuestas_cortes": {c: etiqueta for c, (etiqueta, _) in encuestas.CORTES.items()},
         "encuestas_tipos": {t: etiqueta for t, (etiqueta, _) in encuestas.TIPOS_PREGUNTA.items()},
         "encuestas_tipos_anonima": [t for t, _ in encuestas.tipos_para(encuestas.ANONIMA)],
+        "encuestas_ayuda": encuestas.AYUDA_POR_TIPO,
         "encuestas_umbral": db.umbral_encuestas(),
         "tipos_tramite": db.tipos_tramite_del_sindicato(sid)
                          if puede("tramites_formularios", "tramites_recibidos") else [],
