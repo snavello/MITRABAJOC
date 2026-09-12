@@ -31,13 +31,14 @@ from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Cookie, Response, Body, Header
+from fastapi import FastAPI, UploadFile, File, Request, HTTPException, Form, Cookie, Response, Body, Header, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, Response as BinResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
 from sqlmodel import select
 
+import encuestas
 import fechas
 import db
 import auth
@@ -748,6 +749,11 @@ PERMISOS_RUTAS = {
 
     # Responder un trámite y diseñar el formulario son permisos distintos:
     # quien edita el formulario elige el área receptora.
+    "/admin/encuesta":                      "encuestas",
+    "/admin/encuesta/disclaimer":           "encuestas",
+    "/admin/encuesta/borrar":               "encuestas",
+    "/admin/encuesta/duplicar":             "encuestas",
+
     "/admin/tramite-tipo":                  "tramites_formularios",
     "/admin/tramite-tipo/probar":           "tramites_formularios",
     "/admin/tramite-tipo/borrar":           "tramites_formularios",
@@ -1024,6 +1030,16 @@ def admin(request: Request):
         "beneficios": db.beneficios_del_sindicato(sid) if puede("beneficios") else [],
         "notificaciones": db.notificaciones_del_sindicato(sid, usuario_id=uid)
                           if puede("notificaciones") else [],
+        # Encuestas: la lista se recorta por alcance de seccional EN LA
+        # CONSULTA (N18) -- si el recorte viviera en la plantilla, las
+        # encuestas de las otras delegaciones viajarían igual en el HTML.
+        "encuestas": db.encuestas_del_sindicato(sid, alcance=db.alcance_seccional(uid))
+                     if puede("encuestas", "encuestas_resultados") else [],
+        "encuestas_modos": encuestas.MODOS,
+        "encuestas_cortes": {c: etiqueta for c, (etiqueta, _) in encuestas.CORTES.items()},
+        "encuestas_tipos": {t: etiqueta for t, (etiqueta, _) in encuestas.TIPOS_PREGUNTA.items()},
+        "encuestas_tipos_anonima": [t for t, _ in encuestas.tipos_para(encuestas.ANONIMA)],
+        "encuestas_umbral": db.umbral_encuestas(),
         "tipos_tramite": db.tipos_tramite_del_sindicato(sid)
                          if puede("tramites_formularios", "tramites_recibidos") else [],
         "tramites": db.tramites_del_sindicato(sid, usuario_id=uid)
@@ -2525,6 +2541,106 @@ def borrar_tramite_tipo(request: Request, id: int = Form(...)):
     if not ok:
         return RedirectResponse("/admin?error=tramitesenviados#tramites", status_code=303)
     return RedirectResponse("/admin#tramites", status_code=303)
+
+
+# ==================== Encuestas (SPRINT_ENCUESTAS.md, Fase 1) ====================
+# El constructor. Crear y editar borradores: publicar, comunicar y leer los
+# resultados son actos distintos y viven en fases posteriores.
+def _preguntas_del_formulario(preguntas_json: str, modo: str):
+    """(preguntas saneadas, mensaje de error). El saneo vive en encuestas.py,
+    sin base ni request, así que es el MISMO para el alta, la edición y los
+    tests -- mismo criterio que validaciones_tramite."""
+    import json
+    try:
+        crudas = json.loads(preguntas_json or "[]")
+        assert isinstance(crudas, list)
+    except Exception:
+        return [], "No se pudieron leer las preguntas."
+    limpias, errores = encuestas.preguntas_saneadas(modo, crudas)
+    return limpias, (errores[0] if errores else "")
+
+
+@app.post("/admin/encuesta")
+def abm_encuesta(
+    request: Request,
+    id: str = Form(""), titulo: str = Form(...), descripcion: str = Form(""),
+    modo: str = Form("nominal"), cortes: list[str] = Form(default=[]),
+    fecha_desde: str = Form(""), fecha_hasta: str = Form(""),
+    mostrar_resultados: str = Form(""), preguntas_json: str = Form("[]"),
+):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "encuestas")
+    uid = _uid_sesion(request)
+    if modo not in encuestas.MODOS:
+        modo = encuestas.NOMINAL
+    preguntas, error = _preguntas_del_formulario(preguntas_json, modo)
+    if error:
+        return RedirectResponse(f"/admin?error=encuesta&motivo={quote(error)}#encuestas",
+                                status_code=303)
+    if fecha_desde and fecha_hasta and fecha_hasta < fecha_desde:
+        return RedirectResponse(
+            "/admin?error=encuesta&motivo=" + quote("La fecha de cierre no puede ser "
+                                                    "anterior a la de apertura.") + "#encuestas",
+            status_code=303)
+    datos = {"titulo": titulo, "descripcion": descripcion, "modo": modo,
+             "cortes": cortes, "fecha_desde": fecha_desde, "fecha_hasta": fecha_hasta,
+             "mostrar_resultados": bool(mostrar_resultados)}
+    if id:
+        r = db.editar_encuesta(int(id), sid, datos, preguntas, usuario_id=uid)
+        if not r["ok"]:
+            return RedirectResponse(
+                f"/admin?error=encuesta&motivo={quote(r['error'])}#encuestas", status_code=303)
+    else:
+        # La seccional de quien la crea viaja con la encuesta: es lo que
+        # después deja que cada seccional vea las suyas (N18).
+        db.crear_encuesta(sid, uid, db.seccional_de_usuario(uid), datos, preguntas)
+    return RedirectResponse("/admin#encuestas", status_code=303)
+
+
+@app.get("/admin/encuesta/disclaimer")
+def encuesta_disclaimer(request: Request, modo: str = "nominal",
+                        cortes: list[str] = Query(default=[])):
+    """El texto que verá el afiliado, para la vista previa del constructor.
+
+    La pantalla NO arma este texto: se lo pide al servidor, que lo genera
+    con la misma función que usará el trabajador (encuestas.disclaimer).
+    Es el mismo criterio que evaluar_envio() en Trámites -- una sola
+    implementación --, y acá pesa más: el disclaimer es una promesa sobre
+    qué se guarda, y una copia en JS que se desincronice haría que la
+    pantalla prometa algo distinto de lo que el sistema cumple.
+    """
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "encuestas")
+    if modo not in encuestas.MODOS:
+        modo = encuestas.NOMINAL
+    return {"lineas": encuestas.disclaimer(modo, cortes, db.umbral_encuestas())}
+
+
+@app.post("/admin/encuesta/borrar")
+def borrar_encuesta(request: Request, id: int = Form(...)):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "encuestas")
+    r = db.borrar_encuesta(id, sid)
+    if not r["ok"]:
+        return RedirectResponse(f"/admin?error=encuesta&motivo={quote(r['error'])}#encuestas",
+                                status_code=303)
+    return RedirectResponse("/admin#encuestas", status_code=303)
+
+
+@app.post("/admin/encuesta/duplicar")
+def duplicar_encuesta(request: Request, id: int = Form(...)):
+    """Copia la estructura en un borrador nuevo (N23). Es la salida cuando
+    una encuesta con respuestas quedó mal, y la forma de repetir la misma
+    encuesta cada trimestre para comparar."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "encuestas")
+    uid = _uid_sesion(request)
+    nueva = db.duplicar_encuesta(id, sid, usuario_id=uid,
+                                 seccional_id=db.seccional_de_usuario(uid))
+    if not nueva:
+        return RedirectResponse("/admin?error=encuesta&motivo=" +
+                                quote("La encuesta no existe.") + "#encuestas", status_code=303)
+    return RedirectResponse("/admin#encuestas", status_code=303)
 
 
 @app.get("/admin/tramite/{tramite_id}")

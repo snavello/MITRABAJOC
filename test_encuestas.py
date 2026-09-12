@@ -291,3 +291,211 @@ def test_una_encuesta_nace_en_borrador_y_nominal():
 if __name__ == "__main__":
     import pytest, sys
     sys.exit(pytest.main([__file__, "-q"]))
+
+
+# ==================== Fase 1: el constructor ====================
+import json  # noqa: E402
+from urllib.parse import unquote  # noqa: E402
+
+import auth  # noqa: E402
+import main  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+
+cliente = TestClient(main.app)
+
+
+def _sindicato_con(modulos: list, slug: str) -> tuple:
+    """(sindicato_id, usuario_id) de un Super Admin de un sindicato nuevo."""
+    with db.get_session() as s:
+        sind = db.Sindicato(nombre=slug.upper(), slug=slug, modulos_habilitados=modulos)
+        s.add(sind); s.commit(); s.refresh(sind)
+        u = db.UsuarioSindicato(sindicato_id=sind.id, usuario=f"20{sind.id:09d}",
+                                nombre="Admin", clave_hash=auth.hashear_clave("x"),
+                                debe_cambiar_clave=False, es_super_admin=True)
+        s.add(u); s.commit(); s.refresh(u)
+        return sind.id, u.id
+
+
+def _sesion(sid: int, uid: int):
+    # clear() primero: el cookie jar conserva la cookie anterior y, al
+    # mandar las dos, el servidor se queda con la de la sesión vieja -- el
+    # test parecería estar mirando el sindicato nuevo y estaría mirando el
+    # anterior.
+    cliente.cookies.clear()
+    cliente.cookies.set("sesion_sindicato", auth.crear_sesion("sindicato", uid, sid))
+
+
+PREGUNTAS = [
+    {"etiqueta": "¿Conforme con la obra social?", "tipo_dato": "escala",
+     "escala_min": 1, "escala_max": 5, "etiqueta_min": "Nada", "etiqueta_max": "Mucho",
+     "ancho": "completo", "obligatorio": True},
+    {"etiqueta": "Ordená los reclamos", "tipo_dato": "ranking",
+     "opciones": "Salario, Obra social, Jornada", "ancho": "completo", "obligatorio": True},
+]
+
+
+def _alta(titulo="Clima laboral", modo="anonima", cortes=("seccional",), preguntas=None):
+    return cliente.post("/admin/encuesta", data={
+        "titulo": titulo, "descripcion": "Tres minutos", "modo": modo,
+        "cortes": list(cortes), "fecha_desde": "2026-10-01", "fecha_hasta": "2026-10-15",
+        "mostrar_resultados": "1",
+        "preguntas_json": json.dumps(preguntas if preguntas is not None else PREGUNTAS),
+    }, follow_redirects=False)
+
+
+def test_el_panel_aparece_solo_con_modulo_y_permiso():
+    sid, uid = _sindicato_con(["encuestas"], "con-encuestas")
+    _sesion(sid, uid)
+    html = cliente.get("/admin").text
+    assert 'id="panel-encuestas"' in html and 'data-panel="encuestas"' in html
+
+    sid2, uid2 = _sindicato_con(["noticias"], "sin-encuestas")
+    _sesion(sid2, uid2)
+    html = cliente.get("/admin").text
+    assert 'id="panel-encuestas"' not in html and 'data-panel="encuestas"' not in html
+
+
+def test_sin_el_modulo_el_backend_rechaza_aunque_se_arme_el_post_a_mano():
+    # Esconder la pestaña no es ningún control: el HTML se lee con Ver
+    # Código Fuente y el POST se arma con curl.
+    sid, uid = _sindicato_con(["noticias"], "sin-mod-post")
+    _sesion(sid, uid)
+    r = _alta()
+    assert r.status_code == 403, r.status_code
+
+
+def test_todas_las_rutas_de_encuestas_estan_clasificadas():
+    # El gateo es fail-closed: una ruta que nadie clasificó se rechaza sola.
+    # Este test evita el olvido al sumar rutas en las fases que siguen.
+    rutas = {r.path for r in main.app.routes
+             if getattr(r, "path", "").startswith("/admin/encuesta")}
+    sin_clasificar = rutas - set(main.PERMISOS_RUTAS)
+    assert not sin_clasificar, sin_clasificar
+    assert all(main.PERMISOS_RUTAS[r] in ("encuestas", "encuestas_resultados")
+               for r in rutas)
+
+
+def test_alta_guarda_preguntas_escala_y_ranking():
+    sid, uid = _sindicato_con(["encuestas"], "alta-ok")
+    _sesion(sid, uid)
+    assert _alta().status_code == 303
+    e = db.encuestas_del_sindicato(sid)[0]
+    assert e["modo"] == encuestas.ANONIMA and e["cortes"] == ["seccional"]
+    assert e["estado"] == encuestas.BORRADOR      # publicar es otro acto (Fase 3)
+    escala, ranking = e["preguntas"]
+    assert (escala["tipo_dato"], escala["escala_min"], escala["escala_max"]) == ("escala", 1, 5)
+    assert ranking["opciones"] == "Salario, Obra social, Jornada"
+
+
+def test_una_pregunta_mal_formada_no_se_guarda_y_dice_por_que():
+    sid, uid = _sindicato_con(["encuestas"], "alta-mala")
+    _sesion(sid, uid)
+    r = _alta(preguntas=[{"etiqueta": "Foto del recibo", "tipo_dato": "archivo"}])
+    assert "error=encuesta" in r.headers["location"]
+    assert "archivo" in unquote(r.headers["location"])
+    assert not db.encuestas_del_sindicato(sid)
+
+    r = _alta(preguntas=[{"etiqueta": "¿Cuál preferís?", "tipo_dato": "opcion_unica",
+                          "opciones": "Una sola"}])
+    assert "dos opciones" in unquote(r.headers["location"])
+    assert not db.encuestas_del_sindicato(sid)
+
+
+def test_el_disclaimer_de_la_vista_previa_lo_arma_el_servidor():
+    # Una copia del texto en JS que se desincronice haría que la pantalla
+    # prometa algo distinto de lo que el sistema cumple: por eso el
+    # constructor lo PIDE y no lo escribe.
+    sid, uid = _sindicato_con(["encuestas"], "disclaimer")
+    _sesion(sid, uid)
+    r = cliente.get("/admin/encuesta/disclaimer",
+                    params={"modo": "anonima", "cortes": ["seccional"]})
+    assert r.status_code == 200
+    assert r.json()["lineas"] == encuestas.disclaimer(
+        encuestas.ANONIMA, ["seccional"], db.umbral_encuestas())
+
+
+def test_con_respuestas_se_congela_la_estructura_y_se_permite_la_errata():
+    sid, uid = _sindicato_con(["encuestas"], "congelado")
+    _sesion(sid, uid)
+    _alta()
+    e = db.encuestas_del_sindicato(sid)[0]
+    with db.get_session() as s:
+        s.add(db.RespuestaEncuesta(encuesta_id=e["id"], pregunta_id=e["preguntas"][0]["id"],
+                                   valor_numero=4, dia="2026-10-02"))
+        s.commit()
+
+    # Quitar una pregunta: rechazado, y la encuesta queda intacta.
+    r = cliente.post("/admin/encuesta", data={
+        "id": e["id"], "titulo": "Clima laboral", "modo": "anonima",
+        "fecha_hasta": "2026-10-20", "preguntas_json": json.dumps(PREGUNTAS[:1])},
+        follow_redirects=False)
+    assert "error=encuesta" in r.headers["location"]
+    assert len(db.encuesta_por_id(e["id"])["preguntas"]) == 2
+
+    # Corregir la redacción: permitido, y queda registrado con fecha.
+    corregidas = [dict(p) for p in PREGUNTAS]
+    corregidas[0]["etiqueta"] = "¿Estás conforme con la obra social?"
+    r = cliente.post("/admin/encuesta", data={
+        "id": e["id"], "titulo": "Clima laboral", "modo": "anonima",
+        "fecha_hasta": "2026-10-25", "preguntas_json": json.dumps(corregidas)},
+        follow_redirects=False)
+    assert r.headers["location"] == "/admin#encuestas"
+    despues = db.encuesta_por_id(e["id"])
+    assert despues["preguntas"][0]["etiqueta"] == "¿Estás conforme con la obra social?"
+    assert despues["fecha_hasta"] == "2026-10-25"
+    evento = db.eventos_de_encuesta(e["id"])[0]
+    assert evento["evento"] == "edicion" and "Corrección de texto" in evento["detalle"]
+    assert evento["fecha"]
+
+
+def test_duplicar_guarda_el_linaje_y_numera_el_titulo():
+    sid, uid = _sindicato_con(["encuestas"], "duplicar")
+    _sesion(sid, uid)
+    _alta(titulo="Clima laboral")
+    original = db.encuestas_del_sindicato(sid)[0]
+    cliente.post("/admin/encuesta/duplicar", data={"id": original["id"]},
+                 follow_redirects=False)
+    copia = [e for e in db.encuestas_del_sindicato(sid) if e["id"] != original["id"]][0]
+    assert copia["titulo"] == "Clima laboral (2)"
+    assert copia["origen_id"] == original["id"]     # con esto se comparan las tomas
+    assert copia["estado"] == encuestas.BORRADOR
+    assert copia["fecha_desde"] == "" and copia["fecha_hasta"] == ""
+    assert len(copia["preguntas"]) == len(original["preguntas"])
+
+    # La copia de la copia sigue la numeración, no se llama "copia de copia".
+    cliente.post("/admin/encuesta/duplicar", data={"id": copia["id"]}, follow_redirects=False)
+    assert any(e["titulo"] == "Clima laboral (3)" for e in db.encuestas_del_sindicato(sid))
+
+
+def test_borrar_solo_borradores():
+    sid, uid = _sindicato_con(["encuestas"], "borrar")
+    _sesion(sid, uid)
+    _alta()
+    e = db.encuestas_del_sindicato(sid)[0]
+    r = cliente.post("/admin/encuesta/borrar", data={"id": e["id"]}, follow_redirects=False)
+    assert r.headers["location"] == "/admin#encuestas"
+    assert not db.encuestas_del_sindicato(sid)
+
+    # Una publicada no se borra: tiene padrón fijado y es un hecho del sindicato.
+    _alta(titulo="Publicada")
+    e = db.encuestas_del_sindicato(sid)[0]
+    with db.get_session() as s:
+        fila = s.get(db.Encuesta, e["id"]); fila.publicada = True; s.add(fila); s.commit()
+    r = cliente.post("/admin/encuesta/borrar", data={"id": e["id"]}, follow_redirects=False)
+    assert "error=encuesta" in r.headers["location"]
+    assert db.encuesta_por_id(e["id"]) is not None
+
+
+def test_una_encuesta_de_otro_sindicato_no_se_toca():
+    sid_a, uid_a = _sindicato_con(["encuestas"], "aislada-a")
+    _sesion(sid_a, uid_a)
+    _alta(titulo="De A")
+    ajena = db.encuestas_del_sindicato(sid_a)[0]
+
+    sid_b, uid_b = _sindicato_con(["encuestas"], "aislada-b")
+    _sesion(sid_b, uid_b)
+    assert not db.encuestas_del_sindicato(sid_b)
+    r = cliente.post("/admin/encuesta/borrar", data={"id": ajena["id"]}, follow_redirects=False)
+    assert "error=encuesta" in r.headers["location"]
+    assert db.encuesta_por_id(ajena["id"]) is not None
+    assert db.encuesta_por_id(ajena["id"], sid_b) is None

@@ -611,6 +611,57 @@
   .tvc-exp, .mt-exp, td code, .rep-detalle code { font-family:var(--fuente-num); font-variant-numeric:tabular-nums; }
   .rep-sub { font-family:var(--fuente-display); font-size:14px; letter-spacing:1.2px; text-transform:uppercase; color:var(--gris); }
   .msg { border-radius:10px; }
+  /* ---------- Encuestas (SPRINT_ENCUESTAS.md, N19) ----------
+     Trámites es "Expediente": lomo numerado, sellos, carátula. Encuestas es
+     lo opuesto a propósito, y la diferencia es de FORMA además de color --
+     con brillo bajo, al sol o para alguien con daltonismo, dos pantallas
+     iguales con distinto tono se confunden igual. Acá: tarjeta limpia,
+     barra de avance, una pregunta por bloque, y el cierre con el conteo de
+     participación en vez de un sello. El color sale del acento y el
+     secundario de la marca (Trámites usa los oscuros). */
+  .enc-marco { border:1px solid var(--linea); border-radius:16px; overflow:hidden;
+    background:#fff; box-shadow:0 6px 20px rgba(0,0,0,.07); max-width:420px; }
+  .enc-cab { background:linear-gradient(135deg, var(--marca-acento), var(--marca-secundario));
+    color:#fff; padding:16px 18px 14px; }
+  .enc-cab .tit { font-size:17px; font-weight:800; line-height:1.25; }
+  .enc-cab .baja { font-size:12.5px; opacity:.92; margin-top:4px; }
+  .enc-avance { height:5px; background:rgba(255,255,255,.28); border-radius:99px; margin-top:12px; }
+  .enc-avance > i { display:block; height:100%; width:18%; border-radius:99px; background:#fff; }
+  .enc-cuerpo { padding:14px 16px 18px; display:flex; flex-direction:column; gap:14px;
+    max-height:520px; overflow:auto; }
+  .enc-bloque { border-bottom:1px dashed var(--linea); padding-bottom:12px; }
+  .enc-bloque:last-child { border-bottom:0; }
+  .enc-preg { font-size:13.5px; font-weight:700; display:block; margin-bottom:7px; }
+  .enc-preg .ob { color:var(--marca-acento); }
+  .enc-opcion { display:flex; align-items:center; gap:7px; font-size:13px; padding:3px 0; }
+  .enc-input { width:100%; padding:7px 9px; border:1px solid var(--linea); border-radius:8px;
+    font-size:13px; font-family:inherit; }
+  .enc-escala { display:flex; gap:6px; align-items:stretch; }
+  .enc-escala button { flex:1; padding:9px 0; border:1px solid var(--linea); background:#fff;
+    border-radius:9px; font-weight:700; font-size:13px; cursor:default; color:#444; }
+  .enc-escala-pies { display:flex; justify-content:space-between; font-size:11px;
+    color:var(--gris); margin-top:4px; }
+  .enc-rank { display:flex; align-items:center; gap:8px; font-size:13px; padding:6px 8px;
+    border:1px solid var(--linea); border-radius:8px; margin-bottom:5px; background:#fcfcfc; }
+  .enc-rank .n { width:19px; height:19px; border-radius:50%; background:var(--marca-secundario);
+    color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center;
+    justify-content:center; flex:0 0 auto; }
+  .enc-rank .mano { margin-left:auto; color:var(--gris); opacity:.5; }
+  .enc-sep { border:0; border-top:1px solid var(--linea); margin:2px 0; }
+  .enc-pie { background:#fafafa; border-top:1px solid var(--linea); padding:11px 16px;
+    font-size:11.5px; color:var(--gris); }
+  .enc-disc { background:#f4f8f7; border-left:3px solid var(--marca-secundario);
+    padding:9px 11px; border-radius:0 8px 8px 0; font-size:11.5px; color:#3a4a48;
+    line-height:1.45; }
+  .enc-disc p { margin:0 0 5px; } .enc-disc p:last-child { margin:0; }
+  .enc-congelada { background:#fdf3e7; border:1px solid #e8c89a; color:#8a5a1a;
+    padding:10px 12px; border-radius:9px; font-size:12.5px; margin-bottom:12px; }
+  .enc-chip { display:inline-block; padding:2px 9px; border-radius:99px; font-size:11px;
+    font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+  .enc-chip.borrador { background:#eee; color:#777; }
+  .enc-chip.programada { background:#e7effb; color:#2a5aa0; }
+  .enc-chip.abierta { background:#e6f5ec; color:#1c7a45; }
+  .enc-chip.cerrada { background:#f3e9e7; color:#8a4033; }
 </style>
 </head>
 <body>
@@ -661,6 +712,7 @@
   {% if 'noticias' in modulos and 'noticias' in permisos %}<button class="tab-btn" data-panel="noticias"><svg viewBox="0 0 24 24"><use href="#ic-noticias"/></svg><span>Noticias</span></button>{% endif %}
   {% if 'beneficios' in modulos and 'beneficios' in permisos %}<button class="tab-btn" data-panel="beneficios"><svg viewBox="0 0 24 24"><use href="#ic-beneficios"/></svg><span>Beneficios</span></button>{% endif %}
   {% if 'notificaciones' in modulos and 'notificaciones' in permisos %}<button class="tab-btn" data-panel="notificaciones"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg><span>Notificaciones</span></button>{% endif %}
+  {% if 'encuestas' in modulos and ('encuestas' in permisos or 'encuestas_resultados' in permisos) %}<button class="tab-btn" data-panel="encuestas"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg><span>Encuestas</span></button>{% endif %}
   {% if 'tramites' in modulos and ('tramites_recibidos' in permisos or 'tramites_formularios' in permisos) %}<button class="tab-btn" data-panel="tramites" style="position:relative;"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg><span>Trámites</span>{% if tramites_nuevos %}<span class="badge-noleidas" id="badge-tramites-nuevos-tab">{{ tramites_nuevos }}</span>{% endif %}</button>{% endif %}
   {% if 'empleadores' in modulos and ('emp_empresas' in permisos or 'emp_notificaciones' in permisos or 'emp_tramites_recibidos' in permisos or 'emp_tramites_formularios' in permisos) %}<button class="tab-btn" data-panel="empleadores" style="position:relative;"><svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg><span>Empleadores</span>{% if tramites_empresa_nuevos %}<span class="badge-noleidas" id="badge-tramites-empresa-nuevos-tab">{{ tramites_empresa_nuevos }}</span>{% endif %}</button>{% endif %}
   {% if 'convenio' in modulos and 'convenio' in permisos %}<button class="tab-btn" data-panel="convenio"><svg viewBox="0 0 24 24"><use href="#ic-conceptos"/></svg><span>Convenio</span></button>{% endif %}
@@ -1573,6 +1625,137 @@
       </div>
     </div>
   </div>
+  </div>
+  {% endif %}
+  {% endif %}
+
+  {% if 'encuestas' in modulos %}
+  {% if 'encuestas' in permisos or 'encuestas_resultados' in permisos %}
+  <div class="panel" id="panel-encuestas">
+  <!-- ============ ENCUESTAS (SPRINT_ENCUESTAS.md) ============ -->
+  {% if request.query_params.get('error') == 'encuesta' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">{{ request.query_params.get('motivo') }}</div>
+  {% endif %}
+
+  {% if 'encuestas' in permisos %}
+  <h2 id="enc-h2">Nueva encuesta</h2>
+  <div class="card">
+    <form method="post" action="/admin/encuesta" id="form-encuesta" onsubmit="return prepararEnvioEncuesta()">
+      <input type="hidden" name="id" id="enc-id">
+      <input type="hidden" name="preguntas_json" id="enc-preguntas-json">
+
+      <div class="grid2">
+        <div class="campo"><label>Título *</label>
+          <input name="titulo" id="enc-titulo" required maxlength="160"
+                 placeholder="Ej: Clima laboral 2026" oninput="renderVistaPreviaEncuesta()"></div>
+        <div class="campo"><label>¿Anónima o nominal? *</label>
+          <select name="modo" id="enc-modo" onchange="cambioModoEncuesta()">
+            {% for valor, etiqueta in encuestas_modos.items() %}
+            <option value="{{ valor }}">{{ etiqueta }}</option>
+            {% endfor %}
+          </select>
+          <span class="muted" style="font-size:11.5px;">En una anónima, la respuesta no se puede vincular con la persona: solo queda registrado que participó.</span>
+        </div>
+      </div>
+
+      <div class="campo" style="margin-top:10px;"><label>Descripción</label>
+        <input name="descripcion" id="enc-descripcion" maxlength="400"
+               placeholder="Una línea que explique de qué se trata y cuánto lleva"
+               oninput="renderVistaPreviaEncuesta()"></div>
+
+      <div id="enc-cortes-caja" class="oculto" style="margin-top:14px;">
+        <h3 class="ct-secc">¿Qué se guarda junto a cada respuesta?</h3>
+        <p class="muted" style="font-size:11.5px; margin:0 0 8px;">
+          Sin esto, los resultados son solo totales generales. Lo que tildes acá es lo único
+          que se guarda —nunca la identidad— y es lo que después permite filtrar el tablero.
+          Los grupos con menos de <b>{{ encuestas_umbral }}</b> respuestas no se muestran,
+          para que nadie pueda deducir quién respondió qué. El texto que ve el afiliado
+          se arma solo con lo que tildes.</p>
+        <div class="check-seccionales">
+          {% for valor, etiqueta in encuestas_cortes.items() %}
+          <label class="chk-seccional"><input type="checkbox" name="cortes" value="{{ valor }}"
+                 class="enc-corte" onchange="renderVistaPreviaEncuesta()"> {{ etiqueta }}</label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-top:14px;">
+        <div class="campo"><label>Abre el</label>
+          <input type="date" name="fecha_desde" id="enc-desde"></div>
+        <div class="campo"><label>Cierra el</label>
+          <input type="date" name="fecha_hasta" id="enc-hasta">
+          <span class="muted" style="font-size:11.5px;">Cierra a las 23:59 de ese día, hora de Buenos Aires.</span></div>
+      </div>
+
+      <div style="margin-top:10px;">
+        <label class="chk-seccional" style="width:fit-content;">
+          <input type="checkbox" name="mostrar_resultados" id="enc-mostrar" value="1">
+          Al cerrarse, mostrarle los resultados al afiliado
+        </label>
+        <p class="muted" style="font-size:11.5px; margin:4px 0 0;">Solo los totales generales, nunca los cortes por seccional o empresa: es por ahí por donde se identifica gente.</p>
+      </div>
+
+      <div id="enc-congelada" class="enc-congelada oculto" style="margin-top:14px;"></div>
+
+      <div class="ct-layout">
+        <div class="ct-izq">
+          <h3 class="ct-secc">Preguntas</h3>
+          <div class="ct-ficha" id="enc-preguntas-lista"></div>
+          <button type="button" class="sec mini" style="margin-top:8px;" id="enc-btn-agregar"
+                  onclick="agregarPreguntaEncuesta()">+ Agregar pregunta</button>
+          <div style="margin-top:18px;">
+            <button type="submit" id="enc-submit">Crear encuesta</button>
+            <button type="button" class="sec oculto" id="enc-cancel" onclick="cancelarEncuesta()">Cancelar edición</button>
+          </div>
+        </div>
+        <div class="ct-der">
+          <h3 class="ct-secc">Lo que ve el afiliado</h3>
+          <div class="enc-marco">
+            <div class="enc-cab">
+              <div class="tit" id="enc-prev-titulo">Encuesta</div>
+              <div class="baja" id="enc-prev-baja"></div>
+              <div class="enc-avance"><i id="enc-prev-avance"></i></div>
+            </div>
+            <div class="enc-cuerpo" id="enc-vista-previa"></div>
+            <div class="enc-pie" id="enc-prev-pie">Respondieron 0 de 0</div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  <h2>Encuestas ({{ encuestas|length }})</h2>
+  <table>
+    <tr><th>Título</th><th>Modo</th><th>Estado</th><th>Preguntas</th><th>Ventana</th><th>Respuestas</th><th></th></tr>
+    {% for e in encuestas %}
+    <tr>
+      <td>{{ e.titulo }}{% if e.origen_id %}<br><small class="muted">toma nueva de #{{ e.origen_id }}</small>{% endif %}</td>
+      <td>{{ encuestas_modos.get(e.modo, e.modo) }}</td>
+      <td><span class="enc-chip {{ e.estado }}">{{ e.estado }}</span></td>
+      <td class="muted">{{ e.preguntas|length }}</td>
+      <td class="muted">{% if e.fecha_desde %}{{ e.fecha_desde }} → {{ e.fecha_hasta }}{% else %}sin fechas{% endif %}</td>
+      <td class="muted">{{ e.respuestas }}{% if e.cantidad_destinatarios %} de {{ e.cantidad_destinatarios }}{% endif %}</td>
+      <td style="white-space:nowrap; text-align:right;">
+        {% if 'encuestas' in permisos %}
+        <button type="button" class="mini" onclick='editarEncuesta({{ e | tojson }})'>Editar</button>
+        <form method="post" action="/admin/encuesta/duplicar" style="display:inline;">
+          <input type="hidden" name="id" value="{{ e.id }}">
+          <button class="sec mini" type="submit" title="Copia la estructura en un borrador nuevo, para relanzarla y poder comparar las dos tomas">Duplicar</button>
+        </form>
+        {% if not e.publicada %}
+        <form method="post" action="/admin/encuesta/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar este borrador?')">
+          <input type="hidden" name="id" value="{{ e.id }}">
+          <button class="peligro mini" type="submit">Borrar</button>
+        </form>
+        {% endif %}
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="muted">Todavía no creaste ninguna encuesta.</td></tr>
+    {% endfor %}
+  </table>
   </div>
   {% endif %}
   {% endif %}
@@ -4525,5 +4708,285 @@ async function verFragmentos(docId) {
 })();
 {% endif %}
 </script>
+{% if 'encuestas' in modulos and 'encuestas' in permisos %}
+<script>
+/* ===================== Encuestas: el constructor =====================
+   Mismo esqueleto que el de Trámites (array en memoria, render completo,
+   drag nativo sin librerías), con dos diferencias que importan:
+
+   - La vista previa NO escribe el disclaimer: se lo PIDE al servidor
+     (/admin/encuesta/disclaimer). Es el mismo criterio que evaluar_envio()
+     en Trámites -- una sola implementación. Acá pesa más todavía: el
+     disclaimer es una promesa sobre qué se guarda, y una copia en JS que se
+     desincronice haría que la pantalla prometa algo distinto de lo que el
+     sistema cumple.
+   - Con respuestas cargadas el formulario se CONGELA (N5): queda editable
+     el texto, nada más. Lo vuelve a verificar el servidor.
+   =================================================================== */
+const TIPOS_ENC = {{ encuestas_tipos | tojson }};
+const TIPOS_ENC_ANONIMA = new Set({{ encuestas_tipos_anonima | tojson }});
+const TIPOS_ENC_OPCIONES = new Set(['seleccion', 'opcion_unica', 'multiple', 'ranking']);
+const UMBRAL_ENC = {{ encuestas_umbral }};
+
+let preguntasEncuestaActuales = [];
+let encuestaCongelada = false;
+
+function agregarPreguntaEncuesta() {
+  if (encuestaCongelada) return;
+  preguntasEncuestaActuales.push({etiqueta:'', tipo_dato:'opcion_unica', opciones:'',
+    escala_min:1, escala_max:5, etiqueta_min:'', etiqueta_max:'',
+    ancho:'completo', obligatorio:true});
+  renderPreguntasEncuesta();
+}
+function actualizarPreguntaEncuesta(i, campo, valor) {
+  preguntasEncuestaActuales[i][campo] = valor;
+  if (campo === 'tipo_dato' || campo === 'obligatorio') renderPreguntasEncuesta();
+  else renderVistaPreviaEncuesta();
+}
+function moverPreguntaEncuesta(i, delta) {
+  if (encuestaCongelada) return;
+  const j = i + delta;
+  if (j < 0 || j >= preguntasEncuestaActuales.length) return;
+  [preguntasEncuestaActuales[i], preguntasEncuestaActuales[j]] =
+    [preguntasEncuestaActuales[j], preguntasEncuestaActuales[i]];
+  renderPreguntasEncuesta();
+}
+function quitarPreguntaEncuesta(i) {
+  if (encuestaCongelada) return;
+  preguntasEncuestaActuales.splice(i, 1);
+  renderPreguntasEncuesta();
+}
+
+let dragPregEncOrigen = null;
+function dragPregEncStart(ev, i) {
+  if (encuestaCongelada) { ev.preventDefault(); return; }
+  dragPregEncOrigen = i;
+  ev.currentTarget.classList.add('arrastrando');
+  ev.dataTransfer.effectAllowed = 'move';
+}
+function dragPregEncOver(ev, i) {
+  if (encuestaCongelada) return;
+  ev.preventDefault();
+  document.querySelectorAll('#enc-preguntas-lista .campo-tramite-fila.sobre-drop')
+    .forEach(el => el.classList.remove('sobre-drop'));
+  if (i !== dragPregEncOrigen) ev.currentTarget.classList.add('sobre-drop');
+}
+function dragPregEncDrop(ev, i) {
+  ev.preventDefault();
+  if (encuestaCongelada || dragPregEncOrigen === null || i === dragPregEncOrigen) return;
+  const [movida] = preguntasEncuestaActuales.splice(dragPregEncOrigen, 1);
+  preguntasEncuestaActuales.splice(i, 0, movida);
+  dragPregEncOrigen = null;
+  renderPreguntasEncuesta();
+}
+function dragPregEncEnd() {
+  dragPregEncOrigen = null;
+  document.querySelectorAll('#enc-preguntas-lista .arrastrando, #enc-preguntas-lista .sobre-drop')
+    .forEach(el => el.classList.remove('arrastrando', 'sobre-drop'));
+}
+
+function renderPreguntasEncuesta() {
+  const cont = document.getElementById('enc-preguntas-lista');
+  if (!cont) return;
+  const modo = document.getElementById('enc-modo').value;
+  const dis = encuestaCongelada ? 'disabled' : '';
+  if (!preguntasEncuestaActuales.length) {
+    cont.innerHTML = '<p class="muted" style="font-size:12px;">Todavía no agregaste ninguna pregunta.</p>';
+    renderVistaPreviaEncuesta();
+    return;
+  }
+  cont.innerHTML = preguntasEncuestaActuales.map((p, i) => {
+    const tipos = Object.entries(TIPOS_ENC)
+      .filter(([v]) => modo !== 'anonima' || TIPOS_ENC_ANONIMA.has(v))
+      .map(([v, l]) => `<option value="${v}" ${p.tipo_dato===v?'selected':''}>${l}</option>`).join('');
+    let extra = '';
+    if (TIPOS_ENC_OPCIONES.has(p.tipo_dato)) {
+      extra = `<input class="ct-extra" placeholder="Opciones separadas por coma"
+        value="${escHtml(p.opciones)}" oninput="actualizarPreguntaEncuesta(${i},'opciones',this.value)">`;
+    } else if (p.tipo_dato === 'escala') {
+      extra = `<input class="ct-num" type="number" value="${p.escala_min ?? 1}" ${dis}
+          title="Desde" oninput="actualizarPreguntaEncuesta(${i},'escala_min',this.value)">
+        <input class="ct-num" type="number" value="${p.escala_max ?? 5}" ${dis}
+          title="Hasta" oninput="actualizarPreguntaEncuesta(${i},'escala_max',this.value)">
+        <input class="ct-extra" placeholder="Texto del extremo bajo" value="${escHtml(p.etiqueta_min)}"
+          oninput="actualizarPreguntaEncuesta(${i},'etiqueta_min',this.value)">
+        <input class="ct-extra" placeholder="Texto del extremo alto" value="${escHtml(p.etiqueta_max)}"
+          oninput="actualizarPreguntaEncuesta(${i},'etiqueta_max',this.value)">`;
+    }
+    const esSep = p.tipo_dato === 'separador';
+    return `
+    <div class="campo-tramite-fila" draggable="${!encuestaCongelada}" data-idx="${i}"
+         ondragstart="dragPregEncStart(event, ${i})" ondragover="dragPregEncOver(event, ${i})"
+         ondrop="dragPregEncDrop(event, ${i})" ondragend="dragPregEncEnd(event)">
+      <span class="ct-orden" title="${encuestaCongelada ? 'Congelada: ya tiene respuestas' : 'Arrastrá para reordenar'}">${String(i+1).padStart(2,'0')}</span>
+      <input class="ct-etiqueta" placeholder="${esSep ? 'Título del bloque (opcional)' : 'La pregunta, tal cual la va a leer el afiliado'}"
+             value="${escHtml(p.etiqueta)}" oninput="actualizarPreguntaEncuesta(${i},'etiqueta',this.value)">
+      <select class="ct-tipo" ${dis} onchange="actualizarPreguntaEncuesta(${i},'tipo_dato',this.value)">${tipos}</select>
+      ${extra}
+      <select class="ct-ancho" ${esSep||encuestaCongelada?'disabled':''} onchange="actualizarPreguntaEncuesta(${i},'ancho',this.value)" title="Ancho">
+        <option value="completo" ${p.ancho==='completo'?'selected':''}>Ancho completo</option>
+        <option value="mitad" ${p.ancho==='mitad'?'selected':''}>Mitad</option>
+        <option value="tercio" ${p.ancho==='tercio'?'selected':''}>Un tercio</option>
+      </select>
+      <label style="display:flex; align-items:center; gap:3px; white-space:nowrap;" ${esSep?'class="oculto"':''}>
+        <input type="checkbox" ${p.obligatorio?'checked':''} ${esSep||encuestaCongelada?'disabled':''}
+               onchange="actualizarPreguntaEncuesta(${i},'obligatorio',this.checked)"> Oblig.
+      </label>
+      <button type="button" class="sec mini" ${i===0||encuestaCongelada?'disabled':''} onclick="moverPreguntaEncuesta(${i},-1)" title="Subir">↑</button>
+      <button type="button" class="sec mini" ${i===preguntasEncuestaActuales.length-1||encuestaCongelada?'disabled':''} onclick="moverPreguntaEncuesta(${i},1)" title="Bajar">↓</button>
+      <button type="button" class="peligro mini" ${encuestaCongelada?'disabled':''} onclick="quitarPreguntaEncuesta(${i})" title="Quitar">✕</button>
+    </div>`;
+  }).join('');
+  renderVistaPreviaEncuesta();
+}
+
+/* ---------- Vista del afiliado ---------- */
+let tiempoDisclaimer = null;
+function renderVistaPreviaEncuesta() {
+  const cont = document.getElementById('enc-vista-previa');
+  if (!cont) return;
+  document.getElementById('enc-prev-titulo').textContent =
+    document.getElementById('enc-titulo').value.trim() || 'Encuesta';
+  document.getElementById('enc-prev-baja').textContent =
+    document.getElementById('enc-descripcion').value.trim();
+  const conRespuesta = preguntasEncuestaActuales.filter(p => p.tipo_dato !== 'separador').length;
+  document.getElementById('enc-prev-avance').style.width =
+    (conRespuesta ? Math.min(100, 100 / Math.max(conRespuesta, 1)) : 8) + '%';
+  document.getElementById('enc-prev-pie').textContent =
+    conRespuesta ? `${conRespuesta} pregunta${conRespuesta === 1 ? '' : 's'} · respondés una sola vez` : '';
+  const bloques = preguntasEncuestaActuales.map(htmlPreguntaPreview).join('');
+  cont.innerHTML = '<div class="enc-disc" id="enc-prev-disc">…</div>' +
+    (bloques || '<p class="muted" style="font-size:12px;">Agregá preguntas para ver la vista previa.</p>');
+  clearTimeout(tiempoDisclaimer);
+  tiempoDisclaimer = setTimeout(pedirDisclaimer, 250);
+}
+function pedirDisclaimer() {
+  const modo = document.getElementById('enc-modo').value;
+  const cortes = [...document.querySelectorAll('.enc-corte:checked')].map(c => c.value);
+  const q = new URLSearchParams({modo}); cortes.forEach(c => q.append('cortes', c));
+  fetch('/admin/encuesta/disclaimer?' + q.toString())
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(d => {
+      const caja = document.getElementById('enc-prev-disc');
+      if (caja) caja.innerHTML = d.lineas.map(l => `<p>${escHtml(l)}</p>`).join('');
+    })
+    .catch(() => {});
+}
+function htmlPreguntaPreview(p) {
+  if (p.tipo_dato === 'separador') {
+    return `<div class="enc-bloque"><hr class="enc-sep">${p.etiqueta ? `<b style="font-size:12.5px;">${escHtml(p.etiqueta)}</b>` : ''}</div>`;
+  }
+  const et = `<span class="enc-preg">${escHtml(p.etiqueta) || '(sin texto)'}${p.obligatorio ? ' <span class="ob">*</span>' : ''}</span>`;
+  const opciones = (p.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
+  let cuerpo;
+  if (p.tipo_dato === 'escala') {
+    const min = parseInt(p.escala_min ?? 1, 10), max = parseInt(p.escala_max ?? 5, 10);
+    const botones = [];
+    for (let n = min; n <= max && botones.length < 12; n++) botones.push(`<button type="button">${n}</button>`);
+    cuerpo = `<div class="enc-escala">${botones.join('')}</div>
+      <div class="enc-escala-pies"><span>${escHtml(p.etiqueta_min)}</span><span>${escHtml(p.etiqueta_max)}</span></div>`;
+  } else if (p.tipo_dato === 'ranking') {
+    cuerpo = (opciones.length ? opciones : ['(sin opciones cargadas)']).map((o, n) =>
+      `<div class="enc-rank"><span class="n">${n+1}</span> ${escHtml(o)} <span class="mano">⠿</span></div>`).join('');
+  } else if (p.tipo_dato === 'opcion_unica' || p.tipo_dato === 'multiple') {
+    const tipo = p.tipo_dato === 'opcion_unica' ? 'radio' : 'checkbox';
+    cuerpo = (opciones.length ? opciones : ['(sin opciones cargadas)']).map(o =>
+      `<label class="enc-opcion"><input type="${tipo}" disabled> ${escHtml(o)}</label>`).join('');
+  } else if (p.tipo_dato === 'seleccion') {
+    cuerpo = `<select class="enc-input" disabled><option>${opciones.length ? 'Elegí una opción' : '(sin opciones cargadas)'}</option></select>`;
+  } else if (p.tipo_dato === 'booleano') {
+    cuerpo = `<label class="enc-opcion"><input type="radio" disabled> Sí</label>
+              <label class="enc-opcion"><input type="radio" disabled> No</label>`;
+  } else if (p.tipo_dato === 'fecha') {
+    cuerpo = `<input type="date" class="enc-input" disabled>`;
+  } else if (p.tipo_dato === 'numero') {
+    cuerpo = `<input type="number" class="enc-input" placeholder="Un número" disabled>`;
+  } else if (p.tipo_dato === 'archivo') {
+    cuerpo = `<span class="muted" style="font-size:12px;">📎 Adjuntar archivo</span>`;
+  } else {
+    cuerpo = `<input type="text" class="enc-input" placeholder="Tu respuesta" disabled>`;
+  }
+  return `<div class="enc-bloque">${et}${cuerpo}</div>`;
+}
+
+/* ---------- Modo, edición y envío ---------- */
+function cambioModoEncuesta() {
+  const anonima = document.getElementById('enc-modo').value === 'anonima';
+  document.getElementById('enc-cortes-caja').classList.toggle('oculto', !anonima);
+  if (anonima) {
+    // Un archivo adjunto lleva metadatos (modelo de teléfono, a veces GPS;
+    // un PDF lleva autor): en una anónima ese tipo no existe (N4b).
+    preguntasEncuestaActuales.forEach(p => {
+      if (!TIPOS_ENC_ANONIMA.has(p.tipo_dato)) p.tipo_dato = 'texto';
+    });
+  }
+  renderPreguntasEncuesta();
+}
+function editarEncuesta(e) {
+  document.getElementById('enc-id').value = e.id;
+  document.getElementById('enc-titulo').value = e.titulo || '';
+  document.getElementById('enc-descripcion').value = e.descripcion || '';
+  document.getElementById('enc-modo').value = e.modo;
+  document.getElementById('enc-desde').value = e.fecha_desde || '';
+  document.getElementById('enc-hasta').value = e.fecha_hasta || '';
+  document.getElementById('enc-mostrar').checked = !!e.mostrar_resultados;
+  document.querySelectorAll('.enc-corte').forEach(c => { c.checked = (e.cortes || []).includes(c.value); });
+  preguntasEncuestaActuales = (e.preguntas || []).map(p => ({
+    etiqueta: p.etiqueta, tipo_dato: p.tipo_dato, opciones: p.opciones || '',
+    escala_min: p.escala_min, escala_max: p.escala_max,
+    etiqueta_min: p.etiqueta_min || '', etiqueta_max: p.etiqueta_max || '',
+    ancho: p.ancho || 'completo', obligatorio: !!p.obligatorio,
+  }));
+  encuestaCongelada = (e.respuestas || 0) > 0;
+  const aviso = document.getElementById('enc-congelada');
+  aviso.classList.toggle('oculto', !encuestaCongelada);
+  if (encuestaCongelada) {
+    aviso.innerHTML = `<b>Esta encuesta ya tiene ${e.respuestas} respuesta${e.respuestas === 1 ? '' : 's'}.</b>
+      Solo se puede corregir el texto de las preguntas y de las opciones —una errata, no el sentido—,
+      el título y la fecha de cierre. Cada corrección queda registrada con tu nombre y la fecha.
+      Si necesitás cambiarla de verdad, duplicala y lanzá otra ronda.`;
+  }
+  document.getElementById('enc-modo').disabled = encuestaCongelada;
+  document.querySelectorAll('.enc-corte').forEach(c => { c.disabled = encuestaCongelada; });
+  document.getElementById('enc-btn-agregar').disabled = encuestaCongelada;
+  document.getElementById('enc-h2').textContent = 'Editar encuesta';
+  document.getElementById('enc-submit').textContent = 'Guardar cambios';
+  document.getElementById('enc-cancel').classList.remove('oculto');
+  document.getElementById('enc-cortes-caja').classList.toggle('oculto', e.modo !== 'anonima');
+  renderPreguntasEncuesta();
+  document.getElementById('form-encuesta').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function cancelarEncuesta() {
+  document.getElementById('form-encuesta').reset();
+  document.getElementById('enc-id').value = '';
+  preguntasEncuestaActuales = [];
+  encuestaCongelada = false;
+  document.getElementById('enc-congelada').classList.add('oculto');
+  document.getElementById('enc-modo').disabled = false;
+  document.querySelectorAll('.enc-corte').forEach(c => { c.disabled = false; c.checked = false; });
+  document.getElementById('enc-btn-agregar').disabled = false;
+  document.getElementById('enc-h2').textContent = 'Nueva encuesta';
+  document.getElementById('enc-submit').textContent = 'Crear encuesta';
+  document.getElementById('enc-cancel').classList.add('oculto');
+  document.getElementById('enc-cortes-caja').classList.add('oculto');
+  renderPreguntasEncuesta();
+}
+function prepararEnvioEncuesta() {
+  const conRespuesta = preguntasEncuestaActuales.filter(p => p.tipo_dato !== 'separador');
+  if (!conRespuesta.length) {
+    alert('La encuesta necesita al menos una pregunta que se pueda responder.');
+    return false;
+  }
+  const sinTexto = preguntasEncuestaActuales.findIndex(p => p.tipo_dato !== 'separador' && !p.etiqueta.trim());
+  if (sinTexto >= 0) {
+    alert(`La pregunta ${sinTexto + 1} no tiene texto.`);
+    return false;
+  }
+  document.getElementById('enc-preguntas-json').value = JSON.stringify(preguntasEncuestaActuales);
+  return true;
+}
+document.addEventListener('DOMContentLoaded', renderPreguntasEncuesta);
+</script>
+{% endif %}
 </body>
 </html>

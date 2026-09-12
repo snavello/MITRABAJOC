@@ -192,3 +192,129 @@ def _enumerar(items: list) -> str:
     if len(items) == 1:
         return items[0]
     return ", ".join(items[:-1]) + " y " + items[-1]
+
+
+# --- Saneo de las preguntas ---------------------------------------------
+ANCHOS = ("completo", "mitad", "tercio")
+MAX_OPCIONES = 20
+MAX_PUNTOS_ESCALA = 10
+
+
+def opciones_de(texto: str) -> list:
+    """"a, b, c" -> ["a", "b", "c"], sin vacías ni repetidas.
+
+    Mismo formato que CampoTramite.opciones (separadas por coma) a
+    propósito: el constructor es el mismo y el admin ya lo conoce.
+    """
+    vistas, salida = set(), []
+    for parte in (texto or "").split(","):
+        o = parte.strip()
+        if o and o.lower() not in vistas:
+            vistas.add(o.lower())
+            salida.append(o)
+    return salida
+
+
+def preguntas_saneadas(modo: str, preguntas) -> tuple:
+    """(preguntas limpias, errores). Una pregunta mal formada NO se guarda.
+
+    Mismo criterio que `validaciones_tramite.validaciones_saneadas`: el
+    saneo vive acá, sin base y sin request, y lo usan por igual el alta, la
+    edición y los tests. Devolver los errores en vez de tirar una excepción
+    permite mostrarlos todos juntos y no de a uno.
+    """
+    ofrecibles = {t for t, _ in tipos_para(modo)}
+    limpias, errores = [], []
+
+    for i, cruda in enumerate(preguntas or [], start=1):
+        p = dict(cruda or {})
+        tipo = str(p.get("tipo_dato") or "").strip()
+        if tipo not in ofrecibles:
+            errores.append(f"Pregunta {i}: el tipo «{tipo or 'vacío'}» no existe"
+                           + (" en una encuesta anónima." if modo == ANONIMA else "."))
+            continue
+
+        etiqueta = str(p.get("etiqueta") or "").strip()
+        if not etiqueta and tipo not in TIPOS_SIN_RESPUESTA:
+            errores.append(f"Pregunta {i}: falta el texto de la pregunta.")
+            continue
+
+        limpia = {
+            "etiqueta": etiqueta,
+            "tipo_dato": tipo,
+            "opciones": "",
+            "escala_min": None,
+            "escala_max": None,
+            "etiqueta_min": str(p.get("etiqueta_min") or "").strip(),
+            "etiqueta_max": str(p.get("etiqueta_max") or "").strip(),
+            "ancho": p.get("ancho") if p.get("ancho") in ANCHOS else "completo",
+            "obligatorio": bool(p.get("obligatorio", True)),
+        }
+
+        if tipo in TIPOS_SIN_RESPUESTA:
+            # Un separador no se responde: ni ocupa media pantalla ni puede
+            # ser obligatorio.
+            limpia["ancho"] = "completo"
+            limpia["obligatorio"] = False
+
+        if tipo in TIPOS_CON_OPCIONES:
+            opciones = opciones_de(p.get("opciones", ""))
+            if len(opciones) < 2:
+                errores.append(f"Pregunta {i}: hacen falta al menos dos opciones distintas.")
+                continue
+            if len(opciones) > MAX_OPCIONES:
+                errores.append(f"Pregunta {i}: {len(opciones)} opciones es demasiado "
+                               f"(máximo {MAX_OPCIONES}); nadie contesta eso en un celular.")
+                continue
+            limpia["opciones"] = ", ".join(opciones)
+
+        if tipo == "escala":
+            minimo = _entero(p.get("escala_min"), ESCALA_MIN_DEFAULT)
+            maximo = _entero(p.get("escala_max"), ESCALA_MAX_DEFAULT)
+            if maximo <= minimo:
+                errores.append(f"Pregunta {i}: el máximo de la escala tiene que ser "
+                               "mayor que el mínimo.")
+                continue
+            if maximo - minimo + 1 > MAX_PUNTOS_ESCALA:
+                errores.append(f"Pregunta {i}: una escala de {maximo - minimo + 1} puntos "
+                               f"no entra en un celular (máximo {MAX_PUNTOS_ESCALA}).")
+                continue
+            limpia["escala_min"], limpia["escala_max"] = minimo, maximo
+
+        limpias.append(limpia)
+
+    if not limpias and not errores:
+        errores.append("La encuesta no tiene ninguna pregunta.")
+    if limpias and all(p["tipo_dato"] in TIPOS_SIN_RESPUESTA for p in limpias):
+        errores.append("La encuesta solo tiene separadores: no hay nada para responder.")
+    return limpias, errores
+
+
+def _entero(valor, por_defecto: int) -> int:
+    try:
+        return int(str(valor).strip())
+    except (TypeError, ValueError):
+        return por_defecto
+
+
+def cambio_estructural(antes: list, despues: list) -> bool:
+    """Si entre dos versiones de las preguntas cambió algo MÁS que el texto.
+
+    Es lo que decide si una edición está permitida con respuestas ya
+    cargadas (N5): la redacción se puede corregir, la estructura no. Compara
+    cantidad, orden, tipo, ancho, obligatoriedad, los extremos de la escala
+    y la CANTIDAD de opciones -- cambiarle el texto a una opción es una
+    errata; agregar o sacar una cambia el sentido de lo ya respondido,
+    porque las respuestas guardan el índice.
+    """
+    if len(antes) != len(despues):
+        return True
+    for a, d in zip(antes, despues):
+        if (a.get("tipo_dato") != d.get("tipo_dato")
+                or bool(a.get("obligatorio")) != bool(d.get("obligatorio"))
+                or (a.get("ancho") or "completo") != (d.get("ancho") or "completo")
+                or a.get("escala_min") != d.get("escala_min")
+                or a.get("escala_max") != d.get("escala_max")
+                or len(opciones_de(a.get("opciones", ""))) != len(opciones_de(d.get("opciones", "")))):
+            return True
+    return False

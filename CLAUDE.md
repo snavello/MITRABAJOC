@@ -408,10 +408,16 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
 7. **Módulo Encuestas** (anónimas y nominales al padrón): plan acordado
    decisión por decisión el 2026-09-11, **antes de tocar código**, en
    [`SPRINT_ENCUESTAS.md`](SPRINT_ENCUESTAS.md) — 24 decisiones, modelo de
-   datos, seis fases y los cuatro tests de privacidad. **Fase 0 HECHA**
-   (modelo, migración, módulo `encuestas` opt-in y las dos secciones de
-   permiso): no hay ninguna ruta todavía y el módulo nace apagado para
-   todos, así que no se ve nada. Siguen las fases 1 a 6.
+   datos, seis fases y los cuatro tests de privacidad. **Fases 0 y 1
+   HECHAS**: el modelo (padrón y urna separados), el módulo `encuestas`
+   opt-in con sus dos secciones de permiso, y el **constructor** en la
+   pestaña Encuestas de `/admin` — diez tipos de pregunta (los de
+   CampoTramite más escala y ranking; archivo solo en las nominales),
+   reordenar arrastrando, vista previa del lado del afiliado y congelado
+   con corrección de erratas. **El disclaimer de la vista previa lo arma el
+   servidor** (`GET /admin/encuesta/disclaimer`), no el JS: es una promesa
+   sobre qué se guarda y no puede haber dos versiones. Siguen las fases 2 a
+   6 (responder, publicar/comunicar, dashboard, exportar/duplicar, demo).
    Lo central: el anonimato se sostiene por la FORMA de las tablas (padrón
    y urna separados, sin vínculo posible), no por un cartel.
 

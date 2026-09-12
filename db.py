@@ -4849,3 +4849,286 @@ def umbral_encuestas() -> int:
     with Session(engine) as s:
         c = s.get(ConfiguracionPlataforma, 1)
         return int(c.encuestas_umbral_minimo) if c else encuestas.UMBRAL_MINIMO_DEFAULT
+
+
+def _pregunta_a_dict(p: "PreguntaEncuesta") -> dict:
+    return {
+        "id": p.id, "orden": p.orden, "etiqueta": p.etiqueta, "tipo_dato": p.tipo_dato,
+        "opciones": p.opciones, "escala_min": p.escala_min, "escala_max": p.escala_max,
+        "etiqueta_min": p.etiqueta_min, "etiqueta_max": p.etiqueta_max,
+        "ancho": p.ancho, "obligatorio": p.obligatorio,
+    }
+
+
+def _encuesta_a_dict(s: Session, e: "Encuesta", hoy: str) -> dict:
+    preguntas = s.exec(select(PreguntaEncuesta)
+                       .where(PreguntaEncuesta.encuesta_id == e.id)
+                       .order_by(PreguntaEncuesta.orden)).all()
+    return {
+        "id": e.id, "titulo": e.titulo, "descripcion": e.descripcion, "modo": e.modo,
+        "cortes": list(e.cortes or []), "umbral_minimo": e.umbral_minimo,
+        "fecha_desde": e.fecha_desde, "fecha_hasta": e.fecha_hasta,
+        "publicada": e.publicada, "publicada_en": e.publicada_en,
+        "cerrada_en": e.cerrada_en, "mostrar_resultados": e.mostrar_resultados,
+        "criterio": e.criterio, "criterio_valores": list(e.criterio_valores or []),
+        "cantidad_destinatarios": e.cantidad_destinatarios,
+        "usuario_id": e.usuario_id, "seccional_id": e.seccional_id,
+        "origen_id": e.origen_id, "creada": e.creada,
+        "estado": encuestas.estado(e.publicada, e.fecha_desde, e.fecha_hasta,
+                                   hoy, e.cerrada_en),
+        "preguntas": [_pregunta_a_dict(p) for p in preguntas],
+    }
+
+
+def encuestas_del_sindicato(sindicato_id: int, alcance=None) -> list:
+    """Las encuestas del sindicato, más nuevas primero.
+
+    `alcance` es el de seccional de quien mira (db.alcance_seccional):
+    None = todas, un set = solo las que lanzó alguna de esas seccionales
+    (decisión N18: cada seccional ve las suyas). Las de sede central
+    (seccional_id NULL) las ve solo quien alcanza todo.
+    """
+    if alcance is not None and not alcance:
+        return []
+    hoy = fechas.hoy_texto()
+    with Session(engine) as s:
+        q = select(Encuesta).where(Encuesta.sindicato_id == sindicato_id)
+        if alcance is not None:
+            q = q.where(Encuesta.seccional_id.in_(list(alcance)))
+        filas = s.exec(q.order_by(Encuesta.id.desc())).all()
+        salida = []
+        for e in filas:
+            d = _encuesta_a_dict(s, e, hoy)
+            d["respuestas"] = _cuenta(s, RespuestaEncuesta.encuesta_id, e.id, RespuestaEncuesta)
+            d["participantes"] = _cuenta(s, EncuestaParticipante.encuesta_id, e.id,
+                                          EncuestaParticipante)
+            salida.append(d)
+        return salida
+
+
+def _cuenta(s: Session, columna, valor, modelo) -> int:
+    from sqlalchemy import func
+    return s.execute(select(func.count()).select_from(modelo)
+                     .where(columna == valor)).scalar() or 0
+
+
+def encuesta_por_id(encuesta_id: int, sindicato_id: int = 0) -> Optional[dict]:
+    """Una encuesta con sus preguntas. `sindicato_id` acota: una encuesta de
+    otro sindicato devuelve None, no una excepción."""
+    with Session(engine) as s:
+        e = s.get(Encuesta, encuesta_id)
+        if not e or (sindicato_id and e.sindicato_id != sindicato_id):
+            return None
+        return _encuesta_a_dict(s, e, fechas.hoy_texto())
+
+
+def encuesta_tiene_respuestas(encuesta_id: int) -> bool:
+    """Si ya entró aunque sea una respuesta. Es lo que congela las preguntas."""
+    with Session(engine) as s:
+        return _cuenta(s, RespuestaEncuesta.encuesta_id, encuesta_id,
+                       RespuestaEncuesta) > 0
+
+
+def seccional_de_usuario(usuario_id: Optional[int]) -> Optional[int]:
+    """La seccional con la que nace lo que crea este usuario.
+
+    None cuando alcanza TODAS las seccionales (sede central): lo que lanza
+    es del sindicato entero, no de una delegación. Es lo que después hace
+    que cada seccional vea sus encuestas y no las de las otras (N18).
+    """
+    if not usuario_id:
+        return None
+    if alcance_seccional(usuario_id) is None:
+        return None
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        return u.seccional_id if u else None
+
+
+def registrar_evento_encuesta(encuesta_id: int, usuario_id: Optional[int],
+                               evento: str, detalle: str = "") -> None:
+    """Una línea en el historial de la encuesta (ver EventoEncuesta)."""
+    with Session(engine) as s:
+        s.add(EventoEncuesta(encuesta_id=encuesta_id, usuario_id=usuario_id,
+                             evento=evento, detalle=detalle[:2000],
+                             fecha=fechas.ahora_texto()))
+        s.commit()
+
+
+def eventos_de_encuesta(encuesta_id: int) -> list:
+    with Session(engine) as s:
+        filas = s.exec(select(EventoEncuesta)
+                       .where(EventoEncuesta.encuesta_id == encuesta_id)
+                       .order_by(EventoEncuesta.id.desc())).all()
+        return [{"evento": v.evento, "detalle": v.detalle, "fecha": v.fecha,
+                 "usuario_id": v.usuario_id} for v in filas]
+
+
+def _guardar_preguntas(s: Session, encuesta_id: int, preguntas: list) -> None:
+    """Reemplaza las preguntas de la encuesta por esta lista.
+
+    Borrar y volver a crear solo es seguro mientras NO haya respuestas (las
+    respuestas apuntan a pregunta_id): quien llama tiene que haberlo
+    verificado. Con respuestas cargadas se edita en el lugar, ver
+    editar_encuesta."""
+    viejas = s.exec(select(PreguntaEncuesta)
+                    .where(PreguntaEncuesta.encuesta_id == encuesta_id)).all()
+    for v in viejas:
+        s.delete(v)
+    s.flush()
+    for i, p in enumerate(preguntas):
+        s.add(PreguntaEncuesta(encuesta_id=encuesta_id, orden=i, **p))
+
+
+def crear_encuesta(sindicato_id: int, usuario_id: Optional[int],
+                    seccional_id: Optional[int], datos: dict, preguntas: list) -> int:
+    """Crea una encuesta en BORRADOR. Publicar es otro acto (Fase 3)."""
+    with Session(engine) as s:
+        e = Encuesta(
+            sindicato_id=sindicato_id, usuario_id=usuario_id, seccional_id=seccional_id,
+            titulo=datos.get("titulo", "").strip(),
+            descripcion=datos.get("descripcion", "").strip(),
+            modo=datos.get("modo") or encuestas.NOMINAL,
+            cortes=encuestas.cortes_saneados(datos.get("modo") or encuestas.NOMINAL,
+                                             datos.get("cortes")),
+            umbral_minimo=umbral_encuestas(),
+            fecha_desde=datos.get("fecha_desde", ""), fecha_hasta=datos.get("fecha_hasta", ""),
+            mostrar_resultados=bool(datos.get("mostrar_resultados")),
+            origen_id=datos.get("origen_id"),
+            creada=fechas.ahora_texto(),
+        )
+        s.add(e); s.commit(); s.refresh(e)
+        _guardar_preguntas(s, e.id, preguntas)
+        s.commit()
+        return e.id
+
+
+def editar_encuesta(encuesta_id: int, sindicato_id: int, datos: dict,
+                     preguntas: list, usuario_id: Optional[int] = None) -> dict:
+    """Edita una encuesta. Devuelve {"ok": bool, "error": str}.
+
+    Con respuestas ya cargadas rige el congelado (N5): se pueden corregir
+    título, descripción y la REDACCIÓN de preguntas y opciones, y estirar la
+    fecha de cierre. No se puede agregar, borrar ni reordenar preguntas, ni
+    cambiar tipos, anchos, obligatoriedad ni la cantidad de opciones. Cada
+    corrección de texto queda en el historial, porque el sistema no puede
+    distinguir una errata de un cambio de sentido.
+    """
+    with Session(engine) as s:
+        e = s.get(Encuesta, encuesta_id)
+        if not e or e.sindicato_id != sindicato_id:
+            return {"ok": False, "error": "La encuesta no existe."}
+
+        con_respuestas = _cuenta(s, RespuestaEncuesta.encuesta_id, e.id,
+                                 RespuestaEncuesta) > 0
+        viejas = [_pregunta_a_dict(p) for p in s.exec(
+            select(PreguntaEncuesta).where(PreguntaEncuesta.encuesta_id == e.id)
+            .order_by(PreguntaEncuesta.orden)).all()]
+
+        cambios = []
+        if con_respuestas:
+            if encuestas.cambio_estructural(viejas, preguntas):
+                return {"ok": False, "error":
+                        "Esta encuesta ya tiene respuestas: solo se puede corregir el "
+                        "texto de las preguntas y las opciones. Agregar, quitar o "
+                        "reordenar preguntas cambiaría el sentido de lo ya respondido. "
+                        "Si necesitás cambiarla de verdad, duplicala y lanzá otra ronda."}
+            cambios = [f"«{a['etiqueta']}» → «{d['etiqueta']}»"
+                       for a, d in zip(viejas, preguntas) if a["etiqueta"] != d["etiqueta"]]
+            cambios += [f"opciones de «{d['etiqueta']}»"
+                        for a, d in zip(viejas, preguntas) if a["opciones"] != d["opciones"]]
+            for i, (a, d) in enumerate(zip(viejas, preguntas)):
+                p = s.get(PreguntaEncuesta, a["id"])
+                p.etiqueta = d["etiqueta"]
+                p.opciones = d["opciones"]
+                p.etiqueta_min, p.etiqueta_max = d["etiqueta_min"], d["etiqueta_max"]
+                s.add(p)
+        else:
+            # Sin respuestas la estructura es libre, y el modo y los cortes
+            # también: nadie vio todavía el disclaimer de esta encuesta.
+            e.modo = datos.get("modo") or encuestas.NOMINAL
+            e.cortes = encuestas.cortes_saneados(e.modo, datos.get("cortes"))
+            _guardar_preguntas(s, e.id, preguntas)
+
+        e.titulo = datos.get("titulo", "").strip()
+        e.descripcion = datos.get("descripcion", "").strip()
+        e.mostrar_resultados = bool(datos.get("mostrar_resultados"))
+        if not e.publicada:
+            e.fecha_desde = datos.get("fecha_desde", "")
+        e.fecha_hasta = datos.get("fecha_hasta", "")
+        s.add(e); s.commit()
+
+    if con_respuestas and cambios:
+        registrar_evento_encuesta(encuesta_id, usuario_id, "edicion",
+                                  "Corrección de texto: " + "; ".join(cambios))
+    return {"ok": True, "error": ""}
+
+
+def borrar_encuesta(encuesta_id: int, sindicato_id: int) -> dict:
+    """Borra una encuesta que todavía es borrador.
+
+    Una encuesta PUBLICADA no se borra: tiene un padrón fijado, puede tener
+    respuestas y es un hecho del sindicato. Si no se va a usar más, se
+    cierra."""
+    with Session(engine) as s:
+        e = s.get(Encuesta, encuesta_id)
+        if not e or e.sindicato_id != sindicato_id:
+            return {"ok": False, "error": "La encuesta no existe."}
+        if e.publicada:
+            return {"ok": False, "error":
+                    "No se puede borrar una encuesta publicada: ya se la mostró a los "
+                    "afiliados. Cerrala en vez de borrarla."}
+        for p in s.exec(select(PreguntaEncuesta)
+                        .where(PreguntaEncuesta.encuesta_id == e.id)).all():
+            s.delete(p)
+        for v in s.exec(select(EventoEncuesta)
+                        .where(EventoEncuesta.encuesta_id == e.id)).all():
+            s.delete(v)
+        # El flush no es decorativo: sin él, SQLAlchemy puede mandar el
+        # DELETE de la encuesta ANTES que el de sus hijos (estos modelos no
+        # declaran relationship, solo la FK), y Postgres lo rechaza con
+        # ForeignKeyViolation. En SQLite pasaba sin chistar.
+        s.flush()
+        s.delete(e); s.commit()
+        return {"ok": True, "error": ""}
+
+
+def duplicar_encuesta(encuesta_id: int, sindicato_id: int,
+                       usuario_id: Optional[int] = None,
+                       seccional_id: Optional[int] = None) -> Optional[int]:
+    """Copia la estructura en un borrador nuevo, guardando de dónde salió.
+
+    Es la salida cuando una encuesta con respuestas quedó mal (N5) y, sobre
+    todo, la forma de repetir la misma encuesta cada trimestre: con
+    `origen_id` las tomas sucesivas se pueden comparar en el tiempo (N23).
+    Las fechas NO se copian: la ventana es de cada toma.
+    """
+    original = encuesta_por_id(encuesta_id, sindicato_id)
+    if not original:
+        return None
+    preguntas = [{k: v for k, v in p.items() if k not in ("id", "orden")}
+                 for p in original["preguntas"]]
+    nueva = crear_encuesta(
+        sindicato_id, usuario_id,
+        seccional_id if seccional_id is not None else original["seccional_id"],
+        {"titulo": _titulo_de_copia(original["titulo"]),
+         "descripcion": original["descripcion"], "modo": original["modo"],
+         "cortes": original["cortes"], "mostrar_resultados": original["mostrar_resultados"],
+         "fecha_desde": "", "fecha_hasta": "",
+         "origen_id": original["origen_id"] or original["id"]},
+        preguntas)
+    registrar_evento_encuesta(nueva, usuario_id, "duplicada",
+                              f"Copiada de la encuesta #{encuesta_id}")
+    return nueva
+
+
+def _titulo_de_copia(titulo: str) -> str:
+    """"Clima laboral" -> "Clima laboral (2)"; "Clima laboral (2)" -> "(3)".
+
+    Repetir la misma encuesta cada trimestre es el caso de uso, así que la
+    copia se numera en vez de llamarse "copia de copia de"."""
+    import re
+    m = re.match(r"^(.*) \((\d+)\)$", titulo.strip())
+    if m:
+        return f"{m.group(1)} ({int(m.group(2)) + 1})"
+    return f"{titulo.strip()} (2)"
