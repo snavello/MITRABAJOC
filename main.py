@@ -828,6 +828,7 @@ PERMISOS_RUTAS = {
     "/admin/dashboard/notificaciones":         "dashboard",
     "/admin/dashboard/formato-semana":         "dashboard",
     "/admin/dashboard/semaforo":               "dashboard",
+    "/admin/dashboard/seccionales-geo":        "dashboard",
     "/admin/dashboard/consultas":              "dashboard",
     "/admin/dashboard/explorador/{fuente}":    "dashboard",
     "/admin/dashboard/afiliados":              "dashboard",
@@ -4730,6 +4731,29 @@ def dashboard_notificaciones(request: Request):
 def dashboard_formato_semana(request: Request):
     sid = _exigir_dashboard(request)
     return {"semanas": dashboard.formato_semana(sid, _filtros_dashboard(request))}
+
+
+@app.get("/admin/dashboard/seccionales-geo")
+def dashboard_seccionales_geo(request: Request):
+    """Las seccionales del tenant con sus indicadores, para el mapa del panel.
+
+    Devuelve SOLO agregados: seis números por seccional más su domicilio.
+    Ni una fila cruda ni un dato de una persona -- el mapa no es un explorador
+    con otra cara. El `sindicato_id` sale de la cookie, como en todo el panel.
+
+    Las que no tienen coordenadas viajan aparte, en `sin_ubicar`: el panel las
+    cuenta en un aviso en vez de esconderlas, porque una seccional que no
+    aparece en el mapa y tampoco en ningún lado es una seccional que nadie
+    va a georreferenciar nunca.
+    """
+    sid = _exigir_dashboard(request)
+    datos = dashboard.seccionales_geo(sid, _filtros_dashboard(request))
+    # El enlace para ir a arreglarlo solo se ofrece a quien puede editar
+    # seccionales: ver el mapa (sección "dashboard") y cargar una dirección
+    # (sección "seccionales") son dos permisos distintos, y ofrecerle un
+    # botón que le va a dar 403 es peor que no ofrecérselo.
+    datos["puede_georreferenciar"] = "seccionales" in db.permisos_efectivos(_uid_sesion(request))
+    return datos
 
 
 @app.get("/admin/dashboard/semaforo")

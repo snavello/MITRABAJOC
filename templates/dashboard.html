@@ -6,6 +6,9 @@
 <meta name="theme-color" content="{{ marca.color_base }}">
 <title>Panel Sindical — {{ sindicato }}</title>
 <link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
+{# Leaflet vendoreado, igual que Chart.js. Las teselas de OSM sí salen a la
+   red: no se pueden cachear ni copiar, es su política. #}
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css?v={{ sello_static('vendor/leaflet/leaflet.css') }}">
 <style>
   :root {
     --marca-base: {{ marca.color_base }};
@@ -377,6 +380,34 @@
 
   footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-size: 11px; color: var(--gris); text-align: center; }
   :focus-visible { outline: 2px solid var(--destacado); outline-offset: 2px; }
+
+  /* ---- Mapa de seccionales ----
+     La escala de color es FIJA de la app y no la marca del sindicato: es una
+     escala cuantitativa, y con el acento de cada gremio la misma intensidad
+     significaría cosas distintas en dos tenants. El destacado (--destacado)
+     se reserva para la seccional SELECCIONADA, que es un filtro activo. */
+  .mapa-panel { height: 420px; border-radius: 10px; border: 1px solid var(--linea);
+    background: var(--papel); }
+  .mapa-controles { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin: 0 0 10px; }
+  .mapa-controles label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--gris); font-weight: 700; }
+  .mapa-controles select { padding: 6px 9px; border: 1px solid var(--linea); border-radius: 8px;
+    font-size: 13px; background: #fff; color: var(--tinta); }
+  .mapa-leyenda { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--gris); }
+  .mapa-leyenda i { width: 15px; height: 15px; border-radius: 50%; display: inline-block; }
+  .mapa-sin-ubicar { margin-top: 10px; font-size: 12.5px; color: #8a5a1a;
+    background: #fdf3e7; border: 1px solid #e8c89a; border-radius: 9px; padding: 9px 12px;
+    display: none; line-height: 1.55; }
+  .mapa-sin-ubicar.hay { display: block; }
+  .mapa-sin-ubicar a { color: #8a5a1a; font-weight: 700; }
+  .mapa-pop b { font-size: 13px; }
+  .mapa-pop table { border-collapse: collapse; margin-top: 6px; font-size: 12px; }
+  .mapa-pop td { padding: 2px 0; }
+  .mapa-pop td:last-child { text-align: right; padding-left: 14px;
+    font-family: ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums;
+    font-weight: 700; }
+  @media (max-width: 700px) { .mapa-panel { height: 320px; } }
 </style>
 </head>
 <body>
@@ -527,6 +558,27 @@
     </div>
     {% endif %}
 
+    <div class="panel" data-panel="seccionales-geo">
+      <h3>Mapa de seccionales</h3>
+      <div class="sub">Tocá un marcador para filtrar todo el panel por esa seccional.
+        <b>Afiliados</b> y <b>ingresaron</b> son una foto del padrón y no cambian con el período;
+        los otros cuatro sí.</div>
+      <div class="mapa-controles">
+        <label for="mapa-metrica">Colorear por</label>
+        <select id="mapa-metrica">
+          <option value="afiliados">Afiliados</option>
+          <option value="pct_ingresaron">% que ingresó</option>
+          <option value="recibos">Recibos validados</option>
+          <option value="pct_con_diferencias">% con diferencias</option>
+          <option value="tramites_abiertos">Trámites abiertos</option>
+        </select>
+        <div class="mapa-leyenda" id="mapa-leyenda"></div>
+      </div>
+      <div class="mapa-panel" id="mapa-seccionales"></div>
+      <div class="mapa-sin-ubicar" id="mapa-sin-ubicar"></div>
+      <div class="panel-error"><span>No se pudo cargar este panel.</span><button type="button" data-reintentar>Reintentar</button></div>
+    </div>
+
     <div class="panel span5" data-panel="semaforo">
       <h3>Semáforo de aportes</h3>
       <div class="sub">Días desde el último depósito que imprime el recibo (formato Ley 27.802 —
@@ -618,6 +670,8 @@
 <footer class="dash">Panel Sindical · versión {{ version }} · {{ fecha_version }}</footer>
 
 <script src="/static/chart.umd.min.js?v=4.4.9"></script>
+<script src="/static/vendor/leaflet/leaflet.js?v={{ sello_static('vendor/leaflet/leaflet.js') }}"></script>
+<script src="/static/mapa.js?v={{ sello_static('mapa.js') }}"></script>
 <script src="/static/dashboard.js?v={{ sello_static('dashboard.js') }}"></script>
 </body>
 </html>
