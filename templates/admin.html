@@ -164,6 +164,17 @@
   .emptram-subtab.activa { background:var(--marca-secundario); color:#fff; border-color:var(--marca-secundario); }
   .emptram-subpanel { display:none; }
   .emptram-subpanel.activo { display:block; }
+  /* Encuestas: namespace propio, mismo motivo que las de arriba -- no
+     comparte listener con ninguna de las otras sub-pestañas. */
+  .enc-subtab { padding:6px 14px; border-radius:7px; font-size:13px; font-weight:500;
+    background:#f2f0ea; color:var(--gris); border:1px solid var(--linea); cursor:pointer; font-family:inherit; }
+  .enc-subtab.activa { background:var(--marca-secundario); color:#fff; border-color:var(--marca-secundario); }
+  .enc-subpanel { display:none; }
+  .enc-subpanel.activo { display:block; }
+  /* La tabla de encuestas tiene siete columnas: en un teléfono se desliza
+     ella sola en vez de meterle scroll horizontal a la PÁGINA entera. */
+  .enc-tabla { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .enc-tabla table { min-width:820px; }
   /* Áreas y Usuarios: namespace propio, mismo motivo que las de arriba, y
      los MISMOS valores -- son tokens del proyecto (--gris, --linea), no
      colores sueltos. Sin `color`, el texto heredaba blanco sobre blanco y
@@ -583,10 +594,10 @@
     line-height:1.05; border-bottom:none; padding-bottom:0; display:flex; align-items:center; gap:12px; color:var(--tinta); }
   h2::after { content:""; flex:1; height:1px; background:var(--linea); }
   h2 .badge, h2 .tag, h2 small { font-family:var(--fuente); letter-spacing:0; text-transform:none; }
-  .subtab, .tramite-subtab, .emp-subtab, .emptram-subtab, .subtab-au { font-family:var(--fuente-display); font-weight:700; font-size:13px; letter-spacing:.8px;
+  .subtab, .tramite-subtab, .emp-subtab, .emptram-subtab, .subtab-au, .enc-subtab { font-family:var(--fuente-display); font-weight:700; font-size:13px; letter-spacing:.8px;
     text-transform:uppercase; background:#fff; border-radius:20px; }
   th { font-size:10.5px; letter-spacing:1px; font-weight:700; color:var(--gris); background:#f4f2ec; }
-  button:not(.sec):not(.mini):not(.tab-btn):not(.ptab):not(.subtab):not(.tramite-subtab):not(.emp-subtab):not(.emptram-subtab):not(.subtab-au):not(.btn-ayuda):not(.link-num) {
+  button:not(.sec):not(.mini):not(.tab-btn):not(.ptab):not(.subtab):not(.tramite-subtab):not(.emp-subtab):not(.emptram-subtab):not(.subtab-au):not(.enc-subtab):not(.btn-ayuda):not(.link-num) {
     font-family:var(--fuente-display); font-weight:700; font-size:15px; letter-spacing:1px; text-transform:uppercase;
     background:var(--marca-acento); color:var(--marca-base); border-radius:9px; }
   button.mini { border-radius:7px; }
@@ -1666,7 +1677,21 @@
   <div class="msg" style="background:#e6f5ec;color:#1c7a45;">Noticia publicada: ya se ve en la portada del afiliado.</div>
   {% endif %}
 
+  {# Dos pastillas y no una pantalla sola: el constructor es largo y dejaba
+     la lista de encuestas tan abajo que parecía otra sección. Arranca en la
+     LISTA, que es lo que se mira todos los días -- salvo que todavía no
+     haya ninguna, donde lo único que se puede hacer es crearla. #}
+  <div class="subtabs">
+    <button type="button" class="enc-subtab {% if encuestas or 'encuestas' not in permisos %}activa{% endif %}"
+            data-enc-sub="lista" onclick="cambiarSubEncuesta('lista')">Ver / editar encuestas ({{ encuestas|length }})</button>
+    {% if 'encuestas' in permisos %}
+    <button type="button" class="enc-subtab {% if not encuestas %}activa{% endif %}"
+            data-enc-sub="nueva" onclick="cambiarSubEncuesta('nueva')">+ Crear encuesta</button>
+    {% endif %}
+  </div>
+
   {% if 'encuestas' in permisos %}
+  <div class="enc-subpanel {% if not encuestas %}activo{% endif %}" id="enc-sub-nueva">
   <h2 id="enc-h2">Nueva encuesta</h2>
   <div class="card">
     <form method="post" action="/admin/encuesta" id="form-encuesta" onsubmit="return prepararEnvioEncuesta()">
@@ -1752,9 +1777,12 @@
       </div>
     </form>
   </div>
+  </div>
   {% endif %}
 
+  <div class="enc-subpanel {% if encuestas or 'encuestas' not in permisos %}activo{% endif %}" id="enc-sub-lista">
   <h2>Encuestas ({{ encuestas|length }})</h2>
+  <div class="enc-tabla">
   <table>
     <tr><th>Título</th><th>Modo</th><th>Estado</th><th>Preguntas</th><th>Ventana</th><th>Respuestas</th><th></th></tr>
     {% for e in encuestas %}
@@ -1763,7 +1791,7 @@
       <td>{{ encuestas_modos.get(e.modo, e.modo) }}</td>
       <td><span class="enc-chip {{ e.estado }}">{{ e.estado }}</span></td>
       <td class="muted">{{ e.preguntas|length }}</td>
-      <td class="muted">{% if e.fecha_desde %}{{ e.fecha_desde }} → {{ e.fecha_hasta }}{% else %}sin fechas{% endif %}</td>
+      <td class="muted" style="white-space:nowrap;">{% if e.fecha_desde %}{{ e.fecha_desde|dia }} → {{ e.fecha_hasta|dia }}{% else %}sin fechas{% endif %}</td>
       <td class="muted">{{ e.respuestas }}{% if e.cantidad_destinatarios %} de {{ e.cantidad_destinatarios }}{% endif %}</td>
       <td style="white-space:nowrap; text-align:right;">
         {# Los resultados son OTRA sección (N17): un delegado puede leer el
@@ -1802,7 +1830,11 @@
     <tr><td colspan="7" class="muted">Todavía no creaste ninguna encuesta.</td></tr>
     {% endfor %}
   </table>
+  </div>
+  </div>
 
+  {# Los modales van AFUERA de los subpaneles: adentro de uno oculto no se
+     podrían abrir, y "avisar" se abre solo al volver de publicar. #}
   {% if 'encuestas' in permisos %}
   <!-- Avisar: el paso guiado de N13. Publicar una encuesta y que nadie se
        entere de que existe es la falla más común y la más cara. -->
@@ -5088,6 +5120,7 @@ function cambioModoEncuesta() {
   renderPreguntasEncuesta();
 }
 function editarEncuesta(e) {
+  cambiarSubEncuesta('nueva');
   document.getElementById('enc-id').value = e.id;
   document.getElementById('enc-titulo').value = e.titulo || '';
   document.getElementById('enc-descripcion').value = e.descripcion || '';
@@ -5119,7 +5152,7 @@ function editarEncuesta(e) {
   document.getElementById('enc-cancel').classList.remove('oculto');
   document.getElementById('enc-cortes-caja').classList.toggle('oculto', e.modo !== 'anonima');
   renderPreguntasEncuesta();
-  document.getElementById('form-encuesta').scrollIntoView({behavior:'smooth', block:'center'});
+  document.getElementById('panel-encuestas').scrollIntoView({behavior:'smooth', block:'start'});
 }
 function cancelarEncuesta() {
   document.getElementById('form-encuesta').reset();
@@ -5135,6 +5168,7 @@ function cancelarEncuesta() {
   document.getElementById('enc-cancel').classList.add('oculto');
   document.getElementById('enc-cortes-caja').classList.add('oculto');
   renderPreguntasEncuesta();
+  cambiarSubEncuesta('lista');
 }
 function prepararEnvioEncuesta() {
   const conRespuesta = preguntasEncuestaActuales.filter(p => p.tipo_dato !== 'separador');
@@ -5149,6 +5183,13 @@ function prepararEnvioEncuesta() {
   }
   document.getElementById('enc-preguntas-json').value = JSON.stringify(preguntasEncuestaActuales);
   return true;
+}
+
+/* ---------- Las dos pastillas de Encuestas ---------- */
+function cambiarSubEncuesta(dest) {
+  document.querySelectorAll('.enc-subtab').forEach(b => b.classList.toggle('activa', b.dataset.encSub === dest));
+  document.querySelectorAll('.enc-subpanel').forEach(p => p.classList.toggle('activo', p.id === 'enc-sub-' + dest));
+  if (typeof actualizarBtnAyuda === 'function') actualizarBtnAyuda();
 }
 
 /* ---------- Avisar: el paso guiado de N13 ---------- */

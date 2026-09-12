@@ -1587,3 +1587,72 @@ def test_una_toma_por_debajo_del_umbral_no_aporta_punto():
     escala = next(p for p in d["preguntas"] if p["tipo_dato"] == "escala")
     assert escala["lineas"][0]["valores"] == [3.0, None]
     assert [t["oculto"] for t in d["tomas"]] == [False, True]
+
+
+def test_la_tarjeta_del_afiliado_dice_cuanto_trabajo_es_y_cuanto_tiempo_queda():
+    """Sin eso la tarjeta es una caja de texto y la encuesta se posterga --
+    y postergada es no respondida. Los días los cuenta el SERVIDOR en hora
+    de Buenos Aires: con el reloj del teléfono, uno mal puesto muestra un
+    plazo que no existe."""
+    sid, uid = _sindicato_con(["encuestas"], "tarjeta-datos")
+    _padron(sid)
+    cuil, _ = _cuils(sid)
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    preguntas = PREGUNTAS + [
+        {"etiqueta": "Datos de contexto", "tipo_dato": "separador", "ancho": "completo"},
+        {"etiqueta": "¿Algo para agregar?", "tipo_dato": "texto", "ancho": "completo",
+         "obligatorio": False},
+    ]
+    _alta(modo="anonima", preguntas=preguntas,
+          desde=(hoy - timedelta(days=4)).isoformat(),
+          hasta=(hoy + timedelta(days=6)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                 follow_redirects=False)
+
+    _sesion_trabajador(cuil, sid)
+    e = cliente.get("/api/encuestas").json()["encuestas"][0]
+    # El separador es un título en el medio, no una pregunta: contarlo haría
+    # que la tarjeta prometa más trabajo del que hay.
+    assert e["preguntas_reales"] == 3 and len(e["preguntas"]) == 4
+    assert e["minutos"] == 1                    # 3 × 20s, redondeado para arriba
+    assert e["dias_restantes"] == 6
+    assert e["avance"] == 40                    # 4 de 10 días del período
+
+    # El último día todavía se puede responder: 0 no es "ya cerró".
+    with db.get_session() as s:
+        x = s.get(db.Encuesta, eid)
+        x.fecha_hasta = hoy.isoformat()
+        s.add(x); s.commit()
+    e = cliente.get("/api/encuestas").json()["encuestas"][0]
+    assert e["dias_restantes"] == 0 and e["estado"] == encuestas.ABIERTA
+
+
+def test_el_minutaje_nunca_promete_menos_de_un_minuto():
+    # Prometer de menos es peor que redondear para arriba: el afiliado
+    # abandona a mitad de camino.
+    assert encuestas.minutos_estimados([]) == 1
+    assert encuestas.minutos_estimados([{"tipo_dato": "separador"}]) == 1
+    assert encuestas.preguntas_reales([{"tipo_dato": "separador"}]) == 0
+    assert encuestas.minutos_estimados([{"tipo_dato": "texto"}] * 3) == 1
+    assert encuestas.minutos_estimados([{"tipo_dato": "texto"}] * 4) == 2
+    assert encuestas.minutos_estimados([{"tipo_dato": "texto"}] * 9) == 3
+
+
+def test_el_panel_arranca_en_la_lista_salvo_que_no_haya_ninguna():
+    """Dos pastillas y no una pantalla sola: el constructor es largo y dejaba
+    la lista tan abajo que parecía otra sección. Arranca en lo que se mira
+    todos los días -- salvo cuando todavía no hay nada que mirar."""
+    sid, uid = _sindicato_con(["encuestas"], "pastillas")
+    _sesion(sid, uid)
+    html = cliente.get("/admin").text
+    # Sin encuestas, la abierta es la de crear: es lo único que se puede hacer.
+    assert '<div class="enc-subpanel activo" id="enc-sub-nueva">' in html
+    assert '<div class="enc-subpanel " id="enc-sub-lista">' in html
+
+    _alta()
+    html = cliente.get("/admin").text
+    assert '<div class="enc-subpanel activo" id="enc-sub-lista">' in html
+    assert '<div class="enc-subpanel " id="enc-sub-nueva">' in html
+    assert "Ver / editar encuestas (1)" in html

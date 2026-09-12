@@ -392,6 +392,9 @@ def _sello_static(nombre: str) -> str:
 
 
 templates.env.globals["sello_static"] = _sello_static
+# Las fechas que lee una persona van en dd/mm/aaaa, también en las
+# plantillas: "2026-10-12" es el formato de la base, no el de la pantalla.
+templates.env.filters["dia"] = fechas.dia_legible
 
 
 @app.on_event("startup")

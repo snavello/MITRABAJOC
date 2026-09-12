@@ -708,22 +708,58 @@
   /* ---------- Encuestas (N19): tarjeta limpia y barra de avance, nada de
      carátula ni sellos -- eso es de Trámites, y el afiliado tiene que
      distinguir de un vistazo que esto no es un expediente. ---------- */
-  .enq-card { border:1px solid var(--linea); border-radius:14px; background:#fff;
-    padding:14px 16px; margin-bottom:12px; box-shadow:0 2px 10px rgba(0,0,0,.04); }
-  .enq-card h3 { font-size:15.5px; margin:0 0 4px; }
+  .enq-card { border:1px solid var(--linea); border-radius:16px; background:#fff;
+    margin-bottom:13px; box-shadow:0 2px 10px rgba(0,0,0,.05); overflow:hidden; }
+  .enq-card h3 { font-size:16.5px; margin:0; line-height:1.25; }
   .enq-meta { font-size:12px; color:var(--gris); }
+  /* La banda de color es la jerarquía de la lista: la ÚNICA a todo color es
+     la que está abierta y sin responder, que es lo que el afiliado vino a
+     hacer. Si todas fueran de color, ninguna resaltaría. */
+  .enq-banda { padding:14px 16px 13px; background:#f4f3ef; color:var(--tinta);
+    border-bottom:1px solid var(--linea); }
+  .enq-card.urge .enq-banda { border-bottom:0; color:#fff;
+    background:linear-gradient(135deg, var(--marca-acento), var(--marca-apoyo)); }
+  .enq-banda .baja { font-size:12.5px; margin-top:5px; opacity:.85; }
+  .enq-card.urge .enq-banda .baja { opacity:.93; }
+  .enq-cuerpo-card { padding:12px 16px 15px; }
   .enq-chip { display:inline-block; padding:2px 9px; border-radius:99px; font-size:10.5px;
-    font-weight:800; text-transform:uppercase; letter-spacing:.04em; margin-left:6px; }
+    font-weight:800; text-transform:uppercase; letter-spacing:.04em; margin-bottom:7px; }
   .enq-chip.abierta { background:#e6f5ec; color:#1c7a45; }
   .enq-chip.cerrada { background:#f3e9e7; color:#8a4033; }
   .enq-chip.programada { background:#e7effb; color:#2a5aa0; }
   .enq-chip.lista { background:#eef0ee; color:#5c5a54; }
+  .enq-card.urge .enq-chip { background:rgba(255,255,255,.22); color:#fff; }
+  /* Los tres datos que evitan la pregunta "¿cuánto me va a llevar esto?",
+     que es la que hace que una encuesta se postergue y no se responda. */
+  .enq-datos { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:11px; }
+  .enq-dato { display:inline-flex; align-items:center; gap:5px; font-size:11.5px;
+    font-weight:600; color:var(--gris); background:#f4f3ef; border:1px solid var(--linea);
+    border-radius:99px; padding:4px 10px; }
+  .enq-dato svg { width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2;
+    stroke-linecap:round; stroke-linejoin:round; }
+  .enq-dato.anon { color:#1c6b57; background:#eaf4f1; border-color:#c9e3db; }
+  /* La barra de avance de N19: muestra el TIEMPO que corre, no un progreso
+     de respuestas que el afiliado no tiene. */
+  .enq-plazo { margin-bottom:12px; }
+  .enq-plazo-barra { height:6px; border-radius:99px; background:#eceae4; overflow:hidden; }
+  .enq-plazo-barra > i { display:block; height:100%; border-radius:99px;
+    background:var(--marca-apoyo); transition:width .4s ease; }
+  .enq-plazo.ya .enq-plazo-barra > i { background:var(--alerta); }
+  .enq-plazo-txt { display:block; font-size:11.5px; color:var(--gris); margin-top:5px; }
+  .enq-plazo.ya .enq-plazo-txt { color:var(--alerta); font-weight:700; }
+  .enq-hecha { display:flex; align-items:center; gap:8px; font-size:13px; color:#1c7a45;
+    font-weight:600; }
+  .enq-hecha .tic { width:20px; height:20px; border-radius:50%; background:#e6f5ec;
+    display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .enq-hecha .tic svg { width:12px; height:12px; fill:none; stroke:#1c7a45;
+    stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
   .enq-marco { border:1px solid var(--linea); border-radius:16px; overflow:hidden; background:#fff; }
   .enq-cab { background:linear-gradient(135deg, var(--marca-acento), var(--marca-apoyo));
     color:#fff; padding:18px 18px 15px; }
   .enq-cab .tit { font-size:18px; font-weight:800; line-height:1.25; }
   .enq-cab .baja { font-size:13px; opacity:.93; margin-top:5px; }
   .enq-avance { height:6px; background:rgba(255,255,255,.28); border-radius:99px; margin-top:13px; }
+  .enq-cuenta { font-size:11.5px; opacity:.9; margin-top:7px; font-weight:600; }
   .enq-avance > i { display:block; height:100%; width:0; border-radius:99px; background:#fff;
     transition:width .25s ease; }
   .enq-cuerpo { padding:16px; display:grid; grid-template-columns:repeat(12,1fr); gap:0 14px; }
@@ -2589,26 +2625,72 @@ function pintarListaEncuestas() {
     cont.innerHTML = '<p class="muted" style="font-size:13.5px;">Tu sindicato todavía no te invitó a ninguna encuesta.</p>';
     return;
   }
-  cont.innerHTML = encuestasTrab.map(e => {
-    const abierta = e.estado === 'abierta';
-    const chip = e.respondio ? '<span class="enq-chip lista">respondida</span>'
-                             : `<span class="enq-chip ${e.estado}">${e.estado}</span>`;
-    const pie = e.respondio
-      ? 'Gracias por participar.'
-      : (abierta ? `Se puede responder hasta el ${diaEnc(e.fecha_hasta)}.`
-                 : (e.estado === 'programada' ? `Abre el ${diaEnc(e.fecha_desde)}.` : 'Ya cerró.'));
-    let boton = (abierta && !e.respondio)
-      ? `<button class="btn" style="margin-top:11px;" onclick="abrirEncuesta(${e.id})">Responder</button>` : '';
-    // Los resultados solo si la encuesta cerró Y el admin lo tildó (N12).
-    if (!abierta && e.estado === 'cerrada' && e.mostrar_resultados) {
-      boton += `<button class="btn sec" style="margin-top:11px;"
-        onclick="verResultadosEncuesta(${e.id})">Ver los resultados</button>`;
-    }
-    return `<div class="enq-card">
-      <h3>${escEnc(e.titulo)}${chip}</h3>
-      ${e.descripcion ? `<div class="enq-meta">${escEnc(e.descripcion)}</div>` : ''}
-      <div class="enq-meta" style="margin-top:6px;">${pie}</div>${boton}</div>`;
-  }).join('');
+  cont.innerHTML = encuestasTrab.map(htmlTarjetaEncuesta).join('');
+}
+
+// La tarjeta tiene que contestar tres cosas ANTES de que el afiliado
+// entre: qué es, cuánto le va a llevar y hasta cuándo tiene. Sin eso, una
+// encuesta se posterga -- y postergada es no respondida.
+function htmlTarjetaEncuesta(e) {
+  const abierta = e.estado === 'abierta';
+  const urge = abierta && !e.respondio;      // la única a todo color
+  const chip = e.respondio ? '<span class="enq-chip lista">respondida</span>'
+                           : `<span class="enq-chip ${e.estado}">${e.estado}</span>`;
+
+  const datos = [];
+  // El anonimato es EL dato que decide si alguien contesta con franqueza,
+  // así que va primero. De una nominal no se dice nada: se asume.
+  if (e.modo === 'anonima') {
+    datos.push(`<span class="enq-dato anon"><svg viewBox="0 0 24 24"><rect x="4" y="10.5" width="16" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>Anónima</span>`);
+  }
+  datos.push(`<span class="enq-dato"><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="1.6"/><line x1="10" y1="7" x2="19" y2="7"/><circle cx="6" cy="12.5" r="1.6"/><line x1="10" y1="12.5" x2="19" y2="12.5"/><circle cx="6" cy="18" r="1.6"/><line x1="10" y1="18" x2="19" y2="18"/></svg>${e.preguntas_reales} pregunta${e.preguntas_reales === 1 ? '' : 's'}</span>`);
+  datos.push(`<span class="enq-dato"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>${e.minutos} minuto${e.minutos === 1 ? '' : 's'}</span>`);
+
+  let cuerpo = `<div class="enq-datos">${datos.join('')}</div>`;
+  if (e.respondio) {
+    cuerpo += `<div class="enq-hecha"><span class="tic"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
+      Ya la respondiste. Gracias por participar.</div>`;
+  } else if (abierta) {
+    cuerpo += htmlPlazoEncuesta(e);
+  } else if (e.estado === 'programada') {
+    cuerpo += `<div class="enq-meta">Abre el ${diaEnc(e.fecha_desde)}.</div>`;
+  } else {
+    cuerpo += `<div class="enq-meta">Cerró el ${diaEnc(e.fecha_hasta)} y no la respondiste.</div>`;
+  }
+
+  if (urge) {
+    cuerpo += `<button class="btn" onclick="abrirEncuesta(${e.id})">Responder</button>`;
+  }
+  // Los resultados solo si la encuesta cerró Y el admin lo tildó (N12).
+  if (e.estado === 'cerrada' && e.mostrar_resultados) {
+    cuerpo += `<button class="btn sec" style="margin-top:9px;"
+      onclick="verResultadosEncuesta(${e.id})">Ver los resultados</button>`;
+  }
+
+  return `<div class="enq-card ${urge ? 'urge' : ''}">
+    <div class="enq-banda">
+      ${chip}
+      <h3>${escEnc(e.titulo)}</h3>
+      ${e.descripcion ? `<div class="baja">${escEnc(e.descripcion)}</div>` : ''}
+    </div>
+    <div class="enq-cuerpo-card">${cuerpo}</div>
+  </div>`;
+}
+
+// Los días los cuenta el SERVIDOR en hora de Buenos Aires (db.encuestas_de_
+// trabajador): con el reloj del teléfono, uno mal puesto muestra un plazo
+// que no existe -- y este plazo es el que hace que alguien entre hoy.
+function htmlPlazoEncuesta(e) {
+  const dias = e.dias_restantes;
+  if (dias === null || dias === undefined) return '';
+  const ya = dias <= 2;
+  const texto = dias === 0 ? 'Cierra hoy: es el último día'
+    : dias === 1 ? 'Cierra mañana'
+    : `Cierra en ${dias} días · ${diaEnc(e.fecha_hasta)}`;
+  return `<div class="enq-plazo ${ya ? 'ya' : ''}">
+    <div class="enq-plazo-barra"><i style="width:${e.avance}%"></i></div>
+    <span class="enq-plazo-txt">${texto}</span>
+  </div>`;
 }
 
 function diaEnc(iso) {
@@ -2702,6 +2784,7 @@ function pintarFormularioEncuesta(error) {
         <div class="tit">${escEnc(e.titulo)}</div>
         ${e.descripcion ? `<div class="baja">${escEnc(e.descripcion)}</div>` : ''}
         <div class="enq-avance"><i id="enq-avance"></i></div>
+        <div class="enq-cuenta" id="enq-cuenta"></div>
       </div>
       <div class="enq-cuerpo">
         ${error ? `<div class="enq-error" style="grid-column:span 12;">${escEnc(error)}</div>` : ''}
@@ -2835,6 +2918,14 @@ function actualizarAvanceEnc() {
     return v !== undefined && v !== '' && !(Array.isArray(v) && !v.length);
   }).length;
   barra.style.width = (conRespuesta.length ? (hechas / conRespuesta.length) * 100 : 0) + '%';
+  // Una barra sin número no dice cuánto falta, y "cuánto falta" es
+  // exactamente lo que evita que alguien abandone a mitad de camino.
+  const cuenta = document.getElementById('enq-cuenta');
+  if (cuenta) {
+    cuenta.textContent = hechas === conRespuesta.length
+      ? '¡Listo! Ya podés enviarla.'
+      : `${hechas} de ${conRespuesta.length} respondida${conRespuesta.length === 1 ? '' : 's'}`;
+  }
 }
 
 /* ---------- Revisión antes de enviar (N11) ---------- */

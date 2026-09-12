@@ -5312,6 +5312,14 @@ def encuestas_de_trabajador(cuil: str, sindicato_id: int) -> list:
             d = _encuesta_a_dict(s, e, hoy)
             d["respondio"] = por_encuesta[e.id].respondio
             d["disclaimer"] = encuestas.disclaimer(e.modo, e.cortes, e.umbral_minimo)
+            # Lo que la tarjeta necesita para no ser una caja de texto: cuánto
+            # trabajo es y cuánto tiempo queda. Los días los cuenta el
+            # SERVIDOR, en hora de Buenos Aires: con el reloj del teléfono,
+            # uno mal puesto o en otra zona muestra un plazo que no existe.
+            d["preguntas_reales"] = encuestas.preguntas_reales(d["preguntas"])
+            d["minutos"] = encuestas.minutos_estimados(d["preguntas"])
+            d["dias_restantes"] = _dias_hasta(e.fecha_hasta, hoy)
+            d["avance"] = _avance_de_ventana(e.fecha_desde, e.fecha_hasta, hoy)
             salida.append(d)
         # Las abiertas y sin responder primero: es lo que el afiliado vino a hacer.
         salida.sort(key=lambda d: (d["respondio"], d["estado"] != encuestas.ABIERTA))
@@ -5331,6 +5339,29 @@ def esta_en_el_padron(encuesta_id: int, cuil: str, sindicato_id: int) -> bool:
         return s.exec(select(EncuestaParticipante).where(
             EncuestaParticipante.encuesta_id == encuesta_id,
             EncuestaParticipante.cuil == cuil)).first() is not None
+
+
+def _dias_hasta(fecha_hasta: str, hoy: str) -> Optional[int]:
+    """Cuántos días faltan para el cierre. 0 = cierra HOY (el último día se
+    puede responder, es inclusive). None si no hay fecha."""
+    try:
+        return (date.fromisoformat(fecha_hasta) - date.fromisoformat(hoy)).days
+    except (TypeError, ValueError):
+        return None
+
+
+def _avance_de_ventana(desde: str, hasta: str, hoy: str) -> int:
+    """Qué porcentaje del período ya pasó, 0..100. Es la barra de avance de
+    N19 -- la tarjeta muestra el tiempo que corre, no un progreso de
+    respuestas que el afiliado no tiene."""
+    try:
+        d, h, a = (date.fromisoformat(x) for x in (desde, hasta, hoy))
+    except (TypeError, ValueError):
+        return 0
+    total = (h - d).days
+    if total <= 0:
+        return 100 if a >= h else 0
+    return max(0, min(100, round((a - d).days * 100 / total)))
 
 
 def contar_encuestas_pendientes(cuil: str, sindicato_id: int) -> int:

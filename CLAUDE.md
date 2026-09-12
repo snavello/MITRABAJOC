@@ -479,7 +479,18 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    aplana el `origen_id` a la raíz, así que la familia sale de una
    consulta—, emparejando preguntas por orden y tipo, con el umbral de cada
    toma: una toma chica no aporta punto en vez de aportar uno que
-   identifique gente. Sigue la Fase 6 (demo y cierre).
+   identifique gente. La **tarjeta del afiliado** contesta antes de entrar
+   las tres preguntas que hacen que una encuesta se postergue —y postergada
+   es no respondida—: si es anónima, cuántas preguntas tiene y cuántos
+   minutos lleva (`encuestas.minutos_estimados`, redondeando para arriba:
+   prometer de menos es peor), más la barra de avance del PERÍODO con los
+   días que faltan, contados en el servidor y no con el reloj del teléfono.
+   La única tarjeta a todo color es la abierta y sin responder: si todas lo
+   fueran, ninguna resaltaría. Y el panel de Encuestas se abre en **dos
+   pastillas** (ver/editar y crear, namespace `.enc-subtab` propio como el
+   resto de las sub-pestañas): el constructor es largo y dejaba la lista tan
+   abajo que parecía otra sección. Arranca en la lista salvo que no haya
+   ninguna encuesta todavía. Sigue la Fase 6 (demo y cierre).
    Lo central: el anonimato se sostiene por la FORMA de las tablas (padrón
    y urna separados, sin vínculo posible), no por un cartel.
 

@@ -468,6 +468,28 @@ def _indice(valor, cantidad: int):
     return i if i is not None and 0 <= i < cantidad else None
 
 
+# --- Lo que la tarjeta del afiliado le dice antes de entrar --------------
+# Segundos que lleva contestar una pregunta, promediando las cortas (sí/no,
+# una opción) con las que hacen pensar (escala, ranking, texto libre). No
+# pretende ser exacto: pretende que "dos minutos" no sea una sorpresa de
+# quince. Se redondea siempre PARA ARRIBA -- prometer de menos es peor.
+SEGUNDOS_POR_PREGUNTA = 20
+
+
+def preguntas_reales(preguntas: list) -> int:
+    """Cuántas hay que responder de verdad. Un separador es un título en el
+    medio del formulario, no una pregunta, y contarlo hace que la tarjeta
+    prometa más trabajo del que hay."""
+    return sum(1 for p in preguntas
+               if (p.get("tipo_dato") or p.get("tipo")) not in TIPOS_SIN_RESPUESTA)
+
+
+def minutos_estimados(preguntas: list) -> int:
+    """Cuánto lleva responderla, en minutos enteros y nunca menos de uno."""
+    segundos = preguntas_reales(preguntas) * SEGUNDOS_POR_PREGUNTA
+    return max(1, -(-segundos // 60))
+
+
 # --- Los textos de los avisos -------------------------------------------
 LANZAMIENTO = "lanzamiento"
 RECORDATORIO = "recordatorio"
