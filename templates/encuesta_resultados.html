@@ -62,8 +62,13 @@
   .m-chip { border: 1.5px solid var(--linea); background: var(--blanco); border-radius: var(--r-chip);
     padding: 5px 12px; font-size: 12px; font-weight: 600; color: var(--gris); cursor: pointer;
     font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
-  .m-chip:hover:not(:disabled) { border-color: var(--enc-borde); color: var(--marca-apoyo); }
+  /* El :not(.act) no es adorno: sin él el hover le gana en especificidad
+     (0,3,1 contra 0,2,0) a la pastilla elegida, y como después de tocarla el
+     mouse queda encima, la pastilla recién elegida quedaba verde sobre verde
+     -- con el texto invisible justo en el clic en que importa. */
+  .m-chip:hover:not(:disabled):not(.act) { border-color: var(--enc-borde); color: var(--marca-apoyo); }
   .m-chip.act { background: var(--marca-apoyo); border-color: var(--marca-apoyo); color: #fff; }
+  .m-chip.act:hover { filter: brightness(1.08); }
   .m-chip:disabled { opacity: .55; cursor: not-allowed; }
   .m-chip .n { font-family: var(--fuente-num); font-size: 11px; opacity: .75; }
   .m-chip .n i { font-style: normal; opacity: .6; margin-left: 1px; }
