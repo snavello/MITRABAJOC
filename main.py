@@ -39,6 +39,7 @@ from starlette.concurrency import run_in_threadpool
 from sqlmodel import select
 
 import encuestas
+import resultados_encuesta
 import fechas
 import db
 import auth
@@ -759,6 +760,10 @@ PERMISOS_RUTAS = {
     "/admin/encuesta/destinatarios":        "encuestas",
     "/admin/encuesta/borrar":               "encuestas",
     "/admin/encuesta/duplicar":             "encuestas",
+    # Leer los resultados es otra sección que armarlos (N17): un delegado
+    # puede mirar el dashboard sin poder lanzar nada.
+    "/admin/encuesta/{encuesta_id}/resultados":  "encuestas_resultados",
+    "/admin/encuesta/resultados":                "encuestas_resultados",
 
     "/admin/tramite-tipo":                  "tramites_formularios",
     "/admin/tramite-tipo/probar":           "tramites_formularios",
@@ -2593,6 +2598,7 @@ def abm_encuesta(
              "cortes": cortes, "fecha_desde": fecha_desde, "fecha_hasta": fecha_hasta,
              "mostrar_resultados": bool(mostrar_resultados)}
     if id:
+        _exigir_alcance_encuesta(request, int(id), sid)
         r = db.editar_encuesta(int(id), sid, datos, preguntas, usuario_id=uid)
         if not r["ok"]:
             return RedirectResponse(
@@ -2623,6 +2629,7 @@ def publicar_encuesta(request: Request, id: int = Form(...), criterio: str = For
     hay gente invitada y la lista no se recalcula (N10)."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "encuestas")
+    _exigir_alcance_encuesta(request, id, sid)
     # Los valores llegan como varios campos (una seccional por check) o como
     # un texto con comas (CUILs, CUITs): se aplana acá, así la pantalla usa
     # la forma que le quede mejor para cada criterio.
@@ -2640,6 +2647,7 @@ def publicar_encuesta(request: Request, id: int = Form(...), criterio: str = For
 def cerrar_encuesta(request: Request, id: int = Form(...)):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "encuestas")
+    _exigir_alcance_encuesta(request, id, sid)
     r = db.cerrar_encuesta(id, sid, usuario_id=_uid_sesion(request))
     if not r["ok"]:
         return RedirectResponse(f"/admin?error=encuesta&motivo={quote(r['error'])}#encuestas",
@@ -2668,6 +2676,7 @@ def notificar_encuesta(request: Request, id: int = Form(...), texto: str = Form(
     (N13). El recordatorio, solo a los que todavía no respondieron."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "encuestas")
+    _exigir_alcance_encuesta(request, id, sid)
     r = db.notificar_encuesta(id, sid, _uid_sesion(request), texto, remitente, tipo)
     if not r["ok"]:
         return RedirectResponse(f"/admin?error=encuesta&motivo={quote(r['error'])}#encuestas",
@@ -2680,6 +2689,7 @@ def noticia_encuesta(request: Request, id: int = Form(...), titulo: str = Form(.
                      bajada: str = Form(""), texto: str = Form("")):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "encuestas")
+    _exigir_alcance_encuesta(request, id, sid)
     r = db.noticia_de_encuesta(id, sid, _uid_sesion(request), titulo, bajada, texto)
     if not r["ok"]:
         return RedirectResponse(f"/admin?error=encuesta&motivo={quote(r['error'])}#encuestas",
@@ -2698,6 +2708,7 @@ def encuesta_avisos(request: Request, id: int):
     """
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "encuestas")
+    _exigir_alcance_encuesta(request, id, sid)
     e = db.encuesta_por_id(id, sid)
     if not e:
         raise HTTPException(404, "La encuesta no existe")
@@ -2712,6 +2723,69 @@ def encuesta_avisos(request: Request, id: int):
         "noticia": encuestas.texto_noticia(e["titulo"], e["fecha_hasta"], e["modo"]),
         "avisos": db.avisos_de_encuesta(id),
     }
+
+
+def _exigir_alcance_encuesta(request: Request, encuesta_id: int, sid: int) -> None:
+    """403 si esta encuesta está fuera del alcance de seccional de quien pide.
+
+    Desde N18 la seccional VE la encuesta central para leer sus resultados
+    recortados, así que esconder los botones ya no alcanza: sin este freno,
+    un admin de seccional arma el POST a mano y edita, publica, cierra o
+    borra la encuesta nacional. Mismo criterio que _exigir_alcance_tramite.
+    """
+    e = db.encuesta_por_id(encuesta_id, sid)
+    # Que no exista (o sea de otro sindicato) NO se resuelve acá: lo contesta
+    # la función de db con su mensaje, que vuelve al panel como un aviso y no
+    # como un JSON de error en pantalla completa.
+    if e and not db.encuesta_en_alcance(e["seccional_id"], _alcance_de(request)):
+        raise HTTPException(403, "Esta encuesta es de sede central: la podés mirar, no tocar.")
+
+
+@app.get("/admin/encuesta/{encuesta_id}/resultados", response_class=HTMLResponse)
+def encuesta_resultados_pagina(request: Request, encuesta_id: int):
+    """La pantalla del dashboard de UNA encuesta. Los datos no viajan acá:
+    los pide el JS a /admin/encuesta/resultados, igual que el Panel
+    Sindical. Sin sesión o sin módulo redirige, porque es una pantalla."""
+    ses = sesion_actual(request, "sindicato")
+    if not ses:
+        return templates.TemplateResponse("admin_login.html", {
+            "request": request, "marca_plataforma": db.marca_plataforma()})
+    sid = ses.get("sid", 0)
+    if not db.modulo_habilitado(sid, "encuestas") \
+            or not db.tiene_permiso(ses.get("uid", 0), "encuestas_resultados"):
+        return RedirectResponse("/admin", status_code=303)
+    e = db.encuesta_por_id(encuesta_id, sid)
+    if not e:
+        return RedirectResponse("/admin#encuestas", status_code=303)
+    marca = db.marca_sindicato(sid)
+    return templates.TemplateResponse("encuesta_resultados.html", {
+        "request": request, "sindicato": marca.get("nombre", ""),
+        "marca": marca, "marca_plataforma": db.marca_plataforma(),
+        "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
+        "encuesta_id": encuesta_id, "titulo_encuesta": e["titulo"],
+        "encuestas_cortes": encuestas.CORTES,
+        "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
+    })
+
+
+@app.get("/admin/encuesta/resultados")
+def encuesta_resultados(request: Request, id: int,
+                        seccional: list[str] = Query(default=[]),
+                        provincia: list[str] = Query(default=[]),
+                        empleador: list[str] = Query(default=[])):
+    """Los agregados del dashboard, con el umbral YA aplicado en el SQL.
+
+    El recorte por seccional (N18) se le impone acá, del lado del servidor:
+    el alcance sale de la sesión, nunca de un parámetro.
+    """
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "encuestas")
+    r = resultados_encuesta.resultados(
+        id, sid, {"seccional": seccional, "provincia": provincia, "empleador": empleador},
+        alcance=_alcance_de(request))
+    if r is None:
+        raise HTTPException(404, "La encuesta no existe")
+    return r
 
 
 @app.get("/admin/encuesta/disclaimer")
@@ -2737,6 +2811,7 @@ def encuesta_disclaimer(request: Request, modo: str = "nominal",
 def borrar_encuesta(request: Request, id: int = Form(...)):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "encuestas")
+    _exigir_alcance_encuesta(request, id, sid)
     r = db.borrar_encuesta(id, sid)
     if not r["ok"]:
         return RedirectResponse(f"/admin?error=encuesta&motivo={quote(r['error'])}#encuestas",
@@ -2751,6 +2826,10 @@ def duplicar_encuesta(request: Request, id: int = Form(...)):
     encuesta cada trimestre para comparar."""
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "encuestas")
+    # Duplicar tampoco: la copia nacería con el linaje (origen_id) apuntando
+    # a una encuesta de sede central y una segunda toma de la nacional
+    # lanzada por una seccional es justo lo que N23 no quiere mezclar.
+    _exigir_alcance_encuesta(request, id, sid)
     uid = _uid_sesion(request)
     nueva = db.duplicar_encuesta(id, sid, usuario_id=uid,
                                  seccional_id=db.seccional_de_usuario(uid))
@@ -3140,6 +3219,31 @@ def api_encuestas_del_trabajador(request: Request):
         raise HTTPException(403, "No autorizado")
     _exigir_modulo(sid, "encuestas")
     return {"encuestas": db.encuestas_de_trabajador(cuil, sid)}
+
+
+@app.get("/api/encuesta/{encuesta_id}/resultados")
+def api_resultados_para_afiliado(encuesta_id: int, request: Request):
+    """Los TOTALES GENERALES de una encuesta cerrada, si el admin lo tildó.
+
+    Nunca los cortes (N12): es por ahí por donde se identifica gente, y el
+    afiliado no tiene padrón ni filtros con los que contrastar. Tiene que
+    estar en el padrón: los resultados de una encuesta a la que no lo
+    invitaron no son asunto suyo.
+    """
+    ses = sesion_actual(request, "trabajador")
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise HTTPException(403, "No autorizado")
+    _exigir_modulo(sid, "encuestas")
+    if not db.esta_en_el_padron(encuesta_id, cuil, sid):
+        raise HTTPException(403, "No autorizado")
+    r = resultados_encuesta.totales_para_afiliado(encuesta_id, sid)
+    if r is None:
+        raise HTTPException(404, "Esta encuesta no publica resultados")
+    return r
 
 
 @app.post("/api/encuesta/{encuesta_id}")

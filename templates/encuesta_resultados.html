@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="{{ marca.color_base }}">
+<title>{{ titulo_encuesta }} — Resultados</title>
+<link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
+<style>
+  /* Estética propia de Encuestas (N19): tarjeta limpia con barra de avance,
+     no el "expediente" de Trámites. El color sale de la marca del sindicato
+     usando acento y secundario -- Trámites usa los oscuros. */
+  :root {
+    --marca-base: {{ marca.color_base }};
+    --marca-primario: {{ marca.color_primario }};
+    --marca-acento: {{ marca.color_acento }};
+    --marca-apoyo: {{ marca.color_secundario }};
+    --enc-suave: color-mix(in srgb, var(--marca-apoyo) 12%, white);
+    --enc-borde: color-mix(in srgb, var(--marca-apoyo) 38%, white);
+  }
+  body { background: var(--papel); }
+
+  header.enc { background: linear-gradient(135deg, var(--marca-base) 0%,
+      color-mix(in srgb, var(--marca-base) 55%, var(--marca-apoyo)) 100%);
+    color: var(--sobre-base); padding: 14px 18px 22px; }
+  .enc-top { max-width: 1180px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+  .enc-top img.logo-sind { max-height: 56px; max-width: 160px; object-fit: contain; }
+  .enc-top .logo-fallback { width: 44px; height: 44px; border-radius: 9px; background: var(--marca-acento);
+    color: var(--marca-base); display: grid; place-items: center; font-weight: 800; font-size: 17px; }
+  .enc-top h1 { font-family: var(--fuente-display); font-size: 23px; line-height: 1.05; }
+  .enc-top .sub { font-size: 11px; color: var(--sobre-base-mute); }
+  .enc-top .volver { margin-left: auto; color: var(--sobre-base); text-decoration: none;
+    border: 1px solid color-mix(in srgb, var(--sobre-base) 35%, transparent);
+    border-radius: 99px; padding: 6px 14px; font-size: 12.5px; font-weight: 600; }
+  .enc-top .volver:hover { background: color-mix(in srgb, var(--sobre-base) 14%, transparent); }
+
+  main { max-width: 1180px; margin: 0 auto; padding: 0 14px 90px; }
+
+  /* ---------- Filtros ---------- */
+  .filtros { background: color-mix(in srgb, var(--gris) 7%, var(--papel));
+    border: 1px solid var(--linea); border-radius: var(--r-card);
+    padding: 12px 14px; margin-top: 14px; display: flex; gap: 14px;
+    align-items: flex-end; flex-wrap: wrap; }
+  .f-grupo { display: flex; flex-direction: column; gap: 5px; }
+  .f-label { font-size: 10.5px; font-weight: 700; letter-spacing: .7px;
+    text-transform: uppercase; color: var(--gris); }
+  select.f-select { border: 1.5px solid var(--linea); border-radius: var(--r-btn);
+    padding: 7px 10px; font-family: inherit; font-size: 12.5px; color: var(--tinta);
+    background: var(--blanco); min-width: 170px; max-width: 100%; }
+  select.f-select.act { border-color: var(--marca-apoyo); background: var(--enc-suave); font-weight: 600; }
+  select.f-select:disabled { background: var(--papel); color: var(--gris); }
+  .f-nota { font-size: 11.5px; color: var(--gris); max-width: 420px; }
+
+  /* ---------- Los cuatro indicadores (N22) ---------- */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px; margin: 14px 0; }
+  .kpi { background: var(--blanco); border: 1px solid var(--linea); border-radius: var(--r-card);
+    padding: 12px 14px; position: relative; overflow: hidden; }
+  .kpi::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--kc, var(--marca-apoyo)); }
+  .kpi .et { font-size: 10.5px; font-weight: 700; letter-spacing: .6px;
+    text-transform: uppercase; color: var(--gris); }
+  .kpi .val { font-family: var(--fuente-display); font-size: 27px; margin: 3px 0 1px; }
+  .kpi .pie { font-size: 11.5px; color: var(--gris); min-height: 16px; }
+  .barra { height: 6px; border-radius: 99px; background: var(--linea); margin: 7px 0 4px; overflow: hidden; }
+  .barra i { display: block; height: 100%; border-radius: 99px; background: var(--kc, var(--marca-apoyo)); }
+  /* Chart.js con maintainAspectRatio:false se estira hasta el tamaño del
+     contenedor, y si el contenedor crece con el canvas el gráfico se va al
+     infinito (pasó: paneles de 14.000px de alto). La altura la fija SIEMPRE
+     un envoltorio posicionado, nunca el atributo height del <canvas>. */
+  .grafico { position: relative; width: 100%; }
+  .grafico canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
+  .kpi .grafico { height: 52px; margin-top: 4px; }
+
+  .chip { display: inline-block; border-radius: var(--r-chip); padding: 3px 11px;
+    font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+  .chip.borrador  { background: #eceef2; color: var(--gris); }
+  .chip.programada{ background: #fdf1d8; color: var(--aviso); }
+  .chip.abierta   { background: color-mix(in srgb, var(--marca-apoyo) 16%, white);
+                    color: color-mix(in srgb, var(--marca-apoyo) 75%, black); }
+  .chip.cerrada   { background: #e7e9ee; color: var(--tinta); }
+
+  /* ---------- Paneles por pregunta ---------- */
+  .rejilla { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; }
+  .panel { background: var(--blanco); border: 1px solid var(--linea); border-radius: var(--r-card);
+    padding: 14px 16px; grid-column: span 12; min-width: 0; }
+  .panel.mitad { grid-column: span 6; }
+  .panel.tercio { grid-column: span 4; }
+  .panel h3 { font-family: var(--fuente-display); font-size: 16.5px; }
+  .panel .sub { font-size: 11.5px; color: var(--gris); margin-bottom: 10px; }
+  .prom { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .prom b { font-family: var(--fuente-display); font-size: 30px; color: var(--marca-apoyo); }
+  .prom span { font-size: 12px; color: var(--gris); }
+  .lista-textos { max-height: 320px; overflow-y: auto; margin-top: 4px; }
+  .lista-textos li { list-style: none; border-bottom: 1px solid var(--linea);
+    padding: 7px 2px; font-size: 13px; }
+  .lista-textos li:last-child { border-bottom: none; }
+  .nums { display: flex; gap: 18px; flex-wrap: wrap; }
+  .nums div { font-size: 12px; color: var(--gris); }
+  .nums b { display: block; font-family: var(--fuente-display); font-size: 22px; color: var(--tinta); }
+
+  .aviso-umbral { background: var(--enc-suave); border: 1px solid var(--enc-borde);
+    border-radius: var(--r-card); padding: 16px 18px; margin-top: 14px; font-size: 13.5px; }
+  .aviso-umbral b { display: block; font-family: var(--fuente-display); font-size: 17px; margin-bottom: 4px; }
+
+  h2.secc { font-family: var(--fuente-display); font-size: 19px; margin: 22px 0 10px;
+    display: flex; align-items: baseline; gap: 9px; }
+  h2.secc small { font-size: 11.5px; color: var(--gris); font-family: var(--fuente); font-weight: 400; }
+
+  /* A 430px la tabla no se achica: se desliza. Apretar cuatro columnas en
+     un teléfono las vuelve ilegibles y mete scroll horizontal a la PÁGINA,
+     que es lo único que no puede pasar. */
+  .tabla-ancha { overflow-x: auto; }
+  table.hist { width: 100%; min-width: 460px; border-collapse: collapse; font-size: 12.5px; }
+  table.hist th { text-align: left; font-size: 10.5px; text-transform: uppercase;
+    letter-spacing: .6px; color: var(--gris); padding: 6px 8px; border-bottom: 1px solid var(--linea); }
+  table.hist td { padding: 7px 8px; border-bottom: 1px solid var(--linea); vertical-align: top; }
+  table.hist td.fecha { font-family: var(--fuente-num); white-space: nowrap; color: var(--gris); }
+
+  footer.enc { text-align: center; font-size: 11px; color: var(--gris); padding: 16px; }
+
+  @media (max-width: 760px) {
+    .panel.mitad, .panel.tercio { grid-column: span 12; }
+    select.f-select { min-width: 0; width: 100%; }
+    .f-grupo { width: 100%; }
+  }
+</style>
+</head>
+<body>
+{% include "_entorno.html" %}
+
+<header class="enc">
+  <div class="enc-top">
+    {% if marca.logo %}
+    <img class="logo-sind" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
+    {% else %}
+    <div class="logo-fallback">{{ iniciales }}</div>
+    {% endif %}
+    <div>
+      <h1 id="enc-titulo">{{ titulo_encuesta }}</h1>
+      <div class="sub">Resultados · {{ sindicato }}</div>
+    </div>
+    <a class="volver" href="/admin#encuestas">← Volver al panel</a>
+  </div>
+</header>
+
+<main>
+  <div class="filtros" id="filtros">
+    <div class="f-nota" id="f-nota">Cargando…</div>
+  </div>
+
+  <section class="kpis">
+    <div class="kpi" style="--kc:var(--marca-apoyo)">
+      <div class="et">Participación</div>
+      <div class="val" id="k-part">—</div>
+      <div class="barra"><i id="k-part-barra" style="width:0"></i></div>
+      <div class="pie" id="k-part-pie"></div>
+    </div>
+    <div class="kpi" style="--kc:var(--marca-acento)">
+      <div class="et">Avisos leídos</div>
+      <div class="val" id="k-leidos">—</div>
+      <div class="barra"><i id="k-leidos-barra" style="width:0"></i></div>
+      <div class="pie" id="k-leidos-pie"></div>
+    </div>
+    <div class="kpi" style="--kc:var(--marca-primario)">
+      <div class="et">Ritmo</div>
+      <div class="val" id="k-ritmo">—</div>
+      <div class="grafico"><canvas id="c-ritmo"></canvas></div>
+      <div class="pie" id="k-ritmo-pie"></div>
+    </div>
+    <div class="kpi" style="--kc:var(--gris)">
+      <div class="et">Estado</div>
+      <div class="val"><span class="chip" id="k-estado">—</span></div>
+      <div class="pie" id="k-estado-pie"></div>
+    </div>
+  </section>
+
+  {# Los dos primeros indicadores solo sirven juntos: leyeron 82% y respondió
+     20% quiere decir que el problema es la encuesta y el recordatorio no lo
+     arregla; leyeron 30% y de esos respondió casi todo, el problema es el
+     canal y el recordatorio sí lo resuelve. #}
+  <div class="f-nota" id="lectura-vs-respuesta" style="margin:-4px 0 2px;"></div>
+
+  <div id="umbral" class="aviso-umbral" hidden></div>
+
+  <h2 class="secc">Respuestas <small id="sub-preguntas"></small></h2>
+  <div class="rejilla" id="preguntas"></div>
+
+  <h2 class="secc">Historial <small>ediciones, prórrogas, avisos y cierre</small></h2>
+  <div class="panel">
+    <div class="tabla-ancha"><table class="hist"><tbody id="historial"></tbody></table></div>
+  </div>
+</main>
+
+<a class="btn-flotante btn-home" href="/admin/inicio" title="Inicio" aria-label="Inicio">
+  <svg viewBox="0 0 24 24"><path d="M3 11.2 12 4l9 7.2"/><path d="M5.5 9.8V20h13V9.8"/></svg>
+</a>
+<a class="btn-flotante btn-cerrar" href="/admin/salir" title="Salir" aria-label="Salir">
+  <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+</a>
+
+<footer class="enc">Resultados de encuesta · versión {{ version }} · {{ fecha_version }}</footer>
+
+<script>
+  const ENCUESTA_ID = {{ encuesta_id }};
+  const CORTES = {{ encuestas_cortes | tojson }};
+</script>
+<script src="/static/chart.umd.min.js?v=4.4.9"></script>
+<script src="/static/encuesta_resultados.js?v={{ sello_static('encuesta_resultados.js') }}"></script>
+</body>
+</html>

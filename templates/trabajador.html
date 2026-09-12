@@ -771,6 +771,26 @@
   .enq-revision dd.sin { color:var(--gris); font-style:italic; }
   .enq-gracias { text-align:center; padding:30px 18px; }
   .enq-gracias .tilde { font-size:40px; line-height:1; }
+  /* Los resultados que ve el afiliado (N12): totales generales y nada más.
+     Sin cortes ni filtros -- es por ahí por donde se identifica gente. */
+  .enq-res { padding:16px; }
+  .enq-res h4 { font-size:14.5px; margin:0 0 3px; }
+  .enq-res .cuantos { font-size:12px; color:var(--gris); margin-bottom:9px; }
+  .enq-res-bloque { border-bottom:1px dashed var(--linea); padding:13px 0; }
+  .enq-res-bloque:last-child { border-bottom:0; }
+  .enq-barra { display:flex; align-items:center; gap:9px; margin:6px 0; font-size:13.5px; }
+  .enq-barra .nom { flex:0 0 40%; }
+  .enq-barra .via { flex:1; height:9px; background:#eef0ee; border-radius:99px; overflow:hidden; }
+  .enq-barra .via i { display:block; height:100%; background:var(--marca-apoyo); border-radius:99px; }
+  .enq-barra .pct { flex:0 0 52px; text-align:right; color:var(--gris); font-size:12.5px; }
+  .enq-prom { font-size:13px; color:var(--gris); }
+  .enq-prom b { font-size:22px; color:var(--marca-apoyo); }
+  .enq-rank-res { display:flex; align-items:center; gap:9px; margin:7px 0; font-size:13.5px; }
+  .enq-rank-res .pos { width:22px; height:22px; border-radius:50%; background:var(--marca-apoyo);
+    color:#fff; font-size:12px; font-weight:800; display:flex; align-items:center;
+    justify-content:center; flex:0 0 auto; }
+  .enq-rank-res .nom { flex:1; }
+  .enq-rank-res .det { color:var(--gris); font-size:12px; text-align:right; }
 </style>
 </head>
 <body>
@@ -2575,15 +2595,88 @@ function pintarListaEncuestas() {
                              : `<span class="enq-chip ${e.estado}">${e.estado}</span>`;
     const pie = e.respondio
       ? 'Gracias por participar.'
-      : (abierta ? `Se puede responder hasta el ${e.fecha_hasta}.`
-                 : (e.estado === 'programada' ? `Abre el ${e.fecha_desde}.` : 'Ya cerró.'));
-    const boton = (abierta && !e.respondio)
+      : (abierta ? `Se puede responder hasta el ${diaEnc(e.fecha_hasta)}.`
+                 : (e.estado === 'programada' ? `Abre el ${diaEnc(e.fecha_desde)}.` : 'Ya cerró.'));
+    let boton = (abierta && !e.respondio)
       ? `<button class="btn" style="margin-top:11px;" onclick="abrirEncuesta(${e.id})">Responder</button>` : '';
+    // Los resultados solo si la encuesta cerró Y el admin lo tildó (N12).
+    if (!abierta && e.estado === 'cerrada' && e.mostrar_resultados) {
+      boton += `<button class="btn sec" style="margin-top:11px;"
+        onclick="verResultadosEncuesta(${e.id})">Ver los resultados</button>`;
+    }
     return `<div class="enq-card">
       <h3>${escEnc(e.titulo)}${chip}</h3>
       ${e.descripcion ? `<div class="enq-meta">${escEnc(e.descripcion)}</div>` : ''}
       <div class="enq-meta" style="margin-top:6px;">${pie}</div>${boton}</div>`;
   }).join('');
+}
+
+function diaEnc(iso) {
+  const p = String(iso || '').split('-');
+  return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : (iso || '');
+}
+
+/* ---------- Los resultados, cuando la encuesta cerró (N12) ---------- */
+// Totales GENERALES nada más. Nunca los cortes: el afiliado no tiene padrón
+// ni filtros con los que contrastar, y es por ahí por donde se identifica
+// gente. El servidor manda exactamente esto y nada más.
+async function verResultadosEncuesta(id) {
+  const cont = document.getElementById('enc-responder');
+  document.getElementById('enc-lista').classList.add('oculto');
+  cont.classList.remove('oculto');
+  cont.innerHTML = '<p class="muted" style="font-size:13.5px;">Cargando los resultados…</p>';
+  try {
+    const r = await fetch(`/api/encuesta/${id}/resultados`);
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    cont.innerHTML = `
+      <button class="btn sec" style="min-height:38px; margin:0 0 10px; width:auto; padding:0 14px;"
+              onclick="volverAListaEncuestas()">← Volver</button>
+      <div class="enq-marco">
+        <div class="enq-cab"><div class="tit">${escEnc(d.titulo)}</div>
+          <div class="baja">Resultados · ${d.respondentes} ${d.respondentes === 1
+            ? 'persona respondió' : 'personas respondieron'}</div></div>
+        <div class="enq-res">${d.preguntas.map(htmlResultado).join('')}</div>
+      </div>`;
+  } catch (e) {
+    cont.innerHTML = `<button class="btn sec" style="min-height:38px; margin:0 0 10px; width:auto; padding:0 14px;"
+        onclick="volverAListaEncuestas()">← Volver</button>
+      <p class="muted" style="font-size:13.5px;">Todavía no se pueden ver los resultados de esta encuesta.</p>`;
+  }
+}
+
+function htmlResultado(p) {
+  let cuerpo = '';
+  if (p.tipo_dato === 'escala') {
+    const e = p.escala;
+    cuerpo = `<div class="enq-prom"><b>${e.promedio === null ? '—' : e.promedio}</b>
+      de ${e.min} a ${e.max}</div>`
+      + e.distribucion.map(x => barraEnc(String(x.valor), x.porcentaje, x.cantidad)).join('');
+  } else if (p.tipo_dato === 'ranking') {
+    // Ya vienen ordenadas por prioridad: el número de orden ES el resultado.
+    cuerpo = p.ranking.filter(x => x.promedio !== null).map((x, i) =>
+      `<div class="enq-rank-res"><span class="pos">${i + 1}</span>
+        <span class="nom">${escEnc(x.texto)}</span>
+        <span class="det">${x.primeras} la pusieron primera</span></div>`).join('');
+  } else if (p.tipo_dato === 'numero') {
+    cuerpo = `<div class="enq-prom"><b>${p.numero.promedio === null ? '—' : p.numero.promedio}</b>
+      promedio</div>`;
+  } else if (p.opciones) {
+    cuerpo = p.opciones.map(x => barraEnc(x.texto, x.porcentaje, x.cantidad)).join('');
+  } else {
+    // El texto libre y las fechas no se le devuelven al afiliado: una
+    // respuesta escrita a mano puede identificar a quien la escribió.
+    cuerpo = '<div class="enq-meta">Las respuestas escritas no se publican.</div>';
+  }
+  return `<div class="enq-res-bloque"><h4>${escEnc(p.etiqueta)}</h4>
+    <div class="cuantos">${p.respondieron} ${p.tipo_dato === 'multiple'
+      ? 'marcas' : (p.respondieron === 1 ? 'respuesta' : 'respuestas')}</div>${cuerpo}</div>`;
+}
+
+function barraEnc(nombre, porcentaje, cantidad) {
+  return `<div class="enq-barra"><span class="nom">${escEnc(nombre)}</span>
+    <span class="via"><i style="width:${Math.min(porcentaje, 100)}%"></i></span>
+    <span class="pct">${porcentaje}%</span></div>`;
 }
 
 function abrirEncuesta(id) {

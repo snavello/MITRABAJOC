@@ -78,6 +78,15 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - validador.py — motor de validación de fórmulas.
 - semaforo.py — lógica del semáforo de aportes (ARCA).
 - dashboard.py — agregados SQL del Panel Sindical (ver sección propia).
+- fechas.py — la hora de Buenos Aires, en un solo lugar. En el código de la
+  app NO se llama a `datetime.now()` ni a `date.today()`: el servidor de
+  Render corre en UTC y toda la app compara fechas como texto. Lo verifica
+  `test_fechas.py` recorriendo los archivos con `ast`.
+- encuestas.py — catálogo y reglas PURAS del módulo Encuestas (modos,
+  cortes, tipos de pregunta, estados, disclaimer, textos de los avisos). No
+  importa `db`, así que se prueba solo y rápido.
+- resultados_encuesta.py — agregados SQL del dashboard de una encuesta. El
+  umbral y los filtros se aplican acá, en la consulta, no en la pantalla.
 - rag.py — piloto de consultas sobre el convenio: extracción de PDF,
   troceo, embeddings locales e indexación en segundo plano.
 - validaciones_tramite.py — motor puro de validaciones de formularios de
@@ -437,8 +446,25 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    `GET /admin/encuesta/avisos`) por lo mismo que el disclaimer: el
    lanzamiento y el recordatorio tienen que decir lo mismo sobre el
    anonimato. El aviso lleva al afiliado a responder **solo mientras la
-   encuesta siga abierta**. Siguen las fases 4 a 6 (dashboard,
-   exportar/duplicar, demo).
+   encuesta siga abierta**. **Fase 4 HECHA**: el dashboard de cada encuesta
+   (`/admin/encuesta/<id>/resultados`, sección `encuestas_resultados`, con
+   los agregados en `resultados_encuesta.py` — es a Encuestas lo que
+   `dashboard.py` al Panel Sindical). Abre con los cuatro indicadores
+   (participación, avisos leídos, ritmo y estado) y debajo un gráfico por
+   pregunta, con filtros por los cortes que ESA encuesta guardó. Tres cosas
+   que no son de la pantalla sino del servidor: **el umbral se aplica en el
+   SQL** —un grupo anónimo por debajo del mínimo no se calcula ni viaja, y
+   solo rige en las anónimas, porque en una nominal el admin ve respuesta
+   por respuesta con nombre y apellido (es lo que el CSV nominal entrega)—,
+   **el recorte por seccional (N18)** —la seccional ahora VE la encuesta
+   central, con el filtro de su seccional impuesto desde la sesión, y
+   `_exigir_alcance_encuesta` le frena editarla, publicarla, cerrarla,
+   borrarla o duplicarla aunque arme el POST a mano— y **lo que ve el
+   afiliado al cerrarse** (N12): totales generales, sin cortes y sin los
+   textos libres, que se sacan en el servidor. La curva de ritmo se cuenta
+   sobre una PREGUNTA TESTIGO (una obligatoria de las que dejan una sola
+   fila por persona): contar filas de la urna contaría opciones, no gente.
+   Sigue la Fase 5 (exportar y evolución) y la 6 (demo).
    Lo central: el anonimato se sostiene por la FORMA de las tablas (padrón
    y urna separados, sin vínculo posible), no por un cartel.
 

@@ -34,6 +34,7 @@ from datetime import date, timedelta
 from dotenv import load_dotenv
 from typing import Any
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON, text
+from sqlalchemy import or_
 
 import encuestas
 import fechas
@@ -4905,7 +4906,8 @@ def _encuesta_a_dict(s: Session, e: "Encuesta", hoy: str) -> dict:
                        .where(PreguntaEncuesta.encuesta_id == e.id)
                        .order_by(PreguntaEncuesta.orden)).all()
     return {
-        "id": e.id, "titulo": e.titulo, "descripcion": e.descripcion, "modo": e.modo,
+        "id": e.id, "sindicato_id": e.sindicato_id,
+        "titulo": e.titulo, "descripcion": e.descripcion, "modo": e.modo,
         "cortes": list(e.cortes or []), "umbral_minimo": e.umbral_minimo,
         "fecha_desde": e.fecha_desde, "fecha_hasta": e.fecha_hasta,
         "publicada": e.publicada, "publicada_en": e.publicada_en,
@@ -4924,9 +4926,14 @@ def encuestas_del_sindicato(sindicato_id: int, alcance=None) -> list:
     """Las encuestas del sindicato, más nuevas primero.
 
     `alcance` es el de seccional de quien mira (db.alcance_seccional):
-    None = todas, un set = solo las que lanzó alguna de esas seccionales
-    (decisión N18: cada seccional ve las suyas). Las de sede central
-    (seccional_id NULL) las ve solo quien alcanza todo.
+    None = todas, un set = las que lanzó alguna de esas seccionales MÁS las
+    centrales (decisión N18: la seccional ve las suyas para trabajarlas, y
+    la encuesta nacional para leer sus resultados recortados a su gente).
+
+    Cada fila trae `propia`: False en una central mirada por una seccional.
+    Es lo que separa "la puedo leer" de "la puedo tocar" -- editar, publicar,
+    cerrar o borrar una encuesta ajena lo frena el servidor
+    (main._exigir_alcance_encuesta), no el hecho de que el botón no esté.
     """
     if alcance is not None and not alcance:
         return []
@@ -4934,7 +4941,8 @@ def encuestas_del_sindicato(sindicato_id: int, alcance=None) -> list:
     with Session(engine) as s:
         q = select(Encuesta).where(Encuesta.sindicato_id == sindicato_id)
         if alcance is not None:
-            q = q.where(Encuesta.seccional_id.in_(list(alcance)))
+            q = q.where(or_(Encuesta.seccional_id.in_(list(alcance)),
+                            Encuesta.seccional_id == None))   # noqa: E711
         filas = s.exec(q.order_by(Encuesta.id.desc())).all()
         salida = []
         for e in filas:
@@ -4942,8 +4950,21 @@ def encuestas_del_sindicato(sindicato_id: int, alcance=None) -> list:
             d["respuestas"] = _cuenta(s, RespuestaEncuesta.encuesta_id, e.id, RespuestaEncuesta)
             d["participantes"] = _cuenta(s, EncuestaParticipante.encuesta_id, e.id,
                                           EncuestaParticipante)
+            d["propia"] = encuesta_en_alcance(e.seccional_id, alcance)
             salida.append(d)
         return salida
+
+
+def encuesta_en_alcance(seccional_id, alcance) -> bool:
+    """Si quien tiene ese alcance puede TOCAR una encuesta de esa seccional.
+
+    Leer una central y modificarla son dos cosas distintas: la seccional ve
+    la nacional para sus resultados (N18), pero editarla, publicarla,
+    cerrarla o borrarla es de quien alcanza todo.
+    """
+    if alcance is None:
+        return True
+    return bool(seccional_id) and seccional_id in alcance
 
 
 def _cuenta(s: Session, columna, valor, modelo) -> int:
@@ -4996,12 +5017,19 @@ def registrar_evento_encuesta(encuesta_id: int, usuario_id: Optional[int],
 
 
 def eventos_de_encuesta(encuesta_id: int) -> list:
+    """El historial de la encuesta, más nuevo primero, con el NOMBRE de quien
+    hizo cada cosa. Un "corrección de texto" sin autor no sirve para lo que
+    el historial existe (N5): saber quién cambió qué y cuándo."""
     with Session(engine) as s:
         filas = s.exec(select(EventoEncuesta)
                        .where(EventoEncuesta.encuesta_id == encuesta_id)
                        .order_by(EventoEncuesta.id.desc())).all()
+        ids = {v.usuario_id for v in filas if v.usuario_id}
+        nombres = {u.id: (u.nombre or u.usuario) for u in s.exec(select(UsuarioSindicato).where(
+            UsuarioSindicato.id.in_(ids))).all()} if ids else {}
         return [{"evento": v.evento, "detalle": v.detalle, "fecha": v.fecha,
-                 "usuario_id": v.usuario_id} for v in filas]
+                 "usuario_id": v.usuario_id,
+                 "usuario": nombres.get(v.usuario_id, "")} for v in filas]
 
 
 def _guardar_preguntas(s: Session, encuesta_id: int, preguntas: list) -> None:
@@ -5288,6 +5316,21 @@ def encuestas_de_trabajador(cuil: str, sindicato_id: int) -> list:
         # Las abiertas y sin responder primero: es lo que el afiliado vino a hacer.
         salida.sort(key=lambda d: (d["respondio"], d["estado"] != encuestas.ABIERTA))
         return salida
+
+
+def esta_en_el_padron(encuesta_id: int, cuil: str, sindicato_id: int) -> bool:
+    """Si este CUIL fue invitado a esta encuesta de este sindicato.
+
+    Es control de acceso, no un dato: una encuesta a la que no lo invitaron
+    no existe para él, ni siquiera para leer sus resultados.
+    """
+    with Session(engine) as s:
+        e = s.get(Encuesta, encuesta_id)
+        if not e or e.sindicato_id != sindicato_id:
+            return False
+        return s.exec(select(EncuestaParticipante).where(
+            EncuestaParticipante.encuesta_id == encuesta_id,
+            EncuestaParticipante.cuil == cuil)).first() is not None
 
 
 def contar_encuestas_pendientes(cuil: str, sindicato_id: int) -> int:

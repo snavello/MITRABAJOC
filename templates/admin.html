@@ -545,6 +545,12 @@
   button.sec { background:#fff; color:var(--tinta); border:1px solid #b4b2a9; }
   button.mini { padding:5px 10px; font-size:12px; }
   button.peligro { background:#fff; color:var(--alerta); border:1px solid #e3b5ae; }
+  /* Un <a> que se ve como botón: "Resultados" navega a otra pantalla, así
+     que tiene que ser un enlace de verdad (se abre en otra pestaña, se
+     copia el link), no un button con onclick. */
+  a.btn-mini { display:inline-block; padding:5px 10px; font-size:12px; font-weight:500;
+               background:var(--tinta); color:#fff; border-radius:6px; text-decoration:none; }
+  a.btn-mini:hover { opacity:.92; }
   .acc { display:flex; flex-wrap:wrap; gap:5px; justify-content:flex-end; align-items:center; }
   .acc form { display:flex; margin:0; }
   .drop { display:block; box-sizing:border-box; width:100%; max-width:100%;
@@ -1760,7 +1766,16 @@
       <td class="muted">{% if e.fecha_desde %}{{ e.fecha_desde }} → {{ e.fecha_hasta }}{% else %}sin fechas{% endif %}</td>
       <td class="muted">{{ e.respuestas }}{% if e.cantidad_destinatarios %} de {{ e.cantidad_destinatarios }}{% endif %}</td>
       <td style="white-space:nowrap; text-align:right;">
-        {% if 'encuestas' in permisos %}
+        {# Los resultados son OTRA sección (N17): un delegado puede leer el
+           dashboard sin poder lanzar ni tocar nada. Y solo tienen sentido
+           una vez publicada: antes no hay ni padrón ni respuestas. #}
+        {% if e.publicada and 'encuestas_resultados' in permisos %}
+        <a class="btn-mini" href="/admin/encuesta/{{ e.id }}/resultados">Resultados</a>
+        {% endif %}
+        {# `propia` es False en una encuesta de sede central mirada por una
+           seccional: la lee (N18) pero no la toca, y el servidor lo frena
+           igual aunque alguien arme el POST a mano. #}
+        {% if 'encuestas' in permisos and e.propia %}
         <button type="button" class="mini" onclick='editarEncuesta({{ e | tojson }})'>Editar</button>
         <form method="post" action="/admin/encuesta/duplicar" style="display:inline;">
           <input type="hidden" name="id" value="{{ e.id }}">

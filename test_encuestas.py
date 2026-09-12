@@ -750,6 +750,21 @@ def test_ninguna_salida_de_una_anonima_devuelve_un_cuil():
     assert not _tiene(cliente.get("/admin/encuesta/disclaimer",
                                   params={"modo": "anonima"}).json(), cuil)
     assert not _tiene(db.eventos_de_encuesta(eid), cuil)
+    # Y el dashboard, que es el que agrega las respuestas: si un CUIL se
+    # colara acá, todo el anonimato de la urna no serviría de nada.
+    assert not _tiene(cliente.get("/admin/encuesta/resultados",
+                                  params={"id": eid}).json(), cuil)
+    assert not _tiene(cliente.get("/admin/encuesta/avisos",
+                                  params={"id": eid}).json(), cuil)
+    # Con el corte aplicado tampoco -- es donde el grupo se achica.
+    assert not _tiene(cliente.get("/admin/encuesta/resultados",
+                                  params={"id": eid, "seccional": "1"}).json(), cuil)
+    # Y lo que ve el afiliado cuando cierra (N12).
+    cliente.post("/admin/encuesta/cerrar", data={"id": eid}, follow_redirects=False)
+    _sesion_trabajador(cuil, sid)
+    r = cliente.get(f"/api/encuesta/{eid}/resultados")
+    if r.status_code == 200:
+        assert not _tiene(r.json(), cuil)
 
 
 # ---------- Privacidad 2: padrón y urna no se cruzan (N21.2) ----------
@@ -990,3 +1005,326 @@ def test_prorrogar_una_encuesta_lanzada_queda_en_el_historial():
     _alta(desde=(fechas.hoy() - timedelta(days=1)).isoformat(), hasta=nuevo,
           extra={"id": eid})
     assert len([v for v in db.eventos_de_encuesta(eid) if v["evento"] == "prorroga"]) == 1
+
+
+# ==================== Fase 4: el dashboard ====================
+def _seccional(sid: int, nombre: str) -> int:
+    with db.get_session() as s:
+        x = db.Seccional(sindicato_id=sid, nombre=nombre)
+        s.add(x); s.commit(); s.refresh(x)
+        return x.id
+
+
+def _admin_de_seccional(sid: int, seccional_id: int) -> int:
+    """Un Admin de Seccional: las MISMAS secciones que el Super Admin, lo que
+    lo achica es el alcance (ver db.permisos_efectivos y alcance_seccional)."""
+    with db.get_session() as s:
+        u = db.UsuarioSindicato(sindicato_id=sid, usuario=f"27{seccional_id:09d}",
+                                nombre="Admin local", clave_hash=auth.hashear_clave("x"),
+                                debe_cambiar_clave=False, es_admin_seccional=True,
+                                seccional_id=seccional_id)
+        s.add(u); s.commit(); s.refresh(u)
+        return u.id
+
+
+def _responden(eid: int, sid: int, cuils: list, valor=4, opciones=(0,)):
+    """Contesta la encuesta con cada uno de esos CUIL (escala + ranking)."""
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    for c in cuils:
+        _sesion_trabajador(c, sid)
+        r = cliente.post(f"/api/encuesta/{eid}",
+                         json={"respuestas": {str(pids[0]): valor,
+                                              str(pids[1]): [0, 1, 2]}})
+        assert r.status_code == 200, r.text
+
+
+def _padron_grande(sid: int, cantidad: int, seccional_id=None, provincia="Santa Fe") -> list:
+    cuils = [f"20{sid:05d}{n:04d}" for n in range(cantidad)]
+    _padron(sid, cuils, seccional_id=seccional_id, provincia=provincia)
+    return cuils
+
+
+def test_el_dashboard_agrega_en_sql_y_cuenta_gente_no_filas():
+    """Una múltiple deja varias filas por persona: si la participación se
+    contara con COUNT(*) de la urna, una encuesta de 3 personas informaría
+    quince respuestas."""
+    sid, uid = _sindicato_con(["encuestas", "notificaciones"], "dash-agrega")
+    cuils = _padron_grande(sid, 6)
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    _alta(modo="nominal", cortes=(), desde=(hoy - timedelta(days=1)).isoformat(),
+          hasta=(hoy + timedelta(days=30)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    _sesion(sid, uid)
+    cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                 follow_redirects=False)
+    _responden(eid, sid, cuils[:4])
+
+    _sesion(sid, uid)
+    d = cliente.get("/admin/encuesta/resultados", params={"id": eid}).json()
+    assert d["indicadores"]["participacion"] == {"respondieron": 4, "padron": 6, "porcentaje": 66.7}
+    assert d["respondentes"] == 4            # gente, no filas
+    assert sum(x["cantidad"] for x in d["indicadores"]["ritmo"]) == 4
+
+    escala = d["preguntas"][0]
+    assert escala["tipo_dato"] == "escala" and escala["respondieron"] == 4
+    assert escala["escala"]["promedio"] == 4.0
+    assert [x["cantidad"] for x in escala["escala"]["distribucion"]] == [0, 0, 0, 4, 0]
+
+    ranking = d["preguntas"][1]
+    # Todos ordenaron igual, así que el promedio de posiciones es 1, 2 y 3.
+    assert [x["promedio"] for x in ranking["ranking"]] == [1.0, 2.0, 3.0]
+    assert ranking["ranking"][0]["primeras"] == 4
+    assert ranking["respondieron"] == 4      # 12 filas / 3 opciones
+
+
+def test_el_umbral_se_aplica_en_el_servidor_no_en_la_pantalla():
+    """Tercer test de privacidad (N21.3): se pide el endpoint con un corte de
+    3 respuestas y tiene que venir VACÍO del servidor. Que la pantalla lo
+    esconda no protege nada -- el JSON se lee con el inspector."""
+    sid, uid = _sindicato_con(["encuestas", "notificaciones"], "dash-umbral")
+    chica = _seccional(sid, "Rosario")
+    grande = _seccional(sid, "Córdoba")
+    pocos = _padron_grande(sid, 3, seccional_id=chica)
+    muchos = [f"27{sid:05d}{n:04d}" for n in range(7)]
+    _padron(sid, muchos, seccional_id=grande)
+
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    _alta(modo="anonima", cortes=("seccional",),
+          desde=(hoy - timedelta(days=1)).isoformat(),
+          hasta=(hoy + timedelta(days=30)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    _sesion(sid, uid)
+    cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                 follow_redirects=False)
+    _responden(eid, sid, pocos + muchos)
+
+    _sesion(sid, uid)
+    # El total general sí se ve: 10 respuestas.
+    entero = cliente.get("/admin/encuesta/resultados", params={"id": eid}).json()
+    assert entero["oculto"] is False and entero["respondentes"] == 10
+    assert entero["umbral"] == {"minimo": 5, "aplica": True}
+
+    # La seccional chica NO: tres respuestas no llegan al umbral.
+    chico = cliente.get("/admin/encuesta/resultados",
+                        params={"id": eid, "seccional": chica}).json()
+    assert chico["oculto"] is True and chico["preguntas"] == []
+    # Y ni un conteo se coló por otra vía del JSON.
+    assert "4" not in json.dumps(chico["preguntas"])
+
+    # La grande sí, porque llega.
+    gordo = cliente.get("/admin/encuesta/resultados",
+                        params={"id": eid, "seccional": grande}).json()
+    assert gordo["oculto"] is False and gordo["respondentes"] == 7
+
+
+def test_en_una_nominal_no_hay_umbral_que_esconda_nada():
+    """El umbral protege el anonimato, así que en una nominal no rige: el
+    admin puede ver respuesta por respuesta con nombre y apellido -- es lo
+    que el afiliado aceptó y lo que el CSV nominal entrega (N20)."""
+    sid, uid = _sindicato_con(["encuestas", "notificaciones"], "dash-nominal")
+    cuils = _padron_grande(sid, 2)
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    _alta(modo="nominal", cortes=("seccional",),
+          desde=(hoy - timedelta(days=1)).isoformat(),
+          hasta=(hoy + timedelta(days=30)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    _sesion(sid, uid)
+    cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                 follow_redirects=False)
+    _responden(eid, sid, cuils)
+
+    _sesion(sid, uid)
+    d = cliente.get("/admin/encuesta/resultados", params={"id": eid}).json()
+    assert d["umbral"] == {"minimo": 0, "aplica": False}
+    assert d["oculto"] is False and d["respondentes"] == 2 and d["preguntas"]
+
+
+def test_un_corte_que_la_encuesta_no_guarda_no_se_puede_filtrar():
+    """La urna de una anónima sin corte de provincia no tiene ese dato:
+    pedirlo por URL no lo inventa, y filtrar por él tampoco puede devolver
+    un subconjunto que no existe."""
+    sid, uid = _sindicato_con(["encuestas", "notificaciones"], "dash-sin-corte")
+    sec = _seccional(sid, "Centro")
+    cuils = _padron_grande(sid, 6, seccional_id=sec, provincia="Santa Fe")
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    _alta(modo="anonima", cortes=("seccional",),
+          desde=(hoy - timedelta(days=1)).isoformat(),
+          hasta=(hoy + timedelta(days=30)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    _sesion(sid, uid)
+    cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                 follow_redirects=False)
+    _responden(eid, sid, cuils)
+
+    _sesion(sid, uid)
+    d = cliente.get("/admin/encuesta/resultados",
+                    params={"id": eid, "provincia": "Santa Fe"}).json()
+    assert "provincia" not in d["filtros"]["aplicados"]
+    assert "provincia" not in d["filtros"]["disponibles"]
+    assert d["respondentes"] == 6   # no recortó nada: el corte no existe
+
+
+def test_la_seccional_ve_la_encuesta_central_recortada_a_su_gente():
+    """N18. Y solo para MIRAR: editarla, publicarla, cerrarla o borrarla es
+    de sede central, y lo frena el servidor aunque el POST venga a mano."""
+    sid, uid = _sindicato_con(["encuestas", "notificaciones"], "dash-n18")
+    mia = _seccional(sid, "Rosario")
+    otra = _seccional(sid, "Córdoba")
+    mios = _padron_grande(sid, 6, seccional_id=mia)
+    ajenos = [f"27{sid:05d}{n:04d}" for n in range(6)]
+    _padron(sid, ajenos, seccional_id=otra)
+
+    # La lanza sede central (super admin, sin seccional).
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    _alta(modo="anonima", cortes=("seccional",),
+          desde=(hoy - timedelta(days=1)).isoformat(),
+          hasta=(hoy + timedelta(days=30)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    _sesion(sid, uid)
+    cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                 follow_redirects=False)
+    _responden(eid, sid, mios + ajenos)
+
+    # Un admin de la seccional Rosario, con las dos secciones de Encuestas.
+    uid_sec = _admin_de_seccional(sid, mia)
+    _sesion(sid, uid_sec)
+
+    lista = db.encuestas_del_sindicato(sid, alcance={mia})
+    assert [e["id"] for e in lista] == [eid]
+    assert lista[0]["propia"] is False      # la ve, no es suya
+
+    d = cliente.get("/admin/encuesta/resultados", params={"id": eid}).json()
+    assert d["filtros"]["fijos"] == ["seccional"]
+    assert d["filtros"]["aplicados"]["seccional"] == [str(mia)]
+    assert d["respondentes"] == 6           # los suyos, no los doce
+    # Y pedir la otra seccional a mano no la saca de la suya.
+    d2 = cliente.get("/admin/encuesta/resultados",
+                     params={"id": eid, "seccional": otra}).json()
+    assert d2["respondentes"] == 0 and d2["oculto"] is True
+
+    # Tocarla, no.
+    for ruta in ("/admin/encuesta/cerrar", "/admin/encuesta/borrar",
+                 "/admin/encuesta/duplicar"):
+        assert cliente.post(ruta, data={"id": eid}).status_code == 403, ruta
+    assert cliente.post("/admin/encuesta/notificar",
+                        data={"id": eid, "texto": "hola"}).status_code == 403
+
+
+def test_el_afiliado_ve_los_totales_solo_si_cerro_y_el_admin_lo_tildo():
+    """N12: un tilde por encuesta, y solo los totales GENERALES -- nunca los
+    cortes, que es por donde se identifica gente."""
+    sid, uid = _sindicato_con(["encuestas", "notificaciones"], "dash-afiliado")
+    cuils = _padron_grande(sid, 6)
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    _alta(modo="anonima", cortes=("seccional",),
+          desde=(hoy - timedelta(days=1)).isoformat(),
+          hasta=(hoy + timedelta(days=30)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    _sesion(sid, uid)
+    cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                 follow_redirects=False)
+    _responden(eid, sid, cuils)
+
+    # Abierta todavía: no hay resultados para nadie de afuera.
+    _sesion_trabajador(cuils[0], sid)
+    assert cliente.get(f"/api/encuesta/{eid}/resultados").status_code == 404
+
+    _sesion(sid, uid)
+    cliente.post("/admin/encuesta/cerrar", data={"id": eid}, follow_redirects=False)
+    _sesion_trabajador(cuils[0], sid)
+    d = cliente.get(f"/api/encuesta/{eid}/resultados").json()
+    assert d["respondentes"] == 6
+    # Totales y nada más: ni cortes, ni filtros, ni el padrón.
+    crudo = json.dumps(d)
+    assert "seccional" not in crudo and "filtros" not in crudo
+    assert "cuil" not in crudo.lower() and cuils[0] not in crudo
+
+
+def test_al_afiliado_no_le_llegan_ni_los_textos_libres():
+    """Una respuesta escrita a mano puede identificar sola a quien la
+    escribió. Se saca en el SERVIDOR: esconderla en el JS dejaría el dato
+    en el JSON igual."""
+    sid, uid = _sindicato_con(["encuestas", "notificaciones"], "dash-textos")
+    cuils = _padron_grande(sid, 6)
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    preguntas = [{"etiqueta": "¿Algo para agregar?", "tipo_dato": "texto",
+                  "ancho": "completo", "obligatorio": True}]
+    _alta(modo="anonima", cortes=(), preguntas=preguntas,
+          desde=(hoy - timedelta(days=1)).isoformat(),
+          hasta=(hoy + timedelta(days=30)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    _sesion(sid, uid)
+    cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                 follow_redirects=False)
+    pid = db.encuesta_por_id(eid)["preguntas"][0]["id"]
+    for c in cuils:
+        _sesion_trabajador(c, sid)
+        assert cliente.post(f"/api/encuesta/{eid}",
+                            json={"respuestas": {str(pid): f"soy {c} y digo esto"}}
+                            ).status_code == 200
+
+    # El admin sí los lee: es su encuesta y los pidió por escrito.
+    _sesion(sid, uid)
+    d = cliente.get("/admin/encuesta/resultados", params={"id": eid}).json()
+    assert len(d["preguntas"][0]["textos"]) == 6
+
+    # El afiliado, no.
+    cliente.post("/admin/encuesta/cerrar", data={"id": eid}, follow_redirects=False)
+    _sesion_trabajador(cuils[0], sid)
+    visto = cliente.get(f"/api/encuesta/{eid}/resultados").json()
+    assert "textos" not in visto["preguntas"][0]
+    assert "soy " not in json.dumps(visto)
+
+
+def test_los_resultados_son_otra_seccion_que_armar_la_encuesta():
+    """N17: un delegado puede leer el dashboard sin poder lanzar nada, y al
+    revés. El gateo es el de siempre y falla cerrado."""
+    assert main.PERMISOS_RUTAS["/admin/encuesta/resultados"] == "encuestas_resultados"
+    assert main.PERMISOS_RUTAS["/admin/encuesta/{encuesta_id}/resultados"] \
+        == "encuestas_resultados"
+    assert main.PERMISOS_RUTAS["/admin/encuesta"] == "encuestas"
+
+
+def test_una_encuesta_de_otro_sindicato_no_tiene_dashboard():
+    sid_a, uid_a = _sindicato_con(["encuestas"], "dash-ajena-a")
+    _sesion(sid_a, uid_a)
+    _alta()
+    eid = db.encuestas_del_sindicato(sid_a)[0]["id"]
+    sid_b, uid_b = _sindicato_con(["encuestas"], "dash-ajena-b")
+    _sesion(sid_b, uid_b)
+    assert cliente.get("/admin/encuesta/resultados", params={"id": eid}).status_code == 404
+
+
+def test_la_pantalla_del_dashboard_pide_su_seccion_y_el_modulo():
+    """Es una PANTALLA, así que sin permiso redirige al panel en vez de
+    tirar un JSON de error en pantalla completa -- mismo criterio que el
+    Panel Sindical. El endpoint de datos sí responde 403."""
+    sid, uid, eid = _encuesta_publicada("dash-pantalla")
+    _sesion(sid, uid)
+    r = cliente.get(f"/admin/encuesta/{eid}/resultados", follow_redirects=False)
+    assert r.status_code == 200 and 'id="k-part"' in r.text
+
+    # Un usuario de área sin la sección de resultados.
+    uid_pelado = _usuario_sin_secciones(sid)
+    _sesion(sid, uid_pelado)
+    r = cliente.get(f"/admin/encuesta/{eid}/resultados", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/admin"
+    assert cliente.get("/admin/encuesta/resultados",
+                       params={"id": eid}).status_code == 403
+
+
+def _usuario_sin_secciones(sid: int) -> int:
+    """Un usuario de área sin área: permisos_efectivos() le da set()."""
+    with db.get_session() as s:
+        u = db.UsuarioSindicato(sindicato_id=sid, usuario=f"23{sid:09d}",
+                                nombre="Sin secciones", clave_hash=auth.hashear_clave("x"),
+                                debe_cambiar_clave=False)
+        s.add(u); s.commit(); s.refresh(u)
+        return u.id
