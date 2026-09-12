@@ -5266,6 +5266,27 @@ def encuestas_de_trabajador(cuil: str, sindicato_id: int) -> list:
         return salida
 
 
+def contar_encuestas_pendientes(cuil: str, sindicato_id: int) -> int:
+    """Encuestas ABIERTAS a las que este CUIL fue invitado y no respondió.
+
+    Es el número del globo de la portada: sin él, una encuesta lanzada
+    depende de que el afiliado entre a la pestaña por casualidad.
+    """
+    hoy = fechas.hoy_texto()
+    with Session(engine) as s:
+        filas = s.exec(
+            select(Encuesta).join(
+                EncuestaParticipante,
+                EncuestaParticipante.encuesta_id == Encuesta.id)
+            .where(EncuestaParticipante.cuil == cuil,
+                   EncuestaParticipante.respondio == False,
+                   Encuesta.sindicato_id == sindicato_id,
+                   Encuesta.publicada == True)).all()
+    return sum(1 for e in filas
+               if encuestas.acepta_respuestas(e.publicada, e.fecha_desde, e.fecha_hasta,
+                                              hoy, e.cerrada_en))
+
+
 def registrar_respuesta_encuesta(encuesta_id: int, cuil: str, sindicato_id: int,
                                   crudas: dict) -> dict:
     """Guarda una respuesta. Devuelve {ok, error}.

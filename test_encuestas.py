@@ -794,3 +794,32 @@ def test_una_encuesta_de_otro_sindicato_no_se_responde():
     assert cliente.get("/api/encuestas").json()["encuestas"] == []
     r = cliente.post(f"/api/encuesta/{eid}", json={"respuestas": {}})
     assert r.status_code == 400 and "no existe" in r.json()["detail"]
+
+
+def test_la_portada_del_afiliado_tiene_su_puerta_de_entrada():
+    """La pestaña no alcanza: el afiliado aterriza en la PORTADA.
+
+    Sin esta tarjeta, una encuesta lanzada dependía de que entrara a la
+    pestaña de casualidad -- que es exactamente lo que pasó la primera vez
+    que se probó en Pruebas.
+    """
+    sid, uid, eid = _encuesta_publicada("portada")
+    cuil, _ = _cuils(sid)
+    _sesion_trabajador(cuil, sid)
+
+    html = cliente.get("/app/inicio").text
+    assert 'href="/app?tab=encuestas"' in html
+    assert "sin responder" in html          # la tarjeta dice cuántas faltan
+    assert db.contar_encuestas_pendientes(cuil, sid) == 1
+
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    assert cliente.post(f"/api/encuesta/{eid}",
+                        json={"respuestas": {str(pids[0]): 4,
+                                             str(pids[1]): [0, 1, 2]}}).status_code == 200
+    assert db.contar_encuestas_pendientes(cuil, sid) == 0
+
+    # Y sin el módulo, ni tarjeta ni cuenta.
+    sid2, uid2 = _sindicato_con(["noticias"], "portada-sin-modulo")
+    _padron(sid2)
+    _sesion_trabajador(_cuils(sid2)[0], sid2)
+    assert 'href="/app?tab=encuestas"' not in cliente.get("/app/inicio").text

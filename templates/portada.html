@@ -281,6 +281,20 @@
       <span class="badge-noleidas" id="badge-notif" style="display:{{ 'flex' if notificaciones_no_leidas else 'none' }};">{{ notificaciones_no_leidas }}</span>
     </div>
     {% endif %}
+    {% if 'encuestas' in modulos %}
+    <div class="acceso-badge-wrap">
+      {# La puerta de entrada a las encuestas. Sin esta tarjeta, una encuesta
+         lanzada dependía de que el afiliado entrara a la pestaña de casualidad. #}
+      <a class="acceso" href="/app?tab=encuestas">
+        <svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg>
+        <div>
+          <div class="titulo">Encuestas</div>
+          <div class="estado">{% if encuestas_pendientes %}Tenés {{ encuestas_pendientes }} sin responder{% else %}Tu opinión al sindicato{% endif %}</div>
+        </div>
+      </a>
+      <span class="badge-noleidas" id="badge-encuestas-portada" style="display:{{ 'flex' if encuestas_pendientes else 'none' }};">{{ encuestas_pendientes }}</span>
+    </div>
+    {% endif %}
     {% if 'tramites' in modulos %}
     <div class="acceso-badge-wrap">
       <a class="acceso" href="/app?tab=tramites">

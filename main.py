@@ -4859,6 +4859,8 @@ def app_portada(request: Request):
             "beneficios": db.beneficios_vigentes(sid_activo, seccional_id=seccional_id),
             "notificaciones_no_leidas": db.contar_notificaciones_no_leidas(cuil, sid_activo),
             "tramites_novedades": db.contar_tramites_con_novedades(cuil, sid_activo),
+            "encuestas_pendientes": db.contar_encuestas_pendientes(cuil, sid_activo)
+                                    if "encuestas" in _modulos_de(sid_activo) else 0,
             "modulos": _modulos_de(sid_activo),
             "version": VERSION_TRABAJADOR, "fecha_version": FECHA_VERSION,
         })
