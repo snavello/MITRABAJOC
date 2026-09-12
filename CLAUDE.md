@@ -464,7 +464,22 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    textos libres, que se sacan en el servidor. La curva de ritmo se cuenta
    sobre una PREGUNTA TESTIGO (una obligatoria de las que dejan una sola
    fila por persona): contar filas de la urna contaría opciones, no gente.
-   Sigue la Fase 5 (exportar y evolución) y la 6 (demo).
+   **Fase 5 HECHA**: exportar y evolución. El CSV sale del MODO de la
+   encuesta y no de un parámetro (N20): en una **nominal**, una fila por
+   persona con nombre, CUIL y respuestas —todo el padrón, con columna
+   "Respondió", porque la lista de los que faltan es media razón para
+   bajarlo—; en una **anónima**, solo conteos y porcentajes con el umbral
+   ya aplicado, nunca fila por respuesta: si saliera crudo, cualquiera
+   filtra "Rosario + Empresa X" en la planilla y se queda con dos filas que
+   identifican a dos personas. El archivo baja el grupo que se está viendo
+   (los filtros lo acompañan) y **cada descarga queda en el historial**
+   (quién, cuándo, qué y cuántas filas): si algún día se filtra una
+   planilla, es lo único que permite saber de dónde salió. La **evolución**
+   (N23) compara las tomas sucesivas del mismo linaje —`duplicar_encuesta`
+   aplana el `origen_id` a la raíz, así que la familia sale de una
+   consulta—, emparejando preguntas por orden y tipo, con el umbral de cada
+   toma: una toma chica no aporta punto en vez de aportar uno que
+   identifique gente. Sigue la Fase 6 (demo y cierre).
    Lo central: el anonimato se sostiene por la FORMA de las tablas (padrón
    y urna separados, sin vínculo posible), no por un cartel.
 

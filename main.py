@@ -764,6 +764,8 @@ PERMISOS_RUTAS = {
     # puede mirar el dashboard sin poder lanzar nada.
     "/admin/encuesta/{encuesta_id}/resultados":  "encuestas_resultados",
     "/admin/encuesta/resultados":                "encuestas_resultados",
+    "/admin/encuesta/evolucion":                 "encuestas_resultados",
+    "/admin/encuesta/exportar":                  "encuestas_resultados",
 
     "/admin/tramite-tipo":                  "tramites_formularios",
     "/admin/tramite-tipo/probar":           "tramites_formularios",
@@ -2786,6 +2788,44 @@ def encuesta_resultados(request: Request, id: int,
     if r is None:
         raise HTTPException(404, "La encuesta no existe")
     return r
+
+
+@app.get("/admin/encuesta/evolucion")
+def encuesta_evolucion(request: Request, id: int):
+    """La misma pregunta a lo largo de las tomas sucesivas (N23). Vacío si la
+    encuesta no tiene con qué compararse todavía."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "encuestas")
+    if not db.encuesta_por_id(id, sid):
+        raise HTTPException(404, "La encuesta no existe")
+    return resultados_encuesta.evolucion(id, sid, alcance=_alcance_de(request))
+
+
+@app.get("/admin/encuesta/exportar")
+def encuesta_exportar(request: Request, id: int,
+                      seccional: list[str] = Query(default=[]),
+                      provincia: list[str] = Query(default=[]),
+                      empleador: list[str] = Query(default=[])):
+    """El CSV de la encuesta (N20), con los mismos filtros que el dashboard.
+
+    En una NOMINAL, una fila por persona; en una ANÓNIMA, solo conteos con
+    el umbral ya aplicado. Y CADA DESCARGA QUEDA REGISTRADA en el historial
+    (quién, cuándo, qué y cuántas filas): si algún día se filtra una
+    planilla, el historial es lo único que permite saber de dónde salió.
+    """
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "encuestas")
+    r = resultados_encuesta.csv_de_encuesta(
+        id, sid, {"seccional": seccional, "provincia": provincia, "empleador": empleador},
+        alcance=_alcance_de(request))
+    if not r["ok"]:
+        raise ErrorApp("E-ENCUESTA-02", r["error"])
+    db.registrar_evento_encuesta(
+        id, _uid_sesion(request), "descarga",
+        f"CSV {r['tipo']} · {r['filas']} filas · {r['nombre']}")
+    return BinResponse(
+        content=r["contenido"].encode("utf-8"), media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{r["nombre"]}"'})
 
 
 @app.get("/admin/encuesta/disclaimer")

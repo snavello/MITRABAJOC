@@ -50,6 +50,13 @@
   select.f-select.act { border-color: var(--marca-apoyo); background: var(--enc-suave); font-weight: 600; }
   select.f-select:disabled { background: var(--papel); color: var(--gris); }
   .f-nota { font-size: 11.5px; color: var(--gris); max-width: 420px; }
+  .f-acciones { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  a.btn-descargar { display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
+    border: 1.5px solid var(--marca-apoyo); color: var(--marca-apoyo); background: var(--blanco);
+    border-radius: 99px; padding: 7px 15px; font-size: 12.5px; font-weight: 700; }
+  a.btn-descargar:hover { background: var(--marca-apoyo); color: #fff; }
+  a.btn-descargar svg { width: 15px; height: 15px; fill: none; stroke: currentColor;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
   /* ---------- Los cuatro indicadores (N22) ---------- */
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -186,7 +193,12 @@
   <h2 class="secc">Respuestas <small id="sub-preguntas"></small></h2>
   <div class="rejilla" id="preguntas"></div>
 
-  <h2 class="secc">Historial <small>ediciones, prórrogas, avisos y cierre</small></h2>
+  <section id="evolucion-seccion" hidden>
+    <h2 class="secc">Evolución <small id="sub-evolucion"></small></h2>
+    <div class="rejilla" id="evolucion"></div>
+  </section>
+
+  <h2 class="secc">Historial <small>ediciones, prórrogas, avisos, descargas y cierre</small></h2>
   <div class="panel">
     <div class="tabla-ancha"><table class="hist"><tbody id="historial"></tbody></table></div>
   </div>

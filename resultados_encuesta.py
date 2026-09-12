@@ -41,6 +41,7 @@ from sqlalchemy import case, func
 
 import db
 import encuestas
+import fechas
 
 # Tipos que dejan EXACTAMENTE una fila por persona en la urna. Son los que
 # sirven de testigo para contar personas (ver `_pregunta_testigo`).
@@ -535,3 +536,328 @@ def totales_para_afiliado(encuesta_id: int, sindicato_id: int) -> dict:
         p.pop("textos", None)
         p.pop("fechas", None)
     return {"titulo": e["titulo"], "respondentes": respondentes, "preguntas": preguntas}
+
+
+# ---------- Exportar (N20) ----------
+# Dos archivos muy distintos, y la diferencia NO es cosmética:
+#
+# - En una NOMINAL, una fila por persona con nombre, CUIL y sus respuestas.
+#   Es exactamente lo que el afiliado aceptó al responder una encuesta que
+#   dice "nominal" en la cara.
+# - En una ANÓNIMA, SOLO conteos y porcentajes con el umbral ya aplicado.
+#   Nunca fila por respuesta: si no, cualquiera abre la planilla, filtra
+#   "Rosario + Empresa X" y se queda con dos filas que identifican a dos
+#   personas. El umbral que protege la pantalla no protege nada si el
+#   archivo sale crudo.
+#
+# El separador es ";" y el archivo lleva BOM: es lo que abre bien el Excel
+# en español sin pasar por el asistente de importación, que es donde este
+# archivo se va a abrir.
+SEPARADOR = ";"
+BOM = "﻿"
+
+
+def csv_de_encuesta(encuesta_id: int, sindicato_id: int, pedidos: dict, alcance=None) -> dict:
+    """{ok, error, nombre, contenido, filas, tipo}. Los mismos filtros que el
+    dashboard, recorte por seccional (N18) incluido: quien no puede ver un
+    grupo en pantalla tampoco se lo puede bajar."""
+    e = db.encuesta_por_id(encuesta_id, sindicato_id)
+    if not e:
+        return {"ok": False, "error": "La encuesta no existe."}
+    if not e["publicada"]:
+        return {"ok": False, "error": "Una encuesta sin publicar no tiene nada que exportar."}
+    f = filtros_saneados(e, pedidos, alcance)["aplicados"]
+    anonima = e["modo"] == encuestas.ANONIMA
+
+    with db.Session(db.engine) as s:
+        testigo = _pregunta_testigo(e["preguntas"])
+        respondentes = _respondentes(s, e, f, testigo)
+        if anonima and respondentes < e["umbral_minimo"]:
+            return {"ok": False, "error":
+                    f"Este grupo tiene {respondentes} respuestas y hacen falta "
+                    f"{e['umbral_minimo']}. En una encuesta anónima un grupo chico deja de "
+                    f"ser anónimo, así que tampoco se exporta."}
+        filas = (_csv_agregado(s, e, f, respondentes) if anonima
+                 else _csv_nominal(s, e, f))
+    salida = BOM + "".join(SEPARADOR.join(_celda(c) for c in fila) + "\r\n" for fila in filas)
+    return {"ok": True, "error": "", "contenido": salida,
+            "nombre": _nombre_archivo(e, anonima),
+            "filas": max(len(filas) - 1, 0),
+            "tipo": "agregado" if anonima else "nominal"}
+
+
+def _csv_nominal(s, e: dict, filtros: dict) -> list:
+    """Una fila por persona del padrón, con sus respuestas.
+
+    Va todo el padrón y no solo los que contestaron, con una columna
+    "Respondió": la lista de los que faltan es la mitad de para qué se baja
+    este archivo. El vínculo respuesta→persona vive en RespuestaNominal,
+    que es la tabla que SOLO existe en las nominales.
+    """
+    preguntas = [p for p in e["preguntas"] if p["tipo_dato"] not in encuestas.TIPOS_SIN_RESPUESTA]
+    cuils = _cuils_alcanzados(s, e, filtros)
+
+    q = (db.select(db.EncuestaParticipante.cuil, db.EncuestaParticipante.respondio,
+                   db.Trabajador.nombre, db.Trabajador.seccional_id,
+                   db.Trabajador.provincia, db.Trabajador.cuit_empleador)
+         .join(db.Trabajador, db.Trabajador.cuil == db.EncuestaParticipante.cuil)
+         .where(db.EncuestaParticipante.encuesta_id == e["id"],
+                db.Trabajador.sindicato_id == e["sindicato_id"])
+         .order_by(db.Trabajador.nombre))
+    if cuils is not None:
+        q = q.where(db.EncuestaParticipante.cuil.in_(cuils or ["__ninguno__"]))
+    gente = s.execute(q).all()
+
+    respuestas = _respuestas_por_cuil(s, e["id"])
+    nombres_sec = {x.id: x.nombre for x in s.exec(db.select(db.Seccional).where(
+        db.Seccional.sindicato_id == e["sindicato_id"])).all()}
+
+    cabecera = ["Nombre", "CUIL", "Seccional", "Provincia", "CUIT empleador", "Respondió"]
+    cabecera += [p["etiqueta"] for p in preguntas]
+    filas = [cabecera]
+    for cuil, respondio, nombre, sec, prov, cuit in gente:
+        fila = [nombre, cuil, nombres_sec.get(sec, ""), prov or "", cuit or "",
+                "Sí" if respondio else "No"]
+        suyas = respuestas.get(cuil, {})
+        fila += [_texto_de_respuesta(p, suyas.get(p["id"], [])) for p in preguntas]
+        filas.append(fila)
+    return filas
+
+
+def _respuestas_por_cuil(s, encuesta_id: int) -> dict:
+    """{cuil: {pregunta_id: [filas de la urna]}}, vía RespuestaNominal."""
+    pares = s.execute(
+        db.select(db.RespuestaNominal.cuil, db.RespuestaEncuesta)
+        .join(db.RespuestaEncuesta, db.RespuestaEncuesta.id == db.RespuestaNominal.respuesta_id)
+        .where(db.RespuestaNominal.encuesta_id == encuesta_id)).all()
+    salida = {}
+    for cuil, fila in pares:
+        salida.setdefault(cuil, {}).setdefault(fila.pregunta_id, []).append(fila)
+    return salida
+
+
+def _texto_de_respuesta(p: dict, filas: list) -> str:
+    """Lo que esa persona contestó a esa pregunta, en una celda."""
+    if not filas:
+        return ""
+    tipo = p["tipo_dato"]
+    opciones = encuestas.opciones_de(p.get("opciones", ""))
+
+    def opcion(i):
+        return opciones[i] if i is not None and 0 <= i < len(opciones) else ""
+
+    if tipo == "ranking":
+        ordenadas = sorted(filas, key=lambda f: f.posicion or 0)
+        return " > ".join(opcion(f.opcion_indice) for f in ordenadas)
+    if tipo == "multiple":
+        return ", ".join(sorted(opcion(f.opcion_indice) for f in filas))
+    f = filas[0]
+    if tipo in ("seleccion", "opcion_unica"):
+        return opcion(f.opcion_indice)
+    if tipo == "booleano":
+        return "Sí" if (f.valor_numero or 0) >= 1 else "No"
+    if tipo in ("escala", "numero"):
+        return "" if f.valor_numero is None else _numero_ar(f.valor_numero)
+    if tipo == "fecha":
+        return f.valor_fecha
+    return f.valor_texto
+
+
+def _csv_agregado(s, e: dict, filtros: dict, respondentes: int) -> list:
+    """Conteos y porcentajes, nunca una fila por respuesta.
+
+    Lleva arriba de todo qué grupo es: un archivo suelto sin esa línea no se
+    puede interpretar tres meses después, y peor, se puede confundir con el
+    total general.
+    """
+    grupo = _describir_grupo(s, e, filtros)
+    filas = [["Encuesta", e["titulo"]],
+             ["Modo", "Anónima"],
+             ["Grupo", grupo],
+             ["Personas que respondieron", str(respondentes)],
+             ["Umbral mínimo", str(e["umbral_minimo"])],
+             [],
+             ["Pregunta", "Tipo", "Opción", "Cantidad", "Porcentaje", "Promedio"]]
+
+    for p in _por_pregunta(s, e, filtros, respondentes):
+        tipo = p["tipo_dato"]
+        if tipo == "escala":
+            prom = p["escala"]["promedio"]
+            for x in p["escala"]["distribucion"]:
+                filas.append([p["etiqueta"], tipo, str(x["valor"]), str(x["cantidad"]),
+                              _numero_ar(x["porcentaje"]),
+                              _numero_ar(prom) if prom is not None else ""])
+        elif tipo == "ranking":
+            for x in p["ranking"]:
+                filas.append([p["etiqueta"], tipo, x["texto"], str(x["primeras"]), "",
+                              _numero_ar(x["promedio"]) if x["promedio"] is not None else ""])
+        elif tipo == "numero":
+            n = p["numero"]
+            filas.append([p["etiqueta"], tipo, "", str(p["respondieron"]), "",
+                          _numero_ar(n["promedio"]) if n["promedio"] is not None else ""])
+        elif p.get("opciones") is not None:
+            for x in p["opciones"]:
+                filas.append([p["etiqueta"], tipo, x["texto"], str(x["cantidad"]),
+                              _numero_ar(x["porcentaje"]), ""])
+        else:
+            # Texto libre y fechas: solo cuántos contestaron. El texto crudo
+            # de una anónima identifica solo a quien lo escribió, y una
+            # planilla circula sin control.
+            filas.append([p["etiqueta"], tipo, "", str(p["respondieron"]), "", ""])
+    return filas
+
+
+def _describir_grupo(s, e: dict, filtros: dict) -> str:
+    if not filtros:
+        return "Todas las respuestas"
+    partes = []
+    disponibles = _valores_de_filtro(s, e)
+    for corte, valores in filtros.items():
+        etiquetas = {v["valor"]: v["etiqueta"] for v in disponibles.get(corte, [])}
+        nombre = encuestas.CORTES[corte][0]
+        partes.append(f"{nombre}: " + ", ".join(etiquetas.get(v, v) for v in valores))
+    return " · ".join(partes)
+
+
+def _nombre_archivo(e: dict, anonima: bool) -> str:
+    limpio = "".join(c if c.isalnum() or c in " -_" else "" for c in e["titulo"]).strip()
+    limpio = (limpio or "encuesta").replace(" ", "-").lower()[:50]
+    return f"{limpio}-{'agregado' if anonima else 'nominal'}-{fechas.hoy_texto()}.csv"
+
+
+def _numero_ar(valor) -> str:
+    """Coma decimal: es lo que el Excel en español interpreta como número.
+    Con punto lo toma como texto y no se puede ni sumar una columna.
+
+    Un entero sale sin decimales: un 4 en una escala de 1 a 5 es "4", no
+    "4,0" -- la columna se lee de un vistazo y no parece una medición."""
+    if valor is None:
+        return ""
+    if isinstance(valor, float) and valor.is_integer():
+        return str(int(valor))
+    return str(valor).replace(".", ",")
+
+
+def _celda(valor) -> str:
+    """Escapa una celda de CSV. El ; y el salto de línea obligan a comillar,
+    y una comilla adentro se duplica."""
+    texto = "" if valor is None else str(valor)
+    if any(c in texto for c in (SEPARADOR, '"', "\n", "\r")):
+        return '"' + texto.replace('"', '""') + '"'
+    return texto
+
+
+# ---------- Evolución entre tomas (N23) ----------
+
+def linaje(encuesta_id: int, sindicato_id: int) -> list:
+    """Las tomas sucesivas de la misma encuesta, de la más vieja a la más
+    nueva. `duplicar_encuesta` aplana el linaje --toda copia apunta a la
+    RAÍZ, no a la copia anterior--, así que la familia entera sale de una
+    consulta y no de recorrer una cadena."""
+    with db.Session(db.engine) as s:
+        e = s.get(db.Encuesta, encuesta_id)
+        if not e or e.sindicato_id != sindicato_id:
+            return []
+        raiz = e.origen_id or e.id
+        filas = s.exec(db.select(db.Encuesta).where(
+            db.Encuesta.sindicato_id == sindicato_id,
+            db.or_(db.Encuesta.id == raiz, db.Encuesta.origen_id == raiz))
+            .order_by(db.Encuesta.id)).all()
+        hoy = fechas.hoy_texto()
+        return [{"id": x.id, "titulo": x.titulo, "publicada": x.publicada,
+                 "fecha_desde": x.fecha_desde, "fecha_hasta": x.fecha_hasta,
+                 "modo": x.modo, "umbral_minimo": x.umbral_minimo,
+                 "estado": encuestas.estado(x.publicada, x.fecha_desde, x.fecha_hasta,
+                                            hoy, x.cerrada_en)}
+                for x in filas if x.publicada]
+
+
+def evolucion(encuesta_id: int, sindicato_id: int, alcance=None) -> dict:
+    """La misma pregunta a lo largo de las tomas sucesivas (N23).
+
+    Es lo que convierte un dato suelto en una herramienta de gestión: "esto
+    veníamos midiendo hace un año". Las preguntas se emparejan por ORDEN y
+    tipo, que es lo que `duplicar_encuesta` preserva; una toma a la que le
+    corrigieron la redacción sigue emparejando, y una que cambió el tipo de
+    pregunta deja de hacerlo --que es lo correcto, porque ya no mide lo
+    mismo.
+
+    Cada toma se calcula con su PROPIO umbral (el que se congeló al
+    publicarla): una toma chica no aporta punto en vez de aportar uno que
+    identifica gente.
+    """
+    tomas = linaje(encuesta_id, sindicato_id)
+    if len(tomas) < 2:
+        return {"tomas": [], "preguntas": []}
+
+    calculadas = []
+    for t in tomas:
+        e = db.encuesta_por_id(t["id"], sindicato_id)
+        f = filtros_saneados(e, {}, alcance)["aplicados"]
+        with db.Session(db.engine) as s:
+            testigo = _pregunta_testigo(e["preguntas"])
+            respondentes = _respondentes(s, e, f, testigo)
+            oculto = e["modo"] == encuestas.ANONIMA and respondentes < e["umbral_minimo"]
+            calculadas.append({
+                "toma": {**t, "respondentes": respondentes, "oculto": oculto},
+                "preguntas": {} if oculto else {
+                    (i, p["tipo_dato"]): p
+                    for i, p in enumerate(_por_pregunta(s, e, f, respondentes))},
+            })
+
+    # La última toma manda, porque es la que tiene la redacción vigente --
+    # pero la última CON DATOS: si la toma más nueva quedó por debajo del
+    # umbral, sin este detalle la evolución entera desaparecía justo cuando
+    # más sirve (hay historia y la última ronda salió floja).
+    referencia = next((c["preguntas"] for c in reversed(calculadas) if c["preguntas"]), {})
+    salida = []
+    for clave, p in referencia.items():
+        if p["tipo_dato"] not in ("escala", "seleccion", "opcion_unica", "multiple",
+                                  "booleano", "ranking"):
+            continue
+        serie = _serie_de(clave, p, calculadas)
+        if serie:
+            salida.append({"etiqueta": p["etiqueta"], "tipo_dato": p["tipo_dato"],
+                           "lineas": serie})
+    return {"tomas": [c["toma"] for c in calculadas], "preguntas": salida}
+
+
+def _serie_de(clave, referencia: dict, calculadas: list) -> list:
+    """Una línea por opción (o una sola, en la escala), con un valor por
+    toma. None donde la toma no aporta -- por umbral o porque la pregunta
+    no existía todavía."""
+    if referencia["tipo_dato"] == "escala":
+        return [{"nombre": "Promedio",
+                 "valores": [_valor_escala(c["preguntas"].get(clave)) for c in calculadas]}]
+    if referencia["tipo_dato"] == "ranking":
+        opciones = sorted(referencia["ranking"], key=lambda x: x["indice"])
+        return [{"nombre": o["texto"],
+                 "valores": [_valor_ranking(c["preguntas"].get(clave), o["indice"])
+                             for c in calculadas]}
+                for o in opciones]
+    return [{"nombre": o["texto"],
+             "valores": [_valor_opcion(c["preguntas"].get(clave), o["indice"])
+                         for c in calculadas]}
+            for o in referencia.get("opciones", [])]
+
+
+def _valor_escala(p):
+    return p["escala"]["promedio"] if p else None
+
+
+def _valor_ranking(p, indice):
+    if not p:
+        return None
+    for x in p["ranking"]:
+        if x["indice"] == indice:
+            return x["promedio"]
+    return None
+
+
+def _valor_opcion(p, indice):
+    if not p:
+        return None
+    for x in p.get("opciones", []):
+        if x["indice"] == indice:
+            return x["porcentaje"]
+    return None

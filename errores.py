@@ -58,6 +58,10 @@ MENSAJES = {
     # padrón, la encuesta cerró, falta una pregunta): son cosas distintas
     # para la persona y todas terminan en "tu respuesta no se guardó".
     "E-ENCUESTA-01": (400, "No se pudo enviar tu respuesta."),
+    # La exportación tiene su propio código porque su motivo más común no es
+    # un error: es el umbral frenando un grupo demasiado chico, y quien lo
+    # pide tiene que entender que el archivo no existe, no que falló algo.
+    "E-ENCUESTA-02": (400, "No se pudo exportar esta encuesta."),
 
     # --- Red de seguridad --------------------------------------------------
     "E-INTERNO-00": (500, "Se produjo un error inesperado y no pudimos completar la "

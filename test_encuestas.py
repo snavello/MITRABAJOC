@@ -1328,3 +1328,262 @@ def _usuario_sin_secciones(sid: int) -> int:
                                 debe_cambiar_clave=False)
         s.add(u); s.commit(); s.refresh(u)
         return u.id
+
+
+def test_la_portada_del_admin_tiene_la_tarjeta_de_encuestas():
+    """La pestaña de /admin no alcanza: el admin ATERRIZA en /admin/inicio.
+    Una sección que solo se encuentra entrando a otra pantalla y buscando
+    una pestaña es una sección que nadie usa."""
+    sid, uid = _sindicato_con(["encuestas"], "portada-admin")
+    _sesion(sid, uid)
+    html = cliente.get("/admin/inicio").text
+    assert 'href="/admin#encuestas"' in html and "#ic-encuestas" in html
+
+    sid2, uid2 = _sindicato_con(["noticias"], "portada-admin-sin")
+    _sesion(sid2, uid2)
+    assert 'href="/admin#encuestas"' not in cliente.get("/admin/inicio").text
+
+
+# ==================== Fase 5: exportar y evolución ====================
+def _csv(eid: int, **params) -> str:
+    r = cliente.get("/admin/encuesta/exportar", params={"id": eid, **params})
+    assert r.status_code == 200, r.text
+    return r.text
+
+
+def _filas_csv(texto: str) -> list:
+    """Parsea el CSV como lo haría una planilla: ; de separador, BOM afuera."""
+    import csv as _csv_mod
+    import io
+    return list(_csv_mod.reader(io.StringIO(texto.lstrip("﻿")), delimiter=";"))
+
+
+def test_el_csv_nominal_trae_una_fila_por_persona_con_nombre_y_cuil():
+    """Es lo que el afiliado aceptó al responder una encuesta que dice
+    "nominal" en la cara (N20). Va TODO el padrón, con la columna
+    "Respondió": la lista de los que faltan es la mitad de para qué se baja
+    este archivo."""
+    sid, uid = _sindicato_con(["encuestas", "notificaciones"], "csv-nominal")
+    cuils = _padron_grande(sid, 4)
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    _alta(modo="nominal", cortes=(), desde=(hoy - timedelta(days=1)).isoformat(),
+          hasta=(hoy + timedelta(days=30)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    _sesion(sid, uid)
+    cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                 follow_redirects=False)
+    _responden(eid, sid, cuils[:3])
+
+    _sesion(sid, uid)
+    filas = _filas_csv(_csv(eid))
+    assert filas[0][:6] == ["Nombre", "CUIL", "Seccional", "Provincia",
+                            "CUIT empleador", "Respondió"]
+    assert filas[0][6:] == ["¿Conforme con la obra social?", "Ordená los reclamos"]
+    assert len(filas) == 5                      # cabecera + los 4 del padrón
+    por_cuil = {f[1]: f for f in filas[1:]}
+    assert set(por_cuil) == set(cuils)
+    respondio = por_cuil[cuils[0]]
+    assert respondio[5] == "Sí" and respondio[6] == "4"
+    assert respondio[7] == "Salario > Obra social > Jornada"   # el ranking, en orden
+    falta = por_cuil[cuils[3]]
+    assert falta[5] == "No" and falta[6] == "" and falta[7] == ""
+
+
+def test_el_csv_de_una_anonima_nunca_trae_filas_individuales():
+    """Cuarto test de privacidad (N21.4). Si saliera crudo, cualquiera abre
+    la planilla, filtra "Rosario + Empresa X" y se queda con dos filas que
+    identifican a dos personas: el umbral que protege la pantalla no
+    protegería nada."""
+    sid, uid = _sindicato_con(["encuestas", "notificaciones"], "csv-anonima")
+    cuils = _padron_grande(sid, 6)
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    _alta(modo="anonima", cortes=("seccional",),
+          desde=(hoy - timedelta(days=1)).isoformat(),
+          hasta=(hoy + timedelta(days=30)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    _sesion(sid, uid)
+    cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                 follow_redirects=False)
+    _responden(eid, sid, cuils)
+
+    _sesion(sid, uid)
+    texto = _csv(eid)
+    # Ni un CUIL, ni un nombre, ni una columna que los pueda traer.
+    for c in cuils:
+        assert c not in texto
+    assert "CUIL" not in texto and "Nombre" not in texto and "Respondió" not in texto
+    filas = _filas_csv(texto)
+    cabecera = next(f for f in filas if f and f[0] == "Pregunta")
+    assert cabecera == ["Pregunta", "Tipo", "Opción", "Cantidad", "Porcentaje", "Promedio"]
+    # Conteos: 6 respuestas con un 4 en la escala.
+    escala = [f for f in filas if f and f[0] == "¿Conforme con la obra social?"]
+    # 100, no "100,0": un entero sale sin decimales para que la columna se
+    # lea de un vistazo.
+    assert len(escala) == 5 and escala[3][3] == "6" and escala[3][4] == "100"
+    # Y el archivo dice de qué grupo es: suelto, sin esa línea, no se puede
+    # interpretar tres meses después.
+    assert ["Grupo", "Todas las respuestas"] in filas
+
+
+def test_pedir_el_csv_crudo_a_mano_no_cambia_nada():
+    """Cambiarle los parámetros a la URL no convierte una anónima en
+    nominal: el formato lo decide el MODO de la encuesta, en el servidor."""
+    sid, uid = _sindicato_con(["encuestas", "notificaciones"], "csv-a-mano")
+    cuils = _padron_grande(sid, 6)
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    _alta(modo="anonima", cortes=("seccional",),
+          desde=(hoy - timedelta(days=1)).isoformat(),
+          hasta=(hoy + timedelta(days=30)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    _sesion(sid, uid)
+    cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                 follow_redirects=False)
+    _responden(eid, sid, cuils)
+
+    _sesion(sid, uid)
+    for extra in ({"modo": "nominal"}, {"tipo": "nominal"}, {"crudo": "1"},
+                  {"umbral": "0"}, {"formato": "detalle"}):
+        r = cliente.get("/admin/encuesta/exportar", params={"id": eid, **extra})
+        assert r.status_code == 200
+        assert "CUIL" not in r.text
+        for c in cuils:
+            assert c not in r.text
+
+
+def test_el_umbral_tambien_frena_la_descarga():
+    """Si el umbral solo protegiera la pantalla, bastaría con bajar el
+    archivo para saltearlo."""
+    sid, uid = _sindicato_con(["encuestas", "notificaciones"], "csv-umbral")
+    chica = _seccional(sid, "Rosario")
+    grande = _seccional(sid, "Córdoba")
+    pocos = _padron_grande(sid, 3, seccional_id=chica)
+    muchos = [f"27{sid:05d}{n:04d}" for n in range(7)]
+    _padron(sid, muchos, seccional_id=grande)
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    _alta(modo="anonima", cortes=("seccional",),
+          desde=(hoy - timedelta(days=1)).isoformat(),
+          hasta=(hoy + timedelta(days=30)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    _sesion(sid, uid)
+    cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                 follow_redirects=False)
+    _responden(eid, sid, pocos + muchos)
+
+    _sesion(sid, uid)
+    r = cliente.get("/admin/encuesta/exportar", params={"id": eid, "seccional": chica})
+    assert r.status_code == 400 and "E-ENCUESTA-02" in r.text
+    assert cliente.get("/admin/encuesta/exportar",
+                       params={"id": eid, "seccional": grande}).status_code == 200
+
+
+def test_cada_descarga_queda_registrada_en_el_historial():
+    """N20: quién, cuándo, qué encuesta y cuántas filas. Si algún día se
+    filtra una planilla, el historial es lo único que permite saber de dónde
+    salió."""
+    sid, uid = _sindicato_con(["encuestas", "notificaciones"], "csv-registro")
+    cuils = _padron_grande(sid, 4)
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    _alta(modo="nominal", cortes=(), desde=(hoy - timedelta(days=1)).isoformat(),
+          hasta=(hoy + timedelta(days=30)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    _sesion(sid, uid)
+    cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                 follow_redirects=False)
+    _responden(eid, sid, cuils)
+
+    _sesion(sid, uid)
+    assert not [v for v in db.eventos_de_encuesta(eid) if v["evento"] == "descarga"]
+    _csv(eid)
+    _csv(eid)
+    descargas = [v for v in db.eventos_de_encuesta(eid) if v["evento"] == "descarga"]
+    assert len(descargas) == 2
+    assert "nominal" in descargas[0]["detalle"] and "4 filas" in descargas[0]["detalle"]
+    assert descargas[0]["usuario"] == "Admin"       # quién, con nombre
+
+
+def test_una_encuesta_sin_publicar_no_se_exporta():
+    sid, uid = _sindicato_con(["encuestas"], "csv-borrador")
+    _padron(sid)
+    _sesion(sid, uid)
+    _alta()
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    r = cliente.get("/admin/encuesta/exportar", params={"id": eid})
+    assert r.status_code == 400 and "E-ENCUESTA-02" in r.text
+
+
+def test_la_evolucion_compara_las_tomas_sucesivas_de_la_misma_encuesta():
+    """N23: lo que convierte un dato suelto en una herramienta de gestión.
+    Las preguntas se emparejan por orden y tipo, que es lo que `duplicar`
+    preserva."""
+    sid, uid = _sindicato_con(["encuestas", "notificaciones"], "evolucion")
+    cuils = _padron_grande(sid, 6)
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    desde, hasta = (hoy - timedelta(days=1)).isoformat(), (hoy + timedelta(days=30)).isoformat()
+
+    _alta(titulo="Clima", modo="nominal", cortes=(), desde=desde, hasta=hasta)
+    primera = db.encuestas_del_sindicato(sid)[0]["id"]
+    cliente.post("/admin/encuesta/publicar", data={"id": primera, "criterio": "todos"},
+                 follow_redirects=False)
+    _responden(eid=primera, sid=sid, cuils=cuils, valor=2)
+
+    # Sola no se compara con nada.
+    _sesion(sid, uid)
+    assert cliente.get("/admin/encuesta/evolucion",
+                       params={"id": primera}).json()["preguntas"] == []
+
+    # Segunda toma: se duplica y se relanza.
+    cliente.post("/admin/encuesta/duplicar", data={"id": primera}, follow_redirects=False)
+    segunda = db.encuestas_del_sindicato(sid)[0]["id"]
+    assert db.encuesta_por_id(segunda)["origen_id"] == primera
+    _alta(titulo="Clima (2)", modo="nominal", cortes=(), desde=desde, hasta=hasta,
+          extra={"id": segunda})
+    cliente.post("/admin/encuesta/publicar", data={"id": segunda, "criterio": "todos"},
+                 follow_redirects=False)
+    _responden(eid=segunda, sid=sid, cuils=cuils, valor=5)
+
+    _sesion(sid, uid)
+    d = cliente.get("/admin/encuesta/evolucion", params={"id": segunda}).json()
+    assert [t["id"] for t in d["tomas"]] == [primera, segunda]
+    escala = next(p for p in d["preguntas"] if p["tipo_dato"] == "escala")
+    # El promedio subió de 2 a 5: eso es exactamente lo que se vino a ver.
+    assert escala["lineas"][0]["valores"] == [2.0, 5.0]
+    # Y se ve igual desde cualquiera de las dos tomas.
+    assert cliente.get("/admin/encuesta/evolucion",
+                       params={"id": primera}).json()["tomas"] == d["tomas"]
+
+
+def test_una_toma_por_debajo_del_umbral_no_aporta_punto():
+    """La comparación en el tiempo no puede ser la puerta de atrás del
+    umbral: una toma chica no aporta un punto que identifique gente."""
+    sid, uid = _sindicato_con(["encuestas", "notificaciones"], "evolucion-umbral")
+    muchos = _padron_grande(sid, 6)
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    desde, hasta = (hoy - timedelta(days=1)).isoformat(), (hoy + timedelta(days=30)).isoformat()
+
+    _alta(titulo="Clima anónimo", modo="anonima", cortes=(), desde=desde, hasta=hasta)
+    primera = db.encuestas_del_sindicato(sid)[0]["id"]
+    cliente.post("/admin/encuesta/publicar", data={"id": primera, "criterio": "todos"},
+                 follow_redirects=False)
+    _responden(eid=primera, sid=sid, cuils=muchos, valor=3)
+
+    _sesion(sid, uid)
+    cliente.post("/admin/encuesta/duplicar", data={"id": primera}, follow_redirects=False)
+    segunda = db.encuestas_del_sindicato(sid)[0]["id"]
+    _alta(titulo="Clima anónimo (2)", modo="anonima", cortes=(), desde=desde, hasta=hasta,
+          extra={"id": segunda})
+    cliente.post("/admin/encuesta/publicar", data={"id": segunda, "criterio": "todos"},
+                 follow_redirects=False)
+    _responden(eid=segunda, sid=sid, cuils=muchos[:2], valor=5)   # solo 2: no llega
+
+    _sesion(sid, uid)
+    d = cliente.get("/admin/encuesta/evolucion", params={"id": primera}).json()
+    escala = next(p for p in d["preguntas"] if p["tipo_dato"] == "escala")
+    assert escala["lineas"][0]["valores"] == [3.0, None]
+    assert [t["oculto"] for t in d["tomas"]] == [False, True]
