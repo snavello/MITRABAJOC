@@ -768,6 +768,7 @@ PERMISOS_RUTAS = {
     "/admin/encuesta/{encuesta_id}/resultados":  "encuestas_resultados",
     "/admin/encuesta/resultados":                "encuestas_resultados",
     "/admin/encuesta/evolucion":                 "encuestas_resultados",
+    "/admin/encuesta/cruce":                     "encuestas_resultados",
     "/admin/encuesta/exportar":                  "encuestas_resultados",
 
     "/admin/tramite-tipo":                  "tramites_formularios",
@@ -2777,7 +2778,8 @@ def encuesta_resultados_pagina(request: Request, encuesta_id: int):
 def encuesta_resultados(request: Request, id: int,
                         seccional: list[str] = Query(default=[]),
                         provincia: list[str] = Query(default=[]),
-                        empleador: list[str] = Query(default=[])):
+                        empleador: list[str] = Query(default=[]),
+                        desde: str = "", hasta: str = ""):
     """Los agregados del dashboard, con el umbral YA aplicado en el SQL.
 
     El recorte por seccional (N18) se le impone acá, del lado del servidor:
@@ -2786,10 +2788,36 @@ def encuesta_resultados(request: Request, id: int,
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "encuestas")
     r = resultados_encuesta.resultados(
-        id, sid, {"seccional": seccional, "provincia": provincia, "empleador": empleador},
+        id, sid, {"seccional": seccional, "provincia": provincia, "empleador": empleador,
+                  "desde": desde, "hasta": hasta},
         alcance=_alcance_de(request))
     if r is None:
         raise HTTPException(404, "La encuesta no existe")
+    return r
+
+
+@app.get("/admin/encuesta/cruce")
+def encuesta_cruce(request: Request, id: int, pregunta: int, opcion: str,
+                   seccional: list[str] = Query(default=[]),
+                   provincia: list[str] = Query(default=[]),
+                   empleador: list[str] = Query(default=[]),
+                   desde: str = "", hasta: str = ""):
+    """Dónde se concentra una opción: al tocarla en un gráfico, se abre.
+
+    Contra los cortes siempre; contra otras preguntas SOLO en las nominales
+    --eso exige saber que dos respuestas son de la misma persona, y en una
+    anónima esa unión no existe a propósito. El umbral y el recorte por
+    seccional (N18) se aplican igual que en el resto del dashboard.
+    """
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "encuestas")
+    r = resultados_encuesta.cruce(
+        id, sid, pregunta, opcion,
+        {"seccional": seccional, "provincia": provincia, "empleador": empleador,
+         "desde": desde, "hasta": hasta},
+        alcance=_alcance_de(request))
+    if r is None:
+        raise HTTPException(404, "No existe esa encuesta, pregunta u opción")
     return r
 
 
@@ -2808,7 +2836,8 @@ def encuesta_evolucion(request: Request, id: int):
 def encuesta_exportar(request: Request, id: int,
                       seccional: list[str] = Query(default=[]),
                       provincia: list[str] = Query(default=[]),
-                      empleador: list[str] = Query(default=[])):
+                      empleador: list[str] = Query(default=[]),
+                      desde: str = "", hasta: str = ""):
     """El CSV de la encuesta (N20), con los mismos filtros que el dashboard.
 
     En una NOMINAL, una fila por persona; en una ANÓNIMA, solo conteos con
@@ -2819,7 +2848,8 @@ def encuesta_exportar(request: Request, id: int,
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "encuestas")
     r = resultados_encuesta.csv_de_encuesta(
-        id, sid, {"seccional": seccional, "provincia": provincia, "empleador": empleador},
+        id, sid, {"seccional": seccional, "provincia": provincia, "empleador": empleador,
+                  "desde": desde, "hasta": hasta},
         alcance=_alcance_de(request))
     if not r["ok"]:
         raise ErrorApp("E-ENCUESTA-02", r["error"])

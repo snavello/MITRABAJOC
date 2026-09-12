@@ -323,10 +323,27 @@ def main() -> int:
     hoy = fechas.hoy()
     movidas = 0
     with Session(db.engine) as s:
-        for fila in s.exec(select(RespuestaEncuesta).where(
-                RespuestaEncuesta.encuesta_id == enc.id,
-                RespuestaEncuesta.dia == hoy.isoformat())).all():
-            fila.dia = _dia(desde, hoy, rnd)
+        filas = s.exec(select(RespuestaEncuesta).where(
+            RespuestaEncuesta.encuesta_id == enc.id,
+            RespuestaEncuesta.dia == hoy.isoformat())
+            .order_by(RespuestaEncuesta.id)).all()
+        # El día se sortea por PERSONA, no por fila: alguien responde una
+        # sola vez, y con un día por fila la misma persona aparecía
+        # contestando la pregunta 1 el martes y la 3 el jueves -- y el CSV
+        # filtrado por fecha traía 66 personas donde el gráfico mostraba 19.
+        #
+        # Las filas de una respuesta entran juntas, consecutivas y EN EL
+        # ORDEN DE LAS PREGUNTAS, así que la siguiente persona empieza donde
+        # el orden retrocede. No sirve mirar si el pregunta_id se repite:
+        # una múltiple deja varias filas de la misma pregunta seguidas.
+        orden = {p["id"]: p["orden"] for p in e["preguntas"]}
+        dia, previo = _dia(desde, hoy, rnd), -1
+        for fila in filas:
+            actual = orden.get(fila.pregunta_id, 0)
+            if actual < previo:
+                dia = _dia(desde, hoy, rnd)
+            previo = actual
+            fila.dia = dia
             s.add(fila)
             movidas += 1
         s.commit()

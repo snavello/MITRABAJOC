@@ -511,6 +511,24 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    y la evolución no existiría. En la demo, Prensa Central arma encuestas Y
    lee resultados y Prensa Córdoba SOLO lee, que es lo que muestra que las
    dos secciones de N17 no son la misma cosa.
+   **Ampliación del dashboard (2026-09-12, pedido de Sd probando La
+   Bancaria)**: los filtros pasaron de desplegables a **pastillas
+   multi-selección** (un `<select>` esconde las opciones y no deja combinar)
+   con la cantidad de GENTE al lado de cada una —contada sobre la pregunta
+   testigo, porque contar filas de la urna decía 125 donde hay 15—, más un
+   **calendario** de rango sobre el día que guarda la urna (recorta los
+   gráficos y el ritmo, nunca el padrón, que no sabe cuándo respondió cada
+   uno). Cada pregunta se puede ver en **barras, torta o tabla** —la tabla
+   es la que da los números exactos— y la escala muestra mediana y extremos,
+   no solo el promedio. Y lo central: **tocar una respuesta abre el cruce**
+   (`/admin/encuesta/cruce`), que dice DÓNDE se concentra comparando contra
+   el general ("Algo tenso: 44% en Sede central contra 29% general, +15").
+   Contra los cortes siempre; **contra las otras preguntas solo en las
+   nominales**, porque eso exige saber que dos respuestas son de la misma
+   persona y en una anónima esa unión no existe — la pantalla lo explica en
+   vez de disculparse. El umbral y el recorte por seccional (N18) rigen
+   también ahí: si el cruce los ignorara, bastaría con tocar una barra para
+   saltearlos.
    **Detalle completo en HISTORIAL.md** ("Módulo Encuestas").
    Lo central: el anonimato se sostiene por la FORMA de las tablas (padrón
    y urna separados, sin vínculo posible), no por un cartel.

@@ -1681,3 +1681,280 @@ def test_el_panel_arranca_en_la_lista_salvo_que_no_haya_ninguna():
     html = cliente.get("/admin").text
     assert "Ver encuestas (1)" in html and "Ver / editar" not in html
     assert 'data-enc-sub="nueva"' not in html and 'id="enc-sub-nueva"' not in html
+
+
+# ==================== Filtros y cruce (pedido de Sd 2026-09-12) ==========
+def _encuesta_con_datos(slug: str, modo="anonima", cortes=("seccional", "empleador"),
+                        preguntas=None, cantidad=24):
+    """Una encuesta publicada con gente repartida en dos seccionales y dos
+    empleadores, y respuestas cargadas. Devuelve (sid, uid, eid, secs)."""
+    sid, uid = _sindicato_con(["encuestas", "notificaciones"], slug)
+    sec_a, sec_b = _seccional(sid, "Norte"), _seccional(sid, "Sur")
+    grupo_a = [f"20{sid:05d}{n:04d}" for n in range(cantidad // 2)]
+    grupo_b = [f"27{sid:05d}{n:04d}" for n in range(cantidad // 2)]
+    with db.get_session() as s:
+        for n, c in enumerate(grupo_a):
+            s.add(db.Trabajador(sindicato_id=sid, cuil=c, nombre=f"A{n}", activo=True,
+                                registrado=True, seccional_id=sec_a, provincia="Santa Fe",
+                                cuit_empleador="30111111111"))
+        for n, c in enumerate(grupo_b):
+            s.add(db.Trabajador(sindicato_id=sid, cuil=c, nombre=f"B{n}", activo=True,
+                                registrado=True, seccional_id=sec_b, provincia="Santa Fe",
+                                cuit_empleador="30222222222"))
+        s.commit()
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    _alta(modo=modo, cortes=cortes, preguntas=preguntas,
+          desde=(hoy - timedelta(days=4)).isoformat(),
+          hasta=(hoy + timedelta(days=10)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                 follow_redirects=False)
+    return sid, uid, eid, {"norte": sec_a, "sur": sec_b}, grupo_a, grupo_b
+
+
+PREG_CRUCE = [
+    {"etiqueta": "¿Cómo está el ambiente?", "tipo_dato": "seleccion",
+     "opciones": "Óptimo, Algo tenso, Nocivo", "ancho": "completo", "obligatorio": True},
+    {"etiqueta": "¿Te representa el delegado?", "tipo_dato": "booleano",
+     "ancho": "completo", "obligatorio": True},
+]
+
+
+def test_las_pastillas_cuentan_gente_y_no_filas_de_la_urna():
+    """Una encuesta de varias preguntas deja varias filas por persona: la
+    pastilla decía 125 donde hay 15 personas. Un número al lado de un filtro
+    que no es el que después aparece en pantalla es peor que no tenerlo."""
+    sid, uid, eid, secs, a, b = _encuesta_con_datos("chips", preguntas=PREG_CRUCE)
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    for c in a + b:
+        _sesion_trabajador(c, sid)
+        cliente.post(f"/api/encuesta/{eid}",
+                     json={"respuestas": {str(pids[0]): 1, str(pids[1]): "si"}})
+    _sesion(sid, uid)
+    d = cliente.get("/admin/encuesta/resultados", params={"id": eid}).json()
+    por_seccional = d["filtros"]["disponibles"]["seccional"]
+    assert sum(v["cantidad"] for v in por_seccional) == d["respondentes"] == 24
+    assert sorted(v["cantidad"] for v in por_seccional) == [12, 12]
+
+
+def test_el_filtro_de_fechas_recorta_la_urna_y_no_el_padron():
+    """El día lo guarda la urna; el padrón NO sabe cuándo respondió cada uno
+    (punto 3 del anonimato). Así que el rango mueve los gráficos y el ritmo,
+    y deja quieta la participación."""
+    sid, uid, eid, secs, a, b = _encuesta_con_datos("fechas", preguntas=PREG_CRUCE)
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    for c in a + b:
+        _sesion_trabajador(c, sid)
+        cliente.post(f"/api/encuesta/{eid}",
+                     json={"respuestas": {str(pids[0]): 0, str(pids[1]): "si"}})
+    # La mitad se corre a anteayer, a mano: responder pone el día de hoy.
+    ayer = (fechas.hoy() - timedelta(days=2)).isoformat()
+    with db.get_session() as s:
+        filas = s.exec(db.select(db.RespuestaEncuesta).where(
+            db.RespuestaEncuesta.encuesta_id == eid).order_by(db.RespuestaEncuesta.id)).all()
+        for f in filas[:len(filas) // 2]:
+            f.dia = ayer
+            s.add(f)
+        s.commit()
+
+    _sesion(sid, uid)
+    entero = cliente.get("/admin/encuesta/resultados", params={"id": eid}).json()
+    assert entero["respondentes"] == 24 and len(entero["indicadores"]["ritmo"]) == 2
+
+    recorte = cliente.get("/admin/encuesta/resultados",
+                          params={"id": eid, "desde": ayer, "hasta": ayer}).json()
+    assert recorte["respondentes"] < 24
+    assert [x["dia"] for x in recorte["indicadores"]["ritmo"]] == [ayer]
+    # El padrón no se toca: no sabe de fechas.
+    assert recorte["indicadores"]["participacion"] == entero["indicadores"]["participacion"]
+    assert recorte["filtros"]["dias"] == [ayer, ayer]
+
+    # Un rango inventado por la URL no devuelve un recorte al azar.
+    roto = cliente.get("/admin/encuesta/resultados",
+                       params={"id": eid, "desde": "ayer nomás"}).json()
+    assert roto["filtros"]["dias"] == [] and roto["respondentes"] == 24
+
+
+def test_varias_pastillas_a_la_vez_suman_los_grupos():
+    sid, uid, eid, secs, a, b = _encuesta_con_datos("multi", preguntas=PREG_CRUCE)
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    for c in a + b:
+        _sesion_trabajador(c, sid)
+        cliente.post(f"/api/encuesta/{eid}",
+                     json={"respuestas": {str(pids[0]): 0, str(pids[1]): "no"}})
+    _sesion(sid, uid)
+    una = cliente.get("/admin/encuesta/resultados",
+                      params={"id": eid, "seccional": secs["norte"]}).json()
+    dos = cliente.get("/admin/encuesta/resultados",
+                      params={"id": eid, "seccional": [secs["norte"], secs["sur"]]}).json()
+    assert una["respondentes"] == 12 and dos["respondentes"] == 24
+    assert sorted(dos["filtros"]["aplicados"]["seccional"]) == sorted(
+        [str(secs["norte"]), str(secs["sur"])])
+
+
+def test_el_cruce_dice_donde_se_concentra_una_respuesta():
+    """Es la pregunta que un sindicato hace de verdad: "el 30% dice que el
+    ambiente está tenso... ¿tenso DÓNDE?"."""
+    sid, uid, eid, secs, a, b = _encuesta_con_datos("cruce", modo="nominal",
+                                                    preguntas=PREG_CRUCE)
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    # Norte: 10 de 12 dicen "Algo tenso". Sur: 2 de 12.
+    for n, c in enumerate(a):
+        _sesion_trabajador(c, sid)
+        cliente.post(f"/api/encuesta/{eid}", json={"respuestas": {
+            str(pids[0]): 1 if n < 10 else 0, str(pids[1]): "no"}})
+    for n, c in enumerate(b):
+        _sesion_trabajador(c, sid)
+        cliente.post(f"/api/encuesta/{eid}", json={"respuestas": {
+            str(pids[0]): 1 if n < 2 else 0, str(pids[1]): "si"}})
+
+    _sesion(sid, uid)
+    d = cliente.get("/admin/encuesta/cruce",
+                    params={"id": eid, "pregunta": pids[0], "opcion": 1}).json()
+    assert d["opcion"] == "Algo tenso"
+    assert d["elegidos"] == 12 and d["total"] == 24 and d["porcentaje"] == 50.0
+
+    filas = {f["etiqueta"]: f for f in d["cortes"]["seccional"]["filas"]}
+    assert filas["Norte"]["dentro"] == 83.3 and filas["Norte"]["diferencia"] == 33.3
+    assert filas["Sur"]["dentro"] == 16.7 and filas["Sur"]["diferencia"] == -33.3
+    # Ordenado por concentración: lo que se vino a ver va primero.
+    assert d["cortes"]["seccional"]["filas"][0]["etiqueta"] == "Norte"
+    # Y el empleador también, que es el ejemplo que motivó esto.
+    assert d["cortes"]["empleador"]["filas"][0]["cantidad"] == 10
+
+
+def test_en_una_nominal_el_cruce_llega_hasta_las_otras_preguntas():
+    """Saber que dos respuestas son de la misma persona solo se puede en una
+    nominal -- y ahí el afiliado respondió sabiéndolo."""
+    sid, uid, eid, secs, a, b = _encuesta_con_datos("cruce-nominal", modo="nominal",
+                                                    preguntas=PREG_CRUCE)
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    for n, c in enumerate(a + b):
+        _sesion_trabajador(c, sid)
+        cliente.post(f"/api/encuesta/{eid}", json={"respuestas": {
+            str(pids[0]): 1 if n < 12 else 0,
+            # Los que dicen "algo tenso" NO se sienten representados.
+            str(pids[1]): "no" if n < 12 else "si"}})
+    _sesion(sid, uid)
+    d = cliente.get("/admin/encuesta/cruce",
+                    params={"id": eid, "pregunta": pids[0], "opcion": 1}).json()
+    assert d["puede_cruzar_preguntas"] is True
+    otra = next(p for p in d["preguntas"] if p["id"] == pids[1])
+    assert otra["personas"] == 12
+    no = next(o for o in otra["opciones"] if o["texto"] == "No")
+    assert no["cantidad"] == 12 and no["porcentaje"] == 100.0
+
+
+def test_en_una_anonima_el_cruce_llega_a_los_cortes_y_no_a_las_preguntas():
+    """No es una limitación técnica que haya que disculpar: es la garantía.
+    Los cortes viajan pegados a cada respuesta; el vínculo entre dos
+    respuestas de la misma persona, no."""
+    sid, uid, eid, secs, a, b = _encuesta_con_datos("cruce-anonima", modo="anonima",
+                                                    preguntas=PREG_CRUCE)
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    for c in a + b:
+        _sesion_trabajador(c, sid)
+        cliente.post(f"/api/encuesta/{eid}",
+                     json={"respuestas": {str(pids[0]): 1, str(pids[1]): "no"}})
+    _sesion(sid, uid)
+    d = cliente.get("/admin/encuesta/cruce",
+                    params={"id": eid, "pregunta": pids[0], "opcion": 1}).json()
+    assert d["puede_cruzar_preguntas"] is False and d["preguntas"] == []
+    assert d["cortes"]["seccional"]["filas"], "los cortes SÍ se pueden cruzar"
+    # Y ni un CUIL se coló por esta puerta nueva.
+    assert not _tiene(d, a[0])
+
+
+def test_el_umbral_tambien_frena_el_cruce():
+    """Si el umbral protegiera la pantalla pero no el cruce, bastaría con
+    tocar una barra para saltearlo."""
+    sid, uid, eid, secs, a, b = _encuesta_con_datos("cruce-umbral", modo="anonima",
+                                                    preguntas=PREG_CRUCE)
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    for n, c in enumerate(a + b):
+        _sesion_trabajador(c, sid)
+        # Solo 3 eligen "Nocivo": por debajo del umbral de 5.
+        cliente.post(f"/api/encuesta/{eid}",
+                     json={"respuestas": {str(pids[0]): 2 if n < 3 else 0,
+                                          str(pids[1]): "si"}})
+    _sesion(sid, uid)
+    chico = cliente.get("/admin/encuesta/cruce",
+                        params={"id": eid, "pregunta": pids[0], "opcion": 2}).json()
+    assert chico["oculto"] is True and chico["cortes"] == {} and chico["preguntas"] == []
+    grande = cliente.get("/admin/encuesta/cruce",
+                         params={"id": eid, "pregunta": pids[0], "opcion": 0}).json()
+    assert grande["oculto"] is False and grande["cortes"]["seccional"]["filas"]
+
+
+def test_una_opcion_inventada_en_la_url_no_devuelve_un_recorte_al_azar():
+    sid, uid, eid, secs, a, b = _encuesta_con_datos("cruce-roto", modo="nominal",
+                                                    preguntas=PREG_CRUCE)
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    _sesion_trabajador(a[0], sid)
+    cliente.post(f"/api/encuesta/{eid}",
+                 json={"respuestas": {str(pids[0]): 0, str(pids[1]): "si"}})
+    _sesion(sid, uid)
+    for params in ({"pregunta": pids[0], "opcion": 99}, {"pregunta": pids[0], "opcion": "-1"},
+                   {"pregunta": pids[0], "opcion": "toda"}, {"pregunta": 999999, "opcion": 0}):
+        r = cliente.get("/admin/encuesta/cruce", params={"id": eid, **params})
+        assert r.status_code == 404, params
+
+
+def test_el_cruce_respeta_el_recorte_por_seccional():
+    """N18: si el cruce ignorara el alcance, una seccional vería por esa
+    puerta lo que el dashboard le recorta por la de adelante."""
+    sid, uid, eid, secs, a, b = _encuesta_con_datos("cruce-n18", modo="nominal",
+                                                    preguntas=PREG_CRUCE)
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    for c in a + b:
+        _sesion_trabajador(c, sid)
+        cliente.post(f"/api/encuesta/{eid}",
+                     json={"respuestas": {str(pids[0]): 0, str(pids[1]): "si"}})
+    _sesion(sid, uid)
+    entero = cliente.get("/admin/encuesta/cruce",
+                         params={"id": eid, "pregunta": pids[0], "opcion": 0}).json()
+    assert entero["elegidos"] == 24
+
+    uid_sec = _admin_de_seccional(sid, secs["norte"])
+    _sesion(sid, uid_sec)
+    suyo = cliente.get("/admin/encuesta/cruce",
+                       params={"id": eid, "pregunta": pids[0], "opcion": 0}).json()
+    assert suyo["elegidos"] == 12
+    assert [f["etiqueta"] for f in suyo["cortes"]["seccional"]["filas"]] == ["Norte"]
+
+
+def test_el_csv_dice_lo_mismo_que_la_pantalla_con_un_rango_de_fechas():
+    """Si el archivo trae 66 personas donde el gráfico muestra 19, uno de
+    los dos miente y no se sabe cuál."""
+    sid, uid, eid, secs, a, b = _encuesta_con_datos("csv-fechas", modo="nominal",
+                                                    preguntas=PREG_CRUCE)
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    for c in a + b:
+        _sesion_trabajador(c, sid)
+        cliente.post(f"/api/encuesta/{eid}",
+                     json={"respuestas": {str(pids[0]): 0, str(pids[1]): "si"}})
+    # La mitad se corre a anteayer -- TODAS las filas de esa persona, que es
+    # lo que pasa de verdad: alguien responde una sola vez.
+    ayer = (fechas.hoy() - timedelta(days=2)).isoformat()
+    mitad = set(a)
+    with db.get_session() as s:
+        nominales = {n.respuesta_id: n.cuil for n in s.exec(db.select(db.RespuestaNominal)
+                     .where(db.RespuestaNominal.encuesta_id == eid)).all()}
+        for f in s.exec(db.select(db.RespuestaEncuesta).where(
+                db.RespuestaEncuesta.encuesta_id == eid)).all():
+            if nominales.get(f.id) in mitad:
+                f.dia = ayer
+                s.add(f)
+        s.commit()
+
+    _sesion(sid, uid)
+    pantalla = cliente.get("/admin/encuesta/resultados",
+                           params={"id": eid, "desde": ayer, "hasta": ayer}).json()
+    archivo = cliente.get("/admin/encuesta/exportar",
+                          params={"id": eid, "desde": ayer, "hasta": ayer}).text
+    filas = [l for l in archivo.lstrip("﻿").splitlines()[1:] if l.strip()]
+    assert pantalla["respondentes"] == len(filas) == len(mitad)
+    # Y no se cuela nadie del otro día.
+    for cuil in b:
+        assert cuil not in archivo

@@ -36,21 +36,68 @@
 
   main { max-width: 1180px; margin: 0 auto; padding: 0 14px 90px; }
 
-  /* ---------- Filtros ---------- */
+  /* ---------- Filtros ----------
+     Pastillas y no desplegables: un <select> esconde las opciones, obliga a
+     un clic para ver qué hay y no deja elegir varias. Acá el admin ve todos
+     los grupos y su tamaño de un vistazo, y combina los que quiera --
+     mismo patrón que el Panel Sindical (.m-chip). */
   .filtros { background: color-mix(in srgb, var(--gris) 7%, var(--papel));
+    background-image: radial-gradient(color-mix(in srgb, var(--gris) 20%, transparent) 1px, transparent 1px);
+    background-size: 14px 14px;
     border: 1px solid var(--linea); border-radius: var(--r-card);
-    padding: 12px 14px; margin-top: 14px; display: flex; gap: 14px;
-    align-items: flex-end; flex-wrap: wrap; }
-  .f-grupo { display: flex; flex-direction: column; gap: 5px; }
+    padding: 13px 15px; margin-top: 14px; }
+  .f-cabecera { display: flex; justify-content: space-between; align-items: center;
+    gap: 10px; flex-wrap: wrap; margin-bottom: 11px; }
+  .f-titulo { font-family: var(--fuente-display); font-size: 16px;
+    display: flex; align-items: center; gap: 7px; }
+  .f-titulo .numf { background: var(--marca-apoyo); color: #fff; border-radius: 99px;
+    min-width: 20px; height: 20px; display: none; place-items: center; font-size: 11px;
+    padding: 0 6px; font-family: var(--fuente-num); }
+  .f-titulo .numf.hay { display: grid; }
+  .f-fila { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+  .f-grupo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
   .f-label { font-size: 10.5px; font-weight: 700; letter-spacing: .7px;
     text-transform: uppercase; color: var(--gris); }
-  select.f-select { border: 1.5px solid var(--linea); border-radius: var(--r-btn);
-    padding: 7px 10px; font-family: inherit; font-size: 12.5px; color: var(--tinta);
-    background: var(--blanco); min-width: 170px; max-width: 100%; }
-  select.f-select.act { border-color: var(--marca-apoyo); background: var(--enc-suave); font-weight: 600; }
-  select.f-select:disabled { background: var(--papel); color: var(--gris); }
-  .f-nota { font-size: 11.5px; color: var(--gris); max-width: 420px; }
-  .f-acciones { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .m-chips { display: flex; flex-wrap: wrap; gap: 6px; max-width: 420px; }
+  .m-chip { border: 1.5px solid var(--linea); background: var(--blanco); border-radius: var(--r-chip);
+    padding: 5px 12px; font-size: 12px; font-weight: 600; color: var(--gris); cursor: pointer;
+    font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
+  .m-chip:hover:not(:disabled) { border-color: var(--enc-borde); color: var(--marca-apoyo); }
+  .m-chip.act { background: var(--marca-apoyo); border-color: var(--marca-apoyo); color: #fff; }
+  .m-chip:disabled { opacity: .55; cursor: not-allowed; }
+  .m-chip .n { font-family: var(--fuente-num); font-size: 11px; opacity: .75; }
+  .btn-reiniciar { display: inline-flex; align-items: center; gap: 6px;
+    border: 1.5px solid var(--marca-apoyo); color: var(--marca-apoyo); background: none;
+    font-weight: 700; font-size: 12.5px; border-radius: 99px; padding: 6px 14px;
+    cursor: pointer; font-family: inherit; }
+  .btn-reiniciar:hover { background: var(--marca-apoyo); color: #fff; }
+  .f-nota { font-size: 11.5px; color: var(--gris); max-width: 460px; }
+  .f-acciones { display: flex; gap: 8px; align-items: center; }
+
+  /* Calendario: el mismo del Panel Sindical, para no inventar un segundo
+     lenguaje. Dos clics arman el rango. */
+  .cal { border: 1.5px solid var(--linea); border-radius: var(--r-card); padding: 10px 12px;
+    background: var(--blanco); width: 252px; user-select: none; }
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+  .cal-nav b { font-family: var(--fuente-display); font-size: 14px; text-transform: capitalize; }
+  .cal-nav button { width: 26px; height: 26px; border: none; background: none; border-radius: 8px;
+    color: var(--marca-primario); font-weight: 800; font-size: 14px; cursor: pointer; }
+  .cal-nav button:hover { background: var(--papel); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; text-align: center; }
+  .cal-dow { font-size: 10px; font-weight: 700; color: var(--gris); padding: 3px 0; text-transform: uppercase; }
+  .cal-dia { height: 28px; border: none; background: none; border-radius: 8px; font-size: 12px;
+    display: grid; place-items: center; position: relative; cursor: pointer;
+    font-family: var(--fuente-num); color: var(--tinta); }
+  .cal-dia:hover:not(:disabled) { background: var(--papel); }
+  .cal-dia:disabled { color: #c3c9d4; cursor: not-allowed; }
+  .cal-dia.conresp::after { content: ""; position: absolute; bottom: 2px; width: 4px; height: 4px;
+    border-radius: 50%; background: var(--marca-apoyo); }
+  .cal-dia.rango { background: var(--enc-suave); border-radius: 0; font-weight: 600; }
+  .cal-dia.extremo { background: var(--marca-apoyo) !important; color: #fff !important; font-weight: 700; }
+  .cal-dia.extremo.ini { border-radius: 8px 0 0 8px; }
+  .cal-dia.extremo.fin { border-radius: 0 8px 8px 0; }
+  .cal-dia.extremo.solo { border-radius: 8px !important; }
+  .cal-ayuda { font-size: 10.5px; color: var(--gris); margin-top: 7px; text-align: center; }
   a.btn-descargar { display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
     border: 1.5px solid var(--marca-apoyo); color: var(--marca-apoyo); background: var(--blanco);
     border-radius: 99px; padding: 7px 15px; font-size: 12.5px; font-weight: 700; }
@@ -106,6 +153,76 @@
   .nums div { font-size: 12px; color: var(--gris); }
   .nums b { display: block; font-family: var(--fuente-display); font-size: 22px; color: var(--tinta); }
 
+  /* ---------- Opciones de cada gráfico ---------- */
+  .panel-enc { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .g-ops { display: flex; gap: 3px; background: var(--papel); border: 1px solid var(--linea);
+    border-radius: 9px; padding: 2px; flex: 0 0 auto; }
+  .g-ops button { border: none; background: none; border-radius: 7px; padding: 4px 9px;
+    font-size: 11px; font-weight: 700; color: var(--gris); cursor: pointer; font-family: inherit; }
+  .g-ops button.act { background: var(--blanco); color: var(--marca-apoyo);
+    box-shadow: 0 1px 2px rgba(21,34,56,.12); }
+  table.datos { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.datos th { text-align: left; font-size: 10px; text-transform: uppercase;
+    letter-spacing: .6px; color: var(--gris); padding: 5px 8px; border-bottom: 1px solid var(--linea); }
+  table.datos td { padding: 6px 8px; border-bottom: 1px solid var(--linea); }
+  table.datos td.num { text-align: right; font-family: var(--fuente-num); white-space: nowrap; }
+  table.datos tr:last-child td { border-bottom: none; }
+  table.datos tr.clicable { cursor: pointer; }
+  table.datos tr.clicable:hover { background: var(--enc-suave); }
+  .resumen-escala { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+  .resumen-escala div { font-size: 11px; color: var(--gris); }
+  .resumen-escala b { display: block; font-family: var(--fuente-display); font-size: 24px;
+    color: var(--tinta); line-height: 1.1; }
+  .resumen-escala .destaca b { color: var(--marca-apoyo); }
+  .pista-clic { font-size: 10.5px; color: var(--gris); margin-top: 7px; font-style: italic; }
+
+  /* ---------- El cruce: dónde se concentra una opción ---------- */
+  .cruce { position: fixed; right: 0; top: 0; bottom: 0; width: min(460px, 100%);
+    background: var(--blanco); border-left: 1px solid var(--linea); z-index: 60;
+    box-shadow: -12px 0 40px -20px rgba(8,12,20,.35); overflow-y: auto;
+    transform: translateX(100%); transition: transform .22s ease; }
+  .cruce.abierto { transform: none; }
+  /* El padding derecho le deja lugar al botón de cerrar: sin él, el texto
+     del encabezado se le monta encima y el botón deja de recibir el clic
+     (el navegador lo encontró). */
+  .cruce-enc { position: sticky; top: 0; z-index: 2;
+    background: linear-gradient(135deg, var(--marca-base) 0%,
+      color-mix(in srgb, var(--marca-base) 55%, var(--marca-apoyo)) 100%);
+    color: var(--sobre-base); padding: 15px 52px 15px 18px; }
+  .cruce-enc .que { font-size: 11px; opacity: .8; text-transform: uppercase; letter-spacing: .7px; }
+  .cruce-enc h3 { font-family: var(--fuente-display); font-size: 20px; margin: 3px 0 2px; }
+  .cruce-enc .cuantos { font-size: 12.5px; opacity: .92; }
+  .cruce-cerrar { position: absolute; top: 13px; right: 14px; z-index: 3;
+    width: 30px; height: 30px; border-radius: 50%; border: none;
+    background: rgba(255,255,255,.2); color: #fff; cursor: pointer;
+    font-size: 15px; line-height: 1; }
+  .cruce-cerrar:hover { background: rgba(255,255,255,.34); }
+  .cruce-cuerpo { padding: 16px 18px 40px; }
+  .cruce-cuerpo h4 { font-family: var(--fuente-display); font-size: 15px; margin: 18px 0 3px; }
+  .cruce-cuerpo h4:first-child { margin-top: 0; }
+  .cruce-cuerpo .sub { font-size: 11.5px; color: var(--gris); margin-bottom: 9px; }
+  .cr-fila { display: grid; grid-template-columns: 1fr 52px 62px; gap: 8px; align-items: center;
+    padding: 7px 0; border-bottom: 1px solid var(--linea); font-size: 13px; }
+  .cr-fila:last-child { border-bottom: none; }
+  .cr-fila .nom { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cr-fila .nom small { display: block; color: var(--gris); font-size: 10.5px; }
+  .cr-fila .pct { text-align: right; font-family: var(--fuente-num); font-weight: 700; }
+  /* La diferencia contra el general es el dato accionable: un conteo no
+     dice si algo se concentra, la distancia contra el promedio sí. */
+  .cr-dif { text-align: right; font-size: 11.5px; font-weight: 700; font-family: var(--fuente-num);
+    border-radius: 99px; padding: 2px 7px; }
+  .cr-dif.mas { background: #fbe9e7; color: #b23a2e; }
+  .cr-dif.menos { background: #e6f5ec; color: #1c7a45; }
+  .cr-dif.igual { background: var(--papel); color: var(--gris); }
+  .cr-barra { grid-column: 1 / -1; height: 4px; background: var(--linea); border-radius: 99px;
+    overflow: hidden; margin-top: -3px; }
+  .cr-barra i { display: block; height: 100%; background: var(--marca-apoyo); border-radius: 99px; }
+  .cr-nota { background: var(--enc-suave); border: 1px solid var(--enc-borde);
+    border-radius: var(--r-card); padding: 12px 14px; font-size: 12.5px; margin-top: 16px; }
+  .cr-nota b { display: block; font-family: var(--fuente-display); font-size: 14px; margin-bottom: 3px; }
+  .velo { position: fixed; inset: 0; background: rgba(8,12,20,.28); z-index: 55; display: none; }
+  .velo.abierto { display: block; }
+
   .aviso-umbral { background: var(--enc-suave); border: 1px solid var(--enc-borde);
     border-radius: var(--r-card); padding: 16px 18px; margin-top: 14px; font-size: 13.5px; }
   .aviso-umbral b { display: block; font-family: var(--fuente-display); font-size: 17px; margin-bottom: 4px; }
@@ -153,7 +270,18 @@
 
 <main>
   <div class="filtros" id="filtros">
-    <div class="f-nota" id="f-nota">Cargando…</div>
+    <div class="f-cabecera">
+      <div class="f-titulo">Filtros <span class="numf" id="f-cuenta">0</span></div>
+      <div class="f-acciones">
+        <button type="button" class="btn-reiniciar" id="f-limpiar" onclick="limpiarFiltros()">
+          Limpiar</button>
+        <a class="btn-descargar" id="btn-csv" href="#">
+          <svg viewBox="0 0 24 24"><path d="M12 4v11"/><path d="m7.5 11 4.5 4.5 4.5-4.5"/><path d="M5 19h14"/></svg>
+          Descargar CSV</a>
+      </div>
+    </div>
+    <div class="f-fila" id="f-fila"><div class="f-nota">Cargando…</div></div>
+    <div class="f-nota" id="f-nota" style="margin-top:10px;"></div>
   </div>
 
   <section class="kpis">
@@ -203,6 +331,17 @@
     <div class="tabla-ancha"><table class="hist"><tbody id="historial"></tbody></table></div>
   </div>
 </main>
+
+<div class="velo" id="velo" onclick="cerrarCruce()"></div>
+<aside class="cruce" id="cruce" role="dialog" aria-modal="false" aria-labelledby="cr-opcion">
+  <div class="cruce-enc">
+    <button type="button" class="cruce-cerrar" onclick="cerrarCruce()" aria-label="Cerrar">✕</button>
+    <div class="que" id="cr-pregunta"></div>
+    <h3 id="cr-opcion"></h3>
+    <div class="cuantos" id="cr-cuantos"></div>
+  </div>
+  <div class="cruce-cuerpo" id="cr-cuerpo"></div>
+</aside>
 
 <a class="btn-flotante btn-home" href="/admin/inicio" title="Inicio" aria-label="Inicio">
   <svg viewBox="0 0 24 24"><path d="M3 11.2 12 4l9 7.2"/><path d="M5.5 9.8V20h13V9.8"/></svg>

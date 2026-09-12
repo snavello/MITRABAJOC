@@ -37,6 +37,8 @@ Pueden dar números distintos si alguien se mudó de seccional entre que
 respondió y hoy. Es correcto que así sea, y por eso la pantalla dice de
 dónde sale cada cosa.
 """
+from datetime import date
+
 from sqlalchemy import case, func
 
 import db
@@ -68,6 +70,18 @@ def filtros_saneados(e: dict, pedidos: dict, alcance=None) -> dict:
         valores = [str(v).strip() for v in (pedidos.get(corte) or []) if str(v).strip()]
         if valores:
             salida[corte] = valores
+
+    # El rango de fechas corre sobre el DÍA que guarda la urna, así que
+    # recorta los gráficos y el ritmo pero NO el padrón, que no sabe cuándo
+    # respondió cada uno (y a propósito: es el punto 3 del anonimato). Se
+    # acota a la ventana de la encuesta -- pedir marzo de una encuesta de
+    # septiembre devolvería vacío y parecería un error.
+    desde, hasta = _dia_pedido(pedidos.get("desde")), _dia_pedido(pedidos.get("hasta"))
+    if desde or hasta:
+        desde = max(desde or e["fecha_desde"], e["fecha_desde"])
+        hasta = min(hasta or e["fecha_hasta"], e["fecha_hasta"])
+        if desde <= hasta:
+            salida["_dias"] = [desde, hasta]
 
     if alcance is not None and "seccional" in (e.get("cortes") or []):
         propias = {str(x) for x in alcance}
@@ -104,7 +118,11 @@ def resultados(encuesta_id: int, sindicato_id: int, pedidos: dict, alcance=None)
                 "mostrar_resultados": e["mostrar_resultados"],
             },
             "umbral": {"minimo": umbral, "aplica": anonima},
-            "filtros": {**f, "disponibles": _valores_de_filtro(s, e)},
+            "filtros": {**f, "disponibles": _valores_de_filtro(s, e, testigo),
+                        # El rango sale aparte del resto: la pantalla lo
+                        # dibuja con un calendario, no con pastillas.
+                        "dias": f["aplicados"].get("_dias", []),
+                        "ventana": [e["fecha_desde"], e["fecha_hasta"]]},
             "indicadores": _indicadores(s, e, f["aplicados"], testigo),
             "respondentes": respondentes,
             "oculto": oculto,
@@ -144,13 +162,14 @@ def _cuils_alcanzados(s, e: dict, filtros: dict):
     Sale del padrón cruzado con `Trabajador`, no de la urna: es el mismo
     dato con el que el recordatorio le escribe a los que faltan.
     """
-    if not filtros:
+    cortes = {k: v for k, v in (filtros or {}).items() if k in encuestas.CORTES}
+    if not cortes:
         return None
     q = (db.select(db.EncuestaParticipante.cuil)
          .join(db.Trabajador, db.Trabajador.cuil == db.EncuestaParticipante.cuil)
          .where(db.EncuestaParticipante.encuesta_id == e["id"],
                 db.Trabajador.sindicato_id == e["sindicato_id"]))
-    for corte, valores in filtros.items():
+    for corte, valores in cortes.items():
         q = q.where(_columna_trabajador(corte).in_(_tipados(corte, valores)))
     return {c for c in s.exec(q).all()}
 
@@ -288,14 +307,38 @@ def _escala(s, encuesta_id: int, p: dict, filtros: dict) -> dict:
                  if v is not None}
     total = sum(por_valor.values())
     suma = sum(v * n for v, n in por_valor.items())
+    # Promedio solo miente cuando la distribución es de dos jorobas: 5 y 5
+    # da lo mismo que 1 y 9. La MEDIANA y los dos extremos ("cuántos están
+    # en los dos valores más bajos / más altos") son los que dicen si el
+    # promedio se puede creer.
+    ancho = maximo - minimo + 1
+    bajos = sum(por_valor.get(v, 0) for v in range(minimo, minimo + max(1, ancho // 5)))
+    altos = sum(por_valor.get(v, 0) for v in range(maximo - max(0, ancho // 5 - 1), maximo + 1))
     return {
         "min": minimo, "max": maximo,
         "etiqueta_min": p.get("etiqueta_min", ""), "etiqueta_max": p.get("etiqueta_max", ""),
         "promedio": round(suma / total, 2) if total else None,
+        "mediana": _mediana(por_valor, total),
+        "respuestas": total,
+        "bajos": {"cantidad": bajos, "porcentaje": _porcentaje(bajos, total)},
+        "altos": {"cantidad": altos, "porcentaje": _porcentaje(altos, total)},
         "distribucion": [{"valor": v, "cantidad": por_valor.get(v, 0),
                           "porcentaje": _porcentaje(por_valor.get(v, 0), total)}
                          for v in range(minimo, maximo + 1)],
     }
+
+
+def _mediana(por_valor: dict, total: int):
+    """El valor que parte la muestra al medio. Se calcula del conteo por
+    valor y no ordenando una lista: la urna puede tener miles de filas."""
+    if not total:
+        return None
+    mitad, acumulado = total / 2, 0
+    for v in sorted(por_valor):
+        acumulado += por_valor[v]
+        if acumulado >= mitad:
+            return v
+    return None
 
 
 def _ranking(s, encuesta_id: int, p: dict, opciones: list, filtros: dict) -> list:
@@ -429,20 +472,30 @@ def _respondentes(s, e: dict, filtros: dict, testigo) -> int:
     return int(s.execute(_con_filtros_urna(q, filtros)).scalar() or 0)
 
 
-def _valores_de_filtro(s, e: dict) -> dict:
+def _valores_de_filtro(s, e: dict, testigo=None) -> dict:
     """Los valores que de verdad hay en la urna para cada corte habilitado,
-    con su etiqueta. Salen de la URNA y no del padrón para que el desplegable
-    no ofrezca un grupo que no tiene ni una respuesta -- elegirlo daría
-    siempre vacío y parecería un error."""
+    con su etiqueta y CUÁNTA GENTE hay en cada uno.
+
+    Salen de la URNA y no del padrón para que la pastilla no ofrezca un
+    grupo sin ni una respuesta -- elegirlo daría siempre vacío y parecería
+    un error.
+
+    El conteo va sobre la PREGUNTA TESTIGO y no sobre todas las filas: una
+    encuesta de cinco preguntas con una múltiple deja ocho filas por
+    persona, y la pastilla decía "125" donde hay quince personas. Un número
+    al lado de un filtro que no es el que después aparece en pantalla es
+    peor que no tener número.
+    """
     salida = {}
     for corte in (e.get("cortes") or []):
         if corte not in encuestas.CORTES:
             continue
         columna = _columna_urna(corte)
-        filas = s.execute(
-            db.select(columna, func.count()).select_from(db.RespuestaEncuesta)
-            .where(db.RespuestaEncuesta.encuesta_id == e["id"])
-            .group_by(columna)).all()
+        q = db.select(columna, func.count()).select_from(db.RespuestaEncuesta) \
+            .where(db.RespuestaEncuesta.encuesta_id == e["id"]).group_by(columna)
+        if testigo:
+            q = q.where(db.RespuestaEncuesta.pregunta_id == testigo["id"])
+        filas = s.execute(q).all()
         valores = [(v, int(n)) for v, n in filas if v not in (None, "")]
         salida[corte] = _con_etiquetas(s, corte, valores, e["sindicato_id"])
     return salida
@@ -490,12 +543,30 @@ def _tipados(corte: str, valores: list):
     return salida or [0]
 
 
+def _dia_pedido(valor) -> str:
+    """"2026-09-15" o nada. Cualquier otra cosa se descarta: un filtro que
+    llega roto por la URL no puede devolver un recorte al azar."""
+    texto = str(valor or "").strip()
+    if len(texto) == 10 and texto[4] == "-" and texto[7] == "-":
+        try:
+            date.fromisoformat(texto)
+            return texto
+        except ValueError:
+            pass
+    return ""
+
+
 def _con_filtros_urna(q, filtros: dict):
-    """El recorte por cortes, EN LA CONSULTA. Acá es donde el umbral y los
-    filtros dejan de ser una promesa de la pantalla."""
+    """El recorte por cortes y por fecha, EN LA CONSULTA. Acá es donde el
+    umbral y los filtros dejan de ser una promesa de la pantalla."""
     for corte, valores in (filtros or {}).items():
         if corte in encuestas.CORTES:
             q = q.where(_columna_urna(corte).in_(_tipados(corte, valores)))
+    dias = (filtros or {}).get("_dias")
+    if dias:
+        # El día se guarda como texto AAAA-MM-DD: ordenable y comparable
+        # como string, igual que el resto de las fechas del proyecto.
+        q = q.where(db.RespuestaEncuesta.dia >= dias[0], db.RespuestaEncuesta.dia <= dias[1])
     return q
 
 
@@ -596,6 +667,13 @@ def _csv_nominal(s, e: dict, filtros: dict) -> list:
     """
     preguntas = [p for p in e["preguntas"] if p["tipo_dato"] not in encuestas.TIPOS_SIN_RESPUESTA]
     cuils = _cuils_alcanzados(s, e, filtros)
+    respuestas = _respuestas_por_cuil(s, e["id"], filtros)
+    # Con un rango de fechas puesto, el archivo tiene que decir lo mismo que
+    # la pantalla: solo la gente que respondió DENTRO del rango. Antes se
+    # ignoraba en silencio y el CSV traía a todo el padrón.
+    if filtros.get("_dias"):
+        con_respuesta = set(respuestas)
+        cuils = (cuils & con_respuesta) if cuils is not None else con_respuesta
 
     q = (db.select(db.EncuestaParticipante.cuil, db.EncuestaParticipante.respondio,
                    db.Trabajador.nombre, db.Trabajador.seccional_id,
@@ -607,8 +685,6 @@ def _csv_nominal(s, e: dict, filtros: dict) -> list:
     if cuils is not None:
         q = q.where(db.EncuestaParticipante.cuil.in_(cuils or ["__ninguno__"]))
     gente = s.execute(q).all()
-
-    respuestas = _respuestas_por_cuil(s, e["id"])
     nombres_sec = {x.id: x.nombre for x in s.exec(db.select(db.Seccional).where(
         db.Seccional.sindicato_id == e["sindicato_id"])).all()}
 
@@ -624,12 +700,12 @@ def _csv_nominal(s, e: dict, filtros: dict) -> list:
     return filas
 
 
-def _respuestas_por_cuil(s, encuesta_id: int) -> dict:
+def _respuestas_por_cuil(s, encuesta_id: int, filtros: dict = None) -> dict:
     """{cuil: {pregunta_id: [filas de la urna]}}, vía RespuestaNominal."""
-    pares = s.execute(
-        db.select(db.RespuestaNominal.cuil, db.RespuestaEncuesta)
-        .join(db.RespuestaEncuesta, db.RespuestaEncuesta.id == db.RespuestaNominal.respuesta_id)
-        .where(db.RespuestaNominal.encuesta_id == encuesta_id)).all()
+    q = (db.select(db.RespuestaNominal.cuil, db.RespuestaEncuesta)
+         .join(db.RespuestaEncuesta, db.RespuestaEncuesta.id == db.RespuestaNominal.respuesta_id)
+         .where(db.RespuestaNominal.encuesta_id == encuesta_id))
+    pares = s.execute(_con_filtros_urna(q, filtros or {})).all()
     salida = {}
     for cuil, fila in pares:
         salida.setdefault(cuil, {}).setdefault(fila.pregunta_id, []).append(fila)
@@ -713,6 +789,12 @@ def _describir_grupo(s, e: dict, filtros: dict) -> str:
     partes = []
     disponibles = _valores_de_filtro(s, e)
     for corte, valores in filtros.items():
+        if corte == "_dias":
+            partes.append(f"Respondidas entre el {fechas.dia_legible(valores[0])} y el "
+                          f"{fechas.dia_legible(valores[1])}")
+            continue
+        if corte not in encuestas.CORTES:
+            continue
         etiquetas = {v["valor"]: v["etiqueta"] for v in disponibles.get(corte, [])}
         nombre = encuestas.CORTES[corte][0]
         partes.append(f"{nombre}: " + ", ".join(etiquetas.get(v, v) for v in valores))
@@ -861,3 +943,241 @@ def _valor_opcion(p, indice):
         if x["indice"] == indice:
             return x["porcentaje"]
     return None
+
+
+# ---------- El cruce: tocar una opción y ver dónde se concentra ----------
+#
+# Es la pregunta que un sindicato hace de verdad mirando un gráfico: "el
+# 30% dijo que el ambiente está tenso... ¿tenso DÓNDE?". Un total no se
+# puede accionar; "el 62% de la sucursal Centro" sí.
+#
+# Qué se puede cruzar, y por qué no es una limitación arbitraria:
+#
+# - **Contra los CORTES (seccional, provincia, empleador): SIEMPRE.** Cada
+#   fila de la urna guarda sus propios cortes, así que agrupar "los que
+#   eligieron esta opción" por empleador es un GROUP BY sobre la misma fila.
+#   No hace falta saber quién respondió.
+# - **Contra OTRAS PREGUNTAS: solo en las NOMINALES.** Eso exige saber que
+#   la respuesta A y la respuesta B son de la misma persona, y en una
+#   anónima esa unión no existe -- es exactamente la garantía del módulo, no
+#   un agujero. En una nominal el vínculo está en `RespuestaNominal` y el
+#   afiliado respondió sabiéndolo.
+#
+# El número que se muestra no es el conteo pelado sino la COMPARACIÓN: "en
+# este empleador el 62% eligió esta opción, contra el 29% general". Un
+# conteo no dice si algo se concentra; la diferencia contra el general, sí.
+
+def cruce(encuesta_id: int, sindicato_id: int, pregunta_id: int, opcion: str,
+          pedidos: dict, alcance=None) -> dict:
+    """Dónde se concentra una opción. Devuelve None si la encuesta no es de
+    este sindicato o la pregunta no es de esta encuesta."""
+    e = db.encuesta_por_id(encuesta_id, sindicato_id)
+    if not e:
+        return None
+    pregunta = next((p for p in e["preguntas"] if p["id"] == pregunta_id), None)
+    if not pregunta:
+        return None
+    f = filtros_saneados(e, pedidos, alcance)["aplicados"]
+    anonima = e["modo"] == encuestas.ANONIMA
+    umbral = e["umbral_minimo"] if anonima else 0
+    condicion = _condicion_de_opcion(pregunta, opcion)
+    if condicion is None:
+        return None
+
+    with db.Session(db.engine) as s:
+        # El universo: cuánta gente contestó ESTA pregunta con el filtro
+        # vigente, y cuánta eligió esta opción.
+        total = _cuenta_pregunta(s, encuesta_id, pregunta, f, None)
+        elegidos = _cuenta_pregunta(s, encuesta_id, pregunta, f, condicion)
+        if anonima and elegidos < umbral:
+            return {"encuesta": e["id"], "pregunta": pregunta["etiqueta"],
+                    "opcion": _texto_de_opcion(pregunta, opcion), "total": total,
+                    "elegidos": elegidos, "oculto": True, "umbral": umbral,
+                    "cortes": {}, "preguntas": [], "puede_cruzar_preguntas": not anonima}
+
+        cortes = {}
+        for corte in (e.get("cortes") or []):
+            if corte not in encuestas.CORTES:
+                continue
+            cortes[corte] = _cruce_por_corte(s, e, pregunta, condicion, f, corte, umbral)
+
+        # El cruce contra las otras preguntas necesita saber de quién es
+        # cada respuesta: solo existe en las nominales.
+        otras = _cruce_por_pregunta(s, e, pregunta, condicion, f) if not anonima else []
+
+    return {
+        "encuesta": e["id"], "pregunta": pregunta["etiqueta"],
+        "pregunta_id": pregunta["id"], "opcion": _texto_de_opcion(pregunta, opcion),
+        "total": total, "elegidos": elegidos,
+        "porcentaje": _porcentaje(elegidos, total),
+        "oculto": False, "umbral": umbral,
+        "cortes": cortes, "preguntas": otras,
+        "puede_cruzar_preguntas": not anonima,
+    }
+
+
+def _condicion_de_opcion(pregunta: dict, opcion: str):
+    """La condición SQL que aísla "los que eligieron esta opción".
+
+    Una escala y un número se cruzan por su VALOR (elegí el 7), una opción
+    por su índice, un sí/no por 1 ó 0. Devuelve None si la opción no existe:
+    un índice inventado por la URL no puede devolver un recorte al azar.
+    """
+    tipo = pregunta["tipo_dato"]
+    if tipo in ("escala", "numero", "booleano"):
+        try:
+            return db.RespuestaEncuesta.valor_numero == float(opcion)
+        except (TypeError, ValueError):
+            return None
+    if tipo == "fecha":
+        return db.RespuestaEncuesta.valor_fecha == str(opcion) if opcion else None
+    opciones = encuestas.opciones_de(pregunta.get("opciones", ""))
+    try:
+        i = int(opcion)
+    except (TypeError, ValueError):
+        return None
+    if not (0 <= i < len(opciones)):
+        return None
+    return db.RespuestaEncuesta.opcion_indice == i
+
+
+def _texto_de_opcion(pregunta: dict, opcion: str) -> str:
+    tipo = pregunta["tipo_dato"]
+    if tipo == "booleano":
+        return "Sí" if str(opcion) in ("1", "1.0") else "No"
+    if tipo in ("escala", "numero", "fecha"):
+        return _numero_ar(float(opcion)) if tipo != "fecha" else fechas.dia_legible(opcion)
+    opciones = encuestas.opciones_de(pregunta.get("opciones", ""))
+    i = int(opcion)
+    return opciones[i] if 0 <= i < len(opciones) else str(opcion)
+
+
+def _cuenta_pregunta(s, encuesta_id: int, pregunta: dict, filtros: dict, condicion) -> int:
+    """Cuánta GENTE hay detrás de esas filas.
+
+    En un ranking cada persona deja una fila por opción, así que contar
+    filas contaría opciones. Con una condición puesta (una opción concreta)
+    el ranking deja una sola fila por persona y el problema desaparece.
+    """
+    q = db.select(func.count()).select_from(db.RespuestaEncuesta).where(
+        db.RespuestaEncuesta.encuesta_id == encuesta_id,
+        db.RespuestaEncuesta.pregunta_id == pregunta["id"])
+    if condicion is not None:
+        q = q.where(condicion)
+    filas = int(s.execute(_con_filtros_urna(q, filtros)).scalar() or 0)
+    if condicion is None and pregunta["tipo_dato"] == "ranking":
+        opciones = len(encuestas.opciones_de(pregunta.get("opciones", ""))) or 1
+        return filas // opciones
+    return filas
+
+
+def _cruce_por_corte(s, e: dict, pregunta: dict, condicion, filtros: dict,
+                     corte: str, umbral: int) -> dict:
+    """Por cada valor del corte: cuántos eligieron la opción, cuántos
+    respondieron la pregunta ahí, y la comparación contra el general.
+
+    `dentro` es el número que se lee solo: "en este empleador, el 62%
+    eligió esta opción". `del_grupo` dice de dónde sale el volumen: "el 38%
+    de todos los que la eligieron están acá".
+    """
+    columna = _columna_urna(corte)
+    base = db.select(columna, func.count()).select_from(db.RespuestaEncuesta).where(
+        db.RespuestaEncuesta.encuesta_id == e["id"],
+        db.RespuestaEncuesta.pregunta_id == pregunta["id"]).group_by(columna)
+
+    # Denominador por bucket: cuánta gente respondió la pregunta ahí.
+    totales = {v: int(n) for v, n in s.execute(_con_filtros_urna(base, filtros)).all()
+               if v not in (None, "")}
+    if pregunta["tipo_dato"] == "ranking":
+        opciones = len(encuestas.opciones_de(pregunta.get("opciones", ""))) or 1
+        totales = {v: n // opciones for v, n in totales.items()}
+
+    elegidos = {v: int(n) for v, n in s.execute(
+        _con_filtros_urna(base.where(condicion), filtros)).all() if v not in (None, "")}
+
+    general = _porcentaje(sum(elegidos.values()), sum(totales.values()))
+    crudo = []
+    for valor, total_bucket in totales.items():
+        cuantos = elegidos.get(valor, 0)
+        # El umbral se aplica al BUCKET, no al total: un grupo chico no se
+        # muestra ni siquiera para decir que eligió poco.
+        if umbral and total_bucket < umbral:
+            continue
+        crudo.append({"valor": valor, "cantidad": cuantos, "base": total_bucket,
+                      "dentro": _porcentaje(cuantos, total_bucket),
+                      "del_grupo": _porcentaje(cuantos, sum(elegidos.values()))})
+    con_nombre = _con_etiquetas(s, corte, [(x["valor"], x["cantidad"]) for x in crudo],
+                                e["sindicato_id"])
+    etiquetas = {x["valor"]: x["etiqueta"] for x in con_nombre}
+    for x in crudo:
+        x["etiqueta"] = etiquetas.get(str(x["valor"]), str(x["valor"]))
+        x["valor"] = str(x["valor"])
+        # Cuánto se despega del promedio: es lo que hace que un número
+        # sirva para decidir a dónde ir.
+        x["diferencia"] = round(x["dentro"] - general, 1)
+    crudo.sort(key=lambda x: -x["dentro"])
+    return {"general": general, "filas": crudo,
+            "escondidos": len(totales) - len(crudo)}
+
+
+def _cruce_por_pregunta(s, e: dict, pregunta: dict, condicion, filtros: dict) -> list:
+    """Cómo respondió ESE MISMO grupo las demás preguntas. Solo nominales.
+
+    Se resuelve por `RespuestaNominal`: de las respuestas que cumplen la
+    condición saco los CUIL, y con esos CUIL miro sus otras respuestas. En
+    una anónima esta función no se llama -- no hay tabla que unir.
+    """
+    q = db.select(db.RespuestaNominal.cuil).join(
+        db.RespuestaEncuesta, db.RespuestaEncuesta.id == db.RespuestaNominal.respuesta_id).where(
+        db.RespuestaNominal.encuesta_id == e["id"],
+        db.RespuestaEncuesta.pregunta_id == pregunta["id"], condicion)
+    cuils = {c for c in s.execute(_con_filtros_urna(q, filtros)).scalars().all()}
+    if not cuils:
+        return []
+
+    salida = []
+    for otra in e["preguntas"]:
+        if otra["id"] == pregunta["id"] or otra["tipo_dato"] in encuestas.TIPOS_SIN_RESPUESTA:
+            continue
+        if otra["tipo_dato"] not in ("seleccion", "opcion_unica", "multiple",
+                                     "booleano", "escala"):
+            continue
+        filas = s.execute(
+            db.select(db.RespuestaEncuesta.opcion_indice, db.RespuestaEncuesta.valor_numero)
+            .join(db.RespuestaNominal,
+                  db.RespuestaNominal.respuesta_id == db.RespuestaEncuesta.id)
+            .where(db.RespuestaEncuesta.encuesta_id == e["id"],
+                   db.RespuestaEncuesta.pregunta_id == otra["id"],
+                   db.RespuestaNominal.cuil.in_(cuils))).all()
+        if not filas:
+            continue
+        salida.append(_resumen_cruzado(otra, filas, len(cuils)))
+    return salida
+
+
+def _resumen_cruzado(pregunta: dict, filas: list, personas: int) -> dict:
+    """Lo que ese grupo contestó en otra pregunta, comparable de un vistazo."""
+    tipo = pregunta["tipo_dato"]
+    if tipo == "escala":
+        valores = [v for _, v in filas if v is not None]
+        return {"id": pregunta["id"], "etiqueta": pregunta["etiqueta"], "tipo_dato": tipo,
+                "personas": personas,
+                "promedio": round(sum(valores) / len(valores), 2) if valores else None,
+                "opciones": []}
+    if tipo == "booleano":
+        si = sum(1 for _, v in filas if (v or 0) >= 1)
+        opciones = [{"texto": "Sí", "cantidad": si, "porcentaje": _porcentaje(si, personas)},
+                    {"texto": "No", "cantidad": len(filas) - si,
+                     "porcentaje": _porcentaje(len(filas) - si, personas)}]
+    else:
+        textos = encuestas.opciones_de(pregunta.get("opciones", ""))
+        conteo = {}
+        for i, _ in filas:
+            if i is not None:
+                conteo[int(i)] = conteo.get(int(i), 0) + 1
+        opciones = [{"texto": t, "cantidad": conteo.get(n, 0),
+                     "porcentaje": _porcentaje(conteo.get(n, 0), personas)}
+                    for n, t in enumerate(textos)]
+        opciones.sort(key=lambda x: -x["cantidad"])
+    return {"id": pregunta["id"], "etiqueta": pregunta["etiqueta"], "tipo_dato": tipo,
+            "personas": personas, "promedio": None, "opciones": opciones}
