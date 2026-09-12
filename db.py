@@ -35,7 +35,25 @@ from dotenv import load_dotenv
 from typing import Any
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON, text
 from sqlalchemy import or_, bindparam
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError
+
+# El tipo de las columnas JSON del proyecto. **En Postgres es JSONB**, que es
+# lo que las migraciones vienen creando desde el principio con esta misma
+# expresión.
+#
+# Estaba solo en las migraciones y no en los modelos, así que el esquema que
+# arma `create_all` -- el de la base descartable de la SUITE -- tenía `json`
+# donde producción tiene `jsonb`: quince columnas probándose contra un tipo
+# distinto del que corre. Es el mismo defecto que motivó sacar SQLite el
+# 2026-09-11, solo que adentro del mismo motor y por eso más difícil de ver.
+# `test_migraciones.py` compara los dos esquemas para que no vuelva a pasar.
+#
+# `json` guarda el texto tal cual (conserva orden de claves y espacios) y no
+# tiene operador de igualdad; `jsonb` es binario, normalizado, comparable e
+# indexable. Para leer y escribir un dict entero dan lo mismo, que es por lo
+# que la diferencia pasó desapercibida.
+JSON_TIPO = JSON().with_variant(postgresql.JSONB(), "postgresql")
 
 import encuestas
 import fechas
@@ -140,7 +158,7 @@ class Sindicato(SQLModel, table=True):
     # Qué módulos tiene disponibles este sindicato (ver modulos.py). Controla
     # qué tarjetas ve el trabajador y qué pestañas ve el admin del sindicato
     # -- pensado para distintos modelos comerciales, no todos adoptan todo.
-    modulos_habilitados: list = Field(default=[], sa_column=Column(JSON))
+    modulos_habilitados: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
     # Portada del trabajador: oscura (default, regla histórica) o clara.
     # El encabezado (.enc) sigue siendo oscuro en las dos variantes -- lo
     # que cambia es el fondo del cuerpo y las tarjetas. Default False =
@@ -398,7 +416,7 @@ class Trabajador(SQLModel, table=True):
     # Último semáforo de ARCA calculado (POST /api/aportes) -- antes se
     # perdía apenas se navegaba o se recargaba la página, porque nunca se
     # guardaba. Es el mismo dict que devuelve semaforo.calcular_semaforo().
-    semaforo_datos: dict = Field(default={}, sa_column=Column(JSON))
+    semaforo_datos: dict = Field(default={}, sa_column=Column(JSON_TIPO))
     semaforo_actualizado: Optional[str] = Field(default=None)  # fecha ISO del último cálculo
 
 
@@ -441,6 +459,14 @@ class Concepto(SQLModel, table=True):
     nombre: str
     tipo: str                      # "ingreso" | "descuento"
     remunerativo: bool = True
+    # `JSON` pelado y no `JSON_TIPO`: en la base ESTA columna es `json`, no
+    # `jsonb`, porque su migración es anterior a que se adoptara la variante.
+    # Igual que `detalle` (Reporte, ReciboVerificado, EnvioSindicato),
+    # `fragmentos_usados`, `parametros` y `resumen`. El modelo dice lo que la
+    # base tiene: alinearlas a `jsonb` sería mejor -- indexables, comparables
+    # -- pero exige un ALTER que reescribe tablas con datos, que es otro
+    # cambio y no éste. Lo que NO puede pasar es que el modelo prometa un tipo
+    # y la base tenga otro, que era el defecto que se arregló acá.
     alias: list = Field(default=[], sa_column=Column(JSON))
     pendiente_revision: bool = False
     # Ley 27.802 / Dto 407/2026: categoría sindical de un descuento.
@@ -539,7 +565,7 @@ class Noticia(SQLModel, table=True):
     # Destino: lista de Seccional.id a la(s) que se dirige. Lista vacía (el
     # default) = todas las seccionales, incluidos los trabajadores sin
     # seccional asignada.
-    destino_seccionales: list = Field(default=[], sa_column=Column(JSON))
+    destino_seccionales: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
 
 
 class Beneficio(SQLModel, table=True):
@@ -561,7 +587,7 @@ class Beneficio(SQLModel, table=True):
     formulario_id: Optional[int] = None  # mismo criterio que Noticia.formulario_id
     # Destino: lista de Seccional.id a la(s) que se dirige. Lista vacía (el
     # default) = todas las seccionales, mismo criterio que Noticia.
-    destino_seccionales: list = Field(default=[], sa_column=Column(JSON))
+    destino_seccionales: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
 
 
 class Reporte(SQLModel, table=True):
@@ -720,7 +746,7 @@ class Notificacion(SQLModel, table=True):
     adjunto_mime: str = ""
     adjunto_nombre: str = ""
     criterio: str = ""             # "cuil" | "cuit_empleador" | "seccional" | "provincia"
-    criterio_valores: list = Field(default=[], sa_column=Column(JSON))
+    criterio_valores: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
     # "manual" = la compuso el admin desde /admin. "sistema" = la disparó
     # automáticamente un cambio de trámite (Fase 3, main._notificar_cambio_tramite).
     origen: str = "manual"
@@ -757,7 +783,7 @@ class NotificacionEmpleador(SQLModel, table=True):
     adjunto_mime: str = ""
     adjunto_nombre: str = ""
     criterio: str = ""             # "cuit" | "todos" | "provincia"
-    criterio_valores: list = Field(default=[], sa_column=Column(JSON))
+    criterio_valores: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
     origen: str = "manual"          # "manual" | "sistema" (Fase 5: cambio de trámite externo)
     enviado_en: str = ""
     cantidad_destinatarios: int = 0
@@ -788,7 +814,7 @@ class TipoTramite(SQLModel, table=True):
     # mensaje, bloquea}), referenciando campos POR ORDEN y no por id porque
     # editar el tipo REEMPLAZA los campos (ids nuevos en cada edición). Se
     # sanean en validaciones_tramite.reglas_saneadas antes de llegar acá.
-    reglas_consistencia: list = Field(default=[], sa_column=Column(JSON))
+    reglas_consistencia: list = Field(default=[], sa_column=Column(JSON_TIPO))
     # NULL = formulario GLOBAL, lo ve todo el sindicato. Con seccional, solo
     # lo ven los trabajadores de esa seccional y solo su admin local lo
     # edita (decisión N7 de SPRINT_AREAS_V2.md).
@@ -877,7 +903,7 @@ class CampoTramite(SQLModel, table=True):
     # Validaciones del campo ({fuente, operador, valor, mensaje, bloquea}),
     # saneadas en validaciones_tramite.validaciones_saneadas. Fase 1: solo
     # fuente "fija"; la forma ya contempla lista/sistema/externa.
-    validaciones: list = Field(default=[], sa_column=Column(JSON))
+    validaciones: list = Field(default=[], sa_column=Column(JSON_TIPO))
     # True = el admin lo quitó del formulario pero ya tenía respuestas: no
     # se puede borrar (FK desde RespuestaTramite) y los trámites viejos
     # necesitan su etiqueta. Sale de la búsqueda del formulario, nada más.
@@ -909,7 +935,7 @@ class Tramite(SQLModel, table=True):
     # Mensajes de validaciones con bloquea=False ("avisa") que el envío
     # disparó: no frenan al trabajador, quedan para el operador del
     # sindicato en el detalle del trámite.
-    advertencias: list = Field(default=[], sa_column=Column(JSON))
+    advertencias: list = Field(default=[], sa_column=Column(JSON_TIPO))
     # Trámite desde cuyo CHAT se inició este (el admin adjuntó un
     # formulario y el trabajador lo abrió desde ahí): los dos chats se
     # muestran vinculados. Un formulario abierto desde una noticia/
@@ -998,7 +1024,7 @@ class TipoTramiteEmpleador(SQLModel, table=True):
     codigo: str
     activo: bool = True
     creado: str = ""
-    reglas_consistencia: list = Field(default=[], sa_column=Column(JSON))  # mirror de TipoTramite
+    reglas_consistencia: list = Field(default=[], sa_column=Column(JSON_TIPO))  # mirror de TipoTramite
 
 
 class CampoTramiteEmpleador(SQLModel, table=True):
@@ -1015,7 +1041,7 @@ class CampoTramiteEmpleador(SQLModel, table=True):
     opciones: str = ""
     ancho: str = "completo"
     obligatorio: bool = True
-    validaciones: list = Field(default=[], sa_column=Column(JSON))  # mirror de CampoTramite
+    validaciones: list = Field(default=[], sa_column=Column(JSON_TIPO))  # mirror de CampoTramite
     retirado: bool = False                                           # mirror de CampoTramite
 
 
@@ -1030,7 +1056,7 @@ class TramiteEmpleador(SQLModel, table=True):
     estado: str = "iniciado"
     creado: str = ""
     actualizado: str = ""
-    advertencias: list = Field(default=[], sa_column=Column(JSON))  # mirror de Tramite
+    advertencias: list = Field(default=[], sa_column=Column(JSON_TIPO))  # mirror de Tramite
     origen_tramite_id: Optional[int] = None                          # mirror de Tramite
     visto_empresa_en: Optional[str] = None                           # mirror de visto_trabajador_en
 
@@ -1275,7 +1301,7 @@ class ConsultaAsistente(SQLModel, table=True):
     usuario_id: Optional[int] = Field(default=None, foreign_key="usuariosindicato.id")
     pregunta: str = ""
     respuesta: str = ""
-    filtros: Optional[dict] = Field(default=None, sa_column=Column(JSON))   # None = no aplicó
+    filtros: Optional[dict] = Field(default=None, sa_column=Column(JSON_TIPO))   # None = no aplicó
     tab: str = ""
     aplicado: bool = False
     modelo: str = ""
@@ -1326,7 +1352,7 @@ class TestCarga(SQLModel, table=True):
     entorno: str = "pruebas"                 # "pruebas" únicamente por ahora (demo: no disponible)
     tipo: str = "lecturas"                    # "lecturas" | "recibos"
     estado: str = "pendiente"                 # pendiente -> corriendo -> listo | error
-    parametros: dict = Field(default={}, sa_column=Column(JSON))
+    parametros: dict = Field(default={}, sa_column=Column(JSON, nullable=False))
     resumen: Optional[list] = Field(default=None, sa_column=Column(JSON))  # filas tipo resumen.csv
     avance: str = ""                          # último progreso corto ("escalón 200, 00m30s")
     error_detalle: str = ""
@@ -1437,7 +1463,7 @@ class GeoCache(SQLModel, table=True):
     # La clave de búsqueda, ya normalizada por geo._clave_cache (minúsculas,
     # sin tildes, campos separados por "|"). Única: una dirección, una fila.
     consulta_normalizada: str = Field(index=True, unique=True)
-    respuesta_json: list = Field(default=[], sa_column=Column(JSON))
+    respuesta_json: list = Field(default=[], sa_column=Column(JSON_TIPO))
     # "AAAA-MM-DD HH:MM" de Buenos Aires, igual que el resto del proyecto.
     creado: str = ""
 
@@ -5051,7 +5077,7 @@ class Encuesta(SQLModel, table=True):
     # Qué atributos se guardan pegados a cada respuesta para poder filtrar
     # (subconjunto de encuestas.CORTES). En una anónima los tilda el admin;
     # en una nominal están todos. Lista vacía en una anónima = solo totales.
-    cortes: list = Field(default=[], sa_column=Column(JSON))
+    cortes: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
     # Mínimo de respuestas para mostrar un grupo. Se copia de
     # ConfiguracionPlataforma AL PUBLICAR: si plataforma lo cambia después,
     # una encuesta ya cerrada no empieza a mostrar u ocultar cosas distintas.
@@ -5069,7 +5095,7 @@ class Encuesta(SQLModel, table=True):
     mostrar_resultados: bool = False
     # A quién se dirigió, con los mismos criterios que Notificacion.
     criterio: str = ""      # "cuil" | "cuit_empleador" | "seccional" | "provincia"
-    criterio_valores: list = Field(default=[], sa_column=Column(JSON))
+    criterio_valores: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
     # Snapshot: cuántos quedaron en el padrón al publicar. Es el
     # denominador de la participación, y por eso no se recalcula.
     cantidad_destinatarios: int = 0

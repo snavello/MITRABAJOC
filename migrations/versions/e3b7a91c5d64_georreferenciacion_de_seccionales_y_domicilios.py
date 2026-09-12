@@ -41,7 +41,13 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 import sqlmodel
+
+# JSONB en Postgres, igual que el resto de las columnas JSON del proyecto y
+# que `db.JSON_TIPO`. Con `sa.JSON()` pelado la columna nacería `json` y el
+# esquema de las migraciones dejaría de coincidir con el de los modelos.
+JSON_TIPO = sa.JSON().with_variant(postgresql.JSONB(), "postgresql")
 
 
 revision: str = 'e3b7a91c5d64'
@@ -120,7 +126,7 @@ def upgrade() -> None:
     op.create_table('geocache',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('consulta_normalizada', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column('respuesta_json', sa.JSON(), nullable=True),
+        sa.Column('respuesta_json', JSON_TIPO, nullable=True),
         sa.Column('creado', sqlmodel.sql.sqltypes.AutoString(), nullable=False,
                   server_default=''),
         sa.PrimaryKeyConstraint('id'),

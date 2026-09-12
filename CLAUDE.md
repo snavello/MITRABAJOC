@@ -252,8 +252,21 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   `main._sello_static(nombre)` (global de Jinja, mtime+tamaño del archivo, no
   `version.py`: cambia aunque nadie suba la versión). Un archivo nuevo en
   `/static/` que una plantilla referencie tiene que usarlo.
-- **JSON como JSONB:** columnas alias (Concepto), detalle (Reporte) y las
-  listas de Encuestas son jsonb, indexables.
+- **JSON como JSONB:** las columnas JSON del proyecto usan `db.JSON_TIPO`
+  (`JSON().with_variant(JSONB, "postgresql")`), que es la misma expresión que
+  usan las migraciones. **Una columna JSON nueva va con `JSON_TIPO`, no con
+  `JSON` pelado**: si no, el modelo dice `json` donde la migración crea
+  `jsonb` y la suite pasa a probar contra un tipo que no es el que corre.
+  Siete columnas históricas quedaron en `json` (alias de Concepto, los tres
+  `detalle`, `fragmentos_usados`, `parametros`, `resumen`) porque sus
+  migraciones son anteriores a esa variante: el modelo dice lo que la base
+  tiene, que es lo que importa. Pasarlas a jsonb exige un ALTER que reescribe
+  tablas con datos y todavía no se hizo.
+  **`test_migraciones.py` compara los dos esquemas** — tablas, columnas, tipos
+  y obligatoriedad — levantando uno con `create_all` y otro con `alembic
+  upgrade head`. Existía como promesa en `conftest.py` desde que la suite pasó
+  a Postgres y se escribió recién el 2026-09-12, cuando encontró 15 columnas
+  `json`/`jsonb` desalineadas y 8 que el modelo dejaba nulas y la base no.
 - **Aislamiento entre sindicatos: total.** Marca por sindicato: 4 colores
   (`color_base`, `color_primario`, `color_acento`, `color_secundario`), inyectados
   como `--marca-base/primario/acento/apoyo` en cada plantilla. `color_base` es el

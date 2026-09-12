@@ -3718,3 +3718,64 @@ domicilios verificados del sindicato. Las seccionales genéricas del lote (las
 que recibe La Bancaria, que no tiene propias) llevan el centroide real de su
 ciudad y van como `aproximada`, que es exactamente lo que son: el centro de
 la localidad, no la puerta.
+
+## El esquema de la suite no era el de producción (2026-09-12)
+
+Salió de una comparación que se hizo al pasar, verificando la migración de
+georreferenciación: `create_all` (los modelos, que es como la suite arma su
+base) producía `json` donde Alembic produce `jsonb`. **Quince columnas**, en
+trece tablas: `modulos_habilitados`, `semaforo_datos`, los dos
+`destino_seccionales`, los tres `criterio_valores`, los dos
+`reglas_consistencia`, los dos `validaciones`, los dos `advertencias`,
+`filtros` y `cortes`.
+
+Las migraciones venían usando `sa.JSON().with_variant(postgresql.JSONB(),
+"postgresql")` desde el principio; los modelos, `Column(JSON)` pelado. Nunca
+falló nada, y ese es justamente el problema: para leer y escribir un dict
+entero los dos tipos se comportan igual. La diferencia aparece en lo que
+`json` NO tiene — operador de igualdad, contención (`@>`), índices GIN —, así
+que la primera consulta que usara cualquiera de esas cosas habría andado en
+la suite y roto en producción.
+
+Es el mismo defecto que motivó sacar SQLite el 2026-09-11 ("la suite entera
+validaba contra un motor que el proyecto no usa"), pero adentro del mismo
+motor, y por eso invisible hasta que alguien compara los dos esquemas columna
+por columna.
+
+### Lo que se arregló y lo que no
+
+Los modelos pasaron a declarar `db.JSON_TIPO`, la misma expresión de las
+migraciones. **No hizo falta ninguna migración**: producción ya tenía `jsonb`;
+el que mentía era el modelo, y con él la base de la suite.
+
+Quedaron siete columnas en `json` —`alias` de Concepto, los tres `detalle`,
+`fragmentos_usados`, `parametros`, `resumen`— porque sus migraciones son
+anteriores a la variante y la base LAS TIENE así. El modelo dice lo que la
+base tiene, que es el invariante que importa. Pasarlas a `jsonb` sería mejor
+(indexables, comparables) pero exige un `ALTER COLUMN ... TYPE jsonb` que
+reescribe tablas con datos: es otro cambio, con su propia decisión.
+
+De paso quedó corregido CLAUDE.md, que afirmaba que `alias` y `detalle` ya
+eran jsonb. No lo eran.
+
+### El test que faltaba desde julio
+
+`conftest.py` prometía `test_migraciones.py` desde que la suite pasó a
+Postgres ("que el esquema de las migraciones coincida con el de los modelos
+es otra cosa, y se verifica aparte") y ese archivo **no existía**. Ahora sí:
+levanta una base con `alembic upgrade head` y la compara contra la de
+`create_all` en tablas, columnas, tipos y obligatoriedad. Tarda 1,7 segundos
+porque las migraciones enteras corren en 1,4.
+
+Alembic va en un SUBPROCESO y no con `command.upgrade` en el mismo proceso:
+`migrations/env.py` usa `db.engine` directamente —a propósito, para leer
+DATABASE_URL igual que la app— e ignora la URL de `alembic.ini`, así que
+llamarlo desde el test levantaba las migraciones sobre la base de la suite,
+que `create_all` ya había llenado, y reventaba con "relation already exists".
+Con el subproceso se corre igual que lo corre una persona.
+
+Y encontró algo más en la primera corrida: **ocho columnas JSON que el modelo
+dejaba nulas y la base declara NOT NULL**. `sa_column=Column(...)` pisa al
+`Field`, y un `Column` sin `nullable` nace nullable: un test podía guardar
+`None` en `modulos_habilitados` y pasar, donde producción lo rechaza. También
+se alinearon hacia lo que corre.
