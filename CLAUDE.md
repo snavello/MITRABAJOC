@@ -257,11 +257,14 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   usan las migraciones. **Una columna JSON nueva va con `JSON_TIPO`, no con
   `JSON` pelado**: si no, el modelo dice `json` donde la migración crea
   `jsonb` y la suite pasa a probar contra un tipo que no es el que corre.
-  Siete columnas históricas quedaron en `json` (alias de Concepto, los tres
-  `detalle`, `fragmentos_usados`, `parametros`, `resumen`) porque sus
-  migraciones son anteriores a esa variante: el modelo dice lo que la base
-  tiene, que es lo que importa. Pasarlas a jsonb exige un ALTER que reescribe
-  tablas con datos y todavía no se hizo.
+  **No queda ninguna columna en `json`**: las siete históricas (alias de
+  Concepto, los tres `detalle`, `fragmentos_usados`, `parametros`, `resumen`)
+  se convirtieron en la migración `d2c8f04a6b31`. Medido antes de hacerlo
+  sobre una copia de la demo con 15.000 recibos: 1,5 s las siete juntas. El
+  `ALTER COLUMN ... TYPE` reescribe la tabla con lock ACCESS EXCLUSIVE, así
+  que a esta escala son segundos de espera en el Pre-Deploy; si estas tablas
+  llegaran a millones de filas hay que repensarlo (columna nueva, backfill
+  por lotes y swap).
   **`test_migraciones.py` compara los dos esquemas** — tablas, columnas, tipos
   y obligatoriedad — levantando uno con `create_all` y otro con `alembic
   upgrade head`. Existía como promesa en `conftest.py` desde que la suite pasó

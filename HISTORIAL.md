@@ -3779,3 +3779,35 @@ dejaba nulas y la base declara NOT NULL**. `sa_column=Column(...)` pisa al
 `Field`, y un `Column` sin `nullable` nace nullable: un test podía guardar
 `None` en `modulos_habilitados` y pasar, donde producción lo rechaza. También
 se alinearon hacia lo que corre.
+
+
+### Y las últimas siete (mismo día)
+
+Con los modelos ya alineados, quedaban siete columnas que eran `json` en los
+dos lados --consistentes, pero no lo que CLAUDE.md decía--: `alias` de
+Concepto, los tres `detalle` (Reporte, ReciboVerificado, EnvioSindicato),
+`fragmentos_usados`, `parametros` y `resumen`. Se convirtieron todas
+(`d2c8f04a6b31`), así que **el proyecto ya no tiene ninguna columna `json`**.
+
+El riesgo se midió ANTES de escribir la migración, no después:
+
+- **Orden de las claves.** `jsonb` normaliza el orden de los objetos pero
+  CONSERVA el de los arrays. Se revisó qué recorre el código en orden:
+  `discrepancias`, `alertas`, `log`, `respuestas`, `alias` -- todos arrays.
+  Nada itera claves de objeto para mostrar.
+- **Tiempo de la reescritura.** Sobre una copia de la demo con 15.000 recibos
+  (25 MB en `reciboverificado`), las siete conversiones tardaron 1,5
+  segundos; a las 50.000 del banco de pruebas del panel serían unos 5. En
+  Render esto corre en el Pre-Deploy con la versión anterior sirviendo, así
+  que son segundos de espera en un momento que ya iba a tener un reinicio. A
+  millones de filas habría que hacerlo de otra forma (columna nueva, backfill
+  por lotes, swap); a esta escala no se justifica.
+- **Datos que no castean.** `jsonb` rechaza la secuencia de escape de NUL
+  dentro de una cadena y `json` la acepta: es el único modo de falla real. No
+  hay ninguna en las 21.000 filas de las tres tablas de la demo. Si apareciera
+  en producción, el cast aborta, la migración revierte entera y el deploy se
+  corta con la versión vieja intacta -- falla del lado seguro. El docstring de
+  la migración deja el síntoma y la consulta para encontrarla.
+
+Verificado además sobre la base de demo REAL y no una sintética: 2,4 segundos
+de punta a punta, y los 15.000 recibos con su `detalle` entero después.

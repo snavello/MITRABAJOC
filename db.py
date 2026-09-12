@@ -53,6 +53,11 @@ from sqlalchemy.exc import IntegrityError
 # tiene operador de igualdad; `jsonb` es binario, normalizado, comparable e
 # indexable. Para leer y escribir un dict entero dan lo mismo, que es por lo
 # que la diferencia pasó desapercibida.
+#
+# **Toda columna JSON del proyecto usa esto**: desde la migración
+# d2c8f04a6b31 no queda ninguna en `json` pelado. Una columna nueva que use
+# `Column(JSON)` en vez de `Column(JSON_TIPO)` rompe esa uniformidad y
+# `test_migraciones.py` la marca.
 JSON_TIPO = JSON().with_variant(postgresql.JSONB(), "postgresql")
 
 import encuestas
@@ -459,15 +464,7 @@ class Concepto(SQLModel, table=True):
     nombre: str
     tipo: str                      # "ingreso" | "descuento"
     remunerativo: bool = True
-    # `JSON` pelado y no `JSON_TIPO`: en la base ESTA columna es `json`, no
-    # `jsonb`, porque su migración es anterior a que se adoptara la variante.
-    # Igual que `detalle` (Reporte, ReciboVerificado, EnvioSindicato),
-    # `fragmentos_usados`, `parametros` y `resumen`. El modelo dice lo que la
-    # base tiene: alinearlas a `jsonb` sería mejor -- indexables, comparables
-    # -- pero exige un ALTER que reescribe tablas con datos, que es otro
-    # cambio y no éste. Lo que NO puede pasar es que el modelo prometa un tipo
-    # y la base tenga otro, que era el defecto que se arregló acá.
-    alias: list = Field(default=[], sa_column=Column(JSON))
+    alias: list = Field(default=[], sa_column=Column(JSON_TIPO))
     pendiente_revision: bool = False
     # Ley 27.802 / Dto 407/2026: categoría sindical de un descuento.
     # "convenio"   = cuota solidaria / fondos convencionales -> cuenta para el tope
@@ -597,7 +594,7 @@ class Reporte(SQLModel, table=True):
     cuil: str = ""
     periodo: str = ""
     estado: str = "nuevo"          # "nuevo" | "en_revision" | "resuelto"
-    detalle: dict = Field(default={}, sa_column=Column(JSON))
+    detalle: dict = Field(default={}, sa_column=Column(JSON_TIPO))
 
 
 class UsoIA(SQLModel, table=True):
@@ -677,7 +674,7 @@ class EnvioSindicato(SQLModel, table=True):
     fecha: str = ""
     # {"recibo": {...}, "resultado": {...}} — lo que el sindicato puede consultar
     # del recibo que el trabajador envió (Punto 3).
-    detalle: dict = Field(default={}, sa_column=Column(JSON))
+    detalle: dict = Field(default={}, sa_column=Column(JSON_TIPO))
 
 
 class ReciboVerificado(SQLModel, table=True):
@@ -693,7 +690,7 @@ class ReciboVerificado(SQLModel, table=True):
     # período): lo actualiza /api/enviar-sindicato por id, no por matching.
     enviado_sindicato: bool = False
     fecha_envio: str = ""
-    detalle: dict = Field(default={}, sa_column=Column(JSON))
+    detalle: dict = Field(default={}, sa_column=Column(JSON_TIPO))
     # ---- Columnas analíticas para el Panel Sindical (docs/DASHBOARD.md) ----
     # Todo esto ya existía ADENTRO de `detalle` (JSON), pero los agregados del
     # dashboard se calculan en SQL con índices y ahí un JSON no sirve. Se
@@ -1279,7 +1276,7 @@ class ConsultaConvenio(SQLModel, table=True):
     cuil: str = Field(default="", index=True)
     pregunta: str = ""
     hubo_respuesta: bool = False   # False = se contestó "no lo encontré"
-    fragmentos_usados: list = Field(default=[], sa_column=Column(JSON))
+    fragmentos_usados: list = Field(default=[], sa_column=Column(JSON_TIPO))
     creado: str = ""
     # Tema de la consulta, para el gráfico "Consultas por tema" del Panel
     # Sindical (docs/DASHBOARD.md). NULL en todo lo registrado hasta ahora:
@@ -1352,8 +1349,8 @@ class TestCarga(SQLModel, table=True):
     entorno: str = "pruebas"                 # "pruebas" únicamente por ahora (demo: no disponible)
     tipo: str = "lecturas"                    # "lecturas" | "recibos"
     estado: str = "pendiente"                 # pendiente -> corriendo -> listo | error
-    parametros: dict = Field(default={}, sa_column=Column(JSON, nullable=False))
-    resumen: Optional[list] = Field(default=None, sa_column=Column(JSON))  # filas tipo resumen.csv
+    parametros: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+    resumen: Optional[list] = Field(default=None, sa_column=Column(JSON_TIPO))  # filas tipo resumen.csv
     avance: str = ""                          # último progreso corto ("escalón 200, 00m30s")
     error_detalle: str = ""
     render_job_id: str = ""
