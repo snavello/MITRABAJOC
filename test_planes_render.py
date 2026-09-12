@@ -9,13 +9,10 @@ acceso de las rutas.
 Correr con: python -m pytest test_planes_render.py
 """
 import os
-import tempfile
 from datetime import datetime
 
 from zoneinfo import ZoneInfo
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["ENTORNO"] = "pruebas"
 os.environ["PIN_ENTORNOS"] = "13571357"
 os.environ["PLANIFICADOR"] = "off"   # el hilo no arranca dentro de los tests

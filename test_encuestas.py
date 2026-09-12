@@ -11,13 +11,9 @@ Los tests de esta tanda son de dos clases muy distintas:
   padrón la hora en que respondió, estos tests fallan aunque toda la app
   siga andando -- que es exactamente para lo que están.
 
-Correr con: .venv/Scripts/python.exe test_encuestas.py
+Correr con: .venv/Scripts/python.exe -m pytest test_encuestas.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import encuestas
 import modulos

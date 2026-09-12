@@ -29,15 +29,16 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   no se usa más en ningún caso** — si algo sugiere Streamlit, está mirando el
   repo equivocado.
 - **Backend:** FastAPI + Jinja2.
-- **Base de datos:** Postgres en producción (Render gestionado). El motor se
-  elige solo: si existe la variable DATABASE_URL usa Postgres; si no, cae a
-  SQLite. Esa lógica está en db.py (variable USANDO_POSTGRES). Desarrollo
-  local usa Postgres vía Docker por defecto desde 2026-08-16 (ver "Desarrollo
-  local con Postgres" más abajo) — SQLite queda como fallback sin Docker.
-- **Migraciones:** Alembic. El esquema lo administra Alembic, NO create_all. En
-  Postgres (producción y ahora también desarrollo local), los cambios de
-  modelo se aplican con `alembic upgrade head` sin borrar datos. Solo en
-  SQLite (fallback sin Docker) db.crear_tablas() sigue creando tablas.
+- **Base de datos: Postgres, siempre.** `DATABASE_URL` es OBLIGATORIA y sin
+  ella la app no arranca (db.py levanta un error explicando qué hacer). No
+  hay fallback a SQLite: lo hubo hasta el 2026-09-11 y se sacó porque la
+  suite entera validaba contra un motor que el proyecto no usa (detalle en
+  "Afuera SQLite" de HISTORIAL.md). Producción y pruebas son Render
+  gestionado; desarrollo local es el Postgres del `docker-compose.yml`.
+- **Migraciones:** Alembic. El esquema lo administra Alembic, NO create_all:
+  los cambios de modelo se aplican con `alembic upgrade head` sin borrar
+  datos, y en Render corre solo en el Pre-Deploy. `db.crear_tablas()` quedó
+  para un solo uso: que la suite arme el esquema de su base descartable.
 - **IA:** API de Anthropic, tres modelos con un uso cada uno:
   `claude-sonnet-4-6` lee recibos y comprobantes (`extractor.py`),
   `claude-opus-5` responde las consultas sobre el convenio (`rag.py`) y
@@ -184,7 +185,6 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - PLATAFORMA_PASSWORD — clave del login de plataforma.
 - SESSION_SECRET — secreto para firmar cookies de sesión.
 - PYTHON_VERSION — 3.12.8 (redundante con .python-version, a propósito).
-- DB_PATH — solo dev local (SQLite). NO se usa en Render.
 - DEMO_DATABASE_URL — solo en el `.env` de la PC de quien promueve: External
   Database URL de la base de demo, para el `pg_dump` de `promover_demo.py`.
 - VAPID_PRIVATE_KEY / VAPID_PUBLIC_KEY / VAPID_CLAIM_EMAIL — Web Push de la
@@ -228,8 +228,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   `main._sello_static(nombre)` (global de Jinja, mtime+tamaño del archivo, no
   `version.py`: cambia aunque nadie suba la versión). Un archivo nuevo en
   `/static/` que una plantilla referencie tiene que usarlo.
-- **JSON como JSONB en Postgres:** columnas alias (Concepto) y detalle (Reporte)
-  son jsonb (indexables). En SQLite quedan JSON común.
+- **JSON como JSONB:** columnas alias (Concepto), detalle (Reporte) y las
+  listas de Encuestas son jsonb, indexables.
 - **Aislamiento entre sindicatos: total.** Marca por sindicato: 4 colores
   (`color_base`, `color_primario`, `color_acento`, `color_secundario`), inyectados
   como `--marca-base/primario/acento/apoyo` en cada plantilla. `color_base` es el
@@ -259,11 +259,15 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   alcanza con ocultar en el cliente. Cualquier feature grande nueva evalúa
   primero si necesita su propia entrada acá (opt-in, no en
   `MODULOS_INICIALES`) en vez de estar siempre encendida para todos.
-- **Desarrollo local con Postgres vía Docker** (no SQLite) desde 2026-08-16
-  — paridad con producción para probar migraciones de Alembic antes de
-  llegar a Render. `docker-compose.yml` en la raíz. Los tests (`test_*.py`)
-  siguen en SQLite temporal, sin cambios — ver "Comandos útiles" y detalle
-  en HISTORIAL.md.
+- **Postgres y nada más, en todos lados** (2026-09-11). Desarrollo local
+  con el `docker-compose.yml` de la raíz desde 2026-08-16, y desde el
+  11-09 también **la suite**: `conftest.py` crea una base Postgres
+  descartable por proceso de pytest, le arma el esquema y la borra al
+  terminar. El SQLite de los tests se fue porque daba por buenos defectos
+  que Postgres no perdona — el mismo día encontró tres, entre ellos una
+  clave foránea a un sindicato inexistente y un test del dashboard que
+  afirmaba MIN/MAX donde la app real devuelve percentiles. Detalle en
+  "Afuera SQLite" de HISTORIAL.md.
 - **Aislamiento total entre sistemas de trabajador y empleador**: cuando un
   concepto existe para los dos actores (notificaciones, trámites), se
   duplican tablas y rutas en vez de compartirlas, a costa de más código
@@ -754,8 +758,6 @@ función sigue existiendo solo a pedido explícito.
 ## Comandos útiles
 - Correr local (Postgres vía Docker): `docker compose up -d`,
   después `alembic upgrade head`, después `uvicorn main:app --reload`.
-- Correr local (SQLite, sin Docker): `uvicorn main:app --reload`
-  (con `DATABASE_URL` comentado/ausente en `.env`).
 - Autodiagnóstico: `python chequeo.py`
 - Cargar demo: `python cargar_demo.py` (¡correr alembic upgrade head antes si es Postgres!)
 - Migraciones: `alembic upgrade head` (aplicar) / `alembic revision --autogenerate -m "msg"` (crear)
@@ -773,10 +775,11 @@ función sigue existiendo solo a pedido explícito.
 - Tests: correr CADA `test_*.py` por separado (loop por archivo), nunca
   `pytest -q` batcheado — módulos comparten estado de import y se
   contaminan entre archivos si corren en el mismo proceso pytest.
-- **Corriendo un test directo con `.venv/Scripts/python.exe test_x.py`
-  (sin pytest)**: `conftest.py` (que fuerza SQLite aislado) NO se carga en
-  ese modo — con `DATABASE_URL` real en `.env` (desarrollo local con
-  Postgres), el test pega contra el Postgres de Docker de verdad, no un
-  SQLite temporal. Anteponer `DATABASE_URL=` vacío al comando:
-  `DATABASE_URL= .venv/Scripts/python.exe test_x.py`. Detalle en
-  HISTORIAL.md, sección del ícono/logo de Colm3na.
+- **Los tests SIEMPRE con pytest**: `python -m pytest test_x.py`, nunca
+  `python test_x.py`. Corriendo el archivo directo, el módulo se importa
+  como `__main__` ANTES de que pytest cargue `conftest.py`, así que el
+  engine queda apuntando a la base del `.env` — la de desarrollo, con datos
+  de verdad — y el test la llenaría de basura. `conftest.py` detecta ese
+  caso y corta con un mensaje, pero la regla es más simple: pytest siempre.
+- Si pytest muere de mala manera quedan bases `mitrabajo_test_*` sueltas:
+  `python chequeo.py --limpiar-bases-de-test` las borra.

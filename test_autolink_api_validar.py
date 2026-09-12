@@ -6,13 +6,9 @@ sindicato ya tuviera ese genérico cargado — quedaba "huérfano": matcheaba
 por código exacto pero la fórmula del genérico nunca lo encontraba (porque
 buscaba por su propio código, no por el del genérico).
 
-Correr con: .venv/Scripts/python.exe test_autolink_api_validar.py
+Correr con: .venv/Scripts/python.exe -m pytest test_autolink_api_validar.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 from db import Sindicato, Trabajador, Concepto

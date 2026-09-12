@@ -4,13 +4,10 @@ grandfathering, y que portada/trabajador/admin oculten tarjetas/pestañas
 según el catálogo -- más el bloqueo real en el backend (403) aunque se
 arme el request a mano sin pasar por la UI.
 
-Correr con: .venv/Scripts/python.exe test_modulos.py
+Correr con: .venv/Scripts/python.exe -m pytest test_modulos.py -q
 """
 import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db

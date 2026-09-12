@@ -9,7 +9,7 @@ extractor.py, que es la instrucción que le da esa aclaración a la IA.
 
 No llama a la API real: mockea extractor.client.messages.create, mismo
 criterio que test_extractor_bi_formato.py.
-Correr con: .venv/Scripts/python.exe test_aportes_informado.py
+Correr con: .venv/Scripts/python.exe -m pytest test_aportes_informado.py -q
 """
 import json
 from types import SimpleNamespace

@@ -3,13 +3,9 @@ de datos propios (todo menos el CUIT) y foto de perfil (una por CUIT, no
 por sindicato -- ver CuentaEmpleador.foto_datos). Mismo patrón que
 test_perfil_trabajador.py.
 
-Correr con: .venv/Scripts/python.exe test_perfil_empleador.py
+Correr con: .venv/Scripts/python.exe -m pytest test_perfil_empleador.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth

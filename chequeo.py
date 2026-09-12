@@ -165,6 +165,34 @@ else:
     print("          Mac: brew install poppler | Ubuntu: sudo apt install poppler-utils")
 
 # 9. Llamada real a la API (opcional)
+def limpiar_bases_de_test():
+    """Borra las bases `mitrabajo_test_*` que hayan quedado sueltas.
+
+    conftest.py crea una por proceso de pytest y la borra al terminar, pero
+    si pytest muere de mala manera (Ctrl-C, kill, corte de luz) la base
+    queda. No molestan, pero se acumulan."""
+    import psycopg
+    from urllib.parse import urlsplit, urlunsplit
+
+    url = os.getenv("DATABASE_URL", "").strip()
+    if not url:
+        sys.exit("Falta DATABASE_URL (ver .env.example).")
+    partes = urlsplit(url.replace("postgresql+psycopg://", "postgresql://", 1))
+    admin = urlunsplit((partes.scheme, partes.netloc, "/postgres", "", ""))
+    with psycopg.connect(admin, autocommit=True) as c:
+        bases = [f[0] for f in c.execute(
+            "SELECT datname FROM pg_database WHERE datname LIKE 'mitrabajo_test_%'").fetchall()]
+        for base in bases:
+            c.execute(f'DROP DATABASE IF EXISTS "{base}" WITH (FORCE)')
+            print(f"  borrada {base}")
+    print(f"{len(bases)} base(s) de test borradas." if bases
+          else "No había bases de test sueltas.")
+
+
+if "--limpiar-bases-de-test" in sys.argv:
+    limpiar_bases_de_test()
+    sys.exit(0)
+
 if "--api" in sys.argv:
     print("\n9. Conexión con la API de Anthropic (consume créditos)")
     try:

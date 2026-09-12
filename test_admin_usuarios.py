@@ -8,13 +8,10 @@ con default "area": si el campo faltara, el usuario nace SIN poder en vez de
 con todo. Por eso los posts de acá mandan rol="super" -- son administradores
 generales, que es lo que este archivo prueba.
 
-Correr con: .venv/Scripts/python.exe test_admin_usuarios.py
+Correr con: .venv/Scripts/python.exe -m pytest test_admin_usuarios.py -q
 """
 import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db

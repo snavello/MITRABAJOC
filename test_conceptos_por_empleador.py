@@ -2,7 +2,7 @@
 genéricos del sindicato, y resolución a un único código genérico para que la
 Formula los valide sin duplicarla por cada empleador.
 
-Correr con: .venv/Scripts/python.exe test_conceptos_por_empleador.py
+Correr con: .venv/Scripts/python.exe -m pytest test_conceptos_por_empleador.py -q
 """
 from validador import indexar_conceptos, matchear_lineas, validar, detectar_nuevos, codigo_efectivo
 

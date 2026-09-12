@@ -40,7 +40,7 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,          # detecta cambios de tipo de columna
-            render_as_batch=db.engine.dialect.name == "sqlite",  # ALTER seguro en SQLite
+            render_as_batch=False,   # solo hacía falta en SQLite, que ya no se usa
         )
         with context.begin_transaction():
             context.run_migrations()

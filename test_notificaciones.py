@@ -3,13 +3,9 @@ criterio de destinatarios, preview sin persistir, marcar leída, aislamiento
 entre trabajadores y entre sindicatos, bloqueo si el módulo está apagado,
 y que una notificación origen="sistema" se distinga en el listado.
 
-Correr con: .venv/Scripts/python.exe test_notificaciones.py
+Correr con: .venv/Scripts/python.exe -m pytest test_notificaciones.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth
@@ -250,7 +246,6 @@ def test_adjunto_mayor_a_5mb_no_se_guarda():
     assert r.status_code == 303
     assert "error=adjunto" in r.headers["location"]
     print("OK  test_adjunto_mayor_a_5mb_no_se_guarda")
-
 
 
 def test_formulario_para_iniciar_en_notificacion():

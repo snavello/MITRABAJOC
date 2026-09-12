@@ -9,14 +9,11 @@ Cubre las dos reglas innegociables (con test, §5.5 y §5.6):
 Más: validación de rangos de fecha, feature flag del carril de consultas,
 paginación server-side, semáforo por empresa y correctitud de los agregados.
 
-Correr con: .venv/Scripts/python.exe test_dashboard.py
+Correr con: .venv/Scripts/python.exe -m pytest test_dashboard.py -q
 """
 import os
-import tempfile
 from datetime import date, datetime, timedelta
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import auth
@@ -491,7 +488,12 @@ def test_catalogo_filtros():
     assert {s_["nombre"] for s_ in d["seccionales"]} == {"Rosario", "Córdoba"}
     assert {e["nombre"] for e in d["empresas"]} == {"Metalsur SA", "Textil Belgrano"}
     assert set(d["categorias"]) == {"Operario A", "Administrativo"}
-    assert d["bruto_min"] == 500000.0 and d["bruto_max"] == 900000.0
+    # Percentiles 1 y 99, no mínimo y máximo: con brutos de 500.000, 700.000
+    # y 900.000, percentile_cont da 504.000 y 896.000. Este test afirmaba
+    # 500.000 y 900.000 porque corría en SQLite, donde dashboard.py caía a
+    # MIN/MAX -- y así daba en verde afirmando un comportamiento que la app
+    # no tiene en ningún entorno real (ver HISTORIAL.md, "Afuera SQLite").
+    assert d["bruto_min"] == 504000.0 and d["bruto_max"] == 896000.0
     print("OK  test_catalogo_filtros")
 
 

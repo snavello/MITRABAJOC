@@ -3,13 +3,9 @@ CUIL) y foto de perfil (una por CUIL, no por sindicato -- ver
 CuentaTrabajador.foto_datos). El achicado a baja resolución lo hace el
 cliente (canvas); el servidor solo valida tipo/tamaño y guarda tal cual.
 
-Correr con: .venv/Scripts/python.exe test_perfil_trabajador.py
+Correr con: .venv/Scripts/python.exe -m pytest test_perfil_trabajador.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth

@@ -10,7 +10,7 @@ conclusiones que no salga de la tabla del propio test); este test la corre
 en cada corrida de la suite para que nadie pueda publicar algo que no
 cierre con el dato de origen.
 
-Correr con: python test_experimentos_carga.py
+Correr con: python -m pytest test_experimentos_carga.py -q
 """
 import json
 import subprocess

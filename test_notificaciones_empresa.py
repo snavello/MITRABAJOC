@@ -4,13 +4,9 @@ marcar leída, aislamiento entre empleadores y entre sindicatos, bloqueo si
 el módulo está apagado, y que nunca se mezclen con las notificaciones al
 trabajador (tablas separadas a propósito).
 
-Correr con: .venv/Scripts/python.exe test_notificaciones_empresa.py
+Correr con: .venv/Scripts/python.exe -m pytest test_notificaciones_empresa.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth

@@ -1,7 +1,7 @@
 """Verificación de: (1) Total neto = ingresos - descuentos, (2) el CUIL del
 recibo debe coincidir con el CUIL de la sesión que lo está verificando — si
 no coincide, se corta y NO se hace ningún chequeo (ni fórmulas ni totales).
-Sin dependencias externas. Correr con: .venv/Scripts/python.exe test_verificaciones_recibo.py
+Sin dependencias externas. Correr con: .venv/Scripts/python.exe -m pytest test_verificaciones_recibo.py -q
 """
 import validador
 

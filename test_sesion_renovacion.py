@@ -8,14 +8,11 @@ respuesta era un login/logout que ya había puesto su propio Set-Cookie
 así que loguearse con un rol distinto en la misma sesión de navegador nunca
 "prendía" de verdad.
 
-Correr con: .venv/Scripts/python.exe test_sesion_renovacion.py
+Correr con: .venv/Scripts/python.exe -m pytest test_sesion_renovacion.py -q
 """
 import os
-import tempfile
 import time
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db

@@ -6,16 +6,13 @@ un guion: no gasta créditos y no depende de la red. Lo que sí se verifica
 de verdad es lo que le llega al modelo (catálogo, estado actual, tool
 results con los números reales) y que jamás viaje una persona.
 
-Correr con: .venv/Scripts/python.exe test_asistente.py
+Correr con: .venv/Scripts/python.exe -m pytest test_asistente.py -q
 """
 import json
 import os
-import tempfile
 from datetime import date, timedelta
 from types import SimpleNamespace
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 # El extractor construye su cliente al importarse: con una clave de mentira
 # alcanza. El asistente NUNCA llega a usarla: cada test inyecta el falso.

@@ -1,13 +1,9 @@
 """Modelo de Empleadores: CuentaEmpleador/Empleador y la precarga de CUITs
 desde Concepto.cuit_empleador (db.importar_cuits_de_conceptos).
 
-Correr con: .venv/Scripts/python.exe test_empleadores_modelo.py
+Correr con: .venv/Scripts/python.exe -m pytest test_empleadores_modelo.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 from db import Sindicato, Concepto, Empleador

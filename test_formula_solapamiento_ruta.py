@@ -1,13 +1,9 @@
 """La ruta /admin/formula rechaza altas/ediciones cuya vigencia se superpone
 con otra fórmula existente del mismo target.
 
-Correr con: .venv/Scripts/python.exe test_formula_solapamiento_ruta.py
+Correr con: .venv/Scripts/python.exe -m pytest test_formula_solapamiento_ruta.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 from db import Sindicato, UsuarioSindicato, Formula

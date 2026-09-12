@@ -4,13 +4,9 @@ Lo importante: además de mover el alias, tiene que REPUNTAR las fórmulas que
 apuntaban al código provisorio. Si no, quedan huérfanas y no matchean nunca —
 exactamente el bug que tenía AEFIP con los targets de texto libre.
 
-Usa un SQLite temporal. Correr con: .venv/Scripts/python.exe test_fusionar_concepto.py
+Correr con: .venv/Scripts/python.exe -m pytest test_fusionar_concepto.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 from db import Sindicato, Concepto, Formula, UsuarioSindicato

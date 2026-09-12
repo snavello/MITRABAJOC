@@ -6,14 +6,10 @@ del trabajador rechazado con errores_campos, las advertencias persistidas
 en el trámite, el banco de pruebas del admin (misma función que el envío
 real) y el espejo de empleadores.
 
-Correr con: .venv/Scripts/python.exe test_validaciones_tramite.py
+Correr con: .venv/Scripts/python.exe -m pytest test_validaciones_tramite.py -q
 """
-import os
-import tempfile
 import json
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth

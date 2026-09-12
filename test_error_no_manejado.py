@@ -3,13 +3,9 @@
 frontend con "unexpected token"). Encontrado en producción: una foto de mala
 calidad generó un recibo con algún campo raro que rompió /api/validar.
 
-Correr con: .venv/Scripts/python.exe test_error_no_manejado.py
+Correr con: .venv/Scripts/python.exe -m pytest test_error_no_manejado.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth

@@ -3,13 +3,9 @@ sobrevive a un reload -- antes se perdía apenas se navegaba, porque nunca se
 persistía (calcular_semaforo() solo devolvía el resultado, no lo guardaba en
 ningún lado).
 
-Correr con: .venv/Scripts/python.exe test_semaforo_persistente.py
+Correr con: .venv/Scripts/python.exe -m pytest test_semaforo_persistente.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth

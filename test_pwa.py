@@ -2,14 +2,10 @@
 worker servido desde la raiz con el header Service-Worker-Allowed (sin eso,
 el navegador rechaza el scope /app porque el archivo vive bajo /static/).
 
-Correr con: .venv/Scripts/python.exe test_pwa.py
+Correr con: .venv/Scripts/python.exe -m pytest test_pwa.py -q
 """
-import os
-import tempfile
 import json
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 db.crear_tablas()

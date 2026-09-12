@@ -249,8 +249,6 @@ def medir():
 
 
 if __name__ == "__main__":
-    if not db.USANDO_POSTGRES:
-        sys.exit("Este script corre contra el Postgres local (DATABASE_URL en .env). Abortando.")
     if "--limpiar" in sys.argv:
         limpiar()
     else:

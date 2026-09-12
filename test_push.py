@@ -3,13 +3,9 @@ el gancho sea un no-op inofensivo sin claves VAPID configuradas.
 
 El envío real contra un servicio de push no se prueba acá (necesita un
 navegador de verdad); sí se prueba que un endpoint inalcanzable no tumba
-nada. Correr con: .venv/Scripts/python.exe test_push.py
+nada. Correr con: .venv/Scripts/python.exe -m pytest test_push.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth

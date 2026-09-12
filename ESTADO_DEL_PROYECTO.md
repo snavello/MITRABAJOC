@@ -25,8 +25,9 @@ sindicatos y a un inversor como algo escalable.
 ## 2. Arquitectura y stack
 - **Backend:** FastAPI + Jinja2.
 - **Base de datos:** SQLModel sobre **Postgres** en producción (Render gestionado);
-  SQLite solo en desarrollo local. El motor se elige solo: si hay DATABASE_URL usa
-  Postgres, si no cae a SQLite. Una línea en db.py, el resto de la app no cambia.
+  Postgres en todos lados desde el 2026-09-11: DATABASE_URL es obligatoria y
+  no hay fallback a SQLite, ni en la app ni en la suite (ver "Afuera SQLite"
+  en HISTORIAL.md).
 - **Migraciones de esquema:** **Alembic**. El esquema ya no se crea con create_all
   en producción; lo administra Alembic (alembic upgrade head). Esto permite
   evolucionar el modelo SIN borrar la base (antes había que borrar y recargar).

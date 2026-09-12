@@ -1,6 +1,6 @@
 """Verificación del Punto 3 del Sprint A (alerta temprana de último depósito).
 
-Sin dependencias externas. Correr con: .venv/Scripts/python.exe test_alerta_deposito.py
+Sin dependencias externas. Correr con: .venv/Scripts/python.exe -m pytest test_alerta_deposito.py -q
 """
 import semaforo
 

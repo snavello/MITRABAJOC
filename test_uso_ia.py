@@ -2,14 +2,11 @@
 aportes de ARCA, aprendizaje del admin), no solo cuando se reporta al
 sindicato -- y se puede ver/filtrar desde /plataforma.
 
-Correr con: .venv/Scripts/python.exe test_uso_ia.py
+Correr con: .venv/Scripts/python.exe -m pytest test_uso_ia.py -q
 """
 import os
-import tempfile
 from types import SimpleNamespace
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db

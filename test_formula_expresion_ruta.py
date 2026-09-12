@@ -7,11 +7,7 @@ recibo). Ahí tumbaba la verificación entera y salía el 500 genérico de la ap
 
 Correr con: DATABASE_URL= .venv/Scripts/python.exe test_formula_expresion_ruta.py
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 from db import Sindicato, UsuarioSindicato, Formula

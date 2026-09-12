@@ -11,7 +11,7 @@ app y falla nombrando al que vuelva a pedirle la hora al servidor. Es
 fail-closed a propósito -- un archivo nuevo entra a la lista solo, sin que
 nadie se acuerde de agregarlo.
 
-Correr con: .venv/Scripts/python.exe test_fechas.py
+Correr con: .venv/Scripts/python.exe -m pytest test_fechas.py -q
 """
 import ast
 from datetime import datetime, timedelta, timezone

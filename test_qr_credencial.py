@@ -2,13 +2,9 @@
 verificación pública, y que el servidor no confíe en los query params (esos
 son solo el respaldo legible offline).
 
-Correr con: .venv/Scripts/python.exe test_qr_credencial.py
+Correr con: .venv/Scripts/python.exe -m pytest test_qr_credencial.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 from db import Sindicato, Trabajador, UsuarioSindicato, CuentaTrabajador

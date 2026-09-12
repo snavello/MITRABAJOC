@@ -2,13 +2,9 @@
 alta/edición de trabajador, y qué pasa con los trabajadores cuando se
 borra la seccional que tenían asignada.
 
-Correr con: .venv/Scripts/python.exe test_seccionales.py
+Correr con: .venv/Scripts/python.exe -m pytest test_seccionales.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth

@@ -4,13 +4,9 @@ un trabajador de un sindicato con id != 1 nunca veía sus reportes en su panel,
 aunque los conceptos nuevos (que sí resuelven el sindicato) se veían bien.
 
 Usa un SQLite temporal, no toca la base de desarrollo.
-Correr con: .venv/Scripts/python.exe test_reportar_sindicato_correcto.py
+Correr con: .venv/Scripts/python.exe -m pytest test_reportar_sindicato_correcto.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 from db import Sindicato, Trabajador

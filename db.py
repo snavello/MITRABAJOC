@@ -1,10 +1,11 @@
 """Capa de datos: modelos SQLModel, motor y acceso a datos.
 
-Motor: Postgres cuando existe DATABASE_URL (Render y el desarrollo local con
-Docker); sin ella cae a SQLite en DB_PATH (los tests y el fallback sin
-Docker). `USANDO_POSTGRES` dice cuál quedó. El esquema lo administra Alembic (`migrations/`): en
-Postgres se aplica con `alembic upgrade head` y NUNCA con create_all;
-`crear_tablas()` queda solo para SQLite.
+Motor: **Postgres, siempre**. DATABASE_URL es obligatoria y sin ella la app
+no arranca -- no hay fallback a SQLite (lo hubo hasta el 2026-09-11; ver
+HISTORIAL.md, "Afuera SQLite"). El esquema lo administra Alembic
+(`migrations/`): se aplica con `alembic upgrade head` y NUNCA con
+create_all. `crear_tablas()` existe solo para que la suite arme el esquema
+de su base descartable (ver conftest.py).
 
 Acá viven todas las tablas de la plataforma, por área: sindicatos,
 seccionales y administradores; trabajadores y sus cuentas; empleadores y
@@ -49,50 +50,52 @@ load_dotenv()
 
 
 # ---------- Ubicación de la base ----------
-# Si hay DATABASE_URL (Render Postgres), se usa Postgres.
-# Si no, cae a SQLite en DB_PATH (desarrollo local, sin cambios).
+# Postgres o nada. Hasta el 2026-09-11 había un fallback a SQLite y fue peor
+# el remedio: la suite entera validaba contra un motor que el proyecto no
+# usa, y daba por buenos defectos que SQLite perdona y Postgres no (claves
+# foráneas sin validar, sobre todo). Un fallback silencioso a otro motor es
+# la clase de red que hace caer más fuerte.
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+if not DATABASE_URL:
+    raise RuntimeError(
+        "Falta DATABASE_URL: esta app corre sobre Postgres y no tiene otro "
+        "motor.\n"
+        "  - Desarrollo local: `docker compose up -d` y DATABASE_URL en el "
+        ".env (ver .env.example).\n"
+        "  - Render: la variable ya existe en el servicio.\n"
+        "SQLite dejó de usarse el 2026-09-11.")
 
-if DATABASE_URL:
-    # Render entrega la URL como postgres://; SQLAlchemy/psycopg3 espera postgresql+psycopg://
-    url = DATABASE_URL
-    if url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql+psycopg://", 1)
-    elif url.startswith("postgresql://") and "+psycopg" not in url:
-        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
-    engine = create_engine(
-        url,
-        pool_pre_ping=True,   # descarta conexiones muertas antes de usarlas (clave con base remota)
-        pool_recycle=300,     # recicla conexiones cada 5 min (Render duerme el servicio en plan free)
-        pool_size=5,
-        max_overflow=5,
-        connect_args={
-            # TCP keepalives agresivos: sin esto, si un proxy/NAT intermedio
-            # corta una conexión ociosa en silencio (sin avisarle a Postgres
-            # ni a la app), el propio pool_pre_ping puede quedar COLGADO
-            # hasta 15-20 min (el timeout de TCP por defecto del SO) en vez
-            # de fallar rápido y reconectar -- bug conocido de SQLAlchemy +
-            # psycopg contra Postgres gestionado (ver
-            # github.com/sqlalchemy/sqlalchemy/discussions/13032). Con esto,
-            # una conexión muerta se detecta en ~60s (30 + 10*3) en vez de
-            # minutos: sospecha fundada para el "se corta a los 2-3 minutos,
-            # específicamente al guardar" reportado (ver CLAUDE.md
-            # "Pendientes" -- sigue sin confirmarse con un traceback real).
-            "keepalives": 1,
-            "keepalives_idle": 30,
-            "keepalives_interval": 10,
-            "keepalives_count": 3,
-        },
-    )
-    USANDO_POSTGRES = True
-else:
-    DB_PATH = os.getenv("DB_PATH", "data/validador.db")
-    Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
-    engine = create_engine(
-        f"sqlite:///{DB_PATH}",
-        connect_args={"check_same_thread": False},
-    )
-    USANDO_POSTGRES = False
+# Render entrega la URL como postgres://; SQLAlchemy/psycopg3 espera
+# postgresql+psycopg://
+url = DATABASE_URL
+if url.startswith("postgres://"):
+    url = url.replace("postgres://", "postgresql+psycopg://", 1)
+elif url.startswith("postgresql://") and "+psycopg" not in url:
+    url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+engine = create_engine(
+    url,
+    pool_pre_ping=True,   # descarta conexiones muertas antes de usarlas (clave con base remota)
+    pool_recycle=300,     # recicla conexiones cada 5 min (Render duerme el servicio en plan free)
+    pool_size=5,
+    max_overflow=5,
+    connect_args={
+        # TCP keepalives agresivos: sin esto, si un proxy/NAT intermedio
+        # corta una conexión ociosa en silencio (sin avisarle a Postgres
+        # ni a la app), el propio pool_pre_ping puede quedar COLGADO
+        # hasta 15-20 min (el timeout de TCP por defecto del SO) en vez
+        # de fallar rápido y reconectar -- bug conocido de SQLAlchemy +
+        # psycopg contra Postgres gestionado (ver
+        # github.com/sqlalchemy/sqlalchemy/discussions/13032). Con esto,
+        # una conexión muerta se detecta en ~60s (30 + 10*3) en vez de
+        # minutos: sospecha fundada para el "se corta a los 2-3 minutos,
+        # específicamente al guardar" reportado (ver CLAUDE.md
+        # "Pendientes" -- sigue sin confirmarse con un traceback real).
+        "keepalives": 1,
+        "keepalives_idle": 30,
+        "keepalives_interval": 10,
+        "keepalives_count": 3,
+    },
+)
 
 
 # ---------- Modelos ----------
@@ -1318,14 +1321,8 @@ def borrar_todos_los_tests_carga() -> int:
     with Session(engine) as s:
         n = len(s.exec(select(TestCarga)).all())
         s.execute(text("DELETE FROM testcarga"))
-        # Reiniciar el contador es propio de cada motor: Postgres usa una
-        # secuencia; SQLite lo lleva en sqlite_sequence (que solo existe si
-        # la tabla tuvo filas alguna vez).
         try:
-            if USANDO_POSTGRES:
-                s.execute(text("ALTER SEQUENCE testcarga_id_seq RESTART WITH 1"))
-            else:
-                s.execute(text("DELETE FROM sqlite_sequence WHERE name='testcarga'"))
+            s.execute(text("ALTER SEQUENCE testcarga_id_seq RESTART WITH 1"))
         except Exception:
             # Si el contador no se pudo reiniciar, el borrado igual vale.
             pass
@@ -1730,6 +1727,12 @@ def documento_para_indexar(documento_id: int) -> Optional[dict]:
                 "tipo": d.tipo, "titulo": d.titulo, "fecha_documento": d.fecha_documento}
 
 def crear_tablas():
+    """Arma el esquema con create_all.
+
+    NO se usa ni en producción ni en desarrollo: ahí el esquema lo
+    administra Alembic. Existe para la suite, que levanta una base
+    descartable por proceso y necesita el esquema sin correr 59 migraciones
+    (ver conftest.py)."""
     SQLModel.metadata.create_all(engine)
 
 
@@ -1776,10 +1779,7 @@ def cargar_seed_si_vacio():
 
 
 def _sincronizar_secuencias(s, modelos):
-    """Pone el contador de autoincremento de Postgres por encima del id máximo.
-    En SQLite no hace nada (no tiene secuencias con nombre)."""
-    if not USANDO_POSTGRES:
-        return
+    """Pone el contador de autoincremento por encima del id máximo."""
     from sqlalchemy import text
     for modelo in modelos:
         tabla = modelo.__tablename__
@@ -1793,16 +1793,12 @@ def _sincronizar_secuencias(s, modelos):
 def init_db():
     """Inicialización en el arranque.
 
-    - En SQLite (desarrollo): crea las tablas con create_all, como siempre.
-    - En Postgres (producción): NO crea tablas; el esquema lo administra Alembic
-      (`alembic upgrade head` corre en el deploy).
-    NO siembra AEFIP: una base vacía queda vacía hasta que se corre
-    cargar_demo.py o se da de alta un sindicato desde /plataforma. Solo se
-    siembran los topes de la seguridad social (data/topes_ss.csv), que son
-    datos de ley y no de ningún sindicato.
+    NO crea tablas: el esquema lo administra Alembic (`alembic upgrade head`
+    corre en el Pre-Deploy). Y NO siembra AEFIP: una base vacía queda vacía
+    hasta que se corre cargar_demo.py o se da de alta un sindicato desde
+    /plataforma. Solo se siembran los topes de la seguridad social
+    (data/topes_ss.csv), que son datos de ley y no de ningún sindicato.
     """
-    if not USANDO_POSTGRES:
-        crear_tablas()
     sembrar_topes_si_vacio()
 
 

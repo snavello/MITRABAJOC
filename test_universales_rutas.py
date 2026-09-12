@@ -1,13 +1,10 @@
 """Rutas: alta de sindicato autocarga los 3 conceptos+fórmulas universales,
 y /admin/aprender sugiere el vínculo genérico por categoria_universal.
 
-Correr con: .venv/Scripts/python.exe test_universales_rutas.py
+Correr con: .venv/Scripts/python.exe -m pytest test_universales_rutas.py -q
 """
 import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db

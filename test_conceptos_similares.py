@@ -4,7 +4,7 @@ Usa el catálogo REAL de AEFIP (33 conceptos, producción) como caso de prueba,
 porque es el que expuso el problema: comparar por similitud de nombre a secas
 marca 6 pares legítimos por cada duplicado real.
 
-Correr con: .venv/Scripts/python.exe test_conceptos_similares.py
+Correr con: .venv/Scripts/python.exe -m pytest test_conceptos_similares.py -q
 """
 import validador
 

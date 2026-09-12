@@ -1,6 +1,6 @@
 """Verificación del Punto 5B del Sprint B (retención de cuota para el envío al sindicato).
 
-Sin dependencias externas. Correr con: .venv/Scripts/python.exe test_envio_sindicato.py
+Sin dependencias externas. Correr con: .venv/Scripts/python.exe -m pytest test_envio_sindicato.py -q
 """
 import validador
 

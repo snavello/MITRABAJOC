@@ -4,13 +4,10 @@ versión, visible solo en local/pruebas (mismo criterio que el distintivo de
 entorno.py), nunca en la demo. La landing entera está detrás de un PIN de
 ocho dígitos (entorno.PIN_LANDING) que deja un pase de 30 días.
 
-Correr con: .venv/Scripts/python.exe test_entornos.py
+Correr con: .venv/Scripts/python.exe -m pytest test_entornos.py -q
 """
 import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["ENTORNO"] = "pruebas"   # antes de importar main: se lee al importar
 os.environ["PIN_ENTORNOS"] = "24681357"   # antes de importar entorno
 

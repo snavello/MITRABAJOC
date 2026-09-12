@@ -42,7 +42,7 @@ corre solo en cada deploy** (Pre-Deploy Command), ya no a mano.
 | `PYTHON_VERSION` | `3.12.8` | `3.12.8` | Redundante con `.python-version` a propósito: evita que Render tome 3.14, que rompe SQLModel. |
 | `VAPID_PRIVATE_KEY` / `VAPID_PUBLIC_KEY` / `VAPID_CLAIM_EMAIL` | propias | propias (o ninguna: el push queda apagado) | Las suscripciones push son por origen; no se comparten entre URLs. |
 
-`DB_PATH` NO se usa en Render (solo desarrollo local con SQLite).
+`DATABASE_URL` es obligatoria en los dos servicios: la app no tiene otro motor.
 
 ## Paso a paso — crear Pruebas (una vez)
 

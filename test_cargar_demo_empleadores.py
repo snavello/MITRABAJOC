@@ -1,26 +1,21 @@
 """Test liviano de la carga de datos de prueba de empleadores agregada a
 cargar_demo.py en la Fase 6 del plan de Empleadores: corre el script real
-(`python cargar_demo.py`) contra una base SQLite temporal y confirma que
+(`python cargar_demo.py`) contra la base de test y confirma que
 el CUIT compartido resuelve los 2 sindicatos y que el módulo "empleadores"
 queda habilitado -- sin duplicar la lógica de carga, solo verificando el
 resultado real del script tal como lo correría el usuario.
 
-Correr con: .venv/Scripts/python.exe test_cargar_demo_empleadores.py
+Correr con: .venv/Scripts/python.exe -m pytest test_cargar_demo_empleadores.py -q
 """
 import os
 import subprocess
 import sys
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
+# El subproceso hereda la DATABASE_URL de la base descartable de conftest.py:
+# cargar_demo.py ya no crea tablas, así que necesita una base con esquema --
+# y por heredarla, escribe en la de test y no en la de desarrollo.
 env = dict(os.environ)
-# Cadena vacía, NO pop -- load_dotenv() (adentro de db.py) no pisa una
-# variable ya presente, pero SI la completa desde .env si está ausente.
-# Sin esto, el subproceso terminaría escribiendo sobre el Postgres real de
-# desarrollo en vez de la base SQLite temporal de este test.
-env["DATABASE_URL"] = ""
 # cargar_demo.py imprime "✓" -- forzar UTF-8 acá, si no la consola de
 # Windows (cp1252) revienta al capturar stdout del subproceso.
 env["PYTHONIOENCODING"] = "utf-8"

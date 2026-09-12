@@ -3,13 +3,9 @@ las seccionales (lista vacía); si se targetea a una o varias, solo las ve el
 trabajador que tenga esa seccional asignada -- uno sin seccional NO ve
 contenido dirigido a seccionales específicas.
 
-Correr con: .venv/Scripts/python.exe test_destino_seccionales.py
+Correr con: .venv/Scripts/python.exe -m pytest test_destino_seccionales.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth

@@ -2,13 +2,10 @@
 sindicato (elegida por el admin de plataforma), default False para que
 ningún sindicato existente cambie de aspecto el día del deploy.
 
-Correr con: .venv/Scripts/python.exe test_portada_clara.py
+Correr con: .venv/Scripts/python.exe -m pytest test_portada_clara.py -q
 """
 import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db

@@ -7,13 +7,9 @@ nítida o el PDF"), así que era imposible saber qué había pasado sin leer el
 log del servidor -- y encima mandaba a sacar la foto de nuevo por errores que
 no tenían nada que ver con la foto.
 
-Correr con: DATABASE_URL= .venv/Scripts/python.exe test_codigos_error.py
+Correr con: .venv/Scripts/python.exe -m pytest test_codigos_error.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 from db import Sindicato, Trabajador

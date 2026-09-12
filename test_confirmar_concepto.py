@@ -3,13 +3,9 @@ podía sacar la marca como efecto secundario de editar y guardar (poco
 evidente en la UI); ahora hay una acción dedicada que no toca los demás
 datos del concepto.
 
-Correr con: .venv/Scripts/python.exe test_confirmar_concepto.py
+Correr con: .venv/Scripts/python.exe -m pytest test_confirmar_concepto.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth

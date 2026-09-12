@@ -1,13 +1,9 @@
 """Verificación de "Mis recibos" y el envío al sindicato (corrección de dic. 2026):
 cada verificación se registra, y "enviado" marca el INTENTO EXACTO que se mandó,
 no todos los intentos del mismo período. Usa un SQLite temporal, no toca la base
-de desarrollo. Correr con: .venv/Scripts/python.exe test_historial_recibos.py
+de desarrollo. Correr con: .venv/Scripts/python.exe -m pytest test_historial_recibos.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 from db import Sindicato, Trabajador

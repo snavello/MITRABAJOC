@@ -1,13 +1,9 @@
 """Noticias del sindicato: CRUD de admin, vigencia por fecha, aislamiento
 entre sindicatos, y la API de detalle que consume el trabajador.
 
-Correr con: .venv/Scripts/python.exe test_noticias.py
+Correr con: .venv/Scripts/python.exe -m pytest test_noticias.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth
@@ -169,7 +165,6 @@ def test_borrar_noticia():
     with Session(db.engine) as s:
         assert s.get(Noticia, nid) is None
     print("OK  test_borrar_noticia")
-
 
 
 def test_formulario_para_iniciar_en_noticia():

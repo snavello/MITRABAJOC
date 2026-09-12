@@ -1,11 +1,7 @@
 """Filigrana determinística y generación del código de credencial persistido.
-Correr con: .venv/Scripts/python.exe test_credencial_v2.py
+Correr con: .venv/Scripts/python.exe -m pytest test_credencial_v2.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 from filigrana import filigrana_svg
 import db

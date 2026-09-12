@@ -4,14 +4,10 @@ validación server-side de obligatorios/longitud/archivo, cambio de estado
 dispara log + notificación de sistema, nota de cada lado en el thread
 correcto, aislamiento entre sindicatos, bloqueo si el módulo está apagado.
 
-Correr con: .venv/Scripts/python.exe test_tramites.py
+Correr con: .venv/Scripts/python.exe -m pytest test_tramites.py -q
 """
-import os
-import tempfile
 import json
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth
@@ -447,7 +443,6 @@ def test_formulario_adjunto_en_chat():
     nota = db.tramite_detalle(TRAMITE_ID)["notas"][-3]
     assert nota["formulario_id"] == pasajeros["id"] and nota["formulario_activo"] is False
     print("OK  test_formulario_adjunto_en_chat")
-
 
 
 def test_tramite_encadenado_desde_chat():

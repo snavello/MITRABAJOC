@@ -1,13 +1,10 @@
 """Marca de la plataforma (colores + logo), configurable desde /plataforma,
 con el mismo patrón que la marca de un sindicato.
 
-Correr con: .venv/Scripts/python.exe test_marca_plataforma.py
+Correr con: .venv/Scripts/python.exe -m pytest test_marca_plataforma.py -q
 """
 import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db

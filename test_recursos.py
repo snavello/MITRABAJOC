@@ -5,14 +5,11 @@ entorno.PIN_LANDING, cookie de 30 días) o una sesión de plataforma; nada de
 esto existe en la demo. La puerta del PIN en sí se prueba en
 test_entornos.py.
 
-Correr con: .venv/Scripts/python.exe test_recursos.py
+Correr con: .venv/Scripts/python.exe -m pytest test_recursos.py -q
 """
 import os
-import tempfile
 from datetime import date
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["ENTORNO"] = "pruebas"            # antes de importar main
 os.environ["PIN_ENTORNOS"] = "12345678"      # antes de importar entorno
 os.environ["PLATAFORMA_PASSWORD"] = "clave-de-prueba"   # antes de importar auth

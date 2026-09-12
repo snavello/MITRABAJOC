@@ -3,13 +3,9 @@ reemplaza /app (Tu Recibo, que sigue intacta) -- misma resolución de
 sindicato activo, con la marca correcta y sin romper el selector cuando el
 CUIL está en varios sindicatos y todavía no eligió.
 
-Correr con: .venv/Scripts/python.exe test_portada.py
+Correr con: .venv/Scripts/python.exe -m pytest test_portada.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth

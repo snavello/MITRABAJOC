@@ -4,13 +4,10 @@ y render_admin.py. Acá se cubre la tabla TestCarga (db.py) y el gate de
 acceso de las rutas; NO se prueba contra la API real de Render (se
 monkeypatchea render_admin.crear_job).
 
-Correr con: .venv/Scripts/python.exe test_tests_carga.py
+Correr con: .venv/Scripts/python.exe -m pytest test_tests_carga.py -q
 """
 import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["ENTORNO"] = "pruebas"
 os.environ["PIN_ENTORNOS"] = "13571357"
 
@@ -376,7 +373,7 @@ if __name__ == "__main__":
             setattr(obj, name, value)
 
     test_correr_crea_test_y_llama_a_render(_MP())
-    test_entornos_renderiza_la_pestana_tests_con_datos_reales()
+    test_entornos_renderiza_la_pestana_tests_con_el_link_al_detalle()
     test_correr_sin_configuracion_de_render_queda_en_error(_MP())
     test_escalones_invalidos_caen_al_default()
     test_api_detalle_404_si_no_existe()

@@ -2,7 +2,7 @@
 categoria_universal: red de seguridad para un empleador sin catálogo propio,
 y auto-vinculación en Aprendizaje. La cuota sindical NO se autogenera.
 
-Correr con: .venv/Scripts/python.exe test_categorias_universales.py
+Correr con: .venv/Scripts/python.exe -m pytest test_categorias_universales.py -q
 """
 from validador import (matchear_lineas, indexar_conceptos, validar,
                         detectar_nuevos, CATEGORIAS_UNIVERSALES, CONCEPTOS_UNIVERSALES)

@@ -6,14 +6,10 @@ lado en el thread correcto, estado terminado bloquea cambios, aislamiento
 entre sindicatos, bloqueo si el módulo está apagado) más un test explícito
 de que los trámites de trabajador y de empresa nunca se mezclan.
 
-Correr con: .venv/Scripts/python.exe test_tramites_empresa.py
+Correr con: .venv/Scripts/python.exe -m pytest test_tramites_empresa.py -q
 """
-import os
-import tempfile
 import json
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth

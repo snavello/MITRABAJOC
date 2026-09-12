@@ -30,11 +30,6 @@ from sqlalchemy import delete as sa_delete, or_ as sa_or, select as sa_select
 import auth
 from modulos import MODULOS_INICIALES
 
-# Aseguramos el esquema SIN sembrar AEFIP. La demo arranca desde cero:
-# en SQLite creamos tablas; en Postgres el esquema ya lo aplicó Alembic.
-if not db.USANDO_POSTGRES:
-    db.crear_tablas()
-
 SINDICATOS = [
     {
         "nombre": "Unión Obrera Metalúrgica", "descripcion": "Trabajadores del metal",

@@ -17,10 +17,7 @@ Dos clases de test, y la primera es la que más vale a futuro:
 Correr con: python -m pytest test_areas_rutas.py -q
 """
 import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db

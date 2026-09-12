@@ -3,13 +3,9 @@ patrón que el trabajador (CuentaEmpleador/Empleador, cuit_emp/
 sind_elegido_emp), con su propia cookie de rol para que las dos sesiones
 convivan en el mismo navegador sin pisarse.
 
-Correr con: .venv/Scripts/python.exe test_empresa_sesion.py
+Correr con: .venv/Scripts/python.exe -m pytest test_empresa_sesion.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth

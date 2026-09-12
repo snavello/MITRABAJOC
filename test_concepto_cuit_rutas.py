@@ -1,12 +1,8 @@
 """Rutas de ABM de conceptos y aprendizaje con CUIT de empleador.
 
-Correr con: .venv/Scripts/python.exe test_concepto_cuit_rutas.py
+Correr con: .venv/Scripts/python.exe -m pytest test_concepto_cuit_rutas.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 from db import Sindicato, UsuarioSindicato, Concepto

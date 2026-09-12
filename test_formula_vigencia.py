@@ -2,7 +2,7 @@
 que regía en SU período (no la actual), sin fórmulas superpuestas para el
 mismo concepto, y sin discrepancia si ninguna fórmula estaba vigente.
 
-Correr con: .venv/Scripts/python.exe test_formula_vigencia.py
+Correr con: .venv/Scripts/python.exe -m pytest test_formula_vigencia.py -q
 """
 from validador import formula_vigente_en, rangos_se_superponen, validar
 

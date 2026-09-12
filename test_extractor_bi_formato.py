@@ -2,7 +2,7 @@
 
 No llama a la API real: mockea extractor.client.messages.create con dos
 fixtures fijas (un recibo clásico y uno Anexo III) y valida el contrato del
-JSON de salida. Correr con: .venv/Scripts/python.exe test_extractor_bi_formato.py
+JSON de salida. Correr con: .venv/Scripts/python.exe -m pytest test_extractor_bi_formato.py -q
 """
 import json
 from types import SimpleNamespace

@@ -10,14 +10,10 @@ módulo apagado por plataforma. En un sistema de permisos, equivocarse para
 el lado de dar de más es el único error que importa.
 
 Correr con: python -m pytest test_areas_permisos.py -q
-(vía pytest, para que conftest.py fuerce SQLite y no tome el Postgres
-local de .env -- ver conftest.py)
+(siempre vía pytest: conftest.py levanta una base descartable por proceso,
+y sin él el test escribiría en la base de desarrollo del .env)
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth

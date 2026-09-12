@@ -216,7 +216,7 @@ frases de prueba con preguntas reales.
 
 ## 5. Pruebas
 
-- `test_asistente.py` (SQLite, sin API): cliente de Anthropic falso
+- `test_asistente.py` (base de test descartable, sin API): cliente de Anthropic falso
   inyectado. Casos: `tool_use` válido → filtros + respuesta + fila en la
   tabla; fecha futura → reintento con `is_error`; id de seccional ajena →
   descartado; sin módulo → 403; tope → 429; pregunta vacía → 422.

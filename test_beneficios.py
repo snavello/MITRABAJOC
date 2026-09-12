@@ -2,13 +2,9 @@
 Noticia), carrusel en la portada, aislamiento entre sindicatos, y la API de
 detalle que consume el trabajador.
 
-Correr con: .venv/Scripts/python.exe test_beneficios.py
+Correr con: .venv/Scripts/python.exe -m pytest test_beneficios.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth

@@ -4,13 +4,10 @@ sesión de sindicato, muestra una tarjeta por sección habilitada según
 admin.html), Trabajadores y Seccionales siempre visibles, y el login exitoso
 redirige ahí en vez de a /admin.
 
-Correr con: .venv/Scripts/python.exe test_admin_portada.py
+Correr con: .venv/Scripts/python.exe -m pytest test_admin_portada.py -q
 """
 import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db

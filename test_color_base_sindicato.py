@@ -2,13 +2,10 @@
 y de los encabezados. A diferencia de primario/secundario/acento, este tiene
 que validarse como oscuro -- si no, el texto blanco encima deja de leerse.
 
-Correr con: .venv/Scripts/python.exe test_color_base_sindicato.py
+Correr con: .venv/Scripts/python.exe -m pytest test_color_base_sindicato.py -q
 """
 import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db

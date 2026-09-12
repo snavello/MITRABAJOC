@@ -2,13 +2,9 @@
 aislamiento por sindicato, botón de importar CUITs desde Conceptos, y que
 las 4 rutas y el tab de la UI respeten el módulo "empleadores".
 
-Correr con: .venv/Scripts/python.exe test_empleadores_crud.py
+Correr con: .venv/Scripts/python.exe -m pytest test_empleadores_crud.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 import auth

@@ -133,12 +133,6 @@ def limpiar(sindicato_id: int):
 
 
 if __name__ == "__main__":
-    if not db.USANDO_POSTGRES:
-        sys.exit(
-            "DATABASE_URL no apunta a Postgres (o no esta seteada) -- este script es "
-            "para mitrabajo-pruebas, no para SQLite local. Exportá la Database URL de "
-            "mitrabajo-pruebas-db antes de correrlo."
-        )
     sid = obtener_o_crear_sindicato()
     if "--limpiar" in sys.argv:
         limpiar(sid)

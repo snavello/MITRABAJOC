@@ -5,7 +5,8 @@ Docker, el JavaScript del frontend ejecutándose y sesiones de verdad. Es lo
 más cercano a una persona usando la aplicación.
 
 Viven acá y no en la raíz a propósito: la suite unitaria (`test_*.py`) corre
-contra SQLite aislado y no necesita nada levantado; estos sí.
+contra una base Postgres descartable que arma conftest.py; estos, además,
+necesitan la app levantada.
 
 ## Antes de correrlos
 

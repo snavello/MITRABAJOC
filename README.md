@@ -23,9 +23,9 @@ narrativa de cómo se llegó a cada una, en [`HISTORIAL.md`](HISTORIAL.md).
 ## Stack
 
 - **Backend:** FastAPI + Jinja2, Python 3.12 (`.python-version`).
-- **Datos:** SQLModel sobre **Postgres** (Render), esquema administrado por
-  **Alembic** (`migrations/`). Sin `DATABASE_URL` la app cae a SQLite, que
-  se usa para los tests y como fallback sin Docker. Todo binario (logos,
+- **Datos:** SQLModel sobre **Postgres**, esquema administrado por
+  **Alembic** (`migrations/`). `DATABASE_URL` es obligatoria: la app no
+  tiene otro motor y sin esa variable no arranca. Todo binario (logos,
   fotos, adjuntos, PDF) vive en la base, nunca en disco.
 - **IA:** API de Anthropic. Tres modelos con un uso cada uno:
   `claude-sonnet-4-6` lee recibos y comprobantes (`extractor.py`),
@@ -59,8 +59,6 @@ uvicorn main:app --reload
   /ingresar-empresa · Plataforma: /plataforma · Landing interna: /entornos.
 - `python chequeo.py` revisa la instalación (`--api` prueba la clave de
   Anthropic; gasta créditos).
-- Sin Docker: dejá `DATABASE_URL` vacío o comentado en `.env` y la app usa
-  SQLite en `DB_PATH`. Sirve para mirar, no para probar migraciones.
 - Para poblar un sindicato con datos sintéticos realistas (padrón, 5.000
   recibos, trámites, notificaciones): `python cargar_lote_sindicato.py
   --sindicato "NOMBRE"`. Ver "Lotes de datos sintéticos" en `CLAUDE.md`.
@@ -76,9 +74,13 @@ Dependencias de desarrollo (pytest, Playwright): `pip install -r
 requirements-dev.txt`. Nunca van a `requirements.txt`: Render instala ese
 archivo en cada deploy.
 
-- **Suite unitaria**: los `test_*.py` de la raíz corren contra un SQLite
-  temporal, sin nada levantado. **Cada archivo en su propio proceso**: los
-  módulos comparten estado de import y se contaminan si corren juntos.
+- **Suite unitaria**: los `test_*.py` de la raíz corren contra **Postgres**,
+  el mismo motor que producción. `conftest.py` crea una base descartable
+  por proceso de pytest y la borra al terminar, así que hace falta el
+  Postgres de desarrollo levantado (`docker compose up -d`). **Cada archivo
+  en su propio proceso**: los módulos comparten estado de import y se
+  contaminan si corren juntos. Siempre con `python -m pytest`, nunca
+  `python test_x.py` (ver CLAUDE.md, "Comandos útiles").
 
   ```
   for f in test_*.py; do python -m pytest -q "$f" || break; done      # bash

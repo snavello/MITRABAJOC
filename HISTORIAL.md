@@ -3291,3 +3291,77 @@ se acuerde de agregarlo. Mira el árbol de sintaxis y no el texto, así un
 comentario que nombre `datetime.now()` no lo hace fallar, y no toca
 `datetime.now(ZONA)` ni `datetime.now(timezone.utc)`, que son usos
 legítimos y explícitos (`planificador.py`, `render_admin.py`).
+
+
+## Afuera SQLite: la suite pasa a Postgres (2026-09-11)
+
+Hasta este día el proyecto tenía dos motores: Postgres en Render y en el
+desarrollo local con Docker, y SQLite como fallback -- sin `DATABASE_URL`,
+`db.py` caía a un archivo en `DB_PATH`. La suite entera vivía ahí:
+`conftest.py` forzaba `DATABASE_URL=""` y cada uno de los 64 `test_*.py`
+armaba su propio SQLite temporal. Era rápido y no necesitaba nada levantado.
+
+**El problema es que validaba un motor que el proyecto no usa**, y eso no es
+una objeción teórica: el mismo día en que se revisó, la suite estaba dando
+por buenos tres defectos y afirmando un comportamiento inexistente.
+
+**Lo que SQLite tapaba.** Los tres primeros aparecieron en los tests de
+Encuestas Fase 0, recién escritos, al correrlos contra Postgres:
+
+1. **Claves foráneas sin validar.** Los tests creaban encuestas con
+   `sindicato_id=1`, un sindicato que no existía. SQLite no valida FK por
+   defecto y el INSERT pasaba; Postgres lo rechaza con
+   `ForeignKeyViolation`, que es lo que hubiera pasado en producción.
+2. **Suponer la base recién nacida.** El test del umbral daba por hecho que
+   no había fila de `ConfiguracionPlataforma`. Cierto en un archivo nuevo de
+   SQLite, falso en cualquier base que viva más de una corrida.
+3. **Consultas sin acotar.** Un participante se buscaba por CUIL en TODAS
+   las encuestas: `MultipleResultsFound` en la segunda corrida.
+
+El cuarto es el más interesante, porque no era un test flojo sino un test
+que afirmaba **lo contrario de lo que hace la app**. `dashboard.limites_bruto`
+calcula los extremos del slider de remuneración con `percentile_cont(0.01)` y
+`(0.99)`, y tenía una rama para SQLite que caía a `MIN/MAX` con el comentario
+"para bases chicas es lo mismo". No es lo mismo: con brutos de 500.000,
+700.000 y 900.000, los percentiles dan **504.000 y 896.000**. El test
+afirmaba 500.000 y 900.000 -- verde durante meses, describiendo un
+comportamiento que la app no tiene en ningún entorno real.
+
+**Lo que se hizo.**
+
+- `conftest.py` crea una base **Postgres** descartable por proceso de pytest
+  (`mitrabajo_test_<pid>_<azar>`), le instala la extensión `vector` y le
+  arma el esquema con `create_all`; al terminar la borra. El nombre lleva el
+  PID porque la convención es un archivo por proceso: dos corriendo a la vez
+  nunca comparten base, igual que antes no compartían archivo.
+- El esquema de la base de test sale de `create_all` y no de Alembic: correr
+  59 migraciones por archivo multiplicaría por diez lo que tarda la suite.
+- `db.py` **exige** `DATABASE_URL` y levanta un error explicando qué hacer.
+  Desaparecieron `USANDO_POSTGRES`, `DB_PATH` y todas las ramas por motor
+  (el `sqlite_sequence` de `testcarga`, el `return` temprano de
+  `_sincronizar_secuencias`, el `create_all` de `init_db`, la rama MIN/MAX
+  del dashboard, las guardas de `cargar_demo.py`, `medir_dashboard.py` y
+  `carga/preparar_datos.py`).
+- Los 64 `test_*.py` perdieron el preámbulo de tempfile/DB_PATH (y 98
+  imports que quedaron sin uso).
+- `crear_tablas()` sobrevive con un solo propósito, documentado: armar el
+  esquema de la base de test.
+
+**La trampa que quedó, y su red.** Varios `test_*.py` terminan con
+`if __name__ == "__main__": pytest.main([__file__])`. Corridos así, el módulo
+se importa como `__main__` **antes** de que pytest cargue `conftest.py`: el
+engine queda apuntando a la base del `.env` -- la de desarrollo, con datos de
+verdad -- y el test la llenaría de basura. `conftest.py` detecta que `db` ya
+estaba importado y corta con un mensaje. La regla, igual, es más simple:
+los tests se corren con `python -m pytest`.
+
+Si pytest muere de mala manera quedan bases `mitrabajo_test_*` sueltas:
+`python chequeo.py --limpiar-bases-de-test` las borra.
+
+**Costo real de la mudanza**: 3 archivos de test con arreglos de fondo
+(`test_cargar_demo_areas`, `test_cargar_demo_empleadores` -- los dos
+forzaban `DATABASE_URL=""` en el subproceso -- y `test_dashboard`, con la
+afirmación corregida), más uno de regalo: el bloque `__main__` de
+`test_tests_carga.py` llamaba a una función renombrada hacía tiempo y nadie
+se había enterado, porque bajo pytest ese bloque no corre. La suite quedó en
+**725 tests, 77 archivos, todo en verde contra Postgres 16**.

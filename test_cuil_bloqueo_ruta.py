@@ -1,13 +1,9 @@
 """/api/validar corta apenas detecta que el recibo no es del CUIL logueado:
 no da de alta conceptos nuevos, no valida nada, y no queda en el historial.
 
-Correr con: .venv/Scripts/python.exe test_cuil_bloqueo_ruta.py
+Correr con: .venv/Scripts/python.exe -m pytest test_cuil_bloqueo_ruta.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 from db import Sindicato, Trabajador, Concepto, ReciboVerificado

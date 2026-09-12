@@ -6,13 +6,9 @@ el sindicato lo revise), registra un EnvioSindicato -- mismo padrón que ya
 usa /api/enviar-sindicato -- y marca el ReciboVerificado como enviado.
 
 Usa un SQLite temporal, no toca la base de desarrollo.
-Correr con: .venv/Scripts/python.exe test_reportar_afiliado_cotizante.py
+Correr con: .venv/Scripts/python.exe -m pytest test_reportar_afiliado_cotizante.py -q
 """
-import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
 import db
 from db import Sindicato, Trabajador, Concepto, Formula, EnvioSindicato, Reporte

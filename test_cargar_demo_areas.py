@@ -1,5 +1,5 @@
 """La estructura de Áreas V2 que carga cargar_demo.py, verificada corriendo
-el script real (`python cargar_demo.py`) contra una base SQLite temporal.
+el script real (`python cargar_demo.py`) contra la base de test.
 
 Mismo criterio que test_cargar_demo_empleadores.py: no se duplica la lógica
 de carga, se verifica el resultado tal como lo vería quien corre el script.
@@ -7,20 +7,18 @@ Vale la pena porque la demo es lo que se muestra en vivo: si queda con un
 usuario cuya área es de otra seccional, o con un formulario sin área
 destino, el sindicato lo descubre en la demo y no acá.
 
-Correr con: .venv/bin/python test_cargar_demo_areas.py
+Correr con: .venv/bin/python -m pytest test_cargar_demo_areas.py -q
 """
 import os
 import subprocess
 import sys
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 
+# El subproceso hereda la DATABASE_URL de la base descartable que arma
+# conftest.py: cargar_demo.py ya no crea tablas (el esquema lo pone Alembic
+# en los entornos reales y create_all en la de los tests), así que tiene que
+# escribir en una base que YA tenga el esquema.
 env = dict(os.environ)
-# Cadena vacía, NO pop -- load_dotenv() (adentro de db.py) no pisa una
-# variable ya presente, pero SI la completa desde .env si está ausente.
-env["DATABASE_URL"] = ""
 env["PYTHONIOENCODING"] = "utf-8"
 resultado = subprocess.run(
     [sys.executable, "cargar_demo.py"], cwd=os.path.dirname(os.path.abspath(__file__)),

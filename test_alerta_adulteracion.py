@@ -3,13 +3,10 @@ alerta_adulteracion.detectada=true (en totales, CUIL, CUIT del empleador o
 fechas), /api/leer no bloquea -- devuelve la alerta en la respuesta y guarda
 el archivo original en ReciboSospechoso para que la plataforma lo revise.
 
-Correr con: .venv/Scripts/python.exe test_alerta_adulteracion.py
+Correr con: .venv/Scripts/python.exe -m pytest test_alerta_adulteracion.py -q
 """
 import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db

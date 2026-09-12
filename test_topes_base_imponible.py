@@ -3,13 +3,10 @@ obra social) -- Fase 1: modelo de datos, semilla desde data/topes_ss.csv y
 la marca `sujeto_a_tope` en Formula. La Fase 2 (lógica en validador.py) se
 prueba en la sección de más abajo del mismo archivo.
 
-Correr con: .venv/Scripts/python.exe test_topes_base_imponible.py
+Correr con: .venv/Scripts/python.exe -m pytest test_topes_base_imponible.py -q
 """
 import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db

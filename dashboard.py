@@ -192,21 +192,21 @@ def _rango_previo(f: dict) -> dict:
 
 def limites_bruto(sid: int) -> tuple:
     """Límites del slider de remuneración bruta (§4.3): percentiles 1 y 99
-    del tenant, para que un outlier no estire la escala. percentile_cont es
-    de Postgres; en SQLite (tests) se cae a MIN/MAX, que para bases chicas
-    es lo mismo."""
+    del tenant, para que un outlier no estire la escala.
+
+    Hasta el 2026-09-11 esto tenía una rama para SQLite que caía a MIN/MAX
+    "que para bases chicas es lo mismo". No era lo mismo, y la suite
+    afirmaba los valores de esa rama: en Postgres, con tres recibos de
+    500.000, 700.000 y 900.000, el percentil 1 da 504.000 y el 99 da
+    896.000, no 500.000 y 900.000. El test daba en verde afirmando un
+    comportamiento que la app NO tiene en ningún entorno real."""
     with db.get_session() as s:
-        if db.USANDO_POSTGRES:
-            fila = s.execute(text("""
-                SELECT percentile_cont(0.01) WITHIN GROUP (ORDER BY bruto),
-                       percentile_cont(0.99) WITHIN GROUP (ORDER BY bruto)
-                FROM reciboverificado
-                WHERE sindicato_id = :sid AND bruto IS NOT NULL"""),
-                {"sid": sid}).one()
-        else:
-            fila = s.execute(text(
-                "SELECT MIN(bruto), MAX(bruto) FROM reciboverificado "
-                "WHERE sindicato_id = :sid AND bruto IS NOT NULL"), {"sid": sid}).one()
+        fila = s.execute(text("""
+            SELECT percentile_cont(0.01) WITHIN GROUP (ORDER BY bruto),
+                   percentile_cont(0.99) WITHIN GROUP (ORDER BY bruto)
+            FROM reciboverificado
+            WHERE sindicato_id = :sid AND bruto IS NOT NULL"""),
+            {"sid": sid}).one()
     return fila[0], fila[1]
 
 

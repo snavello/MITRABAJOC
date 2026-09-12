@@ -1,7 +1,7 @@
 """Verificación del Punto 2 del Sprint A (tope sindical 2%, Ley 27.802 art. 133).
 
 Sin dependencias de la API: arma un recibo y un catálogo de conceptos a mano.
-Correr con: .venv/Scripts/python.exe test_tope_sindical.py
+Correr con: .venv/Scripts/python.exe -m pytest test_tope_sindical.py -q
 """
 import validador
 

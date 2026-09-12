@@ -3,13 +3,10 @@ patrón que la de /admin: login redirige ahí, 7 tarjetas (Sindicatos agrupa
 alta/nuevo admin), colores/portada_clara propios de la marca de plataforma
 (ConfiguracionPlataforma, independiente de cualquier sindicato).
 
-Correr con: .venv/Scripts/python.exe test_plataforma_portada.py
+Correr con: .venv/Scripts/python.exe -m pytest test_plataforma_portada.py -q
 """
 import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
 import db

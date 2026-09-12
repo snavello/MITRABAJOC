@@ -2,13 +2,10 @@
 db.registrar_acceso, GET /api/entornos/actividad): trámites, recibos,
 notificaciones, tokens de IA y accesos, por sindicato y totales.
 
-Correr con: .venv/Scripts/python.exe test_actividad.py
+Correr con: .venv/Scripts/python.exe -m pytest test_actividad.py -q
 """
 import os
-import tempfile
 
-DB_FILE = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
-os.environ["DB_PATH"] = DB_FILE
 os.environ["ENTORNO"] = "pruebas"
 os.environ["PIN_ENTORNOS"] = "97531975"
 
