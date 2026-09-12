@@ -154,6 +154,7 @@
       cargarPanel("notif", pedir("notificaciones", null, signal), pintarNotif),
       cargarPanel("empresas", pedir("diferencias-empresa", null, signal), pintarEmpresas),
       cargarPanel("semaforo", pedir("semaforo", null, signal), pintarSemaforo),
+      cargarPanel("seccionales-geo", pedir("seccionales-geo", null, signal), pintarMapa),
       cargarPanel("formato", pedir("formato-semana", null, signal), pintarFormato),
       cargarPanel("explorador", pedir("explorador/" + S.tab, { page: 1, page_size: 10 }, signal),
         function (d) { pintarTabla(d, false); }),
@@ -169,6 +170,14 @@
         .catch(function () { });
     });
     return Promise.all(rondas);
+  }
+
+  function initMapa() {
+    var sel = $("mapa-metrica");
+    if (!sel) return;
+    // Cambiar la métrica NO vuelve a pedir nada: los seis indicadores ya
+    // vinieron en la misma respuesta. Es solo repintar.
+    sel.addEventListener("change", function () { if (ULTIMO_MAPA) pintarMapa(ULTIMO_MAPA); });
   }
 
   function cambio() {
@@ -373,6 +382,142 @@
     });
     CH.tramites.update();
   }
+
+  /* ================= Mapa de seccionales =================
+     El mapa es también un SELECTOR: tocar un marcador aplica el filtro por
+     esa seccional al resto del panel, con el mismo mecanismo que los
+     gráficos. Por eso el endpoint ignora el filtro de seccional -- si no, al
+     tocar un marcador el mapa se quedaría con un solo punto.
+
+     Leaflet se crea UNA vez; después solo se reemplaza la capa de
+     marcadores. Recrearlo en cada refresco volvería a pedir todas las
+     teselas a OSM, que es justo lo que su política pide no hacer. */
+  var MAPA = null, CAPA_SECC = null;
+
+  // Escala FIJA de la app, no la marca del sindicato: es cuantitativa, y con
+  // el acento de cada gremio la misma intensidad significaría otra cosa en
+  // cada tenant. Va de poco (claro) a mucho (oscuro).
+  var ESCALA_MAPA = ["#dbe4f0", "#a9c1de", "#6f97c6", "#3f6fa8", "#1e4877"];
+
+  var METRICAS = {
+    afiliados: { etiqueta: "Afiliados", pct: false },
+    pct_ingresaron: { etiqueta: "% que ingresó", pct: true },
+    recibos: { etiqueta: "Recibos validados", pct: false },
+    pct_con_diferencias: { etiqueta: "% con diferencias", pct: true },
+    tramites_abiertos: { etiqueta: "Trámites abiertos", pct: false }
+  };
+
+  function metricaElegida() {
+    var sel = $("mapa-metrica");
+    return (sel && sel.value) || "afiliados";
+  }
+
+  function colorMapa(valor, maximo) {
+    if (valor === null || valor === undefined) return "#cfd6e0";
+    if (!maximo) return ESCALA_MAPA[0];
+    var i = Math.min(ESCALA_MAPA.length - 1,
+                     Math.floor(valor / maximo * ESCALA_MAPA.length));
+    return ESCALA_MAPA[i];
+  }
+
+  function pintarMapa(d) {
+    ULTIMO_MAPA = d;
+    var lista = d.seccionales || [];
+    var metrica = metricaElegida();
+    var valores = lista.map(function (s) { return s[metrica] || 0; });
+    var maximo = Math.max.apply(null, valores.concat([0]));
+    // El radio va por raíz cuadrada y no lineal: el área del círculo es lo
+    // que el ojo compara, así que con radio lineal una seccional del doble
+    // de afiliados se ve cuatro veces más grande.
+    var maxAf = Math.max.apply(null, lista.map(function (s) { return s.afiliados || 0; }).concat([1]));
+
+    if (!window.L || !document.getElementById("mapa-seccionales")) return;
+    if (!MAPA) {
+      MAPA = MapaMT.crear("mapa-seccionales", { rueda: false });
+      if (!MAPA) return;
+    }
+    if (CAPA_SECC) MAPA.mapa.removeLayer(CAPA_SECC);
+    CAPA_SECC = L.layerGroup().addTo(MAPA.mapa);
+
+    var puntos = [];
+    lista.forEach(function (s) {
+      var elegida = S.seccionales.has(s.id);
+      var radio = 9 + Math.sqrt((s.afiliados || 0) / maxAf) * 14;
+      var marcador = L.circleMarker([s.lat, s.lon], {
+        radius: radio,
+        fillColor: colorMapa(s[metrica], maximo), fillOpacity: 0.85,
+        // El destacado se reserva para la selección activa, igual que en
+        // todo el panel (docs/DASHBOARD.md §4.1).
+        color: elegida ? C.destacado : "#ffffff",
+        weight: elegida ? 3.5 : 1.6
+      });
+      marcador.bindPopup(popupMapa(s), { maxWidth: 280 });
+      marcador.on("click", function () { alternarSeccional(s.id); });
+      marcador.addTo(CAPA_SECC);
+      puntos.push([s.lat, s.lon]);
+    });
+    MAPA.refrescar();
+    // Se encuadra solo la primera vez: reencuadrar en cada refresco le
+    // movería el mapa abajo de los dedos a quien está mirando una zona.
+    if (!MAPA._encuadrado && puntos.length) { MAPA.encuadrar(puntos); MAPA._encuadrado = true; }
+
+    pintarLeyendaMapa(metrica, maximo);
+    pintarSinUbicar(d);
+  }
+
+  function popupMapa(s) {
+    var fila = function (k, v) {
+      return "<tr><td>" + k + "</td><td>" + v + "</td></tr>";
+    };
+    var pct = function (v) { return v === null || v === undefined ? "—" : v + "%"; };
+    return '<div class="mapa-pop"><b>' + esc(s.nombre) + "</b>" +
+      (s.direccion_texto ? '<div style="font-size:11.5px;color:#5b6478;">' +
+        esc(s.direccion_texto) + "</div>" : "") +
+      "<table>" +
+      fila("Afiliados", fmtN(s.afiliados)) +
+      fila("Ingresó al menos una vez", fmtN(s.ingresaron) + " · " + pct(s.pct_ingresaron)) +
+      fila("Recibos validados", fmtN(s.recibos)) +
+      fila("Con diferencias", fmtN(s.con_diferencias) + " · " + pct(s.pct_con_diferencias)) +
+      fila("Trámites abiertos", fmtN(s.tramites_abiertos)) +
+      fila("Notificaciones leídas", pct(s.tasa_lectura)) +
+      "</table></div>";
+  }
+
+  function pintarLeyendaMapa(metrica, maximo) {
+    var caja = $("mapa-leyenda");
+    if (!caja) return;
+    var meta = METRICAS[metrica] || METRICAS.afiliados;
+    var sufijo = meta.pct ? "%" : "";
+    caja.innerHTML = "<span>0" + sufijo + "</span>" +
+      ESCALA_MAPA.map(function (c) { return '<i style="background:' + c + '"></i>'; }).join("") +
+      "<span>" + fmtN(Math.round(maximo)) + sufijo + "</span>" +
+      '<span style="margin-left:10px;">el tamaño es la cantidad de afiliados</span>';
+  }
+
+  function pintarSinUbicar(d) {
+    var caja = $("mapa-sin-ubicar");
+    if (!caja) return;
+    var faltan = (d.sin_ubicar || []);
+    if (!faltan.length) { caja.classList.remove("hay"); caja.textContent = ""; return; }
+    caja.classList.add("hay");
+    var nombres = faltan.map(function (s) { return esc(s.nombre); }).join(", ");
+    // El enlace para ir a arreglarlo solo si esta persona PUEDE editar
+    // seccionales: el mapa y la carga de direcciones son permisos distintos.
+    caja.innerHTML = faltan.length + (faltan.length > 1 ? " seccionales sin ubicación, no se muestran en el mapa"
+                                                        : " seccional sin ubicación, no se muestra en el mapa") +
+      ": " + nombres + ". " +
+      (d.puede_georreferenciar
+        ? '<a href="/admin#seccionales">Georreferenciarlas</a>'
+        : "Pedile al administrador del sindicato que las ubique.");
+  }
+
+  function alternarSeccional(id) {
+    if (S.seccionales.has(id)) S.seccionales.delete(id);
+    else S.seccionales.add(id);
+    cambio();
+  }
+
+  var ULTIMO_MAPA = null;
 
   function pintarNotif(d) {
     var tipos = d.por_tipo;
@@ -1335,5 +1480,6 @@
   initControles();
   initAfiliado();
   initAsistente();
+  initMapa();
   initCatalogo().then(function () { asistEjemplo(); etiquetarAfiliado(); return refrescar(); });
 })();

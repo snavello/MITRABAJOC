@@ -56,8 +56,8 @@ def test_perfil_muestra_datos_reales_del_trabajador():
     with db.get_session() as s:
         t = s.exec(select(Trabajador).where(Trabajador.cuil == "20111111119",
                                              Trabajador.sindicato_id == SID_UOM)).first()
-        t.ciudad = "Rosario"
-        t.provincia = "Santa Fe"
+        t.localidad = "Rosario"       # antes `ciudad`; se renombró para que el
+        t.provincia = "Santa Fe"      # domicilio se llame igual que el de la seccional
         s.add(t); s.commit()
     c = _sesion("20111111119")
     r = c.get("/app/inicio")

@@ -82,8 +82,8 @@ def sembrar():
             {"sid": sid, "hash": auth.hashear_clave("zzz-medicion")})
 
         secc_ids = [conn.execute(sa.text(
-            "INSERT INTO seccional (sindicato_id, nombre, direccion) "
-            "VALUES (:sid, :n, '') RETURNING id"), {"sid": sid, "n": n}).scalar()
+            "INSERT INTO seccional (sindicato_id, nombre) "
+            "VALUES (:sid, :n) RETURNING id"), {"sid": sid, "n": n}).scalar()
             for n in SECCIONALES]
         for i, cuit in enumerate(EMPRESAS):
             conn.execute(sa.text(
@@ -94,8 +94,8 @@ def sembrar():
 
         cuils = [f"20{900000000 + i}9"[:11] for i in range(TRABAJADORES)]
         _insertar(conn, """
-            INSERT INTO trabajador (sindicato_id, cuil, nombre, calle, numero, piso,
-                ciudad, provincia, telefono, mail, registrado, activo, seccional_id,
+            INSERT INTO trabajador (sindicato_id, cuil, nombre, calle, numero, piso_depto,
+                localidad, provincia, telefono, mail, registrado, activo, seccional_id,
                 cuit_empleador, semaforo_datos)
             VALUES (:sid, :cuil, :nombre, '', '', '', '', '', '', '', :registrado,
                 true, :secc, :cuit, '{}')""", [

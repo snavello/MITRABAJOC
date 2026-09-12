@@ -41,6 +41,7 @@ from sqlmodel import select
 import encuestas
 import resultados_encuesta
 import fechas
+import geo
 import db
 import auth
 import validaciones_tramite
@@ -718,6 +719,7 @@ PERMISOS_RUTAS = {
     "/admin/trabajador":                    "trabajadores",
     "/admin/trabajador/generar-credencial": "trabajadores",
     "/admin/trabajador/masivo":             "trabajadores",
+    "/admin/trabajador/georreferenciar-pendientes": "trabajadores",
     "/admin/trabajador/baja":               "trabajadores",
     "/admin/trabajador/alta-logica":        "trabajadores",
 
@@ -746,6 +748,9 @@ PERMISOS_RUTAS = {
     "/admin/beneficio/borrar":              "beneficios",
     "/admin/seccional":                     "seccionales",
     "/admin/seccional/borrar":              "seccionales",
+    "/admin/seccional/{seccional_id}/ficha": "seccionales",
+    "/admin/seccionales/geocodificar":      "seccionales",
+    "/admin/seccionales/localidades":       "seccionales",
 
     "/admin/notificacion":                  "notificaciones",
     "/admin/notificacion/preview":          "notificaciones",
@@ -823,6 +828,7 @@ PERMISOS_RUTAS = {
     "/admin/dashboard/notificaciones":         "dashboard",
     "/admin/dashboard/formato-semana":         "dashboard",
     "/admin/dashboard/semaforo":               "dashboard",
+    "/admin/dashboard/seccionales-geo":        "dashboard",
     "/admin/dashboard/consultas":              "dashboard",
     "/admin/dashboard/explorador/{fuente}":    "dashboard",
     "/admin/dashboard/afiliados":              "dashboard",
@@ -1066,6 +1072,12 @@ def admin(request: Request):
                            if "tramites" in modulos and puede("tramites_recibidos") else 0,
         "estados_tramite": db.ESTADOS_TRAMITE, "estados_tramite_label": db.ESTADOS_TRAMITE_LABEL,
         "seccionales": seccionales, "seccional_por_id": seccional_por_id,
+        # Los textos de precisión los arma el servidor (geo.py) y no el JS,
+        # por lo mismo que el disclaimer de Encuestas: el alta de seccional,
+        # la ficha y la app del afiliado tienen que decir LO MISMO sobre qué
+        # tan confiable es un globo.
+        "etiquetas_precision": geo.ETIQUETAS_PRECISION,
+        "ayuda_precision": geo.AYUDA_PRECISION,
         "empleadores": empleadores,
         "notificaciones_empresa": db.notificaciones_empleador_del_sindicato(sid)
                                   if puede("emp_notificaciones") else [],
@@ -1175,18 +1187,28 @@ def admin_salir():
 def admin_trabajador_alta(
     request: Request,
     id: str = Form(""), cuil: str = Form(...), nombre: str = Form(...),
-    calle: str = Form(""), numero: str = Form(""), piso: str = Form(""),
-    ciudad: str = Form(""), provincia: str = Form(""),
+    calle: str = Form(""), numero: str = Form(""), piso_depto: str = Form(""),
+    localidad: str = Form(""), provincia: str = Form(""), codigo_postal: str = Form(""),
+    latitud: str = Form(""), longitud: str = Form(""), precision_geo: str = Form(""),
     telefono: str = Form(""), mail: str = Form(""),
     vigencia_credencial: str = Form(""), seccional_id: str = Form(""),
     cuit_empleador: str = Form(""),
 ):
-    """Alta o modificación manual de un trabajador. Obligatorios: cuil y nombre."""
+    """Alta o modificación manual de un trabajador. Obligatorios: cuil y nombre.
+
+    El domicilio usa la misma carga guiada y el mismo armado que el de la
+    seccional (geo.campos_para_guardar): es la única forma de que el mismo
+    domicilio no quede distinto según lo cargue el admin acá o el propio
+    afiliado desde su perfil."""
     sid = exigir_sindicato(request)
     cuil_norm = _norm_cuil(cuil)
     if len(cuil_norm) != 11 or not nombre.strip():
         return RedirectResponse("/admin?err=datos#trabajadores", status_code=303)
     sec_id = int(seccional_id) if seccional_id else None
+    domicilio = geo.campos_para_guardar(
+        {"calle": calle, "numero": numero, "piso_depto": piso_depto,
+         "localidad": localidad, "provincia": provincia, "codigo_postal": codigo_postal},
+        precision_geo, latitud, longitud)
     with db.get_session() as s:
         if sec_id and not s.exec(select(Seccional).where(
                 Seccional.id == sec_id, Seccional.sindicato_id == sid)).first():
@@ -1195,8 +1217,8 @@ def admin_trabajador_alta(
             t = s.get(Trabajador, int(id))
             if t and t.sindicato_id == sid:
                 t.cuil, t.nombre = cuil_norm, nombre.strip()
-                t.calle, t.numero, t.piso = calle, numero, piso
-                t.ciudad, t.provincia = ciudad, provincia
+                for campo, valor in domicilio.items():
+                    setattr(t, campo, valor)
                 t.telefono, t.mail = telefono, mail
                 t.vigencia_credencial = vigencia_credencial or None
                 t.seccional_id = sec_id
@@ -1208,8 +1230,7 @@ def admin_trabajador_alta(
             if not existe:
                 s.add(Trabajador(
                     sindicato_id=sid, cuil=cuil_norm, nombre=nombre.strip(),
-                    calle=calle, numero=numero, piso=piso, ciudad=ciudad,
-                    provincia=provincia, telefono=telefono, mail=mail,
+                    **domicilio, telefono=telefono, mail=mail,
                     vigencia_credencial=vigencia_credencial or None, seccional_id=sec_id,
                     cuit_empleador=cuit_empleador.strip() or None))
         s.commit()
@@ -1238,10 +1259,25 @@ def admin_generar_credencial(request: Request, id: int = Form(...)):
 @app.post("/admin/trabajador/masivo")
 def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
     """Alta masiva: una línea por trabajador, campos separados por coma.
-    Orden: cuil, nombre, calle, numero, piso, ciudad, provincia, telefono, mail.
-    Obligatorios los dos primeros (cuil y nombre)."""
+    Orden: cuil, nombre, calle, numero, piso, localidad, provincia, telefono,
+    mail, CP, seccional. Obligatorios los dos primeros (cuil y nombre).
+
+    **Nadie se geocodifica acá.** Cien direcciones a un pedido por segundo
+    son cien segundos con el navegador colgado, y Nominatim bloqueando de
+    paso. Las filas entran con el domicilio estructurado y `sin_geo`; el
+    botón "Georreferenciar pendientes" las procesa después, de a una y en
+    segundo plano.
+
+    **La seccional se resuelve POR NOMBRE**, sin distinguir mayúsculas ni
+    tildes: a una planilla se pega "Rosario", no el id 7. Una seccional que
+    no existe en este sindicato se ignora en silencio y el trabajador queda
+    sin asignar -- mismo criterio que el `seccional_id` del alta individual,
+    que tampoco rechaza el alta entera por un campo opcional mal puesto.
+    """
     sid = exigir_sindicato(request)
     altas = 0
+    por_nombre = {geo._norm(sec["nombre"]): sec["id"]
+                  for sec in db.seccionales_del_sindicato(sid)}
     with db.get_session() as s:
         existentes = {t.cuil for t in s.exec(select(Trabajador).where(
             Trabajador.sindicato_id == sid)).all()}
@@ -1254,14 +1290,43 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
             if len(cuil) != 11 or not nombre or cuil in existentes:
                 continue
             def campo(i): return campos[i] if len(campos) > i else ""
+            domicilio = geo.campos_para_guardar({
+                "calle": campo(2), "numero": campo(3), "piso_depto": campo(4),
+                "localidad": campo(5), "provincia": campo(6),
+                "codigo_postal": campo(9)}, precision="sin_geo")
             s.add(Trabajador(
-                sindicato_id=sid, cuil=cuil, nombre=nombre,
-                calle=campo(2), numero=campo(3), piso=campo(4),
-                ciudad=campo(5), provincia=campo(6),
-                telefono=campo(7), mail=campo(8)))
+                sindicato_id=sid, cuil=cuil, nombre=nombre, **domicilio,
+                telefono=campo(7), mail=campo(8),
+                seccional_id=por_nombre.get(geo._norm(campo(10)))))
             existentes.add(cuil); altas += 1
         s.commit()
     return RedirectResponse("/admin#trabajadores", status_code=303)
+
+
+@app.post("/admin/trabajador/georreferenciar-pendientes")
+def admin_georreferenciar_pendientes(request: Request):
+    """Ubica en el mapa a los afiliados que se cargaron sin coordenadas.
+
+    Corre EN SEGUNDO PLANO, por lo mismo que la indexación del convenio no
+    corre en el request: a un pedido por segundo, un padrón de 500 personas
+    son más de ocho minutos, y ningún navegador espera eso. Se dispara un
+    hilo y la pantalla consulta el avance.
+
+    Solo toca filas `sin_geo` con localidad cargada, así que volver a
+    apretarlo no rehace lo ya hecho ni pisa una ubicación puesta a mano.
+    """
+    sid = exigir_sindicato(request)
+    # Un Admin de Seccional georreferencia SU padrón, no el del sindicato
+    # entero: el alcance se aplica dentro de la consulta, como en todo el
+    # resto del sistema de Áreas.
+    return geo.georreferenciar_padron_en_segundo_plano(sid, _alcance_de(request))
+
+
+@app.get("/admin/trabajador/georreferenciar-pendientes")
+def admin_georreferenciar_estado(request: Request):
+    """El avance del proceso de arriba, para la barra de progreso."""
+    sid = exigir_sindicato(request)
+    return db.estado_georreferenciacion(sid)
 
 
 @app.post("/admin/trabajador/baja")
@@ -1942,8 +2007,12 @@ def borrar_beneficio(request: Request, id: int = Form(...)):
 @app.post("/admin/seccional")
 def abm_seccional(
     request: Request,
-    id: str = Form(""), nombre: str = Form(...), direccion: str = Form(""),
-    ve_todas: str = Form(""),
+    id: str = Form(""), nombre: str = Form(...), ve_todas: str = Form(""),
+    calle: str = Form(""), numero: str = Form(""), piso_depto: str = Form(""),
+    localidad: str = Form(""), provincia: str = Form(""), codigo_postal: str = Form(""),
+    latitud: str = Form(""), longitud: str = Form(""), precision_geo: str = Form(""),
+    telefono: str = Form(""), whatsapp: str = Form(""), mail: str = Form(""),
+    horario_atencion: str = Form(""),
 ):
     """`ve_todas` define el ALCANCE de los usuarios de esta seccional: con el
     check puesto, alcanzan a los trabajadores de todas las seccionales del
@@ -1954,12 +2023,29 @@ def abm_seccional(
     mapa de delegaciones del sindicato no lo dibuja una delegación. Y tocar
     `ve_todas` también: un admin local que pudiera tildarlo sobre su propia
     seccional se daría alcance sobre todo el sindicato de un clic, que es
-    exactamente la escalada que el rol tiene que impedir. Editar nombre y
-    dirección de una seccional del propio alcance, en cambio, sí puede."""
+    exactamente la escalada que el rol tiene que impedir. Editar el nombre y
+    el domicilio de una seccional del propio alcance, en cambio, sí puede --
+    y georreferenciarla entra por esa misma puerta: es editar la dirección.
+
+    **Se puede guardar sin ubicar.** Las coordenadas llegan del paso 2 del
+    asistente (el globo del mapa) y son opcionales: sin ellas la seccional
+    queda `sin_geo` y el panel la marca como pendiente. Que una API de
+    terceros no responda no puede impedir dar de alta una delegación.
+    """
     sid = exigir_sindicato(request)
     todas = bool(ve_todas)
     if not id:
         _exigir_super_admin(request)
+    # `geo.campos_para_guardar` es el ÚNICO lugar que decide qué se escribe
+    # en el bloque de domicilio -- acá, en el alta de trabajador, en la masiva
+    # y en el perfil del afiliado. Si cada ruta armara lo suyo, el mismo
+    # domicilio quedaría distinto según por dónde se cargó.
+    domicilio = geo.campos_para_guardar(
+        {"calle": calle, "numero": numero, "piso_depto": piso_depto,
+         "localidad": localidad, "provincia": provincia, "codigo_postal": codigo_postal},
+        precision_geo, latitud, longitud)
+    contacto = {"telefono": telefono.strip()[:40], "whatsapp": whatsapp.strip()[:40],
+                "mail": mail.strip()[:200], "horario_atencion": horario_atencion.strip()[:300]}
     with db.get_session() as s:
         if id:
             sec = s.get(Seccional, int(id))
@@ -1967,13 +2053,82 @@ def abm_seccional(
                 _exigir_alcance_seccional(request, sec.id)
                 if todas != sec.ve_todas:
                     _exigir_super_admin(request)
-                sec.nombre, sec.direccion, sec.ve_todas = nombre, direccion, todas
+                sec.nombre, sec.ve_todas = nombre, todas
+                for campo, valor in {**domicilio, **contacto}.items():
+                    setattr(sec, campo, valor)
                 s.add(sec)
         else:
-            s.add(Seccional(sindicato_id=sid, nombre=nombre, direccion=direccion,
-                            ve_todas=todas))
+            s.add(Seccional(sindicato_id=sid, nombre=nombre, ve_todas=todas,
+                            **domicilio, **contacto))
         s.commit()
     return RedirectResponse("/admin#seccionales", status_code=303)
+
+
+def _actor_geo(request: Request) -> str:
+    """Con quién se cuenta el tope por hora de geocodificación (geo.permitir_a).
+
+    El id del usuario del panel o el CUIL del afiliado, NUNCA la IP: en un
+    gremio con wifi compartido la IP es la misma para todo el edificio, y un
+    tope por IP castigaría a los cien que no hicieron nada."""
+    return str(_uid_sesion(request) or request.cookies.get("cuil_trab", "") or "anonimo")
+
+
+def _geocodificar(actor: str, provincia: str, localidad: str, calle: str, numero: str) -> dict:
+    """El cuerpo compartido de los dos endpoints de geocodificación.
+
+    Hay dos rutas (una de admin, otra del trabajador) y no una sola porque el
+    proyecto separa los sistemas de los dos actores -- misma decisión que en
+    Notificaciones y Trámites. Lo que NO se duplica es esto: el tope, el
+    recorte de entrada y la llamada al servicio.
+    """
+    if not geo.permitir_a(actor):
+        raise HTTPException(429, "Hiciste muchas búsquedas seguidas. Probá de nuevo en un rato.")
+    return geo.normalizar_direccion(
+        (provincia or "").strip()[:80], (localidad or "").strip()[:120],
+        (calle or "").strip()[:200], (numero or "").strip()[:20])
+
+
+@app.post("/admin/seccionales/geocodificar")
+def admin_geocodificar(request: Request, cuerpo: dict = Body(default={})):
+    """Convierte una dirección en candidatos ubicables, para el paso 2 del
+    asistente. Sesión de admin + permiso de la sección Seccionales.
+
+    Va por POST y con el cuerpo en JSON aunque sea una lectura: una dirección
+    en la query string termina en el log de acceso de Render y en el historial
+    del navegador, y el domicilio de una persona no tiene por qué quedar ahí.
+    """
+    exigir_sindicato(request)
+    return _geocodificar(_actor_geo(request), cuerpo.get("provincia", ""),
+                         cuerpo.get("localidad", ""), cuerpo.get("calle", ""),
+                         cuerpo.get("numero", ""))
+
+
+@app.get("/admin/seccionales/localidades")
+def admin_localidades(request: Request, provincia: str = "", q: str = ""):
+    """Sugerencias de localidad mientras se escribe. Esto SÍ va en vivo: es
+    Georef, cuya política lo permite y que existe para esto. A Nominatim no
+    se lo consulta tecla a tecla nunca."""
+    exigir_sindicato(request)
+    return {"localidades": geo.sugerir_localidades(provincia, q)}
+
+
+@app.get("/admin/seccional/{seccional_id}/ficha")
+def admin_seccional_ficha(request: Request, seccional_id: int):
+    """La ficha de consulta de una seccional: domicilio, contacto, horario,
+    ubicación y cuánta gente tiene.
+
+    El 404 (y no un 403) para una seccional de otro sindicato es a propósito
+    y sale solo: `db.seccional_del_sindicato` lleva el `sindicato_id` EN el
+    WHERE, así que una seccional ajena no se encuentra. Un 403 confirmaría
+    que ese id existe."""
+    sid = exigir_sindicato(request)
+    ficha = db.seccional_del_sindicato(sid, seccional_id)
+    if not ficha:
+        raise HTTPException(404, "No existe esa seccional.")
+    ficha["afiliados"] = db.contar_afiliados_de_seccional(sid, seccional_id)
+    ficha["etiqueta_precision"] = geo.ETIQUETAS_PRECISION.get(
+        ficha["precision_geo"], "Sin ubicar")
+    return ficha
 
 
 @app.post("/admin/seccional/borrar")
@@ -4578,6 +4733,29 @@ def dashboard_formato_semana(request: Request):
     return {"semanas": dashboard.formato_semana(sid, _filtros_dashboard(request))}
 
 
+@app.get("/admin/dashboard/seccionales-geo")
+def dashboard_seccionales_geo(request: Request):
+    """Las seccionales del tenant con sus indicadores, para el mapa del panel.
+
+    Devuelve SOLO agregados: seis números por seccional más su domicilio.
+    Ni una fila cruda ni un dato de una persona -- el mapa no es un explorador
+    con otra cara. El `sindicato_id` sale de la cookie, como en todo el panel.
+
+    Las que no tienen coordenadas viajan aparte, en `sin_ubicar`: el panel las
+    cuenta en un aviso en vez de esconderlas, porque una seccional que no
+    aparece en el mapa y tampoco en ningún lado es una seccional que nadie
+    va a georreferenciar nunca.
+    """
+    sid = _exigir_dashboard(request)
+    datos = dashboard.seccionales_geo(sid, _filtros_dashboard(request))
+    # El enlace para ir a arreglarlo solo se ofrece a quien puede editar
+    # seccionales: ver el mapa (sección "dashboard") y cargar una dirección
+    # (sección "seccionales") son dos permisos distintos, y ofrecerle un
+    # botón que le va a dar 403 es peor que no ofrecérselo.
+    datos["puede_georreferenciar"] = "seccionales" in db.permisos_efectivos(_uid_sesion(request))
+    return datos
+
+
 @app.get("/admin/dashboard/semaforo")
 def dashboard_semaforo(request: Request):
     sid = _exigir_dashboard(request)
@@ -5089,6 +5267,13 @@ def app_portada(request: Request):
             "documento": _dni_de_cuil(cuil),
             "perfil": db.perfil_trabajador(cuil, sid_activo),
             "provincias": db.PROVINCIAS_AR,
+            # "Mi seccional": la asigna el sindicato y el afiliado solo la
+            # lee, así que viaja en el contexto y no por un endpoint. None
+            # cuando todavía no le asignaron ninguna -- que no es un error,
+            # es un estado normal y la pantalla lo dice con todas las letras.
+            "mi_seccional": (db.seccional_del_sindicato(sid_activo, seccional_id)
+                             if seccional_id else None),
+            "etiquetas_precision": geo.ETIQUETAS_PRECISION,
             "tiene_foto_perfil": bool(db.foto_trabajador(cuil)),
             "noticias": _con_antiguedad(db.noticias_vigentes(sid_activo, seccional_id=seccional_id, limite=3)),
             "beneficios": db.beneficios_vigentes(sid_activo, seccional_id=seccional_id),
@@ -5107,11 +5292,19 @@ def app_portada(request: Request):
 
 @app.post("/api/perfil")
 async def api_actualizar_perfil(request: Request, nombre: str = Form(...), calle: str = Form(""),
-                                 numero: str = Form(""), piso: str = Form(""), ciudad: str = Form(""),
-                                 provincia: str = Form(""), telefono: str = Form(""), mail: str = Form("")):
+                                 numero: str = Form(""), piso_depto: str = Form(""),
+                                 localidad: str = Form(""), provincia: str = Form(""),
+                                 codigo_postal: str = Form(""), latitud: str = Form(""),
+                                 longitud: str = Form(""), precision_geo: str = Form(""),
+                                 telefono: str = Form(""), mail: str = Form("")):
     """El trabajador edita su propio perfil -- todo menos el CUIL. Actualiza
     el empadronamiento del sindicato ACTIVO (ver actualizar_perfil_trabajador:
-    Trabajador es por sindicato, no hay un domicilio único de la persona)."""
+    Trabajador es por sindicato, no hay un domicilio único de la persona).
+
+    El domicilio pasa por el mismo `geo.campos_para_guardar` que usa el admin:
+    lo que carga el afiliado y lo que carga el sindicato tienen que quedar
+    idénticos, o el mismo domicilio se vería distinto según quién lo tocó
+    último."""
     ses = sesion_actual(request, "trabajador")
     cuil = request.cookies.get("cuil_trab", "")
     if not ses or not cuil:
@@ -5121,10 +5314,62 @@ async def api_actualizar_perfil(request: Request, nombre: str = Form(...), calle
     sid = sindicato_activo_trabajador(request)
     if not sid:
         raise HTTPException(403, "No autorizado")
-    if not db.actualizar_perfil_trabajador(cuil, sid, nombre, calle, numero, piso, ciudad, provincia, telefono, mail):
+    domicilio = geo.campos_para_guardar(
+        {"calle": calle, "numero": numero, "piso_depto": piso_depto,
+         "localidad": localidad, "provincia": provincia, "codigo_postal": codigo_postal},
+        precision_geo, latitud, longitud)
+    if not db.actualizar_perfil_trabajador(cuil, sid, nombre, domicilio, telefono, mail):
         raise HTTPException(404, "No se encontró tu empadronamiento en este sindicato.")
     nombre_guardado = db.nombre_trabajador(cuil, sid)
-    return {"ok": True, "nombre": nombre_guardado, "primer_nombre": nombre_guardado.split(" ")[0] or "Trabajador"}
+    return {"ok": True, "nombre": nombre_guardado,
+            "primer_nombre": nombre_guardado.split(" ")[0] or "Trabajador"}
+
+
+@app.post("/api/geocodificar")
+def api_geocodificar(request: Request, cuerpo: dict = Body(default={})):
+    """Geocodificación para el afiliado que edita su propio domicilio.
+
+    Ruta aparte de la del admin y no compartida, mismo criterio que
+    Notificaciones y Trámites: los sistemas de los dos actores se separan
+    aunque el cuerpo sea el mismo. Acá importa además porque este endpoint
+    queda expuesto a TODO el padrón y no a un puñado de administradores --
+    de ahí el tope por CUIL y por hora de `geo.permitir_a`.
+    """
+    ses = sesion_actual(request, "trabajador")
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    return _geocodificar(cuil, cuerpo.get("provincia", ""), cuerpo.get("localidad", ""),
+                         cuerpo.get("calle", ""), cuerpo.get("numero", ""))
+
+
+@app.get("/api/localidades")
+def api_localidades(request: Request, provincia: str = "", q: str = ""):
+    """Sugerencias de localidad para el afiliado (Georef, en vivo)."""
+    if not sesion_actual(request, "trabajador"):
+        raise HTTPException(403, "No autorizado")
+    return {"localidades": geo.sugerir_localidades(provincia, q)}
+
+
+@app.get("/api/seccionales")
+def api_seccionales(request: Request):
+    """Las seccionales GEORREFERENCIADAS del sindicato activo del afiliado.
+
+    Es lo que consume "Seccionales cerca de mí". Devuelve solo datos de la
+    institución -- nombre, dirección, contacto, horario, coordenadas --: ni
+    un dato de otra persona. La distancia la calcula el navegador, porque
+    **la ubicación del teléfono no viaja al servidor**: se pide con permiso,
+    se usa en la pantalla y se descarta.
+    """
+    ses = sesion_actual(request, "trabajador")
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise HTTPException(403, "No autorizado")
+    return {"seccionales": db.seccionales_ubicadas(sid),
+            "mi_seccional_id": db.seccional_de_trabajador(cuil, sid)}
 
 
 MAX_FOTO_PERFIL = 1 * 1024 * 1024  # 1 MB -- de sobra: el cliente ya la redimensiona a un JPEG chico antes de subirla

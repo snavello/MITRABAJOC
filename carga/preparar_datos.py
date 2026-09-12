@@ -79,7 +79,7 @@ def sembrar_trabajadores(sindicato_id: int, nombre_sindicato: str):
                 continue
             t = Trabajador(
                 sindicato_id=sindicato_id, cuil=cuil,
-                nombre=f"Carga Sintetico {i:04d}", ciudad="Buenos Aires",
+                nombre=f"Carga Sintetico {i:04d}", localidad="Buenos Aires",
                 provincia="Buenos Aires",
             )
             s.add(t)

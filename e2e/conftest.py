@@ -23,6 +23,26 @@ import ventanas
 import fechas
 
 
+@pytest.fixture(scope="session")
+def browser_type_launch_args(browser_type_launch_args):
+    """Permite usar un Chromium que ya esté instalado en la máquina.
+
+    Playwright exige el build EXACTO que corresponde a su versión pineada, y
+    en un entorno que trae otro (un contenedor de CI, una sesión en la nube
+    con los navegadores preinstalados) `browser.launch()` falla pidiendo
+    `playwright install` aunque haya un Chromium perfectamente usable ahí al
+    lado. Con `E2E_CHROMIUM_PATH` apuntando a ese binario, los robots corren
+    igual.
+
+    Es OPT-IN: sin la variable no cambia nada, así que en la máquina de
+    desarrollo sigue usando el navegador que bajó `playwright install`.
+    """
+    ruta = os.environ.get("E2E_CHROMIUM_PATH", "").strip()
+    if ruta and Path(ruta).exists():
+        return {**browser_type_launch_args, "executable_path": ruta}
+    return browser_type_launch_args
+
+
 @pytest.fixture
 def nuevo_actor(browser, pytestconfig, request):
     """Fábrica de "personas": cada llamada devuelve una página en su propio

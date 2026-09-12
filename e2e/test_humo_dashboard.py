@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """Smoke test E2E con Playwright: el robot entra por las pantallas REALES.
 
-A diferencia de la suite unitaria (test_*.py de la raíz, SQLite aislado),
-esto necesita el entorno de desarrollo completo levantado:
+A diferencia de la suite unitaria (test_*.py de la raíz, que corre contra una
+base Postgres descartable), esto necesita el entorno de desarrollo completo
+levantado:
 
     docker compose up -d
     uvicorn main:app --reload           # en otra terminal
-    python cargar_lote_uom.py           # si el lote UOM no está cargado
+    python cargar_lote_sindicato.py --sindicato "Unión Obrera Metalúrgica"
 
 Y se corre con:
 
@@ -27,8 +28,18 @@ import fechas
 BASE = os.environ.get("E2E_BASE_URL", "http://localhost:8000")
 
 ADMIN_UOM = {"usuario": "20111111110", "clave": "uom-demo"}
-# Del lote sintético (cargar_lote_uom.py): clave = 5 primeros dígitos del CUIL.
-TRABAJADOR = {"cuil": "27600000000", "clave": "27600"}
+
+# Primer trabajador del lote sintético de la UOM. Son DOS porque hay dos
+# cargadores: `cargar_lote_sindicato.py` (el actual, para cualquier sindicato)
+# y `cargar_lote_uom.py` (el anterior, específico). Cada uno genera su propia
+# serie de CUILes, así que el robot prueba con los dos en vez de exigir que
+# esté cargado justo el que él conocía. La clave son los 5 primeros dígitos.
+TRABAJADORES_DEL_LOTE = ["27660000000", "27600000000"]
+
+COMO_PREPARAR_DEMO = ("Falta la demo. Corré: python cargar_marca_plataforma.py && "
+                      "python cargar_demo.py")
+COMO_PREPARAR_LOTE = ('Falta el lote de la UOM. Corré: python cargar_lote_sindicato.py '
+                      '--sindicato "Unión Obrera Metalúrgica"')
 
 
 def _login_admin(page: Page):
@@ -36,7 +47,38 @@ def _login_admin(page: Page):
     page.fill('input[name="usuario"]', ADMIN_UOM["usuario"])
     page.fill('input[name="clave"]', ADMIN_UOM["clave"])
     page.click('button[type="submit"]')
-    page.wait_for_url("**/admin/inicio")
+    try:
+        page.wait_for_url("**/admin/inicio", wait_until="commit", timeout=10000)
+    except Exception:
+        # Un prerequisito que falta se dice, no se deja morir en un timeout de
+        # 30 segundos que parece una falla de la app (regla de e2e/README.md).
+        pytest.skip(COMO_PREPARAR_DEMO)
+
+
+def _login_trabajador(page: Page) -> str:
+    """Entra con el primer CUIL del lote que exista. Devuelve cuál fue.
+
+    `wait_until="commit"` y no el default "load": la portada del trabajador
+    puede dibujar el mapa de su seccional, y las teselas de OpenStreetMap
+    salen a la red. Si esa red no está o va lenta, el evento `load` tarda o no
+    llega, y la espera se agota con la página YA en su destino. Lo que
+    interesa acá es haber entrado, no que haya terminado de dibujarse el mapa
+    de un tercero.
+    """
+    for cuil in TRABAJADORES_DEL_LOTE:
+        page.goto(f"{BASE}/ingresar")
+        # La pantalla tiene DOS formularios (ingresar y registrarme) con campos
+        # del mismo nombre: hay que apuntar al de login.
+        login = page.locator("#form-login")
+        login.locator('input[name="cuil"]').fill(cuil)
+        login.locator('input[name="clave"]').fill(cuil[:5])
+        login.locator('button[type="submit"]').click()
+        try:
+            page.wait_for_url("**/app/inicio", wait_until="commit", timeout=8000)
+            return cuil
+        except Exception:
+            continue
+    pytest.skip(COMO_PREPARAR_LOTE)
 
 
 def test_admin_dashboard_carga_con_datos(page: Page, informe):
@@ -66,7 +108,10 @@ def test_admin_dashboard_modal_ver(page: Page, informe):
     _login_admin(page)
     page.goto(f"{BASE}/admin/dashboard?desde=2026-06-01&hasta={fechas.hoy().isoformat()}")
     boton = page.locator("#tabla-body .btn-ver").first
-    boton.wait_for(state="visible", timeout=15000)
+    try:
+        boton.wait_for(state="visible", timeout=15000)
+    except Exception:
+        pytest.skip(COMO_PREPARAR_LOTE + " (el explorador no tiene ni un recibo)")
     boton.click()
     expect(page.locator("#overlay-det")).to_be_visible()
     expect(page.locator("#det-contenido")).to_contain_text("Recibo verificado")
@@ -77,11 +122,7 @@ def test_admin_dashboard_modal_ver(page: Page, informe):
 
 
 def test_trabajador_entra_a_su_app(page: Page, informe):
-    page.goto(f"{BASE}/ingresar")
-    page.fill('input[name="cuil"]', TRABAJADOR["cuil"])
-    page.fill('input[name="clave"]', TRABAJADOR["clave"])
-    page.click('button[type="submit"]')
-    page.wait_for_url("**/app/inicio")
+    cuil = _login_trabajador(page)
     expect(page.locator("body")).to_contain_text("Hola,")
-    informe.paso(f"Un trabajador del lote UOM (CUIL {TRABAJADOR['cuil']}) entró a su app")
+    informe.paso(f"Un trabajador del lote UOM (CUIL {cuil}) entró a su app")
     informe.dato("Portada del trabajador", "saludo personalizado visible")

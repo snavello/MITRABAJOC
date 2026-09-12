@@ -646,6 +646,112 @@ def formato_semana(sid: int, f: dict) -> list:
     return [semanas[k] for k in sorted(semanas)]
 
 
+def seccionales_geo(sid: int, f: dict) -> dict:
+    """Cada seccional del tenant con sus coordenadas y seis indicadores.
+
+    **Ignora el filtro de seccional a propósito.** El mapa ES el selector: si
+    respetara su propio filtro, tocar un marcador dejaría el mapa con un solo
+    punto y no habría forma de volver. Mismo criterio que
+    `diferencias_empresa`, que ignora el filtro de resultado porque el gráfico
+    ES de los que tienen diferencias. El resto de los filtros (período,
+    empresa, categoría, formato, bruto) sí aplican.
+
+    Dos de los seis indicadores NO se mueven al cambiar el período: afiliados
+    y "ingresó al menos una vez" son una foto del padrón, igual que el KPI
+    "Afiliados registrados" (decisión del 2026-08-29). La pantalla lo dice,
+    para que nadie crea que están mal.
+
+    Todo agregado en SQL y agrupado por `seccional_id`, reusando los mismos
+    constructores de WHERE que el resto del panel: el aislamiento por
+    `sindicato_id` viaja adentro de esos WHERE y no se puede olvidar acá.
+    Nunca sale una fila cruda ni un dato de una persona: son seis números por
+    seccional.
+    """
+    f = dict(f, seccionales=[])       # el mapa es el selector, no un filtrado
+    filas = {}
+
+    def fila(secc_id):
+        return filas.setdefault(secc_id, {
+            "afiliados": 0, "ingresaron": 0, "recibos": 0, "con_diferencias": 0,
+            "tramites_abiertos": 0, "notif_enviadas": 0, "notif_leidas": 0})
+
+    with db.get_session() as s:
+        # Padrón: foto, sin rango de fechas (le aplican empresa y afiliado).
+        conds = ["sindicato_id = :sid", "activo", "seccional_id IS NOT NULL"]
+        params = {"sid": sid}
+        cuits = _cuits_de_empresas(sid, f["empresas"])
+        if cuits is not None:
+            conds.append("REPLACE(REPLACE(COALESCE(cuit_empleador, ''), '-', ''), ' ', '') IN :cuits")
+            params["cuits"] = cuits or ["__ninguna__"]
+        if f.get("afiliado"):
+            conds.append("id = :afiliado")
+            params["afiliado"] = f["afiliado"]
+        for secc_id, total, registrados in s.execute(_stmt(f"""
+                SELECT seccional_id, COUNT(*),
+                       COALESCE(SUM(CASE WHEN registrado THEN 1 ELSE 0 END), 0)
+                FROM trabajador WHERE {' AND '.join(conds)}
+                GROUP BY seccional_id""", params), params).all():
+            r = fila(secc_id)
+            r["afiliados"], r["ingresaron"] = total, registrados
+
+        joins, where, params = _sql_recibos(sid, f, forzar_join=True)
+        for secc_id, total, con_dif in s.execute(_stmt(f"""
+                SELECT t.seccional_id, COUNT(*),
+                       COALESCE(SUM(CASE WHEN r.estado = 'CON_DISCREPANCIAS' THEN 1 ELSE 0 END), 0)
+                FROM reciboverificado r{joins} WHERE {where}
+                GROUP BY t.seccional_id""", params), params).all():
+            if secc_id is None:
+                continue          # recibo sin fila en el padrón: no es de ninguna seccional
+            r = fila(secc_id)
+            r["recibos"], r["con_diferencias"] = total, con_dif
+
+        joins, where, params = _sql_tramites(sid, f, forzar_join=True)
+        for secc_id, abiertos in s.execute(_stmt(f"""
+                SELECT t.seccional_id,
+                       COALESCE(SUM(CASE WHEN tr.estado != 'terminado' THEN 1 ELSE 0 END), 0)
+                FROM tramite tr{joins} WHERE {where}
+                GROUP BY t.seccional_id""", params), params).all():
+            if secc_id is not None:
+                fila(secc_id)["tramites_abiertos"] = abiertos
+
+        joins, where, params = _sql_notificaciones(sid, f, forzar_join=True)
+        for secc_id, enviadas, leidas in s.execute(_stmt(f"""
+                SELECT t.seccional_id, COUNT(*),
+                       COALESCE(SUM(CASE WHEN d.leida_en IS NOT NULL THEN 1 ELSE 0 END), 0)
+                FROM notificaciondestinatario d{joins} WHERE {where}
+                GROUP BY t.seccional_id""", params), params).all():
+            if secc_id is not None:
+                r = fila(secc_id)
+                r["notif_enviadas"], r["notif_leidas"] = enviadas, leidas
+
+    # Las seccionales salen de db (con su domicilio y coordenadas); los
+    # agregados se les pegan encima. Una seccional sin actividad aparece con
+    # ceros, no ausente: "no hay recibos en Salta" es información.
+    ubicadas, sin_ubicar = [], []
+    for sec in db.seccionales_del_sindicato(sid):
+        r = filas.get(sec["id"], fila(sec["id"]))
+        tasa = (round(r["notif_leidas"] / r["notif_enviadas"] * 100, 1)
+                if r["notif_enviadas"] else None)
+        item = {
+            "id": sec["id"], "nombre": sec["nombre"],
+            "direccion_texto": sec["direccion_texto"],
+            "provincia": sec["provincia"], "localidad": sec["localidad"],
+            "lat": sec["latitud"], "lon": sec["longitud"],
+            "precision_geo": sec["precision_geo"],
+            "afiliados": r["afiliados"], "ingresaron": r["ingresaron"],
+            "pct_ingresaron": (round(r["ingresaron"] / r["afiliados"] * 100, 1)
+                               if r["afiliados"] else None),
+            "recibos": r["recibos"], "con_diferencias": r["con_diferencias"],
+            "pct_con_diferencias": (round(r["con_diferencias"] / r["recibos"] * 100, 1)
+                                    if r["recibos"] else None),
+            "tramites_abiertos": r["tramites_abiertos"],
+            "notif_enviadas": r["notif_enviadas"], "tasa_lectura": tasa,
+        }
+        (ubicadas if sec["latitud"] is not None and sec["longitud"] is not None
+         else sin_ubicar).append(item)
+    return {"seccionales": ubicadas, "sin_ubicar": sin_ubicar}
+
+
 def semaforo(sid: int, f: dict, hoy: Optional[date] = None) -> dict:
     """Por empresa del tenant: MAX(fecha_ultimo_deposito) sobre sus recibos,
     días transcurridos y estado según umbrales de plataforma. Es una foto del

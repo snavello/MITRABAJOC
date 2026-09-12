@@ -23,6 +23,7 @@ except Exception:
     pass
 
 import db
+import geo
 import demo_encuestas
 from db import (Sindicato, UsuarioSindicato, Concepto, Formula, Trabajador, Empleador,
                 Seccional, Area)
@@ -30,6 +31,16 @@ from sqlmodel import SQLModel, select
 from sqlalchemy import delete as sa_delete, or_ as sa_or, select as sa_select
 import auth
 from modulos import MODULOS_INICIALES
+
+# Teléfonos de las seccionales de demo. Ficticios, con código de área real
+# de cada ciudad: sin ellos los botones Llamar y WhatsApp de "Mi seccional"
+# no aparecen y esa pantalla se ve a medias justo cuando se la muestra.
+TELEFONOS_DEMO = {
+    "Sede Central": "11 4555 1200", "Rosario": "341 425 0850",
+    "Córdoba": "351 422 0430", "La Matanza": "11 4651 2900",
+    "Mar del Plata": "223 495 3100", "Bariloche": "294 442 0550",
+    "Salta": "387 421 0640",
+}
 
 SINDICATOS = [
     {
@@ -49,13 +60,26 @@ SINDICATOS = [
             ("JUB", "Jubilación = 11% del remunerativo", "0.11 * base_remunerativa", 1.0),
             ("SINDMET", "Cuota UOM = 2.5% del remunerativo", "0.025 * base_remunerativa", 1.0),
         ],
-        # (nombre, dirección, ve_todas). Sede Central es la única con
+        # (nombre, ve_todas, domicilio). Sede Central es la única con
         # ve_todas: sus usuarios alcanzan a todo el país, los de una
         # delegación solo a la suya.
+        #
+        # Las DIRECCIONES SON FICTICIAS pero verosímiles: no conozco con
+        # certeza los domicilios reales de estos gremios y no los invento
+        # como si lo fueran. Las COORDENADAS, en cambio, son reales para esa
+        # esquina -- salieron de geocodificar estas direcciones una vez, a
+        # mano, el 2026-09-12. Van como `manual` justamente para no dar a
+        # entender que son domicilios verificados del sindicato.
         "seccionales": [
-            ("Sede Central", "Av. Independencia 1200, CABA", True),
-            ("Rosario", "San Martín 850, Rosario", False),
-            ("Córdoba", "Bv. San Juan 430, Córdoba", False),
+            ("Sede Central", True, ("La Rioja", "1975", "Ciudad Autónoma de Buenos Aires",
+                                    "Ciudad Autónoma de Buenos Aires", "C1260AAK",
+                                    -34.634446, -58.406019)),
+            ("Rosario", False, ("San Martín", "850", "Rosario", "Santa Fe", "2000",
+                                -32.947338, -60.636893)),
+            ("Córdoba", False, ("Boulevard San Juan", "430", "Córdoba", "Córdoba", "X5000",
+                                -31.419157, -64.191904)),
+            ("La Matanza", False, ("Arieta", "2900", "San Justo", "Buenos Aires", "1754",
+                                   -34.676590, -58.563065)),
         ],
         # (seccional, área, secciones del panel que hereda quien está en ella).
         # Los perfiles son distintos a propósito: la demo tiene que mostrar
@@ -163,9 +187,24 @@ SINDICATOS = [
             ("JUBG", "Jubilación = 11% del remunerativo", "0.11 * base_remunerativa", 1.0),
             ("SINDGAS", "Cuota gastronómica = 2% del remunerativo", "0.02 * base_remunerativa", 1.0),
         ],
-        # Sindicato CENTRALIZADO: una sola seccional y un área. No tiene
-        # Admin de Seccional -- el rol es opt-in y acá nadie lo necesita.
-        "seccionales": [("Sede Central", "Av. Corrientes 2200, CABA", True)],
+        # Sindicato CENTRALIZADO, y sigue siéndolo aunque ahora tenga
+        # delegaciones: NO tiene Admin de Seccional ni áreas por delegación,
+        # todo se atiende desde Sede Central, que es lo que lo diferencia de
+        # la UOM. Tiene cuatro seccionales para que el mapa del Panel se vea
+        # poblado en una demostración; el contraste de ROLES se mantiene.
+        # Direcciones ficticias, coordenadas reales (ver la nota en la UOM).
+        "seccionales": [
+            ("Sede Central", True, ("Avenida Rivadavia", "2530",
+                                    "Ciudad Autónoma de Buenos Aires",
+                                    "Ciudad Autónoma de Buenos Aires", "C1034ACR",
+                                    -34.610009, -58.402274)),
+            ("Mar del Plata", False, ("Avenida Luro", "3100", "Mar del Plata",
+                                      "Buenos Aires", "B7600DRN", -37.996284, -57.551156)),
+            ("Bariloche", False, ("Mitre", "550", "San Carlos de Bariloche", "Río Negro",
+                                  "8400", -41.134270, -71.301931)),
+            ("Salta", False, ("Caseros", "640", "Salta", "Salta", "4400",
+                              -24.789722, -65.411569)),
+        ],
         "areas": [
             ("Sede Central", "Atención al Afiliado",
              ["tramites_recibidos", "trabajadores", "noticias", "beneficios", "notificaciones"]),
@@ -273,8 +312,16 @@ for d in SINDICATOS:
 
         # 1. Seccionales y áreas primero: todo lo demás las referencia.
         secs = {}
-        for nombre, direccion, ve_todas in d["seccionales"]:
-            x = Seccional(sindicato_id=sid, nombre=nombre, direccion=direccion, ve_todas=ve_todas)
+        for nombre, ve_todas, dom in d["seccionales"]:
+            calle, numero, localidad, provincia, cp, lat, lon = dom
+            x = Seccional(sindicato_id=sid, nombre=nombre, ve_todas=ve_todas,
+                          telefono=TELEFONOS_DEMO.get(nombre, ""),
+                          whatsapp=TELEFONOS_DEMO.get(nombre, ""),
+                          horario_atencion="Lunes a viernes de 9 a 17",
+                          **geo.campos_para_guardar(
+                              {"calle": calle, "numero": numero, "localidad": localidad,
+                               "provincia": provincia, "codigo_postal": cp},
+                              precision="manual", lat=lat, lon=lon))
             s.add(x); s.commit(); s.refresh(x)
             secs[nombre] = x.id
         areas = {}

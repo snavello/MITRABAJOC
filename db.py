@@ -29,15 +29,43 @@ import csv
 import json
 from pathlib import Path
 from typing import Optional
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from dotenv import load_dotenv
 from typing import Any
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON, text
-from sqlalchemy import or_
+from sqlalchemy import or_, bindparam
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.exc import IntegrityError
+
+# El tipo de las columnas JSON del proyecto. **En Postgres es JSONB**, que es
+# lo que las migraciones vienen creando desde el principio con esta misma
+# expresión.
+#
+# Estaba solo en las migraciones y no en los modelos, así que el esquema que
+# arma `create_all` -- el de la base descartable de la SUITE -- tenía `json`
+# donde producción tiene `jsonb`: quince columnas probándose contra un tipo
+# distinto del que corre. Es el mismo defecto que motivó sacar SQLite el
+# 2026-09-11, solo que adentro del mismo motor y por eso más difícil de ver.
+# `test_migraciones.py` compara los dos esquemas para que no vuelva a pasar.
+#
+# `json` guarda el texto tal cual (conserva orden de claves y espacios) y no
+# tiene operador de igualdad; `jsonb` es binario, normalizado, comparable e
+# indexable. Para leer y escribir un dict entero dan lo mismo, que es por lo
+# que la diferencia pasó desapercibida.
+#
+# **Toda columna JSON del proyecto usa esto**: desde la migración
+# d2c8f04a6b31 no queda ninguna en `json` pelado. Una columna nueva que use
+# `Column(JSON)` en vez de `Column(JSON_TIPO)` rompe esa uniformidad y
+# `test_migraciones.py` la marca.
+JSON_TIPO = JSON().with_variant(postgresql.JSONB(), "postgresql")
 
 import encuestas
 import fechas
+# geo.py importa db DENTRO de sus funciones, no en el encabezado, así que
+# esto no es un ciclo: la mitad pura de geo (armar el texto, haversine) se
+# puede probar sin base, y db puede usar su contrato de campos.
+import geo
 from pgvector.sqlalchemy import Vector
 
 # En Render, DATABASE_URL es una variable de entorno real (no hace falta
@@ -135,7 +163,7 @@ class Sindicato(SQLModel, table=True):
     # Qué módulos tiene disponibles este sindicato (ver modulos.py). Controla
     # qué tarjetas ve el trabajador y qué pestañas ve el admin del sindicato
     # -- pensado para distintos modelos comerciales, no todos adoptan todo.
-    modulos_habilitados: list = Field(default=[], sa_column=Column(JSON))
+    modulos_habilitados: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
     # Portada del trabajador: oscura (default, regla histórica) o clara.
     # El encabezado (.enc) sigue siendo oscuro en las dos variantes -- lo
     # que cambia es el fondo del cuerpo y las tarjetas. Default False =
@@ -159,12 +187,52 @@ class Seccional(SQLModel, table=True):
     `ve_todas` es la excepción a ese recorte: los usuarios de una seccional
     tildada alcanzan TODAS las seccionales del sindicato. Nace tildada en
     "Sede Central"; el Super Admin la puede tildar en otra (ej. una regional
-    que supervisa varias). Ver SPRINT_AREAS.md, decisión 5."""
+    que supervisa varias). Ver SPRINT_AREAS.md, decisión 5.
+
+    **El domicilio es estructurado, no un texto libre.** Hasta el 2026-09-12
+    había una sola columna `direccion` con la dirección escrita a mano; se
+    reemplazó por los campos separados + `direccion_texto` (el armado, para
+    mostrar) + coordenadas. El texto viejo no se migró: era provisorio y
+    buscar o ubicar sobre una cadena libre no se puede.
+
+    El MISMO bloque de campos lo tiene `Trabajador`, con idénticos nombres y
+    tipos, y `test_seccional_geo.py` lo verifica: si los dos domicilios de la
+    app se escriben igual, se cargan igual (una sola pantalla guiada) y se
+    geocodifican con la misma función."""
     id: Optional[int] = Field(default=None, primary_key=True)
     sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
     nombre: str
-    direccion: str = ""
     ve_todas: bool = False
+    # ---- Domicilio (bloque compartido con Trabajador, ver geo.CAMPOS_DOMICILIO)
+    calle: str = ""
+    numero: str = ""
+    piso_depto: str = ""
+    localidad: str = ""
+    provincia: str = ""
+    codigo_postal: str = ""
+    # La dirección tal como se muestra. La arma el SERVIDOR al guardar
+    # (geo.armar_direccion_texto), nunca el cliente: es lo que se ve en la
+    # tabla del panel, en la ficha y en la app del trabajador, y si cada
+    # pantalla la compusiera a su manera habría tres direcciones distintas
+    # para la misma seccional.
+    direccion_texto: str = ""
+    latitud: Optional[float] = Field(default=None)
+    longitud: Optional[float] = Field(default=None)
+    # exacta | aproximada | manual | sin_geo (geo.PRECISIONES). Nace en
+    # "sin_geo" y no en "" para que el estado sea siempre legible: una
+    # seccional sin ubicar es un estado válido del sistema, no un dato que
+    # falta.
+    precision_geo: str = "sin_geo"
+    # Texto "AAAA-MM-DD HH:MM" en hora de Buenos Aires, como TODOS los sellos
+    # de tiempo del proyecto (fechas.ahora_texto()). Un datetime acá sería la
+    # única columna de tiempo con otro criterio.
+    geo_actualizado: str = ""
+    # ---- Contacto de la seccional (esto NO lo tiene Trabajador: es la
+    # puerta de atención al afiliado, no el domicilio de una persona)
+    telefono: str = ""
+    whatsapp: str = ""
+    mail: str = ""
+    horario_atencion: str = ""
 
 
 class Area(SQLModel, table=True):
@@ -284,17 +352,38 @@ class CuentaTrabajador(SQLModel, table=True):
 
 class Trabajador(SQLModel, table=True):
     """Empadronamiento de un CUIL en un sindicato, con sus datos propios de ese gremio.
-    El mismo CUIL puede tener varias filas (una por sindicato donde está afiliado)."""
+    El mismo CUIL puede tener varias filas (una por sindicato donde está afiliado).
+
+    **El domicilio usa el MISMO bloque de campos que `Seccional`** (mismos
+    nombres, mismos tipos, misma pantalla de carga guiada, misma función de
+    geocodificación). Antes del 2026-09-12 eran parecidos pero no iguales:
+    acá `piso` y `ciudad`, en la seccional nada. Dos nombres para lo mismo es
+    lo que hace que una pantalla arme la dirección distinto que la otra, así
+    que se unificaron a `piso_depto` y `localidad` -- un rename, los datos se
+    conservan. `test_seccional_geo.py` verifica que el bloque siga siendo
+    idéntico en las dos tablas.
+
+    Las coordenadas del domicilio son dato del padrón, del mismo nivel de
+    sensibilidad que la dirección que el sindicato ya tenía. No salen nunca
+    en un endpoint que no sea del propio afiliado o del padrón de su
+    sindicato; en particular NO van al Panel Sindical."""
     id: Optional[int] = Field(default=None, primary_key=True)
     sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
     cuil: str = Field(index=True)          # obligatorio
     nombre: str = ""                       # obligatorio
-    # Datos de contacto / domicilio (opcionales)
+    # ---- Domicilio (bloque compartido con Seccional, ver geo.CAMPOS_DOMICILIO)
     calle: str = ""
     numero: str = ""
-    piso: str = ""
-    ciudad: str = ""
+    piso_depto: str = ""
+    localidad: str = ""
     provincia: str = ""
+    codigo_postal: str = ""
+    direccion_texto: str = ""
+    latitud: Optional[float] = Field(default=None)
+    longitud: Optional[float] = Field(default=None)
+    precision_geo: str = "sin_geo"
+    geo_actualizado: str = ""
+    # ---- Contacto
     telefono: str = ""
     mail: str = ""
     # Estado
@@ -332,7 +421,7 @@ class Trabajador(SQLModel, table=True):
     # Último semáforo de ARCA calculado (POST /api/aportes) -- antes se
     # perdía apenas se navegaba o se recargaba la página, porque nunca se
     # guardaba. Es el mismo dict que devuelve semaforo.calcular_semaforo().
-    semaforo_datos: dict = Field(default={}, sa_column=Column(JSON))
+    semaforo_datos: dict = Field(default={}, sa_column=Column(JSON_TIPO))
     semaforo_actualizado: Optional[str] = Field(default=None)  # fecha ISO del último cálculo
 
 
@@ -375,7 +464,7 @@ class Concepto(SQLModel, table=True):
     nombre: str
     tipo: str                      # "ingreso" | "descuento"
     remunerativo: bool = True
-    alias: list = Field(default=[], sa_column=Column(JSON))
+    alias: list = Field(default=[], sa_column=Column(JSON_TIPO))
     pendiente_revision: bool = False
     # Ley 27.802 / Dto 407/2026: categoría sindical de un descuento.
     # "convenio"   = cuota solidaria / fondos convencionales -> cuenta para el tope
@@ -473,7 +562,7 @@ class Noticia(SQLModel, table=True):
     # Destino: lista de Seccional.id a la(s) que se dirige. Lista vacía (el
     # default) = todas las seccionales, incluidos los trabajadores sin
     # seccional asignada.
-    destino_seccionales: list = Field(default=[], sa_column=Column(JSON))
+    destino_seccionales: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
 
 
 class Beneficio(SQLModel, table=True):
@@ -495,7 +584,7 @@ class Beneficio(SQLModel, table=True):
     formulario_id: Optional[int] = None  # mismo criterio que Noticia.formulario_id
     # Destino: lista de Seccional.id a la(s) que se dirige. Lista vacía (el
     # default) = todas las seccionales, mismo criterio que Noticia.
-    destino_seccionales: list = Field(default=[], sa_column=Column(JSON))
+    destino_seccionales: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
 
 
 class Reporte(SQLModel, table=True):
@@ -505,7 +594,7 @@ class Reporte(SQLModel, table=True):
     cuil: str = ""
     periodo: str = ""
     estado: str = "nuevo"          # "nuevo" | "en_revision" | "resuelto"
-    detalle: dict = Field(default={}, sa_column=Column(JSON))
+    detalle: dict = Field(default={}, sa_column=Column(JSON_TIPO))
 
 
 class UsoIA(SQLModel, table=True):
@@ -585,7 +674,7 @@ class EnvioSindicato(SQLModel, table=True):
     fecha: str = ""
     # {"recibo": {...}, "resultado": {...}} — lo que el sindicato puede consultar
     # del recibo que el trabajador envió (Punto 3).
-    detalle: dict = Field(default={}, sa_column=Column(JSON))
+    detalle: dict = Field(default={}, sa_column=Column(JSON_TIPO))
 
 
 class ReciboVerificado(SQLModel, table=True):
@@ -601,7 +690,7 @@ class ReciboVerificado(SQLModel, table=True):
     # período): lo actualiza /api/enviar-sindicato por id, no por matching.
     enviado_sindicato: bool = False
     fecha_envio: str = ""
-    detalle: dict = Field(default={}, sa_column=Column(JSON))
+    detalle: dict = Field(default={}, sa_column=Column(JSON_TIPO))
     # ---- Columnas analíticas para el Panel Sindical (docs/DASHBOARD.md) ----
     # Todo esto ya existía ADENTRO de `detalle` (JSON), pero los agregados del
     # dashboard se calculan en SQL con índices y ahí un JSON no sirve. Se
@@ -654,7 +743,7 @@ class Notificacion(SQLModel, table=True):
     adjunto_mime: str = ""
     adjunto_nombre: str = ""
     criterio: str = ""             # "cuil" | "cuit_empleador" | "seccional" | "provincia"
-    criterio_valores: list = Field(default=[], sa_column=Column(JSON))
+    criterio_valores: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
     # "manual" = la compuso el admin desde /admin. "sistema" = la disparó
     # automáticamente un cambio de trámite (Fase 3, main._notificar_cambio_tramite).
     origen: str = "manual"
@@ -691,7 +780,7 @@ class NotificacionEmpleador(SQLModel, table=True):
     adjunto_mime: str = ""
     adjunto_nombre: str = ""
     criterio: str = ""             # "cuit" | "todos" | "provincia"
-    criterio_valores: list = Field(default=[], sa_column=Column(JSON))
+    criterio_valores: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
     origen: str = "manual"          # "manual" | "sistema" (Fase 5: cambio de trámite externo)
     enviado_en: str = ""
     cantidad_destinatarios: int = 0
@@ -722,7 +811,7 @@ class TipoTramite(SQLModel, table=True):
     # mensaje, bloquea}), referenciando campos POR ORDEN y no por id porque
     # editar el tipo REEMPLAZA los campos (ids nuevos en cada edición). Se
     # sanean en validaciones_tramite.reglas_saneadas antes de llegar acá.
-    reglas_consistencia: list = Field(default=[], sa_column=Column(JSON))
+    reglas_consistencia: list = Field(default=[], sa_column=Column(JSON_TIPO))
     # NULL = formulario GLOBAL, lo ve todo el sindicato. Con seccional, solo
     # lo ven los trabajadores de esa seccional y solo su admin local lo
     # edita (decisión N7 de SPRINT_AREAS_V2.md).
@@ -811,7 +900,7 @@ class CampoTramite(SQLModel, table=True):
     # Validaciones del campo ({fuente, operador, valor, mensaje, bloquea}),
     # saneadas en validaciones_tramite.validaciones_saneadas. Fase 1: solo
     # fuente "fija"; la forma ya contempla lista/sistema/externa.
-    validaciones: list = Field(default=[], sa_column=Column(JSON))
+    validaciones: list = Field(default=[], sa_column=Column(JSON_TIPO))
     # True = el admin lo quitó del formulario pero ya tenía respuestas: no
     # se puede borrar (FK desde RespuestaTramite) y los trámites viejos
     # necesitan su etiqueta. Sale de la búsqueda del formulario, nada más.
@@ -843,7 +932,7 @@ class Tramite(SQLModel, table=True):
     # Mensajes de validaciones con bloquea=False ("avisa") que el envío
     # disparó: no frenan al trabajador, quedan para el operador del
     # sindicato en el detalle del trámite.
-    advertencias: list = Field(default=[], sa_column=Column(JSON))
+    advertencias: list = Field(default=[], sa_column=Column(JSON_TIPO))
     # Trámite desde cuyo CHAT se inició este (el admin adjuntó un
     # formulario y el trabajador lo abrió desde ahí): los dos chats se
     # muestran vinculados. Un formulario abierto desde una noticia/
@@ -932,7 +1021,7 @@ class TipoTramiteEmpleador(SQLModel, table=True):
     codigo: str
     activo: bool = True
     creado: str = ""
-    reglas_consistencia: list = Field(default=[], sa_column=Column(JSON))  # mirror de TipoTramite
+    reglas_consistencia: list = Field(default=[], sa_column=Column(JSON_TIPO))  # mirror de TipoTramite
 
 
 class CampoTramiteEmpleador(SQLModel, table=True):
@@ -949,7 +1038,7 @@ class CampoTramiteEmpleador(SQLModel, table=True):
     opciones: str = ""
     ancho: str = "completo"
     obligatorio: bool = True
-    validaciones: list = Field(default=[], sa_column=Column(JSON))  # mirror de CampoTramite
+    validaciones: list = Field(default=[], sa_column=Column(JSON_TIPO))  # mirror de CampoTramite
     retirado: bool = False                                           # mirror de CampoTramite
 
 
@@ -964,7 +1053,7 @@ class TramiteEmpleador(SQLModel, table=True):
     estado: str = "iniciado"
     creado: str = ""
     actualizado: str = ""
-    advertencias: list = Field(default=[], sa_column=Column(JSON))  # mirror de Tramite
+    advertencias: list = Field(default=[], sa_column=Column(JSON_TIPO))  # mirror de Tramite
     origen_tramite_id: Optional[int] = None                          # mirror de Tramite
     visto_empresa_en: Optional[str] = None                           # mirror de visto_trabajador_en
 
@@ -1187,7 +1276,7 @@ class ConsultaConvenio(SQLModel, table=True):
     cuil: str = Field(default="", index=True)
     pregunta: str = ""
     hubo_respuesta: bool = False   # False = se contestó "no lo encontré"
-    fragmentos_usados: list = Field(default=[], sa_column=Column(JSON))
+    fragmentos_usados: list = Field(default=[], sa_column=Column(JSON_TIPO))
     creado: str = ""
     # Tema de la consulta, para el gráfico "Consultas por tema" del Panel
     # Sindical (docs/DASHBOARD.md). NULL en todo lo registrado hasta ahora:
@@ -1209,7 +1298,7 @@ class ConsultaAsistente(SQLModel, table=True):
     usuario_id: Optional[int] = Field(default=None, foreign_key="usuariosindicato.id")
     pregunta: str = ""
     respuesta: str = ""
-    filtros: Optional[dict] = Field(default=None, sa_column=Column(JSON))   # None = no aplicó
+    filtros: Optional[dict] = Field(default=None, sa_column=Column(JSON_TIPO))   # None = no aplicó
     tab: str = ""
     aplicado: bool = False
     modelo: str = ""
@@ -1260,8 +1349,8 @@ class TestCarga(SQLModel, table=True):
     entorno: str = "pruebas"                 # "pruebas" únicamente por ahora (demo: no disponible)
     tipo: str = "lecturas"                    # "lecturas" | "recibos"
     estado: str = "pendiente"                 # pendiente -> corriendo -> listo | error
-    parametros: dict = Field(default={}, sa_column=Column(JSON))
-    resumen: Optional[list] = Field(default=None, sa_column=Column(JSON))  # filas tipo resumen.csv
+    parametros: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+    resumen: Optional[list] = Field(default=None, sa_column=Column(JSON_TIPO))  # filas tipo resumen.csv
     avance: str = ""                          # último progreso corto ("escalón 200, 00m30s")
     error_detalle: str = ""
     render_job_id: str = ""
@@ -1350,6 +1439,65 @@ def registrar_acceso(rol: str, sindicato_id: Optional[int] = None) -> None:
         s.add(AccesoLog(rol=rol, sindicato_id=sindicato_id,
                          fecha=fechas.ahora_texto()))
         s.commit()
+
+
+class GeoCache(SQLModel, table=True):
+    """Respuestas ya pedidas a Georef y Nominatim, para no repetir el pedido.
+
+    **No tiene `sindicato_id`, y es a propósito** -- la única excepción
+    consciente al aislamiento total del proyecto. Lo que se guarda acá es la
+    respuesta de una API PÚBLICA a una dirección normalizada: "santa fe|
+    rosario|san martin|850" no es un dato de nadie, es una calle. Ponerle
+    `sindicato_id` mataría el reuso (dos gremios con seccional en la misma
+    cuadra pedirían dos veces, gastando el presupuesto de 1 pedido/segundo
+    que comparten) y no protegería nada, porque ninguna pantalla de la app
+    lee esta tabla: solo la lee `geo.py` antes de salir a la red.
+
+    El TTL son 90 días. No hay proceso que limpie lo vencido: una fila
+    vencida se reescribe la próxima vez que alguien pregunte por esa misma
+    dirección, y la tabla crece con el padrón, no con el uso."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    # La clave de búsqueda, ya normalizada por geo._clave_cache (minúsculas,
+    # sin tildes, campos separados por "|"). Única: una dirección, una fila.
+    consulta_normalizada: str = Field(index=True, unique=True)
+    respuesta_json: list = Field(default=[], sa_column=Column(JSON_TIPO))
+    # "AAAA-MM-DD HH:MM" de Buenos Aires, igual que el resto del proyecto.
+    creado: str = ""
+
+
+def geocache_leer(clave: str) -> Optional[dict]:
+    """La fila de caché de esa consulta, o None. El TTL lo evalúa geo.py."""
+    with Session(engine) as s:
+        fila = s.exec(select(GeoCache).where(
+            GeoCache.consulta_normalizada == clave)).first()
+        if not fila:
+            return None
+        return {"respuesta_json": fila.respuesta_json, "creado": fila.creado}
+
+
+def geocache_guardar(clave: str, respuesta: list) -> None:
+    """Guarda o refresca la respuesta de esa consulta.
+
+    Es un upsert a mano porque la fila vencida se REESCRIBE en lugar de
+    sumar otra: la clave es única, y dejar histórico de una caché sería
+    juntar basura para siempre. Si dos pedidos simultáneos intentan crear la
+    misma clave, el UNIQUE frena al segundo y se ignora -- la caché ya
+    quedó escrita por el primero, que era todo el objetivo.
+    """
+    with Session(engine) as s:
+        fila = s.exec(select(GeoCache).where(
+            GeoCache.consulta_normalizada == clave)).first()
+        if fila:
+            fila.respuesta_json = respuesta
+            fila.creado = fechas.ahora_texto()
+            s.add(fila)
+        else:
+            s.add(GeoCache(consulta_normalizada=clave, respuesta_json=respuesta,
+                           creado=fechas.ahora_texto()))
+        try:
+            s.commit()
+        except IntegrityError:
+            s.rollback()
 
 
 def actividad_resumen(dias: int = 30) -> dict:
@@ -2403,28 +2551,38 @@ def perfil_trabajador(cuil: str, sindicato_id: int) -> Optional[dict]:
             return None
         return {
             "nombre": t.nombre, "cuil": t.cuil,
-            "calle": t.calle, "numero": t.numero, "piso": t.piso,
-            "ciudad": t.ciudad, "provincia": t.provincia,
+            "calle": t.calle, "numero": t.numero, "piso_depto": t.piso_depto,
+            "localidad": t.localidad, "provincia": t.provincia,
+            "codigo_postal": t.codigo_postal, "direccion_texto": t.direccion_texto,
+            "latitud": t.latitud, "longitud": t.longitud,
+            "precision_geo": t.precision_geo, "geo_actualizado": t.geo_actualizado,
             "telefono": t.telefono, "mail": t.mail,
         }
 
 
-def actualizar_perfil_trabajador(cuil: str, sindicato_id: int, nombre: str, calle: str, numero: str,
-                                  piso: str, ciudad: str, provincia: str, telefono: str, mail: str) -> bool:
+def actualizar_perfil_trabajador(cuil: str, sindicato_id: int, nombre: str,
+                                  domicilio: dict, telefono: str, mail: str) -> bool:
     """El trabajador edita sus propios datos -- todo menos el CUIL (identidad,
     no se toca acá) y los campos de gestión del sindicato (seccional,
     vigencia de credencial, etc.), que siguen siendo resorte del admin.
     Actualiza SOLO el empadronamiento del sindicato activo -- Trabajador es
     por sindicato (pluriempleo), no hay un domicilio único de la persona en
-    este modelo."""
+    este modelo.
+
+    `domicilio` llega ya armado por `geo.campos_para_guardar()`, que es la
+    única función que decide qué se escribe en el bloque de domicilio: antes
+    esta firma tenía un parámetro por campo y sumarle el CP y las
+    coordenadas la habría dejado en once posicionales, donde equivocarse de
+    orden no da error, da datos mal."""
     with Session(engine) as s:
         t = s.exec(select(Trabajador).where(
             Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
         if not t:
             return False
         t.nombre = (nombre or "").strip()[:200] or t.nombre
-        t.calle, t.numero, t.piso = calle.strip()[:200], numero.strip()[:20], piso.strip()[:20]
-        t.ciudad, t.provincia = ciudad.strip()[:100], provincia.strip()[:60]
+        for campo, valor in (domicilio or {}).items():
+            if campo in geo.CAMPOS_DOMICILIO:
+                setattr(t, campo, valor)
         t.telefono, t.mail = telefono.strip()[:40], mail.strip()[:200]
         s.add(t)
         s.commit()
@@ -2668,14 +2826,199 @@ def beneficio_por_id(beneficio_id: int) -> Optional[dict]:
         return _beneficio_a_dict(b) if b else None
 
 
+def _seccional_a_dict(sec: "Seccional") -> dict:
+    """La seccional como la consumen las pantallas. Un solo armado para
+    todas: la tabla del panel, el <select> del alta de trabajador, los
+    checkboxes de destino de Noticias/Beneficios/Notificaciones, el mapa por
+    seccional de Trámites, los filtros del Panel Sindical y la ficha."""
+    return {
+        "id": sec.id, "nombre": sec.nombre, "ve_todas": sec.ve_todas,
+        "calle": sec.calle, "numero": sec.numero, "piso_depto": sec.piso_depto,
+        "localidad": sec.localidad, "provincia": sec.provincia,
+        "codigo_postal": sec.codigo_postal, "direccion_texto": sec.direccion_texto,
+        "latitud": sec.latitud, "longitud": sec.longitud,
+        "precision_geo": sec.precision_geo, "geo_actualizado": sec.geo_actualizado,
+        "telefono": sec.telefono, "whatsapp": sec.whatsapp, "mail": sec.mail,
+        "horario_atencion": sec.horario_atencion,
+    }
+
+
 def seccionales_del_sindicato(sindicato_id: int) -> list:
     """Todas las seccionales del sindicato, para el CRUD de admin y el
     <select> del alta/edición de trabajador."""
     with Session(engine) as s:
         seccionales = s.exec(select(Seccional).where(
             Seccional.sindicato_id == sindicato_id).order_by(Seccional.nombre)).all()
-        return [{"id": sec.id, "nombre": sec.nombre, "direccion": sec.direccion,
-                 "ve_todas": sec.ve_todas} for sec in seccionales]
+        return [_seccional_a_dict(sec) for sec in seccionales]
+
+
+def seccional_del_sindicato(sindicato_id: int, seccional_id: int) -> Optional[dict]:
+    """UNA seccional, o None si no existe o es de otro sindicato.
+
+    El `sindicato_id` va EN el WHERE y no en un chequeo posterior: es la
+    misma regla que el resto del proyecto -- una seccional ajena no se
+    encuentra, no es que se encuentre y después se descarte."""
+    with Session(engine) as s:
+        sec = s.exec(select(Seccional).where(
+            Seccional.id == seccional_id,
+            Seccional.sindicato_id == sindicato_id)).first()
+        return _seccional_a_dict(sec) if sec else None
+
+
+class GeoPadron(SQLModel, table=True):
+    """Avance de la georreferenciación masiva del padrón de UN sindicato.
+
+    Vive en la base y no en memoria del proceso porque Render corre un
+    worker por núcleo: el hilo que trabaja está en uno y la pantalla que
+    pregunta el avance puede caer en otro, y con un diccionario en memoria
+    vería cero para siempre. Es el mismo motivo por el que los planes
+    programados se coordinan con un UPDATE condicional y no con un flag.
+
+    Una fila por sindicato, reutilizada en cada corrida."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True, unique=True)
+    corriendo: bool = False
+    total: int = 0
+    hechos: int = 0
+    ubicados: int = 0
+    iniciado: str = ""
+    actualizado: str = ""
+
+
+# Si una corrida no dio señales en este tiempo, se la da por muerta. Sin
+# esto, un proceso que se cae (o un redeploy en el medio) deja `corriendo`
+# en true para siempre y nadie puede volver a lanzar la georreferenciación.
+MINUTOS_GEO_MUERTA = 15
+
+
+def _geo_padron(s: Session, sindicato_id: int) -> "GeoPadron":
+    fila = s.exec(select(GeoPadron).where(GeoPadron.sindicato_id == sindicato_id)).first()
+    if not fila:
+        fila = GeoPadron(sindicato_id=sindicato_id)
+        s.add(fila); s.commit(); s.refresh(fila)
+    return fila
+
+
+def iniciar_georreferenciacion(sindicato_id: int) -> bool:
+    """Reclama la corrida. False si ya hay una viva: el segundo clic no
+    arranca un segundo hilo pidiéndole a Nominatim al doble de velocidad."""
+    ahora = fechas.ahora_texto()
+    with Session(engine) as s:
+        fila = _geo_padron(s, sindicato_id)
+        if fila.corriendo and not _geo_esta_muerta(fila):
+            return False
+        pendientes = s.execute(text(
+            "SELECT COUNT(*) FROM trabajador WHERE sindicato_id = :sid AND activo "
+            "AND latitud IS NULL AND localidad != ''"), {"sid": sindicato_id}).one()[0]
+        fila.corriendo, fila.total = True, pendientes
+        fila.hechos, fila.ubicados = 0, 0
+        fila.iniciado, fila.actualizado = ahora, ahora
+        s.add(fila); s.commit()
+        return True
+
+
+def _geo_esta_muerta(fila: "GeoPadron") -> bool:
+    try:
+        ultimo = datetime.strptime((fila.actualizado or "")[:16], "%Y-%m-%d %H:%M")
+    except ValueError:
+        return True
+    return ultimo < fechas.ahora() - timedelta(minutes=MINUTOS_GEO_MUERTA)
+
+
+def avanzar_georreferenciacion(sindicato_id: int, ubicado: bool) -> None:
+    with Session(engine) as s:
+        fila = _geo_padron(s, sindicato_id)
+        fila.hechos += 1
+        fila.ubicados += 1 if ubicado else 0
+        fila.actualizado = fechas.ahora_texto()
+        s.add(fila); s.commit()
+
+
+def terminar_georreferenciacion(sindicato_id: int) -> None:
+    with Session(engine) as s:
+        fila = _geo_padron(s, sindicato_id)
+        fila.corriendo = False
+        fila.actualizado = fechas.ahora_texto()
+        s.add(fila); s.commit()
+
+
+def estado_georreferenciacion(sindicato_id: int) -> dict:
+    """Lo que lee la barra de progreso."""
+    with Session(engine) as s:
+        fila = _geo_padron(s, sindicato_id)
+        corriendo = fila.corriendo and not _geo_esta_muerta(fila)
+        return {"corriendo": corriendo, "total": fila.total, "hechos": fila.hechos,
+                "ubicados": fila.ubicados, "iniciado": fila.iniciado,
+                "actualizado": fila.actualizado}
+
+
+def trabajadores_sin_geo(sindicato_id: int, alcance=None, limite: int = 2000) -> list:
+    """(id, domicilio) de los afiliados activos sin coordenadas y CON localidad.
+
+    Sin localidad no hay nada que preguntarle a Georef, así que esas filas
+    no se cuentan ni se intentan: gastarían un pedido para devolver siempre
+    lo mismo. El alcance de seccional se aplica EN la consulta."""
+    conds = ["sindicato_id = :sid", "activo", "latitud IS NULL", "localidad != ''"]
+    params = {"sid": sindicato_id, "limite": limite}
+    if alcance is not None:
+        if not alcance:
+            return []
+        conds.append("seccional_id IN :secs")
+        params["secs"] = list(alcance)
+    sql = (f"SELECT id, calle, numero, piso_depto, localidad, provincia, codigo_postal "
+           f"FROM trabajador WHERE {' AND '.join(conds)} ORDER BY id LIMIT :limite")
+    stmt = text(sql)
+    if alcance is not None:
+        stmt = stmt.bindparams(bindparam("secs", expanding=True))
+    with Session(engine) as s:
+        filas = s.execute(stmt, params).all()
+    return [(f[0], {"calle": f[1], "numero": f[2], "piso_depto": f[3],
+                    "localidad": f[4], "provincia": f[5], "codigo_postal": f[6]})
+            for f in filas]
+
+
+def guardar_geo_trabajador(sindicato_id: int, trabajador_id: int, domicilio: dict) -> None:
+    """Escribe el bloque de domicilio de UN afiliado. El `sindicato_id` va en
+    el WHERE aunque el id ya sea único: una función que escribe por id suelto
+    es la que un día se llama con el id equivocado."""
+    with Session(engine) as s:
+        t = s.exec(select(Trabajador).where(
+            Trabajador.id == trabajador_id,
+            Trabajador.sindicato_id == sindicato_id)).first()
+        if not t:
+            return
+        for campo, valor in (domicilio or {}).items():
+            if campo in geo.CAMPOS_DOMICILIO:
+                setattr(t, campo, valor)
+        s.add(t); s.commit()
+
+
+def contar_afiliados_de_seccional(sindicato_id: int, seccional_id: int) -> int:
+    """Cuántos afiliados activos tiene esa seccional. Para la ficha."""
+    with Session(engine) as s:
+        return s.execute(text(
+            "SELECT COUNT(*) FROM trabajador WHERE sindicato_id = :sid "
+            "AND seccional_id = :sec AND activo"
+        ), {"sid": sindicato_id, "sec": seccional_id}).one()[0]
+
+
+def seccionales_ubicadas(sindicato_id: int, limite: int = 500) -> list:
+    """Las seccionales del sindicato que YA tienen coordenadas.
+
+    Es lo que consume "Seccionales cerca de mí" del trabajador y el mapa del
+    Panel Sindical. Devuelve solo datos de la institución (nombre,
+    dirección, contacto, horario, coordenadas): ni un dato de una persona.
+    El `limite` es una baranda, no una paginación -- el gremio más grande de
+    Argentina no llega a 200 seccionales, y si algún día alguien carga un
+    padrón raro, mejor cortar que mandar diez mil filas a un teléfono."""
+    with Session(engine) as s:
+        seccionales = s.exec(select(Seccional).where(
+            Seccional.sindicato_id == sindicato_id,
+            Seccional.latitud.is_not(None),
+            Seccional.longitud.is_not(None),
+        ).order_by(Seccional.provincia, Seccional.localidad,
+                   Seccional.nombre).limit(limite)).all()
+        return [_seccional_a_dict(sec) for sec in seccionales]
 
 
 # ---------- Identidad del empleado del sindicato (decisión N1) ----------
@@ -4731,7 +5074,7 @@ class Encuesta(SQLModel, table=True):
     # Qué atributos se guardan pegados a cada respuesta para poder filtrar
     # (subconjunto de encuestas.CORTES). En una anónima los tilda el admin;
     # en una nominal están todos. Lista vacía en una anónima = solo totales.
-    cortes: list = Field(default=[], sa_column=Column(JSON))
+    cortes: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
     # Mínimo de respuestas para mostrar un grupo. Se copia de
     # ConfiguracionPlataforma AL PUBLICAR: si plataforma lo cambia después,
     # una encuesta ya cerrada no empieza a mostrar u ocultar cosas distintas.
@@ -4749,7 +5092,7 @@ class Encuesta(SQLModel, table=True):
     mostrar_resultados: bool = False
     # A quién se dirigió, con los mismos criterios que Notificacion.
     criterio: str = ""      # "cuil" | "cuit_empleador" | "seccional" | "provincia"
-    criterio_valores: list = Field(default=[], sa_column=Column(JSON))
+    criterio_valores: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
     # Snapshot: cuántos quedaron en el padrón al publicar. Es el
     # denominador de la participación, y por eso no se recalcula.
     cantidad_destinatarios: int = 0
