@@ -66,6 +66,10 @@
   .m-chip.act { background: var(--marca-apoyo); border-color: var(--marca-apoyo); color: #fff; }
   .m-chip:disabled { opacity: .55; cursor: not-allowed; }
   .m-chip .n { font-family: var(--fuente-num); font-size: 11px; opacity: .75; }
+  .m-chip .n i { font-style: normal; opacity: .6; margin-left: 1px; }
+  /* Sin nadie dentro del recorte: se ve, apagada, porque "Córdoba 0" es un
+     dato y esconderla haría creer que ahí no hay a quién preguntarle. */
+  .m-chip.vacio:not(.act) { opacity: .4; }
   .btn-reiniciar { display: inline-flex; align-items: center; gap: 6px;
     border: 1.5px solid var(--marca-apoyo); color: var(--marca-apoyo); background: none;
     font-weight: 700; font-size: 12.5px; border-radius: 99px; padding: 6px 14px;

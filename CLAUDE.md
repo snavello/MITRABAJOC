@@ -529,6 +529,14 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    vez de disculparse. El umbral y el recorte por seccional (N18) rigen
    también ahí: si el cruce los ignorara, bastaría con tocar una barra para
    saltearlos.
+   Y los filtros son **asociativos**: al elegir un empleador que deja 10
+   casos, las pastillas de los demás cortes se recalculan contra ese recorte
+   ("Córdoba 3 / 11") en vez de seguir mostrando el total, que es un número
+   que miente justo cuando se lo está mirando. Cada corte se cuenta con los
+   OTROS filtros y no con el suyo —si no, quedaría una sola pastilla y no
+   habría con qué cambiar de opinión—, salvo la seccional IMPUESTA por N18,
+   que sí se filtra a sí misma para no dejar leer de refilón cuánta gente
+   respondió en las otras.
    **Detalle completo en HISTORIAL.md** ("Módulo Encuestas").
    Lo central: el anonimato se sostiene por la FORMA de las tablas (padrón
    y urna separados, sin vínculo posible), no por un cartel.

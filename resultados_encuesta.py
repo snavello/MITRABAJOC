@@ -23,6 +23,16 @@ Las tres reglas que este módulo respeta a rajatabla:
    anónima sin corte de seccional no se puede filtrar por seccional, porque
    la urna no tiene ese dato -- y pedirlo por URL no lo inventa.
 
+4. **Los filtros son ASOCIATIVOS: todo número en pantalla se cuenta contra
+   lo que ya está filtrado** (`_valores_de_filtro`). Elegir un empleador que
+   deja 10 casos y que las seccionales sigan mostrando el total es un número
+   que miente en el único momento en que se lo está mirando. A cada corte se
+   le aplican los OTROS filtros y no el propio -- si se aplicara el propio,
+   quedaría una sola pastilla y no habría con qué cambiar de opinión -- salvo
+   que sea un corte IMPUESTO por alcance (N18), que sí se filtra a sí mismo
+   para no dejar leer de refilón cuánta gente respondió en las otras
+   seccionales.
+
 Dos fuentes distintas, a propósito:
 
 - La **participación** y los **avisos leídos** salen del PADRÓN (quién fue
@@ -125,7 +135,8 @@ def resultados(encuesta_id: int, sindicato_id: int, pedidos: dict, alcance=None)
                 "mostrar_resultados": e["mostrar_resultados"],
             },
             "umbral": {"minimo": umbral, "aplica": anonima},
-            "filtros": {**f, "disponibles": _valores_de_filtro(s, e, testigo),
+            "filtros": {**f, "disponibles": _valores_de_filtro(
+                            s, e, testigo, f["aplicados"], f["fijos"]),
                         # El rango sale aparte del resto: la pantalla lo
                         # dibuja con un calendario, no con pastillas.
                         "dias": f["aplicados"].get("_dias", []),
@@ -479,9 +490,9 @@ def _respondentes(s, e: dict, filtros: dict, testigo) -> int:
     return int(s.execute(_con_filtros_urna(q, filtros)).scalar() or 0)
 
 
-def _valores_de_filtro(s, e: dict, testigo=None) -> dict:
+def _valores_de_filtro(s, e: dict, testigo=None, filtros=None, fijos=()) -> dict:
     """Los valores que de verdad hay en la urna para cada corte habilitado,
-    con su etiqueta y CUÁNTA GENTE hay en cada uno.
+    con su etiqueta y CUÁNTA GENTE hay en cada uno DENTRO DE LO YA FILTRADO.
 
     Salen de la URNA y no del padrón para que la pastilla no ofrezca un
     grupo sin ni una respuesta -- elegirlo daría siempre vacío y parecería
@@ -492,18 +503,47 @@ def _valores_de_filtro(s, e: dict, testigo=None) -> dict:
     persona, y la pastilla decía "125" donde hay quince personas. Un número
     al lado de un filtro que no es el que después aparece en pantalla es
     peor que no tener número.
+
+    Y los filtros activos se aplican al resto de los cortes (asociativo,
+    como Qlik): elegir Banco Santander y que la pantalla baje a 10 casos
+    mientras las seccionales siguen mostrando el total es un número que
+    miente. Con el filtro puesto, "Córdoba 3" quiere decir que 3 de esos 10
+    son de Córdoba, que es justo la pregunta que uno se está haciendo.
+
+    A cada corte se le aplican TODOS los filtros MENOS EL PROPIO: si no, el
+    corte elegido se quedaría con una sola pastilla y no habría con qué
+    cambiar de opinión. La excepción es un corte IMPUESTO (la seccional por
+    N18), que sí se aplica a sí mismo -- si no, quien tiene alcance de una
+    seccional leería de refilón cuánta gente respondió en las otras.
+
+    `total` sale del universo de quien mira (la encuesta entera, o su
+    recorte de seccional) y NO del rango de fechas: sirve para leer la
+    pastilla como "3 de 11", que es lo que vuelve evidente el recorte.
     """
     salida = {}
+    filtros = filtros or {}
+    impuestos = {k: v for k, v in filtros.items() if k in (fijos or ())}
     for corte in (e.get("cortes") or []):
         if corte not in encuestas.CORTES:
             continue
         columna = _columna_urna(corte)
-        q = db.select(columna, func.count()).select_from(db.RespuestaEncuesta) \
-            .where(db.RespuestaEncuesta.encuesta_id == e["id"]).group_by(columna)
-        if testigo:
-            q = q.where(db.RespuestaEncuesta.pregunta_id == testigo["id"])
-        filas = s.execute(q).all()
-        valores = [(v, int(n)) for v, n in filas if v not in (None, "")]
+
+        def _contar(recorte):
+            q = db.select(columna, func.count()).select_from(db.RespuestaEncuesta) \
+                .where(db.RespuestaEncuesta.encuesta_id == e["id"]).group_by(columna)
+            if testigo:
+                q = q.where(db.RespuestaEncuesta.pregunta_id == testigo["id"])
+            return {v: int(n) for v, n in s.execute(_con_filtros_urna(q, recorte)).all()
+                    if v not in (None, "")}
+
+        otros = {k: v for k, v in filtros.items()
+                 if k != corte or corte in (fijos or ())}
+        universo = _contar(impuestos)
+        dentro = universo if otros == impuestos else _contar(otros)
+        # Los valores en cero se muestran igual, apagados: que Córdoba
+        # aparezca con 0 dentro de Santander es un dato, y esconderla haría
+        # creer que en Córdoba no hay a quién preguntarle.
+        valores = [(v, dentro.get(v, 0), n) for v, n in universo.items()]
         salida[corte] = _con_etiquetas(s, corte, valores, e["sindicato_id"])
     return salida
 
@@ -511,22 +551,34 @@ def _valores_de_filtro(s, e: dict, testigo=None) -> dict:
 def _con_etiquetas(s, corte: str, valores: list, sindicato_id: int) -> list:
     """Le pone nombre a cada valor. Seccional y empleador se resuelven contra
     los catálogos del sindicato (chicos); la provincia ya es su propio
-    nombre."""
+    nombre.
+
+    Cada valor entra como (valor, cantidad) o como (valor, cantidad, total):
+    la tercera es cuánta gente hay en ese grupo SIN el filtro puesto, y es
+    opcional porque los otros dos usos (el cruce y el nombre del recorte en
+    el CSV) no tienen con qué comparar.
+    """
+    def _partes(fila):
+        v, n = fila[0], fila[1]
+        return v, n, (fila[2] if len(fila) > 2 else n)
+
     if corte == "seccional":
         nombres = {x.id: x.nombre for x in s.exec(db.select(db.Seccional).where(
             db.Seccional.sindicato_id == sindicato_id)).all()}
-        return sorted(({"valor": str(v), "etiqueta": nombres.get(v, f"Seccional {v}"),
-                        "cantidad": n} for v, n in valores),
-                      key=lambda d: d["etiqueta"])
-    if corte == "empleador":
+        etiqueta = lambda v: nombres.get(v, f"Seccional {v}")   # noqa: E731
+    elif corte == "empleador":
         nombres = {_solo_digitos(x.cuit): (x.razon_social or x.cuit)
                    for x in s.exec(db.select(db.Empleador).where(
                        db.Empleador.sindicato_id == sindicato_id)).all()}
-        return sorted(({"valor": str(v), "etiqueta": nombres.get(_solo_digitos(v), str(v)),
-                        "cantidad": n} for v, n in valores),
-                      key=lambda d: d["etiqueta"])
-    return sorted(({"valor": str(v), "etiqueta": str(v), "cantidad": n} for v, n in valores),
-                  key=lambda d: d["etiqueta"])
+        etiqueta = lambda v: nombres.get(_solo_digitos(v), str(v))   # noqa: E731
+    else:
+        etiqueta = str
+    salida = []
+    for fila in valores:
+        v, n, total = _partes(fila)
+        salida.append({"valor": str(v), "etiqueta": etiqueta(v),
+                       "cantidad": n, "total": total})
+    return sorted(salida, key=lambda d: d["etiqueta"])
 
 
 def _columna_urna(corte: str):

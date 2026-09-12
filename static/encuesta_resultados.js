@@ -114,11 +114,20 @@ function pintarFiltros(d) {
     if (valores.length < 2) return;
     html += `<div class="f-grupo">
         <span class="f-label">${esc(etiqueta)}${fijo ? ' · tu seccional' : ''}</span>
-        <div class="m-chips">${valores.map(v => `
-          <button type="button" class="m-chip ${FILTRO[corte].includes(v.valor) ? 'act' : ''}"
-                  ${fijo ? 'disabled' : ''}
+        <div class="m-chips">${valores.map(v => {
+          // La pastilla muestra cuánta gente queda DENTRO de lo ya filtrado,
+          // y al lado el total cuando son distintos: "3 / 11" dice de una
+          // que el filtro de al lado se llevó puestos a ocho.
+          const recortado = v.total !== undefined && v.cantidad !== v.total;
+          const clases = ['m-chip', FILTRO[corte].includes(v.valor) ? 'act' : '',
+                          v.cantidad === 0 ? 'vacio' : ''].join(' ').trim();
+          return `<button type="button" class="${clases}" ${fijo ? 'disabled' : ''}
+                  title="${esc(v.etiqueta)}: ${v.cantidad} ${v.cantidad === 1 ? 'respuesta' : 'respuestas'}${
+                    recortado ? ' con los filtros puestos, ' + v.total + ' en total' : ''}"
                   onclick="alternar('${corte}', '${esc(v.valor)}')">
-            ${esc(v.etiqueta)} <span class="n">${v.cantidad}</span></button>`).join('')}
+            ${esc(v.etiqueta)} <span class="n">${v.cantidad}${
+              recortado ? `<i>/${v.total}</i>` : ''}</span></button>`;
+        }).join('')}
         </div>
       </div>`;
   });
@@ -142,6 +151,12 @@ function pintarFiltros(d) {
   const partes = [];
   if (fijos.length) partes.push('Ves la encuesta recortada a tu seccional.');
   partes.push('Las pastillas se combinan: podés marcar varias a la vez.');
+  if (cuantosFiltros()) {
+    partes.push('Los números de las pastillas se recalculan contra lo que ya está '
+      + 'filtrado: "3 / 11" quiere decir que de los 11 de ese grupo, 3 quedan dentro '
+      + 'del recorte actual. Cada corte se cuenta con los OTROS filtros puestos, no '
+      + 'con el suyo, para que siempre se pueda cambiar de opinión.');
+  }
   if (FILTRO.desde || FILTRO.hasta) {
     partes.push('El rango de fechas recorta los gráficos y el ritmo, no el padrón: '
       + 'la urna guarda el día en que se respondió, pero el padrón no sabe cuándo '
