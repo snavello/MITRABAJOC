@@ -222,6 +222,16 @@
   .cerca-km { float: right; font-family: ui-monospace, Consolas, monospace;
     font-variant-numeric: tabular-nums; font-size: 12.5px; color: var(--marca-primario); font-weight: 700; }
   .cerca-permiso { font-size: 13px; color: var(--gris); line-height: 1.6; margin-bottom: 12px; }
+
+  /* El modal de PERFIL, 20% más ancho en desktop (480 -> 576px). Solo el de
+     perfil: `.modal-notif-caja` la comparten cuatro overlays -- perfil,
+     notificaciones, mapa en pantalla completa y "cerca de mí" -- y ensanchar
+     la clase los movería a todos. En teléfono no cambia nada: ahí ya ocupa el
+     ancho completo y el max-width no llega a aplicar. 700px es el mismo corte
+     de desktop que usa marca.css. */
+  @media (min-width: 700px) {
+    #overlay-perfil .modal-notif-caja { max-width: 576px; }
+  }
   /* Lightbox de la foto: clic en la foto del modal la agranda un poco, sin
      pasar de un cuarto de pantalla -- ya es de muy baja resolución, no tiene
      sentido mostrarla más grande. */

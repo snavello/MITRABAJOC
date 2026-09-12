@@ -720,6 +720,7 @@
   .geo-mapa { height:330px; border-radius:10px; border:1px solid var(--linea); margin-bottom:10px; }
   .geo-mapa-chico { height:220px; border-radius:10px; border:1px solid var(--linea); }
   .geo-con-lista { display:grid; grid-template-columns:1fr 260px; gap:14px; }
+  .geo-con-lista.sin-lista { grid-template-columns:1fr; }
   .geo-candidatos { max-height:330px; overflow:auto; display:flex; flex-direction:column; gap:6px; }
   .geo-cand { text-align:left; background:#fff; border:1px solid var(--linea); border-radius:9px;
     padding:9px 11px; font-size:12px; cursor:pointer; color:var(--tinta); line-height:1.45; }
@@ -2871,6 +2872,7 @@
 // Trabajadores y Seccionales, que son dos secciones con permisos distintos.
 var AYUDA_PRECISION = {{ ayuda_precision | tojson }};
 var ETIQUETAS_PRECISION = {{ etiquetas_precision | tojson }};
+var AYUDA_GUARDADA = {{ ayuda_guardada | tojson }};
 // ---------- Navegación por pestañas ----------
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -4453,6 +4455,16 @@ function editarTrab(t) {
   document.getElementById('trab-lon').value = t.longitud == null ? '' : t.longitud;
   document.getElementById('trab-precision').value = t.precision_geo || 'sin_geo';
   trabEstadoGeo();
+  // Si el domicilio YA está ubicado, el mapa se muestra directamente: quien
+  // abre la ficha de un afiliado viene a ver dónde vive o a corregirlo, y
+  // obligarlo a apretar "Ubicar" para ver algo que ya existe es un clic de
+  // más sobre información que ya está. Sin coordenadas no se dibuja nada,
+  // que es lo correcto: no hay nada que mostrar.
+  if (t.latitud != null && t.longitud != null) {
+    trabMostrarUbicacion(t.latitud, t.longitud, t.precision_geo || 'manual');
+  } else {
+    document.getElementById('trab-geo-caja').classList.add('oculto');
+  }
   document.getElementById('trab-submit').textContent = 'Guardar cambios';
   document.getElementById('trab-cancelar').style.display = 'inline-block';
   // pasar a la sub-pestaña de alta manual
@@ -4506,6 +4518,7 @@ function trabBuscar() {
   var caja = document.getElementById('trab-geo-caja');
   var btn = document.getElementById('trab-btn-buscar');
   caja.classList.remove('oculto');
+  caja.querySelector('.geo-con-lista').classList.remove('sin-lista');
   btn.disabled = true; btn.textContent = 'Buscando…';
   document.getElementById('trab-ayuda').className = 'geo-ayuda sin_geo';
   document.getElementById('trab-ayuda').textContent = 'Buscando la dirección…';
@@ -4563,6 +4576,30 @@ function trabElegir(i, aviso) {
     if (trabMapa) trabMapa.refrescar();
   } else {
     trabMapa.ir(c.lat, c.lon, 17);
+  }
+}
+
+// Muestra el mapa de un domicilio YA guardado, sin lista de candidatos: no
+// es una búsqueda, no hay entre qué elegir; hay un globo que se puede
+// arrastrar para corregir.
+function trabMostrarUbicacion(lat, lon, precision) {
+  var caja = document.getElementById('trab-geo-caja');
+  caja.classList.remove('oculto');
+  // Sin candidatos, la columna de la derecha quedaría vacía y el mapa a dos
+  // tercios de ancho: la grilla pasa a una sola columna.
+  caja.querySelector('.geo-con-lista').classList.add('sin-lista');
+  document.getElementById('trab-candidatos').innerHTML = '';
+  trabCands = [];
+  trabFijar(lat, lon, precision, AYUDA_GUARDADA[precision]);
+  if (!trabMapa) {
+    trabMapa = MapaMT.crear('trab-mapa', {
+      lat: lat, lon: lon, zoom: 16, arrastrable: true, rueda: false,
+      alMover: function (la, lo) { trabFijar(la, lo, 'manual'); }
+    });
+    if (trabMapa) trabMapa.refrescar();
+  } else {
+    trabMapa.ir(lat, lon, 16);
+    trabMapa.refrescar();
   }
 }
 
@@ -4987,7 +5024,8 @@ function editarSeccional(sec) {
     secCands = [{lat: sec.latitud, lon: sec.longitud, precision: sec.precision_geo,
                  etiqueta: sec.direccion_texto || sec.nombre, codigo_postal: sec.codigo_postal || ''}];
     secPaso(2);
-    secPintarCandidatos({provincia: sec.provincia, localidad: sec.localidad});
+    secPintarCandidatos({provincia: sec.provincia, localidad: sec.localidad,
+                         aviso: AYUDA_GUARDADA[sec.precision_geo || 'manual']});
   } else {
     secPaso(1);
   }
