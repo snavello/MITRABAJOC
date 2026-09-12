@@ -627,7 +627,16 @@
 </svg>
 
 <script>
-function abrirPerfil() { document.getElementById('overlay-perfil').classList.add('abierto'); }
+function abrirPerfil() {
+  document.getElementById('overlay-perfil').classList.add('abierto');
+  // El mapa se dibuja RECIÉN ACÁ y no al cargar la portada. Dos razones: la
+  // mayoría de las visitas nunca abren el perfil, así que pedirle teselas a
+  // OpenStreetMap en cada carga es gastar su servicio al pedo (su política
+  // pide lo contrario); y mientras esas teselas no resuelven, el evento
+  // `load` de la portada no llega, que es como esto se descubrió -- un robot
+  // E2E que esperaba la carga completa se quedó esperando.
+  pintarMiSeccional();
+}
 function cerrarPerfil() { document.getElementById('overlay-perfil').classList.remove('abierto'); }
 
 async function guardarPerfil(ev) {
@@ -1153,7 +1162,14 @@ function cercaPintar(lat, lon, origen) {
   });
 }
 
-document.addEventListener('DOMContentLoaded', pintarMiSeccional);
+// Los enlaces de contacto no cuestan red: se arman al cargar. El mapa no
+// (ver abrirPerfil).
+document.addEventListener('DOMContentLoaded', function () {
+  var wa = document.getElementById('secc-wa');
+  if (wa) wa.href = MapaMT.whatsappUrl(wa.dataset.tel);
+  var d = seccDatos(), ir = document.getElementById('secc-ir');
+  if (d && ir) ir.href = MapaMT.enlaceComoLlegar(d.lat, d.lon, d.nombre);
+});
 </script>
 
 {# sello ?v= para romper el cache de 1h al sumar funciones nuevas #}

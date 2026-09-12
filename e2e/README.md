@@ -27,6 +27,7 @@ Instalación (una vez por máquina): `pip install -r requirements-dev.txt` y
 | **Verlo en vivo** (abre el navegador) | `.venv/Scripts/python.exe -m pytest e2e/ --headed --slowmo 700` |
 | **Grabarlo** (video + traza por actor) | `.venv/Scripts/python.exe -m pytest e2e/ --video on --tracing on --output e2e/resultados` |
 | Solo un robot | agregar `e2e/test_robot_tramite_guarderia.py` |
+| Solo los mapas | agregar `e2e/test_robot_georreferenciacion.py` |
 | Grabar solo lo que falla | `--video retain-on-failure --screenshot only-on-failure` |
 
 En vivo, cada actor ocupa media pantalla y su ventana queda fijada SIEMPRE
@@ -83,3 +84,41 @@ eso se ve exactamente en qué punto se rompió algo, sin volver a correr nada.
   nunca fallar críptico porque falta el lote.
 - Usar `expect(...)` en vez de `sleep`: reintenta solo hasta que la condición
   se cumpla.
+
+
+## Un Chromium que ya esté instalado
+
+Playwright exige el build EXACTO que corresponde a su versión pineada. En un
+entorno que trae otro (un contenedor de CI, una sesión en la nube con los
+navegadores preinstalados) `browser.launch()` falla pidiendo `playwright
+install` aunque haya un Chromium perfectamente usable ahí al lado. Con:
+
+```
+E2E_CHROMIUM_PATH=/ruta/al/chrome .venv/bin/python -m pytest e2e/ -q
+```
+
+los robots usan ese binario. Es **opt-in**: sin la variable no cambia nada y
+en la máquina de desarrollo sigue usando el que bajó `playwright install`.
+
+## Los mapas y las teselas de OpenStreetMap
+
+`test_robot_georreferenciacion.py` verifica que Leaflet dibuje, que el globo
+se arrastre, que tocar un marcador del Panel filtre el tablero y que el
+permiso de ubicación se comporte como la pantalla promete (concedido y
+denegado, con `browser.new_context(permissions=..., geolocation=...)`).
+
+**Las teselas NO se verifican.** Salen a openstreetmap.org en cada uso (no se
+pueden cachear, es su política), así que en un entorno sin salida a internet
+el mapa queda gris y eso no es una falla de la app: confundir "no hay
+teselas" con "el mapa está roto" haría fallar el robot por algo ajeno.
+
+Ese mismo detalle obliga a esperar las navegaciones con `wait_until="commit"`
+en las pantallas que dibujan un mapa al cargar: con las teselas colgadas el
+evento `load` no llega nunca, y la espera se agota con la página ya en su
+destino.
+
+**Este robot no toca la base de datos.** El conftest de la raíz apunta `db` a
+una base descartable antes de que el de `e2e/` pueda revertirlo, así que un
+robot que leyera `db` para verificar estaría mirando una base vacía y
+distinta de la que usa el servidor que prueba. Todo se comprueba por donde lo
+comprueba una persona: la pantalla y los endpoints.

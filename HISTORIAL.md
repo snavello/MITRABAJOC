@@ -3514,3 +3514,207 @@ respuesta de una empresa no es anónima en los hechos), **NPS** y preguntas
 **matriz**, **reabrir** una encuesta cerrada (se duplica y se lanza otra
 ronda, que queda como un hecho separado y auditable) y **agregar
 preguntas** a una encuesta que ya tiene respuestas.
+
+## Georreferenciación de Seccionales y domicilios (2026-09-12)
+
+Pedido de Sd, acordado decisión por decisión ANTES de tocar código (las
+preguntas fueron de a una y las respuestas cambiaron tres veces el alcance
+del sprint). Le da ubicación geográfica a las Seccionales y la usa en cinco
+lugares: alta guiada, ficha de consulta, "Mi seccional" del afiliado, mapa
+del Panel Sindical y "Seccionales cerca de mí".
+
+### El alcance creció en la conversación, no en el código
+
+El prompt original hablaba solo de seccionales. Al preguntar por la
+duplicación entre `Seccional.direccion` (texto libre) y el `direccion_texto`
+que el plan pedía, Sd contestó dos cosas: que el texto viejo era provisorio y
+no importaba perderlo, y que **el domicilio del trabajador se iba a cargar
+igual que el de la seccional, con las mismas especificaciones**. Sobre eso
+salió la pregunta de si el domicilio del afiliado también se geocodifica: la
+respuesta fue sí, con coordenadas exactas y confirmación en el mapa.
+
+Eso convirtió una feature de seccionales en una de **domicilios**, y de ahí
+sale la decisión que ordena todo el sprint: `Seccional` y `Trabajador`
+comparten el MISMO bloque de once campos, con los mismos nombres y los mismos
+tipos (`geo.CAMPOS_DOMICILIO`), y `test_seccional_geo.py` lo verifica contra
+las dos tablas. Antes eran parecidos pero no iguales — en el trabajador
+`piso` y `ciudad`, en la seccional nada —, y dos nombres para lo mismo es
+exactamente lo que hace que cada pantalla arme la dirección a su manera. Se
+renombraron a `piso_depto` y `localidad`: un rename conserva los datos.
+
+No se usó un mixin de SQLModel para compartir los campos aunque sería más
+DRY. El contrato se verifica con un test, que es la forma que el proyecto ya
+usa para las promesas que no se pueden dejar libradas a la memoria
+(`test_fechas.py` recorre módulos con `ast` por la misma razón), y así los
+modelos siguen leyéndose explícitos como el resto de `db.py`.
+
+### Tres defectos que aparecieron probando contra las APIs de verdad
+
+Los tests con respuestas simuladas pasaban. Los tres salieron al llamar a
+Georef y Nominatim de verdad, y los tres habrían llegado a la demo:
+
+1. **`Bv. San Juan 430` en Córdoba devuelve CERO resultados** y `Boulevard
+   San Juan 430` la encuentra. Nominatim no expande abreviaturas, y las
+   direcciones argentinas están llenas de "Av.", "Bv.", "Gral.", "Pte.". Se
+   expanden para CONSULTAR y se guarda lo que la persona escribió: si el
+   cartel de la esquina dice "Bv. San Juan", la dirección de la seccional
+   dice lo mismo.
+
+2. **El parámetro `city` de Nominatim orienta pero NO acota.** "San Juan 430,
+   Córdoba" devuelve esa calle en Morrison y en Alicia, a 200 km de Córdoba
+   capital, y las devuelve PRIMERO. Sin corte, el admin elegía de una lista
+   donde el primer globo estaba en otra ciudad y no tenía forma de darse
+   cuenta. Ahora se descarta todo lo que caiga a más de 60 km del centroide
+   de la localidad pedida y se ordena por cercanía a ese centro.
+
+3. **En CABA no hay "localidades".** Georef modela los 49 BARRIOS
+   (Constitución, Retiro, Recoleta…) como localidades de la Ciudad, así que
+   nadie que escriba una dirección porteña va a tipear una localidad que
+   resuelva — y sin embargo Nominatim encuentra "Av. Independencia 1200"
+   perfectamente. La primera versión cortaba con un error y dejaba **toda la
+   Capital imposible de georreferenciar**. Ahora una localidad que Georef no
+   reconoce no es un error: se busca la calle igual y, si hace falta un
+   centroide de respaldo, se cae al de la provincia.
+
+Un cuarto lo encontró un test: una respuesta de Nominatim con `lat` ilegible
+reventaba el alta entera. Se descarta ese candidato y se sigue — misma regla
+que `validador.a_numero` con lo que devuelve la IA: la salida de un tercero
+no es un contrato.
+
+### SQLModel acepta una columna que ya no existe y la tira en silencio
+
+El más caro, y no lo mostró ningún test: `Seccional(direccion="Av. Falsa
+123")` sobre un modelo que ya no tiene esa columna **no falla**. Pydantic la
+descarta y el objeto se guarda sin dirección. Los cinco cargadores
+(`cargar_demo`, los dos lotes, `medir_dashboard`, `carga/preparar_datos`)
+seguían pasando el kwarg viejo y perdían el dato sin un solo error. Apareció
+al correr `cargar_demo.py` contra una base limpia y mirar la tabla, que es
+justamente lo que la suite no hace.
+
+La lección práctica: después de un rename de columna, **correr los
+cargadores de verdad**, no solo la suite.
+
+### Qué decide el servidor y qué el navegador
+
+- **La dirección que se muestra la arma el SERVIDOR** (`armar_direccion_texto`),
+  por el mismo motivo que el disclaimer de Encuestas: si la tabla del panel,
+  la ficha y la app del afiliado la compusieran cada una a su manera, habría
+  tres direcciones distintas para la misma seccional y ninguna sería "la"
+  dirección. Ahí apareció un detalle que solo se ve con datos: en CABA la
+  localidad y la provincia son el mismo nombre, y toda dirección porteña lo
+  escribía dos veces.
+- **La ubicación del teléfono NO viaja al servidor.** El permiso se pide al
+  tocar el enlace (nunca al abrir la app) y con el texto que explica para qué;
+  la posición se usa para ordenar la lista y se descarta. Por eso la distancia
+  se calcula en el navegador. Hay un test que recorre las rutas de la app
+  buscando alguna que pudiera recibirla, y que verifica que `/api/seccionales`
+  devuelva lo mismo con o sin `lat`/`lon`: es la promesa que la pantalla le
+  hace al afiliado antes de pedirle el permiso, y tenía que ser demostrable.
+- **La tasa y la caché son del servidor.** Nominatim permite un pedido por
+  segundo y bloquea por IP al que se pasa. El candado es POR PROCESO y Render
+  corre un worker por núcleo, así que el peor caso son N pedidos por segundo:
+  se acepta a ojos abiertos porque geocodificar lo dispara una persona
+  apretando "Buscar", de a una dirección, y `GeoCache` se come los repetidos.
+  Si algún día no alcanza, el patrón que el proyecto ya usa para coordinar
+  instancias es un UPDATE condicional (`db.reclamar_plan_programado`).
+- **`GeoCache` no tiene `sindicato_id`**, única excepción consciente al
+  aislamiento total. Guarda la respuesta de una API pública a una dirección
+  normalizada ("santa fe|rosario|san martin|850"), que no es dato de nadie;
+  ponérselo mataría el reuso —dos gremios con seccional en la misma cuadra
+  pedirían dos veces, gastando el mismo presupuesto de 1/s— sin proteger nada,
+  porque ninguna pantalla lee esa tabla.
+- **El domicilio del afiliado lo edita el afiliado**, así que el endpoint de
+  geocodificación no es solo de admins: queda expuesto a todo el padrón. De
+  ahí el tope de 20 por hora **por CUIL**, y no por IP — en un gremio con wifi
+  compartido la IP es la misma para todo el edificio y un tope por IP
+  castigaría a los cien que no hicieron nada.
+
+### El mapa del Panel es un selector, y por eso ignora su propio filtro
+
+Tocar un marcador aplica el filtro por esa seccional al resto del tablero,
+con el mismo mecanismo que los gráficos (el chip de filtro activo se prende
+igual). Si el endpoint respetara el filtro de seccional, tocar un marcador
+dejaría el mapa con un solo punto y no habría forma de volver: es el mismo
+criterio con el que `diferencias_empresa` ignora el filtro de resultado
+porque ese gráfico ES de los que tienen diferencias.
+
+Los agregados reusan los tres constructores de WHERE que ya existían
+(`_sql_recibos` / `_sql_tramites` / `_sql_notificaciones` con `forzar_join`)
+agrupando por `seccional_id`, así el aislamiento por `sindicato_id` viaja
+adentro de esos WHERE y no se puede olvidar en la consulta nueva. Dos de los
+seis indicadores (afiliados y "ingresó al menos una vez") son una foto del
+padrón y no se mueven con el período, igual que el KPI "Afiliados
+registrados"; la pantalla lo dice para que no parezca un error. Medido con la
+demo cargada: 29 ms, contra el criterio de 1 s del panel.
+
+La escala de color es FIJA de la app y no la marca del sindicato: es
+cuantitativa, y con el acento de cada gremio la misma intensidad significaría
+otra cosa en cada tenant. El `--destacado` queda reservado, como en todo el
+panel, para la seccional seleccionada. El radio del círculo va por **raíz
+cuadrada** de los afiliados: el ojo compara áreas, y con radio lineal el doble
+de afiliados se ve cuatro veces más grande.
+
+Las seccionales sin coordenadas no van al mapa pero tampoco desaparecen: se
+listan en un aviso. El enlace para ir a ubicarlas aparece SOLO si esa persona
+tiene la sección "seccionales" — ver el mapa y cargar una dirección son
+permisos distintos, y ofrecer un botón que va a dar 403 es peor que no
+ofrecerlo.
+
+### El alta masiva y el proceso en segundo plano
+
+Cien direcciones a un pedido por segundo son cien segundos con el navegador
+colgado, y Nominatim bloqueando de paso. Así que la masiva suma seccional
+(por NOMBRE, sin distinguir mayúsculas ni tildes: a una planilla se pega
+"Rosario", no el id 7) y CP, y guarda todo `sin_geo`. El botón
+"Georreferenciar pendientes" los ubica después, de a uno, en un hilo —mismo
+criterio que la indexación del convenio en `rag.py`—, y cada fila se guarda
+apenas se resuelve: si el proceso se corta a la mitad (un redeploy de Render,
+que pasa seguido), lo hecho queda hecho y la próxima corrida sigue desde ahí.
+
+El avance vive en la tabla `GeoPadron` y no en memoria del proceso, porque
+Render corre un worker por núcleo: el hilo que trabaja está en uno y la
+pantalla que pregunta el avance puede caer en otro. Con un diccionario en
+memoria, la barra de progreso mostraría cero para siempre. Y una corrida que
+no da señales por 15 minutos se da por muerta, para que un proceso caído no
+deje el flag en "corriendo" bloqueando a todos.
+
+### Lo que encontró el robot E2E
+
+Dos cosas que ninguna prueba de servidor podía ver:
+
+- **"Cancelar edición" quedaba inalcanzable.** El botón vivía dentro del paso
+  1 del asistente, y editar una seccional abre en el paso 2 (con el globo ya
+  puesto, que es lo que uno viene a corregir). Pasó a vivir junto a la tira de
+  pasos, visible en los tres.
+- **El rediseño "Hilo" pintaba los candidatos de ámbar.** La regla
+  `button:not(.sec):not(.mini)…` de `admin.html` alcanza a todo botón que no
+  esté en su lista de excepciones, así que las tarjetas de candidato —que son
+  `<button>`— salían con el fondo de acento y la tipografía condensada en
+  mayúsculas, en vez de la tarjeta clara que corresponde. Se sumó `.geo-cand`
+  a la lista, que es como el proyecto ya resuelve esto.
+
+Un tercer hallazgo es del entorno y no de la app, pero vale anotarlo: en la
+portada del trabajador el evento `load` no llega nunca si las teselas de OSM
+no resuelven (quedan colgadas), así que los robots esperan la navegación con
+`wait_until="commit"` y no la carga completa. Lo correcto igual: lo que
+interesa es haber entrado, no que haya terminado de dibujarse un mapa de un
+tercero.
+
+### La demo
+
+Los tres sindicatos quedan con cuatro o más seccionales georreferenciadas en
+provincias distintas y con trabajadores y recibos repartidos. La Gastronómica
+pasó de UNA seccional a cuatro y ahora se le corre el lote, que antes no se
+le corría; **sigue siendo el sindicato centralizado de la demo** —sin Admin
+de Seccional ni áreas por delegación—, porque ese contraste con la UOM es lo
+que muestra que el rol es opt-in. Tener delegaciones y tener un rol de
+delegación son dos cosas distintas.
+
+Las direcciones son ficticias pero verosímiles: no se conocen con certeza los
+domicilios reales de esos gremios y no se inventan como si lo fueran. Las
+coordenadas SÍ son reales para esa esquina —se geocodificaron una vez, a
+mano— y se guardan como `manual` justamente para no dar a entender que son
+domicilios verificados del sindicato. Las seccionales genéricas del lote (las
+que recibe La Bancaria, que no tiene propias) llevan el centroide real de su
+ciudad y van como `aproximada`, que es exactamente lo que son: el centro de
+la localidad, no la puerta.

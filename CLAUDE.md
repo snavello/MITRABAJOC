@@ -81,6 +81,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - extractor.py — lee recibos y comprobantes de aportes con IA.
 - validador.py — motor de validación de fórmulas.
 - semaforo.py — lógica del semáforo de aportes (ARCA).
+- geo.py — geocodificación de domicilios: Georef (provincia/localidad) +
+  Nominatim (calle y altura). Ver "Georreferenciación" para las reglas.
 - dashboard.py — agregados SQL del Panel Sindical (ver sección propia).
 - fechas.py — la hora de Buenos Aires, en un solo lugar. En el código de la
   app NO se llama a `datetime.now()` ni a `date.today()`: el servidor de
@@ -139,7 +141,9 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   empresa: portada + panel de cada una, logins, selectores, verificación
   pública de credencial).
 - static/ — 2 SVG base + marca.css (sistema de diseño compartido) +
-  static/fonts/ (Barlow Condensed, licencia SIL OFL).
+  static/fonts/ (Barlow Condensed, licencia SIL OFL) + mapa.js (capa fina
+  sobre Leaflet, compartida por las cuatro pantallas con mapa) +
+  static/vendor/leaflet/ (Leaflet 1.9.4 vendoreado, jamás CDN).
 - data/seed_aefip.json — semilla histórica; ya NO se carga por defecto.
 - data/topes_ss.csv — vigencias de topes de la seguridad social (ver
   "Topes de base imponible" en HISTORIAL.md).
@@ -795,9 +799,11 @@ cambio de estado: `agregar_nota_tramite(..., estado_nuevo=...)` deja UN solo
 evento en el chat. Antes, un mismo acto aparecía dos veces.
 
 ## Seccionales del sindicato
-Modelo `Seccional` (db.py): sindicato_id, nombre, dirección, `ve_todas`.
-CRUD simple en `/admin` → Seccionales (solo Super Admin).
-`Trabajador.seccional_id` opcional. Noticias y Beneficios pueden dirigirse
+Modelo `Seccional` (db.py): sindicato_id, nombre, `ve_todas`, **domicilio
+estructurado con coordenadas** (ver "Georreferenciación") y contacto
+(teléfono, WhatsApp, mail, horario). Alta guiada en `/admin` → Seccionales
+(crear y borrar, solo Super Admin; editar y ubicar, también el Admin de
+Seccional sobre la suya). `Trabajador.seccional_id` opcional. Noticias y Beneficios pueden dirigirse
 por seccional (`destino_seccionales`, lista vacía = todas) — detalle en
 HISTORIAL.md.
 
@@ -805,6 +811,50 @@ Desde Áreas V2 dejó de ser un dato descriptivo: la seccional **acota** lo
 que un usuario ve (sus trámites, a quién puede notificar, qué padrón toca).
 `ve_todas` es la excepción — nace tildada en "Sede Central" y sus usuarios
 alcanzan todas las seccionales del sindicato.
+
+## Georreferenciación de Seccionales y domicilios (2026-09-12)
+Las Seccionales y el domicilio del afiliado tienen **el mismo bloque de
+campos** (`geo.CAMPOS_DOMICILIO`: calle, numero, piso_depto, localidad,
+provincia, codigo_postal, direccion_texto, latitud, longitud, precision_geo,
+geo_actualizado), la misma carga guiada y la misma función de guardado. Un
+test verifica que las dos tablas no se separen. Detalle en HISTORIAL.md.
+
+- **La geocodificación es SIEMPRE del lado del servidor, con caché.** Nunca
+  desde el navegador: así se controla la tasa (Nominatim permite 1 pedido por
+  segundo y bloquea por IP al que se pasa), se cachea en `GeoCache` (TTL 90
+  días) y el día que una de las dos APIs cambie el formato se arregla en un
+  archivo y no en el JS de cuatro pantallas.
+- **A Nominatim NO se lo autocompleta tecla a tecla.** Se geocodifica solo
+  cuando una persona aprieta "Buscar". Las sugerencias de localidad en vivo
+  salen de **Georef**, cuya política lo permite y que existe para eso.
+- **Sin claves ni cuentas**: Georef (`apis.datos.gob.ar/georef/api`) y
+  Nominatim (OSM) son públicas. Lo único que piden es un User-Agent que
+  identifique la app, que es `geo.USER_AGENT`.
+- **Ningún fallo de esas APIs bloquea un alta.** Sin respuesta, la fila se
+  guarda `sin_geo` con un aviso; el panel la marca como pendiente. Una
+  seccional sin ubicar es un estado válido del sistema.
+- **Sin coordenadas válidas no hay precisión que valga**: `campos_para_guardar`
+  fuerza `sin_geo`. Una fila que dice "exacta" con lat/lon en NULL es peor que
+  una que admite no estar ubicada. Las cuatro son `exacta` / `aproximada` /
+  `manual` (alguien arrastró el globo) / `sin_geo`.
+- **La ubicación del trabajador es EFÍMERA y solo vive en el navegador.** En
+  "Seccionales cerca de mí" el permiso se pide al tocar el enlace (nunca al
+  abrir la app), la posición se usa para ordenar la lista y se descarta: **no
+  viaja al servidor ni se guarda**. La distancia la calcula el cliente
+  (haversine en `mapa.js`). Negar el permiso no rompe nada: se mide desde el
+  domicilio guardado y, sin domicilio, se ordena por provincia.
+- **Leaflet va VENDOREADO** en `static/vendor/leaflet/` (jamás CDN, mismo
+  criterio que Chart.js) con el sello `?v=` obligatorio de `/static/`. Las
+  **teselas de OSM no se cachean** (su política) y **el service worker sigue
+  sin cachear nada**: sin conexión se muestra la dirección en texto.
+- El mapa del Panel Sindical (`GET /admin/dashboard/seccionales-geo`) devuelve
+  **solo agregados** — seis indicadores por seccional— y **ignora el filtro de
+  seccional**, porque el mapa ES el selector. Escala de color fija de la app,
+  no la marca del sindicato.
+- El alta masiva de trabajadores **no geocodifica**: cien direcciones a un
+  pedido por segundo son cien segundos colgado. Las ubica después el botón
+  "Georreferenciar pendientes", en segundo plano, con el avance en la tabla
+  `GeoPadron` (en la base y no en memoria: Render corre un worker por núcleo).
 
 ## Áreas y Usuarios del sindicato (self-service)
 `/admin` → pestaña "Áreas y Usuarios" (antes "Administradores"), con dos

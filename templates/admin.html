@@ -602,7 +602,7 @@
   .subtab, .tramite-subtab, .emp-subtab, .emptram-subtab, .subtab-au, .enc-subtab { font-family:var(--fuente-display); font-weight:700; font-size:13px; letter-spacing:.8px;
     text-transform:uppercase; background:#fff; border-radius:20px; }
   th { font-size:10.5px; letter-spacing:1px; font-weight:700; color:var(--gris); background:#f4f2ec; }
-  button:not(.sec):not(.mini):not(.tab-btn):not(.ptab):not(.subtab):not(.tramite-subtab):not(.emp-subtab):not(.emptram-subtab):not(.subtab-au):not(.enc-subtab):not(.btn-ayuda):not(.link-num) {
+  button:not(.sec):not(.mini):not(.tab-btn):not(.ptab):not(.subtab):not(.tramite-subtab):not(.emp-subtab):not(.emptram-subtab):not(.subtab-au):not(.enc-subtab):not(.btn-ayuda):not(.link-num):not(.geo-cand) {
     font-family:var(--fuente-display); font-weight:700; font-size:15px; letter-spacing:1px; text-transform:uppercase;
     background:var(--marca-acento); color:var(--marca-base); border-radius:9px; }
   button.mini { border-radius:7px; }
@@ -2490,6 +2490,8 @@
       <div class="geo-paso-n activo" data-paso-n="1"><b>1</b> Dirección</div>
       <div class="geo-paso-n" data-paso-n="2"><b>2</b> Confirmar en el mapa</div>
       <div class="geo-paso-n" data-paso-n="3"><b>3</b> Contacto y guardar</div>
+      <button type="button" class="sec mini oculto" id="sec-cancel" form="form-seccional"
+              onclick="cancelarSeccional()" style="margin-left:auto;">Cancelar edición</button>
     </div>
 
     <form method="post" action="/admin/seccional" id="form-seccional">
@@ -2531,7 +2533,6 @@
         {% endif %}
         <button type="button" onclick="secBuscar()" id="sec-btn-buscar">Buscar en el mapa</button>
         <button type="button" class="sec" onclick="secPaso(3)">Seguir sin ubicar</button>
-        <button type="button" class="sec oculto" id="sec-cancel" onclick="cancelarSeccional()">Cancelar edición</button>
       </div>
 
       <!-- ---------- Paso 2: confirmar en el mapa ---------- -->
