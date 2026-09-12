@@ -22,8 +22,12 @@ sindicatos, cada uno con su marca, conceptos y trabajadores, en aislamiento tota
 Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 
 ## Stack y arquitectura
-- **Repositorio:** `snavello/mitrabajoC` (github.com/snavello/mitrabajoc) es el
-  ÚNICO repo del proyecto: todo se lee, se desarrolla y se pushea acá. El repo
+- **Repositorio:** `snavello/MITRABAJOC`
+  (https://github.com/snavello/MITRABAJOC) es el ÚNICO repo del proyecto:
+  todo se lee, se desarrolla y se pushea acá. Ese es el nombre canónico y
+  con esas mayúsculas: escrito de otra forma GitHub redirige, el push anda
+  igual e imprime un aviso de que el repositorio se movió -- que no es un
+  error pero hace dudar cada vez. El repo
   viejo `snavello/MiTrabajo` es un PoC descartado, escrito en **Streamlit**:
   está abandonado, no se lee, no se toca y no se porta NADA de ahí. **Streamlit
   no se usa más en ningún caso** — si algo sugiere Streamlit, está mirando el
@@ -89,6 +93,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   umbral y los filtros se aplican acá, en la consulta, no en la pantalla.
 - demo_encuestas.py — el padrón sintético y las tres tomas de encuesta de
   la demo (lo llama `cargar_demo.py`).
+- cargar_encuesta_sintetica.py — llena de respuestas una encuesta YA
+  publicada (no la crea: la arma una persona en el panel). Es la
+  herramienta para preparar una demo sobre una encuesta de verdad. Sin
+  `--si` no escribe nada. Ver "Llenar una encuesta con respuestas
+  sintéticas" en DESPLIEGUE_RENDER.md.
 - rag.py — piloto de consultas sobre el convenio: extracción de PDF,
   troceo, embeddings locales e indexación en segundo plano.
 - validaciones_tramite.py — motor puro de validaciones de formularios de

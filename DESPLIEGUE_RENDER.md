@@ -120,6 +120,31 @@ redeployar; el Pre-Deploy recrea el esquema. En ese caso volver a correr
 también `python cargar_marca_plataforma.py`, que es lo único que repone la
 marca de Colm3na.
 
+### Llenar una encuesta con respuestas sintéticas
+Para mostrar el módulo Encuestas hace falta volumen: con cinco respuestas
+el umbral esconde los cortes y el dashboard queda vacío. El script NO crea
+la encuesta —esa la arma una persona en el panel, con sus preguntas— sino
+que le pone adentro las respuestas. En la Shell de `mitrabajo-pruebas`:
+```
+python cargar_encuesta_sintetica.py --sindicato "La Bancaria"        # ensayo
+python cargar_encuesta_sintetica.py --sindicato "La Bancaria" --si
+```
+**Sin `--si` no escribe nada**: imprime el padrón, cuántos van a responder,
+cuántos avisos se marcan leídos y qué seccional va a quedar más
+disconforme. Opciones: `--respuestas 85` (total de personas que tienen que
+quedar con la encuesta respondida, contando las que ya respondieron),
+`--leidas 90` (porcentaje de los avisos que queda leído), `--encuesta 12`
+(si el sindicato tiene más de una publicada) y `--semilla`.
+
+Las respuestas se reparten **Pareto** (una opción dominante y una cola que
+cae, que es lo que devuelve una encuesta real) y **distinto por seccional**
+—una queda claramente peor y otra claramente mejor—, para que el filtro por
+seccional del dashboard muestre algo y no tres curvas iguales. Se escriben
+con la misma función que corre cuando contesta una persona, así que no
+dejan la base en un estado que la app no sepa producir; lo único que se
+ajusta después es el DÍA, repartido entre los ya corridos de la ventana
+para que la curva de ritmo no sea un punto solo.
+
 ### Copiar los datos de la demo a Pruebas (excepción)
 Cuando la demo tiene datos y usuarios que los scripts todavía no saben
 reproducir, se puede clonar entera. **Es la excepción, no la rutina**: lo
