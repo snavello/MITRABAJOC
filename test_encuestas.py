@@ -1738,6 +1738,93 @@ def test_las_pastillas_cuentan_gente_y_no_filas_de_la_urna():
     assert sorted(v["cantidad"] for v in por_seccional) == [12, 12]
 
 
+def test_las_pastillas_del_resto_de_los_cortes_se_recalculan_con_el_filtro():
+    """Asociativo (como Qlik): elegir un empleador que deja 10 casos y que
+    las seccionales sigan mostrando el total es un número que miente. Con
+    el filtro puesto, "3 de 12" quiere decir que 3 de esos 10 son del Norte.
+
+    Y el corte ELEGIDO no se filtra a sí mismo: si lo hiciera, quedaría una
+    sola pastilla y no habría con qué cambiar de opinión.
+    """
+    sid, uid, eid, secs, a, b = _encuesta_con_datos("asoc", preguntas=PREG_CRUCE)
+    # Un empleador que cruza las dos seccionales: 3 del Norte y 7 del Sur.
+    # Con el reparto de origen (una seccional por empleador) el cruce sería
+    # 12 y 0, que no distingue un filtro asociativo de uno roto.
+    with db.get_session() as s:
+        for c in a[:3] + b[:7]:
+            t = s.exec(db.select(db.Trabajador).where(
+                db.Trabajador.sindicato_id == sid, db.Trabajador.cuil == c)).first()
+            t.cuit_empleador = "30333333333"
+            s.add(t)
+        s.commit()
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    for c in a + b:
+        _sesion_trabajador(c, sid)
+        cliente.post(f"/api/encuesta/{eid}",
+                     json={"respuestas": {str(pids[0]): 1, str(pids[1]): "si"}})
+
+    _sesion(sid, uid)
+    d = cliente.get("/admin/encuesta/resultados", params={"id": eid}).json()
+    sin = {v["etiqueta"]: (v["cantidad"], v["total"])
+           for v in d["filtros"]["disponibles"]["seccional"]}
+    assert sin == {"Norte": (12, 12), "Sur": (12, 12)}
+
+    d = cliente.get("/admin/encuesta/resultados",
+                    params={"id": eid, "empleador": "30333333333"}).json()
+    assert d["respondentes"] == 10
+    con = {v["etiqueta"]: (v["cantidad"], v["total"])
+           for v in d["filtros"]["disponibles"]["seccional"]}
+    assert con == {"Norte": (3, 12), "Sur": (7, 12)}
+    # El propio corte NO se recorta a sí mismo: las tres opciones siguen
+    # ahí con su número entero, que es lo que permite cambiar de empleador
+    # sin tener que limpiar el filtro primero.
+    emp = {v["cantidad"] for v in d["filtros"]["disponibles"]["empleador"]}
+    assert emp == {9, 5, 10}
+
+
+def test_una_pastilla_sin_nadie_dentro_del_filtro_queda_en_cero_y_no_desaparece():
+    """"Córdoba 0" es un dato: dice que ahí hay a quién preguntarle y que
+    ninguno cayó dentro del recorte. Sacarla de la lista haría creer que esa
+    seccional no existe, y además movería las pastillas de lugar en cada
+    clic."""
+    sid, uid, eid, secs, a, b = _encuesta_con_datos("cero", preguntas=PREG_CRUCE)
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    for c in a + b:
+        _sesion_trabajador(c, sid)
+        cliente.post(f"/api/encuesta/{eid}",
+                     json={"respuestas": {str(pids[0]): 1, str(pids[1]): "si"}})
+    _sesion(sid, uid)
+    # El reparto de origen es una seccional por empleador: filtrando por el
+    # del Norte, el Sur tiene que quedar visible y en cero.
+    d = cliente.get("/admin/encuesta/resultados",
+                    params={"id": eid, "empleador": "30222222222"}).json()
+    por_seccional = {v["etiqueta"]: (v["cantidad"], v["total"])
+                     for v in d["filtros"]["disponibles"]["seccional"]}
+    assert por_seccional == {"Norte": (0, 12), "Sur": (12, 12)}
+
+
+def test_el_alcance_de_seccional_no_se_filtra_a_si_mismo_pero_tampoco_se_abre():
+    """N18: al corte IMPUESTO sí se le aplica su propio filtro. Si se lo
+    exceptuara como a los demás, quien tiene alcance de una seccional
+    leería de refilón cuánta gente respondió en las otras."""
+    sid, uid, eid, secs, a, b = _encuesta_con_datos("n18asoc", preguntas=PREG_CRUCE)
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    for c in a + b:
+        _sesion_trabajador(c, sid)
+        cliente.post(f"/api/encuesta/{eid}",
+                     json={"respuestas": {str(pids[0]): 1, str(pids[1]): "si"}})
+    _sesion(sid, _admin_de_seccional(sid, secs["norte"]))
+    d = cliente.get("/admin/encuesta/resultados", params={"id": eid}).json()
+    assert d["respondentes"] == 12
+    por_seccional = d["filtros"]["disponibles"]["seccional"]
+    assert [v["etiqueta"] for v in por_seccional] == ["Norte"]
+    assert por_seccional[0] == {"valor": str(secs["norte"]), "etiqueta": "Norte",
+                                "cantidad": 12, "total": 12}
+    # Y el resto de los cortes se cuenta DENTRO de su alcance, no en total.
+    emp = {v["cantidad"] for v in d["filtros"]["disponibles"]["empleador"]}
+    assert emp == {12}
+
+
 def test_el_filtro_de_fechas_recorta_la_urna_y_no_el_padron():
     """El día lo guarda la urna; el padrón NO sabe cuándo respondió cada uno
     (punto 3 del anonimato). Así que el rango mueve los gráficos y el ritmo,
