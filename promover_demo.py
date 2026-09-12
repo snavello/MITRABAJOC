@@ -37,6 +37,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 import pg_cliente
+import fechas
 
 load_dotenv()
 
@@ -89,7 +90,7 @@ def backup_demo(sin_backup):
     except pg_cliente.ErrorPg as e:
         abortar(str(e))
     BACKUPS.mkdir(exist_ok=True)
-    destino = BACKUPS / f"demo-{datetime.now():%Y-%m-%d-%H%M}.dump"
+    destino = BACKUPS / f"demo-{fechas.ahora():%Y-%m-%d-%H%M}.dump"
     print(f"- Backup de la base de demo (Postgres {version}, {de_donde}) -> {destino.name}")
     with open(destino, "wb") as salida:
         r = subprocess.run([*cmd_dump, url, "-Fc", "--no-owner", "--no-privileges"],
@@ -161,7 +162,7 @@ def main():
         podar_backups(dump)
 
     version = version_en("origin/main")
-    tag = f"demo-{datetime.now():%Y-%m-%d}-v{version}"
+    tag = f"demo-{fechas.ahora():%Y-%m-%d}-v{version}"
 
     if args.solo_pr:
         link = url_del_pr()

@@ -34,8 +34,9 @@ sys.path.insert(0, RAIZ)
 import test_asistente as fx                  # noqa: E402  (arma el sindicato sintético)
 import asistente                             # noqa: E402
 import dashboard                             # noqa: E402
+import fechas
 
-HOY = date.today()
+HOY = fechas.hoy()
 PRECIO_ENTRADA, PRECIO_SALIDA = 2.0 / 1e6, 10.0 / 1e6   # USD por token, claude-sonnet-5
 
 

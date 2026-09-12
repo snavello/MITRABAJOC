@@ -17,6 +17,7 @@ import main
 from db import (Sindicato, Trabajador, Tramite, TipoTramite, ReciboVerificado,
                  Notificacion, NotificacionDestinatario, UsoIA)
 from fastapi.testclient import TestClient
+import fechas
 
 db.crear_tablas()
 
@@ -41,7 +42,7 @@ with db.get_session() as s:
 
     s.add(UsoIA(sindicato_id=SID, cuil="20111111119", tipo="recibo", modelo="claude-sonnet-4-6",
                  tokens_entrada=1000, tokens_salida=200,
-                 fecha=__import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M")))
+                 fecha=fechas.ahora_texto()))
     s.commit()
 
 client = TestClient(main.app)

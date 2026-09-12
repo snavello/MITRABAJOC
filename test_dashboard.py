@@ -26,10 +26,11 @@ from db import (Sindicato, UsuarioSindicato, Trabajador, Seccional, Empleador,
                 NotificacionDestinatario, ConsultaConvenio)
 import main
 from fastapi.testclient import TestClient
+import fechas
 
 db.crear_tablas()
 
-HOY = date.today()
+HOY = fechas.hoy()
 
 
 def _ts(dias_atras=0, hora="10:00"):

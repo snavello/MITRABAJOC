@@ -23,6 +23,7 @@ import sqlalchemy as sa
 
 import auth
 import db
+import fechas
 
 NOMBRE = "ZZZ Medición Dashboard"
 RECIBOS, TRABAJADORES, TRAMITES, NOTIFS, DEST_POR_NOTIF, CONSULTAS = 50_000, 5_000, 2_000, 200, 100, 3_000
@@ -30,7 +31,7 @@ SECCIONALES = ["Rosario", "Córdoba", "Buenos Aires", "Mendoza", "Tucumán"]
 EMPRESAS = [f"3011111{i:03d}7" for i in range(8)]
 CATEGORIAS = ["Operario A", "Operario B", "Oficial", "Administrativo", "Supervisor", "Oficial especializado"]
 DIAS = 120
-HOY = date.today()
+HOY = fechas.hoy()
 
 rnd = random.Random(42)
 

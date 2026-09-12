@@ -34,6 +34,7 @@ import httpx
 
 import db
 import render_admin
+import fechas
 
 BASE_URL = (os.getenv("RENDER_EXTERNAL_URL")
             or {"pruebas": "https://mitrabajo-pruebas.onrender.com",
@@ -183,7 +184,7 @@ async def main(test_id: int):
 
     from datetime import datetime
     db.actualizar_test_carga(test_id, estado="listo",
-                              terminado_en=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                              terminado_en=fechas.ahora_con_segundos())
 
 
 if __name__ == "__main__":

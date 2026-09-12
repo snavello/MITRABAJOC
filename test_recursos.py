@@ -23,6 +23,7 @@ import db
 import auth
 import main
 from fastapi.testclient import TestClient
+import fechas
 
 db.crear_tablas()
 sin_pase = TestClient(main.app)
@@ -207,7 +208,7 @@ def test_validaciones_del_alta(monkeypatch):
     assert r.json()["codigo"] == "tamanio"
     assert db.listar_recursos() == []
     # La fecha inválida no rompe: cae en hoy; la ancla se normaliza.
-    assert recursos.leer_fecha("no-es-fecha") == date.today()
+    assert recursos.leer_fecha("no-es-fecha") == fechas.hoy()
     assert recursos.normalizar_fragmento("estrategia") == "#estrategia"
     assert recursos.normalizar_fragmento(" #plan ") == "#plan"
     print("OK  test_validaciones_del_alta")

@@ -22,6 +22,7 @@ import re
 
 import pytest
 from playwright.sync_api import Page, expect
+import fechas
 
 BASE = os.environ.get("E2E_BASE_URL", "http://localhost:8000")
 
@@ -63,7 +64,7 @@ def test_admin_dashboard_carga_con_datos(page: Page, informe):
 
 def test_admin_dashboard_modal_ver(page: Page, informe):
     _login_admin(page)
-    page.goto(f"{BASE}/admin/dashboard?desde=2026-06-01&hasta={__import__('datetime').date.today().isoformat()}")
+    page.goto(f"{BASE}/admin/dashboard?desde=2026-06-01&hasta={fechas.hoy().isoformat()}")
     boton = page.locator("#tabla-body .btn-ver").first
     boton.wait_for(state="visible", timeout=15000)
     boton.click()

@@ -44,8 +44,9 @@ from db import (Sindicato, Seccional, Empleador, Trabajador, CuentaTrabajador,
                 Tramite, RespuestaTramite, NotaTramite, TramiteLog,
                 Notificacion, NotificacionDestinatario, Noticia, Beneficio)
 from validador import validar, a_numero
+import fechas
 
-HOY = date.today()
+HOY = fechas.hoy()
 DIAS_HISTORIA = 120
 CANT_TRABAJADORES, CANT_RECIBOS, CANT_TRAMITES, CANT_NOTIFS = 100, 5000, 2000, 200
 

@@ -41,10 +41,11 @@ from db import (Sindicato, Seccional, Empleador, Trabajador, CuentaTrabajador,
                 Tramite, RespuestaTramite, NotaTramite, TramiteLog,
                 Notificacion, NotificacionDestinatario, Noticia, Beneficio)
 from validador import validar
+import fechas
 
 SINDICATO_NOMBRE = "Unión Obrera Metalúrgica"
 rnd = random.Random(20260829)
-HOY = date.today()
+HOY = fechas.hoy()
 DIAS_HISTORIA = 120
 
 SECCIONALES = ["Avellaneda", "Quilmes", "La Matanza", "Rosario", "Córdoba", "San Nicolás"]

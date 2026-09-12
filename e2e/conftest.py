@@ -20,6 +20,7 @@ import pytest
 # pytest agrega e2e/ al sys.path (import mode "prepend"), así que este
 # import simple funciona sin convertir la carpeta en paquete.
 import ventanas
+import fechas
 
 
 @pytest.fixture
@@ -225,7 +226,7 @@ def pytest_sessionfinish(session, exitstatus):
     salida.mkdir(parents=True, exist_ok=True)
     destino = salida / "informe.html"
     destino.write_text(_PLANTILLA.format(
-        fecha=datetime.now().strftime("%d/%m/%Y %H:%M"),
+        fecha=fechas.ahora().strftime("%d/%m/%Y %H:%M"),
         modo="con ventana visible" if headed else "modo silencioso",
         aprobados=aprobados, total=total, duracion=duracion,
         color_total="#0d7a5f" if aprobados == total else "#c0392b",

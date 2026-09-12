@@ -23,6 +23,7 @@ from modulos import MODULOS_INICIALES
 import main
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
+import fechas
 
 db.crear_tablas()
 
@@ -317,17 +318,17 @@ def test_limite_dinamico_hoy():
     campos = [{"id": 1, "etiqueta": "Fecha de reserva", "tipo_dato": "fecha",
                "validaciones": [{"fuente": "fija", "operador": ">=", "valor": "hoy",
                                  "mensaje": "No se puede antedatar.", "bloquea": True}]}]
-    ayer = (date.today() - timedelta(days=1)).isoformat()
-    maniana = (date.today() + timedelta(days=1)).isoformat()
+    ayer = (fechas.hoy() - timedelta(days=1)).isoformat()
+    maniana = (fechas.hoy() + timedelta(days=1)).isoformat()
     v = vt.evaluar_envio(campos, [], {1: ayer})
     assert v["errores_campos"][1] == "No se puede antedatar."
     v = vt.evaluar_envio(campos, [], {1: maniana})
     assert v["errores"] == []
     # hoy+10: reservar a 5 días no alcanza, a 15 sí
     campos[0]["validaciones"][0].update({"valor": "hoy+10", "mensaje": "Mínimo 10 días de anticipación."})
-    v = vt.evaluar_envio(campos, [], {1: (date.today() + timedelta(days=5)).isoformat()})
+    v = vt.evaluar_envio(campos, [], {1: (fechas.hoy() + timedelta(days=5)).isoformat()})
     assert v["errores_campos"][1] == "Mínimo 10 días de anticipación."
-    v = vt.evaluar_envio(campos, [], {1: (date.today() + timedelta(days=15)).isoformat()})
+    v = vt.evaluar_envio(campos, [], {1: (fechas.hoy() + timedelta(days=15)).isoformat()})
     assert v["errores"] == []
     print("OK  test_limite_dinamico_hoy")
 

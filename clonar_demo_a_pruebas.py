@@ -47,6 +47,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 import pg_cliente
+import fechas
 
 load_dotenv()
 
@@ -142,7 +143,7 @@ def main():
         return
 
     BACKUPS.mkdir(exist_ok=True)
-    dump = BACKUPS / f"demo-{datetime.now():%Y-%m-%d-%H%M}.dump"
+    dump = BACKUPS / f"demo-{fechas.ahora():%Y-%m-%d-%H%M}.dump"
 
     print(f"\n1. Copiando la demo -> {dump.name}")
     # La tabla `recurso` (documentación subida desde /entornos, que solo

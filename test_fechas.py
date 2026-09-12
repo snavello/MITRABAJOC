@@ -22,19 +22,28 @@ import fechas
 
 RAIZ = Path(__file__).resolve().parent
 
-# Lo que NO es la app: la suite, los scripts que corren en la PC del
-# desarrollador (ya está en hora de Buenos Aires) y el propio módulo de
-# fechas, que es el único que tiene permitido preguntar la hora.
-EXCLUIDOS = {"fechas.py", "conftest.py", "promover_demo.py",
-             "clonar_demo_a_pruebas.py", "actualizar_planes_render.py",
-             "chequeo.py", "version.py"}
-PREFIJOS_EXCLUIDOS = ("test_", "cargar_", "medir_", "probar_")
+# La regla vale para TODO el proyecto, no solo para la app. La primera
+# versión de este test excluía la suite y los scripts "porque corren en la
+# PC del desarrollador, que ya está en hora de Buenos Aires" -- y esa
+# excusa duró seis horas: los tests calculaban su "hoy" con date.today(),
+# la app con la hora de Buenos Aires, y a las 21:04 de un 11 de septiembre
+# cuatro archivos de tests empezaron a fallar solos porque para ellos ya
+# era 12. Los lotes de datos sintéticos tenían el mismo problema y peor
+# consecuencia: generaban fechas "del futuro" que la app rechaza.
+#
+# Así que la lista de excluidos es de UNO.
+EXCLUIDOS = {"fechas.py"}
+# docs/generador/ se ejecuta desde su propia carpeta (no tiene el proyecto
+# en el sys.path), no escribe en la base y solo pone la fecha en el pie de
+# un HTML generado a mano.
+CARPETAS_EXCLUIDAS = {"docs", ".git", ".venv", "venv", "node_modules"}
 
 
 def _modulos_de_la_app() -> list:
-    return sorted(p for p in RAIZ.glob("*.py")
+    """Todos los .py del proyecto, en la raíz y en las subcarpetas."""
+    return sorted(p for p in RAIZ.rglob("*.py")
                   if p.name not in EXCLUIDOS
-                  and not p.name.startswith(PREFIJOS_EXCLUIDOS))
+                  and not (set(p.relative_to(RAIZ).parts[:-1]) & CARPETAS_EXCLUIDAS))
 
 
 def _hora_del_servidor_en(ruta: Path) -> list:
