@@ -53,6 +53,12 @@ MENSAJES = {
     "E-ASISTENTE-01": (502, "El asistente no pudo responder en este momento. Los filtros "
                             "del panel siguen funcionando a mano; probá de nuevo en un rato."),
 
+    # --- Encuestas (SPRINT_ENCUESTAS.md) ----------------------------------
+    # El motivo real lo agrega quien lo lanza (ya respondiste, no estás en el
+    # padrón, la encuesta cerró, falta una pregunta): son cosas distintas
+    # para la persona y todas terminan en "tu respuesta no se guardó".
+    "E-ENCUESTA-01": (400, "No se pudo enviar tu respuesta."),
+
     # --- Red de seguridad --------------------------------------------------
     "E-INTERNO-00": (500, "Se produjo un error inesperado y no pudimos completar la "
                           "operación. Probá de nuevo en un momento; si vuelve a "

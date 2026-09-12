@@ -320,7 +320,9 @@ def preguntas_saneadas(modo: str, preguntas) -> tuple:
     return limpias, errores
 
 
-def _entero(valor, por_defecto: int) -> int:
+def _entero(valor, por_defecto):
+    """El entero que trae `valor`, o `por_defecto` si no lo es. El default
+    puede ser None: así el que valida distingue "no es un número" de un 0."""
     try:
         return int(str(valor).strip())
     except (TypeError, ValueError):
@@ -348,3 +350,117 @@ def cambio_estructural(antes: list, despues: list) -> bool:
                 or len(opciones_de(a.get("opciones", ""))) != len(opciones_de(d.get("opciones", "")))):
             return True
     return False
+
+
+# --- Lo que responde el afiliado -----------------------------------------
+MAX_TEXTO_RESPUESTA = 2000
+
+
+def respuestas_saneadas(preguntas: list, crudas: dict) -> tuple:
+    """(filas para la urna, errores). Las filas NO llevan identidad.
+
+    `crudas` es {pregunta_id: valor}, con la forma que corresponda al tipo:
+    un índice de opción, una lista de índices (múltiple y ranking), un
+    número, un texto o una fecha. Se valida contra las PREGUNTAS guardadas,
+    nunca contra lo que mande el navegador: el formulario del afiliado es
+    una sugerencia y el servidor decide, igual que en Trámites.
+
+    Cada fila sale lista para RespuestaEncuesta menos el día y los cortes,
+    que los pone db.registrar_respuesta_encuesta. Una fila por opción
+    elegida, así los gráficos se agregan con un GROUP BY y no leyendo JSON.
+    """
+    filas, errores = [], []
+    for p in preguntas:
+        tipo = p.get("tipo_dato")
+        if tipo in TIPOS_SIN_RESPUESTA:
+            continue
+        pid = p.get("id")
+        valor = crudas.get(str(pid), crudas.get(pid))
+        etiqueta = (p.get("etiqueta") or "").strip() or f"pregunta {pid}"
+        vacio = valor is None or valor == "" or valor == []
+        if vacio:
+            if p.get("obligatorio"):
+                errores.append(f"Falta responder «{etiqueta}».")
+            continue
+
+        opciones = opciones_de(p.get("opciones", ""))
+        base = {"pregunta_id": pid, "opcion_indice": None, "posicion": None,
+                "valor_texto": "", "valor_numero": None, "valor_fecha": ""}
+
+        if tipo in ("seleccion", "opcion_unica"):
+            i = _indice(valor, len(opciones))
+            if i is None:
+                errores.append(f"«{etiqueta}»: la opción elegida no existe.")
+                continue
+            filas.append({**base, "opcion_indice": i})
+
+        elif tipo == "multiple":
+            indices, malo = [], False
+            for v in (valor if isinstance(valor, list) else [valor]):
+                i = _indice(v, len(opciones))
+                if i is None or i in indices:
+                    malo = True
+                    break
+                indices.append(i)
+            if malo:
+                errores.append(f"«{etiqueta}»: hay una opción repetida o inexistente.")
+                continue
+            filas += [{**base, "opcion_indice": i} for i in indices]
+
+        elif tipo == "ranking":
+            indices, malo = [], False
+            for v in (valor if isinstance(valor, list) else [valor]):
+                i = _indice(v, len(opciones))
+                if i is None or i in indices:
+                    malo = True
+                    break
+                indices.append(i)
+            # El ranking se responde ENTERO o no se responde: un orden
+            # parcial no se puede promediar contra los que sí ordenaron todo.
+            if malo or len(indices) != len(opciones):
+                errores.append(f"«{etiqueta}»: hay que ordenar todas las opciones.")
+                continue
+            filas += [{**base, "opcion_indice": i, "posicion": n + 1}
+                      for n, i in enumerate(indices)]
+
+        elif tipo == "escala":
+            minimo = p.get("escala_min") or ESCALA_MIN_DEFAULT
+            maximo = p.get("escala_max") or ESCALA_MAX_DEFAULT
+            n = _entero(valor, None)
+            if n is None or not (minimo <= n <= maximo):
+                errores.append(f"«{etiqueta}»: elegí un número entre {minimo} y {maximo}.")
+                continue
+            filas.append({**base, "valor_numero": float(n)})
+
+        elif tipo == "numero":
+            try:
+                filas.append({**base, "valor_numero": float(str(valor).replace(",", "."))})
+            except (TypeError, ValueError):
+                errores.append(f"«{etiqueta}»: tiene que ser un número.")
+
+        elif tipo == "booleano":
+            texto = str(valor).strip().lower()
+            if texto not in ("si", "sí", "no", "true", "false", "1", "0"):
+                errores.append(f"«{etiqueta}»: respondé Sí o No.")
+                continue
+            filas.append({**base, "valor_numero": 1.0 if texto in ("si", "sí", "true", "1") else 0.0})
+
+        elif tipo == "fecha":
+            texto = str(valor).strip()
+            if len(texto) != 10 or texto[4] != "-" or texto[7] != "-":
+                errores.append(f"«{etiqueta}»: la fecha tiene que ser AAAA-MM-DD.")
+                continue
+            filas.append({**base, "valor_fecha": texto})
+
+        else:   # texto y cualquier tipo nuevo que se responda escribiendo
+            filas.append({**base, "valor_texto": str(valor).strip()[:MAX_TEXTO_RESPUESTA]})
+
+    if not filas and not errores:
+        errores.append("No respondiste ninguna pregunta.")
+    return filas, errores
+
+
+def _indice(valor, cantidad: int):
+    """El índice de una opción, o None si no es válido."""
+    i = _entero(valor, None)
+    return i if i is not None and 0 <= i < cantidad else None

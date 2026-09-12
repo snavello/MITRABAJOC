@@ -2987,7 +2987,10 @@ def resolver_destinatarios(sindicato_id: int, criterio: str, valores: list,
     Se aplica a TODOS los criterios, no solo a "cuil": por provincia o
     pidiendo otra seccional se llegaría igual a gente de afuera."""
     valores = [str(v).strip() for v in (valores or []) if str(v).strip()]
-    if not valores:
+    # "todos" es el único criterio sin valores: es el padrón entero, ya
+    # recortado por el alcance de quien envía como todos los demás. Lo usan
+    # las encuestas dirigidas a todo el gremio.
+    if not valores and criterio != "todos":
         return []
     alcance = alcance_seccional(usuario_id) if usuario_id else None
     if alcance is not None and not alcance:
@@ -2998,6 +3001,8 @@ def resolver_destinatarios(sindicato_id: int, criterio: str, valores: list,
         if alcance is not None:
             q = q.where(Trabajador.seccional_id.in_(list(alcance)))
         trabajadores = s.exec(q).all()
+    if criterio == "todos":
+        return sorted({t.cuil for t in trabajadores})
     if criterio == "cuil":
         objetivo = set(valores)
         return sorted({t.cuil for t in trabajadores if t.cuil in objetivo})
@@ -4827,6 +4832,27 @@ class EncuestaParticipante(SQLModel, table=True):
     respondio: bool = False
 
 
+class RespuestaNominal(SQLModel, table=True):
+    """El vínculo respuesta → persona. SOLO existe en encuestas NOMINALES.
+
+    En una nominal no hay anonimato que proteger: el afiliado respondió
+    sabiendo que su nombre queda pegado a lo que contestó, y el sindicato
+    tiene que poder exportarlo (N20). Pero ese vínculo NO puede vivir como
+    una columna de la urna, porque entonces la garantía de las anónimas
+    pasaría a ser "nos acordamos de dejarla en NULL" -- justo el tipo de
+    promesa que este módulo no quiere hacer.
+
+    Por eso es una tabla aparte y la flecha apunta AL REVÉS: de acá a la
+    respuesta, nunca de la respuesta a acá. RespuestaEncuesta sigue sin
+    ninguna columna que lleve a una persona, y en una encuesta anónima esta
+    tabla simplemente no tiene filas -- hay un test que lo verifica.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    encuesta_id: int = Field(foreign_key="encuesta.id", index=True)
+    respuesta_id: int = Field(foreign_key="respuestaencuesta.id", index=True)
+    cuil: str = Field(index=True)
+
+
 class EventoEncuesta(SQLModel, table=True):
     """El historial de una encuesta: todo lo que alguien hizo con ella.
 
@@ -5132,3 +5158,188 @@ def _titulo_de_copia(titulo: str) -> str:
     if m:
         return f"{m.group(1)} ({int(m.group(2)) + 1})"
     return f"{titulo.strip()} (2)"
+
+
+def publicar_encuesta(encuesta_id: int, sindicato_id: int, criterio: str,
+                       valores: list, usuario_id: Optional[int] = None) -> dict:
+    """Fija el padrón y abre la encuesta. Devuelve {ok, error, cantidad}.
+
+    Publicar es EL acto que vuelve real una encuesta, y hace dos cosas que
+    no se deshacen:
+
+    1. **Resuelve los destinatarios y los GUARDA** (N10), una fila por CUIL,
+       igual que `crear_notificacion`. No se recalcula nunca más: es lo que
+       hace que "respondieron 620 de 1.000" signifique algo, porque esos
+       1.000 son siempre los mismos. Se recorta por el alcance de seccional
+       de quien publica, con la MISMA función que usa el preview.
+    2. **Congela el umbral** vigente de plataforma: si mañana lo cambian,
+       una encuesta ya cerrada no empieza a mostrar u ocultar cosas
+       distintas de las que venía mostrando.
+
+    Las filas del padrón nacen todas acá, al publicar, y responder solo
+    prende un booleano. Ese detalle es la mitad de la garantía de anonimato:
+    el orden de sus id es el del padrón, no el de las respuestas.
+    """
+    e = encuesta_por_id(encuesta_id, sindicato_id)
+    if not e:
+        return {"ok": False, "error": "La encuesta no existe.", "cantidad": 0}
+    if e["publicada"]:
+        return {"ok": False, "error": "Esta encuesta ya está publicada.", "cantidad": 0}
+    if not [p for p in e["preguntas"] if p["tipo_dato"] not in encuestas.TIPOS_SIN_RESPUESTA]:
+        return {"ok": False, "error": "La encuesta no tiene ninguna pregunta para responder.",
+                "cantidad": 0}
+    if not e["fecha_desde"] or not e["fecha_hasta"]:
+        return {"ok": False, "error": "Antes de publicar hay que poner las dos fechas: "
+                                      "cuándo abre y cuándo cierra.", "cantidad": 0}
+    if e["fecha_hasta"] < e["fecha_desde"]:
+        return {"ok": False, "error": "La fecha de cierre es anterior a la de apertura.",
+                "cantidad": 0}
+
+    cuils = resolver_destinatarios(sindicato_id, criterio, valores, usuario_id=usuario_id)
+    if not cuils:
+        return {"ok": False, "error": "Ese criterio no alcanza a ningún afiliado activo: "
+                                      "la encuesta no se publicó.", "cantidad": 0}
+
+    with Session(engine) as s:
+        fila = s.get(Encuesta, encuesta_id)
+        fila.publicada = True
+        fila.publicada_en = fechas.ahora_texto()
+        fila.criterio = criterio
+        fila.criterio_valores = list(valores or [])
+        fila.cantidad_destinatarios = len(cuils)
+        fila.umbral_minimo = umbral_encuestas()
+        s.add(fila)
+        for cuil in cuils:
+            s.add(EncuestaParticipante(encuesta_id=encuesta_id, cuil=cuil))
+        s.commit()
+    registrar_evento_encuesta(encuesta_id, usuario_id, "publicada",
+                              f"Padrón fijado: {len(cuils)} afiliados ({criterio})")
+    return {"ok": True, "error": "", "cantidad": len(cuils)}
+
+
+def cerrar_encuesta(encuesta_id: int, sindicato_id: int,
+                     usuario_id: Optional[int] = None) -> dict:
+    """Cierra una encuesta antes de tiempo (N7). No se puede reabrir: una
+    encuesta que se reabre después de ver los resultados deja de ser
+    confiable, y en un gremio con internas eso se discute. Si hace falta
+    más gente, se duplica y se lanza otra ronda."""
+    with Session(engine) as s:
+        e = s.get(Encuesta, encuesta_id)
+        if not e or e.sindicato_id != sindicato_id:
+            return {"ok": False, "error": "La encuesta no existe."}
+        if not e.publicada:
+            return {"ok": False, "error": "Esta encuesta todavía es un borrador."}
+        if e.cerrada_en:
+            return {"ok": False, "error": "Esta encuesta ya está cerrada."}
+        e.cerrada_en = fechas.ahora_texto()
+        s.add(e); s.commit()
+    registrar_evento_encuesta(encuesta_id, usuario_id, "cierre", "Cierre anticipado")
+    return {"ok": True, "error": ""}
+
+
+def encuestas_de_trabajador(cuil: str, sindicato_id: int) -> list:
+    """Las encuestas de este sindicato a las que ESTE CUIL fue invitado.
+
+    Solo las publicadas y solo si está en el padrón: una encuesta a la que
+    no fue invitado no existe para él. Trae `respondio` (del padrón, que es
+    lo único que sabe quién participó) y las preguntas, para la pantalla.
+    """
+    hoy = fechas.hoy_texto()
+    with Session(engine) as s:
+        participaciones = s.exec(select(EncuestaParticipante)
+                                 .where(EncuestaParticipante.cuil == cuil)).all()
+        if not participaciones:
+            return []
+        por_encuesta = {p.encuesta_id: p for p in participaciones}
+        filas = s.exec(select(Encuesta).where(
+            Encuesta.id.in_(list(por_encuesta)),
+            Encuesta.sindicato_id == sindicato_id,
+            Encuesta.publicada == True).order_by(Encuesta.id.desc())).all()
+        salida = []
+        for e in filas:
+            d = _encuesta_a_dict(s, e, hoy)
+            d["respondio"] = por_encuesta[e.id].respondio
+            d["disclaimer"] = encuestas.disclaimer(e.modo, e.cortes, e.umbral_minimo)
+            salida.append(d)
+        # Las abiertas y sin responder primero: es lo que el afiliado vino a hacer.
+        salida.sort(key=lambda d: (d["respondio"], d["estado"] != encuestas.ABIERTA))
+        return salida
+
+
+def registrar_respuesta_encuesta(encuesta_id: int, cuil: str, sindicato_id: int,
+                                  crudas: dict) -> dict:
+    """Guarda una respuesta. Devuelve {ok, error}.
+
+    Acá se cumple el anonimato, y es UNA transacción: se escriben las filas
+    de la urna y se prende `respondio` del padrón juntas, o no se escribe
+    nada. Lo que NO va a la urna: el CUIL, el id del participante, la hora.
+    Lo que sí, y solo si la encuesta los habilitó: seccional, provincia y
+    empleador, copiados en el momento (si el afiliado cambia de seccional
+    después, su respuesta sigue contando donde estaba cuando respondió).
+    """
+    e = encuesta_por_id(encuesta_id, sindicato_id)
+    if not e:
+        return {"ok": False, "error": "La encuesta no existe."}
+    if not encuestas.acepta_respuestas(e["publicada"], e["fecha_desde"], e["fecha_hasta"],
+                                       fechas.hoy_texto(), e["cerrada_en"]):
+        return {"ok": False, "error": "Esta encuesta no está abierta."}
+
+    # El padrón se chequea ANTES de mirar las respuestas: es control de
+    # acceso, no validación. Al revés, alguien que no fue invitado recibiría
+    # mensajes sobre las preguntas ("falta responder tal cosa") y se
+    # enteraría de cómo está armada una encuesta que no le toca.
+    with Session(engine) as s:
+        invitado = s.exec(select(EncuestaParticipante).where(
+            EncuestaParticipante.encuesta_id == encuesta_id,
+            EncuestaParticipante.cuil == cuil)).first()
+        if not invitado:
+            return {"ok": False, "error": "Esta encuesta no está dirigida a vos."}
+        if invitado.respondio:
+            return {"ok": False, "error": "Ya respondiste esta encuesta."}
+
+    filas, errores = encuestas.respuestas_saneadas(e["preguntas"], crudas or {})
+    if errores:
+        return {"ok": False, "error": errores[0]}
+
+    cortes = set(e["cortes"] or [])
+    datos_corte = {"seccional_id": None, "provincia": "", "cuit_empleador": ""}
+    if cortes:
+        with Session(engine) as s:
+            t = s.exec(select(Trabajador).where(
+                Trabajador.sindicato_id == sindicato_id, Trabajador.cuil == cuil)).first()
+            if t:
+                if "seccional" in cortes:
+                    datos_corte["seccional_id"] = t.seccional_id
+                if "provincia" in cortes:
+                    datos_corte["provincia"] = t.provincia or ""
+                if "empleador" in cortes:
+                    datos_corte["cuit_empleador"] = t.cuit_empleador or ""
+
+    dia = fechas.hoy_texto()
+    with Session(engine) as s:
+        # Se vuelve a leer el padrón DENTRO de la transacción que escribe:
+        # entre el chequeo de arriba y esto pueden haber pasado dos
+        # pestañas mandando a la vez, y la que llegue segunda tiene que
+        # encontrar la fila ya en True y no escribir nada.
+        participante = s.exec(select(EncuestaParticipante).where(
+            EncuestaParticipante.encuesta_id == encuesta_id,
+            EncuestaParticipante.cuil == cuil).with_for_update()).first()
+        if not participante:
+            return {"ok": False, "error": "Esta encuesta no está dirigida a vos."}
+        if participante.respondio:
+            return {"ok": False, "error": "Ya respondiste esta encuesta."}
+        participante.respondio = True
+        s.add(participante)
+        nuevas = []
+        for f in filas:
+            fila = RespuestaEncuesta(encuesta_id=encuesta_id, dia=dia, **f, **datos_corte)
+            s.add(fila)
+            nuevas.append(fila)
+        if e["modo"] == encuestas.NOMINAL:
+            # Solo en las nominales, y en su tabla aparte: la urna nunca
+            # sabe de quién es una respuesta (ver RespuestaNominal).
+            s.flush()   # para tener los id de las filas recién creadas
+            for fila in nuevas:
+                s.add(RespuestaNominal(encuesta_id=encuesta_id, respuesta_id=fila.id, cuil=cuil))
+        s.commit()
+    return {"ok": True, "error": ""}

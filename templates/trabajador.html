@@ -246,7 +246,7 @@
     display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
   .tram-chat-estado { display:inline-block; margin-top:6px; padding:2px 8px; border-radius:999px;
     font-size:10.5px; font-weight:700; letter-spacing:.3px; text-transform:uppercase;
-    background:color-mix(in srgb, var(--marca-secundario) 18%, #fff); color:var(--marca-secundario); }
+    background:color-mix(in srgb, var(--marca-apoyo) 18%, #fff); color:var(--marca-apoyo); }
   .tram-chat-meta { display:flex; align-items:center; gap:5px; margin-top:4px; font-size:10px; color:var(--gris); }
   .tram-chat-meta svg { width:11px; height:11px; stroke:var(--gris); stroke-width:2.2; fill:none; }
   .tram-chat-vacio { text-align:center; padding:22px 0; color:var(--gris); font-size:12.5px; }
@@ -704,6 +704,73 @@
   .sem-dot { display:inline-block; width:9px; height:9px; border-radius:2px; vertical-align:-1px; margin-right:3px; }
   .sem-fuente { font-size:11px; color:#8a887f; padding:0 18px 14px; font-style:italic; }
   @media (prefers-reduced-motion:reduce) { .spin { animation:none; } .btn:active { transform:none; } }
+  .oculto { display:none; }
+  /* ---------- Encuestas (N19): tarjeta limpia y barra de avance, nada de
+     carátula ni sellos -- eso es de Trámites, y el afiliado tiene que
+     distinguir de un vistazo que esto no es un expediente. ---------- */
+  .enq-card { border:1px solid var(--linea); border-radius:14px; background:#fff;
+    padding:14px 16px; margin-bottom:12px; box-shadow:0 2px 10px rgba(0,0,0,.04); }
+  .enq-card h3 { font-size:15.5px; margin:0 0 4px; }
+  .enq-meta { font-size:12px; color:var(--gris); }
+  .enq-chip { display:inline-block; padding:2px 9px; border-radius:99px; font-size:10.5px;
+    font-weight:800; text-transform:uppercase; letter-spacing:.04em; margin-left:6px; }
+  .enq-chip.abierta { background:#e6f5ec; color:#1c7a45; }
+  .enq-chip.cerrada { background:#f3e9e7; color:#8a4033; }
+  .enq-chip.programada { background:#e7effb; color:#2a5aa0; }
+  .enq-chip.lista { background:#eef0ee; color:#5c5a54; }
+  .enq-marco { border:1px solid var(--linea); border-radius:16px; overflow:hidden; background:#fff; }
+  .enq-cab { background:linear-gradient(135deg, var(--marca-acento), var(--marca-apoyo));
+    color:#fff; padding:18px 18px 15px; }
+  .enq-cab .tit { font-size:18px; font-weight:800; line-height:1.25; }
+  .enq-cab .baja { font-size:13px; opacity:.93; margin-top:5px; }
+  .enq-avance { height:6px; background:rgba(255,255,255,.28); border-radius:99px; margin-top:13px; }
+  .enq-avance > i { display:block; height:100%; width:0; border-radius:99px; background:#fff;
+    transition:width .25s ease; }
+  .enq-cuerpo { padding:16px; display:grid; grid-template-columns:repeat(12,1fr); gap:0 14px; }
+  .enq-bloque { grid-column:span 12; min-width:0; border-bottom:1px dashed var(--linea);
+    padding-bottom:14px; margin-bottom:16px; }
+  .enq-bloque:last-of-type { border-bottom:0; }
+  .eq-completo { grid-column:span 12; } .eq-mitad { grid-column:span 6; } .eq-tercio { grid-column:span 4; }
+  @media (max-width:640px) { .eq-mitad, .eq-tercio { grid-column:span 12; } }
+  .enq-preg { display:block; font-size:14.5px; font-weight:700; margin-bottom:4px; }
+  .enq-preg .ob { color:var(--marca-acento); }
+  .enq-preg .opc { font-weight:400; color:var(--gris); font-size:12.5px; }
+  .enq-ayuda { display:block; font-size:12px; color:var(--gris); margin-bottom:9px; }
+  .enq-opcion { display:flex; align-items:center; gap:9px; font-size:14px; padding:8px 10px;
+    border:1px solid var(--linea); border-radius:10px; margin-bottom:6px; cursor:pointer; }
+  .enq-opcion:hover { background:#fbfbfa; }
+  .enq-opcion input { width:17px; height:17px; }
+  .enq-input { width:100%; padding:10px 11px; border:1px solid var(--linea); border-radius:10px;
+    font-size:14px; font-family:inherit; }
+  .enq-escala { display:flex; gap:7px; }
+  .enq-escala .n { flex:1; padding:12px 0; border:1px solid var(--linea); background:#fff;
+    border-radius:11px; font-weight:800; font-size:15px; text-align:center; cursor:pointer; }
+  .enq-escala .n.elegido { background:var(--marca-apoyo); color:#fff;
+    border-color:var(--marca-apoyo); }
+  .enq-escala-pies { display:flex; justify-content:space-between; font-size:11.5px;
+    color:var(--gris); margin-top:5px; }
+  .enq-rank { display:flex; align-items:center; gap:9px; font-size:14px; padding:9px 10px;
+    border:1px solid var(--linea); border-radius:10px; margin-bottom:7px; background:#fff; }
+  .enq-rank.arrastrando { opacity:.5; }
+  .enq-rank.sobre-drop { border-top:3px solid var(--marca-acento); }
+  .enq-rank .n { width:22px; height:22px; border-radius:50%; background:var(--marca-apoyo);
+    color:#fff; font-size:12px; font-weight:800; display:flex; align-items:center;
+    justify-content:center; flex:0 0 auto; }
+  .enq-rank .nom { flex:1; }
+  .enq-rank button { padding:3px 9px; font-size:13px; }
+  .enq-disc { grid-column:span 12; background:#f4f8f7; border-left:3px solid var(--marca-apoyo);
+    padding:11px 13px; border-radius:0 10px 10px 0; font-size:12.5px; color:#3a4a48;
+    line-height:1.5; margin-bottom:16px; }
+  .enq-disc p { margin:0 0 6px; } .enq-disc p:last-child { margin:0; }
+  .enq-pie { background:#fafafa; border-top:1px solid var(--linea); padding:14px 16px; }
+  .enq-error { background:#f8e5e2; color:#b23a2e; padding:10px 12px; border-radius:9px;
+    font-size:13px; margin-bottom:10px; }
+  .enq-revision { font-size:14px; }
+  .enq-revision dt { font-weight:700; margin-top:11px; font-size:13.5px; }
+  .enq-revision dd { margin:3px 0 0; color:#333; }
+  .enq-revision dd.sin { color:var(--gris); font-style:italic; }
+  .enq-gracias { text-align:center; padding:30px 18px; }
+  .enq-gracias .tilde { font-size:40px; line-height:1; }
 </style>
 </head>
 <body>
@@ -1018,7 +1085,16 @@
   </div>
   {% endif %}
 
+  {% if 'encuestas' in modulos %}
+  <div class="tpanel" id="tp-encuestas">
+    <!-- ======= ENCUESTAS (SPRINT_ENCUESTAS.md, Fase 2) ======= -->
+    <div id="enc-lista"><p class="muted" style="font-size:13px;">Cargando…</p></div>
+    <div id="enc-responder" class="oculto"></div>
+  </div>
+  {% endif %}
+
 </div>
+
 
 <!-- Overlay: detalle de noticia -->
 <div class="overlay overlay-articulo" id="overlay-noticia" onclick="if (event.target === this) cerrarNoticia()">
@@ -1081,6 +1157,7 @@
   {% if 'aportes' in modulos %}<button class="tab-t" data-tp="aportes"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg></span>Mis Aportes</button>{% endif %}
   {% if 'capacitacion' in modulos %}<button class="tab-t" data-tp="capacitacion"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg></span>Capacitación</button>{% endif %}
   {% if 'tramites' in modulos %}<button class="tab-t" data-tp="tramites" style="position:relative;"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>Trámites<span class="tab-badge-tram" id="badge-tramites" style="display:{{ 'flex' if tramites_novedades else 'none' }};">{{ tramites_novedades or '' }}</span></button>{% endif %}
+  {% if 'encuestas' in modulos %}<button class="tab-t" data-tp="encuestas" style="position:relative;"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-nov"/></svg></span>Encuestas<span class="tab-badge-tram" id="badge-encuestas" style="display:none;"></span></button>{% endif %}
 </nav>
 
 <script>
@@ -2436,5 +2513,298 @@ if (document.getElementById('tp-tramites')) {
 {# sello ?v= para romper el cache de 1h al sumar funciones nuevas #}
 <script src="/static/pwa.js?v=2"></script>
 <script>registrarSW(); initBannerInstalar(); if (window.initPushTramites) initPushTramites();</script>
+{% if 'encuestas' in modulos %}
+<script>
+const AYUDA_ENC_TRAB = {{ encuestas_ayuda | tojson }};
+/* ============ Encuestas: la pantalla del afiliado (Fase 2) ============
+   Tres estados: la lista, el formulario y la revisión antes de enviar.
+   Nada se valida "de verdad" acá -- el servidor sanea contra las preguntas
+   guardadas y decide. Esto es comodidad: que no llegue vacío lo que se
+   puede evitar en el teléfono.
+
+   La revisión existe por N11: no se puede editar después de enviar, ni
+   siquiera en las nominales, así que la última pantalla antes del envío
+   tiene que mostrar TODO lo que está por mandar.
+   ==================================================================== */
+let encuestasTrab = [];
+let encActual = null;
+let respuestasTrab = {};   // {pregunta_id: valor}
+
+function escEnc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function opcionesDe(p) {
+  return (p.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
+}
+
+function cargarEncuestas() {
+  fetch('/api/encuestas').then(r => r.ok ? r.json() : Promise.reject())
+    .then(d => { encuestasTrab = d.encuestas || []; pintarListaEncuestas(); })
+    .catch(() => {
+      document.getElementById('enc-lista').innerHTML =
+        '<p class="muted" style="font-size:13px;">No pudimos cargar las encuestas. Probá de nuevo en un rato.</p>';
+    });
+}
+function pintarListaEncuestas() {
+  const cont = document.getElementById('enc-lista');
+  document.getElementById('enc-responder').classList.add('oculto');
+  cont.classList.remove('oculto');
+  const pendientes = encuestasTrab.filter(e => !e.respondio && e.estado === 'abierta').length;
+  const badge = document.getElementById('badge-encuestas');
+  if (badge) { badge.textContent = pendientes || ''; badge.style.display = pendientes ? 'flex' : 'none'; }
+  if (!encuestasTrab.length) {
+    cont.innerHTML = '<p class="muted" style="font-size:13.5px;">Tu sindicato todavía no te invitó a ninguna encuesta.</p>';
+    return;
+  }
+  cont.innerHTML = encuestasTrab.map(e => {
+    const abierta = e.estado === 'abierta';
+    const chip = e.respondio ? '<span class="enq-chip lista">respondida</span>'
+                             : `<span class="enq-chip ${e.estado}">${e.estado}</span>`;
+    const pie = e.respondio
+      ? 'Gracias por participar.'
+      : (abierta ? `Se puede responder hasta el ${e.fecha_hasta}.`
+                 : (e.estado === 'programada' ? `Abre el ${e.fecha_desde}.` : 'Ya cerró.'));
+    const boton = (abierta && !e.respondio)
+      ? `<button class="btn" style="margin-top:11px;" onclick="abrirEncuesta(${e.id})">Responder</button>` : '';
+    return `<div class="enq-card">
+      <h3>${escEnc(e.titulo)}${chip}</h3>
+      ${e.descripcion ? `<div class="enq-meta">${escEnc(e.descripcion)}</div>` : ''}
+      <div class="enq-meta" style="margin-top:6px;">${pie}</div>${boton}</div>`;
+  }).join('');
+}
+
+function abrirEncuesta(id) {
+  encActual = encuestasTrab.find(e => e.id === id);
+  if (!encActual) return;
+  respuestasTrab = {};
+  pintarFormularioEncuesta();
+}
+function volverAListaEncuestas() { encActual = null; pintarListaEncuestas(); }
+
+function pintarFormularioEncuesta(error) {
+  const cont = document.getElementById('enc-responder');
+  document.getElementById('enc-lista').classList.add('oculto');
+  cont.classList.remove('oculto');
+  const e = encActual;
+  const disc = (e.disclaimer || []).length
+    ? `<div class="enq-disc">${e.disclaimer.map(l => `<p>${escEnc(l)}</p>`).join('')}</div>` : '';
+  cont.innerHTML = `
+    <button class="btn sec" style="min-height:38px; margin:0 0 10px; width:auto; padding:0 14px;"
+            onclick="volverAListaEncuestas()">← Volver</button>
+    <div class="enq-marco">
+      <div class="enq-cab">
+        <div class="tit">${escEnc(e.titulo)}</div>
+        ${e.descripcion ? `<div class="baja">${escEnc(e.descripcion)}</div>` : ''}
+        <div class="enq-avance"><i id="enq-avance"></i></div>
+      </div>
+      <div class="enq-cuerpo">
+        ${error ? `<div class="enq-error" style="grid-column:span 12;">${escEnc(error)}</div>` : ''}
+        ${disc}
+        ${e.preguntas.map(htmlPreguntaTrab).join('')}
+      </div>
+      <div class="enq-pie">
+        <button class="btn" style="margin-top:0;" onclick="revisarEncuesta()">Revisar y enviar</button>
+        <p class="muted" style="font-size:11.5px; text-align:center; margin:8px 0 0;">
+          Vas a poder revisar todo antes de mandarlo.</p>
+      </div>
+    </div>`;
+  actualizarAvanceEnc();
+}
+
+function htmlPreguntaTrab(p) {
+  if (p.tipo_dato === 'separador') {
+    return `<div class="enq-bloque eq-completo"><hr>${p.etiqueta ? `<b>${escEnc(p.etiqueta)}</b>` : ''}</div>`;
+  }
+  const opciones = opcionesDe(p);
+  const marca = p.obligatorio ? ' <span class="ob">*</span>' : ' <span class="opc">(opcional)</span>';
+  const ayuda = AYUDA_ENC_TRAB[p.tipo_dato]
+    ? `<span class="enq-ayuda">${escEnc(AYUDA_ENC_TRAB[p.tipo_dato])}</span>` : '';
+  let cuerpo = '';
+  if (p.tipo_dato === 'escala') {
+    const min = p.escala_min ?? 1, max = p.escala_max ?? 5;
+    const ns = [];
+    for (let n = min; n <= max; n++) ns.push(
+      `<div class="n" data-n="${n}" onclick="elegirEscala(${p.id}, ${n}, this)">${n}</div>`);
+    cuerpo = `<div class="enq-escala" id="esc_${p.id}">${ns.join('')}</div>
+      <div class="enq-escala-pies"><span>${escEnc(p.etiqueta_min)}</span><span>${escEnc(p.etiqueta_max)}</span></div>`;
+  } else if (p.tipo_dato === 'ranking') {
+    respuestasTrab[p.id] = opciones.map((_, i) => i);   // arranca en el orden del formulario
+    cuerpo = `<div id="rank_${p.id}">${htmlRanking(p, opciones)}</div>`;
+  } else if (p.tipo_dato === 'opcion_unica' || p.tipo_dato === 'multiple') {
+    const tipo = p.tipo_dato === 'opcion_unica' ? 'radio' : 'checkbox';
+    cuerpo = opciones.map((o, i) =>
+      `<label class="enq-opcion"><input type="${tipo}" name="p_${p.id}" value="${i}"
+        onchange="marcarOpcion(${p.id}, '${p.tipo_dato}')"> ${escEnc(o)}</label>`).join('');
+  } else if (p.tipo_dato === 'seleccion') {
+    cuerpo = `<select class="enq-input" onchange="guardarResp(${p.id}, this.value)">
+      <option value="">Elegí una opción</option>
+      ${opciones.map((o, i) => `<option value="${i}">${escEnc(o)}</option>`).join('')}</select>`;
+  } else if (p.tipo_dato === 'booleano') {
+    cuerpo = ['si', 'no'].map(v =>
+      `<label class="enq-opcion"><input type="radio" name="p_${p.id}" value="${v}"
+        onchange="guardarResp(${p.id}, '${v}')"> ${v === 'si' ? 'Sí' : 'No'}</label>`).join('');
+  } else if (p.tipo_dato === 'fecha') {
+    cuerpo = `<input type="date" class="enq-input" onchange="guardarResp(${p.id}, this.value)">`;
+  } else if (p.tipo_dato === 'numero') {
+    cuerpo = `<input type="number" inputmode="decimal" class="enq-input" placeholder="Un número"
+      oninput="guardarResp(${p.id}, this.value)">`;
+  } else {
+    cuerpo = `<textarea class="enq-input" rows="3" maxlength="2000" placeholder="Tu respuesta"
+      oninput="guardarResp(${p.id}, this.value)"></textarea>`;
+  }
+  return `<div class="enq-bloque eq-${p.ancho || 'completo'}">
+    <span class="enq-preg">${escEnc(p.etiqueta)}${marca}</span>${ayuda}${cuerpo}</div>`;
+}
+
+function htmlRanking(p, opciones) {
+  const orden = respuestasTrab[p.id] || opciones.map((_, i) => i);
+  return orden.map((idx, pos) => `
+    <div class="enq-rank" draggable="true" data-pos="${pos}"
+         ondragstart="dragRankStart(event, ${p.id}, ${pos})"
+         ondragover="dragRankOver(event)" ondrop="dragRankDrop(event, ${p.id}, ${pos})"
+         ondragend="dragRankEnd(event)">
+      <span class="n">${pos + 1}</span><span class="nom">${escEnc(opciones[idx])}</span>
+      <button type="button" class="btn sec" style="min-height:30px; width:34px; margin:0; padding:0;" ${pos === 0 ? 'disabled' : ''}
+              onclick="moverRank(${p.id}, ${pos}, -1)" aria-label="Subir">↑</button>
+      <button type="button" class="btn sec" style="min-height:30px; width:34px; margin:0; padding:0;" ${pos === orden.length - 1 ? 'disabled' : ''}
+              onclick="moverRank(${p.id}, ${pos}, 1)" aria-label="Bajar">↓</button>
+    </div>`).join('');
+}
+function repintarRanking(pid) {
+  const p = encActual.preguntas.find(x => x.id === pid);
+  document.getElementById('rank_' + pid).innerHTML = htmlRanking(p, opcionesDe(p));
+}
+function moverRank(pid, pos, delta) {
+  const orden = respuestasTrab[pid];
+  const otra = pos + delta;
+  if (otra < 0 || otra >= orden.length) return;
+  [orden[pos], orden[otra]] = [orden[otra], orden[pos]];
+  repintarRanking(pid);
+}
+let rankOrigen = null;
+function dragRankStart(ev, pid, pos) { rankOrigen = {pid, pos}; ev.currentTarget.classList.add('arrastrando'); }
+function dragRankOver(ev) { ev.preventDefault(); ev.currentTarget.classList.add('sobre-drop'); }
+function dragRankDrop(ev, pid, pos) {
+  ev.preventDefault();
+  if (!rankOrigen || rankOrigen.pid !== pid || rankOrigen.pos === pos) return;
+  const orden = respuestasTrab[pid];
+  const [movido] = orden.splice(rankOrigen.pos, 1);
+  orden.splice(pos, 0, movido);
+  rankOrigen = null;
+  repintarRanking(pid);
+}
+function dragRankEnd() {
+  rankOrigen = null;
+  document.querySelectorAll('.enq-rank.arrastrando, .enq-rank.sobre-drop')
+    .forEach(el => el.classList.remove('arrastrando', 'sobre-drop'));
+}
+
+function guardarResp(pid, valor) {
+  if (valor === '' || valor === null) delete respuestasTrab[pid];
+  else respuestasTrab[pid] = valor;
+  actualizarAvanceEnc();
+}
+function elegirEscala(pid, n, el) {
+  respuestasTrab[pid] = n;
+  el.parentElement.querySelectorAll('.n').forEach(x => x.classList.remove('elegido'));
+  el.classList.add('elegido');
+  actualizarAvanceEnc();
+}
+function marcarOpcion(pid, tipo) {
+  const marcados = [...document.querySelectorAll(`input[name="p_${pid}"]:checked`)]
+    .map(i => parseInt(i.value, 10));
+  if (tipo === 'opcion_unica') {
+    if (marcados.length) respuestasTrab[pid] = marcados[0]; else delete respuestasTrab[pid];
+  } else {
+    if (marcados.length) respuestasTrab[pid] = marcados; else delete respuestasTrab[pid];
+  }
+  actualizarAvanceEnc();
+}
+function actualizarAvanceEnc() {
+  const barra = document.getElementById('enq-avance');
+  if (!barra || !encActual) return;
+  const conRespuesta = encActual.preguntas.filter(p => p.tipo_dato !== 'separador');
+  const hechas = conRespuesta.filter(p => {
+    const v = respuestasTrab[p.id];
+    return v !== undefined && v !== '' && !(Array.isArray(v) && !v.length);
+  }).length;
+  barra.style.width = (conRespuesta.length ? (hechas / conRespuesta.length) * 100 : 0) + '%';
+}
+
+/* ---------- Revisión antes de enviar (N11) ---------- */
+function textoRespuesta(p) {
+  const v = respuestasTrab[p.id];
+  const opciones = opcionesDe(p);
+  if (v === undefined || v === '' || (Array.isArray(v) && !v.length)) return null;
+  if (p.tipo_dato === 'ranking') return v.map((i, n) => `${n + 1}. ${opciones[i]}`).join(' · ');
+  if (p.tipo_dato === 'multiple') return v.map(i => opciones[i]).join(', ');
+  if (p.tipo_dato === 'opcion_unica' || p.tipo_dato === 'seleccion') return opciones[v];
+  if (p.tipo_dato === 'booleano') return v === 'si' ? 'Sí' : 'No';
+  return String(v);
+}
+function revisarEncuesta() {
+  const e = encActual;
+  const faltan = e.preguntas.filter(p => p.tipo_dato !== 'separador' && p.obligatorio
+                                        && textoRespuesta(p) === null);
+  const items = e.preguntas.filter(p => p.tipo_dato !== 'separador').map(p => {
+    const t = textoRespuesta(p);
+    return `<dt>${escEnc(p.etiqueta)}</dt>` + (t !== null
+      ? `<dd>${escEnc(t)}</dd>` : '<dd class="sin">sin responder</dd>');
+  }).join('');
+  document.getElementById('enc-responder').innerHTML = `
+    <button class="btn sec" style="min-height:38px; margin:0 0 10px; width:auto; padding:0 14px;"
+            onclick="pintarFormularioEncuesta()">← Volver a editar</button>
+    <div class="enq-marco">
+      <div class="enq-cab"><div class="tit">Revisá lo que vas a enviar</div>
+        <div class="baja">${escEnc(e.titulo)}</div></div>
+      <div style="padding:16px;">
+        ${faltan.length ? `<div class="enq-error">Falta responder ${faltan.length}
+          pregunta${faltan.length === 1 ? '' : 's'} obligatoria${faltan.length === 1 ? '' : 's'}.</div>` : ''}
+        <dl class="enq-revision">${items}</dl>
+      </div>
+      <div class="enq-pie">
+        <button class="btn" style="margin-top:0;" id="enq-enviar" ${faltan.length ? 'disabled' : ''}
+                onclick="enviarEncuesta()">Enviar mi respuesta</button>
+        <p class="muted" style="font-size:11.5px; text-align:center; margin:8px 0 0;">
+          Una vez enviada no se puede modificar.</p>
+      </div>
+    </div>`;
+}
+function enviarEncuesta() {
+  const boton = document.getElementById('enq-enviar');
+  boton.disabled = true; boton.textContent = 'Enviando…';
+  fetch('/api/encuesta/' + encActual.id, {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({respuestas: respuestasTrab}),
+  }).then(async r => {
+    if (r.ok) return r.json();
+    const cuerpo = await r.json().catch(() => ({}));
+    throw new Error(cuerpo.detail || 'No se pudo enviar tu respuesta.');
+  }).then(() => {
+    document.getElementById('enc-responder').innerHTML = `
+      <div class="enq-marco"><div class="enq-gracias">
+        <div class="tilde">✓</div>
+        <h3 style="margin:10px 0 6px;">¡Gracias por participar!</h3>
+        <p class="muted" style="font-size:13.5px;">Tu respuesta quedó registrada.</p>
+        <button class="btn sec" onclick="cargarEncuestas()">Volver a las encuestas</button>
+      </div></div>`;
+    const item = encuestasTrab.find(x => x.id === encActual.id);
+    if (item) item.respondio = true;
+  }).catch(err => {
+    boton.disabled = false; boton.textContent = 'Enviar mi respuesta';
+    const marco = document.querySelector('#enc-responder .enq-revision');
+    if (marco) marco.insertAdjacentHTML('beforebegin',
+      `<div class="enq-error">${escEnc(err.message)}</div>`);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.querySelector('.tab-t[data-tp="encuestas"]');
+  if (btn) btn.addEventListener('click', cargarEncuestas, {once: false});
+  cargarEncuestas();
+});
+</script>
+{% endif %}
 </body>
 </html>

@@ -1760,9 +1760,16 @@
           <button class="sec mini" type="submit" title="Copia la estructura en un borrador nuevo, para relanzarla y poder comparar las dos tomas">Duplicar</button>
         </form>
         {% if not e.publicada %}
+        <button type="button" class="mini" onclick="abrirPublicar({{ e.id }})">Publicar</button>
         <form method="post" action="/admin/encuesta/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar este borrador?')">
           <input type="hidden" name="id" value="{{ e.id }}">
           <button class="peligro mini" type="submit">Borrar</button>
+        </form>
+        {% elif e.estado == 'abierta' or e.estado == 'programada' %}
+        <form method="post" action="/admin/encuesta/cerrar" style="display:inline;"
+              onsubmit="return confirm('¿Cerrar la encuesta ahora? No se puede reabrir: si hace falta más gente, se duplica y se lanza otra ronda.')">
+          <input type="hidden" name="id" value="{{ e.id }}">
+          <button class="sec mini" type="submit">Cerrar</button>
         </form>
         {% endif %}
         {% endif %}
@@ -1772,6 +1779,57 @@
     <tr><td colspan="7" class="muted">Todavía no creaste ninguna encuesta.</td></tr>
     {% endfor %}
   </table>
+
+  {% if 'encuestas' in permisos %}
+  <!-- Publicar: fija el padrón y abre la encuesta. Es irreversible -->
+  <div class="modal-recibo-overlay" id="modal-publicar" onclick="if (event.target === this) cerrarPublicar()">
+    <div class="modal-recibo" style="max-width:520px;">
+      <div class="modal-recibo-enc">
+        <h3>Publicar la encuesta</h3>
+        <button type="button" class="modal-recibo-cerrar" onclick="cerrarPublicar()" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-recibo-body">
+        <form method="post" action="/admin/encuesta/publicar" id="form-publicar">
+          <input type="hidden" name="id" id="pub-id">
+          <p class="muted" style="font-size:12.5px; margin:0 0 12px;">
+            Al publicar se <b>fija el padrón</b>: se resuelve ahora quiénes pueden responder y
+            esa lista no se recalcula nunca más. Es lo que hace que "respondieron 620 de 1.000"
+            signifique algo. No se puede deshacer.</p>
+          <div class="campo"><label>¿A quiénes?</label>
+            <select name="criterio" id="pub-criterio" onchange="cambioCriterioPublicar()">
+              <option value="todos">A todo el padrón</option>
+              {% if seccionales %}<option value="seccional">Por seccional</option>{% endif %}
+              <option value="provincia">Por provincia</option>
+              <option value="cuit_empleador">Por empresa (CUIT)</option>
+              <option value="cuil">Por CUIL</option>
+            </select>
+          </div>
+          <div class="campo oculto" id="pub-seccionales" style="margin-top:10px;">
+            <label>Seccionales</label>
+            <div class="check-seccionales">
+              {% for sec in seccionales %}
+              <label class="chk-seccional"><input type="checkbox" name="valores" value="{{ sec.id }}"
+                     class="pub-valor" onchange="contarDestinatarios()"> {{ sec.nombre }}</label>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="campo oculto" id="pub-texto" style="margin-top:10px;">
+            <label id="pub-texto-label">Valores, separados por coma</label>
+            <input type="text" name="valores" id="pub-texto-input" class="pub-valor"
+                   oninput="contarDestinatarios()" placeholder="20111111119, 27222222224">
+          </div>
+          <p id="pub-cuenta" style="margin:14px 0 0; font-size:13.5px;"></p>
+          <div style="margin-top:14px;">
+            <button type="submit" id="pub-submit">Publicar</button>
+            <button type="button" class="sec" onclick="cerrarPublicar()">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
   </div>
   {% endif %}
   {% endif %}
@@ -5014,6 +5072,65 @@ function prepararEnvioEncuesta() {
   document.getElementById('enc-preguntas-json').value = JSON.stringify(preguntasEncuestaActuales);
   return true;
 }
+
+/* ---------- Publicar: fijar el padrón ---------- */
+function abrirPublicar(id) {
+  document.getElementById('pub-id').value = id;
+  document.getElementById('pub-criterio').value = 'todos';
+  document.querySelectorAll('.pub-valor').forEach(v => {
+    if (v.type === 'checkbox') v.checked = false; else v.value = '';
+  });
+  cambioCriterioPublicar();
+  document.getElementById('modal-publicar').classList.add('abierto');
+}
+function cerrarPublicar() {
+  document.getElementById('modal-publicar').classList.remove('abierto');
+}
+function cambioCriterioPublicar() {
+  const c = document.getElementById('pub-criterio').value;
+  document.getElementById('pub-seccionales').classList.toggle('oculto', c !== 'seccional');
+  document.getElementById('pub-texto').classList.toggle('oculto',
+    !['provincia', 'cuit_empleador', 'cuil'].includes(c));
+  const etiquetas = {
+    provincia: ['Provincias, separadas por coma', 'Santa Fe, Córdoba'],
+    cuit_empleador: ['CUIT de las empresas, separados por coma', '30999888776, 30111222339'],
+    cuil: ['CUIL, separados por coma', '20111111119, 27222222224'],
+  };
+  if (etiquetas[c]) {
+    document.getElementById('pub-texto-label').textContent = etiquetas[c][0];
+    document.getElementById('pub-texto-input').placeholder = etiquetas[c][1];
+  }
+  contarDestinatarios();
+}
+// El número sale del servidor, con la MISMA función que usa el envío real:
+// si el conteo lo hiciera el navegador, el admin podría confirmar un número
+// distinto del que sale -- y el error sería silencioso, porque nadie compara
+// los dos (mismo criterio que el preview de Notificaciones).
+let tiempoCuenta = null;
+function contarDestinatarios() {
+  clearTimeout(tiempoCuenta);
+  tiempoCuenta = setTimeout(() => {
+    const c = document.getElementById('pub-criterio').value;
+    const q = new URLSearchParams({criterio: c});
+    document.querySelectorAll('.pub-valor').forEach(v => {
+      if (v.type === 'checkbox') { if (v.checked) q.append('valores', v.value); }
+      else if (v.value.trim()) q.append('valores', v.value.trim());
+    });
+    const caja = document.getElementById('pub-cuenta');
+    const boton = document.getElementById('pub-submit');
+    fetch('/admin/encuesta/destinatarios?' + q.toString())
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(d => {
+        const n = d.cantidad;
+        caja.innerHTML = n
+          ? `Le va a llegar a <b>${n}</b> afiliado${n === 1 ? '' : 's'} activo${n === 1 ? '' : 's'}.`
+          : '<span style="color:var(--alerta);">Ese criterio no alcanza a ningún afiliado activo.</span>';
+        boton.disabled = !n;
+      })
+      .catch(() => { caja.textContent = ''; boton.disabled = false; });
+  }, 250);
+}
+
 document.addEventListener('DOMContentLoaded', renderPreguntasEncuesta);
 </script>
 {% endif %}

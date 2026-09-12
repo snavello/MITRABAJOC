@@ -15,7 +15,10 @@ Correr con: .venv/Scripts/python.exe -m pytest test_encuestas.py -q
 """
 
 
+from datetime import timedelta
+
 import encuestas
+import fechas
 import modulos
 import permisos
 import db
@@ -356,10 +359,11 @@ PREGUNTAS = [
 ]
 
 
-def _alta(titulo="Clima laboral", modo="anonima", cortes=("seccional",), preguntas=None):
+def _alta(titulo="Clima laboral", modo="anonima", cortes=("seccional",), preguntas=None,
+          desde="2026-10-01", hasta="2026-10-15"):
     return cliente.post("/admin/encuesta", data={
         "titulo": titulo, "descripcion": "Tres minutos", "modo": modo,
-        "cortes": list(cortes), "fecha_desde": "2026-10-01", "fecha_hasta": "2026-10-15",
+        "cortes": list(cortes), "fecha_desde": desde, "fecha_hasta": hasta,
         "mostrar_resultados": "1",
         "preguntas_json": json.dumps(preguntas if preguntas is not None else PREGUNTAS),
     }, follow_redirects=False)
@@ -521,3 +525,272 @@ def test_una_encuesta_de_otro_sindicato_no_se_toca():
     assert "error=encuesta" in r.headers["location"]
     assert db.encuesta_por_id(ajena["id"]) is not None
     assert db.encuesta_por_id(ajena["id"], sid_b) is None
+
+
+# ==================== Fase 2: publicar y responder ====================
+def _cuils(sid: int) -> tuple:
+    """Dos CUIL propios de ESTE sindicato.
+
+    Únicos por sindicato a propósito: si el mismo CUIL queda empadronado en
+    varios, la app no puede resolver en cuál está parado el trabajador
+    (pluriempleo) y responde 403 -- el test fallaría por un motivo que no
+    tiene nada que ver con lo que está probando.
+    """
+    return f"20{sid:09d}", f"27{sid:09d}"
+
+
+def _padron(sid: int, cuils=None, seccional_id=None, provincia="Santa Fe"):
+    with db.get_session() as s:
+        for c in (cuils if cuils is not None else _cuils(sid)):
+            s.add(db.Trabajador(sindicato_id=sid, cuil=c, nombre="T " + c, activo=True,
+                                registrado=True, seccional_id=seccional_id,
+                                provincia=provincia, cuit_empleador="30999888776"))
+        s.commit()
+
+
+def _sesion_trabajador(cuil: str, sid: int = 0):
+    cliente.cookies.clear()
+    cliente.cookies.set("sesion_trabajador", auth.crear_sesion("trabajador"))
+    cliente.cookies.set("cuil_trab", cuil)
+    if sid:
+        cliente.cookies.set("sind_elegido", str(sid))
+
+
+def _encuesta_publicada(slug: str, modo="anonima", cortes=("seccional",),
+                        preguntas=None, criterio="todos", valores=()):
+    """(sid, uid, encuesta_id) con el padrón ya fijado."""
+    sid, uid = _sindicato_con(["encuestas"], slug)
+    _padron(sid)
+    _sesion(sid, uid)
+    # La ventana se calcula alrededor de HOY: una encuesta con fechas fijas
+    # se vuelve "programada" o "cerrada" sola con el paso del tiempo, y el
+    # test empezaría a fallar un día sin que nadie toque nada.
+    hoy = fechas.hoy()
+    _alta(modo=modo, cortes=cortes, preguntas=preguntas,
+          desde=(hoy - timedelta(days=1)).isoformat(),
+          hasta=(hoy + timedelta(days=30)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    r = cliente.post("/admin/encuesta/publicar",
+                     data={"id": eid, "criterio": criterio, "valores": list(valores)},
+                     follow_redirects=False)
+    assert r.headers["location"] == "/admin#encuestas", unquote(r.headers["location"])
+    return sid, uid, eid
+
+
+def test_publicar_fija_el_padron():
+    sid, uid, eid = _encuesta_publicada("publicar")
+    e = db.encuestas_del_sindicato(sid)[0]
+    assert e["estado"] == encuestas.ABIERTA
+    assert e["participantes"] == 2 and e["cantidad_destinatarios"] == 2
+    assert e["umbral_minimo"] == db.umbral_encuestas()   # congelado al publicar
+    # Y no se recalcula: un afiliado nuevo no entra a una encuesta ya lanzada.
+    _padron(sid, ("20333333330",))
+    assert db.encuestas_del_sindicato(sid)[0]["participantes"] == 2
+
+
+def test_no_se_publica_dos_veces_ni_sin_fechas_ni_sin_gente():
+    sid, uid, eid = _encuesta_publicada("publicar-otra-vez")
+    r = cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                     follow_redirects=False)
+    assert "ya está publicada" in unquote(r.headers["location"])
+
+    sid2, uid2 = _sindicato_con(["encuestas"], "sin-fechas")
+    _padron(sid2)
+    _sesion(sid2, uid2)
+    cliente.post("/admin/encuesta", data={"titulo": "Sin fechas", "modo": "nominal",
+                                          "preguntas_json": json.dumps(PREGUNTAS)},
+                 follow_redirects=False)
+    eid2 = db.encuestas_del_sindicato(sid2)[0]["id"]
+    r = cliente.post("/admin/encuesta/publicar", data={"id": eid2, "criterio": "todos"},
+                     follow_redirects=False)
+    assert "las dos fechas" in unquote(r.headers["location"])
+    assert not db.encuestas_del_sindicato(sid2)[0]["publicada"]
+
+    sid3, uid3 = _sindicato_con(["encuestas"], "sin-gente")   # sin padrón
+    _sesion(sid3, uid3)
+    _alta()
+    eid3 = db.encuestas_del_sindicato(sid3)[0]["id"]
+    r = cliente.post("/admin/encuesta/publicar", data={"id": eid3, "criterio": "todos"},
+                     follow_redirects=False)
+    assert "no alcanza a ningún afiliado" in unquote(r.headers["location"])
+
+
+def test_el_afiliado_ve_la_encuesta_y_la_responde_una_sola_vez():
+    sid, uid, eid = _encuesta_publicada("responder")
+    _sesion_trabajador(_cuils(sid)[0], sid)
+    lista = cliente.get("/api/encuestas").json()["encuestas"]
+    assert [e["id"] for e in lista] == [eid]
+    assert lista[0]["respondio"] is False and lista[0]["disclaimer"]
+    pids = [p["id"] for p in lista[0]["preguntas"]]
+
+    r = cliente.post(f"/api/encuesta/{eid}",
+                     json={"respuestas": {str(pids[0]): 5, str(pids[1]): [1, 0, 2]}})
+    assert r.status_code == 200
+    assert cliente.get("/api/encuestas").json()["encuestas"][0]["respondio"] is True
+
+    r = cliente.post(f"/api/encuesta/{eid}",
+                     json={"respuestas": {str(pids[0]): 1, str(pids[1]): [0, 1, 2]}})
+    assert r.status_code == 400
+    assert "Ya respondiste" in r.json()["detail"]
+    assert r.json()["codigo"] == "E-ENCUESTA-01"
+    # Y la segunda no dejó rastro: sigue habiendo una sola tanda de respuestas.
+    with db.get_session() as s:
+        filas = s.exec(db.select(db.RespuestaEncuesta)
+                       .where(db.RespuestaEncuesta.encuesta_id == eid)).all()
+    assert len({f.valor_numero for f in filas if f.valor_numero is not None}) == 1
+
+
+def test_quien_no_esta_en_el_padron_no_entra_y_no_se_entera_de_nada():
+    sid, uid = _sindicato_con(["encuestas"], "ajeno")
+    invitado, ajeno = _cuils(sid)
+    _padron(sid)
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    _alta(desde=(hoy - timedelta(days=1)).isoformat(),
+          hasta=(hoy + timedelta(days=30)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    cliente.post("/admin/encuesta/publicar",
+                 data={"id": eid, "criterio": "cuil", "valores": [invitado]},
+                 follow_redirects=False)
+
+    _sesion_trabajador(ajeno, sid)
+    assert cliente.get("/api/encuestas").json()["encuestas"] == []
+    r = cliente.post(f"/api/encuesta/{eid}", json={"respuestas": {}})
+    assert r.status_code == 400
+    # El mensaje es de ACCESO, no sobre las preguntas: al revés, alguien que
+    # no fue invitado se enteraría de cómo está armada la encuesta.
+    assert "no está dirigida a vos" in r.json()["detail"]
+    assert "Falta responder" not in r.json()["detail"]
+
+
+def test_fuera_de_la_ventana_no_se_responde():
+    sid, uid, eid = _encuesta_publicada("ventana")
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    respuestas = {"respuestas": {str(pids[0]): 3, str(pids[1]): [0, 1, 2]}}
+
+    _sesion(sid, uid)
+    cliente.post("/admin/encuesta/cerrar", data={"id": eid}, follow_redirects=False)
+    _sesion_trabajador(_cuils(sid)[0], sid)
+    r = cliente.post(f"/api/encuesta/{eid}", json=respuestas)
+    assert r.status_code == 400 and "no está abierta" in r.json()["detail"]
+
+    # Cerrada es cerrada: no hay forma de reabrirla (N7).
+    _sesion(sid, uid)
+    r = cliente.post("/admin/encuesta/cerrar", data={"id": eid}, follow_redirects=False)
+    assert "ya está cerrada" in unquote(r.headers["location"])
+
+
+def test_solo_se_guardan_los_cortes_que_la_encuesta_habilito():
+    sid, uid = _sindicato_con(["encuestas"], "cortes")
+    with db.get_session() as s:
+        sec = db.Seccional(sindicato_id=sid, nombre="Rosario")
+        s.add(sec); s.commit(); s.refresh(sec)
+        seccional_id = sec.id
+    _padron(sid, seccional_id=seccional_id)
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    _alta(modo="anonima", cortes=("seccional",),     # provincia y empleador NO
+          desde=(hoy - timedelta(days=1)).isoformat(),
+          hasta=(hoy + timedelta(days=30)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                 follow_redirects=False)
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    _sesion_trabajador(_cuils(sid)[0], sid)
+    # El status se afirma: sin esto, una respuesta rechazada dejaría la urna
+    # vacía y el test podría pasar por el motivo equivocado.
+    assert cliente.post(f"/api/encuesta/{eid}",
+                        json={"respuestas": {str(pids[0]): 4,
+                                             str(pids[1]): [0, 1, 2]}}).status_code == 200
+
+    with db.get_session() as s:
+        filas = s.exec(db.select(db.RespuestaEncuesta)
+                       .where(db.RespuestaEncuesta.encuesta_id == eid)).all()
+    assert filas
+    for f in filas:
+        assert f.seccional_id == seccional_id      # tildado: se guarda
+        assert f.provincia == ""                   # no tildado: no se guarda
+        assert f.cuit_empleador == ""              # tampoco
+        assert f.dia and len(f.dia) == 10          # el día, nunca la hora
+
+
+# ---------- Privacidad 1: ninguna ruta devuelve un CUIL (N21.1) ----------
+def _tiene(dato, aguja: str) -> bool:
+    """Busca un texto en cualquier lugar de una estructura, por anidado que esté."""
+    if isinstance(dato, str):
+        return aguja in dato
+    if isinstance(dato, dict):
+        return any(_tiene(k, aguja) or _tiene(v, aguja) for k, v in dato.items())
+    if isinstance(dato, list):
+        return any(_tiene(x, aguja) for x in dato)
+    return False
+
+
+def test_ninguna_salida_de_una_anonima_devuelve_un_cuil():
+    sid, uid, eid = _encuesta_publicada("privacidad-rutas")
+    cuil, _ = _cuils(sid)
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    _sesion_trabajador(cuil, sid)
+    assert cliente.post(f"/api/encuesta/{eid}",
+                        json={"respuestas": {str(pids[0]): 5,
+                                             str(pids[1]): [2, 1, 0]}}).status_code == 200
+
+    # Lo que ve el afiliado.
+    assert not _tiene(cliente.get("/api/encuestas").json(), cuil)
+    # Lo que ve el sindicato del módulo: la encuesta serializada (es lo que
+    # el panel embebe en el botón Editar) y los endpoints de encuestas. El
+    # padrón de afiliados tiene su propia pestaña y ahí los CUIL van: lo que
+    # no puede pasar es que salgan POR ACÁ.
+    _sesion(sid, uid)
+    assert not _tiene(db.encuestas_del_sindicato(sid), cuil)
+    assert not _tiene(db.encuesta_por_id(eid, sid), cuil)
+    assert not _tiene(cliente.get("/admin/encuesta/disclaimer",
+                                  params={"modo": "anonima"}).json(), cuil)
+    assert not _tiene(db.eventos_de_encuesta(eid), cuil)
+
+
+# ---------- Privacidad 2: padrón y urna no se cruzan (N21.2) ----------
+def test_en_una_anonima_no_existe_el_vinculo_con_la_persona():
+    sid, uid, eid = _encuesta_publicada("privacidad-vinculo", modo="anonima")
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    _sesion_trabajador(_cuils(sid)[0], sid)
+    cliente.post(f"/api/encuesta/{eid}",
+                 json={"respuestas": {str(pids[0]): 5, str(pids[1]): [0, 1, 2]}})
+    with db.get_session() as s:
+        vinculos = s.exec(db.select(db.RespuestaNominal)
+                          .where(db.RespuestaNominal.encuesta_id == eid)).all()
+        filas = s.exec(db.select(db.RespuestaEncuesta)
+                       .where(db.RespuestaEncuesta.encuesta_id == eid)).all()
+        padron = s.exec(db.select(db.EncuestaParticipante)
+                        .where(db.EncuestaParticipante.encuesta_id == eid)).all()
+    assert filas and not vinculos, "una encuesta anónima no puede tener vínculos"
+    # El padrón sabe QUIÉN participó y nada más; la urna, QUÉ se respondió.
+    assert {p.cuil for p in padron} == set(_cuils(sid))
+    assert all(p.respondio == (p.cuil == _cuils(sid)[0]) for p in padron)
+
+
+def test_en_una_nominal_el_vinculo_existe_y_vive_en_su_tabla():
+    sid, uid, eid = _encuesta_publicada("nominal-vinculo", modo="nominal", cortes=())
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    _sesion_trabajador(_cuils(sid)[0], sid)
+    cliente.post(f"/api/encuesta/{eid}",
+                 json={"respuestas": {str(pids[0]): 2, str(pids[1]): [1, 2, 0]}})
+    with db.get_session() as s:
+        vinculos = s.exec(db.select(db.RespuestaNominal)
+                          .where(db.RespuestaNominal.encuesta_id == eid)).all()
+        filas = s.exec(db.select(db.RespuestaEncuesta)
+                       .where(db.RespuestaEncuesta.encuesta_id == eid)).all()
+    assert len(vinculos) == len(filas) and {v.cuil for v in vinculos} == {_cuils(sid)[0]}
+    # La flecha va de RespuestaNominal a la urna, nunca al revés: la urna
+    # sigue sin ninguna columna que lleve a una persona, en los dos modos.
+    assert {v.respuesta_id for v in vinculos} == {f.id for f in filas}
+
+
+def test_una_encuesta_de_otro_sindicato_no_se_responde():
+    sid_a, uid_a, eid = _encuesta_publicada("aislada-responder")
+    sid_b, uid_b = _sindicato_con(["encuestas"], "aislada-otro")
+    _padron(sid_b, ("20999999999",))
+    _sesion_trabajador("20999999999")
+    assert cliente.get("/api/encuestas").json()["encuestas"] == []
+    r = cliente.post(f"/api/encuesta/{eid}", json={"respuestas": {}})
+    assert r.status_code == 400 and "no existe" in r.json()["detail"]

@@ -414,10 +414,17 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    pestaña Encuestas de `/admin` — diez tipos de pregunta (los de
    CampoTramite más escala y ranking; archivo solo en las nominales),
    reordenar arrastrando, vista previa del lado del afiliado y congelado
-   con corrección de erratas. **El disclaimer de la vista previa lo arma el
-   servidor** (`GET /admin/encuesta/disclaimer`), no el JS: es una promesa
-   sobre qué se guarda y no puede haber dos versiones. Siguen las fases 2 a
-   6 (responder, publicar/comunicar, dashboard, exportar/duplicar, demo).
+   con corrección de erratas. **El disclaimer lo arma el servidor**
+   (`GET /admin/encuesta/disclaimer`), no el JS: es una promesa sobre qué se
+   guarda y no puede haber dos versiones. **Fase 2 HECHA**: publicar (fija
+   el padrón, una fila por destinatario, y congela el umbral), cerrar
+   anticipado, y la pestaña Encuestas del trabajador — responder con
+   revisión previa y una sola vez por persona. En una NOMINAL el vínculo
+   respuesta→persona vive en `RespuestaNominal`, tabla aparte y con la
+   flecha apuntando a la urna: así `RespuestaEncuesta` sigue sin ninguna
+   columna que lleve a alguien y el anonimato de las anónimas no depende de
+   acordarse de dejar un campo en NULL. Siguen las fases 3 a 6 (comunicar,
+   dashboard, exportar/duplicar, demo).
    Lo central: el anonimato se sostiene por la FORMA de las tablas (padrón
    y urna separados, sin vínculo posible), no por un cartel.
 

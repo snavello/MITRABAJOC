@@ -751,6 +751,9 @@ PERMISOS_RUTAS = {
     # quien edita el formulario elige el área receptora.
     "/admin/encuesta":                      "encuestas",
     "/admin/encuesta/disclaimer":           "encuestas",
+    "/admin/encuesta/publicar":             "encuestas",
+    "/admin/encuesta/cerrar":               "encuestas",
+    "/admin/encuesta/destinatarios":        "encuestas",
     "/admin/encuesta/borrar":               "encuestas",
     "/admin/encuesta/duplicar":             "encuestas",
 
@@ -2598,6 +2601,61 @@ def abm_encuesta(
     return RedirectResponse("/admin#encuestas", status_code=303)
 
 
+def _valores_sueltos(valores) -> list:
+    """["a, b", "c"] -> ["a", "b", "c"]. Sin vacíos ni repetidos."""
+    salida, vistos = [], set()
+    for bruto in (valores or []):
+        for parte in str(bruto).split(","):
+            v = parte.strip()
+            if v and v not in vistos:
+                vistos.add(v)
+                salida.append(v)
+    return salida
+
+
+@app.post("/admin/encuesta/publicar")
+def publicar_encuesta(request: Request, id: int = Form(...), criterio: str = Form(...),
+                      valores: list[str] = Form(default=[])):
+    """Fija el padrón y abre la encuesta. Es irreversible: a partir de acá
+    hay gente invitada y la lista no se recalcula (N10)."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "encuestas")
+    # Los valores llegan como varios campos (una seccional por check) o como
+    # un texto con comas (CUILs, CUITs): se aplana acá, así la pantalla usa
+    # la forma que le quede mejor para cada criterio.
+    r = db.publicar_encuesta(id, sid, criterio, _valores_sueltos(valores),
+                             usuario_id=_uid_sesion(request))
+    if not r["ok"]:
+        return RedirectResponse(f"/admin?error=encuesta&motivo={quote(r['error'])}#encuestas",
+                                status_code=303)
+    return RedirectResponse("/admin#encuestas", status_code=303)
+
+
+@app.post("/admin/encuesta/cerrar")
+def cerrar_encuesta(request: Request, id: int = Form(...)):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "encuestas")
+    r = db.cerrar_encuesta(id, sid, usuario_id=_uid_sesion(request))
+    if not r["ok"]:
+        return RedirectResponse(f"/admin?error=encuesta&motivo={quote(r['error'])}#encuestas",
+                                status_code=303)
+    return RedirectResponse("/admin#encuestas", status_code=303)
+
+
+@app.get("/admin/encuesta/destinatarios")
+def encuesta_contar_destinatarios(request: Request, criterio: str = "todos",
+                                  valores: list[str] = Query(default=[])):
+    """Cuántos afiliados alcanza un criterio, para que el admin vea el
+    número ANTES de publicar. Usa la misma función que el envío real, así
+    que el número que confirmó es el que sale (mismo criterio que el
+    preview de Notificaciones)."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "encuestas")
+    cuils = db.resolver_destinatarios(sid, criterio, _valores_sueltos(valores),
+                                      usuario_id=_uid_sesion(request))
+    return {"cantidad": len(cuils)}
+
+
 @app.get("/admin/encuesta/disclaimer")
 def encuesta_disclaimer(request: Request, modo: str = "nominal",
                         cortes: list[str] = Query(default=[])):
@@ -3009,6 +3067,50 @@ async def api_consultar_convenio(request: Request):
             raise HTTPException(404, "Convenio no encontrado")
 
     return rag.responder(pregunta, sid, int(convenio_id), cuil=cuil)
+
+
+@app.get("/api/encuestas")
+def api_encuestas_del_trabajador(request: Request):
+    """Las encuestas a las que este CUIL fue invitado. Una encuesta a la que
+    no fue invitado no aparece ni existe para él."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise HTTPException(403, "No autorizado")
+    _exigir_modulo(sid, "encuestas")
+    return {"encuestas": db.encuestas_de_trabajador(cuil, sid)}
+
+
+@app.post("/api/encuesta/{encuesta_id}")
+async def api_responder_encuesta(encuesta_id: int, request: Request):
+    """Responder. El cuerpo es {"respuestas": {pregunta_id: valor}}.
+
+    Acá no se valida casi nada: TODO lo decide
+    db.registrar_respuesta_encuesta, que chequea el padrón antes que las
+    respuestas (es control de acceso, no validación), sanea contra las
+    preguntas guardadas y escribe la urna y el padrón en una sola
+    transacción. La ruta solo resuelve quién está pidiendo.
+    """
+    ses = sesion_actual(request, "trabajador")
+    cuil = request.cookies.get("cuil_trab", "")
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise HTTPException(403, "No autorizado")
+    _exigir_modulo(sid, "encuestas")
+    try:
+        cuerpo = await request.json()
+    except Exception:
+        raise HTTPException(400, "Cuerpo inválido")
+    r = db.registrar_respuesta_encuesta(encuesta_id, cuil, sid,
+                                        (cuerpo or {}).get("respuestas") or {})
+    if not r["ok"]:
+        raise ErrorApp("E-ENCUESTA-01", r["error"])
+    return {"ok": True}
 
 
 @app.post("/api/tramite")
@@ -4699,6 +4801,7 @@ def app_trabajador(request: Request):
             "noticias": _con_antiguedad(db.noticias_vigentes(
                 sid_activo, seccional_id=db.seccional_de_trabajador(cuil, sid_activo))),
             "modulos": _modulos_de(sid_activo),
+            "encuestas_ayuda": encuestas.AYUDA_POR_TIPO,
             "tiene_foto_perfil": bool(db.foto_trabajador(cuil)),
             "tramites_novedades": db.contar_tramites_con_novedades(cuil, sid_activo),
         }
