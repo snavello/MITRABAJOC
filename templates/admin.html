@@ -1683,7 +1683,7 @@
      haya ninguna, donde lo único que se puede hacer es crearla. #}
   <div class="subtabs">
     <button type="button" class="enc-subtab {% if encuestas or 'encuestas' not in permisos %}activa{% endif %}"
-            data-enc-sub="lista" onclick="cambiarSubEncuesta('lista')">Ver / editar encuestas ({{ encuestas|length }})</button>
+            data-enc-sub="lista" onclick="cambiarSubEncuesta('lista')">{% if 'encuestas' in permisos %}Ver / editar encuestas{% else %}Ver encuestas{% endif %} ({{ encuestas|length }})</button>
     {% if 'encuestas' in permisos %}
     <button type="button" class="enc-subtab {% if not encuestas %}activa{% endif %}"
             data-enc-sub="nueva" onclick="cambiarSubEncuesta('nueva')">+ Crear encuesta</button>

@@ -437,7 +437,7 @@ async function cargarEvolucion() {
       <div class="panel mitad">
         <h3>${esc(p.etiqueta)}</h3>
         <div class="sub">${p.tipo_dato === 'escala' ? 'promedio por toma'
-          : p.tipo_dato === 'ranking' ? 'posición promedio por toma (más abajo = más prioritario)'
+          : p.tipo_dato === 'ranking' ? 'posición promedio por toma (más arriba = más prioritario)'
           : '% por toma'}</div>
         <div class="grafico" style="height:210px"><canvas id="ev-${i}"></canvas></div>
       </div>`).join('');

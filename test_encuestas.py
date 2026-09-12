@@ -1320,6 +1320,24 @@ def test_la_pantalla_del_dashboard_pide_su_seccion_y_el_modulo():
                        params={"id": eid}).status_code == 403
 
 
+def _usuario_de_area(sid: int, secciones: list) -> int:
+    """Un usuario de área con EXACTAMENTE esas secciones. Es como se prueba
+    que las dos de Encuestas (N17) no son la misma cosa."""
+    with db.get_session() as s:
+        sec = db.Seccional(sindicato_id=sid, nombre="Delegación")
+        s.add(sec); s.commit(); s.refresh(sec)
+        area = db.Area(sindicato_id=sid, seccional_id=sec.id, nombre="Prensa")
+        s.add(area); s.commit(); s.refresh(area)
+        u = db.UsuarioSindicato(sindicato_id=sid, usuario=f"24{sid:09d}",
+                                nombre="Delegado", clave_hash=auth.hashear_clave("x"),
+                                debe_cambiar_clave=False, seccional_id=sec.id,
+                                area_id=area.id)
+        s.add(u); s.commit(); s.refresh(u)
+        uid, area_id = u.id, area.id
+    db.set_permisos_area(area_id, secciones, sid)
+    return uid
+
+
 def _usuario_sin_secciones(sid: int) -> int:
     """Un usuario de área sin área: permisos_efectivos() le da set()."""
     with db.get_session() as s:
@@ -1656,3 +1674,10 @@ def test_el_panel_arranca_en_la_lista_salvo_que_no_haya_ninguna():
     assert '<div class="enc-subpanel activo" id="enc-sub-lista">' in html
     assert '<div class="enc-subpanel " id="enc-sub-nueva">' in html
     assert "Ver / editar encuestas (1)" in html
+
+    # A quien solo puede LEER no se le promete editar.
+    uid_lector = _usuario_de_area(sid, ["encuestas_resultados"])
+    _sesion(sid, uid_lector)
+    html = cliente.get("/admin").text
+    assert "Ver encuestas (1)" in html and "Ver / editar" not in html
+    assert 'data-enc-sub="nueva"' not in html and 'id="enc-sub-nueva"' not in html

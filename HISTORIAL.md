@@ -3365,3 +3365,152 @@ afirmación corregida), más uno de regalo: el bloque `__main__` de
 `test_tests_carga.py` llamaba a una función renombrada hacía tiempo y nadie
 se había enterado, porque bajo pytest ese bloque no corre. La suite quedó en
 **725 tests, 77 archivos, todo en verde contra Postgres 16**.
+
+## Módulo Encuestas (2026-09-11/12) — el anonimato en la forma de las tablas
+
+Plan acordado decisión por decisión **antes de tocar código**, en
+[`SPRINT_ENCUESTAS.md`](SPRINT_ENCUESTAS.md): 24 decisiones, modelo de
+datos, seis fases y cuatro tests de privacidad. Este archivo cuenta cómo
+salió.
+
+### La premisa: si no se puede demostrar con un test, no se promete
+
+El módulo le pregunta cosas al padrón y muestra los resultados agregados.
+La mitad del valor está en que el afiliado conteste con franqueza, y eso
+depende de una promesa: *"queda registrado que participaste, nunca qué
+respondiste"*. Una promesa así no se sostiene con un cartel en la pantalla.
+
+**Lo que la sostiene es la forma de las tablas**, y son cuatro cosas que
+solo sirven juntas:
+
+1. Las filas del **padrón** (`EncuestaParticipante`) se crean AL PUBLICAR,
+   una por destinatario, y responder solo prende un booleano. Su orden de
+   `id` es el del padrón, no el de las respuestas.
+2. La **urna** (`RespuestaEncuesta`) guarda el DÍA, nunca la hora. Sin
+   timestamp fino no hay forma de ordenar las respuestas en el tiempo para
+   alinearlas con nada.
+3. El padrón NO guarda cuándo respondió cada uno. La curva de ritmo del
+   dashboard sale del día que guarda la urna.
+4. La urna no tiene ninguna columna que apunte a una persona: ni CUIL, ni
+   id de participante, ni sesión.
+
+Sacá una sola de las cuatro y el orden de inserción alcanza para
+reconstruir quién contestó qué. Hay un test por cada una, y **miran la
+forma de las tablas, no el comportamiento de una ruta**: si alguien le suma
+a la urna una columna que lleve a una persona, fallan aunque la app siga
+andando — que es exactamente para lo que están.
+
+En una encuesta **nominal** el vínculo sí existe, pero vive en su propia
+tabla (`RespuestaNominal`) y **con la flecha apuntando a la urna**, no al
+revés. Así `RespuestaEncuesta` sigue sin ninguna columna que lleve a
+alguien, y el anonimato de las anónimas no depende de que alguien se
+acuerde de dejar un campo en NULL.
+
+### Tablas propias, no las de Trámites
+
+`TipoTramite` arrastra código de expediente, área destino obligatoria,
+pases, estados, chat y validaciones, nada de lo cual aplica. Y
+`RespuestaTramite` cuelga de un `Tramite` que cuelga de un CUIL, lo que
+rompería el anonimato **en la raíz del modelo**. Se reusó el vocabulario de
+`CampoTramite.tipo_dato` y el constructor con vista previa; las tablas, no.
+Mismo criterio explícito que ya rige entre trabajador y empleador: duplicar
+antes que compartir.
+
+### Todo lo que es una promesa lo arma el servidor
+
+El disclaimer que ve el afiliado, los borradores de los avisos y el texto
+del recordatorio **no están en el JS**. Salen de `encuestas.py`
+(`disclaimer()`, `texto_aviso()`, `texto_noticia()`) y la pantalla los
+pide. El motivo es siempre el mismo: el disclaimer es una promesa sobre qué
+se guarda y no puede haber dos versiones; el lanzamiento y el recordatorio
+tienen que decir lo mismo sobre el anonimato, y dos textos escritos en dos
+lugares se desincronizan solos.
+
+### El umbral vive en el SQL
+
+Un grupo de una encuesta anónima con menos de N respuestas (5 por defecto,
+configurable por plataforma) **no se calcula, no se cuenta y no viaja**: el
+endpoint devuelve `oculto: true` y `preguntas: []`. Esconderlo en la
+pantalla no sería ninguna protección — el JSON se lee con el inspector, y
+ese es el tercero de los cuatro tests de privacidad.
+
+El umbral se congela **al publicar**: si plataforma lo cambia después, una
+encuesta ya cerrada no empieza a mostrar u ocultar cosas distintas.
+
+**Y solo rige en las anónimas.** En una nominal el admin ve respuesta por
+respuesta con nombre y apellido: es lo que el afiliado aceptó al responder
+una encuesta que dice "nominal" en la cara, y lo que el CSV nominal
+entrega. Aplicarlo ahí escondería en pantalla datos que el mismo módulo
+exporta dos clics más allá.
+
+### Cosas que se aprendieron construyéndolo
+
+**La participación no se cuenta con `COUNT(*)` de la urna.** Una pregunta
+múltiple deja varias filas por persona y un ranking deja una por opción: la
+lista del panel informaba "391 de 106", que parece un error del sistema.
+Hoy la lista cuenta gente (del padrón) y el dashboard cuenta personas con
+una **pregunta testigo** — una obligatoria de las que dejan exactamente una
+fila por persona, porque una respuesta sin obligatoria se rechaza entera y
+entonces su cantidad de filas ES la cantidad de personas. Apareció con la
+demo, que fue la primera vez que hubo volumen suficiente para que se notara.
+
+**Chart.js se va al infinito** con `maintainAspectRatio: false` si el
+contenedor crece con el canvas: paneles de 14.000px de alto. La altura la
+fija siempre un envoltorio posicionado, nunca el atributo `height` del
+`<canvas>`.
+
+**El ranking no se grafica crudo.** "1" es la prioridad más alta, así que
+una barra corta leyéndose como "lo más importante" es al revés de lo que el
+ojo espera. Se grafica la prioridad —`(n+1)` menos la posición promedio—,
+que arranca en cero y se lee sola; la posición real va en el tooltip.
+
+**Una fecha ISO en un texto que lee una persona se lee como un mensaje del
+sistema.** "Se puede responder hasta el 2026-10-12". De ahí salió
+`fechas.dia_legible()` y el filtro `|dia` de las plantillas.
+
+**El paso de avisar no es un lujo.** Publicar una encuesta y que nadie se
+entere de que existe es la falla más común y la más cara, así que publicar
+deja al admin en el paso de comunicación con los textos ya escritos. Y la
+notificación va SIEMPRE al padrón fijado de la encuesta, nunca a un
+criterio elegido aparte: si no, "leídas / no leídas" se mediría contra un
+universo distinto al de "respondieron" y los dos números del dashboard no
+se podrían comparar.
+
+**El recordatorio lleva freno: uno por día.** Cuatro recordatorios y el
+afiliado apaga las notificaciones de la app — y ahí se pierde el canal para
+todo, no solo para encuestas. Va solo a los que faltan, que se sabe del
+padrón sin mirar la urna, así que funciona igual en las anónimas.
+
+**La seccional ve la encuesta central, y eso obligó a un freno nuevo.**
+Hasta la Fase 4 una seccional no veía las encuestas de sede central, así
+que esconder los botones alcanzaba. Desde N18 las ve (con los resultados
+recortados a su gente, impuesto desde la sesión y no desde un parámetro),
+y entonces hizo falta `_exigir_alcance_encuesta`: sin él, un admin de
+seccional arma el POST a mano y edita, publica, cierra o borra la nacional.
+
+### La demo tuvo que crecer
+
+El módulo no se puede mostrar con tres afiliados: el umbral escondería
+absolutamente todo y la evolución no existiría. `demo_encuestas.py` siembra
+96 afiliados sintéticos repartidos entre las tres seccionales de la UOM y
+**tres tomas de la misma encuesta** en el tiempo, con una historia adentro
+que se puede contar en voz alta mirando la pantalla: el clima mejora, la
+preocupación se corre del sueldo a la seguridad, y **Córdoba mejora menos
+que Rosario** — para que el filtro por seccional muestre algo y no tres
+curvas iguales. Más una nominal abierta, que es la que muestra el CSV con
+nombre y apellido.
+
+Todo pasa por las funciones de `db` y no por INSERT directo, mismo criterio
+que el resto de `cargar_demo.py`: la demo no puede quedar en un estado que
+la aplicación real no sepa producir. Lo único que se toca a mano después es
+la ventana de cada toma, el día de sus respuestas y la fecha de su
+historial — porque una encuesta que cerró hace cuatro meses no se puede
+responder hoy, y sin historia no hay evolución que mostrar.
+
+### Lo que quedó afuera, a propósito
+
+Encuestas a **empleadores** (duplicarían el módulo entero y además la
+respuesta de una empresa no es anónima en los hechos), **NPS** y preguntas
+**matriz**, **reabrir** una encuesta cerrada (se duplica y se lanza otra
+ronda, que queda como un hecho separado y auditable) y **agregar
+preguntas** a una encuesta que ya tiene respuestas.

@@ -23,6 +23,7 @@ except Exception:
     pass
 
 import db
+import demo_encuestas
 from db import (Sindicato, UsuarioSindicato, Concepto, Formula, Trabajador, Empleador,
                 Seccional, Area)
 from sqlmodel import SQLModel, select
@@ -64,11 +65,16 @@ SINDICATOS = [
         "areas": [
             ("Sede Central", "Mesa de Entradas", ["tramites_recibidos", "trabajadores"]),
             ("Sede Central", "Legales", ["tramites_recibidos", "tramites_formularios"]),
-            ("Sede Central", "Prensa", ["noticias", "beneficios", "notificaciones"]),
+            # Prensa Central arma encuestas Y lee resultados; Prensa Córdoba
+            # SOLO lee. Es lo que muestra que las dos secciones de N17 no son
+            # la misma cosa: un delegado puede mirar el dashboard sin poder
+            # lanzar nada.
+            ("Sede Central", "Prensa", ["noticias", "beneficios", "notificaciones",
+                                        "encuestas", "encuestas_resultados"]),
             ("Rosario", "Mesa de Entradas", ["tramites_recibidos", "trabajadores"]),
             ("Rosario", "Legales", ["tramites_recibidos"]),
             ("Córdoba", "Mesa de Entradas", ["tramites_recibidos", "trabajadores"]),
-            ("Córdoba", "Prensa", ["noticias", "notificaciones"]),
+            ("Córdoba", "Prensa", ["noticias", "notificaciones", "encuestas_resultados"]),
         ],
         # (usuario/CUIL, clave, nombre, rol, seccional, área). El rol es
         # "admin_seccional" o "area"; el Super Admin va aparte, en "admin".
@@ -260,7 +266,7 @@ for d in SINDICATOS:
             # siguen apagados ("convenio", "dashboard") son los que se
             # venden aparte.
             modulos_habilitados=list(MODULOS_INICIALES) + ["notificaciones", "tramites",
-                                                           "empleadores"],
+                                                           "empleadores", "encuestas"],
         )
         s.add(sind); s.commit(); s.refresh(sind)
         sid = sind.id
@@ -332,6 +338,19 @@ for d in SINDICATOS:
     for usuario, _, _, _, _, _ in d["usuarios"]:
         db.sincronizar_por_cuil(sid, usuario)
 
+    # 5. Encuestas: padrón sintético y tres tomas en el tiempo. Solo en el
+    # sindicato FEDERADO -- el módulo se muestra con sus cortes por seccional
+    # y en la Gastronómica, que tiene una sola, no habría nada que filtrar.
+    resumen_encuestas = None
+    if len(d["seccionales"]) > 1:
+        with db.get_session() as s:
+            admin = s.exec(select(UsuarioSindicato).where(
+                UsuarioSindicato.sindicato_id == sid,
+                UsuarioSindicato.es_super_admin == True)).first()   # noqa: E712
+            admin_id = admin.id if admin else None
+        resumen_encuestas = demo_encuestas.sembrar(
+            sid, secs, [c for c, _ in d.get("empleadores", [])], admin_id)
+
     u, cl = d["admin"]
     for usuario, clave, nombre, rol, seccional, area in d["usuarios"]:
         resumen_usuarios.append(f"    {usuario} / {clave}  →  {nombre}, "
@@ -340,6 +359,11 @@ for d in SINDICATOS:
           f"{len(d['areas'])} áreas, {len(d['usuarios'])} usuarios de panel, "
           f"{len(d['conceptos'])} conceptos, {len(d['cuils'])} trabajadores, "
           f"{len(d.get('empleadores', []))} empleadores")
+    if resumen_encuestas:
+        r = resumen_encuestas
+        print(f"  Encuestas: +{r['padron']} afiliados sintéticos, "
+              + " · ".join(f"«{t['titulo']}» {t['respondieron']} resp." for t in r["tomas"])
+              + f" · nominal «{r['nominal']['titulo']}» {r['nominal']['respondieron']} resp.")
 
 print("\nDemo cargada. Accesos:")
 print("  Plataforma:  /plataforma  (clave en variable PLATAFORMA_PASSWORD)")

@@ -87,6 +87,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   importa `db`, así que se prueba solo y rápido.
 - resultados_encuesta.py — agregados SQL del dashboard de una encuesta. El
   umbral y los filtros se aplican acá, en la consulta, no en la pantalla.
+- demo_encuestas.py — el padrón sintético y las tres tomas de encuesta de
+  la demo (lo llama `cargar_demo.py`).
 - rag.py — piloto de consultas sobre el convenio: extracción de PDF,
   troceo, embeddings locales e indexación en segundo plano.
 - validaciones_tramite.py — motor puro de validaciones de formularios de
@@ -490,7 +492,17 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    pastillas** (ver/editar y crear, namespace `.enc-subtab` propio como el
    resto de las sub-pestañas): el constructor es largo y dejaba la lista tan
    abajo que parecía otra sección. Arranca en la lista salvo que no haya
-   ninguna encuesta todavía. Sigue la Fase 6 (demo y cierre).
+   ninguna encuesta todavía. **Fase 6 HECHA, sprint cerrado**:
+   `demo_encuestas.py` siembra 96 afiliados sintéticos y **tres tomas de la
+   misma encuesta** en el tiempo, con una historia que se puede contar en
+   voz alta mirando la pantalla (el clima mejora, la preocupación se corre
+   del sueldo a la seguridad, y Córdoba mejora menos que Rosario para que
+   el filtro por seccional muestre algo), más una nominal abierta. El
+   módulo no se puede mostrar con tres afiliados: el umbral escondería todo
+   y la evolución no existiría. En la demo, Prensa Central arma encuestas Y
+   lee resultados y Prensa Córdoba SOLO lee, que es lo que muestra que las
+   dos secciones de N17 no son la misma cosa.
+   **Detalle completo en HISTORIAL.md** ("Módulo Encuestas").
    Lo central: el anonimato se sostiene por la FORMA de las tablas (padrón
    y urna separados, sin vínculo posible), no por un cartel.
 

@@ -4947,7 +4947,11 @@ def encuestas_del_sindicato(sindicato_id: int, alcance=None) -> list:
         salida = []
         for e in filas:
             d = _encuesta_a_dict(s, e, hoy)
-            d["respuestas"] = _cuenta(s, RespuestaEncuesta.encuesta_id, e.id, RespuestaEncuesta)
+            # GENTE que respondió, no filas de la urna: una múltiple deja
+            # varias filas por persona y la lista informaba "391 de 106",
+            # que parece un error del sistema. El dato sale del padrón, que
+            # es justamente lo único que sabe quién participó.
+            d["respuestas"] = _cuenta_si(s, EncuestaParticipante, e.id)
             d["participantes"] = _cuenta(s, EncuestaParticipante.encuesta_id, e.id,
                                           EncuestaParticipante)
             d["propia"] = encuesta_en_alcance(e.seccional_id, alcance)
@@ -4971,6 +4975,14 @@ def _cuenta(s: Session, columna, valor, modelo) -> int:
     from sqlalchemy import func
     return s.execute(select(func.count()).select_from(modelo)
                      .where(columna == valor)).scalar() or 0
+
+
+def _cuenta_si(s: Session, modelo, encuesta_id: int) -> int:
+    """Cuántos del padrón de esa encuesta ya respondieron."""
+    from sqlalchemy import func
+    return s.execute(select(func.count()).select_from(modelo).where(
+        modelo.encuesta_id == encuesta_id,
+        modelo.respondio == True)).scalar() or 0   # noqa: E712
 
 
 def encuesta_por_id(encuesta_id: int, sindicato_id: int = 0) -> Optional[dict]:
