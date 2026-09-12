@@ -751,6 +751,9 @@ PERMISOS_RUTAS = {
     # quien edita el formulario elige el área receptora.
     "/admin/encuesta":                      "encuestas",
     "/admin/encuesta/disclaimer":           "encuestas",
+    "/admin/encuesta/notificar":            "encuestas",
+    "/admin/encuesta/noticia":              "encuestas",
+    "/admin/encuesta/avisos":               "encuestas",
     "/admin/encuesta/publicar":             "encuestas",
     "/admin/encuesta/cerrar":               "encuestas",
     "/admin/encuesta/destinatarios":        "encuestas",
@@ -2628,7 +2631,9 @@ def publicar_encuesta(request: Request, id: int = Form(...), criterio: str = For
     if not r["ok"]:
         return RedirectResponse(f"/admin?error=encuesta&motivo={quote(r['error'])}#encuestas",
                                 status_code=303)
-    return RedirectResponse("/admin#encuestas", status_code=303)
+    # Vuelve pidiendo el paso de comunicación (N13): publicar una encuesta y
+    # que nadie se entere de que existe es la falla más común y la más cara.
+    return RedirectResponse(f"/admin?avisar={id}#encuestas", status_code=303)
 
 
 @app.post("/admin/encuesta/cerrar")
@@ -2654,6 +2659,59 @@ def encuesta_contar_destinatarios(request: Request, criterio: str = "todos",
     cuils = db.resolver_destinatarios(sid, criterio, _valores_sueltos(valores),
                                       usuario_id=_uid_sesion(request))
     return {"cantidad": len(cuils)}
+
+
+@app.post("/admin/encuesta/notificar")
+def notificar_encuesta(request: Request, id: int = Form(...), texto: str = Form(...),
+                       remitente: str = Form(""), tipo: str = Form("lanzamiento")):
+    """El aviso va al padrón FIJADO de la encuesta, nunca a otro criterio
+    (N13). El recordatorio, solo a los que todavía no respondieron."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "encuestas")
+    r = db.notificar_encuesta(id, sid, _uid_sesion(request), texto, remitente, tipo)
+    if not r["ok"]:
+        return RedirectResponse(f"/admin?error=encuesta&motivo={quote(r['error'])}#encuestas",
+                                status_code=303)
+    return RedirectResponse(f"/admin?aviso={r['cantidad']}#encuestas", status_code=303)
+
+
+@app.post("/admin/encuesta/noticia")
+def noticia_encuesta(request: Request, id: int = Form(...), titulo: str = Form(...),
+                     bajada: str = Form(""), texto: str = Form("")):
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "encuestas")
+    r = db.noticia_de_encuesta(id, sid, _uid_sesion(request), titulo, bajada, texto)
+    if not r["ok"]:
+        return RedirectResponse(f"/admin?error=encuesta&motivo={quote(r['error'])}#encuestas",
+                                status_code=303)
+    return RedirectResponse("/admin?noticia=ok#encuestas", status_code=303)
+
+
+@app.get("/admin/encuesta/avisos")
+def encuesta_avisos(request: Request, id: int):
+    """Los borradores de los textos y el estado de los avisos ya mandados.
+
+    Los textos los arma el servidor (encuestas.texto_aviso / texto_noticia),
+    no el JS: el lanzamiento y el recordatorio tienen que decir lo mismo
+    sobre el anonimato, y dos textos escritos en dos lugares se
+    desincronizan solos -- mismo criterio que el disclaimer.
+    """
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "encuestas")
+    e = db.encuesta_por_id(id, sid)
+    if not e:
+        raise HTTPException(404, "La encuesta no existe")
+    pendientes = db.contar_pendientes_de_encuesta(id)
+    return {
+        "titulo": e["titulo"], "modo": e["modo"], "fecha_hasta": e["fecha_hasta"],
+        "pendientes": pendientes,
+        "recordatorios_hoy": db.recordatorios_de_hoy(id),
+        "lanzamiento": encuestas.texto_aviso(e["titulo"], e["fecha_hasta"], e["modo"]),
+        "recordatorio": encuestas.texto_aviso(e["titulo"], e["fecha_hasta"], e["modo"],
+                                              encuestas.RECORDATORIO),
+        "noticia": encuestas.texto_noticia(e["titulo"], e["fecha_hasta"], e["modo"]),
+        "avisos": db.avisos_de_encuesta(id),
+    }
 
 
 @app.get("/admin/encuesta/disclaimer")

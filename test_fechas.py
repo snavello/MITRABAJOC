@@ -109,3 +109,13 @@ def test_ningun_modulo_de_la_app_le_pide_la_hora_al_servidor():
 if __name__ == "__main__":
     import pytest, sys
     sys.exit(pytest.main([__file__, "-q"]))
+
+
+def test_dia_legible_para_la_pantalla_y_no_para_la_base():
+    # El formato de la base es ISO; el que lee una persona, dd/mm/aaaa.
+    assert fechas.dia_legible("2026-10-12") == "12/10/2026"
+    # Lo que no es una fecha ISO vuelve tal cual: es texto para una
+    # pantalla, nunca vale romperla por un dato raro.
+    assert fechas.dia_legible("") == ""
+    assert fechas.dia_legible(None) == ""
+    assert fechas.dia_legible("cuando se pueda") == "cuando se pueda"

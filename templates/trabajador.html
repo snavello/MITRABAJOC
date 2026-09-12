@@ -1143,6 +1143,7 @@
     <g id="ic-cred"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><line x1="14" y1="10" x2="18" y2="10"/><line x1="14" y1="14" x2="18" y2="14"/><path d="M6 16c.6-1.3 1.7-2 3-2s2.4.7 3 2"/></g>
     <g id="ic-home"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></g>
     <g id="ic-x"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g>
+    <g id="ic-encuestas"><circle cx="6.5" cy="7" r="2"/><line x1="11" y1="7" x2="20" y2="7"/><circle cx="6.5" cy="12.5" r="2"/><line x1="11" y1="12.5" x2="20" y2="12.5"/><path d="m4.7 17.6 1.4 1.4 2.6-2.8"/><line x1="11" y1="18" x2="20" y2="18"/></g>
     <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
     <g id="ic-perfil"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></g>
     <g id="ic-clip"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></g>
@@ -1157,7 +1158,7 @@
   {% if 'aportes' in modulos %}<button class="tab-t" data-tp="aportes"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg></span>Mis Aportes</button>{% endif %}
   {% if 'capacitacion' in modulos %}<button class="tab-t" data-tp="capacitacion"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg></span>Capacitación</button>{% endif %}
   {% if 'tramites' in modulos %}<button class="tab-t" data-tp="tramites" style="position:relative;"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>Trámites<span class="tab-badge-tram" id="badge-tramites" style="display:{{ 'flex' if tramites_novedades else 'none' }};">{{ tramites_novedades or '' }}</span></button>{% endif %}
-  {% if 'encuestas' in modulos %}<button class="tab-t" data-tp="encuestas" style="position:relative;"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-nov"/></svg></span>Encuestas<span class="tab-badge-tram" id="badge-encuestas" style="display:none;"></span></button>{% endif %}
+  {% if 'encuestas' in modulos %}<button class="tab-t" data-tp="encuestas" style="position:relative;"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-encuestas"/></svg></span>Encuestas<span class="tab-badge-tram" id="badge-encuestas" style="display:none;"></span></button>{% endif %}
 </nav>
 
 <script>
@@ -1689,9 +1690,15 @@ async function abrirNoticia(id) {
     document.getElementById('not-det-imagenes').innerHTML = figuras.join('');
     // Ícono del formulario asociado: ya estamos en /app, abre el
     // formulario directo con la maquinaria del chat de Trámites.
-    document.getElementById('not-det-form').innerHTML = n.formulario_id
-      ? `<button type="button" class="cta-form" title="Completar el formulario"
-           onclick="cerrarNoticia(); abrirFormularioDesdeChatTrab(${n.formulario_id})">📋</button>` : '';
+    // El de formulario abre el trámite en el lugar (sin recargar la página);
+    // el de encuesta hace lo mismo con la pestaña Encuestas.
+    document.getElementById('not-det-form').innerHTML =
+      (n.formulario_id
+        ? `<button type="button" class="cta-form" title="Completar el formulario"
+             onclick="cerrarNoticia(); abrirFormularioDesdeChatTrab(${n.formulario_id})">📋</button>` : '')
+      + (n.encuesta_id
+        ? `<button type="button" class="cta-form" title="Responder la encuesta"
+             onclick="cerrarNoticia(); irAEncuestas()">📊</button>` : '');
   } catch (e) {
     document.getElementById('not-det-titulo').textContent = 'No se pudo cargar la noticia.';
   }
@@ -2538,6 +2545,11 @@ function opcionesDe(p) {
   return (p.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
 }
 
+function irAEncuestas() {
+  activarPestana('encuestas');
+  cargarEncuestas();
+  window.scrollTo(0, 0);
+}
 function cargarEncuestas() {
   fetch('/api/encuestas').then(r => r.ok ? r.json() : Promise.reject())
     .then(d => { encuestasTrab = d.encuestas || []; pintarListaEncuestas(); })

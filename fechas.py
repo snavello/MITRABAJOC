@@ -58,3 +58,17 @@ def ahora_con_segundos() -> str:
     """Igual que ahora_texto() pero con segundos, para bitácoras donde dos
     eventos del mismo minuto tienen que quedar ordenados."""
     return ahora().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def dia_legible(iso: str) -> str:
+    """"2026-10-12" -> "12/10/2026", para los textos que lee una persona.
+
+    Una fecha ISO es el formato de la base y de <input type=date>, no el
+    que se le muestra a un afiliado: "Se puede responder hasta el
+    2026-10-12" se lee como un mensaje del sistema. Si no viene en ISO se
+    devuelve tal cual: es texto para una pantalla, nunca vale romperla.
+    """
+    try:
+        return datetime.strptime((iso or "").strip(), "%Y-%m-%d").strftime("%d/%m/%Y")
+    except ValueError:
+        return iso or ""

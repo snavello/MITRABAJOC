@@ -360,13 +360,16 @@ PREGUNTAS = [
 
 
 def _alta(titulo="Clima laboral", modo="anonima", cortes=("seccional",), preguntas=None,
-          desde="2026-10-01", hasta="2026-10-15"):
-    return cliente.post("/admin/encuesta", data={
+          desde="2026-10-01", hasta="2026-10-15", extra=None):
+    """POST al constructor. Con extra={"id": N} es una edición, no un alta."""
+    datos = {
         "titulo": titulo, "descripcion": "Tres minutos", "modo": modo,
         "cortes": list(cortes), "fecha_desde": desde, "fecha_hasta": hasta,
         "mostrar_resultados": "1",
         "preguntas_json": json.dumps(preguntas if preguntas is not None else PREGUNTAS),
-    }, follow_redirects=False)
+    }
+    datos.update(extra or {})
+    return cliente.post("/admin/encuesta", data=datos, follow_redirects=False)
 
 
 def test_el_panel_aparece_solo_con_modulo_y_permiso():
@@ -573,7 +576,7 @@ def _encuesta_publicada(slug: str, modo="anonima", cortes=("seccional",),
     r = cliente.post("/admin/encuesta/publicar",
                      data={"id": eid, "criterio": criterio, "valores": list(valores)},
                      follow_redirects=False)
-    assert r.headers["location"] == "/admin#encuestas", unquote(r.headers["location"])
+    assert r.headers["location"] == f"/admin?avisar={eid}#encuestas", unquote(r.headers["location"])
     return sid, uid, eid
 
 
@@ -807,8 +810,9 @@ def test_la_portada_del_afiliado_tiene_su_puerta_de_entrada():
     cuil, _ = _cuils(sid)
     _sesion_trabajador(cuil, sid)
 
+    tarjeta = 'class="acceso" href="/app?tab=encuestas"'
     html = cliente.get("/app/inicio").text
-    assert 'href="/app?tab=encuestas"' in html
+    assert tarjeta in html
     assert "sin responder" in html          # la tarjeta dice cuántas faltan
     assert db.contar_encuestas_pendientes(cuil, sid) == 1
 
@@ -822,4 +826,167 @@ def test_la_portada_del_afiliado_tiene_su_puerta_de_entrada():
     sid2, uid2 = _sindicato_con(["noticias"], "portada-sin-modulo")
     _padron(sid2)
     _sesion_trabajador(_cuils(sid2)[0], sid2)
-    assert 'href="/app?tab=encuestas"' not in cliente.get("/app/inicio").text
+    assert tarjeta not in cliente.get("/app/inicio").text
+
+
+# ==================== Fase 3: comunicar ====================
+def test_publicar_lleva_al_paso_de_avisar():
+    """Publicar una encuesta y que nadie se entere de que existe es la falla
+    más común y la más cara (N13): el paso es salteable, no invisible."""
+    sid, uid = _sindicato_con(["encuestas", "notificaciones"], "avisar-paso")
+    _padron(sid)
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    _alta(desde=(hoy - timedelta(days=1)).isoformat(),
+          hasta=(hoy + timedelta(days=30)).isoformat())
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    r = cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                     follow_redirects=False)
+    assert r.headers["location"] == f"/admin?avisar={eid}#encuestas"
+
+
+def test_los_borradores_de_los_avisos_los_arma_el_servidor():
+    # El lanzamiento y el recordatorio tienen que decir lo mismo sobre el
+    # anonimato: dos textos escritos en dos lugares se desincronizan solos.
+    sid, uid, eid = _encuesta_publicada("avisar-textos")
+    e = db.encuesta_por_id(eid)
+    d = cliente.get("/admin/encuesta/avisos", params={"id": eid}).json()
+    assert d["lanzamiento"] == encuestas.texto_aviso(e["titulo"], e["fecha_hasta"], e["modo"])
+    assert d["recordatorio"] == encuestas.texto_aviso(e["titulo"], e["fecha_hasta"],
+                                                      e["modo"], encuestas.RECORDATORIO)
+    assert d["noticia"] == encuestas.texto_noticia(e["titulo"], e["fecha_hasta"], e["modo"])
+    # Una anónima lo dice en los dos textos, no solo en el primero.
+    assert "anónima" in d["lanzamiento"] and "anónima" in d["recordatorio"]
+    # Y la fecha se le muestra a una persona, no en el formato de la base:
+    # "hasta el 2026-10-12" se lee como un mensaje del sistema.
+    legible = fechas.dia_legible(e["fecha_hasta"])
+    for texto in (d["lanzamiento"], d["recordatorio"], d["noticia"]["texto"]):
+        assert legible in texto and e["fecha_hasta"] not in texto
+
+
+def test_el_aviso_va_al_padron_fijado_de_la_encuesta():
+    """Si fuera a otro criterio, "leídas / no leídas" se mediría contra un
+    universo distinto al de "respondieron" y los dos números del dashboard
+    no se podrían comparar (N13)."""
+    sid, uid, eid = _encuesta_publicada("avisar-padron", criterio="todos")
+    # Alguien que se afilia DESPUÉS de publicar no está en el padrón...
+    _padron(sid, ("20999999999",))
+    r = cliente.post("/admin/encuesta/notificar",
+                     data={"id": eid, "texto": "Respondé la encuesta"}, follow_redirects=False)
+    assert r.headers["location"] == "/admin?aviso=2#encuestas"
+    # ...y por lo tanto tampoco recibe el aviso.
+    destinatarios = {d["cuil"] for d in db.notificacion_destinatarios(
+        db.avisos_de_encuesta(eid)[0]["id"])}
+    assert destinatarios == set(_cuils(sid))
+    assert "20999999999" not in destinatarios
+
+
+def test_el_recordatorio_va_solo_a_los_que_faltan_y_uno_por_dia():
+    sid, uid, eid = _encuesta_publicada("recordar")
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    uno, otro = _cuils(sid)
+    _sesion_trabajador(uno, sid)
+    assert cliente.post(f"/api/encuesta/{eid}",
+                        json={"respuestas": {str(pids[0]): 4,
+                                             str(pids[1]): [0, 1, 2]}}).status_code == 200
+
+    _sesion(sid, uid)
+    r = cliente.post("/admin/encuesta/notificar",
+                     data={"id": eid, "texto": "Falta poco", "tipo": "recordatorio"},
+                     follow_redirects=False)
+    assert r.headers["location"] == "/admin?aviso=1#encuestas"
+    # Funciona igual en una ANÓNIMA: quién falta sale del padrón, sin saber
+    # qué respondió nadie.
+    assert {d["cuil"] for d in db.notificacion_destinatarios(
+        db.avisos_de_encuesta(eid)[-1]["id"])} == {otro}
+
+    # El freno: uno por día. Cuatro recordatorios y el afiliado apaga las
+    # notificaciones de la app -- y ahí se pierde el canal para todo.
+    r = cliente.post("/admin/encuesta/notificar",
+                     data={"id": eid, "texto": "Otro más", "tipo": "recordatorio"},
+                     follow_redirects=False)
+    assert "un recordatorio hoy" in unquote(r.headers["location"])
+    assert db.recordatorios_de_hoy(eid) == 1
+
+
+def test_no_se_recuerda_una_encuesta_cerrada():
+    sid, uid, eid = _encuesta_publicada("recordar-cerrada")
+    cliente.post("/admin/encuesta/cerrar", data={"id": eid}, follow_redirects=False)
+    r = cliente.post("/admin/encuesta/notificar",
+                     data={"id": eid, "texto": "Falta poco", "tipo": "recordatorio"},
+                     follow_redirects=False)
+    assert "no está abierta" in unquote(r.headers["location"])
+
+
+def test_la_noticia_hereda_la_ventana_de_la_encuesta():
+    """La noticia es PÚBLICA: la ve cualquiera que entre a la app, esté o no
+    en el padrón. Por eso vive exactamente lo que vive la encuesta."""
+    sid, uid, eid = _encuesta_publicada("noticia")
+    e = db.encuesta_por_id(eid)
+    d = cliente.get("/admin/encuesta/avisos", params={"id": eid}).json()
+    r = cliente.post("/admin/encuesta/noticia",
+                     data={"id": eid, "titulo": d["noticia"]["titulo"],
+                           "bajada": d["noticia"]["bajada"], "texto": d["noticia"]["texto"]},
+                     follow_redirects=False)
+    assert r.headers["location"] == "/admin?noticia=ok#encuestas"
+    noticia = db.noticias_del_sindicato(sid)[0]
+    assert noticia["encuesta_id"] == eid
+    assert (noticia["fecha_desde"], noticia["fecha_hasta"]) == (e["fecha_desde"], e["fecha_hasta"])
+
+
+def test_el_aviso_del_afiliado_lleva_a_la_encuesta_solo_mientras_este_abierta():
+    sid, uid, eid = _encuesta_publicada("aviso-cta")
+    cuil, _ = _cuils(sid)
+    cliente.post("/admin/encuesta/notificar",
+                 data={"id": eid, "texto": "Respondé la encuesta"}, follow_redirects=False)
+    assert db.notificaciones_de_trabajador(cuil, sid)[0]["encuesta_id"] == eid
+
+    # Cerrada, el aviso viejo ya no ofrece el botón: llevaría a una pantalla
+    # que no acepta nada.
+    cliente.post("/admin/encuesta/cerrar", data={"id": eid}, follow_redirects=False)
+    assert db.notificaciones_de_trabajador(cuil, sid)[0]["encuesta_id"] is None
+
+
+def test_los_avisos_cuentan_lo_leido():
+    sid, uid, eid = _encuesta_publicada("avisos-leidos")
+    cuil, _ = _cuils(sid)
+    cliente.post("/admin/encuesta/notificar",
+                 data={"id": eid, "texto": "Respondé la encuesta"}, follow_redirects=False)
+    avisos = db.avisos_de_encuesta(eid)
+    assert len(avisos) == 1 and avisos[0]["enviados"] == 2 and avisos[0]["leidos"] == 0
+    db.marcar_notificacion_leida(avisos[0]["id"], cuil)
+    assert db.avisos_de_encuesta(eid)[0]["leidos"] == 1
+
+
+def test_sin_publicar_no_hay_a_quien_avisarle():
+    sid, uid = _sindicato_con(["encuestas"], "avisar-borrador")
+    _padron(sid)
+    _sesion(sid, uid)
+    _alta()
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    r = cliente.post("/admin/encuesta/notificar", data={"id": eid, "texto": "Hola"},
+                     follow_redirects=False)
+    assert "Primero hay que publicar" in unquote(r.headers["location"])
+    assert not db.avisos_de_encuesta(eid)
+
+
+def test_prorrogar_una_encuesta_lanzada_queda_en_el_historial():
+    """N7: cerrar antes sí, prorrogar sí, reabrir nunca -- y las dos cosas
+    van al historial. Mover el cierre cuando ya hay gente avisada no es un
+    retoque de redacción: cambia hasta cuándo se puede responder, y en un
+    gremio con internas eso se discute."""
+    sid, uid, eid = _encuesta_publicada("prorroga")
+    nuevo = (fechas.hoy() + timedelta(days=60)).isoformat()
+    r = _alta(desde=(fechas.hoy() - timedelta(days=1)).isoformat(), hasta=nuevo,
+              extra={"id": eid})
+    assert r.headers["location"] == "/admin#encuestas", unquote(r.headers["location"])
+    assert db.encuesta_por_id(eid)["fecha_hasta"] == nuevo
+
+    prorrogas = [v for v in db.eventos_de_encuesta(eid) if v["evento"] == "prorroga"]
+    assert len(prorrogas) == 1
+    assert fechas.dia_legible(nuevo) in prorrogas[0]["detalle"]
+
+    # Guardar sin tocar la fecha no inventa una prórroga en el historial.
+    _alta(desde=(fechas.hoy() - timedelta(days=1)).isoformat(), hasta=nuevo,
+          extra={"id": eid})
+    assert len([v for v in db.eventos_de_encuesta(eid) if v["evento"] == "prorroga"]) == 1

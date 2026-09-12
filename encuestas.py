@@ -22,6 +22,8 @@ Lo que vive acá:
   probar la promesa con un test.
 """
 
+import fechas
+
 # --- Modos -------------------------------------------------------------
 ANONIMA = "anonima"
 NOMINAL = "nominal"
@@ -464,3 +466,41 @@ def _indice(valor, cantidad: int):
     """El índice de una opción, o None si no es válido."""
     i = _entero(valor, None)
     return i if i is not None and 0 <= i < cantidad else None
+
+
+# --- Los textos de los avisos -------------------------------------------
+LANZAMIENTO = "lanzamiento"
+RECORDATORIO = "recordatorio"
+
+
+def texto_aviso(titulo: str, fecha_hasta: str, modo: str, tipo: str = LANZAMIENTO) -> str:
+    """El texto sugerido de la notificación que anuncia una encuesta.
+
+    Es un BORRADOR editable, no un cartel del sistema: el admin lo cambia
+    antes de mandarlo. Vive acá y no en la plantilla por lo mismo que el
+    disclaimer -- el lanzamiento y el recordatorio tienen que decir lo
+    mismo sobre el anonimato, y dos textos escritos en dos lugares se
+    desincronizan solos.
+    """
+    anonima = ("Es anónima: no se puede saber quién respondió qué. "
+               if modo == ANONIMA else "")
+    hasta = fechas.dia_legible(fecha_hasta)
+    if tipo == RECORDATORIO:
+        return (f"Todavía estás a tiempo de responder «{titulo}». "
+                f"{anonima}Se cierra el {hasta} y lleva un par de minutos.")
+    return (f"Tu sindicato quiere saber tu opinión: «{titulo}». "
+            f"{anonima}Se puede responder hasta el {hasta} y lleva un par de minutos.")
+
+
+def texto_noticia(titulo: str, fecha_hasta: str, modo: str) -> dict:
+    """El borrador de la noticia que anuncia una encuesta (título y bajada)."""
+    return {
+        "titulo": f"Encuesta: {titulo}",
+        "bajada": ("Tu opinión cuenta. Es anónima y lleva un par de minutos."
+                   if modo == ANONIMA else "Tu opinión cuenta y lleva un par de minutos."),
+        "texto": (f"Está abierta la encuesta «{titulo}», hasta el "
+                  f"{fechas.dia_legible(fecha_hasta)}. "
+                  + ("Es anónima: el sindicato ve los resultados en conjunto, nunca quién "
+                     "respondió qué. " if modo == ANONIMA else "")
+                  + "Entrá a Encuestas desde la app y dejanos tu respuesta."),
+    }

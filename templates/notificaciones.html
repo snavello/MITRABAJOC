@@ -191,7 +191,7 @@ function toggleBuscar() {
 
 function actualizarContadores() {
   const noLeidas = NOTIFS.filter(n => !n.leida_en).length;
-  const conAdj = NOTIFS.filter(n => n.tiene_adjunto || n.formulario_id).length;
+  const conAdj = NOTIFS.filter(n => n.tiene_adjunto || n.formulario_id || n.encuesta_id).length;
   document.getElementById('cant').innerHTML = NOTIFS.length
     ? (noLeidas ? `<b>${noLeidas} sin leer</b> de ${NOTIFS.length}` : `Todo leído · ${NOTIFS.length} en total`) : '';
   document.getElementById('c-todas').textContent = NOTIFS.length || '';
@@ -204,7 +204,7 @@ function render() {
   const q = (document.getElementById('buscar').value || '').toLowerCase().trim();
   const visibles = NOTIFS.filter(n => {
     if (FILTRO === 'noleidas' && n.leida_en) return false;
-    if (FILTRO === 'adjunto' && !(n.tiene_adjunto || n.formulario_id)) return false;
+    if (FILTRO === 'adjunto' && !(n.tiene_adjunto || n.formulario_id || n.encuesta_id)) return false;
     if (q && !((n.texto || '').toLowerCase().includes(q) || (n.remitente || '').toLowerCase().includes(q))) return false;
     return true;
   });
@@ -222,9 +222,10 @@ function render() {
       diaActual = dia;
     }
     const rem = n.remitente || 'Tu sindicato';
-    const accs = (n.tiene_adjunto || n.formulario_id) ? `<div class="accs">
+    const accs = (n.tiene_adjunto || n.formulario_id || n.encuesta_id) ? `<div class="accs">
         ${n.tiene_adjunto ? `<a href="/notificacion-adjunto/${n.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()"><svg class="ic" viewBox="0 0 24 24"><use href="#i-clip"/></svg>${esc(n.adjunto_nombre || 'Ver adjunto')}</a>` : ''}
         ${n.formulario_id ? `<a class="cta" href="/app?tab=tramites&formulario=${n.formulario_id}" onclick="event.stopPropagation()"><svg class="ic" viewBox="0 0 24 24"><use href="#i-form"/></svg>Completar el formulario</a>` : ''}
+        ${n.encuesta_id ? `<a class="cta" href="/app?tab=encuestas" onclick="event.stopPropagation()"><svg class="ic" viewBox="0 0 24 24"><use href="#i-form"/></svg>Responder la encuesta</a>` : ''}
       </div>` : '';
     html += `
       <div class="m ${n.leida_en ? '' : 'nl'}" data-id="${n.id}" onclick="toggleNotif(${n.id})">

@@ -728,7 +728,7 @@
   {% if 'noticias' in modulos and 'noticias' in permisos %}<button class="tab-btn" data-panel="noticias"><svg viewBox="0 0 24 24"><use href="#ic-noticias"/></svg><span>Noticias</span></button>{% endif %}
   {% if 'beneficios' in modulos and 'beneficios' in permisos %}<button class="tab-btn" data-panel="beneficios"><svg viewBox="0 0 24 24"><use href="#ic-beneficios"/></svg><span>Beneficios</span></button>{% endif %}
   {% if 'notificaciones' in modulos and 'notificaciones' in permisos %}<button class="tab-btn" data-panel="notificaciones"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg><span>Notificaciones</span></button>{% endif %}
-  {% if 'encuestas' in modulos and ('encuestas' in permisos or 'encuestas_resultados' in permisos) %}<button class="tab-btn" data-panel="encuestas"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg><span>Encuestas</span></button>{% endif %}
+  {% if 'encuestas' in modulos and ('encuestas' in permisos or 'encuestas_resultados' in permisos) %}<button class="tab-btn" data-panel="encuestas"><svg viewBox="0 0 24 24"><use href="#ic-encuestas"/></svg><span>Encuestas</span></button>{% endif %}
   {% if 'tramites' in modulos and ('tramites_recibidos' in permisos or 'tramites_formularios' in permisos) %}<button class="tab-btn" data-panel="tramites" style="position:relative;"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg><span>Trámites</span>{% if tramites_nuevos %}<span class="badge-noleidas" id="badge-tramites-nuevos-tab">{{ tramites_nuevos }}</span>{% endif %}</button>{% endif %}
   {% if 'empleadores' in modulos and ('emp_empresas' in permisos or 'emp_notificaciones' in permisos or 'emp_tramites_recibidos' in permisos or 'emp_tramites_formularios' in permisos) %}<button class="tab-btn" data-panel="empleadores" style="position:relative;"><svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg><span>Empleadores</span>{% if tramites_empresa_nuevos %}<span class="badge-noleidas" id="badge-tramites-empresa-nuevos-tab">{{ tramites_empresa_nuevos }}</span>{% endif %}</button>{% endif %}
   {% if 'convenio' in modulos and 'convenio' in permisos %}<button class="tab-btn" data-panel="convenio"><svg viewBox="0 0 24 24"><use href="#ic-conceptos"/></svg><span>Convenio</span></button>{% endif %}
@@ -749,6 +749,7 @@
     <g id="ic-noticias"><rect x="3" y="5" width="14" height="14" rx="1.3"/><line x1="6.2" y1="9" x2="13.8" y2="9"/><line x1="6.2" y1="12" x2="13.8" y2="12"/><line x1="6.2" y1="15" x2="11" y2="15"/><path d="M17 8h1.5a2.5 2.5 0 0 1 2.5 2.5V17a2 2 0 0 1-2 2H9"/></g>
     <g id="ic-beneficios"><path d="M20.6 12.3 12.7 3.4A2 2 0 0 0 11.2 3H5a2 2 0 0 0-2 2v6.2a2 2 0 0 0 .6 1.4l8.9 8.9a2 2 0 0 0 2.8 0l5.3-5.3a2 2 0 0 0 0-2.8Z"/><circle cx="8.5" cy="8.5" r="1.5"/></g>
     <g id="ic-notif"><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></g>
+    <g id="ic-encuestas"><circle cx="6.5" cy="7" r="2"/><line x1="11" y1="7" x2="20" y2="7"/><circle cx="6.5" cy="12.5" r="2"/><line x1="11" y1="12.5" x2="20" y2="12.5"/><path d="m4.7 17.6 1.4 1.4 2.6-2.8"/><line x1="11" y1="18" x2="20" y2="18"/></g>
     <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
     <g id="ic-seccionales"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></g>
     <g id="ic-empleadores"><rect x="4" y="9" width="16" height="12" rx="1.2"/><path d="M9 9V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4"/><circle cx="9" cy="14" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="0.9" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="0.9" fill="currentColor" stroke="none"/></g>
@@ -1652,6 +1653,12 @@
   {% if request.query_params.get('error') == 'encuesta' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">{{ request.query_params.get('motivo') }}</div>
   {% endif %}
+  {% if request.query_params.get('aviso') %}
+  <div class="msg" style="background:#e6f5ec;color:#1c7a45;">Aviso enviado a {{ request.query_params.get('aviso') }} afiliados.</div>
+  {% endif %}
+  {% if request.query_params.get('noticia') == 'ok' %}
+  <div class="msg" style="background:#e6f5ec;color:#1c7a45;">Noticia publicada: ya se ve en la portada del afiliado.</div>
+  {% endif %}
 
   {% if 'encuestas' in permisos %}
   <h2 id="enc-h2">Nueva encuesta</h2>
@@ -1766,6 +1773,7 @@
           <button class="peligro mini" type="submit">Borrar</button>
         </form>
         {% elif e.estado == 'abierta' or e.estado == 'programada' %}
+        <button type="button" class="mini" onclick="abrirAvisar({{ e.id }})">Avisos</button>
         <form method="post" action="/admin/encuesta/cerrar" style="display:inline;"
               onsubmit="return confirm('¿Cerrar la encuesta ahora? No se puede reabrir: si hace falta más gente, se duplica y se lanza otra ronda.')">
           <input type="hidden" name="id" value="{{ e.id }}">
@@ -1781,6 +1789,61 @@
   </table>
 
   {% if 'encuestas' in permisos %}
+  <!-- Avisar: el paso guiado de N13. Publicar una encuesta y que nadie se
+       entere de que existe es la falla más común y la más cara. -->
+  <div class="modal-recibo-overlay" id="modal-avisar" onclick="if (event.target === this) cerrarAvisar()">
+    <div class="modal-recibo" style="max-width:620px;">
+      <div class="modal-recibo-enc">
+        <h3 id="av-titulo">Avisale a los afiliados</h3>
+        <button type="button" class="modal-recibo-cerrar" onclick="cerrarAvisar()" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-recibo-body">
+        <div id="av-enviados" class="muted" style="font-size:12.5px; margin-bottom:14px;"></div>
+
+        <h3 class="ct-secc">Notificación</h3>
+        <p class="muted" style="font-size:11.5px; margin:0 0 8px;">
+          Le llega <b>al padrón de esta encuesta</b>, no a un grupo elegido aparte: así
+          "leídas / no leídas" se compara con "respondieron / no respondieron".</p>
+        <form method="post" action="/admin/encuesta/notificar">
+          <input type="hidden" name="id" class="av-id">
+          <input type="hidden" name="tipo" id="av-tipo" value="lanzamiento">
+          <div class="campo"><label>De parte de (opcional)</label>
+            <input name="remitente" id="av-remitente" placeholder="Ej: Comisión Directiva"></div>
+          <div class="campo" style="margin-top:8px;"><label>Texto</label>
+            <textarea name="texto" id="av-texto" rows="3"></textarea></div>
+          <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <button type="submit" id="av-enviar">Mandar la notificación</button>
+            <button type="button" class="sec" id="av-modo-recordatorio"
+                    onclick="modoRecordatorio()">Escribir un recordatorio</button>
+            <span class="muted" id="av-pendientes" style="font-size:12px;"></span>
+          </div>
+        </form>
+
+        <h3 class="ct-secc" style="margin-top:22px;">Noticia en la portada</h3>
+        <p class="muted" style="font-size:11.5px; margin:0 0 8px;">
+          Opcional y pública: la ve cualquiera que entre a la app, esté o no en el padrón.
+          Vigente exactamente durante la ventana de la encuesta.</p>
+        <form method="post" action="/admin/encuesta/noticia">
+          <input type="hidden" name="id" class="av-id">
+          <div class="campo"><label>Título</label><input name="titulo" id="av-not-titulo"></div>
+          <div class="campo" style="margin-top:8px;"><label>Bajada</label>
+            <input name="bajada" id="av-not-bajada"></div>
+          <div class="campo" style="margin-top:8px;"><label>Texto</label>
+            <textarea name="texto" id="av-not-texto" rows="3"></textarea></div>
+          <div style="margin-top:10px;">
+            <button type="submit" class="sec">Publicar la noticia</button>
+          </div>
+        </form>
+
+        <div style="margin-top:18px;">
+          <button type="button" class="sec" onclick="cerrarAvisar()">Ahora no</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Publicar: fija el padrón y abre la encuesta. Es irreversible -->
   <div class="modal-recibo-overlay" id="modal-publicar" onclick="if (event.target === this) cerrarPublicar()">
     <div class="modal-recibo" style="max-width:520px;">
@@ -5072,6 +5135,59 @@ function prepararEnvioEncuesta() {
   document.getElementById('enc-preguntas-json').value = JSON.stringify(preguntasEncuestaActuales);
   return true;
 }
+
+/* ---------- Avisar: el paso guiado de N13 ---------- */
+// Los textos los trae el SERVIDOR (encuestas.texto_aviso / texto_noticia).
+// El lanzamiento y el recordatorio tienen que decir lo mismo sobre el
+// anonimato, y dos textos escritos en dos lugares se desincronizan solos.
+let avisosEncuesta = null;
+function abrirAvisar(id) {
+  fetch('/admin/encuesta/avisos?id=' + id)
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(d => {
+      avisosEncuesta = d;
+      document.querySelectorAll('.av-id').forEach(i => { i.value = id; });
+      document.getElementById('av-titulo').textContent = 'Avisale a los afiliados · ' + d.titulo;
+      document.getElementById('av-tipo').value = 'lanzamiento';
+      document.getElementById('av-texto').value = d.lanzamiento;
+      document.getElementById('av-not-titulo').value = d.noticia.titulo;
+      document.getElementById('av-not-bajada').value = d.noticia.bajada;
+      document.getElementById('av-not-texto').value = d.noticia.texto;
+      document.getElementById('av-enviar').textContent = 'Mandar la notificación';
+      const enviados = document.getElementById('av-enviados');
+      enviados.innerHTML = d.avisos.length
+        ? d.avisos.map(a => `Enviado el ${a.enviado_en}: <b>${a.leidos}</b> de ${a.enviados} leídos.`).join('<br>')
+        : 'Todavía no mandaste ningún aviso de esta encuesta.';
+      // El recordatorio solo tiene sentido si queda gente sin responder, y
+      // uno por día: más que eso y el afiliado apaga las notificaciones.
+      const btn = document.getElementById('av-modo-recordatorio');
+      const nota = document.getElementById('av-pendientes');
+      if (!d.pendientes) {
+        btn.disabled = true; nota.textContent = 'Ya respondieron todos.';
+      } else if (d.recordatorios_hoy) {
+        btn.disabled = true; nota.textContent = 'Ya mandaste un recordatorio hoy.';
+      } else {
+        btn.disabled = false;
+        nota.textContent = `${d.pendientes} afiliado${d.pendientes === 1 ? '' : 's'} sin responder.`;
+      }
+      document.getElementById('modal-avisar').classList.add('abierto');
+    })
+    .catch(() => alert('No se pudieron cargar los avisos de esta encuesta.'));
+}
+function modoRecordatorio() {
+  if (!avisosEncuesta) return;
+  document.getElementById('av-tipo').value = 'recordatorio';
+  document.getElementById('av-texto').value = avisosEncuesta.recordatorio;
+  document.getElementById('av-enviar').textContent =
+    `Mandar el recordatorio a ${avisosEncuesta.pendientes}`;
+}
+function cerrarAvisar() { document.getElementById('modal-avisar').classList.remove('abierto'); }
+// Al volver de publicar (?avisar=<id>) el paso se abre solo: es salteable,
+// pero no invisible.
+document.addEventListener('DOMContentLoaded', () => {
+  const pedido = new URLSearchParams(location.search).get('avisar');
+  if (pedido) abrirAvisar(parseInt(pedido, 10));
+});
 
 /* ---------- Publicar: fijar el padrón ---------- */
 function abrirPublicar(id) {

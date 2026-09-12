@@ -286,7 +286,7 @@
       {# La puerta de entrada a las encuestas. Sin esta tarjeta, una encuesta
          lanzada dependía de que el afiliado entrara a la pestaña de casualidad. #}
       <a class="acceso" href="/app?tab=encuestas">
-        <svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg>
+        <svg viewBox="0 0 24 24"><use href="#ic-encuestas"/></svg>
         <div>
           <div class="titulo">Encuestas</div>
           <div class="estado">{% if encuestas_pendientes %}Tenés {{ encuestas_pendientes }} sin responder{% else %}Tu opinión al sindicato{% endif %}</div>
@@ -495,6 +495,7 @@
     <g id="ic-x"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g>
     <g id="ic-perfil"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></g>
     <g id="ic-notif"><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></g>
+    <g id="ic-encuestas"><circle cx="6.5" cy="7" r="2"/><line x1="11" y1="7" x2="20" y2="7"/><circle cx="6.5" cy="12.5" r="2"/><line x1="11" y1="12.5" x2="20" y2="12.5"/><path d="m4.7 17.6 1.4 1.4 2.6-2.8"/><line x1="11" y1="18" x2="20" y2="18"/></g>
     <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
   </defs>
 </svg>
@@ -620,6 +621,14 @@ function ctaFormularioHtml(formularioId) {
     title="Completar el formulario" onclick="event.stopPropagation()">📋</a>`;
 }
 
+// Mismo patrón para una encuesta: la notificación que la anuncia lleva el
+// botón para responderla. Solo llega con encuesta_id si sigue abierta.
+function ctaEncuestaHtml(encuestaId) {
+  if (!encuestaId) return '';
+  return `<a class="cta-form" href="/app?tab=encuestas"
+    title="Responder la encuesta" onclick="event.stopPropagation()">📊</a>`;
+}
+
 async function abrirBeneficio(id) {
   const ov = document.getElementById('overlay-beneficio');
   document.getElementById('ben-det-rubro').textContent = 'Cargando…';
@@ -674,7 +683,8 @@ async function abrirNoticia(id) {
     if (n.tiene_imagen1) figuras.push(`<img src="/noticia-imagen/${id}/1" alt="" onclick="abrirImagen('/noticia-imagen/${id}/1')">`);
     if (n.tiene_imagen2) figuras.push(`<img src="/noticia-imagen/${id}/2" alt="" onclick="abrirImagen('/noticia-imagen/${id}/2')">`);
     document.getElementById('not-det-imagenes').innerHTML = figuras.join('');
-    document.getElementById('not-det-form').innerHTML = ctaFormularioHtml(n.formulario_id);
+    document.getElementById('not-det-form').innerHTML =
+      ctaFormularioHtml(n.formulario_id) + ctaEncuestaHtml(n.encuesta_id);
   } catch (e) {
     document.getElementById('not-det-titulo').textContent = 'No se pudo cargar la noticia.';
   }
@@ -721,7 +731,7 @@ function renderNotificaciones(items) {
         <span class="notif-fecha">${fmtFechaHora(n.enviado_en)}</span>
       </div>
       <div class="notif-snippet">${(n.texto || '').replace(/</g, '&lt;')}</div>
-      <div class="notif-texto-full">${n.texto_html}${n.tiene_adjunto ? `<br><a class="notif-adjunto" href="/notificacion-adjunto/${n.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📎 Ver adjunto</a>` : ''}${n.formulario_id ? '<br>' + ctaFormularioHtml(n.formulario_id) : ''}</div>
+      <div class="notif-texto-full">${n.texto_html}${n.tiene_adjunto ? `<br><a class="notif-adjunto" href="/notificacion-adjunto/${n.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📎 Ver adjunto</a>` : ''}${n.formulario_id ? '<br>' + ctaFormularioHtml(n.formulario_id) : ''}${n.encuesta_id ? '<br>' + ctaEncuestaHtml(n.encuesta_id) : ''}</div>
     </div>
   `).join('');
 }

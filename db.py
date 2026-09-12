@@ -2574,6 +2574,7 @@ def _noticia_a_dict(n: "Noticia") -> dict:
         "tiene_imagen1": bool(n.imagen1_datos), "tiene_imagen2": bool(n.imagen2_datos),
         "destino_seccionales": n.destino_seccionales or [],
         "formulario_id": n.formulario_id,
+        "encuesta_id": n.encuesta_id,
     }
 
 
@@ -3021,7 +3022,8 @@ def resolver_destinatarios(sindicato_id: int, criterio: str, valores: list,
 def crear_notificacion(sindicato_id: int, usuario_id: Optional[int], remitente: str, texto: str,
                         criterio: str, valores: list, adjunto_datos: Optional[bytes] = None,
                         adjunto_mime: str = "", adjunto_nombre: str = "",
-                        origen: str = "manual", formulario_id: Optional[int] = None) -> dict:
+                        origen: str = "manual", formulario_id: Optional[int] = None,
+                        encuesta_id: Optional[int] = None) -> dict:
     """Resuelve los destinatarios y los FIJA en el momento de enviar (snapshot,
     ver Notificacion). Devuelve id y cantidad real, para la confirmación.
 
@@ -3037,6 +3039,7 @@ def crear_notificacion(sindicato_id: int, usuario_id: Optional[int], remitente: 
             adjunto_nombre=adjunto_nombre or "", criterio=criterio, criterio_valores=list(valores or []),
             origen=origen, enviado_en=fechas.ahora_texto(),
             cantidad_destinatarios=len(cuils), formulario_id=formulario_id,
+            encuesta_id=encuesta_id,
         )
         s.add(n); s.commit(); s.refresh(n)
         for cuil in cuils:
@@ -3131,11 +3134,22 @@ def notificaciones_de_trabajador(cuil: str, sindicato_id: int) -> list:
         activos = {t.id for t in s.exec(select(TipoTramite).where(
             TipoTramite.id.in_(forms_ref), TipoTramite.sindicato_id == sindicato_id,
             TipoTramite.activo == True)).all()} if forms_ref else set()  # noqa: E712
+        # El botón "Responder la encuesta" solo si sigue abierta: un aviso
+        # viejo de una encuesta cerrada llevaría a una pantalla que ya no
+        # acepta nada.
+        encuestas_ref = {n.encuesta_id for n in notifs if n.encuesta_id}
+        hoy = fechas.hoy_texto()
+        abiertas = {e.id for e in s.exec(select(Encuesta).where(
+            Encuesta.id.in_(encuestas_ref),
+            Encuesta.sindicato_id == sindicato_id)).all()
+            if encuestas.acepta_respuestas(e.publicada, e.fecha_desde, e.fecha_hasta,
+                                            hoy, e.cerrada_en)} if encuestas_ref else set()
         return [{
             "id": n.id, "remitente": n.remitente, "texto": n.texto,
             "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
             "enviado_en": n.enviado_en, "leida_en": por_id[n.id].leida_en,
             "formulario_id": n.formulario_id if n.formulario_id in activos else None,
+            "encuesta_id": n.encuesta_id if n.encuesta_id in abiertas else None,
         } for n in notifs]
 
 
@@ -5081,9 +5095,19 @@ def editar_encuesta(encuesta_id: int, sindicato_id: int, datos: dict,
         e.mostrar_resultados = bool(datos.get("mostrar_resultados"))
         if not e.publicada:
             e.fecha_desde = datos.get("fecha_desde", "")
+        # Mover la fecha de cierre de una encuesta YA PUBLICADA es un hecho,
+        # no un retoque: cambia hasta cuándo se puede responder cuando ya hay
+        # gente avisada. Va al historial, como el cierre anticipado (N7).
+        antes = e.fecha_hasta
         e.fecha_hasta = datos.get("fecha_hasta", "")
+        prorroga = ""
+        if e.publicada and e.fecha_hasta != antes:
+            prorroga = (f"El cierre pasó del {fechas.dia_legible(antes)} al "
+                        f"{fechas.dia_legible(e.fecha_hasta)}")
         s.add(e); s.commit()
 
+    if prorroga:
+        registrar_evento_encuesta(encuesta_id, usuario_id, "prorroga", prorroga)
     if con_respuestas and cambios:
         registrar_evento_encuesta(encuesta_id, usuario_id, "edicion",
                                   "Corrección de texto: " + "; ".join(cambios))
@@ -5364,3 +5388,118 @@ def registrar_respuesta_encuesta(encuesta_id: int, cuil: str, sindicato_id: int,
                 s.add(RespuestaNominal(encuesta_id=encuesta_id, respuesta_id=fila.id, cuil=cuil))
         s.commit()
     return {"ok": True, "error": ""}
+
+
+def _cuils_del_padron(encuesta_id: int, solo_pendientes: bool = False) -> list:
+    with Session(engine) as s:
+        q = select(EncuestaParticipante).where(
+            EncuestaParticipante.encuesta_id == encuesta_id)
+        if solo_pendientes:
+            q = q.where(EncuestaParticipante.respondio == False)   # noqa: E712
+        return sorted({p.cuil for p in s.exec(q).all()})
+
+
+def contar_pendientes_de_encuesta(encuesta_id: int) -> int:
+    """Cuántos del padrón todavía no respondieron. Se sabe del padrón, sin
+    mirar la urna: funciona igual en las anónimas."""
+    return len(_cuils_del_padron(encuesta_id, solo_pendientes=True))
+
+
+def recordatorios_de_hoy(encuesta_id: int) -> int:
+    """Cuántos recordatorios se mandaron hoy. El freno de N14 vive acá: uno
+    por día. Cuatro recordatorios y el afiliado apaga las notificaciones de
+    la app -- y ahí se pierde el canal para todo, no solo para encuestas."""
+    hoy = fechas.hoy_texto()
+    return sum(1 for v in eventos_de_encuesta(encuesta_id)
+               if v["evento"] == "recordatorio" and v["fecha"].startswith(hoy))
+
+
+def notificar_encuesta(encuesta_id: int, sindicato_id: int, usuario_id: Optional[int],
+                        texto: str, remitente: str = "", tipo: str = "lanzamiento") -> dict:
+    """Le avisa al padrón de la encuesta. Devuelve {ok, error, cantidad}.
+
+    Va SIEMPRE al padrón fijado de la encuesta, nunca a un criterio elegido
+    aparte (N13): si no, "leídas / no leídas" se mediría contra un universo
+    distinto al de "respondieron / no respondieron" y los dos números del
+    dashboard no se podrían comparar. El recordatorio va solo a los que
+    todavía no respondieron -- eso se sabe del padrón, sin saber qué
+    contestó nadie, así que funciona igual en las anónimas.
+    """
+    e = encuesta_por_id(encuesta_id, sindicato_id)
+    if not e:
+        return {"ok": False, "error": "La encuesta no existe.", "cantidad": 0}
+    if not e["publicada"]:
+        return {"ok": False, "error": "Primero hay que publicar la encuesta.", "cantidad": 0}
+    if not (texto or "").strip():
+        return {"ok": False, "error": "El aviso no puede ir vacío.", "cantidad": 0}
+
+    es_recordatorio = tipo == encuestas.RECORDATORIO
+    if es_recordatorio:
+        if not encuestas.acepta_respuestas(e["publicada"], e["fecha_desde"], e["fecha_hasta"],
+                                           fechas.hoy_texto(), e["cerrada_en"]):
+            return {"ok": False, "error": "La encuesta no está abierta: no tiene sentido "
+                                          "recordarla.", "cantidad": 0}
+        if recordatorios_de_hoy(encuesta_id):
+            return {"ok": False, "error": "Ya mandaste un recordatorio hoy. Se puede uno por "
+                                          "día: más que eso y el afiliado apaga las "
+                                          "notificaciones de la app.", "cantidad": 0}
+
+    cuils = _cuils_del_padron(encuesta_id, solo_pendientes=es_recordatorio)
+    if not cuils:
+        return {"ok": False, "error": "Ya respondieron todos: no hay a quién recordarle."
+                if es_recordatorio else "La encuesta no tiene padrón.", "cantidad": 0}
+
+    r = crear_notificacion(sindicato_id, usuario_id, remitente, texto,
+                           criterio="cuil", valores=cuils, encuesta_id=encuesta_id)
+    registrar_evento_encuesta(
+        encuesta_id, usuario_id, tipo,
+        f"Aviso a {r['cantidad_destinatarios']} afiliados"
+        + (" que todavía no respondieron" if es_recordatorio else ""))
+    return {"ok": True, "error": "", "cantidad": r["cantidad_destinatarios"]}
+
+
+def noticia_de_encuesta(encuesta_id: int, sindicato_id: int, usuario_id: Optional[int],
+                         titulo: str, bajada: str, texto: str) -> dict:
+    """Publica la noticia que anuncia la encuesta, con su mismo período.
+
+    A diferencia de la notificación, la noticia es PÚBLICA en la portada y
+    no se dirige al padrón: la puede ver alguien que no fue invitado. Por
+    eso su vigencia es la ventana de la encuesta y ni un día más.
+    """
+    e = encuesta_por_id(encuesta_id, sindicato_id)
+    if not e:
+        return {"ok": False, "error": "La encuesta no existe."}
+    if not e["publicada"]:
+        return {"ok": False, "error": "Primero hay que publicar la encuesta."}
+    if not (titulo or "").strip():
+        return {"ok": False, "error": "La noticia necesita un título."}
+    with Session(engine) as s:
+        s.add(Noticia(sindicato_id=sindicato_id, titulo=titulo.strip(),
+                      bajada=(bajada or "").strip(), texto_completo=(texto or "").strip(),
+                      fecha_desde=e["fecha_desde"], fecha_hasta=e["fecha_hasta"],
+                      creada=fechas.ahora_texto(), encuesta_id=encuesta_id))
+        s.commit()
+    registrar_evento_encuesta(encuesta_id, usuario_id, "noticia", titulo.strip()[:200])
+    return {"ok": True, "error": ""}
+
+
+def avisos_de_encuesta(encuesta_id: int) -> list:
+    """Los avisos de esta encuesta con su lectura: enviados y leídos.
+
+    Es el "2 envíos · 1.000 destinatarios · 640 leídos" del dashboard, y el
+    desglose por envío que dice si el recordatorio sirvió o no.
+    """
+    with Session(engine) as s:
+        notifs = s.exec(select(Notificacion)
+                        .where(Notificacion.encuesta_id == encuesta_id)
+                        .order_by(Notificacion.id)).all()
+        salida = []
+        for n in notifs:
+            destinatarios = s.exec(select(NotificacionDestinatario).where(
+                NotificacionDestinatario.notificacion_id == n.id)).all()
+            salida.append({
+                "id": n.id, "enviado_en": n.enviado_en, "texto": n.texto,
+                "enviados": len(destinatarios),
+                "leidos": sum(1 for d in destinatarios if d.leida_en),
+            })
+        return salida

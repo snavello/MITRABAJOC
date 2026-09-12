@@ -423,8 +423,22 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    respuesta→persona vive en `RespuestaNominal`, tabla aparte y con la
    flecha apuntando a la urna: así `RespuestaEncuesta` sigue sin ninguna
    columna que lleve a alguien y el anonimato de las anónimas no depende de
-   acordarse de dejar un campo en NULL. Siguen las fases 3 a 6 (comunicar,
-   dashboard, exportar/duplicar, demo).
+   acordarse de dejar un campo en NULL. **Fase 3 HECHA**: publicar deja al
+   admin en el paso de **avisar** (publicar una encuesta y que nadie se
+   entere de que existe es la falla más cara), con la notificación al
+   **padrón fijado** —nunca a un criterio elegido aparte, si no "leídas /
+   no leídas" se mediría contra otro universo que "respondieron"—, la
+   noticia pública con la misma vigencia que la encuesta, y el
+   recordatorio, que va **solo a los que faltan** (se sabe del padrón, sin
+   mirar la urna: funciona igual en las anónimas) y **uno por día**: cuatro
+   recordatorios y el afiliado apaga las notificaciones de la app, y ahí se
+   pierde el canal para todo. Los borradores de esos textos los arma el
+   servidor (`encuestas.texto_aviso` / `texto_noticia`, vía
+   `GET /admin/encuesta/avisos`) por lo mismo que el disclaimer: el
+   lanzamiento y el recordatorio tienen que decir lo mismo sobre el
+   anonimato. El aviso lleva al afiliado a responder **solo mientras la
+   encuesta siga abierta**. Siguen las fases 4 a 6 (dashboard,
+   exportar/duplicar, demo).
    Lo central: el anonimato se sostiene por la FORMA de las tablas (padrón
    y urna separados, sin vínculo posible), no por un cartel.
 
