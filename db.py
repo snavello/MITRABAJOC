@@ -35,9 +35,14 @@ from dotenv import load_dotenv
 from typing import Any
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON, text
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 
 import encuestas
 import fechas
+# geo.py importa db DENTRO de sus funciones, no en el encabezado, así que
+# esto no es un ciclo: la mitad pura de geo (armar el texto, haversine) se
+# puede probar sin base, y db puede usar su contrato de campos.
+import geo
 from pgvector.sqlalchemy import Vector
 
 # En Render, DATABASE_URL es una variable de entorno real (no hace falta
@@ -159,12 +164,52 @@ class Seccional(SQLModel, table=True):
     `ve_todas` es la excepción a ese recorte: los usuarios de una seccional
     tildada alcanzan TODAS las seccionales del sindicato. Nace tildada en
     "Sede Central"; el Super Admin la puede tildar en otra (ej. una regional
-    que supervisa varias). Ver SPRINT_AREAS.md, decisión 5."""
+    que supervisa varias). Ver SPRINT_AREAS.md, decisión 5.
+
+    **El domicilio es estructurado, no un texto libre.** Hasta el 2026-09-12
+    había una sola columna `direccion` con la dirección escrita a mano; se
+    reemplazó por los campos separados + `direccion_texto` (el armado, para
+    mostrar) + coordenadas. El texto viejo no se migró: era provisorio y
+    buscar o ubicar sobre una cadena libre no se puede.
+
+    El MISMO bloque de campos lo tiene `Trabajador`, con idénticos nombres y
+    tipos, y `test_seccional_geo.py` lo verifica: si los dos domicilios de la
+    app se escriben igual, se cargan igual (una sola pantalla guiada) y se
+    geocodifican con la misma función."""
     id: Optional[int] = Field(default=None, primary_key=True)
     sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
     nombre: str
-    direccion: str = ""
     ve_todas: bool = False
+    # ---- Domicilio (bloque compartido con Trabajador, ver geo.CAMPOS_DOMICILIO)
+    calle: str = ""
+    numero: str = ""
+    piso_depto: str = ""
+    localidad: str = ""
+    provincia: str = ""
+    codigo_postal: str = ""
+    # La dirección tal como se muestra. La arma el SERVIDOR al guardar
+    # (geo.armar_direccion_texto), nunca el cliente: es lo que se ve en la
+    # tabla del panel, en la ficha y en la app del trabajador, y si cada
+    # pantalla la compusiera a su manera habría tres direcciones distintas
+    # para la misma seccional.
+    direccion_texto: str = ""
+    latitud: Optional[float] = Field(default=None)
+    longitud: Optional[float] = Field(default=None)
+    # exacta | aproximada | manual | sin_geo (geo.PRECISIONES). Nace en
+    # "sin_geo" y no en "" para que el estado sea siempre legible: una
+    # seccional sin ubicar es un estado válido del sistema, no un dato que
+    # falta.
+    precision_geo: str = "sin_geo"
+    # Texto "AAAA-MM-DD HH:MM" en hora de Buenos Aires, como TODOS los sellos
+    # de tiempo del proyecto (fechas.ahora_texto()). Un datetime acá sería la
+    # única columna de tiempo con otro criterio.
+    geo_actualizado: str = ""
+    # ---- Contacto de la seccional (esto NO lo tiene Trabajador: es la
+    # puerta de atención al afiliado, no el domicilio de una persona)
+    telefono: str = ""
+    whatsapp: str = ""
+    mail: str = ""
+    horario_atencion: str = ""
 
 
 class Area(SQLModel, table=True):
@@ -284,17 +329,38 @@ class CuentaTrabajador(SQLModel, table=True):
 
 class Trabajador(SQLModel, table=True):
     """Empadronamiento de un CUIL en un sindicato, con sus datos propios de ese gremio.
-    El mismo CUIL puede tener varias filas (una por sindicato donde está afiliado)."""
+    El mismo CUIL puede tener varias filas (una por sindicato donde está afiliado).
+
+    **El domicilio usa el MISMO bloque de campos que `Seccional`** (mismos
+    nombres, mismos tipos, misma pantalla de carga guiada, misma función de
+    geocodificación). Antes del 2026-09-12 eran parecidos pero no iguales:
+    acá `piso` y `ciudad`, en la seccional nada. Dos nombres para lo mismo es
+    lo que hace que una pantalla arme la dirección distinto que la otra, así
+    que se unificaron a `piso_depto` y `localidad` -- un rename, los datos se
+    conservan. `test_seccional_geo.py` verifica que el bloque siga siendo
+    idéntico en las dos tablas.
+
+    Las coordenadas del domicilio son dato del padrón, del mismo nivel de
+    sensibilidad que la dirección que el sindicato ya tenía. No salen nunca
+    en un endpoint que no sea del propio afiliado o del padrón de su
+    sindicato; en particular NO van al Panel Sindical."""
     id: Optional[int] = Field(default=None, primary_key=True)
     sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
     cuil: str = Field(index=True)          # obligatorio
     nombre: str = ""                       # obligatorio
-    # Datos de contacto / domicilio (opcionales)
+    # ---- Domicilio (bloque compartido con Seccional, ver geo.CAMPOS_DOMICILIO)
     calle: str = ""
     numero: str = ""
-    piso: str = ""
-    ciudad: str = ""
+    piso_depto: str = ""
+    localidad: str = ""
     provincia: str = ""
+    codigo_postal: str = ""
+    direccion_texto: str = ""
+    latitud: Optional[float] = Field(default=None)
+    longitud: Optional[float] = Field(default=None)
+    precision_geo: str = "sin_geo"
+    geo_actualizado: str = ""
+    # ---- Contacto
     telefono: str = ""
     mail: str = ""
     # Estado
@@ -1352,6 +1418,65 @@ def registrar_acceso(rol: str, sindicato_id: Optional[int] = None) -> None:
         s.commit()
 
 
+class GeoCache(SQLModel, table=True):
+    """Respuestas ya pedidas a Georef y Nominatim, para no repetir el pedido.
+
+    **No tiene `sindicato_id`, y es a propósito** -- la única excepción
+    consciente al aislamiento total del proyecto. Lo que se guarda acá es la
+    respuesta de una API PÚBLICA a una dirección normalizada: "santa fe|
+    rosario|san martin|850" no es un dato de nadie, es una calle. Ponerle
+    `sindicato_id` mataría el reuso (dos gremios con seccional en la misma
+    cuadra pedirían dos veces, gastando el presupuesto de 1 pedido/segundo
+    que comparten) y no protegería nada, porque ninguna pantalla de la app
+    lee esta tabla: solo la lee `geo.py` antes de salir a la red.
+
+    El TTL son 90 días. No hay proceso que limpie lo vencido: una fila
+    vencida se reescribe la próxima vez que alguien pregunte por esa misma
+    dirección, y la tabla crece con el padrón, no con el uso."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    # La clave de búsqueda, ya normalizada por geo._clave_cache (minúsculas,
+    # sin tildes, campos separados por "|"). Única: una dirección, una fila.
+    consulta_normalizada: str = Field(index=True, unique=True)
+    respuesta_json: list = Field(default=[], sa_column=Column(JSON))
+    # "AAAA-MM-DD HH:MM" de Buenos Aires, igual que el resto del proyecto.
+    creado: str = ""
+
+
+def geocache_leer(clave: str) -> Optional[dict]:
+    """La fila de caché de esa consulta, o None. El TTL lo evalúa geo.py."""
+    with Session(engine) as s:
+        fila = s.exec(select(GeoCache).where(
+            GeoCache.consulta_normalizada == clave)).first()
+        if not fila:
+            return None
+        return {"respuesta_json": fila.respuesta_json, "creado": fila.creado}
+
+
+def geocache_guardar(clave: str, respuesta: list) -> None:
+    """Guarda o refresca la respuesta de esa consulta.
+
+    Es un upsert a mano porque la fila vencida se REESCRIBE en lugar de
+    sumar otra: la clave es única, y dejar histórico de una caché sería
+    juntar basura para siempre. Si dos pedidos simultáneos intentan crear la
+    misma clave, el UNIQUE frena al segundo y se ignora -- la caché ya
+    quedó escrita por el primero, que era todo el objetivo.
+    """
+    with Session(engine) as s:
+        fila = s.exec(select(GeoCache).where(
+            GeoCache.consulta_normalizada == clave)).first()
+        if fila:
+            fila.respuesta_json = respuesta
+            fila.creado = fechas.ahora_texto()
+            s.add(fila)
+        else:
+            s.add(GeoCache(consulta_normalizada=clave, respuesta_json=respuesta,
+                           creado=fechas.ahora_texto()))
+        try:
+            s.commit()
+        except IntegrityError:
+            s.rollback()
+
+
 def actividad_resumen(dias: int = 30) -> dict:
     """Agregados de actividad de ESTE entorno para el dashboard de
     Actividad (/entornos): trámites, notificaciones enviadas/leídas,
@@ -2403,28 +2528,38 @@ def perfil_trabajador(cuil: str, sindicato_id: int) -> Optional[dict]:
             return None
         return {
             "nombre": t.nombre, "cuil": t.cuil,
-            "calle": t.calle, "numero": t.numero, "piso": t.piso,
-            "ciudad": t.ciudad, "provincia": t.provincia,
+            "calle": t.calle, "numero": t.numero, "piso_depto": t.piso_depto,
+            "localidad": t.localidad, "provincia": t.provincia,
+            "codigo_postal": t.codigo_postal, "direccion_texto": t.direccion_texto,
+            "latitud": t.latitud, "longitud": t.longitud,
+            "precision_geo": t.precision_geo, "geo_actualizado": t.geo_actualizado,
             "telefono": t.telefono, "mail": t.mail,
         }
 
 
-def actualizar_perfil_trabajador(cuil: str, sindicato_id: int, nombre: str, calle: str, numero: str,
-                                  piso: str, ciudad: str, provincia: str, telefono: str, mail: str) -> bool:
+def actualizar_perfil_trabajador(cuil: str, sindicato_id: int, nombre: str,
+                                  domicilio: dict, telefono: str, mail: str) -> bool:
     """El trabajador edita sus propios datos -- todo menos el CUIL (identidad,
     no se toca acá) y los campos de gestión del sindicato (seccional,
     vigencia de credencial, etc.), que siguen siendo resorte del admin.
     Actualiza SOLO el empadronamiento del sindicato activo -- Trabajador es
     por sindicato (pluriempleo), no hay un domicilio único de la persona en
-    este modelo."""
+    este modelo.
+
+    `domicilio` llega ya armado por `geo.campos_para_guardar()`, que es la
+    única función que decide qué se escribe en el bloque de domicilio: antes
+    esta firma tenía un parámetro por campo y sumarle el CP y las
+    coordenadas la habría dejado en once posicionales, donde equivocarse de
+    orden no da error, da datos mal."""
     with Session(engine) as s:
         t = s.exec(select(Trabajador).where(
             Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
         if not t:
             return False
         t.nombre = (nombre or "").strip()[:200] or t.nombre
-        t.calle, t.numero, t.piso = calle.strip()[:200], numero.strip()[:20], piso.strip()[:20]
-        t.ciudad, t.provincia = ciudad.strip()[:100], provincia.strip()[:60]
+        for campo, valor in (domicilio or {}).items():
+            if campo in geo.CAMPOS_DOMICILIO:
+                setattr(t, campo, valor)
         t.telefono, t.mail = telefono.strip()[:40], mail.strip()[:200]
         s.add(t)
         s.commit()
@@ -2668,14 +2803,62 @@ def beneficio_por_id(beneficio_id: int) -> Optional[dict]:
         return _beneficio_a_dict(b) if b else None
 
 
+def _seccional_a_dict(sec: "Seccional") -> dict:
+    """La seccional como la consumen las pantallas. Un solo armado para
+    todas: la tabla del panel, el <select> del alta de trabajador, los
+    checkboxes de destino de Noticias/Beneficios/Notificaciones, el mapa por
+    seccional de Trámites, los filtros del Panel Sindical y la ficha."""
+    return {
+        "id": sec.id, "nombre": sec.nombre, "ve_todas": sec.ve_todas,
+        "calle": sec.calle, "numero": sec.numero, "piso_depto": sec.piso_depto,
+        "localidad": sec.localidad, "provincia": sec.provincia,
+        "codigo_postal": sec.codigo_postal, "direccion_texto": sec.direccion_texto,
+        "latitud": sec.latitud, "longitud": sec.longitud,
+        "precision_geo": sec.precision_geo, "geo_actualizado": sec.geo_actualizado,
+        "telefono": sec.telefono, "whatsapp": sec.whatsapp, "mail": sec.mail,
+        "horario_atencion": sec.horario_atencion,
+    }
+
+
 def seccionales_del_sindicato(sindicato_id: int) -> list:
     """Todas las seccionales del sindicato, para el CRUD de admin y el
     <select> del alta/edición de trabajador."""
     with Session(engine) as s:
         seccionales = s.exec(select(Seccional).where(
             Seccional.sindicato_id == sindicato_id).order_by(Seccional.nombre)).all()
-        return [{"id": sec.id, "nombre": sec.nombre, "direccion": sec.direccion,
-                 "ve_todas": sec.ve_todas} for sec in seccionales]
+        return [_seccional_a_dict(sec) for sec in seccionales]
+
+
+def seccional_del_sindicato(sindicato_id: int, seccional_id: int) -> Optional[dict]:
+    """UNA seccional, o None si no existe o es de otro sindicato.
+
+    El `sindicato_id` va EN el WHERE y no en un chequeo posterior: es la
+    misma regla que el resto del proyecto -- una seccional ajena no se
+    encuentra, no es que se encuentre y después se descarte."""
+    with Session(engine) as s:
+        sec = s.exec(select(Seccional).where(
+            Seccional.id == seccional_id,
+            Seccional.sindicato_id == sindicato_id)).first()
+        return _seccional_a_dict(sec) if sec else None
+
+
+def seccionales_ubicadas(sindicato_id: int, limite: int = 500) -> list:
+    """Las seccionales del sindicato que YA tienen coordenadas.
+
+    Es lo que consume "Seccionales cerca de mí" del trabajador y el mapa del
+    Panel Sindical. Devuelve solo datos de la institución (nombre,
+    dirección, contacto, horario, coordenadas): ni un dato de una persona.
+    El `limite` es una baranda, no una paginación -- el gremio más grande de
+    Argentina no llega a 200 seccionales, y si algún día alguien carga un
+    padrón raro, mejor cortar que mandar diez mil filas a un teléfono."""
+    with Session(engine) as s:
+        seccionales = s.exec(select(Seccional).where(
+            Seccional.sindicato_id == sindicato_id,
+            Seccional.latitud.is_not(None),
+            Seccional.longitud.is_not(None),
+        ).order_by(Seccional.provincia, Seccional.localidad,
+                   Seccional.nombre).limit(limite)).all()
+        return [_seccional_a_dict(sec) for sec in seccionales]
 
 
 # ---------- Identidad del empleado del sindicato (decisión N1) ----------
