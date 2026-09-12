@@ -3811,3 +3811,28 @@ El riesgo se midió ANTES de escribir la migración, no después:
 
 Verificado además sobre la base de demo REAL y no una sintética: 2,4 segundos
 de punta a punta, y los 15.000 recibos con su `detalle` entero después.
+
+### Dos ajustes de uso, probando con datos reales (2026-09-12, noche)
+
+Pedidos de Sd después de usarlo en Pruebas:
+
+- **El modal de perfil, 20% más ancho en desktop** (480 -> 576px). La regla va
+  scopeada a `#overlay-perfil` y dentro de `@media (min-width: 700px)`:
+  `.modal-notif-caja` la comparten CUATRO overlays --perfil, notificaciones,
+  mapa en pantalla completa y "cerca de mí"-- así que ensanchar la clase los
+  movía a todos. En teléfono no cambia nada, ahí ya ocupa el ancho completo.
+- **Al consultar o editar un trabajador ya ubicado, el mapa se abre solo.**
+  Quien abre la ficha de un afiliado viene a ver dónde vive o a corregirlo:
+  obligarlo a apretar "Ubicar en el mapa" para ver algo que ya existe es un
+  clic de más sobre información que ya está. Sin coordenadas no se dibuja
+  nada, que es lo correcto. Como en ese caso no hay entre qué elegir, la
+  columna de candidatos se esconde y el mapa toma el ancho completo (`.geo-con-
+  lista.sin-lista`); volver a apretar "Ubicar" la trae de nuevo.
+
+Y algo que apareció mirando la pantalla: el texto de ayuda decía "**Encontramos**
+la dirección exacta" sobre un domicilio guardado la semana pasada, donde no se
+acababa de buscar nada. Son dos momentos distintos y no pueden compartir el
+texto, así que `geo.py` suma `AYUDA_GUARDADA` al lado de `AYUDA_PRECISION`
+--los textos los sigue armando el servidor, por lo mismo de siempre-- y lo usan
+tanto el domicilio del afiliado como la edición de una seccional ya ubicada,
+que tenía el mismo desajuste.

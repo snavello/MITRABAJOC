@@ -81,6 +81,17 @@ AYUDA_PRECISION = {
     "sin_geo": "Todavía sin ubicar.",
 }
 
+# Lo mismo, pero para cuando se ABRE una ubicación ya guardada en vez de
+# buscarla. Son dos momentos distintos y no pueden compartir el texto:
+# "Encontramos la dirección exacta" sobre un domicilio que se cargó la semana
+# pasada dice algo que no pasó, y hace dudar de si se acaba de buscar algo.
+AYUDA_GUARDADA = {
+    "exacta": "Domicilio ubicado en la dirección exacta. Arrastrá el globo para corregirlo.",
+    "aproximada": "Ubicación aproximada: el globo no está en la puerta. Arrastralo para ajustarlo.",
+    "manual": "Ubicación puesta a mano. Arrastrá el globo para corregirla.",
+    "sin_geo": "Todavía sin ubicar.",
+}
+
 GEOREF = "https://apis.datos.gob.ar/georef/api"
 NOMINATIM = "https://nominatim.openstreetmap.org/search"
 

@@ -1078,6 +1078,7 @@ def admin(request: Request):
         # tan confiable es un globo.
         "etiquetas_precision": geo.ETIQUETAS_PRECISION,
         "ayuda_precision": geo.AYUDA_PRECISION,
+        "ayuda_guardada": geo.AYUDA_GUARDADA,
         "empleadores": empleadores,
         "notificaciones_empresa": db.notificaciones_empleador_del_sindicato(sid)
                                   if puede("emp_notificaciones") else [],
