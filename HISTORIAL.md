@@ -4467,7 +4467,26 @@ si lee bien, que es lo que dice el banco de pruebas y no esta tabla.
 Las dos tablas (nueve columnas la de detalle) van dentro de `.tabla-ancha`,
 que se desliza sola en un teléfono en vez de desbordar la página.
 
-**Tests**: `test_precios_ia.py`, 18 casos. Los cuatro que importan: el precio
+### El mock no cuenta como una llamada (mismo día, apenas desplegado)
+
+Sd probó en Pruebas y avisó: "todos tardaron 15 seg" y "ninguno muestra los
+tokens". Era `MOCK_EXTRACTOR=1`, que había quedado prendido en
+`mitrabajo-pruebas` desde la campaña de tests de carga (`carga/README.md`
+paso 1). Con el mock, `extraer()` no llama a la API: duerme
+`MOCK_EXTRACTOR_LATENCIA` (15 s por default) y devuelve cero tokens.
+
+No era un error del panel, pero el panel se prestó: mostraba 15,0 s clavados
+en cada fila como si fueran una medición. Tres cambios:
+`extractor._uso_mock` devuelve `duracion_ms=0` (el sleep no es una
+medición); `db._uso_ia_fila` ignora la duración guardada de cualquier fila
+con modelo `mock`, así las que ya están en Pruebas dejan de contaminar el
+tiempo mediano sin migrar nada; y el modelo se nombra entero,
+"mock — no hubo llamada a la API", para que una fila sin tokens ni costo se
+explique sola. El costo ya salía "—" —`mock` no está en el catálogo de
+precios a propósito— y los agregados ya ignoraban lo que no tiene costo, así
+que el promedio nunca estuvo mal.
+
+**Tests**: `test_precios_ia.py`, 20 casos. Los cuatro que importan: el precio
 congelado no se mueve cuando cambia el catálogo; los defaults de
 `precios_ia.USOS` son las constantes de los tres módulos (fail-closed: si
 alguien mueve una y no la otra, el panel mostraría "el de origen" al lado del

@@ -3348,6 +3348,11 @@ def _uso_ia_fila(f: UsoIA, nombres: dict) -> dict:
     registrado antes de que existiera la columna), se estima con los precios
     de hoy y se marca `costo_exacto=False` para que la pantalla lo diga: un
     número sin aclarar de dónde sale es peor que no tenerlo."""
+    # Las filas de mock que ya están guardadas traen los 15 s del sleep de
+    # MOCK_EXTRACTOR_LATENCIA. Nunca fueron una medición, así que se leen como
+    # "no se sabe" -- si no, el tiempo mediano del panel en Pruebas lo decide
+    # una variable de entorno.
+    duracion = 0 if f.modelo == precios_ia.MOCK else f.duracion_ms
     if f.precio_entrada or f.precio_salida:
         costo = precios_ia.costo(f.tokens_entrada, f.tokens_salida,
                                  f.precio_entrada, f.precio_salida)
@@ -3361,7 +3366,7 @@ def _uso_ia_fila(f: UsoIA, nombres: dict) -> dict:
         "modelo": f.modelo, "modelo_nombre": precios_ia.nombre(f.modelo),
         "tokens_entrada": f.tokens_entrada,
         "tokens_salida": f.tokens_salida, "fecha": f.fecha,
-        "duracion_ms": f.duracion_ms, "duracion_txt": precios_ia.segundos(f.duracion_ms),
+        "duracion_ms": duracion, "duracion_txt": precios_ia.segundos(duracion),
         "costo": costo, "costo_exacto": exacto and costo is not None,
         "costo_txt": precios_ia.usd(costo),
     }

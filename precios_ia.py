@@ -78,10 +78,21 @@ def modelo(modelo_id: str) -> dict | None:
     return next((m for m in modelos() if m["id"] == modelo_id), None)
 
 
+# extractor.MOCK, repetido acá para no importar extractor (que levanta el
+# cliente de Anthropic) desde un módulo puro. Hay un test que los compara.
+MOCK = "mock"
+
+
 def nombre(modelo_id: str) -> str:
     """"claude-sonnet-4-6" -> "Claude Sonnet 4.6". Si no está en el catálogo
     (un modelo viejo que quedó registrado en filas de hace meses), devuelve
-    el id crudo en vez de esconderlo."""
+    el id crudo en vez de esconderlo.
+
+    El mock se nombra entero: una fila sin tokens y sin costo tiene que
+    explicarse sola en la tabla. Es lo que pasa en Pruebas, que quedó con
+    MOCK_EXTRACTOR=1 de los tests de carga (carga/README.md)."""
+    if modelo_id == MOCK:
+        return "mock — no hubo llamada a la API"
     m = modelo(modelo_id)
     return m["nombre"] if m else (modelo_id or "—")
 

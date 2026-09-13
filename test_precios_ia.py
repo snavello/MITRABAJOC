@@ -140,6 +140,32 @@ def test_el_nombre_de_un_modelo_desconocido_no_se_esconde():
     assert fila["costo"] is None and fila["costo_txt"] == "—"
 
 
+def test_una_lectura_de_mock_no_aporta_ni_costo_ni_tiempo():
+    """Pruebas quedó con MOCK_EXTRACTOR=1 de los tests de carga
+    (carga/README.md): esas filas no llamaron a la API, no tienen tokens y
+    sus "15 s" son el sleep configurado, no una medición. Si contaran, el
+    tiempo mediano del panel lo decidiría una variable de entorno."""
+    assert precios_ia.MOCK == extractor.MOCK, "los dos ids tienen que ser el mismo"
+    with Session(db.engine) as s:
+        s.add(UsoIA(sindicato_id=SID, cuil="", tipo="recibo", modelo=precios_ia.MOCK,
+                    tokens_entrada=0, tokens_salida=0, fecha="2026-09-01 10:00",
+                    duracion_ms=15000))
+        s.commit()
+    fila = next(f for f in db.uso_ia_listado() if f["modelo"] == precios_ia.MOCK)
+    assert fila["costo"] is None and fila["costo_txt"] == "—"
+    assert fila["duracion_ms"] == 0 and fila["duracion_txt"] == "—"
+    # Y que la tabla se explique sola: sin tokens ni costo, el nombre tiene
+    # que decir por qué.
+    assert "no hubo llamada" in fila["modelo_nombre"]
+
+
+def test_el_extractor_en_mock_no_inventa_una_duracion(monkeypatch):
+    monkeypatch.setenv("MOCK_EXTRACTOR", "1")
+    monkeypatch.setenv("MOCK_EXTRACTOR_LATENCIA", "0")
+    _, uso = extractor.extraer(b"x", "image/png")
+    assert uso == {"modelo": "mock", "tokens_entrada": 0, "tokens_salida": 0, "duracion_ms": 0}
+
+
 # ---------------- 3. el modelo que elige plataforma es el que corre ----------------
 def test_sin_configuracion_corre_el_default_del_modulo():
     assert db.modelos_ia() == {uso: precios_ia.default_de(uso) for uso in precios_ia.USOS}

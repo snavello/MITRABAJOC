@@ -686,6 +686,12 @@ Detalle completo en HISTORIAL.md. Reglas vigentes:
 - **La duración se mide pegada a `client.messages.create`**, no al request:
   convertir un PDF tarda lo mismo con cualquier modelo y arruinaría la
   comparación.
+- **Una lectura con `MOCK_EXTRACTOR=1` no aporta costo NI tiempo.** Pruebas
+  quedó con el mock prendido de los tests de carga (`carga/README.md`): esas
+  filas no llamaron a la API, no tienen tokens, y sus "15 s" son
+  `MOCK_EXTRACTOR_LATENCIA`, no una medición. Se muestran como
+  "mock — no hubo llamada a la API", con costo y tiempo en "—", y quedan
+  afuera del promedio y del tiempo mediano.
 - **Un modelo fuera del catálogo no se guarda** (`db.set_modelos_ia` deja el
   uso como estaba): un id mal escrito fallaría con un 400 de la API en la
   pantalla del trabajador, no en el panel.

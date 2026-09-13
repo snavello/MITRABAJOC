@@ -195,6 +195,11 @@ def _uso(msg, modelo: str, ms: int) -> dict:
     }
 
 
+# Lo que se registra como "modelo" cuando corrió el mock y no la API. No está
+# en el catálogo de precios a propósito: una fila así no tiene costo que
+# calcular porque no hubo llamada.
+MOCK = "mock"
+
 # El modelo por defecto. Plataforma puede elegir otro (db.modelo_ia("recibos"))
 # y main se lo pasa a estas dos funciones; el default vive acá, en el código,
 # en un solo lugar -- ver precios_ia.USOS.
@@ -205,9 +210,14 @@ def _uso_mock(inicio: float) -> dict:
     """En modo mock no corrió ningún modelo: se registra "mock" y no el que
     se pidió, para que una fila de desarrollo nunca se confunda con gasto
     real (el catálogo no tiene precio para "mock", así que la pantalla
-    muestra "—" y no "US$ 0,00")."""
-    return {"modelo": "mock", "tokens_entrada": 0, "tokens_salida": 0,
-            "duracion_ms": int((time.perf_counter() - inicio) * 1000)}
+    muestra "—" y no "US$ 0,00").
+
+    La duración va en 0 por lo mismo: lo que tardó es
+    MOCK_EXTRACTOR_LATENCIA, un sleep configurado, no una medición. Con el
+    mock prendido en Pruebas (ver carga/README.md), registrarla dejaba todas
+    las filas en 15,0 s clavados y el tiempo mediano del panel dejaba de
+    querer decir algo."""
+    return {"modelo": MOCK, "tokens_entrada": 0, "tokens_salida": 0, "duracion_ms": 0}
 
 
 def extraer(contenido: bytes, content_type: str, modelo: str | None = None) -> tuple[dict, dict]:
