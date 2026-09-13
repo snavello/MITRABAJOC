@@ -91,6 +91,32 @@
   .chip-estado.por_verificar { background:#fdf3e7; color:#8a5a1a; }
   .chip-estado.sospechoso { background:#f8e5e2; color:#b23a2e; }
 
+  /* Uso de IA: tres sub-pestañas con namespace propio (mismo criterio que
+     .enc-subtab en admin.html -- no comparten listener con nada). */
+  .subtabs { display:flex; gap:5px; margin:14px 0 18px; flex-wrap:wrap; }
+  .ia-subtab { padding:6px 14px; border-radius:7px; font-size:13px; font-weight:500;
+    background:#f2f0ea; color:var(--gris); border:1px solid var(--linea); cursor:pointer; font-family:inherit; }
+  .ia-subtab.activa { background:var(--agua); color:#fff; border-color:var(--agua); }
+  .ia-subpanel { display:none; }
+  .ia-subpanel.activo { display:block; }
+  /* La tabla de consumo tiene nueve columnas: en un teléfono se desliza
+     sola en vez de desbordar la página. */
+  .tabla-ancha { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .tabla-ancha table { min-width:860px; }
+  /* Los números se leen en columna, así que van en monoespaciada y a la
+     derecha: alineados, el que se sale del orden salta a la vista. */
+  .num { text-align:right; font-variant-numeric:tabular-nums;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; white-space:nowrap; }
+  th.num { text-align:right; }
+  .ia-tot { display:flex; flex-wrap:wrap; gap:10px 26px; align-items:baseline; }
+  .ia-tot > div { display:flex; flex-direction:column; gap:2px; }
+  .ia-tot .cifra { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:20px;
+    font-weight:600; color:var(--tinta); }
+  .ia-tot .rotulo { font-size:11px; color:var(--gris); text-transform:uppercase; letter-spacing:.6px; }
+  .estimado { color:var(--gris); font-style:italic; }
+  .aviso-caja { background:#fdf3e7; border:1px solid #e8cfa8; border-radius:8px;
+    padding:12px 14px; margin-bottom:16px; font-size:13px; color:#8a5a1a; }
+
   /* ============ Esquema "Hilo" (2026-09-03): cromo común del panel ============
      Solo CSS sobre el marcado existente: encabezado con degradé + grano +
      filo ámbar, pestañas y sub-pestañas en condensada, títulos de sección
@@ -113,10 +139,10 @@
     line-height:1.05; border-bottom:none; padding-bottom:0; display:flex; align-items:center; gap:12px; color:var(--tinta); }
   h2::after { content:""; flex:1; height:1px; background:var(--linea); }
   h2 .badge, h2 .tag, h2 small { font-family:var(--fuente); letter-spacing:0; text-transform:none; }
-  .subtab { font-family:var(--fuente-display); font-weight:700; font-size:13px; letter-spacing:.8px;
+  .subtab, .ia-subtab { font-family:var(--fuente-display); font-weight:700; font-size:13px; letter-spacing:.8px;
     text-transform:uppercase; background:#fff; border-radius:20px; }
   th { font-size:10.5px; letter-spacing:1px; font-weight:700; color:var(--gris); background:#f4f2ec; }
-  button:not(.sec):not(.mini):not(.tab-btn):not(.ptab):not(.subtab):not(.tramite-subtab):not(.emp-subtab):not(.emptram-subtab):not(.btn-ayuda):not(.link-num) {
+  button:not(.sec):not(.mini):not(.tab-btn):not(.ptab):not(.subtab):not(.ia-subtab):not(.tramite-subtab):not(.emp-subtab):not(.emptram-subtab):not(.btn-ayuda):not(.link-num) {
     font-family:var(--fuente-display); font-weight:700; font-size:15px; letter-spacing:1px; text-transform:uppercase;
     background:var(--marca-acento); color:var(--marca-base); border-radius:9px; }
   button.mini { border-radius:7px; }
@@ -481,37 +507,145 @@
   </div>
 
   <div class="ppanel" id="pp-usoia">
-  <h2>Uso de la API de IA ({{ uso_ia|length }})</h2>
-  <p class="muted" style="margin-bottom:14px; max-width:640px;">Tokens de entrada y salida que devuelve cada llamada real a la API de Anthropic — no es un costo en pesos, es la base para calcularlo con el precio vigente del modelo. Se registra apenas se llama a la IA, no solo cuando el trabajador reporta el recibo.</p>
-  <div class="filtros">
+  <h2>Uso de la API de IA</h2>
+  <div class="subtabs">
+    <button type="button" class="ia-subtab activa" data-ia-sub="consumo"
+            onclick="cambiarSubIA('consumo')">Consumo y costo ({{ uso_ia|length }})</button>
+    <button type="button" class="ia-subtab" data-ia-sub="modelos"
+            onclick="cambiarSubIA('modelos')">Modelos</button>
+    <button type="button" class="ia-subtab" data-ia-sub="probar"
+            onclick="cambiarSubIA('probar')">Banco de pruebas</button>
+  </div>
+
+  {# ---------------- Consumo y costo ---------------- #}
+  <div class="ia-subpanel activo" id="ia-sub-consumo">
+  <p class="muted" style="margin-bottom:14px; max-width:700px;">Una fila por cada llamada real a la API de Anthropic, con los tokens que devolvió la propia respuesta, lo que tardó y lo que costó. Se registra apenas se llama a la IA, no solo cuando el trabajador reporta el recibo. El costo sale de los tokens por el precio del modelo <strong>que regía en ese momento</strong>: actualizar la lista de precios no reescribe el gasto de los meses anteriores.</p>
+
+  <div class="card">
+    <div class="ia-tot" id="usoia-totales"></div>
+    <div class="tabla-ancha" style="margin-top:16px;">
+      <table>
+        <tr><th>Modelo</th><th class="num">Llamadas</th><th class="num">Tokens entrada</th>
+            <th class="num">Tokens salida</th><th class="num">Costo</th>
+            <th class="num">Promedio por llamada</th><th class="num">Tiempo mediano</th></tr>
+        <tbody id="usoia-por-modelo"></tbody>
+      </table>
+    </div>
+    <p class="muted" style="margin-top:12px; font-size:12px;">
+      {% if precios_ia.modelos %}Precios de <strong>{{ precios_ia.fuente }}</strong>, leídos el {{ precios_ia.leido }}. Son los de la API estándar, sin descuentos de cache ni Batch.{% else %}<strong>No se encontró data/precios_ia.json</strong>: sin catálogo no se puede calcular ningún costo.{% endif %}
+      Los totales acompañan a los filtros de abajo.
+      Un costo con <span class="estimado">asterisco</span> es una llamada anterior a que se
+      guardara el precio del momento: se muestra con los precios de hoy.</p>
+  </div>
+
+  <div class="filtros" style="margin-top:18px;">
     <select id="f-usoia-sindicato" onchange="filtrarUsoIA()">
       <option value="">Todos los sindicatos</option>
       {% for sn in sindicatos_uso_ia %}<option value="{{ sn }}">{{ sn }}</option>{% endfor %}
     </select>
     <select id="f-usoia-modelo" onchange="filtrarUsoIA()">
       <option value="">Todos los modelos</option>
-      {% for mn in modelos_uso_ia %}<option value="{{ mn }}">{{ mn }}</option>{% endfor %}
+      {% for mid, mnom in modelos_uso_ia %}<option value="{{ mid }}">{{ mnom }}</option>{% endfor %}
     </select>
     <select id="f-usoia-tipo" onchange="filtrarUsoIA()">
       <option value="">Todos los tipos</option>
       <option value="recibo">Recibo</option>
       <option value="aportes">Aportes (ARCA)</option>
       <option value="aprendizaje">Aprendizaje</option>
+      <option value="prueba">Banco de pruebas</option>
     </select>
     <button type="button" class="sec mini" onclick="limpiarFiltroUsoIA()">Limpiar</button>
     <span class="f-cant" id="f-usoia-cant"></span>
   </div>
+  <div class="tabla-ancha">
   <table>
-    <tr><th>Fecha</th><th>Sindicato</th><th>Tipo</th><th>Modelo</th><th>CUIL</th><th>Tokens entrada</th><th>Tokens salida</th></tr>
+    <tr><th>Fecha</th><th>Sindicato</th><th>Tipo</th><th>Modelo</th><th>CUIL</th>
+        <th class="num">Tokens entrada</th><th class="num">Tokens salida</th>
+        <th class="num">Tiempo</th><th class="num">Costo</th></tr>
     {% for u in uso_ia %}
-    <tr class="fila-usoia" data-sindicato="{{ u.sindicato }}" data-modelo="{{ u.modelo }}" data-tipo="{{ u.tipo }}" data-entrada="{{ u.tokens_entrada }}" data-salida="{{ u.tokens_salida }}">
-      <td>{{ u.fecha }}</td><td>{{ u.sindicato }}</td><td>{{ u.tipo }}</td><td>{{ u.modelo }}</td>
-      <td>{{ u.cuil or '—' }}</td><td>{{ u.tokens_entrada }}</td><td>{{ u.tokens_salida }}</td>
+    <tr class="fila-usoia" data-sindicato="{{ u.sindicato }}" data-modelo="{{ u.modelo }}" data-tipo="{{ u.tipo }}"
+        data-entrada="{{ u.tokens_entrada }}" data-salida="{{ u.tokens_salida }}"
+        data-ms="{{ u.duracion_ms }}" data-costo="{% if u.costo is not none %}{{ u.costo }}{% endif %}"
+        data-nombre="{{ u.modelo_nombre }}">
+      <td>{{ u.fecha }}</td><td>{{ u.sindicato }}</td><td>{{ u.tipo }}</td><td>{{ u.modelo_nombre }}</td>
+      <td>{{ u.cuil or '—' }}</td><td class="num">{{ u.tokens_entrada }}</td><td class="num">{{ u.tokens_salida }}</td>
+      <td class="num">{{ u.duracion_txt }}</td>
+      <td class="num{% if not u.costo_exacto %} estimado{% endif %}"
+          {% if u.costo is not none and not u.costo_exacto %}title="Estimado con los precios de hoy: esta llamada es anterior a que se guardara el precio del momento."{% endif %}>{{ u.costo_txt }}{% if u.costo is not none and not u.costo_exacto %} *{% endif %}</td>
     </tr>
     {% else %}
-    <tr><td colspan="7" class="muted">Todavía no hay consumo registrado.</td></tr>
+    <tr><td colspan="9" class="muted">Todavía no hay consumo registrado.</td></tr>
     {% endfor %}
   </table>
+  </div>
+  </div>
+
+  {# ---------------- Modelos: qué modelo usa cada parte ---------------- #}
+  <div class="ia-subpanel" id="ia-sub-modelos">
+  <div class="aviso-caja">
+    <strong>Esto cambia lo que corre en producción.</strong> El modelo elegido se usa desde la
+    llamada siguiente, sin reiniciar nada y para todos los sindicatos a la vez. El precio se ve
+    acá, pero si el modelo más barato lee mal el recibo el ahorro no existe: antes de bajar de
+    modelo, pasalo por el banco de pruebas con un recibo de verdad.
+  </div>
+  <form method="post" action="/plataforma/modelos-ia">
+    {% for uso, info in usos_ia.items() %}
+    <div class="card">
+      <h3>{{ info.nombre }}</h3>
+      <p class="muted" style="margin-bottom:12px; max-width:660px;">{{ info.detalle }}</p>
+      <div class="campo" style="max-width:480px;">
+        <label>Modelo</label>
+        <select name="modelo_{{ uso }}">
+          {% for m in precios_ia.modelos %}
+          <option value="{{ m.id }}" {% if modelos_ia[uso] == m.id %}selected{% endif %}>{{ m.nombre }} — {{ m.precio_txt }}{% if m.id == info.default %} · el de origen{% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    {% endfor %}
+    <button type="submit">Guardar</button>
+  </form>
+  <p class="muted" style="margin-top:10px; font-size:12px;">La lectura del convenio escaneado (OCR
+    al indexar un PDF) sigue usando el modelo de origen del extractor y no cambia acá: es una
+    operación puntual del alta de un convenio, no del uso diario.</p>
+  </div>
+
+  {# ---------------- Banco de pruebas ---------------- #}
+  <div class="ia-subpanel" id="ia-sub-probar">
+  <div class="aviso-caja">
+    <strong>Cada prueba gasta créditos de verdad.</strong> Se hace una llamada a la API por cada
+    modelo tildado, con el archivo que subas. Cada una queda registrada en «Consumo y costo»
+    como tipo <em>prueba</em>, para que el total de la pantalla siga siendo el gasto real.
+  </div>
+  <div class="card">
+    <div class="grid">
+      <div class="campo">
+        <label>Recibo de sueldo o comprobante de ARCA (imagen o PDF)</label>
+        <input type="file" id="prueba-archivo" accept="image/*,application/pdf">
+      </div>
+      <div class="campo">
+        <label>Qué es el archivo</label>
+        <select id="prueba-tipo">
+          <option value="recibo">Un recibo de sueldo</option>
+          <option value="aportes">Un comprobante de aportes de ARCA</option>
+        </select>
+      </div>
+      <div class="campo full">
+        <label>Modelos a comparar</label>
+        <div class="check-modulos">
+          {% for m in precios_ia.modelos %}
+          <label class="chk-modulo"><input type="checkbox" class="prueba-modelo" value="{{ m.id }}"
+                 {% if m.id == modelos_ia.recibos %}checked{% endif %}> {{ m.nombre }} <span class="muted" style="font-size:11px;">({{ m.precio_txt }})</span></label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <button type="button" id="prueba-btn" onclick="correrPrueba()">Probar con los modelos tildados</button>
+    <span class="muted" id="prueba-estado" style="margin-left:10px;"></span>
+  </div>
+  <div id="prueba-resultado"></div>
+  </div>
+
   </div>
 
   <div class="ppanel" id="pp-sospechosos">
@@ -616,23 +750,88 @@ function activarTab(dest) {
   document.querySelectorAll('.ppanel').forEach(pan => pan.classList.toggle('activo', pan.id === 'pp-' + dest));
 }
 
+/* ---------- Uso de IA: tres sub-pestañas con namespace propio ---------- */
+function cambiarSubIA(dest) {
+  document.querySelectorAll('.ia-subtab').forEach(b => b.classList.toggle('activa', b.dataset.iaSub === dest));
+  document.querySelectorAll('.ia-subpanel').forEach(p => p.classList.toggle('activo', p.id === 'ia-sub-' + dest));
+}
+
+const escHTML = s => String(s === null || s === undefined ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const usdTxt = n => 'US$ ' + n.toLocaleString('es-AR', {minimumFractionDigits: 4, maximumFractionDigits: 4});
+const segTxt = ms => (ms / 1000).toLocaleString('es-AR', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + ' s';
+const medianaDe = xs => {
+  if (!xs.length) return 0;
+  const o = xs.slice().sort((a, b) => a - b), m = Math.floor(o.length / 2);
+  return o.length % 2 ? o[m] : (o[m - 1] + o[m]) / 2;
+};
+
+/* Los totales y el desglose por modelo se calculan acá, sobre las filas
+   visibles, para que acompañen a los filtros: mirar cuánto sale un modelo con
+   el filtro de un sindicato puesto y que el total siguiera siendo el global
+   sería peor que no tenerlo. El costo DE CADA FILA lo calcula el servidor,
+   que es el único que sabe qué precio tenía congelado esa llamada; acá solo
+   se suman números ya hechos. */
 function filtrarUsoIA() {
   const sind = document.getElementById('f-usoia-sindicato').value;
   const mod = document.getElementById('f-usoia-modelo').value;
   const tipo = document.getElementById('f-usoia-tipo').value;
-  let visibles = 0, sumaEntrada = 0, sumaSalida = 0;
+  const visibles = [];
   document.querySelectorAll('.fila-usoia').forEach(fila => {
     let visible = true;
     if (sind && fila.dataset.sindicato !== sind) visible = false;
     if (visible && mod && fila.dataset.modelo !== mod) visible = false;
     if (visible && tipo && fila.dataset.tipo !== tipo) visible = false;
     fila.style.display = visible ? '' : 'none';
-    if (visible) { visibles++; sumaEntrada += Number(fila.dataset.entrada); sumaSalida += Number(fila.dataset.salida); }
+    if (visible) visibles.push(fila.dataset);
   });
+
+  const sumaEntrada = visibles.reduce((a, d) => a + Number(d.entrada || 0), 0);
+  const sumaSalida = visibles.reduce((a, d) => a + Number(d.salida || 0), 0);
+  const conCosto = visibles.filter(d => d.costo !== '');
+  const total = conCosto.reduce((a, d) => a + Number(d.costo), 0);
+  const tiempos = visibles.filter(d => Number(d.ms) > 0).map(d => Number(d.ms));
+
   const contador = document.getElementById('f-usoia-cant');
-  if (contador) contador.textContent = visibles + (visibles === 1 ? ' resultado' : ' resultados')
-    + ' · ' + sumaEntrada.toLocaleString('es-AR') + ' tokens entrada · '
-    + sumaSalida.toLocaleString('es-AR') + ' tokens salida';
+  if (contador) contador.textContent = visibles.length + (visibles.length === 1 ? ' resultado' : ' resultados');
+
+  const caja = document.getElementById('usoia-totales');
+  if (caja) {
+    const bloque = (cifra, rotulo) =>
+      '<div><span class="cifra">' + cifra + '</span><span class="rotulo">' + rotulo + '</span></div>';
+    /* El promedio se divide por las llamadas CON costo conocido y no por
+       todas: con las viejas adentro daría un promedio más bajo que el real. */
+    caja.innerHTML = [
+      bloque(visibles.length.toLocaleString('es-AR'), 'Llamadas'),
+      bloque(usdTxt(total), 'Costo total'),
+      bloque(conCosto.length ? usdTxt(total / conCosto.length) : '—', 'Promedio por llamada'),
+      bloque(tiempos.length ? segTxt(medianaDe(tiempos)) : '—', 'Tiempo mediano'),
+      bloque(sumaEntrada.toLocaleString('es-AR') + ' / ' + sumaSalida.toLocaleString('es-AR'),
+             'Tokens entrada / salida'),
+    ].join('');
+  }
+
+  const cuerpo = document.getElementById('usoia-por-modelo');
+  if (cuerpo) {
+    const grupos = new Map();
+    visibles.forEach(d => {
+      if (!grupos.has(d.modelo)) grupos.set(d.modelo, {nombre: d.nombre, n: 0, e: 0, s: 0, costo: 0, conCosto: 0, ms: []});
+      const g = grupos.get(d.modelo);
+      g.n++; g.e += Number(d.entrada || 0); g.s += Number(d.salida || 0);
+      if (d.costo !== '') { g.costo += Number(d.costo); g.conCosto++; }
+      if (Number(d.ms) > 0) g.ms.push(Number(d.ms));
+    });
+    const filas = [...grupos.values()].sort((a, b) => b.costo - a.costo).map(g =>
+      '<tr><td>' + escHTML(g.nombre) + '</td>' +
+      '<td class="num">' + g.n.toLocaleString('es-AR') + '</td>' +
+      '<td class="num">' + g.e.toLocaleString('es-AR') + '</td>' +
+      '<td class="num">' + g.s.toLocaleString('es-AR') + '</td>' +
+      '<td class="num">' + usdTxt(g.costo) + '</td>' +
+      '<td class="num">' + (g.conCosto ? usdTxt(g.costo / g.conCosto) : '—') + '</td>' +
+      '<td class="num">' + (g.ms.length ? segTxt(medianaDe(g.ms)) : '—') + '</td></tr>');
+    cuerpo.innerHTML = filas.join('') ||
+      '<tr><td colspan="7" class="muted">Sin llamadas registradas para este filtro.</td></tr>';
+  }
 }
 function limpiarFiltroUsoIA() {
   document.getElementById('f-usoia-sindicato').value = '';
@@ -640,7 +839,82 @@ function limpiarFiltroUsoIA() {
   document.getElementById('f-usoia-tipo').value = '';
   filtrarUsoIA();
 }
-if (document.querySelector('.fila-usoia')) filtrarUsoIA();
+if (document.getElementById('usoia-totales')) filtrarUsoIA();
+
+/* ---------- Banco de pruebas: el mismo archivo con varios modelos ---------- */
+async function correrPrueba() {
+  const inp = document.getElementById('prueba-archivo');
+  const estado = document.getElementById('prueba-estado');
+  const btn = document.getElementById('prueba-btn');
+  const elegidos = [...document.querySelectorAll('.prueba-modelo:checked')].map(c => c.value);
+  if (!inp.files.length) { estado.textContent = 'Elegí un archivo primero.'; return; }
+  if (!elegidos.length) { estado.textContent = 'Tildá al menos un modelo.'; return; }
+  const veces = elegidos.length === 1 ? 'una vez' : elegidos.length + ' veces';
+  if (!confirm('Se va a llamar a la API ' + veces + ' con ese archivo, una por modelo. ' +
+               'Cada llamada gasta créditos de verdad. ¿Seguimos?')) return;
+  const fd = new FormData();
+  fd.append('archivo', inp.files[0]);
+  fd.append('tipo', document.getElementById('prueba-tipo').value);
+  elegidos.forEach(m => fd.append('modelos', m));
+  btn.disabled = true;
+  estado.textContent = 'Leyendo el archivo con ' + elegidos.length +
+    (elegidos.length === 1 ? ' modelo…' : ' modelos en paralelo…');
+  try {
+    const r = await fetch('/plataforma/probar-modelos', {method: 'POST', body: fd});
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.detail || ('el servidor contestó ' + r.status));
+    pintarPrueba(data);
+    estado.textContent = '';
+  } catch (e) {
+    estado.textContent = 'No se pudo: ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* Una columna por modelo y una fila por dato: así la comparación se lee de
+   corrido hacia el costado. Lo que difiere del primero que contestó va en
+   rojo -- que dos modelos lean distinto es EL dato de esta pantalla. */
+function pintarPrueba(data) {
+  const ms = data.modelos || [];
+  const ref = ms.find(m => m.ok);
+  const cab = '<tr><th></th>' + ms.map(m => '<th>' + escHTML(m.nombre) + '</th>').join('') + '</tr>';
+  const fila = (rot, celdas, clase) => '<tr><td>' + escHTML(rot) + '</td>' +
+    celdas.map(c => '<td class="' + (clase || '') + '">' + c + '</td>').join('') + '</tr>';
+  const filas = [
+    fila('Estado', ms.map(m => m.ok ? 'leyó el archivo'
+      : '<span style="color:#b23a2e;">' + escHTML(m.error) + '</span>')),
+    fila('Costo', ms.map(m => m.ok ? escHTML(m.costo_txt) : '—'), 'num'),
+    fila('Tiempo', ms.map(m => m.ok ? escHTML(m.duracion_txt) : '—'), 'num'),
+    fila('Tokens entrada / salida', ms.map(m => m.ok
+      ? escHTML(m.tokens_entrada.toLocaleString('es-AR') + ' / ' + m.tokens_salida.toLocaleString('es-AR'))
+      : '—'), 'num'),
+    fila('Precio de lista', ms.map(m => escHTML(m.precio_txt))),
+  ];
+  if (ref) {
+    ref.resumen.forEach((r, i) => {
+      filas.push(fila(r.etiqueta, ms.map(m => {
+        if (!m.ok) return '—';
+        const c = m.resumen[i];
+        return c.igual ? escHTML(c.valor)
+          : '<strong style="color:#b23a2e;">' + escHTML(c.valor) + '</strong>';
+      })));
+    });
+  }
+  const crudos = ms.filter(m => m.ok).map(m =>
+    '<details><summary>Lo que leyó ' + escHTML(m.nombre) + ', completo</summary>' +
+    '<pre style="background:#fff; border:1px solid var(--linea); border-radius:8px; padding:12px; ' +
+    'overflow:auto; font-size:11.5px; max-height:340px;">' + escHTML(m.json) + '</pre></details>').join('');
+  document.getElementById('prueba-resultado').innerHTML =
+    '<h2 style="margin-top:22px;">Comparación</h2>' +
+    '<p class="muted" style="margin-bottom:12px;">' +
+    (ref ? 'En rojo, lo que ese modelo leyó distinto de <strong>' + escHTML(ref.nombre) +
+           '</strong> (el primero que contestó). Que coincidan no prueba que esté bien: ' +
+           'prueba que leyeron lo mismo.'
+         : 'Ningún modelo pudo leer el archivo.') +
+    '</p><div class="tabla-ancha"><table>' + cab + filas.join('') + '</table></div>' +
+    (crudos ? '<div class="card">' + crudos + '</div>' : '');
+}
 
 // Si el POST de alta/edición de sindicato rechazó el color base, volver
 // directo al tab donde está el formulario y el mensaje de error.
@@ -849,10 +1123,14 @@ function prepararEnvioTope(form) {
 (function abrirDesdeHash() {
   const h = (location.hash || '').replace('#', '');
   const errorTope = new URLSearchParams(location.search).get('error');
-  const destino = h || (['topebajo', 'topeduplicado', 'topenoexiste', 'topeformato'].includes(errorTope) ? 'topes' : '');
+  const hash = h || (['topebajo', 'topeduplicado', 'topenoexiste', 'topeformato'].includes(errorTope) ? 'topes' : '');
+  // "usoia-modelos" abre la pestaña Uso de IA y, adentro, su sub-pestaña:
+  // guardar los modelos redirige ahí para volver al lugar donde se estaba.
+  const [destino, sub] = hash.startsWith('usoia-') ? ['usoia', hash.slice(6)] : [hash, ''];
   if (destino) {
     const btn = document.querySelector('.ptab[data-pp="' + destino + '"]');
     if (btn) btn.click();
+    if (sub && typeof cambiarSubIA === 'function') cambiarSubIA(sub);
   }
 })();
 </script>

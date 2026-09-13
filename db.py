@@ -62,6 +62,7 @@ JSON_TIPO = JSON().with_variant(postgresql.JSONB(), "postgresql")
 
 import encuestas
 import fechas
+import precios_ia
 # geo.py importa db DENTRO de sus funciones, no en el encabezado, así que
 # esto no es un ciclo: la mitad pura de geo (armar el texto, haversine) se
 # puede probar sin base, y db puede usar su contrato de campos.
@@ -599,18 +600,29 @@ class Reporte(SQLModel, table=True):
 
 class UsoIA(SQLModel, table=True):
     """Consumo de la API de Anthropic, una fila por llamada -- sindicato_id
-    NULL cuando no se puede resolver (no debería pasar en los 3 puntos donde
-    se registra hoy, pero no se descarta la fila por eso). Pensado para medir
-    costo real (tokens crudos, sin precio -- cambia según el plan/modelo) por
+    NULL cuando no se puede resolver (no debería pasar en los puntos donde se
+    registra hoy, pero no se descarta la fila por eso). Mide el costo real por
     sindicato y por tipo de llamada en el panel de plataforma."""
     id: Optional[int] = Field(default=None, primary_key=True)
     sindicato_id: Optional[int] = Field(default=None, foreign_key="sindicato.id", index=True)
-    cuil: str = ""  # vacío en "aprendizaje": lo dispara el admin, no es de un trabajador puntual
-    tipo: str = ""  # "recibo" | "aportes" | "aprendizaje"
+    cuil: str = ""  # vacío en "aprendizaje" y "prueba": no son de un trabajador puntual
+    tipo: str = ""  # "recibo" | "aportes" | "aprendizaje" | "prueba"
     modelo: str = ""
     tokens_entrada: int = 0
     tokens_salida: int = 0
     fecha: str = ""  # "AAAA-MM-DD HH:MM"
+    # Cuánto tardó la llamada a la API, medida alrededor del pedido y no del
+    # request entero: es el número que cambia al probar otro modelo.
+    duracion_ms: int = 0
+    # Los dólares por millón de tokens que regían en ESE momento. Se guarda el
+    # precio y no el costo ya multiplicado, por lo mismo que se guarda la fecha
+    # de afiliación y no la antigüedad: el precio es el hecho, el costo se
+    # deriva (precios_ia.py). Así cambiar la lista de precios no reescribe el
+    # gasto de los meses anteriores.
+    # 0 en todo lo anterior a esta columna: esas filas muestran el costo
+    # estimado con los precios de hoy, y la pantalla lo dice.
+    precio_entrada: float = 0.0
+    precio_salida: float = 0.0
 
 
 class ConfiguracionPlataforma(SQLModel, table=True):
@@ -634,6 +646,15 @@ class ConfiguracionPlataforma(SQLModel, table=True):
     # lleva el valor vigente al publicarse, así cambiarlo no altera lo que
     # una encuesta ya cerrada venía mostrando.
     encuestas_umbral_minimo: int = 5
+    # Qué modelo de Anthropic usa cada parte de la app (los tres usos de
+    # precios_ia.USOS). VACÍO significa "el que está escrito en el módulo"
+    # (extractor.MODELO, rag.MODELO_RESPUESTA, asistente.MODELO), no "ninguno":
+    # así el default sigue viviendo en el código, en un solo lugar, y la
+    # configuración solo existe cuando alguien eligió apartarse de él.
+    # Editable SOLO desde /plataforma, igual que el tope sindical.
+    modelo_recibos: str = ""
+    modelo_convenio: str = ""
+    modelo_asistente: str = ""
     # Marca de la plataforma "Mi Trabajo" (pantallas de login y panel de
     # plataforma, antes de entrar a un sindicato en particular). Mismo patrón
     # que Sindicato: logo en la base (Opción B), colores editables. Si no se
@@ -2470,6 +2491,44 @@ def set_config_dashboard(verde_hasta: int, amarillo_hasta: int, bot_habilitado: 
         s.commit()
 
 
+def modelos_ia() -> dict:
+    """{uso: modelo_id} para los tres usos de precios_ia.USOS, ya resuelto:
+    lo que eligió plataforma o, si no eligió nada, el default del módulo.
+    Quien llama nunca tiene que preguntarse si hay configuración."""
+    with Session(engine) as s:
+        cfg = s.get(ConfiguracionPlataforma, 1)
+        elegidos = {
+            "recibos": (cfg.modelo_recibos if cfg else "") or "",
+            "convenio": (cfg.modelo_convenio if cfg else "") or "",
+            "asistente": (cfg.modelo_asistente if cfg else "") or "",
+        }
+    return {uso: elegidos.get(uso) or precios_ia.default_de(uso) for uso in precios_ia.USOS}
+
+
+def modelo_ia(uso: str) -> str:
+    """El modelo vigente de UN uso. Se lee en cada llamada a propósito:
+    cambiarlo desde el panel tiene que valer para el próximo recibo, no para
+    el próximo reinicio del servidor (Render corre un worker por núcleo, así
+    que una variable en memoria quedaría distinta en cada uno)."""
+    return modelos_ia().get(uso, precios_ia.default_de(uso))
+
+
+def set_modelos_ia(elegidos: dict) -> None:
+    """Guarda los modelos elegidos. Un id que no está en el catálogo se
+    IGNORA y el uso queda como estaba: un modelo mal escrito no falla acá,
+    falla con un 400 de la API en la pantalla del trabajador que sube el
+    recibo, que es el peor lugar posible para enterarse."""
+    with Session(engine) as s:
+        cfg = s.get(ConfiguracionPlataforma, 1) or ConfiguracionPlataforma(id=1)
+        for uso, columna in (("recibos", "modelo_recibos"), ("convenio", "modelo_convenio"),
+                             ("asistente", "modelo_asistente")):
+            valor = (elegidos.get(uso) or "").strip()
+            if valor and precios_ia.modelo_valido(valor):
+                setattr(cfg, columna, valor)
+        s.add(cfg)
+        s.commit()
+
+
 def set_color_destacado(sindicato_id: int, color: str) -> None:
     """Color destacado del dashboard de UN sindicato -- lo edita solo el
     admin de plataforma (docs/DASHBOARD.md §1.4)."""
@@ -3251,16 +3310,24 @@ def seccional_de_trabajador(cuil: str, sindicato_id: int) -> Optional[int]:
 
 
 def registrar_uso_ia(sindicato_id: Optional[int], cuil: str, tipo: str,
-                      modelo: str, tokens_entrada: int, tokens_salida: int) -> None:
+                      modelo: str, tokens_entrada: int, tokens_salida: int,
+                      duracion_ms: int = 0) -> None:
     """Guarda una fila de consumo de la API por cada llamada real -- se llama
     en el mismo request que hace la llamada (extraer/extraer_aportes), nunca
     se re-arma después, para que el conteo no dependa de que el trabajador
-    confirme o reporte nada."""
+    confirme o reporte nada.
+
+    El precio vigente se copia acá adentro y no lo pasa quien llama: es un
+    dato del catálogo, no del request, y así ningún punto de registro puede
+    olvidarse de congelarlo. Un modelo que no está en el catálogo queda en 0,
+    que la pantalla lee como "no se puede saber" y no como "salió gratis"."""
+    p = precios_ia.precios(modelo) or (0.0, 0.0)
     with Session(engine) as s:
         s.add(UsoIA(
             sindicato_id=sindicato_id, cuil=cuil, tipo=tipo, modelo=modelo,
             tokens_entrada=tokens_entrada, tokens_salida=tokens_salida,
-            fecha=fechas.ahora_texto(),
+            fecha=fechas.ahora_texto(), duracion_ms=duracion_ms or 0,
+            precio_entrada=p[0], precio_salida=p[1],
         ))
         s.commit()
 
@@ -3271,12 +3338,33 @@ def uso_ia_listado() -> list:
     with Session(engine) as s:
         filas = s.exec(select(UsoIA).order_by(UsoIA.id.desc())).all()
         nombres = {sind.id: sind.nombre for sind in s.exec(select(Sindicato)).all()}
-        return [{
-            "id": f.id, "sindicato": nombres.get(f.sindicato_id, "—"),
-            "sindicato_id": f.sindicato_id, "cuil": f.cuil, "tipo": f.tipo,
-            "modelo": f.modelo, "tokens_entrada": f.tokens_entrada,
-            "tokens_salida": f.tokens_salida, "fecha": f.fecha,
-        } for f in filas]
+        return [_uso_ia_fila(f, nombres) for f in filas]
+
+
+def _uso_ia_fila(f: UsoIA, nombres: dict) -> dict:
+    """Una fila del listado, con el costo YA calculado.
+
+    Si la fila congeló su precio, el costo es exacto. Si no (todo lo
+    registrado antes de que existiera la columna), se estima con los precios
+    de hoy y se marca `costo_exacto=False` para que la pantalla lo diga: un
+    número sin aclarar de dónde sale es peor que no tenerlo."""
+    if f.precio_entrada or f.precio_salida:
+        costo = precios_ia.costo(f.tokens_entrada, f.tokens_salida,
+                                 f.precio_entrada, f.precio_salida)
+        exacto = True
+    else:
+        costo = precios_ia.costo_estimado(f.modelo, f.tokens_entrada, f.tokens_salida)
+        exacto = False
+    return {
+        "id": f.id, "sindicato": nombres.get(f.sindicato_id, "—"),
+        "sindicato_id": f.sindicato_id, "cuil": f.cuil, "tipo": f.tipo,
+        "modelo": f.modelo, "modelo_nombre": precios_ia.nombre(f.modelo),
+        "tokens_entrada": f.tokens_entrada,
+        "tokens_salida": f.tokens_salida, "fecha": f.fecha,
+        "duracion_ms": f.duracion_ms, "duracion_txt": precios_ia.segundos(f.duracion_ms),
+        "costo": costo, "costo_exacto": exacto and costo is not None,
+        "costo_txt": precios_ia.usd(costo),
+    }
 
 
 def registrar_recibo_sospechoso(sindicato_id: Optional[int], cuil: str, periodo: str,

@@ -197,12 +197,17 @@ if "--api" in sys.argv:
     print("\n9. Conexión con la API de Anthropic (consume créditos)")
     try:
         from anthropic import Anthropic
+        import db as _db
+        # El modelo que la plataforma eligió para leer recibos, no uno fijo:
+        # si alguien eligió uno que esta cuenta no puede usar, el chequeo
+        # tiene que enterarse acá y no en la pantalla de un trabajador.
+        modelo = _db.modelo_ia("recibos")
         cliente = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         resp = cliente.messages.create(
-            model="claude-sonnet-4-6", max_tokens=10,
+            model=modelo, max_tokens=10,
             messages=[{"role": "user", "content": "Respondé solo: ok"}],
         )
-        ok("La API responde correctamente")
+        ok(f"La API responde correctamente ({modelo})")
     except Exception as e:
         error(f"No se pudo conectar con la API: {type(e).__name__}",
               "Verificá la clave en .env, tu conexión a internet y que tengas créditos disponibles")

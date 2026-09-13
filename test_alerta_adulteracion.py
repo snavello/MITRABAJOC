@@ -41,8 +41,9 @@ RECIBO_BASE = {
 
 def _mockear_extraer(alerta):
     recibo = dict(RECIBO_BASE, alerta_adulteracion=alerta)
-    def fake(contenido, content_type):
-        return recibo, {"modelo": "claude-sonnet-4-6", "tokens_entrada": 100, "tokens_salida": 50}
+    def fake(contenido, content_type, modelo=None):
+        return recibo, {"modelo": modelo or "claude-sonnet-4-6", "tokens_entrada": 100,
+                        "tokens_salida": 50, "duracion_ms": 1200}
     return fake
 
 

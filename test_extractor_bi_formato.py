@@ -70,7 +70,9 @@ def _run_extraer_con_mock(payload: dict) -> dict:
     extractor.client.messages.create = lambda **kw: _mock_response(payload)
     try:
         datos, uso = extractor.extraer(b"fake-bytes", "image/png")
-        assert uso == {"modelo": "claude-sonnet-4-6", "tokens_entrada": 1234, "tokens_salida": 567}, uso
+        assert uso["modelo"] == "claude-sonnet-4-6", uso
+        assert (uso["tokens_entrada"], uso["tokens_salida"]) == (1234, 567), uso
+        assert uso["duracion_ms"] >= 0, uso
         return datos
     finally:
         extractor.client.messages.create = original

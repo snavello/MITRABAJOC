@@ -1,0 +1,41 @@
+{
+  "fuente": "https://www.anthropic.com/pricing (tabla de modelos de la skill claude-api)",
+  "leido": "2026-06-24",
+  "moneda": "USD",
+  "unidad": "dolares por millon de tokens",
+  "nota": "Precios de la API estandar de Anthropic, sin descuentos de cache ni Batch. Se copian a mano: no hay pagina que se pueda leer con un script sin inventar, por eso vale la fecha de arriba.",
+  "modelos": [
+    {
+      "id": "claude-opus-5",
+      "nombre": "Claude Opus 5",
+      "entrada": 5.0,
+      "salida": 25.0,
+      "contexto": "1M",
+      "resumen": "El mas capaz. Hoy responde las consultas sobre el convenio."
+    },
+    {
+      "id": "claude-sonnet-4-6",
+      "nombre": "Claude Sonnet 4.6",
+      "entrada": 3.0,
+      "salida": 15.0,
+      "contexto": "1M",
+      "resumen": "El que lee recibos y comprobantes de ARCA hoy."
+    },
+    {
+      "id": "claude-sonnet-5",
+      "nombre": "Claude Sonnet 5",
+      "entrada": 2.0,
+      "salida": 10.0,
+      "contexto": "1M",
+      "resumen": "Mas nuevo y mas barato que Sonnet 4.6. Hoy corre el Asistente del Panel."
+    },
+    {
+      "id": "claude-haiku-4-5",
+      "nombre": "Claude Haiku 4.5",
+      "entrada": 1.0,
+      "salida": 5.0,
+      "contexto": "200K",
+      "resumen": "El mas barato y el mas rapido. Sin probarlo con recibos reales."
+    }
+  ]
+}

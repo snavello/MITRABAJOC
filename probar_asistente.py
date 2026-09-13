@@ -34,10 +34,11 @@ sys.path.insert(0, RAIZ)
 import test_asistente as fx                  # noqa: E402  (arma el sindicato sintético)
 import asistente                             # noqa: E402
 import dashboard                             # noqa: E402
+import db                                    # noqa: E402
 import fechas
+import precios_ia
 
 HOY = fechas.hoy()
-PRECIO_ENTRADA, PRECIO_SALIDA = 2.0 / 1e6, 10.0 / 1e6   # USD por token, claude-sonnet-5
 
 
 def periodo_esperado(clave: str) -> list:
@@ -149,8 +150,11 @@ def main() -> int:
         frases = json.load(fh)["frases"]
     elegidas = [int(x) for x in args.solo.split(",") if x.strip()] or list(range(1, len(frases) + 1))
     cat = asistente.catalogo(fx.SID_A)
+    # El modelo que de verdad va a correr, no la constante: desde que
+    # plataforma lo puede cambiar, el informe tiene que decir cuál se midió.
+    modelo = db.modelo_ia("asistente")
     print(f"Asistente del Panel · set de aceptación · {len(elegidas)} frases · "
-          f"{asistente.MODELO} · {config} · hoy {HOY.isoformat()}\n")
+          f"{modelo} · {config} · hoy {HOY.isoformat()}\n")
 
     with ThreadPoolExecutor(max_workers=max(1, args.hilos)) as pool:
         resultados = list(pool.map(lambda n: correr(cat, n, frases[n - 1]), elegidas))
@@ -168,14 +172,16 @@ def main() -> int:
     entrada = sum(r["uso"].get("tokens_entrada", 0) for r in resultados)
     salida = sum(r["uso"].get("tokens_salida", 0) for r in resultados)
     llamadas = sum(r["uso"].get("llamadas", 0) for r in resultados)
-    costo = entrada * PRECIO_ENTRADA + salida * PRECIO_SALIDA
+    # Precios del catálogo (precios_ia.py), no escritos acá: con dos listas
+    # de precios en el repo, una de las dos envejece sin que nadie lo note.
+    costo = precios_ia.costo_estimado(modelo, entrada, salida) or 0.0
     print(f"\nAciertos: {aciertos}/{len(resultados)}   ·   tiempo por pregunta: mediana "
           f"{statistics.median(tiempos):.1f} s, máximo {max(tiempos):.1f} s   ·   "
           f"{llamadas} llamadas, {entrada} tokens de entrada y {salida} de salida "
           f"(≈ US$ {costo:.3f} la corrida, {costo / len(resultados):.4f} por pregunta)")
 
     with open(os.path.join(RAIZ, "medicion_asistente", "ultima_corrida.json"), "w", encoding="utf-8") as fh:
-        json.dump({"fecha": HOY.isoformat(), "modelo": asistente.MODELO, "config": config,
+        json.dump({"fecha": HOY.isoformat(), "modelo": modelo, "config": config,
                    "aciertos": aciertos, "total": len(resultados),
                    "mediana_seg": statistics.median(tiempos), "max_seg": max(tiempos),
                    "tokens_entrada": entrada, "tokens_salida": salida, "costo_usd": round(costo, 4),

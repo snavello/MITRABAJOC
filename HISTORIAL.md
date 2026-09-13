@@ -4312,3 +4312,165 @@ lo mismo.
 Lo que NO se tocó: `CLAUDE.md`, `README`, docstrings y comentarios de código
 siguen diciendo "Mi Trabajo" donde hablan del producto. Es documentación
 interna, no interfaz.
+
+## Costo en dólares de cada llamada a la IA, y cambiar de modelo desde el panel (2026-09-13)
+
+Pedido de Sd sobre la solapa "Uso de IA" de `/plataforma`: que cada fila
+diga **cuánto costó en dólares** (tokens por el precio de ese modelo), cuánto
+**tardó** y a qué hora se hizo; y poder **cambiar de modelo** por uno más caro
+o más barato y **hacer pruebas**.
+
+**Lo que había.** `UsoIA` guardaba sindicato, CUIL, tipo, modelo, tokens de
+entrada y de salida y la fecha al minuto — y nada más. El comentario de la
+tabla decía, textual, "tokens crudos, sin precio -- cambia según el plan/
+modelo": el precio se había dejado afuera a propósito. Los modelos eran tres
+constantes fijas en tres módulos (`extractor.MODELO`,
+`rag.MODELO_RESPUESTA`, `asistente.MODELO`).
+
+**Dos decisiones de Sd, preguntadas antes de escribir código:**
+
+1. **Selector + banco de pruebas**, no uno de los dos. El selector solo dice
+   cuánto sale cada modelo; lo que decide si conviene bajar de modelo es
+   leer el MISMO recibo con dos modelos y comparar. Un listado de consumo
+   nunca puede contestar eso, porque cada fila es un recibo distinto.
+2. **El listado sigue con los tres tipos de hoy** (recibo, aportes,
+   aprendizaje). Se le ofreció sumar el bot del convenio y el Asistente, que
+   hoy no registran en `UsoIA` —y el convenio es el que corre en
+   `claude-opus-5`, el más caro por token— y la respuesta fue que no. Queda
+   dicho para que no se lea como olvido: **el total de la pantalla es el
+   gasto de la lectura de recibos, no el gasto de IA de toda la plataforma.**
+
+### El precio se congela, el costo se deriva
+
+La columna nueva de `UsoIA` no es `costo_usd`: son `precio_entrada` y
+`precio_salida`, los dólares por millón de tokens que regían **en el momento
+de la llamada**. El costo se calcula al mostrarlo. Es el mismo criterio que
+"se guardan hechos, no derivados" de las validaciones de Trámites (fecha de
+afiliación, no antigüedad): el precio es un hecho de ese día, el costo es una
+multiplicación. La consecuencia práctica es la que importa: **actualizar la
+lista de precios no reescribe el gasto de los meses anteriores**, y el número
+sigue siendo re-derivable y auditable años después.
+
+El precio lo copia `db.registrar_uso_ia()` adentro, no se lo pasa quien
+llama: así ningún punto de registro puede olvidarse de congelarlo.
+
+Las filas anteriores a la migración quedan en 0, que **no es "salió gratis"**:
+la pantalla las muestra estimadas con los precios de hoy, en bastardilla y
+con asterisco, y el pie de la tabla lo explica. Lo mismo para un modelo que
+no está en el catálogo (una fila vieja de un modelo retirado): "—", nunca
+"US$ 0,00". La diferencia entre "no sé" y "cero" es la única que importa en
+una pantalla de costos.
+
+`precios_ia.py` es el catálogo y las cuentas, módulo puro (no importa `db`),
+con los precios en `data/precios_ia.json`. **A diferencia de
+`render_planes.py`, estos precios se copian a mano**: no hay una página de
+Anthropic que se pueda leer con un script sin inventar. Por eso el archivo
+guarda `fuente` y `leido`, y la pantalla muestra la fecha de lectura al pie —
+un precio sin fecha no se puede auditar. Al 2026-06-24: Opus 5 US$ 5/25,
+Sonnet 4.6 US$ 3/15, Sonnet 5 US$ 2/10, Haiku 4.5 US$ 1/5 por millón.
+No contempla descuentos de cache ni Batch: el extractor no usa ninguno de los
+dos, así que para lo que hoy se registra el número es el real.
+
+### La duración se mide alrededor de la llamada, no del request
+
+`extractor._uso()` recibe los milisegundos medidos con `perf_counter()`
+**pegados al `client.messages.create`** y nada más. Pasar un PDF a imagen
+tarda lo mismo con cualquier modelo; metido adentro, comparar dos modelos en
+el banco de pruebas diría cualquier cosa.
+
+### Cambiar de modelo
+
+Tres columnas nuevas en `ConfiguracionPlataforma` (`modelo_recibos`,
+`modelo_convenio`, `modelo_asistente`). **Vacío significa "el que está
+escrito en el módulo"**, no "ninguno": el default sigue viviendo en el
+código, en un solo lugar, y la configuración solo existe para apartarse de
+él. `db.modelo_ia(uso)` resuelve una cosa o la otra, y se lee **en cada
+llamada** — Render corre un worker por núcleo, así que una variable en
+memoria quedaría distinta en cada uno.
+
+Cómo llega el modelo a cada módulo, y por qué de dos formas distintas:
+`extractor.py` **no importa `db`** (es el único de los tres que no lo hace, y
+conviene que siga así), entonces `main` le pasa el modelo como tercer
+argumento a `extraer`/`extraer_aportes`. `rag.py` y `asistente.py` ya
+importan `db` y lo leen ellos. En el Asistente se resuelve **una vez por
+pregunta** y no por vuelta del bucle: cambiar de modelo en el medio tiraría
+el cache del prompt de sistema y mezclaría dos modelos en una respuesta.
+
+`db.set_modelos_ia()` **ignora** cualquier id que no esté en el catálogo y
+deja el uso como estaba. Un id mal escrito no falla en el panel: falla con un
+400 de la API en la pantalla del trabajador que sube el recibo, que es el
+peor lugar posible para enterarse.
+
+Dos cosas que quedaron atadas al mismo hilo:
+`chequeo.py --api` ahora prueba **el modelo elegido** y no uno fijo (si
+alguien elige uno que la cuenta no puede usar, el autodiagnóstico tiene que
+enterarse ahí), y `probar_asistente.py` dejó de tener sus propios
+`PRECIO_ENTRADA`/`PRECIO_SALIDA` escritos a mano — usa el catálogo, y su
+informe nombra el modelo que de verdad corrió. Con dos listas de precios en
+el repo, una de las dos envejece sin que nadie lo note.
+
+Lo que **no** cambia con el selector: el OCR de un convenio escaneado
+(`rag.py` usa `extractor.MODELO` al indexar) sigue con el modelo de origen.
+Es una operación puntual del alta de un convenio, no del uso diario, y la
+pantalla lo aclara para que no se lea como un olvido.
+
+### El banco de pruebas
+
+`POST /plataforma/probar-modelos`: un archivo, dos a cuatro modelos, y una
+tabla con una columna por modelo — costo, tiempo, tokens, y qué leyó cada
+uno. Tres decisiones:
+
+- **En paralelo** (`asyncio.gather` sobre `run_in_threadpool`). Van a la
+  misma API y no se estorban; en serie, cuatro modelos serían casi un minuto
+  colgado del navegador, con riesgo de corte del proxy.
+- **Cada lectura se registra en `UsoIA` con tipo `"prueba"`** y sin
+  sindicato. Es gasto real: si no se registrara, el total de la pantalla
+  dejaría de ser el gasto real justo por usar la pantalla. Filtrable aparte
+  para que no ensucie el consumo de producción.
+- **Un modelo que falla no tumba la comparación** (`return_exceptions=True`):
+  vuelve con su error al lado de los que sí contestaron, que es justo lo que
+  hay que ver. El error va crudo a la vista — lo lee quien administra la
+  plataforma, y "modelo inexistente" y "sin cuota" se arreglan de maneras muy
+  distintas.
+
+`extractor.resumen_comparable(tipo, datos)` decide QUÉ se compara: período,
+formato, CUIL, CUIT del empleador, líneas, aportes, los tres totales
+impresos y la confianza (o, en un comprobante de ARCA, CUIL, desde, hasta,
+meses leídos y meses con algo impago). Vive en `extractor.py`, al lado de los
+dos `ESQUEMA`, porque es conocimiento de la forma de lo que devuelve el
+modelo: si mañana cambia un campo del esquema, el resumen que lo compara está
+en la misma pantalla. Lo que difiere del primer modelo que contestó sale en
+rojo, y el JSON completo de cada lectura queda a un clic — la pantalla dice
+que coincidir no prueba que esté bien, prueba que leyeron lo mismo.
+
+### La pantalla
+
+La solapa se abrió en **tres sub-pestañas** con namespace propio
+(`.ia-subtab`, mismo criterio que `.enc-subtab`): Consumo y costo, Modelos,
+Banco de pruebas.
+
+Los totales (llamadas, costo total, promedio por llamada, tiempo mediano,
+tokens) y el **desglose por modelo** se calculan **en el navegador, sobre las
+filas visibles**, para que acompañen a los filtros: mirar cuánto sale un
+modelo con el filtro de un sindicato puesto y que el total siguiera siendo el
+global sería peor que no tenerlo. No hay lógica duplicada: el costo DE CADA
+FILA lo calcula el servidor —el único que sabe qué precio tenía congelado esa
+llamada— y el JS solo suma números ya hechos. El promedio se divide por las
+llamadas **con costo conocido** y no por todas: con las viejas adentro daría
+un promedio más bajo que el real.
+
+El desglose por modelo es la tabla que contesta la pregunta del sprint. En la
+prueba con datos sintéticos: Sonnet 4.6, US$ 0,0148 y 8,6 s por llamada;
+Haiku 4.5, US$ 0,0043 y 5,6 s. Tres veces y media más barato y más rápido —
+si lee bien, que es lo que dice el banco de pruebas y no esta tabla.
+
+Las dos tablas (nueve columnas la de detalle) van dentro de `.tabla-ancha`,
+que se desliza sola en un teléfono en vez de desbordar la página.
+
+**Tests**: `test_precios_ia.py`, 18 casos. Los cuatro que importan: el precio
+congelado no se mueve cuando cambia el catálogo; los defaults de
+`precios_ia.USOS` son las constantes de los tres módulos (fail-closed: si
+alguien mueve una y no la otra, el panel mostraría "el de origen" al lado del
+modelo equivocado); el modelo que elige plataforma es el que de verdad viaja
+a la API; y el banco de pruebas registra lo que gasta. Se actualizaron cuatro
+tests que simulaban `extraer` con dos argumentos.

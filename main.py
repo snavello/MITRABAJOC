@@ -25,6 +25,7 @@ rutas, con rol y descripción, está en la documentación técnica generada
 Arrancar con:  uvicorn main:app --reload   (ver README.md)
 """
 
+import asyncio
 import traceback
 import uuid
 from datetime import date, datetime
@@ -39,6 +40,7 @@ from starlette.concurrency import run_in_threadpool
 from sqlmodel import select
 
 import encuestas
+import precios_ia
 import resultados_encuesta
 import fechas
 import geo
@@ -56,7 +58,7 @@ from db import (Area, Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, T
                 TipoTramiteEmpleador, CampoTramiteEmpleador, TramiteEmpleador, RespuestaTramiteEmpleador,
                 NotaTramiteEmpleador, TramiteEmpleadorLog,
                 Convenio, DocumentoConvenio, FragmentoConvenio, ConsultaConvenio)
-from extractor import extraer, extraer_aportes
+from extractor import extraer, extraer_aportes, resumen_comparable
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, error_de_expresion,
                         CATEGORIAS_UNIVERSALES)
@@ -452,14 +454,16 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
         # La llamada a la IA es sincrónica y puede tardar varios segundos --
         # se corre en un hilo aparte para no bloquear el worker de FastAPI
         # (y con él, a todos los demás pedidos) mientras se espera la respuesta.
-        recibo, uso = await run_in_threadpool(extraer, contenido, archivo.content_type)
+        recibo, uso = await run_in_threadpool(extraer, contenido, archivo.content_type,
+                                              db.modelo_ia("recibos"))
     except Exception:
         raise ErrorApp("E-RECIBO-01")
     sid = sindicato_activo_trabajador(request)
     # Se registra apenas se llama a la IA -- el costo ya se generó, sea cual
     # sea el resultado (confianza baja, o si el trabajador nunca confirma).
     db.registrar_uso_ia(sid or None, request.cookies.get("cuil_trab", ""), "recibo",
-                         uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"])
+                         uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"],
+                         uso.get("duracion_ms", 0))
     if recibo.get("confianza") == "baja":
         raise ErrorApp("E-RECIBO-02")
     # Alerta de posible adulteración (totales, CUIL, CUIT del empleador o
@@ -657,13 +661,15 @@ async def api_aportes(request: Request, archivo: UploadFile = File(...)):
     resuelto) para que no se pierda al navegar o recargar la página."""
     contenido = await archivo.read()
     try:
-        datos, uso = await run_in_threadpool(extraer_aportes, contenido, archivo.content_type)
+        datos, uso = await run_in_threadpool(extraer_aportes, contenido, archivo.content_type,
+                                             db.modelo_ia("recibos"))
     except Exception:
         raise ErrorApp("E-APORTE-01")
     cuil = request.cookies.get("cuil_trab", "")
     sid = sindicato_activo_trabajador(request)
     db.registrar_uso_ia(sid or None, cuil, "aportes",
-                         uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"])
+                         uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"],
+                         uso.get("duracion_ms", 0))
     if datos.get("confianza") == "baja" or not datos.get("meses"):
         raise ErrorApp("E-APORTE-02")
     resultado = calcular_semaforo(datos)
@@ -4261,13 +4267,15 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
     for archivo in archivos:
         contenido = await archivo.read()
         try:
-            recibo, uso = await run_in_threadpool(extraer, contenido, archivo.content_type)
+            recibo, uso = await run_in_threadpool(extraer, contenido, archivo.content_type,
+                                                  db.modelo_ia("recibos"))
         except Exception:
             fallidos += 1
             continue
         leidos += 1
         db.registrar_uso_ia(sid, "", "aprendizaje",
-                             uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"])
+                             uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"],
+                             uso.get("duracion_ms", 0))
         cuit_empleador = _norm_cuil((recibo.get("empleador") or {}).get("cuit")) or None
         for n in detectar_nuevos(conceptos_actuales, recibo["lineas"], cuit_empleador):
             clave = (n["codigo"], cuit_empleador or "")
@@ -4451,7 +4459,13 @@ def plataforma(request: Request):
         "marca_plataforma": db.marca_plataforma(),
         "uso_ia": uso_ia,
         "sindicatos_uso_ia": sorted({u["sindicato"] for u in uso_ia}),
-        "modelos_uso_ia": sorted({u["modelo"] for u in uso_ia}),
+        # (id, nombre): el filtro compara contra el id que guarda la fila, pero
+        # muestra el nombre lindo -- un modelo viejo que ya no está en el
+        # catálogo sigue apareciendo con su id, no se esconde.
+        "modelos_uso_ia": sorted({(u["modelo"], u["modelo_nombre"]) for u in uso_ia}),
+        "precios_ia": precios_ia.catalogo_pantalla(),
+        "modelos_ia": db.modelos_ia(),
+        "usos_ia": precios_ia.USOS,
         "recibos_sospechosos": db.recibos_sospechosos_listado(),
         "catalogo_modulos": MODULOS, "modulos_iniciales": MODULOS_INICIALES,
         "topes": topes, "topes_json": topes_json,
@@ -4517,6 +4531,96 @@ def plataforma_config_dashboard(
     db.set_config_dashboard(semaforo_verde_hasta_dias, semaforo_amarillo_hasta_dias,
                              dashboard_consultas_bot_habilitado)
     return RedirectResponse("/plataforma?config=ok#config", status_code=303)
+
+
+@app.post("/plataforma/modelos-ia")
+def plataforma_modelos_ia(request: Request,
+                          modelo_recibos: str = Form(""),
+                          modelo_convenio: str = Form(""),
+                          modelo_asistente: str = Form("")):
+    """Qué modelo de Anthropic usa cada parte de la app. Solo plataforma: la
+    API la paga la plataforma, no el sindicato, y un cambio acá vale para
+    todos los sindicatos a la vez.
+
+    db.set_modelos_ia deja como estaba cualquier id que no esté en el
+    catálogo -- el <select> solo ofrece los del catálogo, así que llegar acá
+    con otra cosa significa un POST armado a mano."""
+    exigir_plataforma(request)
+    db.set_modelos_ia({"recibos": modelo_recibos, "convenio": modelo_convenio,
+                       "asistente": modelo_asistente})
+    return RedirectResponse("/plataforma?config=ok#usoia-modelos", status_code=303)
+
+
+@app.post("/plataforma/probar-modelos")
+async def plataforma_probar_modelos(request: Request,
+                                    archivo: UploadFile = File(...),
+                                    tipo: str = Form("recibo"),
+                                    modelos: list[str] = Form([])):
+    """Banco de pruebas: lee el MISMO archivo con dos o más modelos y
+    devuelve, lado a lado, qué leyó cada uno, cuánto tardó y cuánto costó.
+
+    Es lo único que contesta la pregunta que el listado de consumo no puede:
+    el listado dice cuánto sale cada modelo, no si el barato lee bien. Sin
+    esto, bajar de modelo sería a ciegas.
+
+    Tres decisiones:
+    - Las llamadas van EN PARALELO. Van a la misma API y no se estorban; en
+      serie, cuatro modelos serían casi un minuto de espera colgado del
+      navegador.
+    - Cada lectura se registra en UsoIA con tipo "prueba", sin sindicato: es
+      gasto real y el total de la pantalla tiene que seguir siendo el gasto
+      real. Filtrable aparte, para que no ensucie el consumo de producción.
+    - Un modelo que falla NO tumba la comparación: vuelve con su error al
+      lado de los que sí contestaron, que es justo lo que hay que ver.
+    """
+    import json
+    exigir_plataforma(request)
+    if tipo not in ("recibo", "aportes"):
+        raise HTTPException(422, "Tipo de archivo desconocido.")
+    elegidos = [m for m in dict.fromkeys(modelos) if precios_ia.modelo_valido(m)]
+    if not elegidos:
+        raise HTTPException(422, "Elegí al menos un modelo del catálogo.")
+    contenido = await archivo.read()
+    if not contenido:
+        raise HTTPException(422, "El archivo llegó vacío.")
+    leer = extraer_aportes if tipo == "aportes" else extraer
+
+    lecturas = await asyncio.gather(
+        *(run_in_threadpool(leer, contenido, archivo.content_type, m) for m in elegidos),
+        return_exceptions=True)
+
+    salida, referencia = [], None
+    for modelo, r in zip(elegidos, lecturas):
+        fila = {"modelo": modelo, "nombre": precios_ia.nombre(modelo),
+                "precio_txt": precios_ia.precio_txt(precios_ia.modelo(modelo))}
+        if isinstance(r, BaseException):
+            # El error crudo a la vista: acá lo lee quien administra la
+            # plataforma, y "modelo inexistente" y "sin cuota" se arreglan de
+            # maneras muy distintas.
+            print(f"[banco de pruebas] {modelo}: {type(r).__name__}: {r}")
+            fila.update({"ok": False, "error": f"{type(r).__name__}: {str(r)[:200]}"})
+            salida.append(fila)
+            continue
+        datos, uso = r
+        db.registrar_uso_ia(None, "", "prueba", uso["modelo"], uso["tokens_entrada"],
+                            uso["tokens_salida"], uso.get("duracion_ms", 0))
+        p = precios_ia.precios(uso["modelo"])
+        costo = precios_ia.costo(uso["tokens_entrada"], uso["tokens_salida"], p[0], p[1]) if p else None
+        resumen = resumen_comparable(tipo, datos)
+        if referencia is None:
+            referencia = resumen
+        fila.update({
+            "ok": True,
+            "tokens_entrada": uso["tokens_entrada"], "tokens_salida": uso["tokens_salida"],
+            "duracion_txt": precios_ia.segundos(uso["duracion_ms"]),
+            "costo_txt": precios_ia.usd(costo),
+            "resumen": [{"etiqueta": e, "valor": v,
+                         "igual": any(e == e2 and v == v2 for e2, v2 in referencia)}
+                        for e, v in resumen],
+            "json": json.dumps(datos, ensure_ascii=False, indent=1),
+        })
+        salida.append(fila)
+    return {"tipo": tipo, "archivo": archivo.filename or "", "modelos": salida}
 
 
 ESTADOS_TOPE = ("verificado", "derivado", "por_verificar", "SOSPECHOSO")

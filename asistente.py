@@ -31,6 +31,9 @@ import fechas
 import dashboard
 import db
 
+# El DEFAULT: plataforma puede elegir otro desde /plataforma (uso
+# "asistente" de precios_ia.USOS). Cambiarlo obliga a volver a correr
+# probar_asistente.py: el prompt está medido contra ESTE modelo.
 MODELO = "claude-sonnet-5"
 MAX_TOKENS = 1024
 # Cómo se llama al modelo. El set de aceptación (probar_asistente.py) lo
@@ -442,10 +445,10 @@ def _mensajes(pregunta: str, filtros_actuales: dict, historial: list, cat: dict,
     return mensajes
 
 
-def _llamar(cli, sistema: str, mensajes: list):
+def _llamar(cli, sistema: str, mensajes: list, modelo: str = MODELO):
     try:
         return cli.messages.create(
-            model=MODELO, max_tokens=MAX_TOKENS,
+            model=modelo, max_tokens=MAX_TOKENS,
             system=[{"type": "text", "text": sistema, "cache_control": {"type": "ephemeral"}}],
             tools=[HERRAMIENTA],
             # Copia: la lista sigue creciendo en el bucle y cada pedido tiene
@@ -476,11 +479,15 @@ def responder(sid: int, pregunta: str, filtros_actuales: dict, historial: list,
     cat = catalogo(sid)
     sistema = prompt_sistema(cat, hoy)
     mensajes = _mensajes(pregunta, filtros_actuales, historial, cat, hoy)
-    uso = {"modelo": MODELO, "tokens_entrada": 0, "tokens_salida": 0, "llamadas": 0}
+    # Se resuelve UNA vez para toda la pregunta: las vueltas del bucle son
+    # una sola conversación y cambiar de modelo en el medio tiraría el cache
+    # del prompt de sistema (y mezclaría dos modelos en una misma respuesta).
+    modelo = db.modelo_ia("asistente")
+    uso = {"modelo": modelo, "tokens_entrada": 0, "tokens_salida": 0, "llamadas": 0}
     filtros_salida, texto = None, ""
 
     for _ in range(MAX_VUELTAS):
-        msg = _llamar(cli, sistema, mensajes)
+        msg = _llamar(cli, sistema, mensajes, modelo)
         uso["llamadas"] += 1
         uso["tokens_entrada"] += getattr(msg.usage, "input_tokens", 0) or 0
         uso["tokens_salida"] += getattr(msg.usage, "output_tokens", 0) or 0

@@ -174,13 +174,15 @@ def vista_arquitectura():
         ("plataforma", "sesion_plataforma", "—", "PLATAFORMA_CUIT + PLATAFORMA_PASSWORD, en tiempo constante"),
         ("empleador", "sesion_empleador", "cuit_emp · sind_elegido_emp", "CuentaEmpleador.clave_hash"),
     ]
+    # Son los DEFAULT: desde 2026-09-13 plataforma elige el modelo de cada uso
+    # en /plataforma → Uso de IA → Modelos (precios_ia.USOS, db.modelo_ia).
     modelos = [
-        ("claude-sonnet-4-6", "extractor.py · rag.py (OCR)", "Lee recibos y comprobantes de ARCA; transcribe páginas escaneadas del convenio. Salida estructurada, sin cálculo."),
+        ("claude-sonnet-4-6", "extractor.py · rag.py (OCR)", "Lee recibos y comprobantes de ARCA; transcribe páginas escaneadas del convenio. Salida estructurada, sin cálculo. El OCR del convenio es el único que NO sigue al selector de plataforma."),
         ("claude-opus-5", "rag.py", "Responde sobre el convenio con los ocho fragmentos recuperados; el control de «no lo encontré» es el prompt, no un umbral."),
         ("claude-sonnet-5", "asistente.py", "Traduce la pregunta del admin a los filtros del panel con una herramienta; effort low, hasta tres vueltas."),
     ]
     variables = [
-        ("DATABASE_URL", "Postgres interno de Render; si falta, SQLite."), ("ENTORNO", "local, pruebas, demo o prod: distintivo y existencia de /entornos."),
+        ("DATABASE_URL", "Postgres interno de Render; es obligatoria, sin ella la app no arranca."), ("ENTORNO", "local, pruebas, demo o prod: distintivo y existencia de /entornos."),
         ("PIN_ENTORNOS", "PIN de ocho dígitos de la landing."), ("ANTHROPIC_API_KEY", "Una por entorno, con tope de gasto."),
         ("PLATAFORMA_CUIT · PLATAFORMA_PASSWORD", "El login de plataforma."), ("SESSION_SECRET", "Firma cookies y pases; cambiarlo desloguea a todos."),
         ("VAPID_PRIVATE_KEY · VAPID_PUBLIC_KEY · VAPID_CLAIM_EMAIL", "Web Push; sin las tres, apagado."), ("PYTHON_VERSION", "3.12.8, redundante a propósito."),

@@ -43,11 +43,17 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   los cambios de modelo se aplican con `alembic upgrade head` sin borrar
   datos, y en Render corre solo en el Pre-Deploy. `db.crear_tablas()` quedó
   para un solo uso: que la suite arme el esquema de su base descartable.
-- **IA:** API de Anthropic, tres modelos con un uso cada uno:
+- **IA:** API de Anthropic, tres usos con un modelo por defecto cada uno:
   `claude-sonnet-4-6` lee recibos y comprobantes (`extractor.py`),
   `claude-opus-5` responde las consultas sobre el convenio (`rag.py`) y
   `claude-sonnet-5` es el Asistente del Panel Sindical (`asistente.py`).
-  Cada llamada queda registrada en `UsoIA` (tipo, modelo, tokens).
+  **Esos tres son el DEFAULT, no algo fijo**: desde 2026-09-13 plataforma
+  elige el modelo de cada uso en `/plataforma` → Uso de IA → Modelos. Se lee
+  con `db.modelo_ia(uso)` en CADA llamada; vacío = la constante del módulo,
+  que es donde sigue viviendo el default. `extractor.py` lo recibe por
+  parámetro (es el único de los tres que no importa `db`, y conviene que siga
+  así); `rag.py` y `asistente.py` lo leen ellos. Cada llamada de lectura de
+  recibos queda registrada en `UsoIA` — ver "Costo de la IA".
 - **Auth:** propia. Claves PBKDF2, sesiones como cookies firmadas HMAC (auth.py).
   Sesión por INACTIVIDAD, no por tiempo fijo desde el login: 15 minutos sin uso
   (`auth.IDLE_TIMEOUT_SEGUNDOS`). El middleware `renovar_sesion_por_actividad`
@@ -81,6 +87,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - extractor.py — lee recibos y comprobantes de aportes con IA.
 - validador.py — motor de validación de fórmulas.
 - semaforo.py — lógica del semáforo de aportes (ARCA).
+- precios_ia.py — catálogo de precios de la API (`data/precios_ia.json`), el
+  costo de cada llamada y los tres usos configurables. Puro, no importa db.
 - geo.py — geocodificación de domicilios: Georef (provincia/localidad) +
   Nominatim (calle y altura). Ver "Georreferenciación" para las reglas.
 - dashboard.py — agregados SQL del Panel Sindical (ver sección propia).
@@ -147,6 +155,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   modales.js (arrastre de modales en escritorio, ver "Modales") +
   static/vendor/leaflet/ (Leaflet 1.9.4 vendoreado, jamás CDN).
 - data/seed_aefip.json — semilla histórica; ya NO se carga por defecto.
+- data/precios_ia.json — precios de la API de Anthropic (USD por millón de
+  tokens), con su fuente y su fecha de lectura. A mano, no hay scraper.
 - data/topes_ss.csv — vigencias de topes de la seguridad social (ver
   "Topes de base imponible" en HISTORIAL.md).
 - .claude/skills/diseno-mi-trabajo/ — skill con las reglas del sistema de diseño;
@@ -432,6 +442,12 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     gremio), y el título de la pantalla se decía dos veces. Ahora hay un
     parcial único (12 pantallas, incluida Resultados de encuesta) — ver la
     regla en "Decisiones tomadas" y el relevamiento en HISTORIAL.md.
+23. **Costo en dólares de cada llamada a la IA, y el modelo elegible desde
+    el panel** (2026-09-13): la solapa "Uso de IA" de `/plataforma` dice
+    ahora cuánto costó y cuánto tardó cada lectura de recibo, con el precio
+    congelado en la fila; plataforma elige el modelo de cada uso; y el banco
+    de pruebas lee el MISMO recibo con varios modelos para comparar costo,
+    tiempo y qué leyó cada uno — ver la sección propia y HISTORIAL.md.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -643,6 +659,45 @@ rutas rechazan el intento aunque se las llame a mano.
   bitácora importa: para las bases de datos Render **no expone historial de
   planes**, así que sin ella no habría cómo saber por qué cambió el gasto.
 - Tests: `test_planes_render.py` (24, sin tocar la API real).
+
+## Costo de la IA y cambio de modelo (solapa "Uso de IA" de `/plataforma`)
+
+Tres sub-pestañas: **Consumo y costo** (una fila por llamada, con costo en
+dólares, duración y fecha), **Modelos** (qué modelo usa cada uso) y **Banco
+de pruebas** (el mismo recibo leído por varios modelos, lado a lado).
+Detalle completo en HISTORIAL.md. Reglas vigentes:
+
+- **`UsoIA` guarda el PRECIO, no el costo.** Las columnas nuevas son
+  `precio_entrada`/`precio_salida` (USD por millón de tokens vigentes en ese
+  momento) y `duracion_ms`; el costo se calcula al mostrarlo. Es "hechos, no
+  derivados": **actualizar la lista de precios no reescribe el gasto de los
+  meses anteriores**. El precio lo copia `db.registrar_uso_ia()` adentro, no
+  quien llama, para que ningún punto de registro pueda olvidarse.
+- **Cero y "no sé" no son lo mismo.** Una fila sin precio congelado (anterior
+  a la migración) se muestra ESTIMADA con los precios de hoy y marcada; un
+  modelo fuera del catálogo muestra "—". Nunca "US$ 0,00".
+- **Los precios van con fecha de lectura.** `data/precios_ia.json` se copia a
+  mano de anthropic.com/pricing (no hay scraper, a diferencia de
+  `render_planes.py`) y la pantalla muestra el `leido` al pie.
+- **El listado cubre los TRES tipos de lectura de recibos** (recibo, aportes,
+  aprendizaje) más `prueba`. El bot del convenio y el Asistente **no**
+  registran acá (decisión de Sd, 2026-09-13): el total es el gasto de lectura
+  de recibos, no el gasto de IA de toda la plataforma.
+- **La duración se mide pegada a `client.messages.create`**, no al request:
+  convertir un PDF tarda lo mismo con cualquier modelo y arruinaría la
+  comparación.
+- **Un modelo fuera del catálogo no se guarda** (`db.set_modelos_ia` deja el
+  uso como estaba): un id mal escrito fallaría con un 400 de la API en la
+  pantalla del trabajador, no en el panel.
+- **El banco de pruebas gasta créditos y lo registra** (tipo `prueba`, sin
+  sindicato): si no lo registrara, usar la pantalla haría que el total dejara
+  de ser el gasto real. Corre los modelos en paralelo y un modelo que falla
+  no tumba la comparación.
+- Lo que NO cambia con el selector: el OCR de un convenio escaneado (`rag.py`
+  al indexar) sigue con `extractor.MODELO`.
+- Tests: `test_precios_ia.py` (18). Uno es fail-closed y hay que respetarlo:
+  los `default` de `precios_ia.USOS` tienen que ser las constantes de los
+  tres módulos.
 
 ## Validaciones en formularios de Trámites
 Capa de validaciones acordada 2026-09-01, cuatro fuentes: `fija` (valor

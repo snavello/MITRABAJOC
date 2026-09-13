@@ -179,34 +179,55 @@ def _imagen_desde_pdf(contenido: bytes) -> tuple[str, str]:
     return base64.standard_b64encode(buf.getvalue()).decode(), "image/png"
 
 
-def _uso(msg, modelo: str) -> dict:
+def _uso(msg, modelo: str, ms: int) -> dict:
     """Tokens de entrada/salida que devuelve la propia respuesta de la API
-    (msg.usage), para medir costo real -- no un estimado."""
+    (msg.usage) y lo que tardó el pedido, para medir costo real -- no un
+    estimado.
+
+    La duración se mide alrededor de la llamada y de nada más: pasar el PDF a
+    imagen tarda lo mismo con cualquier modelo, y meterlo adentro haría que
+    comparar dos modelos en el banco de pruebas diga cualquier cosa."""
     return {
         "modelo": modelo,
         "tokens_entrada": msg.usage.input_tokens,
         "tokens_salida": msg.usage.output_tokens,
+        "duracion_ms": ms,
     }
 
 
+# El modelo por defecto. Plataforma puede elegir otro (db.modelo_ia("recibos"))
+# y main se lo pasa a estas dos funciones; el default vive acá, en el código,
+# en un solo lugar -- ver precios_ia.USOS.
 MODELO = "claude-sonnet-4-6"
 
 
-def extraer(contenido: bytes, content_type: str) -> tuple[dict, dict]:
+def _uso_mock(inicio: float) -> dict:
+    """En modo mock no corrió ningún modelo: se registra "mock" y no el que
+    se pidió, para que una fila de desarrollo nunca se confunda con gasto
+    real (el catálogo no tiene precio para "mock", así que la pantalla
+    muestra "—" y no "US$ 0,00")."""
+    return {"modelo": "mock", "tokens_entrada": 0, "tokens_salida": 0,
+            "duracion_ms": int((time.perf_counter() - inicio) * 1000)}
+
+
+def extraer(contenido: bytes, content_type: str, modelo: str | None = None) -> tuple[dict, dict]:
     """Devuelve (datos_del_recibo, uso) -- uso trae modelo/tokens_entrada/
-    tokens_salida de esta llamada puntual, para registrar el costo real."""
+    tokens_salida/duracion_ms de esta llamada puntual, para registrar el costo
+    real. `modelo` lo decide quien llama; sin él, MODELO."""
     if _mock_activo():
+        inicio = time.perf_counter()
         time.sleep(_mock_latencia())
-        return json.loads(json.dumps(_RECIBO_MOCK)), {
-            "modelo": "mock", "tokens_entrada": 0, "tokens_salida": 0}
+        return json.loads(json.dumps(_RECIBO_MOCK)), _uso_mock(inicio)
+    modelo = modelo or MODELO
     if content_type == "application/pdf":
         b64, media = _imagen_desde_pdf(contenido)
     else:
         b64 = base64.standard_b64encode(contenido).decode()
         media = content_type  # image/jpeg, image/png
 
+    inicio = time.perf_counter()
     msg = client.messages.create(
-        model=MODELO,
+        model=modelo,
         max_tokens=2000,
         system=SYSTEM,
         messages=[{
@@ -220,7 +241,61 @@ def extraer(contenido: bytes, content_type: str) -> tuple[dict, dict]:
     texto = "".join(b.text for b in msg.content if b.type == "text").strip()
     if texto.startswith("```"):
         texto = texto.split("```")[1].removeprefix("json").strip()
-    return json.loads(texto), _uso(msg, MODELO)
+    return json.loads(texto), _uso(msg, modelo, int((time.perf_counter() - inicio) * 1000))
+
+
+# ============ Comparar la misma lectura hecha por dos modelos ============
+# Vive acá, al lado de los dos ESQUEMA, porque es conocimiento de la FORMA de
+# lo que devuelve el modelo: si mañana cambia un campo del esquema, el resumen
+# que compara dos lecturas está en la misma pantalla y se actualiza junto.
+def _num(x) -> str:
+    """1234.5 -> "1.234,50". Devuelve "—" si no hay número: un campo que el
+    modelo no leyó no es un cero."""
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return "—"
+    return f"{v:,.2f}".replace(",", "\x00").replace(".", ",").replace("\x00", ".")
+
+
+def _txt(x) -> str:
+    return str(x).strip() if x not in (None, "") else "—"
+
+
+def resumen_comparable(tipo: str, datos: dict) -> list:
+    """[(etiqueta, valor)] con los pocos campos que deciden si dos modelos
+    leyeron LO MISMO. No es el recibo entero a propósito: la comparación se
+    tiene que poder hacer de un vistazo, y el JSON completo está a un clic en
+    el banco de pruebas para cuando dos resúmenes coinciden pero algo huele
+    mal."""
+    if tipo == "aportes":
+        meses = datos.get("meses") or []
+        con_problema = sum(1 for m in meses
+                           if (m.get("jubilacion") != "pagado" or m.get("obra_social") != "pagado"))
+        return [
+            ("CUIL", _txt(datos.get("cuil"))),
+            ("Desde", _txt(datos.get("desde"))),
+            ("Hasta", _txt(datos.get("hasta"))),
+            ("Meses leídos", str(len(meses))),
+            ("Meses con algo impago", str(con_problema)),
+            ("Confianza", _txt(datos.get("confianza"))),
+        ]
+    empleado = datos.get("empleado") or {}
+    empleador = datos.get("empleador") or {}
+    totales = datos.get("totales_impresos") or {}
+    lineas = datos.get("lineas") or []
+    return [
+        ("Período", _txt(datos.get("periodo"))),
+        ("Formato", _txt(datos.get("formato"))),
+        ("CUIL", _txt(empleado.get("cuil"))),
+        ("CUIT del empleador", _txt(empleador.get("cuit"))),
+        ("Líneas leídas", str(len(lineas))),
+        ("Aportes del trabajador", str(sum(1 for l in lineas if l.get("tipo") == "aporte_trabajador"))),
+        ("Remuneraciones", _num(totales.get("remuneraciones"))),
+        ("Descuentos", _num(totales.get("descuentos"))),
+        ("Neto", _num(totales.get("neto"))),
+        ("Confianza", _txt(datos.get("confianza"))),
+    ]
 
 
 # ==================== Comprobante de aportes de ARCA ====================
@@ -261,21 +336,24 @@ Devolvé los 12 meses en orden. Si la imagen no es un comprobante de aportes
 de ARCA, poné confianza en "baja"."""
 
 
-def extraer_aportes(contenido: bytes, content_type: str) -> tuple[dict, dict]:
+def extraer_aportes(contenido: bytes, content_type: str,
+                    modelo: str | None = None) -> tuple[dict, dict]:
     """Lee un comprobante de aportes de ARCA (imagen o PDF) y devuelve
     (estado_mensual, uso) -- mismo criterio que extraer()."""
     if _mock_activo():
+        inicio = time.perf_counter()
         time.sleep(_mock_latencia())
-        return json.loads(json.dumps(_APORTES_MOCK)), {
-            "modelo": "mock", "tokens_entrada": 0, "tokens_salida": 0}
+        return json.loads(json.dumps(_APORTES_MOCK)), _uso_mock(inicio)
+    modelo = modelo or MODELO
     if content_type == "application/pdf":
         b64, media = _imagen_desde_pdf(contenido)
     else:
         b64 = base64.standard_b64encode(contenido).decode()
         media = content_type
 
+    inicio = time.perf_counter()
     msg = client.messages.create(
-        model=MODELO,
+        model=modelo,
         max_tokens=2000,
         system=SYSTEM_APORTES,
         messages=[{
@@ -289,4 +367,4 @@ def extraer_aportes(contenido: bytes, content_type: str) -> tuple[dict, dict]:
     texto = "".join(b.text for b in msg.content if b.type == "text").strip()
     if texto.startswith("```"):
         texto = texto.split("```")[1].removeprefix("json").strip()
-    return json.loads(texto), _uso(msg, MODELO)
+    return json.loads(texto), _uso(msg, modelo, int((time.perf_counter() - inicio) * 1000))

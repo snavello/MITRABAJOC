@@ -4,6 +4,49 @@ Anotaciones para no desviar el bloque de trabajo en curso (ver "Backlog
 técnico" en la memoria del proyecto). Cada ítem se tacha o se borra cuando
 se hace.
 
+- [ ] **Tres tests fallan en Windows por la codificación de la consola, no por
+  el código** (2026-09-13, encontrado al barrer la suite entera archivo por
+  archivo en el bloque de costo de IA). En esta PC la codepage por defecto es
+  cp1252, y tres tests abren archivos o leen la salida de un subproceso sin
+  pasar `encoding="utf-8"`:
+  - `test_trabajador_seccionales_cerca.py` → lee `static/mapa.js`
+    (`UnicodeDecodeError: byte 0x8d`).
+  - `test_cargar_demo_areas.py` → compara contra la salida de `cargar_demo.py`
+    y la palabra con acento llega rota (`usuario de área`).
+  - `test_experimentos_carga.py` → el subproceso que lanza imprime `→` y
+    revienta al escribir en stdout (`UnicodeEncodeError`).
+
+  Los tres pasan o fallan por el entorno, no por lo que prueban, y hoy
+  ensucian cualquier barrido completo: cuesta ver una falla de verdad entre
+  las tres de siempre. Arreglo: `encoding="utf-8"` explícito en cada `open()`
+  de test, y `PYTHONIOENCODING=utf-8` (o `encoding=` en `subprocess.run`) para
+  los que lanzan subprocesos. Es la misma trampa que ya obligó a poner
+  `sys.stdout.reconfigure(encoding="utf-8")` arriba de `probar_asistente.py`.
+
+- [ ] **Terminar de sacar "Mi Trabajo" de la documentación** (2026-09-13,
+  pedido de Sd: "lo haremos después"). De la INTERFAZ ya salió (ver
+  HISTORIAL.md, "«Mi Trabajo» sale de la interfaz"). Queda el nombre viejo
+  en **67 líneas de 22 archivos**, todo texto, sin riesgo técnico:
+  - **Lo que ve alguien de afuera, y por eso va primero**: los documentos
+    de `recursos/` que la landing `/entornos` publica —
+    `colm3na-plan-maestro.html`, `colm3na-plan-implementacion-sindicato.html`,
+    `anexo-servicios-mensuales.html`, `documentacion-tecnica.html` — que hoy
+    encabezan "Colm3na · Mi Trabajo".
+  - **Documentación del repo**: `README.md`, `CLAUDE.md`, `HISTORIAL.md`,
+    `ESTADO_DEL_PROYECTO.md`, `PLAN_ENTORNOS.md`, `DESPLIEGUE_RENDER.md`,
+    `GUIA_CODE_REDISENO.md` y la skill `diseno-mi-trabajo`.
+  - **Docstrings y comentarios**: `main.py`, `db.py`, `errores.py`,
+    `chequeo.py`, `cargar_marca_plataforma.py`, `migrations/env.py`,
+    `e2e/conftest.py`, `static/mapa.js`.
+
+  **Lo que NO se toca**, porque son identificadores y no la marca: el archivo
+  `static/logo_mitrabajo.svg`, la carpeta de la skill `diseno-mi-trabajo`,
+  los servicios de Render (`mitrabajo-pruebas`, `mitrabajo-demo`) y su URL,
+  las bases (`mitrabajo_dev`, `mitrabajo_test_*`), `.claude/launch.json`, los
+  mockups de `disenos/` y `docs/` (son el registro de lo que se propuso en su
+  momento), el comentario de `templates/dashboard.html` que cita el texto
+  viejo a propósito, y `e2e/resultados/informe.html`, que se regenera solo.
+
 - [ ] **Tres tests rotos en Windows por encoding** (2026-09-13, hallazgo
   lateral: fallan igual en `main` limpio, no los rompió el encabezado
   normalizado). Los tres son cp1252 contra UTF-8, no lógica:

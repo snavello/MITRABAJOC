@@ -347,6 +347,10 @@ def indexar_en_segundo_plano(documento_id: int, permitir_ocr: bool = True) -> No
 # margen entre una pregunta legítima y una que el convenio no contesta es de
 # 0,011, indistinguible por umbral), así que todo el peso de no inventar cae
 # sobre este modelo leyendo el material.
+# Es el DEFAULT: plataforma puede elegir otro desde /plataforma (uso
+# "convenio" de precios_ia.USOS) y esta constante es lo que corre si nunca
+# eligió nada. Bajarlo a un modelo más barato es exactamente lo que el
+# párrafo de arriba desaconseja -- por eso el panel lo avisa ahí mismo.
 MODELO_RESPUESTA = "claude-opus-5"
 
 # Cuántos fragmentos se le pasan. De la medición: recall@8 = 94%, recall@3 =
@@ -456,7 +460,7 @@ def responder(pregunta: str, sindicato_id: int, convenio_id: int,
 
     from extractor import client
     mensaje = client.messages.create(
-        model=MODELO_RESPUESTA,
+        model=db.modelo_ia("convenio"),
         max_tokens=1500,
         thinking={"type": "adaptive"},
         output_config={"effort": "medium"},
