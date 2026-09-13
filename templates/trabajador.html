@@ -588,31 +588,156 @@
   .spin { width:52px; height:52px; margin:0 auto; border:3px solid var(--linea); border-top-color:var(--tinta); border-radius:50%; animation:spin .9s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
 
-  /* Carga grande: leyendo/decodificando el recibo con IA. Documento con un
-     haz que lo "escanea" (da la idea de lectura, no un giro genérico) +
-     barra de progreso indeterminada + puntos suspensivos animados. */
-  .cargando-ia { text-align:center; padding:28px 0 36px; }
-  .ia-doc-wrap { position:relative; width:104px; height:130px; margin:0 auto; }
-  .ia-doc-wrap svg { width:100%; height:100%; display:block; overflow:visible; }
-  .ia-doc-hoja { fill:#fff; stroke:var(--linea); stroke-width:2; filter:drop-shadow(0 4px 10px rgba(21,34,56,.12)); }
-  .ia-doc-renglon { fill:var(--linea); animation:ia-parpadeo-renglon 1.8s ease-in-out infinite; }
-  .ia-doc-renglon:nth-child(3) { animation-delay:.15s; }
-  .ia-doc-renglon:nth-child(4) { animation-delay:.3s; }
-  .ia-doc-renglon:nth-child(5) { animation-delay:.45s; }
-  .ia-doc-renglon:nth-child(6) { animation-delay:.6s; }
-  @keyframes ia-parpadeo-renglon { 0%,100% { fill:var(--linea); } 50% { fill:var(--agua); opacity:.55; } }
-  .ia-scan { position:absolute; left:2px; right:2px; height:30px; border-radius:6px;
-    background:linear-gradient(180deg, transparent, rgba(26,122,107,.30), rgba(26,122,107,.55), rgba(26,122,107,.30), transparent);
-    animation:ia-escanear 1.7s cubic-bezier(.45,0,.55,1) infinite; pointer-events:none; }
-  @keyframes ia-escanear { 0% { top:-30px; } 100% { top:130px; } }
-  .ia-barra { width:190px; height:6px; border-radius:99px; background:var(--linea); margin:22px auto 0; overflow:hidden; }
-  .ia-barra-fill { width:42%; height:100%; border-radius:99px; background:var(--agua); animation:ia-avanzar 1.25s ease-in-out infinite; }
-  @keyframes ia-avanzar { 0% { margin-left:-42%; } 100% { margin-left:100%; } }
-  .ia-titulo { font-weight:600; margin-top:20px; font-size:16px; color:var(--tinta); }
+  /* ============ Flujo del recibo (rediseño 2026-09-13) ============
+     Los cuatro pasos comparten vocabulario: kicker en primario, título en
+     condensada, tarjeta oscura con filo de acento para la acción, y los
+     íconos como SVG de línea (nunca tildes de texto). */
+  .rc-kicker { font-family:var(--fuente-display); font-size:11px; font-weight:700;
+    letter-spacing:2.2px; text-transform:uppercase; color:var(--marca-primario); }
+  .rc-h1 { font-family:var(--fuente-display); font-weight:700; font-size:31px; line-height:1;
+    letter-spacing:.3px; text-transform:uppercase; margin:4px 0 6px; }
+  .rc-card { background:var(--card); border:1px solid var(--linea); border-radius:14px; }
+  .rc-oscura { background:linear-gradient(150deg, var(--marca-base),
+      color-mix(in srgb, var(--marca-primario) 60%, var(--marca-base)));
+    border-left:5px solid var(--marca-acento); border-radius:14px; color:#fff;
+    position:relative; overflow:hidden; padding:18px; }
+  .rc-oscura::before { content:""; position:absolute; inset:0; opacity:.09; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .rc-oscura > * { position:relative; }
+  .rc-oscura .rc-kicker { color:var(--marca-acento); }
+  .rc-oscura-tit { font-family:var(--fuente-display); font-weight:700; font-size:23px;
+    text-transform:uppercase; line-height:1.05; margin:5px 0 13px; }
+  .rc-btn { display:flex; align-items:center; justify-content:center; gap:9px; width:100%;
+    background:var(--marca-acento); color:var(--marca-base); border:none; border-radius:11px;
+    padding:15px; font-family:var(--fuente-display); font-weight:700; font-size:17px;
+    letter-spacing:1px; text-transform:uppercase; cursor:pointer; }
+  .rc-btn.sec { background:transparent; color:#fff; border:1px solid rgba(255,255,255,.35);
+    margin-top:9px; }
+  .rc-btn svg, .rc-ico svg { width:20px; height:20px; stroke:currentColor; stroke-width:1.8;
+    fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  #archivo, #archivo-pdf { display:none; }
+
+  /* --- paso 1: los tres pasos + la guía de foto --- */
+  .rc-pasos { display:flex; margin:16px 0 18px; }
+  .rc-paso { flex:1; position:relative; padding-top:26px; text-align:center; }
+  .rc-paso::before { content:""; position:absolute; top:9px; left:0; right:0; height:2px;
+    background:var(--linea); }
+  .rc-paso:first-child::before { left:50%; }
+  .rc-paso:last-child::before { right:50%; }
+  .rc-paso i { position:absolute; top:0; left:50%; transform:translateX(-50%); width:20px; height:20px;
+    border-radius:50%; background:var(--papel); border:2px solid var(--linea);
+    font-family:var(--fuente-num); font-size:10px; font-style:normal; font-weight:700;
+    color:var(--gris); display:flex; align-items:center; justify-content:center; }
+  .rc-paso.on i { background:var(--marca-acento); border-color:var(--marca-acento); color:var(--marca-base); }
+  .rc-paso b { display:block; font-family:var(--fuente-display); font-size:13.5px; letter-spacing:.6px;
+    text-transform:uppercase; color:var(--tinta); }
+  .rc-paso.on b { color:var(--marca-primario); }
+  .rc-paso small { font-size:11px; color:var(--gris); }
+  .rc-tips { margin-top:14px; }
+  .rc-tips-tit { display:flex; align-items:center; gap:8px; padding:12px 14px;
+    border-bottom:1px solid var(--linea); font-family:var(--fuente-display); font-size:14px;
+    letter-spacing:1.2px; text-transform:uppercase; color:var(--tinta); }
+  .rc-tips-tit svg { width:17px; height:17px; stroke:var(--marca-apoyo); stroke-width:2.2;
+    fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .rc-tip { display:flex; gap:11px; align-items:flex-start; padding:11px 14px;
+    border-bottom:1px solid var(--linea); }
+  .rc-tip:last-child { border-bottom:none; }
+  .rc-tip .rc-ico { color:var(--marca-apoyo); flex:none; margin-top:1px; }
+  .rc-tip b { display:block; font-size:13.5px; }
+  .rc-tip small { font-size:12px; color:var(--gris); line-height:1.45; }
+  .rc-pie { display:flex; align-items:center; gap:10px; width:100%; background:none; border:none;
+    padding:13px 2px; margin-top:14px; border-top:1px solid var(--linea); cursor:pointer;
+    font-family:inherit; text-align:left; color:var(--marca-primario); font-size:13.5px; font-weight:600; }
+  .rc-pie svg { width:18px; height:18px; stroke:currentColor; stroke-width:1.8; fill:none; }
+  .rc-pie span { margin-left:auto; color:var(--gris); font-weight:400; font-size:12px; }
+
+  /* --- paso 3: confirmar lo leído --- */
+  .rc-caratula { padding:16px 17px; }
+  .rc-caratula .per { font-family:var(--fuente-display); font-weight:700; font-size:27px;
+    line-height:1; text-transform:uppercase; }
+  .rc-caratula .emp { font-size:13.5px; color:rgba(255,255,255,.8); margin-top:4px; }
+  .rc-caratula .linea { display:flex; justify-content:space-between; align-items:baseline;
+    gap:12px; margin-top:13px; padding-top:12px; border-top:1px solid rgba(255,255,255,.16); }
+  .rc-caratula .linea span:first-child { font-size:11px; letter-spacing:1.4px;
+    text-transform:uppercase; color:rgba(255,255,255,.65); }
+  .rc-caratula .linea .imp { font-family:var(--fuente-num); font-variant-numeric:tabular-nums;
+    font-size:19px; font-weight:600; color:var(--marca-acento); }
+  .rc-datos { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--linea);
+    border-top:1px solid var(--linea); }
+  .rc-datos > div { background:var(--card); padding:10px 14px; }
+  .rc-datos .k { display:block; font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase;
+    color:var(--gris); }
+  .rc-datos .v { font-size:14px; font-weight:600; overflow-wrap:anywhere; }
+  .rc-datos .v.falta { color:var(--alerta); font-weight:500; }
+
+  /* --- paso 4: el veredicto y lo chequeado --- */
+  .rc-veredicto { border-radius:14px; padding:16px 17px; margin-bottom:14px;
+    border:1px solid var(--linea); border-left:5px solid var(--gris); background:var(--card); }
+  .rc-veredicto.ok { border-left-color:var(--agua);
+    background:color-mix(in srgb, var(--agua) 6%, var(--card)); }
+  .rc-veredicto.mal { border-left-color:var(--alerta);
+    background:color-mix(in srgb, var(--alerta) 6%, var(--card)); }
+  .rc-vcab { display:flex; gap:12px; align-items:flex-start; }
+  .rc-vico { flex:none; width:38px; height:38px; border-radius:11px; display:flex;
+    align-items:center; justify-content:center; }
+  .rc-vico svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2.2;
+    stroke-linecap:round; stroke-linejoin:round; }
+  .rc-veredicto.ok .rc-vico { background:color-mix(in srgb, var(--agua) 16%, #fff); color:var(--agua); }
+  .rc-veredicto.mal .rc-vico { background:color-mix(in srgb, var(--alerta) 14%, #fff); color:var(--alerta); }
+  .rc-veredicto .tit { font-family:var(--fuente-display); font-weight:700; font-size:24px;
+    line-height:1.05; text-transform:uppercase; margin-top:2px; }
+  .rc-vsub { font-size:13px; color:var(--gris); margin-top:9px; }
+  .rc-hallazgo { background:var(--card); border:1px solid var(--linea); border-radius:10px;
+    padding:11px 13px; margin-top:10px; font-size:13.5px; line-height:1.55; }
+  .rc-hallazgo.aviso { border-color:color-mix(in srgb, var(--marca-acento) 55%, var(--linea));
+    background:color-mix(in srgb, var(--marca-acento) 7%, var(--card)); }
+  .rc-chq { display:flex; align-items:center; gap:10px; padding:11px 14px;
+    border-bottom:1px solid var(--linea); font-size:13.5px; }
+  .rc-chq:last-child { border-bottom:none; }
+  .rc-chq .ic { flex:none; width:20px; height:20px; display:flex; align-items:center;
+    justify-content:center; color:var(--agua); }
+  .rc-chq.mal .ic { color:var(--alerta); }
+  .rc-chq .ic svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2.6;
+    stroke-linecap:round; stroke-linejoin:round; }
+  .rc-chq .tx { flex:1; min-width:0; line-height:1.35; }
+  .rc-chq .imp { font-family:var(--fuente-num); font-variant-numeric:tabular-nums;
+    font-size:13.5px; font-weight:600; white-space:nowrap; }
+  .rc-totales { margin-top:12px; overflow:hidden; }
+  .rc-totales .t { display:flex; justify-content:space-between; align-items:baseline; gap:12px;
+    padding:11px 14px; border-bottom:1px solid var(--linea); font-size:13.5px; }
+  .rc-totales .t .imp { font-family:var(--fuente-num); font-variant-numeric:tabular-nums;
+    font-weight:600; }
+  .rc-totales .t .imp.neg { color:var(--alerta); }
+  .rc-totales .neto { border-bottom:none; background:var(--papel); font-weight:700; }
+  .rc-totales .neto .imp { font-size:17px; }
+
+  /* --- paso 2: el cronómetro mientras lee la IA --- */
+  .ia-cron { text-align:center; padding:26px 0 34px; }
+  .ia-aro { position:relative; width:148px; height:148px; margin:0 auto; }
+  .ia-aro svg { width:100%; height:100%; transform:rotate(-90deg); }
+  .ia-aro .pista { fill:none; stroke:var(--linea); stroke-width:7; }
+  .ia-aro .avance { fill:none; stroke:var(--marca-acento); stroke-width:7; stroke-linecap:round;
+    stroke-dasharray:414; stroke-dashoffset:414; transition:stroke-dashoffset .95s linear; }
+  .ia-aro .centro { position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; }
+  .ia-aro .centro .n { font-family:var(--fuente-num); font-variant-numeric:tabular-nums;
+    font-size:34px; font-weight:600; color:var(--marca-primario); letter-spacing:-1px; }
+  .ia-aro .centro .et { font-size:9.5px; letter-spacing:2px; text-transform:uppercase; color:var(--gris); }
+  .ia-leyenda { font-family:var(--fuente-display); font-weight:700; font-size:23px;
+    letter-spacing:.4px; text-transform:uppercase; line-height:1.05; margin-top:18px; }
   .ia-sub { font-size:13px; color:var(--gris); margin-top:5px; }
-  .ia-puntos span { opacity:0; animation:ia-parpadeo-punto 1.4s infinite; }
-  .ia-puntos span:nth-child(2) { animation-delay:.2s; }
-  .ia-puntos span:nth-child(3) { animation-delay:.4s; }
+  .ia-fases { display:grid; gap:1px; background:var(--linea); border:1px solid var(--linea);
+    border-radius:12px; overflow:hidden; margin-top:20px; text-align:left; }
+  .ia-fase { background:var(--card); padding:12px 14px; display:flex; align-items:center; gap:11px;
+    font-size:13.5px; color:var(--gris); }
+  .ia-fase .pt { width:9px; height:9px; border-radius:50%; background:var(--linea); flex:none; }
+  .ia-fase.hecha { color:var(--tinta); }
+  .ia-fase.hecha .pt { background:var(--marca-apoyo); }
+  .ia-fase.activa { color:var(--tinta); font-weight:600; }
+  .ia-fase.activa .pt { background:var(--marca-acento);
+    box-shadow:0 0 0 0 color-mix(in srgb, var(--marca-acento) 60%, transparent);
+    animation:ia-pulso 1.6s ease-out infinite; }
+  @keyframes ia-pulso { to { box-shadow:0 0 0 10px transparent; } }
   @keyframes ia-parpadeo-punto { 0%,100% { opacity:0; } 50% { opacity:1; } }
 
   /* Check verde animado: confirmación visible de un envío, en vez de un
@@ -627,7 +752,7 @@
   @keyframes check-dibujar-marca { to { stroke-dashoffset:0; } }
   .check-enviado span { font-weight:600; color:var(--tinta); font-size:14.5px; }
   @media (prefers-reduced-motion:reduce) {
-    .ia-scan, .ia-barra-fill, .ia-doc-renglon, .ia-puntos span { animation:none; }
+    .ia-fase.activa .pt { animation:none; }
     .check-circulo, .check-marca { animation:none; stroke-dashoffset:0; }
   }
   .nota { font-size:11px; color:#8a887f; margin-top:22px; line-height:1.5; }
@@ -845,23 +970,53 @@
   {% if 'recibos' in modulos %}
   <div class="tpanel" id="tp-recibo">
     <!-- Paso 0: inicio -->
+    <!-- Los tres pasos del recorrido + la guía de foto (elegido entre 3
+         propuestas el 2026-09-13). La guía no es decorativa: una foto
+         cortada o con brillo es una lectura que sale mal, y antes no había
+         nada que lo previniera. Dos inputs a propósito: el de la cámara
+         lleva capture="environment" (abre la cámara directo en el celular)
+         y el otro abre el selector de archivos, para el PDF que manda la
+         empresa. -->
     <div id="inicio">
-      <h1>Revisá tu recibo</h1>
-      <p class="sub">Sacale una foto o subí el PDF y verificamos que los aportes estén bien calculados.</p>
-      <!-- Esquema "Hilo" (2026-09-03): la tarjeta oscura reemplaza a la zona
-           punteada; mismos textos y mismo input de siempre. -->
-      <div class="th-aten">
-        <div class="k"><svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg>Tu recibo</div>
-        <div class="tit">Foto o PDF de tu último recibo</div>
-        <div class="bts"><label for="archivo">Elegir recibo</label></div>
+      <div class="rc-kicker">Verificación de recibo</div>
+      <h1 class="rc-h1">Revisá tu recibo</h1>
+      <p class="sub">Tres pasos. El primero lo hacés vos; los otros dos, nosotros.</p>
+      <div class="rc-pasos">
+        <div class="rc-paso on"><i>1</i><b>Foto</b><small>o PDF</small></div>
+        <div class="rc-paso"><i>2</i><b>Lectura</b><small>30 segundos</small></div>
+        <div class="rc-paso"><i>3</i><b>Chequeo</b><small>de conceptos</small></div>
       </div>
-      <input type="file" id="archivo" accept="image/*,application/pdf" capture="environment">
-      <div class="th-acc una">
-        <button type="button" class="th-tile fila-t" id="ver-historial">
-          <svg viewBox="0 0 24 24"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
-          <div><b>Ver mis recibos verificados</b><small>Historial privado</small></div>
-        </button>
+      <div class="rc-oscura">
+        <div class="rc-kicker">Paso 1 de 3</div>
+        <div class="rc-oscura-tit">Tu último recibo</div>
+        <label class="rc-btn" for="archivo">
+          <svg viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.6"/></svg>
+          Sacar foto</label>
+        <label class="rc-btn sec" for="archivo-pdf">
+          <svg viewBox="0 0 24 24"><path d="M14 3v5h5"/><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8z"/></svg>
+          Subir un PDF</label>
       </div>
+      <input type="file" id="archivo" accept="image/*" capture="environment">
+      <input type="file" id="archivo-pdf" accept="image/*,application/pdf">
+      <div class="rc-card rc-tips">
+        <div class="rc-tips-tit">
+          <svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg>Para que salga bien</div>
+        <div class="rc-tip">
+          <span class="rc-ico"><svg viewBox="0 0 24 24"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/></svg></span>
+          <div><b>Que entre completo</b>
+            <small>Las cuatro esquinas dentro de la foto, incluido el pie con los totales.</small></div></div>
+        <div class="rc-tip">
+          <span class="rc-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span>
+          <div><b>Luz pareja, sin sombras</b>
+            <small>Evitá el flash de frente: el brillo tapa los números.</small></div></div>
+        <div class="rc-tip">
+          <span class="rc-ico"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M6 7h12M6 17h12"/></svg></span>
+          <div><b>Apoyado y derecho</b>
+            <small>Sobre una mesa, sin dobleces y de frente, no en diagonal.</small></div></div>
+      </div>
+      <button type="button" class="rc-pie" id="ver-historial">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>
+        Ver mis recibos verificados <span>Historial privado</span></button>
     </div>
 
     <!-- Historial: mis recibos verificados -->
@@ -874,7 +1029,8 @@
 
     <!-- Paso 1: archivo elegido -->
     <div id="listo" style="display:none;">
-      <h1>Revisá tu recibo</h1>
+      <div class="rc-kicker">Paso 1 de 3</div>
+      <h1 class="rc-h1">Tu recibo, listo</h1>
       <div class="archivo">
         <div class="thumb">📄</div>
         <div style="flex:1; min-width:0;">
@@ -888,7 +1044,8 @@
 
     <!-- Paso 2: preview -->
     <div id="preview" style="display:none;">
-      <h1>Confirmá los datos</h1>
+      <div class="rc-kicker">Paso 2 de 3</div>
+      <h1 class="rc-h1">Confirmá los datos</h1>
       <p class="sub">Esto es lo que leímos del recibo. Si está bien, seguí con la verificación.</p>
       <div id="preview-contenido"></div>
       <button class="btn" id="continuar">Continuar con la verificación</button>
@@ -1253,43 +1410,81 @@ const peso = n => '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits
 const ver = (id) => { for (const s of ['inicio','listo','preview','misrecibos']) $(s).style.display = (s===id)?'block':'none'; };
 
 {% if 'recibos' in modulos %}
-$('archivo').onchange = e => {
+function archivoElegido(e) {
   archivo = e.target.files[0];
   if (!archivo) return;
   $('nombre').textContent = archivo.name;
   $('meta').textContent = (archivo.size/1024).toFixed(0) + ' KB · listo para leer';
   $('resultado').innerHTML = '';
   ver('listo');
-};
-
-$('otro').onclick = () => { archivo = null; $('archivo').value = ''; ver('inicio'); };
-$('reintentar').onclick = () => { archivo = null; $('archivo').value = ''; datosLeidos = null; $('resultado').innerHTML=''; ver('inicio'); };
-
-// Carga grande (documento "escaneándose" + barra de progreso) para los pasos
-// donde la IA lee/decodifica el recibo — más visible que el spinner chico.
-function cargandoIA(titulo, subtitulo) {
-  return `<div class="cargando-ia">
-    <div class="ia-doc-wrap">
-      <svg viewBox="0 0 104 130" aria-hidden="true">
-        <rect class="ia-doc-hoja" x="4" y="4" width="96" height="122" rx="10"/>
-        <rect class="ia-doc-renglon" x="20" y="26" width="64" height="6" rx="3"/>
-        <rect class="ia-doc-renglon" x="20" y="42" width="64" height="6" rx="3"/>
-        <rect class="ia-doc-renglon" x="20" y="58" width="44" height="6" rx="3"/>
-        <rect class="ia-doc-renglon" x="20" y="80" width="64" height="6" rx="3"/>
-        <rect class="ia-doc-renglon" x="20" y="96" width="36" height="6" rx="3"/>
-      </svg>
-      <div class="ia-scan"></div>
-    </div>
-    <div class="ia-barra"><div class="ia-barra-fill"></div></div>
-    <div class="ia-titulo">${titulo}</div>
-    <div class="ia-sub">${subtitulo}<span class="ia-puntos"><span>.</span><span>.</span><span>.</span></span></div>
-  </div>`;
 }
+// Dos inputs, un solo handler: el de la cámara (capture) y el del PDF.
+$('archivo').onchange = archivoElegido;
+$('archivo-pdf').onchange = archivoElegido;
+
+function limpiarElegido() { archivo = null; $('archivo').value = ''; $('archivo-pdf').value = ''; }
+$('otro').onclick = () => { limpiarElegido(); ver('inicio'); };
+$('reintentar').onclick = () => { limpiarElegido(); datosLeidos = null; $('resultado').innerHTML=''; ver('inicio'); };
+
+// Mientras la IA trabaja: cronómetro REAL con los segundos transcurridos
+// (elegido entre 3 propuestas el 2026-09-13). Lo que había era un
+// documento con un haz y una barra indeterminada: no decía cuánto llevaba
+// esperando el afiliado, que es lo único que quiere saber mirando esto.
+// El aro da una vuelta cada 45 s -- no promete un final exacto, que no
+// tenemos, solo muestra que el tiempo corre.
+const IA_FASES = ['Abriendo el archivo', 'Reconociendo los conceptos', 'Comparando'];
+const IA_ARO = 414;   // 2·PI·66, el perímetro del círculo del SVG
+
+function cargandoIA(leyenda, subtitulo) {
+  const html = `<div class="ia-cron">
+    <div class="ia-aro">
+      <svg viewBox="0 0 148 148" aria-hidden="true">
+        <circle class="pista" cx="74" cy="74" r="66"/>
+        <circle class="avance" id="ia-avance" cx="74" cy="74" r="66"/>
+      </svg>
+      <div class="centro">
+        <span class="n" id="ia-reloj">00:00</span><span class="et">Segundos</span>
+      </div>
+    </div>
+    <div class="ia-leyenda">${leyenda}</div>
+    <div class="ia-sub">${subtitulo}</div>
+    <div class="ia-fases" id="ia-fases">
+      ${IA_FASES.map((f, i) => `<div class="ia-fase${i === 0 ? ' activa' : ''}">
+        <span class="pt"></span><span>${f}</span></div>`).join('')}
+    </div>
+  </div>`;
+  // el cronómetro arranca en el próximo tick, cuando el HTML ya está en el DOM
+  setTimeout(arrancarCronometro, 0);
+  return html;
+}
+
+function arrancarCronometro() {
+  let s = 0;
+  const mmss = n => String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
+  const tic = () => {
+    const reloj = document.getElementById('ia-reloj');
+    // se limpia solo: cuando la respuesta llega, este nodo ya no existe
+    if (!reloj) { clearInterval(cronometroIA); cronometroIA = null; return; }
+    reloj.textContent = mmss(s);
+    const avance = document.getElementById('ia-avance');
+    if (avance) avance.style.strokeDashoffset = IA_ARO - IA_ARO * ((s % 45) / 45);
+    const fase = s < 6 ? 0 : s < 16 ? 1 : 2;
+    document.querySelectorAll('.ia-fase').forEach((e, i) => {
+      e.classList.toggle('activa', i === fase);
+      e.classList.toggle('hecha', i < fase);
+    });
+    s++;
+  };
+  if (cronometroIA) clearInterval(cronometroIA);
+  tic();
+  cronometroIA = setInterval(tic, 1000);
+}
+let cronometroIA = null;
 
 // Paso 1 → 2: leer el recibo y mostrar el preview
 $('leer').onclick = async () => {
   ver('listo'); $('listo').style.display = 'none';
-  $('resultado').innerHTML = cargandoIA('Leyendo tu recibo', 'Interpretando los conceptos');
+  $('resultado').innerHTML = cargandoIA('Estamos leyendo tu recibo', 'No cierres la app: suele tardar menos de un minuto.');
   const fd = new FormData(); fd.append('archivo', archivo);
   try {
     const r = await fetch('/api/leer', { method:'POST', body:fd });
@@ -1304,6 +1499,12 @@ $('leer').onclick = async () => {
       <button class="btn sec" onclick="location.reload()">Volver a intentar</button>`;
   }
 };
+
+function datoCelda(k, v) {
+  const vacio = (v === null || v === undefined || v === '');
+  return `<div><span class="k">${k}</span>
+    <span class="v${vacio ? ' falta' : ''}">${vacio ? 'no se leyó' : v}</span></div>`;
+}
 
 function dato(k, v) {
   const vacio = (v === null || v === undefined || v === '');
@@ -1327,12 +1528,11 @@ function renderTotalesIngresosDescuentos(lineas) {
 function renderTotalesResumen(totales) {
   if (!totales) return '';
   const neto = totales.neto != null ? totales.neto : (totales.ingresos || 0) - (totales.descuentos || 0);
-  return `<div class="fila" style="border-top:2px solid var(--linea); margin-top:4px; font-weight:600;">
-      <span>Total ingresos</span><span class="imp">${peso(totales.ingresos || 0)}</span></div>
-    <div class="fila" style="font-weight:600;">
-      <span>Total descuentos</span><span class="imp neg">${peso(totales.descuentos || 0)}</span></div>
-    <div class="fila" style="font-weight:600;">
-      <span>Total neto</span><span class="imp">${peso(neto)}</span></div>`;
+  return `<div class="rc-card rc-totales">
+    <div class="t"><span>Total ingresos</span><span class="imp">${peso(totales.ingresos || 0)}</span></div>
+    <div class="t"><span>Total descuentos</span><span class="imp neg">${peso(totales.descuentos || 0)}</span></div>
+    <div class="t neto"><span>Total neto</span><span class="imp">${peso(neto)}</span></div>
+  </div>`;
 }
 
 // Marca los recibos con el formato del Anexo III (Dto 407/2026), para que el
@@ -1357,16 +1557,28 @@ function renderPreview(d) {
     h += `<div class="alerta-legal"><b>Atención:</b> algunos datos podrían estar alterados.
       Podés seguir igual — guardamos una copia del archivo para revisión.</div>`;
   }
-  h += `<div class="card">`;
+  // Carátula: lo que hay que mirar para decir "sí, es mi recibo". El resto
+  // de los datos queda abajo, en la grilla, sin competirle.
+  const neto = (r.totales_impresos && r.totales_impresos.neto) || null;
+  h += `<div class="rc-oscura rc-caratula">
+    <div class="rc-kicker">Lo que leímos</div>
+    <div class="per">${fmtPeriodo(r.periodo) || 'Sin período'}</div>
+    <div class="emp">${empresa.nombre || 'Empresa no reconocida'}</div>
+    ${neto ? `<div class="linea"><span>Neto impreso</span><span class="imp">${peso(neto)}</span></div>` : ''}
+  </div>`;
   if (r.formato === 'nuevo') h += badgeReforma();
-  h += `<h2>Datos del recibo</h2><div class="datos">`;
-  h += dato('Empleado', emp.apellido_nombre);
-  h += dato('CUIL', emp.cuil);
-  h += dato('Empresa', empresa.nombre);
-  h += dato('CUIT', empresa.cuit);
-  h += dato('Período', fmtPeriodo(r.periodo));
-  h += dato('Fecha de cobro', r.fecha_pago);
-  h += `</div>`;
+  h += `<div class="rc-card" style="margin-top:12px; overflow:hidden;">
+    <div class="rc-tips-tit">
+      <svg viewBox="0 0 24 24"><path d="M14 3v5h5"/><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8z"/></svg>
+      Datos del recibo</div>
+    <div class="rc-datos">
+      ${datoCelda('Empleado', emp.apellido_nombre)}
+      ${datoCelda('CUIL', emp.cuil)}
+      ${datoCelda('CUIT de la empresa', empresa.cuit)}
+      ${datoCelda('Fecha de cobro', r.fecha_pago)}
+    </div>
+  </div>`;
+  h += `<div class="card" style="margin-top:12px;">`;
 
   // Conceptos leídos
   h += `<h2>Conceptos leídos (${r.lineas.length})</h2>`;
@@ -1442,7 +1654,7 @@ function textoError(e) {
 // Paso 2 → 3: confirmar y validar
 $('continuar').onclick = async () => {
   ver('preview'); $('preview').style.display = 'none';
-  $('resultado').innerHTML = cargandoIA('Verificando los aportes', 'Comparando contra las fórmulas del convenio');
+  $('resultado').innerHTML = cargandoIA('Estamos verificando los aportes', 'Un momento: estamos haciendo las cuentas.');
   try {
     const r = await fetch('/api/validar', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -1456,26 +1668,56 @@ $('continuar').onclick = async () => {
   }
 };
 
+// Íconos de línea del resultado. Antes eran los caracteres ✓ y ✗ sueltos
+// en el texto: se veían de distinto tamaño según la fuente del sistema.
+const IC_OK = '<svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg>';
+const IC_CRUZ = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+const IC_ALERTA = '<svg viewBox="0 0 24 24"><path d="M12 4 2.8 20h18.4z"/><path d="M12 10v4M12 17.2v.1"/></svg>';
+
 function renderResultado(d) {
   if (d.bloqueado) {
-    $('resultado').innerHTML = `<div class="banner mal">⚠ Este recibo no es tuyo</div>
-      <div class="disc">${d.discrepancias[0].detalle}</div>
+    $('resultado').innerHTML = `<div class="rc-veredicto mal">
+      <div class="rc-kicker">Resultado</div>
+      <div class="tit">Este recibo no es tuyo</div>
+      <div class="rc-hallazgo">${d.discrepancias[0].detalle}</div></div>
       <button class="btn sec" onclick="location.reload()">Volver a intentar</button>`;
     return;
   }
   const ok = d.estado === 'OK';
-  let h = `<div class="banner ${ok?'ok':'mal'}">`
-        + (ok ? '✓ Todo en orden' : `Encontramos ${d.discrepancias.length} cosa(s) para revisar`)
-        + `</div><div class="lista">`;
-  for (const f of d.formulas_validadas)
-    h += `<div class="fila"><span>${f.ok?'✓':'✗'} ${f.descripcion}${f.chequeo_automatico ? '<span class="badge-auto" title="Este empleador todavía no tiene sus conceptos cargados en el sindicato: se identificó y chequeó automáticamente por tratarse de un aporte de ley.">chequeo automático</span>' : ''}</span><span class="imp">${peso(f.en_recibo)}</span></div>`;
-  h += renderTotalesResumen(d.totales);
+  const n = d.discrepancias.length;
+  // "1 cosa(s)" no lo dice nadie: o es una diferencia, o son varias.
+  const titulo = ok ? 'Todo en orden'
+    : (n === 1 ? 'Hay 1 diferencia para revisar' : `Hay ${n} diferencias para revisar`);
+  const chequeados = d.formulas_validadas.length;
+
+  // 1. El veredicto, con el hallazgo adentro: es lo que la persona vino a ver.
+  let h = `<div class="rc-veredicto ${ok ? 'ok' : 'mal'}">
+    <div class="rc-vcab">
+      <span class="rc-vico">${ok ? IC_OK : IC_ALERTA}</span>
+      <div><div class="rc-kicker">Resultado</div><div class="tit">${titulo}</div></div>
+    </div>
+    <div class="rc-vsub">Chequeamos ${chequeados} ${chequeados === 1 ? 'concepto' : 'conceptos'} de tu recibo.</div>`;
+  for (const disc of d.discrepancias) h += `<div class="rc-hallazgo">${disc.detalle}</div>`;
+  for (const al of (d.alertas || [])) h += `<div class="rc-hallazgo aviso">${al.detalle}</div>`;
   h += `</div>`;
+
+  // 2. Qué se chequeó, con íconos de línea (antes eran tildes de texto).
+  h += `<div class="rc-card rc-chequeos"><div class="rc-tips-tit">
+    <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Lo que chequeamos</div>`;
+  for (const f of d.formulas_validadas) {
+    h += `<div class="rc-chq ${f.ok ? 'ok' : 'mal'}">
+      <span class="ic">${f.ok ? IC_OK : IC_CRUZ}</span>
+      <span class="tx">${f.descripcion}${f.chequeo_automatico ? '<span class="badge-auto" title="Este empleador todavía no tiene sus conceptos cargados en el sindicato: se identificó y chequeó automáticamente por tratarse de un aporte de ley.">chequeo automático</span>' : ''}</span>
+      <span class="imp">${peso(f.en_recibo)}</span></div>`;
+  }
+  h += `</div>`;
+
+  // 3. Los totales, aparte y con las cifras alineadas en columna.
+  h += renderTotalesResumen(d.totales);
+
   if (d.base_remunerativa_aproximada) {
     h += `<div class="disc" style="border-left-color:#d9a441;">El sindicato todavía no tiene cargado ningún concepto de haberes para este empleador, así que el remunerativo usado para los cálculos de arriba se tomó del total impreso en el recibo, no de conceptos verificados uno por uno.</div>`;
   }
-  for (const disc of d.discrepancias) h += `<div class="disc">${disc.detalle}</div>`;
-  for (const al of (d.alertas || [])) h += `<div class="alerta-legal">${al.detalle}</div>`;
   if (!ok) h += `<button class="btn alerta" id="rep">Reportar al sindicato</button>`;
   const retencion = (d.retencion_sindical && d.retencion_sindical.total) || 0;
   if (ok) {

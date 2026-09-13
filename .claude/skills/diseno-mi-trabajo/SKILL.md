@@ -130,6 +130,28 @@ cursor en `marca.css`, o ese modal va a ser el único que no se mueve. En
 teléfono no se arrastran: ahí el modal ocupa el ancho completo y no hay nada
 atrás que destapar.
 
+## El flujo del recibo (2026-09-13)
+
+Los cuatro pasos comparten vocabulario y están en `trabajador.html`
+(`.rc-*` para la estructura, `.ia-*` para la espera):
+
+- **Kicker** en primario + **título en condensada** (`.rc-h1`) en cada paso,
+  y el paso numerado ("Paso 1 de 3") cuando corresponde.
+- La **acción** vive en la tarjeta oscura con filo de acento (`.rc-oscura`);
+  el resto de la pantalla es claro.
+- **Los tildes son SVG de línea, nunca `✓` ni `✗` de texto**: como
+  caracteres se ven de distinto tamaño según la fuente del sistema.
+- **Toda cifra va en `--fuente-num` con `tabular-nums`**, para que las
+  columnas de importes se alineen.
+- **La espera muestra el tiempo real**, no una barra indeterminada: el
+  cronómetro cuenta los segundos y las fases dicen qué está pasando.
+- **Una pantalla que pide una foto explica cómo sacarla.** Que entre
+  completo, luz pareja, apoyado y derecho: de eso depende que la lectura
+  salga bien.
+- Ojo con las variables: `trabajador.html` y `empresa.html` **no cargan
+  `marca.css`** y definen las suyas. Ahí el verde es `--agua`, no
+  `--verde`; un `var()` inexistente no falla, hereda y se ve mal.
+
 ## Íconos
 
 SVG de línea, `stroke-width:1.7`, `fill:none`, 22px en la barra, 26px en

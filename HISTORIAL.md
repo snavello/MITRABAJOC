@@ -4637,3 +4637,62 @@ alguien mueve una y no la otra, el panel mostraría "el de origen" al lado del
 modelo equivocado); el modelo que elige plataforma es el que de verdad viaja
 a la API; y el banco de pruebas registra lo que gasta. Se actualizaron cuatro
 tests que simulaban `extraer` con dos argumentos.
+
+## El flujo del recibo, rediseñado (2026-09-13)
+
+Pedido de Sd: "la pantalla de recibos es pobre, los componentes están
+dispersos y parecieran no tener un orden". Se relevaron los cuatro pasos con
+un recibo REAL del padrón de La Bancaria --se alimentaron las mismas
+funciones de render con un `ReciboVerificado.detalle` guardado, sin llamar a
+la IA-- y se le presentaron tres opciones para el paso 1 y tres para el 2,
+aplicadas sobre el DOM real. Eligió **A y A**, con dos cambios de texto
+suyos: "Chequeo **de conceptos**" (no "contra el convenio") y la fase
+"**Comparando**" a secas, porque no toda comparación es contra el convenio
+--algunas son de ley.
+
+**Paso 1 · Subir el recibo.** Antes: dos bloques sueltos, media pantalla
+vacía y ninguna indicación de cómo sacar la foto. Ahora: los tres pasos del
+recorrido (foto · lectura · chequeo) con el actual marcado, la tarjeta oscura
+de acción, y una guía de tres consejos con su porqué. **La guía no es
+decorativa**: una foto cortada, torcida o con brillo es una lectura que sale
+mal, y no había nada que lo previniera.
+
+**Dos inputs, no uno.** "Sacar foto" lleva `capture="environment"` (abre la
+cámara directo en el celular) y "Subir un PDF" abre el selector de archivos.
+Antes había un solo input con `capture`, así que el PDF que manda la empresa
+quedaba a un rodeo de distancia. Los dos comparten `archivoElegido()` y
+`limpiarElegido()` los vacía a ambos.
+
+**Paso 2 · Mientras lee la IA.** Antes: un documento con un haz y una barra
+indeterminada, en un verde (`--agua`) que no es de la marca del sindicato, y
+sin decir cuánto llevaba esperando el afiliado --lo único que uno quiere
+saber mirando esa pantalla. Ahora: **cronómetro real** con los segundos
+corriendo en la monoespaciada tabular, aro que da una vuelta cada 45 s (no
+promete un final exacto, que no tenemos: solo muestra que el tiempo corre),
+la leyenda "Estamos leyendo tu recibo" y las tres fases, con la activa
+latiendo. El intervalo **se limpia solo**: cada tic comprueba que el nodo
+del reloj siga en el DOM y, si no está --porque la respuesta llegó y se
+reemplazó el contenido--, se cancela. Las dos llamadas (leer y verificar)
+usan el mismo componente con distinta leyenda.
+
+**Paso 3 · Confirmar lo leído.** Antes, una lista larga sin jerarquía: "¿leyó
+bien mi sueldo?" pesaba lo mismo que el último concepto. Ahora arriba va una
+carátula con lo que hace falta para decir "sí, es mi recibo" --período en
+grande, empresa y neto impreso-- y recién después los datos en grilla y el
+detalle completo. `datoCelda()` marca en rojo lo que no se pudo leer, mismo
+criterio que `dato()`.
+
+**Paso 4 · Las diferencias.** Antes: "Encontramos 1 cosa(s) para revisar",
+los ✓ y ✗ como caracteres sueltos --se veían de distinto tamaño según la
+fuente del sistema-- y el hallazgo, lo único que la persona vino a buscar,
+en un bloque gris al final. Ahora el veredicto es la primera pieza y **el
+hallazgo va adentro**, con el plural resuelto ("Hay 1 diferencia" / "Hay 3
+diferencias"), los tildes como SVG de línea (`IC_OK`, `IC_CRUZ`,
+`IC_ALERTA`) y los totales en tarjeta propia con `tabular-nums`, para que
+las cifras se alineen en columna.
+
+Detalle que se encontró al implementar: el CSS nuevo usaba `var(--verde)`,
+que **no existe en `trabajador.html`** (esta plantilla no carga `marca.css`
+y define sus propias variables: el verde acá es `--agua`). Los tildes se
+veían negros en vez de verdes. Es el mismo tropiezo del encabezado
+normalizado, y por el mismo motivo.
