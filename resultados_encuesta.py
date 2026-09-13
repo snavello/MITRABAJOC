@@ -142,6 +142,10 @@ def resultados(encuesta_id: int, sindicato_id: int, pedidos: dict, alcance=None)
                         "dias": f["aplicados"].get("_dias", []),
                         "ventana": [e["fecha_desde"], e["fecha_hasta"]]},
             "indicadores": _indicadores(s, e, f["aplicados"], testigo),
+            # El mapa de burbujas. `None` cuando esta encuesta no guarda el
+            # corte de seccional: sin ese dato no hay nada que ubicar, y un
+            # mapa vacío haría pensar que algo falló.
+            "mapa": _mapa_seccionales(s, e, f["aplicados"], f["fijos"]),
             "respondentes": respondentes,
             "oculto": oculto,
             # Con el grupo por debajo del umbral las preguntas NO se calculan:
@@ -253,6 +257,88 @@ def _ritmo(s, e: dict, filtros: dict, testigo) -> list:
         .order_by(db.RespuestaEncuesta.dia)
     q = _con_filtros_urna(q, filtros)
     return [{"dia": dia, "cantidad": int(n)} for dia, n in s.execute(q).all() if dia]
+
+
+# ---------- El mapa de participación por seccional ----------
+
+def _mapa_seccionales(s, e: dict, filtros: dict, fijos) -> dict:
+    """Participación por seccional, con coordenadas, para el mapa de burbujas.
+
+    Devuelve `None` si la encuesta no guarda el corte de seccional: sin ese
+    dato no hay nada que ubicar.
+
+    **Sale del PADRÓN, no de la urna**, y es lo que hace que la burbuja pueda
+    tener un color: la urna sabe cuántas respuestas llegaron etiquetadas
+    "Rosario", pero solo el padrón sabe a cuántos se les preguntó, y sin
+    denominador no hay porcentaje de participación. Es la misma fuente del
+    indicador "Participación" de arriba, partida por seccional, así que los
+    dos números cierran entre sí.
+
+    La contra, que la pantalla dice con todas las letras: el padrón se cruza
+    con `Trabajador`, o sea con la seccional de HOY. Si alguien se mudó de
+    seccional después de responder, su respuesta cuenta en la pastilla donde
+    estaba (la urna congela el corte) y su participación cuenta acá donde está
+    ahora. Es el mismo desfasaje que el encabezado de este módulo ya documenta
+    para todo lo que sale del padrón, y no se puede evitar sin guardar en el
+    padrón un dato que abriría la puerta a cruzarlo con la urna.
+
+    **El mapa ES el selector de seccional, así que ignora su propio filtro**
+    -- si lo respetara, tocar una burbuja dejaría el mapa con un solo punto y
+    no habría forma de volver. Mismo criterio que `dashboard.seccionales_geo`.
+    Lo que NO ignora es un filtro de seccional IMPUESTO por alcance (N18): ahí
+    el recorte no es una elección de quien mira, y dejarlo pasar le mostraría
+    en un mapa cuánta gente participó en las seccionales que no le tocan.
+
+    Los otros cortes (provincia, empleador) sí se aplican. El rango de fechas
+    no le llega, porque el padrón no sabe cuándo respondió cada uno.
+    """
+    if "seccional" not in (e.get("cortes") or []):
+        return None
+    impuesto = "seccional" in (fijos or [])
+    # Todos los filtros menos el de seccional, salvo que esté impuesto.
+    cortes = {k: v for k, v in (filtros or {}).items()
+              if k in encuestas.CORTES and (k != "seccional" or impuesto)}
+
+    q = (db.select(db.Trabajador.seccional_id, func.count(),
+                   func.coalesce(func.sum(case((db.EncuestaParticipante.respondio, 1),
+                                               else_=0)), 0))
+         .select_from(db.EncuestaParticipante)
+         .join(db.Trabajador, db.Trabajador.cuil == db.EncuestaParticipante.cuil)
+         .where(db.EncuestaParticipante.encuesta_id == e["id"],
+                # El aislamiento viaja DENTRO del WHERE: un CUIL puede estar
+                # empadronado en varios sindicatos (pluriempleo), y sin esto la
+                # fila del otro gremio sumaría en este mapa.
+                db.Trabajador.sindicato_id == e["sindicato_id"],
+                db.Trabajador.seccional_id.isnot(None))
+         .group_by(db.Trabajador.seccional_id))
+    for corte, valores in cortes.items():
+        q = q.where(_columna_trabajador(corte).in_(_tipados(corte, valores)))
+    conteos = {int(sid): (int(convocados), int(respondieron))
+               for sid, convocados, respondieron in s.execute(q).all()}
+
+    ubicadas, sin_ubicar = [], []
+    for sec in db.seccionales_del_sindicato(e["sindicato_id"]):
+        # Una seccional sin nadie en el padrón de ESTA encuesta no entra: no
+        # participó de una encuesta que no le llegó, y dibujarla en 0% diría
+        # algo que no pasó.
+        if sec["id"] not in conteos:
+            continue
+        convocados, respondieron = conteos[sec["id"]]
+        item = {
+            "id": sec["id"], "nombre": sec["nombre"],
+            "direccion_texto": sec["direccion_texto"],
+            "localidad": sec["localidad"], "provincia": sec["provincia"],
+            "lat": sec["latitud"], "lon": sec["longitud"],
+            "convocados": convocados, "respondieron": respondieron,
+            "porcentaje": _porcentaje(respondieron, convocados),
+        }
+        (ubicadas if sec["latitud"] is not None and sec["longitud"] is not None
+         else sin_ubicar).append(item)
+    return {"seccionales": ubicadas, "sin_ubicar": sin_ubicar,
+            # Que el corte esté impuesto se repite acá (además de en
+            # `filtros.fijos`) porque es lo que decide si las burbujas se
+            # pueden tocar: con el recorte impuesto no hay nada que elegir.
+            "impuesto": impuesto}
 
 
 # ---------- Los gráficos, uno por pregunta ----------

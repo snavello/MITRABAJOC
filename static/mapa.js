@@ -102,6 +102,71 @@
     };
   }
 
+  /* ---------- Burbujas de seccional ----------
+
+     Las usan los DOS mapas de la app (el del Panel Sindical y el del
+     dashboard de una encuesta) y viven acá por lo mismo que la atribución de
+     OSM: dos copias es lo que hace que un día un mapa se vea distinto del
+     otro y nadie sepa cuál es el bueno.
+
+     Una burbuja dice tres cosas a la vez:
+       - su TAMAÑO, una cantidad (afiliados, participantes);
+       - su BORDE, dónde cae en una escala (el % de participación, la métrica
+         elegida);
+       - su RELLENO, si está seleccionada o no.
+     Y adentro lleva el logo del sindicato en marca de agua, que es lo que
+     hace que el mapa se lea como parte de la app del gremio y no como un
+     mapa cualquiera con puntos. */
+
+  // Escala FIJA de la app, no la marca del sindicato: es cuantitativa, y con
+  // el acento de cada gremio la misma intensidad significaría otra cosa en
+  // cada tenant. De poco (claro) a mucho (oscuro).
+  var ESCALA = ["#dbe4f0", "#a9c1de", "#6f97c6", "#3f6fa8", "#1e4877"];
+  var SIN_DATO = "#cfd6e0";
+
+  function colorEscala(valor, maximo) {
+    if (valor === null || valor === undefined) return SIN_DATO;
+    if (!maximo) return ESCALA[0];
+    var i = Math.min(ESCALA.length - 1, Math.floor(valor / maximo * ESCALA.length));
+    return ESCALA[i];
+  }
+
+  /* El diámetro va por RAÍZ CUADRADA y no lineal: lo que el ojo compara es
+     el área del círculo, así que con tamaño lineal una seccional del doble de
+     gente se ve cuatro veces más grande. Va de 18 a 46 px: más chico no se
+     puede tocar con el dedo, más grande tapa a las vecinas en el conurbano. */
+  function diametroBurbuja(valor, maximo) {
+    return 2 * (9 + Math.sqrt(Math.max(0, valor || 0) / (maximo || 1)) * 14);
+  }
+
+  /* Un marcador con forma de burbuja. Es un `divIcon` y no un
+     `L.circleMarker` porque un círculo de SVG no puede llevar una imagen
+     adentro sin armar un `<pattern>` por marcador; con HTML el logo es un
+     background y el CSS vive en marca.css, donde se lo puede leer. */
+  function burbuja(lat, lon, o) {
+    o = o || {};
+    var d = Math.max(14, Math.round(o.diametro || 26));
+    var borde = o.seleccionada ? 3.5 : 2.5;
+    var estilo = "border-width:" + borde + "px;border-color:" + (o.borde || "#ffffff") +
+                 ";background-color:" + (o.relleno || "#ffffff") + ";";
+    // El logo se pasa como URL de la propia app; se le sacan las comillas por
+    // si algún día la arma otro y mete algo raro en el `url(...)`.
+    var logo = o.logo ? '<i style="background-image:url(' +
+               String(o.logo).replace(/["'\\()\s]/g, "") + ')"></i>' : "";
+    return L.marker([lat, lon], {
+      icon: L.divIcon({
+        className: "mt-burbuja-wrap",
+        html: '<span class="mt-burbuja' + (o.seleccionada ? " sel" : "") +
+              '" style="' + estilo + '">' + logo + "</span>",
+        iconSize: [d, d], iconAnchor: [d / 2, d / 2]
+      }),
+      keyboard: false,
+      // Mantiene a las chicas por encima de las grandes: si no, una burbuja
+      // de 46 px tapa a la de 18 y no hay forma de tocarla.
+      zIndexOffset: Math.round(1000 - d)
+    });
+  }
+
   /* Enlace "cómo llegar" según el teléfono.
 
      Android entiende el esquema `geo:` y abre la app de mapas que la persona
@@ -148,6 +213,10 @@
 
   global.MapaMT = {
     crear: crear,
+    burbuja: burbuja,
+    colorEscala: colorEscala,
+    diametroBurbuja: diametroBurbuja,
+    ESCALA: ESCALA,
     enlaceComoLlegar: enlaceComoLlegar,
     enlaceVerEnMapa: enlaceVerEnMapa,
     distanciaKm: distanciaKm,

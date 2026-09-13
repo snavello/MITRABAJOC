@@ -6,6 +6,9 @@
 <meta name="theme-color" content="{{ marca.color_base }}">
 <title>{{ titulo_encuesta }} — Resultados</title>
 <link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
+{# Leaflet VENDOREADO, jamás CDN (mismo criterio que Chart.js). Las teselas de
+   OSM sí salen a la red en cada uso: no se pueden cachear, es su política. #}
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css?v={{ sello_static('vendor/leaflet/leaflet.css') }}">
 <style>
   /* Estética propia de Encuestas (N19): tarjeta limpia con barra de avance,
      no el "expediente" de Trámites. El color sale de la marca del sindicato
@@ -17,6 +20,18 @@
     --marca-apoyo: {{ marca.color_secundario }};
     --enc-suave: color-mix(in srgb, var(--marca-apoyo) 12%, white);
     --enc-borde: color-mix(in srgb, var(--marca-apoyo) 38%, white);
+    /* Las dos de arriba son el cromo suave de la marca (avisos, notas); estas
+       dos son de SELECCIÓN y salen del destacado. Separadas a propósito: un
+       aviso de umbral pintado del color de las selecciones diría que está
+       seleccionado. */
+    --sel-suave: color-mix(in srgb, var(--destacado) 12%, white);
+    --sel-borde: color-mix(in srgb, var(--destacado) 38%, white);
+    /* Color destacado (docs/DASHBOARD.md §4.1): EXCLUSIVO de las selecciones
+       y los filtros activos, igual que en el Panel Sindical. Acá lo usaban el
+       apoyo de la marca y el mapa venía a sumar un segundo color de selección
+       en la misma pantalla: al tocar una burbuja quedaba fucsia y su pastilla
+       verde, para la misma cosa. Un solo idioma de selección por pantalla. */
+    --destacado: {{ marca.color_destacado }};
   }
   body { background: var(--papel); }
 
@@ -50,7 +65,7 @@
     gap: 10px; flex-wrap: wrap; margin-bottom: 11px; }
   .f-titulo { font-family: var(--fuente-display); font-size: 16px;
     display: flex; align-items: center; gap: 7px; }
-  .f-titulo .numf { background: var(--marca-apoyo); color: #fff; border-radius: 99px;
+  .f-titulo .numf { background: var(--destacado); color: #fff; border-radius: 99px;
     min-width: 20px; height: 20px; display: none; place-items: center; font-size: 11px;
     padding: 0 6px; font-family: var(--fuente-num); }
   .f-titulo .numf.hay { display: grid; }
@@ -66,8 +81,8 @@
      (0,3,1 contra 0,2,0) a la pastilla elegida, y como después de tocarla el
      mouse queda encima, la pastilla recién elegida quedaba verde sobre verde
      -- con el texto invisible justo en el clic en que importa. */
-  .m-chip:hover:not(:disabled):not(.act) { border-color: var(--enc-borde); color: var(--marca-apoyo); }
-  .m-chip.act { background: var(--marca-apoyo); border-color: var(--marca-apoyo); color: #fff; }
+  .m-chip:hover:not(:disabled):not(.act) { border-color: var(--sel-borde); color: var(--destacado); }
+  .m-chip.act { background: var(--destacado); border-color: var(--destacado); color: #fff; }
   .m-chip.act:hover { filter: brightness(1.08); }
   .m-chip:disabled { opacity: .55; cursor: not-allowed; }
   .m-chip .n { font-family: var(--fuente-num); font-size: 11px; opacity: .75; }
@@ -76,10 +91,10 @@
      dato y esconderla haría creer que ahí no hay a quién preguntarle. */
   .m-chip.vacio:not(.act) { opacity: .4; }
   .btn-reiniciar { display: inline-flex; align-items: center; gap: 6px;
-    border: 1.5px solid var(--marca-apoyo); color: var(--marca-apoyo); background: none;
+    border: 1.5px solid var(--destacado); color: var(--destacado); background: none;
     font-weight: 700; font-size: 12.5px; border-radius: 99px; padding: 6px 14px;
     cursor: pointer; font-family: inherit; }
-  .btn-reiniciar:hover { background: var(--marca-apoyo); color: #fff; }
+  .btn-reiniciar:hover { background: var(--destacado); color: #fff; }
   .f-nota { font-size: 11.5px; color: var(--gris); max-width: 460px; }
   .f-acciones { display: flex; gap: 8px; align-items: center; }
 
@@ -101,8 +116,8 @@
   .cal-dia:disabled { color: #c3c9d4; cursor: not-allowed; }
   .cal-dia.conresp::after { content: ""; position: absolute; bottom: 2px; width: 4px; height: 4px;
     border-radius: 50%; background: var(--marca-apoyo); }
-  .cal-dia.rango { background: var(--enc-suave); border-radius: 0; font-weight: 600; }
-  .cal-dia.extremo { background: var(--marca-apoyo) !important; color: #fff !important; font-weight: 700; }
+  .cal-dia.rango { background: var(--sel-suave); border-radius: 0; font-weight: 600; }
+  .cal-dia.extremo { background: var(--destacado) !important; color: #fff !important; font-weight: 700; }
   .cal-dia.extremo.ini { border-radius: 8px 0 0 8px; }
   .cal-dia.extremo.fin { border-radius: 0 8px 8px 0; }
   .cal-dia.extremo.solo { border-radius: 8px !important; }
@@ -177,7 +192,7 @@
   table.datos td.num { text-align: right; font-family: var(--fuente-num); white-space: nowrap; }
   table.datos tr:last-child td { border-bottom: none; }
   table.datos tr.clicable { cursor: pointer; }
-  table.datos tr.clicable:hover { background: var(--enc-suave); }
+  table.datos tr.clicable:hover { background: var(--sel-suave); }
   .resumen-escala { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
   .resumen-escala div { font-size: 11px; color: var(--gris); }
   .resumen-escala b { display: block; font-family: var(--fuente-display); font-size: 24px;
@@ -328,6 +343,25 @@
      canal y el recordatorio sí lo resuelve. #}
   <div class="f-nota" id="lectura-vs-respuesta" style="margin:-4px 0 2px;"></div>
 
+  {# El mapa se esconde entero cuando la encuesta no guarda el corte de
+     seccional (la urna no tiene ese dato) o cuando ninguna de las seccionales
+     del padrón está ubicada: un mapa gris y vacío hace pensar que algo falló.
+     Lo decide el JS con lo que devuelve el servidor. #}
+  <section id="mapa-seccion" hidden>
+    <h2 class="secc">Participación por seccional
+      <small>burbujas: el tamaño es cuánta gente respondió, el color qué
+        porcentaje de su padrón es · tocá una para filtrar</small></h2>
+    <div class="panel">
+      <div class="mapa-controles">
+        <div class="mapa-leyenda" id="mapa-leyenda"></div>
+      </div>
+      <div class="mapa-panel" id="mapa-seccionales"
+           data-logo="{{ ('/logo/' ~ marca.id ~ '?v=' ~ marca.logo_v) if marca.logo else '' }}"></div>
+      <div class="mapa-sin-ubicar" id="mapa-sin-ubicar"></div>
+      <div class="f-nota" id="mapa-nota" style="margin-top:10px;"></div>
+    </div>
+  </section>
+
   <div id="umbral" class="aviso-umbral" hidden></div>
 
   <h2 class="secc">Respuestas <small id="sub-preguntas"></small></h2>
@@ -369,6 +403,8 @@
   const CORTES = {{ encuestas_cortes | tojson }};
 </script>
 <script src="/static/chart.umd.min.js?v=4.4.9"></script>
+<script src="/static/vendor/leaflet/leaflet.js?v={{ sello_static('vendor/leaflet/leaflet.js') }}"></script>
+<script src="/static/mapa.js?v={{ sello_static('mapa.js') }}"></script>
 <script src="/static/encuesta_resultados.js?v={{ sello_static('encuesta_resultados.js') }}"></script>
 </body>
 </html>

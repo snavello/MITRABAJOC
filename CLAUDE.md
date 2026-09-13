@@ -142,7 +142,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   pública de credencial).
 - static/ — 2 SVG base + marca.css (sistema de diseño compartido) +
   static/fonts/ (Barlow Condensed, licencia SIL OFL) + mapa.js (capa fina
-  sobre Leaflet, compartida por las cuatro pantallas con mapa) +
+  sobre Leaflet y las burbujas de los dos mapas de tablero, compartida por las
+  cinco pantallas con mapa) +
   modales.js (arrastre de modales en escritorio, ver "Modales") +
   static/vendor/leaflet/ (Leaflet 1.9.4 vendoreado, jamás CDN).
 - data/seed_aefip.json — semilla histórica; ya NO se carga por defecto.
@@ -566,6 +567,19 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    habría con qué cambiar de opinión—, salvo la seccional IMPUESTA por N18,
    que sí se filtra a sí misma para no dejar leer de refilón cuánta gente
    respondió en las otras.
+   **Mapa de participación por seccional (2026-09-13)**: las burbujas del
+   Panel Sindical, aplicadas a otra pregunta. El tamaño es cuánta gente
+   respondió y el color qué porcentaje de SU padrón es eso, con escala fija de
+   0 a 100% —una participación del 70% tiene que verse igual de oscura con el
+   filtro puesto que sin él—. Sale del **padrón** fijado al publicar y no de
+   la urna, porque es el único que sabe a cuántos se les preguntó: sin
+   denominador no hay porcentaje (y por eso puede diferir de la pastilla, que
+   cuenta respuestas en la urna con la seccional congelada al responder; la
+   pantalla lo dice). Tocar una burbuja llama al MISMO `alternar('seccional')`
+   que la pastilla, así que no hay dos estados que se desincronicen. Como en
+   el Panel, **ignora su propio filtro** (es el selector) pero **no el
+   impuesto por N18**, y no existe si la encuesta no guarda el corte de
+   seccional.
    **Detalle completo en HISTORIAL.md** ("Módulo Encuestas").
    Lo central: el anonimato se sostiene por la FORMA de las tablas (padrón
    y urna separados, sin vínculo posible), no por un cartel.
@@ -899,6 +913,15 @@ por eso son dos listas en `geo.py`:
   **solo agregados** — seis indicadores por seccional— y **ignora el filtro de
   seccional**, porque el mapa ES el selector. Escala de color fija de la app,
   no la marca del sindicato.
+- **Los dos mapas de tablero dibujan la MISMA burbuja** (`MapaMT.burbuja`,
+  2026-09-13): el TAMAÑO es una cantidad, el BORDE el color de la escala, el
+  RELLENO dice si está seleccionada (el destacado del panel, fucsia por
+  default) y adentro va el logo del sindicato en marca de agua. Son `divIcon`
+  de Leaflet y no `circleMarker` — un círculo de SVG no lleva una imagen
+  adentro sin un `<pattern>` por marcador. La forma, la escala
+  (`MapaMT.ESCALA`) y el diámetro (raíz cuadrada: el ojo compara áreas) viven
+  en `mapa.js`, y el cromo (`.mapa-panel`, `.mapa-leyenda`, `.mapa-pop`,
+  `.mt-burbuja`) en `marca.css`: un mapa nuevo los usa, no los copia.
 - El alta masiva de trabajadores **no geocodifica**: cien direcciones a un
   pedido por segundo son cien segundos colgado. Las ubica después el botón
   "Georreferenciar pendientes", en segundo plano, con el avance en la tabla
