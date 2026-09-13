@@ -2511,10 +2511,18 @@
   {% if 'seccionales' in permisos %}
   <div class="panel" id="panel-seccionales">
   <!-- ============ SECCIONALES ============ -->
-  <h2 id="seccionales-titulo">Dar de alta una seccional</h2>
-  <p class="muted">Las seccionales quedan disponibles para elegir en el alta/edición de trabajadores, y además <b>acotan lo que ve cada usuario del panel</b>: un usuario de área trabaja sobre los trabajadores de su seccional. No afectan la validación de recibos.</p>
+  {# CREAR una seccional es del administrador general y de nadie más, pero
+     el Admin de Seccional entra igual a esta pantalla porque tiene que
+     poder editar la SUYA (dirección, contacto, el punto en el mapa). Antes
+     el formulario se le mostraba entero, con su asistente de alta en tres
+     pasos, y recién al apretar Guardar el servidor le contestaba que no --
+     con el JSON crudo en la cara. Ahora el formulario le nace escondido y
+     solo lo abre "Editar". #}
+  <h2 id="seccionales-titulo">{% if es_super_admin %}Dar de alta una seccional{% else %}Seccionales{% endif %}</h2>
+  <p class="muted">Las seccionales quedan disponibles para elegir en el alta/edición de trabajadores, y además <b>acotan lo que ve cada usuario del panel</b>: un usuario de área trabaja sobre los trabajadores de su seccional. No afectan la validación de recibos.
+  {% if not es_super_admin %}<br>Podés <b>editar la tuya</b>; darlas de alta o borrarlas es del administrador general del sindicato.{% endif %}</p>
 
-  <div class="card">
+  <div class="card{% if not es_super_admin %} oculto{% endif %}" id="sec-card">
     <div class="geo-pasos">
       <div class="geo-paso-n activo" data-paso-n="1"><b>1</b> Dirección</div>
       <div class="geo-paso-n" data-paso-n="2"><b>2</b> Confirmar en el mapa</div>
@@ -2618,10 +2626,13 @@
   </div>
   {% endif %}
 
-  <h2>Seccionales cargadas ({{ seccionales|length }})</h2>
+  <h2>Seccionales cargadas ({{ seccionales_visibles|length }})</h2>
   <table>
     <tr><th>Nombre</th><th>Dirección</th><th>Ubicación</th><th>Alcance</th><th></th></tr>
-    {% for sec in seccionales %}
+    {# `seccionales_visibles`, no `seccionales`: el recorte por alcance lo
+       hace el servidor. Un admin local no tiene nada que hacer con la fila
+       de otra delegación. #}
+    {% for sec in seccionales_visibles %}
     <tr>
       <td>{{ sec.nombre }}</td>
       <td class="muted">{{ sec.direccion_texto or '—' }}</td>
@@ -2630,14 +2641,16 @@
       <td style="white-space:nowrap; text-align:right;">
         <button type="button" class="mini" onclick="verSeccional({{ sec.id }})">Ver</button>
         <button type="button" class="mini" onclick='editarSeccional({{ sec | tojson }})'>Editar</button>
+        {% if es_super_admin %}
         <form method="post" action="/admin/seccional/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar esta seccional? Los trabajadores que la tengan asignada quedan sin seccional.')">
           <input type="hidden" name="id" value="{{ sec.id }}">
           <button class="peligro mini" type="submit">Borrar</button>
         </form>
+        {% endif %}
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="5" class="muted">Todavía no cargaste ninguna seccional.</td></tr>
+    <tr><td colspan="5" class="muted">{% if es_super_admin %}Todavía no cargaste ninguna seccional.{% else %}No tenés ninguna seccional a tu alcance.{% endif %}</td></tr>
     {% endfor %}
   </table>
 
@@ -2674,12 +2687,15 @@
   {% if request.query_params.get('err') == 'sinpermiso' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No tenés permiso para esa sección del panel. Si te hace falta, pedísela al administrador de tu sindicato.</div>
   {% endif %}
+  {# Solo los avisos DE ÁREAS. Los de usuarios estaban acá y se veían arriba
+     del formulario equivocado -- y encima el panel abría siempre en esta
+     sub-pestaña, así que un error al guardar un usuario aterrizaba en la
+     otra pantalla. Ahora cada aviso vive donde está su formulario, y el
+     servidor manda `sub=` para abrir la sub-pestaña correcta. #}
   {% if request.query_params.get('err') == 'datosarea' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El área necesita un nombre y una seccional.</div>
-  {% elif request.query_params.get('err') == 'sinseccional' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Un administrador de seccional tiene que tener una seccional asignada.</div>
-  {% elif request.query_params.get('err') == 'areaajena' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El área y la seccional del usuario tienen que ser la misma. Elegí un área de esa seccional.</div>
+  {% elif request.query_params.get('ok') == 'area' %}
+  <div class="msg" style="background:#e3f3ec;color:#1d6b52;">Área guardada.</div>
   {% endif %}
   <h2 id="area-titulo">Dar de alta un área</h2>
   <p class="muted">Tildá las secciones del panel que puede tocar. Solo aparecen las de los módulos que el sindicato tiene contratados.</p>
@@ -2748,15 +2764,34 @@
 
   <!-- Sub: USUARIOS -->
   <div class="au-subpanel" id="au-sub-usuarios">
-  <h2>Dar de alta un usuario</h2>
+  {# El título dice si estás dando de alta o editando, igual que en Áreas y
+     en Seccionales. Antes lo que cambiaba al tocar "Editar" era el título
+     del PANEL ("Áreas y Usuarios"), arriba de las sub-pestañas, y este
+     seguía diciendo "Dar de alta un usuario": el formulario se llenaba con
+     los datos de la persona pero encabezado por un alta. #}
+  <h2 id="usuario-titulo">Dar de alta un usuario</h2>
   <p class="muted">Entra a este panel con su CUIT/CUIL y la clave que le asignes -- va a tener que cambiarla en su primer ingreso. Para cambiarle la clave a uno ya existente, pedíselo a plataforma.<br>
   Si ese CUIL además está en el padrón del sindicato, el sistema lo vincula solo y lo marca como <b>empleado del sindicato</b> en Trabajadores. No hace falta elegir nada, y el orden no importa: funciona igual si primero se carga en el padrón o si primero se le da el usuario.</p>
+  {# Un cartel por cada `err=` que emiten las rutas de usuarios de main.py.
+     `sinarea` no estaba y era el peor de todos: bajar a alguien de
+     administrador a usuario de área sin elegirle un área rebotaba sin decir
+     absolutamente nada, y la edición se perdía. `datosadmin` sí estaba y no
+     lo emitía nadie -- cartel muerto, se fue. test_panel_avisos.py ata las
+     dos listas para que no vuelvan a separarse. #}
   {% if request.query_params.get('err') == 'usuarioexiste' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Ya existe un administrador con ese CUIT/CUIL en este sindicato.</div>
   {% elif request.query_params.get('err') == 'ultimoadmin' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No podés dar de baja al último administrador activo del sindicato -- te quedarías sin nadie que pueda entrar a este panel.</div>
-  {% elif request.query_params.get('err') == 'datosadmin' %}
+  {% elif request.query_params.get('err') == 'datos' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">CUIT/CUIL o clave inválidos.</div>
+  {% elif request.query_params.get('err') == 'sinarea' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Un usuario de área necesita un área. Elegile una, o dejalo como administrador de seccional.</div>
+  {% elif request.query_params.get('err') == 'sinseccional' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Un administrador de seccional tiene que tener una seccional asignada.</div>
+  {% elif request.query_params.get('err') == 'areaajena' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El área y la seccional del usuario tienen que ser la misma. Elegí un área de esa seccional.</div>
+  {% elif request.query_params.get('ok') == 'usuario' %}
+  <div class="msg" style="background:#e3f3ec;color:#1d6b52;">Usuario guardado.</div>
   {% endif %}
   <div class="card">
     <form method="post" action="/admin/usuario" id="form-usuario">
@@ -2779,10 +2814,15 @@
         <div class="campo"><label>Seccional</label>
           {# Se elige PRIMERO: define qué áreas se ofrecen, porque el área y
              el usuario tienen que ser de la misma. #}
-          <select name="seccional_id" id="usu-seccional" onchange="filtrarAreasPorSeccional()">
+          <select name="seccional_id" id="usu-seccional" onchange="filtrarAreasPorSeccional(); avisoAlcanceTotal();">
             <option value="">— elegí una seccional —</option>
-            {% for sec in seccionales_alcance %}<option value="{{ sec.id }}">{{ sec.nombre }}{% if sec.ve_todas %} (ve todas){% endif %}</option>{% endfor %}
+            {% for sec in seccionales_alcance %}<option value="{{ sec.id }}" data-ve-todas="{{ 1 if sec.ve_todas else 0 }}">{{ sec.nombre }}{% if sec.ve_todas %} (ve todas){% endif %}</option>{% endfor %}
           </select>
+          <span class="muted oculto" id="usu-aviso-alcance" style="font-size:12px; color:#b23a2e;">
+            Ojo: esa seccional <b>ve todas</b>, así que este administrador de
+            seccional va a alcanzar a todo el sindicato, no solo a una
+            delegación.
+          </span>
         </div>
         <div class="campo"><label>Área</label>
           <select name="area_id" id="usu-area" onchange="pintarPermisosDelArea()">
@@ -2796,6 +2836,11 @@
          dos columnas de checkbox, y "ninguno tildado" ES heredar del área.
          Los nombres de campo caen directo en lo que espera el backend
          (agregar / bloquear), así que no hace falta JS que traduzca. #}
+      <p class="muted oculto" id="usu-sin-permisos" style="margin-top:16px;">
+        Un administrador tiene <b>todas las secciones</b> que el sindicato
+        tenga contratadas, así que no hay ajustes individuales que hacerle.
+        Lo que lo acota es su <b>seccional</b>, no la lista de secciones.
+      </p>
       <div id="usu-permisos-caja" style="margin-top:16px;">
         <label style="font-weight:700;">Ajustes sobre lo que hereda del área</label>
         <p class="muted" style="margin:4px 0 10px;">Sin tildar nada, el usuario tiene exactamente lo del área. "Dar igual" suma algo que el área no tiene; "Bloquear" se lo quita aunque el área lo tenga -- el bloqueo siempre gana.</p>
@@ -2919,6 +2964,12 @@
 var AYUDA_PRECISION = {{ ayuda_precision | tojson }};
 var ETIQUETAS_PRECISION = {{ etiquetas_precision | tojson }};
 var AYUDA_GUARDADA = {{ ayuda_guardada | tojson }};
+// El rol de quien mira, para lo que el JS tiene que decidir en vivo (qué
+// título poner, si volver a esconder un formulario al cancelar). Va acá
+// arriba, fuera de todo bloque condicional, porque lo usan secciones con
+// permisos distintos. NO reemplaza a ningún chequeo: lo que se puede hacer
+// lo decide el servidor, esto solo evita ofrecer lo que va a rechazar.
+var ES_SUPER_ADMIN = {{ 'true' if es_super_admin else 'false' }};
 // ---------- Navegación por pestañas ----------
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -5130,6 +5181,9 @@ function editarSeccional(sec) {
   var chk = document.getElementById('sec-ve-todas');
   if (chk) chk.checked = !!sec.ve_todas;
   document.getElementById('seccionales-titulo').textContent = 'Editar seccional: ' + sec.nombre;
+  // Para quien no es administrador general, la tarjeta nace escondida (no
+  // puede dar de alta): "Editar" es lo único que la abre.
+  document.getElementById('sec-card').classList.remove('oculto');
   document.getElementById('form-seccional').querySelector('button[type=submit]').textContent = 'Guardar cambios';
   document.getElementById('sec-cancel').classList.remove('oculto');
   // En edición se abre en el paso 2 con el globo ya puesto -- que es lo que
@@ -5156,9 +5210,13 @@ function cancelarSeccional() {
   document.getElementById('sec-btn-manual').classList.add('oculto');
   secMostrarError('');
   secBotones();
-  document.getElementById('seccionales-titulo').textContent = 'Dar de alta una seccional';
+  document.getElementById('seccionales-titulo').textContent =
+    ES_SUPER_ADMIN ? 'Dar de alta una seccional' : 'Seccionales';
   document.getElementById('form-seccional').querySelector('button[type=submit]').textContent = 'Guardar seccional';
   document.getElementById('sec-cancel').classList.add('oculto');
+  // Y al cancelar vuelve a esconderse: para el admin local, el formulario
+  // en blanco es una invitación a un alta que el servidor va a rechazar.
+  if (!ES_SUPER_ADMIN) document.getElementById('sec-card').classList.add('oculto');
   secCands = [];
   secPaso(1);
 }
@@ -5356,6 +5414,25 @@ function cambioRolUsuario() {
   document.getElementById('usu-seccional').closest('.campo')
     .classList.toggle('oculto', rol === 'super');
   document.getElementById('usu-rol-ayuda').textContent = AYUDA_ROL[rol] || '';
+  // Esconder la caja de permisos sin decir por qué se lee como una pantalla
+  // rota: se abre "Editar" sobre un administrador para ver qué tiene, y no
+  // hay nada. La explicación ocupa una línea y evita la consulta.
+  document.getElementById('usu-sin-permisos').classList.toggle('oculto', !esAdmin);
+  avisoAlcanceTotal();
+}
+
+function avisoAlcanceTotal() {
+  // Un Admin de Seccional en una seccional con `ve_todas` (Sede Central, o
+  // una regional que supervise a otras) alcanza a TODO el sindicato: en los
+  // hechos tiene la vista de un administrador general, sin la bandera. Es
+  // válido y a veces es lo que se busca, pero es un ensanche de privilegio
+  // que hasta ahora la pantalla no anunciaba.
+  const rol = document.getElementById('usu-rol').value;
+  const combo = document.getElementById('usu-seccional');
+  const op = combo.options[combo.selectedIndex];
+  const veTodas = !!(op && op.dataset.veTodas === '1');
+  document.getElementById('usu-aviso-alcance')
+    .classList.toggle('oculto', !(rol === 'seccional' && veTodas));
 }
 
 function editarUsuario(u) {
@@ -5378,7 +5455,7 @@ function editarUsuario(u) {
   pintarPermisosDelArea();
   cambioRolUsuario();
   f.action = '/admin/usuario/editar';
-  document.getElementById('administradores-titulo').textContent = 'Editar usuario: ' + (u.nombre || u.usuario);
+  document.getElementById('usuario-titulo').textContent = 'Editar usuario: ' + (u.nombre || u.usuario);
   document.getElementById('usu-submit').textContent = 'Guardar cambios';
   document.getElementById('usu-cancel').classList.remove('oculto');
   cambiarSubAU('usuarios');
@@ -5393,7 +5470,7 @@ function cancelarUsuario() {
   document.getElementById('usu-clave-campo').classList.remove('oculto');
   document.getElementById('usu-clave').required = true;
   f.action = '/admin/usuario';
-  document.getElementById('administradores-titulo').textContent = 'Áreas y Usuarios';
+  document.getElementById('usuario-titulo').textContent = 'Dar de alta un usuario';
   document.getElementById('usu-submit').textContent = 'Dar de alta';
   document.getElementById('usu-cancel').classList.add('oculto');
   pintarPermisosDelArea();
@@ -5402,6 +5479,16 @@ function cancelarUsuario() {
 
 filtrarAreasPorSeccional();
 cambioRolUsuario();
+
+// El servidor manda `sub=` al volver de un alta o una edición. Sin esto el
+// panel abría SIEMPRE en "Áreas": guardaras un usuario o te rebotara un
+// error, aterrizabas en la otra sub-pestaña, con el formulario en blanco y
+// el aviso -- si lo había -- fuera de la vista. Se veía igual que si el
+// botón no hubiera hecho nada.
+(function abrirSubDesdeURL() {
+  const sub = new URLSearchParams(location.search).get('sub');
+  if (sub === 'usuarios' || sub === 'areas') cambiarSubAU(sub);
+})();
 {% endif %}
 
 {% if 'recibos' in modulos and 'aprendizaje' in permisos %}
