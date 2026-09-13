@@ -54,8 +54,8 @@ Nunca se personaliza:
 
 ## Estructura de la portada del trabajador
 
-1. **Encabezado de marca**: logo del sindicato (42px) + nombre completo del
-   sindicato + "Mi Trabajo" como subtítulo chico. El gremio manda, no la app.
+1. **Encabezado de marca**: el parcial común, igual que en todas las
+   pantallas (ver "El encabezado" más abajo). El gremio manda, no la app.
 2. **Saludo**: "Hola, {nombre}" con el nombre en color de acento, y debajo
    seccional y antigüedad de afiliación.
 3. **Tarjetas de acceso** en grilla de 2 columnas: Tu recibo (destacada con
@@ -68,8 +68,38 @@ Nunca se personaliza:
 
 ## Pantallas interiores
 
-Encabezado oscuro compacto (logo chico + título de sección + usuario), cuerpo
-claro, botón principal en color de acento, pestaña activa marcada con acento.
+Encabezado común (abajo), cuerpo claro, botón principal en color de acento,
+pestaña activa marcada con acento.
+
+## El encabezado (2026-09-13): uno solo, para las cuatro apps
+
+**Ninguna pantalla escribe su propio encabezado.** Se arma SIEMPRE con
+`{% include "_encabezado.html" %}`, que trae su hoja (`static/encabezado.css`)
+y no depende de `marca.css` — `trabajador.html` y `empresa.html` no la cargan.
+Son dos franjas y esa separación es el punto:
+
+    CINTA   [ rol del panel ]                          [ Colm3na ]
+    BARRA   [ logo del sindicato ]                     [ pantalla ]
+
+- La **cinta** dice quién opera la plataforma: el logo de Colm3na a la
+  derecha, siempre 17px de alto. A la izquierda, el rol del panel
+  ("Panel de administración", "Panel de empleador"…) — **vacío en la app del
+  afiliado**: ahí la plataforma firma con el logo, no con texto.
+- La **barra** es del sindicato: su logo a 52px de alto y **ancho libre**
+  (un logo horizontal no se aplasta en una caja cuadrada) y, a la derecha,
+  el nombre de la pantalla. En los paneles con pestañas lo actualiza el JS
+  al cambiar de pestaña.
+- **El nombre del sindicato en texto solo aparece si NO hay logo cargado**
+  (entonces es el logotipo, en condensada sobre un filo de acento). Con logo,
+  escribirlo al lado es decir dos veces lo mismo.
+- **El título de la pantalla se dice una sola vez**: si está en el
+  encabezado, no va también como `<h1>` del cuerpo.
+- El texto "Mi Trabajo" no va en ningún encabezado.
+- Variables del parcial: `enc_rol`, `enc_pantalla`, `enc_volver`, `enc_fecha`,
+  `enc_fija`, `enc_plataforma`. Una pantalla nueva se encabeza con eso.
+- Fuera del sistema, a propósito: los tres ingresos (el logo grande de
+  plataforma es la identidad de esa pantalla) y las herramientas internas del
+  equipo (`/entornos`, informes de carga).
 
 ## Mapas
 

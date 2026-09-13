@@ -4,6 +4,20 @@ Anotaciones para no desviar el bloque de trabajo en curso (ver "Backlog
 técnico" en la memoria del proyecto). Cada ítem se tacha o se borra cuando
 se hace.
 
+- [ ] **Tres tests rotos en Windows por encoding** (2026-09-13, hallazgo
+  lateral: fallan igual en `main` limpio, no los rompió el encabezado
+  normalizado). Los tres son cp1252 contra UTF-8, no lógica:
+  - `test_cargar_demo_areas.py::test_la_salida_lista_los_usuarios_nuevos` —
+    compara "usuario de área" contra la salida del subproceso, que llega con
+    la tilde corrupta.
+  - `test_experimentos_carga.py` — `charmap_encode` revienta al imprimir
+    unicode desde un subproceso.
+  - `test_trabajador_seccionales_cerca.py::test_haversine_del_servidor_y_del_navegador_dan_lo_mismo`
+    — `UnicodeDecodeError` leyendo un archivo sin `encoding="utf-8"`.
+  Probablemente pasan en Linux (CI), así que es específico de la PC de
+  desarrollo: falta `encoding="utf-8"` en las lecturas y
+  `PYTHONIOENCODING`/`encoding` en los subprocesos.
+
 - [ ] **Validaciones de Trámites, fases 2–4** (2026-09-01): la Fase 1
   (fuente `fija` + consistencia entre campos) está HECHA y en el código —
   ver "Validaciones en formularios de Trámites" en CLAUDE.md/HISTORIAL.md.

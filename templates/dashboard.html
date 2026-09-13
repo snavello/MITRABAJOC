@@ -24,16 +24,13 @@
   }
   body { background: var(--papel); }
 
-  header.dash { background: linear-gradient(135deg, var(--marca-base) 0%, color-mix(in srgb, var(--marca-base) 55%, var(--marca-primario)) 100%);
-    color: var(--sobre-base); padding: 14px 18px 22px; }
-  .dash-top { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
-  .dash-top img.logo-sind { max-height: 61px; max-width: 170px; object-fit: contain; }
-  .dash-top .logo-fallback { width: 46px; height: 46px; border-radius: 9px; background: var(--marca-acento);
-    color: var(--marca-base); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; }
-  .dash-top h1 { font-family: var(--fuente-display); font-size: 24px; line-height: 1.05; letter-spacing: .01em; }
-  .dash-top .sub { font-size: 11px; color: var(--sobre-base-mute); }
-  .dash-top .hoy { margin-left: auto; text-align: right; font-size: 11.5px; color: var(--sobre-base-mute); }
-  .dash-top .hoy strong { display: block; color: var(--sobre-base); font-size: 12.5px; text-transform: capitalize; }
+  /* El encabezado es el parcial común (marca.css). Acá solo se le suma el
+     degradé del Panel Sindical y se centra el contenido en 1280 px, como el
+     resto de la página. */
+  .marca-barra { background-image: linear-gradient(135deg, var(--marca-base) 0%,
+    color-mix(in srgb, var(--marca-base) 55%, var(--marca-primario)) 100%); padding-bottom: 16px; }
+  .marca-cinta, .marca-barra { padding-left: max(18px, calc((100% - 1280px) / 2));
+    padding-right: max(18px, calc((100% - 1280px) / 2)); }
 
   main { max-width: 1280px; margin: 0 auto; padding: 0 14px 90px; }
 
@@ -394,20 +391,13 @@
 <body>
 {% include "_entorno.html" %}
 
-<header class="dash">
-  <div class="dash-top">
-    {% if marca.logo %}
-    <img class="logo-sind" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
-    {% else %}
-    <div class="logo-fallback">{{ iniciales }}</div>
-    {% endif %}
-    <div>
-      <h1>Panel Sindical</h1>
-      <div class="sub">{{ sindicato }} · Mi Trabajo</div>
-    </div>
-    <div class="hoy"><strong id="hoy-fecha"></strong><span id="rango-texto"></span></div>
-  </div>
-</header>
+{# El nombre del sindicato ya lo dice su logo: acá quedaba escrito dos
+   veces ("La Bancaria · Mi Trabajo" debajo del logo que dice La Bancaria).
+   La fecha del rango la sigue llenando static/dashboard.js. #}
+{% set enc_rol = 'Panel de administración' %}
+{% set enc_pantalla = 'Panel Sindical' %}
+{% set enc_fecha = True %}
+{% include "_encabezado.html" %}
 
 {# `data-hoy` es la fecha de Buenos Aires SEGÚN EL SERVIDOR, y es la que usa
    el panel para su rango: el reloj del navegador puede estar adelantado y el

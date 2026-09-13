@@ -286,9 +286,18 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   zona gris legal). ARCA cubre jubilación y obra social, NO ART. Estados:
   pagado/parcial/impago/no_presentada/no_declarado/informado (ver
   "Ajustes de recibos, aportes y trámites" en HISTORIAL.md para "INFORMADO").
-- **Tamaño de logos, 76px unificado** en toda la app (61px en mobile) salvo
-  en los 3 logins standalone, donde el logo de plataforma es más grande a
-  propósito (148px desktop / 85px mobile) — detalle en HISTORIAL.md.
+- **Un solo encabezado para las cuatro apps** (2026-09-13): ninguna
+  plantilla escribe el suyo, se arma con `{% include "_encabezado.html" %}`
+  (+ `static/encabezado.css`, que el propio parcial carga porque
+  `trabajador.html` y `empresa.html` no cargan `marca.css`). Cinta oscura
+  con el rol del panel a la izquierda y **Colm3na a la derecha**; debajo, la
+  barra del sindicato: logo a 52px de ALTO y ancho libre (38px en mobile) y
+  el nombre de la pantalla a la derecha, dicho UNA sola vez. El nombre del
+  sindicato en texto solo si no hay logo; el texto "Mi Trabajo" no va en
+  ningún encabezado. Fuera del sistema a propósito: los 3 logins standalone
+  (logo de plataforma grande, 148/85px) y las herramientas internas
+  (`/entornos`, informes de carga). Reglas completas en la skill
+  `diseno-mi-trabajo`; el porqué, en HISTORIAL.md.
 - **Logos sin fondo blanco forzado**: un PNG con fondo transparente se ve
   transparente de verdad; si un sindicato quiere fondo de color, lo sube ya
   incluido en el archivo. Excepción: el círculo de iniciales de fallback (sin
@@ -406,6 +415,15 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     se cumplió: los admins de hoy migran a Super Admin y no pierden nada.
     Siete fases, seis migraciones verificadas en Postgres con datos, 149
     tests nuevos en 10 archivos — ver la sección propia y HISTORIAL.md.
+
+22. **Encabezado normalizado en toda la suite** (2026-09-13): antes cada
+    pantalla armaba el suyo — el logo del sindicato salía en cuatro medidas
+    distintas (76×76, 76×220, 61×170, 46×46), el orden sindicato/Colm3na se
+    daba vuelta entre la portada y el panel, Colm3na aparecía en 6 de 12
+    pantallas (y en la portada del afiliado se veía más grande que el
+    gremio), y el título de la pantalla se decía dos veces. Ahora hay un
+    parcial único (12 pantallas, incluida Resultados de encuesta) — ver la
+    regla en "Decisiones tomadas" y el relevamiento en HISTORIAL.md.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

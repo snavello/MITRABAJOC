@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mi Trabajo — Consultas sobre el convenio</title>
+<link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
 <style>
   :root {
     --marca-base: {{ marca.color_base if marca else '#152238' }};
@@ -16,15 +17,7 @@
   * { box-sizing:border-box; margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
   body { background:var(--papel); color:var(--tinta); min-height:100vh; }
 
-  /* Encabezado oscuro compacto: pantalla interior, no portada. */
-  .barra { background:var(--marca-base); padding:14px 15px; display:flex; align-items:center;
-           gap:12px; position:sticky; top:0; z-index:10; }
-  .barra img { max-height:38px; max-width:120px; object-fit:contain; }
-  .barra .tit { color:#fff; font-size:15px; font-weight:600; line-height:1.2; }
-  .barra .sub { color:rgba(255,255,255,.62); font-size:11.5px; }
-  .barra .volver { margin-left:auto; color:rgba(255,255,255,.85); text-decoration:none;
-                   font-size:12.5px; border:1px solid rgba(255,255,255,.28);
-                   padding:6px 11px; border-radius:9px; }
+  /* El encabezado es el parcial común (marca.css): acá no se define. */
 
   .cuerpo { max-width:660px; margin:0 auto; padding:18px 15px 60px; }
   .intro { font-size:13.5px; color:var(--gris); line-height:1.55; margin-bottom:16px; }
@@ -36,7 +29,10 @@
   textarea { resize:vertical; min-height:78px; line-height:1.5; }
   select:focus, textarea:focus { outline:2px solid var(--marca-acento); outline-offset:-1px; border-color:transparent; }
 
-  .btn { background:var(--marca-acento); color:#fff; border:none; border-radius:9px;
+  /* display/width explícitos: desde que esta pantalla carga marca.css (por
+     el encabezado normalizado), el .btn de ahí es block al 100% de ancho. */
+  .btn { display:inline-block; width:auto;
+         background:var(--marca-acento); color:#fff; border:none; border-radius:9px;
          padding:12px 20px; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; }
   .btn:disabled { opacity:.5; cursor:default; }
 
@@ -73,14 +69,10 @@
 <body>
 {% include "_entorno.html" %}
 
-<div class="barra">
-  {% if marca and marca.logo %}<img src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">{% endif %}
-  <div>
-    <div class="tit">Consultas sobre el convenio</div>
-    <div class="sub">{{ sindicato }}</div>
-  </div>
-  <a class="volver" href="/app">Volver</a>
-</div>
+{% set enc_pantalla = 'Convenio' %}
+{% set enc_volver = '/app' %}
+{% set enc_fija = True %}
+{% include "_encabezado.html" %}
 
 <div class="cuerpo">
 

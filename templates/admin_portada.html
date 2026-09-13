@@ -61,32 +61,21 @@
   .tarjetas .acceso .titulo { font-family: var(--fuente-display); font-weight: 700; font-size: 16px;
     letter-spacing: .8px; text-transform: uppercase; line-height: 1.05; }
   .tarjetas .acceso .estado { margin-top: 5px; }
-  .kicker { font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--marca-acento);
-    font-weight: 700; margin-top: 4px; }
   .hola { margin-top: 2px; }
 </style>
 </head>
 <body class="{{ 'claro' if marca.admin_portada_clara else 'oscuro' }} grano {{ 'grano-clara' if marca.admin_portada_clara else 'grano-osc' }}">
 {% include "_entorno.html" %}
 
-<div class="enc">
-  {% if marca.logo %}
-  <img class="logo" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
-  {% else %}
-  <div class="logo-fallback">{{ iniciales }}</div>
-  {% endif %}
-  <div>
-    <div class="nom">{{ sindicato }}</div>
-    <div class="sub">Panel de administración</div>
-  </div>
-</div>
+{% set enc_rol = 'Panel de administración' %}
+{% set enc_pantalla = 'Inicio' %}
+{% include "_encabezado.html" %}
 
 <a class="btn-flotante btn-cerrar" href="/admin/salir" title="Salir" aria-label="Salir">
   <svg viewBox="0 0 24 24"><use href="#ic-x"/></svg>
 </a>
 
 <div class="pad">
-  <div class="kicker">Panel de administración</div>
   <div class="hola">Hola, <em>{{ primer_nombre }}</em></div>
 
   <div class="tarjetas" style="margin-top: 18px;">

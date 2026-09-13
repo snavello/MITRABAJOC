@@ -35,19 +35,14 @@
   }
   body { background: var(--papel); }
 
-  header.enc { background: linear-gradient(135deg, var(--marca-base) 0%,
-      color-mix(in srgb, var(--marca-base) 55%, var(--marca-apoyo)) 100%);
-    color: var(--sobre-base); padding: 14px 18px 22px; }
-  .enc-top { max-width: 1180px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
-  .enc-top img.logo-sind { max-height: 56px; max-width: 160px; object-fit: contain; }
-  .enc-top .logo-fallback { width: 44px; height: 44px; border-radius: 9px; background: var(--marca-acento);
-    color: var(--marca-base); display: grid; place-items: center; font-weight: 800; font-size: 17px; }
-  .enc-top h1 { font-family: var(--fuente-display); font-size: 23px; line-height: 1.05; }
-  .enc-top .sub { font-size: 11px; color: var(--sobre-base-mute); }
-  .enc-top .volver { margin-left: auto; color: var(--sobre-base); text-decoration: none;
-    border: 1px solid color-mix(in srgb, var(--sobre-base) 35%, transparent);
-    border-radius: 99px; padding: 6px 14px; font-size: 12.5px; font-weight: 600; }
-  .enc-top .volver:hover { background: color-mix(in srgb, var(--sobre-base) 14%, transparent); }
+  /* El encabezado es el parcial común; acá solo el degradé de esta pantalla
+     y el ancho de 1180 px del resto de la página. */
+  .marca-barra { background-image: linear-gradient(135deg, var(--marca-base) 0%,
+      color-mix(in srgb, var(--marca-base) 55%, var(--marca-apoyo)) 100%); padding-bottom: 16px; }
+  .marca-cinta, .marca-barra { padding-left: max(18px, calc((100% - 1180px) / 2));
+    padding-right: max(18px, calc((100% - 1180px) / 2)); }
+  .titulo-encuesta { font-family: var(--fuente-display); font-size: 26px; line-height: 1.05;
+    padding: 16px 0 4px; }
 
   main { max-width: 1180px; margin: 0 auto; padding: 0 14px 90px; }
 
@@ -268,7 +263,7 @@
   table.hist td { padding: 7px 8px; border-bottom: 1px solid var(--linea); vertical-align: top; }
   table.hist td.fecha { font-family: var(--fuente-num); white-space: nowrap; color: var(--gris); }
 
-  footer.enc { text-align: center; font-size: 11px; color: var(--gris); padding: 16px; }
+  footer.pie-version { text-align: center; font-size: 11px; color: var(--gris); padding: 16px; }
 
   @media (max-width: 760px) {
     .panel.mitad, .panel.tercio { grid-column: span 12; }
@@ -280,22 +275,16 @@
 <body>
 {% include "_entorno.html" %}
 
-<header class="enc">
-  <div class="enc-top">
-    {% if marca.logo %}
-    <img class="logo-sind" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
-    {% else %}
-    <div class="logo-fallback">{{ iniciales }}</div>
-    {% endif %}
-    <div>
-      <h1 id="enc-titulo">{{ titulo_encuesta }}</h1>
-      <div class="sub">Resultados · {{ sindicato }}</div>
-    </div>
-    <a class="volver" href="/admin#encuestas">← Volver al panel</a>
-  </div>
-</header>
+{# Encabezado normalizado, igual que el Panel Sindical. El título de la
+   encuesta NO es el nombre de la pantalla (es qué encuesta estás mirando):
+   va al cuerpo, con el mismo id que actualiza encuesta_resultados.js. #}
+{% set enc_rol = 'Panel de administración' %}
+{% set enc_pantalla = 'Resultados' %}
+{% set enc_volver = '/admin#encuestas' %}
+{% include "_encabezado.html" %}
 
 <main>
+  <h1 class="titulo-encuesta" id="enc-titulo">{{ titulo_encuesta }}</h1>
   <div class="filtros" id="filtros">
     <div class="f-cabecera">
       <div class="f-titulo">Filtros <span class="numf" id="f-cuenta">0</span></div>
@@ -396,7 +385,7 @@
   <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
 </a>
 
-<footer class="enc">Resultados de encuesta · versión {{ version }} · {{ fecha_version }}</footer>
+<footer class="pie-version">Resultados de encuesta · versión {{ version }} · {{ fecha_version }}</footer>
 
 <script>
   const ENCUESTA_ID = {{ encuesta_id }};

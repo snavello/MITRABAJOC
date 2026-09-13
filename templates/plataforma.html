@@ -23,10 +23,7 @@
      así la barra de navegación nunca se scrolea fuera de vista, sin tener
      que calcular a mano la altura del header. */
   .app-bar-fija { position:sticky; top:0; z-index:21; }
-  header { background:var(--marca-base); color:#fff; border-bottom:1px solid rgba(255,255,255,.12);
-    padding:14px 22px; display:flex; align-items:center; gap:16px; }
-  header img { width:40px; height:40px; object-fit:contain; }
-  header .rol { font-size:13px; color:rgba(255,255,255,.7); }
+  /* El encabezado (cinta + barra) vive entero en marca.css. */
   .btn-cerrar, .btn-home { position:fixed; bottom:20px; width:44px; height:44px; border-radius:50%;
     background:var(--marca-base); display:flex; align-items:center; justify-content:center;
     text-decoration:none; border:1px solid rgba(255,255,255,.14);
@@ -99,13 +96,14 @@
      filo ámbar, pestañas y sub-pestañas en condensada, títulos de sección
      como hitos (condensada + línea), botón principal en acento, tablas con
      cabecera en tracking. El contenido de cada sección no cambia. */
-  header { position:relative; overflow:hidden; border-bottom:none; border-left:5px solid var(--marca-acento);
+  /* Cromo "Hilo" sobre el encabezado normalizado: el filo ámbar abarca la
+     cinta y la barra; el degradé y el grano, solo la barra del sindicato. */
+  .marca-enc { border-left:5px solid var(--marca-acento); }
+  .marca-barra { position:relative; overflow:hidden; border-bottom:none;
     background-image:linear-gradient(150deg, var(--marca-base), color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base))); }
-  header::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08;
+  .marca-barra::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08;
     mix-blend-mode:overlay; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
-  header > * { position:relative; z-index:1; }
-  header .rol, header .sind-nombre { font-family:var(--fuente-display); font-weight:700; font-size:19px !important;
-    letter-spacing:.5px; text-transform:uppercase; line-height:1.05; color:#fff !important; }
+  .marca-barra > * { position:relative; z-index:1; }
   .nav-strip { background:var(--marca-base); border-bottom:1px solid rgba(255,255,255,.1); padding:9px 14px; }
   .ptab { background:transparent; border-color:rgba(255,255,255,.16); color:rgba(255,255,255,.72);
     font-family:var(--fuente-display); font-weight:700; font-size:12.5px; letter-spacing:.8px; text-transform:uppercase; }
@@ -139,10 +137,11 @@
 <body>
 {% include "_entorno.html" %}
 <div class="app-bar-fija">
-<header>
-  <img src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Mi Trabajo">
-  <span class="rol">Administración de plataforma</span>
-</header>
+{# Acá la marca principal ES la plataforma: el logo grande es el de Colm3na. #}
+{% set enc_rol = 'Administración de plataforma' %}
+{% set enc_pantalla = 'Sindicatos' %}   {# pestaña abierta al entrar; el JS la va cambiando #}
+{% set enc_plataforma = True %}
+{% include "_encabezado.html" %}
 <a class="btn-cerrar" href="/plataforma/salir" title="Salir" aria-label="Salir">
   <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
 </a>
@@ -611,6 +610,9 @@
 <script>
 function activarTab(dest) {
   document.querySelectorAll('.ptab').forEach(b => b.classList.toggle('activa', b.dataset.pp === dest));
+  const rotulo = document.getElementById('marca-pantalla');
+  const btnActivo = document.querySelector('.ptab[data-pp="' + dest + '"] span');
+  if (rotulo && btnActivo) rotulo.textContent = btnActivo.textContent;
   document.querySelectorAll('.ppanel').forEach(pan => pan.classList.toggle('activo', pan.id === 'pp-' + dest));
 }
 

@@ -58,25 +58,10 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
 /* Cifras siempre alineadas en columna */
 .num, td.num, .importe { font-family: var(--fuente-num); font-variant-numeric: tabular-nums; }
 
-/* ---------- Encabezado oscuro (portada e interiores) ---------- */
-.enc { background: var(--marca-base); color: var(--sobre-base); padding: 13px 15px;
-       display: flex; align-items: center; gap: 10px; position: relative; z-index: 1; }
-.enc .logo { width: 76px; height: 76px; object-fit: contain; }
-.enc .logo-fallback { width: 76px; height: 76px; border-radius: 9px; background: var(--marca-acento);
-             color: var(--marca-base); display: flex; align-items: center; justify-content: center;
-             font-weight: 800; font-size: 26px; }
-.enc .nom { font-size: 14.5px; font-weight: 600; line-height: 1.15; }
-.enc .sub { font-size: 10px; color: var(--sobre-base-mute); letter-spacing: 1.1px; text-transform: uppercase; }
-@media (max-width: 600px) {
-  .enc .logo, .enc .logo-fallback { width: 61px; height: 61px; }
-  .enc .logo-fallback { font-size: 21px; }
-}
-.enc .usuario { margin-left: auto; font-size: 10.5px; color: var(--sobre-base-mute); }
-/* Logo de Colm3na a la derecha del encabezado de la portada del trabajador:
-   discreto a propósito (el gremio manda, la plataforma firma). */
-.enc .logo-colmena { margin-left: auto; height: 24px; width: auto; max-width: 128px;
-  object-fit: contain; opacity: .92; align-self: center; }
-@media (max-width: 600px) { .enc .logo-colmena { height: 19px; max-width: 100px; } }
+/* El encabezado (cinta + barra de marca) vive en static/encabezado.css y
+   lo carga el propio parcial templates/_encabezado.html: trabajador.html y
+   empresa.html NO cargan esta hoja (tienen su CSS propio) y el encabezado
+   tiene que ser el mismo igual. No duplicar esas reglas acá. */
 
 /* ---------- Tarjetas de acceso (portada) ---------- */
 .tarjetas { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }

@@ -4176,3 +4176,90 @@ contesta 422 "'hasta' no puede ser una fecha futura" — o sea que el bug era
 exactamente ese. Más dos tests en `test_dashboard.py`: que la página le dé al
 navegador la fecha del servidor, y que un rango rechazado diga por qué y la
 pantalla tenga dónde decirlo.
+
+## Encabezado normalizado en toda la suite (2026-09-13)
+
+Pedido de Sd: "en todas las pantallas tenemos el logo del sindicato y el de
+Colm3na, además en algunas el nombre del sindicato en texto y también en
+algunas el título de la pantalla". Antes de proponer nada se relevaron las
+doce pantallas leyendo el CSS de cada plantilla, con capturas de la app
+corriendo (La Bancaria, con un logo de demo cargado para el relevamiento).
+**Ninguna regla se repetía dos veces seguidas:**
+
+- **El orden se daba vuelta**: en las portadas iba sindicato → Colm3na; en
+  los paneles internos, Colm3na → sindicato. Dos pantallas seguidas del
+  mismo recorrido.
+- **Cuatro medidas del mismo logo**: `76×76` (portadas), `76×220` (paneles),
+  `61×170` (Panel Sindical), `46×46` (Notificaciones). En la caja cuadrada
+  un logo horizontal --el caso típico de un sindicato-- entraba escalado a
+  76px de ancho e ilegible; dos pantallas después ocupaba un tercio del
+  ancho de la ventana.
+- **Colm3na aparecía en 6 de 12 pantallas**, y en la portada del afiliado se
+  la veía MÁS GRANDE que el logo del gremio, que es de quien es la app.
+- **El nombre del sindicato se decía dos veces**: en las portadas iba en
+  texto al lado de un logo que ya lo dice (y el Panel Sindical llegaba a
+  poner "La Bancaria · Mi Trabajo" debajo del logo de La Bancaria); en los
+  paneles, en cambio, era excluyente (o el logo o el nombre).
+- **El título también**: "Panel de administración" y "Notificaciones"
+  estaban en el encabezado y otra vez como título del cuerpo.
+
+Se le presentaron a Sd tres opciones, cada una aplicada sobre el DOM real de
+cada pantalla (no sobre una maqueta) y fotografiada: **A** una sola franja
+con "operado por" a la derecha; **B** encabezado solo del sindicato y
+Colm3na al pie; **C** cinta de plataforma + encabezado del sindicato. Eligió
+la **C con dos cambios**: la colmena a la DERECHA de la cinta, y el texto
+"Mi Trabajo" borrado del encabezado.
+
+**Cómo quedó.** `templates/_encabezado.html` + `static/encabezado.css`:
+
+    CINTA   [ rol del panel ]                          [ Colm3na ]
+    BARRA   [ logo del sindicato ]                     [ pantalla ]
+
+- La cinta del **afiliado va sin texto de rol**: ahí la plataforma firma con
+  el logo, no con la palabra. En las otras tres apps lleva el rol.
+- El logo del sindicato va con **altura fija (52px; 38 en mobile) y ancho
+  libre** hasta 300px. Ese es el fix real del logo ilegible: el problema no
+  era el tamaño sino la caja cuadrada.
+- **El nombre del sindicato en texto solo si no hay logo cargado**, y
+  entonces ES el logotipo (condensada sobre un filo de acento, no un
+  cuadrito de iniciales).
+- El **título de la pantalla se dice una sola vez**: salió el `<h1>`
+  "Notificaciones" del cuerpo, el kicker "Panel de administración" de la
+  portada del admin, el de empleador y el de plataforma. En los paneles con
+  pestañas lo escribe el JS al cambiar de pestaña (verificado a mano en las
+  tres: trabajador, admin y plataforma), así el encabezado dice siempre
+  dónde estás y no una pestaña fija que dejó de ser cierta.
+
+**Por qué el CSS no fue a `marca.css`.** Primer intento: el bloque adentro
+de `marca.css`. La app del trabajador quedó con la colmena a tamaño natural
+ocupando la pantalla entera. Causa: **`trabajador.html` y `empresa.html` NO
+cargan `marca.css`** (lo dicen en su propio comentario: tienen su CSS
+propio; un grep de "marca.css" las listaba igual porque el nombre aparece en
+esos comentarios). De ahí `static/encabezado.css`, que carga **el propio
+parcial** con un `<link>` en el cuerpo: así una pantalla nueva no puede
+quedarse sin el estilo por olvido, y ninguna var() se da por sentada (todas
+llevan valor de respaldo, y la condensada se declara también ahí).
+
+**Lo que se conservó:** el cromo "Hilo" de admin/empresa/plataforma (degradé
++ grano + filo ámbar) pasó de `header` a `.marca-barra`, con el filo en
+`.marca-enc` para que recorra las dos franjas; el degradé propio del Panel
+Sindical y el de Resultados de encuesta, con su ancho de 1280/1180px; la
+fecha del rango del Panel Sindical (`enc_fecha`, con los mismos ids que
+espera `dashboard.js`); y el "Volver" de Notificaciones, Convenio y
+Resultados (`enc_volver`).
+
+**Fuera del sistema, a propósito:** los tres ingresos (ahí el logo grande de
+plataforma ES la identidad de la pantalla) y las herramientas internas del
+equipo (`/entornos`, su PIN, el informe de carga y el detalle de test): no
+tienen sindicato y no son pantallas de la suite.
+
+**Nota de proceso.** El relevamiento y las tres opciones se hicieron sobre
+una copia local que estaba **90 commits atrás** de `origin/main` (no se
+había traído lo de georreferenciación, encuestas y entornos). Al ir a subir
+la versión, `git fetch` lo mostró: `origin/main` tenía Admin 0.41.02 y la
+copia local 0.29.06. Se guardó el trabajo en una rama, se actualizó `main` y
+el cherry-pick entró limpio --los once bloques de encabezado seguían
+idénticos allá--, más `encuesta_resultados.html`, que es la pantalla nueva
+que sí pertenece a la suite. Confirma la regla de FLUJO.md de mirar
+`origin/main:version.py` ANTES de escribir el número: esta vez avisó de algo
+bastante más grande que un número.

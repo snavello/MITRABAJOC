@@ -63,8 +63,6 @@
   .tarjetas .acceso .titulo { font-family: var(--fuente-display); font-weight: 700; font-size: 16px;
     letter-spacing: .8px; text-transform: uppercase; line-height: 1.05; }
   .tarjetas .acceso .estado { margin-top: 5px; }
-  .kicker { font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--marca-acento);
-    font-weight: 700; margin-top: 4px; }
   .modal-notif-enc { overflow: hidden; border-left: 5px solid var(--marca-acento);
     background-image: linear-gradient(150deg, var(--marca-base), color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base))); }
   .modal-notif-enc::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0; opacity: .08;
@@ -96,24 +94,15 @@
 <body class="oscuro grano grano-osc">
 {% include "_entorno.html" %}
 
-<div class="enc">
-  {% if marca.logo %}
-  <img class="logo" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
-  {% else %}
-  <div class="logo-fallback">{{ iniciales }}</div>
-  {% endif %}
-  <div>
-    <div class="nom">{{ sindicato }}</div>
-    <div class="sub">Panel de empleador</div>
-  </div>
-</div>
+{% set enc_rol = 'Panel de empleador' %}
+{% set enc_pantalla = 'Inicio' %}
+{% include "_encabezado.html" %}
 
 <a class="btn-flotante btn-cerrar" href="/empresa/salir" title="Salir" aria-label="Salir">
   <svg viewBox="0 0 24 24"><use href="#ic-x"/></svg>
 </a>
 
 <div class="pad">
-  <div class="kicker">Panel de empleador</div>
   <div class="fila-hola">
     <div class="hola">Hola, <em>{{ razon_social or cuit }}</em></div>
     <button class="circulo-acento" onclick="abrirPerfil()" aria-label="Tu perfil" title="Tu perfil">

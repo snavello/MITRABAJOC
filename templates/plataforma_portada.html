@@ -42,28 +42,22 @@
   .tarjetas .acceso .titulo { font-family: var(--fuente-display); font-weight: 700; font-size: 16px;
     letter-spacing: .8px; text-transform: uppercase; line-height: 1.05; }
   .tarjetas .acceso .estado { margin-top: 5px; }
-  .kicker { font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--marca-acento);
-    font-weight: 700; margin-top: 4px; }
   .hola { margin-top: 2px; }
 </style>
 </head>
 <body class="{{ 'claro' if marca_plataforma.portada_clara else 'oscuro' }} grano {{ 'grano-clara' if marca_plataforma.portada_clara else 'grano-osc' }}">
 {% include "_entorno.html" %}
 
-<div class="enc">
-  <img class="logo" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Mi Trabajo">
-  <div>
-    <div class="nom">Mi Trabajo</div>
-    <div class="sub">Panel de plataforma</div>
-  </div>
-</div>
+{% set enc_rol = 'Administración de plataforma' %}
+{% set enc_pantalla = 'Inicio' %}
+{% set enc_plataforma = True %}
+{% include "_encabezado.html" %}
 
 <a class="btn-flotante btn-cerrar" href="/plataforma/salir" title="Salir" aria-label="Salir">
   <svg viewBox="0 0 24 24"><use href="#ic-x"/></svg>
 </a>
 
 <div class="pad">
-  <div class="kicker">Panel de plataforma</div>
   <div class="hola">¿Qué querés hacer?</div>
 
   <div class="tarjetas" style="margin-top: 18px;">

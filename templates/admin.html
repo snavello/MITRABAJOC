@@ -89,17 +89,7 @@
      así la barra de navegación nunca se scrolea fuera de vista, sin tener
      que calcular a mano la altura del header (que varía por breakpoint). */
   .app-bar-fija { position:sticky; top:0; z-index:21; }
-  header { background:var(--marca-base); border-bottom:1px solid var(--linea); padding:14px 22px;
-           display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-  .logo-plataforma-header { width:76px; height:76px; object-fit:contain; flex-shrink:0; }
-  header .rol { color:rgba(255,255,255,.85) !important; }
-  .sind-wrap { display:flex; align-items:center; gap:14px; }
-  .sind-wrap img.sind { max-height:76px; max-width:220px; object-fit:contain; }
-  .sind-wrap .sind-nombre { font-size:14px; color:rgba(255,255,255,.9); }
-  @media (max-width:600px) {
-    .logo-plataforma-header { width:61px; height:61px; }
-    .sind-wrap img.sind { max-height:61px; max-width:170px; }
-  }
+  /* El encabezado (cinta + barra) vive entero en marca.css. */
   .btn-cerrar, .btn-home, .btn-ayuda { position:fixed; bottom:20px; width:44px; height:44px; border-radius:50%;
     background:var(--marca-base); display:flex; align-items:center; justify-content:center;
     text-decoration:none; border:1px solid rgba(255,255,255,.14);
@@ -584,13 +574,14 @@
      filo ámbar, pestañas y sub-pestañas en condensada, títulos de sección
      como hitos (condensada + línea), botón principal en acento, tablas con
      cabecera en tracking. El contenido de cada sección no cambia. */
-  header { position:relative; overflow:hidden; border-bottom:none; border-left:5px solid var(--marca-acento);
+  /* Cromo "Hilo" sobre el encabezado normalizado: el filo ámbar abarca la
+     cinta y la barra; el degradé y el grano, solo la barra del sindicato. */
+  .marca-enc { border-left:5px solid var(--marca-acento); }
+  .marca-barra { position:relative; overflow:hidden; border-bottom:none;
     background-image:linear-gradient(150deg, var(--marca-base), color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base))); }
-  header::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08;
+  .marca-barra::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08;
     mix-blend-mode:overlay; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
-  header > * { position:relative; z-index:1; }
-  header .rol, header .sind-nombre { font-family:var(--fuente-display); font-weight:700; font-size:19px !important;
-    letter-spacing:.5px; text-transform:uppercase; line-height:1.05; color:#fff !important; }
+  .marca-barra > * { position:relative; z-index:1; }
   .nav-strip { background:var(--marca-base); border-bottom:1px solid rgba(255,255,255,.1); padding:9px 14px; }
   .tab-btn { background:transparent; border-color:rgba(255,255,255,.16); color:rgba(255,255,255,.72);
     font-family:var(--fuente-display); font-weight:700; font-size:12.5px; letter-spacing:.8px; text-transform:uppercase; }
@@ -765,17 +756,10 @@
 <body>
 {% include "_entorno.html" %}
 <div class="app-bar-fija">
-<header>
-  <img class="logo-plataforma-header" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Mi Trabajo">
-  <div class="sind-wrap">
-    {% if marca and marca.logo %}
-    <img class="sind" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
-    {% else %}
-    <span class="sind-nombre">{{ sindicato }}</span>
-    {% endif %}
-  </div>
-  <span class="rol-kicker" style="margin-left:auto; font-size:10.5px; letter-spacing:1.6px; text-transform:uppercase; color:var(--marca-acento); font-weight:700;">Panel de administración</span>
-</header>
+{# Encabezado normalizado. La pantalla de la derecha la escribe el JS de la
+   tira de pestañas; el sticky lo da .app-bar-fija, no el parcial. #}
+{% set enc_rol = 'Panel de administración' %}
+{% include "_encabezado.html" %}
 <a class="btn-cerrar" href="/admin/salir" title="Salir" aria-label="Salir">
   <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
 </a>
@@ -2975,6 +2959,9 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const destino = btn.dataset.panel;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('activa', b === btn));
+    // el encabezado dice en qué pestaña estás (antes repetía el rol del panel)
+    const rotulo = document.getElementById('marca-pantalla');
+    if (rotulo) rotulo.textContent = btn.querySelector('span')?.textContent || '';
     document.querySelectorAll('.panel').forEach(pan => {
       pan.classList.toggle('activo', pan.id === 'panel-' + destino);
     });

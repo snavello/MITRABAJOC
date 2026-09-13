@@ -41,19 +41,9 @@
     min-height:100dvh;
     padding-bottom:env(safe-area-inset-bottom);
   }
-  /* ---------- Encabezado con logos ---------- */
-  header {
-    background:var(--marca-base); border-bottom:1px solid var(--linea);
-    padding:12px 18px; padding-top:calc(12px + env(safe-area-inset-top));
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
-    position:sticky; top:0; z-index:10;
-  }
-  .logo-plataforma-header { width:76px; height:76px; object-fit:contain; flex-shrink:0; }
-  .sind { max-height:76px; max-width:200px; object-fit:contain; }
-  @media (max-width:600px) {
-    .logo-plataforma-header { width:61px; height:61px; }
-    .sind { max-height:61px; max-width:160px; }
-  }
+  /* El encabezado (cinta + barra de marca) vive entero en marca.css, igual
+     que en las otras diez pantallas: acá no se redefine nada. */
+  .marca-enc.fija { z-index:10; }
   /* Botones flotantes inicio/salir: fondo base del sindicato, ícono acento
      (mismo color que el botón principal y la pestaña activa). */
   .btn-flotante { position:fixed; bottom:84px; width:42px; height:42px; border-radius:50%;
@@ -261,7 +251,7 @@
      Vidrio + grano + condensada (Fase D del rediseño): el recuadro entero
      usa un degradé claro en vez de un color plano, el encabezado suma
      grano sutil (el .tit/.sub necesitan position+z-index para quedar por
-     encima, mismo criterio que .enc/.pad en marca.css). */
+     encima, mismo criterio que .marca-enc/.pad en marca.css). */
   #tp-tramites h1, #tp-tramites h2 { font-family:var(--fuente-display); font-weight:700; letter-spacing:.005em; }
   .tram-box { position:relative; overflow:hidden; margin-top:16px;
     background:linear-gradient(160deg, #ffffff, var(--papel)); border:1px solid var(--linea);
@@ -831,14 +821,10 @@
 </head>
 <body>
 {% include "_entorno.html" %}
-<header>
-  <img class="logo-plataforma-header" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Mi Trabajo">
-  {% if marca and marca.logo %}
-  <img class="sind" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
-  {% else %}
-  <span style="color:#fff; font-size:13px; font-weight:500; opacity:.95;">{{ sindicato }}</span>
-  {% endif %}
-</header>
+{# Encabezado normalizado (marca.css + _encabezado.html). La pantalla de la
+   derecha la va escribiendo activarPestana() más abajo. #}
+{% set enc_fija = True %}
+{% include "_encabezado.html" %}
 
 {% if cuil %}
 <a class="btn-flotante btn-home" href="/app/inicio" title="Inicio" aria-label="Inicio">
@@ -1226,6 +1212,13 @@ function activarPestana(dest) {
   document.querySelectorAll('.tpanel').forEach(pan => {
     pan.classList.toggle('activo', pan.id === 'tp-' + dest);
   });
+  // El encabezado dice siempre dónde estás. El nombre sale de los nodos de
+  // TEXTO del botón: así no arrastra el ícono ni el globo de novedades.
+  const rotulo = document.getElementById('marca-pantalla');
+  if (rotulo) {
+    rotulo.textContent = Array.from(btn.childNodes)
+      .filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent).join('').trim();
+  }
 }
 document.querySelectorAll('.tab-t').forEach(btn => {
   btn.addEventListener('click', () => {

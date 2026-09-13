@@ -1,0 +1,61 @@
+{# ============================================================
+   Encabezado de TODAS las pantallas de las cuatro apps.
+
+   Una sola regla, sin excepciones (antes cada plantilla armaba el suyo:
+   cuatro tamaños de logo distintos, dos órdenes opuestos y el nombre del
+   sindicato repetido al lado de un logo que ya lo decía):
+
+     CINTA   [ rol del panel ]                      [ Colm3na ]
+     BARRA   [ logo del sindicato ]                 [ pantalla ]
+
+   El estilo vive en marca.css (bloque "Encabezado normalizado"): esta
+   plantilla solo decide QUÉ se muestra, nunca CÓMO se ve.
+
+   Variables opcionales, con {% set %} antes del include:
+     enc_rol        texto de la cinta. Vacío en la app del afiliado: la
+                    plataforma firma con el logo, no con texto.
+     enc_pantalla   nombre de la pantalla (derecha de la barra). En los
+                    paneles con pestañas lo actualiza el JS al cambiar de
+                    pestaña, así el encabezado dice siempre dónde estás.
+     enc_volver     URL del link "Volver" (pantallas sin tira de pestañas).
+     enc_fecha      True en el Panel Sindical: deja el hueco de la fecha,
+                    con los ids que espera static/dashboard.js.
+     enc_fija       True donde el encabezado tiene que quedar pegado arriba
+                    al scrollear (paneles internos; las portadas, no).
+     enc_plataforma True cuando la marca principal ES la plataforma
+                    (/plataforma): entonces el logo grande es el de Colm3na.
+   ============================================================ #}
+{# La hoja la carga el parcial, no cada plantilla: trabajador.html y
+   empresa.html no cargan marca.css y el encabezado tiene que ser el mismo.
+   Un <link> en el cuerpo es válido y evita que alguien sume una pantalla
+   nueva y se olvide del estilo. Sello ?v= obligatorio: /static/ se sirve
+   con Cache-Control de 1 hora. #}
+<link rel="stylesheet" href="/static/encabezado.css?v={{ sello_static('encabezado.css') }}">
+{% set _logo_plataforma = '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro
+   else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') %}
+<div class="marca-enc{% if enc_fija %} fija{% endif %}">
+  <div class="marca-cinta">
+    {% if enc_rol %}<span class="marca-rol">{{ enc_rol }}</span>{% endif %}
+    <img class="marca-colmena" src="{{ _logo_plataforma }}" alt="Colm3na">
+  </div>
+  <header class="marca-barra">
+    {% if enc_plataforma or not sindicato %}
+      {# Sin sindicato activo (demo anónima, panel de plataforma) la marca
+         principal es la de la plataforma, no un texto de respaldo. #}
+      <img class="marca-logo" src="{{ _logo_plataforma }}" alt="Colm3na">
+    {% elif marca and marca.logo %}
+      <img class="marca-logo" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
+    {% else %}
+      <span class="marca-nombre">{{ sindicato }}</span>
+    {% endif %}
+    {% if enc_fecha %}
+    <div class="marca-fecha"><strong id="hoy-fecha"></strong><span id="rango-texto"></span></div>
+    {% endif %}
+    <span class="marca-pantalla" id="marca-pantalla">{{ enc_pantalla or '' }}</span>
+    {% if enc_volver %}
+    <a class="marca-volver" href="{{ enc_volver }}">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg> Volver
+    </a>
+    {% endif %}
+  </header>
+</div>

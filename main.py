@@ -3479,6 +3479,7 @@ def pantalla_convenio(request: Request):
         "request": request,
         "sindicato": sind.nombre if sind else "",
         "marca": db.marca_sindicato(sid),
+        "marca_plataforma": db.marca_plataforma(),   # lo pide el encabezado común
         "convenios": [c for c in db.convenios_del_sindicato(sid, solo_activos=True)
                       if c["fragmentos_vigentes"] > 0],
     })

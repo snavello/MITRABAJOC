@@ -22,20 +22,15 @@
     --marca-apoyo: {{ marca.color_secundario }};
   }
   body { background: var(--papel); }
-  .volver { display:flex; align-items:center; gap:6px; color:var(--sobre-base-mute);
-    text-decoration:none; font-size:12.5px; margin-left:auto; }
-  .volver svg { width:16px; height:16px; stroke:currentColor; stroke-width:2.2; fill:none; }
   svg.ic { width:16px; height:16px; stroke:currentColor; stroke-width:1.9; fill:none;
     stroke-linecap:round; stroke-linejoin:round; flex:none; }
 
   /* ---- franja oscura bajo el encabezado: título, contador, chips ---- */
-  .top3 { background:var(--marca-base); color:#fff; padding:2px 15px 12px; position:relative; overflow:hidden; }
+  .top3 { background:var(--marca-base); color:#fff; padding:10px 15px 12px; position:relative; overflow:hidden; }
   .top3::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08; mix-blend-mode:overlay;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
   .top3 > * { position:relative; z-index:1; }
   .top3-in { max-width:680px; margin:0 auto; }
-  .top3 h1 { font-family:var(--fuente-display); font-weight:700; font-size:30px; line-height:1;
-    text-transform:uppercase; letter-spacing:.5px; color:#fff; }
   .l2 { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px; min-height:18px; }
   .l2 small { font-size:12.5px; color:var(--sobre-base-mute); }
   .l2 small b { color:#fff; font-weight:600; }
@@ -111,19 +106,13 @@
   <symbol id="i-form" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
 </svg>
 
-<div class="enc">
-  {% if marca.logo %}
-  <img class="logo" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}" style="width:46px; height:46px;">
-  {% endif %}
-  <div>
-    <div class="nom">{{ sindicato }}</div>
-    <div class="sub">Notificaciones</div>
-  </div>
-  <a class="volver" href="/app/inicio"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg> Volver</a>
-</div>
+{% set enc_pantalla = 'Notificaciones' %}
+{% set enc_volver = '/app/inicio' %}
+{% include "_encabezado.html" %}
 
+{# El <h1> "Notificaciones" que estaba acá salió: el encabezado ya lo dice,
+   y quedaban los dos títulos a dos centímetros uno del otro. #}
 <div class="top3"><div class="top3-in">
-  <h1>Notificaciones</h1>
   <div class="l2">
     <small id="cant"></small>
     <button type="button" id="btn-todas" hidden onclick="marcarTodasLeidas()">Marcar todas como leídas</button>

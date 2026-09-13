@@ -37,8 +37,8 @@
   /* ---------- Vidrio (tarjetas/filas) + tipografía condensada en
      encabezados de sección -- variantes oscura/clara según body.oscuro/
      body.claro. Ver también .grano/.grano-osc/.grano-clara en marca.css,
-     aplicadas al <body> (el .enc y el .pad tienen position+z-index en
-     marca.css para quedar por encima del grano). ---------- */
+     aplicadas al <body> (el .marca-enc y el .pad tienen position+z-index
+     en marca.css para quedar por encima del grano). ---------- */
   .sech b { font-family: var(--fuente-display); font-weight: 700; font-size: 15px;
     letter-spacing: .015em; text-transform: uppercase; }
   body.claro .sech b { color: var(--tinta); }
@@ -249,25 +249,12 @@
 <body class="{{ 'claro' if marca.portada_clara else 'oscuro' }} grano {{ 'grano-clara' if marca.portada_clara else 'grano-osc' }}">
 {% include "_entorno.html" %}
 
-<div class="enc">
-  {% if marca.logo %}
-  <img class="logo" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
-  {% else %}
-  <div class="logo-fallback">{{ iniciales }}</div>
-  {% endif %}
-  <div>
-    <div class="nom">{{ sindicato }}</div>
-    <div class="sub">Mi Trabajo</div>
-  </div>
-  {# Logo de Colm3na a la derecha (pedido de Sd 2026-09-02): discreto, el
-     gremio sigue mandando. SIEMPRE la versión para fondo oscuro: el
-     encabezado es oscuro aunque la portada del sindicato sea clara (regla
-     del sistema de diseño). Cadena de fallback estándar. #}
-  {# El tamaño va INLINE y no solo en marca.css: la hoja se cachea 1 hora
-     sin sello de versión, y con el CSS viejo la imagen quedaba a tamaño
-     natural (gigante) — pasó en producción en mobile el 2026-09-02. #}
-  <img class="logo-colmena" style="margin-left:auto; height:24px; width:auto; max-width:128px; object-fit:contain; align-self:center;" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Colm3na">
-</div>
+{# Encabezado normalizado: el mismo parcial que el resto de la suite.
+   La cinta del afiliado va sin texto de rol (el logo de Colm3na firma
+   solo) y el nombre del sindicato ya no se repite en texto al lado de un
+   logo que lo dice. #}
+{% set enc_pantalla = 'Inicio' %}
+{% include "_encabezado.html" %}
 
 <a class="btn-flotante btn-home" href="/app/inicio" title="Inicio" aria-label="Inicio">
   <svg viewBox="0 0 24 24"><use href="#ic-home"/></svg>

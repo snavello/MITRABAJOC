@@ -29,17 +29,8 @@
   html { -webkit-text-size-adjust:100%; }
   body { font-family:system-ui,-apple-system,sans-serif; background:var(--papel); color:var(--tinta);
     line-height:1.5; min-height:100dvh; padding-bottom:env(safe-area-inset-bottom); }
-  header { background:var(--marca-base); border-bottom:1px solid var(--linea);
-    padding:12px 18px; padding-top:calc(12px + env(safe-area-inset-top));
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
-    position:sticky; top:0; z-index:10; }
-  .logo-plataforma-header { width:76px; height:76px; object-fit:contain; flex-shrink:0; }
-  .sind { max-height:76px; max-width:200px; object-fit:contain; }
-  @media (max-width:600px) {
-    .logo-plataforma-header { width:61px; height:61px; }
-    .sind { max-height:61px; max-width:160px; }
-  }
-  .sind-nombre-header { color:#fff; font-size:14px; font-weight:600; }
+  /* El encabezado (cinta + barra) vive entero en marca.css. */
+  .marca-enc.fija { z-index:10; }
   .btn-flotante { position:fixed; bottom:84px; right:18px; width:42px; height:42px; border-radius:50%;
     background:var(--marca-base); display:flex; align-items:center; justify-content:center;
     text-decoration:none; border:1px solid rgba(255,255,255,.14);
@@ -220,12 +211,14 @@
      Trámites con "Necesita tu atención", accesos grandes, filtros y barra de
      progreso. Aislamiento: clases propias (nh-/tx-), sin compartir con el
      trabajador. ============ */
-  header { position:relative; overflow:hidden; border-bottom:none; border-left:5px solid var(--marca-acento);
+  /* Cromo "Hilo" sobre el encabezado normalizado: el filo ámbar abarca la
+     cinta y la barra; el degradé y el grano, solo la barra del sindicato. */
+  .marca-enc { border-left:5px solid var(--marca-acento); }
+  .marca-barra { position:relative; overflow:hidden; border-bottom:none;
     background-image:linear-gradient(150deg, var(--marca-base), color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base))); }
-  header::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08;
+  .marca-barra::before { content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.08;
     mix-blend-mode:overlay; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
-  header > * { position:relative; z-index:1; }
-  .sind-nombre-header { font-family:var(--fuente-display); font-weight:700; font-size:19px; letter-spacing:.5px; text-transform:uppercase; }
+  .marca-barra > * { position:relative; z-index:1; }
   /* --- notificaciones como hilo --- */
   .nh-hilo { position:relative; padding:4px 0 10px; }
   .nh-hilo::before { content:""; position:absolute; left:16px; top:0; bottom:30px; width:2px; background:var(--linea); }
@@ -305,14 +298,10 @@
 </head>
 <body>
 {% include "_entorno.html" %}
-<header>
-  <img class="logo-plataforma-header" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Mi Trabajo">
-  {% if marca and marca.logo %}
-  <img class="sind" src="/logo/{{ marca.id }}?v={{ marca.logo_v }}" alt="{{ sindicato }}">
-  {% else %}
-  <span class="sind-nombre-header">{{ sindicato }}</span>
-  {% endif %}
-</header>
+{% set enc_rol = 'Panel de empleador' %}
+{% set enc_pantalla = 'Notificaciones' %}   {# pestaña abierta al entrar; el JS la va cambiando #}
+{% set enc_fija = True %}
+{% include "_encabezado.html" %}
 
 <div class="cont">
   <h1>{{ razon_social or cuit }}</h1>
@@ -446,6 +435,11 @@ document.querySelectorAll('.tab-t').forEach(btn => {
   btn.addEventListener('click', () => {
     const dest = btn.dataset.tp;
     document.querySelectorAll('.tab-t').forEach(b => b.classList.toggle('activa', b === btn));
+    const rotulo = document.getElementById('marca-pantalla');
+    if (rotulo) {
+      rotulo.textContent = Array.from(btn.childNodes)
+        .filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent).join('').trim();
+    }
     document.querySelectorAll('.tpanel').forEach(pan => {
       pan.classList.toggle('activo', pan.id === 'tp-' + dest);
     });
