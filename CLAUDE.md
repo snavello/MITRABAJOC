@@ -713,9 +713,12 @@ Detalle completo en HISTORIAL.md. Reglas vigentes:
   (`extractor.comparar_lineas`). Dos modelos pueden coincidir en el neto y
   clasificar distinto una línea, y ese campo (`lineas[].tipo`) alimenta la
   retención sindical y con ella el tope del 2% del art. 133: coincidir en el
-  total no es leer lo mismo. Las líneas se emparejan por código (o
-  descripción) normalizado, **nunca por posición**: si un modelo se saltea
-  una, por posición quedaría todo corrido.
+  total no es leer lo mismo. Las líneas se emparejan en **dos pasadas** —
+  primero por código, después por descripción normalizada sobre lo que
+  sobró—, **nunca por posición**. La segunda pasada existe por un caso real:
+  un modelo leyó `128-001` donde los otros tres leyeron `126-001`, y por
+  código solo esa única línea salía como dos filas sin mostrar el dígito mal
+  leído. Un código o un importe distinto se nombra en la celda.
 - **CUIL y CUIT se comparan normalizados y se muestran crudos.** Un modelo
   puede devolver `30-44464097-5` y otro `30444640975`: es el mismo CUIT y la
   app lo normaliza en los cuatro lugares donde lo usa, así que marcarlo en

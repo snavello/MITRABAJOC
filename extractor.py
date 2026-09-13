@@ -382,76 +382,98 @@ def resumen_comparable(tipo: str, datos: dict) -> list:
     ]
 
 
-def _clave_linea(ln: dict, i: int) -> str:
-    """Con qué se emparejan las líneas de dos lecturas del mismo recibo: el
-    código si lo hay, si no la descripción, normalizados (un modelo escribe
-    "JUB." y otro "JUB"). Emparejar por POSICIÓN sería peor: si un modelo se
-    saltea una línea, todo lo que sigue queda corrido y la comparación se
-    vuelve un muro de rojo que no dice nada."""
-    crudo = (ln.get("codigo") or ln.get("descripcion") or "").strip().lower()
-    return re.sub(r"[^a-z0-9]", "", crudo) or f"linea-{i}"
+def _norm_clave(valor) -> str:
+    """Minúsculas y solo letras y números: "TITULO UNIV/TERC.LAUDO15/91" y
+    "TITULO UNIV./TERC LAUDO15/91" son la MISMA línea leída por dos modelos
+    que puntuaron distinto."""
+    return re.sub(r"[^a-z0-9]", "", str(valor or "").strip().lower())
 
 
-def lineas_comparables(datos: dict) -> dict:
-    """{clave: {codigo, descripcion, importe, tipo, categoria}} de cada línea.
+def lineas_comparables(datos: dict) -> list:
+    """Una entrada por línea del recibo, con lo que define cómo se valida.
 
-    `tipo` es el campo que hay que mirar y por eso existe esta función:
-    "aporte_trabajador" alimenta la retención sindical y con ella el tope del
-    2% del art. 133 (validador.py), así que dos modelos que leen los mismos
-    importes pero clasifican distinto NO están leyendo lo mismo, aunque los
-    totales coincidan."""
-    salida = {}
-    for i, ln in enumerate(datos.get("lineas") or []):
-        base = _clave_linea(ln, i)
-        clave, n = base, 2
-        while clave in salida:          # dos líneas con el mismo código
-            clave, n = f"{base}#{n}", n + 1
-        salida[clave] = {
-            "codigo": _txt(ln.get("codigo")),
-            "descripcion": _txt(ln.get("descripcion")),
-            "importe": _num(ln.get("importe")),
-            "tipo": _txt(ln.get("tipo")),
-            "categoria": _txt(ln.get("categoria_universal")),
-        }
-    return salida
+    `tipo` es el campo que hay que mirar: "aporte_trabajador" alimenta la
+    retención sindical y con ella el tope del 2% del art. 133, y
+    `categoria_universal` es la red de seguridad que matchea la línea contra
+    el concepto genérico del sindicato cuando el catálogo no la tiene
+    (validador.matchear). Dos modelos que leen los mismos importes pero
+    clasifican distinto NO leyeron lo mismo, aunque los totales coincidan."""
+    return [{
+        "codigo": _txt(ln.get("codigo")),
+        "descripcion": _txt(ln.get("descripcion")),
+        "importe": _num(ln.get("importe")),
+        "tipo": _txt(ln.get("tipo")),
+        "categoria": _txt(ln.get("categoria_universal")),
+        "_cod": _norm_clave(ln.get("codigo")),
+        "_desc": _norm_clave(ln.get("descripcion")),
+    } for ln in (datos.get("lineas") or [])]
 
 
 def comparar_lineas(lecturas: list) -> dict:
     """[(modelo, datos)] -> la tabla línea por línea.
 
-    Las filas salen en el orden del primer modelo que contestó, y al final se
-    suman las líneas que solo vieron los demás. Cada celda dice cómo clasificó
-    ESE modelo esa línea; "no la leyó" cuando no está. `distintas` es el
-    número que importa: cuántas líneas no se leyeron igual en todos."""
-    por_modelo = [(modelo, lineas_comparables(datos)) for modelo, datos in lecturas]
-    claves = []
-    for _, lineas in por_modelo:
-        for k in lineas:
-            if k not in claves:
-                claves.append(k)
+    El emparejado va en DOS pasadas: primero por código y después, sobre lo
+    que sobró, por descripción. La segunda pasada existe por un caso real: un
+    modelo leyó el código "128-001" donde los otros tres leyeron "126-001",
+    misma descripción y mismo importe. Emparejando solo por código, esa única
+    línea salía como dos filas y ninguna de las dos mostraba el problema
+    --que es justamente el dígito mal leído--. Ahora cae en una fila sola y
+    la celda lo dice: "remuneracion · código 128-001".
+
+    Por POSICIÓN no se empareja nunca: si un modelo se saltea una línea, todo
+    lo que sigue queda corrido y la tabla es un muro de rojo que no dice nada.
+    """
+    lecturas_n = [(modelo, lineas_comparables(datos)) for modelo, datos in lecturas]
+    n = len(lecturas_n)
+    grupos = []
+
+    def _nuevo(i: int, linea: dict) -> None:
+        celdas = [None] * n
+        celdas[i] = linea
+        grupos.append({"celdas": celdas, "ref": linea})
+
+    for i, (_, lineas) in enumerate(lecturas_n):
+        if i == 0:
+            for ln in lineas:
+                _nuevo(0, ln)
+            continue
+        libres = list(lineas)
+        for campo in ("_cod", "_desc"):
+            sobran = []
+            for ln in libres:
+                g = next((g for g in grupos if g["celdas"][i] is None
+                          and g["ref"][campo] and g["ref"][campo] == ln[campo]), None)
+                if g is None:
+                    sobran.append(ln)
+                else:
+                    g["celdas"][i] = ln
+            libres = sobran
+        for ln in libres:          # líneas que solo vio este modelo
+            _nuevo(i, ln)
 
     filas, distintas = [], 0
-    for k in claves:
-        ref = next((l[k] for _, l in por_modelo if k in l), None)
-        celdas = []
-        for _, lineas in por_modelo:
-            ln = lineas.get(k)
+    for g in grupos:
+        ref, celdas = g["ref"], []
+        for ln in g["celdas"]:
             if ln is None:
                 celdas.append({"valor": "no la leyó", "igual": False, "falta": True})
                 continue
             valor = ln["tipo"] if ln["categoria"] == "—" else f'{ln["tipo"]} · {ln["categoria"]}'
+            # Lo que difiere del renglón se dice en la celda: un importe o un
+            # código distinto es tan diferencia como una clasificación
+            # distinta, y si no se nombra, la fila parece coincidir.
             if ln["importe"] != ref["importe"]:
                 valor += f' · {ln["importe"]}'
+            if ln["codigo"] != ref["codigo"]:
+                valor += f' · código {ln["codigo"]}'
             celdas.append({"valor": valor, "igual": None, "falta": False})
-        # Igual = igual a la PRIMERA celda, que es la del modelo de referencia.
-        primero = celdas[0]["valor"]
+        base = next((c["valor"] for c in celdas if not c["falta"]), "")
         for c in celdas:
-            c["igual"] = (c["valor"] == primero) and not c["falta"]
-        hay_diferencia = any(not c["igual"] for c in celdas)
-        distintas += 1 if hay_diferencia else 0
+            c["igual"] = (not c["falta"]) and c["valor"] == base
+        difiere = any(not c["igual"] for c in celdas)
+        distintas += 1 if difiere else 0
         filas.append({"codigo": ref["codigo"], "descripcion": ref["descripcion"],
-                      "importe": ref["importe"], "celdas": celdas,
-                      "difiere": hay_diferencia})
+                      "importe": ref["importe"], "celdas": celdas, "difiere": difiere})
     return {"filas": filas, "total": len(filas), "distintas": distintas}
 
 

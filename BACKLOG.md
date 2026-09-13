@@ -4,6 +4,23 @@ Anotaciones para no desviar el bloque de trabajo en curso (ver "Backlog
 técnico" en la memoria del proyecto). Cada ítem se tacha o se borra cuando
 se hace.
 
+- [ ] **El código de concepto no es una clave confiable entre empleadores**
+  (2026-09-13, dicho por Sd al analizar el primer recibo real en el banco de
+  pruebas). **Cada empleador le pone el código que quiere**, así que el
+  código solo pesa cuando se están mirando recibos de UN empleador. Hoy
+  `validador.matchear` lo prueba primero y cae a la descripción normalizada,
+  y existen `Concepto.codigo_generico` y `Concepto.cuit_empleador` justamente
+  por esto; la `categoria_universal` que pone la IA es la tercera red.
+  Sd lo deja explícitamente **para la V2 del motor, ya evaluada y en
+  agenda** -- no se toca antes. Se anota acá porque no está escrito en ningún
+  lado y es la clase de supuesto que se vuelve a discutir desde cero si nadie
+  lo dejó dicho.
+
+  Corolario práctico para el banco de pruebas: un dígito mal leído en el
+  código pesa MENOS de lo que parece (el match cae a la descripción), pero no
+  es inocuo -- un código fantasma se propone como concepto nuevo en
+  Aprendizaje.
+
 - [ ] **Tres tests fallan en Windows por la codificación de la consola, no por
   el código** (2026-09-13, encontrado al barrer la suite entera archivo por
   archivo en el bloque de costo de IA). En esta PC la codepage por defecto es

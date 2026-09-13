@@ -286,6 +286,35 @@ def test_comparar_lineas_empareja_por_codigo_y_no_por_posicion():
     assert jub["celdas"][1]["falta"] is True and jub["celdas"][1]["valor"] == "no la leyó"
 
 
+def test_un_codigo_mal_leido_no_parte_la_linea_en_dos():
+    """Caso real (2026-09-13, recibo de verdad): Haiku leyó el código
+    "128-001" donde los otros tres leyeron "126-001", con la misma
+    descripción --puntuada distinto-- y el mismo importe. Emparejando solo
+    por código salían DOS filas y ninguna mostraba el problema, que es
+    justamente el dígito mal leído."""
+    titulo = "TITULO UNIV/TERC.LAUDO15/91 - INCISO A)"
+    titulo_otro = "TITULO UNIV./TERC LAUDO15/91 - INCISO A)"   # otra puntuación
+    bien = {"lineas": [{"codigo": "126-001", "descripcion": titulo, "importe": 892,
+                        "tipo": "remuneracion"}]}
+    mal = {"lineas": [{"codigo": "128-001", "descripcion": titulo_otro, "importe": 892,
+                       "tipo": "remuneracion"}]}
+    c = extractor.comparar_lineas([("bien", bien), ("mal", mal)])
+    assert c["total"] == 1, "es UNA línea leída por los dos, no dos líneas"
+    fila = c["filas"][0]
+    assert fila["difiere"] is True, "el código mal leído ES la diferencia"
+    assert fila["celdas"][0]["valor"] == "remuneracion"
+    assert fila["celdas"][1]["valor"] == "remuneracion · código 128-001"
+
+
+def test_el_codigo_manda_sobre_la_descripcion():
+    """La descripción es la segunda pasada, no la primera: dos líneas con la
+    misma descripción y códigos distintos son dos líneas distintas."""
+    a = {"lineas": [{"codigo": "126-001", "descripcion": "TITULO", "importe": 892, "tipo": "remuneracion"},
+                    {"codigo": "127-001", "descripcion": "TITULO", "importe": 500, "tipo": "remuneracion"}]}
+    c = extractor.comparar_lineas([("a", a), ("b", a)])
+    assert c["total"] == 2 and c["distintas"] == 0
+
+
 def test_dos_lineas_con_el_mismo_codigo_no_se_pisan():
     repetido = {"lineas": [LINEAS[0], dict(LINEAS[0], importe=1000)]}
     c = extractor.comparar_lineas([("a", repetido)])

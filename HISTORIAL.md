@@ -4585,7 +4585,52 @@ entrada para Opus 5 y Sonnet 5 y 3.596 para Sonnet 4.6 y Haiku --dos
 familias de tokenizador--, así que un precio por token más barato no
 garantiza una llamada más barata.
 
-**Tests**: `test_precios_ia.py`, 30 casos. Los cuatro que importan: el precio
+### El primer recibo de verdad, y lo que encontró
+
+La tabla línea por línea se estrenó con un recibo real y devolvió tres
+divergencias, las tres del mismo modelo:
+
+1. **Un dígito mal leído en el código.** Haiku leyó `128-001` donde los otros
+   tres leyeron `126-001` -- misma descripción (puntuada distinto: "TITULO
+   UNIV/TERC.LAUDO15/91" contra "TITULO UNIV./TERC LAUDO15/91") y el mismo
+   importe, 892. En este proyecto el código es la clave con la que
+   `validador.matchear` busca el concepto en el catálogo del sindicato; si no
+   da, cae a la descripción normalizada, así que el daño depende de que el
+   catálogo tenga el alias. Lo que no depende de nada es el otro efecto: un
+   código fantasma se propone como concepto nuevo en Aprendizaje.
+   Sd puso el error en escala en el mismo momento: **el código no es una
+   clave confiable entre empleadores, porque cada empleador le pone el que
+   quiere** -- solo pesa mirando recibos de uno solo. Queda anotado en
+   BACKLOG.md para la V2 del motor.
+2. **PAMI clasificado como jubilación.** `38-001 APORTE PERSONAL I.N.S.S.J.Y
+   P.` es el aporte de la Ley 19.032; los otros tres le pusieron
+   `categoria_universal: "pami"` y Haiku, `"jubilacion"`. Esa categoría es la
+   RED DE SEGURIDAD de `validador.matchear`: solo entra en juego cuando la
+   línea no matcheó por código ni por descripción, y ahí matchea contra el
+   concepto genérico. O sea que el error pega exactamente en el escenario
+   para el que la red existe --un empleador nuevo, sin catálogo curado-- y el
+   resultado sería validar el aporte de PAMI (3%) contra la fórmula de
+   jubilación (11%): una discrepancia inventada en la pantalla del afiliado.
+3. **Un seguro obligatorio contado como aporte.** `44-001 SEGURO OBLIGATORIO
+   - DGI`, $3,80: `otro` para los tres, `aporte_trabajador` para Haiku.
+
+Los otros tres modelos coincidieron en TODO. Con eso, Haiku queda afuera para
+recibos --3,1 veces más barato y 40% más rápido no compensa tres errores de
+lectura en un solo recibo-- y la elección queda entre Sonnet 4.6 (el actual)
+y Sonnet 5, que en la misma corrida salió 23% más barato y 47% más rápido
+leyendo igual.
+
+**Y el hallazgo obligó a arreglar la comparación misma**: emparejando solo
+por código, la línea 1 salía como DOS filas ("126-001: no la leyó" para
+Haiku, "128-001: no la leyó" para los otros tres) y ninguna de las dos
+mostraba el problema real, que es el dígito. Ahora el emparejado va en dos
+pasadas --código primero, descripción normalizada después sobre lo que
+sobró-- y lo que difiere del renglón se nombra en la celda:
+"remuneracion · código 128-001". Un código o un importe distinto es tan
+diferencia como una clasificación distinta; si no se nombra, la fila parece
+coincidir.
+
+**Tests**: `test_precios_ia.py`, 32 casos. Los cuatro que importan: el precio
 congelado no se mueve cuando cambia el catálogo; los defaults de
 `precios_ia.USOS` son las constantes de los tres módulos (fail-closed: si
 alguien mueve una y no la otra, el panel mostraría "el de origen" al lado del
