@@ -381,33 +381,9 @@
   footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-size: 11px; color: var(--gris); text-align: center; }
   :focus-visible { outline: 2px solid var(--destacado); outline-offset: 2px; }
 
-  /* ---- Mapa de seccionales ----
-     La escala de color es FIJA de la app y no la marca del sindicato: es una
-     escala cuantitativa, y con el acento de cada gremio la misma intensidad
-     significaría cosas distintas en dos tenants. El destacado (--destacado)
-     se reserva para la seccional SELECCIONADA, que es un filtro activo. */
-  .mapa-panel { height: 420px; border-radius: 10px; border: 1px solid var(--linea);
-    background: var(--papel); }
-  .mapa-controles { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-    margin: 0 0 10px; }
-  .mapa-controles label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em;
-    color: var(--gris); font-weight: 700; }
-  .mapa-controles select { padding: 6px 9px; border: 1px solid var(--linea); border-radius: 8px;
-    font-size: 13px; background: #fff; color: var(--tinta); }
-  .mapa-leyenda { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--gris); }
-  .mapa-leyenda i { width: 15px; height: 15px; border-radius: 50%; display: inline-block; }
-  .mapa-sin-ubicar { margin-top: 10px; font-size: 12.5px; color: #8a5a1a;
-    background: #fdf3e7; border: 1px solid #e8c89a; border-radius: 9px; padding: 9px 12px;
-    display: none; line-height: 1.55; }
-  .mapa-sin-ubicar.hay { display: block; }
-  .mapa-sin-ubicar a { color: #8a5a1a; font-weight: 700; }
-  .mapa-pop b { font-size: 13px; }
-  .mapa-pop table { border-collapse: collapse; margin-top: 6px; font-size: 12px; }
-  .mapa-pop td { padding: 2px 0; }
-  .mapa-pop td:last-child { text-align: right; padding-left: 14px;
-    font-family: ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums;
-    font-weight: 700; }
-  @media (max-width: 700px) { .mapa-panel { height: 320px; } }
+  /* El chrome del mapa de seccionales (.mapa-panel, .mapa-leyenda,
+     .mapa-sin-ubicar, .mapa-pop) y las burbujas viven en marca.css: los
+     comparte con el mapa del dashboard de una encuesta. */
 </style>
 </head>
 <body>
@@ -574,7 +550,11 @@
         </select>
         <div class="mapa-leyenda" id="mapa-leyenda"></div>
       </div>
-      <div class="mapa-panel" id="mapa-seccionales"></div>
+      {# El logo va como dato del contenedor y no en el JS: la plantilla es la
+         que sabe si el sindicato tiene logo cargado y cuál es su sello de
+         versión. Sin logo el atributo queda vacío y la burbuja sale lisa. #}
+      <div class="mapa-panel" id="mapa-seccionales"
+           data-logo="{{ ('/logo/' ~ marca.id ~ '?v=' ~ marca.logo_v) if marca.logo else '' }}"></div>
       <div class="mapa-sin-ubicar" id="mapa-sin-ubicar"></div>
       <div class="panel-error"><span>No se pudo cargar este panel.</span><button type="button" data-reintentar>Reintentar</button></div>
     </div>

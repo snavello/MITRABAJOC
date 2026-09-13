@@ -394,10 +394,10 @@
      teselas a OSM, que es justo lo que su política pide no hacer. */
   var MAPA = null, CAPA_SECC = null;
 
-  // Escala FIJA de la app, no la marca del sindicato: es cuantitativa, y con
-  // el acento de cada gremio la misma intensidad significaría otra cosa en
-  // cada tenant. Va de poco (claro) a mucho (oscuro).
-  var ESCALA_MAPA = ["#dbe4f0", "#a9c1de", "#6f97c6", "#3f6fa8", "#1e4877"];
+  // La escala, el color y el tamaño de las burbujas viven en mapa.js: los
+  // comparte con el mapa del dashboard de una encuesta, y dos copias es lo que
+  // hace que un día un mapa se vea distinto del otro.
+  var ESCALA_MAPA = MapaMT.ESCALA;
 
   var METRICAS = {
     afiliados: { etiqueta: "Afiliados", pct: false },
@@ -410,14 +410,6 @@
   function metricaElegida() {
     var sel = $("mapa-metrica");
     return (sel && sel.value) || "afiliados";
-  }
-
-  function colorMapa(valor, maximo) {
-    if (valor === null || valor === undefined) return "#cfd6e0";
-    if (!maximo) return ESCALA_MAPA[0];
-    var i = Math.min(ESCALA_MAPA.length - 1,
-                     Math.floor(valor / maximo * ESCALA_MAPA.length));
-    return ESCALA_MAPA[i];
   }
 
   function pintarMapa(d) {
@@ -440,16 +432,21 @@
     CAPA_SECC = L.layerGroup().addTo(MAPA.mapa);
 
     var puntos = [];
+    var logo = document.getElementById("mapa-seccionales").dataset.logo || "";
     lista.forEach(function (s) {
       var elegida = S.seccionales.has(s.id);
-      var radio = 9 + Math.sqrt((s.afiliados || 0) / maxAf) * 14;
-      var marcador = L.circleMarker([s.lat, s.lon], {
-        radius: radio,
-        fillColor: colorMapa(s[metrica], maximo), fillOpacity: 0.85,
-        // El destacado se reserva para la selección activa, igual que en
-        // todo el panel (docs/DASHBOARD.md §4.1).
-        color: elegida ? C.destacado : "#ffffff",
-        weight: elegida ? 3.5 : 1.6
+      // El BORDE lleva el color de la escala y el RELLENO dice si está
+      // seleccionada: el destacado se reserva para la selección activa en todo
+      // el panel (docs/DASHBOARD.md §4.1), así que no puede ser al mismo
+      // tiempo el color de un dato. Adentro, el logo del gremio en marca de
+      // agua. La forma la arma MapaMT.burbuja, compartida con el mapa del
+      // dashboard de una encuesta.
+      var marcador = MapaMT.burbuja(s.lat, s.lon, {
+        diametro: MapaMT.diametroBurbuja(s.afiliados, maxAf),
+        borde: MapaMT.colorEscala(s[metrica], maximo),
+        relleno: elegida ? C.destacado : "#ffffff",
+        seleccionada: elegida,
+        logo: logo
       });
       marcador.bindPopup(popupMapa(s), { maxWidth: 280 });
       marcador.on("click", function () { alternarSeccional(s.id); });

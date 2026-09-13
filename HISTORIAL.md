@@ -4003,3 +4003,117 @@ dispositivo adelantado respecto de Argentina pide mañana, cada endpoint del
 panel devuelve 422 y todos los indicadores quedan en "—" sin ningún aviso. Es
 la misma clase de bug que `fechas.py` resolvió en el backend, pero del lado del
 cliente.
+
+## Mapa de participación por seccional en Encuestas (2026-09-13)
+
+Pedido de Sd: el mismo mapa que tiene el Panel Sindical, pero en el dashboard
+de una encuesta, con burbujas cuyo tamaño sea la cantidad de participantes. Y
+un detalle estético propio: que el círculo lleve el logo del sindicato de fondo,
+que el BORDE tenga el color de la escala de participación y que al seleccionar
+una seccional el RELLENO pase al color de selección del panel (fucsia por
+default).
+
+### La burbuja, y por qué cambió también el mapa del Panel
+
+Pidió "la misma estética" que el mapa del Panel **y** el detalle nuevo. Las dos
+cosas juntas solo se sostienen de una manera: que la burbuja sea UNA, compartida
+por los dos mapas. Si el detalle entrara solo en el mapa nuevo, la frase "la
+misma estética" quedaría falsa el mismo día. Así que `MapaMT.burbuja` vive en
+`mapa.js`, el CSS en `marca.css`, y el mapa del Panel Sindical pasó a usarla.
+
+Eso obligó a un cambio de fondo en el Panel: sus marcadores eran
+`L.circleMarker`, y **un círculo de SVG no puede llevar una imagen adentro** sin
+armar un `<pattern>` por marcador. Las burbujas son ahora `divIcon` —HTML, con
+el logo como `background-image` en una capa propia para poder atenuarlo—. De
+paso se movió lo que el mapa reparte en tres significados:
+
+| | antes (Panel) | ahora (los dos) |
+|---|---|---|
+| tamaño | cantidad | cantidad |
+| **borde** | blanco, o destacado si estaba elegida | **color de la escala** |
+| **relleno** | color de la escala | **blanco, o destacado si está elegida** |
+
+El intercambio no es cosmético: el destacado es, por regla del proyecto
+(docs/DASHBOARD.md §4.1), EXCLUSIVO de las selecciones activas. Con la escala en
+el relleno, el color de un dato y el color de "esto está elegido" competían por
+el mismo lugar. Con la escala en el borde, cada cosa tiene el suyo.
+
+Lo que NO cambió: la escala sigue siendo fija de la app (cinco azules) y no la
+marca del gremio, el diámetro sigue yendo por raíz cuadrada (lo que el ojo
+compara es el área: con tamaño lineal, el doble de gente se ve cuatro veces más
+grande) y el mapa sigue siendo el selector.
+
+### De dónde salen los números del mapa nuevo
+
+De la URNA no se puede: guarda los cortes de cada respuesta, así que sabe
+cuántas llegaron etiquetadas "Rosario", pero **no a cuántos se les preguntó**.
+Sin denominador no hay porcentaje de participación, que es justamente lo que el
+color tiene que decir. Así que el mapa sale del **padrón fijado al publicar**
+(`EncuestaParticipante`, con su bandera `respondio`), que es la misma fuente del
+indicador "Participación" de arriba: los dos números cierran entre sí.
+
+La contra, dicha en la pantalla: el padrón se cruza con `Trabajador`, o sea con
+la seccional de HOY, mientras que la urna congela la seccional al responder. Si
+alguien se mudó entre una cosa y la otra, la burbuja y la pastilla pueden
+diferir en una persona. Es el mismo desfasaje que el encabezado de
+`resultados_encuesta.py` ya documenta para todo lo que sale del padrón, y no se
+puede evitar sin guardar en el padrón un dato que abriría la puerta a cruzarlo
+con la urna -- que es exactamente lo que el módulo no hace.
+
+El color va con escala FIJA de 0 a 100% y no contra el máximo observado (como
+sí hace el Panel, donde las métricas son cantidades sin techo natural): una
+participación del 70% tiene que verse igual de oscura con el filtro puesto que
+sin él.
+
+### Las tres reglas que hereda, sin escribirlas de nuevo
+
+- **Es el selector, así que ignora su propio filtro.** Si lo respetara, tocar
+  una burbuja dejaría el mapa con un punto y sin vuelta.
+- **Pero NO ignora el filtro impuesto por alcance (N18).** Dejarlo pasar le
+  mostraría a un Admin de Seccional, en un mapa, cuánta gente participó en las
+  seccionales que no le tocan. Con el recorte impuesto las burbujas además no
+  filtran: no hay nada que elegir, igual que la pastilla queda deshabilitada.
+- **Tocar una burbuja llama al MISMO `alternar('seccional', ...)` que la
+  pastilla.** No hay un segundo estado de selección que se pueda desincronizar:
+  se toca la burbuja y se prende la pastilla, porque son la misma cosa.
+
+Y una que no hereda sino que decide: una seccional **sin nadie en el padrón de
+esa encuesta no aparece**. Cero de cero no es 0% de participación, es una
+encuesta que no le llegó; dibujarla apagada diría algo que no pasó. Las que sí
+participaron pero no están ubicadas se nombran abajo del mapa, con sus números,
+para que los totales cierren.
+
+### Un solo idioma de selección por pantalla
+
+El dashboard de encuestas usaba el color de APOYO de la marca para las
+selecciones (pastillas elegidas, rango del calendario) y el Panel Sindical usa
+el destacado. Con el mapa nuevo eso se volvía visible en la misma pantalla: al
+tocar una burbuja quedaba fucsia y su pastilla verde, para la misma cosa. Así
+que la pantalla de Encuestas pasó a usar el destacado en sus estados de
+selección, que es lo que `Sindicato.color_destacado` significa desde que existe
+("SOLO selecciones/filtros activos del dashboard"). El cromo suave de la marca
+(`--enc-suave`/`--enc-borde`: el aviso de umbral, las notas del cruce) se quedó
+donde estaba, con dos variables nuevas (`--sel-suave`/`--sel-borde`) para lo que
+sí es selección: un aviso pintado del color de las selecciones diría que está
+seleccionado.
+
+### El globo que se iba solo
+
+Primer intento: el globo (popup) se abría al tocar la burbuja. Pero tocar una
+burbuja recarga el tablero, y el repintado destruye los marcadores con su globo
+adentro: se abría y se cerraba en el mismo clic, justo cuando la persona quería
+leer los números de la seccional que acababa de elegir. Ahora el globo se abre
+al pasar el mouse, el clic filtra, y cuál está abierto se recuerda entre
+repintados. Se encontró mirando la pantalla, no razonándolo.
+
+### Verificado
+
+15 comprobaciones en un Chromium de verdad sobre la demo cargada de cero
+(burbujas de tamaños distintos, el logo adentro, los bordes con tres tonos de la
+escala, el relleno fucsia al seleccionar, la pastilla que se prende sola, el
+tablero que se recalcula, y el mapa del Panel dibujando las mismas burbujas),
+10 tests nuevos en `test_encuesta_mapa.py` (participación por seccional,
+aislamiento con el mismo CUIL en dos gremios, N18, sin ubicar, sin corte de
+seccional, y que el mapa siga viajando cuando el umbral esconde las preguntas)
+y dos robots de e2e, el del Panel actualizado a las burbujas nuevas y uno nuevo
+para el mapa de la encuesta.

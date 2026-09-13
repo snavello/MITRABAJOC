@@ -233,9 +233,11 @@ def test_el_mapa_del_panel_filtra_al_tocar_un_marcador(nuevo_actor, informe):
 
     mapa = page.locator('[data-panel="seccionales-geo"]')
     expect(mapa).to_be_visible()
-    # Un círculo por seccional ubicada: Leaflet los dibuja como <path>
-    # interactivos dentro del SVG de la capa de vectores.
-    marcadores = page.locator("#mapa-seccionales .leaflet-interactive")
+    # Una burbuja por seccional ubicada. Son `divIcon` de Leaflet (HTML, no
+    # <path> de SVG) porque llevan el logo del gremio adentro: de ahí que se
+    # busquen por `.mt-burbuja`, la clase que les pone MapaMT.burbuja, y no
+    # por `.leaflet-interactive`, que es de las capas vectoriales.
+    marcadores = page.locator("#mapa-seccionales .mt-burbuja")
     try:
         marcadores.first.wait_for(state="visible", timeout=20000)
     except Exception:
@@ -267,13 +269,68 @@ def test_el_mapa_del_panel_filtra_al_tocar_un_marcador(nuevo_actor, informe):
 
     # Y el mapa NO se queda con un solo punto: es el selector, ignora su
     # propio filtro. Sin esto, tocar un marcador sería un camino sin vuelta.
-    expect(page.locator("#mapa-seccionales .leaflet-interactive")).to_have_count(cuantos)
+    expect(page.locator("#mapa-seccionales .mt-burbuja")).to_have_count(cuantos)
     informe.paso("Con el filtro puesto, el mapa siguió mostrando todas: es el selector")
+
+    # La seleccionada se pinta con el destacado del panel y las demás no: es
+    # el relleno el que dice "elegida", y el borde sigue siendo el color de la
+    # escala (si el destacado fuera también el color de un dato, no se podría
+    # distinguir una cosa de la otra).
+    expect(page.locator("#mapa-seccionales .mt-burbuja.sel")).to_have_count(1)
+    informe.paso("La burbuja elegida quedó rellena con el color de selección del panel")
 
     # Cambiar la métrica repinta sin volver a pedir datos.
     page.select_option("#mapa-metrica", "pct_con_diferencias")
     expect(page.locator("#mapa-leyenda")).to_contain_text("%")
     informe.paso("Cambió la métrica de color y la leyenda se actualizó sola")
+
+
+def test_el_mapa_de_una_encuesta_filtra_al_tocar_una_burbuja(nuevo_actor, informe):
+    """El mismo mapa, otra pregunta: cuánta gente de cada seccional respondió
+    una encuesta. Comparte las burbujas con el Panel (MapaMT.burbuja), así que
+    lo propio de esta pantalla es lo que se verifica: que el color salga de la
+    participación, que tocar una burbuja filtre el tablero entero y que la
+    pastilla de esa seccional quede activa -- una sola selección, no dos."""
+    page = nuevo_actor("admin")
+    _login_admin(page)
+    page.goto(f"{BASE}/admin")
+    page.click('.tab-btn[data-panel="encuestas"]')
+    ver = page.locator('#panel-encuestas a:has-text("Resultados")')
+    if ver.count() == 0:
+        pytest.skip("La UOM no tiene encuestas publicadas. " + COMO_PREPARAR)
+    ver.first.click()
+    page.wait_for_url(re.compile(r"/admin/encuesta/\d+/resultados"))
+    informe.paso("El admin abrió los resultados de una encuesta")
+
+    burbujas = page.locator("#mapa-seccionales .mt-burbuja")
+    try:
+        burbujas.first.wait_for(state="visible", timeout=20000)
+    except Exception:
+        pytest.skip("Esa encuesta no guarda el corte de seccional o ninguna está "
+                    "ubicada, así que no hay mapa. " + COMO_PREPARAR)
+    expect(page.locator("#mapa-seccion")).to_be_visible()
+    cuantas = burbujas.count()
+    informe.dato("Burbujas en el mapa", cuantas)
+    # La leyenda dice que el color es un PORCENTAJE (participación) y el
+    # tamaño, gente: las dos cosas que la burbuja informa a la vez.
+    expect(page.locator("#mapa-leyenda")).to_contain_text("100%")
+    expect(page.locator("#mapa-leyenda")).to_contain_text("respondió")
+    informe.paso(f"El mapa dibujó {cuantas} seccionales con su participación")
+
+    antes = page.locator("#k-part").inner_text()
+    burbujas.first.click()
+    expect(page.locator("#mapa-seccionales .mt-burbuja.sel")).to_have_count(1)
+    expect(page.locator(".m-chip.act")).to_have_count(1)
+    informe.paso("Tocó una burbuja: quedó rellena con el color de selección y su "
+                 "pastilla se prendió (una sola selección, no dos)")
+
+    expect(page.locator("#k-part")).not_to_have_text(antes)
+    informe.dato("Participación", f"{antes} -> {page.locator('#k-part').inner_text()}")
+    informe.paso("El tablero entero se recalculó con esa seccional")
+
+    # Y el mapa no se queda con una sola: es el selector.
+    expect(page.locator("#mapa-seccionales .mt-burbuja")).to_have_count(cuantas)
+    informe.paso("El mapa siguió mostrando todas las seccionales")
 
 
 # ------------------------------- 3. cerca de mí: con permiso y sin permiso

@@ -93,6 +93,7 @@ function pintar() {
   pintarFiltros(d);
   pintarDescarga(d);
   pintarIndicadores(d);
+  pintarMapa(d);
   pintarUmbral(d);
   pintarPreguntas(d);
   pintarHistorial(d);
@@ -302,6 +303,126 @@ function pintarIndicadores(d) {
   } else {
     nota.textContent = `Leyeron el ${a.porcentaje}% y respondió el ${p.porcentaje}% del padrón.`;
   }
+}
+
+/* ---------- Mapa de participación por seccional ----------
+ *
+ * Es la pastilla de seccional dibujada sobre un mapa: tocar una burbuja llama
+ * al MISMO `alternar('seccional', ...)` que la pastilla, así que no hay dos
+ * estados que se puedan desincronizar. Y por eso el mapa IGNORA el filtro de
+ * seccional (viene así del servidor): si lo respetara, tocar una burbuja
+ * dejaría el mapa con un solo punto y no habría cómo volver.
+ *
+ * Los números NO son los de la pastilla, y es a propósito: la pastilla cuenta
+ * respuestas en la urna (con el corte congelado al responder) y el mapa cuenta
+ * participación en el padrón (que es el único que sabe a cuántos se les
+ * preguntó, o sea el único que puede dar un porcentaje). Pueden diferir en una
+ * persona que cambió de seccional después de responder; la nota de abajo del
+ * mapa lo dice.
+ */
+let MAPA = null, CAPA_SECC = null;
+// Qué burbuja tiene el globo abierto. Hace falta guardarlo porque tocar una
+// burbuja recarga el tablero y las burbujas se vuelven a dibujar: sin esto, el
+// globo se abre y se cierra solo en el mismo clic, justo cuando la persona
+// quiere leer los números de la seccional que acaba de elegir.
+let POPUP_SECC = null;
+
+function pintarMapa(d) {
+  const seccion = $('mapa-seccion');
+  const m = d.mapa;
+  const lista = (m && m.seccionales) || [];
+  if (!m || (!lista.length && !(m.sin_ubicar || []).length)) { seccion.hidden = true; return; }
+  seccion.hidden = false;
+
+  const caja = $('mapa-seccionales');
+  // El tamaño sale de cuánta gente respondió; el color, del porcentaje de su
+  // propio padrón, con escala FIJA de 0 a 100: una participación del 70% tiene
+  // que verse igual de oscura con el filtro puesto que sin él.
+  const maxResp = Math.max(1, ...lista.map(x => x.respondieron || 0));
+  const logo = caja.dataset.logo || '';
+  const destacado = css('--destacado') || '#E5188F';
+
+  if (window.L && lista.length) {
+    caja.hidden = false;
+    if (!MAPA) MAPA = MapaMT.crear('mapa-seccionales', { rueda: false });
+    if (MAPA) {
+      if (CAPA_SECC) MAPA.mapa.removeLayer(CAPA_SECC);
+      CAPA_SECC = L.layerGroup().addTo(MAPA.mapa);
+      const puntos = [];
+      lista.forEach(sec => {
+        const elegida = FILTRO.seccional.includes(String(sec.id));
+        const burbuja = MapaMT.burbuja(sec.lat, sec.lon, {
+          diametro: MapaMT.diametroBurbuja(sec.respondieron, maxResp),
+          borde: MapaMT.colorEscala(sec.porcentaje, 100),
+          relleno: elegida ? destacado : '#ffffff',
+          seleccionada: elegida,
+          logo: logo
+        });
+        burbuja.bindPopup(popupSeccional(sec), { maxWidth: 280 });
+        // Pasar el mouse muestra los números; el clic filtra. Son dos cosas
+        // distintas y en un mapa que se repinta al filtrar conviene que lo
+        // sean: si el globo dependiera del clic, se iría con el repintado.
+        burbuja.on('mouseover', () => { POPUP_SECC = sec.id; burbuja.openPopup(); });
+        burbuja.on('popupclose', () => { if (POPUP_SECC === sec.id) POPUP_SECC = null; });
+        // Con el recorte impuesto (N18) no hay nada que elegir: la burbuja
+        // informa y no filtra, igual que la pastilla queda deshabilitada.
+        if (!m.impuesto) {
+          burbuja.on('click', () => { POPUP_SECC = sec.id; alternar('seccional', String(sec.id)); });
+        }
+        burbuja.addTo(CAPA_SECC);
+        if (POPUP_SECC === sec.id) burbuja.openPopup();
+        puntos.push([sec.lat, sec.lon]);
+      });
+      MAPA.refrescar();
+      // Se encuadra una sola vez: reencuadrar en cada filtro le movería el
+      // mapa abajo de los dedos a quien está mirando una zona.
+      if (!MAPA._encuadrado && puntos.length) { MAPA.encuadrar(puntos); MAPA._encuadrado = true; }
+    }
+  } else {
+    caja.hidden = true;
+  }
+
+  $('mapa-leyenda').innerHTML = lista.length
+    ? '<span>0%</span>' + MapaMT.ESCALA.map(c => `<i style="background:${c}"></i>`).join('')
+      + '<span>100%</span><span style="margin-left:10px;">el tamaño es cuánta gente respondió</span>'
+    : '';
+  pintarSinUbicar(m);
+
+  const partes = [];
+  if (lista.length) {
+    partes.push('El mapa sale del padrón fijado al publicar: cuánta gente de cada '
+      + 'seccional respondió sobre cuánta se le preguntó. Puede diferir en algún caso '
+      + 'de los números de las pastillas, que cuentan respuestas en la urna con la '
+      + 'seccional que cada uno tenía al responder.');
+  }
+  if (m.impuesto) partes.push('Ves solo tu seccional, así que las burbujas no filtran.');
+  else if (lista.length) partes.push('Tocá una burbuja para filtrar todo el tablero por esa seccional.');
+  $('mapa-nota').textContent = partes.join(' ');
+}
+
+function popupSeccional(sec) {
+  const fila = (k, v) => `<tr><td>${k}</td><td>${v}</td></tr>`;
+  return `<div class="mapa-pop"><b>${esc(sec.nombre)}</b>` +
+    (sec.direccion_texto ? `<div style="font-size:11.5px;color:#5b6478;">${esc(sec.direccion_texto)}</div>` : '') +
+    '<table>' +
+    fila('Respondieron', sec.respondieron) +
+    fila('Padrón de la encuesta', sec.convocados) +
+    fila('Participación', (sec.porcentaje === null ? '—' : sec.porcentaje + '%')) +
+    '</table></div>';
+}
+
+function pintarSinUbicar(m) {
+  const caja = $('mapa-sin-ubicar');
+  const faltan = m.sin_ubicar || [];
+  if (!faltan.length) { caja.classList.remove('hay'); caja.textContent = ''; return; }
+  caja.classList.add('hay');
+  // Sin enlace a propósito: quien mira resultados de una encuesta no
+  // necesariamente puede editar seccionales, y un enlace que da 403 es peor
+  // que una frase que dice dónde se arregla.
+  caja.textContent = `${faltan.length === 1 ? 'Esta seccional participó y no está ubicada'
+    : 'Estas seccionales participaron y no están ubicadas'} en el mapa: `
+    + faltan.map(x => `${x.nombre} (${x.respondieron} de ${x.convocados})`).join(', ')
+    + '. Se ubican en la pestaña Seccionales del panel.';
 }
 
 function pintarUmbral(d) {

@@ -192,6 +192,57 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
 .modal-fila .k { color: var(--sobre-base-mute); }
 .modal-fila .v { font-weight: 500; text-align: right; }
 
+/* ---------- Mapa de seccionales ----------
+   Lo comparten el Panel Sindical y el dashboard de una encuesta.
+
+   La escala de color es FIJA de la app y no la marca del sindicato: es una
+   escala cuantitativa, y con el acento de cada gremio la misma intensidad
+   significaría cosas distintas en dos tenants. El destacado (--destacado)
+   se reserva para la seccional SELECCIONADA, que es un filtro activo. */
+.mapa-panel { height: 420px; border-radius: 10px; border: 1px solid var(--linea);
+  background: var(--papel); }
+.mapa-controles { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 0 0 10px; }
+.mapa-controles label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--gris); font-weight: 700; }
+.mapa-controles select { padding: 6px 9px; border: 1px solid var(--linea); border-radius: 8px;
+  font-size: 13px; background: #fff; color: var(--tinta); }
+.mapa-leyenda { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--gris); }
+.mapa-leyenda i { width: 15px; height: 15px; border-radius: 50%; display: inline-block; }
+.mapa-sin-ubicar { margin-top: 10px; font-size: 12.5px; color: #8a5a1a;
+  background: #fdf3e7; border: 1px solid #e8c89a; border-radius: 9px; padding: 9px 12px;
+  display: none; line-height: 1.55; }
+.mapa-sin-ubicar.hay { display: block; }
+.mapa-sin-ubicar a { color: #8a5a1a; font-weight: 700; }
+.mapa-pop b { font-size: 13px; }
+.mapa-pop table { border-collapse: collapse; margin-top: 6px; font-size: 12px; }
+.mapa-pop td { padding: 2px 0; }
+.mapa-pop td:last-child { text-align: right; padding-left: 14px;
+  font-family: ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums;
+  font-weight: 700; }
+@media (max-width: 700px) { .mapa-panel { height: 320px; } }
+/* ---------- Burbujas de los mapas (MapaMT.burbuja) ----------
+   Compartidas por el mapa del Panel Sindical y el del dashboard de una
+   encuesta: el tamaño es una cantidad, el borde el color de la escala, el
+   relleno dice si está seleccionada, y adentro va el logo del sindicato en
+   marca de agua.
+
+   El `background:none` del wrapper NO es de adorno: `.leaflet-div-icon` trae
+   fondo blanco y borde propios, y sin esto cada burbuja sale dentro de un
+   cuadrado blanco. */
+.leaflet-div-icon.mt-burbuja-wrap { background: none; border: none; }
+.mt-burbuja { position: relative; display: block; box-sizing: border-box;
+  width: 100%; height: 100%; border-radius: 50%; border-style: solid;
+  box-shadow: 0 1px 4px rgba(8, 12, 20, .3); cursor: pointer; }
+/* El logo va en su propia capa para poder atenuarlo: `opacity` sobre el
+   `background-image` del círculo se llevaría también el borde y el relleno. */
+.mt-burbuja > i { position: absolute; inset: 16%; opacity: .55;
+  background: center / contain no-repeat; }
+/* Seleccionada el relleno es fuerte, así que el logo necesita más presencia
+   para no desaparecer adentro del color. */
+.mt-burbuja.sel > i { opacity: .8; }
+.mt-burbuja:hover { filter: brightness(1.04); }
+
 /* ---------- Modales que se pueden mover (static/modales.js) ----------
    El arrastre lo hace modales.js; acá va la única pista visual de que el
    encabezado se puede agarrar. Mismo recorte que el script: solo con mouse y

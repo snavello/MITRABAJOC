@@ -71,6 +71,17 @@ Nunca se personaliza:
 Encabezado oscuro compacto (logo chico + título de sección + usuario), cuerpo
 claro, botón principal en color de acento, pestaña activa marcada con acento.
 
+## Mapas
+
+Leaflet vendoreado, teselas de OpenStreetMap con su atribución. Una seccional
+en un mapa de tablero es una **burbuja** (`MapaMT.burbuja`): el tamaño es una
+cantidad, el borde el color de la escala cuantitativa —fija de la app, cinco
+azules, nunca la marca del gremio—, el relleno dice si está seleccionada
+(color destacado) y adentro va el logo del sindicato en marca de agua.
+
+Un mapa de tablero **es el selector**: tocar una burbuja filtra el tablero y
+el mapa NO se filtra a sí mismo, o sería un camino sin vuelta.
+
 ## Modales
 
 Hoja que entra desde abajo, encabezado en `--marca-base` con el nombre del
