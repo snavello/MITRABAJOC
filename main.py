@@ -59,7 +59,7 @@ from db import (Area, Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, T
                 NotaTramiteEmpleador, TramiteEmpleadorLog,
                 Convenio, DocumentoConvenio, FragmentoConvenio, ConsultaConvenio)
 from extractor import (extraer, extraer_aportes, preparar_imagen, resumen_comparable,
-                        ErrorLectura)
+                        comparar_lineas, ErrorLectura)
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, error_de_expresion,
                         CATEGORIAS_UNIVERSALES)
@@ -4615,7 +4615,7 @@ async def plataforma_probar_modelos(request: Request,
         *(run_in_threadpool(leer, contenido, archivo.content_type, m, imagen) for m in elegidos),
         return_exceptions=True)
 
-    salida, referencia = [], None
+    salida, referencia, leidas = [], None, []
     for modelo, r in zip(elegidos, lecturas):
         fila = {"modelo": modelo, "nombre": precios_ia.nombre(modelo),
                 "precio_txt": precios_ia.precio_txt(precios_ia.modelo(modelo))}
@@ -4647,15 +4647,29 @@ async def plataforma_probar_modelos(request: Request,
         fila.update({
             "ok": True,
             "tokens_entrada": uso["tokens_entrada"], "tokens_salida": uso["tokens_salida"],
-            "duracion_txt": precios_ia.segundos(uso["duracion_ms"]),
+            "duracion_txt": precios_ia.segundos(uso.get("duracion_ms", 0)),
             "costo_txt": precios_ia.usd(costo),
-            "resumen": [{"etiqueta": e, "valor": v,
-                         "igual": any(e == e2 and v == v2 for e2, v2 in referencia)}
-                        for e, v in resumen],
+            # `comparar` y no `valor`: un CUIT con guiones y otro sin guiones
+            # son el mismo CUIT (la app los normaliza en los cuatro lugares
+            # donde los usa), y marcarlo en rojo sería gritar por algo que no
+            # cambia nada. El rojo se guarda para lo que de verdad difiere.
+            "resumen": [{"etiqueta": d["etiqueta"], "valor": d["valor"],
+                         "igual": any(d["etiqueta"] == r["etiqueta"] and d["comparar"] == r["comparar"]
+                                      for r in referencia)}
+                        for d in resumen],
             "json": json.dumps(datos, ensure_ascii=False, indent=1),
         })
         salida.append(fila)
-    return {"tipo": tipo, "archivo": archivo.filename or "", "modelos": salida}
+        leidas.append((modelo, datos))
+
+    # La comparación línea por línea es la que contesta la pregunta que el
+    # resumen deja abierta: dos modelos pueden coincidir en los totales y aun
+    # así clasificar distinto una línea, y ESE campo (`tipo`) alimenta la
+    # retención sindical y el tope del 2%. Solo aplica a un recibo (un
+    # comprobante de ARCA no tiene líneas) y con dos lecturas o más.
+    return {"tipo": tipo, "archivo": archivo.filename or "", "modelos": salida,
+            "lineas": comparar_lineas(leidas) if tipo == "recibo" and len(leidas) > 1 else None,
+            "modelos_leidos": [precios_ia.nombre(m) for m, _ in leidas]}
 
 
 ESTADOS_TOPE = ("verificado", "derivado", "por_verificar", "SOSPECHOSO")

@@ -103,6 +103,9 @@
      sola en vez de desbordar la página. */
   .tabla-ancha { overflow-x:auto; -webkit-overflow-scrolling:touch; }
   .tabla-ancha table { min-width:860px; }
+  /* Filtro del banco de pruebas: esconder las líneas que todos leyeron igual.
+     La cabecera no lleva la clase, así que no se esconde. */
+  .solo-dif tr.linea-igual { display:none; }
   /* Los números se leen en columna, así que van en monoespaciada y a la
      derecha: alineados, el que se sale del orden salta a la vista. */
   .num { text-align:right; font-variant-numeric:tabular-nums;
@@ -910,10 +913,45 @@ function pintarPrueba(data) {
     '<p class="muted" style="margin-bottom:12px;">' +
     (ref ? 'En rojo, lo que ese modelo leyó distinto de <strong>' + escHTML(ref.nombre) +
            '</strong> (el primero que contestó). Que coincidan no prueba que esté bien: ' +
-           'prueba que leyeron lo mismo.'
+           'prueba que leyeron lo mismo. Un CUIL o un CUIT con guiones no cuenta como ' +
+           'diferencia: la app los normaliza antes de usarlos.'
          : 'Ningún modelo pudo leer el archivo.') +
     '</p><div class="tabla-ancha"><table>' + cab + filas.join('') + '</table></div>' +
+    tablaLineas(data, ms) +
     (crudos ? '<div class="card">' + crudos + '</div>' : '');
+}
+
+/* La comparación línea por línea. Es la que contesta lo que el resumen deja
+   abierto: dos modelos pueden dar los mismos totales y clasificar distinto una
+   línea, y ese campo (`tipo`) alimenta la retención sindical y el tope del 2%
+   del art. 133. Coincidir en el neto no es leer lo mismo. */
+function tablaLineas(data, ms) {
+  const L = data.lineas;
+  if (!L || !L.filas.length) return '';
+  const columnas = ms.filter(m => m.ok);
+  const cab = '<tr><th>Código</th><th>Descripción</th><th class="num">Importe</th>' +
+    columnas.map(m => '<th>' + escHTML(m.nombre) + '</th>').join('') + '</tr>';
+  const filas = L.filas.map(f =>
+    '<tr class="' + (f.difiere ? '' : 'linea-igual') + '">' +
+    '<td>' + escHTML(f.codigo) + '</td>' +
+    '<td>' + escHTML(f.descripcion) + '</td>' +
+    '<td class="num">' + escHTML(f.importe) + '</td>' +
+    f.celdas.map(c => '<td>' + (c.igual ? escHTML(c.valor)
+      : '<strong style="color:#b23a2e;">' + escHTML(c.valor) + '</strong>') + '</td>').join('') +
+    '</tr>').join('');
+  const resumen = L.distintas
+    ? '<strong>' + L.distintas + ' de ' + L.total + ' líneas se leyeron distinto.</strong> ' +
+      'La columna dice cómo clasificó cada modelo esa línea. Es el campo que decide: ' +
+      '«aporte_trabajador» alimenta la retención sindical y con ella el tope del 2% ' +
+      'del art. 133, así que dos lecturas con los mismos totales pero distinta ' +
+      'clasificación no son la misma lectura.'
+    : 'Las ' + L.total + ' líneas se leyeron igual en todos los modelos, clasificación incluida.';
+  return '<h2 style="margin-top:22px;">Línea por línea</h2>' +
+    '<p class="muted" style="margin-bottom:10px;">' + resumen + '</p>' +
+    (L.distintas ? '<label class="chk-modulo" style="margin-bottom:10px;">' +
+      '<input type="checkbox" onchange="document.getElementById(\'prueba-lineas\')' +
+      '.classList.toggle(\'solo-dif\', this.checked)"> Mostrar solo las que difieren</label>' : '') +
+    '<div class="tabla-ancha" id="prueba-lineas"><table>' + cab + filas + '</table></div>';
 }
 
 // Si el POST de alta/edición de sindicato rechazó el color base, volver

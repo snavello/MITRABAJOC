@@ -4535,7 +4535,57 @@ Queda dicho para la próxima: en este proyecto el paralelismo está para
 esperar en la red, no para hacer cuentas; y un `max_tokens` que el trabajo
 real roza al 89% no es un tope, es una bomba de tiempo.
 
-**Tests**: `test_precios_ia.py`, 24 casos. Los cuatro que importan: el precio
+### Comparar los totales no alcanza: la tabla línea por línea
+
+La primera corrida con los cuatro modelos andando dio el resultado que
+justifica todo el módulo. Mismo recibo, en paralelo: período, formato, CUIL,
+17 líneas, remuneraciones, descuentos, neto y confianza **idénticos en los
+cuatro**. Y una sola celda distinta: "Aportes del trabajador", 4 / 5 / 4 / 6.
+
+Esa celda no es descriptiva. `tipo: "aporte_trabajador"` alimenta
+`retencion_sindical` (validador.py), que es la base del tope del 2% del art.
+133 --la advertencia de retención en exceso que ve el afiliado-- y del número
+que el afiliado le manda al sindicato como prueba de afiliado cotizante (art.
+21 bis). Una línea solo mueve ese número si además matchea un concepto con
+`categoria_sindical` de convenio o afiliación, así que el impacto es
+condicional; pero es una cifra con peso legal, no un contador.
+
+El problema era que la pantalla mostraba el CONTEO y no CUÁLES líneas, así
+que para saber quién tenía razón había que abrir dos JSON y leerlos a mano.
+`extractor.comparar_lineas()` arma ahora la tabla: una fila por línea
+--código, descripción, importe-- y una columna por modelo con cómo clasificó
+esa línea, en rojo lo que difiere del primero. Arriba, el número que
+importa: "2 de 17 líneas se leyeron distinto". Con un tilde para ver solo
+esas.
+
+**Las líneas se emparejan por código (o descripción) normalizado, nunca por
+posición.** Si un modelo se saltea una línea, por posición quedaría todo lo
+que sigue corrido y la comparación sería un muro de rojo que no dice nada; y
+un modelo escribe "JUB." donde otro escribe "JUB". Un código repetido en el
+mismo recibo tampoco pisa al anterior.
+
+**Y el CUIT con guiones dejó de ser una diferencia.** En esa misma corrida,
+Sonnet 5 devolvió `30-44464097-5` donde los otros tres devolvieron
+`30444640975`. Es el mismo CUIT: la app lo normaliza en los cuatro lugares
+donde lo usa (`validador.validar` antes de matchear conceptos por empleador,
+`cuil_no_coincide`, `dashboard.campos_analiticos` y las rutas de `main`).
+Marcarlo en rojo era gritar por algo que no cambia nada, y el rojo pierde
+valor si salta por cosmética. Ahora `_dato()` lleva un campo `comparar`
+aparte del que se muestra: se compara el número, se muestra lo que devolvió
+el modelo.
+
+De la misma corrida, dos datos para el archivo. El costo por recibo fue Opus
+5 US$ 0,0695, Sonnet 4.6 US$ 0,0382, Sonnet 5 US$ 0,0295 y Haiku 4.5
+US$ 0,0123; los tiempos, 15,7 / 27,4 / 14,4 / 16,5 s, con Sonnet 4.6 y Haiku
+repitiendo el mismo número en dos corridas distintas. O sea que **el modelo
+que corre en producción es el más lento de los cuatro y el segundo más
+caro**, y Sonnet 5 le gana en las dos cosas leyendo igual. Y un detalle que
+no se ve en la lista de precios: la MISMA imagen mide 5.458 tokens de
+entrada para Opus 5 y Sonnet 5 y 3.596 para Sonnet 4.6 y Haiku --dos
+familias de tokenizador--, así que un precio por token más barato no
+garantiza una llamada más barata.
+
+**Tests**: `test_precios_ia.py`, 30 casos. Los cuatro que importan: el precio
 congelado no se mueve cuando cambia el catálogo; los defaults de
 `precios_ia.USOS` son las constantes de los tres módulos (fail-closed: si
 alguien mueve una y no la otra, el panel mostraría "el de origen" al lado del

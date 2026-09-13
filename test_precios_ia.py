@@ -217,13 +217,118 @@ def test_los_modelos_solo_los_cambia_plataforma():
 
 
 # ---------------- 4. el banco de pruebas ----------------
+def _valor(resumen: list, etiqueta: str) -> str:
+    return next(d["valor"] for d in resumen if d["etiqueta"] == etiqueta)
+
+
 def test_resumen_comparable_marca_lo_que_leyo_distinto():
     a = extractor.resumen_comparable("recibo", dict(RECIBO, periodo="2026-08"))
     b = extractor.resumen_comparable("recibo", dict(RECIBO, periodo="2026-09"))
-    assert dict(a)["Período"] == "2026-08" and dict(b)["Período"] == "2026-09"
-    assert dict(a)["Neto"] == "500.000,00"
+    assert _valor(a, "Período") == "2026-08" and _valor(b, "Período") == "2026-09"
+    assert _valor(a, "Neto") == "500.000,00"
     # Un campo que el modelo no leyó no es un cero.
-    assert dict(extractor.resumen_comparable("recibo", {}))["Neto"] == "—"
+    assert _valor(extractor.resumen_comparable("recibo", {}), "Neto") == "—"
+
+
+def test_un_cuit_con_guiones_no_es_una_diferencia():
+    """Pasó de verdad: Sonnet 5 devolvió 30-44464097-5 y los otros tres
+    30444640975. Es el MISMO CUIT -- la app lo normaliza en los cuatro lugares
+    donde lo usa (validador.validar, cuil_no_coincide, dashboard, main) -- y
+    pintarlo en rojo sería gritar por algo que no cambia nada."""
+    con = extractor.resumen_comparable("recibo", dict(RECIBO, empleador={"cuit": "30-44464097-5"}))
+    sin = extractor.resumen_comparable("recibo", dict(RECIBO, empleador={"cuit": "30444640975"}))
+    d_con = next(d for d in con if d["etiqueta"] == "CUIT del empleador")
+    d_sin = next(d for d in sin if d["etiqueta"] == "CUIT del empleador")
+    assert d_con["valor"] != d_sin["valor"], "lo que se MUESTRA es lo que devolvió el modelo"
+    assert d_con["comparar"] == d_sin["comparar"] == "30444640975", "y lo que se COMPARA es el número"
+    # Un CUIT de verdad distinto sí tiene que diferir.
+    otro = extractor.resumen_comparable("recibo", dict(RECIBO, empleador={"cuit": "30999999999"}))
+    assert next(d for d in otro if d["etiqueta"] == "CUIT del empleador")["comparar"] != "30444640975"
+
+
+# ---------------- 5. la comparación línea por línea ----------------
+LINEAS = [
+    {"codigo": "SUELDO", "descripcion": "Sueldo básico", "importe": 4497540, "tipo": "remuneracion"},
+    {"codigo": "JUB", "descripcion": "Jubilación", "importe": -494729,
+     "tipo": "aporte_trabajador", "categoria_universal": "jubilacion"},
+    {"codigo": "SEG", "descripcion": "Seguro de vida", "importe": -1200, "tipo": "otro"},
+]
+
+
+def test_comparar_lineas_encuentra_la_que_se_clasifico_distinto():
+    """El caso que apareció probando cuatro modelos: mismos totales, mismas
+    17 líneas, pero 4 / 5 / 4 / 6 aportes del trabajador. El resumen dice que
+    difieren; esto dice CUÁL."""
+    conservador = {"lineas": LINEAS}
+    generoso = {"lineas": [LINEAS[0], LINEAS[1], dict(LINEAS[2], tipo="aporte_trabajador")]}
+    c = extractor.comparar_lineas([("modelo-a", conservador), ("modelo-b", generoso)])
+    assert c["total"] == 3 and c["distintas"] == 1
+    fila = next(f for f in c["filas"] if f["codigo"] == "SEG")
+    assert fila["difiere"] is True
+    assert [x["valor"] for x in fila["celdas"]] == ["otro", "aporte_trabajador"]
+    # Y la que sí coincide arrastra su categoría universal, que es lo que
+    # engancha la línea con el concepto del catálogo.
+    jub = next(f for f in c["filas"] if f["codigo"] == "JUB")
+    assert jub["difiere"] is False
+    assert jub["celdas"][0]["valor"] == "aporte_trabajador · jubilacion"
+
+
+def test_comparar_lineas_empareja_por_codigo_y_no_por_posicion():
+    """Si un modelo se saltea una línea, emparejar por posición dejaría todo
+    lo que sigue corrido y la comparación sería un muro de rojo inútil."""
+    completo = {"lineas": LINEAS}
+    incompleto = {"lineas": [LINEAS[0], LINEAS[2]]}     # le falta JUB, la del medio
+    c = extractor.comparar_lineas([("completo", completo), ("incompleto", incompleto)])
+    assert c["total"] == 3
+    seg = next(f for f in c["filas"] if f["codigo"] == "SEG")
+    assert seg["difiere"] is False, "SEG se leyó igual en los dos: no puede salir corrida"
+    jub = next(f for f in c["filas"] if f["codigo"] == "JUB")
+    assert jub["celdas"][1]["falta"] is True and jub["celdas"][1]["valor"] == "no la leyó"
+
+
+def test_dos_lineas_con_el_mismo_codigo_no_se_pisan():
+    repetido = {"lineas": [LINEAS[0], dict(LINEAS[0], importe=1000)]}
+    c = extractor.comparar_lineas([("a", repetido)])
+    assert c["total"] == 2, "la segunda no puede desaparecer por tener el mismo código"
+
+
+def test_el_banco_de_pruebas_devuelve_la_comparacion_por_linea():
+    def responder(**kw):
+        lineas = LINEAS if kw["model"] != "claude-haiku-4-5" else [
+            LINEAS[0], LINEAS[1], dict(LINEAS[2], tipo="aporte_trabajador")]
+        return _mock_msg(dict(RECIBO, lineas=lineas), 1200, 300)
+
+    original = extractor.client.messages.create
+    extractor.client.messages.create = responder
+    try:
+        r = plataforma_client.post(
+            "/plataforma/probar-modelos",
+            data={"tipo": "recibo", "modelos": ["claude-sonnet-4-6", "claude-haiku-4-5"]},
+            files={"archivo": ("r.png", b"fake", "image/png")})
+    finally:
+        extractor.client.messages.create = original
+    assert r.status_code == 200, r.text
+    lineas = r.json()["lineas"]
+    assert lineas["total"] == 3 and lineas["distintas"] == 1
+    assert r.json()["modelos_leidos"] == ["Claude Sonnet 4.6", "Claude Haiku 4.5"]
+
+
+def test_un_comprobante_de_arca_no_trae_comparacion_por_linea():
+    """No tiene líneas: la tabla no aplica y no se inventa una vacía."""
+    original = extractor.client.messages.create
+    extractor.client.messages.create = lambda **kw: _mock_msg(
+        {"cuil": "27999999999", "desde": "06/2025", "hasta": "05/2026",
+         "meses": [{"periodo": "06/2025", "jubilacion": "pagado", "obra_social": "pagado"}],
+         "confianza": "alta"}, 500, 120)
+    try:
+        r = plataforma_client.post(
+            "/plataforma/probar-modelos",
+            data={"tipo": "aportes", "modelos": ["claude-sonnet-4-6", "claude-haiku-4-5"]},
+            files={"archivo": ("a.png", b"fake", "image/png")})
+    finally:
+        extractor.client.messages.create = original
+    assert r.status_code == 200, r.text
+    assert r.json()["lineas"] is None
 
 
 def test_banco_de_pruebas_compara_dos_modelos_y_registra_el_gasto():

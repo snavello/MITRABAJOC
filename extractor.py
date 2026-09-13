@@ -14,6 +14,7 @@ valor por defecto que lo active solo.
 import os
 import io
 import json
+import re
 import time
 import base64
 from anthropic import Anthropic
@@ -332,40 +333,126 @@ def _txt(x) -> str:
     return str(x).strip() if x not in (None, "") else "—"
 
 
+def _solo_digitos(x) -> str:
+    return re.sub(r"[^0-9]", "", str(x or ""))
+
+
+def _dato(etiqueta: str, valor: str, comparar: str | None = None) -> dict:
+    """Un dato del resumen. `comparar` es con qué se decide si dos modelos
+    dijeron LO MISMO, y puede no ser lo que se muestra: un CUIT con guiones y
+    otro sin guiones son el mismo CUIT --la app los normaliza en los cuatro
+    lugares donde los usa-- y marcarlos en rojo sería gritar por algo que no
+    cambia nada. El rojo se reserva para lo que de verdad difiere."""
+    return {"etiqueta": etiqueta, "valor": valor,
+            "comparar": valor if comparar is None else comparar}
+
+
 def resumen_comparable(tipo: str, datos: dict) -> list:
-    """[(etiqueta, valor)] con los pocos campos que deciden si dos modelos
-    leyeron LO MISMO. No es el recibo entero a propósito: la comparación se
-    tiene que poder hacer de un vistazo, y el JSON completo está a un clic en
-    el banco de pruebas para cuando dos resúmenes coinciden pero algo huele
-    mal."""
+    """Los pocos campos que deciden si dos modelos leyeron LO MISMO. No es el
+    recibo entero a propósito: la comparación se tiene que poder hacer de un
+    vistazo. El detalle línea por línea lo da lineas_comparables()."""
     if tipo == "aportes":
         meses = datos.get("meses") or []
         con_problema = sum(1 for m in meses
                            if (m.get("jubilacion") != "pagado" or m.get("obra_social") != "pagado"))
         return [
-            ("CUIL", _txt(datos.get("cuil"))),
-            ("Desde", _txt(datos.get("desde"))),
-            ("Hasta", _txt(datos.get("hasta"))),
-            ("Meses leídos", str(len(meses))),
-            ("Meses con algo impago", str(con_problema)),
-            ("Confianza", _txt(datos.get("confianza"))),
+            _dato("CUIL", _txt(datos.get("cuil")), _solo_digitos(datos.get("cuil"))),
+            _dato("Desde", _txt(datos.get("desde"))),
+            _dato("Hasta", _txt(datos.get("hasta"))),
+            _dato("Meses leídos", str(len(meses))),
+            _dato("Meses con algo impago", str(con_problema)),
+            _dato("Confianza", _txt(datos.get("confianza"))),
         ]
     empleado = datos.get("empleado") or {}
     empleador = datos.get("empleador") or {}
     totales = datos.get("totales_impresos") or {}
     lineas = datos.get("lineas") or []
     return [
-        ("Período", _txt(datos.get("periodo"))),
-        ("Formato", _txt(datos.get("formato"))),
-        ("CUIL", _txt(empleado.get("cuil"))),
-        ("CUIT del empleador", _txt(empleador.get("cuit"))),
-        ("Líneas leídas", str(len(lineas))),
-        ("Aportes del trabajador", str(sum(1 for l in lineas if l.get("tipo") == "aporte_trabajador"))),
-        ("Remuneraciones", _num(totales.get("remuneraciones"))),
-        ("Descuentos", _num(totales.get("descuentos"))),
-        ("Neto", _num(totales.get("neto"))),
-        ("Confianza", _txt(datos.get("confianza"))),
+        _dato("Período", _txt(datos.get("periodo"))),
+        _dato("Formato", _txt(datos.get("formato"))),
+        _dato("CUIL", _txt(empleado.get("cuil")), _solo_digitos(empleado.get("cuil"))),
+        _dato("CUIT del empleador", _txt(empleador.get("cuit")), _solo_digitos(empleador.get("cuit"))),
+        _dato("Líneas leídas", str(len(lineas))),
+        _dato("Aportes del trabajador",
+              str(sum(1 for l in lineas if l.get("tipo") == "aporte_trabajador"))),
+        _dato("Remuneraciones", _num(totales.get("remuneraciones"))),
+        _dato("Descuentos", _num(totales.get("descuentos"))),
+        _dato("Neto", _num(totales.get("neto"))),
+        _dato("Confianza", _txt(datos.get("confianza"))),
     ]
+
+
+def _clave_linea(ln: dict, i: int) -> str:
+    """Con qué se emparejan las líneas de dos lecturas del mismo recibo: el
+    código si lo hay, si no la descripción, normalizados (un modelo escribe
+    "JUB." y otro "JUB"). Emparejar por POSICIÓN sería peor: si un modelo se
+    saltea una línea, todo lo que sigue queda corrido y la comparación se
+    vuelve un muro de rojo que no dice nada."""
+    crudo = (ln.get("codigo") or ln.get("descripcion") or "").strip().lower()
+    return re.sub(r"[^a-z0-9]", "", crudo) or f"linea-{i}"
+
+
+def lineas_comparables(datos: dict) -> dict:
+    """{clave: {codigo, descripcion, importe, tipo, categoria}} de cada línea.
+
+    `tipo` es el campo que hay que mirar y por eso existe esta función:
+    "aporte_trabajador" alimenta la retención sindical y con ella el tope del
+    2% del art. 133 (validador.py), así que dos modelos que leen los mismos
+    importes pero clasifican distinto NO están leyendo lo mismo, aunque los
+    totales coincidan."""
+    salida = {}
+    for i, ln in enumerate(datos.get("lineas") or []):
+        base = _clave_linea(ln, i)
+        clave, n = base, 2
+        while clave in salida:          # dos líneas con el mismo código
+            clave, n = f"{base}#{n}", n + 1
+        salida[clave] = {
+            "codigo": _txt(ln.get("codigo")),
+            "descripcion": _txt(ln.get("descripcion")),
+            "importe": _num(ln.get("importe")),
+            "tipo": _txt(ln.get("tipo")),
+            "categoria": _txt(ln.get("categoria_universal")),
+        }
+    return salida
+
+
+def comparar_lineas(lecturas: list) -> dict:
+    """[(modelo, datos)] -> la tabla línea por línea.
+
+    Las filas salen en el orden del primer modelo que contestó, y al final se
+    suman las líneas que solo vieron los demás. Cada celda dice cómo clasificó
+    ESE modelo esa línea; "no la leyó" cuando no está. `distintas` es el
+    número que importa: cuántas líneas no se leyeron igual en todos."""
+    por_modelo = [(modelo, lineas_comparables(datos)) for modelo, datos in lecturas]
+    claves = []
+    for _, lineas in por_modelo:
+        for k in lineas:
+            if k not in claves:
+                claves.append(k)
+
+    filas, distintas = [], 0
+    for k in claves:
+        ref = next((l[k] for _, l in por_modelo if k in l), None)
+        celdas = []
+        for _, lineas in por_modelo:
+            ln = lineas.get(k)
+            if ln is None:
+                celdas.append({"valor": "no la leyó", "igual": False, "falta": True})
+                continue
+            valor = ln["tipo"] if ln["categoria"] == "—" else f'{ln["tipo"]} · {ln["categoria"]}'
+            if ln["importe"] != ref["importe"]:
+                valor += f' · {ln["importe"]}'
+            celdas.append({"valor": valor, "igual": None, "falta": False})
+        # Igual = igual a la PRIMERA celda, que es la del modelo de referencia.
+        primero = celdas[0]["valor"]
+        for c in celdas:
+            c["igual"] = (c["valor"] == primero) and not c["falta"]
+        hay_diferencia = any(not c["igual"] for c in celdas)
+        distintas += 1 if hay_diferencia else 0
+        filas.append({"codigo": ref["codigo"], "descripcion": ref["descripcion"],
+                      "importe": ref["importe"], "celdas": celdas,
+                      "difiere": hay_diferencia})
+    return {"filas": filas, "total": len(filas), "distintas": distintas}
 
 
 # ==================== Comprobante de aportes de ARCA ====================

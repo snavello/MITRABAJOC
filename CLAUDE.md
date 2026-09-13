@@ -709,6 +709,18 @@ Detalle completo en HISTORIAL.md. Reglas vigentes:
   devolvían un JSON cortado. El tope no se paga, se paga lo generado. Esos
   dos van con `effort: low` (`extractor.MODELOS_QUE_RAZONAN`); a los que no
   razonan por default no se les toca la llamada.
+- **El banco de pruebas compara LÍNEA POR LÍNEA, no solo los totales**
+  (`extractor.comparar_lineas`). Dos modelos pueden coincidir en el neto y
+  clasificar distinto una línea, y ese campo (`lineas[].tipo`) alimenta la
+  retención sindical y con ella el tope del 2% del art. 133: coincidir en el
+  total no es leer lo mismo. Las líneas se emparejan por código (o
+  descripción) normalizado, **nunca por posición**: si un modelo se saltea
+  una, por posición quedaría todo corrido.
+- **CUIL y CUIT se comparan normalizados y se muestran crudos.** Un modelo
+  puede devolver `30-44464097-5` y otro `30444640975`: es el mismo CUIT y la
+  app lo normaliza en los cuatro lugares donde lo usa, así que marcarlo en
+  rojo sería gritar por algo que no cambia nada. El rojo se reserva para lo
+  que de verdad difiere (`extractor._dato`, campo `comparar`).
 - **Una lectura que la API contestó pero no se pudo interpretar YA se pagó.**
   `extractor.ErrorLectura` se lleva el `uso` adentro y
   `main._registrar_uso_fallido` lo guarda, en las tres rutas de lectura y en
