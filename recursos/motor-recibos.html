@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>De la foto al veredicto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --tinta:#0a1421;
+  --papel:#f4f6f9;
+  --blanco:#ffffff;
+  --linea:#dbe2ea;
+  --suave:#eef2f7;
+  --texto:#16243a;
+  --texto2:#4c5d75;
+  --miel:#f0a01e;
+  --agua:#a0030b;
+  --verde:#0f8a6a;
+  --codigo-fondo:#eef2f7;
+  --codigo-texto:#1f3350;
+  --chip-fondo:#0a1421;
+  --chip-texto:#eef3f9;
+  --sombra:0 1px 2px rgba(10,20,33,.05);
+  --display:'Barlow Condensed','Arial Narrow',sans-serif;
+  --body:'Barlow',system-ui,-apple-system,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --tinta:#060d16;
+    --papel:#0d1725;
+    --blanco:#131f30;
+    --linea:#26374d;
+    --suave:#1a2839;
+    --texto:#e3eaf3;
+    --texto2:#9aadc4;
+    --miel:#f6b545;
+    --agua:#ef7b74;
+    --verde:#3fbf9c;
+    --codigo-fondo:#1a2839;
+    --codigo-texto:#bcd0e8;
+    --chip-fondo:#2b4058;
+    --chip-texto:#eaf1fa;
+    --sombra:0 1px 2px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --tinta:#060d16;
+  --papel:#0d1725;
+  --blanco:#131f30;
+  --linea:#26374d;
+  --suave:#1a2839;
+  --texto:#e3eaf3;
+  --texto2:#9aadc4;
+  --miel:#f6b545;
+  --agua:#ef7b74;
+  --verde:#3fbf9c;
+  --codigo-fondo:#1a2839;
+  --codigo-texto:#bcd0e8;
+  --chip-fondo:#2b4058;
+  --chip-texto:#eaf1fa;
+  --sombra:0 1px 2px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box;margin:0}
+body{
+  background:var(--papel);
+  color:var(--texto);
+  font-family:var(--body);
+  font-size:16px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+code,.mono{font-family:var(--mono);font-size:.86em;background:var(--codigo-fondo);color:var(--codigo-texto);padding:1px 5px;border-radius:4px}
+strong{font-weight:600}
+em{font-style:italic}
+
+/* ---------- Encabezado ---------- */
+.top{
+  background:var(--tinta);
+  color:#eef3f9;
+  padding:34px clamp(18px,5vw,56px) 30px;
+  border-bottom:4px solid var(--miel);
+}
+.top .interior{max-width:1080px;margin:0 auto}
+.eyebrow{
+  font-family:var(--display);font-weight:600;letter-spacing:2.6px;
+  text-transform:uppercase;color:var(--miel);font-size:13px;
+}
+h1{
+  font-family:var(--display);font-weight:700;
+  font-size:clamp(32px,5.2vw,54px);line-height:.98;
+  margin:8px 0 12px;text-wrap:balance;color:#fff;
+}
+.top p{max-width:66ch;color:rgba(238,243,249,.8);font-size:16.5px}
+.top .ficha{
+  display:flex;flex-wrap:wrap;gap:8px 26px;margin-top:20px;
+  padding-top:16px;border-top:1px solid rgba(238,243,249,.18);
+  font-size:13px;color:rgba(238,243,249,.62);
+}
+.top .ficha b{color:rgba(238,243,249,.92);font-weight:500}
+
+/* ---------- Estructura ---------- */
+.wrap{max-width:1080px;margin:0 auto;padding:0 clamp(18px,5vw,56px) 72px}
+section{padding-top:46px}
+.rotulo{
+  font-family:var(--display);font-weight:600;letter-spacing:2.4px;
+  text-transform:uppercase;color:var(--agua);font-size:12.5px;margin-bottom:6px;
+}
+h2{
+  font-family:var(--display);font-weight:700;font-size:clamp(25px,3.4vw,34px);
+  line-height:1.05;text-wrap:balance;margin-bottom:10px;
+}
+h3{
+  font-family:var(--display);font-weight:700;font-size:21px;
+  line-height:1.15;margin-bottom:6px;text-wrap:balance;
+}
+.intro{max-width:66ch;color:var(--texto2);font-size:16.5px}
+p+p{margin-top:12px}
+section>p{max-width:66ch}
+
+/* ---------- Etapas del recorrido ---------- */
+.etapas{display:grid;gap:14px;margin-top:26px}
+.etapa{
+  display:grid;grid-template-columns:56px minmax(0,1fr);gap:18px;
+  background:var(--blanco);border:1px solid var(--linea);border-radius:12px;
+  padding:18px 20px;box-shadow:var(--sombra);
+}
+.etapa .n{
+  font-family:var(--display);font-weight:700;font-size:34px;line-height:.9;
+  color:var(--agua);font-variant-numeric:tabular-nums;padding-top:2px;
+}
+.etapa .cuerpo p{max-width:70ch;color:var(--texto2);margin-top:5px}
+.etapa .cuerpo p.principal{color:var(--texto)}
+.limite{
+  margin-top:12px;padding:9px 13px;border-left:3px solid var(--miel);
+  background:var(--suave);border-radius:0 7px 7px 0;font-size:14.5px;
+}
+.limite b{font-family:var(--display);letter-spacing:1.4px;text-transform:uppercase;
+  font-size:12px;color:var(--texto2);display:block;margin-bottom:2px;font-weight:600}
+
+/* ---------- Comparación hoy / v2 ---------- */
+.pilar{
+  background:var(--blanco);border:1px solid var(--linea);border-radius:12px;
+  margin-top:18px;overflow:hidden;box-shadow:var(--sombra);
+}
+.pilar>header{padding:16px 20px 14px;border-bottom:1px solid var(--linea)}
+.pilar>header p{color:var(--texto2);max-width:72ch;margin-top:4px}
+.dos{display:grid;grid-template-columns:1fr 1fr}
+@media (max-width:760px){.dos{grid-template-columns:1fr}}
+.dos>div{padding:16px 20px 18px}
+.dos>div+div{border-left:1px solid var(--linea)}
+@media (max-width:760px){.dos>div+div{border-left:0;border-top:1px solid var(--linea)}}
+.pill{
+  font-family:var(--display);font-size:11.5px;letter-spacing:1.6px;text-transform:uppercase;
+  font-weight:600;padding:3px 10px;border-radius:999px;display:inline-block;margin-bottom:9px;
+  border:1px solid;
+}
+.pill.hoy{color:var(--texto2);border-color:var(--linea);background:var(--suave)}
+.pill.v2{color:var(--verde);border-color:var(--verde);background:transparent}
+.dos li{margin-left:17px;padding-left:2px;margin-top:7px;color:var(--texto2)}
+.dos li::marker{color:var(--linea)}
+.dos .v2col li::marker{color:var(--verde)}
+.dos li b{color:var(--texto);font-weight:600}
+
+/* ---------- Tabla ---------- */
+.tabla-scroll{overflow-x:auto;margin-top:18px;border:1px solid var(--linea);border-radius:12px;background:var(--blanco)}
+table{border-collapse:collapse;width:100%;min-width:660px;font-size:14.5px}
+th,td{text-align:left;padding:11px 15px;border-bottom:1px solid var(--suave);vertical-align:top}
+th{
+  font-family:var(--display);font-weight:600;letter-spacing:1.4px;text-transform:uppercase;
+  font-size:11.5px;color:var(--texto2);background:var(--suave);
+}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---------- Cita / nota fuerte ---------- */
+.nota{
+  margin-top:22px;background:var(--blanco);border:1px solid var(--linea);
+  border-left:4px solid var(--agua);border-radius:0 12px 12px 0;padding:16px 20px;
+}
+.nota h3{color:var(--agua);margin-bottom:5px}
+.nota p{max-width:72ch;color:var(--texto2)}
+
+/* ---------- Secuencia de pasadas ---------- */
+.pasadas{display:grid;gap:10px;margin-top:18px}
+.pasada{
+  display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start;
+  background:var(--blanco);border:1px solid var(--linea);border-radius:10px;padding:13px 17px;
+}
+.pasada .marca{
+  font-family:var(--mono);font-size:12px;color:var(--chip-texto);background:var(--chip-fondo);
+  padding:3px 8px;border-radius:5px;white-space:nowrap;margin-top:2px;
+}
+.pasada.condicional .marca{background:var(--miel);color:#231a08}
+.pasada .que{font-weight:600}
+.pasada .det{color:var(--texto2);font-size:14.5px;margin-top:3px;max-width:70ch}
+
+/* ---------- Cierre ---------- */
+.cierre{
+  margin-top:46px;padding:20px 22px;border-radius:12px;
+  background:var(--tinta);color:rgba(238,243,249,.82);
+}
+.cierre h3{color:var(--miel);margin-bottom:8px}
+.cierre p{max-width:72ch}
+.cierre p+p{margin-top:10px}
+.cierre code{background:rgba(255,255,255,.1);color:#e8eef6}
+
+.pie{margin-top:34px;padding-top:16px;border-top:1px solid var(--linea);
+  color:var(--texto2);font-size:13.5px;max-width:74ch}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="interior">
+    <div class="eyebrow">Colm3na · Mi Trabajo · Motor de análisis de recibos</div>
+    <h1>De la foto al veredicto</h1>
+    <p>Qué le pasa a un recibo de sueldo desde que el afiliado lo sube hasta que la app le dice si sus aportes están bien — cómo funciona hoy, qué se rompe, y qué cambia con el motor v2.</p>
+    <div class="ficha">
+      <span>Para <b>analistas funcionales</b></span>
+      <span>Estado: <b>v1 en producción · v2 planificada, sin empezar</b></span>
+      <span>Fuente: código de <b>extractor.py</b>, <b>validador.py</b> y el tablero <b>Motor v2 · Avance</b></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<section>
+  <div class="rotulo">De qué se trata</div>
+  <h2>El problema que resuelve el motor</h2>
+  <p class="intro">Un afiliado saca una foto de su recibo. El sistema tiene que leer un papel que cada empleador arma a su manera, entender qué es cada renglón, y decidir si los descuentos de ley y de convenio están bien calculados. Todo eso sin que nadie cargue nada a mano.</p>
+  <p style="margin-top:12px">Hay dos partes bien distintas, y conviene no confundirlas. <strong>Leer</strong> es pasar de una imagen a datos: qué dice cada renglón, cuánto suma, de quién es el recibo. <strong>Validar</strong> es juzgar esos datos contra las fórmulas del convenio del sindicato. Casi todos los problemas que hoy ve un afiliado nacen en la primera y se manifiestan en la segunda: una diferencia de aportes que en realidad era un dígito mal leído.</p>
+</section>
+
+<section>
+  <div class="rotulo">Hoy · en producción</div>
+  <h2>El recorrido de un recibo, paso a paso</h2>
+  <p class="intro">Seis etapas. Lo que sigue es lo que corre hoy en la app, con sus límites conocidos.</p>
+
+  <div class="etapas">
+
+    <div class="etapa">
+      <div class="n">1</div>
+      <div class="cuerpo">
+        <h3>Preparar la imagen</h3>
+        <p class="principal">El afiliado sube una foto o un PDF. Si es PDF, se convierte a imagen a 150 dpi.</p>
+        <div class="limite"><b>Límite</b>Se lee <strong>solo la primera página</strong>. Un recibo de dos carillas pierde la segunda, y un PDF que ya trae el texto adentro se convierte igual a imagen: se tira la versión exacta de los números para leerlos de una foto.</div>
+      </div>
+    </div>
+
+    <div class="etapa">
+      <div class="n">2</div>
+      <div class="cuerpo">
+        <h3>Una sola lectura con IA</h3>
+        <p class="principal">Una única llamada al modelo con la imagen entera y un esquema: datos del empleado y del empleador, período, todos los renglones con su importe y su tipo, totales impresos y — en el formato del Decreto 407 — las contribuciones patronales.</p>
+        <p>El modelo devuelve además un campo <code>confianza</code> con tres valores: alta, media o baja.</p>
+        <div class="limite"><b>Límite</b>Esa confianza es <strong>una sola para todo el recibo</strong>. Un recibo puede tener 16 renglones perfectos y uno ilegible, y el modelo va a decir "alta" igual. No hay forma de saber cuál de los renglones es el flojo.</div>
+      </div>
+    </div>
+
+    <div class="etapa">
+      <div class="n">3</div>
+      <div class="cuerpo">
+        <h3>Primer filtro: ¿se pudo leer?</h3>
+        <p class="principal">Si la confianza vino <code>baja</code>, se corta ahí con el código <code>E-RECIBO-02</code> y se le pide al afiliado otra foto. Si vino alta o media, sigue todo el proceso.</p>
+        <p>Independientemente de eso, la app deja registrada la llamada: modelo, tokens, duración y el costo en dólares con el precio congelado de ese momento.</p>
+        <div class="limite"><b>Límite</b>Es todo o nada. No existe un estado intermedio "leí bien casi todo, este renglón no".</div>
+      </div>
+    </div>
+
+    <div class="etapa">
+      <div class="n">4</div>
+      <div class="cuerpo">
+        <h3>Reconocer cada renglón</h3>
+        <p class="principal">Antes de calcular nada, cada renglón tiene que engancharse con un concepto del catálogo del sindicato. Se intenta en tres capas, en este orden:</p>
+        <p><strong>1.</strong> Por <strong>código exacto</strong> (<code>126-001</code>). &nbsp; <strong>2.</strong> Si no da, por <strong>descripción normalizada</strong> contra el nombre o los alias del concepto. &nbsp; <strong>3.</strong> Si tampoco, por la <strong>categoría universal</strong> que puso la IA — jubilación, PAMI, obra social o cuota sindical — contra el concepto genérico del sindicato. Es la red de seguridad para un empleador recién agregado.</p>
+        <div class="limite"><b>Límite</b>El código no es una clave confiable: <strong>cada empleador le pone el que quiere</strong>, así que solo sirve mirando recibos de uno solo. Y si nada matcheó, el que decide si el concepto es remunerativo es <strong>el afiliado</strong>, con un interruptor en la pantalla que viene marcado que sí por defecto.</div>
+      </div>
+    </div>
+
+    <div class="etapa">
+      <div class="n">5</div>
+      <div class="cuerpo">
+        <h3>Validar contra las fórmulas del convenio</h3>
+        <p class="principal">Con los renglones ya reconocidos se arma la base de cálculo y se evalúan las fórmulas que cargó el sindicato: jubilación, PAMI, obra social, cuota sindical, adicionales. Se aplican los topes de base imponible del art. 9 de la Ley 24.241 y el tope global del 2% a las cargas de convenio.</p>
+        <p>Hay tres guardas importantes. El <strong>CUIL del recibo tiene que coincidir con el de la sesión</strong>: si no, se corta y no se valida nada. Un importe que no se puede leer como número <strong>queda afuera del cálculo</strong> con una alerta, nunca vale cero. Y una fórmula que no evalúa saltea su propio chequeo en vez de tumbar el recibo entero.</p>
+        <div class="limite"><b>Límite</b>Si ningún renglón matcheó, el sistema usa el <strong>total de remuneraciones impreso</strong> como base aproximada. Es mejor que comparar contra cero, pero significa calcular porcentajes sobre una base que nadie verificó.</div>
+      </div>
+    </div>
+
+    <div class="etapa">
+      <div class="n">6</div>
+      <div class="cuerpo">
+        <h3>Mostrar y reportar</h3>
+        <p class="principal">El afiliado ve las discrepancias encontradas y las alertas. Puede enviarle el recibo al sindicato de forma explícita — eso es lo que acredita la retención de cuota sindical del art. 21 bis.</p>
+        <p>El recibo queda guardado y alimenta el Panel Sindical. <strong>Ahí el nombre y el CUIL solo se muestran si el afiliado envió ese recibo al sindicato</strong>; en cualquier otro caso el panel lo ve anonimizado, y la regla se aplica en la consulta SQL, no en la pantalla.</p>
+        <div class="limite"><b>Límite</b>El resultado es una lista plana de frases. No distingue "esto es un error" de "esto es un aviso", y no dice de qué regla salió cada cosa.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <div class="rotulo">Lo que se rompe</div>
+  <h2>Por qué un dígito mal leído se convierte en una acusación</h2>
+  <p class="intro">Las tres limitaciones de arriba se combinan en un solo modo de falla, y es el que motiva toda la v2.</p>
+  <p style="margin-top:12px">El sistema lee un renglón con un error, no tiene forma de saber que ese renglón puntual está flojo — porque la confianza es del recibo entero — y lo empuja igual a la validación. Ahí la cuenta da distinta, y el afiliado ve <strong>"tu aporte jubilatorio no coincide"</strong>. La app no se equivocó al calcular: se equivocó al leer, tres pasos antes, y no tenía cómo darse cuenta.</p>
+
+  <div class="nota">
+    <h3>Un caso real, medido esta semana</h3>
+    <p>Probando el mismo recibo con cuatro modelos, uno leyó el renglón <code>38-001 APORTE PERSONAL I.N.S.S.J.Y P.</code> y lo etiquetó como <strong>jubilación</strong> en vez de <strong>PAMI</strong>. Los otros tres acertaron. Si el sindicato no tiene ese código cargado, entra en juego la red de seguridad y el aporte de PAMI — cerca del 3% — termina validándose contra la fórmula de jubilación, que ronda el 11%. Resultado: una diferencia inventada, en la pantalla de una persona que no tiene ningún problema con su recibo.</p>
+  </div>
+</section>
+
+<section>
+  <div class="rotulo">Motor v2</div>
+  <h2>Los tres cambios que dan vuelta el proceso</h2>
+  <p class="intro">La v2 no mejora el modelo de IA: cambia la <em>forma</em> de preguntarle y, sobre todo, agrega una compuerta entre leer y juzgar. Estos son los tres pilares.</p>
+
+  <div class="pilar">
+    <header>
+      <h3>1 · De una lectura grande a tres cortas</h3>
+      <p>Pedirle todo junto a un modelo es pedirle que no se distraiga en 17 renglones a la vez. Se parte en tres preguntas chicas, cada una con su esquema.</p>
+    </header>
+    <div class="dos">
+      <div>
+        <span class="pill hoy">Hoy</span>
+        <ul>
+          <li>Una llamada con <b>todo el recibo</b>: encabezado, renglones y totales en la misma respuesta.</li>
+          <li>La respuesta viene como texto que después hay que interpretar.</li>
+          <li>Si el recibo es largo, la respuesta <b>puede cortarse a la mitad</b> sin que nadie se entere.</li>
+        </ul>
+      </div>
+      <div class="v2col">
+        <span class="pill v2">Con v2</span>
+        <ul>
+          <li><b>Tres lecturas</b>: encabezado y estructura, renglones, totales y contribuciones.</li>
+          <li><b>Salida estructurada</b>: el modelo responde con datos, no con texto a interpretar.</li>
+          <li>Se detecta la respuesta cortada, se relee por partes, y si aun así no entra hay un error claro.</li>
+          <li>Se leen <b>todas las páginas</b>, y si el PDF trae texto se usa ese texto en vez de una foto.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="pilar">
+    <header>
+      <h3>2 · La confianza deja de ser del recibo y pasa a ser de cada renglón</h3>
+      <p>Es el cambio conceptual más grande, y el que habilita todo lo demás.</p>
+    </header>
+    <div class="dos">
+      <div>
+        <span class="pill hoy">Hoy</span>
+        <ul>
+          <li>Un único <code>confianza: alta | media | baja</code> para las 17 líneas juntas.</li>
+          <li>Decisión binaria: o se rechaza el recibo entero, o se valida todo.</li>
+          <li>Un renglón flojo viaja escondido entre 16 buenos.</li>
+        </ul>
+      </div>
+      <div class="v2col">
+        <span class="pill v2">Con v2</span>
+        <ul>
+          <li><b>Cada renglón trae su propia confianza</b>.</li>
+          <li>Un renglón dudoso se puede señalar, releer o dejar fuera del cálculo <b>sin descartar el recibo</b>.</li>
+          <li>El afiliado puede <b>corregir un dato mal leído</b> y reprocesar; esa corrección queda registrada, y es la mejor señal de qué le cuesta leer al extractor.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="pilar">
+    <header>
+      <h3>3 · El enmascarado, antes de que la imagen salga</h3>
+      <p>Ojo con no confundir dos cosas que hoy se llaman parecido.</p>
+    </header>
+    <div class="dos">
+      <div>
+        <span class="pill hoy">Hoy</span>
+        <ul>
+          <li>La <b>imagen completa</b> del recibo, con nombre y CUIL a la vista, se manda tal cual a la API.</li>
+          <li>Lo que sí está anonimizado es <b>el panel del sindicato</b>: solo ve nombre y CUIL de los recibos que el afiliado envió explícitamente. Es otra capa, y no reemplaza a ésta.</li>
+        </ul>
+      </div>
+      <div class="v2col">
+        <span class="pill v2">Con v2</span>
+        <ul>
+          <li>Queda un <b>punto de enganche</b> entre preparar la imagen y enviarla: una función por la que pasa toda imagen antes de salir.</li>
+          <li>En el plan esa función <b>no hace nada todavía</b> — es deliberado: primero el lugar, después la solución de enmascarado que el equipo acordó.</li>
+          <li>Importa que esté desde el principio: si el enganche no existe, después hay que buscar todos los lugares por donde sale una imagen.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="rotulo">Motor v2 · el recorrido nuevo</div>
+  <h2>Cuántas veces habla el sistema con la IA</h2>
+  <p class="intro">Tres llamadas fijas y hasta tres condicionales. Las condicionales solo ocurren cuando algo no cerró, que es exactamente cuando conviene gastar.</p>
+
+  <div class="pasadas">
+    <div class="pasada">
+      <span class="marca">fija · 1</span>
+      <div><div class="que">Encabezado y estructura</div><div class="det">Empleador, empleado, período, tipo de liquidación — mensual, quincenal, aguinaldo, vacaciones o liquidación final.</div></div>
+    </div>
+    <div class="pasada">
+      <span class="marca">fija · 2</span>
+      <div><div class="que">Renglones</div><div class="det">Cada línea con su importe, su tipo y <strong>su confianza propia</strong>.</div></div>
+    </div>
+    <div class="pasada">
+      <span class="marca">fija · 3</span>
+      <div><div class="que">Totales y contribuciones</div><div class="det">Totales impresos y, en el formato del Decreto 407, las contribuciones patronales.</div></div>
+    </div>
+    <div class="pasada condicional">
+      <span class="marca">si no cierra</span>
+      <div><div class="que">Relectura con pista — hasta dos veces</div><div class="det">No se le pide "leelo de nuevo": se le dice qué no coincide. <em>"La suma de descuentos da $X y el total impreso dice $Y."</em></div></div>
+    </div>
+    <div class="pasada condicional">
+      <span class="marca">si hace falta</span>
+      <div><div class="que">Normalización por lote</div><div class="det">Una sola consulta por recibo, solo para los renglones de descuento que las capas anteriores no resolvieron, eligiendo de una <strong>lista cerrada de candidatos ya cargados</strong>. Su costo se registra aparte.</div></div>
+    </div>
+  </div>
+
+  <div class="nota" style="border-left-color:var(--verde)">
+    <h3 style="color:var(--verde)">La compuerta: el cierre aritmético</h3>
+    <p>Es el corazón de la v2 y no usa IA. Antes de juzgar nada, el sistema verifica que <strong>lo que leyó cierre solo</strong>: suma de haberes = total de haberes, suma de descuentos = total de descuentos, haberes menos descuentos = neto, y en cada renglón con porcentaje, base × porcentaje = importe. Tolerancia de un peso.</p>
+    <p>Si no cierra, relee con pista. Si sigue sin cerrar, el recibo <strong>no se valida</strong>: entra en un estado nuevo, <strong>"lectura incierta"</strong>, que muestra lo leído, señala los renglones dudosos y pide una foto mejor. Es la diferencia entre decirle a alguien "te descontaron mal" y decirle "no pude leer bien tu recibo". Hoy, esas dos situaciones se ven iguales.</p>
+  </div>
+</section>
+
+<section>
+  <div class="rotulo">Motor v2 · reconocimiento</div>
+  <h2>De tres capas a seis, y un catálogo común</h2>
+  <p class="intro">La otra mitad del problema no es leer el renglón sino saber qué es. Hoy hay tres intentos; la v2 los lleva a seis y agrega un catálogo nacional de conceptos que todos los sindicatos comparten.</p>
+
+  <div class="tabla-scroll">
+    <table>
+      <tr><th>Capa</th><th>Qué compara</th><th>Cuándo acepta</th></tr>
+      <tr><td>1 · Exacta</td><td>El código, tal cual</td><td class="num">siempre</td></tr>
+      <tr><td>2 · Texto normalizado</td><td>Sin mayúsculas, acentos ni puntuación, con las abreviaturas expandidas (<code>AP PERS</code> → <code>APORTE PERSONAL</code>)</td><td class="num">siempre</td></tr>
+      <tr><td>3 · Alias del sindicato</td><td>Las formas que ese sindicato ya confirmó</td><td class="num">siempre</td></tr>
+      <tr><td>4 · Alias maestro</td><td>Alias de conceptos de ley, compartidos entre sindicatos</td><td class="num">siempre</td></tr>
+      <tr><td>5 · Parecido semántico</td><td>Significado, no letras — con el mismo componente que ya usa el bot del convenio, sin costo por consulta</td><td class="num">acepta ≥ 0,90<br>sugiere 0,75–0,90</td></tr>
+      <tr><td>6 · IA con lista cerrada</td><td>El modelo elige entre candidatos ya cargados, nunca inventa uno</td><td class="num">acepta ≥ 0,85</td></tr>
+      <tr><td>— Desconocido</td><td>Va a la cola de pendientes del administrador del sindicato</td><td class="num">—</td></tr>
+    </table>
+  </div>
+
+  <div class="nota">
+    <h3>El cambio de comportamiento que hay que explicarles a los sindicatos</h3>
+    <p>Hoy, un concepto que el sindicato todavía no confirmó <strong>igual entra en la base de cálculo</strong> — y el que decide si es remunerativo es el afiliado, con un interruptor que viene marcado que sí. En la v2, <strong>lo desconocido no entra</strong>: si quedó afuera un haber, las fórmulas de porcentaje dicen <em>"no verificable"</em> en lugar de mostrar una diferencia que no existe. También desaparece el atajo de usar el total impreso como base aproximada.</p>
+    <p>La consecuencia es contraintuitiva y conviene anticiparla: <strong>al principio va a haber más "no verificable" y menos "diferencias"</strong>. Eso es correcto, no una regresión — pero un sindicato que ve caer su número de hallazgos necesita que alguien se lo explique antes, no después.</p>
+  </div>
+</section>
+
+<section>
+  <div class="rotulo">Motor v2 · lo que ve el afiliado</div>
+  <h2>De una lista de frases a un veredicto</h2>
+  <div class="tabla-scroll">
+    <table>
+      <tr><th>Hoy</th><th>Con v2</th></tr>
+      <tr>
+        <td>Una lista plana de discrepancias y alertas, todas con el mismo peso visual.</td>
+        <td>Un <strong>veredicto en tres estados</strong>: todo en orden · encontramos N diferencias por $X · no pudimos leer bien.</td>
+      </tr>
+      <tr>
+        <td>No se distingue un error de un aviso.</td>
+        <td>Cada hallazgo lleva <strong>severidad</strong> (error, advertencia, información) y un <strong>código estable</strong> — <code>JUB_DIFERENCIA</code>, <code>TOTAL_NO_CIERRA</code> — que después permite hacer estadística por tipo de problema.</td>
+      </tr>
+      <tr>
+        <td>No se dice de qué regla salió el número.</td>
+        <td>Cada hallazgo muestra <strong>la fórmula del sindicato que lo produjo</strong>, lo esperado, lo que figura, la diferencia y la explicación posible.</td>
+      </tr>
+      <tr>
+        <td>Si un dato se leyó mal, no hay nada que hacer salvo subir otra foto.</td>
+        <td>Botón <strong>"corregí un dato"</strong>: se corrige el renglón y se reprocesa.</td>
+      </tr>
+      <tr>
+        <td>Enviar el recibo al sindicato es una acción suelta.</td>
+        <td>Desde cada hallazgo se puede <strong>iniciar el trámite de reclamo</strong> con período, concepto y montos ya cargados.</td>
+      </tr>
+      <tr>
+        <td>La app espera a la IA con la pantalla congelada.</td>
+        <td><strong>Cola asíncrona</strong>: se muestra el progreso (leyendo… verificando…) y se avisa al terminar.</td>
+      </tr>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="rotulo">Cómo se ejecuta</div>
+  <h2>Ocho bloques, y el primero no toca código del motor</h2>
+  <p class="intro">El plan está ordenado por dependencia, no por tamaño. Vale la pena entender por qué arranca donde arranca.</p>
+
+  <div class="tabla-scroll">
+    <table>
+      <tr><th>Orden</th><th>Bloque</th><th>Qué deja listo</th></tr>
+      <tr><td class="num">1º</td><td><strong>Golden set y línea de base</strong></td><td>60 recibos reales anotados a mano con la verdad de campo, y la medición del motor actual contra ellos. <strong>Sin este número no se puede saber si la v2 mejora o empeora.</strong></td></tr>
+      <tr><td class="num">2º</td><td><strong>Extractor v2</strong></td><td>Las tres lecturas, la confianza por renglón, todas las páginas, el enganche del enmascarado y una bandera para convivir con el motor viejo.</td></tr>
+      <tr><td class="num">3º</td><td><strong>Cierre aritmético</strong></td><td>La compuerta, la relectura con pista y el estado "lectura incierta".</td></tr>
+      <tr><td class="num">4º</td><td><strong>Motor de reglas</strong></td><td>Evaluador seguro de fórmulas, tipo de liquidación (a un aguinaldo no se le aplican las fórmulas mensuales), severidades y formato argentino de importes.</td></tr>
+      <tr><td class="num">5º</td><td><strong>Catálogo maestro</strong></td><td>Las seis capas de reconocimiento, los alias por empleador y la cola de pendientes del administrador.</td></tr>
+      <tr><td class="num">6º</td><td><strong>Escala salarial</strong></td><td>Primera verificación contra un dato externo: si el sindicato carga la escala del convenio, se puede responder <em>"¿me pagan la categoría que corresponde?"</em>.</td></tr>
+      <tr><td class="num">7º</td><td><strong>Exposición del resultado</strong></td><td>El veredicto, los hallazgos por gravedad y la corrección de datos.</td></tr>
+      <tr><td class="num">8º</td><td><strong>Operación</strong></td><td>Cola asíncrona, cascada de modelos (uno barato primero, el bueno solo si el cierre falla) y política de retención de datos.</td></tr>
+    </table>
+  </div>
+
+  <p style="margin-top:16px">El motor nuevo y el actual <strong>conviven detrás de una variable de entorno</strong>. Se puede probar en producción con vuelta atrás inmediata, y el viejo recién se retira cuando el golden set esté en verde y haya una semana sin errores de lectura nuevos.</p>
+</section>
+
+<section>
+  <div class="rotulo">Qué hace falta de las personas</div>
+  <h2>Lo que ningún desarrollo resuelve solo</h2>
+  <p class="intro">El plan marca explícitamente los puntos donde el código se detiene y necesita una decisión o un dato humano. Para un analista funcional, son estos.</p>
+
+  <div class="tabla-scroll">
+    <table>
+      <tr><th>Rol</th><th>Qué tiene que aportar</th></tr>
+      <tr><td><strong>Datos</strong></td><td>Conseguir los 60 recibos reales con consentimiento, y <strong>anotar la verdad de campo de cada uno</strong> — aproximadamente una tarde cada 30 recibos. Es el trabajo que bloquea todo lo demás.</td></tr>
+      <tr><td><strong>Producto</strong></td><td>Validar que los prompts reflejen el vocabulario real de los recibos argentinos; decidir qué hallazgo es error y cuál advertencia; y aceptar explícitamente el cambio de "más no verificable, menos diferencias".</td></tr>
+      <tr><td><strong>Sindicato</strong></td><td>Operar la cola de conceptos pendientes, y mantener la escala salarial al día en cada paritaria.</td></tr>
+      <tr><td><strong>Legal</strong></td><td>Validar la política de retención — cuánto tiempo se guarda la respuesta cruda de la IA y el JSON con nombre y CUIL — y reflejarla en el texto de privacidad.</td></tr>
+      <tr><td><strong>Dev</strong></td><td>Conectar la solución de enmascarado en el punto de enganche, y verificar que las fórmulas reales de producción sigan evaluando igual con el evaluador nuevo.</td></tr>
+    </table>
+  </div>
+</section>
+
+<div class="cierre">
+  <h3>Dos cosas para no perder de vista</h3>
+  <p><strong>El plan técnico no está en el repositorio.</strong> El tablero <em>Motor v2 · Avance</em> menciona un documento <code>PLAN_MOTOR_V2.md</code> que hoy no existe en el código ni aparece en ningún historial. El tablero es el único registro del plan: conviene bajarlo a un archivo versionado antes de empezar.</p>
+  <p><strong>Nada de esto empezó.</strong> Al momento de escribir este informe, los ocho bloques están en cero. El motor que corre en producción es el v1 descrito en la primera mitad de este documento.</p>
+</div>
+
+<p class="pie">Informe preparado sobre el código de <code>extractor.py</code> y <code>validador.py</code> en la rama <code>main</code>, y sobre el tablero <em>Motor v2 · Avance</em>. Los ejemplos de renglones y los cuatro modelos comparados salen de pruebas reales corridas el 13 de septiembre de 2026 en el entorno de Pruebas.</p>
+
+</div>
+</body>
+</html>

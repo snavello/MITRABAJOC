@@ -101,6 +101,29 @@ def test_con_pase_se_sirven_los_del_repositorio():
     print("OK  test_con_pase_se_sirven_los_del_repositorio")
 
 
+def test_todo_lo_del_repositorio_tiene_su_archivo_y_su_miniatura():
+    """Fail-closed sobre SEMILLA. Agregar un documento son tres cosas --el
+    archivo, la miniatura y la entrada-- y olvidarse de una no falla en
+    ningún lado: falla recién cuando alguien lo abre en la landing, que es
+    justo cuando se lo estás mostrando a alguien."""
+    c = _cliente_con_pase()
+    for r in recursos.SEMILLA:
+        clave = r["clave"]
+        if r.get("archivo"):
+            assert (recursos.CARPETA / r["archivo"]).is_file(), f"{clave}: falta el archivo"
+            # Con Range para no arrastrar los 13 MB del video en cada corrida.
+            resp = c.get(f"/recursos/{clave}/archivo", headers={"Range": "bytes=0-0"})
+            assert resp.status_code in (200, 206), f"{clave}: el archivo no se sirve"
+        if r.get("miniatura"):
+            assert (recursos.CARPETA / r["miniatura"]).is_file(), f"{clave}: falta la miniatura"
+            resp = c.get(f"/recursos/{clave}/miniatura")
+            assert resp.status_code == 200, f"{clave}: la miniatura no se sirve"
+            assert resp.headers["content-type"] == "image/jpeg", clave
+    claves = [r["clave"] for r in recursos.SEMILLA]
+    assert len(claves) == len(set(claves)), "dos recursos con la misma clave se pisan en la URL"
+    print("OK  test_todo_lo_del_repositorio_tiene_su_archivo_y_su_miniatura")
+
+
 def test_sesion_de_plataforma_tambien_abre():
     c = TestClient(main.app)
     r = c.post("/plataforma/login", data={"cuit": auth.CUIT_PLATAFORMA, "clave": "clave-de-prueba"},

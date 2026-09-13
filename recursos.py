@@ -62,6 +62,16 @@ TIPOS = {
 # y migrations/); su miniatura es una captura de la portada.
 SEMILLA = [
     {
+        "clave": "motor-recibos",
+        "titulo": "Motor de recibos: de la foto al veredicto",
+        "descripcion": "Cómo se lee y se valida un recibo hoy, qué falla, y qué cambia con "
+                       "el motor v2: tres lecturas, confianza por renglón y enmascarado.",
+        "fecha": date(2026, 9, 13),
+        "archivo": "motor-recibos.html",
+        "miniatura": "motor-recibos.jpg",
+        "fragmento": "",
+    },
+    {
         "clave": "anexo-servicios-mensuales",
         "titulo": "Anexo Servicios Mensuales",
         "descripcion": "Costo mensual aproximado de operar la plataforma: Render, Postgres, "
