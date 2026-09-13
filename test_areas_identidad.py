@@ -132,6 +132,8 @@ def test_el_orden_no_importa_si_primero_se_da_el_usuario():
 
     r = c.post("/admin/trabajador", data={
         "cuil": "27500000005", "nombre": "Se Afilia Después", "seccional_id": str(SEC),
+        # Provincia y localidad son obligatorias en el alta desde 2026-09-13.
+        "provincia": "Santa Fe", "localidad": "Rosario",
     }, follow_redirects=False)
     assert r.status_code == 303
     t = _trabajador("27500000005")

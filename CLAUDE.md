@@ -143,6 +143,7 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - static/ — 2 SVG base + marca.css (sistema de diseño compartido) +
   static/fonts/ (Barlow Condensed, licencia SIL OFL) + mapa.js (capa fina
   sobre Leaflet, compartida por las cuatro pantallas con mapa) +
+  modales.js (arrastre de modales en escritorio, ver "Modales") +
   static/vendor/leaflet/ (Leaflet 1.9.4 vendoreado, jamás CDN).
 - data/seed_aefip.json — semilla histórica; ya NO se carga por defecto.
 - data/topes_ss.csv — vigencias de topes de la seguridad social (ver
@@ -312,6 +313,14 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   concepto existe para los dos actores (notificaciones, trámites), se
   duplican tablas y rutas en vez de compartirlas, a costa de más código
   repetido — decisión explícita, no un default del proyecto.
+- **Los modales se mueven en escritorio** (`static/modales.js`, 2026-09-13):
+  se arrastran del encabezado (o del título si no tiene), quedan siempre
+  enteros dentro de la ventana y vuelven a su lugar al cerrarse. Un solo
+  archivo compartido, delegado en `document` (los modales se llenan con
+  innerHTML, cualquier enganche al abrir se perdería) y apagado en teléfono,
+  donde el modal es una hoja pegada al borde. Una FAMILIA nueva de modal tiene
+  que sumarse a `CAJAS` de ese archivo y al cursor de marca.css; `test_modales.py`
+  verifica que toda plantilla con modales cargue el script.
 - **Patrón portada + panel interno**, repetido para los 3 roles con login
   (`/app/inicio`+`/app`, `/admin/inicio`+`/admin`, `/empresa/inicio`+`/empresa`)
   — cualquier rol nuevo que se agregue debería seguir el mismo patrón.
@@ -834,6 +843,29 @@ campos** (`geo.CAMPOS_DOMICILIO`: calle, numero, piso_depto, localidad,
 provincia, codigo_postal, direccion_texto, latitud, longitud, precision_geo,
 geo_actualizado), la misma carga guiada y la misma función de guardado. Un
 test verifica que las dos tablas no se separen. Detalle en HISTORIAL.md.
+
+**Qué se exige de cada uno (2026-09-13, decisión de Sd).** No es lo mismo, y
+por eso son dos listas en `geo.py`:
+- **Seccional: dirección completa y el globo en la puerta.**
+  `OBLIGATORIOS_SECCIONAL` (provincia, localidad, calle, altura) +
+  `precision_geo` en `PRECISIONES_SECCIONAL` = `exacta` o `manual`. Son
+  pocas, las carga el sindicato y una sola vez, y el afiliado usa ese punto
+  para ir: un centroide de localidad lo manda al centro de la ciudad sin
+  avisarle. `aproximada` NO alcanza -- la diferencia con `manual` no son los
+  metros sino que alguien miró el mapa y responde por el punto. Y `manual` es
+  la vía de escape que mantiene en pie la otra regla: si Georef y Nominatim no
+  responden, el asistente abre el mapa igual (`geo.CENTRO_ARGENTINA`) y el
+  punto se marca tocando, así que **ninguna API de terceros bloquea el alta**.
+- **Afiliado: provincia y localidad, nada más** (`OBLIGATORIOS_AFILIADO`). Es
+  lo que el sindicato necesita para agrupar y dirigir por zona; exigirle la
+  altura y un globo a quien se registra desde el teléfono es perderlo en el
+  alta. Lo fino se muestra marcado "(opcional)". Rige en las CUATRO puertas por
+  las que entra un domicilio -- alta manual del admin, alta masiva (por línea:
+  las incompletas quedan afuera y la pantalla dice cuántas, nunca en silencio),
+  registro del afiliado y su perfil --, con `geo.faltan_campos` como única
+  implementación. En el registro el domicilio se guarda **como un bloque**:
+  reemplaza entero al que hubiera o no toca la fila, nunca se fusiona campo por
+  campo (así no aparece una calle de Rafaela con la localidad de La Plata).
 
 - **La geocodificación es SIEMPRE del lado del servidor, con caché.** Nunca
   desde el navegador: así se controla la tasa (Nominatim permite 1 pedido por

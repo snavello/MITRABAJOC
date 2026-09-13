@@ -20,6 +20,15 @@ from modulos import MODULOS
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
+# Una seccional no se guarda sin dirección completa y ubicada (2026-09-13, ver
+# geo.OBLIGATORIOS_SECCIONAL). Acá se manda un domicilio VÁLIDO a propósito:
+# lo que estos tests miran es el permiso, y con un POST inválido el rechazo
+# vendría de otro lado y dirían que el permiso funciona sin haberlo probado.
+DOMICILIO_SEC = {"provincia": "Santa Fe", "localidad": "Rosario", "calle": "San Martín",
+                 "numero": "850", "piso_depto": "", "codigo_postal": "2000",
+                 "latitud": "-32.947338", "longitud": "-60.636893",
+                 "precision_geo": "exacta"}
+
 db.crear_tablas()
 
 with db.get_session() as s:
@@ -262,12 +271,12 @@ def test_no_se_puede_degradar_al_ultimo_super_admin():
 
 def test_ve_todas_se_guarda_y_se_edita():
     c = _sa()
-    c.post("/admin/seccional", data={"nombre": "Regional Norte", "direccion": "",
-                                     "ve_todas": "si"}, follow_redirects=False)
+    c.post("/admin/seccional", data={"nombre": "Regional Norte", "ve_todas": "si",
+                                     **DOMICILIO_SEC}, follow_redirects=False)
     sec = [x for x in db.seccionales_del_sindicato(SID) if x["nombre"] == "Regional Norte"][0]
     assert sec["ve_todas"] is True
     c.post("/admin/seccional", data={"id": str(sec["id"]), "nombre": "Regional Norte",
-                                     "direccion": ""}, follow_redirects=False)
+                                     **DOMICILIO_SEC}, follow_redirects=False)
     sec = [x for x in db.seccionales_del_sindicato(SID) if x["id"] == sec["id"]][0]
     assert sec["ve_todas"] is False, "sin el check destildado vuelve a alcance propio"
     print("OK  test_ve_todas_se_guarda_y_se_edita")

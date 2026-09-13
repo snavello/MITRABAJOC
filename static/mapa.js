@@ -34,7 +34,14 @@
   }
 
   /* Crea un mapa. `alMover` se llama con (lat, lon) cada vez que el usuario
-     suelta el globo: es lo que convierte una ubicación en `manual`. */
+     suelta el globo: es lo que convierte una ubicación en `manual`.
+
+     `alTocar` (opcional) hace lo mismo al TOCAR el mapa, poniendo el globo
+     ahí si todavía no hay ninguno. Existe para el único caso en que no hay
+     nada que arrastrar: la dirección no se encontró (o los servicios de
+     geocodificación no respondieron) y la persona tiene que marcar el punto
+     desde cero. Sin esto, ese caso obligaría a arrastrar un globo puesto en
+     el medio del país. */
   function crear(elemento, opciones) {
     opciones = opciones || {};
     var el = typeof elemento === "string" ? document.getElementById(elemento) : elemento;
@@ -57,6 +64,12 @@
         });
       }
       if (opciones.popup) globo.bindPopup(opciones.popup);
+    }
+
+    if (opciones.alTocar) {
+      mapa.on("click", function (ev) {
+        opciones.alTocar(ev.latlng.lat, ev.latlng.lng);
+      });
     }
 
     return {

@@ -92,6 +92,50 @@ AYUDA_GUARDADA = {
     "sin_geo": "Todavía sin ubicar.",
 }
 
+# ------------------------------------------------- qué se le exige a cada uno
+
+# Una SECCIONAL tiene que quedar ubicada en la puerta (decisión de Sd,
+# 2026-09-13). No es prolijidad: el afiliado toca "Cómo llegar" y el teléfono
+# lo lleva al punto guardado, así que un centroide de localidad lo manda al
+# centro de la ciudad sin avisarle. Son pocas, las carga el sindicato y una
+# sola vez -- el costo de exigirlo lo paga quien tiene la información, no el
+# afiliado.
+#
+# `aproximada` NO alcanza y `manual` SÍ. La diferencia no es cuántos metros
+# de error tiene el punto sino quién responde por él: `aproximada` es el
+# centroide que devolvió la API cuando no encontró la altura, `manual` es una
+# persona que miró el mapa y arrastró el globo hasta la puerta. Y `manual` es
+# además la vía de escape que mantiene en pie la otra regla: que una API de
+# terceros caída no pueda impedir dar de alta una delegación (ver
+# CENTRO_ARGENTINA).
+PRECISIONES_SECCIONAL = ("exacta", "manual")
+
+# Los campos que el domicilio de una seccional exige, en el orden del
+# formulario (el mensaje de error los nombra así).
+OBLIGATORIOS_SECCIONAL = ("provincia", "localidad", "calle", "numero")
+
+# Del domicilio del AFILIADO se exigen solo estos dos. Decisión de Sd
+# (2026-09-13): con provincia y localidad el sindicato ya puede agrupar,
+# dirigir noticias por seccional y saber dónde vive su gente; exigirle calle,
+# altura y globo en la puerta a alguien que se registra desde el teléfono es
+# la forma más barata de perderlo en el alta. Lo fino queda a la vista,
+# marcado como opcional, y se completa después desde el perfil.
+OBLIGATORIOS_AFILIADO = ("provincia", "localidad")
+
+# Cómo se nombra cada campo en el mensaje de error. "numero" es la columna,
+# pero a nadie se le dice "falta el numero" de un domicilio.
+ETIQUETAS_CAMPO = {"provincia": "provincia", "localidad": "localidad",
+                   "calle": "calle", "numero": "altura"}
+
+# Centro geográfico aproximado del país, para abrir el mapa "a mano" cuando
+# no hay NINGÚN candidato: ni la calle, ni el centroide de la localidad, ni
+# el de la provincia. Es el único camino que no depende de Georef ni de
+# Nominatim, y existe por eso: con las dos APIs caídas, la seccional se ubica
+# igual arrastrando el globo, porque las teselas del mapa son un tercer
+# servicio independiente.
+CENTRO_ARGENTINA = (-38.0, -63.6)
+ZOOM_PAIS = 4
+
 GEOREF = "https://apis.datos.gob.ar/georef/api"
 NOMINATIM = "https://nominatim.openstreetmap.org/search"
 
@@ -232,6 +276,31 @@ def coordenadas_validas(lat, lon) -> bool:
     if lat == 0 and lon == 0:
         return False
     return -90 <= lat <= 90 and -180 <= lon <= 180
+
+
+def faltan_campos(datos: dict, obligatorios=OBLIGATORIOS_AFILIADO) -> list:
+    """Los campos obligatorios que llegaron vacíos, con el nombre que usa el
+    mensaje de error.
+
+    Una sola función para las cinco rutas que escriben un domicilio (alta de
+    seccional, alta de trabajador, alta masiva, registro del afiliado y su
+    perfil): si cada una decidiera por su cuenta qué es obligatorio, el mismo
+    domicilio pasaría o no según por dónde se cargó -- que es exactamente el
+    defecto que el bloque compartido de campos vino a corregir.
+    """
+    return [ETIQUETAS_CAMPO.get(campo, campo) for campo in obligatorios
+            if not str((datos or {}).get(campo) or "").strip()]
+
+
+def ubicacion_precisa(precision, lat=None, lon=None) -> bool:
+    """¿Este punto sirve para que una persona camine hasta ahí?
+
+    Es la regla que separa una seccional guardable de una que no (ver
+    PRECISIONES_SECCIONAL). Vive acá y no en la ruta para que el test la
+    pruebe sin levantar la app, y para que el día que se aplique al domicilio
+    del afiliado haya un solo lugar que cambiar.
+    """
+    return coordenadas_validas(lat, lon) and normalizar_precision(precision) in PRECISIONES_SECCIONAL
 
 
 def distancia_km(lat1, lon1, lat2, lon2) -> Optional[float]:

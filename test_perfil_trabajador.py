@@ -47,9 +47,12 @@ def _sesion_admin(usuario, clave):
 
 def test_actualizar_perfil_no_toca_cuil():
     trab = _sesion_trabajador("20111111119")
+    # `piso`/`ciudad` eran los nombres viejos de las columnas: hoy son
+    # `piso_depto`/`localidad` (migración e3b7a91c5d64) y mandarlos con el
+    # nombre viejo no escribía nada. Y localidad + provincia son obligatorias.
     r = trab.post("/api/perfil", data={
-        "nombre": "Juan Pérez", "calle": "Av. Rivadavia", "numero": "1234", "piso": "",
-        "ciudad": "CABA", "provincia": "Ciudad Autónoma de Buenos Aires",
+        "nombre": "Juan Pérez", "calle": "Av. Rivadavia", "numero": "1234", "piso_depto": "",
+        "localidad": "CABA", "provincia": "Ciudad Autónoma de Buenos Aires",
         "telefono": "1122334455", "mail": "juan@example.com",
     })
     assert r.status_code == 200, r.text

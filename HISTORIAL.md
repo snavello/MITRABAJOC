@@ -3836,3 +3836,170 @@ texto, así que `geo.py` suma `AYUDA_GUARDADA` al lado de `AYUDA_PRECISION`
 --los textos los sigue armando el servidor, por lo mismo de siempre-- y lo usan
 tanto el domicilio del afiliado como la edición de una seccional ya ubicada,
 que tenía el mismo desajuste.
+
+## Qué se le exige a cada domicilio, y modales que se mueven (2026-09-13)
+
+Tres cosas en un mismo bloque, las tres pedidas por Sd después de probar la
+georreferenciación en La Bancaria. La primera venía de una pregunta suya:
+¿conviene exigir la georreferenciación exacta, que hace más difícil el alta a
+quien no está acostumbrado, o se tolera provincia y ciudad sin lo fino? Su
+respuesta fue que **depende del actor**, y eso es lo que se implementó.
+
+### La seccional va en la puerta
+
+"La dirección de las seccionales sí debiera ser exacta, además es un número
+finito y lo carga el sindicato."
+
+Hasta acá una seccional se podía guardar `sin_geo`, y estaba escrito como una
+virtud: "que una API de terceros no responda no puede impedir dar de alta una
+delegación". Lo que ese razonamiento no miraba es qué hace el afiliado con esa
+fila: toca "Cómo llegar" y el teléfono lo lleva **al punto guardado**. Con
+`aproximada` —el centroide de la localidad, que es lo que devuelve el
+geocodificador cuando no encuentra la altura— eso significa el centro de la
+ciudad, sin ningún aviso. Y con `sin_geo` la seccional no aparece ni en el mapa
+del Panel ni en la app: se cargaba y no servía para nada.
+
+Así que ahora `POST /admin/seccional` exige provincia, localidad, calle y
+altura (`geo.OBLIGATORIOS_SECCIONAL`) **y** un `precision_geo` en
+`geo.PRECISIONES_SECCIONAL`, que son exactamente dos: `exacta` y `manual`.
+
+Lo interesante es por qué `manual` sí y `aproximada` no, cuando el error en
+metros puede ser parecido: **lo que cambia es quién responde por el punto.**
+`aproximada` la puso una API que no encontró la dirección; `manual` la puso una
+persona que miró el mapa y arrastró el globo hasta la puerta. Eso convierte a
+`manual`, además, en la vía de escape que salva la vieja promesa: si Georef y
+Nominatim están caídos, el asistente ahora ofrece "Ubicar a mano en el mapa",
+que abre Leaflet en el centro del país (`geo.CENTRO_ARGENTINA`, una constante,
+sin llamar a nada) y deja marcar el punto tocando —para eso `mapa.js` sumó
+`alTocar`—. Las teselas son un tercer servicio, independiente de los dos
+geocodificadores. **Ninguna API de terceros bloquea el alta; lo único que
+cambió es que el resultado tiene que ser un punto y no un casillero vacío.**
+
+En la pantalla: se fue el botón "Seguir sin ubicar", "Continuar" nace
+deshabilitado y se habilita cuando el punto sirve (`secUbicada()`, espejo de
+`geo.ubicacion_precisa`), y "Buscar" avisa qué falta antes de ir a ninguna
+parte. La validación está en los dos lados a propósito: el botón deshabilitado
+se saltea con un POST armado a mano, y un formulario que deja mandar algo que
+el servidor rechaza es una pantalla que miente.
+
+Efecto colateral que valía la pena: las seccionales `aproximada` que ya existen
+(las genéricas del lote sintético) ahora avisan en la app del afiliado que el
+punto es el centro de la localidad. No se pueden crear más así, pero las que
+hay tienen que decir lo que son.
+
+### Del afiliado, provincia y localidad
+
+"Es muy difícil para el sindicato tener info sin esos datos al menos."
+
+`geo.OBLIGATORIOS_AFILIADO` son dos campos y nada más. Con provincia y
+localidad el sindicato ya puede agrupar, dirigir noticias por seccional y ver
+dónde vive su gente; pedirle la altura y que confirme un globo a alguien que
+se está registrando desde el teléfono es la forma más barata de perderlo en la
+puerta. Todo lo demás se muestra igual, con "(opcional)" al lado —una
+obligatoriedad que no se ve es una trampa, y un campo opcional que parece
+obligatorio es abandono—.
+
+Rige en las **cuatro** puertas por las que entra un domicilio, porque una sola
+que no valide vuelve inútiles a las otras tres: alta manual del admin, alta
+masiva, registro del afiliado y su perfil. Y la pregunta la contesta una sola
+función, `geo.faltan_campos`: si cada ruta decidiera por su cuenta, el mismo
+domicilio pasaría o no según por dónde se cargó, que es el defecto que el
+bloque compartido de campos vino a corregir.
+
+Dos decisiones finas:
+
+- **El alta masiva valida por LÍNEA, no por lote.** Una planilla de 500 filas
+  no se rechaza entera porque tres no traigan la provincia: las que faltan
+  quedan afuera y la pantalla dice cuántas y muestra tres de ejemplo (casi
+  siempre es la misma columna en todas). Esa ruta ya venía descartando en
+  silencio las líneas sin CUIL o sin nombre —contaba las altas en una variable
+  que después no usaba—, así que el sindicato podía creer que cargó 500 y tener
+  497. Ahora el conteo se ve. De paso apareció que `err=datos` del alta
+  individual no se mostraba en ninguna parte: el alta fallaba y la pantalla
+  volvía igual, sin decir nada.
+- **En el registro el domicilio se guarda como un BLOQUE.** La primera versión
+  fusionaba campo por campo, conservando lo que el padrón ya tenía, y el
+  resultado era peor que cualquiera de las dos fuentes: alguien que declaraba
+  vivir en La Plata terminaba con la calle que el padrón tenía de Rafaela, o
+  sea una dirección que no existe en ningún lado. **Un domicilio es UN dato, no
+  seis.** Así que o reemplaza entero al anterior o no toca la fila, y manda la
+  persona: es su dirección, la está declarando ahora, y el perfil ya la deja
+  cambiarla un minuto después —pedirle dos campos obligatorios para después
+  descartarlos sería un formulario que miente—. Si lo que escribe es idéntico a
+  lo que había, la fila no se toca: reescribirla le borraría las coordenadas
+  (el alta escribe `sin_geo`, no geocodifica) y la mandaría de nuevo a la cola
+  de georreferenciación estando ya ubicada.
+
+Y **en el registro no se llama a ninguna API**, por lo mismo que en el alta
+masiva: una espera de ocho segundos contra un servicio ajeno en el camino del
+alta es el peor lugar posible. Las filas quedan `sin_geo` **con localidad**,
+que es exactamente lo que "Georreferenciar pendientes" procesa después — o
+sea que exigir estos dos campos es lo que hace que ese proceso sirva para
+algo.
+
+Los tres cargadores de demo pasaron a darle a cada afiliado la localidad y la
+provincia **de su seccional** (antes: `cargar_demo.py` no ponía ninguna,
+`cargar_lote_sindicato.py` sorteaba la provincia al azar —gente de la seccional
+de Rosario viviendo en Córdoba— y `demo_encuestas.py` la tenía escrita a mano).
+Un padrón de demo sin esos campos mostraría justo lo que la app ya no permite
+cargar. Se verificó sobre una base nueva: 305 afiliados, 0 incompletos, cada
+uno en la zona de su seccional.
+
+### Modales que se mueven
+
+"El modal tiene ubicación fija y creo sería útil poder moverlo al menos en
+desktop (aplica a todos los modales)."
+
+`static/modales.js`, 130 líneas, cargado por las ocho plantillas que tienen
+modales. Las decisiones que importan:
+
+- **Un solo archivo compartido.** El "aplica a todos" es la parte difícil: con
+  el arrastre repetido en cada plantilla, se mueven tres modales y el cuarto no,
+  y nadie se entera hasta que alguien lo usa en una demo. `test_modales.py`
+  recorre las plantillas, se queda con las que tienen una caja de modal y exige
+  que todas carguen el script — una plantilla nueva entra sola a la lista.
+- **Delegado en `document`**, no enganchado al abrir: los modales de esta app se
+  llenan con innerHTML (el detalle de un trámite, el "Ver" del panel), así que
+  cualquier enganche por elemento se perdería en el siguiente repintado.
+- **El agarre es el encabezado**, nunca la caja entera: si se moviera al
+  arrastrar cualquier parte, no se podría seleccionar texto adentro. Los modales
+  sin encabezado (el "Acerca de", el "Ver" del Panel Sindical) se agarran del
+  título.
+- **Entra entero en la ventana.** La primera versión dejaba asomar solo un
+  borde, y arrastrándolo a la derecha la X de cerrar quedaba afuera: el modal
+  seguía ahí y no había forma de cerrarlo sin volver a traerlo. Se vio en el
+  navegador, no razonándolo.
+- **La posición se resetea al cerrar** (un `MutationObserver` sobre la clase del
+  fondo). Si quedara guardada, quien lo dejó en un costado lo abre la próxima
+  vez ahí y no entiende por qué "apareció raro".
+- **Solo con mouse y pantalla ancha** (`(min-width: 700px) and (pointer: fine)`,
+  la misma condición en el script y en el cursor de marca.css). En un teléfono
+  el modal es una hoja pegada al borde inferior: moverla no tiene sentido y
+  competiría con el scroll del contenido.
+- `.modal-recibo-card` NO está en la lista de cajas y hay un test que lo
+  verifica: es una tarjeta de contenido ADENTRO de un modal, y si entrara,
+  `closest()` la encontraría primero y el arrastre movería el contenido en vez
+  de la ventana.
+
+No toca el HTML de ninguna plantilla: si el archivo no carga, los modales
+siguen funcionando como siempre, quietos.
+
+### Verificado
+
+86 archivos de la suite en verde (los 84 de antes más `test_domicilio_obligatorio.py`
+y `test_modales.py`), 13 robots de e2e (los 11 de antes más
+`e2e/test_robot_modales.py`) y 31 comprobaciones en un Chromium de verdad sobre
+la demo cargada desde cero: el asistente de seccional contra Georef y Nominatim
+reales (San Martín 850 de Rosario resuelve `exacta`), una dirección inexistente
+que cae en `aproximada` y NO deja continuar, el registro de punta a punta con su
+domicilio apareciendo después en el perfil, y el arrastre de dos familias de
+modal en escritorio y su ausencia en teléfono.
+
+Quedó anotado un defecto **ajeno a este cambio** que apareció corriendo los
+robots: `static/dashboard.js` arma el rango de fechas del Panel Sindical con el
+reloj del NAVEGADOR (`new Date()`), y el servidor lo valida contra la hora de
+Buenos Aires (`dashboard.parsear_filtros` rechaza un `hasta` futuro). Un
+dispositivo adelantado respecto de Argentina pide mañana, cada endpoint del
+panel devuelve 422 y todos los indicadores quedan en "—" sin ningún aviso. Es
+la misma clase de bug que `fechas.py` resolvió en el backend, pero del lado del
+cliente.

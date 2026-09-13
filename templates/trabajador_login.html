@@ -63,8 +63,23 @@
   input { width:100%; padding:13px 14px; border-radius:10px; font-size:16px; font-family:inherit;
     background:rgba(9,15,26,.6); border:1px solid rgba(255,255,255,.14); color:#fff; }
   input::placeholder { color:rgba(255,255,255,.3); }
-  input:focus { outline:none; border-color:var(--miel);
+  /* El <select> de provincia copia el estilo del input: es el primer
+     desplegable de esta pantalla. `color-scheme:dark` es lo que hace que la
+     lista desplegada se vea clara sobre oscuro en Chrome y Firefox; sin eso
+     queda texto blanco sobre fondo blanco. */
+  select { width:100%; padding:13px 14px; border-radius:10px; font-size:16px; font-family:inherit;
+    background:rgba(9,15,26,.6); border:1px solid rgba(255,255,255,.14); color:#fff;
+    color-scheme:dark; }
+  input:focus, select:focus { outline:none; border-color:var(--miel);
     box-shadow:0 0 0 3px color-mix(in srgb, var(--miel) 20%, transparent); }
+  /* Bloque de domicilio del registro: dos columnas para que los cuatro
+     campos opcionales no estiren la credencial cuatro renglones más. */
+  .dom-titulo { margin-top:20px; padding-top:14px; border-top:1px dashed rgba(255,255,255,.18);
+    font-family:var(--fuente-display); font-size:15px; letter-spacing:1.8px;
+    text-transform:uppercase; color:var(--miel); }
+  .dom-fila { display:flex; gap:10px; }
+  .dom-fila > div { flex:1; min-width:0; }
+  .opc { font-weight:400; letter-spacing:.6px; text-transform:none; opacity:.7; }
   button.enviar { width:100%; margin-top:20px; padding:14px; border:none; border-radius:10px; cursor:pointer;
     font-family:var(--fuente-display); font-size:18px; letter-spacing:1.6px; text-transform:uppercase;
     background:linear-gradient(90deg, var(--miel), color-mix(in srgb, var(--miel) 82%, #8a5f14)); color:#231a08; }
@@ -106,6 +121,7 @@
     {% elif err == 'nohabilitado' %}<div class="error">Tu CUIL no está habilitado en ningún sindicato todavía. Pedile a tu sindicato que te agregue.</div>
     {% elif err == 'yaexiste' %}<div class="error">Ya tenés una cuenta con ese CUIL. Ingresá con tu clave.</div>
     {% elif err == 'sinsind' %}<div class="error">Tu cuenta no está asociada a ningún sindicato activo.</div>
+    {% elif err == 'domicilio' %}<div class="error">Elegí tu provincia y escribí tu localidad: tu sindicato las necesita para agruparte por zona.</div>
     {% endif %}
 
     <div class="tabs">
@@ -130,8 +146,34 @@
       <label>Repetí la clave</label>
       <input type="password" id="reg-repetir" required minlength="4">
       <div id="reg-error" style="display:none; color:#f2b8ae; font-size:12px; margin-top:6px;">Las claves no coinciden.</div>
+
+      {# Provincia y localidad son lo único obligatorio del domicilio, y son
+         los mismos campos que el afiliado ve después en su perfil: si acá
+         pidiéramos otra cosa, la primera vez que abra "Tu perfil" tendría que
+         volver a entender el formulario. Lo fino se muestra igual pero dice
+         "opcional" al lado, que es lo que hace que nadie lo confunda con un
+         requisito. El mapa NO está acá a propósito: ubicar un globo es una
+         tarea de escritorio y este es el momento de menos paciencia de toda
+         la app. #}
+      <div class="dom-titulo">Tu domicilio</div>
+      <label>Provincia</label>
+      <select name="provincia" required>
+        <option value="">Elegí tu provincia</option>
+        {% for p in provincias %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+      </select>
+      <label>Localidad</label>
+      <input name="localidad" required placeholder="Rosario" autocomplete="address-level2">
+      <div class="dom-fila">
+        <div><label>Calle <span class="opc">(opcional)</span></label><input name="calle" autocomplete="address-line1"></div>
+        <div><label>Altura <span class="opc">(opcional)</span></label><input name="numero" inputmode="numeric"></div>
+      </div>
+      <div class="dom-fila">
+        <div><label>Piso / depto <span class="opc">(opcional)</span></label><input name="piso_depto"></div>
+        <div><label>Código postal <span class="opc">(opcional)</span></label><input name="codigo_postal" inputmode="numeric" autocomplete="postal-code"></div>
+      </div>
+
       <button class="enviar" type="submit">Crear mi cuenta</button>
-      <div class="ayuda">Tu CUIL tiene que estar habilitado por tu sindicato. Con una sola cuenta accedés a todos tus sindicatos.</div>
+      <div class="ayuda">Tu CUIL tiene que estar habilitado por tu sindicato. Con una sola cuenta accedés a todos tus sindicatos. La dirección completa y el mapa los podés cargar después, desde tu perfil.<br>Si tu sindicato ya tenía otra dirección tuya, queda la que cargues acá.</div>
     </form>
     <div class="mrz">MITRABAJO&lt;&lt;TRABAJADOR&lt;&lt;ACCESO&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div>
   </div>
@@ -145,6 +187,15 @@ function mostrar(cual) {
   document.getElementById('form-login').classList.toggle('activo', cual==='login');
   document.getElementById('form-registro').classList.toggle('activo', cual==='registro');
 }
+
+// Un error del REGISTRO tiene que dejar abierta la pestaña de registro. Sin
+// esto, quien se equivoca vuelve a la pantalla con "Ingresar" adelante, lee
+// un mensaje que habla de un formulario que no ve y tiene que descubrir que
+// hay que tocar "Registrarme" otra vez.
+(function () {
+  var err = new URLSearchParams(location.search).get('error');
+  if (['yaexiste', 'nohabilitado', 'domicilio'].indexOf(err) >= 0) mostrar('registro');
+})();
 
 function confirmarClaves(form, idClave, idRepetir, idError) {
   const clave = document.getElementById(idClave).value;

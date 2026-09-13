@@ -71,6 +71,18 @@ Nunca se personaliza:
 Encabezado oscuro compacto (logo chico + título de sección + usuario), cuerpo
 claro, botón principal en color de acento, pestaña activa marcada con acento.
 
+## Modales
+
+Hoja que entra desde abajo, encabezado en `--marca-base` con el nombre del
+sindicato arriba del título, cuerpo claro. Máximo 82vh con scroll propio.
+
+**En escritorio se arrastran del encabezado** (`static/modales.js`, un archivo
+compartido por todas las pantallas). Al crear una familia nueva de modal hay
+que sumar su caja a `CAJAS` de ese archivo y su encabezado a la regla del
+cursor en `marca.css`, o ese modal va a ser el único que no se mueve. En
+teléfono no se arrastran: ahí el modal ocupa el ancho completo y no hay nada
+atrás que destapar.
+
 ## Íconos
 
 SVG de línea, `stroke-width:1.7`, `fill:none`, 22px en la barra, 26px en

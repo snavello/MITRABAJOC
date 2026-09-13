@@ -74,6 +74,7 @@
 <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css?v={{ sello_static('vendor/leaflet/leaflet.css') }}">
 <script src="/static/vendor/leaflet/leaflet.js?v={{ sello_static('vendor/leaflet/leaflet.js') }}"></script>
 <script src="/static/mapa.js?v={{ sello_static('mapa.js') }}"></script>
+<script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
 <style>
   :root { --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e; --linea:#e2ded5; --gris:#5c5a54;
     /* color_base es el único color validado como oscuro -- el encabezado usa
@@ -738,6 +739,13 @@
   .geo-punto.aproximada i, .geo-punto.manual i { background:#b8860b; }
   .geo-punto.sin_geo i { background:#b6bdc9; }
   .geo-punto.sin_geo { color:var(--gris); }
+  /* Un botón deshabilitado tiene que VERSE deshabilitado: la regla del
+     esquema "Hilo" pinta todos los botones en ámbar y, sin esto, "Continuar"
+     apagado se ve igual de clickeable que encendido. */
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  /* "(opcional)" al lado de una etiqueta: tiene que leerse como una aclaración
+     y no como parte del nombre del campo. */
+  label .opc { font-weight:400; color:var(--gris); font-size:11.5px; }
   .geo-resumen { background:var(--papel); border:1px solid var(--linea); border-radius:10px;
     padding:13px 15px; font-size:13px; line-height:1.7; margin-bottom:14px; }
   .geo-resumen b { color:var(--marca-primario); }
@@ -1054,6 +1062,19 @@
   <h2 id="trabajadores">Trabajadores ({{ trabajadores|selectattr('activo')|list|length }} activos)</h2>
   <p class="muted">Los trabajadores cargados acá pueden registrarse en la app con su CUIL. Podés darlos de alta de a uno o pegar una lista.</p>
 
+  {# `err=datos` existía desde antes y no se mostraba en ninguna parte: el
+     alta fallaba y la pantalla volvía igual, sin decir nada. #}
+  {% if request.query_params.get('err') == 'domicilio' %}
+  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: falta {{ request.query_params.get('faltan') }}. El sindicato necesita al menos la provincia y la localidad de cada afiliado para agruparlo por zona.</div>
+  {% elif request.query_params.get('err') == 'datos' %}
+  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: revisá el CUIL (11 dígitos) y el nombre.</div>
+  {% endif %}
+  {% if request.query_params.get('altas') %}
+  <div class="msg ok">{{ request.query_params.get('altas') }} trabajador{{ 'es' if request.query_params.get('altas') != '1' else '' }} cargado{{ 's' if request.query_params.get('altas') != '1' else '' }} de la lista.
+    {% if request.query_params.get('omitidas') %}<br>Quedaron afuera {{ request.query_params.get('omitidas') }} línea{{ 's' if request.query_params.get('omitidas') != '1' else '' }}: les falta el CUIL, el nombre, la localidad o la provincia, o el CUIL ya estaba cargado. Por ejemplo: <code>{{ request.query_params.get('muestra') }}</code>{% endif %}
+  </div>
+  {% endif %}
+
   <div class="subtabs">
     <button class="subtab activa" data-sub="listado">Listado</button>
     <button class="subtab" data-sub="manual">Alta manual</button>
@@ -1123,21 +1144,28 @@
       <div class="grid2">
         <div class="campo"><label>CUIL *</label><input name="cuil" id="trab-cuil" required placeholder="20123456789"></div>
         <div class="campo"><label>Nombre *</label><input name="nombre" id="trab-nombre" required></div>
-        <div class="campo"><label>Calle</label><input name="calle" id="trab-calle"></div>
-        <div class="campo"><label>Número</label><input name="numero" id="trab-numero"></div>
-        <div class="campo"><label>Piso / Depto</label><input name="piso_depto" id="trab-piso"></div>
-        <div class="campo"><label>Localidad</label>
+        {# Del domicilio, provincia y localidad son OBLIGATORIAS y el resto no
+           (geo.OBLIGATORIOS_AFILIADO): sin esos dos campos el sindicato no
+           puede agrupar a su gente ni dirigir nada por zona, y exigirle la
+           altura a quien está cargando un padrón de mil personas es garantía
+           de que invente. El "(opcional)" va solo en los campos del
+           domicilio: es ahí donde la distinción importa y donde el afiliado
+           ve la misma marca en su perfil. #}
+        <div class="campo"><label>Calle <span class="opc">(opcional)</span></label><input name="calle" id="trab-calle"></div>
+        <div class="campo"><label>Número <span class="opc">(opcional)</span></label><input name="numero" id="trab-numero"></div>
+        <div class="campo"><label>Piso / Depto <span class="opc">(opcional)</span></label><input name="piso_depto" id="trab-piso"></div>
+        <div class="campo"><label>Localidad *</label>
           <input name="localidad" id="trab-localidad" list="trab-localidades" autocomplete="off"
-                 oninput="trabLocalidades()">
+                 oninput="trabLocalidades()" required>
           <datalist id="trab-localidades"></datalist>
         </div>
-        <div class="campo"><label>Provincia</label>
-          <select name="provincia" id="trab-provincia" onchange="trabLocalidades()">
+        <div class="campo"><label>Provincia *</label>
+          <select name="provincia" id="trab-provincia" onchange="trabLocalidades()" required>
             <option value="">—</option>
             {% for p in provincias %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
           </select>
         </div>
-        <div class="campo"><label>Código postal</label><input name="codigo_postal" id="trab-cp"></div>
+        <div class="campo"><label>Código postal <span class="opc">(opcional)</span></label><input name="codigo_postal" id="trab-cp"></div>
         <div class="campo"><label>Teléfono</label><input name="telefono" id="trab-telefono"></div>
         <div class="campo"><label>Mail</label><input name="mail" id="trab-mail" type="email"></div>
         <div class="campo"><label>Vigencia de credencial</label><input name="vigencia_credencial" id="trab-vigencia" type="date"></div>
@@ -1176,7 +1204,7 @@
     <p class="muted">Pegá una línea por trabajador, con los campos separados por coma, en este orden:</p>
     <p class="muted" style="font-family:Consolas,monospace; font-size:12.5px; background:#f4f2ec; padding:8px 10px; border-radius:6px;">
       cuil, nombre, calle, numero, piso, localidad, provincia, telefono, mail, cp, seccional</p>
-    <p class="muted">Solo <b>cuil</b> y <b>nombre</b> son obligatorios; el resto puede ir vacío (pero respetá las comas si querés cargar un campo posterior). La <b>seccional</b> va por nombre, tal como figura en la pestaña Seccionales: si no coincide con ninguna, el trabajador queda sin asignar.</p>
+    <p class="muted">Obligatorios: <b>cuil</b>, <b>nombre</b>, <b>localidad</b> y <b>provincia</b>; el resto puede ir vacío (pero respetá las comas si querés cargar un campo posterior). Las líneas que no traigan esos cuatro datos quedan afuera y te decimos cuántas. La <b>seccional</b> va por nombre, tal como figura en la pestaña Seccionales: si no coincide con ninguna, el trabajador queda sin asignar.</p>
     <form method="post" action="/admin/trabajador/masivo">
       <textarea name="lista" rows="6" placeholder="20123456789, Juan Pérez, Av. Siempreviva, 742, , Rosario, Santa Fe, 341-555-5555, juan@mail.com, 2000, Rosario&#10;27987654321, Ana López" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:7px; font-family:Consolas,monospace; font-size:13px;"></textarea>
       <button type="submit" style="margin-top:10px;">Cargar lista</button>
@@ -2505,13 +2533,13 @@
       <div class="geo-paso activo" data-paso="1">
         <div class="grid2">
           <div class="campo full"><label>Nombre *</label><input name="nombre" id="sec-nombre" required></div>
-          <div class="campo"><label>Provincia</label>
+          <div class="campo"><label>Provincia *</label>
             <select name="provincia" id="sec-provincia" onchange="secLocalidades()">
               <option value="">Elegí una provincia</option>
               {% for p in provincias %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
             </select>
           </div>
-          <div class="campo"><label>Localidad</label>
+          <div class="campo"><label>Localidad *</label>
             {# Las sugerencias salen de Georef, que SÍ permite consultarlo
                mientras se escribe. A Nominatim no se lo toca tecla a tecla:
                su política pide un pedido por segundo y se geocodifica solo
@@ -2520,8 +2548,8 @@
                    oninput="secLocalidades()" placeholder="Empezá a escribir">
             <datalist id="sec-localidades"></datalist>
           </div>
-          <div class="campo"><label>Calle</label><input name="calle" id="sec-calle"></div>
-          <div class="campo"><label>Número</label><input name="numero" id="sec-numero"></div>
+          <div class="campo"><label>Calle *</label><input name="calle" id="sec-calle"></div>
+          <div class="campo"><label>Número *</label><input name="numero" id="sec-numero"></div>
           <div class="campo"><label>Piso / depto</label><input name="piso_depto" id="sec-piso"></div>
           <div class="campo"><label>Código postal</label><input name="codigo_postal" id="sec-cp"></div>
         </div>
@@ -2532,8 +2560,14 @@
         </label>
         <p class="muted" style="margin:4px 0 10px;">Es lo que hace que una sede sea "central". Tildalo también en una regional que supervise a otras. Sin el tilde, sus usuarios alcanzan solo a los trabajadores de esta seccional.</p>
         {% endif %}
+        {# Antes había acá un "Seguir sin ubicar". Se fue el 2026-09-13: la
+           dirección de una seccional tiene que quedar en la puerta, porque el
+           afiliado toca "Cómo llegar" y el teléfono lo lleva al punto
+           guardado. La vía de escape cuando la búsqueda falla no es guardar
+           sin ubicar, es marcar el punto a mano: está en el paso 2. #}
+        <div class="msg oculto" id="sec-error" style="background:#f8e5e2; color:#b23a2e;"></div>
         <button type="button" onclick="secBuscar()" id="sec-btn-buscar">Buscar en el mapa</button>
-        <button type="button" class="sec" onclick="secPaso(3)">Seguir sin ubicar</button>
+        <p class="muted" style="font-size:12px; margin:8px 0 0;">La seccional queda ubicada en el mapa: es lo que hace funcionar "Cómo llegar" en la app del afiliado y el mapa del Panel Sindical.</p>
       </div>
 
       <!-- ---------- Paso 2: confirmar en el mapa ---------- -->
@@ -2545,7 +2579,11 @@
         </div>
         <p class="muted" style="font-size:12px; margin:8px 0 12px;">Arrastrá el globo hasta la puerta de la seccional si no quedó bien. Al moverlo, la ubicación pasa a estar puesta a mano.</p>
         <button type="button" class="sec" onclick="secPaso(1)">Volver</button>
-        <button type="button" onclick="secPaso(3)">Continuar</button>
+        {# Deshabilitado mientras el punto no sirva para caminar hasta ahí
+           (ver geo.PRECISIONES_SECCIONAL). El servidor lo rechaza igual: esto
+           es para que la persona sepa qué falta ANTES de llenar el paso 3. #}
+        <button type="button" onclick="secPaso(3)" id="sec-btn-continuar" disabled>Continuar</button>
+        <button type="button" class="sec oculto" id="sec-btn-manual" onclick="secManual()">Ubicar a mano en el mapa</button>
       </div>
 
       <!-- ---------- Paso 3: contacto y guardar ---------- -->
@@ -2562,6 +2600,14 @@
       </div>
     </form>
   </div>
+
+  {% if request.query_params.get('err') == 'secdireccion' %}
+  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó la seccional: falta {{ request.query_params.get('faltan') }}. La dirección de una seccional tiene que estar completa y ubicada en el mapa.</div>
+  {% elif request.query_params.get('err') == 'secsinubicar' %}
+  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó la seccional: falta ubicarla en el mapa. Buscá la dirección y, si el globo no quedó en la puerta, arrastralo hasta ahí.</div>
+  {% elif request.query_params.get('err') == 'secsinnombre' %}
+  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó la seccional: falta el nombre.</div>
+  {% endif %}
 
   {# El aviso solo aparece si hay algo que hacer, y recién después de que
      exista al menos una seccional: en un sindicato nuevo sería ruido. #}
@@ -4900,7 +4946,70 @@ function secLocalidades() {
   }, 300);
 }
 
+function secVal(id) { return (document.getElementById(id).value || '').trim(); }
+
+// Lo que la seccional necesita para poder guardarse, con los mismos campos
+// que exige `geo.OBLIGATORIOS_SECCIONAL` del lado del servidor. Están los dos
+// porque hacen falta los dos: el servidor es el que decide (un POST se arma a
+// mano), y el formulario es el que evita que la persona llene tres pasos para
+// enterarse al final.
+function secFaltantes() {
+  var faltan = [];
+  if (!secVal('sec-nombre')) faltan.push('el nombre');
+  if (!secVal('sec-provincia')) faltan.push('la provincia');
+  if (!secVal('sec-localidad')) faltan.push('la localidad');
+  if (!secVal('sec-calle')) faltan.push('la calle');
+  if (!secVal('sec-numero')) faltan.push('la altura');
+  return faltan;
+}
+
+function secMostrarError(texto) {
+  var caja = document.getElementById('sec-error');
+  caja.textContent = texto || '';
+  caja.classList.toggle('oculto', !texto);
+}
+
+// ¿El globo sirve para que alguien camine hasta ahí? Espejo de
+// geo.ubicacion_precisa: `aproximada` (el centro de la localidad) no alcanza.
+function secUbicada() {
+  var p = document.getElementById('sec-precision').value;
+  return !!secVal('sec-lat') && !!secVal('sec-lon') && (p === 'exacta' || p === 'manual');
+}
+
+function secBotones() {
+  var btn = document.getElementById('sec-btn-continuar');
+  if (!btn) return;
+  btn.disabled = !secUbicada();
+  btn.title = btn.disabled ? 'Arrastrá el globo hasta la puerta de la seccional' : '';
+}
+
+// La vía de escape cuando la búsqueda no encuentra nada -- incluido el caso
+// en que Georef y Nominatim no responden. Abre el mapa en el país y deja
+// marcar el punto tocando: es lo único de esta pantalla que no depende de
+// ninguna API de terceros (las teselas son un servicio aparte), y por eso
+// existe. Sin esto, exigir la ubicación sería exigir que los servicios de
+// mapas estén funcionando para poder cargar una delegación.
+function secManual() {
+  var ayuda = document.getElementById('sec-ayuda');
+  ayuda.className = 'geo-ayuda sin_geo';
+  ayuda.textContent = 'Tocá el mapa en el lugar de la seccional. Acercate con la rueda para marcar la puerta.';
+  if (!secMapa) {
+    secMapa = MapaMT.crear('sec-mapa', {
+      arrastrable: true,
+      alMover: function (lat, lon) { secFijar(lat, lon, 'manual'); },
+      alTocar: function (lat, lon) { secMapa.ir(lat, lon, Math.max(secMapa.mapa.getZoom(), 16)); secFijar(lat, lon, 'manual'); }
+    });
+  }
+  secMapa.refrescar();
+}
+
 function secBuscar() {
+  var faltan = secFaltantes();
+  if (faltan.length) {
+    secMostrarError('Falta ' + faltan.join(', ') + '. La dirección de una seccional va completa: el afiliado la usa para llegar.');
+    return;
+  }
+  secMostrarError('');
   var btn = document.getElementById('sec-btn-buscar');
   btn.disabled = true; btn.textContent = 'Buscando…';
   secPaso(2);
@@ -4921,12 +5030,14 @@ function secBuscar() {
     secCands = d.candidatos || [];
     secPintarCandidatos(d);
   }).catch(function (e) {
-    // Que la búsqueda falle NUNCA bloquea el alta: se puede seguir y
-    // guardar sin ubicar.
+    // Que la búsqueda falle no bloquea el alta, pero tampoco deja guardar sin
+    // ubicar: lo que aparece es el camino a mano.
     document.getElementById('sec-ayuda').className = 'geo-ayuda sin_geo';
     document.getElementById('sec-ayuda').textContent =
-      (e.message || 'No pudimos buscar la dirección.') + ' Podés continuar y guardar sin ubicar.';
+      (e.message || 'No pudimos buscar la dirección.') + ' Marcá el punto a mano en el mapa.';
     document.getElementById('sec-candidatos').innerHTML = '';
+    document.getElementById('sec-btn-manual').classList.remove('oculto');
+    secBotones();
   }).finally(function () {
     btn.disabled = false; btn.textContent = 'Buscar en el mapa';
   });
@@ -4937,10 +5048,13 @@ function secPintarCandidatos(d) {
   var ayuda = document.getElementById('sec-ayuda');
   if (!secCands.length) {
     ayuda.className = 'geo-ayuda sin_geo';
-    ayuda.textContent = d.aviso || 'No encontramos esa dirección. Podés guardar sin ubicar.';
+    ayuda.textContent = d.aviso || 'No encontramos esa dirección. Marcá el punto a mano en el mapa.';
     caja.innerHTML = '';
+    document.getElementById('sec-btn-manual').classList.remove('oculto');
+    secBotones();
     return;
   }
+  document.getElementById('sec-btn-manual').classList.add('oculto');
   // Georef devuelve el nombre oficial: se escribe en el form para que lo
   // que se guarde sea el canónico y no "rosario" en minúscula.
   if (d.provincia) document.getElementById('sec-provincia').value = d.provincia;
@@ -4982,6 +5096,7 @@ function secFijar(lat, lon, precision, aviso) {
   var ayuda = document.getElementById('sec-ayuda');
   ayuda.className = 'geo-ayuda ' + precision;
   ayuda.textContent = aviso || AYUDA_PRECISION[precision] || '';
+  secBotones();
 }
 
 function secResumen() {
@@ -5036,12 +5151,37 @@ function cancelarSeccional() {
   document.getElementById('form-seccional').reset();
   document.getElementById('sec-id').value = '';
   document.getElementById('sec-precision').value = 'sin_geo';
+  document.getElementById('sec-lat').value = '';
+  document.getElementById('sec-lon').value = '';
+  document.getElementById('sec-btn-manual').classList.add('oculto');
+  secMostrarError('');
+  secBotones();
   document.getElementById('seccionales-titulo').textContent = 'Dar de alta una seccional';
   document.getElementById('form-seccional').querySelector('button[type=submit]').textContent = 'Guardar seccional';
   document.getElementById('sec-cancel').classList.add('oculto');
   secCands = [];
   secPaso(1);
 }
+
+// Última red del lado del cliente: el botón de guardar vive en el paso 3 y la
+// dirección se llena en el paso 1, así que sin esto se podría llegar a
+// "Guardar" con el formulario a medias (por ejemplo editando una seccional
+// vieja, que abre directo en el paso 2). Lleva a la persona AL PASO donde
+// está el problema, en vez de dejarle un mensaje lejos del campo.
+document.getElementById('form-seccional').addEventListener('submit', function (ev) {
+  var faltan = secFaltantes();
+  if (faltan.length) {
+    ev.preventDefault();
+    secPaso(1);
+    secMostrarError('Falta ' + faltan.join(', ') + '.');
+    return;
+  }
+  if (!secUbicada()) {
+    ev.preventDefault();
+    secPaso(2);
+    if (!secCands.length && !secVal('sec-lat')) secManual();
+  }
+});
 
 // ---------- Ficha de consulta de una seccional ----------
 var fichaMapa = null;

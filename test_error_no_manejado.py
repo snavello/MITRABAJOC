@@ -79,7 +79,11 @@ def test_500_en_post_de_pagina_completa_redirige_con_aviso():
         raise ConnectionError("conexión a la base perdida (simulado)")
     db.get_session = _get_session_roto
     try:
-        r = admin_client.post("/admin/trabajador", data={"cuil": "20111111119", "nombre": "Juan"},
+        # El alta valida el domicilio ANTES de tocar la base: sin provincia ni
+        # localidad volvería por la validación y no por el error simulado.
+        r = admin_client.post("/admin/trabajador",
+                               data={"cuil": "20111111119", "nombre": "Juan",
+                                     "provincia": "Santa Fe", "localidad": "Rosario"},
                                headers={"accept": "text/html,application/xhtml+xml"}, follow_redirects=False)
     finally:
         db.get_session = original
@@ -105,7 +109,9 @@ def test_500_en_llamada_fetch_sigue_devolviendo_json():
         raise ConnectionError("conexión a la base perdida (simulado)")
     db.get_session = _get_session_roto
     try:
-        r = admin_client.post("/admin/trabajador", data={"cuil": "20111111119", "nombre": "Juan"},
+        r = admin_client.post("/admin/trabajador",
+                               data={"cuil": "20111111119", "nombre": "Juan",
+                                     "provincia": "Santa Fe", "localidad": "Rosario"},
                                follow_redirects=False)
     finally:
         db.get_session = original
