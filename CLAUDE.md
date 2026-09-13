@@ -699,6 +699,21 @@ Detalle completo en HISTORIAL.md. Reglas vigentes:
   sindicato): si no lo registrara, usar la pantalla haría que el total dejara
   de ser el gasto real. Corre los modelos en paralelo y un modelo que falla
   no tumba la comparación.
+- **El archivo se prepara UNA vez** (`extractor.preparar_imagen`) y las N
+  llamadas comparten la misma imagen: convertir el PDF es lo único caro en
+  CPU y memoria del camino, y Pruebas corre con medio núcleo, 512 MB y un
+  worker. Un archivo ilegible falla ahí, antes de gastar un crédito.
+- **`extractor.MAX_TOKENS` = 8.000, y no se baja.** Estaba en 2.000 y el JSON
+  de un recibo de 17 líneas mide ~1.790: el modelo de producción pasaba al
+  89% del tope y los que razonan por default (Opus 5, Sonnet 5) lo cruzaban y
+  devolvían un JSON cortado. El tope no se paga, se paga lo generado. Esos
+  dos van con `effort: low` (`extractor.MODELOS_QUE_RAZONAN`); a los que no
+  razonan por default no se les toca la llamada.
+- **Una lectura que la API contestó pero no se pudo interpretar YA se pagó.**
+  `extractor.ErrorLectura` se lleva el `uso` adentro y
+  `main._registrar_uso_fallido` lo guarda, en las tres rutas de lectura y en
+  el banco de pruebas. Si no, el intento fallido desaparece del panel de
+  costos, que es justo donde interesa verlo.
 - Lo que NO cambia con el selector: el OCR de un convenio escaneado (`rag.py`
   al indexar) sigue con `extractor.MODELO`.
 - Tests: `test_precios_ia.py` (18). Uno es fail-closed y hay que respetarlo:

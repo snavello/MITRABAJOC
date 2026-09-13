@@ -58,7 +58,8 @@ from db import (Area, Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, T
                 TipoTramiteEmpleador, CampoTramiteEmpleador, TramiteEmpleador, RespuestaTramiteEmpleador,
                 NotaTramiteEmpleador, TramiteEmpleadorLog,
                 Convenio, DocumentoConvenio, FragmentoConvenio, ConsultaConvenio)
-from extractor import extraer, extraer_aportes, resumen_comparable
+from extractor import (extraer, extraer_aportes, preparar_imagen, resumen_comparable,
+                        ErrorLectura)
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, error_de_expresion,
                         CATEGORIAS_UNIVERSALES)
@@ -447,18 +448,32 @@ def home(request: Request):
     })
 
 
+def _registrar_uso_fallido(e: BaseException, sindicato_id, cuil: str, tipo: str) -> None:
+    """Una lectura que la API contestó pero que no se pudo interpretar (se
+    cortó, o no volvió JSON) IGUAL se pagó. extractor.ErrorLectura se trae el
+    `uso` adentro justamente para que esa llamada no desaparezca del panel de
+    costos. Un error de red no trae uso y no registra nada: ahí no hubo
+    respuesta que cobrar."""
+    uso = getattr(e, "uso", None)
+    if not uso:
+        return
+    db.registrar_uso_ia(sindicato_id, cuil, tipo, uso["modelo"], uso["tokens_entrada"],
+                        uso["tokens_salida"], uso.get("duracion_ms", 0))
+
+
 @app.post("/api/leer")
 async def api_leer(request: Request, archivo: UploadFile = File(...)):
     contenido = await archivo.read()
+    sid = sindicato_activo_trabajador(request)
     try:
         # La llamada a la IA es sincrónica y puede tardar varios segundos --
         # se corre en un hilo aparte para no bloquear el worker de FastAPI
         # (y con él, a todos los demás pedidos) mientras se espera la respuesta.
         recibo, uso = await run_in_threadpool(extraer, contenido, archivo.content_type,
                                               db.modelo_ia("recibos"))
-    except Exception:
+    except Exception as e:
+        _registrar_uso_fallido(e, sid or None, request.cookies.get("cuil_trab", ""), "recibo")
         raise ErrorApp("E-RECIBO-01")
-    sid = sindicato_activo_trabajador(request)
     # Se registra apenas se llama a la IA -- el costo ya se generó, sea cual
     # sea el resultado (confianza baja, o si el trabajador nunca confirma).
     db.registrar_uso_ia(sid or None, request.cookies.get("cuil_trab", ""), "recibo",
@@ -660,13 +675,14 @@ async def api_aportes(request: Request, archivo: UploadFile = File(...)):
     semáforo. Lo persiste (si hay sesión de trabajador con sindicato
     resuelto) para que no se pierda al navegar o recargar la página."""
     contenido = await archivo.read()
+    cuil = request.cookies.get("cuil_trab", "")
+    sid = sindicato_activo_trabajador(request)
     try:
         datos, uso = await run_in_threadpool(extraer_aportes, contenido, archivo.content_type,
                                              db.modelo_ia("recibos"))
-    except Exception:
+    except Exception as e:
+        _registrar_uso_fallido(e, sid or None, cuil, "aportes")
         raise ErrorApp("E-APORTE-01")
-    cuil = request.cookies.get("cuil_trab", "")
-    sid = sindicato_activo_trabajador(request)
     db.registrar_uso_ia(sid or None, cuil, "aportes",
                          uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"],
                          uso.get("duracion_ms", 0))
@@ -4269,7 +4285,8 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
         try:
             recibo, uso = await run_in_threadpool(extraer, contenido, archivo.content_type,
                                                   db.modelo_ia("recibos"))
-        except Exception:
+        except Exception as e:
+            _registrar_uso_fallido(e, sid, "", "aprendizaje")
             fallidos += 1
             continue
         leidos += 1
@@ -4566,7 +4583,10 @@ async def plataforma_probar_modelos(request: Request,
     Tres decisiones:
     - Las llamadas van EN PARALELO. Van a la misma API y no se estorban; en
       serie, cuatro modelos serían casi un minuto de espera colgado del
-      navegador.
+      navegador. Pero el archivo se prepara UNA vez y las N llamadas comparten
+      la misma imagen: convertir un PDF por cada modelo, en paralelo, es CPU y
+      memoria multiplicadas por N sobre un worker que en Pruebas tiene medio
+      núcleo y 512 MB -- y ahí el worker se cae y Render devuelve un 502.
     - Cada lectura se registra en UsoIA con tipo "prueba", sin sindicato: es
       gasto real y el total de la pantalla tiene que seguir siendo el gasto
       real. Filtrable aparte, para que no ensucie el consumo de producción.
@@ -4584,9 +4604,15 @@ async def plataforma_probar_modelos(request: Request,
     if not contenido:
         raise HTTPException(422, "El archivo llegó vacío.")
     leer = extraer_aportes if tipo == "aportes" else extraer
+    try:
+        imagen = await run_in_threadpool(preparar_imagen, contenido, archivo.content_type)
+    except Exception as e:
+        # Un PDF ilegible falla acá, antes de gastar un solo crédito.
+        print(f"[banco de pruebas] no se pudo preparar el archivo: {type(e).__name__}: {e}")
+        raise HTTPException(422, "No se pudo abrir el archivo. ¿Es una imagen o un PDF?")
 
     lecturas = await asyncio.gather(
-        *(run_in_threadpool(leer, contenido, archivo.content_type, m) for m in elegidos),
+        *(run_in_threadpool(leer, contenido, archivo.content_type, m, imagen) for m in elegidos),
         return_exceptions=True)
 
     salida, referencia = [], None
@@ -4598,7 +4624,16 @@ async def plataforma_probar_modelos(request: Request,
             # plataforma, y "modelo inexistente" y "sin cuota" se arreglan de
             # maneras muy distintas.
             print(f"[banco de pruebas] {modelo}: {type(r).__name__}: {r}")
-            fila.update({"ok": False, "error": f"{type(r).__name__}: {str(r)[:200]}"})
+            # Si la API llegó a contestar, esa llamada se pagó: se registra
+            # igual. Un modelo que falla es justo donde interesa saber cuánto
+            # costó el intento.
+            _registrar_uso_fallido(r, None, "", "prueba")
+            # ErrorLectura ya explica el problema en castellano; cualquier
+            # otra cosa viene de la API o de la red y ahí el TIPO es la mitad
+            # del diagnóstico (NotFoundError y RateLimitError se arreglan de
+            # maneras muy distintas).
+            detalle = str(r) if isinstance(r, ErrorLectura) else f"{type(r).__name__}: {r}"
+            fila.update({"ok": False, "error": detalle[:240]})
             salida.append(fila)
             continue
         datos, uso = r

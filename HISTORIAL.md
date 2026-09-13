@@ -4486,7 +4486,56 @@ explique sola. El costo ya salía "—" —`mock` no está en el catálogo de
 precios a propósito— y los agregados ya ignoraban lo que no tiene costo, así
 que el promedio nunca estuvo mal.
 
-**Tests**: `test_precios_ia.py`, 20 casos. Los cuatro que importan: el precio
+### El 502 y el JSON cortado: dos síntomas, una sola causa real
+
+Probando el banco en Pruebas aparecieron dos cosas seguidas. La primera fue
+un "el servidor contestó 502", y la primera explicación que di fue **la
+equivocada**: supuse que `extraer()` prepara el archivo adentro, así que N
+modelos en paralelo lanzaban N conversiones del mismo PDF (poppler a 150
+dpi + la imagen en RAM + el base64, todo por N) y tumbaban el worker, que en
+Pruebas es medio núcleo y 512 MB.
+
+Los logs de Render lo desmintieron. Cero `SIGKILL`, cero `Out of memory`, y
+los cuatro 502 del día (18:30:22, 18:30:32, 18:31:27, 18:31:35 UTC) caen
+exactamente sobre dos `Instance ... restarted` a las 18:30:40 y 18:31:41 --
+dos de ellos con `responseTimeMS=1` y `260`, o sea que la app no estaba, no
+que tardó. Eran los reinicios que dispara **cambiar una variable de
+entorno**: Sd estaba sacando `MOCK_EXTRACTOR` justo en esa ventana. Nada que
+ver con el código. Queda anotado porque la moraleja es cara: sobre un
+entorno desplegado, la hipótesis se confirma con el log antes de contarla
+como causa.
+
+El cambio de `preparar_imagen()` quedó igual, pero por lo que de verdad es:
+multiplicar por N la única parte cara en CPU y memoria del camino no tiene
+sentido. La ruta prepara el archivo una vez y se lo pasa a las N llamadas,
+que comparten la MISMA cadena y solo esperan en la red. De paso, un PDF
+ilegible falla al prepararlo, antes de gastar un crédito, en vez de fallar N
+veces adentro de la API.
+
+**La segunda sí era un defecto, y de los caros.** Con cuatro modelos, Opus 5
+y Sonnet 5 volvieron con `JSONDecodeError: Unterminated string`: el JSON
+venía cortado a la mitad. Los dos que sí anduvieron gastaron 1.790 y 1.744
+tokens de salida contra un `max_tokens` de **2.000** -- el modelo que corre
+en producción ya pasaba al 89% del tope, así que un recibo un poco más largo
+se cortaba igual, con Sonnet 4.6 y sin que nadie se enterara de por qué.
+Opus 5 y Sonnet 5 lo cruzaron primero porque **razonan por default** y ese
+razonamiento sale del mismo presupuesto que el JSON.
+
+Cuatro cambios: `MAX_TOKENS` a 8.000 (el tope no se paga, se paga lo
+generado); `effort: low` SOLO para los dos que razonan
+(`MODELOS_QUE_RAZONAN`), dejando intacta la llamada de los que no -- uno de
+ellos es el que hoy corre en producción y no se cambia a ciegas lo que anda;
+`_parsear()` mira `stop_reason` y explica que se cortó, en vez de tirar un
+`JSONDecodeError` que no dice nada; y `ErrorLectura` se lleva el `uso`
+adentro para que **una lectura que falló al interpretarse no pierda lo que
+costó** -- esas dos llamadas se pagaron y no figuraban en ninguna tabla, que
+es exactamente lo que un panel de costos no puede hacer.
+
+Queda dicho para la próxima: en este proyecto el paralelismo está para
+esperar en la red, no para hacer cuentas; y un `max_tokens` que el trabajo
+real roza al 89% no es un tope, es una bomba de tiempo.
+
+**Tests**: `test_precios_ia.py`, 24 casos. Los cuatro que importan: el precio
 congelado no se mueve cuando cambia el catálogo; los defaults de
 `precios_ia.USOS` son las constantes de los tres módulos (fail-closed: si
 alguien mueve una y no la otra, el panel mostraría "el de origen" al lado del

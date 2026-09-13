@@ -179,6 +179,20 @@ def _imagen_desde_pdf(contenido: bytes) -> tuple[str, str]:
     return base64.standard_b64encode(buf.getvalue()).decode(), "image/png"
 
 
+def preparar_imagen(contenido: bytes, content_type: str) -> tuple[str, str]:
+    """(base64, media_type) listo para mandar a la API.
+
+    Está afuera de extraer() por el banco de pruebas, que lee el MISMO
+    archivo con varios modelos: pasar un PDF a PNG es lo único caro en CPU y
+    memoria de todo el camino (poppler a 150 dpi + la imagen en RAM), y
+    hacerlo una vez POR MODELO y en paralelo tumba un worker chico -- Pruebas
+    corre en Starter, medio núcleo y 512 MB. Preparada una vez, las N
+    llamadas comparten la misma cadena y solo esperan en la red."""
+    if content_type == "application/pdf":
+        return _imagen_desde_pdf(contenido)
+    return base64.standard_b64encode(contenido).decode(), content_type  # image/jpeg, image/png
+
+
 def _uso(msg, modelo: str, ms: int) -> dict:
     """Tokens de entrada/salida que devuelve la propia respuesta de la API
     (msg.usage) y lo que tardó el pedido, para medir costo real -- no un
@@ -193,6 +207,55 @@ def _uso(msg, modelo: str, ms: int) -> dict:
         "tokens_salida": msg.usage.output_tokens,
         "duracion_ms": ms,
     }
+
+
+# Tope de tokens de SALIDA. Estaba en 2.000 y era muy poco: el JSON de un
+# recibo de 17 líneas mide ~1.790, o sea que el modelo que corre en producción
+# pasaba al 89% del tope y un recibo un poco más largo se cortaba a la mitad
+# (JSONDecodeError "Unterminated string", encontrado el 2026-09-13 probando
+# cuatro modelos). Subirlo no cuesta nada: se paga lo que el modelo genera, no
+# el tope.
+MAX_TOKENS = 8000
+
+# Opus 5 y Sonnet 5 RAZONAN por default, y ese razonamiento sale del mismo
+# MAX_TOKENS que el JSON: por eso fueron los dos que se cortaron primero.
+# Leer un recibo es transcribir, no razonar, así que van con esfuerzo bajo.
+# A los que no razonan por default no se les toca la llamada -- uno de ellos
+# es el que hoy corre en producción, y no se cambia a ciegas lo que anda.
+MODELOS_QUE_RAZONAN = {"claude-opus-5", "claude-sonnet-5"}
+
+
+def _opciones(modelo: str) -> dict:
+    return {"output_config": {"effort": "low"}} if modelo in MODELOS_QUE_RAZONAN else {}
+
+
+class ErrorLectura(Exception):
+    """La API contestó pero la respuesta no se puede usar (se cortó, o no es
+    JSON). Lleva el `uso` adentro porque esa llamada YA se pagó: sin esto, un
+    recibo que falla al interpretarse desaparece del panel de costos como si
+    nunca hubiera existido -- y es justo el caso donde uno quiere ver cuánto
+    salió el intento fallido."""
+
+    def __init__(self, mensaje: str, uso: dict):
+        super().__init__(mensaje)
+        self.uso = uso
+
+
+def _parsear(msg, modelo: str, ms: int) -> tuple[dict, dict]:
+    """El JSON que devolvió el modelo, o un ErrorLectura que dice por qué no
+    se pudo -- con el uso adentro en los dos casos."""
+    uso = _uso(msg, modelo, ms)
+    if getattr(msg, "stop_reason", None) == "max_tokens":
+        raise ErrorLectura(
+            f"la respuesta se cortó en el tope de {MAX_TOKENS} tokens de salida "
+            f"(el modelo devolvió {uso['tokens_salida']})", uso)
+    texto = "".join(b.text for b in msg.content if b.type == "text").strip()
+    if texto.startswith("```"):
+        texto = texto.split("```")[1].removeprefix("json").strip()
+    try:
+        return json.loads(texto), uso
+    except json.JSONDecodeError as e:
+        raise ErrorLectura(f"la respuesta no es un JSON válido: {e}", uso) from e
 
 
 # Lo que se registra como "modelo" cuando corrió el mock y no la API. No está
@@ -220,26 +283,26 @@ def _uso_mock(inicio: float) -> dict:
     return {"modelo": MOCK, "tokens_entrada": 0, "tokens_salida": 0, "duracion_ms": 0}
 
 
-def extraer(contenido: bytes, content_type: str, modelo: str | None = None) -> tuple[dict, dict]:
+def extraer(contenido: bytes, content_type: str, modelo: str | None = None,
+            imagen: tuple[str, str] | None = None) -> tuple[dict, dict]:
     """Devuelve (datos_del_recibo, uso) -- uso trae modelo/tokens_entrada/
     tokens_salida/duracion_ms de esta llamada puntual, para registrar el costo
-    real. `modelo` lo decide quien llama; sin él, MODELO."""
+    real. `modelo` lo decide quien llama; sin él, MODELO. `imagen` es el
+    (base64, media_type) ya preparado -- lo pasa el banco de pruebas para no
+    convertir el mismo archivo una vez por modelo (ver preparar_imagen)."""
     if _mock_activo():
         inicio = time.perf_counter()
         time.sleep(_mock_latencia())
         return json.loads(json.dumps(_RECIBO_MOCK)), _uso_mock(inicio)
     modelo = modelo or MODELO
-    if content_type == "application/pdf":
-        b64, media = _imagen_desde_pdf(contenido)
-    else:
-        b64 = base64.standard_b64encode(contenido).decode()
-        media = content_type  # image/jpeg, image/png
+    b64, media = imagen or preparar_imagen(contenido, content_type)
 
     inicio = time.perf_counter()
     msg = client.messages.create(
         model=modelo,
-        max_tokens=2000,
+        max_tokens=MAX_TOKENS,
         system=SYSTEM,
+        **_opciones(modelo),
         messages=[{
             "role": "user",
             "content": [
@@ -248,10 +311,7 @@ def extraer(contenido: bytes, content_type: str, modelo: str | None = None) -> t
             ],
         }],
     )
-    texto = "".join(b.text for b in msg.content if b.type == "text").strip()
-    if texto.startswith("```"):
-        texto = texto.split("```")[1].removeprefix("json").strip()
-    return json.loads(texto), _uso(msg, modelo, int((time.perf_counter() - inicio) * 1000))
+    return _parsear(msg, modelo, int((time.perf_counter() - inicio) * 1000))
 
 
 # ============ Comparar la misma lectura hecha por dos modelos ============
@@ -346,8 +406,8 @@ Devolvé los 12 meses en orden. Si la imagen no es un comprobante de aportes
 de ARCA, poné confianza en "baja"."""
 
 
-def extraer_aportes(contenido: bytes, content_type: str,
-                    modelo: str | None = None) -> tuple[dict, dict]:
+def extraer_aportes(contenido: bytes, content_type: str, modelo: str | None = None,
+                    imagen: tuple[str, str] | None = None) -> tuple[dict, dict]:
     """Lee un comprobante de aportes de ARCA (imagen o PDF) y devuelve
     (estado_mensual, uso) -- mismo criterio que extraer()."""
     if _mock_activo():
@@ -355,17 +415,14 @@ def extraer_aportes(contenido: bytes, content_type: str,
         time.sleep(_mock_latencia())
         return json.loads(json.dumps(_APORTES_MOCK)), _uso_mock(inicio)
     modelo = modelo or MODELO
-    if content_type == "application/pdf":
-        b64, media = _imagen_desde_pdf(contenido)
-    else:
-        b64 = base64.standard_b64encode(contenido).decode()
-        media = content_type
+    b64, media = imagen or preparar_imagen(contenido, content_type)
 
     inicio = time.perf_counter()
     msg = client.messages.create(
         model=modelo,
-        max_tokens=2000,
+        max_tokens=MAX_TOKENS,
         system=SYSTEM_APORTES,
+        **_opciones(modelo),
         messages=[{
             "role": "user",
             "content": [
@@ -374,7 +431,4 @@ def extraer_aportes(contenido: bytes, content_type: str,
             ],
         }],
     )
-    texto = "".join(b.text for b in msg.content if b.type == "text").strip()
-    if texto.startswith("```"):
-        texto = texto.split("```")[1].removeprefix("json").strip()
-    return json.loads(texto), _uso(msg, modelo, int((time.perf_counter() - inicio) * 1000))
+    return _parsear(msg, modelo, int((time.perf_counter() - inicio) * 1000))

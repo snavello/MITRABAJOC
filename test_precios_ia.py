@@ -282,6 +282,116 @@ def test_banco_de_pruebas_no_tumba_la_comparacion_si_un_modelo_falla():
     assert _fila_con(6666)["tipo"] == "prueba"
 
 
+def test_el_archivo_se_prepara_una_sola_vez_para_todos_los_modelos():
+    """Convertir el PDF una vez POR MODELO, en paralelo, es CPU y memoria por
+    N sobre el worker: en Pruebas (Starter, medio núcleo y 512 MB) se cae y
+    Render devuelve 502. La conversión va una vez y las N llamadas comparten
+    la misma imagen."""
+    conversiones = []
+
+    def falsa_conversion(contenido):
+        conversiones.append(1)
+        return "UEZERg==", "image/png"
+
+    original_pdf = extractor._imagen_desde_pdf
+    original_api = extractor.client.messages.create
+    extractor._imagen_desde_pdf = falsa_conversion
+    extractor.client.messages.create = lambda **kw: _mock_msg(RECIBO, 7777, 77)
+    try:
+        r = plataforma_client.post(
+            "/plataforma/probar-modelos",
+            data={"tipo": "recibo",
+                  "modelos": ["claude-sonnet-4-6", "claude-haiku-4-5", "claude-sonnet-5"]},
+            files={"archivo": ("r.pdf", b"%PDF-fake", "application/pdf")})
+    finally:
+        extractor._imagen_desde_pdf = original_pdf
+        extractor.client.messages.create = original_api
+    assert r.status_code == 200, r.text
+    assert len(r.json()["modelos"]) == 3
+    assert len(conversiones) == 1, f"el PDF se convirtió {len(conversiones)} veces"
+
+
+def test_un_archivo_ilegible_no_gasta_un_credito():
+    """Si el PDF no se puede abrir, tiene que fallar ANTES de llamar a la
+    API: si no, se pagan N llamadas para enterarse."""
+    llamadas = []
+    original_pdf = extractor._imagen_desde_pdf
+    original_api = extractor.client.messages.create
+
+    def revienta(contenido):
+        raise ValueError("no es un PDF")
+
+    extractor._imagen_desde_pdf = revienta
+    extractor.client.messages.create = lambda **kw: llamadas.append(1)
+    try:
+        r = plataforma_client.post(
+            "/plataforma/probar-modelos",
+            data={"tipo": "recibo", "modelos": ["claude-sonnet-4-6", "claude-haiku-4-5"]},
+            files={"archivo": ("roto.pdf", b"no-soy-un-pdf", "application/pdf")})
+    finally:
+        extractor._imagen_desde_pdf = original_pdf
+        extractor.client.messages.create = original_api
+    assert r.status_code == 422
+    assert llamadas == [], "no se puede llamar a la API con un archivo que no se pudo abrir"
+
+
+def test_una_respuesta_cortada_se_explica_y_no_se_pierde_lo_que_costo():
+    """El caso real del 2026-09-13: con max_tokens en 2.000, Opus 5 y
+    Sonnet 5 devolvieron un JSON trunco y el panel mostraba un
+    JSONDecodeError críptico, sin tokens ni costo -- pero esas dos llamadas
+    se habían pagado igual."""
+    cortado = SimpleNamespace(
+        content=[SimpleNamespace(type="text", text='{"periodo": "2026-08", "lineas": [{"desc')],
+        usage=SimpleNamespace(input_tokens=3596, output_tokens=1999),
+        stop_reason="max_tokens")
+
+    original = extractor.client.messages.create
+    extractor.client.messages.create = lambda **kw: cortado
+    try:
+        r = plataforma_client.post(
+            "/plataforma/probar-modelos",
+            data={"tipo": "recibo", "modelos": ["claude-opus-5"]},
+            files={"archivo": ("r.png", b"fake", "image/png")})
+    finally:
+        extractor.client.messages.create = original
+
+    assert r.status_code == 200, r.text
+    fila = r.json()["modelos"][0]
+    assert fila["ok"] is False
+    assert "se cortó" in fila["error"] and str(extractor.MAX_TOKENS) in fila["error"], fila["error"]
+    # Y lo que costó ese intento fallido quedó registrado.
+    gastado = _fila_con(3596)
+    assert gastado["tipo"] == "prueba" and gastado["modelo"] == "claude-opus-5"
+    assert gastado["costo"] is not None and gastado["costo"] > 0
+
+
+def test_el_esfuerzo_bajo_va_solo_a_los_modelos_que_razonan():
+    """Opus 5 y Sonnet 5 razonan por default y ese razonamiento sale del
+    mismo max_tokens que el JSON. A los otros dos no se les toca la llamada:
+    uno es el que corre en producción."""
+    pedidos = {}
+    original = extractor.client.messages.create
+    extractor.client.messages.create = lambda **kw: (pedidos.update({kw["model"]: kw}),
+                                                     _mock_msg(RECIBO, 900, 90))[1]
+    try:
+        r = plataforma_client.post(
+            "/plataforma/probar-modelos",
+            data={"tipo": "recibo",
+                  "modelos": ["claude-opus-5", "claude-sonnet-5",
+                              "claude-sonnet-4-6", "claude-haiku-4-5"]},
+            files={"archivo": ("r.png", b"fake", "image/png")})
+    finally:
+        extractor.client.messages.create = original
+    assert r.status_code == 200, r.text
+    assert pedidos["claude-opus-5"]["output_config"] == {"effort": "low"}
+    assert pedidos["claude-sonnet-5"]["output_config"] == {"effort": "low"}
+    assert "output_config" not in pedidos["claude-sonnet-4-6"]
+    assert "output_config" not in pedidos["claude-haiku-4-5"]
+    # Y el tope de salida es el mismo para todos, con aire de sobra.
+    assert {kw["max_tokens"] for kw in pedidos.values()} == {extractor.MAX_TOKENS}
+    assert extractor.MAX_TOKENS >= 4000, "un recibo largo mide ~1.800 tokens de salida"
+
+
 def test_banco_de_pruebas_rechaza_lo_que_no_es_del_catalogo():
     r = plataforma_client.post("/plataforma/probar-modelos",
                                data={"tipo": "recibo", "modelos": ["gpt-lo-que-sea"]},
