@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mi Trabajo — Ingreso de empresas</title>
+<title>Colm3na — Ingreso de empresas</title>
 <style>
   @font-face {
     font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal;
@@ -99,7 +99,7 @@
   <div class="escena">
   <div class="cred" id="cred">
     <div class="banda"></div>
-    <img class="logo" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Mi Trabajo">
+    <img class="logo" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Colm3na">
     <div class="chip-rol">Empresa</div>
     {% set err = request.query_params.get('error') %}
     {% if err == 'login' %}<div class="error">CUIT o clave incorrectos.</div>
@@ -133,7 +133,7 @@
       <button class="enviar" type="submit">Crear mi cuenta</button>
       <div class="ayuda">Tu CUIT tiene que estar habilitado por el sindicato como empleador. Con una sola cuenta accedés a todos los sindicatos donde estés dado de alta.</div>
     </form>
-    <div class="mrz">MITRABAJO&lt;&lt;EMPRESA&lt;&lt;ACCESO&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div>
+    <div class="mrz">COLM3NA&lt;&lt;EMPRESA&lt;&lt;ACCESO&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div>
   </div>
   </div>
   <div class="pie">Notificaciones del sindicato · Trámites con expediente y seguimiento</div>

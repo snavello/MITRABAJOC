@@ -293,11 +293,19 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   con el rol del panel a la izquierda y **Colm3na a la derecha**; debajo, la
   barra del sindicato: logo a 52px de ALTO y ancho libre (38px en mobile) y
   el nombre de la pantalla a la derecha, dicho UNA sola vez. El nombre del
-  sindicato en texto solo si no hay logo; el texto "Mi Trabajo" no va en
-  ningún encabezado. Fuera del sistema a propósito: los 3 logins standalone
+  sindicato en texto solo si no hay logo. Fuera del sistema a propósito: los 3 logins standalone
   (logo de plataforma grande, 148/85px) y las herramientas internas
   (`/entornos`, informes de carga). Reglas completas en la skill
   `diseno-mi-trabajo`; el porqué, en HISTORIAL.md.
+- **La plataforma se llama Colm3na, no "Mi Trabajo"** (2026-09-13): el
+  nombre viejo salió de todo lo que ve una persona — títulos del navegador,
+  banda MRZ de los tres ingresos, `alt` de los logos, textos del panel de
+  plataforma, verificación pública de credencial y el título por defecto de
+  una notificación push. El manifest de la PWA ya decía Colm3na. Patrón de
+  los `<title>`: **`<pantalla> — {{ sindicato }}`** donde hay sindicato
+  (manda el gremio, igual que en el encabezado) y **`Colm3na — <pantalla>`**
+  donde no lo hay (ingresos, plataforma, verificación). Queda "Mi Trabajo"
+  solo en documentación interna y comentarios de código.
 - **Logos sin fondo blanco forzado**: un PNG con fondo transparente se ve
   transparente de verdad; si un sindicato quiere fondo de color, lo sube ya
   incluido en el archivo. Excepción: el círculo de iniciales de fallback (sin

@@ -33,13 +33,23 @@
 <link rel="stylesheet" href="/static/encabezado.css?v={{ sello_static('encabezado.css') }}">
 {% set _logo_plataforma = '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro
    else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') %}
+{# Cuando la marca principal YA es la de la plataforma (panel de
+   plataforma, demo anónima sin sindicato), la cinta no repite el logo:
+   quedaba Colm3na dos veces, una arriba de la otra. #}
+{% set _marca_es_plataforma = enc_plataforma or not sindicato %}
 <div class="marca-enc{% if enc_fija %} fija{% endif %}">
+  {# Sin rol y sin logo la cinta sería una franja vacía (demo anónima):
+     entonces no va. #}
+  {% if enc_rol or not _marca_es_plataforma %}
   <div class="marca-cinta">
     {% if enc_rol %}<span class="marca-rol">{{ enc_rol }}</span>{% endif %}
+    {% if not _marca_es_plataforma %}
     <img class="marca-colmena" src="{{ _logo_plataforma }}" alt="Colm3na">
+    {% endif %}
   </div>
+  {% endif %}
   <header class="marca-barra">
-    {% if enc_plataforma or not sindicato %}
+    {% if _marca_es_plataforma %}
       {# Sin sindicato activo (demo anónima, panel de plataforma) la marca
          principal es la de la plataforma, no un texto de respaldo. #}
       <img class="marca-logo" src="{{ _logo_plataforma }}" alt="Colm3na">

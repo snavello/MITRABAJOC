@@ -4263,3 +4263,52 @@ idénticos allá--, más `encuesta_resultados.html`, que es la pantalla nueva
 que sí pertenece a la suite. Confirma la regla de FLUJO.md de mirar
 `origin/main:version.py` ANTES de escribir el número: esta vez avisó de algo
 bastante más grande que un número.
+
+## "Mi Trabajo" sale de la interfaz: la plataforma es Colm3na (2026-09-13)
+
+Pedido de Sd el mismo día que el encabezado normalizado, y por el mismo
+motivo: el nombre viejo del producto quedaba suelto por todos lados aunque
+la marca --logo, manifest de la PWA, ícono del celular-- ya dijera Colm3na.
+
+Qué cambió, todo lo que ve una persona:
+
+- **Los `<title>`**, con el patrón que las pantallas nuevas ya usaban:
+  `<pantalla> — {{ sindicato }}` donde hay sindicato ("Revisá tu recibo —
+  La Bancaria", "Panel de administración — La Bancaria"), y
+  `Colm3na — <pantalla>` donde no lo hay (los tres ingresos, el selector de
+  sindicato, plataforma, verificación de credencial). Es la misma regla del
+  encabezado: si la pantalla es de un gremio, manda el gremio.
+- **La banda MRZ** de los cuatro ingresos: `MITRABAJO<<TRABAJADOR<<ACCESO`
+  pasó a `COLM3NA<<...`, con dos `<` más para conservar el largo (es un
+  adorno de documento: si se acorta, se nota).
+- **`alt="Mi Trabajo"`** en los ocho logos de plataforma → `alt="Colm3na"`.
+- **Textos**: "Es la marca de «Mi Trabajo» en sí" y "Logo y colores de Mi
+  Trabajo" (panel de plataforma), "Verificado por Mi Trabajo contra los
+  datos de {sindicato}" (verificación pública de credencial), el título por
+  defecto de una notificación push (`sw.js`) y el título de la app FastAPI
+  (que se ve en `/docs`).
+
+**Dos cosas que aparecieron al hacerlo:**
+
+1. **La demo anónima tomaba prestado un sindicato.** `GET /` pasaba
+   `db.nombre_sindicato()` --el PRIMERO de la base-- a una pantalla que su
+   propio comentario describe como "sin sindicato real". Con el encabezado
+   viejo pasaba medio inadvertido; con el nuevo, el nombre de un gremio
+   cualquiera quedaba grande en la barra y, desde este cambio, también en la
+   pestaña del navegador (en la base local: "ZZZ Medición Dashboard"). Ahora
+   va vacío y el encabezado firma con el logo de Colm3na.
+2. **Colm3na aparecía dos veces** donde la marca principal ES la plataforma
+   (ese mismo `/`, y el panel de plataforma): el logo grande en la barra y
+   otra vez chiquito en la cinta. La cinta ya no lo repite ahí, y si además
+   no hay rol que mostrar --la demo anónima-- directamente no se dibuja, en
+   vez de dejar una franja oscura vacía.
+
+**Logo del sindicato +20%** (pedido de Sd en el mismo bloque): 52→62 px de
+alto en escritorio (ancho libre hasta 360) y 38→46 en móvil (hasta 192). El
+logotipo tipográfico, el que se usa cuando el sindicato no cargó logo, creció
+igual (30→36 y 22→26) para que las dos formas del mismo lugar sigan pesando
+lo mismo.
+
+Lo que NO se tocó: `CLAUDE.md`, `README`, docstrings y comentarios de código
+siguen diciendo "Mi Trabajo" donde hablan del producto. Es documentación
+interna, no interfaz.

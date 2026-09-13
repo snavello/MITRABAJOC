@@ -79,7 +79,7 @@ import rag
 import mimetypes
 mimetypes.add_type("font/woff2", ".woff2")  # algunos Windows no lo traen registrado -> se servía como text/plain
 
-app = FastAPI(title="Mi Trabajo — validador de recibos")
+app = FastAPI(title="Colm3na — validador de recibos")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
@@ -433,7 +433,11 @@ def _startup():
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     return templates.TemplateResponse("trabajador.html", {
-        "request": request, "sindicato": db.nombre_sindicato(),
+        # Sin sindicato: acá NO hay uno elegido, y pasar el primero de la
+        # base (lo que hacía esta ruta) ponía el nombre de un gremio
+        # cualquiera en el encabezado y en la pestaña del navegador. Vacío,
+        # el encabezado común firma con el logo de la plataforma.
+        "request": request, "sindicato": "",
         "marca_plataforma": db.marca_plataforma(),
         # Demo anónima sin sindicato real: solo tiene sentido mostrar "Tu
         # recibo" -- las demás pestañas dependen de un sindicato/login.

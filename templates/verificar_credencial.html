@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mi Trabajo — Verificación de credencial</title>
+<title>Colm3na — Verificación de credencial</title>
 <style>
   :root { --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e; --papel:#f7f5f0; --linea:#dcd8cf; --gris:#5c5a54;
     --marca-primario: {{ marca.color_primario if marca else '#152238' }}; }
@@ -46,7 +46,7 @@
       <div class="lbl">Vigencia</div>
       <div class="val">{{ datos.vigencia_credencial }}</div>
       {% endif %}
-      <p class="nota">Verificado por Mi Trabajo contra los datos de {{ datos.sindicato }}. Por privacidad, esta página no muestra el documento del afiliado.</p>
+      <p class="nota">Verificado por Colm3na contra los datos de {{ datos.sindicato }}. Por privacidad, esta página no muestra el documento del afiliado.</p>
     </div>
     {% elif motivo == 'vencido' %}
     <div class="body">

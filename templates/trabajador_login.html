@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mi Trabajo — Ingresar</title>
+<title>Colm3na — Ingresar</title>
 <style>
   @font-face {
     font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal;
@@ -114,7 +114,7 @@
   <div class="escena">
   <div class="cred" id="cred">
     <div class="banda"></div>
-    <img class="logo" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Mi Trabajo">
+    <img class="logo" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Colm3na">
     <div class="chip-rol">Trabajador</div>
     {% set err = request.query_params.get('error') %}
     {% if err == 'login' %}<div class="error">CUIL o clave incorrectos.</div>
@@ -175,7 +175,7 @@
       <button class="enviar" type="submit">Crear mi cuenta</button>
       <div class="ayuda">Tu CUIL tiene que estar habilitado por tu sindicato. Con una sola cuenta accedés a todos tus sindicatos. La dirección completa y el mapa los podés cargar después, desde tu perfil.<br>Si tu sindicato ya tenía otra dirección tuya, queda la que cargues acá.</div>
     </form>
-    <div class="mrz">MITRABAJO&lt;&lt;TRABAJADOR&lt;&lt;ACCESO&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div>
+    <div class="mrz">COLM3NA&lt;&lt;TRABAJADOR&lt;&lt;ACCESO&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div>
   </div>
   </div>
   <div class="pie">Verificá tus aportes · Seguí tus trámites · Tu credencial siempre a mano</div>

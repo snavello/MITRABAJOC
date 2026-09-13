@@ -1,5 +1,5 @@
 /* ============================================================
-   Encabezado de Mi Trabajo — hoja propia a propósito
+   Encabezado de Colm3na — hoja propia a propósito
    ------------------------------------------------------------
    La carga el parcial templates/_encabezado.html, no cada plantilla:
    trabajador.html y empresa.html no cargan marca.css (tienen su CSS
@@ -34,13 +34,13 @@
 .marca-barra { background: var(--marca-base, #0f1b2d); color: var(--sobre-base, #eef2f7);
   display: flex; align-items: center; gap: 14px; padding: 11px 18px;
   border-bottom: 1px solid rgba(255, 255, 255, .10); }
-.marca-logo { height: 52px; width: auto; max-width: 300px; object-fit: contain; flex: none; }
+.marca-logo { height: 62px; width: auto; max-width: 360px; object-fit: contain; flex: none; }
 /* Sin logo cargado, el nombre del sindicato ES el logotipo: condensada
    sobre un filo de acento. Queda mejor que un cuadrito de iniciales.
    Se deja achicar (flex-shrink) y recorta con puntos: un nombre largo
    --"Unión Obrera Metalúrgica"-- no puede empujar a la pantalla fuera de
    la barra en un teléfono angosto. */
-.marca-nombre { font-family: var(--fuente-display, "Barlow Condensed", "Arial Narrow", sans-serif); font-weight: 700; font-size: 30px;
+.marca-nombre { font-family: var(--fuente-display, "Barlow Condensed", "Arial Narrow", sans-serif); font-weight: 700; font-size: 36px;
   line-height: 1; letter-spacing: .6px; text-transform: uppercase; white-space: nowrap;
   min-width: 0; overflow: hidden; text-overflow: ellipsis;
   padding-right: 14px; border-right: 2px solid var(--marca-acento, #e8a33d); }
@@ -61,8 +61,8 @@
   .marca-cinta { padding: 5px 14px; padding-top: calc(5px + env(safe-area-inset-top)); min-height: 26px; }
   .marca-colmena { height: 15px; max-width: 88px; }
   .marca-barra { gap: 11px; padding: 10px 14px; }
-  .marca-logo { height: 38px; max-width: 160px; }
-  .marca-nombre { font-size: 22px; padding-right: 11px; }
+  .marca-logo { height: 46px; max-width: 192px; }
+  .marca-nombre { font-size: 26px; padding-right: 11px; }
   .marca-pantalla { font-size: 9px; letter-spacing: 1.4px; }
   .marca-fecha { font-size: 10.5px; }
 }

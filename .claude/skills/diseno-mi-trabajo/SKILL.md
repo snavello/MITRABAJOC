@@ -85,16 +85,22 @@ Son dos franjas y esa separación es el punto:
   derecha, siempre 17px de alto. A la izquierda, el rol del panel
   ("Panel de administración", "Panel de empleador"…) — **vacío en la app del
   afiliado**: ahí la plataforma firma con el logo, no con texto.
-- La **barra** es del sindicato: su logo a 52px de alto y **ancho libre**
-  (un logo horizontal no se aplasta en una caja cuadrada) y, a la derecha,
-  el nombre de la pantalla. En los paneles con pestañas lo actualiza el JS
-  al cambiar de pestaña.
+- La **barra** es del sindicato: su logo a 62px de alto (46 en móvil) y
+  **ancho libre** (un logo horizontal no se aplasta en una caja cuadrada) y,
+  a la derecha, el nombre de la pantalla. En los paneles con pestañas lo
+  actualiza el JS al cambiar de pestaña.
+- Donde la marca principal ES la plataforma (panel de plataforma, demo
+  anónima), la barra lleva el logo de Colm3na y **la cinta no lo repite**;
+  si además no hay rol que mostrar, la cinta no se dibuja.
 - **El nombre del sindicato en texto solo aparece si NO hay logo cargado**
   (entonces es el logotipo, en condensada sobre un filo de acento). Con logo,
   escribirlo al lado es decir dos veces lo mismo.
 - **El título de la pantalla se dice una sola vez**: si está en el
   encabezado, no va también como `<h1>` del cuerpo.
-- El texto "Mi Trabajo" no va en ningún encabezado.
+- **La plataforma se llama Colm3na**: "Mi Trabajo" no va en ninguna
+  pantalla. Los `<title>` siguen el mismo criterio que el encabezado:
+  `<pantalla> — {{ sindicato }}` donde hay sindicato, `Colm3na — <pantalla>`
+  donde no lo hay.
 - Variables del parcial: `enc_rol`, `enc_pantalla`, `enc_volver`, `enc_fecha`,
   `enc_fija`, `enc_plataforma`. Una pantalla nueva se encabeza con eso.
 - Fuera del sistema, a propósito: los tres ingresos (el logo grande de
