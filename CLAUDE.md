@@ -724,6 +724,13 @@ vigentes:
   el Postgres local y cronometra cada endpoint (criterio < 1 s; medido 80 ms
   el peor). El tenant sintético queda en la base local para desarrollo
   (`--limpiar` lo borra).
+- **El "hoy" del panel lo dice el SERVIDOR** (`data-hoy` en `<main>`,
+  2026-09-13), no `new Date()`: todo el rango cuelga de esa constante y el
+  servidor valida contra la hora de Buenos Aires, así que un dispositivo
+  adelantado pedía "mañana" y el panel quedaba con todo en "—" tras un 422
+  mudo. Es la regla de `fechas.py` del lado del cliente. Y como red, **un
+  rechazo del servidor se ve**: el `detail` del 422 se muestra en un cartel
+  arriba de los KPIs y en cada panel, en vez de morir en un `catch`.
 - **UI**: página propia `GET /admin/dashboard` (`templates/dashboard.html` +
   `static/dashboard.js`), linkeada desde la tira de /admin y la portada,
   gateada por módulo. Chart.js 4.4.9 VENDOREADO en `static/chart.umd.min.js`

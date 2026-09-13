@@ -625,6 +625,55 @@ def test_pagina_dashboard():
     print("OK  test_pagina_dashboard")
 
 
+def _sin_comentarios(js: str) -> str:
+    """El JS sin sus comentarios, para poder buscar código y no prosa."""
+    import re
+    js = re.sub(r"/\*.*?\*/", "", js, flags=re.S)
+    return "\n".join(l for l in js.splitlines() if not l.strip().startswith("//"))
+
+
+def test_la_pagina_le_da_al_navegador_la_fecha_del_servidor():
+    """El bug que esto impide: el panel armaba su rango con `new Date()` del
+    NAVEGADOR y el servidor lo valida contra la hora de Buenos Aires
+    (`parsear_filtros` rechaza un `hasta` futuro). Un dispositivo adelantado
+    --uno al este de Argentina, o con el reloj en UTC entre las 21 y la
+    medianoche-- pedía "mañana", cada endpoint devolvía 422 y el panel quedaba
+    con los nueve indicadores en "—" sin decir nada.
+
+    Es la misma regla de `fechas.py` del lado del cliente: la fecha la decide
+    el servidor, y viaja en el HTML."""
+    r = admin_a.get("/admin/dashboard")
+    assert f'data-hoy="{fechas.hoy_texto()}"' in r.text, r.text[:400]
+    # Y no la del reloj del proceso, que en Render corre en UTC: entre las
+    # 21 y la medianoche de Argentina son días distintos.
+    assert fechas.hoy_texto() == fechas.hoy().isoformat()
+    # El JS tiene que leer ESE atributo, no inventarlo. Se cuentan los
+    # `new Date()` del CÓDIGO (sin comentarios: el de arriba de HOY explica
+    # justamente este bug y lo nombra tres veces). Queda uno solo, el de la
+    # red por si la plantilla no manda el dato.
+    js = _sin_comentarios(open("static/dashboard.js", encoding="utf-8").read())
+    assert "dataset.hoy" in js
+    assert js.count("new Date()") == 1, \
+        "el panel volvió a sacar la fecha del reloj del navegador"
+    print("OK  test_la_pagina_le_da_al_navegador_la_fecha_del_servidor")
+
+
+def test_un_rango_rechazado_dice_por_que_y_la_pantalla_tiene_donde_decirlo():
+    """La red de seguridad del bug de arriba: si el servidor rechaza los
+    filtros, el motivo tiene que llegar al JSON y la pantalla tiene que tener
+    dónde mostrarlo. Antes el 422 se comía en un `catch` y los KPIs se
+    quedaban en "—" para siempre."""
+    r = admin_a.get("/admin/dashboard/kpis",
+                    params={"desde": _dia(0), "hasta": (HOY + timedelta(days=1)).isoformat()})
+    assert r.status_code == 422
+    assert "futura" in r.json()["detail"], r.json()
+    # El cartel donde se muestra, y el JS que lee el `detail`.
+    assert 'id="aviso-error"' in admin_a.get("/admin/dashboard").text
+    js = open("static/dashboard.js", encoding="utf-8").read()
+    assert "cuerpo.detail" in js and "avisoDeError" in js
+    print("OK  test_un_rango_rechazado_dice_por_que_y_la_pantalla_tiene_donde_decirlo")
+
+
 def test_pagina_dashboard_flag_prendido():
     db.set_config_dashboard(35, 60, True)
     try:
