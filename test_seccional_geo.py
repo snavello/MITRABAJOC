@@ -2,10 +2,13 @@
 
 Lo que se verifica:
 
-- Las cuatro precisiones (`exacta`, `aproximada`, `manual`, `sin_geo`) se
+- Las precisiones que una seccional PUEDE tener (`exacta` y `manual`) se
   guardan como corresponde, y **sin coordenadas válidas ninguna vale**.
-- Se puede guardar sin ubicar: que una API ajena esté caída no puede impedir
-  dar de alta una delegación.
+- **No se puede guardar sin ubicar, ni con el globo en el centro de la
+  localidad** (2026-09-13): la dirección de una seccional va completa y en la
+  puerta, porque el afiliado toca "Cómo llegar" y el teléfono lo lleva al
+  punto guardado. La vía de escape cuando las APIs no responden no es guardar
+  sin ubicar, es marcar el punto a mano (queda `manual`).
 - Editar y mover el globo deja la ubicación en `manual`.
 - **Aislamiento**: un admin no geocodifica, no ve la ficha ni edita una
   seccional de otro sindicato.
@@ -47,16 +50,41 @@ cliente_b = TestClient(main.app)
 cliente_b.post("/admin/login", data={"usuario": "20222222220", "clave": "b-demo"})
 
 
-def _alta(nombre, **extra):
-    datos = {"nombre": nombre, "provincia": "", "localidad": "", "calle": "",
-             "numero": "", "piso_depto": "", "codigo_postal": "",
-             "latitud": "", "longitud": "", "precision_geo": "sin_geo"}
+# Un domicilio completo y ubicado en la puerta: lo mínimo que el alta acepta.
+# Cada test le cambia lo que va a mirar.
+VALIDO = {"provincia": "Santa Fe", "localidad": "Rosario", "calle": "San Martín",
+          "numero": "850", "piso_depto": "", "codigo_postal": "2000",
+          "latitud": "-32.947338", "longitud": "-60.636893", "precision_geo": "exacta"}
+
+
+def _postear(nombre, **extra):
+    datos = dict(VALIDO, nombre=nombre)
     datos.update(extra)
-    r = cliente.post("/admin/seccional", data=datos, follow_redirects=False)
+    return cliente.post("/admin/seccional", data=datos, follow_redirects=False)
+
+
+def _alta(nombre, **extra):
+    """Alta que TIENE que entrar. Devuelve la fila guardada."""
+    r = _postear(nombre, **extra)
     assert r.status_code == 303, r.text
     with db.get_session() as s:
-        return s.exec(select(Seccional).where(Seccional.sindicato_id == SID_A,
+        sec = s.exec(select(Seccional).where(Seccional.sindicato_id == SID_A,
                                              Seccional.nombre == nombre)).first()
+    assert sec is not None, f"no se guardó {nombre}: {r.headers.get('location')}"
+    return sec
+
+
+def _rechazada(nombre, **extra):
+    """Alta que NO tiene que entrar. Devuelve el `err=` con el que volvió, que
+    es lo que la pantalla usa para decir qué falta."""
+    r = _postear(nombre, **extra)
+    assert r.status_code == 303, r.text
+    destino = r.headers.get("location", "")
+    with db.get_session() as s:
+        assert s.exec(select(Seccional).where(Seccional.sindicato_id == SID_A,
+                                             Seccional.nombre == nombre)).first() is None, \
+            f"{nombre} se guardó y no debería"
+    return destino
 
 
 # --------------------------------------------------- el contrato compartido
@@ -90,13 +118,17 @@ def test_alta_con_geo_exacta():
     print("OK  test_alta_con_geo_exacta")
 
 
-def test_alta_con_geo_aproximada():
-    sec = _alta("Salta Aprox", provincia="Salta", localidad="Salta",
-                latitud="-24.7897", longitud="-65.4116", precision_geo="aproximada")
-    assert sec.precision_geo == "aproximada"
-    # Localidad igual a la provincia: no se escribe dos veces.
-    assert sec.direccion_texto == "Salta"
-    print("OK  test_alta_con_geo_aproximada")
+def test_una_seccional_aproximada_no_se_guarda():
+    """`aproximada` es el centro de la localidad, no la puerta. Es el caso que
+    más importa de todos: se guardaba sin chistar y el afiliado terminaba a
+    quince cuadras siguiendo el "Cómo llegar" de la app. La diferencia con
+    `manual` no son los metros, es quién responde por el punto."""
+    destino = _rechazada("Salta Aprox", provincia="Salta", localidad="Salta",
+                         calle="Caseros", numero="100",
+                         latitud="-24.7897", longitud="-65.4116",
+                         precision_geo="aproximada")
+    assert "err=secsinubicar" in destino, destino
+    print("OK  test_una_seccional_aproximada_no_se_guarda")
 
 
 def test_alta_con_globo_movido_a_mano():
@@ -107,46 +139,72 @@ def test_alta_con_globo_movido_a_mano():
     print("OK  test_alta_con_globo_movido_a_mano")
 
 
-def test_alta_sin_ubicar_es_valida():
-    """Que Georef o Nominatim no respondan no puede impedir dar de alta una
-    delegación: queda `sin_geo` y el panel la marca como pendiente."""
-    sec = _alta("Sin Ubicar", provincia="Santa Fe", localidad="Rafaela",
-                calle="Mitre", numero="100")
-    assert sec.precision_geo == "sin_geo"
-    assert sec.latitud is None and sec.longitud is None
-    assert sec.geo_actualizado == "", "sin coordenadas no hay sello de tiempo"
-    # La dirección estructurada SÍ se guarda: sirve para buscarla y para
-    # georreferenciarla después sin volver a tipearla.
-    assert sec.direccion_texto == "Mitre 100, Rafaela, Santa Fe"
-    print("OK  test_alta_sin_ubicar_es_valida")
+def test_alta_sin_ubicar_se_rechaza():
+    """Lo contrario de lo que este archivo probaba hasta el 2026-09-13. La
+    ubicación dejó de ser opcional: una seccional sin globo no aparece en el
+    mapa del Panel Sindical ni en la app del afiliado, o sea que se carga y no
+    sirve para nada, y así quedaban."""
+    destino = _rechazada("Sin Ubicar", localidad="Rafaela", calle="Mitre", numero="100",
+                         latitud="", longitud="", precision_geo="sin_geo")
+    assert "err=secsinubicar" in destino, destino
+    print("OK  test_alta_sin_ubicar_se_rechaza")
+
+
+def test_sin_calle_ni_altura_se_rechaza_nombrando_lo_que_falta():
+    """El mensaje tiene que decir QUÉ falta: "revisá los datos" obliga a
+    adivinar entre siete campos."""
+    destino = _rechazada("Sin Calle", calle="", numero="")
+    assert "err=secdireccion" in destino, destino
+    assert "calle" in destino and "altura" in destino, destino
+    print("OK  test_sin_calle_ni_altura_se_rechaza_nombrando_lo_que_falta")
+
+
+def test_sin_provincia_ni_localidad_se_rechaza():
+    destino = _rechazada("Sin Provincia", provincia="", localidad="")
+    assert "err=secdireccion" in destino, destino
+    assert "provincia" in destino and "localidad" in destino, destino
+    print("OK  test_sin_provincia_ni_localidad_se_rechaza")
+
+
+def test_sin_nombre_se_rechaza():
+    """`nombre` llegaba obligatorio por FastAPI pero vacío pasaba, y quedaba
+    una seccional sin nombre en la lista."""
+    r = _postear("")
+    assert "err=secsinnombre" in r.headers.get("location", "")
+    with db.get_session() as s:
+        assert not s.exec(select(Seccional).where(Seccional.sindicato_id == SID_A,
+                                                 Seccional.nombre == "")).first()
+    print("OK  test_sin_nombre_se_rechaza")
 
 
 def test_precision_inventada_no_entra():
-    """Un POST armado a mano no puede escribir una precisión que no existe."""
-    sec = _alta("Precision Trucha", provincia="Santa Fe", localidad="Rosario",
-                latitud="-32.94", longitud="-60.63", precision_geo="exactisima")
-    # Hay coordenadas válidas, así que queda `manual`: son, de hecho, puestas
-    # a mano. Lo que no puede es quedar como si las hubiera resuelto el
-    # geocodificador.
-    assert sec.precision_geo == "manual"
+    """Un POST armado a mano no puede escribir una precisión que no existe. Y
+    ahora tampoco cuela como `manual`: la lista de lo aceptable es cerrada
+    (geo.PRECISIONES_SECCIONAL), así que lo que no está en la lista se
+    rechaza en vez de guardarse con otro nombre."""
+    destino = _rechazada("Precision Trucha", precision_geo="exactisima")
+    assert "err=secsinubicar" in destino, destino
     print("OK  test_precision_inventada_no_entra")
 
 
-def test_precision_exacta_sin_coordenadas_cae_a_sin_geo():
+def test_precision_exacta_sin_coordenadas_se_rechaza():
     """Una fila que dice "exacta" con lat/lon en NULL es peor que una que
-    admite no estar ubicada."""
-    sec = _alta("Miente Exacta", provincia="Santa Fe", localidad="Rosario",
-                precision_geo="exacta")
-    assert sec.precision_geo == "sin_geo"
-    print("OK  test_precision_exacta_sin_coordenadas_cae_a_sin_geo")
+    admite no estar ubicada. Antes se guardaba como `sin_geo` (que es lo que
+    sigue haciendo `geo.campos_para_guardar`); ahora ni entra."""
+    destino = _rechazada("Miente Exacta", latitud="", longitud="", precision_geo="exacta")
+    assert "err=secsinubicar" in destino, destino
+    # La regla de abajo sigue en pie, y es la que protege a las OTRAS cinco
+    # rutas que escriben un domicilio: sin coordenadas válidas no hay
+    # precisión que valga.
+    assert geo.campos_para_guardar({"localidad": "Rosario"}, "exacta")["precision_geo"] == "sin_geo"
+    print("OK  test_precision_exacta_sin_coordenadas_se_rechaza")
 
 
 def test_coordenadas_basura_no_entran():
     for lat, lon in [("0", "0"), ("ahi", "-60.6"), ("91", "0"), ("-32.9", "181")]:
-        sec = _alta(f"Basura {lat} {lon}", provincia="Santa Fe", localidad="Rosario",
-                    latitud=lat, longitud=lon, precision_geo="exacta")
-        assert sec.precision_geo == "sin_geo", f"{lat},{lon} no debería entrar"
-        assert sec.latitud is None
+        destino = _rechazada(f"Basura {lat} {lon}", latitud=lat, longitud=lon,
+                             precision_geo="exacta")
+        assert "err=secsinubicar" in destino, f"{lat},{lon}: {destino}"
     print("OK  test_coordenadas_basura_no_entran")
 
 
@@ -157,9 +215,7 @@ def test_editar_mueve_el_globo():
                 calle="San Martín", numero="850",
                 latitud="-32.947338", longitud="-60.636893", precision_geo="exacta")
     r = cliente.post("/admin/seccional", data={
-        "id": str(sec.id), "nombre": "Para Mover", "provincia": "Santa Fe",
-        "localidad": "Rosario", "calle": "San Martín", "numero": "850",
-        "piso_depto": "", "codigo_postal": "2000",
+        **VALIDO, "id": str(sec.id), "nombre": "Para Mover",
         "latitud": "-32.950000", "longitud": "-60.640000", "precision_geo": "manual",
     }, follow_redirects=False)
     assert r.status_code == 303
@@ -171,11 +227,9 @@ def test_editar_mueve_el_globo():
 
 
 def test_editar_guarda_el_contacto():
-    sec = _alta("Con Contacto", provincia="Santa Fe", localidad="Rosario")
+    sec = _alta("Con Contacto")
     cliente.post("/admin/seccional", data={
-        "id": str(sec.id), "nombre": "Con Contacto", "provincia": "Santa Fe",
-        "localidad": "Rosario", "calle": "", "numero": "", "piso_depto": "",
-        "codigo_postal": "", "latitud": "", "longitud": "", "precision_geo": "sin_geo",
+        **VALIDO, "id": str(sec.id), "nombre": "Con Contacto",
         "telefono": "341 425 0850", "whatsapp": "341 555 1234",
         "mail": "rosario@uom.org.ar", "horario_atencion": "Lunes a viernes de 9 a 17",
     })
@@ -191,11 +245,12 @@ def test_editar_guarda_el_contacto():
 # --------------------------------------------------------------- aislamiento
 
 def test_no_se_puede_editar_una_seccional_ajena():
+    # Con un domicilio VÁLIDO: si el POST fuera inválido, el rechazo vendría
+    # de la validación de la dirección y este test pasaría sin haber probado
+    # el aislamiento.
     cliente.post("/admin/seccional", data={
-        "id": str(SEC_AJENA), "nombre": "Hackeada", "provincia": "Santa Fe",
-        "localidad": "Rosario", "calle": "", "numero": "", "piso_depto": "",
-        "codigo_postal": "", "latitud": "-32.94", "longitud": "-60.63",
-        "precision_geo": "manual",
+        **VALIDO, "id": str(SEC_AJENA), "nombre": "Hackeada",
+        "latitud": "-32.94", "longitud": "-60.63", "precision_geo": "manual",
     })
     with db.get_session() as s:
         sec = s.get(Seccional, SEC_AJENA)

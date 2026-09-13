@@ -150,6 +150,38 @@ def test_normalizar_precision_es_fail_closed():
     print("OK  test_normalizar_precision_es_fail_closed")
 
 
+def test_ubicacion_precisa_separa_el_punto_de_la_puerta():
+    """La regla que decide si una seccional se puede guardar (2026-09-13).
+    `aproximada` es el centroide que devolvió la API cuando no encontró la
+    altura; `manual` es alguien que miró el mapa y puso el globo en la puerta.
+    Los metros de error pueden ser parecidos: lo que cambia es que en un caso
+    hay una persona que responde por el punto."""
+    assert geo.ubicacion_precisa("exacta", -32.947, -60.636) is True
+    assert geo.ubicacion_precisa("manual", -32.947, -60.636) is True
+    assert geo.ubicacion_precisa("aproximada", -32.947, -60.636) is False
+    assert geo.ubicacion_precisa("sin_geo", -32.947, -60.636) is False
+    # Una precisión inventada no cuela como buena: la lista es cerrada.
+    assert geo.ubicacion_precisa("exactísima", -32.947, -60.636) is False
+    # Y sin coordenadas válidas no hay precisión que valga, igual que en
+    # campos_para_guardar.
+    for lat, lon in ((None, None), (0, 0), ("ahi", -60.6), (91, 0)):
+        assert geo.ubicacion_precisa("exacta", lat, lon) is False, (lat, lon)
+    print("OK  test_ubicacion_precisa_separa_el_punto_de_la_puerta")
+
+
+def test_faltan_campos_nombra_los_campos_como_los_lee_una_persona():
+    """El mensaje de error se arma con esto, así que "numero" tiene que salir
+    como "altura": nadie dice "falta el numero" de un domicilio."""
+    assert geo.faltan_campos({}, geo.OBLIGATORIOS_SECCIONAL) == \
+        ["provincia", "localidad", "calle", "altura"]
+    assert geo.faltan_campos({"provincia": "Santa Fe", "localidad": "Rosario",
+                              "calle": "San Martín", "numero": "850"},
+                             geo.OBLIGATORIOS_SECCIONAL) == []
+    # Un espacio no es un dato.
+    assert geo.faltan_campos({"provincia": " ", "localidad": "\t"}) == ["provincia", "localidad"]
+    print("OK  test_faltan_campos_nombra_los_campos_como_los_lee_una_persona")
+
+
 def test_vencido():
     import fechas
     from datetime import timedelta

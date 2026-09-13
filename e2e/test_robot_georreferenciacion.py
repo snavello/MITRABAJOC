@@ -94,10 +94,12 @@ def _abrir_seccionales(page):
 def test_asistente_de_alta_de_seccional(nuevo_actor, informe):
     """Los tres pasos completos, con búsqueda real contra Georef y Nominatim.
 
-    Si esas APIs no responden (entorno sin salida a internet), el asistente
-    tiene que dejar seguir igual y guardar `sin_geo`: eso también se verifica,
-    porque es la promesa de que un servicio ajeno caído no impide dar de alta
-    una delegación.
+    Desde el 2026-09-13 una seccional NO se puede guardar sin ubicar, así que
+    lo que se verifica cuando esas APIs no responden (entorno sin salida a
+    internet) es la vía de escape: el mapa se abre igual y el punto se marca a
+    mano. Es lo que mantiene en pie la otra promesa -- que un servicio ajeno
+    caído no impida dar de alta una delegación -- ahora que el globo es
+    obligatorio.
     """
     page = nuevo_actor("admin")
     _login_admin(page)
@@ -124,8 +126,18 @@ def test_asistente_de_alta_de_seccional(nuevo_actor, informe):
     informe.dato("Ayuda del paso 2", ayuda[:90])
 
     if precision == "sin_geo":
-        informe.paso("Las APIs de mapas no respondieron: el asistente dejó continuar igual")
-        assert "guardar" in ayuda.lower(), ayuda
+        # Ni Georef ni Nominatim contestaron. "Continuar" tiene que estar
+        # deshabilitado y el camino a mano, visible.
+        expect(page.locator("#sec-btn-continuar")).to_be_disabled()
+        expect(page.locator("#sec-btn-manual")).to_be_visible()
+        informe.paso("Las APIs de mapas no respondieron: apareció el camino a mano")
+        page.click("#sec-btn-manual")
+        expect(page.locator("#sec-mapa.leaflet-container")).to_be_visible()
+        caja = page.locator("#sec-mapa").bounding_box()
+        page.mouse.click(caja["x"] + caja["width"] / 2, caja["y"] + caja["height"] / 2)
+        page.wait_for_function(
+            "() => document.getElementById('sec-precision').value === 'manual'", timeout=8000)
+        informe.paso("Tocó el mapa y el punto quedó puesto a mano, sin depender de ninguna API")
     else:
         assert precision in ("exacta", "aproximada"), precision
         expect(page.locator("#sec-mapa.leaflet-container")).to_be_visible()
@@ -147,7 +159,8 @@ def test_asistente_de_alta_de_seccional(nuevo_actor, informe):
             "() => document.getElementById('sec-precision').value === 'manual'", timeout=8000)
         informe.paso("Arrastró el globo y la ubicación pasó a 'manual'")
 
-    page.click('.geo-paso[data-paso="2"] button:has-text("Continuar")')
+    expect(page.locator("#sec-btn-continuar")).to_be_enabled()
+    page.click("#sec-btn-continuar")
     expect(page.locator('.geo-paso[data-paso="3"]')).to_be_visible()
     page.fill("#sec-telefono", "341 425 0850")
     page.fill("#sec-horario", "Lunes a viernes de 9 a 17")

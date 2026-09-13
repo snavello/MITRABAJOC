@@ -30,6 +30,7 @@ from datetime import timedelta
 import db
 import encuestas
 import fechas
+import geo
 
 # Bloque de CUIL propio, separado de los de `cargar_lote_sindicato.py`
 # (65000000+) y de los escritos a mano en `cargar_demo.py`, para que dos
@@ -119,6 +120,14 @@ def _padron(sid: int, secs: dict, cuits: list, rnd) -> list:
     nombres_sec = list(secs)
     filas = []
     with db.get_session() as s:
+        # La zona del afiliado sale de SU seccional, leída de la base y no de
+        # un mapa escrito acá: la provincia estaba hardcodeada y la localidad
+        # no estaba, y desde el 2026-09-13 las dos son obligatorias en todas
+        # las altas (geo.OBLIGATORIOS_AFILIADO). Un padrón de demo sin ellas
+        # mostraría justo lo que la app ya no deja cargar.
+        zonas = {sec.id: {"localidad": sec.localidad, "provincia": sec.provincia}
+                 for sec in s.exec(db.select(db.Seccional).where(
+                     db.Seccional.id.in_(list(secs.values())))).all()}
         for i in range(CANTIDAD):
             cuil = f"{'20' if i % 3 else '27'}{BASE_CUIL + i:08d}{(i * 7) % 10}"
             seccional = nombres_sec[i % len(nombres_sec)]
@@ -127,8 +136,8 @@ def _padron(sid: int, secs: dict, cuits: list, rnd) -> list:
                 sindicato_id=sid, cuil=cuil,
                 nombre=f"{rnd.choice(NOMBRES)} {rnd.choice(APELLIDOS)}",
                 seccional_id=secs[seccional], cuit_empleador=cuit,
-                provincia={"Rosario": "Santa Fe", "Córdoba": "Córdoba"}.get(
-                    seccional, "Buenos Aires"),
+                **geo.campos_para_guardar(zonas.get(secs[seccional], {}),
+                                          precision="sin_geo"),
                 activo=True, registrado=True))
             filas.append({"cuil": cuil, "seccional": seccional})
         s.commit()

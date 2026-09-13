@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css?v={{ sello_static('vendor/leaflet/leaflet.css') }}">
 <script src="/static/vendor/leaflet/leaflet.js?v={{ sello_static('vendor/leaflet/leaflet.js') }}"></script>
 <script src="/static/mapa.js?v={{ sello_static('mapa.js') }}"></script>
+<script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
 <style>
   :root {
     --marca-base: {{ marca.color_base }};
@@ -176,6 +177,9 @@
   .perfil-campo input, .perfil-campo select { width: 100%; padding: 9px 10px; border: 1px solid var(--linea);
     border-radius: 8px; font-size: 13.5px; font-family: inherit; background: #fff; color: var(--tinta); }
   .perfil-campo input:disabled { background: var(--papel); color: var(--gris); }
+  /* "(opcional)" en minúscula al lado de la etiqueta en mayúsculas: se lee
+     como aclaración y no como parte del nombre del campo. */
+  .perfil-campo label .opc { text-transform: none; letter-spacing: .2px; font-weight: 500; opacity: .8; }
   .perfil-fila3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; }
   .perfil-fila2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .perfil-guardar-btn { width: 100%; margin-top: 6px; padding: 12px; background: var(--marca-acento);
@@ -446,26 +450,37 @@
           <label>Nombre</label>
           <input type="text" id="pf-nombre" value="{{ perfil.nombre if perfil else nombre_trab }}" required>
         </div>
-        <div class="perfil-campo perfil-fila3">
-          <div><label>Calle</label><input type="text" id="pf-calle" value="{{ perfil.calle if perfil else '' }}"></div>
-          <div><label>Número</label><input type="text" id="pf-numero" value="{{ perfil.numero if perfil else '' }}"></div>
-          <div><label>Piso / depto</label><input type="text" id="pf-piso" value="{{ perfil.piso_depto if perfil else '' }}"></div>
-        </div>
+        {# Provincia y localidad son las dos únicas obligatorias del domicilio
+           (geo.OBLIGATORIOS_AFILIADO, decisión de Sd 2026-09-13): son lo que
+           el sindicato necesita para agrupar a su gente, y son los mismos dos
+           campos que se piden en el alta. El resto dice "(opcional)" al lado:
+           es lo que evita que alguien abandone el formulario porque no se
+           acuerda del código postal. #}
         <div class="perfil-campo perfil-fila2">
-          <div><label>Localidad</label>
+          <div><label>Localidad *</label>
             <input type="text" id="pf-localidad" list="pf-localidades" autocomplete="off"
-                   value="{{ perfil.localidad if perfil else '' }}" oninput="pfLocalidades()">
+                   value="{{ perfil.localidad if perfil else '' }}" oninput="pfLocalidades()" required>
             <datalist id="pf-localidades"></datalist>
           </div>
-          <div><label>Provincia</label>
-            <select id="pf-provincia" onchange="pfLocalidades()">
+          <div><label>Provincia *</label>
+            <select id="pf-provincia" onchange="pfLocalidades()" required>
               <option value="">—</option>
               {% for p in provincias %}<option value="{{ p }}" {{ 'selected' if perfil and perfil.provincia == p else '' }}>{{ p }}</option>{% endfor %}
             </select>
           </div>
         </div>
+        {# El motivo va a la vista y no en el mensaje de error: con los dos
+           campos `required`, el aviso que se ve al guardar es el del navegador
+           ("completá este campo"), que dice qué falta pero no para qué. Una
+           obligatoriedad sin motivo se lee como un capricho del formulario. #}
+        <div class="pf-geo-nota" style="margin:-6px 0 12px;">Tu sindicato usa la provincia y la localidad para agruparte por zona y mandarte lo de tu seccional. El resto del domicilio es opcional.</div>
+        <div class="perfil-campo perfil-fila3">
+          <div><label>Calle <span class="opc">(opcional)</span></label><input type="text" id="pf-calle" value="{{ perfil.calle if perfil else '' }}"></div>
+          <div><label>Altura <span class="opc">(opcional)</span></label><input type="text" id="pf-numero" value="{{ perfil.numero if perfil else '' }}"></div>
+          <div><label>Piso <span class="opc">(opcional)</span></label><input type="text" id="pf-piso" value="{{ perfil.piso_depto if perfil else '' }}"></div>
+        </div>
         <div class="perfil-campo perfil-fila2">
-          <div><label>Código postal</label><input type="text" id="pf-cp" value="{{ perfil.codigo_postal if perfil else '' }}"></div>
+          <div><label>Código postal <span class="opc">(opcional)</span></label><input type="text" id="pf-cp" value="{{ perfil.codigo_postal if perfil else '' }}"></div>
           <div><label>Teléfono</label><input type="text" id="pf-telefono" value="{{ perfil.telefono if perfil else '' }}"></div>
         </div>
         <div class="perfil-campo">
@@ -509,6 +524,14 @@
              onclick="abrirMapaGrande()" title="Tocá para verlo en pantalla completa"></div>
         {% else %}
         <div class="mi-secc-aviso">Tu seccional todavía no está ubicada en el mapa.</div>
+        {% endif %}
+        {# Una seccional `aproximada` tiene el globo en el centro de la
+           localidad, no en la puerta: "Cómo llegar" te deja a diez cuadras y
+           sin avisar. Desde 2026-09-13 no se pueden guardar así (ver
+           geo.PRECISIONES_SECCIONAL), pero las cargadas antes siguen
+           existiendo y el afiliado tiene que saber lo que está mirando. #}
+        {% if mi_seccional.precision_geo == 'aproximada' %}
+        <div class="mi-secc-aviso">La ubicación es aproximada: el mapa marca el centro de la localidad, no la puerta.</div>
         {% endif %}
 
         <div class="mi-secc-botones">
@@ -655,6 +678,15 @@ async function guardarPerfil(ev) {
   const msg = document.getElementById('perfil-guardar-msg');
   const nombre = document.getElementById('pf-nombre').value.trim();
   if (!nombre) { msg.textContent = 'El nombre no puede estar vacío.'; return false; }
+  // Mismo par de campos que exige el servidor (geo.OBLIGATORIOS_AFILIADO).
+  // Acá para no hacer un viaje al servidor por algo que se ve en la pantalla.
+  const faltan = [];
+  if (!document.getElementById('pf-provincia').value.trim()) faltan.push('tu provincia');
+  if (!document.getElementById('pf-localidad').value.trim()) faltan.push('tu localidad');
+  if (faltan.length) {
+    msg.textContent = 'Falta ' + faltan.join(' y ') + ': tu sindicato las necesita para agruparte por zona.';
+    return false;
+  }
   const fd = new URLSearchParams({
     nombre, calle: document.getElementById('pf-calle').value,
     numero: document.getElementById('pf-numero').value,
@@ -1139,6 +1171,8 @@ function cercaPintar(lat, lon, origen) {
         '<b>' + s.nombre + '</b>' + (propia ? ' <span style="font-size:11px;">· tu seccional</span>' : '') +
         (s.direccion_texto ? '<div class="mi-secc-dir">' + s.direccion_texto + '</div>' : '') +
         (s.horario_atencion ? '<div class="mi-secc-dir">' + s.horario_atencion + '</div>' : '') +
+        (s.precision_geo === 'aproximada'
+          ? '<div class="mi-secc-aviso">Ubicación aproximada: el punto es el centro de la localidad.</div>' : '') +
         '<div class="mi-secc-botones">' +
         (s.telefono ? '<a class="mi-secc-btn" href="tel:' + s.telefono + '">Llamar</a>' : '') +
         (s.whatsapp ? '<a class="mi-secc-btn" target="_blank" rel="noopener" href="' +

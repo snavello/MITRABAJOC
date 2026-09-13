@@ -26,6 +26,15 @@ from modulos import MODULOS
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
+# Una seccional no se guarda sin dirección completa y ubicada (2026-09-13, ver
+# geo.OBLIGATORIOS_SECCIONAL). Acá se manda un domicilio VÁLIDO a propósito:
+# lo que estos tests miran es el permiso, y con un POST inválido el rechazo
+# vendría de otro lado y dirían que el permiso funciona sin haberlo probado.
+DOMICILIO_SEC = {"provincia": "Santa Fe", "localidad": "Rosario", "calle": "San Martín",
+                 "numero": "850", "piso_depto": "", "codigo_postal": "2000",
+                 "latitud": "-32.947338", "longitud": "-60.636893",
+                 "precision_geo": "exacta"}
+
 db.crear_tablas()
 
 with db.get_session() as s:
@@ -165,7 +174,7 @@ def test_no_puede_tildar_ve_todas_en_su_seccional():
     """Sería darse alcance sobre todo el sindicato de un clic."""
     c = _raul()
     r = c.post("/admin/seccional", data={
-        "id": str(SEC_ROSARIO), "nombre": "Rosario", "direccion": "", "ve_todas": "1",
+        "id": str(SEC_ROSARIO), "nombre": "Rosario", "ve_todas": "1", **DOMICILIO_SEC,
     }, follow_redirects=False)
     assert r.status_code == 403
     with Session(db.engine) as s:
@@ -178,7 +187,7 @@ def test_puede_editar_el_nombre_de_su_seccional_sin_tocar_ve_todas():
     no la administración normal."""
     c = _raul()
     r = c.post("/admin/seccional", data={
-        "id": str(SEC_ROSARIO), "nombre": "Rosario Centro", "direccion": "Córdoba 1234",
+        "id": str(SEC_ROSARIO), "nombre": "Rosario Centro", **DOMICILIO_SEC,
     }, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
@@ -192,7 +201,7 @@ def test_puede_editar_el_nombre_de_su_seccional_sin_tocar_ve_todas():
 def test_no_puede_crear_ni_borrar_seccionales():
     """El mapa de delegaciones del sindicato no lo dibuja una delegación."""
     c = _raul()
-    r = c.post("/admin/seccional", data={"nombre": "Inventada", "direccion": ""},
+    r = c.post("/admin/seccional", data={"nombre": "Inventada", **DOMICILIO_SEC},
                follow_redirects=False)
     assert r.status_code == 403
     r = c.post("/admin/seccional/borrar", data={"id": str(SEC_CORDOBA)},

@@ -26,10 +26,21 @@ with db.get_session() as s:
 admin_client = TestClient(main.app)
 admin_client.post("/admin/login", data={"usuario": "20111111110", "clave": "uom-demo"})
 
+# Desde el 2026-09-13 una seccional no se guarda sin dirección completa Y
+# ubicada en la puerta (geo.OBLIGATORIOS_SECCIONAL + geo.PRECISIONES_SECCIONAL).
+# Estos tests no son sobre eso -- de eso se ocupa test_seccional_geo.py -- así
+# que arrancan de un domicilio válido y le cambian lo que cada uno mira.
+DOMICILIO_SEC = {"provincia": "Santa Fe", "localidad": "Rosario", "calle": "San Martín",
+                 "numero": "850", "piso_depto": "", "codigo_postal": "2000",
+                 "latitud": "-32.947338", "longitud": "-60.636893",
+                 "precision_geo": "exacta"}
+# Del domicilio del afiliado, en cambio, solo se exigen provincia y localidad.
+DOMICILIO_TRAB = {"provincia": "Santa Fe", "localidad": "Rosario"}
+
 
 def test_alta_seccional_desde_admin():
     r = admin_client.post("/admin/seccional", data={
-        "nombre": "Seccional Norte", "direccion": "Av. Siempreviva 742",
+        "nombre": "Seccional Norte", **DOMICILIO_SEC,
     }, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
@@ -44,7 +55,7 @@ def test_edicion_seccional():
         sec = s.exec(select(Seccional).where(Seccional.sindicato_id == SID_UOM)).first()
         sec_id = sec.id
     r = admin_client.post("/admin/seccional", data={
-        "id": str(sec_id), "nombre": "Seccional Norte (renombrada)", "direccion": "Otra dirección",
+        "id": str(sec_id), "nombre": "Seccional Norte (renombrada)", **DOMICILIO_SEC,
     }, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
@@ -59,6 +70,7 @@ def test_alta_trabajador_con_seccional():
         sec_id = sec.id
     admin_client.post("/admin/trabajador", data={
         "cuil": "20111111119", "nombre": "Juan Pérez", "seccional_id": str(sec_id),
+        **DOMICILIO_TRAB,
     })
     with Session(db.engine) as s:
         t = s.exec(select(Trabajador).where(Trabajador.cuil == "20111111119")).first()
@@ -67,7 +79,8 @@ def test_alta_trabajador_con_seccional():
 
 
 def test_alta_trabajador_sin_seccional_es_opcional():
-    admin_client.post("/admin/trabajador", data={"cuil": "27222222224", "nombre": "Ana López"})
+    admin_client.post("/admin/trabajador", data={"cuil": "27222222224", "nombre": "Ana López",
+                                                **DOMICILIO_TRAB})
     with Session(db.engine) as s:
         t = s.exec(select(Trabajador).where(Trabajador.cuil == "27222222224")).first()
         assert t.seccional_id is None
@@ -83,6 +96,7 @@ def test_no_se_puede_asignar_seccional_de_otro_sindicato():
         sec_fega_id = sec_fega.id
     admin_client.post("/admin/trabajador", data={
         "cuil": "20333333336", "nombre": "Pedro Gómez", "seccional_id": str(sec_fega_id),
+        **DOMICILIO_TRAB,
     })
     with Session(db.engine) as s:
         t = s.exec(select(Trabajador).where(Trabajador.cuil == "20333333336")).first()
@@ -110,8 +124,11 @@ def test_admin_no_edita_seccional_de_otro_sindicato():
     with Session(db.engine) as s:
         sec_fega = s.exec(select(Seccional).where(Seccional.sindicato_id == SID_FEGA)).first()
         sec_fega_id = sec_fega.id
+    # Con un domicilio VÁLIDO a propósito: si el POST fuera inválido, el
+    # rechazo vendría de la validación del domicilio y este test diría que el
+    # aislamiento funciona sin haberlo probado.
     admin_client.post("/admin/seccional", data={
-        "id": str(sec_fega_id), "nombre": "Hackeada por admin de UOM", "direccion": "",
+        "id": str(sec_fega_id), "nombre": "Hackeada por admin de UOM", **DOMICILIO_SEC,
     })
     with Session(db.engine) as s:
         sec_fega = s.get(Seccional, sec_fega_id)

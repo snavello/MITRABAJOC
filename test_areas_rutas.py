@@ -29,6 +29,15 @@ from modulos import MODULOS
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
+# Una seccional no se guarda sin dirección completa y ubicada (2026-09-13, ver
+# geo.OBLIGATORIOS_SECCIONAL). Acá se manda un domicilio VÁLIDO a propósito:
+# lo que estos tests miran es el permiso, y con un POST inválido el rechazo
+# vendría de otro lado y dirían que el permiso funciona sin haberlo probado.
+DOMICILIO_SEC = {"provincia": "Santa Fe", "localidad": "Rosario", "calle": "San Martín",
+                 "numero": "850", "piso_depto": "", "codigo_postal": "2000",
+                 "latitud": "-32.947338", "longitud": "-60.636893",
+                 "precision_geo": "exacta"}
+
 db.crear_tablas()
 
 with db.get_session() as s:
@@ -150,7 +159,7 @@ def test_la_gestion_de_usuarios_es_solo_de_super_admin():
 
 def test_super_admin_pasa_donde_el_de_area_no():
     c = _cliente("20111111110", "jefa")
-    r = c.post("/admin/seccional", data={"nombre": "Rosario", "direccion": ""},
+    r = c.post("/admin/seccional", data={"nombre": "Rosario", **DOMICILIO_SEC},
                follow_redirects=False)
     assert r.status_code == 303, "el Super Admin tiene todo lo contratado"
     print("OK  test_super_admin_pasa_donde_el_de_area_no")

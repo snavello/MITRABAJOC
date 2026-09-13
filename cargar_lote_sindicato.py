@@ -376,6 +376,10 @@ def sembrar_base(sid: int, ctx: dict):
         # demo en vez de enriquecerla.
         existentes = s.exec(select(Seccional).where(Seccional.sindicato_id == sid)).all()
         secc_ids = [sec.id for sec in existentes]
+        # id de seccional -> su zona, para que el domicilio del afiliado caiga
+        # donde está su seccional.
+        zonas = {sec.id: {"localidad": sec.localidad, "provincia": sec.provincia}
+                 for sec in existentes}
         tope = 0 if len(secc_ids) >= 4 else 6
         for nombre in SECCIONALES_GENERICAS:
             if len(secc_ids) >= tope:
@@ -392,6 +396,7 @@ def sembrar_base(sid: int, ctx: dict):
                                 precision="aproximada", lat=lat, lon=lon))
             s.add(sec); s.commit(); s.refresh(sec)
             secc_ids.append(sec.id)
+            zonas[sec.id] = {"localidad": localidad, "provincia": provincia}
 
         # Empleadores: usa los reales activos; completa con sintéticos hasta ~12.
         reales = s.exec(select(Empleador).where(Empleador.sindicato_id == sid,
@@ -418,10 +423,17 @@ def sembrar_base(sid: int, ctx: dict):
             emp = rnd.choice(empresas)
             if not s.exec(select(Trabajador).where(Trabajador.sindicato_id == sid,
                                                    Trabajador.cuil == cuil)).first():
+                # La zona sale de SU seccional y no de un sorteo: la
+                # provincia al azar dejaba gente de la seccional de Rosario
+                # viviendo en Córdoba, y desde el 2026-09-13 la localidad es
+                # obligatoria además de la provincia
+                # (geo.OBLIGATORIOS_AFILIADO).
+                sec_id = rnd.choice(secc_ids)
                 s.add(Trabajador(sindicato_id=sid, cuil=cuil, nombre=nombre,
-                                 registrado=True, seccional_id=rnd.choice(secc_ids),
+                                 registrado=True, seccional_id=sec_id,
                                  cuit_empleador=emp["cuit"],
-                                 provincia=rnd.choice(["Buenos Aires", "Santa Fe", "Córdoba"])))
+                                 **geo.campos_para_guardar(zonas.get(sec_id, {}),
+                                                           precision="sin_geo")))
             if not s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first():
                 s.add(CuentaTrabajador(cuil=cuil, nombre=nombre,
                                        clave_hash=auth.hashear_clave(cuil[:5])))

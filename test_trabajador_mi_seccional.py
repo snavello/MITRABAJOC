@@ -124,7 +124,9 @@ def test_el_afiliado_no_puede_cambiarse_la_seccional_por_la_api():
     c = _sesion(CUIL_SIN_SECC)
     r = c.post("/api/perfil", data={
         "nombre": "Afiliado 3336", "calle": "", "numero": "", "piso_depto": "",
-        "localidad": "", "provincia": "", "codigo_postal": "",
+        # Provincia y localidad son obligatorias desde 2026-09-13; el resto
+        # del domicilio sigue siendo opcional.
+        "localidad": "Rosario", "provincia": "Santa Fe", "codigo_postal": "",
         "latitud": "", "longitud": "", "precision_geo": "sin_geo",
         "telefono": "", "mail": "", "seccional_id": str(SEC_UBICADA)})
     assert r.status_code == 200, r.text

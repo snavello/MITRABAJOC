@@ -1195,16 +1195,26 @@ def admin_trabajador_alta(
     vigencia_credencial: str = Form(""), seccional_id: str = Form(""),
     cuit_empleador: str = Form(""),
 ):
-    """Alta o modificación manual de un trabajador. Obligatorios: cuil y nombre.
+    """Alta o modificación manual de un trabajador. Obligatorios: cuil,
+    nombre y **provincia y localidad** (geo.OBLIGATORIOS_AFILIADO).
 
     El domicilio usa la misma carga guiada y el mismo armado que el de la
     seccional (geo.campos_para_guardar): es la única forma de que el mismo
     domicilio no quede distinto según lo cargue el admin acá o el propio
-    afiliado desde su perfil."""
+    afiliado desde su perfil. Y desde 2026-09-13 exige lo mismo que le exige
+    al afiliado: sin provincia ni localidad el sindicato no puede agrupar a
+    su gente ni dirigir nada por seccional, y un padrón a medio llenar no se
+    completa nunca. La calle, la altura y el globo en el mapa siguen siendo
+    opcionales -- eso lo pone el afiliado desde su perfil, o el proceso de
+    georreferenciación masiva."""
     sid = exigir_sindicato(request)
     cuil_norm = _norm_cuil(cuil)
     if len(cuil_norm) != 11 or not nombre.strip():
         return RedirectResponse("/admin?err=datos#trabajadores", status_code=303)
+    faltan = geo.faltan_campos({"provincia": provincia, "localidad": localidad})
+    if faltan:
+        return RedirectResponse("/admin?err=domicilio&faltan=" + quote(", ".join(faltan))
+                                + "#trabajadores", status_code=303)
     sec_id = int(seccional_id) if seccional_id else None
     domicilio = geo.campos_para_guardar(
         {"calle": calle, "numero": numero, "piso_depto": piso_depto,
@@ -1274,9 +1284,18 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
     no existe en este sindicato se ignora en silencio y el trabajador queda
     sin asignar -- mismo criterio que el `seccional_id` del alta individual,
     que tampoco rechaza el alta entera por un campo opcional mal puesto.
+
+    **Provincia y localidad son obligatorias también acá** (2026-09-13), pero
+    por LÍNEA y no por lote: una planilla de 500 filas no se rechaza entera
+    porque tres no traigan la provincia. Las que faltan quedan afuera y la
+    pantalla dice cuántas y cuáles -- si se ignoraran en silencio, el
+    sindicato creería que cargó 500 y tendría 497. Antes esta ruta ya
+    descartaba en silencio las líneas sin CUIL o sin nombre; ahora el conteo
+    vuelve y se ve.
     """
     sid = exigir_sindicato(request)
     altas = 0
+    omitidas = []
     por_nombre = {geo._norm(sec["nombre"]): sec["id"]
                   for sec in db.seccionales_del_sindicato(sid)}
     with db.get_session() as s:
@@ -1289,8 +1308,12 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
             cuil = _norm_cuil(campos[0]) if campos else ""
             nombre = campos[1] if len(campos) > 1 else ""
             if len(cuil) != 11 or not nombre or cuil in existentes:
+                omitidas.append(linea.strip()[:60])
                 continue
             def campo(i): return campos[i] if len(campos) > i else ""
+            if geo.faltan_campos({"localidad": campo(5), "provincia": campo(6)}):
+                omitidas.append(linea.strip()[:60])
+                continue
             domicilio = geo.campos_para_guardar({
                 "calle": campo(2), "numero": campo(3), "piso_depto": campo(4),
                 "localidad": campo(5), "provincia": campo(6),
@@ -1301,7 +1324,13 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
                 seccional_id=por_nombre.get(geo._norm(campo(10)))))
             existentes.add(cuil); altas += 1
         s.commit()
-    return RedirectResponse("/admin#trabajadores", status_code=303)
+    # Las primeras tres líneas rechazadas alcanzan para que la persona vea el
+    # patrón (casi siempre es la misma columna que falta en todas) sin armar
+    # una query string de diez mil caracteres con la planilla entera.
+    destino = f"/admin?altas={altas}"
+    if omitidas:
+        destino += f"&omitidas={len(omitidas)}&muestra=" + quote(" | ".join(omitidas[:3]))
+    return RedirectResponse(destino + "#trabajadores", status_code=303)
 
 
 @app.post("/admin/trabajador/georreferenciar-pendientes")
@@ -2028,15 +2057,37 @@ def abm_seccional(
     el domicilio de una seccional del propio alcance, en cambio, sí puede --
     y georreferenciarla entra por esa misma puerta: es editar la dirección.
 
-    **Se puede guardar sin ubicar.** Las coordenadas llegan del paso 2 del
-    asistente (el globo del mapa) y son opcionales: sin ellas la seccional
-    queda `sin_geo` y el panel la marca como pendiente. Que una API de
-    terceros no responda no puede impedir dar de alta una delegación.
+    **La dirección es obligatoria y el globo tiene que estar en la puerta**
+    (decisión de Sd, 2026-09-13): provincia, localidad, calle y altura, más
+    una ubicación `exacta` o `manual` -- ver `geo.PRECISIONES_SECCIONAL` para
+    por qué `aproximada` no alcanza. Antes se podía guardar sin ubicar; el
+    resultado era que el afiliado tocaba "Cómo llegar" y el teléfono lo
+    llevaba al centro de la ciudad.
+
+    Lo que NO cambia es que ninguna API de terceros pueda bloquear el alta:
+    si Georef y Nominatim no responden, el asistente abre el mapa igual y la
+    seccional se ubica arrastrando el globo (queda `manual`).
+
+    La validación está acá y también en el formulario, y tiene que estar en
+    los dos lados: el botón deshabilitado se saltea con un POST armado a
+    mano, y un formulario que deja mandar algo que el servidor rechaza es una
+    pantalla que miente.
     """
     sid = exigir_sindicato(request)
     todas = bool(ve_todas)
     if not id:
         _exigir_super_admin(request)
+    if not nombre.strip():
+        return RedirectResponse("/admin?err=secsinnombre#seccionales", status_code=303)
+    faltan = geo.faltan_campos(
+        {"provincia": provincia, "localidad": localidad, "calle": calle, "numero": numero},
+        geo.OBLIGATORIOS_SECCIONAL)
+    if faltan:
+        return RedirectResponse(
+            "/admin?err=secdireccion&faltan=" + quote(", ".join(faltan))
+            + "#seccionales", status_code=303)
+    if not geo.ubicacion_precisa(precision_geo, latitud, longitud):
+        return RedirectResponse("/admin?err=secsinubicar#seccionales", status_code=303)
     # `geo.campos_para_guardar` es el ÚNICO lugar que decide qué se escribe
     # en el bloque de domicilio -- acá, en el alta de trabajador, en la masiva
     # y en el perfil del afiliado. Si cada ruta armara lo suyo, el mismo
@@ -5129,9 +5180,15 @@ def _texto_con_links(texto: str) -> str:
 
 @app.get("/ingresar", response_class=HTMLResponse)
 def ingresar(request: Request):
-    """Pantalla de login/registro del trabajador."""
+    """Pantalla de login/registro del trabajador.
+
+    Las provincias van en el contexto porque el registro pide el domicilio:
+    la provincia es un desplegable con la lista canónica (db.PROVINCIAS_AR) y
+    no un campo libre, así que nadie escribe "Bs As" y queda fuera de todo
+    filtro por zona."""
     return templates.TemplateResponse("trabajador_login.html", {
-        "request": request, "marca_plataforma": db.marca_plataforma()})
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "provincias": db.PROVINCIAS_AR})
 
 
 @app.post("/trabajador/login")
@@ -5154,13 +5211,64 @@ def trabajador_login(request: Request, cuil: str = Form(...), clave: str = Form(
     return resp
 
 
+def _domicilio_distinto(trabajador, domicilio: dict) -> bool:
+    """¿El domicilio que llegó dice algo distinto de lo que la fila ya tiene?
+
+    Separado de la ruta porque de esto depende que un domicilio IDÉNTICO no
+    toque la fila: reescribirlo igual le borraría las coordenadas (el alta no
+    geocodifica, escribe `sin_geo`) y volvería a mandar a la cola de
+    georreferenciación algo que ya estaba ubicado."""
+    return any((getattr(trabajador, campo) or "").strip() != (domicilio.get(campo) or "").strip()
+               for campo in ("calle", "numero", "piso_depto", "localidad",
+                             "provincia", "codigo_postal"))
+
+
 @app.post("/trabajador/registro")
-def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Form(...)):
+def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Form(...),
+                         provincia: str = Form(""), localidad: str = Form(""),
+                         calle: str = Form(""), numero: str = Form(""),
+                         piso_depto: str = Form(""), codigo_postal: str = Form("")):
+    """Crea la cuenta del afiliado y, con ella, su domicilio.
+
+    **Se le piden provincia y localidad, y nada más es obligatorio** (decisión
+    de Sd, 2026-09-13; geo.OBLIGATORIOS_AFILIADO). El alta es el único momento
+    en que se le puede preguntar algo a todo el mundo, y sin esos dos campos
+    el sindicato no puede agrupar a su gente por zona; pedirle además la
+    altura y que confirme un globo en el mapa, en cambio, es perder gente en
+    la puerta. Los campos finos se muestran igual, marcados "opcional", y el
+    mapa queda para el perfil.
+
+    **El domicilio se guarda como un bloque, no campo por campo.** Si lo que
+    la persona escribe es distinto de lo que el sindicato tenía, reemplaza al
+    anterior COMPLETO; si es idéntico, la fila no se toca. La primera versión
+    fusionaba campo por campo y el resultado era peor que cualquiera de las
+    dos fuentes: alguien que declaraba vivir en La Plata terminaba con la
+    calle que el padrón tenía de Rafaela, o sea una dirección que no existe en
+    ninguna parte. Un domicilio es UN dato, no seis.
+    Y manda la persona, no el padrón: es su dirección, la está declarando
+    ahora, y el perfil ya la deja cambiarla un minuto después -- pedirle dos
+    campos obligatorios para después descartarlos sería un formulario que
+    miente. Lo que el padrón tenía queda igual solo si la persona no cambió
+    nada.
+
+    **Acá no se geocodifica.** Es la misma regla del alta masiva: una llamada
+    a un servicio ajeno en el camino del registro es el peor lugar para
+    esperar ocho segundos, y el afiliado no tiene por qué pagar con su alta
+    que Nominatim esté lento. Las filas quedan `sin_geo` con localidad
+    cargada, que es exactamente lo que "Georreferenciar pendientes" procesa
+    después.
+    """
     cuil = _norm_cuil(cuil)
     # Validar que el CUIL esté empadronado en al menos un sindicato
     sinds = db.sindicatos_de_cuil(cuil)
     if not sinds:
         return RedirectResponse("/ingresar?error=nohabilitado", status_code=303)
+    if geo.faltan_campos({"provincia": provincia, "localidad": localidad}):
+        return RedirectResponse("/ingresar?error=domicilio", status_code=303)
+    domicilio = geo.campos_para_guardar(
+        {"calle": calle, "numero": numero, "piso_depto": piso_depto,
+         "localidad": localidad, "provincia": provincia, "codigo_postal": codigo_postal},
+        precision="sin_geo")
     with db.get_session() as s:
         existe = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
         if existe:
@@ -5169,6 +5277,12 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
         # marcar los empadronamientos como registrados
         for t in s.exec(select(Trabajador).where(Trabajador.cuil == cuil)).all():
             t.registrado = True
+            # `Trabajador` es por sindicato (pluriempleo), así que el domicilio
+            # va en TODOS sus empadronamientos: es una sola persona y vive en
+            # un solo lugar.
+            if _domicilio_distinto(t, domicilio):
+                for campo, valor in domicilio.items():
+                    setattr(t, campo, valor)
             s.add(t)
         s.commit()
     token = auth.crear_sesion("trabajador", sindicato_id=0)
@@ -5305,13 +5419,30 @@ async def api_actualizar_perfil(request: Request, nombre: str = Form(...), calle
     El domicilio pasa por el mismo `geo.campos_para_guardar` que usa el admin:
     lo que carga el afiliado y lo que carga el sindicato tienen que quedar
     idénticos, o el mismo domicilio se vería distinto según quién lo tocó
-    último."""
+    último.
+
+    **Provincia y localidad son obligatorias** (geo.OBLIGATORIOS_AFILIADO).
+    Es el único dato del domicilio que el sindicato realmente necesita para
+    trabajar, y este formulario es la vía por la que se completa el padrón de
+    la gente que ya estaba registrada antes de que se exigiera en el alta. El
+    resto del domicilio y el globo en el mapa siguen siendo opcionales."""
     ses = sesion_actual(request, "trabajador")
     cuil = request.cookies.get("cuil_trab", "")
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     if not nombre.strip():
         raise HTTPException(400, "El nombre no puede estar vacío.")
+    faltan = geo.faltan_campos({"provincia": provincia, "localidad": localidad})
+    if faltan:
+        # Los dos campos son femeninos, así que "la" sirve para los dos; lo que
+        # cambia es el número. Un "Falta localidad: las necesita" se lee como
+        # un error del sistema y no como algo que la persona tiene que corregir.
+        cuantos = len(faltan)
+        raise HTTPException(400, ("Faltan " if cuantos > 1 else "Falta ")
+                            + " y ".join("la " + campo for campo in faltan)
+                            + (": tu sindicato las necesita" if cuantos > 1
+                               else ": tu sindicato la necesita")
+                            + " para agruparte por zona.")
     sid = sindicato_activo_trabajador(request)
     if not sid:
         raise HTTPException(403, "No autorizado")

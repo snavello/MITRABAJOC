@@ -312,8 +312,10 @@ for d in SINDICATOS:
 
         # 1. Seccionales y áreas primero: todo lo demás las referencia.
         secs = {}
+        zona = {}   # seccional -> (localidad, provincia), para el padrón
         for nombre, ve_todas, dom in d["seccionales"]:
             calle, numero, localidad, provincia, cp, lat, lon = dom
+            zona[nombre] = (localidad, provincia)
             x = Seccional(sindicato_id=sid, nombre=nombre, ve_todas=ve_todas,
                           telefono=TELEFONOS_DEMO.get(nombre, ""),
                           whatsapp=TELEFONOS_DEMO.get(nombre, ""),
@@ -338,8 +340,18 @@ for d in SINDICATOS:
             (cuil, por_cuil[cuil][2], por_cuil[cuil][4])
             for cuil in d.get("empleados_afiliados", []) if cuil in por_cuil]
         for cuil, nombre, seccional in filas:
+            # Localidad y provincia de SU seccional: desde el 2026-09-13 son
+            # obligatorias en las cuatro puertas por las que entra un
+            # domicilio (geo.OBLIGATORIOS_AFILIADO), así que un padrón de demo
+            # sin esos campos mostraría justo lo que la app ya no permite
+            # cargar. Y la seccional es la mejor respuesta que hay acá: quien
+            # está asignado a Rosario vive en Rosario.
+            localidad, provincia = zona[seccional]
             s.add(Trabajador(sindicato_id=sid, cuil=cuil, nombre=nombre,
-                             seccional_id=secs[seccional], registrado=False))
+                             seccional_id=secs[seccional], registrado=False,
+                             **geo.campos_para_guardar(
+                                 {"localidad": localidad, "provincia": provincia},
+                                 precision="sin_geo")))
 
         # 3. El Super Admin de Sede Central: el admin de siempre, con los
         # accesos de siempre. La premisa del sprint es que no pierda nada.
