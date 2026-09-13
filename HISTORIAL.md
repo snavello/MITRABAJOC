@@ -4117,3 +4117,62 @@ aislamiento con el mismo CUIL en dos gremios, N18, sin ubicar, sin corte de
 seccional, y que el mapa siga viajando cuando el umbral esconde las preguntas)
 y dos robots de e2e, el del Panel actualizado a las burbujas nuevas y uno nuevo
 para el mapa de la encuesta.
+
+## El Panel Sindical en blanco: la fecha la ponía el navegador (2026-09-13)
+
+Apareció corriendo los robots de e2e, no en producción: `test_humo_dashboard`
+fallaba porque `#v-recibos` se quedaba en "—". El robot estaba bien; el panel
+estaba mal.
+
+**Qué pasaba.** `static/dashboard.js` armaba su "hoy" con `new Date()` —el
+reloj del DISPOSITIVO— y de esa constante cuelga todo el rango del panel: el
+período por default, los presets, el tope del calendario y la validación de la
+URL. Del otro lado, `dashboard.parsear_filtros` valida contra la hora de
+Buenos Aires (`fechas.hoy()`) y **rechaza un `hasta` futuro**. Cualquier
+dispositivo adelantado respecto de Argentina pedía "mañana", los nueve
+endpoints del panel devolvían **422**, y el JS se comía el error en un `catch`
+que solo sacaba la clase "cargando": los indicadores quedaban en "—" para
+siempre, sin un cartel, sin nada en pantalla. Parecía que no había datos.
+
+A quién le pasa: a cualquiera con el dispositivo en un huso al este de
+Argentina, a quien tenga el reloj mal puesto, y a todos entre las 21 y la
+medianoche si el dispositivo está en UTC. Silencioso, que es lo peor: nadie
+reporta "me dio 422", reportan "el panel no anda".
+
+**Es el mismo defecto que `fechas.py` arregló en el backend el 2026-09-11**
+(Render corre en UTC, `date.today()` cambia de día a las 21:00 de Argentina),
+pero del lado del cliente. La regla vale para los dos lados: **la fecha la
+decide el servidor**.
+
+### El arreglo
+
+La página ya la renderiza el servidor, así que la fecha viaja con ella:
+`data-hoy` en el `<main>` (de `fechas.hoy_texto()`), y `HOY` sale de ahí. Una
+sola línea de JS cambia y con ella el rango entero, los presets, el calendario
+y la guarda de la URL. Queda un `new Date()` de respaldo por si la plantilla no
+manda el dato —ahí vuelve el problema viejo, pero es mejor que un panel que no
+arranca—, y un test cuenta los `new Date()` del código (sin comentarios) para
+que no se cuele otro.
+
+### Y la red, que importa más que el arreglo
+
+El bug era invisible, y eso es lo que lo hizo durar. Ahora el `detail` que
+manda el servidor se lee y se muestra: en un cartel ámbar arriba de los KPIs
+—donde están los filtros que hay que corregir— y en el error de cada panel. Se
+probó con el caso que el JS SÍ deja pasar: un rango de más de 366 días, que el
+servidor rechaza y que antes también dejaba la pantalla muda. Ahora dice "El
+rango máximo es de 366 días".
+
+Los KPIs no son un `[data-panel]`, así que su error no se veía en ningún lado:
+por eso el cartel es global y no solo por panel.
+
+### Verificado
+
+En un Chromium con el huso horario de **Kiritimati (UTC+14)**, que hoy es un
+día más que Buenos Aires: el navegador cree que es el 14 y el servidor dice el
+13. Con el arreglo, ningún endpoint rechazado y los indicadores con datos; y
+pidiendo a mano lo que el panel viejo habría pedido con ese reloj, el servidor
+contesta 422 "'hasta' no puede ser una fecha futura" — o sea que el bug era
+exactamente ese. Más dos tests en `test_dashboard.py`: que la página le dé al
+navegador la fecha del servidor, y que un rango rechazado diga por qué y la
+pantalla tenga dónde decirlo.

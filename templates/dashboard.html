@@ -166,6 +166,11 @@
     border-radius: var(--r-card); z-index: 3; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
     font-size: 12.5px; color: var(--gris); text-align: center; padding: 12px; }
   .panel.con-error .panel-error { display: flex; }
+  /* El motivo que devuelve el servidor, arriba del tablero. Ámbar y no rojo:
+     casi siempre es un filtro mal puesto, no una falla. */
+  .aviso-error { background: #fdf3e7; border: 1px solid #e8c89a; color: #8a5a1a;
+    border-radius: var(--r-card); padding: 10px 14px; font-size: 13px;
+    margin-bottom: 12px; line-height: 1.5; }
   .panel-error button { border: 1px solid var(--linea); background: var(--blanco); border-radius: var(--r-btn);
     padding: 6px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; color: var(--tinta); }
 
@@ -404,7 +409,11 @@
   </div>
 </header>
 
-<main data-consultas="{{ '1' if consultas_bot else '0' }}" data-asistente="{{ '1' if asistente else '0' }}">
+{# `data-hoy` es la fecha de Buenos Aires SEGÚN EL SERVIDOR, y es la que usa
+   el panel para su rango: el reloj del navegador puede estar adelantado y el
+   servidor rechaza un "hasta" futuro (ver el comentario en main.py). #}
+<main data-consultas="{{ '1' if consultas_bot else '0' }}" data-asistente="{{ '1' if asistente else '0' }}"
+      data-hoy="{{ hoy }}">
 
   <div class="filtros-card">
     <div class="f-cabecera">
@@ -472,6 +481,10 @@
     <div class="hint-cross">Tocá cualquier segmento o barra de los gráficos para filtrar todo el panel. Lo seleccionado se marca en <b>color destacado</b> y el detalle aparece abajo, en el explorador de datos.</div>
     <div class="f-pie"><button class="btn-reiniciar" id="btn-reiniciar" type="button">⟳ Reiniciar</button></div>
   </div>
+
+  {# Lo que el servidor conteste cuando rechace los filtros. Vive arriba de
+     los KPIs a propósito: es donde están los controles que hay que corregir. #}
+  <div class="aviso-error" id="aviso-error" hidden></div>
 
   <section class="kpis" id="kpis">
     <div class="kpi" style="--kc:var(--marca-primario)"><div class="et">Recibos analizados</div><div class="val" id="v-recibos">—</div><div class="delta neu" id="d-recibos"></div></div>

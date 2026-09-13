@@ -7,10 +7,34 @@
 (function () {
   "use strict";
 
-  var HOY = new Date(); HOY.setHours(0, 0, 0, 0);
+  var MAIN = document.querySelector("main");
   var REDUCIR = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var CONSULTAS_ON = document.querySelector("main").dataset.consultas === "1";
-  var ASISTENTE_ON = document.querySelector("main").dataset.asistente === "1";
+  var CONSULTAS_ON = MAIN.dataset.consultas === "1";
+  var ASISTENTE_ON = MAIN.dataset.asistente === "1";
+
+  /* **Hoy lo dice el SERVIDOR, no el navegador.**
+
+     Todo el rango del panel cuelga de esta constante: el período por default,
+     los presets, el tope del calendario y la validación de la URL. Salía de
+     `new Date()`, y el servidor valida el rango contra la hora de Buenos
+     Aires (`dashboard.parsear_filtros` rechaza un `hasta` futuro): cualquier
+     dispositivo adelantado --uno al este de Argentina, o con el reloj en UTC
+     entre las 21 y la medianoche-- pedía "mañana", los endpoints devolvían
+     422 y el panel quedaba con todos los indicadores en "—" sin decir nada.
+
+     Es la misma regla que `fechas.py` impone del lado del servidor, acá: la
+     fecha no la inventa el cliente. El `new Date()` del final es una red por
+     si la plantilla no mandó el dato; en ese caso vuelve el problema viejo,
+     pero es mejor que un panel que no arranca. */
+  var HOY = (function () {
+    var iso = (MAIN.dataset.hoy || "").slice(0, 10).split("-");
+    if (iso.length === 3) {
+      var d = new Date(+iso[0], +iso[1] - 1, +iso[2]);
+      if (!isNaN(d)) return d;
+    }
+    var ahora = new Date(); ahora.setHours(0, 0, 0, 0);
+    return ahora;
+  })();
 
   var css = getComputedStyle(document.documentElement);
   function color(v) { return css.getPropertyValue(v).trim(); }
@@ -119,12 +143,30 @@
     return fetch("/admin/dashboard/" + ruta + "?" + q.toString(), { signal: signal })
       .then(function (r) {
         if (r.status === 403) { location.href = "/admin"; throw new Error("sesion"); }
-        if (!r.ok) throw new Error(ruta + ": " + r.status);
-        return r.json();
+        if (r.ok) return r.json();
+        // El motivo que manda el servidor se lee y se muestra. Sin esto, un
+        // 422 por el rango de fechas dejaba TODO el panel en "—" y nadie
+        // tenía forma de saber por qué: parecía que no había datos.
+        return r.json().catch(function () { return {}; }).then(function (cuerpo) {
+          var e = new Error(ruta + ": " + r.status);
+          e.detalle = (cuerpo && cuerpo.detail) || "";
+          throw e;
+        });
       });
   }
 
   function panelDe(nombre) { return document.querySelector('[data-panel="' + nombre + '"]'); }
+
+  /* Un aviso arriba del tablero cuando el servidor rechaza los filtros. Los
+     paneles fallan todos juntos en ese caso, y diez cartelitos iguales dicen
+     menos que uno solo arriba, donde están los filtros que hay que corregir.
+     Se limpia solo en la próxima ronda que salga bien. */
+  function avisoDeError(detalle) {
+    var caja = $("aviso-error");
+    if (!caja) return;
+    caja.textContent = detalle || "";
+    caja.hidden = !detalle;
+  }
 
   function cargarPanel(nombre, promesa, pintar) {
     var p = panelDe(nombre);
@@ -136,6 +178,9 @@
     }).catch(function (e) {
       if (e.name === "AbortError" || e.message === "sesion") return;
       p.classList.remove("cargando"); p.classList.add("con-error");
+      var texto = p.querySelector(".panel-error span");
+      if (texto) texto.textContent = e.detalle || "No se pudo cargar este panel.";
+      avisoDeError(e.detalle);
     });
   }
 
@@ -143,6 +188,7 @@
     if (abortador) abortador.abort();
     abortador = new AbortController();
     var signal = abortador.signal;
+    avisoDeError("");          // lo vuelve a encender el que falle, si falla
     S.paginas = 1;
     urlCompartible();
     pintarControles();
@@ -225,7 +271,11 @@
       $("rango-texto").textContent = fFecha(d.rango.desde) + " – " + fFecha(d.rango.hasta);
       seccion.classList.remove("cargando");
     }).catch(function (e) {
-      if (e.name !== "AbortError") seccion.classList.remove("cargando");
+      if (e.name === "AbortError") return;
+      seccion.classList.remove("cargando");
+      // Los KPIs no son un `[data-panel]`: sin esto, su error no se veía en
+      // ningún lado y los nueve números se quedaban en "—" para siempre.
+      avisoDeError(e.detalle);
     });
   }
 

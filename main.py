@@ -1144,6 +1144,16 @@ def admin_dashboard_pagina(request: Request):
         # Asistente del Panel (docs/ASISTENTE_PANEL.md): sin API key en el
         # entorno, ni el botón ni el cajón llegan al HTML.
         "asistente": asistente.disponible(),
+        # **El "hoy" del panel sale de acá y no del reloj del navegador**
+        # (2026-09-13). El JS lo armaba con `new Date()`, y el servidor valida
+        # el rango contra la hora de Buenos Aires (`dashboard.parsear_filtros`
+        # rechaza un `hasta` futuro): cualquier dispositivo adelantado -- uno
+        # al este de Argentina, o con el reloj en UTC entre las 21 y la
+        # medianoche -- pedía "mañana", cada endpoint devolvía 422 y el panel
+        # se quedaba con todos los indicadores en "—" sin decir nada. Es la
+        # misma regla que `fechas.py` impone en el backend, del lado del
+        # cliente: la fecha la decide el servidor.
+        "hoy": fechas.hoy_texto(),
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
 
