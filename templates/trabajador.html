@@ -156,16 +156,6 @@
   .btn.sec { background:transparent; color:var(--tinta); border:1px solid #b4b2a9; }
   .btn.alerta { background:var(--alerta); }
   input[type=file] { display:none; }
-  .archivo {
-    margin-top:22px; background:var(--card); border:1px solid var(--linea);
-    border-radius:16px; padding:16px; display:flex; align-items:center; gap:14px;
-  }
-  .archivo .thumb {
-    width:44px; height:56px; background:#e3f2ee; border-radius:8px; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center; font-size:24px; color:var(--agua);
-  }
-  .archivo .nombre { font-size:14px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .archivo .meta { font-size:12px; color:var(--gris); margin-top:2px; }
   /* ---------- Preview ---------- */
   .card {
     margin-top:16px; background:var(--card); border:1px solid var(--linea);
@@ -597,16 +587,6 @@
   .rc-h1 { font-family:var(--fuente-display); font-weight:700; font-size:31px; line-height:1;
     letter-spacing:.3px; text-transform:uppercase; margin:4px 0 6px; }
   .rc-card { background:var(--card); border:1px solid var(--linea); border-radius:14px; }
-  .rc-oscura { background:linear-gradient(150deg, var(--marca-base),
-      color-mix(in srgb, var(--marca-primario) 60%, var(--marca-base)));
-    border-left:5px solid var(--marca-acento); border-radius:14px; color:#fff;
-    position:relative; overflow:hidden; padding:18px; }
-  .rc-oscura::before { content:""; position:absolute; inset:0; opacity:.09; mix-blend-mode:overlay;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
-  .rc-oscura > * { position:relative; }
-  .rc-oscura .rc-kicker { color:var(--marca-acento); }
-  .rc-oscura-tit { font-family:var(--fuente-display); font-weight:700; font-size:23px;
-    text-transform:uppercase; line-height:1.05; margin:5px 0 13px; }
   .rc-btn { display:flex; align-items:center; justify-content:center; gap:9px; width:100%;
     background:var(--marca-acento); color:var(--marca-base); border:none; border-radius:11px;
     padding:15px; font-family:var(--fuente-display); font-weight:700; font-size:17px;
@@ -617,22 +597,75 @@
     fill:none; stroke-linecap:round; stroke-linejoin:round; }
   #archivo, #archivo-pdf { display:none; }
 
-  /* --- paso 1: los tres pasos + la guía de foto --- */
-  .rc-pasos { display:flex; margin:16px 0 18px; }
+  /* --- EL MARCO: cada momento del recorrido es UNA tarjeta oscura con una
+       hoja clara adentro (propuesta "Marco", elegida por Sd el 2026-09-14).
+       Antes cada pantalla armaba lo suyo: dos tenían la línea de pasos y tres
+       no, elegir el archivo saltaba a una pantalla aparte con botones de otra
+       época, y los paneles claros se confundían con el fondo de la app. El
+       oscuro es lo que los despega del fondo y lo que hace que las cinco
+       pantallas se lean como una sola pieza. --- */
+  .rc-panel { position:relative; overflow:hidden; border-radius:16px; padding:16px; color:#fff;
+    background:linear-gradient(150deg, var(--marca-base),
+      color-mix(in srgb, var(--marca-primario) 60%, var(--marca-base)));
+    border-left:5px solid var(--marca-acento); box-shadow:0 14px 34px rgba(15,27,45,.25); }
+  .rc-panel::before { content:""; position:absolute; inset:0; opacity:.09; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .rc-panel > * { position:relative; z-index:1; }
+  .rc-panel .rc-kicker { color:var(--marca-acento); }
+  .rc-panel .rc-h1 { color:#fff; }
+  .rc-panel .rc-sub { color:rgba(255,255,255,.72); font-size:13px; line-height:1.45; }
+  /* La hoja: una sola superficie clara, con los bloques separados por hairline
+     y sin bordes propios -- adentro del marco, cada borde sería un marco más. */
+  .rc-hoja { background:var(--card); color:var(--tinta); border-radius:12px; overflow:hidden;
+    margin-top:14px; }
+  .rc-hoja > * + * { border-top:1px solid var(--linea); }
+  .rc-hoja .rc-card, .rc-hoja .card { border:none; border-radius:0; margin-top:0; }
+  .rc-hoja .rc-tips, .rc-hoja .rc-chequeos, .rc-hoja .rc-totales,
+  .rc-hoja .rc-veredicto, .rc-hoja .disc, .rc-hoja .nuevos { margin:0; }
+  .rc-hoja .rc-veredicto, .rc-hoja .disc, .rc-hoja .nuevos { border-radius:0; }
+  .rc-acc { margin-top:14px; }
+  /* Un .btn.sec en la zona de acciones vive sobre el oscuro: la tinta y el
+     borde gris no se ven ahí. Va scopeado a .rc-acc y no a .rc-panel entero,
+     porque adentro de la hoja (blanca) el secundario tiene que seguir siendo
+     el de siempre -- es el caso del botón "Enviar a mi sindicato". */
+  .rc-acc .btn.sec { color:#fff; border-color:rgba(255,255,255,.4); }
+
+  /* --- la línea de pasos: ahora en LOS CINCO momentos, siempre en el mismo
+       lugar y con los mismos tres rótulos. Vive sobre el oscuro. --- */
+  .rc-pasos { display:flex; margin:16px 0 2px; }
   .rc-paso { flex:1; position:relative; padding-top:26px; text-align:center; }
   .rc-paso::before { content:""; position:absolute; top:9px; left:0; right:0; height:2px;
-    background:var(--linea); }
+    background:rgba(255,255,255,.18); }
   .rc-paso:first-child::before { left:50%; }
   .rc-paso:last-child::before { right:50%; }
   .rc-paso i { position:absolute; top:0; left:50%; transform:translateX(-50%); width:20px; height:20px;
-    border-radius:50%; background:var(--papel); border:2px solid var(--linea);
+    border-radius:50%; background:rgba(255,255,255,.08); border:2px solid rgba(255,255,255,.28);
     font-family:var(--fuente-num); font-size:10px; font-style:normal; font-weight:700;
-    color:var(--gris); display:flex; align-items:center; justify-content:center; }
+    color:rgba(255,255,255,.6); display:flex; align-items:center; justify-content:center; }
+  .rc-paso i svg { width:11px; height:11px; stroke:currentColor; stroke-width:3.2; fill:none;
+    stroke-linecap:round; stroke-linejoin:round; }
   .rc-paso.on i { background:var(--marca-acento); border-color:var(--marca-acento); color:var(--marca-base); }
+  .rc-paso.hecho i { background:var(--marca-apoyo); border-color:var(--marca-apoyo); color:#fff; }
+  .rc-paso.curso i { animation:rc-pulso 1.6s ease-out infinite; }
+  @keyframes rc-pulso { 0% { box-shadow:0 0 0 0 color-mix(in srgb, var(--marca-acento) 60%, transparent); }
+    100% { box-shadow:0 0 0 10px transparent; } }
   .rc-paso b { display:block; font-family:var(--fuente-display); font-size:13.5px; letter-spacing:.6px;
-    text-transform:uppercase; color:var(--tinta); }
-  .rc-paso.on b { color:var(--marca-primario); }
-  .rc-paso small { font-size:11px; color:var(--gris); }
+    text-transform:uppercase; color:rgba(255,255,255,.55); }
+  .rc-paso.on b, .rc-paso.hecho b { color:#fff; }
+  .rc-paso small { display:block; font-size:11px; color:rgba(255,255,255,.38); }
+  .rc-paso.on small { color:rgba(255,255,255,.62); }
+
+  /* El archivo elegido, ahora adentro del mismo panel del paso 1 (antes era
+     la pantalla suelta "Tu recibo, listo", con un emoji de hoja como ícono). */
+  .rc-arch { display:flex; align-items:center; gap:12px; padding:13px 14px; }
+  .rc-arch .ic { width:36px; height:44px; border-radius:7px; flex:none; display:flex;
+    align-items:center; justify-content:center;
+    background:color-mix(in srgb, var(--marca-apoyo) 15%, #fff); color:var(--marca-apoyo); }
+  .rc-arch .ic svg { width:20px; height:20px; stroke:currentColor; stroke-width:1.8; fill:none; }
+  .rc-arch .nb { font-size:13.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis;
+    white-space:nowrap; }
+  .rc-arch .mt { font-family:var(--fuente-num); font-variant-numeric:tabular-nums;
+    font-size:11.5px; color:var(--gris); margin-top:2px; }
   .rc-tips { margin-top:14px; }
   .rc-tips-tit { display:flex; align-items:center; gap:8px; padding:12px 14px;
     border-bottom:1px solid var(--linea); font-family:var(--fuente-display); font-size:14px;
@@ -647,21 +680,27 @@
   .rc-tip small { font-size:12px; color:var(--gris); line-height:1.45; }
   .rc-pie { display:flex; align-items:center; gap:10px; width:100%; background:none; border:none;
     padding:13px 2px; margin-top:14px; border-top:1px solid var(--linea); cursor:pointer;
-    font-family:inherit; text-align:left; color:var(--marca-primario); font-size:13.5px; font-weight:600; }
+    font-family:inherit; text-align:left; color:#fff; font-size:13.5px; font-weight:600; }
+  .rc-panel .rc-pie { border-top-color:rgba(255,255,255,.18); }
   .rc-pie svg { width:18px; height:18px; stroke:currentColor; stroke-width:1.8; fill:none; }
-  .rc-pie span { margin-left:auto; color:var(--gris); font-weight:400; font-size:12px; }
+  .rc-pie span { margin-left:auto; color:rgba(255,255,255,.6); font-weight:400; font-size:12px; }
 
-  /* --- paso 3: confirmar lo leído --- */
-  .rc-caratula { padding:16px 17px; }
+  /* --- paso 2: confirmar lo leído ---
+     La carátula era una tarjeta OSCURA (.rc-oscura). Adentro del marco pasó a
+     ser clara: un bloque oscuro dentro de la hoja blanca dentro del panel
+     oscuro son tres niveles y ninguno manda. Conserva el filo de acento, que
+     es lo que la distingue del resto de la hoja. */
+  .rc-caratula { padding:15px 16px; background:var(--papel);
+    border-left:4px solid var(--marca-acento); }
   .rc-caratula .per { font-family:var(--fuente-display); font-weight:700; font-size:27px;
-    line-height:1; text-transform:uppercase; }
-  .rc-caratula .emp { font-size:13.5px; color:rgba(255,255,255,.8); margin-top:4px; }
+    line-height:1; text-transform:uppercase; color:var(--tinta); }
+  .rc-caratula .emp { font-size:13.5px; color:var(--gris); margin-top:4px; }
   .rc-caratula .linea { display:flex; justify-content:space-between; align-items:baseline;
-    gap:12px; margin-top:13px; padding-top:12px; border-top:1px solid rgba(255,255,255,.16); }
+    gap:12px; margin-top:13px; padding-top:12px; border-top:1px solid var(--linea); }
   .rc-caratula .linea span:first-child { font-size:11px; letter-spacing:1.4px;
-    text-transform:uppercase; color:rgba(255,255,255,.65); }
+    text-transform:uppercase; color:var(--gris); }
   .rc-caratula .linea .imp { font-family:var(--fuente-num); font-variant-numeric:tabular-nums;
-    font-size:19px; font-weight:600; color:var(--marca-acento); }
+    font-size:19px; font-weight:600; color:var(--tinta); }
   .rc-datos { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--linea);
     border-top:1px solid var(--linea); }
   .rc-datos > div { background:var(--card); padding:10px 14px; }
@@ -713,6 +752,14 @@
 
   /* --- paso 2: el cronómetro mientras lee la IA --- */
   .ia-cron { text-align:center; padding:26px 0 34px; }
+  /* Adentro del marco, la espera no necesita su propia caja: la caja es la
+     hoja (ver .rc-hoja). */
+  .rc-hoja .ia-cron { padding:24px 0 0; }
+  .rc-hoja .ia-fases { border:none; border-top:1px solid var(--linea); border-radius:0; margin-top:24px; }
+  /* Adentro del marco la espera ya no necesita su propia caja: la hoja es la
+     caja (ver .rc-hoja). */
+  .rc-hoja .ia-cron { padding:22px 0 0; }
+  .rc-hoja .ia-fases { border:none; border-top:1px solid var(--linea); border-radius:0; margin-top:22px; }
   .ia-aro { position:relative; width:148px; height:148px; margin:0 auto; }
   .ia-aro svg { width:100%; height:100%; transform:rotate(-90deg); }
   .ia-aro .pista { fill:none; stroke:var(--linea); stroke-width:7; }
@@ -723,9 +770,6 @@
   .ia-aro .centro .n { font-family:var(--fuente-num); font-variant-numeric:tabular-nums;
     font-size:34px; font-weight:600; color:var(--marca-primario); letter-spacing:-1px; }
   .ia-aro .centro .et { font-size:9.5px; letter-spacing:2px; text-transform:uppercase; color:var(--gris); }
-  .ia-leyenda { font-family:var(--fuente-display); font-weight:700; font-size:23px;
-    letter-spacing:.4px; text-transform:uppercase; line-height:1.05; margin-top:18px; }
-  .ia-sub { font-size:13px; color:var(--gris); margin-top:5px; }
   .ia-fases { display:grid; gap:1px; background:var(--linea); border:1px solid var(--linea);
     border-radius:12px; overflow:hidden; margin-top:20px; text-align:left; }
   .ia-fase { background:var(--card); padding:12px 14px; display:flex; align-items:center; gap:11px;
@@ -969,54 +1013,67 @@
   <!-- ============ PESTAÑA: TU RECIBO ============ -->
   {% if 'recibos' in modulos %}
   <div class="tpanel" id="tp-recibo">
-    <!-- Paso 0: inicio -->
-    <!-- Los tres pasos del recorrido + la guía de foto (elegido entre 3
-         propuestas el 2026-09-13). La guía no es decorativa: una foto
-         cortada o con brillo es una lectura que sale mal, y antes no había
-         nada que lo previniera. Dos inputs a propósito: el de la cámara
-         lleva capture="environment" (abre la cámara directo en el celular)
-         y el otro abre el selector de archivos, para el PDF que manda la
-         empresa. -->
+    <!-- PASO 1 DE 3 -- subir el archivo.
+         DOS ESTADOS EN EL MISMO PANEL: sin archivo (guía de foto + los dos
+         botones de carga) y con archivo elegido (el archivo + "Leer recibo").
+         Antes elegir el archivo saltaba a una pantalla aparte, "Tu recibo,
+         listo", que no tenía ni la línea de pasos ni el vocabulario del resto.
+         La guía no es decorativa: una foto cortada o con brillo es una lectura
+         que sale mal, y antes no había nada que lo previniera. Dos inputs a
+         propósito: el de la cámara lleva capture="environment" (abre la cámara
+         directo en el celular) y el otro abre el selector de archivos, para el
+         PDF que manda la empresa. -->
     <div id="inicio">
-      <div class="rc-kicker">Verificación de recibo</div>
-      <h1 class="rc-h1">Revisá tu recibo</h1>
-      <p class="sub">Tres pasos. El primero lo hacés vos; los otros dos, nosotros.</p>
-      <div class="rc-pasos">
-        <div class="rc-paso on"><i>1</i><b>Foto</b><small>o PDF</small></div>
-        <div class="rc-paso"><i>2</i><b>Lectura</b><small>30 segundos</small></div>
-        <div class="rc-paso"><i>3</i><b>Chequeo</b><small>de conceptos</small></div>
-      </div>
-      <div class="rc-oscura">
+      <div class="rc-panel">
         <div class="rc-kicker">Paso 1 de 3</div>
-        <div class="rc-oscura-tit">Tu último recibo</div>
-        <label class="rc-btn" for="archivo">
-          <svg viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.6"/></svg>
-          Sacar foto</label>
-        <label class="rc-btn sec" for="archivo-pdf">
-          <svg viewBox="0 0 24 24"><path d="M14 3v5h5"/><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8z"/></svg>
-          Subir un PDF</label>
+        <h1 class="rc-h1">Subí tu recibo</h1>
+        <p class="rc-sub" id="p1-sub">Sacale una foto o subí el PDF que te manda la empresa.</p>
+        <div class="rc-pasos" data-pasos="1,0,0"></div>
+        <div class="rc-hoja">
+          <div class="rc-arch" id="p1-archivo" style="display:none;">
+            <span class="ic"><svg viewBox="0 0 24 24"><path d="M14 3v5h5"/><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8z"/></svg></span>
+            <div style="min-width:0;">
+              <div class="nb" id="nombre"></div>
+              <div class="mt" id="meta">listo para leer</div>
+            </div>
+          </div>
+          <div class="rc-tips">
+            <div class="rc-tips-tit">
+              <svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg>Para que salga bien</div>
+            <div class="rc-tip">
+              <span class="rc-ico"><svg viewBox="0 0 24 24"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/></svg></span>
+              <div><b>Que entre completo</b>
+                <small>Las cuatro esquinas dentro de la foto, incluido el pie con los totales.</small></div></div>
+            <div class="rc-tip">
+              <span class="rc-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span>
+              <div><b>Luz pareja, sin sombras</b>
+                <small>Evitá el flash de frente: el brillo tapa los números.</small></div></div>
+            <div class="rc-tip">
+              <span class="rc-ico"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M6 7h12M6 17h12"/></svg></span>
+              <div><b>Apoyado y derecho</b>
+                <small>Sobre una mesa, sin dobleces y de frente, no en diagonal.</small></div></div>
+          </div>
+        </div>
+        <div class="rc-acc" id="p1-vacio">
+          <label class="rc-btn" for="archivo">
+            <svg viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.6"/></svg>
+            Sacar foto</label>
+          <label class="rc-btn sec" for="archivo-pdf">
+            <svg viewBox="0 0 24 24"><path d="M14 3v5h5"/><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8z"/></svg>
+            Subir un PDF</label>
+        </div>
+        <div class="rc-acc" id="p1-elegido" style="display:none;">
+          <button type="button" class="rc-btn" id="leer">
+            <svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg>
+            Leer recibo</button>
+          <button type="button" class="rc-btn sec" id="otro">Elegir otro</button>
+        </div>
+        <button type="button" class="rc-pie" id="ver-historial">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>
+          Ver mis recibos verificados <span>Historial privado</span></button>
       </div>
       <input type="file" id="archivo" accept="image/*" capture="environment">
       <input type="file" id="archivo-pdf" accept="image/*,application/pdf">
-      <div class="rc-card rc-tips">
-        <div class="rc-tips-tit">
-          <svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg>Para que salga bien</div>
-        <div class="rc-tip">
-          <span class="rc-ico"><svg viewBox="0 0 24 24"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/></svg></span>
-          <div><b>Que entre completo</b>
-            <small>Las cuatro esquinas dentro de la foto, incluido el pie con los totales.</small></div></div>
-        <div class="rc-tip">
-          <span class="rc-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span>
-          <div><b>Luz pareja, sin sombras</b>
-            <small>Evitá el flash de frente: el brillo tapa los números.</small></div></div>
-        <div class="rc-tip">
-          <span class="rc-ico"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M6 7h12M6 17h12"/></svg></span>
-          <div><b>Apoyado y derecho</b>
-            <small>Sobre una mesa, sin dobleces y de frente, no en diagonal.</small></div></div>
-      </div>
-      <button type="button" class="rc-pie" id="ver-historial">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>
-        Ver mis recibos verificados <span>Historial privado</span></button>
     </div>
 
     <!-- Historial: mis recibos verificados -->
@@ -1027,29 +1084,21 @@
       <button class="btn sec" id="historial-volver" style="margin-top:14px;">Volver</button>
     </div>
 
-    <!-- Paso 1: archivo elegido -->
-    <div id="listo" style="display:none;">
-      <div class="rc-kicker">Paso 1 de 3</div>
-      <h1 class="rc-h1">Tu recibo, listo</h1>
-      <div class="archivo">
-        <div class="thumb">📄</div>
-        <div style="flex:1; min-width:0;">
-          <div class="nombre" id="nombre"></div>
-          <div class="meta" id="meta">listo para leer</div>
+    <!-- PASO 2 DE 3: confirmar lo leído. El cuerpo lo llena renderPreview()
+         directamente sobre la hoja, así sus bloques son hijos directos y los
+         separa el hairline de .rc-hoja en vez de que cada uno traiga su caja. -->
+    <div id="preview" style="display:none;">
+      <div class="rc-panel">
+        <div class="rc-kicker">Paso 2 de 3</div>
+        <h1 class="rc-h1">Confirmá los datos</h1>
+        <p class="rc-sub">Esto es lo que leímos del recibo. Si está bien, seguimos con la verificación.</p>
+        <div class="rc-pasos" data-pasos="2,1,0"></div>
+        <div class="rc-hoja" id="preview-contenido"></div>
+        <div class="rc-acc">
+          <button type="button" class="rc-btn" id="continuar">Continuar con la verificación</button>
+          <button type="button" class="rc-btn sec" id="reintentar">Volver a empezar</button>
         </div>
       </div>
-      <button class="btn" id="leer">Leer recibo</button>
-      <button class="btn sec" id="otro">Elegir otro</button>
-    </div>
-
-    <!-- Paso 2: preview -->
-    <div id="preview" style="display:none;">
-      <div class="rc-kicker">Paso 2 de 3</div>
-      <h1 class="rc-h1">Confirmá los datos</h1>
-      <p class="sub">Esto es lo que leímos del recibo. Si está bien, seguí con la verificación.</p>
-      <div id="preview-contenido"></div>
-      <button class="btn" id="continuar">Continuar con la verificación</button>
-      <button class="btn sec" id="reintentar">Volver a empezar</button>
     </div>
 
     <!-- Paso 3: resultado / cargando -->
@@ -1407,24 +1456,81 @@ function cerrarModalRecibo() {
 let archivo = null, datosLeidos = null;
 const $ = id => document.getElementById(id);
 const peso = n => '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:2});
-const ver = (id) => { for (const s of ['inicio','listo','preview','misrecibos']) $(s).style.display = (s===id)?'block':'none'; };
+// 'listo' ya no está: elegir el archivo es un ESTADO del paso 1, no otra
+// pantalla. Y ver(null) no muestra ninguna -- es lo que se usa mientras la IA
+// trabaja, cuando la pantalla la ocupa el panel de espera de #resultado.
+const ver = (id) => { for (const s of ['inicio','preview','misrecibos']) $(s).style.display = (s===id)?'block':'none'; };
 
 {% if 'recibos' in modulos %}
+// ---- El marco del recorrido (propuesta "Marco", 2026-09-14) ----
+// Tres pasos: Subí · Revisá · Resultado. Estados de cada uno: 0 pendiente,
+// 1 el actual, 2 ya hecho, 3 en curso. Las dos esperas dejaron de ser
+// pantallas sin número: son el estado "en curso" del paso al que llevan
+// (antes la lectura no tenía número y la confirmación decía "2 de 3"
+// pisándola, porque la lectura también era el paso 2).
+const PASOS = [['Subí', 'foto o PDF'], ['Revisá', 'lo que leímos'], ['Resultado', 'tus aportes']];
+const IC_PASO_HECHO = '<svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg>';
+
+function pasosHTML(estados) {
+  return PASOS.map(([rotulo, detalle], i) => {
+    const e = estados[i];
+    const cls = e === 2 ? 'hecho' : e === 3 ? 'on curso' : e === 1 ? 'on' : '';
+    return `<div class="rc-paso ${cls}"><i>${e === 2 ? IC_PASO_HECHO : i + 1}</i>` +
+           `<b>${rotulo}</b><small>${detalle}</small></div>`;
+  }).join('');
+}
+
+// Los dos pasos que viven en el HTML declaran su estado con data-pasos; los
+// que arma el JS (espera y resultado) usan panelPaso(). Una sola
+// implementación del marco, para que no terminen siendo dos marcos distintos.
+document.querySelectorAll('.rc-pasos[data-pasos]').forEach(e => {
+  e.innerHTML = pasosHTML(e.dataset.pasos.split(',').map(Number));
+});
+
+function panelPaso(kicker, titulo, sub, estados, cuerpo, acciones) {
+  return `<div class="rc-panel">
+    <div class="rc-kicker">${kicker}</div>
+    <h1 class="rc-h1">${titulo}</h1>
+    ${sub ? `<p class="rc-sub">${sub}</p>` : ''}
+    <div class="rc-pasos">${pasosHTML(estados)}</div>
+    <div class="rc-hoja">${cuerpo}</div>
+    ${acciones ? `<div class="rc-acc">${acciones}</div>` : ''}
+  </div>`;
+}
+
+function panelError(estados, mensaje) {
+  return panelPaso('No pudimos seguir', 'Algo salió mal', '', estados,
+    `<div class="banner mal" style="margin:0;border-radius:0;">${mensaje}</div>`,
+    `<button class="rc-btn sec" onclick="location.reload()">Volver a intentar</button>`);
+}
+
+// El paso 1 tiene DOS ESTADOS en el mismo panel: con y sin archivo elegido.
+function estadoPaso1(conArchivo) {
+  $('p1-archivo').style.display = conArchivo ? 'flex' : 'none';
+  $('p1-vacio').style.display = conArchivo ? 'none' : 'block';
+  $('p1-elegido').style.display = conArchivo ? 'block' : 'none';
+  $('p1-sub').textContent = conArchivo
+    ? 'Ya tenemos el archivo. Cuando quieras, lo leemos.'
+    : 'Sacale una foto o subí el PDF que te manda la empresa.';
+}
+
 function archivoElegido(e) {
   archivo = e.target.files[0];
   if (!archivo) return;
   $('nombre').textContent = archivo.name;
   $('meta').textContent = (archivo.size/1024).toFixed(0) + ' KB · listo para leer';
   $('resultado').innerHTML = '';
-  ver('listo');
+  estadoPaso1(true);
+  ver('inicio');
 }
 // Dos inputs, un solo handler: el de la cámara (capture) y el del PDF.
 $('archivo').onchange = archivoElegido;
 $('archivo-pdf').onchange = archivoElegido;
 
 function limpiarElegido() { archivo = null; $('archivo').value = ''; $('archivo-pdf').value = ''; }
-$('otro').onclick = () => { limpiarElegido(); ver('inicio'); };
-$('reintentar').onclick = () => { limpiarElegido(); datosLeidos = null; $('resultado').innerHTML=''; ver('inicio'); };
+$('otro').onclick = () => { limpiarElegido(); estadoPaso1(false); ver('inicio'); };
+$('reintentar').onclick = () => { limpiarElegido(); estadoPaso1(false); datosLeidos = null;
+  $('resultado').innerHTML=''; ver('inicio'); };
 
 // Mientras la IA trabaja: cronómetro REAL con los segundos transcurridos
 // (elegido entre 3 propuestas el 2026-09-13). Lo que había era un
@@ -1435,8 +1541,11 @@ $('reintentar').onclick = () => { limpiarElegido(); datosLeidos = null; $('resul
 const IA_FASES = ['Abriendo el archivo', 'Reconociendo los conceptos', 'Comparando'];
 const IA_ARO = 414;   // 2·PI·66, el perímetro del círculo del SVG
 
-function cargandoIA(leyenda, subtitulo) {
-  const html = `<div class="ia-cron">
+// La leyenda y el subtítulo pasaron a ser el título y la bajada del panel
+// (antes .ia-leyenda/.ia-sub, adentro del cuerpo): con el marco, el título de
+// cada momento se dice UNA vez y siempre en el mismo lugar.
+function cargandoIA(kicker, titulo, subtitulo, estados) {
+  const cuerpo = `<div class="ia-cron">
     <div class="ia-aro">
       <svg viewBox="0 0 148 148" aria-hidden="true">
         <circle class="pista" cx="74" cy="74" r="66"/>
@@ -1446,8 +1555,6 @@ function cargandoIA(leyenda, subtitulo) {
         <span class="n" id="ia-reloj">00:00</span><span class="et">Segundos</span>
       </div>
     </div>
-    <div class="ia-leyenda">${leyenda}</div>
-    <div class="ia-sub">${subtitulo}</div>
     <div class="ia-fases" id="ia-fases">
       ${IA_FASES.map((f, i) => `<div class="ia-fase${i === 0 ? ' activa' : ''}">
         <span class="pt"></span><span>${f}</span></div>`).join('')}
@@ -1455,7 +1562,7 @@ function cargandoIA(leyenda, subtitulo) {
   </div>`;
   // el cronómetro arranca en el próximo tick, cuando el HTML ya está en el DOM
   setTimeout(arrancarCronometro, 0);
-  return html;
+  return panelPaso(kicker, titulo, subtitulo, estados, cuerpo, '');
 }
 
 function arrancarCronometro() {
@@ -1483,8 +1590,9 @@ let cronometroIA = null;
 
 // Paso 1 → 2: leer el recibo y mostrar el preview
 $('leer').onclick = async () => {
-  ver('listo'); $('listo').style.display = 'none';
-  $('resultado').innerHTML = cargandoIA('Estamos leyendo tu recibo', 'No cierres la app: suele tardar menos de un minuto.');
+  ver(null);
+  $('resultado').innerHTML = cargandoIA('Paso 2 de 3 · en curso', 'Leyendo tu recibo',
+    'No cierres la app: suele tardar menos de un minuto.', [2, 3, 0]);
   const fd = new FormData(); fd.append('archivo', archivo);
   try {
     const r = await fetch('/api/leer', { method:'POST', body:fd });
@@ -1495,8 +1603,7 @@ $('leer').onclick = async () => {
     ver('preview');
     if (!semArcaCargado) semApagado(); // señal temprana de último depósito, si aplica
   } catch (err) {
-    $('resultado').innerHTML = `<div class="banner mal">${err.message}</div>
-      <button class="btn sec" onclick="location.reload()">Volver a intentar</button>`;
+    $('resultado').innerHTML = panelError([2, 1, 0], err.message);
   }
 };
 
@@ -1560,14 +1667,14 @@ function renderPreview(d) {
   // Carátula: lo que hay que mirar para decir "sí, es mi recibo". El resto
   // de los datos queda abajo, en la grilla, sin competirle.
   const neto = (r.totales_impresos && r.totales_impresos.neto) || null;
-  h += `<div class="rc-oscura rc-caratula">
+  h += `<div class="rc-caratula">
     <div class="rc-kicker">Lo que leímos</div>
     <div class="per">${fmtPeriodo(r.periodo) || 'Sin período'}</div>
     <div class="emp">${empresa.nombre || 'Empresa no reconocida'}</div>
     ${neto ? `<div class="linea"><span>Neto impreso</span><span class="imp">${peso(neto)}</span></div>` : ''}
   </div>`;
   if (r.formato === 'nuevo') h += badgeReforma();
-  h += `<div class="rc-card" style="margin-top:12px; overflow:hidden;">
+  h += `<div class="rc-card">
     <div class="rc-tips-tit">
       <svg viewBox="0 0 24 24"><path d="M14 3v5h5"/><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8z"/></svg>
       Datos del recibo</div>
@@ -1578,7 +1685,7 @@ function renderPreview(d) {
       ${datoCelda('Fecha de cobro', r.fecha_pago)}
     </div>
   </div>`;
-  h += `<div class="card" style="margin-top:12px;">`;
+  h += `<div class="card">`;
 
   // Conceptos leídos
   h += `<h2>Conceptos leídos (${r.lineas.length})</h2>`;
@@ -1653,8 +1760,9 @@ function textoError(e) {
 
 // Paso 2 → 3: confirmar y validar
 $('continuar').onclick = async () => {
-  ver('preview'); $('preview').style.display = 'none';
-  $('resultado').innerHTML = cargandoIA('Estamos verificando los aportes', 'Un momento: estamos haciendo las cuentas.');
+  ver(null);
+  $('resultado').innerHTML = cargandoIA('Paso 3 de 3 · en curso', 'Verificando los aportes',
+    'Un momento: estamos haciendo las cuentas.', [2, 2, 3]);
   try {
     const r = await fetch('/api/validar', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -1663,8 +1771,7 @@ $('continuar').onclick = async () => {
     if (!r.ok) { const e = await r.json(); throw new Error(textoError(e)); }
     renderResultado(await r.json());
   } catch (err) {
-    $('resultado').innerHTML = `<div class="banner mal">${err.message}</div>
-      <button class="btn sec" onclick="location.reload()">Volver a intentar</button>`;
+    $('resultado').innerHTML = panelError([2, 2, 1], err.message);
   }
 };
 
@@ -1676,27 +1783,28 @@ const IC_ALERTA = '<svg viewBox="0 0 24 24"><path d="M12 4 2.8 20h18.4z"/><path 
 
 function renderResultado(d) {
   if (d.bloqueado) {
-    $('resultado').innerHTML = `<div class="rc-veredicto mal">
-      <div class="rc-kicker">Resultado</div>
-      <div class="tit">Este recibo no es tuyo</div>
-      <div class="rc-hallazgo">${d.discrepancias[0].detalle}</div></div>
-      <button class="btn sec" onclick="location.reload()">Volver a intentar</button>`;
+    $('resultado').innerHTML = panelPaso('Paso 3 de 3', 'Este recibo no es tuyo', '', [2, 2, 1],
+      `<div class="rc-veredicto mal"><div class="rc-hallazgo">${d.discrepancias[0].detalle}</div></div>`,
+      `<button class="rc-btn sec" onclick="location.reload()">Volver a intentar</button>`);
     return;
   }
   const ok = d.estado === 'OK';
   const n = d.discrepancias.length;
-  // "1 cosa(s)" no lo dice nadie: o es una diferencia, o son varias.
-  const titulo = ok ? 'Todo en orden'
-    : (n === 1 ? 'Hay 1 diferencia para revisar' : `Hay ${n} diferencias para revisar`);
+  // "1 cosa(s)" no lo dice nadie: o es una diferencia, o son varias. Y el
+  // título es ahora el encabezado del panel, en condensada y grande: "para
+  // revisar" lo hacía entrar en dos renglones sin agregar nada.
+  const titulo = ok ? 'Todo en orden' : (n === 1 ? 'Hay 1 diferencia' : `Hay ${n} diferencias`);
   const chequeados = d.formulas_validadas.length;
 
   // 1. El veredicto, con el hallazgo adentro: es lo que la persona vino a ver.
+  //    El TÍTULO ya no va acá sino en el encabezado del panel (el marco lo dice
+  //    una sola vez); adentro queda el ícono de estado, que es lo que le da el
+  //    color, y los hallazgos.
   let h = `<div class="rc-veredicto ${ok ? 'ok' : 'mal'}">
     <div class="rc-vcab">
       <span class="rc-vico">${ok ? IC_OK : IC_ALERTA}</span>
-      <div><div class="rc-kicker">Resultado</div><div class="tit">${titulo}</div></div>
-    </div>
-    <div class="rc-vsub">Chequeamos ${chequeados} ${chequeados === 1 ? 'concepto' : 'conceptos'} de tu recibo.</div>`;
+      <div class="rc-vsub" style="margin-top:0;">Chequeamos ${chequeados} ${chequeados === 1 ? 'concepto' : 'conceptos'} de tu recibo.</div>
+    </div>`;
   for (const disc of d.discrepancias) h += `<div class="rc-hallazgo">${disc.detalle}</div>`;
   for (const al of (d.alertas || [])) h += `<div class="rc-hallazgo aviso">${al.detalle}</div>`;
   h += `</div>`;
@@ -1718,7 +1826,6 @@ function renderResultado(d) {
   if (d.base_remunerativa_aproximada) {
     h += `<div class="disc" style="border-left-color:#d9a441;">El sindicato todavía no tiene cargado ningún concepto de haberes para este empleador, así que el remunerativo usado para los cálculos de arriba se tomó del total impreso en el recibo, no de conceptos verificados uno por uno.</div>`;
   }
-  if (!ok) h += `<button class="btn alerta" id="rep">Reportar al sindicato</button>`;
   const retencion = (d.retencion_sindical && d.retencion_sindical.total) || 0;
   if (ok) {
     const texto = retencion > 0
@@ -1730,8 +1837,12 @@ function renderResultado(d) {
       <div style="margin-top:8px;"><button class="btn sec" id="env-sind">Enviar a mi sindicato</button></div>
     </div>`;
   }
-  h += `<button class="btn sec" onclick="location.reload()">Verificar otro recibo</button>`;
-  $('resultado').innerHTML = h;
+  // Las acciones viven sobre el oscuro del marco, fuera de la hoja.
+  const acciones = (!ok ? `<button class="rc-btn" id="rep">Reportar al sindicato</button>` : '') +
+    `<button class="rc-btn sec" onclick="location.reload()">Verificar otro recibo</button>`;
+  $('resultado').innerHTML = panelPaso('Paso 3 de 3', titulo,
+    `${fmtPeriodo((datosLeidos && datosLeidos.recibo && datosLeidos.recibo.periodo) || '') || 'Tu recibo'}`,
+    [2, 2, 1], h, acciones);
   if (!ok) $('rep').onclick = () => reportar(d);
   if (ok) $('env-sind').onclick = (e) => enviarASindicato(d, e.target);
 }

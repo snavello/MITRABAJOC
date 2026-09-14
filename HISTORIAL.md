@@ -806,6 +806,68 @@ no es ninguna combinación de las once líneas del recibo (verificado por
 fuerza bruta) ni ningún tope del catálogo — es el 93,6% de la otra base, un
 factor sin explicación. El generador de esos PDF no vive en este repo.
 
+## El flujo del recibo, encuadrado: cinco pantallas, un solo marco (2026-09-14)
+
+Relevado por Sd mirando la app en escritorio: el recorrido del recibo eran
+**cinco pantallas que no parecían de la misma app**. La primera (la guía de
+foto) tenía la línea de pasos; "Tu recibo, listo" no la tenía y usaba los
+botones redondeados viejos y un emoji de hoja como ícono; el cronómetro
+tampoco la tenía; la de confirmar decía "2 de 3" sin línea; y la de resultado
+no decía nada. Encima los paneles eran claros sobre el fondo claro de la app,
+así que en una pantalla grande no se distinguía dónde empezaba el contenido.
+
+La numeración además estaba mal, y no era un detalle de redacción: la
+**lectura** era el paso 2 según la línea de la primera pantalla, pero la
+pantalla de **confirmar** también decía "Paso 2 de 3". Un paso no puede ser
+dos cosas.
+
+Se armaron tres propuestas en `disenos/recibo-flujo-propuestas.html` (Marco /
+Panel oscuro / Cáscara, con el conmutador de paleta de siempre) y Sd eligió
+**Marco**. Lo que quedó:
+
+- **Cada momento es un `.rc-panel`**: tarjeta oscura con filo de acento y el
+  contenido en una hoja clara insertada (`.rc-hoja`), acciones abajo sobre el
+  oscuro (`.rc-acc`). El oscuro despega el panel del fondo; la hoja deja leer
+  diecisiete conceptos con importes, que era el argumento contra hacerlo todo
+  oscuro (propuesta B).
+- **Los bloques de la hoja perdieron su caja**: adentro del marco cada borde
+  era un marco más. Los separa un hairline (`.rc-hoja > * + *`), y por eso
+  `renderPreview` escribe directo sobre `#preview-contenido`, que ES la hoja
+  -- si envolviera, sus bloques dejarían de ser hijos directos y no habría
+  separador.
+- **Tres pasos: Subí · Revisá · Resultado**, con la línea (`.rc-pasos`) en los
+  cinco momentos. **Las dos esperas dejaron de ser huérfanas**: cada
+  cronómetro es el estado `curso` del paso al que lleva. Así la lectura y la
+  confirmación dejan de pelearse por el número 2.
+- **"Tu recibo, listo" desapareció como pantalla**: elegir el archivo es un
+  estado del paso 1 (`estadoPaso1()`), con el archivo y "Leer recibo" en el
+  mismo panel. `ver()` perdió `'listo'` y acepta `null` para no mostrar
+  ninguna, que es lo que se usa mientras la IA trabaja.
+- **Un solo marco, una sola implementación**: los dos momentos estáticos
+  declaran su estado en el HTML con `data-pasos` y los dos que arma el JS
+  usan `panelPaso()`; los dos caminos llaman a `pasosHTML()`. Si hubiera dos
+  implementaciones, en tres cambios serían dos marcos distintos.
+- **La carátula del recibo pasó de oscura a clara.** Era `.rc-oscura`; un
+  bloque oscuro adentro de una hoja blanca adentro de un panel oscuro son
+  tres niveles y no manda ninguno. Conserva el filo de acento, que es lo que
+  la distingue del resto de la hoja.
+- **El veredicto perdió su título** y lo dice el encabezado del panel ("Hay 3
+  diferencias"), una sola vez. Adentro quedan el ícono de estado -- que es lo
+  que le da el color -- y los hallazgos.
+- **`.rc-acc .btn.sec`, no `.rc-panel .btn.sec`.** El secundario sobre el
+  oscuro va en blanco, pero adentro de la hoja tiene que seguir siendo el de
+  siempre: scopeado al panel entero, "Enviar a mi sindicato" quedaba blanco
+  sobre blanco.
+- Quedó sin uso y se borró: `.rc-oscura`, `.rc-oscura-tit`, `.ia-leyenda`,
+  `.ia-sub` (la leyenda y la bajada de la espera son ahora el título y la
+  bajada del panel) y `.archivo`/`.thumb`, que eran de la pantalla que dejó
+  de existir.
+
+**Nada de la lógica cambió**: mismos endpoints, mismos datos, mismo
+`renderPreview`/`renderResultado` salvo por dónde escriben. La verificación
+se hizo renderizando la plantilla con Jinja a un archivo y recorriendo los
+cinco momentos en el navegador.
+
 ## Empleadores (CRUD, login propio, notificaciones y trámites externos)
 Cuarto actor de la plataforma. Se construyó en rama `empleadores` (6 fases,
 un commit por fase) y está mergeada a `main`. Hasta ahora el empleador era

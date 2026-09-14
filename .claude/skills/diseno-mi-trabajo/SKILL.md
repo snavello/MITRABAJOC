@@ -130,15 +130,30 @@ cursor en `marca.css`, o ese modal va a ser el único que no se mueve. En
 teléfono no se arrastran: ahí el modal ocupa el ancho completo y no hay nada
 atrás que destapar.
 
-## El flujo del recibo (2026-09-13)
+## El flujo del recibo (2026-09-14, "Marco")
 
-Los cuatro pasos comparten vocabulario y están en `trabajador.html`
-(`.rc-*` para la estructura, `.ia-*` para la espera):
+Los cinco momentos están en `trabajador.html` (`.rc-*` para la estructura,
+`.ia-*` para la espera) y comparten UN SOLO marco:
 
-- **Kicker** en primario + **título en condensada** (`.rc-h1`) en cada paso,
-  y el paso numerado ("Paso 1 de 3") cuando corresponde.
-- La **acción** vive en la tarjeta oscura con filo de acento (`.rc-oscura`);
-  el resto de la pantalla es claro.
+- **Cada momento es una tarjeta oscura** (`.rc-panel`, filo de acento a la
+  izquierda) con el contenido en una **hoja clara insertada adentro**
+  (`.rc-hoja`), y las acciones abajo, sobre el oscuro (`.rc-acc`). El oscuro
+  es lo que despega el panel del fondo de la app; la hoja es lo que deja
+  leer una tabla de importes. Los bloques de la hoja no traen caja propia:
+  los separa un hairline (`.rc-hoja > * + *`), porque adentro del marco cada
+  borde sería un marco más.
+- **Encabezado del panel**: kicker en acento ("Paso 2 de 3"), título en
+  condensada (`.rc-h1`) y bajada. El título de cada momento se dice **una
+  sola vez**: lo dice el panel, no el contenido.
+- **Son TRES pasos** — Subí · Revisá · Resultado — y la línea (`.rc-pasos`)
+  está en los cinco momentos, siempre en el mismo lugar. Estados: pendiente,
+  actual (`.on`), hecho (`.hecho`, con tilde) y **en curso** (`.curso`).
+- **Las esperas no son pantallas aparte**: cada cronómetro es el estado *en
+  curso* del paso al que lleva. Si una espera necesita su propio número, el
+  recorrido tiene un paso más de los que dice.
+- **Elegir el archivo es un ESTADO, no una pantalla**: el paso 1 cambia de
+  cara (aparece el archivo y "Leer recibo") sin sacar a nadie de donde
+  estaba.
 - **Los tildes son SVG de línea, nunca `✓` ni `✗` de texto**: como
   caracteres se ven de distinto tamaño según la fuente del sistema.
 - **Toda cifra va en `--fuente-num` con `tabular-nums`**, para que las
