@@ -625,6 +625,19 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    **Detalle completo en HISTORIAL.md** ("Módulo Encuestas").
    Lo central: el anonimato se sostiene por la FORMA de las tablas (padrón
    y urna separados, sin vínculo posible), no por un cartel.
+8. **Motor de recibos v2** — plan acordado el 2026-09-04, **sin empezar**:
+   [`PLAN_MOTOR_V2.md`](PLAN_MOTOR_V2.md), ocho bloques en orden de
+   dependencia. Lo central: **tres lecturas cortas en vez de una grande**,
+   **la confianza pasa a ser de cada renglón y no del recibo entero**, y un
+   **cierre aritmético como compuerta** entre leer y juzgar — si lo leído no
+   cierra contra los totales impresos, el recibo no se valida y se dice
+   "lectura incierta" en vez de inventar una diferencia. El bloque 0 (golden
+   set de 60 recibos reales anotados a mano + línea de base del motor de
+   hoy) **no toca el motor y es el que bloquea todo lo demás**: sin ese
+   número no se puede saber si la v2 mejora. Convive con el motor actual
+   detrás de la variable `MOTOR_V2`. El avance ítem por ítem se lleva en el
+   tablero compartido "Motor v2 · Avance"; el informe en lenguaje llano para
+   analistas está en la landing `/entornos` (recurso `motor-recibos`).
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 
