@@ -39,6 +39,13 @@ CATEGORIAS_UNIVERSALES = {
 # concepto (se repetiría una vez por cada aporte con tope afectado, jubilación
 # + PAMI + obra social) -- se junta una sola vez por recibo en una `alerta`
 # (ver más abajo, tope_posible_explicacion).
+#
+# SOLO vale hacia abajo, y por eso el signo se mira antes de agregarla: que el
+# tope se haya alcanzado entre dos recibos puede hacer que un empleador retenga
+# de MENOS, nunca de más. Ofrecerla cuando el recibo retuvo de más es peor que
+# no decir nada -- tranquiliza justo en el caso en que al trabajador le
+# descontaron de más y conviene que consulte. Ese caso tiene su propia alerta
+# (tope_no_aplicado, más abajo).
 NOTA_TOPE_DISCREPANCIA = (
     "puede deberse a que tuviste más de un recibo este mes (otro empleador, "
     "un adelanto) y el tope se alcanzó entre los dos -- no se puede confirmar "
@@ -433,8 +440,15 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
     tope_periodo = tope_vigente_en(topes, periodo_recibo)
     conceptos_con_tope = []  # descripciones de las fórmulas sujetas a tope evaluadas, para las alertas
     formulas_rotas = []      # (descripción, motivo) de las que no se pudieron evaluar
-    conceptos_con_discrepancia_tope = []  # subset de los de arriba que dieron discrepancia
+    # Los dos subsets de los de arriba que dieron discrepancia, SEPARADOS por
+    # signo: cada uno tiene su explicación y son opuestas (ver
+    # NOTA_TOPE_DISCREPANCIA). Un recibo puede caer en las dos listas a la vez
+    # (un aporte de menos y otro de más), y entonces se emiten las dos alertas.
+    conceptos_tope_retuvo_de_menos = []
+    conceptos_tope_retuvo_de_mas = []
+    exceso_retenido_con_tope = 0.0   # cuánto suman las diferencias de la 2da lista
     aplico_piso_en_discrepancia = False
+    aplico_techo_en_discrepancia = False
 
     for target, fs in formulas_por_target.items():
         f = next((x for x in fs if formula_vigente_en(x, periodo_recibo)), None)
@@ -445,8 +459,9 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
         if sujeto_a_tope:
             conceptos_con_tope.append(f["descripcion"])
         if codigo not in importe_por_codigo:
+            # No figura la línea: se retuvo 0, que es menos de lo esperado.
             if sujeto_a_tope:
-                conceptos_con_discrepancia_tope.append(f["descripcion"])
+                conceptos_tope_retuvo_de_menos.append(f["descripcion"])
             discrepancias.append({
                 "tipo": "concepto_faltante", "codigo": codigo,
                 "detalle": f"El recibo no incluye '{f['descripcion']}'.",
@@ -454,12 +469,13 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
             continue
 
         variables_f = variables
-        aplico_piso = False
+        aplico_piso = aplico_techo = False
         piso = a_numero((tope_periodo or {}).get("base_minima"))
         techo = a_numero((tope_periodo or {}).get("tope_maximo"))
         if sujeto_a_tope and piso is not None and techo is not None:
             base_topeada = min(max(base_remunerativa, piso), techo)
             aplico_piso = base_remunerativa < piso
+            aplico_techo = base_remunerativa > techo
             variables_f = dict(variables, base_remunerativa=base_topeada)
 
         # Una fórmula mal escrita (la carga un humano en /admin) NO puede
@@ -482,9 +498,13 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
             "chequeo_automatico": codigo in codigos_automaticos,
         })
         if not ok:
-            if sujeto_a_tope:
-                conceptos_con_discrepancia_tope.append(f["descripcion"])
+            if sujeto_a_tope and dif < 0:
+                conceptos_tope_retuvo_de_menos.append(f["descripcion"])
                 aplico_piso_en_discrepancia = aplico_piso_en_discrepancia or aplico_piso
+            elif sujeto_a_tope:
+                conceptos_tope_retuvo_de_mas.append(f["descripcion"])
+                exceso_retenido_con_tope += dif
+                aplico_techo_en_discrepancia = aplico_techo_en_discrepancia or aplico_techo
             discrepancias.append({
                 "tipo": "formula", "codigo": codigo,
                 "detalle": (f"{f['descripcion']}: esperado ${esperado:,.2f}, "
@@ -572,12 +592,38 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
 
     # Aclaración de las discrepancias en conceptos con tope (una sola vez por
     # recibo, no repetida por cada concepto -- ver NOTA_TOPE_DISCREPANCIA).
-    if conceptos_con_discrepancia_tope:
-        lista_disc = ", ".join(conceptos_con_discrepancia_tope)
-        detalle = f"La diferencia en {lista_disc} {NOTA_TOPE_DISCREPANCIA}"
+    # Solo para los que retuvieron de MENOS: es lo único que un tope alcanzado
+    # entre dos recibos puede producir. El texto arranca igual sirva la línea
+    # con un importe bajo o directamente no figure.
+    if conceptos_tope_retuvo_de_menos:
+        lista_disc = ", ".join(conceptos_tope_retuvo_de_menos)
+        detalle = f"Que figure menos de lo esperado en {lista_disc} {NOTA_TOPE_DISCREPANCIA}"
         if aplico_piso_en_discrepancia:
             detalle += NOTA_PISO_PROPORCIONAL
         alertas.append({"tipo": "tope_posible_explicacion", "detalle": detalle})
+
+    # El caso opuesto: el recibo retuvo MÁS de lo esperado en un aporte con
+    # tope, y la app sí topeó la base (o sea, el sueldo del mes superaba el
+    # tope y el recibo no lo aplicó). Acá no hay nada que conjeturar: el dato
+    # es público y el exceso es una cuenta, así que se dice el hecho -- es
+    # accionable frente al sindicato, a diferencia del "no se puede confirmar"
+    # del caso de arriba. Si la app NO topeó (sueldo por debajo del tope, o
+    # período sin tope cargado), el tope no explica nada y no se dice nada:
+    # de ese caso ya avisa tope_no_verificable.
+    if conceptos_tope_retuvo_de_mas and aplico_techo_en_discrepancia:
+        techo_periodo = a_numero((tope_periodo or {}).get("tope_maximo"))
+        lista_exc = ", ".join(conceptos_tope_retuvo_de_mas)
+        verbo = "se calculó" if len(conceptos_tope_retuvo_de_mas) == 1 else "se calcularon"
+        alertas.append({
+            "tipo": "tope_no_aplicado",
+            "detalle": (
+                f"En {periodo_recibo} la base máxima para aportes de la seguridad "
+                f"social era ${techo_periodo:,.2f}, y tu sueldo la superó. En tu recibo "
+                f"{lista_exc} {verbo} igual sobre el sueldo completo: te retuvieron "
+                f"${round(exceso_retenido_con_tope, 2):,.2f} de más. Un tope no puede hacer "
+                "que te retengan de más, así que conviene consultarlo con tu sindicato."
+            ),
+        })
 
     # Ley 27.802 art. 133 / Dto 407/2026: tope global a las cargas sindicales de
     # convenio (cuota solidaria, fondos convencionales). NO es un error de cálculo:

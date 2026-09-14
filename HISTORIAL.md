@@ -752,6 +752,60 @@ en dos tandas con datos reales aportados por el sindicato (2026-08-15,
 no hay ninguna inconsistencia detectada en ellas, a diferencia de las que
 eran `SOSPECHOSO`.
 
+### La explicación del tope se ofrecía también cuando el recibo retenía de MÁS (2026-09-14)
+
+Encontrado por Sd escaneando un recibo sintético de julio 2025: los tres
+aportes daban discrepancia y la app cerraba con "puede deberse a que tuviste
+más de un recibo este mes y el tope se alcanzó entre los dos". Pero el recibo
+retenía **de más**, no de menos, así que esa explicación era imposible.
+
+La causa: la alerta `tope_posible_explicacion` se enganchaba a *cualquier*
+discrepancia de una fórmula `sujeto_a_tope`, sin mirar el signo. `dif` ya se
+calculaba tres líneas antes y no se usaba para decidir. **Un tope alcanzado
+entre dos recibos solo puede hacer que un empleador retenga de MENOS** — la
+base se recorta, nunca se agranda. Ofrecerla hacia el otro lado no es un
+mensaje inexacto: es tranquilizador justo en el caso en que al trabajador le
+descontaron de más y conviene que consulte.
+
+Números del caso, que además muestran que el motor hacía bien su parte: el
+tope de julio 2025 es 3.385.490,05 (`data/topes_ss.csv`, Res. ANSES
+251/2025), y los "esperado" que mostraba la pantalla eran exactamente su 3%
+(101.564,70) y su 11% (372.403,91). O sea **la app topeó y el recibo no**:
+calculó los aportes sobre el sueldo completo, 167.759,69 de retención en
+exceso.
+
+Lo que se hizo:
+
+- La lista de conceptos con discrepancia se partió en dos por signo
+  (`conceptos_tope_retuvo_de_menos` / `..._de_mas`). La nota de pluriempleo
+  queda solo para la primera, y el texto arranca ahora "Que figure menos de
+  lo esperado en ..." para que sirva igual cuando la línea trae un importe
+  bajo y cuando directamente no figura (el `concepto_faltante` retiene 0, que
+  también es de menos, y entraba a la misma lista diciendo "La diferencia
+  en X" sobre algo que no estaba).
+- Alerta nueva `tope_no_aplicado` para el caso contrario, y **solo cuando la
+  app efectivamente topeó** (`base_remunerativa > tope_maximo`): ahí no hay
+  nada que conjeturar, el tope es público y el exceso es una resta, así que
+  se dice el hecho con los dos números. Es accionable frente al sindicato, a
+  diferencia del "no se puede confirmar mirando un solo recibo" del otro
+  caso. Si la app no topeó (sueldo por debajo del tope, o período sin tope
+  cargado), el tope no explica nada y no se dice nada del tope: de ese caso
+  ya avisa `tope_no_verificable`.
+- Un mismo recibo puede caer en las dos listas (un aporte de menos y otro de
+  más) y entonces salen las dos alertas, cada una nombrando solo a los suyos.
+- Cuatro tests nuevos en `test_topes_base_imponible.py` (33 en total), uno de
+  ellos con los números exactos del recibo que lo destapó. Los que ya estaban
+  siguen pasando sin tocarse: el comportamiento solo cambia hacia el lado que
+  no tenía ninguna prueba, que es por donde se coló.
+
+Nota sobre el recibo que lo destapó, por si vuelve a aparecer en un golden
+set: además **es incoherente consigo mismo**. Obra social (3%) y cuota
+sindical (1,5%) salen de 4.615.388 = total 4.767.392 menos el refrigerio, que
+es no remunerativo y cierra; pero jubilación y PAMI salen de 4.320.225, que
+no es ninguna combinación de las once líneas del recibo (verificado por
+fuerza bruta) ni ningún tope del catálogo — es el 93,6% de la otra base, un
+factor sin explicación. El generador de esos PDF no vive en este repo.
+
 ## Empleadores (CRUD, login propio, notificaciones y trámites externos)
 Cuarto actor de la plataforma. Se construyó en rama `empleadores` (6 fases,
 un commit por fase) y está mergeada a `main`. Hasta ahora el empleador era

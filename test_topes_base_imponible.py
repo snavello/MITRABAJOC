@@ -256,6 +256,67 @@ def test_concepto_faltante_sujeto_a_tope_agrega_alerta():
     print("OK  test_concepto_faltante_sujeto_a_tope_agrega_alerta")
 
 
+# ---------- Retención POR ENCIMA de lo esperado (el tope no la explica) ----------
+# Un tope alcanzado entre dos recibos solo puede hacer que un empleador retenga
+# de MENOS. Hasta este bloque, la alerta tope_posible_explicacion se agregaba
+# ante cualquier discrepancia de un concepto con tope, sin mirar el signo: un
+# recibo que retenía de más recibía una explicación imposible y tranquilizadora.
+
+TOPE_JUL_2025 = {"vigencia_desde": "2025-07", "tope_maximo": 3385490.05,
+                 "base_minima": 104170.43, "estado": "verificado", "fuente": "test"}
+
+
+def test_caso_real_julio_2025_recibo_que_no_aplico_el_tope():
+    # Recibo sintético real (Talleres Metalúrgicos del Sur, julio 2025):
+    # remunerativo 4.767.392 y los tres aportes calculados sobre el sueldo
+    # completo, sin aplicar el tope de 3.385.490,05 de ese mes.
+    recibo = _recibo("2025-07", 4767392.0, jub=475224.0, pami=129607.0, os_=138462.0)
+    r = validador.validar(CONCEPTOS_TOPE, FORMULAS_TOPE, recibo,
+                          topes=[TOPE_JUL_2025], cuil_sesion="20111111119")
+    assert r["estado"] == "CON_DISCREPANCIAS"
+    assert len(r["discrepancias"]) == 3
+    # La explicación de pluriempleo NO puede aparecer: acá retuvieron de más.
+    assert [a for a in r["alertas"] if a["tipo"] == "tope_posible_explicacion"] == []
+    alertas = [a for a in r["alertas"] if a["tipo"] == "tope_no_aplicado"]
+    assert len(alertas) == 1, r["alertas"]
+    detalle = alertas[0]["detalle"]
+    assert "3,385,490.05" in detalle          # el tope del período, dicho con su valor
+    assert "167,759.69" in detalle            # 102.820,09 + 28.042,30 + 36.897,30
+    for desc in ("Aporte jubilatorio (SIPA)", "Ley 19.032 (PAMI)", "Obra Social"):
+        assert desc in detalle
+    print("OK  test_caso_real_julio_2025_recibo_que_no_aplico_el_tope")
+
+
+def test_retencion_de_mas_sin_superar_el_tope_no_menciona_el_tope():
+    # Sueldo por debajo del tope: la app no topeó nada, así que el tope no
+    # explica ni la discrepancia ni el exceso. No se dice nada de topes.
+    recibo = _recibo("2015-05", 20000.0, jub=3000.0, pami=600.0, os_=600.0)
+    r = validador.validar(CONCEPTOS_TOPE, FORMULAS_TOPE, recibo,
+                          topes=[TOPE_MAY_2015], cuil_sesion="20111111119")
+    assert r["estado"] == "CON_DISCREPANCIAS"
+    tipos = {a["tipo"] for a in r["alertas"]}
+    assert "tope_posible_explicacion" not in tipos
+    assert "tope_no_aplicado" not in tipos
+    print("OK  test_retencion_de_mas_sin_superar_el_tope_no_menciona_el_tope")
+
+
+def test_un_aporte_de_menos_y_otro_de_mas_emiten_las_dos_alertas():
+    # Cada dirección tiene su explicación y son opuestas: un mismo recibo
+    # puede necesitar las dos, cada una nombrando solo a los suyos.
+    recibo = _recibo("2015-05", 44975.40, jub=100.0, pami=5000.0, os_=1296.07)
+    r = validador.validar(CONCEPTOS_TOPE, FORMULAS_TOPE, recibo,
+                          topes=[TOPE_MAY_2015], cuil_sesion="20111111119")
+    menos = [a for a in r["alertas"] if a["tipo"] == "tope_posible_explicacion"]
+    mas = [a for a in r["alertas"] if a["tipo"] == "tope_no_aplicado"]
+    assert len(menos) == 1 and len(mas) == 1, r["alertas"]
+    assert "Aporte jubilatorio (SIPA)" in menos[0]["detalle"]
+    assert "Ley 19.032 (PAMI)" not in menos[0]["detalle"]
+    assert "Ley 19.032 (PAMI)" in mas[0]["detalle"]
+    assert "Aporte jubilatorio (SIPA)" not in mas[0]["detalle"]
+    assert "3,703.93" in mas[0]["detalle"]   # solo el exceso del PAMI
+    print("OK  test_un_aporte_de_menos_y_otro_de_mas_emiten_las_dos_alertas")
+
+
 def test_formula_no_sujeta_a_tope_sigue_sobre_base_completa():
     # SINDMET no está sujeta a tope: aunque el sueldo supere el tope, se
     # sigue calculando sobre el remunerativo completo, no sobre el topeado.
