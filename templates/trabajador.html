@@ -1499,7 +1499,11 @@ function panelPaso(kicker, titulo, sub, estados, cuerpo, acciones) {
 }
 
 function panelError(estados, mensaje) {
-  return panelPaso('No pudimos seguir', 'Algo salió mal', '', estados,
+  // "Algo salió mal" no sirve para todos los casos que caen acá: el más
+  // común de los del paso 2 es el recibo que no es tuyo (E-RECIBO-04), donde
+  // no salió nada mal -- lo frenamos a propósito. El motivo lo dice el
+  // mensaje, que viene con su código.
+  return panelPaso('Verificación detenida', 'No pudimos seguir', '', estados,
     `<div class="banner mal" style="margin:0;border-radius:0;">${mensaje}</div>`,
     `<button class="rc-btn sec" onclick="location.reload()">Volver a intentar</button>`);
 }

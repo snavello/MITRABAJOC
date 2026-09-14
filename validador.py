@@ -333,13 +333,23 @@ def _evaluar(expr: str, variables: dict) -> float:
     return float(eval(expr, {"__builtins__": {}}, variables))
 
 
+def cuiles_distintos(cuil_leido, cuil_sesion) -> bool:
+    """¿Dos CUIL son distintos, normalizados? (Si alguno falta, no se puede
+    afirmar que no coinciden -> False: no se bloquea con datos incompletos,
+    solo ante una discrepancia real y verificable.)
+
+    Está separado de cuil_no_coincide() porque el comprobante de aportes de
+    ARCA trae el CUIL suelto y no adentro de un recibo: el criterio de
+    comparación tiene que ser UNO solo para los dos documentos que sube el
+    trabajador.
+    """
+    a, b = _norm_cuil(cuil_leido), _norm_cuil(cuil_sesion)
+    return bool(a and b and a != b)
+
+
 def cuil_no_coincide(recibo: dict, cuil_sesion: str) -> bool:
-    """¿El CUIL que leyó la IA del recibo es distinto del de la sesión?
-    (Si alguno falta, no se puede afirmar que no coincide -> False: no bloquea
-    con datos incompletos, solo ante una discrepancia real y verificable.)"""
-    cuil_recibo = _norm_cuil((recibo.get("empleado") or {}).get("cuil"))
-    cuil_sesion_norm = _norm_cuil(cuil_sesion)
-    return bool(cuil_recibo and cuil_sesion_norm and cuil_recibo != cuil_sesion_norm)
+    """¿El CUIL que leyó la IA del recibo es distinto del de la sesión?"""
+    return cuiles_distintos((recibo.get("empleado") or {}).get("cuil"), cuil_sesion)
 
 
 def _resultado_bloqueado_por_cuil(recibo: dict, cuil_sesion: str) -> dict:

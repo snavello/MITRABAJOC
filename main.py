@@ -61,7 +61,8 @@ from db import (Area, Concepto, Formula, Reporte, Sindicato, UsuarioSindicato, T
 from extractor import (extraer, extraer_aportes, preparar_imagen, resumen_comparable,
                         comparar_lineas, ErrorLectura)
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
-                        rangos_se_superponen, cuil_no_coincide, error_de_expresion,
+                        rangos_se_superponen, cuil_no_coincide, cuiles_distintos,
+                        error_de_expresion,
                         CATEGORIAS_UNIVERSALES)
 from filigrana import filigrana_svg
 from qr import qr_svg, url_verificacion, codigo_efimero, verificar_codigo_efimero, TTL_QR_SEGUNDOS
@@ -481,6 +482,18 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
                          uso.get("duracion_ms", 0))
     if recibo.get("confianza") == "baja":
         raise ErrorApp("E-RECIBO-02")
+    # El recibo no es de quien inició sesión: cortar ACÁ, apenas se sabe.
+    # El mismo chequeo está en /api/validar y ahí SIGUE (esa ruta se puede
+    # llamar sola, con cualquier payload), pero para esto llegaba tarde: la
+    # pantalla de confirmar ya le había mostrado a quien subió el archivo el
+    # nombre, el CUIL, el empleador y todos los importes de OTRA persona.
+    # Reportado por Sd el 2026-09-14 con un recibo ajeno leído entero.
+    # El CUIL recién se conoce DESPUÉS de leer, así que la llamada a la IA ya
+    # se hizo y ya quedó registrada arriba (el costo es real); lo que no pasa
+    # de acá es el contenido. Va antes de guardar el recibo sospechoso a
+    # propósito: de un recibo ajeno no se guarda nada, ni el archivo.
+    if cuil_no_coincide(recibo, request.cookies.get("cuil_trab", "")):
+        raise ErrorApp("E-RECIBO-04")
     # Alerta de posible adulteración (totales, CUIL, CUIT del empleador o
     # fechas): no bloquea el proceso, solo avisa y guarda una copia del
     # archivo original para que la plataforma la pueda revisar.
@@ -688,6 +701,12 @@ async def api_aportes(request: Request, archivo: UploadFile = File(...)):
                          uso.get("duracion_ms", 0))
     if datos.get("confianza") == "baja" or not datos.get("meses"):
         raise ErrorApp("E-APORTE-02")
+    # Mismo corte que en /api/leer, y acá importa todavía más: sin este
+    # chequeo, el comprobante de OTRA persona no solo se mostraba -- se
+    # guardaba como semáforo propio (guardar_semaforo indexa por el CUIL de la
+    # sesión, no por el del comprobante), y quedaba ahí al volver a entrar.
+    if cuiles_distintos(datos.get("cuil"), cuil):
+        raise ErrorApp("E-APORTE-03")
     resultado = calcular_semaforo(datos)
     if cuil and sid:
         db.guardar_semaforo(cuil, sid, resultado)

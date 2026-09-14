@@ -38,12 +38,23 @@ MENSAJES = {
     # --- Verificación del recibo ------------------------------------------
     "E-RECIBO-03": (500, "No pudimos terminar de verificar este recibo. El recibo se "
                          "leyó bien: el problema está de nuestro lado."),
+    # El recibo se leyó bien: el problema es de quién es. No habla de la foto
+    # (la foto está perfecta) y no repite el CUIL ajeno, que es dato de otra
+    # persona -- lo único que hace falta decir es que ese recibo no es suyo.
+    "E-RECIBO-04": (403, "Este recibo no está a tu nombre: el CUIL que figura no es el "
+                         "tuyo. Solo podés verificar tus propios recibos. Si es tuyo y "
+                         "el CUIL del recibo está mal impreso, avisale a tu sindicato."),
 
     # --- Comprobante de aportes de ARCA (semáforo) ------------------------
     "E-APORTE-01": (422, "No pudimos leer el comprobante. Probá con una captura más "
                          "nítida o con el PDF que descargaste de ARCA."),
     "E-APORTE-02": (422, "El archivo no parece un comprobante de aportes de ARCA. "
                          "Revisá que hayas subido la pantalla correcta."),
+    # Mismo criterio que E-RECIBO-04, para el otro documento que sube el
+    # trabajador: el comprobante se leyó bien, no es suyo.
+    "E-APORTE-03": (403, "Este comprobante no está a tu nombre: el CUIL que figura no es "
+                         "el tuyo. Entrá a ARCA con tu propia clave fiscal y subí tu "
+                         "comprobante."),
 
     # --- Sesión / identidad ------------------------------------------------
     "E-SESION-01": (400, "No pudimos determinar tu sindicato. Volvé a ingresar."),

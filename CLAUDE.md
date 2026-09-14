@@ -365,6 +365,17 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   lista. Los datos escritos ANTES del fix quedaron en UTC: no se migraron
   (detalle en HISTORIAL.md).
 
+- **Un documento que no es del CUIL logueado se corta APENAS SE LEE, no al
+  confirmar** (2026-09-14): `/api/leer` (recibo) y `/api/aportes`
+  (comprobante de ARCA) comparan el CUIL leído contra el de la sesión con
+  `validador.cuiles_distintos()` antes de devolver nada — E-RECIBO-04 y
+  E-APORTE-03. Antes el recibo ajeno se leía entero y la pantalla de
+  confirmar mostraba nombre, CUIL, empleador e importes de otra persona; el
+  comprobante ajeno además se guardaba como semáforo propio. El chequeo de
+  `/api/validar` SIGUE además de este: esa ruta se puede llamar sola con
+  cualquier payload. Una ruta nueva que lea el documento de una persona suma
+  el suyo. Detalle en HISTORIAL.md.
+
 ## Estado actual (actualizado 2026-09-11)
 Todo lo listado acá está mergeado a `main` y desplegado (Render sigue `main`,
 cada push redeploya) **salvo el punto 21**, que vive en la rama

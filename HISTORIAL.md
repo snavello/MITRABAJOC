@@ -868,6 +868,51 @@ Panel oscuro / Cáscara, con el conmutador de paleta de siempre) y Sd eligió
 se hizo renderizando la plantilla con Jinja a un archivo y recorriendo los
 cinco momentos en el navegador.
 
+## El recibo ajeno se leía entero antes de frenarse (2026-09-14)
+
+Reportado por Sd: con sesión de un CUIL, subió el recibo de otro. "Leyó todo
+y me mostró. Debió fallar antes."
+
+El control existía y funcionaba -- pero en el lugar equivocado del recorrido.
+`cuil_no_coincide()` se evaluaba en `/api/validar`, o sea al **confirmar**.
+Para entonces `/api/leer` ya había devuelto el recibo completo y la pantalla
+de confirmar le había mostrado a quien subió el archivo el nombre, el CUIL,
+el empleador y todos los importes de otra persona. El bloqueo llegaba después
+de lo único que había que evitar.
+
+El CUIL del recibo recién se conoce **después** de leerlo (está en la
+imagen), así que la llamada a la IA no se puede ahorrar y su costo se
+registra igual -- si no, el panel de costos dejaría de decir el gasto real.
+Lo que no sale de la ruta es el contenido: `/api/leer` corta con
+**E-RECIBO-04** apenas compara, y lo hace **antes** de `registrar_recibo_
+sospechoso`, porque de un recibo que no es de quien lo sube no se guarda
+nada, ni el archivo.
+
+**El mismo agujero estaba en el gemelo, y ahí era peor.** `/api/aportes` lee
+el comprobante de ARCA, que también trae CUIL, y nunca lo comparaba: el
+comprobante de otra persona no solo se mostraba, se **guardaba como semáforo
+propio** (`guardar_semaforo` indexa por el CUIL de la sesión, no por el del
+comprobante) y seguía ahí al volver a entrar. Corta con **E-APORTE-03**.
+
+Detalles que valen para la próxima:
+
+- **El chequeo de `/api/validar` NO se sacó.** Esa ruta se puede llamar sola,
+  con cualquier payload: el corte de `/api/leer` protege a la persona que usa
+  la app, el de `/api/validar` protege al catálogo y al historial de quien
+  arma el POST a mano. Son dos cosas distintas.
+- **Una sola regla de comparación**: `validador.cuiles_distintos()`, que
+  `cuil_no_coincide()` ahora usa por dentro. El comprobante de ARCA trae el
+  CUIL suelto y el recibo lo trae adentro de `empleado`; con dos
+  implementaciones, en algún momento una de las dos normaliza distinto.
+- **Ninguno de los dos afirma nada con datos incompletos**: si el CUIL del
+  documento no se pudo leer, o no hay CUIL en la sesión, no se bloquea. Un
+  bloqueo por un dato ausente es peor que el caso que evita.
+- **Los dos mensajes tienen prohibido hablar de la foto.** El documento se
+  leyó perfecto; el problema es de quién es (ver la regla en `errores.py`).
+- Tests: `test_cuil_leer_ajeno.py` (9), incluido uno que revisa que **ni un
+  dato del recibo ajeno aparezca en el cuerpo de la respuesta**, no solo que
+  el status sea 403.
+
 ## Empleadores (CRUD, login propio, notificaciones y trámites externos)
 Cuarto actor de la plataforma. Se construyó en rama `empleadores` (6 fases,
 un commit por fase) y está mergeada a `main`. Hasta ahora el empleador era
