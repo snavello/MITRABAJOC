@@ -1139,7 +1139,58 @@ en la Etapa 0 de entornos): una base creada desde cero queda vacía hasta
 "AEFIP" fantasma con id=1, justo el caso de la base nueva de Pruebas. La
 función sigue existiendo solo a pedido explícito.
 
+## Bitácora y cierre de bloque (regla desde 2026-09-17)
+
+`BITACORA.md` es el índice cronológico del proyecto: una línea por bloque
+de trabajo, con qué herramienta se hizo y dónde está el detalle. La
+narrativa técnica sigue en `HISTORIAL.md`; el estado vigente, en "Estado
+actual" de este archivo. La bitácora **apunta** a ambos, no los repite.
+
+**Al cerrar cada bloque de trabajo, sin que se pida:**
+
+1. Agregar **una línea al final** de `BITACORA.md` (nunca reordenar ni
+   editar líneas anteriores), con el formato de la tabla:
+   `| AAAA-MM-DD | Code | <Módulo> | <Qué se hizo, una frase> | <commits hash..hash; archivos; sección de HISTORIAL.md> | <Quién> |`
+   "Quién" es el código de la persona con la que se trabaja (SDN, ARS,
+   AKG…), no "Claude". Si la sesión cubrió varios bloques sin relación,
+   una línea por bloque. Si el mes no tiene encabezado todavía, abrirlo
+   (`## AAAA-MM — <título corto>`) con la cabecera de la tabla.
+2. Si cambió lo que el proyecto **es** o **tiene**, actualizar "Estado
+   actual" (y "Pendientes" si se cerró o abrió uno). Si hubo una decisión
+   nueva, "Decisiones tomadas". El detalle largo, a `HISTORIAL.md`.
+3. Correr `python generar_bitacora.py`: regenera `recursos/bitacora.html`
+   desde `BITACORA.md`. Va en el mismo commit que la línea.
+4. Si Sd pegó un "cierre de bloque" de Chat o Cowork (formato de
+   `docs/chat/PLANTILLA_CIERRE.md`): crear el archivo en `docs/chat/`,
+   agregar su línea a la bitácora con herramienta `Chat` o `Cowork`, y
+   aplicar lo indicado para `CLAUDE.md`. Si pide publicarlo, generar el
+   HTML en `recursos/` y registrarlo en `recursos.SEMILLA`.
+
+**Commits.** El autor del commit es la persona (su `git config user.name`
+y `user.email`), nunca "Claude". Todo commit cuyo código escribió Claude
+Code lleva al pie del mensaje:
+
+```
+Co-authored-by: Claude <noreply@anthropic.com>
+```
+
+Mensaje en castellano, una línea que diga qué cambia y para quién (como
+los que ya hay en el historial). La versión sube en el mismo commit (regla
+3 de `FLUJO.md`). Si el `git config` no tiene nombre configurado, avisar
+antes de commitear en vez de commitear con un autor genérico.
+
+**Ramas.** Una rama por bloque desde `main` (`feature/…`, `fix/…`,
+`sprint/…`). Sobre `demo` no se programa nunca. Las ramas viejas no se
+borran por ahora (decisión 2026-09-17, ver `docs/OPERATIVA.md` §8).
+
+**Documentos que llegan de Chat o Cowork** van a `docs/chat/AAAA-MM-DD-tema.md`;
+los planes para Code, además, en la raíz como `PLAN_*.md` o `SPRINT_*.md`
+(y no se editan una vez acordados). El mapa de dónde está cada cosa es
+`docs/INDICE.md`: si aparece una fuente nueva (chat, artefacto, documento),
+se agrega ahí.
+
 ## Método de trabajo
+- Cerrar cada bloque según "Bitácora y cierre de bloque" (arriba). No se pide: se hace.
 - Por bloques chicos, verificando la lógica de verdad (rutas y funciones), no
   simulada. Preferir cambios quirúrgicos y probar antes de avanzar.
 - Sd tiene skills intermedias de Python, trabaja en Argentina, deploya con

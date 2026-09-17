@@ -62,6 +62,16 @@ TIPOS = {
 # y migrations/); su miniatura es una captura de la portada.
 SEMILLA = [
     {
+        "clave": "bitacora",
+        "titulo": "Bitácora del proyecto",
+        "descripcion": "Qué se hizo cada día, con qué herramienta (Chat, Code, Cowork) y "
+                       "dónde está el detalle. Se regenera desde BITACORA.md con generar_bitacora.py.",
+        "fecha": date(2026, 9, 17),
+        "archivo": "bitacora.html",
+        "miniatura": "bitacora.jpg",
+        "fragmento": "",
+    },
+    {
         "clave": "motor-recibos",
         "titulo": "Motor de recibos: de la foto al veredicto",
         "descripcion": "Cómo se lee y se valida un recibo hoy, qué falla, y qué cambia con "
