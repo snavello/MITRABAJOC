@@ -4857,3 +4857,136 @@ que **no existe en `trabajador.html`** (esta plantilla no carga `marca.css`
 y define sus propias variables: el verde acá es `--agua`). Los tildes se
 veían negros en vez de verdes. Es el mismo tropiezo del encabezado
 normalizado, y por el mismo motivo.
+
+
+
+## El cuelgue del Panel Sindical en Pruebas: conexiones, techos y cupo (2026-09-19)
+
+Rama `fix/panel-conexiones`, ocho correcciones (C1 a C8), un commit cada una.
+Diagnóstico y plan en `docs/chat/2026-09-19-cuelgue-dashboard-conexiones.md`
+(Cowork, 2026-09-19); prompt de trabajo en
+`docs/chat/2026-09-19-prompt-code-cuelgue-dashboard.md`.
+
+### Qué pasó
+
+El 2026-09-18, en `mitrabajo-pruebas` con la configuración mínima (web
+`0.5c-512mb`, base `0.1c-256mb`, un worker), un solo usuario cambió varias
+veces el filtro de empresa del Panel Sindical sin esperar a que pintara la
+selección anterior. La app dejó de responder a **todo**, incluso a un login
+desde otra sesión. Reiniciar el web service no cambió nada; reiniciar
+Postgres lo destrabó. Los logs mostraron cinco `QueuePool limit of size 5
+overflow 5 reached, connection timed out, timeout 30.00` en 50 ms, todas desde
+`run_in_threadpool`.
+
+### La causa real (la auditoría corrigió al diagnóstico)
+
+El documento rector atribuía el cuelgue a helpers que abrían una segunda
+sesión (`_cuits_de_empresas`, `_cuil_de_afiliado`) mientras el endpoint ya
+tenía una. **Era cierto, pero solo en `kpis()` y `seccionales_geo()`**: los
+demás endpoints arman el WHERE antes de abrir su sesión y no anidaban. Lo que
+la reproducción local mostró, trazando cada `checkout` del pool, es que había
+un anidamiento peor y más general, que no figuraba en el documento:
+
+- **`db.permisos_efectivos` abría una sesión y, con ella tomada, llamaba a
+  `modulos_habilitados`, que abría otra.** Corre en **cada** ruta `/admin/*`
+  (vía `exigir_sindicato` → `_exigir_permiso_de_ruta` → `tiene_permiso`), así
+  que **cada request del panel retenía dos conexiones desde el primer
+  instante**, con o sin filtro. Entró con Áreas V2 (2026-09-11). Con un pool
+  de 10 alcanzaban cinco requests en vuelo para trabarlo.
+- Con el filtro de empresa o de afiliado, `kpis()` y `seccionales_geo()`
+  sumaban un tercer anidamiento; `kpis()` además leía `config_dashboard()` con
+  su sesión abierta, y `detalle_notificaciones_grupo` abría una sesión extra por
+  cada notificación del grupo.
+- Nada tenía techo: `pool_timeout` en su default de 30 s, ni `statement_timeout`
+  ni `idle_in_transaction_session_timeout`.
+- Cada refresco del panel disparaba 12–13 requests juntos, y abortar el fetch
+  solo cancela en el navegador: el servidor termina cada consulta igual.
+- Los endpoints son `def` síncronos y comparten el threadpool (40 hilos) con
+  toda la app: el panel se los comía y el login quedaba sin hilos.
+
+Reproducción (`test_dashboard_concurrencia.py` contra `main` antes de C1): pool
+de 2 sin desborde y 20 refrescos simultáneos → 12 respuestas y **228
+excepciones `TimeoutError` de pool en 81 s**, con o sin filtro de empresa. Con
+un pool de N y N requests, `serie-recibos` sin ningún filtro ya fallaba: eso
+fue lo que delató a `permisos_efectivos`.
+
+### Qué se cambió
+
+- **C1 · una conexión por request.** `permisos_efectivos` lee los módulos con
+  su propia sesión. `dashboard._resolver(sid, f)` traduce empresas y afiliado a
+  CUITs/CUIL **una vez, antes de abrir la sesión del endpoint**, y los `_sql_*`
+  solo leen `f["cuits"]` / `f["cuil_af"]` (idempotente, muta `f` en el lugar).
+  Los helpers viejos se borraron. `kpis` lee la config antes de abrir su
+  sesión; el destino legible de las notificaciones se resuelve con la sesión
+  ya cerrada. Test: 42 pedidos (con y sin filtro de empresa y de afiliado, el
+  detalle y los guardas) no superan 1 conexión tomada a la vez; contra el
+  código anterior los 42 tomaban 2. Se eligió resolver en `_resolver` y no
+  pasar la sesión a cada helper porque no cambia ninguna firma pública y
+  `parsear_filtros` sigue siendo puro.
+- **C2 · techos.** `pool_timeout=5`, `statement_timeout=15 s`,
+  `idle_in_transaction_session_timeout=30 s`; pool y timeouts por variable de
+  entorno (`DB_POOL_SIZE`, `DB_MAX_OVERFLOW`, `DB_POOL_TIMEOUT`,
+  `DB_STATEMENT_TIMEOUT_MS`, `DB_IDLE_TX_TIMEOUT_MS`). Un pool agotado
+  responde 503 JSON con `Retry-After` (`E-SERVIDOR-01`); una consulta cortada
+  por `statement_timeout` responde 503 (`E-SERVIDOR-02`, sale de manejar el
+  `QueryCanceled` de psycopg: sin eso el techo habría vuelto un 500 genérico).
+  Alembic usa `db.engine_para_migraciones()`: **sin** los techos de la app (un
+  `ALTER COLUMN TYPE` sobre una tabla grande pasa de 15 s) y **con**
+  `lock_timeout=5 s`. El valor de 15 s se fijó midiendo: la consulta más pesada
+  (`limites_bruto`, `percentile_cont` sobre 50.000 recibos) tarda 28–34 ms con
+  CPU completa (105 ms en frío), el peor endpoint 100 ms.
+- **C3 · cupo.** `BoundedSemaphore` por proceso (`DASHBOARD_CUPO`, default 4;
+  espera `DASHBOARD_CUPO_ESPERA`, default 2 s) alrededor de los endpoints de
+  agregados y el explorador. Sin lugar → 503 `E-SERVIDOR-03` con "El panel está
+  ocupado, reintentá en unos segundos.". Se toma **después** de la sesión y de
+  validar los filtros. Quedan afuera el detalle, `/filtros`, el buscador de
+  afiliados y el asistente. Limitación del test: `TestClient` arma un event
+  loop (y un threadpool) por cliente, así que no reproduce que los 40 hilos
+  sean compartidos; prueba el mecanismo que evita llegar a eso.
+- **C4 · front.** `refrescar()` sale en una cola de a 4 (`enCola`,
+  `MAX_EN_VUELO`), los contadores de pestañas inactivas se piden **después**
+  de los paneles, debounce de 250 → 400 ms, y una tarea que espera turno en
+  una ronda abortada no arranca. **Agregado que no estaba en el plan:**
+  `pedir()` reintenta hasta dos veces un 503 con espera corta (700 y 1500 ms):
+  con el cupo en 4, cambiar filtros rápido choca con las consultas de la ronda
+  anterior que el servidor todavía está terminando, y sin reintento eso dejaba
+  paneles en error. Verificado en el navegador real con el tenant de 50.000
+  recibos: pico de **4** pedidos en vuelo; una ráfaga de 4 cambios dentro del
+  debounce es una sola ronda de 12; cinco rondas "frenéticas" seguidas dieron
+  60 respuestas 200 y ningún panel en error.
+- **C5 · regresión.** El mismo test de la reproducción, parametrizado con y sin
+  filtro de empresa: 240 de 240 respuestas 200 en ~4 s (antes, 12 y 228
+  excepciones en 81 s).
+- **C6 · health checks.** `GET /healthz` (200 sin tocar la base, `async` para
+  no usar el threadpool) y `GET /readyz` (`SELECT 1` con techo de 2 s, 503 si
+  no responde). El Health Check Path de Render tiene que ser `/healthz`, **no**
+  `/readyz`: si Render usara el que consulta la base, una base lenta reiniciaría
+  el web service, que no arregla nada y corta a los que sí se estaban atendiendo.
+  Hasta hoy no había ninguno configurado.
+- **C7 · carga.** `carga/k6/test3_panel.js`: 30 cambios del filtro de empresa en
+  60 s con los 12 pedidos abandonados a los 250 ms (el peor caso: sin ayuda del
+  front nuevo), más 20 lectores; dos fases de 60 s (base y tormenta). Criterios:
+  0 respuestas 500, lectores sin fallas y p95 de la tormenta ≤ 2 × el de la base.
+  `correr.sh` lo corre si está `ADMIN_CLAVE`. **No se corrió contra Pruebas**.
+- **C8 · runbook.** Sección 9 de `docs/OPERATIVA.md`: evidencia primero,
+  `/healthz` vs `/readyz`, la consulta de `pg_stat_activity`,
+  `pg_terminate_backend` de lo que sobra y el reinicio de Postgres como último
+  recurso.
+
+### Lo que quedó sin resolver
+
+- **Cargar el Health Check Path (`/healthz`) en Render**, en `mitrabajo-pruebas`
+  y en `mitrabajo-demo`: es una configuración del panel de Render, no del repo.
+- **Correr `test3_panel.js` contra Pruebas** y volcar el resultado; es también
+  el insumo para la decisión sobre el plan de la base (0,1 vCPU, de AKG).
+- **Hipótesis sin confirmar**: por qué reiniciar el web service no alcanzó
+  (consultas huérfanas corriendo en una base de 0,1 vCPU). Los logs y las
+  métricas del 18-sep no se guardaron; la Fase 2.5 del documento sigue siendo
+  una hipótesis.
+- **Scripts de carga masiva** (`cargar_lote_*`, `--limpiar`) que necesiten
+  consultas de más de 15 s tienen que correr con `DB_STATEMENT_TIMEOUT_MS=0`
+  (queda dicho en `DESPLIEGUE_RENDER.md`).
+- Fuera de alcance, como pedía el plan: caché de agregados, endpoints `async`,
+  observabilidad (Sentry, métricas de Render).
+- Hallazgo aparte, de la bitácora y no de este bloque: `test_fechas.py` falla
+  por `generar_bitacora.py` línea 62 (llama a `datetime.now()`).
