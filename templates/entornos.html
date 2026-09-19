@@ -154,6 +154,8 @@
     padding:3px 9px; border-radius:999px; display:inline-block; }
   .plan-semaforo.ok { background:color-mix(in srgb, var(--demo) 25%, transparent); color:var(--demo); }
   .plan-semaforo.mal { background:rgba(220,80,80,.25); color:#ff9d9d; }
+  .plan-semaforo.atencion { background:rgba(240,180,60,.25); color:#ffd27a; }
+  .plan-semaforo.gris { background:rgba(255,255,255,.12); color:rgba(255,255,255,.7); }
   .plan-dias { display:flex; gap:7px; flex-wrap:wrap; }
   .plan-dia { display:flex; align-items:center; gap:6px; padding:7px 11px; border-radius:999px;
     border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.05); font-size:13px; cursor:pointer; }
@@ -301,6 +303,7 @@
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="tests-pruebas">Tests en Pruebas</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="tests-demo" disabled title="Todavía no disponible">Tests en Demo</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="planes"{% if entorno_actual != 'pruebas' %} disabled title="Cambiar de plan reinicia el servicio: se administra solo desde Pruebas"{% endif %}>Planes</button>
+      <button type="button" class="etab" role="tab" aria-selected="false" data-tab="observabilidad"{% if entorno_actual != 'pruebas' %} disabled title="La observabilidad se administra solo desde Pruebas por ahora: se replica a Demo cuando esté validada"{% endif %}>Observabilidad</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="actividad">Actividad</button>
     </nav>
 
@@ -365,6 +368,14 @@
       {% include "_planes.html" %}
     {% else %}
       <div class="vacio">Los planes se administran solo desde Pruebas -- esto es {{ entorno_actual or 'este entorno' }}. Cambiar de plan reinicia el servicio, y Demo la ven sindicatos e inversor.</div>
+    {% endif %}
+    </div>
+
+    <div class="panel-etab" data-panel="observabilidad" hidden>
+    {% if entorno_actual == 'pruebas' %}
+      {% include "_observabilidad.html" %}
+    {% else %}
+      <div class="vacio">La observabilidad se administra solo desde Pruebas por ahora -- esto es {{ entorno_actual or 'este entorno' }}. Se replica a Demo cuando esté validada.</div>
     {% endif %}
     </div>
 
@@ -627,7 +638,108 @@
   }
   tabs.forEach(t => t.addEventListener('click', () => { if (!t.disabled) activar(t.dataset.tab); }));
   const inicial = location.hash.replace('#', '');
-  if (['tests-pruebas', 'tests-demo', 'planes'].includes(inicial)) activar(inicial);
+  if (['tests-pruebas', 'tests-demo', 'planes', 'observabilidad'].includes(inicial)) activar(inicial);
+})();
+
+// Observabilidad (2026-09-19): la app es la PUERTA, no el motor. Lee de Grafana el
+// semáforo y la configuración de avisos y deja cambiar el mail y el intervalo de
+// repetición. Si Grafana no responde, cada parte lo dice sin romper la pantalla.
+// Todo contra /api/entornos/observabilidad.
+(function () {
+  const semaforo = document.getElementById('obs-semaforo');
+  if (!semaforo) return;  // en Demo la solapa no se incluye
+  const aviso = document.getElementById('obs-aviso');
+  const form = document.getElementById('obs-form');
+  const esc = t => String(t ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function decir(texto, mal) {
+    aviso.hidden = !texto;
+    aviso.textContent = texto || '';
+    aviso.className = 'aviso' + (mal ? ' mal' : ' ok');
+  }
+  function pedir(url, opciones) {
+    return fetch(url, {headers: {'Content-Type': 'application/json'}, ...opciones}).then(async r => {
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.detail || ('HTTP ' + r.status));
+      return j;
+    });
+  }
+  const ETIQUETAS = {
+    verde:    ['ok', 'Todo en orden', 'Ninguna alerta está disparando.'],
+    amarillo: ['atencion', 'Atención', 'Hay una alerta en espera o que no se pudo evaluar.'],
+    rojo:     ['mal', 'Hay alertas disparando', ''],
+    gris:     ['gris', 'Sin reglas cargadas todavía', 'Todavía nadie está mirando nada: las reglas de alerta se cargan en los próximos pasos del plan.'],
+  };
+
+  function pintar(d) {
+    const a = d.alertas;
+    const detalleEl = document.getElementById('obs-semaforo-detalle');
+    if (!d.configurado) {
+      semaforo.innerHTML = '<span class="plan-semaforo gris">No configurado</span>';
+      detalleEl.textContent = 'Falta conectar este servicio con Grafana.';
+    } else if (!a) {
+      semaforo.innerHTML = '<span class="plan-semaforo atencion">Sin datos</span>';
+      detalleEl.textContent = 'No se pudo leer el estado de las alertas. El motor sigue midiendo aunque acá no se vea.';
+    } else {
+      const [clase, titulo, detalle] = ETIQUETAS[a.semaforo] || ETIQUETAS.gris;
+      semaforo.innerHTML = `<span class="plan-semaforo ${clase}">${esc(titulo)}</span>`;
+      detalleEl.textContent = a.semaforo === 'rojo' ? `${a.disparando} de ${a.total} reglas están disparando.` : detalle;
+    }
+    const g = document.getElementById('obs-abrir-grafana');
+    g.hidden = !d.tablero_url; g.href = d.tablero_url || '#';
+    const s = document.getElementById('obs-abrir-sentry');
+    s.hidden = !d.sentry_url; s.href = d.sentry_url || '#';
+    document.getElementById('obs-sentry-falta').hidden = !!d.sentry_url;
+
+    const reglas = (a && a.reglas) || [];
+    document.getElementById('obs-reglas').innerHTML = reglas.map(r =>
+      `<div class="plan-regla"><b>${esc(r.nombre)}</b><span class="cuando">${esc(r.estado || '—')}</span>` +
+      (r.entorno ? `<span>${esc(r.entorno)}</span>` : '') + '</div>').join('');
+
+    const c = d.config;
+    const sel = document.getElementById('obs-repetir');
+    sel.innerHTML = (d.intervalos || []).map(i => `<option value="${esc(i)}">${esc(i.replace('h', ' h'))}</option>`).join('');
+    if (c) {
+      document.getElementById('obs-email').value = c.email || '';
+      if ((d.intervalos || []).includes(c.repeat_interval)) sel.value = c.repeat_interval;
+      document.getElementById('obs-resolver').checked = !!c.avisar_al_resolverse;
+    }
+    const puede = !!d.puede_configurar && !!c;
+    form.querySelectorAll('input, select, button').forEach(el => { el.disabled = !puede; });
+    document.getElementById('obs-nota-permiso').hidden = puede;
+    decir((d.errores || []).join(' · '), true);
+  }
+
+  async function cargar() {
+    try { pintar(await pedir('/api/entornos/observabilidad')); }
+    catch (err) { decir('No se pudo consultar: ' + err.message, true); }
+  }
+
+  form.addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const boton = document.getElementById('obs-guardar');
+    boton.disabled = true;
+    try {
+      await pedir('/entornos/observabilidad/config', {method: 'POST', body: JSON.stringify({
+        email: document.getElementById('obs-email').value,
+        repeat_interval: document.getElementById('obs-repetir').value,
+        avisar_al_resolverse: document.getElementById('obs-resolver').checked})});
+      await cargar();
+      decir('Guardado: los próximos avisos van con esta configuración.', false);
+    } catch (err) { decir(err.message, true); }
+    boton.disabled = false;
+  });
+  document.getElementById('obs-probar').addEventListener('click', async ev => {
+    ev.target.disabled = true;
+    try {
+      await pedir('/entornos/observabilidad/probar-mail', {method: 'POST'});
+      decir('Mail de prueba enviado: revisá la casilla (y el spam).', false);
+    } catch (err) { decir(err.message, true); }
+    ev.target.disabled = false;
+  });
+  document.querySelector('.etab[data-tab="observabilidad"]').addEventListener('click', cargar);
+  cargar();
 })();
 
 // Planes de Render (2026-09-11): estado actual, cambio inmediato y reglas

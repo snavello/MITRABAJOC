@@ -223,6 +223,9 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - PYTHON_VERSION — 3.12.8 (redundante con .python-version, a propósito).
 - DEMO_DATABASE_URL — solo en el `.env` de la PC de quien promueve: External
   Database URL de la base de demo, para el `pg_dump` de `promover_demo.py`.
+- GRAFANA_URL / GRAFANA_TOKEN_LECTURA (Viewer) / GRAFANA_TOKEN_CONFIG (Editor) —
+  solo Pruebas: la pestaña Observabilidad de `/entornos` (ver "Estado actual" 25).
+  SENTRY_URL opcional. Detalle y vencimiento en `DESPLIEGUE_RENDER.md`.
 - VAPID_PRIVATE_KEY / VAPID_PUBLIC_KEY / VAPID_CLAIM_EMAIL — Web Push de la
   PWA (push.py); sin las tres, el canal queda apagado en silencio.
 
@@ -486,6 +489,20 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     `E-SERVIDOR-03`); el front pide de a 4 y reintenta un 503. `/healthz`
     (no toca la base) es el Health Check Path de Render; `/readyz` (`SELECT 1`)
     es para mirar a mano, nunca para el reinicio automático.
+
+25. **Observabilidad** (2026-09-19, en construcción, solo Pruebas): plan en
+    `docs/chat/2026-09-19-plan-observabilidad.md`. **Regla 0: el observador
+    vive fuera de la app y de Render** -- Grafana Cloud (uptime, métricas,
+    alertas) y Sentry (errores), todo gratis, avisos solo al mail de SDN y solo
+    por excepción (cuatro eventos), con repetición cada 24 h. La app es la
+    **puerta, no el motor**: la pestaña "Observabilidad" de `/entornos`
+    (`observabilidad/panel.py`) muestra el semáforo y deja cambiar el mail y el
+    intervalo; si la app cae, los avisos siguen saliendo. La configuración de
+    Grafana vive como código en `observabilidad/config.json` +
+    `aplicar_grafana.py` (idempotente; tokens por variable de entorno, nunca en
+    el repo). Hecho: carpeta, punto de contacto y política anti-ruido. Falta:
+    monitor de uptime, colector de métricas de Render, Sentry y las reglas de
+    alerta.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

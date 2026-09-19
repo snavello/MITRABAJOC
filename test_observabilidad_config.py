@@ -75,6 +75,15 @@ def test_cambiar_el_mail_o_el_intervalo_es_editar_una_linea():
     assert ag.payload_politica(c)["repeat_interval"] == "12h"
 
 
+def test_grafana_devuelve_24h_como_1d_y_se_normaliza_para_poder_compararlo():
+    n = ag.normalizar_duracion
+    assert n("1d") == "24h" and n("2d") == "48h" and n("24h") == "24h"
+    assert n("60m") == "1h" and n("90m") == "90m" and n("30s") == "30s"
+    assert n("") == "" and n(None) == "" and n("raro") == "raro"
+    for elegible in ("1h", "6h", "12h", "24h", "48h"):     # los del selector
+        assert n(elegible) == elegible
+
+
 def test_el_nombre_de_recurso_de_grafana_13_es_base64_sin_relleno():
     assert ag.nombre_de_recurso("sdn-mail") == "c2RuLW1haWw"      # el que devolvió la API real
     assert "=" not in ag.nombre_de_recurso("un nombre de largo distinto")

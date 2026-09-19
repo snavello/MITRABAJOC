@@ -1,0 +1,59 @@
+{# Solapa "Observabilidad" de /entornos. Solo se incluye en Pruebas (main.py).
+
+   La app es la PUERTA, no el motor (docs/chat/2026-09-19-plan-observabilidad.md,
+   regla 0): las mediciones, las alertas y los mails viven en Grafana Cloud. Si
+   esta pantalla no carga, los avisos igual salen y el tablero se abre directo en
+   Grafana. Todo el contenido lo carga el JS desde /api/entornos/observabilidad.
+   Reusa las clases de "Planes" (.plan-tarjeta, .plan-estado-tarjeta, .campo...). #}
+<div class="rec-cab" style="margin-top:0;">
+  <svg class="rec-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-recursos"/></svg>
+  <div>
+    <h2>Observabilidad</h2>
+    <p class="rec-lede">Estado de Pruebas, dónde se ve el detalle y a quién se avisa cuando algo falla. Todo se mide y se avisa desde afuera de la app: si esta pantalla no carga, los avisos igual llegan.</p>
+  </div>
+</div>
+
+<div id="obs-aviso" class="aviso" hidden></div>
+
+<h3 class="planes-titulo">Estado general</h3>
+<div class="planes-estado">
+  <div class="plan-estado-tarjeta">
+    <span class="k">Semáforo de Pruebas</span>
+    <span class="grande" id="obs-semaforo">Consultando…</span>
+    <span class="linea" id="obs-semaforo-detalle"></span>
+  </div>
+  <div class="plan-estado-tarjeta">
+    <span class="k">Dónde se ve el detalle</span>
+    <span class="linea">
+      <a class="boton" id="obs-abrir-grafana" href="#" target="_blank" rel="noopener" hidden>Abrir tablero en Grafana</a>
+      <a class="boton" id="obs-abrir-sentry" href="#" target="_blank" rel="noopener" hidden>Abrir errores en Sentry</a>
+    </span>
+    <span class="linea" id="obs-sentry-falta">Sentry todavía no está conectado.</span>
+  </div>
+</div>
+<div class="tests-lista" id="obs-reglas" style="margin-top:12px;"></div>
+
+<h3 class="planes-titulo">A quién se avisa</h3>
+<form class="plan-tarjeta" id="obs-form" style="max-width:520px;">
+  <div class="campo">
+    <label for="obs-email">Mail de aviso</label>
+    <input type="email" id="obs-email" autocomplete="off" required
+           style="width:100%; padding:9px 12px; border-radius:9px; border:1px solid rgba(255,255,255,.25); background:rgba(0,0,0,.25); color:#fff; font-size:14px;">
+  </div>
+  <div class="campo">
+    <label for="obs-repetir">Repetir el recordatorio de un problema abierto cada</label>
+    <select id="obs-repetir"></select>
+    <small>Un problema manda un mail al abrirse, otro al resolverse, y este recordatorio mientras siga abierto. Nada en el medio.</small>
+  </div>
+  <label class="plan-check">
+    <input type="checkbox" id="obs-resolver" checked>
+    <span>Avisar también cuando el problema se resuelve</span>
+  </label>
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <button type="submit" class="boton" id="obs-guardar">Guardar</button>
+    <button type="button" class="boton" id="obs-probar">Enviar mail de prueba</button>
+  </div>
+  <p class="plan-nota" id="obs-nota-permiso" hidden>Este servicio no tiene el permiso para cambiar la configuración: solo se puede mirar.</p>
+</form>
+
+<p class="plan-pie" id="obs-pie">Los avisos son la excepción: cuatro eventos (app caída, base caída, muchos errores 5xx, CPU o memoria al límite). Todo lo demás queda guardado y se ve en el tablero, sin mail.</p>

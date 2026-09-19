@@ -22,6 +22,7 @@ Consecuencia: la app puede ser la **puerta de entrada** (`/entornos`, ver §6) p
 | D7 | General = semáforo por entorno (web, base, errores). Particular = detalle por servicio **y por sindicato** | El detalle por sindicato se arma con el ID del sindicato en cada evento, **nunca con datos de personas** (CUIL, nombre). |
 | D8 | Alcance inicial: **solo Pruebas**; se replica a Demo cuando esté validado | Producción no existe todavía. |
 | D9 | Repetición del recordatorio: **cada 24 h** por ahora (`repeat_interval`) | Es para no agobiar durante Pruebas; configurable. |
+| D10 | Todo se maneja desde **`/entornos` de Pruebas**, sin entradas nuevas; con formulario para **ver y configurar** (opción b) | Ver §6. La app es la puerta; el motor sigue afuera. |
 
 ## 3. Qué merece un mail (los cuatro eventos)
 
@@ -53,18 +54,22 @@ El *stream* de métricas nativo de Render exigiría el plan Pro del workspace (d
 - `test_observabilidad_config.py`: 9 tests sin red (la configuración se valida antes de tocar Grafana).
 - Hallazgos técnicos: Grafana 13 quitó el endpoint viejo de prueba de contact points (se usa el de `notifications.alerting.grafana.app`, con el nombre del punto en base64 sin relleno); el Python "pelado" de Windows rechaza el certificado de Grafana por una raíz vencida del sistema (el script usa `certifi` cuando está).
 
-## 6. Pedido de SDN: manejarlo todo desde `/entornos` de Pruebas
+## 6. Pestaña Observabilidad de `/entornos` (HECHO 2026-09-19)
 
 SDN no quiere entradas nuevas: los accesos y la configuración de observabilidad se manejan desde la landing `/entornos` (la de los 8 accesos, Recursos y Planes), con una pestaña "Observabilidad" en el mismo estilo que "Planes". **Es posible y respeta la Regla 0** si se separan dos cosas:
 
 - **En `/entornos` (la puerta):** los enlaces a Grafana y Sentry, el estado general (semáforo por entorno, leído de Grafana), y un formulario para cambiar el mail y el intervalo de repetición. Guarda en la configuración y la aplica a Grafana por API.
 - **Fuera de la app (el motor):** las mediciones, las alertas y los mails. Si `/entornos` está caído, los avisos siguen saliendo, y el tablero se abre directo desde Grafana.
 
-Detalles a resolver: el token de Grafana que use la app va como variable de entorno del servicio (con el rol mínimo, no Admin) y el estado se lee de Grafana con un token de solo lectura. Diseño pendiente de la próxima pregunta.
+**Cómo quedó** (`observabilidad/panel.py`, `templates/_observabilidad.html`, rutas `/api/entornos/observabilidad`, `/entornos/observabilidad/config` y `/probar-mail`): mismo PIN y misma regla que "Planes" (solo Pruebas; en Demo la pestaña aparece deshabilitada y las rutas rechazan). Muestra el semáforo leído de las reglas de Grafana (**gris** mientras no haya reglas: un verde sin reglas mentiría), los enlaces al tablero y a Sentry, y el formulario del mail y el intervalo (24 h por defecto, elegible entre 1, 6, 12, 24 y 48 h; nunca un campo libre, para que un "1m" no mande un mail por minuto). La **fuente de verdad en ejecución es Grafana**, no `config.json`: la pantalla lee de ahí y guarda ahí, conservando lo que no edita.
+
+**Tokens** (variables de entorno de Render, nunca en el repo): `GRAFANA_TOKEN_LECTURA` con rol Viewer (probado: lee, recibe 403 al escribir) y `GRAFANA_TOKEN_CONFIG` con rol Editor (escribe; nunca Admin), ambos con vencimiento a un año. Un mail de prueba por minuto como máximo.
+
+**Verificación real:** contra el Grafana verdadero, con la app local y los mismos tokens acotados. Encontró un error que los tests no vieron: Grafana guarda "24 h" como `1d`, el selector solo conocía `24h` y mostraba 1 h (un Guardar sin tocar nada habría cambiado el recordatorio a cada hora). Ahora las duraciones se normalizan al leerlas (`normalizar_duracion`) y hay test.
 
 ## 7. Pendiente (se cierra pregunta a pregunta)
 
-1. Diseño de la pestaña Observabilidad en `/entornos` (§6).
+1. ~~Pestaña Observabilidad en `/entornos` (§6).~~ Hecho.
 2. Activar Synthetic Monitoring en Grafana y crear los checks de `/healthz` y `/readyz` de Pruebas.
 3. Colector externo de métricas de Render (dónde corre, cada cuánto, retención según plan gratuito) y segundo token de Grafana (solo escritura de métricas).
 4. Cuenta y proyecto de Sentry; qué se envía y qué se filtra (nada de datos personales); integración en `main.py`.
