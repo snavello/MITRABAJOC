@@ -1,0 +1,18 @@
+{
+  "_ayuda": "Configuración de la observabilidad (docs/chat/2026-09-19-plan-observabilidad.md). Sin secretos: los tokens van por variable de entorno. Se aplica con: python observabilidad/aplicar_grafana.py",
+  "grafana": {
+    "url": "https://braveorange1921.grafana.net",
+    "carpeta_uid": "colm3na-pruebas",
+    "carpeta_titulo": "Colm3na · Pruebas"
+  },
+  "alertas": {
+    "_ayuda": "Un solo destinatario por ahora. repeat_interval = cada cuánto se repite el recordatorio de un problema que SIGUE abierto (no cada cuánto se evalúa). Formatos: 30s, 5m, 12h, 24h.",
+    "contact_point": "sdn-mail",
+    "email": "snavello@gmail.com",
+    "avisar_al_resolverse": true,
+    "group_by": ["alertname", "entorno"],
+    "group_wait": "1m",
+    "group_interval": "5m",
+    "repeat_interval": "24h"
+  }
+}
