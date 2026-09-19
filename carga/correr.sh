@@ -72,6 +72,23 @@ RC2=${PIPESTATUS[0]}
 set -e
 echo "(Test 2 terminó con código $RC2 -- 0 = sin thresholds cruzados, no 0 = alguno se cruzó, ver resumen.csv)"
 
+# Test 3: "filtro frenético" del Panel Sindical (cuelgue del 2026-09-18). Es
+# opcional porque necesita la clave de un admin de sindicato con el módulo
+# dashboard: sin ADMIN_CLAVE se saltea y lo dice. ADMIN_CUIT default = el Super
+# Admin de UOM de la demo. Su veredicto (APROBADO / NO APROBADO) queda en
+# test3_resumen.json y en test3_stdout.log; resumen.py todavía no lo levanta.
+RC3=skip
+if [[ -n "${ADMIN_CLAVE:-}" ]]; then
+  echo "=== Test 3: filtro frenético del panel (2 min) ==="
+  set +e
+  BASE_URL="$BASE_URL" ADMIN_CLAVE="$ADMIN_CLAVE" ADMIN_CUIT="${ADMIN_CUIT:-20111111110}"     RESUMEN_PANEL="$CARPETA/test3_resumen.json"     k6 run --out "json=$CARPETA/test3_panel.json"     k6/test3_panel.js 2>&1 | tee "$CARPETA/test3_stdout.log"
+  RC3=${PIPESTATUS[0]}
+  set -e
+  echo "(Test 3 terminó con código $RC3 -- 0 = criterios cumplidos, no 0 = algún threshold se cruzó)"
+else
+  echo "=== Test 3 salteado: falta ADMIN_CLAVE (clave de un admin de sindicato con el módulo dashboard) ==="
+fi
+
 kill "$MONITOR_PID" 2>/dev/null || true
 trap - EXIT
 
