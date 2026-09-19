@@ -10,9 +10,10 @@ commit se toman solos. Code lo corre al cerrar cada bloque (ver CLAUDE.md,
 "Bitácora y cierre de bloque")."""
 import re
 import subprocess
-from datetime import date
 from html import escape as e
 from pathlib import Path
+
+import fechas
 
 RAIZ = Path(__file__).resolve().parent
 ORIGEN = RAIZ / "BITACORA.md"
@@ -59,7 +60,7 @@ def leer(md: str):
 
 def render(bloques) -> str:
     total = sum(len(f) for _, f in bloques)
-    hoy = date.today()
+    hoy = fechas.hoy()          # la hora de Buenos Aires, no la del servidor (test_fechas.py)
     cuerpo = []
     for titulo, filas in reversed(bloques):  # el mes más reciente arriba
         cuerpo.append(f'<section><h2>{_inline(titulo)}</h2><table><thead><tr>'
