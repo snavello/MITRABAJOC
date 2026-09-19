@@ -6,15 +6,25 @@ agotó el pool de conexiones (y algunas funciones piden una segunda conexión
 teniendo ya una). Reconstrucción en
 docs/chat/2026-09-19-cuelgue-dashboard-conexiones.md.
 
-Regla que se prueba acá (C1): un request del panel nunca tiene más de UNA
-conexión del pool tomada a la vez. Ni con el filtro de empresa, ni con el de
-afiliado, ni en las rutas de detalle, ni en el guardián de permisos que corre
-antes de todas.
+Dos cosas se prueban acá:
+
+- C1: un request del panel nunca tiene más de UNA conexión del pool tomada a
+  la vez. Ni con el filtro de empresa, ni con el de afiliado, ni en las rutas
+  de detalle, ni en el guardián de permisos que corre antes de todas.
+- C5: con el pool achicado a 2 conexiones sin desborde, 20 refrescos completos
+  del panel a la vez (con y sin filtro de empresa) terminan en menos de 10 s y
+  la app CONTESTA: 200, o un 503 rápido cuando no hay cupo o conexión. Nunca un
+  500, nunca una excepción sin manejar, nunca un cuelgue. Contra el código
+  anterior daba 228 excepciones de pool en 80 s.
 
 Correr con: .venv/Scripts/python.exe -m pytest test_dashboard_concurrencia.py -q
 """
 import os
+import threading
+import time
 from datetime import timedelta
+
+import pytest
 
 os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 
@@ -31,6 +41,8 @@ from sqlmodel import select
 db.crear_tablas()
 
 HOY = fechas.hoy()
+REFRESCOS = 20
+TECHO_SEGUNDOS = 10
 
 # Los mismos endpoints que dispara refrescar() en static/dashboard.js.
 ENDPOINTS = ["kpis", "serie-recibos", "validacion", "diferencias-empresa",
@@ -148,3 +160,53 @@ def test_ningun_request_del_panel_retiene_dos_conexiones():
     excedidos = [r for r in resultado if r[3] > 1]
     assert not malos, f"respuestas que no son 200: {malos[:5]}"
     assert not excedidos, f"requests que retuvieron más de una conexión: {excedidos[:5]}"
+
+
+@pytest.mark.parametrize("filtro", ["empresa", "ninguno"])
+def test_veinte_refrescos_simultaneos_no_cuelgan_la_app(filtro):
+    motor_original = db.engine
+    # Pool de 2 sin desborde: con el código anterior a C1/C2/C3 esto se rompía
+    # con o sin filtro (cada request tomaba 2 conexiones a la vez y nadie
+    # tenía techo). Ahora tiene que contestar todo.
+    db.engine = create_engine(motor_original.url, pool_size=2, max_overflow=0,
+                              pool_timeout=db.POOL_TIMEOUT, pool_pre_ping=True)
+    params = {"desde": (HOY - timedelta(days=30)).isoformat(),
+              "hasta": HOY.isoformat()}
+    if filtro == "empresa":
+        params["empresas"] = ",".join(str(i) for i in IDS_EMPRESAS[:2])
+    resultados, excepciones = [], []
+    lock = threading.Lock()
+
+    def refresco():
+        cliente = TestClient(main.app, cookies=COOKIES)
+        for ep in ENDPOINTS:
+            try:
+                r = cliente.get(f"/admin/dashboard/{ep}", params=params)
+                with lock:
+                    resultados.append((ep, r.status_code))
+            except Exception as e:                       # 500 sin manejar en TestClient
+                with lock:
+                    excepciones.append((ep, type(e).__name__))
+
+    try:
+        inicio = time.monotonic()
+        hilos = [threading.Thread(target=refresco) for _ in range(REFRESCOS)]
+        for h in hilos:
+            h.start()
+        for h in hilos:
+            h.join(timeout=TECHO_SEGUNDOS * 3)
+        colgados = [h for h in hilos if h.is_alive()]
+        duracion = time.monotonic() - inicio
+    finally:
+        db.engine.dispose()
+        db.engine = motor_original
+
+    malos = [r for r in resultados if r[1] not in (200, 503)]
+    print(f"\n{len(resultados)} respuestas en {duracion:.1f}s; "
+          f"{sum(1 for r in resultados if r[1] == 200)} 200, "
+          f"{sum(1 for r in resultados if r[1] == 503)} 503, "
+          f"{len(malos)} otros, {len(excepciones)} excepciones, {len(colgados)} hilos colgados")
+    assert not colgados, "hay refrescos que no terminaron: la app se colgó"
+    assert not excepciones, f"excepciones sin manejar (500): {excepciones[:5]}"
+    assert not malos, f"solo se admite 200 o 503, llegó: {malos[:5]}"
+    assert duracion < TECHO_SEGUNDOS, f"tardó {duracion:.1f}s (techo {TECHO_SEGUNDOS}s)"
