@@ -2331,7 +2331,13 @@ def permisos_efectivos(usuario_id: int) -> set:
         u = s.get(UsuarioSindicato, usuario_id)
         if not u or not u.activo:
             return set()
-        mods = modulos_habilitados(u.sindicato_id)
+        # Los módulos se leen con ESTA sesión. Llamar a modulos_habilitados()
+        # abría una segunda conexión con la primera todavía tomada, y como
+        # esto corre en cada ruta /admin/* (vía exigir_sindicato), cada request
+        # del panel retenía dos conexiones del pool desde el primer instante:
+        # con un pool de 10 alcanzaban cinco requests en vuelo para trabarlo.
+        sind = s.get(Sindicato, u.sindicato_id)
+        mods = list(sind.modulos_habilitados or []) if sind else []
         # El Super Admin tiene todo lo que el sindicato tenga contratado --
         # pero pasa por el mismo filtro de módulos que los demás, así un
         # módulo apagado no le deja secciones colgadas.
