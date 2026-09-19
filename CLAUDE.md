@@ -365,6 +365,17 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   lista. Los datos escritos ANTES del fix quedaron en UTC: no se migraron
   (detalle en HISTORIAL.md).
 
+- **Una sesión de base por request; ningún helper abre la suya si recibe
+  una** (2026-09-19): un request nunca tiene más de UNA conexión del pool
+  tomada a la vez. Abrir `db.get_session()` adentro de otra sesión abierta
+  --un helper que "resuelve" un dato con la suya, un guardián de permisos--
+  retiene dos conexiones por request y, con un pool de 10, cinco requests en
+  vuelo lo traban: así se colgó Pruebas el 2026-09-18. Un helper que necesite
+  la base recibe la sesión (o el dato ya resuelto), y lo que hay que resolver
+  antes de abrir la sesión del endpoint se resuelve antes (`dashboard._resolver`
+  para los filtros de empresa/afiliado). `test_dashboard_concurrencia.py` lo
+  verifica sobre los endpoints del panel. Detalle en HISTORIAL.md.
+
 - **Un documento que no es del CUIL logueado se corta APENAS SE LEE, no al
   confirmar** (2026-09-14): `/api/leer` (recibo) y `/api/aportes`
   (comprobante de ARCA) comparan el CUIL leído contra el de la sesión con
@@ -459,6 +470,22 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     congelado en la fila; plataforma elige el modelo de cada uso; y el banco
     de pruebas lee el MISMO recibo con varios modelos para comparar costo,
     tiempo y qué leyó cada uno — ver la sección propia y HISTORIAL.md.
+
+24. **Techos del engine y cupo del Panel Sindical** (2026-09-19, rama
+    `fix/panel-conexiones`, **sin desplegar**): el engine ya no espera
+    indefinidamente. `pool_timeout` 5 s, `statement_timeout` 15 s e
+    `idle_in_transaction_session_timeout` 30 s, todo por variable de entorno
+    (`DB_POOL_SIZE` 5, `DB_MAX_OVERFLOW` 5, `DB_POOL_TIMEOUT` 5,
+    `DB_STATEMENT_TIMEOUT_MS` 15000, `DB_IDLE_TX_TIMEOUT_MS` 30000; `0` apaga
+    los de Postgres; tabla en `DESPLIEGUE_RENDER.md`). Las migraciones usan
+    `db.engine_para_migraciones()`: sin esos techos y con `lock_timeout` 5 s. Un
+    pool agotado o una consulta cortada devuelven **503 con JSON**
+    (`E-SERVIDOR-01/02`), nunca 500 ni cuelgue. Los endpoints de agregados del
+    Panel Sindical y el explorador corren con un **cupo por proceso**
+    (`DASHBOARD_CUPO` 4, espera `DASHBOARD_CUPO_ESPERA` 2 s; sin lugar,
+    `E-SERVIDOR-03`); el front pide de a 4 y reintenta un 503. `/healthz`
+    (no toca la base) es el Health Check Path de Render; `/readyz` (`SELECT 1`)
+    es para mirar a mano, nunca para el reinicio automático.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -649,6 +676,15 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    detrás de la variable `MOTOR_V2`. El avance ítem por ítem se lleva en el
    tablero compartido "Motor v2 · Avance"; el informe en lenguaje llano para
    analistas está en la landing `/entornos` (recurso `motor-recibos`).
+
+9. **Cuelgue del panel (2026-09-18, Pruebas): corregido en la rama
+   `fix/panel-conexiones`, falta mergear y desplegar.** Causa y correcciones
+   C1–C8 en `docs/chat/2026-09-19-cuelgue-dashboard-conexiones.md` y en
+   HISTORIAL.md ("El cuelgue del Panel Sindical en Pruebas"). Queda a mano:
+   cargar el Health Check Path `/healthz` en los dos servicios de Render, y
+   correr `carga/k6/test3_panel.js` contra Pruebas (no se corrió). Si Pruebas
+   no responde: `docs/OPERATIVA.md` §9 (evidencia primero, `pg_terminate_backend`
+   antes de reiniciar Postgres).
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 

@@ -137,12 +137,36 @@
   /* ================= Ronda de fetches ================= */
   var abortador = null, debounceId = null;
 
-  function pedir(ruta, extra, signal) {
+  /* Un 503 es el servidor diciendo "estoy ocupado" (cupo del panel o pool de
+     conexiones agotado), no que el pedido esté mal: se reintenta hasta dos
+     veces con una espera corta y creciente. Cuando cambiás filtros rápido, el
+     servidor todavía está terminando las consultas de la ronda anterior --
+     abortar un fetch solo lo cancela acá, el servidor las completa igual --, y
+     un reintento espera a que se libere lugar en vez de dejar el panel en
+     error. Solo el 503: cualquier otro error se muestra tal cual. */
+  var ESPERA_503_MS = [700, 1500];
+
+  function esperar(ms, signal) {
+    return new Promise(function (resolver, rechazar) {
+      var id = setTimeout(resolver, ms);
+      if (signal) signal.addEventListener("abort", function () {
+        clearTimeout(id);
+        rechazar(new DOMException("Aborted", "AbortError"));
+      });
+    });
+  }
+
+  function pedir(ruta, extra, signal, intento) {
+    intento = intento || 0;
     var q = paramsDeEstado();
     if (extra) Object.keys(extra).forEach(function (k) { q.set(k, extra[k]); });
     return fetch("/admin/dashboard/" + ruta + "?" + q.toString(), { signal: signal })
       .then(function (r) {
         if (r.status === 403) { location.href = "/admin"; throw new Error("sesion"); }
+        if (r.status === 503 && intento < ESPERA_503_MS.length) {
+          return esperar(ESPERA_503_MS[intento], signal)
+            .then(function () { return pedir(ruta, extra, signal, intento + 1); });
+        }
         if (r.ok) return r.json();
         // El motivo que manda el servidor se lee y se muestra. Sin esto, un
         // 422 por el rango de fechas dejaba TODO el panel en "—" y nadie
@@ -168,11 +192,14 @@
     caja.hidden = !detalle;
   }
 
-  function cargarPanel(nombre, promesa, pintar) {
+  /* `pedido` es una FUNCIÓN que devuelve la promesa, no la promesa: el
+     fetch sale cuando la cola de la ronda le da lugar (ver enCola), no antes.
+     El panel se marca "cargando" ya mismo desde refrescar(). */
+  function cargarPanel(nombre, pedido, pintar) {
     var p = panelDe(nombre);
-    if (!p) return promesa;
+    if (!p) return pedido();
     p.classList.add("cargando"); p.classList.remove("con-error");
-    return promesa.then(function (datos) {
+    return pedido().then(function (datos) {
       pintar(datos);
       p.classList.remove("cargando");
     }).catch(function (e) {
@@ -193,29 +220,82 @@
     urlCompartible();
     pintarControles();
 
-    var rondas = [
-      cargarPanel("serie", pedir("serie-recibos", null, signal), pintarLinea),
-      cargarPanel("validacion", pedir("validacion", null, signal), pintarDona),
-      cargarPanel("tramites", pedir("tramites-seccional", null, signal), pintarTramites),
-      cargarPanel("notif", pedir("notificaciones", null, signal), pintarNotif),
-      cargarPanel("empresas", pedir("diferencias-empresa", null, signal), pintarEmpresas),
-      cargarPanel("semaforo", pedir("semaforo", null, signal), pintarSemaforo),
-      cargarPanel("seccionales-geo", pedir("seccionales-geo", null, signal), pintarMapa),
-      cargarPanel("formato", pedir("formato-semana", null, signal), pintarFormato),
-      cargarPanel("explorador", pedir("explorador/" + S.tab, { page: 1, page_size: 10 }, signal),
+    // Los diez paneles + KPIs (+ bot) salen en una COLA de a MAX_EN_VUELO, no
+    // todos juntos: doce requests simultáneos por refresco fueron lo que
+    // saturó el servidor el 2026-09-18 (el cupo del servidor es de 4).
+    var tareas = [
+      function () { return pintarKPIs(signal); },
+      cargarEnCola("serie", "serie-recibos", null, signal, pintarLinea),
+      cargarEnCola("validacion", "validacion", null, signal, pintarDona),
+      cargarEnCola("tramites", "tramites-seccional", null, signal, pintarTramites),
+      cargarEnCola("notif", "notificaciones", null, signal, pintarNotif),
+      cargarEnCola("empresas", "diferencias-empresa", null, signal, pintarEmpresas),
+      cargarEnCola("semaforo", "semaforo", null, signal, pintarSemaforo),
+      cargarEnCola("seccionales-geo", "seccionales-geo", null, signal, pintarMapa),
+      cargarEnCola("formato", "formato-semana", null, signal, pintarFormato),
+      cargarEnCola("explorador", "explorador/" + S.tab, { page: 1, page_size: 10 }, signal,
         function (d) { pintarTabla(d, false); }),
-      pintarKPIs(signal),
     ];
-    if (CONSULTAS_ON) rondas.push(cargarPanel("bot", pedir("consultas", null, signal), pintarBot));
+    if (CONSULTAS_ON) tareas.push(cargarEnCola("bot", "consultas", null, signal, pintarBot));
+    // Todos los paneles se ven "cargando" desde ya, aunque el fetch de algunos
+    // espere turno.
+    ["serie", "validacion", "tramites", "notif", "empresas", "semaforo",
+     "seccionales-geo", "formato", "explorador"].concat(CONSULTAS_ON ? ["bot"] : [])
+      .forEach(function (n) {
+        var p = panelDe(n);
+        if (p) { p.classList.add("cargando"); p.classList.remove("con-error"); }
+      });
 
-    // Contadores en vivo de las pestañas NO activas (total con page_size=1).
-    tabsDisponibles().forEach(function (t) {
-      if (t === S.tab) return;
-      pedir("explorador/" + t, { page: 1, page_size: 1 }, signal)
-        .then(function (d) { $("cnt-" + t).textContent = fmtN(d.total); })
-        .catch(function () { });
+    // Los contadores de las pestañas NO activas (total con page_size=1) son
+    // decorativos: se piden DESPUÉS de que terminan los paneles, no en la
+    // misma ráfaga, y también en cola.
+    return enCola(tareas, MAX_EN_VUELO).then(function () {
+      if (signal.aborted) return;
+      var contadores = tabsDisponibles().filter(function (t) { return t !== S.tab; })
+        .map(function (t) {
+          return function () {
+            if (signal.aborted) return Promise.resolve();
+            return pedir("explorador/" + t, { page: 1, page_size: 1 }, signal)
+              .then(function (d) { $("cnt-" + t).textContent = fmtN(d.total); })
+              .catch(function () { });
+          };
+        });
+      return enCola(contadores, MAX_EN_VUELO);
     });
-    return Promise.all(rondas);
+  }
+
+  /* Ejecuta `tareas` (funciones que devuelven promesas) en orden, con a lo
+     sumo `limite` en vuelo a la vez. Resuelve cuando todas terminaron, salgan
+     bien o mal: cada tarea ya maneja su propio error. */
+  var MAX_EN_VUELO = 4;
+
+  function enCola(tareas, limite) {
+    return new Promise(function (resolver) {
+      var i = 0, vivas = 0, terminadas = 0, total = tareas.length;
+      if (!total) { resolver(); return; }
+      function fin() {
+        vivas--; terminadas++;
+        if (terminadas === total) resolver(); else siguiente();
+      }
+      function siguiente() {
+        while (vivas < limite && i < total) {
+          var tarea = tareas[i++];
+          vivas++;
+          Promise.resolve().then(tarea).then(fin, fin);
+        }
+      }
+      siguiente();
+    });
+  }
+
+  /* Una tarea de la cola que carga un panel. Si la ronda se abortó mientras
+     esperaba turno (el usuario ya cambió otro filtro), no arranca: pedirlo
+     sería gastar un lugar del servidor en algo que nadie va a ver. */
+  function cargarEnCola(nombre, ruta, extra, signal, pintar) {
+    return function () {
+      if (signal.aborted) return Promise.resolve();
+      return cargarPanel(nombre, function () { return pedir(ruta, extra, signal); }, pintar);
+    };
   }
 
   function initMapa() {
@@ -228,7 +308,7 @@
 
   function cambio() {
     clearTimeout(debounceId);
-    debounceId = setTimeout(refrescar, 250);
+    debounceId = setTimeout(refrescar, 400);
   }
 
   function tabsDisponibles() {

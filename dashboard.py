@@ -222,27 +222,42 @@ def catalogo_empresas(sid: int) -> list:
              "nombre": fila[2] or fila[1]} for fila in filas]
 
 
-def _cuits_de_empresas(sid: int, ids: list) -> Optional[list]:
-    """ids de Empleador (del PROPIO sindicato) -> CUITs normalizados. Un id
-    ajeno o inexistente no resuelve a nada: si el filtro vino con ids y
-    ninguno es del tenant, devuelve [] y el que llama no matchea NADA (nunca
-    "todo"). None = sin filtro."""
-    if not ids:
-        return None
-    return [e["cuit"] for e in catalogo_empresas(sid) if e["id"] in set(ids)]
+def _resolver(sid: int, f: dict) -> dict:
+    """Traduce los ids del filtro (empresas, afiliado) a lo que el SQL
+    compara -- CUITs y CUIL -- y lo deja en `f["cuits"]` / `f["cuil_af"]`.
 
+    **Una conexión a la vez, una sola vez por request.** Esto antes eran dos
+    helpers que abrían su propia sesión cada vez que un constructor de WHERE
+    los llamaba, y se los llamaba con la sesión del endpoint ya abierta: cada
+    request retenía una conexión del pool y pedía una segunda (cuelgue de
+    Pruebas del 2026-09-18,
+    docs/chat/2026-09-19-cuelgue-dashboard-conexiones.md). Ahora se resuelve
+    acá, con una sola sesión, ANTES de que el endpoint abra la suya, y los
+    constructores `_sql_*` solo leen `f`. Idempotente: si `f` ya está
+    resuelto no toca la base, y muta `f` en el lugar (las copias con
+    `dict(f, ...)` heredan lo resuelto).
 
-def _cuil_de_afiliado(sid: int, afiliado_id) -> Optional[str]:
-    """id de Trabajador (del PROPIO sindicato) -> CUIL. Mismo criterio que
-    _cuits_de_empresas: un id ajeno o inexistente resuelve a un CUIL
-    imposible y el filtro no matchea NADA (nunca "todo"). None = sin filtro."""
-    if not afiliado_id:
-        return None
-    with db.get_session() as s:
-        fila = s.execute(text(
-            "SELECT cuil FROM trabajador WHERE id = :id AND sindicato_id = :sid"
-        ), {"id": afiliado_id, "sid": sid}).first()
-    return _norm_cuil(fila[0]) if fila else "__nadie__"
+    Semántica intacta: un id ajeno o inexistente no resuelve a nada --
+    empresas da [] y afiliado da un CUIL imposible -- y el que llama no
+    matchea NADA (nunca "todo"). None = sin filtro."""
+    if "cuits" in f and "cuil_af" in f:
+        return f
+    ids, afiliado_id = f.get("empresas") or [], f.get("afiliado")
+    cuits = cuil_af = None
+    if ids or afiliado_id:
+        with db.get_session() as s:
+            if ids:
+                filas = s.execute(text(
+                    "SELECT id, cuit FROM empleador WHERE sindicato_id = :sid AND activo"
+                ), {"sid": sid}).all()
+                cuits = [_norm_cuil(cuit) for eid, cuit in filas if eid in set(ids)]
+            if afiliado_id:
+                fila = s.execute(text(
+                    "SELECT cuil FROM trabajador WHERE id = :id AND sindicato_id = :sid"
+                ), {"id": afiliado_id, "sid": sid}).first()
+                cuil_af = _norm_cuil(fila[0]) if fila else "__nadie__"
+    f["cuits"], f["cuil_af"] = cuits, cuil_af
+    return f
 
 
 # Con filtro de afiliado, de los recibos cuentan SOLO los que esa persona
@@ -347,13 +362,14 @@ def _sql_recibos(sid: int, f: dict, extra_conds: str = "", forzar_join: bool = F
              "r.procesado_en >= :desde_ts", "r.procesado_en <= :hasta_ts"]
     params = {"sid": sid, "desde_ts": f["desde_ts"], "hasta_ts": f["hasta_ts"]}
     joins = ""
+    _resolver(sid, f)
     if f["seccionales"] or forzar_join:
         joins = (" LEFT JOIN trabajador t ON t.sindicato_id = r.sindicato_id "
                  "AND t.cuil = r.cuil")
     if f["seccionales"]:
         conds.append("t.seccional_id IN :seccionales")
         params["seccionales"] = f["seccionales"]
-    cuits = _cuits_de_empresas(sid, f["empresas"])
+    cuits = f["cuits"]
     if cuits is not None:
         conds.append("r.cuit_empleador IN :cuits")
         params["cuits"] = cuits or ["__ninguna__"]
@@ -372,7 +388,7 @@ def _sql_recibos(sid: int, f: dict, extra_conds: str = "", forzar_join: bool = F
     if f["resultado"]:
         conds.append("r.estado = :resultado")
         params["resultado"] = f["resultado"]
-    cuil_af = _cuil_de_afiliado(sid, f.get("afiliado"))
+    cuil_af = f["cuil_af"]
     if cuil_af is not None:
         conds.append(_SOLO_ENVIADOS_DEL_AFILIADO)
         params["cuil_af"] = cuil_af
@@ -386,6 +402,7 @@ def _sql_tramites(sid: int, f: dict, forzar_join: bool = False):
              "tr.creado >= :desde_ts", "tr.creado <= :hasta_ts"]
     params = {"sid": sid, "desde_ts": f["desde_ts"], "hasta_ts": f["hasta_ts"]}
     joins = ""
+    _resolver(sid, f)
     if f["seccionales"] or forzar_join:
         joins = (" LEFT JOIN trabajador t ON t.sindicato_id = tr.sindicato_id "
                  "AND t.cuil = tr.cuil")
@@ -395,7 +412,7 @@ def _sql_tramites(sid: int, f: dict, forzar_join: bool = False):
     if f["estado_tramite"]:
         conds.append("tr.estado IN :estados")
         params["estados"] = ESTADOS_TRAMITE_DASHBOARD[f["estado_tramite"]]
-    cuil_af = _cuil_de_afiliado(sid, f.get("afiliado"))
+    cuil_af = f["cuil_af"]
     if cuil_af is not None:
         conds.append("tr.cuil = :cuil_af")
         params["cuil_af"] = cuil_af
@@ -410,6 +427,7 @@ def _sql_notificaciones(sid: int, f: dict, forzar_join: bool = False):
              "n.enviado_en >= :desde_ts", "n.enviado_en <= :hasta_ts"]
     params = {"sid": sid, "desde_ts": f["desde_ts"], "hasta_ts": f["hasta_ts"]}
     joins = " JOIN notificacion n ON n.id = d.notificacion_id"
+    _resolver(sid, f)
     if f["seccionales"] or forzar_join:
         joins += (" LEFT JOIN trabajador t ON t.sindicato_id = n.sindicato_id "
                   "AND t.cuil = d.cuil")
@@ -419,7 +437,7 @@ def _sql_notificaciones(sid: int, f: dict, forzar_join: bool = False):
     if f["tipo_notif"]:
         conds.append("n.origen = :tipo_notif")
         params["tipo_notif"] = f["tipo_notif"]
-    cuil_af = _cuil_de_afiliado(sid, f.get("afiliado"))
+    cuil_af = f["cuil_af"]
     if cuil_af is not None:
         conds.append("d.cuil = :cuil_af")
         params["cuil_af"] = cuil_af
@@ -493,6 +511,8 @@ def _kpis_de_rango(s, sid: int, f: dict) -> dict:
 def kpis(sid: int, f: dict) -> dict:
     """Los KPIs del período + los mismos valores del período inmediato
     anterior de igual longitud (para los deltas), en un solo JSON."""
+    _resolver(sid, f)         # antes de abrir la sesión: una conexión a la vez
+    con_consultas = db.config_dashboard()["consultas_bot_habilitado"]   # idem
     with db.get_session() as s:
         actual = _kpis_de_rango(s, sid, f)
         anterior = _kpis_de_rango(s, sid, _rango_previo(f))
@@ -505,7 +525,7 @@ def kpis(sid: int, f: dict) -> dict:
         if f["seccionales"]:
             conds.append("seccional_id IN :seccionales")
             params["seccionales"] = f["seccionales"]
-        cuits = _cuits_de_empresas(sid, f["empresas"])
+        cuits = f["cuits"]
         if cuits is not None:
             conds.append("REPLACE(REPLACE(COALESCE(cuit_empleador, ''), '-', ''), ' ', '') IN :cuits")
             params["cuits"] = cuits or ["__ninguna__"]
@@ -521,7 +541,7 @@ def kpis(sid: int, f: dict) -> dict:
         consultas = None
         # Con afiliado elegido el KPI de consultas no aplica (son anónimas):
         # None, no 0 -- un 0 afirmaría "esta persona no consultó".
-        if db.config_dashboard()["consultas_bot_habilitado"] and not f.get("afiliado"):
+        if con_consultas and not f.get("afiliado"):
             joins, where, params = _sql_consultas(sid, f)
             consultas = _uno(s, f"SELECT COUNT(*) FROM consultaconvenio c{joins} WHERE {where}",
                              params)[0]
@@ -667,7 +687,7 @@ def seccionales_geo(sid: int, f: dict) -> dict:
     Nunca sale una fila cruda ni un dato de una persona: son seis números por
     seccional.
     """
-    f = dict(f, seccionales=[])       # el mapa es el selector, no un filtrado
+    f = dict(_resolver(sid, f), seccionales=[])   # el mapa es el selector, no un filtrado
     filas = {}
 
     def fila(secc_id):
@@ -679,7 +699,7 @@ def seccionales_geo(sid: int, f: dict) -> dict:
         # Padrón: foto, sin rango de fechas (le aplican empresa y afiliado).
         conds = ["sindicato_id = :sid", "activo", "seccional_id IS NOT NULL"]
         params = {"sid": sid}
-        cuits = _cuits_de_empresas(sid, f["empresas"])
+        cuits = f["cuits"]
         if cuits is not None:
             conds.append("REPLACE(REPLACE(COALESCE(cuit_empleador, ''), '-', ''), ' ', '') IN :cuits")
             params["cuits"] = cuits or ["__ninguna__"]
@@ -761,16 +781,17 @@ def semaforo(sid: int, f: dict, hoy: Optional[date] = None) -> dict:
              "r.cuit_empleador != ''"]
     params = {"sid": sid}
     joins = ""
+    _resolver(sid, f)
     if f["seccionales"]:
         joins = (" LEFT JOIN trabajador t ON t.sindicato_id = r.sindicato_id "
                  "AND t.cuil = r.cuil")
         conds.append("t.seccional_id IN :seccionales")
         params["seccionales"] = f["seccionales"]
-    cuits = _cuits_de_empresas(sid, f["empresas"])
+    cuits = f["cuits"]
     if cuits is not None:
         conds.append("r.cuit_empleador IN :cuits")
         params["cuits"] = cuits or ["__ninguna__"]
-    cuil_af = _cuil_de_afiliado(sid, f.get("afiliado"))
+    cuil_af = f["cuil_af"]
     if cuil_af is not None:
         conds.append(_SOLO_ENVIADOS_DEL_AFILIADO)
         params["cuil_af"] = cuil_af
@@ -1040,20 +1061,28 @@ def detalle_tramite(sid: int, tramite_id: int) -> Optional[dict]:
     return d
 
 
-def _destino_legible(sid: int, criterio: str, valores: list) -> str:
+def _destino_legible(sid: int, criterio: str, valores: list, cache: dict) -> str:
     """El destino de una Notificacion en palabras: a quién se dirigió el
-    envío, resolviendo ids de seccional y CUITs a sus nombres."""
+    envío, resolviendo ids de seccional y CUITs a sus nombres.
+
+    Abre sesión propia solo la primera vez que necesita un catálogo, y lo
+    guarda en `cache` para el resto de las notificaciones de la misma
+    respuesta. Hay que llamarla con la sesión del endpoint YA CERRADA."""
     valores = valores or []
     if criterio == "cuil":
         return f"{len(valores)} afiliado puntual" if len(valores) == 1 \
             else f"{len(valores)} afiliados puntuales"
     if criterio == "seccional":
-        nombres = _etiquetas_seccionales(sid)
+        nombres = cache.get("seccionales")
+        if nombres is None:
+            nombres = cache["seccionales"] = _etiquetas_seccionales(sid)
         etiquetas = [nombres.get(int(v), f"Seccional #{v}") for v in valores
                      if str(v).lstrip("-").isdigit()]
         return "Seccional " + ", ".join(etiquetas) if etiquetas else "Por seccional"
     if criterio == "cuit_empleador":
-        empresas = _etiquetas_empresas(sid)
+        empresas = cache.get("empresas")
+        if empresas is None:
+            empresas = cache["empresas"] = _etiquetas_empresas(sid)
         etiquetas = [empresas.get(_norm_cuil(str(v)), str(v)) for v in valores]
         return "Empresa " + ", ".join(etiquetas) if etiquetas else "Por empresa"
     if criterio == "provincia":
@@ -1085,7 +1114,7 @@ def detalle_notificaciones_grupo(sid: int, dia: str, seccional_id: Optional[int]
             WHERE {' AND '.join(conds)}
             GROUP BY n.id"""), params).all()
         porcion = {f[0]: (f[1], f[2]) for f in filas}
-        resultado = []
+        resultado, criterios = [], {}
         for nid in porcion:
             n = s.get(db.Notificacion, nid)
             if not n:
@@ -1093,16 +1122,21 @@ def detalle_notificaciones_grupo(sid: int, dia: str, seccional_id: Optional[int]
             total_leidas = s.execute(text(
                 "SELECT COUNT(*), COALESCE(SUM(CASE WHEN leida_en IS NOT NULL THEN 1 ELSE 0 END), 0) "
                 "FROM notificaciondestinatario WHERE notificacion_id = :nid"), {"nid": nid}).one()
+            criterios[nid] = (n.criterio, n.criterio_valores)
             resultado.append({
                 "id": nid, "remitente": n.remitente, "texto": n.texto,
                 "enviado_en": n.enviado_en, "tipo": n.origen,
                 "etiqueta": TIPOS_NOTIF.get(n.origen, n.origen),
-                "destino": _destino_legible(sid, n.criterio, n.criterio_valores),
                 "tiene_adjunto": bool(n.adjunto_datos), "adjunto_nombre": n.adjunto_nombre,
                 "enviadas": porcion[nid][0], "leidas": porcion[nid][1],
                 "sin_leer": porcion[nid][0] - porcion[nid][1],
                 "total_enviadas": total_leidas[0], "total_leidas": total_leidas[1],
             })
+    # El destino legible pide catálogos a la base: va con la sesión ya cerrada
+    # (antes se resolvía adentro y cada notificación tomaba una segunda conexión).
+    cache = {}
+    for item in resultado:
+        item["destino"] = _destino_legible(sid, *criterios[item["id"]], cache)
     resultado.sort(key=lambda x: x["enviado_en"], reverse=True)
     return resultado
 

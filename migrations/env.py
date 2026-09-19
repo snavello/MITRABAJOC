@@ -34,8 +34,11 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Modo online: usa el engine real de la app."""
-    with db.engine.connect() as connection:
+    """Modo online: la misma base y los mismos modelos que la app, pero con
+    el engine de migraciones (sin los techos de consulta de la app y con
+    lock_timeout): ver db.engine_para_migraciones."""
+    motor = db.engine_para_migraciones()
+    with motor.connect() as connection:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,

@@ -150,7 +150,98 @@ Claude devuelve el archivo y la línea listos.
 - **Demo atrasada**: `demo` está 119 commits detrás de `main` (última
   promoción 2026-09-05). Decide SDN cuándo promover.
 
-## 9. Resumen en una tarjeta
+## 9. Si la app no responde
+
+Origen: cuelgue de Pruebas del 2026-09-18, en el que la app entera dejó de
+responder (incluso un login desde otra sesión), reiniciar el web service no
+alcanzó y solo reiniciar Postgres lo destrabó. Reconstrucción y correcciones
+en `docs/chat/2026-09-19-cuelgue-dashboard-conexiones.md`. Aplica a Pruebas y a
+Demo. **El orden importa: primero se junta evidencia, después se destraba, y
+reiniciar la base es el último recurso.**
+
+### 9.1 Antes de tocar nada (2 minutos)
+
+Un reinicio borra las pruebas. Guardar, con la hora a la vista:
+
+1. **Captura de la pestaña Metrics** del web service y de la base en Render
+   (CPU, memoria, conexiones). El plan Hobby retiene 7 días: si pasó más
+   tiempo, ya no está.
+2. **Los logs del web service** de la ventana del problema, sin filtrar. Buscar
+   `QueuePool`, `TimeoutError`, `too many connections` y los códigos
+   `E-SERVIDOR-01`, `-02` y `-03` (tabla de abajo).
+3. **Qué se estaba haciendo** en el momento (qué pantalla, qué filtro) y quién.
+
+### 9.2 ¿Está viva la app o la base?
+
+Desde el navegador, sin sesión:
+
+| URL | Qué pregunta | Si responde 200 | Si no responde o da 503 |
+|---|---|---|---|
+| `/healthz` | ¿el proceso está vivo? (no toca la base) | El web service vive: mirar la base. | El proceso está caído o sin CPU: reiniciar el web service. |
+| `/readyz` | ¿la base contesta un `SELECT 1` en 2 s? | La base responde: el problema es de la app (cupo, hilos). | La base no responde a tiempo: pasar a 9.3. |
+
+Lo que ve la gente cuando la app se defiende (503 en vez de colgarse):
+
+| Código | Qué pasó | Qué hacer |
+|---|---|---|
+| `E-SERVIDOR-01` | El pool de conexiones se agotó (5 s sin conexión libre). | Ver 9.3: alguien está reteniendo conexiones. |
+| `E-SERVIDOR-02` | Postgres cortó una consulta por pasar de 15 s (`statement_timeout`). | Una consulta es lenta: ver cuál en 9.3. Pedir un rango más corto. |
+| `E-SERVIDOR-03` | El panel está ocupado (cupo de 4 endpoints a la vez). | Normal bajo ráfaga; si es constante, ver 9.3. |
+
+### 9.3 Ver qué está pasando en la base
+
+En Render: la base → **Connect** / **Queries**, o `psql` con la External
+Database URL. Esta consulta lista lo que está corriendo ahora:
+
+```sql
+SELECT pid, state, wait_event_type, wait_event,
+       now() - query_start AS duracion, left(query, 120) AS query
+FROM pg_stat_activity
+WHERE datname = current_database() AND state <> 'idle'
+ORDER BY query_start;
+```
+
+Cómo leerla:
+
+- **Muchas filas `active` con SQL del panel** (`reciboverificado`,
+  `notificaciondestinatario`, `tramite`...) = **saturación**: la base no da
+  abasto. Es el caso del 2026-09-18.
+- **Filas `idle in transaction`, o `wait_event_type = 'Lock'`** = **bloqueo**:
+  alguien retiene una transacción o un lock y los demás hacen cola. Otro caso,
+  otro arreglo: mirar qué migración o proceso largo está corriendo.
+
+### 9.4 Destrabar, de menos a más
+
+1. **Cortar lo que sobra, sin reiniciar nada.** Consultas de más de 15 s y
+   transacciones abandonadas (no toca las conexiones sanas):
+
+   ```sql
+   SELECT pg_terminate_backend(pid)
+   FROM pg_stat_activity
+   WHERE datname = current_database() AND pid <> pg_backend_pid()
+     AND ((state = 'active' AND now() - query_start > interval '15 seconds')
+       OR (state = 'idle in transaction' AND now() - state_change > interval '30 seconds'));
+   ```
+
+   Con los techos de la app (`DB_STATEMENT_TIMEOUT_MS`, `DB_IDLE_TX_TIMEOUT_MS`)
+   esto debería resolverse solo; si hay que hacerlo a mano, es una señal.
+2. **Reiniciar el web service** si `/healthz` no responde o si tras cortar
+   las consultas la app sigue trabada.
+3. **Reiniciar Postgres, solo como último recurso.** Corta a todos y deja la
+   base cerca de un minuto sin responder.
+
+### 9.5 Después
+
+- Agregar una línea a `BITACORA.md` (herramienta `Manual`) y, si la causa
+  fue nueva, una sección en `HISTORIAL.md` con lo que se vio en 9.1 y 9.3.
+- Si el problema fue de capacidad y no de un defecto, la decisión de subir el
+  plan de la base es de AKG; el insumo es el resultado de
+  `carga/k6/test3_panel.js` (ver `carga/README.md`).
+- Las variables `DB_POOL_*`, `DB_STATEMENT_TIMEOUT_MS`, `DASHBOARD_CUPO*` se
+  documentan en `DESPLIEGUE_RENDER.md`. El Health Check Path de Render tiene
+  que ser `/healthz`, nunca `/readyz`.
+
+## 10. Resumen en una tarjeta
 
 ```
 Rama por bloque → Code construye y testea → commit (autor = vos, Co-authored-by Claude)
