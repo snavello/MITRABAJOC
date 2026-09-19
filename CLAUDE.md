@@ -650,6 +650,17 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    tablero compartido "Motor v2 · Avance"; el informe en lenguaje llano para
    analistas está en la landing `/entornos` (recurso `motor-recibos`).
 
+9. **Cuelgue del panel (2026-09-18, Pruebas).** Causa reconstruida desde el
+   código en `docs/chat/2026-09-19-cuelgue-dashboard-conexiones.md`:
+   `_cuits_de_empresas`/`_cuil_de_afiliado` abren una segunda sesión
+   mientras el endpoint ya tiene una (deadlock del pool con filtro de
+   empresa/afiliado), pool de 10 sin `pool_timeout` ni `statement_timeout`,
+   13 requests por refresco, threadpool de 40 hilos compartido con toda la
+   app. Correcciones C1–C8 y prompt en `docs/chat/2026-09-19-prompt-code-
+   cuelgue-dashboard.md`. Hasta que se aplique: si Pruebas no responde,
+   mirar la pestaña Queries de la base y `pg_terminate_backend` antes de
+   reiniciar Postgres; guardar logs y captura primero.
+
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 
 Sube y baja el plan del servicio web y de Postgres, ahora o en un horario
