@@ -104,8 +104,8 @@ def _contexto_tls():
 
 
 class Grafana:
-    def __init__(self, url: str, token: str):
-        self.url, self.token = url.rstrip("/"), token
+    def __init__(self, url: str, token: str, timeout: int = 30):
+        self.url, self.token, self.timeout = url.rstrip("/"), token, timeout
 
     def pedir(self, metodo: str, ruta: str, cuerpo=None, editable_desde_la_ui=False):
         datos = json.dumps(cuerpo).encode("utf-8") if cuerpo is not None else None
@@ -119,7 +119,7 @@ class Grafana:
             # la interfaz: no se podría tocar a mano en una urgencia.
             req.add_header("X-Disable-Provenance", "true")
         try:
-            with urllib.request.urlopen(req, timeout=30, context=_contexto_tls()) as r:
+            with urllib.request.urlopen(req, timeout=self.timeout, context=_contexto_tls()) as r:
                 texto = r.read().decode("utf-8")
                 return r.status, (json.loads(texto) if texto else None)
         except urllib.error.HTTPError as e:
@@ -174,6 +174,81 @@ def aplicar_politica(g: Grafana, cfg: dict, dry: bool) -> str:
     a = cfg["alertas"]
     return (f"política de notificaciones: fijada (espera {a['group_wait']}, agrupa cada "
             f"{a['group_interval']}, repite cada {a['repeat_interval']})")
+
+
+def aplicar_config(g: Grafana, cfg: dict) -> list:
+    """Punto de contacto + política de notificaciones, en ese orden (la política
+    apunta al punto de contacto, que tiene que existir antes). Lo usan el script
+    y la pestaña Observabilidad de /entornos."""
+    return [asegurar_contact_point(g, cfg, False), aplicar_politica(g, cfg, False)]
+
+
+def normalizar_duracion(texto: str) -> str:
+    """Grafana guarda '24h' como '1d' (y '48h' como '2d'). Se lleva todo a horas,
+    minutos o segundos enteros para que lo leído sea comparable con lo que se
+    escribe: sin esto, la pantalla mostraba '1d' donde el selector solo conoce
+    '24h', caía en la primera opción (1 h) y un Guardar sin tocar nada cambiaba el
+    recordatorio a cada hora."""
+    m = re.match(r"^(\d+)(s|m|h|d)$", str(texto or ""))
+    if not m:
+        return str(texto or "")
+    segundos = int(m.group(1)) * {"s": 1, "m": 60, "h": 3600, "d": 86400}[m.group(2)]
+    for divisor, sufijo in ((3600, "h"), (60, "m"), (1, "s")):
+        if segundos % divisor == 0:
+            return f"{segundos // divisor}{sufijo}"
+    return str(texto)
+
+
+def leer_configuracion(g: Grafana) -> dict:
+    """Lo que HOY tiene Grafana: a qué mail avisa y con qué intervalos. Es la
+    fuente de verdad en tiempo de ejecución: la pestaña muestra esto, no lo que
+    diga config.json (que es solo el punto de partida del script)."""
+    estado, politica = g.pedir("GET", "/api/v1/provisioning/policies")
+    if estado != 200:
+        raise RuntimeError(f"Grafana no dejó leer la política de notificaciones (HTTP {estado})")
+    estado, puntos = g.pedir("GET", "/api/v1/provisioning/contact-points")
+    if estado != 200:
+        raise RuntimeError(f"Grafana no dejó leer los puntos de contacto (HTTP {estado})")
+    nombre = politica.get("receiver") or ""
+    punto = next((p for p in puntos if p["name"] == nombre), None)
+    return {
+        "contact_point": nombre,
+        "email": (punto or {}).get("settings", {}).get("addresses", ""),
+        "avisar_al_resolverse": not (punto or {}).get("disableResolveMessage", False),
+        "group_by": politica.get("group_by") or [],
+        "group_wait": normalizar_duracion(politica.get("group_wait")),
+        "group_interval": normalizar_duracion(politica.get("group_interval")),
+        "repeat_interval": normalizar_duracion(politica.get("repeat_interval")),
+    }
+
+
+def estado_alertas(g: Grafana) -> dict:
+    """El semáforo general: qué dicen las reglas de alerta de Grafana ahora.
+
+    verde = ninguna dispara; amarillo = alguna en espera (`pending`) o con error
+    al evaluarse; rojo = alguna disparando; gris = todavía no hay reglas (un
+    semáforo verde sin reglas mentiría: nadie está mirando nada)."""
+    estado, datos = g.pedir("GET", "/api/prometheus/grafana/api/v1/rules")
+    if estado != 200:
+        raise RuntimeError(f"Grafana no dejó leer las reglas de alerta (HTTP {estado})")
+    reglas = []
+    for grupo in (datos.get("data") or {}).get("groups", []):
+        for r in grupo.get("rules", []):
+            reglas.append({"nombre": r.get("name", ""), "estado": r.get("state", ""),
+                           "salud": r.get("health", ""), "carpeta": grupo.get("file", ""),
+                           "entorno": (r.get("labels") or {}).get("entorno", "")})
+    disparando = [r for r in reglas if r["estado"] == "firing"]
+    en_espera = [r for r in reglas if r["estado"] == "pending" or r["salud"] not in ("ok", "")]
+    if not reglas:
+        semaforo = "gris"
+    elif disparando:
+        semaforo = "rojo"
+    elif en_espera:
+        semaforo = "amarillo"
+    else:
+        semaforo = "verde"
+    return {"semaforo": semaforo, "total": len(reglas), "disparando": len(disparando),
+            "reglas": reglas}
 
 
 def nombre_de_recurso(nombre: str) -> str:

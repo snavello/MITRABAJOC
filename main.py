@@ -80,6 +80,7 @@ from permisos import SECCION_SUPER_ADMIN
 import recursos
 import render_admin
 import render_planes
+from observabilidad import panel as observabilidad_panel
 import planificador
 from modulos import MODULOS, MODULOS_INICIALES
 import dashboard
@@ -6556,6 +6557,62 @@ def entornos_planes_borrar(request: Request, regla_id: int):
     if not db.borrar_plan_programado(regla_id):
         raise HTTPException(404, "No existe esa regla.")
     return {"ok": True}
+
+
+# ==================== Solapa "Observabilidad" ====================
+# La app es la PUERTA, no el motor (docs/chat/2026-09-19-plan-observabilidad.md,
+# regla 0): las mediciones, las alertas y los mails viven en Grafana Cloud, fuera
+# de Render. Si esta pantalla no carga, los avisos igual salen y el tablero se
+# abre directo en Grafana. Acá solo se ve el estado y se cambian dos ajustes:
+# el mail de aviso y cada cuánto se repite el recordatorio. Solo Pruebas, por ahora.
+
+
+def _exigir_observabilidad(request: Request):
+    _exigir_landing()
+    if not _pase_landing(request):
+        raise HTTPException(403, "Ingresá el PIN de la landing.")
+    if entorno.ENTORNO != "pruebas":
+        raise HTTPException(400, "La observabilidad se administra solo desde Pruebas por ahora: "
+                                 "se replica a Demo cuando esté validada.")
+
+
+@app.get("/api/entornos/observabilidad")
+def api_entornos_observabilidad(request: Request):
+    """Estado del semáforo, configuración de avisos y enlaces, en una sola llamada."""
+    _exigir_observabilidad(request)
+    return observabilidad_panel.estado()
+
+
+@app.post("/entornos/observabilidad/config")
+def entornos_observabilidad_config(request: Request, payload: dict = Body(...)):
+    """Cambia el mail de aviso y el intervalo de repetición en Grafana."""
+    _exigir_observabilidad(request)
+    try:
+        return observabilidad_panel.guardar(
+            payload.get("email", ""), payload.get("repeat_interval", ""),
+            bool(payload.get("avisar_al_resolverse", True)))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except observabilidad_panel.ErrorObservabilidad as e:
+        raise HTTPException(502, str(e))
+    except Exception as e:
+        print(f"[observabilidad] no se pudo guardar: {type(e).__name__}: {e}")
+        raise HTTPException(502, "Grafana no aceptó el cambio. Revisá que el token de configuración siga vigente.")
+
+
+@app.post("/entornos/observabilidad/probar-mail")
+def entornos_observabilidad_probar_mail(request: Request):
+    """Manda un mail de prueba al punto de contacto vigente (uno por minuto)."""
+    _exigir_observabilidad(request)
+    try:
+        return {"ok": True, "detalle": observabilidad_panel.probar_mail()}
+    except ValueError as e:
+        raise HTTPException(429, str(e))
+    except observabilidad_panel.ErrorObservabilidad as e:
+        raise HTTPException(502, str(e))
+    except Exception as e:
+        print(f"[observabilidad] no se pudo mandar la prueba: {type(e).__name__}: {e}")
+        raise HTTPException(502, "Grafana no pudo mandar el mail de prueba.")
 
 
 @app.get("/api/entornos/tests")
