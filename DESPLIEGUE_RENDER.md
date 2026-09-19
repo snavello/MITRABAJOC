@@ -27,6 +27,14 @@ corre solo en cada deploy** (Pre-Deploy Command), ya no a mano.
   anterior. (Se usa `python -m alembic` y no `alembic` porque en la Shell
   de Render el ejecutable no siempre está en el PATH.)
 - Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+- **Health Check Path: `/healthz`** (Settings → Health & Alerts). Es la
+  pregunta "¿el proceso está vivo?": responde 200 sin tocar la base y sin
+  usar el threadpool, así contesta aun con la app saturada. Hasta el
+  2026-09-19 no había ninguno configurado. **No apuntarlo a `/readyz`**: esa
+  ruta sí consulta la base (`SELECT 1`, techo de 2 s) y sirve para mirar a mano
+  o desde un monitor externo; si Render la usara, una base lenta reiniciaría el
+  web service, que no arregla nada y corta a los que sí estaban siendo
+  atendidos.
 - Auto-Deploy: encendido (cada servicio sobre SU rama).
 
 ## Variables de entorno
@@ -43,6 +51,29 @@ corre solo en cada deploy** (Pre-Deploy Command), ya no a mano.
 | `VAPID_PRIVATE_KEY` / `VAPID_PUBLIC_KEY` / `VAPID_CLAIM_EMAIL` | propias | propias (o ninguna: el push queda apagado) | Las suscripciones push son por origen; no se comparten entre URLs. |
 
 `DATABASE_URL` es obligatoria en los dos servicios: la app no tiene otro motor.
+
+### Ajustes de conexiones y del Panel Sindical (opcionales)
+
+Todas tienen un default razonable y no hace falta cargarlas; existen para
+poder mover un techo sin tocar código (cuelgue de Pruebas del 2026-09-18,
+`docs/chat/2026-09-19-cuelgue-dashboard-conexiones.md`). Van por proceso: con
+`--workers N` cada worker tiene su propio pool y su propio cupo.
+
+| Variable | Default | Qué hace |
+|----------|---------|----------|
+| `DB_POOL_SIZE` | `5` | Conexiones fijas del pool. |
+| `DB_MAX_OVERFLOW` | `5` | Conexiones extra que el pool abre en un pico. |
+| `DB_POOL_TIMEOUT` | `5` | Segundos que un request espera una conexión libre antes de rendirse con un 503 (`E-SERVIDOR-01`). |
+| `DB_STATEMENT_TIMEOUT_MS` | `15000` | Postgres corta cualquier consulta que pase de esto (503, `E-SERVIDOR-02`). `0` lo apaga; las migraciones nunca lo llevan. |
+| `DB_IDLE_TX_TIMEOUT_MS` | `30000` | Postgres cierra una transacción abierta sin actividad. `0` lo apaga. |
+| `DASHBOARD_CUPO` | `4` | Endpoints de agregados del Panel Sindical que corren a la vez en el proceso; el resto recibe un 503 (`E-SERVIDOR-03`). |
+| `DASHBOARD_CUPO_ESPERA` | `2` | Segundos que un pedido espera un lugar del cupo antes del 503. |
+
+La suma de `DB_POOL_SIZE + DB_MAX_OVERFLOW`, por cantidad de workers, tiene
+que entrar en el límite de conexiones del plan de Postgres; con el cupo en 4 y
+un solo worker no se llega ni a la mitad de un pool de 10. Si un script de
+carga masiva (`cargar_lote_*`, `--limpiar`) necesita consultas de más de 15 s,
+correrlo con `DB_STATEMENT_TIMEOUT_MS=0`.
 
 ## Paso a paso — crear Pruebas (una vez)
 

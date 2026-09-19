@@ -30,6 +30,7 @@ import os
 import threading
 import traceback
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
@@ -307,6 +308,50 @@ async def renovar_sesion_por_actividad(request: Request, call_next):
                 respuesta.set_cookie(cookie_extra, valor, httponly=True,
                                       max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
     return respuesta
+
+
+# ---------- Salud del servicio (Health Check de Render) ----------
+# Dos preguntas distintas con dos rutas distintas:
+#
+# - /healthz: "¿el proceso está vivo?". NO toca la base y es `async def`: corre
+#   en el event loop y no en el threadpool, así responde aunque los 40 hilos
+#   estén ocupados o el pool de conexiones agotado. Es la que va en el Health
+#   Check Path de Render. Si apuntara a algo que usa la base, una base lenta
+#   haría que Render reinicie el web service, que no arregla nada y encima
+#   corta a todos los que sí estaban siendo atendidos.
+# - /readyz: "¿puedo atender pedidos ahora?". Hace un SELECT 1 con techo de 2 s.
+#   Para mirar a mano o desde un monitor externo, no para que Render reinicie.
+#
+# Ninguna de las dos pide sesión ni revela datos: solo dicen si están bien.
+_SONDA_BASE = ThreadPoolExecutor(max_workers=2, thread_name_prefix="readyz")
+READYZ_TECHO_SEGUNDOS = 2.0
+
+
+def _ping_a_la_base() -> None:
+    with db.engine.connect() as conexion:
+        conexion.execute(db.text("SELECT 1"))
+
+
+@app.get("/healthz")
+async def healthz():
+    return JSONResponse({"ok": True}, headers={"Cache-Control": "no-store"})
+
+
+@app.get("/readyz")
+async def readyz():
+    sin_cache = {"Cache-Control": "no-store"}
+    try:
+        await asyncio.wait_for(
+            asyncio.get_running_loop().run_in_executor(_SONDA_BASE, _ping_a_la_base),
+            timeout=READYZ_TECHO_SEGUNDOS)
+    except asyncio.TimeoutError:
+        return JSONResponse({"ok": False, "motivo": f"la base no respondió en {READYZ_TECHO_SEGUNDOS:g} s"},
+                            status_code=503, headers=sin_cache)
+    except Exception as e:
+        print(f"[readyz] la base no está lista: {type(e).__name__}")
+        return JSONResponse({"ok": False, "motivo": "la base no está lista"},
+                            status_code=503, headers=sin_cache)
+    return JSONResponse({"ok": True}, headers=sin_cache)
 
 
 @app.get("/logo/{sindicato_id}")
