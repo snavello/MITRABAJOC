@@ -54,6 +54,21 @@ El *stream* de métricas nativo de Render exigiría el plan Pro del workspace (d
 - `test_observabilidad_config.py`: 9 tests sin red (la configuración se valida antes de tocar Grafana).
 - Hallazgos técnicos: Grafana 13 quitó el endpoint viejo de prueba de contact points (se usa el de `notifications.alerting.grafana.app`, con el nombre del punto en base64 sin relleno); el Python "pelado" de Windows rechaza el certificado de Grafana por una raíz vencida del sistema (el script usa `certifi` cuando está).
 
+## 5b. Monitor de uptime (HECHO 2026-09-19)
+
+`observabilidad/aplicar_uptime.py` (idempotente, config en `config.json` → `uptime`) crea en Synthetic Monitoring dos checks HTTP que pegan desde **afuera** a Pruebas, y sus reglas de alerta en la carpeta `Colm3na · Pruebas`:
+
+| Check | Frecuencia | Alerta (evento de §3) | Dispara tras |
+|---|---|---|---|
+| `/healthz` | cada 2 min | App no responde (Pruebas) — evento 1 | 3 min |
+| `/readyz` | cada 3 min | Base de datos no responde (Pruebas) — evento 2 | 5 min |
+
+- **Ubicaciones:** Ohio (donde está el host de Render) y São Paulo (la más cercana a SDN). La alerta usa `max by (job) (probe_success)`: solo dispara si fallan **las dos** ubicaciones a la vez, así un problema de un solo sitio no manda un mail.
+- **Un 200 con otro cuerpo no cuenta como "la app vive"** (la página de error de un proxy, por ejemplo): el check exige `{"ok": true}`.
+- **El monitor no se calla si se rompe:** si deja de reportar, la regla pasa a `NoData` y avisa. Quedarse ciego sin enterarse es peor que un falso aviso.
+- **Presupuesto:** 72.000 ejecuciones al mes contra un tope gratuito de 100.000 (dato asumido; se verifica en Grafana Cloud → Billing/Usage). `validar_uptime` rechaza una configuración que se pase.
+- Los eventos 3 (5xx) y 4 (CPU/memoria) necesitan métricas de la app y de Render: siguen pendientes.
+
 ## 6. Pestaña Observabilidad de `/entornos` (HECHO 2026-09-19)
 
 SDN no quiere entradas nuevas: los accesos y la configuración de observabilidad se manejan desde la landing `/entornos` (la de los 8 accesos, Recursos y Planes), con una pestaña "Observabilidad" en el mismo estilo que "Planes". **Es posible y respeta la Regla 0** si se separan dos cosas:
@@ -70,7 +85,7 @@ SDN no quiere entradas nuevas: los accesos y la configuración de observabilidad
 ## 7. Pendiente (se cierra pregunta a pregunta)
 
 1. ~~Pestaña Observabilidad en `/entornos` (§6).~~ Hecho.
-2. Activar Synthetic Monitoring en Grafana y crear los checks de `/healthz` y `/readyz` de Pruebas.
+2. ~~Synthetic Monitoring y checks de `/healthz` y `/readyz` (§5b).~~ Hecho. Falta probar el camino completo (una caída simulada que llegue al mail).
 3. Colector externo de métricas de Render (dónde corre, cada cuánto, retención según plan gratuito) y segundo token de Grafana (solo escritura de métricas).
 4. Cuenta y proyecto de Sentry; qué se envía y qué se filtra (nada de datos personales); integración en `main.py`.
 5. Reglas de alerta de los cuatro eventos de §3.

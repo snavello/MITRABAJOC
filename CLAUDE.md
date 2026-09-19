@@ -500,9 +500,11 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     intervalo; si la app cae, los avisos siguen saliendo. La configuración de
     Grafana vive como código en `observabilidad/config.json` +
     `aplicar_grafana.py` (idempotente; tokens por variable de entorno, nunca en
-    el repo). Hecho: carpeta, punto de contacto y política anti-ruido. Falta:
-    monitor de uptime, colector de métricas de Render, Sentry y las reglas de
-    alerta.
+    el repo). Hecho: carpeta, punto de contacto y política anti-ruido, y el
+    **monitor de uptime** (`aplicar_uptime.py`: `/healthz` y `/readyz` de Pruebas
+    desde Ohio y São Paulo, con sus alertas; solo dispara si fallan todas las
+    ubicaciones). Falta: colector de métricas de Render, Sentry y las alertas de
+    5xx y de CPU/memoria.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
