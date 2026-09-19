@@ -45,6 +45,11 @@ def test_los_criterios_de_aceptacion_estan_en_el_script():
     assert "res.status >= 500 && res.status !== 503" in JS                  # un 503 no es error
     assert "razon <= 2" in JS                                               # p95 no se degrada más de 2x
     assert "APROBADO" in JS
+    # Sin tormenta no hay veredicto: la primera corrida contra Pruebas dio
+    # APROBADO con 0 pedidos del panel porque el admin no pudo entrar.
+    assert "veredicto.aprobado = veredicto.tormenta_ejecutada" in JS
+    setup = JS[JS.index("export function setup()"):JS.index("function fase(")]
+    assert "entrarComoAdmin();" in setup, "el admin tiene que validarse en setup(), antes de correr"
 
 
 def test_pide_la_clave_por_entorno_y_no_la_escribe():

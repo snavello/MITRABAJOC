@@ -677,14 +677,14 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    tablero compartido "Motor v2 · Avance"; el informe en lenguaje llano para
    analistas está en la landing `/entornos` (recurso `motor-recibos`).
 
-9. **Cuelgue del panel (2026-09-18, Pruebas): corregido en la rama
-   `fix/panel-conexiones`, falta mergear y desplegar.** Causa y correcciones
-   C1–C8 en `docs/chat/2026-09-19-cuelgue-dashboard-conexiones.md` y en
-   HISTORIAL.md ("El cuelgue del Panel Sindical en Pruebas"). Queda a mano:
-   cargar el Health Check Path `/healthz` en los dos servicios de Render, y
-   correr `carga/k6/test3_panel.js` contra Pruebas (no se corrió). Si Pruebas
-   no responde: `docs/OPERATIVA.md` §9 (evidencia primero, `pg_terminate_backend`
-   antes de reiniciar Postgres).
+9. **Cuelgue del panel (2026-09-18, Pruebas): corregido y en Pruebas desde el
+   2026-09-19** (PR #6). Causa y correcciones C1–C8 en
+   `docs/chat/2026-09-19-cuelgue-dashboard-conexiones.md` y en HISTORIAL.md
+   ("El cuelgue del Panel Sindical en Pruebas"); `carga/k6/test3_panel.js`
+   dio APROBADO contra Pruebas. Queda: al promover a la demo, cargar
+   `/healthz` como Health Check Path en `mitrabajo-demo` (hoy vacío; ponerlo
+   antes de promover haría fallar sus deploys). Si una app no responde:
+   `docs/OPERATIVA.md` §9.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 

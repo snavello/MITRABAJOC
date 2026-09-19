@@ -90,6 +90,11 @@ export function setup() {
   if (!ADMIN_CLAVE) {
     throw new Error('Falta ADMIN_CLAVE (la clave del admin de sindicato con el módulo dashboard).');
   }
+  // Se prueba al admin ACÁ, antes de arrancar: si la clave está mal o el
+  // sindicato no tiene el módulo, el test se corta en un segundo con el motivo,
+  // en vez de correr 2 minutos de lectores sin tormenta y dar un veredicto
+  // vacío (pasó en la primera corrida contra Pruebas, 2026-09-19).
+  entrarComoAdmin();
   return { inicio: Date.now() };
 }
 
@@ -204,8 +209,11 @@ export function handleSummary(data) {
     pedidos_del_panel: data.metrics.panel_pedidos ? data.metrics.panel_pedidos.values.count : 0,
     respuestas_503_del_panel: data.metrics.panel_503 ? data.metrics.panel_503.values.count : 0,
   };
-  veredicto.aprobado = veredicto.criterio_2x && veredicto.criterio_cero_500 &&
-    fallaLectores !== null && fallaLectores < 0.01;
+  // Sin tormenta no hay veredicto: 30 cambios x 12 paneles = 360 pedidos. Si el
+  // admin no pudo entrar, los lectores solos "aprueban" cualquier cosa.
+  veredicto.tormenta_ejecutada = veredicto.pedidos_del_panel >= CAMBIOS_DE_FILTRO * PANELES.length * 0.9;
+  veredicto.aprobado = veredicto.tormenta_ejecutada && veredicto.criterio_2x &&
+    veredicto.criterio_cero_500 && fallaLectores !== null && fallaLectores < 0.01;
   const linea = (k, v) => `  ${k.padEnd(34)} ${v}\n`;
   const texto = '\n=== Test 3: filtro frenético ===\n' +
     linea('p95 lectores, fase base', base === null ? 's/d' : base.toFixed(0) + ' ms') +
@@ -214,6 +222,7 @@ export function handleSummary(data) {
     linea('respuestas 500 (deben ser 0)', e500 === null ? 's/d' : (e500 * 100).toFixed(2) + ' %') +
     linea('fallas de lectores (< 1 %)', fallaLectores === null ? 's/d' : (fallaLectores * 100).toFixed(2) + ' %') +
     linea('pedidos del panel / 503', `${veredicto.pedidos_del_panel} / ${veredicto.respuestas_503_del_panel}`) +
-    linea('VEREDICTO', veredicto.aprobado ? 'APROBADO' : 'NO APROBADO') + '\n';
+    linea('VEREDICTO', veredicto.aprobado ? 'APROBADO'
+      : (veredicto.tormenta_ejecutada ? 'NO APROBADO' : 'NO APROBADO: la tormenta no se ejecutó')) + '\n';
   return { stdout: texto, [RESUMEN]: JSON.stringify(veredicto, null, 2) };
 }
