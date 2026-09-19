@@ -10,9 +10,46 @@
     "contact_point": "sdn-mail",
     "email": "snavello@gmail.com",
     "avisar_al_resolverse": true,
-    "group_by": ["alertname", "entorno"],
+    "group_by": [
+      "alertname",
+      "entorno"
+    ],
     "group_wait": "1m",
     "group_interval": "5m",
     "repeat_interval": "24h"
+  },
+  "uptime": {
+    "_ayuda": "Monitor de uptime (Synthetic Monitoring de Grafana Cloud) y sus alertas. La alerta dispara solo si fallan TODAS las ubicaciones a la vez (para que un problema de un sitio no cuente como caída) y solo despues de `falla_minutos` seguidos. El tope gratuito de ejecuciones al mes se verifica en Grafana Cloud -> Billing/Usage; `tope_ejecuciones_mes` es lo que se asume.",
+    "entorno": "pruebas",
+    "base_url": "https://mitrabajo-pruebas.onrender.com",
+    "probes": [
+      "Ohio",
+      "SaoPaulo"
+    ],
+    "tope_ejecuciones_mes": 100000,
+    "checks": [
+      {
+        "id": "app",
+        "job": "colm3na-pruebas-healthz",
+        "ruta": "/healthz",
+        "frecuencia_s": 120,
+        "timeout_s": 10,
+        "falla_minutos": 3,
+        "alerta": "App no responde (Pruebas)",
+        "evento": "app-caida",
+        "descripcion": "/healthz no responde desde afuera. La app (o Render) está caída o sin capacidad de atender."
+      },
+      {
+        "id": "base",
+        "job": "colm3na-pruebas-readyz",
+        "ruta": "/readyz",
+        "frecuencia_s": 180,
+        "timeout_s": 10,
+        "falla_minutos": 5,
+        "alerta": "Base de datos no responde (Pruebas)",
+        "evento": "base-caida",
+        "descripcion": "/readyz falla: la app vive pero la base no contesta un SELECT 1 a tiempo. Ver docs/OPERATIVA.md §9."
+      }
+    ]
   }
 }
