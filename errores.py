@@ -77,6 +77,7 @@ MENSAJES = {
     # --- Servidor saturado (503, no es un error del recibo ni de la persona) -
     "E-SERVIDOR-01": (503, "El servidor está ocupado y no pudo atender el pedido. "
                            "Esperá unos segundos y probá de nuevo."),
+    "E-SERVIDOR-03": (503, "El panel está ocupado, reintentá en unos segundos."),
     "E-SERVIDOR-02": (503, "La consulta tardó más de lo permitido y se cortó. "
                            "Probá de nuevo con un rango de fechas más corto o menos "
                            "filtros; si sigue pasando, avisá a tu sindicato."),

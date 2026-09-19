@@ -26,8 +26,11 @@ Arrancar con:  uvicorn main:app --reload   (ver README.md)
 """
 
 import asyncio
+import os
+import threading
 import traceback
 import uuid
+from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import quote
@@ -4956,6 +4959,35 @@ def _exigir_dashboard_detalle(request: Request) -> int:
     return _exigir_dashboard(request)
 
 
+# Cupo del Panel Sindical: cuántos endpoints de agregados corren a la vez en
+# este proceso. Cada refresco del panel dispara ~13 requests (dashboard.js) y el
+# navegador solo cancela del lado del cliente: el servidor termina cada query
+# igual. Sin cupo, una ráfaga de filtros ocupaba los 40 hilos del threadpool
+# -- que comparten el login, la app del trabajador y todo lo demás -- y la app
+# entera dejaba de responder (Pruebas, 2026-09-18). Con cupo, el panel se
+# queda con como mucho DASHBOARD_CUPO hilos y el resto recibe un 503 rápido que
+# el propio panel muestra. Es POR PROCESO (cada worker de uvicorn tiene el suyo).
+# Los endpoints de detalle ("Ver") y el asistente quedan afuera a propósito:
+# son una consulta puntual, no la ráfaga.
+CUPO_PANEL = max(1, int(os.getenv("DASHBOARD_CUPO", "").strip() or 4))
+CUPO_PANEL_ESPERA = float(os.getenv("DASHBOARD_CUPO_ESPERA", "").strip() or 2)
+_cupo_panel_semaforo = threading.BoundedSemaphore(CUPO_PANEL)
+
+
+@contextmanager
+def _cupo_panel():
+    """Toma un lugar del cupo o, pasados CUPO_PANEL_ESPERA segundos, rinde con
+    503. Va DESPUÉS del chequeo de sesión y de la validación de filtros: un
+    pedido sin sesión o mal formado no debe gastar un lugar."""
+    if not _cupo_panel_semaforo.acquire(timeout=CUPO_PANEL_ESPERA):
+        print(f"[E-SERVIDOR-03] cupo del panel agotado ({CUPO_PANEL})")
+        raise ErrorApp("E-SERVIDOR-03")
+    try:
+        yield
+    finally:
+        _cupo_panel_semaforo.release()
+
+
 def _filtros_dashboard(request: Request) -> dict:
     try:
         return dashboard.parsear_filtros(request.query_params)
@@ -5006,43 +5038,57 @@ def dashboard_asistente(request: Request, cuerpo: dict = Body(default={})):
 @app.get("/admin/dashboard/kpis")
 def dashboard_kpis(request: Request):
     sid = _exigir_dashboard(request)
-    return dashboard.kpis(sid, _filtros_dashboard(request))
+    filtros = _filtros_dashboard(request)
+    with _cupo_panel():
+        return dashboard.kpis(sid, filtros)
 
 
 @app.get("/admin/dashboard/serie-recibos")
 def dashboard_serie_recibos(request: Request):
     sid = _exigir_dashboard(request)
-    return {"serie": dashboard.serie_recibos(sid, _filtros_dashboard(request))}
+    filtros = _filtros_dashboard(request)
+    with _cupo_panel():
+        return {"serie": dashboard.serie_recibos(sid, filtros)}
 
 
 @app.get("/admin/dashboard/validacion")
 def dashboard_validacion(request: Request):
     sid = _exigir_dashboard(request)
-    return dashboard.validacion(sid, _filtros_dashboard(request))
+    filtros = _filtros_dashboard(request)
+    with _cupo_panel():
+        return dashboard.validacion(sid, filtros)
 
 
 @app.get("/admin/dashboard/diferencias-empresa")
 def dashboard_diferencias_empresa(request: Request):
     sid = _exigir_dashboard(request)
-    return {"empresas": dashboard.diferencias_empresa(sid, _filtros_dashboard(request))}
+    filtros = _filtros_dashboard(request)
+    with _cupo_panel():
+        return {"empresas": dashboard.diferencias_empresa(sid, filtros)}
 
 
 @app.get("/admin/dashboard/tramites-seccional")
 def dashboard_tramites_seccional(request: Request):
     sid = _exigir_dashboard(request)
-    return dashboard.tramites_seccional(sid, _filtros_dashboard(request))
+    filtros = _filtros_dashboard(request)
+    with _cupo_panel():
+        return dashboard.tramites_seccional(sid, filtros)
 
 
 @app.get("/admin/dashboard/notificaciones")
 def dashboard_notificaciones(request: Request):
     sid = _exigir_dashboard(request)
-    return dashboard.notificaciones(sid, _filtros_dashboard(request))
+    filtros = _filtros_dashboard(request)
+    with _cupo_panel():
+        return dashboard.notificaciones(sid, filtros)
 
 
 @app.get("/admin/dashboard/formato-semana")
 def dashboard_formato_semana(request: Request):
     sid = _exigir_dashboard(request)
-    return {"semanas": dashboard.formato_semana(sid, _filtros_dashboard(request))}
+    filtros = _filtros_dashboard(request)
+    with _cupo_panel():
+        return {"semanas": dashboard.formato_semana(sid, filtros)}
 
 
 @app.get("/admin/dashboard/seccionales-geo")
@@ -5059,7 +5105,9 @@ def dashboard_seccionales_geo(request: Request):
     va a georreferenciar nunca.
     """
     sid = _exigir_dashboard(request)
-    datos = dashboard.seccionales_geo(sid, _filtros_dashboard(request))
+    filtros = _filtros_dashboard(request)
+    with _cupo_panel():
+        datos = dashboard.seccionales_geo(sid, filtros)
     # El enlace para ir a arreglarlo solo se ofrece a quien puede editar
     # seccionales: ver el mapa (sección "dashboard") y cargar una dirección
     # (sección "seccionales") son dos permisos distintos, y ofrecerle un
@@ -5071,7 +5119,9 @@ def dashboard_seccionales_geo(request: Request):
 @app.get("/admin/dashboard/semaforo")
 def dashboard_semaforo(request: Request):
     sid = _exigir_dashboard(request)
-    return dashboard.semaforo(sid, _filtros_dashboard(request))
+    filtros = _filtros_dashboard(request)
+    with _cupo_panel():
+        return dashboard.semaforo(sid, filtros)
 
 
 @app.get("/admin/dashboard/consultas")
@@ -5081,7 +5131,9 @@ def dashboard_consultas(request: Request):
     # carril entero no existe para afuera (404, no 403: no se revela nada).
     if not db.config_dashboard()["consultas_bot_habilitado"]:
         raise HTTPException(404, "No disponible.")
-    return {"temas": dashboard.consultas_por_tema(sid, _filtros_dashboard(request))}
+    filtros = _filtros_dashboard(request)
+    with _cupo_panel():
+        return {"temas": dashboard.consultas_por_tema(sid, filtros)}
 
 
 @app.get("/admin/dashboard/explorador/{fuente}")
@@ -5102,7 +5154,8 @@ def dashboard_explorador(request: Request, fuente: str):
         page, page_size = dashboard._paginacion(request.query_params)
     except ValueError as e:
         raise HTTPException(422, str(e))
-    return fuentes[fuente](sid, filtros, page, page_size)
+    with _cupo_panel():
+        return fuentes[fuente](sid, filtros, page, page_size)
 
 
 @app.get("/admin/dashboard/detalle/recibo/{recibo_id}")
