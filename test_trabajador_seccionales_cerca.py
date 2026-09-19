@@ -183,7 +183,7 @@ def test_haversine_del_servidor_y_del_navegador_dan_lo_mismo():
     # 375 km en LÍNEA RECTA. Por ruta son unos 400, y esa diferencia es
     # esperable: haversine mide sobre la esfera, no por la autopista.
     assert 370 < km < 380, km
-    js = open("static/mapa.js").read()
+    js = open("static/mapa.js", encoding="utf-8").read()
     assert "6371" in js, "el radio de la Tierra tiene que ser el mismo en las dos"
     assert "Math.asin(Math.sqrt(a))" in js, "y la misma fórmula de haversine"
     print("OK  test_haversine_del_servidor_y_del_navegador_dan_lo_mismo")

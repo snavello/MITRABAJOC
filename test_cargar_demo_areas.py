@@ -22,7 +22,7 @@ env = dict(os.environ)
 env["PYTHONIOENCODING"] = "utf-8"
 resultado = subprocess.run(
     [sys.executable, "cargar_demo.py"], cwd=os.path.dirname(os.path.abspath(__file__)),
-    env=env, capture_output=True, text=True, timeout=120,
+    env=env, capture_output=True, text=True, encoding="utf-8", timeout=120,   # el hijo escribe UTF-8: sin esto Windows lo lee como cp1252
 )
 assert resultado.returncode == 0, resultado.stdout + resultado.stderr
 SALIDA = resultado.stdout

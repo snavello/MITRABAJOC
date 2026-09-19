@@ -13,6 +13,7 @@ cierre con el dato de origen.
 Correr con: python -m pytest test_experimentos_carga.py -q
 """
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -33,9 +34,12 @@ def test_el_json_consolidado_esta_al_dia_con_los_datos_crudos():
     """Si alguien toca carga/log/ o consolidar.py y se olvida de regenerar,
     el JSON publicado queda viejo -- eso se detecta acá, no en la página."""
     antes = json.loads((CARGA / "experimentos.json").read_text(encoding="utf-8"))
+    # El hijo imprime UTF-8 (ensure_ascii=False, hay "→" en los textos): sin
+    # forzar la codificación de los dos lados, en Windows escribe y lee cp1252.
     r = subprocess.run([sys.executable, "-c",
                         "import consolidar, json; print(json.dumps(consolidar.construir(), ensure_ascii=False))"],
-                       cwd=CARGA, capture_output=True, text=True)
+                       cwd=CARGA, capture_output=True, text=True, encoding="utf-8",
+                       env={**os.environ, "PYTHONIOENCODING": "utf-8"})
     assert r.returncode == 0, r.stderr
     assert json.loads(r.stdout) == antes, \
         "carga/experimentos.json quedó desactualizado: correr python carga/consolidar.py"
