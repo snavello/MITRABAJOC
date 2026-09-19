@@ -37,6 +37,7 @@ from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JS
 from sqlalchemy import or_, bindparam
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.pool import NullPool
 
 # El tipo de las columnas JSON del proyecto. **En Postgres es JSONB**, que es
 # lo que las migraciones vienen creando desde el principio con esta misma
@@ -102,30 +103,92 @@ if url.startswith("postgres://"):
     url = url.replace("postgres://", "postgresql+psycopg://", 1)
 elif url.startswith("postgresql://") and "+psycopg" not in url:
     url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+
+def _env_entero(nombre: str, defecto: int) -> int:
+    """Entero de una variable de entorno; vacía o mal escrita = el default."""
+    try:
+        return int(os.getenv(nombre, "").strip() or defecto)
+    except ValueError:
+        return defecto
+
+
+# Techos del engine (cuelgue de Pruebas del 2026-09-18, ver
+# docs/chat/2026-09-19-cuelgue-dashboard-conexiones.md). Sin ellos, nada tenía
+# límite: un request esperaba 30 s una conexión que nunca llegaba, y una
+# consulta lenta o una transacción abierta quedaban vivas en Postgres aunque
+# el web service ya no existiera. Todo se puede mover por variable de entorno
+# sin tocar código; 0 apaga el techo de Postgres (statement / idle).
+POOL_SIZE = _env_entero("DB_POOL_SIZE", 5)
+MAX_OVERFLOW = _env_entero("DB_MAX_OVERFLOW", 5)
+# Segundos que un request espera una conexión libre. Corto a propósito: si el
+# pool está agotado, es mejor un 503 en 5 s (main.pool_agotado) que un hilo del
+# threadpool atado 30 s, que es lo que termina tumbando a TODA la app.
+POOL_TIMEOUT = _env_entero("DB_POOL_TIMEOUT", 5)
+# Techo de UNA consulta. La más pesada del panel (percentile_cont sobre 50.000
+# recibos) tarda ~30 ms con CPU completa, así que 15 s deja más de 100 veces de
+# margen incluso en la base de 0,1 vCPU.
+STATEMENT_TIMEOUT_MS = _env_entero("DB_STATEMENT_TIMEOUT_MS", 15000)
+# Una transacción abierta sin hacer nada retiene su conexión y sus locks.
+IDLE_TX_TIMEOUT_MS = _env_entero("DB_IDLE_TX_TIMEOUT_MS", 30000)
+
+_KEEPALIVES = {
+    # TCP keepalives agresivos: sin esto, si un proxy/NAT intermedio
+    # corta una conexión ociosa en silencio (sin avisarle a Postgres
+    # ni a la app), el propio pool_pre_ping puede quedar COLGADO
+    # hasta 15-20 min (el timeout de TCP por defecto del SO) en vez
+    # de fallar rápido y reconectar -- bug conocido de SQLAlchemy +
+    # psycopg contra Postgres gestionado (ver
+    # github.com/sqlalchemy/sqlalchemy/discussions/13032). Con esto,
+    # una conexión muerta se detecta en ~60s (30 + 10*3) en vez de
+    # minutos: sospecha fundada para el "se corta a los 2-3 minutos,
+    # específicamente al guardar" reportado (ver CLAUDE.md
+    # "Pendientes" -- sigue sin confirmarse con un traceback real).
+    "keepalives": 1,
+    "keepalives_idle": 30,
+    "keepalives_interval": 10,
+    "keepalives_count": 3,
+}
+
+
+def _opciones_postgres(**parametros) -> str:
+    """El string `options` de libpq: `-c parametro=valor` por cada uno."""
+    return " ".join(f"-c {k}={v}" for k, v in parametros.items())
+
+
 engine = create_engine(
     url,
     pool_pre_ping=True,   # descarta conexiones muertas antes de usarlas (clave con base remota)
     pool_recycle=300,     # recicla conexiones cada 5 min (Render duerme el servicio en plan free)
-    pool_size=5,
-    max_overflow=5,
+    pool_size=POOL_SIZE,
+    max_overflow=MAX_OVERFLOW,
+    pool_timeout=POOL_TIMEOUT,
     connect_args={
-        # TCP keepalives agresivos: sin esto, si un proxy/NAT intermedio
-        # corta una conexión ociosa en silencio (sin avisarle a Postgres
-        # ni a la app), el propio pool_pre_ping puede quedar COLGADO
-        # hasta 15-20 min (el timeout de TCP por defecto del SO) en vez
-        # de fallar rápido y reconectar -- bug conocido de SQLAlchemy +
-        # psycopg contra Postgres gestionado (ver
-        # github.com/sqlalchemy/sqlalchemy/discussions/13032). Con esto,
-        # una conexión muerta se detecta en ~60s (30 + 10*3) en vez de
-        # minutos: sospecha fundada para el "se corta a los 2-3 minutos,
-        # específicamente al guardar" reportado (ver CLAUDE.md
-        # "Pendientes" -- sigue sin confirmarse con un traceback real).
-        "keepalives": 1,
-        "keepalives_idle": 30,
-        "keepalives_interval": 10,
-        "keepalives_count": 3,
+        **_KEEPALIVES,
+        "options": _opciones_postgres(
+            statement_timeout=STATEMENT_TIMEOUT_MS,
+            idle_in_transaction_session_timeout=IDLE_TX_TIMEOUT_MS),
     },
 )
+
+
+def engine_para_migraciones():
+    """Engine de Alembic (migrations/env.py): una sola conexión, sin pool.
+
+    Las migraciones no pueden llevar los techos del engine de la app: un
+    ALTER COLUMN TYPE sobre una tabla grande reescribe la tabla y pasa de los
+    15 s de statement_timeout, y una conversión hecha en Python deja la
+    transacción "idle" más de 30 s. Al revés, sí llevan `lock_timeout`: una
+    migración que espera un lock más de 5 s (porque el web service viejo está
+    tocando esa tabla) tiene que fallar en el Pre-Deploy y no quedarse
+    haciendo cola detrás de una consulta larga, bloqueando además a todas las
+    que vengan después de ella."""
+    return create_engine(
+        url, poolclass=NullPool,
+        connect_args={**_KEEPALIVES, "options": _opciones_postgres(
+            statement_timeout=0, idle_in_transaction_session_timeout=0,
+            lock_timeout=5000)})
+
 
 
 # ---------- Modelos ----------

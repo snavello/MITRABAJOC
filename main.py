@@ -37,6 +37,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response as BinRes
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
+from psycopg.errors import QueryCanceled
+from sqlalchemy.exc import OperationalError, TimeoutError as PoolTimeoutError
 from sqlmodel import select
 
 import encuestas
@@ -172,6 +174,33 @@ async def error_no_manejado(request: Request, exc: Exception):
     cuerpo = errores.cuerpo(codigo)
     cuerpo["ref"] = ref
     return JSONResponse(status_code=500, content=cuerpo)
+
+
+@app.exception_handler(PoolTimeoutError)
+async def pool_agotado(request: Request, exc: PoolTimeoutError):
+    """No hubo una conexión libre en `db.POOL_TIMEOUT` segundos. Es saturación,
+    no un bug del pedido: se contesta 503 con JSON y `Retry-After` en vez del
+    500 genérico, así el frontend muestra "servidor ocupado" y no "error
+    inesperado", y cada hilo del threadpool queda libre en segundos. Cuelgue de
+    Pruebas del 2026-09-18 (docs/chat/2026-09-19-cuelgue-dashboard-conexiones.md).
+    Se loguea una línea, no el traceback: en una tormenta son cientos."""
+    print(f"[E-SERVIDOR-01] pool de conexiones agotado: {request.method} {request.url.path}")
+    return JSONResponse(status_code=503, content=errores.cuerpo("E-SERVIDOR-01"),
+                        headers={"Retry-After": str(db.POOL_TIMEOUT)})
+
+
+@app.exception_handler(OperationalError)
+async def error_de_base(request: Request, exc: OperationalError):
+    """Un error de la base. Si es que Postgres cortó la consulta por pasarse de
+    `statement_timeout` (SQLSTATE 57014) es un 503 explicado; cualquier otro
+    error operacional (conexión caída, etc.) sigue el camino de siempre y sale
+    por la red de seguridad de excepciones no previstas."""
+    if isinstance(getattr(exc, "orig", None), QueryCanceled):
+        print(f"[E-SERVIDOR-02] consulta cortada por statement_timeout: "
+              f"{request.method} {request.url.path}")
+        return JSONResponse(status_code=503, content=errores.cuerpo("E-SERVIDOR-02"),
+                            headers={"Retry-After": "5"})
+    return await error_no_manejado(request, exc)
 
 
 @app.exception_handler(HTTPException)
