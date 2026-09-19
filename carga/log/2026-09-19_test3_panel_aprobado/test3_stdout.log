@@ -1,0 +1,8 @@
+=== Test 3: filtro frenético ===
+  p95 lectores, fase base            2379 ms
+  p95 lectores, fase tormenta        2264 ms
+  razón tormenta / base (<= 2)       0.95
+  respuestas 500 (deben ser 0)       0.00 %
+  fallas de lectores (< 1 %)         0.00 %
+  pedidos del panel / 503            360 / 0
+  VEREDICTO                          APROBADO

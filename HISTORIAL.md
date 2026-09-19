@@ -4973,12 +4973,33 @@ fue lo que delató a `permisos_efectivos`.
   `pg_terminate_backend` de lo que sobra y el reinicio de Postgres como último
   recurso.
 
+### Verificación en Pruebas (mismo día, ya desplegado el PR #6)
+
+- **Health Check Path `/healthz`** cargado en `mitrabajo-pruebas` por la API de
+  Render y verificado leyéndolo de vuelta. En `mitrabajo-demo` sigue vacío a
+  propósito: demo todavía no tiene `/healthz`, y cargarlo antes de promover
+  haría fallar sus deploys. Se carga después de `promover_demo.py`.
+- **`test3_panel.js` contra Pruebas: APROBADO.** 20 lectores + el admin de UOM
+  (13 empresas, 5.000 recibos) con 30 cambios de filtro en 60 s, 360 pedidos del
+  panel abandonados a los 250 ms: 0 respuestas 500, lectores sin fallas, p95 de
+  los lectores 2379 ms en la base contra 2264 ms en la tormenta (razón 0,95). Los
+  ~2,3 s de p95 son latencia de red + servidor chico, no de la tormenta: son
+  iguales en las dos fases. Salida en `carga/log/2026-09-19_test3_panel_aprobado/`.
+  Límite honesto de la medición: no se contó cuántos de los 360 pedidos alcanzaron
+  a contestar antes de abandonarse (los abandonados quedan con status 0), así que
+  el cupo del panel casi no llegó a dar 503 y no se lo vio actuar contra el
+  servidor real; eso sí lo prueba `test_dashboard_cupo.py`.
+- **La primera corrida dio un APROBADO falso** y el error fue del script, no de la
+  app: el admin no entró (clave distinta en Pruebas), la tormenta nunca corrió (0
+  pedidos del panel) y los lectores solos aprobaron. Ahora `setup()` valida al
+  admin antes de arrancar (con clave mala corta en 1,4 s con el motivo) y el
+  veredicto exige que la tormenta se haya ejecutado (≥ 90 % de los 360 pedidos).
+
 ### Lo que quedó sin resolver
 
-- **Cargar el Health Check Path (`/healthz`) en Render**, en `mitrabajo-pruebas`
-  y en `mitrabajo-demo`: es una configuración del panel de Render, no del repo.
-- **Correr `test3_panel.js` contra Pruebas** y volcar el resultado; es también
-  el insumo para la decisión sobre el plan de la base (0,1 vCPU, de AKG).
+- **Cargar `/healthz` en `mitrabajo-demo` después de promover** (ver arriba).
+- Decidir si la base de Pruebas (0,1 vCPU) sube de plan: decisión de AKG; el
+  resultado de arriba es un insumo.
 - **Hipótesis sin confirmar**: por qué reiniciar el web service no alcanzó
   (consultas huérfanas corriendo en una base de 0,1 vCPU). Los logs y las
   métricas del 18-sep no se guardaron; la Fase 2.5 del documento sigue siendo

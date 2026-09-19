@@ -1,0 +1,5 @@
+BASE_URL=https://mitrabajo-pruebas.onrender.com
+fecha_local=2026-09-19 19:12 (UTC-3)
+escenario=carga/k6/test3_panel.js (20 lectores + admin UOM frenetico: 30 cambios de filtro de empresa en 60 s, 12 pedidos por cambio abandonados a los 250 ms)
+servidor=Pruebas, deploy 1dc34de (PR #6), web 0.5c-512mb, base 0.1c-256mb, un worker
+resultado=APROBADO: 360 pedidos del panel, 0 respuestas 500, lectores sin fallas, p95 tormenta/base = 0.95

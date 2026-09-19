@@ -1,0 +1,13 @@
+{
+  "p95_lectores_base_ms": 2379.122925,
+  "p95_lectores_tormenta_ms": 2264.4559449999997,
+  "razon_tormenta_sobre_base": 0.9518028350720884,
+  "criterio_2x": true,
+  "tasa_500": 0,
+  "criterio_cero_500": true,
+  "tasa_falla_lectores": 0,
+  "pedidos_del_panel": 360,
+  "respuestas_503_del_panel": 0,
+  "tormenta_ejecutada": true,
+  "aprobado": true
+}
