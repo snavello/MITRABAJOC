@@ -5,11 +5,12 @@ Correr con: .venv/Scripts/python.exe -m pytest test_xsk_correcciones.py -q
 """
 import os
 
-os.environ["ENTORNO"] = "pruebas"   # COOKIE_SECURE = True en este entorno
+os.environ["ENTORNO"] = "pruebas"   # COOKIE_SECURE queda en False (pruebas) -> ver H-0006
 os.environ.setdefault("PIN_ENTORNOS", "24681357")
 
 import importlib
 import pytest
+from fastapi.testclient import TestClient
 
 
 # ---- H-0001 / H-0002: secretos fail-closed (auth._requerido) ----
@@ -165,3 +166,46 @@ def test_h0005_no_queda_eval_en_validador():
     fuente = open(validador.__file__, encoding="utf-8").read()
     # No debe quedar ninguna llamada eval( en el motor de fórmulas.
     assert "eval(" not in fuente, "quedó un eval( en validador.py"
+
+
+# ---- H-0007: cabeceras de seguridad en toda respuesta ----
+
+def test_h0007_cabeceras_de_seguridad_presentes():
+    import main
+    c = TestClient(main.app)
+    r = c.get("/healthz")
+    assert r.headers.get("x-content-type-options") == "nosniff"
+    assert r.headers.get("x-frame-options") == "DENY"
+    assert "strict-origin" in r.headers.get("referrer-policy", "")
+    csp = r.headers.get("content-security-policy", "")
+    assert "frame-ancestors 'none'" in csp and "default-src 'self'" in csp
+
+
+def test_h0007_hsts_solo_en_demo_prod():
+    import main
+    c = TestClient(main.app)
+    r = c.get("/healthz")
+    # En 'pruebas' (este test) COOKIE_SECURE es False -> sin HSTS.
+    assert main.COOKIE_SECURE is False
+    assert "strict-transport-security" not in {k.lower() for k in r.headers}
+
+
+# ---- H-0009: PBKDF2 a 600.000 iteraciones, backward-compatible ----
+
+def test_h0009_hash_nuevo_usa_600k_y_verifica():
+    import auth
+    h = auth.hashear_clave("secreta")
+    assert h.startswith("sha256$600000$")
+    assert auth.verificar_clave("secreta", h)
+    assert not auth.verificar_clave("otra", h)
+    assert not auth.hash_desactualizado(h)
+
+
+def test_h0009_hash_legado_sigue_validando():
+    import auth, hashlib
+    # Formato viejo 'sal$hash' a 100.000 iteraciones.
+    sal = "a" * 32
+    dk = hashlib.pbkdf2_hmac("sha256", "vieja".encode(), sal.encode(), 100_000)
+    legado = f"{sal}${dk.hex()}"
+    assert auth.verificar_clave("vieja", legado)          # se sigue validando
+    assert auth.hash_desactualizado(legado)               # pero marcado para re-hashear

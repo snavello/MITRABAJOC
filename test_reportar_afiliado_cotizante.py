@@ -13,6 +13,7 @@ Correr con: .venv/Scripts/python.exe -m pytest test_reportar_afiliado_cotizante.
 import db
 from db import Sindicato, Trabajador, Concepto, Formula, EnvioSindicato, Reporte
 import main
+import auth
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
@@ -31,6 +32,7 @@ with db.get_session() as s:
     s.commit()
 
 client = TestClient(main.app)
+client.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", ident="20111111119"))
 client.cookies.set("cuil_trab", "20111111119")
 
 RECIBO_CON_DISCREPANCIA = {

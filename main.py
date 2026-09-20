@@ -342,6 +342,37 @@ async def sin_cache_en_paneles(request: Request, call_next):
     return respuesta
 
 
+# Cabeceras de seguridad en TODA respuesta (XSK H-0007). Antes no se emitía
+# ninguna. `nosniff` corta el MIME sniffing (agrava los uploads); frame-ancestors
+# 'none' evita el clickjacking; Referrer-Policy no filtra la URL a terceros;
+# HSTS solo en demo/prod (HTTPS). La CSP es PERMISIVA con inline a propósito:
+# la app tiene mucho <script>/<style> en línea, así que 'unsafe-inline' es
+# necesario hoy. Endurecerla (nonces por request) para que contenga de verdad
+# el XSS de un SVG/HTML subido es un follow-up (ENT-01/ENT-02). Por eso H-0007
+# queda PARCIAL: las cabeceras están, la CSP todavía no es estricta.
+CSP = ("default-src 'self'; "
+       "img-src 'self' data: https:; "
+       "style-src 'self' 'unsafe-inline'; "
+       "script-src 'self' 'unsafe-inline'; "
+       "connect-src 'self' https:; "
+       "frame-ancestors 'none'; "
+       "base-uri 'self'; "
+       "form-action 'self'")
+
+
+@app.middleware("http")
+async def cabeceras_de_seguridad(request: Request, call_next):
+    respuesta = await call_next(request)
+    respuesta.headers.setdefault("X-Content-Type-Options", "nosniff")
+    respuesta.headers.setdefault("X-Frame-Options", "DENY")
+    respuesta.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    respuesta.headers.setdefault("Content-Security-Policy", CSP)
+    if COOKIE_SECURE:      # demo/prod, servidos por HTTPS
+        respuesta.headers.setdefault(
+            "Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return respuesta
+
+
 @app.middleware("http")
 async def renovar_sesion_por_actividad(request: Request, call_next):
     """Sesión de 15 minutos SIN uso (no un límite fijo desde el login): cada
