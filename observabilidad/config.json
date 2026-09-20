@@ -113,5 +113,17 @@
         "descripcion": "Hace más de 30 minutos que el colector de métricas de Render no escribe en Grafana: el tablero y las alertas de CPU, memoria y errores miran datos viejos. Revisar la pestaña Actions del repo (workflow 'Métricas de Render a Grafana') y que RENDER_API_KEY siga vigente."
       }
     ]
+  },
+  "disparador": {
+    "_ayuda": "Un check del monitor de uptime que cada 5 min le pide a GitHub, por API, que corra el colector (workflow_dispatch). Existe porque el cron de GitHub Actions se atrasa o se descarta. Ver aplicar_disparador.py.",
+    "job": "colm3na-disparador-colector",
+    "repo": "snavello/MITRABAJOC",
+    "workflow": "metricas-render.yml",
+    "ref": "main",
+    "probe": "Ohio",
+    "frecuencia_s": 300,
+    "alerta": "El disparador del colector falló (Pruebas)",
+    "evento": "disparador-caido",
+    "falla_minutos": 15
   }
 }
