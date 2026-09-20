@@ -203,3 +203,9 @@ def test_un_sentry_caido_en_el_detalle_es_un_502_legible(monkeypatch):
 def test_el_detalle_exige_el_pin(sentry):
     assert TestClient(main.app).get(f"/api/entornos/observabilidad/sentry/evento/{EVENTO}").status_code == 403
     assert sentry == []
+
+
+def test_el_orden_de_la_pestana_es_grafana_luego_sentry_y_luego_el_resto():
+    html = client.get("/entornos").text
+    orden = [html.index(x) for x in ('id="obs-graficos"', 'id="obs-sentry"', 'id="obs-semaforo"', 'id="obs-form"', 'id="obs-renovaciones"')]
+    assert orden == sorted(orden), orden
