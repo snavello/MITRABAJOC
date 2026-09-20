@@ -15,6 +15,7 @@ consultas a Sentry.
 """
 import json
 import os
+import re
 import secrets
 import threading
 import time
@@ -35,7 +36,10 @@ TIMEOUT_SEGUNDOS = 10
 VIGENCIA_CACHE = 45
 ESPERA_ENTRE_PRUEBAS = 60
 ENTORNO_DE_PRUEBA = "prueba-de-conexion"
-CAMPOS_EVENTO = ["timestamp", "title", "issue", "codigo", "ref", "rol", "sindicato_id", "ruta"]
+CAMPOS_EVENTO = ["id", "timestamp", "title", "issue", "codigo", "ref", "rol", "sindicato_id", "ruta"]
+# De las etiquetas de un evento solo se muestran estas: el resto es ruido del SDK.
+ETIQUETAS_VISIBLES = ("codigo", "ref", "rol", "sindicato_id", "ruta", "release", "environment", "handled")
+MAX_PASOS = 10
 
 _cache = {"hasta": 0.0, "datos": None}
 _ultima_prueba = -ESPERA_ENTRE_PRUEBAS
@@ -118,8 +122,38 @@ def _evento(fila: dict) -> dict:
         "codigo": codigo, "descripcion": descripcion_del_codigo(codigo), "gravedad": gravedad(codigo),
         "ruta": fila.get("ruta") or "", "rol": fila.get("rol") or "",
         "sindicato_id": fila.get("sindicato_id") or "", "ref": fila.get("ref") or "",
-        "incidencia": incidencia,
+        "incidencia": incidencia, "evento_id": fila.get("id") or "",
         "url": f"https://{c['org']}.sentry.io/issues/{fila.get('issue.id')}/" if fila.get("issue.id") else "",
+    }
+
+
+def _linea_de_codigo(paso: dict) -> str:
+    """La línea de código del paso (Sentry manda algunas de contexto: se toma la del error)."""
+    for numero, texto in paso.get("context") or []:
+        if numero == paso.get("lineNo"):
+            return texto.strip()[:200]
+    return ""
+
+
+def detalle(evento_id: str) -> dict:
+    """El detalle de UN error, para verlo en la pestaña sin abrir Sentry: qué falló, en qué archivo y
+    línea del código (los pasos de la app, del más reciente al más viejo) y sus etiquetas. Sentry NO
+    guarda los valores de las variables (sentry_config.py lo apaga): lo que se ve es código, no datos."""
+    if not re.fullmatch(r"[0-9a-f]{32}", evento_id or ""):
+        raise ValueError("Identificador de evento inválido.")
+    c = _cfg()
+    e = _pedir(f"/projects/{c['org']}/{c['proyecto']}/events/{evento_id}/", [])
+    excepcion = next((x["data"]["values"][-1] for x in e.get("entries", [])
+                      if x.get("type") == "exception" and x.get("data", {}).get("values")), {})
+    pasos = (excepcion.get("stacktrace") or {}).get("frames") or []
+    propios = [p for p in pasos if p.get("inApp")] or pasos
+    return {
+        "tipo": excepcion.get("type") or "", "mensaje": (excepcion.get("value") or e.get("title") or "")[:400],
+        "pasos": [{"archivo": p.get("filename") or p.get("module") or "?", "linea": p.get("lineNo"),
+                   "funcion": p.get("function") or "", "codigo": _linea_de_codigo(p),
+                   "propio": bool(p.get("inApp"))} for p in reversed(propios[-MAX_PASOS:])],
+        "etiquetas": {t["key"]: t["value"] for t in e.get("tags", []) if t.get("key") in ETIQUETAS_VISIBLES},
+        "cuando": e.get("dateCreated"), "evento_id": evento_id,
     }
 
 

@@ -529,7 +529,10 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     sin ella no hace nada. Los errores se LEEN en la pestaña Observabilidad
     (`observabilidad/sentry_panel.py`, variable `SENTRY_AUTH_TOKEN` de solo
     lectura): indicadores, códigos y tabla de los últimos, con botón de error
-    de prueba que verifica el camino de punta a punta.
+    de prueba que verifica el camino de punta a punta. La pestaña también dibuja
+    los gráficos del tablero de Grafana (`observabilidad/metricas_panel.py`, token
+    de lectura) y el detalle de cada error de Sentry: para mirar no hace falta
+    iniciar sesión en ninguno de los dos (regla: no se publican enlaces abiertos).
     Falta: métricas propias de la app, el detalle por sindicato y el resumen diario.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
