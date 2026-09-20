@@ -162,3 +162,58 @@ def test_en_la_demo_la_landing_no_existe_pero_la_version_si(monkeypatch):
 if __name__ == "__main__":
     import pytest, sys
     sys.exit(pytest.main([__file__, "-q"]))
+
+
+# ---- /entornos/login: la landing con usuario nominal (SPRINT_R1, H-0003) ----
+import auth as _auth
+from db import UsuarioPlataforma as _UP
+from sqlmodel import select as _select
+
+
+def _crear_usuario_plataforma(usuario, clave, pendiente=False, activo=True):
+    with db.get_session() as s:
+        for u in s.exec(_select(_UP).where(_UP.usuario == usuario)).all():
+            s.delete(u)
+        s.commit()
+        s.add(_UP(usuario=usuario, nombre=usuario, clave_hash=_auth.hashear_clave(clave),
+                  rol="superadmin", activo=activo,
+                  debe_cambiar_clave=pendiente, debe_completar_datos=pendiente,
+                  creado_por="test"))
+        s.commit()
+
+
+def test_entornos_login_nominal_entra_a_la_landing():
+    _crear_usuario_plataforma("opsuser", "claveLarga2026", pendiente=False)
+    c = TestClient(main.app)
+    r = c.post("/entornos/login", data={"usuario": "opsuser", "clave": "claveLarga2026"},
+               follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/entornos"
+    assert c.cookies.get(main.COOKIE_PLATAFORMA)
+    # con la sesión de plataforma, la landing se ve entera (sin PIN)
+    assert entorno.URLS["demo"] in c.get("/entornos").text
+    print("OK  test_entornos_login_nominal_entra_a_la_landing")
+
+
+def test_entornos_login_pendiente_va_a_completar():
+    _crear_usuario_plataforma("nuevito", "transitoria10", pendiente=True)
+    c = TestClient(main.app)
+    r = c.post("/entornos/login", data={"usuario": "nuevito", "clave": "transitoria10"},
+               follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/plataforma/completar"
+    print("OK  test_entornos_login_pendiente_va_a_completar")
+
+
+def test_entornos_login_malo_avisa_y_no_entra():
+    c = TestClient(main.app)
+    r = c.post("/entornos/login", data={"usuario": "opsuser", "clave": "mala"},
+               follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/entornos?aviso=login"
+    assert not c.cookies.get(main.COOKIE_PLATAFORMA)
+    print("OK  test_entornos_login_malo_avisa_y_no_entra")
+
+
+def test_entornos_pin_sigue_funcionando_como_fallback():
+    c = TestClient(main.app)
+    r = c.post("/entornos/pin", data={"pin": "24681357"}, follow_redirects=False)
+    assert r.status_code == 303 and recursos.COOKIE_PASE in r.cookies
+    print("OK  test_entornos_pin_sigue_funcionando_como_fallback")
