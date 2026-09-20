@@ -570,8 +570,19 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     (`xsk/catalogo/`), y la solapa **"Seguridad" de `/entornos`**
     (`/entornos/xsanders`, lectora del registro: banner de salida a
     producción, tira de etapas, ranking por riesgo, cobertura por eje;
-    `xsk/motor/tablero.py` arma el resumen, gate del PIN, 404 en demo). Sigue
-    el bloque 3: correr la batería, un eje por vez, empezando por AUT.
+    `xsk/motor/tablero.py` arma el resumen, gate del PIN, 404 en demo).
+    **Bloque 3, primera pasada hecha** (revisión de código + estático, sin
+    tocar entornos): **18 hallazgos abiertos** (`hallazgos/`), 5 Críticos, 3
+    Altos, 8 Medios, 2 Bajos, 8 bloquean producción. Los cinco Críticos:
+    `SESSION_SECRET` y la clave de plataforma con default en `auth.py`; la
+    identidad del trabajador/empleador en cookie sin firmar; el alta nivel 1
+    solo por CUIL; y **`eval` evadible en el motor de fórmulas**
+    (`validador.py:333`, lo encontró bandit). pip-audit halló CVE en
+    python-multipart/starlette/jinja2/python-dotenv. **Pendiente**: la
+    pasada dinámica/destructiva (fuerza bruta, IDOR, carga, backups,
+    perímetro) NO se corrió, y la clasificación es la propuesta de Code a
+    confirmar por SDN. Sigue: clasificación (etapa 7) con SDN, pasada
+    dinámica contra Pruebas, y bloque 4 (correcciones) por el ranking.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
