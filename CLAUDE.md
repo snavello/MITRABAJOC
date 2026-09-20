@@ -123,6 +123,13 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   docs/generador/generar.py`.
 - push.py — notificaciones Web Push a la PWA del trabajador (novedades de
   trámites; apagado sin claves VAPID).
+- xsk/ — **XSANDERS Security Kit** (plan en `PLAN_XSK.md`, método en
+  `xsk/METODO.md`, skill `xsk`): `catalogo/` y `motor/` son genéricos (se
+  extraen a repo propio cuando madure); `proyectos/mitrabajo/` es el
+  registro de ESTE sistema (configuración, relevamiento, amenazas,
+  hallazgos, corridas, avance). Todo Markdown con cabecera `clave: valor`,
+  sin YAML ni tablas: versionado y portable. Lo sensible va en `.env`,
+  nunca ahí. Ver "Estado actual" 26.
 - asistente.py — Asistente del Panel Sindical: pregunta en lenguaje
   natural → filtros del panel + resumen (ficha: `docs/ASISTENTE_PANEL.md`).
   `probar_asistente.py` + `medicion_asistente/` = set de aceptación del
@@ -536,6 +543,25 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     Falta: métricas propias de la app, el detalle por sindicato y el resumen diario.
     **Ficha rectora: [`docs/OBSERVABILIDAD.md`](docs/OBSERVABILIDAD.md)** (reglas, claves y
     el procedimiento para replicar en Demo y Producción); versión ilustrada en Recursos.
+
+26. **XSANDERS Security Kit (XSK)** (2026-09-20, rama `sprint/xsk`, en
+    construcción): el método para llevar la plataforma a un estado de
+    seguridad verificado antes del primer sindicato real, y para mantenerlo.
+    Plan acordado en [`PLAN_XSK.md`](PLAN_XSK.md): diez etapas, nueve ejes
+    (IDS, AUT, ENT, IA, DAT, DIS, INF, OBS, LEY —el último es Ley 25.326,
+    porque la afiliación sindical es dato sensible por definición legal—),
+    riesgo = probabilidad × daño con complejidad como segundo criterio, y un
+    criterio de salida explícito (nada Crítico ni Alto abierto). **Code es el
+    ejecutor** (revisión de código, estático, dinámico contra Pruebas/Demo,
+    perímetro por API); la página `/entornos/xsanders` (todavía no existe)
+    será el registro. Hallazgos y corridas son archivos en el repo, no
+    tablas. **Bloque 0 hecho** (método, motor, skill, etapa 0). Siguen:
+    bloque 1 (relevamiento y mapeo con modelo de amenazas), bloque 2
+    (catálogo, herramientas y la página), bloque 3 (batería de la iteración
+    1: IDS, AUT, DAT, INF/DIS), bloque 4 (correcciones), bloque 5 (cierre).
+    Hipótesis a verificar en el bloque 1: PIN por defecto en `entorno.py`,
+    "Cambiar clave" de plataforma, límite de intentos en los logins, CSRF,
+    SVG de logo servido inline, prompt injection vía recibo.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
