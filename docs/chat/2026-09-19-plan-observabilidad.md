@@ -90,6 +90,18 @@ El *stream* de métricas nativo de Render exigiría el plan Pro del workspace (d
 
 Escriben las mismas series con las mismas marcas de tiempo (Prometheus descarta los repetidos) y se identifican con la etiqueta `via` (`github`, `app`, `manual`) para poder ver que las dos están vivas. El hilo no cambia la regla 0: es un respaldo, nunca el motor. No suma exposición de claves: la app de Pruebas ya guardaba `RENDER_API_KEY` para la pestaña Planes; solo suma `GRAFANA_METRICS_TOKEN` (solo escritura de métricas). Si ambas fallan, la alerta "colector mudo" avisa a los 30 minutos.
 
+**Actualizar a pedido y ver "en vivo" (pedido de SDN, 2026-09-20).** Tres caminos, con sus riesgos dichos:
+
+| | Qué es | Depende de |
+|---|---|---|
+| **A. Enlace en el tablero → GitHub** | "Actualizar datos de Render ahora": abre el workflow y se toca *Run workflow*; en ~30 s hay datos nuevos. | Solo GitHub: **sirve con la app caída**. |
+| **B. Botón en la pestaña Observabilidad** | "Actualizar métricas ahora": corre el colector una vez (~10 s), una vez por minuto como máximo. | La app viva y el PIN. |
+| **C. Fila "En vivo" del tablero** | Seis gráficos (CPU, memoria, conexiones, disco: uso junto a su límite) que consultan la **API de Render directamente** cada vez que se abre o refresca el tablero, últimos 10 minutos, sin historia. Fuente Infinity `render-vivo`. | Que la API de Render responda. |
+
+**Costo de C, que SDN aceptó:** la fuente `render-vivo` guarda la **API key de Render dentro de Grafana Cloud** (cifrada, y la fuente solo puede hablar con `api.render.com`). Esa clave da acceso a todo el workspace de Render, así que es un lugar más donde vive. Si se rota la clave hay que volver a correr `aplicar_tablero.py` con `RENDER_API_KEY` (y ya son cuatro lugares: secreto de GitHub, variable de la app, fuente de Grafana y la propia Render). Render limita las consultas (429): la fila hace ~10 por refresco de un minuto. Durante un deploy Render devuelve dos instancias; los gráficos toman la que tiene el dato más reciente (`$sort` en el selector).
+
+Ninguna es "tiempo real": entre tocar y ver pasan unos 30 segundos (A y B); C es lo más cercano.
+
 **Límite conocido:** la frescura es de entre 5 y 15 minutos, y GitHub puede atrasarse bastante más. Sirve para tablero y para las alertas sostenidas (30 minutos), no para detectar algo en segundos: eso lo hace el monitor de uptime (§5b).
 
 ## 6. Pestaña Observabilidad de `/entornos` (HECHO 2026-09-19)

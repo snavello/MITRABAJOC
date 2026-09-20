@@ -512,6 +512,10 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     Estado general" y las alertas de 5xx, CPU, memoria y colector mudo. El Metrics
     Stream nativo de Render existe pero exige el plan Pro (USD 25/mes): se dejó
     como mejora. Secretos de Actions: `RENDER_API_KEY`, `GRAFANA_METRICS_TOKEN`.
+    Se puede actualizar a pedido: enlace a GitHub en el tablero, botón en la pestaña
+    Observabilidad, y una fila "En vivo" que consulta a Render directo (fuente
+    Infinity `render-vivo`, que guarda la API key de Render en Grafana: al rotarla,
+    volver a correr `aplicar_tablero.py` con `RENDER_API_KEY`).
     Falta: Sentry, métricas propias de la app y el detalle por sindicato.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el

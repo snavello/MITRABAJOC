@@ -292,16 +292,20 @@ def test_las_alertas_del_uptime_siguen_dando_lo_mismo_tras_compartir_la_pieza():
 def test_el_tablero_es_coherente():
     t = at.construir_tablero(CFG)
     ids = [p["id"] for p in t["panels"]]
-    assert len(ids) == len(set(ids)) == 20
+    assert len(ids) == len(set(ids)) == 27
     for p in t["panels"]:
         assert 0 <= p["gridPos"]["x"] and p["gridPos"]["x"] + p["gridPos"]["w"] <= 24, p["title"]
-        if p["type"] != "text":
-            assert p["targets"] and all(x["datasource"]["uid"] == "grafanacloud-prom" for x in p["targets"]), p["title"]
+        if p["type"] in ("text", "row"):
+            continue
+        fuente = "render-vivo" if p["id"] >= 22 else "grafanacloud-prom"      # la fila En vivo consulta a Render
+        assert p["targets"] and all(x["datasource"]["uid"] == fuente for x in p["targets"]), p["title"]
     assert t["uid"] == "colm3na-pruebas-estado" and t["refresh"] == "1m"
 
 
 def test_toda_consulta_del_tablero_filtra_por_entorno_o_por_los_checks_de_pruebas():
     for p in at.construir_tablero(CFG)["panels"]:
+        if p["id"] >= 22:
+            continue                                # En vivo: consulta a Render por id de recurso, no a Prometheus
         for x in p.get("targets", []):
             assert 'entorno="pruebas"' in x["expr"] or "colm3na-pruebas" in x["expr"], (p["title"], x["expr"])
 
@@ -378,3 +382,65 @@ def test_el_colector_y_el_config_no_llevan_ningun_token():
                     "aplicar_alertas_metricas.py", "reglas.py", "config.json"):
         t = (RAIZ / "observabilidad" / archivo).read_text(encoding="utf-8")
         assert "glc_eyJ" not in t and "rnd_oqu" not in t and "glsa_vmk" not in t, archivo
+
+
+# ------------------------- fila "En vivo" y enlaces de actualización -------------------------
+def _vivos():
+    return [p for p in at.construir_tablero(CFG)["panels"] if p["id"] >= 22]
+
+
+def test_la_fila_en_vivo_consulta_a_render_directo_y_siempre_trae_ahora():
+    vivos = _vivos()
+    assert len(vivos) == 6
+    for p in vivos:
+        assert p["timeFrom"] == "10m", "sin esto el panel usaría las 6 horas del tablero"
+        for t in p["targets"]:
+            assert t["datasource"]["uid"] == "render-vivo"
+            assert t["url"].startswith("https://api.render.com/v1/metrics/")
+            params = {x["key"]: x["value"] for x in t["url_options"]["params"]}
+            assert params["resource"] in (CFG["metricas_render"]["recursos"]["web"], CFG["metricas_render"]["recursos"]["db"])
+            assert params["startTime"] == "${__from:date:iso}" and params["endTime"] == "${__to:date:iso}"
+
+
+def test_la_fila_en_vivo_elige_la_instancia_mas_reciente_durante_un_deploy():
+    """Durante un deploy Render devuelve dos instancias; la vieja queda sin datos nuevos."""
+    for p in _vivos():
+        for t in p["targets"]:
+            assert t["root_selector"] == at.MAS_RECIENTE and "$sort" in t["root_selector"]
+
+
+def test_cada_grafico_en_vivo_muestra_el_uso_junto_a_su_limite():
+    por_titulo = {p["title"]: [t["url"].rsplit("/", 1)[1] for t in p["targets"]] for p in _vivos()}
+    assert por_titulo["CPU de la app: uso y límite del plan (núcleos)"] == ["cpu", "cpu-limit"]
+    assert por_titulo["Memoria de la base: uso y límite del plan"] == ["memory", "memory-limit"]
+    assert por_titulo["Disco de la base: usado y capacidad"] == ["disk-usage", "disk-capacity"]
+
+
+def test_la_fuente_en_vivo_solo_habla_con_render_y_la_clave_va_como_secreto():
+    f = at.payload_fuente_render("rnd_secreto")
+    assert f["jsonData"]["allowedHosts"] == ["https://api.render.com"]
+    assert f["secureJsonData"] == {"bearerToken": "rnd_secreto"}
+    assert "rnd_secreto" not in json.dumps(f["jsonData"])
+    assert f["uid"] == "render-vivo" and f["type"] == "yesoreyeram-infinity-datasource"
+
+
+def test_el_json_del_tablero_no_lleva_ninguna_clave():
+    texto = json.dumps(at.construir_tablero(CFG))
+    assert "rnd_" not in texto and "glc_" not in texto and "glsa_" not in texto and "Bearer" not in texto
+
+
+def test_el_tablero_ofrece_dos_caminos_independientes_para_actualizar_a_pedido():
+    links = at.construir_tablero(CFG)["links"]
+    urls = [l["url"] for l in links]
+    assert "https://github.com/snavello/MITRABAJOC/actions/workflows/metricas-render.yml" in urls   # no depende de la app
+    assert "https://mitrabajo-pruebas.onrender.com/entornos#observabilidad" in urls                  # el botón de la app
+    assert all(l["targetBlank"] for l in links)
+    assert "no depende de la app" in links[0]["tooltip"].lower()
+
+
+def test_la_fila_en_vivo_tiene_su_titulo_y_no_pisa_a_las_de_arriba():
+    t = at.construir_tablero(CFG)["panels"]
+    fila = next(p for p in t if p["type"] == "row")
+    assert "En vivo" in fila["title"] and fila["gridPos"]["y"] == 48
+    arriba = [p for p in t if p["id"] < 21]
+    assert max(p["gridPos"]["y"] + p["gridPos"]["h"] for p in arriba) <= 48
