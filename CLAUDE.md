@@ -589,11 +589,15 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     (el Crítico de riesgo 25): la identidad del trabajador/empleador ahora va
     FIRMADA en el token de sesión (`auth.crear_sesion(..., ident=...)`,
     helpers `_cuil_seguro`/`_cuit_seguro`), no en la cookie plana. Bloquean
-    producción: de 7 a **4**. El registro y la página `/entornos/xsanders`
-    muestran el estado **Solucionado / Parcial / Pendiente / Aceptado** con
-    aclaración por hallazgo. Trabajador 0.39.03, Plataforma 0.30.01. Sigue:
-    H-0003 (usuario+contraseña en la landing), H-0005 (reemplazar el eval del
-    motor de fórmulas), completar H-0002 (hashear + usuarios nominales), y la
+    producción: de 7 a **3**. Además **H-0005 Solucionado**: el motor de
+    fórmulas (`validador._evaluar`) ya no usa `eval` —se parsea con `ast` y
+    se recorre a mano (`_ev_nodo`), sin escape de sandbox posible—. El
+    registro y la página `/entornos/xsanders` muestran el estado
+    **Solucionado / Parcial / Pendiente / Aceptado** con aclaración por
+    hallazgo (4 Solucionado, 2 Parcial, 11 Pendiente, 1 Aceptado). Trabajador
+    0.39.03, Admin 0.42.04, Plataforma 0.30.01. Sigue: H-0003
+    (usuario+contraseña en la landing) y completar H-0002 (hashear + usuarios
+    nominales) —ambos en el terreno de R1, conviene tratarlos juntos—, y la
     pasada dinámica/destructiva contra Pruebas.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
