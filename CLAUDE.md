@@ -534,6 +534,8 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     de lectura) y el detalle de cada error de Sentry: para mirar no hace falta
     iniciar sesión en ninguno de los dos (regla: no se publican enlaces abiertos).
     Falta: métricas propias de la app, el detalle por sindicato y el resumen diario.
+    **Ficha rectora: [`docs/OBSERVABILIDAD.md`](docs/OBSERVABILIDAD.md)** (reglas, claves y
+    el procedimiento para replicar en Demo y Producción); versión ilustrada en Recursos.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
