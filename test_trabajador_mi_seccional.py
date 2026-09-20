@@ -64,7 +64,7 @@ def _sesion(cuil):
     """Sesión de trabajador armada como en el resto de la suite: la cookie
     firmada directamente, sin pasar por el formulario de login."""
     c = TestClient(main.app)
-    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
+    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0, ident=cuil))
     c.cookies.set("cuil_trab", cuil)
     return c
 

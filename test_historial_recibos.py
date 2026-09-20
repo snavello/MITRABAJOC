@@ -8,6 +8,7 @@ de desarrollo. Correr con: .venv/Scripts/python.exe -m pytest test_historial_rec
 import db
 from db import Sindicato, Trabajador
 import main
+import auth
 from fastapi.testclient import TestClient
 
 db.crear_tablas()
@@ -21,6 +22,7 @@ with db.get_session() as s:
     SID = sind.id
 
 client = TestClient(main.app)
+client.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", ident="20111111119"))
 client.cookies.set("cuil_trab", "20111111119")
 
 RECIBO = {

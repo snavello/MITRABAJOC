@@ -119,7 +119,7 @@ def _responden(eid: int, sid: int, cuils: list):
     pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
     for c in cuils:
         cliente.cookies.clear()
-        cliente.cookies.set("sesion_trabajador", auth.crear_sesion("trabajador"))
+        cliente.cookies.set("sesion_trabajador", auth.crear_sesion("trabajador", ident=c))
         cliente.cookies.set("cuil_trab", c)
         cliente.cookies.set("sind_elegido", str(sid))
         r = cliente.post(f"/api/encuesta/{eid}", json={"respuestas": {str(pids[0]): 4}})

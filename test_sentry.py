@@ -185,7 +185,7 @@ with db.get_session() as s:
 
 def _trabajador():
     c = TestClient(main.app, raise_server_exceptions=False)
-    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
+    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0, ident=CUIL))
     c.cookies.set("cuil_trab", CUIL)
     return c
 

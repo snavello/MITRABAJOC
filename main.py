@@ -379,7 +379,7 @@ async def renovar_sesion_por_actividad(request: Request, call_next):
         if payload and payload.get("rol") == rol:
             hubo_sesion_valida = True
             if not _ya_seteada(nombre_cookie):
-                nuevo = auth.crear_sesion(rol, payload.get("uid", 0), payload.get("sid", 0))
+                nuevo = auth.crear_sesion(rol, payload.get("uid", 0), payload.get("sid", 0), ident=payload.get("ident", ""))
                 set_cookie_segura(respuesta, nombre_cookie, nuevo)
     if hubo_sesion_valida:
         for cookie_extra in ("cuil_trab", "sind_elegido", "cuit_emp", "sind_elegido_emp"):
@@ -635,11 +635,11 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
         recibo, uso = await run_in_threadpool(extraer, contenido, archivo.content_type,
                                               db.modelo_ia("recibos"))
     except Exception as e:
-        _registrar_uso_fallido(e, sid or None, request.cookies.get("cuil_trab", ""), "recibo")
+        _registrar_uso_fallido(e, sid or None, _cuil_seguro(request), "recibo")
         raise ErrorApp("E-RECIBO-01")
     # Se registra apenas se llama a la IA -- el costo ya se generó, sea cual
     # sea el resultado (confianza baja, o si el trabajador nunca confirma).
-    db.registrar_uso_ia(sid or None, request.cookies.get("cuil_trab", ""), "recibo",
+    db.registrar_uso_ia(sid or None, _cuil_seguro(request), "recibo",
                          uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"],
                          uso.get("duracion_ms", 0))
     if recibo.get("confianza") == "baja":
@@ -654,7 +654,7 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
     # se hizo y ya quedó registrada arriba (el costo es real); lo que no pasa
     # de acá es el contenido. Va antes de guardar el recibo sospechoso a
     # propósito: de un recibo ajeno no se guarda nada, ni el archivo.
-    if cuil_no_coincide(recibo, request.cookies.get("cuil_trab", "")):
+    if cuil_no_coincide(recibo, _cuil_seguro(request)):
         raise ErrorApp("E-RECIBO-04")
     # Alerta de posible adulteración (totales, CUIL, CUIT del empleador o
     # fechas): no bloquea el proceso, solo avisa y guarda una copia del
@@ -662,7 +662,7 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
     alerta = recibo.get("alerta_adulteracion") or {}
     if alerta.get("detectada"):
         db.registrar_recibo_sospechoso(
-            sid or None, request.cookies.get("cuil_trab", ""), recibo.get("periodo") or "",
+            sid or None, _cuil_seguro(request), recibo.get("periodo") or "",
             alerta.get("motivo") or "", contenido, archivo.content_type, archivo.filename or "",
         )
     cuit_empleador = _norm_cuil((recibo.get("empleador") or {}).get("cuit"))
@@ -682,7 +682,7 @@ def api_validar(request: Request, payload: dict):
     if not sid:
         raise ErrorApp("E-SESION-01")
 
-    cuil_sesion = request.cookies.get("cuil_trab", "")
+    cuil_sesion = _cuil_seguro(request)
 
     # Si el recibo no es de quien inició sesión, cortar ACÁ: no se cargan
     # conceptos nuevos al catálogo, no se valida nada, y no queda en el
@@ -829,7 +829,7 @@ def api_enviar_sindicato(request: Request, payload: dict):
 def api_mis_recibos(request: Request):
     """Historial privado del trabajador: todos los recibos que verificó,
     estén enviados a su sindicato o no."""
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not cuil:
         raise ErrorApp("E-SESION-02")
     with db.get_session() as s:
@@ -850,7 +850,7 @@ async def api_aportes(request: Request, archivo: UploadFile = File(...)):
     semáforo. Lo persiste (si hay sesión de trabajador con sindicato
     resuelto) para que no se pierda al navegar o recargar la página."""
     contenido = await archivo.read()
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     sid = sindicato_activo_trabajador(request)
     try:
         datos, uso = await run_in_threadpool(extraer_aportes, contenido, archivo.content_type,
@@ -2387,7 +2387,7 @@ def _actor_geo(request: Request) -> str:
     El id del usuario del panel o el CUIL del afiliado, NUNCA la IP: en un
     gremio con wifi compartido la IP es la misma para todo el edificio, y un
     tope por IP castigaría a los cien que no hicieron nada."""
-    return str(_uid_sesion(request) or request.cookies.get("cuil_trab", "") or "anonimo")
+    return str(_uid_sesion(request) or _cuil_seguro(request) or "anonimo")
 
 
 def _geocodificar(actor: str, provincia: str, localidad: str, calle: str, numero: str) -> dict:
@@ -2623,7 +2623,7 @@ def servir_adjunto_notificacion(notificacion_id: int, request: Request):
         if ses_sind and ses_sind.get("sid") == n.sindicato_id:
             autorizado = True
         elif ses_trab:
-            cuil = request.cookies.get("cuil_trab", "")
+            cuil = _cuil_seguro(request)
             if cuil and s.exec(select(NotificacionDestinatario).where(
                     NotificacionDestinatario.notificacion_id == notificacion_id,
                     NotificacionDestinatario.cuil == cuil)).first():
@@ -2639,7 +2639,7 @@ def servir_adjunto_notificacion(notificacion_id: int, request: Request):
 @app.get("/api/mis-notificaciones")
 def api_mis_notificaciones(request: Request):
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_trabajador(request)
@@ -2654,7 +2654,7 @@ def api_mis_notificaciones(request: Request):
 @app.post("/api/notificacion/{notificacion_id}/leer")
 def api_marcar_notificacion_leida(notificacion_id: int, request: Request):
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     ok = db.marcar_notificacion_leida(notificacion_id, cuil)
@@ -2669,7 +2669,7 @@ def api_marcar_notificacion_leida(notificacion_id: int, request: Request):
 def api_marcar_todas_notificaciones_leidas(request: Request):
     """Bandeja "Hilo" (2026-09-03): un solo toque deja todo leído."""
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_trabajador(request)
@@ -2738,7 +2738,7 @@ def servir_adjunto_notificacion_empresa(notificacion_empleador_id: int, request:
         if ses_sind and ses_sind.get("sid") == n.sindicato_id:
             autorizado = True
         elif ses_emp:
-            cuit = request.cookies.get("cuit_emp", "")
+            cuit = _cuit_seguro(request)
             if cuit and s.exec(select(NotificacionEmpleadorDestinatario).where(
                     NotificacionEmpleadorDestinatario.notificacion_empleador_id == notificacion_empleador_id,
                     NotificacionEmpleadorDestinatario.cuit == cuit)).first():
@@ -2754,7 +2754,7 @@ def servir_adjunto_notificacion_empresa(notificacion_empleador_id: int, request:
 @app.get("/api/empresa/notificaciones")
 def api_mis_notificaciones_empresa(request: Request):
     ses = sesion_actual(request, "empleador")
-    cuit = request.cookies.get("cuit_emp", "")
+    cuit = _cuit_seguro(request)
     if not ses or not cuit:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_empleador(request)
@@ -2769,7 +2769,7 @@ def api_mis_notificaciones_empresa(request: Request):
 @app.post("/api/empresa/notificacion/{notificacion_empleador_id}/leer")
 def api_marcar_notificacion_leida_empresa(notificacion_empleador_id: int, request: Request):
     ses = sesion_actual(request, "empleador")
-    cuit = request.cookies.get("cuit_emp", "")
+    cuit = _cuit_seguro(request)
     if not ses or not cuit:
         raise HTTPException(403, "No autorizado")
     ok = db.marcar_notificacion_leida_empleador(notificacion_empleador_id, cuit)
@@ -2789,7 +2789,7 @@ async def api_actualizar_perfil_empleador(request: Request, razon_social: str = 
     alta del sindicato ACTIVO (Empleador es por sindicato, mismo criterio
     que actualizar_perfil_trabajador)."""
     ses = sesion_actual(request, "empleador")
-    cuit = request.cookies.get("cuit_emp", "")
+    cuit = _cuit_seguro(request)
     if not ses or not cuit:
         raise HTTPException(403, "No autorizado")
     if not razon_social.strip():
@@ -2809,7 +2809,7 @@ async def api_subir_foto_perfil_empresa(request: Request, foto: UploadFile = Fil
     api_subir_foto_perfil: el achicado a baja resolución lo hace el cliente
     antes de subir, acá solo se valida tipo/tamaño."""
     ses = sesion_actual(request, "empleador")
-    cuit = request.cookies.get("cuit_emp", "")
+    cuit = _cuit_seguro(request)
     if not ses or not cuit:
         raise HTTPException(403, "No autorizado")
     if (foto.content_type or "") not in MIMES_FOTO_PERFIL:
@@ -2828,7 +2828,7 @@ def servir_foto_perfil_empleador(cuit: str, request: Request):
     CUIT esté dado de alta como Empleador (para el avatar en el chat de
     Trámites externos) -- no es pública como el logo del sindicato."""
     ses_emp = sesion_actual(request, "empleador")
-    if ses_emp and request.cookies.get("cuit_emp", "") == cuit:
+    if ses_emp and _cuit_seguro(request) == cuit:
         pass
     else:
         ses_sind = sesion_actual(request, "sindicato")
@@ -3530,7 +3530,7 @@ def _autorizado_para_tramite(request: Request, tr) -> bool:
         return True
     ses_trab = sesion_actual(request, "trabajador")
     if ses_trab:
-        cuil = request.cookies.get("cuil_trab", "")
+        cuil = _cuil_seguro(request)
         if cuil and cuil == tr.cuil:
             return True
     return False
@@ -3539,7 +3539,7 @@ def _autorizado_para_tramite(request: Request, tr) -> bool:
 @app.get("/api/tramites/tipos")
 def api_tipos_tramite(request: Request):
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_trabajador(request)
@@ -3555,7 +3555,7 @@ def api_tipos_tramite(request: Request):
 @app.get("/api/tramites/mios")
 def api_mis_tramites(request: Request):
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_trabajador(request)
@@ -3565,7 +3565,7 @@ def api_mis_tramites(request: Request):
 @app.get("/api/tramite/{numero_expediente}")
 def api_consultar_tramite(numero_expediente: str, request: Request):
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     detalle = db.tramite_por_numero_expediente(numero_expediente.strip().upper())
@@ -3583,7 +3583,7 @@ def pantalla_notificaciones(request: Request):
     agrupadas por día, leídas/no leídas y filtros. Los datos los trae el
     mismo /api/mis-notificaciones de siempre."""
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         return RedirectResponse("/ingresar", status_code=303)
     sid = sindicato_activo_trabajador(request)
@@ -3614,7 +3614,7 @@ def api_push_clave_publica():
 @app.post("/api/push/suscribir")
 async def api_push_suscribir(request: Request):
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     cuerpo = await request.json()
@@ -3642,7 +3642,7 @@ def api_novedades_tramites(request: Request):
     """Cantidad de trámites del trabajador con movimientos sin ver, para el
     globo de Trámites (reemplaza a las notificaciones de sistema)."""
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_trabajador(request)
@@ -3655,7 +3655,7 @@ def api_novedades_tramites(request: Request):
 def api_novedades_tramites_empresa(request: Request):
     """Mirror para la empresa."""
     ses = sesion_actual(request, "empleador")
-    cuit = request.cookies.get("cuit_emp", "")
+    cuit = _cuit_seguro(request)
     if not ses or not cuit:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_empleador(request)
@@ -3676,7 +3676,7 @@ def pantalla_convenio(request: Request):
     ensuciar la navegación mientras el piloto se prueba, no para esconderla
     de nadie."""
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         return RedirectResponse("/ingresar", status_code=303)
     sid = sindicato_activo_trabajador(request)
@@ -3704,7 +3704,7 @@ def api_convenios_del_trabajador(request: Request):
     porque inferirlo mal y contestarle con el convenio equivocado es peor que
     no contestarle."""
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_trabajador(request)
@@ -3724,7 +3724,7 @@ async def api_consultar_convenio(request: Request):
     una llamada al modelo. Es un request normal, a diferencia de la
     indexación."""
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_trabajador(request)
@@ -3757,7 +3757,7 @@ def api_encuestas_del_trabajador(request: Request):
     """Las encuestas a las que este CUIL fue invitado. Una encuesta a la que
     no fue invitado no aparece ni existe para él."""
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_trabajador(request)
@@ -3777,7 +3777,7 @@ def api_resultados_para_afiliado(encuesta_id: int, request: Request):
     invitaron no son asunto suyo.
     """
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_trabajador(request)
@@ -3803,7 +3803,7 @@ async def api_responder_encuesta(encuesta_id: int, request: Request):
     transacción. La ruta solo resuelve quién está pidiendo.
     """
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_trabajador(request)
@@ -3829,7 +3829,7 @@ async def api_enviar_tramite(request: Request):
     archivo server-side -- el formulario del cliente ya valida lo mismo,
     pero esto es lo que realmente decide qué se persiste."""
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_trabajador(request)
@@ -3960,7 +3960,7 @@ async def api_enviar_tramite(request: Request):
 async def api_nota_tramite_trabajador(tramite_id: int, request: Request, texto: str = Form(""),
                                        adjunto: UploadFile = File(None)):
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     detalle = db.tramite_detalle(tramite_id)
@@ -4001,7 +4001,7 @@ def _autorizado_para_tramite_empleador(request: Request, tr) -> bool:
         return True
     ses_emp = sesion_actual(request, "empleador")
     if ses_emp:
-        cuit = request.cookies.get("cuit_emp", "")
+        cuit = _cuit_seguro(request)
         if cuit and cuit == tr.cuit:
             return True
     return False
@@ -4140,7 +4140,7 @@ def servir_adjunto_nota_tramite_empresa(nota_id: int, request: Request):
 @app.get("/api/empresa/tramites/tipos")
 def api_tipos_tramite_empresa(request: Request):
     ses = sesion_actual(request, "empleador")
-    cuit = request.cookies.get("cuit_emp", "")
+    cuit = _cuit_seguro(request)
     if not ses or not cuit:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_empleador(request)
@@ -4150,7 +4150,7 @@ def api_tipos_tramite_empresa(request: Request):
 @app.get("/api/empresa/tramites/mios")
 def api_mis_tramites_empresa(request: Request):
     ses = sesion_actual(request, "empleador")
-    cuit = request.cookies.get("cuit_emp", "")
+    cuit = _cuit_seguro(request)
     if not ses or not cuit:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_empleador(request)
@@ -4160,7 +4160,7 @@ def api_mis_tramites_empresa(request: Request):
 @app.get("/api/empresa/tramite/{numero_expediente}")
 def api_consultar_tramite_empresa(numero_expediente: str, request: Request):
     ses = sesion_actual(request, "empleador")
-    cuit = request.cookies.get("cuit_emp", "")
+    cuit = _cuit_seguro(request)
     if not ses or not cuit:
         raise HTTPException(403, "No autorizado")
     detalle = db.tramite_empleador_por_numero_expediente(numero_expediente.strip().upper())
@@ -4173,7 +4173,7 @@ def api_consultar_tramite_empresa(numero_expediente: str, request: Request):
 @app.post("/api/empresa/tramite")
 async def api_enviar_tramite_empresa(request: Request):
     ses = sesion_actual(request, "empleador")
-    cuit = request.cookies.get("cuit_emp", "")
+    cuit = _cuit_seguro(request)
     if not ses or not cuit:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_empleador(request)
@@ -4291,7 +4291,7 @@ async def api_enviar_tramite_empresa(request: Request):
 async def api_nota_tramite_empresa(tramite_id: int, request: Request, texto: str = Form(""),
                                     adjunto: UploadFile = File(None)):
     ses = sesion_actual(request, "empleador")
-    cuit = request.cookies.get("cuit_emp", "")
+    cuit = _cuit_seguro(request)
     if not ses or not cuit:
         raise HTTPException(403, "No autorizado")
     detalle = db.tramite_empleador_detalle(tramite_id)
@@ -4583,7 +4583,7 @@ def sindicato_activo_empleador(request: Request) -> int:
     patrón que sindicato_activo_trabajador, con cuit_emp/sind_elegido_emp
     en vez de cuil_trab/sind_elegido (cookies propias, para que las dos
     sesiones convivan sin pisarse en el mismo navegador)."""
-    cuit = request.cookies.get("cuit_emp", "")
+    cuit = _cuit_seguro(request)
     if not cuit:
         return 0
     sinds = db.sindicatos_de_cuit_empleador(cuit)
@@ -4601,7 +4601,7 @@ def sindicato_activo_trabajador(request: Request) -> int:
     """Resuelve en qué sindicato está parado el trabajador ahora.
     Si tiene uno solo, ese; si tiene varios, el que eligió (cookie sind_elegido).
     Devuelve 0 si no se puede determinar."""
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not cuil:
         return 0
     sinds = db.sindicatos_de_cuil(cuil)
@@ -4623,6 +4623,22 @@ def sesion_actual(request: Request, rol: str) -> dict | None:
     if payload and payload.get("rol") == rol:
         return payload
     return None
+
+
+def _cuil_seguro(request: Request) -> str:
+    """El CUIL del trabajador logueado, tomado de la SESIÓN FIRMADA, no de la
+    cookie `cuil_trab` (que es plana y falsificable, XSK H-0004). Sin sesión
+    de trabajador válida devuelve "" -> las rutas tratan eso como "sin
+    identidad" y no entregan datos de nadie. La cookie `cuil_trab` se sigue
+    emitiendo como comodidad del cliente, pero el servidor NO le cree."""
+    ses = sesion_actual(request, "trabajador")
+    return (ses or {}).get("ident", "") or ""
+
+
+def _cuit_seguro(request: Request) -> str:
+    """El CUIT del empleador logueado, tomado de la sesión firmada (XSK H-0004)."""
+    ses = sesion_actual(request, "empleador")
+    return (ses or {}).get("ident", "") or ""
 
 
 def slugify(nombre: str) -> str:
@@ -5657,7 +5673,7 @@ def trabajador_login(request: Request, cuil: str = Form(...), clave: str = Form(
     sinds = db.sindicatos_de_cuil(cuil)
     if not sinds:
         return RedirectResponse("/ingresar?error=sinsind", status_code=303)
-    token = auth.crear_sesion("trabajador", id_usuario=cuenta_id, sindicato_id=0)
+    token = auth.crear_sesion("trabajador", id_usuario=cuenta_id, sindicato_id=0, ident=cuil)
     db.registrar_acceso("trabajador", sindicato_id=sinds[0]["id"] if len(sinds) == 1 else None)
     # sindicato_id 0 = todavía no eligió; se define en /elegir o directo si hay uno solo
     resp = RedirectResponse("/app/inicio", status_code=303)
@@ -5740,7 +5756,7 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
                     setattr(t, campo, valor)
             s.add(t)
         s.commit()
-    token = auth.crear_sesion("trabajador", sindicato_id=0)
+    token = auth.crear_sesion("trabajador", sindicato_id=0, ident=cuil)
     resp = RedirectResponse("/app/inicio", status_code=303)
     set_cookie_segura(resp, COOKIE_TRABAJADOR, token)
     set_cookie_segura(resp, "cuil_trab", cuil)
@@ -5751,7 +5767,7 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
 def app_trabajador(request: Request):
     """La app del trabajador. Si está en varios sindicatos y no eligió, muestra el selector."""
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         return RedirectResponse("/ingresar", status_code=303)
 
@@ -5807,7 +5823,7 @@ def app_portada(request: Request):
     No reemplaza /app (Tu Recibo, sigue intacta) -- misma resolución de
     sindicato activo, landing previa a la que apuntan login/registro/elegir."""
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         return RedirectResponse("/ingresar", status_code=303)
 
@@ -5882,7 +5898,7 @@ async def api_actualizar_perfil(request: Request, nombre: str = Form(...), calle
     la gente que ya estaba registrada antes de que se exigiera en el alta. El
     resto del domicilio y el globo en el mapa siguen siendo opcionales."""
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     if not nombre.strip():
@@ -5923,7 +5939,7 @@ def api_geocodificar(request: Request, cuerpo: dict = Body(default={})):
     de ahí el tope por CUIL y por hora de `geo.permitir_a`.
     """
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     return _geocodificar(cuil, cuerpo.get("provincia", ""), cuerpo.get("localidad", ""),
@@ -5949,7 +5965,7 @@ def api_seccionales(request: Request):
     se usa en la pantalla y se descarta.
     """
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     sid = sindicato_activo_trabajador(request)
@@ -5969,7 +5985,7 @@ async def api_subir_foto_perfil(request: Request, foto: UploadFile = File(...)):
     baja resolución lo hace el cliente (canvas -> JPEG chico) antes de subir
     -- acá solo se valida tipo/tamaño, no se reprocesa la imagen de nuevo."""
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(403, "No autorizado")
     if (foto.content_type or "") not in MIMES_FOTO_PERFIL:
@@ -5988,7 +6004,7 @@ def servir_foto_perfil(cuil: str, request: Request):
     ese CUIL esté empadronado (para el avatar en el chat de Trámites) --
     no es pública como el logo del sindicato."""
     ses_trab = sesion_actual(request, "trabajador")
-    if ses_trab and request.cookies.get("cuil_trab", "") == cuil:
+    if ses_trab and _cuil_seguro(request) == cuil:
         pass
     else:
         ses_sind = sesion_actual(request, "sindicato")
@@ -6040,7 +6056,7 @@ def api_qr_credencial(request: Request):
     así el código que se ve en pantalla siempre está vigente y una captura
     vieja no verifica."""
     ses = sesion_actual(request, "trabajador")
-    cuil = request.cookies.get("cuil_trab", "")
+    cuil = _cuil_seguro(request)
     if not ses or not cuil:
         raise HTTPException(401, "Sesión vencida")
     sid = sindicato_activo_trabajador(request)
@@ -6111,7 +6127,7 @@ def empresa_login(request: Request, cuit: str = Form(...), clave: str = Form(...
     sinds = db.sindicatos_de_cuit_empleador(cuit)
     if not sinds:
         return RedirectResponse("/ingresar-empresa?error=sinsind", status_code=303)
-    token = auth.crear_sesion("empleador", id_usuario=cuenta_id, sindicato_id=0)
+    token = auth.crear_sesion("empleador", id_usuario=cuenta_id, sindicato_id=0, ident=cuit)
     db.registrar_acceso("empresa", sindicato_id=sinds[0]["id"] if len(sinds) == 1 else None)
     resp = RedirectResponse("/empresa/inicio", status_code=303)
     set_cookie_segura(resp, COOKIE_EMPLEADOR, token)
@@ -6136,7 +6152,7 @@ def empresa_registro(request: Request, cuit: str = Form(...), clave: str = Form(
             e.registrado = True
             s.add(e)
         s.commit()
-    token = auth.crear_sesion("empleador", sindicato_id=0)
+    token = auth.crear_sesion("empleador", sindicato_id=0, ident=cuit)
     resp = RedirectResponse("/empresa/inicio", status_code=303)
     set_cookie_segura(resp, COOKIE_EMPLEADOR, token)
     set_cookie_segura(resp, "cuit_emp", cuit)
@@ -6151,7 +6167,7 @@ def empresa_inicio(request: Request):
     siempre están, gatean juntos con el módulo "empleadores" del sindicato
     (ya verificado para que exista la fila Empleador en primer lugar)."""
     ses = sesion_actual(request, "empleador")
-    cuit = request.cookies.get("cuit_emp", "")
+    cuit = _cuit_seguro(request)
     if not ses or not cuit:
         return RedirectResponse("/ingresar-empresa", status_code=303)
 
@@ -6190,7 +6206,7 @@ def app_empresa(request: Request):
     2 funcionalidades no hace falta esa capa extra). Si el CUIT está en
     varios sindicatos y no eligió, muestra el selector."""
     ses = sesion_actual(request, "empleador")
-    cuit = request.cookies.get("cuit_emp", "")
+    cuit = _cuit_seguro(request)
     if not ses or not cuit:
         return RedirectResponse("/ingresar-empresa", status_code=303)
 

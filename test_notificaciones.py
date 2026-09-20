@@ -63,7 +63,7 @@ admin_fega.post("/admin/login", data={"usuario": "20222222220", "clave": "fega-d
 
 def _sesion_trabajador(cuil):
     c = TestClient(main.app)
-    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
+    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0, ident=cuil))
     c.cookies.set("cuil_trab", cuil)
     return c
 
@@ -205,7 +205,7 @@ def test_aislamiento_entre_sindicatos():
     y en Fega (pluriempleo) -- la notificación de UOM no debe aparecerle si
     su sindicato activo es Fega."""
     c = TestClient(main.app)
-    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
+    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0, ident="20555555551"))
     c.cookies.set("cuil_trab", "20555555551")
     c.cookies.set("sind_elegido", str(SID_FEGA))
     r = c.get("/api/mis-notificaciones")

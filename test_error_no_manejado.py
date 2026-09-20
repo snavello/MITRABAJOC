@@ -25,7 +25,7 @@ with db.get_session() as s:
     s.commit()
 
 client = TestClient(main.app, raise_server_exceptions=False)
-client.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
+client.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0, ident="20111111119"))
 client.cookies.set("cuil_trab", "20111111119")
 
 

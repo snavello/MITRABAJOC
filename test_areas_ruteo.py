@@ -100,7 +100,7 @@ def _trabajador(cuil):
     """El sindicato activo sale del CUIL (ver sindicato_activo_trabajador):
     con uno solo empadronado no hace falta la cookie de elección."""
     c = TestClient(main.app)
-    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
+    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0, ident=cuil))
     c.cookies.set("cuil_trab", cuil)
     c.cookies.set("sind_elegido", str(SID))
     return c

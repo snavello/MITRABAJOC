@@ -48,7 +48,7 @@ admin.post("/admin/login", data={"usuario": "20111111110", "clave": "uom-demo"})
 
 def _sesion_trabajador(cuil):
     c = TestClient(main.app)
-    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
+    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0, ident=cuil))
     c.cookies.set("cuil_trab", cuil)
     return c
 
@@ -273,7 +273,7 @@ def test_espejo_empleadores():
     ids = {c["etiqueta"]: c["id"] for c in tipo["campos"]}
 
     emp_cli = TestClient(main.app)
-    emp_cli.cookies.set(main.COOKIE_EMPLEADOR, auth.crear_sesion("empleador", sindicato_id=0))
+    emp_cli.cookies.set(main.COOKIE_EMPLEADOR, auth.crear_sesion("empleador", sindicato_id=0, ident="30999888776"))
     emp_cli.cookies.set("cuit_emp", "30999888776")
     r = emp_cli.post("/api/empresa/tramite", data={
         "tipo_tramite_id": tipo["id"],
