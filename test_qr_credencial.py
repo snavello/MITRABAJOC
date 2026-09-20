@@ -139,7 +139,7 @@ def test_sin_codigo_no_verifica():
 
 def _sesion_trabajador(cuil="20111111119"):
     c = TestClient(main.app)
-    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
+    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0, ident=cuil))
     c.cookies.set("cuil_trab", cuil)
     return c
 

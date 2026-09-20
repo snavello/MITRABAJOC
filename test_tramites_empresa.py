@@ -59,7 +59,7 @@ admin_fega.post("/admin/login", data={"usuario": "20222222220", "clave": "fega-d
 
 def _sesion_empleador(cuit):
     c = TestClient(main.app)
-    c.cookies.set(main.COOKIE_EMPLEADOR, auth.crear_sesion("empleador", sindicato_id=0))
+    c.cookies.set(main.COOKIE_EMPLEADOR, auth.crear_sesion("empleador", sindicato_id=0, ident=cuit))
     c.cookies.set("cuit_emp", cuit)
     c.cookies.set("sind_elegido_emp", str(SID_UOM))
     return c
@@ -67,7 +67,7 @@ def _sesion_empleador(cuit):
 
 def _sesion_trabajador(cuil):
     c = TestClient(main.app)
-    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
+    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0, ident=cuil))
     c.cookies.set("cuil_trab", cuil)
     c.cookies.set("sind_elegido", str(SID_UOM))
     return c
@@ -279,7 +279,7 @@ def test_bloqueo_403_si_modulo_apagado():
         fega_emp = Empleador(sindicato_id=SID_FEGA, cuit="30444444440", razon_social="Ajena", activo=True)
         s.add(fega_emp); s.commit()
     emp_fega = TestClient(main.app)
-    emp_fega.cookies.set(main.COOKIE_EMPLEADOR, auth.crear_sesion("empleador", sindicato_id=0))
+    emp_fega.cookies.set(main.COOKIE_EMPLEADOR, auth.crear_sesion("empleador", sindicato_id=0, ident="30444444440"))
     emp_fega.cookies.set("cuit_emp", "30444444440")
     emp_fega.cookies.set("sind_elegido_emp", str(SID_FEGA))
     r3 = emp_fega.post("/api/empresa/tramite", data={"tipo_tramite_id": TIPO_ID, "campo_1": "x"})

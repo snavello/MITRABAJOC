@@ -8,6 +8,7 @@ Correr con: .venv/Scripts/python.exe -m pytest test_cuil_bloqueo_ruta.py -q
 import db
 from db import Sindicato, Trabajador, Concepto, ReciboVerificado
 import main
+import auth
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
@@ -20,6 +21,7 @@ with db.get_session() as s:
     s.commit()
 
 client = TestClient(main.app)
+client.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", ident="20111111119"))
 client.cookies.set("cuil_trab", "20111111119")
 
 

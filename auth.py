@@ -74,13 +74,24 @@ def verificar_clave(clave: str, clave_hash: str) -> bool:
 
 
 # ---------- Sesiones (cookie firmada) ----------
-def crear_sesion(rol: str, id_usuario: int = 0, sindicato_id: int = 0) -> str:
-    """Crea un token de sesión firmado con los datos del usuario."""
+def crear_sesion(rol: str, id_usuario: int = 0, sindicato_id: int = 0, ident: str = "") -> str:
+    """Crea un token de sesión firmado con los datos del usuario.
+
+    `ident` es la identidad del trabajador/empleador (CUIL/CUIT) que ANTES
+    viajaba en una cookie aparte SIN firmar (`cuil_trab`/`cuit_emp`): el
+    servidor le creía y se podía suplantar a otro cambiándola (XSK H-0004).
+    Ahora va firmada acá adentro, y las rutas la leen de la sesión, no de la
+    cookie plana."""
     payload = {
-        "rol": rol, "uid": id_usuario, "sid": sindicato_id,
+        "rol": rol, "uid": id_usuario, "sid": sindicato_id, "ident": ident,
         "t": int(time.time()),
     }
-    cuerpo = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode()
+    # Sin el padding "=" del base64: un "=" en el valor obliga al navegador (y
+    # a http.cookies) a entrecomillar la cookie, y esas comillas rompen la
+    # lectura del token. La longitud del payload cambió al sumar `ident`, lo
+    # que destapó el problema; quitar el padding lo evita de raíz. Se re-agrega
+    # al decodificar (leer_sesion).
+    cuerpo = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
     firma = hmac.new(SECRETO.encode(), cuerpo.encode(), hashlib.sha256).hexdigest()[:32]
     return f"{cuerpo}.{firma}"
 
@@ -94,7 +105,9 @@ def leer_sesion(token: str) -> dict | None:
     if not hmac.compare_digest(firma, esperada):
         return None
     try:
-        payload = json.loads(base64.urlsafe_b64decode(cuerpo.encode()).decode())
+        # Re-agregar el padding "=" que crear_sesion quita (múltiplo de 4).
+        relleno = cuerpo + "=" * (-len(cuerpo) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(relleno.encode()).decode())
     except Exception:
         return None
     if time.time() - payload.get("t", 0) > IDLE_TIMEOUT_SEGUNDOS:

@@ -71,7 +71,7 @@ with db.get_session() as s:
 
 def _sesion(cuil, sindicato_elegido=None):
     c = TestClient(main.app)
-    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
+    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0, ident=cuil))
     c.cookies.set("cuil_trab", cuil)
     if sindicato_elegido:
         c.cookies.set("sind_elegido", str(sindicato_elegido))

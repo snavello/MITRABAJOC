@@ -55,7 +55,7 @@ def _admin_client(usuario, clave):
 
 def _sesion_trabajador(cuil):
     c = TestClient(main.app)
-    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
+    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0, ident=cuil))
     c.cookies.set("cuil_trab", cuil)
     return c
 

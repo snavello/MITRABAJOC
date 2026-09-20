@@ -585,12 +585,16 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     (H-0011). **Bloque 4 arrancado**, primer lote de correcciones: H-0001
     Solucionado (SESSION_SECRET fail-closed), H-0006 Solucionado en demo/prod
     (cookies Secure+SameSite), H-0002 y H-0008 Parcial (default de plataforma
-    eliminado; freno por IP en los cuatro logins). Bloquean producción: de 7
-    a 5. El registro y la página `/entornos/xsanders` muestran el estado
-    **Solucionado / Parcial / Pendiente / Aceptado** con aclaración por
-    hallazgo. Plataforma 0.30.01. Sigue: segundo lote (H-0004 identidad
-    firmada, H-0003 usuario+contraseña en la landing, H-0005 reemplazar el
-    eval) y la pasada dinámica/destructiva contra Pruebas.
+    eliminado; freno por IP en los cuatro logins) y **H-0004 Solucionado**
+    (el Crítico de riesgo 25): la identidad del trabajador/empleador ahora va
+    FIRMADA en el token de sesión (`auth.crear_sesion(..., ident=...)`,
+    helpers `_cuil_seguro`/`_cuit_seguro`), no en la cookie plana. Bloquean
+    producción: de 7 a **4**. El registro y la página `/entornos/xsanders`
+    muestran el estado **Solucionado / Parcial / Pendiente / Aceptado** con
+    aclaración por hallazgo. Trabajador 0.39.03, Plataforma 0.30.01. Sigue:
+    H-0003 (usuario+contraseña en la landing), H-0005 (reemplazar el eval del
+    motor de fórmulas), completar H-0002 (hashear + usuarios nominales), y la
+    pasada dinámica/destructiva contra Pruebas.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

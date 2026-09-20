@@ -56,7 +56,7 @@ def _admin():
 
 def _trab():
     c = TestClient(main.app)
-    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
+    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0, ident="20300000001"))
     c.cookies.set("cuil_trab", "20300000001")
     c.cookies.set("sind_elegido", str(SID))
     return c

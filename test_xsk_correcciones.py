@@ -99,3 +99,37 @@ def test_h0008_los_cuatro_logins_chequean_el_limite():
     fuente = open(main.__file__, encoding="utf-8").read()
     # Cada login tiene que llamar al chequeo.
     assert fuente.count("_login_bloqueado(request)") >= 4
+
+
+# ---- H-0004: la identidad sale de la sesión firmada, no de la cookie plana ----
+
+def test_h0004_la_identidad_va_en_el_token_firmado():
+    import auth
+    tok = auth.crear_sesion("trabajador", id_usuario=7, sindicato_id=0, ident="20111111119")
+    payload = auth.leer_sesion(tok)
+    assert payload["ident"] == "20111111119"
+
+
+def test_h0004_cuil_seguro_lee_la_sesion_no_la_cookie():
+    """El corazón del fix: forjar cuil_trab NO cambia la identidad; manda la
+    sesión firmada. Sin sesión válida, no hay identidad."""
+    import main, auth
+
+    class Req:
+        def __init__(self, cookies):
+            self.cookies = cookies
+    # Sesión firmada de A + cookie plana forjada con el CUIL de B.
+    ses_a = auth.crear_sesion("trabajador", id_usuario=1, sindicato_id=0, ident="20111111119")
+    req = Req({main.COOKIE_TRABAJADOR: ses_a, "cuil_trab": "27999999999"})
+    assert main._cuil_seguro(req) == "20111111119"   # gana la sesión, no la cookie forjada
+    # Sin sesión, solo la cookie plana forjada -> sin identidad.
+    req2 = Req({"cuil_trab": "27999999999"})
+    assert main._cuil_seguro(req2) == ""
+
+
+def test_h0004_no_quedan_lecturas_crudas_de_identidad():
+    import main
+    fuente = open(main.__file__, encoding="utf-8").read()
+    # Ninguna ruta debe volver a leer la identidad de la cookie plana.
+    assert 'cookies.get("cuil_trab", "")' not in fuente
+    assert 'cookies.get("cuit_emp", "")' not in fuente

@@ -97,3 +97,22 @@ def pytest_sessionfinish(session, exitstatus):
             c.execute(f'DROP DATABASE IF EXISTS "{NOMBRE_BASE}" WITH (FORCE)')
     except Exception as e:      # que un error limpiando no tape el resultado
         print(f"\n[conftest] no se pudo borrar {NOMBRE_BASE}: {e}")
+
+
+import pytest  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _reset_limitadores_en_memoria():
+    """Los limitadores de intentos (login y PIN de la landing) son globales
+    del módulo `main`, en memoria del proceso. Sin esto, los intentos
+    fallidos de un test se acumulan y bloquean la IP compartida ("testclient")
+    para los tests siguientes del mismo archivo (XSK H-0008). Se limpian antes
+    de cada test; no se fuerza a importar main si un test todavía no lo cargó."""
+    m = sys.modules.get("main")
+    if m:
+        for nombre in ("_intentos_login", "_intentos_pin"):
+            d = getattr(m, nombre, None)
+            if isinstance(d, dict):
+                d.clear()
+    yield

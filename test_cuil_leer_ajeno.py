@@ -35,7 +35,7 @@ with db.get_session() as s:
     s.commit()
 
 client = TestClient(main.app)
-client.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=SID))
+client.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=SID, ident="27999999999"))
 client.cookies.set("cuil_trab", "27999999999")
 
 AJENO = "20202790411"   # el CUIL del recibo del caso real

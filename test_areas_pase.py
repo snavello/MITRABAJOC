@@ -96,7 +96,7 @@ def _crear_tipo(codigo, permite_pase, destinos_pase=()):
 
 def _presentar(tipo_id):
     c = TestClient(main.app)
-    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
+    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0, ident="20300000001"))
     c.cookies.set("cuil_trab", "20300000001")
     c.cookies.set("sind_elegido", str(SID))
     with Session(db.engine) as s:
@@ -357,7 +357,7 @@ def test_el_trabajador_ve_el_movimiento_sin_saber_quien_lo_movio():
         numero = s.get(Tramite, tr).numero_expediente
 
     c = TestClient(main.app)
-    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
+    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0, ident="20300000001"))
     c.cookies.set("cuil_trab", "20300000001")
     c.cookies.set("sind_elegido", str(SID))
     d = c.get(f"/api/tramite/{numero}").json()

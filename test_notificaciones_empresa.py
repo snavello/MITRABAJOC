@@ -57,14 +57,14 @@ admin_fega.post("/admin/login", data={"usuario": "20222222220", "clave": "fega-d
 
 def _sesion_empleador(cuit):
     c = TestClient(main.app)
-    c.cookies.set(main.COOKIE_EMPLEADOR, auth.crear_sesion("empleador", sindicato_id=0))
+    c.cookies.set(main.COOKIE_EMPLEADOR, auth.crear_sesion("empleador", sindicato_id=0, ident=cuit))
     c.cookies.set("cuit_emp", cuit)
     return c
 
 
 def _sesion_trabajador(cuil):
     c = TestClient(main.app)
-    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0))
+    c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0, ident=cuil))
     c.cookies.set("cuil_trab", cuil)
     return c
 

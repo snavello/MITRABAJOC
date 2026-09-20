@@ -553,7 +553,7 @@ def _padron(sid: int, cuils=None, seccional_id=None, provincia="Santa Fe"):
 
 def _sesion_trabajador(cuil: str, sid: int = 0):
     cliente.cookies.clear()
-    cliente.cookies.set("sesion_trabajador", auth.crear_sesion("trabajador"))
+    cliente.cookies.set("sesion_trabajador", auth.crear_sesion("trabajador", ident=cuil))
     cliente.cookies.set("cuil_trab", cuil)
     if sid:
         cliente.cookies.set("sind_elegido", str(sid))

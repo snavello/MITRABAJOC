@@ -16,19 +16,14 @@ actualizado: 2026-09-20
 
 ## Cómo seguir
 
-Bloque 4 arrancado (2026-09-20), primer lote de correcciones (las victorias
-rápidas del ranking) + el estado de resolución para el registro:
-- H-0001 Solucionado (SESSION_SECRET fail-closed).
-- H-0002 Parcial (default de la clave de plataforma eliminado; falta hashear
-  + usuarios nominales, H-0016).
-- H-0006 Solucionado en demo/prod (cookies Secure+SameSite; pruebas/local sin
-  Secure a propósito, mejora anotada en DESPLIEGUE_RENDER.md).
-- H-0008 Parcial (freno por IP en los cuatro logins; falta el perímetro).
-Bloquean producción: de 7 a 5. Corrida en `corridas/2026-09-20-1900-CORRECCIONES.md`.
-La página `/entornos/xsanders` ahora muestra Solucionado/Parcial/Pendiente con
-aclaración (verificado en el navegador). Plataforma 0.30.01.
+Bloque 4 en curso. Corregidos hasta ahora: H-0001 (Solucionado), H-0006
+(Solucionado demo/prod), H-0002 y H-0008 (Parcial), y **H-0004
+(Solucionado)** — el Crítico de riesgo 25: identidad firmada en el token,
+52 lecturas de cookie plana reemplazadas, 43 archivos de test verdes.
+Bloquean producción: **4**. Resolución: 3 Solucionado, 2 Parcial, 12
+Pendiente, 1 Aceptado.
 
-Sigue: el segundo lote del bloque 4 por el ranking —H-0004 (firmar la
-identidad, C3), H-0003 (usuario+contraseña en la landing, C3), H-0005
-(reemplazar el eval, C3)—, y en paralelo la pasada dinámica/destructiva
-contra Pruebas (AUT-02, IDS-01, DIS-01/02) que sigue pendiente.
+Sigue por el ranking: H-0003 (usuario+contraseña en la landing, C3), H-0005
+(reemplazar el eval del motor de fórmulas, C3), H-0002 (completar: hashear +
+usuarios nominales, con H-0016). Y la pasada dinámica/destructiva contra
+Pruebas, todavía pendiente (AUT-02 confirmaría H-0004 desde afuera).
