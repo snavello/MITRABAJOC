@@ -9,11 +9,17 @@
   <svg class="rec-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-recursos"/></svg>
   <div>
     <h2>Observabilidad</h2>
-    <p class="rec-lede">Estado de Pruebas, dónde se ve el detalle y a quién se avisa cuando algo falla. Todo se mide y se avisa desde afuera de la app: si esta pantalla no carga, los avisos igual llegan.</p>
+    <p class="rec-lede">Métricas, errores, estado de Pruebas, dónde se ve el detalle y a quién se avisa cuando algo falla. Todo se mide y se avisa desde afuera de la app: si esta pantalla no carga, los avisos igual llegan.</p>
   </div>
 </div>
 
 <div id="obs-aviso" class="aviso" hidden></div>
+
+<h3 class="planes-titulo">Métricas de Grafana (números y gráficos, sin iniciar sesión)</h3>
+<div id="obs-graficos"><div class="vacio">Consultando a Grafana…</div></div>
+
+<h3 class="planes-titulo">Errores de la app (Sentry)</h3>
+<div id="obs-sentry"><div class="vacio">Consultando a Sentry…</div></div>
 
 <h3 class="planes-titulo">Estado general</h3>
 <div class="planes-estado">
@@ -28,17 +34,11 @@
       <a class="boton" id="obs-abrir-grafana" href="#" target="_blank" rel="noopener" hidden>Abrir tablero en Grafana</a>
       <button type="button" class="boton" id="obs-actualizar">Actualizar métricas ahora</button>
     </span>
-    <span class="linea" style="font-size:12px; opacity:.7;">Los errores de la app se leen más abajo, en "Errores de la app (Sentry)".</span>
+    <span class="linea" style="font-size:12px; opacity:.7;">Los errores de la app se leen más arriba, en "Errores de la app (Sentry)".</span>
     <span class="linea" style="font-size:12px; opacity:.7;">Trae los datos de Render y los deja en Grafana (unos 10 s). Si la app estuviera caída, el mismo botón está en el tablero de Grafana (enlace a GitHub).</span>
   </div>
 </div>
 <div class="tests-lista" id="obs-reglas" style="margin-top:12px;"></div>
-
-<h3 class="planes-titulo">Gráficos (lo mismo que el tablero de Grafana, sin iniciar sesión)</h3>
-<div id="obs-graficos"><div class="vacio">Consultando a Grafana…</div></div>
-
-<h3 class="planes-titulo">Errores de la app (Sentry)</h3>
-<div id="obs-sentry"><div class="vacio">Consultando a Sentry…</div></div>
 
 <h3 class="planes-titulo">A quién se avisa</h3>
 <form class="plan-tarjeta" id="obs-form" style="max-width:520px;">
