@@ -522,7 +522,12 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     Observabilidad, y una fila "En vivo" que consulta a Render directo (fuente
     Infinity `render-vivo`, que guarda la API key de Render en Grafana: al rotarla,
     volver a correr `aplicar_tablero.py` con `RENDER_API_KEY`).
-    Falta: Sentry, métricas propias de la app y el detalle por sindicato.
+    **Sentry** (`sentry_config.py`): manda solo los errores no previstos, con la
+    referencia `ref` que la persona ve en pantalla, el rol y el ID del sindicato, y
+    SIN cuerpos de pedidos, cookies, IP, variables locales ni nombres (un CUIL o CUIT
+    suelto sí puede salir: decisión de SDN, es dato público). Variable `SENTRY_DSN`;
+    sin ella no hace nada.
+    Falta: métricas propias de la app, el detalle por sindicato y el resumen diario.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

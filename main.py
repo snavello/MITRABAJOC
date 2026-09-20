@@ -82,6 +82,7 @@ import render_admin
 import render_planes
 from observabilidad import panel as observabilidad_panel
 from observabilidad import hilo_colector
+import sentry_config
 import planificador
 from modulos import MODULOS, MODULOS_INICIALES
 import dashboard
@@ -90,6 +91,10 @@ import rag
 
 import mimetypes
 mimetypes.add_type("font/woff2", ".woff2")  # algunos Windows no lo traen registrado -> se servía como text/plain
+
+# Errores no previstos a Sentry, sin datos personales (sentry_config.py). Sin SENTRY_DSN no hace
+# nada. Va antes de crear la app para que el SDK se enganche a Starlette desde el principio.
+sentry_config.iniciar_desde_el_entorno(entorno.ENTORNO)
 
 app = FastAPI(title="Colm3na — validador de recibos")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -141,6 +146,23 @@ def _rol_de(path: str) -> str | None:
     return None
 
 
+def _capturar_en_sentry(request: Request, exc: Exception, ref: str, codigo: str) -> None:
+    """Manda el error a Sentry con lo mínimo para diagnosticarlo: el patrón de la ruta (no la URL,
+    que puede llevar un CUIL), el rol y el ID del sindicato de la sesión, y la referencia que la
+    persona ve en pantalla. Nunca lanza."""
+    try:
+        ruta = getattr(request.scope.get("route"), "path", "") or "(sin ruta)"
+        rol, sid = "", None
+        for r in COOKIES_POR_ROL:
+            ses = sesion_actual(request, r)
+            if ses:
+                rol, sid = r, ses.get("sid")
+                break
+        sentry_config.capturar(exc, ruta=ruta, rol=rol, sindicato_id=sid, ref=ref, codigo=codigo)
+    except Exception:
+        pass
+
+
 @app.exception_handler(Exception)
 async def error_no_manejado(request: Request, exc: Exception):
     """Red de seguridad: sin esto, cualquier excepción no prevista devuelve
@@ -168,6 +190,7 @@ async def error_no_manejado(request: Request, exc: Exception):
     codigo = errores.codigo_de_ruta(request.url.path)
     print(f"[{codigo} ref={ref}] {request.method} {request.url.path}")
     traceback.print_exc()
+    _capturar_en_sentry(request, exc, ref, codigo)
     if _es_navegacion_de_pagina(request):
         destino = _panel_de(request.url.path)
         if destino:
