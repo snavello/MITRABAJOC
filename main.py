@@ -103,6 +103,57 @@ sentry_config.iniciar_desde_el_entorno(entorno.ENTORNO)
 app = FastAPI(title="Colm3na — validador de recibos")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Cookies con Secure + SameSite (XSK H-0006). `Secure` hace que el navegador
+# nunca mande la cookie por HTTP. Se activa en los entornos con datos reales
+# (demo/prod), que Render sirve por HTTPS. Se deja apagado en `local` (HTTP) y
+# en `pruebas`: pruebas tiene datos sintéticos y, además, el harness de tests
+# (TestClient) habla HTTP y no reenviaría una cookie Secure, lo que rompería
+# ~75 archivos de test. Mejora pendiente para cubrir pruebas también: arrancar
+# uvicorn en Render con `--proxy-headers --forwarded-allow-ips="*"` (ver
+# DESPLIEGUE_RENDER.md) y decidir `Secure` por `request.url.scheme == "https"`.
+# `SameSite=Lax` acota el envío entre sitios y va en TODOS los entornos. Todo
+# set_cookie de sesión o identidad pasa por este helper, nunca `resp.set_cookie`.
+COOKIE_SECURE = entorno.ENTORNO in ("demo", "prod")
+
+
+def set_cookie_segura(respuesta, nombre, valor, max_age=None, samesite="lax"):
+    respuesta.set_cookie(
+        nombre, valor, httponly=True, secure=COOKIE_SECURE, samesite=samesite,
+        max_age=auth.IDLE_TIMEOUT_SEGUNDOS if max_age is None else max_age)
+
+
+# Límite de intentos de login (XSK H-0008). Antes ningún login tenía freno:
+# se podía tantear claves sin costo. Es un freno por IP, en memoria del
+# proceso (mismo criterio que el del PIN de la landing): N fallos seguidos
+# desde una IP y ese origen espera. Corrección PARCIAL a propósito: la IP
+# sale de X-Forwarded-For, que es falsificable, y el freno robusto de verdad
+# es el perímetro (Cloudflare, H-0008/INF-05); esto vuelve inútil el tanteo a
+# mano y encarece el automatizado, pero no reemplaza al perímetro.
+LOGIN_MAX_FALLOS = int(os.getenv("LOGIN_MAX_FALLOS", "10"))
+LOGIN_ESPERA_SEGUNDOS = int(os.getenv("LOGIN_ESPERA_SEGUNDOS", "60"))
+_intentos_login: dict[str, list] = {}
+
+
+def _login_bloqueado(request) -> bool:
+    import time
+    estado = _intentos_login.get(_ip_de(request))
+    return bool(estado) and estado[1] > time.time()
+
+
+def _login_fallo(request) -> None:
+    import time
+    estado = _intentos_login.setdefault(_ip_de(request), [0, 0.0])
+    estado[0] += 1
+    if estado[0] >= LOGIN_MAX_FALLOS:
+        estado[0] = 0
+        estado[1] = time.time() + LOGIN_ESPERA_SEGUNDOS
+    if len(_intentos_login) > 5000:      # que la tabla no crezca sin límite
+        _intentos_login.clear()
+
+
+def _login_ok(request) -> None:
+    _intentos_login.pop(_ip_de(request), None)
+
 
 @app.get("/sw.js")
 def service_worker():
@@ -329,13 +380,12 @@ async def renovar_sesion_por_actividad(request: Request, call_next):
             hubo_sesion_valida = True
             if not _ya_seteada(nombre_cookie):
                 nuevo = auth.crear_sesion(rol, payload.get("uid", 0), payload.get("sid", 0))
-                respuesta.set_cookie(nombre_cookie, nuevo, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+                set_cookie_segura(respuesta, nombre_cookie, nuevo)
     if hubo_sesion_valida:
         for cookie_extra in ("cuil_trab", "sind_elegido", "cuit_emp", "sind_elegido_emp"):
             valor = request.cookies.get(cookie_extra)
             if valor and not _ya_seteada(cookie_extra):
-                respuesta.set_cookie(cookie_extra, valor, httponly=True,
-                                      max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+                set_cookie_segura(respuesta, cookie_extra, valor)
     return respuesta
 
 
@@ -1351,17 +1401,21 @@ def admin_inicio(request: Request):
 
 
 @app.post("/admin/login")
-def admin_login(usuario: str = Form(...), clave: str = Form(...)):
+def admin_login(request: Request, usuario: str = Form(...), clave: str = Form(...)):
+    if _login_bloqueado(request):
+        return RedirectResponse("/admin?error=espera", status_code=303)
     cuit = _norm_cuil(usuario)   # todos los usuarios se identifican con CUIT/CUIL
     with db.get_session() as s:
         user = s.exec(select(UsuarioSindicato).where(
             UsuarioSindicato.usuario == cuit, UsuarioSindicato.activo == True)).first()
         if not user or not auth.verificar_clave(clave, user.clave_hash):
+            _login_fallo(request)
             return RedirectResponse("/admin?error=1", status_code=303)
         token = auth.crear_sesion("sindicato", id_usuario=user.id, sindicato_id=user.sindicato_id)
         db.registrar_acceso("admin", sindicato_id=user.sindicato_id)
+    _login_ok(request)
     resp = RedirectResponse("/admin/inicio", status_code=303)
-    resp.set_cookie(COOKIE_SINDICATO, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    set_cookie_segura(resp, COOKIE_SINDICATO, token)
     return resp
 
 
@@ -4648,13 +4702,17 @@ def servir_recibo_sospechoso(recibo_id: int, request: Request):
 
 
 @app.post("/plataforma/login")
-def plataforma_login(response: Response, cuit: str = Form(...), clave: str = Form(...)):
+def plataforma_login(request: Request, response: Response, cuit: str = Form(...), clave: str = Form(...)):
+    if _login_bloqueado(request):
+        return RedirectResponse("/plataforma?error=espera", status_code=303)
     if not auth.verificar_plataforma(clave, cuit):
+        _login_fallo(request)
         return RedirectResponse("/plataforma?error=1", status_code=303)
+    _login_ok(request)
     token = auth.crear_sesion("plataforma")
     db.registrar_acceso("plataforma")
     resp = RedirectResponse("/plataforma/inicio", status_code=303)
-    resp.set_cookie(COOKIE_PLATAFORMA, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    set_cookie_segura(resp, COOKIE_PLATAFORMA, token)
     return resp
 
 
@@ -5586,12 +5644,16 @@ def ingresar(request: Request):
 
 @app.post("/trabajador/login")
 def trabajador_login(request: Request, cuil: str = Form(...), clave: str = Form(...)):
+    if _login_bloqueado(request):
+        return RedirectResponse("/ingresar?error=espera", status_code=303)
     cuil = _norm_cuil(cuil)
     with db.get_session() as s:
         cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
         if not cuenta or not auth.verificar_clave(clave, cuenta.clave_hash):
+            _login_fallo(request)
             return RedirectResponse("/ingresar?error=login", status_code=303)
         cuenta_id = cuenta.id   # capturar el id ANTES de cerrar la sesión
+    _login_ok(request)
     sinds = db.sindicatos_de_cuil(cuil)
     if not sinds:
         return RedirectResponse("/ingresar?error=sinsind", status_code=303)
@@ -5599,8 +5661,8 @@ def trabajador_login(request: Request, cuil: str = Form(...), clave: str = Form(
     db.registrar_acceso("trabajador", sindicato_id=sinds[0]["id"] if len(sinds) == 1 else None)
     # sindicato_id 0 = todavía no eligió; se define en /elegir o directo si hay uno solo
     resp = RedirectResponse("/app/inicio", status_code=303)
-    resp.set_cookie(COOKIE_TRABAJADOR, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
-    resp.set_cookie("cuil_trab", cuil, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    set_cookie_segura(resp, COOKIE_TRABAJADOR, token)
+    set_cookie_segura(resp, "cuil_trab", cuil)
     return resp
 
 
@@ -5680,8 +5742,8 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
         s.commit()
     token = auth.crear_sesion("trabajador", sindicato_id=0)
     resp = RedirectResponse("/app/inicio", status_code=303)
-    resp.set_cookie(COOKIE_TRABAJADOR, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
-    resp.set_cookie("cuil_trab", cuil, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    set_cookie_segura(resp, COOKIE_TRABAJADOR, token)
+    set_cookie_segura(resp, "cuil_trab", cuil)
     return resp
 
 
@@ -5945,7 +6007,7 @@ def servir_foto_perfil(cuil: str, request: Request):
 @app.get("/app/elegir/{sindicato_id}")
 def app_elegir(sindicato_id: int, request: Request):
     resp = RedirectResponse("/app/inicio", status_code=303)
-    resp.set_cookie("sind_elegido", str(sindicato_id), httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    set_cookie_segura(resp, "sind_elegido", str(sindicato_id))
     return resp
 
 
@@ -6036,20 +6098,24 @@ def ingresar_empresa(request: Request):
 
 @app.post("/empresa/login")
 def empresa_login(request: Request, cuit: str = Form(...), clave: str = Form(...)):
+    if _login_bloqueado(request):
+        return RedirectResponse("/ingresar-empresa?error=espera", status_code=303)
     cuit = _norm_cuil(cuit)
     with db.get_session() as s:
         cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == cuit)).first()
         if not cuenta or not auth.verificar_clave(clave, cuenta.clave_hash):
+            _login_fallo(request)
             return RedirectResponse("/ingresar-empresa?error=login", status_code=303)
         cuenta_id = cuenta.id   # capturar el id ANTES de cerrar la sesión
+    _login_ok(request)
     sinds = db.sindicatos_de_cuit_empleador(cuit)
     if not sinds:
         return RedirectResponse("/ingresar-empresa?error=sinsind", status_code=303)
     token = auth.crear_sesion("empleador", id_usuario=cuenta_id, sindicato_id=0)
     db.registrar_acceso("empresa", sindicato_id=sinds[0]["id"] if len(sinds) == 1 else None)
     resp = RedirectResponse("/empresa/inicio", status_code=303)
-    resp.set_cookie(COOKIE_EMPLEADOR, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
-    resp.set_cookie("cuit_emp", cuit, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    set_cookie_segura(resp, COOKIE_EMPLEADOR, token)
+    set_cookie_segura(resp, "cuit_emp", cuit)
     return resp
 
 
@@ -6072,8 +6138,8 @@ def empresa_registro(request: Request, cuit: str = Form(...), clave: str = Form(
         s.commit()
     token = auth.crear_sesion("empleador", sindicato_id=0)
     resp = RedirectResponse("/empresa/inicio", status_code=303)
-    resp.set_cookie(COOKIE_EMPLEADOR, token, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
-    resp.set_cookie("cuit_emp", cuit, httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    set_cookie_segura(resp, COOKIE_EMPLEADOR, token)
+    set_cookie_segura(resp, "cuit_emp", cuit)
     return resp
 
 
@@ -6161,7 +6227,7 @@ def app_empresa(request: Request):
 @app.get("/empresa/elegir/{sindicato_id}")
 def empresa_elegir(sindicato_id: int, request: Request):
     resp = RedirectResponse("/empresa/inicio", status_code=303)
-    resp.set_cookie("sind_elegido_emp", str(sindicato_id), httponly=True, max_age=auth.IDLE_TIMEOUT_SEGUNDOS)
+    set_cookie_segura(resp, "sind_elegido_emp", str(sindicato_id))
     return resp
 
 
@@ -6351,8 +6417,7 @@ def entornos_pin(request: Request, pin: str = Form(""), siguiente: str = Form(""
         return RedirectResponse(f"/entornos?aviso=pin{cola}", status_code=303)
     _intentos_pin.pop(ip, None)
     resp = RedirectResponse(siguiente or "/entornos", status_code=303)
-    resp.set_cookie(recursos.COOKIE_PASE, recursos.crear_pase(), httponly=True,
-                    samesite="lax", max_age=recursos.PASE_SEGUNDOS)
+    set_cookie_segura(resp, recursos.COOKIE_PASE, recursos.crear_pase(), max_age=recursos.PASE_SEGUNDOS)
     return resp
 
 

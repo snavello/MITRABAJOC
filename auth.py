@@ -29,9 +29,28 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-CLAVE_PLATAFORMA = os.getenv("PLATAFORMA_PASSWORD", "plataforma-demo-2026")
+def _requerido(nombre: str, ayuda: str) -> str:
+    """Una variable de entorno que NO puede faltar ni caer a un default: si
+    no está, la app no arranca (mismo criterio que DATABASE_URL en db.py).
+    Antes SESSION_SECRET y PLATAFORMA_PASSWORD tenían un default escrito en
+    el código (XSK H-0001/H-0002): sin la variable, se firmaba con un secreto
+    público y se entraba a plataforma con la clave del repositorio. Ahora
+    fallan cerrado. Los valores reales viven en el .env (local) y en Render."""
+    valor = os.getenv(nombre, "").strip()
+    if not valor:
+        raise RuntimeError(
+            f"Falta {nombre}: es obligatoria y no tiene valor por defecto.\n"
+            f"  - {ayuda}\n"
+            "  - Desarrollo local: ponela en el .env (ver .env.example).\n"
+            "  - Render: cargala en las variables del servicio.")
+    return valor
+
+
+CLAVE_PLATAFORMA = _requerido(
+    "PLATAFORMA_PASSWORD", "Es la clave del panel de plataforma; elegí una fuerte.")
 CUIT_PLATAFORMA = os.getenv("PLATAFORMA_CUIT", "20000000000")
-SECRETO = os.getenv("SESSION_SECRET", "cambiar-este-secreto-en-produccion")
+SECRETO = _requerido(
+    "SESSION_SECRET", "Firma todas las cookies de sesión; usá una cadena larga y aleatoria.")
 
 # Sesión por inactividad (sliding window): cada request autenticado reemite
 # el token con la marca de tiempo actual (ver middleware en main.py), así que

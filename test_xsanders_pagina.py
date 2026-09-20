@@ -33,8 +33,14 @@ def test_con_pase_devuelve_el_tablero():
     assert r.status_code == 200
     d = r.json()
     # Estructura que la página espera.
-    for clave in ("avance", "resumen", "ranking", "bloquean", "catalogo_por_eje", "ejes", "puede_salir"):
+    for clave in ("avance", "resumen", "ranking", "bloquean", "catalogo_por_eje",
+                  "ejes", "puede_salir", "hallazgos", "por_resolucion"):
         assert clave in d, f"falta {clave}"
+    # El tri-estado de resolución cubre a todos los hallazgos.
+    assert sum(d["por_resolucion"].values()) == len(d["hallazgos"])
+    assert set(d["por_resolucion"]) == {"solucionado", "parcial", "pendiente", "aceptado"}
+    for h in d["hallazgos"]:
+        assert h["resolucion"] in ("solucionado", "parcial", "pendiente", "aceptado")
     assert len(d["avance"]["etapas"]) == 10
     assert set(d["ejes"]) == set(main.xsk_tablero.registro.EJES)
     # El catálogo real tiene tests en los nueve ejes.

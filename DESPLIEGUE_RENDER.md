@@ -27,6 +27,13 @@ corre solo en cada deploy** (Pre-Deploy Command), ya no a mano.
   anterior. (Se usa `python -m alembic` y no `alembic` porque en la Shell
   de Render el ejecutable no siempre está en el PATH.)
 - Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+  - **Mejora de seguridad pendiente (XSK H-0006)**: agregar
+    `--proxy-headers --forwarded-allow-ips="*"` para que la app vea el
+    esquema real (`https`) y la IP real detrás del proxy de Render. Hoy sin
+    esto el esquema llega como `http`, así que el flag `Secure` de las
+    cookies se decide por entorno (solo demo/prod, ver `main.COOKIE_SECURE`).
+    Con el flag, se puede pasar a decidir `Secure` por `request.url.scheme`
+    y cubrir también Pruebas.
 - **Health Check Path: `/healthz`** (Settings → Health & Alerts). Es la
   pregunta "¿el proceso está vivo?": responde 200 sin tocar la base y sin
   usar el threadpool, así contesta aun con la app saturada. Hasta el
