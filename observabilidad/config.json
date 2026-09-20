@@ -3,7 +3,9 @@
   "grafana": {
     "url": "https://braveorange1921.grafana.net",
     "carpeta_uid": "colm3na-pruebas",
-    "carpeta_titulo": "Colm3na · Pruebas"
+    "carpeta_titulo": "Colm3na · Pruebas",
+    "tablero_uid": "colm3na-pruebas-estado",
+    "tablero_titulo": "Pruebas · Estado general"
   },
   "alertas": {
     "_ayuda": "Un solo destinatario por ahora. repeat_interval = cada cuánto se repite el recordatorio de un problema que SIGUE abierto (no cada cuánto se evalúa). Formatos: 30s, 5m, 12h, 24h.",
@@ -49,6 +51,66 @@
         "alerta": "Base de datos no responde (Pruebas)",
         "evento": "base-caida",
         "descripcion": "/readyz falla: la app vive pero la base no contesta un SELECT 1 a tiempo. Ver docs/OPERATIVA.md §9."
+      }
+    ]
+  },
+  "metricas_render": {
+    "_ayuda": "Colector de métricas de Render -> Grafana Cloud (colector_render.py, corre en GitHub Actions cada 5 min). Cada corrida re-manda los últimos `ventana_min` minutos para no dejar huecos si una corrida se atrasa. Los ids y la URL no son secretos; los tokens van por variable de entorno.",
+    "entorno": "pruebas",
+    "recursos": {
+      "web": "srv-dacrg02jnfac73a0mes0",
+      "db": "dpg-dacr7psmqu1s739kttq0-a"
+    },
+    "remote_write": {
+      "url": "https://prometheus-prod-67-prod-us-west-0.grafana.net/api/prom/push",
+      "usuario": "3597060"
+    },
+    "ventana_min": 20,
+    "resolucion_s": 60,
+    "alertas": [
+      {
+        "id": "5xx",
+        "evento": "errores-5xx",
+        "titulo": "Muchos errores del servidor (Pruebas)",
+        "expr": "100 * (sum(sum_over_time(render_http_requests{entorno=\"__ENTORNO__\",status_code=~\"5..\"}[10m])) or vector(0)) / sum(sum_over_time(render_http_requests{entorno=\"__ENTORNO__\"}[10m])) and on() sum(sum_over_time(render_http_requests{entorno=\"__ENTORNO__\"}[10m])) >= 20",
+        "operador": "gt",
+        "umbral": 5,
+        "para_min": 2,
+        "sin_datos": "OK",
+        "descripcion": "Más del 5 % de los pedidos de los últimos 10 minutos terminaron con un error del servidor (5xx), con al menos 20 pedidos en la ventana. Suele ser un deploy que se rompió o la base saturada. Ver docs/OPERATIVA.md §9."
+      },
+      {
+        "id": "cpu",
+        "evento": "cpu-al-limite",
+        "titulo": "CPU al límite (Pruebas)",
+        "expr": "100 * max by (servicio) (last_over_time(render_cpu_cores{entorno=\"__ENTORNO__\"}[15m]) / last_over_time(render_cpu_limit_cores{entorno=\"__ENTORNO__\"}[15m]))",
+        "operador": "gt",
+        "umbral": 95,
+        "para_min": 30,
+        "sin_datos": "OK",
+        "descripcion": "La app o la base llevan más de 30 minutos por encima del 95 % de la CPU de su plan. Es capacidad, no un defecto: ver el tablero y evaluar subir el plan (decisión de AKG)."
+      },
+      {
+        "id": "memoria",
+        "evento": "memoria-al-limite",
+        "titulo": "Memoria al límite (Pruebas)",
+        "expr": "100 * max by (servicio) (last_over_time(render_memory_bytes{entorno=\"__ENTORNO__\"}[15m]) / last_over_time(render_memory_limit_bytes{entorno=\"__ENTORNO__\"}[15m]))",
+        "operador": "gt",
+        "umbral": 95,
+        "para_min": 30,
+        "sin_datos": "OK",
+        "descripcion": "La app o la base llevan más de 30 minutos por encima del 95 % de la memoria de su plan. Riesgo de que Render reinicie el servicio por falta de memoria."
+      },
+      {
+        "id": "colector",
+        "evento": "colector-mudo",
+        "titulo": "El colector de métricas no corre (Pruebas)",
+        "expr": "(time() - max(last_over_time(render_colector_ultima_corrida_segundos{entorno=\"__ENTORNO__\"}[3h]))) / 60",
+        "operador": "gt",
+        "umbral": 30,
+        "para_min": 5,
+        "sin_datos": "Alerting",
+        "descripcion": "Hace más de 30 minutos que el colector de métricas de Render no escribe en Grafana: el tablero y las alertas de CPU, memoria y errores miran datos viejos. Revisar la pestaña Actions del repo (workflow 'Métricas de Render a Grafana') y que RENDER_API_KEY siga vigente."
       }
     ]
   }

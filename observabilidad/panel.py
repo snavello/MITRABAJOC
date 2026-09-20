@@ -62,7 +62,8 @@ def estado() -> dict:
     out = {
         "configurado": configurado(),
         "grafana_url": url,
-        "tablero_url": f"{url}/dashboards/f/{cfg_repo['grafana']['carpeta_uid']}" if url else "",
+        # Directo al tablero de estado (no a la carpeta): el clic tiene que llevar a lo que se busca.
+        "tablero_url": f"{url}/d/{cfg_repo['grafana']['tablero_uid']}" if url else "",
         "sentry_url": os.getenv("SENTRY_URL", "").strip(),
         "puede_configurar": bool(os.getenv("GRAFANA_TOKEN_CONFIG", "").strip()),
         "intervalos": list(INTERVALOS),

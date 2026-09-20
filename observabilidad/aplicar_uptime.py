@@ -29,8 +29,10 @@ from pathlib import Path
 if __package__ in (None, ""):                       # `python observabilidad/aplicar_uptime.py`
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import aplicar_grafana as ag
+    import reglas
 else:                                               # importado como parte del paquete
     from . import aplicar_grafana as ag
+    from . import reglas
 
 SEGUNDOS_POR_MES = 30 * 24 * 3600
 ETIQUETA_DE_SERVICIO = {"app": "app", "base": "base"}
@@ -122,38 +124,16 @@ def payload_regla(cfg: dict, chk: dict) -> dict:
     """Regla de Grafana: dispara si probe_success, tomando el MEJOR resultado entre
     todas las ubicaciones, es menor que 1 durante `falla_minutos` seguidos."""
     u = cfg["uptime"]
-    consulta = f'max by (job) (probe_success{{job="{chk["job"]}"}})'
-    expr = {"type": "__expr__", "uid": "__expr__"}
-    return {
-        "uid": uid_de_regla(cfg, chk),
-        "title": chk["alerta"],
-        "ruleGroup": "uptime",
-        "folderUID": cfg["grafana"]["carpeta_uid"],
-        "orgID": 1,
-        "condition": "C",
-        "for": f"{chk['falla_minutos']}m",
-        "noDataState": "NoData",           # el monitor dejó de reportar: se avisa, no se calla
-        "execErrState": "Error",
-        "isPaused": False,
-        "labels": {"entorno": u["entorno"], "evento": chk["evento"]},
-        "annotations": {
-            "summary": chk["alerta"],
-            "description": f"{chk['descripcion']} Desde {', '.join(u['probes'])} durante "
-                           f"más de {chk['falla_minutos']} minutos.",
-        },
-        "data": [
-            {"refId": "A", "relativeTimeRange": {"from": 900, "to": 0},
-             "datasourceUid": "grafanacloud-prom",
-             "model": {"editorMode": "code", "expr": consulta, "instant": True,
-                       "intervalMs": 1000, "maxDataPoints": 43200, "refId": "A"}},
-            {"refId": "B", "relativeTimeRange": {"from": 0, "to": 0}, "datasourceUid": "__expr__",
-             "model": {"type": "reduce", "expression": "A", "reducer": "last", "refId": "B",
-                       "settings": {"mode": "dropNN"}, "datasource": expr}},
-            {"refId": "C", "relativeTimeRange": {"from": 0, "to": 0}, "datasourceUid": "__expr__",
-             "model": {"type": "threshold", "expression": "B", "refId": "C",
-                       "conditions": [{"evaluator": {"params": [1], "type": "lt"}}], "datasource": expr}},
-        ],
-    }
+    return reglas.regla_umbral(
+        uid=uid_de_regla(cfg, chk), titulo=chk["alerta"], grupo="uptime",
+        carpeta_uid=cfg["grafana"]["carpeta_uid"],
+        expr=f'max by (job) (probe_success{{job="{chk["job"]}"}})',
+        operador="lt", umbral=1, para_minutos=chk["falla_minutos"],
+        labels={"entorno": u["entorno"], "evento": chk["evento"]},
+        resumen=chk["alerta"],
+        descripcion=f"{chk['descripcion']} Desde {', '.join(u['probes'])} durante "
+                    f"más de {chk['falla_minutos']} minutos.",
+        sin_datos="NoData")            # el monitor dejó de reportar: se avisa, no se calla
 
 
 # ---------- Grafana ----------
