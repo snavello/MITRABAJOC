@@ -13,6 +13,7 @@ Correr con: .venv/Scripts/python.exe -m pytest test_autolink_api_validar.py -q
 import db
 from db import Sindicato, Trabajador, Concepto
 import main
+import auth
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
@@ -28,6 +29,7 @@ with db.get_session() as s:
 db.crear_conceptos_universales(SID)
 
 client = TestClient(main.app)
+client.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", ident="20111111119"))
 client.cookies.set("cuil_trab", "20111111119")
 
 
@@ -94,6 +96,7 @@ def test_no_se_vincula_si_el_sindicato_no_tiene_el_generico_cargado():
     # OJO: acá NO se llama a crear_conceptos_universales — el sindicato no
     # tiene JUBILACION cargado todavía.
     client2 = TestClient(main.app)
+    client2.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", ident="20222222220"))
     client2.cookies.set("cuil_trab", "20222222220")
     payload = _payload()
     payload["recibo"]["empleado"]["cuil"] = "20222222220"

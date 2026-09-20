@@ -594,14 +594,18 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     se recorre a mano (`_ev_nodo`), sin escape de sandbox posible—. El
     registro y la página `/entornos/xsanders` muestran el estado
     **Solucionado / Parcial / Pendiente / Aceptado** con aclaración por
-    hallazgo (4 Solucionado, 2 Parcial, 11 Pendiente, 1 Aceptado). Trabajador
-    0.39.03, Admin 0.42.04, Plataforma 0.30.01. Sigue: H-0003
-    (usuario+contraseña en la landing) y completar H-0002 (hashear + usuarios
-    nominales) —ambos en el terreno de R1, conviene tratarlos juntos—.
-    **Primera pasada dinámica hecha** (HTTP real contra uvicorn local):
-    AUT-02 confirmó H-0004 (verificado), IDS-01 confirmó el freno de H-0008,
-    DIS-04 confirmó H-0018 abierto. Falta AUT-03, carga (DIS-01/02) y
-    repetir contra Pruebas desplegado.
+    hallazgo. Además, lote de fixes chicos: **H-0007 Parcial** (cabeceras de
+    seguridad —nosniff, X-Frame-Options, Referrer-Policy, CSP, HSTS en
+    demo/prod—; CSP permisiva por el inline, endurecer con nonces pendiente),
+    **H-0009 Solucionado** (PBKDF2 600k, formato versionado backward-compat) y
+    **H-0013 Aceptado** (CUIL/CUIT es dato público). Estado: **5 Solucionado,
+    3 Parcial, 8 Pendiente, 2 Aceptado; bloquean 3**. Trabajador 0.39.03,
+    Admin 0.42.04, Plataforma 0.30.02. **Primera pasada dinámica hecha**
+    (HTTP real, uvicorn local): AUT-02 confirmó H-0004 (verificado), IDS-01
+    el freno de H-0008, DIS-04 H-0018 abierto. Lo que queda son piezas
+    grandes: sub-sprint R1 (H-0002/H-0003/H-0016), perímetro INF-05 (H-0008,
+    necesita dominio+Cloudflare), y lotes menores (H-0018, H-0014+H-0015,
+    H-0010+H-0012), más carga (DIS-01/02) y repetir la dinámica contra Pruebas.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

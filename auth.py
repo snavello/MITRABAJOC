@@ -58,19 +58,48 @@ SECRETO = _requerido(
 IDLE_TIMEOUT_SEGUNDOS = 15 * 60
 
 # ---------- Hash de contraseñas ----------
+# PBKDF2-HMAC-SHA256. El costo (iteraciones) subió de 100.000 a 600.000, la
+# guía OWASP 2023 (XSK H-0009). El formato NUEVO incluye el número de
+# iteraciones (`sha256$600000$sal$hash`) para poder cambiarlo sin romper las
+# claves ya guardadas: un hash VIEJO (`sal$hash`, sin iteraciones) se sigue
+# validando a 100.000, y se re-hashea al costo nuevo la próxima vez que la
+# persona cambie la clave.
+ITERACIONES = 600_000
+ITERACIONES_LEGADO = 100_000
+
+
 def hashear_clave(clave: str) -> str:
-    """Devuelve 'sal$hash' usando PBKDF2-HMAC-SHA256."""
+    """Devuelve 'sha256$<iter>$sal$hash' usando PBKDF2-HMAC-SHA256."""
     sal = secrets.token_hex(16)
-    dk = hashlib.pbkdf2_hmac("sha256", clave.encode(), sal.encode(), 100_000)
-    return f"{sal}${dk.hex()}"
+    dk = hashlib.pbkdf2_hmac("sha256", clave.encode(), sal.encode(), ITERACIONES)
+    return f"sha256${ITERACIONES}${sal}${dk.hex()}"
 
 
 def verificar_clave(clave: str, clave_hash: str) -> bool:
-    if not clave_hash or "$" not in clave_hash:
+    if not clave_hash:
         return False
-    sal, guardado = clave_hash.split("$", 1)
-    dk = hashlib.pbkdf2_hmac("sha256", clave.encode(), sal.encode(), 100_000)
+    partes = clave_hash.split("$")
+    if len(partes) == 4 and partes[0] == "sha256":      # formato nuevo con iteraciones
+        try:
+            iteraciones = int(partes[1])
+        except ValueError:
+            return False
+        sal, guardado = partes[2], partes[3]
+    elif len(partes) == 2:                               # formato legado: sal$hash, 100.000
+        sal, guardado = partes
+        iteraciones = ITERACIONES_LEGADO
+    else:
+        return False
+    dk = hashlib.pbkdf2_hmac("sha256", clave.encode(), sal.encode(), iteraciones)
     return hmac.compare_digest(dk.hex(), guardado)
+
+
+def hash_desactualizado(clave_hash: str) -> bool:
+    """True si el hash usa un formato o costo viejo y conviene re-hashearlo
+    (al próximo login/cambio de clave). Hoy: cualquier hash que no sea el
+    formato nuevo con las iteraciones vigentes."""
+    partes = (clave_hash or "").split("$")
+    return not (len(partes) == 4 and partes[0] == "sha256" and partes[1] == str(ITERACIONES))
 
 
 # ---------- Sesiones (cookie firmada) ----------

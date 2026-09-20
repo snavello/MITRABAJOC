@@ -11,6 +11,7 @@ Correr con: .venv/Scripts/python.exe -m pytest test_reportar_sindicato_correcto.
 import db
 from db import Sindicato, Trabajador
 import main
+import auth
 from fastapi.testclient import TestClient
 
 db.crear_tablas()
@@ -31,6 +32,7 @@ with db.get_session() as s:
 assert SID_REAL == 2, "el test asume que el sindicato real quedó con id=2"
 
 client = TestClient(main.app)
+client.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", ident="20222222224"))
 client.cookies.set("cuil_trab", "20222222224")
 
 

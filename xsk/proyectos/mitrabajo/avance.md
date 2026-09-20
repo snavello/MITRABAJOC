@@ -16,13 +16,16 @@ actualizado: 2026-09-20
 
 ## Cómo seguir
 
-Bloque 4 en curso. Solucionados: H-0001, H-0006, H-0004 y **H-0005** (el
-eval del motor de fórmulas, reemplazado por un evaluador seguro con `ast`).
-Parciales: H-0002, H-0008. Bloquean producción: **3**. Resolución: 4
-Solucionado, 2 Parcial, 11 Pendiente, 1 Aceptado.
+Bloque 4, lote de fixes chicos cerrado: H-0007 (cabeceras de seguridad,
+Parcial — CSP permisiva por el inline), H-0009 (PBKDF2 600k, Solucionado) y
+H-0013 (Aceptado — CUIL/CUIT es dato público). Estado: **5 Solucionado, 3
+Parcial, 8 Pendiente, 2 Aceptado; bloquean 3**.
 
-Quedan bloqueando: H-0003 (usuario+contraseña en la landing, C3) y H-0002
-(completar: hashear la clave de plataforma + usuarios nominales, con H-0016).
-Ambos entran en el terreno de R1 (usuarios de plataforma nominales), así que
-conviene tratarlos juntos como un sub-sprint. Y sigue pendiente la pasada
-dinámica/destructiva contra Pruebas.
+Lo que queda, en tres frentes (ya no son fixes sueltos):
+1. **Sub-sprint R1** (usuarios de plataforma nominales): cierra H-0002,
+   H-0003 y H-0016. Necesita decisiones de producto de SDN.
+2. **Perímetro (INF-05)**: cierra H-0008 del todo; depende de dominio propio
+   + Cloudflare (faltantes de la etapa 0).
+3. Lotes menores: H-0018 (decisión sobre el panel cross-entorno), H-0014
+   (deps con CVE) + H-0015 (CI), H-0010 + H-0012 (con un cambio de sesión).
+Y la carga (DIS-01/02) + repetir la dinámica contra Pruebas desplegado.
