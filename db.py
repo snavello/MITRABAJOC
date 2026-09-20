@@ -1619,6 +1619,38 @@ SUPERADMINS_INICIALES = [
 ]
 
 
+def email_plataforma_en_uso(email: str, excepto_id: Optional[int] = None) -> bool:
+    """¿Ya hay otro usuario de plataforma con ese mail? (único, sirve a futuro
+    para recuperación de clave). Compara normalizado en minúsculas."""
+    e = (email or "").strip().lower()
+    if not e:
+        return False
+    with Session(engine) as s:
+        q = select(UsuarioPlataforma).where(UsuarioPlataforma.email == e)
+        return any(u.id != excepto_id for u in s.exec(q).all())
+
+
+def completar_usuario_plataforma(uid: int, clave_hash: str, cuil: str, dni: str,
+                                 email: str, direccion: str, telefono: str) -> None:
+    """Primer ingreso: fija la clave definitiva, marca la cuenta como completa
+    y guarda los datos obligatorios (SPRINT_R1.md)."""
+    with Session(engine) as s:
+        u = s.get(UsuarioPlataforma, uid)
+        if not u:
+            return
+        u.clave_hash = clave_hash
+        u.debe_cambiar_clave = False
+        u.clave_vence = None
+        u.debe_completar_datos = False
+        u.cuil = (cuil or "").strip()
+        u.dni = (dni or "").strip()
+        u.email = (email or "").strip().lower()
+        u.direccion = (direccion or "").strip()
+        u.telefono = (telefono or "").strip()
+        s.add(u)
+        s.commit()
+
+
 def sembrar_superadmins_iniciales() -> int:
     """Crea los superadmin iniciales que falten (idempotente). Devuelve
     cuántos creó. La clave inicial es transitoria (debe_cambiar_clave) y sin

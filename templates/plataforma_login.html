@@ -101,14 +101,19 @@
     <div class="banda"></div>
     <img class="logo" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Colm3na">
     <div class="chip-rol">Plataforma</div>
-    {% if request.query_params.get('error') %}
-    <div class="error">Clave incorrecta. Probá de nuevo.</div>
+    {% set err = request.query_params.get('error') %}
+    {% if err == 'espera' %}
+    <div class="error">Demasiados intentos. Esperá un minuto y probá de nuevo.</div>
+    {% elif err == 'vencida' %}
+    <div class="error">La clave transitoria venció. Pedile a un superadmin que te reemita una.</div>
+    {% elif err %}
+    <div class="error">Usuario o clave incorrectos. Probá de nuevo.</div>
     {% endif %}
 
     <form method="post" action="/plataforma/login">
-      <label for="cuit">CUIT / CUIL</label>
-      <input type="text" id="cuit" name="cuit" inputmode="numeric" placeholder="20123456789" autofocus required>
-      <label for="clave">Clave de plataforma</label>
+      <label for="usuario">Usuario</label>
+      <input type="text" id="usuario" name="usuario" placeholder="usuario" autofocus required>
+      <label for="clave">Clave</label>
       <input type="password" id="clave" name="clave" required>
       <button class="enviar" type="submit">Ingresar</button>
       <div class="ayuda">Administración central de Colm3na.</div>

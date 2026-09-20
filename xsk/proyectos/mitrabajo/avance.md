@@ -16,16 +16,14 @@ actualizado: 2026-09-20
 
 ## Cómo seguir
 
-Bloque 4, lote de fixes chicos cerrado: H-0007 (cabeceras de seguridad,
-Parcial — CSP permisiva por el inline), H-0009 (PBKDF2 600k, Solucionado) y
-H-0013 (Aceptado — CUIL/CUIT es dato público). Estado: **5 Solucionado, 3
-Parcial, 8 Pendiente, 2 Aceptado; bloquean 3**.
+Sub-sprint R1 (SPRINT_R1.md) etapas 0 y 1 hechas: modelo + siembra de los
+dos superadmin + login nominal con primer ingreso forzado (cambio de clave +
+carga de datos) + bitácora de login. Verificado en el navegador. H-0016 pasó
+a Parcial. Plataforma 0.31.01.
 
-Lo que queda, en tres frentes (ya no son fixes sueltos):
-1. **Sub-sprint R1** (usuarios de plataforma nominales): cierra H-0002,
-   H-0003 y H-0016. Necesita decisiones de producto de SDN.
-2. **Perímetro (INF-05)**: cierra H-0008 del todo; depende de dominio propio
-   + Cloudflare (faltantes de la etapa 0).
-3. Lotes menores: H-0018 (decisión sobre el panel cross-entorno), H-0014
-   (deps con CVE) + H-0015 (CI), H-0010 + H-0012 (con un cambio de sesión).
-Y la carga (DIS-01/02) + repetir la dinámica contra Pruebas desplegado.
+Sigue en R1: etapa 2 (`/entornos` con el mismo login), etapa 3 (gestión de
+usuarios solo superadmin: alta con clave transitoria de 7 días, edición,
+activar/desactivar, resetear), etapa 4 (cerrar la transición: sacar el
+genérico y el PIN → ahí H-0002/H-0003/H-0016 pasan a Solucionado).
+En paralelo siguen: perímetro INF-05 (H-0008), H-0018, H-0014/H-0015,
+carga DIS-01/02.

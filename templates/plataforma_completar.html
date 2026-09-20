@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Colm3na — Completá tu cuenta</title>
+<style>
+  :root {
+    --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
+    --acento: {{ marca_plataforma.color_acento if marca_plataforma else '#E5188F' }};
+    --alerta: #ff8c42;
+  }
+  * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
+  body { min-height:100vh; padding:32px 16px 60px; color:#fff; display:flex; justify-content:center; align-items:flex-start;
+    background:radial-gradient(900px 480px at 78% -10%, color-mix(in srgb, var(--tinta) 40%, transparent), transparent 62%),
+               linear-gradient(160deg, #0d1626 20%, var(--tinta) 75%); }
+  .caja { width:100%; max-width:560px; background:rgba(9,15,26,.55); border:1px solid rgba(255,255,255,.12);
+    border-radius:20px; padding:28px 26px; box-shadow:0 24px 60px rgba(0,0,0,.45); }
+  h1 { font-size:22px; margin-bottom:4px; }
+  .lede { font-size:13.5px; color:rgba(255,255,255,.6); margin-bottom:20px; }
+  .lede b { color:#fff; }
+  label { display:block; font-size:12px; letter-spacing:.5px; text-transform:uppercase; color:rgba(255,255,255,.55);
+    margin:14px 0 5px; }
+  input { width:100%; padding:11px 13px; border-radius:10px; border:1px solid rgba(255,255,255,.18);
+    background:rgba(255,255,255,.06); color:#fff; font-size:15px; }
+  input::placeholder { color:rgba(255,255,255,.3); }
+  .fila { display:flex; gap:12px; } .fila > div { flex:1; }
+  .sep { margin:22px 0 6px; font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--acento); }
+  .error { background:color-mix(in srgb, var(--alerta) 22%, transparent); border:1px solid var(--alerta);
+    border-radius:10px; padding:10px 13px; font-size:13.5px; margin-bottom:14px; }
+  button { width:100%; margin-top:22px; padding:13px; border:0; border-radius:12px; cursor:pointer;
+    background:var(--acento); color:#fff; font-size:16px; font-weight:700; }
+  .nota { font-size:12px; color:rgba(255,255,255,.45); margin-top:12px; text-align:center; }
+</style>
+</head>
+<body>
+  <div class="caja">
+    <h1>Completá tu cuenta</h1>
+    <p class="lede">Hola <b>{{ u.nombre or u.usuario }}</b>. Antes de entrar, elegí una clave nueva y cargá tus datos. Es por única vez.</p>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    {% set d = datos or {} %}
+    <form method="post" action="/plataforma/completar">
+      <div class="sep">Clave nueva</div>
+      <label for="clave_nueva">Clave nueva (mínimo 10 caracteres)</label>
+      <input type="password" id="clave_nueva" name="clave_nueva" minlength="10" required autofocus>
+      <label for="clave_repetir">Repetí la clave</label>
+      <input type="password" id="clave_repetir" name="clave_repetir" minlength="10" required>
+
+      <div class="sep">Tus datos</div>
+      <div class="fila">
+        <div>
+          <label for="cuil">CUIL (11 dígitos)</label>
+          <input type="text" id="cuil" name="cuil" inputmode="numeric" value="{{ d.cuil or '' }}" required>
+        </div>
+        <div>
+          <label for="dni">DNI</label>
+          <input type="text" id="dni" name="dni" inputmode="numeric" value="{{ d.dni or '' }}" required>
+        </div>
+      </div>
+      <label for="email">Mail</label>
+      <input type="email" id="email" name="email" value="{{ d.email or '' }}" required>
+      <label for="direccion">Dirección</label>
+      <input type="text" id="direccion" name="direccion" value="{{ d.direccion or '' }}" required>
+      <label for="telefono">Teléfono</label>
+      <input type="text" id="telefono" name="telefono" inputmode="tel" value="{{ d.telefono or '' }}" required>
+
+      <button type="submit">Guardar y entrar</button>
+      <div class="nota">Todos los campos son obligatorios.</div>
+    </form>
+  </div>
+</body>
+</html>

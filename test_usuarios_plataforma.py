@@ -68,3 +68,162 @@ def test_log_plataforma_registra():
     login = [f for f in filas if f.accion == "login"][0]
     assert login.usuario == "snavello" and login.ip == "1.2.3.4" and login.cuando
     print("OK  test_log_plataforma_registra")
+
+
+# ================= Etapa 1: login nominal + primer ingreso forzado =================
+os.environ.setdefault("PLATAFORMA_CUIT", "20000000000")
+os.environ["PLATAFORMA_PASSWORD"] = "generico-test"
+
+import main
+from fastapi.testclient import TestClient
+
+
+def _cli():
+    return TestClient(main.app)
+
+
+def test_login_nominal_manda_a_completar_en_el_primer_ingreso():
+    _limpiar()
+    db.sembrar_superadmins_iniciales()
+    c = _cli()
+    r = c.post("/plataforma/login", data={"usuario": "snavello", "clave": "snaSandro"},
+               follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/plataforma/completar"
+    assert c.cookies.get(main.COOKIE_PLATAFORMA)
+    # queda registrado el login
+    from db import LogPlataforma
+    with db.get_session() as s:
+        assert any(l.accion == "login" and l.usuario == "snavello"
+                   for l in s.exec(select(LogPlataforma)).all())
+    # y el panel lo empuja a completar
+    r2 = c.get("/plataforma/inicio", follow_redirects=False)
+    assert r2.status_code == 303 and r2.headers["location"] == "/plataforma/completar"
+    print("OK  test_login_nominal_manda_a_completar_en_el_primer_ingreso")
+
+
+def test_completar_cuenta_exitoso_habilita_el_panel():
+    _limpiar()
+    db.sembrar_superadmins_iniciales()
+    c = _cli()
+    c.post("/plataforma/login", data={"usuario": "snavello", "clave": "snaSandro"})
+    r = c.post("/plataforma/completar", data={
+        "clave_nueva": "claveLarga2026", "clave_repetir": "claveLarga2026",
+        "cuil": "20-31000111-3", "dni": "31000111", "email": "san@colmena.ar",
+        "direccion": "Calle 1 234", "telefono": "3411234567"}, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/plataforma/inicio"
+    u = db.usuario_plataforma_por_usuario("snavello")
+    assert not u.debe_cambiar_clave and not u.debe_completar_datos
+    assert u.cuil == "20310001113" and u.email == "san@colmena.ar"
+    assert auth.verificar_clave("claveLarga2026", u.clave_hash)
+    # ya entra directo al panel
+    c2 = _cli()
+    r2 = c2.post("/plataforma/login", data={"usuario": "snavello", "clave": "claveLarga2026"},
+                 follow_redirects=False)
+    assert r2.headers["location"] == "/plataforma/inicio"
+    print("OK  test_completar_cuenta_exitoso_habilita_el_panel")
+
+
+def test_completar_rechaza_datos_invalidos():
+    _limpiar()
+    db.sembrar_superadmins_iniciales()
+    base = {"clave_nueva": "claveLarga2026", "clave_repetir": "claveLarga2026",
+            "cuil": "20310001113", "dni": "31000111", "email": "a@b.com",
+            "direccion": "x", "telefono": "1"}
+    casos = [
+        ({"clave_nueva": "corta1", "clave_repetir": "corta1"}, "10 caracteres"),
+        ({"clave_repetir": "otradistinta9"}, "no coinciden"),
+        ({"cuil": "123"}, "11 dígitos"),
+        ({"email": "no-es-mail"}, "formato válido"),
+        ({"dni": ""}, "DNI"),
+        ({"direccion": ""}, "dirección"),
+        ({"telefono": ""}, "teléfono"),
+    ]
+    for parche, texto in casos:
+        c = _cli()
+        c.post("/plataforma/login", data={"usuario": "snavello", "clave": "snaSandro"})
+        r = c.post("/plataforma/completar", data={**base, **parche})
+        assert r.status_code == 400 and texto in r.text, f"{parche} -> {texto}"
+        # no se completó
+        assert db.usuario_plataforma_por_usuario("snavello").debe_completar_datos
+    print("OK  test_completar_rechaza_datos_invalidos")
+
+
+def test_email_duplicado_se_rechaza():
+    _limpiar()
+    db.sembrar_superadmins_iniciales()
+    # snavello completa con un mail
+    c = _cli(); c.post("/plataforma/login", data={"usuario": "snavello", "clave": "snaSandro"})
+    c.post("/plataforma/completar", data={
+        "clave_nueva": "claveLarga2026", "clave_repetir": "claveLarga2026",
+        "cuil": "20310001113", "dni": "31000111", "email": "compartido@colmena.ar",
+        "direccion": "x", "telefono": "1"})
+    # arsantagati intenta el mismo mail
+    c2 = _cli(); c2.post("/plataforma/login", data={"usuario": "arsantagati", "clave": "arsAlejandro"})
+    r = c2.post("/plataforma/completar", data={
+        "clave_nueva": "otraClave2026", "clave_repetir": "otraClave2026",
+        "cuil": "20320002224", "dni": "32000222", "email": "compartido@colmena.ar",
+        "direccion": "y", "telefono": "2"})
+    assert r.status_code == 400 and "ya está en uso" in r.text
+    print("OK  test_email_duplicado_se_rechaza")
+
+
+def test_login_generico_sigue_andando_en_transicion(monkeypatch):
+    _limpiar()
+    monkeypatch.setattr(auth, "CLAVE_PLATAFORMA", "generico-test")
+    monkeypatch.setattr(auth, "CUIT_PLATAFORMA", "20000000000")
+    c = _cli()
+    r = c.post("/plataforma/login", data={"cuit": "20000000000", "clave": "generico-test"},
+               follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/plataforma/inicio"
+    print("OK  test_login_generico_sigue_andando_en_transicion")
+
+
+def test_clave_transitoria_vencida_no_deja_entrar():
+    _limpiar()
+    from db import UsuarioPlataforma
+    with db.get_session() as s:
+        s.add(UsuarioPlataforma(usuario="vencido", nombre="V",
+              clave_hash=auth.hashear_clave("transitoria1"), rol="admin",
+              debe_cambiar_clave=True, clave_vence="2000-01-01 00:00",
+              debe_completar_datos=True, creado_por="test"))
+        s.commit()
+    c = _cli()
+    r = c.post("/plataforma/login", data={"usuario": "vencido", "clave": "transitoria1"},
+               follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/plataforma?error=vencida"
+    assert not c.cookies.get(main.COOKIE_PLATAFORMA)
+    print("OK  test_clave_transitoria_vencida_no_deja_entrar")
+
+
+def test_usuario_inactivo_no_entra():
+    _limpiar()
+    from db import UsuarioPlataforma
+    with db.get_session() as s:
+        s.add(UsuarioPlataforma(usuario="baja", nombre="B",
+              clave_hash=auth.hashear_clave("claveLarga2026"), rol="admin",
+              activo=False, debe_cambiar_clave=False, debe_completar_datos=False,
+              creado_por="test"))
+        s.commit()
+    c = _cli()
+    r = c.post("/plataforma/login", data={"usuario": "baja", "clave": "claveLarga2026"},
+               follow_redirects=False)
+    assert r.headers["location"] == "/plataforma?error=1"
+    print("OK  test_usuario_inactivo_no_entra")
+
+
+def test_clave_nueva_no_puede_ser_la_transitoria():
+    _limpiar()
+    from db import UsuarioPlataforma
+    with db.get_session() as s:
+        s.add(UsuarioPlataforma(usuario="largo", nombre="L",
+              clave_hash=auth.hashear_clave("transitoria10"), rol="admin",
+              debe_cambiar_clave=True, debe_completar_datos=True, creado_por="test"))
+        s.commit()
+    c = _cli()
+    c.post("/plataforma/login", data={"usuario": "largo", "clave": "transitoria10"})
+    r = c.post("/plataforma/completar", data={
+        "clave_nueva": "transitoria10", "clave_repetir": "transitoria10",
+        "cuil": "20310001113", "dni": "31000111", "email": "l@c.ar",
+        "direccion": "x", "telefono": "1"})
+    assert r.status_code == 400 and "distinta de la transitoria" in r.text
+    print("OK  test_clave_nueva_no_puede_ser_la_transitoria")
