@@ -150,6 +150,10 @@
     text-transform:uppercase; color:rgba(255,255,255,.45); }
   .plan-estado-tarjeta .grande { font-size:20px; font-weight:700; }
   .plan-estado-tarjeta .linea { font-size:13px; color:rgba(255,255,255,.7); }
+  /* Los botones de una línea van uno al lado del otro y bajan de renglón con espacio (un <a> en línea
+     con padding se pisaba con el de al lado, y en el teléfono quedaban tapados). */
+  .plan-estado-tarjeta .botones { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .plan-estado-tarjeta .botones .boton { flex:0 1 auto; max-width:100%; white-space:normal; }
   .plan-semaforo { font-family:var(--mono); font-size:10.5px; letter-spacing:1px; text-transform:uppercase;
     padding:3px 9px; border-radius:999px; display:inline-block; }
   .plan-semaforo.ok { background:color-mix(in srgb, var(--demo) 25%, transparent); color:var(--demo); }
@@ -157,6 +161,7 @@
   /* Reporte de errores de Sentry (pestaña Observabilidad) */
   .obs-barra { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px; }
   .obs-barra .espacio { flex:1; }
+  @media (max-width:640px) { .obs-barra .espacio { display:none; } }
   .obs-tabla-caja { overflow-x:auto; border-radius:14px; border:1px solid rgba(255,255,255,.12); }
   .obs-tabla { width:100%; border-collapse:collapse; font-size:13px; min-width:760px; }
   .obs-tabla th { text-align:left; font-family:var(--mono); font-size:10.5px; letter-spacing:1.1px; text-transform:uppercase;
@@ -233,7 +238,8 @@
   .aviso.ok { border-color:color-mix(in srgb, var(--demo) 55%, transparent); background:color-mix(in srgb, var(--demo) 14%, rgba(255,255,255,.04)); }
   .aviso.mal { border-color:color-mix(in srgb, var(--pruebas) 60%, transparent); background:color-mix(in srgb, var(--pruebas) 12%, rgba(255,255,255,.04)); }
   .boton { appearance:none; cursor:pointer; padding:9px 14px; border-radius:9px; border:1px solid rgba(255,255,255,.7); background:#fff; color:var(--tinta);
-    font-family:var(--fuente-display); font-size:15px; letter-spacing:1.4px; text-transform:uppercase; white-space:nowrap; }
+    font-family:var(--fuente-display); font-size:15px; letter-spacing:1.4px; text-transform:uppercase; white-space:nowrap;
+    display:inline-block; text-decoration:none; line-height:1.25; text-align:center; }
   .boton:hover, .boton:focus-visible { background:rgba(255,255,255,.88); outline:none; }
   .boton:disabled { opacity:.55; cursor:default; }
   .boton.suave { background:transparent; color:#fff; border-color:rgba(255,255,255,.35); }
@@ -709,9 +715,6 @@
     }
     const g = document.getElementById('obs-abrir-grafana');
     g.hidden = !d.tablero_url; g.href = d.tablero_url || '#';
-    const s = document.getElementById('obs-abrir-sentry');
-    s.hidden = !d.sentry_url; s.href = d.sentry_url || '#';
-    document.getElementById('obs-sentry-falta').hidden = !!d.sentry_url;
 
     const reglas = (a && a.reglas) || [];
     document.getElementById('obs-reglas').innerHTML = reglas.map(r =>
@@ -792,7 +795,7 @@
       `<button type="button" class="boton" id="obs-sentry-ejemplo">${d.ejemplo ? 'Ver datos reales' : 'Ver ejemplo'}</button>` +
       '<button type="button" class="boton" id="obs-sentry-prueba">Mandar error de prueba</button>' +
       '<button type="button" class="boton" id="obs-sentry-actualizar">Actualizar</button>' +
-      (d.url_todos ? `<a class="boton" href="${esc(d.url_todos)}" target="_blank" rel="noopener">Ver todos en Sentry ↗</a>` : '') +
+      (d.url_todos && (d.recientes || []).length ? `<a class="boton" href="${esc(d.url_todos)}" target="_blank" rel="noopener">Ver todos en Sentry ↗</a>` : '') +
       '</div>';
 
     if (!k) {
