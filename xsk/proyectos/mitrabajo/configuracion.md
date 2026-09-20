@@ -49,6 +49,8 @@ porque los datos son los mismos. Faltan las que **no** existen a propósito:
 | `gh` autenticado | ramas, reglas de protección, secretos de Actions, colaboradores | `gh auth status` | tengo |
 | Tokens de Grafana / Sentry | eje OBS: ¿se ve un ataque? | Render de Pruebas | tengo |
 | Docker Desktop | herramientas que corren en contenedor (ZAP, si se usa) | a mano, avisar si no corre | tengo |
+| Copia de la base en S3 | eje INF: ensayo de restauración, permisos del bucket | `.env` → `XSK_S3_BACKUP` (bucket/prefijo) + credenciales de solo lectura | falta: SDN dice que existe; hay que apuntarla |
+| Proveedor de mail | R2 nivel 2 y R3 (confirmación de alta, recuperación de clave) | a elegir | falta: no existe |
 
 ## Herramientas de Code
 
