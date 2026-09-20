@@ -22,14 +22,17 @@ import threading
 import time
 
 from . import aplicar_grafana as ag
+from . import colector_render as cr
 
 TIMEOUT_SEGUNDOS = 10
 # Los únicos intervalos que se pueden elegir desde la pantalla. Una lista y no un
 # campo libre: escribir "1m" por error mandaría un mail por minuto.
 INTERVALOS = ("1h", "6h", "12h", "24h", "48h")
 ESPERA_ENTRE_PRUEBAS = 60        # segundos: un mail de prueba por minuto, no más
+ESPERA_ENTRE_ACTUALIZACIONES = 60   # ídem para el botón "Actualizar métricas ahora"
 
 _ultima_prueba = -ESPERA_ENTRE_PRUEBAS      # la primera prueba no espera
+_ultima_actualizacion = -ESPERA_ENTRE_ACTUALIZACIONES
 _candado = threading.Lock()
 
 
@@ -107,6 +110,29 @@ def guardar(email: str, repeat_interval: str, avisar_al_resolverse: bool) -> dic
     hechos = ag.aplicar_config(_cliente("GRAFANA_TOKEN_CONFIG"), cfg)
     print(f"[observabilidad] configuración cambiada desde /entornos: {email}, repite cada {repeat_interval}")
     return {"hechos": hechos, "config": ag.leer_configuracion(lectura)}
+
+
+def actualizar_metricas() -> dict:
+    """El botón "Actualizar métricas ahora": corre el colector una vez, en el momento, y deja
+    los datos de Render en Grafana (unos 10 segundos). Usa las mismas claves que el hilo
+    colector de la app. Una vez por minuto como máximo: cada corrida son ~15 consultas a la
+    API de Render, que limita el ritmo (429)."""
+    global _ultima_actualizacion
+    with _candado:
+        falta = ESPERA_ENTRE_ACTUALIZACIONES - (time.monotonic() - _ultima_actualizacion)
+        if falta > 0:
+            raise ValueError(f"Ya se actualizó hace poco: esperá {int(falta) + 1} s.")
+        _ultima_actualizacion = time.monotonic()
+    clave = os.getenv("RENDER_API_KEY", "").strip()
+    token = os.getenv("GRAFANA_METRICS_TOKEN", "").strip()
+    faltan = [n for n, v in (("RENDER_API_KEY", clave), ("GRAFANA_METRICS_TOKEN", token)) if not v]
+    if faltan:
+        raise ErrorObservabilidad("Falta " + " y ".join(faltan) + " en este servicio.")
+    r = cr.ejecutar(ag.cargar_config(), clave, token, pausa=0.3, via="boton")
+    if not r["ok"]:
+        motivo = (r["errores"][0] if r["errores"] else f"Grafana respondió HTTP {r['estado_http']}")
+        raise ErrorObservabilidad(f"No se pudo actualizar: {motivo}")
+    return {"series": r["series"], "puntos": r["puntos"], "errores_de_render": len(r["errores"])}
 
 
 def probar_mail() -> str:

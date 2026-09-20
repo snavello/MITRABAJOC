@@ -84,6 +84,9 @@ def grafana(monkeypatch):
     monkeypatch.setenv("GRAFANA_TOKEN_CONFIG", TOKEN_CONFIG)
     monkeypatch.delenv("SENTRY_URL", raising=False)
     monkeypatch.setattr(panel, "_ultima_prueba", -panel.ESPERA_ENTRE_PRUEBAS)
+    monkeypatch.setattr(panel, "_ultima_actualizacion", -panel.ESPERA_ENTRE_ACTUALIZACIONES)
+    monkeypatch.setenv("RENDER_API_KEY", "rnd_CLAVE_de_prueba_2222")
+    monkeypatch.setenv("GRAFANA_METRICS_TOKEN", "glc_METRICAS_de_prueba_3333")
     falso = GrafanaDeMentira()
     monkeypatch.setattr(ag.Grafana, "pedir",
                         lambda self, metodo, ruta, cuerpo=None, editable_desde_la_ui=False:
@@ -229,3 +232,71 @@ def test_ningun_token_sale_en_una_respuesta(grafana):
               client.get("/entornos").text]
     for t in textos:
         assert TOKEN_LECTURA not in t and TOKEN_CONFIG not in t
+
+
+# ------------------------- botón "Actualizar métricas ahora" -------------------------
+def _ejecutar_falso(monkeypatch, ok=True, errores=(), http=200):
+    llamadas = []
+
+    def ejecutar(cfg, clave, token, **kw):
+        llamadas.append({"clave": clave, "token": token, **kw})
+        return {"series": 25, "puntos": 1096, "errores": list(errores), "estado_http": http, "ok": ok}
+
+    monkeypatch.setattr(panel.cr, "ejecutar", ejecutar)
+    return llamadas
+
+
+def test_el_boton_corre_el_colector_ahora_y_dice_cuanto_dejo(grafana, monkeypatch):
+    llamadas = _ejecutar_falso(monkeypatch)
+    r = client.post("/entornos/observabilidad/actualizar-metricas")
+    assert r.status_code == 200, r.text
+    assert r.json() == {"ok": True, "series": 25, "puntos": 1096, "errores_de_render": 0}
+    (l,) = llamadas
+    assert l["via"] == "boton" and l["clave"] == "rnd_CLAVE_de_prueba_2222" and l["token"] == "glc_METRICAS_de_prueba_3333"
+    assert l["pausa"] < 1, "el botón tiene que ser más rápido que el colector programado"
+
+
+def test_el_boton_avisa_si_alguna_metrica_de_render_fallo(grafana, monkeypatch):
+    _ejecutar_falso(monkeypatch, errores=["cpu de x: HTTP 500", "memory de x: HTTP 500"])
+    assert client.post("/entornos/observabilidad/actualizar-metricas").json()["errores_de_render"] == 2
+
+
+def test_el_boton_se_puede_apretar_una_vez_por_minuto(grafana, monkeypatch):
+    llamadas = _ejecutar_falso(monkeypatch)
+    assert client.post("/entornos/observabilidad/actualizar-metricas").status_code == 200
+    segundo = client.post("/entornos/observabilidad/actualizar-metricas")
+    assert segundo.status_code == 429 and "esperá" in segundo.json()["detail"]
+    assert len(llamadas) == 1, "el segundo clic no tiene que gastar consultas de la API de Render"
+
+
+def test_el_boton_dice_que_falta_en_vez_de_romperse(grafana, monkeypatch):
+    _ejecutar_falso(monkeypatch)
+    monkeypatch.delenv("GRAFANA_METRICS_TOKEN")
+    r = client.post("/entornos/observabilidad/actualizar-metricas")
+    assert r.status_code == 502 and "GRAFANA_METRICS_TOKEN" in r.json()["detail"]
+
+
+def test_si_el_colector_no_pudo_escribir_el_boton_lo_dice(grafana, monkeypatch):
+    _ejecutar_falso(monkeypatch, ok=False, http=401)
+    r = client.post("/entornos/observabilidad/actualizar-metricas")
+    assert r.status_code == 502 and "401" in r.json()["detail"]
+
+
+def test_el_boton_exige_el_pin_y_solo_pruebas(grafana, monkeypatch):
+    llamadas = _ejecutar_falso(monkeypatch)
+    assert TestClient(main.app).post("/entornos/observabilidad/actualizar-metricas").status_code == 403
+    monkeypatch.setattr(entorno, "ENTORNO", "demo")
+    assert client.post("/entornos/observabilidad/actualizar-metricas").status_code == 400
+    assert llamadas == [], "un pedido sin permiso llegó a consultar Render"
+
+
+def test_las_claves_no_salen_en_la_respuesta_del_boton(grafana, monkeypatch):
+    _ejecutar_falso(monkeypatch)
+    texto = client.post("/entornos/observabilidad/actualizar-metricas").text
+    assert "rnd_CLAVE" not in texto and "glc_METRICAS" not in texto
+
+
+def test_la_pestana_trae_el_boton_y_su_manejador():
+    html = client.get("/entornos").text
+    assert 'id="obs-actualizar"' in html and "Actualizar métricas ahora" in html
+    assert "/entornos/observabilidad/actualizar-metricas" in html

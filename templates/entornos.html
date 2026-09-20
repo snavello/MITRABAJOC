@@ -730,6 +730,20 @@
     } catch (err) { decir(err.message, true); }
     boton.disabled = false;
   });
+  document.getElementById('obs-actualizar').addEventListener('click', async ev => {
+    const boton = ev.target;
+    boton.disabled = true;
+    const original = boton.textContent;
+    boton.textContent = 'Actualizando…';
+    try {
+      const j = await pedir('/entornos/observabilidad/actualizar-metricas', {method: 'POST'});
+      decir(`Listo: ${j.series} series y ${j.puntos} puntos de Render ya están en Grafana` +
+            (j.errores_de_render ? ` (${j.errores_de_render} métrica(s) de Render fallaron)` : '') +
+            '. Refrescá el tablero.', !!j.errores_de_render);
+    } catch (err) { decir(err.message, true); }
+    boton.textContent = original;
+    boton.disabled = false;
+  });
   document.getElementById('obs-probar').addEventListener('click', async ev => {
     ev.target.disabled = true;
     try {

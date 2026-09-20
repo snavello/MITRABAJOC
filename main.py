@@ -6622,6 +6622,21 @@ def entornos_observabilidad_probar_mail(request: Request):
         raise HTTPException(502, "Grafana no pudo mandar el mail de prueba.")
 
 
+@app.post("/entornos/observabilidad/actualizar-metricas")
+def entornos_observabilidad_actualizar(request: Request):
+    """Trae las métricas de Render y las deja en Grafana ahora (una vez por minuto)."""
+    _exigir_observabilidad(request)
+    try:
+        return {"ok": True, **observabilidad_panel.actualizar_metricas()}
+    except ValueError as e:
+        raise HTTPException(429, str(e))
+    except observabilidad_panel.ErrorObservabilidad as e:
+        raise HTTPException(502, str(e))
+    except Exception as e:
+        print(f"[observabilidad] no se pudo actualizar las métricas: {type(e).__name__}: {e}")
+        raise HTTPException(502, "No se pudo actualizar las métricas.")
+
+
 @app.get("/api/entornos/tests")
 def api_entornos_tests(request: Request):
     """Lista para el polling de la sección Tests -- se refresca sola cada

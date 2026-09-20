@@ -181,7 +181,8 @@ def series_de_salud(cfg: dict, ahora: datetime, resumen: dict, via: str = "manua
     congelados sin que nadie lo note: es el mismo problema que se quiere resolver)."""
     m = cfg["metricas_render"]
     t = int(ahora.timestamp() * 1000)
-    # `via` dice QUIÉN corrió: "github" (Actions), "app" (el hilo de la app) o "manual".
+    # `via` dice QUIÉN corrió: "github" (Actions), "app" (el hilo de la app), "boton" (el botón de
+    # Entornos) o "manual".
     # Con dos vías que se cubren, hay que poder ver que las DOS están vivas.
     base = {"entorno": m["entorno"], "via": via}
     return [
