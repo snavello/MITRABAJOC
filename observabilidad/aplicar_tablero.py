@@ -33,6 +33,15 @@ else:
 
 FUENTE = {"type": "prometheus", "uid": "grafanacloud-prom"}
 VERDE, ROJO, AMARILLO = "green", "red", "orange"
+# Cuánto hacia atrás se busca el último dato de los números de "ahora". El colector
+# corre cada 5 minutos pero GitHub retrasa las corridas programadas; con la
+# búsqueda normal de Prometheus (5 minutos) un atraso dejaba los números en
+# "No data" y, con el color base verde, se veían verdes (pasó a las 21:38 del
+# 2026-09-19). Con 30 minutos aguantan un atraso normal, y el número de "Colector"
+# dice cuánto es.
+BUSQUEDA = "30m"
+SIN_DATOS = {"type": "special", "options": {"match": "null+nan",
+                                            "result": {"text": "SIN DATOS", "color": "orange", "index": 99}}}
 
 
 def _objetivo(expr: str, leyenda: str = "", ref: str = "A") -> dict:
@@ -48,8 +57,11 @@ def _umbrales(*pasos) -> dict:
 
 def estado(id_: int, titulo: str, expr: str, x: int, y: int, w: int, unidad: str = "none",
            umbrales=None, mapeos=None, decimales=None, descripcion: str = "") -> dict:
-    """Un número grande con color. Sin datos se ve "Sin datos", nunca un 0 inventado."""
-    campo = {"unit": unidad, "thresholds": _umbrales(*(umbrales or [(0, VERDE)])), "mappings": mapeos or []}
+    """Un número grande con color. Sin datos se ve "SIN DATOS" en ámbar: nunca un 0
+    inventado y, sobre todo, nunca en verde (el color base de los umbrales es verde y
+    sin este mapeo un "No data" se veía como buena noticia)."""
+    campo = {"unit": unidad, "thresholds": _umbrales(*(umbrales or [(0, VERDE)])),
+             "mappings": list(mapeos or []) + [SIN_DATOS], "noValue": "SIN DATOS"}
     if decimales is not None:
         campo["decimals"] = decimales
     return {"id": id_, "type": "stat", "title": titulo, "description": descripcion,
@@ -94,7 +106,8 @@ def construir_tablero(cfg: dict) -> dict:
                                                "0": {"text": "CAÍDA", "color": ROJO}}}]
 
     def pct(m, lim, servicio):
-        return f'100 * max({m}{{{E},servicio="{servicio}"}} / {lim}{{{E},servicio="{servicio}"}})'
+        return (f'100 * max(last_over_time({m}{{{E},servicio="{servicio}"}}[{BUSQUEDA}]) / '
+                f'last_over_time({lim}{{{E},servicio="{servicio}"}}[{BUSQUEDA}]))')
 
     paneles = [
         # ---- Fila 1: ¿responden? y ¿el colector vive? ----
@@ -118,10 +131,10 @@ def construir_tablero(cfg: dict) -> dict:
                umbrales=[(0, VERDE), (70, AMARILLO), (95, ROJO)], decimales=0),
         estado(8, "Memoria de la base", pct("render_memory_bytes", "render_memory_limit_bytes", "db"), 12, 4, 4,
                unidad="percent", umbrales=[(0, VERDE), (70, AMARILLO), (95, ROJO)], decimales=0),
-        estado(9, "Conexiones a la base", f'max(render_db_active_connections{{{E}}})', 16, 4, 4, decimales=0,
+        estado(9, "Conexiones a la base", f'max(last_over_time(render_db_active_connections{{{E}}}[{BUSQUEDA}]))', 16, 4, 4, decimales=0,
                descripcion="Conexiones activas ahora. El pool de la app es de 10 por proceso."),
         estado(10, "Disco de la base",
-               f'100 * max(render_disk_usage_bytes{{{E}}} / render_disk_capacity_bytes{{{E}}})', 20, 4, 4,
+               f'100 * max(last_over_time(render_disk_usage_bytes{{{E}}}[{BUSQUEDA}]) / last_over_time(render_disk_capacity_bytes{{{E}}}[{BUSQUEDA}]))', 20, 4, 4,
                unidad="percent", umbrales=[(0, VERDE), (70, AMARILLO), (85, ROJO)], decimales=1),
         # ---- Detalle con historia ----
         serie(11, "CPU (% del límite del plan)",

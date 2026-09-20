@@ -318,6 +318,32 @@ def test_el_tablero_marca_el_umbral_de_alerta_de_cpu_y_memoria():
         assert p["fieldConfig"]["defaults"]["thresholds"]["steps"][-1]["value"] == 95
 
 
+def test_un_sin_datos_nunca_se_ve_verde():
+    """A las 21:38 del 2026-09-19 los números pasaron a "No data" y se veían verdes:
+    el color base de los umbrales es verde y nada decía que faltaban datos."""
+    estados = [p for p in at.construir_tablero(CFG)["panels"] if p["type"] == "stat"]
+    assert len(estados) == 10
+    for p in estados:
+        campo = p["fieldConfig"]["defaults"]
+        nulo = [m for m in campo["mappings"] if m.get("type") == "special"]
+        assert nulo and nulo[0]["options"]["match"] == "null+nan", p["title"]
+        assert nulo[0]["options"]["result"]["color"] == "orange" and "SIN DATOS" in nulo[0]["options"]["result"]["text"]
+        assert campo["noValue"] == "SIN DATOS"
+
+
+def test_los_numeros_de_ahora_aguantan_un_colector_atrasado():
+    """Con la búsqueda normal de Prometheus (5 min) un atraso de GitHub vaciaba los
+    números. Los de CPU, memoria, conexiones y disco buscan el último dato 30 minutos hacia atrás."""
+    por_titulo = {p["title"]: p for p in at.construir_tablero(CFG)["panels"] if p["type"] == "stat"}
+    for t in ("CPU de la app", "Memoria de la app", "CPU de la base", "Memoria de la base",
+              "Conexiones a la base", "Disco de la base"):
+        assert "last_over_time" in por_titulo[t]["targets"][0]["expr"] and "[30m]" in por_titulo[t]["targets"][0]["expr"], t
+
+
+def test_la_ventana_del_colector_cubre_un_atraso_largo_de_github():
+    assert CFG["metricas_render"]["ventana_min"] >= 60
+
+
 def test_el_tablero_avisa_si_el_colector_dejo_de_correr():
     p = next(p for p in at.construir_tablero(CFG)["panels"] if p["title"].startswith("Colector"))
     assert "last_over_time" in p["targets"][0]["expr"]            # sigue mostrando minutos, no "sin datos"

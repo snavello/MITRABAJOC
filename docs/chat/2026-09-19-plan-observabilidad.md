@@ -73,7 +73,7 @@ El *stream* de métricas nativo de Render exigiría el plan Pro del workspace (d
 
 **Evaluación de la alternativa nativa (Metrics Stream de Render):** existe y sirve, pero exige el plan **Pro del workspace (USD 25/mes; hoy Hobby)**. Su ventaja real es de seguridad: no hay que dejar una API key de Render (que da acceso a todo el workspace, Render no permite claves acotadas) fuera de Render. Con D4 (todo gratis) se eligió el colector propio; el stream queda como mejora futura si se pasa al plan Pro (los nombres de las métricas cambiarían y habría que rehacer el tablero).
 
-**Colector** (`observabilidad/colector_render.py`, stdlib pura): lee de la API de Render y escribe en el Prometheus de Grafana Cloud por remote write (`remote_write.py` codifica protobuf y snappy a mano; el test lo verifica decodificándolo con un lector independiente). Corre en **GitHub Actions cada 5 minutos** (`.github/workflows/metricas-render.yml`; el repo es público, sin costo), fuera de Render. Cada corrida re-manda los últimos 20 minutos, así una corrida atrasada no deja un hueco. Juntan del web: CPU, memoria y sus límites (por instancia), pedidos HTTP por código de estado y host, latencia p95, instancias; de la base: CPU, memoria y sus límites, conexiones activas, disco usado y capacidad. Render no expone para este plan: replicación, autoscaling (`*-target`), disco del web.
+**Colector** (`observabilidad/colector_render.py`, stdlib pura): lee de la API de Render y escribe en el Prometheus de Grafana Cloud por remote write (`remote_write.py` codifica protobuf y snappy a mano; el test lo verifica decodificándolo con un lector independiente). Corre por **dos vías que se cubren entre sí** (ver "Incidente del primer día"): **GitHub Actions cada 5 minutos** (`.github/workflows/metricas-render.yml`; el repo es público, sin costo), fuera de Render. y un **hilo dentro de la app** (`observabilidad/hilo_colector.py`, solo Pruebas). Cada corrida re-manda la **última hora**, así una corrida atrasada no deja un hueco: Grafana Cloud acepta puntos atrasados hasta cerca de 1-2 horas (medido: 1 h sí, 2 h no, error `err-mimir-sample-timestamp-too-old`). Juntan del web: CPU, memoria y sus límites (por instancia), pedidos HTTP por código de estado y host, latencia p95, instancias; de la base: CPU, memoria y sus límites, conexiones activas, disco usado y capacidad. Render no expone para este plan: replicación, autoscaling (`*-target`), disco del web.
 
 **Secretos** (GitHub → Settings → Secrets → Actions): `RENDER_API_KEY` y `GRAFANA_METRICS_TOKEN` (token de Grafana Cloud con **solo** `metrics:write`). Nunca en el repo.
 
@@ -81,7 +81,16 @@ El *stream* de métricas nativo de Render exigiría el plan Pro del workspace (d
 
 **Alertas** (`aplicar_alertas_metricas.py`): evento 3 (más del 5 % de 5xx en 10 minutos, con un mínimo de 20 pedidos: uno de diez no es un 10 %), evento 4 (CPU y memoria por encima del 95 % más de 30 minutos, en la app o en la base) y una regla del propio colector (más de 30 minutos sin correr). Las tres de métricas **no** avisan cuando faltan datos (`sin_datos: OK`): si el colector se muere lo dice la suya, y no tiene sentido que cuatro reglas manden mail por lo mismo; la del colector sí avisa por la falta de datos. Las de CPU/memoria toleran huecos de hasta 15 minutos (`last_over_time`), porque el colector corre cada 5 y GitHub retrasa.
 
-**Límite conocido:** la frescura es de entre 5 y 15 minutos. Sirve para tablero y para las alertas sostenidas (30 minutos), no para detectar algo en segundos: eso lo hace el monitor de uptime (§5b).
+**Incidente del primer día (2026-09-19, 21:38):** los números del tablero pasaron a "No data" y se veían **verdes**. Causa: el cron de GitHub tardó más de 15 minutos en correr por primera vez, y los números de "ahora" usaban la búsqueda normal de Prometheus (5 minutos). Arreglo, en tres capas: (1) el tablero muestra "SIN DATOS" en ámbar en vez de verde (el color base de los umbrales es verde y un "No data" se veía como buena noticia) y sus números de "ahora" toleran un colector atrasado (`last_over_time[30m]`); (2) la ventana del colector pasó de 20 a 60 minutos, para rellenar huecos; (3) lo que SDN pidió que no se repita, que el colector no corra: **una segunda vía independiente**.
+
+| Vía | Corre si... | No corre si... |
+|---|---|---|
+| GitHub Actions | la app está caída | GitHub se atrasa |
+| Hilo en la app (`hilo_colector.py`) | GitHub se atrasa | la app está caída |
+
+Escriben las mismas series con las mismas marcas de tiempo (Prometheus descarta los repetidos) y se identifican con la etiqueta `via` (`github`, `app`, `manual`) para poder ver que las dos están vivas. El hilo no cambia la regla 0: es un respaldo, nunca el motor. No suma exposición de claves: la app de Pruebas ya guardaba `RENDER_API_KEY` para la pestaña Planes; solo suma `GRAFANA_METRICS_TOKEN` (solo escritura de métricas). Si ambas fallan, la alerta "colector mudo" avisa a los 30 minutos.
+
+**Límite conocido:** la frescura es de entre 5 y 15 minutos, y GitHub puede atrasarse bastante más. Sirve para tablero y para las alertas sostenidas (30 minutos), no para detectar algo en segundos: eso lo hace el monitor de uptime (§5b).
 
 ## 6. Pestaña Observabilidad de `/entornos` (HECHO 2026-09-19)
 
