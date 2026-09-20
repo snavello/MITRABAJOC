@@ -400,6 +400,52 @@ class UsuarioSindicato(SQLModel, table=True):
     seccional_id: Optional[int] = Field(default=None, foreign_key="seccional.id", index=True)
 
 
+class UsuarioPlataforma(SQLModel, table=True):
+    """Usuario NOMINAL del panel de plataforma (SPRINT_R1.md). Reemplaza a la
+    cuenta compartida por variable de entorno (XSK H-0002/H-0016). La misma
+    credencial entra a /plataforma y a /entornos.
+
+    - `usuario` es la llave de login (texto, p. ej. "snavello"), no el CUIT.
+      El CUIL es un dato del perfil (obligatorio, pero no la llave).
+    - `rol`: "superadmin" (gestiona usuarios, con log) o "admin".
+    - Primer ingreso forzado: mientras `debe_cambiar_clave` o
+      `debe_completar_datos` estén en True, la persona solo ve la pantalla de
+      completar la cuenta. La clave inicial es transitoria; `clave_vence`
+      (texto AAAA-MM-DD HH:MM, hora de Buenos Aires) la caduca a los 7 días
+      para los usuarios que crea un superadmin. Las dos semillas iniciales
+      van con `clave_vence=None`: valen hasta que la persona entre."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    usuario: str = Field(index=True)            # con lo que INICIA SESIÓN
+    nombre: str = ""
+    clave_hash: str = ""
+    rol: str = "admin"                          # "superadmin" | "admin"
+    activo: bool = True
+    debe_cambiar_clave: bool = True             # la primera clave es transitoria
+    clave_vence: Optional[str] = None           # AAAA-MM-DD HH:MM (BA) o None = no vence
+    debe_completar_datos: bool = True
+    # Datos obligatorios que la persona carga en el primer ingreso.
+    cuil: str = Field(default="", index=True)
+    dni: str = ""
+    email: str = Field(default="", index=True)
+    direccion: str = ""
+    telefono: str = ""
+    creado_en: str = ""                         # AAAA-MM-DD HH:MM (BA)
+    creado_por: str = ""                        # usuario del superadmin, o "semilla"
+
+
+class LogPlataforma(SQLModel, table=True):
+    """Bitácora de acciones del panel de plataforma (SPRINT_R1.md, XSK
+    H-0016): el "quién tocó qué" que la cuenta compartida no dejaba. Guarda
+    login y la gestión de usuarios (alta/edición/desactivación/reseteo)."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cuando: str = Field(default="", index=True)  # AAAA-MM-DD HH:MM (BA)
+    accion: str = ""                             # login | alta | edicion | desactivacion | reseteo | ...
+    usuario: str = Field(default="", index=True)  # QUIÉN hizo la acción
+    objetivo: str = ""                           # sobre qué usuario recae (si aplica)
+    ip: str = ""
+    detalle: str = ""
+
+
 class CuentaTrabajador(SQLModel, table=True):
     """La identidad única del trabajador en toda la plataforma: CUIL + clave.
     Con esto entra, sin importar en cuántos sindicatos esté empadronado.
@@ -1523,6 +1569,110 @@ def registrar_acceso(rol: str, sindicato_id: Optional[int] = None) -> None:
         s.add(AccesoLog(rol=rol, sindicato_id=sindicato_id,
                          fecha=fechas.ahora_texto()))
         s.commit()
+
+
+# ---- Usuarios de plataforma nominales (SPRINT_R1.md) ----
+
+def usuario_plataforma_por_usuario(usuario: str):
+    """La fila del usuario de plataforma por su nombre de login, o None.
+    No filtra por activo: quien llama decide qué hacer con uno inactivo."""
+    u = (usuario or "").strip().lower()
+    if not u:
+        return None
+    with Session(engine) as s:
+        return s.exec(select(UsuarioPlataforma).where(
+            UsuarioPlataforma.usuario == u)).first()
+
+
+def registrar_log_plataforma(accion: str, usuario: str, objetivo: str = "",
+                             ip: str = "", detalle: str = "") -> None:
+    """Deja un evento en la bitácora de plataforma (XSK H-0016)."""
+    with Session(engine) as s:
+        s.add(LogPlataforma(cuando=fechas.ahora_texto(), accion=accion,
+                            usuario=usuario or "", objetivo=objetivo or "",
+                            ip=ip or "", detalle=detalle or ""))
+        s.commit()
+
+
+def hay_usuarios_plataforma() -> bool:
+    """¿Ya existe al menos un usuario de plataforma nominal? Sirve para saber
+    si la transición (login genérico + PIN) todavía hace falta."""
+    with Session(engine) as s:
+        return s.exec(select(UsuarioPlataforma.id)).first() is not None
+
+
+def superadmins_activos() -> int:
+    """Cuántos superadmin activos hay (para la guarda del último)."""
+    with Session(engine) as s:
+        return len(s.exec(select(UsuarioPlataforma).where(
+            UsuarioPlataforma.rol == "superadmin",
+            UsuarioPlataforma.activo == True)).all())
+
+
+# Los dos superadmin iniciales (SPRINT_R1.md). Clave de un solo uso, sin
+# vencimiento: valen hasta que la persona entre la primera vez y cambie la
+# clave + cargue sus datos. La siembra es la ÚNICA fuente de estos datos: la
+# usan la migración (al crear la tabla) y el test.
+SUPERADMINS_INICIALES = [
+    {"usuario": "snavello", "nombre": "Sandro Navello", "clave": "snaSandro"},
+    {"usuario": "arsantagati", "nombre": "Alejandro Santagati", "clave": "arsAlejandro"},
+]
+
+
+def email_plataforma_en_uso(email: str, excepto_id: Optional[int] = None) -> bool:
+    """¿Ya hay otro usuario de plataforma con ese mail? (único, sirve a futuro
+    para recuperación de clave). Compara normalizado en minúsculas."""
+    e = (email or "").strip().lower()
+    if not e:
+        return False
+    with Session(engine) as s:
+        q = select(UsuarioPlataforma).where(UsuarioPlataforma.email == e)
+        return any(u.id != excepto_id for u in s.exec(q).all())
+
+
+def completar_usuario_plataforma(uid: int, clave_hash: str, cuil: str, dni: str,
+                                 email: str, direccion: str, telefono: str) -> None:
+    """Primer ingreso: fija la clave definitiva, marca la cuenta como completa
+    y guarda los datos obligatorios (SPRINT_R1.md)."""
+    with Session(engine) as s:
+        u = s.get(UsuarioPlataforma, uid)
+        if not u:
+            return
+        u.clave_hash = clave_hash
+        u.debe_cambiar_clave = False
+        u.clave_vence = None
+        u.debe_completar_datos = False
+        u.cuil = (cuil or "").strip()
+        u.dni = (dni or "").strip()
+        u.email = (email or "").strip().lower()
+        u.direccion = (direccion or "").strip()
+        u.telefono = (telefono or "").strip()
+        s.add(u)
+        s.commit()
+
+
+def sembrar_superadmins_iniciales() -> int:
+    """Crea los superadmin iniciales que falten (idempotente). Devuelve
+    cuántos creó. La clave inicial es transitoria (debe_cambiar_clave) y sin
+    vencimiento (clave_vence=None); los datos quedan por completar."""
+    import auth
+    creados = 0
+    with Session(engine) as s:
+        for sa_ in SUPERADMINS_INICIALES:
+            existe = s.exec(select(UsuarioPlataforma).where(
+                UsuarioPlataforma.usuario == sa_["usuario"])).first()
+            if existe:
+                continue
+            s.add(UsuarioPlataforma(
+                usuario=sa_["usuario"], nombre=sa_["nombre"],
+                clave_hash=auth.hashear_clave(sa_["clave"]),
+                rol="superadmin", activo=True,
+                debe_cambiar_clave=True, clave_vence=None,
+                debe_completar_datos=True,
+                creado_en=fechas.ahora_texto(), creado_por="semilla"))
+            creados += 1
+        s.commit()
+    return creados
 
 
 class GeoCache(SQLModel, table=True):

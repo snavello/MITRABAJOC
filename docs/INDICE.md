@@ -54,6 +54,7 @@ cuenta), no en cada commit.
 | `SPRINT_ENCUESTAS.md` | Módulo Encuestas. | 2026-09-11 |
 | `PLAN_MOTOR_V2.md` | Motor de análisis de recibos v2 (7 bloques, bandera `MOTOR_V2`). Borrador, sin código escrito. | 2026-09-14 |
 | `PLAN_XSK.md` | XSANDERS Security Kit: método de seguridad en diez etapas, seis decisiones cerradas, nueve ejes, plan por bloques. El método genérico vive en `xsk/METODO.md`. | 2026-09-20 |
+| `SPRINT_R1.md` | Usuarios de plataforma nominales (sub-sprint de XSK: H-0002/H-0003/H-0016). | 2026-09-20 |
 
 ### Carpetas
 

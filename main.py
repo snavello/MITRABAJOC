@@ -27,6 +27,7 @@ Arrancar con:  uvicorn main:app --reload   (ver README.md)
 
 import asyncio
 import os
+import re
 import threading
 import traceback
 import uuid
@@ -4687,6 +4688,8 @@ def plataforma(request: Request):
     if not sesion_actual(request, "plataforma"):
         return templates.TemplateResponse("plataforma_login.html", {
             "request": request, "marca_plataforma": db.marca_plataforma()})
+    if _pendiente_de_completar(request):     # primer ingreso sin terminar
+        return RedirectResponse("/plataforma/completar", status_code=303)
     with db.get_session() as s:
         sindicatos = s.exec(select(Sindicato).order_by(Sindicato.id)).all()
         # contar usuarios por sindicato
@@ -4727,6 +4730,8 @@ def plataforma_inicio(request: Request):
     if not sesion_actual(request, "plataforma"):
         return templates.TemplateResponse("plataforma_login.html", {
             "request": request, "marca_plataforma": db.marca_plataforma()})
+    if _pendiente_de_completar(request):
+        return RedirectResponse("/plataforma/completar", status_code=303)
     return templates.TemplateResponse("plataforma_portada.html", {
         "request": request, "marca_plataforma": db.marca_plataforma(),
         "version": VERSION_PLATAFORMA, "fecha_version": FECHA_VERSION,
@@ -4748,19 +4753,129 @@ def servir_recibo_sospechoso(recibo_id: int, request: Request):
         )
 
 
+def _clave_transitoria_vencida(vence: str | None) -> bool:
+    """True si una clave transitoria ya venció. El formato es 'AAAA-MM-DD HH:MM'
+    (hora de Buenos Aires), así que comparar como texto alcanza. None = no vence."""
+    return bool(vence) and fechas.ahora_texto() > vence
+
+
+def _pendiente_de_completar(request: Request):
+    """La fila del usuario de plataforma nominal logueado que todavía tiene que
+    cambiar la clave o completar sus datos, o None. El genérico (uid 0) nunca
+    está pendiente. Una sola consulta, dentro de esta función (no abre otra
+    sesión anidada)."""
+    ses = sesion_actual(request, "plataforma")
+    if not ses or not ses.get("uid"):
+        return None
+    with db.get_session() as s:
+        u = s.get(db.UsuarioPlataforma, ses["uid"])
+        if u and u.activo and (u.debe_cambiar_clave or u.debe_completar_datos):
+            return u
+    return None
+
+
 @app.post("/plataforma/login")
-def plataforma_login(request: Request, response: Response, cuit: str = Form(...), clave: str = Form(...)):
+def plataforma_login(request: Request, response: Response,
+                     usuario: str = Form(None), cuit: str = Form(None), clave: str = Form(...)):
+    # `usuario` es el campo nuevo (login nominal); `cuit` se acepta por
+    # compatibilidad con el login genérico de transición.
+    usuario = (usuario or cuit or "").strip()
     if _login_bloqueado(request):
         return RedirectResponse("/plataforma?error=espera", status_code=303)
-    if not auth.verificar_plataforma(clave, cuit):
-        _login_fallo(request)
-        return RedirectResponse("/plataforma?error=1", status_code=303)
-    _login_ok(request)
-    token = auth.crear_sesion("plataforma")
-    db.registrar_acceso("plataforma")
-    resp = RedirectResponse("/plataforma/inicio", status_code=303)
-    set_cookie_segura(resp, COOKIE_PLATAFORMA, token)
-    return resp
+    ip = _ip_de(request)
+    # 1) Usuario nominal (SPRINT_R1.md).
+    fila = db.usuario_plataforma_por_usuario(usuario)
+    if fila and fila.activo and auth.verificar_clave(clave, fila.clave_hash):
+        if _clave_transitoria_vencida(fila.clave_vence):
+            _login_fallo(request)
+            return RedirectResponse("/plataforma?error=vencida", status_code=303)
+        _login_ok(request)
+        token = auth.crear_sesion("plataforma", id_usuario=fila.id, ident=fila.usuario)
+        db.registrar_acceso("plataforma")
+        db.registrar_log_plataforma("login", fila.usuario, ip=ip)
+        pendiente = fila.debe_cambiar_clave or fila.debe_completar_datos
+        resp = RedirectResponse("/plataforma/completar" if pendiente else "/plataforma/inicio",
+                                status_code=303)
+        set_cookie_segura(resp, COOKIE_PLATAFORMA, token)
+        return resp
+    # 2) Genérico por variable de entorno (login de transición, se saca al
+    #    cerrar R1). El campo trae el CUIT del genérico.
+    if auth.verificar_plataforma(clave, usuario):
+        _login_ok(request)
+        token = auth.crear_sesion("plataforma")     # uid 0 = genérico
+        db.registrar_acceso("plataforma")
+        db.registrar_log_plataforma("login", "generico", ip=ip)
+        resp = RedirectResponse("/plataforma/inicio", status_code=303)
+        set_cookie_segura(resp, COOKIE_PLATAFORMA, token)
+        return resp
+    _login_fallo(request)
+    return RedirectResponse("/plataforma?error=1", status_code=303)
+
+
+# ---- Primer ingreso: cambio de clave + carga de datos obligatorios ----
+
+def _clave_debil(nueva: str, clave_hash_actual: str) -> str | None:
+    """Motivo por el que una clave nueva no sirve, o None si está bien.
+    Mínimo 10 caracteres y distinta de la transitoria (SPRINT_R1.md)."""
+    if len((nueva or "")) < 10:
+        return "La clave nueva tiene que tener al menos 10 caracteres."
+    if auth.verificar_clave(nueva, clave_hash_actual):
+        return "La clave nueva tiene que ser distinta de la transitoria."
+    return None
+
+
+_RE_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+@app.get("/plataforma/completar", response_class=HTMLResponse)
+def plataforma_completar(request: Request):
+    fila = _pendiente_de_completar(request)
+    if not fila:
+        # Sin sesión nominal pendiente: al panel (o al login si no hay sesión).
+        return RedirectResponse("/plataforma/inicio", status_code=303)
+    return templates.TemplateResponse("plataforma_completar.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(), "u": fila})
+
+
+@app.post("/plataforma/completar")
+def plataforma_completar_guardar(
+        request: Request, clave_nueva: str = Form(...), clave_repetir: str = Form(...),
+        cuil: str = Form(""), dni: str = Form(""), email: str = Form(""),
+        direccion: str = Form(""), telefono: str = Form("")):
+    fila = _pendiente_de_completar(request)
+    if not fila:
+        return RedirectResponse("/plataforma/inicio", status_code=303)
+
+    def _volver(msg):
+        return templates.TemplateResponse("plataforma_completar.html", {
+            "request": request, "marca_plataforma": db.marca_plataforma(),
+            "u": fila, "error": msg,
+            "datos": {"cuil": cuil, "dni": dni, "email": email,
+                      "direccion": direccion, "telefono": telefono}}, status_code=400)
+
+    if clave_nueva != clave_repetir:
+        return _volver("Las dos claves no coinciden.")
+    motivo = _clave_debil(clave_nueva, fila.clave_hash)
+    if motivo:
+        return _volver(motivo)
+    cuil_n = re.sub(r"[^0-9]", "", cuil or "")
+    if len(cuil_n) != 11:
+        return _volver("El CUIL tiene que tener 11 dígitos.")
+    if not (dni or "").strip():
+        return _volver("El DNI es obligatorio.")
+    if not _RE_EMAIL.match((email or "").strip()):
+        return _volver("El mail no tiene un formato válido.")
+    if db.email_plataforma_en_uso(email, excepto_id=fila.id):
+        return _volver("Ese mail ya está en uso por otro usuario de plataforma.")
+    if not (direccion or "").strip():
+        return _volver("La dirección es obligatoria.")
+    if not (telefono or "").strip():
+        return _volver("El teléfono es obligatorio.")
+
+    db.completar_usuario_plataforma(
+        fila.id, auth.hashear_clave(clave_nueva), cuil_n, dni, email, direccion, telefono)
+    db.registrar_log_plataforma("completar_cuenta", fila.usuario, ip=_ip_de(request))
+    return RedirectResponse("/plataforma/inicio", status_code=303)
 
 
 @app.post("/plataforma/config")
