@@ -16,14 +16,13 @@ actualizado: 2026-09-20
 
 ## Cómo seguir
 
-Bloque 4 en curso. Corregidos hasta ahora: H-0001 (Solucionado), H-0006
-(Solucionado demo/prod), H-0002 y H-0008 (Parcial), y **H-0004
-(Solucionado)** — el Crítico de riesgo 25: identidad firmada en el token,
-52 lecturas de cookie plana reemplazadas, 43 archivos de test verdes.
-Bloquean producción: **4**. Resolución: 3 Solucionado, 2 Parcial, 12
-Pendiente, 1 Aceptado.
+Bloque 4 en curso. Solucionados: H-0001, H-0006, H-0004 y **H-0005** (el
+eval del motor de fórmulas, reemplazado por un evaluador seguro con `ast`).
+Parciales: H-0002, H-0008. Bloquean producción: **3**. Resolución: 4
+Solucionado, 2 Parcial, 11 Pendiente, 1 Aceptado.
 
-Sigue por el ranking: H-0003 (usuario+contraseña en la landing, C3), H-0005
-(reemplazar el eval del motor de fórmulas, C3), H-0002 (completar: hashear +
-usuarios nominales, con H-0016). Y la pasada dinámica/destructiva contra
-Pruebas, todavía pendiente (AUT-02 confirmaría H-0004 desde afuera).
+Quedan bloqueando: H-0003 (usuario+contraseña en la landing, C3) y H-0002
+(completar: hashear la clave de plataforma + usuarios nominales, con H-0016).
+Ambos entran en el terreno de R1 (usuarios de plataforma nominales), así que
+conviene tratarlos juntos como un sub-sprint. Y sigue pendiente la pasada
+dinámica/destructiva contra Pruebas.

@@ -328,9 +328,57 @@ def matchear_lineas(lineas: list, idx: dict):
     return matcheadas, desconocidas
 
 
+import ast as _ast
+import operator as _op
+
+_BINOPS = {_ast.Add: _op.add, _ast.Sub: _op.sub, _ast.Mult: _op.mul,
+           _ast.Div: _op.truediv, _ast.Mod: _op.mod, _ast.Pow: _op.pow}
+_UNARIOS = {_ast.UAdd: _op.pos, _ast.USub: _op.neg}
+
+
+def _ev_nodo(nodo, variables):
+    """Evalúa UN nodo del árbol de la fórmula. Solo permite lo que una
+    fórmula del catálogo necesita; cualquier otra cosa levanta SyntaxError."""
+    if isinstance(nodo, _ast.Constant):
+        # Solo números. Un string suelto (o bool) no es una fórmula válida;
+        # los strings solo valen como el código dentro de c("...").
+        if isinstance(nodo.value, bool) or not isinstance(nodo.value, (int, float)):
+            raise SyntaxError("solo se permiten números")
+        return nodo.value
+    if isinstance(nodo, _ast.Name):
+        if nodo.id not in variables:
+            raise NameError(f"name '{nodo.id}' is not defined")
+        return variables[nodo.id]
+    if isinstance(nodo, _ast.BinOp) and type(nodo.op) in _BINOPS:
+        return _BINOPS[type(nodo.op)](_ev_nodo(nodo.left, variables),
+                                      _ev_nodo(nodo.right, variables))
+    if isinstance(nodo, _ast.UnaryOp) and type(nodo.op) in _UNARIOS:
+        return _UNARIOS[type(nodo.op)](_ev_nodo(nodo.operand, variables))
+    if isinstance(nodo, _ast.Call):
+        # Única llamada permitida: c("CODIGO") con un string literal.
+        if (isinstance(nodo.func, _ast.Name) and nodo.func.id == "c"
+                and "c" in variables and len(nodo.args) == 1 and not nodo.keywords
+                and isinstance(nodo.args[0], _ast.Constant)
+                and isinstance(nodo.args[0].value, str)):
+            return variables["c"](nodo.args[0].value)
+        raise SyntaxError("llamada no permitida")
+    raise SyntaxError("expresión no permitida")
+
+
 def _evaluar(expr: str, variables: dict) -> float:
-    # Entorno restringido: sin builtins. Las expresiones vienen de la tabla de fórmulas.
-    return float(eval(expr, {"__builtins__": {}}, variables))
+    """Evalúa una fórmula del catálogo sin usar la función incorporada de
+    Python (XSK H-0005).
+
+    Antes se evaluaba con __builtins__ vacío, que NO es un sandbox: desde un
+    literal se llega a las clases del intérprete por dunders y se ejecuta
+    código arbitrario. Como la fórmula la escribe un admin de sindicato
+    (`/admin/formula`), eso era ejecución de código en el servidor
+    multi-tenant. Ahora se parsea a un árbol y se recorre a mano, permitiendo
+    solo números, las variables provistas (total_ingresos, base_remunerativa),
+    aritmética y la función c("CODIGO"). Se conservan los tipos de excepción
+    (SyntaxError/NameError/ZeroDivisionError) que espera error_de_expresion()."""
+    arbol = _ast.parse(expr, mode="eval")
+    return float(_ev_nodo(arbol.body, variables))
 
 
 def cuiles_distintos(cuil_leido, cuil_sesion) -> bool:

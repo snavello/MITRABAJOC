@@ -133,3 +133,35 @@ def test_h0004_no_quedan_lecturas_crudas_de_identidad():
     # Ninguna ruta debe volver a leer la identidad de la cookie plana.
     assert 'cookies.get("cuil_trab", "")' not in fuente
     assert 'cookies.get("cuit_emp", "")' not in fuente
+
+
+# ---- H-0005: el motor de fórmulas ya no usa eval (sin escape de sandbox) ----
+
+def test_h0005_formulas_legitimas_siguen_evaluando():
+    import validador
+    v = {"total_ingresos": 1000.0, "base_remunerativa": 2000.0, "c": lambda cod: {"128": 50.0}.get(cod, 0.0)}
+    assert validador._evaluar("base_remunerativa * 0.015", v) == 30.0
+    assert validador._evaluar("total_ingresos * 0.03 + c(\"128\")", v) == 80.0
+    assert validador._evaluar("(base_remunerativa - total_ingresos) / 2", v) == 500.0
+    assert validador._evaluar("-total_ingresos", v) == -1000.0
+
+
+def test_h0005_el_escape_de_sandbox_ya_no_ejecuta():
+    import validador
+    v = dict(validador.VARIABLES_DE_PRUEBA)
+    # El clásico escape por dunders: antes con eval llegaba a las clases del
+    # intérprete; ahora es una expresión no permitida (no ejecuta nada).
+    for payload in (
+        '().__class__.__bases__[0].__subclasses__()',
+        '"".__class__',
+        '__import__("os").system("echo x")',
+    ):
+        with pytest.raises((SyntaxError, NameError, ValueError)):
+            validador._evaluar(payload, v)
+
+
+def test_h0005_no_queda_eval_en_validador():
+    import validador
+    fuente = open(validador.__file__, encoding="utf-8").read()
+    # No debe quedar ninguna llamada eval( en el motor de fórmulas.
+    assert "eval(" not in fuente, "quedó un eval( en validador.py"
