@@ -178,6 +178,31 @@
   .obs-chip { display:flex; gap:8px; align-items:center; padding:6px 12px; border-radius:999px; font-size:12.5px;
     background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); }
   .obs-chip b { font-family:var(--mono); }
+  /* Gráficos de Grafana dentro de la pestaña */
+  .obs-rangos { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
+  .obs-rangos .boton { padding:6px 12px; font-size:13px; }
+  .obs-rangos .boton.activo { background:#fff; color:var(--tinta); }
+  .obs-tarjetas { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; margin-bottom:14px; }
+  .obs-tarjeta { padding:10px 12px; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12);
+    border-left-width:5px; display:grid; gap:2px; }
+  .obs-tarjeta .k { font-family:var(--mono); font-size:10px; letter-spacing:1px; text-transform:uppercase; color:rgba(255,255,255,.5); }
+  .obs-tarjeta .v { font-size:22px; font-weight:700; }
+  .obs-tarjeta.ok { border-left-color:#5fd08a; } .obs-tarjeta.atencion { border-left-color:#ffb84d; }
+  .obs-tarjeta.mal { border-left-color:#ff6b6b; } .obs-tarjeta.sin_datos { border-left-color:#ffb84d; }
+  .obs-tarjeta.mal .v { color:#ff9d9d; } .obs-tarjeta.atencion .v, .obs-tarjeta.sin_datos .v { color:#ffd27a; }
+  .obs-graficos { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px; }
+  .obs-grafico { padding:12px 14px; border-radius:14px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); min-width:0; }
+  .obs-grafico h5 { margin:0 0 8px; font-size:13.5px; font-weight:600; }
+  .obs-grafico svg { width:100%; height:130px; display:block; }
+  .obs-grafico .ejes { display:flex; justify-content:space-between; gap:6px; font-family:var(--mono); font-size:10.5px; color:rgba(255,255,255,.5); margin-top:2px; }
+  .obs-grafico .leyenda { display:flex; flex-wrap:wrap; gap:4px 12px; margin-top:6px; font-size:12px; color:rgba(255,255,255,.75); }
+  .obs-grafico .leyenda i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; }
+  .obs-detalle-fila td { background:rgba(0,0,0,.25); }
+  .obs-pasos { list-style:none; margin:8px 0; padding:0; display:grid; gap:6px; }
+  .obs-pasos li { font-family:var(--mono); font-size:12px; padding:6px 10px; border-radius:8px; background:rgba(255,255,255,.05); word-break:break-word; }
+  .obs-pasos li.propio { border-left:3px solid #ffd27a; }
+  .obs-pasos code { display:block; margin-top:3px; color:rgba(255,255,255,.65); white-space:pre-wrap; }
+  .obs-acciones .boton { padding:5px 10px; font-size:12.5px; }
   .obs-limpio { padding:22px; border-radius:14px; text-align:center; background:color-mix(in srgb, var(--demo) 14%, transparent);
     border:1px solid color-mix(in srgb, var(--demo) 35%, transparent); font-size:15px; }
   .plan-semaforo.atencion { background:rgba(240,180,60,.25); color:#ffd27a; }
@@ -743,6 +768,7 @@
 
   async function cargar() {
     cargarSentry(false);
+    cargarMetricas(false);
     try { pintar(await pedir('/api/entornos/observabilidad')); }
     catch (err) { decir('No se pudo consultar: ' + err.message, true); }
   }
@@ -774,11 +800,11 @@
         {codigo: 'E-RECIBO-03', cantidad: 3, descripcion: 'No pudimos terminar de verificar este recibo', gravedad: 'conocido'}],
       recientes: [
         {cuando: antes(12), codigo: 'E-INTERNO-00', descripcion: '', gravedad: 'inesperado', ruta: '/admin/dashboard/kpis',
-         rol: 'sindicato', sindicato_id: '3', ref: 'a3f9c21b', titulo: 'ValueError: consulta rota', url: ''},
+         rol: 'sindicato', sindicato_id: '3', ref: 'a3f9c21b', evento_id: 'ejemplo1', titulo: 'ValueError: consulta rota', url: ''},
         {cuando: antes(190), codigo: 'E-RECIBO-03', descripcion: 'No pudimos terminar de verificar este recibo', gravedad: 'conocido',
-         ruta: '/api/validar', rol: 'trabajador', sindicato_id: '', ref: '7be0d144', titulo: "KeyError: 'totales_impresos'", url: ''},
+         ruta: '/api/validar', rol: 'trabajador', sindicato_id: '', ref: '7be0d144', evento_id: 'ejemplo2', titulo: "KeyError: 'totales_impresos'", url: ''},
         {cuando: antes(1500), codigo: 'E-INTERNO-00', descripcion: '', gravedad: 'inesperado', ruta: '/api/aportes',
-         rol: 'trabajador', sindicato_id: '', ref: '0c81be92', titulo: 'TypeError: unsupported operand type(s)', url: ''}]});
+         rol: 'trabajador', sindicato_id: '', ref: '0c81be92', evento_id: 'ejemplo3', titulo: 'TypeError: unsupported operand type(s)', url: ''}]});
   }
 
   function pintarSentry(d) {
@@ -827,7 +853,8 @@
           `<td>${esc(e.rol || '—')}${e.sindicato_id ? `<br><span class="obs-suave">Sindicato #${esc(e.sindicato_id)}</span>` : ''}</td>` +
           `<td class="obs-mono">${esc(e.ref || '—')}</td>` +
           `<td>${esc(e.titulo)}</td>` +
-          `<td>${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">Abrir ↗</a>` : ''}</td></tr>`).join('') +
+          `<td class="obs-acciones">${e.evento_id ? `<button type="button" class="boton suave obs-ver-detalle" data-evento="${esc(e.evento_id)}">Ver detalle</button>` : ''}` +
+          `${e.url ? `<br><a class="obs-suave" href="${esc(e.url)}" target="_blank" rel="noopener">Sentry ↗</a>` : ''}</td></tr>`).join('') +
         '</tbody></table></div>' +
         '<p class="plan-nota" style="margin-top:8px;">Rojo = no sabíamos que podía pasar (E-INTERNO-00): mirarlo primero. Ámbar = un error con código propio que la app ya sabe nombrar. La <b>referencia</b> es la que la persona ve en pantalla: buscala acá.</p>';
     }
@@ -837,7 +864,100 @@
     caja.innerHTML = h; enganchar();
   }
 
+
+  /* ---------- Gráficos de Grafana, dibujados acá (sin iniciar sesión en Grafana) ---------- */
+  let rangoMetricas = '6h';
+  const RANGOS_TEXTO = {'1h': 'Última hora', '6h': '6 horas', '24h': '24 horas', '7d': '7 días'};
+  const PALETA = ['#8ecbff', '#ffd27a', '#a8e6b0', '#ffb3b3', '#d0b3ff', '#ffa8e0'];
+  function formatoValor(v, unidad, dec) {
+    if (v === null || v === undefined) return '—';
+    if (unidad === 'percent') return v.toFixed(dec != null ? dec : (v < 10 ? 1 : 0)) + ' %';
+    if (unidad === 's') return v < 1 ? Math.round(v * 1000) + ' ms' : v.toFixed(2) + ' s';
+    if (unidad === 'm') return Math.round(v) + ' min';
+    if (unidad === 'bytes') return v >= 1073741824 ? (v / 1073741824).toFixed(2) + ' GB' : (v / 1048576).toFixed(0) + ' MB';
+    return dec != null ? v.toFixed(dec) : String(Math.round(v * 100) / 100);
+  }
+  const horaCorta = seg => new Date(seg * 1000).toLocaleString('es-AR', {timeZone: ZONA, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'});
+
+  function dibujarGrafico(g, desde, hasta, paso) {
+    const con = g.series.filter(s => s.puntos.length);
+    if (!con.length) return `<div class="obs-grafico"><h5>${esc(g.titulo)}</h5><div class="obs-suave">Sin datos en este rango.</div></div>`;
+    const W = 600, H = 130;
+    const todos = con.flatMap(s => s.puntos.map(p => p[1]));
+    let max = Math.max(...todos, g.umbral != null ? g.umbral * 1.05 : 0);
+    const min = g.minimo != null ? g.minimo : Math.min(...todos);
+    if (max <= min) max = min + 1;
+    const x = t => ((t - desde) / (hasta - desde)) * W, y = v => H - 4 - ((v - min) / (max - min)) * (H - 8);
+    let svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(g.titulo)}">`;
+    svg += `<line x1="0" y1="${H - 4}" x2="${W}" y2="${H - 4}" stroke="rgba(255,255,255,.15)"/>`;
+    if (g.umbral != null) svg += `<line x1="0" y1="${y(g.umbral)}" x2="${W}" y2="${y(g.umbral)}" stroke="#ff6b6b" stroke-dasharray="5 4" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`;
+    con.forEach((s, i) => {
+      // Un hueco (más de 3 pasos sin dato) corta la línea en vez de unir dos puntos lejanos.
+      let d = '', prev = null;
+      s.puntos.forEach(([t, v]) => { d += (prev === null || t - prev > 3 * paso ? 'M' : 'L') + x(t).toFixed(1) + ' ' + y(v).toFixed(1) + ' '; prev = t; });
+      svg += `<path d="${d}" fill="none" stroke="${PALETA[i % PALETA.length]}" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
+    });
+    svg += '</svg>';
+    const leyenda = con.map((s, i) => `<span><i style="background:${PALETA[i % PALETA.length]}"></i>${esc(s.nombre)}: <b>${esc(formatoValor(s.puntos[s.puntos.length - 1][1], g.unidad))}</b></span>`).join('');
+    return `<div class="obs-grafico"><h5 title="${esc(g.descripcion || '')}">${esc(g.titulo)}</h5>${svg}` +
+      `<div class="ejes"><span>${esc(horaCorta(desde))}</span><span>máx ${esc(formatoValor(max, g.unidad))}${g.umbral != null ? ' · umbral ' + esc(formatoValor(g.umbral, g.unidad)) : ''}</span><span>${esc(horaCorta(hasta))}</span></div>` +
+      `<div class="leyenda">${leyenda}</div></div>`;
+  }
+
+  function pintarMetricas(d) {
+    const caja = document.getElementById('obs-graficos');
+    let h = '<div class="obs-rangos">' + Object.keys(RANGOS_TEXTO).map(r =>
+      `<button type="button" class="boton suave${r === rangoMetricas ? ' activo' : ''}" data-rango="${r}">${RANGOS_TEXTO[r]}</button>`).join('') +
+      '<button type="button" class="boton suave" id="obs-metricas-actualizar">Actualizar</button></div>';
+    if ((d.errores || []).length) h += `<div class="aviso mal">${esc(d.errores.join(' · '))}</div>`;
+    h += '<div class="obs-tarjetas">' + (d.tarjetas || []).map(t =>
+      `<div class="obs-tarjeta ${t.estado}" title="${esc(t.descripcion || '')}"><span class="k">${esc(t.titulo)}</span>` +
+      `<span class="v">${t.estado === 'sin_datos' ? 'SIN DATOS' : esc(t.texto || formatoValor(t.valor, t.unidad, t.decimales))}</span></div>`).join('') + '</div>';
+    h += '<div class="obs-graficos">' + (d.graficos || []).map(g => dibujarGrafico(g, d.desde, d.hasta, d.paso)).join('') + '</div>';
+    caja.innerHTML = h;
+    caja.querySelectorAll('[data-rango]').forEach(b => b.onclick = () => { rangoMetricas = b.dataset.rango; cargarMetricas(false); });
+    const act = document.getElementById('obs-metricas-actualizar');
+    if (act) act.onclick = () => cargarMetricas(true);
+  }
+
+  async function cargarMetricas(forzar) {
+    try { pintarMetricas(await pedir('/api/entornos/observabilidad/metricas?rango=' + rangoMetricas + (forzar ? '&forzar=1' : ''))); }
+    catch (err) { document.getElementById('obs-graficos').innerHTML = `<div class="aviso mal">No se pudieron traer los gráficos: ${esc(err.message)}</div>`; }
+  }
+
+  /* ---------- Detalle de un error de Sentry, sin abrir Sentry ---------- */
+  const DETALLE_EJEMPLO = {tipo: 'ValueError', mensaje: 'consulta rota (ejemplo)', etiquetas: {codigo: 'E-INTERNO-00', rol: 'sindicato', ruta: '/admin/dashboard/kpis', release: 'd5abfca'},
+    pasos: [{archivo: 'dashboard.py', linea: 212, funcion: 'kpis', codigo: 'return _agregar(sesion, filtros)', propio: true},
+            {archivo: 'main.py', linea: 4310, funcion: 'admin_dashboard_kpis', codigo: 'return dashboard.kpis(ses, f)', propio: true}]};
+
+  function htmlDetalle(d) {
+    const etiquetas = Object.entries(d.etiquetas || {}).map(([k, v]) => `<span class="obs-chip"><span class="obs-suave">${esc(k)}</span> <b>${esc(v)}</b></span>`).join('');
+    const pasos = (d.pasos || []).map(p =>
+      `<li class="${p.propio ? 'propio' : ''}"><b>${esc(p.archivo)}:${esc(p.linea == null ? '?' : p.linea)}</b> <span class="obs-suave">en ${esc(p.funcion || '?')}</span>` +
+      (p.codigo ? `<code>${esc(p.codigo)}</code>` : '') + '</li>').join('');
+    return `<b>${esc(d.tipo)}</b>: ${esc(d.mensaje)}<ul class="obs-pasos">${pasos || '<li>Sin pasos de código guardados.</li>'}</ul>` +
+      `<div class="obs-chips" style="margin:0;">${etiquetas}</div>` +
+      '<p class="plan-nota" style="margin-top:8px;">Los pasos van del más reciente (donde falló) al más viejo. Sentry no guarda los valores de las variables: acá se ve código, no datos de personas.</p>';
+  }
+
+  function engancharDetalles(caja) {
+    caja.querySelectorAll('.obs-ver-detalle').forEach(boton => boton.onclick = async () => {
+      const fila = boton.closest('tr'), siguiente = fila.nextElementSibling;
+      if (siguiente && siguiente.classList.contains('obs-detalle-fila')) { siguiente.remove(); boton.textContent = 'Ver detalle'; return; }
+      const nueva = document.createElement('tr');
+      nueva.className = 'obs-detalle-fila';
+      nueva.innerHTML = '<td colspan="7"><span class="obs-suave">Cargando el detalle…</span></td>';
+      fila.after(nueva); boton.textContent = 'Ocultar';
+      try {
+        const d = boton.dataset.evento.startsWith('ejemplo') ? DETALLE_EJEMPLO
+                : await pedir('/api/entornos/observabilidad/sentry/evento/' + encodeURIComponent(boton.dataset.evento));
+        nueva.firstElementChild.innerHTML = htmlDetalle(d);
+      } catch (err) { nueva.firstElementChild.innerHTML = `<span class="obs-suave">No se pudo traer el detalle: ${esc(err.message)}</span>`; }
+    });
+  }
+
   function enganchar() {
+    engancharDetalles(document.getElementById('obs-sentry'));
     document.getElementById('obs-sentry-actualizar').onclick = () => cargarSentry(true);
     document.getElementById('obs-sentry-ejemplo').onclick = () => { verEjemplo = !verEjemplo; cargarSentry(false); };
     document.getElementById('obs-sentry-prueba').onclick = async ev => {

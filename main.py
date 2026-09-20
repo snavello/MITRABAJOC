@@ -83,6 +83,7 @@ import render_planes
 from observabilidad import panel as observabilidad_panel
 from observabilidad import hilo_colector
 from observabilidad import sentry_panel
+from observabilidad import metricas_panel
 import sentry_config
 import planificador
 from modulos import MODULOS, MODULOS_INICIALES
@@ -6667,6 +6668,28 @@ def api_entornos_observabilidad_sentry(request: Request, forzar: int = 0):
     tiene que demorar el estado de Grafana)."""
     _exigir_observabilidad(request)
     return sentry_panel.estado(forzar=bool(forzar))
+
+
+@app.get("/api/entornos/observabilidad/sentry/evento/{evento_id}")
+def api_entornos_observabilidad_sentry_evento(request: Request, evento_id: str):
+    """El detalle de un error (archivo, línea y etiquetas), para leerlo sin iniciar sesión en Sentry."""
+    _exigir_observabilidad(request)
+    try:
+        return sentry_panel.detalle(evento_id)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except sentry_panel.ErrorSentry as e:
+        raise HTTPException(502, str(e))
+
+
+@app.get("/api/entornos/observabilidad/metricas")
+def api_entornos_observabilidad_metricas(request: Request, rango: str = "6h", forzar: int = 0):
+    """Los gráficos del tablero de Grafana, para verlos en la pestaña sin iniciar sesión en Grafana."""
+    _exigir_observabilidad(request)
+    try:
+        return metricas_panel.estado(rango, forzar=bool(forzar))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
 
 
 @app.post("/entornos/observabilidad/sentry-prueba")
