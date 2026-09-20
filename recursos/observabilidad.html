@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cómo nos enteramos de que algo falla</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --tinta:#0a1421;
+  --papel:#f4f6f9;
+  --blanco:#ffffff;
+  --linea:#dbe2ea;
+  --suave:#eef2f7;
+  --texto:#16243a;
+  --texto2:#4c5d75;
+  --miel:#f0a01e;
+  --agua:#a0030b;
+  --verde:#0f8a6a;
+  --codigo-fondo:#eef2f7;
+  --codigo-texto:#1f3350;
+  --chip-fondo:#0a1421;
+  --chip-texto:#eef3f9;
+  --sombra:0 1px 2px rgba(10,20,33,.05);
+  --display:'Barlow Condensed','Arial Narrow',sans-serif;
+  --body:'Barlow',system-ui,-apple-system,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --tinta:#060d16;
+    --papel:#0d1725;
+    --blanco:#131f30;
+    --linea:#26374d;
+    --suave:#1a2839;
+    --texto:#e3eaf3;
+    --texto2:#9aadc4;
+    --miel:#f6b545;
+    --agua:#ef7b74;
+    --verde:#3fbf9c;
+    --codigo-fondo:#1a2839;
+    --codigo-texto:#bcd0e8;
+    --chip-fondo:#2b4058;
+    --chip-texto:#eaf1fa;
+    --sombra:0 1px 2px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --tinta:#060d16;
+  --papel:#0d1725;
+  --blanco:#131f30;
+  --linea:#26374d;
+  --suave:#1a2839;
+  --texto:#e3eaf3;
+  --texto2:#9aadc4;
+  --miel:#f6b545;
+  --agua:#ef7b74;
+  --verde:#3fbf9c;
+  --codigo-fondo:#1a2839;
+  --codigo-texto:#bcd0e8;
+  --chip-fondo:#2b4058;
+  --chip-texto:#eaf1fa;
+  --sombra:0 1px 2px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box;margin:0}
+body{
+  background:var(--papel);
+  color:var(--texto);
+  font-family:var(--body);
+  font-size:16px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+code,.mono{font-family:var(--mono);font-size:.86em;background:var(--codigo-fondo);color:var(--codigo-texto);padding:1px 5px;border-radius:4px}
+strong{font-weight:600}
+em{font-style:italic}
+
+/* ---------- Encabezado ---------- */
+.top{
+  background:var(--tinta);
+  color:#eef3f9;
+  padding:34px clamp(18px,5vw,56px) 30px;
+  border-bottom:4px solid var(--miel);
+}
+.top .interior{max-width:1080px;margin:0 auto}
+.eyebrow{
+  font-family:var(--display);font-weight:600;letter-spacing:2.6px;
+  text-transform:uppercase;color:var(--miel);font-size:13px;
+}
+h1{
+  font-family:var(--display);font-weight:700;
+  font-size:clamp(32px,5.2vw,54px);line-height:.98;
+  margin:8px 0 12px;text-wrap:balance;color:#fff;
+}
+.top p{max-width:66ch;color:rgba(238,243,249,.8);font-size:16.5px}
+.top .ficha{
+  display:flex;flex-wrap:wrap;gap:8px 26px;margin-top:20px;
+  padding-top:16px;border-top:1px solid rgba(238,243,249,.18);
+  font-size:13px;color:rgba(238,243,249,.62);
+}
+.top .ficha b{color:rgba(238,243,249,.92);font-weight:500}
+
+/* ---------- Estructura ---------- */
+.wrap{max-width:1080px;margin:0 auto;padding:0 clamp(18px,5vw,56px) 72px}
+section{padding-top:46px}
+.rotulo{
+  font-family:var(--display);font-weight:600;letter-spacing:2.4px;
+  text-transform:uppercase;color:var(--agua);font-size:12.5px;margin-bottom:6px;
+}
+h2{
+  font-family:var(--display);font-weight:700;font-size:clamp(25px,3.4vw,34px);
+  line-height:1.05;text-wrap:balance;margin-bottom:10px;
+}
+h3{
+  font-family:var(--display);font-weight:700;font-size:21px;
+  line-height:1.15;margin-bottom:6px;text-wrap:balance;
+}
+.intro{max-width:66ch;color:var(--texto2);font-size:16.5px}
+p+p{margin-top:12px}
+section>p{max-width:66ch}
+
+/* ---------- Etapas del recorrido ---------- */
+.etapas{display:grid;gap:14px;margin-top:26px}
+.etapa{
+  display:grid;grid-template-columns:56px minmax(0,1fr);gap:18px;
+  background:var(--blanco);border:1px solid var(--linea);border-radius:12px;
+  padding:18px 20px;box-shadow:var(--sombra);
+}
+.etapa .n{
+  font-family:var(--display);font-weight:700;font-size:34px;line-height:.9;
+  color:var(--agua);font-variant-numeric:tabular-nums;padding-top:2px;
+}
+.etapa .cuerpo p{max-width:70ch;color:var(--texto2);margin-top:5px}
+.etapa .cuerpo p.principal{color:var(--texto)}
+.limite{
+  margin-top:12px;padding:9px 13px;border-left:3px solid var(--miel);
+  background:var(--suave);border-radius:0 7px 7px 0;font-size:14.5px;
+}
+.limite b{font-family:var(--display);letter-spacing:1.4px;text-transform:uppercase;
+  font-size:12px;color:var(--texto2);display:block;margin-bottom:2px;font-weight:600}
+
+/* ---------- Comparación hoy / v2 ---------- */
+.pilar{
+  background:var(--blanco);border:1px solid var(--linea);border-radius:12px;
+  margin-top:18px;overflow:hidden;box-shadow:var(--sombra);
+}
+.pilar>header{padding:16px 20px 14px;border-bottom:1px solid var(--linea)}
+.pilar>header p{color:var(--texto2);max-width:72ch;margin-top:4px}
+.dos{display:grid;grid-template-columns:1fr 1fr}
+@media (max-width:760px){.dos{grid-template-columns:1fr}}
+.dos>div{padding:16px 20px 18px}
+.dos>div+div{border-left:1px solid var(--linea)}
+@media (max-width:760px){.dos>div+div{border-left:0;border-top:1px solid var(--linea)}}
+.pill{
+  font-family:var(--display);font-size:11.5px;letter-spacing:1.6px;text-transform:uppercase;
+  font-weight:600;padding:3px 10px;border-radius:999px;display:inline-block;margin-bottom:9px;
+  border:1px solid;
+}
+.pill.hoy{color:var(--texto2);border-color:var(--linea);background:var(--suave)}
+.pill.v2{color:var(--verde);border-color:var(--verde);background:transparent}
+.dos li{margin-left:17px;padding-left:2px;margin-top:7px;color:var(--texto2)}
+.dos li::marker{color:var(--linea)}
+.dos .v2col li::marker{color:var(--verde)}
+.dos li b{color:var(--texto);font-weight:600}
+
+/* ---------- Tabla ---------- */
+.tabla-scroll{overflow-x:auto;margin-top:18px;border:1px solid var(--linea);border-radius:12px;background:var(--blanco)}
+table{border-collapse:collapse;width:100%;min-width:660px;font-size:14.5px}
+th,td{text-align:left;padding:11px 15px;border-bottom:1px solid var(--suave);vertical-align:top}
+th{
+  font-family:var(--display);font-weight:600;letter-spacing:1.4px;text-transform:uppercase;
+  font-size:11.5px;color:var(--texto2);background:var(--suave);
+}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---------- Cita / nota fuerte ---------- */
+.nota{
+  margin-top:22px;background:var(--blanco);border:1px solid var(--linea);
+  border-left:4px solid var(--agua);border-radius:0 12px 12px 0;padding:16px 20px;
+}
+.nota h3{color:var(--agua);margin-bottom:5px}
+.nota p{max-width:72ch;color:var(--texto2)}
+
+/* ---------- Secuencia de pasadas ---------- */
+.pasadas{display:grid;gap:10px;margin-top:18px}
+.pasada{
+  display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start;
+  background:var(--blanco);border:1px solid var(--linea);border-radius:10px;padding:13px 17px;
+}
+.pasada .marca{
+  font-family:var(--mono);font-size:12px;color:var(--chip-texto);background:var(--chip-fondo);
+  padding:3px 8px;border-radius:5px;white-space:nowrap;margin-top:2px;
+}
+.pasada.condicional .marca{background:var(--miel);color:#231a08}
+.pasada .que{font-weight:600}
+.pasada .det{color:var(--texto2);font-size:14.5px;margin-top:3px;max-width:70ch}
+
+/* ---------- Cierre ---------- */
+.cierre{
+  margin-top:46px;padding:20px 22px;border-radius:12px;
+  background:var(--tinta);color:rgba(238,243,249,.82);
+}
+.cierre h3{color:var(--miel);margin-bottom:8px}
+.cierre p{max-width:72ch}
+.cierre p+p{margin-top:10px}
+.cierre code{background:rgba(255,255,255,.1);color:#e8eef6}
+
+.pie{margin-top:34px;padding-top:16px;border-top:1px solid var(--linea);
+  color:var(--texto2);font-size:13.5px;max-width:74ch}
+
+.pasada .marca{min-width:54px;text-align:center}
+.pasada .det strong{color:var(--texto);font-weight:600}
+.limite{max-width:78ch}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="interior">
+    <div class="eyebrow">Colm3na · Observabilidad · Operación</div>
+    <h1>Cómo nos enteramos de que algo falla</h1>
+    <p>Qué mira cada herramienta, qué avisa por mail y qué queda guardado para diagnosticar. Cómo se ve todo desde <span class="mono">/entornos</span>, qué hacer cuando llega un aviso, y el procedimiento para repetir el esquema en Demo y en Producción.</p>
+    <div class="ficha">
+      <span>Para <b>quien opera</b> y <b>quien decide</b></span>
+      <span>Estado: <b>Pruebas completo · Demo y Producción pendientes</b></span>
+      <span>Fuente: <b>observabilidad/</b>, <b>sentry_config.py</b> y el plan <b>docs/chat/2026-09-19-plan-observabilidad.md</b></span>
+      <span>Al <b>20 de septiembre de 2026</b></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<section>
+  <div class="rotulo">De qué se trata</div>
+  <h2>El problema, y la regla que ordena todo</h2>
+  <p class="intro">El 18 de septiembre Pruebas se colgó y nadie recibió un aviso: los registros se perdieron y Render no guarda la historia de CPU ni de memoria. Este esquema existe para que eso no vuelva a pasar en silencio.</p>
+  <div class="nota">
+    <h3>Regla 0: el observador vive afuera de lo que observa</h3>
+    <p>Si la app, la base o Render se caen, la observación no puede caerse con ellos. Por eso las mediciones, las alertas y los mails viven en servicios externos (Grafana Cloud y Sentry) y no dentro de la app ni de su base, ni siquiera en otro servicio del mismo Render. La app es la <strong>puerta</strong> (la pestaña Observabilidad de <span class="mono">/entornos</span>), nunca el <strong>motor</strong>: si la app está caída, los avisos siguen saliendo.</p>
+  </div>
+</section>
+
+<section>
+  <div class="rotulo">Las tres preguntas</div>
+  <h2>Tres preguntas, cada una con su herramienta</h2>
+  <p class="intro">Todo es gratuito para empezar y los avisos van a un solo mail (el de SDN). El principal objetivo es un <strong>tablero</strong> donde ver el estado; el mail es la excepción.</p>
+
+  <div class="etapas">
+    <div class="etapa">
+      <div class="n">A</div>
+      <div class="cuerpo">
+        <h3>¿Está viva? · Monitor de uptime</h3>
+        <p class="principal">Grafana Cloud (Synthetic Monitoring) le pega desde afuera a <span class="mono">/healthz</span> (la app responde) cada 2 minutos y a <span class="mono">/readyz</span> (la base contesta un <span class="mono">SELECT 1</span>) cada 3, desde Ohio y desde São Paulo.</p>
+        <p>Un 200 con otro cuerpo no cuenta como "vive": el monitor exige <span class="mono">{"ok": true}</span>. Solo avisa si fallan <strong>las dos ubicaciones a la vez</strong>, así un problema de un solo sitio no manda mail.</p>
+        <div class="limite"><b>Límite</b>Detecta que algo se cayó en minutos, no en segundos, y no dice por qué. Para el porqué están B y C.</div>
+      </div>
+    </div>
+    <div class="etapa">
+      <div class="n">B</div>
+      <div class="cuerpo">
+        <h3>¿Qué falló? · Errores con contexto</h3>
+        <p class="principal">Sentry recibe los errores <strong>no previstos</strong> (los que hoy muestran <span class="mono">E-INTERNO-00</span>). Cada uno llega con el traceback, la <strong>referencia</strong> que la persona ve en pantalla (para buscarlo), el código, la ruta, el rol y el ID del sindicato.</p>
+        <p>Los errores de usuarios se guardan siempre para diagnóstico pero <strong>no mandan mail</strong>.</p>
+        <div class="limite"><b>Límite</b>Sentry no ve lo que la app maneja a propósito (un 403, un 422, un código <span class="mono">E-...</span> propio): eso no es un fallo.</div>
+      </div>
+    </div>
+    <div class="etapa">
+      <div class="n">C</div>
+      <div class="cuerpo">
+        <h3>¿Cuánto se usa? · Métricas con historia</h3>
+        <p class="principal">Un colector lee la API de Render (CPU, memoria, pedidos por código de estado, latencia, conexiones y disco de la web y de la base) y lo escribe en el Prometheus de Grafana Cloud. Render no guarda esa historia; así queda.</p>
+        <p>El colector corre por <strong>tres vías que se cubren</strong>: el cron de GitHub Actions, un hilo dentro de la app y un disparador de Grafana que le ordena a GitHub correr cada 5 minutos.</p>
+        <div class="limite"><b>Límite</b>La frescura es de 5 a 15 minutos. Sirve para el tablero y para alertas sostenidas (30 minutos), no para detectar algo en segundos.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="rotulo">Qué vive dónde</div>
+  <h2>Si la app se cae, ¿qué sigue funcionando?</h2>
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Pieza</th><th>Dónde corre</th><th>Con la app caída</th></tr></thead>
+      <tbody>
+        <tr><td>Monitor de uptime y sus alertas</td><td>Grafana Cloud</td><td><strong>Sigue</strong> y avisa por mail</td></tr>
+        <tr><td>Métricas, tablero y alertas de CPU, memoria y 5xx</td><td>Grafana Cloud</td><td><strong>Sigue</strong></td></tr>
+        <tr><td>Colector: cron de GitHub y disparador</td><td>GitHub Actions / Grafana Cloud</td><td><strong>Sigue</strong></td></tr>
+        <tr><td>Colector: hilo dentro de la app</td><td>La app (solo Pruebas)</td><td>Se detiene; las otras dos vías cubren</td></tr>
+        <tr><td>Errores</td><td>Sentry</td><td>Lo ya guardado sigue visible</td></tr>
+        <tr><td>Pestaña Observabilidad de <span class="mono">/entornos</span></td><td>La app</td><td>No carga: se abre Grafana o Sentry directo (con cuenta)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="rotulo">Qué merece un mail</div>
+  <h2>Cuatro eventos, y nada más</h2>
+  <p class="intro">Todo lo demás queda guardado y visible en el tablero, sin mail.</p>
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>#</th><th>Evento</th><th>Umbral</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td>La app no responde (<span class="mono">/healthz</span>, medido desde afuera)</td><td>3 minutos seguidos</td></tr>
+        <tr><td class="num">2</td><td>La app vive pero la base no (<span class="mono">/readyz</span>)</td><td>5 minutos seguidos</td></tr>
+        <tr><td class="num">3</td><td>Muchas respuestas 5xx</td><td>más del 5 % durante 10 minutos, con al menos 20 pedidos</td></tr>
+        <tr><td class="num">4</td><td>CPU o memoria, web o base</td><td>por encima del 95 % más de 30 minutos</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:14px">Además hay tres avisos "de mantenimiento" del propio esquema: <strong>el colector no corre</strong> (más de 30 minutos sin escribir), <strong>el disparador falló</strong> (a los 15 minutos) y <strong>un token está por vencer</strong>. Reglas anti-ruido: un mail al abrirse un problema, otro al resolverse y un recordatorio cada 24 horas mientras siga abierto (configurable en la pestaña).</p>
+  <div class="limite"><b>Sin datos no es "todo bien"</b>Un monitor que deja de reportar avisa (mejor un falso aviso que quedarse ciego). En los números del tablero, "SIN DATOS" se ve en ámbar, nunca en verde.</div>
+</section>
+
+<section>
+  <div class="rotulo">Privacidad</div>
+  <h2>Qué viaja a Sentry y qué no</h2>
+  <div class="pilar">
+    <header>
+      <h3>El evento se reconstruye con lo mínimo</h3>
+      <p>No se toma un evento completo para quitarle lo malo: se arma uno nuevo solo con lo permitido, así lo imprevisto no se filtra.</p>
+    </header>
+    <div class="dos">
+      <div>
+        <span class="pill v2">Sí viaja</span>
+        <ul>
+          <li>El <b>traceback</b> (archivo, línea, función)</li>
+          <li>La <b>referencia</b> de la pantalla, el código y la ruta</li>
+          <li>El <b>rol</b> y el <b>ID del sindicato</b> (nunca un nombre)</li>
+          <li>La versión (commit de Render) y el entorno</li>
+          <li>Un CUIL o CUIT suelto: decisión de SDN, es dato público</li>
+        </ul>
+      </div>
+      <div class="v2col">
+        <span class="pill hoy">Nunca viaja</span>
+        <ul>
+          <li>Cuerpos de pedidos, cookies y encabezados</li>
+          <li>IP y datos del usuario</li>
+          <li>El valor de las variables de cada línea (ahí viven los recibos con sueldos)</li>
+          <li>Nombres, mails y claves</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <p style="margin-top:14px">Un tope de 20 eventos por minuto evita que una tormenta (la base caída, por ejemplo) se coma la cuota gratuita del mes. Nota para el futuro: la afiliación a un sindicato es un dato sensible según la Ley 25.326, así que un CUIL junto con el sindicato es lo único que un cambio de criterio podría querer reconsiderar.</p>
+</section>
+
+<section>
+  <div class="rotulo">La pantalla</div>
+  <h2>La pestaña Observabilidad de <span class="mono" style="font-size:.8em">/entornos</span></h2>
+  <p class="intro">Se entra con el PIN de entornos (solo en Pruebas). <strong>No hace falta iniciar sesión en Grafana ni en Sentry</strong>: la app trae los datos con un token de lectura y los dibuja ella. De arriba hacia abajo:</p>
+  <div class="pasadas">
+    <div class="pasada"><span class="marca">1</span><div><div class="que">Métricas de Grafana</div><div class="det">Tarjetas de estado (app y base responden, latencia, CPU y memoria, conexiones, disco, colector) y siete gráficos, a elegir entre 1 hora, 6 horas, 24 horas o 7 días. Las consultas salen del mismo tablero de Grafana: no pueden diferir.</div></div></div>
+    <div class="pasada"><span class="marca">2</span><div><div class="que">Errores de la app (Sentry)</div><div class="det">Cuántos hubo, agrupados por código, y una tabla de los últimos con "Ver detalle": el tipo, el mensaje, los pasos de código donde falló y las etiquetas. Rojo = no lo esperábamos; ámbar = un error con código propio. El botón "Mandar error de prueba" verifica el camino de punta a punta sin ensuciar el reporte.</div></div></div>
+    <div class="pasada"><span class="marca">3</span><div><div class="que">Estado general</div><div class="det">El semáforo leído de las reglas de alerta, el botón "Actualizar métricas ahora" y los enlaces a Grafana.</div></div></div>
+    <div class="pasada"><span class="marca">4</span><div><div class="que">A quién se avisa y vencimientos</div><div class="det">El mail y cada cuánto se repite el recordatorio (lista cerrada: 1, 6, 12, 24 o 48 horas), el mail de prueba, y cuántos días faltan para que venza cada token.</div></div></div>
+  </div>
+  <div class="nota">
+    <h3>Por qué no hay un enlace público</h3>
+    <p>Se evaluó publicar el tablero con un enlace sin login y se descartó: cualquiera que tenga la dirección vería las métricas. Para dar acceso al equipo a Grafana o Sentry hay que <strong>invitar a cada persona con su propio usuario</strong>; nunca se comparten credenciales.</p>
+  </div>
+</section>
+
+<section>
+  <div class="rotulo">Cuando llega un aviso</div>
+  <h2>Qué mirar primero</h2>
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Aviso</th><th>Qué mirar</th></tr></thead>
+      <tbody>
+        <tr><td>App no responde</td><td>Panel y registros de Render; <span class="mono">docs/OPERATIVA.md</span> §9. Después, los gráficos de CPU y memoria de la hora anterior.</td></tr>
+        <tr><td>Base no responde</td><td>Estado de la base en Render y el gráfico de conexiones (el pool de la app es de 10 por proceso).</td></tr>
+        <tr><td>Muchos errores 5xx</td><td>"Errores de la app": buscar por referencia, abrir "Ver detalle" y leer la línea donde falló. Suele ser un deploy roto.</td></tr>
+        <tr><td>CPU o memoria al límite</td><td>Es capacidad, no un defecto: evaluar subir el plan (solapa Planes; decide AKG).</td></tr>
+        <tr><td>Colector mudo</td><td>Botón "Actualizar métricas ahora"; si no alcanza, correr el workflow a mano en GitHub. Revisar los tokens.</td></tr>
+        <tr><td>Disparador falló</td><td>Casi seguro venció o se revocó el token de GitHub: renovarlo (ver la tabla de claves).</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="rotulo">Claves</div>
+  <h2>Qué claves hay, dónde viven y cuándo vencen</h2>
+  <p class="intro">Ninguna clave está en el repositorio: van en variables de entorno o dentro de la configuración de cada servicio. Hay una alerta por mail antes de cada vencimiento y la pestaña muestra los días que faltan.</p>
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Clave</th><th>Dónde vive</th><th>Vence</th><th>Al renovar</th></tr></thead>
+      <tbody>
+        <tr><td>GitHub, disparador (grano fino, solo Actions del repo)</td><td>Dentro del check de Grafana</td><td class="num">2026-10-18</td><td>Token nuevo y <span class="mono">aplicar_disparador.py</span></td></tr>
+        <tr><td>Grafana de la app: lectura (Viewer) y configuración (Editor)</td><td>Render: <span class="mono">GRAFANA_TOKEN_LECTURA</span> y <span class="mono">GRAFANA_TOKEN_CONFIG</span></td><td class="num">2027-09-19</td><td>Tokens nuevos y actualizar las dos variables</td></tr>
+        <tr><td>Grafana para escribir métricas (<span class="mono">metrics:write</span>)</td><td>Secreto de GitHub y Render: <span class="mono">GRAFANA_METRICS_TOKEN</span></td><td>a confirmar</td><td>Token nuevo, dos lugares</td></tr>
+        <tr><td>API key de Render</td><td>Secreto de GitHub, Render y la fuente <span class="mono">render-vivo</span> de Grafana</td><td>no vence</td><td>Al rotarla, cuatro lugares (correr <span class="mono">aplicar_tablero.py</span> con la nueva)</td></tr>
+        <tr><td>Sentry: DSN (solo envía)</td><td>Render: <span class="mono">SENTRY_DSN</span></td><td>no vence</td><td>Regenerar en Sentry y actualizar la variable</td></tr>
+        <tr><td>Sentry: token personal de lectura</td><td>Render: <span class="mono">SENTRY_AUTH_TOKEN</span></td><td>no vence</td><td>Revocar si no se usa; permisos Read en Project, Issue &amp; Event y Organization</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="limite"><b>Pendiente de higiene</b>Durante la construcción se usaron una cuenta de servicio <strong>Admin</strong> de Grafana (no vence nunca), una API key de Render y un token de Sentry, y se pegaron en una conversación. Hay que <strong>revocarlos</strong> y, si hace falta volver a configurar, crear credenciales nuevas con vencimiento.</div>
+</section>
+
+<section>
+  <div class="rotulo">Decisiones</div>
+  <h2>Lo que se decidió, y lo que se descartó</h2>
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Tema</th><th>Decisión</th><th>Por qué</th></tr></thead>
+      <tbody>
+        <tr><td>Servicios</td><td>Externos y gestionados: Grafana Cloud (A y C) y Sentry (B)</td><td>Regla 0; SDN ya conocía Grafana</td></tr>
+        <tr><td>Costo</td><td>Todo gratis para empezar</td><td>Se sube de plan si el gratuito queda corto</td></tr>
+        <tr><td>Avisos</td><td>Solo un mail; recordatorio cada 24 h en Pruebas</td><td>No agobiar mientras se prueba</td></tr>
+        <tr><td>Tablero vs. mail</td><td>El tablero es el objetivo; el mail es la excepción</td><td>Los errores de usuarios se guardan pero no avisan</td></tr>
+        <tr><td>Alcance</td><td>Primero Pruebas; se replica a Demo cuando esté validado</td><td>Producción todavía no existe</td></tr>
+        <tr><td>Métricas de Render</td><td>Colector propio</td><td>El Metrics Stream nativo exige el plan Pro (USD 25/mes)</td></tr>
+        <tr><td>Cron de GitHub</td><td>Se dejó de depender de él</td><td>Estuvo más de una hora sin dispararse; se sumó el hilo y el disparador</td></tr>
+        <tr><td>Enlace público del tablero</td><td>Descartado</td><td>Expondría las métricas a quien tenga la dirección</td></tr>
+        <tr><td>Datos personales en Sentry</td><td>CUIL/CUIT suelto sí; nombres, sueldos y recibos nunca</td><td>Decisión de SDN: un CUIL suelto es dato público</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="rotulo">Replicar</div>
+  <h2>Cómo repetirlo en Demo y en Producción</h2>
+  <p class="intro">Este procedimiento <strong>no se ejecutó todavía</strong>: es el plan, armado a partir de cómo quedó Pruebas. Está pensado para hacerlo una sola vez por entorno, en este orden.</p>
+
+  <div class="nota">
+    <h3>Tres cosas para saber antes de empezar</h3>
+    <p><strong>1. La configuración hoy es de un solo entorno.</strong> <span class="mono">observabilidad/config.json</span> describe Pruebas (nombres, direcciones, IDs de servicios, proyecto de Sentry). Todos los scripts aceptan <span class="mono">--config</span>: cada entorno nuevo tiene su propio archivo (<span class="mono">config.demo.json</span>) y se aplica con esa opción. El Grafana, el mail y la política de avisos son compartidos.</p>
+    <p><strong>2. El presupuesto del monitor de uptime es de todo el stack.</strong> Pruebas usa unas 80.600 ejecuciones al mes de un tope gratuito asumido de 100.000 (dato sin verificar: mirarlo en Grafana Cloud, Billing/Usage). Sumar Demo con la misma frecuencia lo pasa. Hay que bajar la frecuencia o las ubicaciones, o pasar a un plan pago. Cuenta: ejecuciones por mes = 2.592.000 ÷ frecuencia en segundos, por cada ubicación, por cada check.</p>
+    <p><strong>3. La pestaña Observabilidad es solo de Pruebas.</strong> Demo y Producción no tienen <span class="mono">/entornos</span>. Verlos ahí requiere un cambio de código (un selector de entorno); mientras tanto se ven en Grafana y Sentry, con cuenta.</p>
+  </div>
+
+  <div class="pasadas">
+    <div class="pasada"><span class="marca">Paso 0</span><div><div class="que">Requisitos del entorno</div><div class="det">La app del entorno ya expone <span class="mono">/healthz</span> y <span class="mono">/readyz</span> (están en <span class="mono">main</span>). <strong>En Demo, cargar <span class="mono">/healthz</span> como Health Check Path en Render recién después de promover</strong> (antes haría fallar sus deploys). Verificar que la variable <span class="mono">ENTORNO</span> del servicio dice <span class="mono">demo</span> (o <span class="mono">prod</span>). Anotar los IDs del servicio web (<span class="mono">srv-...</span>) y de la base (<span class="mono">dpg-...</span>).</div></div></div>
+    <div class="pasada"><span class="marca">Paso 1</span><div><div class="que">Crear el archivo de configuración del entorno</div><div class="det">Copiar <span class="mono">config.json</span> a <span class="mono">config.demo.json</span> y cambiar: carpeta y tablero (<span class="mono">grafana.carpeta_uid/titulo</span>, <span class="mono">tablero_uid/titulo</span>); <span class="mono">uptime.entorno</span>, <span class="mono">base_url</span>, los <span class="mono">job</span> y los nombres de alerta ("(Demo)"); frecuencias y ubicaciones según el presupuesto; <span class="mono">metricas_render.entorno</span> y los IDs de <span class="mono">recursos</span>; los títulos de las cuatro alertas de métricas; el <span class="mono">disparador</span> (job, evento, alerta); y <span class="mono">sentry.proyecto</span>. <strong>Sacar la sección <span class="mono">renovaciones</span></strong>: los vencimientos ya los avisa Pruebas y se duplicarían los mails.</div></div></div>
+    <div class="pasada"><span class="marca">Paso 2</span><div><div class="que">Ensayar sin tocar nada</div><div class="det">Cada script tiene <span class="mono">--dry-run</span>: muestra qué haría sin escribir. Correrlos todos con <span class="mono">--config observabilidad/config.demo.json</span> y leer el resultado antes de seguir.</div></div></div>
+    <div class="pasada"><span class="marca">Paso 3</span><div><div class="que">Aplicar en Grafana</div><div class="det">Con una cuenta de servicio de Grafana (variable <span class="mono">GRAFANA_TOKEN</span>) y la opción <span class="mono">--config</span>, en este orden: <span class="mono">aplicar_grafana.py</span> (carpeta; el punto de contacto y la política ya existen y no se duplican), <span class="mono">aplicar_uptime.py</span> (checks y alertas), <span class="mono">aplicar_alertas_metricas.py</span> y <span class="mono">aplicar_tablero.py</span> (con <span class="mono">RENDER_API_KEY</span> solo si hay que crear la fuente "en vivo"). Todos son idempotentes.</div></div></div>
+    <div class="pasada"><span class="marca">Paso 4</span><div><div class="que">Colector de métricas</div><div class="det">El workflow de GitHub llama al colector sin opciones, o sea con la configuración de Pruebas. Hay dos caminos: <strong>(a)</strong> un segundo workflow que use <span class="mono">--config observabilidad/config.demo.json</span>, o <strong>(b, recomendado)</strong> que el colector recorra todas las configuraciones en una sola corrida (un cambio chico en <span class="mono">colector_render.py</span>), así alcanza <strong>un solo disparador</strong> y no se duplica el consumo del monitor. Los secretos de GitHub (<span class="mono">RENDER_API_KEY</span>, <span class="mono">GRAFANA_METRICS_TOKEN</span>) ya sirven: es el mismo espacio de trabajo de Render. Si se elige (a), correr también <span class="mono">aplicar_disparador.py --config</span> para el segundo workflow (el token de GitHub existente sirve: es el mismo repositorio).</div></div></div>
+    <div class="pasada"><span class="marca">Paso 5</span><div><div class="que">Sentry del entorno</div><div class="det">Crear un proyecto propio en Sentry (por ejemplo <span class="mono">colm3na-demo</span>, plataforma Python), copiar su DSN y cargarlo como <span class="mono">SENTRY_DSN</span> en el servicio de Render del entorno. El entorno viaja solo (sale de <span class="mono">ENTORNO</span>). Revisar en Sentry → Alerts que no haya una regla por defecto que mande un mail por cada error nuevo: los errores de usuarios no avisan. Verificar el cupo mensual gratuito, compartido entre proyectos de la misma organización.</div></div></div>
+    <div class="pasada condicional"><span class="marca">Paso 6</span><div><div class="que">Verificar de punta a punta (esperar unos 15 minutos)</div><div class="det">(1) En Synthetic Monitoring los dos checks del entorno reportan éxito. (2) El tablero nuevo no muestra "SIN DATOS" y "Colector" marca menos de 15 minutos. (3) Un mail de prueba llega. (4) Un error de prueba aparece en Sentry en el entorno correcto: desde la consola de Render del servicio se puede mandar uno con <span class="mono">sentry_config.capturar</span> marcado como prueba (ver <span class="mono">sentry_config.py</span>), y desaparece del reporte real porque va a otro entorno. (5) Un simulacro de caída solo se hace en Pruebas, nunca en Demo antes de una presentación.</div></div></div>
+    <div class="pasada"><span class="marca">Paso 7</span><div><div class="que">Dejarlo registrado</div><div class="det">Guardar <span class="mono">config.demo.json</span> en el repositorio (no tiene secretos), agregar una línea a la bitácora, actualizar "Estado actual" de <span class="mono">CLAUDE.md</span> y las variables nuevas de <span class="mono">DESPLIEGUE_RENDER.md</span>, y sumar los vencimientos nuevos a la tabla de claves.</div></div></div>
+  </div>
+
+  <div class="pilar">
+    <header>
+      <h3>Y para Producción, además</h3>
+      <p>Lo mismo que Demo, más las decisiones que en Pruebas se postergaron a propósito.</p>
+    </header>
+    <div class="dos">
+      <div>
+        <span class="pill hoy">Pruebas hoy</span>
+        <ul>
+          <li>Un solo mail, el de SDN</li>
+          <li>Recordatorio cada 24 horas</li>
+          <li>Planes gratuitos de Grafana y Sentry</li>
+          <li>Cuentas a nombre de una persona</li>
+        </ul>
+      </div>
+      <div class="v2col">
+        <span class="pill v2">Producción, a decidir</span>
+        <ul>
+          <li>Más de un destinatario y un canal que despierte a alguien (mensaje o guardia), no solo mail</li>
+          <li>Recordatorio más corto (por ejemplo 1 hora): con usuarios reales importa</li>
+          <li>Plan pago si el presupuesto del monitor o la cuota de errores no alcanzan</li>
+          <li>Cuentas y claves a nombre de la organización, con una cuenta de servicio nueva y con vencimiento</li>
+          <li>Revisar los umbrales con carga real y el criterio de privacidad de Sentry</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="rotulo">Lo que falta</div>
+  <h2>Pendiente</h2>
+  <div class="pasadas">
+    <div class="pasada"><span class="marca">1</span><div><div class="que">Resumen diario de errores por sindicato</div><div class="det">Sentry ya los guarda con el ID del sindicato; falta armar el resumen.</div></div></div>
+    <div class="pasada"><span class="marca">2</span><div><div class="que">Métricas propias de la app</div><div class="det">Conexiones del pool, cupo del panel y latencia por ruta, sin datos personales. Es lo que permitiría el detalle por sindicato en el tablero.</div></div></div>
+    <div class="pasada"><span class="marca">3</span><div><div class="que">Replicar a Demo y a Producción</div><div class="det">El procedimiento de arriba.</div></div></div>
+    <div class="pasada"><span class="marca">4</span><div><div class="que">Ajuste de Sentry</div><div class="det">Activar "Prevent Storing of IP Addresses" (prioridad baja).</div></div></div>
+    <div class="pasada"><span class="marca">5</span><div><div class="que">Renovar y revocar</div><div class="det">Renovar el token de GitHub antes del 18 de octubre; confirmar el vencimiento del token de métricas; revocar las credenciales usadas durante la construcción.</div></div></div>
+  </div>
+</section>
+
+<div class="cierre">
+  <h3>Dónde está el detalle</h3>
+  <p>El código y su configuración están en <span class="mono">observabilidad/</span> (un script por función, todos idempotentes) y en <span class="mono">sentry_config.py</span>. La ficha vigente para quien programa es <span class="mono">docs/OBSERVABILIDAD.md</span>; la historia de cómo se llegó hasta acá, con los incidentes y las mediciones, está en <span class="mono">docs/chat/2026-09-19-plan-observabilidad.md</span>. Los tests (<span class="mono">test_observabilidad_*.py</span>, <span class="mono">test_sentry*.py</span>, <span class="mono">test_metricas_panel.py</span>) se corren cada archivo por separado.</p>
+</div>
+
+<p class="pie">Documento interno de Colm3na. Los valores de las claves no figuran en ningún documento del repositorio.</p>
+
+</div>
+</body>
+</html>

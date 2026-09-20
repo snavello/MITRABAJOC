@@ -36,6 +36,7 @@ cuenta), no en cada commit.
 | `HISTORIAL.md` | Changelog técnico por bloque (79 secciones fechadas): el porqué de cada decisión, bugs y su causa real. No se carga automático en Code; se abre por sección. |
 | `BACKLOG.md` | Hallazgos y pedidos laterales para no desviar el bloque en curso. |
 | `ESTADO_DEL_PROYECTO.md` | **Congelado (ago 2026).** Se conserva como historia. |
+| `docs/OBSERVABILIDAD.md` | Ficha rectora de la observabilidad (Grafana, Sentry, colector): cómo funciona, reglas de código, claves y vencimientos, y el procedimiento para replicar en Demo y Producción. Versión ilustrada: `recursos/observabilidad.html`. |
 | `docs/ASISTENTE_PANEL.md` | Ficha rectora del Asistente del Panel Sindical (se actualiza esta ficha, no otra). |
 | `docs/DASHBOARD.md` | Especificación funcional y técnica del Panel Sindical. |
 | `docs/cct-1875-bancarios.md` | Lo que la simulación usa del CCT 18/75. |

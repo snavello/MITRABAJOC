@@ -62,6 +62,15 @@ TIPOS = {
 # y migrations/); su miniatura es una captura de la portada.
 SEMILLA = [
     {
+        "clave": "observabilidad",
+        "titulo": "Observabilidad: cómo nos enteramos de que algo falla",
+        "descripcion": "Qué mira cada herramienta (uptime, errores, métricas), qué avisa por mail, cómo se ve en la pestaña de Entornos, qué hacer ante un aviso y el procedimiento para replicarlo en Demo y Producción.",
+        "fecha": date(2026, 9, 20),
+        "archivo": "observabilidad.html",
+        "miniatura": "observabilidad.jpg",
+        "fragmento": "",
+    },
+    {
         "clave": "bitacora",
         "titulo": "Bitácora del proyecto",
         "descripcion": "Qué se hizo cada día, con qué herramienta (Chat, Code, Cowork) y "
