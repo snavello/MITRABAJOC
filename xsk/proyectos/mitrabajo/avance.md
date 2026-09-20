@@ -1,6 +1,6 @@
 ---
 iteracion: 1
-etapa_actual: 7
+etapa_actual: 8
 etapa0: hecha
 etapa1: hecha
 etapa2: hecha
@@ -8,7 +8,7 @@ etapa3: hecha
 etapa4: hecha
 etapa5: en_curso
 etapa6: hecha
-etapa7: en_curso
+etapa7: hecha
 etapa8: pendiente
 etapa9: pendiente
 actualizado: 2026-09-20
@@ -16,20 +16,24 @@ actualizado: 2026-09-20
 
 ## Cómo seguir
 
-Bloque 3, primera pasada (2026-09-20): **revisión de código + análisis
-estático**, sin tocar ningún entorno. 18 hallazgos abiertos (`hallazgos/`):
-5 Críticos, 3 Altos, 8 Medios, 2 Bajos; 8 bloquean producción. Corrida en
-`corridas/2026-09-20-1700-REVISION.md`. Herramientas: lectura dirigida,
-bandit (encontró el `eval` de fórmulas, H-0005), pip-audit (CVE de
-dependencias, H-0014), escaneo del historial (sin secretos, DAT-02 pasa).
+Etapa 7 (clasificación) cerrada con SDN uno a uno (2026-09-20). Ranking
+final: **3 Críticos, 4 Altos, 6 Medios, 4 Bajos; 7 bloquean producción**;
+1 aceptado (H-0011, herramienta de pruebas que no va a producción). Ajustes
+de SDN sobre la propuesta: H-0004 subió a P5 (riesgo 25); H-0003 subió a D4
+y su corrección pasó a usuario+contraseña como plataforma (la landing ya
+guarda el registro de XSK); H-0005 y H-0007 bajaron; H-0017 y H-0013
+bajaron; H-0011 aceptado; H-0012 a Bajo.
 
-**Falta y queda pendiente**: NO se corrió el modo destructivo ni ningún
-test dinámico contra un entorno (fuerza bruta IDS-01, IDOR AUT-02,
-aislamiento AUT-03/04, carga DIS-01/02, backups/perímetro INF-03/05). La
-lista completa está en la sección "Pendiente" de la corrida.
+Los tres Críticos y los cuatro Altos, por orden del ranking:
+1. H-0004 (25) identidad en cookie sin firma — AUT, C3
+2. H-0001 (20) SESSION_SECRET default — DAT, C1
+3. H-0002 (20) clave de plataforma default/sin hash — IDS, C2
+4. H-0006 (12) cookies sin Secure — IDS, C1
+5. H-0008 (12) logins sin límite de intentos — IDS, C2
+6. H-0003 (12) landing: PIN default → usuario+contraseña — DAT, C3
+7. H-0005 (10) eval evadible en fórmulas — AUT, C3
 
-Dos cosas antes de seguir:
-1. **Clasificación (etapa 7)**: los puntajes probabilidad/daño/complejidad
-   de los 18 son la PROPUESTA de Code; falta que SDN los confirme o ajuste.
-2. Después: la pasada dinámica contra Pruebas, y el bloque 4 (correcciones)
-   por orden del ranking, empezando por los cinco Críticos.
+Sigue el bloque 4 (correcciones, etapa 8): por el ranking, una rama
+`fix/xsk-H-NNNN` por hallazgo con su test de regresión. Los de complejidad
+baja (H-0001, H-0006) se cierran rápido. En paralelo queda pendiente la
+pasada dinámica/destructiva contra Pruebas (AUT-02, IDS-01, DIS-01/02, etc.).
