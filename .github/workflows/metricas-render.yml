@@ -17,7 +17,11 @@ name: Métricas de Render a Grafana
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    # Minutos 3, 8, 13... y NO */5: GitHub documenta que las corridas programadas se
+    # demoran o se descartan cuando hay mucha carga, y la carga se concentra en los
+    # minutos redondos (:00, :05, :10...) donde caen todos los "*/5" del mundo. Su
+    # propia recomendación es correr en otro minuto de la hora.
+    - cron: "3-58/5 * * * *"
   workflow_dispatch:
 
 concurrency:
