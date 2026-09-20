@@ -144,7 +144,7 @@ def test_el_estado_trae_la_configuracion_vigente_de_grafana_y_los_enlaces(grafan
     # muestre 24 h y no caiga en la primera opción (1 h). Lo encontró la
     # verificación en el navegador contra el Grafana real.
     assert d["config"]["repeat_interval"] == "24h"
-    assert d["tablero_url"] == "https://prueba.grafana.net/dashboards/f/colm3na-pruebas"
+    assert d["tablero_url"] == "https://prueba.grafana.net/d/colm3na-pruebas-estado"
     assert d["sentry_url"] == ""
 
 

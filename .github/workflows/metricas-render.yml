@@ -1,0 +1,41 @@
+# Junta las métricas de Render (CPU, memoria, HTTP, conexiones, disco...) y las
+# escribe en Grafana Cloud, para que la historia exista aunque Render no la guarde.
+# Corre FUERA de Render a propósito (regla 0 de docs/chat/2026-09-19-plan-observabilidad.md):
+# si la app o la plataforma se caen, la historia igual se acumula.
+#
+# GitHub retrasa las corridas programadas (a veces 10-15 min) y las cancela si el
+# repo lleva 60 días sin actividad: por eso cada corrida re-manda los últimos 20
+# minutos y por eso hay una alerta si el colector se queda callado.
+#
+# Secretos del repositorio (Settings > Secrets and variables > Actions):
+#   RENDER_API_KEY          clave de la API de Render (solo se usa para LEER métricas)
+#   GRAFANA_METRICS_TOKEN   token de Grafana Cloud con permiso metrics:write y nada más
+name: Métricas de Render a Grafana
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: metricas-render
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  colectar:
+    if: github.repository == 'snavello/MITRABAJOC'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Colectar y escribir en Grafana
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          GRAFANA_METRICS_TOKEN: ${{ secrets.GRAFANA_METRICS_TOKEN }}
+        run: python observabilidad/colector_render.py

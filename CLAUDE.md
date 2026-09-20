@@ -503,8 +503,12 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     el repo). Hecho: carpeta, punto de contacto y política anti-ruido, y el
     **monitor de uptime** (`aplicar_uptime.py`: `/healthz` y `/readyz` de Pruebas
     desde Ohio y São Paulo, con sus alertas; solo dispara si fallan todas las
-    ubicaciones). Falta: colector de métricas de Render, Sentry y las alertas de
-    5xx y de CPU/memoria.
+    ubicaciones), el **colector de métricas de Render** (`colector_render.py`, en
+    GitHub Actions cada 5 min, fuera de Render) con su **tablero** "Pruebas ·
+    Estado general" y las alertas de 5xx, CPU, memoria y colector mudo. El Metrics
+    Stream nativo de Render existe pero exige el plan Pro (USD 25/mes): se dejó
+    como mejora. Secretos de Actions: `RENDER_API_KEY`, `GRAFANA_METRICS_TOKEN`.
+    Falta: Sentry, métricas propias de la app y el detalle por sindicato.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
