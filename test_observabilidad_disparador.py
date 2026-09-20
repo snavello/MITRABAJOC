@@ -54,7 +54,8 @@ def test_el_pedido_es_el_que_github_acepta_para_disparar_un_workflow():
     h = p["settings"]["http"]
     assert h["method"] == "POST" and h["validStatusCodes"] == [204]
     assert json.loads(h["body"]) == {"ref": "main"}
-    cab = {x["name"]: x["value"] for x in h["headers"]}
+    assert all(isinstance(x, str) for x in h["headers"]), "SM exige texto 'Nombre: valor', no objetos"
+    cab = dict(x.split(": ", 1) for x in h["headers"])
     assert cab["Authorization"] == "Bearer github_pat_X" and cab["Accept"] == "application/vnd.github+json"
     assert cab["X-GitHub-Api-Version"] == "2022-11-28"
     assert p["frequency"] == 300000 and p["timeout"] == 10000 and p["probes"] == [7]

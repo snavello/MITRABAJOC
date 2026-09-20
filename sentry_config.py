@@ -44,6 +44,7 @@ CAMPOS_PERSONALES = [
 # Tope de eventos por minuto: si algo se rompe en cada pedido (la base caída, por ejemplo) no se
 # manda una tormenta que se coma la cuota del mes en minutos. Sentry además agrupa por
 # causa, así que lo que se pierde acá es repetición.
+ENTORNO_DE_PRUEBA = "prueba-de-conexion"
 MAX_EVENTOS_POR_MINUTO = 20
 _recientes = deque()
 _candado = threading.Lock()
@@ -114,6 +115,10 @@ def limpiar_evento(evento: dict, pista=None):
         {"category": m.get("category"), "level": m.get("level"), "message": limpiar_texto(m.get("message") or ""),
          "timestamp": m.get("timestamp")} for m in migas[-10:]]}
     evento["tags"] = {k: limpiar_texto(str(v)) for k, v in (evento.get("tags") or {}).items()}
+    # Un error de PRUEBA (botón de la pestaña Observabilidad) va a un entorno aparte: el reporte de
+    # errores reales filtra por el entorno de la app y no se ensucia con las pruebas de conexión.
+    if evento["tags"].get("prueba") == "si":
+        evento["environment"] = ENTORNO_DE_PRUEBA
     return evento
 
 
@@ -147,11 +152,18 @@ def iniciar(dsn: str, entorno: str, release: str = "", transport=None) -> bool:
     return True
 
 
+def activo() -> bool:
+    """¿Hay un Sentry que realmente manda? `sentry_sdk.is_initialized()` no alcanza: con un DSN vacío
+    el SDK igual figura como iniciado (verificado con sentry-sdk 2.69.2), pero no manda nada."""
+    cliente = sentry_sdk.get_client()
+    return bool(getattr(cliente, "options", {}).get("dsn")) and cliente.is_active()
+
+
 def capturar(exc: BaseException, *, ruta: str = "", rol: str = "", sindicato_id=None,
-             ref: str = "", codigo: str = "") -> None:
+             ref: str = "", codigo: str = "", prueba: bool = False) -> None:
     """Manda un error no previsto con sus etiquetas. Nunca lanza: observar no puede romper la app."""
     try:
-        if not sentry_sdk.is_initialized():
+        if not activo():
             return
         # El middleware de sesión envuelve lo que explota en una ruta en un ExceptionGroup de un solo
         # elemento; el error real es el de adentro y es el que hay que ver en Sentry.
@@ -167,6 +179,8 @@ def capturar(exc: BaseException, *, ruta: str = "", rol: str = "", sindicato_id=
                 scope.set_tag("ref", ref)                   # el que ve la persona en pantalla
             if codigo:
                 scope.set_tag("codigo", codigo)
+            if prueba:
+                scope.set_tag("prueba", "si")
             sentry_sdk.capture_exception(exc)
     except Exception:
         pass

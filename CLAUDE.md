@@ -526,7 +526,10 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     referencia `ref` que la persona ve en pantalla, el rol y el ID del sindicato, y
     SIN cuerpos de pedidos, cookies, IP, variables locales ni nombres (un CUIL o CUIT
     suelto sí puede salir: decisión de SDN, es dato público). Variable `SENTRY_DSN`;
-    sin ella no hace nada.
+    sin ella no hace nada. Los errores se LEEN en la pestaña Observabilidad
+    (`observabilidad/sentry_panel.py`, variable `SENTRY_AUTH_TOKEN` de solo
+    lectura): indicadores, códigos y tabla de los últimos, con botón de error
+    de prueba que verifica el camino de punta a punta.
     Falta: métricas propias de la app, el detalle por sindicato y el resumen diario.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
