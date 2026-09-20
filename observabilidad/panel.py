@@ -26,6 +26,7 @@ import fechas
 
 from . import aplicar_grafana as ag
 from . import colector_render as cr
+from . import sentry_panel
 
 TIMEOUT_SEGUNDOS = 10
 # Los únicos intervalos que se pueden elegir desde la pantalla. Una lista y no un
@@ -83,7 +84,7 @@ def estado() -> dict:
         "grafana_url": url,
         # Directo al tablero de estado (no a la carpeta): el clic tiene que llevar a lo que se busca.
         "tablero_url": f"{url}/d/{cfg_repo['grafana']['tablero_uid']}" if url else "",
-        "sentry_url": os.getenv("SENTRY_URL", "").strip(),
+        "sentry_url": sentry_panel._url_todos(),
         "puede_configurar": bool(os.getenv("GRAFANA_TOKEN_CONFIG", "").strip()),
         "intervalos": list(INTERVALOS),
         "alertas": None, "config": None, "errores": [],

@@ -138,6 +138,13 @@ def test_tope_de_eventos_por_minuto_para_no_comerse_la_cuota(monkeypatch):
 
 
 # ------------------------- configuración -------------------------
+def test_activo_mira_el_dsn_y_no_solo_si_el_sdk_se_inicio(sentry):
+    """sentry_sdk.is_initialized() da True incluso con DSN vacío: por eso existe sc.activo()."""
+    assert sc.activo() is True
+    sentry_sdk.init(dsn="")
+    assert sentry_sdk.is_initialized() is True and sc.activo() is False
+
+
 def test_sin_dsn_no_hace_nada_y_capturar_no_rompe():
     sentry_sdk.init(dsn="")
     assert sc.iniciar("", "pruebas") is False

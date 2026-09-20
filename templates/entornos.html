@@ -154,6 +154,27 @@
     padding:3px 9px; border-radius:999px; display:inline-block; }
   .plan-semaforo.ok { background:color-mix(in srgb, var(--demo) 25%, transparent); color:var(--demo); }
   .plan-semaforo.mal { background:rgba(220,80,80,.25); color:#ff9d9d; }
+  /* Reporte de errores de Sentry (pestaña Observabilidad) */
+  .obs-barra { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px; }
+  .obs-barra .espacio { flex:1; }
+  .obs-tabla-caja { overflow-x:auto; border-radius:14px; border:1px solid rgba(255,255,255,.12); }
+  .obs-tabla { width:100%; border-collapse:collapse; font-size:13px; min-width:760px; }
+  .obs-tabla th { text-align:left; font-family:var(--mono); font-size:10.5px; letter-spacing:1.1px; text-transform:uppercase;
+    color:rgba(255,255,255,.5); padding:10px 12px; background:rgba(255,255,255,.05); white-space:nowrap; }
+  .obs-tabla td { padding:10px 12px; border-top:1px solid rgba(255,255,255,.08); vertical-align:top; }
+  .obs-tabla tr.inesperado td:first-child { box-shadow:inset 3px 0 0 #ff7b7b; }
+  .obs-tabla tr.conocido td:first-child { box-shadow:inset 3px 0 0 #ffd27a; }
+  .obs-mono { font-family:var(--mono); font-size:12px; }
+  .obs-suave { color:rgba(255,255,255,.55); font-size:12px; }
+  .obs-cod { font-family:var(--mono); font-size:11.5px; padding:2px 8px; border-radius:6px; display:inline-block; }
+  .obs-cod.inesperado { background:rgba(220,80,80,.25); color:#ffb0b0; }
+  .obs-cod.conocido { background:rgba(240,180,60,.22); color:#ffd27a; }
+  .obs-chips { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px; }
+  .obs-chip { display:flex; gap:8px; align-items:center; padding:6px 12px; border-radius:999px; font-size:12.5px;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); }
+  .obs-chip b { font-family:var(--mono); }
+  .obs-limpio { padding:22px; border-radius:14px; text-align:center; background:color-mix(in srgb, var(--demo) 14%, transparent);
+    border:1px solid color-mix(in srgb, var(--demo) 35%, transparent); font-size:15px; }
   .plan-semaforo.atencion { background:rgba(240,180,60,.25); color:#ffd27a; }
   .plan-semaforo.gris { background:rgba(255,255,255,.12); color:rgba(255,255,255,.7); }
   .plan-dias { display:flex; gap:7px; flex-wrap:wrap; }
@@ -718,8 +739,123 @@
   }
 
   async function cargar() {
+    cargarSentry(false);
     try { pintar(await pedir('/api/entornos/observabilidad')); }
     catch (err) { decir('No se pudo consultar: ' + err.message, true); }
+  }
+
+  /* ---------- Errores de la app (Sentry): pensado para leerse de un vistazo ---------- */
+  const ZONA = 'America/Argentina/Buenos_Aires';
+  function hace(iso) {
+    if (!iso) return '—';
+    const seg = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+    if (seg < 90) return 'recién';
+    if (seg < 3600) return 'hace ' + Math.round(seg / 60) + ' min';
+    if (seg < 86400) return 'hace ' + Math.round(seg / 3600) + ' h';
+    return 'hace ' + Math.round(seg / 86400) + ' d';
+  }
+  const exacta = iso => iso ? new Date(iso).toLocaleString('es-AR', {timeZone: ZONA, dateStyle: 'short', timeStyle: 'medium'}) : '';
+  const tileSentry = (etiqueta, grande, linea) =>
+    `<div class="plan-estado-tarjeta"><span class="k">${esc(etiqueta)}</span><span class="grande">${grande}</span>` +
+    (linea ? `<span class="linea">${linea}</span>` : '') + '</div>';
+
+  /* Un ejemplo de cómo se ve el reporte CON errores, para poder juzgar el formato aunque hoy no haya
+     ninguno. Es de mentira y la pantalla lo dice: no viene de Sentry ni se guarda. */
+  let verEjemplo = false;
+  function datosDeEjemplo(d) {
+    const antes = min => new Date(Date.now() - min * 60000).toISOString();
+    return Object.assign({}, d, {ejemplo: true, errores: [],
+      kpis: {errores_24h: 2, errores_7d: 9, tipos_distintos: 3, ultimo: antes(12)},
+      por_codigo: [
+        {codigo: 'E-INTERNO-00', cantidad: 6, descripcion: '', gravedad: 'inesperado'},
+        {codigo: 'E-RECIBO-03', cantidad: 3, descripcion: 'No pudimos terminar de verificar este recibo', gravedad: 'conocido'}],
+      recientes: [
+        {cuando: antes(12), codigo: 'E-INTERNO-00', descripcion: '', gravedad: 'inesperado', ruta: '/admin/dashboard/kpis',
+         rol: 'sindicato', sindicato_id: '3', ref: 'a3f9c21b', titulo: 'ValueError: consulta rota', url: ''},
+        {cuando: antes(190), codigo: 'E-RECIBO-03', descripcion: 'No pudimos terminar de verificar este recibo', gravedad: 'conocido',
+         ruta: '/api/validar', rol: 'trabajador', sindicato_id: '', ref: '7be0d144', titulo: "KeyError: 'totales_impresos'", url: ''},
+        {cuando: antes(1500), codigo: 'E-INTERNO-00', descripcion: '', gravedad: 'inesperado', ruta: '/api/aportes',
+         rol: 'trabajador', sindicato_id: '', ref: '0c81be92', titulo: 'TypeError: unsupported operand type(s)', url: ''}]});
+  }
+
+  function pintarSentry(d) {
+    const caja = document.getElementById('obs-sentry');
+    if (verEjemplo && d.kpis) d = datosDeEjemplo(d);
+    const k = d.kpis;
+    let h = (d.ejemplo ? '<div class="aviso mal">EJEMPLO: así se vería el reporte con errores. Estos datos son de mentira, no vienen de Sentry.</div>' : '') +
+      '<div class="obs-barra">' +
+      (d.sdk_activo ? '<span class="plan-semaforo ok">Envío de errores: activo</span>'
+                    : `<span class="plan-semaforo atencion">Envío de errores: apagado${d.dsn_configurado ? '' : ' (falta SENTRY_DSN)'}</span>`) +
+      (d.token_configurado ? '<span class="plan-semaforo ok">Lectura: conectada</span>'
+                           : '<span class="plan-semaforo atencion">Lectura: falta el token</span>') +
+      '<span class="espacio"></span>' +
+      `<button type="button" class="boton" id="obs-sentry-ejemplo">${d.ejemplo ? 'Ver datos reales' : 'Ver ejemplo'}</button>` +
+      '<button type="button" class="boton" id="obs-sentry-prueba">Mandar error de prueba</button>' +
+      '<button type="button" class="boton" id="obs-sentry-actualizar">Actualizar</button>' +
+      (d.url_todos ? `<a class="boton" href="${esc(d.url_todos)}" target="_blank" rel="noopener">Ver todos en Sentry ↗</a>` : '') +
+      '</div>';
+
+    if (!k) {
+      h += `<div class="aviso mal">${esc((d.errores || []).join(' · ') || 'Sin datos de Sentry.')}</div>`;
+      caja.innerHTML = h; enganchar(); return;
+    }
+    const sinErrores = k.errores_7d === 0 && !(d.recientes || []).length;
+    h += '<div class="planes-estado">' +
+      tileSentry('Últimas 24 horas', k.errores_24h ? `<span class="plan-semaforo mal">${k.errores_24h}</span>` : '<span class="plan-semaforo ok">0</span>', 'errores no previstos') +
+      tileSentry('Últimos 7 días', k.errores_7d, 'errores no previstos') +
+      tileSentry('Tipos distintos', k.tipos_distintos, 'problemas diferentes (14 días)') +
+      tileSentry('Último error', esc(hace(k.ultimo)), esc(exacta(k.ultimo))) + '</div>';
+
+    if (sinErrores) {
+      h += '<div class="obs-limpio" style="margin-top:14px;">✓ <b>Sin errores</b> en los últimos 14 días en este entorno.</div>';
+    } else {
+      h += '<h4 class="planes-titulo" style="margin-top:20px;">Por código de error</h4><div class="obs-chips">' +
+        (d.por_codigo || []).map(c =>
+          `<span class="obs-chip" title="${esc(c.descripcion || 'Error sin código propio: no sabíamos que podía pasar')}">` +
+          `<span class="obs-cod ${c.gravedad}">${esc(c.codigo)}</span> <b>× ${c.cantidad}</b>` +
+          (c.descripcion ? `<span class="obs-suave">${esc(c.descripcion)}</span>` : '') + '</span>').join('') + '</div>';
+      h += '<h4 class="planes-titulo">Últimos errores</h4><div class="obs-tabla-caja"><table class="obs-tabla"><thead><tr>' +
+        '<th>Cuándo</th><th>Código</th><th>Dónde</th><th>Quién</th><th>Referencia</th><th>Qué pasó</th><th></th></tr></thead><tbody>' +
+        (d.recientes || []).map(e =>
+          `<tr class="${e.gravedad}"><td title="${esc(exacta(e.cuando))}"><b>${esc(hace(e.cuando))}</b><br><span class="obs-suave">${esc(exacta(e.cuando))}</span></td>` +
+          `<td><span class="obs-cod ${e.gravedad}">${esc(e.codigo || 'sin código')}</span>` +
+          (e.descripcion ? `<br><span class="obs-suave">${esc(e.descripcion)}</span>` : '') + '</td>' +
+          `<td class="obs-mono">${esc(e.ruta || '—')}</td>` +
+          `<td>${esc(e.rol || '—')}${e.sindicato_id ? `<br><span class="obs-suave">Sindicato #${esc(e.sindicato_id)}</span>` : ''}</td>` +
+          `<td class="obs-mono">${esc(e.ref || '—')}</td>` +
+          `<td>${esc(e.titulo)}</td>` +
+          `<td>${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">Abrir ↗</a>` : ''}</td></tr>`).join('') +
+        '</tbody></table></div>' +
+        '<p class="plan-nota" style="margin-top:8px;">Rojo = no sabíamos que podía pasar (E-INTERNO-00): mirarlo primero. Ámbar = un error con código propio que la app ya sabe nombrar. La <b>referencia</b> es la que la persona ve en pantalla: buscala acá.</p>';
+    }
+    if (k && d.prueba) {
+      h += `<p class="plan-nota">Última prueba de conexión: ${esc(hace(d.prueba.cuando))} (${esc(exacta(d.prueba.cuando))}). No cuenta como error.</p>`;
+    }
+    caja.innerHTML = h; enganchar();
+  }
+
+  function enganchar() {
+    document.getElementById('obs-sentry-actualizar').onclick = () => cargarSentry(true);
+    document.getElementById('obs-sentry-ejemplo').onclick = () => { verEjemplo = !verEjemplo; cargarSentry(false); };
+    document.getElementById('obs-sentry-prueba').onclick = async ev => {
+      const boton = ev.target, original = boton.textContent;
+      boton.disabled = true; boton.textContent = 'Mandando y verificando…';
+      try {
+        const j = await pedir('/entornos/observabilidad/sentry-prueba', {method: 'POST'});
+        decir(j.llego ? `Prueba enviada y verificada en Sentry ✓ (referencia ${j.ref}).`
+                      : `Prueba enviada (referencia ${j.ref}), pero todavía no aparece en Sentry: puede tardar. Tocá Actualizar en un minuto.`,
+              !j.llego && j.verificable);
+        await cargarSentry(true);
+      } catch (err) { decir(err.message, true); }
+      boton.textContent = original; boton.disabled = false;
+    };
+  }
+
+  async function cargarSentry(forzar) {
+    try { pintarSentry(await pedir('/api/entornos/observabilidad/sentry' + (forzar ? '?forzar=1' : ''))); }
+    catch (err) {
+      document.getElementById('obs-sentry').innerHTML = `<div class="aviso mal">No se pudo consultar Sentry: ${esc(err.message)}</div>`;
+    }
   }
 
   form.addEventListener('submit', async ev => {

@@ -82,6 +82,7 @@ import render_admin
 import render_planes
 from observabilidad import panel as observabilidad_panel
 from observabilidad import hilo_colector
+from observabilidad import sentry_panel
 import sentry_config
 import planificador
 from modulos import MODULOS, MODULOS_INICIALES
@@ -6658,6 +6659,29 @@ def entornos_observabilidad_actualizar(request: Request):
     except Exception as e:
         print(f"[observabilidad] no se pudo actualizar las métricas: {type(e).__name__}: {e}")
         raise HTTPException(502, "No se pudo actualizar las métricas.")
+
+
+@app.get("/api/entornos/observabilidad/sentry")
+def api_entornos_observabilidad_sentry(request: Request, forzar: int = 0):
+    """El reporte de errores de Sentry (aparte del resto de la pestaña: consulta a un tercero y no
+    tiene que demorar el estado de Grafana)."""
+    _exigir_observabilidad(request)
+    return sentry_panel.estado(forzar=bool(forzar))
+
+
+@app.post("/entornos/observabilidad/sentry-prueba")
+def entornos_observabilidad_sentry_prueba(request: Request):
+    """Manda un error de prueba a Sentry y espera a verlo llegar."""
+    _exigir_observabilidad(request)
+    try:
+        return {"ok": True, **sentry_panel.mandar_prueba()}
+    except ValueError as e:
+        raise HTTPException(429, str(e))
+    except sentry_panel.ErrorSentry as e:
+        raise HTTPException(502, str(e))
+    except Exception as e:
+        print(f"[observabilidad] no se pudo mandar la prueba a Sentry: {type(e).__name__}: {e}")
+        raise HTTPException(502, "No se pudo mandar la prueba a Sentry.")
 
 
 @app.get("/api/entornos/tests")

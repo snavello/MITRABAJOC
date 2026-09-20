@@ -142,5 +142,11 @@
       "aviso_dias": 30,
       "como": "En Grafana (Administration > Service accounts) crear tokens nuevos de colm3na-app-lectura y colm3na-app-config y actualizar GRAFANA_TOKEN_LECTURA y GRAFANA_TOKEN_CONFIG en Render."
     }
-  ]
+  ],
+  "sentry": {
+    "_ayuda": "Proyecto de Sentry que lee la pestaña Observabilidad (sentry_panel.py). No son secretos; el token de lectura va en SENTRY_AUTH_TOKEN.",
+    "org": "ats-xp-qk",
+    "proyecto": "colm3na-pruebas",
+    "proyecto_id": "4512116285833216"
+  }
 }

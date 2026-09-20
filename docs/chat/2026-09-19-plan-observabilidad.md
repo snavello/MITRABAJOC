@@ -116,6 +116,7 @@ Ninguna es "tiempo real": entre tocar y ver pasan unos 30 segundos (A y B); C es
 
 | Token | Dónde vive | Vence | Aviso | Cómo renovar |
 |---|---|---|---|---|
+| Token personal de Sentry (`SENTRY_AUTH_TOKEN`) | Render (Pruebas) | **no vence nunca** | — | Revocarlo en Sentry → User settings → Personal tokens si se deja de usar; crear otro con los mismos tres permisos de lectura |
 | **GitHub (disparador)** | Check del monitor, en Grafana | **2026-10-18** | 7 días antes | Token nuevo de grano fino en GitHub y `aplicar_disparador.py` |
 | Grafana de la app (Viewer y Editor) | Render (`GRAFANA_TOKEN_LECTURA`/`_CONFIG`) | 2027-09-19 | 30 días antes | Tokens nuevos en Grafana y actualizar las dos variables |
 | Grafana `metrics:write` (colector) | Secreto de GitHub y Render (`GRAFANA_METRICS_TOKEN`) | **a confirmar** en grafana.com > Security > Access policies (se eligió "un año") | — | Token nuevo y actualizar los dos lugares |
@@ -132,7 +133,9 @@ Ninguna es "tiempo real": entre tocar y ver pasan unos 30 segundos (A y B); C es
 
 **No manda ruido:** las respuestas deliberadas (403, 422, el 503 de "servidor ocupado", los códigos `E-...`) no viajan; sin rendimiento ni perfiles (eso lo mide Grafana); tope de 20 eventos por minuto para que una tormenta (la base caída, por ejemplo) no se coma la cuota gratuita del mes. Si el error llega envuelto en un `ExceptionGroup` del middleware de sesión, se manda el de adentro.
 
-**Variables de Render (Pruebas):** `SENTRY_DSN` (sin ella no hace nada) y `SENTRY_URL` (el botón de la pestaña). **Errores de usuarios: se guardan siempre, no avisan** (D6). Los avisos por mail de Sentry deben quedar apagados o acotados: ver "Pendiente" abajo.
+**Variables de Render (Pruebas):** `SENTRY_DSN` (sin ella no hace nada) y `SENTRY_AUTH_TOKEN` (token personal de solo lectura, para que la pestaña muestre los errores). **Errores de usuarios: se guardan siempre, no avisan** (D6). Los avisos por mail de Sentry deben quedar apagados o acotados: ver "Pendiente" abajo.
+
+**El reporte en la pestaña Observabilidad** (HECHO 2026-09-20, `observabilidad/sentry_panel.py`): sección "Errores de la app (Sentry)" con el estado de las dos conexiones (envío y lectura), cuatro indicadores (24 h, 7 días, tipos distintos, último error), errores agrupados por código y una tabla de los últimos 12 con cuándo, código, ruta, rol/sindicato, referencia y qué pasó. **Rojo** = `E-INTERNO-00` o sin código (no sabíamos que podía pasar); **ámbar** = un error con código propio. Solo cuenta el entorno de la app (`environment:pruebas`). El botón **Mandar error de prueba** manda un evento con otro entorno (`prueba-de-conexion`, no ensucia el reporte), espera a verlo llegar y lo confirma; una vez por minuto. Con cero errores muestra "✓ Sin errores"; el botón "Ver ejemplo" muestra cómo se vería con errores (datos de mentira, marcados como tales). Sentry se consulta con la API Discover (una llamada trae los tags propios) y se guarda 45 s.
 
 **Pendiente de este frente:** (1) revisar en Sentry → Alerts que no haya una regla por defecto que mande un mail por cada error nuevo (Sentry crea una al crear el proyecto): D6 dice que los errores de usuarios no avisan; (2) el resumen diario por sindicato; (3) replicar a Demo con su propio proyecto.
 

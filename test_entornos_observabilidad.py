@@ -148,7 +148,8 @@ def test_el_estado_trae_la_configuracion_vigente_de_grafana_y_los_enlaces(grafan
     # verificación en el navegador contra el Grafana real.
     assert d["config"]["repeat_interval"] == "24h"
     assert d["tablero_url"] == "https://prueba.grafana.net/d/colm3na-pruebas-estado"
-    assert d["sentry_url"] == ""
+    # Antes era una lista de una línea (el evento de prueba): ahora lleva a los errores REALES del entorno.
+    assert d["sentry_url"].startswith("https://ats-xp-qk.sentry.io/issues/?") and "environment=pruebas" in d["sentry_url"]
 
 
 def test_leer_usa_solo_el_token_de_lectura(grafana):
