@@ -104,6 +104,24 @@ Ninguna es "tiempo real": entre tocar y ver pasan unos 30 segundos (A y B); C es
 
 **Límite conocido:** la frescura es de entre 5 y 15 minutos, y GitHub puede atrasarse bastante más. Sirve para tablero y para las alertas sostenidas (30 minutos), no para detectar algo en segundos: eso lo hace el monitor de uptime (§5b).
 
+## 5d. El cron de GitHub no dispara: tercera vía y renovaciones (HECHO 2026-09-20)
+
+**Hecho comprobado:** el cron del workflow del colector estuvo **más de una hora sin dispararse ni una vez**, aun moviéndolo de `*/5` a `3-58/5` (minutos no redondos, como recomienda GitHub). No había incidente declarado en githubstatus. La documentación de GitHub admite que las corridas programadas "se demoran o se descartan" con carga alta. No se puede forzar: **se deja de depender de él**.
+
+**Disparador** (`observabilidad/aplicar_disparador.py`): un check del monitor de uptime de Grafana (que es puntual) hace un `POST` a la API de GitHub cada 5 minutos pidiendo correr el workflow (`workflow_dispatch`, que corre al instante). Independiente de Render y de la app (regla 0). Verificado: llegan órdenes a ~5 minutos. El token de GitHub es de grano fino, **solo el repo `MITRABAJOC`, solo Actions: read and write**, y vive únicamente en la configuración del check, dentro de Grafana Cloud. Si vence o se revoca, el check falla y hay una alerta a los 15 minutos. Suma 8.640 ejecuciones al mes (80.640 de un tope gratuito asumido de 100.000, sin verificar). Una orden manual sirve para probar el token: `POST .../actions/workflows/metricas-render.yml/dispatches` devuelve 204.
+
+**El colector queda con tres vías** que escriben lo mismo (se identifican por `via`): el cron de GitHub (si algún día anda), el hilo de la app y este disparador. Hoy la que carga con todo es el disparador más el hilo de la app.
+
+**Renovaciones de tokens** (`observabilidad/config.json` → `renovaciones`, `aplicar_vencimientos.py`): cada token tiene su fecha y una alerta que manda **un mail `aviso_dias` antes** y lo repite cada 24 h hasta que se renueve; la pestaña Observabilidad muestra cuántos días faltan. Al renovar: actualizar `vence` y volver a correr el script.
+
+| Token | Dónde vive | Vence | Aviso | Cómo renovar |
+|---|---|---|---|---|
+| **GitHub (disparador)** | Check del monitor, en Grafana | **2026-10-18** | 7 días antes | Token nuevo de grano fino en GitHub y `aplicar_disparador.py` |
+| Grafana de la app (Viewer y Editor) | Render (`GRAFANA_TOKEN_LECTURA`/`_CONFIG`) | 2027-09-19 | 30 días antes | Tokens nuevos en Grafana y actualizar las dos variables |
+| Grafana `metrics:write` (colector) | Secreto de GitHub y Render (`GRAFANA_METRICS_TOKEN`) | **a confirmar** en grafana.com > Security > Access policies (se eligió "un año") | — | Token nuevo y actualizar los dos lugares |
+| API key de Render | Secreto de GitHub, Render, fuente `render-vivo` de Grafana | no vence | — | Al rotarla, cuatro lugares |
+| Cuenta de servicio Admin de Grafana (`sa-1-ccode`) | pegada en esta conversación | **no vence nunca** | — | **Revocarla** cuando terminen las tareas de configuración |
+
 ## 6. Pestaña Observabilidad de `/entornos` (HECHO 2026-09-19)
 
 SDN no quiere entradas nuevas: los accesos y la configuración de observabilidad se manejan desde la landing `/entornos` (la de los 8 accesos, Recursos y Planes), con una pestaña "Observabilidad" en el mismo estilo que "Planes". **Es posible y respeta la Regla 0** si se separan dos cosas:

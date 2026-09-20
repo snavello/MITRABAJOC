@@ -697,6 +697,12 @@
       `<div class="plan-regla"><b>${esc(r.nombre)}</b><span class="cuando">${esc(r.estado || '—')}</span>` +
       (r.entorno ? `<span>${esc(r.entorno)}</span>` : '') + '</div>').join('');
 
+    const ROT = {ok: 'ok', pronto: 'atencion', urgente: 'mal', vencido: 'mal'};
+    document.getElementById('obs-renovaciones').innerHTML = (d.renovaciones || []).map(r =>
+      `<div class="plan-regla" title="${esc(r.como)}"><span class="plan-semaforo ${ROT[r.estado] || 'gris'}">` +
+      `${r.estado === 'vencido' ? 'VENCIDO' : r.dias + ' días'}</span> <b>${esc(r.nombre)}</b>` +
+      `<span class="cuando">vence ${esc(r.vence)}</span></div>`).join('');
+
     const c = d.config;
     const sel = document.getElementById('obs-repetir');
     sel.innerHTML = (d.intervalos || []).map(i => `<option value="${esc(i)}">${esc(i.replace('h', ' h'))}</option>`).join('');
