@@ -9,3 +9,8 @@
 pytest==9.1.1
 playwright==1.62.0
 pytest-playwright==0.9.0
+
+
+# XSK (XSANDERS Security Kit): análisis estático de seguridad. Dev/QA, no producción.
+bandit==1.9.4
+pip-audit==2.10.1

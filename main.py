@@ -86,6 +86,8 @@ from observabilidad import sentry_panel
 from observabilidad import metricas_panel
 import sentry_config
 import planificador
+from xsk.motor import tablero as xsk_tablero
+from xsk.motor.registro import ErrorRegistro as XSKErrorRegistro
 from modulos import MODULOS, MODULOS_INICIALES
 import dashboard
 import asistente
@@ -6589,6 +6591,32 @@ def entornos_planes_borrar(request: Request, regla_id: int):
     if not db.borrar_plan_programado(regla_id):
         raise HTTPException(404, "No existe esa regla.")
     return {"ok": True}
+
+
+# ==================== Solapa "XSANDERS" (XSK) ====================
+# Registro del kit de seguridad (PLAN_XSK.md, xsk/): avance del método,
+# ranking de expuestos no corregidos y estado de la batería de tests. Es un
+# LECTOR de xsk/proyectos/mitrabajo/ (archivos versionados en el repo); no
+# corre nada ni guarda nada. Gate: el mismo de la landing (PIN o sesión de
+# plataforma), y como toda /entornos, 404 en la demo -- los hallazgos
+# abiertos son un manual de ataque hasta que se corrigen y no se muestran a
+# un sindicato ni a un inversor.
+
+def _exigir_xsanders(request: Request):
+    _exigir_landing()
+    if not _pase_landing(request):
+        raise HTTPException(403, "Ingresá el PIN de la landing.")
+
+
+@app.get("/api/entornos/xsanders")
+def api_entornos_xsanders(request: Request, proyecto: str = "mitrabajo"):
+    """El tablero de XSK de un proyecto, en una sola llamada."""
+    _exigir_xsanders(request)
+    try:
+        return xsk_tablero.tablero(proyecto)
+    except XSKErrorRegistro as e:
+        # Un archivo del registro mal formado: se dice cuál, no se rompe la página.
+        raise HTTPException(500, f"El registro de XSK tiene un archivo mal formado: {e}")
 
 
 # ==================== Solapa "Observabilidad" ====================

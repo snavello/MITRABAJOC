@@ -1,0 +1,177 @@
+{# Solapa "Seguridad" de /entornos: el tablero del XSANDERS Security Kit.
+   Es un LECTOR de xsk/proyectos/mitrabajo/ (PLAN_XSK.md, xsk/): avance del
+   método, ranking de expuestos no corregidos y cobertura de la batería. No
+   corre nada. Como toda /entornos, no existe en la demo. Todo el contenido
+   lo trae el JS desde /api/entornos/xsanders.
+   Reusa .rec-cab, .aviso, .vacio, .planes-titulo, .plan-estado-tarjeta. #}
+<style>
+  .xsk-banner { padding:16px 18px; border-radius:16px; margin-bottom:18px; border:2px solid;
+    display:flex; align-items:center; gap:14px; font-size:15px; }
+  .xsk-banner.ok { border-color:color-mix(in srgb, var(--demo) 60%, transparent); background:color-mix(in srgb, var(--demo) 14%, rgba(255,255,255,.04)); }
+  .xsk-banner.mal { border-color:#ff6b6b; background:rgba(255,107,107,.12); }
+  .xsk-banner .n { font-family:var(--fuente-display); font-size:40px; line-height:1; }
+  /* Tira de las diez etapas */
+  .xsk-etapas { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 20px; }
+  .xsk-et { flex:1 1 auto; min-width:64px; text-align:center; padding:8px 4px; border-radius:10px; font-size:10.5px;
+    letter-spacing:.5px; text-transform:uppercase; border:1px solid rgba(255,255,255,.18); color:rgba(255,255,255,.55); }
+  .xsk-et .num { font-family:var(--mono); font-size:15px; display:block; color:#fff; }
+  .xsk-et.hecha { background:color-mix(in srgb, var(--demo) 18%, transparent); border-color:color-mix(in srgb, var(--demo) 50%, transparent); color:#fff; }
+  .xsk-et.en_curso { background:color-mix(in srgb, var(--pruebas) 20%, transparent); border-color:var(--pruebas); color:#fff; }
+  /* Ranking */
+  .xsk-tabla { width:100%; border-collapse:collapse; font-size:13px; }
+  .xsk-tabla th { text-align:left; font-family:var(--mono); font-size:10px; letter-spacing:1px; text-transform:uppercase;
+    color:rgba(255,255,255,.45); padding:6px 8px; border-bottom:1px solid rgba(255,255,255,.15); }
+  .xsk-tabla td { padding:8px; border-bottom:1px solid rgba(255,255,255,.07); vertical-align:top; }
+  .xsk-tabla .id { font-family:var(--mono); font-size:12px; color:rgba(255,255,255,.6); white-space:nowrap; }
+  .xsk-niv { display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:700;
+    letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; }
+  .xsk-niv.critico { background:#ff3b3b; color:#fff; }
+  .xsk-niv.alto { background:#ff8c42; color:#1b1508; }
+  .xsk-niv.medio { background:#ffd23f; color:#1b1508; }
+  .xsk-niv.bajo { background:rgba(255,255,255,.2); color:#fff; }
+  .xsk-ref { font-family:var(--mono); font-size:11px; color:rgba(255,255,255,.5); }
+  /* Cobertura por eje */
+  .xsk-ejes { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+  .xsk-eje { padding:12px 14px; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); }
+  .xsk-eje .sig { font-family:var(--fuente-display); font-size:22px; letter-spacing:1px; }
+  .xsk-eje .nom { font-size:11.5px; color:rgba(255,255,255,.6); margin:2px 0 8px; }
+  .xsk-eje .barra { display:flex; height:6px; border-radius:3px; overflow:hidden; background:rgba(255,255,255,.1); }
+  .xsk-eje .barra i { display:block; height:100%; }
+  .xsk-eje .barra .paso { background:var(--demo); }
+  .xsk-eje .barra .fallo { background:#ff6b6b; }
+  .xsk-eje .barra .sin { background:rgba(255,255,255,.15); }
+  .xsk-eje .cuenta { font-family:var(--mono); font-size:11px; color:rgba(255,255,255,.55); margin-top:6px; }
+  .xsk-como { margin-top:18px; padding:14px 16px; border-radius:12px; background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.1); font-size:13.5px; color:rgba(255,255,255,.75); white-space:pre-wrap; line-height:1.5; }
+</style>
+
+<div class="rec-cab" style="margin-top:0;">
+  <svg class="rec-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-recursos"/></svg>
+  <div>
+    <h2>Seguridad · XSANDERS</h2>
+    <p class="rec-lede">El kit de seguridad (XSK): en qué etapa del método va, qué expuestos siguen sin corregir ordenados por riesgo, y cómo salió la batería de tests. Es un lector del registro versionado en el repo; no corre nada acá.</p>
+  </div>
+</div>
+
+<div id="xsk-aviso" class="aviso mal" hidden></div>
+<div id="xsk-cuerpo"><div class="vacio">Leyendo el registro…</div></div>
+
+<template id="xsk-plantilla">
+  <div class="xsk-banner"><span class="n"></span><span class="txt"></span></div>
+
+  <h3 class="planes-titulo">Avance del método</h3>
+  <div class="xsk-etapas"></div>
+
+  <h3 class="planes-titulo">Ranking de expuestos no corregidos</h3>
+  <div class="xsk-ranking"></div>
+
+  <h3 class="planes-titulo">Cobertura por eje</h3>
+  <div class="xsk-ejes"></div>
+
+  <h3 class="planes-titulo">Cómo seguir</h3>
+  <div class="xsk-como"></div>
+</template>
+
+<script>
+(function () {
+  const ETAPAS = ['Config','Relevar','Mapa/Amenazas','Alcance','Herram.','Ejecución','Registro','Clasificar','Corregir','Seguir'];
+  let cargado = false;
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  async function cargar() {
+    if (cargado) return; cargado = true;
+    const cont = document.getElementById('xsk-cuerpo');
+    const aviso = document.getElementById('xsk-aviso');
+    try {
+      const r = await fetch('/api/entornos/xsanders');
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || ('HTTP ' + r.status));
+      pintar(await r.json());
+      aviso.hidden = true;
+    } catch (e) {
+      cargado = false;  // que un fallo se pueda reintentar volviendo a la pestaña
+      cont.innerHTML = '';
+      aviso.textContent = 'No se pudo leer el registro de XSK: ' + e.message;
+      aviso.hidden = false;
+    }
+  }
+
+  function pintar(d) {
+    const cont = document.getElementById('xsk-cuerpo');
+    const tpl = document.getElementById('xsk-plantilla').content.cloneNode(true);
+
+    // Banner: ¿puede salir a producción? El verde solo si YA se corrió la
+    // batería (sin corridas, "puede salir" mentiría: no se probó nada).
+    const banner = tpl.querySelector('.xsk-banner');
+    const bloquean = d.bloquean.length;
+    const sinCorrer = d.corridas.length === 0;
+    if (sinCorrer) {
+      banner.classList.add('mal');
+      banner.querySelector('.n').textContent = '…';
+      banner.querySelector('.txt').textContent = 'La batería todavía no se corrió: el estado de salida a producción se completa al ejecutar la iteración 1.';
+    } else {
+      banner.classList.add(d.puede_salir ? 'ok' : 'mal');
+      banner.querySelector('.n').textContent = d.puede_salir ? '✓' : bloquean;
+      banner.querySelector('.txt').textContent = d.puede_salir
+        ? 'Ningún hallazgo Crítico ni Alto sin corregir en los ejes evaluados.'
+        : (bloquean === 1 ? '1 hallazgo Crítico o Alto bloquea salir a producción.'
+                          : bloquean + ' hallazgos Críticos o Altos bloquean salir a producción.');
+    }
+
+    // Tira de etapas
+    const tira = tpl.querySelector('.xsk-etapas');
+    d.avance.etapas.forEach((estado, i) => {
+      const e = document.createElement('div');
+      e.className = 'xsk-et ' + estado;
+      e.innerHTML = '<span class="num">' + i + '</span>' + esc(ETAPAS[i]);
+      tira.appendChild(e);
+    });
+
+    // Ranking
+    const rk = tpl.querySelector('.xsk-ranking');
+    if (!d.ranking.length) {
+      rk.innerHTML = '<div class="vacio">Nada en el ranking: no hay hallazgos abiertos todavía (la batería aún no se corrió, o todo está corregido).</div>';
+    } else {
+      let h = '<table class="xsk-tabla"><thead><tr><th>ID</th><th>Riesgo</th><th>Hallazgo</th><th>Eje</th><th>Compl.</th><th>Ref.</th></tr></thead><tbody>';
+      d.ranking.forEach(f => {
+        h += '<tr><td class="id">' + esc(f.id) + '</td>'
+          + '<td><span class="xsk-niv ' + esc(f.nivel) + '">' + esc(f.nivel) + ' ' + esc(f.riesgo) + '</span></td>'
+          + '<td>' + esc(f.titulo) + '</td>'
+          + '<td>' + esc(f.eje) + '</td>'
+          + '<td>' + esc(f.complejidad) + '/5</td>'
+          + '<td class="xsk-ref">' + esc(f.owasp) + (f.cwe ? '<br>' + esc(f.cwe) : '') + '</td></tr>';
+      });
+      rk.innerHTML = h + '</tbody></table>';
+    }
+
+    // Cobertura por eje
+    const ejesCont = tpl.querySelector('.xsk-ejes');
+    Object.entries(d.ejes).forEach(([sig, nom]) => {
+      const tests = d.catalogo_por_eje[sig] || [];
+      const paso = tests.filter(t => t.resultado === 'paso').length;
+      const fallo = tests.filter(t => t.resultado === 'fallo').length;
+      const total = tests.length;
+      const sin = total - paso - fallo;
+      const pct = x => total ? (x / total * 100) + '%' : '0%';
+      const div = document.createElement('div');
+      div.className = 'xsk-eje';
+      div.innerHTML = '<div class="sig">' + esc(sig) + '</div><div class="nom">' + esc(nom) + '</div>'
+        + '<div class="barra"><i class="paso" style="width:' + pct(paso) + '"></i>'
+        + '<i class="fallo" style="width:' + pct(fallo) + '"></i>'
+        + '<i class="sin" style="width:' + pct(sin) + '"></i></div>'
+        + '<div class="cuenta">' + total + ' test' + (total === 1 ? '' : 's')
+        + (total ? ' · ' + paso + ' ok · ' + fallo + ' falla · ' + sin + ' sin correr' : '') + '</div>';
+      ejesCont.appendChild(div);
+    });
+
+    tpl.querySelector('.xsk-como').textContent = d.avance.como_seguir || '—';
+
+    cont.innerHTML = '';
+    cont.appendChild(tpl);
+  }
+
+  const tab = document.querySelector('.etab[data-tab="xsanders"]');
+  if (tab) tab.addEventListener('click', cargar);
+  // Si se entra directo con #xsanders, la pestaña ya está activa: cargar igual.
+  if (location.hash.replace('#', '') === 'xsanders') cargar();
+})();
+</script>
