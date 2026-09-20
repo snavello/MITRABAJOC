@@ -37,6 +37,23 @@ EJES = {
 ESTADOS = ("abierto", "en_correccion", "corregido", "verificado", "aceptado")
 ESTADOS_NO_CERRADOS = ("abierto", "en_correccion")
 
+# Estado de resolución que se muestra en la página, más llano que los estados
+# internos (pedido de SDN, 2026-09-20): un vistazo dice qué se arregló, qué a
+# medias y qué falta. Cada hallazgo puede llevar una `aclaracion` (texto libre
+# en la cabecera) que explica el "por qué" de su estado.
+RESOLUCION = {
+    "abierto": "pendiente",
+    "en_correccion": "parcial",
+    "corregido": "solucionado",
+    "verificado": "solucionado",
+    "aceptado": "aceptado",
+}
+
+
+def resolucion(estado: str) -> str:
+    """El estado llano (solucionado/parcial/pendiente/aceptado) de un estado interno."""
+    return RESOLUCION.get(estado, "pendiente")
+
 TIPOS_TEST = ("revision", "estatico", "dinamico", "configuracion", "manual")
 RESULTADOS = ("paso", "fallo", "no_aplica", "error")
 

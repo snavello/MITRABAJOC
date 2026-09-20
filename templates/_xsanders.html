@@ -43,6 +43,23 @@
   .xsk-eje .cuenta { font-family:var(--mono); font-size:11px; color:rgba(255,255,255,.55); margin-top:6px; }
   .xsk-como { margin-top:18px; padding:14px 16px; border-radius:12px; background:rgba(255,255,255,.04);
     border:1px solid rgba(255,255,255,.1); font-size:13.5px; color:rgba(255,255,255,.75); white-space:pre-wrap; line-height:1.5; }
+  /* Estado de resolucion (Solucionado / Parcial / Pendiente / Aceptado) */
+  .xsk-resumen-res { display:flex; flex-wrap:wrap; gap:10px; margin:0 0 18px; }
+  .xsk-rchip { padding:8px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.14);
+    display:flex; align-items:baseline; gap:8px; }
+  .xsk-rchip .n { font-family:var(--fuente-display); font-size:24px; line-height:1; }
+  .xsk-rchip .l { font-size:11px; letter-spacing:.5px; text-transform:uppercase; color:rgba(255,255,255,.6); }
+  .xsk-rchip.solucionado { border-color:color-mix(in srgb, var(--demo) 55%, transparent); background:color-mix(in srgb, var(--demo) 12%, transparent); }
+  .xsk-rchip.parcial { border-color:#ffd23f88; background:#ffd23f18; }
+  .xsk-rchip.pendiente { border-color:#ff8c4288; background:#ff8c4214; }
+  .xsk-rchip.aceptado { border-color:rgba(255,255,255,.25); }
+  .xsk-res td .et { display:inline-block; padding:2px 9px; border-radius:999px; font-size:10.5px; font-weight:700;
+    letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; }
+  .xsk-res td .et.solucionado { background:var(--demo); color:var(--demo-tinta); }
+  .xsk-res td .et.parcial { background:#ffd23f; color:#1b1508; }
+  .xsk-res td .et.pendiente { background:#ff8c42; color:#1b1508; }
+  .xsk-res td .et.aceptado { background:rgba(255,255,255,.2); color:#fff; }
+  .xsk-res .acl { font-size:12px; color:rgba(255,255,255,.6); margin-top:3px; }
 </style>
 
 <div class="rec-cab" style="margin-top:0;">
@@ -64,6 +81,10 @@
 
   <h3 class="planes-titulo">Ranking de expuestos no corregidos</h3>
   <div class="xsk-ranking"></div>
+
+  <h3 class="planes-titulo">Estado de resolución</h3>
+  <div class="xsk-resumen-res"></div>
+  <div class="xsk-res"></div>
 
   <h3 class="planes-titulo">Cobertura por eje</h3>
   <div class="xsk-ejes"></div>
@@ -142,6 +163,25 @@
       });
       rk.innerHTML = h + '</tbody></table>';
     }
+
+    // Estado de resolución: resumen en chips + tabla de todos los hallazgos
+    const RES = [['solucionado','Solucionado'],['parcial','Parcial'],['pendiente','Pendiente'],['aceptado','Aceptado']];
+    const resumenRes = tpl.querySelector('.xsk-resumen-res');
+    RES.forEach(([k, label]) => {
+      const chip = document.createElement('div');
+      chip.className = 'xsk-rchip ' + k;
+      chip.innerHTML = '<span class="n">' + (d.por_resolucion[k] || 0) + '</span><span class="l">' + label + '</span>';
+      resumenRes.appendChild(chip);
+    });
+    const resCont = tpl.querySelector('.xsk-res');
+    let hr = '<table class="xsk-tabla"><thead><tr><th>ID</th><th>Estado</th><th>Hallazgo</th><th>Nivel</th></tr></thead><tbody>';
+    d.hallazgos.forEach(f => {
+      hr += '<tr><td class="id">' + esc(f.id) + '</td>'
+        + '<td><span class="et ' + esc(f.resolucion) + '">' + esc(f.resolucion) + '</span></td>'
+        + '<td>' + esc(f.titulo) + (f.aclaracion ? '<div class="acl">' + esc(f.aclaracion) + '</div>' : '') + '</td>'
+        + '<td><span class="xsk-niv ' + esc(f.nivel) + '">' + esc(f.nivel) + ' ' + esc(f.riesgo) + '</span></td></tr>';
+    });
+    resCont.innerHTML = hr + '</tbody></table>';
 
     // Cobertura por eje
     const ejesCont = tpl.querySelector('.xsk-ejes');

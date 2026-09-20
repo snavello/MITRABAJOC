@@ -20,10 +20,13 @@ def _hallazgo_publico(h: dict) -> dict:
         "id": h["id"], "titulo": h["titulo"], "eje": h["eje"],
         "eje_nombre": registro.EJES.get(h["eje"], h["eje"]),
         "test": h["test"], "estado": h["estado"],
+        "resolucion": registro.resolucion(h["estado"]),
+        "aclaracion": h.get("aclaracion", ""),
         "riesgo": h["riesgo"], "nivel": h["nivel"],
         "probabilidad": h["probabilidad"], "dano": h["dano"],
         "complejidad": h["complejidad"],
         "owasp": h.get("owasp", ""), "cwe": h.get("cwe", ""),
+        "corregido_en": h.get("corregido_en", ""),
         "archivo": h["archivo"],
     }
 
@@ -54,6 +57,14 @@ def tablero(nombre: str) -> dict:
         "archivo": c["archivo"],
     } for c in est["corridas"]]
 
+    # Todos los hallazgos, del más al menos riesgoso, con su estado de
+    # resolución. La página los agrupa en Solucionado / Parcial / Pendiente /
+    # Aceptado, que es lo que se mira de un vistazo (pedido de SDN).
+    todos = sorted(est["hallazgos"], key=lambda h: (-h["riesgo"], h["id"]))
+    por_resolucion = {"solucionado": 0, "parcial": 0, "pendiente": 0, "aceptado": 0}
+    for h in est["hallazgos"]:
+        por_resolucion[registro.resolucion(h["estado"])] += 1
+
     return {
         "proyecto": nombre,
         "avance": {
@@ -65,6 +76,8 @@ def tablero(nombre: str) -> dict:
         "resumen": est["resumen"],
         "ranking": [_hallazgo_publico(h) for h in est["ranking"]],
         "bloquean": [_hallazgo_publico(h) for h in est["bloquean"]],
+        "hallazgos": [_hallazgo_publico(h) for h in todos],
+        "por_resolucion": por_resolucion,
         "catalogo_por_eje": por_eje,
         "ejes": registro.EJES,
         "corridas": corridas,
