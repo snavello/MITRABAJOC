@@ -14,9 +14,15 @@ Qué junta, del servicio web y de la base de Pruebas:
 Todas salen como `render_*` con las etiquetas `entorno`, `servicio` (web/db) y
 `recurso`. Los pedidos HTTP traen además `status_code` y `host`.
 
-Cada corrida vuelve a mandar una ventana de los últimos `ventana_min` minutos, no
+Cada corrida vuelve a mandar una ventana de los últimos `ventana_min` minutos (60), no
 solo lo último: así una corrida atrasada o perdida (GitHub retrasa las programadas)
-no deja un hueco. Los puntos repetidos los descarta Prometheus.
+no deja un hueco. Grafana Cloud acepta puntos atrasados hasta cerca de 1-2 horas (probado:
+1 h sí, 2 h no; error `err-mimir-sample-timestamp-too-old`), así que la corrida siguiente
+rellena lo que la anterior no llegó a mandar, siempre que el atraso sea menor que eso. Los
+puntos repetidos los descarta Prometheus.
+
+Hay dos vías que corren este mismo código y se cubren entre sí: GitHub Actions y un hilo
+dentro de la app (observabilidad/hilo_colector.py).
 
     RENDER_API_KEY=rnd_... GRAFANA_METRICS_TOKEN=glc_... python observabilidad/colector_render.py
     python observabilidad/colector_render.py --dry-run      # lee de Render, no escribe
@@ -169,17 +175,47 @@ def recolectar(cfg: dict, clave_render: str, ahora: datetime = None, pausa: floa
     return series, {"errores": errores, "series_por_metrica": por_metrica}
 
 
-def series_de_salud(cfg: dict, ahora: datetime, resumen: dict) -> list:
+def series_de_salud(cfg: dict, ahora: datetime, resumen: dict, via: str = "manual") -> list:
     """Dos series del propio colector. `render_colector_ultima_corrida_segundos`
     permite alertar si el colector se muere (un colector mudo deja los tableros
     congelados sin que nadie lo note: es el mismo problema que se quiere resolver)."""
     m = cfg["metricas_render"]
     t = int(ahora.timestamp() * 1000)
-    base = {"entorno": m["entorno"]}
+    # `via` dice QUIÉN corrió: "github" (Actions), "app" (el hilo de la app) o "manual".
+    # Con dos vías que se cubren, hay que poder ver que las DOS están vivas.
+    base = {"entorno": m["entorno"], "via": via}
     return [
         (dict(base, __name__="render_colector_ultima_corrida_segundos"), [(t, ahora.timestamp())]),
         (dict(base, __name__="render_colector_errores"), [(t, float(len(resumen["errores"])))]),
     ]
+
+
+# Mensajes de Grafana que NO indican un problema con lo que se mandó: puntos repetidos o
+# demasiado viejos para la ventana (los demás de la misma tanda sí se guardan).
+BENIGNOS = ("out of order", "out-of-order", "duplicate", "too far behind", "too-old", "too old")
+
+
+def escritura_aceptable(estado: int, texto: str) -> bool:
+    return estado < 400 or any(b in texto.lower() for b in BENIGNOS)
+
+
+def ejecutar(cfg: dict, clave: str, token: str, dry_run: bool = False,
+             ahora: datetime = None, pausa: float = 1.2, via: str = "manual") -> dict:
+    """Una pasada completa: lee de Render, escribe en Grafana. Lo usan este script y el
+    hilo de la app. `ok` es False si Render falló en TODAS las métricas o si Grafana
+    rechazó lo escrito por una razón que no es benigna."""
+    ahora = ahora or datetime.now(timezone.utc)
+    series, resumen = recolectar(cfg, clave, ahora, pausa)
+    series += series_de_salud(cfg, ahora, resumen, via)
+    r = {"series": len(series), "puntos": sum(len(m) for _, m in series),
+         "errores": resumen["errores"], "por_metrica": resumen["series_por_metrica"],
+         "estado_http": None, "texto": "", "ok": bool(resumen["series_por_metrica"])}
+    if dry_run:
+        return r
+    rwc = cfg["metricas_render"]["remote_write"]
+    r["estado_http"], r["texto"] = rw.escribir(rwc["url"], rwc["usuario"], token, series)
+    r["ok"] = r["ok"] and escritura_aceptable(r["estado_http"], r["texto"])
+    return r
 
 
 def main(argv=None) -> int:
@@ -202,25 +238,17 @@ def main(argv=None) -> int:
     if not clave or (not token and not args.dry_run):
         print("Faltan RENDER_API_KEY y/o GRAFANA_METRICS_TOKEN.")
         return 2
-    ahora = datetime.now(timezone.utc)
-    series, resumen = recolectar(cfg, clave, ahora)
-    series += series_de_salud(cfg, ahora, resumen)
-    puntos = sum(len(m) for _, m in series)
-    print(f"Render: {len(series)} series, {puntos} puntos, {len(resumen['errores'])} error(es).")
-    for e in resumen["errores"]:
+    r = ejecutar(cfg, clave, token, dry_run=args.dry_run,
+                 via="github" if os.environ.get("GITHUB_ACTIONS") else "manual")
+    print(f"Render: {r['series']} series, {r['puntos']} puntos, {len(r['errores'])} error(es).")
+    for e in r["errores"]:
         print("  ! ", e)
     if args.dry_run:
-        for k, v in sorted(resumen["series_por_metrica"].items()):
+        for k, v in sorted(r["por_metrica"].items()):
             print(f"   {k}: {v} serie(s)")
         return 0
-    rwc = cfg["metricas_render"]["remote_write"]
-    estado, texto = rw.escribir(rwc["url"], rwc["usuario"], token, series)
-    print(f"Grafana: HTTP {estado} {texto}".rstrip())
-    if estado >= 400 and "out of order" not in texto.lower() and "duplicate" not in texto.lower() \
-            and "too far behind" not in texto.lower():
-        return 1
-    # Si Render falló en TODAS las métricas no hay nada que valga: corrida fallida.
-    return 1 if not resumen["series_por_metrica"] else 0
+    print(f"Grafana: HTTP {r['estado_http']} {r['texto']}".rstrip())
+    return 0 if r["ok"] else 1
 
 
 if __name__ == "__main__":

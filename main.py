@@ -81,6 +81,7 @@ import recursos
 import render_admin
 import render_planes
 from observabilidad import panel as observabilidad_panel
+from observabilidad import hilo_colector
 import planificador
 from modulos import MODULOS, MODULOS_INICIALES
 import dashboard
@@ -501,6 +502,12 @@ def _startup():
                 print("[planificador] hilo de planes programados en marcha")
         except Exception as e:
             print(f"[planificador] no arrancó ({type(e).__name__}: {e})")
+        # Segunda vía del colector de métricas: respaldo de GitHub Actions, que se atrasa
+        # (observabilidad/hilo_colector.py). Nunca puede tumbar el arranque.
+        try:
+            hilo_colector.arrancar(entorno.ENTORNO)
+        except Exception as e:
+            print(f"[colector-metricas] no arrancó ({type(e).__name__}: {e})")
 
     try:
         colgadas = db.rescatar_indexaciones_colgadas()

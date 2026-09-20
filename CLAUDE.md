@@ -225,6 +225,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   Database URL de la base de demo, para el `pg_dump` de `promover_demo.py`.
 - GRAFANA_URL / GRAFANA_TOKEN_LECTURA (Viewer) / GRAFANA_TOKEN_CONFIG (Editor) —
   solo Pruebas: la pestaña Observabilidad de `/entornos` (ver "Estado actual" 25).
+  GRAFANA_METRICS_TOKEN (solo `metrics:write`) para el hilo colector de métricas;
+  COLECTOR_METRICAS=off lo apaga.
   SENTRY_URL opcional. Detalle y vencimiento en `DESPLIEGUE_RENDER.md`.
 - VAPID_PRIVATE_KEY / VAPID_PUBLIC_KEY / VAPID_CLAIM_EMAIL — Web Push de la
   PWA (push.py); sin las tres, el canal queda apagado en silencio.
@@ -504,7 +506,9 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     **monitor de uptime** (`aplicar_uptime.py`: `/healthz` y `/readyz` de Pruebas
     desde Ohio y São Paulo, con sus alertas; solo dispara si fallan todas las
     ubicaciones), el **colector de métricas de Render** (`colector_render.py`, en
-    GitHub Actions cada 5 min, fuera de Render) con su **tablero** "Pruebas ·
+    **dos vías que se cubren**: GitHub Actions cada 5 min, fuera de Render, y un
+    hilo de la app, porque GitHub se atrasa; cada corrida re-manda la última hora
+    y Grafana acepta puntos atrasados hasta ~1 h) con su **tablero** "Pruebas ·
     Estado general" y las alertas de 5xx, CPU, memoria y colector mudo. El Metrics
     Stream nativo de Render existe pero exige el plan Pro (USD 25/mes): se dejó
     como mejora. Secretos de Actions: `RENDER_API_KEY`, `GRAFANA_METRICS_TOKEN`.

@@ -3,9 +3,12 @@
 # Corre FUERA de Render a propósito (regla 0 de docs/chat/2026-09-19-plan-observabilidad.md):
 # si la app o la plataforma se caen, la historia igual se acumula.
 #
-# GitHub retrasa las corridas programadas (a veces 10-15 min) y las cancela si el
-# repo lleva 60 días sin actividad: por eso cada corrida re-manda los últimos 20
-# minutos y por eso hay una alerta si el colector se queda callado.
+# GitHub retrasa las corridas programadas (a veces más de 30 min; la primera de un
+# workflow nuevo tardó más de 15) y las cancela si el repo lleva 60 días sin
+# actividad: por eso cada corrida re-manda la última hora (Grafana acepta puntos
+# atrasados hasta cerca de 1-2 h), por eso hay una SEGUNDA vía dentro de la app
+# (observabilidad/hilo_colector.py) y por eso hay una alerta si el colector se queda
+# callado.
 #
 # Secretos del repositorio (Settings > Secrets and variables > Actions):
 #   RENDER_API_KEY          clave de la API de Render (solo se usa para LEER métricas)

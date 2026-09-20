@@ -55,7 +55,7 @@
     ]
   },
   "metricas_render": {
-    "_ayuda": "Colector de métricas de Render -> Grafana Cloud (colector_render.py, corre en GitHub Actions cada 5 min). Cada corrida re-manda los últimos `ventana_min` minutos para no dejar huecos si una corrida se atrasa. Los ids y la URL no son secretos; los tokens van por variable de entorno.",
+    "_ayuda": "Colector de métricas de Render -> Grafana Cloud (colector_render.py). Corre por DOS vías que se cubren: GitHub Actions cada 5 min (fuera de Render) y un hilo dentro de la app (hilo_colector.py). Cada corrida re-manda los últimos `ventana_min` minutos: GitHub retrasa las corridas programadas y Grafana Cloud acepta puntos atrasados hasta cerca de 1-2 h (1 h sí, 2 h no), así que 60 rellena el hueco sin pasarse. Los ids y la URL no son secretos; los tokens van por variable de entorno.",
     "entorno": "pruebas",
     "recursos": {
       "web": "srv-dacrg02jnfac73a0mes0",
@@ -65,7 +65,7 @@
       "url": "https://prometheus-prod-67-prod-us-west-0.grafana.net/api/prom/push",
       "usuario": "3597060"
     },
-    "ventana_min": 20,
+    "ventana_min": 60,
     "resolucion_s": 60,
     "alertas": [
       {

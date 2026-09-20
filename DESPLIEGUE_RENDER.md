@@ -49,6 +49,7 @@ corre solo en cada deploy** (Pre-Deploy Command), ya no a mano.
 | `SESSION_SECRET` | propio | **distinto** | Cambiarlo desloguea a todos los usuarios de ese entorno. |
 | `PYTHON_VERSION` | `3.12.8` | `3.12.8` | Redundante con `.python-version` a propósito: evita que Render tome 3.14, que rompe SQLModel. |
 | `GRAFANA_URL` / `GRAFANA_TOKEN_LECTURA` / `GRAFANA_TOKEN_CONFIG` | — | URL del stack de Grafana Cloud y dos tokens de cuenta de servicio | Solo Pruebas por ahora. Los usa la pestaña Observabilidad de `/entornos` (`observabilidad/panel.py`). `_LECTURA` es rol **Viewer** (lee estado y configuración); `_CONFIG` es rol **Editor** (cambia el mail y el intervalo de aviso), nunca Admin. Vencen al año: renovarlos en Grafana (Administration → Service accounts) y actualizar la variable. Sin ellas la pestaña dice qué falta. |
+| `GRAFANA_METRICS_TOKEN` | — | Token de Grafana Cloud con permiso `metrics:write` y nada más | Solo Pruebas. Lo usa el hilo de la app que junta las métricas de Render y las escribe en Grafana (`observabilidad/hilo_colector.py`): es la segunda vía del colector, respaldo de GitHub Actions. Usa además `RENDER_API_KEY` (que ya está para la pestaña Planes). Sin alguna de las dos, o con `COLECTOR_METRICAS=off`, no arranca. |
 | `SENTRY_URL` | — | (opcional) enlace al proyecto de Sentry | Solo agrega el botón "Abrir errores en Sentry" a esa pestaña. |
 | `VAPID_PRIVATE_KEY` / `VAPID_PUBLIC_KEY` / `VAPID_CLAIM_EMAIL` | propias | propias (o ninguna: el push queda apagado) | Las suscripciones push son por origen; no se comparten entre URLs. |
 
