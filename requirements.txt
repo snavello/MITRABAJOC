@@ -20,3 +20,6 @@ pywebpush==2.5.0
 # Cliente async para carga/correr_job.py (el generador de carga que corre
 # en un Job de Render, disparado desde la pestaña "Tests" de /entornos).
 httpx==0.28.1
+# Errores no previstos a Sentry, sin datos personales (sentry_config.py). Pinneado exacto: el
+# filtrado depende de la forma del evento, y un cambio del SDK puede dejar pasar un campo.
+sentry-sdk==2.69.2

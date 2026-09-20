@@ -122,6 +122,20 @@ Ninguna es "tiempo real": entre tocar y ver pasan unos 30 segundos (A y B); C es
 | API key de Render | Secreto de GitHub, Render, fuente `render-vivo` de Grafana | no vence | — | Al rotarla, cuatro lugares |
 | Cuenta de servicio Admin de Grafana (`sa-1-ccode`) | pegada en esta conversación | **no vence nunca** | — | **Revocarla** cuando terminen las tareas de configuración |
 
+## 5e. Sentry: errores no previstos con contexto (HECHO 2026-09-20)
+
+**Qué manda** (`sentry_config.py`, conectado en `main.py`): solo los errores **no previstos**, desde el manejador global (`error_no_manejado`). Cada uno lleva el traceback, la **referencia** que la persona ya ve en pantalla (`E-INTERNO-00 ref=abc12345`, como etiqueta `ref`: se busca en Sentry con eso), el código, el patrón de la ruta, el **rol** y el **ID del sindicato** de la sesión (nunca un nombre) y la versión (commit de Render).
+
+**Qué NO manda, nunca:** cuerpos de pedidos, cookies, encabezados, IP, usuario, el valor de las variables locales de cada línea del traceback (ahí viven los recibos enteros con sueldos), nombres, mails ni claves. El evento se reconstruye con lo mínimo en vez de quitar lo malo de uno completo, así lo imprevisto no se filtra.
+
+**Decisión de SDN (2026-09-20):** *un CUIL o CUIT suelto es dato público*; no se filtra. Sirve para diagnosticar (saber de qué CUIL falló algo). Lo que se protege es lo que tiene contexto y valor: sueldo, recibo, nombres, sesiones. (Nota para el futuro: la afiliación a un sindicato es un dato sensible en la Ley 25.326, así que un CUIL junto con el sindicato es lo único que un cambio de criterio podría querer reconsiderar.)
+
+**No manda ruido:** las respuestas deliberadas (403, 422, el 503 de "servidor ocupado", los códigos `E-...`) no viajan; sin rendimiento ni perfiles (eso lo mide Grafana); tope de 20 eventos por minuto para que una tormenta (la base caída, por ejemplo) no se coma la cuota gratuita del mes. Si el error llega envuelto en un `ExceptionGroup` del middleware de sesión, se manda el de adentro.
+
+**Variables de Render (Pruebas):** `SENTRY_DSN` (sin ella no hace nada) y `SENTRY_URL` (el botón de la pestaña). **Errores de usuarios: se guardan siempre, no avisan** (D6). Los avisos por mail de Sentry deben quedar apagados o acotados: ver "Pendiente" abajo.
+
+**Pendiente de este frente:** (1) revisar en Sentry → Alerts que no haya una regla por defecto que mande un mail por cada error nuevo (Sentry crea una al crear el proyecto): D6 dice que los errores de usuarios no avisan; (2) el resumen diario por sindicato; (3) replicar a Demo con su propio proyecto.
+
 ## 6. Pestaña Observabilidad de `/entornos` (HECHO 2026-09-19)
 
 SDN no quiere entradas nuevas: los accesos y la configuración de observabilidad se manejan desde la landing `/entornos` (la de los 8 accesos, Recursos y Planes), con una pestaña "Observabilidad" en el mismo estilo que "Planes". **Es posible y respeta la Regla 0** si se separan dos cosas:
@@ -143,6 +157,6 @@ SDN no quiere entradas nuevas: los accesos y la configuración de observabilidad
 4. Cuenta y proyecto de Sentry; qué se envía y qué se filtra (nada de datos personales); integración en `main.py`.
 5. ~~Reglas de alerta de los cuatro eventos de §3.~~ Hecho (uptime en §5b, métricas en §5c).
 6. Tablero: hecho el estado general y el detalle por servicio (§5c); falta el detalle por sindicato.
-7. Resumen diario de errores de usuarios por sindicato.
+7. Resumen diario de errores de usuarios por sindicato (Sentry ya los guarda, §5e; falta el resumen).
 8. Métricas propias de la app: conexiones del pool, cupo del panel, latencia por ruta (sin datos personales).
 9. Replicar a Demo.
