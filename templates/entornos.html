@@ -357,6 +357,7 @@
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="planes"{% if entorno_actual != 'pruebas' %} disabled title="Cambiar de plan reinicia el servicio: se administra solo desde Pruebas"{% endif %}>Planes</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="observabilidad"{% if entorno_actual != 'pruebas' %} disabled title="La observabilidad se administra solo desde Pruebas por ahora: se replica a Demo cuando esté validada"{% endif %}>Observabilidad</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="actividad">Actividad</button>
+      <button type="button" class="etab" role="tab" aria-selected="false" data-tab="xsanders">Seguridad</button>
     </nav>
 
     <div class="panel-etab" data-panel="accesos">
@@ -433,6 +434,10 @@
 
     <div class="panel-etab" data-panel="actividad" hidden>
       {% include "_actividad.html" %}
+    </div>
+
+    <div class="panel-etab" data-panel="xsanders" hidden>
+      {% include "_xsanders.html" %}
     </div>
 
     {# ---- Recursos: la documentación del proyecto (recursos.py) ---- #}
@@ -690,7 +695,7 @@
   }
   tabs.forEach(t => t.addEventListener('click', () => { if (!t.disabled) activar(t.dataset.tab); }));
   const inicial = location.hash.replace('#', '');
-  if (['tests-pruebas', 'tests-demo', 'planes', 'observabilidad'].includes(inicial)) activar(inicial);
+  if (['tests-pruebas', 'tests-demo', 'planes', 'observabilidad', 'xsanders'].includes(inicial)) activar(inicial);
 })();
 
 // Observabilidad (2026-09-19): la app es la PUERTA, no el motor. Lee de Grafana el

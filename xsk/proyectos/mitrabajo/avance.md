@@ -1,11 +1,11 @@
 ---
 iteracion: 1
-etapa_actual: 3
+etapa_actual: 5
 etapa0: hecha
 etapa1: hecha
 etapa2: hecha
-etapa3: pendiente
-etapa4: pendiente
+etapa3: hecha
+etapa4: hecha
 etapa5: pendiente
 etapa6: pendiente
 etapa7: pendiente
@@ -16,13 +16,13 @@ actualizado: 2026-09-20
 
 ## Cómo seguir
 
-Bloque 1 cerrado (2026-09-20): relevamiento con SDN (nueve decisiones
-R1–R9, nueve activos, diez actores), mapa técnico generado del código (226
-rutas, 20 observaciones O1–O20) y modelo de amenazas STRIDE por activo. El
-modelo ya dice qué entra en la iteración 1: identidad forjable, logins sin
-defensa, perímetro y cabeceras, secretos y cadena de suministro (ejes IDS,
-AUT, DAT, INF, DIS).
+Bloque 2 cerrado (2026-09-20): alcance de la iteración 1 (`alcance.md`:
+AUT → IDS → DAT → INF → DIS, más ENT-01 cabeceras y LEY-01 clasificación),
+catálogo de 30 tests en los nueve ejes (`xsk/catalogo/`) con su herramienta
+y estándar, y la página `/entornos/xsanders` (solapa "Seguridad", lectora
+del registro; Plataforma 0.29.01).
 
-Sigue el bloque 2: `alcance.md` de la iteración 1 (etapa 3), el catálogo de
-tests de los nueve ejes con sus herramientas (etapa 4), y la página
-`/entornos/xsanders` antes de correr nada.
+Sigue el bloque 3: correr la batería de la iteración 1, un eje por vez
+(`/xsk correr AUT`), dejando la corrida en `corridas/` y abriendo un
+hallazgo por cada `fallo`. Empieza por AUT porque su corrección (firmar la
+identidad) cambia cómo se prueban los demás ejes.

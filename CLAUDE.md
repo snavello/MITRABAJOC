@@ -564,10 +564,14 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     de amenazas STRIDE por activo (`amenazas.md`). Lo que más pesa según el
     modelo: la **identidad del trabajador/empleador viaja en una cookie sin
     firma** (`cuil_trab`/`cuit_emp`, O2) y `SESSION_SECRET` /
-    `PLATAFORMA_PASSWORD` tienen default en `auth.py` (O1/O3). Siguen:
-    bloque 2 (alcance de la iteración 1, catálogo, herramientas y la
-    página), bloque 3 (batería: IDS, AUT, DAT, INF/DIS), bloque 4
-    (correcciones), bloque 5 (cierre).
+    `PLATAFORMA_PASSWORD` tienen default en `auth.py` (O1/O3). **Bloque 2
+    hecho**: alcance de la iteración 1 (`alcance.md`: AUT → IDS → DAT → INF
+    → DIS, más ENT-01 y LEY-01), catálogo de 30 tests en los nueve ejes
+    (`xsk/catalogo/`), y la solapa **"Seguridad" de `/entornos`**
+    (`/entornos/xsanders`, lectora del registro: banner de salida a
+    producción, tira de etapas, ranking por riesgo, cobertura por eje;
+    `xsk/motor/tablero.py` arma el resumen, gate del PIN, 404 en demo). Sigue
+    el bloque 3: correr la batería, un eje por vez, empezando por AUT.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
