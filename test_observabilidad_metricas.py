@@ -355,7 +355,9 @@ FLUJO = (RAIZ / ".github" / "workflows" / "metricas-render.yml").read_text(encod
 
 
 def test_el_workflow_corre_cada_5_minutos_y_a_mano():
-    assert 'cron: "*/5 * * * *"' in FLUJO and "workflow_dispatch:" in FLUJO
+    assert 'cron: "3-58/5 * * * *"' in FLUJO and "workflow_dispatch:" in FLUJO
+    # nunca en los minutos redondos, donde GitHub descarta más corridas programadas
+    assert '"*/5 ' not in FLUJO and '"0 ' not in FLUJO
 
 
 def test_el_workflow_no_corre_en_pull_requests_ni_en_forks_ni_expone_secretos():
