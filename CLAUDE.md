@@ -597,8 +597,11 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     hallazgo (4 Solucionado, 2 Parcial, 11 Pendiente, 1 Aceptado). Trabajador
     0.39.03, Admin 0.42.04, Plataforma 0.30.01. Sigue: H-0003
     (usuario+contraseña en la landing) y completar H-0002 (hashear + usuarios
-    nominales) —ambos en el terreno de R1, conviene tratarlos juntos—, y la
-    pasada dinámica/destructiva contra Pruebas.
+    nominales) —ambos en el terreno de R1, conviene tratarlos juntos—.
+    **Primera pasada dinámica hecha** (HTTP real contra uvicorn local):
+    AUT-02 confirmó H-0004 (verificado), IDS-01 confirmó el freno de H-0008,
+    DIS-04 confirmó H-0018 abierto. Falta AUT-03, carga (DIS-01/02) y
+    repetir contra Pruebas desplegado.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
