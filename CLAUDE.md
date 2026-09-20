@@ -555,13 +555,19 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     ejecutor** (revisión de código, estático, dinámico contra Pruebas/Demo,
     perímetro por API); la página `/entornos/xsanders` (todavía no existe)
     será el registro. Hallazgos y corridas son archivos en el repo, no
-    tablas. **Bloque 0 hecho** (método, motor, skill, etapa 0). Siguen:
-    bloque 1 (relevamiento y mapeo con modelo de amenazas), bloque 2
-    (catálogo, herramientas y la página), bloque 3 (batería de la iteración
-    1: IDS, AUT, DAT, INF/DIS), bloque 4 (correcciones), bloque 5 (cierre).
-    Hipótesis a verificar en el bloque 1: PIN por defecto en `entorno.py`,
-    "Cambiar clave" de plataforma, límite de intentos en los logins, CSRF,
-    SVG de logo servido inline, prompt injection vía recibo.
+    tablas. **Bloques 0 y 1 hechos**: método, motor, skill y etapa 0;
+    relevamiento con SDN (`relevamiento.md`: activos V1–V9 en su orden,
+    actores A1–A10, decisiones R1–R9 — entre ellas usuarios de plataforma
+    nominales, niveles de fiabilidad de registro 1–4, Colm3na como
+    encargado del tratamiento), mapa técnico generado del código
+    (`mapa.md`: 226 rutas, 30 públicas, 20 observaciones O1–O20) y modelo
+    de amenazas STRIDE por activo (`amenazas.md`). Lo que más pesa según el
+    modelo: la **identidad del trabajador/empleador viaja en una cookie sin
+    firma** (`cuil_trab`/`cuit_emp`, O2) y `SESSION_SECRET` /
+    `PLATAFORMA_PASSWORD` tienen default en `auth.py` (O1/O3). Siguen:
+    bloque 2 (alcance de la iteración 1, catálogo, herramientas y la
+    página), bloque 3 (batería: IDS, AUT, DAT, INF/DIS), bloque 4
+    (correcciones), bloque 5 (cierre).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
