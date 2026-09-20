@@ -32,8 +32,11 @@ def test_la_configuracion_es_valida_y_entra_en_el_tope_gratuito():
 
 def test_pasarse_del_tope_se_rechaza():
     c = copy.deepcopy(CFG)
-    c["disparador"]["frecuencia_s"] = 120                      # 21.600 al mes: ya no entra con el uptime
+    c["uptime"]["tope_ejecuciones_mes"] = 80000                # 72.000 del uptime + 8.640 del disparador = 80.640
     assert any("pasan del tope" in e for e in ad.validar_disparador(c))
+    c["disparador"]["frecuencia_s"] = 120                      # 72.000 + 21.600 = 93.600: todavía entra en 100.000
+    c["uptime"]["tope_ejecuciones_mes"] = 100000
+    assert ad.validar_disparador(c) == []
 
 
 def test_valores_invalidos_se_rechazan():
