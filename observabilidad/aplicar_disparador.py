@@ -84,10 +84,12 @@ def payload_check(cfg: dict, token: str, id_probe: int, existente: dict = None) 
             "method": "POST", "ipVersion": "V4", "noFollowRedirects": False, "failIfNotSSL": True,
             "validStatusCodes": [204],                       # GitHub contesta 204 sin cuerpo al aceptar el pedido
             "body": json.dumps({"ref": d["ref"]}),
-            "headers": [{"name": "Accept", "value": "application/vnd.github+json"},
-                        {"name": "Authorization", "value": f"Bearer {token}"},
-                        {"name": "X-GitHub-Api-Version", "value": "2022-11-28"},
-                        {"name": "Content-Type", "value": "application/json"}],
+            # Synthetic Monitoring espera los encabezados como texto "Nombre: valor" (no como
+            # objetos: la API contesta 400 "cannot unmarshal object ... of type string").
+            "headers": ["Accept: application/vnd.github+json",
+                        f"Authorization: Bearer {token}",
+                        "X-GitHub-Api-Version: 2022-11-28",
+                        "Content-Type: application/json"],
         }},
     }
     if existente:

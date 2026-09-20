@@ -125,5 +125,22 @@
     "alerta": "El disparador del colector falló (Pruebas)",
     "evento": "disparador-caido",
     "falla_minutos": 15
-  }
+  },
+  "renovaciones": [
+    {
+      "id": "github-disparador",
+      "nombre": "Token de GitHub del disparador del colector",
+      "vence": "2026-10-18",
+      "aviso_dias": 7,
+      "como": "Crear un token de grano fino (github.com/settings/personal-access-tokens/new: solo el repo MITRABAJOC, permiso Actions: read and write) y correr GITHUB_DISPATCH_TOKEN=... GRAFANA_TOKEN=... python observabilidad/aplicar_disparador.py",
+      "_ayuda": "Vencimientos de tokens. `aplicar_vencimientos.py` crea una alerta que manda un mail `aviso_dias` antes (y lo repite cada 24 h hasta que se renueve), y la pestaña Observabilidad de /entornos los muestra. Al renovar un token, actualizar `vence` y volver a correr el script. Falta agregar el token de metrics:write del colector: su vencimiento hay que confirmarlo en grafana.com (Security > Access policies)."
+    },
+    {
+      "id": "grafana-app",
+      "nombre": "Tokens de Grafana de la app (lectura y configuración)",
+      "vence": "2027-09-19",
+      "aviso_dias": 30,
+      "como": "En Grafana (Administration > Service accounts) crear tokens nuevos de colm3na-app-lectura y colm3na-app-config y actualizar GRAFANA_TOKEN_LECTURA y GRAFANA_TOKEN_CONFIG en Render."
+    }
+  ]
 }

@@ -512,6 +512,12 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     Estado general" y las alertas de 5xx, CPU, memoria y colector mudo. El Metrics
     Stream nativo de Render existe pero exige el plan Pro (USD 25/mes): se dejó
     como mejora. Secretos de Actions: `RENDER_API_KEY`, `GRAFANA_METRICS_TOKEN`.
+    **El cron de GitHub no dispara** (más de 1 h en cero, aun en minutos no
+    redondos): el colector tiene además un **disparador** (check de Grafana que le
+    hace `workflow_dispatch` a GitHub cada 5 min, `aplicar_disparador.py`). Su token
+    de GitHub **vence el 2026-10-18**: hay alerta por mail 7 días antes
+    (`aplicar_vencimientos.py`, `observabilidad/config.json` → `renovaciones`) y la
+    pestaña lo muestra. Tabla completa de vencimientos en el plan de observabilidad.
     Se puede actualizar a pedido: enlace a GitHub en el tablero, botón en la pestaña
     Observabilidad, y una fila "En vivo" que consulta a Render directo (fuente
     Infinity `render-vivo`, que guarda la API key de Render en Grafana: al rotarla,

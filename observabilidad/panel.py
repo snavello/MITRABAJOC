@@ -20,6 +20,9 @@ tampoco rompe la pantalla: cada parte informa su propio error.
 import os
 import threading
 import time
+from datetime import date
+
+import fechas
 
 from . import aplicar_grafana as ag
 from . import colector_render as cr
@@ -56,6 +59,19 @@ def configurado() -> bool:
     return bool(_url() and os.getenv("GRAFANA_TOKEN_LECTURA", "").strip())
 
 
+def renovaciones(hoy: date = None) -> list:
+    """Vencimientos de los tokens (config.json > renovaciones), con los días que faltan.
+    `estado`: ok, pronto (dentro del aviso), urgente (3 días o menos) o vencido."""
+    hoy = hoy or fechas.hoy()
+    salida = []
+    for r in ag.cargar_config().get("renovaciones", []):
+        dias = (date.fromisoformat(r["vence"]) - hoy).days
+        estado_ = "vencido" if dias < 0 else "urgente" if dias <= 3 else "pronto" if dias <= r["aviso_dias"] else "ok"
+        salida.append({"id": r["id"], "nombre": r["nombre"], "vence": r["vence"], "dias": dias,
+                       "estado": estado_, "como": r["como"]})
+    return sorted(salida, key=lambda x: x["dias"])
+
+
 def estado() -> dict:
     """Todo lo que la pestaña necesita, en una sola llamada. Cada parte que no
     se pudo leer queda en None con su motivo en `errores`: la pantalla muestra
@@ -71,6 +87,7 @@ def estado() -> dict:
         "puede_configurar": bool(os.getenv("GRAFANA_TOKEN_CONFIG", "").strip()),
         "intervalos": list(INTERVALOS),
         "alertas": None, "config": None, "errores": [],
+        "renovaciones": renovaciones(),
     }
     if not out["configurado"]:
         out["errores"].append("Falta GRAFANA_URL o GRAFANA_TOKEN_LECTURA en este servicio.")
