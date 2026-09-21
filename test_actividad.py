@@ -1,6 +1,8 @@
-"""Dashboard de Actividad de /entornos (db.actividad_resumen,
-db.registrar_acceso, GET /api/entornos/actividad): trámites, recibos,
-notificaciones, tokens de IA y accesos, por sindicato y totales.
+"""Agregados de actividad (db.actividad_resumen, db.registrar_acceso):
+trámites, recibos, notificaciones, tokens de IA y accesos, por sindicato y
+totales. La pestaña Actividad de /entornos y su API se sacaron el
+2026-09-21 (la Sala de mando la reemplazó); las funciones quedan porque
+AccesoLog alimenta "usuarios en línea" de esquema.py.
 
 Correr con: .venv/Scripts/python.exe -m pytest test_actividad.py -q
 """
@@ -89,26 +91,6 @@ def test_login_trabajador_registra_acceso():
     print("OK  test_login_trabajador_registra_acceso")
 
 
-def test_api_actividad_es_publica_y_con_cors_abierto():
-    c = TestClient(main.app)  # sin pase de PIN a propósito
-    r = c.get("/api/entornos/actividad")
-    assert r.status_code == 200
-    assert r.headers.get("access-control-allow-origin") == "*"
-    body = r.json()
-    assert "totales" in body and "sindicatos" in body and "servidor" in body
-    assert body["entorno"] == "pruebas"
-    print("OK  test_api_actividad_es_publica_y_con_cors_abierto")
-
-
-def test_entornos_renderiza_pestana_actividad():
-    r = client.get("/entornos")
-    assert r.status_code == 200
-    assert "Actividad" in r.text
-    assert 'data-act-env="pruebas"' in r.text and 'data-act-env="demo"' in r.text
-    assert "actividad-local-json" in r.text
-    print("OK  test_entornos_renderiza_pestana_actividad")
-
-
 if __name__ == "__main__":
     test_actividad_resumen_agrega_por_sindicato_y_totales()
     test_registrar_acceso_y_contarlo()
@@ -116,3 +98,11 @@ if __name__ == "__main__":
     test_api_actividad_es_publica_y_con_cors_abierto()
     test_entornos_renderiza_pestana_actividad()
     print("Todo OK")
+
+
+def test_la_pestana_actividad_ya_no_existe_ni_su_api():
+    r = client.get("/entornos")
+    assert r.status_code == 200
+    assert 'data-tab="actividad"' not in r.text and "actividad-local-json" not in r.text
+    assert client.get("/api/entornos/actividad").status_code == 404
+    print("OK  test_la_pestana_actividad_ya_no_existe_ni_su_api")

@@ -17,7 +17,7 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--noche);color:var(--texto);font:14px/1.45 var(--body)}
-.marco{max-width:1800px;margin:0 auto;padding:16px 22px 30px;display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start}
+.marco{max-width:1800px;margin:0 auto;padding:16px 22px 30px;{% if embebida %}padding-top:8px;{% endif %}display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start}
 header{grid-column:1/-1;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;border-bottom:1px solid var(--linea);padding-bottom:10px}
 h1{margin:0;font:700 34px/1 var(--cond);letter-spacing:.02em;text-transform:uppercase}
 h1 em{font-style:normal;color:var(--miel)}
@@ -121,7 +121,7 @@ aside ol.recorrido{padding-left:18px;color:var(--texto3);font-size:11.5px} aside
 <div class="marco">
   <header>
     <div>
-      <h1><a href="/entornos" style="color:var(--texto3);text-decoration:none;font-size:16px;letter-spacing:.1em;margin-right:12px">← ENTORNOS</a>Colm3na · <em>Sala de mando</em></h1>
+      <h1>{% if not embebida %}<a href="/entornos" style="color:var(--texto3);text-decoration:none;font-size:16px;letter-spacing:.1em;margin-right:12px">← ENTORNOS</a>{% endif %}Colm3na · <em>Sala de mando</em></h1>
       <p>Todo lo que corre entre la foto de un recibo en un teléfono y un aviso en el mail del equipo. Clic en una caja la amplía y abre su ficha; los ▶ cuentan un recorrido.</p>
     </div>
     <div class="estado-ctl" id="estadoCtl">estado general
