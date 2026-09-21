@@ -464,7 +464,7 @@ function alClic(n) {
   const g = nodeG(n.id);
   if (zoomado === g) { desZoom(); fichaInicial(); return; }
   desZoom();
-  const F = n.rack ? 1.3 : 1.5, cx = n.x + n.w/2, cy = n.y + n.h/2;
+  const F = 1.4, cx = n.x + n.w/2, cy = n.y + n.h/2;
   let dx = 0, dy = 0;
   const l = cx - n.w*F/2, r = cx + n.w*F/2, t = cy - n.h*F/2, b = cy + n.h*F/2;
   if (l < 8) dx = 8 - l; if (r > 1432) dx = 1432 - r; if (t < 8) dy = 8 - t; if (b > 872) dy = 872 - b;
