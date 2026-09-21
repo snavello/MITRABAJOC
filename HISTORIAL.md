@@ -5085,3 +5085,24 @@ todo". Por eso el HTML dejó de ser un archivo en `docs/` y pasó a ser una
 
 Pendientes anotados en la propia página: gasto mensual, decidir Telegram
 como canal y Cloudflare como perímetro (ver Pendientes de CLAUDE.md).
+
+### Los logos de cada producto (mismo día)
+
+Pedido de Sd: "un mini ícono de cada producto o servicio que usamos, para
+mejor identificación". Los íconos de línea dibujados a mano se reemplazaron
+por los **logos oficiales** en su color de marca, sobre un círculo claro
+(así GitHub, Anthropic, Render y Sentry, que son casi negros, también se
+ven). Salen de Simple Icons 16.32.0 (CC0) y van **vendoreados** en
+`static/marcas.svg`, un símbolo por marca, con sello `?v=`; jamás CDN. ARCA
+no está en ningún catálogo: Sd pasó el isotipo y va como PNG chico
+(`static/marcas/arca.png`, 96 px) recortado en círculo. Georef no tiene
+marca: lleva un mapita dibujado. Usuarios y equipo, un ícono genérico de
+persona. Un test verifica que cada marca declarada en la plantilla tenga su
+símbolo en el sprite y que los dos archivos se sirvan. Plataforma 0.34.02.
+
+**Recuperación de la rama.** Los cinco commits de la v3 y de la versión viva
+se habían hecho, sin advertirlo, sobre la rama `docs/xsanders-herramienta`
+(la copia de trabajo cambió de rama en el medio), así que el PR #42 mergeó
+solo la v1 y la v2. Se aplicaron con cherry-pick sobre `main` en la rama
+`feature/esquema-logos`, con la bitácora resuelta a mano (la línea de
+`main` más la de la Sala de mando).

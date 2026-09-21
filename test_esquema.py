@@ -106,3 +106,21 @@ def test_en_la_demo_no_existe(monkeypatch):
     assert c.get("/entornos/esquema").status_code == 404
     assert c.get("/api/entornos/esquema").status_code == 404
     print("OK  test_en_la_demo_no_existe")
+
+
+def test_logos_vendoreados_y_cada_marca_del_esquema_esta_en_el_sprite():
+    import re
+    from pathlib import Path
+    raiz = Path(main.__file__).parent
+    sprite = (raiz / "static" / "marcas.svg").read_text(encoding="utf-8")
+    plantilla = (raiz / "templates" / "esquema.html").read_text(encoding="utf-8")
+    assert "jsdelivr" not in plantilla and "unpkg" not in plantilla        # jamás CDN
+    assert "sello_static('marcas.svg')" in plantilla and "sello_static('marcas/arca.png')" in plantilla
+    marcas = set(re.findall(r'marca:"([a-z]+)"', plantilla)) - {"arca"}
+    assert marcas, "la plantilla tiene que declarar marcas"
+    for m in marcas:
+        assert f'id="m-{m}"' in sprite, f"falta el logo de {m} en static/marcas.svg"
+    c = TestClient(main.app)
+    assert c.get("/static/marcas.svg").status_code == 200
+    assert c.get("/static/marcas/arca.png").status_code == 200
+    print("OK  test_logos_vendoreados_y_cada_marca_del_esquema_esta_en_el_sprite")
