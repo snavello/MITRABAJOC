@@ -34,6 +34,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# La suite corre con la transición de R1 ENCENDIDA (login genérico + PIN de la
+# landing): muchos tests entran a /plataforma con el genérico y a /entornos con
+# el PIN. El comportamiento de la etapa 4 (apagados por defecto) se prueba en
+# tests puntuales con monkeypatch. Se setea antes de importar entorno, que lee
+# estas banderas al importarse.
+os.environ.setdefault("LOGIN_GENERICO", "1")
+os.environ.setdefault("PIN_ENTORNOS_HABILITADO", "1")
+
 _URL_BASE = os.getenv("DATABASE_URL", "").strip()
 if not _URL_BASE:
     raise RuntimeError(

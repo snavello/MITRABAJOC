@@ -230,3 +230,18 @@ def test_entornos_salir_limpia_el_pase_y_vuelve_a_pedir():
     c.cookies.clear()   # el navegador aplica el delete_cookie; el TestClient lo simula limpiando
     assert 'action="/entornos/login"' in c.get("/entornos").text  # vuelve la puerta
     print("OK  test_entornos_salir_limpia_el_pase_y_vuelve_a_pedir")
+
+
+def test_pin_apagado_no_entra_y_el_pase_viejo_no_vale(monkeypatch):
+    monkeypatch.setattr(entorno, "PIN_LANDING_HABILITADO", False)
+    c = TestClient(main.app)
+    # el PIN ya no entra
+    r = c.post("/entornos/pin", data={"pin": "24681357"}, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/entornos"
+    assert recursos.COOKIE_PASE not in r.cookies
+    # un pase válido ya no abre la landing (los pases viejos dejan de valer)
+    c.cookies.set(recursos.COOKIE_PASE, recursos.crear_pase())
+    texto = c.get("/entornos").text
+    assert 'action="/entornos/login"' in texto            # muestra la puerta
+    assert 'action="/entornos/pin"' not in texto          # sin el form del PIN
+    print("OK  test_pin_apagado_no_entra_y_el_pase_viejo_no_vale")

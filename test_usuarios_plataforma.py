@@ -323,3 +323,20 @@ def test_resetear_clave_vuelve_a_forzar_cambio():
     u2 = db.usuario_plataforma_por_usuario("reset")
     assert u2.debe_cambiar_clave and u2.clave_vence and auth.verificar_clave("nueva123456", u2.clave_hash)
     print("OK  test_resetear_clave_vuelve_a_forzar_cambio")
+
+
+# ================= Etapa 4: transición cerrada (genérico apagado) =================
+import entorno as _entorno
+
+
+def test_generico_apagado_no_deja_entrar(monkeypatch):
+    _limpiar()
+    monkeypatch.setattr(_entorno, "LOGIN_GENERICO_HABILITADO", False)
+    monkeypatch.setattr(auth, "CLAVE_PLATAFORMA", "generico-test")
+    monkeypatch.setattr(auth, "CUIT_PLATAFORMA", "20000000000")
+    c = _cli()
+    r = c.post("/plataforma/login", data={"cuit": "20000000000", "clave": "generico-test"},
+               follow_redirects=False)
+    assert r.headers["location"] == "/plataforma?error=1"     # el genérico ya no entra
+    assert not c.cookies.get(main.COOKIE_PLATAFORMA)
+    print("OK  test_generico_apagado_no_deja_entrar")

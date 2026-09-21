@@ -4814,9 +4814,9 @@ def plataforma_login(request: Request, response: Response,
                                 status_code=303)
         set_cookie_segura(resp, COOKIE_PLATAFORMA, token)
         return resp
-    # Genérico por variable de entorno (login de transición, se saca al cerrar
-    # R1). El campo trae el CUIT del genérico.
-    if auth.verificar_plataforma(clave, usuario):
+    # Genérico por variable de entorno (login de transición). Apagado por
+    # defecto al cerrar R1 (etapa 4); reversible con LOGIN_GENERICO=1.
+    if entorno.LOGIN_GENERICO_HABILITADO and auth.verificar_plataforma(clave, usuario):
         _login_ok(request)
         token = auth.crear_sesion("plataforma")     # uid 0 = genérico
         db.registrar_acceso("plataforma")
@@ -6622,6 +6622,7 @@ def entornos(request: Request):
             # A dónde ir después del PIN: el recurso que se pidió por enlace
             # directo (_exigir_pase lo manda acá con ?siguiente=).
             "siguiente": _siguiente_seguro(request.query_params.get("siguiente", "")),
+            "pin_habilitado": entorno.PIN_LANDING_HABILITADO,
         })
     # Prellenar solo las versiones de este mismo servicio (las de Pruebas
     # cuando se sirve desde Pruebas); las del otro entorno las trae el JS.
@@ -6698,6 +6699,9 @@ def entornos_pin(request: Request, pin: str = Form(""), siguiente: str = Form(""
     pase puesto se abre ese documento en vez de la landing, así un enlace
     a /recursos/.../archivo se puede compartir con solo el PIN."""
     _exigir_landing()
+    if not entorno.PIN_LANDING_HABILITADO:
+        # PIN retirado al cerrar R1: la landing entra con usuario nominal.
+        return RedirectResponse("/entornos", status_code=303)
     ip = _ip_de(request)
     siguiente = _siguiente_seguro(siguiente)
     cola = f"&siguiente={quote(siguiente, safe='')}" if siguiente else ""
@@ -7275,11 +7279,15 @@ def _exigir_landing() -> None:
 
 
 def _pase_landing(request: Request) -> bool:
-    """Puede ver la landing y abrir, subir y quitar recursos: pase de 30
-    días (el PIN ingresado una vez en este navegador) o sesión de
-    plataforma vigente."""
-    return (recursos.pase_valido(request.cookies.get(recursos.COOKIE_PASE, ""))
-            or bool(sesion_actual(request, "plataforma")))
+    """Puede ver la landing y abrir, subir y quitar recursos: sesión de
+    plataforma vigente (usuario nominal) o, si el PIN sigue habilitado
+    (transición), el pase de 30 días que dejó el PIN. Al cerrar R1 el PIN
+    queda apagado y solo la sesión nominal abre la landing; así los pases
+    viejos dejan de valer sin esperar a que expiren."""
+    if sesion_actual(request, "plataforma"):
+        return True
+    return (entorno.PIN_LANDING_HABILITADO
+            and recursos.pase_valido(request.cookies.get(recursos.COOKIE_PASE, "")))
 
 
 def _exigir_pase(request: Request):

@@ -54,6 +54,20 @@ URLS = {
 PIN_LANDING = os.getenv("PIN_ENTORNOS", "09211999")
 
 
+def _bandera(nombre: str) -> bool:
+    return os.getenv(nombre, "").strip().lower() in ("1", "si", "sí", "true", "on")
+
+
+# Cierre de la transición de R1 (SPRINT_R1.md etapa 4, XSK H-0002/H-0003/H-0016).
+# Por defecto AMBOS quedan APAGADOS: la plataforma y la landing entran SOLO con
+# usuario nominal (usuario + clave). El genérico 20000000000 y el PIN de 8
+# dígitos dejan de funcionar. Son reversibles por variable de entorno para una
+# emergencia (mientras no exista recuperación de clave por mail): poner
+# LOGIN_GENERICO=1 o PIN_ENTORNOS_HABILITADO=1 los vuelve a encender.
+LOGIN_GENERICO_HABILITADO = _bandera("LOGIN_GENERICO")
+PIN_LANDING_HABILITADO = _bandera("PIN_ENTORNOS_HABILITADO")
+
+
 def verificar_pin(texto) -> bool:
     """Compara solo los dígitos de lo tecleado (un espacio o un guion no
     lo invalidan) en tiempo constante."""
