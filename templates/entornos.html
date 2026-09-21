@@ -243,7 +243,21 @@
   .obs-pastilla:hover { background:rgba(255,255,255,.12); }
   .obs-pastilla.activa { background:#fff; color:var(--tinta); border-color:#fff; }
   .obs-sub[hidden] { display:none; }
-  #sala-mando { display:block; width:100%; height:calc(100vh - 150px); min-height:760px; border:0; border-radius:14px; background:#0a1421; }
+  /* La Sala de mando se abre a PANTALLA COMPLETA (pedido de Sd, 2026-09-21): sin
+     títulos ni Recursos, solo el esquema, el logo y un botón para volver. */
+  .sala-full { position:fixed; inset:0; z-index:1000; background:#0a1421; display:none; }
+  .sala-full.abierta { display:block; }
+  .sala-full iframe { display:block; width:100%; height:100%; border:0; background:#0a1421; }
+  .sala-barra { position:fixed; top:10px; right:14px; z-index:1001; display:flex; align-items:center; gap:12px;
+    background:rgba(10,20,33,.88); border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:6px 8px 6px 14px;
+    backdrop-filter:blur(6px); }
+  .sala-barra img { display:block; height:22px; width:auto; }
+  .sala-barra button { appearance:none; cursor:pointer; border:0; border-radius:999px; padding:6px 14px; font:inherit; font-size:13px; font-weight:600;
+    background:#fff; color:var(--tinta); }
+  .sala-barra button:hover { background:#e8eef7; }
+  .sala-tarjeta { border:1px solid rgba(255,255,255,.18); border-radius:14px; padding:22px 24px; background:rgba(255,255,255,.04); display:flex; flex-wrap:wrap; align-items:center; gap:16px 24px; }
+  .sala-tarjeta p { margin:0; flex:1 1 320px; opacity:.85; }
+  .sala-tarjeta .boton { white-space:nowrap; }
 
   /* ---- Recursos (2026-09-07): la documentación del proyecto, en la misma
      colmena nocturna. Tarjetas con miniatura 16:10, título en la display
@@ -432,8 +446,10 @@
         <button type="button" class="obs-pastilla" role="tab" aria-selected="false" data-obs="tecnica">Observación técnica</button>
       </nav>
       <div class="obs-sub" data-obs-panel="sala">
-        <iframe id="sala-mando" title="Sala de mando" data-src="/entornos/esquema?embebida=1"></iframe>
-        <p class="rec-lede" style="margin-top:8px;"><a href="/entornos/esquema" target="_blank" rel="noopener" style="color:inherit;">Abrir la Sala de mando en una pestaña propia ↗</a></p>
+        <div class="sala-tarjeta">
+          <p>La Sala de mando ocupa toda la pantalla: el esquema físico de la plataforma con sus indicadores en vivo. Se abre sola al entrar acá; con Esc o el botón de arriba a la derecha se vuelve.</p>
+          <button type="button" class="boton" id="sala-abrir">Abrir la Sala de mando</button>
+        </div>
       </div>
       <div class="obs-sub" data-obs-panel="tecnica" hidden>
       {% if entorno_actual == 'pruebas' %}
@@ -576,6 +592,15 @@
     </defs>
   </svg>
 
+{# La Sala de mando a pantalla completa: va antes de los scripts porque estos corren al parsearse. #}
+<div class="sala-full" id="sala-full" aria-hidden="true">
+  <div class="sala-barra">
+    <img src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Colm3na">
+    <button type="button" id="sala-cerrar" title="Volver a Entornos (Esc)">← Volver a Entornos</button>
+  </div>
+  <iframe id="sala-mando" title="Sala de mando" data-src="/entornos/esquema?embebida=1"></iframe>
+</div>
+
 <script>
 // Cada entorno publica /api/version (JSON con CORS abierto): se le pregunta
 // a los dos desde acá, así la versión que se ve es la que corre de verdad
@@ -712,17 +737,30 @@
 (function () {
   const pastillas = document.querySelectorAll('.obs-pastilla');
   const subs = document.querySelectorAll('.obs-sub');
+  const capa = document.getElementById('sala-full');
   const iframe = document.getElementById('sala-mando');
-  function cargarSala() { if (iframe && !iframe.getAttribute('src')) iframe.src = iframe.dataset.src; }
-  function elegir(n) {
+  function abrirSala() {
+    if (!iframe.getAttribute('src')) iframe.src = iframe.dataset.src;
+    capa.classList.add('abierta'); capa.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+  function cerrarSala() {
+    capa.classList.remove('abierta'); capa.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+  function elegir(n, abrir) {
     pastillas.forEach(p => { p.classList.toggle('activa', p.dataset.obs === n); p.setAttribute('aria-selected', p.dataset.obs === n ? 'true' : 'false'); });
     subs.forEach(s => { s.hidden = s.dataset.obsPanel !== n; });
-    if (n === 'sala') cargarSala();
+    if (n === 'sala' && abrir) abrirSala();
   }
-  pastillas.forEach(p => p.addEventListener('click', () => elegir(p.dataset.obs)));
+  pastillas.forEach(p => p.addEventListener('click', () => elegir(p.dataset.obs, true)));
+  document.getElementById('sala-abrir').addEventListener('click', abrirSala);
+  document.getElementById('sala-cerrar').addEventListener('click', cerrarSala);
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && capa.classList.contains('abierta')) cerrarSala(); });
   const tabObs = document.querySelector('.etab[data-tab="observabilidad"]');
-  tabObs.addEventListener('click', () => { if (document.querySelector('.obs-pastilla.activa').dataset.obs === 'sala') cargarSala(); });
-  if (location.hash === '#observabilidad') cargarSala();
+  tabObs.addEventListener('click', () => { if (document.querySelector('.obs-pastilla.activa').dataset.obs === 'sala') abrirSala(); });
+  if (location.hash === '#observabilidad') abrirSala();
+  window.abrirSala = abrirSala;   // por si otra parte de la landing quiere abrirla
 })();
 
 // Observabilidad (2026-09-19): la app es la PUERTA, no el motor. Lee de Grafana el
