@@ -133,6 +133,9 @@ def test_pestana_observabilidad_con_dos_pastillas_y_sala_de_mando_por_defecto():
     assert 'data-obs="sala"' in t and 'data-obs="tecnica"' in t
     assert 'class="obs-pastilla activa" role="tab" aria-selected="true" data-obs="sala"' in t
     assert 'data-src="/entornos/esquema?embebida=1"' in t and 'data-tab="actividad"' not in t
+    # la Sala se abre a pantalla completa: capa fija con el logo y el botón de volver
+    assert 'id="sala-full"' in t and 'id="sala-cerrar"' in t and 'id="sala-abrir"' in t
+    assert 'class="sala-barra"' in t and 'alt="Colm3na"' in t
     # embebida: sin el enlace de vuelta a la landing; suelta: con él
     assert "← ENTORNOS" not in c.get("/entornos/esquema?embebida=1").text
     assert "← ENTORNOS" in c.get("/entornos/esquema").text

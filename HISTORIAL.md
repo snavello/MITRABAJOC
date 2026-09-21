@@ -5156,3 +5156,16 @@ app y desde ningún otro sitio; suelta, sigue con `DENY`. El middleware usa
 (8). Plataforma 0.35.02. Lección: cuando el CI no verifica una pantalla en
 el navegador real, un iframe hay que probarlo servido, no desde un archivo
 local (ahí el marco no carga por otro motivo y el error se confunde).
+
+### La Sala de mando a pantalla completa (mismo día)
+
+Sd la vio dentro de la pestaña, recortada entre el título de la landing y
+Recursos, y pidió lo contrario: **toda la pantalla, sin títulos ni
+Recursos, solo un botón para volver y el logo de Colm3na**. La Sala es
+ahora una **capa fija** sobre la landing (`.sala-full`, el iframe ocupa el
+viewport entero) con una cápsula flotante arriba a la derecha: el logo de
+plataforma y "← Volver a Entornos"; Esc también cierra. Se abre sola al
+entrar a Observabilidad (la pastilla por defecto) o al elegir la pastilla,
+y al volver queda en la pestaña una tarjeta con "Abrir la Sala de mando"
+para reabrirla sin salir. El iframe sigue cargándose recién la primera vez
+que se abre. Plataforma 0.35.03.
