@@ -594,10 +594,9 @@
 
 {# La Sala de mando a pantalla completa: va antes de los scripts porque estos corren al parsearse. #}
 <div class="sala-full" id="sala-full" aria-hidden="true">
-  <div class="sala-barra">
-    <img src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Colm3na">
-    <button type="button" id="sala-cerrar" title="Volver a Entornos (Esc)">← Volver a Entornos</button>
-  </div>
+  {# Sin cápsula propia: la Sala trae su logo y su botón circular de volver, que
+     le avisa a esta página por postMessage (mismo origen). Esc también cierra. #}
+  <button type="button" id="sala-cerrar" hidden aria-hidden="true">Volver a Entornos</button>
   <iframe id="sala-mando" title="Sala de mando" data-src="/entornos/esquema?embebida=1"></iframe>
 </div>
 
@@ -757,6 +756,7 @@
   document.getElementById('sala-abrir').addEventListener('click', abrirSala);
   document.getElementById('sala-cerrar').addEventListener('click', cerrarSala);
   document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && capa.classList.contains('abierta')) cerrarSala(); });
+  window.addEventListener('message', ev => { if (ev.origin === location.origin && ev.data && ev.data.sala === 'cerrar') cerrarSala(); });
   const tabObs = document.querySelector('.etab[data-tab="observabilidad"]');
   tabObs.addEventListener('click', () => { if (document.querySelector('.obs-pastilla.activa').dataset.obs === 'sala') abrirSala(); });
   if (location.hash === '#observabilidad') abrirSala();

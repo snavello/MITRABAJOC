@@ -18,19 +18,27 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--noche);color:var(--texto);font:14px/1.45 var(--body)}
 .marco{max-width:1800px;margin:0 auto;padding:16px 22px 30px;{% if embebida %}padding-top:8px;{% endif %}display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start}
-header{grid-column:1/-1;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;border-bottom:1px solid var(--linea);padding-bottom:10px}
-h1{margin:0;font:700 34px/1 var(--cond);letter-spacing:.02em;text-transform:uppercase}
+header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid var(--linea);padding-bottom:8px}
+header .marca{display:flex;align-items:center;gap:14px;min-width:0}
+header .marca img{display:block;height:30px;width:auto;max-width:150px;object-fit:contain}
+h1{margin:0;font:700 28px/1 var(--cond);letter-spacing:.02em;text-transform:uppercase;white-space:nowrap}
 h1 em{font-style:normal;color:var(--miel)}
-header p{margin:4px 0 0;color:var(--texto2);font-size:13px;max-width:720px}
+/* Botón circular de volver, flotante abajo a la derecha (pedido de Sd, 2026-09-21).
+   Embebida en la landing le avisa al padre que cierre la capa; suelta, vuelve a /entornos. */
+.volver{position:fixed;right:22px;bottom:22px;z-index:70;width:58px;height:58px;border-radius:50%;border:2px solid var(--miel);background:#0f1c2e;color:var(--miel);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(0,0,0,.6),0 0 0 6px rgba(242,178,52,.12);transition:transform .15s,background .15s}
+.volver:hover{transform:scale(1.06);background:var(--miel);color:#1a1200}
+.volver svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.volver span{position:absolute;right:68px;top:50%;transform:translateY(-50%);white-space:nowrap;font:700 12px var(--cond);letter-spacing:.14em;text-transform:uppercase;color:var(--texto2);opacity:0;transition:opacity .15s;pointer-events:none}
+.volver:hover span{opacity:1}
 .estado-ctl{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--texto2);letter-spacing:.1em;text-transform:uppercase}
 .estado-ctl button{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;background:var(--c);opacity:.45}
 .estado-ctl button.on{opacity:1;border-color:#fff;box-shadow:0 0 10px var(--c)}
 .estado-ctl span{margin-left:6px;font:700 15px var(--cond);color:var(--halo);letter-spacing:.06em}
-.tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:6px 0}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:5px;margin:6px 0}
 .tile.neg::before{background:var(--cian)} .tile.neg b{color:var(--cian)}
 /* Compactos (2026-09-21): dos líneas fijas por indicador. La segunda se corta con
    puntos suspensivos y el detalle completo sale en una burbuja al pasar el mouse. */
-.tile{background:var(--noche2);border:1px solid var(--linea);border-radius:8px;padding:4px 10px 5px 12px;position:relative;line-height:1.15;min-width:0;cursor:default}
+.tile{background:var(--noche2);border:1px solid var(--linea);border-radius:8px;padding:4px 8px 5px 10px;position:relative;line-height:1.15;min-width:0;cursor:default}
 .tile::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:3px;background:var(--miel);border-radius:2px}
 .tile small{display:inline-block;color:var(--texto3);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;margin-right:6px;vertical-align:baseline}
 .tile b{font:700 18px/1 var(--cond);letter-spacing:.02em;vertical-align:baseline}
@@ -95,7 +103,7 @@ aside ol.recorrido{padding-left:18px;color:var(--texto3);font-size:11.5px} aside
 .pie{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;color:var(--texto3);font-size:11px;align-items:center}
 .pie i{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--c);vertical-align:middle;margin-right:5px;opacity:.9}
 .pie .pago i{border-radius:50%;background:var(--miel)} .pie .pago.fut i{background:none;border:1.5px dashed var(--miel)} .pie .pl i{background:none;border:1px dashed #6b7a94;border-radius:0;height:0;width:22px}
-@media (max-width:1100px){.marco{grid-template-columns:1fr} aside{position:static;max-height:none} .tiles{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:1100px){.marco{grid-template-columns:1fr} aside{position:static;max-height:none}}
 </style>
 </head>
 <body>
@@ -125,9 +133,9 @@ aside ol.recorrido{padding-left:18px;color:var(--texto3);font-size:11.5px} aside
 
 <div class="marco">
   <header>
-    <div>
-      <h1>{% if not embebida %}<a href="/entornos" style="color:var(--texto3);text-decoration:none;font-size:16px;letter-spacing:.1em;margin-right:12px">← ENTORNOS</a>{% endif %}Colm3na · <em>Sala de mando</em></h1>
-      <p>Todo lo que corre entre la foto de un recibo en un teléfono y un aviso en el mail del equipo. Clic en una caja la amplía y abre su ficha; los ▶ cuentan un recorrido.</p>
+    <div class="marca">
+      <img src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Colm3na">
+      <h1>Colm3na · <em>Sala de mando</em></h1>
     </div>
     <div class="estado-ctl" id="estadoCtl">estado general
       <button data-e="verde" style="--c:#3ec9a7" title="Todo en línea"></button>
@@ -164,6 +172,7 @@ Los planes y montos todavía no están cargados."><small>Gasto del mes</small><b
   <aside id="ficha"></aside>
 </div>
 
+<button type="button" class="volver" id="volver" title="Volver a Entornos" aria-label="Volver a Entornos"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg><span>Volver a Entornos</span></button>
 <script id="datos-vivos" type="application/json">{{ datos|tojson }}</script>
 <script>
 // Logos vendoreados (static/marcas.svg, Simple Icons CC0) y el isotipo de ARCA, con sello de /static.
@@ -604,6 +613,13 @@ function limpiarNeon() { svg.querySelectorAll(".neon, .paso").forEach(e => e.cla
 function finAnim() { limpiarNeon(); anim = null; fichaInicial(); }
 function detener() { if (anim) { clearTimeout(anim.timer); anim = null; } limpiarNeon(); }
 fichaInicial();
+
+// Volver: adentro de la landing (iframe) le pide al padre que cierre la capa;
+// suelta, va a /entornos. Solo se habla con el mismo origen.
+document.getElementById("volver").addEventListener("click", () => {
+  if (window.parent && window.parent !== window) window.parent.postMessage({sala:"cerrar"}, location.origin);
+  else location.href = "/entornos";
+});
 
 // foco de luz que sigue al puntero (mismo mecanismo que el login, más chico y más sutil)
 (function () {

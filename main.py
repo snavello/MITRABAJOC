@@ -7031,6 +7031,7 @@ def entornos_esquema(request: Request):
     embebida = request.query_params.get("embebida") == "1"
     respuesta = templates.TemplateResponse("esquema.html", {
         "request": request, "datos": _esquema_datos(con_grafana=False),
+        "marca_plataforma": db.marca_plataforma(),     # el logo de Colm3na en la cabecera
         # ?embebida=1: la pestaña Observabilidad de /entornos la muestra en un
         # iframe; sin el enlace "← Entornos" y con menos aire arriba.
         "embebida": embebida,
