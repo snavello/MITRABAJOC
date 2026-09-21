@@ -5127,3 +5127,18 @@ su JS, la ruta `GET /api/entornos/actividad` y la variable
 (AccesoLog alimenta "usuarios en línea"). Tests: `test_actividad.py`
 ajustado (la pestaña y la API ya no existen), `test_esquema.py` (7).
 Plataforma 0.35.01.
+
+### El CI en cuatro partes paralelas (mismo día)
+
+Sd preguntó por qué el CI tardaba tanto: 10 minutos por corrida. Medido en
+el log: un minuto de preparación, cinco de pytest y **cuatro de arranque de
+proceso**, porque los 111 archivos corren uno por uno en su propio proceso
+(regla del proyecto, que no se toca). La suite se reparte ahora en **cuatro
+trabajos de GitHub Actions que corren a la vez**, cada uno con su Postgres
+y con cada archivo todavía en su propio proceso. `ci_reparto.py` decide qué
+archivo va a cuál (orden alfabético, módulo cuatro, determinista) y
+`test_ci_reparto.py` verifica que las partes no se pisen, cubran todos los
+archivos y que la matriz del workflow declare exactamente `PARTES`
+trabajos: agregar una quinta parte sin tocar la lista falla en el propio
+CI. `fail-fast: false` para que una parte rota no cancele las otras, y la
+caché de pip para ahorrarse la descarga de dependencias. Sin código de app.
