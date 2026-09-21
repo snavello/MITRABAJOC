@@ -299,13 +299,19 @@ def test_el_chat_de_las_tres_apps_muestra_el_pase():
     print("OK  test_el_chat_de_las_tres_apps_muestra_el_pase")
 
 
-def test_el_chat_ordena_el_pase_y_la_respuesta_del_mismo_minuto():
+def test_el_chat_ordena_el_pase_y_la_respuesta_del_mismo_minuto(monkeypatch):
     """Contestar y derivar seguido es el caso normal, y las dos cosas caen en
     el mismo minuto: las fechas del chat se guardan a esa granularidad. Con
     solo la fecha, el empate lo rompía el orden en que el cliente concatena
     notas y eventos, así que el pase salía SIEMPRE después de todas las
     respuestas. `orden` (el id del log, que es la secuencia real de actos)
     es lo que arregla el hilo."""
+    # Se congela el reloj: así los cuatro eventos comparten el minuto SIEMPRE
+    # (antes, en un runner lento —CI— podían cruzar el borde de minuto y el
+    # test fallaba sin que nada estuviera mal). Lo que se prueba es el
+    # desempate por `orden` cuando las fechas empatan.
+    import fechas
+    monkeypatch.setattr(fechas, "ahora_texto", lambda: "2026-01-01 12:00")
     tipo = _crear_tipo("F_ORDEN", True, (A_TES,))
     tr = _presentar(tipo)
     c = _cli("20111111111")
