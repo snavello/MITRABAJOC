@@ -6712,6 +6712,18 @@ def entornos_pin(request: Request, pin: str = Form(""), siguiente: str = Form(""
     return resp
 
 
+@app.get("/entornos/salir")
+def entornos_salir():
+    """Cierra la sesión de la landing: borra el pase del PIN (cookie de 30
+    días) y la sesión de plataforma, así /entornos vuelve a pedir usuario y
+    clave. Útil para cambiar de usuario o para probar el login nominal cuando
+    quedó un pase viejo del PIN (SPRINT_R1.md)."""
+    resp = RedirectResponse("/entornos", status_code=303)
+    resp.delete_cookie(recursos.COOKIE_PASE, path="/")
+    resp.delete_cookie(COOKIE_PLATAFORMA, path="/")
+    return resp
+
+
 @app.post("/entornos/login")
 def entornos_login(request: Request, usuario: str = Form(...), clave: str = Form(...),
                    siguiente: str = Form("")):

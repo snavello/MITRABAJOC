@@ -217,3 +217,16 @@ def test_entornos_pin_sigue_funcionando_como_fallback():
     r = c.post("/entornos/pin", data={"pin": "24681357"}, follow_redirects=False)
     assert r.status_code == 303 and recursos.COOKIE_PASE in r.cookies
     print("OK  test_entornos_pin_sigue_funcionando_como_fallback")
+
+
+def test_entornos_salir_limpia_el_pase_y_vuelve_a_pedir():
+    c = TestClient(main.app)
+    # entra con el PIN -> queda el pase
+    c.post("/entornos/pin", data={"pin": "24681357"})
+    assert entorno.URLS["demo"] in c.get("/entornos").text     # ve la landing
+    # sale -> borra el pase
+    r = c.get("/entornos/salir", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/entornos"
+    c.cookies.clear()   # el navegador aplica el delete_cookie; el TestClient lo simula limpiando
+    assert 'action="/entornos/login"' in c.get("/entornos").text  # vuelve la puerta
+    print("OK  test_entornos_salir_limpia_el_pase_y_vuelve_a_pedir")
