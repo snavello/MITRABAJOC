@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sala de mando — Colm3na</title>
+<title>Colm3na — Sala de mando</title>
 <style>
-@font-face{font-family:"Barlow Condensed";src:url("../static/fonts/barlow-condensed-bold.woff2") format("woff2");font-weight:700}
+@font-face{font-family:"Barlow Condensed";src:url('/static/fonts/barlow-condensed-bold.woff2?v={{ sello_static('fonts/barlow-condensed-bold.woff2') }}') format('woff2');font-weight:700}
 :root{
   --noche:#0a1421; --noche2:#0f1c2e; --noche3:#16263c; --linea:#22344d;
   --texto:#e8eef7; --texto2:#8ea0bb; --texto3:#5f7597;
@@ -120,7 +120,7 @@ aside ol.recorrido{padding-left:18px;color:var(--texto3);font-size:11.5px} aside
 <div class="marco">
   <header>
     <div>
-      <h1>Colm3na · <em>Sala de mando</em></h1>
+      <h1><a href="/entornos" style="color:var(--texto3);text-decoration:none;font-size:16px;letter-spacing:.1em;margin-right:12px">← ENTORNOS</a>Colm3na · <em>Sala de mando</em></h1>
       <p>Todo lo que corre entre la foto de un recibo en un teléfono y un aviso en el mail del equipo. Clic en una caja la amplía y abre su ficha; los ▶ cuentan un recorrido.</p>
     </div>
     <div class="estado-ctl" id="estadoCtl">estado general
@@ -128,35 +128,37 @@ aside ol.recorrido{padding-left:18px;color:var(--texto3);font-size:11.5px} aside
       <button data-e="amarillo" style="--c:#f2b234" title="Degradado"></button>
       <button data-e="rojo" style="--c:#ff4d5a" title="Con errores"></button>
       <button data-e="violeta" style="--c:#b3b2e8" title="Sistema caído"></button>
-      <span id="estadoTxt"></span>
+      <span id="estadoTxt"></span><small id="actualizado" style="margin-left:10px;color:var(--texto3);letter-spacing:0;text-transform:none"></small>
     </div>
   </header>
 
   <div>
     <div class="tiles" id="tiles">
-      <div class="tile ok"><small>Pruebas</small><b data-env>EN LÍNEA</b><span>0.42.04 · main</span></div>
-      <div class="tile ok"><small>Demo</small><b data-env>EN LÍNEA</b><span>0.42.03 · promovida 19-09</span></div>
-      <div class="tile"><small>Seguridad</small><b>1 BLOQUEA</b><span>H-0008 · 8 corregidos</span></div>
-      <div class="tile alerta"><small>Próximo vencimiento</small><b>27 DÍAS</b><span>token disparador · 18-10</span></div>
+      <div class="tile ok" data-envtile="pruebas"><small>Pruebas</small><b data-kpi="est-pruebas">—</b><span data-kpi="ver-pruebas">consultando…</span></div>
+      <div class="tile ok" data-envtile="demo"><small>Demo</small><b data-kpi="est-demo">—</b><span data-kpi="ver-demo">consultando…</span></div>
+      <div class="tile"><small>Seguridad</small><b data-kpi="seg">—</b><span data-kpi="seg-sub">—</span></div>
+      <div class="tile alerta"><small>Próximo vencimiento</small><b data-kpi="venc">—</b><span data-kpi="venc-sub">—</span></div>
       <div class="tile"><small>Gasto del mes</small><b>US$ —</b><span>5 pagos + 3 futuros · a completar</span></div>
-      <div class="tile neg"><small>Recibos leídos</small><b>18.412</b><span>+184 hoy · US$ 1,92</span></div>
-      <div class="tile neg"><small>Usuarios en línea</small><b>37</b><span>afiliados 31 · gremio 5 · empresa 1</span></div>
-      <div class="tile neg"><small>Trámites abiertos</small><b>212</b><span>14 esperan al gremio</span></div>
-      <div class="tile neg"><small>Sindicatos activos</small><b>3</b><span>UOM · Gastronómica · Bancaria</span></div>
-      <div class="tile neg"><small>Afiliados registrados</small><b>1.284</b><span>de 4.900 en padrón · 26%</span></div>
+      <div class="tile neg"><small>Recibos leídos</small><b data-kpi="recibos">—</b><span data-kpi="recibos-sub">—</span></div>
+      <div class="tile neg"><small>Usuarios en línea</small><b data-kpi="linea">—</b><span data-kpi="linea-sub">—</span></div>
+      <div class="tile neg"><small>Trámites abiertos</small><b data-kpi="tramites">—</b><span data-kpi="tramites-sub">—</span></div>
+      <div class="tile neg"><small>Sindicatos activos</small><b data-kpi="sind">—</b><span data-kpi="sind-sub">—</span></div>
+      <div class="tile neg"><small>Afiliados registrados</small><b data-kpi="reg">—</b><span data-kpi="reg-sub">—</span></div>
     </div>
     <div class="radar" id="radar" data-estado="verde">
       <div class="barrido"></div>
       <div class="foco"></div>
       <svg id="svg" viewBox="0 0 1440 880" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
-    <div class="pie" id="pie"><span class="pago"><i></i>pago hoy</span><span class="pago fut"><i></i>será pago</span><span class="pl"><i></i>planeado / manual · pelotitas: tráfico real</span><span style="color:var(--texto3)">· cifras de negocio de muestra: en la versión viva salen de la base</span></div>
+    <div class="pie" id="pie"><span class="pago"><i></i>pago hoy</span><span class="pago fut"><i></i>será pago</span><span class="pl"><i></i>planeado / manual · pelotitas: tráfico real</span><span style="color:var(--texto3)" id="fuente-cifras">· las cifras salen de la base de este entorno; el semáforo, de Grafana</span></div>
   </div>
 
   <aside id="ficha"></aside>
 </div>
 
+<script id="datos-vivos" type="application/json">{{ datos|tojson }}</script>
 <script>
+{% raw %}
 // ============================ DATOS ============================
 const ZONAS = {
   usu:{nombre:"Personas", color:"#ff6ab0"},
@@ -423,17 +425,57 @@ for (const a of ARISTAS) {
 }
 
 // ============================ ESTADO GENERAL ============================
-const ESTADOS = {verde:{c:"#3ec9a7", t:"todo en línea", env:"EN LÍNEA"}, amarillo:{c:"#f2b234", t:"degradado", env:"DEGRADADO"}, rojo:{c:"#ff4d5a", t:"con errores", env:"CON ERRORES"}, violeta:{c:"#b3b2e8", t:"sistema caído", env:"CAÍDO"}};
+const ESTADOS = {verde:{c:"#3ec9a7", t:"todo en línea", env:"EN LÍNEA"}, amarillo:{c:"#f2b234", t:"degradado", env:"DEGRADADO"}, rojo:{c:"#ff4d5a", t:"con errores", env:"CON ERRORES"}, violeta:{c:"#b3b2e8", t:"sistema caído", env:"CAÍDO"}, gris:{c:"#6b7a94", t:"sin vigilancia configurada", env:"SIN DATO"}};
 function setEstado(k) {
   const e = ESTADOS[k];
   document.documentElement.style.setProperty("--halo", e.c);
   document.getElementById("radar").dataset.estado = k;
   document.querySelectorAll("#estadoCtl button").forEach(b => b.classList.toggle("on", b.dataset.e === k));
   document.getElementById("estadoTxt").textContent = e.t;
-  document.querySelectorAll("[data-env]").forEach(b => b.textContent = e.env);
 }
 document.querySelectorAll("#estadoCtl button").forEach(b => b.addEventListener("click", () => setEstado(b.dataset.e)));
 setEstado("verde");
+
+// ---- datos vivos: los inyecta el servidor al dibujar y el navegador los
+// refresca cada minuto pidiendo /api/entornos/esquema (que suma el semáforo
+// de Grafana). Si el pedido falla, el estado pasa a violeta: la app no responde.
+const fmt = n => (n == null) ? "—" : Number(n).toLocaleString("es-AR");
+const kpi = (k, v) => { const e = document.querySelector(`[data-kpi="${k}"]`); if (e) e.textContent = v; };
+function aplicarDatos(d) {
+  if (!d) return;
+  const k = d.kpis || {};
+  kpi("recibos", fmt(k.recibos_total)); kpi("recibos-sub", `+${fmt(k.recibos_hoy)} hoy · ${fmt(k.lecturas_hoy)} lecturas IA · US$ ${fmt(k.costo_hoy_usd)}`);
+  const l = k.en_linea || {};
+  kpi("linea", fmt(k.en_linea_total)); kpi("linea-sub", `ingresos en ${k.minutos_en_linea} min · afiliados ${fmt(l.trabajador || 0)} · gremio ${fmt(l.admin || 0)} · empresa ${fmt(l.empresa || 0)}`);
+  kpi("tramites", fmt(k.tramites_abiertos)); kpi("tramites-sub", `${fmt(k.tramites_esperan)} esperan al gremio`);
+  kpi("sind", fmt((k.sindicatos || []).length)); kpi("sind-sub", (k.sindicatos || []).join(" · ") || "ninguno");
+  kpi("reg", fmt(k.registrados)); kpi("reg-sub", `de ${fmt(k.padron)} en padrón · ${fmt(k.porcentaje_registrados)}%`);
+  if (d.seguridad) { kpi("seg", d.seguridad.bloquean ? `${d.seguridad.bloquean} BLOQUEA` : "SIN BLOQUEOS"); kpi("seg-sub", `${d.seguridad.solucionado} solucionados · ${d.seguridad.pendiente} pendientes`); }
+  else { kpi("seg", "SIN DATO"); kpi("seg-sub", "registro del Security Kit ilegible"); }
+  if (d.vencimiento) { kpi("venc", d.vencimiento.dias < 0 ? "VENCIDO" : `${d.vencimiento.dias} DÍAS`); kpi("venc-sub", `${d.vencimiento.nombre} · ${d.vencimiento.vence}`); }
+  else { kpi("venc", "—"); kpi("venc-sub", "sin vencimientos registrados"); }
+  setEstado(d.semaforo && ESTADOS[d.semaforo] ? d.semaforo : "gris");
+  const act = document.getElementById("actualizado"); if (act) act.textContent = "· " + (d.actualizado || "");
+}
+// El estado de CADA entorno sale de su propio /api/version (público, con
+// CORS, igual que lo hace la landing): responde = en línea, con su versión.
+function sondearEntornos(urls) {
+  for (const [env, base] of Object.entries(urls || {})) {
+    const t = document.querySelector(`[data-envtile="${env}"]`); if (!t) continue;
+    fetch(base + "/api/version", {mode:"cors"}).then(r => r.ok ? r.json() : Promise.reject(r.status)).then(v => {
+      t.classList.remove("alerta"); kpi("est-" + env, "EN LÍNEA");
+      kpi("ver-" + env, `${v.plataforma || v.version || "—"} · ${env === "pruebas" ? "main" : "rama demo"}${v.fecha ? " · " + v.fecha : ""}`);
+    }).catch(() => { t.classList.add("alerta"); kpi("est-" + env, "SIN RESPUESTA"); kpi("ver-" + env, base.replace(/^https?:\/\//, "")); });
+  }
+}
+const inicial = document.getElementById("datos-vivos");
+if (inicial) {
+  let urls = {};
+  try { const d0 = JSON.parse(inicial.textContent); urls = d0.urls || {}; aplicarDatos(d0); } catch (e) {}
+  sondearEntornos(urls); setInterval(() => sondearEntornos(urls), 60000);
+  const refrescar = () => fetch("/api/entornos/esquema", {credentials:"same-origin"}).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(aplicarDatos).catch(() => setEstado("violeta"));
+  refrescar(); setInterval(refrescar, 60000);
+}
 
 // ============================ FICHA, ZOOM Y CLIC ============================
 const ficha = document.getElementById("ficha");
@@ -522,6 +564,7 @@ fichaInicial();
   });
   radar.addEventListener("mouseleave", () => radar.classList.remove("con-foco"));
 })();
+{% endraw %}
 </script>
 </body>
 </html>

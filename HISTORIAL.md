@@ -5011,3 +5011,77 @@ fue lo que delató a `permisos_efectivos`.
   observabilidad (Sentry, métricas de Render).
 - Hallazgo aparte, de la bitácora y no de este bloque: `test_fechas.py` falla
   por `generar_bitacora.py` línea 62 (llama a `datetime.now()`).
+
+## La Sala de mando: el esquema físico de la plataforma, vivo (2026-09-21)
+
+Rama `feature/esquema-fisico`. Nació como un boceto a mano en un cuaderno:
+Sd dibujó todos los componentes de la solución (PC de desarrollo con Docker,
+Claude Code, GitHub, la API de Render, los dos entornos con su web y su
+Postgres, la API de Claude en el medio, las cinco puertas de la app,
+Cloudflare delante, Grafana y Sentry avisando por mail) y pidió primero que
+Code lo descifrara, después que lo mejorara, y al final que fuera **una sola
+pantalla viva** para aprender, mostrar y manejar pendientes, renovaciones y
+costos.
+
+### Cómo se llegó al diseño
+
+1. **v1, cajitas y flechas** (`docs/esquema-fisico.html`, después
+   reemplazado): la lectura del boceto con una tabla "en el papel → en el
+   esquema" y las preguntas abiertas. Aclaraciones de Sd: "ADM" es
+   `/entornos`, y "porta" bajo la API de Render es la **portación** de
+   Pruebas a Demo (`promover_demo.py`).
+2. **v2**: siete zonas tintadas, ícono `$` en lo que se paga, primer clic
+   amplía la caja, y tres **recorridos con luz de neón** (un recibo de punta a
+   punta, un error o anomalía, el camino de un cambio) pensados para que un
+   inversor o un comercial entiendan la complejidad sin que sea "científico".
+3. **Tres propuestas de dirección visual** (`disenos/esquema-propuestas.html`,
+   fuera de git como todos los mockups): A "Sala de mando" (centro de
+   operaciones nocturno con barrido de radar), B "Plano de circuito" (chips,
+   pistas de cobre, serigrafía) y C "La colmena" (celdas hexagonales, fondo
+   claro). Sd eligió A.
+4. **v3 sobre A**: franja de color por zona en el lateral de cada caja, las
+   cajas reubicadas para que **las flechas sigan el flujo físico** (entrega
+   arriba de izquierda a derecha, personas a la izquierda, externos en el
+   medio porque los dos entornos los llaman, vigilancia abajo saliendo de
+   Pruebas y el aviso volviendo al equipo por el borde), **pelotitas
+   circulando** por las líneas punteadas y las de tráfico, KPIs más chicos
+   para darle espacio al radar, y **el halo del radar atado al estado
+   general** (verde / amarillo / rojo / violeta = sistema caído). Después:
+   KPIs de negocio, sin siglas personales, Cloudflare mostrando lo que va a
+   hacer (dominio a registrar, DNS, certificado TLS, WAF), GitHub, Grafana y
+   Cloudflare marcados como **pagos futuros** (`$` en contorno), zoom al 40%
+   y un foco de luz que sigue al puntero, tomado del login de plataforma
+   pero más chico y más sutil.
+
+### La versión viva
+
+Decisión de Sd: las cifras salen de Pruebas y "cuando se porte se porta
+todo". Por eso el HTML dejó de ser un archivo en `docs/` y pasó a ser una
+**página de la app**:
+
+- `esquema.py`: los indicadores en SQL agrupado (recibos totales y de hoy,
+  lecturas de IA de hoy con su costo a precio congelado, ingresos por rol en
+  los últimos 15 minutos como aproximación honesta a "usuarios en línea",
+  trámites abiertos y los que esperan al gremio, sindicatos activos, padrón y
+  registrados). Recibe la sesión, no la abre.
+- `GET /entornos/esquema` (`templates/esquema.html`) dibuja con los datos ya
+  inyectados, y `GET /api/entornos/esquema` los refresca cada minuto sumando
+  el **semáforo de Grafana** (`estado_alertas`): verde, amarillo, rojo, o
+  gris cuando no hay vigilancia configurada; si el pedido falla, la página
+  pasa sola a violeta, que es exactamente "la app no responde". El estado de
+  **cada entorno** sale de su propio `/api/version` (público, con CORS,
+  como lo hace la landing): responde = en línea con su versión. Hasta que
+  Demo tenga esa ruta promovida dice "sin respuesta", y es verdad.
+- El vencimiento más próximo sale de `observabilidad/config.json`
+  (`panel.renovaciones()`), la seguridad del tablero del XSK
+  (`por_resolucion` + cuántos bloquean). Lo único que sigue "a completar" es
+  el **gasto mensual**: los planes de Render y el costo de Claude no están
+  en ningún archivo todavía.
+- Mismo gate que toda la landing (`_exigir_pase`), 404 en la demo.
+- Catalogada en Recursos como el primer recurso **de tipo enlace del
+  repositorio** (`recursos.SEMILLA` con `url` en vez de `archivo`;
+  `del_repositorio` y `del_repositorio_por_clave` lo contemplan).
+- Tests: `test_esquema.py` (5). Plataforma 0.34.01.
+
+Pendientes anotados en la propia página: gasto mensual, decidir Telegram
+como canal y Cloudflare como perímetro (ver Pendientes de CLAUDE.md).

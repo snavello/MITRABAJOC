@@ -47,6 +47,7 @@ from sqlalchemy.exc import OperationalError, TimeoutError as PoolTimeoutError
 from sqlmodel import select
 
 import encuestas
+import esquema
 import precios_ia
 import resultados_encuesta
 import fechas
@@ -7017,6 +7018,66 @@ def api_entornos_xsanders(request: Request, proyecto: str = "mitrabajo"):
     except XSKErrorRegistro as e:
         # Un archivo del registro mal formado: se dice cuál, no se rompe la página.
         raise HTTPException(500, f"El registro de XSK tiene un archivo mal formado: {e}")
+
+
+# ==================== Sala de mando (esquema físico vivo) ====================
+# El esquema físico de la plataforma (esquema.py + templates/esquema.html):
+# de dónde a dónde va un recibo, quién entrega, quién mira. Nació como boceto
+# en papel de Sd (2026-09-21) y es una pieza de venta tanto como un mapa
+# técnico. Los indicadores de arriba salen de la base de ESTE entorno y el
+# semáforo general de Grafana; lo que no se puede leer se dice ("sin dato"),
+# no se inventa. Mismo gate y misma regla que el resto de /entornos: 404 en
+# la demo (con la portación viaja el código, no la landing).
+
+def _esquema_datos(con_grafana: bool = False) -> dict:
+    """Todo lo que la Sala de mando muestra vivo, en un dict serializable.
+    `con_grafana` pide además el semáforo a Grafana Cloud (red): lo pide el
+    JSON que el navegador refresca, no la página, para que un Grafana lento
+    no demore el primer dibujo."""
+    with db.get_session() as s:
+        kpis = esquema.kpis(s)
+    renov = observabilidad_panel.renovaciones()
+    proximo = next((r for r in renov if r["dias"] >= 0), None) or (renov[0] if renov else None)
+    try:
+        t = xsk_tablero.tablero("mitrabajo")
+        seguridad = dict(t["por_resolucion"], bloquean=len(t["bloquean"]))
+    except Exception:                       # registro mal formado: la Sala no se cae por esto
+        seguridad = None
+    semaforo = None
+    if con_grafana:
+        # verde / amarillo / rojo / gris (sin reglas) según las alertas; None si
+        # no está configurado o no respondió: el navegador lo muestra como "sin dato".
+        try:
+            if observabilidad_panel.configurado():
+                semaforo = observabilidad_panel.ag.estado_alertas(
+                    observabilidad_panel._cliente("GRAFANA_TOKEN_LECTURA"))["semaforo"]
+        except Exception:
+            semaforo = None
+    return {
+        "entorno": entorno.ENTORNO, "versiones": _versiones(), "urls": entorno.URLS, "kpis": kpis,
+        "vencimiento": proximo, "seguridad": seguridad, "semaforo": semaforo,
+        "actualizado": fechas.ahora_con_segundos(),
+    }
+
+
+@app.get("/entornos/esquema", response_class=HTMLResponse)
+def entornos_esquema(request: Request):
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    return templates.TemplateResponse("esquema.html", {
+        "request": request, "datos": _esquema_datos(con_grafana=False),
+    })
+
+
+@app.get("/api/entornos/esquema")
+def api_entornos_esquema(request: Request):
+    """Lo mismo que dibuja la página, más el semáforo de Grafana. El
+    navegador lo pide al abrir y cada minuto."""
+    _exigir_landing()
+    if not _pase_landing(request):
+        raise HTTPException(403, "Ingresá a la landing.")
+    return _esquema_datos(con_grafana=True)
 
 
 # ==================== Solapa "Observabilidad" ====================

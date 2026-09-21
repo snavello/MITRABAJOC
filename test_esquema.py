@@ -1,0 +1,108 @@
+"""Sala de mando (GET /entornos/esquema + GET /api/entornos/esquema): el
+esquema físico de la plataforma con los indicadores reales del entorno
+(esquema.py). Mismo gate que la landing: existe solo donde hay distintivo,
+pide pase, y en la demo responde 404.
+
+Correr con: .venv/Scripts/python.exe -m pytest test_esquema.py -q
+"""
+import os
+
+os.environ["ENTORNO"] = "pruebas"          # antes de importar main
+os.environ["PIN_ENTORNOS"] = "24681357"    # antes de importar entorno
+os.environ["PIN_ENTORNOS_HABILITADO"] = "1"
+
+from datetime import datetime
+
+import db
+import entorno
+import esquema
+import fechas
+import main
+import recursos
+from fastapi.testclient import TestClient
+from sqlmodel import select
+
+db.crear_tablas()
+
+
+def _sindicato() -> int:
+    with db.get_session() as s:
+        sd = s.exec(select(db.Sindicato).where(db.Sindicato.nombre == "Gremio Esquema")).first()
+        if not sd:
+            sd = db.Sindicato(nombre="Gremio Esquema", cuit="30777777770", activo=True)
+            s.add(sd)
+            s.commit()
+            s.refresh(sd)
+        return sd.id
+
+
+def test_kpis_en_un_dia_sin_movimiento_dan_cero():
+    with db.get_session() as s:
+        k = esquema.kpis(s, ahora=datetime(2031, 1, 1, 10, 0))
+    assert k["recibos_hoy"] == 0 and k["lecturas_hoy"] == 0 and k["costo_hoy_usd"] == 0.0
+    assert k["en_linea_total"] == 0 and k["en_linea"] == {}
+    assert k["minutos_en_linea"] == 15
+    print("OK  test_kpis_en_un_dia_sin_movimiento_dan_cero")
+
+
+def test_kpis_cuentan_lo_de_hoy_y_los_ingresos_recientes():
+    sid = _sindicato()
+    ahora = fechas.ahora()
+    hoy = ahora.strftime("%Y-%m-%d %H:%M")
+    with db.get_session() as s:
+        s.add(db.ReciboVerificado(sindicato_id=sid, cuil="20111111119", fecha=hoy[:10],
+                                  estado="OK", procesado_en=hoy))
+        s.add(db.ReciboVerificado(sindicato_id=sid, cuil="20111111119", fecha="2020-01-01",
+                                  estado="OK", procesado_en="2020-01-01 10:00"))
+        s.add(db.UsoIA(sindicato_id=sid, tipo="recibo", modelo="claude-sonnet-4-6",
+                       tokens_entrada=1000, tokens_salida=500, fecha=hoy,
+                       precio_entrada=3.0, precio_salida=15.0))
+        s.add(db.UsoIA(sindicato_id=sid, tipo="prueba", modelo="claude-sonnet-4-6",
+                       tokens_entrada=1000, tokens_salida=500, fecha=hoy,
+                       precio_entrada=3.0, precio_salida=15.0))   # "prueba" no es gasto de recibos
+        s.add(db.AccesoLog(rol="trabajador", sindicato_id=sid, fecha=hoy))
+        s.add(db.AccesoLog(rol="admin", sindicato_id=sid, fecha="2020-01-01 10:00"))  # viejo: no cuenta
+        s.add(db.Trabajador(sindicato_id=sid, cuil="20111111119", nombre="Ana", registrado=True))
+        s.add(db.Trabajador(sindicato_id=sid, cuil="27222222224", nombre="Bea", registrado=False))
+        s.commit()
+        k = esquema.kpis(s, ahora=ahora)
+    assert k["recibos_hoy"] == 1 and k["recibos_total"] >= 2
+    assert k["lecturas_hoy"] == 1
+    assert k["costo_hoy_usd"] == round(1000 / 1e6 * 3.0 + 500 / 1e6 * 15.0, 2)
+    assert k["en_linea"] == {"trabajador": 1} and k["en_linea_total"] == 1
+    assert "Gremio Esquema" in k["sindicatos"]
+    assert k["padron"] >= 2 and k["registrados"] >= 1
+    print("OK  test_kpis_cuentan_lo_de_hoy_y_los_ingresos_recientes")
+
+
+def test_sin_pase_no_se_ve_y_con_pase_dibuja_con_datos():
+    c = TestClient(main.app)
+    navegador = {"Accept": "text/html,application/xhtml+xml"}
+    r = c.get("/entornos/esquema", headers=navegador, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"].startswith("/entornos")
+    assert c.get("/entornos/esquema").status_code == 403        # un fetch sin pase: 403, no redirección
+    assert c.get("/api/entornos/esquema").status_code == 403
+    assert c.post("/entornos/pin", data={"pin": "24681357"}, follow_redirects=False).status_code == 303
+    r = c.get("/entornos/esquema")
+    assert r.status_code == 200 and "Sala de mando" in r.text and 'id="datos-vivos"' in r.text
+    assert "{% raw %}" not in r.text        # Jinja procesó la plantilla entera
+    d = c.get("/api/entornos/esquema").json()
+    assert d["entorno"] == "pruebas" and "kpis" in d and "versiones" in d
+    assert d["seguridad"] is not None and "bloquean" in d["seguridad"]
+    assert d["semaforo"] is None           # sin GRAFANA_URL en la suite: "sin dato", no inventado
+    print("OK  test_sin_pase_no_se_ve_y_con_pase_dibuja_con_datos")
+
+
+def test_esta_en_el_catalogo_de_recursos_como_enlace():
+    fichas = [f for f in recursos.catalogo() if f["ref"] == "sala-de-mando"]
+    assert fichas and fichas[0]["tipo"] == "enlace" and fichas[0]["href"] == "/entornos/esquema"
+    assert recursos.del_repositorio_por_clave("sala-de-mando") is None   # no es un archivo
+    print("OK  test_esta_en_el_catalogo_de_recursos_como_enlace")
+
+
+def test_en_la_demo_no_existe(monkeypatch):
+    monkeypatch.setattr(entorno, "MUESTRA_DISTINTIVO", False)
+    c = TestClient(main.app)
+    assert c.get("/entornos/esquema").status_code == 404
+    assert c.get("/api/entornos/esquema").status_code == 404
+    print("OK  test_en_la_demo_no_existe")
