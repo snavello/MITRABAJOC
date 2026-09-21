@@ -92,6 +92,9 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - geo.py — geocodificación de domicilios: Georef (provincia/localidad) +
   Nominatim (calle y altura). Ver "Georreferenciación" para las reglas.
 - dashboard.py — agregados SQL del Panel Sindical (ver sección propia).
+- esquema.py — indicadores de la **Sala de mando** (`/entornos/esquema`,
+  `templates/esquema.html`): el esquema físico de toda la solución, vivo.
+  Recibe la sesión, todo en SQL agrupado. Ver "Estado actual" 27.
 - fechas.py — la hora de Buenos Aires, en un solo lugar. En el código de la
   app NO se llama a `datetime.now()` ni a `date.today()`: el servidor de
   Render corre en UTC y toda la app compara fechas como texto. Lo verifica
@@ -617,6 +620,25 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     H-0003 y H-0016 → Solucionado.** Plataforma 0.33.01. Estado del kit: 8
     Solucionado, 2 Parcial, 6 Pendiente, 2 Aceptado; bloquean 1 (H-0008,
     cierra con el perímetro INF-05).
+
+27. **Sala de mando: el esquema físico de la plataforma, vivo** (2026-09-21,
+    rama `feature/esquema-fisico`): el boceto en papel de Sd llevado a una
+    pantalla de venta y de operación. `GET /entornos/esquema` dibuja todos
+    los componentes (desarrollo y entrega, Render, servicios externos,
+    seguridad, observabilidad, documentación) con la franja de color de su
+    zona, ficha al pasar el mouse, zoom al clic, tres recorridos con luz de
+    neón (un recibo, un error, el camino de un cambio), pelotitas en las
+    líneas y el halo del radar según el estado general. Los indicadores
+    salen de la base del entorno (`esquema.py`), el semáforo de Grafana, el
+    estado de cada entorno de su `/api/version`, el vencimiento más próximo
+    de `observabilidad/config.json` y la seguridad del XSK; el JSON es
+    `GET /api/entornos/esquema` y se refresca cada minuto. Catalogada en
+    Recursos como el primer enlace del repositorio. Los mockups de las tres
+    direcciones (A sala de mando, B circuito, C colmena) están en
+    `disenos/esquema-propuestas.html`, fuera de git. Detalle en HISTORIAL.md
+    ("La Sala de mando"). **Queda**: cargar el gasto mensual (planes de
+    Render y Claude), y decidir Telegram como canal de alertas y Cloudflare
+    como perímetro (la página ya los dibuja como planeados).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

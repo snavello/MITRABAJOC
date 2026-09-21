@@ -62,6 +62,16 @@ TIPOS = {
 # y migrations/); su miniatura es una captura de la portada.
 SEMILLA = [
     {
+        # Una página de la app, no un archivo: el esquema físico vivo
+        # (esquema.py + templates/esquema.html) con los indicadores de este
+        # entorno. `url` en vez de `archivo` = recurso de tipo enlace.
+        "clave": "sala-de-mando",
+        "titulo": "Sala de mando: el esquema físico de la plataforma, en vivo",
+        "descripcion": "Quién entra, por dónde, qué lee el recibo, dónde se guarda, quién mira y a quién avisa. Con los indicadores reales de este entorno, el semáforo de Grafana y tres recorridos animados para contarlo.",
+        "fecha": date(2026, 9, 21),
+        "url": "/entornos/esquema",
+    },
+    {
         "clave": "observabilidad",
         "titulo": "Observabilidad: cómo nos enteramos de que algo falla",
         "descripcion": "Qué mira cada herramienta (uptime, errores, métricas), qué avisa por mail, cómo se ve en la pestaña de Entornos, qué hacer ante un aviso y el procedimiento para replicarlo en Demo y Producción.",
@@ -247,6 +257,15 @@ def del_repositorio() -> list[dict]:
     """Los recursos versionados, con el mismo formato que los de la base."""
     lista = []
     for item in SEMILLA:
+        if item.get("url"):                      # una página de la app, sin archivo
+            f = _ficha(ref=item["clave"], origen="repo", titulo=item["titulo"],
+                       descripcion=item["descripcion"], fecha=item["fecha"], tipo="enlace",
+                       url=item["url"], nombre_archivo="", tamanio=0,
+                       fragmento=item.get("fragmento", ""), miniatura_url="")
+            f["href"] = item["url"]
+            f["portada"] = "en vivo"
+            lista.append(f)
+            continue
         ruta = CARPETA / item["archivo"]
         mini = CARPETA / item["miniatura"] if item.get("miniatura") else None
         tamanio = ruta.stat().st_size if ruta.exists() else 0
@@ -264,7 +283,7 @@ def del_repositorio() -> list[dict]:
 def del_repositorio_por_clave(clave: str) -> dict | None:
     """Ruta del archivo y de la miniatura de un recurso del repositorio."""
     for item in SEMILLA:
-        if item["clave"] == clave:
+        if item["clave"] == clave and item.get("archivo"):
             return {
                 "ruta": CARPETA / item["archivo"],
                 "nombre_archivo": item["archivo"],
