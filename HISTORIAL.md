@@ -5182,3 +5182,16 @@ explicación de los 15 minutos, cómo renovar el token que vence, los
 hallazgos del XSK por estado, qué se paga y qué se pagará. Una sola burbuja
 para toda la página, que sigue al puntero y se acomoda para no salirse de la
 pantalla. Plataforma 0.35.04.
+
+### Cabecera de una línea y botón circular de volver (mismo día)
+
+Pedido de Sd: la cabecera ocupaba dos renglones con una bajada larga y las
+tarjetas desperdiciaban ancho. Ahora la cabecera es **una sola línea**: el
+logo de Colm3na y el título a la izquierda, el semáforo de estado general a
+la derecha, sin bajada. Las tarjetas se reparten en las columnas que entren
+(`auto-fit`, mínimo 168 px) con menos aire lateral, así en una pantalla
+ancha van las diez en una fila. Y el volver es un **botón circular flotante
+abajo a la derecha**, siempre visible: embebida en la landing le pide al
+padre por `postMessage` (mismo origen) que cierre la capa; suelta, va a
+`/entornos`. La cápsula que la landing dibujaba arriba a la derecha se fue,
+porque la Sala trae su logo y su botón. Plataforma 0.35.05.

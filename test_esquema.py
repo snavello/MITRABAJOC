@@ -136,10 +136,12 @@ def test_pestana_observabilidad_con_dos_pastillas_y_sala_de_mando_por_defecto():
     assert 'data-src="/entornos/esquema?embebida=1"' in t and 'data-tab="actividad"' not in t
     # la Sala se abre a pantalla completa: capa fija con el logo y el botón de volver
     assert 'id="sala-full"' in t and 'id="sala-cerrar"' in t and 'id="sala-abrir"' in t
-    assert 'class="sala-barra"' in t and 'alt="Colm3na"' in t
-    # embebida: sin el enlace de vuelta a la landing; suelta: con él
-    assert "← ENTORNOS" not in c.get("/entornos/esquema?embebida=1").text
-    assert "← ENTORNOS" in c.get("/entornos/esquema").text
+    assert 'class="sala-barra"' not in t       # la cápsula de la landing se fue
+    # la Sala trae su logo y su botón circular de volver; la bajada larga ya no está
+    s = c.get("/entornos/esquema").text
+    assert 'id="volver"' in s and 'alt="Colm3na"' in s and "Todo lo que corre entre" not in s
+    assert 'window.parent.postMessage({sala:"cerrar"}' in s
+    assert "ev.data.sala === 'cerrar'" in t    # y la landing lo escucha
     print("OK  test_pestana_observabilidad_con_dos_pastillas_y_sala_de_mando_por_defecto")
 
 
