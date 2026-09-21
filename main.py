@@ -4774,6 +4774,26 @@ def _pendiente_de_completar(request: Request):
     return None
 
 
+def _login_plataforma_nominal(usuario: str, clave: str, request: Request):
+    """Núcleo del login nominal de plataforma, compartido por /plataforma/login
+    y /entornos/login (SPRINT_R1.md). Devuelve:
+      - (token, pendiente)  si el login es válido (pendiente=True si tiene que
+        completar la cuenta),
+      - "vencida"           si la clave transitoria venció,
+      - None                si no corresponde (para que el llamador pruebe el
+        fallback genérico o marque error).
+    Registra el acceso y el login en la bitácora cuando es válido."""
+    fila = db.usuario_plataforma_por_usuario(usuario)
+    if not (fila and fila.activo and auth.verificar_clave(clave, fila.clave_hash)):
+        return None
+    if _clave_transitoria_vencida(fila.clave_vence):
+        return "vencida"
+    token = auth.crear_sesion("plataforma", id_usuario=fila.id, ident=fila.usuario)
+    db.registrar_acceso("plataforma")
+    db.registrar_log_plataforma("login", fila.usuario, ip=_ip_de(request))
+    return (token, fila.debe_cambiar_clave or fila.debe_completar_datos)
+
+
 @app.post("/plataforma/login")
 def plataforma_login(request: Request, response: Response,
                      usuario: str = Form(None), cuit: str = Form(None), clave: str = Form(...)):
@@ -4782,29 +4802,24 @@ def plataforma_login(request: Request, response: Response,
     usuario = (usuario or cuit or "").strip()
     if _login_bloqueado(request):
         return RedirectResponse("/plataforma?error=espera", status_code=303)
-    ip = _ip_de(request)
-    # 1) Usuario nominal (SPRINT_R1.md).
-    fila = db.usuario_plataforma_por_usuario(usuario)
-    if fila and fila.activo and auth.verificar_clave(clave, fila.clave_hash):
-        if _clave_transitoria_vencida(fila.clave_vence):
-            _login_fallo(request)
-            return RedirectResponse("/plataforma?error=vencida", status_code=303)
+    res = _login_plataforma_nominal(usuario, clave, request)
+    if res == "vencida":
+        _login_fallo(request)
+        return RedirectResponse("/plataforma?error=vencida", status_code=303)
+    if res:
         _login_ok(request)
-        token = auth.crear_sesion("plataforma", id_usuario=fila.id, ident=fila.usuario)
-        db.registrar_acceso("plataforma")
-        db.registrar_log_plataforma("login", fila.usuario, ip=ip)
-        pendiente = fila.debe_cambiar_clave or fila.debe_completar_datos
+        token, pendiente = res
         resp = RedirectResponse("/plataforma/completar" if pendiente else "/plataforma/inicio",
                                 status_code=303)
         set_cookie_segura(resp, COOKIE_PLATAFORMA, token)
         return resp
-    # 2) Genérico por variable de entorno (login de transición, se saca al
-    #    cerrar R1). El campo trae el CUIT del genérico.
+    # Genérico por variable de entorno (login de transición, se saca al cerrar
+    # R1). El campo trae el CUIT del genérico.
     if auth.verificar_plataforma(clave, usuario):
         _login_ok(request)
         token = auth.crear_sesion("plataforma")     # uid 0 = genérico
         db.registrar_acceso("plataforma")
-        db.registrar_log_plataforma("login", "generico", ip=ip)
+        db.registrar_log_plataforma("login", "generico", ip=_ip_de(request))
         resp = RedirectResponse("/plataforma/inicio", status_code=303)
         set_cookie_segura(resp, COOKIE_PLATAFORMA, token)
         return resp
@@ -6580,6 +6595,34 @@ def entornos_pin(request: Request, pin: str = Form(""), siguiente: str = Form(""
     _intentos_pin.pop(ip, None)
     resp = RedirectResponse(siguiente or "/entornos", status_code=303)
     set_cookie_segura(resp, recursos.COOKIE_PASE, recursos.crear_pase(), max_age=recursos.PASE_SEGUNDOS)
+    return resp
+
+
+@app.post("/entornos/login")
+def entornos_login(request: Request, usuario: str = Form(...), clave: str = Form(...),
+                   siguiente: str = Form("")):
+    """Login de la landing por usuario nominal de plataforma (SPRINT_R1.md,
+    H-0003): la misma credencial que /plataforma abre /entornos. Deja la
+    sesión de plataforma, que `_pase_landing` ya reconoce. El PIN sigue como
+    fallback hasta cerrar la transición (etapa 4). Un usuario con la cuenta
+    sin completar va primero a /plataforma/completar."""
+    _exigir_landing()
+    siguiente = _siguiente_seguro(siguiente)
+    cola = f"&siguiente={quote(siguiente, safe='')}" if siguiente else ""
+    if _login_bloqueado(request):
+        return RedirectResponse(f"/entornos?aviso=espera{cola}", status_code=303)
+    res = _login_plataforma_nominal((usuario or "").strip(), clave, request)
+    if res == "vencida":
+        _login_fallo(request)
+        return RedirectResponse(f"/entornos?aviso=vencida{cola}", status_code=303)
+    if not res:
+        _login_fallo(request)
+        return RedirectResponse(f"/entornos?aviso=login{cola}", status_code=303)
+    _login_ok(request)
+    token, pendiente = res
+    destino = "/plataforma/completar" if pendiente else (siguiente or "/entornos")
+    resp = RedirectResponse(destino, status_code=303)
+    set_cookie_segura(resp, COOKIE_PLATAFORMA, token)
     return resp
 
 

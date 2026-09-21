@@ -16,14 +16,12 @@ actualizado: 2026-09-20
 
 ## Cómo seguir
 
-Sub-sprint R1 (SPRINT_R1.md) etapas 0 y 1 hechas: modelo + siembra de los
-dos superadmin + login nominal con primer ingreso forzado (cambio de clave +
-carga de datos) + bitácora de login. Verificado en el navegador. H-0016 pasó
-a Parcial. Plataforma 0.31.01.
+Sub-sprint R1: etapas 0, 1 y 2 hechas. La 2 sumó **/entornos/login**: la
+landing se abre con el mismo usuario+clave nominal (el PIN queda de fallback).
+H-0003 → Parcial. Plataforma 0.31.02.
 
-Sigue en R1: etapa 2 (`/entornos` con el mismo login), etapa 3 (gestión de
-usuarios solo superadmin: alta con clave transitoria de 7 días, edición,
-activar/desactivar, resetear), etapa 4 (cerrar la transición: sacar el
-genérico y el PIN → ahí H-0002/H-0003/H-0016 pasan a Solucionado).
-En paralelo siguen: perímetro INF-05 (H-0008), H-0018, H-0014/H-0015,
+Sigue: etapa 3 (gestión de usuarios solo superadmin: alta con clave
+transitoria de 7 días, editar, activar/desactivar, resetear) y etapa 4
+(cerrar la transición: sacar el genérico y el PIN → H-0002/H-0003/H-0016 a
+Solucionado). En paralelo: perímetro INF-05 (H-0008), H-0018, H-0014/H-0015,
 carga DIS-01/02.

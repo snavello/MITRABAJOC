@@ -71,17 +71,31 @@
   <main class="puerta">
     <img class="logo" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Colm3na">
     <h1>Entornos</h1>
-    <p class="lede">Página interna del equipo. Ingresá el código para entrar.</p>
-    <form class="tarjeta" method="post" action="/entornos/pin" id="form-pin">
+    <p class="lede">Página interna del equipo. Entrá con tu usuario, o con el código.</p>
+    <form class="tarjeta" method="post" action="/entornos/login" id="form-login">
       {% if siguiente %}<input type="hidden" name="siguiente" value="{{ siguiente }}">{% endif %}
-      <label for="pin"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Código de acceso</label>
-      <input class="pin" type="password" name="pin" id="pin" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" minlength="8"
-             placeholder="••••••••" autocomplete="one-time-code" autofocus required aria-describedby="pin-nota">
+      <label for="usuario"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Usuario</label>
+      <input class="pin" type="text" name="usuario" id="usuario" placeholder="usuario" autocomplete="username" autofocus required>
+      <label for="clave" style="margin-top:10px;"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Clave</label>
+      <input class="pin" type="password" name="clave" id="clave" placeholder="••••••••" autocomplete="current-password" required style="letter-spacing:normal;">
       <button class="boton" type="submit">Entrar</button>
-      {% if aviso == 'pin' %}
-      <p class="aviso" role="alert">Ese no es el código. Probá de nuevo.</p>
+      {% if aviso == 'login' %}
+      <p class="aviso" role="alert">Usuario o clave incorrectos.</p>
+      {% elif aviso == 'vencida' %}
+      <p class="aviso" role="alert">La clave transitoria venció. Pedile a un superadmin que te reemita una.</p>
       {% elif aviso == 'espera' %}
       <p class="aviso" role="alert">Demasiados intentos. Esperá un minuto y probá de nuevo.</p>
+      {% endif %}
+    </form>
+
+    <form class="tarjeta" method="post" action="/entornos/pin" id="form-pin" style="margin-top:14px;">
+      {% if siguiente %}<input type="hidden" name="siguiente" value="{{ siguiente }}">{% endif %}
+      <label for="pin"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>O el código de acceso</label>
+      <input class="pin" type="password" name="pin" id="pin" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" minlength="8"
+             placeholder="••••••••" autocomplete="one-time-code" required aria-describedby="pin-nota">
+      <button class="boton" type="submit">Entrar con código</button>
+      {% if aviso == 'pin' %}
+      <p class="aviso" role="alert">Ese no es el código. Probá de nuevo.</p>
       {% endif %}
       <p class="nota" id="pin-nota">Ocho dígitos. Se pide una vez por dispositivo; el pase dura 30 días.{% if siguiente %} Después se abre el documento que pediste.{% endif %}</p>
     </form>
