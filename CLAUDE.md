@@ -633,7 +633,10 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     estado de cada entorno de su `/api/version`, el vencimiento más próximo
     de `observabilidad/config.json` y la seguridad del XSK; el JSON es
     `GET /api/entornos/esquema` y se refresca cada minuto. Catalogada en
-    Recursos como el primer enlace del repositorio. Los mockups de las tres
+    Recursos como el primer enlace del repositorio y, desde el mismo día,
+    **pastilla por defecto de la pestaña Observabilidad de `/entornos`**
+    (iframe a `?embebida=1`), junto a "Observación técnica" (Grafana,
+    Sentry, avisos). La pestaña Actividad se sacó ese día. Los mockups de las tres
     direcciones (A sala de mando, B circuito, C colmena) están en
     `disenos/esquema-propuestas.html`, fuera de git. Detalle en HISTORIAL.md
     ("La Sala de mando"). **Queda**: cargar el gasto mensual (planes de

@@ -5106,3 +5106,24 @@ se habían hecho, sin advertirlo, sobre la rama `docs/xsanders-herramienta`
 solo la v1 y la v2. Se aplicaron con cherry-pick sobre `main` en la rama
 `feature/esquema-logos`, con la bitácora resuelta a mano (la línea de
 `main` más la de la Sala de mando).
+
+### Reorganización de `/entornos`: la Sala de mando como pestaña (mismo día)
+
+Pedido de Sd, apenas mergeada la Sala de mando: la pestaña **Actividad se
+va** (ya no tenía sentido: sus números están en la Sala, mejor contados) y
+**Observabilidad pasa a tener dos pastillas**: "Sala de mando" (este
+desarrollo, por defecto) y "Observación técnica" (la solapa de Grafana,
+Sentry y avisos tal cual estaba). La Sala va **incrustada en un iframe** a
+`/entornos/esquema?embebida=1`: la página sigue existiendo suelta (y
+enlazada desde Recursos), con su propio CSS y JS aislados del de la
+landing, y en modo embebido solo esconde el enlace "← Entornos". El iframe
+**se carga recién cuando se muestra**: abrir la landing no dibuja el esquema
+ni pide sus datos si nadie lo va a mirar. La pestaña Observabilidad dejó de
+estar deshabilitada fuera de Pruebas, porque la Sala de mando existe en
+cualquier entorno con landing; la pastilla técnica sigue diciendo que se
+administra desde Pruebas. Se fueron `templates/_actividad.html`, su CSS y
+su JS, la ruta `GET /api/entornos/actividad` y la variable
+`actividad_local`; `db.actividad_resumen` y `db.registrar_acceso` quedan
+(AccesoLog alimenta "usuarios en línea"). Tests: `test_actividad.py`
+ajustado (la pestaña y la API ya no existen), `test_esquema.py` (7).
+Plataforma 0.35.01.

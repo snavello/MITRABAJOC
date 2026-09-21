@@ -6573,38 +6573,6 @@ def api_version():
                                  "Cache-Control": "no-store"})
 
 
-# ---- Actividad: dashboard de monitoreo en /entornos (2026-09-09) ----
-# Mismo criterio que /api/version: público y con CORS abierto a propósito,
-# porque las cookies de sesión NO viajan entre orígenes distintos (Pruebas
-# y Demo son hosts .onrender.com separados) -- sin esto, la pestaña
-# Actividad de un entorno no podría mostrar los números del otro. Son
-# agregados (cantidades, tokens totales), no el contenido de ningún recibo
-# ni trámite puntual. "Cada servicio expone SU propio resumen" (decisión
-# de Sd, 2026-09-09): esta ruta nunca consulta la base del otro entorno.
-_CACHE_ACTIVIDAD = {"hasta": 0.0, "datos": None}
-CACHE_ACTIVIDAD_SEGUNDOS = 120
-
-
-@app.get("/api/entornos/actividad")
-def api_entornos_actividad():
-    """Trámites, notificaciones, recibos, tokens de IA y accesos de ESTE
-    entorno, por sindicato y totales -- con un caché corto en memoria del
-    proceso para que el polling del navegador (cada ~10 min, ver
-    entornos.html) y las visitas cruzadas de otro entorno no recalculen en
-    cada pedido. CPU/RAM del propio servidor vía render_admin (mismos datos
-    que la pestaña Tests)."""
-    import time
-    ahora = time.monotonic()
-    if not _CACHE_ACTIVIDAD["datos"] or ahora > _CACHE_ACTIVIDAD["hasta"]:
-        datos = db.actividad_resumen()
-        datos["servidor"] = render_admin.estado_servidor()
-        datos["entorno"] = entorno.ENTORNO
-        _CACHE_ACTIVIDAD["datos"] = datos
-        _CACHE_ACTIVIDAD["hasta"] = ahora + CACHE_ACTIVIDAD_SEGUNDOS
-    return JSONResponse(_CACHE_ACTIVIDAD["datos"],
-                        headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-store"})
-
-
 @app.get("/entornos", response_class=HTMLResponse)
 def entornos(request: Request):
     """Landing interna de accesos. Existe SOLO donde se muestra el
@@ -6645,11 +6613,6 @@ def entornos(request: Request):
         # Pruebas las tiene, así que en Demo queda "configurado": false
         # (render_admin.py lo maneja solo, sin romper la página).
         "render_estado": render_admin.estado_servidor(),
-        # Actividad: a diferencia de Tests (solo Pruebas), tiene sentido en
-        # los dos entornos -- Demo también se monitorea. La del OTRO
-        # entorno la trae el JS (api_entornos_actividad es público con CORS
-        # abierto, mismo motivo que /api/version).
-        "actividad_local": db.actividad_resumen(),
         "escalones_default_lecturas": ",".join(map(str, ESCALONES_DEFAULT_LECTURAS)),
         "escalones_default_recibos": ",".join(map(str, ESCALONES_DEFAULT_RECIBOS)),
     })
@@ -7067,6 +7030,9 @@ def entornos_esquema(request: Request):
         return sin_pase
     return templates.TemplateResponse("esquema.html", {
         "request": request, "datos": _esquema_datos(con_grafana=False),
+        # ?embebida=1: la pestaña Observabilidad de /entornos la muestra en un
+        # iframe; sin el enlace "← Entornos" y con menos aire arriba.
+        "embebida": request.query_params.get("embebida") == "1",
     })
 
 

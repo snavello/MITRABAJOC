@@ -124,3 +124,16 @@ def test_logos_vendoreados_y_cada_marca_del_esquema_esta_en_el_sprite():
     assert c.get("/static/marcas.svg").status_code == 200
     assert c.get("/static/marcas/arca.png").status_code == 200
     print("OK  test_logos_vendoreados_y_cada_marca_del_esquema_esta_en_el_sprite")
+
+
+def test_pestana_observabilidad_con_dos_pastillas_y_sala_de_mando_por_defecto():
+    c = TestClient(main.app)
+    assert c.post("/entornos/pin", data={"pin": "24681357"}, follow_redirects=False).status_code == 303
+    t = c.get("/entornos").text
+    assert 'data-obs="sala"' in t and 'data-obs="tecnica"' in t
+    assert 'class="obs-pastilla activa" role="tab" aria-selected="true" data-obs="sala"' in t
+    assert 'data-src="/entornos/esquema?embebida=1"' in t and 'data-tab="actividad"' not in t
+    # embebida: sin el enlace de vuelta a la landing; suelta: con él
+    assert "← ENTORNOS" not in c.get("/entornos/esquema?embebida=1").text
+    assert "← ENTORNOS" in c.get("/entornos/esquema").text
+    print("OK  test_pestana_observabilidad_con_dos_pastillas_y_sala_de_mando_por_defecto")
