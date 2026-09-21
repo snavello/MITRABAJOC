@@ -17,7 +17,7 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--noche);color:var(--texto);font:14px/1.45 var(--body)}
-.marco{max-width:1800px;margin:0 auto;padding:16px 22px 30px;{% if embebida %}padding-top:8px;{% endif %}display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start}
+.marco{max-width:1800px;margin:0 auto;padding:16px 22px 30px;{% if embebida %}padding-top:8px;{% endif %}}
 header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid var(--linea);padding-bottom:8px}
 header .marca{display:flex;align-items:center;gap:14px;min-width:0}
 header .marca img{display:block;height:30px;width:auto;max-width:150px;object-fit:contain}
@@ -86,7 +86,14 @@ path.paso{stroke:var(--neon)!important;stroke-width:2.4!important;opacity:1!impo
 @keyframes fluir{from{stroke-dashoffset:32}to{stroke-dashoffset:0}}
 svg.animando .nodo:not(.neon):not(.paso) > rect.caja{opacity:.5}
 /* ficha */
-aside{background:var(--noche2);border:1px solid var(--linea);border-radius:14px;padding:16px 18px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}
+/* La ficha FLOTA sobre el radar (pedido de Sd, 2026-09-21): aparece al pasar el mouse
+   por una caja, del lado contrario a la caja para no taparla, y se queda al hacer clic. */
+aside{position:fixed;top:70px;width:340px;max-height:calc(100vh - 110px);overflow:auto;z-index:65;display:none;
+  background:rgba(15,28,46,.96);border:1px solid #3a4f70;border-radius:14px;padding:14px 18px;box-shadow:0 18px 50px rgba(0,0,0,.6);backdrop-filter:blur(6px);pointer-events:none}
+aside.visible{display:block} aside.fija{pointer-events:auto;border-color:var(--miel)}
+.recorridos{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.recorridos button{background:transparent;color:var(--texto);border:1px solid var(--c);border-radius:999px;padding:4px 12px;font:600 12px var(--body);cursor:pointer}
+.recorridos button:hover{background:var(--c);color:#0a1421}
 aside h2{margin:0 0 4px;font:700 24px/1 var(--cond);letter-spacing:.03em;text-transform:uppercase}
 aside .zona{color:var(--texto3);font-size:10px;text-transform:uppercase;letter-spacing:.14em}
 aside .estado{display:inline-block;margin:8px 6px 10px 0;padding:2px 9px;border-radius:999px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;border:1px solid}
@@ -103,7 +110,7 @@ aside ol.recorrido{padding-left:18px;color:var(--texto3);font-size:11.5px} aside
 .pie{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;color:var(--texto3);font-size:11px;align-items:center}
 .pie i{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--c);vertical-align:middle;margin-right:5px;opacity:.9}
 .pie .pago i{border-radius:50%;background:var(--miel)} .pie .pago.fut i{background:none;border:1.5px dashed var(--miel)} .pie .pl i{background:none;border:1px dashed #6b7a94;border-radius:0;height:0;width:22px}
-@media (max-width:1100px){.marco{grid-template-columns:1fr} aside{position:static;max-height:none}}
+@media (max-width:1100px){aside{width:min(340px,calc(100vw - 32px))}}
 </style>
 </head>
 <body>
@@ -135,8 +142,9 @@ aside ol.recorrido{padding-left:18px;color:var(--texto3);font-size:11.5px} aside
   <header>
     <div class="marca">
       <img src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Colm3na">
-      <h1>Colm3na · <em>Sala de mando</em></h1>
+      <h1><em>Sala de mando</em></h1>
     </div>
+    <div class="recorridos" id="recorridos"></div>
     <div class="estado-ctl" id="estadoCtl">estado general
       <button data-e="verde" style="--c:#3ec9a7" title="Todo en línea"></button>
       <button data-e="amarillo" style="--c:#f2b234" title="Degradado"></button>
@@ -416,6 +424,7 @@ function dibujarNodo(n) {
     }
   }
   g.addEventListener("mouseenter", ev => { ev.stopPropagation(); mostrarFicha(n); });
+  g.addEventListener("mouseleave", ev => { ev.stopPropagation(); ocultarFicha(); });
   g.addEventListener("click", ev => { ev.stopPropagation(); n.chip ? (fijado || mostrarFicha(n)) : alClic(n); });
   return g;
 }
@@ -542,6 +551,16 @@ if (inicial) {
 // ============================ FICHA, ZOOM Y CLIC ============================
 const ficha = document.getElementById("ficha");
 let fijado = null, zoomado = null, anim = null;
+function ubicarFicha(n) {
+  // Del lado contrario a la caja, para no taparla; a la derecha si no hay caja (recorridos).
+  const g = n ? nodeG(n.id) : null;
+  const r = g ? g.getBoundingClientRect() : null;
+  const izquierda = r ? (r.left + r.width / 2) > window.innerWidth / 2 : false;
+  ficha.style.left = izquierda ? "22px" : ""; ficha.style.right = izquierda ? "" : "22px";
+  ficha.style.top = r ? Math.max(70, Math.min(r.top, window.innerHeight - 80 - Math.min(ficha.offsetHeight || 300, window.innerHeight - 110))) + "px" : "70px";
+  ficha.classList.add("visible");
+}
+function ocultarFicha() { if (fijado || anim) return; ficha.classList.remove("visible", "fija"); }
 function mostrarFicha(n) {
   if (anim || (fijado && fijado !== n)) return;
   const f = n.ficha || {};
@@ -554,18 +573,19 @@ function mostrarFicha(n) {
     ${campos ? `<dl>${campos}</dl>` : ""}
     ${(n.vencimientos || []).length ? `<dl>${n.vencimientos.map(v => `<dt>Vence</dt><dd>${v.fecha} · ${v.que} (aviso ${v.aviso} días antes)</dd>`).join("")}</dl>` : ""}
     ${plays ? `<div>${plays}</div>` : ""}
-    ${fijado ? `<p class="vacio">Fijado y ampliado. Otro clic en la caja, o en el fondo, lo suelta.</p>` : ""}`;
+    ${fijado ? `<p class="vacio">Fijada. Otro clic en la caja, o en el fondo, la suelta.</p>` : ""}`;
   ficha.querySelectorAll("[data-play]").forEach(b => b.addEventListener("click", () => animar(b.dataset.play)));
+  ficha.classList.toggle("fija", !!fijado);
+  ubicarFicha(n);
 }
 function fichaInicial() {
   fijado = null;
-  ficha.innerHTML = `<div class="zona">Componente</div><h2>Pasá el mouse por el mapa</h2>
-    <p class="vacio">Cada caja tiene su ficha: qué es, claves y vencimientos, costo y lo que falta. Un clic la amplía; otro la vuelve a su tamaño. La franja de color a la izquierda de cada caja dice a qué zona pertenece.</p>
-    <p class="vacio">Los ▶ cuentan un recorrido con luz de neón:</p>
-    ${Object.entries(RECORRIDOS).map(([k, r]) => `<button data-play="${k}" style="background:${r.color}">▶ ${r.titulo}</button>`).join("")}
-    <p class="vacio" style="margin-top:14px">El halo del radar sigue el estado general (los cuatro puntos de arriba a la derecha). En la versión viva lo decide Grafana: verde todo en línea, amarillo degradado, rojo con errores, violeta sistema caído.</p>`;
-  ficha.querySelectorAll("[data-play]").forEach(b => b.addEventListener("click", () => animar(b.dataset.play)));
+  ficha.classList.remove("visible", "fija");
 }
+// Los tres recorridos, como botones en la cabecera.
+const recorridosEl = document.getElementById("recorridos");
+recorridosEl.innerHTML = Object.entries(RECORRIDOS).map(([k, r]) => `<button data-play="${k}" style="--c:${r.color}" title="${r.titulo}">▶ ${r.titulo}</button>`).join("");
+recorridosEl.querySelectorAll("[data-play]").forEach(b => b.addEventListener("click", () => animar(b.dataset.play)));
 function desZoom() { if (zoomado) { zoomado.removeAttribute("transform"); zoomado.classList.remove("zoom", "fijo"); zoomado = null; } }
 function alClic(n) {
   if (anim) return;
@@ -602,6 +622,7 @@ function paso() {
 }
 function pintarAside(fin) {
   const {rec, i} = anim, actual = rec.pasos[i-1];
+  ficha.classList.add("visible", "fija"); ficha.style.left = ""; ficha.style.right = "22px"; ficha.style.top = "70px";
   ficha.innerHTML = `<div class="zona">Recorrido · ${fin ? "fin" : `paso ${i} de ${rec.pasos.length}`}</div><h2 style="color:${rec.color}">${rec.titulo}</h2>
     <div class="paso-actual" style="border-color:${rec.color}">${fin ? "Eso es todo lo que toca. Cada caja del recorrido quedó encendida." : actual.t}</div>
     <button data-det class="sec">${fin ? "Cerrar" : "Detener"}</button><button data-rep class="sec">Repetir</button>
