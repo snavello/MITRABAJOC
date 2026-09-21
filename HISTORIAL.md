@@ -5195,3 +5195,17 @@ abajo a la derecha**, siempre visible: embebida en la landing le pide al
 padre por `postMessage` (mismo origen) que cierre la capa; suelta, va a
 `/entornos`. La cápsula que la landing dibujaba arriba a la derecha se fue,
 porque la Sala trae su logo y su botón. Plataforma 0.35.05.
+
+### La ficha flota sobre el radar (mismo día)
+
+Sd: el panel de la derecha le quitaba un cuarto del ancho al radar y el
+esquema seguía sin verse entero. La ficha ya no es una columna: es un
+**panel flotante** que aparece al pasar el mouse por una caja, **del lado
+contrario a la caja** para no taparla (a la derecha si la caja está en la
+mitad izquierda y viceversa), alineado a su altura, y desaparece al salir.
+Con un clic se **fija** (borde ámbar, se pueden usar sus botones) hasta
+otro clic en la caja o en el fondo. Mientras corre un recorrido, la
+narración va en el mismo panel, fijado a la derecha. Los tres botones de
+recorrido pasaron a la cabecera, entre el título y el semáforo, y el
+título dice solo "Sala de mando": el logo al lado ya dice Colm3na. El radar
+ocupa ahora todo el ancho. Plataforma 0.35.06.
