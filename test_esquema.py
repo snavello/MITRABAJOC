@@ -137,3 +137,15 @@ def test_pestana_observabilidad_con_dos_pastillas_y_sala_de_mando_por_defecto():
     assert "← ENTORNOS" not in c.get("/entornos/esquema?embebida=1").text
     assert "← ENTORNOS" in c.get("/entornos/esquema").text
     print("OK  test_pestana_observabilidad_con_dos_pastillas_y_sala_de_mando_por_defecto")
+
+
+def test_embebida_permite_el_marco_desde_el_mismo_origen_y_suelta_no():
+    c = TestClient(main.app)
+    assert c.post("/entornos/pin", data={"pin": "24681357"}, follow_redirects=False).status_code == 303
+    r = c.get("/entornos/esquema?embebida=1")
+    assert r.headers["x-frame-options"] == "SAMEORIGIN"
+    assert "frame-ancestors 'self'" in r.headers["content-security-policy"]
+    r = c.get("/entornos/esquema")
+    assert r.headers["x-frame-options"] == "DENY"
+    assert "frame-ancestors 'none'" in r.headers["content-security-policy"]
+    print("OK  test_embebida_permite_el_marco_desde_el_mismo_origen_y_suelta_no")
