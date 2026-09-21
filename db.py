@@ -1619,6 +1619,84 @@ SUPERADMINS_INICIALES = [
 ]
 
 
+def listar_usuarios_plataforma() -> list:
+    """Todos los usuarios de plataforma, superadmin primero y luego por usuario."""
+    with Session(engine) as s:
+        return s.exec(select(UsuarioPlataforma).order_by(
+            UsuarioPlataforma.rol, UsuarioPlataforma.usuario)).all()
+
+
+def _vencimiento_transitoria(dias: int = 7) -> str:
+    """Fecha/hora (texto, hora de Buenos Aires) a los `dias` días desde ahora,
+    para la clave transitoria (SPRINT_R1.md: máximo 7 días)."""
+    from datetime import timedelta
+    return (fechas.ahora() + timedelta(days=dias)).strftime("%Y-%m-%d %H:%M")
+
+
+def crear_usuario_plataforma(usuario: str, nombre: str, rol: str, clave_hash: str,
+                             creado_por: str, dias_vencimiento: int = 7):
+    """Alta de un usuario de plataforma con clave transitoria (la crea un
+    superadmin). Devuelve (usuario, None) si se creó, o (None, motivo) si el
+    nombre de usuario ya existe."""
+    u = (usuario or "").strip().lower()
+    if not u:
+        return None, "El usuario es obligatorio."
+    with Session(engine) as s:
+        if s.exec(select(UsuarioPlataforma).where(UsuarioPlataforma.usuario == u)).first():
+            return None, "Ya existe un usuario con ese nombre."
+        fila = UsuarioPlataforma(
+            usuario=u, nombre=(nombre or "").strip(),
+            rol="superadmin" if rol == "superadmin" else "admin",
+            clave_hash=clave_hash, activo=True,
+            debe_cambiar_clave=True, clave_vence=_vencimiento_transitoria(dias_vencimiento),
+            debe_completar_datos=True,
+            creado_en=fechas.ahora_texto(), creado_por=creado_por)
+        s.add(fila)
+        s.commit()
+        s.refresh(fila)
+        return fila, None
+
+
+def editar_usuario_plataforma(uid: int, nombre: str, rol: str) -> None:
+    with Session(engine) as s:
+        u = s.get(UsuarioPlataforma, uid)
+        if not u:
+            return
+        u.nombre = (nombre or "").strip()
+        u.rol = "superadmin" if rol == "superadmin" else "admin"
+        s.add(u)
+        s.commit()
+
+
+def set_activo_usuario_plataforma(uid: int, activo: bool) -> None:
+    with Session(engine) as s:
+        u = s.get(UsuarioPlataforma, uid)
+        if not u:
+            return
+        u.activo = activo
+        s.add(u)
+        s.commit()
+
+
+def resetear_clave_plataforma(uid: int, clave_hash: str, dias_vencimiento: int = 7) -> None:
+    """Un superadmin le pone al usuario una clave transitoria nueva: vuelve a
+    forzar el cambio en el próximo ingreso, con vencimiento a 7 días."""
+    with Session(engine) as s:
+        u = s.get(UsuarioPlataforma, uid)
+        if not u:
+            return
+        u.clave_hash = clave_hash
+        u.debe_cambiar_clave = True
+        u.clave_vence = _vencimiento_transitoria(dias_vencimiento)
+        s.add(u)
+        s.commit()
+
+
+def usuario_plataforma_por_id(uid: int):
+    with Session(engine) as s:
+        return s.get(UsuarioPlataforma, uid)
+
+
 def email_plataforma_en_uso(email: str, excepto_id: Optional[int] = None) -> bool:
     """¿Ya hay otro usuario de plataforma con ese mail? (único, sirve a futuro
     para recuperación de clave). Compara normalizado en minúsculas."""

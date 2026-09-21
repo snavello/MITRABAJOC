@@ -68,6 +68,15 @@
         <div class="estado">Alta, edición y administradores</div>
       </div>
     </a>
+    {% if es_superadmin %}
+    <a class="acceso" href="/plataforma/usuarios">
+      <svg viewBox="0 0 24 24"><use href="#ic-clave"/></svg>
+      <div>
+        <div class="titulo">Usuarios de plataforma</div>
+        <div class="estado">Altas, roles y accesos (solo superadmin)</div>
+      </div>
+    </a>
+    {% endif %}
     <a class="acceso" href="/plataforma#clave">
       <svg viewBox="0 0 24 24"><use href="#ic-clave"/></svg>
       <div>
