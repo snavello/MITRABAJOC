@@ -86,7 +86,7 @@ aside .paso-actual{font-size:14px;line-height:1.4;margin:10px 0;padding:10px 12p
 aside ol.recorrido{padding-left:18px;color:var(--texto3);font-size:11.5px} aside ol.recorrido li{margin:2px 0}
 .pie{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;color:var(--texto3);font-size:11px;align-items:center}
 .pie i{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--c);vertical-align:middle;margin-right:5px;opacity:.9}
-.pie .pago i{border-radius:50%;background:var(--miel)} .pie .pl i{background:none;border:1px dashed #6b7a94;border-radius:0;height:0;width:22px}
+.pie .pago i{border-radius:50%;background:var(--miel)} .pie .pago.fut i{background:none;border:1.5px dashed var(--miel)} .pie .pl i{background:none;border:1px dashed #6b7a94;border-radius:0;height:0;width:22px}
 @media (max-width:1100px){.marco{grid-template-columns:1fr} aside{position:static;max-height:none} .tiles{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
@@ -135,7 +135,7 @@ aside ol.recorrido{padding-left:18px;color:var(--texto3);font-size:11.5px} aside
       <div class="tile ok"><small>Demo</small><b data-env>EN LÍNEA</b><span>0.42.03 · promovida 19-09</span></div>
       <div class="tile"><small>Seguridad</small><b>1 BLOQUEA</b><span>H-0008 · 8 corregidos</span></div>
       <div class="tile alerta"><small>Próximo vencimiento</small><b>27 DÍAS</b><span>token disparador · 18-10</span></div>
-      <div class="tile"><small>Gasto del mes</small><b>US$ —</b><span>5 pagos · a completar</span></div>
+      <div class="tile"><small>Gasto del mes</small><b>US$ —</b><span>5 pagos + 3 futuros · a completar</span></div>
       <div class="tile neg"><small>Recibos leídos</small><b>18.412</b><span>+184 hoy · US$ 1,92</span></div>
       <div class="tile neg"><small>Usuarios en línea</small><b>37</b><span>afiliados 31 · gremio 5 · empresa 1</span></div>
       <div class="tile neg"><small>Trámites abiertos</small><b>212</b><span>14 esperan al gremio</span></div>
@@ -146,7 +146,7 @@ aside ol.recorrido{padding-left:18px;color:var(--texto3);font-size:11.5px} aside
       <div class="barrido"></div>
       <svg id="svg" viewBox="0 0 1440 880" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
-    <div class="pie" id="pie"><span class="pago"><i></i>pago o suscripción</span><span class="pl"><i></i>planeado / manual · pelotitas: tráfico real</span><span style="color:var(--texto3)">· cifras de negocio de muestra: en la versión viva salen de la base</span></div>
+    <div class="pie" id="pie"><span class="pago"><i></i>pago hoy</span><span class="pago fut"><i></i>será pago</span><span class="pl"><i></i>planeado / manual · pelotitas: tráfico real</span><span style="color:var(--texto3)">· cifras de negocio de muestra: en la versión viva salen de la base</span></div>
   </div>
 
   <aside id="ficha"></aside>
@@ -177,18 +177,19 @@ const NODOS = [
   {id:"usuarios", z:"usu", x:50, y:200, w:160, h:140, ico:"i-personas", k:"usuarios", t:"Afiliados", s:["sindicatos · empresas", "plataforma", "PWA instalable, recibe push"],
    plays:[{id:"recibo", titulo:"Un recibo, de punta a punta"}, {id:"error", titulo:"Un error o una anomalía"}],
    ficha:{notas:["Entran hoy directo por HTTPS a *.onrender.com, sin perímetro propio.","La afiliación sindical es dato sensible por ley (Ley 25.326): Colm3na es encargado del tratamiento.","Sesión por inactividad de 15 min, cookie separada por rol, identidad firmada en el token."]}},
-  {id:"cloudflare", z:"seg", estado:"planeado", x:50, y:420, w:160, h:110, ico:"i-cloudflare", k:"perímetro · planeado", t:"Cloudflare", s:["DNS · WAF · rate limit", "necesita dominio propio"], pago:"plan Free + dominio (a completar)",
-   ficha:{notas:["No existe todavía. Es el perímetro INF-05 del XSK: rate limit, WAF y ocultar el origen de Render.","Hoy los entornos viven en onrender.com: primero hay que comprar el dominio.","H-0008 (fuerza bruta en logins) es el único hallazgo que aún bloquea producción y cierra con esto."], campos:{"Pendiente":"comprar dominio, poner Cloudflare delante de Demo/Prod"}}},
+  {id:"cloudflare", z:"seg", estado:"planeado", x:50, y:400, w:160, h:150, ico:"i-cloudflare", k:"perímetro · planeado", t:"Cloudflare", s:["dominio a registrar", "DNS · certificado TLS", "proxy · WAF · rate limit", "oculta el origen de Render"], pagoFuturo:"plan Pro cuando haya usuarios reales + dominio anual",
+   ficha:{notas:["Lo que va a hacer: registrar el dominio propio (hoy todo vive en onrender.com), resolver el DNS, emitir y renovar el certificado TLS, y poner un proxy delante de Demo y Producción con WAF y límite de pedidos por IP.","Cierra INF-05 y con él H-0008 (fuerza bruta en logins), el único hallazgo que aún bloquea producción.","Orden: registrar dominio → DNS en Cloudflare → certificado → proxy con reglas → apuntar Demo y Producción."], campos:{"Dominio":"a registrar","Certificado":"lo emite Cloudflare al activar el proxy","Pendiente":"registrar dominio, configurar, apuntar los entornos"}}},
 
   // --- desarrollo y entrega
-  {id:"equipo", z:"usu", x:50, y:50, w:180, h:62, ico:"i-equipo", k:"equipo", t:"SDN · ARS", s:["desarrolla, opera, recibe alertas"], plays:[{id:"equipo", titulo:"El camino de un cambio"}],
-   ficha:{notas:["Dos superadmin de plataforma sembrados por migración (snavello, arsantagati).","Sd decide versiones, prioridades y qué cuenta como funcionalidad nueva.","Traspaso de la operación diaria a dos devs: Etapa 4 de PLAN_ENTORNOS.md, pendiente."]}},
+  {id:"equipo", z:"usu", x:50, y:50, w:180, h:62, ico:"i-equipo", k:"equipo", t:"Equipo Colm3na", s:["desarrolla, opera, recibe alertas"], plays:[{id:"equipo", titulo:"El camino de un cambio"}],
+   ficha:{notas:["Dos superadmin de plataforma nominales, sembrados por migración.","El equipo decide versiones, prioridades y qué cuenta como funcionalidad nueva.","Traspaso de la operación diaria a dos devs: Etapa 4 de PLAN_ENTORNOS.md, pendiente."]}},
   {id:"code", z:"dev", x:260, y:50, w:200, h:62, ico:"i-claude", k:"asistente de código", t:"Claude Code", s:["commit · PR · merge con gh"], pago:"suscripción Claude (a completar)",
    ficha:{notas:["Code corre en la PC de desarrollo: lee y escribe el repo, corre la suite y opera GitHub con gh.","Chat y Cowork producen planes y cierres de bloque que van a docs/chat/ y a la raíz como PLAN_*/SPRINT_*.","En el XSK, Code es el ejecutor.","El autor de cada commit es la persona; Claude va como Co-authored-by."]}},
   {id:"pc", z:"dev", x:490, y:50, w:200, h:62, ico:"i-docker", k:"pc de desarrollo", t:"Docker · Postgres", s:["uvicorn · pytest · Playwright"],
    ficha:{notas:["Postgres y nada más: docker compose up -d, alembic upgrade head, uvicorn main:app --reload.","La suite crea una base Postgres descartable por proceso de pytest (un archivo por corrida).","E2E con Playwright contra la app real (dependencia de desarrollo)."], campos:{"Pendiente":"devcontainer (Etapa 2 de PLAN_ENTORNOS)"}}},
   {id:"github", z:"dev", x:720, y:50, w:230, h:62, ico:"i-github", k:"repositorio", t:"GitHub", s:["main → Pruebas · demo → Demo"], vencimientos:[{que:"Token de GitHub del disparador del colector", fecha:"2026-10-18", aviso:7}],
-   ficha:{notas:["Único repo del proyecto: snavello/MITRABAJOC. Ramas por bloque (feature/ fix/ sprint/); sobre demo nunca se programa.","Render mira este repo: push a main redeploya Pruebas, push a demo (solo por promover_demo.py) redeploya Demo."], campos:{"Costo":"gratis","Pendiente":"organización de GitHub + reglas de rama"}}},
+   pagoFuturo:"plan Team al pasar a organización con reglas de rama y más minutos de Actions",
+   ficha:{notas:["Único repo del proyecto (MITRABAJOC). Ramas por bloque (feature/ fix/ sprint/); sobre demo nunca se programa.","Render mira este repo: push a main redeploya Pruebas, push a demo (solo por promover_demo.py) redeploya Demo."], campos:{"Costo":"gratis hoy; pago al pasar a organización","Pendiente":"organización de GitHub + reglas de rama"}}},
   {id:"actions", z:"dev", x:980, y:50, w:200, h:62, ico:"i-actions", k:"github actions", t:"CI · Colector", s:["suite + pip-audit · métricas cada 5 min"],
    ficha:{notas:["CI (ci.yml): la suite por archivo y pip-audit en cada push y PR (H-0015).","Colector (metricas-render.yml): cada 5 min lee CPU/memoria/5xx de Render y los manda a Grafana. El cron no dispara solo: lo empuja el disparador de Grafana.","Secretos: RENDER_API_KEY, GRAFANA_METRICS_TOKEN."]}},
   {id:"render", z:"dev", x:1210, y:50, w:180, h:62, ico:"i-render", k:"plataforma", t:"Render API", s:["deploy · planes · métricas"],
@@ -219,8 +220,8 @@ const NODOS = [
   // --- observabilidad
   {id:"mail", z:"obs", x:590, y:720, w:180, h:80, ico:"i-mail", k:"aviso", t:"Mail del equipo", s:["solo por excepción", "repite cada 24 h"],
    ficha:{notas:["Política anti-ruido: avisos solo cuando algo se rompe o un token está por vencer.","Mail e intervalo se cambian desde la pestaña Observabilidad de /entornos."]}},
-  {id:"grafana", z:"obs", x:800, y:720, w:220, h:80, ico:"i-grafana", k:"uptime · métricas · alertas", t:"Grafana Cloud", s:["Ohio + São Paulo", "disparador del colector"], vencimientos:[{que:"Tokens de Grafana de la app", fecha:"2027-09-19", aviso:30}],
-   ficha:{notas:["Regla 0: el observador vive fuera de la app y de Render.","Uptime sobre /healthz y /readyz de Pruebas; alerta solo si fallan todas las ubicaciones.","Configuración como código: observabilidad/config.json + aplicar_*.py."], campos:{"Costo":"0 (Free)","Pendiente":"métricas propias, detalle por sindicato, replicar en Demo"}}},
+  {id:"grafana", z:"obs", x:800, y:720, w:220, h:80, ico:"i-grafana", k:"uptime · métricas · alertas", t:"Grafana Cloud", s:["Ohio + São Paulo", "disparador del colector"], vencimientos:[{que:"Tokens de Grafana de la app", fecha:"2027-09-19", aviso:30}], pagoFuturo:"plan Pro cuando haya más de un entorno vigilado o más retención",
+   ficha:{notas:["Regla 0: el observador vive fuera de la app y de Render.","Uptime sobre /healthz y /readyz de Pruebas; alerta solo si fallan todas las ubicaciones.","Configuración como código: observabilidad/config.json + aplicar_*.py."], campos:{"Costo":"0 (Free) hoy; pago al vigilar Demo y Producción","Pendiente":"métricas propias, detalle por sindicato, replicar en Demo"}}},
   {id:"sentry", z:"obs", x:1050, y:720, w:180, h:80, ico:"i-sentry", k:"errores", t:"Sentry", s:["ref · rol · sindicato", "sin datos personales"],
    ficha:{notas:["Solo lo que el handler global no previó, con la ref de 8 caracteres que ve la persona.","Sin cuerpos, cookies, IP ni nombres. Se lee desde /entornos con un token de solo lectura."], campos:{"Costo":"0 (Free)"}}},
   {id:"telegram", z:"obs", estado:"planeado", x:1260, y:720, w:130, h:80, ico:"i-telegram", k:"idea", t:"Telegram", s:["no existe hoy"],
@@ -251,7 +252,7 @@ const ARISTAS = [
   {id:"render-pruebas", de:"render.b(0.5)", a:"pruebas.t(0.8)", z:"dev", label:"Planes · deploy", labelEn:[1310,150]},
   {id:"usu-demo", de:"usuarios.r(0.35)", a:"demo.l(0.2)", z:"usu", label:"HTTPS", labelEn:[240,238], bolas:true},
   {id:"usu-cf", de:"usuarios.b(0.5)", a:"cloudflare.t(0.5)", tipo:"planeado", label:"planeado", bolas:true},
-  {id:"cf-demo", de:"cloudflare.r(0.5)", a:"demo.l(0.65)", tipo:"planeado", label:"DNS · WAF", labelEn:[240,462], bolas:true},
+  {id:"cf-demo", de:"cloudflare.r(0.5)", a:"demo.l(0.65)", tipo:"planeado", label:"dominio · TLS · WAF", labelEn:[240,462], bolas:true},
   {id:"demo-ia", de:"demo.r(0.15)", a:"ia.l(0.5)", z:"ext", label:"lee · consulta · asiste", labelEn:[810,200], bolas:true},
   {id:"pruebas-ia", de:"pruebas.l(0.15)", a:"ia.r(0.5)", z:"ext"},
   {id:"demo-geo", de:"demo.r(0.4)", a:"geo.l(0.5)", z:"ext", label:"geocodifica", labelEn:[810,322]},
@@ -274,7 +275,8 @@ const ARISTAS = [
 const RECORRIDOS = {
   recibo:{titulo:"Un recibo, de punta a punta", color:"#f2b234", pasos:[
     {n:["usuarios"], t:"Un afiliado abre la app en el teléfono (PWA) y saca una foto de su recibo de sueldo."},
-    {n:["usuarios"], e:["usu-demo"], t:"La foto viaja por HTTPS al servicio web de Demo. Hoy sin perímetro: Cloudflare es el paso que falta."},
+    {n:["cloudflare"], e:["usu-cf","cf-demo"], t:"Cuando esté Cloudflare, la foto entra por el dominio propio: DNS, certificado TLS, WAF y límite de pedidos antes de llegar a Render. Hoy va directo."},
+    {n:["usuarios"], e:["usu-demo"], t:"La foto viaja por HTTPS al servicio web de Demo."},
     {n:["demoWeb"], t:"FastAPI recibe /api/leer: verifica la sesión firmada, el rol, el tamaño del archivo y el CUIL que va en el token."},
     {n:["demoPg"], t:"Lee de Postgres el sindicato del afiliado, su marca, el catálogo de conceptos y las fórmulas vigentes para esa fecha."},
     {n:["demoWeb","ia"], e:["demo-ia"], t:"El recibo va a la API de Anthropic. Sonnet lee cada línea, los totales, el CUIL y el CUIT; la app mide tokens, precio y duración."},
@@ -293,8 +295,8 @@ const RECORRIDOS = {
     {n:["pruebas-afiliado"], t:"La persona ve un mensaje genérico con el código E-INTERNO-00 y esa referencia. Un pool agotado devuelve 503 con JSON, nunca cuelgue."},
     {n:["sentry"], e:["pruebas-sentry"], t:"Sentry recibe el error con la referencia, el rol y el ID del sindicato. Sin cuerpos, cookies, IP ni nombres."},
     {n:["grafana"], e:["pruebas-grafana"], t:"Grafana mira desde Ohio y São Paulo: si /healthz deja de responder en todas las ubicaciones, o suben los 5xx, la CPU o la memoria, dispara la alerta."},
-    {n:["mail"], e:["grafana-mail","sentry-mail"], t:"Sale un mail a SDN. Solo por excepción, y se repite cada 24 h hasta que se resuelva."},
-    {n:["equipo"], e:["mail-equipo"], t:"SDN busca la referencia en la pestaña Observabilidad de /entornos, que lee Grafana y Sentry por API, sin iniciar sesión en ninguno."},
+    {n:["mail"], e:["grafana-mail","sentry-mail"], t:"Sale un mail al equipo. Solo por excepción, y se repite cada 24 h hasta que se resuelva."},
+    {n:["equipo"], e:["mail-equipo"], t:"El equipo busca la referencia en la pestaña Observabilidad de /entornos, que lee Grafana y Sentry por API, sin iniciar sesión en ninguno."},
     {n:["pruebas-entornos","render"], t:"Si es de recursos, sube el plan de Render desde la solapa Planes y lo baja después; queda en la bitácora CambioPlan."},
     {n:["code","pc"], e:["equipo-code","code-pc"], t:"Con Claude Code se reproduce el error en local, contra Postgres, y se escribe el test que lo caza."},
     {n:["github","actions"], e:["pc-gh","gh-actions"], t:"Fix en una rama, PR y CI: la suite completa más pip-audit. Un test que flakea o una CVE nueva frenan acá."},
@@ -302,7 +304,7 @@ const RECORRIDOS = {
     {n:["xsk","docs"], t:"Si fue una brecha, queda como hallazgo del Security Kit con su riesgo; si fue un bug, en HISTORIAL.md y en la bitácora.", ms:2600},
   ]},
   equipo:{titulo:"El camino de un cambio", color:"#6fe3ff", pasos:[
-    {n:["equipo"], t:"Sd pide un cambio o cierra una decisión (a veces en Chat o Cowork, que dejan un plan en docs/chat/)."},
+    {n:["equipo"], t:"El equipo pide un cambio o cierra una decisión (a veces en Chat o Cowork, que dejan un plan en docs/chat/)."},
     {n:["code"], e:["equipo-code"], t:"Claude Code lee CLAUDE.md, abre una rama desde main y programa el bloque."},
     {n:["pc"], e:["code-pc"], t:"Corre la suite contra un Postgres descartable, archivo por archivo, y los robots E2E si toca pantalla. Sube la versión de la app tocada en el mismo commit."},
     {n:["github","actions"], e:["pc-gh","gh-actions"], t:"Push y PR con gh. GitHub Actions corre la suite entera y pip-audit; el autor del commit es la persona, Claude va como coautor."},
@@ -310,7 +312,7 @@ const RECORRIDOS = {
     {n:["pruebasPg"], e:["gh-pruebas"], t:"Pre-Deploy: alembic upgrade head aplica la migración sobre la base de Pruebas sin borrar datos."},
     {n:["pruebasWeb"], e:["render-pruebas"], t:"El web nuevo arranca; /healthz le dice a Render que está vivo. Distintivo con entorno y versión en pantalla."},
     {n:["grafana"], e:["pruebas-grafana"], t:"Grafana confirma el uptime; el colector sigue mandando CPU, memoria y 5xx cada 5 minutos."},
-    {n:["pruebas-entornos"], t:"Sd prueba en Pruebas. /entornos muestra qué versión corre en cada entorno leyendo /api/version."},
+    {n:["pruebas-entornos"], t:"El equipo prueba en Pruebas. /entornos muestra qué versión corre en cada entorno leyendo /api/version."},
     {n:["docs"], t:"Cierre de bloque: línea en BITACORA.md, HISTORIAL.md si hubo narrativa, CLAUDE.md si cambió el estado."},
     {n:["demoPg","demoWeb"], e:["portacion","gh-demo"], t:"Cuando está aprobado: promover_demo.py hace pg_dump de la base de Demo, mergea main en demo, etiqueta y pushea. Render redeploya Demo."},
     {n:["usuarios","demo-afiliado","demo-sindicato","demo-empresa","demo-plataforma"], e:["usu-demo"], t:"Sindicatos, afiliados, empresas y plataforma ven la versión nueva en la URL de siempre.", ms:2600},
@@ -355,7 +357,7 @@ function dibujarNodo(n) {
     if (n.led) { const led = el("circle", {cx:n.x+n.w-16, cy:n.y+n.h/2, r:4, fill:"var(--halo)"}); led.append(el("animate", {attributeName:"opacity", values:"1;.3;1", dur:"2.4s", repeatCount:"indefinite"})); g.append(led); }
     if (n.estado !== "activo") g.append(el("text", {x:n.x+n.w-10, y:n.y+n.h-8, class:"s", "text-anchor":"end", fill:col, "font-weight":"700", "letter-spacing":".1em"}, n.estado.toUpperCase()));
     let bx = n.x + n.w - 16;
-    if (n.pago) { const p = el("g"); p.append(el("circle", {cx:bx, cy:n.y+14, r:8, fill:"var(--miel)"})); p.append(el("text", {x:bx, y:n.y+18, "text-anchor":"middle", "font-size":"11", "font-weight":"700", fill:"#111"}, "$")); p.append(el("title", {}, "Pago: " + n.pago)); g.append(p); bx -= 22; }
+    if (n.pago || n.pagoFuturo) { const p = el("g"), fut = !n.pago; p.append(el("circle", {cx:bx, cy:n.y+14, r:8, fill:fut ? "#0a1421" : "var(--miel)", stroke:"var(--miel)", "stroke-width":1.5, "stroke-dasharray":fut ? "3 2" : ""})); p.append(el("text", {x:bx, y:n.y+18, "text-anchor":"middle", "font-size":"11", "font-weight":"700", fill:fut ? "var(--miel)" : "#111"}, "$")); p.append(el("title", {}, fut ? "Será pago: " + n.pagoFuturo : "Pago: " + n.pago)); g.append(p); bx -= 22; }
     (n.plays || []).forEach(pl => { const p = el("g", {class:"play"}); p.append(el("circle", {cx:bx, cy:n.y+14, r:9, fill:"var(--cian)"})); p.append(el("path", {d:`M${bx-3},${n.y+9.5} L${bx+4.5},${n.y+14} L${bx-3},${n.y+18.5} z`, fill:"#0a1421"})); p.append(el("title", {}, "▶ " + pl.titulo)); p.addEventListener("click", ev => { ev.stopPropagation(); animar(pl.id); }); g.append(p); bx -= 24; });
     if (n.rack) {
       g.append(el("text", {x:n.x+16, y:n.y+230, class:"k"}, "cinco puertas"));
@@ -439,7 +441,7 @@ function mostrarFicha(n) {
   const plays = (n.plays || []).map(p => `<button data-play="${p.id}">▶ ${p.titulo}</button>`).join("");
   const zona = n.z ? ZONAS[n.z].nombre : (n.padre ? porId[n.padre].t : "");
   ficha.innerHTML = `<div class="zona">${zona}</div><h2>${n.t}</h2>
-    <span class="estado e-${n.estado || "activo"}">${n.estado || "activo"}</span>${n.pago ? `<span class="estado e-pago">$ ${n.pago}</span>` : ""}
+    <span class="estado e-${n.estado || "activo"}">${n.estado || "activo"}</span>${n.pago ? `<span class="estado e-pago">$ ${n.pago}</span>` : ""}${n.pagoFuturo ? `<span class="estado e-parcial">$ será pago: ${n.pagoFuturo}</span>` : ""}
     <ul>${(f.notas || []).map(x => `<li>${x}</li>`).join("")}</ul>
     ${campos ? `<dl>${campos}</dl>` : ""}
     ${(n.vencimientos || []).length ? `<dl>${n.vencimientos.map(v => `<dt>Vence</dt><dd>${v.fecha} · ${v.que} (aviso ${v.aviso} días antes)</dd>`).join("")}</dl>` : ""}
