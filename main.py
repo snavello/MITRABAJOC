@@ -7028,12 +7028,23 @@ def entornos_esquema(request: Request):
     _exigir_landing()
     if (sin_pase := _exigir_pase(request)):
         return sin_pase
-    return templates.TemplateResponse("esquema.html", {
+    embebida = request.query_params.get("embebida") == "1"
+    respuesta = templates.TemplateResponse("esquema.html", {
         "request": request, "datos": _esquema_datos(con_grafana=False),
         # ?embebida=1: la pestaña Observabilidad de /entornos la muestra en un
         # iframe; sin el enlace "← Entornos" y con menos aire arriba.
-        "embebida": request.query_params.get("embebida") == "1",
+        "embebida": embebida,
     })
+    if embebida:
+        # Las cabeceras de seguridad (H-0007) prohíben enmarcar CUALQUIER
+        # página (X-Frame-Options DENY, frame-ancestors 'none'): el iframe de
+        # la landing mostraba "refused to connect" (2026-09-21). Solo en modo
+        # embebido, y solo desde el mismo origen, se permite el marco. El
+        # middleware usa setdefault, así que lo que pone la ruta manda.
+        respuesta.headers["X-Frame-Options"] = "SAMEORIGIN"
+        respuesta.headers["Content-Security-Policy"] = CSP.replace(
+            "frame-ancestors 'none'", "frame-ancestors 'self'")
+    return respuesta
 
 
 @app.get("/api/entornos/esquema")

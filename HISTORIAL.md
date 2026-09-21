@@ -5127,3 +5127,17 @@ su JS, la ruta `GET /api/entornos/actividad` y la variable
 (AccesoLog alimenta "usuarios en línea"). Tests: `test_actividad.py`
 ajustado (la pestaña y la API ya no existen), `test_esquema.py` (7).
 Plataforma 0.35.01.
+
+### El iframe decía "refused to connect" (mismo día)
+
+Sd entró a la pestaña nueva y vio un rectángulo blanco; el enlace de abajo
+sí abría. Causa: las cabeceras de seguridad de H-0007 prohíben enmarcar
+cualquier página de la app (`X-Frame-Options: DENY` y
+`frame-ancestors 'none'`), y el iframe de la landing es exactamente eso.
+La ruta `/entornos/esquema` ahora, **solo con `?embebida=1`**, responde
+`SAMEORIGIN` y `frame-ancestors 'self'`: se puede enmarcar desde la propia
+app y desde ningún otro sitio; suelta, sigue con `DENY`. El middleware usa
+`setdefault`, así que lo que pone la ruta manda. Test en `test_esquema.py`
+(8). Plataforma 0.35.02. Lección: cuando el CI no verifica una pantalla en
+el navegador real, un iframe hay que probarlo servido, no desde un archivo
+local (ahí el marco no carga por otro motivo y el error se confunde).
