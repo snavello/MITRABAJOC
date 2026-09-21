@@ -71,7 +71,7 @@
   <main class="puerta">
     <img class="logo" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Colm3na">
     <h1>Entornos</h1>
-    <p class="lede">Página interna del equipo. Entrá con tu usuario, o con el código.</p>
+    <p class="lede">Página interna del equipo. Entrá con tu usuario{% if pin_habilitado %}, o con el código{% endif %}.</p>
     <form class="tarjeta" method="post" action="/entornos/login" id="form-login">
       {% if siguiente %}<input type="hidden" name="siguiente" value="{{ siguiente }}">{% endif %}
       <label for="usuario"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Usuario</label>
@@ -88,6 +88,7 @@
       {% endif %}
     </form>
 
+    {% if pin_habilitado %}
     <form class="tarjeta" method="post" action="/entornos/pin" id="form-pin" style="margin-top:14px;">
       {% if siguiente %}<input type="hidden" name="siguiente" value="{{ siguiente }}">{% endif %}
       <label for="pin"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>O el código de acceso</label>
@@ -99,6 +100,7 @@
       {% endif %}
       <p class="nota" id="pin-nota">Ocho dígitos. Se pide una vez por dispositivo; el pase dura 30 días.{% if siguiente %} Después se abre el documento que pediste.{% endif %}</p>
     </form>
+    {% endif %}
   </main>
 </body>
 </html>

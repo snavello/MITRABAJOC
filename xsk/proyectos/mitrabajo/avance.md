@@ -16,13 +16,17 @@ actualizado: 2026-09-20
 
 ## Cómo seguir
 
-Sub-sprint R1: etapas 0-3 hechas. La 3 sumó la **gestión de usuarios** en
-`/plataforma/usuarios` (solo superadmin): alta con clave transitoria de 7
-días, editar, activar/desactivar, resetear, con guarda del último superadmin
-y bitácora. Verificado en el navegador. Plataforma 0.32.01.
+**Sub-sprint R1 COMPLETO** (etapas 0-4). Usuarios de plataforma nominales con
+login por usuario en /plataforma y /entornos, primer ingreso forzado, gestión
+solo-superadmin con bitácora, y transición cerrada: genérico y PIN apagados
+por defecto (reversibles por variable). **H-0002, H-0003 y H-0016 →
+Solucionado.** Plataforma 0.33.01.
 
-Queda la **etapa 4**: cerrar la transición — sacar el genérico 20000000000 y
-el PIN de la landing. Recién ahí H-0002/H-0003/H-0016 pasan a Solucionado.
-**Se hace cuando SDN confirme que los nominales ya andan en Pruebas/Demo**
-(es el paso que apaga el acceso viejo). En paralelo siguen: perímetro
-INF-05 (H-0008), H-0018, H-0014/H-0015, carga DIS-01/02.
+Estado del kit: 8 Solucionado, 2 Parcial, 6 Pendiente, 2 Aceptado; bloquean 1.
+El único que bloquea es **H-0008** (rate-limit de login), cuyo cierre robusto
+es el **perímetro (INF-05, Cloudflare)** — necesita dominio propio + cuenta.
+
+Frentes que siguen (no dependen de credenciales de SDN): lote **H-0014 (deps
+con CVE) + H-0015 (CI)**; carga DIS-01/02; y la iteración 2 (ENT/IA/OBS/LEY).
+Nota de operación en la corrida de la etapa 4: antes de producción, snavello
+y arsantagati deben haber hecho su primer ingreso.

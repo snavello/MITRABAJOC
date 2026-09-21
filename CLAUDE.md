@@ -607,14 +607,16 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     necesita dominio+Cloudflare), y lotes menores (H-0018, H-0014+H-0015,
     H-0010+H-0012), más carga (DIS-01/02) y repetir la dinámica contra Pruebas.
 
-    **Sub-sprint R1 (SPRINT_R1.md) en curso** (usuarios de plataforma
-    nominales): etapas 0-1 hechas — modelo `UsuarioPlataforma`/`LogPlataforma`,
-    migración que siembra los dos superadmin (snavello, arsantagati) con
-    clave de un solo uso, y **login nominal** con primer ingreso forzado
-    (cambio de clave + carga de datos) y bitácora de login; el genérico
-    20000000000 sigue como login de transición. H-0016 → Parcial. Plataforma
-    0.31.01. Faltan etapas 2 (landing con el mismo login), 3 (gestión de
-    usuarios solo superadmin) y 4 (cerrar la transición: sacar genérico + PIN).
+    **Sub-sprint R1 (SPRINT_R1.md) COMPLETO** (usuarios de plataforma
+    nominales): login por usuario en `/plataforma` y `/entornos`, primer
+    ingreso forzado (cambio de clave + carga de datos), gestión solo-superadmin
+    con bitácora (`LogPlataforma`), y transición cerrada — el genérico
+    20000000000 y el PIN quedaron apagados por defecto (reversibles con
+    `LOGIN_GENERICO=1` / `PIN_ENTORNOS_HABILITADO=1` en emergencia). Dos
+    superadmin sembrados por migración: snavello, arsantagati. **H-0002,
+    H-0003 y H-0016 → Solucionado.** Plataforma 0.33.01. Estado del kit: 8
+    Solucionado, 2 Parcial, 6 Pendiente, 2 Aceptado; bloquean 1 (H-0008,
+    cierra con el perímetro INF-05).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
