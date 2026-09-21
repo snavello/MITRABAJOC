@@ -86,6 +86,7 @@ def test_sin_pase_no_se_ve_y_con_pase_dibuja_con_datos():
     r = c.get("/entornos/esquema")
     assert r.status_code == 200 and "Sala de mando" in r.text and 'id="datos-vivos"' in r.text
     assert "{% raw %}" not in r.text        # Jinja procesó la plantilla entera
+    assert 'className = "burbuja"' in r.text and "dataset.detalle" in r.text   # detalle largo en burbuja, no en la tarjeta
     d = c.get("/api/entornos/esquema").json()
     assert d["entorno"] == "pruebas" and "kpis" in d and "versiones" in d
     assert d["seguridad"] is not None and "bloquean" in d["seguridad"]

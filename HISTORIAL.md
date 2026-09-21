@@ -5169,3 +5169,16 @@ entrar a Observabilidad (la pastilla por defecto) o al elegir la pastilla,
 y al volver queda en la pestaña una tarjeta con "Abrir la Sala de mando"
 para reabrirla sin salir. El iframe sigue cargándose recién la primera vez
 que se abre. Plataforma 0.35.03.
+
+### Indicadores compactos con burbuja (mismo día)
+
+Los indicadores de arriba crecían con el texto: la lista de sindicatos o el
+desglose de ingresos ocupaban tres o cuatro líneas y le robaban espacio al
+radar. Ahora cada tarjeta tiene **dos líneas fijas** (etiqueta y cifra en
+la primera, un resumen corto en la segunda, cortado con puntos suspensivos)
+y **el detalle completo sale en una burbuja al pasar el mouse**: la lista
+entera de sindicatos, el desglose por rol de los ingresos con la
+explicación de los 15 minutos, cómo renovar el token que vence, los
+hallazgos del XSK por estado, qué se paga y qué se pagará. Una sola burbuja
+para toda la página, que sigue al puntero y se acomoda para no salirse de la
+pantalla. Plataforma 0.35.04.

@@ -26,13 +26,18 @@ header p{margin:4px 0 0;color:var(--texto2);font-size:13px;max-width:720px}
 .estado-ctl button{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;background:var(--c);opacity:.45}
 .estado-ctl button.on{opacity:1;border-color:#fff;box-shadow:0 0 10px var(--c)}
 .estado-ctl span{margin-left:6px;font:700 15px var(--cond);color:var(--halo);letter-spacing:.06em}
-.tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:8px 0}
+.tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:6px 0}
 .tile.neg::before{background:var(--cian)} .tile.neg b{color:var(--cian)}
-.tile{background:var(--noche2);border:1px solid var(--linea);border-radius:8px;padding:6px 10px 6px 12px;position:relative;line-height:1.2}
-.tile::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:3px;background:var(--miel);border-radius:2px}
-.tile small{display:block;color:var(--texto3);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
-.tile b{font:700 19px var(--cond);letter-spacing:.02em;margin-right:6px}
-.tile span{font:10.5px var(--mono);color:var(--texto2)}
+/* Compactos (2026-09-21): dos líneas fijas por indicador. La segunda se corta con
+   puntos suspensivos y el detalle completo sale en una burbuja al pasar el mouse. */
+.tile{background:var(--noche2);border:1px solid var(--linea);border-radius:8px;padding:4px 10px 5px 12px;position:relative;line-height:1.15;min-width:0;cursor:default}
+.tile::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:3px;background:var(--miel);border-radius:2px}
+.tile small{display:inline-block;color:var(--texto3);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;margin-right:6px;vertical-align:baseline}
+.tile b{font:700 18px/1 var(--cond);letter-spacing:.02em;vertical-align:baseline}
+.tile span{display:block;font:10px var(--mono);color:var(--texto2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.tile:hover{border-color:#3a4f70}
+.burbuja{position:fixed;z-index:60;max-width:360px;background:#0f1c2e;border:1px solid #3a4f70;border-radius:8px;padding:8px 11px;font-size:12px;line-height:1.45;color:var(--texto);box-shadow:0 12px 30px rgba(0,0,0,.55);pointer-events:none;white-space:pre-line;display:none}
+.burbuja b{color:var(--miel);font-weight:600}
 .tile.ok b{color:var(--halo)} .tile.alerta::before{background:var(--rojo)} .tile.alerta b{color:var(--rojo)}
 .radar{position:relative;border:1px solid var(--linea);border-radius:14px;overflow:hidden;
   background:radial-gradient(ellipse at 50% 40%, #12223a 0%, var(--noche) 70%);
@@ -139,7 +144,9 @@ aside ol.recorrido{padding-left:18px;color:var(--texto3);font-size:11.5px} aside
       <div class="tile ok" data-envtile="demo"><small>Demo</small><b data-kpi="est-demo">—</b><span data-kpi="ver-demo">consultando…</span></div>
       <div class="tile"><small>Seguridad</small><b data-kpi="seg">—</b><span data-kpi="seg-sub">—</span></div>
       <div class="tile alerta"><small>Próximo vencimiento</small><b data-kpi="venc">—</b><span data-kpi="venc-sub">—</span></div>
-      <div class="tile"><small>Gasto del mes</small><b>US$ —</b><span>5 pagos + 3 futuros · a completar</span></div>
+      <div class="tile" data-detalle="Pagos de hoy: Render (Demo y Pruebas, web y Postgres), API de Anthropic (por uso), Claude Code (suscripción).
+Serán pagos: GitHub (organización), Grafana (más de un entorno), Cloudflare (dominio y plan).
+Los planes y montos todavía no están cargados."><small>Gasto del mes</small><b>US$ —</b><span>5 pagos + 3 futuros · a completar</span></div>
       <div class="tile neg"><small>Recibos leídos</small><b data-kpi="recibos">—</b><span data-kpi="recibos-sub">—</span></div>
       <div class="tile neg"><small>Usuarios en línea</small><b data-kpi="linea">—</b><span data-kpi="linea-sub">—</span></div>
       <div class="tile neg"><small>Trámites abiertos</small><b data-kpi="tramites">—</b><span data-kpi="tramites-sub">—</span></div>
@@ -462,20 +469,43 @@ setEstado("verde");
 // refresca cada minuto pidiendo /api/entornos/esquema (que suma el semáforo
 // de Grafana). Si el pedido falla, el estado pasa a violeta: la app no responde.
 const fmt = n => (n == null) ? "—" : Number(n).toLocaleString("es-AR");
-const kpi = (k, v) => { const e = document.querySelector(`[data-kpi="${k}"]`); if (e) e.textContent = v; };
+const kpi = (k, v, detalle) => {
+  const e = document.querySelector(`[data-kpi="${k}"]`); if (!e) return;
+  e.textContent = v;
+  if (detalle != null) { const t = e.closest(".tile"); if (t) t.dataset.detalle = detalle; }
+};
+// Burbuja de detalle: una sola para toda la página; sigue al mouse sobre el indicador.
+const burbuja = document.createElement("div"); burbuja.className = "burbuja"; document.body.append(burbuja);
+document.querySelectorAll(".tile").forEach(t => {
+  t.addEventListener("mouseenter", () => { if (!t.dataset.detalle) return; burbuja.textContent = t.dataset.detalle; burbuja.style.display = "block"; });
+  t.addEventListener("mousemove", ev => {
+    const w = burbuja.offsetWidth, h = burbuja.offsetHeight;
+    burbuja.style.left = Math.min(ev.clientX + 14, window.innerWidth - w - 8) + "px";
+    burbuja.style.top = (ev.clientY + 18 + h > window.innerHeight ? ev.clientY - h - 10 : ev.clientY + 18) + "px";
+  });
+  t.addEventListener("mouseleave", () => { burbuja.style.display = "none"; });
+});
 function aplicarDatos(d) {
   if (!d) return;
   const k = d.kpis || {};
-  kpi("recibos", fmt(k.recibos_total)); kpi("recibos-sub", `+${fmt(k.recibos_hoy)} hoy · ${fmt(k.lecturas_hoy)} lecturas IA · US$ ${fmt(k.costo_hoy_usd)}`);
+  kpi("recibos", fmt(k.recibos_total)); kpi("recibos-sub", `+${fmt(k.recibos_hoy)} hoy · US$ ${fmt(k.costo_hoy_usd)}`,
+      `Recibos leídos en total: ${fmt(k.recibos_total)}\nLeídos hoy: ${fmt(k.recibos_hoy)}\nLecturas de IA hoy (recibos, aportes, aprendizaje): ${fmt(k.lecturas_hoy)}\nCosto de hoy, a precio congelado de cada llamada: US$ ${fmt(k.costo_hoy_usd)}`);
   const l = k.en_linea || {};
-  kpi("linea", fmt(k.en_linea_total)); kpi("linea-sub", `ingresos en ${k.minutos_en_linea} min · afiliados ${fmt(l.trabajador || 0)} · gremio ${fmt(l.admin || 0)} · empresa ${fmt(l.empresa || 0)}`);
-  kpi("tramites", fmt(k.tramites_abiertos)); kpi("tramites-sub", `${fmt(k.tramites_esperan)} esperan al gremio`);
-  kpi("sind", fmt((k.sindicatos || []).length)); kpi("sind-sub", (k.sindicatos || []).join(" · ") || "ninguno");
-  kpi("reg", fmt(k.registrados)); kpi("reg-sub", `de ${fmt(k.padron)} en padrón · ${fmt(k.porcentaje_registrados)}%`);
-  if (d.seguridad) { kpi("seg", d.seguridad.bloquean ? `${d.seguridad.bloquean} BLOQUEA` : "SIN BLOQUEOS"); kpi("seg-sub", `${d.seguridad.solucionado} solucionados · ${d.seguridad.pendiente} pendientes`); }
-  else { kpi("seg", "SIN DATO"); kpi("seg-sub", "registro del Security Kit ilegible"); }
-  if (d.vencimiento) { kpi("venc", d.vencimiento.dias < 0 ? "VENCIDO" : `${d.vencimiento.dias} DÍAS`); kpi("venc-sub", `${d.vencimiento.nombre} · ${d.vencimiento.vence}`); }
-  else { kpi("venc", "—"); kpi("venc-sub", "sin vencimientos registrados"); }
+  kpi("linea", fmt(k.en_linea_total)); kpi("linea-sub", `afiliados ${fmt(l.trabajador || 0)} · gremio ${fmt(l.admin || 0)} · empresa ${fmt(l.empresa || 0)}`,
+      `Ingresos en los últimos ${k.minutos_en_linea} minutos (lo que dura una sesión sin actividad): es la aproximación a "en línea", la app no registra cada pedido.\nAfiliados: ${fmt(l.trabajador || 0)}\nSindicato: ${fmt(l.admin || 0)}\nEmpresas: ${fmt(l.empresa || 0)}\nPlataforma: ${fmt(l.plataforma || 0)}`);
+  kpi("tramites", fmt(k.tramites_abiertos)); kpi("tramites-sub", `${fmt(k.tramites_esperan)} esperan al gremio`,
+      `Trámites en cualquier estado salvo terminado: ${fmt(k.tramites_abiertos)}\nTodavía sin respuesta del gremio (estado iniciado): ${fmt(k.tramites_esperan)}`);
+  const sind = k.sindicatos || [];
+  kpi("sind", fmt(sind.length)); kpi("sind-sub", sind.slice(0, 3).join(" · ") + (sind.length > 3 ? ` · +${sind.length - 3}` : "") || "ninguno",
+      sind.length ? "Sindicatos activos en este entorno:\n" + sind.map(x => "· " + x).join("\n") : "Ningún sindicato activo");
+  kpi("reg", fmt(k.registrados)); kpi("reg-sub", `de ${fmt(k.padron)} · ${fmt(k.porcentaje_registrados)}%`,
+      `Afiliados activos en el padrón: ${fmt(k.padron)}\nQue ya crearon su cuenta: ${fmt(k.registrados)} (${fmt(k.porcentaje_registrados)}%)`);
+  if (d.seguridad) { kpi("seg", d.seguridad.bloquean ? `${d.seguridad.bloquean} BLOQUEA` : "SIN BLOQUEOS"); kpi("seg-sub", `${d.seguridad.solucionado} solucionados · ${d.seguridad.pendiente} pendientes`,
+      `Hallazgos del Security Kit (XSK):\nSolucionados: ${d.seguridad.solucionado}\nParciales: ${d.seguridad.parcial}\nPendientes: ${d.seguridad.pendiente}\nAceptados: ${d.seguridad.aceptado}\nBloquean producción: ${d.seguridad.bloquean}`); }
+  else { kpi("seg", "SIN DATO"); kpi("seg-sub", "registro del Security Kit ilegible", "No se pudo leer el registro de hallazgos del XSK."); }
+  if (d.vencimiento) { kpi("venc", d.vencimiento.dias < 0 ? "VENCIDO" : `${d.vencimiento.dias} DÍAS`); kpi("venc-sub", `${d.vencimiento.nombre}`,
+      `${d.vencimiento.nombre}\nVence: ${d.vencimiento.vence} (faltan ${d.vencimiento.dias} días)\nEstado: ${d.vencimiento.estado}\nCómo renovarlo: ${d.vencimiento.como || "ver observabilidad/config.json"}`); }
+  else { kpi("venc", "—"); kpi("venc-sub", "sin vencimientos registrados", "No hay vencimientos en observabilidad/config.json."); }
   setEstado(d.semaforo && ESTADOS[d.semaforo] ? d.semaforo : "gris");
   const act = document.getElementById("actualizado"); if (act) act.textContent = "· " + (d.actualizado || "");
 }
@@ -486,8 +516,9 @@ function sondearEntornos(urls) {
     const t = document.querySelector(`[data-envtile="${env}"]`); if (!t) continue;
     fetch(base + "/api/version", {mode:"cors"}).then(r => r.ok ? r.json() : Promise.reject(r.status)).then(v => {
       t.classList.remove("alerta"); kpi("est-" + env, "EN LÍNEA");
-      kpi("ver-" + env, `${v.plataforma || v.version || "—"} · ${env === "pruebas" ? "main" : "rama demo"}${v.fecha ? " · " + v.fecha : ""}`);
-    }).catch(() => { t.classList.add("alerta"); kpi("est-" + env, "SIN RESPUESTA"); kpi("ver-" + env, base.replace(/^https?:\/\//, "")); });
+      kpi("ver-" + env, `${v.plataforma || v.version || "—"} · ${env === "pruebas" ? "main" : "rama demo"}`,
+          `${base}\nResponde /api/version: en línea.\nTrabajador ${v.trabajador || "—"} · Admin ${v.admin || "—"} · Plataforma ${v.plataforma || "—"}\nVersión del ${v.fecha || "—"}\n${env === "pruebas" ? "Sigue main: redeploya con cada push." : "Sigue la rama demo: cambia solo al promover."}`);
+    }).catch(() => { t.classList.add("alerta"); kpi("est-" + env, "SIN RESPUESTA"); kpi("ver-" + env, base.replace(/^https?:\/\//, ""), `${base}\nNo respondió /api/version. Puede estar caído, dormido, o correr una versión anterior a esa ruta.`); });
   }
 }
 const inicial = document.getElementById("datos-vivos");
