@@ -4734,6 +4734,7 @@ def plataforma_inicio(request: Request):
         return RedirectResponse("/plataforma/completar", status_code=303)
     return templates.TemplateResponse("plataforma_portada.html", {
         "request": request, "marca_plataforma": db.marca_plataforma(),
+        "es_superadmin": _es_superadmin_plataforma(request),
         "version": VERSION_PLATAFORMA, "fecha_version": FECHA_VERSION,
     })
 
@@ -4891,6 +4892,119 @@ def plataforma_completar_guardar(
         fila.id, auth.hashear_clave(clave_nueva), cuil_n, dni, email, direccion, telefono)
     db.registrar_log_plataforma("completar_cuenta", fila.usuario, ip=_ip_de(request))
     return RedirectResponse("/plataforma/inicio", status_code=303)
+
+
+# ---- Gestión de usuarios de plataforma (solo superadmin, SPRINT_R1.md etapa 3) ----
+
+def _usuario_plataforma_de_sesion(request: Request):
+    """La fila del usuario de plataforma logueado, o None si es el genérico
+    (uid 0) o no hay sesión."""
+    ses = sesion_actual(request, "plataforma")
+    if not ses or not ses.get("uid"):
+        return None
+    return db.usuario_plataforma_por_id(ses["uid"])
+
+
+def _es_superadmin_plataforma(request: Request) -> bool:
+    """True para un usuario nominal con rol superadmin, o para el genérico de
+    transición (uid 0), que hace de superadmin hasta que se lo saque."""
+    ses = sesion_actual(request, "plataforma")
+    if not ses:
+        return False
+    if not ses.get("uid"):
+        return True                       # genérico de transición
+    u = db.usuario_plataforma_por_id(ses["uid"])
+    return bool(u and u.activo and u.rol == "superadmin")
+
+
+def _exigir_superadmin_plataforma(request: Request):
+    exigir_plataforma(request)
+    if not _es_superadmin_plataforma(request):
+        raise HTTPException(403, "Solo un superadmin de plataforma puede gestionar usuarios.")
+
+
+def _quien_plataforma(request: Request) -> str:
+    """El nombre de usuario que hace la acción, para la bitácora."""
+    u = _usuario_plataforma_de_sesion(request)
+    return u.usuario if u else "generico"
+
+
+@app.get("/plataforma/usuarios", response_class=HTMLResponse)
+def plataforma_usuarios(request: Request):
+    if not sesion_actual(request, "plataforma"):
+        return RedirectResponse("/plataforma", status_code=303)
+    if _pendiente_de_completar(request):
+        return RedirectResponse("/plataforma/completar", status_code=303)
+    if not _es_superadmin_plataforma(request):
+        raise HTTPException(403, "Solo un superadmin puede ver esta sección.")
+    return templates.TemplateResponse("plataforma_usuarios.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "usuarios": db.listar_usuarios_plataforma(),
+        "aviso": request.query_params.get("aviso", ""),
+    })
+
+
+@app.post("/plataforma/usuarios")
+def plataforma_usuarios_crear(request: Request, usuario: str = Form(...), nombre: str = Form(""),
+                              rol: str = Form("admin"), clave_transitoria: str = Form(...)):
+    _exigir_superadmin_plataforma(request)
+    if len(clave_transitoria) < 8:
+        return RedirectResponse("/plataforma/usuarios?aviso=clave_corta", status_code=303)
+    fila, motivo = db.crear_usuario_plataforma(
+        usuario, nombre, rol, auth.hashear_clave(clave_transitoria), _quien_plataforma(request))
+    if motivo:
+        return RedirectResponse("/plataforma/usuarios?aviso=existe", status_code=303)
+    db.registrar_log_plataforma("alta", _quien_plataforma(request), objetivo=fila.usuario,
+                                ip=_ip_de(request), detalle=f"rol={fila.rol}")
+    return RedirectResponse("/plataforma/usuarios?aviso=creado", status_code=303)
+
+
+@app.post("/plataforma/usuarios/{uid}/editar")
+def plataforma_usuarios_editar(uid: int, request: Request, nombre: str = Form(""),
+                               rol: str = Form("admin")):
+    _exigir_superadmin_plataforma(request)
+    objetivo = db.usuario_plataforma_por_id(uid)
+    if not objetivo:
+        raise HTTPException(404, "No existe ese usuario.")
+    # No dejar que se le saque el superadmin al último superadmin activo.
+    if objetivo.rol == "superadmin" and rol != "superadmin" and db.superadmins_activos() <= 1:
+        return RedirectResponse("/plataforma/usuarios?aviso=ultimo", status_code=303)
+    db.editar_usuario_plataforma(uid, nombre, rol)
+    db.registrar_log_plataforma("edicion", _quien_plataforma(request), objetivo=objetivo.usuario,
+                                ip=_ip_de(request), detalle=f"rol={rol}")
+    return RedirectResponse("/plataforma/usuarios?aviso=editado", status_code=303)
+
+
+@app.post("/plataforma/usuarios/{uid}/activar")
+def plataforma_usuarios_activar(uid: int, request: Request, activo: str = Form("")):
+    _exigir_superadmin_plataforma(request)
+    objetivo = db.usuario_plataforma_por_id(uid)
+    if not objetivo:
+        raise HTTPException(404, "No existe ese usuario.")
+    activar = activo == "1"
+    # Guarda del último superadmin activo (SPRINT_R1.md).
+    if not activar and objetivo.rol == "superadmin" and db.superadmins_activos() <= 1:
+        return RedirectResponse("/plataforma/usuarios?aviso=ultimo", status_code=303)
+    db.set_activo_usuario_plataforma(uid, activar)
+    db.registrar_log_plataforma("activacion" if activar else "desactivacion",
+                                _quien_plataforma(request), objetivo=objetivo.usuario,
+                                ip=_ip_de(request))
+    return RedirectResponse("/plataforma/usuarios?aviso=" + ("activado" if activar else "desactivado"),
+                            status_code=303)
+
+
+@app.post("/plataforma/usuarios/{uid}/resetear")
+def plataforma_usuarios_resetear(uid: int, request: Request, clave_transitoria: str = Form(...)):
+    _exigir_superadmin_plataforma(request)
+    objetivo = db.usuario_plataforma_por_id(uid)
+    if not objetivo:
+        raise HTTPException(404, "No existe ese usuario.")
+    if len(clave_transitoria) < 8:
+        return RedirectResponse("/plataforma/usuarios?aviso=clave_corta", status_code=303)
+    db.resetear_clave_plataforma(uid, auth.hashear_clave(clave_transitoria))
+    db.registrar_log_plataforma("reseteo", _quien_plataforma(request), objetivo=objetivo.usuario,
+                                ip=_ip_de(request))
+    return RedirectResponse("/plataforma/usuarios?aviso=reseteado", status_code=303)
 
 
 @app.post("/plataforma/config")

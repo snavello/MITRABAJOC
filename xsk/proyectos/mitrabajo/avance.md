@@ -16,12 +16,13 @@ actualizado: 2026-09-20
 
 ## Cómo seguir
 
-Sub-sprint R1: etapas 0, 1 y 2 hechas. La 2 sumó **/entornos/login**: la
-landing se abre con el mismo usuario+clave nominal (el PIN queda de fallback).
-H-0003 → Parcial. Plataforma 0.31.02.
+Sub-sprint R1: etapas 0-3 hechas. La 3 sumó la **gestión de usuarios** en
+`/plataforma/usuarios` (solo superadmin): alta con clave transitoria de 7
+días, editar, activar/desactivar, resetear, con guarda del último superadmin
+y bitácora. Verificado en el navegador. Plataforma 0.32.01.
 
-Sigue: etapa 3 (gestión de usuarios solo superadmin: alta con clave
-transitoria de 7 días, editar, activar/desactivar, resetear) y etapa 4
-(cerrar la transición: sacar el genérico y el PIN → H-0002/H-0003/H-0016 a
-Solucionado). En paralelo: perímetro INF-05 (H-0008), H-0018, H-0014/H-0015,
-carga DIS-01/02.
+Queda la **etapa 4**: cerrar la transición — sacar el genérico 20000000000 y
+el PIN de la landing. Recién ahí H-0002/H-0003/H-0016 pasan a Solucionado.
+**Se hace cuando SDN confirme que los nominales ya andan en Pruebas/Demo**
+(es el paso que apaga el acceso viejo). En paralelo siguen: perímetro
+INF-05 (H-0008), H-0018, H-0014/H-0015, carga DIS-01/02.
