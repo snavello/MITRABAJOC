@@ -145,6 +145,9 @@ def test_h0005_formulas_legitimas_siguen_evaluando():
     assert validador._evaluar("total_ingresos * 0.03 + c(\"128\")", v) == 80.0
     assert validador._evaluar("(base_remunerativa - total_ingresos) / 2", v) == 500.0
     assert validador._evaluar("-total_ingresos", v) == -1000.0
+    # con espacios/saltos alrededor (como quedan guardadas): deben evaluar igual
+    assert validador._evaluar("  base_remunerativa * 0.015  ", v) == 30.0
+    assert validador._evaluar("\n0.03*total_ingresos\n", v) == 30.0
 
 
 def test_h0005_el_escape_de_sandbox_ya_no_ejecuta():

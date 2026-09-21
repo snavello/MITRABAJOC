@@ -377,7 +377,10 @@ def _evaluar(expr: str, variables: dict) -> float:
     solo números, las variables provistas (total_ingresos, base_remunerativa),
     aritmética y la función c("CODIGO"). Se conservan los tipos de excepción
     (SyntaxError/NameError/ZeroDivisionError) que espera error_de_expresion()."""
-    arbol = _ast.parse(expr, mode="eval")
+    # .strip(): en modo "eval" ast.parse NO tolera espacios/saltos al inicio
+    # (da IndentationError), cosa que la función incorporada sí aceptaba. Una
+    # fórmula guardada como "  0.03*total_ingresos " tiene que evaluar igual.
+    arbol = _ast.parse((expr or "").strip(), mode="eval")
     return float(_ev_nodo(arbol.body, variables))
 
 
