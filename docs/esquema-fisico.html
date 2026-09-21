@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Esquema físico — Colm3na</title>
+<style>
+  :root{
+    --bg:#0b1220; --panel:#111a2e; --nodo:#172238; --nodo2:#1d2a44; --borde:#2b3a57;
+    --texto:#e6edf7; --texto2:#9fb0c8; --texto3:#6b7a94;
+    --ambar:#f5b83d; --azul:#5aa9ff; --violeta:#b39bff; --verde:#4ade80; --rosa:#ff6ab0; --gris:#5c6b85;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--texto);font:14px/1.45 "Segoe UI",system-ui,-apple-system,sans-serif}
+  header{padding:22px 28px 10px;display:flex;flex-wrap:wrap;gap:14px 28px;align-items:baseline;border-bottom:1px solid var(--borde)}
+  header h1{margin:0;font-size:22px;letter-spacing:.02em}
+  header h1 small{color:var(--texto2);font-weight:400;font-size:14px;margin-left:10px}
+  .leyenda{display:flex;flex-wrap:wrap;gap:14px;color:var(--texto2);font-size:12px}
+  .leyenda span::before{content:"";display:inline-block;width:22px;height:0;border-top:2px solid var(--texto2);margin-right:6px;vertical-align:middle}
+  .leyenda .pl::before{border-top-style:dashed;border-color:var(--gris)}
+  .leyenda .ma::before{border-top-style:dotted;border-color:var(--rosa)}
+  .leyenda .dev::before{border-color:var(--azul)} .leyenda .ext::before{border-color:var(--violeta)}
+  .leyenda .obs::before{border-color:var(--verde)} .leyenda .ent::before{border-color:var(--ambar)}
+  main{display:grid;grid-template-columns:1fr 340px;gap:0;min-height:calc(100vh - 70px)}
+  #lienzo{padding:14px 10px 10px 18px;overflow:auto}
+  svg{width:100%;height:auto;display:block}
+  aside{border-left:1px solid var(--borde);background:var(--panel);padding:18px 20px;position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto}
+  aside h2{margin:0 0 4px;font-size:18px}
+  aside .zona{color:var(--texto3);font-size:11px;text-transform:uppercase;letter-spacing:.12em}
+  aside .estado{display:inline-block;margin:8px 0 12px;padding:2px 9px;border-radius:999px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;border:1px solid}
+  .e-activo{color:var(--verde);border-color:var(--verde)} .e-planeado{color:var(--gris);border-color:var(--gris)}
+  .e-manual{color:var(--rosa);border-color:var(--rosa)} .e-parcial{color:var(--ambar);border-color:var(--ambar)}
+  aside ul{padding-left:18px;margin:0 0 12px;color:var(--texto2)}
+  aside li{margin:4px 0}
+  aside dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;font-size:13px}
+  aside dt{color:var(--texto3)} aside dd{margin:0}
+  aside .vacio{color:var(--texto3);font-style:italic}
+  .g-titulo{fill:var(--texto3);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+  .n-titulo{fill:var(--texto);font-size:14px;font-weight:600}
+  .n-sub{fill:var(--texto2);font-size:11px}
+  .n-chip{fill:var(--texto);font-size:11px}
+  .a-label{fill:var(--texto2);font-size:10.5px}
+  .a-labelbg{fill:var(--bg);opacity:.92}
+  .nodo{cursor:pointer}
+  .nodo:hover rect.caja, .nodo.fijo rect.caja{stroke-width:2.5;filter:drop-shadow(0 0 6px rgba(245,184,61,.35))}
+  section.lectura{padding:26px 28px 40px;border-top:1px solid var(--borde);grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:28px}
+  section.lectura h2{font-size:16px;margin:0 0 10px;color:var(--ambar);letter-spacing:.04em}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  td,th{padding:6px 8px;border-bottom:1px solid var(--borde);vertical-align:top;text-align:left}
+  th{color:var(--texto3);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+  td:first-child{color:var(--texto2);white-space:nowrap}
+  section.lectura ol{padding-left:20px;color:var(--texto2)} section.lectura li{margin:6px 0}
+  b{color:var(--texto)}
+  @media (max-width:1000px){main{grid-template-columns:1fr} aside{position:static;max-height:none;border-left:0;border-top:1px solid var(--borde)} section.lectura{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Esquema físico de Colm3na <small>v1 · leído del boceto del 2026-09-21 · pasar el mouse por un componente para ver su ficha, clic para fijarla</small></h1>
+  <div class="leyenda">
+    <span class="dev">desarrollo y entrega</span><span class="ent">entornos en Render</span><span class="ext">servicios externos</span>
+    <span class="obs">observabilidad</span><span class="pl">planeado / no existe hoy</span><span class="ma">paso manual de una persona</span>
+  </div>
+</header>
+<main>
+  <div id="lienzo"><svg id="svg" viewBox="0 0 1440 980" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  <aside id="ficha">
+    <div class="zona">Componente</div>
+    <h2>Pasá el mouse por el esquema</h2>
+    <p class="vacio">Cada caja tiene su ficha: qué es, qué la conecta, claves y vencimientos, costo y lo que falta. Lo que dice "a completar" todavía no lo sabemos con certeza.</p>
+  </aside>
+
+  <section class="lectura">
+    <div>
+      <h2>Lo que leí en el boceto y a dónde fue a parar</h2>
+      <table>
+        <tr><th>En el papel</th><th>En el esquema</th></tr>
+        <tr><td>DESA · PC DESA · Docker Postgres</td><td>Caja "PC de desarrollo": uvicorn + Postgres del docker-compose + suite con base descartable.</td></tr>
+        <tr><td>Claude Code → API Git → GitHub</td><td>Claude Code commitea, pushea y abre PR con <b>gh</b>; GitHub es el único repo (MITRABAJOC).</td></tr>
+        <tr><td>API Git Grafana (el círculo de arriba a la derecha)</td><td>Lo leí como el <b>disparador</b>: un check de Grafana que le hace workflow_dispatch al colector cada 5 min porque el cron de GitHub no dispara solo. Dibujado como línea verde punteada Grafana → GitHub.</td></tr>
+        <tr><td>API Render (centro, "PORTA…" debajo)</td><td>Caja "API de Render": deploy por rama, Pre-Deploy con alembic, solapa Planes y colector de métricas. La palabra de abajo no la descifré (¿"Portal"? ¿"Puerta"?).</td></tr>
+        <tr><td>② Demo Render Web · Web · Postg · CPU/MEM</td><td>Entorno Demo: rama <b>demo</b>, solo cambia con promover_demo.py. Los "CPU MEM" son las métricas que Render expone por API.</td></tr>
+        <tr><td>① Pruebas · Web · Postg · API Metrics · API Error</td><td>Entorno Pruebas: sigue <b>main</b>. De ahí salen las métricas a Grafana y los errores a Sentry.</td></tr>
+        <tr><td>API Claude (columna central, entre los dos)</td><td>API de Anthropic, usada por los dos entornos: sonnet-4-6 lee recibos, opus-5 contesta el convenio, sonnet-5 es el Asistente.</td></tr>
+        <tr><td>TRAB · SIND · EMP · PLA · ADM</td><td>Las cinco entradas de cada entorno. Puse Afiliado, Sindicato, Empresa, Plataforma y <b>/entornos</b> (la landing interna) como quinta; si "ADM" quiso decir otra cosa, lo corrijo.</td></tr>
+        <tr><td>Personas → Cloudflare (DNS, WAF, Proxy) → Demo</td><td>Dibujado <b>punteado</b>: hoy no existe. Es el perímetro INF-05 / H-0008, el único hallazgo que todavía bloquea producción, y necesita dominio propio.</td></tr>
+        <tr><td>Grafana · Sentry → Mail · Telegram</td><td>Grafana y Sentry avisan al mail de SDN, solo por excepción. <b>Telegram no existe</b> en la configuración ni en el plan: lo dejé punteado como idea.</td></tr>
+        <tr><td>Docs</td><td>Caja "Documentación": lo que vive en el repo y lo que la landing /entornos sirve como Recursos.</td></tr>
+      </table>
+    </div>
+    <div>
+      <h2>Lo que agregué que no estaba en el papel</h2>
+      <ol>
+        <li><b>GitHub Actions</b> como parte de GitHub: el CI (suite completa + pip-audit) y el colector de métricas de Render. Sin esto el eje GitHub ↔ Grafana no se entiende.</li>
+        <li><b>Georef + Nominatim</b> y <b>Web Push</b>: dos servicios externos más que la app llama desde el servidor, sin claves el primero y con VAPID el segundo.</li>
+        <li><b>ARCA</b> como paso manual del afiliado: por decisión no se integra (el captcha lo resuelve la persona y sube la captura).</li>
+        <li><b>El equipo</b> (SDN, ARS) como actor aparte de los usuarios finales: son quienes desarrollan, operan y reciben las alertas.</li>
+        <li>Dentro de cada entorno, lo que lo hace funcionar: Pre-Deploy con Alembic, /healthz como Health Check, y en Pruebas los techos del engine y la solapa Planes.</li>
+        <li><b>Vencimientos</b> que ya conocemos: token del disparador (2026-10-18), tokens de Grafana de la app (2027-09-19). Están en las fichas de Grafana y GitHub.</li>
+      </ol>
+      <h2>Preguntas para afinar la v2</h2>
+      <ol>
+        <li>¿Qué dice debajo de "API Render"? Leo "PORTA" o "PUERTA".</li>
+        <li>¿"ADM" es /entornos, o es el panel de administración del sindicato y "SIND" otra cosa?</li>
+        <li>Telegram: ¿lo querés como canal real de alertas (Grafana Cloud lo soporta con un bot) o era una idea?</li>
+        <li>Cloudflare: ¿lo damos por decidido para el perímetro, o hay que evaluar alternativas antes de comprar el dominio?</li>
+        <li>Costos: ¿el plan actual de cada servicio web y de cada Postgres en Render? Es el dato que falta para que la pantalla muestre gasto mensual.</li>
+      </ol>
+    </div>
+  </section>
+</main>
+
+<script>
+// ---------- DATOS ----------
+// Cada nodo es un componente físico. Los campos "ficha" son lo que mostrará la
+// pantalla viva: estado, notas, claves/vencimientos, costo y pendientes.
+// tipo: dev | ent | ext | obs | per | doc   ·   estado: activo | planeado | manual | parcial
+const GRUPOS = [
+  {id:"gPer", x:30,  y:40,  w:230,  h:910, titulo:"Personas y perímetro"},
+  {id:"gDev", x:290, y:40,  w:1120, h:190, titulo:"Desarrollo y entrega"},
+  {id:"gEnt", x:290, y:270, w:1120, h:370, titulo:"Entornos en Render"},
+  {id:"gDoc", x:290, y:680, w:360,  h:270, titulo:"Documentación"},
+  {id:"gObs", x:680, y:680, w:730,  h:270, titulo:"Observabilidad · hoy solo sobre Pruebas"},
+];
+
+const NODOS = [
+  // --- personas y perímetro
+  {id:"sdn", tipo:"per", estado:"activo", x:50, y:90, w:190, h:110, titulo:"Equipo", sub:["SDN · ARS","desarrolla, opera, recibe alertas"],
+   ficha:{zona:"Personas", notas:["Dos superadmin de plataforma sembrados por migración (snavello, arsantagati).","Sd decide versiones, prioridades y qué cuenta como funcionalidad nueva.","Traspaso de la operación diaria a dos devs: Etapa 4 de PLAN_ENTORNOS.md, pendiente."],
+     campos:{"Costo":"—","Pendiente":"Etapas 2 a 4 de PLAN_ENTORNOS (organización de GitHub, runbook, traspaso)"}}},
+  {id:"personas", tipo:"per", estado:"activo", x:50, y:330, w:190, h:120, titulo:"Usuarios", sub:["Afiliados (CUIL) · Sindicatos (CUIT)","Empresas (CUIT) · Plataforma (usuario)"],
+   ficha:{zona:"Personas", notas:["Entran hoy directo por HTTPS a *.onrender.com, sin perímetro propio.","La afiliación sindical es dato sensible por ley (Ley 25.326): Colm3na es encargado del tratamiento.","Sesión por inactividad de 15 min, cookie separada por rol."],
+     campos:{"Costo":"—"}}},
+  {id:"cloudflare", tipo:"per", estado:"planeado", x:50, y:500, w:190, h:110, titulo:"Cloudflare", sub:["DNS · WAF · proxy","PLANEADO (INF-05 / H-0008)"],
+   ficha:{zona:"Perímetro", notas:["No existe todavía. Es el perímetro del XSK: rate limit, WAF y ocultar el origen de Render.","Necesita dominio propio: hoy los entornos viven en onrender.com.","H-0008 (fuerza bruta en logins) es el único hallazgo que aún bloquea producción y cierra con esto."],
+     campos:{"Costo":"plan Free + dominio (a completar)","Pendiente":"comprar dominio, poner Cloudflare delante de Demo/Prod"}}},
+  {id:"arca", tipo:"per", estado:"manual", x:50, y:780, w:190, h:110, titulo:"ARCA", sub:["Mis Aportes (semáforo)","captcha lo resuelve el afiliado"],
+   ficha:{zona:"Servicio externo · manual", notas:["Decisión firme: NO se automatiza el captcha (frágil y zona gris legal).","El afiliado va a ARCA con un botón, descarga su comprobante y lo sube; la IA lo lee.","Cubre jubilación y obra social, no ART. Estados: pagado / parcial / impago / no presentada / no declarado / informado."],
+     campos:{"Costo":"—","Integración":"ninguna, por diseño"}}},
+
+  // --- desarrollo y entrega
+  {id:"pcdesa", tipo:"dev", estado:"activo", x:310, y:90, w:220, h:110, titulo:"PC de desarrollo", sub:["uvicorn --reload · Python 3.12.8","Postgres del docker-compose"],
+   ficha:{zona:"Desarrollo", notas:["Postgres y nada más: docker compose up -d, alembic upgrade head, uvicorn main:app --reload.","La suite crea una base Postgres descartable por proceso de pytest (un archivo por corrida, nunca batcheado).","E2E con Playwright contra la app real (dependencia de desarrollo, jamás en requirements.txt).","El .env tiene DATABASE_URL, ANTHROPIC_API_KEY y, en la PC de quien promueve, DEMO_DATABASE_URL."],
+     campos:{"Costo":"—","Pendiente":"devcontainer (Etapa 2 de PLAN_ENTORNOS)"}}},
+  {id:"claudecode", tipo:"dev", estado:"activo", x:560, y:90, w:200, h:110, titulo:"Claude Code", sub:["Code ejecuta · Chat y Cowork planifican","commit, push, PR y merge con gh"],
+   ficha:{zona:"Desarrollo", notas:["Code corre en la PC de desarrollo: lee y escribe el repo, corre la suite y opera GitHub con gh.","Chat y Cowork producen planes y cierres de bloque que van a docs/chat/ y a la raíz como PLAN_*/SPRINT_*.","En el XSK, Code es el ejecutor (revisión de código, estático, dinámico contra Pruebas/Demo).","El autor de cada commit es la persona; Claude va como Co-authored-by."],
+     campos:{"Costo":"suscripción Claude (a completar)"}}},
+  {id:"github", tipo:"dev", estado:"activo", x:790, y:90, w:280, h:110, titulo:"GitHub · snavello/MITRABAJOC", sub:["main → Pruebas · demo → Demo","Actions: CI (suite + pip-audit) · colector de métricas"],
+   ficha:{zona:"Desarrollo y entrega", notas:["Único repo del proyecto. Ramas por bloque (feature/ fix/ sprint/); sobre demo nunca se programa.","CI (ci.yml): corre la suite por archivo y pip-audit en cada push y PR (H-0015).","Colector (metricas-render.yml): cada 5 min lee CPU/memoria/5xx de Render y los manda a Grafana. El cron de GitHub no dispara solo: lo empuja el disparador de Grafana.","Secretos de Actions: RENDER_API_KEY, GRAFANA_METRICS_TOKEN."],
+     campos:{"Costo":"gratis (cuenta personal)","Vence":"token del disparador: 2026-10-18 (aviso 7 días antes)","Pendiente":"organización de GitHub + reglas de rama (Etapa 2 de PLAN_ENTORNOS)"}}},
+  {id:"renderapi", tipo:"dev", estado:"activo", x:1100, y:90, w:290, h:110, titulo:"API de Render", sub:["deploy por rama · Pre-Deploy alembic","planes · métricas CPU/MEM · 'En vivo'"],
+   ficha:{zona:"Entrega y operación", notas:["Render mira GitHub: push a main redeploya Pruebas (~90 s); push a demo (solo por promover_demo.py) redeploya Demo. Alembic corre en el Pre-Deploy.","La solapa Planes de /entornos sube y baja el plan del web y del Postgres por API, ahora o en horario fijo (planificador.py); bitácora en CambioPlan.","El colector de métricas y la fila 'En vivo' de Grafana (fuente Infinity render-vivo) usan RENDER_API_KEY: al rotarla, volver a correr aplicar_tablero.py.","El Metrics Stream nativo exige plan Pro (USD 25/mes): descartado por ahora."],
+     campos:{"Clave":"RENDER_API_KEY (Actions, Grafana, app)","Vence":"a confirmar","Costo":"incluido en los servicios"}}},
+
+  // --- entornos
+  {id:"demo", tipo:"ent", estado:"activo", grupo:true, x:310, y:310, w:360, h:310, titulo:"② Demo · mitrabajo.onrender.com", sub:["rama demo · solo cambia con promover_demo.py"],
+   ficha:{zona:"Entorno · Demo", notas:["Es la URL que ven sindicatos e inversores. Cambia únicamente al promover: backup (pg_dump) + merge + tag + push.","ENTORNO=demo: sin distintivo, cookies Secure+SameSite, HSTS, /entornos/xsanders y Planes deshabilitados.","Observabilidad NO replicada todavía: el procedimiento está en docs/OBSERVABILIDAD.md.","Al promover el fix del cuelgue: cargar /healthz como Health Check Path (hoy vacío)."],
+     campos:{"Plan web":"a completar","Plan Postgres":"a completar","Costo":"a completar","Pendiente":"Health Check /healthz · replicar observabilidad · Cloudflare delante"}}},
+  {id:"pruebas", tipo:"ent", estado:"activo", grupo:true, x:1030, y:310, w:360, h:310, titulo:"① Pruebas · mitrabajo-pruebas.onrender.com", sub:["sigue main · redeploya en cada push"],
+   ficha:{zona:"Entorno · Pruebas", notas:["Donde se prueba antes de la demo. Distintivo fijo con entorno + versión para no confundir pantallas.","Medido con 0,5 CPU, 512 MB y 1 worker: los techos del engine (pool 5+5, statement 15 s, cupo del Panel Sindical) nacieron acá tras el cuelgue del 2026-09-18.","MOCK_EXTRACTOR quedó prendido desde los tests de carga: sus lecturas no gastan ni miden.","Único entorno con Planes desde /entornos, colector de métricas, Sentry y uptime."],
+     campos:{"Plan web":"a completar","Plan Postgres":"a completar","Costo":"variable, según Planes","Health Check":"/healthz (sin base) · /readyz solo a mano"}}},
+  // hijos de Demo
+  {id:"demoWeb", tipo:"ent", estado:"activo", x:330, y:370, w:150, h:90, titulo:"Web", sub:["FastAPI + Jinja2 · uvicorn","workers = núcleos"], ficha:{zona:"Demo · servicio web", notas:["FastAPI + Jinja2 + auth propia (PBKDF2, cookies HMAC).","Pre-Deploy: alembic upgrade head. Sin disco persistente: todo archivo va a la base.","/healthz no toca la base; /readyz hace SELECT 1."], campos:{"Plan":"a completar"}}},
+  {id:"demoPg", tipo:"ent", estado:"activo", x:500, y:370, w:150, h:90, titulo:"Postgres", sub:["gestionado por Render","pgvector · JSONB"], ficha:{zona:"Demo · base", notas:["Esquema por Alembic, nunca create_all.","Logos, fotos, adjuntos y embeddings del convenio viven acá (pgvector 1024).","Backup: pg_dump en cada promoción (DEMO_DATABASE_URL en la PC de quien promueve)."], campos:{"Plan":"a completar","Backups":"pg_dump al promover; política de Render a confirmar"}}},
+  // hijos de Pruebas
+  {id:"pruebasWeb", tipo:"ent", estado:"activo", x:1050, y:370, w:150, h:90, titulo:"Web", sub:["FastAPI + Jinja2 · uvicorn","0,5 CPU · 512 MB · 1 worker"], ficha:{zona:"Pruebas · servicio web", notas:["Misma imagen que Demo, rama main.","Hilo colector de métricas (COLECTOR_METRICAS=off lo apaga) y planificador de planes corren adentro de la app.","503 con JSON (E-SERVIDOR-01/02/03) cuando el pool o el cupo se agotan; nunca cuelgue."], campos:{"Plan":"a completar"}}},
+  {id:"pruebasPg", tipo:"ent", estado:"activo", x:1220, y:370, w:150, h:90, titulo:"Postgres", sub:["gestionado por Render","pgvector · JSONB"], ficha:{zona:"Pruebas · base", notas:["Propia, separada de la de Demo. Se puede clonar desde Demo con clonar_demo_a_pruebas.py (excepción, no rutina).","Techos: statement_timeout 15 s, idle_in_transaction 30 s, lock_timeout 5 s en migraciones."], campos:{"Plan":"a completar"}}},
+
+  // --- servicios externos
+  {id:"anthropic", tipo:"ext", estado:"activo", x:700, y:320, w:300, h:100, titulo:"API de Anthropic", sub:["sonnet-4-6 lee recibos y comprobantes","opus-5 convenio (RAG) · sonnet-5 Asistente del panel"],
+   ficha:{zona:"Servicio externo · IA", notas:["Tres usos, cada uno con modelo elegible desde /plataforma → Uso de IA (los tres del título son el default).","Cada lectura de recibo queda en UsoIA con el PRECIO congelado, duración y tokens: el costo se calcula al mostrarlo.","Banco de pruebas: el mismo recibo con varios modelos, línea por línea.","Embeddings del convenio son LOCALES (fastembed), no pasan por esta API."],
+     campos:{"Clave":"ANTHROPIC_API_KEY (por entorno)","Costo":"por uso, USD; ver solapa Uso de IA","Precios":"data/precios_ia.json, a mano, con fecha de lectura"}}},
+  {id:"geo", tipo:"ext", estado:"activo", x:700, y:440, w:300, h:70, titulo:"Georef + Nominatim", sub:["geocodificación en el servidor · caché 90 días · sin claves"],
+   ficha:{zona:"Servicio externo · geo", notas:["Georef (datos.gob.ar): provincia, localidad y sugerencias en vivo.","Nominatim (OSM): calle y altura, 1 pedido por segundo y solo al apretar Buscar.","Un fallo nunca bloquea un alta: la fila queda sin_geo y se ubica después.","Identificación: solo el User-Agent geo.USER_AGENT."],
+     campos:{"Costo":"0","Clave":"ninguna"}}},
+  {id:"push", tipo:"ext", estado:"parcial", x:700, y:530, w:300, h:70, titulo:"Web Push (VAPID)", sub:["novedades de trámites a la PWA del afiliado"],
+   ficha:{zona:"Servicio externo · push", notas:["pywebpush contra los servidores push del navegador de cada afiliado.","Sin las tres variables VAPID el canal queda apagado en silencio: confirmar en qué entornos están cargadas."],
+     campos:{"Clave":"VAPID_PRIVATE_KEY / VAPID_PUBLIC_KEY / VAPID_CLAIM_EMAIL","Costo":"0","Estado":"a confirmar por entorno"}}},
+
+  // --- observabilidad
+  {id:"grafana", tipo:"obs", estado:"activo", x:700, y:730, w:300, h:120, titulo:"Grafana Cloud", sub:["uptime desde Ohio y São Paulo · métricas de Render","alertas · vencimientos · disparador del colector"],
+   ficha:{zona:"Observabilidad", notas:["Regla 0: el observador vive fuera de la app y de Render. Si la app cae, los avisos siguen saliendo.","Uptime sobre /healthz y /readyz de Pruebas; alerta solo si fallan todas las ubicaciones.","Tablero 'Pruebas · Estado general' con 5xx, CPU, memoria y colector mudo. Se dibuja también en la pestaña Observabilidad de /entornos.","Toda la configuración es código: observabilidad/config.json + aplicar_*.py (idempotentes)."],
+     campos:{"Costo":"0 (plan Free)","Tokens":"LECTURA (Viewer) · CONFIG (Editor) · METRICS (metrics:write)","Vence":"tokens de la app 2027-09-19 (aviso 30 días) · disparador GitHub 2026-10-18 (aviso 7 días) · METRICS a confirmar","Pendiente":"métricas propias de la app, detalle por sindicato, resumen diario, replicar en Demo"}}},
+  {id:"sentry", tipo:"obs", estado:"activo", x:1030, y:730, w:200, h:120, titulo:"Sentry", sub:["errores no previstos","con ref, rol y sindicato"],
+   ficha:{zona:"Observabilidad", notas:["Manda solo lo que el handler global no previó, con la ref de 8 caracteres que ve la persona.","Sin cuerpos, cookies, IP, variables locales ni nombres (un CUIL/CUIT suelto puede salir: decisión de SDN).","Se LEE desde la pestaña Observabilidad con un token de solo lectura; botón de error de prueba de punta a punta."],
+     campos:{"Clave":"SENTRY_DSN (escribe) · SENTRY_AUTH_TOKEN (lee)","Costo":"0 (plan Free)","Vence":"a confirmar"}}},
+  {id:"telegram", tipo:"obs", estado:"planeado", x:1250, y:730, w:140, h:120, titulo:"Telegram", sub:["¿canal de alertas?","no existe hoy"],
+   ficha:{zona:"Observabilidad", notas:["Está en el boceto pero no en observabilidad/config.json ni en el plan.","Grafana Cloud lo soporta como punto de contacto (bot + chat id). Decidir si vale la pena además del mail."],
+     campos:{"Costo":"0","Estado":"idea"}}},
+  {id:"mail", tipo:"obs", estado:"activo", x:700, y:880, w:300, h:50, titulo:"Mail de SDN", sub:["solo por excepción · cuatro eventos · repite cada 24 h"],
+   ficha:{zona:"Observabilidad", notas:["Política anti-ruido: avisos solo cuando algo se rompe o un token está por vencer.","El mail y el intervalo se cambian desde la pestaña Observabilidad de /entornos."],
+     campos:{"Costo":"0"}}},
+
+  // --- documentación
+  {id:"docs", tipo:"doc", estado:"activo", x:310, y:730, w:320, h:200, titulo:"Documentación viva", sub:["CLAUDE.md (corto, cada turno) · HISTORIAL.md · BITACORA.md","docs/ fichas rectoras · docs/chat/ · PLAN_* y SPRINT_* en raíz","docs/generador → documentación técnica desde el código","recursos/ → Recursos de /entornos (bitácora, fichas, informes)","este esquema, cuando sea vivo"],
+   ficha:{zona:"Documentación", notas:["CLAUDE.md es el estado vigente; HISTORIAL.md la narrativa; BITACORA.md el índice cronológico (generar_bitacora.py la publica como HTML).","docs/INDICE.md dice dónde está cada cosa. Las fichas rectoras por feature viven en docs/.","Todo lo publicado se cataloga en recursos.SEMILLA y se sirve detrás del login de plataforma en /entornos."],
+     campos:{"Pendiente":"convertir este esquema en la pantalla viva (datos, costos, vencimientos, pendientes)"}}},
+];
+
+// tipo: solido | punteado | manual. de/a: "id.lado(frac)" (lado t r b l). pts: ruta manual.
+const ARISTAS = [
+  {de:"sdn.r", a:"pcdesa.l", label:"programa y prueba", labelEn:[275,214], color:"dev"},
+  {de:"pcdesa.r", a:"claudecode.l", label:"Code corre acá", labelEn:[545,214], color:"dev"},
+  {de:"claudecode.r", a:"github.l", label:"git push · gh (PR, merge)", labelEn:[775,214], color:"dev"},
+  {de:"github.r", a:"renderapi.l", label:"Actions: colector cada 5 min", labelEn:[1085,214], color:"dev"},
+  {de:"github.b(0.3)", a:"demo.t(0.5)", label:"rama demo ← promover_demo.py", color:"ent"},
+  {de:"github.b(0.72)", a:"pruebas.t(0.4)", label:"push a main → redeploy ~90 s", color:"ent"},
+  {de:"renderapi.b(0.55)", a:"pruebas.t(0.85)", label:"Planes · métricas (solo Pruebas)", color:"dev"},
+  {de:"personas.r(0.4)", a:"demo.l(0.3)", label:"HTTPS · onrender.com", labelEn:[275,300], color:"ent"},
+  {de:"personas.b(0.5)", a:"cloudflare.t(0.5)", label:"planeado", tipo:"punteado"},
+  {de:"cloudflare.r(0.5)", a:"demo.l(0.7)", label:"DNS · WAF · proxy (INF-05)", labelEn:[275,634], tipo:"punteado"},
+  {de:"arca.t(0.5)", a:"personas.b(0.85)", label:"el afiliado baja el comprobante y lo sube", labelEn:[145,700], tipo:"manual"},
+  {de:"demo.r(0.2)", a:"anthropic.l(0.5)", label:"lee recibos · convenio · asistente", labelEn:[850,309], color:"ext"},
+  {de:"pruebas.l(0.2)", a:"anthropic.r(0.5)", color:"ext"},
+  {de:"demo.r(0.5)", a:"geo.l(0.5)", label:"geocodifica", labelEn:[850,430], color:"ext"},
+  {de:"pruebas.l(0.5)", a:"geo.r(0.5)", color:"ext"},
+  {de:"demo.r(0.8)", a:"push.l(0.5)", label:"avisa a la PWA", labelEn:[850,520], color:"ext"},
+  {de:"pruebas.l(0.8)", a:"push.r(0.5)", color:"ext"},
+  {de:"grafana.t(0.5)", a:"pruebas.b(0.3)", label:"uptime /healthz /readyz · métricas del hilo · lectura del tablero", labelEn:[980,648], color:"obs"},
+  {de:"sentry.t(0.5)", a:"pruebas.b(0.6)", label:"errores (SENTRY_DSN) · lectura por API", labelEn:[1230,668], color:"obs"},
+  {de:"grafana", a:"github", pts:[[700,760],[685,760],[685,250],[930,250],[930,200]], label:"disparador: workflow_dispatch cada 5 min · token vence 2026-10-18", labelEn:[808,250], color:"obs", tipo:"punteado"},
+  {de:"grafana.b(0.5)", a:"mail.t(0.5)", label:"alertas", color:"obs"},
+  {de:"sentry.b(0.5)", a:"mail.t(0.9)", color:"obs"},
+  {de:"grafana.r(0.5)", a:"telegram.l(0.5)", label:"idea", tipo:"punteado"},
+  {de:"docs.t(0.5)", a:"demo.b(0.5)", label:"Recursos en /entornos (login de plataforma)", labelEn:[480,655], color:"doc"},
+];
+
+const CHIPS = [
+  {padre:"demo", y:480, x0:330}, {padre:"pruebas", y:480, x0:1050}
+];
+const APPS = [
+  {t:"Afiliado", f:"/ingresar → /app · PWA instalable · 6 pestañas"},
+  {t:"Sindicato", f:"/admin · 15 pestañas · 3 roles (Super Admin, Seccional, área)"},
+  {t:"Empresa", f:"/ingresar-empresa → /empresa · solo con módulo empleadores"},
+  {t:"Plataforma", f:"/plataforma · usuarios nominales · alta de sindicatos, módulos, IA"},
+  {t:"/entornos", f:"landing interna: accesos, Recursos, Observabilidad, Planes, Seguridad"},
+];
+const NOTAS_ENT = {
+  demo:["Pre-Deploy: alembic upgrade head", "Health Check: vacío → poner /healthz al promover"],
+  pruebas:["Pre-Deploy: alembic upgrade head", "Health Check: /healthz · techos del engine · cupo del panel"],
+};
+
+const COLOR = {dev:"var(--azul)", ent:"var(--ambar)", ext:"var(--violeta)", obs:"var(--verde)", per:"var(--texto2)", doc:"var(--texto2)", planeado:"var(--gris)", manual:"var(--rosa)"};
+
+// ---------- RENDER ----------
+const NS = "http://www.w3.org/2000/svg";
+const svg = document.getElementById("svg");
+const el = (n, attrs, txt) => { const e = document.createElementNS(NS, n); for (const k in attrs) e.setAttribute(k, attrs[k]); if (txt != null) e.textContent = txt; return e; };
+const porId = Object.fromEntries(NODOS.map(n => [n.id, n]));
+
+// capas
+const capaG = el("g", {id:"grupos"}), capaA = el("g", {id:"aristas"}), capaN = el("g", {id:"nodos"}), capaL = el("g", {id:"labels"});
+svg.append(capaG, capaA, capaN, capaL);
+
+for (const g of GRUPOS) {
+  capaG.append(el("rect", {x:g.x, y:g.y, width:g.w, height:g.h, rx:10, fill:"var(--panel)", stroke:"var(--borde)", "stroke-dasharray":"6 5"}));
+  capaG.append(el("text", {x:g.x+14, y:g.y+22, class:"g-titulo"}, g.titulo));
+}
+
+function colorDe(n) { return n.estado === "planeado" ? COLOR.planeado : n.estado === "manual" ? COLOR.manual : COLOR[n.tipo]; }
+
+for (const n of NODOS) {
+  const g = el("g", {class:"nodo", "data-id":n.id});
+  const col = colorDe(n);
+  const caja = el("rect", {class:"caja", x:n.x, y:n.y, width:n.w, height:n.h, rx:8,
+    fill: n.grupo ? "var(--nodo)" : "var(--nodo2)", stroke: col, "stroke-width": n.grupo ? 1.5 : 1.8});
+  if (n.estado === "planeado") caja.setAttribute("stroke-dasharray", "7 5");
+  if (n.estado === "manual") caja.setAttribute("stroke-dasharray", "2 4");
+  g.append(caja);
+  // filo de color a la izquierda
+  g.append(el("rect", {x:n.x, y:n.y+8, width:3, height:n.h-16, fill:col, rx:1.5}));
+  g.append(el("text", {x:n.x+14, y:n.y+22, class:"n-titulo"}, n.titulo));
+  n.sub.forEach((s, i) => g.append(el("text", {x:n.x+14, y:n.y+40+i*15, class:"n-sub"}, s)));
+  if (n.estado !== "activo") {
+    const et = n.estado.toUpperCase();
+    g.append(el("text", {x:n.x+n.w-10, y:n.y+n.h-8, class:"n-sub", "text-anchor":"end", fill:col, "font-weight":"700", "letter-spacing":".08em"}, et));
+  }
+  g.addEventListener("mouseenter", () => mostrarFicha(n));
+  g.addEventListener("click", (ev) => { ev.stopPropagation(); fijar(n); });
+  capaN.append(g);
+}
+
+// chips de apps y notas dentro de cada entorno
+for (const c of CHIPS) {
+  const padre = porId[c.padre];
+  APPS.forEach((a, i) => {
+    const x = c.x0 + i*66, w = 62;
+    const g = el("g", {class:"nodo", "data-id":c.padre+"-app"+i});
+    g.append(el("rect", {x, y:c.y, width:w, height:30, rx:6, fill:"var(--bg)", stroke:"var(--borde)"}));
+    g.append(el("text", {x:x+w/2, y:c.y+19, class:"n-chip", "text-anchor":"middle"}, a.t));
+    g.addEventListener("mouseenter", () => mostrarFicha({titulo:a.t, estado:"activo", ficha:{zona:padre.titulo, notas:[a.f], campos:{}}}));
+    capaN.append(g);
+  });
+  NOTAS_ENT[c.padre].forEach((t, i) => capaN.append(el("text", {x:c.x0, y:c.y+55+i*16, class:"n-sub"}, t)));
+}
+
+// anclas
+function ancla(spec) {
+  const m = spec.match(/^(\w+)\.([trbl])(?:\(([\d.]+)\))?$/);
+  const n = porId[m[1]], f = m[3] != null ? parseFloat(m[3]) : 0.5;
+  switch (m[2]) {
+    case "t": return {x:n.x+n.w*f, y:n.y,     dx:0,  dy:-1};
+    case "b": return {x:n.x+n.w*f, y:n.y+n.h, dx:0,  dy:1};
+    case "l": return {x:n.x,       y:n.y+n.h*f, dx:-1, dy:0};
+    case "r": return {x:n.x+n.w,   y:n.y+n.h*f, dx:1,  dy:0};
+  }
+}
+function bezier(a, b) {
+  const d = Math.max(40, Math.hypot(b.x-a.x, b.y-a.y) * 0.4);
+  const c1 = {x:a.x+a.dx*d, y:a.y+a.dy*d}, c2 = {x:b.x+b.dx*d, y:b.y+b.dy*d};
+  const mid = {x:(a.x+3*c1.x+3*c2.x+b.x)/8, y:(a.y+3*c1.y+3*c2.y+b.y)/8};
+  return {d:`M${a.x},${a.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${b.x},${b.y}`, mid};
+}
+// puntas de flecha por color
+const defs = el("defs", {});
+for (const k of ["dev","ent","ext","obs","per","doc","planeado","manual"]) {
+  const mk = el("marker", {id:"f-"+k, viewBox:"0 0 10 10", refX:9, refY:5, markerWidth:7, markerHeight:7, orient:"auto-start-reverse"});
+  mk.append(el("path", {d:"M0,0 L10,5 L0,10 z", fill:COLOR[k]}));
+  defs.append(mk);
+}
+svg.prepend(defs);
+
+for (const a of ARISTAS) {
+  const k = a.tipo === "punteado" ? "planeado" : a.tipo === "manual" ? "manual" : (a.color || "per");
+  let d, mid;
+  if (a.pts) {
+    d = "M" + a.pts.map(p => p.join(",")).join(" L");
+    mid = a.labelEn ? {x:a.labelEn[0], y:a.labelEn[1]} : {x:a.pts[1][0], y:a.pts[1][1]};
+  } else {
+    const r = bezier(ancla(a.de), ancla(a.a)); d = r.d; mid = a.labelEn ? {x:a.labelEn[0], y:a.labelEn[1]} : r.mid;
+  }
+  const p = el("path", {d, fill:"none", stroke:COLOR[k], "stroke-width":1.4, "marker-end":`url(#f-${k})`, opacity:.9});
+  if (a.tipo === "punteado") p.setAttribute("stroke-dasharray", "6 5");
+  if (a.tipo === "manual") p.setAttribute("stroke-dasharray", "2 4");
+  capaA.append(p);
+  if (a.label) {
+    const t = el("text", {x:mid.x, y:mid.y+3.5, class:"a-label", "text-anchor":"middle"}, a.label);
+    capaL.append(t);
+    const bb = t.getBBox();
+    capaL.insertBefore(el("rect", {class:"a-labelbg", x:bb.x-4, y:bb.y-1, width:bb.width+8, height:bb.height+2, rx:3}), t);
+  }
+}
+
+// ---------- FICHA ----------
+const ficha = document.getElementById("ficha");
+let fijado = null;
+function mostrarFicha(n) {
+  if (fijado && fijado !== n) return;
+  const f = n.ficha || {};
+  const campos = Object.entries(f.campos || {}).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+  ficha.innerHTML = `<div class="zona">${f.zona || ""}</div><h2>${n.titulo}</h2>
+    <span class="estado e-${n.estado}">${n.estado}</span>
+    <ul>${(f.notas || []).map(x => `<li>${x}</li>`).join("")}</ul>
+    ${campos ? `<dl>${campos}</dl>` : ""}
+    ${fijado ? `<p class="vacio">Fijado. Clic en el fondo para soltar.</p>` : ""}`;
+}
+function fijar(n) {
+  document.querySelectorAll(".nodo.fijo").forEach(e => e.classList.remove("fijo"));
+  if (fijado === n) { fijado = null; return; }
+  fijado = null; mostrarFicha(n); fijado = n; mostrarFicha(n);
+  const g = document.querySelector(`.nodo[data-id="${n.id}"]`); if (g) g.classList.add("fijo");
+}
+svg.addEventListener("click", () => { fijado = null; document.querySelectorAll(".nodo.fijo").forEach(e => e.classList.remove("fijo")); });
+</script>
+</body>
+</html>
