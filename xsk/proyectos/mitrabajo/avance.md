@@ -16,17 +16,15 @@ actualizado: 2026-09-20
 
 ## Cómo seguir
 
-**Sub-sprint R1 COMPLETO** (etapas 0-4). Usuarios de plataforma nominales con
-login por usuario en /plataforma y /entornos, primer ingreso forzado, gestión
-solo-superadmin con bitácora, y transición cerrada: genérico y PIN apagados
-por defecto (reversibles por variable). **H-0002, H-0003 y H-0016 →
-Solucionado.** Plataforma 0.33.01.
+Cerrado el lote INF: H-0014 (deps con CVE, Parcial — multipart/jinja2/dotenv
+al día + anthropic pinneado; falta el salto fastapi/starlette) y H-0015 (CI,
+Solucionado — .github/workflows/ci.yml corre cada test_*.py + pip-audit).
 
-Estado del kit: 8 Solucionado, 2 Parcial, 6 Pendiente, 2 Aceptado; bloquean 1.
-El único que bloquea es **H-0008** (rate-limit de login), cuyo cierre robusto
-es el **perímetro (INF-05, Cloudflare)** — necesita dominio propio + cuenta.
+Estado del kit: 9 Solucionado, 3 Parcial, 4 Pendiente, 2 Aceptado; bloquean 1.
+El único que bloquea es H-0008 (rate-limit de login), que cierra con el
+**perímetro (INF-05, Cloudflare + dominio propio)** — depende de infra de SDN.
 
-Frentes que siguen (no dependen de credenciales de SDN): lote **H-0014 (deps
-con CVE) + H-0015 (CI)**; carga DIS-01/02; y la iteración 2 (ENT/IA/OBS/LEY).
-Nota de operación en la corrida de la etapa 4: antes de producción, snavello
-y arsantagati deben haber hecho su primer ingreso.
+Pendientes que quedan: follow-up de H-0014 (fastapi/starlette 1.x), H-0018
+(panel cross-entorno público), H-0010/H-0012 (con un cambio de sesión), carga
+DIS-01/02, INF-02/03/05 (accesos, backups, perímetro), y la iteración 2
+(ENT/IA/OBS/LEY).

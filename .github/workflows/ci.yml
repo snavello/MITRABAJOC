@@ -1,0 +1,86 @@
+# CI de la suite (XSK H-0015). Antes un push a `main` redeployaba Pruebas sin
+# correr nada: un test roto llegaba al entorno. Ahora, en cada push a main y en
+# cada PR, se corre CADA test_*.py POR SEPARADO (regla del proyecto: comparten
+# estado de import y se contaminan si corren juntos) contra un Postgres con la
+# extensión vector, y se audita las dependencias.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    if: github.repository == 'snavello/MITRABAJOC'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16     # trae la extensión `vector` que usa el RAG
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mitrabajo_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # conftest.py crea una base descartable por proceso a partir de esta URL.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mitrabajo_ci
+      # auth.py las exige (fail-closed); en CI son valores de descarte.
+      SESSION_SECRET: ci-secreto-descartable-larguisimo
+      PLATAFORMA_PASSWORD: ci-plataforma-descartable
+      PLATAFORMA_CUIT: "20000000000"
+      ENTORNO: pruebas
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+      - name: Correr cada test_*.py por separado
+        run: |
+          set -e
+          fallidos=""
+          for f in test_*.py; do
+            echo "::group::$f"
+            if python -m pytest "$f" -q; then :; else fallidos="$fallidos $f"; fi
+            echo "::endgroup::"
+          done
+          if [ -n "$fallidos" ]; then
+            echo "Archivos con fallas:$fallidos"
+            exit 1
+          fi
+
+  auditoria:
+    if: github.repository == 'snavello/MITRABAJOC'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: pip-audit de las dependencias
+        # Informativo por ahora: quedan las CVE de starlette, que se cierran con
+        # el salto mayor fastapi/starlette (follow-up de H-0014). Cuando eso
+        # entre, sacar continue-on-error para que la auditoría bloquee.
+        continue-on-error: true
+        run: |
+          python -m pip install pip-audit
+          python -m pip_audit -r requirements.txt --progress-spinner off
