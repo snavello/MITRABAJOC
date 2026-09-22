@@ -15,6 +15,20 @@
 
 <div id="obs-aviso" class="aviso" hidden></div>
 
+{# Indicadores de negocio del entorno (vinieron de la Sala de mando, 2026-09-21).
+   Salen de /api/entornos/esquema (esquema.py). Lo que la solapa ya mostraba
+   (semáforo, uptime, vencimientos de tokens) no se repite acá. #}
+<h3 class="planes-titulo">Indicadores del entorno</h3>
+<div class="planes-estado" id="obs-kpis">
+  <div class="plan-estado-tarjeta"><span class="k">Recibos leídos</span><span class="grande" data-kpi="recibos">…</span><span class="linea" data-kpi="recibos-sub"></span></div>
+  <div class="plan-estado-tarjeta"><span class="k">Usuarios en línea</span><span class="grande" data-kpi="linea">…</span><span class="linea" data-kpi="linea-sub"></span></div>
+  <div class="plan-estado-tarjeta"><span class="k">Trámites abiertos</span><span class="grande" data-kpi="tramites">…</span><span class="linea" data-kpi="tramites-sub"></span></div>
+  <div class="plan-estado-tarjeta"><span class="k">Sindicatos activos</span><span class="grande" data-kpi="sind">…</span><span class="linea" data-kpi="sind-sub"></span></div>
+  <div class="plan-estado-tarjeta"><span class="k">Afiliados registrados</span><span class="grande" data-kpi="reg">…</span><span class="linea" data-kpi="reg-sub"></span></div>
+  <div class="plan-estado-tarjeta"><span class="k">Gasto del mes</span><span class="grande">US$ —</span><span class="linea">5 pagos hoy + 3 futuros · planes y montos a completar</span></div>
+</div>
+<p class="plan-nota" id="obs-kpis-nota" style="margin-top:6px;">"En línea" son los ingresos de los últimos 15 minutos (lo que dura una sesión sin uso). Actualizado: <span id="obs-kpis-hora">—</span>.</p>
+
 <h3 class="planes-titulo">Métricas de Grafana (números y gráficos, sin iniciar sesión)</h3>
 <div id="obs-graficos"><div class="vacio">Consultando a Grafana…</div></div>
 
