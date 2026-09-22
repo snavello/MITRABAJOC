@@ -597,7 +597,7 @@
   {# Sin cápsula propia: la Sala trae su logo y su botón circular de volver, que
      le avisa a esta página por postMessage (mismo origen). Esc también cierra. #}
   <button type="button" id="sala-cerrar" hidden aria-hidden="true">Volver a Entornos</button>
-  <iframe id="sala-mando" title="Sala de mando" data-src="/entornos/esquema?embebida=1"></iframe>
+  <iframe id="sala-mando" title="Sala de mando" data-src="/entornos/esquema?embebida=1" allow="fullscreen"></iframe>
 </div>
 
 <script>
@@ -756,7 +756,17 @@
   document.getElementById('sala-abrir').addEventListener('click', abrirSala);
   document.getElementById('sala-cerrar').addEventListener('click', cerrarSala);
   document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && capa.classList.contains('abierta')) cerrarSala(); });
-  window.addEventListener('message', ev => { if (ev.origin === location.origin && ev.data && ev.data.sala === 'cerrar') cerrarSala(); });
+  window.addEventListener('message', ev => {
+    if (ev.origin !== location.origin || !ev.data) return;
+    if (ev.data.sala === 'cerrar') { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); cerrarSala(); }
+    // Pantalla completa "solo radar": se pide sobre la CAPA (este documento), no sobre
+    // el iframe; la activación del clic adentro del iframe vale acá por ser mismo origen.
+    if (ev.data.sala === 'fullscreen' && capa.requestFullscreen) capa.requestFullscreen().catch(() => {});
+    if (ev.data.sala === 'salir-fullscreen' && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  });
+  document.addEventListener('fullscreenchange', () => {
+    if (iframe.contentWindow) iframe.contentWindow.postMessage({sala:'solo-radar', on: !!document.fullscreenElement}, location.origin);
+  });
   const tabObs = document.querySelector('.etab[data-tab="observabilidad"]');
   tabObs.addEventListener('click', () => { if (document.querySelector('.obs-pastilla.activa').dataset.obs === 'sala') abrirSala(); });
   if (location.hash === '#observabilidad') abrirSala();

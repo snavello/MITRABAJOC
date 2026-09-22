@@ -5209,3 +5209,27 @@ narración va en el mismo panel, fijado a la derecha. Los tres botones de
 recorrido pasaron a la cabecera, entre el título y el semáforo, y el
 título dice solo "Sala de mando": el logo al lado ya dice Colm3na. El radar
 ocupa ahora todo el ancho. Plataforma 0.35.06.
+
+### La Sala entra en la ventana, y "solo radar" a pantalla completa (mismo día)
+
+Sd reportó tres cosas: el botón de volver "desapareció", las tarjetas
+flotantes salían cortadas a los costados, y quería un modo de pantalla
+completa real (sin barra del navegador ni del sistema, solo el radar) que
+se cierre con el mismo botón de volver. Reproducido con la app servida en
+local y la Sala dentro del iframe: **la página medía 1.146 px en una
+ventana de 900**, así que el tercio inferior del radar quedaba afuera, una
+caja ampliada del borde inferior (Telegram) se dibujaba por debajo del
+viewport y el botón flotante caía sobre esa zona cortada. La raíz era el
+alto: `.marco` es ahora una columna de `100vh` sin scroll (cabecera y
+tarjetas miden lo suyo, el radar se queda con el resto y el SVG se escala
+para caber entero), así nada queda fuera de la ventana a ningún tamaño.
+
+**Pantalla completa "solo radar"**: un segundo botón redondo (cian, encima
+del de volver) pide el fullscreen del navegador. Embebida en la landing lo
+pide el padre sobre su capa por `postMessage` (la activación del clic en
+el iframe alcanza a los ancestros del mismo origen; el iframe lleva
+`allow="fullscreen"` igual) y avisa al iframe cuando entra y sale; suelta,
+lo pide la propia página. En ese modo `body.solo-radar` esconde cabecera,
+tarjetas y leyenda: queda el radar a toda la pantalla. **El botón de volver
+sale de la pantalla completa** si está en ella, y si no, como antes,
+cierra la capa o vuelve a `/entornos`. Plataforma 0.35.07.

@@ -16,8 +16,16 @@
   --halo:#3ec9a7; --neon:#f2b234;
 }
 *{box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
 body{margin:0;background:var(--noche);color:var(--texto);font:14px/1.45 var(--body)}
-.marco{max-width:1800px;margin:0 auto;padding:16px 22px 30px;{% if embebida %}padding-top:8px;{% endif %}}
+/* Todo entra en la ventana (2026-09-21): cabecera y tarjetas miden lo suyo y el
+   radar se queda con el resto, con el dibujo escalado para caber entero. Antes la
+   página medía más que la ventana y, embebida, el borde inferior quedaba afuera. */
+.marco{height:100vh;display:flex;flex-direction:column;padding:10px 22px 8px;{% if embebida %}padding-top:6px;{% endif %}}
+.cuerpo{flex:1;min-height:0;display:flex;flex-direction:column}
+body.solo-radar .marco{padding:0}
+body.solo-radar header, body.solo-radar .tiles, body.solo-radar .pie{display:none}
+body.solo-radar .radar{border-radius:0;border:0}
 header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid var(--linea);padding-bottom:8px}
 header .marca{display:flex;align-items:center;gap:14px;min-width:0}
 header .marca img{display:block;height:30px;width:auto;max-width:150px;object-fit:contain}
@@ -30,6 +38,11 @@ h1 em{font-style:normal;color:var(--miel)}
 .volver svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .volver span{position:absolute;right:68px;top:50%;transform:translateY(-50%);white-space:nowrap;font:700 12px var(--cond);letter-spacing:.14em;text-transform:uppercase;color:var(--texto2);opacity:0;transition:opacity .15s;pointer-events:none}
 .volver:hover span{opacity:1}
+.volver.pantalla{bottom:92px;width:48px;height:48px;border-color:var(--cian);color:var(--cian);box-shadow:0 10px 30px rgba(0,0,0,.6),0 0 0 6px rgba(111,227,255,.1)}
+.volver.pantalla:hover{background:var(--cian);color:#0a1421}
+.volver.pantalla svg{width:22px;height:22px}
+.volver.pantalla span{right:58px}
+body.solo-radar .volver.pantalla{display:none}
 .estado-ctl{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--texto2);letter-spacing:.1em;text-transform:uppercase}
 .estado-ctl button{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;background:var(--c);opacity:.45}
 .estado-ctl button.on{opacity:1;border-color:#fff;box-shadow:0 0 10px var(--c)}
@@ -47,7 +60,7 @@ h1 em{font-style:normal;color:var(--miel)}
 .burbuja{position:fixed;z-index:60;max-width:360px;background:#0f1c2e;border:1px solid #3a4f70;border-radius:8px;padding:8px 11px;font-size:12px;line-height:1.45;color:var(--texto);box-shadow:0 12px 30px rgba(0,0,0,.55);pointer-events:none;white-space:pre-line;display:none}
 .burbuja b{color:var(--miel);font-weight:600}
 .tile.ok b{color:var(--halo)} .tile.alerta::before{background:var(--rojo)} .tile.alerta b{color:var(--rojo)}
-.radar{position:relative;border:1px solid var(--linea);border-radius:14px;overflow:hidden;
+.radar{position:relative;flex:1;min-height:0;border:1px solid var(--linea);border-radius:14px;overflow:hidden;
   background:radial-gradient(ellipse at 50% 40%, #12223a 0%, var(--noche) 70%);
   box-shadow:inset 0 0 140px -50px var(--halo), 0 0 60px -30px var(--halo);transition:box-shadow .8s}
 .radar::before{content:"";position:absolute;inset:0;background-image:linear-gradient(#ffffff07 1px,transparent 1px),linear-gradient(90deg,#ffffff07 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
@@ -59,7 +72,7 @@ h1 em{font-style:normal;color:var(--miel)}
 .radar[data-estado="violeta"] svg{filter:saturate(.4)}
 @keyframes girar{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.barrido{animation:none}}
-svg#svg{position:relative;width:100%;height:auto;display:block}
+svg#svg{position:relative;width:100%;height:100%;display:block}
 svg text{font-family:var(--body)}
 .ico{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .zona-t{font:700 11px var(--cond);letter-spacing:.2em;text-transform:uppercase}
@@ -107,7 +120,7 @@ aside button{background:var(--cian);color:#0a1421;border:0;border-radius:6px;pad
 aside button.sec{background:transparent;color:var(--texto2);border:1px solid var(--linea)}
 aside .paso-actual{font-size:14px;line-height:1.4;margin:10px 0;padding:10px 12px;border-left:3px solid var(--neon);background:rgba(255,255,255,.03)}
 aside ol.recorrido{padding-left:18px;color:var(--texto3);font-size:11.5px} aside ol.recorrido li{margin:2px 0}
-.pie{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;color:var(--texto3);font-size:11px;align-items:center}
+.pie{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;color:var(--texto3);font-size:11px;align-items:center;flex:none}
 .pie i{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--c);vertical-align:middle;margin-right:5px;opacity:.9}
 .pie .pago i{border-radius:50%;background:var(--miel)} .pie .pago.fut i{background:none;border:1.5px dashed var(--miel)} .pie .pl i{background:none;border:1px dashed #6b7a94;border-radius:0;height:0;width:22px}
 @media (max-width:1100px){aside{width:min(340px,calc(100vw - 32px))}}
@@ -154,7 +167,7 @@ aside ol.recorrido{padding-left:18px;color:var(--texto3);font-size:11.5px} aside
     </div>
   </header>
 
-  <div>
+  <div class="cuerpo">
     <div class="tiles" id="tiles">
       <div class="tile ok" data-envtile="pruebas"><small>Pruebas</small><b data-kpi="est-pruebas">—</b><span data-kpi="ver-pruebas">consultando…</span></div>
       <div class="tile ok" data-envtile="demo"><small>Demo</small><b data-kpi="est-demo">—</b><span data-kpi="ver-demo">consultando…</span></div>
@@ -180,7 +193,8 @@ Los planes y montos todavía no están cargados."><small>Gasto del mes</small><b
   <aside id="ficha"></aside>
 </div>
 
-<button type="button" class="volver" id="volver" title="Volver a Entornos" aria-label="Volver a Entornos"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg><span>Volver a Entornos</span></button>
+<button type="button" class="volver pantalla" id="pantalla" title="Pantalla completa: solo el radar" aria-label="Pantalla completa"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><span>Solo el radar, a pantalla completa</span></button>
+<button type="button" class="volver" id="volver" title="Volver" aria-label="Volver"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg><span>Volver</span></button>
 <script id="datos-vivos" type="application/json">{{ datos|tojson }}</script>
 <script>
 // Logos vendoreados (static/marcas.svg, Simple Icons CC0) y el isotipo de ARCA, con sello de /static.
@@ -635,11 +649,32 @@ function finAnim() { limpiarNeon(); anim = null; fichaInicial(); }
 function detener() { if (anim) { clearTimeout(anim.timer); anim = null; } limpiarNeon(); }
 fichaInicial();
 
-// Volver: adentro de la landing (iframe) le pide al padre que cierre la capa;
-// suelta, va a /entornos. Solo se habla con el mismo origen.
+// Pantalla completa "solo radar": sin barra del navegador ni del sistema, sin
+// cabecera ni tarjetas. Embebida, la pide el PADRE sobre su capa (la activación
+// del usuario dentro del iframe alcanza a los ancestros del mismo origen) y avisa
+// por mensaje cuando entra o sale; suelta, la pide esta misma página.
+const EMBEBIDA = window.parent && window.parent !== window;
+const avisarPadre = m => window.parent.postMessage(Object.assign({sala:"x"}, m), location.origin);
+function soloRadar(on) {
+  document.body.classList.toggle("solo-radar", !!on);
+  desZoom(); fichaInicial();
+}
+function enFullscreen() { return document.body.classList.contains("solo-radar"); }
+document.getElementById("pantalla").addEventListener("click", () => {
+  if (EMBEBIDA) avisarPadre({sala:"fullscreen"});
+  else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+});
+// Volver: en pantalla completa, sale de ella; si no, embebida cierra la capa de la
+// landing y suelta vuelve a /entornos. Solo se habla con el mismo origen.
 document.getElementById("volver").addEventListener("click", () => {
-  if (window.parent && window.parent !== window) window.parent.postMessage({sala:"cerrar"}, location.origin);
+  if (enFullscreen()) { if (EMBEBIDA) avisarPadre({sala:"salir-fullscreen"}); else if (document.fullscreenElement) document.exitFullscreen(); return; }
+  if (EMBEBIDA) avisarPadre({sala:"cerrar"});
   else location.href = "/entornos";
+});
+document.addEventListener("fullscreenchange", () => { if (!EMBEBIDA) soloRadar(!!document.fullscreenElement); });
+window.addEventListener("message", ev => {
+  if (ev.origin !== location.origin || !ev.data || ev.data.sala !== "solo-radar") return;
+  soloRadar(ev.data.on);
 });
 
 // foco de luz que sigue al puntero (mismo mecanismo que el login, más chico y más sutil)
