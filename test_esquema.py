@@ -140,7 +140,8 @@ def test_pestana_observabilidad_con_dos_pastillas_y_sala_de_mando_por_defecto():
     # la Sala trae su logo y su botón circular de volver; la bajada larga ya no está
     s = c.get("/entornos/esquema").text
     assert 'id="volver"' in s and 'alt="Colm3na"' in s and "Todo lo que corre entre" not in s
-    assert "<h1><em>Sala de mando</em></h1>" in s and 'id="recorridos"' in s   # sin "Colm3na" en el título; recorridos en la cabecera
+    assert "<h1><em>Sala de mando</em></h1>" in s and 'id="recorridos"' in s   # sin "Colm3na" en el título
+    assert s.index('id="recorridos"') > s.index('class="foco"') and 'equipo:"Código"' in s   # los ▶ viven dentro del radar
     assert "function ocultarFicha" in s and "aside.visible" in s              # la ficha flota, no ocupa columna
     assert 'avisarPadre({sala:"cerrar"})' in s and 'id="pantalla"' in s and "solo-radar" in s
     assert "ev.data.sala === 'cerrar'" in t and "ev.data.sala === 'fullscreen'" in t   # y la landing lo escucha
