@@ -142,8 +142,9 @@ def test_pestana_observabilidad_con_dos_pastillas_y_sala_de_mando_por_defecto():
     assert 'id="volver"' in s and 'alt="Colm3na"' in s and "Todo lo que corre entre" not in s
     assert "<h1><em>Sala de mando</em></h1>" in s and 'id="recorridos"' in s   # sin "Colm3na" en el título; recorridos en la cabecera
     assert "function ocultarFicha" in s and "aside.visible" in s              # la ficha flota, no ocupa columna
-    assert 'window.parent.postMessage({sala:"cerrar"}' in s
-    assert "ev.data.sala === 'cerrar'" in t    # y la landing lo escucha
+    assert 'avisarPadre({sala:"cerrar"})' in s and 'id="pantalla"' in s and "solo-radar" in s
+    assert "ev.data.sala === 'cerrar'" in t and "ev.data.sala === 'fullscreen'" in t   # y la landing lo escucha
+    assert "capa.requestFullscreen()" in t and "sala:'solo-radar'" in t
     print("OK  test_pestana_observabilidad_con_dos_pastillas_y_sala_de_mando_por_defecto")
 
 
