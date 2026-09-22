@@ -738,27 +738,32 @@
   const subs = document.querySelectorAll('.obs-sub');
   const capa = document.getElementById('sala-full');
   const iframe = document.getElementById('sala-mando');
-  function abrirSala() {
+  function abrirSala(conFullscreen) {
     if (!iframe.getAttribute('src')) iframe.src = iframe.dataset.src;
     capa.classList.add('abierta'); capa.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
+    // Pantalla completa del navegador: solo vale dentro de un clic (activación del
+    // usuario); al entrar por el hash de la URL no hay clic y queda la capa sola.
+    if (conFullscreen && capa.requestFullscreen && !document.fullscreenElement) capa.requestFullscreen().catch(() => {});
   }
   function cerrarSala() {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     capa.classList.remove('abierta'); capa.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
+    elegir('tecnica', false);          // volver deja la Observación técnica, no el menú
   }
   function elegir(n, abrir) {
     pastillas.forEach(p => { p.classList.toggle('activa', p.dataset.obs === n); p.setAttribute('aria-selected', p.dataset.obs === n ? 'true' : 'false'); });
     subs.forEach(s => { s.hidden = s.dataset.obsPanel !== n; });
-    if (n === 'sala' && abrir) abrirSala();
+    if (n === 'sala' && abrir) abrirSala(true);
   }
   pastillas.forEach(p => p.addEventListener('click', () => elegir(p.dataset.obs, true)));
-  document.getElementById('sala-abrir').addEventListener('click', abrirSala);
+  document.getElementById('sala-abrir').addEventListener('click', () => abrirSala(true));
   document.getElementById('sala-cerrar').addEventListener('click', cerrarSala);
   document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && capa.classList.contains('abierta')) cerrarSala(); });
   window.addEventListener('message', ev => {
     if (ev.origin !== location.origin || !ev.data) return;
-    if (ev.data.sala === 'cerrar') { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); cerrarSala(); }
+    if (ev.data.sala === 'cerrar') cerrarSala();
     // Pantalla completa "solo radar": se pide sobre la CAPA (este documento), no sobre
     // el iframe; la activación del clic adentro del iframe vale acá por ser mismo origen.
     if (ev.data.sala === 'fullscreen' && capa.requestFullscreen) capa.requestFullscreen().catch(() => {});
@@ -768,8 +773,8 @@
     if (iframe.contentWindow) iframe.contentWindow.postMessage({sala:'solo-radar', on: !!document.fullscreenElement}, location.origin);
   });
   const tabObs = document.querySelector('.etab[data-tab="observabilidad"]');
-  tabObs.addEventListener('click', () => { if (document.querySelector('.obs-pastilla.activa').dataset.obs === 'sala') abrirSala(); });
-  if (location.hash === '#observabilidad') abrirSala();
+  tabObs.addEventListener('click', () => { if (document.querySelector('.obs-pastilla.activa').dataset.obs === 'sala') abrirSala(true); });
+  if (location.hash === '#observabilidad') abrirSala(false);
   window.abrirSala = abrirSala;   // por si otra parte de la landing quiere abrirla
 })();
 
@@ -847,9 +852,26 @@
     decir((d.errores || []).join(' · '), true);
   }
 
+  // Indicadores de negocio (vinieron de la Sala de mando): /api/entornos/esquema.
+  const fmt = n => (n == null) ? '—' : Number(n).toLocaleString('es-AR');
+  const kpi = (k, v) => { const e = document.querySelector(`#obs-kpis [data-kpi="${k}"]`); if (e) e.textContent = v; };
+  async function cargarKpis() {
+    if (!document.getElementById('obs-kpis')) return;
+    try {
+      const d = await pedir('/api/entornos/esquema');
+      const k = d.kpis || {}, l = k.en_linea || {}, sind = k.sindicatos || [];
+      kpi('recibos', fmt(k.recibos_total)); kpi('recibos-sub', `+${fmt(k.recibos_hoy)} hoy · ${fmt(k.lecturas_hoy)} lecturas de IA · US$ ${fmt(k.costo_hoy_usd)}`);
+      kpi('linea', fmt(k.en_linea_total)); kpi('linea-sub', `afiliados ${fmt(l.trabajador || 0)} · gremio ${fmt(l.admin || 0)} · empresa ${fmt(l.empresa || 0)} · plataforma ${fmt(l.plataforma || 0)}`);
+      kpi('tramites', fmt(k.tramites_abiertos)); kpi('tramites-sub', `${fmt(k.tramites_esperan)} todavía sin respuesta del gremio`);
+      kpi('sind', fmt(sind.length)); kpi('sind-sub', sind.join(' · ') || 'ninguno');
+      kpi('reg', fmt(k.registrados)); kpi('reg-sub', `de ${fmt(k.padron)} en el padrón · ${fmt(k.porcentaje_registrados)}%`);
+      const h = document.getElementById('obs-kpis-hora'); if (h) h.textContent = d.actualizado || '—';
+    } catch (err) { kpi('recibos', '—'); kpi('recibos-sub', 'No se pudieron leer los indicadores: ' + err.message); }
+  }
   async function cargar() {
     cargarSentry(false);
     cargarMetricas(false);
+    cargarKpis();
     try { pintar(await pedir('/api/entornos/observabilidad')); }
     catch (err) { decir('No se pudo consultar: ' + err.message, true); }
   }

@@ -42,7 +42,7 @@ h1 em{font-style:normal;color:var(--miel)}
 .volver.pantalla:hover{background:var(--cian);color:#0a1421}
 .volver.pantalla svg{width:22px;height:22px}
 .volver.pantalla span{right:58px}
-body.solo-radar .volver.pantalla{display:none}
+body.en-fullscreen .volver.pantalla{display:none}
 .estado-ctl{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--texto2);letter-spacing:.1em;text-transform:uppercase}
 .estado-ctl button{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;background:var(--c);opacity:.45}
 .estado-ctl button.on{opacity:1;border-color:#fff;box-shadow:0 0 10px var(--c)}
@@ -133,7 +133,7 @@ aside ol.recorrido{padding-left:18px;color:var(--texto3);font-size:11.5px} aside
 @media (max-width:1100px){aside{width:min(340px,calc(100vw - 32px))}}
 </style>
 </head>
-<body>
+<body class="{% if embebida %}solo-radar{% endif %}">
 <svg width="0" height="0" style="position:absolute"><defs>
   <symbol id="i-docker" viewBox="0 0 24 24"><g class="ico"><path d="M3 13h18c-.6 4-3.6 6.5-8 6.5S3.7 17 3 13z"/><rect x="5" y="9.5" width="3" height="3"/><rect x="8.5" y="9.5" width="3" height="3"/><rect x="12" y="9.5" width="3" height="3"/><rect x="8.5" y="6" width="3" height="3"/><rect x="12" y="6" width="3" height="3"/><path d="M18 11c1.5-.8 3-.5 3.5.3"/></g></symbol>
   <symbol id="i-github" viewBox="0 0 24 24"><g class="ico"><circle cx="6" cy="5" r="2.2"/><circle cx="6" cy="19" r="2.2"/><circle cx="18" cy="9" r="2.2"/><path d="M6 7.2v9.6M18 11.2c0 3-3 4-6 4.5-2 .3-4 .8-6 1.1"/></g></symbol>
@@ -174,20 +174,6 @@ aside ol.recorrido{padding-left:18px;color:var(--texto3);font-size:11.5px} aside
   </header>
 
   <div class="cuerpo">
-    <div class="tiles" id="tiles">
-      <div class="tile ok" data-envtile="pruebas"><small>Pruebas</small><b data-kpi="est-pruebas">—</b><span data-kpi="ver-pruebas">consultando…</span></div>
-      <div class="tile ok" data-envtile="demo"><small>Demo</small><b data-kpi="est-demo">—</b><span data-kpi="ver-demo">consultando…</span></div>
-      <div class="tile"><small>Seguridad</small><b data-kpi="seg">—</b><span data-kpi="seg-sub">—</span></div>
-      <div class="tile alerta"><small>Próximo vencimiento</small><b data-kpi="venc">—</b><span data-kpi="venc-sub">—</span></div>
-      <div class="tile" data-detalle="Pagos de hoy: Render (Demo y Pruebas, web y Postgres), API de Anthropic (por uso), Claude Code (suscripción).
-Serán pagos: GitHub (organización), Grafana (más de un entorno), Cloudflare (dominio y plan).
-Los planes y montos todavía no están cargados."><small>Gasto del mes</small><b>US$ —</b><span>5 pagos + 3 futuros · a completar</span></div>
-      <div class="tile neg"><small>Recibos leídos</small><b data-kpi="recibos">—</b><span data-kpi="recibos-sub">—</span></div>
-      <div class="tile neg"><small>Usuarios en línea</small><b data-kpi="linea">—</b><span data-kpi="linea-sub">—</span></div>
-      <div class="tile neg"><small>Trámites abiertos</small><b data-kpi="tramites">—</b><span data-kpi="tramites-sub">—</span></div>
-      <div class="tile neg"><small>Sindicatos activos</small><b data-kpi="sind">—</b><span data-kpi="sind-sub">—</span></div>
-      <div class="tile neg"><small>Afiliados registrados</small><b data-kpi="reg">—</b><span data-kpi="reg-sub">—</span></div>
-    </div>
     <div class="radar" id="radar" data-estado="verde">
       <div class="barrido"></div>
       <div class="foco"></div>
@@ -507,64 +493,17 @@ setEstado("verde");
 // ---- datos vivos: los inyecta el servidor al dibujar y el navegador los
 // refresca cada minuto pidiendo /api/entornos/esquema (que suma el semáforo
 // de Grafana). Si el pedido falla, el estado pasa a violeta: la app no responde.
-const fmt = n => (n == null) ? "—" : Number(n).toLocaleString("es-AR");
-const kpi = (k, v, detalle) => {
-  const e = document.querySelector(`[data-kpi="${k}"]`); if (!e) return;
-  e.textContent = v;
-  if (detalle != null) { const t = e.closest(".tile"); if (t) t.dataset.detalle = detalle; }
-};
-// Burbuja de detalle: una sola para toda la página; sigue al mouse sobre el indicador.
-const burbuja = document.createElement("div"); burbuja.className = "burbuja"; document.body.append(burbuja);
-document.querySelectorAll(".tile").forEach(t => {
-  t.addEventListener("mouseenter", () => { if (!t.dataset.detalle) return; burbuja.textContent = t.dataset.detalle; burbuja.style.display = "block"; });
-  t.addEventListener("mousemove", ev => {
-    const w = burbuja.offsetWidth, h = burbuja.offsetHeight;
-    burbuja.style.left = Math.min(ev.clientX + 14, window.innerWidth - w - 8) + "px";
-    burbuja.style.top = (ev.clientY + 18 + h > window.innerHeight ? ev.clientY - h - 10 : ev.clientY + 18) + "px";
-  });
-  t.addEventListener("mouseleave", () => { burbuja.style.display = "none"; });
-});
+// Los indicadores de negocio se mudaron a la pastilla "Observación técnica" de
+// /entornos (2026-09-21): la Sala es solo el radar. De /api/entornos/esquema
+// toma el semáforo de Grafana y la hora; si el pedido falla, violeta.
 function aplicarDatos(d) {
   if (!d) return;
-  const k = d.kpis || {};
-  kpi("recibos", fmt(k.recibos_total)); kpi("recibos-sub", `+${fmt(k.recibos_hoy)} hoy · US$ ${fmt(k.costo_hoy_usd)}`,
-      `Recibos leídos en total: ${fmt(k.recibos_total)}\nLeídos hoy: ${fmt(k.recibos_hoy)}\nLecturas de IA hoy (recibos, aportes, aprendizaje): ${fmt(k.lecturas_hoy)}\nCosto de hoy, a precio congelado de cada llamada: US$ ${fmt(k.costo_hoy_usd)}`);
-  const l = k.en_linea || {};
-  kpi("linea", fmt(k.en_linea_total)); kpi("linea-sub", `afiliados ${fmt(l.trabajador || 0)} · gremio ${fmt(l.admin || 0)} · empresa ${fmt(l.empresa || 0)}`,
-      `Ingresos en los últimos ${k.minutos_en_linea} minutos (lo que dura una sesión sin actividad): es la aproximación a "en línea", la app no registra cada pedido.\nAfiliados: ${fmt(l.trabajador || 0)}\nSindicato: ${fmt(l.admin || 0)}\nEmpresas: ${fmt(l.empresa || 0)}\nPlataforma: ${fmt(l.plataforma || 0)}`);
-  kpi("tramites", fmt(k.tramites_abiertos)); kpi("tramites-sub", `${fmt(k.tramites_esperan)} esperan al gremio`,
-      `Trámites en cualquier estado salvo terminado: ${fmt(k.tramites_abiertos)}\nTodavía sin respuesta del gremio (estado iniciado): ${fmt(k.tramites_esperan)}`);
-  const sind = k.sindicatos || [];
-  kpi("sind", fmt(sind.length)); kpi("sind-sub", sind.slice(0, 3).join(" · ") + (sind.length > 3 ? ` · +${sind.length - 3}` : "") || "ninguno",
-      sind.length ? "Sindicatos activos en este entorno:\n" + sind.map(x => "· " + x).join("\n") : "Ningún sindicato activo");
-  kpi("reg", fmt(k.registrados)); kpi("reg-sub", `de ${fmt(k.padron)} · ${fmt(k.porcentaje_registrados)}%`,
-      `Afiliados activos en el padrón: ${fmt(k.padron)}\nQue ya crearon su cuenta: ${fmt(k.registrados)} (${fmt(k.porcentaje_registrados)}%)`);
-  if (d.seguridad) { kpi("seg", d.seguridad.bloquean ? `${d.seguridad.bloquean} BLOQUEA` : "SIN BLOQUEOS"); kpi("seg-sub", `${d.seguridad.solucionado} solucionados · ${d.seguridad.pendiente} pendientes`,
-      `Hallazgos del Security Kit (XSK):\nSolucionados: ${d.seguridad.solucionado}\nParciales: ${d.seguridad.parcial}\nPendientes: ${d.seguridad.pendiente}\nAceptados: ${d.seguridad.aceptado}\nBloquean producción: ${d.seguridad.bloquean}`); }
-  else { kpi("seg", "SIN DATO"); kpi("seg-sub", "registro del Security Kit ilegible", "No se pudo leer el registro de hallazgos del XSK."); }
-  if (d.vencimiento) { kpi("venc", d.vencimiento.dias < 0 ? "VENCIDO" : `${d.vencimiento.dias} DÍAS`); kpi("venc-sub", `${d.vencimiento.nombre}`,
-      `${d.vencimiento.nombre}\nVence: ${d.vencimiento.vence} (faltan ${d.vencimiento.dias} días)\nEstado: ${d.vencimiento.estado}\nCómo renovarlo: ${d.vencimiento.como || "ver observabilidad/config.json"}`); }
-  else { kpi("venc", "—"); kpi("venc-sub", "sin vencimientos registrados", "No hay vencimientos en observabilidad/config.json."); }
   setEstado(d.semaforo && ESTADOS[d.semaforo] ? d.semaforo : "gris");
   const act = document.getElementById("actualizado"); if (act) act.textContent = "· " + (d.actualizado || "");
 }
-// El estado de CADA entorno sale de su propio /api/version (público, con
-// CORS, igual que lo hace la landing): responde = en línea, con su versión.
-function sondearEntornos(urls) {
-  for (const [env, base] of Object.entries(urls || {})) {
-    const t = document.querySelector(`[data-envtile="${env}"]`); if (!t) continue;
-    fetch(base + "/api/version", {mode:"cors"}).then(r => r.ok ? r.json() : Promise.reject(r.status)).then(v => {
-      t.classList.remove("alerta"); kpi("est-" + env, "EN LÍNEA");
-      kpi("ver-" + env, `${v.plataforma || v.version || "—"} · ${env === "pruebas" ? "main" : "rama demo"}`,
-          `${base}\nResponde /api/version: en línea.\nTrabajador ${v.trabajador || "—"} · Admin ${v.admin || "—"} · Plataforma ${v.plataforma || "—"}\nVersión del ${v.fecha || "—"}\n${env === "pruebas" ? "Sigue main: redeploya con cada push." : "Sigue la rama demo: cambia solo al promover."}`);
-    }).catch(() => { t.classList.add("alerta"); kpi("est-" + env, "SIN RESPUESTA"); kpi("ver-" + env, base.replace(/^https?:\/\//, ""), `${base}\nNo respondió /api/version. Puede estar caído, dormido, o correr una versión anterior a esa ruta.`); });
-  }
-}
 const inicial = document.getElementById("datos-vivos");
 if (inicial) {
-  let urls = {};
-  try { const d0 = JSON.parse(inicial.textContent); urls = d0.urls || {}; aplicarDatos(d0); } catch (e) {}
-  sondearEntornos(urls); setInterval(() => sondearEntornos(urls), 60000);
+  try { aplicarDatos(JSON.parse(inicial.textContent)); } catch (e) {}
   const refrescar = () => fetch("/api/entornos/esquema", {credentials:"same-origin"}).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(aplicarDatos).catch(() => setEstado("violeta"));
   refrescar(); setInterval(refrescar, 60000);
 }
@@ -665,20 +604,22 @@ fichaInicial();
 const EMBEBIDA = window.parent && window.parent !== window;
 const avisarPadre = m => window.parent.postMessage(Object.assign({sala:"x"}, m), location.origin);
 function soloRadar(on) {
-  document.body.classList.toggle("solo-radar", !!on);
+  document.body.classList.toggle("en-fullscreen", !!on);
+  if (!EMBEBIDA) document.body.classList.toggle("solo-radar", !!on);   // embebida ya es solo radar siempre
   desZoom(); fichaInicial();
 }
-function enFullscreen() { return document.body.classList.contains("solo-radar"); }
+function enFullscreen() { return document.body.classList.contains("en-fullscreen"); }
 document.getElementById("pantalla").addEventListener("click", () => {
   if (EMBEBIDA) avisarPadre({sala:"fullscreen"});
   else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
 });
-// Volver: en pantalla completa, sale de ella; si no, embebida cierra la capa de la
-// landing y suelta vuelve a /entornos. Solo se habla con el mismo origen.
+// Volver: embebida, le pide a la landing que cierre (sale del fullscreen y deja
+// abierta la pastilla "Observación técnica"); suelta, sale de la pantalla completa
+// si está en ella y si no vuelve a /entornos. Solo se habla con el mismo origen.
 document.getElementById("volver").addEventListener("click", () => {
-  if (enFullscreen()) { if (EMBEBIDA) avisarPadre({sala:"salir-fullscreen"}); else if (document.fullscreenElement) document.exitFullscreen(); return; }
-  if (EMBEBIDA) avisarPadre({sala:"cerrar"});
-  else location.href = "/entornos";
+  if (EMBEBIDA) { avisarPadre({sala:"cerrar"}); return; }
+  if (enFullscreen() && document.fullscreenElement) { document.exitFullscreen(); return; }
+  location.href = "/entornos";
 });
 document.addEventListener("fullscreenchange", () => { if (!EMBEBIDA) soloRadar(!!document.fullscreenElement); });
 window.addEventListener("message", ev => {

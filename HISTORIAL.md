@@ -5243,3 +5243,19 @@ esconde) y viven ahora **adentro del radar**, abajo a la izquierda:
 ámbar, rojo y cian, con el rótulo debajo en condensada; el que está
 corriendo queda encendido con un halo de su color hasta que termina o se
 detiene. Plataforma 0.35.08.
+
+### Los indicadores se mudan a Observación técnica; la Sala es solo el radar (mismo día)
+
+Última vuelta de Sd tras mirar todo con calma: los indicadores de negocio
+pasan a la pastilla **Observación técnica** (sin repetir lo que esa solapa
+ya tenía: el semáforo, el uptime y los vencimientos de tokens quedan donde
+estaban; se suman recibos leídos, usuarios en línea, trámites abiertos,
+sindicatos activos, afiliados registrados y gasto del mes, leídos de
+`/api/entornos/esquema` con las tarjetas de siempre de la landing). Con eso
+la Sala embebida es **solo el radar**, sin cabecera ni tarjetas, y
+**elegirla abre directamente en pantalla completa** del navegador (el clic
+en la pastilla es la activación que el navegador exige; al entrar por el
+hash de la URL no hay clic y queda la capa sola). **Volver deja abierta la
+pastilla Observación técnica**, no el menú principal: sale del fullscreen,
+cierra la capa y cambia la pastilla. Suelta (desde Recursos) la Sala
+conserva la cabecera y el botón de pantalla completa. Plataforma 0.35.09.

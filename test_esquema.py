@@ -86,7 +86,7 @@ def test_sin_pase_no_se_ve_y_con_pase_dibuja_con_datos():
     r = c.get("/entornos/esquema")
     assert r.status_code == 200 and "Sala de mando" in r.text and 'id="datos-vivos"' in r.text
     assert "{% raw %}" not in r.text        # Jinja procesó la plantilla entera
-    assert 'className = "burbuja"' in r.text and "dataset.detalle" in r.text   # detalle largo en burbuja, no en la tarjeta
+    assert 'class="tiles"' not in r.text and "data-kpi=" not in r.text   # los indicadores viven en Observación técnica
     d = c.get("/api/entornos/esquema").json()
     assert d["entorno"] == "pruebas" and "kpis" in d and "versiones" in d
     assert d["seguridad"] is not None and "bloquean" in d["seguridad"]
@@ -145,6 +145,10 @@ def test_pestana_observabilidad_con_dos_pastillas_y_sala_de_mando_por_defecto():
     assert "function ocultarFicha" in s and "aside.visible" in s              # la ficha flota, no ocupa columna
     assert 'avisarPadre({sala:"cerrar"})' in s and 'id="pantalla"' in s and "solo-radar" in s
     assert "ev.data.sala === 'cerrar'" in t and "ev.data.sala === 'fullscreen'" in t   # y la landing lo escucha
+    assert 'id="obs-kpis"' in t and 'data-kpi="recibos"' in t and "cargarKpis" in t       # los indicadores, en la técnica
+    assert "elegir('tecnica', false);          // volver deja" in t                        # volver = Observación técnica
+    assert 'body class="{% if embebida %}solo-radar{% endif %}"' not in s            # (Jinja lo procesó)
+    assert '<body class="solo-radar">' in c.get("/entornos/esquema?embebida=1").text and '<body class="">' in s
     assert "capa.requestFullscreen()" in t and "sala:'solo-radar'" in t
     print("OK  test_pestana_observabilidad_con_dos_pastillas_y_sala_de_mando_por_defecto")
 
