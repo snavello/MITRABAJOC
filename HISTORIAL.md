@@ -5233,3 +5233,13 @@ lo pide la propia página. En ese modo `body.solo-radar` esconde cabecera,
 tarjetas y leyenda: queda el radar a toda la pantalla. **El botón de volver
 sale de la pantalla completa** si está en ella, y si no, como antes,
 cierra la capa o vuelve a `/entornos`. Plataforma 0.35.07.
+
+### Los tres ▶ como botones circulares dentro del radar (mismo día)
+
+Sd: que los tres recorridos sean botones circulares de play, cada uno de su
+color, con un rótulo corto (Recibo, Error, Código), y que sigan a mano en
+la pantalla completa. Salieron de la cabecera (que en modo "solo radar" se
+esconde) y viven ahora **adentro del radar**, abajo a la izquierda:
+ámbar, rojo y cian, con el rótulo debajo en condensada; el que está
+corriendo queda encendido con un halo de su color hasta que termina o se
+detiene. Plataforma 0.35.08.

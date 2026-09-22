@@ -104,9 +104,16 @@ svg.animando .nodo:not(.neon):not(.paso) > rect.caja{opacity:.5}
 aside{position:fixed;top:70px;width:340px;max-height:calc(100vh - 110px);overflow:auto;z-index:65;display:none;
   background:rgba(15,28,46,.96);border:1px solid #3a4f70;border-radius:14px;padding:14px 18px;box-shadow:0 18px 50px rgba(0,0,0,.6);backdrop-filter:blur(6px);pointer-events:none}
 aside.visible{display:block} aside.fija{pointer-events:auto;border-color:var(--miel)}
-.recorridos{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
-.recorridos button{background:transparent;color:var(--texto);border:1px solid var(--c);border-radius:999px;padding:4px 12px;font:600 12px var(--body);cursor:pointer}
-.recorridos button:hover{background:var(--c);color:#0a1421}
+/* Los tres recorridos: botones circulares de play, cada uno de su color, con un
+   rótulo corto debajo. Viven ADENTRO del radar (abajo a la izquierda), así siguen
+   a mano en pantalla completa "solo radar" (pedido de Sd, 2026-09-21). */
+.recorridos{position:absolute;left:16px;bottom:12px;z-index:6;display:flex;gap:14px;align-items:flex-end}
+.recorridos button{position:relative;width:46px;height:46px;border-radius:50%;border:2px solid var(--c);background:rgba(10,20,33,.85);color:var(--c);cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(0,0,0,.55),0 0 0 4px color-mix(in srgb,var(--c) 14%,transparent);transition:transform .15s,background .15s,color .15s}
+.recorridos button svg{width:20px;height:20px;fill:currentColor;margin-left:3px}
+.recorridos button:hover,.recorridos button.activo{background:var(--c);color:#0a1421;transform:scale(1.06)}
+.recorridos button.activo{box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 35%,transparent),0 0 18px var(--c)}
+.recorridos button span{position:absolute;top:50px;left:50%;transform:translateX(-50%);font:700 10px var(--cond);letter-spacing:.16em;text-transform:uppercase;color:var(--texto2);white-space:nowrap}
+.recorridos{padding-bottom:16px}
 aside h2{margin:0 0 4px;font:700 24px/1 var(--cond);letter-spacing:.03em;text-transform:uppercase}
 aside .zona{color:var(--texto3);font-size:10px;text-transform:uppercase;letter-spacing:.14em}
 aside .estado{display:inline-block;margin:8px 6px 10px 0;padding:2px 9px;border-radius:999px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;border:1px solid}
@@ -157,7 +164,6 @@ aside ol.recorrido{padding-left:18px;color:var(--texto3);font-size:11.5px} aside
       <img src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Colm3na">
       <h1><em>Sala de mando</em></h1>
     </div>
-    <div class="recorridos" id="recorridos"></div>
     <div class="estado-ctl" id="estadoCtl">estado general
       <button data-e="verde" style="--c:#3ec9a7" title="Todo en línea"></button>
       <button data-e="amarillo" style="--c:#f2b234" title="Degradado"></button>
@@ -185,6 +191,7 @@ Los planes y montos todavía no están cargados."><small>Gasto del mes</small><b
     <div class="radar" id="radar" data-estado="verde">
       <div class="barrido"></div>
       <div class="foco"></div>
+      <div class="recorridos" id="recorridos" aria-label="Recorridos"></div>
       <svg id="svg" viewBox="0 0 1440 880" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
     <div class="pie" id="pie"><span class="pago"><i></i>pago hoy</span><span class="pago fut"><i></i>será pago</span><span class="pl"><i></i>planeado / manual · pelotitas: tráfico real</span><span style="color:var(--texto3)" id="fuente-cifras">· las cifras salen de la base de este entorno; el semáforo, de Grafana</span></div>
@@ -598,7 +605,8 @@ function fichaInicial() {
 }
 // Los tres recorridos, como botones en la cabecera.
 const recorridosEl = document.getElementById("recorridos");
-recorridosEl.innerHTML = Object.entries(RECORRIDOS).map(([k, r]) => `<button data-play="${k}" style="--c:${r.color}" title="${r.titulo}">▶ ${r.titulo}</button>`).join("");
+const ROTULOS = {recibo:"Recibo", error:"Error", equipo:"Código"};
+recorridosEl.innerHTML = Object.entries(RECORRIDOS).map(([k, r]) => `<button data-play="${k}" style="--c:${r.color}" title="${r.titulo}" aria-label="${r.titulo}"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg><span>${ROTULOS[k] || k}</span></button>`).join("");
 recorridosEl.querySelectorAll("[data-play]").forEach(b => b.addEventListener("click", () => animar(b.dataset.play)));
 function desZoom() { if (zoomado) { zoomado.removeAttribute("transform"); zoomado.classList.remove("zoom", "fijo"); zoomado = null; } }
 function alClic(n) {
@@ -622,6 +630,7 @@ function animar(id) {
   const rec = RECORRIDOS[id];
   document.documentElement.style.setProperty("--neon", rec.color);
   svg.classList.add("animando");
+  recorridosEl.querySelectorAll("[data-play]").forEach(b => b.classList.toggle("activo", b.dataset.play === id));
   anim = {rec, i:0, timer:null}; paso();
 }
 const elementosDe = p => [...(p.n || []).map(nodeG), ...(p.e || []).map(id => capaA.querySelector(`[data-arista="${id}"]`))].filter(Boolean);
@@ -644,7 +653,7 @@ function pintarAside(fin) {
   ficha.querySelector("[data-det]").addEventListener("click", () => { detener(); fichaInicial(); });
   ficha.querySelector("[data-rep]").addEventListener("click", () => animar(Object.keys(RECORRIDOS).find(k => RECORRIDOS[k] === rec)));
 }
-function limpiarNeon() { svg.querySelectorAll(".neon, .paso").forEach(e => e.classList.remove("neon", "paso")); svg.classList.remove("animando"); }
+function limpiarNeon() { svg.querySelectorAll(".neon, .paso").forEach(e => e.classList.remove("neon", "paso")); svg.classList.remove("animando"); recorridosEl.querySelectorAll(".activo").forEach(b => b.classList.remove("activo")); }
 function finAnim() { limpiarNeon(); anim = null; fichaInicial(); }
 function detener() { if (anim) { clearTimeout(anim.timer); anim = null; } limpiarNeon(); }
 fichaInicial();
