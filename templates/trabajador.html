@@ -912,6 +912,11 @@
     display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
   .enq-hecha .tic svg { width:12px; height:12px; fill:none; stroke:#1c7a45;
     stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
+  /* Por qué de una anónima no se pueden ver las respuestas propias. Va con
+     el color del chip "Anónima" y no en gris de nota al pie: no es una
+     disculpa, es la prueba de que la promesa se cumplió. */
+  .enq-anon-nota { margin-top:11px; font-size:12px; line-height:1.5; color:#1c6b57;
+    background:#eaf4f1; border:1px solid #c9e3db; border-radius:10px; padding:9px 11px; }
   .enq-marco { border:1px solid var(--linea); border-radius:16px; overflow:hidden; background:#fff; }
   .enq-cab { background:linear-gradient(135deg, var(--marca-acento), var(--marca-apoyo));
     color:#fff; padding:18px 18px 15px; }
@@ -3000,6 +3005,17 @@ function htmlTarjetaEncuesta(e) {
   if (e.respondio) {
     cuerpo += `<div class="enq-hecha"><span class="tic"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
       Ya la respondiste. Gracias por participar.</div>`;
+    // Sus propias respuestas, no las de todos: no espera a que la encuesta
+    // cierre ni depende de que el sindicato lo habilite. Pero en una anónima
+    // NO HAY dónde buscarlas, y decirlo acá es lo que hace creíble el
+    // "anónima" de la próxima encuesta.
+    // Una línea y no un párrafo: con tres encuestas anónimas respondidas, el
+    // mismo texto largo repetido en cada tarjeta deja de leerse.
+    cuerpo += e.modo === 'anonima'
+      ? `<div class="enq-anon-nota">Es anónima: ni el sindicato ni esta aplicación
+         pueden ver qué contestaste.</div>`
+      : `<button class="btn sec" style="margin-top:11px;"
+          onclick="verMisRespuestas(${e.id})">Ver mis respuestas</button>`;
   } else if (abierta) {
     cuerpo += htmlPlazoEncuesta(e);
   } else if (e.estado === 'programada') {
@@ -3046,6 +3062,61 @@ function htmlPlazoEncuesta(e) {
 function diaEnc(iso) {
   const p = String(iso || '').split('-');
   return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : (iso || '');
+}
+
+/* ---------- Mis respuestas: lo que contestó ÉL ---------- */
+// Otra cosa que los resultados: no son los números de todos, es su propia
+// respuesta. Por eso no espera al cierre ni al tilde del sindicato. Y por eso
+// mismo solo existe en las nominales: en una anónima la urna no guarda
+// ninguna columna que lleve a una persona, así que la búsqueda no puede dar
+// resultado -- y la pantalla lo explica en vez de mostrar un error.
+async function verMisRespuestas(id) {
+  const cont = document.getElementById('enc-responder');
+  document.getElementById('enc-lista').classList.add('oculto');
+  cont.classList.remove('oculto');
+  const volver = `<button class="btn sec" style="min-height:38px; margin:0 0 10px; width:auto; padding:0 14px;"
+            onclick="volverAListaEncuestas()">← Volver</button>`;
+  cont.innerHTML = volver + '<p class="muted" style="font-size:13.5px;">Buscando tus respuestas…</p>';
+  try {
+    const r = await fetch(`/api/encuesta/${id}/mis-respuestas`);
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    cont.innerHTML = volver + `<div class="enq-marco">
+      <div class="enq-cab"><div class="tit">Tus respuestas</div>
+        <div class="baja">${escEnc(d.titulo)}${d.dia ? ` · respondida el ${diaEnc(d.dia)}` : ''}</div></div>
+      <div style="padding:16px;">${cuerpoMisRespuestas(d)}</div>
+    </div>`;
+  } catch (err) {
+    cont.innerHTML = volver + `<p class="muted" style="font-size:13.5px;">
+      No se pudieron traer tus respuestas. Probá de nuevo en un rato.</p>`;
+  }
+}
+
+function cuerpoMisRespuestas(d) {
+  // La tarjeta de una anónima no ofrece este botón, así que acá no se llega
+  // por la pantalla; se llega escribiendo la URL. Igual contesta bien --
+  // explicando-- y nunca con un error: el endpoint es del afiliado.
+  if (d.anonima) {
+    return `<div class="enq-disc">
+      <p><b>Esta encuesta es anónima y por eso no podemos mostrarte qué contestaste.</b></p>
+      <p>Tu respuesta se guardó separada de tu identidad: queda registrado que
+      participaste, pero no hay ningún dato que una eso con lo que marcaste. No es
+      que esté escondido — no existe la forma de encontrarlo, tampoco para el
+      sindicato.</p>
+      <p>Es exactamente lo que decía el aviso antes de que respondieras.</p>
+    </div>`;
+  }
+  if (!d.respondio) {
+    return '<p class="muted" style="font-size:13.5px;">Todavía no respondiste esta encuesta.</p>';
+  }
+  const items = (d.preguntas || []).map(p =>
+    `<dt>${escEnc(p.etiqueta)}</dt>` + (p.respuesta
+      ? `<dd>${escEnc(p.respuesta)}</dd>`
+      : '<dd class="sin">no la respondiste</dd>')).join('');
+  return `<dl class="enq-revision">${items}</dl>
+    <p class="muted" style="font-size:11.5px; margin:14px 0 0;">
+      Esta encuesta es nominal: tus respuestas quedaron asociadas a tu nombre, y el
+      sindicato las ve igual que vos. Una vez enviada no se puede modificar.</p>`;
 }
 
 /* ---------- Los resultados, cuando la encuesta cerró (N12) ---------- */

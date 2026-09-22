@@ -1283,6 +1283,145 @@ def test_al_afiliado_no_le_llegan_ni_los_textos_libres():
     assert "soy " not in json.dumps(visto)
 
 
+# ---------- "Ver mis respuestas": lo que contestó ÉL ----------
+
+PREG_MIAS = [
+    {"etiqueta": "¿Conforme con la obra social?", "tipo_dato": "escala",
+     "escala_min": 1, "escala_max": 5, "etiqueta_min": "Nada", "etiqueta_max": "Mucho",
+     "ancho": "completo", "obligatorio": True},
+    {"etiqueta": "¿Cómo está el ambiente?", "tipo_dato": "seleccion",
+     "opciones": "Óptimo, Algo tenso, Nocivo", "ancho": "completo", "obligatorio": True},
+    {"etiqueta": "¿Te representa el delegado?", "tipo_dato": "booleano",
+     "ancho": "completo", "obligatorio": True},
+    {"etiqueta": "Ordená los reclamos", "tipo_dato": "ranking",
+     "opciones": "Salario, Obra social, Jornada", "ancho": "completo", "obligatorio": True},
+    {"etiqueta": "¿Algo para agregar?", "tipo_dato": "texto",
+     "ancho": "completo", "obligatorio": False},
+]
+
+
+def _encuesta_para_mirarse(slug: str, modo: str, mostrar="1"):
+    """Una encuesta publicada con cinco tipos de pregunta y dos afiliados."""
+    sid, uid = _sindicato_con(["encuestas"], slug)
+    cuils = _padron_grande(sid, 2)
+    _sesion(sid, uid)
+    hoy = fechas.hoy()
+    _alta(modo=modo, cortes=(), preguntas=PREG_MIAS,
+          desde=(hoy - timedelta(days=1)).isoformat(),
+          hasta=(hoy + timedelta(days=30)).isoformat(),
+          extra={"mostrar_resultados": mostrar})
+    eid = db.encuestas_del_sindicato(sid)[0]["id"]
+    _sesion(sid, uid)
+    cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                 follow_redirects=False)
+    return sid, uid, eid, cuils
+
+
+def test_en_una_nominal_el_afiliado_vuelve_a_ver_lo_que_contesto():
+    """Su propia respuesta, no la de todos: por eso no espera a que la
+    encuesta cierre ni a que el sindicato tilde nada (eso es N12, que es
+    otra cosa). Y de los cinco tipos de pregunta tiene que volver el texto
+    que él eligió, no un índice."""
+    sid, uid, eid, cuils = _encuesta_para_mirarse("mias-nominal", "nominal", mostrar="")
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    _sesion_trabajador(cuils[0], sid)
+    assert cliente.post(f"/api/encuesta/{eid}", json={"respuestas": {
+        str(pids[0]): 4, str(pids[1]): 1, str(pids[2]): "si",
+        str(pids[3]): [2, 0, 1], str(pids[4]): "el comedor cierra temprano",
+    }}).status_code == 200
+    # El otro contesta lo contrario: si las respuestas se mezclaran, se vería.
+    _sesion_trabajador(cuils[1], sid)
+    assert cliente.post(f"/api/encuesta/{eid}", json={"respuestas": {
+        str(pids[0]): 1, str(pids[1]): 2, str(pids[2]): "no",
+        str(pids[3]): [0, 1, 2], str(pids[4]): "todo bien",
+    }}).status_code == 200
+
+    _sesion_trabajador(cuils[0], sid)
+    d = cliente.get(f"/api/encuesta/{eid}/mis-respuestas").json()
+    assert d["anonima"] is False and d["respondio"] is True
+    assert d["dia"] == fechas.hoy_texto()
+    assert [p["respuesta"] for p in d["preguntas"]] == [
+        "4", "Algo tenso", "Sí", "Jornada > Salario > Obra social",
+        "el comedor cierra temprano"]
+    # Y nada del otro: es lo único que este endpoint no puede confundir.
+    assert "todo bien" not in json.dumps(d) and cuils[1] not in json.dumps(d)
+
+
+def test_una_opcional_en_blanco_se_muestra_como_no_respondida():
+    """Sacarla de la lista haría parecer que la encuesta tenía menos
+    preguntas de las que tenía."""
+    sid, uid, eid, cuils = _encuesta_para_mirarse("mias-blanco", "nominal")
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    _sesion_trabajador(cuils[0], sid)
+    cliente.post(f"/api/encuesta/{eid}", json={"respuestas": {
+        str(pids[0]): 3, str(pids[1]): 0, str(pids[2]): "si", str(pids[3]): [0, 1, 2]}})
+    d = cliente.get(f"/api/encuesta/{eid}/mis-respuestas").json()
+    assert len(d["preguntas"]) == 5
+    assert d["preguntas"][-1] == {"etiqueta": "¿Algo para agregar?",
+                                  "tipo_dato": "texto", "obligatoria": False,
+                                  "respuesta": ""}
+
+
+def test_en_una_anonima_no_hay_respuestas_propias_que_mostrar():
+    """No es una decisión de producto: la urna no tiene ninguna columna que
+    lleve a una persona, así que la búsqueda no puede dar resultado. El
+    endpoint lo dice con `anonima` y NO devuelve nada de la urna -- si
+    devolviera aunque sea una respuesta, la promesa de la anónima sería
+    falsa."""
+    sid, uid, eid, cuils = _encuesta_para_mirarse("mias-anon", "anonima")
+    pids = [p["id"] for p in db.encuesta_por_id(eid)["preguntas"]]
+    _sesion_trabajador(cuils[0], sid)
+    assert cliente.post(f"/api/encuesta/{eid}", json={"respuestas": {
+        str(pids[0]): 5, str(pids[1]): 2, str(pids[2]): "si",
+        str(pids[3]): [0, 1, 2], str(pids[4]): "me acuerdo de esto"}}).status_code == 200
+
+    d = cliente.get(f"/api/encuesta/{eid}/mis-respuestas").json()
+    assert d["anonima"] is True
+    # Respondió: eso el padrón SÍ lo sabe, y es lo que impide contestar dos
+    # veces. Lo que no existe es el puente hasta la respuesta.
+    assert d["respondio"] is True
+    assert d["preguntas"] == [] and d["dia"] == ""
+    crudo = json.dumps(d)
+    assert "me acuerdo" not in crudo and "Nocivo" not in crudo
+    # La prueba de fondo, en la base: la tabla del vínculo está vacía.
+    with db.get_session() as s:
+        assert s.exec(db.select(db.RespuestaNominal).where(
+            db.RespuestaNominal.encuesta_id == eid)).all() == []
+
+
+def test_las_respuestas_propias_son_de_quien_esta_en_el_padron_y_de_nadie_mas():
+    """Una encuesta a la que no lo invitaron no existe para él, tampoco para
+    preguntar qué contestó. Y sin sesión de trabajador no se contesta nada."""
+    sid, uid, eid, cuils = _encuesta_para_mirarse("mias-padron", "nominal")
+    ajeno = f"27{sid:05d}9999"
+    _padron(sid, [ajeno])
+    _sesion_trabajador(ajeno, sid)
+    assert cliente.get(f"/api/encuesta/{eid}/mis-respuestas").status_code == 404
+
+    # Otro sindicato, con el mismo id de encuesta pedido a mano.
+    sid2, uid2 = _sindicato_con(["encuestas"], "mias-ajeno")
+    _padron(sid2)
+    _sesion_trabajador(_cuils(sid2)[0], sid2)
+    assert cliente.get(f"/api/encuesta/{eid}/mis-respuestas").status_code == 404
+
+    cliente.cookies.clear()
+    assert cliente.get(f"/api/encuesta/{eid}/mis-respuestas").status_code == 403
+
+    # Y con la sesión de admin tampoco: es una puerta del afiliado.
+    _sesion(sid, uid)
+    assert cliente.get(f"/api/encuesta/{eid}/mis-respuestas").status_code == 403
+
+
+def test_sin_el_modulo_encuestas_no_hay_respuestas_propias():
+    sid, uid, eid, cuils = _encuesta_para_mirarse("mias-modulo", "nominal")
+    with db.get_session() as s:
+        sind = s.get(db.Sindicato, sid)
+        sind.modulos_habilitados = ["noticias"]
+        s.add(sind); s.commit()
+    _sesion_trabajador(cuils[0], sid)
+    assert cliente.get(f"/api/encuesta/{eid}/mis-respuestas").status_code in (403, 404)
+
+
 def test_los_resultados_son_otra_seccion_que_armar_la_encuesta():
     """N17: un delegado puede leer el dashboard sin poder lanzar nada, y al
     revés. El gateo es el de siempre y falla cerrado."""

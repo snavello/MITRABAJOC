@@ -738,7 +738,13 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    `_exigir_alcance_encuesta` le frena editarla, publicarla, cerrarla,
    borrarla o duplicarla aunque arme el POST a mano— y **lo que ve el
    afiliado al cerrarse** (N12): totales generales, sin cortes y sin los
-   textos libres, que se sacan en el servidor. La curva de ritmo se cuenta
+   textos libres, que se sacan en el servidor. Distinto de eso, **"Ver mis
+   respuestas"** (2026-09-21, `GET /api/encuesta/{id}/mis-respuestas`): lo
+   que contestó ÉL, que no espera al cierre ni al tilde de N12 y solo exige
+   estar en el padrón. Existe únicamente en las NOMINALES —en una anónima no
+   hay columna que una la urna con una persona, así que la tarjeta dice que
+   no se puede y por qué, que es la única prueba que el afiliado tiene de
+   que el disclaimer decía la verdad. La curva de ritmo se cuenta
    sobre una PREGUNTA TESTIGO (una obligatoria de las que dejan una sola
    fila por persona): contar filas de la urna contaría opciones, no gente.
    **Fase 5 HECHA**: exportar y evolución. El CSV sale del MODO de la

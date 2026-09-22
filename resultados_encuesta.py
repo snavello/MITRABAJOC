@@ -723,7 +723,15 @@ def _solo_digitos(texto) -> str:
     return "".join(c for c in str(texto or "") if c.isdigit())
 
 
-# ---------- Lo que ve el afiliado cuando la encuesta cierra (N12) ----------
+# ---------- Lo que ve el afiliado de su propia encuesta ----------
+# Dos cosas muy distintas y con reglas opuestas:
+#
+# - `totales_para_afiliado` (N12): los totales GENERALES, solo si la encuesta
+#   cerró y el sindicato lo tildó. Es el resultado de TODOS, y por eso pasa
+#   por el umbral y nunca lleva cortes.
+# - `mis_respuestas`: lo que contestó ÉL. No necesita que la encuesta cierre
+#   ni que nadie lo habilite -- es su propia respuesta --, pero SOLO existe
+#   en las nominales, porque en una anónima no hay forma de encontrarla.
 
 def totales_para_afiliado(encuesta_id: int, sindicato_id: int) -> dict:
     """Los totales GENERALES de una encuesta cerrada, sin ningún corte.
@@ -752,6 +760,69 @@ def totales_para_afiliado(encuesta_id: int, sindicato_id: int) -> dict:
         p.pop("textos", None)
         p.pop("fechas", None)
     return {"titulo": e["titulo"], "respondentes": respondentes, "preguntas": preguntas}
+
+
+def mis_respuestas(encuesta_id: int, cuil: str, sindicato_id: int) -> dict:
+    """Lo que ESTA persona contestó en ESTA encuesta.
+
+    Existe solo en las NOMINALES, y no por una decisión de producto: en una
+    anónima la urna no tiene ninguna columna que lleve a una persona, así
+    que no hay forma de encontrar sus respuestas -- ni para ella, ni para el
+    sindicato, ni para quien administre el servidor. Que acá no haya nada
+    que devolver no es una limitación para disculpar: es la prueba de que lo
+    que prometió el disclaimer antes de responder era verdad, y la pantalla
+    lo dice con todas las letras en vez de mostrar un error.
+
+    Devuelve None si la encuesta no es de este sindicato o si este CUIL no
+    está en el padrón: una encuesta a la que no lo invitaron no existe para
+    él, ni siquiera para preguntar qué contestó.
+    """
+    e = db.encuesta_por_id(encuesta_id, sindicato_id)
+    if not e:
+        return None
+    anonima = e["modo"] == encuestas.ANONIMA
+    with db.Session(db.engine) as s:
+        participante = s.exec(db.select(db.EncuestaParticipante).where(
+            db.EncuestaParticipante.encuesta_id == encuesta_id,
+            db.EncuestaParticipante.cuil == cuil)).first()
+        if not participante:
+            return None
+        salida = {"titulo": e["titulo"], "descripcion": e["descripcion"],
+                  "modo": e["modo"], "anonima": anonima, "estado": e["estado"],
+                  "respondio": bool(participante.respondio), "dia": "",
+                  "preguntas": []}
+        # En la anónima se corta ACÁ, antes de tocar la urna: ni siquiera se
+        # intenta la búsqueda que no puede dar resultado.
+        if anonima or not participante.respondio:
+            return salida
+
+        filas = s.execute(
+            db.select(db.RespuestaEncuesta)
+            .join(db.RespuestaNominal,
+                  db.RespuestaNominal.respuesta_id == db.RespuestaEncuesta.id)
+            .where(db.RespuestaNominal.encuesta_id == encuesta_id,
+                   db.RespuestaNominal.cuil == cuil)).scalars().all()
+
+    por_pregunta = {}
+    for f in filas:
+        por_pregunta.setdefault(f.pregunta_id, []).append(f)
+    # El día sale de la urna (el padrón no guarda cuándo respondió nadie, ni
+    # siquiera en una nominal: es una sola tabla para los dos modos).
+    dias = sorted(f.dia for f in filas if f.dia)
+    salida["dia"] = dias[0] if dias else ""
+    for p in e["preguntas"]:
+        if p["tipo_dato"] in encuestas.TIPOS_SIN_RESPUESTA:
+            continue
+        suyas = por_pregunta.get(p["id"], [])
+        salida["preguntas"].append({
+            "etiqueta": p["etiqueta"], "tipo_dato": p["tipo_dato"],
+            "obligatoria": p["obligatorio"],
+            # Una opcional sin responder devuelve "" y la pantalla la muestra
+            # como "no la respondiste": sacarla de la lista haría parecer que
+            # la encuesta tenía menos preguntas de las que tenía.
+            "respuesta": _texto_de_respuesta(p, suyas),
+        })
+    return salida
 
 
 # ---------- Exportar (N20) ----------

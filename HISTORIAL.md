@@ -5209,3 +5209,61 @@ narración va en el mismo panel, fijado a la derecha. Los tres botones de
 recorrido pasaron a la cabecera, entre el título y el semáforo, y el
 título dice solo "Sala de mando": el logo al lado ya dice Colm3na. El radar
 ocupa ahora todo el ancho. Plataforma 0.35.06.
+
+## "Ver mis respuestas" en la app del afiliado (2026-09-21)
+
+Pedido de Sd: que el afiliado, en la solapa donde consulta sus encuestas,
+pueda volver a ver lo que contestó. Hasta acá la pantalla le mostraba dos
+cosas —que ya la había respondido, y los totales GENERALES si la encuesta
+cerró y el sindicato tildó "mostrar resultados" (N12)— y ninguna de las dos
+es su respuesta.
+
+### El pedido choca con el anonimato, y ahí está lo interesante
+
+En una encuesta **nominal** no hay nada que resolver: `RespuestaNominal`
+guarda el vínculo CUIL → respuesta justamente porque el afiliado contestó
+sabiendo que su nombre queda pegado a lo que marcó, y el sindicato lo
+exporta en el CSV (N20). Devolvérselo a él es menos de lo que ya se le
+entrega a otro.
+
+En una **anónima** no se puede. Y no es una decisión de producto que se
+pueda revisar: la urna (`RespuestaEncuesta`) no tiene ninguna columna que
+lleve a una persona, y `RespuestaNominal` no tiene filas. No hay consulta
+que escribir. La tentación sería pedir disculpas por la limitación; la
+pantalla hace lo contrario y lo dice como lo que es —*"Es anónima: ni el
+sindicato ni esta aplicación pueden ver qué contestaste"*—, porque es la
+única prueba que el afiliado va a tener de que el disclaimer que leyó antes
+de responder decía la verdad. Es el mismo argumento que sostiene todo el
+módulo, pero dicho en el momento en que se puede comprobar.
+
+`resultados_encuesta.mis_respuestas()` corta ANTES de tocar la urna cuando
+la encuesta es anónima: ni siquiera intenta la búsqueda que no puede dar
+resultado. Un test verifica las dos mitades —que el JSON no trae nada de la
+urna y que la tabla del vínculo está vacía en la base.
+
+### Lo que NO pide, a diferencia de los totales
+
+Los totales de N12 necesitan que la encuesta haya cerrado y que el admin lo
+haya tildado; son el resultado de todos, y por eso además pasan por el
+umbral. Las respuestas propias no necesitan nada de eso: son suyas, y la
+encuesta puede seguir abierta. Lo único que se exige es lo de siempre —estar
+en el padrón—, y con el mismo criterio que el resto del módulo: una encuesta
+a la que no lo invitaron no existe para él, tampoco para preguntar qué
+contestó. Tanto "no sos de este sindicato" como "no te invitaron" contestan
+404: distinguirlas diría quién fue invitado.
+
+### Detalles
+
+- El texto de cada respuesta lo arma `_texto_de_respuesta()`, la misma
+  función que llena el CSV nominal: el afiliado lee exactamente lo mismo que
+  ve el sindicato en su planilla, y una sola función decide cómo se
+  representa un ranking (`Jornada > Salario > Obra social`) o una múltiple.
+- Las **opcionales en blanco** se muestran como "no la respondiste" en vez de
+  desaparecer: sacarlas haría parecer que la encuesta tenía menos preguntas.
+- El **día** sale de la urna (el padrón no guarda cuándo respondió nadie, ni
+  siquiera en una nominal: es una sola tabla para los dos modos).
+- La nota de la anónima quedó en **una línea y no en un párrafo**: probándolo
+  con la demo, un afiliado con tres anónimas respondidas veía el mismo texto
+  largo repetido tres veces y dejaba de leerse.
+
+Trabajador 0.40.01.

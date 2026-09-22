@@ -3825,6 +3825,33 @@ def api_resultados_para_afiliado(encuesta_id: int, request: Request):
     return r
 
 
+@app.get("/api/encuesta/{encuesta_id}/mis-respuestas")
+def api_mis_respuestas_de_encuesta(encuesta_id: int, request: Request):
+    """Lo que ESTE afiliado contestó en esta encuesta.
+
+    No hace falta que la encuesta esté cerrada ni que el sindicato tilde
+    nada: son sus propias respuestas, no las de todos. Pero solo existen en
+    las NOMINALES -- en una anónima la urna no tiene ninguna columna que
+    lleve a una persona, así que no hay dónde buscarlas. La respuesta trae
+    `anonima: true` y la pantalla lo explica, que es mucho mejor que un
+    error: es la prueba de que el disclaimer decía la verdad.
+    """
+    ses = sesion_actual(request, "trabajador")
+    cuil = _cuil_seguro(request)
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise HTTPException(403, "No autorizado")
+    _exigir_modulo(sid, "encuestas")
+    r = resultados_encuesta.mis_respuestas(encuesta_id, cuil, sid)
+    # None = la encuesta no es de este sindicato o no lo invitaron. Las dos
+    # se contestan igual: para él esa encuesta no existe.
+    if r is None:
+        raise HTTPException(404, "Encuesta no encontrada")
+    return r
+
+
 @app.post("/api/encuesta/{encuesta_id}")
 async def api_responder_encuesta(encuesta_id: int, request: Request):
     """Responder. El cuerpo es {"respuestas": {pregunta_id: valor}}.
