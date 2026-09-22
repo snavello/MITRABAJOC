@@ -5259,3 +5259,48 @@ hash de la URL no hay clic y queda la capa sola). **Volver deja abierta la
 pastilla Observación técnica**, no el menú principal: sale del fullscreen,
 cierra la capa y cambia la pastilla. Suelta (desde Recursos) la Sala
 conserva la cabecera y el botón de pantalla completa. Plataforma 0.35.09.
+
+## El video "Panel de Control": la Sala de mando en 20 segundos (2026-09-21/22)
+
+Pedido de Sd: un video dinámico de 15–20 s de la Sala de mando con el tango
+electrónico del proyecto. Los play de Recibo y de Código encienden los
+circuitos, los clics amplían cajas, un tramo va en vuelo 3D siguiendo el
+circuito, hay partes a velocidad normal, aceleradas y en cámara lenta, y los
+cambios de imagen caen al ritmo de la música. Arranca con el logo sobre azul
+y "Panel de Control / Arquitectura de Desarrollo y Operación", y cierra con
+el logo. Está en Recursos (`video-panel-de-control`); las fuentes para
+regenerarlo, en `disenos/video-panel-control/` (fuera de git, con su `LEEME.md`).
+
+**La música no sale del video anterior.** `mi-trabajo-recibos-tramites.mp4`
+tiene locución encima ("eso no va", Sd), así que Sd pasó el tema limpio
+(1:58, 117,5 BPM). Se usa el tramo 90,836 → 110,836 s: arranca en inicio de
+frase, trae los cortes secos de 93–97 s y termina con el remate del tema, así
+el video termina cuando termina el tango, sin fundido inventado. Sin voz que
+cuidar va a volumen pleno: −10,8 LUFS con el pico a −1,1 dB. Se probó
+dejarlo en −9,2 LUFS y la compresión AAC lo pasaba de 0 dB (+0,3 dBTP): lo que
+HyperFrames bajó al mezclar era justo el margen para no saturar.
+
+**Por qué se filma cuadro por cuadro y no se graba la pantalla.** La Sala
+anima con `setTimeout` (los pasos de los recorridos), CSS (el barrido, el
+neón) y SMIL (las pelotitas, los LEDs). Nada de eso se puede ubicar en un
+instante dado, que es lo que necesita un editor de video, y grabar la
+pantalla en vivo da cuadros irregulares y texto borroso. `captura/vt.js` se
+inyecta antes que la página y reemplaza el reloj: temporizadores, `Date` y
+`performance.now` avanzan solo cuando el filmador lo pide, las animaciones CSS
+se pausan y se ubican a mano en cada cuadro, y las SMIL con `setCurrentTime`.
+Con eso la cámara lenta y el acelerado son reales (cada cuadro es la página
+dibujada en ese instante), y los pasos de cada recorrido se reparten
+(`pasos[k].ms`) para que el neón salte exactamente en el golpe de la música.
+La cámara (zoom 2D y vuelo 3D con `perspective` sobre el `<svg>`) deja quietos
+los botones, la ficha y el cursor, que se dibuja aparte. Cada cuadro se toma a
+3840×2160 y se reduce a 1080p, y el desenfoque de movimiento promedia 4 a 6
+subcuadros (con 3 se veían copias fantasma). La página se renderiza suelta
+desde `templates/esquema.html` de `main`, sin servidor ni login: es el mismo
+código que corre en Pruebas.
+
+**El vuelo 3D.** La línea de Desarrollo está en el borde superior del dibujo:
+con la cámara mirando hacia adelante sobre ella, medio cuadro quedaba en negro
+(más allá del borde no hay nada). Se subió la línea al tercio superior del
+cuadro, se bajó la inclinación a 50°, se ocultó el barrido del radar durante
+el vuelo (quieto sobre el plano inclinado parecía un triángulo) y se dibujó una
+grilla de piso que acompaña al plano hasta el horizonte.

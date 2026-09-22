@@ -641,7 +641,10 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     `disenos/esquema-propuestas.html`, fuera de git. Detalle en HISTORIAL.md
     ("La Sala de mando"). **Queda**: cargar el gasto mensual (planes de
     Render y Claude), y decidir Telegram como canal de alertas y Cloudflare
-    como perímetro (la página ya los dibuja como planeados).
+    como perímetro (la página ya los dibuja como planeados). Desde el
+    2026-09-22 la presenta además un **video de 20 s** ("Panel de Control", en
+    Recursos), filmado cuadro por cuadro con reloj virtual; las fuentes para
+    regenerarlo están en `disenos/video-panel-control/` (fuera de git, `LEEME.md`).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
