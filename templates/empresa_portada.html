@@ -102,9 +102,16 @@
   <svg viewBox="0 0 24 24"><use href="#ic-x"/></svg>
 </a>
 
+<div class="pt-ambiente" aria-hidden="true">
+  <span class="pt-blob b1"></span><span class="pt-blob b2"></span><span class="pt-reticula"></span>
+</div>
+
 <div class="pad">
   <div class="fila-hola">
-    <div class="hola">Hola, <em>{{ razon_social or cuit }}</em></div>
+    <div>
+      <div class="hola">Hola, <em>{{ razon_social or cuit }}</em></div>
+      <div class="pt-hola-baj">CUIT {{ cuit }} · {{ sindicato }}</div>
+    </div>
     <button class="circulo-acento" onclick="abrirPerfil()" aria-label="Tu perfil" title="Tu perfil">
       {% if tiene_foto_perfil %}
       <img id="circulo-foto-perfil" src="/perfil-empleador-foto/{{ cuit }}?v={{ range(1, 999999) | random }}" alt="">
@@ -114,24 +121,29 @@
     </button>
   </div>
 
-  <div class="tarjetas" style="margin-top: 18px;">
+  {# Dos accesos nada más: no hay uno "principal" que justifique un hero, así
+     que van los dos parejos. #}
+  <div class="pt-filas">
     <div class="acceso-badge-wrap">
-      <a class="acceso" href="/empresa#notificaciones">
-        <svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg>
-        <div>
-          <div class="titulo">Notificaciones</div>
-          <div class="estado">Mensajes de tu sindicato</div>
-        </div>
+      <a class="pt-fila pt-vid" href="/empresa#notificaciones">
+        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg></span>
+        <span class="pt-fila-txt"><span class="pt-fila-t">Notificaciones</span>
+          <span class="pt-fila-e">Mensajes de tu sindicato</span></span>
+        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
       </a>
       {% if notificaciones_no_leidas %}<span class="badge-noleidas">{{ notificaciones_no_leidas }}</span>{% endif %}
     </div>
-    <a class="acceso" href="/empresa#tramites">
-      <svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg>
-      <div>
-        <div class="titulo">Trámites</div>
-        <div class="estado">Formularios y seguimiento</div>
-      </div>
-    </a>
+    <div class="acceso-badge-wrap">
+      <a class="pt-fila pt-vid" href="/empresa#tramites">
+        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>
+        <span class="pt-fila-txt"><span class="pt-fila-t">Trámites</span>
+          <span class="pt-fila-e">Formularios y seguimiento</span></span>
+        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+      </a>
+      {# El globo ya se contaba en el contexto y no se mostraba: un expediente
+         con respuesta del sindicato no se veía hasta entrar. #}
+      {% if tramites_novedades %}<span class="badge-noleidas">{{ tramites_novedades }}</span>{% endif %}
+    </div>
   </div>
 </div>
 
@@ -199,6 +211,7 @@
 <svg style="display:none" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <g id="ic-x"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></g>
+    <g id="ic-flecha"><path d="M5 12h13"/><path d="m12.5 6 6 6-6 6"/></g>
     <g id="ic-notif"><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></g>
     <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
     <g id="ic-perfil"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></g>

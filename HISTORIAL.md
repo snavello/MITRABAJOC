@@ -5469,3 +5469,158 @@ todavía: su `domicilio` sigue siendo un texto libre, nunca se migró al bloque
 estructurado de `geo.CAMPOS_DOMICILIO`. Quedó anotado en BACKLOG.md; hacerlo
 en el mismo bloque duplicaba el tamaño del cambio y el pedido era sobre el
 trabajador.
+
+
+## La portada del afiliado, esquema "Tablero" (2026-09-23)
+
+El pedido de Sd fue "en escritorio las tarjetas son demasiado largas y queda
+mucho espacio, y las letras de los títulos son chicas y difíciles de leer".
+La causa no era de gusto y estaba en una línea: **`.pad` no tenía ancho
+máximo**. En un monitor de 1920 la grilla de `.tarjetas` (3 columnas arriba
+de 700 px) repartía todo el ancho disponible, así que cada tarjeta terminaba
+midiendo unos 600 px, con un `min-height: 88px`, el ícono arriba, el texto
+abajo y un título de 13 px en el medio de todo ese aire. No era "poca
+letra": era una tarjeta que se estiraba sin tope.
+
+**Tres mockups antes de tocar código**, en `disenos/portadas-propuestas.html`
+(la carpeta está en `.gitignore`): A "Respiro" (la de hoy, con tope de ancho
+y tipografía más grande), B "Tablero" (dos columnas: acción a la izquierda,
+novedades a la derecha) y C "Mesa de trabajo" (agrupada por familias, pensada
+por el panel del sindicato con sus 15 accesos). Cada propuesta se renderiza
+dentro de un `<iframe>` de 1440 y otro de 390 al mismo tiempo, así las media
+queries responden al ancho del iframe y no al de la página: lo que se ve en
+el panel "Escritorio" es literalmente el CSS a 1440. Sd eligió la B.
+
+### Qué cambió
+
+- **Tope de 1320 px centrado** y dos columnas arriba de 1040 px
+  (`minmax(0,1fr) 352px`). Abajo de eso se apila y queda como antes.
+- **Los accesos son horizontales**: ícono en una pastilla a la izquierda,
+  título y estado a la derecha, flecha al final. Es la forma que llena el
+  ancho en vez de dejar hueco, y el título sube de 13 a 19 px.
+- **La tarjeta principal dice números reales.** `db.resumen_recibos_trabajador`
+  devuelve cuántos recibos verificó en lo que va del año y cómo salió el
+  último; la tarjeta muestra "72 · recibos verificados este año" y "Julio
+  2026 · con diferencias para revisar". Antes decía "Revisá tus aportes", que
+  no le informaba al afiliado nada que él no supiera ya. Sin ningún recibo
+  todavía no inventa un cero: cambia el texto e invita a subir el primero.
+- **Novedades y Beneficios suben al riel**, donde se ven al entrar, en vez de
+  quedar al final de un scroll largo.
+
+### Las dos cosas que Sd pidió conservar
+
+**La foto de la noticia.** En la primera versión de la propuesta B el riel las
+había reducido a un hilo de texto. La miniatura ya existía (44 px,
+`/noticia-imagen/{id}/1`): ahora sube a 62 px y la más nueva lleva filo de
+acento, el mismo recurso que ya usa `.notif-item.no-leida`. La noticia sin
+imagen sigue cayendo en el ícono genérico, del mismo tamaño, para que los
+títulos queden alineados.
+
+**El carrusel de beneficios**, rehecho como pieza de marketing: imagen a
+sangre con velo oscuro de abajo hacia arriba, el rubro como chip en acento,
+la descripción en condensada cortada a dos renglones (la escribe el sindicato
+y puede ser larga; si no, la tarjeta cambia de alto entre una lámina y la
+siguiente) y la vigencia al pie. La fluidez son cinco cosas concretas:
+deslizamiento con curva de salida de 620 ms, **zoom lento sobre la lámina
+activa** (Ken Burns de 7 s, que es lo que hace que una tarjeta quieta parezca
+viva), barra que muestra cuánto falta para la que sigue, arrastre con el dedo
+que sigue la mano y decide al soltar, y **pausa al pasar el mouse** -- nadie
+quiere que se le mueva lo que está leyendo. Las cinco se apagan con
+`prefers-reduced-motion`.
+
+Dos decisiones del carrusel que conviene recordar:
+
+- **Clases propias (`.car-*`) y no las `.carrusel*` de marca.css.** Esas las
+  sigue usando la vista previa del panel de admin y no tienen por qué cambiar
+  juntas.
+- **La imagen pasó de `contain` sobre una tira de 88 px a `cover` sobre
+  16/11.** Las imágenes cargadas hasta ahora se van a ver recortadas si son
+  verticales: hay que pedirle al sindicato que las suba apaisadas.
+
+### La profundidad, sin un solo color nuevo
+
+Sd trajo como referencia una app de club de pádel hecha con Code. Lo que se
+tomó de ahí son cuatro recursos, ninguno de los cuales agrega color: dos
+**manchas de luz difuminadas** (que son el primario y el acento del PROPIO
+sindicato, al 42% y 16% con blur de 110 px), una **retícula de colmena** muy
+tenue de fondo -- el equivalente nuestro a sus líneas de cancha --, la
+**trama diagonal más fina** (1 px cada 6) y **radios más grandes** en las
+piezas principales. En la portada clara las manchas se apagan: dos blobs
+sobre papel se ven como una mancha de impresión.
+
+### Lo que se verificó
+
+Contra el local con Postgres: **La Bancaria** (con logo y con 20 beneficios
+sintéticos) en 1440 y en 375, la variante clara forzada por DOM, y el
+carrusel medido en vivo -- avanzó solo a la quinta lámina, `carMover(1)`
+pasó a la sexta, los puntos siguieron el estado y la barra corrió. Tests:
+`test_portada` (12, cuatro nuevos: números reales, el caso sin recibos, la
+foto de la noticia y el carrusel), `test_beneficios`, `test_encuestas`,
+`test_modulos`, `test_noticias`, `test_notificaciones`, `test_modales`,
+`test_fechas`, `test_datos_personales` y `test_codigos_error`.
+
+Dos tests había que tocarlos y valía la pena entender por qué. El de
+beneficios afirmaba las clases viejas del carrusel (prueba lo mismo de
+siempre: con una sola lámina no hay a dónde ir, así que no se dibujan ni
+flechas ni puntos). Y el de encuestas buscaba `class="acceso" href="/app?tab=
+encuestas"`; al aflojarlo al href pelado empezó a dar falso negativo, porque
+ese mismo href aparece **dentro de un template literal del JS** de
+notificaciones. Quedó con la clase nueva.
+
+### Lo que NO cambió
+
+Las portadas del sindicato, la empresa y la plataforma siguen con el esquema
+anterior (`.tarjetas` + `.acceso` de marca.css). El pedido era sobre la del
+afiliado y llevarlas a las cuatro de una vez es otro bloque.
+
+
+### El mismo esquema en las otras tres portadas (2026-09-23)
+
+Sd pidió llevarlo a sindicato, plataforma y empresa, en ese orden. Lo que
+obligó a pensar antes de copiar fue **dónde poner el CSS**: cuatro copias del
+mismo bloque en cuatro `<style>` es exactamente lo que este proyecto ya vivió
+con el encabezado. Las cuatro portadas cargan `marca.css`, así que ahí va.
+
+**Y ahí apareció el problema de verdad**: `.fila`, `.filas`, `.pastilla`,
+`.mini`, `.txt`, `.nov` y `.sec` **ya existen** en admin.html, dashboard.js,
+encuesta_resultados.js, entornos.html y empresa.html. `marca.css` la carga
+casi toda la app, así que subir esas clases sin prefijo habría pisado media
+docena de pantallas sin que ningún test lo notara (son estilos, no
+comportamiento). Por eso todo el bloque quedó prefijado **`pt-`**
+(`.pt-fila`, `.pt-pastilla`, `.pt-hero`…), y el renombre se hizo solo sobre
+selectores CSS y atributos `class="..."`, nunca sobre texto libre: "una fila
+por sindicato" y "dos columnas" son frases que aparecen en los comentarios.
+
+Cada portada quedó con lo suyo:
+
+- **Sindicato**: hero para el Panel Sindical (sin cifra propia -- la portada
+  no tiene de dónde sacarla sin pegarle a la base, y el Panel es justo la
+  pantalla que las trae todas) y los 14 accesos restantes en **tres
+  columnas** (`.pt-tres`, un modificador para las portadas sin riel: en dos
+  columnas 15 accesos son una lista larguísima). Se fue la estrella de la
+  esquina del módulo nuevo: en una tarjeta chica marcaba algo, sobre el hero
+  es ruido. La etiqueta NUEVO queda.
+- **Plataforma**: hero para Sindicatos, que es lo que se hace ahí el 90% de
+  las veces, y los otros siete accesos en tres columnas.
+- **Empresa**: sin hero. Son dos accesos y ninguno es "el principal"; un hero
+  ahí sería una jerarquía inventada. De paso se estrenó el globo de novedades
+  de Trámites, que **ya se contaba en el contexto y no se mostraba**: un
+  expediente con respuesta del sindicato no se veía hasta entrar.
+
+### El círculo de perfil del sindicato
+
+Sd lo pidió "en el mismo lugar" que en la app del afiliado. Es de **lectura**:
+abre una ficha con nombre, usuario, CUIL, rol, seccional, área y sindicato.
+No edita nada -- cambiar la clave de un usuario del panel sigue siendo cosa
+de plataforma, y los permisos los da el Super Admin desde Áreas y Usuarios.
+
+La foto sale de `CuentaTrabajador`, o sea **del CUIL**, no de una copia
+guardada en `UsuarioSindicato`: quien trabaja en el gremio y además está
+afiliado tiene una sola foto, igual que tiene un solo domicilio. Quien no
+está en el padrón -- que es un caso real y no un error, como Elena Vidal de
+Prensa en la demo -- simplemente no tiene, y se ve el ícono.
+
+Un detalle que costó encontrar: `.fila-hola` (el flex que pone el saludo y el
+círculo en la misma línea) vivía en el `<style>` de portada.html y de
+empresa_portada.html. Al llevar el esquema al sindicato, el círculo caía
+debajo del saludo. Ahora está en `marca.css` con el resto.

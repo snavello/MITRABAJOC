@@ -4057,6 +4057,46 @@ def marcar_todas_notificaciones_leidas(cuil: str, sindicato_id: int) -> int:
         return len(pendientes)
 
 
+def resumen_recibos_trabajador(cuil: str, sindicato_id: int) -> dict:
+    """Lo que la portada del afiliado dice de SUS propios recibos: cuántos
+    verificó en lo que va del año y cómo salió el último.
+
+    Todo el filtro va adentro de la consulta. La portada la abre cada
+    afiliado en cada entrada a la app, así que no puede traerse el
+    historial entero para contarlo en Python.
+
+    El año sale de `fechas.hoy_texto()` (hora de Buenos Aires) y no del
+    reloj del servidor, que en Render corre en UTC -- entre las 21:00 y la
+    medianoche del 31 de diciembre el contador diría el año que viene.
+
+    El "último" se elige por PERÍODO, no por fecha de carga: alguien que
+    sube en diciembre el recibo de marzo no cambia cuál es su último
+    recibo. `procesado_en` desempata dos cargas del mismo período (se
+    puede volver a subir un recibo corregido).
+    """
+    from sqlalchemy import func
+    anio = fechas.hoy_texto()[:4]
+    with Session(engine) as s:
+        cantidad = s.execute(
+            select(func.count(ReciboVerificado.id)).where(
+                ReciboVerificado.cuil == cuil,
+                ReciboVerificado.sindicato_id == sindicato_id,
+                ReciboVerificado.periodo.like(anio + "-%"))).scalar()
+        ultimo = s.exec(
+            select(ReciboVerificado)
+            .where(ReciboVerificado.cuil == cuil,
+                   ReciboVerificado.sindicato_id == sindicato_id)
+            .order_by(ReciboVerificado.periodo.desc(),
+                      ReciboVerificado.procesado_en.desc())
+            .limit(1)).first()
+    return {
+        "anio": int(cantidad or 0),
+        "ultimo_periodo": (ultimo.periodo if ultimo else ""),
+        # "OK" | "CON_DISCREPANCIAS" | "" (todavía no verificó ninguno)
+        "ultimo_estado": (ultimo.estado if ultimo else ""),
+    }
+
+
 def contar_notificaciones_no_leidas(cuil: str, sindicato_id: int) -> int:
     return sum(1 for n in notificaciones_de_trabajador(cuil, sindicato_id) if not n["leida_en"])
 

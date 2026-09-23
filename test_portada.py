@@ -9,6 +9,7 @@ Correr con: .venv/Scripts/python.exe -m pytest test_portada.py -q
 
 import db
 import auth
+import fechas
 from db import Sindicato, Trabajador
 from modulos import MODULOS_INICIALES
 import main
@@ -130,6 +131,82 @@ def test_login_redirige_a_inicio_no_a_app():
     print("OK  test_login_redirige_a_inicio_no_a_app")
 
 
+def test_tarjeta_principal_dice_numeros_reales():
+    """La tarjeta grande dice cuántos recibos verificó ESTE AÑO y cómo salió
+    el último. Antes decía "Revisá tus aportes", que no le informaba nada al
+    afiliado que él no supiera ya."""
+    anio = fechas.hoy_texto()[:4]
+    with db.get_session() as s:
+        s.add(db.ReciboVerificado(sindicato_id=SID_UOM, cuil="20111111119",
+                                  periodo=anio + "-03", estado="OK"))
+        s.add(db.ReciboVerificado(sindicato_id=SID_UOM, cuil="20111111119",
+                                  periodo=anio + "-04", estado="CON_DISCREPANCIAS"))
+        # De otro año: NO entra en el contador, pero tampoco es el último.
+        s.add(db.ReciboVerificado(sindicato_id=SID_UOM, cuil="20111111119",
+                                  periodo="2019-11", estado="OK"))
+        # De OTRO trabajador del mismo sindicato: no es asunto de este.
+        s.add(db.ReciboVerificado(sindicato_id=SID_UOM, cuil="27222222224",
+                                  periodo=anio + "-04", estado="OK"))
+        s.commit()
+
+    resumen = db.resumen_recibos_trabajador("20111111119", SID_UOM)
+    assert resumen["anio"] == 2, resumen
+    assert resumen["ultimo_periodo"] == anio + "-04", resumen
+    assert resumen["ultimo_estado"] == "CON_DISCREPANCIAS", resumen
+
+    r = _sesion("20111111119").get("/app/inicio")
+    assert r.status_code == 200
+    assert "recibos verificados este año" in r.text
+    assert "con diferencias para revisar" in r.text
+    print("OK  test_tarjeta_principal_dice_numeros_reales")
+
+
+def test_sin_recibos_la_tarjeta_invita_en_vez_de_mentir():
+    """Cero recibos no es lo mismo que un recibo en cero: sin ninguno, la
+    tarjeta no muestra el contador, invita a subir el primero."""
+    resumen = db.resumen_recibos_trabajador("27222222224", SID_FEGA)
+    assert resumen == {"anio": 0, "ultimo_periodo": "", "ultimo_estado": ""}, resumen
+
+    c = _sesion("27222222224")
+    c.cookies.set("sind_elegido", str(SID_FEGA))
+    r = c.get("/app/inicio")
+    assert r.status_code == 200
+    assert "Subí tu primer recibo" in r.text
+    assert "recibos verificados este año" not in r.text
+    print("OK  test_sin_recibos_la_tarjeta_invita_en_vez_de_mentir")
+
+
+def test_la_noticia_conserva_su_foto():
+    """La miniatura de la noticia es lo que la hace leerse como una novedad y
+    no como un renglón de sistema. El rediseño la agranda, no la saca."""
+    with db.get_session() as s:
+        s.add(db.Noticia(sindicato_id=SID_UOM, titulo="Paritaria homologada",
+                         bajada="Se liquida con los haberes del mes",
+                         fecha_desde="2000-01-01", fecha_hasta="2999-12-31",
+                         imagen1_datos=b"fake", imagen1_mime="image/png"))
+        s.commit()
+    r = _sesion("20111111119").get("/app/inicio")
+    assert 'class="pt-mini"' in r.text
+    assert "/noticia-imagen/" in r.text
+    print("OK  test_la_noticia_conserva_su_foto")
+
+
+def test_el_carrusel_de_beneficios_sigue_existiendo():
+    """El carrusel se rehízo, no se sacó: con más de un beneficio tiene que
+    salir con su pista, sus puntos y su barra de tiempo."""
+    with db.get_session() as s:
+        for i, rubro in enumerate(("Salud", "Turismo")):
+            s.add(db.Beneficio(sindicato_id=SID_UOM, rubro=rubro,
+                               descripcion="Descuento " + str(i),
+                               fecha_desde="2000-01-01", fecha_hasta="2999-12-31"))
+        s.commit()
+    r = _sesion("20111111119").get("/app/inicio")
+    assert 'id="car-pista"' in r.text
+    assert 'class="car-punto' in r.text
+    assert 'id="car-barra"' in r.text
+    print("OK  test_el_carrusel_de_beneficios_sigue_existiendo")
+
+
 if __name__ == "__main__":
     test_tarjetas_linkean_con_tab_para_deeplink()
     test_perfil_muestra_datos_reales_del_trabajador()
@@ -139,4 +216,8 @@ if __name__ == "__main__":
     test_pluriempleo_con_eleccion_pinta_la_elegida()
     test_app_tu_recibo_sigue_intacta()
     test_login_redirige_a_inicio_no_a_app()
+    test_tarjeta_principal_dice_numeros_reales()
+    test_sin_recibos_la_tarjeta_invita_en_vez_de_mentir()
+    test_la_noticia_conserva_su_foto()
+    test_el_carrusel_de_beneficios_sigue_existiendo()
     print("\nTodo OK — portada del trabajador (/app/inicio).")

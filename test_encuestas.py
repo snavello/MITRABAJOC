@@ -827,7 +827,10 @@ def test_la_portada_del_afiliado_tiene_su_puerta_de_entrada():
     cuil, _ = _cuils(sid)
     _sesion_trabajador(cuil, sid)
 
-    tarjeta = 'class="acceso" href="/app?tab=encuestas"'
+    # Con la clase, no solo el href: desde el rediseño de la portada
+    # (2026-09-23) el mismo href aparece dentro de un template literal del JS
+    # de notificaciones, y sin la clase el "no está" daba falso negativo.
+    tarjeta = 'class="pt-fila pt-vid" href="/app?tab=encuestas"'
     html = cliente.get("/app/inicio").text
     assert tarjeta in html
     assert "sin responder" in html          # la tarjeta dice cuántas faltan

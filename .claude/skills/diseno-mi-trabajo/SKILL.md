@@ -58,9 +58,15 @@ Nunca se personaliza:
    pantallas (ver "El encabezado" más abajo). El gremio manda, no la app.
 2. **Saludo**: "Hola, {nombre}" con el nombre en color de acento, y debajo
    seccional y antigüedad de afiliación.
-3. **Tarjetas de acceso** en grilla de 2 columnas: Tu recibo (destacada con
-   fondo de acento), Mis aportes, Credencial, Capacitación. Cada una con ícono
-   de línea, título y una línea de estado real ("12 de 12 al día", no "Ver más").
+3. **Accesos horizontales** (`.pt-fila`, esquema "Tablero" 2026-09-23):
+   ícono en pastilla a la izquierda, título en condensada de 19px y una línea
+   de estado real ("12 de 12 al día", no "Ver más"), flecha al final. Arriba
+   de todo, la tarjeta principal (`.pt-hero`) con un número de verdad. Las
+   cuatro portadas comparten el bloque "Portadas v2" de marca.css, con todas
+   las clases prefijadas `pt-`: media docena de esos nombres (`.fila`,
+   `.pastilla`, `.mini`, `.txt`) ya existen en otras pantallas y esa hoja la
+   carga casi toda la app. `.pt-tres` da tres columnas a las portadas sin
+   riel (sindicato, plataforma).
 4. **Novedades**: hasta 3 items con título y antigüedad, más "Ver todas".
 5. **Beneficios**: fila de 3 tarjetas chicas.
 6. **Barra inferior**: 4 pestañas con íconos SVG de línea y píldora de fondo
