@@ -97,6 +97,14 @@ Son dos franjas y esa separación es el punto:
   escribirlo al lado es decir dos veces lo mismo.
 - **El título de la pantalla se dice una sola vez**: si está en el
   encabezado, no va también como `<h1>` del cuerpo.
+- **La app del afiliado es la excepción, y es de una sola línea**
+  (2026-09-23). Ahí la cinta no tiene rol que decir: no se dibuja, y Colm3na
+  baja a la misma barra del logo del gremio, a la derecha, a 24px de alto
+  (19 en móvil) contra los 62 del gremio. Y el nombre de la pantalla **no se
+  escribe en ninguna** de sus pantallas: todas llevan el mismo encabezado que
+  Inicio, porque la barra de pestañas de abajo ya dice dónde estás. El
+  parcial lo decide solo a partir de `enc_rol`, así que una pantalla nueva
+  del afiliado no tiene que acordarse de nada.
 - **La plataforma se llama Colm3na**: "Mi Trabajo" no va en ninguna
   pantalla. Los `<title>` siguen el mismo criterio que el encabezado:
   `<pantalla> — {{ sindicato }}` donde hay sindicato, `Colm3na — <pantalla>`

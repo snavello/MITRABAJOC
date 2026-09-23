@@ -30,6 +30,14 @@
    principal. Alto fijo y ancho libre, igual que el logo del sindicato. */
 .marca-colmena { margin-left: auto; height: 17px; width: auto; max-width: 104px;
   object-fit: contain; opacity: .95; }
+/* En la app del afiliado no hay cinta y la colmena va en la barra, al lado
+   del logo del gremio. Ahí necesita algo más de cuerpo para no perderse
+   contra un logo de 62px, pero sigue siendo claramente la firma y no la
+   marca principal: el gremio manda. */
+.marca-colmena.en-barra { height: 24px; max-width: 140px; opacity: 1; }
+/* Dos margin-left:auto en la misma fila se REPARTEN el espacio libre, así
+   que con "Volver" la colmena quedaría en el medio. */
+.marca-volver + .marca-colmena.en-barra { margin-left: 14px; }
 
 .marca-barra { background: var(--marca-base, #0f1b2d); color: var(--sobre-base, #eef2f7);
   display: flex; align-items: center; gap: 14px; padding: 11px 18px;
@@ -60,6 +68,7 @@
 @media (max-width: 600px) {
   .marca-cinta { padding: 5px 14px; padding-top: calc(5px + env(safe-area-inset-top)); min-height: 26px; }
   .marca-colmena { height: 15px; max-width: 88px; }
+  .marca-colmena.en-barra { height: 19px; max-width: 112px; }
   .marca-barra { gap: 11px; padding: 10px 14px; }
   .marca-logo { height: 46px; max-width: 192px; }
   .marca-nombre { font-size: 26px; padding-right: 11px; }
