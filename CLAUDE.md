@@ -433,10 +433,20 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   cualquier payload. Una ruta nueva que lea el documento de una persona suma
   el suyo. Detalle en HISTORIAL.md.
 
-## Estado actual (actualizado 2026-09-11)
-Todo lo listado acá está mergeado a `main` y desplegado (Render sigue `main`,
-cada push redeploya) **salvo el punto 21**, que vive en la rama
-`areas-permisos-v2` y todavía no se mergeó ni se desplegó.
+## Estado actual (actualizado 2026-09-23)
+Todo lo listado acá está mergeado a `main` y desplegado en Pruebas (Render
+sigue `main`, cada push redeploya), **incluido el punto 21**, que ya se portó
+sobre `main`.
+
+**La demo está al día desde el 2026-09-23** (tag `demo-2026-09-23-v0.40.01`):
+se promovieron de una vez los 241 commits acumulados desde el 2026-09-05 —
+Encuestas, Áreas V2, georreferenciación, Asistente del Panel, landing
+`/entornos`, costo de la IA, XSK y la Sala de mando—, con 18 migraciones
+ensayadas antes sobre una copia de la base real. Trabajador 0.40.01, Admin
+0.43.01, Plataforma 0.35.10. **En demo, `/entornos` y `/entornos/xsanders`
+responden 404 a propósito** (la landing interna solo existe donde hay
+distintivo de entorno), y el login genérico de plataforma quedó apagado: se
+entra con usuario nominal. Detalle del ensayo y del resultado en BITACORA.md.
 
 **SPRINT_REFORMA.md (adaptación a la Reforma Laboral, Dto 407/2026) —
 COMPLETO**, los 5 puntos de los dos sprints originales: extractor bi-formato
@@ -884,9 +894,10 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    2026-09-19** (PR #6). Causa y correcciones C1–C8 en
    `docs/chat/2026-09-19-cuelgue-dashboard-conexiones.md` y en HISTORIAL.md
    ("El cuelgue del Panel Sindical en Pruebas"); `carga/k6/test3_panel.js`
-   dio APROBADO contra Pruebas. Queda: al promover a la demo, cargar
-   `/healthz` como Health Check Path en `mitrabajo-demo` (hoy vacío; ponerlo
-   antes de promover haría fallar sus deploys). Si una app no responde:
+   dio APROBADO contra Pruebas. **Cerrado el 2026-09-23**: con la versión nueva ya viva en la demo se
+   cargó `/healthz` como Health Check Path en `mitrabajo-demo` (estaba
+   vacío; ponerlo antes de promover habría hecho fallar sus deploys,
+   porque esa ruta no existía en la versión anterior). Si una app no responde:
    `docs/OPERATIVA.md` §9.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
