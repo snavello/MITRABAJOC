@@ -347,11 +347,16 @@ for d in SINDICATOS:
             # cargar. Y la seccional es la mejor respuesta que hay acá: quien
             # está asignado a Rosario vive en Rosario.
             localidad, provincia = zona[seccional]
-            s.add(Trabajador(sindicato_id=sid, cuil=cuil, nombre=nombre,
-                             seccional_id=secs[seccional], registrado=False,
-                             **geo.campos_para_guardar(
-                                 {"localidad": localidad, "provincia": provincia},
-                                 precision="sin_geo")))
+            s.add(Trabajador(sindicato_id=sid, cuil=cuil,
+                             seccional_id=secs[seccional], registrado=False))
+            # Los datos personales van en la PERSONA, no en el
+            # empadronamiento: la fila de `cuentatrabajador` nace con el alta
+            # del padrón y sin clave (todavía no se registró).
+            db.guardar_datos_personales(
+                s, cuil, nombre=nombre,
+                domicilio=geo.campos_para_guardar(
+                    {"localidad": localidad, "provincia": provincia},
+                    precision="sin_geo"))
 
         # 3. El Super Admin de Sede Central: el admin de siempre, con los
         # accesos de siempre. La premisa del sprint es que no pierda nada.

@@ -79,8 +79,9 @@ def test_login_trabajador_registra_acceso():
     from auth import hashear_clave
     from db import CuentaTrabajador
     with db.get_session() as s:
-        s.add(Trabajador(sindicato_id=SID, cuil="20999999990", nombre="Ana"))
-        s.add(CuentaTrabajador(cuil="20999999990", clave_hash=hashear_clave("1234")))
+        s.add(Trabajador(sindicato_id=SID, cuil="20999999990"))
+        db.guardar_datos_personales(s, "20999999990", nombre="Ana")
+        db.asegurar_cuenta(s, "20999999990").clave_hash = hashear_clave("1234")
         s.commit()
     antes = db.actividad_resumen()["totales"]["accesos_por_rol"].get("trabajador", 0)
     r = client.post("/trabajador/login", data={"cuil": "20999999990", "clave": "1234"},

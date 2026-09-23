@@ -50,8 +50,9 @@ with db.get_session() as s:
     for a in (A_LEG, A_TES, A_PRE):
         s.add(PermisoArea(area_id=a, seccion="tramites_recibidos"))
 
-    s.add(Trabajador(sindicato_id=SID, cuil="20300000001", nombre="Afiliado",
+    s.add(Trabajador(sindicato_id=SID, cuil="20300000001",
                      seccional_id=SEC, activo=True, registrado=True))
+    db.guardar_datos_personales(s, "20300000001", nombre="Afiliado")
     s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111110", cuil="20111111110",
                            nombre="Marta", clave_hash=auth.hashear_clave("marta"),
                            debe_cambiar_clave=False, es_super_admin=True, seccional_id=SEC))

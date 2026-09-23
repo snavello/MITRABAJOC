@@ -19,9 +19,10 @@ with db.get_session() as s:
     sind = Sindicato(nombre="Test QR", slug="test-qr")
     s.add(sind); s.commit(); s.refresh(sind)
     SID = sind.id
-    s.add(Trabajador(sindicato_id=SID, cuil="20111111119", nombre="Juan Pérez", activo=True,
+    s.add(Trabajador(sindicato_id=SID, cuil="20111111119", activo=True,
                       registrado=True, codigo_credencial="TESTQ-000001"))
-    s.add(CuentaTrabajador(cuil="20111111119", clave_hash=auth.hashear_clave("demo1234")))
+    db.guardar_datos_personales(s, "20111111119", nombre="Juan Pérez")
+    db.asegurar_cuenta(s, "20111111119").clave_hash = auth.hashear_clave("demo1234")
     s.commit()
 db.set_modulos_sindicato(SID, ["credencial"])   # sin el módulo, /app no pinta la credencial
 

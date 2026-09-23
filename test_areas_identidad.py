@@ -46,12 +46,14 @@ with db.get_session() as s:
     s.add(PermisoArea(area_id=AREA, seccion="trabajadores"))
 
     # AFILIADA: está en el padrón ANTES de que le den usuario.
-    s.add(Trabajador(sindicato_id=SID, cuil="27300000001", nombre="Lucía Ferreyra",
+    s.add(Trabajador(sindicato_id=SID, cuil="27300000001",
                      seccional_id=SEC, registrado=False, activo=True))
+    db.guardar_datos_personales(s, "27300000001", nombre="Lucía Ferreyra")
     # El MISMO CUIL, pero empadronado en el OTRO sindicato: no tiene que
     # vincularse ni marcarse por lo que pase en la UOM.
-    s.add(Trabajador(sindicato_id=SID_OTRO, cuil="20300000002", nombre="Homónimo Fega",
+    s.add(Trabajador(sindicato_id=SID_OTRO, cuil="20300000002",
                      seccional_id=sec_otro.id, registrado=False, activo=True))
+    db.guardar_datos_personales(s, "20300000002", nombre="Homónimo Fega")
 
     s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111110", cuil="20111111110",
                            nombre="Marta", clave_hash=auth.hashear_clave("marta"),

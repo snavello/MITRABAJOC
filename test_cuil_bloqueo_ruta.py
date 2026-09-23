@@ -17,7 +17,8 @@ with db.get_session() as s:
     sind = Sindicato(nombre="Test Bloqueo", slug="test-bloqueo")
     s.add(sind); s.commit(); s.refresh(sind)
     SID = sind.id
-    s.add(Trabajador(sindicato_id=SID, cuil="20111111119", nombre="Juan", activo=True, registrado=True))
+    s.add(Trabajador(sindicato_id=SID, cuil="20111111119", activo=True, registrado=True))
+    db.guardar_datos_personales(s, "20111111119", nombre="Juan")
     s.commit()
 
 client = TestClient(main.app)

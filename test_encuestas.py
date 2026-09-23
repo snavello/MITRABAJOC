@@ -545,9 +545,11 @@ def _cuils(sid: int) -> tuple:
 def _padron(sid: int, cuils=None, seccional_id=None, provincia="Santa Fe"):
     with db.get_session() as s:
         for c in (cuils if cuils is not None else _cuils(sid)):
-            s.add(db.Trabajador(sindicato_id=sid, cuil=c, nombre="T " + c, activo=True,
+            s.add(db.Trabajador(sindicato_id=sid, cuil=c, activo=True,
                                 registrado=True, seccional_id=seccional_id,
-                                provincia=provincia, cuit_empleador="30999888776"))
+                                cuit_empleador="30999888776"))
+            db.guardar_datos_personales(s, c, nombre="T " + c,
+                                        domicilio={"provincia": provincia})
         s.commit()
 
 
@@ -1694,13 +1696,17 @@ def _encuesta_con_datos(slug: str, modo="anonima", cortes=("seccional", "emplead
     grupo_b = [f"27{sid:05d}{n:04d}" for n in range(cantidad // 2)]
     with db.get_session() as s:
         for n, c in enumerate(grupo_a):
-            s.add(db.Trabajador(sindicato_id=sid, cuil=c, nombre=f"A{n}", activo=True,
-                                registrado=True, seccional_id=sec_a, provincia="Santa Fe",
+            s.add(db.Trabajador(sindicato_id=sid, cuil=c, activo=True,
+                                registrado=True, seccional_id=sec_a,
                                 cuit_empleador="30111111111"))
+            db.guardar_datos_personales(s, c, nombre=f"A{n}",
+                                        domicilio={"provincia": "Santa Fe"})
         for n, c in enumerate(grupo_b):
-            s.add(db.Trabajador(sindicato_id=sid, cuil=c, nombre=f"B{n}", activo=True,
-                                registrado=True, seccional_id=sec_b, provincia="Santa Fe",
+            s.add(db.Trabajador(sindicato_id=sid, cuil=c, activo=True,
+                                registrado=True, seccional_id=sec_b,
                                 cuit_empleador="30222222222"))
+            db.guardar_datos_personales(s, c, nombre=f"B{n}",
+                                        domicilio={"provincia": "Santa Fe"})
         s.commit()
     _sesion(sid, uid)
     hoy = fechas.hoy()

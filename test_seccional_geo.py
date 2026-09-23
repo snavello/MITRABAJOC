@@ -23,7 +23,8 @@ import auth
 import db
 import geo
 import main
-from db import Sindicato, UsuarioSindicato, Seccional, Trabajador, Area
+from db import (Sindicato, UsuarioSindicato, Seccional, Trabajador, Area,
+                CuentaTrabajador)
 from fastapi.testclient import TestClient
 from sqlmodel import select
 
@@ -89,20 +90,30 @@ def _rechazada(nombre, **extra):
 
 # --------------------------------------------------- el contrato compartido
 
-def test_seccional_y_trabajador_tienen_el_mismo_domicilio():
+def test_seccional_y_persona_tienen_el_mismo_domicilio():
     """La promesa del sprint: un domicilio es un domicilio, se llame como se
     llame la tabla. Si alguien suma un campo a una sola, esto falla nombrando
-    el campo y la tabla."""
+    el campo y la tabla.
+
+    El domicilio de la persona vive en `CuentaTrabajador` desde el
+    2026-09-22 (antes estaba en `Trabajador`, una copia por sindicato). Que
+    este test siga en pie es media razón por la que la mudanza se hizo como
+    bloque y no campo por campo."""
     for campo in geo.CAMPOS_DOMICILIO:
         assert campo in Seccional.model_fields, f"falta {campo} en Seccional"
-        assert campo in Trabajador.model_fields, f"falta {campo} en Trabajador"
+        assert campo in CuentaTrabajador.model_fields, f"falta {campo} en CuentaTrabajador"
     # Y con el mismo tipo en las dos: un `latitud` float acá y str allá haría
     # que la misma función de guardado escriba cosas distintas.
     for campo in geo.CAMPOS_DOMICILIO:
         t_sec = Seccional.model_fields[campo].annotation
-        t_trab = Trabajador.model_fields[campo].annotation
-        assert t_sec == t_trab, f"{campo}: {t_sec} en Seccional, {t_trab} en Trabajador"
-    print("OK  test_seccional_y_trabajador_tienen_el_mismo_domicilio")
+        t_pers = CuentaTrabajador.model_fields[campo].annotation
+        assert t_sec == t_pers, f"{campo}: {t_sec} en Seccional, {t_pers} en CuentaTrabajador"
+    # Y el EMPADRONAMIENTO no puede volver a tener una copia: es exactamente
+    # el defecto que se corrigió (dos direcciones para la misma persona).
+    for campo in (*geo.CAMPOS_DOMICILIO, "nombre", "telefono", "mail"):
+        assert campo not in Trabajador.model_fields, (
+            f"{campo} volvió a Trabajador: los datos personales son de la persona")
+    print("OK  test_seccional_y_persona_tienen_el_mismo_domicilio")
 
 
 # --------------------------------------------------------- las 4 precisiones
@@ -272,8 +283,8 @@ def test_la_ficha_propia_trae_lo_que_muestra_la_pantalla():
                 latitud="-32.947338", longitud="-60.636893", precision_geo="exacta",
                 telefono="341 425 0850", horario_atencion="9 a 17")
     with db.get_session() as s:
-        s.add(Trabajador(sindicato_id=SID_A, cuil="20888888884", nombre="Uno",
-                         seccional_id=sec.id))
+        s.add(Trabajador(sindicato_id=SID_A, cuil="20888888884", seccional_id=sec.id))
+        db.guardar_datos_personales(s, "20888888884", nombre="Uno")
         s.commit()
     ficha = cliente.get(f"/admin/seccional/{sec.id}/ficha").json()
     assert ficha["nombre"] == "Ficha Propia"
@@ -347,8 +358,8 @@ def test_borrar_una_seccional_ubicada_sigue_dejando_a_su_gente_sin_seccional():
     sec = _alta("Para Borrar", provincia="Santa Fe", localidad="Rosario",
                 latitud="-32.94", longitud="-60.63", precision_geo="manual")
     with db.get_session() as s:
-        s.add(Trabajador(sindicato_id=SID_A, cuil="20777777773", nombre="Queda Suelto",
-                         seccional_id=sec.id))
+        s.add(Trabajador(sindicato_id=SID_A, cuil="20777777773", seccional_id=sec.id))
+        db.guardar_datos_personales(s, "20777777773", nombre="Queda Suelto")
         s.commit()
     cliente.post("/admin/seccional/borrar", data={"id": sec.id})
     with db.get_session() as s:

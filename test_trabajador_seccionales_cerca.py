@@ -56,16 +56,21 @@ with db.get_session() as s:
     SEC_ROS, SEC_CBA, SEC_MDQ = ros.id, cba.id, mdq.id
 
     for cuil in (CUIL_UNO, CUIL_DOS):
-        s.add(CuentaTrabajador(cuil=cuil, clave_hash=auth.hashear_clave("x"), nombre="A"))
-    s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_UNO, nombre="Juan Solo",
+        db.guardar_datos_personales(s, cuil, nombre="A")
+        db.asegurar_cuenta(s, cuil).clave_hash = auth.hashear_clave("x")
+    s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_UNO,
                      registrado=True, seccional_id=SEC_ROS))
-    s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_DOS, nombre="Maria Dos",
+    db.guardar_datos_personales(s, CUIL_UNO, nombre="Juan Solo")
+    s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_DOS,
                      registrado=True, seccional_id=SEC_CBA))
-    s.add(Trabajador(sindicato_id=SID_B, cuil=CUIL_DOS, nombre="Maria Dos",
+    db.guardar_datos_personales(s, CUIL_DOS, nombre="Maria Dos")
+    s.add(Trabajador(sindicato_id=SID_B, cuil=CUIL_DOS,
                      registrado=True, seccional_id=SEC_MDQ))
+    db.guardar_datos_personales(s, CUIL_DOS, nombre="Maria Dos")
     # Otro afiliado, para probar que sus datos no salen por ningún lado.
-    s.add(Trabajador(sindicato_id=SID_A, cuil="20999999995", nombre="Ajeno Nadiesabe",
+    s.add(Trabajador(sindicato_id=SID_A, cuil="20999999995",
                      registrado=True, seccional_id=SEC_ROS))
+    db.guardar_datos_personales(s, "20999999995", nombre="Ajeno Nadiesabe")
     s.commit()
 
 

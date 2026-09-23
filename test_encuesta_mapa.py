@@ -78,9 +78,11 @@ def _seccional(sid: int, nombre: str, geo_datos=None) -> int:
 def _padron(sid: int, cuils: list, seccional_id=None, provincia="Santa Fe"):
     with db.get_session() as s:
         for c in cuils:
-            s.add(db.Trabajador(sindicato_id=sid, cuil=c, nombre="T " + c, activo=True,
+            s.add(db.Trabajador(sindicato_id=sid, cuil=c, activo=True,
                                 registrado=True, seccional_id=seccional_id,
-                                provincia=provincia, cuit_empleador="30999888776"))
+                                cuit_empleador="30999888776"))
+            db.guardar_datos_personales(s, c, nombre="T " + c,
+                                        domicilio={"provincia": provincia})
         s.commit()
 
 

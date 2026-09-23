@@ -352,8 +352,21 @@ async def sin_cache_en_paneles(request: Request, call_next):
 # necesario hoy. Endurecerla (nonces por request) para que contenga de verdad
 # el XSS de un SVG/HTML subido es un follow-up (ENT-01/ENT-02). Por eso H-0007
 # queda PARCIAL: las cabeceras están, la CSP todavía no es estricta.
+#
+# `blob:` va en `img-src` y en `media-src` y NO se puede sacar: es lo que la
+# app usa para MOSTRARLE a una persona el archivo que acaba de elegir, antes
+# de subirlo. La foto de perfil del afiliado y la del empleador se achican en
+# un <canvas> y para eso primero se cargan en un <img src="blob:...">; las
+# miniaturas y los videos de Recursos se previsualizan igual. Sin `blob:` el
+# navegador bloquea ese <img>, salta `onerror` y la pantalla dice "No se pudo
+# leer la imagen" sin que el archivo haya llegado nunca al servidor -- así se
+# rompió la carga de foto de perfil el 2026-09-20, al estrenar estas
+# cabeceras. Un `blob:` no es una fuente externa: lo fabrica el mismo
+# documento a partir de un archivo que la persona eligió, así que no abre
+# ninguna puerta que `data:` no tuviera ya abierta.
 CSP = ("default-src 'self'; "
-       "img-src 'self' data: https:; "
+       "img-src 'self' data: blob: https:; "
+       "media-src 'self' data: blob:; "
        "style-src 'self' 'unsafe-inline'; "
        "script-src 'self' 'unsafe-inline'; "
        "connect-src 'self' https:; "
@@ -1222,9 +1235,10 @@ def admin(request: Request):
                           .order_by(Reporte.id.desc())).all() \
             if puede("reportes") else []
         # El padrón se usa también para resolver nombres por CUIL en Reportes
-        # y en Cotizantes, que solo guardan el CUIL.
-        trabajadores = s.exec(select(Trabajador).where(Trabajador.sindicato_id == sid)
-                              .order_by(Trabajador.activo.desc(), Trabajador.nombre)).all() \
+        # y en Cotizantes, que solo guardan el CUIL. Viene como dicts con el
+        # empadronamiento y la persona ya unidos (db.padron_del_sindicato):
+        # el nombre y el domicilio son de la persona, no de esta fila.
+        trabajadores = db.padron_del_sindicato(s, sid) \
             if puede("trabajadores", "reportes", "cotizantes") else []
         envios = s.exec(select(EnvioSindicato).where(EnvioSindicato.sindicato_id == sid)
                         .order_by(EnvioSindicato.periodo.desc(), EnvioSindicato.id.desc())).all() \
@@ -1234,7 +1248,7 @@ def admin(request: Request):
             if puede("emp_empresas") else []
     # Nombre por CUIL, para poder filtrar Reportes y Afiliados cotizantes por
     # nombre (esas tablas solo guardan el CUIL, no el nombre).
-    nombres_por_cuil = {t.cuil: t.nombre for t in trabajadores}
+    nombres_por_cuil = {t["cuil"]: t["nombre"] for t in trabajadores}
     # Conceptos con código provisorio (la IA no pudo leer el código del recibo):
     # nunca matchean por código, así que hay que revisarlos.
     provisorios = detectar_provisorios([
@@ -1502,23 +1516,27 @@ def admin_trabajador_alta(
         if id:  # modificación (solo si es de este sindicato)
             t = s.get(Trabajador, int(id))
             if t and t.sindicato_id == sid:
-                t.cuil, t.nombre = cuil_norm, nombre.strip()
-                for campo, valor in domicilio.items():
-                    setattr(t, campo, valor)
-                t.telefono, t.mail = telefono, mail
+                t.cuil = cuil_norm
                 t.vigencia_credencial = vigencia_credencial or None
                 t.seccional_id = sec_id
                 t.cuit_empleador = cuit_empleador.strip() or None
                 s.add(t)
+                # El nombre, el domicilio y el contacto son de la PERSONA:
+                # se escriben en un solo lugar y por eso el cambio se ve
+                # también en los otros gremios donde esté empadronada. Es la
+                # contracara de que no puedan existir dos versiones.
+                db.guardar_datos_personales(s, cuil_norm, nombre=nombre,
+                                            domicilio=domicilio, telefono=telefono, mail=mail)
         else:    # alta — evitar duplicado de CUIL en el mismo sindicato
             existe = s.exec(select(Trabajador).where(
                 Trabajador.sindicato_id == sid, Trabajador.cuil == cuil_norm)).first()
             if not existe:
                 s.add(Trabajador(
-                    sindicato_id=sid, cuil=cuil_norm, nombre=nombre.strip(),
-                    **domicilio, telefono=telefono, mail=mail,
+                    sindicato_id=sid, cuil=cuil_norm,
                     vigencia_credencial=vigencia_credencial or None, seccional_id=sec_id,
                     cuit_empleador=cuit_empleador.strip() or None))
+                db.guardar_datos_personales(s, cuil_norm, nombre=nombre,
+                                            domicilio=domicilio, telefono=telefono, mail=mail)
         s.commit()
     # Las dos altas pueden venir en cualquier orden: si a este CUIL ya se le
     # había dado usuario del panel, acá se arma el vínculo y se prende la
@@ -1594,9 +1612,10 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
                 "localidad": campo(5), "provincia": campo(6),
                 "codigo_postal": campo(9)}, precision="sin_geo")
             s.add(Trabajador(
-                sindicato_id=sid, cuil=cuil, nombre=nombre, **domicilio,
-                telefono=campo(7), mail=campo(8),
+                sindicato_id=sid, cuil=cuil,
                 seccional_id=por_nombre.get(geo._norm(campo(10)))))
+            db.guardar_datos_personales(s, cuil, nombre=nombre, domicilio=domicilio,
+                                        telefono=campo(7), mail=campo(8))
             existentes.add(cuil); altas += 1
         s.commit()
     # Las primeras tres líneas rechazadas alcanzan para que la persona vea el
@@ -5803,12 +5822,10 @@ def plataforma_ver_trabajadores(sindicato_id: int, request: Request):
     mostrar al clickear el número, mismo patrón que plataforma_ver_admins)."""
     exigir_plataforma(request)
     with db.get_session() as s:
-        trabajadores = s.exec(select(Trabajador).where(
-            Trabajador.sindicato_id == sindicato_id).order_by(
-            Trabajador.activo.desc(), Trabajador.nombre)).all()
         return {"trabajadores": [
-            {"cuil": t.cuil, "nombre": t.nombre, "activo": t.activo, "registrado": t.registrado}
-            for t in trabajadores]}
+            {"cuil": t["cuil"], "nombre": t["nombre"],
+             "activo": t["activo"], "registrado": t["registrado"]}
+            for t in db.padron_del_sindicato(s, sindicato_id)]}
 
 
 @app.post("/plataforma/reset-clave")
@@ -5829,9 +5846,20 @@ def plataforma_reset_clave(
                 u.clave_hash = hasheada; u.debe_cambiar_clave = False; s.add(u); s.commit()
                 return RedirectResponse("/plataforma?reset=ok", status_code=303)
         elif tipo == "trabajador":
+            # Desde que la fila de la persona nace con el alta del padrón, un
+            # CUIL sin clave YA tiene fila: ponerle una acá lo registra de
+            # hecho, así que los empadronamientos tienen que quedar marcados
+            # igual que si se hubiera registrado solo. Sin esto el KPI de
+            # "Afiliados registrados" contaría de menos y nadie lo notaría.
             c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == ident)).first()
             if c:
-                c.clave_hash = hasheada; s.add(c); s.commit()
+                era_nueva = not c.clave_hash
+                c.clave_hash = hasheada; s.add(c)
+                if era_nueva:
+                    for t in s.exec(select(Trabajador).where(Trabajador.cuil == ident)).all():
+                        t.registrado = True
+                        s.add(t)
+                s.commit()
                 return RedirectResponse("/plataforma?reset=ok", status_code=303)
     return RedirectResponse("/plataforma?reset=nohay", status_code=303)
 
@@ -5958,24 +5986,33 @@ def trabajador_login(request: Request, cuil: str = Form(...), clave: str = Form(
     return resp
 
 
-def _domicilio_distinto(trabajador, domicilio: dict) -> bool:
+def _domicilio_distinto(persona, domicilio: dict) -> bool:
     """¿El domicilio que llegó dice algo distinto de lo que la fila ya tiene?
 
     Separado de la ruta porque de esto depende que un domicilio IDÉNTICO no
     toque la fila: reescribirlo igual le borraría las coordenadas (el alta no
     geocodifica, escribe `sin_geo`) y volvería a mandar a la cola de
     georreferenciación algo que ya estaba ubicado."""
-    return any((getattr(trabajador, campo) or "").strip() != (domicilio.get(campo) or "").strip()
+    return any((getattr(persona, campo) or "").strip() != (domicilio.get(campo) or "").strip()
                for campo in ("calle", "numero", "piso_depto", "localidad",
                              "provincia", "codigo_postal"))
 
 
 @app.post("/trabajador/registro")
 def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Form(...),
+                         nombre: str = Form(""),
                          provincia: str = Form(""), localidad: str = Form(""),
                          calle: str = Form(""), numero: str = Form(""),
-                         piso_depto: str = Form(""), codigo_postal: str = Form("")):
-    """Crea la cuenta del afiliado y, con ella, su domicilio.
+                         piso_depto: str = Form(""), codigo_postal: str = Form(""),
+                         telefono: str = Form(""), mail: str = Form("")):
+    """Crea la cuenta del afiliado y, con ella, sus datos personales.
+
+    **Pide exactamente los mismos campos que el perfil** (nombre, domicilio,
+    teléfono y mail), y con la misma marca de obligatorio y opcional. Antes
+    pedía solo el domicilio: el afiliado se registraba, entraba, abría "Tu
+    perfil" y se encontraba con un formulario que no había visto nunca y con
+    campos que nadie le había pedido. Son el mismo dato y se cargan en el
+    mismo lugar -- la única diferencia es el momento.
 
     **Se le piden provincia y localidad, y nada más es obligatorio** (decisión
     de Sd, 2026-09-13; geo.OBLIGATORIOS_AFILIADO). El alta es el único momento
@@ -5998,6 +6035,13 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
     miente. Lo que el padrón tenía queda igual solo si la persona no cambió
     nada.
 
+    **Un campo en blanco no borra lo que el sindicato ya tenía.** El nombre,
+    el teléfono y el mail vienen prellenados vacíos (el formulario no puede
+    mostrar lo que el padrón sabe de un CUIL sin que cualquiera pueda
+    averiguarlo tipeando CUILes ajenos), así que dejarlos vacíos significa
+    "no lo completé", no "no tengo". En el perfil es al revés: ahí sí se ve
+    lo cargado y borrarlo es una decisión.
+
     **Acá no se geocodifica.** Es la misma regla del alta masiva: una llamada
     a un servicio ajeno en el camino del registro es el peor lugar para
     esperar ocho segundos, y el afiliado no tiene por qué pagar con su alta
@@ -6017,19 +6061,25 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
          "localidad": localidad, "provincia": provincia, "codigo_postal": codigo_postal},
         precision="sin_geo")
     with db.get_session() as s:
-        existe = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
-        if existe:
+        # La fila de la persona puede existir ya (la crea el alta del padrón)
+        # con `clave_hash` vacío: eso es "está en el padrón y todavía no
+        # eligió clave". Lo que no puede repetirse es la CLAVE -- si ya la
+        # tiene, esto es un alta duplicada.
+        persona = db.asegurar_cuenta(s, cuil)
+        if persona.clave_hash:
             return RedirectResponse("/ingresar?error=yaexiste", status_code=303)
-        s.add(CuentaTrabajador(cuil=cuil, clave_hash=auth.hashear_clave(clave)))
+        persona.clave_hash = auth.hashear_clave(clave)
+        # Cada `None` es "no lo toques": el domicilio idéntico no se reescribe
+        # (ver `_domicilio_distinto`), y el teléfono o el mail en blanco
+        # significan "no lo completé", no "bórralo".
+        db.guardar_datos_personales(
+            s, cuil, nombre=nombre,
+            domicilio=domicilio if _domicilio_distinto(persona, domicilio) else None,
+            telefono=telefono if telefono.strip() else None,
+            mail=mail if mail.strip() else None)
         # marcar los empadronamientos como registrados
         for t in s.exec(select(Trabajador).where(Trabajador.cuil == cuil)).all():
             t.registrado = True
-            # `Trabajador` es por sindicato (pluriempleo), así que el domicilio
-            # va en TODOS sus empadronamientos: es una sola persona y vive en
-            # un solo lugar.
-            if _domicilio_distinto(t, domicilio):
-                for campo, valor in domicilio.items():
-                    setattr(t, campo, valor)
             s.add(t)
         s.commit()
     token = auth.crear_sesion("trabajador", sindicato_id=0, ident=cuil)
@@ -6159,14 +6209,23 @@ async def api_actualizar_perfil(request: Request, nombre: str = Form(...), calle
                                  codigo_postal: str = Form(""), latitud: str = Form(""),
                                  longitud: str = Form(""), precision_geo: str = Form(""),
                                  telefono: str = Form(""), mail: str = Form("")):
-    """El trabajador edita su propio perfil -- todo menos el CUIL. Actualiza
-    el empadronamiento del sindicato ACTIVO (ver actualizar_perfil_trabajador:
-    Trabajador es por sindicato, no hay un domicilio único de la persona).
+    """El trabajador edita su propio perfil -- todo menos el CUIL.
+
+    Escribe en la PERSONA (`CuentaTrabajador`), así que el cambio se ve en
+    TODOS los sindicatos donde esté empadronada. Hasta el 2026-09-22 escribía
+    solo el empadronamiento del sindicato activo mientras el registro escribía
+    todos, y la misma persona editando en dos pantallas dejaba dos domicilios
+    distintos. Sigue exigiendo estar empadronado en el sindicato activo: el
+    perfil se abre desde la app de un gremio.
 
     El domicilio pasa por el mismo `geo.campos_para_guardar` que usa el admin:
     lo que carga el afiliado y lo que carga el sindicato tienen que quedar
     idénticos, o el mismo domicilio se vería distinto según quién lo tocó
     último.
+
+    **Acá un campo vacío SÍ borra**, al revés que en el registro: la persona
+    está viendo lo que tiene cargado, así que dejar el teléfono en blanco es
+    una decisión y no un "no lo completé".
 
     **Provincia y localidad son obligatorias** (geo.OBLIGATORIOS_AFILIADO).
     Es el único dato del domicilio que el sindicato realmente necesita para

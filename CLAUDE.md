@@ -83,6 +83,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 ## Archivos principales
 - main.py — servidor y todas las rutas.
 - db.py — modelos SQLModel, engine dual, acceso a datos, marca_sindicato().
+  `CuentaTrabajador` es la PERSONA (una fila por CUIL, dueña de sus datos
+  personales) y `Trabajador` el EMPADRONAMIENTO en un sindicato.
 - auth.py — hash de claves y sesiones.
 - extractor.py — lee recibos y comprobantes de aportes con IA.
 - validador.py — motor de validación de fórmulas.
@@ -391,6 +393,35 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   para los filtros de empresa/afiliado). `test_dashboard_concurrencia.py` lo
   verifica sobre los endpoints del panel. Detalle en HISTORIAL.md.
 
+- **Los datos personales del afiliado tienen UN SOLO dueño: la persona**
+  (2026-09-22). Nombre, domicilio, teléfono y mail viven en
+  `CuentaTrabajador` (una fila por CUIL); `Trabajador` quedó con lo que
+  cambia de un gremio a otro (seccional, credencial, CUIT del empleador,
+  activo, registrado). **La fila de la persona existe desde que el CUIL
+  entra al PADRÓN, no desde que se registra**: `clave_hash` vacío significa
+  "todavía no eligió clave" y no deja entrar. Toda escritura pasa por
+  `db.guardar_datos_personales` / `db.asegurar_cuenta`, y toda lectura del
+  padrón por `db.padron_del_sindicato` o un JOIN por CUIL -- nunca una
+  columna local. Antes había una copia POR SINDICATO y las cuatro puertas no
+  escribían igual (el registro copiaba a todos los empadronamientos, el
+  perfil solo al activo), así que el mismo CUIL terminaba con dos nombres y
+  dos direcciones. **El registro pide exactamente los mismos campos que el
+  perfil** (lo verifica `test_datos_personales.py` contra la firma de las dos
+  rutas). Consecuencia buscada y dicha en pantalla: lo que corrige el admin
+  de un gremio lo ven el afiliado y los otros gremios. El empleador **todavía
+  no** se unificó (sigue con su bloque por sindicato, y con el domicilio como
+  texto libre) -- ver BACKLOG.md. Detalle en HISTORIAL.md.
+
+- **`blob:` no se saca de la CSP** (`main.CSP`, 2026-09-22): va en `img-src`
+  y en `media-src` porque es lo que la app usa para mostrarle a una persona
+  el archivo que acaba de elegir, antes de subirlo (la foto de perfil se
+  achica en un `<canvas>` y para eso primero se carga en un `<img>`). Sin
+  `blob:` el navegador bloquea ese `<img>`, salta `onerror` y la pantalla
+  dice "no se pudo leer la imagen" sin que el archivo haya llegado nunca al
+  servidor: un error que no deja rastro en ningún log porque no hubo
+  request. Así se rompió la carga de foto de perfil del 2026-09-20 al
+  2026-09-22, en las apps de trabajador y de empresa.
+
 - **Un documento que no es del CUIL logueado se corta APENAS SE LEE, no al
   confirmar** (2026-09-14): `/api/leer` (recibo) y `/api/aportes`
   (comprobante de ARCA) comparan el CUIL leído contra el de la sesión con
@@ -645,6 +676,19 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     2026-09-22 la presenta además un **video de 20 s** ("Panel de Control", en
     Recursos), filmado cuadro por cuadro con reloj virtual; las fuentes para
     regenerarlo están en `disenos/video-panel-control/` (fuera de git, `LEEME.md`).
+
+28. **Los datos personales del afiliado tienen un solo dueño** (2026-09-22,
+    rama `fix/datos-personales-trabajador`): nombre, domicilio, teléfono y
+    mail se mudaron de `Trabajador` (una fila por sindicato) a
+    `CuentaTrabajador` (una por CUIL), con la fila de la persona creada desde
+    el alta del padrón y sin clave. Migración `a7e3f90b5c21`, que consolida
+    lo que ya diverge: el domicilio como bloque desde el empadronamiento más
+    completo, y nombre/teléfono/mail cada uno con su primer valor no vacío.
+    En el mismo bloque, **el registro pasó a pedir los mismos campos que el
+    perfil** y se arregló la **carga de foto de perfil**, rota desde el
+    2026-09-20 porque la CSP de XSK no listaba `blob:`. Ver las dos
+    decisiones nuevas en "Decisiones tomadas" y el detalle en HISTORIAL.md
+    ("Una persona, un domicilio").
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

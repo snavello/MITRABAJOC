@@ -147,14 +147,23 @@
       <input type="password" id="reg-repetir" required minlength="4">
       <div id="reg-error" style="display:none; color:#f2b8ae; font-size:12px; margin-top:6px;">Las claves no coinciden.</div>
 
-      {# Provincia y localidad son lo único obligatorio del domicilio, y son
-         los mismos campos que el afiliado ve después en su perfil: si acá
-         pidiéramos otra cosa, la primera vez que abra "Tu perfil" tendría que
-         volver a entender el formulario. Lo fino se muestra igual pero dice
+      {# Son EXACTAMENTE los campos de "Tu perfil", en el mismo orden y con
+         la misma marca de obligatorio y opcional: nombre, domicilio,
+         teléfono y mail. Son el mismo dato y se guardan en el mismo lugar --
+         lo único que cambia es el momento. Antes acá se pedía solo el
+         domicilio, y quien se registraba abría después su perfil y se
+         encontraba con un formulario que no había visto nunca.
+
+         Del domicilio, provincia y localidad son lo único obligatorio
+         (geo.OBLIGATORIOS_AFILIADO). Lo fino se muestra igual pero dice
          "opcional" al lado, que es lo que hace que nadie lo confunda con un
          requisito. El mapa NO está acá a propósito: ubicar un globo es una
          tarea de escritorio y este es el momento de menos paciencia de toda
-         la app. #}
+         la app -- queda para el perfil. #}
+      <div class="dom-titulo">Tus datos</div>
+      <label>Nombre y apellido</label>
+      <input name="nombre" required autocomplete="name" placeholder="Como figura en tu recibo">
+
       <div class="dom-titulo">Tu domicilio</div>
       <label>Provincia</label>
       <select name="provincia" required>
@@ -172,8 +181,14 @@
         <div><label>Código postal <span class="opc">(opcional)</span></label><input name="codigo_postal" inputmode="numeric" autocomplete="postal-code"></div>
       </div>
 
+      <div class="dom-titulo">Para que tu sindicato pueda contactarte</div>
+      <div class="dom-fila">
+        <div><label>Teléfono <span class="opc">(opcional)</span></label><input name="telefono" inputmode="tel" autocomplete="tel"></div>
+        <div><label>Mail <span class="opc">(opcional)</span></label><input name="mail" type="email" autocomplete="email"></div>
+      </div>
+
       <button class="enviar" type="submit">Crear mi cuenta</button>
-      <div class="ayuda">Tu CUIL tiene que estar habilitado por tu sindicato. Con una sola cuenta accedés a todos tus sindicatos. La dirección completa y el mapa los podés cargar después, desde tu perfil.<br>Si tu sindicato ya tenía otra dirección tuya, queda la que cargues acá.</div>
+      <div class="ayuda">Tu CUIL tiene que estar habilitado por tu sindicato. Con una sola cuenta accedés a todos tus sindicatos. La dirección completa y el mapa los podés cargar después, desde tu perfil.<br>Si tu sindicato ya tenía otros datos tuyos, quedan los que cargues acá; lo que dejes vacío no se borra.</div>
     </form>
     <div class="mrz">COLM3NA&lt;&lt;TRABAJADOR&lt;&lt;ACCESO&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div>
   </div>

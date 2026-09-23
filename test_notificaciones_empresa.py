@@ -46,7 +46,8 @@ with db.get_session() as s:
                      provincia="Santa Fe", activo=True))
     # Un trabajador con el mismo "identificador" numérico que un CUIT de
     # arriba, para el test de que las dos tablas nunca se cruzan.
-    s.add(Trabajador(sindicato_id=SID_UOM, cuil="30111222339", nombre="Coincidencia", activo=True))
+    s.add(Trabajador(sindicato_id=SID_UOM, cuil="30111222339", activo=True))
+    db.guardar_datos_personales(s, "30111222339", nombre="Coincidencia")
     s.commit()
 
 admin_uom = TestClient(main.app)

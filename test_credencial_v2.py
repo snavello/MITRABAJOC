@@ -11,7 +11,8 @@ db.crear_tablas()
 with db.get_session() as s:
     sind = Sindicato(nombre="Unión Obrera Metalúrgica", slug="union-obrera-metalurgica")
     s.add(sind); s.commit(); s.refresh(sind)
-    trab = Trabajador(sindicato_id=sind.id, cuil="20111111119", nombre="Juan")
+    trab = Trabajador(sindicato_id=sind.id, cuil="20111111119")
+    db.guardar_datos_personales(s, "20111111119", nombre="Juan")
     s.add(trab)
     s.commit()
     s.refresh(trab)
@@ -95,7 +96,8 @@ def test_generar_codigo_credencial_persiste_y_regenera():
 
 def test_credencial_de_sin_generar_es_none():
     with db.get_session() as s:
-        otro = Trabajador(sindicato_id=SID, cuil="20999999999", nombre="Sin Generar")
+        otro = Trabajador(sindicato_id=SID, cuil="20999999999")
+        db.guardar_datos_personales(s, "20999999999", nombre="Sin Generar")
         s.add(otro); s.commit()
     assert db.credencial_de("20999999999", SID)["codigo"] is None
     print("OK  test_credencial_de_sin_generar_es_none")

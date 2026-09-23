@@ -17,7 +17,8 @@ with db.get_session() as s:
     s.add(sind)
     s.commit()
     s.refresh(sind)
-    s.add(Trabajador(sindicato_id=sind.id, cuil="20111111119", nombre="Juan", registrado=True))
+    s.add(Trabajador(sindicato_id=sind.id, cuil="20111111119", registrado=True))
+    db.guardar_datos_personales(s, "20111111119", nombre="Juan")
     s.commit()
     SID = sind.id
 

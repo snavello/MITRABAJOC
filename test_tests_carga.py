@@ -29,8 +29,10 @@ def test_usuarios_carga_estres_lee_de_la_base_no_de_un_csv():
     with db.get_session() as s:
         sind = Sindicato(nombre="Carga Estres Test", slug="carga-estres")
         s.add(sind); s.commit(); s.refresh(sind)
-        s.add(Trabajador(sindicato_id=sind.id, cuil="20900000001", nombre="Uno"))
-        s.add(Trabajador(sindicato_id=sind.id, cuil="20900000002", nombre="Dos"))
+        s.add(Trabajador(sindicato_id=sind.id, cuil="20900000001"))
+        db.guardar_datos_personales(s, "20900000001", nombre="Uno")
+        s.add(Trabajador(sindicato_id=sind.id, cuil="20900000002"))
+        db.guardar_datos_personales(s, "20900000002", nombre="Dos")
         s.commit()
     usuarios = db.usuarios_carga_estres()
     assert set(usuarios) == {("20900000001", "1234"), ("20900000002", "1234")}

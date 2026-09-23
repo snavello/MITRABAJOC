@@ -280,14 +280,18 @@ def sembrar_base(sid: int):
             t = s.exec(select(Trabajador).where(Trabajador.sindicato_id == sid,
                                                 Trabajador.cuil == cuil)).first()
             if not t:
-                s.add(Trabajador(sindicato_id=sid, cuil=cuil, nombre=nombre,
+                s.add(Trabajador(sindicato_id=sid, cuil=cuil,
                                  registrado=True, seccional_id=secc,
-                                 cuit_empleador=emp["cuit"],
-                                 provincia=rnd.choice(["Buenos Aires", "Santa Fe", "Córdoba"])))
-            if not s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first():
+                                 cuit_empleador=emp["cuit"]))
+            # El nombre y el domicilio son de la PERSONA (ver CuentaTrabajador).
+            db.guardar_datos_personales(
+                s, cuil, nombre=nombre,
+                domicilio={"provincia": rnd.choice(["Buenos Aires", "Santa Fe", "Córdoba"])})
+            cuenta = db.asegurar_cuenta(s, cuil)
+            if not cuenta.clave_hash:
                 # La regla del lote: la clave son los 5 primeros dígitos del CUIL.
-                s.add(CuentaTrabajador(cuil=cuil, nombre=nombre,
-                                       clave_hash=auth.hashear_clave(cuil[:5])))
+                cuenta.clave_hash = auth.hashear_clave(cuil[:5])
+                s.add(cuenta)
             trabajadores.append({"cuil": cuil, "nombre": nombre, "seccional_id": secc,
                                  "empresa": emp,
                                  "sueldo": rnd.randint(900, 3200) * 1000})

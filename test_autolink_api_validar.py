@@ -22,7 +22,8 @@ with db.get_session() as s:
     sind = Sindicato(nombre="Test Autolink", slug="test-autolink")
     s.add(sind); s.commit(); s.refresh(sind)
     SID = sind.id
-    s.add(Trabajador(sindicato_id=SID, cuil="20111111119", nombre="Juan", activo=True, registrado=True))
+    s.add(Trabajador(sindicato_id=SID, cuil="20111111119", activo=True, registrado=True))
+    db.guardar_datos_personales(s, "20111111119", nombre="Juan")
     s.commit()
 # El genérico JUBILACION ya está cargado (como pasaría con el botón de
 # "Cargar aportes de ley", o la autocarga al crear el sindicato).
@@ -91,7 +92,8 @@ def test_no_se_vincula_si_el_sindicato_no_tiene_el_generico_cargado():
         sind2 = Sindicato(nombre="Test Sin Generico", slug="test-sin-generico")
         s.add(sind2); s.commit(); s.refresh(sind2)
         sid2 = sind2.id
-        s.add(Trabajador(sindicato_id=sid2, cuil="20222222220", nombre="Ana", activo=True, registrado=True))
+        s.add(Trabajador(sindicato_id=sid2, cuil="20222222220", activo=True, registrado=True))
+        db.guardar_datos_personales(s, "20222222220", nombre="Ana")
         s.commit()
     # OJO: acá NO se llama a crear_conceptos_universales — el sindicato no
     # tiene JUBILACION cargado todavía.

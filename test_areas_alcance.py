@@ -50,8 +50,9 @@ with db.get_session() as s:
                               ("20300000002", "Cordobés Dos", SEC_CBA),
                               ("20300000003", "Rosarino", SEC_ROS),
                               ("20300000004", "Central", SEC_CEN)]:
-        s.add(Trabajador(sindicato_id=SID, cuil=cuil, nombre=nombre, seccional_id=sec,
+        s.add(Trabajador(sindicato_id=SID, cuil=cuil, seccional_id=sec,
                          activo=True, registrado=True))
+        db.guardar_datos_personales(s, cuil, nombre=nombre)
 
     s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111110", cuil="20111111110",
                            nombre="Prensa Central", clave_hash=auth.hashear_clave("cen"),

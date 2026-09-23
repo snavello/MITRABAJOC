@@ -708,14 +708,14 @@ def _georreferenciar_padron(sindicato_id: int, alcance) -> None:
     ahí, porque la lista de pendientes se recalcula sola."""
     import db
     try:
-        for trabajador_id, datos in db.trabajadores_sin_geo(sindicato_id, alcance):
+        for cuil, datos in db.trabajadores_sin_geo(sindicato_id, alcance):
             elegido = None
             try:
                 r = normalizar_direccion(datos["provincia"], datos["localidad"],
                                          datos["calle"], datos["numero"])
                 elegido = (r["candidatos"] or [None])[0]
                 if elegido:
-                    db.guardar_geo_trabajador(sindicato_id, trabajador_id, campos_para_guardar(
+                    db.guardar_geo_trabajador(sindicato_id, cuil, campos_para_guardar(
                         datos, elegido["precision"], elegido["lat"], elegido["lon"]))
             except Exception:
                 # Una dirección que rompe no puede cortar el lote entero:

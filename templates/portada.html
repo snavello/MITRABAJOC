@@ -468,10 +468,12 @@
         </div>
         <div class="perfil-campo perfil-fila2">
           <div><label>Código postal <span class="opc">(opcional)</span></label><input type="text" id="pf-cp" value="{{ perfil.codigo_postal if perfil else '' }}"></div>
-          <div><label>Teléfono</label><input type="text" id="pf-telefono" value="{{ perfil.telefono if perfil else '' }}"></div>
+          {# Marcados "(opcional)" igual que en el registro: son los mismos
+             campos y no puede ser que acá parezcan obligatorios y allá no. #}
+          <div><label>Teléfono <span class="opc">(opcional)</span></label><input type="text" id="pf-telefono" value="{{ perfil.telefono if perfil else '' }}"></div>
         </div>
         <div class="perfil-campo">
-          <label>Mail</label><input type="email" id="pf-mail" value="{{ perfil.mail if perfil else '' }}">
+          <label>Mail <span class="opc">(opcional)</span></label><input type="email" id="pf-mail" value="{{ perfil.mail if perfil else '' }}">
         </div>
 
         {# Ubicar el domicilio es opcional y bajo demanda: el mapa no se

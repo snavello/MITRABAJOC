@@ -421,22 +421,27 @@ def sembrar_base(sid: int, ctx: dict):
         for cuil in ctx["cuils"]:
             nombre = f"{rnd.choice(NOMBRES)} {rnd.choice(APELLIDOS)}"
             emp = rnd.choice(empresas)
-            if not s.exec(select(Trabajador).where(Trabajador.sindicato_id == sid,
-                                                   Trabajador.cuil == cuil)).first():
-                # La zona sale de SU seccional y no de un sorteo: la
-                # provincia al azar dejaba gente de la seccional de Rosario
-                # viviendo en Córdoba, y desde el 2026-09-13 la localidad es
-                # obligatoria además de la provincia
-                # (geo.OBLIGATORIOS_AFILIADO).
-                sec_id = rnd.choice(secc_ids)
-                s.add(Trabajador(sindicato_id=sid, cuil=cuil, nombre=nombre,
+            # La zona sale de SU seccional y no de un sorteo: la provincia al
+            # azar dejaba gente de la seccional de Rosario viviendo en
+            # Córdoba, y desde el 2026-09-13 la localidad es obligatoria
+            # además de la provincia (geo.OBLIGATORIOS_AFILIADO).
+            ya = s.exec(select(Trabajador).where(Trabajador.sindicato_id == sid,
+                                                 Trabajador.cuil == cuil)).first()
+            sec_id = ya.seccional_id if ya else rnd.choice(secc_ids)
+            if not ya:
+                s.add(Trabajador(sindicato_id=sid, cuil=cuil,
                                  registrado=True, seccional_id=sec_id,
-                                 cuit_empleador=emp["cuit"],
-                                 **geo.campos_para_guardar(zonas.get(sec_id, {}),
-                                                           precision="sin_geo")))
-            if not s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first():
-                s.add(CuentaTrabajador(cuil=cuil, nombre=nombre,
-                                       clave_hash=auth.hashear_clave(cuil[:5])))
+                                 cuit_empleador=emp["cuit"]))
+            # Los datos personales viven en la PERSONA: una sola fila por
+            # CUIL, con el domicilio y el nombre (ver CuentaTrabajador).
+            db.guardar_datos_personales(
+                s, cuil, nombre=nombre,
+                domicilio=geo.campos_para_guardar(zonas.get(sec_id, {}), precision="sin_geo"))
+            cuenta = db.asegurar_cuenta(s, cuil)
+            if not cuenta.clave_hash:
+                # La regla del lote: la clave son los 5 primeros dígitos del CUIL.
+                cuenta.clave_hash = auth.hashear_clave(cuil[:5])
+                s.add(cuenta)
             # `semilla` deja que un perfil derive rasgos ESTABLES del
             # trabajador (antigüedad, función, título): tienen que ser los
             # mismos en todos sus recibos, no sortearse en cada uno.
