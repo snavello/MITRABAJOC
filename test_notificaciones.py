@@ -38,21 +38,29 @@ with db.get_session() as s:
     SEC_NORTE, SEC_SUR = norte.id, sur.id
 
     # Trabajadores de UOM, cada uno pensado para un criterio distinto.
-    s.add(Trabajador(sindicato_id=SID_UOM, cuil="20111111119", nombre="Juan", activo=True,
-                      registrado=True, seccional_id=SEC_NORTE, provincia="Santa Fe",
+    s.add(Trabajador(sindicato_id=SID_UOM, cuil="20111111119", activo=True,
+                      registrado=True, seccional_id=SEC_NORTE,
                       cuit_empleador="30111222339"))
-    s.add(Trabajador(sindicato_id=SID_UOM, cuil="27222222224", nombre="Ana", activo=True,
-                      registrado=True, seccional_id=SEC_SUR, provincia="Buenos Aires",
+    db.guardar_datos_personales(s, "20111111119", nombre="Juan",
+                                domicilio={"provincia": "Santa Fe"})
+    s.add(Trabajador(sindicato_id=SID_UOM, cuil="27222222224", activo=True,
+                      registrado=True, seccional_id=SEC_SUR,
                       cuit_empleador="30999888776"))
-    s.add(Trabajador(sindicato_id=SID_UOM, cuil="20333333336", nombre="Luis", activo=True,
-                      registrado=True, seccional_id=None, provincia="Córdoba"))
+    db.guardar_datos_personales(s, "27222222224", nombre="Ana",
+                                domicilio={"provincia": "Buenos Aires"})
+    s.add(Trabajador(sindicato_id=SID_UOM, cuil="20333333336", activo=True,
+                      registrado=True, seccional_id=None))
+    db.guardar_datos_personales(s, "20333333336", nombre="Luis",
+                                domicilio={"provincia": "Córdoba"})
     # Pluriempleo: mismo CUIL en UOM (seccional Norte, destinatario real de la
     # notificación de prueba) y en Fega -- el aislamiento entre sindicatos se
     # prueba con ESTE cuil, separado de Juan para no alterar sus asserts.
-    s.add(Trabajador(sindicato_id=SID_UOM, cuil="20555555551", nombre="Marta", activo=True,
+    s.add(Trabajador(sindicato_id=SID_UOM, cuil="20555555551", activo=True,
                       registrado=True, seccional_id=SEC_NORTE))
-    s.add(Trabajador(sindicato_id=SID_FEGA, cuil="20555555551", nombre="Marta (Fega)",
+    db.guardar_datos_personales(s, "20555555551", nombre="Marta")
+    s.add(Trabajador(sindicato_id=SID_FEGA, cuil="20555555551",
                       activo=True, registrado=True))
+    db.guardar_datos_personales(s, "20555555551", nombre="Marta (Fega)")
     s.commit()
 
 admin_uom = TestClient(main.app)

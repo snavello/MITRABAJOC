@@ -31,7 +31,8 @@ with db.get_session() as s:
                             clave_hash=auth.hashear_clave("uom-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(UsuarioSindicato(sindicato_id=SID_FEGA, usuario="20222222220", nombre="Admin Fega",
                             clave_hash=auth.hashear_clave("fega-demo"), debe_cambiar_clave=False, es_super_admin=True))
-    s.add(Trabajador(sindicato_id=SID_UOM, cuil="20111111119", nombre="Juan", activo=True, registrado=True))
+    s.add(Trabajador(sindicato_id=SID_UOM, cuil="20111111119", activo=True, registrado=True))
+    db.guardar_datos_personales(s, "20111111119", nombre="Juan")
     # Desde la Fase 3 el formulario declara a qué ÁREA cae el trámite, y el
     # destino por defecto es obligatorio (decisión N6): sin él el alta se
     # rechaza, porque un trámite sin área no lo ve nadie en ninguna bandeja.
@@ -389,7 +390,8 @@ def test_bloqueo_403_si_modulo_apagado():
     r2 = admin_fega.post("/admin/tramite-tipo/borrar", data={"id": TIPO_ID})
     assert r2.status_code == 403
     with Session(db.engine) as s:
-        fega_trab = Trabajador(sindicato_id=SID_FEGA, cuil="20444444440", nombre="Ana", activo=True, registrado=True)
+        fega_trab = Trabajador(sindicato_id=SID_FEGA, cuil="20444444440", activo=True, registrado=True)
+        db.guardar_datos_personales(s, "20444444440", nombre="Ana")
         s.add(fega_trab); s.commit()
     trab_fega = _sesion_trabajador("20444444440")
     r3 = trab_fega.post("/api/tramite", data={"tipo_tramite_id": TIPO_ID, "campo_1": "x"})

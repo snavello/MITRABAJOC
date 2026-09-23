@@ -112,7 +112,8 @@ def test_sesion_empleador_no_pisa_sesion_trabajador_en_el_mismo_navegador():
     un rol nuevo (empleador), verificado directo: las dos cookies conviven."""
     with db.get_session() as s:
         from db import Trabajador
-        s.add(Trabajador(sindicato_id=SID_UOM, cuil="20111111119", nombre="Juan", activo=True))
+        s.add(Trabajador(sindicato_id=SID_UOM, cuil="20111111119", activo=True))
+        db.guardar_datos_personales(s, "20111111119", nombre="Juan")
         s.commit()
     c = _cliente()
     c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0, ident="20111111119"))

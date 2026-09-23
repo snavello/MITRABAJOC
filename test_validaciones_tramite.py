@@ -32,8 +32,9 @@ with db.get_session() as s:
     SID = uom.id
     s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111110", nombre="Admin",
                             clave_hash=auth.hashear_clave("uom-demo"), debe_cambiar_clave=False, es_super_admin=True))
-    s.add(Trabajador(sindicato_id=SID, cuil="20111111119", nombre="Juan",
+    s.add(Trabajador(sindicato_id=SID, cuil="20111111119",
                      activo=True, registrado=True))
+    db.guardar_datos_personales(s, "20111111119", nombre="Juan")
     # El destino por defecto es obligatorio desde la Fase 3 (decisión N6).
     sec = Seccional(sindicato_id=SID, nombre="Sede Central", ve_todas=True)
     s.add(sec); s.commit(); s.refresh(sec)

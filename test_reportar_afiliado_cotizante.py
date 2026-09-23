@@ -22,7 +22,8 @@ with db.get_session() as s:
     sind = Sindicato(nombre="UOM Test Cotizantes")
     s.add(sind); s.commit(); s.refresh(sind)
     SID = sind.id
-    s.add(Trabajador(sindicato_id=SID, cuil="20111111119", nombre="Juan", registrado=True))
+    s.add(Trabajador(sindicato_id=SID, cuil="20111111119", registrado=True))
+    db.guardar_datos_personales(s, "20111111119", nombre="Juan")
     # Fórmula que el recibo de abajo NO va a cumplir a propósito, para que la
     # validación termine con discrepancias reales (no simuladas a mano).
     s.add(Concepto(sindicato_id=SID, codigo="JUB", nombre="Aporte jubilatorio",

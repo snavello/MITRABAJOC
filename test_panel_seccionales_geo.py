@@ -83,19 +83,25 @@ with db.get_session() as s:
     # Padrón: 3 en Rosario (2 registrados), 1 en Córdoba (0 registrados).
     # Los nombres son rebuscados a propósito: se los busca después en el JSON
     # crudo de la respuesta para probar que NO viajan.
-    s.add(Trabajador(sindicato_id=SID_A, cuil="20111111119", nombre="Zoltan Kerekes",
+    s.add(Trabajador(sindicato_id=SID_A, cuil="20111111119",
                      registrado=True, seccional_id=SEC_ROS, cuit_empleador="30111111117"))
-    s.add(Trabajador(sindicato_id=SID_A, cuil="20222222227", nombre="Hipolita Quiroga",
+    db.guardar_datos_personales(s, "20111111119", nombre="Zoltan Kerekes")
+    s.add(Trabajador(sindicato_id=SID_A, cuil="20222222227",
                      registrado=True, seccional_id=SEC_ROS, cuit_empleador="30222222225"))
-    s.add(Trabajador(sindicato_id=SID_A, cuil="20333333336", nombre="Bartolome Nunez",
+    db.guardar_datos_personales(s, "20222222227", nombre="Hipolita Quiroga")
+    s.add(Trabajador(sindicato_id=SID_A, cuil="20333333336",
                      registrado=False, seccional_id=SEC_ROS, cuit_empleador="30111111117"))
-    s.add(Trabajador(sindicato_id=SID_A, cuil="20444444440", nombre="Casilda Etchevarne",
+    db.guardar_datos_personales(s, "20333333336", nombre="Bartolome Nunez")
+    s.add(Trabajador(sindicato_id=SID_A, cuil="20444444440",
                      registrado=False, seccional_id=SEC_CBA, cuit_empleador="30111111117"))
+    db.guardar_datos_personales(s, "20444444440", nombre="Casilda Etchevarne")
     # Sin seccional: no tiene que aparecer en ninguna fila del mapa.
-    s.add(Trabajador(sindicato_id=SID_A, cuil="20555555553", nombre="Nadie Sinseccional",
+    s.add(Trabajador(sindicato_id=SID_A, cuil="20555555553",
                      registrado=True, cuit_empleador="30111111117"))
-    s.add(Trabajador(sindicato_id=SID_B, cuil="20999999995", nombre="Ajeno Total",
+    db.guardar_datos_personales(s, "20555555553", nombre="Nadie Sinseccional")
+    s.add(Trabajador(sindicato_id=SID_B, cuil="20999999995",
                      registrado=True, seccional_id=SEC_AJENA))
+    db.guardar_datos_personales(s, "20999999995", nombre="Ajeno Total")
 
     # Recibos: 3 en Rosario (1 con diferencias), 1 en Córdoba (OK), y uno
     # VIEJO en Rosario fuera del rango, para que el período se note.

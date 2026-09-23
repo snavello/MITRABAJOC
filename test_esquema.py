@@ -62,8 +62,10 @@ def test_kpis_cuentan_lo_de_hoy_y_los_ingresos_recientes():
                        precio_entrada=3.0, precio_salida=15.0))   # "prueba" no es gasto de recibos
         s.add(db.AccesoLog(rol="trabajador", sindicato_id=sid, fecha=hoy))
         s.add(db.AccesoLog(rol="admin", sindicato_id=sid, fecha="2020-01-01 10:00"))  # viejo: no cuenta
-        s.add(db.Trabajador(sindicato_id=sid, cuil="20111111119", nombre="Ana", registrado=True))
-        s.add(db.Trabajador(sindicato_id=sid, cuil="27222222224", nombre="Bea", registrado=False))
+        s.add(db.Trabajador(sindicato_id=sid, cuil="20111111119", registrado=True))
+        db.guardar_datos_personales(s, "20111111119", nombre="Ana")
+        s.add(db.Trabajador(sindicato_id=sid, cuil="27222222224", registrado=False))
+        db.guardar_datos_personales(s, "27222222224", nombre="Bea")
         s.commit()
         k = esquema.kpis(s, ahora=ahora)
     assert k["recibos_hoy"] == 1 and k["recibos_total"] >= 2

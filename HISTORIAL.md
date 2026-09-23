@@ -5304,3 +5304,168 @@ con la cámara mirando hacia adelante sobre ella, medio cuadro quedaba en negro
 cuadro, se bajó la inclinación a 50°, se ocultó el barrido del radar durante
 el vuelo (quieto sobre el plano inclinado parecía un triángulo) y se dibujó una
 grilla de piso que acompaña al plano hasta el horizonte.
+
+## Una persona, un domicilio (2026-09-22)
+
+Lo reportó Sd así: "he detectado una inconsistencia en la informacion de
+personal del trabajador, que puede tener un origen mas complejo que un error
+de codigo". Tres síntomas: el alta que hace el sindicato no pide lo mismo que
+el afiliado completa después en su perfil; la carga de foto de perfil falla; y
+el CUIL 20202790411 parecía tener una dirección en su perfil y otra en la
+información del sindicato, "pareciera que hay algo guardado en dos lugares".
+
+Tenía razón en el diagnóstico de fondo, y las tres cosas resultaron ser
+problemas distintos.
+
+### La foto: la CSP no dejaba pasar los blob
+
+No era de AEFIP ni de ningún sindicato: estaba roto para todos desde el
+2026-09-20, el día que XSK estrenó las cabeceras de seguridad (H-0007).
+`main.CSP` declaraba `img-src 'self' data: https:`, sin `blob:`.
+
+Para no subir una foto de 4 MB al servidor, `redimensionarFotoPerfil()`
+(portada.html) la achica en un `<canvas>`, y para eso primero tiene que
+cargarla en un `<img src="blob:...">` fabricado con
+`URL.createObjectURL(archivo)`. Sin `blob:` en `img-src`, el navegador bloquea
+esa carga, salta `img.onerror` y la promesa se rechaza con "No se pudo leer la
+imagen".
+
+Lo que hace que el bug sea difícil de encontrar desde el servidor: **el
+archivo nunca sale de la máquina de la persona**. No hay request, no hay error
+4xx, no hay nada en los logs de Render ni en Sentry. Solo un cartel en la
+pantalla. Y la foto que Sd ya tenía cargada se seguía viendo, porque era
+anterior a la CSP: el síntoma era "no puedo cambiarla", no "no tengo".
+
+Se confirmó levantando un servidor mínimo con esa misma cabecera y un `<img>`
+apuntado a un blob: BLOB_BLOQUEADO con la CSP de entonces, BLOB_OK agregando
+`blob:`. El mismo defecto afectaba a la foto del empleador
+(`empresa_portada.html`) y a las miniaturas y videos de Recursos
+(`entornos.html`), que además necesitan `media-src`.
+
+Fix: `img-src 'self' data: blob: https:` y `media-src 'self' data: blob:`. Un
+`blob:` no es una fuente externa -- lo fabrica el propio documento a partir de
+un archivo que la persona eligió --, así que no abre ninguna puerta que
+`data:` no tuviera ya abierta. Regresión en `test_xsk_correcciones.py`, que
+hasta ese día no probaba el CONTENIDO de la CSP, solo su presencia.
+
+### Las dos direcciones eran dos entornos
+
+En Pruebas, el CUIL 20202790411 tiene un solo empadronamiento y un solo
+domicilio ("pueyrredon 1362, barrio norte"). En Demo, el mismo CUIL tiene "La
+rioja 893" con altura "892" y ciudad "Caba" -- la basura típica del formulario
+de texto libre de antes. Demo corre la rama `demo`, que quedó en el esquema
+viejo (columnas `piso`/`ciudad`, sin CP ni coordenadas): son dos bases
+distintas con dos versiones distintas de la app, no dos lugares dentro de una.
+
+### Pero abajo había un problema real, y era el que Sd intuía
+
+`Trabajador` es una fila POR SINDICATO. Nombre, domicilio, teléfono y mail
+vivían ahí, así que una persona empadronada en dos gremios tenía **dos
+copias** de sus datos personales. Y las cuatro puertas por las que entran esos
+datos no escribían igual:
+
+- `/trabajador/registro` copiaba el domicilio a **todos** los
+  empadronamientos del CUIL, con el comentario "es una sola persona y vive en
+  un solo lugar".
+- `/api/perfil` escribía **solo en el sindicato activo**, con el comentario
+  "no hay un domicilio único de la persona en este modelo".
+
+Dos rutas del mismo archivo, con dos modelos mentales opuestos y un comentario
+cada una explicando el suyo. La misma persona editando en dos pantallas dejaba
+dos resultados distintos, y nada indicaba cuál era el bueno. La divergencia ya
+existía: un CUIL en Pruebas, uno en Demo y uno en la base local, los tres con
+dos nombres y dos direcciones.
+
+Había además una **tercera copia**: `CuentaTrabajador.nombre`, que existía, la
+llenaba solo el cargador de datos sintéticos y **no la leía nadie** en toda la
+app. La cuenta de Sd la tenía vacía mientras el padrón decía "Sandro Navello".
+
+### La decisión: la persona es la dueña
+
+Sd eligió, entre tres opciones, que el dato sea de la persona y exista una
+sola vez. Nombre, domicilio, teléfono y mail se mudaron a `CuentaTrabajador`;
+`Trabajador` quedó con lo que de verdad cambia de un gremio a otro: seccional,
+credencial, CUIT del empleador, activo, registrado.
+
+**La pieza que hace que "un solo lugar" sea cierto**: la fila de la persona
+existe desde que el CUIL entra al PADRÓN, no desde que se registra. Si no, el
+alta del admin necesitaría un segundo lugar donde escribir los datos de quien
+todavía no tiene cuenta, y volveríamos al problema. Por eso `clave_hash` puede
+estar vacío: vacío significa "todavía no eligió clave", no "no existe", y
+`auth.verificar_clave` ya devolvía False con un hash vacío, así que ninguna de
+esas filas sirve para entrar. Quién se registró lo sigue diciendo
+`Trabajador.registrado`, que es por sindicato y alimenta el KPI del panel.
+
+Toda escritura pasa por `db.guardar_datos_personales` (que ignora lo que llega
+en `None`, así una pantalla que edita el domicilio no borra el teléfono que
+cargó otra) y `db.asegurar_cuenta`. Toda lectura del padrón, por
+`db.padron_del_sindicato(s, sid)` -- que recibe la sesión abierta, como manda
+la regla de una sola conexión por request -- o por un JOIN explícito por CUIL
+en las consultas del Panel Sindical, las encuestas y el ruteo de
+notificaciones por provincia.
+
+**Consecuencia buscada, y dicha en pantalla**: lo que corrige el admin de un
+gremio lo ven el afiliado y los otros gremios. La pestaña Trabajadores lo
+explica en dos renglones, arriba de la tabla, en vez de dejar que se descubra.
+
+**La migración (a7e3f90b5c21) consolida lo que ya diverge** con una regla para
+el domicilio y otra para el resto. El domicilio se copia **entero** desde un
+solo empadronamiento -- son seis campos que valen como un dato, y fusionarlos
+daría una dirección que no existe en ninguna parte, la calle de una ciudad con
+la localidad de otra --, eligiendo la fila más completa: primero la que tiene
+coordenadas, después la que tiene más campos cargados y, empatando, la del
+sindicato más viejo. El nombre, el teléfono y el mail se resuelven **uno por
+uno**, con el primer valor no vacío por orden de sindicato: no son parte del
+bloque, y atarlos a él haría perder el teléfono que cargó un gremio solo
+porque la dirección buena la tenía el otro. Se probó recreando a mano la
+divergencia en la base local (un gremio con el teléfono y nada más, el otro
+con nombre y domicilio completo con coordenadas) y el resultado tomó de cada
+uno lo que correspondía.
+
+`downgrade` devuelve las columnas y copia lo consolidado a todos los
+empadronamientos: el esquema vuelve, la divergencia anterior no. Es el punto
+del cambio.
+
+**El costo del cambio fueron los tests**: 45 fixtures en 40 archivos creaban
+`Trabajador(nombre=..., provincia=...)`. Se reescribieron con un script que
+usa `ast` para ubicar cada llamada y sus keywords por posición y hace cirugía
+sobre el texto, para no perder formato ni comentarios. Tuvo un bug que vale
+anotar: **`ast` cuenta las columnas en bytes UTF-8 y Python corta strings por
+caracteres**, así que sobre una línea con una tilde (`provincia="Córdoba"`) el
+corte se iba uno de más y se comía un paréntesis.
+
+### Y el registro pasó a pedir lo mismo que el perfil
+
+Era el otro pedido de Sd. El registro pedía CUIL, clave y domicilio; el perfil
+pedía además nombre, teléfono y mail. Quien se registraba abría "Tu perfil" un
+minuto después y se encontraba con un formulario que no había visto nunca.
+Ahora pide los mismos campos, en el mismo orden y con la misma marca de
+obligatorio y opcional (teléfono y mail estaban sin marcar en el perfil y en
+el alta del admin: se marcaron en los tres).
+
+Dos diferencias que quedan a propósito: el registro pide además CUIL y clave
+(es un alta), y el perfil recibe además el globo del mapa, que no está en el
+registro porque ubicar un punto es una tarea de escritorio y el alta es el
+momento de menos paciencia de toda la app.
+
+Y una regla que tuvo que quedar escrita: **en el registro, un campo vacío no
+borra lo que el padrón ya tenía**. El formulario no puede mostrar lo que el
+sindicato sabe de un CUIL (lo averiguaría cualquiera tipeando CUILes ajenos),
+así que dejar el teléfono en blanco significa "no lo completé". En el perfil
+es al revés: ahí se ve lo cargado y borrarlo es una decisión.
+
+`test_datos_personales.py` verifica que las dos pantallas pidan lo mismo
+comparando la FIRMA de las dos rutas y no el HTML: es el contrato de verdad, y
+un campo que el formulario muestre pero el servidor no reciba se pierde igual
+sin avisar.
+
+### Lo que quedó afuera
+
+**El empleador tiene exactamente el mismo problema y no se tocó.** `Empleador`
+es una fila por sindicato con `razon_social`, `domicilio`, `telefono`,
+`provincia` y `mail`, y `/api/empresa/perfil` escribe solo en el sindicato
+activo -- igual que el perfil del trabajador antes de este cambio. Peor
+todavía: su `domicilio` sigue siendo un texto libre, nunca se migró al bloque
+estructurado de `geo.CAMPOS_DOMICILIO`. Quedó anotado en BACKLOG.md; hacerlo
+en el mismo bloque duplicaba el tamaño del cambio y el pedido era sobre el
+trabajador.

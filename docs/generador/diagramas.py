@@ -401,7 +401,10 @@ def tira_migraciones(migs):
     while dia <= d1:
         x = x0 + (dia - d0).days / total * (x1 - x0)
         b.append(f'<line class="tick" x1="{x:.0f}" y1="{y}" x2="{x:.0f}" y2="{y + 8}"/>')
-        b.append(texto(x, y + 24, dia.strftime("%-d %b").replace("Aug", "ago").replace("Sep", "sep"), "lab", "middle"))
+        # `%-d` (día sin cero a la izquierda) es de glibc y en Windows revienta
+        # con "Invalid format string": se arma a mano, que anda en los dos.
+        etiqueta = f"{dia.day} " + dia.strftime("%b").replace("Aug", "ago").replace("Sep", "sep")
+        b.append(texto(x, y + 24, etiqueta, "lab", "middle"))
         dia += timedelta(days=7)
     apilado = {}
     hitos = {"cbe17211376d": "esquema inicial", "a8c25f9b6d31": "trámites", "826e9627293a": "empleadores",

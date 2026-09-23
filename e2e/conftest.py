@@ -338,7 +338,9 @@ def entorno_aefip():
             cuenta = s.exec(select(CuentaTrabajador).where(
                 CuentaTrabajador.cuil == t.cuil)).first()
             if cuenta and auth.verificar_clave(t.cuil[:5], cuenta.clave_hash):
-                trabajador = {"cuil": t.cuil, "clave": t.cuil[:5], "nombre": t.nombre}
+                # El nombre es de la PERSONA (cuentatrabajador), no del
+                # empadronamiento -- ver CuentaTrabajador en db.py.
+                trabajador = {"cuil": t.cuil, "clave": t.cuil[:5], "nombre": cuenta.nombre}
                 break
         if not trabajador:
             pytest.skip("AEFIP no tiene el lote sintético: correr "

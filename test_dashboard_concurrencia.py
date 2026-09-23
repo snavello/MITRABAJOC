@@ -76,8 +76,9 @@ with db.get_session() as s:
     CUITS = [e.cuit for e in empresas]
     for i in range(30):
         cuil = f"2011111{i:04d}9"
-        s.add(Trabajador(sindicato_id=SID, cuil=cuil, nombre=f"Trab {i}", registrado=True,
+        s.add(Trabajador(sindicato_id=SID, cuil=cuil, registrado=True,
                          seccional_id=secc.id, cuit_empleador=CUITS[i % 3]))
+        db.guardar_datos_personales(s, cuil, nombre=f"Trab {i}")
         s.add(ReciboVerificado(
             sindicato_id=SID, cuil=cuil, periodo="2026-08", estado="OK" if i % 4 else "CON_DISCREPANCIAS",
             procesado_en=(HOY - timedelta(days=i % 20)).isoformat() + " 10:00",

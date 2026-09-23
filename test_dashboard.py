@@ -74,12 +74,17 @@ with db.get_session() as s:
     s.commit(); s.refresh(emp_1); s.refresh(emp_2); s.refresh(emp_b)
 
     CUIL_1, CUIL_2, CUIL_B = "20111111119", "20222222227", "20999999995"
-    s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_1, nombre="Juan Enviado",
+    # El nombre es de la PERSONA (cuentatrabajador); el empadronamiento solo
+    # guarda el vínculo con el gremio.
+    s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_1,
                       registrado=True, seccional_id=secc_1.id, cuit_empleador="30111111117"))
-    s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_2, nombre="Ana Privada",
+    db.guardar_datos_personales(s, CUIL_1, nombre="Juan Enviado")
+    s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_2,
                       registrado=False, seccional_id=secc_2.id, cuit_empleador="30222222225"))
-    s.add(Trabajador(sindicato_id=SID_B, cuil=CUIL_B, nombre="Beto Ajeno",
+    db.guardar_datos_personales(s, CUIL_2, nombre="Ana Privada")
+    s.add(Trabajador(sindicato_id=SID_B, cuil=CUIL_B,
                       registrado=True, seccional_id=secc_b.id))
+    db.guardar_datos_personales(s, CUIL_B, nombre="Beto Ajeno")
 
     # --- Recibos del sindicato A ---
     # r1: con diferencias, ENVIADO voluntariamente (nombre/CUIL visibles).

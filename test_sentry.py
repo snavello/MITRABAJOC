@@ -177,7 +177,8 @@ with db.get_session() as s:
     s.commit()
     s.refresh(sind)
     SID = sind.id
-    s.add(Trabajador(sindicato_id=SID, cuil=CUIL, nombre="Juan Pérez", activo=True, registrado=True))
+    s.add(Trabajador(sindicato_id=SID, cuil=CUIL, activo=True, registrado=True))
+    db.guardar_datos_personales(s, CUIL, nombre="Juan Pérez")
     s.add(UsuarioSindicato(sindicato_id=SID, usuario="20777777770", nombre="Admin Sentry",
                            clave_hash=auth.hashear_clave("s-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.commit()

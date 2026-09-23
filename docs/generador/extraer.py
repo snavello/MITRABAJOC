@@ -72,7 +72,12 @@ def migraciones():
     lista = []
     for f in sorted((RAIZ / "migrations/versions").glob("*.py")):
         s = f.read_text(encoding="utf-8")
-        rev = re.search(r"^revision(?:: str)? = '([^']+)'", s, re.M).group(1)
+        # Comilla simple O doble: dos migraciones (c5f1a2d70b39, e7b3c9a15f28)
+        # escriben `revision = "..."` y con el patrón que solo aceptaba
+        # comilla simple este script venía fallando entero -- o sea que la
+        # documentación técnica no se podía regenerar desde el 2026-09-13 y
+        # nadie se enteraba hasta intentarlo.
+        rev = re.search(r"""^revision(?:: str)? = ['"]([^'"]+)['"]""", s, re.M).group(1)
         down = re.search(r"^down_revision[^=]*= (.+)$", s, re.M).group(1).strip()
         down = None if down == "None" else down.strip("'\"")
         fecha = re.search(r"Create Date: (\S+)", s)

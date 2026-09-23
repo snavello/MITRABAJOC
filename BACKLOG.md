@@ -4,6 +4,27 @@ Anotaciones para no desviar el bloque de trabajo en curso (ver "Backlog
 técnico" en la memoria del proyecto). Cada ítem se tacha o se borra cuando
 se hace.
 
+- [ ] **El empleador quedó con el defecto que se le corrigió al trabajador**
+  (2026-09-22, al terminar "Una persona, un domicilio" en HISTORIAL.md).
+  `Empleador` es una fila POR SINDICATO y ahí viven `razon_social`,
+  `domicilio`, `telefono`, `provincia` y `mail`; `/api/empresa/perfil`
+  escribe **solo en el sindicato activo**. Es exactamente lo que hacía el
+  perfil del trabajador antes de este bloque: un CUIT dado de alta en dos
+  gremios puede terminar con dos razones sociales y dos domicilios, y nada
+  dice cuál es el bueno. Y peor: su `domicilio` sigue siendo **un texto
+  libre**, nunca se migró al bloque estructurado de `geo.CAMPOS_DOMICILIO`,
+  así que no se puede agrupar ni ubicar por zona como el del afiliado.
+
+  El arreglo es el mismo y ya está probado: mover el bloque personal a
+  `CuentaEmpleador` (una fila por CUIT, creada desde el alta del padrón y
+  con `clave_hash` vacío mientras no se registre), con
+  `db.guardar_datos_personales` y `db.asegurar_cuenta` como espejo. No se
+  hizo en el mismo bloque porque duplicaba su tamaño y el pedido de Sd era
+  sobre el trabajador. **Ojo con una diferencia real**: el CUIT y la razón
+  social son datos públicos de la empresa, no de una persona, así que la
+  regla de "manda quien se registra" puede no aplicar igual -- conviene
+  decidirlo antes de escribir la migración.
+
 - [ ] **El código de concepto no es una clave confiable entre empleadores**
   (2026-09-13, dicho por Sd al analizar el primer recibo real en el banco de
   pruebas). **Cada empleador le pone el código que quiere**, así que el

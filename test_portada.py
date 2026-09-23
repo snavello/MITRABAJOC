@@ -25,12 +25,16 @@ with db.get_session() as s:
                       modulos_habilitados=list(MODULOS_INICIALES))
     s.add(uom); s.add(fega); s.commit(); s.refresh(uom); s.refresh(fega)
     SID_UOM, SID_FEGA = uom.id, fega.id
-    s.add(Trabajador(sindicato_id=SID_UOM, cuil="20111111119", nombre="Juan Perez",
+    s.add(Trabajador(sindicato_id=SID_UOM, cuil="20111111119",
                       activo=True, registrado=True))
-    s.add(Trabajador(sindicato_id=SID_UOM, cuil="27222222224", nombre="Ana Multi",
+    s.add(Trabajador(sindicato_id=SID_UOM, cuil="27222222224",
                       activo=True, registrado=True))
-    s.add(Trabajador(sindicato_id=SID_FEGA, cuil="27222222224", nombre="Ana Multi",
+    s.add(Trabajador(sindicato_id=SID_FEGA, cuil="27222222224",
                       activo=True, registrado=True))
+    # El nombre es de la persona y no del empadronamiento: se escribe UNA vez
+    # aunque "Ana Multi" esté en los dos sindicatos (ver CuentaTrabajador).
+    db.guardar_datos_personales(s, "20111111119", nombre="Juan Perez")
+    db.guardar_datos_personales(s, "27222222224", nombre="Ana Multi")
     s.commit()
 
 client = TestClient(main.app)
@@ -54,11 +58,11 @@ def test_tarjetas_linkean_con_tab_para_deeplink():
 
 def test_perfil_muestra_datos_reales_del_trabajador():
     with db.get_session() as s:
-        t = s.exec(select(Trabajador).where(Trabajador.cuil == "20111111119",
-                                             Trabajador.sindicato_id == SID_UOM)).first()
-        t.localidad = "Rosario"       # antes `ciudad`; se renombró para que el
-        t.provincia = "Santa Fe"      # domicilio se llame igual que el de la seccional
-        s.add(t); s.commit()
+        # El domicilio es de la PERSONA, no del empadronamiento (2026-09-22).
+        db.guardar_datos_personales(
+            s, "20111111119",
+            domicilio={"localidad": "Rosario", "provincia": "Santa Fe"})
+        s.commit()
     c = _sesion("20111111119")
     r = c.get("/app/inicio")
     assert "Juan Perez" in r.text
@@ -114,8 +118,10 @@ def test_app_tu_recibo_sigue_intacta():
 
 def test_login_redirige_a_inicio_no_a_app():
     with db.get_session() as s:
-        from db import CuentaTrabajador
-        s.add(CuentaTrabajador(cuil="20111111119", clave_hash=auth.hashear_clave("demo1234")))
+        # La fila de la persona ya existe (la crea el alta del padrón): lo
+        # que convierte ese CUIL en una cuenta con la que se entra es la
+        # clave, no la fila.
+        db.asegurar_cuenta(s, "20111111119").clave_hash = auth.hashear_clave("demo1234")
         s.commit()
     r = client.post("/trabajador/login", data={"cuil": "20111111119", "clave": "demo1234"},
                      follow_redirects=False)

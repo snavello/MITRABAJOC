@@ -37,10 +37,12 @@ with db.get_session() as s:
                             clave_hash=auth.hashear_clave("noticias-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(UsuarioSindicato(sindicato_id=SID_RECIBOS, usuario="20333333330", nombre="Admin Recibos",
                             clave_hash=auth.hashear_clave("recibos-demo"), debe_cambiar_clave=False, es_super_admin=True))
-    s.add(Trabajador(sindicato_id=SID_FULL, cuil="20111111119", nombre="Juan Full",
+    s.add(Trabajador(sindicato_id=SID_FULL, cuil="20111111119",
                       activo=True, registrado=True))
-    s.add(Trabajador(sindicato_id=SID_NOTICIAS, cuil="20444444440", nombre="Ana Noticias",
+    db.guardar_datos_personales(s, "20111111119", nombre="Juan Full")
+    s.add(Trabajador(sindicato_id=SID_NOTICIAS, cuil="20444444440",
                       activo=True, registrado=True))
+    db.guardar_datos_personales(s, "20444444440", nombre="Ana Noticias")
     s.commit()
 
 plataforma_client = TestClient(main.app)

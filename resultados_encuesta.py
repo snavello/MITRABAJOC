@@ -187,10 +187,10 @@ def _cuils_alcanzados(s, e: dict, filtros: dict):
     cortes = {k: v for k, v in (filtros or {}).items() if k in encuestas.CORTES}
     if not cortes:
         return None
-    q = (db.select(db.EncuestaParticipante.cuil)
-         .join(db.Trabajador, db.Trabajador.cuil == db.EncuestaParticipante.cuil)
-         .where(db.EncuestaParticipante.encuesta_id == e["id"],
-                db.Trabajador.sindicato_id == e["sindicato_id"]))
+    q = _join_padron(
+        db.select(db.EncuestaParticipante.cuil)
+          .where(db.EncuestaParticipante.encuesta_id == e["id"]),
+        e["sindicato_id"])
     for corte, valores in cortes.items():
         q = q.where(_columna_trabajador(corte).in_(_tipados(corte, valores)))
     return {c for c in s.exec(q).all()}
@@ -299,18 +299,14 @@ def _mapa_seccionales(s, e: dict, filtros: dict, fijos) -> dict:
     cortes = {k: v for k, v in (filtros or {}).items()
               if k in encuestas.CORTES and (k != "seccional" or impuesto)}
 
-    q = (db.select(db.Trabajador.seccional_id, func.count(),
-                   func.coalesce(func.sum(case((db.EncuestaParticipante.respondio, 1),
-                                               else_=0)), 0))
-         .select_from(db.EncuestaParticipante)
-         .join(db.Trabajador, db.Trabajador.cuil == db.EncuestaParticipante.cuil)
-         .where(db.EncuestaParticipante.encuesta_id == e["id"],
-                # El aislamiento viaja DENTRO del WHERE: un CUIL puede estar
-                # empadronado en varios sindicatos (pluriempleo), y sin esto la
-                # fila del otro gremio sumaría en este mapa.
-                db.Trabajador.sindicato_id == e["sindicato_id"],
-                db.Trabajador.seccional_id.isnot(None))
-         .group_by(db.Trabajador.seccional_id))
+    q = _join_padron(
+        db.select(db.Trabajador.seccional_id, func.count(),
+                  func.coalesce(func.sum(case((db.EncuestaParticipante.respondio, 1),
+                                              else_=0)), 0))
+          .select_from(db.EncuestaParticipante)
+          .where(db.EncuestaParticipante.encuesta_id == e["id"],
+                 db.Trabajador.seccional_id.isnot(None)),
+        e["sindicato_id"]).group_by(db.Trabajador.seccional_id)
     for corte, valores in cortes.items():
         q = q.where(_columna_trabajador(corte).in_(_tipados(corte, valores)))
     conteos = {int(sid): (int(convocados), int(respondieron))
@@ -672,7 +668,33 @@ def _columna_urna(corte: str):
 
 
 def _columna_trabajador(corte: str):
-    return getattr(db.Trabajador, encuestas.CORTES[corte][1])
+    """La columna del PADRÓN que corresponde a un corte.
+
+    Sale de dos tablas distintas y por eso no alcanza con un `getattr` sobre
+    `Trabajador`: la provincia es de la PERSONA (`CuentaTrabajador`, desde el
+    2026-09-22) y la seccional y el empleador son del empadronamiento. Quien
+    la use TIENE que haber pasado por `_join_padron`, o la tabla que falta
+    entra al FROM como producto cartesiano y los conteos se multiplican sin
+    dar ningún error."""
+    campo = encuestas.CORTES[corte][1]
+    modelo = db.CuentaTrabajador if hasattr(db.CuentaTrabajador, campo) else db.Trabajador
+    return getattr(modelo, campo)
+
+
+def _join_padron(q, sindicato_id: int):
+    """Cruza una consulta sobre `EncuestaParticipante` con las DOS tablas del
+    padrón, y acota al sindicato.
+
+    Va junto y no suelto porque las dos son la misma cosa partida en dos:
+    quien filtra por un corte necesita las dos en el FROM (ver
+    `_columna_trabajador`). El aislamiento viaja DENTRO del WHERE: un CUIL
+    puede estar empadronado en varios sindicatos (pluriempleo), y sin esto la
+    fila del otro gremio sumaría acá. El JOIN con la persona es LEFT para que
+    un CUIL sin fila de persona no desaparezca en silencio."""
+    return (q.join(db.Trabajador, db.Trabajador.cuil == db.EncuestaParticipante.cuil)
+             .join(db.CuentaTrabajador,
+                   db.CuentaTrabajador.cuil == db.EncuestaParticipante.cuil, isouter=True)
+             .where(db.Trabajador.sindicato_id == sindicato_id))
 
 
 def _tipados(corte: str, valores: list):
@@ -820,13 +842,19 @@ def _csv_nominal(s, e: dict, filtros: dict) -> list:
         con_respuesta = set(respuestas)
         cuils = (cuils & con_respuesta) if cuils is not None else con_respuesta
 
+    # El nombre y la provincia son de la PERSONA (cuentatrabajador); la
+    # seccional y el empleador, del empadronamiento. El JOIN con la persona
+    # es LEFT para que un CUIL del padrón sin fila de persona igual salga en
+    # el archivo: en un CSV de control, la fila que falta es el problema.
     q = (db.select(db.EncuestaParticipante.cuil, db.EncuestaParticipante.respondio,
-                   db.Trabajador.nombre, db.Trabajador.seccional_id,
-                   db.Trabajador.provincia, db.Trabajador.cuit_empleador)
+                   db.CuentaTrabajador.nombre, db.Trabajador.seccional_id,
+                   db.CuentaTrabajador.provincia, db.Trabajador.cuit_empleador)
          .join(db.Trabajador, db.Trabajador.cuil == db.EncuestaParticipante.cuil)
+         .join(db.CuentaTrabajador,
+               db.CuentaTrabajador.cuil == db.EncuestaParticipante.cuil, isouter=True)
          .where(db.EncuestaParticipante.encuesta_id == e["id"],
                 db.Trabajador.sindicato_id == e["sindicato_id"])
-         .order_by(db.Trabajador.nombre))
+         .order_by(db.CuentaTrabajador.nombre))
     if cuils is not None:
         q = q.where(db.EncuestaParticipante.cuil.in_(cuils or ["__ninguno__"]))
     gente = s.execute(q).all()
@@ -837,7 +865,7 @@ def _csv_nominal(s, e: dict, filtros: dict) -> list:
     cabecera += [p["etiqueta"] for p in preguntas]
     filas = [cabecera]
     for cuil, respondio, nombre, sec, prov, cuit in gente:
-        fila = [nombre, cuil, nombres_sec.get(sec, ""), prov or "", cuit or "",
+        fila = [nombre or "", cuil, nombres_sec.get(sec, ""), prov or "", cuit or "",
                 "Sí" if respondio else "No"]
         suyas = respuestas.get(cuil, {})
         fila += [_texto_de_respuesta(p, suyas.get(p["id"], [])) for p in preguntas]
