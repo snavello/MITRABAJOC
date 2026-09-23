@@ -313,26 +313,24 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   zona gris legal). ARCA cubre jubilación y obra social, NO ART. Estados:
   pagado/parcial/impago/no_presentada/no_declarado/informado (ver
   "Ajustes de recibos, aportes y trámites" en HISTORIAL.md para "INFORMADO").
-- **Un solo encabezado para las cuatro apps** (2026-09-13, con la excepción
-  del afiliado desde 2026-09-23): ninguna
-  plantilla escribe el suyo, se arma con `{% include "_encabezado.html" %}`
-  (+ `static/encabezado.css`, que el propio parcial carga porque
-  `trabajador.html` y `empresa.html` no cargan `marca.css`). Cinta oscura
-  con el rol del panel a la izquierda y **Colm3na a la derecha**; debajo, la
-  barra del sindicato: logo a 52px de ALTO y ancho libre (38px en mobile) y
-  el nombre de la pantalla a la derecha, dicho UNA sola vez. El nombre del
-  sindicato en texto solo si no hay logo. Fuera del sistema a propósito: los 3 logins standalone
+- **Un solo encabezado para las cuatro apps, de UNA línea** (2026-09-13,
+  reducido a una línea el 2026-09-23): ninguna plantilla escribe el suyo, se
+  arma con `{% include "_encabezado.html" %}` (+ `static/encabezado.css`, que
+  el propio parcial carga porque `trabajador.html` y `empresa.html` no cargan
+  `marca.css`). Es una sola barra oscura: **logo del sindicato a la izquierda
+  y Colm3na a la derecha**, el logo del gremio a 62px de alto y ancho libre
+  (46 en móvil) contra los 24 de Colm3na (19 en móvil) -- el gremio manda y
+  Colm3na firma. **No hay cinta** (era una franja entera para decir el rol
+  del panel) y **el nombre de la pantalla no se escribe en ninguna app**: la
+  tira de pestañas, o la barra de abajo en el afiliado, ya dice dónde estás.
+  El nombre del sindicato en texto solo si no hay logo. Donde la marca
+  principal ES la plataforma, el logo grande de la izquierda es el de Colm3na
+  y a la derecha no se repite. `enc_rol` y `enc_pantalla` ya no existen; las
+  variables que quedan son `enc_volver`, `enc_fecha`, `enc_fija` y
+  `enc_plataforma`. Fuera del sistema a propósito: los 3 logins standalone
   (logo de plataforma grande, 148/85px) y las herramientas internas
   (`/entornos`, informes de carga). Reglas completas en la skill
   `diseno-mi-trabajo`; el porqué, en HISTORIAL.md.
-  **La app del afiliado es de UNA sola línea** (2026-09-23): ahí la cinta no
-  tiene rol que decir, así que no se dibuja y Colm3na baja a la misma barra
-  del logo del gremio, a la derecha (24px contra los 62 del gremio: sigue
-  siendo la firma y no la marca principal). Y **el nombre de la pantalla no
-  se escribe en ninguna pantalla de esa app**: todas llevan el mismo
-  encabezado que Inicio, porque la barra de pestañas de abajo ya dice dónde
-  estás. La regla la decide el parcial a partir de `enc_rol`: sin rol, no hay
-  cinta ni rótulo. Los otros tres paneles no cambian.
 - **La plataforma se llama Colm3na, no "Mi Trabajo"** (2026-09-13): el
   nombre viejo salió de todo lo que ve una persona — títulos del navegador,
   banda MRZ de los tres ingresos, `alt` de los logos, textos del panel de

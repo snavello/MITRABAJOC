@@ -167,8 +167,6 @@
 {% include "_entorno.html" %}
 <div class="app-bar-fija">
 {# Acá la marca principal ES la plataforma: el logo grande es el de Colm3na. #}
-{% set enc_rol = 'Administración de plataforma' %}
-{% set enc_pantalla = 'Sindicatos' %}   {# pestaña abierta al entrar; el JS la va cambiando #}
 {% set enc_plataforma = True %}
 {% include "_encabezado.html" %}
 <a class="btn-cerrar" href="/plataforma/salir" title="Salir" aria-label="Salir">
@@ -747,9 +745,6 @@
 <script>
 function activarTab(dest) {
   document.querySelectorAll('.ptab').forEach(b => b.classList.toggle('activa', b.dataset.pp === dest));
-  const rotulo = document.getElementById('marca-pantalla');
-  const btnActivo = document.querySelector('.ptab[data-pp="' + dest + '"] span');
-  if (rotulo && btnActivo) rotulo.textContent = btnActivo.textContent;
   document.querySelectorAll('.ppanel').forEach(pan => pan.classList.toggle('activo', pan.id === 'pp-' + dest));
 }
 

@@ -44,8 +44,6 @@
 <body class="{{ 'claro' if marca.admin_portada_clara else 'oscuro' }} grano {{ 'grano-clara' if marca.admin_portada_clara else 'grano-osc' }}">
 {% include "_entorno.html" %}
 
-{% set enc_rol = 'Panel de administración' %}
-{% set enc_pantalla = 'Inicio' %}
 {% include "_encabezado.html" %}
 
 <a class="btn-flotante btn-cerrar" href="/admin/salir" title="Salir" aria-label="Salir">

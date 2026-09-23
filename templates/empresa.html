@@ -298,8 +298,6 @@
 </head>
 <body>
 {% include "_entorno.html" %}
-{% set enc_rol = 'Panel de empleador' %}
-{% set enc_pantalla = 'Notificaciones' %}   {# pestaña abierta al entrar; el JS la va cambiando #}
 {% set enc_fija = True %}
 {% include "_encabezado.html" %}
 
@@ -435,11 +433,6 @@ document.querySelectorAll('.tab-t').forEach(btn => {
   btn.addEventListener('click', () => {
     const dest = btn.dataset.tp;
     document.querySelectorAll('.tab-t').forEach(b => b.classList.toggle('activa', b === btn));
-    const rotulo = document.getElementById('marca-pantalla');
-    if (rotulo) {
-      rotulo.textContent = Array.from(btn.childNodes)
-        .filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent).join('').trim();
-    }
     document.querySelectorAll('.tpanel').forEach(pan => {
       pan.classList.toggle('activo', pan.id === 'tp-' + dest);
     });

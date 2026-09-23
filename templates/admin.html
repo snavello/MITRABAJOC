@@ -758,7 +758,6 @@
 <div class="app-bar-fija">
 {# Encabezado normalizado. La pantalla de la derecha la escribe el JS de la
    tira de pestañas; el sticky lo da .app-bar-fija, no el parcial. #}
-{% set enc_rol = 'Panel de administración' %}
 {% include "_encabezado.html" %}
 <a class="btn-cerrar" href="/admin/salir" title="Salir" aria-label="Salir">
   <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
@@ -2965,9 +2964,6 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const destino = btn.dataset.panel;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('activa', b === btn));
-    // el encabezado dice en qué pestaña estás (antes repetía el rol del panel)
-    const rotulo = document.getElementById('marca-pantalla');
-    if (rotulo) rotulo.textContent = btn.querySelector('span')?.textContent || '';
     document.querySelectorAll('.panel').forEach(pan => {
       pan.classList.toggle('activo', pan.id === 'panel-' + destino);
     });

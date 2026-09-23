@@ -29,7 +29,7 @@
      resto de la página. */
   .marca-barra { background-image: linear-gradient(135deg, var(--marca-base) 0%,
     color-mix(in srgb, var(--marca-base) 55%, var(--marca-primario)) 100%); padding-bottom: 16px; }
-  .marca-cinta, .marca-barra { padding-left: max(18px, calc((100% - 1280px) / 2));
+  .marca-barra { padding-left: max(18px, calc((100% - 1280px) / 2));
     padding-right: max(18px, calc((100% - 1280px) / 2)); }
 
   main { max-width: 1280px; margin: 0 auto; padding: 0 14px 90px; }
@@ -394,8 +394,6 @@
 {# El nombre del sindicato ya lo dice su logo: acá quedaba escrito dos
    veces ("La Bancaria · Mi Trabajo" debajo del logo que dice La Bancaria).
    La fecha del rango la sigue llenando static/dashboard.js. #}
-{% set enc_rol = 'Panel de administración' %}
-{% set enc_pantalla = 'Panel Sindical' %}
 {% set enc_fecha = True %}
 {% include "_encabezado.html" %}
 

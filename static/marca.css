@@ -157,6 +157,12 @@ body { font-family: var(--fuente); color: var(--tinta); background: var(--papel)
   border: 2px solid var(--marca-acento); cursor: pointer;
   flex-shrink: 0; padding: 0; }
 .circulo-acento svg { width: 20px; height: 20px; stroke: var(--marca-base); stroke-width: 1.8; fill: none; }
+/* Con foto cargada, el recorte va ACÁ y no en el <style> de cada portada:
+   estaba duplicado en la del afiliado y la de empresa, y la del sindicato
+   -- que estrenó el círculo el 2026-09-23 -- salió sin él, así que la foto
+   se dibujaba a tamaño natural, desbordando el botón. */
+.circulo-acento { overflow: hidden; }
+.circulo-acento img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
 /* ---------- Overlay / hoja modal (perfil, detalle de noticia) ---------- */
 .overlay { position: fixed; inset: 0; background: rgba(8,12,20,.6); z-index: 100;
