@@ -58,9 +58,15 @@ Nunca se personaliza:
    pantallas (ver "El encabezado" más abajo). El gremio manda, no la app.
 2. **Saludo**: "Hola, {nombre}" con el nombre en color de acento, y debajo
    seccional y antigüedad de afiliación.
-3. **Tarjetas de acceso** en grilla de 2 columnas: Tu recibo (destacada con
-   fondo de acento), Mis aportes, Credencial, Capacitación. Cada una con ícono
-   de línea, título y una línea de estado real ("12 de 12 al día", no "Ver más").
+3. **Accesos horizontales** (`.pt-fila`, esquema "Tablero" 2026-09-23):
+   ícono en pastilla a la izquierda, título en condensada de 19px y una línea
+   de estado real ("12 de 12 al día", no "Ver más"), flecha al final. Arriba
+   de todo, la tarjeta principal (`.pt-hero`) con un número de verdad. Las
+   cuatro portadas comparten el bloque "Portadas v2" de marca.css, con todas
+   las clases prefijadas `pt-`: media docena de esos nombres (`.fila`,
+   `.pastilla`, `.mini`, `.txt`) ya existen en otras pantallas y esa hoja la
+   carga casi toda la app. `.pt-tres` da tres columnas a las portadas sin
+   riel (sindicato, plataforma).
 4. **Novedades**: hasta 3 items con título y antigüedad, más "Ver todas".
 5. **Beneficios**: fila de 3 tarjetas chicas.
 6. **Barra inferior**: 4 pestañas con íconos SVG de línea y píldora de fondo
@@ -97,6 +103,14 @@ Son dos franjas y esa separación es el punto:
   escribirlo al lado es decir dos veces lo mismo.
 - **El título de la pantalla se dice una sola vez**: si está en el
   encabezado, no va también como `<h1>` del cuerpo.
+- **La app del afiliado es la excepción, y es de una sola línea**
+  (2026-09-23). Ahí la cinta no tiene rol que decir: no se dibuja, y Colm3na
+  baja a la misma barra del logo del gremio, a la derecha, a 24px de alto
+  (19 en móvil) contra los 62 del gremio. Y el nombre de la pantalla **no se
+  escribe en ninguna** de sus pantallas: todas llevan el mismo encabezado que
+  Inicio, porque la barra de pestañas de abajo ya dice dónde estás. El
+  parcial lo decide solo a partir de `enc_rol`, así que una pantalla nueva
+  del afiliado no tiene que acordarse de nada.
 - **La plataforma se llama Colm3na**: "Mi Trabajo" no va en ninguna
   pantalla. Los `<title>` siguen el mismo criterio que el encabezado:
   `<pantalla> — {{ sindicato }}` donde hay sindicato, `Colm3na — <pantalla>`

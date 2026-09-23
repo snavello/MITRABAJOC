@@ -70,16 +70,21 @@ with db.get_session() as s:
 
     CUIL_R1, CUIL_R2, CUIL_C = "20111111119", "20222222227", "20333333335"
     CUIL_R3, CUIL_AJENA = "20444444443", "20999999995"
-    s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_R1, nombre="Juan Rosarino",
+    s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_R1,
                       registrado=True, seccional_id=SECC_ROSARIO, cuit_empleador="30111111117"))
-    s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_R2, nombre="Ana Rosarina",
+    db.guardar_datos_personales(s, CUIL_R1, nombre="Juan Rosarino")
+    s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_R2,
                       registrado=True, seccional_id=SECC_ROSARIO, cuit_empleador="30111111117"))
-    s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_C, nombre="Beto Cordobés",
+    db.guardar_datos_personales(s, CUIL_R2, nombre="Ana Rosarina")
+    s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_C,
                       registrado=False, seccional_id=SECC_CORDOBA))
+    db.guardar_datos_personales(s, CUIL_C, nombre="Beto Cordobés")
     # Homónimo de Juan en otra seccional y otra empresa: para desempatar.
-    s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_R3, nombre="Juan Rosarino",
+    s.add(Trabajador(sindicato_id=SID_A, cuil=CUIL_R3,
                       registrado=True, seccional_id=SECC_CORDOBA, cuit_empleador="30-22222222-5"))
-    s.add(Trabajador(sindicato_id=SID_B, cuil=CUIL_AJENA, nombre="Zoe Ajena", registrado=True))
+    db.guardar_datos_personales(s, CUIL_R3, nombre="Juan Rosarino")
+    s.add(Trabajador(sindicato_id=SID_B, cuil=CUIL_AJENA, registrado=True))
+    db.guardar_datos_personales(s, CUIL_AJENA, nombre="Zoe Ajena")
 
     # n1 (manual, hace 3 días) a los tres: R1 y C la leyeron, R2 no.
     n1 = Notificacion(sindicato_id=SID_A, remitente="CD", texto="Asamblea",

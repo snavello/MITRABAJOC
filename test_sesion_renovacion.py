@@ -29,8 +29,9 @@ with db.get_session() as s:
     SID = sind.id
     s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111110", nombre="Admin",
                             clave_hash=auth.hashear_clave("clave-test"), debe_cambiar_clave=False, es_super_admin=True))
-    s.add(Trabajador(sindicato_id=SID, cuil=CUIL_TRAB, nombre="Juan Trabajador", activo=True))
-    s.add(CuentaTrabajador(cuil=CUIL_TRAB, clave_hash=auth.hashear_clave("demo1234")))
+    s.add(Trabajador(sindicato_id=SID, cuil=CUIL_TRAB, activo=True))
+    db.guardar_datos_personales(s, CUIL_TRAB, nombre="Juan Trabajador")
+    db.asegurar_cuenta(s, CUIL_TRAB).clave_hash = auth.hashear_clave("demo1234")
     s.commit()
 
 

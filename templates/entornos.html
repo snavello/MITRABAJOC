@@ -236,15 +236,28 @@
   .test-tabla th, .test-tabla td { padding:6px 10px; text-align:right; border-bottom:1px solid rgba(255,255,255,.1); font-family:var(--mono); }
   .test-tabla th:first-child, .test-tabla td:first-child { text-align:left; }
 
-  /* ---- Actividad (2026-09-09): Pruebas y Demo lado a lado, mismo cromo
-     por color de entorno que .entorno (franja arriba). */
-  .act-envs { display:grid; grid-template-columns:1fr 1fr; gap:22px; }
-  @media (max-width:820px) { .act-envs { grid-template-columns:1fr; } }
-  .act-entorno { border-radius:16px; padding:18px 16px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05); position:relative; overflow:hidden; }
-  .act-entorno::before { content:""; position:absolute; top:0; left:0; right:0; height:6px; }
-  .act-entorno.pruebas::before { background:var(--pruebas); }
-  .act-entorno.demo::before { background:var(--demo); }
-  .act-entorno h3 { font-family:var(--fuente-display); font-size:24px; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:12px; }
+  /* ---- Observabilidad (2026-09-21): dos pastillas, Sala de mando primero. */
+  .obs-pastillas { display:flex; gap:8px; margin:0 0 14px; }
+  .obs-pastilla { appearance:none; cursor:pointer; padding:7px 14px; border-radius:999px; border:1px solid rgba(255,255,255,.25);
+    background:transparent; color:#fff; font:inherit; font-size:13.5px; }
+  .obs-pastilla:hover { background:rgba(255,255,255,.12); }
+  .obs-pastilla.activa { background:#fff; color:var(--tinta); border-color:#fff; }
+  .obs-sub[hidden] { display:none; }
+  /* La Sala de mando se abre a PANTALLA COMPLETA (pedido de Sd, 2026-09-21): sin
+     títulos ni Recursos, solo el esquema, el logo y un botón para volver. */
+  .sala-full { position:fixed; inset:0; z-index:1000; background:#0a1421; display:none; }
+  .sala-full.abierta { display:block; }
+  .sala-full iframe { display:block; width:100%; height:100%; border:0; background:#0a1421; }
+  .sala-barra { position:fixed; top:10px; right:14px; z-index:1001; display:flex; align-items:center; gap:12px;
+    background:rgba(10,20,33,.88); border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:6px 8px 6px 14px;
+    backdrop-filter:blur(6px); }
+  .sala-barra img { display:block; height:22px; width:auto; }
+  .sala-barra button { appearance:none; cursor:pointer; border:0; border-radius:999px; padding:6px 14px; font:inherit; font-size:13px; font-weight:600;
+    background:#fff; color:var(--tinta); }
+  .sala-barra button:hover { background:#e8eef7; }
+  .sala-tarjeta { border:1px solid rgba(255,255,255,.18); border-radius:14px; padding:22px 24px; background:rgba(255,255,255,.04); display:flex; flex-wrap:wrap; align-items:center; gap:16px 24px; }
+  .sala-tarjeta p { margin:0; flex:1 1 320px; opacity:.85; }
+  .sala-tarjeta .boton { white-space:nowrap; }
 
   /* ---- Recursos (2026-09-07): la documentación del proyecto, en la misma
      colmena nocturna. Tarjetas con miniatura 16:10, título en la display
@@ -356,8 +369,7 @@
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="tests-pruebas">Tests en Pruebas</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="tests-demo" disabled title="Todavía no disponible">Tests en Demo</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="planes"{% if entorno_actual != 'pruebas' %} disabled title="Cambiar de plan reinicia el servicio: se administra solo desde Pruebas"{% endif %}>Planes</button>
-      <button type="button" class="etab" role="tab" aria-selected="false" data-tab="observabilidad"{% if entorno_actual != 'pruebas' %} disabled title="La observabilidad se administra solo desde Pruebas por ahora: se replica a Demo cuando esté validada"{% endif %}>Observabilidad</button>
-      <button type="button" class="etab" role="tab" aria-selected="false" data-tab="actividad">Actividad</button>
+      <button type="button" class="etab" role="tab" aria-selected="false" data-tab="observabilidad">Observabilidad</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="xsanders">Seguridad</button>
     </nav>
 
@@ -426,15 +438,26 @@
     </div>
 
     <div class="panel-etab" data-panel="observabilidad" hidden>
-    {% if entorno_actual == 'pruebas' %}
-      {% include "_observabilidad.html" %}
-    {% else %}
-      <div class="vacio">La observabilidad se administra solo desde Pruebas por ahora -- esto es {{ entorno_actual or 'este entorno' }}. Se replica a Demo cuando esté validada.</div>
-    {% endif %}
-    </div>
-
-    <div class="panel-etab" data-panel="actividad" hidden>
-      {% include "_actividad.html" %}
+      {# Dos pastillas (pedido de Sd, 2026-09-21): la Sala de mando (el esquema
+         físico vivo, /entornos/esquema, incrustado) arranca por defecto; la
+         Observación técnica es la solapa de Grafana/Sentry de siempre. #}
+      <nav class="obs-pastillas" role="tablist" aria-label="Observabilidad">
+        <button type="button" class="obs-pastilla activa" role="tab" aria-selected="true" data-obs="sala">Sala de mando</button>
+        <button type="button" class="obs-pastilla" role="tab" aria-selected="false" data-obs="tecnica">Observación técnica</button>
+      </nav>
+      <div class="obs-sub" data-obs-panel="sala">
+        <div class="sala-tarjeta">
+          <p>La Sala de mando ocupa toda la pantalla: el esquema físico de la plataforma con sus indicadores en vivo. Se abre sola al entrar acá; con Esc o el botón de arriba a la derecha se vuelve.</p>
+          <button type="button" class="boton" id="sala-abrir">Abrir la Sala de mando</button>
+        </div>
+      </div>
+      <div class="obs-sub" data-obs-panel="tecnica" hidden>
+      {% if entorno_actual == 'pruebas' %}
+        {% include "_observabilidad.html" %}
+      {% else %}
+        <div class="vacio">La observación técnica (Grafana, Sentry, avisos) se administra solo desde Pruebas por ahora -- esto es {{ entorno_actual or 'este entorno' }}. Se replica a Demo cuando esté validada.</div>
+      {% endif %}
+      </div>
     </div>
 
     <div class="panel-etab" data-panel="xsanders" hidden>
@@ -569,6 +592,14 @@
     </defs>
   </svg>
 
+{# La Sala de mando a pantalla completa: va antes de los scripts porque estos corren al parsearse. #}
+<div class="sala-full" id="sala-full" aria-hidden="true">
+  {# Sin cápsula propia: la Sala trae su logo y su botón circular de volver, que
+     le avisa a esta página por postMessage (mismo origen). Esc también cierra. #}
+  <button type="button" id="sala-cerrar" hidden aria-hidden="true">Volver a Entornos</button>
+  <iframe id="sala-mando" title="Sala de mando" data-src="/entornos/esquema?embebida=1" allow="fullscreen"></iframe>
+</div>
+
 <script>
 // Cada entorno publica /api/version (JSON con CORS abierto): se le pregunta
 // a los dos desde acá, así la versión que se ve es la que corre de verdad
@@ -699,11 +730,60 @@
   if (['tests-pruebas', 'tests-demo', 'planes', 'observabilidad', 'xsanders'].includes(inicial)) activar(inicial);
 })();
 
+// Observabilidad, pastillas (2026-09-21): Sala de mando por defecto. El iframe
+// se carga recién cuando se muestra, así abrir la landing no dibuja el esquema
+// entero ni pide sus datos si nadie lo va a mirar.
+(function () {
+  const pastillas = document.querySelectorAll('.obs-pastilla');
+  const subs = document.querySelectorAll('.obs-sub');
+  const capa = document.getElementById('sala-full');
+  const iframe = document.getElementById('sala-mando');
+  function abrirSala(conFullscreen) {
+    if (!iframe.getAttribute('src')) iframe.src = iframe.dataset.src;
+    capa.classList.add('abierta'); capa.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    // Pantalla completa del navegador: solo vale dentro de un clic (activación del
+    // usuario); al entrar por el hash de la URL no hay clic y queda la capa sola.
+    if (conFullscreen && capa.requestFullscreen && !document.fullscreenElement) capa.requestFullscreen().catch(() => {});
+  }
+  function cerrarSala() {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    capa.classList.remove('abierta'); capa.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    elegir('tecnica', false);          // volver deja la Observación técnica, no el menú
+  }
+  function elegir(n, abrir) {
+    pastillas.forEach(p => { p.classList.toggle('activa', p.dataset.obs === n); p.setAttribute('aria-selected', p.dataset.obs === n ? 'true' : 'false'); });
+    subs.forEach(s => { s.hidden = s.dataset.obsPanel !== n; });
+    if (n === 'sala' && abrir) abrirSala(true);
+  }
+  pastillas.forEach(p => p.addEventListener('click', () => elegir(p.dataset.obs, true)));
+  document.getElementById('sala-abrir').addEventListener('click', () => abrirSala(true));
+  document.getElementById('sala-cerrar').addEventListener('click', cerrarSala);
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && capa.classList.contains('abierta')) cerrarSala(); });
+  window.addEventListener('message', ev => {
+    if (ev.origin !== location.origin || !ev.data) return;
+    if (ev.data.sala === 'cerrar') cerrarSala();
+    // Pantalla completa "solo radar": se pide sobre la CAPA (este documento), no sobre
+    // el iframe; la activación del clic adentro del iframe vale acá por ser mismo origen.
+    if (ev.data.sala === 'fullscreen' && capa.requestFullscreen) capa.requestFullscreen().catch(() => {});
+    if (ev.data.sala === 'salir-fullscreen' && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  });
+  document.addEventListener('fullscreenchange', () => {
+    if (iframe.contentWindow) iframe.contentWindow.postMessage({sala:'solo-radar', on: !!document.fullscreenElement}, location.origin);
+  });
+  const tabObs = document.querySelector('.etab[data-tab="observabilidad"]');
+  tabObs.addEventListener('click', () => { if (document.querySelector('.obs-pastilla.activa').dataset.obs === 'sala') abrirSala(true); });
+  if (location.hash === '#observabilidad') abrirSala(false);
+  window.abrirSala = abrirSala;   // por si otra parte de la landing quiere abrirla
+})();
+
 // Observabilidad (2026-09-19): la app es la PUERTA, no el motor. Lee de Grafana el
 // semáforo y la configuración de avisos y deja cambiar el mail y el intervalo de
 // repetición. Si Grafana no responde, cada parte lo dice sin romper la pantalla.
 // Todo contra /api/entornos/observabilidad.
 (function () {
+  if (!document.getElementById('obs-semaforo')) return;   // fuera de Pruebas no hay solapa técnica
   const semaforo = document.getElementById('obs-semaforo');
   if (!semaforo) return;  // en Demo la solapa no se incluye
   const aviso = document.getElementById('obs-aviso');
@@ -772,9 +852,26 @@
     decir((d.errores || []).join(' · '), true);
   }
 
+  // Indicadores de negocio (vinieron de la Sala de mando): /api/entornos/esquema.
+  const fmt = n => (n == null) ? '—' : Number(n).toLocaleString('es-AR');
+  const kpi = (k, v) => { const e = document.querySelector(`#obs-kpis [data-kpi="${k}"]`); if (e) e.textContent = v; };
+  async function cargarKpis() {
+    if (!document.getElementById('obs-kpis')) return;
+    try {
+      const d = await pedir('/api/entornos/esquema');
+      const k = d.kpis || {}, l = k.en_linea || {}, sind = k.sindicatos || [];
+      kpi('recibos', fmt(k.recibos_total)); kpi('recibos-sub', `+${fmt(k.recibos_hoy)} hoy · ${fmt(k.lecturas_hoy)} lecturas de IA · US$ ${fmt(k.costo_hoy_usd)}`);
+      kpi('linea', fmt(k.en_linea_total)); kpi('linea-sub', `afiliados ${fmt(l.trabajador || 0)} · gremio ${fmt(l.admin || 0)} · empresa ${fmt(l.empresa || 0)} · plataforma ${fmt(l.plataforma || 0)}`);
+      kpi('tramites', fmt(k.tramites_abiertos)); kpi('tramites-sub', `${fmt(k.tramites_esperan)} todavía sin respuesta del gremio`);
+      kpi('sind', fmt(sind.length)); kpi('sind-sub', sind.join(' · ') || 'ninguno');
+      kpi('reg', fmt(k.registrados)); kpi('reg-sub', `de ${fmt(k.padron)} en el padrón · ${fmt(k.porcentaje_registrados)}%`);
+      const h = document.getElementById('obs-kpis-hora'); if (h) h.textContent = d.actualizado || '—';
+    } catch (err) { kpi('recibos', '—'); kpi('recibos-sub', 'No se pudieron leer los indicadores: ' + err.message); }
+  }
   async function cargar() {
     cargarSentry(false);
     cargarMetricas(false);
+    cargarKpis();
     try { pintar(await pedir('/api/entornos/observabilidad')); }
     catch (err) { decir('No se pudo consultar: ' + err.message, true); }
   }
@@ -1337,76 +1434,6 @@
       .catch(() => {});
   }
   actualizar();
-})();
-</script>
-<script>
-// Actividad: pinta ESTE entorno con los datos ya renderizados (sin round-
-// trip) y pide el OTRO por HTTPS a su propio host (api_entornos_actividad
-// es público con CORS abierto -- las cookies de sesión no cruzan de
-// dominio, mismo motivo que /api/version más arriba). Refresco cada 10 min.
-(function () {
-  const cont = document.getElementById('act-envs');
-  if (!cont) return;
-  const URLS = {{ urls|tojson }};
-  const ENTORNO_ACTUAL = {{ (entorno_actual or '')|tojson }};
-  const localJson = document.getElementById('actividad-local-json');
-  const renderJson = document.getElementById('render-estado-local-json');
-  const datosLocales = localJson ? JSON.parse(localJson.textContent) : null;
-  const renderLocal = renderJson ? JSON.parse(renderJson.textContent) : null;
-
-  const fmtBytes = (b) => b == null ? '…' : (b / (1024 * 1024)).toFixed(0) + ' MB';
-  const fmtCpu = (c) => c == null ? '…' : (c * 100).toFixed(0) + '%';
-
-  function pintar(env, datos, servidor) {
-    const sec = cont.querySelector('[data-act-env="' + env + '"]');
-    if (!sec || !datos) return;
-    const t = datos.totales || {};
-    const set = (campo, valor) => { const el = sec.querySelector('[data-act="' + campo + '"]'); if (el) el.textContent = valor; };
-    set('tramites', t.tramites ?? '…');
-    set('recibos', t.recibos ?? '…');
-    set('notificaciones', (t.notificaciones_leidas ?? 0) + ' leídas / ' + (t.notificaciones_enviadas ?? 0));
-    set('tokens_ia', (t.tokens_ia ?? 0).toLocaleString('es-AR') + ' (' + (t.llamadas_ia ?? 0) + ' llamadas)');
-    const porRol = t.accesos_por_rol || {};
-    set('accesos', (t.accesos ?? 0) + ' · ' + Object.entries(porRol).map(([r, n]) => r + ':' + n).join(' '));
-    if (servidor && servidor.configurado) {
-      set('servidor', fmtCpu(servidor.cpu_web) + ' / ' + fmtBytes(servidor.ram_web_bytes));
-    } else {
-      set('servidor', 'sin API key');
-    }
-    const tbody = sec.querySelector('[data-act-tabla] tbody');
-    const filas = datos.sindicatos || [];
-    tbody.innerHTML = filas.length ? filas.map(f =>
-      '<tr><td>' + f.nombre + '</td><td>' + f.tramites + '</td><td>' + f.recibos + '</td><td>' +
-      f.notificaciones_leidas + '</td><td>' + f.tokens_ia.toLocaleString('es-AR') + '</td><td>' + f.accesos + '</td></tr>'
-    ).join('') : '<tr><td colspan="6" style="text-align:center; opacity:.5;">sin sindicatos activos</td></tr>';
-  }
-
-  function actualizar() {
-    if (ENTORNO_ACTUAL && datosLocales) pintar(ENTORNO_ACTUAL, datosLocales, renderLocal);
-    Object.keys(URLS).forEach(env => {
-      if (env === ENTORNO_ACTUAL) return;  // el propio ya se pintó sin red
-      fetch(URLS[env] + '/api/entornos/actividad', { cache: 'no-store' })
-        .then(r => r.ok ? r.json() : Promise.reject(r.status))
-        .then(d => pintar(env, d, d.servidor))
-        .catch(() => { const sec = cont.querySelector('[data-act-env="' + env + '"]'); if (sec) sec.querySelectorAll('[data-act]').forEach(el => { if (el.textContent === '…') el.textContent = 'sin dato'; }); });
-    });
-  }
-  actualizar();
-  setInterval(function () {
-    // Repinta el propio con un fetch fresco (los datos embebidos son del
-    // momento en que se cargó la página) + el ajeno, cada 10 min.
-    fetch('/api/entornos/actividad', { cache: 'no-store' })
-      .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(d => pintar(ENTORNO_ACTUAL, d, d.servidor))
-      .catch(() => {});
-    Object.keys(URLS).forEach(env => {
-      if (env === ENTORNO_ACTUAL) return;
-      fetch(URLS[env] + '/api/entornos/actividad', { cache: 'no-store' })
-        .then(r => r.ok ? r.json() : Promise.reject(r.status))
-        .then(d => pintar(env, d, d.servidor))
-        .catch(() => {});
-    });
-  }, 10 * 60 * 1000);
 })();
 </script>
 </body>

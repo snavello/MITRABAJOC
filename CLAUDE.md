@@ -83,6 +83,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 ## Archivos principales
 - main.py — servidor y todas las rutas.
 - db.py — modelos SQLModel, engine dual, acceso a datos, marca_sindicato().
+  `CuentaTrabajador` es la PERSONA (una fila por CUIL, dueña de sus datos
+  personales) y `Trabajador` el EMPADRONAMIENTO en un sindicato.
 - auth.py — hash de claves y sesiones.
 - extractor.py — lee recibos y comprobantes de aportes con IA.
 - validador.py — motor de validación de fórmulas.
@@ -92,6 +94,9 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - geo.py — geocodificación de domicilios: Georef (provincia/localidad) +
   Nominatim (calle y altura). Ver "Georreferenciación" para las reglas.
 - dashboard.py — agregados SQL del Panel Sindical (ver sección propia).
+- esquema.py — indicadores de la **Sala de mando** (`/entornos/esquema`,
+  `templates/esquema.html`): el esquema físico de toda la solución, vivo.
+  Recibe la sesión, todo en SQL agrupado. Ver "Estado actual" 27.
 - fechas.py — la hora de Buenos Aires, en un solo lugar. En el código de la
   app NO se llama a `datetime.now()` ni a `date.today()`: el servidor de
   Render corre en UTC y toda la app compara fechas como texto. Lo verifica
@@ -308,7 +313,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   zona gris legal). ARCA cubre jubilación y obra social, NO ART. Estados:
   pagado/parcial/impago/no_presentada/no_declarado/informado (ver
   "Ajustes de recibos, aportes y trámites" en HISTORIAL.md para "INFORMADO").
-- **Un solo encabezado para las cuatro apps** (2026-09-13): ninguna
+- **Un solo encabezado para las cuatro apps** (2026-09-13, con la excepción
+  del afiliado desde 2026-09-23): ninguna
   plantilla escribe el suyo, se arma con `{% include "_encabezado.html" %}`
   (+ `static/encabezado.css`, que el propio parcial carga porque
   `trabajador.html` y `empresa.html` no cargan `marca.css`). Cinta oscura
@@ -319,6 +325,14 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   (logo de plataforma grande, 148/85px) y las herramientas internas
   (`/entornos`, informes de carga). Reglas completas en la skill
   `diseno-mi-trabajo`; el porqué, en HISTORIAL.md.
+  **La app del afiliado es de UNA sola línea** (2026-09-23): ahí la cinta no
+  tiene rol que decir, así que no se dibuja y Colm3na baja a la misma barra
+  del logo del gremio, a la derecha (24px contra los 62 del gremio: sigue
+  siendo la firma y no la marca principal). Y **el nombre de la pantalla no
+  se escribe en ninguna pantalla de esa app**: todas llevan el mismo
+  encabezado que Inicio, porque la barra de pestañas de abajo ya dice dónde
+  estás. La regla la decide el parcial a partir de `enc_rol`: sin rol, no hay
+  cinta ni rótulo. Los otros tres paneles no cambian.
 - **La plataforma se llama Colm3na, no "Mi Trabajo"** (2026-09-13): el
   nombre viejo salió de todo lo que ve una persona — títulos del navegador,
   banda MRZ de los tres ingresos, `alt` de los logos, textos del panel de
@@ -388,6 +402,35 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   para los filtros de empresa/afiliado). `test_dashboard_concurrencia.py` lo
   verifica sobre los endpoints del panel. Detalle en HISTORIAL.md.
 
+- **Los datos personales del afiliado tienen UN SOLO dueño: la persona**
+  (2026-09-22). Nombre, domicilio, teléfono y mail viven en
+  `CuentaTrabajador` (una fila por CUIL); `Trabajador` quedó con lo que
+  cambia de un gremio a otro (seccional, credencial, CUIT del empleador,
+  activo, registrado). **La fila de la persona existe desde que el CUIL
+  entra al PADRÓN, no desde que se registra**: `clave_hash` vacío significa
+  "todavía no eligió clave" y no deja entrar. Toda escritura pasa por
+  `db.guardar_datos_personales` / `db.asegurar_cuenta`, y toda lectura del
+  padrón por `db.padron_del_sindicato` o un JOIN por CUIL -- nunca una
+  columna local. Antes había una copia POR SINDICATO y las cuatro puertas no
+  escribían igual (el registro copiaba a todos los empadronamientos, el
+  perfil solo al activo), así que el mismo CUIL terminaba con dos nombres y
+  dos direcciones. **El registro pide exactamente los mismos campos que el
+  perfil** (lo verifica `test_datos_personales.py` contra la firma de las dos
+  rutas). Consecuencia buscada y dicha en pantalla: lo que corrige el admin
+  de un gremio lo ven el afiliado y los otros gremios. El empleador **todavía
+  no** se unificó (sigue con su bloque por sindicato, y con el domicilio como
+  texto libre) -- ver BACKLOG.md. Detalle en HISTORIAL.md.
+
+- **`blob:` no se saca de la CSP** (`main.CSP`, 2026-09-22): va en `img-src`
+  y en `media-src` porque es lo que la app usa para mostrarle a una persona
+  el archivo que acaba de elegir, antes de subirlo (la foto de perfil se
+  achica en un `<canvas>` y para eso primero se carga en un `<img>`). Sin
+  `blob:` el navegador bloquea ese `<img>`, salta `onerror` y la pantalla
+  dice "no se pudo leer la imagen" sin que el archivo haya llegado nunca al
+  servidor: un error que no deja rastro en ningún log porque no hubo
+  request. Así se rompió la carga de foto de perfil del 2026-09-20 al
+  2026-09-22, en las apps de trabajador y de empresa.
+
 - **Un documento que no es del CUIL logueado se corta APENAS SE LEE, no al
   confirmar** (2026-09-14): `/api/leer` (recibo) y `/api/aportes`
   (comprobante de ARCA) comparan el CUIL leído contra el de la sesión con
@@ -399,10 +442,20 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   cualquier payload. Una ruta nueva que lea el documento de una persona suma
   el suyo. Detalle en HISTORIAL.md.
 
-## Estado actual (actualizado 2026-09-11)
-Todo lo listado acá está mergeado a `main` y desplegado (Render sigue `main`,
-cada push redeploya) **salvo el punto 21**, que vive en la rama
-`areas-permisos-v2` y todavía no se mergeó ni se desplegó.
+## Estado actual (actualizado 2026-09-23)
+Todo lo listado acá está mergeado a `main` y desplegado en Pruebas (Render
+sigue `main`, cada push redeploya), **incluido el punto 21**, que ya se portó
+sobre `main`.
+
+**La demo está al día desde el 2026-09-23** (tag `demo-2026-09-23-v0.40.01`):
+se promovieron de una vez los 241 commits acumulados desde el 2026-09-05 —
+Encuestas, Áreas V2, georreferenciación, Asistente del Panel, landing
+`/entornos`, costo de la IA, XSK y la Sala de mando—, con 18 migraciones
+ensayadas antes sobre una copia de la base real. Trabajador 0.40.01, Admin
+0.43.01, Plataforma 0.35.10. **En demo, `/entornos` y `/entornos/xsanders`
+responden 404 a propósito** (la landing interna solo existe donde hay
+distintivo de entorno), y el login genérico de plataforma quedó apagado: se
+entra con usuario nominal. Detalle del ensayo y del resultado en BITACORA.md.
 
 **SPRINT_REFORMA.md (adaptación a la Reforma Laboral, Dto 407/2026) —
 COMPLETO**, los 5 puntos de los dos sprints originales: extractor bi-formato
@@ -618,6 +671,66 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     Solucionado, 2 Parcial, 6 Pendiente, 2 Aceptado; bloquean 1 (H-0008,
     cierra con el perímetro INF-05).
 
+27. **Sala de mando: el esquema físico de la plataforma, vivo** (2026-09-21,
+    rama `feature/esquema-fisico`): el boceto en papel de Sd llevado a una
+    pantalla de venta y de operación. `GET /entornos/esquema` dibuja todos
+    los componentes (desarrollo y entrega, Render, servicios externos,
+    seguridad, observabilidad, documentación) con la franja de color de su
+    zona, ficha al pasar el mouse, zoom al clic, tres recorridos con luz de
+    neón (un recibo, un error, el camino de un cambio), pelotitas en las
+    líneas y el halo del radar según el estado general. Los indicadores
+    salen de la base del entorno (`esquema.py`), el semáforo de Grafana, el
+    estado de cada entorno de su `/api/version`, el vencimiento más próximo
+    de `observabilidad/config.json` y la seguridad del XSK; el JSON es
+    `GET /api/entornos/esquema` y se refresca cada minuto. Catalogada en
+    Recursos como el primer enlace del repositorio y, desde el mismo día,
+    **pastilla por defecto de la pestaña Observabilidad de `/entornos`**
+    (iframe a `?embebida=1`), junto a "Observación técnica" (Grafana,
+    Sentry, avisos). La pestaña Actividad se sacó ese día. Los mockups de las tres
+    direcciones (A sala de mando, B circuito, C colmena) están en
+    `disenos/esquema-propuestas.html`, fuera de git. Detalle en HISTORIAL.md
+    ("La Sala de mando"). **Queda**: cargar el gasto mensual (planes de
+    Render y Claude), y decidir Telegram como canal de alertas y Cloudflare
+    como perímetro (la página ya los dibuja como planeados). Desde el
+    2026-09-22 la presenta además un **video de 20 s** ("Panel de Control", en
+    Recursos), filmado cuadro por cuadro con reloj virtual; las fuentes para
+    regenerarlo están en `disenos/video-panel-control/` (fuera de git, `LEEME.md`).
+
+28. **Los datos personales del afiliado tienen un solo dueño** (2026-09-22,
+    rama `fix/datos-personales-trabajador`): nombre, domicilio, teléfono y
+    mail se mudaron de `Trabajador` (una fila por sindicato) a
+    `CuentaTrabajador` (una por CUIL), con la fila de la persona creada desde
+    el alta del padrón y sin clave. Migración `a7e3f90b5c21`, que consolida
+    lo que ya diverge: el domicilio como bloque desde el empadronamiento más
+    completo, y nombre/teléfono/mail cada uno con su primer valor no vacío.
+    En el mismo bloque, **el registro pasó a pedir los mismos campos que el
+    perfil** y se arregló la **carga de foto de perfil**, rota desde el
+    2026-09-20 porque la CSP de XSK no listaba `blob:`. Ver las dos
+    decisiones nuevas en "Decisiones tomadas" y el detalle en HISTORIAL.md
+    ("Una persona, un domicilio").
+
+29. **La portada del afiliado, esquema "Tablero"** (2026-09-23, rama
+    `feature/portada-tablero`): `/app/inicio` deja la tira vertical de
+    tarjetas cuadradas. El problema era de una línea -- `.pad` sin ancho
+    máximo, así que en un monitor cada tarjeta medía ~600px con un título de
+    13px adentro. Ahora tope de 1320px y dos columnas (acción a la
+    izquierda, novedades y beneficios a la derecha), accesos horizontales
+    con el título en 19px, y la tarjeta principal con **números reales**
+    (`db.resumen_recibos_trabajador`: cuántos verificó este año y cómo salió
+    el último). La noticia **conserva su foto** (62px, filo de acento en la
+    más nueva) y el carrusel de beneficios se rehízo con velo, chip de
+    rubro, barra de tiempo, zoom lento, arrastre y pausa al pasar el mouse.
+    Profundidad nueva sin ningún color nuevo (manchas de luz con el primario
+    y el acento del sindicato, retícula de colmena, trama diagonal). Las dos
+    variantes, oscura y clara. El mismo día se llevó a **las cuatro
+    portadas**: el CSS se mudó al bloque "Portadas v2" de `marca.css` con
+    todas las clases prefijadas **`pt-`** (`.fila`, `.filas`, `.pastilla`,
+    `.mini`, `.txt` y `.nov` ya existen en otras pantallas y esa hoja la
+    carga casi toda la app), con `.pt-tres` para las portadas sin riel
+    (sindicato y plataforma, que tienen muchos accesos). El **sindicato
+    estrena el círculo de perfil** del afiliado, de lectura, con la foto
+    tomada de `CuentaTrabajador` por CUIL. Detalle en HISTORIAL.md.
+
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
 plataforma), (b) sacar "Cambiar clave" transitorio de plataforma antes de
@@ -812,9 +925,10 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    2026-09-19** (PR #6). Causa y correcciones C1–C8 en
    `docs/chat/2026-09-19-cuelgue-dashboard-conexiones.md` y en HISTORIAL.md
    ("El cuelgue del Panel Sindical en Pruebas"); `carga/k6/test3_panel.js`
-   dio APROBADO contra Pruebas. Queda: al promover a la demo, cargar
-   `/healthz` como Health Check Path en `mitrabajo-demo` (hoy vacío; ponerlo
-   antes de promover haría fallar sus deploys). Si una app no responde:
+   dio APROBADO contra Pruebas. **Cerrado el 2026-09-23**: con la versión nueva ya viva en la demo se
+   cargó `/healthz` como Health Check Path en `mitrabajo-demo` (estaba
+   vacío; ponerlo antes de promover habría hecho fallar sus deploys,
+   porque esa ruta no existía en la versión anterior). Si una app no responde:
    `docs/OPERATIVA.md` §9.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)

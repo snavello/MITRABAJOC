@@ -40,7 +40,8 @@ with db.get_session() as s:
     s.add(Empleador(sindicato_id=SID_UOM, cuit="30111222339", razon_social="Constructora A", activo=True))
     # Un trabajador con el mismo "identificador" numérico que el empleador de
     # arriba -- para el test de que las dos tablas nunca se cruzan.
-    s.add(Trabajador(sindicato_id=SID_UOM, cuil="30111222339", nombre="Coincidencia", activo=True, registrado=True))
+    s.add(Trabajador(sindicato_id=SID_UOM, cuil="30111222339", activo=True, registrado=True))
+    db.guardar_datos_personales(s, "30111222339", nombre="Coincidencia")
     s.commit()
     # El formulario DEL TRABAJADOR que usa este archivo necesita área destino
     # desde la Fase 3 (decisión N6). Los de EMPRESA siguen sin ruteo por

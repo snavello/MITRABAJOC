@@ -47,6 +47,7 @@ from sqlalchemy.exc import OperationalError, TimeoutError as PoolTimeoutError
 from sqlmodel import select
 
 import encuestas
+import esquema
 import precios_ia
 import resultados_encuesta
 import fechas
@@ -351,8 +352,21 @@ async def sin_cache_en_paneles(request: Request, call_next):
 # necesario hoy. Endurecerla (nonces por request) para que contenga de verdad
 # el XSS de un SVG/HTML subido es un follow-up (ENT-01/ENT-02). Por eso H-0007
 # queda PARCIAL: las cabeceras están, la CSP todavía no es estricta.
+#
+# `blob:` va en `img-src` y en `media-src` y NO se puede sacar: es lo que la
+# app usa para MOSTRARLE a una persona el archivo que acaba de elegir, antes
+# de subirlo. La foto de perfil del afiliado y la del empleador se achican en
+# un <canvas> y para eso primero se cargan en un <img src="blob:...">; las
+# miniaturas y los videos de Recursos se previsualizan igual. Sin `blob:` el
+# navegador bloquea ese <img>, salta `onerror` y la pantalla dice "No se pudo
+# leer la imagen" sin que el archivo haya llegado nunca al servidor -- así se
+# rompió la carga de foto de perfil el 2026-09-20, al estrenar estas
+# cabeceras. Un `blob:` no es una fuente externa: lo fabrica el mismo
+# documento a partir de un archivo que la persona eligió, así que no abre
+# ninguna puerta que `data:` no tuviera ya abierta.
 CSP = ("default-src 'self'; "
-       "img-src 'self' data: https:; "
+       "img-src 'self' data: blob: https:; "
+       "media-src 'self' data: blob:; "
        "style-src 'self' 'unsafe-inline'; "
        "script-src 'self' 'unsafe-inline'; "
        "connect-src 'self' https:; "
@@ -588,6 +602,7 @@ templates.env.globals["sello_static"] = _sello_static
 # Las fechas que lee una persona van en dd/mm/aaaa, también en las
 # plantillas: "2026-10-12" es el formato de la base, no el de la pantalla.
 templates.env.filters["dia"] = fechas.dia_legible
+templates.env.filters["periodo"] = fechas.periodo_legible
 
 
 @app.on_event("startup")
@@ -1221,9 +1236,10 @@ def admin(request: Request):
                           .order_by(Reporte.id.desc())).all() \
             if puede("reportes") else []
         # El padrón se usa también para resolver nombres por CUIL en Reportes
-        # y en Cotizantes, que solo guardan el CUIL.
-        trabajadores = s.exec(select(Trabajador).where(Trabajador.sindicato_id == sid)
-                              .order_by(Trabajador.activo.desc(), Trabajador.nombre)).all() \
+        # y en Cotizantes, que solo guardan el CUIL. Viene como dicts con el
+        # empadronamiento y la persona ya unidos (db.padron_del_sindicato):
+        # el nombre y el domicilio son de la persona, no de esta fila.
+        trabajadores = db.padron_del_sindicato(s, sid) \
             if puede("trabajadores", "reportes", "cotizantes") else []
         envios = s.exec(select(EnvioSindicato).where(EnvioSindicato.sindicato_id == sid)
                         .order_by(EnvioSindicato.periodo.desc(), EnvioSindicato.id.desc())).all() \
@@ -1233,7 +1249,7 @@ def admin(request: Request):
             if puede("emp_empresas") else []
     # Nombre por CUIL, para poder filtrar Reportes y Afiliados cotizantes por
     # nombre (esas tablas solo guardan el CUIL, no el nombre).
-    nombres_por_cuil = {t.cuil: t.nombre for t in trabajadores}
+    nombres_por_cuil = {t["cuil"]: t["nombre"] for t in trabajadores}
     # Conceptos con código provisorio (la IA no pudo leer el código del recibo):
     # nunca matchean por código, así que hay que revisarlos.
     provisorios = detectar_provisorios([
@@ -1419,12 +1435,39 @@ def admin_inicio(request: Request):
         if "tramites" in modulos and "tramites_recibidos" in permisos else 0
     tramites_empresa_nuevos = db.contar_tramites_empleador_nuevos(sid) \
         if "empleadores" in modulos and "emp_tramites_recibidos" in permisos else 0
+    # Ficha del operador para el círculo de perfil de la portada (2026-09-23,
+    # pedido de Sd: el mismo lugar que en la app del afiliado). Es de LECTURA:
+    # el usuario del sindicato no edita sus datos desde acá.
+    #
+    # La FOTO sale de `CuentaTrabajador`, o sea del CUIL, no de una copia del
+    # usuario del panel: quien trabaja en el gremio y además está afiliado
+    # tiene una sola foto, igual que tiene un solo domicilio. Quien no está
+    # en el padrón (caso real, no un error) simplemente no tiene.
+    cuil_admin = (usuario.cuil if usuario else "") or ""
+    rol_admin = ("Super Admin" if es_super_admin else
+                 ("Admin de Seccional" if usuario and usuario.es_admin_seccional
+                  else "Usuario de área"))
+    sec_admin = db.seccional_del_sindicato(sid, usuario.seccional_id) \
+        if usuario and usuario.seccional_id else None
+    area_admin = ""
+    if usuario and usuario.area_id:
+        for a in db.areas_del_sindicato(sid):
+            if a["id"] == usuario.area_id:
+                area_admin = a["nombre"]
+                break
     return templates.TemplateResponse("admin_portada.html", {
         "permisos": permisos, "es_super_admin": es_super_admin,
         "request": request, "sindicato": marca.get("nombre", ""),
         "marca": marca, "marca_plataforma": db.marca_plataforma(),
         "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
         "primer_nombre": nombre_admin.split(" ")[0] or "Admin",
+        "nombre_admin": nombre_admin,
+        "usuario_admin": (usuario.usuario if usuario else ""),
+        "cuil_admin": cuil_admin,
+        "rol_admin": rol_admin,
+        "seccional_admin": (sec_admin["nombre"] if sec_admin else ""),
+        "area_admin": area_admin,
+        "tiene_foto_perfil": bool(cuil_admin and db.foto_trabajador(cuil_admin)),
         "tramites_nuevos": tramites_nuevos,
         "tramites_empresa_nuevos": tramites_empresa_nuevos,
         "modulos": modulos,
@@ -1501,23 +1544,27 @@ def admin_trabajador_alta(
         if id:  # modificación (solo si es de este sindicato)
             t = s.get(Trabajador, int(id))
             if t and t.sindicato_id == sid:
-                t.cuil, t.nombre = cuil_norm, nombre.strip()
-                for campo, valor in domicilio.items():
-                    setattr(t, campo, valor)
-                t.telefono, t.mail = telefono, mail
+                t.cuil = cuil_norm
                 t.vigencia_credencial = vigencia_credencial or None
                 t.seccional_id = sec_id
                 t.cuit_empleador = cuit_empleador.strip() or None
                 s.add(t)
+                # El nombre, el domicilio y el contacto son de la PERSONA:
+                # se escriben en un solo lugar y por eso el cambio se ve
+                # también en los otros gremios donde esté empadronada. Es la
+                # contracara de que no puedan existir dos versiones.
+                db.guardar_datos_personales(s, cuil_norm, nombre=nombre,
+                                            domicilio=domicilio, telefono=telefono, mail=mail)
         else:    # alta — evitar duplicado de CUIL en el mismo sindicato
             existe = s.exec(select(Trabajador).where(
                 Trabajador.sindicato_id == sid, Trabajador.cuil == cuil_norm)).first()
             if not existe:
                 s.add(Trabajador(
-                    sindicato_id=sid, cuil=cuil_norm, nombre=nombre.strip(),
-                    **domicilio, telefono=telefono, mail=mail,
+                    sindicato_id=sid, cuil=cuil_norm,
                     vigencia_credencial=vigencia_credencial or None, seccional_id=sec_id,
                     cuit_empleador=cuit_empleador.strip() or None))
+                db.guardar_datos_personales(s, cuil_norm, nombre=nombre,
+                                            domicilio=domicilio, telefono=telefono, mail=mail)
         s.commit()
     # Las dos altas pueden venir en cualquier orden: si a este CUIL ya se le
     # había dado usuario del panel, acá se arma el vínculo y se prende la
@@ -1593,9 +1640,10 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
                 "localidad": campo(5), "provincia": campo(6),
                 "codigo_postal": campo(9)}, precision="sin_geo")
             s.add(Trabajador(
-                sindicato_id=sid, cuil=cuil, nombre=nombre, **domicilio,
-                telefono=campo(7), mail=campo(8),
+                sindicato_id=sid, cuil=cuil,
                 seccional_id=por_nombre.get(geo._norm(campo(10)))))
+            db.guardar_datos_personales(s, cuil, nombre=nombre, domicilio=domicilio,
+                                        telefono=campo(7), mail=campo(8))
             existentes.add(cuil); altas += 1
         s.commit()
     # Las primeras tres líneas rechazadas alcanzan para que la persona vea el
@@ -5802,12 +5850,10 @@ def plataforma_ver_trabajadores(sindicato_id: int, request: Request):
     mostrar al clickear el número, mismo patrón que plataforma_ver_admins)."""
     exigir_plataforma(request)
     with db.get_session() as s:
-        trabajadores = s.exec(select(Trabajador).where(
-            Trabajador.sindicato_id == sindicato_id).order_by(
-            Trabajador.activo.desc(), Trabajador.nombre)).all()
         return {"trabajadores": [
-            {"cuil": t.cuil, "nombre": t.nombre, "activo": t.activo, "registrado": t.registrado}
-            for t in trabajadores]}
+            {"cuil": t["cuil"], "nombre": t["nombre"],
+             "activo": t["activo"], "registrado": t["registrado"]}
+            for t in db.padron_del_sindicato(s, sindicato_id)]}
 
 
 @app.post("/plataforma/reset-clave")
@@ -5828,9 +5874,20 @@ def plataforma_reset_clave(
                 u.clave_hash = hasheada; u.debe_cambiar_clave = False; s.add(u); s.commit()
                 return RedirectResponse("/plataforma?reset=ok", status_code=303)
         elif tipo == "trabajador":
+            # Desde que la fila de la persona nace con el alta del padrón, un
+            # CUIL sin clave YA tiene fila: ponerle una acá lo registra de
+            # hecho, así que los empadronamientos tienen que quedar marcados
+            # igual que si se hubiera registrado solo. Sin esto el KPI de
+            # "Afiliados registrados" contaría de menos y nadie lo notaría.
             c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == ident)).first()
             if c:
-                c.clave_hash = hasheada; s.add(c); s.commit()
+                era_nueva = not c.clave_hash
+                c.clave_hash = hasheada; s.add(c)
+                if era_nueva:
+                    for t in s.exec(select(Trabajador).where(Trabajador.cuil == ident)).all():
+                        t.registrado = True
+                        s.add(t)
+                s.commit()
                 return RedirectResponse("/plataforma?reset=ok", status_code=303)
     return RedirectResponse("/plataforma?reset=nohay", status_code=303)
 
@@ -5957,24 +6014,33 @@ def trabajador_login(request: Request, cuil: str = Form(...), clave: str = Form(
     return resp
 
 
-def _domicilio_distinto(trabajador, domicilio: dict) -> bool:
+def _domicilio_distinto(persona, domicilio: dict) -> bool:
     """¿El domicilio que llegó dice algo distinto de lo que la fila ya tiene?
 
     Separado de la ruta porque de esto depende que un domicilio IDÉNTICO no
     toque la fila: reescribirlo igual le borraría las coordenadas (el alta no
     geocodifica, escribe `sin_geo`) y volvería a mandar a la cola de
     georreferenciación algo que ya estaba ubicado."""
-    return any((getattr(trabajador, campo) or "").strip() != (domicilio.get(campo) or "").strip()
+    return any((getattr(persona, campo) or "").strip() != (domicilio.get(campo) or "").strip()
                for campo in ("calle", "numero", "piso_depto", "localidad",
                              "provincia", "codigo_postal"))
 
 
 @app.post("/trabajador/registro")
 def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Form(...),
+                         nombre: str = Form(""),
                          provincia: str = Form(""), localidad: str = Form(""),
                          calle: str = Form(""), numero: str = Form(""),
-                         piso_depto: str = Form(""), codigo_postal: str = Form("")):
-    """Crea la cuenta del afiliado y, con ella, su domicilio.
+                         piso_depto: str = Form(""), codigo_postal: str = Form(""),
+                         telefono: str = Form(""), mail: str = Form("")):
+    """Crea la cuenta del afiliado y, con ella, sus datos personales.
+
+    **Pide exactamente los mismos campos que el perfil** (nombre, domicilio,
+    teléfono y mail), y con la misma marca de obligatorio y opcional. Antes
+    pedía solo el domicilio: el afiliado se registraba, entraba, abría "Tu
+    perfil" y se encontraba con un formulario que no había visto nunca y con
+    campos que nadie le había pedido. Son el mismo dato y se cargan en el
+    mismo lugar -- la única diferencia es el momento.
 
     **Se le piden provincia y localidad, y nada más es obligatorio** (decisión
     de Sd, 2026-09-13; geo.OBLIGATORIOS_AFILIADO). El alta es el único momento
@@ -5997,6 +6063,13 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
     miente. Lo que el padrón tenía queda igual solo si la persona no cambió
     nada.
 
+    **Un campo en blanco no borra lo que el sindicato ya tenía.** El nombre,
+    el teléfono y el mail vienen prellenados vacíos (el formulario no puede
+    mostrar lo que el padrón sabe de un CUIL sin que cualquiera pueda
+    averiguarlo tipeando CUILes ajenos), así que dejarlos vacíos significa
+    "no lo completé", no "no tengo". En el perfil es al revés: ahí sí se ve
+    lo cargado y borrarlo es una decisión.
+
     **Acá no se geocodifica.** Es la misma regla del alta masiva: una llamada
     a un servicio ajeno en el camino del registro es el peor lugar para
     esperar ocho segundos, y el afiliado no tiene por qué pagar con su alta
@@ -6016,19 +6089,25 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
          "localidad": localidad, "provincia": provincia, "codigo_postal": codigo_postal},
         precision="sin_geo")
     with db.get_session() as s:
-        existe = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
-        if existe:
+        # La fila de la persona puede existir ya (la crea el alta del padrón)
+        # con `clave_hash` vacío: eso es "está en el padrón y todavía no
+        # eligió clave". Lo que no puede repetirse es la CLAVE -- si ya la
+        # tiene, esto es un alta duplicada.
+        persona = db.asegurar_cuenta(s, cuil)
+        if persona.clave_hash:
             return RedirectResponse("/ingresar?error=yaexiste", status_code=303)
-        s.add(CuentaTrabajador(cuil=cuil, clave_hash=auth.hashear_clave(clave)))
+        persona.clave_hash = auth.hashear_clave(clave)
+        # Cada `None` es "no lo toques": el domicilio idéntico no se reescribe
+        # (ver `_domicilio_distinto`), y el teléfono o el mail en blanco
+        # significan "no lo completé", no "bórralo".
+        db.guardar_datos_personales(
+            s, cuil, nombre=nombre,
+            domicilio=domicilio if _domicilio_distinto(persona, domicilio) else None,
+            telefono=telefono if telefono.strip() else None,
+            mail=mail if mail.strip() else None)
         # marcar los empadronamientos como registrados
         for t in s.exec(select(Trabajador).where(Trabajador.cuil == cuil)).all():
             t.registrado = True
-            # `Trabajador` es por sindicato (pluriempleo), así que el domicilio
-            # va en TODOS sus empadronamientos: es una sola persona y vive en
-            # un solo lugar.
-            if _domicilio_distinto(t, domicilio):
-                for campo, valor in domicilio.items():
-                    setattr(t, campo, valor)
             s.add(t)
         s.commit()
     token = auth.crear_sesion("trabajador", sindicato_id=0, ident=cuil)
@@ -6136,6 +6215,9 @@ def app_portada(request: Request):
                              if seccional_id else None),
             "etiquetas_precision": geo.ETIQUETAS_PRECISION,
             "tiene_foto_perfil": bool(db.foto_trabajador(cuil)),
+            # Lo que la tarjeta principal de la portada dice de verdad:
+            # cuántos recibos verificó este año y cómo salió el último.
+            "recibos_resumen": db.resumen_recibos_trabajador(cuil, sid_activo),
             "noticias": _con_antiguedad(db.noticias_vigentes(sid_activo, seccional_id=seccional_id, limite=3)),
             "beneficios": db.beneficios_vigentes(sid_activo, seccional_id=seccional_id),
             "notificaciones_no_leidas": db.contar_notificaciones_no_leidas(cuil, sid_activo),
@@ -6158,14 +6240,23 @@ async def api_actualizar_perfil(request: Request, nombre: str = Form(...), calle
                                  codigo_postal: str = Form(""), latitud: str = Form(""),
                                  longitud: str = Form(""), precision_geo: str = Form(""),
                                  telefono: str = Form(""), mail: str = Form("")):
-    """El trabajador edita su propio perfil -- todo menos el CUIL. Actualiza
-    el empadronamiento del sindicato ACTIVO (ver actualizar_perfil_trabajador:
-    Trabajador es por sindicato, no hay un domicilio único de la persona).
+    """El trabajador edita su propio perfil -- todo menos el CUIL.
+
+    Escribe en la PERSONA (`CuentaTrabajador`), así que el cambio se ve en
+    TODOS los sindicatos donde esté empadronada. Hasta el 2026-09-22 escribía
+    solo el empadronamiento del sindicato activo mientras el registro escribía
+    todos, y la misma persona editando en dos pantallas dejaba dos domicilios
+    distintos. Sigue exigiendo estar empadronado en el sindicato activo: el
+    perfil se abre desde la app de un gremio.
 
     El domicilio pasa por el mismo `geo.campos_para_guardar` que usa el admin:
     lo que carga el afiliado y lo que carga el sindicato tienen que quedar
     idénticos, o el mismo domicilio se vería distinto según quién lo tocó
     último.
+
+    **Acá un campo vacío SÍ borra**, al revés que en el registro: la persona
+    está viendo lo que tiene cargado, así que dejar el teléfono en blanco es
+    una decisión y no un "no lo completé".
 
     **Provincia y localidad son obligatorias** (geo.OBLIGATORIOS_AFILIADO).
     Es el único dato del domicilio que el sindicato realmente necesita para
@@ -6572,38 +6663,6 @@ def api_version():
                                  "Cache-Control": "no-store"})
 
 
-# ---- Actividad: dashboard de monitoreo en /entornos (2026-09-09) ----
-# Mismo criterio que /api/version: público y con CORS abierto a propósito,
-# porque las cookies de sesión NO viajan entre orígenes distintos (Pruebas
-# y Demo son hosts .onrender.com separados) -- sin esto, la pestaña
-# Actividad de un entorno no podría mostrar los números del otro. Son
-# agregados (cantidades, tokens totales), no el contenido de ningún recibo
-# ni trámite puntual. "Cada servicio expone SU propio resumen" (decisión
-# de Sd, 2026-09-09): esta ruta nunca consulta la base del otro entorno.
-_CACHE_ACTIVIDAD = {"hasta": 0.0, "datos": None}
-CACHE_ACTIVIDAD_SEGUNDOS = 120
-
-
-@app.get("/api/entornos/actividad")
-def api_entornos_actividad():
-    """Trámites, notificaciones, recibos, tokens de IA y accesos de ESTE
-    entorno, por sindicato y totales -- con un caché corto en memoria del
-    proceso para que el polling del navegador (cada ~10 min, ver
-    entornos.html) y las visitas cruzadas de otro entorno no recalculen en
-    cada pedido. CPU/RAM del propio servidor vía render_admin (mismos datos
-    que la pestaña Tests)."""
-    import time
-    ahora = time.monotonic()
-    if not _CACHE_ACTIVIDAD["datos"] or ahora > _CACHE_ACTIVIDAD["hasta"]:
-        datos = db.actividad_resumen()
-        datos["servidor"] = render_admin.estado_servidor()
-        datos["entorno"] = entorno.ENTORNO
-        _CACHE_ACTIVIDAD["datos"] = datos
-        _CACHE_ACTIVIDAD["hasta"] = ahora + CACHE_ACTIVIDAD_SEGUNDOS
-    return JSONResponse(_CACHE_ACTIVIDAD["datos"],
-                        headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-store"})
-
-
 @app.get("/entornos", response_class=HTMLResponse)
 def entornos(request: Request):
     """Landing interna de accesos. Existe SOLO donde se muestra el
@@ -6644,11 +6703,6 @@ def entornos(request: Request):
         # Pruebas las tiene, así que en Demo queda "configurado": false
         # (render_admin.py lo maneja solo, sin romper la página).
         "render_estado": render_admin.estado_servidor(),
-        # Actividad: a diferencia de Tests (solo Pruebas), tiene sentido en
-        # los dos entornos -- Demo también se monitorea. La del OTRO
-        # entorno la trae el JS (api_entornos_actividad es público con CORS
-        # abierto, mismo motivo que /api/version).
-        "actividad_local": db.actividad_resumen(),
         "escalones_default_lecturas": ",".join(map(str, ESCALONES_DEFAULT_LECTURAS)),
         "escalones_default_recibos": ",".join(map(str, ESCALONES_DEFAULT_RECIBOS)),
     })
@@ -7017,6 +7071,81 @@ def api_entornos_xsanders(request: Request, proyecto: str = "mitrabajo"):
     except XSKErrorRegistro as e:
         # Un archivo del registro mal formado: se dice cuál, no se rompe la página.
         raise HTTPException(500, f"El registro de XSK tiene un archivo mal formado: {e}")
+
+
+# ==================== Sala de mando (esquema físico vivo) ====================
+# El esquema físico de la plataforma (esquema.py + templates/esquema.html):
+# de dónde a dónde va un recibo, quién entrega, quién mira. Nació como boceto
+# en papel de Sd (2026-09-21) y es una pieza de venta tanto como un mapa
+# técnico. Los indicadores de arriba salen de la base de ESTE entorno y el
+# semáforo general de Grafana; lo que no se puede leer se dice ("sin dato"),
+# no se inventa. Mismo gate y misma regla que el resto de /entornos: 404 en
+# la demo (con la portación viaja el código, no la landing).
+
+def _esquema_datos(con_grafana: bool = False) -> dict:
+    """Todo lo que la Sala de mando muestra vivo, en un dict serializable.
+    `con_grafana` pide además el semáforo a Grafana Cloud (red): lo pide el
+    JSON que el navegador refresca, no la página, para que un Grafana lento
+    no demore el primer dibujo."""
+    with db.get_session() as s:
+        kpis = esquema.kpis(s)
+    renov = observabilidad_panel.renovaciones()
+    proximo = next((r for r in renov if r["dias"] >= 0), None) or (renov[0] if renov else None)
+    try:
+        t = xsk_tablero.tablero("mitrabajo")
+        seguridad = dict(t["por_resolucion"], bloquean=len(t["bloquean"]))
+    except Exception:                       # registro mal formado: la Sala no se cae por esto
+        seguridad = None
+    semaforo = None
+    if con_grafana:
+        # verde / amarillo / rojo / gris (sin reglas) según las alertas; None si
+        # no está configurado o no respondió: el navegador lo muestra como "sin dato".
+        try:
+            if observabilidad_panel.configurado():
+                semaforo = observabilidad_panel.ag.estado_alertas(
+                    observabilidad_panel._cliente("GRAFANA_TOKEN_LECTURA"))["semaforo"]
+        except Exception:
+            semaforo = None
+    return {
+        "entorno": entorno.ENTORNO, "versiones": _versiones(), "urls": entorno.URLS, "kpis": kpis,
+        "vencimiento": proximo, "seguridad": seguridad, "semaforo": semaforo,
+        "actualizado": fechas.ahora_con_segundos(),
+    }
+
+
+@app.get("/entornos/esquema", response_class=HTMLResponse)
+def entornos_esquema(request: Request):
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    embebida = request.query_params.get("embebida") == "1"
+    respuesta = templates.TemplateResponse("esquema.html", {
+        "request": request, "datos": _esquema_datos(con_grafana=False),
+        "marca_plataforma": db.marca_plataforma(),     # el logo de Colm3na en la cabecera
+        # ?embebida=1: la pestaña Observabilidad de /entornos la muestra en un
+        # iframe; sin el enlace "← Entornos" y con menos aire arriba.
+        "embebida": embebida,
+    })
+    if embebida:
+        # Las cabeceras de seguridad (H-0007) prohíben enmarcar CUALQUIER
+        # página (X-Frame-Options DENY, frame-ancestors 'none'): el iframe de
+        # la landing mostraba "refused to connect" (2026-09-21). Solo en modo
+        # embebido, y solo desde el mismo origen, se permite el marco. El
+        # middleware usa setdefault, así que lo que pone la ruta manda.
+        respuesta.headers["X-Frame-Options"] = "SAMEORIGIN"
+        respuesta.headers["Content-Security-Policy"] = CSP.replace(
+            "frame-ancestors 'none'", "frame-ancestors 'self'")
+    return respuesta
+
+
+@app.get("/api/entornos/esquema")
+def api_entornos_esquema(request: Request):
+    """Lo mismo que dibuja la página, más el semáforo de Grafana. El
+    navegador lo pide al abrir y cada minuto."""
+    _exigir_landing()
+    if not _pase_landing(request):
+        raise HTTPException(403, "Ingresá a la landing.")
+    return _esquema_datos(con_grafana=True)
 
 
 # ==================== Solapa "Observabilidad" ====================

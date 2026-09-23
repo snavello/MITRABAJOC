@@ -21,8 +21,9 @@ with db.get_session() as s:
                     modulos_habilitados=list(MODULOS_INICIALES) + ["tramites"])
     s.add(uom); s.commit(); s.refresh(uom)
     SID = uom.id
-    s.add(Trabajador(sindicato_id=SID, cuil="20111111119", nombre="Juan",
+    s.add(Trabajador(sindicato_id=SID, cuil="20111111119",
                      activo=True, registrado=True))
+    db.guardar_datos_personales(s, "20111111119", nombre="Juan")
     s.commit()
 
 

@@ -93,15 +93,22 @@ def sembrar():
                 {"sid": sid, "c": cuit, "rs": f"Empresa Sintética {i + 1}"})
 
         cuils = [f"20{900000000 + i}9"[:11] for i in range(TRABAJADORES)]
+        # Dos inserts porque son dos cosas: la PERSONA (nombre y domicilio,
+        # una por CUIL) y el EMPADRONAMIENTO en este sindicato.
         _insertar(conn, """
-            INSERT INTO trabajador (sindicato_id, cuil, nombre, calle, numero, piso_depto,
-                localidad, provincia, telefono, mail, registrado, activo, seccional_id,
+            INSERT INTO cuentatrabajador (cuil, clave_hash, nombre, calle, numero,
+                piso_depto, localidad, provincia, codigo_postal, direccion_texto,
+                precision_geo, geo_actualizado, telefono, mail)
+            VALUES (:cuil, '', :nombre, '', '', '', '', '', '', '',
+                'sin_geo', '', '', '')""", [
+            {"cuil": c, "nombre": f"Trabajador {i}"} for i, c in enumerate(cuils)])
+        _insertar(conn, """
+            INSERT INTO trabajador (sindicato_id, cuil, registrado, activo, seccional_id,
                 cuit_empleador, semaforo_datos)
-            VALUES (:sid, :cuil, :nombre, '', '', '', '', '', '', '', :registrado,
-                true, :secc, :cuit, '{}')""", [
-            {"sid": sid, "cuil": c, "nombre": f"Trabajador {i}",
+            VALUES (:sid, :cuil, :registrado, true, :secc, :cuit, '{}')""", [
+            {"sid": sid, "cuil": c,
              "registrado": rnd.random() < 0.6, "secc": rnd.choice(secc_ids),
-             "cuit": rnd.choice(EMPRESAS)} for i, c in enumerate(cuils)])
+             "cuit": rnd.choice(EMPRESAS)} for c in cuils])
 
         filas = []
         for i in range(RECIBOS):
@@ -185,6 +192,11 @@ def limpiar():
         conn.execute(sa.text(
             "DELETE FROM notificaciondestinatario WHERE notificacion_id IN "
             "(SELECT id FROM notificacion WHERE sindicato_id = :sid)"), {"sid": sid})
+        # Las personas no cuelgan de un sindicato: se borran por los CUIL de
+        # ESTE padrón, y antes de borrarlo (después ya no se sabe cuáles eran).
+        conn.execute(sa.text(
+            "DELETE FROM cuentatrabajador WHERE cuil IN "
+            "(SELECT cuil FROM trabajador WHERE sindicato_id = :sid)"), {"sid": sid})
         for tabla in ["notificacion", "consultaconvenio", "tramite", "tipotramite",
                       "reciboverificado", "trabajador", "empleador", "seccional",
                       "usuariosindicato", "sindicato"]:

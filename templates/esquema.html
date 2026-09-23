@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Colm3na — Sala de mando</title>
+<style>
+@font-face{font-family:"Barlow Condensed";src:url('/static/fonts/barlow-condensed-bold.woff2?v={{ sello_static('fonts/barlow-condensed-bold.woff2') }}') format('woff2');font-weight:700}
+:root{
+  --noche:#0a1421; --noche2:#0f1c2e; --noche3:#16263c; --linea:#22344d;
+  --texto:#e8eef7; --texto2:#8ea0bb; --texto3:#5f7597;
+  --miel:#f2b234; --cian:#6fe3ff; --verde:#3ec9a7; --rojo:#ff4d5a; --violeta:#b3b2e8; --rosa:#ff6ab0; --gris:#9fb0c8;
+  --cond:"Barlow Condensed","Arial Narrow",Impact,sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,Consolas,"SF Mono",monospace;
+  --halo:#3ec9a7; --neon:#f2b234;
+}
+*{box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{margin:0;background:var(--noche);color:var(--texto);font:14px/1.45 var(--body)}
+/* Todo entra en la ventana (2026-09-21): cabecera y tarjetas miden lo suyo y el
+   radar se queda con el resto, con el dibujo escalado para caber entero. Antes la
+   página medía más que la ventana y, embebida, el borde inferior quedaba afuera. */
+.marco{height:100vh;display:flex;flex-direction:column;padding:10px 22px 8px;{% if embebida %}padding-top:6px;{% endif %}}
+.cuerpo{flex:1;min-height:0;display:flex;flex-direction:column}
+body.solo-radar .marco{padding:0}
+body.solo-radar header, body.solo-radar .tiles, body.solo-radar .pie{display:none}
+body.solo-radar .radar{border-radius:0;border:0}
+header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid var(--linea);padding-bottom:8px}
+header .marca{display:flex;align-items:center;gap:14px;min-width:0}
+header .marca img{display:block;height:30px;width:auto;max-width:150px;object-fit:contain}
+h1{margin:0;font:700 28px/1 var(--cond);letter-spacing:.02em;text-transform:uppercase;white-space:nowrap}
+h1 em{font-style:normal;color:var(--miel)}
+/* Botón circular de volver, flotante abajo a la derecha (pedido de Sd, 2026-09-21).
+   Embebida en la landing le avisa al padre que cierre la capa; suelta, vuelve a /entornos. */
+.volver{position:fixed;right:22px;bottom:22px;z-index:70;width:58px;height:58px;border-radius:50%;border:2px solid var(--miel);background:#0f1c2e;color:var(--miel);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(0,0,0,.6),0 0 0 6px rgba(242,178,52,.12);transition:transform .15s,background .15s}
+.volver:hover{transform:scale(1.06);background:var(--miel);color:#1a1200}
+.volver svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.volver span{position:absolute;right:68px;top:50%;transform:translateY(-50%);white-space:nowrap;font:700 12px var(--cond);letter-spacing:.14em;text-transform:uppercase;color:var(--texto2);opacity:0;transition:opacity .15s;pointer-events:none}
+.volver:hover span{opacity:1}
+.volver.pantalla{bottom:92px;width:48px;height:48px;border-color:var(--cian);color:var(--cian);box-shadow:0 10px 30px rgba(0,0,0,.6),0 0 0 6px rgba(111,227,255,.1)}
+.volver.pantalla:hover{background:var(--cian);color:#0a1421}
+.volver.pantalla svg{width:22px;height:22px}
+.volver.pantalla span{right:58px}
+body.en-fullscreen .volver.pantalla{display:none}
+.estado-ctl{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--texto2);letter-spacing:.1em;text-transform:uppercase}
+.estado-ctl button{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;background:var(--c);opacity:.45}
+.estado-ctl button.on{opacity:1;border-color:#fff;box-shadow:0 0 10px var(--c)}
+.estado-ctl span{margin-left:6px;font:700 15px var(--cond);color:var(--halo);letter-spacing:.06em}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:5px;margin:6px 0}
+.tile.neg::before{background:var(--cian)} .tile.neg b{color:var(--cian)}
+/* Compactos (2026-09-21): dos líneas fijas por indicador. La segunda se corta con
+   puntos suspensivos y el detalle completo sale en una burbuja al pasar el mouse. */
+.tile{background:var(--noche2);border:1px solid var(--linea);border-radius:8px;padding:4px 8px 5px 10px;position:relative;line-height:1.15;min-width:0;cursor:default}
+.tile::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:3px;background:var(--miel);border-radius:2px}
+.tile small{display:inline-block;color:var(--texto3);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;margin-right:6px;vertical-align:baseline}
+.tile b{font:700 18px/1 var(--cond);letter-spacing:.02em;vertical-align:baseline}
+.tile span{display:block;font:10px var(--mono);color:var(--texto2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.tile:hover{border-color:#3a4f70}
+.burbuja{position:fixed;z-index:60;max-width:360px;background:#0f1c2e;border:1px solid #3a4f70;border-radius:8px;padding:8px 11px;font-size:12px;line-height:1.45;color:var(--texto);box-shadow:0 12px 30px rgba(0,0,0,.55);pointer-events:none;white-space:pre-line;display:none}
+.burbuja b{color:var(--miel);font-weight:600}
+.tile.ok b{color:var(--halo)} .tile.alerta::before{background:var(--rojo)} .tile.alerta b{color:var(--rojo)}
+.radar{position:relative;flex:1;min-height:0;border:1px solid var(--linea);border-radius:14px;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 40%, #12223a 0%, var(--noche) 70%);
+  box-shadow:inset 0 0 140px -50px var(--halo), 0 0 60px -30px var(--halo);transition:box-shadow .8s}
+.radar::before{content:"";position:absolute;inset:0;background-image:linear-gradient(#ffffff07 1px,transparent 1px),linear-gradient(90deg,#ffffff07 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
+.barrido{position:absolute;inset:-40%;background:conic-gradient(from 0deg, transparent 0 80%, color-mix(in srgb,var(--halo) 12%,transparent) 92%, color-mix(in srgb,var(--halo) 32%,transparent) 100%);animation:girar 14s linear infinite;pointer-events:none;mix-blend-mode:screen;transition:background .8s}
+.foco{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .4s;mix-blend-mode:screen;
+  background:radial-gradient(180px 180px at var(--mx,50%) var(--my,50%), rgba(255,255,255,.085), rgba(255,255,255,.03) 45%, transparent 70%)}
+.radar.con-foco .foco{opacity:1}
+.radar[data-estado="rojo"] .barrido{animation-duration:6s} .radar[data-estado="violeta"] .barrido{animation-duration:30s;opacity:.6}
+.radar[data-estado="violeta"] svg{filter:saturate(.4)}
+@keyframes girar{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.barrido{animation:none}}
+svg#svg{position:relative;width:100%;height:100%;display:block}
+svg text{font-family:var(--body)}
+.ico{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.zona-t{font:700 11px var(--cond);letter-spacing:.2em;text-transform:uppercase}
+.nodo{cursor:pointer}
+.nodo > rect.caja{fill:#0f1c2e;stroke:#2a3e5a;stroke-width:1.2;transition:stroke .2s}
+.nodo.rack > rect.caja{fill:#0c1728;stroke:#33507a}
+.nodo.planeado > rect.caja{stroke-dasharray:6 5;stroke:#4a5b74}
+.nodo.manual > rect.caja{stroke-dasharray:2 4}
+.nodo:hover > rect.caja, .nodo.fijo > rect.caja{stroke:var(--miel);stroke-width:2}
+.nodo.zoom > rect.caja{filter:drop-shadow(0 14px 26px rgba(0,0,0,.75))}
+.nodo text.t{font:700 15px var(--cond);fill:#f4f7fb;letter-spacing:.04em;text-transform:uppercase}
+.nodo text.s{font:10.5px var(--body);fill:var(--texto2)}
+.nodo text.k{font:9.5px var(--body);fill:var(--miel);letter-spacing:.14em;text-transform:uppercase}
+.nodo text.chip{font:10.5px var(--body);fill:var(--texto)}
+.nodo.chipn > rect.caja{fill:#0a1421;stroke:#2a3e5a}
+.ins{fill:#101d31;stroke:#2a3e5a}
+.a-label{fill:var(--texto2);font-size:10px} .a-labelbg{fill:#0b1526;opacity:.95}
+.play{cursor:pointer} .play:hover circle{filter:drop-shadow(0 0 6px var(--cian))}
+/* neón */
+.neon > rect.caja{stroke:var(--neon)!important;stroke-width:3!important;filter:drop-shadow(0 0 6px var(--neon)) drop-shadow(0 0 16px var(--neon))}
+.paso > rect.caja{stroke:var(--neon)!important;stroke-width:2!important;filter:drop-shadow(0 0 5px var(--neon))}
+path.neon{stroke:var(--neon)!important;stroke-width:3.5!important;opacity:1!important;filter:drop-shadow(0 0 5px var(--neon));stroke-dasharray:10 6!important;animation:fluir .5s linear infinite}
+path.paso{stroke:var(--neon)!important;stroke-width:2.4!important;opacity:1!important}
+@keyframes fluir{from{stroke-dashoffset:32}to{stroke-dashoffset:0}}
+svg.animando .nodo:not(.neon):not(.paso) > rect.caja{opacity:.5}
+/* ficha */
+/* La ficha FLOTA sobre el radar (pedido de Sd, 2026-09-21): aparece al pasar el mouse
+   por una caja, del lado contrario a la caja para no taparla, y se queda al hacer clic. */
+aside{position:fixed;top:70px;width:340px;max-height:calc(100vh - 110px);overflow:auto;z-index:65;display:none;
+  background:rgba(15,28,46,.96);border:1px solid #3a4f70;border-radius:14px;padding:14px 18px;box-shadow:0 18px 50px rgba(0,0,0,.6);backdrop-filter:blur(6px);pointer-events:none}
+aside.visible{display:block} aside.fija{pointer-events:auto;border-color:var(--miel)}
+/* Los tres recorridos: botones circulares de play, cada uno de su color, con un
+   rótulo corto debajo. Viven ADENTRO del radar (abajo a la izquierda), así siguen
+   a mano en pantalla completa "solo radar" (pedido de Sd, 2026-09-21). */
+.recorridos{position:absolute;left:16px;bottom:12px;z-index:6;display:flex;gap:14px;align-items:flex-end}
+.recorridos button{position:relative;width:46px;height:46px;border-radius:50%;border:2px solid var(--c);background:rgba(10,20,33,.85);color:var(--c);cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(0,0,0,.55),0 0 0 4px color-mix(in srgb,var(--c) 14%,transparent);transition:transform .15s,background .15s,color .15s}
+.recorridos button svg{width:20px;height:20px;fill:currentColor;margin-left:3px}
+.recorridos button:hover,.recorridos button.activo{background:var(--c);color:#0a1421;transform:scale(1.06)}
+.recorridos button.activo{box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 35%,transparent),0 0 18px var(--c)}
+.recorridos button span{position:absolute;top:50px;left:50%;transform:translateX(-50%);font:700 10px var(--cond);letter-spacing:.16em;text-transform:uppercase;color:var(--texto2);white-space:nowrap}
+.recorridos{padding-bottom:16px}
+aside h2{margin:0 0 4px;font:700 24px/1 var(--cond);letter-spacing:.03em;text-transform:uppercase}
+aside .zona{color:var(--texto3);font-size:10px;text-transform:uppercase;letter-spacing:.14em}
+aside .estado{display:inline-block;margin:8px 6px 10px 0;padding:2px 9px;border-radius:999px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;border:1px solid}
+.e-activo{color:var(--verde);border-color:var(--verde)} .e-planeado{color:#6b7a94;border-color:#6b7a94}
+.e-manual{color:var(--rosa);border-color:var(--rosa)} .e-parcial{color:var(--miel);border-color:var(--miel)}
+.e-pago{color:#111;background:var(--miel);border-color:var(--miel)}
+aside ul{padding-left:18px;margin:0 0 10px;color:var(--texto2);font-size:13px} aside li{margin:4px 0}
+aside dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:0 0 10px;font-size:12.5px} aside dt{color:var(--texto3)} aside dd{margin:0}
+aside .vacio{color:var(--texto3);font-style:italic;font-size:13px}
+aside button{background:var(--cian);color:#0a1421;border:0;border-radius:6px;padding:6px 12px;font:600 12.5px var(--body);cursor:pointer;margin:4px 6px 4px 0}
+aside button.sec{background:transparent;color:var(--texto2);border:1px solid var(--linea)}
+aside .paso-actual{font-size:14px;line-height:1.4;margin:10px 0;padding:10px 12px;border-left:3px solid var(--neon);background:rgba(255,255,255,.03)}
+aside ol.recorrido{padding-left:18px;color:var(--texto3);font-size:11.5px} aside ol.recorrido li{margin:2px 0}
+.pie{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;color:var(--texto3);font-size:11px;align-items:center;flex:none}
+.pie i{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--c);vertical-align:middle;margin-right:5px;opacity:.9}
+.pie .pago i{border-radius:50%;background:var(--miel)} .pie .pago.fut i{background:none;border:1.5px dashed var(--miel)} .pie .pl i{background:none;border:1px dashed #6b7a94;border-radius:0;height:0;width:22px}
+@media (max-width:1100px){aside{width:min(340px,calc(100vw - 32px))}}
+</style>
+</head>
+<body class="{% if embebida %}solo-radar{% endif %}">
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="i-docker" viewBox="0 0 24 24"><g class="ico"><path d="M3 13h18c-.6 4-3.6 6.5-8 6.5S3.7 17 3 13z"/><rect x="5" y="9.5" width="3" height="3"/><rect x="8.5" y="9.5" width="3" height="3"/><rect x="12" y="9.5" width="3" height="3"/><rect x="8.5" y="6" width="3" height="3"/><rect x="12" y="6" width="3" height="3"/><path d="M18 11c1.5-.8 3-.5 3.5.3"/></g></symbol>
+  <symbol id="i-github" viewBox="0 0 24 24"><g class="ico"><circle cx="6" cy="5" r="2.2"/><circle cx="6" cy="19" r="2.2"/><circle cx="18" cy="9" r="2.2"/><path d="M6 7.2v9.6M18 11.2c0 3-3 4-6 4.5-2 .3-4 .8-6 1.1"/></g></symbol>
+  <symbol id="i-actions" viewBox="0 0 24 24"><g class="ico"><circle cx="7" cy="7" r="3"/><circle cx="17" cy="17" r="3"/><path d="M10 7h4a3 3 0 0 1 3 3v4M7 10v4a3 3 0 0 0 3 3h4"/></g></symbol>
+  <symbol id="i-render" viewBox="0 0 24 24"><g class="ico"><path d="M7 17a4 4 0 0 1-.5-8 5.5 5.5 0 0 1 10.6 1.3A3.5 3.5 0 0 1 17 17H7z"/><path d="M12 20v-6M9.5 16.5 12 14l2.5 2.5"/></g></symbol>
+  <symbol id="i-postgres" viewBox="0 0 24 24"><g class="ico"><ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6"/><path d="M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></g></symbol>
+  <symbol id="i-fastapi" viewBox="0 0 24 24"><g class="ico"><circle cx="12" cy="12" r="9"/><path d="M13 5.5 8.5 13H12l-1 5.5L15.5 11H12z"/></g></symbol>
+  <symbol id="i-anthropic" viewBox="0 0 24 24"><g class="ico"><path d="M4 19 10.5 4h3L20 19M8 14h8"/></g></symbol>
+  <symbol id="i-claude" viewBox="0 0 24 24"><g class="ico"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="m7 9 3 3-3 3M12 15h5"/></g></symbol>
+  <symbol id="i-grafana" viewBox="0 0 24 24"><g class="ico"><path d="M4 16a8 8 0 0 1 16 0"/><path d="M12 16 16 9"/><circle cx="12" cy="16" r="1.4"/><path d="M3 19h18"/></g></symbol>
+  <symbol id="i-sentry" viewBox="0 0 24 24"><g class="ico"><path d="M12 3 3 19h6"/><path d="M12 3l9 16h-3.5"/><path d="M12 9.5 8.5 16h2.2"/><circle cx="12" cy="17" r="1.2"/></g></symbol>
+  <symbol id="i-cloudflare" viewBox="0 0 24 24"><g class="ico"><path d="M6.5 18a3.5 3.5 0 0 1-.4-7 5 5 0 0 1 9.6-1.2A3.6 3.6 0 0 1 17 18H6.5z"/><path d="M6 14.5h9"/></g></symbol>
+  <symbol id="i-telegram" viewBox="0 0 24 24"><g class="ico"><path d="M21 4 3 11.5l6 2 2 6 3.5-4.5 5 3.5z"/><path d="M9 13.5 21 4"/></g></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><g class="ico"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></g></symbol>
+  <symbol id="i-arca" viewBox="0 0 24 24"><g class="ico"><path d="M3 9 12 4l9 5H3zM5 9v8M9.5 9v8M14.5 9v8M19 9v8M3 20h18"/></g></symbol>
+  <symbol id="i-mapa" viewBox="0 0 24 24"><g class="ico"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/><circle cx="12" cy="10.5" r="1.6"/><path d="M12 12.1v3"/></g></symbol>
+  <symbol id="i-geo" viewBox="0 0 24 24"><g class="ico"><path d="M12 21s6-5.5 6-11a6 6 0 0 0-12 0c0 5.5 6 11 6 11z"/><circle cx="12" cy="10" r="2.2"/></g></symbol>
+  <symbol id="i-push" viewBox="0 0 24 24"><g class="ico"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></g></symbol>
+  <symbol id="i-docs" viewBox="0 0 24 24"><g class="ico"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></g></symbol>
+  <symbol id="i-xsk" viewBox="0 0 24 24"><g class="ico"><path d="M12 3 5 6v6c0 4 3 7 7 9 4-2 7-5 7-9V6z"/><path d="m9 12 2 2 4-4"/></g></symbol>
+  <symbol id="i-personas" viewBox="0 0 24 24"><g class="ico"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M14.5 18.5a4 4 0 0 1 6.5-2.8"/></g></symbol>
+  <symbol id="i-equipo" viewBox="0 0 24 24"><g class="ico"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/><path d="M17.5 3.5 18.3 5.5l2.2.3-1.6 1.5.4 2.2-2-1.1-2 1.1.4-2.2-1.6-1.5 2.2-.3z"/></g></symbol>
+</defs></svg>
+
+<div class="marco">
+  <header>
+    <div class="marca">
+      <img src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Colm3na">
+      <h1><em>Sala de mando</em></h1>
+    </div>
+    <div class="estado-ctl" id="estadoCtl">estado general
+      <button data-e="verde" style="--c:#3ec9a7" title="Todo en línea"></button>
+      <button data-e="amarillo" style="--c:#f2b234" title="Degradado"></button>
+      <button data-e="rojo" style="--c:#ff4d5a" title="Con errores"></button>
+      <button data-e="violeta" style="--c:#b3b2e8" title="Sistema caído"></button>
+      <span id="estadoTxt"></span><small id="actualizado" style="margin-left:10px;color:var(--texto3);letter-spacing:0;text-transform:none"></small>
+    </div>
+  </header>
+
+  <div class="cuerpo">
+    <div class="radar" id="radar" data-estado="verde">
+      <div class="barrido"></div>
+      <div class="foco"></div>
+      <div class="recorridos" id="recorridos" aria-label="Recorridos"></div>
+      <svg id="svg" viewBox="0 0 1440 880" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="pie" id="pie"><span class="pago"><i></i>pago hoy</span><span class="pago fut"><i></i>será pago</span><span class="pl"><i></i>planeado / manual · pelotitas: tráfico real</span><span style="color:var(--texto3)" id="fuente-cifras">· las cifras salen de la base de este entorno; el semáforo, de Grafana</span></div>
+  </div>
+
+  <aside id="ficha"></aside>
+</div>
+
+<button type="button" class="volver pantalla" id="pantalla" title="Pantalla completa: solo el radar" aria-label="Pantalla completa"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><span>Solo el radar, a pantalla completa</span></button>
+<button type="button" class="volver" id="volver" title="Volver" aria-label="Volver"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg><span>Volver</span></button>
+<script id="datos-vivos" type="application/json">{{ datos|tojson }}</script>
+<script>
+// Logos vendoreados (static/marcas.svg, Simple Icons CC0) y el isotipo de ARCA, con sello de /static.
+const MARCAS_URL = "/static/marcas.svg?v={{ sello_static('marcas.svg') }}";
+const ARCA_URL = "/static/marcas/arca.png?v={{ sello_static('marcas/arca.png') }}";
+</script>
+<script>
+{% raw %}
+// ============================ DATOS ============================
+// Color oficial de cada logo (Simple Icons). La caja lo usa sobre un círculo claro,
+// así los logos oscuros (GitHub, Anthropic, Render, Sentry) también se ven.
+const MARCAS = {docker:"#2496ED", github:"#181717", githubactions:"#2088FF", render:"#000000", postgresql:"#4169E1", fastapi:"#009688", anthropic:"#191919", claude:"#D97757", grafana:"#F46800", sentry:"#362D59", cloudflare:"#F38020", telegram:"#26A5E4", arca:"#1a2340"};
+const ZONAS = {
+  usu:{nombre:"Personas", color:"#ff6ab0"},
+  seg:{nombre:"Seguridad", color:"#ff4d5a"},
+  dev:{nombre:"Desarrollo y entrega", color:"#6fe3ff"},
+  inf:{nombre:"Infraestructura · Render", color:"#f2b234"},
+  ext:{nombre:"Servicios externos", color:"#b3b2e8"},
+  obs:{nombre:"Observabilidad", color:"#3ec9a7"},
+  doc:{nombre:"Documentación", color:"#9fb0c8"},
+};
+const AREAS = [
+  {z:"dev", x:30, y:20, w:1380, h:120},
+  {z:"usu", x:30, y:160, w:200, h:500, titulo:"Personas y perímetro"},
+  {z:"inf", x:250, y:160, w:1160, h:500},
+  {z:"ext", x:670, y:170, w:280, h:480},
+  {z:"doc", x:30, y:680, w:520, h:180, titulo:"Registro y seguridad"},
+  {z:"obs", x:570, y:680, w:840, h:180, titulo:"Observabilidad · hoy solo sobre Pruebas"},
+];
+
+const NODOS = [
+  // --- personas y perímetro
+  {id:"usuarios", z:"usu", x:50, y:200, w:160, h:140, ico:"i-personas", k:"usuarios", t:"Afiliados", s:["sindicatos · empresas", "plataforma", "PWA instalable, recibe push"],
+   plays:[{id:"recibo", titulo:"Un recibo, de punta a punta"}, {id:"error", titulo:"Un error o una anomalía"}],
+   ficha:{notas:["Entran hoy directo por HTTPS a *.onrender.com, sin perímetro propio.","La afiliación sindical es dato sensible por ley (Ley 25.326): Colm3na es encargado del tratamiento.","Sesión por inactividad de 15 min, cookie separada por rol, identidad firmada en el token."]}},
+  {id:"cloudflare", z:"seg", estado:"planeado", x:50, y:400, w:160, h:150, ico:"i-cloudflare", marca:"cloudflare", k:"perímetro · planeado", t:"Cloudflare", s:["dominio a registrar", "DNS · certificado TLS", "proxy · WAF · rate limit", "oculta el origen de Render"], pagoFuturo:"plan Pro cuando haya usuarios reales + dominio anual",
+   ficha:{notas:["Lo que va a hacer: registrar el dominio propio (hoy todo vive en onrender.com), resolver el DNS, emitir y renovar el certificado TLS, y poner un proxy delante de Demo y Producción con WAF y límite de pedidos por IP.","Cierra INF-05 y con él H-0008 (fuerza bruta en logins), el único hallazgo que aún bloquea producción.","Orden: registrar dominio → DNS en Cloudflare → certificado → proxy con reglas → apuntar Demo y Producción."], campos:{"Dominio":"a registrar","Certificado":"lo emite Cloudflare al activar el proxy","Pendiente":"registrar dominio, configurar, apuntar los entornos"}}},
+
+  // --- desarrollo y entrega
+  {id:"equipo", z:"usu", x:50, y:50, w:180, h:62, ico:"i-equipo", k:"equipo", t:"Equipo Colm3na", s:["desarrolla, opera, recibe alertas"], plays:[{id:"equipo", titulo:"El camino de un cambio"}],
+   ficha:{notas:["Dos superadmin de plataforma nominales, sembrados por migración.","El equipo decide versiones, prioridades y qué cuenta como funcionalidad nueva.","Traspaso de la operación diaria a dos devs: Etapa 4 de PLAN_ENTORNOS.md, pendiente."]}},
+  {id:"code", z:"dev", x:260, y:50, w:200, h:62, ico:"i-claude", marca:"claude", k:"asistente de código", t:"Claude Code", s:["commit · PR · merge con gh"], pago:"suscripción Claude (a completar)",
+   ficha:{notas:["Code corre en la PC de desarrollo: lee y escribe el repo, corre la suite y opera GitHub con gh.","Chat y Cowork producen planes y cierres de bloque que van a docs/chat/ y a la raíz como PLAN_*/SPRINT_*.","En el XSK, Code es el ejecutor.","El autor de cada commit es la persona; Claude va como Co-authored-by."]}},
+  {id:"pc", z:"dev", x:490, y:50, w:200, h:62, ico:"i-docker", marca:"docker", k:"pc de desarrollo", t:"Docker · Postgres", s:["uvicorn · pytest · Playwright"],
+   ficha:{notas:["Postgres y nada más: docker compose up -d, alembic upgrade head, uvicorn main:app --reload.","La suite crea una base Postgres descartable por proceso de pytest (un archivo por corrida).","E2E con Playwright contra la app real (dependencia de desarrollo)."], campos:{"Pendiente":"devcontainer (Etapa 2 de PLAN_ENTORNOS)"}}},
+  {id:"github", z:"dev", x:720, y:50, w:230, h:62, ico:"i-github", marca:"github", k:"repositorio", t:"GitHub", s:["main → Pruebas · demo → Demo"], vencimientos:[{que:"Token de GitHub del disparador del colector", fecha:"2026-10-18", aviso:7}],
+   pagoFuturo:"plan Team al pasar a organización con reglas de rama y más minutos de Actions",
+   ficha:{notas:["Único repo del proyecto (MITRABAJOC). Ramas por bloque (feature/ fix/ sprint/); sobre demo nunca se programa.","Render mira este repo: push a main redeploya Pruebas, push a demo (solo por promover_demo.py) redeploya Demo."], campos:{"Costo":"gratis hoy; pago al pasar a organización","Pendiente":"organización de GitHub + reglas de rama"}}},
+  {id:"actions", z:"dev", x:980, y:50, w:200, h:62, ico:"i-actions", marca:"githubactions", k:"github actions", t:"CI · Colector", s:["suite + pip-audit · métricas cada 5 min"],
+   ficha:{notas:["CI (ci.yml): la suite por archivo y pip-audit en cada push y PR (H-0015).","Colector (metricas-render.yml): cada 5 min lee CPU/memoria/5xx de Render y los manda a Grafana. El cron no dispara solo: lo empuja el disparador de Grafana.","Secretos: RENDER_API_KEY, GRAFANA_METRICS_TOKEN."]}},
+  {id:"render", z:"dev", x:1210, y:50, w:180, h:62, ico:"i-render", marca:"render", k:"plataforma", t:"Render API", s:["deploy · planes · métricas"],
+   ficha:{notas:["Deploy automático por rama, Pre-Deploy con alembic upgrade head.","Solapa Planes de /entornos: sube y baja el plan del web y del Postgres por API, ahora o en horario fijo; bitácora en CambioPlan.","RENDER_API_KEY vive en Actions, en Grafana (fuente render-vivo) y en la app."], campos:{"Vence":"a confirmar"}}},
+
+  // --- infraestructura (racks)
+  {id:"demo", z:"inf", rack:true, x:270, y:190, w:380, h:440, k:"entorno 2 · mitrabajo.onrender.com", t:"Demo", s:["lo que ven sindicatos e inversores · rama demo"], pago:"web + Postgres (plan a completar)",
+   ficha:{notas:["Cambia únicamente al promover: backup (pg_dump) + merge + tag + push.","ENTORNO=demo: sin distintivo, cookies Secure+SameSite, HSTS; /entornos/xsanders y Planes deshabilitados.","Observabilidad NO replicada todavía (docs/OBSERVABILIDAD.md)."], campos:{"Pendiente":"Health Check /healthz al promover · replicar observabilidad · Cloudflare delante"}}},
+  {id:"pruebas", z:"inf", rack:true, x:990, y:190, w:400, h:440, k:"entorno 1 · mitrabajo-pruebas.onrender.com", t:"Pruebas", s:["donde se prueba antes · sigue main · redeploy ~90 s"], pago:"web + Postgres (plan variable, desde Planes)",
+   ficha:{notas:["Distintivo fijo con entorno + versión para no confundir pantallas.","Medido con 0,5 CPU, 512 MB y 1 worker: los techos del engine (pool 5+5, statement 15 s, cupo del Panel) nacieron acá tras el cuelgue del 2026-09-18.","MOCK_EXTRACTOR prendido desde los tests de carga.","Único entorno con Planes, colector, Sentry y uptime."], campos:{"Health Check":"/healthz (sin base) · /readyz a mano"}}},
+
+  // --- servicios externos
+  {id:"ia", z:"ext", x:690, y:210, w:240, h:96, ico:"i-anthropic", marca:"anthropic", k:"inteligencia artificial", t:"Anthropic", s:["sonnet-4-6 lee recibos", "opus-5 convenio · sonnet-5 asistente"], pago:"por uso (USD por millón de tokens)",
+   ficha:{notas:["Tres usos, cada uno con modelo elegible desde /plataforma → Uso de IA.","Cada lectura queda en UsoIA con el precio congelado, duración y tokens.","Embeddings del convenio son locales (fastembed), no pasan por acá."], campos:{"Clave":"ANTHROPIC_API_KEY por entorno"}}},
+  {id:"geo", z:"ext", x:690, y:330, w:240, h:70, ico:"i-mapa", k:"geocodificación", t:"Georef · OSM", s:["sin claves · caché 90 días"],
+   ficha:{notas:["Georef (datos.gob.ar): provincia, localidad y sugerencias.","Nominatim (OSM): calle y altura, 1 pedido por segundo, solo al apretar Buscar.","Un fallo nunca bloquea un alta."], campos:{"Costo":"0"}}},
+  {id:"push", z:"ext", estado:"parcial", x:690, y:424, w:240, h:70, ico:"i-push", k:"avisos", t:"Web Push", s:["VAPID · a la PWA del afiliado"],
+   ficha:{notas:["pywebpush contra los servidores push del navegador de cada afiliado.","Sin las tres variables VAPID el canal queda apagado en silencio: confirmar por entorno."], campos:{"Costo":"0"}}},
+  {id:"arca", z:"ext", estado:"manual", x:690, y:518, w:240, h:70, ico:"i-arca", marca:"arca", k:"paso manual", t:"ARCA", s:["el afiliado resuelve el captcha"],
+   ficha:{notas:["Decisión firme: NO se automatiza el captcha.","El afiliado descarga su comprobante y lo sube; la IA lo lee. Cubre jubilación y obra social, no ART."], campos:{"Integración":"ninguna, por diseño"}}},
+
+  // --- registro y seguridad
+  {id:"docs", z:"doc", x:50, y:720, w:230, h:100, ico:"i-docs", k:"registro", t:"Documentación viva", s:["CLAUDE.md · HISTORIAL · BITÁCORA", "fichas en docs/ · Recursos en /entornos"],
+   ficha:{notas:["CLAUDE.md es el estado vigente; HISTORIAL.md la narrativa; BITACORA.md el índice cronológico.","Todo lo publicado se cataloga en recursos.SEMILLA y se sirve detrás del login de plataforma en /entornos."], campos:{"Pendiente":"este esquema como recurso vivo"}}},
+  {id:"xsk", z:"seg", estado:"parcial", x:300, y:720, w:230, h:100, ico:"i-xsk", k:"seguridad", t:"Security Kit", s:["8 corregidos · 3 en corrección", "5 abiertos · 1 bloquea producción"],
+   ficha:{notas:["XSANDERS Security Kit: diez etapas, nueve ejes. Code es el ejecutor; el registro son archivos en xsk/proyectos/mitrabajo/.","Criterio de salida: nada Crítico ni Alto abierto. Bloquea uno: H-0008 (perímetro)."], campos:{"Pendiente":"pasada dinámica contra Pruebas, carga, CSP con nonces, backups"}}},
+
+  // --- observabilidad
+  {id:"mail", z:"obs", x:590, y:720, w:180, h:80, ico:"i-mail", k:"aviso", t:"Mail del equipo", s:["solo por excepción", "repite cada 24 h"],
+   ficha:{notas:["Política anti-ruido: avisos solo cuando algo se rompe o un token está por vencer.","Mail e intervalo se cambian desde la pestaña Observabilidad de /entornos."]}},
+  {id:"grafana", z:"obs", x:800, y:720, w:220, h:80, ico:"i-grafana", marca:"grafana", k:"uptime · métricas · alertas", t:"Grafana Cloud", s:["Ohio + São Paulo", "disparador del colector"], vencimientos:[{que:"Tokens de Grafana de la app", fecha:"2027-09-19", aviso:30}], pagoFuturo:"plan Pro cuando haya más de un entorno vigilado o más retención",
+   ficha:{notas:["Regla 0: el observador vive fuera de la app y de Render.","Uptime sobre /healthz y /readyz de Pruebas; alerta solo si fallan todas las ubicaciones.","Configuración como código: observabilidad/config.json + aplicar_*.py."], campos:{"Costo":"0 (Free) hoy; pago al vigilar Demo y Producción","Pendiente":"métricas propias, detalle por sindicato, replicar en Demo"}}},
+  {id:"sentry", z:"obs", x:1050, y:720, w:180, h:80, ico:"i-sentry", marca:"sentry", k:"errores", t:"Sentry", s:["ref · rol · sindicato", "sin datos personales"],
+   ficha:{notas:["Solo lo que el handler global no previó, con la ref de 8 caracteres que ve la persona.","Sin cuerpos, cookies, IP ni nombres. Se lee desde /entornos con un token de solo lectura."], campos:{"Costo":"0 (Free)"}}},
+  {id:"telegram", z:"obs", estado:"planeado", x:1260, y:720, w:130, h:80, ico:"i-telegram", marca:"telegram", k:"idea", t:"Telegram", s:["no existe hoy"],
+   ficha:{notas:["Está en el boceto pero no en la configuración ni en el plan. Grafana Cloud lo soporta como punto de contacto."]}},
+];
+// hijos de los racks: filas web/postgres + chips de las cinco puertas
+const RACK_HIJOS = {demo:[], pruebas:[]};
+for (const rid of ["demo", "pruebas"]) {
+  const r = NODOS.find(n => n.id === rid), x = r.x + 16;
+  NODOS.push({id:rid+"Web", padre:rid, z:"inf", x, y:r.y+70, w:r.w-32, h:60, ico:"i-fastapi", marca:"fastapi", t:"FastAPI · uvicorn", s:["workers = núcleos · Pre-Deploy alembic · /healthz"], led:true,
+    ficha:{notas:["FastAPI + Jinja2 + auth propia (PBKDF2, cookies HMAC).","Sin disco persistente: todo archivo va a la base.","503 con JSON cuando el pool o el cupo se agotan; nunca cuelgue."]}});
+  NODOS.push({id:rid+"Pg", padre:rid, z:"inf", x, y:r.y+142, w:r.w-32, h:60, ico:"i-postgres", marca:"postgresql", t:"Postgres", s:["pgvector · JSONB · adjuntos en la base"], led:true,
+    ficha:{notas:["Esquema por Alembic, nunca create_all.","Logos, fotos, adjuntos y embeddings del convenio viven acá.", rid === "demo" ? "Backup: pg_dump en cada promoción." : "Techos: statement 15 s, idle_in_transaction 30 s."]}});
+  [["afiliado","Afiliado","/ingresar → /app · PWA · 6 pestañas"],["sindicato","Sindicato","/admin · 15 pestañas · 3 roles · Panel Sindical"],["empresa","Empresa","/ingresar-empresa · solo con módulo empleadores"],["plataforma","Plataforma","/plataforma · usuarios nominales · Uso de IA"],["entornos","/entornos","ADM: landing interna, Recursos, Observabilidad, Planes, Seguridad"]].forEach((c, i) => {
+    NODOS.push({id:rid+"-"+c[0], padre:rid, chip:true, x:x+i*((r.w-32-16)/5+4), y:r.y+238, w:(r.w-32-16)/5, h:26, t:c[1], ficha:{notas:[c[2]]}});
+  });
+}
+
+// aristas: de/a = "id.lado(fracción)"; pts = ruta manual; bolas = pelotitas circulando
+const ARISTAS = [
+  {id:"equipo-code", de:"equipo.r", a:"code.l", z:"dev", label:"pide · decide"},
+  {id:"code-pc", de:"code.r", a:"pc.l", z:"dev", label:"programa y prueba"},
+  {id:"pc-gh", de:"pc.r", a:"github.l", z:"dev", label:"git push · PR"},
+  {id:"gh-actions", de:"github.r", a:"actions.l", z:"dev", label:"CI en cada push"},
+  {id:"actions-render", de:"actions.r", a:"render.l", z:"dev", label:"lee métricas"},
+  {id:"gh-demo", de:"github.b(0.25)", a:"demo.t(0.5)", z:"inf", label:"rama demo ← promover_demo.py", labelEn:[600,150]},
+  {id:"gh-pruebas", de:"github.b(0.75)", a:"pruebas.t(0.3)", z:"inf", label:"push a main → redeploy ~90 s", labelEn:[1000,150], bolas:true},
+  {id:"render-pruebas", de:"render.b(0.5)", a:"pruebas.t(0.8)", z:"dev", label:"Planes · deploy", labelEn:[1310,150]},
+  {id:"usu-demo", de:"usuarios.r(0.35)", a:"demo.l(0.2)", z:"usu", label:"HTTPS", labelEn:[240,238], bolas:true},
+  {id:"usu-cf", de:"usuarios.b(0.5)", a:"cloudflare.t(0.5)", tipo:"planeado", label:"planeado", bolas:true},
+  {id:"cf-demo", de:"cloudflare.r(0.5)", a:"demo.l(0.65)", tipo:"planeado", label:"dominio · TLS · WAF", labelEn:[240,462], bolas:true},
+  {id:"demo-ia", de:"demo.r(0.15)", a:"ia.l(0.5)", z:"ext", label:"lee · consulta · asiste", labelEn:[810,200], bolas:true},
+  {id:"pruebas-ia", de:"pruebas.l(0.15)", a:"ia.r(0.5)", z:"ext"},
+  {id:"demo-geo", de:"demo.r(0.4)", a:"geo.l(0.5)", z:"ext", label:"geocodifica", labelEn:[810,322]},
+  {id:"pruebas-geo", de:"pruebas.l(0.4)", a:"geo.r(0.5)", z:"ext"},
+  {id:"demo-push", de:"demo.r(0.61)", a:"push.l(0.5)", z:"ext", label:"avisa a la PWA", labelEn:[810,416]},
+  {id:"pruebas-push", de:"pruebas.l(0.61)", a:"push.r(0.5)", z:"ext"},
+  {id:"arca-demo", de:"arca.l(0.5)", a:"demo.r(0.83)", tipo:"manual", label:"comprobante", labelEn:[810,510], bolas:true},
+  {id:"portacion", de:"pruebas", a:"demo", pts:[[1050,630],[1050,650],[460,650],[460,630]], z:"inf", label:"PORTACIÓN Pruebas → Demo · promover_demo.py: pg_dump + merge main→demo + tag + push", labelEn:[755,650], bolas:true},
+  {id:"pruebas-grafana", de:"pruebas.b(0.35)", a:"grafana.t(0.5)", z:"obs", label:"uptime · métricas · tablero", labelEn:[1000,690], bolas:true},
+  {id:"pruebas-sentry", de:"pruebas.b(0.65)", a:"sentry.t(0.5)", z:"seg", label:"errores", labelEn:[1180,690]},
+  {id:"grafana-mail", de:"grafana.l(0.5)", a:"mail.r(0.5)", z:"obs", label:"alerta", labelEn:[785,752]},
+  {id:"sentry-mail", de:"sentry", a:"mail", pts:[[1140,800],[1140,835],[680,835],[680,800]], z:"seg"},
+  {id:"grafana-tg", de:"grafana", a:"telegram", pts:[[910,800],[910,820],[1325,820],[1325,800]], tipo:"planeado", label:"idea", labelEn:[1240,820], bolas:true},
+  {id:"disparador", de:"grafana", a:"actions", pts:[[1010,720],[1010,700],[970,700],[970,145],[1080,145],[1080,112]], tipo:"planeado", z:"obs", label:"disparador: workflow_dispatch cada 5 min · token vence 18-10", labelEn:[960,410], rot:-90, bolas:true},
+  {id:"mail-equipo", de:"mail", a:"equipo", pts:[[630,800],[630,870],[14,870],[14,81],[50,81]], z:"seg", label:"aviso al equipo", labelEn:[14,480], rot:-90, bolas:true},
+  {id:"docs-demo", de:"docs.t(0.5)", a:"demo.b(0.2)", z:"doc", label:"Recursos en /entornos", labelEn:[230,690]},
+  {id:"xsk-demo", de:"xsk.t(0.5)", a:"demo.b(0.6)", tipo:"planeado", label:"pasada dinámica", labelEn:[470,690]},
+];
+
+const RECORRIDOS = {
+  recibo:{titulo:"Un recibo, de punta a punta", color:"#f2b234", pasos:[
+    {n:["usuarios"], t:"Un afiliado abre la app en el teléfono (PWA) y saca una foto de su recibo de sueldo."},
+    {n:["cloudflare"], e:["usu-cf","cf-demo"], t:"Cuando esté Cloudflare, la foto entra por el dominio propio: DNS, certificado TLS, WAF y límite de pedidos antes de llegar a Render. Hoy va directo."},
+    {n:["usuarios"], e:["usu-demo"], t:"La foto viaja por HTTPS al servicio web de Demo."},
+    {n:["demoWeb"], t:"FastAPI recibe /api/leer: verifica la sesión firmada, el rol, el tamaño del archivo y el CUIL que va en el token."},
+    {n:["demoPg"], t:"Lee de Postgres el sindicato del afiliado, su marca, el catálogo de conceptos y las fórmulas vigentes para esa fecha."},
+    {n:["demoWeb","ia"], e:["demo-ia"], t:"El recibo va a la API de Anthropic. Sonnet lee cada línea, los totales, el CUIL y el CUIT; la app mide tokens, precio y duración."},
+    {n:["demoWeb"], t:"Compuerta: si el CUIL leído no es el de la sesión, se corta acá. Si la IA ve señales de edición, el archivo queda aparte para Plataforma."},
+    {n:["demoWeb"], t:"El motor de fórmulas valida cada aporte (jubilación, obra social, cuota sindical, tope del 2%) contra el convenio, sin eval y sin confiar en ningún número crudo."},
+    {n:["demoPg"], t:"Se guarda el ReciboVerificado con los campos analíticos del Panel Sindical, y el UsoIA con el precio congelado."},
+    {n:["demo-afiliado"], t:"El afiliado ve el resultado: verde o rojo por concepto, la diferencia en pesos, y puede enviarlo al sindicato con su consentimiento."},
+    {n:["demo-sindicato"], t:"Si lo envía, el gremio lo ve con nombre: entra en KPIs, mapa de seccionales, semáforo por empresa y explorador del Panel Sindical."},
+    {n:["demo-plataforma"], t:"Plataforma ve el costo de esa lectura en Uso de IA y, si hubo alerta de adulteración, el recibo en Recibos con alerta."},
+    {n:["arca"], e:["arca-demo"], t:"Para Mis Aportes el afiliado repite el camino con el comprobante de ARCA, que descarga él mismo resolviendo el captcha."},
+    {n:["grafana","sentry"], e:["pruebas-grafana","pruebas-sentry"], t:"En Pruebas ese mismo pedido deja métricas en Grafana y, si algo falla, un error en Sentry. Replicarlo en Demo está pendiente.", ms:2600},
+  ]},
+  error:{titulo:"Un error o una anomalía", color:"#ff4d5a", pasos:[
+    {n:["usuarios"], e:["usu-demo"], t:"Una persona hace algo que la app no previó, o el pool de conexiones se agota en un día de liquidación."},
+    {n:["pruebasWeb"], t:"El handler global atrapa la excepción: nunca un 500 crudo. Genera una referencia de 8 caracteres y la imprime junto al traceback en el log de Render."},
+    {n:["pruebas-afiliado"], t:"La persona ve un mensaje genérico con el código E-INTERNO-00 y esa referencia. Un pool agotado devuelve 503 con JSON, nunca cuelgue."},
+    {n:["sentry"], e:["pruebas-sentry"], t:"Sentry recibe el error con la referencia, el rol y el ID del sindicato. Sin cuerpos, cookies, IP ni nombres."},
+    {n:["grafana"], e:["pruebas-grafana"], t:"Grafana mira desde Ohio y São Paulo: si /healthz deja de responder en todas las ubicaciones, o suben los 5xx, la CPU o la memoria, dispara la alerta."},
+    {n:["mail"], e:["grafana-mail","sentry-mail"], t:"Sale un mail al equipo. Solo por excepción, y se repite cada 24 h hasta que se resuelva."},
+    {n:["equipo"], e:["mail-equipo"], t:"El equipo busca la referencia en la pestaña Observabilidad de /entornos, que lee Grafana y Sentry por API, sin iniciar sesión en ninguno."},
+    {n:["pruebas-entornos","render"], t:"Si es de recursos, sube el plan de Render desde la solapa Planes y lo baja después; queda en la bitácora CambioPlan."},
+    {n:["code","pc"], e:["equipo-code","code-pc"], t:"Con Claude Code se reproduce el error en local, contra Postgres, y se escribe el test que lo caza."},
+    {n:["github","actions"], e:["pc-gh","gh-actions"], t:"Fix en una rama, PR y CI: la suite completa más pip-audit. Un test que flakea o una CVE nueva frenan acá."},
+    {n:["pruebasWeb"], e:["gh-pruebas"], t:"Merge a main: Render redeploya Pruebas en ~90 s y Grafana confirma que /healthz volvió."},
+    {n:["xsk","docs"], t:"Si fue una brecha, queda como hallazgo del Security Kit con su riesgo; si fue un bug, en HISTORIAL.md y en la bitácora.", ms:2600},
+  ]},
+  equipo:{titulo:"El camino de un cambio", color:"#6fe3ff", pasos:[
+    {n:["equipo"], t:"El equipo pide un cambio o cierra una decisión (a veces en Chat o Cowork, que dejan un plan en docs/chat/)."},
+    {n:["code"], e:["equipo-code"], t:"Claude Code lee CLAUDE.md, abre una rama desde main y programa el bloque."},
+    {n:["pc"], e:["code-pc"], t:"Corre la suite contra un Postgres descartable, archivo por archivo, y los robots E2E si toca pantalla. Sube la versión de la app tocada en el mismo commit."},
+    {n:["github","actions"], e:["pc-gh","gh-actions"], t:"Push y PR con gh. GitHub Actions corre la suite entera y pip-audit; el autor del commit es la persona, Claude va como coautor."},
+    {n:["render"], e:["actions-render"], t:"Al mergear a main, Render detecta el push."},
+    {n:["pruebasPg"], e:["gh-pruebas"], t:"Pre-Deploy: alembic upgrade head aplica la migración sobre la base de Pruebas sin borrar datos."},
+    {n:["pruebasWeb"], e:["render-pruebas"], t:"El web nuevo arranca; /healthz le dice a Render que está vivo. Distintivo con entorno y versión en pantalla."},
+    {n:["grafana"], e:["pruebas-grafana"], t:"Grafana confirma el uptime; el colector sigue mandando CPU, memoria y 5xx cada 5 minutos."},
+    {n:["pruebas-entornos"], t:"El equipo prueba en Pruebas. /entornos muestra qué versión corre en cada entorno leyendo /api/version."},
+    {n:["docs"], t:"Cierre de bloque: línea en BITACORA.md, HISTORIAL.md si hubo narrativa, CLAUDE.md si cambió el estado."},
+    {n:["demoPg","demoWeb"], e:["portacion","gh-demo"], t:"Cuando está aprobado: promover_demo.py hace pg_dump de la base de Demo, mergea main en demo, etiqueta y pushea. Render redeploya Demo."},
+    {n:["usuarios","demo-afiliado","demo-sindicato","demo-empresa","demo-plataforma"], e:["usu-demo"], t:"Sindicatos, afiliados, empresas y plataforma ven la versión nueva en la URL de siempre.", ms:2600},
+  ]},
+};
+
+// ============================ RENDER ============================
+const NS = "http://www.w3.org/2000/svg";
+const svg = document.getElementById("svg");
+const el = (n, a, t) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); if (t != null) e.textContent = t; return e; };
+const uso = (id, x, y, s) => el("use", {href:"#"+id, x, y, width:s, height:s});
+const porId = Object.fromEntries(NODOS.map(n => [n.id, n]));
+const hex2rgba = (h, a) => { const v = parseInt(h.slice(1), 16); return `rgba(${v>>16},${(v>>8)&255},${v&255},${a})`; };
+const capaZ = el("g"), capaA = el("g"), capaN = el("g"), capaL = el("g"), capaB = el("g");
+svg.append(capaZ, capaA, capaB, capaN, capaL);
+const nodeG = id => capaN.querySelector(`.nodo[data-id="${id}"]`);
+
+// leyenda de zonas
+const pie = document.getElementById("pie");
+for (const k in ZONAS) { const s = document.createElement("span"); s.innerHTML = `<i style="--c:${ZONAS[k].color}"></i>${ZONAS[k].nombre}`; pie.prepend(s); }
+
+for (const a of AREAS) {
+  const c = ZONAS[a.z].color;
+  capaZ.append(el("rect", {x:a.x, y:a.y, width:a.w, height:a.h, rx:12, fill:hex2rgba(c, .05), stroke:hex2rgba(c, .28)}));
+  capaZ.append(el("text", {x:a.x+14, y:a.y+20, class:"zona-t", fill:hex2rgba(c, .8)}, a.titulo || ZONAS[a.z].nombre));
+}
+
+function dibujarNodo(n) {
+  n.estado = n.estado || "activo";
+  const col = n.z ? ZONAS[n.z].color : "#2a3e5a";
+  const g = el("g", {class:"nodo " + (n.rack ? "rack " : "") + (n.chip ? "chipn " : "") + (n.estado !== "activo" ? n.estado : ""), "data-id":n.id});
+  g.append(el("rect", {class:"caja", x:n.x, y:n.y, width:n.w, height:n.h, rx:n.chip ? 5 : 9}));
+  if (n.chip) { g.append(el("text", {x:n.x+n.w/2, y:n.y+17, class:"chip", "text-anchor":"middle"}, n.t)); }
+  else {
+    g.append(el("rect", {x:n.x, y:n.y+8, width:3, height:n.h-16, rx:1.5, fill:col}));  // franja de zona
+    let tx = n.x + 14;
+    if (n.ico) {
+      const cy = n.padre ? n.y+n.h/2 : Math.min(n.y+n.h/2, n.y+40);
+      if (n.marca === "arca") {           // isotipo de ARCA (PNG), recortado en círculo
+        const cid = "clip-" + n.id; const cp = el("clipPath", {id:cid}); cp.append(el("circle", {cx:n.x+28, cy, r:15})); g.append(cp);
+        g.append(el("image", {href:ARCA_URL, x:n.x+13, y:cy-15, width:30, height:30, "clip-path":`url(#${cid})`}));
+        g.append(el("circle", {cx:n.x+28, cy, r:15, fill:"none", stroke:"#2a3e5a"}));
+      } else if (n.marca) {               // logo oficial, en su color, sobre círculo claro
+        g.append(el("circle", {cx:n.x+28, cy, r:15, fill:"#eef2f8", stroke:"#2a3e5a"}));
+        const u = el("use", {href:MARCAS_URL + "#m-" + n.marca, x:n.x+19, y:cy-9, width:18, height:18}); u.setAttribute("color", MARCAS[n.marca] || col); g.append(u);
+      } else {                            // ícono de línea, en el color de la zona
+        g.append(el("circle", {cx:n.x+28, cy, r:15, fill:"#0a1421", stroke:"#2a3e5a"})); const u = uso(n.ico, n.x+18, cy-10, 20); u.setAttribute("color", col); g.append(u);
+      }
+      tx = n.x + 52;
+    }
+    let y = n.y + (n.k ? 18 : 24);
+    if (n.k) { g.append(el("text", {x:tx, y, class:"k"}, n.k)); y += 17; }
+    g.append(el("text", {x:tx, y, class:"t"}, n.t)); y += 15;
+    (n.s || []).forEach(s => { g.append(el("text", {x:tx, y, class:"s"}, s)); y += 13; });
+    if (n.led) { const led = el("circle", {cx:n.x+n.w-16, cy:n.y+n.h/2, r:4, fill:"var(--halo)"}); led.append(el("animate", {attributeName:"opacity", values:"1;.3;1", dur:"2.4s", repeatCount:"indefinite"})); g.append(led); }
+    if (n.estado !== "activo") g.append(el("text", {x:n.x+n.w-10, y:n.y+n.h-8, class:"s", "text-anchor":"end", fill:col, "font-weight":"700", "letter-spacing":".1em"}, n.estado.toUpperCase()));
+    let bx = n.x + n.w - 16;
+    if (n.pago || n.pagoFuturo) { const p = el("g"), fut = !n.pago; p.append(el("circle", {cx:bx, cy:n.y+14, r:8, fill:fut ? "#0a1421" : "var(--miel)", stroke:"var(--miel)", "stroke-width":1.5, "stroke-dasharray":fut ? "3 2" : ""})); p.append(el("text", {x:bx, y:n.y+18, "text-anchor":"middle", "font-size":"11", "font-weight":"700", fill:fut ? "var(--miel)" : "#111"}, "$")); p.append(el("title", {}, fut ? "Será pago: " + n.pagoFuturo : "Pago: " + n.pago)); g.append(p); bx -= 22; }
+    (n.plays || []).forEach(pl => { const p = el("g", {class:"play"}); p.append(el("circle", {cx:bx, cy:n.y+14, r:9, fill:"var(--cian)"})); p.append(el("path", {d:`M${bx-3},${n.y+9.5} L${bx+4.5},${n.y+14} L${bx-3},${n.y+18.5} z`, fill:"#0a1421"})); p.append(el("title", {}, "▶ " + pl.titulo)); p.addEventListener("click", ev => { ev.stopPropagation(); animar(pl.id); }); g.append(p); bx -= 24; });
+    if (n.rack) {
+      g.append(el("text", {x:n.x+16, y:n.y+230, class:"k"}, "cinco puertas"));
+      g.append(el("text", {x:n.x+16, y:n.y+290, class:"s"}, n.id === "demo" ? "Pre-Deploy alembic · Health Check: poner /healthz al promover" : "Pre-Deploy alembic · Health Check /healthz · techos del engine"));
+      g.append(el("text", {x:n.x+16, y:n.y+306, class:"s"}, "cookies Secure · HSTS · CSP · sesión por inactividad 15 min"));
+      g.append(el("rect", {x:n.x+16, y:n.y+322, width:n.w-32, height:6, rx:3, fill:"#0a1421"}));
+      g.append(el("rect", {x:n.x+16, y:n.y+322, width:(n.w-32)*(n.id === "demo" ? .27 : .63), height:6, rx:3, fill:"var(--halo)", "data-carga":1}));
+      g.append(el("text", {x:n.x+16, y:n.y+344, class:"s"}, n.id === "demo" ? "carga 27% · sin alertas (cifra de muestra)" : "carga 63% · MOCK_EXTRACTOR prendido (cifra de muestra)"));
+      g.append(el("text", {x:n.x+16, y:n.y+372, class:"k"}, n.id === "demo" ? "cambia solo al promover · backup antes" : "sigue main · Planes desde /entornos"));
+      g.append(el("text", {x:n.x+16, y:n.y+388, class:"s"}, n.id === "demo" ? "sin observabilidad todavía · Cloudflare pendiente" : "0,5 CPU · 512 MB · 1 worker · pool 5+5 · statement 15 s"));
+      g.append(el("text", {x:n.x+16, y:n.y+420, class:"s", fill:"var(--texto3)"}, n.id === "demo" ? "Trabajador 0.39.03 · Admin 0.42.04 · Plataforma 0.33.01" : "versión de main · distintivo con entorno y versión en pantalla"));
+    }
+  }
+  g.addEventListener("mouseenter", ev => { ev.stopPropagation(); mostrarFicha(n); });
+  g.addEventListener("mouseleave", ev => { ev.stopPropagation(); ocultarFicha(); });
+  g.addEventListener("click", ev => { ev.stopPropagation(); n.chip ? (fijado || mostrarFicha(n)) : alClic(n); });
+  return g;
+}
+for (const n of NODOS.filter(n => !n.padre)) capaN.append(dibujarNodo(n));
+for (const n of NODOS.filter(n => n.padre)) nodeG(n.padre).append(dibujarNodo(n));
+
+function ancla(spec) {
+  const m = spec.match(/^(\w+)\.([trbl])(?:\(([\d.]+)\))?$/);
+  const n = porId[m[1]], f = m[3] != null ? parseFloat(m[3]) : .5;
+  return {t:{x:n.x+n.w*f, y:n.y, dx:0, dy:-1}, b:{x:n.x+n.w*f, y:n.y+n.h, dx:0, dy:1}, l:{x:n.x, y:n.y+n.h*f, dx:-1, dy:0}, r:{x:n.x+n.w, y:n.y+n.h*f, dx:1, dy:0}}[m[2]];
+}
+function bezier(a, b) {
+  const d = Math.max(30, Math.hypot(b.x-a.x, b.y-a.y) * .38);
+  const c1 = {x:a.x+a.dx*d, y:a.y+a.dy*d}, c2 = {x:b.x+b.dx*d, y:b.y+b.dy*d};
+  return {d:`M${a.x},${a.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${b.x},${b.y}`, mid:{x:(a.x+3*c1.x+3*c2.x+b.x)/8, y:(a.y+3*c1.y+3*c2.y+b.y)/8}};
+}
+const defs = el("defs", {}); svg.prepend(defs);
+const colorArista = a => a.tipo === "planeado" ? "#6b7a94" : a.tipo === "manual" ? "#ff6ab0" : ZONAS[a.z].color;
+const marcadores = {};
+function marcador(col) { if (marcadores[col]) return marcadores[col]; const id = "f" + Object.keys(marcadores).length; const mk = el("marker", {id, viewBox:"0 0 10 10", refX:9, refY:5, markerWidth:6, markerHeight:6, orient:"auto-start-reverse"}); mk.append(el("path", {d:"M0,0 L10,5 L0,10 z", fill:col})); defs.append(mk); return marcadores[col] = id; }
+
+for (const a of ARISTAS) {
+  const col = colorArista(a);
+  let d, mid;
+  if (a.pts) { d = "M" + a.pts.map(p => p.join(",")).join(" L"); mid = a.labelEn ? {x:a.labelEn[0], y:a.labelEn[1]} : {x:a.pts[1][0], y:a.pts[1][1]}; }
+  else { const r = bezier(ancla(a.de), ancla(a.a)); d = r.d; mid = a.labelEn ? {x:a.labelEn[0], y:a.labelEn[1]} : r.mid; }
+  const p = el("path", {id:"ar-"+a.id, d, fill:"none", stroke:col, "stroke-width":1.5, "marker-end":`url(#${marcador(col)})`, opacity:.85, "data-arista":a.id});
+  if (a.tipo === "planeado") p.setAttribute("stroke-dasharray", "6 5");
+  if (a.tipo === "manual") p.setAttribute("stroke-dasharray", "2 4");
+  capaA.append(p);
+  if (a.bolas) {  // pelotitas circulando
+    const largo = p.getTotalLength(), dur = Math.max(3, largo / 70), n = Math.max(1, Math.round(largo / 220));
+    for (let i = 0; i < n; i++) {
+      const c = el("circle", {r:3, fill:col, opacity:.95}); c.append(el("animateMotion", {dur:dur+"s", repeatCount:"indefinite", begin:(-dur*i/n)+"s"}));
+      c.lastChild.append(el("mpath", {href:"#ar-"+a.id})); capaB.append(c);
+    }
+  }
+  if (a.label) {
+    const t = el("text", {x:mid.x, y:mid.y+3.5, class:"a-label", "text-anchor":"middle", transform:a.rot ? `rotate(${a.rot} ${mid.x} ${mid.y})` : ""}, a.label);
+    capaL.append(t);
+    const bb = t.getBBox();
+    const bg = el("rect", {class:"a-labelbg", x:bb.x-4, y:bb.y-1, width:bb.width+8, height:bb.height+2, rx:3, transform:t.getAttribute("transform")});
+    capaL.insertBefore(bg, t);
+  }
+}
+
+// ============================ ESTADO GENERAL ============================
+const ESTADOS = {verde:{c:"#3ec9a7", t:"todo en línea", env:"EN LÍNEA"}, amarillo:{c:"#f2b234", t:"degradado", env:"DEGRADADO"}, rojo:{c:"#ff4d5a", t:"con errores", env:"CON ERRORES"}, violeta:{c:"#b3b2e8", t:"sistema caído", env:"CAÍDO"}, gris:{c:"#6b7a94", t:"sin vigilancia configurada", env:"SIN DATO"}};
+function setEstado(k) {
+  const e = ESTADOS[k];
+  document.documentElement.style.setProperty("--halo", e.c);
+  document.getElementById("radar").dataset.estado = k;
+  document.querySelectorAll("#estadoCtl button").forEach(b => b.classList.toggle("on", b.dataset.e === k));
+  document.getElementById("estadoTxt").textContent = e.t;
+}
+document.querySelectorAll("#estadoCtl button").forEach(b => b.addEventListener("click", () => setEstado(b.dataset.e)));
+setEstado("verde");
+
+// ---- datos vivos: los inyecta el servidor al dibujar y el navegador los
+// refresca cada minuto pidiendo /api/entornos/esquema (que suma el semáforo
+// de Grafana). Si el pedido falla, el estado pasa a violeta: la app no responde.
+// Los indicadores de negocio se mudaron a la pastilla "Observación técnica" de
+// /entornos (2026-09-21): la Sala es solo el radar. De /api/entornos/esquema
+// toma el semáforo de Grafana y la hora; si el pedido falla, violeta.
+function aplicarDatos(d) {
+  if (!d) return;
+  setEstado(d.semaforo && ESTADOS[d.semaforo] ? d.semaforo : "gris");
+  const act = document.getElementById("actualizado"); if (act) act.textContent = "· " + (d.actualizado || "");
+}
+const inicial = document.getElementById("datos-vivos");
+if (inicial) {
+  try { aplicarDatos(JSON.parse(inicial.textContent)); } catch (e) {}
+  const refrescar = () => fetch("/api/entornos/esquema", {credentials:"same-origin"}).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(aplicarDatos).catch(() => setEstado("violeta"));
+  refrescar(); setInterval(refrescar, 60000);
+}
+
+// ============================ FICHA, ZOOM Y CLIC ============================
+const ficha = document.getElementById("ficha");
+let fijado = null, zoomado = null, anim = null;
+function ubicarFicha(n) {
+  // Del lado contrario a la caja, para no taparla; a la derecha si no hay caja (recorridos).
+  const g = n ? nodeG(n.id) : null;
+  const r = g ? g.getBoundingClientRect() : null;
+  const izquierda = r ? (r.left + r.width / 2) > window.innerWidth / 2 : false;
+  ficha.style.left = izquierda ? "22px" : ""; ficha.style.right = izquierda ? "" : "22px";
+  ficha.style.top = r ? Math.max(70, Math.min(r.top, window.innerHeight - 80 - Math.min(ficha.offsetHeight || 300, window.innerHeight - 110))) + "px" : "70px";
+  ficha.classList.add("visible");
+}
+function ocultarFicha() { if (fijado || anim) return; ficha.classList.remove("visible", "fija"); }
+function mostrarFicha(n) {
+  if (anim || (fijado && fijado !== n)) return;
+  const f = n.ficha || {};
+  const campos = Object.entries(f.campos || {}).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+  const plays = (n.plays || []).map(p => `<button data-play="${p.id}">▶ ${p.titulo}</button>`).join("");
+  const zona = n.z ? ZONAS[n.z].nombre : (n.padre ? porId[n.padre].t : "");
+  ficha.innerHTML = `<div class="zona">${zona}</div><h2>${n.t}</h2>
+    <span class="estado e-${n.estado || "activo"}">${n.estado || "activo"}</span>${n.pago ? `<span class="estado e-pago">$ ${n.pago}</span>` : ""}${n.pagoFuturo ? `<span class="estado e-parcial">$ será pago: ${n.pagoFuturo}</span>` : ""}
+    <ul>${(f.notas || []).map(x => `<li>${x}</li>`).join("")}</ul>
+    ${campos ? `<dl>${campos}</dl>` : ""}
+    ${(n.vencimientos || []).length ? `<dl>${n.vencimientos.map(v => `<dt>Vence</dt><dd>${v.fecha} · ${v.que} (aviso ${v.aviso} días antes)</dd>`).join("")}</dl>` : ""}
+    ${plays ? `<div>${plays}</div>` : ""}
+    ${fijado ? `<p class="vacio">Fijada. Otro clic en la caja, o en el fondo, la suelta.</p>` : ""}`;
+  ficha.querySelectorAll("[data-play]").forEach(b => b.addEventListener("click", () => animar(b.dataset.play)));
+  ficha.classList.toggle("fija", !!fijado);
+  ubicarFicha(n);
+}
+function fichaInicial() {
+  fijado = null;
+  ficha.classList.remove("visible", "fija");
+}
+// Los tres recorridos, como botones en la cabecera.
+const recorridosEl = document.getElementById("recorridos");
+const ROTULOS = {recibo:"Recibo", error:"Error", equipo:"Código"};
+recorridosEl.innerHTML = Object.entries(RECORRIDOS).map(([k, r]) => `<button data-play="${k}" style="--c:${r.color}" title="${r.titulo}" aria-label="${r.titulo}"><svg viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg><span>${ROTULOS[k] || k}</span></button>`).join("");
+recorridosEl.querySelectorAll("[data-play]").forEach(b => b.addEventListener("click", () => animar(b.dataset.play)));
+function desZoom() { if (zoomado) { zoomado.removeAttribute("transform"); zoomado.classList.remove("zoom", "fijo"); zoomado = null; } }
+function alClic(n) {
+  if (anim) return;
+  const g = nodeG(n.id);
+  if (zoomado === g) { desZoom(); fichaInicial(); return; }
+  desZoom();
+  const F = 1.4, cx = n.x + n.w/2, cy = n.y + n.h/2;
+  let dx = 0, dy = 0;
+  const l = cx - n.w*F/2, r = cx + n.w*F/2, t = cy - n.h*F/2, b = cy + n.h*F/2;
+  if (l < 8) dx = 8 - l; if (r > 1432) dx = 1432 - r; if (t < 8) dy = 8 - t; if (b > 872) dy = 872 - b;
+  g.setAttribute("transform", `translate(${cx+dx} ${cy+dy}) scale(${F}) translate(${-cx} ${-cy})`);
+  g.classList.add("zoom", "fijo"); (n.padre ? nodeG(n.padre) : capaN).append(g); zoomado = g;
+  fijado = null; mostrarFicha(n); fijado = n; mostrarFicha(n);
+}
+svg.addEventListener("click", () => { if (anim) return; desZoom(); fichaInicial(); });
+
+// ============================ RECORRIDOS ============================
+function animar(id) {
+  detener(); desZoom();
+  const rec = RECORRIDOS[id];
+  document.documentElement.style.setProperty("--neon", rec.color);
+  svg.classList.add("animando");
+  recorridosEl.querySelectorAll("[data-play]").forEach(b => b.classList.toggle("activo", b.dataset.play === id));
+  anim = {rec, i:0, timer:null}; paso();
+}
+const elementosDe = p => [...(p.n || []).map(nodeG), ...(p.e || []).map(id => capaA.querySelector(`[data-arista="${id}"]`))].filter(Boolean);
+function paso() {
+  const {rec, i} = anim;
+  if (i > 0) elementosDe(rec.pasos[i-1]).forEach(e => { e.classList.remove("neon"); e.classList.add("paso"); });
+  if (i >= rec.pasos.length) { anim.timer = setTimeout(finAnim, 3000); pintarAside(true); return; }
+  const p = rec.pasos[i];
+  elementosDe(p).forEach(e => { e.classList.add("neon"); if (e.classList.contains("nodo") && !e.parentElement.classList.contains("nodo")) capaN.append(e); });
+  anim.i++; pintarAside(false);
+  anim.timer = setTimeout(paso, p.ms || 2200);
+}
+function pintarAside(fin) {
+  const {rec, i} = anim, actual = rec.pasos[i-1];
+  ficha.classList.add("visible", "fija"); ficha.style.left = ""; ficha.style.right = "22px"; ficha.style.top = "70px";
+  ficha.innerHTML = `<div class="zona">Recorrido · ${fin ? "fin" : `paso ${i} de ${rec.pasos.length}`}</div><h2 style="color:${rec.color}">${rec.titulo}</h2>
+    <div class="paso-actual" style="border-color:${rec.color}">${fin ? "Eso es todo lo que toca. Cada caja del recorrido quedó encendida." : actual.t}</div>
+    <button data-det class="sec">${fin ? "Cerrar" : "Detener"}</button><button data-rep class="sec">Repetir</button>
+    <ol class="recorrido">${rec.pasos.slice(0, fin ? rec.pasos.length : i-1).map(p => `<li>${p.t}</li>`).join("")}</ol>`;
+  ficha.querySelector("[data-det]").addEventListener("click", () => { detener(); fichaInicial(); });
+  ficha.querySelector("[data-rep]").addEventListener("click", () => animar(Object.keys(RECORRIDOS).find(k => RECORRIDOS[k] === rec)));
+}
+function limpiarNeon() { svg.querySelectorAll(".neon, .paso").forEach(e => e.classList.remove("neon", "paso")); svg.classList.remove("animando"); recorridosEl.querySelectorAll(".activo").forEach(b => b.classList.remove("activo")); }
+function finAnim() { limpiarNeon(); anim = null; fichaInicial(); }
+function detener() { if (anim) { clearTimeout(anim.timer); anim = null; } limpiarNeon(); }
+fichaInicial();
+
+// Pantalla completa "solo radar": sin barra del navegador ni del sistema, sin
+// cabecera ni tarjetas. Embebida, la pide el PADRE sobre su capa (la activación
+// del usuario dentro del iframe alcanza a los ancestros del mismo origen) y avisa
+// por mensaje cuando entra o sale; suelta, la pide esta misma página.
+const EMBEBIDA = window.parent && window.parent !== window;
+const avisarPadre = m => window.parent.postMessage(Object.assign({sala:"x"}, m), location.origin);
+function soloRadar(on) {
+  document.body.classList.toggle("en-fullscreen", !!on);
+  if (!EMBEBIDA) document.body.classList.toggle("solo-radar", !!on);   // embebida ya es solo radar siempre
+  desZoom(); fichaInicial();
+}
+function enFullscreen() { return document.body.classList.contains("en-fullscreen"); }
+document.getElementById("pantalla").addEventListener("click", () => {
+  if (EMBEBIDA) avisarPadre({sala:"fullscreen"});
+  else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+});
+// Volver: embebida, le pide a la landing que cierre (sale del fullscreen y deja
+// abierta la pastilla "Observación técnica"); suelta, sale de la pantalla completa
+// si está en ella y si no vuelve a /entornos. Solo se habla con el mismo origen.
+document.getElementById("volver").addEventListener("click", () => {
+  if (EMBEBIDA) { avisarPadre({sala:"cerrar"}); return; }
+  if (enFullscreen() && document.fullscreenElement) { document.exitFullscreen(); return; }
+  location.href = "/entornos";
+});
+document.addEventListener("fullscreenchange", () => { if (!EMBEBIDA) soloRadar(!!document.fullscreenElement); });
+window.addEventListener("message", ev => {
+  if (ev.origin !== location.origin || !ev.data || ev.data.sala !== "solo-radar") return;
+  soloRadar(ev.data.on);
+});
+
+// foco de luz que sigue al puntero (mismo mecanismo que el login, más chico y más sutil)
+(function () {
+  if (!window.matchMedia("(hover:hover)").matches || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const radar = document.getElementById("radar");
+  radar.addEventListener("mousemove", ev => {
+    const r = radar.getBoundingClientRect();
+    radar.style.setProperty("--mx", (ev.clientX - r.left) + "px");
+    radar.style.setProperty("--my", (ev.clientY - r.top) + "px");
+    radar.classList.add("con-foco");
+  });
+  radar.addEventListener("mouseleave", () => radar.classList.remove("con-foco"));
+})();
+{% endraw %}
+</script>
+</body>
+</html>

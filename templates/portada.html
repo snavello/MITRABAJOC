@@ -39,58 +39,10 @@
      body.claro. Ver también .grano/.grano-osc/.grano-clara en marca.css,
      aplicadas al <body> (el .marca-enc y el .pad tienen position+z-index
      en marca.css para quedar por encima del grano). ---------- */
-  .sech b { font-family: var(--fuente-display); font-weight: 700; font-size: 15px;
-    letter-spacing: .015em; text-transform: uppercase; }
-  body.claro .sech b { color: var(--tinta); }
-  body.claro .sech a { color: var(--gris); }
+  /* El esquema "Tablero" de las portadas vive en marca.css
+     (bloque "Portadas v2"): lo comparten las cuatro apps. Acá quedan
+     solo las reglas propias de la portada del afiliado. */
 
-  body.oscuro .tarjetas .acceso { position: relative; overflow: hidden;
-    background: linear-gradient(155deg, rgba(255,255,255,.14), rgba(255,255,255,.02) 55%, rgba(255,255,255,.06));
-    border-color: rgba(255,255,255,.14); backdrop-filter: blur(3px) saturate(1.1); }
-  body.oscuro .tarjetas .acceso::after { content: ""; position: absolute; top: -60%; left: -30%;
-    width: 90%; height: 90%; background: linear-gradient(120deg, rgba(255,255,255,.22), transparent 60%);
-    transform: rotate(-18deg); pointer-events: none; }
-  body.oscuro .tarjetas .acceso.destacada {
-    background: linear-gradient(155deg, color-mix(in srgb, var(--marca-acento) 92%, white), color-mix(in srgb, var(--marca-acento) 60%, #7a4f10));
-    border-color: transparent; }
-
-  body.claro .tarjetas .acceso { position: relative; overflow: hidden; color: var(--tinta);
-    background: linear-gradient(160deg, #ffffff, var(--papel)); border-color: var(--linea);
-    box-shadow: 0 1px 0 rgba(20,15,5,.03); }
-  body.claro .tarjetas .acceso .estado { color: var(--gris); opacity: 1; }
-  body.claro .tarjetas .acceso.destacada {
-    background: linear-gradient(155deg, color-mix(in srgb, var(--marca-acento) 95%, white), color-mix(in srgb, var(--marca-acento) 55%, white));
-    border-color: transparent; color: var(--marca-base); }
-
-  body.claro .noticia-card { background: linear-gradient(160deg, #ffffff, var(--papel));
-    border-color: var(--linea); color: var(--tinta); }
-  body.claro .noticia-card .baj { color: var(--gris); opacity: 1; }
-  body.claro .vacio-sec { background: var(--papel); border-color: var(--linea); color: var(--gris); }
-  body.claro .carrusel { border-color: var(--linea); background: var(--papel); }
-  body.claro .carrusel-slide { background: var(--papel); }
-  body.claro .carrusel-slide img { background: var(--linea); }
-
-  /* ---------- Esquema "Hilo" en la portada (2026-09-03): títulos de acceso
-     en condensada, encabezados de sección como hitos (con línea), fecha de
-     noticia en monoespaciada. El vidrio y la portada clara/oscura quedan. */
-  .tarjetas .acceso .titulo { font-family: var(--fuente-display); font-weight: 700; font-size: 16px;
-    letter-spacing: .8px; text-transform: uppercase; line-height: 1.05; }
-  .tarjetas .acceso .estado { margin-top: 5px; }
-  .sech { align-items: center; gap: 10px; }
-  .sech b { flex: 1; display: flex; align-items: center; gap: 10px; letter-spacing: 1.4px; font-size: 14px; }
-  .sech b::after { content: ""; flex: 1; height: 1px; background: rgba(255,255,255,.16); }
-  body.claro .sech b::after { background: var(--linea); }
-  .sech a { font-size: 11px; font-weight: 600; }
-  .noticia-card .tit { font-size: 13px; }
-  .noticia-card .fecha { font-family: var(--fuente-num); opacity: 1; color: var(--marca-acento); }
-  /* Noticia sin imagen: ícono genérico del mismo tamaño que la miniatura,
-     así el título queda alineado con las que sí tienen foto (2026-09-03). */
-  .noticia-card .miniatura-ico { display: flex; align-items: center; justify-content: center;
-    background: color-mix(in srgb, var(--marca-primario) 70%, var(--marca-base)); }
-  .noticia-card .miniatura-ico svg { width: 20px; height: 20px; stroke: #fff; stroke-width: 1.8; fill: none;
-    stroke-linecap: round; }
-  body.claro .noticia-card .miniatura-ico { background: var(--marca-primario); }
-  body.claro .noticia-card .fecha { color: var(--marca-primario); }
   .btn-acerca { background: none; border: none; opacity: .5; font-size: 11px; cursor: pointer;
     padding: 6px; color: var(--sobre-base-mute); }
   body.claro .btn-acerca { color: var(--gris); }
@@ -250,10 +202,9 @@
 {% include "_entorno.html" %}
 
 {# Encabezado normalizado: el mismo parcial que el resto de la suite.
-   La cinta del afiliado va sin texto de rol (el logo de Colm3na firma
-   solo) y el nombre del sindicato ya no se repite en texto al lado de un
-   logo que lo dice. #}
-{% set enc_pantalla = 'Inicio' %}
+   En la app del afiliado es UNA sola línea -- logo del gremio a la
+   izquierda, Colm3na a la derecha -- y sin nombre de pantalla: no hay rol
+   que poner en la cinta, así que la cinta no existe. Ver _encabezado.html. #}
 {% include "_encabezado.html" %}
 
 <a class="btn-flotante btn-home" href="/app/inicio" title="Inicio" aria-label="Inicio">
@@ -263,9 +214,16 @@
   <svg viewBox="0 0 24 24"><use href="#ic-x"/></svg>
 </a>
 
+<div class="pt-ambiente" aria-hidden="true">
+  <span class="pt-blob b1"></span><span class="pt-blob b2"></span><span class="pt-reticula"></span>
+</div>
+
 <div class="pad">
   <div class="fila-hola">
-    <div class="hola">Hola, <em>{{ primer_nombre }}</em></div>
+    <div>
+      <div class="hola">Hola, <em>{{ primer_nombre }}</em></div>
+      <div class="pt-hola-baj">{% if mi_seccional %}Seccional {{ mi_seccional.nombre }} · {% endif %}{{ sindicato }}</div>
+    </div>
     <button class="circulo-acento" onclick="abrirPerfil()" aria-label="Tu perfil" title="Tu perfil">
       {% if tiene_foto_perfil %}
       <img id="circulo-foto-perfil" src="/perfil-foto/{{ cuil }}?v={{ range(1, 999999) | random }}" alt="">
@@ -275,133 +233,159 @@
     </button>
   </div>
 
-  <div class="tarjetas" style="margin-top: 18px;">
-    {% if 'recibos' in modulos %}
-    <a class="acceso destacada" href="/app">
-      <svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg>
-      <div>
-        <div class="titulo">Tu recibo</div>
-        <div class="estado">Revisá tus aportes</div>
-      </div>
-    </a>
-    {% endif %}
-    {% if 'aportes' in modulos %}
-    <a class="acceso" href="/app?tab=aportes">
-      <svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg>
-      <div>
-        <div class="titulo">Mis aportes</div>
-        <div class="estado">Semáforo de aportes</div>
-      </div>
-    </a>
-    {% endif %}
-    {% if 'credencial' in modulos %}
-    <a class="acceso" href="/app?tab=credencial">
-      <svg viewBox="0 0 24 24"><use href="#ic-cred"/></svg>
-      <div>
-        <div class="titulo">Credencial</div>
-        <div class="estado">{{ 'Tu carnet digital' if credencial_generada else 'Todavía no generada' }}</div>
-      </div>
-    </a>
-    {% endif %}
-    {% if 'capacitacion' in modulos %}
-    <a class="acceso" href="/app?tab=capacitacion">
-      <svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg>
-      <div>
-        <div class="titulo">Capacitación</div>
-        <div class="estado">Entendé tu nuevo recibo</div>
-      </div>
-    </a>
-    {% endif %}
-    {% if 'notificaciones' in modulos %}
-    <div class="acceso-badge-wrap">
-      {# La tarjeta ahora lleva a la BANDEJA (página completa estilo casilla
-         de correo), reemplaza al modal -- decisión de Sd 2026-09-02. #}
-      <a class="acceso" href="/app/notificaciones">
-        <svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg>
-        <div>
-          <div class="titulo">Notificaciones</div>
-          <div class="estado">Mensajes de tu sindicato</div>
-        </div>
+  <div class="pt-dos">
+    <div>
+      {% if 'recibos' in modulos %}
+      {# La tarjeta principal dice números reales: cuántos recibos verificó
+         este año y cómo salió el último. "Revisá tus aportes" no le
+         informaba nada al afiliado que él no supiera ya. #}
+      <a class="pt-hero" href="/app">
+        <span class="pt-hero-k">{% if recibos_resumen.ultimo_periodo %}Lo primero{% else %}Empezá por acá{% endif %}</span>
+        <span class="pt-hero-t">Tu recibo</span>
+        {% if recibos_resumen.ultimo_periodo %}
+        <span class="pt-hero-n num">{{ recibos_resumen.anio }}<small>{{ 'recibo verificado' if recibos_resumen.anio == 1 else 'recibos verificados' }} este año</small></span>
+        <span class="pt-hero-e">{{ recibos_resumen.ultimo_periodo | periodo }} · {% if recibos_resumen.ultimo_estado == 'OK' %}sin diferencias{% else %}con diferencias para revisar{% endif %}</span>
+        {% else %}
+        <span class="pt-hero-e">Sacale una foto o subí el PDF y te decimos si los aportes están bien calculados.</span>
+        {% endif %}
+        <span class="pt-hero-cta">{% if recibos_resumen.ultimo_periodo %}Subir un recibo nuevo{% else %}Subí tu primer recibo{% endif %}
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-flecha"/></svg></span>
+        <span class="pt-hero-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg></span>
       </a>
-      <span class="badge-noleidas" id="badge-notif" style="display:{{ 'flex' if notificaciones_no_leidas else 'none' }};">{{ notificaciones_no_leidas }}</span>
-    </div>
-    {% endif %}
-    {% if 'encuestas' in modulos %}
-    <div class="acceso-badge-wrap">
-      {# La puerta de entrada a las encuestas. Sin esta tarjeta, una encuesta
-         lanzada dependía de que el afiliado entrara a la pestaña de casualidad. #}
-      <a class="acceso" href="/app?tab=encuestas">
-        <svg viewBox="0 0 24 24"><use href="#ic-encuestas"/></svg>
-        <div>
-          <div class="titulo">Encuestas</div>
-          <div class="estado">{% if encuestas_pendientes %}Tenés {{ encuestas_pendientes }} sin responder{% else %}Tu opinión al sindicato{% endif %}</div>
-        </div>
-      </a>
-      <span class="badge-noleidas" id="badge-encuestas-portada" style="display:{{ 'flex' if encuestas_pendientes else 'none' }};">{{ encuestas_pendientes }}</span>
-    </div>
-    {% endif %}
-    {% if 'tramites' in modulos %}
-    <div class="acceso-badge-wrap">
-      <a class="acceso" href="/app?tab=tramites">
-        <svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg>
-        <div>
-          <div class="titulo">Trámites</div>
-          <div class="estado">Formularios y seguimiento</div>
-        </div>
-      </a>
-      {# Novedades de trámites: reemplazan a las notificaciones de sistema #}
-      <span class="badge-noleidas" id="badge-tramites-portada" style="display:{{ 'flex' if tramites_novedades else 'none' }};">{{ tramites_novedades }}</span>
-    </div>
-    {% endif %}
-  </div>
+      {% endif %}
 
-  {% if 'noticias' in modulos %}
-  <div class="sec">
-    <div class="sech"><b>Novedades</b>{% if noticias %}<a href="/app?tab=novedades">Ver todas</a>{% endif %}</div>
-    {% if noticias %}
-      {% for n in noticias %}
-      <button class="noticia-card" onclick="abrirNoticia({{ n.id }})">
-        {% if n.tiene_imagen1 %}<img class="miniatura" src="/noticia-imagen/{{ n.id }}/1" alt="">
-        {% else %}<span class="miniatura miniatura-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>{% endif %}
-        <div class="contenido">
-          <div class="fila-tit"><span class="tit">{{ n.titulo }}</span><span class="fecha">{{ n.fecha_hora }}</span></div>
-          {% if n.bajada %}<div class="baj">{{ n.bajada }}</div>{% endif %}
+      <div class="pt-filas">
+        {% if 'aportes' in modulos %}
+        <a class="pt-fila pt-vid" href="/app?tab=aportes">
+          <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg></span>
+          <span class="pt-fila-txt"><span class="pt-fila-t">Mis aportes</span>
+            <span class="pt-fila-e">Semáforo de aportes</span></span>
+          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+        </a>
+        {% endif %}
+        {% if 'credencial' in modulos %}
+        <a class="pt-fila pt-vid" href="/app?tab=credencial">
+          <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-cred"/></svg></span>
+          <span class="pt-fila-txt"><span class="pt-fila-t">Credencial</span>
+            <span class="pt-fila-e">{{ 'Tu carnet digital' if credencial_generada else 'Todavía no generada' }}</span></span>
+          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+        </a>
+        {% endif %}
+        {% if 'capacitacion' in modulos %}
+        <a class="pt-fila pt-vid" href="/app?tab=capacitacion">
+          <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg></span>
+          <span class="pt-fila-txt"><span class="pt-fila-t">Capacitación</span>
+            <span class="pt-fila-e">Entendé tu nuevo recibo</span></span>
+          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+        </a>
+        {% endif %}
+        {% if 'notificaciones' in modulos %}
+        <div class="acceso-badge-wrap">
+          {# Lleva a la BANDEJA (página completa estilo casilla de correo),
+             reemplaza al modal -- decisión de Sd 2026-09-02. #}
+          <a class="pt-fila pt-vid" href="/app/notificaciones">
+            <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg></span>
+            <span class="pt-fila-txt"><span class="pt-fila-t">Notificaciones</span>
+              <span class="pt-fila-e">Mensajes de tu sindicato</span></span>
+            <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+          </a>
+          <span class="badge-noleidas" id="badge-notif" style="display:{{ 'flex' if notificaciones_no_leidas else 'none' }};">{{ notificaciones_no_leidas }}</span>
         </div>
-      </button>
-      {% endfor %}
-    {% else %}
-    <div class="vacio-sec">Acá vas a ver los mensajes y avisos de tu sindicato. Muy pronto.</div>
-    {% endif %}
-  </div>
-  {% endif %}
+        {% endif %}
+        {% if 'encuestas' in modulos %}
+        <div class="acceso-badge-wrap">
+          {# La puerta de entrada a las encuestas. Sin esta tarjeta, una encuesta
+             lanzada dependía de que el afiliado entrara a la pestaña de casualidad. #}
+          <a class="pt-fila pt-vid" href="/app?tab=encuestas">
+            <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-encuestas"/></svg></span>
+            <span class="pt-fila-txt"><span class="pt-fila-t">Encuestas</span>
+              <span class="pt-fila-e">{% if encuestas_pendientes %}Tenés {{ encuestas_pendientes }} sin responder{% else %}Tu opinión al sindicato{% endif %}</span></span>
+            <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+          </a>
+          <span class="badge-noleidas" id="badge-encuestas-portada" style="display:{{ 'flex' if encuestas_pendientes else 'none' }};">{{ encuestas_pendientes }}</span>
+        </div>
+        {% endif %}
+        {% if 'tramites' in modulos %}
+        <div class="acceso-badge-wrap">
+          <a class="pt-fila pt-vid" href="/app?tab=tramites">
+            <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>
+            <span class="pt-fila-txt"><span class="pt-fila-t">Trámites</span>
+              <span class="pt-fila-e">Formularios y seguimiento</span></span>
+            <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+          </a>
+          {# Novedades de trámites: reemplazan a las notificaciones de sistema #}
+          <span class="badge-noleidas" id="badge-tramites-portada" style="display:{{ 'flex' if tramites_novedades else 'none' }};">{{ tramites_novedades }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
 
-  {% if 'beneficios' in modulos %}
-  <div class="sec">
-    <div class="sech"><b>Beneficios</b></div>
-    {% if beneficios %}
-    <div class="carrusel-wrap">
-      <div class="carrusel" id="carrusel-beneficios">
-        <div class="carrusel-track" id="carrusel-track">
-          {% for b in beneficios %}
-          <button type="button" class="carrusel-slide" onclick="abrirBeneficio({{ b.id }})">
-            {% if b.tiene_imagen %}<img src="/beneficio-imagen/{{ b.id }}" alt="">{% endif %}
-            <span class="carrusel-rubro">{{ b.rubro }}</span>
+    <aside class="pt-riel">
+      {% if 'noticias' in modulos %}
+      <div class="sec">
+        <div class="pt-riel-tit">Novedades{% if noticias %}<a href="/app?tab=novedades">Ver todas</a>{% endif %}</div>
+        {% if noticias %}
+          {% for n in noticias %}
+          <button class="pt-nov pt-vid{% if loop.first %} fresca{% endif %}" onclick="abrirNoticia({{ n.id }})">
+            {% if n.tiene_imagen1 %}<img class="pt-mini" src="/noticia-imagen/{{ n.id }}/1" alt="">
+            {% else %}<span class="pt-mini pt-mini-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>{% endif %}
+            <span class="pt-txt">
+              <span class="f">{{ n.fecha_hora }}</span>
+              <span class="t">{{ n.titulo }}</span>
+              {% if n.bajada %}<span class="b">{{ n.bajada }}</span>{% endif %}
+            </span>
           </button>
           {% endfor %}
-        </div>
+        {% else %}
+        <div class="vacio-sec">Acá vas a ver los mensajes y avisos de tu sindicato. Muy pronto.</div>
+        {% endif %}
       </div>
-      {% if beneficios|length > 1 %}
-      <button type="button" class="carrusel-flecha carrusel-izq" onclick="carruselMover(-1)" aria-label="Anterior">‹</button>
-      <button type="button" class="carrusel-flecha carrusel-der" onclick="carruselMover(1)" aria-label="Siguiente">›</button>
       {% endif %}
-    </div>
-    {% else %}
-    <div class="vacio-sec">Próximamente vas a tener descuentos y beneficios para afiliados.</div>
-    {% endif %}
-  </div>
-  {% endif %}
 
-  <div style="text-align:center; margin-top:18px;">
+      {% if 'beneficios' in modulos %}
+      <div class="sec">
+        <div class="pt-riel-tit">Beneficios</div>
+        {% if beneficios %}
+        <div class="car" id="car-beneficios">
+          <div class="car-marco">
+            <div class="car-pista" id="car-pista">
+              {% for b in beneficios %}
+              <button type="button" class="car-sl" onclick="abrirBeneficio({{ b.id }})">
+                {% if b.tiene_imagen %}<img src="/beneficio-imagen/{{ b.id }}" alt="">{% endif %}
+                <span class="car-velo"></span>
+                <span class="car-txt">
+                  <span class="car-k">{{ b.rubro }}</span>
+                  {% if b.descripcion %}<span class="car-t">{{ b.descripcion }}</span>{% endif %}
+                  {% if b.fecha_hasta %}<span class="car-p">Hasta el {{ b.fecha_hasta | dia }}</span>{% endif %}
+                </span>
+              </button>
+              {% endfor %}
+            </div>
+            {% if beneficios|length > 1 %}
+            <button type="button" class="car-flecha car-izq" onclick="carMover(-1)" aria-label="Anterior"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></button>
+            <button type="button" class="car-flecha car-der" onclick="carMover(1)" aria-label="Siguiente"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></button>
+            {% endif %}
+          </div>
+          {% if beneficios|length > 1 %}
+          <div class="car-pie">
+            <span class="car-barra"><i id="car-barra"></i></span>
+            <span class="car-puntos">
+              {% for b in beneficios %}
+              <button type="button" class="car-punto{% if loop.first %} on{% endif %}" onclick="carIr({{ loop.index0 }})" aria-label="Beneficio {{ loop.index }}"></button>
+              {% endfor %}
+            </span>
+          </div>
+          {% endif %}
+        </div>
+        {% else %}
+        <div class="vacio-sec">Próximamente vas a tener descuentos y beneficios para afiliados.</div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </aside>
+  </div>
+
+  <div style="text-align:center; margin-top:26px;">
     <button class="btn-acerca" onclick="abrirAcerca()">Acerca de</button>
   </div>
 </div>
@@ -468,10 +452,12 @@
         </div>
         <div class="perfil-campo perfil-fila2">
           <div><label>Código postal <span class="opc">(opcional)</span></label><input type="text" id="pf-cp" value="{{ perfil.codigo_postal if perfil else '' }}"></div>
-          <div><label>Teléfono</label><input type="text" id="pf-telefono" value="{{ perfil.telefono if perfil else '' }}"></div>
+          {# Marcados "(opcional)" igual que en el registro: son los mismos
+             campos y no puede ser que acá parezcan obligatorios y allá no. #}
+          <div><label>Teléfono <span class="opc">(opcional)</span></label><input type="text" id="pf-telefono" value="{{ perfil.telefono if perfil else '' }}"></div>
         </div>
         <div class="perfil-campo">
-          <label>Mail</label><input type="email" id="pf-mail" value="{{ perfil.mail if perfil else '' }}">
+          <label>Mail <span class="opc">(opcional)</span></label><input type="email" id="pf-mail" value="{{ perfil.mail if perfil else '' }}">
         </div>
 
         {# Ubicar el domicilio es opcional y bajo demanda: el mapa no se
@@ -643,6 +629,7 @@
     <g id="ic-notif"><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></g>
     <g id="ic-encuestas"><circle cx="6.5" cy="7" r="2"/><line x1="11" y1="7" x2="20" y2="7"/><circle cx="6.5" cy="12.5" r="2"/><line x1="11" y1="12.5" x2="20" y2="12.5"/><path d="m4.7 17.6 1.4 1.4 2.6-2.8"/><line x1="11" y1="18" x2="20" y2="18"/></g>
     <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
+    <g id="ic-flecha"><path d="M5 12h13"/><path d="m12.5 6 6 6-6 6"/></g>
   </defs>
 </svg>
 
@@ -761,25 +748,81 @@ function cerrarFotoGrande() { document.getElementById('overlay-foto-grande').cla
 function abrirAcerca() { document.getElementById('overlay-acerca').classList.add('abierto'); }
 function cerrarAcerca() { document.getElementById('overlay-acerca').classList.remove('abierto'); }
 
-let carruselIdx = 0;
-let carruselTimer = null;
-function carruselMover(delta) {
-  const track = document.getElementById('carrusel-track');
-  if (!track) return;
-  const slides = track.querySelectorAll('.carrusel-slide');
-  if (!slides.length) return;
-  carruselIdx = (carruselIdx + delta + slides.length) % slides.length;
-  track.style.transform = 'translateX(-' + (carruselIdx * 100) + '%)';
-  reiniciarAutoplayCarrusel();
-}
-function reiniciarAutoplayCarrusel() {
-  clearInterval(carruselTimer);
-  const track = document.getElementById('carrusel-track');
-  if (!track) return;
-  const slides = track.querySelectorAll('.carrusel-slide');
-  if (slides.length > 1) carruselTimer = setInterval(() => carruselMover(1), 5000);
-}
-reiniciarAutoplayCarrusel();
+// ---------- Carrusel de beneficios ----------
+// Avanza solo, se FRENA cuando el mouse está encima (nadie quiere que se le
+// mueva lo que está leyendo), se arrastra con el dedo y respeta
+// prefers-reduced-motion: ahí no hay autoplay, ni zoom, ni barra.
+//
+// Las funciones quedan globales porque los botones las llaman por onclick
+// desde el HTML que arma Jinja; el resto vive adentro del bloque.
+let carIr = function () {}, carMover = function () {};
+(function () {
+  const car = document.getElementById('car-beneficios');
+  if (!car) return;                       // el módulo Beneficios puede estar apagado
+  const pista = document.getElementById('car-pista');
+  const slides = Array.from(car.querySelectorAll('.car-sl'));
+  const puntos = Array.from(car.querySelectorAll('.car-punto'));
+  const barra = document.getElementById('car-barra');
+  const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const MS = 5400;
+  let i = 0, reloj = null;
+
+  carIr = function (n) {
+    i = (n + slides.length) % slides.length;
+    pista.style.transform = 'translateX(' + (-i * 100) + '%)';
+    slides.forEach((s, k) => s.classList.toggle('on', k === i));
+    puntos.forEach((p, k) => p.classList.toggle('on', k === i));
+    arrancar();
+  };
+  carMover = function (delta) { carIr(i + delta); };
+
+  function arrancar() {
+    clearTimeout(reloj);
+    if (quieto || slides.length < 2 || !barra) return;
+    // Reiniciar la barra: sin el reflow del medio, el navegador junta las
+    // dos escrituras de width y la transición no vuelve a correr.
+    barra.style.transition = 'none';
+    barra.style.width = '0';
+    void barra.offsetWidth;
+    barra.style.transition = 'width ' + MS + 'ms linear';
+    barra.style.width = '100%';
+    reloj = setTimeout(() => carIr(i + 1), MS);
+  }
+  function frenar() {
+    clearTimeout(reloj);
+    if (!barra) return;
+    const ancho = barra.getBoundingClientRect().width;
+    barra.style.transition = 'none';
+    barra.style.width = ancho + 'px';
+  }
+  car.addEventListener('mouseenter', frenar);
+  car.addEventListener('mouseleave', arrancar);
+
+  // Arrastre: la pista sigue al dedo y al soltar decide si pasa o vuelve.
+  let x0 = null, ancho = 0;
+  pista.addEventListener('pointerdown', (e) => {
+    if (slides.length < 2) return;
+    x0 = e.clientX;
+    ancho = pista.getBoundingClientRect().width;
+    pista.classList.add('sin-anim');
+    frenar();
+  });
+  pista.addEventListener('pointermove', (e) => {
+    if (x0 === null) return;
+    pista.style.transform = 'translateX(calc(' + (-i * 100) + '% + ' + (e.clientX - x0) + 'px))';
+  });
+  function soltar(e) {
+    if (x0 === null) return;
+    const dx = ((e && e.clientX) || x0) - x0;
+    x0 = null;
+    pista.classList.remove('sin-anim');
+    carIr(Math.abs(dx) > ancho * 0.18 ? i + (dx < 0 ? 1 : -1) : i);
+  }
+  pista.addEventListener('pointerup', soltar);
+  pista.addEventListener('pointercancel', soltar);
+
+  carIr(0);
+})();
 
 // Ícono del formulario asociado ("completá los datos haciendo click acá"
 // lo escribe el sindicato en el texto): abre el formulario directo vía el

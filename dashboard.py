@@ -287,8 +287,9 @@ def buscar_afiliados(sid: int, texto: str, cuits: Optional[list] = None, limite:
         return []
     with db.get_session() as s:
         filas = s.execute(text(
-            "SELECT id, nombre, cuil, seccional_id, cuit_empleador FROM trabajador "
-            "WHERE sindicato_id = :sid AND activo"), {"sid": sid}).all()
+            "SELECT t.id, c.nombre, t.cuil, t.seccional_id, t.cuit_empleador "
+            "FROM trabajador t LEFT JOIN cuentatrabajador c ON c.cuil = t.cuil "
+            "WHERE t.sindicato_id = :sid AND t.activo"), {"sid": sid}).all()
     digitos = re.sub(r"\D", "", texto)
     es_cuil = len(digitos) >= 6 and not re.search(r"[a-zA-Z]", texto)
     tokens = _normalizar(texto).split()
@@ -322,8 +323,10 @@ def afiliado_por_id(sid: int, afiliado_id: int) -> Optional[dict]:
     """Para etiquetar el chip al cargar un link con ?afiliado=. Solo del tenant."""
     with db.get_session() as s:
         fila = s.execute(text(
-            "SELECT id, nombre, cuil, seccional_id, cuit_empleador FROM trabajador "
-            "WHERE id = :id AND sindicato_id = :sid"), {"id": afiliado_id, "sid": sid}).first()
+            "SELECT t.id, c.nombre, t.cuil, t.seccional_id, t.cuit_empleador "
+            "FROM trabajador t LEFT JOIN cuentatrabajador c ON c.cuil = t.cuil "
+            "WHERE t.id = :id AND t.sindicato_id = :sid"),
+            {"id": afiliado_id, "sid": sid}).first()
     if not fila:
         return None
     return {"id": fila[0], "nombre": fila[1], "cuil": fila[2],
@@ -858,7 +861,11 @@ def explorador_recibos(sid: int, f: dict, page: int, page_size: int) -> dict:
     solo_diferencias = "" if (f.get("resultado") or f.get("afiliado")) else "r.estado != 'OK'"
     joins, where, params = _sql_recibos(sid, f, extra_conds=solo_diferencias,
                                         forzar_join=True)
-    joins += " LEFT JOIN seccional sec ON sec.id = t.seccional_id"
+    joins += (" LEFT JOIN seccional sec ON sec.id = t.seccional_id"
+              # El nombre es de la PERSONA y no del empadronamiento, así que
+              # sale de `cuentatrabajador`. El CASE de privacidad que lo tapa
+              # cuando el recibo no fue enviado sigue estando en el SELECT.
+              " LEFT JOIN cuentatrabajador ct ON ct.cuil = t.cuil")
     with db.get_session() as s:
         total = _uno(s, f"SELECT COUNT(*) FROM reciboverificado r{joins} WHERE {where}",
                      params)[0]
@@ -866,7 +873,7 @@ def explorador_recibos(sid: int, f: dict, page: int, page_size: int) -> dict:
         filas = s.execute(_stmt(f"""
             SELECT r.procesado_en, sec.nombre, r.cuit_empleador, r.categoria,
                    r.formato, r.bruto, r.monto_diferencia, r.estado, r.enviado_sindicato,
-                   CASE WHEN r.enviado_sindicato THEN t.nombre ELSE NULL END,
+                   CASE WHEN r.enviado_sindicato THEN ct.nombre ELSE NULL END,
                    CASE WHEN r.enviado_sindicato THEN r.cuil ELSE NULL END,
                    r.periodo, r.id
             FROM reciboverificado r{joins} WHERE {where}
@@ -1020,7 +1027,9 @@ def detalle_recibo(sid: int, recibo_id: int) -> Optional[dict]:
     if enviado:
         with db.get_session() as s:
             t = s.execute(text(
-                "SELECT nombre FROM trabajador WHERE sindicato_id = :sid AND cuil = :cuil"),
+                "SELECT c.nombre FROM trabajador t "
+                "JOIN cuentatrabajador c ON c.cuil = t.cuil "
+                "WHERE t.sindicato_id = :sid AND t.cuil = :cuil"),
                 {"sid": sid, "cuil": cuil}).first()
         nombre = (t[0] if t else None) or (recibo.get("empleado") or {}).get("apellido_nombre")
     else:
@@ -1052,7 +1061,8 @@ def detalle_tramite(sid: int, tramite_id: int) -> Optional[dict]:
         return None
     with db.get_session() as s:
         t = s.execute(text(
-            "SELECT tr.nombre, sec.nombre FROM trabajador tr "
+            "SELECT c.nombre, sec.nombre FROM trabajador tr "
+            "LEFT JOIN cuentatrabajador c ON c.cuil = tr.cuil "
             "LEFT JOIN seccional sec ON sec.id = tr.seccional_id "
             "WHERE tr.sindicato_id = :sid AND tr.cuil = :cuil"),
             {"sid": sid, "cuil": d["cuil"]}).first()
@@ -1156,12 +1166,17 @@ def destinatarios_notificacion(sid: int, notificacion_id: int) -> Optional[dict]
         if not propia:
             return None
         filas = s.execute(text("""
-            SELECT d.cuil, t.nombre, sec.nombre, d.leida_en
+            SELECT d.cuil, c.nombre, sec.nombre, d.leida_en
             FROM notificaciondestinatario d
              LEFT JOIN trabajador t ON t.sindicato_id = :sid AND t.cuil = d.cuil
+             -- El nombre cuelga de `t.cuil` y NO de `d.cuil`: así solo sale
+             -- el de quien está en el padrón de ESTE sindicato. Colgado del
+             -- destinatario mostraría el nombre de un CUIL ajeno si alguna
+             -- vez se colara uno en la lista.
+             LEFT JOIN cuentatrabajador c ON c.cuil = t.cuil
              LEFT JOIN seccional sec ON sec.id = t.seccional_id
             WHERE d.notificacion_id = :nid
-            ORDER BY d.leida_en IS NULL, t.nombre, d.cuil"""),
+            ORDER BY d.leida_en IS NULL, c.nombre, d.cuil"""),
             {"sid": sid, "nid": notificacion_id}).all()
     items = [{"cuil": f[0], "nombre": f[1] or "—",
               "seccional": f[2] or "Sin seccional", "leida_en": f[3]}

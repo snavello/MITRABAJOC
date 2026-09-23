@@ -21,10 +21,12 @@ with db.get_session() as s:
     s.add(sind); s.add(otro_sind); s.commit(); s.refresh(sind); s.refresh(otro_sind)
     SID = sind.id
     SID_OTRO = otro_sind.id
-    s.add(Trabajador(sindicato_id=SID, cuil="20111111119", nombre="Juan", activo=True, registrado=True))
-    s.add(CuentaTrabajador(cuil="20111111119", clave_hash=auth.hashear_clave("demo1234")))
-    s.add(Trabajador(sindicato_id=SID, cuil="20444444440", nombre="Ana", activo=True, registrado=True))
-    s.add(CuentaTrabajador(cuil="20444444440", clave_hash=auth.hashear_clave("demo1234")))
+    s.add(Trabajador(sindicato_id=SID, cuil="20111111119", activo=True, registrado=True))
+    db.guardar_datos_personales(s, "20111111119", nombre="Juan")
+    db.asegurar_cuenta(s, "20111111119").clave_hash = auth.hashear_clave("demo1234")
+    s.add(Trabajador(sindicato_id=SID, cuil="20444444440", activo=True, registrado=True))
+    db.guardar_datos_personales(s, "20444444440", nombre="Ana")
+    db.asegurar_cuenta(s, "20444444440").clave_hash = auth.hashear_clave("demo1234")
     s.add(UsuarioSindicato(sindicato_id=SID, usuario="20777777770", nombre="Admin Test Perfil",
                             clave_hash=auth.hashear_clave("admin-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.add(UsuarioSindicato(sindicato_id=SID_OTRO, usuario="20888888880", nombre="Admin Otro",

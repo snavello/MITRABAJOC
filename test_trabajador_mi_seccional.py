@@ -53,10 +53,11 @@ with db.get_session() as s:
 
     for cuil, secc in ((CUIL_UBICADA, SEC_UBICADA), (CUIL_SIN_GEO, SEC_SIN_GEO),
                        (CUIL_SIN_SECC, None)):
-        s.add(CuentaTrabajador(cuil=cuil, clave_hash=auth.hashear_clave(CLAVE),
-                               nombre="Afiliado"))
-        s.add(Trabajador(sindicato_id=SID, cuil=cuil, nombre=f"Afiliado {cuil[-4:]}",
+        db.guardar_datos_personales(s, cuil, nombre="Afiliado")
+        db.asegurar_cuenta(s, cuil).clave_hash = auth.hashear_clave(CLAVE)
+        s.add(Trabajador(sindicato_id=SID, cuil=cuil,
                          registrado=True, seccional_id=secc))
+        db.guardar_datos_personales(s, cuil, nombre=f"Afiliado {cuil[-4:]}")
     s.commit()
 
 
@@ -147,16 +148,18 @@ def test_el_afiliado_guarda_su_domicilio_con_coordenadas():
         "codigo_postal": "2000", "latitud": "-32.958000", "longitud": "-60.645000",
         "precision_geo": "exacta", "telefono": "341 555 0000", "mail": "juan@mail.com"})
     assert r.status_code == 200, r.text
+    # El domicilio es de la PERSONA (`CuentaTrabajador`) y no del
+    # empadronamiento: desde el 2026-09-22 hay una sola copia por CUIL.
     with db.get_session() as s:
-        t = s.exec(select(Trabajador).where(Trabajador.cuil == CUIL_UBICADA,
-                                           Trabajador.sindicato_id == SID)).first()
-        assert t.localidad == "Rosario" and t.piso_depto == "2 A"
-        assert t.codigo_postal == "2000"
-        assert t.precision_geo == "exacta"
-        assert round(t.latitud, 4) == -32.958
+        p = s.exec(select(CuentaTrabajador).where(
+            CuentaTrabajador.cuil == CUIL_UBICADA)).first()
+        assert p.localidad == "Rosario" and p.piso_depto == "2 A"
+        assert p.codigo_postal == "2000"
+        assert p.precision_geo == "exacta"
+        assert round(p.latitud, 4) == -32.958
         # El texto lo arma el SERVIDOR, no el cliente.
-        assert t.direccion_texto == "Av. Pellegrini 1234, 2 A, Rosario, Santa Fe (CP 2000)"
-        assert t.geo_actualizado
+        assert p.direccion_texto == "Av. Pellegrini 1234, 2 A, Rosario, Santa Fe (CP 2000)"
+        assert p.geo_actualizado
     print("OK  test_el_afiliado_guarda_su_domicilio_con_coordenadas")
 
 
@@ -168,11 +171,11 @@ def test_el_domicilio_sin_coordenadas_queda_sin_geo():
         "latitud": "", "longitud": "", "precision_geo": "exacta",
         "telefono": "", "mail": ""})
     with db.get_session() as s:
-        t = s.exec(select(Trabajador).where(Trabajador.cuil == CUIL_SIN_GEO,
-                                           Trabajador.sindicato_id == SID)).first()
-        assert t.precision_geo == "sin_geo"
-        assert t.latitud is None
-        assert t.direccion_texto == "Mitre 50, Rafaela, Santa Fe"
+        p = s.exec(select(CuentaTrabajador).where(
+            CuentaTrabajador.cuil == CUIL_SIN_GEO)).first()
+        assert p.precision_geo == "sin_geo"
+        assert p.latitud is None
+        assert p.direccion_texto == "Mitre 50, Rafaela, Santa Fe"
     print("OK  test_el_domicilio_sin_coordenadas_queda_sin_geo")
 
 

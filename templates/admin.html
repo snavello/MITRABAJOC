@@ -1045,6 +1045,12 @@
   <!-- ============ TRABAJADORES ============ -->
   <h2 id="trabajadores">Trabajadores ({{ trabajadores|selectattr('activo')|list|length }} activos)</h2>
   <p class="muted">Los trabajadores cargados acá pueden registrarse en la app con su CUIL. Podés darlos de alta de a uno o pegar una lista.</p>
+  {# Que esto se diga acá y no se descubra después: el nombre, el domicilio
+     y el contacto son de la PERSONA (una fila por CUIL), no de la ficha de
+     este sindicato. Lo que se corrige acá lo ve el afiliado en su perfil, y
+     al revés. La seccional, la credencial y el CUIT del empleador sí son
+     de este sindicato y nadie más los toca. #}
+  <p class="muted">El <b>nombre, el domicilio y el contacto</b> son datos de la persona: se comparten con su perfil en la app y con los otros sindicatos donde esté afiliada, así que lo que corrijas acá lo ve también el afiliado. La <b>seccional</b>, la <b>credencial</b> y el <b>CUIT del empleador</b> son de este sindicato.</p>
 
   {# `err=datos` existía desde antes y no se mostraba en ninguna parte: el
      alta fallaba y la pantalla volvía igual, sin decir nada. #}
@@ -1150,8 +1156,8 @@
           </select>
         </div>
         <div class="campo"><label>Código postal <span class="opc">(opcional)</span></label><input name="codigo_postal" id="trab-cp"></div>
-        <div class="campo"><label>Teléfono</label><input name="telefono" id="trab-telefono"></div>
-        <div class="campo"><label>Mail</label><input name="mail" id="trab-mail" type="email"></div>
+        <div class="campo"><label>Teléfono <span class="opc">(opcional)</span></label><input name="telefono" id="trab-telefono"></div>
+        <div class="campo"><label>Mail <span class="opc">(opcional)</span></label><input name="mail" id="trab-mail" type="email"></div>
         <div class="campo"><label>Vigencia de credencial</label><input name="vigencia_credencial" id="trab-vigencia" type="date"></div>
         <div class="campo"><label>Seccional</label>
           <select name="seccional_id" id="trab-seccional">

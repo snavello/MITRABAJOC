@@ -22,8 +22,9 @@ with db.get_session() as s:
     sind = Sindicato(nombre="UOM Uso IA", slug="uom-uso-ia", modulos_habilitados=list(MODULOS_INICIALES))
     s.add(sind); s.commit(); s.refresh(sind)
     SID = sind.id
-    s.add(Trabajador(sindicato_id=SID, cuil="20111111119", nombre="Juan",
+    s.add(Trabajador(sindicato_id=SID, cuil="20111111119",
                       activo=True, registrado=True))
+    db.guardar_datos_personales(s, "20111111119", nombre="Juan")
     s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111110", nombre="Admin",
                             clave_hash=auth.hashear_clave("clave-test"), debe_cambiar_clave=False, es_super_admin=True))
     s.commit()

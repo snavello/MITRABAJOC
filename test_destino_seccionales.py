@@ -26,10 +26,12 @@ with db.get_session() as s:
     sur = Seccional(sindicato_id=SID, nombre="Sur")
     s.add(norte); s.add(sur); s.commit(); s.refresh(norte); s.refresh(sur)
     SEC_NORTE, SEC_SUR = norte.id, sur.id
-    s.add(Trabajador(sindicato_id=SID, cuil="20111111119", nombre="Con Norte",
+    s.add(Trabajador(sindicato_id=SID, cuil="20111111119",
                       activo=True, registrado=True, seccional_id=SEC_NORTE))
-    s.add(Trabajador(sindicato_id=SID, cuil="27222222224", nombre="Sin seccional",
+    db.guardar_datos_personales(s, "20111111119", nombre="Con Norte")
+    s.add(Trabajador(sindicato_id=SID, cuil="27222222224",
                       activo=True, registrado=True, seccional_id=None))
+    db.guardar_datos_personales(s, "27222222224", nombre="Sin seccional")
     s.commit()
 
 admin_client = TestClient(main.app)

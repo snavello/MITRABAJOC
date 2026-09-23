@@ -184,6 +184,28 @@ def test_h0007_cabeceras_de_seguridad_presentes():
     assert "frame-ancestors 'none'" in csp and "default-src 'self'" in csp
 
 
+def test_h0007_la_csp_deja_pasar_los_blob_que_la_propia_app_fabrica():
+    """La CSP de H-0007 salió sin `blob:` y eso ROMPIÓ la carga de foto de
+    perfil (2026-09-22), en la app del afiliado y en la del empleador.
+
+    Para achicar la foto antes de subirla, el navegador la carga en un
+    `<img src="blob:...">` que fabrica el mismo documento con
+    `URL.createObjectURL(archivo)`. Sin `blob:` en `img-src` el navegador lo
+    bloquea, salta `onerror` y la pantalla dice "no se pudo leer la imagen"
+    sin que el archivo haya llegado nunca al servidor -- un error que no
+    aparece en ningún log porque no hubo request. Lo mismo con `media-src` y
+    la vista previa de un video en Recursos.
+
+    Un `blob:` no es una fuente externa: lo fabrica el propio documento a
+    partir de un archivo que la persona eligió, así que no abre ninguna
+    puerta que `data:` no tuviera ya abierta."""
+    import main
+    csp = TestClient(main.app).get("/healthz").headers.get("content-security-policy", "")
+    for directiva in ("img-src", "media-src"):
+        valores = next((d for d in csp.split("; ") if d.startswith(directiva + " ")), "")
+        assert "blob:" in valores, f"{directiva} sin blob:: {csp}"
+
+
 def test_h0007_hsts_solo_en_demo_prod():
     import main
     c = TestClient(main.app)

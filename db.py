@@ -447,40 +447,39 @@ class LogPlataforma(SQLModel, table=True):
 
 
 class CuentaTrabajador(SQLModel, table=True):
-    """La identidad única del trabajador en toda la plataforma: CUIL + clave.
-    Con esto entra, sin importar en cuántos sindicatos esté empadronado.
-    La foto de perfil vive acá (no en Trabajador, que es por sindicato) --
-    es una sola por persona, la misma se ve sin importar el sindicato
-    activo. Bytes en la base, mismo patrón que el logo del sindicato."""
+    """**La PERSONA**: una fila por CUIL en toda la plataforma, y la única
+    dueña de sus datos personales -- nombre, domicilio, teléfono, mail y
+    foto.
+
+    Hasta el 2026-09-22 esto era solo "CUIL + clave" y los datos personales
+    vivían en `Trabajador`, que es una fila POR SINDICATO. Una persona en dos
+    gremios tenía entonces dos copias de su nombre y su domicilio, y las
+    cuatro puertas por las que entra un domicilio no escribían igual: el
+    registro lo copiaba a TODOS los empadronamientos y el perfil solo al del
+    sindicato activo. El resultado, encontrado en Pruebas, era el mismo CUIL
+    con dos nombres y dos direcciones distintas, y nada que dijera cuál era
+    la buena. Una persona vive en un solo lugar: ahora hay un solo renglón
+    donde eso se escribe (decisión de Sd, 2026-09-22).
+
+    **La fila existe desde que el CUIL entra al PADRÓN, no desde que se
+    registra.** Es lo que hace que "un solo lugar" sea cierto también para
+    los afiliados que el sindicato cargó y que todavía no crearon su cuenta
+    -- si no, el alta del admin necesitaría un segundo lugar donde escribir y
+    volveríamos al problema. Por eso `clave_hash` puede estar vacío: vacío
+    significa "todavía no eligió clave", no "no existe". Quien decide si una
+    persona ya se registró sigue siendo `Trabajador.registrado`, que es por
+    sindicato y alimenta el KPI del panel.
+
+    El domicilio usa el MISMO bloque de campos que `Seccional` (ver
+    `geo.CAMPOS_DOMICILIO`), con la misma carga guiada y la misma función de
+    guardado; `test_seccional_geo.py` verifica que las dos tablas no se
+    separen. Las coordenadas son dato sensible del padrón: no salen nunca en
+    un endpoint que no sea del propio afiliado o del padrón de su sindicato,
+    y en particular NO van al Panel Sindical."""
     id: Optional[int] = Field(default=None, primary_key=True)
     cuil: str = Field(index=True, unique=True)
-    clave_hash: str = ""
+    clave_hash: str = ""                   # "" = está en el padrón pero todavía no eligió clave
     nombre: str = ""
-    foto_datos: Optional[bytes] = Field(default=None)
-    foto_mime: str = ""
-
-
-class Trabajador(SQLModel, table=True):
-    """Empadronamiento de un CUIL en un sindicato, con sus datos propios de ese gremio.
-    El mismo CUIL puede tener varias filas (una por sindicato donde está afiliado).
-
-    **El domicilio usa el MISMO bloque de campos que `Seccional`** (mismos
-    nombres, mismos tipos, misma pantalla de carga guiada, misma función de
-    geocodificación). Antes del 2026-09-12 eran parecidos pero no iguales:
-    acá `piso` y `ciudad`, en la seccional nada. Dos nombres para lo mismo es
-    lo que hace que una pantalla arme la dirección distinto que la otra, así
-    que se unificaron a `piso_depto` y `localidad` -- un rename, los datos se
-    conservan. `test_seccional_geo.py` verifica que el bloque siga siendo
-    idéntico en las dos tablas.
-
-    Las coordenadas del domicilio son dato del padrón, del mismo nivel de
-    sensibilidad que la dirección que el sindicato ya tenía. No salen nunca
-    en un endpoint que no sea del propio afiliado o del padrón de su
-    sindicato; en particular NO van al Panel Sindical."""
-    id: Optional[int] = Field(default=None, primary_key=True)
-    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
-    cuil: str = Field(index=True)          # obligatorio
-    nombre: str = ""                       # obligatorio
     # ---- Domicilio (bloque compartido con Seccional, ver geo.CAMPOS_DOMICILIO)
     calle: str = ""
     numero: str = ""
@@ -496,8 +495,32 @@ class Trabajador(SQLModel, table=True):
     # ---- Contacto
     telefono: str = ""
     mail: str = ""
+    # ---- Foto de perfil (bytes en la base, mismo patrón que el logo del sindicato)
+    foto_datos: Optional[bytes] = Field(default=None)
+    foto_mime: str = ""
+
+
+class Trabajador(SQLModel, table=True):
+    """Empadronamiento de un CUIL en un sindicato: el VÍNCULO con ese gremio.
+    El mismo CUIL puede tener varias filas (una por sindicato donde está
+    afiliado).
+
+    **Acá NO viven los datos personales.** El nombre, el domicilio, el
+    teléfono y el mail son de la PERSONA y viven en `CuentaTrabajador`, una
+    sola fila por CUIL (ver su docstring: hasta el 2026-09-22 estaban acá y
+    una persona en dos gremios terminaba con dos nombres y dos direcciones
+    distintas). Lo que queda acá es lo que de verdad cambia de un sindicato
+    a otro: a qué seccional pertenece, qué credencial le dieron, con qué
+    empleador figura, si está activo y si ya se registró.
+
+    Una consulta que necesite el nombre o la zona de un afiliado hace JOIN
+    con `cuentatrabajador` por CUIL; no hay copia local que se pueda quedar
+    vieja."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    cuil: str = Field(index=True)          # obligatorio
     # Estado
-    registrado: bool = False               # True cuando el CUIL ya creó su cuenta
+    registrado: bool = False               # True cuando el CUIL ya eligió su clave
     activo: bool = True                    # baja lógica: False = dado de baja (recuperable)
     # Token opaco para el QR de la credencial (/v/{token}). Optional/NULL para
     # las filas ya cargadas: se genera solo, la primera vez que hace falta
@@ -2889,31 +2912,147 @@ PROVINCIAS_AR = [
 ]
 
 
-def nombre_trabajador(cuil: str, sindicato_id: int) -> str:
-    """Devuelve el nombre del trabajador en ese sindicato (o cadena vacía)."""
+# ---------- Los datos personales de una persona: un solo dueño ----------
+# Todo lo que sea nombre, domicilio, teléfono o mail de un afiliado entra y
+# sale por acá. Las cuatro puertas de la app (alta manual del admin, alta
+# masiva, registro del afiliado y su perfil) llaman a estas funciones y no
+# escriben columnas a mano: es lo que impide que vuelvan a existir dos
+# versiones del mismo domicilio (ver CuentaTrabajador).
+
+def asegurar_cuenta(s: Session, cuil: str) -> CuentaTrabajador:
+    """La fila de la PERSONA, creándola si el CUIL todavía no tenía ninguna.
+
+    Recibe la sesión abierta y no abre la suya: un request nunca toma más de
+    una conexión del pool a la vez (regla del 2026-09-19, ver "Una sesión de
+    base por request" en CLAUDE.md). La crea sin `clave_hash`, que es el
+    estado normal de alguien que el sindicato cargó en el padrón y todavía
+    no se registró.
+
+    Nace vacía a propósito: los datos se escriben con
+    `guardar_datos_personales`, que es la única función que decide qué pisa y
+    qué no."""
+    c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+    if not c:
+        c = CuentaTrabajador(cuil=cuil)
+        s.add(c)
+        s.flush()          # que quede con id dentro de la misma transacción
+    return c
+
+
+def guardar_datos_personales(s: Session, cuil: str, nombre: str = None,
+                             domicilio: dict = None, telefono: str = None,
+                             mail: str = None) -> CuentaTrabajador:
+    """Escribe el bloque personal de un CUIL. Lo que llega en `None` no se
+    toca -- así una pantalla que edita solo el domicilio no borra el teléfono
+    que cargó otra.
+
+    `domicilio` llega ya armado por `geo.campos_para_guardar()`, que es la
+    única función que decide qué se escribe en el bloque: antes esta firma
+    tenía un parámetro por campo y sumarle el CP y las coordenadas la habría
+    dejado en once posicionales, donde equivocarse de orden no da error, da
+    datos mal.
+
+    Un `nombre` vacío tampoco pisa al que había: es el caso del alta masiva y
+    del registro, donde el campo puede venir en blanco y el padrón ya tenía
+    el nombre bueno."""
+    c = asegurar_cuenta(s, cuil)
+    if nombre is not None and nombre.strip():
+        c.nombre = nombre.strip()[:200]
+    for campo, valor in (domicilio or {}).items():
+        if campo in geo.CAMPOS_DOMICILIO:
+            setattr(c, campo, valor)
+    if telefono is not None:
+        c.telefono = telefono.strip()[:40]
+    if mail is not None:
+        c.mail = mail.strip()[:200]
+    s.add(c)
+    return c
+
+
+def padron_del_sindicato(s: Session, sindicato_id: int) -> list:
+    """El padrón completo de un sindicato, con los datos personales de cada
+    afiliado ya unidos por CUIL.
+
+    Recibe la sesión abierta y no abre la suya (regla del 2026-09-19: un
+    request no toma dos conexiones del pool a la vez), porque las dos
+    pantallas que lo piden ya están adentro de una.
+
+    Devuelve DICTS y no filas de `Trabajador` porque lo que la pantalla del
+    admin muestra no es una tabla sino dos: el vínculo con el gremio
+    (seccional, credencial, empleador, estado) y la persona (nombre,
+    domicilio, contacto). Que se arme acá y no en la plantilla es lo que
+    permite que el resto de la app pida "el padrón" sin tener que acordarse
+    del JOIN."""
+    filas = s.exec(
+        select(Trabajador, CuentaTrabajador)
+        .join(CuentaTrabajador, CuentaTrabajador.cuil == Trabajador.cuil, isouter=True)
+        .where(Trabajador.sindicato_id == sindicato_id)
+        .order_by(Trabajador.activo.desc(), CuentaTrabajador.nombre)).all()
+    salida = []
+    vacios = {campo: "" for campo in ("nombre", *geo.CAMPOS_DOMICILIO)}
+    vacios.update({"latitud": None, "longitud": None, "precision_geo": "sin_geo",
+                   "telefono": "", "mail": ""})
+    for t, c in filas:
+        # Un afiliado sin fila de persona no debería existir (la crea el
+        # alta), pero si alguna vez pasara la pantalla tiene que mostrar la
+        # fila igual, vacía, y no romperse: un padrón que no se puede abrir
+        # es peor que un renglón incompleto.
+        fila = dict(_dict_personales(c) if c else vacios)
+        fila.update({
+            "id": t.id, "cuil": t.cuil, "sindicato_id": t.sindicato_id,
+            "registrado": t.registrado, "activo": t.activo,
+            "codigo_credencial": t.codigo_credencial,
+            "vigencia_credencial": t.vigencia_credencial,
+            "seccional_id": t.seccional_id,
+            "es_empleado_sindicato": t.es_empleado_sindicato,
+            "cuit_empleador": t.cuit_empleador,
+        })
+        salida.append(fila)
+    return salida
+
+
+def datos_personales(cuil: str) -> Optional[dict]:
+    """El bloque personal de un CUIL, o None si ese CUIL no existe en la
+    plataforma. No depende del sindicato: es una persona, no un afiliado."""
     with Session(engine) as s:
-        t = s.exec(select(Trabajador).where(
-            Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
-        return t.nombre if t else ""
+        c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        return _dict_personales(c) if c else None
+
+
+def _dict_personales(c: CuentaTrabajador) -> dict:
+    return {
+        "nombre": c.nombre, "cuil": c.cuil,
+        "calle": c.calle, "numero": c.numero, "piso_depto": c.piso_depto,
+        "localidad": c.localidad, "provincia": c.provincia,
+        "codigo_postal": c.codigo_postal, "direccion_texto": c.direccion_texto,
+        "latitud": c.latitud, "longitud": c.longitud,
+        "precision_geo": c.precision_geo, "geo_actualizado": c.geo_actualizado,
+        "telefono": c.telefono, "mail": c.mail,
+    }
+
+
+def nombre_trabajador(cuil: str, sindicato_id: int = None) -> str:
+    """El nombre de la persona. `sindicato_id` ya no cambia nada -- el nombre
+    es de la persona, no del empadronamiento -- pero se mantiene en la firma
+    porque lo pasan una docena de llamadas y sacarlo de todas en el mismo
+    cambio que mueve las columnas haría ilegible el diff."""
+    with Session(engine) as s:
+        c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        return c.nombre if c else ""
 
 
 def perfil_trabajador(cuil: str, sindicato_id: int) -> Optional[dict]:
-    """Datos propios del trabajador para mostrarle su perfil. Editable desde
-    /api/perfil (ver actualizar_perfil_trabajador) -- todo menos el CUIL."""
+    """Datos propios del trabajador para mostrarle su perfil. Devuelve None
+    si ese CUIL no está empadronado en ese sindicato -- el perfil se abre
+    desde la app de un gremio y no tiene sentido fuera de él, aunque los
+    datos que muestre sean de la persona y no del empadronamiento."""
     with Session(engine) as s:
         t = s.exec(select(Trabajador).where(
             Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
         if not t:
             return None
-        return {
-            "nombre": t.nombre, "cuil": t.cuil,
-            "calle": t.calle, "numero": t.numero, "piso_depto": t.piso_depto,
-            "localidad": t.localidad, "provincia": t.provincia,
-            "codigo_postal": t.codigo_postal, "direccion_texto": t.direccion_texto,
-            "latitud": t.latitud, "longitud": t.longitud,
-            "precision_geo": t.precision_geo, "geo_actualizado": t.geo_actualizado,
-            "telefono": t.telefono, "mail": t.mail,
-        }
+        c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        return _dict_personales(c) if c else None
 
 
 def actualizar_perfil_trabajador(cuil: str, sindicato_id: int, nombre: str,
@@ -2921,26 +3060,18 @@ def actualizar_perfil_trabajador(cuil: str, sindicato_id: int, nombre: str,
     """El trabajador edita sus propios datos -- todo menos el CUIL (identidad,
     no se toca acá) y los campos de gestión del sindicato (seccional,
     vigencia de credencial, etc.), que siguen siendo resorte del admin.
-    Actualiza SOLO el empadronamiento del sindicato activo -- Trabajador es
-    por sindicato (pluriempleo), no hay un domicilio único de la persona en
-    este modelo.
 
-    `domicilio` llega ya armado por `geo.campos_para_guardar()`, que es la
-    única función que decide qué se escribe en el bloque de domicilio: antes
-    esta firma tenía un parámetro por campo y sumarle el CP y las
-    coordenadas la habría dejado en once posicionales, donde equivocarse de
-    orden no da error, da datos mal."""
+    Escribe en la PERSONA, así que el cambio se ve en todos los sindicatos
+    donde esté empadronado. Antes escribía solo el empadronamiento activo y
+    el registro escribía todos: la misma persona editando en dos pantallas
+    dejaba dos domicilios distintos."""
     with Session(engine) as s:
         t = s.exec(select(Trabajador).where(
             Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
         if not t:
             return False
-        t.nombre = (nombre or "").strip()[:200] or t.nombre
-        for campo, valor in (domicilio or {}).items():
-            if campo in geo.CAMPOS_DOMICILIO:
-                setattr(t, campo, valor)
-        t.telefono, t.mail = telefono.strip()[:40], mail.strip()[:200]
-        s.add(t)
+        guardar_datos_personales(s, cuil, nombre=nombre, domicilio=domicilio,
+                                 telefono=telefono, mail=mail)
         s.commit()
         return True
 
@@ -2994,10 +3125,12 @@ def credencial_por_token(token: str) -> Optional[dict]:
         sind = s.get(Sindicato, t.sindicato_id)
         if not sind or not sind.activo:
             return None
+        persona = s.exec(select(CuentaTrabajador).where(
+            CuentaTrabajador.cuil == t.cuil)).first()
         return {
             "sindicato": sind.nombre, "sindicato_id": sind.id,
             "logo": sind.logo, "color_primario": sind.color_primario,
-            "nombre": t.nombre, "cuil": t.cuil,
+            "nombre": persona.nombre if persona else "", "cuil": t.cuil,
             "codigo_credencial": t.codigo_credencial,
             "vigencia_credencial": t.vigencia_credencial,
         }
@@ -3309,20 +3442,29 @@ def estado_georreferenciacion(sindicato_id: int) -> dict:
 
 
 def trabajadores_sin_geo(sindicato_id: int, alcance=None, limite: int = 2000) -> list:
-    """(id, domicilio) de los afiliados activos sin coordenadas y CON localidad.
+    """(cuil, domicilio) de los afiliados activos sin coordenadas y CON
+    localidad.
 
     Sin localidad no hay nada que preguntarle a Georef, así que esas filas
     no se cuentan ni se intentan: gastarían un pedido para devolver siempre
-    lo mismo. El alcance de seccional se aplica EN la consulta."""
-    conds = ["sindicato_id = :sid", "activo", "latitud IS NULL", "localidad != ''"]
+    lo mismo. El alcance de seccional se aplica EN la consulta.
+
+    El domicilio sale de la PERSONA (`cuentatrabajador`) y el recorte, del
+    empadronamiento: el admin georreferencia SU padrón, pero lo que ubica es
+    la dirección de alguien, que es una sola. Devuelve el CUIL y no el id de
+    la fila de padrón justamente por eso -- lo que se escribe después no es
+    el empadronamiento."""
+    conds = ["t.sindicato_id = :sid", "t.activo", "c.latitud IS NULL", "c.localidad != ''"]
     params = {"sid": sindicato_id, "limite": limite}
     if alcance is not None:
         if not alcance:
             return []
-        conds.append("seccional_id IN :secs")
+        conds.append("t.seccional_id IN :secs")
         params["secs"] = list(alcance)
-    sql = (f"SELECT id, calle, numero, piso_depto, localidad, provincia, codigo_postal "
-           f"FROM trabajador WHERE {' AND '.join(conds)} ORDER BY id LIMIT :limite")
+    sql = (f"SELECT c.cuil, c.calle, c.numero, c.piso_depto, c.localidad, c.provincia, "
+           f"c.codigo_postal FROM trabajador t "
+           f"JOIN cuentatrabajador c ON c.cuil = t.cuil "
+           f"WHERE {' AND '.join(conds)} ORDER BY t.id LIMIT :limite")
     stmt = text(sql)
     if alcance is not None:
         stmt = stmt.bindparams(bindparam("secs", expanding=True))
@@ -3333,20 +3475,19 @@ def trabajadores_sin_geo(sindicato_id: int, alcance=None, limite: int = 2000) ->
             for f in filas]
 
 
-def guardar_geo_trabajador(sindicato_id: int, trabajador_id: int, domicilio: dict) -> None:
-    """Escribe el bloque de domicilio de UN afiliado. El `sindicato_id` va en
-    el WHERE aunque el id ya sea único: una función que escribe por id suelto
-    es la que un día se llama con el id equivocado."""
+def guardar_geo_trabajador(sindicato_id: int, cuil: str, domicilio: dict) -> None:
+    """Escribe el bloque de domicilio de UNA persona, previa comprobación de
+    que esté empadronada en ESE sindicato. La comprobación no sobra aunque el
+    CUIL ya identifique la fila: es lo que impide que el proceso de un
+    sindicato termine escribiendo el domicilio de alguien que no es suyo."""
     with Session(engine) as s:
-        t = s.exec(select(Trabajador).where(
-            Trabajador.id == trabajador_id,
+        propio = s.exec(select(Trabajador).where(
+            Trabajador.cuil == cuil,
             Trabajador.sindicato_id == sindicato_id)).first()
-        if not t:
+        if not propio:
             return
-        for campo, valor in (domicilio or {}).items():
-            if campo in geo.CAMPOS_DOMICILIO:
-                setattr(t, campo, valor)
-        s.add(t); s.commit()
+        guardar_datos_personales(s, cuil, domicilio=domicilio)
+        s.commit()
 
 
 def contar_afiliados_de_seccional(sindicato_id: int, seccional_id: int) -> int:
@@ -3731,25 +3872,31 @@ def resolver_destinatarios(sindicato_id: int, criterio: str, valores: list,
     if alcance is not None and not alcance:
         return []
     with Session(engine) as s:
-        q = select(Trabajador).where(
-            Trabajador.sindicato_id == sindicato_id, Trabajador.activo == True)
+        # La provincia es de la PERSONA, así que el criterio "provincia" sale
+        # del JOIN y no de una columna del empadronamiento. Se trae siempre
+        # (no solo para ese criterio) para no tener dos consultas distintas
+        # según el criterio, que es como se terminan aplicando dos recortes
+        # de alcance distintos sin que nadie lo note.
+        q = (select(Trabajador, CuentaTrabajador.provincia)
+             .join(CuentaTrabajador, CuentaTrabajador.cuil == Trabajador.cuil, isouter=True)
+             .where(Trabajador.sindicato_id == sindicato_id, Trabajador.activo == True))
         if alcance is not None:
             q = q.where(Trabajador.seccional_id.in_(list(alcance)))
-        trabajadores = s.exec(q).all()
+        filas = s.exec(q).all()
     if criterio == "todos":
-        return sorted({t.cuil for t in trabajadores})
+        return sorted({t.cuil for t, _prov in filas})
     if criterio == "cuil":
         objetivo = set(valores)
-        return sorted({t.cuil for t in trabajadores if t.cuil in objetivo})
+        return sorted({t.cuil for t, _prov in filas if t.cuil in objetivo})
     if criterio == "cuit_empleador":
         objetivo = set(valores)
-        return sorted({t.cuil for t in trabajadores if t.cuit_empleador in objetivo})
+        return sorted({t.cuil for t, _prov in filas if t.cuit_empleador in objetivo})
     if criterio == "seccional":
         objetivo = {int(v) for v in valores if v.isdigit()}
-        return sorted({t.cuil for t in trabajadores if t.seccional_id in objetivo})
+        return sorted({t.cuil for t, _prov in filas if t.seccional_id in objetivo})
     if criterio == "provincia":
         objetivo = set(valores)
-        return sorted({t.cuil for t in trabajadores if t.provincia in objetivo})
+        return sorted({t.cuil for t, prov in filas if prov in objetivo})
     return []
 
 
@@ -3844,7 +3991,7 @@ def notificacion_destinatarios(notificacion_id: int, usuario_id: Optional[int] =
                 Trabajador.sindicato_id == (n.sindicato_id if n else 0),
                 Trabajador.seccional_id.in_(list(alcance)))).all()}
             dests = [d for d in dests if d.cuil in propios]
-        nombres = {t.cuil: t.nombre for t in s.exec(select(Trabajador)).all()}
+        nombres = {c.cuil: c.nombre for c in s.exec(select(CuentaTrabajador)).all()}
         return [{
             "cuil": d.cuil, "nombre": nombres.get(d.cuil, ""), "leida_en": d.leida_en,
         } for d in dests]
@@ -3908,6 +4055,46 @@ def marcar_todas_notificaciones_leidas(cuil: str, sindicato_id: int) -> int:
             s.add(d)
         s.commit()
         return len(pendientes)
+
+
+def resumen_recibos_trabajador(cuil: str, sindicato_id: int) -> dict:
+    """Lo que la portada del afiliado dice de SUS propios recibos: cuántos
+    verificó en lo que va del año y cómo salió el último.
+
+    Todo el filtro va adentro de la consulta. La portada la abre cada
+    afiliado en cada entrada a la app, así que no puede traerse el
+    historial entero para contarlo en Python.
+
+    El año sale de `fechas.hoy_texto()` (hora de Buenos Aires) y no del
+    reloj del servidor, que en Render corre en UTC -- entre las 21:00 y la
+    medianoche del 31 de diciembre el contador diría el año que viene.
+
+    El "último" se elige por PERÍODO, no por fecha de carga: alguien que
+    sube en diciembre el recibo de marzo no cambia cuál es su último
+    recibo. `procesado_en` desempata dos cargas del mismo período (se
+    puede volver a subir un recibo corregido).
+    """
+    from sqlalchemy import func
+    anio = fechas.hoy_texto()[:4]
+    with Session(engine) as s:
+        cantidad = s.execute(
+            select(func.count(ReciboVerificado.id)).where(
+                ReciboVerificado.cuil == cuil,
+                ReciboVerificado.sindicato_id == sindicato_id,
+                ReciboVerificado.periodo.like(anio + "-%"))).scalar()
+        ultimo = s.exec(
+            select(ReciboVerificado)
+            .where(ReciboVerificado.cuil == cuil,
+                   ReciboVerificado.sindicato_id == sindicato_id)
+            .order_by(ReciboVerificado.periodo.desc(),
+                      ReciboVerificado.procesado_en.desc())
+            .limit(1)).first()
+    return {
+        "anio": int(cantidad or 0),
+        "ultimo_periodo": (ultimo.periodo if ultimo else ""),
+        # "OK" | "CON_DISCREPANCIAS" | "" (todavía no verificó ninguno)
+        "ultimo_estado": (ultimo.estado if ultimo else ""),
+    }
 
 
 def contar_notificaciones_no_leidas(cuil: str, sindicato_id: int) -> int:
@@ -6169,13 +6356,20 @@ def registrar_respuesta_encuesta(encuesta_id: int, cuil: str, sindicato_id: int,
     datos_corte = {"seccional_id": None, "provincia": "", "cuit_empleador": ""}
     if cortes:
         with Session(engine) as s:
-            t = s.exec(select(Trabajador).where(
-                Trabajador.sindicato_id == sindicato_id, Trabajador.cuil == cuil)).first()
-            if t:
+            # La provincia es de la persona y el resto del empadronamiento;
+            # las dos se leen de una, en la misma sesión (regla de una sola
+            # conexión por request).
+            fila = s.exec(
+                select(Trabajador, CuentaTrabajador.provincia)
+                .join(CuentaTrabajador, CuentaTrabajador.cuil == Trabajador.cuil, isouter=True)
+                .where(Trabajador.sindicato_id == sindicato_id,
+                       Trabajador.cuil == cuil)).first()
+            if fila:
+                t, provincia = fila
                 if "seccional" in cortes:
                     datos_corte["seccional_id"] = t.seccional_id
                 if "provincia" in cortes:
-                    datos_corte["provincia"] = t.provincia or ""
+                    datos_corte["provincia"] = provincia or ""
                 if "empleador" in cortes:
                     datos_corte["cuit_empleador"] = t.cuit_empleador or ""
 

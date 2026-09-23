@@ -3,6 +3,11 @@
 # cada PR, se corre CADA test_*.py POR SEPARADO (regla del proyecto: comparten
 # estado de import y se contaminan si corren juntos) contra un Postgres con la
 # extensión vector, y se audita las dependencias.
+#
+# Desde 2026-09-21 la suite se reparte en PARTES trabajos que corren a la vez
+# (ci_reparto.py decide qué archivo va a cuál; test_ci_reparto.py verifica que
+# ninguno quede afuera): 111 archivos en fila eran ~10 minutos, y casi la mitad
+# era arranque de proceso. Cada trabajo levanta su propio Postgres.
 name: CI
 
 on:
@@ -22,7 +27,12 @@ jobs:
   tests:
     if: github.repository == 'snavello/MITRABAJOC'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
+    name: tests (parte ${{ matrix.parte }})
+    strategy:
+      fail-fast: false                 # que una parte rota no oculte las otras
+      matrix:
+        parte: [0, 1, 2, 3]            # tiene que ser 0..PARTES-1 (lo verifica test_ci_reparto.py)
     services:
       postgres:
         image: pgvector/pgvector:pg16     # trae la extensión `vector` que usa el RAG
@@ -43,21 +53,23 @@ jobs:
       PLATAFORMA_PASSWORD: ci-plataforma-descartable
       PLATAFORMA_CUIT: "20000000000"
       ENTORNO: pruebas
+      PARTES: "4"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest
-      - name: Correr cada test_*.py por separado
+      - name: Correr cada test_*.py de esta parte, por separado
         run: |
           set -e
           fallidos=""
-          for f in test_*.py; do
+          for f in $(python ci_reparto.py ${{ matrix.parte }} $PARTES); do
             echo "::group::$f"
             if python -m pytest "$f" -q; then :; else fallidos="$fallidos $f"; fi
             echo "::endgroup::"

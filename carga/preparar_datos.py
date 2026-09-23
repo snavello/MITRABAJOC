@@ -77,18 +77,15 @@ def sembrar_trabajadores(sindicato_id: int, nombre_sindicato: str):
             filas_csv.append((cuil, CLAVE))
             if cuil in existentes:
                 continue
-            t = Trabajador(
-                sindicato_id=sindicato_id, cuil=cuil,
-                nombre=f"Carga Sintetico {i:04d}", localidad="Buenos Aires",
-                provincia="Buenos Aires",
-            )
-            s.add(t)
-            cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
-            if not cuenta:
-                s.add(CuentaTrabajador(
-                    cuil=cuil, clave_hash=auth.hashear_clave(CLAVE),
-                    nombre=f"Carga Sintetico {i:04d}",
-                ))
+            s.add(Trabajador(sindicato_id=sindicato_id, cuil=cuil))
+            # Nombre y domicilio van en la PERSONA (ver CuentaTrabajador).
+            db.guardar_datos_personales(
+                s, cuil, nombre=f"Carga Sintetico {i:04d}",
+                domicilio={"localidad": "Buenos Aires", "provincia": "Buenos Aires"})
+            cuenta = db.asegurar_cuenta(s, cuil)
+            if not cuenta.clave_hash:
+                cuenta.clave_hash = auth.hashear_clave(CLAVE)
+                s.add(cuenta)
             creados += 1
             if creados % 200 == 0:
                 s.commit()

@@ -134,11 +134,13 @@ def _padron(sid: int, secs: dict, cuits: list, rnd) -> list:
             cuit = cuits[i % len(cuits)] if cuits else None
             s.add(db.Trabajador(
                 sindicato_id=sid, cuil=cuil,
-                nombre=f"{rnd.choice(NOMBRES)} {rnd.choice(APELLIDOS)}",
                 seccional_id=secs[seccional], cuit_empleador=cuit,
-                **geo.campos_para_guardar(zonas.get(secs[seccional], {}),
-                                          precision="sin_geo"),
                 activo=True, registrado=True))
+            # Nombre y domicilio van en la PERSONA (ver CuentaTrabajador).
+            db.guardar_datos_personales(
+                s, cuil, nombre=f"{rnd.choice(NOMBRES)} {rnd.choice(APELLIDOS)}",
+                domicilio=geo.campos_para_guardar(zonas.get(secs[seccional], {}),
+                                                  precision="sin_geo"))
             filas.append({"cuil": cuil, "seccional": seccional})
         s.commit()
     return filas

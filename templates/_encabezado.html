@@ -8,6 +8,19 @@
      CINTA   [ rol del panel ]                      [ Colm3na ]
      BARRA   [ logo del sindicato ]                 [ pantalla ]
 
+   Con una excepción, que es la app del AFILIADO (2026-09-23, pedido de
+   Sd): ahí la cinta no tiene rol que decir, así que era una franja entera
+   para un solo logo. Cuando no hay rol, la cinta NO se dibuja y Colm3na
+   baja a la misma línea del logo del gremio, a la derecha:
+
+     BARRA   [ logo del sindicato ]                 [ Colm3na ]
+
+   Y en esa app el nombre de la pantalla no se escribe: todas las pantallas
+   del afiliado llevan el mismo encabezado que la de inicio. La barra de
+   pestañas de abajo ya dice dónde estás. Esto NO cambia los otros tres
+   paneles, donde la cinta sí dice algo ("Panel de administración") y el
+   nombre de la pantalla se sigue actualizando al cambiar de pestaña.
+
    El estilo vive en marca.css (bloque "Encabezado normalizado"): esta
    plantilla solo decide QUÉ se muestra, nunca CÓMO se ve.
 
@@ -17,6 +30,8 @@
      enc_pantalla   nombre de la pantalla (derecha de la barra). En los
                     paneles con pestañas lo actualiza el JS al cambiar de
                     pestaña, así el encabezado dice siempre dónde estás.
+                    Se ignora en la app del afiliado (ver arriba): ahí ese
+                    lugar lo ocupa el logo de la plataforma.
      enc_volver     URL del link "Volver" (pantallas sin tira de pestañas).
      enc_fecha      True en el Panel Sindical: deja el hueco de la fecha,
                     con los ids que espera static/dashboard.js.
@@ -37,10 +52,14 @@
    plataforma, demo anónima sin sindicato), la cinta no repite el logo:
    quedaba Colm3na dos veces, una arriba de la otra. #}
 {% set _marca_es_plataforma = enc_plataforma or not sindicato %}
+{# App del afiliado: sin rol y con sindicato. Colm3na va en la barra y no
+   hay cinta ni nombre de pantalla. #}
+{% set _colmena_en_barra = not enc_rol and not _marca_es_plataforma %}
 <div class="marca-enc{% if enc_fija %} fija{% endif %}">
-  {# Sin rol y sin logo la cinta sería una franja vacía (demo anónima):
-     entonces no va. #}
-  {% if enc_rol or not _marca_es_plataforma %}
+  {# La cinta existe solo para decir el rol del panel. Sin rol no se
+     dibuja: en la app del afiliado sería una franja entera para un logo
+     (que ahora va en la barra), y en la demo anónima quedaría vacía. #}
+  {% if enc_rol %}
   <div class="marca-cinta">
     {% if enc_rol %}<span class="marca-rol">{{ enc_rol }}</span>{% endif %}
     {% if not _marca_es_plataforma %}
@@ -61,11 +80,20 @@
     {% if enc_fecha %}
     <div class="marca-fecha"><strong id="hoy-fecha"></strong><span id="rango-texto"></span></div>
     {% endif %}
+    {# El hueco del nombre de pantalla se renderiza aunque venga vacío: es
+       el que rellena el JS de los paneles con pestañas. #}
+    {% if not _colmena_en_barra %}
     <span class="marca-pantalla" id="marca-pantalla">{{ enc_pantalla or '' }}</span>
+    {% endif %}
     {% if enc_volver %}
     <a class="marca-volver" href="{{ enc_volver }}">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg> Volver
     </a>
+    {% endif %}
+    {# Colm3na al final para que quede pegado al borde derecho aun cuando
+       la pantalla tiene "Volver". #}
+    {% if _colmena_en_barra %}
+    <img class="marca-colmena en-barra" src="{{ _logo_plataforma }}" alt="Colm3na">
     {% endif %}
   </header>
 </div>

@@ -5011,3 +5011,616 @@ fue lo que delató a `permisos_efectivos`.
   observabilidad (Sentry, métricas de Render).
 - Hallazgo aparte, de la bitácora y no de este bloque: `test_fechas.py` falla
   por `generar_bitacora.py` línea 62 (llama a `datetime.now()`).
+
+## La Sala de mando: el esquema físico de la plataforma, vivo (2026-09-21)
+
+Rama `feature/esquema-fisico`. Nació como un boceto a mano en un cuaderno:
+Sd dibujó todos los componentes de la solución (PC de desarrollo con Docker,
+Claude Code, GitHub, la API de Render, los dos entornos con su web y su
+Postgres, la API de Claude en el medio, las cinco puertas de la app,
+Cloudflare delante, Grafana y Sentry avisando por mail) y pidió primero que
+Code lo descifrara, después que lo mejorara, y al final que fuera **una sola
+pantalla viva** para aprender, mostrar y manejar pendientes, renovaciones y
+costos.
+
+### Cómo se llegó al diseño
+
+1. **v1, cajitas y flechas** (`docs/esquema-fisico.html`, después
+   reemplazado): la lectura del boceto con una tabla "en el papel → en el
+   esquema" y las preguntas abiertas. Aclaraciones de Sd: "ADM" es
+   `/entornos`, y "porta" bajo la API de Render es la **portación** de
+   Pruebas a Demo (`promover_demo.py`).
+2. **v2**: siete zonas tintadas, ícono `$` en lo que se paga, primer clic
+   amplía la caja, y tres **recorridos con luz de neón** (un recibo de punta a
+   punta, un error o anomalía, el camino de un cambio) pensados para que un
+   inversor o un comercial entiendan la complejidad sin que sea "científico".
+3. **Tres propuestas de dirección visual** (`disenos/esquema-propuestas.html`,
+   fuera de git como todos los mockups): A "Sala de mando" (centro de
+   operaciones nocturno con barrido de radar), B "Plano de circuito" (chips,
+   pistas de cobre, serigrafía) y C "La colmena" (celdas hexagonales, fondo
+   claro). Sd eligió A.
+4. **v3 sobre A**: franja de color por zona en el lateral de cada caja, las
+   cajas reubicadas para que **las flechas sigan el flujo físico** (entrega
+   arriba de izquierda a derecha, personas a la izquierda, externos en el
+   medio porque los dos entornos los llaman, vigilancia abajo saliendo de
+   Pruebas y el aviso volviendo al equipo por el borde), **pelotitas
+   circulando** por las líneas punteadas y las de tráfico, KPIs más chicos
+   para darle espacio al radar, y **el halo del radar atado al estado
+   general** (verde / amarillo / rojo / violeta = sistema caído). Después:
+   KPIs de negocio, sin siglas personales, Cloudflare mostrando lo que va a
+   hacer (dominio a registrar, DNS, certificado TLS, WAF), GitHub, Grafana y
+   Cloudflare marcados como **pagos futuros** (`$` en contorno), zoom al 40%
+   y un foco de luz que sigue al puntero, tomado del login de plataforma
+   pero más chico y más sutil.
+
+### La versión viva
+
+Decisión de Sd: las cifras salen de Pruebas y "cuando se porte se porta
+todo". Por eso el HTML dejó de ser un archivo en `docs/` y pasó a ser una
+**página de la app**:
+
+- `esquema.py`: los indicadores en SQL agrupado (recibos totales y de hoy,
+  lecturas de IA de hoy con su costo a precio congelado, ingresos por rol en
+  los últimos 15 minutos como aproximación honesta a "usuarios en línea",
+  trámites abiertos y los que esperan al gremio, sindicatos activos, padrón y
+  registrados). Recibe la sesión, no la abre.
+- `GET /entornos/esquema` (`templates/esquema.html`) dibuja con los datos ya
+  inyectados, y `GET /api/entornos/esquema` los refresca cada minuto sumando
+  el **semáforo de Grafana** (`estado_alertas`): verde, amarillo, rojo, o
+  gris cuando no hay vigilancia configurada; si el pedido falla, la página
+  pasa sola a violeta, que es exactamente "la app no responde". El estado de
+  **cada entorno** sale de su propio `/api/version` (público, con CORS,
+  como lo hace la landing): responde = en línea con su versión. Hasta que
+  Demo tenga esa ruta promovida dice "sin respuesta", y es verdad.
+- El vencimiento más próximo sale de `observabilidad/config.json`
+  (`panel.renovaciones()`), la seguridad del tablero del XSK
+  (`por_resolucion` + cuántos bloquean). Lo único que sigue "a completar" es
+  el **gasto mensual**: los planes de Render y el costo de Claude no están
+  en ningún archivo todavía.
+- Mismo gate que toda la landing (`_exigir_pase`), 404 en la demo.
+- Catalogada en Recursos como el primer recurso **de tipo enlace del
+  repositorio** (`recursos.SEMILLA` con `url` en vez de `archivo`;
+  `del_repositorio` y `del_repositorio_por_clave` lo contemplan).
+- Tests: `test_esquema.py` (5). Plataforma 0.34.01.
+
+Pendientes anotados en la propia página: gasto mensual, decidir Telegram
+como canal y Cloudflare como perímetro (ver Pendientes de CLAUDE.md).
+
+### Los logos de cada producto (mismo día)
+
+Pedido de Sd: "un mini ícono de cada producto o servicio que usamos, para
+mejor identificación". Los íconos de línea dibujados a mano se reemplazaron
+por los **logos oficiales** en su color de marca, sobre un círculo claro
+(así GitHub, Anthropic, Render y Sentry, que son casi negros, también se
+ven). Salen de Simple Icons 16.32.0 (CC0) y van **vendoreados** en
+`static/marcas.svg`, un símbolo por marca, con sello `?v=`; jamás CDN. ARCA
+no está en ningún catálogo: Sd pasó el isotipo y va como PNG chico
+(`static/marcas/arca.png`, 96 px) recortado en círculo. Georef no tiene
+marca: lleva un mapita dibujado. Usuarios y equipo, un ícono genérico de
+persona. Un test verifica que cada marca declarada en la plantilla tenga su
+símbolo en el sprite y que los dos archivos se sirvan. Plataforma 0.34.02.
+
+**Recuperación de la rama.** Los cinco commits de la v3 y de la versión viva
+se habían hecho, sin advertirlo, sobre la rama `docs/xsanders-herramienta`
+(la copia de trabajo cambió de rama en el medio), así que el PR #42 mergeó
+solo la v1 y la v2. Se aplicaron con cherry-pick sobre `main` en la rama
+`feature/esquema-logos`, con la bitácora resuelta a mano (la línea de
+`main` más la de la Sala de mando).
+
+### Reorganización de `/entornos`: la Sala de mando como pestaña (mismo día)
+
+Pedido de Sd, apenas mergeada la Sala de mando: la pestaña **Actividad se
+va** (ya no tenía sentido: sus números están en la Sala, mejor contados) y
+**Observabilidad pasa a tener dos pastillas**: "Sala de mando" (este
+desarrollo, por defecto) y "Observación técnica" (la solapa de Grafana,
+Sentry y avisos tal cual estaba). La Sala va **incrustada en un iframe** a
+`/entornos/esquema?embebida=1`: la página sigue existiendo suelta (y
+enlazada desde Recursos), con su propio CSS y JS aislados del de la
+landing, y en modo embebido solo esconde el enlace "← Entornos". El iframe
+**se carga recién cuando se muestra**: abrir la landing no dibuja el esquema
+ni pide sus datos si nadie lo va a mirar. La pestaña Observabilidad dejó de
+estar deshabilitada fuera de Pruebas, porque la Sala de mando existe en
+cualquier entorno con landing; la pastilla técnica sigue diciendo que se
+administra desde Pruebas. Se fueron `templates/_actividad.html`, su CSS y
+su JS, la ruta `GET /api/entornos/actividad` y la variable
+`actividad_local`; `db.actividad_resumen` y `db.registrar_acceso` quedan
+(AccesoLog alimenta "usuarios en línea"). Tests: `test_actividad.py`
+ajustado (la pestaña y la API ya no existen), `test_esquema.py` (7).
+Plataforma 0.35.01.
+
+### El CI en cuatro partes paralelas (mismo día)
+
+Sd preguntó por qué el CI tardaba tanto: 10 minutos por corrida. Medido en
+el log: un minuto de preparación, cinco de pytest y **cuatro de arranque de
+proceso**, porque los 111 archivos corren uno por uno en su propio proceso
+(regla del proyecto, que no se toca). La suite se reparte ahora en **cuatro
+trabajos de GitHub Actions que corren a la vez**, cada uno con su Postgres
+y con cada archivo todavía en su propio proceso. `ci_reparto.py` decide qué
+archivo va a cuál (orden alfabético, módulo cuatro, determinista) y
+`test_ci_reparto.py` verifica que las partes no se pisen, cubran todos los
+archivos y que la matriz del workflow declare exactamente `PARTES`
+trabajos: agregar una quinta parte sin tocar la lista falla en el propio
+CI. `fail-fast: false` para que una parte rota no cancele las otras, y la
+caché de pip para ahorrarse la descarga de dependencias. Sin código de app.
+
+### El iframe decía "refused to connect" (mismo día)
+
+Sd entró a la pestaña nueva y vio un rectángulo blanco; el enlace de abajo
+sí abría. Causa: las cabeceras de seguridad de H-0007 prohíben enmarcar
+cualquier página de la app (`X-Frame-Options: DENY` y
+`frame-ancestors 'none'`), y el iframe de la landing es exactamente eso.
+La ruta `/entornos/esquema` ahora, **solo con `?embebida=1`**, responde
+`SAMEORIGIN` y `frame-ancestors 'self'`: se puede enmarcar desde la propia
+app y desde ningún otro sitio; suelta, sigue con `DENY`. El middleware usa
+`setdefault`, así que lo que pone la ruta manda. Test en `test_esquema.py`
+(8). Plataforma 0.35.02. Lección: cuando el CI no verifica una pantalla en
+el navegador real, un iframe hay que probarlo servido, no desde un archivo
+local (ahí el marco no carga por otro motivo y el error se confunde).
+
+### La Sala de mando a pantalla completa (mismo día)
+
+Sd la vio dentro de la pestaña, recortada entre el título de la landing y
+Recursos, y pidió lo contrario: **toda la pantalla, sin títulos ni
+Recursos, solo un botón para volver y el logo de Colm3na**. La Sala es
+ahora una **capa fija** sobre la landing (`.sala-full`, el iframe ocupa el
+viewport entero) con una cápsula flotante arriba a la derecha: el logo de
+plataforma y "← Volver a Entornos"; Esc también cierra. Se abre sola al
+entrar a Observabilidad (la pastilla por defecto) o al elegir la pastilla,
+y al volver queda en la pestaña una tarjeta con "Abrir la Sala de mando"
+para reabrirla sin salir. El iframe sigue cargándose recién la primera vez
+que se abre. Plataforma 0.35.03.
+
+### Indicadores compactos con burbuja (mismo día)
+
+Los indicadores de arriba crecían con el texto: la lista de sindicatos o el
+desglose de ingresos ocupaban tres o cuatro líneas y le robaban espacio al
+radar. Ahora cada tarjeta tiene **dos líneas fijas** (etiqueta y cifra en
+la primera, un resumen corto en la segunda, cortado con puntos suspensivos)
+y **el detalle completo sale en una burbuja al pasar el mouse**: la lista
+entera de sindicatos, el desglose por rol de los ingresos con la
+explicación de los 15 minutos, cómo renovar el token que vence, los
+hallazgos del XSK por estado, qué se paga y qué se pagará. Una sola burbuja
+para toda la página, que sigue al puntero y se acomoda para no salirse de la
+pantalla. Plataforma 0.35.04.
+
+### Cabecera de una línea y botón circular de volver (mismo día)
+
+Pedido de Sd: la cabecera ocupaba dos renglones con una bajada larga y las
+tarjetas desperdiciaban ancho. Ahora la cabecera es **una sola línea**: el
+logo de Colm3na y el título a la izquierda, el semáforo de estado general a
+la derecha, sin bajada. Las tarjetas se reparten en las columnas que entren
+(`auto-fit`, mínimo 168 px) con menos aire lateral, así en una pantalla
+ancha van las diez en una fila. Y el volver es un **botón circular flotante
+abajo a la derecha**, siempre visible: embebida en la landing le pide al
+padre por `postMessage` (mismo origen) que cierre la capa; suelta, va a
+`/entornos`. La cápsula que la landing dibujaba arriba a la derecha se fue,
+porque la Sala trae su logo y su botón. Plataforma 0.35.05.
+
+### La ficha flota sobre el radar (mismo día)
+
+Sd: el panel de la derecha le quitaba un cuarto del ancho al radar y el
+esquema seguía sin verse entero. La ficha ya no es una columna: es un
+**panel flotante** que aparece al pasar el mouse por una caja, **del lado
+contrario a la caja** para no taparla (a la derecha si la caja está en la
+mitad izquierda y viceversa), alineado a su altura, y desaparece al salir.
+Con un clic se **fija** (borde ámbar, se pueden usar sus botones) hasta
+otro clic en la caja o en el fondo. Mientras corre un recorrido, la
+narración va en el mismo panel, fijado a la derecha. Los tres botones de
+recorrido pasaron a la cabecera, entre el título y el semáforo, y el
+título dice solo "Sala de mando": el logo al lado ya dice Colm3na. El radar
+ocupa ahora todo el ancho. Plataforma 0.35.06.
+
+### La Sala entra en la ventana, y "solo radar" a pantalla completa (mismo día)
+
+Sd reportó tres cosas: el botón de volver "desapareció", las tarjetas
+flotantes salían cortadas a los costados, y quería un modo de pantalla
+completa real (sin barra del navegador ni del sistema, solo el radar) que
+se cierre con el mismo botón de volver. Reproducido con la app servida en
+local y la Sala dentro del iframe: **la página medía 1.146 px en una
+ventana de 900**, así que el tercio inferior del radar quedaba afuera, una
+caja ampliada del borde inferior (Telegram) se dibujaba por debajo del
+viewport y el botón flotante caía sobre esa zona cortada. La raíz era el
+alto: `.marco` es ahora una columna de `100vh` sin scroll (cabecera y
+tarjetas miden lo suyo, el radar se queda con el resto y el SVG se escala
+para caber entero), así nada queda fuera de la ventana a ningún tamaño.
+
+**Pantalla completa "solo radar"**: un segundo botón redondo (cian, encima
+del de volver) pide el fullscreen del navegador. Embebida en la landing lo
+pide el padre sobre su capa por `postMessage` (la activación del clic en
+el iframe alcanza a los ancestros del mismo origen; el iframe lleva
+`allow="fullscreen"` igual) y avisa al iframe cuando entra y sale; suelta,
+lo pide la propia página. En ese modo `body.solo-radar` esconde cabecera,
+tarjetas y leyenda: queda el radar a toda la pantalla. **El botón de volver
+sale de la pantalla completa** si está en ella, y si no, como antes,
+cierra la capa o vuelve a `/entornos`. Plataforma 0.35.07.
+
+### Los tres ▶ como botones circulares dentro del radar (mismo día)
+
+Sd: que los tres recorridos sean botones circulares de play, cada uno de su
+color, con un rótulo corto (Recibo, Error, Código), y que sigan a mano en
+la pantalla completa. Salieron de la cabecera (que en modo "solo radar" se
+esconde) y viven ahora **adentro del radar**, abajo a la izquierda:
+ámbar, rojo y cian, con el rótulo debajo en condensada; el que está
+corriendo queda encendido con un halo de su color hasta que termina o se
+detiene. Plataforma 0.35.08.
+
+### Los indicadores se mudan a Observación técnica; la Sala es solo el radar (mismo día)
+
+Última vuelta de Sd tras mirar todo con calma: los indicadores de negocio
+pasan a la pastilla **Observación técnica** (sin repetir lo que esa solapa
+ya tenía: el semáforo, el uptime y los vencimientos de tokens quedan donde
+estaban; se suman recibos leídos, usuarios en línea, trámites abiertos,
+sindicatos activos, afiliados registrados y gasto del mes, leídos de
+`/api/entornos/esquema` con las tarjetas de siempre de la landing). Con eso
+la Sala embebida es **solo el radar**, sin cabecera ni tarjetas, y
+**elegirla abre directamente en pantalla completa** del navegador (el clic
+en la pastilla es la activación que el navegador exige; al entrar por el
+hash de la URL no hay clic y queda la capa sola). **Volver deja abierta la
+pastilla Observación técnica**, no el menú principal: sale del fullscreen,
+cierra la capa y cambia la pastilla. Suelta (desde Recursos) la Sala
+conserva la cabecera y el botón de pantalla completa. Plataforma 0.35.09.
+
+## El video "Panel de Control": la Sala de mando en 20 segundos (2026-09-21/22)
+
+Pedido de Sd: un video dinámico de 15–20 s de la Sala de mando con el tango
+electrónico del proyecto. Los play de Recibo y de Código encienden los
+circuitos, los clics amplían cajas, un tramo va en vuelo 3D siguiendo el
+circuito, hay partes a velocidad normal, aceleradas y en cámara lenta, y los
+cambios de imagen caen al ritmo de la música. Arranca con el logo sobre azul
+y "Panel de Control / Arquitectura de Desarrollo y Operación", y cierra con
+el logo. Está en Recursos (`video-panel-de-control`); las fuentes para
+regenerarlo, en `disenos/video-panel-control/` (fuera de git, con su `LEEME.md`).
+
+**La música no sale del video anterior.** `mi-trabajo-recibos-tramites.mp4`
+tiene locución encima ("eso no va", Sd), así que Sd pasó el tema limpio
+(1:58, 117,5 BPM). Se usa el tramo 90,836 → 110,836 s: arranca en inicio de
+frase, trae los cortes secos de 93–97 s y termina con el remate del tema, así
+el video termina cuando termina el tango, sin fundido inventado. Sin voz que
+cuidar va a volumen pleno: −10,8 LUFS con el pico a −1,1 dB. Se probó
+dejarlo en −9,2 LUFS y la compresión AAC lo pasaba de 0 dB (+0,3 dBTP): lo que
+HyperFrames bajó al mezclar era justo el margen para no saturar.
+
+**Por qué se filma cuadro por cuadro y no se graba la pantalla.** La Sala
+anima con `setTimeout` (los pasos de los recorridos), CSS (el barrido, el
+neón) y SMIL (las pelotitas, los LEDs). Nada de eso se puede ubicar en un
+instante dado, que es lo que necesita un editor de video, y grabar la
+pantalla en vivo da cuadros irregulares y texto borroso. `captura/vt.js` se
+inyecta antes que la página y reemplaza el reloj: temporizadores, `Date` y
+`performance.now` avanzan solo cuando el filmador lo pide, las animaciones CSS
+se pausan y se ubican a mano en cada cuadro, y las SMIL con `setCurrentTime`.
+Con eso la cámara lenta y el acelerado son reales (cada cuadro es la página
+dibujada en ese instante), y los pasos de cada recorrido se reparten
+(`pasos[k].ms`) para que el neón salte exactamente en el golpe de la música.
+La cámara (zoom 2D y vuelo 3D con `perspective` sobre el `<svg>`) deja quietos
+los botones, la ficha y el cursor, que se dibuja aparte. Cada cuadro se toma a
+3840×2160 y se reduce a 1080p, y el desenfoque de movimiento promedia 4 a 6
+subcuadros (con 3 se veían copias fantasma). La página se renderiza suelta
+desde `templates/esquema.html` de `main`, sin servidor ni login: es el mismo
+código que corre en Pruebas.
+
+**El vuelo 3D.** La línea de Desarrollo está en el borde superior del dibujo:
+con la cámara mirando hacia adelante sobre ella, medio cuadro quedaba en negro
+(más allá del borde no hay nada). Se subió la línea al tercio superior del
+cuadro, se bajó la inclinación a 50°, se ocultó el barrido del radar durante
+el vuelo (quieto sobre el plano inclinado parecía un triángulo) y se dibujó una
+grilla de piso que acompaña al plano hasta el horizonte.
+
+## Una persona, un domicilio (2026-09-22)
+
+Lo reportó Sd así: "he detectado una inconsistencia en la informacion de
+personal del trabajador, que puede tener un origen mas complejo que un error
+de codigo". Tres síntomas: el alta que hace el sindicato no pide lo mismo que
+el afiliado completa después en su perfil; la carga de foto de perfil falla; y
+el CUIL 20202790411 parecía tener una dirección en su perfil y otra en la
+información del sindicato, "pareciera que hay algo guardado en dos lugares".
+
+Tenía razón en el diagnóstico de fondo, y las tres cosas resultaron ser
+problemas distintos.
+
+### La foto: la CSP no dejaba pasar los blob
+
+No era de AEFIP ni de ningún sindicato: estaba roto para todos desde el
+2026-09-20, el día que XSK estrenó las cabeceras de seguridad (H-0007).
+`main.CSP` declaraba `img-src 'self' data: https:`, sin `blob:`.
+
+Para no subir una foto de 4 MB al servidor, `redimensionarFotoPerfil()`
+(portada.html) la achica en un `<canvas>`, y para eso primero tiene que
+cargarla en un `<img src="blob:...">` fabricado con
+`URL.createObjectURL(archivo)`. Sin `blob:` en `img-src`, el navegador bloquea
+esa carga, salta `img.onerror` y la promesa se rechaza con "No se pudo leer la
+imagen".
+
+Lo que hace que el bug sea difícil de encontrar desde el servidor: **el
+archivo nunca sale de la máquina de la persona**. No hay request, no hay error
+4xx, no hay nada en los logs de Render ni en Sentry. Solo un cartel en la
+pantalla. Y la foto que Sd ya tenía cargada se seguía viendo, porque era
+anterior a la CSP: el síntoma era "no puedo cambiarla", no "no tengo".
+
+Se confirmó levantando un servidor mínimo con esa misma cabecera y un `<img>`
+apuntado a un blob: BLOB_BLOQUEADO con la CSP de entonces, BLOB_OK agregando
+`blob:`. El mismo defecto afectaba a la foto del empleador
+(`empresa_portada.html`) y a las miniaturas y videos de Recursos
+(`entornos.html`), que además necesitan `media-src`.
+
+Fix: `img-src 'self' data: blob: https:` y `media-src 'self' data: blob:`. Un
+`blob:` no es una fuente externa -- lo fabrica el propio documento a partir de
+un archivo que la persona eligió --, así que no abre ninguna puerta que
+`data:` no tuviera ya abierta. Regresión en `test_xsk_correcciones.py`, que
+hasta ese día no probaba el CONTENIDO de la CSP, solo su presencia.
+
+### Las dos direcciones eran dos entornos
+
+En Pruebas, el CUIL 20202790411 tiene un solo empadronamiento y un solo
+domicilio ("pueyrredon 1362, barrio norte"). En Demo, el mismo CUIL tiene "La
+rioja 893" con altura "892" y ciudad "Caba" -- la basura típica del formulario
+de texto libre de antes. Demo corre la rama `demo`, que quedó en el esquema
+viejo (columnas `piso`/`ciudad`, sin CP ni coordenadas): son dos bases
+distintas con dos versiones distintas de la app, no dos lugares dentro de una.
+
+### Pero abajo había un problema real, y era el que Sd intuía
+
+`Trabajador` es una fila POR SINDICATO. Nombre, domicilio, teléfono y mail
+vivían ahí, así que una persona empadronada en dos gremios tenía **dos
+copias** de sus datos personales. Y las cuatro puertas por las que entran esos
+datos no escribían igual:
+
+- `/trabajador/registro` copiaba el domicilio a **todos** los
+  empadronamientos del CUIL, con el comentario "es una sola persona y vive en
+  un solo lugar".
+- `/api/perfil` escribía **solo en el sindicato activo**, con el comentario
+  "no hay un domicilio único de la persona en este modelo".
+
+Dos rutas del mismo archivo, con dos modelos mentales opuestos y un comentario
+cada una explicando el suyo. La misma persona editando en dos pantallas dejaba
+dos resultados distintos, y nada indicaba cuál era el bueno. La divergencia ya
+existía: un CUIL en Pruebas, uno en Demo y uno en la base local, los tres con
+dos nombres y dos direcciones.
+
+Había además una **tercera copia**: `CuentaTrabajador.nombre`, que existía, la
+llenaba solo el cargador de datos sintéticos y **no la leía nadie** en toda la
+app. La cuenta de Sd la tenía vacía mientras el padrón decía "Sandro Navello".
+
+### La decisión: la persona es la dueña
+
+Sd eligió, entre tres opciones, que el dato sea de la persona y exista una
+sola vez. Nombre, domicilio, teléfono y mail se mudaron a `CuentaTrabajador`;
+`Trabajador` quedó con lo que de verdad cambia de un gremio a otro: seccional,
+credencial, CUIT del empleador, activo, registrado.
+
+**La pieza que hace que "un solo lugar" sea cierto**: la fila de la persona
+existe desde que el CUIL entra al PADRÓN, no desde que se registra. Si no, el
+alta del admin necesitaría un segundo lugar donde escribir los datos de quien
+todavía no tiene cuenta, y volveríamos al problema. Por eso `clave_hash` puede
+estar vacío: vacío significa "todavía no eligió clave", no "no existe", y
+`auth.verificar_clave` ya devolvía False con un hash vacío, así que ninguna de
+esas filas sirve para entrar. Quién se registró lo sigue diciendo
+`Trabajador.registrado`, que es por sindicato y alimenta el KPI del panel.
+
+Toda escritura pasa por `db.guardar_datos_personales` (que ignora lo que llega
+en `None`, así una pantalla que edita el domicilio no borra el teléfono que
+cargó otra) y `db.asegurar_cuenta`. Toda lectura del padrón, por
+`db.padron_del_sindicato(s, sid)` -- que recibe la sesión abierta, como manda
+la regla de una sola conexión por request -- o por un JOIN explícito por CUIL
+en las consultas del Panel Sindical, las encuestas y el ruteo de
+notificaciones por provincia.
+
+**Consecuencia buscada, y dicha en pantalla**: lo que corrige el admin de un
+gremio lo ven el afiliado y los otros gremios. La pestaña Trabajadores lo
+explica en dos renglones, arriba de la tabla, en vez de dejar que se descubra.
+
+**La migración (a7e3f90b5c21) consolida lo que ya diverge** con una regla para
+el domicilio y otra para el resto. El domicilio se copia **entero** desde un
+solo empadronamiento -- son seis campos que valen como un dato, y fusionarlos
+daría una dirección que no existe en ninguna parte, la calle de una ciudad con
+la localidad de otra --, eligiendo la fila más completa: primero la que tiene
+coordenadas, después la que tiene más campos cargados y, empatando, la del
+sindicato más viejo. El nombre, el teléfono y el mail se resuelven **uno por
+uno**, con el primer valor no vacío por orden de sindicato: no son parte del
+bloque, y atarlos a él haría perder el teléfono que cargó un gremio solo
+porque la dirección buena la tenía el otro. Se probó recreando a mano la
+divergencia en la base local (un gremio con el teléfono y nada más, el otro
+con nombre y domicilio completo con coordenadas) y el resultado tomó de cada
+uno lo que correspondía.
+
+`downgrade` devuelve las columnas y copia lo consolidado a todos los
+empadronamientos: el esquema vuelve, la divergencia anterior no. Es el punto
+del cambio.
+
+**El costo del cambio fueron los tests**: 45 fixtures en 40 archivos creaban
+`Trabajador(nombre=..., provincia=...)`. Se reescribieron con un script que
+usa `ast` para ubicar cada llamada y sus keywords por posición y hace cirugía
+sobre el texto, para no perder formato ni comentarios. Tuvo un bug que vale
+anotar: **`ast` cuenta las columnas en bytes UTF-8 y Python corta strings por
+caracteres**, así que sobre una línea con una tilde (`provincia="Córdoba"`) el
+corte se iba uno de más y se comía un paréntesis.
+
+### Y el registro pasó a pedir lo mismo que el perfil
+
+Era el otro pedido de Sd. El registro pedía CUIL, clave y domicilio; el perfil
+pedía además nombre, teléfono y mail. Quien se registraba abría "Tu perfil" un
+minuto después y se encontraba con un formulario que no había visto nunca.
+Ahora pide los mismos campos, en el mismo orden y con la misma marca de
+obligatorio y opcional (teléfono y mail estaban sin marcar en el perfil y en
+el alta del admin: se marcaron en los tres).
+
+Dos diferencias que quedan a propósito: el registro pide además CUIL y clave
+(es un alta), y el perfil recibe además el globo del mapa, que no está en el
+registro porque ubicar un punto es una tarea de escritorio y el alta es el
+momento de menos paciencia de toda la app.
+
+Y una regla que tuvo que quedar escrita: **en el registro, un campo vacío no
+borra lo que el padrón ya tenía**. El formulario no puede mostrar lo que el
+sindicato sabe de un CUIL (lo averiguaría cualquiera tipeando CUILes ajenos),
+así que dejar el teléfono en blanco significa "no lo completé". En el perfil
+es al revés: ahí se ve lo cargado y borrarlo es una decisión.
+
+`test_datos_personales.py` verifica que las dos pantallas pidan lo mismo
+comparando la FIRMA de las dos rutas y no el HTML: es el contrato de verdad, y
+un campo que el formulario muestre pero el servidor no reciba se pierde igual
+sin avisar.
+
+### Lo que quedó afuera
+
+**El empleador tiene exactamente el mismo problema y no se tocó.** `Empleador`
+es una fila por sindicato con `razon_social`, `domicilio`, `telefono`,
+`provincia` y `mail`, y `/api/empresa/perfil` escribe solo en el sindicato
+activo -- igual que el perfil del trabajador antes de este cambio. Peor
+todavía: su `domicilio` sigue siendo un texto libre, nunca se migró al bloque
+estructurado de `geo.CAMPOS_DOMICILIO`. Quedó anotado en BACKLOG.md; hacerlo
+en el mismo bloque duplicaba el tamaño del cambio y el pedido era sobre el
+trabajador.
+
+
+## La portada del afiliado, esquema "Tablero" (2026-09-23)
+
+El pedido de Sd fue "en escritorio las tarjetas son demasiado largas y queda
+mucho espacio, y las letras de los títulos son chicas y difíciles de leer".
+La causa no era de gusto y estaba en una línea: **`.pad` no tenía ancho
+máximo**. En un monitor de 1920 la grilla de `.tarjetas` (3 columnas arriba
+de 700 px) repartía todo el ancho disponible, así que cada tarjeta terminaba
+midiendo unos 600 px, con un `min-height: 88px`, el ícono arriba, el texto
+abajo y un título de 13 px en el medio de todo ese aire. No era "poca
+letra": era una tarjeta que se estiraba sin tope.
+
+**Tres mockups antes de tocar código**, en `disenos/portadas-propuestas.html`
+(la carpeta está en `.gitignore`): A "Respiro" (la de hoy, con tope de ancho
+y tipografía más grande), B "Tablero" (dos columnas: acción a la izquierda,
+novedades a la derecha) y C "Mesa de trabajo" (agrupada por familias, pensada
+por el panel del sindicato con sus 15 accesos). Cada propuesta se renderiza
+dentro de un `<iframe>` de 1440 y otro de 390 al mismo tiempo, así las media
+queries responden al ancho del iframe y no al de la página: lo que se ve en
+el panel "Escritorio" es literalmente el CSS a 1440. Sd eligió la B.
+
+### Qué cambió
+
+- **Tope de 1320 px centrado** y dos columnas arriba de 1040 px
+  (`minmax(0,1fr) 352px`). Abajo de eso se apila y queda como antes.
+- **Los accesos son horizontales**: ícono en una pastilla a la izquierda,
+  título y estado a la derecha, flecha al final. Es la forma que llena el
+  ancho en vez de dejar hueco, y el título sube de 13 a 19 px.
+- **La tarjeta principal dice números reales.** `db.resumen_recibos_trabajador`
+  devuelve cuántos recibos verificó en lo que va del año y cómo salió el
+  último; la tarjeta muestra "72 · recibos verificados este año" y "Julio
+  2026 · con diferencias para revisar". Antes decía "Revisá tus aportes", que
+  no le informaba al afiliado nada que él no supiera ya. Sin ningún recibo
+  todavía no inventa un cero: cambia el texto e invita a subir el primero.
+- **Novedades y Beneficios suben al riel**, donde se ven al entrar, en vez de
+  quedar al final de un scroll largo.
+
+### Las dos cosas que Sd pidió conservar
+
+**La foto de la noticia.** En la primera versión de la propuesta B el riel las
+había reducido a un hilo de texto. La miniatura ya existía (44 px,
+`/noticia-imagen/{id}/1`): ahora sube a 62 px y la más nueva lleva filo de
+acento, el mismo recurso que ya usa `.notif-item.no-leida`. La noticia sin
+imagen sigue cayendo en el ícono genérico, del mismo tamaño, para que los
+títulos queden alineados.
+
+**El carrusel de beneficios**, rehecho como pieza de marketing: imagen a
+sangre con velo oscuro de abajo hacia arriba, el rubro como chip en acento,
+la descripción en condensada cortada a dos renglones (la escribe el sindicato
+y puede ser larga; si no, la tarjeta cambia de alto entre una lámina y la
+siguiente) y la vigencia al pie. La fluidez son cinco cosas concretas:
+deslizamiento con curva de salida de 620 ms, **zoom lento sobre la lámina
+activa** (Ken Burns de 7 s, que es lo que hace que una tarjeta quieta parezca
+viva), barra que muestra cuánto falta para la que sigue, arrastre con el dedo
+que sigue la mano y decide al soltar, y **pausa al pasar el mouse** -- nadie
+quiere que se le mueva lo que está leyendo. Las cinco se apagan con
+`prefers-reduced-motion`.
+
+Dos decisiones del carrusel que conviene recordar:
+
+- **Clases propias (`.car-*`) y no las `.carrusel*` de marca.css.** Esas las
+  sigue usando la vista previa del panel de admin y no tienen por qué cambiar
+  juntas.
+- **La imagen pasó de `contain` sobre una tira de 88 px a `cover` sobre
+  16/11.** Las imágenes cargadas hasta ahora se van a ver recortadas si son
+  verticales: hay que pedirle al sindicato que las suba apaisadas.
+
+### La profundidad, sin un solo color nuevo
+
+Sd trajo como referencia una app de club de pádel hecha con Code. Lo que se
+tomó de ahí son cuatro recursos, ninguno de los cuales agrega color: dos
+**manchas de luz difuminadas** (que son el primario y el acento del PROPIO
+sindicato, al 42% y 16% con blur de 110 px), una **retícula de colmena** muy
+tenue de fondo -- el equivalente nuestro a sus líneas de cancha --, la
+**trama diagonal más fina** (1 px cada 6) y **radios más grandes** en las
+piezas principales. En la portada clara las manchas se apagan: dos blobs
+sobre papel se ven como una mancha de impresión.
+
+### Lo que se verificó
+
+Contra el local con Postgres: **La Bancaria** (con logo y con 20 beneficios
+sintéticos) en 1440 y en 375, la variante clara forzada por DOM, y el
+carrusel medido en vivo -- avanzó solo a la quinta lámina, `carMover(1)`
+pasó a la sexta, los puntos siguieron el estado y la barra corrió. Tests:
+`test_portada` (12, cuatro nuevos: números reales, el caso sin recibos, la
+foto de la noticia y el carrusel), `test_beneficios`, `test_encuestas`,
+`test_modulos`, `test_noticias`, `test_notificaciones`, `test_modales`,
+`test_fechas`, `test_datos_personales` y `test_codigos_error`.
+
+Dos tests había que tocarlos y valía la pena entender por qué. El de
+beneficios afirmaba las clases viejas del carrusel (prueba lo mismo de
+siempre: con una sola lámina no hay a dónde ir, así que no se dibujan ni
+flechas ni puntos). Y el de encuestas buscaba `class="acceso" href="/app?tab=
+encuestas"`; al aflojarlo al href pelado empezó a dar falso negativo, porque
+ese mismo href aparece **dentro de un template literal del JS** de
+notificaciones. Quedó con la clase nueva.
+
+### Lo que NO cambió
+
+Las portadas del sindicato, la empresa y la plataforma siguen con el esquema
+anterior (`.tarjetas` + `.acceso` de marca.css). El pedido era sobre la del
+afiliado y llevarlas a las cuatro de una vez es otro bloque.
+
+
+### El mismo esquema en las otras tres portadas (2026-09-23)
+
+Sd pidió llevarlo a sindicato, plataforma y empresa, en ese orden. Lo que
+obligó a pensar antes de copiar fue **dónde poner el CSS**: cuatro copias del
+mismo bloque en cuatro `<style>` es exactamente lo que este proyecto ya vivió
+con el encabezado. Las cuatro portadas cargan `marca.css`, así que ahí va.
+
+**Y ahí apareció el problema de verdad**: `.fila`, `.filas`, `.pastilla`,
+`.mini`, `.txt`, `.nov` y `.sec` **ya existen** en admin.html, dashboard.js,
+encuesta_resultados.js, entornos.html y empresa.html. `marca.css` la carga
+casi toda la app, así que subir esas clases sin prefijo habría pisado media
+docena de pantallas sin que ningún test lo notara (son estilos, no
+comportamiento). Por eso todo el bloque quedó prefijado **`pt-`**
+(`.pt-fila`, `.pt-pastilla`, `.pt-hero`…), y el renombre se hizo solo sobre
+selectores CSS y atributos `class="..."`, nunca sobre texto libre: "una fila
+por sindicato" y "dos columnas" son frases que aparecen en los comentarios.
+
+Cada portada quedó con lo suyo:
+
+- **Sindicato**: hero para el Panel Sindical (sin cifra propia -- la portada
+  no tiene de dónde sacarla sin pegarle a la base, y el Panel es justo la
+  pantalla que las trae todas) y los 14 accesos restantes en **tres
+  columnas** (`.pt-tres`, un modificador para las portadas sin riel: en dos
+  columnas 15 accesos son una lista larguísima). Se fue la estrella de la
+  esquina del módulo nuevo: en una tarjeta chica marcaba algo, sobre el hero
+  es ruido. La etiqueta NUEVO queda.
+- **Plataforma**: hero para Sindicatos, que es lo que se hace ahí el 90% de
+  las veces, y los otros siete accesos en tres columnas.
+- **Empresa**: sin hero. Son dos accesos y ninguno es "el principal"; un hero
+  ahí sería una jerarquía inventada. De paso se estrenó el globo de novedades
+  de Trámites, que **ya se contaba en el contexto y no se mostraba**: un
+  expediente con respuesta del sindicato no se veía hasta entrar.
+
+### El círculo de perfil del sindicato
+
+Sd lo pidió "en el mismo lugar" que en la app del afiliado. Es de **lectura**:
+abre una ficha con nombre, usuario, CUIL, rol, seccional, área y sindicato.
+No edita nada -- cambiar la clave de un usuario del panel sigue siendo cosa
+de plataforma, y los permisos los da el Super Admin desde Áreas y Usuarios.
+
+La foto sale de `CuentaTrabajador`, o sea **del CUIL**, no de una copia
+guardada en `UsuarioSindicato`: quien trabaja en el gremio y además está
+afiliado tiene una sola foto, igual que tiene un solo domicilio. Quien no
+está en el padrón -- que es un caso real y no un error, como Elena Vidal de
+Prensa en la demo -- simplemente no tiene, y se ve el ícono.
+
+Un detalle que costó encontrar: `.fila-hola` (el flex que pone el saludo y el
+círculo en la misma línea) vivía en el `<style>` de portada.html y de
+empresa_portada.html. Al llevar el esquema al sindicato, el círculo caía
+debajo del saludo. Ahora está en `marca.css` con el resto.

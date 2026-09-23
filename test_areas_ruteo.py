@@ -54,12 +54,15 @@ with db.get_session() as s:
         s.add(PermisoArea(area_id=a, seccion="tramites_recibidos"))
 
     # Trabajadores: uno por seccional, y uno SIN seccional cargada.
-    s.add(Trabajador(sindicato_id=SID, cuil="20300000001", nombre="Rosarino",
+    s.add(Trabajador(sindicato_id=SID, cuil="20300000001",
                      seccional_id=SEC_ROSARIO, activo=True, registrado=True))
-    s.add(Trabajador(sindicato_id=SID, cuil="20300000002", nombre="Cordobés",
+    db.guardar_datos_personales(s, "20300000001", nombre="Rosarino")
+    s.add(Trabajador(sindicato_id=SID, cuil="20300000002",
                      seccional_id=SEC_CORDOBA, activo=True, registrado=True))
-    s.add(Trabajador(sindicato_id=SID, cuil="20300000003", nombre="Sin Seccional",
+    db.guardar_datos_personales(s, "20300000002", nombre="Cordobés")
+    s.add(Trabajador(sindicato_id=SID, cuil="20300000003",
                      seccional_id=None, activo=True, registrado=True))
+    db.guardar_datos_personales(s, "20300000003", nombre="Sin Seccional")
 
     s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111110", cuil="20111111110",
                            nombre="Marta", clave_hash=auth.hashear_clave("marta"),
