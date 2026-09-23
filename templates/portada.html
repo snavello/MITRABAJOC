@@ -39,223 +39,10 @@
      body.claro. Ver también .grano/.grano-osc/.grano-clara en marca.css,
      aplicadas al <body> (el .marca-enc y el .pad tienen position+z-index
      en marca.css para quedar por encima del grano). ---------- */
-  /* ---------- Portada v2, esquema "Tablero" (2026-09-23) ----------
-     Dos columnas en escritorio: a la izquierda lo que HACÉS, a la derecha
-     lo que PASÓ. Antes todo bajaba en una tira vertical y `.pad` no tenía
-     ancho máximo, así que en un monitor de 1920 la grilla de tarjetas
-     repartía todo el ancho: cada una medía ~600px con un título de 13px
-     adentro -- mucho aire y poca letra. Los dos cambios de fondo son ese
-     tope de ancho y que los accesos pasen a ser tarjetas HORIZONTALES
-     (ícono a la izquierda, texto a la derecha), que es la forma que llena
-     el ancho en vez de dejar hueco. Novedades y Beneficios suben al riel,
-     donde se ven al entrar, en vez de quedar al final de un scroll largo.
+  /* El esquema "Tablero" de las portadas vive en marca.css
+     (bloque "Portadas v2"): lo comparten las cuatro apps. Acá quedan
+     solo las reglas propias de la portada del afiliado. */
 
-     Todo lleva su variante clara: `marca.portada_clara` es una opción POR
-     SINDICATO, no una preferencia del navegador. ---------- */
-  .pad { max-width: 1320px; margin: 0 auto; padding: 22px 15px 100px; }
-  @media (min-width: 900px) { .pad { padding: 26px 26px 100px; } }
-
-  /* Ambiente: dos manchas de luz difuminadas y una retícula de colmena muy
-     tenue. Ningún color nuevo -- las manchas son el primario y el acento
-     del propio sindicato. En la portada clara solo queda la retícula: dos
-     blobs sobre papel se ven como una mancha de impresión. */
-  .ambiente { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
-  .ambiente .blob { position: absolute; border-radius: 50%; }
-  .ambiente .b1 { right: -140px; top: -90px; width: 520px; height: 520px;
-    background: var(--marca-primario); opacity: .42; filter: blur(110px); }
-  .ambiente .b2 { left: -160px; top: 44%; width: 440px; height: 440px;
-    background: var(--marca-acento); opacity: .16; filter: blur(120px); }
-  .ambiente .reticula { position: absolute; inset: 0; opacity: .09;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='1'%3E%3Cpath d='M28 1 55 16.5v31L28 63 1 47.5v-31z'/%3E%3Cpath d='M28 63v33'/%3E%3C/g%3E%3C/svg%3E"); }
-  body.claro .ambiente .blob { display: none; }
-  body.claro .ambiente .reticula { opacity: .05;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'%3E%3Cg fill='none' stroke='%23152238' stroke-width='1'%3E%3Cpath d='M28 1 55 16.5v31L28 63 1 47.5v-31z'/%3E%3Cpath d='M28 63v33'/%3E%3C/g%3E%3C/svg%3E"); }
-
-  .fila-hola { align-items: flex-start; }
-  .hola-baj { font-size: 12.5px; color: var(--sobre-base-mute); margin-top: 4px; }
-  body.claro .hola-baj { color: var(--gris); }
-
-  .dos { display: grid; grid-template-columns: 1fr; gap: 26px; margin-top: 20px; }
-  @media (min-width: 1040px) { .dos { grid-template-columns: minmax(0, 1fr) 352px; gap: 30px; } }
-
-  /* ---- Vidrio de la portada: una sola clase para las dos variantes, así
-     ninguna pieza se olvida de la clara. ---- */
-  .vid { position: relative; overflow: hidden;
-    background: linear-gradient(155deg, rgba(255,255,255,.14), rgba(255,255,255,.02) 55%, rgba(255,255,255,.06));
-    border: 1px solid rgba(255,255,255,.14); backdrop-filter: blur(3px) saturate(1.1); }
-  .vid::after { content: ""; position: absolute; top: -60%; left: -30%; width: 90%; height: 90%;
-    background: linear-gradient(120deg, rgba(255,255,255,.22), transparent 60%);
-    transform: rotate(-18deg); pointer-events: none; }
-  body.claro .vid { background: linear-gradient(160deg, #ffffff, var(--papel));
-    border-color: var(--linea); box-shadow: 0 1px 0 rgba(20,15,5,.03); color: var(--tinta); }
-  body.claro .vid::after { display: none; }
-
-  /* ---- La tarjeta principal. Dice un NÚMERO real (cuántos recibos
-     verificó este año) y cómo salió el último: "Revisá tus aportes" no le
-     informaba nada al afiliado que él no supiera ya. ---- */
-  .hero { position: relative; display: block; overflow: hidden; border-radius: 18px;
-    padding: 22px 24px; color: var(--marca-base); text-decoration: none;
-    background: linear-gradient(140deg, color-mix(in srgb, var(--marca-acento) 95%, white),
-      color-mix(in srgb, var(--marca-acento) 55%, var(--marca-base))); }
-  body.claro .hero { background: linear-gradient(140deg, color-mix(in srgb, var(--marca-acento) 96%, white),
-      color-mix(in srgb, var(--marca-acento) 58%, white)); }
-  .hero::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .55;
-    background-image: repeating-linear-gradient(115deg, rgba(255,255,255,.06) 0 1px, transparent 1px 6px); }
-  .hero > * { position: relative; }
-  .hero-k { display: block; font-size: 10.5px; letter-spacing: 1.9px; text-transform: uppercase;
-    font-weight: 800; opacity: .72; }
-  .hero-t { display: block; font-family: var(--fuente-display); font-weight: 700; font-size: 36px;
-    letter-spacing: .8px; text-transform: uppercase; line-height: 1; margin-top: 5px; }
-  .hero-n { display: block; font-size: 42px; font-weight: 700; line-height: 1; margin-top: 15px; }
-  .hero-n small { display: block; font-family: var(--fuente); font-size: 12.5px; font-weight: 600;
-    opacity: .78; margin-top: 5px; letter-spacing: .2px; }
-  .hero-e { display: block; font-size: 13px; opacity: .82; margin-top: 9px; line-height: 1.45; max-width: 46ch; }
-  .hero-cta { display: inline-flex; align-items: center; gap: 9px; margin-top: 18px;
-    background: var(--marca-base); color: var(--marca-acento); border-radius: 10px;
-    padding: 12px 18px; font-weight: 700; font-size: 14px; }
-  .hero-cta svg { width: 17px; height: 17px; stroke: currentColor; stroke-width: 2; fill: none;
-    stroke-linecap: round; stroke-linejoin: round; }
-  .hero-ico { position: absolute; right: -14px; bottom: -26px; opacity: .16; }
-  .hero-ico svg { width: 178px; height: 178px; stroke: var(--marca-base); stroke-width: 1; fill: none; }
-  @media (max-width: 620px) { .hero-t { font-size: 29px; } .hero-n { font-size: 36px; }
-    .hero-ico svg { width: 138px; height: 138px; } }
-
-  /* ---- Accesos: horizontales, dos por fila en pantalla ancha ---- */
-  .filas { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
-  @media (min-width: 660px) { .filas { grid-template-columns: 1fr 1fr; } }
-  .fila { display: flex; align-items: center; gap: 14px; border-radius: 14px; padding: 14px 16px;
-    color: var(--sobre-base); text-decoration: none; transition: transform .16s, border-color .16s; }
-  .fila:hover { transform: translateX(3px);
-    border-color: color-mix(in srgb, var(--marca-acento) 55%, transparent); }
-  .pastilla { width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; display: flex;
-    align-items: center; justify-content: center; color: var(--marca-acento);
-    background: color-mix(in srgb, var(--marca-acento) 16%, transparent);
-    border: 1px solid color-mix(in srgb, var(--marca-acento) 30%, transparent); }
-  .pastilla svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 1.7; fill: none;
-    stroke-linecap: round; stroke-linejoin: round; }
-  body.claro .pastilla { color: var(--marca-primario);
-    background: color-mix(in srgb, var(--marca-primario) 10%, transparent);
-    border-color: color-mix(in srgb, var(--marca-primario) 22%, transparent); }
-  .fila-txt { min-width: 0; }
-  .fila-t { display: block; font-family: var(--fuente-display); font-weight: 700; font-size: 19px;
-    letter-spacing: .9px; text-transform: uppercase; line-height: 1.02; }
-  .fila-e { display: block; font-size: 12.5px; color: var(--sobre-base-mute); margin-top: 3px;
-    line-height: 1.35; }
-  body.claro .fila-e { color: var(--gris); }
-  .fila-f { margin-left: auto; color: var(--sobre-base-mute); opacity: .55; flex-shrink: 0; }
-  .fila-f svg { width: 19px; height: 19px; stroke: currentColor; stroke-width: 2; fill: none;
-    stroke-linecap: round; stroke-linejoin: round; }
-  body.claro .fila-f { color: var(--gris); }
-
-  /* ---- El riel: novedades y beneficios, arriba y a la vista ---- */
-  @media (min-width: 1040px) { .riel { position: sticky; top: 18px; } }
-  .titulo-riel { display: flex; align-items: center; gap: 11px; margin-bottom: 12px;
-    font-family: var(--fuente-display); font-weight: 700; font-size: 15px; letter-spacing: 1.9px;
-    text-transform: uppercase; color: var(--sobre-base); }
-  .titulo-riel::after { content: ""; flex: 1; height: 1px; background: rgba(255,255,255,.16); }
-  .titulo-riel a { font-family: var(--fuente); font-size: 11px; font-weight: 600; letter-spacing: 0;
-    text-transform: none; color: var(--sobre-base-mute); text-decoration: none; }
-  body.claro .titulo-riel { color: var(--tinta); }
-  body.claro .titulo-riel::after { background: var(--linea); }
-  body.claro .titulo-riel a { color: var(--gris); }
-  .riel .sec + .sec { margin-top: 22px; }
-
-  /* La noticia CONSERVA su foto: es lo que la hace leerse como una novedad
-     y no como un renglón de sistema. Miniatura de 62px (antes 44) y filo
-     de acento en la más nueva -- el mismo recurso que ya usa
-     .notif-item.no-leida. */
-  .nov { display: flex; gap: 12px; align-items: flex-start; width: 100%; text-align: left;
-    border-radius: 14px; padding: 10px; margin-bottom: 9px; cursor: pointer;
-    font-family: inherit; color: var(--sobre-base); border-left: 3px solid transparent;
-    transition: transform .16s; }
-  .nov:hover { transform: translateX(3px); }
-  .nov.fresca { border-left-color: var(--marca-acento); }
-  .nov .mini { width: 62px; height: 62px; border-radius: 11px; object-fit: cover; flex-shrink: 0; }
-  .nov .mini-ico { display: flex; align-items: center; justify-content: center;
-    background: color-mix(in srgb, var(--marca-primario) 70%, var(--marca-base)); }
-  .nov .mini-ico svg { width: 24px; height: 24px; stroke: #fff; stroke-width: 1.8; fill: none;
-    stroke-linecap: round; }
-  body.claro .nov .mini-ico { background: var(--marca-primario); }
-  .nov .txt { min-width: 0; }
-  .nov .f { display: block; font-family: var(--fuente-num); font-size: 10.5px;
-    color: var(--marca-acento); letter-spacing: .4px; }
-  body.claro .nov .f { color: var(--marca-primario); }
-  .nov .t { display: block; font-size: 14px; font-weight: 650; line-height: 1.3; margin-top: 3px; }
-  .nov .b { display: block; font-size: 12px; color: var(--sobre-base-mute); line-height: 1.45;
-    margin-top: 3px; }
-  body.claro .nov .b { color: var(--gris); }
-
-  /* ---- Carrusel de beneficios ----
-     Es la pieza de marketing de la portada, así que la imagen manda: va a
-     sangre con un velo oscuro abajo y el texto encima. La fluidez son
-     cinco cosas concretas -- deslizamiento con curva de salida, zoom lento
-     sobre la foto activa, barra que muestra cuánto falta para la que
-     sigue, arrastre con el dedo y PAUSA al pasar el mouse (nadie quiere
-     que se le mueva lo que está leyendo) -- y las cinco se apagan con
-     prefers-reduced-motion.
-
-     Clases propias y no las .carrusel* de marca.css: esas las sigue usando
-     la vista previa del panel de admin y no tienen por qué cambiar juntas.
-
-     OJO con la imagen: antes iba en `contain` sobre una tira de 88px de
-     alto. Acá va en `cover` sobre 16/11, así que una imagen muy vertical
-     se recorta -- conviene pedirle al sindicato apaisadas. ---- */
-  .car { position: relative; }
-  .car-marco { position: relative; overflow: hidden; border-radius: 18px;
-    border: 1px solid rgba(255,255,255,.16); box-shadow: 0 18px 40px rgba(0,0,0,.34); }
-  body.claro .car-marco { border-color: var(--linea); box-shadow: 0 6px 20px rgba(20,15,5,.10); }
-  .car-pista { display: flex; touch-action: pan-y;
-    transition: transform .62s cubic-bezier(.22,.61,.36,1); }
-  .car-pista.sin-anim { transition: none; }
-  .car-sl { position: relative; flex: 0 0 100%; aspect-ratio: 16 / 11; overflow: hidden;
-    border: none; padding: 0; margin: 0; cursor: pointer; font-family: inherit;
-    background: color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base)); }
-  .car-sl img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-    transform: scale(1.02); transition: transform 7s linear; }
-  .car-sl.on img { transform: scale(1.13); }
-  .car-velo { position: absolute; inset: 0;
-    background: linear-gradient(to top, rgba(5,9,16,.90) 4%, rgba(5,9,16,.42) 46%, transparent 76%); }
-  .car-txt { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 16px 15px;
-    z-index: 2; text-align: left; }
-  .car-k { display: inline-block; padding: 3px 10px; border-radius: 99px;
-    background: var(--marca-acento); color: var(--marca-base); font-size: 9.5px; font-weight: 800;
-    letter-spacing: 1.3px; text-transform: uppercase; }
-  /* La descripción del beneficio la escribe el sindicato y puede ser larga;
-     se corta en dos renglones para que la tarjeta no cambie de alto entre
-     una lámina y la siguiente. */
-  .car-t { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    overflow: hidden; font-family: var(--fuente-display); font-weight: 700; font-size: 22px;
-    letter-spacing: .5px; line-height: 1.08; color: #fff; margin-top: 8px;
-    text-shadow: 0 1px 12px rgba(0,0,0,.5); }
-  .car-p { display: block; font-size: 12px; color: rgba(255,255,255,.78); margin-top: 4px; }
-  .car-flecha { position: absolute; top: 50%; transform: translateY(-50%); width: 34px; height: 34px;
-    border-radius: 50%; background: rgba(8,12,20,.5); border: 1px solid rgba(255,255,255,.22);
-    color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
-    z-index: 3; opacity: 0; transition: opacity .2s; }
-  .car-marco:hover .car-flecha, .car-marco:focus-within .car-flecha { opacity: 1; }
-  .car-flecha svg { width: 17px; height: 17px; stroke: currentColor; stroke-width: 2; fill: none;
-    stroke-linecap: round; stroke-linejoin: round; }
-  .car-izq { left: 9px; }
-  .car-izq svg { transform: rotate(180deg); }
-  .car-der { right: 9px; }
-  .car-pie { display: flex; align-items: center; gap: 11px; margin-top: 10px; }
-  .car-barra { flex: 1; height: 2px; border-radius: 2px; background: rgba(255,255,255,.18);
-    overflow: hidden; }
-  body.claro .car-barra { background: var(--linea); }
-  .car-barra i { display: block; height: 100%; width: 0; border-radius: 2px;
-    background: var(--marca-acento); }
-  .car-puntos { display: flex; gap: 6px; }
-  .car-punto { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.3);
-    border: 0; padding: 0; cursor: pointer; transition: width .3s, background .3s; }
-  body.claro .car-punto { background: var(--linea); }
-  .car-punto.on { width: 18px; border-radius: 99px; background: var(--marca-acento); }
-  @media (prefers-reduced-motion: reduce) {
-    .car-pista { transition: none; }
-    .car-sl.on img { transform: scale(1.02); }
-    .car-barra { display: none; }
-  }
-
-  body.claro .vacio-sec { background: var(--papel); border-color: var(--linea); color: var(--gris); }
   .btn-acerca { background: none; border: none; opacity: .5; font-size: 11px; cursor: pointer;
     padding: 6px; color: var(--sobre-base-mute); }
   body.claro .btn-acerca { color: var(--gris); }
@@ -427,15 +214,15 @@
   <svg viewBox="0 0 24 24"><use href="#ic-x"/></svg>
 </a>
 
-<div class="ambiente" aria-hidden="true">
-  <span class="blob b1"></span><span class="blob b2"></span><span class="reticula"></span>
+<div class="pt-ambiente" aria-hidden="true">
+  <span class="pt-blob b1"></span><span class="pt-blob b2"></span><span class="pt-reticula"></span>
 </div>
 
 <div class="pad">
   <div class="fila-hola">
     <div>
       <div class="hola">Hola, <em>{{ primer_nombre }}</em></div>
-      <div class="hola-baj">{% if mi_seccional %}Seccional {{ mi_seccional.nombre }} · {% endif %}{{ sindicato }}</div>
+      <div class="pt-hola-baj">{% if mi_seccional %}Seccional {{ mi_seccional.nombre }} · {% endif %}{{ sindicato }}</div>
     </div>
     <button class="circulo-acento" onclick="abrirPerfil()" aria-label="Tu perfil" title="Tu perfil">
       {% if tiene_foto_perfil %}
@@ -446,61 +233,61 @@
     </button>
   </div>
 
-  <div class="dos">
+  <div class="pt-dos">
     <div>
       {% if 'recibos' in modulos %}
       {# La tarjeta principal dice números reales: cuántos recibos verificó
          este año y cómo salió el último. "Revisá tus aportes" no le
          informaba nada al afiliado que él no supiera ya. #}
-      <a class="hero" href="/app">
-        <span class="hero-k">{% if recibos_resumen.ultimo_periodo %}Lo primero{% else %}Empezá por acá{% endif %}</span>
-        <span class="hero-t">Tu recibo</span>
+      <a class="pt-hero" href="/app">
+        <span class="pt-hero-k">{% if recibos_resumen.ultimo_periodo %}Lo primero{% else %}Empezá por acá{% endif %}</span>
+        <span class="pt-hero-t">Tu recibo</span>
         {% if recibos_resumen.ultimo_periodo %}
-        <span class="hero-n num">{{ recibos_resumen.anio }}<small>{{ 'recibo verificado' if recibos_resumen.anio == 1 else 'recibos verificados' }} este año</small></span>
-        <span class="hero-e">{{ recibos_resumen.ultimo_periodo | periodo }} · {% if recibos_resumen.ultimo_estado == 'OK' %}sin diferencias{% else %}con diferencias para revisar{% endif %}</span>
+        <span class="pt-hero-n num">{{ recibos_resumen.anio }}<small>{{ 'recibo verificado' if recibos_resumen.anio == 1 else 'recibos verificados' }} este año</small></span>
+        <span class="pt-hero-e">{{ recibos_resumen.ultimo_periodo | periodo }} · {% if recibos_resumen.ultimo_estado == 'OK' %}sin diferencias{% else %}con diferencias para revisar{% endif %}</span>
         {% else %}
-        <span class="hero-e">Sacale una foto o subí el PDF y te decimos si los aportes están bien calculados.</span>
+        <span class="pt-hero-e">Sacale una foto o subí el PDF y te decimos si los aportes están bien calculados.</span>
         {% endif %}
-        <span class="hero-cta">{% if recibos_resumen.ultimo_periodo %}Subir un recibo nuevo{% else %}Subí tu primer recibo{% endif %}
+        <span class="pt-hero-cta">{% if recibos_resumen.ultimo_periodo %}Subir un recibo nuevo{% else %}Subí tu primer recibo{% endif %}
           <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-flecha"/></svg></span>
-        <span class="hero-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg></span>
+        <span class="pt-hero-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg></span>
       </a>
       {% endif %}
 
-      <div class="filas">
+      <div class="pt-filas">
         {% if 'aportes' in modulos %}
-        <a class="fila vid" href="/app?tab=aportes">
-          <span class="pastilla"><svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg></span>
-          <span class="fila-txt"><span class="fila-t">Mis aportes</span>
-            <span class="fila-e">Semáforo de aportes</span></span>
-          <span class="fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+        <a class="pt-fila pt-vid" href="/app?tab=aportes">
+          <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg></span>
+          <span class="pt-fila-txt"><span class="pt-fila-t">Mis aportes</span>
+            <span class="pt-fila-e">Semáforo de aportes</span></span>
+          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
         </a>
         {% endif %}
         {% if 'credencial' in modulos %}
-        <a class="fila vid" href="/app?tab=credencial">
-          <span class="pastilla"><svg viewBox="0 0 24 24"><use href="#ic-cred"/></svg></span>
-          <span class="fila-txt"><span class="fila-t">Credencial</span>
-            <span class="fila-e">{{ 'Tu carnet digital' if credencial_generada else 'Todavía no generada' }}</span></span>
-          <span class="fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+        <a class="pt-fila pt-vid" href="/app?tab=credencial">
+          <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-cred"/></svg></span>
+          <span class="pt-fila-txt"><span class="pt-fila-t">Credencial</span>
+            <span class="pt-fila-e">{{ 'Tu carnet digital' if credencial_generada else 'Todavía no generada' }}</span></span>
+          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
         </a>
         {% endif %}
         {% if 'capacitacion' in modulos %}
-        <a class="fila vid" href="/app?tab=capacitacion">
-          <span class="pastilla"><svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg></span>
-          <span class="fila-txt"><span class="fila-t">Capacitación</span>
-            <span class="fila-e">Entendé tu nuevo recibo</span></span>
-          <span class="fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+        <a class="pt-fila pt-vid" href="/app?tab=capacitacion">
+          <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-capac"/></svg></span>
+          <span class="pt-fila-txt"><span class="pt-fila-t">Capacitación</span>
+            <span class="pt-fila-e">Entendé tu nuevo recibo</span></span>
+          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
         </a>
         {% endif %}
         {% if 'notificaciones' in modulos %}
         <div class="acceso-badge-wrap">
           {# Lleva a la BANDEJA (página completa estilo casilla de correo),
              reemplaza al modal -- decisión de Sd 2026-09-02. #}
-          <a class="fila vid" href="/app/notificaciones">
-            <span class="pastilla"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg></span>
-            <span class="fila-txt"><span class="fila-t">Notificaciones</span>
-              <span class="fila-e">Mensajes de tu sindicato</span></span>
-            <span class="fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+          <a class="pt-fila pt-vid" href="/app/notificaciones">
+            <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg></span>
+            <span class="pt-fila-txt"><span class="pt-fila-t">Notificaciones</span>
+              <span class="pt-fila-e">Mensajes de tu sindicato</span></span>
+            <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
           </a>
           <span class="badge-noleidas" id="badge-notif" style="display:{{ 'flex' if notificaciones_no_leidas else 'none' }};">{{ notificaciones_no_leidas }}</span>
         </div>
@@ -509,22 +296,22 @@
         <div class="acceso-badge-wrap">
           {# La puerta de entrada a las encuestas. Sin esta tarjeta, una encuesta
              lanzada dependía de que el afiliado entrara a la pestaña de casualidad. #}
-          <a class="fila vid" href="/app?tab=encuestas">
-            <span class="pastilla"><svg viewBox="0 0 24 24"><use href="#ic-encuestas"/></svg></span>
-            <span class="fila-txt"><span class="fila-t">Encuestas</span>
-              <span class="fila-e">{% if encuestas_pendientes %}Tenés {{ encuestas_pendientes }} sin responder{% else %}Tu opinión al sindicato{% endif %}</span></span>
-            <span class="fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+          <a class="pt-fila pt-vid" href="/app?tab=encuestas">
+            <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-encuestas"/></svg></span>
+            <span class="pt-fila-txt"><span class="pt-fila-t">Encuestas</span>
+              <span class="pt-fila-e">{% if encuestas_pendientes %}Tenés {{ encuestas_pendientes }} sin responder{% else %}Tu opinión al sindicato{% endif %}</span></span>
+            <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
           </a>
           <span class="badge-noleidas" id="badge-encuestas-portada" style="display:{{ 'flex' if encuestas_pendientes else 'none' }};">{{ encuestas_pendientes }}</span>
         </div>
         {% endif %}
         {% if 'tramites' in modulos %}
         <div class="acceso-badge-wrap">
-          <a class="fila vid" href="/app?tab=tramites">
-            <span class="pastilla"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>
-            <span class="fila-txt"><span class="fila-t">Trámites</span>
-              <span class="fila-e">Formularios y seguimiento</span></span>
-            <span class="fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+          <a class="pt-fila pt-vid" href="/app?tab=tramites">
+            <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>
+            <span class="pt-fila-txt"><span class="pt-fila-t">Trámites</span>
+              <span class="pt-fila-e">Formularios y seguimiento</span></span>
+            <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
           </a>
           {# Novedades de trámites: reemplazan a las notificaciones de sistema #}
           <span class="badge-noleidas" id="badge-tramites-portada" style="display:{{ 'flex' if tramites_novedades else 'none' }};">{{ tramites_novedades }}</span>
@@ -533,16 +320,16 @@
       </div>
     </div>
 
-    <aside class="riel">
+    <aside class="pt-riel">
       {% if 'noticias' in modulos %}
       <div class="sec">
-        <div class="titulo-riel">Novedades{% if noticias %}<a href="/app?tab=novedades">Ver todas</a>{% endif %}</div>
+        <div class="pt-riel-tit">Novedades{% if noticias %}<a href="/app?tab=novedades">Ver todas</a>{% endif %}</div>
         {% if noticias %}
           {% for n in noticias %}
-          <button class="nov vid{% if loop.first %} fresca{% endif %}" onclick="abrirNoticia({{ n.id }})">
-            {% if n.tiene_imagen1 %}<img class="mini" src="/noticia-imagen/{{ n.id }}/1" alt="">
-            {% else %}<span class="mini mini-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>{% endif %}
-            <span class="txt">
+          <button class="pt-nov pt-vid{% if loop.first %} fresca{% endif %}" onclick="abrirNoticia({{ n.id }})">
+            {% if n.tiene_imagen1 %}<img class="pt-mini" src="/noticia-imagen/{{ n.id }}/1" alt="">
+            {% else %}<span class="pt-mini pt-mini-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>{% endif %}
+            <span class="pt-txt">
               <span class="f">{{ n.fecha_hora }}</span>
               <span class="t">{{ n.titulo }}</span>
               {% if n.bajada %}<span class="b">{{ n.bajada }}</span>{% endif %}
@@ -557,7 +344,7 @@
 
       {% if 'beneficios' in modulos %}
       <div class="sec">
-        <div class="titulo-riel">Beneficios</div>
+        <div class="pt-riel-tit">Beneficios</div>
         {% if beneficios %}
         <div class="car" id="car-beneficios">
           <div class="car-marco">

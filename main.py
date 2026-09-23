@@ -1435,12 +1435,39 @@ def admin_inicio(request: Request):
         if "tramites" in modulos and "tramites_recibidos" in permisos else 0
     tramites_empresa_nuevos = db.contar_tramites_empleador_nuevos(sid) \
         if "empleadores" in modulos and "emp_tramites_recibidos" in permisos else 0
+    # Ficha del operador para el círculo de perfil de la portada (2026-09-23,
+    # pedido de Sd: el mismo lugar que en la app del afiliado). Es de LECTURA:
+    # el usuario del sindicato no edita sus datos desde acá.
+    #
+    # La FOTO sale de `CuentaTrabajador`, o sea del CUIL, no de una copia del
+    # usuario del panel: quien trabaja en el gremio y además está afiliado
+    # tiene una sola foto, igual que tiene un solo domicilio. Quien no está
+    # en el padrón (caso real, no un error) simplemente no tiene.
+    cuil_admin = (usuario.cuil if usuario else "") or ""
+    rol_admin = ("Super Admin" if es_super_admin else
+                 ("Admin de Seccional" if usuario and usuario.es_admin_seccional
+                  else "Usuario de área"))
+    sec_admin = db.seccional_del_sindicato(sid, usuario.seccional_id) \
+        if usuario and usuario.seccional_id else None
+    area_admin = ""
+    if usuario and usuario.area_id:
+        for a in db.areas_del_sindicato(sid):
+            if a["id"] == usuario.area_id:
+                area_admin = a["nombre"]
+                break
     return templates.TemplateResponse("admin_portada.html", {
         "permisos": permisos, "es_super_admin": es_super_admin,
         "request": request, "sindicato": marca.get("nombre", ""),
         "marca": marca, "marca_plataforma": db.marca_plataforma(),
         "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
         "primer_nombre": nombre_admin.split(" ")[0] or "Admin",
+        "nombre_admin": nombre_admin,
+        "usuario_admin": (usuario.usuario if usuario else ""),
+        "cuil_admin": cuil_admin,
+        "rol_admin": rol_admin,
+        "seccional_admin": (sec_admin["nombre"] if sec_admin else ""),
+        "area_admin": area_admin,
+        "tiene_foto_perfil": bool(cuil_admin and db.foto_trabajador(cuil_admin)),
         "tramites_nuevos": tramites_nuevos,
         "tramites_empresa_nuevos": tramites_empresa_nuevos,
         "modulos": modulos,

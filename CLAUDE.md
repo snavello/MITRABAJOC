@@ -722,8 +722,14 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     rubro, barra de tiempo, zoom lento, arrastre y pausa al pasar el mouse.
     Profundidad nueva sin ningún color nuevo (manchas de luz con el primario
     y el acento del sindicato, retícula de colmena, trama diagonal). Las dos
-    variantes, oscura y clara. **Solo la del afiliado**: sindicato, empresa
-    y plataforma siguen con `.tarjetas`/`.acceso`. Detalle en HISTORIAL.md.
+    variantes, oscura y clara. El mismo día se llevó a **las cuatro
+    portadas**: el CSS se mudó al bloque "Portadas v2" de `marca.css` con
+    todas las clases prefijadas **`pt-`** (`.fila`, `.filas`, `.pastilla`,
+    `.mini`, `.txt` y `.nov` ya existen en otras pantallas y esa hoja la
+    carga casi toda la app), con `.pt-tres` para las portadas sin riel
+    (sindicato y plataforma, que tienen muchos accesos). El **sindicato
+    estrena el círculo de perfil** del afiliado, de lectura, con la foto
+    tomada de `CuentaTrabajador` por CUIL. Detalle en HISTORIAL.md.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

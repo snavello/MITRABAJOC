@@ -5572,3 +5572,55 @@ notificaciones. Quedó con la clase nueva.
 Las portadas del sindicato, la empresa y la plataforma siguen con el esquema
 anterior (`.tarjetas` + `.acceso` de marca.css). El pedido era sobre la del
 afiliado y llevarlas a las cuatro de una vez es otro bloque.
+
+
+### El mismo esquema en las otras tres portadas (2026-09-23)
+
+Sd pidió llevarlo a sindicato, plataforma y empresa, en ese orden. Lo que
+obligó a pensar antes de copiar fue **dónde poner el CSS**: cuatro copias del
+mismo bloque en cuatro `<style>` es exactamente lo que este proyecto ya vivió
+con el encabezado. Las cuatro portadas cargan `marca.css`, así que ahí va.
+
+**Y ahí apareció el problema de verdad**: `.fila`, `.filas`, `.pastilla`,
+`.mini`, `.txt`, `.nov` y `.sec` **ya existen** en admin.html, dashboard.js,
+encuesta_resultados.js, entornos.html y empresa.html. `marca.css` la carga
+casi toda la app, así que subir esas clases sin prefijo habría pisado media
+docena de pantallas sin que ningún test lo notara (son estilos, no
+comportamiento). Por eso todo el bloque quedó prefijado **`pt-`**
+(`.pt-fila`, `.pt-pastilla`, `.pt-hero`…), y el renombre se hizo solo sobre
+selectores CSS y atributos `class="..."`, nunca sobre texto libre: "una fila
+por sindicato" y "dos columnas" son frases que aparecen en los comentarios.
+
+Cada portada quedó con lo suyo:
+
+- **Sindicato**: hero para el Panel Sindical (sin cifra propia -- la portada
+  no tiene de dónde sacarla sin pegarle a la base, y el Panel es justo la
+  pantalla que las trae todas) y los 14 accesos restantes en **tres
+  columnas** (`.pt-tres`, un modificador para las portadas sin riel: en dos
+  columnas 15 accesos son una lista larguísima). Se fue la estrella de la
+  esquina del módulo nuevo: en una tarjeta chica marcaba algo, sobre el hero
+  es ruido. La etiqueta NUEVO queda.
+- **Plataforma**: hero para Sindicatos, que es lo que se hace ahí el 90% de
+  las veces, y los otros siete accesos en tres columnas.
+- **Empresa**: sin hero. Son dos accesos y ninguno es "el principal"; un hero
+  ahí sería una jerarquía inventada. De paso se estrenó el globo de novedades
+  de Trámites, que **ya se contaba en el contexto y no se mostraba**: un
+  expediente con respuesta del sindicato no se veía hasta entrar.
+
+### El círculo de perfil del sindicato
+
+Sd lo pidió "en el mismo lugar" que en la app del afiliado. Es de **lectura**:
+abre una ficha con nombre, usuario, CUIL, rol, seccional, área y sindicato.
+No edita nada -- cambiar la clave de un usuario del panel sigue siendo cosa
+de plataforma, y los permisos los da el Super Admin desde Áreas y Usuarios.
+
+La foto sale de `CuentaTrabajador`, o sea **del CUIL**, no de una copia
+guardada en `UsuarioSindicato`: quien trabaja en el gremio y además está
+afiliado tiene una sola foto, igual que tiene un solo domicilio. Quien no
+está en el padrón -- que es un caso real y no un error, como Elena Vidal de
+Prensa en la demo -- simplemente no tiene, y se ve el ícono.
+
+Un detalle que costó encontrar: `.fila-hola` (el flex que pone el saludo y el
+círculo en la misma línea) vivía en el `<style>` de portada.html y de
+empresa_portada.html. Al llevar el esquema al sindicato, el círculo caía
+debajo del saludo. Ahora está en `marca.css` con el resto.

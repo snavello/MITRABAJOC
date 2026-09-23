@@ -186,7 +186,7 @@ def test_la_noticia_conserva_su_foto():
                          imagen1_datos=b"fake", imagen1_mime="image/png"))
         s.commit()
     r = _sesion("20111111119").get("/app/inicio")
-    assert 'class="mini"' in r.text
+    assert 'class="pt-mini"' in r.text
     assert "/noticia-imagen/" in r.text
     print("OK  test_la_noticia_conserva_su_foto")
 

@@ -30,37 +30,14 @@
     display: flex; align-items: center; justify-content: center; padding: 0 5px;
     border: 2.5px solid var(--marca-base); z-index: 2; }
 
-  body.oscuro .tarjetas .acceso { position: relative; overflow: hidden;
-    background: linear-gradient(155deg, rgba(255,255,255,.14), rgba(255,255,255,.02) 55%, rgba(255,255,255,.06));
-    border-color: rgba(255,255,255,.14); backdrop-filter: blur(3px) saturate(1.1); }
-  body.oscuro .tarjetas .acceso::after { content: ""; position: absolute; top: -60%; left: -30%;
-    width: 90%; height: 90%; background: linear-gradient(120deg, rgba(255,255,255,.22), transparent 60%);
-    transform: rotate(-18deg); pointer-events: none; }
-
-  body.claro .tarjetas .acceso { position: relative; overflow: hidden; color: var(--tinta);
-    background: linear-gradient(160deg, #ffffff, var(--papel)); border-color: var(--linea);
-    box-shadow: 0 1px 0 rgba(20,15,5,.03); }
-  body.claro .tarjetas .acceso .estado { color: var(--gris); opacity: 1; }
-
   .btn-acerca { background: none; border: none; opacity: .5; font-size: 11px; cursor: pointer;
     padding: 6px; color: var(--sobre-base-mute); }
   body.claro .btn-acerca { color: var(--gris); }
 
-  /* Módulo recién estrenado: estrella en la esquina + etiqueta NUEVO. Se saca
-     a mano en un deploy posterior (no expira sola) -- ver BACKLOG.md. */
-  .acceso.destacada-new { position: relative; border-color: var(--marca-acento); }
-  .estrella-new { position: absolute; top: 8px; right: 9px; line-height: 0; }
-  .estrella-new svg { width: 17px; height: 17px; fill: var(--marca-acento); stroke: none; }
   .tag-new { display: inline-block; vertical-align: middle; margin-left: 5px; padding: 1px 6px;
     border-radius: 99px; background: var(--marca-acento); color: var(--marca-base);
     font-size: 9px; font-weight: 800; letter-spacing: .5px; }
 
-  /* ---------- Esquema "Hilo" (2026-09-03): mismo tratamiento que la portada
-     del trabajador -- títulos de acceso en condensada, subtítulo de rol como
-     kicker en acento. Vidrio y variante clara/oscura quedan. ---------- */
-  .tarjetas .acceso .titulo { font-family: var(--fuente-display); font-weight: 700; font-size: 16px;
-    letter-spacing: .8px; text-transform: uppercase; line-height: 1.05; }
-  .tarjetas .acceso .estado { margin-top: 5px; }
   .hola { margin-top: 2px; }
 </style>
 </head>
@@ -75,158 +52,179 @@
   <svg viewBox="0 0 24 24"><use href="#ic-x"/></svg>
 </a>
 
-<div class="pad">
-  <div class="hola">Hola, <em>{{ primer_nombre }}</em></div>
+<div class="pt-ambiente" aria-hidden="true">
+  <span class="pt-blob b1"></span><span class="pt-blob b2"></span><span class="pt-reticula"></span>
+</div>
 
-  <div class="tarjetas" style="margin-top: 18px;">
-    {% if 'dashboard' in modulos and 'dashboard' in permisos %}
-    <a class="acceso destacada-new" href="/admin/dashboard">
-      <span class="estrella-new" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><polygon points="12,2.6 14.9,9 21.8,9.7 16.6,14.3 18.1,21.1 12,17.6 5.9,21.1 7.4,14.3 2.2,9.7 9.1,9"/></svg>
-      </span>
-      <svg viewBox="0 0 24 24"><use href="#ic-dashboard"/></svg>
-      <div>
-        <div class="titulo">Panel Sindical <span class="tag-new">NUEVO</span></div>
-        <div class="estado">Indicadores y actividad en vivo</div>
-      </div>
-    </a>
-    {% endif %}
-    {% if 'recibos' in modulos and 'reportes' in permisos %}
-    <a class="acceso" href="/admin#reportes">
-      <svg viewBox="0 0 24 24"><use href="#ic-reportes"/></svg>
-      <div>
-        <div class="titulo">Reportes</div>
-        <div class="estado">Recibos verificados por trabajadores</div>
-      </div>
-    </a>
-    {% endif %}
-    {% if 'recibos' in modulos and 'formulas' in permisos %}
-    <a class="acceso" href="/admin#formulas">
-      <svg viewBox="0 0 24 24"><use href="#ic-formulas"/></svg>
-      <div>
-        <div class="titulo">Fórmulas</div>
-        <div class="estado">Cálculo de cada aporte</div>
-      </div>
-    </a>
-    {% endif %}
-    {% if 'recibos' in modulos and 'conceptos' in permisos %}
-    <a class="acceso" href="/admin#conceptos">
-      <svg viewBox="0 0 24 24"><use href="#ic-conceptos"/></svg>
-      <div>
-        <div class="titulo">Conceptos</div>
-        <div class="estado">Catálogo del recibo</div>
-      </div>
-    </a>
-    {% endif %}
-    {% if 'trabajadores' in permisos %}
-    <a class="acceso" href="/admin#trabajadores">
-      <svg viewBox="0 0 24 24"><use href="#ic-trabajadores"/></svg>
-      <div>
-        <div class="titulo">Trabajadores</div>
-        <div class="estado">Alta, baja y datos de afiliados</div>
-      </div>
-    </a>
-    {% endif %}
-    {% if 'recibos' in modulos and 'aprendizaje' in permisos %}
-    <a class="acceso" href="/admin#aprendizaje">
-      <svg viewBox="0 0 24 24"><use href="#ic-aprendizaje"/></svg>
-      <div>
-        <div class="titulo">Aprendizaje</div>
-        <div class="estado">Corregir sugerencias de la IA</div>
-      </div>
-    </a>
-    {% endif %}
-    {% if 'recibos' in modulos and 'cotizantes' in permisos %}
-    <a class="acceso" href="/admin#cotizantes">
-      <svg viewBox="0 0 24 24"><use href="#ic-cotizantes"/></svg>
-      <div>
-        <div class="titulo">Afiliados cotizantes</div>
-        <div class="estado">Recibos enviados al sindicato</div>
-      </div>
-    </a>
-    {% endif %}
-    {% if 'noticias' in modulos and 'noticias' in permisos %}
-    <a class="acceso" href="/admin#noticias">
-      <svg viewBox="0 0 24 24"><use href="#ic-noticias"/></svg>
-      <div>
-        <div class="titulo">Noticias</div>
-        <div class="estado">Novedades para los afiliados</div>
-      </div>
-    </a>
-    {% endif %}
-    {% if 'beneficios' in modulos and 'beneficios' in permisos %}
-    <a class="acceso" href="/admin#beneficios">
-      <svg viewBox="0 0 24 24"><use href="#ic-beneficios"/></svg>
-      <div>
-        <div class="titulo">Beneficios</div>
-        <div class="estado">Descuentos para afiliados</div>
-      </div>
-    </a>
-    {% endif %}
-    {% if 'notificaciones' in modulos and 'notificaciones' in permisos %}
-    <a class="acceso" href="/admin#notificaciones">
-      <svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg>
-      <div>
-        <div class="titulo">Notificaciones</div>
-        <div class="estado">Mensajes dirigidos a trabajadores</div>
-      </div>
-    </a>
-    {% endif %}
-    {% if 'encuestas' in modulos and ('encuestas' in permisos or 'encuestas_resultados' in permisos) %}
-    <a class="acceso" href="/admin#encuestas">
-      <svg viewBox="0 0 24 24"><use href="#ic-encuestas"/></svg>
-      <div>
-        <div class="titulo">Encuestas</div>
-        <div class="estado">Preguntar y leer los resultados</div>
-      </div>
-    </a>
-    {% endif %}
-    {% if 'tramites' in modulos and ('tramites_recibidos' in permisos or 'tramites_formularios' in permisos) %}
-    <div class="acceso-badge-wrap">
-      <a class="acceso" href="/admin#tramites">
-        <svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg>
-        <div>
-          <div class="titulo">Trámites</div>
-          <div class="estado">Formularios y seguimiento</div>
-        </div>
-      </a>
-      {% if tramites_nuevos %}<span class="badge-noleidas">{{ tramites_nuevos }}</span>{% endif %}
+<div class="pad">
+  <div class="fila-hola">
+    <div>
+      <div class="hola">Hola, <em>{{ primer_nombre }}</em></div>
+      <div class="pt-hola-baj">{% if seccional_admin %}{{ seccional_admin }} · {% endif %}{{ rol_admin }}</div>
     </div>
-    {% endif %}
-    {% if 'empleadores' in modulos and ('emp_empresas' in permisos or 'emp_notificaciones' in permisos or 'emp_tramites_recibidos' in permisos or 'emp_tramites_formularios' in permisos) %}
-    <div class="acceso-badge-wrap">
-      <a class="acceso" href="/admin#empleadores">
-        <svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg>
-        <div>
-          <div class="titulo">Empleadores</div>
-          <div class="estado">Empresas, notificaciones y trámites</div>
-        </div>
-      </a>
-      {% if tramites_empresa_nuevos %}<span class="badge-noleidas">{{ tramites_empresa_nuevos }}</span>{% endif %}
-    </div>
-    {% endif %}
-    {% if 'seccionales' in permisos %}
-    <a class="acceso" href="/admin#seccionales">
-      <svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg>
-      <div>
-        <div class="titulo">Seccionales</div>
-        <div class="estado">Sedes y delegaciones</div>
-      </div>
-    </a>
-    {% endif %}
-    {% if es_super_admin %}
-    <a class="acceso" href="/admin#administradores">
-      <svg viewBox="0 0 24 24"><use href="#ic-admins"/></svg>
-      <div>
-        <div class="titulo">Áreas y Usuarios</div>
-        <div class="estado">Quién entra y qué puede tocar</div>
-      </div>
-    </a>
-    {% endif %}
+    {# El mismo círculo de perfil que la app del afiliado y la de empresa, en
+       el mismo lugar (2026-09-23). Acá es de LECTURA: quién sos y qué
+       alcance tenés. Cambiar la clave sigue siendo cosa de plataforma. #}
+    <button class="circulo-acento" onclick="abrirPerfil()" aria-label="Tu cuenta" title="Tu cuenta">
+      {% if tiene_foto_perfil %}
+      <img src="/perfil-foto/{{ cuil_admin }}?v={{ range(1, 999999) | random }}" alt="">
+      {% else %}
+      <svg viewBox="0 0 24 24"><use href="#ic-perfil"/></svg>
+      {% endif %}
+    </button>
   </div>
 
-  <div style="text-align:center; margin-top:18px;">
+  {% if 'dashboard' in modulos and 'dashboard' in permisos %}
+  {# El acceso principal del panel. Sin cifra propia: la portada no tiene de
+     dónde sacarla sin pegarle a la base, y el Panel Sindical es justo la
+     pantalla que las trae todas. #}
+  <a class="pt-hero pt-hero-chico" href="/admin/dashboard">
+    <span class="pt-hero-k">Lo primero</span>
+    <span class="pt-hero-t">Panel Sindical <span class="tag-new">NUEVO</span></span>
+    <span class="pt-hero-e">Indicadores y actividad en vivo: recibos, trámites, semáforo por empresa y el mapa de seccionales.</span>
+    <span class="pt-hero-cta">Abrir el panel <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-flecha"/></svg></span>
+    <span class="pt-hero-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-dashboard"/></svg></span>
+  </a>
+  {% endif %}
+
+  <div class="pt-filas pt-tres">
+      {% if 'recibos' in modulos and 'reportes' in permisos %}
+      <a class="pt-fila pt-vid" href="/admin#reportes">
+        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-reportes"/></svg></span>
+        <span class="pt-fila-txt"><span class="pt-fila-t">Reportes</span>
+          <span class="pt-fila-e">Recibos verificados por trabajadores</span></span>
+        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+      </a>
+      {% endif %}
+      {% if 'recibos' in modulos and 'formulas' in permisos %}
+      <a class="pt-fila pt-vid" href="/admin#formulas">
+        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-formulas"/></svg></span>
+        <span class="pt-fila-txt"><span class="pt-fila-t">Fórmulas</span>
+          <span class="pt-fila-e">Cálculo de cada aporte</span></span>
+        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+      </a>
+      {% endif %}
+      {% if 'recibos' in modulos and 'conceptos' in permisos %}
+      <a class="pt-fila pt-vid" href="/admin#conceptos">
+        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-conceptos"/></svg></span>
+        <span class="pt-fila-txt"><span class="pt-fila-t">Conceptos</span>
+          <span class="pt-fila-e">Catálogo del recibo</span></span>
+        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+      </a>
+      {% endif %}
+      {% if 'trabajadores' in permisos %}
+      <a class="pt-fila pt-vid" href="/admin#trabajadores">
+        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-trabajadores"/></svg></span>
+        <span class="pt-fila-txt"><span class="pt-fila-t">Trabajadores</span>
+          <span class="pt-fila-e">Alta, baja y datos de afiliados</span></span>
+        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+      </a>
+      {% endif %}
+      {% if 'recibos' in modulos and 'aprendizaje' in permisos %}
+      <a class="pt-fila pt-vid" href="/admin#aprendizaje">
+        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-aprendizaje"/></svg></span>
+        <span class="pt-fila-txt"><span class="pt-fila-t">Aprendizaje</span>
+          <span class="pt-fila-e">Corregir sugerencias de la IA</span></span>
+        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+      </a>
+      {% endif %}
+      {% if 'recibos' in modulos and 'cotizantes' in permisos %}
+      <a class="pt-fila pt-vid" href="/admin#cotizantes">
+        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-cotizantes"/></svg></span>
+        <span class="pt-fila-txt"><span class="pt-fila-t">Afiliados cotizantes</span>
+          <span class="pt-fila-e">Recibos enviados al sindicato</span></span>
+        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+      </a>
+      {% endif %}
+      {% if 'noticias' in modulos and 'noticias' in permisos %}
+      <a class="pt-fila pt-vid" href="/admin#noticias">
+        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-noticias"/></svg></span>
+        <span class="pt-fila-txt"><span class="pt-fila-t">Noticias</span>
+          <span class="pt-fila-e">Novedades para los afiliados</span></span>
+        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+      </a>
+      {% endif %}
+      {% if 'beneficios' in modulos and 'beneficios' in permisos %}
+      <a class="pt-fila pt-vid" href="/admin#beneficios">
+        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-beneficios"/></svg></span>
+        <span class="pt-fila-txt"><span class="pt-fila-t">Beneficios</span>
+          <span class="pt-fila-e">Descuentos para afiliados</span></span>
+        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+      </a>
+      {% endif %}
+      {% if 'notificaciones' in modulos and 'notificaciones' in permisos %}
+      <a class="pt-fila pt-vid" href="/admin#notificaciones">
+        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg></span>
+        <span class="pt-fila-txt"><span class="pt-fila-t">Notificaciones</span>
+          <span class="pt-fila-e">Mensajes dirigidos a trabajadores</span></span>
+        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+      </a>
+      {% endif %}
+      {% if 'encuestas' in modulos and ('encuestas' in permisos or 'encuestas_resultados' in permisos) %}
+      <a class="pt-fila pt-vid" href="/admin#encuestas">
+        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-encuestas"/></svg></span>
+        <span class="pt-fila-txt"><span class="pt-fila-t">Encuestas</span>
+          <span class="pt-fila-e">Preguntar y leer los resultados</span></span>
+        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+      </a>
+      {% endif %}
+      {% if 'tramites' in modulos and ('tramites_recibidos' in permisos or 'tramites_formularios' in permisos) %}
+      <div class="acceso-badge-wrap">
+        <a class="pt-fila pt-vid" href="/admin#tramites">
+          <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-tramites"/></svg></span>
+          <span class="pt-fila-txt"><span class="pt-fila-t">Trámites</span>
+            <span class="pt-fila-e">Formularios y seguimiento</span></span>
+          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+        </a>
+        {% if tramites_nuevos %}<span class="badge-noleidas">{{ tramites_nuevos }}</span>{% endif %}
+      </div>
+      {% endif %}
+      {% if 'empleadores' in modulos and ('emp_empresas' in permisos or 'emp_notificaciones' in permisos or 'emp_tramites_recibidos' in permisos or 'emp_tramites_formularios' in permisos) %}
+      <div class="acceso-badge-wrap">
+        <a class="pt-fila pt-vid" href="/admin#empleadores">
+          <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg></span>
+          <span class="pt-fila-txt"><span class="pt-fila-t">Empleadores</span>
+            <span class="pt-fila-e">Empresas, notificaciones y trámites</span></span>
+          <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+        </a>
+        {% if tramites_empresa_nuevos %}<span class="badge-noleidas">{{ tramites_empresa_nuevos }}</span>{% endif %}
+      </div>
+      {% endif %}
+      {% if 'seccionales' in permisos %}
+      <a class="pt-fila pt-vid" href="/admin#seccionales">
+        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg></span>
+        <span class="pt-fila-txt"><span class="pt-fila-t">Seccionales</span>
+          <span class="pt-fila-e">Sedes y delegaciones</span></span>
+        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+      </a>
+      {% endif %}
+      {% if es_super_admin %}
+      <a class="pt-fila pt-vid" href="/admin#administradores">
+        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-admins"/></svg></span>
+        <span class="pt-fila-txt"><span class="pt-fila-t">Áreas y Usuarios</span>
+          <span class="pt-fila-e">Quién entra y qué puede tocar</span></span>
+        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
+      </a>
+      {% endif %}
+  </div>
+
+  <div style="text-align:center; margin-top:26px;">
     <button class="btn-acerca" onclick="abrirAcerca()">Acerca de</button>
+  </div>
+</div>
+
+<!-- Overlay: tu cuenta (lectura) -->
+<div class="overlay overlay-centro" id="overlay-perfil" onclick="if (event.target === this) cerrarPerfil()">
+  <div class="modal-hoja" style="border-radius: var(--r-card);">
+    <button class="modal-cerrar" onclick="cerrarPerfil()" aria-label="Cerrar"><svg viewBox="0 0 24 24"><use href="#ic-x"/></svg></button>
+    <h3>Tu cuenta</h3>
+    <div class="modal-fila"><span class="k">Nombre</span><span class="v">{{ nombre_admin or '—' }}</span></div>
+    <div class="modal-fila"><span class="k">Usuario</span><span class="v">{{ usuario_admin }}</span></div>
+    {% if cuil_admin %}<div class="modal-fila"><span class="k">CUIL</span><span class="v num">{{ cuil_admin }}</span></div>{% endif %}
+    <div class="modal-fila"><span class="k">Rol</span><span class="v">{{ rol_admin }}</span></div>
+    <div class="modal-fila"><span class="k">Seccional</span><span class="v">{{ seccional_admin or 'Todas' }}</span></div>
+    {% if area_admin %}<div class="modal-fila"><span class="k">Área</span><span class="v">{{ area_admin }}</span></div>{% endif %}
+    <div class="modal-fila"><span class="k">Sindicato</span><span class="v">{{ sindicato }}</span></div>
   </div>
 </div>
 
@@ -259,11 +257,15 @@
     <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
     <g id="ic-seccionales"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></g>
     <g id="ic-empleadores"><rect x="4" y="9" width="16" height="12" rx="1.2"/><path d="M9 9V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4"/><circle cx="9" cy="14" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="0.9" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="0.9" fill="currentColor" stroke="none"/></g>
+    <g id="ic-flecha"><path d="M5 12h13"/><path d="m12.5 6 6 6-6 6"/></g>
+    <g id="ic-perfil"><circle cx="12" cy="8.5" r="3.4"/><path d="M4.8 20c.6-3.9 3.6-6 7.2-6s6.6 2.1 7.2 6"/></g>
     <g id="ic-admins"><path d="M12 3l7 3v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6z"/><circle cx="12" cy="10" r="2.3"/><path d="M8.4 15c.7-1.5 2-2.3 3.6-2.3s2.9.8 3.6 2.3"/></g>
   </defs>
 </svg>
 
 <script>
+function abrirPerfil() { document.getElementById('overlay-perfil').classList.add('abierto'); }
+function cerrarPerfil() { document.getElementById('overlay-perfil').classList.remove('abierto'); }
 function abrirAcerca() { document.getElementById('overlay-acerca').classList.add('abierto'); }
 function cerrarAcerca() { document.getElementById('overlay-acerca').classList.remove('abierto'); }
 </script>
