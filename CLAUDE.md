@@ -313,7 +313,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   zona gris legal). ARCA cubre jubilación y obra social, NO ART. Estados:
   pagado/parcial/impago/no_presentada/no_declarado/informado (ver
   "Ajustes de recibos, aportes y trámites" en HISTORIAL.md para "INFORMADO").
-- **Un solo encabezado para las cuatro apps** (2026-09-13): ninguna
+- **Un solo encabezado para las cuatro apps** (2026-09-13, con la excepción
+  del afiliado desde 2026-09-23): ninguna
   plantilla escribe el suyo, se arma con `{% include "_encabezado.html" %}`
   (+ `static/encabezado.css`, que el propio parcial carga porque
   `trabajador.html` y `empresa.html` no cargan `marca.css`). Cinta oscura
@@ -324,6 +325,14 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   (logo de plataforma grande, 148/85px) y las herramientas internas
   (`/entornos`, informes de carga). Reglas completas en la skill
   `diseno-mi-trabajo`; el porqué, en HISTORIAL.md.
+  **La app del afiliado es de UNA sola línea** (2026-09-23): ahí la cinta no
+  tiene rol que decir, así que no se dibuja y Colm3na baja a la misma barra
+  del logo del gremio, a la derecha (24px contra los 62 del gremio: sigue
+  siendo la firma y no la marca principal). Y **el nombre de la pantalla no
+  se escribe en ninguna pantalla de esa app**: todas llevan el mismo
+  encabezado que Inicio, porque la barra de pestañas de abajo ya dice dónde
+  estás. La regla la decide el parcial a partir de `enc_rol`: sin rol, no hay
+  cinta ni rótulo. Los otros tres paneles no cambian.
 - **La plataforma se llama Colm3na, no "Mi Trabajo"** (2026-09-13): el
   nombre viejo salió de todo lo que ve una persona — títulos del navegador,
   banda MRZ de los tres ingresos, `alt` de los logos, textos del panel de

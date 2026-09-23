@@ -250,10 +250,9 @@
 {% include "_entorno.html" %}
 
 {# Encabezado normalizado: el mismo parcial que el resto de la suite.
-   La cinta del afiliado va sin texto de rol (el logo de Colm3na firma
-   solo) y el nombre del sindicato ya no se repite en texto al lado de un
-   logo que lo dice. #}
-{% set enc_pantalla = 'Inicio' %}
+   En la app del afiliado es UNA sola línea -- logo del gremio a la
+   izquierda, Colm3na a la derecha -- y sin nombre de pantalla: no hay rol
+   que poner en la cinta, así que la cinta no existe. Ver _encabezado.html. #}
 {% include "_encabezado.html" %}
 
 <a class="btn-flotante btn-home" href="/app/inicio" title="Inicio" aria-label="Inicio">
