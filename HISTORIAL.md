@@ -5469,3 +5469,106 @@ todavía: su `domicilio` sigue siendo un texto libre, nunca se migró al bloque
 estructurado de `geo.CAMPOS_DOMICILIO`. Quedó anotado en BACKLOG.md; hacerlo
 en el mismo bloque duplicaba el tamaño del cambio y el pedido era sobre el
 trabajador.
+
+
+## La portada del afiliado, esquema "Tablero" (2026-09-23)
+
+El pedido de Sd fue "en escritorio las tarjetas son demasiado largas y queda
+mucho espacio, y las letras de los títulos son chicas y difíciles de leer".
+La causa no era de gusto y estaba en una línea: **`.pad` no tenía ancho
+máximo**. En un monitor de 1920 la grilla de `.tarjetas` (3 columnas arriba
+de 700 px) repartía todo el ancho disponible, así que cada tarjeta terminaba
+midiendo unos 600 px, con un `min-height: 88px`, el ícono arriba, el texto
+abajo y un título de 13 px en el medio de todo ese aire. No era "poca
+letra": era una tarjeta que se estiraba sin tope.
+
+**Tres mockups antes de tocar código**, en `disenos/portadas-propuestas.html`
+(la carpeta está en `.gitignore`): A "Respiro" (la de hoy, con tope de ancho
+y tipografía más grande), B "Tablero" (dos columnas: acción a la izquierda,
+novedades a la derecha) y C "Mesa de trabajo" (agrupada por familias, pensada
+por el panel del sindicato con sus 15 accesos). Cada propuesta se renderiza
+dentro de un `<iframe>` de 1440 y otro de 390 al mismo tiempo, así las media
+queries responden al ancho del iframe y no al de la página: lo que se ve en
+el panel "Escritorio" es literalmente el CSS a 1440. Sd eligió la B.
+
+### Qué cambió
+
+- **Tope de 1320 px centrado** y dos columnas arriba de 1040 px
+  (`minmax(0,1fr) 352px`). Abajo de eso se apila y queda como antes.
+- **Los accesos son horizontales**: ícono en una pastilla a la izquierda,
+  título y estado a la derecha, flecha al final. Es la forma que llena el
+  ancho en vez de dejar hueco, y el título sube de 13 a 19 px.
+- **La tarjeta principal dice números reales.** `db.resumen_recibos_trabajador`
+  devuelve cuántos recibos verificó en lo que va del año y cómo salió el
+  último; la tarjeta muestra "72 · recibos verificados este año" y "Julio
+  2026 · con diferencias para revisar". Antes decía "Revisá tus aportes", que
+  no le informaba al afiliado nada que él no supiera ya. Sin ningún recibo
+  todavía no inventa un cero: cambia el texto e invita a subir el primero.
+- **Novedades y Beneficios suben al riel**, donde se ven al entrar, en vez de
+  quedar al final de un scroll largo.
+
+### Las dos cosas que Sd pidió conservar
+
+**La foto de la noticia.** En la primera versión de la propuesta B el riel las
+había reducido a un hilo de texto. La miniatura ya existía (44 px,
+`/noticia-imagen/{id}/1`): ahora sube a 62 px y la más nueva lleva filo de
+acento, el mismo recurso que ya usa `.notif-item.no-leida`. La noticia sin
+imagen sigue cayendo en el ícono genérico, del mismo tamaño, para que los
+títulos queden alineados.
+
+**El carrusel de beneficios**, rehecho como pieza de marketing: imagen a
+sangre con velo oscuro de abajo hacia arriba, el rubro como chip en acento,
+la descripción en condensada cortada a dos renglones (la escribe el sindicato
+y puede ser larga; si no, la tarjeta cambia de alto entre una lámina y la
+siguiente) y la vigencia al pie. La fluidez son cinco cosas concretas:
+deslizamiento con curva de salida de 620 ms, **zoom lento sobre la lámina
+activa** (Ken Burns de 7 s, que es lo que hace que una tarjeta quieta parezca
+viva), barra que muestra cuánto falta para la que sigue, arrastre con el dedo
+que sigue la mano y decide al soltar, y **pausa al pasar el mouse** -- nadie
+quiere que se le mueva lo que está leyendo. Las cinco se apagan con
+`prefers-reduced-motion`.
+
+Dos decisiones del carrusel que conviene recordar:
+
+- **Clases propias (`.car-*`) y no las `.carrusel*` de marca.css.** Esas las
+  sigue usando la vista previa del panel de admin y no tienen por qué cambiar
+  juntas.
+- **La imagen pasó de `contain` sobre una tira de 88 px a `cover` sobre
+  16/11.** Las imágenes cargadas hasta ahora se van a ver recortadas si son
+  verticales: hay que pedirle al sindicato que las suba apaisadas.
+
+### La profundidad, sin un solo color nuevo
+
+Sd trajo como referencia una app de club de pádel hecha con Code. Lo que se
+tomó de ahí son cuatro recursos, ninguno de los cuales agrega color: dos
+**manchas de luz difuminadas** (que son el primario y el acento del PROPIO
+sindicato, al 42% y 16% con blur de 110 px), una **retícula de colmena** muy
+tenue de fondo -- el equivalente nuestro a sus líneas de cancha --, la
+**trama diagonal más fina** (1 px cada 6) y **radios más grandes** en las
+piezas principales. En la portada clara las manchas se apagan: dos blobs
+sobre papel se ven como una mancha de impresión.
+
+### Lo que se verificó
+
+Contra el local con Postgres: **La Bancaria** (con logo y con 20 beneficios
+sintéticos) en 1440 y en 375, la variante clara forzada por DOM, y el
+carrusel medido en vivo -- avanzó solo a la quinta lámina, `carMover(1)`
+pasó a la sexta, los puntos siguieron el estado y la barra corrió. Tests:
+`test_portada` (12, cuatro nuevos: números reales, el caso sin recibos, la
+foto de la noticia y el carrusel), `test_beneficios`, `test_encuestas`,
+`test_modulos`, `test_noticias`, `test_notificaciones`, `test_modales`,
+`test_fechas`, `test_datos_personales` y `test_codigos_error`.
+
+Dos tests había que tocarlos y valía la pena entender por qué. El de
+beneficios afirmaba las clases viejas del carrusel (prueba lo mismo de
+siempre: con una sola lámina no hay a dónde ir, así que no se dibujan ni
+flechas ni puntos). Y el de encuestas buscaba `class="acceso" href="/app?tab=
+encuestas"`; al aflojarlo al href pelado empezó a dar falso negativo, porque
+ese mismo href aparece **dentro de un template literal del JS** de
+notificaciones. Quedó con la clase nueva.
+
+### Lo que NO cambió
+
+Las portadas del sindicato, la empresa y la plataforma siguen con el esquema
+anterior (`.tarjetas` + `.acceso` de marca.css). El pedido era sobre la del
+afiliado y llevarlas a las cuatro de una vez es otro bloque.

@@ -602,6 +602,7 @@ templates.env.globals["sello_static"] = _sello_static
 # Las fechas que lee una persona van en dd/mm/aaaa, también en las
 # plantillas: "2026-10-12" es el formato de la base, no el de la pantalla.
 templates.env.filters["dia"] = fechas.dia_legible
+templates.env.filters["periodo"] = fechas.periodo_legible
 
 
 @app.on_event("startup")
@@ -6187,6 +6188,9 @@ def app_portada(request: Request):
                              if seccional_id else None),
             "etiquetas_precision": geo.ETIQUETAS_PRECISION,
             "tiene_foto_perfil": bool(db.foto_trabajador(cuil)),
+            # Lo que la tarjeta principal de la portada dice de verdad:
+            # cuántos recibos verificó este año y cómo salió el último.
+            "recibos_resumen": db.resumen_recibos_trabajador(cuil, sid_activo),
             "noticias": _con_antiguedad(db.noticias_vigentes(sid_activo, seccional_id=seccional_id, limite=3)),
             "beneficios": db.beneficios_vigentes(sid_activo, seccional_id=seccional_id),
             "notificaciones_no_leidas": db.contar_notificaciones_no_leidas(cuil, sid_activo),

@@ -709,6 +709,22 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     decisiones nuevas en "Decisiones tomadas" y el detalle en HISTORIAL.md
     ("Una persona, un domicilio").
 
+29. **La portada del afiliado, esquema "Tablero"** (2026-09-23, rama
+    `feature/portada-tablero`): `/app/inicio` deja la tira vertical de
+    tarjetas cuadradas. El problema era de una línea -- `.pad` sin ancho
+    máximo, así que en un monitor cada tarjeta medía ~600px con un título de
+    13px adentro. Ahora tope de 1320px y dos columnas (acción a la
+    izquierda, novedades y beneficios a la derecha), accesos horizontales
+    con el título en 19px, y la tarjeta principal con **números reales**
+    (`db.resumen_recibos_trabajador`: cuántos verificó este año y cómo salió
+    el último). La noticia **conserva su foto** (62px, filo de acento en la
+    más nueva) y el carrusel de beneficios se rehízo con velo, chip de
+    rubro, barra de tiempo, zoom lento, arrastre y pausa al pasar el mouse.
+    Profundidad nueva sin ningún color nuevo (manchas de luz con el primario
+    y el acento del sindicato, retícula de colmena, trama diagonal). Las dos
+    variantes, oscura y clara. **Solo la del afiliado**: sindicato, empresa
+    y plataforma siguen con `.tarjetas`/`.acceso`. Detalle en HISTORIAL.md.
+
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
 plataforma), (b) sacar "Cambiar clave" transitorio de plataforma antes de

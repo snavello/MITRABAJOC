@@ -103,17 +103,22 @@ def test_aislamiento_entre_sindicatos():
 
 
 def test_carrusel_muestra_flechas_solo_con_mas_de_un_vigente():
+    # Clases del carrusel rediseñado (2026-09-23, portada v2 "Tablero"): lo
+    # que se prueba es lo mismo de siempre -- con una sola lámina no hay a
+    # dónde ir, así que no se dibujan ni flechas ni puntos.
     r = trab_client.get("/app/inicio")
-    assert 'id="carrusel-beneficios"' in r.text
+    assert 'id="car-pista"' in r.text
     # Un solo vigente de UOM a esta altura ("Vencido" y "Todavía no arrancó" no lo son) -> sin flechas.
-    assert 'carrusel-flecha carrusel-izq' not in r.text
+    assert 'car-flecha car-izq' not in r.text
+    assert 'class="car-punto' not in r.text
 
     with db.get_session() as s:
         s.add(Beneficio(sindicato_id=SID_UOM, rubro="Segundo vigente", fecha_desde="2020-01-01",
                         fecha_hasta="2030-12-31", creada="2026-01-01"))
         s.commit()
     r2 = trab_client.get("/app/inicio")
-    assert 'carrusel-flecha carrusel-izq' in r2.text  # ahora hay 2 vigentes -> sí hay flechas
+    assert 'car-flecha car-izq' in r2.text  # ahora hay 2 vigentes -> sí hay flechas
+    assert 'class="car-punto' in r2.text
     print("OK  test_carrusel_muestra_flechas_solo_con_mas_de_un_vigente")
 
 

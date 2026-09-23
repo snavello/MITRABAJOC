@@ -72,3 +72,24 @@ def dia_legible(iso: str) -> str:
         return datetime.strptime((iso or "").strip(), "%Y-%m-%d").strftime("%d/%m/%Y")
     except ValueError:
         return iso or ""
+
+
+MESES = ("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+         "agosto", "septiembre", "octubre", "noviembre", "diciembre")
+
+
+def periodo_legible(periodo: str) -> str:
+    """"2026-07" -> "Julio 2026", para los textos que lee una persona.
+
+    El período de un recibo se guarda "AAAA-MM" porque así ordena solo y
+    se compara como texto; mostrárselo crudo al afiliado es mostrarle el
+    formato de la base. Igual que `dia_legible`, si no viene en ese formato
+    se devuelve tal cual: es texto para una pantalla, nunca vale romperla.
+    """
+    partes = (periodo or "").strip().split("-")
+    if len(partes) != 2 or not partes[0].isdigit() or not partes[1].isdigit():
+        return periodo or ""
+    mes = int(partes[1])
+    if not 1 <= mes <= 12:
+        return periodo
+    return MESES[mes - 1].capitalize() + " " + partes[0]
