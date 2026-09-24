@@ -181,3 +181,58 @@ def test_rutas_de_prueba_piden_pase_y_avisan_si_falta_configurar(monkeypatch):
     obs = c.get("/api/entornos/observabilidad").json()
     assert obs["telegram"]["configurado"] is True and obs["telegram"]["hora_resumen"] == "21:00"
     print("OK  test_rutas_de_prueba_piden_pase_y_avisan_si_falta_configurar")
+
+
+def _serie(valores, labels=None, inicio="2026-09-23T12:00:00Z", paso_min=5):
+    """Una serie al estilo de Render: valores cada `paso_min` desde `inicio` (UTC)."""
+    from datetime import datetime, timedelta, timezone
+    t0 = datetime.fromisoformat(inicio.replace("Z", "+00:00"))
+    return {"labels": labels or [], "values": [
+        {"timestamp": (t0 + timedelta(minutes=paso_min * i)).strftime("%Y-%m-%dT%H:%M:%SZ"), "value": v}
+        for i, v in enumerate(valores)]}
+
+
+def test_metricas_del_dia_resume_web_y_base_con_horas_de_buenos_aires():
+    from observabilidad import metricas_dia as md
+    datos = {
+        "web": {
+            "cpu": [_serie([0.05, 0.10, 0.45, 0.08])], "cpu-limit": [_serie([0.5] * 4)],          # pico 90 % en el 3er punto
+            "memory": [_serie([200e6, 300e6, 380e6, 250e6])], "memory-limit": [_serie([512e6] * 4)],
+            "http-requests": [_serie([10, 20, 300, 30], labels=[{"field": "statusCode", "value": "200"}]),
+                              _serie([0, 0, 6, 0], labels=[{"field": "statusCode", "value": "503"}])],
+            "http-latency": [_serie([0.2, 0.3, 3.4, 0.4])],
+        },
+        "db": {
+            "cpu": [_serie([0.01, 0.02, 0.03, 0.01])], "cpu-limit": [_serie([0.1] * 4)],
+            "memory": [_serie([100e6] * 4)], "memory-limit": [_serie([256e6] * 4)],
+            "active-connections": [_serie([2, 3, 8, 4])],
+        },
+    }
+    a = md.analizar(datos)
+    assert round(a["web"]["cpu_max"]) == 90 and a["web"]["pedidos"] == 366 and a["web"]["cinco_xx"] == 6
+    assert a["web"]["hora_pico"] == 9                    # 12:10 UTC = 09:10 de Buenos Aires
+    assert round(a["db"]["conex_max"]) == 8 and round(a["db"]["cpu_max"]) == 30
+    assert len(a["congestion"]) == 3                     # CPU, 5xx y latencia
+    web, db = md.texto(a)
+    assert web.startswith("🖥 Web: hubo congestión") and "CPU al 90 % a las 09:10" in web and "6 respuestas 5xx" in web
+    assert "366 pedidos" in web and "hora más cargada 09–10 h (366)" in web and "latencia p95 máx 3.4 s" in web
+    assert db.startswith("🗄 Base:") and "conexiones máx 8 a las 09:10" in db and "CPU pico 30 %" in db
+    # un día tranquilo
+    tranquilo = {"web": {"cpu": [_serie([0.05, 0.06])], "cpu-limit": [_serie([0.5, 0.5])], "memory": None, "memory-limit": None,
+                         "http-requests": [_serie([5, 7], labels=[{"field": "statusCode", "value": "200"}])], "http-latency": None},
+                 "db": {"cpu": None, "cpu-limit": None, "memory": None, "memory-limit": None, "active-connections": None}}
+    t = md.texto(md.analizar(tranquilo))
+    assert t[0].startswith("🖥 Web: sin congestión") and "0 con error 5xx" in t[0] and t[1] == "🗄 Base: sin métricas de Render para hoy."
+    # sin nada
+    assert md.texto(md.analizar({"web": {}, "db": {}})) == ["🖥 Servidor: sin métricas de Render para hoy."]
+    print("OK  test_metricas_del_dia_resume_web_y_base_con_horas_de_buenos_aires")
+
+
+def test_lineas_del_dia_sin_clave_lo_dice_y_el_resumen_las_incluye(monkeypatch):
+    from observabilidad import metricas_dia as md
+    monkeypatch.delenv("RENDER_API_KEY", raising=False)
+    lineas = md.lineas_del_dia()
+    assert len(lineas) == 1 and "RENDER_API_KEY" in lineas[0]
+    t = telegram.texto_resumen({}, None, None, "pruebas", "23/09/2026", servidor=["🖥 Web: sin congestión.", "🗄 Base: ok."])
+    assert "🖥 Web: sin congestión." in t and t.index("Estado general") < t.index("🖥 Web") < t.index("Recibos leídos")
+    print("OK  test_lineas_del_dia_sin_clave_lo_dice_y_el_resumen_las_incluye")

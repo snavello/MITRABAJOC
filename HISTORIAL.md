@@ -5650,3 +5650,21 @@ pendiente). Tests: `test_telegram.py` (11). Plataforma 0.36.01.
 **El token pasó por el chat.** Sd pegó el primer token en la conversación
 por error de portapapeles; se le pidió revocarlo en BotFather y cargar el
 nuevo directo en Render, que es la regla: los secretos no pasan por Code.
+
+### El servidor en el resumen: picos, horarios y congestión (mismo día)
+
+Con el primer resumen ya en el teléfono, Sd pidió "una línea o dos de cómo
+funcionó el servicio web, si se congestionó, si tuvo picos en algún horario,
+y lo mismo para la base, con algún número si hiciera falta". Las métricas
+ya existían: son las que el colector manda a Grafana cada cinco minutos.
+`observabilidad/metricas_dia.py` las lee de Render para las últimas 24
+horas (CPU y memoria contra el límite del plan, pedidos HTTP por código de
+estado, latencia p95, conexiones de la base) y las resume en dos líneas con
+las horas en Buenos Aires: pico de CPU y cuándo, promedio, pico de memoria,
+cuántos pedidos, la hora más cargada, cuántos 5xx, la latencia máxima; y
+para la base CPU, memoria y conexiones máximas. El veredicto "sin
+congestión / hubo congestión: …" usa el mismo criterio que las alertas del
+tablero pero mirando el día entero (CPU al 80 %, cinco 5xx, p95 de 3 s).
+Lectura y análisis separados: el análisis es puro y se prueba con series
+inventadas. Sin `RENDER_API_KEY` o con Render caído, el resumen sale igual
+con una línea que lo dice. Plataforma 0.36.02.

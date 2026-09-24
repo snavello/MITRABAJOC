@@ -143,7 +143,11 @@ Tres canales, un solo bot (`Colm3na_bot`):
   de Buenos Aires (`TELEGRAM_RESUMEN_HORA`). Antes de mandar reclama el día con un
   INSERT en `avisoenviado` que solo puede ganar un worker. El texto lo arma
   `telegram.texto_resumen` con los indicadores de `esquema.py`, los errores de
-  Sentry y el semáforo de Grafana; lo que no se pueda leer dice "sin dato".
+  Sentry, el semáforo de Grafana y dos líneas sobre el servidor
+  (`observabilidad/metricas_dia.py`: picos de CPU y memoria con su hora,
+  pedidos, hora más cargada, 5xx, latencia p95, conexiones de la base, y si
+  hubo congestión con el mismo criterio que las alertas); lo que no se pueda
+  leer dice "sin dato".
 
 Pruebas desde la pestaña Observación técnica: "Enviar prueba a Telegram" y
 "Mandar el resumen del día ahora". Para rotar el token: BotFather → `/mybots` →
