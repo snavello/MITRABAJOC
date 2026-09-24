@@ -5950,3 +5950,57 @@ mirarlo además en Pruebas. Quedó así:
   Lo mide el modo sombra (bloque 5) con datos reales, y el número de la
   notebook no se usa para proyectar: con todos sus núcleos ocupados la CPU
   por lectura se triplica.
+
+## Enmascarado, bloque 3: el enganche en la app (2026-09-24)
+
+`preparacion.py` es la capa entre las rutas y los dos módulos del
+enmascarado: elige el camino (PDF con texto, PDF escaneado, foto), arma la
+imagen que viaja, rearma la identidad en lo que devuelve la IA y deja el
+registro. Variable `ENMASCARADO`:
+
+- **`apagado`** (default): no se hace nada. La llamada a `extraer()` queda
+  idéntica a la de siempre (lo verifica `test_preparacion.py`), así que los
+  tests que simulan la IA siguen valiendo tal cual y nada cambia en ningún
+  entorno hasta prender la variable.
+- **`sombra`**: se calcula todo y se registra, pero viaja el original, y un
+  recibo ajeno solo se anota. Es para medir en Pruebas sin tocar a nadie.
+- **`activo`**: viaja la imagen tapada, la IA recibe un aviso (las zonas
+  grises son intencionales: null en esos campos y no es adulteración) y la
+  identidad vuelve con lo leído acá.
+
+Las cuatro salidas hacia la IA: el recibo (`/api/leer`), el comprobante de
+ARCA (`/api/aportes`) y el aprendizaje del admin (`/admin/aprender`, sin
+nada conocido: patrones y rótulos). El banco de pruebas de plataforma se
+toca en el bloque 4.
+
+### Decisiones del bloque
+
+- **El recibo ajeno se corta ANTES de la IA** (E-RECIBO-04 / E-APORTE-03):
+  ni se paga la lectura ni sale el documento. Pero solo con un CUIL ajeno de
+  **dígito verificador válido** (`enmascarado.pertenece`): un dígito mal
+  leído por el OCR no puede rechazarle a nadie su propio recibo. Con "no se
+  sabe" el recibo sigue y los chequeos de siempre sobre lo que devuelve la
+  IA siguen en pie.
+- **La identidad se rearma con lo leído en el documento, no con la base**:
+  el CUIL y el CUIT del recibo (con pluriempleo el CUIT guardado puede no ser
+  el del recibo, y de ese CUIT dependen los conceptos por empleador); el
+  nombre, de `CuentaTrabajador` si se lo encontró en el recibo; la razón
+  social, del empleador cargado en el sindicato por ese CUIT o, si no está,
+  de lo leído (una sola vez: el logo y la firma repiten texto). Solo se
+  completa lo que la IA devolvió vacío o como "OCULTO".
+- **Si la IA marca el rótulo gris como adulteración**, esa alerta no vale.
+  Una alerta real (otro motivo) sigue en pie.
+- **Registro sin datos personales**: tabla `registroenmascarado` (migración
+  `e5b2c8d4f1a7`): modo, camino, motivo, si se tapó, cajas, fugas, si se
+  encontró el CUIL, pertenencia y tiempos. Nunca levanta: ni una tabla
+  faltante puede frenar un recibo.
+- **La foto viaja derecha** (EXIF) y con 3000 px de lado como mucho; un PDF
+  tapado viaja como PNG de la primera página, igual que hoy.
+- El lector de fotos se precarga al arrancar si el modo no es `apagado`.
+
+Tests: `test_preparacion.py` (18: modos, caminos, archivo roto, rearmado, el
+aviso, y las rutas de punta a punta con la IA simulada: apagado idéntico,
+activo tapa y rearma, ajeno cortado sin llamar a la IA, sombra no cambia
+nada, un error del enmascarado no frena el recibo). Probado además el camino
+de fotos con Tesseract real en Linux: 17 zonas tapadas, 0 fugas, 1,3 s.
+Trabajador 0.42.01, Admin 0.46.01.

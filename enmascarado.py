@@ -624,13 +624,20 @@ def analizar(palabras: list[Palabra], conocidos: Conocidos | None = None) -> Ana
 
 
 def pertenece(analisis: Analisis, cuil_sesion: str) -> bool | None:
-    """¿El documento es de quien lo sube? True: su CUIL está. False: hay otro
-    CUIL de persona y el suyo no. None: no se leyó ningún CUIL (foto mala,
-    recorte) -- lo decide quien llama, según la política del plan (§6)."""
+    """¿El documento es de quien lo sube? True: su CUIL está. False: hay OTRO
+    CUIL de persona **con dígito verificador válido** y el suyo no. None: no
+    se puede afirmar nada (no se leyó ningún CUIL, o solo uno inválido junto
+    a su rótulo).
+
+    El verificador es lo que evita rechazarle a alguien su propio recibo por
+    un dígito que el OCR leyó mal: un CUIL mal leído casi nunca tiene el
+    verificador bien. Con None el recibo sigue su camino (mejor esfuerzo) y
+    los chequeos de siempre sobre lo que devuelve la IA siguen en pie."""
     cuil = _digitos(cuil_sesion)
     if cuil in analisis.cuiles:
         return True
-    return False if analisis.cuiles else None
+    ajenos = [c for c in analisis.cuiles if dv_valido(c) and _es_persona(c)]
+    return False if ajenos else None
 
 
 def control_de_fuga(palabras: list[Palabra], cajas: list[Caja],

@@ -133,6 +133,17 @@ def imagenes_pdf(contenido: bytes, escala: float = ESCALA) -> list:
         pdf.close()
 
 
+def imagen_pdf(contenido: bytes, pagina: int = 0, escala: float = ESCALA):
+    """Una sola página como imagen PIL (la IA hoy recibe solo la primera)."""
+    import pypdfium2 as pdfium
+
+    pdf = pdfium.PdfDocument(contenido)
+    try:
+        return pdf[pagina].render(scale=escala).to_pil().convert("RGB")
+    finally:
+        pdf.close()
+
+
 def abrir_imagen(contenido: bytes):
     """La foto como imagen PIL, DERECHA: un teléfono guarda la rotación en
     el EXIF, y al volver a codificar la imagen tapada ese dato se pierde --

@@ -226,6 +226,28 @@ MAX_TOKENS = 8000
 MODELOS_QUE_RAZONAN = {"claude-opus-5", "claude-sonnet-5"}
 
 
+# Se suma al pedido SOLO cuando la imagen va con datos tapados
+# (preparacion.py). Dos cosas: que devuelva null en esos campos en vez de
+# inventar, y que el rótulo gris no es una tachadura -- sin esto, la alerta de
+# adulteración lo leería como una edición del recibo.
+AVISO_ENMASCARADO = (
+    "Aviso: algunas zonas del documento están cubiertas por un rótulo gris que "
+    "dice, por ejemplo, 'CUIL OCULTO', 'NOMBRE OCULTO', 'LEGAJO OCULTO', 'CUENTA "
+    "OCULTA', 'CUIT OCULTO' o 'EMPLEADOR OCULTO'. Las cubrimos nosotros a propósito "
+    "para proteger datos personales: devolvé null en esos campos y NO las "
+    "consideres adulteración ni señal de edición. El resto del documento (importes, "
+    "conceptos, códigos, períodos, fechas, categoría) está intacto y se lee como siempre."
+)
+
+
+def _contenido(b64: str, media: str, esquema: str, aviso_enmascarado: bool) -> list:
+    partes = [{"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}},
+              {"type": "text", "text": esquema}]
+    if aviso_enmascarado:
+        partes.append({"type": "text", "text": AVISO_ENMASCARADO})
+    return partes
+
+
 def _opciones(modelo: str) -> dict:
     return {"output_config": {"effort": "low"}} if modelo in MODELOS_QUE_RAZONAN else {}
 
@@ -285,7 +307,8 @@ def _uso_mock(inicio: float) -> dict:
 
 
 def extraer(contenido: bytes, content_type: str, modelo: str | None = None,
-            imagen: tuple[str, str] | None = None) -> tuple[dict, dict]:
+            imagen: tuple[str, str] | None = None,
+            aviso_enmascarado: bool = False) -> tuple[dict, dict]:
     """Devuelve (datos_del_recibo, uso) -- uso trae modelo/tokens_entrada/
     tokens_salida/duracion_ms de esta llamada puntual, para registrar el costo
     real. `modelo` lo decide quien llama; sin él, MODELO. `imagen` es el
@@ -304,13 +327,8 @@ def extraer(contenido: bytes, content_type: str, modelo: str | None = None,
         max_tokens=MAX_TOKENS,
         system=SYSTEM,
         **_opciones(modelo),
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}},
-                {"type": "text", "text": ESQUEMA},
-            ],
-        }],
+        messages=[{"role": "user",
+                   "content": _contenido(b64, media, ESQUEMA, aviso_enmascarado)}],
     )
     return _parsear(msg, modelo, int((time.perf_counter() - inicio) * 1000))
 
@@ -516,7 +534,8 @@ de ARCA, poné confianza en "baja"."""
 
 
 def extraer_aportes(contenido: bytes, content_type: str, modelo: str | None = None,
-                    imagen: tuple[str, str] | None = None) -> tuple[dict, dict]:
+                    imagen: tuple[str, str] | None = None,
+                    aviso_enmascarado: bool = False) -> tuple[dict, dict]:
     """Lee un comprobante de aportes de ARCA (imagen o PDF) y devuelve
     (estado_mensual, uso) -- mismo criterio que extraer()."""
     if _mock_activo():
@@ -532,12 +551,7 @@ def extraer_aportes(contenido: bytes, content_type: str, modelo: str | None = No
         max_tokens=MAX_TOKENS,
         system=SYSTEM_APORTES,
         **_opciones(modelo),
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}},
-                {"type": "text", "text": ESQUEMA_APORTES},
-            ],
-        }],
+        messages=[{"role": "user",
+                   "content": _contenido(b64, media, ESQUEMA_APORTES, aviso_enmascarado)}],
     )
     return _parsear(msg, modelo, int((time.perf_counter() - inicio) * 1000))

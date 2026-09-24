@@ -171,6 +171,15 @@ def test_pertenece():
     assert E.pertenece(E.analizar([P("Sueldo", 10, 10)]), "27287654311") is None  # no se leyó
 
 
+def test_un_cuil_mal_leido_no_hace_ajeno_el_recibo():
+    """El OCR leyó mal un dígito del CUIL propio: el verificador no da, así
+    que no es prueba de que el recibo sea de otro -- None, no False."""
+    mal_leido = E.analizar([P("CUIL:", 10, 10, 60), P("27-28765481-1", 66, 10, 190)])
+    assert not E.dv_valido("27287654811")
+    assert mal_leido.cuiles == ["27287654811"]              # se tapa igual, por el rótulo
+    assert E.pertenece(mal_leido, "27287654311") is None
+
+
 def test_control_de_fuga_reclama_lo_que_quedo_a_la_vista():
     pal = [P("CUIL:", 10, 10, 60), P("27-28765431-1", 66, 10, 190)]
     con = Conocidos(cuil="27287654311")
@@ -252,4 +261,7 @@ def test_recibo_sintetico(archivo, con_conocidos):
     assert E.control_de_fuga(pal, an.cajas, NIEVES) == []
     assert an.cuiles == ["27999999999"] and an.cuits == ["30444640975"]
     assert E.pertenece(an, "27999999999") is True
-    assert E.pertenece(an, "20111111119") is False
+    # Para otra sesión NO se puede afirmar que sea ajeno: el CUIL ficticio de
+    # estos recibos tiene verificador inválido, y solo uno válido prueba que
+    # el recibo es de otra persona (un CUIL real siempre lo tiene).
+    assert E.pertenece(an, "20111111119") is None
