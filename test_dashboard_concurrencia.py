@@ -51,8 +51,11 @@ ENDPOINTS = ["kpis", "serie-recibos", "validacion", "diferencias-empresa",
              "explorador/tramites", "explorador/notificaciones"]
 
 with db.get_session() as s:
+    # Con cláusula: así el detalle de un recibo no enviado también se abre
+    # y su camino entra en la medición de conexiones.
     sind = Sindicato(nombre="Concurrencia Dash", slug="conc-dash", color_base="#0f1b2d",
-                     modulos_habilitados=["dashboard", "tramites", "notificaciones"])
+                     modulos_habilitados=["dashboard", "tramites", "notificaciones"],
+                     clausula_confidencialidad=True)
     s.add(sind)
     s.commit()
     s.refresh(sind)

@@ -73,22 +73,23 @@ def test_login_exitoso_redirige_a_inicio():
     print("OK  test_login_exitoso_redirige_a_inicio")
 
 
-def test_sindicato_con_todos_los_modulos_ve_las_12_tarjetas():
+def test_sindicato_con_todos_los_modulos_ve_las_11_tarjetas():
     c = _admin_client("20777777770", "full-demo")
     r = c.get("/admin/inicio")
     assert r.status_code == 200
+    # Cotizantes se unió a Reportes el 2026-09-24: ya no tiene tarjeta propia.
     for panel in ("reportes", "formulas", "conceptos", "trabajadores", "aprendizaje",
-                  "cotizantes", "noticias", "beneficios", "notificaciones",
+                  "noticias", "beneficios", "notificaciones",
                   "tramites", "seccionales", "administradores"):
         assert f'href="/admin#{panel}"' in r.text, panel
-    print("OK  test_sindicato_con_todos_los_modulos_ve_las_12_tarjetas")
+    print("OK  test_sindicato_con_todos_los_modulos_ve_las_11_tarjetas")
 
 
 def test_sindicato_solo_recibos_no_ve_modulos_apagados_pero_si_los_fijos():
     c = _admin_client("20888888880", "recibos-demo")
     r = c.get("/admin/inicio")
     assert r.status_code == 200
-    for panel in ("reportes", "formulas", "conceptos", "aprendizaje", "cotizantes"):
+    for panel in ("reportes", "formulas", "conceptos", "aprendizaje"):
         assert f'href="/admin#{panel}"' in r.text, panel
     for panel in ("noticias", "beneficios", "notificaciones", "tramites"):
         assert f'href="/admin#{panel}"' not in r.text, panel
@@ -135,7 +136,7 @@ def test_globo_de_empleadores_se_propaga_a_la_tarjeta():
 if __name__ == "__main__":
     test_sin_sesion_sirve_login()
     test_login_exitoso_redirige_a_inicio()
-    test_sindicato_con_todos_los_modulos_ve_las_12_tarjetas()
+    test_sindicato_con_todos_los_modulos_ve_las_11_tarjetas()
     test_sindicato_solo_recibos_no_ve_modulos_apagados_pero_si_los_fijos()
     test_saluda_con_el_nombre_del_admin_logueado()
     test_globo_de_tramites_nuevos_cuenta_solo_estado_iniciado()

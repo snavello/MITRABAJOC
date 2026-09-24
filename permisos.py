@@ -27,11 +27,12 @@ sección cuyo módulo está apagado no se muestra ni se puede asignar.
 # check en el título que tilda el grupo entero, así asignar "Recibos"
 # completo sigue siendo un clic.
 SECCIONES = {
+    # Reportes: TODOS los recibos verificados (enviados o no, estos
+    # anonimizados). Absorbió a la vieja "cotizantes" el 2026-09-24.
     "reportes":                 ("Reportes de recibos",      "recibos",        "Recibos"),
     "formulas":                 ("Fórmulas",                 "recibos",        "Recibos"),
     "conceptos":                ("Conceptos",                "recibos",        "Recibos"),
     "aprendizaje":              ("Aprendizaje",              "recibos",        "Recibos"),
-    "cotizantes":               ("Cotizantes",               "recibos",        "Recibos"),
     # Panel Sindical (módulo "dashboard"). Es una PÁGINA aparte
     # (/admin/dashboard), no una pestaña del panel, pero se gatea igual: el
     # permiso no es "ver la pestaña" sino "entrar a la sección".

@@ -1002,6 +1002,8 @@ PERMISOS_RUTAS = {
     "/admin/concepto/confirmar":            "conceptos",
     "/admin/concepto/fusionar":             "conceptos",
     "/admin/conceptos-universales":         "conceptos",
+    "/admin/reportes/lista":                "reportes",
+    "/admin/reportes/recibo/{recibo_id}":   "reportes",
     "/admin/formula":                       "formulas",
     "/admin/formula/borrar":                "formulas",
     "/admin/aprender":                      "aprendizaje",
@@ -1243,24 +1245,16 @@ def admin(request: Request):
             if puede("conceptos", "formulas", "aprendizaje") else []
         formulas = s.exec(select(Formula).where(Formula.sindicato_id == sid)).all() \
             if puede("formulas") else []
-        reportes = s.exec(select(Reporte).where(Reporte.sindicato_id == sid)
-                          .order_by(Reporte.id.desc())).all() \
-            if puede("reportes") else []
-        # El padrón se usa también para resolver nombres por CUIL en Reportes
-        # y en Cotizantes, que solo guardan el CUIL. Viene como dicts con el
-        # empadronamiento y la persona ya unidos (db.padron_del_sindicato):
-        # el nombre y el domicilio son de la persona, no de esta fila.
+        # Reportes ya no viaja en el HTML: son miles de recibos y se piden
+        # paginados a /admin/reportes/lista (anonimizados en el servidor).
+        # Viene como dicts con el empadronamiento y la persona ya unidos
+        # (db.padron_del_sindicato): el nombre y el domicilio son de la
+        # persona, no de esta fila.
         trabajadores = db.padron_del_sindicato(s, sid) \
-            if puede("trabajadores", "reportes", "cotizantes") else []
-        envios = s.exec(select(EnvioSindicato).where(EnvioSindicato.sindicato_id == sid)
-                        .order_by(EnvioSindicato.periodo.desc(), EnvioSindicato.id.desc())).all() \
-            if puede("cotizantes") else []
+            if puede("trabajadores") else []
         empleadores = s.exec(select(Empleador).where(Empleador.sindicato_id == sid)
                              .order_by(Empleador.activo.desc(), Empleador.razon_social)).all() \
             if puede("emp_empresas") else []
-    # Nombre por CUIL, para poder filtrar Reportes y Afiliados cotizantes por
-    # nombre (esas tablas solo guardan el CUIL, no el nombre).
-    nombres_por_cuil = {t["cuil"]: t["nombre"] for t in trabajadores}
     # Conceptos con código provisorio (la IA no pudo leer el código del recibo):
     # nunca matchean por código, así que hay que revisarlos.
     provisorios = detectar_provisorios([
@@ -1325,15 +1319,16 @@ def admin(request: Request):
         "marca": db.marca_sindicato(sid), "marca_plataforma": db.marca_plataforma(),
         "iniciales": _iniciales_sindicato(sind.nombre if sind else ""),
         "conceptos": conceptos, "genericos": genericos, "codigos_efectivos": codigos_efectivos,
-        "formulas": formulas, "reportes": reportes,
-        "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR, "envios": envios,
+        "formulas": formulas,
+        "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR,
+        "clausula_confidencialidad": bool(sind and sind.clausula_confidencialidad),
         "usuarios_sindicato": usuarios_sindicato,
         "permisos": permisos, "es_super_admin": es_super_admin,
         "administra_areas": administra,
         "seccionales_alcance": seccionales_alcance,
         "areas": areas, "catalogo_permisos": catalogo_permisos,
         "etiquetas_secciones": {k: v[0] for k, v in permisos_mod.SECCIONES.items()},
-        "nombres_por_cuil": nombres_por_cuil, "provisorios": provisorios,
+        "provisorios": provisorios,
         "debe_cambiar": ses.get("cambiar", False),
         "noticias": db.noticias_del_sindicato(sid) if puede("noticias") else [],
         "beneficios": db.beneficios_del_sindicato(sid) if puede("beneficios") else [],
@@ -5315,11 +5310,16 @@ async def plataforma_alta_sindicato(
     modulos_habilitados: list[str] = Form(default=[]),
     portada_clara: bool = Form(False),
     admin_portada_clara: bool = Form(False),
+    clausula_confidencialidad: bool = Form(False),
+    contrato: UploadFile = File(None),
 ):
     exigir_plataforma(request)
     color_base = color_base or "#0f1b2d"
     if not _es_oscuro(color_base):
         return RedirectResponse("/plataforma?error=colorbase#sindicatos", status_code=303)
+    contrato_leido = _leer_contrato(contrato)
+    if contrato_leido == "invalido":
+        return RedirectResponse("/plataforma?error=contrato#sindicatos", status_code=303)
     modulos_validos = [m for m in modulos_habilitados if m in MODULOS]
     slug = slugify(nombre)
     logo_datos, logo_mime, logo_flag = (None, "", "")
@@ -5344,6 +5344,9 @@ async def plataforma_alta_sindicato(
             portada_clara=portada_clara,
             admin_portada_clara=admin_portada_clara,
         )
+        if not _aplicar_contrato_y_clausula(request, sind, contrato_leido,
+                                            clausula_confidencialidad):
+            return RedirectResponse("/plataforma?error=clausula#sindicatos", status_code=303)
         s.add(sind); s.commit(); s.refresh(sind)
         sind_id = sind.id
     # Aportes de ley (jubilación, PAMI, obra social): mismo % en cualquier
@@ -5657,6 +5660,36 @@ def dashboard_detalle_recibo(request: Request, recibo_id: int):
     return d
 
 
+@app.get("/admin/reportes/lista")
+def admin_reportes_lista(request: Request, cuil: str = "", nombre: str = "",
+                         desde: str = "", hasta: str = "", resultado: str = "",
+                         enviado: str = "", page: int = 1):
+    """La pestaña Reportes: todos los recibos verificados del sindicato,
+    enviados (identificados) y no enviados (anonimizados, y solo con la
+    cláusula de confidencialidad firmada). Toda la privacidad vive en
+    dashboard.listado_reportes, en el SQL."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "recibos")
+    for fecha in (desde, hasta):
+        if fecha and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", fecha):
+            raise HTTPException(422, "Fecha inválida (AAAA-MM-DD).")
+    filtros = {"cuil": cuil, "nombre": nombre, "desde": desde, "hasta": hasta,
+               "resultado": resultado, "enviado": enviado}
+    alcance = _alcance_de(request)
+    return dashboard.listado_reportes(sid, filtros, alcance, page)
+
+
+@app.get("/admin/reportes/recibo/{recibo_id}")
+def admin_reportes_recibo(request: Request, recibo_id: int):
+    """Modal "Ver" de Reportes: el recibo, anonimizado si no fue enviado."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "recibos")
+    d = dashboard.detalle_reporte(sid, recibo_id, _alcance_de(request))
+    if not d:
+        raise HTTPException(404, "Recibo inexistente.")
+    return d
+
+
 @app.get("/admin/dashboard/detalle/tramite/{tramite_id}")
 def dashboard_detalle_tramite(request: Request, tramite_id: int):
     sid = _exigir_dashboard_detalle(request)
@@ -5758,6 +5791,75 @@ def _leer_logo(archivo: UploadFile):
     return datos, mimes[ext], f"logo{ext}"
 
 
+CONTRATO_MIMES = {".pdf": "application/pdf", ".png": "image/png",
+                  ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}
+CONTRATO_MAX_BYTES = 15 * 1024 * 1024
+
+
+def _leer_contrato(archivo: UploadFile | None):
+    """El contrato/convenio firmado con el sindicato: (datos, mime, nombre),
+    None si no se subió nada, o "invalido" si el archivo no sirve (tipo que
+    no es PDF ni imagen, vacío o de más de 15 MB). Bytes en la base, como el
+    logo."""
+    import os
+    if not archivo or not archivo.filename:
+        return None
+    ext = os.path.splitext(archivo.filename)[1].lower()
+    if ext not in CONTRATO_MIMES:
+        return "invalido"
+    datos = archivo.file.read()
+    if not datos or len(datos) > CONTRATO_MAX_BYTES:
+        return "invalido"
+    return datos, CONTRATO_MIMES[ext], os.path.basename(archivo.filename)[:200]
+
+
+def _aplicar_contrato_y_clausula(request: Request, sind: Sindicato, contrato_leido,
+                                 aceptada: bool) -> bool:
+    """Guarda el contrato (si vino) y el estado de la cláusula de
+    confidencialidad. Devuelve False si se quiso marcar la cláusula sin que
+    el sindicato tenga contrato cargado: la aceptación es la firma de ese
+    documento, un tilde sin papel no le da a nadie los recibos anonimizados.
+
+    Quién y cuándo se registran solo al PASAR a aceptada (editar la ficha
+    otra vez no reescribe la fecha), y se borran al desmarcarla."""
+    if contrato_leido:
+        sind.contrato_datos, sind.contrato_mime, sind.contrato_nombre = contrato_leido
+    if aceptada and not sind.contrato_datos:
+        return False
+    fila = _usuario_plataforma_de_sesion(request)
+    quien = fila.usuario if fila else "generico"
+    if aceptada and not sind.clausula_confidencialidad:
+        sind.clausula_confidencialidad = True
+        sind.clausula_aceptada_en = fechas.ahora_texto()
+        sind.clausula_aceptada_por = quien
+        db.registrar_log_plataforma("clausula_aceptada", quien, objetivo=sind.nombre,
+                                    ip=_ip_de(request))
+    elif not aceptada and sind.clausula_confidencialidad:
+        sind.clausula_confidencialidad = False
+        sind.clausula_aceptada_en = sind.clausula_aceptada_por = ""
+        db.registrar_log_plataforma("clausula_quitada", quien, objetivo=sind.nombre,
+                                    ip=_ip_de(request))
+    return True
+
+
+@app.get("/plataforma/sindicato/{sindicato_id}/contrato")
+def plataforma_ver_contrato(request: Request, sindicato_id: int):
+    """El contrato firmado, solo para plataforma (no es público como el logo)."""
+    exigir_plataforma(request)
+    with db.get_session() as s:
+        sind = s.get(Sindicato, sindicato_id)
+        if not sind or not sind.contrato_datos:
+            raise HTTPException(404, "Sin contrato cargado.")
+        # La cabecera va en latin-1: un nombre con tildes la rompería.
+        nombre = re.sub(r"[^A-Za-z0-9._ -]", "_", sind.contrato_nombre or "contrato")
+        return BinResponse(
+            content=sind.contrato_datos,
+            media_type=sind.contrato_mime or "application/octet-stream",
+            headers={"Content-Disposition": f'inline; filename="{nombre}"',
+                     "Cache-Control": "private, no-store"},
+        )
+
+
 @app.post("/plataforma/usuario")
 def plataforma_alta_usuario(
     request: Request,
@@ -5794,11 +5896,16 @@ async def plataforma_editar_sindicato(
     modulos_habilitados: list[str] = Form(default=[]),
     portada_clara: bool = Form(False),
     admin_portada_clara: bool = Form(False),
+    clausula_confidencialidad: bool = Form(False),
+    contrato: UploadFile = File(None),
 ):
     exigir_plataforma(request)
     color_base = color_base or "#0f1b2d"
     if not _es_oscuro(color_base):
         return RedirectResponse("/plataforma?error=colorbase#sindicatos", status_code=303)
+    contrato_leido = _leer_contrato(contrato)
+    if contrato_leido == "invalido":
+        return RedirectResponse("/plataforma?error=contrato#sindicatos", status_code=303)
     modulos_validos = [m for m in modulos_habilitados if m in MODULOS]
     with db.get_session() as s:
         sind = s.get(Sindicato, id)
@@ -5822,6 +5929,9 @@ async def plataforma_editar_sindicato(
                 datos, mime, flag = _leer_logo(firma)
                 if datos:
                     sind.firma_datos, sind.firma_mime, sind.firma = datos, mime, flag
+            if not _aplicar_contrato_y_clausula(request, sind, contrato_leido,
+                                                clausula_confidencialidad):
+                return RedirectResponse("/plataforma?error=clausula#sindicatos", status_code=303)
             s.add(sind); s.commit()
     return RedirectResponse("/plataforma", status_code=303)
 

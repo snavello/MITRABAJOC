@@ -237,6 +237,22 @@ class Sindicato(SQLModel, table=True):
     # trabajador -- un sindicato puede querer, por ejemplo, oscura para el
     # trabajador y clara para el admin. Mismo criterio visual, elegida aparte.
     admin_portada_clara: bool = Field(default=False)
+    # ---- Cláusula de confidencialidad (Reportes, 2026-09-24) ----
+    # Los recibos que el afiliado verificó pero NO envió le llegan al
+    # sindicato anonimizados (sin nombre, CUIL, legajo ni empresa) en la
+    # lista de Reportes y en el explorador del Panel. Aun anonimizados, solo
+    # le llegan si el sindicato aceptó por contrato la responsabilidad de
+    # tratarlos como confidenciales: sin la cláusula ve solo lo enviado. Lo
+    # marca SOLO plataforma, con quién y cuándo (hechos, no un tilde suelto).
+    # Los números agregados del Panel cuentan todo con o sin cláusula.
+    clausula_confidencialidad: bool = Field(default=False)
+    clausula_aceptada_en: str = ""     # "AAAA-MM-DD HH:MM", hora de Buenos Aires
+    clausula_aceptada_por: str = ""    # usuario de plataforma que la cargó
+    # El contrato/convenio firmado con el sindicato: bytes en la base, mismo
+    # patrón que el logo (no hay disco persistente en Render).
+    contrato_datos: Optional[bytes] = Field(default=None)
+    contrato_mime: str = ""
+    contrato_nombre: str = ""          # nombre del archivo tal como se subió
 
 
 class Seccional(SQLModel, table=True):

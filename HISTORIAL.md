@@ -5668,3 +5668,87 @@ tablero pero mirando el día entero (CPU al 80 %, cinco 5xx, p95 de 3 s).
 Lectura y análisis separados: el análisis es puro y se prueba con series
 inventadas. Sin `RENDER_API_KEY` o con Render caído, el resumen sale igual
 con una línea que lo dice. Plataforma 0.36.02.
+
+## Reportes unificados y la cláusula de confidencialidad (2026-09-24)
+
+Pedido de SDN: las dos listas de recibos del panel del sindicato --Reportes
+y Cotizantes-- pasan a ser una sola, "Reportes", y se le suman los recibos
+que el afiliado verificó y NO envió, sin datos que lo identifiquen a él ni a
+su empresa, y solo si el sindicato aceptó por contrato una cláusula de
+confidencialidad.
+
+### De dónde salían las dos listas
+
+- **Reportes** leía la tabla `Reporte`: los recibos que el afiliado
+  "reportó" por tener diferencias, con un estado (nuevo / en revisión /
+  resuelto) que nadie gestionaba.
+- **Cotizantes** leía `EnvioSindicato`: los que el afiliado envió. Y como
+  `/api/reportar` escribe también un `EnvioSindicato`, **todo lo de
+  Reportes ya estaba en Cotizantes**.
+- La tabla con TODOS los recibos verificados, enviados o no, ya existía:
+  `ReciboVerificado`, con `enviado_sindicato` y `estado` OK /
+  CON_DISCREPANCIAS. La lista nueva no pidió datos nuevos, solo otra forma
+  de mostrarlos.
+
+`Reporte` y `EnvioSindicato` no se tocaron: se siguen escribiendo y
+`EnvioSindicato` sigue siendo la prueba de afiliado cotizante (art. 21 bis
+Dto 407/2026). Lo que desapareció es su pestaña.
+
+### Por qué la lista se pide paginada y no viaja en el HTML
+
+Las dos listas viejas se renderizaban enteras dentro de `/admin`, con el
+detalle de cada recibo escondido en una fila oculta. Con `ReciboVerificado`
+eso son miles de filas (el lote de un sindicato tiene 5.000) en cada carga
+del panel. Ahora `/admin/reportes/lista` devuelve de a 50, se pide recién al
+abrir la pestaña, y el modal "Ver" pide un solo recibo a
+`/admin/reportes/recibo/{id}`. De paso, el HTML del panel ya no lleva
+ningún recibo adentro.
+
+### Privacidad: en el SQL, y también en la búsqueda
+
+`dashboard.listado_reportes` saca CUIL, nombre y CUIT del empleador con un
+`CASE WHEN r.enviado_sindicato`, igual que el explorador del Panel. Lo que
+no era obvio: **la búsqueda por CUIL o por nombre busca SOLO entre los
+enviados**. Si buscar "27422222228" trajera la fila anónima de ese CUIL, el
+filtro mismo la identificaría. La pantalla lo aclara debajo de los filtros.
+
+El modal usa `dashboard.detalle_recibo`, el mismo del Panel, y la limpieza
+del JSON guardado quedó en una sola función, `anonimizar_detalle`: borra
+nombre, CUIL, legajo y fecha de ingreso del empleado y **el empleador
+entero** (antes el Panel dejaba la empresa). Una sola implementación porque
+la primera pantalla que anonimizara a su manera y se olvidara un campo lo
+dejaría pasar.
+
+### La compuerta de la cláusula, y qué queda afuera de ella
+
+Decisión de SDN: **los números, conteos y gráficos del Panel cuentan todo**,
+enviado o no, como hasta ahora; lo que se ve fila por fila, anonimizado. La
+cláusula recorta solo las filas: sin ella, ni Reportes ni el explorador del
+Panel muestran recibos no enviados, y el modal responde 404. La lista dice
+cuántos quedaron afuera, para que el sindicato sepa que existen y por qué no
+los ve.
+
+La cláusula vive en `Sindicato` (`clausula_confidencialidad`, más
+`clausula_aceptada_en` y `clausula_aceptada_por`) y solo la marca
+plataforma. **Exige el contrato cargado**: un tilde sin el papel firmado no
+le da a nadie los recibos. Quién y cuándo se escriben solo al PASAR a
+aceptada --volver a guardar la ficha no reescribe la fecha-- y se borran al
+desmarcarla; los dos movimientos quedan además en `LogPlataforma`. El
+contrato va en bytes en la base (PDF o imagen, hasta 15 MB) y lo sirve
+`/plataforma/sindicato/{id}/contrato`, que exige sesión de plataforma: no es
+público como el logo.
+
+### Permisos
+
+La sección `cotizantes` salió de `permisos.SECCIONES`. La migración
+`c9e4a2f7b815` pasa cada permiso de área y cada ajuste individual
+(agregar o bloquear) de `cotizantes` a `reportes`, sin duplicar filas: nadie
+gana ni pierde acceso a esos recibos. La lista respeta además el alcance de
+seccional (`db.alcance_seccional`) dentro de la consulta, cosa que las dos
+listas viejas no hacían.
+
+### Lo que sigue
+
+Próximo sprint: en el primer uso, el afiliado acepta términos y condiciones
+que le dicen que sus recibos llegan al sindicato anonimizados, y con nombre
+solo si los envía él.

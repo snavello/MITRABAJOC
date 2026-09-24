@@ -1,67 +1,3 @@
-{#- Detalle de un recibo tal como lo vio el trabajador, para Reportes y para
-    Afiliados cotizantes. Acepta las dos formas del JSON guardado: la nueva
-    {recibo, resultado} y la vieja (solo el resultado, sin líneas). -#}
-{% macro detalle_recibo(detalle, cuil_fallback='') %}
-  {% set res = detalle.resultado if detalle.resultado is defined else detalle %}
-  {% set rec = detalle.recibo if detalle.recibo is defined else none %}
-  <div class="rep-fila"><span class="rep-k">Estado</span>
-    {% if res.estado == 'OK' %}<span class="tag tag-si">Sin discrepancias</span>
-    {% else %}<span class="tag tag-pend">Con discrepancias</span>{% endif %}
-    {% if rec and rec.formato == 'nuevo' %}<span class="tag tag-reforma">Formato reforma</span>{% endif %}
-  </div>
-  <div class="rep-fila"><span class="rep-k">Período</span> {{ res.periodo or '—' }}</div>
-  <div class="rep-fila"><span class="rep-k">CUIL</span> {{ res.cuil or cuil_fallback or '—' }}</div>
-  {% if rec %}
-    {% if rec.empleador and rec.empleador.nombre %}
-    <div class="rep-fila"><span class="rep-k">Empleador</span> {{ rec.empleador.nombre }}
-      {%- if rec.empleador.cuit %} (CUIT {{ rec.empleador.cuit }}){% endif %}</div>
-    {% endif %}
-    {% if rec.fecha_pago %}<div class="rep-fila"><span class="rep-k">Fecha de cobro</span> {{ rec.fecha_pago }}</div>{% endif %}
-    <div class="rep-sub">Conceptos del recibo ({{ (rec.lineas or [])|length }})</div>
-    {% for ln in rec.lineas or [] %}
-    <div class="linea-concepto {{ 'descuento' if (ln.importe or 0) < 0 }}">
-      <span>{{ ln.descripcion or ln.codigo or '—' }}</span>
-      <span class="imp {{ 'neg' if (ln.importe or 0) < 0 }}">${{ '%.2f'|format(ln.importe or 0) }}</span>
-    </div>
-    {% endfor %}
-  {% endif %}
-  {% if res.totales %}
-  <div class="linea-concepto" style="border-top:2px solid var(--linea); margin-top:4px; font-weight:600;">
-    <span>Total ingresos</span><span class="imp">${{ '%.2f'|format(res.totales.ingresos or 0) }}</span></div>
-  <div class="linea-concepto" style="font-weight:600;">
-    <span>Total descuentos</span><span class="imp neg">${{ '%.2f'|format(res.totales.descuentos or 0) }}</span></div>
-  <div class="linea-concepto" style="font-weight:600;">
-    <span>Total neto</span><span class="imp">${{ '%.2f'|format(res.totales.neto if res.totales.neto is defined else ((res.totales.ingresos or 0) - (res.totales.descuentos or 0))) }}</span></div>
-  <div class="rep-fila muted" style="margin-top:6px;">Total remunerativo: ${{ '%.2f'|format(res.totales.remunerativo or 0) }}</div>
-  {% endif %}
-  {% if rec and rec.formato == 'nuevo' and rec.contribuciones_patronales %}
-  <div class="rep-sub">Contribuciones patronales <span class="muted" style="font-weight:400;">(las paga el empleador, no bajan el neto)</span></div>
-  {% for c in rec.contribuciones_patronales %}
-  <div class="linea-concepto">
-    <span>{{ c.concepto or '—' }}{% if c.porcentaje %} ({{ c.porcentaje }}){% endif %}</span>
-    <span class="imp">${{ '%.2f'|format(c.importe or 0) }}</span>
-  </div>
-  {% endfor %}
-  {% if rec.costo_laboral_total is not none %}
-  <div class="linea-concepto" style="font-weight:600;">
-    <span>Costo laboral total</span><span class="imp">${{ '%.2f'|format(rec.costo_laboral_total) }}</span></div>
-  {% endif %}
-  {% endif %}
-  {% if res.discrepancias %}
-  <div class="rep-sub">Discrepancias detectadas ({{ res.discrepancias|length }})</div>
-  <ul class="rep-lista">{% for x in res.discrepancias %}<li>{{ x.detalle }}</li>{% endfor %}</ul>
-  {% else %}
-  <div class="rep-ok">✓ Todos los aportes coinciden con lo esperado.</div>
-  {% endif %}
-  {% if res.alertas %}
-  <div class="rep-sub" style="color:#8a5a1a;">⚠ Alertas legales</div>
-  <ul class="rep-lista">{% for al in res.alertas %}<li>{{ al.detalle }}</li>{% endfor %}</ul>
-  {% endif %}
-  {% if res.avisos %}
-  <div class="rep-sub">Avisos</div>
-  <ul class="rep-lista">{% for a in res.avisos %}<li>{{ a.descripcion or a }}</li>{% endfor %}</ul>
-  {% endif %}
-{% endmacro %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -539,6 +475,16 @@
   tr.fila-concepto.es-descuento > td { background:#f1efec; }
   tr.fila-concepto.pend > td { background:#fdf6e8; }
   .tag-reforma { background:#e8def5; color:#5b3d8a; }
+  /* Reportes: tilde verde (sin diferencias) o cruz roja (con diferencias). */
+  .rep-tilde { display:inline-flex; width:22px; height:22px; border-radius:50%; align-items:center;
+               justify-content:center; font-weight:700; font-size:13px; }
+  .rep-tilde.ok { background:#e3f2ee; color:#0f6e56; }
+  .rep-tilde.dif { background:#f8e5e2; color:var(--alerta); }
+  .rep-anon { color:var(--gris); font-style:italic; opacity:.8; }
+  .rep-paginas { display:flex; gap:10px; align-items:center; justify-content:flex-end; margin-top:10px;
+                 font-size:12.5px; color:var(--gris); }
+  .filtros select { padding:7px 10px; border:1px solid #ccc; border-radius:7px; font-size:13px;
+                    font-family:inherit; width:auto; }
   .ref-cuadro { display:inline-block; width:11px; height:11px; border-radius:3px;
                 border:1px solid rgba(0,0,0,.12); vertical-align:-1px; margin-right:3px; }
   form.linea { display:flex; gap:7px; flex-wrap:wrap; align-items:center; margin-top:12px;
@@ -789,7 +735,6 @@
   {% if 'recibos' in modulos and 'conceptos' in permisos %}<button class="tab-btn" data-panel="conceptos"><svg viewBox="0 0 24 24"><use href="#ic-conceptos"/></svg><span>Conceptos</span></button>{% endif %}
   {% if 'trabajadores' in permisos %}<button class="tab-btn" data-panel="trabajadores"><svg viewBox="0 0 24 24"><use href="#ic-trabajadores"/></svg><span>Trabajadores</span></button>{% endif %}
   {% if 'recibos' in modulos and 'aprendizaje' in permisos %}<button class="tab-btn" data-panel="aprendizaje"><svg viewBox="0 0 24 24"><use href="#ic-aprendizaje"/></svg><span>Aprendizaje</span></button>{% endif %}
-  {% if 'recibos' in modulos and 'cotizantes' in permisos %}<button class="tab-btn" data-panel="cotizantes"><svg viewBox="0 0 24 24"><use href="#ic-cotizantes"/></svg><span>Cotizantes</span></button>{% endif %}
   {% if 'noticias' in modulos and 'noticias' in permisos %}<button class="tab-btn" data-panel="noticias"><svg viewBox="0 0 24 24"><use href="#ic-noticias"/></svg><span>Noticias</span></button>{% endif %}
   {% if 'beneficios' in modulos and 'beneficios' in permisos %}<button class="tab-btn" data-panel="beneficios"><svg viewBox="0 0 24 24"><use href="#ic-beneficios"/></svg><span>Beneficios</span></button>{% endif %}
   {% if 'notificaciones' in modulos and 'notificaciones' in permisos %}<button class="tab-btn" data-panel="notificaciones"><svg viewBox="0 0 24 24"><use href="#ic-notif"/></svg><span>Notificaciones</span></button>{% endif %}
@@ -810,7 +755,6 @@
     <g id="ic-conceptos"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1.2"/><circle cx="4.5" cy="12" r="1.2"/><circle cx="4.5" cy="18" r="1.2"/></g>
     <g id="ic-trabajadores"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.5" cy="9.5" r="2.3"/><path d="M15.3 14.5c2.1.5 3.7 2.4 3.9 4.8"/></g>
     <g id="ic-aprendizaje"><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.4.9 1 .9 1.7V16h5.2v-.4c0-.7.3-1.3.9-1.7A6 6 0 0 0 12 3z"/><path d="M9.5 18.5h5"/><path d="M10.3 21h3.4"/></g>
-    <g id="ic-cotizantes"><path d="M5 12 6 5.4A2 2 0 0 1 8 3.6h8a2 2 0 0 1 2 1.8L19 12"/><path d="M3 12h4.5l2 3h5l2-3H21"/><path d="M3 12v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6"/></g>
     <g id="ic-noticias"><rect x="3" y="5" width="14" height="14" rx="1.3"/><line x1="6.2" y1="9" x2="13.8" y2="9"/><line x1="6.2" y1="12" x2="13.8" y2="12"/><line x1="6.2" y1="15" x2="11" y2="15"/><path d="M17 8h1.5a2.5 2.5 0 0 1 2.5 2.5V17a2 2 0 0 1-2 2H9"/></g>
     <g id="ic-beneficios"><path d="M20.6 12.3 12.7 3.4A2 2 0 0 0 11.2 3H5a2 2 0 0 0-2 2v6.2a2 2 0 0 0 .6 1.4l8.9 8.9a2 2 0 0 0 2.8 0l5.3-5.3a2 2 0 0 0 0-2.8Z"/><circle cx="8.5" cy="8.5" r="1.5"/></g>
     <g id="ic-notif"><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></g>
@@ -832,30 +776,33 @@
   {% if 'reportes' in permisos %}
   <div class="panel" id="panel-reportes">
   <!-- ============ REPORTES ============ -->
-  <h2 id="reportes">Reportes de trabajadores</h2>
+  <h2 id="reportes">Reportes</h2>
+  <p class="muted">Todos los recibos que verificaron los afiliados. Los que el afiliado <strong>envió</strong> al sindicato se ven con sus datos; los que verificó y <strong>no envió</strong> se ven anonimizados, sin nombre, CUIL ni empresa.</p>
+  <div class="aviso oculto" id="rep-aviso-clausula"></div>
   <div class="filtros">
-    <input type="text" id="f-reportes-cuit" placeholder="Buscar por CUIT/CUIL" oninput="aplicarFiltro('reportes','.fila-reporte')">
-    <input type="text" id="f-reportes-nombre" placeholder="Buscar por nombre" oninput="aplicarFiltro('reportes','.fila-reporte')">
-    <input type="date" id="f-reportes-desde" title="Desde" onchange="aplicarFiltro('reportes','.fila-reporte')">
-    <input type="date" id="f-reportes-hasta" title="Hasta" onchange="aplicarFiltro('reportes','.fila-reporte')">
-    <button type="button" class="sec mini" onclick="limpiarFiltro('reportes','.fila-reporte')">Limpiar</button>
-    <span class="f-cant" id="f-reportes-cant"></span>
+    <input type="text" id="f-rep-cuil" placeholder="Buscar por CUIL" oninput="repFiltrarPronto()">
+    <input type="text" id="f-rep-nombre" placeholder="Buscar por nombre" oninput="repFiltrarPronto()">
+    <input type="date" id="f-rep-desde" title="Desde" onchange="repCargar(1)">
+    <input type="date" id="f-rep-hasta" title="Hasta" onchange="repCargar(1)">
+    <select id="f-rep-resultado" onchange="repCargar(1)">
+      <option value="">Con y sin diferencias</option>
+      <option value="con_diferencias">Con diferencias</option>
+      <option value="ok">Sin diferencias</option>
+    </select>
+    <select id="f-rep-enviado" onchange="repCargar(1)">
+      <option value="">Enviados y no enviados</option>
+      <option value="si">Enviados</option>
+      <option value="no">No enviados</option>
+    </select>
+    <button type="button" class="sec mini" onclick="repLimpiar()">Limpiar</button>
+    <span class="f-cant" id="f-rep-cant"></span>
   </div>
+  <p class="muted" style="font-size:12px; margin:-6px 0 10px;">La búsqueda por CUIL o por nombre encuentra solo recibos enviados: los otros no llevan datos de la persona.</p>
   <table>
-    <tr><th>Fecha</th><th>CUIL</th><th>Período</th><th>Estado</th><th></th></tr>
-    {% for r in reportes %}
-    <tr class="fila-reporte" data-cuil="{{ r.cuil }}" data-nombre="{{ nombres_por_cuil.get(r.cuil, '') }}" data-fecha="{{ r.fecha }}" data-detalle-id="rep-{{ r.id }}">
-      <td>{{ r.fecha }}</td><td>{{ r.cuil }}</td>
-        <td>{{ r.periodo }}
-          {%- if r.detalle and r.detalle.recibo and r.detalle.recibo.formato == 'nuevo' %}
-          <span class="tag tag-reforma" title="Recibo con el formato del Anexo III (Dto 407/2026)">reforma</span>{% endif %}</td>
-        <td><span class="tag {{ 'tag-pend' if r.estado=='nuevo' else 'tag-si' }}">{{ r.estado }}</span></td>
-        <td style="text-align:right;"><button type="button" class="mini" onclick='verReporte({{ r.id }}, {{ r.cuil|tojson }}, {{ r.periodo|tojson }})'>Ver</button></td></tr>
-    <tr id="rep-{{ r.id }}" style="display:none;"><td colspan="5">
-      <div class="rep-detalle">{{ detalle_recibo(r.detalle, r.cuil) }}</div>
-    </td></tr>
-    {% else %}<tr><td colspan="5" class="muted">Sin reportes todavía.</td></tr>{% endfor %}
+    <thead><tr><th>Fecha</th><th>CUIL</th><th>Nombre</th><th>Empresa</th><th>Período</th><th style="text-align:center;">Diferencias</th><th>Enviado</th><th></th></tr></thead>
+    <tbody id="rep-cuerpo"><tr><td colspan="8" class="muted">Cargando…</td></tr></tbody>
   </table>
+  <div class="rep-paginas" id="rep-paginas"></div>
 
   </div>
   {% endif %}
@@ -1235,40 +1182,6 @@
   </div>
   {% endif %}
 
-  {% if 'cotizantes' in permisos %}
-  <div class="panel" id="panel-cotizantes">
-  <!-- ============ AFILIADOS COTIZANTES ============ -->
-  <h2 id="cotizantes">Afiliados cotizantes ({{ envios|length }})</h2>
-  <p class="muted">Trabajadores que enviaron voluntariamente los datos de su recibo, con retención de cuota sindical, como prueba de afiliado cotizante (art. 21 bis, Dto 407/2026).</p>
-  <div class="filtros">
-    <input type="text" id="f-cotizantes-cuit" placeholder="Buscar por CUIT/CUIL" oninput="aplicarFiltro('cotizantes','.fila-envio')">
-    <input type="text" id="f-cotizantes-nombre" placeholder="Buscar por nombre" oninput="aplicarFiltro('cotizantes','.fila-envio')">
-    <input type="date" id="f-cotizantes-desde" title="Desde" onchange="aplicarFiltro('cotizantes','.fila-envio')">
-    <input type="date" id="f-cotizantes-hasta" title="Hasta" onchange="aplicarFiltro('cotizantes','.fila-envio')">
-    <button type="button" class="sec mini" onclick="limpiarFiltro('cotizantes','.fila-envio')">Limpiar</button>
-    <span class="f-cant" id="f-cotizantes-cant"></span>
-  </div>
-  <table>
-    <tr><th>Fecha de envío</th><th>CUIL</th><th>Período</th><th>Monto de cuota</th><th></th></tr>
-    {% for e in envios %}
-    <tr class="fila-envio" data-cuil="{{ e.cuil }}" data-nombre="{{ nombres_por_cuil.get(e.cuil, '') }}" data-fecha="{{ e.fecha }}" data-detalle-id="envio-{{ e.id }}">
-      <td>{{ e.fecha }}</td><td>{{ e.cuil }}</td>
-        <td>{{ e.periodo }}
-          {%- if e.detalle and e.detalle.recibo and e.detalle.recibo.formato == 'nuevo' %}
-          <span class="tag tag-reforma" title="Recibo con el formato del Anexo III (Dto 407/2026)">reforma</span>{% endif %}</td>
-        <td>${{ '%.2f'|format(e.monto_cuota) }}</td>
-        <td style="text-align:right;">{% if e.detalle %}<button type="button" class="mini" onclick='verEnvio({{ e.id }}, {{ e.cuil|tojson }}, {{ e.periodo|tojson }})'>Ver</button>{% endif %}</td></tr>
-    {% if e.detalle %}
-    <tr id="envio-{{ e.id }}" style="display:none;"><td colspan="5">
-      <div class="rep-detalle">{{ detalle_recibo(e.detalle, e.cuil) }}</div>
-    </td></tr>
-    {% endif %}
-    {% else %}
-    <tr><td colspan="5" class="muted">Todavía no hay envíos.</td></tr>
-    {% endfor %}
-  </table>
-  </div>
-  {% endif %}
   {% endif %}
 
   {% if 'noticias' in modulos %}
@@ -2917,7 +2830,7 @@
   </div>
 </div>
 
-<!-- Modal: detalle de un recibo (Reportes y Afiliados cotizantes) -->
+<!-- Modal: detalle de un recibo (Reportes) -->
 <div class="modal-recibo-overlay" id="modal-recibo-overlay" onclick="if (event.target === this) cerrarModalRecibo()">
   <div class="modal-recibo">
     <div class="modal-recibo-enc">
@@ -3095,7 +3008,8 @@ setInterval(() => {
 {% endif %}
 // Si la URL trae un ancla (ej. #conceptos tras un alta), abrir esa pestaña
 (function abrirDesdeHash() {
-  const h = (location.hash || '').replace('#', '');
+  let h = (location.hash || '').replace('#', '');
+  if (h === 'cotizantes') h = 'reportes';   // pestaña unificada el 2026-09-24
   if (h) {
     const btn = document.querySelector('.tab-btn[data-panel="' + h + '"]');
     if (btn) btn.click();
@@ -3111,7 +3025,7 @@ document.querySelectorAll('.subtab').forEach(btn => {
   });
 });
 
-// ---------- Filtro de búsqueda (Reportes / Afiliados cotizantes / Trabajadores) ----------
+// ---------- Filtro de búsqueda (Trabajadores) ----------
 function normTexto(s) {
   return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
@@ -3173,25 +3087,158 @@ function pintarZebra(selectorFilas) {
   });
 }
 
-const TABLAS_ZEBRA = ['.fila-reporte', '.fila-envio', '.fila-trabajador'];
+const TABLAS_ZEBRA = ['.fila-trabajador'];
 TABLAS_ZEBRA.forEach(pintarZebra);
 
-// ---------- Modal de detalle de recibo (Reportes y Afiliados cotizantes) ----------
-function abrirModalRecibo(titulo, origenId) {
-  const origen = document.getElementById(origenId);
-  if (!origen) return;
-  document.getElementById('modal-recibo-titulo').textContent = titulo;
-  document.getElementById('modal-recibo-contenido').innerHTML = origen.querySelector('.rep-detalle').innerHTML;
+{% if 'recibos' in modulos and 'reportes' in permisos %}
+// ---------- Reportes: lista paginada en el servidor ----------
+// El servidor ya manda cada fila como corresponde: un recibo no enviado llega
+// sin CUIL, nombre ni empresa (null). Acá solo se pinta.
+function escH(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+}
+const REP = { pagina: 1, cargado: false, ctrl: null, espera: null };
+function repFiltros() {
+  const v = id => (document.getElementById(id)?.value || '').trim();
+  return { cuil: v('f-rep-cuil'), nombre: v('f-rep-nombre'), desde: v('f-rep-desde'),
+           hasta: v('f-rep-hasta'), resultado: v('f-rep-resultado'), enviado: v('f-rep-enviado') };
+}
+function repFiltrarPronto() {
+  clearTimeout(REP.espera);
+  REP.espera = setTimeout(() => repCargar(1), 300);
+}
+function repLimpiar() {
+  ['cuil', 'nombre', 'desde', 'hasta', 'resultado', 'enviado'].forEach(c => {
+    const el = document.getElementById('f-rep-' + c);
+    if (el) el.value = '';
+  });
+  repCargar(1);
+}
+async function repCargar(pagina) {
+  const cuerpo = document.getElementById('rep-cuerpo');
+  if (!cuerpo) return;
+  REP.pagina = pagina; REP.cargado = true;
+  if (REP.ctrl) REP.ctrl.abort();
+  REP.ctrl = new AbortController();
+  const qs = new URLSearchParams(Object.entries(repFiltros()).filter(([, v]) => v));
+  qs.set('page', pagina);
+  let d;
+  try {
+    const r = await fetch('/admin/reportes/lista?' + qs, { signal: REP.ctrl.signal });
+    if (!r.ok) throw new Error();
+    d = await r.json();
+  } catch (e) {
+    if (e.name === 'AbortError') return;
+    cuerpo.innerHTML = '<tr><td colspan="8" class="muted">No se pudo cargar la lista. ' +
+      '<button type="button" class="sec mini" onclick="repCargar(' + pagina + ')">Reintentar</button></td></tr>';
+    return;
+  }
+  const anon = '<span class="rep-anon">anónimo</span>';
+  cuerpo.innerHTML = d.items.length ? d.items.map(x =>
+    '<tr class="fila-rep">' +
+      '<td>' + escH(x.fecha) + '</td>' +
+      '<td>' + (x.enviado ? escH(x.cuil) : anon) + '</td>' +
+      '<td>' + (x.enviado ? escH(x.nombre || '—') : anon) + '</td>' +
+      '<td>' + (x.enviado ? escH(x.empresa || '—') : anon) + '</td>' +
+      '<td>' + escH(x.periodo || '—') + '</td>' +
+      '<td style="text-align:center;">' + (x.con_diferencias
+        ? '<span class="rep-tilde dif" title="Con diferencias">✗</span>'
+        : '<span class="rep-tilde ok" title="Sin diferencias">✓</span>') + '</td>' +
+      '<td>' + (x.enviado ? '<span class="tag tag-si">Sí</span>' : '<span class="tag tag-pend">No</span>') + '</td>' +
+      '<td style="text-align:right;"><button type="button" class="mini" onclick="verReporte(' + x.id + ')">Ver</button></td>' +
+    '</tr>').join('')
+    : '<tr><td colspan="8" class="muted">No hay recibos con esos filtros.</td></tr>';
+  pintarZebra('.fila-rep');
+  document.getElementById('f-rep-cant').textContent = d.total + (d.total === 1 ? ' recibo' : ' recibos');
+  const paginas = Math.max(1, Math.ceil(d.total / d.page_size));
+  document.getElementById('rep-paginas').innerHTML = paginas > 1
+    ? '<button type="button" class="sec mini" ' + (pagina <= 1 ? 'disabled' : '') + ' onclick="repCargar(' + (pagina - 1) + ')">‹ Anterior</button>' +
+      '<span>Página ' + pagina + ' de ' + paginas + '</span>' +
+      '<button type="button" class="sec mini" ' + (pagina >= paginas ? 'disabled' : '') + ' onclick="repCargar(' + (pagina + 1) + ')">Siguiente ›</button>'
+    : '';
+  const aviso = document.getElementById('rep-aviso-clausula');
+  if (!d.clausula && d.ocultos_sin_clausula > 0) {
+    const n = d.ocultos_sin_clausula;
+    aviso.textContent = 'Hay ' + n + ' recibo' + (n === 1 ? '' : 's') + ' que los afiliados verificaron sin enviar. ' +
+      'Se van a ver acá, anonimizados, cuando el sindicato firme la cláusula de confidencialidad con Colm3na.';
+    aviso.classList.remove('oculto');
+  } else {
+    aviso.classList.add('oculto');
+  }
+}
+// La lista se pide recién al abrir la pestaña: el panel carga muchas otras.
+document.querySelector('.tab-btn[data-panel="reportes"]')?.addEventListener('click', () => {
+  if (!REP.cargado) repCargar(1);
+});
+// Entrando por /admin#reportes la pestaña ya se abrió (abrirDesdeHash corre
+// antes que este bloque) y el clic de arriba nunca llega.
+if (document.getElementById('panel-reportes')?.classList.contains('activo')) repCargar(1);
+{% endif %}
+
+// ---------- Modal de detalle de recibo (Reportes) ----------
+function _pesos(n) { return '$' + (Number(n) || 0).toFixed(2); }
+function htmlDetalleRecibo(d) {
+  const rec = d.recibo || {}, res = d.resultado || {};
+  const fila = (k, v) => '<div class="rep-fila"><span class="rep-k">' + k + '</span> ' + v + '</div>';
+  let h = fila('Estado', d.estado === 'ok'
+    ? '<span class="tag tag-si">Sin diferencias</span>' : '<span class="tag tag-pend">Con diferencias</span>');
+  h += fila('Enviado al sindicato', d.enviado ? 'Sí' : 'No — recibo anonimizado');
+  h += fila('Período', escH(d.periodo || '—'));
+  if (d.enviado) {
+    h += fila('Trabajador', escH(d.trabajador_nombre || '—') + ' (CUIL ' + escH(d.trabajador_cuil || '—') + ')');
+    h += fila('Empleador', escH(d.empresa || '—'));
+  }
+  if (rec.fecha_pago) h += fila('Fecha de cobro', escH(rec.fecha_pago));
+  const lineas = rec.lineas || [];
+  if (lineas.length) {
+    h += '<div class="rep-sub">Conceptos del recibo (' + lineas.length + ')</div>';
+    h += lineas.map(ln => {
+      const neg = (Number(ln.importe) || 0) < 0;
+      return '<div class="linea-concepto' + (neg ? ' descuento' : '') + '"><span>' +
+        escH(ln.descripcion || ln.codigo || '—') + '</span><span class="imp' + (neg ? ' neg' : '') + '">' +
+        _pesos(ln.importe) + '</span></div>';
+    }).join('');
+  }
+  const t = res.totales;
+  if (t) {
+    const neto = t.neto != null ? t.neto : (t.ingresos || 0) - (t.descuentos || 0);
+    h += '<div class="linea-concepto" style="border-top:2px solid var(--linea); margin-top:4px; font-weight:600;"><span>Total ingresos</span><span class="imp">' + _pesos(t.ingresos) + '</span></div>';
+    h += '<div class="linea-concepto" style="font-weight:600;"><span>Total descuentos</span><span class="imp neg">' + _pesos(t.descuentos) + '</span></div>';
+    h += '<div class="linea-concepto" style="font-weight:600;"><span>Total neto</span><span class="imp">' + _pesos(neto) + '</span></div>';
+    h += '<div class="rep-fila muted" style="margin-top:6px;">Total remunerativo: ' + _pesos(t.remunerativo) + '</div>';
+  }
+  const lista = xs => '<ul class="rep-lista">' + xs.map(x =>
+    '<li>' + escH(x && typeof x === 'object' ? (x.detalle || x.descripcion || '') : x) + '</li>').join('') + '</ul>';
+  if ((res.discrepancias || []).length) {
+    h += '<div class="rep-sub">Diferencias detectadas (' + res.discrepancias.length + ')</div>' + lista(res.discrepancias);
+  } else {
+    h += '<div class="rep-ok">✓ Todos los aportes coinciden con lo esperado.</div>';
+  }
+  if ((res.alertas || []).length) h += '<div class="rep-sub" style="color:#8a5a1a;">⚠ Alertas legales</div>' + lista(res.alertas);
+  if ((res.avisos || []).length) h += '<div class="rep-sub">Avisos</div>' + lista(res.avisos);
+  return h;
+}
+async function verReporte(id) {
+  const cont = document.getElementById('modal-recibo-contenido');
+  const titulo = document.getElementById('modal-recibo-titulo');
+  titulo.textContent = 'Recibo';
+  cont.innerHTML = '<span class="muted">Cargando…</span>';
   document.getElementById('modal-recibo-overlay').classList.add('abierto');
+  try {
+    const r = await fetch('/admin/reportes/recibo/' + id);
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    titulo.textContent = d.enviado
+      ? 'Recibo de ' + (d.trabajador_nombre || d.trabajador_cuil || '') + ' — ' + (d.periodo || '')
+      : 'Recibo anonimizado — ' + (d.periodo || '');
+    cont.innerHTML = htmlDetalleRecibo(d);
+  } catch (e) {
+    cont.innerHTML = '<span class="muted">No se pudo cargar el recibo.</span>';
+  }
 }
 function cerrarModalRecibo() {
   document.getElementById('modal-recibo-overlay').classList.remove('abierto');
-}
-function verReporte(id, cuil, periodo) {
-  abrirModalRecibo('Recibo de ' + cuil + ' — ' + periodo, 'rep-' + id);
-}
-function verEnvio(id, cuil, periodo) {
-  abrirModalRecibo('Recibo de ' + cuil + ' — ' + periodo, 'envio-' + id);
 }
 
 // ---------- Notificaciones ----------
