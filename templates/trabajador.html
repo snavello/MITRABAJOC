@@ -604,10 +604,21 @@
        época, y los paneles claros se confundían con el fondo de la app. El
        oscuro es lo que los despega del fondo y lo que hace que las cinco
        pantallas se lean como una sola pieza. --- */
+  /* El panel se separa del fondo con LUZ y no con contraste de color: filo de
+     1px alrededor, brillo interior arriba y una sombra más honda abajo. Hace
+     falta porque arriba de él baja la franja de marca (body.mesa.franja, ver
+     static/interior.css), que es del mismo degradé base→primario que el
+     panel: sin el filo, el borde superior desaparecía contra el fondo justo
+     en el paso 1 del recibo. Sobre el gris claro de los pasos siguientes el
+     mismo filo se lee como el borde de una tarjeta de vidrio. */
   .rc-panel { position:relative; overflow:hidden; border-radius:16px; padding:16px; color:#fff;
     background:linear-gradient(150deg, var(--marca-base),
       color-mix(in srgb, var(--marca-primario) 60%, var(--marca-base)));
-    border-left:5px solid var(--marca-acento); box-shadow:0 14px 34px rgba(15,27,45,.25); }
+    border-left:5px solid var(--marca-acento);
+    box-shadow:0 0 0 1px rgba(255,255,255,.26),
+               inset 0 1px 0 rgba(255,255,255,.22),
+               0 22px 48px rgba(5,10,22,.45),
+               0 2px 10px rgba(5,10,22,.30); }
   .rc-panel::before { content:""; position:absolute; inset:0; opacity:.09; mix-blend-mode:overlay;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
   .rc-panel > * { position:relative; z-index:1; }
@@ -989,7 +1000,7 @@
 </style>
 {% include "_fondo_interior.html" %}
 </head>
-<body class="mesa">
+<body class="mesa franja">
 {% include "_entorno.html" %}
 {# Encabezado normalizado (marca.css + _encabezado.html). La pantalla de la
    derecha la va escribiendo activarPestana() más abajo. #}

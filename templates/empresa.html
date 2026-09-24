@@ -42,6 +42,17 @@
   .cont { max-width:480px; margin:0 auto; padding:22px 20px 40px; padding-bottom:98px; }
   h1 { font-size:clamp(21px, 5.5vw, 26px); font-weight:600; letter-spacing:-0.5px; }
   .sub { color:var(--gris); margin-top:6px; font-size:15px; }
+  /* El título y su bajada caen sobre la franja de marca, que es oscura (ver
+     static/interior.css): en tinta sobre ese degradé no se leen. Solo en
+     escritorio, porque en teléfono la franja no se dibuja. */
+  @media (min-width:761px) {
+    body.franja .cont > h1 { color:#fff; }
+    body.franja .cont > .sub { color:rgba(255,255,255,.75); }
+    /* El estado vacío ("todavía no tenés…") es lo único que queda en texto
+       suelto arriba de todo cuando no hay nada cargado: con contenido real,
+       ahí van tarjetas claras. */
+    body.franja #notif-lista > .notif-vacio { color:rgba(255,255,255,.7); }
+  }
   .card { background:var(--card); border:1px solid var(--linea); border-radius:12px; padding:16px 18px; margin-top:16px; }
   .tpanel { display:none; }
   .tpanel.activo { display:block; }
@@ -297,7 +308,7 @@
 </style>
 {% include "_fondo_interior.html" %}
 </head>
-<body class="mesa">
+<body class="mesa franja">
 {% include "_entorno.html" %}
 {% set enc_fija = True %}
 {% include "_encabezado.html" %}

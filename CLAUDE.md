@@ -344,9 +344,13 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   marca, que baja del encabezado y se desvanece en la mesa. El contenedor de
   ancho máximo que cada pantalla ya tenía (`.cont`, `.wrap`, `main`,
   `.hilo`, `.cuerpo`) lleva `mesa-cont`, que solo lo levanta por encima.
-  **La franja es opt-in** (`<body class="mesa franja">`) y NO va en la app
-  del afiliado ni en la de empresa: ahí lo primero que se ve es una tarjeta
-  oscura (`.rc-panel`) y la franja se la come. **En teléfono se apaga todo**
+  **La franja es opt-in** (`<body class="mesa franja">`) y hoy la usan las
+  ocho. Lo que queda ARRIBA de todo sobre ella tiene que separarse por LUZ y
+  no por contraste de color: la tarjeta oscura del recibo lleva filo de 1px
+  y brillo interior (`.rc-panel` en trabajador.html), y en la app de empresa
+  el título y su bajada van en claro. Una pantalla nueva que ponga algo
+  oscuro o un texto en tinta arriba de todo tiene que resolver lo mismo.
+  **En teléfono se apaga todo**
   (≤760px). Una pantalla se suma con el include, `mesa` (y `franja` si
   corresponde) en el `<body>` y `mesa-cont` en su contenedor. **No va** en
   los logins, el primer ingreso de plataforma, las cuatro portadas (que

@@ -85,9 +85,11 @@ de ancho máximo lleva `mesa-cont`, que solo lo levanta por encima de esas
 capas.
 
 La **franja** de marca -- un degradé que baja del encabezado y muere en la
-mesa -- se suma con `mesa franja` y es OPT-IN: va en los paneles y en las
-pantallas de lectura, y **no** en la app del afiliado ni en la de empresa,
-donde lo primero que se ve es una tarjeta oscura que la franja se come.
+mesa -- se suma con `mesa franja`. Lo que queda ARRIBA DE TODO sobre ella se
+separa por LUZ y no por contraste de color: la tarjeta oscura del recibo
+lleva un filo de 1px y brillo interior, y un título en tinta pasa a claro.
+Si algo oscuro sobre la franja no lleva ese filo, pierde el borde y se funde
+con el fondo.
 
 En teléfono se apaga todo: ahí el contenido ya ocupa el ancho completo. No va
 en los logins, el primer ingreso de plataforma, las portadas ni las pantallas
