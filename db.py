@@ -34,7 +34,7 @@ from datetime import date, datetime, timedelta
 from dotenv import load_dotenv
 from typing import Any
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON, text
-from sqlalchemy import or_, bindparam, UniqueConstraint
+from sqlalchemy import or_, bindparam, UniqueConstraint, delete as sa_delete
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import NullPool
@@ -3790,23 +3790,77 @@ class RegistroEnmascarado(SQLModel, table=True):
     total_ms: int = 0                # todo el paso, de punta a punta
 
 
-def registrar_enmascarado(sindicato_id: Optional[int], tipo: str, registro: dict) -> None:
-    """Guarda el registro de `preparacion.preparar`. NUNCA levanta: es un
-    registro para mirar después y no puede tumbar la lectura de un recibo
-    (mejor esfuerzo), ni siquiera si la tabla todavía no existe porque la
-    migración no corrió."""
+class ImagenEnmascarado(SQLModel, table=True):
+    """DIAGNÓSTICO TRANSITORIO, solo Pruebas (pedido de SDN, 2026-09-24): la
+    imagen original y la que se mandó a la IA de un documento del enmascarado,
+    para ver en la pantalla qué se tapó de verdad.
+
+    **La original tiene datos personales reales.** Por eso vive en una tabla
+    aparte de `RegistroEnmascarado` (que sigue sin ninguno), solo se escribe
+    donde `preparacion.guardar_imagenes_habilitado()` lo permite (entorno
+    local o pruebas + ENMASCARADO_GUARDAR_IMAGENES=1), vence a los
+    `preparacion.DIAS_IMAGENES` días y se vacía entera desde la pantalla."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    registro_id: int = Field(foreign_key="registroenmascarado.id", index=True)
+    creado: str = ""                              # "AAAA-MM-DD HH:MM", Buenos Aires
+    original: bytes = b""
+    enviada: bytes = b""
+
+
+def registrar_enmascarado(sindicato_id: Optional[int], tipo: str, registro: dict) -> Optional[int]:
+    """Guarda el registro de `preparacion.preparar` y devuelve su id. NUNCA
+    levanta: es un registro para mirar después y no puede tumbar la lectura de
+    un recibo (mejor esfuerzo), ni siquiera si la tabla todavía no existe
+    porque la migración no corrió."""
     if not registro:
-        return
+        return None
     try:
         campos = {k: registro.get(k) for k in (
             "modo", "camino", "motivo", "tapado", "cajas", "fugas", "cuil_encontrado",
             "pertenece", "espera_ms", "lectura_ms", "total_ms") if registro.get(k) is not None}
         with Session(engine) as s:
-            s.add(RegistroEnmascarado(fecha=fechas.ahora_texto(), sindicato_id=sindicato_id,
-                                      tipo=tipo, **campos))
+            fila = RegistroEnmascarado(fecha=fechas.ahora_texto(), sindicato_id=sindicato_id,
+                                       tipo=tipo, **campos)
+            s.add(fila)
             s.commit()
+            return fila.id
     except Exception as e:
         print(f"[enmascarado] no se pudo registrar ({type(e).__name__})")
+        return None
+
+
+def guardar_imagenes_enmascarado(registro_id: int, original: bytes, enviada: bytes,
+                                 dias: int = 7) -> None:
+    """Guarda el par de imágenes de diagnóstico y, de paso, borra las que ya
+    vencieron. Nunca levanta. Quien llama decide si está habilitado."""
+    try:
+        limite = (fechas.ahora() - timedelta(days=dias)).strftime("%Y-%m-%d %H:%M")
+        with Session(engine) as s:
+            s.exec(sa_delete(ImagenEnmascarado).where(ImagenEnmascarado.creado < limite))
+            s.add(ImagenEnmascarado(registro_id=registro_id, creado=fechas.ahora_texto(),
+                                    original=original, enviada=enviada))
+            s.commit()
+    except Exception as e:
+        print(f"[enmascarado] no se pudieron guardar las imágenes ({type(e).__name__})")
+
+
+def imagen_enmascarado(registro_id: int, cual: str) -> Optional[bytes]:
+    """Los bytes JPEG de la imagen "original" o "enviada" de un registro."""
+    if cual not in ("original", "enviada"):
+        return None
+    with Session(engine) as s:
+        f = s.exec(select(ImagenEnmascarado)
+                   .where(ImagenEnmascarado.registro_id == registro_id)).first()
+        return getattr(f, cual) if f else None
+
+
+def borrar_imagenes_enmascarado() -> int:
+    """Vacía la tabla de imágenes de diagnóstico. Devuelve cuántas borró."""
+    with Session(engine) as s:
+        n = len(s.exec(select(ImagenEnmascarado.id)).all())
+        s.exec(sa_delete(ImagenEnmascarado))
+        s.commit()
+        return n
 
 
 def registros_enmascarado(limite: int = 3000) -> list:
@@ -3825,6 +3879,10 @@ def registros_enmascarado(limite: int = 3000) -> list:
             filas = s.exec(select(RegistroEnmascarado)
                            .order_by(RegistroEnmascarado.id.desc()).limit(limite)).all()
             nombres = {sind.id: sind.nombre for sind in s.exec(select(Sindicato)).all()}
+            try:
+                con_imagenes = set(s.exec(select(ImagenEnmascarado.registro_id)).all())
+            except Exception:
+                con_imagenes = set()
     except Exception:
         return []
     salida = []
@@ -3837,6 +3895,7 @@ def registros_enmascarado(limite: int = 3000) -> list:
             "cuil_encontrado": f.cuil_encontrado, "pertenece": f.pertenece,
             "espera_ms": f.espera_ms, "lectura_ms": f.lectura_ms, "total_ms": f.total_ms,
             "resultado": ("tapado" if f.tapado else "se_habria_tapado") if leido else "sin_tapar",
+            "id": f.id, "con_imagenes": f.id in con_imagenes,
         })
     return salida
 

@@ -6106,3 +6106,33 @@ arranque ya lo había importado, pero dependía de eso. Ahora `lectores.py`
 lo importa al cargarse (cuando main arranca, en el hilo principal) y si
 falla queda "no disponible"; `ocr_disponible()` ya no importa nada. Test:
 preguntar desde otro hilo no revienta.
+
+### Pruebas en modo activo, y el diagnóstico con imágenes (2026-09-24)
+
+Con el banco de pruebas corrido en Pruebas (PDF digital, escaneado y foto:
+cero diferencias con y sin tapar, 0 fugas, 0,4 / 2,1 / 1,5 s de tapado con
+medio núcleo) y dos recibos reales de SDN (PDF y foto) tapados sin fugas,
+**Pruebas pasó a `ENMASCARADO=activo`** ("Save and deploy" en Render; el
+arranque dice `[enmascarado] modo activo, OCR listo`). Volver atrás es
+cambiar la variable: no hay código de por medio.
+
+La foto de SDN tuvo 5 zonas tapadas contra 9 del PDF, y el registro no
+permite saber por qué: a propósito no guarda nada del documento. SDN pidió,
+**transitoriamente y solo para esta etapa de pruebas y diagnóstico**,
+guardar la imagen original y la enviada a la IA y verlas desde el listado:
+
+- Tabla aparte, `imagenenmascarado` (migración `f3a9d1c6b2e8`): el
+  registro sigue sin datos personales y vaciar las imágenes es vaciar una
+  tabla.
+- **Solo en `local` y `pruebas`**, y solo con
+  `ENMASCARADO_GUARDAR_IMAGENES=1` (`preparacion.guardar_imagenes_habilitado`):
+  en demo/prod no se guarda aunque alguien cargue la variable, y las rutas
+  de las imágenes responden 404 fuera de local/pruebas aunque hubiera filas.
+- JPEG de 1600 px como mucho; **vencen a los 7 días** (se purgan al guardar
+  la siguiente) y el botón "Borrar todas las imágenes" vacía la tabla.
+- En la lista de la sub-pestaña Enmascarado, "Ver" abre las dos lado a lado
+  (`/plataforma/enmascarado/{id}`), con sesión de plataforma.
+- Nunca frena el recibo: si falla el guardado, se anota en el log y sigue.
+
+**Cuando termine la etapa de diagnóstico, se saca** (tabla, rutas y
+variable). Plataforma 0.40.01.
