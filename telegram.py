@@ -129,9 +129,11 @@ def _n(v) -> str:
     return "—" if v is None else f"{v:,}".replace(",", ".")
 
 
-def texto_resumen(kpis: dict, errores: dict, semaforo: str, entorno_nombre: str, fecha_texto: str) -> str:
+def texto_resumen(kpis: dict, errores: dict, semaforo: str, entorno_nombre: str, fecha_texto: str,
+                  servidor: list = None) -> str:
     """El resumen del día, con lo que ya calcula esquema.py más los errores de
-    Sentry y el semáforo de Grafana. Solo conteos: nada de personas."""
+    Sentry y el semáforo de Grafana. `servidor` son las líneas de
+    observabilidad/metricas_dia.py (web y base). Solo conteos: nada de personas."""
     e = html.escape
     k = kpis or {}
     l = k.get("en_linea") or {}
@@ -141,6 +143,7 @@ def texto_resumen(kpis: dict, errores: dict, semaforo: str, entorno_nombre: str,
     lineas = [
         f"📋 <b>Colm3na · {e(entorno_nombre or '?')} · resumen del {e(fecha_texto)}</b>",
         f"Estado general: {sem}",
+        *(servidor or []),
         f"Recibos leídos hoy: <b>{_n(k.get('recibos_hoy'))}</b> (total {_n(k.get('recibos_total'))})",
         f"Lecturas de IA hoy: {_n(k.get('lecturas_hoy'))} · US$ {k.get('costo_hoy_usd', 0):.2f}",
         (f"Ingresos en los últimos {k.get('minutos_en_linea', 15)} min: {_n(k.get('en_linea_total'))} "

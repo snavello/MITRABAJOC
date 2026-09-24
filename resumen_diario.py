@@ -12,8 +12,10 @@ instancias despierten en el mismo minuto sale un solo mensaje.
 
 El contenido lo arma `telegram.texto_resumen` con lo que ya calcula
 `esquema.kpis` (recibos, lecturas de IA y costo, ingresos por rol, trámites,
-afiliados), más los errores de Sentry que la pestaña técnica ya lee y el
-semáforo de Grafana. Cada parte que no se pueda leer queda como "sin dato":
+afiliados), más los errores de Sentry que la pestaña técnica ya lee, el
+semáforo de Grafana y dos líneas sobre cómo le fue al servidor web y a la
+base (`observabilidad/metricas_dia.py`: picos de CPU y memoria con su hora,
+pedidos, 5xx, latencia, conexiones). Cada parte que no se pueda leer queda como "sin dato":
 el resumen sale igual.
 """
 import threading
@@ -63,8 +65,15 @@ def armar_texto(ahora=None) -> str:
             semaforo = obs_panel.ag.estado_alertas(obs_panel._cliente("GRAFANA_TOKEN_LECTURA"))["semaforo"]
     except Exception as e:
         print(f"[resumen-diario] sin semáforo de Grafana: {type(e).__name__}: {e}")
+    servidor = []
+    try:
+        from observabilidad import metricas_dia
+        servidor = metricas_dia.lineas_del_dia()
+    except Exception as e:
+        print(f"[resumen-diario] sin métricas del servidor: {type(e).__name__}: {e}")
     import entorno
-    return telegram.texto_resumen(kpis, errores, semaforo, entorno.ENTORNO, ahora.strftime("%d/%m/%Y"))
+    return telegram.texto_resumen(kpis, errores, semaforo, entorno.ENTORNO, ahora.strftime("%d/%m/%Y"),
+                                  servidor=servidor)
 
 
 def enviar_ahora() -> bool:
