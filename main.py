@@ -4842,6 +4842,11 @@ def plataforma(request: Request):
         "config_dashboard": db.config_dashboard(),
         "marca_plataforma": db.marca_plataforma(),
         "uso_ia": uso_ia,
+        # Sub-pestaña "Enmascarado": los registros y el modo que rige en ESTE
+        # proceso (lo dice la variable ENMASCARADO del servicio).
+        "enmascarado_registros": db.registros_enmascarado(),
+        "enmascarado_modo": preparacion.modo(),
+        "enmascarado_ocr": lectores.ocr_disponible(),
         "sindicatos_uso_ia": sorted({u["sindicato"] for u in uso_ia}),
         # (id, nombre): el filtro compara contra el id que guarda la fila, pero
         # muestra el nombre lindo -- un modelo viejo que ya no está en el

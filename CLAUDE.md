@@ -984,7 +984,9 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    tablero compartido "Motor v2 · Avance"; el informe en lenguaje llano para
    analistas está en la landing `/entornos` (recurso `motor-recibos`).
    **Antes va el paso cero: enmascarado** —plan acordado el 2026-09-24,
-   **bloques 1 a 4 hechos** (medido con la IA real: tapar no cambia la lectura) (`enmascarado.py`, puro: qué se tapa;
+   **bloques 1 a 4 hechos** (medido con la IA real: tapar no cambia la lectura);
+   **en Pruebas en modo sombra** desde el 2026-09-24, con los registros en
+   `/plataforma` → Uso de IA → Enmascarado (`enmascarado.py`, puro: qué se tapa;
    `lectores.py`: PDF digital con pypdfium2 y fotos con Tesseract vía
    `tesserocr`, sin Docker; `preparacion.py`: el enganche en las rutas,
    con registro en `registroenmascarado`), [`PLAN_ENMASCARADO.md`](PLAN_ENMASCARADO.md)—: lo que
