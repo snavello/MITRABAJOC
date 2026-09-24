@@ -957,7 +957,8 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    tablero compartido "Motor v2 · Avance"; el informe en lenguaje llano para
    analistas está en la landing `/entornos` (recurso `motor-recibos`).
    **Antes va el paso cero: enmascarado** —plan acordado el 2026-09-24,
-   **sin empezar**, [`PLAN_ENMASCARADO.md`](PLAN_ENMASCARADO.md)—: lo que
+   **bloque 1 hecho** (`enmascarado.py`, puro: qué se tapa; `lectores.py`,
+   PDF digital), [`PLAN_ENMASCARADO.md`](PLAN_ENMASCARADO.md)—: lo que
    identifica a la persona (CUIL, nombre, DNI, legajo, cuenta, CUIT y razón
    social) se tapa en el servidor antes de salir hacia la IA y la identidad se
    rearma del lado nuestro. PDF digital con `pypdfium2`, fotos con RapidOCR,

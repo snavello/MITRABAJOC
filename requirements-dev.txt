@@ -14,3 +14,10 @@ pytest-playwright==0.9.0
 # XSK (XSANDERS Security Kit): análisis estático de seguridad. Dev/QA, no producción.
 bandit==1.9.4
 pip-audit==2.10.1
+
+# Enmascarado (PLAN_ENMASCARADO.md): datos_prueba/enmascarado/generar.py dibuja
+# el recibo digital ficticio (reportlab) y lee los sintéticos con OCR. pypdfium2
+# y el OCR pasan a requirements.txt en el bloque 2, cuando entren a la app.
+reportlab==5.0.1
+pypdfium2==5.13.0
+rapidocr_onnxruntime==1.4.4

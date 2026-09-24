@@ -5752,3 +5752,67 @@ listas viejas no hacían.
 Próximo sprint: en el primer uso, el afiliado acepta términos y condiciones
 que le dicen que sus recibos llegan al sindicato anonimizados, y con nombre
 solo si los envía él.
+
+## Enmascarado, bloque 1: qué se tapa (2026-09-24)
+
+Paso cero del motor v2 (`PLAN_ENMASCARADO.md`). El bloque 1 es el módulo que
+decide qué se tapa, `enmascarado.py`, puro y sin tocar la app: recibe
+"palabras con posición" y devuelve las cajas a tapar, el CUIL y el CUIT
+leídos, y la imagen tapada con un rótulo gris ("CUIL OCULTO"). `lectores.py`
+trae por ahora solo el PDF digital (`pypdfium2`); el OCR de fotos es el
+bloque 2.
+
+### Lo que enseñó el recibo digital ficticio
+
+Se armó con reportlab un recibo con capa de texto (identidad inventada:
+nombre con acentos y Ñ, CUIL y CUIT con verificador válido, CBU, dos
+páginas) porque los 10 sintéticos son todos imágenes. Encontró dos cosas que
+los sintéticos no mostraban:
+
+- **El lector partía los números.** `30-71234567-1` salía como tres
+  palabras: la caja de un guion mide un punto de alto y el corte por hueco
+  usaba esa altura. Se usa la caja "amplia" de cada carácter
+  (`get_charbox(loose=True)`).
+- **Palabra por palabra no alcanza.** Aun con el lector arreglado, un PDF
+  trae "Apellido y Nombre:" como tres palabras y un OCR puede partir un CUIL
+  en tres cajas. El módulo trabaja por **frase**: palabras contiguas de una
+  línea, cortadas en los huecos grandes para que dos columnas no formen un
+  número.
+
+### Otras decisiones
+
+- **La tabla de conceptos no tiene rótulos**: "A CUENTA DE FUTUROS
+  AUMENTOS" no es una cuenta bancaria. La tabla arranca en una FILA de
+  títulos de columna (dos o más) y no en cualquier frase que diga "haberes":
+  "RECIBO DE HABERES" del encabezado apagaba todos los rótulos.
+- **El valor de un rótulo está en la primera fila de abajo, no en la
+  segunda**: en el sintético, "Categoria" quedaba más centrada bajo
+  "Apellido y nombre" que el nombre mismo.
+- **Lo que se tapó por rótulo se aprende** y se busca en el resto del
+  documento (el nombre se repite al pie para la firma). Con eso el caso del
+  aprendizaje del admin, sin nada conocido de antemano, tapa lo mismo que el
+  del afiliado.
+- **Un importe nunca se tapa**, venga del detector que venga.
+- El verificador de CUIL/CUIT es lo que deja tapar un número de 11 cifras
+  sin rótulo; el CUIL de los sintéticos (27-99999999-9) tiene verificador
+  inválido y se tapa por el rótulo o por ser el de la sesión.
+
+### Resultado
+
+`test_enmascarado.py`, 53 tests: con y sin datos conocidos, en el digital y
+en los 10 sintéticos se tapa **exactamente** la identidad (nombre, CUIL, DNI,
+legajo, cuenta, CUIT, razón social), ningún importe ni concepto, y el
+control de fuga da vacío. Las palabras de cada recibo están en
+`datos_prueba/enmascarado/*.json` (los PDF sintéticos no se versionan: 2 MB
+cada uno); se regeneran con `datos_prueba/enmascarado/generar.py`.
+
+### Lo que condiciona al bloque 2
+
+**El OCR completo de una página es lento**: RapidOCR tardó 10 a 16 s por
+página en una notebook de 8 núcleos y 35 s con un solo hilo. Detectar dónde
+hay texto cuesta 1,3 s; lo caro es LEER las ~136 cajas (el modelo que trae
+el paquete es el chino, con más de 6.600 caracteres). Así no entra en los 3 s
+del plan. El bloque 2 tiene que leer solo lo necesario (el encabezado, no la
+tabla) y/o usar un modelo latino más liviano, y medirlo antes de enchufar
+nada. El PDF digital no tiene este problema: sus palabras salen del archivo
+en milisegundos.
