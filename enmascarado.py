@@ -81,7 +81,7 @@ class Caja:
     pagina: int
     tipo: str
     texto: str
-    motivo: str  # "conocido" | "patron" | "rotulo" | "forma_juridica" | "aprendido"
+    motivo: str  # "conocido" | "patron" | "rotulo" | "forma_juridica" | "aprendido" | "fila_identidad"
 
 
 @dataclass(frozen=True)
@@ -151,6 +151,7 @@ _PESOS = (5, 4, 3, 2, 7, 6, 5, 4, 3, 2)
 _SEP = r"\s?[\-./:]?\s?"   # ":" -- Tesseract a veces lee así el guion
 _RE_ONCE = re.compile(r"(?<!\d)\d{2}" + _SEP + r"\d{8}" + _SEP + r"\d(?!\d)")
 # DNI: 7 u 8 dígitos, con o sin puntos de miles ("28.765.431", "28. 765. 431").
+_RE_FECHA = re.compile(r"\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}")
 _RE_DNI = re.compile(r"(?<!\d)\d{1,2}\s?\.?\s?\d{3}\s?\.?\s?\d{3}(?!\d)")
 
 
@@ -220,7 +221,9 @@ def parece_importe(texto: str) -> bool:
 # arrancan: "CUENTA" es un rótulo, "A CUENTA DE FUTUROS AUMENTOS" no.
 _ROTULOS = [
     # "CUILN": Tesseract junta "CUIL N" (N de número) en una sola palabra.
-    ("cuil", r"C ?U ?I ?L( ?N[RO]?O?)?( N)?"),
+    # "CUL": Tesseract pierde la I cuando el logo de agua del recibo le pasa
+    # por encima (foto real de AEFIP, 2026-09-24).
+    ("cuil", r"C ?U ?I? ?L( ?N[RO]?O?)?( N)?"),
     ("cuit", r"C ?U ?I ?T( ?N[RO]?O?)?( N)?( EMPLEADOR)?"),
     ("dni", r"(D ?N ?I|L ?E|L ?C|DOCUMENTO|NRO DOC|N DOC|N[RO]?O? DE DOCUMENTO"
             r"|TIPO Y NRO DE DOC(UMENTO)?|DOC(UMENTO)? NRO)( N[RO]?O?)?"),
@@ -330,14 +333,24 @@ def _frases(pal: list[Palabra]) -> list[_Frase]:
     frases = []
     for pag in sorted({p.pagina for p in pal}):
         idx = sorted((i for i, p in enumerate(pal) if p.pagina == pag), key=lambda i: pal[i].cy)
+        if not idx:
+            continue
+        # Una palabra entra a la línea si su centro está cerca del centro
+        # PROMEDIO de la línea, medido con el alto TÍPICO de la letra. Antes se
+        # comparaba con la palabra anterior, y en una foto apenas torcida una
+        # caja alta (ruido del logo de agua) unía dos filas: "Datos de la
+        # Cuenta Bancaria" y "Sucursal - Nro. Cuenta" salían entremezcladas.
+        altos = sorted(pal[i].alto for i in idx)
+        tolerancia = 0.6 * altos[len(altos) // 2]
         lineas: list[list[int]] = []
+        centros: list[float] = []
         for i in idx:
-            for ln in lineas:
-                if _misma_linea(pal[ln[-1]], pal[i]):
-                    ln.append(i)
-                    break
+            if lineas and abs(pal[i].cy - centros[-1]) <= tolerancia:
+                lineas[-1].append(i)
+                centros[-1] = sum(pal[k].cy for k in lineas[-1]) / len(lineas[-1])
             else:
                 lineas.append([i])
+                centros.append(pal[i].cy)
         for ln in lineas:
             ln.sort(key=lambda i: pal[i].x0)
             actual = [ln[0]]
@@ -429,7 +442,28 @@ def _nombre_en(texto: str, tokens: list[str]) -> bool:
     letras = _letras(texto)
     if not letras:
         return False
-    return any((len(t) >= 4 and t in letras) or (len(t) < 4 and letras == t) for t in tokens)
+    return any((len(t) >= 4 and t in letras) or (len(t) < 4 and letras == t)
+               or (len(t) >= 6 and _casi_igual(letras, t)) for t in tokens)
+
+
+def _casi_igual(a: str, b: str) -> bool:
+    """A lo sumo una letra de diferencia (cambiada, de más o de menos): así
+    lee el OCR "SANDRO" con un logo de agua encima ("SANDR0" ya se limpió de
+    dígitos: "SANDR"; o "SANORO"). Solo para partes del nombre de 6+ letras:
+    con 5, "JULIA" y "JULIO" (el mes del período) serían la misma."""
+    if abs(len(a) - len(b)) > 1:
+        return False
+    if len(a) == len(b):
+        return sum(x != y for x, y in zip(a, b)) <= 1
+    corto, largo = (a, b) if len(a) < len(b) else (b, a)
+    return any(largo[:k] + largo[k + 1:] == corto for k in range(len(largo)))
+
+
+def _casi_el_cuil(once: str, cuil_s: str) -> bool:
+    """¿Es el CUIL de la sesión con uno o dos dígitos mal leídos? (el OCR
+    leyó "20202790414" donde decía "...411", con el logo de agua encima)."""
+    return (bool(cuil_s) and len(once) == len(cuil_s) == 11
+            and sum(x != y for x, y in zip(once, cuil_s)) <= 2)
 
 
 def _tramos_razon(f: _Frase, razones: list[str]) -> list[list[int]]:
@@ -560,6 +594,11 @@ def analizar(palabras: list[Palabra], conocidos: Conocidos | None = None) -> Ana
     for f in frases:
         for once, crudo, idx in _identidades(f):
             conocido = bool(cuil_s) and once == cuil_s
+            if not conocido and _casi_el_cuil(once, cuil_s):
+                # Es el propio, mal leído: se tapa y cuenta como encontrado.
+                marcar(idx, "cuil", "conocido")
+                leido(cuil_s, "cuil")
+                continue
             if conocido or parece_cuil(crudo, once):
                 tipo = "cuit" if _es_empresa(once) else "cuil"
                 marcar(idx, tipo, "conocido" if conocido else "patron")
@@ -587,6 +626,10 @@ def analizar(palabras: list[Palabra], conocidos: Conocidos | None = None) -> Ana
         for n, (tipo, _ini, fin) in enumerate(lista):
             hasta = lista[n + 1][1] if n + 1 < len(lista) else len(f.texto)
             valor = _valor_de(f, fin, hasta)
+            # Un signo suelto después del rótulo (el OCR leyó un ">" al lado de
+            # "Nro. Cuenta") no es su valor: se busca en la fila de abajo.
+            if len(_alnum(valor)) < 2:
+                valor = ""
             if valor:
                 if valor_valido(tipo, valor):
                     idx = f.palabras_en(fin, hasta)
@@ -603,6 +646,20 @@ def analizar(palabras: list[Palabra], conocidos: Conocidos | None = None) -> Ana
                 marcar(frases[k].idx, tipo, "rotulo")
                 if tipo in ("cuil", "cuit"):
                     leido(_digitos(frases[k].texto), tipo)
+
+    # 3b: la FILA de la identidad. En la línea donde está el nombre o el CUIL
+    # de la persona (fuera de la tabla), un número de 4+ cifras que no es
+    # fecha ni importe es otro dato suyo: el legajo casi siempre. Cubre el
+    # rótulo ilegible (el OCR leyó "Legajo" como "2" en una foto real).
+    ancla = [k for k in marcadas.values() if k.tipo in ("nombre", "cuil")]
+    if ancla:
+        for i, p in enumerate(palabras):
+            if (i in marcadas or len(_digitos(p.texto)) < 4 or parece_importe(p.texto)
+                    or _RE_FECHA.search(p.texto) or re.fullmatch(r"(19|20)\d\d", _digitos(p.texto))
+                    or any(y0 <= p.cy < y1 for y0, y1 in zonas.get(p.pagina, []))):
+                continue
+            if any(k.pagina == p.pagina and _misma_linea(k, p) for k in ancla):
+                marcar([i], "legajo", "fila_identidad")
 
     # 4: razón social sin rótulo. Una frase sin números que lleva una forma
     # jurídica ("DISTRIBUIDORA LOS ANDES S.R.L.") es la razón social entera;
@@ -693,7 +750,7 @@ def control_de_fuga(palabras: list[Palabra], cajas: list[Caja],
 
     for f in _frases(palabras):
         for once, crudo, idx in _identidades(f):
-            if (cuil_s and once == cuil_s) or parece_cuil(crudo, once):
+            if (cuil_s and once == cuil_s) or _casi_el_cuil(once, cuil_s) or parece_cuil(crudo, once):
                 revisar(idx, "CUIL/CUIT")
         if dni_s:
             for dni, idx in _dnis(f):
@@ -749,15 +806,21 @@ def tapar(imagen, cajas: list[Caja], margen: int = 3):
 def _unir(cajas: list[Caja]) -> list[Caja]:
     """Junta cajas del mismo tipo que están en la misma línea y pegadas
     ("GONZÁLEZ" "PEÑA," "MARÍA" "JOSÉ" -> un solo NOMBRE OCULTO)."""
+    # De izquierda a derecha, y cada caja se une a CUALQUIER caja ya armada de
+    # su tipo y su línea que esté pegada. Antes se ordenaba por el alto y se
+    # comparaba solo con la anterior: en una foto apenas torcida "SANDRO"
+    # (un poco más abajo) venía después de "DANILO", la unión se quedaba con
+    # el borde izquierdo de DANILO, y SANDRO quedaba a la vista.
     salida: list[Caja] = []
-    for k in sorted(cajas, key=lambda c: (c.pagina, c.tipo, round(c.y0), c.x0)):
-        if salida:
-            u = salida[-1]
+    for k in sorted(cajas, key=lambda c: (c.pagina, c.tipo, c.x0)):
+        for n, u in enumerate(salida):
             alto = max(u.y1 - u.y0, k.y1 - k.y0, 1)
+            hueco = max(k.x0 - u.x1, u.x0 - k.x1)
             if (u.pagina == k.pagina and u.tipo == k.tipo and _misma_linea(u, k)
-                    and k.x0 - u.x1 <= 1.2 * alto):
-                salida[-1] = Caja(u.x0, min(u.y0, k.y0), max(u.x1, k.x1), max(u.y1, k.y1),
-                                  u.pagina, u.tipo, f"{u.texto} {k.texto}", u.motivo)
-                continue
-        salida.append(k)
+                    and hueco <= 1.2 * alto):
+                salida[n] = Caja(min(u.x0, k.x0), min(u.y0, k.y0), max(u.x1, k.x1),
+                                 max(u.y1, k.y1), u.pagina, u.tipo, f"{u.texto} {k.texto}", u.motivo)
+                break
+        else:
+            salida.append(k)
     return salida

@@ -6136,3 +6136,42 @@ guardar la imagen original y la enviada a la IA y verlas desde el listado:
 
 **Cuando termine la etapa de diagnóstico, se saca** (tabla, rutas y
 variable). Plataforma 0.40.01.
+
+### La primera foto real que falló, y por qué (2026-09-24)
+
+Con el diagnóstico de imágenes, SDN vio que en la foto de su recibo de AEFIP
+(en modo activo) quedaban a la vista el CUIL, el legajo, el número de cuenta
+y "SANDRO", del nombre. La primera sospecha (poca resolución) era
+**falsa**: el navegador mostraba la imagen achicada; en la foto el recibo
+llena el cuadro y la letra se lee bien. Las causas reales, reproducidas con
+la foto original:
+
+- **Los logos de agua "AFIP" impresos encima del encabezado** hacen que el
+  OCR lea `20202790414` donde dice `...411` y "CUL" donde dice "CUIL Nº", y
+  "Legajo" como "2".
+- **Las líneas se armaban comparando con la palabra anterior**: en una foto
+  apenas torcida, una caja alta de ruido unía dos filas, y "Datos de la
+  Cuenta Bancaria" con "Sucursal - Nro. Cuenta" salían en una sola frase
+  entremezclada. Ahora una palabra entra a la línea por la distancia a su
+  centro promedio, medida con el alto típico de la letra.
+- **Un signo suelto después del rótulo** ("Nro. Cuenta >") se tomaba como su
+  valor y no se buscaba el de abajo. Ahora se ignora.
+- **El dibujo**: SANDRO estaba marcado para tapar, pero la unión de cajas
+  vecinas se quedaba con el borde izquierdo de la caja equivocada cuando la
+  foto torcida las traía desordenadas. SANDRO quedaba a la vista aunque el
+  análisis dijera "tapado". Ahora se une por ambos bordes.
+
+Y tolerancia para lo que el OCR lee a medias: el rótulo "CUL"; **el CUIL de
+la sesión con hasta dos dígitos mal leídos** se reconoce como propio;
+**una letra de diferencia en partes del nombre de 6+ letras** (con 5,
+"JULIA" y "JULIO" chocaban -- lo encontró un sintético con el período en
+julio); y **la fila de la identidad**: en la línea del nombre o del CUIL, un
+número de 4+ cifras que no es fecha, año ni importe se tapa como legajo.
+
+Con la foto original: 10 zonas tapadas (nombre completo, CUIL, legajo, DNI,
+cuenta, CUIT del empleador), 0 fugas, 0,9 s. La idea de SDN de subir el
+contraste (blanquear los grises del logo) se probó: el CUIL se lee perfecto,
+pero según el umbral se pierden el legajo, la cuenta o parte del nombre; el
+blanco y negro propio de Tesseract rinde mejor en conjunto. Queda como
+alternativa. Tests nuevos con datos ficticios de la misma forma (65 en
+`test_enmascarado.py`). Trabajador 0.42.05.
