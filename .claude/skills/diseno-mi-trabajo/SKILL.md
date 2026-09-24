@@ -79,16 +79,18 @@ pestaña activa marcada con acento.
 
 **Y el fondo es una mesa, no un plano liso** (2026-09-24). En escritorio la
 columna de contenido ocupa entre 480 y 1280px y el resto del ancho quedaba
-vacío: la columna no tenía dónde terminar. El `<body>` lleva `mesa` (gris
-frío + retícula de colmena al 2,8% + dos halos difuminados del acento y el
-primario del sindicato) y el contenedor de ancho máximo lleva `hoja` (borde,
-radio 18 y sombra larga, del color `--papel` de la app y no blanco puro, para
-que las tarjetas internas conserven su borde). En teléfono se apaga entero:
-ahí el contenido ya ocupa todo el ancho.
+vacío. El `<body>` lleva `mesa` (gris frío + retícula de colmena muy tenue +
+dos halos difuminados del acento y el primario del sindicato) y el contenedor
+de ancho máximo lleva `mesa-cont`, que solo lo levanta por encima de esas
+capas.
 
-Se suma con tres cosas -- `{% include "_fondo_interior.html" %}`,
-`class="mesa"` en el `<body>` y `class="hoja"` en el contenedor -- y no va en
-los logins, el primer ingreso de plataforma, las portadas ni las pantallas
+La **franja** de marca -- un degradé que baja del encabezado y muere en la
+mesa -- se suma con `mesa franja` y es OPT-IN: va en los paneles y en las
+pantallas de lectura, y **no** en la app del afiliado ni en la de empresa,
+donde lo primero que se ve es una tarjeta oscura que la franja se come.
+
+En teléfono se apaga todo: ahí el contenido ya ocupa el ancho completo. No va
+en los logins, el primer ingreso de plataforma, las portadas ni las pantallas
 oscuras. El estilo y el porqué, en `static/interior.css`.
 
 ## El encabezado: uno solo, de UNA línea, para las cuatro apps

@@ -1,10 +1,12 @@
 {# ============================================================
-   Fondo "hoja sobre la mesa" de las pantallas interiores.
+   Fondo "franja de marca" de las pantallas interiores.
 
    Una pantalla se suma con tres cosas y ninguna más:
      1. {% include "_fondo_interior.html" %} en el <head>
-     2. class="mesa" en el <body>
-     3. class="hoja" en su contenedor de ancho máximo
+     2. class="mesa" en el <body> -- y `mesa franja` si además querés la
+        franja de marca bajando del encabezado, que NO va donde lo primero
+        que se ve es una tarjeta oscura (afiliado, empresa)
+     3. class="mesa-cont" en su contenedor de ancho máximo
         (`.cont`, `.wrap`, `main`, `.hilo`, `.cuerpo`… el que ya tenga)
 
    El estilo y el porqué están en static/interior.css. El <link> vive acá y
