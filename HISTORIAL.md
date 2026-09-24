@@ -6096,3 +6096,13 @@ filas que manda el servidor (las últimas 3.000; se listan 300).
 El `resultado` lo resuelve el servidor (`db.registros_enmascarado`) porque
 en sombra nada viaja tapado: "tapado" (activo), "se habría tapado" (sombra,
 se leyó bien y había qué tapar) o "sin tapar". Plataforma 0.39.01.
+
+**Tesseract se importa en el hilo principal.** El CI del PR de la pantalla
+falló en las cuatro partes con `ValueError: signal only works in main
+thread`: la pantalla de plataforma preguntaba si había lector de fotos y
+eso importaba `tesserocr` por primera vez desde el pool de hilos de FastAPI,
+cosa que en Linux revienta. En Render no se notaba porque la precarga del
+arranque ya lo había importado, pero dependía de eso. Ahora `lectores.py`
+lo importa al cargarse (cuando main arranca, en el hilo principal) y si
+falla queda "no disponible"; `ocr_disponible()` ya no importa nada. Test:
+preguntar desde otro hilo no revienta.

@@ -95,6 +95,24 @@ def ocr_simulado(monkeypatch):
     return monkeypatch
 
 
+def test_preguntar_si_hay_ocr_desde_otro_hilo_no_revienta(monkeypatch):
+    """Las rutas sincrónicas corren en un pool de hilos. En Linux, importar
+    tesserocr por primera vez desde uno revienta ("signal only works in main
+    thread"): así se cayó /plataforma en el CI. Tesseract se importa al cargar
+    el módulo; preguntar desde un hilo no importa nada."""
+    monkeypatch.setattr(lectores, "_disponible", None)
+    resultado, errores = [], []
+
+    def preguntar():
+        try:
+            resultado.append(lectores.ocr_disponible())
+        except Exception as e:
+            errores.append(e)
+    h = threading.Thread(target=preguntar)
+    h.start(); h.join()
+    assert errores == [] and resultado == [lectores._tesserocr is not None]
+
+
 def test_sin_ocr_no_lee_y_no_falla(monkeypatch):
     monkeypatch.setattr(lectores, "_disponible", False)
     assert lectores.leer_foto(Image.new("RGB", (50, 50))).motivo == "sin_ocr"
