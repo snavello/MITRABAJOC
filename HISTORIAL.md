@@ -6175,3 +6175,29 @@ pero según el umbral se pierden el legajo, la cuenta o parte del nombre; el
 blanco y negro propio de Tesseract rinde mejor en conjunto. Queda como
 alternativa. Tests nuevos con datos ficticios de la misma forma (65 en
 `test_enmascarado.py`). Trabajador 0.42.05.
+
+### Enfoque mixto y tapones más grandes (2026-09-24)
+
+SDN advirtió que se estaba ajustando para un recibo y que vendrán otros
+formatos. Se compararon tres estrategias -- detectar la identidad (la de
+hasta hoy), tapar por defecto fuera de la tabla, y un mixto -- y SDN eligió
+probar el **mixto**: tapar alrededor de lo ya encontrado (la frase del
+nombre entera y los números de la fila de la identidad), con una lista
+blanca de lo que la IA necesita (fechas, períodos, años, importes). Tapar
+por defecto quedó descartado por ahora: más protector, pero si el límite de
+la tabla se detecta mal se tapan conceptos, y eso pega en el objetivo
+principal. **La ficha rectora es `docs/ENMASCARADO.md`.**
+
+Tapones: margen proporcional al alto de la letra (en una foto torcida
+asomaban los bordes del dato) y color configurable (`ENMASCARADO_COLOR`,
+rojo en Pruebas a pedido de SDN). Lo que se tapa por la fila de identidad
+dice "DATO OCULTO": no se sabe si es el legajo o un código interno.
+
+**Medido con la IA real** (12 recibos, incluida la foto real): totales,
+líneas, período, categoría e identidad iguales; ninguna alerta de
+adulteración con tapones rojos. **Hallazgo abierto**: "A cuenta futuros
+aumentos" dio `remuneracion` 4/4 en el original y 3/4 (rojo) y 2/4 (gris)
+tapado. No es el color. Muestra chica, pero es el riesgo que importa: se
+mide sobre un conjunto variado antes de llevar esto a la demo.
+`medicion_enmascarado/medir.py` ahora acepta fotos y recibos reales con
+`--conocidos-archivo` (que no se versionan). Trabajador 0.43.01.

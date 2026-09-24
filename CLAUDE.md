@@ -1002,7 +1002,9 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    con registro en `registroenmascarado`), [`PLAN_ENMASCARADO.md`](PLAN_ENMASCARADO.md)—: lo que
    identifica a la persona (CUIL, nombre, DNI, legajo, cuenta, CUIT y razón
    social) se tapa en el servidor antes de salir hacia la IA y la identidad se
-   rearma del lado nuestro. Es MEJOR ESFUERZO (ver Decisiones tomadas),
+   rearma del lado nuestro. Es MEJOR ESFUERZO (ver Decisiones tomadas).
+   **Ficha rectora: [`docs/ENMASCARADO.md`](docs/ENMASCARADO.md)** (estrategia
+   mixta en prueba, qué necesita la IA, cómo se mide, lo abierto),
    variable `ENMASCARADO` = `apagado`/`sombra`/`activo`. Absorbe el enganche
    D7 del motor v2. Sale de una arquitectura de Chat del 2026-08-28 que nunca
    se había bajado al repo (`docs/chat/2026-08-28-arquitectura-enmascarado-pii.md`).

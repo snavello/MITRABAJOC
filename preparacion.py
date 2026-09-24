@@ -268,7 +268,7 @@ def rearmar_recibo(recibo: dict, an: E.Analisis, conocidos: E.Conocidos | None,
     if _vacio(empr.get("nombre")):
         razon = razon_por_cuit(empr["cuit"]) if (razon_por_cuit and empr.get("cuit")) else None
         empr["nombre"] = razon or _textos(an, "razon_social") or None
-    # El rótulo gris no es una tachadura: si la IA lo marcó como tal, no vale.
+    # El rótulo no es una tachadura: si la IA lo marcó como tal, no vale.
     alerta = recibo.get("alerta_adulteracion") or {}
     if alerta.get("detectada") and _OCULTO.search(str(alerta.get("motivo") or "")):
         recibo["alerta_adulteracion"] = {"detectada": False, "motivo": None}

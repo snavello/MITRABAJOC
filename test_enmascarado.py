@@ -261,7 +261,11 @@ NIEVES = Conocidos("27999999999", "NIEVES, JULIA", ("TALLERES METALURGICOS DEL S
 # Tesseract, normalizado (el OCR varía un signo entre recibos: "ANONIMA." o
 # "30-44464097:5"). El guion suelto de "22 - 41837529" también se tapa.
 IDENTIDAD_SINTETICOS = {"NIEVES", "JULIA", "27999999999", "99999999", "04521307", "22", "41837529",
-                        "30444640975", "TALLERES", "METALURGICOS", "DEL", "SUR", "SOCIEDAD", "ANONIMA"}
+                        "30444640975", "TALLERES", "METALURGICOS", "DEL", "SUR", "SOCIEDAD", "ANONIMA",
+                        # Enfoque mixto: en la fila de la cuenta bancaria también se tapa el
+                        # código de dependencia. No es de la persona, pero la IA no lo usa:
+                        # es el exceso que ese enfoque acepta (docs/ENMASCARADO.md).
+                        "B2XX000000"}
 
 
 def test_estan_los_diez_sinteticos():
@@ -342,7 +346,7 @@ def test_legajo_sin_rotulo_en_la_fila_de_la_identidad():
     pal = [P("032949/91", 160, 323, 255, 355), P("GOMEZ,", 306, 331, 400, 354),
            P("28/07/1994", 600, 330, 700, 352), P("20111222334", 906, 328, 1024, 352)]
     an = E.analizar(pal, FICTICIO)
-    assert {k.texto: k.tipo for k in an.cajas} == {"032949/91": "legajo", "GOMEZ,": "nombre",
+    assert {k.texto: k.tipo for k in an.cajas} == {"032949/91": "dato", "GOMEZ,": "nombre",
                                                     "20111222334": "cuil"}
 
 
@@ -357,3 +361,43 @@ def test_tapar_une_cajas_aunque_vengan_desordenadas():
     assert len(unidas) == 1 and (unidas[0].x0, unidas[0].x1) == (306, 581)
     out = E.tapar(Image.new("RGB", (700, 400), "white"), cajas)
     assert set(out.crop((420, 338, 495, 352)).tobytes()) != {255}   # ALBERTO tapado
+
+
+# ======================= Enfoque mixto: tapar alrededor de lo encontrado =======================
+
+
+def test_la_parte_ilegible_del_nombre_se_tapa_por_estar_en_su_frase():
+    """Dos partes del nombre reconocidas: la del medio, que el OCR leyó
+    irreconocible por el logo de agua, se tapa igual. El rótulo, no."""
+    pal = [P("Apellido", 40, 330, 110, 350), P("y", 114, 330, 122, 350), P("nombre:", 126, 330, 190, 350),
+           P("GOMEZ,", 196, 330, 260, 350), P("A1b3rf", 266, 330, 320, 350), P("RICARDO", 326, 330, 400, 350)]
+    an = E.analizar(pal, FICTICIO)
+    assert set(tapados(an)) == {"GOMEZ,", "A1b3rf", "RICARDO"}
+
+
+def test_la_lista_blanca_de_la_fila_de_identidad():
+    """En la fila del nombre, lo que la IA necesita para evaluar se queda:
+    fecha de ingreso, período, año, importe. El legajo se tapa."""
+    pal = [P("032949/91", 40, 330, 130, 350), P("GOMEZ,", 196, 330, 260, 350),
+           P("28/07/1994", 300, 330, 400, 350), P("07/2025", 420, 330, 490, 350),
+           P("2025", 500, 330, 540, 350), P("1.234,56", 560, 330, 640, 350)]
+    an = E.analizar(pal, FICTICIO)
+    assert set(tapados(an)) == {"032949/91", "GOMEZ,"}
+
+
+def test_el_tapon_es_mas_grande_que_la_palabra_y_toma_el_color(monkeypatch):
+    from PIL import Image
+    caja = E.Caja(100, 40, 200, 60, 0, "cuil", "27-...", "conocido")    # 20 px de alto
+    blanco = Image.new("RGB", (400, 120), "white")
+    monkeypatch.setenv("ENMASCARADO_COLOR", "rojo")
+    out = E.tapar(blanco, [caja])
+    assert out.getpixel((93, 34)) != (255, 255, 255)       # margen: 10 px a los costados, 7 arriba
+    assert out.getpixel((150, 43))[0] > 150 and out.getpixel((150, 43))[1] < 80   # rojo
+    monkeypatch.setenv("ENMASCARADO_COLOR", "violeta")      # desconocido -> gris
+    assert E.color_tapon() == "gris"
+    # Sin la variable: rojo donde se revisan las imágenes, gris en demo/prod.
+    import entorno
+    monkeypatch.delenv("ENMASCARADO_COLOR")
+    for ent, esperado in (("pruebas", "rojo"), ("local", "rojo"), ("demo", "gris"), ("prod", "gris")):
+        monkeypatch.setattr(entorno, "ENTORNO", ent)
+        assert E.color_tapon() == esperado, ent
