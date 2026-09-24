@@ -282,3 +282,78 @@ def test_recibo_sintetico(archivo, con_conocidos):
     # Para otra sesión es ajeno, aunque el CUIL ficticio no cumpla el módulo
     # 11 (por ahora no se valida): difiere en más de dos dígitos.
     assert E.pertenece(an, "20111111119") is False
+
+
+# ======================= Casos de una foto real (AEFIP, 2026-09-24) =======================
+# Datos ficticios con la MISMA forma que la foto de SDN: logos de agua encima
+# del encabezado, foto apenas torcida y el OCR leyendo con errores.
+
+FICTICIO = Conocidos("20111222334", "GOMEZ ALBERTO RICARDO")
+
+
+def test_rotulo_cuil_sin_la_i():
+    """Tesseract leyó "CUIL Nº" como "CUL"."""
+    pal = [P("CUL", 934, 301, 986, 313), P("20111222334", 906, 328, 1024, 352)]
+    assert [k.tipo for k in E.analizar(pal).cajas] == ["cuil"]
+
+
+def test_cuil_propio_con_un_digito_mal_leido_se_tapa():
+    """El logo de agua encima hizo leer "...4" donde decía "...3"."""
+    pal = [P("20111222344", 906, 328, 1024, 352)]
+    an = E.analizar(pal, FICTICIO)
+    assert tapados(an) == ["20111222344"]
+    assert an.cuil_sesion_encontrado and E.pertenece(an, FICTICIO.cuil) is True
+    assert E.control_de_fuga(pal, [], FICTICIO) == ["página 1: CUIL/CUIT"]
+
+
+def test_parte_del_nombre_con_una_letra_mal_leida():
+    pal = [P("GOMEZ,", 306, 331, 400, 354), P("ALBERT0", 414, 335, 500, 355), P("RICARDO.", 508, 332, 581, 354)]
+    assert len(E.analizar(pal, FICTICIO).cajas) == 3
+
+
+def test_un_mes_no_es_un_nombre_parecido():
+    """Con 5 letras, JULIA y JULIO serían "casi iguales": el mes del período
+    no se tapa, y tampoco el año que lo acompaña."""
+    pal = [P("PERIODO:", 600, 100, 700, 120), P("JULIO", 710, 100, 770, 120), P("2025", 780, 100, 830, 120)]
+    assert E.analizar(pal, Conocidos(nombre="NIEVES, JULIA")).cajas == []
+
+
+def test_signo_suelto_despues_del_rotulo_no_es_el_valor():
+    """El OCR leyó un ">" al lado de "Nro. Cuenta": el valor está abajo."""
+    pal = [P("Sucursal - Nro. Cuenta", 272, 456, 430, 472), P(">", 436, 456, 446, 470),
+           P("18 - 30269198", 264, 486, 380, 502)]
+    assert [k.tipo for k in E.analizar(pal).cajas] == ["cuenta"]
+
+
+def test_una_caja_alta_no_une_dos_filas():
+    """Una caja de ruido del logo, alta, entre dos filas: cada fila sigue
+    siendo su propia línea (antes "Datos de la Cuenta" y "Sucursal - Nro.
+    Cuenta" salían entremezcladas y el rótulo no encontraba su valor)."""
+    pal = [P("Datos", 158, 428, 200, 443), P("Bancaria", 294, 432, 350, 447),
+           P("TE", 397, 420, 430, 470),                     # la caja alta
+           P("Sucursal", 272, 456, 330, 471), P("Nro.", 351, 458, 380, 471), P("Cuenta", 386, 459, 430, 472),
+           P("18-30269198", 264, 486, 380, 502)]
+    assert [k.tipo for k in E.analizar(pal).cajas] == ["cuenta"]
+
+
+def test_legajo_sin_rotulo_en_la_fila_de_la_identidad():
+    """El rótulo "Legajo" se leyó como "2": el número de la fila del nombre y
+    del CUIL se tapa igual. Una fecha o un año en esa fila, no."""
+    pal = [P("032949/91", 160, 323, 255, 355), P("GOMEZ,", 306, 331, 400, 354),
+           P("28/07/1994", 600, 330, 700, 352), P("20111222334", 906, 328, 1024, 352)]
+    an = E.analizar(pal, FICTICIO)
+    assert {k.texto: k.tipo for k in an.cajas} == {"032949/91": "legajo", "GOMEZ,": "nombre",
+                                                    "20111222334": "cuil"}
+
+
+def test_tapar_une_cajas_aunque_vengan_desordenadas():
+    """En una foto torcida la segunda palabra del nombre está un poco más
+    abajo; el rótulo tiene que cubrir las tres, no solo la última."""
+    from PIL import Image
+    cajas = [E.Caja(306, 331, 400, 354, 0, "nombre", "GOMEZ", "conocido"),
+             E.Caja(508, 332, 581, 354, 0, "nombre", "RICARDO", "conocido"),
+             E.Caja(414, 335, 500, 355, 0, "nombre", "ALBERTO", "conocido")]
+    unidas = E._unir(cajas)
+    assert len(unidas) == 1 and (unidas[0].x0, unidas[0].x1) == (306, 581)
+    out = E.tapar(Image.new("RGB", (700, 400), "white"), cajas)
+    assert set(out.crop((420, 338, 495, 352)).tobytes()) != {255}   # ALBERTO tapado
