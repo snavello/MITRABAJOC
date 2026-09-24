@@ -720,8 +720,23 @@ async def _preparar_para_ia(contenido: bytes, content_type: str, conocidos, sid,
         prep = await run_in_threadpool(preparacion.preparar, contenido, content_type, conocidos)
     except Exception:
         prep = preparacion.Preparado("apagado")
-    db.registrar_enmascarado(sid or None, tipo, prep.registro)
+    rid = db.registrar_enmascarado(sid or None, tipo, prep.registro)
+    await _guardar_diagnostico(rid, prep, contenido, content_type)
     return prep
+
+
+async def _guardar_diagnostico(rid, prep, contenido: bytes, content_type: str) -> None:
+    """TRANSITORIO, solo Pruebas: guarda la imagen original y la enviada a la
+    IA para revisarlas desde /plataforma (preparacion.guardar_imagenes_habilitado).
+    Nunca frena el recibo."""
+    if not rid or not preparacion.guardar_imagenes_habilitado():
+        return
+    try:
+        par = await run_in_threadpool(preparacion.imagenes_diagnostico, prep, contenido, content_type)
+        if par:
+            db.guardar_imagenes_enmascarado(rid, *par, dias=preparacion.DIAS_IMAGENES)
+    except Exception as e:
+        print(f"[enmascarado] diagnóstico sin guardar ({type(e).__name__})")
 
 
 def _para_la_ia(prep) -> dict:
@@ -4847,6 +4862,9 @@ def plataforma(request: Request):
         "enmascarado_registros": db.registros_enmascarado(),
         "enmascarado_modo": preparacion.modo(),
         "enmascarado_ocr": lectores.ocr_disponible(),
+        "enmascarado_diagnostico": preparacion.guardar_imagenes_habilitado(),
+        "enmascarado_diag_entorno": entorno.ENTORNO in ("local", "pruebas"),
+        "enmascarado_dias": preparacion.DIAS_IMAGENES,
         "sindicatos_uso_ia": sorted({u["sindicato"] for u in uso_ia}),
         # (id, nombre): el filtro compara contra el id que guarda la fila, pero
         # muestra el nombre lindo -- un modelo viejo que ya no está en el
@@ -5185,6 +5203,58 @@ def plataforma_modelos_ia(request: Request,
     return RedirectResponse("/plataforma?config=ok#usoia-modelos", status_code=303)
 
 
+# ---------- Diagnóstico del enmascarado (TRANSITORIO, solo Pruebas) ----------
+# Las imágenes original y enviada de cada documento, para ver qué se tapó de
+# verdad. 404 fuera de local/pruebas aunque hubiera filas: la original tiene
+# datos personales y no se muestra en la demo ni en producción.
+
+def _exigir_diagnostico(request: Request):
+    exigir_plataforma(request)
+    if entorno.ENTORNO not in ("local", "pruebas"):
+        raise HTTPException(404)
+
+
+@app.get("/plataforma/enmascarado/{registro_id}/imagen/{cual}")
+def enmascarado_imagen(request: Request, registro_id: int, cual: str):
+    _exigir_diagnostico(request)
+    datos = db.imagen_enmascarado(registro_id, cual)
+    if not datos:
+        raise HTTPException(404)
+    return Response(content=datos, media_type="image/jpeg",
+                    headers={"Cache-Control": "no-store"})
+
+
+@app.get("/plataforma/enmascarado/{registro_id}", response_class=HTMLResponse)
+def enmascarado_comparar(request: Request, registro_id: int):
+    """Las dos imágenes lado a lado: la que subió la persona y la que recibió
+    la IA. Página mínima a propósito: es una herramienta de diagnóstico."""
+    _exigir_diagnostico(request)
+    if not db.imagen_enmascarado(registro_id, "original"):
+        raise HTTPException(404)
+    base = f"/plataforma/enmascarado/{registro_id}/imagen"
+    return HTMLResponse(f"""<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Colm3na — Diagnóstico del enmascarado #{registro_id}</title>
+<style>body{{margin:0;font-family:system-ui,sans-serif;background:#f6f7f9;color:#152238}}
+header{{background:#152238;color:#fff;padding:12px 18px;font-size:14px}}
+main{{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px}}
+@media (max-width:900px){{main{{grid-template-columns:1fr}}}}
+figure{{margin:0;background:#fff;border:1px solid #e4e7ec;border-radius:12px;padding:10px}}
+figcaption{{font-size:12px;color:#5b6478;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}}
+img{{width:100%;height:auto;display:block}}</style></head><body>
+<header>Diagnóstico del enmascarado · registro #{registro_id} · solo Pruebas, se borra a los {preparacion.DIAS_IMAGENES} días</header>
+<main><figure><figcaption>Lo que subió la persona</figcaption><img src="{base}/original" alt="Original"></figure>
+<figure><figcaption>Lo que recibió la IA</figcaption><img src="{base}/enviada" alt="Enviada a la IA"></figure></main>
+</body></html>""", headers={"Cache-Control": "no-store"})
+
+
+@app.post("/plataforma/enmascarado/imagenes/borrar")
+def enmascarado_borrar_imagenes(request: Request):
+    _exigir_diagnostico(request)
+    n = db.borrar_imagenes_enmascarado()
+    return RedirectResponse(f"/plataforma?imagenes_borradas={n}#usoia-enmascarado", status_code=303)
+
+
 @app.post("/plataforma/probar-modelos")
 async def plataforma_probar_modelos(request: Request,
                                     archivo: UploadFile = File(...),
@@ -5239,7 +5309,8 @@ async def plataforma_probar_modelos(request: Request,
     if tapado:
         prep = await run_in_threadpool(preparacion.preparar, contenido, archivo.content_type,
                                        None, "activo")
-        db.registrar_enmascarado(None, "prueba", prep.registro)
+        rid = db.registrar_enmascarado(None, "prueba", prep.registro)
+        await _guardar_diagnostico(rid, prep, contenido, archivo.content_type)
     tareas = [(m, False) for m in elegidos]
     if prep is not None and prep.tapado:
         tareas = [t for m in elegidos for t in ((m, False), (m, True))]

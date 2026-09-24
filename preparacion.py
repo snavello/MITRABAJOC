@@ -60,6 +60,9 @@ class Preparado:
     analisis: E.Analisis | None = None
     pertenece: bool | None = None
     registro: dict = field(default_factory=dict)
+    # La página tal como se leyó (PIL, derecha y sin tapar). Solo vive en
+    # memoria durante el request: la usa el diagnóstico de Pruebas.
+    pagina: object = None
 
 
 def _codificar(img, content_type: str) -> tuple[str, str]:
@@ -107,6 +110,7 @@ def preparar(contenido: bytes, content_type: str, conocidos: E.Conocidos | None 
     prep = Preparado(m, registro=reg)
     try:
         img, palabras, camino, lectura = _leer(contenido, content_type)
+        prep.pagina = img
         reg["camino"] = camino
         if lectura is not None:
             reg.update(motivo=lectura.motivo, espera_ms=lectura.espera_ms,
@@ -144,6 +148,54 @@ def preparar(contenido: bytes, content_type: str, conocidos: E.Conocidos | None 
         except Exception:
             prep.imagen = None
     return prep
+
+
+# ======================= Diagnóstico (solo Pruebas) =======================
+# Pedido de SDN (2026-09-24), TRANSITORIO: para revisar en Pruebas qué se tapó
+# de verdad, se guardan la imagen original y la que se mandó a la IA. La
+# original tiene datos personales reales, así que esto:
+# - solo existe en `local` y `pruebas` (en demo/prod no guarda aunque alguien
+#   cargue la variable: lo decide el entorno, no la variable sola);
+# - se prende con ENMASCARADO_GUARDAR_IMAGENES=1;
+# - vence a los DIAS_IMAGENES días y se borra entera desde la pantalla.
+DIAS_IMAGENES = 7
+LADO_IMAGEN_DIAGNOSTICO = 1600
+
+
+def guardar_imagenes_habilitado() -> bool:
+    import entorno
+    return (os.getenv("ENMASCARADO_GUARDAR_IMAGENES", "").strip() == "1"
+            and entorno.ENTORNO in ("local", "pruebas"))
+
+
+def _jpeg(img) -> bytes:
+    img = img.convert("RGB")
+    lado = max(img.size)
+    if lado > LADO_IMAGEN_DIAGNOSTICO:
+        f = LADO_IMAGEN_DIAGNOSTICO / lado
+        img = img.resize((round(img.width * f), round(img.height * f)))
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=80)
+    return buf.getvalue()
+
+
+def imagenes_diagnostico(prep: Preparado, contenido: bytes, content_type: str):
+    """(original, enviada) en JPEG, o None. La original es la página tal como
+    la vio el lector; la enviada, lo que efectivamente recibió la IA (tapado
+    en activo, el original en sombra). Nunca levanta: es diagnóstico."""
+    from PIL import Image
+    try:
+        original = prep.pagina
+        if original is None:
+            original = (lectores.imagen_pdf(contenido, 0) if content_type == "application/pdf"
+                        else lectores.abrir_imagen(contenido))
+        if prep.imagen is not None:
+            enviada = Image.open(io.BytesIO(base64.b64decode(prep.imagen[0])))
+        else:
+            enviada = original
+        return _jpeg(original), _jpeg(enviada)
+    except Exception:
+        return None
 
 
 # ======================= Rearmar la identidad =======================

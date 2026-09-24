@@ -336,3 +336,81 @@ def test_la_pantalla_de_plataforma_muestra_los_registros(monkeypatch):
     assert r.status_code == 200
     assert 'data-ia-sub="enmascarado"' in r.text and 'class="fila-enm"' in r.text
     assert "Modo en este servidor: <strong>sombra</strong>" in r.text
+
+
+# ======================= Diagnóstico con imágenes (TRANSITORIO, Pruebas) =======================
+
+import entorno
+from db import ImagenEnmascarado
+
+
+def test_diagnostico_solo_en_pruebas_o_local(monkeypatch):
+    """La original tiene datos personales: en demo/prod no se guarda aunque
+    alguien cargue la variable."""
+    monkeypatch.delenv("ENMASCARADO_GUARDAR_IMAGENES", raising=False)
+    monkeypatch.setattr(entorno, "ENTORNO", "pruebas")
+    assert not preparacion.guardar_imagenes_habilitado()          # sin la variable
+    monkeypatch.setenv("ENMASCARADO_GUARDAR_IMAGENES", "1")
+    assert preparacion.guardar_imagenes_habilitado()
+    for otro in ("demo", "prod", ""):
+        monkeypatch.setattr(entorno, "ENTORNO", otro)
+        assert not preparacion.guardar_imagenes_habilitado(), otro
+
+
+@pytest.fixture
+def diagnostico(monkeypatch, ia):
+    monkeypatch.setenv("ENMASCARADO", "activo")
+    monkeypatch.setenv("ENMASCARADO_GUARDAR_IMAGENES", "1")
+    monkeypatch.setattr(entorno, "ENTORNO", "pruebas")
+    return monkeypatch
+
+
+def test_un_recibo_deja_sus_dos_imagenes_y_se_ven(diagnostico):
+    r = _subir(_cliente())
+    assert r.status_code == 200, r.text
+    reg = [x for x in db.registros_enmascarado() if x["sindicato"] == "Test Enmascarado"][0]
+    assert reg["con_imagenes"]
+    pagina = plataforma.get(f"/plataforma/enmascarado/{reg['id']}")
+    assert pagina.status_code == 200 and "Lo que recibió la IA" in pagina.text
+    orig = plataforma.get(f"/plataforma/enmascarado/{reg['id']}/imagen/original")
+    env = plataforma.get(f"/plataforma/enmascarado/{reg['id']}/imagen/enviada")
+    assert orig.headers["content-type"] == env.headers["content-type"] == "image/jpeg"
+    assert orig.content != env.content                        # la enviada va tapada
+    assert plataforma.get(f"/plataforma/enmascarado/{reg['id']}/imagen/otra").status_code == 404
+    # Sin sesión de plataforma, nada.
+    assert TestClient(main.app).get(f"/plataforma/enmascarado/{reg['id']}/imagen/original",
+                                    follow_redirects=False).status_code in (302, 303, 401, 403)
+
+
+def test_fuera_de_pruebas_no_se_muestran(diagnostico):
+    _subir(_cliente())
+    reg = [x for x in db.registros_enmascarado() if x["con_imagenes"]][0]
+    diagnostico.setattr(entorno, "ENTORNO", "demo")
+    assert plataforma.get(f"/plataforma/enmascarado/{reg['id']}").status_code == 404
+    assert plataforma.get(f"/plataforma/enmascarado/{reg['id']}/imagen/original").status_code == 404
+
+
+def test_sin_la_variable_no_se_guardan(monkeypatch, ia):
+    monkeypatch.setenv("ENMASCARADO", "activo")
+    monkeypatch.delenv("ENMASCARADO_GUARDAR_IMAGENES", raising=False)
+    monkeypatch.setattr(entorno, "ENTORNO", "pruebas")
+    _subir(_cliente())
+    reg = [x for x in db.registros_enmascarado() if x["sindicato"] == "Test Enmascarado"][0]
+    assert not reg["con_imagenes"]
+
+
+def test_las_vencidas_se_borran_solas_y_el_boton_vacia_todo(diagnostico):
+    _subir(_cliente())
+    with db.get_session() as s:
+        vieja = s.exec(select(ImagenEnmascarado)).first()
+        vieja.creado = "2026-01-01 00:00"
+        s.add(vieja); s.commit()
+        vieja_id = vieja.id
+    _subir(_cliente())                                        # guardar otra purga las vencidas
+    with db.get_session() as s:
+        assert s.get(ImagenEnmascarado, vieja_id) is None
+        assert s.exec(select(ImagenEnmascarado)).first() is not None
+    r = plataforma.post("/plataforma/enmascarado/imagenes/borrar", follow_redirects=False)
+    assert r.status_code == 303
+    with db.get_session() as s:
+        assert s.exec(select(ImagenEnmascarado)).first() is None
