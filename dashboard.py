@@ -859,6 +859,11 @@ def explorador_recibos(sid: int, f: dict, page: int, page_size: int) -> dict:
     # Con afiliado elegido se listan TODOS sus recibos enviados, no solo los
     # observados: la pregunta es "qué mandó esta persona", no "qué está mal".
     solo_diferencias = "" if (f.get("resultado") or f.get("afiliado")) else "r.estado != 'OK'"
+    # Sin la cláusula de confidencialidad firmada, las FILAS de recibos no
+    # enviados no salen (ni siquiera anonimizadas). Los agregados del panel
+    # los cuentan igual: esto recorta solo la vista fila por fila.
+    if not clausula_aceptada(sid):
+        solo_diferencias = " AND ".join(c for c in (solo_diferencias, "r.enviado_sindicato") if c)
     joins, where, params = _sql_recibos(sid, f, extra_conds=solo_diferencias,
                                         forzar_join=True)
     joins += (" LEFT JOIN seccional sec ON sec.id = t.seccional_id"
@@ -871,7 +876,9 @@ def explorador_recibos(sid: int, f: dict, page: int, page_size: int) -> dict:
                      params)[0]
         params_pagina = dict(params, limite=page_size, salto=(page - 1) * page_size)
         filas = s.execute(_stmt(f"""
-            SELECT r.procesado_en, sec.nombre, r.cuit_empleador, r.categoria,
+            SELECT r.procesado_en, sec.nombre,
+                   CASE WHEN r.enviado_sindicato THEN r.cuit_empleador ELSE NULL END,
+                   r.categoria,
                    r.formato, r.bruto, r.monto_diferencia, r.estado, r.enviado_sindicato,
                    CASE WHEN r.enviado_sindicato THEN ct.nombre ELSE NULL END,
                    CASE WHEN r.enviado_sindicato THEN r.cuil ELSE NULL END,
@@ -882,7 +889,8 @@ def explorador_recibos(sid: int, f: dict, page: int, page_size: int) -> dict:
     etiquetas = _etiquetas_empresas(sid)
     items = [{
         "fecha": fila[0], "seccional": fila[1] or "Sin seccional",
-        "empresa": etiquetas.get(fila[2]) or fila[2] or "—",
+        # Recibo no enviado: la empresa también se tapa (llega NULL del SQL).
+        "empresa": (etiquetas.get(fila[2]) or fila[2]) if fila[2] else "—",
         "categoria": fila[3] or "—", "formato": fila[4] or "",
         "bruto": fila[5], "diferencia": fila[6],
         "resultado": "con_diferencias" if fila[7] == "CON_DISCREPANCIAS" else "ok",
@@ -996,22 +1004,173 @@ def _explorador_notificaciones_de_afiliado(joins, where, params, page, page_size
             "modo": "afiliado"}
 
 
+# ---------- Reportes (pestaña del panel del sindicato) ----------
+
+# Lo que identifica a la persona dentro del JSON guardado de un recibo. Un
+# recibo que el afiliado NO envió sale sin nada de esto ni de su empresa.
+_CLAVES_EMPLEADO = ("apellido_nombre", "cuil", "legajo", "fecha_ingreso")
+
+
+def anonimizar_detalle(recibo: dict, resultado: dict) -> None:
+    """Borra EN EL LUGAR los datos identificatorios del trabajador y de la
+    empresa de un recibo no enviado. Una sola implementación para el modal
+    del Panel y el de Reportes: si cada pantalla anonimizara a su manera, la
+    primera que se olvidara de un campo lo dejaría pasar."""
+    empleado = recibo.get("empleado")
+    if isinstance(empleado, dict):
+        for clave in _CLAVES_EMPLEADO:
+            empleado.pop(clave, None)
+    if "empleador" in recibo:
+        recibo["empleador"] = {}
+    resultado.pop("cuil", None)
+
+
+def clausula_aceptada(sid: int) -> bool:
+    """¿El sindicato firmó la cláusula de confidencialidad? Sin ella, ninguna
+    vista fila por fila le muestra recibos no enviados."""
+    with db.get_session() as s:
+        fila = s.execute(text(
+            "SELECT clausula_confidencialidad FROM sindicato WHERE id = :sid"),
+            {"sid": sid}).first()
+    return bool(fila and fila[0])
+
+
+def _cuiles_por_nombre(sid: int, texto: str) -> list:
+    """CUILes del padrón cuyo nombre contiene todas las palabras buscadas,
+    sin importar tildes ni mayúsculas (mismo criterio que buscar_afiliados)."""
+    tokens = _normalizar(texto).split()
+    if not tokens:
+        return []
+    with db.get_session() as s:
+        filas = s.execute(text(
+            "SELECT t.cuil, c.nombre FROM trabajador t "
+            "JOIN cuentatrabajador c ON c.cuil = t.cuil "
+            "WHERE t.sindicato_id = :sid"), {"sid": sid}).all()
+    return [cuil for cuil, nombre in filas
+            if all(t in _normalizar(nombre) for t in tokens)]
+
+
+PAGINA_REPORTES = 50
+
+
+def listado_reportes(sid: int, filtros: dict, alcance, page: int) -> dict:
+    """La pestaña Reportes: TODOS los recibos que verificaron los afiliados
+    del sindicato, los hayan enviado o no, del más nuevo al más viejo y
+    paginados en el servidor (un sindicato con lote tiene miles).
+
+    PRIVACIDAD, en el SQL y no en la pantalla: nombre, CUIL y empresa salen
+    SOLO de los recibos enviados. Y la búsqueda por CUIL o por nombre busca
+    SOLO entre los enviados: si encontrara también los no enviados, la fila
+    anónima quedaría identificada por el filtro que la trajo.
+
+    Sin la cláusula de confidencialidad no se listan los no enviados; se
+    devuelve cuántos quedaron afuera para que la pantalla lo diga.
+
+    `alcance` es el de db.alcance_seccional: None = todas, set = esas (vacío
+    = ninguna), por la seccional del padrón del afiliado.
+
+    `filtros`: cuil, nombre, desde, hasta (AAAA-MM-DD), resultado
+    ("ok" | "con_diferencias"), enviado ("si" | "no")."""
+    conds = ["r.sindicato_id = :sid"]
+    params = {"sid": sid}
+    joins = ""
+    if alcance is not None:
+        joins = (" LEFT JOIN trabajador t ON t.sindicato_id = r.sindicato_id "
+                 "AND t.cuil = r.cuil")
+        conds.append("t.seccional_id IN :alcance")
+        params["alcance"] = sorted(alcance) or [-1]
+    if filtros.get("desde"):
+        conds.append("r.procesado_en >= :desde")
+        params["desde"] = filtros["desde"]
+    if filtros.get("hasta"):
+        conds.append("r.procesado_en <= :hasta")
+        params["hasta"] = filtros["hasta"] + " 23:59"
+    if filtros.get("resultado") == "ok":
+        conds.append("r.estado = 'OK'")
+    elif filtros.get("resultado") == "con_diferencias":
+        conds.append("r.estado != 'OK'")
+    if filtros.get("enviado") == "si":
+        conds.append("r.enviado_sindicato")
+    elif filtros.get("enviado") == "no":
+        conds.append("NOT r.enviado_sindicato")
+    digitos = re.sub(r"\D", "", filtros.get("cuil") or "")
+    if digitos:
+        conds.append("r.enviado_sindicato AND REPLACE(r.cuil, '-', '') LIKE :cuil")
+        params["cuil"] = f"%{digitos}%"
+    if (filtros.get("nombre") or "").strip():
+        conds.append("r.enviado_sindicato AND r.cuil IN :cuiles_nombre")
+        params["cuiles_nombre"] = _cuiles_por_nombre(sid, filtros["nombre"]) or ["__nadie__"]
+
+    clausula = clausula_aceptada(sid)
+    where_base = " AND ".join(conds)
+    where = where_base if clausula else where_base + " AND r.enviado_sindicato"
+    page = max(1, page)
+    with db.get_session() as s:
+        total = _uno(s, f"SELECT COUNT(*) FROM reciboverificado r{joins} WHERE {where}", params)[0]
+        ocultos = 0 if clausula else _uno(
+            s, f"SELECT COUNT(*) FROM reciboverificado r{joins} "
+               f"WHERE {where_base} AND NOT r.enviado_sindicato", params)[0]
+        params_pag = dict(params, limite=PAGINA_REPORTES, salto=(page - 1) * PAGINA_REPORTES)
+        filas = s.execute(_stmt(f"""
+            SELECT r.id, r.fecha, r.periodo, r.estado, r.enviado_sindicato,
+                   CASE WHEN r.enviado_sindicato THEN r.cuil ELSE NULL END,
+                   CASE WHEN r.enviado_sindicato THEN ct.nombre ELSE NULL END,
+                   CASE WHEN r.enviado_sindicato THEN r.cuit_empleador ELSE NULL END
+            FROM reciboverificado r{joins}
+            LEFT JOIN cuentatrabajador ct ON ct.cuil = r.cuil
+            WHERE {where}
+            ORDER BY r.procesado_en DESC NULLS LAST, r.id DESC
+            LIMIT :limite OFFSET :salto""", params_pag), params_pag).all()
+    etiquetas = _etiquetas_empresas(sid)
+    items = [{
+        "id": f[0], "fecha": f[1], "periodo": f[2] or "",
+        "con_diferencias": f[3] != "OK", "enviado": bool(f[4]),
+        "cuil": f[5], "nombre": f[6],
+        "empresa": (etiquetas.get(f[7]) or f[7]) if f[7] else None,
+    } for f in filas]
+    return {"total": total, "page": page, "page_size": PAGINA_REPORTES,
+            "items": items, "clausula": clausula, "ocultos_sin_clausula": ocultos}
+
+
+def detalle_reporte(sid: int, recibo_id: int, alcance) -> Optional[dict]:
+    """El recibo para el modal "Ver" de Reportes: el mismo del Panel
+    (anonimizado y con la compuerta de la cláusula), más el recorte por
+    seccional de quien lo pide."""
+    if alcance is not None:
+        ids = sorted(alcance) or [-1]
+        with db.get_session() as s:
+            fila = s.execute(_stmt(
+                "SELECT 1 FROM reciboverificado r JOIN trabajador t "
+                "ON t.sindicato_id = r.sindicato_id AND t.cuil = r.cuil "
+                "WHERE r.id = :rid AND r.sindicato_id = :sid AND t.seccional_id IN :alcance",
+                {"alcance": ids}), {"rid": recibo_id, "sid": sid, "alcance": ids}).first()
+        if not fila:
+            return None
+    return detalle_recibo(sid, recibo_id)
+
+
 # ---------- Detalle por fila del explorador ("Ver" -> modal) ----------
 
 def detalle_recibo(sid: int, recibo_id: int) -> Optional[dict]:
     """El recibo completo tal como quedó verificado (conceptos, totales,
     discrepancias, alertas). PRIVACIDAD (§1.3, con test): si el trabajador NO
     lo envió voluntariamente, el detalle sale ANONIMIZADO -- se borra todo lo
-    que identifique a la persona (nombre, CUIL, legajo, fecha de ingreso)
-    ANTES de que el dict llegue a la ruta; el frontend nunca lo recibe."""
+    que identifique a la persona (nombre, CUIL, legajo, fecha de ingreso) y a
+    su empresa (nombre y CUIT) ANTES de que el dict llegue a la ruta; el
+    frontend nunca lo recibe. Y sin la cláusula de confidencialidad firmada,
+    un recibo no enviado no se entrega de ninguna forma (None -> 404)."""
     import copy
     with db.get_session() as s:
         fila = s.execute(text(
-            "SELECT cuil, periodo, estado, enviado_sindicato, detalle, procesado_en, "
-            "cuit_empleador, categoria, formato, bruto, monto_diferencia "
-            "FROM reciboverificado WHERE id = :rid AND sindicato_id = :sid"),
+            "SELECT r.cuil, r.periodo, r.estado, r.enviado_sindicato, r.detalle, r.procesado_en, "
+            "r.cuit_empleador, r.categoria, r.formato, r.bruto, r.monto_diferencia, "
+            "s.clausula_confidencialidad "
+            "FROM reciboverificado r JOIN sindicato s ON s.id = r.sindicato_id "
+            "WHERE r.id = :rid AND r.sindicato_id = :sid"),
             {"rid": recibo_id, "sid": sid}).first()
     if not fila:
+        return None
+    if not fila[3] and not fila[11]:
         return None
     cuil, periodo, estado, enviado, detalle, procesado_en = fila[0], fila[1], fila[2], bool(fila[3]), fila[4], fila[5]
     if isinstance(detalle, str):
@@ -1033,18 +1192,15 @@ def detalle_recibo(sid: int, recibo_id: int) -> Optional[dict]:
                 {"sid": sid, "cuil": cuil}).first()
         nombre = (t[0] if t else None) or (recibo.get("empleado") or {}).get("apellido_nombre")
     else:
-        empleado = recibo.get("empleado")
-        if isinstance(empleado, dict):
-            for clave in ("apellido_nombre", "cuil", "legajo", "fecha_ingreso"):
-                empleado.pop(clave, None)
-        resultado.pop("cuil", None)
+        anonimizar_detalle(recibo, resultado)
         cuil = None
     etiquetas = _etiquetas_empresas(sid)
+    empresa = (etiquetas.get(fila[6]) or fila[6] or "—") if enviado else "—"
     return {
         "id": recibo_id, "enviado": enviado,
         "estado": "con_diferencias" if estado == "CON_DISCREPANCIAS" else "ok",
         "periodo": periodo, "procesado_en": procesado_en,
-        "empresa": etiquetas.get(fila[6]) or fila[6] or "—",
+        "empresa": empresa,
         "categoria": fila[7] or "—", "formato": fila[8] or "",
         "bruto": fila[9], "monto_diferencia": fila[10],
         "trabajador_nombre": nombre, "trabajador_cuil": cuil,

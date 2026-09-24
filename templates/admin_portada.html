@@ -90,7 +90,7 @@
       <a class="pt-fila pt-vid" href="/admin#reportes">
         <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-reportes"/></svg></span>
         <span class="pt-fila-txt"><span class="pt-fila-t">Reportes</span>
-          <span class="pt-fila-e">Recibos verificados por trabajadores</span></span>
+          <span class="pt-fila-e">Recibos verificados, enviados y anónimos</span></span>
         <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
       </a>
       {% endif %}
@@ -123,14 +123,6 @@
         <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-aprendizaje"/></svg></span>
         <span class="pt-fila-txt"><span class="pt-fila-t">Aprendizaje</span>
           <span class="pt-fila-e">Corregir sugerencias de la IA</span></span>
-        <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
-      </a>
-      {% endif %}
-      {% if 'recibos' in modulos and 'cotizantes' in permisos %}
-      <a class="pt-fila pt-vid" href="/admin#cotizantes">
-        <span class="pt-pastilla"><svg viewBox="0 0 24 24"><use href="#ic-cotizantes"/></svg></span>
-        <span class="pt-fila-txt"><span class="pt-fila-t">Afiliados cotizantes</span>
-          <span class="pt-fila-e">Recibos enviados al sindicato</span></span>
         <span class="pt-fila-f"><svg viewBox="0 0 24 24"><use href="#ic-flecha"/></svg></span>
       </a>
       {% endif %}
@@ -247,7 +239,6 @@
     <g id="ic-conceptos"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1.2"/><circle cx="4.5" cy="12" r="1.2"/><circle cx="4.5" cy="18" r="1.2"/></g>
     <g id="ic-trabajadores"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.5" cy="9.5" r="2.3"/><path d="M15.3 14.5c2.1.5 3.7 2.4 3.9 4.8"/></g>
     <g id="ic-aprendizaje"><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.4.9 1 .9 1.7V16h5.2v-.4c0-.7.3-1.3.9-1.7A6 6 0 0 0 12 3z"/><path d="M9.5 18.5h5"/><path d="M10.3 21h3.4"/></g>
-    <g id="ic-cotizantes"><path d="M5 12 6 5.4A2 2 0 0 1 8 3.6h8a2 2 0 0 1 2 1.8L19 12"/><path d="M3 12h4.5l2 3h5l2-3H21"/><path d="M3 12v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6"/></g>
     <g id="ic-noticias"><rect x="3" y="5" width="14" height="14" rx="1.3"/><line x1="6.2" y1="9" x2="13.8" y2="9"/><line x1="6.2" y1="12" x2="13.8" y2="12"/><line x1="6.2" y1="15" x2="11" y2="15"/><path d="M17 8h1.5a2.5 2.5 0 0 1 2.5 2.5V17a2 2 0 0 1-2 2H9"/></g>
     <g id="ic-beneficios"><path d="M20.6 12.3 12.7 3.4A2 2 0 0 0 11.2 3H5a2 2 0 0 0-2 2v6.2a2 2 0 0 0 .6 1.4l8.9 8.9a2 2 0 0 0 2.8 0l5.3-5.3a2 2 0 0 0 0-2.8Z"/><circle cx="8.5" cy="8.5" r="1.5"/></g>
     <g id="ic-notif"><path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></g>

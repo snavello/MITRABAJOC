@@ -232,7 +232,7 @@
       <td><button type="button" class="link-num" onclick="verAdmins({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.usuarios }}</button></td>
       <td><button type="button" class="link-num" onclick="verTrabajadores({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.trabajadores }}</button></td>
       <td style="white-space:nowrap; text-align:right;">
-        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base,"modulos_habilitados":i.s.modulos_habilitados,"portada_clara":i.s.portada_clara,"admin_portada_clara":i.s.admin_portada_clara,"logo":i.s.logo,"firma":i.s.firma} | tojson }})'>Editar</button>
+        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base,"modulos_habilitados":i.s.modulos_habilitados,"portada_clara":i.s.portada_clara,"admin_portada_clara":i.s.admin_portada_clara,"logo":i.s.logo,"firma":i.s.firma,"clausula":i.s.clausula_confidencialidad,"clausula_en":i.s.clausula_aceptada_en,"clausula_por":i.s.clausula_aceptada_por,"contrato_nombre":i.s.contrato_nombre if i.s.contrato_datos else ""} | tojson }})'>Editar</button>
         <button type="button" class="mini borrar" onclick="borrarSind({{ i.s.id }}, '{{ i.s.nombre }}', {{ i.usuarios }}, {{ i.trabajadores }})">Borrar</button>
       </td>
     </tr>
@@ -269,6 +269,12 @@
   <div class="ppanel" id="pp-nuevo">
   <h2 id="form-sind-titulo">Dar de alta un sindicato</h2>
   <div class="card">
+    {% if request.query_params.get('error') == 'clausula' %}
+    <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó: para marcar la cláusula de confidencialidad como aceptada, el sindicato tiene que tener cargado el contrato firmado. Subilo en el mismo formulario.</div>
+    {% endif %}
+    {% if request.query_params.get('error') == 'contrato' %}
+    <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó: el contrato tiene que ser un PDF o una imagen (PNG, JPG o WEBP) de hasta 15 MB.</div>
+    {% endif %}
     {% if request.query_params.get('error') == 'colorbase' %}
     <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El color base tiene que ser oscuro (es el fondo de la portada del trabajador y de los encabezados) — el que cargaste es muy claro para que el texto blanco se lea bien encima. Probá con un tono más oscuro.</div>
     {% endif %}
@@ -351,6 +357,22 @@
       <div class="campo" style="margin-top:8px;">
         <label class="chk-modulo"><input type="checkbox" name="admin_portada_clara" value="true" id="sind-admin-portada-clara"> Portada clara (admin)</label>
         <span class="muted" style="font-size:11px;">Independiente de la del trabajador -- por ejemplo, se puede dejar oscura para el trabajador y clara para el admin.</span>
+      </div>
+
+      <div class="campo" style="margin-top:14px;">
+        <label>Contrato / convenio firmado con el sindicato (PDF o imagen)</label>
+        <div id="sind-contrato-actual" class="oculto" style="margin-bottom:8px; font-size:12.5px;">
+          Cargado: <a id="sind-contrato-link" href="#" target="_blank" rel="noopener"></a>
+          <span class="muted" style="font-size:11px; margin-left:6px;">-- subí otro para reemplazarlo.</span>
+        </div>
+        <input type="file" name="contrato" accept="application/pdf,image/png,image/jpeg,image/webp">
+        <span class="muted" style="font-size:11px;">El documento por el que el sindicato acepta la responsabilidad sobre los datos que recibe. Solo lo ve plataforma.</span>
+      </div>
+
+      <div class="campo" style="margin-top:8px;">
+        <label class="chk-modulo"><input type="checkbox" name="clausula_confidencialidad" value="true" id="sind-clausula"> Aceptó la cláusula de confidencialidad</label>
+        <span class="muted" style="font-size:11px;">Tildado: en Reportes y en el explorador del Panel Sindical ve también los recibos que los afiliados verificaron y NO enviaron, siempre anonimizados (sin nombre, CUIL ni empresa). Sin tildar, ve solo los enviados. Exige el contrato cargado.</span>
+        <span class="muted" id="sind-clausula-quien" style="font-size:11px; display:block;"></span>
       </div>
 
       <button type="submit">Crear sindicato</button>
@@ -965,6 +987,8 @@ function resetSindForm() {
   f.querySelector('button[type=submit]').textContent = 'Crear sindicato';
   document.getElementById('sind-logo-preview').classList.add('oculto');
   document.getElementById('sind-firma-preview').classList.add('oculto');
+  document.getElementById('sind-contrato-actual').classList.add('oculto');
+  document.getElementById('sind-clausula-quien').textContent = '';
 }
 
 document.querySelectorAll('.ptab').forEach(btn => {
@@ -1037,6 +1061,18 @@ function editarSind(s) {
   });
   document.getElementById('sind-portada-clara').checked = !!s.portada_clara;
   document.getElementById('sind-admin-portada-clara').checked = !!s.admin_portada_clara;
+  document.getElementById('sind-clausula').checked = !!s.clausula;
+  document.getElementById('sind-clausula-quien').textContent = s.clausula
+    ? 'Aceptada el ' + s.clausula_en + ' (cargó: ' + s.clausula_por + ').' : '';
+  const contratoBox = document.getElementById('sind-contrato-actual');
+  if (s.contrato_nombre) {
+    const a = document.getElementById('sind-contrato-link');
+    a.href = '/plataforma/sindicato/' + s.id + '/contrato';
+    a.textContent = s.contrato_nombre;
+    contratoBox.classList.remove('oculto');
+  } else {
+    contratoBox.classList.add('oculto');
+  }
   // Preview del logo/firma YA cargados -- sin esto no había forma de saber,
   // parado en el form de edición, si ya había una imagen ni si la que se
   // acaba de subir reemplazó a la anterior. Date.now() como sello de cache

@@ -92,7 +92,7 @@ def test_alta_de_area_con_permisos():
 
 def test_edicion_reemplaza_los_permisos_no_los_suma():
     c = _sa()
-    aid = _crear_area(c, "Tesorería", ["reportes", "cotizantes"])
+    aid = _crear_area(c, "Tesorería", ["reportes", "formulas"])
     r = c.post("/admin/area", data={"id": str(aid), "nombre": "Tesorería",
                                     "secciones": ["reportes"],
                                     "seccional_id": str(SEC)}, follow_redirects=False)

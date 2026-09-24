@@ -183,13 +183,13 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
    (portada de tarjetas) → `/plataforma` (panel de siempre).
 2. Usuario de sindicato — /admin con CUIT + clave. Gestiona conceptos, fórmulas,
    trabajadores, empleadores y reportes SOLO de su sindicato (aislamiento
-   total). Login → `/admin/inicio` (portada) → `/admin` (panel con 15
+   total). Login → `/admin/inicio` (portada) → `/admin` (panel con 14
    entradas en una tira de pestañas deslizable: Panel Sindical, Reportes,
-   Fórmulas, Conceptos, Trabajadores, Aprendizaje, Cotizantes, Noticias,
+   Fórmulas, Conceptos, Trabajadores, Aprendizaje, Noticias,
    Beneficios, Notificaciones, Trámites, Empleadores, Convenio, Seccionales
    y Áreas y Usuarios; varias dependen de un módulo). Desde el sprint de
    Áreas V2 no es un rol sino **tres** (ver "Áreas, permisos y ruteo"):
-   Super Admin (= Admin de Sede Central, el de siempre, ve las 15),
+   Super Admin (= Admin de Sede Central, el de siempre, ve las 14),
    Admin de Seccional (lo mismo pero solo sobre SU seccional) y usuario de
    área (solo las secciones que le dé su área, y solo sobre su alcance).
 3. Trabajador — /ingresar con CUIL + clave. Identidad única (un CUIL para toda la
@@ -434,6 +434,17 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   request. Así se rompió la carga de foto de perfil del 2026-09-20 al
   2026-09-22, en las apps de trabajador y de empresa.
 
+- **Reportes: los recibos no enviados llegan al sindicato anonimizados y
+  solo con cláusula firmada** (2026-09-24). La pestaña Reportes lista TODOS
+  los recibos verificados; de los que el afiliado no envió no sale nombre,
+  CUIL ni empresa, y la búsqueda por CUIL/nombre busca solo entre los
+  enviados (si no, el filtro identificaría la fila anónima). Esas filas --en
+  Reportes y en el explorador del Panel-- aparecen solo si
+  `Sindicato.clausula_confidencialidad`, que marca plataforma con el
+  contrato ya cargado. Los números y gráficos del Panel cuentan todo, con o
+  sin cláusula (decisión de Sd). `EnvioSindicato` sigue existiendo como la
+  prueba de afiliado cotizante (art. 21 bis); ya no tiene pestaña propia.
+
 - **Un documento que no es del CUIL logueado se corta APENAS SE LEE, no al
   confirmar** (2026-09-14): `/api/leer` (recibo) y `/api/aportes`
   (comprobante de ARCA) comparan el CUIL leído contra el de la sesión con
@@ -445,7 +456,7 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   cualquier payload. Una ruta nueva que lea el documento de una persona suma
   el suyo. Detalle en HISTORIAL.md.
 
-## Estado actual (actualizado 2026-09-23)
+## Estado actual (actualizado 2026-09-24)
 Todo lo listado acá está mergeado a `main` y desplegado en Pruebas (Render
 sigue `main`, cada push redeploya), **incluido el punto 21**, que ya se portó
 sobre `main`.
@@ -742,6 +753,19 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     (sindicato y plataforma, que tienen muchos accesos). El **sindicato
     estrena el círculo de perfil** del afiliado, de lectura, con la foto
     tomada de `CuentaTrabajador` por CUIL. Detalle en HISTORIAL.md.
+
+30. **Reportes unificados + cláusula de confidencialidad** (2026-09-24,
+    rama `feature/reportes-unificados`): Reportes y Cotizantes pasan a ser
+    una sola pestaña "Reportes" sobre `ReciboVerificado` (todos los recibos
+    verificados), paginada en el servidor (`/admin/reportes/lista`), sin las
+    columnas "estado" ni "reforma" y con tilde verde/rojo de diferencias.
+    Los no enviados salen anonimizados (sin nombre, CUIL ni empresa), y solo
+    si plataforma marcó en la ficha del sindicato la **cláusula de
+    confidencialidad**, que exige el **contrato firmado** subido (bytes en
+    la base, lo baja solo plataforma). Migración `c9e4a2f7b815` (columnas +
+    permiso `cotizantes` → `reportes`). Tests: `test_reportes_unificados.py`.
+    Sigue en el próximo sprint: términos y condiciones del afiliado en el
+    primer uso. Admin 0.45.01, Plataforma 0.37.01.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -1136,10 +1160,13 @@ vigentes:
   Sesión de admin + módulo; el `sindicato_id` sale SIEMPRE de la cookie,
   jamás de un parámetro.
 - **Privacidad (test en `test_dashboard.py`)**: el detalle de recibos
-  muestra nombre/CUIL SOLO si `enviado_sindicato=true`; el CASE está en el
-  SQL, no en el frontend. En el modal "Ver" de un recibo NO enviado, el
-  servidor además BORRA nombre/CUIL/legajo del JSON guardado antes de
-  responder (`dashboard.detalle_recibo`).
+  muestra nombre/CUIL **y empresa** SOLO si `enviado_sindicato=true`; el
+  CASE está en el SQL, no en el frontend. En el modal "Ver" de un recibo NO
+  enviado, el servidor además BORRA nombre/CUIL/legajo y el empleador del
+  JSON guardado antes de responder (`dashboard.anonimizar_detalle`, única
+  implementación, la usa también Reportes). Los **agregados** cuentan todo,
+  enviado o no; las **filas** de no enviados solo salen si el sindicato
+  firmó la cláusula de confidencialidad (ver "Reportes" en Decisiones).
 - **Dos estados de validación** (OK / con diferencias): "en revisión" no
   existe a nivel recibo (decisión de Sd 2026-08-29). Tipos de notificación
   = `origen` real (manual/sistema). KPI "Afiliados registrados" =
