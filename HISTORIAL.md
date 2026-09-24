@@ -6066,3 +6066,43 @@ Las dos variaciones del modelo (la clasificación de "SEGURO OBLIGATORIO" y
 el signo de los descuentos) quedaron en BACKLOG.md para el motor v2: son
 exactamente el tipo de imprecisión que la confianza por renglón y el
 catálogo maestro tienen que resolver.
+
+## Enmascarado, bloque 5: en Pruebas en modo sombra, y la pantalla de registros (2026-09-24)
+
+PR #66 mergeado a `main`: Pruebas corre el enmascarado en **modo sombra**
+(`ENMASCARADO=sombra`, cargada en el servicio `mitrabajo-pruebas` con "Save
+only" para que la tomara el deploy del merge). Al arrancar, el log dice
+`[enmascarado] modo sombra, OCR listo`: Tesseract se instaló con pip en el
+Render nativo, sin Docker, como se había medido. En sombra a la IA le sigue
+llegando el original; cada documento queda anotado en `registroenmascarado`.
+
+El CI encontró algo que en la PC no se veía: **su servidor no tiene
+poppler**, así que un test que prepara un PDF original con `pdf2image` falla
+ahí. Los tests del banco ahora simulan esa preparación.
+
+### La sub-pestaña "Enmascarado" de Uso de IA
+
+En `/plataforma` → Uso de IA → **Enmascarado**: el modo que rige en el
+servidor y si hay lector de fotos; indicadores (documentos, porcentaje
+tapado --en sombra, "se habría tapado"--, sin tapar, con fugas, recibos
+ajenos detectados, tiempo mediano y p95); una tabla por camino (PDF con
+texto, PDF escaneado, foto) con su porcentaje tapado, tiempos y espera p95;
+**por qué no se tapó**, con lo que significa cada motivo ("lector ocupado"
+es capacidad; "se pasó de tiempo", el presupuesto de 5 s); y la lista de
+documentos con filtros por tipo, camino y resultado. Como Consumo y costo,
+los números acompañan a los filtros y se calculan en la pantalla sobre las
+filas que manda el servidor (las últimas 3.000; se listan 300).
+
+El `resultado` lo resuelve el servidor (`db.registros_enmascarado`) porque
+en sombra nada viaja tapado: "tapado" (activo), "se habría tapado" (sombra,
+se leyó bien y había qué tapar) o "sin tapar". Plataforma 0.39.01.
+
+**Tesseract se importa en el hilo principal.** El CI del PR de la pantalla
+falló en las cuatro partes con `ValueError: signal only works in main
+thread`: la pantalla de plataforma preguntaba si había lector de fotos y
+eso importaba `tesserocr` por primera vez desde el pool de hilos de FastAPI,
+cosa que en Linux revienta. En Render no se notaba porque la precarga del
+arranque ya lo había importado, pero dependía de eso. Ahora `lectores.py`
+lo importa al cargarse (cuando main arranca, en el hilo principal) y si
+falla queda "no disponible"; `ocr_disponible()` ya no importa nada. Test:
+preguntar desde otro hilo no revienta.

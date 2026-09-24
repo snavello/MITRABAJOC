@@ -44,6 +44,16 @@ os.environ.setdefault("OMP_THREAD_LIMIT", "1")
 
 from enmascarado import Palabra  # noqa: E402
 
+# Tesseract se importa ACÁ, una vez, cuando main carga este módulo al
+# arrancar -- en el hilo principal. En Linux, la primera importación de
+# tesserocr desde un hilo secundario (las rutas sincrónicas de FastAPI corren
+# en un pool de hilos) revienta con "signal only works in main thread": así se
+# cayó /plataforma en el CI. En Windows no hay rueda y queda en None.
+try:
+    import tesserocr as _tesserocr  # noqa: E402
+except Exception:
+    _tesserocr = None
+
 # 150 dpi, lo mismo que usa hoy extractor._imagen_desde_pdf.
 DPI = 150
 ESCALA = DPI / 72
@@ -181,18 +191,13 @@ def ocr_disponible() -> bool:
     del PDF digital."""
     global _disponible
     if _disponible is None:
-        try:
-            import tesserocr  # noqa: F401
-            _disponible = (TESSDATA / "spa.traineddata").is_file()
-        except ImportError:
-            _disponible = False
+        _disponible = _tesserocr is not None and (TESSDATA / "spa.traineddata").is_file()
     return _disponible
 
 
 def _crear_motor():
-    from tesserocr import OEM, PSM, PyTessBaseAPI
-
-    api = PyTessBaseAPI(path=str(TESSDATA), lang="spa", psm=PSM.AUTO, oem=OEM.LSTM_ONLY)
+    t = _tesserocr
+    api = t.PyTessBaseAPI(path=str(TESSDATA), lang="spa", psm=t.PSM.AUTO, oem=t.OEM.LSTM_ONLY)
     # Sin buscar texto invertido (blanco sobre negro): un recibo no lo tiene.
     api.SetVariable("tessedit_do_invert", "0")
     return api
@@ -262,8 +267,7 @@ def leer_foto(imagen, presupuesto_ms: int | None = None) -> LecturaFoto:
         lectura = int((time.perf_counter() - inicio) * 1000) - espera
         if not ok:
             return LecturaFoto("tiempo", espera_ms=espera, lectura_ms=lectura)
-        from tesserocr import RIL, iterate_level
-
+        RIL, iterate_level = _tesserocr.RIL, _tesserocr.iterate_level
         palabras = []
         for w in iterate_level(motor.GetIterator(), RIL.WORD):
             texto = (w.GetUTF8Text(RIL.WORD) or "").strip()

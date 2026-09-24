@@ -313,3 +313,26 @@ def test_banco_con_tapado_lee_dos_veces_y_muestra_la_imagen(ia, sin_poppler):
     # La versión tapada vuelve rearmada, como en las rutas de verdad.
     tapada = next(m for m in d["modelos"] if m["tapado"])
     assert "30712345671" in tapada["json"]
+
+
+# ======================= La pantalla de registros =======================
+
+
+def test_registros_resuelven_el_resultado():
+    """En sombra nada viaja tapado: lo que importa es si SE HABRÍA tapado."""
+    for reg in ({"modo": "sombra", "camino": "foto", "motivo": "ok", "cajas": 9},
+                {"modo": "activo", "camino": "pdf_texto", "motivo": "ok", "cajas": 12, "tapado": True},
+                {"modo": "sombra", "camino": "foto", "motivo": "sin_lugar", "cajas": 0},
+                {"modo": "sombra", "camino": "pdf_texto", "motivo": "ok", "cajas": 0}):
+        db.registrar_enmascarado(SID, "recibo", reg)
+    ultimos = [r for r in db.registros_enmascarado() if r["sindicato"] == "Test Enmascarado"][:4]
+    assert [r["resultado"] for r in ultimos] == ["sin_tapar", "sin_tapar", "tapado", "se_habria_tapado"]
+    assert ultimos[1]["motivo"] == "sin_lugar"
+
+
+def test_la_pantalla_de_plataforma_muestra_los_registros(monkeypatch):
+    monkeypatch.setenv("ENMASCARADO", "sombra")
+    r = plataforma.get("/plataforma")
+    assert r.status_code == 200
+    assert 'data-ia-sub="enmascarado"' in r.text and 'class="fila-enm"' in r.text
+    assert "Modo en este servidor: <strong>sombra</strong>" in r.text

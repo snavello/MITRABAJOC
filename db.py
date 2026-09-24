@@ -3809,6 +3809,38 @@ def registrar_enmascarado(sindicato_id: Optional[int], tipo: str, registro: dict
         print(f"[enmascarado] no se pudo registrar ({type(e).__name__})")
 
 
+def registros_enmascarado(limite: int = 3000) -> list:
+    """Los últimos registros del enmascarado, más reciente primero, para la
+    sub-pestaña "Enmascarado" de Uso de IA en /plataforma. El `resultado` ya
+    viene resuelto, porque en modo sombra nada viaja tapado y lo que importa
+    es si SE HABRÍA tapado:
+
+    - "tapado": viajó tapado (modo activo).
+    - "se_habria_tapado": en sombra, se leyó bien y había qué tapar.
+    - "sin_tapar": no se pudo (el motivo dice por qué) o no se encontró nada.
+
+    Nunca levanta: sin la tabla (migración sin correr) devuelve lista vacía."""
+    try:
+        with Session(engine) as s:
+            filas = s.exec(select(RegistroEnmascarado)
+                           .order_by(RegistroEnmascarado.id.desc()).limit(limite)).all()
+            nombres = {sind.id: sind.nombre for sind in s.exec(select(Sindicato)).all()}
+    except Exception:
+        return []
+    salida = []
+    for f in filas:
+        leido = f.motivo == "ok" and f.cajas > 0
+        salida.append({
+            "fecha": f.fecha, "sindicato": nombres.get(f.sindicato_id, "—"),
+            "tipo": f.tipo, "modo": f.modo, "camino": f.camino or "—", "motivo": f.motivo,
+            "tapado": f.tapado, "cajas": f.cajas, "fugas": f.fugas,
+            "cuil_encontrado": f.cuil_encontrado, "pertenece": f.pertenece,
+            "espera_ms": f.espera_ms, "lectura_ms": f.lectura_ms, "total_ms": f.total_ms,
+            "resultado": ("tapado" if f.tapado else "se_habria_tapado") if leido else "sin_tapar",
+        })
+    return salida
+
+
 def razon_social_de_cuit(sindicato_id: Optional[int], cuit: str) -> Optional[str]:
     """La razón social con que el sindicato tiene cargado a ese empleador,
     para rearmar el recibo cuando se le tapó a la IA. None si no está."""
