@@ -337,16 +337,19 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   (`/entornos`, informes de carga). Reglas completas en la skill
   `diseno-mi-trabajo`; el porqué, en HISTORIAL.md.
 - **Las pantallas interiores claras van sobre una "mesa", no sobre un plano
-  liso** (2026-09-24, `static/interior.css` + `templates/_fondo_interior.html`):
-  el fondo es gris frío con la retícula de colmena al 2,8% y dos halos
-  difuminados del acento y el primario DEL SINDICATO, y el contenedor de
+  liso** (2026-09-24, `static/interior.css` + `templates/_fondo_interior.html`).
+  Tres capas, ninguna toca el contenido: la **mesa** (gris frío), la
+  **textura** fija (retícula de colmena al 6% de alfa en el trazo + dos halos
+  difuminados del acento y el primario DEL SINDICATO) y la **franja** de
+  marca, que baja del encabezado y se desvanece en la mesa. El contenedor de
   ancho máximo que cada pantalla ya tenía (`.cont`, `.wrap`, `main`,
-  `.hilo`, `.cuerpo`) se apoya en una **hoja** con borde, radio 18 y sombra.
-  La hoja es del color `--papel` de cada app y NO blanco puro, así las
-  tarjetas internas conservan su propio borde. **En teléfono se apaga
-  entero** (≤760px). Una pantalla se suma con tres cosas: el include,
-  `class="mesa"` en el `<body>` y `class="hoja"` en su contenedor. **No va**
-  en los logins, el primer ingreso de plataforma, las cuatro portadas (que
+  `.hilo`, `.cuerpo`) lleva `mesa-cont`, que solo lo levanta por encima.
+  **La franja es opt-in** (`<body class="mesa franja">`) y NO va en la app
+  del afiliado ni en la de empresa: ahí lo primero que se ve es una tarjeta
+  oscura (`.rc-panel`) y la franja se la come. **En teléfono se apaga todo**
+  (≤760px). Una pantalla se suma con el include, `mesa` (y `franja` si
+  corresponde) en el `<body>` y `mesa-cont` en su contenedor. **No va** en
+  los logins, el primer ingreso de plataforma, las cuatro portadas (que
   tienen su propio ambiente, "Portadas v2" en marca.css) ni las pantallas
   que ya son oscuras.
 - **La plataforma se llama Colm3na, no "Mi Trabajo"** (2026-09-13): el

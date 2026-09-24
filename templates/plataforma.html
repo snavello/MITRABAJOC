@@ -164,7 +164,7 @@
 </style>
 {% include "_fondo_interior.html" %}
 </head>
-<body class="mesa">
+<body class="mesa franja">
 {% include "_entorno.html" %}
 <div class="app-bar-fija">
 {# Acá la marca principal ES la plataforma: el logo grande es el de Colm3na. #}
@@ -205,7 +205,7 @@
   </defs>
 </svg>
 
-<div class="wrap hoja">
+<div class="wrap mesa-cont">
   {% set reset = request.query_params.get('reset') %}
   {% if reset == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Clave cambiada correctamente.</div>
   {% elif reset == 'nohay' %}<div style="background:#f8e5e2; border:1px solid #e0c4c0; color:#b23a2e; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">No se encontró un usuario con ese CUIT/CUIL.</div>{% endif %}
