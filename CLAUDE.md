@@ -240,6 +240,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   GRAFANA_METRICS_TOKEN (solo `metrics:write`) para el hilo colector de métricas;
   COLECTOR_METRICAS=off lo apaga.
   SENTRY_URL opcional. Detalle y vencimiento en `DESPLIEGUE_RENDER.md`.
+- TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID — avisos al teléfono del equipo
+  (`telegram.py`, solo Pruebas por ahora): errores no previstos al instante,
+  resumen del día a la hora de TELEGRAM_RESUMEN_HORA (21:00 BA por defecto,
+  `resumen_diario.py`) y las alertas de Grafana por su propio punto de
+  contacto. Sin las dos, apagado en silencio. Ver "Estado actual" 25.
 - VAPID_PRIVATE_KEY / VAPID_PUBLIC_KEY / VAPID_CLAIM_EMAIL — Web Push de la
   PWA (push.py); sin las tres, el canal queda apagado en silencio.
 
@@ -592,6 +597,15 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     de lectura) y el detalle de cada error de Sentry: para mirar no hace falta
     iniciar sesión en ninguno de los dos (regla: no se publican enlaces abiertos).
     Falta: métricas propias de la app, el detalle por sindicato y el resumen diario.
+    **Telegram (2026-09-23)**: el bot `Colm3na_bot` recibe, gratis y sin
+    librerías (`telegram.py`, un POST a `api.telegram.org`), tres cosas: las
+    alertas de Grafana (segundo punto de contacto, `sdn-telegram`, creado por
+    `aplicar_grafana.py` solo si el entorno trae las claves), cada error no
+    previsto al instante desde el handler global (mismos datos que Sentry,
+    sin personas, freno de 10 min por código) y el **resumen del día** a las
+    21:00 de Buenos Aires (`resumen_diario.py`, hilo en la app, candado por
+    día en la tabla `avisoenviado`). Botones de prueba en la pestaña
+    Observación técnica. Cierra la decisión "Telegram" de la Sala de mando.
     **Ficha rectora: [`docs/OBSERVABILIDAD.md`](docs/OBSERVABILIDAD.md)** (reglas, claves y
     el procedimiento para replicar en Demo y Producción); versión ilustrada en Recursos.
 

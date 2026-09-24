@@ -120,6 +120,36 @@ no alcanzan; cuentas y claves a nombre de la organización, con cuenta de servic
 vencimiento; revisar umbrales con carga real y el criterio de privacidad (la afiliación sindical es dato
 sensible, Ley 25.326).
 
+## 6 bis. Telegram: los avisos al teléfono (2026-09-23)
+
+Pedido de Sd: "mi número, alertas como las de Sentry y un resumen del día, simple
+y sin costo". Telegram cumple las tres condiciones: API oficial gratuita, un POST
+sin librerías (`telegram.py`), y un bot que se crea en dos minutos con BotFather.
+WhatsApp exige cuenta de empresa aprobada y cobra por conversación; los SMS se
+pagan uno por uno.
+
+Tres canales, un solo bot (`Colm3na_bot`):
+
+- **Alertas de Grafana**: `aplicar_grafana.py` crea un segundo punto de contacto
+  (`sdn-telegram`) y una política con dos rutas (Telegram con `continue`, después
+  el mail), **solo si el entorno donde corre trae `TELEGRAM_BOT_TOKEN` y
+  `TELEGRAM_CHAT_ID`**. Sin ellas, todo sigue saliendo solo por mail. Este canal
+  cumple la regla 0: avisa aunque la app esté caída.
+- **Errores al instante**: el handler global (`main._capturar_en_sentry`) manda
+  a Telegram lo mismo que a Sentry —código, referencia, patrón de ruta, rol y ID
+  del sindicato; nunca una persona— con un freno de un aviso cada 10 minutos por
+  código. Sale en un hilo aparte para no demorar el request.
+- **Resumen del día**: `resumen_diario.py`, un hilo dentro de la app, a las 21:00
+  de Buenos Aires (`TELEGRAM_RESUMEN_HORA`). Antes de mandar reclama el día con un
+  INSERT en `avisoenviado` que solo puede ganar un worker. El texto lo arma
+  `telegram.texto_resumen` con los indicadores de `esquema.py`, los errores de
+  Sentry y el semáforo de Grafana; lo que no se pueda leer dice "sin dato".
+
+Pruebas desde la pestaña Observación técnica: "Enviar prueba a Telegram" y
+"Mandar el resumen del día ahora". Para rotar el token: BotFather → `/mybots` →
+API Token → Revoke, y actualizar la variable en Render (y volver a correr
+`aplicar_grafana.py` para el punto de contacto).
+
 ## 7. Pendiente
 
 Resumen diario de errores por sindicato · métricas propias de la app (pool, cupo del panel, latencia por

@@ -75,6 +75,15 @@
     <button type="button" class="boton" id="obs-probar">Enviar mail de prueba</button>
   </div>
   <p class="plan-nota" id="obs-nota-permiso" hidden>Este servicio no tiene el permiso para cambiar la configuración: solo se puede mirar.</p>
+  <div class="campo" style="margin-top:14px; border-top:1px solid rgba(255,255,255,.12); padding-top:12px;">
+    <label>Telegram (al teléfono del equipo)</label>
+    <small id="obs-telegram-estado">Consultando…</small>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+      <button type="button" class="boton" id="obs-telegram-probar">Enviar prueba a Telegram</button>
+      <button type="button" class="boton" id="obs-telegram-resumen">Mandar el resumen del día ahora</button>
+    </div>
+    <small>Van al teléfono: las mismas alertas de Grafana (por su propio punto de contacto), cada error no previsto al instante (un aviso por código cada 10 minutos, sin datos de personas) y el resumen del día con los indicadores de arriba. Se configura con TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID en Render; la hora del resumen, con TELEGRAM_RESUMEN_HORA.</small>
+  </div>
 </form>
 
 <h3 class="planes-titulo">Vencimientos de tokens</h3>

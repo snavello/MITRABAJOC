@@ -838,6 +838,11 @@
       `${r.estado === 'vencido' ? 'VENCIDO' : r.dias + ' días'}</span> <b>${esc(r.nombre)}</b>` +
       `<span class="cuando">vence ${esc(r.vence)}</span></div>`).join('');
 
+    const tg = d.telegram || {};
+    const tgEstado = document.getElementById('obs-telegram-estado');
+    if (tgEstado) tgEstado.textContent = tg.configurado
+      ? `Configurado: chat ${tg.chat_id_oculto} · resumen del día a las ${tg.hora_resumen} de Buenos Aires · errores con freno de ${tg.freno_minutos} min por código.`
+      : 'No configurado: faltan TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID en este servicio.';
     const c = d.config;
     const sel = document.getElementById('obs-repetir');
     sel.innerHTML = (d.intervalos || []).map(i => `<option value="${esc(i)}">${esc(i.replace('h', ' h'))}</option>`).join('');
@@ -1112,6 +1117,16 @@
     boton.textContent = original;
     boton.disabled = false;
   });
+  for (const [id, ruta, listo] of [['obs-telegram-probar', '/entornos/observabilidad/probar-telegram', 'Mensaje de prueba enviado a Telegram: revisá el teléfono.'],
+                                    ['obs-telegram-resumen', '/entornos/observabilidad/resumen-ahora', 'Resumen del día enviado a Telegram.']]) {
+    const b = document.getElementById(id);
+    if (b) b.addEventListener('click', async ev => {
+      ev.target.disabled = true;
+      try { await pedir(ruta, {method: 'POST'}); decir(listo, false); }
+      catch (err) { decir(err.message, true); }
+      ev.target.disabled = false;
+    });
+  }
   document.getElementById('obs-probar').addEventListener('click', async ev => {
     ev.target.disabled = true;
     try {
