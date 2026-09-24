@@ -95,8 +95,9 @@
   @keyframes g { to { transform:rotate(360deg); } }
   @media (prefers-reduced-motion:reduce) { .m.nl .avatar::after { animation:none; } .bur { transition:none; } }
 </style>
+{% include "_fondo_interior.html" %}
 </head>
-<body>
+<body class="mesa">
 {% include "_entorno.html" %}
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -127,7 +128,7 @@
   </div>
 </div></div>
 
-<div class="hilo" id="lista"><div class="cargando"><div class="spin"></div></div></div>
+<div class="hilo hoja" id="lista"><div class="cargando"><div class="spin"></div></div></div>
 
 <script>
 let NOTIFS = [];

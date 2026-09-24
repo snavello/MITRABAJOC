@@ -295,13 +295,14 @@
   .tx-r .pie b.esp { color:var(--alerta); }
   @media (prefers-reduced-motion:reduce) { .tx-punto, .notif-item.no-leida .nh-av::after { animation:none; } }
 </style>
+{% include "_fondo_interior.html" %}
 </head>
-<body>
+<body class="mesa">
 {% include "_entorno.html" %}
 {% set enc_fija = True %}
 {% include "_encabezado.html" %}
 
-<div class="cont">
+<div class="cont hoja">
   <h1>{{ razon_social or cuit }}</h1>
   <div class="sub">CUIT {{ cuit }} · {{ sindicato }}</div>
 

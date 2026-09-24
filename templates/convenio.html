@@ -65,15 +65,16 @@
   .sin-convenio { background:#fff; border:1px dashed var(--linea); border-radius:12px;
                   padding:24px 18px; text-align:center; color:var(--gris); font-size:14px; line-height:1.55; }
 </style>
+{% include "_fondo_interior.html" %}
 </head>
-<body>
+<body class="mesa">
 {% include "_entorno.html" %}
 
 {% set enc_volver = '/app' %}
 {% set enc_fija = True %}
 {% include "_encabezado.html" %}
 
-<div class="cuerpo">
+<div class="cuerpo hoja">
 
 {% if not convenios %}
   <div class="sin-convenio">

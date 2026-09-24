@@ -336,6 +336,19 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   (logo de plataforma grande, 148/85px) y las herramientas internas
   (`/entornos`, informes de carga). Reglas completas en la skill
   `diseno-mi-trabajo`; el porqué, en HISTORIAL.md.
+- **Las pantallas interiores claras van sobre una "mesa", no sobre un plano
+  liso** (2026-09-24, `static/interior.css` + `templates/_fondo_interior.html`):
+  el fondo es gris frío con la retícula de colmena al 2,8% y dos halos
+  difuminados del acento y el primario DEL SINDICATO, y el contenedor de
+  ancho máximo que cada pantalla ya tenía (`.cont`, `.wrap`, `main`,
+  `.hilo`, `.cuerpo`) se apoya en una **hoja** con borde, radio 18 y sombra.
+  La hoja es del color `--papel` de cada app y NO blanco puro, así las
+  tarjetas internas conservan su propio borde. **En teléfono se apaga
+  entero** (≤760px). Una pantalla se suma con tres cosas: el include,
+  `class="mesa"` en el `<body>` y `class="hoja"` en su contenedor. **No va**
+  en los logins, el primer ingreso de plataforma, las cuatro portadas (que
+  tienen su propio ambiente, "Portadas v2" en marca.css) ni las pantallas
+  que ya son oscuras.
 - **La plataforma se llama Colm3na, no "Mi Trabajo"** (2026-09-13): el
   nombre viejo salió de todo lo que ve una persona — títulos del navegador,
   banda MRZ de los tres ingresos, `alt` de los logos, textos del panel de

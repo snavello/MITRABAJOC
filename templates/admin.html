@@ -698,8 +698,9 @@
     .geo-candidatos { max-height:none; }
   }
 </style>
+{% include "_fondo_interior.html" %}
 </head>
-<body>
+<body class="mesa">
 {% include "_entorno.html" %}
 <div class="app-bar-fija">
 {# Encabezado normalizado. La pantalla de la derecha la escribe el JS de la
@@ -768,7 +769,7 @@
   </defs>
 </svg>
 
-<div class="wrap">
+<div class="wrap hoja">
   {% if request.query_params.get('error') == 'guardado' %}
   <div class="msg" style="background:#fdf3e7;color:#8a5a1a;">No se pudo guardar -- probá de nuevo en un momento. Si se repite, puede ser un problema pasajero de conexión. {% if request.query_params.get('ref') %}<br><small style="opacity:.8;">Código E-INTERNO-00 · ref {{ request.query_params.get('ref') }}</small>{% endif %}</div>
   {% endif %}
