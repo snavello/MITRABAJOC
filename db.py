@@ -34,7 +34,7 @@ from datetime import date, datetime, timedelta
 from dotenv import load_dotenv
 from typing import Any
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON, text
-from sqlalchemy import or_, bindparam
+from sqlalchemy import or_, bindparam, UniqueConstraint
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import NullPool
@@ -5570,6 +5570,31 @@ def reclamar_plan_programado(regla_id: int, marca: str) -> bool:
             "UPDATE planprogramado SET ultimo_disparo = :marca "
             "WHERE id = :id AND activo = :si AND ultimo_disparo <> :marca"
         ).bindparams(marca=marca, id=regla_id, si=True))
+        s.commit()
+        return (r.rowcount or 0) == 1
+
+
+class AvisoEnviado(SQLModel, table=True):
+    """Una fila por (clave, fecha): "este aviso diario ya salió hoy". Es el
+    candado del resumen por Telegram (resumen_diario.py): antes de mandar,
+    cada proceso intenta insertar la fila del día y solo manda si ganó el
+    INSERT. Mismo criterio que `PlanProgramado.ultimo_disparo`, para avisos
+    que salen una vez por día y no por regla."""
+    __table_args__ = (UniqueConstraint("clave", "fecha", name="uq_avisoenviado_clave_fecha"),)
+    id: Optional[int] = Field(default=None, primary_key=True)
+    clave: str = Field(index=True)
+    fecha: str                                   # "AAAA-MM-DD" de Buenos Aires
+
+
+def reclamar_aviso_diario(clave: str, fecha: str) -> bool:
+    """True solo si ESTE proceso ganó el derecho a mandar el aviso `clave` del
+    día `fecha`. INSERT ... ON CONFLICT DO NOTHING: la condición y la escritura
+    viajan juntas, así que dos instancias no pueden ganar las dos."""
+    with Session(engine) as s:
+        r = s.exec(text(
+            "INSERT INTO avisoenviado (clave, fecha) VALUES (:clave, :fecha) "
+            "ON CONFLICT (clave, fecha) DO NOTHING"
+        ).bindparams(clave=clave, fecha=fecha))
         s.commit()
         return (r.rowcount or 0) == 1
 

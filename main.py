@@ -48,6 +48,8 @@ from sqlmodel import select
 
 import encuestas
 import esquema
+import resumen_diario
+import telegram
 import precios_ia
 import resultados_encuesta
 import fechas
@@ -216,6 +218,10 @@ def _capturar_en_sentry(request: Request, exc: Exception, ref: str, codigo: str)
                 rol, sid = r, ses.get("sid")
                 break
         sentry_config.capturar(exc, ruta=ruta, rol=rol, sindicato_id=sid, ref=ref, codigo=codigo)
+        # El mismo aviso, al teléfono del equipo (telegram.py): mismos datos que
+        # Sentry, sin personas, con freno por código. Sale en otro hilo.
+        telegram.avisar_error(codigo=codigo, ref=ref, ruta=ruta, rol=rol,
+                              sindicato_id=sid, entorno_nombre=entorno.ENTORNO)
     except Exception:
         pass
 
@@ -632,6 +638,11 @@ def _startup():
             hilo_colector.arrancar(entorno.ENTORNO)
         except Exception as e:
             print(f"[colector-metricas] no arrancó ({type(e).__name__}: {e})")
+        # El resumen del día por Telegram (resumen_diario.py). Nunca tumba el arranque.
+        try:
+            resumen_diario.arrancar(entorno.ENTORNO)
+        except Exception as e:
+            print(f"[resumen-diario] no arrancó ({type(e).__name__}: {e})")
 
     try:
         colgadas = db.rescatar_indexaciones_colgadas()
@@ -7109,6 +7120,7 @@ def _esquema_datos(con_grafana: bool = False) -> dict:
     return {
         "entorno": entorno.ENTORNO, "versiones": _versiones(), "urls": entorno.URLS, "kpis": kpis,
         "vencimiento": proximo, "seguridad": seguridad, "semaforo": semaforo,
+        "telegram": telegram.configurado(),      # la Sala dibuja Telegram como activo o planeado
         "actualizado": fechas.ahora_con_segundos(),
     }
 
@@ -7187,6 +7199,29 @@ def entornos_observabilidad_config(request: Request, payload: dict = Body(...)):
     except Exception as e:
         print(f"[observabilidad] no se pudo guardar: {type(e).__name__}: {e}")
         raise HTTPException(502, "Grafana no aceptó el cambio. Revisá que el token de configuración siga vigente.")
+
+
+@app.post("/entornos/observabilidad/probar-telegram")
+def entornos_observabilidad_probar_telegram(request: Request):
+    """Un mensaje de prueba al chat de Telegram configurado, directo desde la app."""
+    _exigir_observabilidad(request)
+    if not telegram.configurado():
+        raise HTTPException(503, "Faltan TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID en este servicio.")
+    if not telegram.enviar(f"✅ Prueba de Colm3na ({entorno.ENTORNO}): los avisos por Telegram funcionan. "
+                           f"{fechas.ahora_texto()}"):
+        raise HTTPException(502, "Telegram no aceptó el mensaje: revisá el token y que le hayas escrito al bot.")
+    return {"ok": True, "detalle": "Mensaje enviado: revisá Telegram."}
+
+
+@app.post("/entornos/observabilidad/resumen-ahora")
+def entornos_observabilidad_resumen_ahora(request: Request):
+    """Manda el resumen del día ya mismo (el mismo texto que sale a la hora fija)."""
+    _exigir_observabilidad(request)
+    if not telegram.configurado():
+        raise HTTPException(503, "Faltan TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID en este servicio.")
+    if not resumen_diario.enviar_ahora():
+        raise HTTPException(502, "Telegram no aceptó el resumen.")
+    return {"ok": True, "detalle": "Resumen enviado: revisá Telegram."}
 
 
 @app.post("/entornos/observabilidad/probar-mail")

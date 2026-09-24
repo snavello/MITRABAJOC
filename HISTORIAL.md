@@ -5624,3 +5624,29 @@ Un detalle que costó encontrar: `.fila-hola` (el flex que pone el saludo y el
 círculo en la misma línea) vivía en el `<style>` de portada.html y de
 empresa_portada.html. Al llevar el esquema al sindicato, el círculo caía
 debajo del saludo. Ahora está en `marca.css` con el resto.
+
+## Avisos por Telegram: errores al instante y el resumen del día (2026-09-23)
+
+Rama `feature/avisos-telegram`. Sd pidió "agregar mi número para que me
+lleguen alertas como las de Sentry y un resumen de la actividad del día
+tomado de los KPI que ya tenemos: algo simple y que no agregue costos".
+Telegram es lo único que cumple las tres: API oficial gratuita, un POST sin
+librerías, y un bot que se crea con BotFather. WhatsApp exige cuenta de
+empresa aprobada y cobra por conversación; los SMS se pagan uno por uno.
+
+**Lo que se construyó.** `telegram.py` (puro: `enviar`, `avisar_error` con
+freno de 10 minutos por código, `texto_resumen`, sin claves en el repo) y
+`resumen_diario.py` (hilo en la app, a la hora de `TELEGRAM_RESUMEN_HORA`,
+21:00 por defecto porque lo pidió Sd). El handler global manda a Telegram
+lo mismo que a Sentry, sin personas, en otro hilo. El resumen reclama el
+día con `db.reclamar_aviso_diario` (tabla `avisoenviado`, migración
+`b3c7e1d9a4f2`): un INSERT que solo gana un worker. Grafana suma un segundo
+punto de contacto (`sdn-telegram`) y una política de dos rutas, solo si el
+entorno trae las claves. La pestaña Observación técnica muestra el estado y
+tiene dos botones: prueba y "resumen ahora". La Sala de mando dibuja
+Telegram como activo cuando está configurado (cierra esa decisión
+pendiente). Tests: `test_telegram.py` (11). Plataforma 0.36.01.
+
+**El token pasó por el chat.** Sd pegó el primer token en la conversación
+por error de portapapeles; se le pidió revocarlo en BotFather y cargar el
+nuevo directo en Render, que es la regla: los secretos no pasan por Code.
