@@ -4,6 +4,32 @@ Anotaciones para no desviar el bloque de trabajo en curso (ver "Backlog
 técnico" en la memoria del proyecto). Cada ítem se tacha o se borra cuando
 se hace.
 
+- [ ] **Para el motor v2: dos variaciones del modelo con el MISMO recibo**
+  (2026-09-24, medición del enmascarado, `medicion_enmascarado/RESULTADO.md`).
+  (1) "SEGURO OBLIGATORIO - DGI" ($380 fijo) sale `aporte_trabajador` en una
+  lectura y `otro` en la siguiente, sin cambiar nada: leído tres veces el
+  mismo original dio `aporte / otro / otro`. Como `tipo` alimenta la
+  retención sindical y el tope del 2%, una línea ambigua cambia el resultado
+  entre dos lecturas del mismo recibo. Es el caso de manual para el catálogo
+  maestro (D8: elegir de una lista cerrada) y la confianza por renglón. (2)
+  El signo de los descuentos: a veces como figura en la columna (positivo),
+  a veces negativo. Hoy no rompe nada (el validador usa `abs()` y el banco ya
+  no lo marca), pero el motor v2 debería normalizarlo en un solo lugar.
+
+- [ ] **Validar el módulo 11 (dígito verificador) de CUIL y CUIT** (2026-09-24,
+  decisión de SDN al construir el enmascarado: "por ahora no lo testeamos,
+  lo anotamos para cuando avancemos en ese tema"). Hoy la app no valida el
+  verificador en ningún lado, y **ninguno de los CUIL/CUIT de la demo lo
+  cumple** (20111111119, 27222222224, 30999888776, 30111222339, los de los
+  admins...). Por eso el enmascarado NO depende de él: tapa lo que viene
+  con formato de CUIL (`enmascarado.parece_cuil`) y decide que un recibo es
+  ajeno por distancia (3 o más dígitos distintos, `distintos_de_verdad`) en
+  vez de por verificador. Cuando se valide: (1) sembrar la demo con CUIL y
+  CUIT válidos (`cargar_demo.py`, `cargar_lote_*`, `IDENTIDAD_FICTICIA` de
+  los sintéticos) -- los tests y los accesos de CLAUDE.md usan esos números;
+  (2) validar en el alta y el registro; (3) volver a exigir el verificador
+  en `enmascarado.pertenece`, que es más firme que la distancia.
+
 - [ ] **El empleador quedó con el defecto que se le corrigió al trabajador**
   (2026-09-22, al terminar "Una persona, un domicilio" en HISTORIAL.md).
   `Empleador` es una fila POR SINDICATO y ahí viven `razon_social`,

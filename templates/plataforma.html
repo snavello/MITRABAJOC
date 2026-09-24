@@ -539,6 +539,8 @@
             onclick="cambiarSubIA('modelos')">Modelos</button>
     <button type="button" class="ia-subtab" data-ia-sub="probar"
             onclick="cambiarSubIA('probar')">Banco de pruebas</button>
+    <button type="button" class="ia-subtab" data-ia-sub="enmascarado"
+            onclick="cambiarSubIA('enmascarado')">Enmascarado ({{ enmascarado_registros|length }})</button>
   </div>
 
   {# ---------------- Consumo y costo ---------------- #}
@@ -634,6 +636,80 @@
     operación puntual del alta de un convenio, no del uso diario.</p>
   </div>
 
+  {# ---------------- Enmascarado ---------------- #}
+  <div class="ia-subpanel" id="ia-sub-enmascarado">
+  <p class="muted" style="margin-bottom:10px; max-width:760px;">Cada recibo, comprobante de ARCA o aprendizaje que pasa por el enmascarado deja una fila: si se tapó lo que identifica a la persona antes de mandarlo a la IA, por qué camino y, si no se pudo, por qué. <strong>Es mejor esfuerzo:</strong> si algo no se tapa, el recibo se analiza igual y queda anotado acá. Las filas no tienen ningún dato personal.</p>
+  <div class="aviso-caja" style="margin-bottom:14px;">
+    Modo en este servidor: <strong>{{ enmascarado_modo }}</strong>
+    {% if enmascarado_modo == "sombra" %}— se calcula todo y se anota, pero a la IA le llega el original: la columna dice si <em>se habría</em> tapado.
+    {% elif enmascarado_modo == "activo" %}— a la IA le llega el documento tapado.
+    {% else %}— no se tapa ni se anota nada. Se prende con la variable <code>ENMASCARADO</code> del servicio (<code>sombra</code> o <code>activo</code>).{% endif %}
+    Lector de fotos: <strong>{{ "listo" if enmascarado_ocr else "no disponible (solo se tapa el PDF con texto)" }}</strong>.
+  </div>
+
+  <div class="card">
+    <div class="ia-tot" id="enm-totales"></div>
+    <div class="tabla-ancha" style="margin-top:16px;">
+      <table>
+        <tr><th>Camino</th><th class="num">Documentos</th><th class="num">Tapados</th>
+            <th class="num">Sin tapar</th><th class="num">Tiempo mediano</th>
+            <th class="num">Tiempo p95</th><th class="num">Espera p95</th></tr>
+        <tbody id="enm-por-camino"></tbody>
+      </table>
+    </div>
+    <div class="tabla-ancha" style="margin-top:16px;">
+      <table>
+        <tr><th>Por qué no se tapó</th><th class="num">Documentos</th><th>Qué significa</th></tr>
+        <tbody id="enm-motivos"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="filtros" style="margin-top:16px;">
+    <select id="f-enm-tipo" onchange="filtrarEnmascarado()">
+      <option value="">Todos los documentos</option>
+      <option value="recibo">Recibos</option>
+      <option value="aportes">Comprobantes de ARCA</option>
+      <option value="aprendizaje">Aprendizaje</option>
+      <option value="prueba">Banco de pruebas</option>
+    </select>
+    <select id="f-enm-camino" onchange="filtrarEnmascarado()">
+      <option value="">Todos los caminos</option>
+      <option value="pdf_texto">PDF con texto</option>
+      <option value="pdf_imagen">PDF escaneado</option>
+      <option value="foto">Foto</option>
+    </select>
+    <select id="f-enm-resultado" onchange="filtrarEnmascarado()">
+      <option value="">Todos los resultados</option>
+      <option value="tapados">Tapados (o se habrían tapado)</option>
+      <option value="sin_tapar">Sin tapar</option>
+      <option value="fugas">Con fugas</option>
+    </select>
+    <span class="f-cant" id="f-enm-cant"></span>
+  </div>
+  <div class="tabla-ancha">
+    <table>
+      <tr><th>Fecha</th><th>Sindicato</th><th>Documento</th><th>Camino</th><th>Resultado</th>
+          <th class="num">Zonas</th><th class="num">Fugas</th><th class="num">Espera</th><th class="num">Total</th></tr>
+      {% for r in enmascarado_registros %}
+      <tr class="fila-enm" data-tipo="{{ r.tipo }}" data-camino="{{ r.camino }}" data-resultado="{{ r.resultado }}"
+          data-motivo="{{ r.motivo }}" data-fugas="{{ r.fugas }}" data-pertenece="{{ '' if r.pertenece is none else ('si' if r.pertenece else 'no') }}"
+          data-espera="{{ r.espera_ms }}" data-total="{{ r.total_ms }}"{% if loop.index > 300 %} data-sobra="1"{% endif %}>
+        <td>{{ r.fecha }}</td><td>{{ r.sindicato }}</td><td>{{ r.tipo }}</td>
+        <td class="enm-camino">{{ r.camino }}</td>
+        <td class="enm-resultado">{{ r.resultado }}</td>
+        <td class="num">{{ r.cajas }}</td>
+        <td class="num">{% if r.fugas %}<strong style="color:#b8860b;">{{ r.fugas }}</strong>{% else %}0{% endif %}</td>
+        <td class="num">{{ r.espera_ms }} ms</td><td class="num">{{ r.total_ms }} ms</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="muted">Todavía no hay registros. Aparecen cuando alguien sube un recibo o un comprobante con el enmascarado en <code>sombra</code> o <code>activo</code>.</td></tr>
+      {% endfor %}
+    </table>
+    <p class="muted" style="font-size:12px; margin-top:8px;">Se listan las 300 más recientes que cumplen el filtro; los números de arriba cuentan todas las que llegaron a esta pantalla (hasta 3.000).</p>
+  </div>
+  </div>
+
   {# ---------------- Banco de pruebas ---------------- #}
   <div class="ia-subpanel" id="ia-sub-probar">
   <div class="aviso-caja">
@@ -664,6 +740,8 @@
         </div>
       </div>
     </div>
+    <label class="chk-modulo" style="margin:4px 0 12px;"><input type="checkbox" id="prueba-tapado">
+      Comparar también con el documento tapado <span class="muted" style="font-size:11px;">(cada modelo lee dos veces: el original y la versión con los datos personales tapados)</span></label>
     <button type="button" id="prueba-btn" onclick="correrPrueba()">Probar con los modelos tildados</button>
     <span class="muted" id="prueba-estado" style="margin-left:10px;"></span>
   </div>
@@ -862,6 +940,112 @@ function limpiarFiltroUsoIA() {
 }
 if (document.getElementById('usoia-totales')) filtrarUsoIA();
 
+/* ---------- Enmascarado: cuántos documentos se taparon y por qué no ---------- */
+const ENM_CAMINOS = {pdf_texto: 'PDF con texto', pdf_imagen: 'PDF escaneado', foto: 'Foto', otro: 'Otro', '—': '—'};
+const ENM_RESULTADOS = {tapado: 'tapado', se_habria_tapado: 'se habría tapado', sin_tapar: 'sin tapar'};
+const ENM_MOTIVOS = {
+  sin_lugar: ['Lector ocupado', 'Había otra foto leyéndose y no se liberó dentro de la espera. Si se repite, es capacidad: más núcleos o más procesos.'],
+  tiempo: ['Se pasó de tiempo', 'La lectura de la foto no terminó dentro del presupuesto de 5 s.'],
+  sin_ocr: ['Sin lector de fotos', 'Este servidor no tiene Tesseract: solo se tapa el PDF con texto.'],
+  sin_palabras: ['No se encontró texto', 'El lector no devolvió palabras: foto muy oscura, borrosa o que no es un documento.'],
+  tipo_no_soportado: ['Tipo de archivo', 'Ni PDF ni imagen.'],
+  ok: ['Nada que tapar', 'Se leyó bien pero no apareció ningún dato personal reconocible.'],
+};
+const percentil = (xs, p) => {
+  if (!xs.length) return 0;
+  const o = xs.slice().sort((a, b) => a - b);
+  return o[Math.min(o.length - 1, Math.ceil(p * o.length) - 1)];
+};
+const pct = (n, d) => d ? Math.round(100 * n / d) + ' %' : '—';
+
+function filtrarEnmascarado() {
+  const tipo = document.getElementById('f-enm-tipo').value;
+  const camino = document.getElementById('f-enm-camino').value;
+  const res = document.getElementById('f-enm-resultado').value;
+  const vis = [];
+  let mostradas = 0;
+  document.querySelectorAll('.fila-enm').forEach(f => {
+    const d = f.dataset;
+    let ok = (!tipo || d.tipo === tipo) && (!camino || d.camino === camino);
+    if (ok && res === 'tapados') ok = d.resultado !== 'sin_tapar';
+    if (ok && res === 'sin_tapar') ok = d.resultado === 'sin_tapar';
+    if (ok && res === 'fugas') ok = Number(d.fugas) > 0;
+    const mostrar = ok && mostradas < 300;
+    if (mostrar) mostradas++;
+    f.style.display = mostrar ? '' : 'none';
+    if (ok) vis.push(d);
+  });
+  const cant = document.getElementById('f-enm-cant');
+  if (cant) cant.textContent = vis.length + (vis.length === 1 ? ' documento' : ' documentos');
+
+  const tapados = vis.filter(d => d.resultado !== 'sin_tapar').length;
+  const totales = vis.map(d => Number(d.total));
+  const caja = document.getElementById('enm-totales');
+  if (caja) {
+    const bloque = (cifra, rotulo) =>
+      '<div><span class="cifra">' + cifra + '</span><span class="rotulo">' + rotulo + '</span></div>';
+    caja.innerHTML = [
+      bloque(vis.length.toLocaleString('es-AR'), 'Documentos'),
+      bloque(pct(tapados, vis.length), 'Tapados (o se habrían tapado)'),
+      bloque((vis.length - tapados).toLocaleString('es-AR'), 'Sin tapar'),
+      bloque(vis.filter(d => Number(d.fugas) > 0).length.toLocaleString('es-AR'), 'Con fugas'),
+      bloque(vis.filter(d => d.pertenece === 'no').length.toLocaleString('es-AR'), 'Recibos ajenos detectados'),
+      bloque(totales.length ? segTxt(medianaDe(totales)) : '—', 'Tiempo mediano'),
+      bloque(totales.length ? segTxt(percentil(totales, 0.95)) : '—', 'Tiempo p95'),
+    ].join('');
+  }
+
+  const cuerpo = document.getElementById('enm-por-camino');
+  if (cuerpo) {
+    const grupos = new Map();
+    vis.forEach(d => {
+      if (!grupos.has(d.camino)) grupos.set(d.camino, {n: 0, t: 0, ms: [], esp: []});
+      const g = grupos.get(d.camino);
+      g.n++; if (d.resultado !== 'sin_tapar') g.t++;
+      g.ms.push(Number(d.total)); g.esp.push(Number(d.espera));
+    });
+    cuerpo.innerHTML = [...grupos.entries()].sort((a, b) => b[1].n - a[1].n).map(([c, g]) =>
+      '<tr><td>' + escHTML(ENM_CAMINOS[c] || c) + '</td>' +
+      '<td class="num">' + g.n.toLocaleString('es-AR') + '</td>' +
+      '<td class="num">' + pct(g.t, g.n) + '</td>' +
+      '<td class="num">' + (g.n - g.t).toLocaleString('es-AR') + '</td>' +
+      '<td class="num">' + segTxt(medianaDe(g.ms)) + '</td>' +
+      '<td class="num">' + segTxt(percentil(g.ms, 0.95)) + '</td>' +
+      '<td class="num">' + segTxt(percentil(g.esp, 0.95)) + '</td></tr>').join('') ||
+      '<tr><td colspan="7" class="muted">Sin documentos para este filtro.</td></tr>';
+  }
+
+  const motivos = document.getElementById('enm-motivos');
+  if (motivos) {
+    const cuenta = new Map();
+    vis.filter(d => d.resultado === 'sin_tapar').forEach(d => {
+      const m = d.motivo.startsWith('error:') ? 'error' : d.motivo;
+      cuenta.set(m, (cuenta.get(m) || 0) + 1);
+    });
+    motivos.innerHTML = [...cuenta.entries()].sort((a, b) => b[1] - a[1]).map(([m, n]) => {
+      const [rot, txt] = m === 'error'
+        ? ['Error del enmascarado', 'Falló algo al leer o tapar (el tipo de error queda en la fila). El recibo siguió igual.']
+        : (ENM_MOTIVOS[m] || [m, '']);
+      return '<tr><td>' + escHTML(rot) + '</td><td class="num">' + n.toLocaleString('es-AR') +
+             '</td><td class="muted">' + escHTML(txt) + '</td></tr>';
+    }).join('') || '<tr><td colspan="3" class="muted">Ninguno: todo lo que se pudo leer se tapó.</td></tr>';
+  }
+}
+document.querySelectorAll('.fila-enm').forEach(f => {
+  const c = f.querySelector('.enm-camino'), r = f.querySelector('.enm-resultado');
+  if (c) c.textContent = ENM_CAMINOS[c.textContent] || c.textContent;
+  if (r) {
+    const motivo = f.dataset.motivo;
+    r.textContent = ENM_RESULTADOS[r.textContent] || r.textContent;
+    if (f.dataset.resultado === 'sin_tapar') {
+      const m = motivo.startsWith('error:') ? motivo : (ENM_MOTIVOS[motivo] || [motivo])[0].toLowerCase();
+      r.textContent += ' · ' + m;
+      r.style.color = '#b8860b';
+    }
+  }
+});
+if (document.getElementById('enm-totales')) filtrarEnmascarado();
+
 /* ---------- Banco de pruebas: el mismo archivo con varios modelos ---------- */
 async function correrPrueba() {
   const inp = document.getElementById('prueba-archivo');
@@ -870,13 +1054,17 @@ async function correrPrueba() {
   const elegidos = [...document.querySelectorAll('.prueba-modelo:checked')].map(c => c.value);
   if (!inp.files.length) { estado.textContent = 'Elegí un archivo primero.'; return; }
   if (!elegidos.length) { estado.textContent = 'Tildá al menos un modelo.'; return; }
-  const veces = elegidos.length === 1 ? 'una vez' : elegidos.length + ' veces';
-  if (!confirm('Se va a llamar a la API ' + veces + ' con ese archivo, una por modelo. ' +
-               'Cada llamada gasta créditos de verdad. ¿Seguimos?')) return;
+  const tapado = document.getElementById('prueba-tapado').checked;
+  const n = elegidos.length * (tapado ? 2 : 1);
+  const veces = n === 1 ? 'una vez' : n + ' veces';
+  if (!confirm('Se va a llamar a la API ' + veces + ' con ese archivo' +
+               (tapado ? ' (cada modelo, con el original y con el tapado)' : ', una por modelo') +
+               '. Cada llamada gasta créditos de verdad. ¿Seguimos?')) return;
   const fd = new FormData();
   fd.append('archivo', inp.files[0]);
   fd.append('tipo', document.getElementById('prueba-tipo').value);
   elegidos.forEach(m => fd.append('modelos', m));
+  if (tapado) fd.append('tapado', '1');
   btn.disabled = true;
   estado.textContent = 'Leyendo el archivo con ' + elegidos.length +
     (elegidos.length === 1 ? ' modelo…' : ' modelos en paralelo…');
@@ -935,8 +1123,30 @@ function pintarPrueba(data) {
            'diferencia: la app los normaliza antes de usarlos.'
          : 'Ningún modelo pudo leer el archivo.') +
     '</p><div class="tabla-ancha"><table>' + cab + filas.join('') + '</table></div>' +
-    tablaLineas(data, ms) +
+    tablaLineas(data, ms) + bloqueTapado(data.enmascarado) +
     (crudos ? '<div class="card">' + crudos + '</div>' : '');
+}
+
+/* La imagen tal como la recibe la IA, y cómo salió el tapado. Si no se pudo
+   tapar, el motivo: el banco es el lugar donde eso se tiene que ver. */
+function bloqueTapado(e) {
+  if (!e) return '';
+  const motivos = {sin_ocr: 'no hay lector de fotos en este servidor', sin_lugar: 'el lector estaba ocupado',
+                   tiempo: 'la lectura se pasó de su tiempo', sin_palabras: 'no se encontró texto',
+                   tipo_no_soportado: 'tipo de archivo no soportado'};
+  const caminos = {pdf_texto: 'PDF con texto (sin OCR)', pdf_imagen: 'PDF escaneado (OCR)', foto: 'foto (OCR)'};
+  const dato = (r, v) => '<div><span class="muted" style="font-size:11px;">' + r + '</span><br>' +
+    '<strong style="font-family:ui-monospace,Consolas,monospace; font-variant-numeric:tabular-nums;">' + v + '</strong></div>';
+  const cabeza = '<div style="display:flex; gap:24px; flex-wrap:wrap; margin:6px 0 12px;">' +
+    dato('Camino', escHTML(caminos[e.camino] || e.camino || '—')) +
+    dato('Zonas tapadas', e.cajas ?? '—') + dato('Fugas', e.fugas ?? '—') +
+    dato('Tiempo del tapado', ((e.total_ms || 0) / 1000).toFixed(1).replace('.', ',') + ' s') + '</div>';
+  const cuerpo = e.tapado && e.imagen
+    ? '<img src="' + e.imagen + '" alt="El documento tal como lo recibe la IA" ' +
+      'style="max-width:100%; border:1px solid var(--linea); border-radius:12px; background:#fff;">'
+    : '<p class="muted">No se tapó: ' + escHTML(motivos[e.motivo] || e.motivo || 'no se encontró nada que tapar') +
+      '. En la app, el recibo sigue igual y se manda sin tapar (mejor esfuerzo).</p>';
+  return '<h2 style="margin-top:22px;">Así lo recibe la IA</h2>' + cabeza + cuerpo;
 }
 
 /* La comparación línea por línea. Es la que contesta lo que el resumen deja

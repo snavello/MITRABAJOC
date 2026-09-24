@@ -5752,3 +5752,357 @@ listas viejas no hacían.
 Próximo sprint: en el primer uso, el afiliado acepta términos y condiciones
 que le dicen que sus recibos llegan al sindicato anonimizados, y con nombre
 solo si los envía él.
+
+## Enmascarado, bloque 1: qué se tapa (2026-09-24)
+
+Paso cero del motor v2 (`PLAN_ENMASCARADO.md`). El bloque 1 es el módulo que
+decide qué se tapa, `enmascarado.py`, puro y sin tocar la app: recibe
+"palabras con posición" y devuelve las cajas a tapar, el CUIL y el CUIT
+leídos, y la imagen tapada con un rótulo gris ("CUIL OCULTO"). `lectores.py`
+trae por ahora solo el PDF digital (`pypdfium2`); el OCR de fotos es el
+bloque 2.
+
+### Lo que enseñó el recibo digital ficticio
+
+Se armó con reportlab un recibo con capa de texto (identidad inventada:
+nombre con acentos y Ñ, CUIL y CUIT con verificador válido, CBU, dos
+páginas) porque los 10 sintéticos son todos imágenes. Encontró dos cosas que
+los sintéticos no mostraban:
+
+- **El lector partía los números.** `30-71234567-1` salía como tres
+  palabras: la caja de un guion mide un punto de alto y el corte por hueco
+  usaba esa altura. Se usa la caja "amplia" de cada carácter
+  (`get_charbox(loose=True)`).
+- **Palabra por palabra no alcanza.** Aun con el lector arreglado, un PDF
+  trae "Apellido y Nombre:" como tres palabras y un OCR puede partir un CUIL
+  en tres cajas. El módulo trabaja por **frase**: palabras contiguas de una
+  línea, cortadas en los huecos grandes para que dos columnas no formen un
+  número.
+
+### Otras decisiones
+
+- **La tabla de conceptos no tiene rótulos**: "A CUENTA DE FUTUROS
+  AUMENTOS" no es una cuenta bancaria. La tabla arranca en una FILA de
+  títulos de columna (dos o más) y no en cualquier frase que diga "haberes":
+  "RECIBO DE HABERES" del encabezado apagaba todos los rótulos.
+- **El valor de un rótulo está en la primera fila de abajo, no en la
+  segunda**: en el sintético, "Categoria" quedaba más centrada bajo
+  "Apellido y nombre" que el nombre mismo.
+- **Lo que se tapó por rótulo se aprende** y se busca en el resto del
+  documento (el nombre se repite al pie para la firma). Con eso el caso del
+  aprendizaje del admin, sin nada conocido de antemano, tapa lo mismo que el
+  del afiliado.
+- **Un importe nunca se tapa**, venga del detector que venga.
+- El verificador de CUIL/CUIT es lo que deja tapar un número de 11 cifras
+  sin rótulo; el CUIL de los sintéticos (27-99999999-9) tiene verificador
+  inválido y se tapa por el rótulo o por ser el de la sesión.
+
+### Resultado
+
+`test_enmascarado.py`, 53 tests: con y sin datos conocidos, en el digital y
+en los 10 sintéticos se tapa **exactamente** la identidad (nombre, CUIL, DNI,
+legajo, cuenta, CUIT, razón social), ningún importe ni concepto, y el
+control de fuga da vacío. Las palabras de cada recibo están en
+`datos_prueba/enmascarado/*.json` (los PDF sintéticos no se versionan: 2 MB
+cada uno); se regeneran con `datos_prueba/enmascarado/generar.py`.
+
+### Lo que condiciona al bloque 2
+
+**El OCR completo de una página es lento**: RapidOCR tardó 10 a 16 s por
+página en una notebook de 8 núcleos y 35 s con un solo hilo. Detectar dónde
+hay texto cuesta 1,3 s; lo caro es LEER las ~136 cajas (el modelo que trae
+el paquete es el chino, con más de 6.600 caracteres). Así no entra en los 3 s
+del plan. El bloque 2 tiene que leer solo lo necesario (el encabezado, no la
+tabla) y/o usar un modelo latino más liviano, y medirlo antes de enchufar
+nada. El PDF digital no tiene este problema: sus palabras salen del archivo
+en milisegundos.
+
+## Enmascarado: el OCR de las fotos es Tesseract, sin Docker (2026-09-24)
+
+El plan (C2) elegía RapidOCR porque Tesseract "es un programa del sistema y
+el Render nativo no deja instalarlo". Medido, RapidOCR no llegaba al límite
+de 3 s por foto, y SDN rechazó ajustar el límite apostando a que llegaran
+pocas fotos. Se buscó otra solución antes que pasar el servicio a Docker.
+
+**`tesserocr` publica ruedas para Linux que traen Tesseract 5.5.1 adentro**
+(`libtesseract` y `libleptonica` empaquetadas, 5,5 MB): se instala con `pip`
+en el Render nativo, sin `apt` y sin Docker. Se verificó en un contenedor
+`python:3.12.8-slim-bookworm` pelado (Debian 12, lo mismo que el Render
+nativo), sin instalar nada del sistema. Le falta solo el idioma:
+`spa.traineddata` de `tessdata_fast` (2,3 MB). No hay rueda para Windows:
+en una PC de desarrollo con Windows el camino de las fotos se prueba en
+Docker.
+
+### La medición (contenedor con `--memory=512m`, 10 sintéticos + el digital)
+
+Los tiempos de reloj en la notebook variaron hasta 4 veces entre corridas
+(la máquina estaba ocupada con otras cosas), así que el número que vale es el
+**tiempo de CPU por página**, que no depende de qué más corre:
+
+| Motor | CPU por página | Memoria del proceso |
+|---|---|---|
+| RapidOCR, modelo chino, página entera | ~21 s (notebook, 1 hilo) | — |
+| RapidOCR, latino v5, sin leer la tabla | 3,4–3,8 s | 256–305 MB |
+| **Tesseract, página entera** | **0,7 s** | ~128 MB |
+
+Con 1 CPU (producción) una foto suma ~0,7 s; con medio núcleo (Pruebas),
+~1,4 s. El modelo de Tesseract ocupa ~20 MB por proceso, no los 200 que
+estimaba el plan. El modelo latino cuantizado a 8 bits se descartó: más
+lento y dejó escapar el nombre. Leer "sin la tabla" (reconocer las filas de
+conceptos por geometría y no leerlas) le sirvió a RapidOCR pero no a
+Tesseract, que analiza la página dos veces para eso.
+
+### Lo que cambió en el módulo
+
+Tesseract lee "CUIL N" como **"CUILN"**: el rótulo acepta ahora la N pegada.
+Con eso, en los 11 recibos se tapa exactamente la identidad y el control de
+fuga da 0, con y sin datos conocidos.
+
+### Docker, por si alguna vez hace falta
+
+Se relevó qué implicaría: Render permite cambiar el runtime de un servicio
+existente a Docker (conserva URL, variables y base); hay que mantener un
+`Dockerfile` (y las actualizaciones del sistema base pasan a ser nuestras),
+`render_admin.py` cambia los workers en el "Start Command", que en Docker
+es el "Docker Command", y el cambio se hace dos veces (Pruebas y Demo).
+Con `tesserocr` no hace falta.
+
+## Enmascarado, bloque 2: los lectores, y el enmascarado pasa a "mejor esfuerzo" (2026-09-24)
+
+### La definición de SDN
+
+Antes de este bloque SDN fijó el objetivo, y cambió dos reglas del plan: el
+análisis de recibos tiene que ser lo más preciso, confiable y viable en
+tiempo y recursos; tapar los datos personales es un agregado a la
+confidencialidad que ya existe, **no una condición**. No debe entorpecer ni
+demorar ni ser cuello de botella; se tolera la fuga eventual de un CUIT o un
+nombre ("no construimos una jaula de acero": el compromiso es el mejor
+esfuerzo), y **un dato que no se pudo tapar no es razón para no analizar el
+recibo**: a lo sumo queda un registro. Eso reemplaza la línea roja 2 ("si el
+enmascarado no está seguro, el recibo no sale") y el §6 entero del plan
+(reintento con imagen mejorada, pedir otra foto, E-RECIBO-05/E-APORTE-04).
+Quedó en "Decisiones tomadas" de CLAUDE.md. La verificación de pertenencia
+NO se relaja: un CUIL ajeno leído localmente corta como hoy (E-RECIBO-04).
+
+### Lo que se construyó
+
+`lectores.py`: el PDF digital con `pypdfium2` y la foto con Tesseract
+(`tesserocr`). La lectura de una foto **nunca espera ni levanta
+excepciones**: devuelve el motivo ("sin_ocr", "sin_lugar", "tiempo",
+"error") y quien llama manda sin tapar y registra.
+
+- **Cupo que no hace fila** (`ENMASCARADO_CUPO`, 2 por proceso): la foto que
+  no entra vuelve al instante con "sin_lugar". Es a propósito distinto del
+  cupo del Panel Sindical, que espera 2 s: acá esperar sería demorar el
+  análisis por un agregado.
+- **Tiempo máximo** (`ENMASCARADO_OCR_MS`, 4000): lo corta Tesseract mismo
+  (`Recognize(timeout)`), no un hilo aparte.
+- **Un hilo por lectura** (`OMP_THREAD_LIMIT=1`, antes de cargar Tesseract)
+  y sin buscar texto invertido.
+- **La foto se lee achicada** a 2000 px de lado y las cajas vuelven en
+  píxeles de la original. **Y derecha**: `abrir_imagen` aplica la rotación
+  del EXIF, porque al volver a codificar la imagen tapada ese dato se pierde
+  y la IA recibiría la foto acostada.
+- El idioma (`spa.traineddata`, `tessdata_fast`, 2,3 MB) va en
+  `data/tessdata/`, versionado. En Windows no hay rueda de tesserocr: el OCR
+  queda "sin_ocr" (se tapa solo el PDF digital) y se prueba en Docker.
+- Los datos de prueba de los sintéticos se regeneraron con Tesseract (el
+  lector de la app, no RapidOCR). El CUIT admite ":" como separador: así lee
+  Tesseract a veces el guion.
+
+### La tabla del §5 (contenedor Debian 12, 512 MB)
+
+| | 1 núcleo | ½ núcleo (Pruebas) | Límite |
+|---|---|---|---|
+| PDF digital, 2 páginas, p95 | 0,14 s | 0,45 s | 0,3 s |
+| Foto de 1 página, p95 | 0,80 s | 2,28 s | 3 s |
+| Modelo cargado | +9 MB | +9 MB | 250 MB |
+| Por lectura | +10 MB | +10 MB | 60 MB |
+| Resto de la app durante 10 fotos a la vez, p95 | 3 ms | 47 ms | sin demora |
+
+Con 10 fotos a la vez se leen 2 (el cupo) y 8 vuelven sin tapar en 0 ms.
+El PDF de dos páginas con medio núcleo pasa el límite (0,45 s contra 0,3 s:
+es pasar dos páginas a imagen); con un núcleo sobra.
+
+Tests: `test_lectores.py` (11; los dos de Tesseract real se saltean en
+Windows) y `test_enmascarado.py` (54). En Linux corren los 65.
+
+### Ráfagas: presupuesto de 5 s y un lector por proceso (2026-09-24)
+
+Con el cupo que no esperaba, una ráfaga de 10 fotos dejaba 8 sin tapar: más
+que una excepción. SDN extendió el criterio a **5 s por foto** y pidió
+mirarlo además en Pruebas. Quedó así:
+
+- **Presupuesto** (`ENMASCARADO_PRESUPUESTO_MS`, 5000): lo máximo que una foto
+  suma, fila más lectura. Hasta `ENMASCARADO_ESPERA_MS` (3000) esperando un
+  lector libre; lo que queda es para leer (nunca menos de 1 s). Pasado el
+  presupuesto, sale sin tapar y se registra.
+- **Un lector por proceso** (`ENMASCARADO_CUPO` = 1). Medido en un
+  contenedor con 4 núcleos y 4 procesos (la forma de Render: un proceso por
+  núcleo): ráfaga de 10, **10 tapadas** en 3,3 s como máximo con 1 lector
+  contra 8 con 2; ráfaga de 20, 12 contra 2. Con dos lectores en el mismo
+  núcleo cada lectura pasó de 0,8 s a 2,6 s de CPU: no leen más, se estorban.
+- La configuración de producción que dejaron las pruebas de estrés (web en
+  2 instancias de 4 CPU, 8 procesos) reparte una ráfaga de 20 en 2 o 3 fotos
+  por proceso, la misma proporción que la ráfaga de 10 sobre 4 procesos.
+- **Lo que queda para Pruebas**: con medio núcleo y un proceso, una ráfaga
+  deja fotos sin tapar (por capacidad: ~1,3 fotos por segundo por núcleo).
+  Lo mide el modo sombra (bloque 5) con datos reales, y el número de la
+  notebook no se usa para proyectar: con todos sus núcleos ocupados la CPU
+  por lectura se triplica.
+
+## Enmascarado, bloque 3: el enganche en la app (2026-09-24)
+
+`preparacion.py` es la capa entre las rutas y los dos módulos del
+enmascarado: elige el camino (PDF con texto, PDF escaneado, foto), arma la
+imagen que viaja, rearma la identidad en lo que devuelve la IA y deja el
+registro. Variable `ENMASCARADO`:
+
+- **`apagado`** (default): no se hace nada. La llamada a `extraer()` queda
+  idéntica a la de siempre (lo verifica `test_preparacion.py`), así que los
+  tests que simulan la IA siguen valiendo tal cual y nada cambia en ningún
+  entorno hasta prender la variable.
+- **`sombra`**: se calcula todo y se registra, pero viaja el original, y un
+  recibo ajeno solo se anota. Es para medir en Pruebas sin tocar a nadie.
+- **`activo`**: viaja la imagen tapada, la IA recibe un aviso (las zonas
+  grises son intencionales: null en esos campos y no es adulteración) y la
+  identidad vuelve con lo leído acá.
+
+Las cuatro salidas hacia la IA: el recibo (`/api/leer`), el comprobante de
+ARCA (`/api/aportes`) y el aprendizaje del admin (`/admin/aprender`, sin
+nada conocido: patrones y rótulos). El banco de pruebas de plataforma se
+toca en el bloque 4.
+
+### Decisiones del bloque
+
+- **El recibo ajeno se corta ANTES de la IA** (E-RECIBO-04 / E-APORTE-03):
+  ni se paga la lectura ni sale el documento. Pero solo con un CUIL ajeno de
+  **dígito verificador válido** (`enmascarado.pertenece`): un dígito mal
+  leído por el OCR no puede rechazarle a nadie su propio recibo. Con "no se
+  sabe" el recibo sigue y los chequeos de siempre sobre lo que devuelve la
+  IA siguen en pie.
+- **La identidad se rearma con lo leído en el documento, no con la base**:
+  el CUIL y el CUIT del recibo (con pluriempleo el CUIT guardado puede no ser
+  el del recibo, y de ese CUIT dependen los conceptos por empleador); el
+  nombre, de `CuentaTrabajador` si se lo encontró en el recibo; la razón
+  social, del empleador cargado en el sindicato por ese CUIT o, si no está,
+  de lo leído (una sola vez: el logo y la firma repiten texto). Solo se
+  completa lo que la IA devolvió vacío o como "OCULTO".
+- **Si la IA marca el rótulo gris como adulteración**, esa alerta no vale.
+  Una alerta real (otro motivo) sigue en pie.
+- **Registro sin datos personales**: tabla `registroenmascarado` (migración
+  `e5b2c8d4f1a7`): modo, camino, motivo, si se tapó, cajas, fugas, si se
+  encontró el CUIL, pertenencia y tiempos. Nunca levanta: ni una tabla
+  faltante puede frenar un recibo.
+- **La foto viaja derecha** (EXIF) y con 3000 px de lado como mucho; un PDF
+  tapado viaja como PNG de la primera página, igual que hoy.
+- El lector de fotos se precarga al arrancar si el modo no es `apagado`.
+
+Tests: `test_preparacion.py` (18: modos, caminos, archivo roto, rearmado, el
+aviso, y las rutas de punta a punta con la IA simulada: apagado idéntico,
+activo tapa y rearma, ajeno cortado sin llamar a la IA, sombra no cambia
+nada, un error del enmascarado no frena el recibo). Probado además el camino
+de fotos con Tesseract real en Linux: 17 zonas tapadas, 0 fugas, 1,3 s.
+Trabajador 0.42.01, Admin 0.46.01.
+
+### Sin módulo 11, por ahora (2026-09-24)
+
+SDN: por ahora no se valida el dígito verificador de CUIL/CUIT; queda en
+BACKLOG.md para cuando se avance. Y ninguno de los CUIL/CUIT de la demo lo
+cumple, así que el enmascarado dejó de depender de él en los dos lugares
+donde lo usaba:
+
+- **Detectar**: un número con formato de CUIL/CUIT (con separadores y
+  prefijo válido) se tapa aunque no cumpla el verificador. Once cifras
+  pegadas y sin rótulo siguen necesitándolo: podrían ser un importe
+  (`enmascarado.parece_cuil`).
+- **Recibo ajeno**: en vez del verificador, el CUIL leído tiene que diferir
+  del de la sesión en **3 dígitos o más** (`distintos_de_verdad`). Un error
+  del OCR cambia uno, rara vez dos: a esa distancia es el propio mal leído y
+  el recibo sigue.
+
+## Enmascarado, bloque 4: tapar no cambia la lectura (2026-09-24)
+
+El criterio del plan era "cero diferencias en importes y en la clasificación
+de cada línea, con y sin enmascarado". Se midió con la IA real
+(`medicion_enmascarado/medir.py`, resultado en `RESULTADO.md`): cada recibo
+leído tres veces con el mismo modelo (claude-sonnet-4-6) -- original, tapado
+con la identidad conocida y tapado sin conocidos --, sobre los 10 sintéticos
+(fotos: OCR con Tesseract) y el digital ficticio (texto del PDF). 33
+llamadas.
+
+- **Totales, cantidad de líneas, período y categoría: iguales en los 11.**
+- **Identidad rearmada igual a la que leyó la IA en el original** (CUIL,
+  CUIT, nombre, legajo, empleador) en los 11.
+- **Ninguna alerta de adulteración** por el rótulo gris.
+- **3 líneas distintas, siempre la misma**: "SEGURO OBLIGATORIO - DGI"
+  (importe fijo de $380), clasificada a veces como `aporte_trabajador` y a
+  veces como `otro`, en los dos sentidos. Control: el **original sin tapar
+  leído tres veces** también cambia (`aporte / otro / otro`). Es la
+  variación del propio modelo sobre una línea ambigua, no efecto del tapado.
+
+Criterio cumplido: cero diferencias atribuibles al enmascarado.
+
+### El banco de pruebas, con el documento tapado
+
+En `/plataforma` → Uso de IA → Banco de pruebas, la casilla "Comparar
+también con el documento tapado": cada modelo lee el archivo dos veces y el
+tapado queda en la columna de al lado ("Claude Sonnet 4.6 — tapado"), así la
+tabla línea por línea dice si tapar cambió algo. Debajo, **"Así lo recibe la
+IA"**: el camino (PDF con texto, PDF escaneado, foto), las zonas, las fugas,
+el tiempo del tapado y la imagen tal cual viaja. La versión tapada vuelve
+rearmada, como en las rutas de verdad. Plataforma 0.38.01.
+
+### El signo solo ya no es una diferencia
+
+En una prueba real del banco, el original transcribió los descuentos en
+positivo (como figuran en la columna Deducciones) y el tapado con signo
+menos: la tabla marcaba 4 de 8 líneas en rojo con la misma clasificación.
+El validador usa el valor absoluto de cada descuento, así que
+`comparar_lineas` ya no cuenta el signo como diferencia -- mismo criterio que
+un CUIT con o sin guiones. Afecta también la comparación entre modelos.
+
+Las dos variaciones del modelo (la clasificación de "SEGURO OBLIGATORIO" y
+el signo de los descuentos) quedaron en BACKLOG.md para el motor v2: son
+exactamente el tipo de imprecisión que la confianza por renglón y el
+catálogo maestro tienen que resolver.
+
+## Enmascarado, bloque 5: en Pruebas en modo sombra, y la pantalla de registros (2026-09-24)
+
+PR #66 mergeado a `main`: Pruebas corre el enmascarado en **modo sombra**
+(`ENMASCARADO=sombra`, cargada en el servicio `mitrabajo-pruebas` con "Save
+only" para que la tomara el deploy del merge). Al arrancar, el log dice
+`[enmascarado] modo sombra, OCR listo`: Tesseract se instaló con pip en el
+Render nativo, sin Docker, como se había medido. En sombra a la IA le sigue
+llegando el original; cada documento queda anotado en `registroenmascarado`.
+
+El CI encontró algo que en la PC no se veía: **su servidor no tiene
+poppler**, así que un test que prepara un PDF original con `pdf2image` falla
+ahí. Los tests del banco ahora simulan esa preparación.
+
+### La sub-pestaña "Enmascarado" de Uso de IA
+
+En `/plataforma` → Uso de IA → **Enmascarado**: el modo que rige en el
+servidor y si hay lector de fotos; indicadores (documentos, porcentaje
+tapado --en sombra, "se habría tapado"--, sin tapar, con fugas, recibos
+ajenos detectados, tiempo mediano y p95); una tabla por camino (PDF con
+texto, PDF escaneado, foto) con su porcentaje tapado, tiempos y espera p95;
+**por qué no se tapó**, con lo que significa cada motivo ("lector ocupado"
+es capacidad; "se pasó de tiempo", el presupuesto de 5 s); y la lista de
+documentos con filtros por tipo, camino y resultado. Como Consumo y costo,
+los números acompañan a los filtros y se calculan en la pantalla sobre las
+filas que manda el servidor (las últimas 3.000; se listan 300).
+
+El `resultado` lo resuelve el servidor (`db.registros_enmascarado`) porque
+en sombra nada viaja tapado: "tapado" (activo), "se habría tapado" (sombra,
+se leyó bien y había qué tapar) o "sin tapar". Plataforma 0.39.01.
+
+**Tesseract se importa en el hilo principal.** El CI del PR de la pantalla
+falló en las cuatro partes con `ValueError: signal only works in main
+thread`: la pantalla de plataforma preguntaba si había lector de fotos y
+eso importaba `tesserocr` por primera vez desde el pool de hilos de FastAPI,
+cosa que en Linux revienta. En Render no se notaba porque la precarga del
+arranque ya lo había importado, pero dependía de eso. Ahora `lectores.py`
+lo importa al cargarse (cuando main arranca, en el hilo principal) y si
+falla queda "no disponible"; `ocr_disponible()` ya no importa nada. Test:
+preguntar desde otro hilo no revienta.

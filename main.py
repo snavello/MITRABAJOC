@@ -90,6 +90,8 @@ from observabilidad import sentry_panel
 from observabilidad import metricas_panel
 import sentry_config
 import planificador
+import preparacion
+import lectores
 from xsk.motor import tablero as xsk_tablero
 from xsk.motor.registro import ErrorRegistro as XSKErrorRegistro
 from modulos import MODULOS, MODULOS_INICIALES
@@ -614,6 +616,15 @@ templates.env.filters["periodo"] = fechas.periodo_legible
 @app.on_event("startup")
 def _startup():
     db.init_db()
+    # El lector de fotos del enmascarado se carga al arrancar y no con la
+    # primera foto del día. Nunca puede tumbar el arranque (mejor esfuerzo).
+    if preparacion.modo() != "apagado":
+        try:
+            lectores.precargar()
+            ocr = "listo" if lectores.ocr_disponible() else "no disponible (solo PDF digital)"
+            print(f"[enmascarado] modo {preparacion.modo()}, OCR {ocr}")
+        except Exception as e:
+            print(f"[enmascarado] no se precargó el OCR ({type(e).__name__})")
     # Ninguna indexación de convenio sobrevive a un reinicio: corre en un
     # hilo de ESTE proceso. Lo que quedó en "procesando" está muerto y hay
     # que decirlo, o el admin ve un cartel que no avanza nunca.
@@ -682,16 +693,64 @@ def _registrar_uso_fallido(e: BaseException, sindicato_id, cuil: str, tipo: str)
                         uso["tokens_salida"], uso.get("duracion_ms", 0))
 
 
+# ---------- Enmascarado antes de la IA (PLAN_ENMASCARADO.md) ----------
+# Mejor esfuerzo (CLAUDE.md, decisión del 2026-09-24): nada de esto puede
+# frenar ni demorar la lectura del recibo. Con ENMASCARADO=apagado (default)
+# no se hace nada y las rutas quedan exactamente como antes.
+
+def _conocidos_trabajador(cuil: str):
+    """Lo que la app ya sabe de quien sube el documento: su CUIL y su nombre
+    (la persona, CuentaTrabajador). Buscar un texto conocido es lo que más
+    fiable hace el tapado. None en modo apagado: no se toca la base."""
+    if not cuil or preparacion.modo() == "apagado":
+        return None
+    try:
+        nombre = (db.datos_personales(cuil) or {}).get("nombre") or ""
+    except Exception:
+        nombre = ""
+    return preparacion.E.Conocidos(cuil=cuil, nombre=nombre)
+
+
+async def _preparar_para_ia(contenido: bytes, content_type: str, conocidos, sid, tipo: str):
+    """Tapa lo que identifica (si el modo lo pide) y deja el registro. En un
+    hilo aparte, como la llamada a la IA: el OCR usa CPU."""
+    if preparacion.modo() == "apagado":
+        return preparacion.Preparado("apagado")
+    try:
+        prep = await run_in_threadpool(preparacion.preparar, contenido, content_type, conocidos)
+    except Exception:
+        prep = preparacion.Preparado("apagado")
+    db.registrar_enmascarado(sid or None, tipo, prep.registro)
+    return prep
+
+
+def _para_la_ia(prep) -> dict:
+    """Los argumentos extra para extraer(): la imagen ya preparada (tapada o
+    no) y el aviso de zonas tapadas. Vacío en modo apagado: la llamada queda
+    idéntica a la de siempre."""
+    if prep.imagen is None:
+        return {}
+    return {"imagen": prep.imagen, "aviso_enmascarado": prep.tapado}
+
+
 @app.post("/api/leer")
 async def api_leer(request: Request, archivo: UploadFile = File(...)):
     contenido = await archivo.read()
     sid = sindicato_activo_trabajador(request)
+    conocidos = _conocidos_trabajador(_cuil_seguro(request))
+    prep = await _preparar_para_ia(contenido, archivo.content_type, conocidos, sid, "recibo")
+    # Un recibo de OTRA persona se corta acá, ANTES de mandarlo a la IA: ni se
+    # paga la lectura ni sale el documento. Solo con un CUIL ajeno de dígito
+    # verificador válido (enmascarado.pertenece): un dígito mal leído por el OCR
+    # no puede rechazarle a nadie su propio recibo. En sombra solo se anota.
+    if prep.modo == "activo" and prep.pertenece is False:
+        raise ErrorApp("E-RECIBO-04")
     try:
         # La llamada a la IA es sincrónica y puede tardar varios segundos --
         # se corre en un hilo aparte para no bloquear el worker de FastAPI
         # (y con él, a todos los demás pedidos) mientras se espera la respuesta.
         recibo, uso = await run_in_threadpool(extraer, contenido, archivo.content_type,
-                                              db.modelo_ia("recibos"))
+                                              db.modelo_ia("recibos"), **_para_la_ia(prep))
     except Exception as e:
         _registrar_uso_fallido(e, sid or None, _cuil_seguro(request), "recibo")
         raise ErrorApp("E-RECIBO-01")
@@ -700,6 +759,12 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
     db.registrar_uso_ia(sid or None, _cuil_seguro(request), "recibo",
                          uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"],
                          uso.get("duracion_ms", 0))
+    if prep.tapado:
+        # Lo que se le tapó a la IA vuelve con lo leído acá (CUIL y CUIT del
+        # documento; nombre de la persona). Antes de los chequeos de siempre,
+        # que así siguen mirando el CUIL del recibo.
+        preparacion.rearmar_recibo(recibo, prep.analisis, conocidos,
+                                   lambda cuit: db.razon_social_de_cuit(sid, cuit))
     if recibo.get("confianza") == "baja":
         raise ErrorApp("E-RECIBO-02")
     # El recibo no es de quien inició sesión: cortar ACÁ, apenas se sabe.
@@ -910,15 +975,21 @@ async def api_aportes(request: Request, archivo: UploadFile = File(...)):
     contenido = await archivo.read()
     cuil = _cuil_seguro(request)
     sid = sindicato_activo_trabajador(request)
+    conocidos = _conocidos_trabajador(cuil)
+    prep = await _preparar_para_ia(contenido, archivo.content_type, conocidos, sid, "aportes")
+    if prep.modo == "activo" and prep.pertenece is False:
+        raise ErrorApp("E-APORTE-03")
     try:
         datos, uso = await run_in_threadpool(extraer_aportes, contenido, archivo.content_type,
-                                             db.modelo_ia("recibos"))
+                                             db.modelo_ia("recibos"), **_para_la_ia(prep))
     except Exception as e:
         _registrar_uso_fallido(e, sid or None, cuil, "aportes")
         raise ErrorApp("E-APORTE-01")
     db.registrar_uso_ia(sid or None, cuil, "aportes",
                          uso["modelo"], uso["tokens_entrada"], uso["tokens_salida"],
                          uso.get("duracion_ms", 0))
+    if prep.tapado:
+        preparacion.rearmar_aportes(datos, prep.analisis, conocidos)
     if datos.get("confianza") == "baja" or not datos.get("meses"):
         raise ErrorApp("E-APORTE-02")
     # Mismo corte que en /api/leer, y acá importa todavía más: sin este
@@ -4553,9 +4624,16 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
 
     for archivo in archivos:
         contenido = await archivo.read()
+        # Recibos de otras personas: no hay nada conocido de antemano, se tapa
+        # por patrones y rótulos. El CUIT del empleador se rearma con lo leído
+        # acá, que es de lo que dependen los conceptos por empleador.
+        prep = await _preparar_para_ia(contenido, archivo.content_type, None, sid, "aprendizaje")
         try:
             recibo, uso = await run_in_threadpool(extraer, contenido, archivo.content_type,
-                                                  db.modelo_ia("recibos"))
+                                                  db.modelo_ia("recibos"), **_para_la_ia(prep))
+            if prep.tapado:
+                preparacion.rearmar_recibo(recibo, prep.analisis, None,
+                                           lambda cuit: db.razon_social_de_cuit(sid, cuit))
         except Exception as e:
             _registrar_uso_fallido(e, sid, "", "aprendizaje")
             fallidos += 1
@@ -4764,6 +4842,11 @@ def plataforma(request: Request):
         "config_dashboard": db.config_dashboard(),
         "marca_plataforma": db.marca_plataforma(),
         "uso_ia": uso_ia,
+        # Sub-pestaña "Enmascarado": los registros y el modo que rige en ESTE
+        # proceso (lo dice la variable ENMASCARADO del servicio).
+        "enmascarado_registros": db.registros_enmascarado(),
+        "enmascarado_modo": preparacion.modo(),
+        "enmascarado_ocr": lectores.ocr_disponible(),
         "sindicatos_uso_ia": sorted({u["sindicato"] for u in uso_ia}),
         # (id, nombre): el filtro compara contra el id que guarda la fila, pero
         # muestra el nombre lindo -- un modelo viejo que ya no está en el
@@ -5106,7 +5189,8 @@ def plataforma_modelos_ia(request: Request,
 async def plataforma_probar_modelos(request: Request,
                                     archivo: UploadFile = File(...),
                                     tipo: str = Form("recibo"),
-                                    modelos: list[str] = Form([])):
+                                    modelos: list[str] = Form([]),
+                                    tapado: str = Form("")):
     """Banco de pruebas: lee el MISMO archivo con dos o más modelos y
     devuelve, lado a lado, qué leyó cada uno, cuánto tardó y cuánto costó.
 
@@ -5145,13 +5229,31 @@ async def plataforma_probar_modelos(request: Request,
         print(f"[banco de pruebas] no se pudo preparar el archivo: {type(e).__name__}: {e}")
         raise HTTPException(422, "No se pudo abrir el archivo. ¿Es una imagen o un PDF?")
 
+    # "Comparar también con el documento tapado" (PLAN_ENMASCARADO.md, bloque
+    # 4): cada modelo lee además la versión tapada, en la columna de al lado.
+    # Es la prueba de que tapar no le cambia la lectura: mismo modelo, mismo
+    # archivo, y la tabla línea por línea marca cualquier diferencia. Sin nada
+    # conocido de antemano (como el aprendizaje del admin): el banco no es de
+    # un afiliado.
+    prep = None
+    if tapado:
+        prep = await run_in_threadpool(preparacion.preparar, contenido, archivo.content_type,
+                                       None, "activo")
+        db.registrar_enmascarado(None, "prueba", prep.registro)
+    tareas = [(m, False) for m in elegidos]
+    if prep is not None and prep.tapado:
+        tareas = [t for m in elegidos for t in ((m, False), (m, True))]
     lecturas = await asyncio.gather(
-        *(run_in_threadpool(leer, contenido, archivo.content_type, m, imagen) for m in elegidos),
+        *(run_in_threadpool(leer, contenido, archivo.content_type, m,
+                            prep.imagen if t else imagen,
+                            **({"aviso_enmascarado": True} if t else {}))
+          for m, t in tareas),
         return_exceptions=True)
 
     salida, referencia, leidas = [], None, []
-    for modelo, r in zip(elegidos, lecturas):
-        fila = {"modelo": modelo, "nombre": precios_ia.nombre(modelo),
+    for (modelo, es_tapado), r in zip(tareas, lecturas):
+        nombre = precios_ia.nombre(modelo) + (" — tapado" if es_tapado else "")
+        fila = {"modelo": modelo, "nombre": nombre, "tapado": es_tapado,
                 "precio_txt": precios_ia.precio_txt(precios_ia.modelo(modelo))}
         if isinstance(r, BaseException):
             # El error crudo a la vista: acá lo lee quien administra la
@@ -5173,6 +5275,13 @@ async def plataforma_probar_modelos(request: Request,
         datos, uso = r
         db.registrar_uso_ia(None, "", "prueba", uso["modelo"], uso["tokens_entrada"],
                             uso["tokens_salida"], uso.get("duracion_ms", 0))
+        if es_tapado:
+            # Lo que se le tapó vuelve con lo leído acá, como en las rutas de
+            # verdad: la comparación es contra el recibo tal como lo usa la app.
+            if tipo == "aportes":
+                preparacion.rearmar_aportes(datos, prep.analisis, None)
+            else:
+                preparacion.rearmar_recibo(datos, prep.analisis, None)
         p = precios_ia.precios(uso["modelo"])
         costo = precios_ia.costo(uso["tokens_entrada"], uso["tokens_salida"], p[0], p[1]) if p else None
         resumen = resumen_comparable(tipo, datos)
@@ -5194,16 +5303,26 @@ async def plataforma_probar_modelos(request: Request,
             "json": json.dumps(datos, ensure_ascii=False, indent=1),
         })
         salida.append(fila)
-        leidas.append((modelo, datos))
+        leidas.append((nombre, datos))
 
     # La comparación línea por línea es la que contesta la pregunta que el
     # resumen deja abierta: dos modelos pueden coincidir en los totales y aun
     # así clasificar distinto una línea, y ESE campo (`tipo`) alimenta la
     # retención sindical y el tope del 2%. Solo aplica a un recibo (un
     # comprobante de ARCA no tiene líneas) y con dos lecturas o más.
+    enmascarado = None
+    if prep is not None:
+        r = prep.registro
+        enmascarado = {
+            "tapado": prep.tapado, "camino": r.get("camino"), "motivo": r.get("motivo"),
+            "cajas": r.get("cajas"), "fugas": r.get("fugas"), "total_ms": r.get("total_ms"),
+            # La imagen TAL COMO la recibe la IA: es la que hay que mirar.
+            "imagen": (f"data:{prep.imagen[1]};base64,{prep.imagen[0]}"
+                       if prep.tapado and prep.imagen else None),
+        }
     return {"tipo": tipo, "archivo": archivo.filename or "", "modelos": salida,
             "lineas": comparar_lineas(leidas) if tipo == "recibo" and len(leidas) > 1 else None,
-            "modelos_leidos": [precios_ia.nombre(m) for m, _ in leidas]}
+            "modelos_leidos": [n for n, _ in leidas], "enmascarado": enmascarado}
 
 
 ESTADOS_TOPE = ("verificado", "derivado", "por_verificar", "SOSPECHOSO")

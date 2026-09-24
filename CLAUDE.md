@@ -472,6 +472,20 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   cualquier payload. Una ruta nueva que lea el documento de una persona suma
   el suyo. Detalle en HISTORIAL.md.
 
+- **El enmascarado es "mejor esfuerzo" y nunca estorba al análisis**
+  (2026-09-24, definición de SDN, **reemplaza la línea roja 2 y el §6 de
+  `PLAN_ENMASCARADO.md`**). El objetivo del análisis de recibos es ser lo
+  más preciso, confiable y viable posible en tiempo y recursos; tapar los
+  datos personales antes de la IA es un agregado a la confidencialidad que
+  ya existe, no una condición. Por eso: tiene que ser liviano; si un dato no
+  se pudo tapar o quedó en duda (fuga, CUIL no encontrado, OCR que falla o
+  no está), **el recibo se analiza igual** y queda un registro para revisar
+  después; si el cupo del OCR está lleno o se pasa de su tiempo máximo, no
+  se espera: sale sin tapar y se registra. Se tolera la fuga eventual de un
+  CUIT o un nombre -- no se construye una jaula de acero. Lo que NO se
+  relaja es la verificación de pertenencia (un CUIL ajeno leído localmente
+  corta como E-RECIBO-04): es seguridad, no enmascarado.
+
 ## Estado actual (actualizado 2026-09-24)
 Todo lo listado acá está mergeado a `main` y desplegado en Pruebas (Render
 sigue `main`, cada push redeploya), **incluido el punto 21**, que ya se portó
@@ -972,6 +986,19 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    detrás de la variable `MOTOR_V2`. El avance ítem por ítem se lleva en el
    tablero compartido "Motor v2 · Avance"; el informe en lenguaje llano para
    analistas está en la landing `/entornos` (recurso `motor-recibos`).
+   **Antes va el paso cero: enmascarado** —plan acordado el 2026-09-24,
+   **bloques 1 a 4 hechos** (medido con la IA real: tapar no cambia la lectura);
+   **en Pruebas en modo sombra** desde el 2026-09-24, con los registros en
+   `/plataforma` → Uso de IA → Enmascarado (`enmascarado.py`, puro: qué se tapa;
+   `lectores.py`: PDF digital con pypdfium2 y fotos con Tesseract vía
+   `tesserocr`, sin Docker; `preparacion.py`: el enganche en las rutas,
+   con registro en `registroenmascarado`), [`PLAN_ENMASCARADO.md`](PLAN_ENMASCARADO.md)—: lo que
+   identifica a la persona (CUIL, nombre, DNI, legajo, cuenta, CUIT y razón
+   social) se tapa en el servidor antes de salir hacia la IA y la identidad se
+   rearma del lado nuestro. Es MEJOR ESFUERZO (ver Decisiones tomadas),
+   variable `ENMASCARADO` = `apagado`/`sombra`/`activo`. Absorbe el enganche
+   D7 del motor v2. Sale de una arquitectura de Chat del 2026-08-28 que nunca
+   se había bajado al repo (`docs/chat/2026-08-28-arquitectura-enmascarado-pii.md`).
 
 9. **Cuelgue del panel (2026-09-18, Pruebas): corregido y en Pruebas desde el
    2026-09-19** (PR #6). Causa y correcciones C1–C8 en
