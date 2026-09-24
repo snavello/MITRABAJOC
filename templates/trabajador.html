@@ -1186,7 +1186,7 @@
       <p style="margin-top:10px;"><b>Regla simple:</b> tu neto = tu bruto − tus aportes. El "costo laboral total" (bruto + contribuciones) es lo que le cuesta tu puesto al empleador, no lo que cobrás vos.</p>
 
       <h3>Qué mirar para detectar un problema</h3>
-      <p>Si algo que figura como "contribución patronal" también te aparece descontado de tu neto, o si la suma de tus descuentos no da lo que dice el recibo, conviene reportarlo desde la pestaña "Tu Recibo".</p>
+      <p>Si algo que figura como "contribución patronal" también te aparece descontado de tu neto, o si la suma de tus descuentos no da lo que dice el recibo, conviene reportarlo desde la pestaña "Mis Recibos".</p>
       </div>
     </div>
   </div>
@@ -1412,7 +1412,7 @@
 
 <!-- Barra de pestañas -->
 <nav class="tabbar">
-  {% if 'recibos' in modulos %}<button class="tab-t" data-tp="recibo"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg></span>Tu Recibo</button>{% endif %}
+  {% if 'recibos' in modulos %}<button class="tab-t" data-tp="recibo"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-recibo"/></svg></span>Mis Recibos</button>{% endif %}
   {% if marca and 'credencial' in modulos %}<button class="tab-t" data-tp="credencial"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-cred"/></svg></span>Credencial</button>{% endif %}
   {% if 'noticias' in modulos %}<button class="tab-t" data-tp="novedades"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-nov"/></svg></span>Novedades</button>{% endif %}
   {% if 'aportes' in modulos %}<button class="tab-t" data-tp="aportes"><span class="picon"><svg viewBox="0 0 24 24"><use href="#ic-aportes"/></svg></span>Mis Aportes</button>{% endif %}

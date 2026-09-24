@@ -239,7 +239,7 @@
          informaba nada al afiliado que él no supiera ya. #}
       <a class="pt-hero" href="/app">
         <span class="pt-hero-k">{% if recibos_resumen.ultimo_periodo %}Lo primero{% else %}Empezá por acá{% endif %}</span>
-        <span class="pt-hero-t">Tu recibo</span>
+        <span class="pt-hero-t">Mis recibos</span>
         {% if recibos_resumen.ultimo_periodo %}
         <span class="pt-hero-n num">{{ recibos_resumen.anio }}<small>{{ 'recibo verificado' if recibos_resumen.anio == 1 else 'recibos verificados' }} este año</small></span>
         <span class="pt-hero-e">{{ recibos_resumen.ultimo_periodo | periodo }} · {% if recibos_resumen.ultimo_estado == 'OK' %}sin diferencias{% else %}con diferencias para revisar{% endif %}</span>
