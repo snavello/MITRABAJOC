@@ -172,12 +172,30 @@ def test_pertenece():
 
 
 def test_un_cuil_mal_leido_no_hace_ajeno_el_recibo():
-    """El OCR leyó mal un dígito del CUIL propio: el verificador no da, así
-    que no es prueba de que el recibo sea de otro -- None, no False."""
+    """El OCR leyó mal un dígito del CUIL propio: a uno o dos dígitos no es
+    prueba de que el recibo sea de otro -- None, no False."""
     mal_leido = E.analizar([P("CUIL:", 10, 10, 60), P("27-28765481-1", 66, 10, 190)])
-    assert not E.dv_valido("27287654811")
-    assert mal_leido.cuiles == ["27287654811"]              # se tapa igual, por el rótulo
+    assert mal_leido.cuiles == ["27287654811"]              # se tapa igual
     assert E.pertenece(mal_leido, "27287654311") is None
+    dos = E.analizar([P("CUIL:", 10, 10, 60), P("27-28765481-7", 66, 10, 190)])
+    assert E.pertenece(dos, "27287654311") is None
+    tres = E.analizar([P("CUIL:", 10, 10, 60), P("27-28761481-7", 66, 10, 190)])
+    assert E.pertenece(tres, "27287654311") is False
+
+
+def test_cuil_de_la_demo_sin_modulo_11_se_tapa_por_su_formato():
+    """Los CUIL y CUIT de la demo no cumplen el módulo 11 (por ahora no se
+    valida): escritos con guiones se tapan igual, aun sin rótulo al lado."""
+    assert not E.dv_valido("20111111119") and not E.dv_valido("30999888776")
+    an = E.analizar([P("Afiliado", 10, 10, 90), P("20-11111111-9", 400, 10, 520),
+                     P("Empresa", 10, 60, 90), P("30-99988877-6", 400, 60, 520)])
+    assert an.cuiles == ["20111111119"] and an.cuits == ["30999888776"]
+    assert {k.tipo for k in an.cajas} == {"cuil", "cuit"}
+
+
+def test_once_cifras_pegadas_sin_verificador_ni_rotulo_no_se_tapan():
+    """Sin formato ni verificador ni rótulo, 11 cifras pueden ser un importe."""
+    assert E.analizar([P("Total", 10, 10), P("20111111119", 400, 10)]).cajas == []
 
 
 def test_control_de_fuga_reclama_lo_que_quedo_a_la_vista():
@@ -261,7 +279,6 @@ def test_recibo_sintetico(archivo, con_conocidos):
     assert E.control_de_fuga(pal, an.cajas, NIEVES) == []
     assert an.cuiles == ["27999999999"] and an.cuits == ["30444640975"]
     assert E.pertenece(an, "27999999999") is True
-    # Para otra sesión NO se puede afirmar que sea ajeno: el CUIL ficticio de
-    # estos recibos tiene verificador inválido, y solo uno válido prueba que
-    # el recibo es de otra persona (un CUIL real siempre lo tiene).
-    assert E.pertenece(an, "20111111119") is None
+    # Para otra sesión es ajeno, aunque el CUIL ficticio no cumpla el módulo
+    # 11 (por ahora no se valida): difiere en más de dos dígitos.
+    assert E.pertenece(an, "20111111119") is False

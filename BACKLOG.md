@@ -4,6 +4,20 @@ Anotaciones para no desviar el bloque de trabajo en curso (ver "Backlog
 técnico" en la memoria del proyecto). Cada ítem se tacha o se borra cuando
 se hace.
 
+- [ ] **Validar el módulo 11 (dígito verificador) de CUIL y CUIT** (2026-09-24,
+  decisión de SDN al construir el enmascarado: "por ahora no lo testeamos,
+  lo anotamos para cuando avancemos en ese tema"). Hoy la app no valida el
+  verificador en ningún lado, y **ninguno de los CUIL/CUIT de la demo lo
+  cumple** (20111111119, 27222222224, 30999888776, 30111222339, los de los
+  admins...). Por eso el enmascarado NO depende de él: tapa lo que viene
+  con formato de CUIL (`enmascarado.parece_cuil`) y decide que un recibo es
+  ajeno por distancia (3 o más dígitos distintos, `distintos_de_verdad`) en
+  vez de por verificador. Cuando se valide: (1) sembrar la demo con CUIL y
+  CUIT válidos (`cargar_demo.py`, `cargar_lote_*`, `IDENTIDAD_FICTICIA` de
+  los sintéticos) -- los tests y los accesos de CLAUDE.md usan esos números;
+  (2) validar en el alta y el registro; (3) volver a exigir el verificador
+  en `enmascarado.pertenece`, que es más firme que la distancia.
+
 - [ ] **El empleador quedó con el defecto que se le corrigió al trabajador**
   (2026-09-22, al terminar "Una persona, un domicilio" en HISTORIAL.md).
   `Empleador` es una fila POR SINDICATO y ahí viven `razon_social`,

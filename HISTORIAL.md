@@ -6004,3 +6004,19 @@ activo tapa y rearma, ajeno cortado sin llamar a la IA, sombra no cambia
 nada, un error del enmascarado no frena el recibo). Probado además el camino
 de fotos con Tesseract real en Linux: 17 zonas tapadas, 0 fugas, 1,3 s.
 Trabajador 0.42.01, Admin 0.46.01.
+
+### Sin módulo 11, por ahora (2026-09-24)
+
+SDN: por ahora no se valida el dígito verificador de CUIL/CUIT; queda en
+BACKLOG.md para cuando se avance. Y ninguno de los CUIL/CUIT de la demo lo
+cumple, así que el enmascarado dejó de depender de él en los dos lugares
+donde lo usaba:
+
+- **Detectar**: un número con formato de CUIL/CUIT (con separadores y
+  prefijo válido) se tapa aunque no cumpla el verificador. Once cifras
+  pegadas y sin rótulo siguen necesitándolo: podrían ser un importe
+  (`enmascarado.parece_cuil`).
+- **Recibo ajeno**: en vez del verificador, el CUIL leído tiene que diferir
+  del de la sesión en **3 dígitos o más** (`distintos_de_verdad`). Un error
+  del OCR cambia uno, rara vez dos: a esa distancia es el propio mal leído y
+  el recibo sigue.

@@ -183,8 +183,10 @@ def _textos(an: E.Analisis, tipo: str) -> str:
 def _cuil_propio_o_valido(an: E.Analisis, conocidos: E.Conocidos | None):
     if conocidos and conocidos.cuil and an.cuil_sesion_encontrado:
         return re.sub(r"\D", "", conocidos.cuil)
-    validos = [c for c in an.cuiles if E.dv_valido(c)]
-    return validos[0] if validos else None
+    # El primer CUIL de persona leído (sin exigir el módulo 11, que por ahora
+    # no se valida: los de la demo no lo cumplen).
+    personas = [c for c in an.cuiles if c[:2] in E.PREFIJOS_PERSONA]
+    return personas[0] if personas else None
 
 
 def rearmar_recibo(recibo: dict, an: E.Analisis, conocidos: E.Conocidos | None,

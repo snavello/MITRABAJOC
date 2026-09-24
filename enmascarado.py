@@ -13,8 +13,10 @@ Tres detectores que se suman, porque ninguno alcanza solo:
    empleador. Buscar un texto conocido es mucho más confiable que reconocer
    uno desconocido.
 2. **Patrones argentinos**: un número de 11 dígitos con prefijo de CUIL/CUIT
-   Y dígito verificador válido. El verificador es lo que impide tapar un
-   importe que por casualidad tenga 11 cifras.
+   escrito con separadores ("27-99999999-9") o con dígito verificador válido
+   (`parece_cuil`). Once cifras pegadas y sin rótulo necesitan el
+   verificador: si no, podrían ser un importe. Por ahora NO se exige el
+   módulo 11 a lo que viene con formato (SDN, 2026-09-24).
 3. **Rótulos**: el valor que acompaña a "CUIL", "Apellido y nombre",
    "Legajo", "DNI", "Cuenta", "Razón social"... (en la misma frase, a la
    derecha o en la fila de abajo). Es lo que cubre al aprendizaje del admin,
@@ -160,6 +162,28 @@ def dv_valido(once: str) -> bool:
     r = 11 - s % 11
     r = 0 if r == 11 else r
     return r != 10 and r == int(once[10])
+
+
+def parece_cuil(crudo: str, once: str) -> bool:
+    """¿Este número de 11 dígitos es un CUIL/CUIT? Prefijo de persona o de
+    empresa, y además: el FORMATO (escrito con separadores, "27-99999999-9")
+    o el dígito verificador. **No depende del módulo 11** (SDN, 2026-09-24:
+    por ahora no se valida, y los CUIL y CUIT de la demo no lo cumplen); un
+    número de 11 cifras pegadas y sin rótulo sí lo necesita, porque si no
+    podría ser un importe."""
+    if not (_es_persona(once) or _es_empresa(once)):
+        return False
+    return bool(re.search(r"\d[\s\-./:]+\d", crudo)) or dv_valido(once)
+
+
+def distintos_de_verdad(a: str, b: str) -> bool:
+    """¿Dos CUIL son de personas distintas y no el mismo mal leído? Un error
+    del OCR cambia un dígito, rara vez dos: tres o más ya es otro número.
+    Reemplaza al dígito verificador mientras no se valide el módulo 11."""
+    a, b = _digitos(a), _digitos(b)
+    if len(a) != 11 or len(b) != 11:
+        return False
+    return sum(x != y for x, y in zip(a, b)) >= 3
 
 
 def _es_persona(once: str) -> bool:
@@ -494,9 +518,10 @@ def _vecina(r: _Frase, frases: list[_Frase], rotuladas: set[int], yo: int,
 
 
 def _identidades(f: _Frase):
-    """(once, [índices de palabras]) de cada número de 11 dígitos de la frase."""
+    """(once, texto crudo, [índices de palabras]) de cada número de 11
+    dígitos de la frase. El crudo dice si venía escrito con separadores."""
     for m in _RE_ONCE.finditer(f.texto):
-        yield _digitos(m.group()), f.palabras_en(m.start(), m.end())
+        yield _digitos(m.group()), m.group(), f.palabras_en(m.start(), m.end())
 
 
 def _dnis(f: _Frase):
@@ -533,9 +558,9 @@ def analizar(palabras: list[Palabra], conocidos: Conocidos | None = None) -> Ana
 
     # 1 y 2: lo conocido y los patrones.
     for f in frases:
-        for once, idx in _identidades(f):
+        for once, crudo, idx in _identidades(f):
             conocido = bool(cuil_s) and once == cuil_s
-            if conocido or (dv_valido(once) and (_es_persona(once) or _es_empresa(once))):
+            if conocido or parece_cuil(crudo, once):
                 tipo = "cuit" if _es_empresa(once) else "cuil"
                 marcar(idx, tipo, "conocido" if conocido else "patron")
                 leido(once, tipo)
@@ -625,18 +650,19 @@ def analizar(palabras: list[Palabra], conocidos: Conocidos | None = None) -> Ana
 
 def pertenece(analisis: Analisis, cuil_sesion: str) -> bool | None:
     """¿El documento es de quien lo sube? True: su CUIL está. False: hay OTRO
-    CUIL de persona **con dígito verificador válido** y el suyo no. None: no
-    se puede afirmar nada (no se leyó ningún CUIL, o solo uno inválido junto
-    a su rótulo).
+    CUIL de persona **distinto de verdad** (3 dígitos o más, ver
+    `distintos_de_verdad`) y el suyo no. None: no se puede afirmar nada (no
+    se leyó ningún CUIL, o solo uno a uno o dos dígitos del propio).
 
-    El verificador es lo que evita rechazarle a alguien su propio recibo por
-    un dígito que el OCR leyó mal: un CUIL mal leído casi nunca tiene el
-    verificador bien. Con None el recibo sigue su camino (mejor esfuerzo) y
-    los chequeos de siempre sobre lo que devuelve la IA siguen en pie."""
+    La distancia es lo que evita rechazarle a alguien su propio recibo por un
+    dígito que el OCR leyó mal. No se usa el dígito verificador porque por
+    ahora no se valida el módulo 11 (SDN, 2026-09-24). Con None el recibo
+    sigue su camino (mejor esfuerzo) y los chequeos de siempre sobre lo que
+    devuelve la IA siguen en pie."""
     cuil = _digitos(cuil_sesion)
     if cuil in analisis.cuiles:
         return True
-    ajenos = [c for c in analisis.cuiles if dv_valido(c) and _es_persona(c)]
+    ajenos = [c for c in analisis.cuiles if _es_persona(c) and distintos_de_verdad(c, cuil)]
     return False if ajenos else None
 
 
@@ -666,8 +692,8 @@ def control_de_fuga(palabras: list[Palabra], cajas: list[Caja],
             fugas.append(f"página {palabras[visibles[0]].pagina + 1}: {motivo}")
 
     for f in _frases(palabras):
-        for once, idx in _identidades(f):
-            if (cuil_s and once == cuil_s) or (dv_valido(once) and (_es_persona(once) or _es_empresa(once))):
+        for once, crudo, idx in _identidades(f):
+            if (cuil_s and once == cuil_s) or parece_cuil(crudo, once):
                 revisar(idx, "CUIL/CUIT")
         if dni_s:
             for dni, idx in _dnis(f):
