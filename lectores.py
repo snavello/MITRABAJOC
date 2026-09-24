@@ -11,15 +11,22 @@ Dos caminos, según el archivo:
   proceso (medición en HISTORIAL.md, "el OCR de las fotos es Tesseract").
 
 **Mejor esfuerzo** (CLAUDE.md, decisión del 2026-09-24): leer para tapar
-nunca estorba al análisis del recibo. Por eso `leer_foto()` no espera ni
-levanta excepciones: si no hay OCR (Windows, donde tesserocr no tiene
-rueda), si el cupo está lleno o si Tesseract se pasa de su tiempo máximo,
-devuelve el MOTIVO y quien llama manda el recibo sin tapar y lo registra.
+nunca estorba al análisis del recibo. Por eso `leer_foto()` no levanta
+excepciones y tiene un PRESUPUESTO de tiempo: si no hay OCR (Windows, donde
+tesserocr no tiene rueda), si no se libera un lector a tiempo o si Tesseract
+se come el resto del presupuesto, devuelve el MOTIVO y quien llama manda el
+recibo sin tapar y lo registra.
 
 Variables de entorno:
-- `ENMASCARADO_CUPO` (2): lecturas de fotos simultáneas por proceso. La que
-  no entra NO espera turno.
-- `ENMASCARADO_OCR_MS` (4000): tiempo máximo de Tesseract por página.
+- `ENMASCARADO_CUPO` (1): lecturas de fotos simultáneas por proceso. UNA,
+  porque en Render hay un proceso por núcleo: dos lecturas en el mismo núcleo
+  no leen más, se estorban. Medido con 4 núcleos y 4 procesos: una ráfaga de
+  10 fotos tapó 10 con 1 lector y 8 con 2; una de 20, 12 contra 2.
+- `ENMASCARADO_PRESUPUESTO_MS` (5000): lo máximo que una foto le puede sumar
+  a la espera, contando la fila y la lectura (tope de SDN, 2026-09-24).
+- `ENMASCARADO_ESPERA_MS` (3000): de ese presupuesto, lo máximo que se espera
+  a que se libere un lector. Lo que sobra es para leer (nunca menos de 1 s).
+  Sin esta fila, una ráfaga de 10 fotos dejaba 8 sin tapar.
 """
 from __future__ import annotations
 
@@ -27,6 +34,7 @@ import io
 import os
 import queue
 import threading
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -53,8 +61,10 @@ def _entero(nombre: str, defecto: int) -> int:
         return defecto
 
 
-CUPO = _entero("ENMASCARADO_CUPO", 2)
-OCR_MS = _entero("ENMASCARADO_OCR_MS", 4000)
+CUPO = _entero("ENMASCARADO_CUPO", 1)
+PRESUPUESTO_MS = _entero("ENMASCARADO_PRESUPUESTO_MS", 5000)
+ESPERA_MS = min(_entero("ENMASCARADO_ESPERA_MS", 3000), PRESUPUESTO_MS - 1000)
+LECTURA_MINIMA_MS = 1000
 
 
 # ======================= PDF digital =======================
@@ -138,10 +148,14 @@ def abrir_imagen(contenido: bytes):
 @dataclass
 class LecturaFoto:
     """Resultado de leer una foto. `motivo` es "ok" o por qué no se leyó:
-    "sin_ocr" (Tesseract no está), "sin_lugar" (cupo lleno), "tiempo" (se
-    pasó de OCR_MS) o "error". Solo con "ok" hay palabras."""
+    "sin_ocr" (Tesseract no está), "sin_lugar" (no se liberó un lector
+    dentro de ESPERA_MS), "tiempo" (la lectura se comió el presupuesto) o
+    "error". Solo con "ok" hay palabras. `espera_ms` y `lectura_ms` son lo
+    que costó cada parte: van al registro del modo sombra."""
     motivo: str
     palabras: list[Palabra] = field(default_factory=list)
+    espera_ms: int = 0
+    lectura_ms: int = 0
 
 
 _motores: "queue.Queue" = queue.Queue()
@@ -173,8 +187,9 @@ def _crear_motor():
     return api
 
 
-def _tomar_motor():
-    """Un motor libre, o None si ya hay CUPO lecturas en curso. No espera."""
+def _tomar_motor(espera_s: float = 0.0):
+    """Un motor libre. Si ya hay CUPO lecturas en curso, espera a que se
+    libere uno hasta `espera_s` segundos; si no se libera, None."""
     global _creados
     try:
         return _motores.get_nowait()
@@ -182,8 +197,15 @@ def _tomar_motor():
         pass
     with _candado:
         if _creados >= CUPO:
+            lleno = True
+        else:
+            lleno = False
+            _creados += 1
+    if lleno:
+        try:
+            return _motores.get(timeout=espera_s) if espera_s > 0 else None
+        except queue.Empty:
             return None
-        _creados += 1
     try:
         return _crear_motor()
     except Exception:
@@ -204,24 +226,31 @@ def precargar():
             pass
 
 
-def leer_foto(imagen, ocr_ms: int | None = None) -> LecturaFoto:
-    """Palabras de una imagen PIL, en sus píxeles. Nunca espera un lugar ni
-    levanta excepciones: ver `LecturaFoto.motivo`."""
+def leer_foto(imagen, presupuesto_ms: int | None = None) -> LecturaFoto:
+    """Palabras de una imagen PIL, en sus píxeles. Nunca levanta excepciones
+    ni se pasa del presupuesto (PRESUPUESTO_MS, o el que se pase): ver
+    `LecturaFoto.motivo`."""
     if not ocr_disponible():
         return LecturaFoto("sin_ocr")
+    presupuesto = presupuesto_ms or PRESUPUESTO_MS
+    inicio = time.perf_counter()
     try:
-        motor = _tomar_motor()
+        motor = _tomar_motor(min(ESPERA_MS, presupuesto - LECTURA_MINIMA_MS) / 1000)
     except Exception:
         return LecturaFoto("error")
+    espera = int((time.perf_counter() - inicio) * 1000)
     if motor is None:
-        return LecturaFoto("sin_lugar")
+        return LecturaFoto("sin_lugar", espera_ms=espera)
     try:
         f = min(1.0, LADO_MAXIMO_OCR / max(imagen.size))
         chica = imagen if f == 1.0 else imagen.resize(
             (round(imagen.width * f), round(imagen.height * f)))
         motor.SetImage(chica)
-        if not motor.Recognize(ocr_ms or OCR_MS):
-            return LecturaFoto("tiempo")
+        # Lo que quedó del presupuesto después de la fila, y nunca menos del mínimo.
+        ok = motor.Recognize(max(LECTURA_MINIMA_MS, presupuesto - espera))
+        lectura = int((time.perf_counter() - inicio) * 1000) - espera
+        if not ok:
+            return LecturaFoto("tiempo", espera_ms=espera, lectura_ms=lectura)
         from tesserocr import RIL, iterate_level
 
         palabras = []
@@ -231,9 +260,9 @@ def leer_foto(imagen, ocr_ms: int | None = None) -> LecturaFoto:
             if texto and caja:
                 x0, y0, x1, y1 = caja
                 palabras.append(Palabra(texto, x0 / f, y0 / f, x1 / f, y1 / f, 0))
-        return LecturaFoto("ok", palabras)
+        return LecturaFoto("ok", palabras, espera, lectura)
     except Exception:
-        return LecturaFoto("error")
+        return LecturaFoto("error", espera_ms=espera)
     finally:
         try:
             motor.Clear()

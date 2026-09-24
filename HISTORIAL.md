@@ -5926,3 +5926,27 @@ es pasar dos páginas a imagen); con un núcleo sobra.
 
 Tests: `test_lectores.py` (11; los dos de Tesseract real se saltean en
 Windows) y `test_enmascarado.py` (54). En Linux corren los 65.
+
+### Ráfagas: presupuesto de 5 s y un lector por proceso (2026-09-24)
+
+Con el cupo que no esperaba, una ráfaga de 10 fotos dejaba 8 sin tapar: más
+que una excepción. SDN extendió el criterio a **5 s por foto** y pidió
+mirarlo además en Pruebas. Quedó así:
+
+- **Presupuesto** (`ENMASCARADO_PRESUPUESTO_MS`, 5000): lo máximo que una foto
+  suma, fila más lectura. Hasta `ENMASCARADO_ESPERA_MS` (3000) esperando un
+  lector libre; lo que queda es para leer (nunca menos de 1 s). Pasado el
+  presupuesto, sale sin tapar y se registra.
+- **Un lector por proceso** (`ENMASCARADO_CUPO` = 1). Medido en un
+  contenedor con 4 núcleos y 4 procesos (la forma de Render: un proceso por
+  núcleo): ráfaga de 10, **10 tapadas** en 3,3 s como máximo con 1 lector
+  contra 8 con 2; ráfaga de 20, 12 contra 2. Con dos lectores en el mismo
+  núcleo cada lectura pasó de 0,8 s a 2,6 s de CPU: no leen más, se estorban.
+- La configuración de producción que dejaron las pruebas de estrés (web en
+  2 instancias de 4 CPU, 8 procesos) reparte una ráfaga de 20 en 2 o 3 fotos
+  por proceso, la misma proporción que la ráfaga de 10 sobre 4 procesos.
+- **Lo que queda para Pruebas**: con medio núcleo y un proceso, una ráfaga
+  deja fotos sin tapar (por capacidad: ~1,3 fotos por segundo por núcleo).
+  Lo mide el modo sombra (bloque 5) con datos reales, y el número de la
+  notebook no se usa para proyectar: con todos sus núcleos ocupados la CPU
+  por lectura se triplica.

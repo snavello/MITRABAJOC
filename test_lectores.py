@@ -8,6 +8,8 @@ sostienen la regla de mejor esfuerzo: nunca esperan ni levantan excepción.
 """
 import io
 import json
+import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -98,14 +100,29 @@ def test_sin_ocr_no_lee_y_no_falla(monkeypatch):
     assert lectores.leer_foto(Image.new("RGB", (50, 50))).motivo == "sin_ocr"
 
 
-def test_cupo_lleno_no_espera(ocr_simulado):
-    """Con el cupo tomado, la foto siguiente NO hace fila: vuelve enseguida
-    con "sin_lugar" y el recibo sale sin tapar."""
+def test_cupo_lleno_espera_hasta_su_tope_y_sale_sin_lugar(ocr_simulado):
+    """Con el cupo tomado y nadie que lo libere, la foto espera a lo sumo
+    ESPERA_MS y vuelve con "sin_lugar": el recibo sale sin tapar."""
     ocr_simulado.setattr(lectores, "CUPO", 1)
+    ocr_simulado.setattr(lectores, "ESPERA_MS", 200)
     ocr_simulado.setattr(lectores, "_crear_motor", lambda: MotorFalso())
-    tomado = lectores._tomar_motor()            # una lectura en curso
-    assert tomado is not None
-    assert lectores.leer_foto(Image.new("RGB", (50, 50))).motivo == "sin_lugar"
+    assert lectores._tomar_motor() is not None            # una lectura en curso
+    t = time.perf_counter()
+    r = lectores.leer_foto(Image.new("RGB", (50, 50)))
+    assert r.motivo == "sin_lugar" and 0.15 < time.perf_counter() - t < 1.0
+
+
+def test_cupo_lleno_toma_el_lector_que_se_libera(ocr_simulado):
+    """La fila existe para que una ráfaga no deje casi todo sin tapar: si el
+    lector se libera dentro de la espera, la foto se lee."""
+    ocr_simulado.setattr(lectores, "CUPO", 1)
+    ocr_simulado.setattr(lectores, "ESPERA_MS", 2000)
+    ocr_simulado.setattr(lectores, "_crear_motor", lambda: MotorFalso(reconoce=False))
+    tomado = lectores._tomar_motor()
+    threading.Timer(0.2, lambda: lectores._motores.put(tomado)).start()
+    r = lectores.leer_foto(Image.new("RGB", (50, 50)))
+    # MotorFalso(reconoce=False) -> "tiempo": lo que importa es que LLEGÓ a leer.
+    assert r.motivo == "tiempo" and r.espera_ms >= 150
 
 
 def test_tiempo_agotado(ocr_simulado):

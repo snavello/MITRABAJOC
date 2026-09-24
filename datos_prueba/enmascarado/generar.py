@@ -150,7 +150,7 @@ def _ocr_pdf(ruta: Path):
     imagenes = lectores.imagenes_pdf(ruta.read_bytes())
     paginas = []
     for n, img in enumerate(imagenes):
-        lectura = lectores.leer_foto(img, ocr_ms=60000)
+        lectura = lectores.leer_foto(img, presupuesto_ms=60000)
         if lectura.motivo != "ok":
             raise SystemExit(f"{ruta.name}: el OCR no leyó ({lectura.motivo})")
         paginas.append([dataclasses.replace(p, pagina=n) for p in lectura.palabras])
