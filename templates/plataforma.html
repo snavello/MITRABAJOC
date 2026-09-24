@@ -664,6 +664,8 @@
         </div>
       </div>
     </div>
+    <label class="chk-modulo" style="margin:4px 0 12px;"><input type="checkbox" id="prueba-tapado">
+      Comparar también con el documento tapado <span class="muted" style="font-size:11px;">(cada modelo lee dos veces: el original y la versión con los datos personales tapados)</span></label>
     <button type="button" id="prueba-btn" onclick="correrPrueba()">Probar con los modelos tildados</button>
     <span class="muted" id="prueba-estado" style="margin-left:10px;"></span>
   </div>
@@ -870,13 +872,17 @@ async function correrPrueba() {
   const elegidos = [...document.querySelectorAll('.prueba-modelo:checked')].map(c => c.value);
   if (!inp.files.length) { estado.textContent = 'Elegí un archivo primero.'; return; }
   if (!elegidos.length) { estado.textContent = 'Tildá al menos un modelo.'; return; }
-  const veces = elegidos.length === 1 ? 'una vez' : elegidos.length + ' veces';
-  if (!confirm('Se va a llamar a la API ' + veces + ' con ese archivo, una por modelo. ' +
-               'Cada llamada gasta créditos de verdad. ¿Seguimos?')) return;
+  const tapado = document.getElementById('prueba-tapado').checked;
+  const n = elegidos.length * (tapado ? 2 : 1);
+  const veces = n === 1 ? 'una vez' : n + ' veces';
+  if (!confirm('Se va a llamar a la API ' + veces + ' con ese archivo' +
+               (tapado ? ' (cada modelo, con el original y con el tapado)' : ', una por modelo') +
+               '. Cada llamada gasta créditos de verdad. ¿Seguimos?')) return;
   const fd = new FormData();
   fd.append('archivo', inp.files[0]);
   fd.append('tipo', document.getElementById('prueba-tipo').value);
   elegidos.forEach(m => fd.append('modelos', m));
+  if (tapado) fd.append('tapado', '1');
   btn.disabled = true;
   estado.textContent = 'Leyendo el archivo con ' + elegidos.length +
     (elegidos.length === 1 ? ' modelo…' : ' modelos en paralelo…');
@@ -935,8 +941,30 @@ function pintarPrueba(data) {
            'diferencia: la app los normaliza antes de usarlos.'
          : 'Ningún modelo pudo leer el archivo.') +
     '</p><div class="tabla-ancha"><table>' + cab + filas.join('') + '</table></div>' +
-    tablaLineas(data, ms) +
+    tablaLineas(data, ms) + bloqueTapado(data.enmascarado) +
     (crudos ? '<div class="card">' + crudos + '</div>' : '');
+}
+
+/* La imagen tal como la recibe la IA, y cómo salió el tapado. Si no se pudo
+   tapar, el motivo: el banco es el lugar donde eso se tiene que ver. */
+function bloqueTapado(e) {
+  if (!e) return '';
+  const motivos = {sin_ocr: 'no hay lector de fotos en este servidor', sin_lugar: 'el lector estaba ocupado',
+                   tiempo: 'la lectura se pasó de su tiempo', sin_palabras: 'no se encontró texto',
+                   tipo_no_soportado: 'tipo de archivo no soportado'};
+  const caminos = {pdf_texto: 'PDF con texto (sin OCR)', pdf_imagen: 'PDF escaneado (OCR)', foto: 'foto (OCR)'};
+  const dato = (r, v) => '<div><span class="muted" style="font-size:11px;">' + r + '</span><br>' +
+    '<strong style="font-family:ui-monospace,Consolas,monospace; font-variant-numeric:tabular-nums;">' + v + '</strong></div>';
+  const cabeza = '<div style="display:flex; gap:24px; flex-wrap:wrap; margin:6px 0 12px;">' +
+    dato('Camino', escHTML(caminos[e.camino] || e.camino || '—')) +
+    dato('Zonas tapadas', e.cajas ?? '—') + dato('Fugas', e.fugas ?? '—') +
+    dato('Tiempo del tapado', ((e.total_ms || 0) / 1000).toFixed(1).replace('.', ',') + ' s') + '</div>';
+  const cuerpo = e.tapado && e.imagen
+    ? '<img src="' + e.imagen + '" alt="El documento tal como lo recibe la IA" ' +
+      'style="max-width:100%; border:1px solid var(--linea); border-radius:12px; background:#fff;">'
+    : '<p class="muted">No se tapó: ' + escHTML(motivos[e.motivo] || e.motivo || 'no se encontró nada que tapar') +
+      '. En la app, el recibo sigue igual y se manda sin tapar (mejor esfuerzo).</p>';
+  return '<h2 style="margin-top:22px;">Así lo recibe la IA</h2>' + cabeza + cuerpo;
 }
 
 /* La comparación línea por línea. Es la que contesta lo que el resumen deja

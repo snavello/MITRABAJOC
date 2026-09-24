@@ -3763,6 +3763,67 @@ def seccional_de_trabajador(cuil: str, sindicato_id: int) -> Optional[int]:
         return t.seccional_id if t else None
 
 
+class RegistroEnmascarado(SQLModel, table=True):
+    """Una fila por documento que pasó por el enmascarado en modo sombra o
+    activo (preparacion.py): si se tapó, qué camino tomó y, si no se pudo,
+    por qué. Es el "log para análisis posterior" de la decisión de mejor
+    esfuerzo, y lo que dice en Pruebas cuántas fotos quedan sin tapar en una
+    ráfaga.
+
+    **Sin ningún dato personal a propósito**: ni CUIL, ni nombre, ni texto
+    del documento -- la tabla existe para medir la protección de esos datos
+    y no puede ser un lugar más donde queden."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    fecha: str = ""                  # "AAAA-MM-DD HH:MM", hora de Buenos Aires
+    sindicato_id: Optional[int] = Field(default=None, foreign_key="sindicato.id", index=True)
+    tipo: str = ""                   # "recibo" | "aportes" | "aprendizaje"
+    modo: str = ""                   # "sombra" | "activo"
+    camino: str = ""                 # "pdf_texto" | "pdf_imagen" | "foto" | "otro"
+    motivo: str = ""                 # "ok" | "sin_ocr" | "sin_lugar" | "tiempo" | "sin_palabras" | "error:..."
+    tapado: bool = False             # si lo que viajó iba tapado
+    cajas: int = 0                   # zonas tapadas (o que se habrían tapado, en sombra)
+    fugas: int = 0                   # lo que el control de fuga vio a la vista
+    cuil_encontrado: Optional[bool] = None
+    pertenece: Optional[bool] = None # None: no se pudo afirmar
+    espera_ms: int = 0               # fila por un lector de OCR libre
+    lectura_ms: int = 0              # OCR
+    total_ms: int = 0                # todo el paso, de punta a punta
+
+
+def registrar_enmascarado(sindicato_id: Optional[int], tipo: str, registro: dict) -> None:
+    """Guarda el registro de `preparacion.preparar`. NUNCA levanta: es un
+    registro para mirar después y no puede tumbar la lectura de un recibo
+    (mejor esfuerzo), ni siquiera si la tabla todavía no existe porque la
+    migración no corrió."""
+    if not registro:
+        return
+    try:
+        campos = {k: registro.get(k) for k in (
+            "modo", "camino", "motivo", "tapado", "cajas", "fugas", "cuil_encontrado",
+            "pertenece", "espera_ms", "lectura_ms", "total_ms") if registro.get(k) is not None}
+        with Session(engine) as s:
+            s.add(RegistroEnmascarado(fecha=fechas.ahora_texto(), sindicato_id=sindicato_id,
+                                      tipo=tipo, **campos))
+            s.commit()
+    except Exception as e:
+        print(f"[enmascarado] no se pudo registrar ({type(e).__name__})")
+
+
+def razon_social_de_cuit(sindicato_id: Optional[int], cuit: str) -> Optional[str]:
+    """La razón social con que el sindicato tiene cargado a ese empleador,
+    para rearmar el recibo cuando se le tapó a la IA. None si no está."""
+    cuit = "".join(c for c in (cuit or "") if c.isdigit())
+    if not cuit or not sindicato_id:
+        return None
+    try:
+        with Session(engine) as s:
+            e = s.exec(select(Empleador).where(Empleador.sindicato_id == sindicato_id,
+                                               Empleador.cuit == cuit)).first()
+            return (e.razon_social or None) if e else None
+    except Exception:
+        return None
+
+
 def registrar_uso_ia(sindicato_id: Optional[int], cuil: str, tipo: str,
                       modelo: str, tokens_entrada: int, tokens_salida: int,
                       duracion_ms: int = 0) -> None:

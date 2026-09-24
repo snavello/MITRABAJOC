@@ -23,3 +23,11 @@ httpx==0.28.1
 # Errores no previstos a Sentry, sin datos personales (sentry_config.py). Pinneado exacto: el
 # filtrado depende de la forma del evento, y un cambio del SDK puede dejar pasar un campo.
 sentry-sdk==2.69.2
+
+# Enmascarado (PLAN_ENMASCARADO.md): pypdfium2 lee el texto de un PDF digital con
+# su posición y lo pasa a imagen (Apache/BSD; PyMuPDF es AGPL). tesserocr trae
+# Tesseract 5.5.1 ADENTRO de su rueda de Linux: pip en el Render nativo, sin
+# Docker. No hay rueda para Windows: ahí el OCR de fotos queda apagado (mejor
+# esfuerzo, ver lectores.py) y se prueba en Docker. El idioma, data/tessdata/.
+pypdfium2==5.13.0
+tesserocr==2.11.0; sys_platform == "linux"
