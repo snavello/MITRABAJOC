@@ -987,8 +987,9 @@
   .enq-rank-res .nom { flex:1; }
   .enq-rank-res .det { color:var(--gris); font-size:12px; text-align:right; }
 </style>
+{% include "_fondo_interior.html" %}
 </head>
-<body>
+<body class="mesa">
 {% include "_entorno.html" %}
 {# Encabezado normalizado (marca.css + _encabezado.html). La pantalla de la
    derecha la va escribiendo activarPestana() más abajo. #}
@@ -1008,7 +1009,7 @@
 </div>
 {% endif %}
 
-<div class="cont">
+<div class="cont hoja">
 
   <!-- ============ PESTAÑA: TU RECIBO ============ -->
   {% if 'recibos' in modulos %}
