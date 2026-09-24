@@ -81,7 +81,7 @@ class Caja:
     pagina: int
     tipo: str
     texto: str
-    motivo: str  # "conocido" | "patron" | "rotulo" | "forma_juridica" | "aprendido" | "fila_identidad"
+    motivo: str  # "conocido" | "patron" | "rotulo" | "forma_juridica" | "aprendido" | "fila_identidad" (mixto)
 
 
 @dataclass(frozen=True)
@@ -111,6 +111,9 @@ ETIQUETAS = {
     "legajo": "LEGAJO OCULTO",
     "cuenta": "CUENTA OCULTA",
     "razon_social": "EMPLEADOR OCULTO",
+    # Lo que se tapa por estar en la fila de la identidad: no se sabe qué es
+    # (el legajo casi siempre, a veces un código interno), así que no se dice.
+    "dato": "DATO OCULTO",
 }
 
 # ======================= Normalización =======================
@@ -152,6 +155,18 @@ _SEP = r"\s?[\-./:]?\s?"   # ":" -- Tesseract a veces lee así el guion
 _RE_ONCE = re.compile(r"(?<!\d)\d{2}" + _SEP + r"\d{8}" + _SEP + r"\d(?!\d)")
 # DNI: 7 u 8 dígitos, con o sin puntos de miles ("28.765.431", "28. 765. 431").
 _RE_FECHA = re.compile(r"\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}")
+# Un período: "07/2025", "2025-07".
+_RE_PERIODO = re.compile(r"(?<!\d)(\d{1,2}[/.-](19|20)\d\d|(19|20)\d\d[/.-]\d{1,2})(?!\d)")
+_MESES = {"ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO",
+          "SEPTIEMBRE", "SETIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"}
+
+
+def _es_lista_blanca(texto: str) -> bool:
+    """Lo que la IA necesita para evaluar el recibo y el enmascarado mixto no
+    tapa nunca, aunque esté en la fila de la identidad: fechas, períodos,
+    años e importes."""
+    return bool(parece_importe(texto) or _RE_FECHA.search(texto) or _RE_PERIODO.search(texto)
+                or re.fullmatch(r"(19|20)\d\d", _digitos(texto)))
 _RE_DNI = re.compile(r"(?<!\d)\d{1,2}\s?\.?\s?\d{3}\s?\.?\s?\d{3}(?!\d)")
 
 
@@ -647,19 +662,42 @@ def analizar(palabras: list[Palabra], conocidos: Conocidos | None = None) -> Ana
                 if tipo in ("cuil", "cuit"):
                     leido(_digitos(frases[k].texto), tipo)
 
-    # 3b: la FILA de la identidad. En la línea donde está el nombre o el CUIL
-    # de la persona (fuera de la tabla), un número de 4+ cifras que no es
-    # fecha ni importe es otro dato suyo: el legajo casi siempre. Cubre el
-    # rótulo ilegible (el OCR leyó "Legajo" como "2" en una foto real).
-    ancla = [k for k in marcadas.values() if k.tipo in ("nombre", "cuil")]
+    # 3b: TAPAR ALREDEDOR DE LO ENCONTRADO (enfoque mixto, SDN 2026-09-24;
+    # ver docs/ENMASCARADO.md). No se tapa "todo el encabezado": solo la
+    # vecindad de lo que ya se sabe que es identidad, porque tapar de más le
+    # saca a la IA lo que necesita para evaluar (período, fechas, categoría).
+    en_tabla = lambda p: any(y0 <= p.cy < y1 for y0, y1 in zonas.get(p.pagina, []))
+
+    # (a) La FRASE del nombre, entera menos su rótulo: si en "NAVELLO, SANDRO
+    # DANILO" se reconocieron dos partes, la del medio también es el nombre
+    # aunque el OCR la haya leído irreconocible.
+    for f in frases:
+        if _en_tabla(f, zonas) or not any(i in marcadas and marcadas[i].tipo == "nombre" for i in f.idx):
+            continue
+        rotulo = [(a, b) for _, a, b in _rotulos_de(f)]
+        for i, (a, b) in zip(f.idx, f.tramos):
+            t = palabras[i].texto
+            # Mayormente letras: la basura del OCR sobre un logo mezcla ("SANDR0").
+            if (i in marcadas or len(_letras(t)) < 2 or len(_digitos(t)) > len(_letras(t))
+                    or _es_lista_blanca(t)
+                    or any(a < fin and b > ini for ini, fin in rotulo)
+                    or _letras(t) in _MESES):
+                continue
+            marcar([i], "nombre", "fila_identidad")
+
+    # (b) La FILA de la identidad: en la línea del nombre, el CUIL, el DNI o
+    # la cuenta, un número de 4+ cifras es otro dato de la persona (el legajo
+    # casi siempre; el OCR leyó "Legajo" como "2" en una foto real). Lista
+    # blanca, lo que la IA necesita y nunca se tapa: fechas, períodos, años e
+    # importes.
+    ancla = [k for k in marcadas.values() if k.tipo in ("nombre", "cuil", "dni", "cuenta")]
     if ancla:
         for i, p in enumerate(palabras):
-            if (i in marcadas or len(_digitos(p.texto)) < 4 or parece_importe(p.texto)
-                    or _RE_FECHA.search(p.texto) or re.fullmatch(r"(19|20)\d\d", _digitos(p.texto))
-                    or any(y0 <= p.cy < y1 for y0, y1 in zonas.get(p.pagina, []))):
+            if (i in marcadas or len(_digitos(p.texto)) < 4 or _es_lista_blanca(p.texto)
+                    or en_tabla(p)):
                 continue
             if any(k.pagina == p.pagina and _misma_linea(k, p) for k in ancla):
-                marcar([i], "legajo", "fila_identidad")
+                marcar([i], "dato", "fila_identidad")
 
     # 4: razón social sin rótulo. Una frase sin números que lleva una forma
     # jurídica ("DISTRIBUIDORA LOS ANDES S.R.L.") es la razón social entera;
@@ -769,21 +807,45 @@ def control_de_fuga(palabras: list[Palabra], cajas: list[Caja],
 # ======================= Tapar =======================
 
 
-def tapar(imagen, cajas: list[Caja], margen: int = 3):
+# Colores del tapón (ENMASCARADO_COLOR): relleno, borde, letra. El gris es el
+# de origen; SDN pidió probar negro y rojo porque se ven mejor en la
+# revisión. La alerta de adulteración no los toma por tachadura porque la IA
+# recibe el aviso (extractor.AVISO_ENMASCARADO): se midió antes de usarlos.
+COLORES = {
+    "gris": ((232, 232, 232), (110, 110, 110), (60, 60, 60)),
+    "negro": ((0, 0, 0), (0, 0, 0), (255, 255, 255)),
+    "rojo": ((200, 30, 30), (140, 0, 0), (255, 255, 255)),
+}
+
+
+def color_tapon() -> str:
+    import os
+    c = (os.getenv("ENMASCARADO_COLOR") or "gris").strip().lower()
+    return c if c in COLORES else "gris"
+
+
+def tapar(imagen, cajas: list[Caja], margen: int = 3, color: str | None = None):
     """Devuelve una COPIA de la imagen (PIL) con las cajas cubiertas por un
-    rótulo gris claro ("CUIL OCULTO"). Palabras vecinas del mismo tipo se
-    cubren con un solo rótulo. No es un rectángulo negro a propósito: la IA
-    lo leería como una tachadura y dispararía la alerta de adulteración, y un
-    campo que dice qué había deja al modelo devolver `null` en vez de
-    inventar. Las cajas tienen que ser todas de la misma página."""
+    rótulo que dice qué había ("CUIL OCULTO"). Palabras vecinas del mismo
+    tipo se cubren con un solo rótulo. Un campo que dice qué había deja al
+    modelo devolver `null` en vez de inventar. Las cajas tienen que ser todas
+    de la misma página.
+
+    **El tapón es más grande que la palabra**: un margen proporcional al alto
+    de la letra (35 % arriba y abajo, 50 % a los costados). En una foto
+    torcida la caja del OCR es recta y la letra no: con un margen fijo de 3 px
+    asomaban los bordes del dato."""
     from PIL import ImageDraw, ImageFont
 
+    relleno, borde, tinta = COLORES[color or color_tapon()]
     img = imagen.convert("RGB").copy()
     dib = ImageDraw.Draw(img)
     for k in _unir(cajas):
-        x0, y0 = max(0, k.x0 - margen), max(0, k.y0 - margen)
-        x1, y1 = min(img.width, k.x1 + margen), min(img.height, k.y1 + margen)
-        dib.rectangle([x0, y0, x1, y1], fill=(232, 232, 232), outline=(110, 110, 110), width=1)
+        h = max(1.0, k.y1 - k.y0)
+        my, mx = max(margen, round(0.35 * h)), max(margen, round(0.5 * h))
+        x0, y0 = max(0, k.x0 - mx), max(0, k.y0 - my)
+        x1, y1 = min(img.width, k.x1 + mx), min(img.height, k.y1 + my)
+        dib.rectangle([x0, y0, x1, y1], fill=relleno, outline=borde, width=1)
         alto_max = max(9, int((y1 - y0) * 0.6))
         # El rótulo completo si entra con letra legible (9 px o más); si no
         # (un legajo de cuatro cifras), "OCULTO" a secas; si tampoco, nada.
@@ -799,7 +861,7 @@ def tapar(imagen, cajas: list[Caja], margen: int = 3):
             continue
         ancho = dib.textlength(etiqueta, font=fuente)
         dib.text(((x0 + x1 - ancho) / 2, (y0 + y1 - alto) / 2), etiqueta,
-                 fill=(60, 60, 60), font=fuente)
+                 fill=tinta, font=fuente)
     return img
 
 

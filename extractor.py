@@ -228,10 +228,10 @@ MODELOS_QUE_RAZONAN = {"claude-opus-5", "claude-sonnet-5"}
 
 # Se suma al pedido SOLO cuando la imagen va con datos tapados
 # (preparacion.py). Dos cosas: que devuelva null en esos campos en vez de
-# inventar, y que el rótulo gris no es una tachadura -- sin esto, la alerta de
+# inventar, y que el rótulo no es una tachadura -- sin esto, la alerta de
 # adulteración lo leería como una edición del recibo.
 AVISO_ENMASCARADO = (
-    "Aviso: algunas zonas del documento están cubiertas por un rótulo gris que "
+    "Aviso: algunas zonas del documento están cubiertas por un rectángulo con un rótulo que "
     "dice, por ejemplo, 'CUIL OCULTO', 'NOMBRE OCULTO', 'LEGAJO OCULTO', 'CUENTA "
     "OCULTA', 'CUIT OCULTO' o 'EMPLEADOR OCULTO'. Las cubrimos nosotros a propósito "
     "para proteger datos personales: devolvé null en esos campos y NO las "
