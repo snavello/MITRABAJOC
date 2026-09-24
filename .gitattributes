@@ -1,0 +1,5 @@
+# Archivos binarios: git no les toca los saltos de línea (un PDF con CRLF queda roto).
+*.pdf binary
+*.png binary
+*.jpg binary
+*.mp4 binary
