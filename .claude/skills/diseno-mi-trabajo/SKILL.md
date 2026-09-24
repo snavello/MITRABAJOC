@@ -77,6 +77,20 @@ Nunca se personaliza:
 Encabezado común (abajo), cuerpo claro, botón principal en color de acento,
 pestaña activa marcada con acento.
 
+**Y el fondo es una mesa, no un plano liso** (2026-09-24). En escritorio la
+columna de contenido ocupa entre 480 y 1280px y el resto del ancho quedaba
+vacío: la columna no tenía dónde terminar. El `<body>` lleva `mesa` (gris
+frío + retícula de colmena al 2,8% + dos halos difuminados del acento y el
+primario del sindicato) y el contenedor de ancho máximo lleva `hoja` (borde,
+radio 18 y sombra larga, del color `--papel` de la app y no blanco puro, para
+que las tarjetas internas conserven su borde). En teléfono se apaga entero:
+ahí el contenido ya ocupa todo el ancho.
+
+Se suma con tres cosas -- `{% include "_fondo_interior.html" %}`,
+`class="mesa"` en el `<body>` y `class="hoja"` en el contenedor -- y no va en
+los logins, el primer ingreso de plataforma, las portadas ni las pantallas
+oscuras. El estilo y el porqué, en `static/interior.css`.
+
 ## El encabezado: uno solo, de UNA línea, para las cuatro apps
 
 **Ninguna pantalla escribe su propio encabezado.** Se arma SIEMPRE con

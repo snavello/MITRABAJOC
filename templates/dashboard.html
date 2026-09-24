@@ -387,8 +387,9 @@
      .mapa-sin-ubicar, .mapa-pop) y las burbujas viven en marca.css: los
      comparte con el mapa del dashboard de una encuesta. */
 </style>
+{% include "_fondo_interior.html" %}
 </head>
-<body>
+<body class="mesa">
 {% include "_entorno.html" %}
 
 {# El nombre del sindicato ya lo dice su logo: acá quedaba escrito dos
@@ -400,7 +401,7 @@
 {# `data-hoy` es la fecha de Buenos Aires SEGÚN EL SERVIDOR, y es la que usa
    el panel para su rango: el reloj del navegador puede estar adelantado y el
    servidor rechaza un "hasta" futuro (ver el comentario en main.py). #}
-<main data-consultas="{{ '1' if consultas_bot else '0' }}" data-asistente="{{ '1' if asistente else '0' }}"
+<main class="hoja" data-consultas="{{ '1' if consultas_bot else '0' }}" data-asistente="{{ '1' if asistente else '0' }}"
       data-hoy="{{ hoy }}">
 
   <div class="filtros-card">

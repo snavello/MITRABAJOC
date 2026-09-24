@@ -1,0 +1,18 @@
+{# ============================================================
+   Fondo "hoja sobre la mesa" de las pantallas interiores.
+
+   Una pantalla se suma con tres cosas y ninguna más:
+     1. {% include "_fondo_interior.html" %} en el <head>
+     2. class="mesa" en el <body>
+     3. class="hoja" en su contenedor de ancho máximo
+        (`.cont`, `.wrap`, `main`, `.hilo`, `.cuerpo`… el que ya tenga)
+
+   El estilo y el porqué están en static/interior.css. El <link> vive acá y
+   no en cada plantilla para que el sello ?v= --obligatorio en /static/,
+   que se sirve con Cache-Control de una hora-- esté en un solo lugar.
+
+   NO va en los logins, ni en el primer ingreso de plataforma, ni en las
+   cuatro portadas (que tienen su propio ambiente, "Portadas v2" en
+   marca.css), ni en las pantallas que ya son oscuras.
+   ============================================================ #}
+<link rel="stylesheet" href="/static/interior.css?v={{ sello_static('interior.css') }}">
