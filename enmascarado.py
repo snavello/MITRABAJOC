@@ -819,8 +819,14 @@ COLORES = {
 
 
 def color_tapon() -> str:
+    """ENMASCARADO_COLOR si está; si no, rojo en local/pruebas (se ve mejor al
+    revisar las imágenes del diagnóstico, SDN 2026-09-24) y gris en demo y
+    producción. Un valor desconocido es gris."""
     import os
-    c = (os.getenv("ENMASCARADO_COLOR") or "gris").strip().lower()
+    c = (os.getenv("ENMASCARADO_COLOR") or "").strip().lower()
+    if not c:
+        import entorno
+        c = "rojo" if entorno.ENTORNO in ("local", "pruebas") else "gris"
     return c if c in COLORES else "gris"
 
 
