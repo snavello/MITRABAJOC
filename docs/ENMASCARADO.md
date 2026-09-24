@@ -92,15 +92,15 @@ aritmético) es la defensa de fondo contra este tipo de línea.
 Rótulo que dice qué había ("CUIL OCULTO", "DATO OCULTO"), con un margen
 proporcional al alto de la letra (35 % arriba y abajo, 50 % a los costados:
 en una foto torcida la caja del OCR es recta y la letra no). Color con
-`ENMASCARADO_COLOR` = `gris` (default) / `negro` / `rojo`; en Pruebas, rojo
-(se ve mejor al revisar). La IA recibe el aviso de que son intencionales.
+`ENMASCARADO_COLOR` = `gris` / `negro` / `rojo`; sin la variable, **rojo en
+local y Pruebas** (se ve mejor al revisar) y gris en demo y producción. La IA recibe el aviso de que son intencionales.
 
 ## Variables
 
 | Variable | Valores | Pruebas hoy |
 |---|---|---|
 | `ENMASCARADO` | apagado / sombra / activo | activo |
-| `ENMASCARADO_COLOR` | gris / negro / rojo | rojo |
+| `ENMASCARADO_COLOR` | gris / negro / rojo (sin cargar: rojo en local/pruebas, gris en demo/prod) | sin cargar → rojo |
 | `ENMASCARADO_CUPO` | lectores de OCR por proceso (1) | 1 |
 | `ENMASCARADO_PRESUPUESTO_MS` | fila + lectura por foto (5000) | 5000 |
 | `ENMASCARADO_GUARDAR_IMAGENES` | 1 = diagnóstico transitorio (solo local/pruebas) | 1 |

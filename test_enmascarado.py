@@ -395,3 +395,9 @@ def test_el_tapon_es_mas_grande_que_la_palabra_y_toma_el_color(monkeypatch):
     assert out.getpixel((150, 43))[0] > 150 and out.getpixel((150, 43))[1] < 80   # rojo
     monkeypatch.setenv("ENMASCARADO_COLOR", "violeta")      # desconocido -> gris
     assert E.color_tapon() == "gris"
+    # Sin la variable: rojo donde se revisan las imágenes, gris en demo/prod.
+    import entorno
+    monkeypatch.delenv("ENMASCARADO_COLOR")
+    for ent, esperado in (("pruebas", "rojo"), ("local", "rojo"), ("demo", "gris"), ("prod", "gris")):
+        monkeypatch.setattr(entorno, "ENTORNO", ent)
+        assert E.color_tapon() == esperado, ent
