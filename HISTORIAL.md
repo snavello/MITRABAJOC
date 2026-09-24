@@ -5866,3 +5866,63 @@ existente a Docker (conserva URL, variables y base); hay que mantener un
 `render_admin.py` cambia los workers en el "Start Command", que en Docker
 es el "Docker Command", y el cambio se hace dos veces (Pruebas y Demo).
 Con `tesserocr` no hace falta.
+
+## Enmascarado, bloque 2: los lectores, y el enmascarado pasa a "mejor esfuerzo" (2026-09-24)
+
+### La definición de SDN
+
+Antes de este bloque SDN fijó el objetivo, y cambió dos reglas del plan: el
+análisis de recibos tiene que ser lo más preciso, confiable y viable en
+tiempo y recursos; tapar los datos personales es un agregado a la
+confidencialidad que ya existe, **no una condición**. No debe entorpecer ni
+demorar ni ser cuello de botella; se tolera la fuga eventual de un CUIT o un
+nombre ("no construimos una jaula de acero": el compromiso es el mejor
+esfuerzo), y **un dato que no se pudo tapar no es razón para no analizar el
+recibo**: a lo sumo queda un registro. Eso reemplaza la línea roja 2 ("si el
+enmascarado no está seguro, el recibo no sale") y el §6 entero del plan
+(reintento con imagen mejorada, pedir otra foto, E-RECIBO-05/E-APORTE-04).
+Quedó en "Decisiones tomadas" de CLAUDE.md. La verificación de pertenencia
+NO se relaja: un CUIL ajeno leído localmente corta como hoy (E-RECIBO-04).
+
+### Lo que se construyó
+
+`lectores.py`: el PDF digital con `pypdfium2` y la foto con Tesseract
+(`tesserocr`). La lectura de una foto **nunca espera ni levanta
+excepciones**: devuelve el motivo ("sin_ocr", "sin_lugar", "tiempo",
+"error") y quien llama manda sin tapar y registra.
+
+- **Cupo que no hace fila** (`ENMASCARADO_CUPO`, 2 por proceso): la foto que
+  no entra vuelve al instante con "sin_lugar". Es a propósito distinto del
+  cupo del Panel Sindical, que espera 2 s: acá esperar sería demorar el
+  análisis por un agregado.
+- **Tiempo máximo** (`ENMASCARADO_OCR_MS`, 4000): lo corta Tesseract mismo
+  (`Recognize(timeout)`), no un hilo aparte.
+- **Un hilo por lectura** (`OMP_THREAD_LIMIT=1`, antes de cargar Tesseract)
+  y sin buscar texto invertido.
+- **La foto se lee achicada** a 2000 px de lado y las cajas vuelven en
+  píxeles de la original. **Y derecha**: `abrir_imagen` aplica la rotación
+  del EXIF, porque al volver a codificar la imagen tapada ese dato se pierde
+  y la IA recibiría la foto acostada.
+- El idioma (`spa.traineddata`, `tessdata_fast`, 2,3 MB) va en
+  `data/tessdata/`, versionado. En Windows no hay rueda de tesserocr: el OCR
+  queda "sin_ocr" (se tapa solo el PDF digital) y se prueba en Docker.
+- Los datos de prueba de los sintéticos se regeneraron con Tesseract (el
+  lector de la app, no RapidOCR). El CUIT admite ":" como separador: así lee
+  Tesseract a veces el guion.
+
+### La tabla del §5 (contenedor Debian 12, 512 MB)
+
+| | 1 núcleo | ½ núcleo (Pruebas) | Límite |
+|---|---|---|---|
+| PDF digital, 2 páginas, p95 | 0,14 s | 0,45 s | 0,3 s |
+| Foto de 1 página, p95 | 0,80 s | 2,28 s | 3 s |
+| Modelo cargado | +9 MB | +9 MB | 250 MB |
+| Por lectura | +10 MB | +10 MB | 60 MB |
+| Resto de la app durante 10 fotos a la vez, p95 | 3 ms | 47 ms | sin demora |
+
+Con 10 fotos a la vez se leen 2 (el cupo) y 8 vuelven sin tapar en 0 ms.
+El PDF de dos páginas con medio núcleo pasa el límite (0,45 s contra 0,3 s:
+es pasar dos páginas a imagen); con un núcleo sobra.
+
+Tests: `test_lectores.py` (11; los dos de Tesseract real se saltean en
+Windows) y `test_enmascarado.py` (54). En Linux corren los 65.

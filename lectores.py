@@ -1,19 +1,63 @@
 """Lectores de "palabras con posición" para `enmascarado.py`.
 
-Por ahora solo el PDF digital: el propio PDF trae cada carácter con su caja,
-así que no hace falta OCR -- es exacto y cuesta milisegundos. El lector de
-fotos (OCR) se suma en el bloque 2 de PLAN_ENMASCARADO.md, con su medición de
-tiempo y memoria.
+Dos caminos, según el archivo:
 
-`pypdfium2` (Apache/BSD) y no PyMuPDF, que es AGPL.
+- **PDF digital**: el propio PDF trae cada carácter con su caja. No hace falta
+  OCR: es exacto y cuesta milisegundos. `pypdfium2` (Apache/BSD) y no
+  PyMuPDF, que es AGPL.
+- **Foto, escaneo o PDF que es solo una imagen**: Tesseract, vía `tesserocr`,
+  cuya rueda de Linux trae la librería adentro -- se instala con pip en el
+  Render nativo, sin Docker. ~0,7 s de CPU por página y ~20 MB de modelo por
+  proceso (medición en HISTORIAL.md, "el OCR de las fotos es Tesseract").
+
+**Mejor esfuerzo** (CLAUDE.md, decisión del 2026-09-24): leer para tapar
+nunca estorba al análisis del recibo. Por eso `leer_foto()` no espera ni
+levanta excepciones: si no hay OCR (Windows, donde tesserocr no tiene
+rueda), si el cupo está lleno o si Tesseract se pasa de su tiempo máximo,
+devuelve el MOTIVO y quien llama manda el recibo sin tapar y lo registra.
+
+Variables de entorno:
+- `ENMASCARADO_CUPO` (2): lecturas de fotos simultáneas por proceso. La que
+  no entra NO espera turno.
+- `ENMASCARADO_OCR_MS` (4000): tiempo máximo de Tesseract por página.
 """
 from __future__ import annotations
 
-from enmascarado import Palabra
+import io
+import os
+import queue
+import threading
+from dataclasses import dataclass, field
+from pathlib import Path
+
+# Un hilo por lectura: el OCR no le saca el procesador al resto de los
+# pedidos. Tiene que estar ANTES de cargar Tesseract (lo lee OpenMP al iniciar).
+os.environ.setdefault("OMP_THREAD_LIMIT", "1")
+
+from enmascarado import Palabra  # noqa: E402
 
 # 150 dpi, lo mismo que usa hoy extractor._imagen_desde_pdf.
 DPI = 150
 ESCALA = DPI / 72
+# Una foto de teléfono (4000 px) se lee achicada: el tiempo de Tesseract
+# crece con los píxeles y a este tamaño la letra de un recibo se lee bien.
+# Las cajas se devuelven en píxeles de la imagen ORIGINAL.
+LADO_MAXIMO_OCR = 2000
+TESSDATA = Path(__file__).resolve().parent / "data" / "tessdata"
+
+
+def _entero(nombre: str, defecto: int) -> int:
+    try:
+        return max(1, int(os.getenv(nombre, "").strip() or defecto))
+    except ValueError:
+        return defecto
+
+
+CUPO = _entero("ENMASCARADO_CUPO", 2)
+OCR_MS = _entero("ENMASCARADO_OCR_MS", 4000)
+
+
+# ======================= PDF digital =======================
 
 
 def palabras_pdf(contenido: bytes, escala: float = ESCALA) -> list[list[Palabra]]:
@@ -77,3 +121,122 @@ def imagenes_pdf(contenido: bytes, escala: float = ESCALA) -> list:
         return [pdf[i].render(scale=escala).to_pil().convert("RGB") for i in range(len(pdf))]
     finally:
         pdf.close()
+
+
+def abrir_imagen(contenido: bytes):
+    """La foto como imagen PIL, DERECHA: un teléfono guarda la rotación en
+    el EXIF, y al volver a codificar la imagen tapada ese dato se pierde --
+    la IA recibiría la foto acostada."""
+    from PIL import Image, ImageOps
+
+    return ImageOps.exif_transpose(Image.open(io.BytesIO(contenido))).convert("RGB")
+
+
+# ======================= Foto (Tesseract) =======================
+
+
+@dataclass
+class LecturaFoto:
+    """Resultado de leer una foto. `motivo` es "ok" o por qué no se leyó:
+    "sin_ocr" (Tesseract no está), "sin_lugar" (cupo lleno), "tiempo" (se
+    pasó de OCR_MS) o "error". Solo con "ok" hay palabras."""
+    motivo: str
+    palabras: list[Palabra] = field(default_factory=list)
+
+
+_motores: "queue.Queue" = queue.Queue()
+_creados = 0
+_candado = threading.Lock()
+_disponible: bool | None = None
+
+
+def ocr_disponible() -> bool:
+    """¿Se puede leer fotos en este proceso? En Windows no hay rueda de
+    tesserocr, y sin el archivo del idioma tampoco: se tapa solo lo que sale
+    del PDF digital."""
+    global _disponible
+    if _disponible is None:
+        try:
+            import tesserocr  # noqa: F401
+            _disponible = (TESSDATA / "spa.traineddata").is_file()
+        except ImportError:
+            _disponible = False
+    return _disponible
+
+
+def _crear_motor():
+    from tesserocr import OEM, PSM, PyTessBaseAPI
+
+    api = PyTessBaseAPI(path=str(TESSDATA), lang="spa", psm=PSM.AUTO, oem=OEM.LSTM_ONLY)
+    # Sin buscar texto invertido (blanco sobre negro): un recibo no lo tiene.
+    api.SetVariable("tessedit_do_invert", "0")
+    return api
+
+
+def _tomar_motor():
+    """Un motor libre, o None si ya hay CUPO lecturas en curso. No espera."""
+    global _creados
+    try:
+        return _motores.get_nowait()
+    except queue.Empty:
+        pass
+    with _candado:
+        if _creados >= CUPO:
+            return None
+        _creados += 1
+    try:
+        return _crear_motor()
+    except Exception:
+        with _candado:
+            _creados -= 1
+        raise
+
+
+def precargar():
+    """Carga un motor al arrancar la app, para que la primera foto del día
+    no pague la carga del modelo. Si no hay OCR, no hace nada."""
+    if ocr_disponible():
+        try:
+            m = _tomar_motor()
+            if m is not None:
+                _motores.put(m)
+        except Exception:
+            pass
+
+
+def leer_foto(imagen, ocr_ms: int | None = None) -> LecturaFoto:
+    """Palabras de una imagen PIL, en sus píxeles. Nunca espera un lugar ni
+    levanta excepciones: ver `LecturaFoto.motivo`."""
+    if not ocr_disponible():
+        return LecturaFoto("sin_ocr")
+    try:
+        motor = _tomar_motor()
+    except Exception:
+        return LecturaFoto("error")
+    if motor is None:
+        return LecturaFoto("sin_lugar")
+    try:
+        f = min(1.0, LADO_MAXIMO_OCR / max(imagen.size))
+        chica = imagen if f == 1.0 else imagen.resize(
+            (round(imagen.width * f), round(imagen.height * f)))
+        motor.SetImage(chica)
+        if not motor.Recognize(ocr_ms or OCR_MS):
+            return LecturaFoto("tiempo")
+        from tesserocr import RIL, iterate_level
+
+        palabras = []
+        for w in iterate_level(motor.GetIterator(), RIL.WORD):
+            texto = (w.GetUTF8Text(RIL.WORD) or "").strip()
+            caja = w.BoundingBox(RIL.WORD)
+            if texto and caja:
+                x0, y0, x1, y1 = caja
+                palabras.append(Palabra(texto, x0 / f, y0 / f, x1 / f, y1 / f, 0))
+        return LecturaFoto("ok", palabras)
+    except Exception:
+        return LecturaFoto("error")
+    finally:
+        try:
+            motor.Clear()
+        except Exception:
+            pass
+        _motores.put(motor)

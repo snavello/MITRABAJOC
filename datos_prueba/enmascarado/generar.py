@@ -14,9 +14,10 @@ Qué deja en esta carpeta:
   `lectores.palabras_pdf` (texto del PDF, sin OCR).
 - `palabras_sintetico_*.json`: si se pasa `--sinteticos` con la carpeta de
   los 10 recibos sintéticos (`recibos_anonimizados_3/anonimizados`, identidad
-  ficticia NIEVES, JULIA), las palabras que leyó RapidOCR de cada uno. Son
-  imágenes sin texto: prueban el camino de las fotos. Tarda ~15 s por
-  recibo. Los PDF no se versionan (2 MB cada uno); las palabras sí.
+  ficticia NIEVES, JULIA), las palabras que leyó Tesseract de cada uno, con
+  `lectores.leer_foto` (el mismo lector de la app). Son imágenes sin texto:
+  prueban el camino de las fotos. Solo corre en Linux (en Windows, dentro de
+  Docker). Los PDF no se versionan (2 MB cada uno); las palabras sí.
 
 `--revisar CARPETA` deja además cada página tapada como PNG, para mirarla.
 """
@@ -141,18 +142,18 @@ def _a_json(paginas) -> list:
 
 
 def _ocr_pdf(ruta: Path):
-    """Palabras de un PDF-imagen con RapidOCR (el lector de fotos del bloque 2)."""
-    import numpy as np
-    from rapidocr_onnxruntime import RapidOCR
+    """Palabras de un PDF-imagen con el mismo lector de fotos que usa la app
+    (Tesseract, `lectores.leer_foto`). Solo en Linux: en Windows tesserocr no
+    tiene rueda y esto se corre dentro de Docker."""
+    import dataclasses
 
-    ocr = _ocr_pdf.motor = getattr(_ocr_pdf, "motor", None) or RapidOCR()
     imagenes = lectores.imagenes_pdf(ruta.read_bytes())
     paginas = []
     for n, img in enumerate(imagenes):
-        res, _ = ocr(np.array(img), use_cls=False)
-        paginas.append([E.Palabra(t, min(q[0] for q in b), min(q[1] for q in b),
-                                  max(q[0] for q in b), max(q[1] for q in b), n)
-                        for b, t, _conf in (res or [])])
+        lectura = lectores.leer_foto(img, ocr_ms=60000)
+        if lectura.motivo != "ok":
+            raise SystemExit(f"{ruta.name}: el OCR no leyó ({lectura.motivo})")
+        paginas.append([dataclasses.replace(p, pagina=n) for p in lectura.palabras])
     return paginas, imagenes
 
 
@@ -167,10 +168,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sinteticos", type=Path)
     ap.add_argument("--revisar", type=Path)
+    ap.add_argument("--redibujar", action="store_true",
+                    help="volver a dibujar el PDF ficticio (reportlab le pone la fecha adentro)")
     a = ap.parse_args()
 
     pdf = AQUI / "recibo_digital_ficticio.pdf"
-    dibujar_pdf(pdf)
+    if a.redibujar or not pdf.exists():
+        dibujar_pdf(pdf)
     paginas = lectores.palabras_pdf(pdf.read_bytes())
     (AQUI / "palabras_digital.json").write_text(
         json.dumps({"cuil": CUIL, "cuit": CUIT, "nombre": NOMBRE, "razon": RAZON,

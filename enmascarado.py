@@ -146,7 +146,7 @@ _PESOS = (5, 4, 3, 2, 7, 6, 5, 4, 3, 2)
 # 11 dígitos con o sin separadores (guion, punto, barra, espacios alrededor),
 # sin estar pegados a otros dígitos: "27-99999999-9", "30444640975",
 # "20 - 12345678 - 3" (así lo puede partir un OCR).
-_SEP = r"\s?[\-./]?\s?"
+_SEP = r"\s?[\-./:]?\s?"   # ":" -- Tesseract a veces lee así el guion
 _RE_ONCE = re.compile(r"(?<!\d)\d{2}" + _SEP + r"\d{8}" + _SEP + r"\d(?!\d)")
 # DNI: 7 u 8 dígitos, con o sin puntos de miles ("28.765.431", "28. 765. 431").
 _RE_DNI = re.compile(r"(?<!\d)\d{1,2}\s?\.?\s?\d{3}\s?\.?\s?\d{3}(?!\d)")

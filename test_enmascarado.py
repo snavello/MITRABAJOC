@@ -230,10 +230,11 @@ def test_recibo_digital(con_conocidos):
 
 SINTETICOS = sorted(DATOS.glob("palabras_sintetico_*.json"))
 NIEVES = Conocidos("27999999999", "NIEVES, JULIA", ("TALLERES METALURGICOS DEL SUR S.A.",))
-# Lo que identifica en estos recibos, tal como lo leyó el OCR.
-IDENTIDAD_SINTETICOS = {"NIEVES,JULIA", "27-99999999-9", "99999999", "045213/07", "22- 41837529",
-                        "CUIT: 30-44464097-5", "TALLERESMETALURGICOSDELSUR", "SOCIEDAD ANONIMA",
-                        "TALLERES METALURGICOS"}
+# Lo que identifica en estos recibos, palabra por palabra como lo lee
+# Tesseract, normalizado (el OCR varía un signo entre recibos: "ANONIMA." o
+# "30-44464097:5"). El guion suelto de "22 - 41837529" también se tapa.
+IDENTIDAD_SINTETICOS = {"NIEVES", "JULIA", "27999999999", "99999999", "04521307", "22", "41837529",
+                        "30444640975", "TALLERES", "METALURGICOS", "DEL", "SUR", "SOCIEDAD", "ANONIMA"}
 
 
 def test_estan_los_diez_sinteticos():
@@ -247,7 +248,7 @@ def test_recibo_sintetico(archivo, con_conocidos):
     una palabra más (se le taparía a la IA algo que necesita leer)."""
     _, pal = _cargar(archivo.name)
     an = E.analizar(pal, NIEVES if con_conocidos else None)
-    assert {k.texto for k in an.cajas} == IDENTIDAD_SINTETICOS
+    assert {E._alnum(k.texto) for k in an.cajas} - {""} == IDENTIDAD_SINTETICOS
     assert E.control_de_fuga(pal, an.cajas, NIEVES) == []
     assert an.cuiles == ["27999999999"] and an.cuits == ["30444640975"]
     assert E.pertenece(an, "27999999999") is True
