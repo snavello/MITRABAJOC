@@ -956,6 +956,14 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    detrás de la variable `MOTOR_V2`. El avance ítem por ítem se lleva en el
    tablero compartido "Motor v2 · Avance"; el informe en lenguaje llano para
    analistas está en la landing `/entornos` (recurso `motor-recibos`).
+   **Antes va el paso cero: enmascarado** —plan acordado el 2026-09-24,
+   **sin empezar**, [`PLAN_ENMASCARADO.md`](PLAN_ENMASCARADO.md)—: lo que
+   identifica a la persona (CUIL, nombre, DNI, legajo, cuenta, CUIT y razón
+   social) se tapa en el servidor antes de salir hacia la IA y la identidad se
+   rearma del lado nuestro. PDF digital con `pypdfium2`, fotos con RapidOCR,
+   variable `ENMASCARADO` = `apagado`/`sombra`/`activo`. Absorbe el enganche
+   D7 del motor v2. Sale de una arquitectura de Chat del 2026-08-28 que nunca
+   se había bajado al repo (`docs/chat/2026-08-28-arquitectura-enmascarado-pii.md`).
 
 9. **Cuelgue del panel (2026-09-18, Pruebas): corregido y en Pruebas desde el
    2026-09-19** (PR #6). Causa y correcciones C1–C8 en
