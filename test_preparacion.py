@@ -275,20 +275,29 @@ plataforma = TestClient(main.app)
 plataforma.post("/plataforma/login", data={"cuit": "20000000000", "clave": "test-plataforma"})
 
 
+@pytest.fixture
+def sin_poppler(monkeypatch):
+    """El banco prepara el original con pdf2image, que necesita poppler (un
+    programa del sistema): está en Render y en una PC con la app, pero no en
+    el servidor del CI. El original no es lo que se prueba acá."""
+    png = base64.standard_b64encode(_png(1240, 1754)).decode()
+    monkeypatch.setattr(main, "preparar_imagen", lambda contenido, content_type: (png, "image/png"))
+
+
 def _banco(ia, **extra):
     return plataforma.post("/plataforma/probar-modelos",
                            data={"tipo": "recibo", "modelos": ["claude-sonnet-4-6"], **extra},
                            files={"archivo": ("recibo.pdf", PDF, "application/pdf")})
 
 
-def test_banco_sin_tapado_queda_como_siempre(ia):
+def test_banco_sin_tapado_queda_como_siempre(ia, sin_poppler):
     r = _banco(ia)
     assert r.status_code == 200, r.text
     assert len(ia.llamadas) == 1 and "aviso_enmascarado" not in ia.llamadas[0]
     assert r.json()["enmascarado"] is None
 
 
-def test_banco_con_tapado_lee_dos_veces_y_muestra_la_imagen(ia):
+def test_banco_con_tapado_lee_dos_veces_y_muestra_la_imagen(ia, sin_poppler):
     """Mismo modelo, original y tapado en columnas vecinas: la tabla línea
     por línea dice si tapar cambió algo. Y la imagen que recibe la IA."""
     r = _banco(ia, tapado="1")
