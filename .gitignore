@@ -33,3 +33,6 @@ carga/log/*/*.ndjson
 
 # Modelos de OCR descargados para medir (PLAN_ENMASCARADO.md, bloque 2).
 modelos_ocr/
+
+# La medición guarda también las lecturas completas: pesadas y regenerables.
+medicion_enmascarado/RESULTADO.json

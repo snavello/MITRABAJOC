@@ -180,7 +180,10 @@ class IAFalsa:
     def __init__(self):
         self.llamadas = []
 
-    def __call__(self, contenido, content_type, modelo=None, **kw):
+    def __call__(self, contenido, content_type, modelo=None, imagen=None, **kw):
+        # El banco pasa la imagen en posición; las rutas, por nombre.
+        if imagen is not None:
+            kw["imagen"] = imagen
         self.llamadas.append(kw)
         return ({"periodo": "2026-08", "formato": "clasico",
                  "empleado": {"cuil": None, "apellido_nombre": None, "legajo": None},
@@ -264,3 +267,40 @@ def test_ruta_un_error_del_enmascarado_no_frena_el_recibo(monkeypatch, ia):
     r = _subir(_cliente())
     assert r.status_code == 200, r.text
     assert _registros()[-1].motivo == "error:RuntimeError"
+
+
+# ======================= El banco de pruebas =======================
+
+plataforma = TestClient(main.app)
+plataforma.post("/plataforma/login", data={"cuit": "20000000000", "clave": "test-plataforma"})
+
+
+def _banco(ia, **extra):
+    return plataforma.post("/plataforma/probar-modelos",
+                           data={"tipo": "recibo", "modelos": ["claude-sonnet-4-6"], **extra},
+                           files={"archivo": ("recibo.pdf", PDF, "application/pdf")})
+
+
+def test_banco_sin_tapado_queda_como_siempre(ia):
+    r = _banco(ia)
+    assert r.status_code == 200, r.text
+    assert len(ia.llamadas) == 1 and "aviso_enmascarado" not in ia.llamadas[0]
+    assert r.json()["enmascarado"] is None
+
+
+def test_banco_con_tapado_lee_dos_veces_y_muestra_la_imagen(ia):
+    """Mismo modelo, original y tapado en columnas vecinas: la tabla línea
+    por línea dice si tapar cambió algo. Y la imagen que recibe la IA."""
+    r = _banco(ia, tapado="1")
+    assert r.status_code == 200, r.text
+    assert len(ia.llamadas) == 2
+    assert [k.get("aviso_enmascarado", False) for k in ia.llamadas] == [False, True]
+    d = r.json()
+    assert d["modelos_leidos"] == ["Claude Sonnet 4.6", "Claude Sonnet 4.6 — tapado"]
+    assert d["lineas"]["distintas"] == 0
+    e = d["enmascarado"]
+    assert e["tapado"] and e["camino"] == "pdf_texto" and e["fugas"] == 0
+    assert e["imagen"].startswith("data:image/png;base64,")
+    # La versión tapada vuelve rearmada, como en las rutas de verdad.
+    tapada = next(m for m in d["modelos"] if m["tapado"])
+    assert "30712345671" in tapada["json"]

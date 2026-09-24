@@ -4,6 +4,18 @@ Anotaciones para no desviar el bloque de trabajo en curso (ver "Backlog
 técnico" en la memoria del proyecto). Cada ítem se tacha o se borra cuando
 se hace.
 
+- [ ] **Para el motor v2: dos variaciones del modelo con el MISMO recibo**
+  (2026-09-24, medición del enmascarado, `medicion_enmascarado/RESULTADO.md`).
+  (1) "SEGURO OBLIGATORIO - DGI" ($380 fijo) sale `aporte_trabajador` en una
+  lectura y `otro` en la siguiente, sin cambiar nada: leído tres veces el
+  mismo original dio `aporte / otro / otro`. Como `tipo` alimenta la
+  retención sindical y el tope del 2%, una línea ambigua cambia el resultado
+  entre dos lecturas del mismo recibo. Es el caso de manual para el catálogo
+  maestro (D8: elegir de una lista cerrada) y la confianza por renglón. (2)
+  El signo de los descuentos: a veces como figura en la columna (positivo),
+  a veces negativo. Hoy no rompe nada (el validador usa `abs()` y el banco ya
+  no lo marca), pero el motor v2 debería normalizarlo en un solo lugar.
+
 - [ ] **Validar el módulo 11 (dígito verificador) de CUIL y CUIT** (2026-09-24,
   decisión de SDN al construir el enmascarado: "por ahora no lo testeamos,
   lo anotamos para cuando avancemos en ese tema"). Hoy la app no valida el

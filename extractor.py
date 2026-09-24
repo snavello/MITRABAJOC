@@ -480,7 +480,11 @@ def comparar_lineas(lecturas: list) -> dict:
             # Lo que difiere del renglón se dice en la celda: un importe o un
             # código distinto es tan diferencia como una clasificación
             # distinta, y si no se nombra, la fila parece coincidir.
-            if ln["importe"] != ref["importe"]:
+            # El SIGNO solo no es diferencia: el validador usa el valor
+            # absoluto de cada descuento, y un modelo puede transcribir
+            # "173.520,83" en la columna Deducciones y otro "-173.520,83".
+            # Mismo criterio que un CUIT con o sin guiones.
+            if ln["importe"].lstrip("-") != ref["importe"].lstrip("-"):
                 valor += f' · {ln["importe"]}'
             if ln["codigo"] != ref["codigo"]:
                 valor += f' · código {ln["codigo"]}'

@@ -6020,3 +6020,49 @@ donde lo usaba:
   del de la sesión en **3 dígitos o más** (`distintos_de_verdad`). Un error
   del OCR cambia uno, rara vez dos: a esa distancia es el propio mal leído y
   el recibo sigue.
+
+## Enmascarado, bloque 4: tapar no cambia la lectura (2026-09-24)
+
+El criterio del plan era "cero diferencias en importes y en la clasificación
+de cada línea, con y sin enmascarado". Se midió con la IA real
+(`medicion_enmascarado/medir.py`, resultado en `RESULTADO.md`): cada recibo
+leído tres veces con el mismo modelo (claude-sonnet-4-6) -- original, tapado
+con la identidad conocida y tapado sin conocidos --, sobre los 10 sintéticos
+(fotos: OCR con Tesseract) y el digital ficticio (texto del PDF). 33
+llamadas.
+
+- **Totales, cantidad de líneas, período y categoría: iguales en los 11.**
+- **Identidad rearmada igual a la que leyó la IA en el original** (CUIL,
+  CUIT, nombre, legajo, empleador) en los 11.
+- **Ninguna alerta de adulteración** por el rótulo gris.
+- **3 líneas distintas, siempre la misma**: "SEGURO OBLIGATORIO - DGI"
+  (importe fijo de $380), clasificada a veces como `aporte_trabajador` y a
+  veces como `otro`, en los dos sentidos. Control: el **original sin tapar
+  leído tres veces** también cambia (`aporte / otro / otro`). Es la
+  variación del propio modelo sobre una línea ambigua, no efecto del tapado.
+
+Criterio cumplido: cero diferencias atribuibles al enmascarado.
+
+### El banco de pruebas, con el documento tapado
+
+En `/plataforma` → Uso de IA → Banco de pruebas, la casilla "Comparar
+también con el documento tapado": cada modelo lee el archivo dos veces y el
+tapado queda en la columna de al lado ("Claude Sonnet 4.6 — tapado"), así la
+tabla línea por línea dice si tapar cambió algo. Debajo, **"Así lo recibe la
+IA"**: el camino (PDF con texto, PDF escaneado, foto), las zonas, las fugas,
+el tiempo del tapado y la imagen tal cual viaja. La versión tapada vuelve
+rearmada, como en las rutas de verdad. Plataforma 0.38.01.
+
+### El signo solo ya no es una diferencia
+
+En una prueba real del banco, el original transcribió los descuentos en
+positivo (como figuran en la columna Deducciones) y el tapado con signo
+menos: la tabla marcaba 4 de 8 líneas en rojo con la misma clasificación.
+El validador usa el valor absoluto de cada descuento, así que
+`comparar_lineas` ya no cuenta el signo como diferencia -- mismo criterio que
+un CUIT con o sin guiones. Afecta también la comparación entre modelos.
+
+Las dos variaciones del modelo (la clasificación de "SEGURO OBLIGATORIO" y
+el signo de los descuentos) quedaron en BACKLOG.md para el motor v2: son
+exactamente el tipo de imprecisión que la confianza por renglón y el
+catálogo maestro tienen que resolver.

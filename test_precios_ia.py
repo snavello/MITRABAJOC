@@ -554,3 +554,16 @@ def test_la_pantalla_muestra_costo_modelos_y_banco():
         assert marca in r.text, marca
     # El precio y la fecha de lectura del catálogo, a la vista.
     assert precios_ia.catalogo()["leido"] in r.text
+
+
+def test_el_signo_solo_no_es_una_diferencia():
+    """Un modelo transcribe el descuento como figura en la columna
+    Deducciones (positivo) y otro le pone el signo: el validador usa el valor
+    absoluto, así que la tabla no lo marca en rojo (caso real del banco con el
+    documento tapado, 2026-09-24). Un importe distinto sí se marca."""
+    pos = {"lineas": [{"codigo": "0501", "descripcion": "Jubilación", "importe": 173520.83,
+                       "tipo": "aporte_trabajador"}]}
+    neg = {"lineas": [dict(pos["lineas"][0], importe=-173520.83)]}
+    otro = {"lineas": [dict(pos["lineas"][0], importe=-173520.00)]}
+    assert extractor.comparar_lineas([("a", pos), ("b", neg)])["distintas"] == 0
+    assert extractor.comparar_lineas([("a", pos), ("b", otro)])["distintas"] == 1

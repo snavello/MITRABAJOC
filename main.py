@@ -5184,7 +5184,8 @@ def plataforma_modelos_ia(request: Request,
 async def plataforma_probar_modelos(request: Request,
                                     archivo: UploadFile = File(...),
                                     tipo: str = Form("recibo"),
-                                    modelos: list[str] = Form([])):
+                                    modelos: list[str] = Form([]),
+                                    tapado: str = Form("")):
     """Banco de pruebas: lee el MISMO archivo con dos o más modelos y
     devuelve, lado a lado, qué leyó cada uno, cuánto tardó y cuánto costó.
 
@@ -5223,13 +5224,31 @@ async def plataforma_probar_modelos(request: Request,
         print(f"[banco de pruebas] no se pudo preparar el archivo: {type(e).__name__}: {e}")
         raise HTTPException(422, "No se pudo abrir el archivo. ¿Es una imagen o un PDF?")
 
+    # "Comparar también con el documento tapado" (PLAN_ENMASCARADO.md, bloque
+    # 4): cada modelo lee además la versión tapada, en la columna de al lado.
+    # Es la prueba de que tapar no le cambia la lectura: mismo modelo, mismo
+    # archivo, y la tabla línea por línea marca cualquier diferencia. Sin nada
+    # conocido de antemano (como el aprendizaje del admin): el banco no es de
+    # un afiliado.
+    prep = None
+    if tapado:
+        prep = await run_in_threadpool(preparacion.preparar, contenido, archivo.content_type,
+                                       None, "activo")
+        db.registrar_enmascarado(None, "prueba", prep.registro)
+    tareas = [(m, False) for m in elegidos]
+    if prep is not None and prep.tapado:
+        tareas = [t for m in elegidos for t in ((m, False), (m, True))]
     lecturas = await asyncio.gather(
-        *(run_in_threadpool(leer, contenido, archivo.content_type, m, imagen) for m in elegidos),
+        *(run_in_threadpool(leer, contenido, archivo.content_type, m,
+                            prep.imagen if t else imagen,
+                            **({"aviso_enmascarado": True} if t else {}))
+          for m, t in tareas),
         return_exceptions=True)
 
     salida, referencia, leidas = [], None, []
-    for modelo, r in zip(elegidos, lecturas):
-        fila = {"modelo": modelo, "nombre": precios_ia.nombre(modelo),
+    for (modelo, es_tapado), r in zip(tareas, lecturas):
+        nombre = precios_ia.nombre(modelo) + (" — tapado" if es_tapado else "")
+        fila = {"modelo": modelo, "nombre": nombre, "tapado": es_tapado,
                 "precio_txt": precios_ia.precio_txt(precios_ia.modelo(modelo))}
         if isinstance(r, BaseException):
             # El error crudo a la vista: acá lo lee quien administra la
@@ -5251,6 +5270,13 @@ async def plataforma_probar_modelos(request: Request,
         datos, uso = r
         db.registrar_uso_ia(None, "", "prueba", uso["modelo"], uso["tokens_entrada"],
                             uso["tokens_salida"], uso.get("duracion_ms", 0))
+        if es_tapado:
+            # Lo que se le tapó vuelve con lo leído acá, como en las rutas de
+            # verdad: la comparación es contra el recibo tal como lo usa la app.
+            if tipo == "aportes":
+                preparacion.rearmar_aportes(datos, prep.analisis, None)
+            else:
+                preparacion.rearmar_recibo(datos, prep.analisis, None)
         p = precios_ia.precios(uso["modelo"])
         costo = precios_ia.costo(uso["tokens_entrada"], uso["tokens_salida"], p[0], p[1]) if p else None
         resumen = resumen_comparable(tipo, datos)
@@ -5272,16 +5298,26 @@ async def plataforma_probar_modelos(request: Request,
             "json": json.dumps(datos, ensure_ascii=False, indent=1),
         })
         salida.append(fila)
-        leidas.append((modelo, datos))
+        leidas.append((nombre, datos))
 
     # La comparación línea por línea es la que contesta la pregunta que el
     # resumen deja abierta: dos modelos pueden coincidir en los totales y aun
     # así clasificar distinto una línea, y ESE campo (`tipo`) alimenta la
     # retención sindical y el tope del 2%. Solo aplica a un recibo (un
     # comprobante de ARCA no tiene líneas) y con dos lecturas o más.
+    enmascarado = None
+    if prep is not None:
+        r = prep.registro
+        enmascarado = {
+            "tapado": prep.tapado, "camino": r.get("camino"), "motivo": r.get("motivo"),
+            "cajas": r.get("cajas"), "fugas": r.get("fugas"), "total_ms": r.get("total_ms"),
+            # La imagen TAL COMO la recibe la IA: es la que hay que mirar.
+            "imagen": (f"data:{prep.imagen[1]};base64,{prep.imagen[0]}"
+                       if prep.tapado and prep.imagen else None),
+        }
     return {"tipo": tipo, "archivo": archivo.filename or "", "modelos": salida,
             "lineas": comparar_lineas(leidas) if tipo == "recibo" and len(leidas) > 1 else None,
-            "modelos_leidos": [precios_ia.nombre(m) for m, _ in leidas]}
+            "modelos_leidos": [n for n, _ in leidas], "enmascarado": enmascarado}
 
 
 ESTADOS_TOPE = ("verificado", "derivado", "por_verificar", "SOSPECHOSO")
