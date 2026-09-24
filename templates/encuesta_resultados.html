@@ -39,7 +39,7 @@
      y el ancho de 1180 px del resto de la página. */
   .marca-barra { background-image: linear-gradient(135deg, var(--marca-base) 0%,
       color-mix(in srgb, var(--marca-base) 55%, var(--marca-apoyo)) 100%); padding-bottom: 16px; }
-  .marca-cinta, .marca-barra { padding-left: max(18px, calc((100% - 1180px) / 2));
+  .marca-barra { padding-left: max(18px, calc((100% - 1180px) / 2));
     padding-right: max(18px, calc((100% - 1180px) / 2)); }
   .titulo-encuesta { font-family: var(--fuente-display); font-size: 26px; line-height: 1.05;
     padding: 16px 0 4px; }
@@ -278,8 +278,6 @@
 {# Encabezado normalizado, igual que el Panel Sindical. El título de la
    encuesta NO es el nombre de la pantalla (es qué encuesta estás mirando):
    va al cuerpo, con el mismo id que actualiza encuesta_resultados.js. #}
-{% set enc_rol = 'Panel de administración' %}
-{% set enc_pantalla = 'Resultados' %}
 {% set enc_volver = '/admin#encuestas' %}
 {% include "_encabezado.html" %}
 

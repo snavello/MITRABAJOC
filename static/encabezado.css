@@ -20,27 +20,20 @@
 .marca-enc { position: relative; z-index: 2; }
 .marca-enc.fija { position: sticky; top: 0; }
 
-.marca-cinta { background: var(--marca-base, #0f1b2d); box-shadow: inset 0 0 0 999px rgba(0, 0, 0, .38);
-  display: flex; align-items: center; gap: 10px; min-height: 29px;
-  padding: 6px 18px; padding-top: calc(6px + env(safe-area-inset-top));
-  border-bottom: 1px solid rgba(255, 255, 255, .07); }
-.marca-rol { font-size: 9px; letter-spacing: 1.9px; text-transform: uppercase;
-  color: rgba(255, 255, 255, .55); font-weight: 600; }
-/* La colmena va a la DERECHA y siempre del mismo tamaño: firma, no logo
-   principal. Alto fijo y ancho libre, igual que el logo del sindicato. */
-.marca-colmena { margin-left: auto; height: 17px; width: auto; max-width: 104px;
-  object-fit: contain; opacity: .95; }
-/* En la app del afiliado no hay cinta y la colmena va en la barra, al lado
-   del logo del gremio. Ahí necesita algo más de cuerpo para no perderse
-   contra un logo de 62px, pero sigue siendo claramente la firma y no la
-   marca principal: el gremio manda. */
-.marca-colmena.en-barra { height: 24px; max-width: 140px; opacity: 1; }
+/* Colm3na va a la DERECHA de la misma barra, siempre del mismo tamaño: es la
+   firma de quien opera la plataforma, no el logo principal. 24px de alto
+   contra los 62 del gremio -- el gremio manda. Alto fijo y ancho libre,
+   igual que el logo del sindicato. */
+.marca-colmena { margin-left: auto; height: 24px; width: auto; max-width: 140px;
+  object-fit: contain; }
 /* Dos margin-left:auto en la misma fila se REPARTEN el espacio libre, así
-   que con "Volver" la colmena quedaría en el medio. */
-.marca-volver + .marca-colmena.en-barra { margin-left: 14px; }
+   que con la fecha o con "Volver" la colmena quedaría en el medio. */
+.marca-fecha + .marca-colmena, .marca-volver + .marca-colmena { margin-left: 14px; }
 
+/* Sin cinta arriba, es esta barra la que tiene que despejar el notch. */
 .marca-barra { background: var(--marca-base, #0f1b2d); color: var(--sobre-base, #eef2f7);
   display: flex; align-items: center; gap: 14px; padding: 11px 18px;
+  padding-top: calc(11px + env(safe-area-inset-top));
   border-bottom: 1px solid rgba(255, 255, 255, .10); }
 .marca-logo { height: 62px; width: auto; max-width: 360px; object-fit: contain; flex: none; }
 /* Sin logo cargado, el nombre del sindicato ES el logotipo: condensada
@@ -52,26 +45,19 @@
   line-height: 1; letter-spacing: .6px; text-transform: uppercase; white-space: nowrap;
   min-width: 0; overflow: hidden; text-overflow: ellipsis;
   padding-right: 14px; border-right: 2px solid var(--marca-acento, #e8a33d); }
-.marca-pantalla { margin-left: auto; text-align: right; font-size: 10.5px; font-weight: 700;
-  letter-spacing: 1.7px; text-transform: uppercase; color: var(--marca-acento, #e8a33d); }
 .marca-volver { margin-left: auto; display: flex; align-items: center; gap: 5px;
   color: var(--sobre-base, #eef2f7); text-decoration: none; font-size: 13px; }
-.marca-pantalla + .marca-volver { margin-left: 14px; }
 .marca-volver svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2;
   stroke-linecap: round; stroke-linejoin: round; }
 .marca-fecha { margin-left: auto; text-align: right; font-size: 11.5px; line-height: 1.35;
   color: var(--sobre-base-mute, #8ea1b8); }
-.marca-fecha + .marca-pantalla { margin-left: 14px; }
 .marca-fecha strong { display: block; color: var(--sobre-base, #eef2f7); font-size: 12.5px;
   text-transform: capitalize; }
 
 @media (max-width: 600px) {
-  .marca-cinta { padding: 5px 14px; padding-top: calc(5px + env(safe-area-inset-top)); min-height: 26px; }
-  .marca-colmena { height: 15px; max-width: 88px; }
-  .marca-colmena.en-barra { height: 19px; max-width: 112px; }
+  .marca-colmena { height: 19px; max-width: 112px; }
   .marca-barra { gap: 11px; padding: 10px 14px; }
   .marca-logo { height: 46px; max-width: 192px; }
   .marca-nombre { font-size: 26px; padding-right: 11px; }
-  .marca-pantalla { font-size: 9px; letter-spacing: 1.4px; }
   .marca-fecha { font-size: 10.5px; }
 }

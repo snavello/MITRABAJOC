@@ -1418,13 +1418,6 @@ function activarPestana(dest) {
   document.querySelectorAll('.tpanel').forEach(pan => {
     pan.classList.toggle('activo', pan.id === 'tp-' + dest);
   });
-  // El encabezado dice siempre dónde estás. El nombre sale de los nodos de
-  // TEXTO del botón: así no arrastra el ícono ni el globo de novedades.
-  const rotulo = document.getElementById('marca-pantalla');
-  if (rotulo) {
-    rotulo.textContent = Array.from(btn.childNodes)
-      .filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent).join('').trim();
-  }
 }
 document.querySelectorAll('.tab-t').forEach(btn => {
   btn.addEventListener('click', () => {

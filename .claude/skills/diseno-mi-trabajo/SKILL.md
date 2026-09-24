@@ -77,46 +77,37 @@ Nunca se personaliza:
 Encabezado común (abajo), cuerpo claro, botón principal en color de acento,
 pestaña activa marcada con acento.
 
-## El encabezado (2026-09-13): uno solo, para las cuatro apps
+## El encabezado: uno solo, de UNA línea, para las cuatro apps
 
 **Ninguna pantalla escribe su propio encabezado.** Se arma SIEMPRE con
 `{% include "_encabezado.html" %}`, que trae su hoja (`static/encabezado.css`)
-y no depende de `marca.css` — `trabajador.html` y `empresa.html` no la cargan.
-Son dos franjas y esa separación es el punto:
+y no depende de `marca.css` -- `trabajador.html` y `empresa.html` no la
+cargan. Es UNA sola barra (2026-09-23; antes eran dos franjas):
 
-    CINTA   [ rol del panel ]                          [ Colm3na ]
-    BARRA   [ logo del sindicato ]                     [ pantalla ]
+    BARRA   [ logo del sindicato ]                     [ Colm3na ]
 
-- La **cinta** dice quién opera la plataforma: el logo de Colm3na a la
-  derecha, siempre 17px de alto. A la izquierda, el rol del panel
-  ("Panel de administración", "Panel de empleador"…) — **vacío en la app del
-  afiliado**: ahí la plataforma firma con el logo, no con texto.
-- La **barra** es del sindicato: su logo a 62px de alto (46 en móvil) y
-  **ancho libre** (un logo horizontal no se aplasta en una caja cuadrada) y,
-  a la derecha, el nombre de la pantalla. En los paneles con pestañas lo
-  actualiza el JS al cambiar de pestaña.
+- El **logo del sindicato** va a 62px de alto (46 en móvil) y **ancho libre**:
+  un logo horizontal no se aplasta en una caja cuadrada.
+- **Colm3na va a la derecha, a 24px** (19 en móvil). Es la firma de quien
+  opera la plataforma, no la marca principal: el gremio manda.
+- **No hay cinta.** Existía para decir el rol del panel ("Panel de
+  administración") y se sacó: el rol ya lo dicen el `<title>`, la pantalla y
+  el login por el que se entró.
+- **El nombre de la pantalla no se escribe.** Todas las pantallas de una app
+  llevan el mismo encabezado que su inicio; la tira de pestañas (o la barra
+  de abajo, en el afiliado) ya dice dónde estás.
 - Donde la marca principal ES la plataforma (panel de plataforma, demo
-  anónima), la barra lleva el logo de Colm3na y **la cinta no lo repite**;
-  si además no hay rol que mostrar, la cinta no se dibuja.
+  anónima), el logo grande de la izquierda es el de Colm3na y a la derecha
+  no se repite.
 - **El nombre del sindicato en texto solo aparece si NO hay logo cargado**
   (entonces es el logotipo, en condensada sobre un filo de acento). Con logo,
   escribirlo al lado es decir dos veces lo mismo.
-- **El título de la pantalla se dice una sola vez**: si está en el
-  encabezado, no va también como `<h1>` del cuerpo.
-- **La app del afiliado es la excepción, y es de una sola línea**
-  (2026-09-23). Ahí la cinta no tiene rol que decir: no se dibuja, y Colm3na
-  baja a la misma barra del logo del gremio, a la derecha, a 24px de alto
-  (19 en móvil) contra los 62 del gremio. Y el nombre de la pantalla **no se
-  escribe en ninguna** de sus pantallas: todas llevan el mismo encabezado que
-  Inicio, porque la barra de pestañas de abajo ya dice dónde estás. El
-  parcial lo decide solo a partir de `enc_rol`, así que una pantalla nueva
-  del afiliado no tiene que acordarse de nada.
 - **La plataforma se llama Colm3na**: "Mi Trabajo" no va en ninguna
   pantalla. Los `<title>` siguen el mismo criterio que el encabezado:
   `<pantalla> — {{ sindicato }}` donde hay sindicato, `Colm3na — <pantalla>`
   donde no lo hay.
-- Variables del parcial: `enc_rol`, `enc_pantalla`, `enc_volver`, `enc_fecha`,
-  `enc_fija`, `enc_plataforma`. Una pantalla nueva se encabeza con eso.
+- Variables del parcial: `enc_volver`, `enc_fecha`, `enc_fija`,
+  `enc_plataforma`. Una pantalla nueva se encabeza con eso y nada más.
 - Fuera del sistema, a propósito: los tres ingresos (el logo grande de
   plataforma es la identidad de esa pantalla) y las herramientas internas del
   equipo (`/entornos`, informes de carga).
