@@ -195,8 +195,9 @@ def parece_importe(texto: str) -> bool:
 # (libreta de enrolamiento). Anclados al principio de la palabra donde
 # arrancan: "CUENTA" es un rótulo, "A CUENTA DE FUTUROS AUMENTOS" no.
 _ROTULOS = [
-    ("cuil", r"C ?U ?I ?L( N[RO]?O?)?( N)?"),
-    ("cuit", r"C ?U ?I ?T( N[RO]?O?)?( N)?( EMPLEADOR)?"),
+    # "CUILN": Tesseract junta "CUIL N" (N de número) en una sola palabra.
+    ("cuil", r"C ?U ?I ?L( ?N[RO]?O?)?( N)?"),
+    ("cuit", r"C ?U ?I ?T( ?N[RO]?O?)?( N)?( EMPLEADOR)?"),
     ("dni", r"(D ?N ?I|L ?E|L ?C|DOCUMENTO|NRO DOC|N DOC|N[RO]?O? DE DOCUMENTO"
             r"|TIPO Y NRO DE DOC(UMENTO)?|DOC(UMENTO)? NRO)( N[RO]?O?)?"),
     ("legajo", r"(NRO DE )?LEG(AJO)?( N[RO]?O?)?( N)?"),

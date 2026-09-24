@@ -5816,3 +5816,53 @@ del plan. El bloque 2 tiene que leer solo lo necesario (el encabezado, no la
 tabla) y/o usar un modelo latino más liviano, y medirlo antes de enchufar
 nada. El PDF digital no tiene este problema: sus palabras salen del archivo
 en milisegundos.
+
+## Enmascarado: el OCR de las fotos es Tesseract, sin Docker (2026-09-24)
+
+El plan (C2) elegía RapidOCR porque Tesseract "es un programa del sistema y
+el Render nativo no deja instalarlo". Medido, RapidOCR no llegaba al límite
+de 3 s por foto, y SDN rechazó ajustar el límite apostando a que llegaran
+pocas fotos. Se buscó otra solución antes que pasar el servicio a Docker.
+
+**`tesserocr` publica ruedas para Linux que traen Tesseract 5.5.1 adentro**
+(`libtesseract` y `libleptonica` empaquetadas, 5,5 MB): se instala con `pip`
+en el Render nativo, sin `apt` y sin Docker. Se verificó en un contenedor
+`python:3.12.8-slim-bookworm` pelado (Debian 12, lo mismo que el Render
+nativo), sin instalar nada del sistema. Le falta solo el idioma:
+`spa.traineddata` de `tessdata_fast` (2,3 MB). No hay rueda para Windows:
+en una PC de desarrollo con Windows el camino de las fotos se prueba en
+Docker.
+
+### La medición (contenedor con `--memory=512m`, 10 sintéticos + el digital)
+
+Los tiempos de reloj en la notebook variaron hasta 4 veces entre corridas
+(la máquina estaba ocupada con otras cosas), así que el número que vale es el
+**tiempo de CPU por página**, que no depende de qué más corre:
+
+| Motor | CPU por página | Memoria del proceso |
+|---|---|---|
+| RapidOCR, modelo chino, página entera | ~21 s (notebook, 1 hilo) | — |
+| RapidOCR, latino v5, sin leer la tabla | 3,4–3,8 s | 256–305 MB |
+| **Tesseract, página entera** | **0,7 s** | ~128 MB |
+
+Con 1 CPU (producción) una foto suma ~0,7 s; con medio núcleo (Pruebas),
+~1,4 s. El modelo de Tesseract ocupa ~20 MB por proceso, no los 200 que
+estimaba el plan. El modelo latino cuantizado a 8 bits se descartó: más
+lento y dejó escapar el nombre. Leer "sin la tabla" (reconocer las filas de
+conceptos por geometría y no leerlas) le sirvió a RapidOCR pero no a
+Tesseract, que analiza la página dos veces para eso.
+
+### Lo que cambió en el módulo
+
+Tesseract lee "CUIL N" como **"CUILN"**: el rótulo acepta ahora la N pegada.
+Con eso, en los 11 recibos se tapa exactamente la identidad y el control de
+fuga da 0, con y sin datos conocidos.
+
+### Docker, por si alguna vez hace falta
+
+Se relevó qué implicaría: Render permite cambiar el runtime de un servicio
+existente a Docker (conserva URL, variables y base); hay que mantener un
+`Dockerfile` (y las actualizaciones del sistema base pasan a ser nuestras),
+`render_admin.py` cambia los workers en el "Start Command", que en Docker
+es el "Docker Command", y el cambio se hace dos veces (Pruebas y Demo).
+Con `tesserocr` no hace falta.

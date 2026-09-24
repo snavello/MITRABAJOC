@@ -30,3 +30,6 @@ carga/usuarios.csv
 carga/log/*/test1_lecturas.json
 carga/log/*/test2_recibos.json
 carga/log/*/*.ndjson
+
+# Modelos de OCR descargados para medir (PLAN_ENMASCARADO.md, bloque 2).
+modelos_ocr/

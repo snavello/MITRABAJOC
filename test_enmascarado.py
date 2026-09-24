@@ -125,6 +125,13 @@ def test_encabezados_en_columnas_con_valores_debajo():
     assert an.cuiles == ["27999999999"]
 
 
+def test_rotulo_cuil_con_la_n_pegada():
+    """Tesseract lee "CUIL N" como "CUILN"; sigue siendo el rótulo."""
+    pal = [P("CUILN", 957, 266, 1000, 282), P("27-99999999-9", 898, 288, 1007, 305)]
+    an = E.analizar(pal)
+    assert [k.tipo for k in an.cajas] == ["cuil"] and an.cuiles == ["27999999999"]
+
+
 def test_rotulo_empleador_no_es_empleado():
     pal = [P("EMPLEADOR:", 10, 10, 100), P("ACME", 106, 10, 150)]
     assert [k.tipo for k in E.analizar(pal).cajas] == ["razon_social"]
