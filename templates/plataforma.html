@@ -646,6 +646,17 @@
     {% else %}— no se tapa ni se anota nada. Se prende con la variable <code>ENMASCARADO</code> del servicio (<code>sombra</code> o <code>activo</code>).{% endif %}
     Lector de fotos: <strong>{{ "listo" if enmascarado_ocr else "no disponible (solo se tapa el PDF con texto)" }}</strong>.
   </div>
+  {% if enmascarado_diag_entorno %}
+  <div class="aviso-caja" style="margin-bottom:14px; border-color:#b8860b;">
+    <strong>Diagnóstico (transitorio, solo Pruebas):</strong>
+    {% if enmascarado_diagnostico %}se guardan la imagen original y la que recibió la IA de cada documento, para verlas con «Ver» en la lista. <strong>La original tiene datos personales</strong>: se borran solas a los {{ enmascarado_dias }} días.
+    {% else %}apagado. Se prende con <code>ENMASCARADO_GUARDAR_IMAGENES=1</code> en el servicio de Pruebas.{% endif %}
+    <form method="post" action="/plataforma/enmascarado/imagenes/borrar" style="display:inline; margin-left:8px;"
+          onsubmit="return confirm('¿Borrar todas las imágenes de diagnóstico guardadas? No se puede deshacer.');">
+      <button type="submit" class="mini borrar">Borrar todas las imágenes</button>
+    </form>
+  </div>
+  {% endif %}
 
   <div class="card">
     <div class="ia-tot" id="enm-totales"></div>
@@ -690,7 +701,8 @@
   <div class="tabla-ancha">
     <table>
       <tr><th>Fecha</th><th>Sindicato</th><th>Documento</th><th>Camino</th><th>Resultado</th>
-          <th class="num">Zonas</th><th class="num">Fugas</th><th class="num">Espera</th><th class="num">Total</th></tr>
+          <th class="num">Zonas</th><th class="num">Fugas</th><th class="num">Espera</th><th class="num">Total</th>
+          {% if enmascarado_diag_entorno %}<th>Imágenes</th>{% endif %}</tr>
       {% for r in enmascarado_registros %}
       <tr class="fila-enm" data-tipo="{{ r.tipo }}" data-camino="{{ r.camino }}" data-resultado="{{ r.resultado }}"
           data-motivo="{{ r.motivo }}" data-fugas="{{ r.fugas }}" data-pertenece="{{ '' if r.pertenece is none else ('si' if r.pertenece else 'no') }}"
@@ -701,9 +713,10 @@
         <td class="num">{{ r.cajas }}</td>
         <td class="num">{% if r.fugas %}<strong style="color:#b8860b;">{{ r.fugas }}</strong>{% else %}0{% endif %}</td>
         <td class="num">{{ r.espera_ms }} ms</td><td class="num">{{ r.total_ms }} ms</td>
+        {% if enmascarado_diag_entorno %}<td>{% if r.con_imagenes %}<a href="/plataforma/enmascarado/{{ r.id }}" target="_blank" rel="noopener">Ver</a>{% else %}<span class="muted">—</span>{% endif %}</td>{% endif %}
       </tr>
       {% else %}
-      <tr><td colspan="9" class="muted">Todavía no hay registros. Aparecen cuando alguien sube un recibo o un comprobante con el enmascarado en <code>sombra</code> o <code>activo</code>.</td></tr>
+      <tr><td colspan="10" class="muted">Todavía no hay registros. Aparecen cuando alguien sube un recibo o un comprobante con el enmascarado en <code>sombra</code> o <code>activo</code>.</td></tr>
       {% endfor %}
     </table>
     <p class="muted" style="font-size:12px; margin-top:8px;">Se listan las 300 más recientes que cumplen el filtro; los números de arriba cuentan todas las que llegaron a esta pantalla (hasta 3.000).</p>
