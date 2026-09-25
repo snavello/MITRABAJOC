@@ -162,9 +162,19 @@ with db.get_session() as s:
     sind = Sindicato(nombre="Test Enmascarado", slug="test-enmascarado")
     s.add(sind); s.commit(); s.refresh(sind)
     SID = sind.id
-    s.add(Trabajador(sindicato_id=SID, cuil=CUIL, activo=True, registrado=True))
+    s.add(Trabajador(sindicato_id=SID, cuil=CUIL, activo=True, registrado=True,
+                     cuit_empleador="33-69345023-9"))
     db.guardar_datos_personales(s, CUIL, nombre=NOMBRE)
     s.commit()
+
+
+def test_cuits_conocidos_de_la_persona_y_del_sindicato(monkeypatch):
+    """Los CUITs que habilitan a tapar un CUIT con certeza: los del
+    empadronamiento de la persona y, para el aprendizaje, los del sindicato."""
+    assert db.cuits_conocidos(cuil=CUIL) == ("33693450239",)
+    assert db.cuits_conocidos(cuil="20000000001") == ()
+    monkeypatch.setenv("ENMASCARADO", "sombra")
+    assert main._conocidos_trabajador(CUIL).cuits == ("33693450239",)
 
 
 def _cliente(cuil=CUIL):

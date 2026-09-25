@@ -91,6 +91,11 @@ class Conocidos:
     cuil: str = ""
     nombre: str = ""
     razones_sociales: tuple[str, ...] = ()
+    # CUITs de empleadores que la app ya conoce (los del afiliado en el
+    # padrón y en sus recibos anteriores, o los del sindicato en el
+    # aprendizaje). Un CUIT leído que coincide con uno de estos se tapa y se
+    # rearma con el CONOCIDO, no con lo que leyó el OCR.
+    cuits: tuple[str, ...] = ()
 
 
 @dataclass
@@ -200,6 +205,15 @@ def distintos_de_verdad(a: str, b: str) -> bool:
     if len(a) != 11 or len(b) != 11:
         return False
     return sum(x != y for x, y in zip(a, b)) >= 3
+
+
+def leido_con_certeza(once: str) -> bool:
+    """Un CUIL/CUIT leído que se puede dar por bien leído sin conocerlo:
+    prefijo que existe Y dígito verificador válido. El verificador no valida
+    nada (el módulo 11 no se exige, BACKLOG.md): es la prueba de lectura. El
+    prefijo hace falta porque un dígito errado cumple el verificador una vez
+    de cada once: así pasó con 33-69345023-9 leído 39-69945023.9."""
+    return once[:2] in PREFIJOS_PERSONA | PREFIJOS_EMPRESA and dv_valido(once)
 
 
 def _es_persona(once: str) -> bool:
@@ -474,6 +488,24 @@ def _casi_igual(a: str, b: str) -> bool:
     return any(largo[:k] + largo[k + 1:] == corto for k in range(len(largo)))
 
 
+def _cuit_conocido(once: str, cuits: list) -> str | None:
+    """El CUIT conocido que el OCR leyó como `once` (igual o con 1-2 dígitos
+    distintos), o None. Si dos conocidos quedan igual de cerca no elige: con
+    los CUITs de todo un sindicato, adivinar sería rearmar el de otro."""
+    if once in cuits:
+        return once
+    cerca = {}
+    for c in cuits:
+        if len(once) == len(c) == 11:
+            d = sum(x != y for x, y in zip(once, c))
+            if d <= 2:
+                cerca.setdefault(d, set()).add(c)
+    if not cerca:
+        return None
+    mejores = cerca[min(cerca)]
+    return next(iter(mejores)) if len(mejores) == 1 else None
+
+
 def _casi_el_cuil(once: str, cuil_s: str) -> bool:
     """¿Es el CUIL de la sesión con uno o dos dígitos mal leídos? (el OCR
     leyó "20202790414" donde decía "...411", con el logo de agua encima)."""
@@ -587,6 +619,17 @@ def analizar(palabras: list[Palabra], conocidos: Conocidos | None = None) -> Ana
     dni_s = dni_de_cuil(cuil_s)
     tokens = _tokens_nombre(c.nombre)
     razones = [_alnum(r) for r in c.razones_sociales if len(_alnum(r)) >= 6]
+    cuits_c = [d for d in (_digitos(x) for x in c.cuits) if len(d) == 11]
+    vistos: list[str] = []      # CUILs leídos sin certeza: no se tapan
+
+    def con_certeza(tipo: str, digitos: str):
+        """El valor con el que se puede rearmar un CUIL/CUIT leído junto a
+        su rótulo, o None si no hay certeza (entonces no se tapa)."""
+        if len(digitos) != 11:
+            return None
+        if cuil_s and (digitos == cuil_s or _casi_el_cuil(digitos, cuil_s)):
+            return cuil_s
+        return _cuit_conocido(digitos, cuits_c) or (digitos if leido_con_certeza(digitos) else None)
 
     res = Analisis()
     marcadas: dict[int, Caja] = {}
@@ -607,17 +650,38 @@ def analizar(palabras: list[Palabra], conocidos: Conocidos | None = None) -> Ana
 
     # 1 y 2: lo conocido y los patrones.
     for f in frases:
+        # REGLA DE CERTEZA (SDN, 2026-09-24): un CUIL o un CUIT se tapa SOLO
+        # si después se puede volver a poner con certeza, porque la
+        # evaluación los usa (el CUIL verifica que el recibo sea de quien lo
+        # sube; el CUIT elige los conceptos del empleador). Con certeza es:
+        # el de la sesión o un CUIT conocido (aunque el OCR les erre 1-2
+        # dígitos: se rearma con el conocido), o un número con dígito
+        # verificador válido -- que NO se usa para validar nada, sino como
+        # prueba de que se leyó bien: una lectura con un dígito errado casi
+        # nunca lo cumple. Si no hay certeza, queda a la vista y la IA lo lee
+        # como siempre. Así se encontró el problema: el OCR leyó el CUIT
+        # 33-69345023-9 como 39-69945023.9, se tapó, y el recibo se rearmó con
+        # el CUIT equivocado.
         for once, crudo, idx in _identidades(f):
-            conocido = bool(cuil_s) and once == cuil_s
-            if not conocido and _casi_el_cuil(once, cuil_s):
-                # Es el propio, mal leído: se tapa y cuenta como encontrado.
+            if cuil_s and (once == cuil_s or _casi_el_cuil(once, cuil_s)):
                 marcar(idx, "cuil", "conocido")
                 leido(cuil_s, "cuil")
                 continue
-            if conocido or parece_cuil(crudo, once):
-                tipo = "cuit" if _es_empresa(once) else "cuil"
-                marcar(idx, tipo, "conocido" if conocido else "patron")
+            conocido = _cuit_conocido(once, cuits_c)
+            if conocido:
+                marcar(idx, "cuit", "conocido")
+                leido(conocido, "cuit")
+                continue
+            if not parece_cuil(crudo, once):
+                continue
+            tipo = "cuit" if _es_empresa(once) else "cuil"
+            if leido_con_certeza(once):
+                marcar(idx, tipo, "patron")
                 leido(once, tipo)
+            elif tipo == "cuil":
+                # Sin certeza no se tapa, pero se anota: un CUIL de otra
+                # persona sirve igual para cortar un recibo ajeno.
+                vistos.append(once)
         if dni_s:
             for dni, idx in _dnis(f):
                 if dni == dni_s:
@@ -648,9 +712,13 @@ def analizar(palabras: list[Palabra], conocidos: Conocidos | None = None) -> Ana
             if valor:
                 if valor_valido(tipo, valor):
                     idx = f.palabras_en(fin, hasta)
-                    marcar(idx, tipo, "rotulo")
                     if tipo in ("cuil", "cuit"):
-                        leido(_digitos(valor), tipo)
+                        cierto = con_certeza(tipo, _digitos(valor))
+                        if not cierto:
+                            vistos.append(_digitos(valor))
+                            continue
+                        leido(cierto, "cuil" if cierto == cuil_s or _es_persona(cierto) else "cuit")
+                    marcar(idx, tipo, "rotulo")
                 continue
             # Rótulo solo: el valor está en otra frase. Solo para el último
             # rótulo de la frase (los anteriores tienen el siguiente al lado).
@@ -658,9 +726,13 @@ def analizar(palabras: list[Palabra], conocidos: Conocidos | None = None) -> Ana
                 continue
             k = _vecina(f, frases, set(rotulos), j, tipo)
             if k is not None:
-                marcar(frases[k].idx, tipo, "rotulo")
                 if tipo in ("cuil", "cuit"):
-                    leido(_digitos(frases[k].texto), tipo)
+                    cierto = con_certeza(tipo, _digitos(frases[k].texto))
+                    if not cierto:
+                        vistos.append(_digitos(frases[k].texto))
+                        continue
+                    leido(cierto, "cuil" if cierto == cuil_s or _es_persona(cierto) else "cuit")
+                marcar(frases[k].idx, tipo, "rotulo")
 
     # 3b: TAPAR ALREDEDOR DE LO ENCONTRADO (enfoque mixto, SDN 2026-09-24;
     # ver docs/ENMASCARADO.md). No se tapa "todo el encabezado": solo la
@@ -693,7 +765,11 @@ def analizar(palabras: list[Palabra], conocidos: Conocidos | None = None) -> Ana
     ancla = [k for k in marcadas.values() if k.tipo in ("nombre", "cuil", "dni", "cuenta")]
     if ancla:
         for i, p in enumerate(palabras):
-            if (i in marcadas or len(_digitos(p.texto)) < 4 or _es_lista_blanca(p.texto)
+            # Un número con forma de CUIL/CUIT (10+ cifras) que no se reconoció
+            # queda a la vista: taparlo sin poder rearmarlo le saca a la IA el
+            # dato con que verifica de quién es el recibo.
+            if (i in marcadas or len(_digitos(p.texto)) < 4 or len(_digitos(p.texto)) >= 10
+                    or _es_lista_blanca(p.texto)
                     or en_tabla(p)):
                 continue
             if any(k.pagina == p.pagina and _misma_linea(k, p) for k in ancla):
@@ -737,6 +813,9 @@ def analizar(palabras: list[Palabra], conocidos: Conocidos | None = None) -> Ana
             for idx in _tramos_razon(f, aprendidas_razones):
                 marcar(idx, "razon_social", "aprendido")
 
+    for v in vistos:
+        if len(v) == 11 and _es_persona(v) and v not in res.cuiles:
+            res.cuiles.append(v)
     res.cajas = sorted(marcadas.values(), key=lambda k: (k.pagina, k.y0, k.x0))
     res.cuil_sesion_encontrado = (cuil_s in res.cuiles) if cuil_s else None
     res.nombre_encontrado = any(k.tipo == "nombre" for k in res.cajas) if tokens else None
@@ -773,6 +852,7 @@ def control_de_fuga(palabras: list[Palabra], cajas: list[Caja],
     dni_s = dni_de_cuil(cuil_s)
     tokens = _tokens_nombre(c.nombre)
     razones = [_alnum(r) for r in c.razones_sociales if len(_alnum(r)) >= 6]
+    cuits_c = [d for d in (_digitos(x) for x in c.cuits) if len(d) == 11]
 
     def cubierta(i: int) -> bool:
         p = palabras[i]
@@ -788,7 +868,10 @@ def control_de_fuga(palabras: list[Palabra], cajas: list[Caja],
 
     for f in _frases(palabras):
         for once, crudo, idx in _identidades(f):
-            if (cuil_s and once == cuil_s) or _casi_el_cuil(once, cuil_s) or parece_cuil(crudo, once):
+            # Solo lo que la regla de certeza manda tapar: lo que se deja a la
+            # vista a propósito no es una fuga.
+            if ((cuil_s and (once == cuil_s or _casi_el_cuil(once, cuil_s)))
+                    or _cuit_conocido(once, cuits_c) or (parece_cuil(crudo, once) and leido_con_certeza(once))):
                 revisar(idx, "CUIL/CUIT")
         if dni_s:
             for dni, idx in _dnis(f):

@@ -6201,3 +6201,39 @@ tapado. No es el color. Muestra chica, pero es el riesgo que importa: se
 mide sobre un conjunto variado antes de llevar esto a la demo.
 `medicion_enmascarado/medir.py` ahora acepta fotos y recibos reales con
 `--conocidos-archivo` (que no se versionan). Trabajador 0.43.01.
+
+### La regla de certeza: "CUIT OCULTO" en la pantalla de confirmar (2026-09-24)
+
+SDN subió en Pruebas la misma foto real y la pantalla de confirmar mostró
+"CUIT OCULTO" en lugar del CUIL. Mirando la imagen guardada (registro 11)
+aparecieron dos cosas. El OCR de Pruebas leyó mal el CUIL: la fila de la
+identidad lo tapó como "DATO OCULTO" y ya no se pudo volver a poner, así que
+la IA devolvió el rótulo y ese texto llegó a la pantalla. Además leyó el CUIT
+`33-69345023-9` como `39-69945023.9`: se tapó por su formato y el recibo se
+rearmó con el CUIT equivocado. Ese número mal leído cumplía el verificador de
+casualidad, cosa que pasa una vez de cada once.
+
+La regla que salió, general y no para este recibo: **un CUIL o un CUIT se tapa
+solo si después se puede volver a poner con certeza**, porque la evaluación
+los usa (el CUIL para saber si el recibo es de quien lo sube, el CUIT para
+elegir los conceptos del empleador). Hay certeza en tres casos:
+- es el de la sesión, aunque tenga hasta 2 dígitos mal leídos;
+- es un CUIT conocido. `db.cuits_conocidos` junta los del empadronamiento y
+  los de los recibos anteriores de la persona y, para el aprendizaje, los del
+  sindicato. También con 2 dígitos de tolerancia, pero si dos conocidos
+  quedan igual de cerca no se elige ninguno;
+- el número tiene un prefijo que existe (20/23/24/25/26/27/30/33/34) y el
+  verificador válido (`enmascarado.leido_con_certeza`). Así el módulo 11
+  sirve para probar que se leyó bien, no para validar el número (sigue en
+  BACKLOG.md).
+
+Si no hay certeza, el número queda a la vista y la IA lo lee como siempre.
+Igual queda anotado como leído, para cortar un recibo ajeno. La fila de la
+identidad ya no tapa números de 10 cifras o más, el control de fuga reclama
+solo lo que había que tapar y el rearmado del CUIL usa solo uno que se tapó
+con certeza.
+
+Probado con la IA real (claude-sonnet-4-6) sobre la imagen del registro 11 y
+la foto original, conociendo el CUIT y sin conocerlo: las cuatro veces
+salieron el CUIL 20202790411 y el CUIT 33693450239. Trabajador 0.43.02,
+Admin 0.46.03 (aprendizaje).

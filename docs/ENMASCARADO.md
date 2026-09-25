@@ -50,6 +50,17 @@ Sale del esquema del extractor (`extractor.ESQUEMA`):
    dependencia, por ejemplo), que es donde lo que se tapa casi nunca le sirve
    a la IA.
 
+## Regla de certeza para CUIL y CUIT (2026-09-24)
+
+Un CUIL o un CUIT **se tapa solo si después se puede volver a poner con
+certeza**. Hay certeza cuando es el de la sesión o un CUIT conocido
+(`db.cuits_conocidos`, con hasta 2 dígitos mal leídos y sin elegir si dos
+conocidos quedan igual de cerca), o cuando el prefijo existe y el verificador
+es válido (`leido_con_certeza`). Si no hay certeza, el número queda a la vista.
+Taparlo sin poder rearmarlo le deja a la evaluación un rótulo en lugar del
+dato ("CUIT OCULTO" en la pantalla de confirmar), o peor, un CUIT mal leído.
+La fila de la identidad no tapa números de 10 cifras o más.
+
 ## Cómo se mide (no se opina)
 
 `medicion_enmascarado/medir.py` lee cada recibo tres veces con el mismo

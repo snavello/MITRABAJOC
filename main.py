@@ -699,16 +699,18 @@ def _registrar_uso_fallido(e: BaseException, sindicato_id, cuil: str, tipo: str)
 # no se hace nada y las rutas quedan exactamente como antes.
 
 def _conocidos_trabajador(cuil: str):
-    """Lo que la app ya sabe de quien sube el documento: su CUIL y su nombre
-    (la persona, CuentaTrabajador). Buscar un texto conocido es lo que más
-    fiable hace el tapado. None en modo apagado: no se toca la base."""
+    """Lo que la app ya sabe de quien sube el documento: su CUIL, su nombre
+    (la persona, CuentaTrabajador) y los CUITs de sus empleadores. Buscar un
+    texto conocido es lo que más fiable hace el tapado, y es lo que permite
+    rearmar un CUIT con certeza aunque el OCR le erre un dígito. None en modo
+    apagado: no se toca la base."""
     if not cuil or preparacion.modo() == "apagado":
         return None
     try:
         nombre = (db.datos_personales(cuil) or {}).get("nombre") or ""
     except Exception:
         nombre = ""
-    return preparacion.E.Conocidos(cuil=cuil, nombre=nombre)
+    return preparacion.E.Conocidos(cuil=cuil, nombre=nombre, cuits=db.cuits_conocidos(cuil=cuil))
 
 
 async def _preparar_para_ia(contenido: bytes, content_type: str, conocidos, sid, tipo: str):
@@ -4634,15 +4636,17 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
     _exigir_modulo(sid, "recibos")
     conceptos_actuales = db.conceptos_como_dicts(sid)
     genericos_actuales = [c for c in conceptos_actuales if not c.get("cuit_empleador")]
+    conocidos_sind = (None if preparacion.modo() == "apagado"
+                      else preparacion.E.Conocidos(cuits=db.cuits_conocidos(sindicato_id=sid)))
     acumulados = {}
     leidos, fallidos = 0, 0
 
     for archivo in archivos:
         contenido = await archivo.read()
-        # Recibos de otras personas: no hay nada conocido de antemano, se tapa
-        # por patrones y rótulos. El CUIT del empleador se rearma con lo leído
-        # acá, que es de lo que dependen los conceptos por empleador.
-        prep = await _preparar_para_ia(contenido, archivo.content_type, None, sid, "aprendizaje")
+        # Recibos de otras personas: de la persona no se sabe nada, se tapa
+        # por patrones y rótulos. Del empleador sí: los CUITs del sindicato,
+        # que es de lo que dependen los conceptos por empleador.
+        prep = await _preparar_para_ia(contenido, archivo.content_type, conocidos_sind, sid, "aprendizaje")
         try:
             recibo, uso = await run_in_threadpool(extraer, contenido, archivo.content_type,
                                                   db.modelo_ia("recibos"), **_para_la_ia(prep))
