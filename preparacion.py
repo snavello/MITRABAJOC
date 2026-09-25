@@ -200,7 +200,8 @@ def imagenes_diagnostico(prep: Preparado, contenido: bytes, content_type: str):
 
 # ======================= Rearmar la identidad =======================
 
-_OCULTO = re.compile(r"OCULT", re.I)
+# "0CULTO" con cero también: es lo que puede devolver la IA leyendo el rótulo.
+_OCULTO = re.compile(r"[O0]CULT", re.I)
 
 
 def _vacio(v) -> bool:
@@ -235,10 +236,12 @@ def _textos(an: E.Analisis, tipo: str) -> str:
 def _cuil_propio_o_valido(an: E.Analisis, conocidos: E.Conocidos | None):
     if conocidos and conocidos.cuil and an.cuil_sesion_encontrado:
         return re.sub(r"\D", "", conocidos.cuil)
-    # El primer CUIL de persona leído (sin exigir el módulo 11, que por ahora
-    # no se valida: los de la demo no lo cumplen).
-    personas = [c for c in an.cuiles if c[:2] in E.PREFIJOS_PERSONA]
-    return personas[0] if personas else None
+    # Solo un CUIL que se TAPÓ, y se tapó porque había certeza (verificador
+    # válido). Uno leído sin certeza no se tapó: la IA lo leyó y el campo no
+    # está vacío, así que no se llega acá.
+    tapados = {re.sub(r"\D", "", k.texto) for k in an.cajas if k.tipo == "cuil"}
+    ciertos = [c for c in an.cuiles if E.leido_con_certeza(c) and c in tapados]
+    return ciertos[0] if ciertos else None
 
 
 def rearmar_recibo(recibo: dict, an: E.Analisis, conocidos: E.Conocidos | None,
@@ -268,7 +271,7 @@ def rearmar_recibo(recibo: dict, an: E.Analisis, conocidos: E.Conocidos | None,
     if _vacio(empr.get("nombre")):
         razon = razon_por_cuit(empr["cuit"]) if (razon_por_cuit and empr.get("cuit")) else None
         empr["nombre"] = razon or _textos(an, "razon_social") or None
-    # El rótulo gris no es una tachadura: si la IA lo marcó como tal, no vale.
+    # El rótulo no es una tachadura: si la IA lo marcó como tal, no vale.
     alerta = recibo.get("alerta_adulteracion") or {}
     if alerta.get("detectada") and _OCULTO.search(str(alerta.get("motivo") or "")):
         recibo["alerta_adulteracion"] = {"detectada": False, "motivo": None}

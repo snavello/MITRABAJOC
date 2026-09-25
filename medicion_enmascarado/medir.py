@@ -60,23 +60,30 @@ def _letras(v) -> str:
     return E._letras(str(v or ""))
 
 
-def _leer(contenido, imagen, aviso, modelo):
+def _tipo(ruta: Path) -> str:
+    return {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}.get(ruta.suffix.lower(), "application/pdf")
+
+
+def _leer(contenido, imagen, aviso, modelo, tipo="application/pdf"):
     t = time.perf_counter()
-    datos, uso = extractor.extraer(contenido, "application/pdf", modelo, imagen, aviso_enmascarado=aviso)
+    datos, uso = extractor.extraer(contenido, tipo, modelo, imagen, aviso_enmascarado=aviso)
     return datos, uso, time.perf_counter() - t
 
 
 def medir_uno(ruta: Path, modelo: str) -> dict:
     contenido = ruta.read_bytes()
     conocidos = CONOCIDOS.get(ruta.stem, SINTETICO)
-    # El original: la primera página a 150 dpi, como la prepara la app hoy.
-    original = _png(lectores.imagen_pdf(contenido, 0))
-    prep = preparacion.preparar(contenido, "application/pdf", conocidos, "activo")
-    prep_sin = preparacion.preparar(contenido, "application/pdf", None, "activo")
+    tipo = _tipo(ruta)
+    # El original: la primera página a 150 dpi, como la prepara la app hoy (o
+    # la foto, derecha).
+    original = _png(lectores.imagen_pdf(contenido, 0) if tipo == "application/pdf"
+                    else lectores.abrir_imagen(contenido))
+    prep = preparacion.preparar(contenido, tipo, conocidos, "activo")
+    prep_sin = preparacion.preparar(contenido, tipo, None, "activo")
     with ThreadPoolExecutor(3) as ex:
-        f_orig = ex.submit(_leer, contenido, original, False, modelo)
-        f_tap = ex.submit(_leer, contenido, prep.imagen, prep.tapado, modelo)
-        f_sin = ex.submit(_leer, contenido, prep_sin.imagen, prep_sin.tapado, modelo)
+        f_orig = ex.submit(_leer, contenido, original, False, modelo, tipo)
+        f_tap = ex.submit(_leer, contenido, prep.imagen, prep.tapado, modelo, tipo)
+        f_sin = ex.submit(_leer, contenido, prep_sin.imagen, prep_sin.tapado, modelo, tipo)
         d_orig, u_orig, t_orig = f_orig.result()
         d_tap, u_tap, t_tap = f_tap.result()
         d_sin, u_sin, t_sin = f_sin.result()
@@ -163,10 +170,19 @@ def main():
     ap.add_argument("rutas", nargs="+", type=Path)
     ap.add_argument("--modelo", default=extractor.MODELO)
     ap.add_argument("--salida", type=Path, default=Path(__file__).parent / "RESULTADO.md")
+    ap.add_argument("--conocidos-archivo", type=Path)
     a = ap.parse_args()
     archivos = []
     for r in a.rutas:
         archivos += sorted(r.glob("*.pdf")) if r.is_dir() else [r]
+    # --conocidos-archivo: nombre=CUIL|NOMBRE por línea, para recibos reales que
+    # no se versionan (sus datos no van en este archivo).
+    if a.conocidos_archivo:
+        for ln in a.conocidos_archivo.read_text(encoding="utf-8").splitlines():
+            if "=" in ln and "|" in ln:
+                clave, resto = ln.split("=", 1)
+                cuil, nombre = resto.split("|", 1)
+                CONOCIDOS[clave.strip()] = E.Conocidos(cuil.strip(), nombre.strip())
     res = []
     for ruta in archivos:
         try:

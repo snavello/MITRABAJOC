@@ -6136,3 +6136,104 @@ guardar la imagen original y la enviada a la IA y verlas desde el listado:
 
 **Cuando termine la etapa de diagnóstico, se saca** (tabla, rutas y
 variable). Plataforma 0.40.01.
+
+### La primera foto real que falló, y por qué (2026-09-24)
+
+Con el diagnóstico de imágenes, SDN vio que en la foto de su recibo de AEFIP
+(en modo activo) quedaban a la vista el CUIL, el legajo, el número de cuenta
+y "SANDRO", del nombre. La primera sospecha (poca resolución) era
+**falsa**: el navegador mostraba la imagen achicada; en la foto el recibo
+llena el cuadro y la letra se lee bien. Las causas reales, reproducidas con
+la foto original:
+
+- **Los logos de agua "AFIP" impresos encima del encabezado** hacen que el
+  OCR lea `20202790414` donde dice `...411` y "CUL" donde dice "CUIL Nº", y
+  "Legajo" como "2".
+- **Las líneas se armaban comparando con la palabra anterior**: en una foto
+  apenas torcida, una caja alta de ruido unía dos filas, y "Datos de la
+  Cuenta Bancaria" con "Sucursal - Nro. Cuenta" salían en una sola frase
+  entremezclada. Ahora una palabra entra a la línea por la distancia a su
+  centro promedio, medida con el alto típico de la letra.
+- **Un signo suelto después del rótulo** ("Nro. Cuenta >") se tomaba como su
+  valor y no se buscaba el de abajo. Ahora se ignora.
+- **El dibujo**: SANDRO estaba marcado para tapar, pero la unión de cajas
+  vecinas se quedaba con el borde izquierdo de la caja equivocada cuando la
+  foto torcida las traía desordenadas. SANDRO quedaba a la vista aunque el
+  análisis dijera "tapado". Ahora se une por ambos bordes.
+
+Y tolerancia para lo que el OCR lee a medias: el rótulo "CUL"; **el CUIL de
+la sesión con hasta dos dígitos mal leídos** se reconoce como propio;
+**una letra de diferencia en partes del nombre de 6+ letras** (con 5,
+"JULIA" y "JULIO" chocaban -- lo encontró un sintético con el período en
+julio); y **la fila de la identidad**: en la línea del nombre o del CUIL, un
+número de 4+ cifras que no es fecha, año ni importe se tapa como legajo.
+
+Con la foto original: 10 zonas tapadas (nombre completo, CUIL, legajo, DNI,
+cuenta, CUIT del empleador), 0 fugas, 0,9 s. La idea de SDN de subir el
+contraste (blanquear los grises del logo) se probó: el CUIL se lee perfecto,
+pero según el umbral se pierden el legajo, la cuenta o parte del nombre; el
+blanco y negro propio de Tesseract rinde mejor en conjunto. Queda como
+alternativa. Tests nuevos con datos ficticios de la misma forma (65 en
+`test_enmascarado.py`). Trabajador 0.42.05.
+
+### Enfoque mixto y tapones más grandes (2026-09-24)
+
+SDN advirtió que se estaba ajustando para un recibo y que vendrán otros
+formatos. Se compararon tres estrategias -- detectar la identidad (la de
+hasta hoy), tapar por defecto fuera de la tabla, y un mixto -- y SDN eligió
+probar el **mixto**: tapar alrededor de lo ya encontrado (la frase del
+nombre entera y los números de la fila de la identidad), con una lista
+blanca de lo que la IA necesita (fechas, períodos, años, importes). Tapar
+por defecto quedó descartado por ahora: más protector, pero si el límite de
+la tabla se detecta mal se tapan conceptos, y eso pega en el objetivo
+principal. **La ficha rectora es `docs/ENMASCARADO.md`.**
+
+Tapones: margen proporcional al alto de la letra (en una foto torcida
+asomaban los bordes del dato) y color configurable (`ENMASCARADO_COLOR`,
+rojo en Pruebas a pedido de SDN). Lo que se tapa por la fila de identidad
+dice "DATO OCULTO": no se sabe si es el legajo o un código interno.
+
+**Medido con la IA real** (12 recibos, incluida la foto real): totales,
+líneas, período, categoría e identidad iguales; ninguna alerta de
+adulteración con tapones rojos. **Hallazgo abierto**: "A cuenta futuros
+aumentos" dio `remuneracion` 4/4 en el original y 3/4 (rojo) y 2/4 (gris)
+tapado. No es el color. Muestra chica, pero es el riesgo que importa: se
+mide sobre un conjunto variado antes de llevar esto a la demo.
+`medicion_enmascarado/medir.py` ahora acepta fotos y recibos reales con
+`--conocidos-archivo` (que no se versionan). Trabajador 0.43.01.
+
+### La regla de certeza: "CUIT OCULTO" en la pantalla de confirmar (2026-09-24)
+
+SDN subió en Pruebas la misma foto real y la pantalla de confirmar mostró
+"CUIT OCULTO" en lugar del CUIL. Mirando la imagen guardada (registro 11)
+aparecieron dos cosas. El OCR de Pruebas leyó mal el CUIL: la fila de la
+identidad lo tapó como "DATO OCULTO" y ya no se pudo volver a poner, así que
+la IA devolvió el rótulo y ese texto llegó a la pantalla. Además leyó el CUIT
+`33-69345023-9` como `39-69945023.9`: se tapó por su formato y el recibo se
+rearmó con el CUIT equivocado. Ese número mal leído cumplía el verificador de
+casualidad, cosa que pasa una vez de cada once.
+
+La regla que salió, general y no para este recibo: **un CUIL o un CUIT se tapa
+solo si después se puede volver a poner con certeza**, porque la evaluación
+los usa (el CUIL para saber si el recibo es de quien lo sube, el CUIT para
+elegir los conceptos del empleador). Hay certeza en tres casos:
+- es el de la sesión, aunque tenga hasta 2 dígitos mal leídos;
+- es un CUIT conocido. `db.cuits_conocidos` junta los del empadronamiento y
+  los de los recibos anteriores de la persona y, para el aprendizaje, los del
+  sindicato. También con 2 dígitos de tolerancia, pero si dos conocidos
+  quedan igual de cerca no se elige ninguno;
+- el número tiene un prefijo que existe (20/23/24/25/26/27/30/33/34) y el
+  verificador válido (`enmascarado.leido_con_certeza`). Así el módulo 11
+  sirve para probar que se leyó bien, no para validar el número (sigue en
+  BACKLOG.md).
+
+Si no hay certeza, el número queda a la vista y la IA lo lee como siempre.
+Igual queda anotado como leído, para cortar un recibo ajeno. La fila de la
+identidad ya no tapa números de 10 cifras o más, el control de fuga reclama
+solo lo que había que tapar y el rearmado del CUIL usa solo uno que se tapó
+con certeza.
+
+Probado con la IA real (claude-sonnet-4-6) sobre la imagen del registro 11 y
+la foto original, conociendo el CUIT y sin conocerlo: las cuatro veces
+salieron el CUIL 20202790411 y el CUIT 33693450239. Trabajador 0.43.02,
+Admin 0.46.03 (aprendizaje).

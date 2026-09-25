@@ -3900,6 +3900,33 @@ def registros_enmascarado(limite: int = 3000) -> list:
     return salida
 
 
+def cuits_conocidos(cuil: str = "", sindicato_id: Optional[int] = None) -> tuple:
+    """Los CUITs de empleador que la app ya conoce, para el enmascarado: con
+    `cuil`, los de esa persona (su empadronamiento y sus recibos anteriores);
+    con `sindicato_id`, los de ese sindicato (empleadores y conceptos). Un
+    CUIT leído que coincide con uno de estos se tapa y se rearma con el
+    conocido. Vacío si algo falla: el enmascarado es mejor esfuerzo."""
+    def dig(x):
+        return "".join(c for c in (x or "") if c.isdigit())
+    cuil = dig(cuil)
+    res = set()
+    try:
+        with Session(engine) as s:
+            if cuil:
+                res |= set(s.exec(select(Trabajador.cuit_empleador)
+                                  .where(Trabajador.cuil == cuil)).all())
+                res |= set(s.exec(select(ReciboVerificado.cuit_empleador)
+                                  .where(ReciboVerificado.cuil == cuil).distinct()).all())
+            if sindicato_id:
+                res |= set(s.exec(select(Empleador.cuit)
+                                  .where(Empleador.sindicato_id == sindicato_id)).all())
+                res |= set(s.exec(select(Concepto.cuit_empleador)
+                                  .where(Concepto.sindicato_id == sindicato_id).distinct()).all())
+    except Exception:
+        return ()
+    return tuple(sorted(d for d in map(dig, res) if len(d) == 11))
+
+
 def razon_social_de_cuit(sindicato_id: Optional[int], cuit: str) -> Optional[str]:
     """La razón social con que el sindicato tiene cargado a ese empleador,
     para rearmar el recibo cuando se le tapó a la IA. None si no está."""
