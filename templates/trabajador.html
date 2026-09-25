@@ -1090,7 +1090,7 @@
 
     <!-- Historial: mis recibos verificados -->
     <div id="misrecibos" style="display:none;">
-      <h1>Mis recibos verificados</h1>
+      <h1 class="titulo-pagina">Mis recibos verificados</h1>
       <p class="sub">Historial privado: todo lo que verificaste, lo hayas enviado a tu sindicato o no.</p>
       <div id="historial-contenido"></div>
       <button class="btn sec" id="historial-volver" style="margin-top:14px;">Volver</button>
@@ -1123,7 +1123,7 @@
   {% if 'noticias' in modulos %}
   <div class="tpanel" id="tp-novedades">
     {% if noticias %}
-      <h1 style="margin-bottom:6px;">Novedades</h1>
+      <h1 class="titulo-pagina" style="margin-bottom:6px;">Novedades</h1>
       {# Hilo: un hito por día (fecha_hora es "DD/MM HH:MM"), una burbuja por noticia #}
       <div class="nv-hilo">
       {% for n in noticias %}
@@ -1152,7 +1152,7 @@
   <!-- ============ PESTAÑA: MIS APORTES ============ -->
   {% if 'aportes' in modulos %}
   <div class="tpanel" id="tp-aportes">
-    <h1>Mis aportes</h1>
+    <h1 class="titulo-pagina">Mis aportes</h1>
     <div class="sem-card">
       <div class="th-head">
         <div class="k">Semáforo</div>
@@ -1167,7 +1167,7 @@
   <!-- ============ PESTAÑA: CAPACITACIÓN ============ -->
   {% if 'capacitacion' in modulos %}
   <div class="tpanel" id="tp-capacitacion">
-    <h1>Capacitación</h1>
+    <h1 class="titulo-pagina">Capacitación</h1>
     <div class="cap-card">
       <div class="th-head">
         <div class="k">Guía</div>
@@ -1196,7 +1196,7 @@
   {# Solo con sesión de trabajador: la ruta / (demo sin login) no tiene marca. #}
   {% if marca and 'credencial' in modulos %}
   <div class="tpanel" id="tp-credencial">
-    <h1>Credencial</h1>
+    <h1 class="titulo-pagina">Credencial</h1>
     <div class="cred" style="margin-top:16px;">
       {% if tiene_foto_perfil %}
       <div class="cred-retrato"><img src="/perfil-foto/{{ cuil }}" alt="" aria-hidden="true"></div>
@@ -1263,7 +1263,7 @@
   <div class="tpanel" id="tp-tramites">
 
     <div id="tram-inicio">
-      <h1>Trámites</h1>
+      <h1 class="titulo-pagina">Trámites</h1>
       <p class="sub">Formularios de tu sindicato y seguimiento de tus expedientes.</p>
 
       <!-- "Necesita tu atención": el trámite con novedad más reciente (lo llena renderTramites) -->

@@ -95,6 +95,25 @@ En teléfono se apaga todo: ahí el contenido ya ocupa el ancho completo. No va
 en los logins, el primer ingreso de plataforma, las portadas ni las pantallas
 oscuras. El estilo y el porqué, en `static/interior.css`.
 
+## El título de la pantalla
+
+Uno solo para las tres apps, con la clase **`titulo-pagina`**: condensada
+(`--fuente-display`), 700, **31px**, interlineado 1, `letter-spacing: .3px` y
+en **MAYÚSCULAS**. Es el tratamiento que ya tenía `.rc-h1` -- el "SUBÍ TU
+RECIBO" del afiliado -- y que ahora usan todas.
+
+- Lo lleva **el primer título de cada panel y de cada sub-panel**: el que
+  queda arriba de todo. Los encabezados de sección que vienen más abajo
+  ("Noticias cargadas (30)") no lo llevan y siguen chicos, en tinta y sobre
+  fondo claro.
+- **Va en blanco arriba de 760px**, porque atrás baja la franja de marca, y
+  con él la bajada que va pegada al título. Lo que adentro de esa bajada
+  tenga superficie propia (un `<code>`, una píldora) vuelve a la tinta: si
+  no, queda una cajita clara vacía.
+- En teléfono no hay franja, así que el título vuelve a la tinta. Eso lo
+  resuelve `static/interior.css`; una pantalla nueva solo marca su título
+  con la clase y no define tipografía propia.
+
 ## El encabezado: uno solo, de UNA línea, para las cuatro apps
 
 **Ninguna pantalla escribe su propio encabezado.** Se arma SIEMPRE con

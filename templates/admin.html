@@ -732,7 +732,7 @@
      pestaña es un link. Va primera porque es la vista de conjunto. #}
   {% if 'dashboard' in modulos and 'dashboard' in permisos %}<a class="tab-btn" style="text-decoration:none;" href="/admin/dashboard"><svg viewBox="0 0 24 24"><use href="#ic-reportes"/></svg><span>Panel Sindical</span></a>{% endif %}
   {% if 'recibos' in modulos and 'reportes' in permisos %}<button class="tab-btn" data-panel="reportes"><svg viewBox="0 0 24 24"><use href="#ic-reportes"/></svg><span>Reportes</span></button>{% endif %}
-  {% if 'recibos' in modulos and 'formulas' in permisos %}<button class="tab-btn" data-panel="formulas"><svg viewBox="0 0 24 24"><use href="#ic-formulas"/></svg><span>Fórmulas</span></button>{% endif %}
+  {% if 'recibos' in modulos and 'formulas' in permisos %}<button class="tab-btn" data-panel="formulas"><svg viewBox="0 0 24 24"><use href="#ic-formulas"/></svg><span>Reglas</span></button>{% endif %}
   {% if 'recibos' in modulos and 'conceptos' in permisos %}<button class="tab-btn" data-panel="conceptos"><svg viewBox="0 0 24 24"><use href="#ic-conceptos"/></svg><span>Conceptos</span></button>{% endif %}
   {% if 'trabajadores' in permisos %}<button class="tab-btn" data-panel="trabajadores"><svg viewBox="0 0 24 24"><use href="#ic-trabajadores"/></svg><span>Trabajadores</span></button>{% endif %}
   {% if 'recibos' in modulos and 'aprendizaje' in permisos %}<button class="tab-btn" data-panel="aprendizaje"><svg viewBox="0 0 24 24"><use href="#ic-aprendizaje"/></svg><span>Aprendizaje</span></button>{% endif %}
@@ -777,7 +777,7 @@
   {% if 'reportes' in permisos %}
   <div class="panel" id="panel-reportes">
   <!-- ============ REPORTES ============ -->
-  <h2 id="reportes">Reportes</h2>
+  <h2 class="titulo-pagina" id="reportes">Reportes</h2>
   <p class="muted">Todos los recibos que verificaron los afiliados. Los que el afiliado <strong>envió</strong> al sindicato se ven con sus datos; los que verificó y <strong>no envió</strong> se ven anonimizados, sin nombre, CUIL ni empresa.</p>
   <div class="aviso oculto" id="rep-aviso-clausula"></div>
   <div class="filtros">
@@ -812,7 +812,7 @@
   {% if 'formulas' in permisos %}
   <div class="panel" id="panel-formulas">
   <!-- ============ FÓRMULAS ============ -->
-  <h2 id="formulas">Fórmulas a validar</h2>
+  <h2 class="titulo-pagina" id="formulas">Reglas de control</h2>
   <p class="muted">La variable <code>base_remunerativa</code> es la suma de los ingresos marcados como remunerativos. También está <code>total_ingresos</code>.
   La expresión es una cuenta: punto decimal (<code>0.015</code>, no <code>0,015</code>), <code>*</code> para multiplicar y sin el signo <code>%</code>. Se prueba al guardar.</p>
   {% if request.query_params.get('error') == 'formulaexpr' %}
@@ -878,7 +878,7 @@
   {% if 'conceptos' in permisos %}
   <div class="panel" id="panel-conceptos">
   <!-- ============ CONCEPTOS ============ -->
-  <h2 id="conceptos">Conceptos ({{ conceptos|length }})</h2>
+  <h2 class="titulo-pagina" id="conceptos">Conceptos ({{ conceptos|length }})</h2>
   {% if request.query_params.get('universales') == 'ok' %}
   <div class="msg ok">✓ Se cargaron los conceptos/fórmulas de aportes de ley que faltaban.</div>
   {% elif request.query_params.get('universales') == 'nada' %}
@@ -990,7 +990,7 @@
   {% if 'trabajadores' in permisos %}
   <div class="panel" id="panel-trabajadores">
   <!-- ============ TRABAJADORES ============ -->
-  <h2 id="trabajadores">Trabajadores ({{ trabajadores|selectattr('activo')|list|length }} activos)</h2>
+  <h2 class="titulo-pagina" id="trabajadores">Trabajadores ({{ trabajadores|selectattr('activo')|list|length }} activos)</h2>
   <p class="muted">Los trabajadores cargados acá pueden registrarse en la app con su CUIL. Podés darlos de alta de a uno o pegar una lista.</p>
   {# Que esto se diga acá y no se descubra después: el nombre, el domicilio
      y el contacto son de la PERSONA (una fila por CUIL), no de la ficha de
@@ -1165,7 +1165,7 @@
   {% if 'aprendizaje' in permisos %}
   <div class="panel" id="panel-aprendizaje">
   <!-- ============ APRENDIZAJE ============ -->
-  <h2 id="aprendizaje">Aprendizaje — incorporar conceptos desde recibos</h2>
+  <h2 class="titulo-pagina" id="aprendizaje">Aprendizaje — incorporar conceptos desde recibos</h2>
   <p class="muted">Subí varios recibos del mismo convenio (lo ideal es entre 3 y 10, de distintos empleados o meses). El sistema los lee, junta los conceptos que no están en el catálogo y te propone darlos de alta. Revisá tipo y remunerativo antes de aprobar.</p>
 
   <form id="form-aprender" style="margin-top:14px;">
@@ -1189,7 +1189,7 @@
   {% if 'noticias' in permisos %}
   <div class="panel" id="panel-noticias">
   <!-- ============ NOTICIAS ============ -->
-  <h2 id="noticias-titulo" class="ct-secc">Dar de alta una noticia</h2>
+  <h2 id="noticias-titulo" class="titulo-pagina ct-secc">Dar de alta una noticia</h2>
   <div class="card">
     <form method="post" action="/admin/noticia" enctype="multipart/form-data" id="form-noticia">
       <input type="hidden" name="id" id="not-id">
@@ -1277,7 +1277,7 @@
   {% if 'beneficios' in permisos %}
   <div class="panel" id="panel-beneficios">
   <!-- ============ BENEFICIOS ============ -->
-  <h2 id="beneficios-titulo" class="ct-secc">Dar de alta un beneficio</h2>
+  <h2 id="beneficios-titulo" class="titulo-pagina ct-secc">Dar de alta un beneficio</h2>
   <div class="card">
     <form method="post" action="/admin/beneficio" enctype="multipart/form-data" id="form-beneficio">
       <input type="hidden" name="id" id="ben-id">
@@ -1365,7 +1365,7 @@
   {% if 'notificaciones' in permisos %}
   <div class="panel" id="panel-notificaciones">
   <!-- ============ NOTIFICACIONES ============ -->
-  <h2 class="ct-secc">Nueva notificación</h2>
+  <h2 class="titulo-pagina ct-secc">Nueva notificación</h2>
   <div class="card">
     <form method="post" action="/admin/notificacion" enctype="multipart/form-data" id="form-notificacion">
       <div class="ct-layout"><div class="ct-izq">
@@ -1496,7 +1496,7 @@
   <!-- Sub: TRÁMITES RECIBIDOS -->
   {% if 'tramites_recibidos' in permisos %}
   <div class="tramite-subpanel activo" id="tramite-sub-recibidos">
-    <h2>Trámites recibidos ({{ tramites|length }})</h2>
+    <h2 class="titulo-pagina">Trámites recibidos ({{ tramites|length }})</h2>
     <div class="filtros">
       <input type="text" id="f-tramites-cuit" placeholder="Buscar por CUIL" oninput="filtrarTramites()">
       <input type="text" id="f-tramites-nombre" placeholder="Buscar por N° de expediente" oninput="filtrarTramites()">
@@ -1528,7 +1528,7 @@
   <!-- Sub: TIPOS DE FORMULARIO -->
   {% if 'tramites_formularios' in permisos %}
   <div class="tramite-subpanel {% if 'tramites_recibidos' not in permisos %}activo{% endif %}" id="tramite-sub-tipos">
-    <h2 id="tt-h2">Nuevo tipo de trámite</h2>
+    <h2 class="titulo-pagina" id="tt-h2">Nuevo tipo de trámite</h2>
     <div class="card">
       <form method="post" action="/admin/tramite-tipo" id="form-tramite-tipo">
         <input type="hidden" name="id" id="tt-id">
@@ -1711,7 +1711,7 @@
 
   {% if 'encuestas' in permisos %}
   <div class="enc-subpanel {% if not encuestas %}activo{% endif %}" id="enc-sub-nueva">
-  <h2 id="enc-h2">Nueva encuesta</h2>
+  <h2 class="titulo-pagina" id="enc-h2">Nueva encuesta</h2>
   <div class="card">
     <form method="post" action="/admin/encuesta" id="form-encuesta" onsubmit="return prepararEnvioEncuesta()">
       <input type="hidden" name="id" id="enc-id">
@@ -1800,7 +1800,7 @@
   {% endif %}
 
   <div class="enc-subpanel {% if encuestas or 'encuestas' not in permisos %}activo{% endif %}" id="enc-sub-lista">
-  <h2>Encuestas ({{ encuestas|length }})</h2>
+  <h2 class="titulo-pagina">Encuestas ({{ encuestas|length }})</h2>
   <div class="enc-tabla">
   <table>
     <tr><th>Título</th><th>Modo</th><th>Estado</th><th>Preguntas</th><th>Ventana</th><th>Respuestas</th><th></th></tr>
@@ -1994,7 +1994,7 @@
   <!-- Sub: EMPRESAS (CRUD) -->
   {% if 'emp_empresas' in permisos %}
   <div class="emp-subpanel {% if emp_primera == 'empresas' %}activo{% endif %}" id="emp-sub-empresas">
-    <h2 id="empleador-titulo">Dar de alta un empleador</h2>
+    <h2 class="titulo-pagina" id="empleador-titulo">Dar de alta un empleador</h2>
     <p class="muted">CUIT, razón social y datos de contacto de las empresas de este sindicato -- cargalos a mano o importá los CUIT que ya aparecen en Conceptos.</p>
     <div class="card">
       <form method="post" action="/admin/empleador" id="form-empleador">
@@ -2057,7 +2057,7 @@
   {% set CRITERIO_LABELS_EMP = {'cuit': 'CUIT', 'todos': 'Todos', 'provincia': 'Provincia'} %}
   {% if 'emp_notificaciones' in permisos %}
   <div class="emp-subpanel {% if emp_primera == 'notificaciones' %}activo{% endif %}" id="emp-sub-notificaciones">
-    <h2>Nueva notificación a empleadores</h2>
+    <h2 class="titulo-pagina">Nueva notificación a empleadores</h2>
     <div class="card">
       <form method="post" action="/admin/notificacion-empresa" enctype="multipart/form-data" id="form-notificacion-emp">
         <div class="grid2">
@@ -2150,7 +2150,7 @@
     <!-- Sub: TRÁMITES DE EMPRESA RECIBIDOS -->
   {% if 'emp_tramites_recibidos' in permisos %}
     <div class="emptram-subpanel activo" id="emptram-sub-recibidos">
-      <h2>Trámites recibidos ({{ tramites_empresa|length }})</h2>
+      <h2 class="titulo-pagina">Trámites recibidos ({{ tramites_empresa|length }})</h2>
       <div class="filtros">
         <input type="text" id="f-tramitesemp-cuit" placeholder="Buscar por CUIT" oninput="filtrarTramitesEmpresa()">
         <input type="text" id="f-tramitesemp-nombre" placeholder="Buscar por N° de expediente" oninput="filtrarTramitesEmpresa()">
@@ -2182,7 +2182,7 @@
     <!-- Sub: TIPOS DE FORMULARIO EXTERNO -->
   {% if 'emp_tramites_formularios' in permisos %}
     <div class="emptram-subpanel {% if 'emp_tramites_recibidos' not in permisos %}activo{% endif %}" id="emptram-sub-tipos">
-      <h2 id="te-h2">Nuevo tipo de trámite externo</h2>
+      <h2 class="titulo-pagina" id="te-h2">Nuevo tipo de trámite externo</h2>
       <div class="card">
         <form method="post" action="/admin/tramite-tipo-empresa" id="form-tramite-tipo-empresa">
           <input type="hidden" name="id" id="te-id">
@@ -2294,7 +2294,7 @@
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Falta el nombre del convenio.</div>
   {% endif %}
 
-  <h2 id="convenio-titulo">Dar de alta un convenio</h2>
+  <h2 class="titulo-pagina" id="convenio-titulo">Dar de alta un convenio</h2>
   <p class="muted">El trabajador elige entre los convenios cargados acá, así que el nombre tiene que ser entendible para él — "Metalúrgicos, rama automotriz" y no solo el número de CCT.</p>
   <div class="card">
     <form method="post" action="/admin/convenio" id="form-convenio">
@@ -2421,7 +2421,7 @@
      pasos, y recién al apretar Guardar el servidor le contestaba que no --
      con el JSON crudo en la cara. Ahora el formulario le nace escondido y
      solo lo abre "Editar". #}
-  <h2 id="seccionales-titulo">{% if es_super_admin %}Dar de alta una seccional{% else %}Seccionales{% endif %}</h2>
+  <h2 class="titulo-pagina" id="seccionales-titulo">{% if es_super_admin %}Dar de alta una seccional{% else %}Seccionales{% endif %}</h2>
   <p class="muted">Las seccionales quedan disponibles para elegir en el alta/edición de trabajadores, y además <b>acotan lo que ve cada usuario del panel</b>: un usuario de área trabaja sobre los trabajadores de su seccional. No afectan la validación de recibos.
   {% if not es_super_admin %}<br>Podés <b>editar la tuya</b>; darlas de alta o borrarlas es del administrador general del sindicato.{% endif %}</p>
 
@@ -2577,7 +2577,7 @@
   {% if administra_areas %}
   <div class="panel" id="panel-administradores">
   <!-- ============ ADMINISTRADORES ============ -->
-  <h2 id="administradores-titulo">Áreas y Usuarios</h2>
+  <h2 class="titulo-pagina" id="administradores-titulo">Áreas y Usuarios</h2>
   <p class="muted">Las <b>áreas</b> agrupan permisos (Legales, Tesorería, Prensa...). Cada <b>usuario</b> pertenece a un área -- de donde hereda lo que puede tocar -- y a una <b>seccional</b>, que define sobre qué trabajadores trabaja. A un usuario suelto se le puede agregar o quitar algo puntual sin inventarle un área propia.</p>
 
   <div class="subtabs">

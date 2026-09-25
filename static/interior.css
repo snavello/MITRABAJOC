@@ -83,6 +83,48 @@ body.mesa.franja::after {
     var(--mesa-bg) 100%);
 }
 
+/* ---------- El título de la pantalla ----------
+   Todas las pantallas de las tres apps escriben su título igual: la misma
+   condensada, el mismo cuerpo y en mayúsculas, copiado de `.rc-h1` -- el
+   "SUBÍ TU RECIBO" de la app del afiliado, que era el único que ya tenía
+   este tratamiento. Antes cada app usaba lo suyo: 26px en system-ui en el
+   afiliado, 22px condensada en los dos paneles.
+
+   Lo lleva el PRIMER título de cada panel y de cada sub-panel, que es el
+   que queda arriba de todo. Los títulos de sección que vienen más abajo
+   ("Noticias cargadas (30)") NO lo llevan: siguen chicos y en tinta, sobre
+   fondo claro.
+
+   Y va en BLANCO, porque ahí atrás baja la franja de marca -- que es
+   oscura. Solo arriba de 760px: en teléfono la franja no se dibuja y el
+   título tiene que volver a la tinta o queda blanco sobre blanco. */
+body.mesa .titulo-pagina {
+  font-family: var(--fuente-display);
+  font-weight: 700;
+  font-size: 31px;
+  line-height: 1;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+}
+@media (min-width: 761px) {
+  body.mesa.franja .titulo-pagina { color: #fff; }
+  /* El hilo que cierra el título en los paneles: sobre la franja, en luz. */
+  body.mesa.franja .titulo-pagina::after { background: rgba(255, 255, 255, .28); }
+  /* Y la bajada que casi todas las pantallas ponen pegada al título: cae en
+     el mismo tramo oscuro, así que en gris no se lee. Solo la que está
+     INMEDIATAMENTE después del título -- el resto del texto de la pantalla
+     ya aterriza sobre el claro. */
+  body.mesa.franja .titulo-pagina + p,
+  body.mesa.franja .titulo-pagina + .sub,
+  body.mesa.franja .titulo-pagina + .muted { color: rgba(255, 255, 255, .78); }
+  /* Menos lo que adentro de esa bajada trae superficie propia: un <code> es
+     una píldora clara y con el texto heredado en blanco queda una cajita
+     vacía. Vuelve a la tinta, que es su color sobre su propio fondo. */
+  body.mesa.franja .titulo-pagina + p code,
+  body.mesa.franja .titulo-pagina + .sub code,
+  body.mesa.franja .titulo-pagina + .muted code { color: var(--tinta); }
+}
+
 /* El contenido, por encima de las tres capas. */
 body.mesa .mesa-cont {
   position: relative;
