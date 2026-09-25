@@ -185,7 +185,7 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
    trabajadores, empleadores y reportes SOLO de su sindicato (aislamiento
    total). Login → `/admin/inicio` (portada) → `/admin` (panel con 14
    entradas en una tira de pestañas deslizable: Panel Sindical, Reportes,
-   Fórmulas, Conceptos, Trabajadores, Aprendizaje, Noticias,
+   Reglas, Conceptos, Trabajadores, Aprendizaje, Noticias,
    Beneficios, Notificaciones, Trámites, Empleadores, Convenio, Seccionales
    y Áreas y Usuarios; varias dependen de un módulo). Desde el sprint de
    Áreas V2 no es un rol sino **tres** (ver "Áreas, permisos y ruteo"):
@@ -356,6 +356,22 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   los logins, el primer ingreso de plataforma, las cuatro portadas (que
   tienen su propio ambiente, "Portadas v2" en marca.css) ni las pantallas
   que ya son oscuras.
+- **El título de cada pantalla se escribe igual en las tres apps**
+  (2026-09-24): condensada, 31px, mayúsculas -- el tratamiento que ya tenía
+  `.rc-h1` ("SUBÍ TU RECIBO") y que ahora usan todas. Antes cada app iba por
+  su lado: 26px en system-ui en el afiliado, 22px condensada en los dos
+  paneles. Lo lleva la clase **`titulo-pagina`**, y solo el PRIMER título de
+  cada panel y de cada sub-panel: los encabezados de sección que vienen más
+  abajo ("Noticias cargadas (30)") siguen chicos y en tinta. Va en **blanco**
+  arriba de 760px, porque ahí atrás baja la franja de marca, junto con la
+  bajada pegada al título (menos lo que traiga superficie propia, como un
+  `<code>`); en teléfono no hay franja y vuelve a la tinta. Una pantalla
+  nueva marca su título con esa clase y no define tipografía propia.
+- **La pestaña "Fórmulas" se llama Reglas** (2026-09-24) y su título es
+  "Reglas de control". Solo cambió lo que lee una persona: la clave de la
+  sección sigue siendo `formulas` en `permisos.py`, la ruta sigue siendo
+  `/admin/formula` y el ancla `#formulas` -- renombrar la clave obligaría a
+  migrar los permisos ya asignados de cada área.
 - **La plataforma se llama Colm3na, no "Mi Trabajo"** (2026-09-13): el
   nombre viejo salió de todo lo que ve una persona — títulos del navegador,
   banda MRZ de los tres ingresos, `alt` de los logos, textos del panel de

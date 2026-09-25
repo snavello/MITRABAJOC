@@ -214,7 +214,7 @@
   {% if request.query_params.get('error') == 'guardado' %}<div style="background:#fdf3e7; border:1px solid #e8d9b0; color:#8a5a1a; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">No se pudo guardar -- probá de nuevo en un momento. Si se repite, puede ser un problema pasajero de conexión. {% if request.query_params.get('ref') %}<br><small style="opacity:.8;">Código E-INTERNO-00 · ref {{ request.query_params.get('ref') }}</small>{% endif %}</div>{% endif %}
 
   <div class="ppanel activo" id="pp-lista">
-  <h2>Sindicatos en la plataforma ({{ sindicatos|length }})</h2>
+  <h2 class="titulo-pagina">Sindicatos en la plataforma ({{ sindicatos|length }})</h2>
   <table>
     <tr><th>Sindicato</th><th>CUIT</th><th>Marca</th><th>Admins</th><th>Trabaj.</th><th></th></tr>
     {% for i in sindicatos %}
@@ -268,7 +268,7 @@
   </div>
 
   <div class="ppanel" id="pp-nuevo">
-  <h2 id="form-sind-titulo">Dar de alta un sindicato</h2>
+  <h2 class="titulo-pagina" id="form-sind-titulo">Dar de alta un sindicato</h2>
   <div class="card">
     {% if request.query_params.get('error') == 'clausula' %}
     <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó: para marcar la cláusula de confidencialidad como aceptada, el sindicato tiene que tener cargado el contrato firmado. Subilo en el mismo formulario.</div>
@@ -383,7 +383,7 @@
   </div>
 
   <div class="ppanel" id="pp-admin">
-  <h2>Crear un administrador de sindicato</h2>
+  <h2 class="titulo-pagina">Crear un administrador de sindicato</h2>
   <div class="card">
     {% if sindicatos %}
     <form method="post" action="/plataforma/usuario" id="form-nuevo-admin" onsubmit="return confirmarClaves(this, 'na-clave', 'na-repetir', 'na-error')">
@@ -411,7 +411,7 @@
   </div>
 
   <div class="ppanel" id="pp-clave">
-  <h2>Cambiar la clave de un usuario</h2>
+  <h2 class="titulo-pagina">Cambiar la clave de un usuario</h2>
   <div class="card">
     <div style="background:#fdf3e7; border:1px solid #e8cfa8; border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:#8a5a1a;">
       <strong>Opción transitoria para pruebas.</strong> Permite resetear la clave de cualquier
@@ -439,7 +439,7 @@
   </div>
 
   <div class="ppanel" id="pp-marca">
-  <h2>Marca de la plataforma</h2>
+  <h2 class="titulo-pagina">Marca de la plataforma</h2>
   <div class="card">
     <p class="muted" style="margin-bottom:14px;">Es la marca de Colm3na en sí — el logo y los colores de las pantallas de login y de este panel, antes de entrar a un sindicato en particular. La marca de cada sindicato se edita aparte, desde "Sindicatos".</p>
     <form method="post" action="/plataforma/marca" enctype="multipart/form-data">
@@ -486,7 +486,7 @@
   </div>
 
   <div class="ppanel" id="pp-config">
-  <h2>Configuración legal</h2>
+  <h2 class="titulo-pagina">Configuración legal</h2>
   <div class="card">
     <div style="background:#fdf3e7; border:1px solid #e8cfa8; border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:#8a5a1a;">
       <strong>Límite de ley nacional.</strong> El tope sindical es el límite global del
@@ -531,7 +531,7 @@
   </div>
 
   <div class="ppanel" id="pp-usoia">
-  <h2>Uso de la API de IA</h2>
+  <h2 class="titulo-pagina">Uso de la API de IA</h2>
   <div class="subtabs">
     <button type="button" class="ia-subtab activa" data-ia-sub="consumo"
             onclick="cambiarSubIA('consumo')">Consumo y costo ({{ uso_ia|length }})</button>
@@ -764,7 +764,7 @@
   </div>
 
   <div class="ppanel" id="pp-sospechosos">
-  <h2>Recibos con alerta de posible adulteración ({{ recibos_sospechosos|length }})</h2>
+  <h2 class="titulo-pagina">Recibos con alerta de posible adulteración ({{ recibos_sospechosos|length }})</h2>
   <p class="muted" style="margin-bottom:14px; max-width:640px;">La IA marca un recibo acá cuando ve, con alto grado de certeza, señales de edición en los totales, el CUIL del trabajador, el CUIT del empleador o alguna fecha. No bloquea al trabajador — solo guarda una copia del archivo original para revisión. Todavía es una función a modo de prueba.</p>
   <table>
     <tr><th>Fecha</th><th>Sindicato</th><th>CUIL</th><th>Período</th><th>Motivo</th><th></th></tr>
@@ -781,7 +781,7 @@
   </div>
 
   <div class="ppanel" id="pp-topes">
-  <h2>Topes de la seguridad social ({{ topes|length }})</h2>
+  <h2 class="titulo-pagina">Topes de la seguridad social ({{ topes|length }})</h2>
   <p class="muted" style="margin-bottom:14px; max-width:680px;">Tope máximo y piso mínimo de la base imponible de jubilación, INSSJP y obra social (art. 9 Ley 24.241) — se actualiza todos los meses por resolución de ANSES. Ordenados del período más nuevo al más viejo; el estado (chip de color) indica cuánto se puede confiar en cada valor. <strong>Los montos van sin punto de separador de miles, con coma para los decimales</strong> (ej. 4594798,23).</p>
   {% if request.query_params.get('error') == 'topebajo' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El valor que intentaste guardar es menor al del período anterior — eso no debería pasar (los topes solo suben). Si estás seguro de que es correcto, confirmá el aviso del navegador antes de guardar.</div>

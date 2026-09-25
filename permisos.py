@@ -30,7 +30,7 @@ SECCIONES = {
     # Reportes: TODOS los recibos verificados (enviados o no, estos
     # anonimizados). Absorbió a la vieja "cotizantes" el 2026-09-24.
     "reportes":                 ("Reportes de recibos",      "recibos",        "Recibos"),
-    "formulas":                 ("Fórmulas",                 "recibos",        "Recibos"),
+    "formulas":                 ("Reglas",                   "recibos",        "Recibos"),
     "conceptos":                ("Conceptos",                "recibos",        "Recibos"),
     "aprendizaje":              ("Aprendizaje",              "recibos",        "Recibos"),
     # Panel Sindical (módulo "dashboard"). Es una PÁGINA aparte
