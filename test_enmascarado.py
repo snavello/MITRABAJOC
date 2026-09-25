@@ -120,16 +120,20 @@ def test_encabezados_en_columnas_con_valores_debajo():
     ]
     an = E.analizar(pal)
     tipos = {k.texto: k.tipo for k in an.cajas}
-    assert tipos == {"045213/07": "legajo", "NIEVES,JULIA": "nombre", "27-99999999-9": "cuil"}
-    # El CUIL con verificador inválido cuenta como leído porque está bajo su rótulo.
+    # Sin nada conocido, el CUIL (verificador inválido) NO se tapa: no se
+    # podría rearmar con certeza (regla de certeza). Queda anotado como leído.
+    assert tipos == {"045213/07": "legajo", "NIEVES,JULIA": "nombre"}
     assert an.cuiles == ["27999999999"]
+    # Si es el de la sesión, sí: se rearma con el de la sesión.
+    an = E.analizar(pal, Conocidos(cuil="27999999999"))
+    assert {k.texto: k.tipo for k in an.cajas}["27-99999999-9"] == "cuil"
 
 
 def test_rotulo_cuil_con_la_n_pegada():
     """Tesseract lee "CUIL N" como "CUILN"; sigue siendo el rótulo."""
-    pal = [P("CUILN", 957, 266, 1000, 282), P("27-99999999-9", 898, 288, 1007, 305)]
-    an = E.analizar(pal)
-    assert [k.tipo for k in an.cajas] == ["cuil"] and an.cuiles == ["27999999999"]
+    pal = [P("CUILN", 957, 266, 1000, 282), P("2728765431 1", 898, 288, 1007, 305)]
+    an = E.analizar(pal)   # 11 dígitos pegados-ish y sin formato: lo tapa el rótulo
+    assert [k.tipo for k in an.cajas] == ["cuil"] and an.cuiles == ["27287654311"]
 
 
 def test_rotulo_empleador_no_es_empleado():
@@ -183,14 +187,36 @@ def test_un_cuil_mal_leido_no_hace_ajeno_el_recibo():
     assert E.pertenece(tres, "27287654311") is False
 
 
-def test_cuil_de_la_demo_sin_modulo_11_se_tapa_por_su_formato():
-    """Los CUIL y CUIT de la demo no cumplen el módulo 11 (por ahora no se
-    valida): escritos con guiones se tapan igual, aun sin rótulo al lado."""
+def test_cuil_y_cuit_de_la_demo_solo_se_tapan_si_se_conocen():
+    """Los CUIL y CUIT de la demo no cumplen el módulo 11. Sin conocerlos no
+    se tapan (no se podrían rearmar con certeza); siendo el de la sesión y un
+    CUIT conocido del afiliado, sí -- y se rearman con los conocidos."""
     assert not E.dv_valido("20111111119") and not E.dv_valido("30999888776")
-    an = E.analizar([P("Afiliado", 10, 10, 90), P("20-11111111-9", 400, 10, 520),
-                     P("Empresa", 10, 60, 90), P("30-99988877-6", 400, 60, 520)])
+    pal = [P("Afiliado", 10, 10, 90), P("20-11111111-9", 400, 10, 520),
+           P("Empresa", 10, 60, 90), P("30-99988877-6", 400, 60, 520)]
+    assert E.analizar(pal).cajas == []
+    an = E.analizar(pal, Conocidos(cuil="20111111119", cuits=("30999888776",)))
     assert an.cuiles == ["20111111119"] and an.cuits == ["30999888776"]
     assert {k.tipo for k in an.cajas} == {"cuil", "cuit"}
+
+
+def test_un_cuit_mal_leido_se_rearma_con_el_conocido_o_no_se_tapa():
+    """El caso real: el OCR leyó 33-69345023-9 como 39-69945023.9. Si ese
+    CUIT es conocido, se tapa y vuelve el CONOCIDO; si no, queda a la vista
+    (antes se tapaba y el recibo se rearmaba con el CUIT equivocado)."""
+    pal = [P("CUIT:", 851, 237, 890, 250), P("39-69945023.9", 894, 229, 1010, 250)]
+    assert E.analizar(pal).cajas == []
+    an = E.analizar(pal, Conocidos(cuits=("33-69345023-9",)))
+    assert an.cuits == ["33693450239"] and [k.tipo for k in an.cajas] == ["cuit"]
+
+
+def test_cuit_conocido_no_adivina_entre_dos_igual_de_cerca():
+    """Con los CUITs de todo un sindicato, dos pueden quedar a la misma
+    distancia de una lectura errada: ahí no se elige (sería rearmar el de otro
+    empleador), y sin certeza el número queda a la vista."""
+    assert E._cuit_conocido("30111111118", ["30111111118", "30111111128"]) == "30111111118"
+    assert E._cuit_conocido("30111111138", ["30111111118", "30111111128"]) is None
+    assert E._cuit_conocido("30111111138", ["30111111118", "30999999998"]) == "30111111118"
 
 
 def test_once_cifras_pegadas_sin_verificador_ni_rotulo_no_se_tapan():
@@ -278,9 +304,13 @@ def test_recibo_sintetico(archivo, con_conocidos):
     """Exactamente la identidad: ni un dato menos (quedaría a la vista) ni
     una palabra más (se le taparía a la IA algo que necesita leer)."""
     _, pal = _cargar(archivo.name)
-    an = E.analizar(pal, NIEVES if con_conocidos else None)
-    assert {E._alnum(k.texto) for k in an.cajas} - {""} == IDENTIDAD_SINTETICOS
-    assert E.control_de_fuga(pal, an.cajas, NIEVES) == []
+    con = NIEVES if con_conocidos else None
+    an = E.analizar(pal, con)
+    # Sin conocidos, el CUIL ficticio (verificador inválido) no se tapa: no se
+    # podría rearmar con certeza. Con la sesión, sí.
+    esperado = IDENTIDAD_SINTETICOS if con_conocidos else IDENTIDAD_SINTETICOS - {"27999999999"}
+    assert {E._alnum(k.texto) for k in an.cajas} - {""} == esperado
+    assert E.control_de_fuga(pal, an.cajas, con) == []
     assert an.cuiles == ["27999999999"] and an.cuits == ["30444640975"]
     assert E.pertenece(an, "27999999999") is True
     # Para otra sesión es ajeno, aunque el CUIL ficticio no cumpla el módulo
@@ -298,7 +328,7 @@ FICTICIO = Conocidos("20111222334", "GOMEZ ALBERTO RICARDO")
 def test_rotulo_cuil_sin_la_i():
     """Tesseract leyó "CUIL Nº" como "CUL"."""
     pal = [P("CUL", 934, 301, 986, 313), P("20111222334", 906, 328, 1024, 352)]
-    assert [k.tipo for k in E.analizar(pal).cajas] == ["cuil"]
+    assert [k.tipo for k in E.analizar(pal, FICTICIO).cajas] == ["cuil"]
 
 
 def test_cuil_propio_con_un_digito_mal_leido_se_tapa():
