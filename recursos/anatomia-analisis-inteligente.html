@@ -10,8 +10,8 @@
 <style>
 :root{
   --tinta:#0a1421; --papel:#f4f6f9; --blanco:#ffffff; --linea:#dbe2ea; --suave:#eef2f7;
-  --texto:#16243a; --texto2:#4c5d75; --miel:#f0a01e; --agua:#a0030b; --verde:#0f8a6a;
-  --azul:#2f5fb3; --azul-suave:#e4ecfa; --ia:#6b3fb0; --ia-suave:#ece4f7;
+  --texto:#16243a; --texto2:#4c5d75; --miel:#f0a01e; --miel-suave:#fdf1d9; --agua:#a0030b; --agua-suave:#fbe6e7;
+  --verde:#0f8a6a; --verde-suave:#e2f4ee; --azul:#2f5fb3; --azul-suave:#e4ecfa; --ia:#6b3fb0; --ia-suave:#ece4f7;
   --sombra:0 1px 2px rgba(10,20,33,.05);
   --display:'Barlow Condensed','Arial Narrow',sans-serif;
   --body:'Barlow',system-ui,-apple-system,sans-serif;
@@ -21,90 +21,142 @@
   :root:not([data-theme="light"]){
     color-scheme:dark;
     --tinta:#060d16; --papel:#0d1725; --blanco:#131f30; --linea:#26374d; --suave:#1a2839;
-    --texto:#e3eaf3; --texto2:#9aadc4; --miel:#f6b545; --agua:#ef7b74; --verde:#3fbf9c;
-    --azul:#7fa4e8; --azul-suave:#1c2a45; --ia:#b48ae6; --ia-suave:#2c1f3e; --sombra:0 1px 2px rgba(0,0,0,.3);
+    --texto:#e3eaf3; --texto2:#9aadc4; --miel:#f6b545; --miel-suave:#3a2d15; --agua:#ef7b74; --agua-suave:#3d1b1e;
+    --verde:#3fbf9c; --verde-suave:#173226; --azul:#7fa4e8; --azul-suave:#1c2a45; --ia:#b48ae6; --ia-suave:#2c1f3e; --sombra:0 1px 2px rgba(0,0,0,.3);
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
   --tinta:#060d16; --papel:#0d1725; --blanco:#131f30; --linea:#26374d; --suave:#1a2839;
-  --texto:#e3eaf3; --texto2:#9aadc4; --miel:#f6b545; --agua:#ef7b74; --verde:#3fbf9c;
-  --azul:#7fa4e8; --azul-suave:#1c2a45; --ia:#b48ae6; --ia-suave:#2c1f3e; --sombra:0 1px 2px rgba(0,0,0,.3);
+  --texto:#e3eaf3; --texto2:#9aadc4; --miel:#f6b545; --miel-suave:#3a2d15; --agua:#ef7b74; --agua-suave:#3d1b1e;
+  --verde:#3fbf9c; --verde-suave:#173226; --azul:#7fa4e8; --azul-suave:#1c2a45; --ia:#b48ae6; --ia-suave:#2c1f3e; --sombra:0 1px 2px rgba(0,0,0,.3);
 }
 *{box-sizing:border-box;margin:0}
 html,body{height:100%}
-body{background:var(--papel);color:var(--texto);font-family:var(--body);font-size:15px;line-height:1.4;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;min-height:100%}
-code{font-family:var(--mono);font-size:.86em;background:var(--suave);padding:1px 5px;border-radius:4px}
+body{background:var(--papel);color:var(--texto);font-family:var(--body);font-size:17px;line-height:1.45;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;min-height:100%}
 b{font-weight:600}
 
-/* ---------- Barra superior (una línea) ---------- */
+/* ---------- Barra superior ---------- */
 .top{background:var(--tinta);color:#eef3f9;border-bottom:3px solid var(--miel);padding:8px clamp(14px,3vw,28px);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;position:relative;overflow:hidden}
-.top::before{content:"";position:absolute;inset:0;opacity:.07;pointer-events:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='1'%3E%3Cpath d='M28 1 55 16.5v31L28 63 1 47.5v-31z'/%3E%3Cpath d='M28 63v33'/%3E%3C/g%3E%3C/svg%3E")}
+.top::before{content:"";position:absolute;inset:0;opacity:.07;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='1'%3E%3Cpath d='M28 1 55 16.5v31L28 63 1 47.5v-31z'/%3E%3Cpath d='M28 63v33'/%3E%3C/g%3E%3C/svg%3E")}
 .top>*{position:relative}
-.top h1{font-family:var(--display);font-weight:700;font-size:clamp(20px,2.6vw,26px);line-height:1;color:#fff;letter-spacing:.3px}
+.top h1{font-family:var(--display);font-weight:700;font-size:clamp(20px,2.6vw,26px);line-height:1;color:#fff}
 .top .bajada{font-family:var(--display);font-weight:600;font-size:14px;letter-spacing:1.4px;text-transform:uppercase;color:var(--miel)}
 .top .paso{margin-left:auto;font-family:var(--display);font-weight:600;font-size:14px;letter-spacing:1px;text-transform:uppercase;color:rgba(238,243,249,.75)}
 
+/* ---------- Mapa del recorrido ---------- */
+.mapa{display:flex;align-items:center;gap:0;padding:8px clamp(14px,3vw,28px) 0;max-width:1240px;width:100%;margin:0 auto;overflow-x:auto}
+.mapa .hito{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:64px;position:relative;cursor:pointer;color:var(--texto2);font-family:var(--display);font-size:11.5px;letter-spacing:.6px;text-transform:uppercase;text-align:center;line-height:1.05}
+.mapa .hito .ic{width:34px;height:34px;border-radius:50%;border:2px solid var(--linea);background:var(--blanco);display:grid;place-items:center;transition:transform .2s,background .2s,border-color .2s}
+.mapa .hito .ic svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.mapa .hito.done .ic{border-color:var(--verde);color:var(--verde)}
+.mapa .hito.on .ic{background:var(--tinta);border-color:var(--miel);color:var(--miel);transform:scale(1.18)}
+.mapa .hito.on{color:var(--texto);font-weight:700}
+.mapa .hito::before{content:"";position:absolute;top:17px;left:-50%;width:100%;height:2px;background:var(--linea);z-index:-1}
+.mapa .hito:first-child::before{display:none}
+.mapa .hito.done::before,.mapa .hito.on::before{background:var(--verde)}
+
 /* ---------- Escenario ---------- */
-main{flex:1;display:flex;flex-direction:column;padding:10px clamp(14px,3vw,28px) 8px;max-width:1240px;width:100%;margin:0 auto;min-height:0}
-.slide{flex:1;display:flex;flex-direction:column;gap:8px;min-height:0;animation:entra .28s ease}
+main{flex:1;display:flex;flex-direction:column;padding:8px clamp(14px,3vw,28px) 8px;max-width:1240px;width:100%;margin:0 auto;min-height:0}
+.slide{flex:1;display:flex;flex-direction:column;gap:10px;min-height:0;animation:entra .28s ease}
 @keyframes entra{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.slide{animation:none}.card{transition:none!important}}
-.cab{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px}
-.cab .n{font-family:var(--display);font-weight:700;font-size:30px;line-height:.9;color:var(--agua);font-variant-numeric:tabular-nums}
-.cab h2{font-family:var(--display);font-weight:700;font-size:clamp(20px,2.8vw,27px);line-height:1;text-wrap:balance}
-.who{font-family:var(--display);font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:2px 9px;border-radius:999px;border:1px solid;white-space:nowrap}
+.cab{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.cab .n{font-family:var(--display);font-weight:700;font-size:34px;line-height:.9;color:var(--agua);font-variant-numeric:tabular-nums}
+.cab h2{font-family:var(--display);font-weight:700;font-size:clamp(24px,3vw,32px);line-height:1;text-wrap:balance}
+.who{font-family:var(--display);font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:3px 11px;border-radius:999px;border:1.5px solid;white-space:nowrap}
 .who.code{color:var(--azul);border-color:var(--azul);background:var(--azul-suave)}
 .who.ia{color:var(--ia);border-color:var(--ia);background:var(--ia-suave)}
-.who.person{color:var(--verde);border-color:var(--verde)}
-.who.union{color:var(--agua);border-color:var(--agua)}
-.lead{color:var(--texto2);font-size:15px;max-width:100ch}
+.who.person{color:var(--verde);border-color:var(--verde);background:var(--verde-suave)}
+.who.union{color:var(--agua);border-color:var(--agua);background:var(--agua-suave)}
+.frase{font-size:19px;color:var(--texto);max-width:110ch;line-height:1.35}
+.frase b{color:var(--agua)}
 
-/* ---------- Cajas (2×2), clic para agrandar ---------- */
-.grid{flex:1;position:relative;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1.15fr 1fr;gap:8px;min-height:0}
-@media (max-width:820px){.grid{grid-template-columns:1fr;grid-template-rows:none;grid-auto-rows:minmax(160px,auto)}}
-.card{background:var(--blanco);border:1px solid var(--linea);border-radius:10px;padding:10px 13px 11px;display:flex;flex-direction:column;gap:6px;min-height:0;overflow:auto;cursor:zoom-in;box-shadow:var(--sombra);transition:transform .25s ease,box-shadow .25s ease}
-.card:hover{box-shadow:0 4px 14px rgba(10,20,33,.12)}
-.card h3{font-family:var(--display);font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--texto2);font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px;position:sticky;top:0;background:inherit}
+.grid{flex:1;position:relative;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);grid-template-rows:minmax(0,1fr) auto;gap:10px;min-height:0}
+@media (max-width:860px){.grid{grid-template-columns:1fr;grid-template-rows:none}}
+.card{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;padding:14px 18px;display:flex;flex-direction:column;gap:8px;min-height:0;overflow:auto;cursor:zoom-in;box-shadow:var(--sombra);transition:box-shadow .2s}
+.card:hover{box-shadow:0 6px 18px rgba(10,20,33,.14)}
+.card h3{font-family:var(--display);font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--texto2);font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .card h3 .lupa{font-size:11px;letter-spacing:1px;color:var(--miel);opacity:0;transition:opacity .2s}
 .card:hover h3 .lupa{opacity:1}
-.card ul{margin:0;padding-left:16px;display:grid;gap:3px;font-size:14px;color:var(--texto2)}
-.card li::marker{color:var(--miel)}
-.card.ej{background:var(--azul-suave);border-color:color-mix(in srgb,var(--azul) 28%,transparent)}
-.card.ej h3{color:var(--azul)}
-.card.falla{border-left:3px solid var(--agua)}
-.card.falla h3{color:var(--agua)}
-.card.falla p{font-size:14px;color:var(--texto2)}
-.card.grande{position:absolute;inset:0;z-index:3;cursor:zoom-out;box-shadow:0 14px 40px rgba(10,20,33,.28);padding:16px 20px;font-size:16px;animation:crece .22s ease}
-.card.grande ul,.card.grande p,.card.grande .kv,.card.grande table.mini{font-size:16px}
-.card.grande h3{font-size:14px}
-.card.grande h3 .lupa{opacity:1}
-.card.grande h3 .lupa::after{content:' · cerrar'}
-@keyframes crece{from{transform:scale(.92);opacity:.6}to{transform:none;opacity:1}}
-.kv{display:grid;grid-template-columns:minmax(110px,auto) 1fr;gap:2px 10px;font-size:14px;font-variant-numeric:tabular-nums}
-.kv b{font-weight:600;color:var(--texto2)}
-.kv span{color:var(--texto)}
-table.mini{border-collapse:collapse;width:100%;font-size:13px;font-family:var(--mono)}
-table.mini td{padding:1px 5px;border-bottom:1px solid color-mix(in srgb,var(--azul) 18%,transparent);color:var(--texto)}
-table.mini td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.card.grande{position:absolute;inset:0;z-index:3;cursor:zoom-out;box-shadow:0 14px 40px rgba(10,20,33,.28);padding:20px 26px;animation:crece .22s ease;font-size:19px}
+.card.grande h3 .lupa{opacity:1}.card.grande h3 .lupa::after{content:' · cerrar'}
+@keyframes crece{from{transform:scale(.94);opacity:.6}to{transform:none;opacity:1}}
 
-/* ---------- Portada: el recibo ---------- */
-.portada{flex:1;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:10px;min-height:0}
-@media (max-width:820px){.portada{grid-template-columns:1fr}}
-.recibo{background:#fbfbf8;color:#1b1b1b;border:1px solid #cfd3d8;border-radius:4px;padding:14px 16px 12px;font-family:var(--mono);font-size:12px;line-height:1.35;position:relative;overflow:auto;cursor:zoom-in;
-  box-shadow:0 10px 26px rgba(10,20,33,.14),0 1px 0 #fff inset;transition:box-shadow .25s}
-.recibo.grande{position:absolute;inset:0;z-index:3;cursor:zoom-out;font-size:14px;padding:22px 26px;animation:crece .22s ease}
+/* explicación */
+.expl{grid-row:1}
+.expl .icono{display:flex;align-items:center;gap:14px}
+.expl .icono svg{width:54px;height:54px;flex:0 0 auto;stroke:var(--tinta);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+:root:not([data-theme="light"]) .expl .icono svg{stroke:var(--miel)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .expl .icono svg{stroke:var(--tinta)}}
+.expl .icono .acento{stroke:var(--miel)}
+.expl .icono p{font-size:17px;font-weight:500;line-height:1.25}
+.expl ol{margin:0;padding-left:0;list-style:none;display:grid;gap:7px;counter-reset:e}
+.expl ol li{display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:start;font-size:16.5px;line-height:1.3}
+.expl ol li::before{counter-increment:e;content:counter(e);width:26px;height:26px;border-radius:50%;background:var(--miel);color:var(--tinta);font-family:var(--display);font-weight:700;font-size:15px;display:grid;place-items:center;margin-top:1px}
+.expl li b{color:var(--texto)}
+
+/* ejemplo */
+.ej{grid-row:1;background:var(--azul-suave);border-color:color-mix(in srgb,var(--azul) 28%,transparent)}
+.ej h3{color:var(--azul)}
+.ej .sub{font-size:14px;color:var(--texto2);margin-top:-4px}
+.tabla{border-collapse:collapse;width:100%;font-size:16px}
+.tabla th{text-align:left;font-family:var(--display);font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--texto2);padding:4px 8px;border-bottom:1.5px solid color-mix(in srgb,var(--azul) 30%,transparent)}
+.tabla td{padding:5px 8px;border-bottom:1px solid color-mix(in srgb,var(--azul) 15%,transparent);vertical-align:middle}
+.tabla td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-family:var(--mono);font-size:15px}
+.tabla td.m{font-family:var(--mono);font-size:15px}
+.tabla tr.hi td{background:var(--miel-suave)}
+.chip{display:inline-block;font-family:var(--display);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.chip.ok{background:var(--verde-suave);color:var(--verde)}
+.chip.no{background:var(--agua-suave);color:var(--agua)}
+.chip.dud{background:var(--miel-suave);color:#8a5a00}
+:root:not([data-theme="light"]) .chip.dud{color:var(--miel)}
+.chip.leido{background:var(--ia-suave);color:var(--ia)}
+.chip.cod{background:var(--azul-suave);color:var(--azul);border:1px solid color-mix(in srgb,var(--azul) 35%,transparent)}
+.barra{display:inline-block;width:70px;height:8px;border-radius:4px;background:color-mix(in srgb,var(--azul) 18%,transparent);vertical-align:middle;overflow:hidden}
+.barra i{display:block;height:100%;background:var(--verde)}
+.barra.baja i{background:var(--miel)}
+.kv{display:grid;grid-template-columns:minmax(150px,auto) 1fr;gap:6px 14px;font-size:16px}
+.kv b{color:var(--texto2);font-weight:600}
+.kv .m{font-family:var(--mono);font-size:15px}
+.suma{display:grid;grid-template-columns:1fr auto auto;gap:6px 14px;font-size:17px;align-items:center}
+.suma .m{font-family:var(--mono);font-size:16px;text-align:right;font-variant-numeric:tabular-nums}
+.suma .t{color:var(--texto2)}
+.veredicto{background:var(--blanco);border:1px solid var(--linea);border-radius:10px;padding:12px 16px;display:grid;gap:8px}
+.veredicto .titulo{font-family:var(--display);font-weight:700;font-size:22px;color:var(--verde);line-height:1.1}
+.veredicto .cob{height:12px;border-radius:6px;background:var(--suave);overflow:hidden}
+.veredicto .cob i{display:block;height:100%;width:95%;background:linear-gradient(90deg,var(--verde),var(--miel))}
+.veredicto .btns{display:flex;gap:8px;flex-wrap:wrap}
+.veredicto .btns span{font-family:var(--display);font-weight:700;letter-spacing:1px;text-transform:uppercase;font-size:13px;padding:6px 12px;border-radius:999px;border:1.5px solid var(--linea)}
+.veredicto .btns span.p{background:var(--tinta);color:var(--miel);border-color:var(--tinta)}
+.veredicto .btns span.off{opacity:.45}
+.stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.stat div{background:var(--blanco);border:1px solid var(--linea);border-radius:10px;padding:10px 12px}
+.stat b{display:block;font-family:var(--display);font-size:26px;line-height:1;color:var(--tinta)}
+:root:not([data-theme="light"]) .stat b{color:var(--miel)}
+.stat span{font-size:14px;color:var(--texto2)}
+
+/* falla */
+.falla{grid-column:1/-1;grid-row:2;border-left:4px solid var(--agua);background:var(--agua-suave);border-color:color-mix(in srgb,var(--agua) 30%,transparent);border-left-color:var(--agua);flex-direction:row;align-items:flex-start;gap:14px;padding:12px 18px}
+.falla h3{color:var(--agua);flex:0 0 auto;padding-top:2px}
+.falla p{font-size:16.5px;line-height:1.35}
+.falla.grande{flex-direction:column}
+
+/* ---------- Portada ---------- */
+.portada{flex:1;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:10px;min-height:0;position:relative}
+@media (max-width:860px){.portada{grid-template-columns:1fr}}
+.recibo{background:#fbfbf8;color:#1b1b1b;border:1px solid #cfd3d8;border-radius:4px;padding:14px 16px 12px;font-family:var(--mono);font-size:12.5px;line-height:1.35;position:relative;overflow:auto;cursor:zoom-in;box-shadow:0 10px 26px rgba(10,20,33,.14),0 1px 0 #fff inset}
+.recibo.grande{position:absolute;inset:0;z-index:3;cursor:zoom-out;font-size:15px;padding:22px 26px;animation:crece .22s ease}
 .recibo::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:4px;background:repeating-linear-gradient(0deg,rgba(0,0,0,.012) 0 2px,transparent 2px 4px)}
 .recibo .cab2{display:flex;justify-content:space-between;gap:12px;border-bottom:1.5px solid #1b1b1b;padding-bottom:6px;margin-bottom:6px}
 .recibo .emp{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:.5px;text-transform:uppercase}
 .recibo .emp small,.recibo .titulo small{display:block;font-family:var(--mono);font-weight:400;font-size:10.5px;letter-spacing:0;text-transform:none;color:#3a3a3a}
 .recibo .titulo{font-family:var(--display);font-weight:700;font-size:14px;text-align:right;text-transform:uppercase;letter-spacing:.6px}
-.recibo .datos{display:grid;grid-template-columns:repeat(3,1fr);gap:2px 10px;margin-bottom:8px;font-size:11px}
+.recibo .datos{display:grid;grid-template-columns:repeat(3,1fr);gap:2px 10px;margin-bottom:8px;font-size:11.5px}
 .recibo .datos span{color:#5a5a5a}
-.recibo table{width:100%;border-collapse:collapse;font-size:11.5px}
+.recibo table{width:100%;border-collapse:collapse;font-size:12px}
 .recibo th{text-align:left;font-weight:600;border-top:1px solid #1b1b1b;border-bottom:1px solid #1b1b1b;padding:3px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.4px}
-.recibo td{padding:2px 4px;border-bottom:1px dotted #d6d6d0;vertical-align:top}
+.recibo td{padding:2.5px 4px;border-bottom:1px dotted #d6d6d0;vertical-align:top}
 .recibo td.n,.recibo th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .recibo tr.sub td{border-top:1px solid #1b1b1b;border-bottom:0;font-weight:600;padding-top:5px}
 .recibo .neto{display:flex;justify-content:space-between;align-items:baseline;border:1.5px solid #1b1b1b;padding:5px 10px;margin-top:8px;font-weight:600}
@@ -112,23 +164,23 @@ table.mini td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:n
 .recibo .pie{display:flex;justify-content:space-between;gap:12px;margin-top:8px;font-size:10px;color:#4a4a4a;flex-wrap:wrap}
 .recibo .firma{border-top:1px solid #1b1b1b;padding-top:3px;min-width:140px;text-align:center}
 .recibo .sello{position:absolute;right:18px;bottom:52px;transform:rotate(9deg);border:2px solid rgba(160,3,11,.55);color:rgba(160,3,11,.7);font-family:var(--display);font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:12px;padding:2px 9px;border-radius:3px;background:rgba(255,255,255,.55)}
-.lado{display:grid;grid-template-rows:1fr 1fr;gap:8px;min-height:0;position:relative}
-@media (max-width:820px){.lado{grid-template-rows:none}}
-.lado .card{cursor:zoom-in}
-.lado .card p{font-size:14px;color:var(--texto2)}
+.lado{display:grid;grid-template-rows:auto 1fr;gap:10px;min-height:0}
+.lado .card ul{margin:0;padding-left:0;list-style:none;display:grid;gap:8px;font-size:16.5px}
+.lado .card ul li{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
+.lado .card ul li .chip{margin-top:2px}
+.lado .card p{font-size:16.5px}
+.persona{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center}
+.persona .av{width:56px;height:56px;border-radius:50%;background:var(--tinta);color:var(--miel);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:24px}
+.persona .dato{font-size:15.5px;color:var(--texto2)}
 
 /* ---------- Barra inferior ---------- */
 .nav{display:flex;align-items:center;gap:10px;padding:8px clamp(14px,3vw,28px) calc(8px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--linea);background:var(--papel)}
-.nav button{font-family:var(--display);font-weight:700;letter-spacing:1px;text-transform:uppercase;font-size:14px;border:1px solid var(--linea);background:var(--blanco);color:var(--texto);padding:8px 16px;border-radius:999px;cursor:pointer}
+.nav button{font-family:var(--display);font-weight:700;letter-spacing:1px;text-transform:uppercase;font-size:15px;border:1px solid var(--linea);background:var(--blanco);color:var(--texto);padding:9px 18px;border-radius:999px;cursor:pointer}
 .nav button.primary{background:var(--tinta);border-color:var(--tinta);color:var(--miel)}
 .nav button:disabled{opacity:.4;cursor:default}
 .nav button:focus-visible{outline:2px solid var(--miel);outline-offset:2px}
-.puntos{flex:1;display:flex;justify-content:center;gap:6px;flex-wrap:wrap}
-.puntos button{width:auto;min-width:26px;height:26px;padding:0 7px;border-radius:999px;border:1px solid var(--linea);background:var(--blanco);color:var(--texto2);font-family:var(--display);font-weight:700;font-size:12px;cursor:pointer}
-.puntos button.on{background:var(--miel);border-color:var(--miel);color:var(--tinta)}
-.puntos button.done{background:var(--suave);color:var(--texto)}
-.nav .leyenda{display:none}
-@media (min-width:1100px){.nav .leyenda{display:flex;gap:10px;font-size:11.5px;color:var(--texto2);margin-right:8px}.nav .leyenda i{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle}}
+.nav .leyenda{flex:1;display:flex;justify-content:center;gap:14px;font-size:13px;color:var(--texto2);flex-wrap:wrap}
+.nav .leyenda i{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -139,21 +191,36 @@ table.mini td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:n
   <span class="paso" id="paso"></span>
 </header>
 
+<div class="mapa" id="mapa"></div>
 <main id="main"></main>
 
 <nav class="nav">
   <button id="prev">◀ Retroceder</button>
-  <div class="puntos" id="puntos"></div>
-  <span class="leyenda"><span><i style="background:var(--verde)"></i>trabajador</span><span><i style="background:var(--ia)"></i>IA transcribe</span><span><i style="background:var(--azul)"></i>código decide</span><span><i style="background:var(--agua)"></i>sindicato</span></span>
+  <span class="leyenda"><span><i style="background:var(--verde)"></i>lo hace la trabajadora</span><span><i style="background:var(--ia)"></i>lo hace la inteligencia artificial: lee, no decide</span><span><i style="background:var(--azul)"></i>lo hace Colm3na con reglas: decide</span><span><i style="background:var(--agua)"></i>lo hace el sindicato</span></span>
   <button id="next" class="primary">Avanzar ▶</button>
 </nav>
 
 <script>
+/* ---------- Íconos (trazo simple) ---------- */
+const ICO = {
+ recibo:'<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4" class="acento"/><path d="M9 11h7M9 14h7M9 17h4"/></svg>',
+ estante:'<svg viewBox="0 0 24 24"><path d="M3 5h18M3 12h18M3 19h18"/><path d="M6 5v7M10 5v7M14 12v7M18 12v7" class="acento"/><path d="M7 12v7M16 5v7"/></svg>',
+ telefono:'<svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2" class="acento"/><path d="M9 8l2 2 4-4"/></svg>',
+ lupa:'<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21" class="acento"/><path d="M8 10.5h5M10.5 8v5"/></svg>',
+ lineas:'<svg viewBox="0 0 24 24"><path d="M4 6h10M4 10h16M4 14h12M4 18h16"/><circle cx="19" cy="6" r="2" class="acento"/></svg>',
+ balanza:'<svg viewBox="0 0 24 24"><path d="M12 3v18M5 21h14"/><path d="M4 8h16" class="acento"/><path d="M4 8l-2 6h6zM20 8l-2 6h6z"/></svg>',
+ diccionario:'<svg viewBox="0 0 24 24"><path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z"/><path d="M20 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z"/><path d="M7 8h4M7 11h4" class="acento"/></svg>',
+ candado:'<svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M9 16l2 2 4-4" class="acento"/></svg>',
+ tablero:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 14v-4M12 14V8M16 14v-2" class="acento"/><path d="M8 21h8"/></svg>',
+ ciclo:'<svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5" class="acento"/></svg>'
+};
+
+/* ---------- El recibo ---------- */
 const RECIBO = `
 <div class="recibo" data-zoom aria-label="Recibo de sueldo de ejemplo">
   <div class="sello">Ejemplo</div>
   <div class="cab2">
-    <div class="emp">Banco Ejemplo S.A.<small>CUIT 30-XXXXXXXX-X · Reconquista 000, CABA · Bancarios CCT 18/75</small></div>
+    <div class="emp">Banco Ejemplo S.A.<small>CUIT 30-XXXXXXXX-X · Reconquista 000, CABA · Convenio bancario 18/75</small></div>
     <div class="titulo">Recibo de haberes<small>Original para el empleado · Ley 20.744 art. 140</small></div>
   </div>
   <div class="datos">
@@ -185,104 +252,176 @@ const RECIBO = `
   </div>
 </div>`;
 
+/* ---------- Pasos ---------- */
 const STEPS = [
- { portada:true, title:"El recibo de Marina, tal como lo sube", who:"person", whoLabel:"Trabajador",
-   lead:"Administrativa bancaria (CCT 18/75), 10 años de antigüedad, título universitario, agosto 2026. Importes de la grilla oficial de La Bancaria; empleador y legajo inventados. Tocá el recibo o una caja para agrandarla.",
-   lado:[
-    {t:"Lo que este recibo trae", ul:["<b>Categoría legible</b>: \"ADM. 10 AÑOS\" combina rama y antigüedad; en bancarios la antigüedad no es un adicional, define la categoría.","<b>Un concepto propio del convenio</b>: \"ADIC. CONF.\" es el complemento hasta el conformado, el piso garantizado hasta los 15 años.","<b>Un concepto que depende del banco</b>: \"PART. GCIAS.\" (ROE) sale de una matriz por tramo de sueldo y banda de rentabilidad.","<b>Descuentos de ley</b>: los tres que el motor ya valida con alta eficacia, más la cuota sindical."]},
-    {t:"Lo que el motor no sabe todavía", p:"Qué significa cada texto (lo resuelve con el catálogo y los alias del banco), si los números son los que se leyeron o hay un dígito cambiado (lo decide el cierre aritmético), y qué debería figurar según la grilla del sindicato (lo dicen las reglas, recién al final)."}
-   ]},
- { n:0, title:"Antes de subir: lo que ya está cargado", who:"union", whoLabel:"Sindicato y plataforma",
-   lead:"Nada de esto lo ve Marina, pero es lo que hace posible juzgar su recibo. Se cargó en la implementación conjunta y se mantiene con cada acuerdo.",
-   does:["Kit del convenio: conceptos del CCT 18/75 y reglas iniciales (escalafón por coeficiente, conformado, título, cajero, ROE), revisados por el sindicato.","Escala de agosto 2026 con fuente, vigencia y estado.","Catálogo maestro de la plataforma: jubilación, ley 19.032, obra social, topes.","Perfiles de lectura: familia de formato del liquidador que usa su banco y, si ya hay 5 recibos validados, perfil del CUIT con sus alias."],
-   data:["Entra: CCT, actas, grilla oficial, muestra de recibos anotados.","Sale: catálogo del sindicato, reglas con severidad, escala vigente, alias por CUIT, perfiles de familia."],
-   example:{kv:[["Convenio","CCT 18/75 · Bancarios"],["Escala vigente","Agosto 2026 · fuente: grilla oficial · estado: verificada"],["Regla básico","max(base × coeficiente, básico inicial)"],["Conformado 10 años","$ 2.524.582,71"],["Perfil de familia","Liquidador X: columnas código · concepto · haberes · descuentos; neto al pie"],["Perfil CUIT del banco","activo (7 recibos validados)"]]},
-   fail:"Si la escala del mes no está cargada, el motor no usa la del mes anterior: marca 'no verificable' y avisa al sindicato que falta la vigencia." },
- { n:1, title:"Marina sube la foto", who:"person", whoLabel:"Trabajador",
-   lead:"Una foto o un PDF. La app prepara el archivo antes de enviarlo a leer y deja registro de que empezó una lectura.",
-   does:["Preprocesa: todas las páginas, texto del PDF si lo tiene, imagen a resolución de lectura.","Enmascara lo acordado antes de cualquier envío al modelo (mejor esfuerzo: nunca frena el análisis).","Crea un registro de lectura en estado 'procesando'; Marina ve 'leyendo…'.","Si ya subió recibos de ese banco, carga el perfil del CUIT desde ahora."],
-   data:["Entra: archivo (JPG/PDF), CUIL de Marina, sindicato.","Sale: páginas listas para leer, id de lectura, perfil precargado (si existe)."],
-   example:{kv:[["Archivo","recibo_agosto.pdf · 1 página · con texto"],["CUIL","el de la sesión (se compara con el leído: un recibo ajeno se corta acá)"],["Lectura","#48213 · procesando"],["Perfil CUIT","cargado: Banco Ejemplo S.A."]]},
-   fail:"Si la imagen es ilegible o el archivo está dañado, se pide una foto nueva antes de gastar una llamada al modelo." },
- { n:2, title:"Llamada 1: encabezado y estructura", who:"ia", whoLabel:"Modelo de IA · transcribe",
-   lead:"El modelo lee el 'quién, cuándo y cómo' del recibo y describe su estructura. No interpreta nada: copia lo que ve.",
-   does:["Transcribe CUIT y razón social, CUIL, período, categoría tal como figura, fecha de ingreso, tipo de liquidación.","Detecta qué columnas tiene el recibo y si es formato 407 o clásico.","Con esas columnas, el código calcula una 'huella' y busca la familia de formato. Sin llamada extra.","Se cargan el perfil de familia y el vocabulario del convenio para las llamadas siguientes."],
-   data:["Entra: páginas + prompt base (uno solo, versionado).","Sale: encabezado estructurado, columnas detectadas, familia de formato resuelta, confianza global."],
-   example:{kv:[["CUIT","30-XXXXXXXX-X · Banco Ejemplo S.A."],["Período","2026-08 · liquidación mensual"],["Categoría (tal cual)","ADM. 10 AÑOS"],["Fecha de ingreso","01/03/2016"],["Columnas","código · concepto · unidad · cantidad · haberes · descuentos"],["Familia detectada","Liquidador X (huella coincide)"],["Confianza","0,97"]]},
-   fail:"Si el CUIT o el período no se leen, la lectura sigue pero el juicio final queda limitado: sin período no hay escala vigente que aplicar." },
- { n:3, title:"Llamadas 2 y 3: líneas y totales, con contexto", who:"ia", whoLabel:"Modelo de IA · transcribe",
-   lead:"El mismo prompt base, más un sufijo con contexto estructurado: alias conocidos de ese banco, pistas de formato y un ejemplo en texto. Cada línea sale con su confianza.",
-   does:["Transcribe cada renglón una sola vez: código, descripción, cantidad y unidad si hay, valor, importe, sección.","Transcribe los totales impresos y las contribuciones patronales.","El sufijo de contexto le dice qué textos suelen aparecer en este banco y cómo está armada la tabla; no le dice qué concluir.","Si la respuesta se corta, se relee por mitades; nunca se acepta un JSON truncado."],
-   data:["Entra: páginas + prompt base + perfil (alias candidatos, columnas, ejemplo previo).","Sale: líneas con importe, sección y confianza por línea; totales impresos."],
-   example:{table:[["SUELDO BASICO","1.989.990,36","haberes"],["ADIC. CONF.","534.592,35","haberes"],["PART. GCIAS.","72.413,50","haberes"],["TITULO UNIV.","97.604,47","haberes"],["JUBILACION 11%","296.406,07","descuentos"],["LEY 19032 3%","80.838,02","descuentos"],["OBRA SOCIAL 3%","80.838,02","descuentos"],["CUOTA SINDICAL","53.892,01","descuentos"]],kv:[["Totales impresos","haberes 2.694.600,68 · descuentos 511.974,12 · neto 2.182.626,56"],["Confianza mínima","0,91 (ADIC. CONF.)"]]},
-   fail:"Una línea con confianza baja no se rechaza: se marca 'dato leído con dudas' y se muestra a Marina para que la corrija si hace falta." },
- { n:4, title:"Compuerta: cierre aritmético", who:"code", whoLabel:"Código · decide",
-   lead:"Antes de juzgar nada, el código verifica que lo leído sea coherente consigo mismo. Es la red de contención más importante: nunca una 'diferencia' por un dígito mal leído.",
-   does:["Suma haberes, suma descuentos, calcula el neto y compara con los totales impresos (tolerancia $1).","Para líneas con base y porcentaje, o cantidad y valor, verifica el producto.","Si no cierra: relee solo el bloque que falla, con la inconsistencia como pista, hasta dos veces.","Si sigue sin cerrar: estado 'lectura incierta'. Se muestran las líneas dudosas y no se evalúa ninguna fórmula."],
-   data:["Entra: líneas y totales leídos.","Sale: cierre ok / no ok, lista de chequeos, intentos usados."],
-   example:{kv:[["Suma haberes","2.694.600,68 = impreso ✓"],["Suma descuentos","511.974,12 = impreso ✓"],["Neto","2.694.600,68 − 511.974,12 = 2.182.626,56 ✓"],["Jubilación 11 % × 2.694.600,68","296.406,07 ✓"],["Intentos","1 (cerró a la primera)"]]},
-   fail:"Ejemplo de falla: si el modelo leyera 1.898.990,36 en vez de 1.989.990,36, los haberes darían 91.000 menos que el impreso; la relectura del bloque de líneas corrige el dígito. Si no, Marina ve 'no pudimos leer bien el recibo' y ningún número falso." },
- { n:5, title:"Reconocer cada línea (normalización en cascada)", who:"code", whoLabel:"Código · decide",
-   lead:"Cada texto del recibo se traduce al concepto del catálogo, probando de lo más seguro a lo menos seguro. El modelo solo entra al final, y solo para elegir entre candidatos ya cargados.",
-   does:["1 · Alias exacto de este CUIT. 2 · Texto normalizado ('TITULO UNIV.' → título universitario). 3 · Alias del sindicato. 4 · Alias maestro. 5 · Similitud semántica. 6 · Modelo entre candidatos cerrados (solo descuentos). 7 · Desconocida.","Lo desconocido no entra en la base remunerativa y aparece como 'concepto que tu sindicato todavía no cargó'.","Si queda desconocida una línea de haberes, las fórmulas de porcentaje pasan a 'no verificable' en vez de dar diferencias."],
-   data:["Entra: líneas leídas, catálogo del sindicato, alias por CUIT, catálogo maestro.","Sale: cada línea con su concepto, la capa que la resolvió y si es remunerativa."],
-   example:{table:[["SUELDO BASICO","→ SUELDO_BASICO","capa 1 · alias CUIT"],["ADIC. CONF.","→ CONFORMADO","capa 1 · alias CUIT"],["PART. GCIAS.","→ ROE","capa 3 · alias sindicato"],["TITULO UNIV.","→ TITULO_UNIVERSITARIO","capa 2 · normalizado"],["JUBILACION 11%","→ JUBILACION","capa 4 · maestro"],["CUOTA SINDICAL","→ CUOTA_SINDICAL","capa 4 · maestro"]],kv:[["Llamada al modelo","no hizo falta"],["Desconocidas","0"]]},
-   fail:"Si 'ADIC. CONF.' fuera desconocida: no suma a la base, se lista aparte, y el sindicato la recibe en su cola con la sugerencia 'parece conformado (0,88)' para confirmar con un clic." },
- { n:6, title:"Juzgar: reglas del sindicato sobre números que cerraron", who:"code", whoLabel:"Código · decide",
-   lead:"Recién ahora se compara. Cada regla busca la escala vigente para agosto (nunca la más cercana) y produce un hallazgo con severidad, motivo estable y fuente.",
-   does:["Resuelve la categoría: 'ADM. 10 AÑOS' → rama administrativa, escalafón, 10 años.","Evalúa cada fórmula con el evaluador seguro (sin eval): básico, conformado, título, aportes de ley con tope.","Lo que depende de un dato no cargado queda 'no verificable' y se dice cuál falta.","Clasifica: error (ley o escala), advertencia (derivado del recibo), info (no verificable)."],
-   data:["Entra: líneas reconocidas, categoría, período, escala vigente, fórmulas, topes.","Sale: hallazgos con esperado, en recibo, diferencia, regla, fuente, severidad, motivo."],
-   example:{table:[["Básico","1.474.066,93 × 1,35 = 1.989.990,36","coincide ✓"],["Conformado 10 años","2.524.582,71 = básico + adicional","coincide ✓"],["Título universitario","97.604,47","coincide ✓"],["Jubilación 11 %","296.406,07 (tope verificado)","coincide ✓"],["ROE","banda del banco no cargada","no verificable"],["Cuota sindical","porcentaje bancario no cargado","no verificable"]],kv:[["Cobertura verificada","≈ 95 % de la remuneración"]]},
-   fail:"Si el básico leído fuera 1.900.000, el hallazgo sería: error · BASICO_BAJO_ESCALA · esperado 1.989.990,36 · diferencia −89.990,36 · 'según la grilla de agosto 2026 del sindicato'." },
- { n:7, title:"Resultado para Marina", who:"person", whoLabel:"Trabajador",
-   lead:"Un veredicto en una frase, lo que se verificó y lo que no, y acciones concretas. El resultado dice también cuánto de su sueldo pudo revisar.",
-   does:["Veredicto: OK · con diferencias · lectura incierta.","Hallazgos ordenados por severidad, con nombre legible del concepto, regla y fuente.","Conceptos no reconocidos, si los hubo, con la sugerencia.","Acciones: enviar al sindicato; iniciar reclamo solo si hay diferencia (el sindicato confirma antes de que llegue a la empresa); 'corregí un dato' vuelve a correr desde el cierre."],
-   data:["Entra: hallazgos, cobertura, líneas.","Sale: pantalla de resultado; recibo verificado guardado en su historial."],
-   example:{kv:[["Veredicto","Tu recibo coincide con el convenio en lo que pudimos verificar"],["Verificado","básico, conformado, título, jubilación, ley 19.032, obra social"],["No verificable","ROE (banda del banco), cuota sindical (porcentaje no cargado)"],["Cobertura","≈ 95 % de tu remuneración"],["Acciones","Enviar al sindicato · Corregí un dato"]]},
-   fail:"Con una diferencia real, aparece 'Reclamar': el trámite nace con el recibo, el período, el concepto y los importes ya cargados; Marina solo confirma." },
- { n:8, title:"Después, sin que nadie lo pida", who:"union", whoLabel:"Plataforma y sindicato",
-   lead:"Cada lectura deja datos que mejoran la siguiente. Los perfiles se alimentan solos; el sindicato solo ve lo que quedó pendiente.",
-   does:["Se guarda la lectura cruda con versión de prompt, tokens, milisegundos, intentos y si cerró.","Los alias confirmados suman 'veces' al perfil del CUIT; con 5 recibos validados, el perfil pasa a activo.","El tablero de plataforma compara lecturas con y sin perfil por familia y por CUIT; el que no baja intentos se apaga solo.","La cola del sindicato recibe solo lo desconocido, con sugerencia; el panel acumula 'empresas por debajo de escala'."],
-   data:["Entra: lectura completa y hallazgos.","Sale: métricas por lectura, perfiles actualizados, cola de pendientes, datos agregados para el panel."],
-   example:{kv:[["Lectura #48213","prompt v2.0.0 · 6.420 tokens · 14,2 s · 1 intento · cierre ok"],["Perfil CUIT Banco Ejemplo","8 recibos validados · cierre 1er intento 100 %"],["Alias reforzado","'ADIC. CONF.' → CONFORMADO (veces: 8)"],["Cola del sindicato","0 pendientes de este recibo"]]},
-   fail:"Si un perfil deja de mejorar el cierre durante varias lecturas (por ejemplo, el banco cambió de liquidador), se desactiva solo y la lectura vuelve al estándar hasta que se aprenda la familia nueva." }
+ { portada:true, ico:'recibo', corto:'El recibo', title:"El recibo de Marina, tal como lo sube", who:"person", whoLabel:"La trabajadora",
+   frase:"Esto es <b>todo lo que recibe Colm3na</b>: una foto o un PDF del recibo. Nada más. Los diez pasos siguientes muestran qué pasa con estos números." },
+
+ { n:0, ico:'estante', corto:'Preparación', title:"Lo que el sindicato dejó preparado", who:"union", whoLabel:"El sindicato, antes",
+   frase:"Colm3na no sabe nada por sí sola. <b>Todo lo que va a controlar sale de lo que el sindicato cargó</b> durante la implementación.",
+   icoTexto:"Tres cosas cargadas de antemano, que se actualizan con cada acuerdo salarial.",
+   pasos:["<b>La lista de conceptos</b> que puede traer un recibo bancario: sueldo básico, complemento, título, función de cajero, participación en ganancias, aportes de ley…","<b>Las reglas de cálculo</b> del convenio: cómo se obtiene cada concepto (por ejemplo, el básico según la antigüedad).","<b>La tabla de sueldos del mes</b>: la grilla que el sindicato publica cada vez que hay un acuerdo, con fecha de vigencia.","Además, con el tiempo Colm3na <b>aprende cómo escribe cada banco</b> sus recibos (qué abreviaturas usa, cómo ordena las columnas)."],
+   ej:`<div class="sub">Un fragmento de la tabla de sueldos de agosto 2026 que cargó el sindicato (rama administrativa)</div>
+       <table class="tabla"><thead><tr><th>Categoría</th><th>Coeficiente</th><th style="text-align:right">Básico agosto</th><th style="text-align:right">Piso garantizado</th></tr></thead><tbody>
+       <tr><td>Inicial</td><td class="m">1,00</td><td class="n">1.642.764,63</td><td class="n">2.505.061,24</td></tr>
+       <tr><td>5 años</td><td class="m">1,17</td><td class="n">1.724.658,32</td><td class="n">2.508.315,25</td></tr>
+       <tr class="hi"><td><b>10 años</b> ← Marina</td><td class="m">1,35</td><td class="n"><b>1.989.990,36</b></td><td class="n"><b>2.524.582,71</b></td></tr>
+       <tr><td>15 años</td><td class="m">1,63</td><td class="n">2.402.729,11</td><td class="n">2.540.849,85</td></tr>
+       </tbody></table>
+       <div class="kv" style="margin-top:6px"><b>Adicional por título universitario</b><span class="m">$ 97.604,47</span><b>Fuente</b><span>Grilla oficial del sindicato, agosto 2026 · estado: <span class="chip ok">verificada</span></span></div>`,
+   falla:"Si la tabla del mes no está cargada, Colm3na <b>no adivina</b> con la del mes anterior: dice que ese punto no se pudo verificar y le avisa al sindicato que falta cargarla." },
+
+ { n:1, ico:'telefono', corto:'Sube la foto', title:"Marina saca la foto y la sube", who:"person", whoLabel:"La trabajadora",
+   frase:"Desde el celular, con la app. <b>Antes de mandar nada a leer</b>, Colm3na hace tres cosas por ella.",
+   icoTexto:"Lo que pasa en el segundo posterior a tocar \"subir\".",
+   pasos:["<b>Prepara el archivo</b>: todas las páginas, a la resolución justa para leer.","<b>Tapa los datos personales</b> (nombre, número de documento) antes de que el recibo salga hacia la inteligencia artificial. Es un cuidado extra: si algo no se puede tapar, el análisis sigue igual.","<b>Comprueba que el recibo sea de Marina</b>. Si es de otra persona, se frena acá y no se muestra nada.","Deja anotado que empezó una lectura, y Marina ve \"leyendo…\"."],
+   ej:`<div class="kv">
+       <b>Archivo</b><span>recibo_agosto.pdf · 1 página</span>
+       <b>¿Es de Marina?</b><span><span class="chip ok">sí</span> el número de CUIL del recibo coincide con el de su cuenta</span>
+       <b>Datos tapados</b><span>nombre, CUIL, legajo <span class="chip cod">antes de salir hacia la IA</span></span>
+       <b>Estado</b><span>lectura iniciada · #48213</span>
+       <b>¿Ya subió recibos de este banco?</b><span>sí, 7 · Colm3na recuerda cómo los escribe este banco</span></div>`,
+   falla:"Si la foto está borrosa o el archivo dañado, Colm3na pide otra foto <b>antes</b> de gastar una lectura de la inteligencia artificial." },
+
+ { n:2, ico:'lupa', corto:'Lee el encabezado', title:"La inteligencia artificial lee el encabezado", who:"ia", whoLabel:"La IA: lee, no decide",
+   frase:"La IA trabaja como <b>un lector muy rápido</b>: copia lo que ve en el recibo. No opina, no calcula, no decide nada.",
+   icoTexto:"Primera lectura: el \"quién, cuándo y cómo\" del recibo.",
+   pasos:["<b>Quién paga y a quién</b>: el banco y su CUIT, Marina y su CUIL.","<b>Cuándo</b>: el mes del recibo y la fecha en que Marina entró a trabajar.","<b>Qué dice el recibo de su categoría</b>, tal cual está escrito, sin interpretar.","<b>Cómo está armado</b>: qué columnas tiene. Con eso Colm3na reconoce el programa de sueldos que usa el banco, y sabe qué esperar en las lecturas siguientes."],
+   ej:`<div class="kv">
+       <b>Empleador</b><span>Banco Ejemplo S.A. · CUIT 30-XXXXXXXX-X</span>
+       <b>Mes del recibo</b><span>agosto 2026 · liquidación mensual</span>
+       <b>Categoría, tal cual</b><span class="m">ADM. 10 AÑOS</span>
+       <b>Fecha de ingreso</b><span>01/03/2016 → 10 años completos en agosto 2026</span>
+       <b>Columnas del recibo</b><span>código · concepto · unidad · cantidad · haberes · descuentos</span>
+       <b>Programa de sueldos</b><span>reconocido: <span class="chip leido">formato conocido</span> Colm3na ya leyó recibos armados así</span>
+       <b>Confianza de la lectura</b><span><span class="barra"><i style="width:97%"></i></span> 97 %</span></div>`,
+   falla:"Si no logra leer el mes, la lectura sigue pero el control final queda limitado: <b>sin mes no hay tabla de sueldos que aplicar</b>." },
+
+ { n:3, ico:'lineas', corto:'Lee las líneas', title:"La IA lee cada línea y los totales", who:"ia", whoLabel:"La IA: lee, no decide",
+   frase:"Dos lecturas más, cortas. Cada línea sale <b>con un puntaje de confianza</b>: cuán segura está la IA de haberla leído bien.",
+   icoTexto:"Colm3na le da pistas, no órdenes.",
+   pasos:["Lee <b>cada renglón una sola vez</b>: código, texto, cantidad, importe y si es un haber o un descuento.","Lee los <b>totales impresos</b> al pie del recibo.","Colm3na le pasa pistas: \"en este banco suele aparecer ADIC. CONF.\", \"el neto está al pie\". <b>Le dice qué esperar, no qué concluir.</b>","Si la respuesta llega cortada, vuelve a leer por mitades. Nunca acepta una lectura incompleta."],
+   ej:`<table class="tabla"><thead><tr><th>Línea leída</th><th style="text-align:right">Importe</th><th>Tipo</th><th>Confianza</th></tr></thead><tbody>
+       <tr><td class="m">SUELDO BASICO</td><td class="n">1.989.990,36</td><td>haber</td><td><span class="barra"><i style="width:98%"></i></span> 98 %</td></tr>
+       <tr><td class="m">ADIC. CONF.</td><td class="n">534.592,35</td><td>haber</td><td><span class="barra baja"><i style="width:91%"></i></span> 91 %</td></tr>
+       <tr><td class="m">PART. GCIAS.</td><td class="n">72.413,50</td><td>haber</td><td><span class="barra"><i style="width:96%"></i></span> 96 %</td></tr>
+       <tr><td class="m">TITULO UNIV.</td><td class="n">97.604,47</td><td>haber</td><td><span class="barra"><i style="width:97%"></i></span> 97 %</td></tr>
+       <tr><td class="m">JUBILACION 11%</td><td class="n">296.406,07</td><td>descuento</td><td><span class="barra"><i style="width:99%"></i></span> 99 %</td></tr>
+       <tr><td class="m">LEY 19032 3%</td><td class="n">80.838,02</td><td>descuento</td><td><span class="barra"><i style="width:99%"></i></span> 99 %</td></tr>
+       <tr><td class="m">OBRA SOCIAL 3%</td><td class="n">80.838,02</td><td>descuento</td><td><span class="barra"><i style="width:99%"></i></span> 99 %</td></tr>
+       <tr><td class="m">CUOTA SINDICAL</td><td class="n">53.892,01</td><td>descuento</td><td><span class="barra"><i style="width:98%"></i></span> 98 %</td></tr>
+       </tbody></table>
+       <div class="kv" style="margin-top:6px"><b>Totales impresos</b><span class="m">haberes 2.694.600,68 · descuentos 511.974,12 · neto 2.182.626,56</span></div>`,
+   falla:"Una línea con confianza baja <b>no se descarta</b>: se marca como \"leída con dudas\" y se le muestra a Marina para que la corrija si hace falta." },
+
+ { n:4, ico:'candado', corto:'¿Cierra?', title:"El control: ¿los números cierran?", who:"code", whoLabel:"Colm3na, con reglas: decide",
+   frase:"Antes de opinar sobre nada, Colm3na <b>suma lo que leyó y lo compara con los totales impresos</b>. Es la red de seguridad más importante.",
+   icoTexto:"Nunca una \"diferencia\" por un dígito mal leído.",
+   pasos:["Suma los haberes, suma los descuentos y calcula el neto. Los tres tienen que coincidir con los totales del recibo (tolerancia: un peso).","Donde hay porcentaje o cantidad, verifica la multiplicación: 11 % de 2.694.600,68 tiene que dar 296.406,07.","<b>Si algo no cierra</b>, vuelve a leer solo esa parte del recibo, diciéndole a la IA qué no coincide. Hasta dos veces.","<b>Si sigue sin cerrar, no opina</b>: le dice a Marina que no pudo leer bien el recibo y le muestra las líneas dudosas. No inventa un resultado."],
+   ej:`<div class="suma">
+       <span class="t">Suma de haberes leídos</span><span class="m">2.694.600,68</span><span class="chip ok">= impreso</span>
+       <span class="t">Suma de descuentos leídos</span><span class="m">511.974,12</span><span class="chip ok">= impreso</span>
+       <span class="t">Haberes − descuentos</span><span class="m">2.182.626,56</span><span class="chip ok">= neto impreso</span>
+       <span class="t">11 % × 2.694.600,68</span><span class="m">296.406,07</span><span class="chip ok">= jubilación</span>
+       <span class="t">3 % × 2.694.600,68</span><span class="m">80.838,02</span><span class="chip ok">= ley 19.032 y obra social</span>
+       <span class="t">Intentos de lectura</span><span class="m">1</span><span class="chip ok">cerró a la primera</span></div>`,
+   falla:"Ejemplo: si la IA leyera <b>1.898.990,36</b> en vez de 1.989.990,36, la suma daría 91.000 pesos menos que el total impreso. Colm3na lo nota, relee esa parte y corrige el dígito. Si no lo lograra, Marina vería \"no pudimos leer bien tu recibo\" y ningún número falso." },
+
+ { n:5, ico:'diccionario', corto:'Nombra líneas', title:"Ponerle nombre a cada línea", who:"code", whoLabel:"Colm3na, con reglas: decide",
+   frase:"\"ADIC. CONF.\" no significa nada para una computadora. Colm3na lo busca <b>en tres diccionarios, del más preciso al más general</b>.",
+   icoTexto:"Como un traductor con tres diccionarios a mano.",
+   pasos:["<b>El diccionario de este banco</b>: cómo escribió este mismo concepto en recibos anteriores ya confirmados.","<b>El diccionario del sindicato</b>: los nombres que el gremio cargó para su convenio.","<b>El diccionario general de Colm3na</b>: los aportes de ley, iguales para todos los sindicatos.","Si nada coincide, recién ahí le pregunta a la IA, <b>pero solo eligiendo entre opciones que ya existen</b>. Y lo que no se reconoce <b>no se usa para calcular</b>: se aparta y se le pregunta al sindicato."],
+   ej:`<table class="tabla"><thead><tr><th>Línea del recibo</th><th>Concepto reconocido</th><th>Dónde lo encontró</th></tr></thead><tbody>
+       <tr><td class="m">SUELDO BASICO</td><td>Sueldo básico</td><td><span class="chip cod">diccionario del banco</span></td></tr>
+       <tr><td class="m">ADIC. CONF.</td><td>Complemento hasta el piso garantizado</td><td><span class="chip cod">diccionario del banco</span></td></tr>
+       <tr><td class="m">PART. GCIAS.</td><td>Participación en ganancias</td><td><span class="chip cod">diccionario del sindicato</span></td></tr>
+       <tr><td class="m">TITULO UNIV.</td><td>Adicional por título universitario</td><td><span class="chip cod">texto normalizado</span></td></tr>
+       <tr><td class="m">JUBILACION 11%</td><td>Aporte jubilatorio</td><td><span class="chip cod">diccionario general</span></td></tr>
+       <tr><td class="m">CUOTA SINDICAL</td><td>Cuota sindical</td><td><span class="chip cod">diccionario general</span></td></tr>
+       </tbody></table>
+       <div class="kv" style="margin-top:6px"><b>Hubo que preguntarle a la IA</b><span>no, las 8 líneas se reconocieron con los diccionarios</span><b>Líneas sin reconocer</b><span>0</span></div>`,
+   falla:"Si \"ADIC. CONF.\" fuera nueva: no se suma para calcular, aparece como \"concepto que tu sindicato todavía no cargó\", y el sindicato la recibe en su bandeja con una sugerencia (\"parece el complemento hasta el piso\") para confirmarla con un clic." },
+
+ { n:6, ico:'balanza', corto:'Compara', title:"Comparar con lo que dice el convenio", who:"code", whoLabel:"Colm3na, con reglas: decide",
+   frase:"Recién ahora se compara. Con la categoría y el mes, Colm3na busca en la tabla del sindicato <b>cuánto debería figurar en cada línea</b>.",
+   icoTexto:"Cada línea termina en uno de tres estados.",
+   pasos:["<span class=\"chip ok\">coincide</span> lo que figura es lo que dice la tabla del sindicato.","<span class=\"chip no\">hay diferencia</span> figura menos de lo que corresponde. Se muestra cuánto y según qué regla.","<span class=\"chip dud\">no se pudo verificar</span> falta un dato para hacer la cuenta, y se dice cuál.","Los aportes de ley se verifican con los porcentajes y topes vigentes, iguales para todos los gremios."],
+   ej:`<table class="tabla"><thead><tr><th>Concepto</th><th style="text-align:right">En el recibo</th><th style="text-align:right">Según el convenio</th><th>Resultado</th></tr></thead><tbody>
+       <tr><td>Sueldo básico (10 años)</td><td class="n">1.989.990,36</td><td class="n">1.989.990,36</td><td><span class="chip ok">coincide</span></td></tr>
+       <tr><td>Complemento hasta el piso</td><td class="n">534.592,35</td><td class="n">534.592,35</td><td><span class="chip ok">coincide</span></td></tr>
+       <tr><td>Título universitario</td><td class="n">97.604,47</td><td class="n">97.604,47</td><td><span class="chip ok">coincide</span></td></tr>
+       <tr><td>Aporte jubilatorio 11 %</td><td class="n">296.406,07</td><td class="n">296.406,07</td><td><span class="chip ok">coincide</span></td></tr>
+       <tr><td>Participación en ganancias</td><td class="n">72.413,50</td><td class="n">depende del banco</td><td><span class="chip dud">no se pudo verificar</span></td></tr>
+       <tr><td>Cuota sindical</td><td class="n">53.892,01</td><td class="n">porcentaje no cargado</td><td><span class="chip dud">no se pudo verificar</span></td></tr>
+       </tbody></table>
+       <div class="kv" style="margin-top:6px"><b>Cómo se calculó el básico</b><span>base 1.474.066,93 × coeficiente 1,35 (10 años) = 1.989.990,36 · grilla de agosto 2026</span></div>`,
+   falla:"Si el básico leído fuera <b>1.900.000</b>, el resultado diría: <b>hay diferencia</b> · te corresponden 1.989.990,36 según la grilla de agosto 2026 del sindicato · faltan 89.990,36." },
+
+ { n:7, ico:'tablero', corto:'Resultado', title:"Lo que ve Marina", who:"person", whoLabel:"La trabajadora",
+   frase:"Un veredicto en una frase, la lista de lo que se controló y lo que no, y <b>qué puede hacer con eso</b>.",
+   icoTexto:"Claro, corto y sin tecnicismos.",
+   pasos:["<b>El veredicto</b>: coincide con el convenio · hay diferencias · no se pudo leer bien.","<b>Cuánto de su sueldo se revisó</b>: \"controlamos el 95 %; el resto depende de datos que el recibo no trae\".","<b>Qué puede hacer</b>: enviarlo al sindicato, reclamar (solo si hay diferencia; el sindicato revisa antes de que llegue al banco) o corregir un dato que se leyó mal.","Su recibo verificado queda guardado en su historial."],
+   ej:`<div class="veredicto">
+       <div class="titulo">✓ Tu recibo coincide con el convenio en todo lo que pudimos verificar</div>
+       <div><b>Revisamos el 95 % de tu remuneración</b></div><div class="cob"><i></i></div>
+       <div class="kv"><b>Verificado</b><span>básico, complemento hasta el piso, título, jubilación, ley 19.032, obra social</span>
+       <b>No se pudo verificar</b><span>participación en ganancias (depende de la ganancia del banco) · cuota sindical (porcentaje no cargado)</span></div>
+       <div class="btns"><span class="p">Enviar al sindicato</span><span>Corregí un dato</span><span class="off">Reclamar</span></div>
+       </div>`,
+   falla:"Con una diferencia real, el botón <b>Reclamar</b> se activa: el trámite nace con el recibo, el mes, el concepto y los importes ya cargados. Marina solo confirma, y el sindicato lo revisa antes de que llegue al banco." },
+
+ { n:8, ico:'ciclo', corto:'Aprende', title:"Colm3na aprende para la próxima", who:"union", whoLabel:"La plataforma y el sindicato",
+   frase:"Cada recibo leído <b>deja algo que mejora la lectura siguiente</b>. Nadie tiene que hacer nada: solo lo que quedó pendiente llega al sindicato.",
+   icoTexto:"Aprendizaje sin intervención, con control humano al final.",
+   pasos:["Anota cómo le fue: cuánto tardó, cuánto costó, si cerró a la primera.","Refuerza el <b>diccionario de este banco</b>: la próxima vez que aparezca \"ADIC. CONF.\" lo reconoce sin dudar.","Si el banco cambia su programa de sueldos y las lecturas empiezan a fallar, <b>deja de usar lo aprendido</b> y vuelve a la lectura estándar hasta aprender de nuevo.","El sindicato ve en su bandeja <b>solo lo que quedó sin reconocer</b>, con una sugerencia lista para confirmar."],
+   ej:`<div class="stat"><div><b>14,2 s</b><span>duró la lectura</span></div><div><b>1</b><span>intento: cerró a la primera</span></div><div><b>8</b><span>recibos de este banco ya validados</span></div><div><b>0</b><span>líneas pendientes para el sindicato</span></div></div>
+       <div class="kv" style="margin-top:10px"><b>Diccionario del banco</b><span>\"ADIC. CONF.\" → complemento hasta el piso <span class="chip ok">reforzado (8 veces)</span></span>
+       <b>Lectura con lo aprendido</b><span>cierra a la primera el 100 % de las veces en este banco <span class="chip ok">se mantiene activo</span></span></div>`,
+   falla:"Si lo aprendido de un banco deja de ayudar (por ejemplo, cambió de programa de sueldos), se apaga solo y Colm3na vuelve a leer sin pistas hasta aprender el formato nuevo. Nada queda \"pegado\" a un formato viejo." }
 ];
 
-const main = document.getElementById('main'), puntos = document.getElementById('puntos'), paso = document.getElementById('paso');
+/* ---------- Render ---------- */
+const main = document.getElementById('main'), mapa = document.getElementById('mapa'), paso = document.getElementById('paso');
 const prev = document.getElementById('prev'), next = document.getElementById('next');
 let cur = 0;
-const esc = t => String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 const LUPA = '<span class="lupa">clic · agrandar</span>';
 
-STEPS.forEach((s,i)=>{ const b=document.createElement('button'); b.textContent = s.portada ? 'Recibo' : s.n; b.title = s.title; b.addEventListener('click',()=>go(i)); puntos.appendChild(b); });
+STEPS.forEach((s,i)=>{ const h=document.createElement('div'); h.className='hito'; h.innerHTML='<span class="ic">'+ICO[s.ico]+'</span><span>'+s.corto+'</span>'; h.addEventListener('click',()=>go(i)); mapa.appendChild(h); });
 
 function render(){
-  const s = STEPS[cur];
-  let h = '';
+  const s = STEPS[cur]; let h='';
   if(s.portada){
     h = `<div class="slide">
-      <div class="cab"><span class="who ${s.who}">${esc(s.whoLabel)}</span><h2>${esc(s.title)}</h2></div>
-      <p class="lead">${esc(s.lead)}</p>
-      <div class="portada">${RECIBO}<div class="lado">${s.lado.map(c=>`<div class="card" data-zoom><h3>${esc(c.t)}${LUPA}</h3>${c.ul?'<ul>'+c.ul.map(x=>'<li>'+x+'</li>').join('')+'</ul>':'<p>'+esc(c.p)+'</p>'}</div>`).join('')}</div></div>
-    </div>`;
+      <div class="cab"><span class="who ${s.who}">${s.whoLabel}</span><h2>${s.title}</h2></div>
+      <p class="frase">${s.frase}</p>
+      <div class="portada">${RECIBO}
+        <div class="lado">
+          <div class="card" data-zoom><h3>Quién es Marina${LUPA}</h3>
+            <div class="persona"><div class="av">M</div><div><div style="font-size:18px;font-weight:600">Administrativa en un banco</div><div class="dato">Entró en marzo de 2016: 10 años de antigüedad · título universitario · convenio bancario 18/75</div></div></div>
+            <p style="color:var(--texto2);font-size:15px">Los importes son los de la grilla oficial del sindicato para agosto 2026. El banco, el legajo y el nombre son inventados.</p></div>
+          <div class="card" data-zoom><h3>Lo que hay que saber de este recibo${LUPA}</h3>
+            <ul>
+              <li><span class="chip leido">categoría</span><span>"ADM. 10 AÑOS": en bancarios la antigüedad no es un adicional, <b>define la categoría</b> y con ella el básico.</span></li>
+              <li><span class="chip leido">línea propia</span><span>"ADIC. CONF." es el <b>complemento hasta el piso garantizado</b> que fija el convenio.</span></li>
+              <li><span class="chip leido">depende del banco</span><span>"PART. GCIAS." es la participación en ganancias: <b>varía según cuánto ganó el banco</b>.</span></li>
+              <li><span class="chip ok">aportes de ley</span><span>jubilación, ley 19.032 y obra social: los que Colm3na ya controla con más precisión.</span></li>
+            </ul></div>
+        </div></div></div>`;
   }else{
-    let ex = '';
-    if(s.example.table) ex += '<table class="mini">' + s.example.table.map(r=>'<tr><td>'+esc(r[0])+'</td><td class="n">'+esc(r[1])+'</td><td>'+esc(r[2])+'</td></tr>').join('') + '</table>';
-    if(s.example.kv) ex += '<div class="kv">' + s.example.kv.map(r=>'<b>'+esc(r[0])+'</b><span>'+esc(r[1])+'</span>').join('') + '</div>';
     h = `<div class="slide">
-      <div class="cab"><span class="n">${s.n}</span><h2>${esc(s.title)}</h2><span class="who ${s.who}">${esc(s.whoLabel)}</span></div>
-      <p class="lead">${esc(s.lead)}</p>
+      <div class="cab"><span class="n">${s.n}</span><h2>${s.title}</h2><span class="who ${s.who}">${s.whoLabel}</span></div>
+      <p class="frase">${s.frase}</p>
       <div class="grid">
-        <div class="card" data-zoom><h3>Qué hace${LUPA}</h3><ul>${s.does.map(d=>'<li>'+esc(d)+'</li>').join('')}</ul></div>
-        <div class="card ej" data-zoom><h3>Ejemplo · Marina, agosto 2026${LUPA}</h3>${ex}</div>
-        <div class="card" data-zoom><h3>Datos que maneja${LUPA}</h3><ul>${s.data.map(d=>'<li>'+esc(d)+'</li>').join('')}</ul></div>
-        <div class="card falla" data-zoom><h3>Si algo falla${LUPA}</h3><p>${esc(s.fail)}</p></div>
-      </div>
-    </div>`;
+        <div class="card expl" data-zoom><h3>Qué pasa en este paso${LUPA}</h3>
+          <div class="icono">${ICO[s.ico]}<p>${s.icoTexto}</p></div>
+          <ol>${s.pasos.map(p=>'<li><span>'+p+'</span></li>').join('')}</ol></div>
+        <div class="card ej" data-zoom><h3>Con el recibo de Marina${LUPA}</h3>${s.ej}</div>
+        <div class="card falla" data-zoom><h3>¿Y si algo sale mal?</h3><p>${s.falla}</p></div>
+      </div></div>`;
   }
   main.innerHTML = h;
-  [...puntos.children].forEach((b,i)=>{ b.classList.toggle('on',i===cur); b.classList.toggle('done',i<cur); });
-  paso.textContent = (cur+1) + ' / ' + STEPS.length;
+  [...mapa.children].forEach((x,i)=>{ x.classList.toggle('on',i===cur); x.classList.toggle('done',i<cur); });
+  paso.textContent = (cur+1)+' / '+STEPS.length;
   prev.disabled = cur===0; next.disabled = cur===STEPS.length-1;
   try{ history.replaceState(null,'','#p'+cur); }catch(e){}
 }
