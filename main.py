@@ -667,17 +667,23 @@ def _startup():
 # ================= App del trabajador =================
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    return templates.TemplateResponse("trabajador.html", {
-        # Sin sindicato: acá NO hay uno elegido, y pasar el primero de la
-        # base (lo que hacía esta ruta) ponía el nombre de un gremio
-        # cualquiera en el encabezado y en la pestaña del navegador. Vacío,
-        # el encabezado común firma con el logo de la plataforma.
-        "request": request, "sindicato": "",
-        "marca_plataforma": db.marca_plataforma(),
-        # Demo anónima sin sindicato real: solo tiene sentido mostrar "Tu
-        # recibo" -- las demás pestañas dependen de un sindicato/login.
-        "modulos": {"recibos"},
+    # La raíz es la PUERTA: tres entradas, una por app. Hasta el 2026-09-26
+    # servía trabajador.html sin sesión -- cualquiera que entrara a la URL
+    # caía en "subí tu recibo" salteándose el login, y /api/leer le leía el
+    # archivo con la IA (créditos pagos) sin saber quién era.
+    return templates.TemplateResponse("inicio.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
     })
+
+
+def _exigir_trabajador_logueado(request: Request) -> str:
+    """Las rutas que mandan un documento a la IA exigen sesión de trabajador:
+    sin ella no hay a quién atribuir la lectura ni contra qué CUIL cortar un
+    documento ajeno, y el costo lo paga la plataforma."""
+    cuil = _cuil_seguro(request)
+    if not cuil:
+        raise ErrorApp("E-SESION-02")
+    return cuil
 
 
 def _registrar_uso_fallido(e: BaseException, sindicato_id, cuil: str, tipo: str) -> None:
@@ -752,6 +758,7 @@ def _para_la_ia(prep) -> dict:
 
 @app.post("/api/leer")
 async def api_leer(request: Request, archivo: UploadFile = File(...)):
+    _exigir_trabajador_logueado(request)
     contenido = await archivo.read()
     sid = sindicato_activo_trabajador(request)
     conocidos = _conocidos_trabajador(_cuil_seguro(request))
@@ -989,8 +996,8 @@ async def api_aportes(request: Request, archivo: UploadFile = File(...)):
     """Lee el comprobante de aportes de ARCA que sube el trabajador y arma el
     semáforo. Lo persiste (si hay sesión de trabajador con sindicato
     resuelto) para que no se pierda al navegar o recargar la página."""
+    cuil = _exigir_trabajador_logueado(request)
     contenido = await archivo.read()
-    cuil = _cuil_seguro(request)
     sid = sindicato_activo_trabajador(request)
     conocidos = _conocidos_trabajador(cuil)
     prep = await _preparar_para_ia(contenido, archivo.content_type, conocidos, sid, "aportes")
