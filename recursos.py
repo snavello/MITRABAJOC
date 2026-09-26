@@ -65,6 +65,18 @@ TIPOS = {
 # y migrations/); su miniatura es una captura de la portada.
 SEMILLA = [
     {
+        "clave": "anatomia-analisis-inteligente",
+        "titulo": "Anatomía del análisis inteligente: IA, aprendizaje y reglas (caso Marina)",
+        "descripcion": "Diagrama animado y educativo del recorrido de un recibo, bloque por bloque: "
+                       "qué hace cada uno, qué datos maneja y cómo se ve con un caso real de "
+                       "bancarios (grilla oficial de agosto 2026). Portada con el recibo y "
+                       "controles de reproducción. Para el equipo y para el sindicato.",
+        "fecha": date(2026, 9, 26),
+        "archivo": "anatomia-analisis-inteligente.html",
+        "miniatura": "anatomia-analisis-inteligente.jpg",
+        "fragmento": "",
+    },
+    {
         "clave": "video-panel-de-control",
         "titulo": "Video: Panel de Control, la arquitectura en 20 segundos",
         "descripcion": "La Sala de mando en movimiento, al ritmo del tango del proyecto: un recibo "
