@@ -82,6 +82,7 @@ a SDN. **No se escribe en ningún documento.**
 |---|---|
 | Bitácora del proyecto | `recursos/bitacora.html` ← `generar_bitacora.py` ← `BITACORA.md` |
 | Motor de recibos: de la foto al veredicto | `recursos/motor-recibos.html` |
+| Anatomía del análisis inteligente (caso Marina) | `recursos/anatomia-analisis-inteligente.html` ← `docs/chat/2026-09-26-anatomia-analisis-inteligente.md` |
 | Anexo Servicios Mensuales | `recursos/anexo-servicios-mensuales.html` |
 | Documentación técnica (generada del código) | `recursos/documentacion-tecnica.html` |
 | Plan Maestro Colm3na | `recursos/colm3na-plan-maestro.html` |
