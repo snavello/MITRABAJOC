@@ -65,6 +65,40 @@ TIPOS = {
 # y migrations/); su miniatura es una captura de la portada.
 SEMILLA = [
     {
+        "clave": "relevamiento-sindicatos-resumen-ejecutivo",
+        "titulo": "Resumen ejecutivo: cuánto de lo que prestan los sindicatos cubre Colm3na",
+        "descripcion": "Tres páginas para dirección, socios e inversores: 47 sindicatos y 715 "
+                       "servicios relevados, 75 % cubiertos por Colm3na (versión actual + ola de "
+                       "bajo esfuerzo), vacancia digital por gremio y diez sindicatos en detalle. "
+                       "Imprimible; también en PDF (relevamiento-sindicatos-resumen-ejecutivo.pdf).",
+        "fecha": date(2026, 9, 26),
+        "archivo": "relevamiento-sindicatos-resumen-ejecutivo.html",
+        "miniatura": "relevamiento-sindicatos-resumen-ejecutivo.jpg",
+        "fragmento": "",
+    },
+    {
+        "clave": "relevamiento-sindicatos",
+        "titulo": "Relevamiento de servicios sindicales: 47 gremios, 715 servicios, 34 propuestas",
+        "descripcion": "Informe interactivo: hallazgos, cobertura de Colm3na (hoy, corto plazo, "
+                       "potencial) por sindicato y por servicio, 34 propuestas de funcionalidad con "
+                       "diseño y evidencia, fichas de cada sindicato y matriz. La planilla con los "
+                       "mismos datos está en relevamiento-sindicatos-planilla.xlsx.",
+        "fecha": date(2026, 9, 26),
+        "archivo": "relevamiento-sindicatos.html",
+        "miniatura": "relevamiento-sindicatos.jpg",
+        "fragmento": "",
+    },
+    {
+        "clave": "relevamiento-sindicatos-planilla",
+        "titulo": "Planilla del relevamiento de servicios sindicales",
+        "descripcion": "Excel con las 34 propuestas, las 47 fichas, los 715 servicios con modalidad "
+                       "y cobertura, la cobertura por sindicato y la matriz sindicato × propuesta.",
+        "fecha": date(2026, 9, 26),
+        "archivo": "relevamiento-sindicatos-planilla.xlsx",
+        "miniatura": "",
+        "fragmento": "",
+    },
+    {
         "clave": "anatomia-analisis-inteligente",
         "titulo": "Anatomía del análisis inteligente: IA, aprendizaje y reglas (caso Marina)",
         "descripcion": "Diagrama animado y educativo del recorrido de un recibo, bloque por bloque: "
