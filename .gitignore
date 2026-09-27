@@ -36,3 +36,10 @@ modelos_ocr/
 
 # La medición guarda también las lecturas completas: pesadas y regenerables.
 medicion_enmascarado/RESULTADO.json
+
+# graphify (orientación secundaria, sin hooks): se versiona solo el informe.
+# graph.json (~7 MB) y lo demás se regeneran local en segundos, ver CLAUDE.md.
+# Ignorar la carpeta entera NO sirve: git no deja re-incluir un archivo de
+# una carpeta ignorada.
+graphify-out/*
+!graphify-out/GRAPH_REPORT.md
