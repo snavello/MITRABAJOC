@@ -1,0 +1,4 @@
+# Código de terceros vendoreado y minificado: no es nuestro y llena el grafo
+# de nodos sin sentido (tn, ai(), at()...). Se suma a lo que ya ignora .gitignore.
+static/chart.umd.min.js
+static/vendor/

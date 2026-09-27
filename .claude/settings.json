@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./graphify-out/graph.html)",
+      "Read(./graphify-out/wiki/**)",
+      "Read(./graphify-out/obsidian/**)",
+      "Read(./graphify-out/cache/**)"
+    ]
+  }
+}
