@@ -7797,14 +7797,15 @@ def _error_recurso(request: Request, codigo: str, mensaje: str):
 
 
 def _bytes_con_rango(request: Request, datos: bytes, mime: str, nombre: str,
-                     cache: str = "private, max-age=86400") -> BinResponse:
+                     cache: str = "private, max-age=86400",
+                     disposicion: str = "inline") -> BinResponse:
     """Sirve bytes de la base respetando `Range` (un solo rango), que es lo
     que el reproductor del navegador manda para adelantar un video o un
     audio: sin 206 se puede reproducir pero no saltar. Los archivos del
     repositorio no pasan por acá (FileResponse ya lo hace solo)."""
     total = len(datos)
     cabeceras = {"Cache-Control": cache, "Accept-Ranges": "bytes",
-                 "Content-Disposition": f"inline; filename*=UTF-8''{quote(nombre or 'recurso')}"}
+                 "Content-Disposition": f"{disposicion}; filename*=UTF-8''{quote(nombre or 'recurso')}"}
     rango = request.headers.get("range", "")
     if rango.startswith("bytes=") and "," not in rango:
         desde, _, hasta = rango[6:].partition("-")
@@ -7893,11 +7894,13 @@ def recursos_quitar(recurso_id: int, request: Request):
 
 
 @app.get("/recursos/{ref}/archivo")
-def recursos_archivo(ref: str, request: Request):
+def recursos_archivo(ref: str, request: Request, descargar: bool = False):
     """Abre el recurso: `ref` es la clave de uno del repositorio
     (recursos.SEMILLA) o el id de uno subido. Un enlace redirige a su URL.
-    Pide el pase: son documentos internos."""
+    Pide el pase: son documentos internos. Con `?descargar=1` sale como
+    adjunto (el botón de bajar de la ficha) en vez de abrirse en la pestaña."""
     _exigir_landing()
+    disposicion = "attachment" if descargar else "inline"
     if (sin_pase := _exigir_pase(request)):
         return sin_pase
     if ref.isdigit():
@@ -7909,12 +7912,12 @@ def recursos_archivo(ref: str, request: Request):
                 return RedirectResponse(r.url, status_code=303)
             raise HTTPException(404, "Ese recurso no tiene archivo")
         return _bytes_con_rango(request, r.archivo_datos, r.mime or "application/octet-stream",
-                                r.nombre_archivo)
+                                r.nombre_archivo, disposicion=disposicion)
     item = recursos.del_repositorio_por_clave(ref)
     if not item or not item["ruta"].exists():
         raise HTTPException(404, "No existe ese recurso")
     return FileResponse(item["ruta"], media_type=item["mime"], filename=item["nombre_archivo"],
-                        content_disposition_type="inline",
+                        content_disposition_type=disposicion,
                         headers={"Cache-Control": "private, no-cache"})
 
 

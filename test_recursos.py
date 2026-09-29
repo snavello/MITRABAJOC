@@ -264,3 +264,26 @@ def test_en_la_demo_nada_de_esto_existe(monkeypatch):
 if __name__ == "__main__":
     import pytest, sys
     sys.exit(pytest.main([__file__, "-q"]))
+
+
+def test_descargar_baja_el_archivo_como_adjunto():
+    """El ícono de la ficha pide ?descargar=1: mismo archivo, pero como
+    adjunto (la PC lo guarda) en vez de abrirse en la pestaña. Un enlace no
+    tiene qué bajar y no lleva el ícono."""
+    c = _cliente_con_pase()
+    r = c.get("/entornos")
+    assert 'href="/recursos/plan-maestro/archivo?descargar=1"' in r.text
+    for item in recursos.SEMILLA:
+        if item.get("url"):
+            assert f'/recursos/{item["clave"]}/archivo?descargar=1' not in r.text
+    r = c.get("/recursos/plan-maestro/archivo?descargar=1")
+    assert r.status_code == 200 and r.headers["content-disposition"].startswith("attachment")
+    assert c.get("/recursos/plan-maestro/archivo").headers["content-disposition"].startswith("inline")
+    rid = c.post("/recursos", data={"titulo": "Bajable", "fecha": "2026-09-21"},
+                 files={"archivo": ("nota.pdf", b"%PDF-1.4 x", "application/pdf")}).json()["id"]
+    assert f'href="/recursos/{rid}/archivo?descargar=1"' in c.get("/entornos").text
+    r = c.get(f"/recursos/{rid}/archivo?descargar=1")
+    assert r.status_code == 200 and r.content == b"%PDF-1.4 x"
+    assert r.headers["content-disposition"] == "attachment; filename*=UTF-8''nota.pdf"
+    assert c.get(f"/recursos/{rid}/archivo").headers["content-disposition"].startswith("inline")
+    print("OK  test_descargar_baja_el_archivo_como_adjunto")

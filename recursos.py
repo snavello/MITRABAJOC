@@ -376,6 +376,8 @@ def _ficha(ref, origen, titulo, descripcion, fecha, tipo, url, nombre_archivo,
         "nombre_archivo": nombre_archivo, "tamanio": tamanio,
         "tamanio_legible": tamanio_legible(tamanio), "fragmento": fragmento,
         "href": f"/recursos/{ref}/archivo{fragmento}", "miniatura_url": miniatura_url,
+        # Solo lo que tiene archivo se baja: un enlace no tiene qué descargar.
+        "descarga": f"/recursos/{ref}/archivo?descargar=1" if nombre_archivo else "",
     }
 
 
