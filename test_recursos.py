@@ -287,3 +287,46 @@ def test_descargar_baja_el_archivo_como_adjunto():
     assert r.headers["content-disposition"] == "attachment; filename*=UTF-8''nota.pdf"
     assert c.get(f"/recursos/{rid}/archivo").headers["content-disposition"].startswith("inline")
     print("OK  test_descargar_baja_el_archivo_como_adjunto")
+
+
+def test_descargar_un_html_lo_deja_autocontenido(monkeypatch):
+    """Un HTML se baja con las fuentes de Google embebidas (solo el bloque
+    latin), para que abra igual mandado por WhatsApp o mail. Sin red, sale
+    como estaba y no se cachea el paquete a medias."""
+    import empaquetar
+    css = (b"/* latin-ext */\n@font-face { font-family:'Barlow'; src: url(https://fonts.gstatic.com/ext.woff2) format('woff2'); }\n"
+           b"/* latin */\n@font-face { font-family:'Barlow'; src: url(https://fonts.gstatic.com/lat.woff2) format('woff2'); }\n")
+    pedidos = []
+
+    def falso(url):
+        pedidos.append(url)
+        return css if "googleapis" in url else b"FUENTE"
+    monkeypatch.setattr(empaquetar, "_traer", falso)
+    monkeypatch.setattr(empaquetar, "_cache_paquetes", {})
+    c = _cliente_con_pase()
+    r = c.get("/recursos/plan-maestro/archivo?descargar=1")
+    assert r.status_code == 200 and r.headers["content-disposition"].startswith("attachment")
+    assert "fonts.googleapis.com" not in r.text and "fonts.gstatic.com" not in r.text
+    assert "data:font/woff2;base64," + __import__("base64").b64encode(b"FUENTE").decode() in r.text
+    assert not any("ext.woff2" in u for u in pedidos)          # solo latin
+    assert "Plan maestro: primer sindicato, primer equipo" in r.text
+    # Abrirlo en la pestaña no pasa por el empaquetador.
+    assert "fonts.googleapis.com" in c.get("/recursos/plan-maestro/archivo").text
+
+    # Uno subido: además /static/ de la app se mete adentro; un host
+    # cualquiera NO se pide (lista cerrada).
+    html = (b'<!doctype html><link rel="preconnect" href="https://fonts.googleapis.com">'
+            b'<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow">'
+            b'<img src="/static/logo_mitrabajo.svg"><img src="https://ejemplo.com/x.png"><p>Hola</p>')
+    rid = c.post("/recursos", data={"titulo": "Html", "fecha": "2026-09-21"},
+                 files={"archivo": ("pag.html", html, "text/html")}).json()["id"]
+    t = c.get(f"/recursos/{rid}/archivo?descargar=1").text
+    assert "preconnect" not in t and "data:image/svg+xml;base64," in t
+    assert 'src="https://ejemplo.com/x.png"' in t and not any("ejemplo.com" in u for u in pedidos)
+
+    # Sin red: el archivo sale igual (con el <link> original) y no se cachea.
+    monkeypatch.setattr(empaquetar, "_traer", lambda url: None)
+    monkeypatch.setattr(empaquetar, "_cache_paquetes", {})
+    r = c.get("/recursos/plan-maestro/archivo?descargar=1")
+    assert r.status_code == 200 and "fonts.googleapis.com" in r.text and not empaquetar._cache_paquetes
+    print("OK  test_descargar_un_html_lo_deja_autocontenido")

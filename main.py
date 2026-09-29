@@ -82,6 +82,7 @@ import entorno
 import permisos as permisos_mod
 from permisos import SECCION_SUPER_ADMIN
 import recursos
+import empaquetar
 import render_admin
 import render_planes
 from observabilidad import panel as observabilidad_panel
@@ -7893,6 +7894,20 @@ def recursos_quitar(recurso_id: int, request: Request):
     return RedirectResponse("/entornos?aviso=quitado#recursos", status_code=303)
 
 
+def _es_html(mime: str | None, nombre: str | None) -> bool:
+    return (mime or "").startswith("text/html") or (nombre or "").lower().endswith((".html", ".htm"))
+
+
+def _html_autocontenido(datos: bytes, clave: str, nombre: str) -> BinResponse:
+    """La descarga de un HTML: un solo archivo con las fuentes (y lo que se
+    pueda) embebido, para que abra igual mandado por WhatsApp o por mail
+    (empaquetar.py). Lo que no se pudo traer queda como estaba."""
+    return BinResponse(content=empaquetar.empaquetar_bytes(datos, clave),
+                       media_type="text/html; charset=utf-8",
+                       headers={"Cache-Control": "private, no-cache",
+                                "Content-Disposition": f"attachment; filename*=UTF-8''{quote(nombre or 'recurso.html')}"})
+
+
 @app.get("/recursos/{ref}/archivo")
 def recursos_archivo(ref: str, request: Request, descargar: bool = False):
     """Abre el recurso: `ref` es la clave de uno del repositorio
@@ -7911,11 +7926,18 @@ def recursos_archivo(ref: str, request: Request, descargar: bool = False):
             if r.url:
                 return RedirectResponse(r.url, status_code=303)
             raise HTTPException(404, "Ese recurso no tiene archivo")
+        if descargar and _es_html(r.mime, r.nombre_archivo):
+            return _html_autocontenido(r.archivo_datos, f"base:{r.id}:{len(r.archivo_datos)}",
+                                       r.nombre_archivo)
         return _bytes_con_rango(request, r.archivo_datos, r.mime or "application/octet-stream",
                                 r.nombre_archivo, disposicion=disposicion)
     item = recursos.del_repositorio_por_clave(ref)
     if not item or not item["ruta"].exists():
         raise HTTPException(404, "No existe ese recurso")
+    if descargar and _es_html(item["mime"], item["nombre_archivo"]):
+        st = item["ruta"].stat()
+        return _html_autocontenido(item["ruta"].read_bytes(),
+                                   f"repo:{ref}:{int(st.st_mtime)}-{st.st_size}", item["nombre_archivo"])
     return FileResponse(item["ruta"], media_type=item["mime"], filename=item["nombre_archivo"],
                         content_disposition_type=disposicion,
                         headers={"Cache-Control": "private, no-cache"})

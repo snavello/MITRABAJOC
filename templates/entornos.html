@@ -516,7 +516,7 @@
               <time datetime="{{ r.fecha_iso }}">{{ r.fecha_legible }}</time>
               {% if r.tamanio_legible %}<span>{{ r.tamanio_legible }}</span>{% endif %}
               {% if r.descarga %}
-              <a class="bajar" href="{{ r.descarga }}" download="{{ r.nombre_archivo }}" title="Descargar {{ r.nombre_archivo }}" aria-label="Descargar {{ r.titulo }}"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-bajar"/></svg></a>
+              <a class="bajar" href="{{ r.descarga }}" download="{{ r.nombre_archivo }}" title="{{ ('Descargar ' ~ r.nombre_archivo ~ ' en un solo archivo, listo para mandar por WhatsApp o mail') if r.tipo == 'html' else ('Descargar ' ~ r.nombre_archivo) }}" aria-label="Descargar {{ r.titulo }}"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-bajar"/></svg></a>
               {% endif %}
               {% if r.origen == 'repo' %}
               <span title="Versionado en recursos/ del repositorio: se cambia con un commit">del repositorio</span>
