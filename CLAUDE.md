@@ -155,17 +155,19 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - medir_dashboard.py — mide los endpoints del Panel Sindical con 50.000 recibos.
 - e2e/ — robots de QA con Playwright (ver `e2e/README.md`).
 - chequeo.py — autodiagnóstico de la instalación.
-- graphify-out/GRAPH_REPORT.md — informe del grafo del código (graphify,
-  solo AST local, sin hooks): **orientación inicial, nunca fuente de
-  verdad**. Manda el código, y después CLAUDE.md/HISTORIAL.md. Toda relación
-  se verifica en el código antes de actuar -- las INFERRED siempre, y
-  también las EXTRACTED (el extractor asocia `@app.get`/`@app.post` de
-  main.py a los `_get()`/`_post()` de `carga/`). Es una foto: si el commit
-  del informe no es el HEAD, está viejo. Solo se versiona el informe; el
-  `graph.json` se regenera local con `graphify extract . --code-only` y
-  `graphify cluster-only . --no-label --no-viz` (sin `--no-label` nombraría
-  las comunidades con una IA). Detalle en
-  `docs/chat/2026-09-26-graphify-orientacion.md`.
+- mapa_funcional.py — **mapa funcional** de la plataforma: app → funcionalidad
+  (las pestañas) → pantalla, rutas, código, tablas y servicios externos, con
+  vista Lista y vista Grafo. Todo se lee del código con `ast` (rutas de
+  main.py, llamadas entre funciones, clases `table=True` y el SQL escrito a
+  mano, librerías y URLs de servicios); lo único a mano es `FUNCIONALIDADES`
+  (qué prefijo de ruta es de qué funcionalidad) y los nombres legibles. Una
+  ruta nueva que no encaje sale en "Sin clasificar": sumarle su regla.
+  **Orientación, nunca fuente de verdad**: no ve llamadas dinámicas; ante la
+  duda manda el código. `python mapa_funcional.py` escribe y abre
+  `mapa-funcional/mapa.html` (no se versiona). Reemplazó a graphify
+  (2026-09-30), que se probó y se desinstaló: por archivo o por función no
+  servía y traía relaciones falsas. Detalle en
+  `docs/chat/2026-09-30-mapa-funcional.md`.
 - migrations/ — Alembic (env.py + versions/).
 - alembic.ini — config de Alembic.
 - templates/ — HTML de las 4 apps (trabajador, sindicato, plataforma,

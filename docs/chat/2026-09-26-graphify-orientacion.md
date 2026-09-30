@@ -1,6 +1,6 @@
 # graphify como orientación secundaria
 Fecha: 2026-09-26 · Herramienta: Code · Origen: sesión de Claude Code (rama chore/graphify-orientacion)
-Estado: acordado
+Estado: superado por docs/chat/2026-09-30-mapa-funcional.md
 Quién: SDN
 
 ## Qué es y para qué
