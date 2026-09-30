@@ -4,14 +4,44 @@
     {
       "name": "mitrabajo-dev",
       "runtimeExecutable": ".venv/Scripts/python.exe",
-      "runtimeArgs": ["-m", "uvicorn", "main:app", "--reload", "--port", "8000"],
+      "runtimeArgs": [
+        "-m",
+        "uvicorn",
+        "main:app",
+        "--reload",
+        "--port",
+        "8000"
+      ],
       "port": 8000
     },
     {
       "name": "mitrabajo-dev-8010",
       "runtimeExecutable": ".venv/Scripts/python.exe",
-      "runtimeArgs": ["-m", "uvicorn", "main:app", "--reload", "--port", "8010"],
+      "runtimeArgs": [
+        "-m",
+        "uvicorn",
+        "main:app",
+        "--reload",
+        "--port",
+        "8010"
+      ],
       "port": 8010
+    },
+    {
+      "name": "mitrabajo-entornos-8020",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": [
+        "-m",
+        "uvicorn",
+        "main:app",
+        "--port",
+        "8020"
+      ],
+      "port": 8020,
+      "env": {
+        "ENTORNO": "local",
+        "PIN_ENTORNOS_HABILITADO": "1"
+      }
     }
   ]
 }

@@ -7472,6 +7472,71 @@ def api_entornos_esquema(request: Request):
     return _esquema_datos(con_grafana=True)
 
 
+# ==================== Solapa "Mapa funcional" ====================
+# La plataforma por funcionalidad (app -> pestaña -> pantalla, rutas, código,
+# tablas y servicios), leída del CÓDIGO DESPLEGADO por mapa_funcional.py. Es
+# orientación, no verdad (lo dice la página). Generarlo lee ~100 archivos con
+# ast (2-3 s en una PC, más con el medio núcleo de Pruebas): se arma una vez
+# por proceso y queda en memoria; con cada deploy nace de nuevo con el código
+# nuevo, y el botón "Actualizar" lo rehace a pedido.
+_MAPA_FUNCIONAL: dict = {}
+_MAPA_LOCK = threading.Lock()
+PROMPT_MAPA_FUNCIONAL = "/recursos/prompt-mapa-funcional/archivo"
+
+
+def _url_static(nombre: str) -> str:
+    return f"/static/{nombre}?v={_sello_static(nombre)}"
+
+
+def _mapa_funcional(forzar: bool = False) -> dict:
+    with _MAPA_LOCK:
+        if forzar or not _MAPA_FUNCIONAL:
+            import mapa_funcional
+            datos = mapa_funcional.armar()
+            datos["generado"] = "Generado " + fechas.ahora_texto()
+            acciones = (
+                '<a href="/entornos#mapa">← Entornos</a>'
+                '<form method="post" action="/entornos/mapa/actualizar">'
+                '<button type="submit" class="fuerte">Actualizar desde el código</button></form>'
+                f'<a href="{PROMPT_MAPA_FUNCIONAL}" target="_blank" rel="noopener">Prompt para otros proyectos</a>')
+            _MAPA_FUNCIONAL["html"] = mapa_funcional.pagina(
+                datos, _url_static("vendor/vis-network/vis-network.min.js"),
+                _url_static("colmena_dorada.webp"), _url_static("fonts/barlow-condensed-bold.woff2"), acciones)
+            _MAPA_FUNCIONAL["resumen"] = {
+                "generado": datos["generado"], "commit": datos["commit"],
+                "apps": len({f["app"] for f in datos["funcionalidades"]}),
+                "funcionalidades": len(datos["funcionalidades"]),
+                "rutas": datos["total_rutas"], "sin_clasificar": len(datos["sin_clasificar"]),
+            }
+        return _MAPA_FUNCIONAL
+
+
+@app.get("/entornos/mapa", response_class=HTMLResponse)
+def entornos_mapa(request: Request):
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    return HTMLResponse(_mapa_funcional()["html"])
+
+
+@app.post("/entornos/mapa/actualizar")
+def entornos_mapa_actualizar(request: Request):
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    _mapa_funcional(forzar=True)
+    return RedirectResponse("/entornos/mapa", status_code=303)
+
+
+@app.get("/api/entornos/mapa")
+def api_entornos_mapa(request: Request):
+    """Lo que muestra la tarjeta de la pestaña: cuándo se generó y cuánto hay."""
+    _exigir_landing()
+    if not _pase_landing(request):
+        raise HTTPException(403, "Ingresá a la landing.")
+    return _mapa_funcional()["resumen"]
+
+
 # ==================== Solapa "Observabilidad" ====================
 # La app es la PUERTA, no el motor (docs/chat/2026-09-19-plan-observabilidad.md,
 # regla 0): las mediciones, las alertas y los mails viven en Grafana Cloud, fuera

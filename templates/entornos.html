@@ -258,6 +258,12 @@
   .sala-tarjeta { border:1px solid rgba(255,255,255,.18); border-radius:14px; padding:22px 24px; background:rgba(255,255,255,.04); display:flex; flex-wrap:wrap; align-items:center; gap:16px 24px; }
   .sala-tarjeta p { margin:0; flex:1 1 320px; opacity:.85; }
   .sala-tarjeta .boton { white-space:nowrap; }
+  /* ---- Mapa funcional (2026-09-30) */
+  .mapa-botones { display:flex; flex-wrap:wrap; gap:8px; }
+  .mapa-botones form { margin:0; }
+  .mapa-botones a.boton { text-decoration:none; display:inline-block; }
+  .mapa-estado { flex:1 1 100%; font-family:var(--mono); font-size:12.5px; color:rgba(255,255,255,.65); }
+  .mapa-estado b { color:var(--pruebas); font-weight:600; }
 
   /* ---- Recursos (2026-09-07): la documentación del proyecto, en la misma
      colmena nocturna. Tarjetas con miniatura 16:10, título en la display
@@ -377,6 +383,7 @@
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="tests-demo" disabled title="Todavía no disponible">Tests en Demo</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="planes"{% if entorno_actual != 'pruebas' %} disabled title="Cambiar de plan reinicia el servicio: se administra solo desde Pruebas"{% endif %}>Planes</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="observabilidad">Observabilidad</button>
+      <button type="button" class="etab" role="tab" aria-selected="false" data-tab="mapa">Mapa funcional</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="xsanders">Seguridad</button>
     </nav>
 
@@ -464,6 +471,21 @@
       {% else %}
         <div class="vacio">La observación técnica (Grafana, Sentry, avisos) se administra solo desde Pruebas por ahora -- esto es {{ entorno_actual or 'este entorno' }}. Se replica a Demo cuando esté validada.</div>
       {% endif %}
+      </div>
+    </div>
+
+    <div class="panel-etab" data-panel="mapa" hidden>
+      {# Mapa funcional (2026-09-30): la plataforma por funcionalidad, leída del
+         código desplegado por mapa_funcional.py. Se abre en su propia página
+         (necesita todo el ancho para el grafo); acá, el estado y los accesos. #}
+      <div class="sala-tarjeta mapa-tarjeta">
+        <p>Las seis apps y sus funcionalidades (las pestañas), y de cada una su pantalla, rutas, código, tablas y servicios externos, leídos del código que corre en este entorno. Dos vistas: <b>Lista</b>, para ver una funcionalidad entera y en qué otras se usa cada pieza, y <b>Grafo</b>, para desplegar varias y ver lo que comparten. Es orientación: ante la duda, manda el código.</p>
+        <div class="mapa-botones">
+          <a class="boton" href="/entornos/mapa" target="_blank" rel="noopener">Abrir el mapa</a>
+          <form method="post" action="/entornos/mapa/actualizar" target="_blank"><button class="boton suave" type="submit">Actualizar desde el código</button></form>
+          <a class="boton suave" href="/recursos/prompt-mapa-funcional/archivo" target="_blank" rel="noopener">Prompt para otros proyectos</a>
+        </div>
+        <div class="mapa-estado" id="mapa-estado">Se lee al abrir esta pestaña…</div>
       </div>
     </div>
 
@@ -738,7 +760,29 @@
   }
   tabs.forEach(t => t.addEventListener('click', () => { if (!t.disabled) activar(t.dataset.tab); }));
   const inicial = location.hash.replace('#', '');
-  if (['tests-pruebas', 'tests-demo', 'planes', 'observabilidad', 'xsanders'].includes(inicial)) activar(inicial);
+  if (['tests-pruebas', 'tests-demo', 'planes', 'observabilidad', 'mapa', 'xsanders'].includes(inicial)) activar(inicial);
+})();
+
+// Mapa funcional (2026-09-30): el estado se pide recién al abrir la pestaña,
+// porque la primera vez el servidor arma el mapa (unos segundos).
+(function () {
+  const tab = document.querySelector('.etab[data-tab="mapa"]');
+  const estado = document.getElementById('mapa-estado');
+  let pedido = false;
+  function cargar() {
+    if (pedido) return; pedido = true;
+    estado.textContent = 'Leyendo el código…';
+    fetch('/api/entornos/mapa', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(d => {
+        estado.innerHTML = d.generado + (d.commit ? ' · commit ' + d.commit : '') + ' · <b>' + d.apps + '</b> apps · <b>' +
+          d.funcionalidades + '</b> funcionalidades · <b>' + d.rutas + '</b> rutas' +
+          (d.sin_clasificar ? ' · <b>' + d.sin_clasificar + ' sin clasificar</b> (sumarles su regla en mapa_funcional.py)' : ' · ninguna sin clasificar');
+      })
+      .catch(() => { pedido = false; estado.textContent = 'No se pudo leer el estado del mapa. Probá abrirlo igual.'; });
+  }
+  tab.addEventListener('click', cargar);
+  if (location.hash === '#mapa') cargar();
 })();
 
 // Observabilidad, pastillas (2026-09-21): Sala de mando por defecto. El iframe

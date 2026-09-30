@@ -65,6 +65,18 @@ TIPOS = {
 # y migrations/); su miniatura es una captura de la portada.
 SEMILLA = [
     {
+        "clave": "prompt-mapa-funcional",
+        "titulo": "Prompt reutilizable: mapa funcional de un proyecto",
+        "descripcion": "Para pegar en Claude Code en OTRO proyecto y construir su mapa funcional "
+                       "(app, funcionalidad, pantalla, código, tablas y servicios, en Lista y Grafo), "
+                       "con lo aprendido acá y lo que ya se sabe que no sirve. Botón para copiarlo. "
+                       "Fuente: docs/prompts/MAPA_FUNCIONAL.md; el de Colm3na está en la pestaña Mapa funcional.",
+        "fecha": date(2026, 9, 30),
+        "archivo": "prompt-mapa-funcional.html",
+        "miniatura": "prompt-mapa-funcional.jpg",
+        "fragmento": "",
+    },
+    {
         "clave": "relevamiento-sindicatos-resumen-ejecutivo",
         "titulo": "Resumen ejecutivo: cuánto de lo que prestan los sindicatos cubre Colm3na",
         "descripcion": "Tres páginas para dirección, socios e inversores: 47 sindicatos y 715 "

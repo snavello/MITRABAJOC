@@ -163,8 +163,16 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   (qué prefijo de ruta es de qué funcionalidad) y los nombres legibles. Una
   ruta nueva que no encaje sale en "Sin clasificar": sumarle su regla.
   **Orientación, nunca fuente de verdad**: no ve llamadas dinámicas; ante la
-  duda manda el código. `python mapa_funcional.py` escribe y abre
-  `mapa-funcional/mapa.html` (no se versiona). Reemplazó a graphify
+  duda manda el código. **Es herramienta del proyecto en `/entornos` →
+  pestaña "Mapa funcional"** (`/entornos/mapa`, mismo pase y 404 en demo):
+  el servidor lo arma del código DESPLEGADO una vez por proceso (2-3 s) y lo
+  guarda en memoria; se renueva solo con cada deploy y a pedido con
+  "Actualizar desde el código". Estética de la landing; vis-network va
+  VENDOREADO en `static/vendor/vis-network/` (la CSP no deja cargar CDN).
+  En la PC, `python mapa_funcional.py` escribe y abre
+  `mapa-funcional/mapa.html` (no se versiona). El prompt para usarlo en
+  otros proyectos es `docs/prompts/MAPA_FUNCIONAL.md`, publicado como
+  Recurso con `python mapa_funcional.py --publicar-prompt`. Reemplazó a graphify
   (2026-09-30), que se probó y se desinstaló: por archivo o por función no
   servía y traía relaciones falsas. Detalle en
   `docs/chat/2026-09-30-mapa-funcional.md`.

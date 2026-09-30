@@ -15,6 +15,11 @@ incluidos los caminos que NO funcionaron, para no repetirlos.
 en `snavello/MITRABAJOC`. Para otro stack se adapta la lectura (tabla al
 final); la idea, la página y las reglas son las mismas.
 
+**Dónde verlo funcionando**: en Colm3na, `/entornos` → pestaña **Mapa
+funcional** (Pruebas y local), que lo genera desde el código desplegado y
+tiene el botón "Actualizar desde el código". Este prompt se publica también
+como Recurso de esa landing (`python mapa_funcional.py --publicar-prompt`).
+
 ---
 
 ## El prompt (copiar desde acá)
