@@ -63,7 +63,31 @@ CÓMO SE ARMA (reglas)
    rutas los usan y repetirían lo mismo en cada funcionalidad) y no mostrar
    utilidades transversales (fechas, errores, versión).
 5. Límite dicho en la página: las llamadas dinámicas (getattr, callbacks por
-   texto, inyección) no se ven.
+   texto, inyección) no se ven, y una función con ramas por parámetro trae
+   lo de todas sus ramas.
+5b. LAS CUATRO DISTORSIONES que aparecieron al revisar el mapa de origen,
+   pieza por pieza (buscalas desde el principio):
+   a. PÁGINAS COMPLETAS: la ruta que arma la página entera de una app
+      (ej. /app con sus seis pestañas) le carga a UNA funcionalidad todo lo
+      que las demás necesitan (el QR y la filigrana de la credencial
+      aparecían en "Tu Recibo"). Van en su propia funcionalidad
+      "Página de la app (carga inicial)", una por app.
+   b. CONSULTAS DE "¿ESTÁ CONFIGURADO?": mostrar si un servicio tiene clave
+      (configurado(), habilitado(), *_disponible()) no es llamarlo. El
+      módulo queda a la vista, pero no se entra ni suma el servicio.
+   c. GUARDIANES que no están en la lista (un control de pase propio de una
+      sección) meten su módulo en todas las rutas que protegen.
+   d. UTILIDADES chicas dentro de módulos grandes: llamar a una función
+      privada que solo limpia un CUIL no es "usar el motor de validación".
+      Una función privada de otro módulo sin llamadas, tablas ni servicios
+      es una utilidad y no cuenta.
+   Y dos cuidados del detector: las docstrings NO son código (un
+   comentario que dice "...del JOIN" y nombra "empleador" sumaba esa
+   tabla), y del SQL escrito a mano solo vale el nombre que sigue a
+   FROM/JOIN/UPDATE/INTO.
+   Para encontrar el resto: una auditoría que liste, por funcionalidad,
+   cada pieza con cuántas de sus rutas la traen y el camino de llamadas más
+   corto. Lo que no se explica en una frase es sospechoso.
 6. VERIFICAR antes de mostrarme: contrastá el resultado con lo que ya dicen
    CLAUDE.md y la documentación (qué funcionalidad usa qué servicio o
    tabla). Cada diferencia es un hueco del detector o un hallazgo: decime
@@ -144,3 +168,6 @@ seccionales y padrón usan Georef y Nominatim; observabilidad usa Sentry,
 Grafana y Telegram. En la verificación aparecieron y se corrigieron tres
 huecos del detector: el cliente de la IA creado a nivel de módulo, el
 importado dentro de una función y las tablas nombradas en SQL escrito a mano.
+La revisión pieza por pieza (2026-09-30) encontró las cuatro distorsiones del
+punto 5b y la de las docstrings; tras corregirlas quedaron 55 funcionalidades
+(cinco de ellas "carga inicial"), 248 rutas y ninguna relación sin explicar.
