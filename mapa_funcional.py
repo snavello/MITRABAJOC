@@ -78,7 +78,8 @@ FUNCIONALIDADES = [
     ("Sindicato", "Encuestas", r"^/admin/encuesta", "admin.html"),
     ("Sindicato", "Marca del sindicato", r"^/(logo|firma)/", None),
 
-    ("Plataforma", "Ingreso y usuarios nominales", r"^/plataforma/(login|salir|inicio|completar|usuario|usuarios|reset-clave|admins)", None),
+    ("Plataforma", "Cambiar clave (transitoria, sacar antes de producción)", r"^/plataforma/reset-clave", "plataforma.html"),
+    ("Plataforma", "Ingreso y usuarios nominales", r"^/plataforma/(login|salir|inicio|completar|usuario|usuarios|admins)", None),
     ("Plataforma", "Página del panel (carga inicial)", r"^/plataforma$", None),
     ("Plataforma", "Sindicatos y marca", r"^/plataforma/(sindicato|marca)", "plataforma.html"),
     ("Plataforma", "Configuración y topes", r"^/plataforma/(config|tope)", "plataforma.html"),
@@ -90,9 +91,9 @@ FUNCIONALIDADES = [
     ("Entornos", "Página de la landing (carga inicial)", r"^/entornos$", None),
     ("Entornos", "Recursos", r"^/recursos", None),
     ("Entornos", "Sala de mando", r"^/(entornos|api/entornos)/esquema", None),
-    ("Entornos", "Observabilidad", r"^/(entornos|api/entornos)/observabilidad", None),
+    ("Entornos", "Observabilidad", r"^/(entornos|api/entornos)/observabilidad", "_observabilidad.html"),
     ("Entornos", "Seguridad (XSK)", r"^/api/entornos/xsanders", None),
-    ("Entornos", "Planes de Render", r"^/(entornos|api/entornos)/planes", None),
+    ("Entornos", "Planes de Render", r"^/(entornos|api/entornos)/planes", "_planes.html"),
     ("Entornos", "Tests de carga", r"^/(entornos|api/entornos)/(tests|informe)", None),
     ("Entornos", "Mapa funcional", r"^/(entornos|api/entornos)/mapa", None),
 ]
@@ -304,7 +305,38 @@ def js_de_plantilla(nombre):
     if not p.exists():
         return []
     txt = p.read_text(encoding="utf-8", errors="ignore")
-    return sorted({j for j in re.findall(r"static/([\w\-/]+\.js)", txt) if "vendor" not in j and ".min." not in j})
+    # Solo un <script src=...> de verdad: un comentario que nombra un .js no lo carga.
+    return sorted({j for j in re.findall(r"""<script[^>]+src=["'][^"']*static/([\w\-/]+\.js)""", txt)
+                   if "vendor" not in j and ".min." not in j})
+
+
+# Una plantilla es pantalla de una ruta si la LLAMA: fetch(...) o action= de un
+# formulario, en la plantilla o en el JS propio que carga. Los enlaces de
+# navegación y las imágenes (el logo está en todas) no cuentan.
+RX_LLAMADA = re.compile(r"""(?:fetch\(\s*|action=\s*)[`'"](/[^`'"?#$]*)""")
+
+
+def llamadas_de_plantillas():
+    """{plantilla: {path o prefijo que llama}} (un prefijo si el path sigue con
+    una variable: fetch('/api/tramite/' + id))."""
+    out = {}
+    for pl in (RAIZ / "templates").glob("*.html"):
+        textos = [pl.read_text(encoding="utf-8", errors="ignore")]
+        textos += [(RAIZ / "static" / j).read_text(encoding="utf-8", errors="ignore")
+                   for j in js_de_plantilla(pl.name) if (RAIZ / "static" / j).exists()]
+        out[pl.name] = {x for tx in textos for x in RX_LLAMADA.findall(tx)}
+    return out
+
+
+def plantilla_llama(llamados, ruta):
+    base = ruta.split("{", 1)[0]
+    for x in llamados:
+        if "{" in ruta:
+            if x.startswith(base) or (base.endswith("/") and x == base.rstrip("/")):
+                return True
+        elif x == ruta or x.rstrip("/") == ruta:
+            return True
+    return False
 
 
 def nombre_mod(m):
@@ -345,6 +377,7 @@ def armar():
             sin_clasificar.append(r)
 
     orden = {(a, f): i for i, (a, f, _, _) in enumerate(FUNCIONALIDADES)}
+    llamadas = llamadas_de_plantillas()
     funcionalidades = []
     for (app, func, pant), rutas in sorted(grupos.items(), key=lambda kv: orden[kv[0][:2]]):
         nodos, aristas = {}, set()
@@ -352,7 +385,13 @@ def armar():
         def nodo(id_, col, etiqueta, **extra):
             nodos.setdefault(id_, {"id": id_, "col": col, "label": etiqueta, **extra})
 
-        plantillas = sorted({p for r in rutas for p in r["plantillas"]} | ({pant} if pant else set()))
+        # De lo que DEVUELVE una ruta no cuentan los parciales (_algo.html: un
+        # nombre citado en el código no es una pantalla) ni el login que se
+        # muestra cuando no hay sesión, salvo en las funcionalidades de ingreso.
+        devueltas = {p for r in rutas for p in r["plantillas"]
+                     if not p.startswith("_") and ("Ingreso" in func or not p.endswith("_login.html"))}
+        plantillas = sorted(devueltas | ({pant} if pant else set())
+                            | {pl for pl, ll in llamadas.items() if any(plantilla_llama(ll, r["ruta"]) for r in rutas)})
         for p in plantillas:
             nodo("p:" + p, 0, p, js=js_de_plantilla(p))
             aristas.add(("p:" + p, "m:main"))

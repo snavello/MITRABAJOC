@@ -57,6 +57,18 @@ def test_no_vuelven_las_distorsiones_de_la_revision():
     assert "t:Empleador" not in por_nombre[("Plataforma", "Trabajadores de la plataforma")]
 
 
+def test_pantallas_por_quien_llama_de_verdad():
+    por_nombre = {(f["app"], f["nombre"]): {n["id"] for n in f["nodos"] if n["col"] == 0}
+                  for f in mapa_funcional.armar()["funcionalidades"]}
+    # Se detecta por fetch/action: el perfil del afiliado se edita desde la portada.
+    assert "p:portada.html" in por_nombre[("Afiliado", "Perfil y domicilio")]
+    # Ni el login que se muestra sin sesión, ni un parcial citado por nombre,
+    # ni un .js nombrado en un comentario del encabezado.
+    assert por_nombre[("Sindicato", "Panel Sindical")] == {"p:dashboard.html"}
+    # La pestaña transitoria de plataforma queda a la vista con nombre propio.
+    assert any(a == "Plataforma" and n.startswith("Cambiar clave") for a, n in por_nombre)
+
+
 def test_sin_pase_no_se_ve_y_con_pase_se_arma():
     c = TestClient(main.app)
     assert c.get("/api/entornos/mapa").status_code == 403

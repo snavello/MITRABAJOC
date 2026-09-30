@@ -166,7 +166,10 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   de cada app va en su propia funcionalidad "(carga inicial)", las consultas
   de "¿está configurado?" no cuentan como llamar al servicio, las utilidades
   privadas de otro módulo no cuentan como usarlo, y las docstrings no son
-  código. `test_mapa_funcional.py` verifica que no vuelvan.
+  código. Las pantallas no se asignan a mano: una plantilla es pantalla
+  de una funcionalidad si llama a sus rutas (fetch o action, en ella o en
+  el JS que carga con <script src>). `test_mapa_funcional.py` verifica
+  que nada de eso vuelva.
   **Orientación, nunca fuente de verdad**: no ve llamadas dinámicas; ante la
   duda manda el código. **Es herramienta del proyecto en `/entornos` →
   pestaña "Mapa funcional"** (`/entornos/mapa`, mismo pase y 404 en demo):
