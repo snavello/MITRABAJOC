@@ -15,11 +15,14 @@ Orientación, no verdad: las llamadas dinámicas (getattr, callbacks por
 string) no se ven. Ante la duda, manda el código.
 
 Uso:  python mapa_funcional.py        (escribe mapa-funcional/mapa.html y lo abre)
+En Pruebas/local también se ve en /entornos -> pestaña "Mapa funcional"
+(main.py lo genera desde el código desplegado y lo guarda en memoria).
 """
 import ast
 import base64
 import collections
 import json
+import os
 import re
 import subprocess
 import sys
@@ -86,6 +89,7 @@ FUNCIONALIDADES = [
     ("Entornos", "Seguridad (XSK)", r"^/api/entornos/xsanders", None),
     ("Entornos", "Planes de Render", r"^/(entornos|api/entornos)/planes", None),
     ("Entornos", "Tests de carga", r"^/(entornos|api/entornos)/(tests|informe)", None),
+    ("Entornos", "Mapa funcional", r"^/(entornos|api/entornos)/mapa", None),
 ]
 
 NOMBRES = {
@@ -368,11 +372,14 @@ def armar():
     modulos_doc = {m: {"nombre": nombre_mod(m), "doc": idx.docs.get(m, ""),
                        "archivo": str(idx.mods[m][1].relative_to(RAIZ)).replace("\\", "/")}
                    for m in idx.mods}
-    try:
-        commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=RAIZ,
-                                capture_output=True, text=True).stdout.strip()
-    except OSError:
-        commit = ""
+    # En Render no hay .git: el commit desplegado viene en RENDER_GIT_COMMIT.
+    commit = os.environ.get("RENDER_GIT_COMMIT", "")[:7]
+    if not commit:
+        try:
+            commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=RAIZ,
+                                    capture_output=True, text=True).stdout.strip()
+        except OSError:
+            commit = ""
     return {"funcionalidades": funcionalidades, "sin_clasificar": sin_clasificar,
             "modulos": modulos_doc, "commit": commit,
             "total_rutas": sum(len(f["rutas"]) for f in funcionalidades) + len(sin_clasificar)}
@@ -380,47 +387,79 @@ def armar():
 
 PAGINA = r"""<!doctype html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mapa funcional — Colm3na</title>
-<script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<meta name="robots" content="noindex, nofollow">
+<title>Colm3na — Mapa funcional</title>
+<script src="__VIS__"></script>
 <style>
-:root{--fondo:#f4f5f7;--papel:#fff;--tinta:#1d2230;--suave:#667085;--linea:#d9dde5;
- --c0:#8a63d2;--c1:#3b6fd8;--c2:#1f9d8b;--c3:#e08a1e;--c4:#d14b5a;--foco:#111827}
-*{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;
- background:var(--fondo);color:var(--tinta);display:grid;grid-template-columns:270px 1fr 320px;height:100vh}
-nav,aside{overflow:auto;background:var(--papel);border-right:1px solid var(--linea)}
-aside{border-right:0;border-left:1px solid var(--linea);padding:16px}
-nav h1{font-size:16px;margin:16px 16px 2px}nav .sub{margin:0 16px 10px;color:var(--suave);font-size:12px}
-nav h2{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--suave);margin:14px 16px 4px}
-nav a{display:flex;justify-content:space-between;gap:8px;padding:5px 16px;color:inherit;text-decoration:none;cursor:pointer}
-nav a:hover{background:#eef1f6}nav a.act{background:#e3e9f7;font-weight:600}
-nav a small{color:var(--suave)}main{overflow:auto;padding:18px 22px}
-h2.t{margin:0;font-size:21px}.chips{margin:6px 0 12px;display:flex;flex-wrap:wrap;gap:6px}
-.chip{font-size:12px;padding:2px 8px;border-radius:99px;background:#e8ebf1;color:#344054}
+/* Estética de /entornos (templates/entornos.html): la "colmena nocturna" de
+   los logins -- fondo oscuro de marca, grano, títulos en Barlow Condensed y
+   el ámbar de Pruebas como acento. */
+@font-face{font-family:'Barlow Condensed';font-weight:700;font-style:normal;src:url('__FUENTE__') format('woff2')}
+:root{--tinta:#152238;--agua:#1a7a6b;--ambar:#ffb020;--texto:#e8edf5;--suave:rgba(232,237,245,.58);
+ --panel:rgba(9,15,26,.62);--linea:rgba(255,255,255,.13);--caja:rgba(255,255,255,.06);
+ --c0:#a78bfa;--c1:#5b8ff9;--c2:#34d1b5;--c3:#ffb020;--c4:#ff6b7d;
+ --display:'Barlow Condensed','Arial Narrow',sans-serif;--mono:ui-monospace,'Cascadia Mono',Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;color:var(--texto);
+ display:grid;grid-template-columns:280px 1fr 330px;height:100vh;
+ background:radial-gradient(900px 480px at 78% -10%,color-mix(in srgb,var(--agua) 26%,transparent),transparent 62%),
+  linear-gradient(160deg,#0d1626 20%,var(--tinta) 70%,color-mix(in srgb,var(--tinta) 72%,#4a6da8))}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.07;mix-blend-mode:overlay;z-index:0;
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+nav,main,aside{position:relative;z-index:1}
+nav,aside{overflow:auto;background:var(--panel);backdrop-filter:blur(6px)}
+nav{border-right:1px solid var(--linea)}aside{border-left:1px solid var(--linea);padding:18px}
+.marca{display:flex;align-items:center;gap:10px;margin:16px 16px 2px}.marca img{height:34px;width:auto}
+nav h1{font-family:var(--display);font-size:26px;line-height:1;letter-spacing:1.5px;text-transform:uppercase;margin:0}
+nav .sub{margin:4px 16px 10px;color:var(--suave);font-size:12px}
+.acciones{display:flex;flex-wrap:wrap;gap:6px;margin:0 16px 12px}
+.acciones a,.acciones button{appearance:none;cursor:pointer;border:1px solid var(--linea);background:var(--caja);color:var(--texto);
+ border-radius:999px;padding:4px 11px;font:inherit;font-size:12px;text-decoration:none}
+.acciones a:hover,.acciones button:hover{background:rgba(255,255,255,.14)}
+.acciones .fuerte{background:var(--ambar);color:#1b1508;border-color:var(--ambar);font-weight:600}
+.acciones form{margin:0}
+nav h2{font-family:var(--display);font-size:15px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ambar);margin:16px 16px 4px}
+nav a.it{display:flex;justify-content:space-between;gap:8px;padding:5px 16px;color:inherit;text-decoration:none;cursor:pointer}
+nav a.it:hover{background:rgba(255,255,255,.07)}
+nav a.it.act{background:rgba(255,176,32,.14);font-weight:600;box-shadow:inset 3px 0 0 var(--ambar)}
+nav a.it small{color:var(--suave);font-family:var(--mono);font-size:11px}
+main{overflow:auto;padding:20px 24px}
+h2.t{margin:0;font-family:var(--display);font-size:30px;line-height:1.05;letter-spacing:1px;text-transform:uppercase}
+.chips{margin:8px 0 14px;display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;padding:2px 9px;border-radius:99px;background:var(--caja);border:1px solid var(--linea);color:var(--texto)}
 .cols{display:grid;grid-template-columns:repeat(5,1fr);gap:0 26px;position:relative;margin-top:6px}
-.cabe{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--suave);margin-bottom:8px}
-.col{display:flex;flex-direction:column;gap:8px}.n{background:var(--papel);border:1px solid var(--linea);
- border-left:4px solid var(--c);border-radius:6px;padding:6px 9px;cursor:pointer;position:relative;z-index:1;font-size:13px}
-.n:hover,.n.sel{border-color:var(--foco);border-left-color:var(--c)}.n.apagado{opacity:.25}
+.cabe{font-family:var(--display);font-size:14px;letter-spacing:1.5px;text-transform:uppercase;color:var(--suave);margin-bottom:8px}
+.col{display:flex;flex-direction:column;gap:8px}
+.n{background:rgba(13,22,38,.78);border:1px solid var(--linea);border-left:4px solid var(--c);border-radius:8px;padding:6px 9px;
+ cursor:pointer;position:relative;z-index:1;font-size:13px}
+.n:hover,.n.sel{border-color:rgba(255,255,255,.6);border-left-color:var(--c)}.n.apagado{opacity:.22}
 .n small{display:block;color:var(--suave);font-size:11px}
 svg.lin{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
-svg.lin path{fill:none;stroke:#b8c0cf;stroke-width:1.3}svg.lin path.on{stroke:var(--foco);stroke-width:2}
-svg.lin path.off{opacity:.12}
-aside h3{margin:0 0 4px;font-size:15px}aside .doc{color:var(--suave);margin-bottom:10px}
-aside ul{padding-left:18px;margin:4px 0 12px}aside li{margin:1px 0}aside a{color:#2451b3;cursor:pointer}
-code{font-size:12px;background:#eef1f6;padding:1px 4px;border-radius:4px}
+svg.lin path{fill:none;stroke:rgba(255,255,255,.22);stroke-width:1.3}svg.lin path.on{stroke:var(--ambar);stroke-width:2}
+svg.lin path.off{opacity:.1}
+aside h3{margin:0 0 4px;font-family:var(--display);font-size:22px;letter-spacing:.5px;text-transform:uppercase}
+aside .doc{color:var(--suave);margin-bottom:12px}aside b{color:#fff}
+aside ul{padding-left:18px;margin:4px 0 12px}aside li{margin:2px 0}
+a{color:#9cc3ff}aside a,.inicio .app a{cursor:pointer}
+code{font-family:var(--mono);font-size:12px;background:rgba(255,255,255,.1);padding:1px 5px;border-radius:4px}
 .rutas{margin-top:22px}.rutas summary{cursor:pointer;color:var(--suave)}
 .rutas table{border-collapse:collapse;margin-top:6px;font-size:12px}.rutas td{padding:2px 10px 2px 0}
-.aviso{font-size:12px;color:var(--suave);background:#eef1f6;border-radius:6px;padding:8px 10px;margin-top:14px}
-.inicio .apps{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-top:14px}
-.inicio .app{background:var(--papel);border:1px solid var(--linea);border-radius:8px;padding:12px 14px}
-.modos{display:flex;gap:4px;margin:0 16px 8px}.modos button{flex:1;border:1px solid var(--linea);background:#fff;border-radius:6px;padding:5px;cursor:pointer;font:inherit;font-size:13px}.modos button.on{background:var(--tinta);color:#fff;border-color:var(--tinta)}
-nav a.exp{background:#fff4e0;font-weight:600;box-shadow:inset 4px 0 0 var(--c3)}
+.aviso{font-size:12px;color:var(--suave);background:var(--caja);border:1px solid var(--linea);border-radius:8px;padding:8px 10px;margin-top:14px}
+.inicio p{color:var(--suave);max-width:760px}
+.inicio .apps{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;margin-top:16px}
+.inicio .app{background:var(--panel);border:1px solid var(--linea);border-radius:14px;padding:14px 16px}
+.inicio .app h3{margin:0 0 6px;font-family:var(--display);font-size:20px;letter-spacing:1px;text-transform:uppercase;color:var(--ambar)}
+.inicio .app a{display:block;padding:1px 0}
+.modos{display:flex;gap:4px;margin:0 16px 8px}
+.modos button{flex:1;appearance:none;border:1px solid var(--linea);background:transparent;color:var(--texto);border-radius:999px;padding:5px;cursor:pointer;font:inherit;font-size:13px}
+.modos button.on{background:#fff;color:var(--tinta);border-color:#fff;font-weight:600}
+nav a.it.exp{background:rgba(255,176,32,.14);font-weight:600;box-shadow:inset 3px 0 0 var(--ambar)}
 main.grafo{padding:0;position:relative;overflow:hidden}#g{position:absolute;inset:0}
-.barra{position:absolute;top:10px;left:12px;z-index:2;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.barra button{border:1px solid var(--linea);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font:inherit;font-size:12px}
-.ley{background:rgba(255,255,255,.92);border:1px solid var(--linea);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--suave)}
-.ley i{display:inline-block;width:10px;height:10px;margin:0 4px 0 8px;vertical-align:-1px}
-.inicio .app h3{margin:0 0 6px}.inicio .app a{display:block;cursor:pointer;color:#2451b3;padding:1px 0}
+.barra{position:absolute;top:12px;left:14px;z-index:2;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.barra button{appearance:none;border:1px solid var(--linea);background:var(--panel);color:var(--texto);border-radius:999px;padding:5px 12px;cursor:pointer;font:inherit;font-size:12px}
+.barra button:hover{background:rgba(255,255,255,.14)}
+.ley{background:var(--panel);border:1px solid var(--linea);border-radius:999px;padding:5px 12px;font-size:12px;color:var(--suave)}
+.ley i{display:inline-block;width:10px;height:10px;margin:0 4px 0 9px;vertical-align:-1px}
 @media (max-width:1000px){body{grid-template-columns:1fr;height:auto}nav,aside{border:0}.cols{grid-template-columns:1fr}svg.lin{display:none}}
 </style></head><body>
 <nav id="nav"></nav><main id="main"></main><aside id="det"></aside>
@@ -432,13 +471,15 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 const apps=[...new Set(D.funcionalidades.map(f=>f.app))];
 const usos={};D.funcionalidades.forEach((f,i)=>f.nodos.forEach(n=>(usos[n.id]=usos[n.id]||[]).push(i)));
 let actual=-1,sel=null,modo='lista';const exp=new Set();
-function nav(){let h=`<h1>Mapa funcional</h1><div class="sub">commit ${esc(D.commit)} · ${D.total_rutas} rutas</div>
+function nav(){let h=`<div class="marca">${LOGO?`<img src="${LOGO}" alt="">`:""}<h1>Mapa funcional</h1></div>
+ <div class="sub">${D.generado?esc(D.generado)+" · ":""}${D.commit?"commit "+esc(D.commit)+" · ":""}${D.total_rutas} rutas</div>
+ <div class="acciones">__ACCIONES__</div>
  <div class="modos"><button class="${modo==='lista'?'on':''}" onclick="setModo('lista')">Lista</button><button class="${modo==='grafo'?'on':''}" onclick="setModo('grafo')">Grafo</button></div>`;
- if(modo==='lista')h+=`<a onclick="ir(-1)" class="${actual<0?'act':''}">Vista general</a>`;
+ if(modo==='lista')h+=`<a class="it ${actual<0?'act':''}" onclick="ir(-1)">Vista general</a>`;
  apps.forEach(a=>{h+=`<h2>${esc(a)}</h2>`;D.funcionalidades.forEach((f,i)=>{if(f.app!==a)return;
-  h+=modo==='lista'?`<a class="${i===actual?'act':''}" onclick="ir(${i})">${esc(f.nombre)}<small>${f.rutas.length}</small></a>`
-   :`<a class="${exp.has(i)?'exp':''}" onclick="alternar(${i})">${esc(f.nombre)}<small>${f.rutas.length}</small></a>`})});
- if(D.sin_clasificar.length)h+=`<h2>Revisar</h2><a onclick="sinClasificar()">Sin clasificar<small>${D.sin_clasificar.length}</small></a>`;
+  h+=modo==='lista'?`<a class="it ${i===actual?'act':''}" onclick="ir(${i})">${esc(f.nombre)}<small>${f.rutas.length}</small></a>`
+   :`<a class="it ${exp.has(i)?'exp':''}" onclick="alternar(${i})">${esc(f.nombre)}<small>${f.rutas.length}</small></a>`})});
+ if(D.sin_clasificar.length)h+=`<h2>Revisar</h2><a class="it" onclick="sinClasificar()">Sin clasificar<small>${D.sin_clasificar.length}</small></a>`;
  document.getElementById("nav").innerHTML=h}
 function ir(i){if(modo!=="lista"){modo="lista";document.getElementById("main").classList.remove("grafo")}actual=i;sel=null;nav();i<0?general():vista(D.funcionalidades[i]);detalleInicial();try{history.replaceState(null,"","#"+i)}catch(e){}}
 function general(){let h=`<div class="inicio"><h2 class="t">Colm3na por funcionalidad</h2>
@@ -488,27 +529,28 @@ function sinClasificar(){actual=-2;nav();document.getElementById("main").innerHT
 window.addEventListener("resize",()=>requestAnimationFrame(lineas));
 
 // ------------------------------------------------------------ vista Grafo
-const COL_APP={"Común":"#7a8394","Afiliado":"#3b6fd8","Empresa":"#1f9d8b","Sindicato":"#d14b5a","Plataforma":"#8a63d2","Entornos":"#e08a1e"};
-const TIPO=[{shape:"triangle",color:"#8a63d2",size:10},null,{shape:"dot",color:"#1f9d8b",size:10},
-            {shape:"square",color:"#e08a1e",size:8},{shape:"hexagon",color:"#d14b5a",size:12}];
+const COL_APP={"Común":"#94a3b8","Afiliado":"#5b8ff9","Empresa":"#3ecfae","Sindicato":"#ff6b7d","Plataforma":"#a78bfa","Entornos":"#ffb020"};
+const TIPO=[{shape:"triangle",color:"#a78bfa",size:10},null,{shape:"dot",color:"#34d1b5",size:10},
+            {shape:"square",color:"#ffb020",size:8},{shape:"hexagon",color:"#ff6b7d",size:12}];
+const FUENTE={color:"#e8edf5",strokeWidth:4,strokeColor:"#0d1626"};
 let red=null,gN=null,gE=null;const refN=new Map(),refE=new Map();
 const compInfo={};D.funcionalidades.forEach(f=>f.nodos.forEach(n=>{if(!compInfo[n.id])compInfo[n.id]=n}));
 function setModo(m){modo=m;nav();if(m==="grafo")montarGrafo();else ir(actual<-1?-1:actual)}
 function nodoFunc(i){const f=D.funcionalidades[i],e=exp.has(i);return{id:"f:"+i,label:f.nombre,shape:"dot",size:e?18:12,
- color:{background:COL_APP[f.app],border:e?"#111827":COL_APP[f.app]},borderWidth:e?4:1,font:{size:15,color:"#1d2230",strokeWidth:4,strokeColor:"#fff"},
+ color:{background:COL_APP[f.app],border:e?"#ffffff":COL_APP[f.app]},borderWidth:e?4:1,font:{...FUENTE,size:15},
  title:f.app+" · "+f.nombre+" — "+f.rutas.length+" rutas. Clic: desplegar / replegar"}}
 function montarGrafo(){const mn=document.getElementById("main");mn.classList.add("grafo");
  mn.innerHTML=`<div id="g"></div><div class="barra"><button onclick="limpiar()">Limpiar</button><button onclick="enfocar()">Enfocar desplegadas</button><button onclick="red&&red.fit({animation:true})">Ver todo</button>
- <span class="ley">Funcionalidad <b>●</b> (clic para desplegar)<i style="background:#8a63d2;clip-path:polygon(50% 0,100% 100%,0 100%)"></i>Pantalla<i style="background:#1f9d8b;border-radius:50%"></i>Código<i style="background:#e08a1e"></i>Tabla<i style="background:#d14b5a;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)"></i>Servicio</span></div>`;
+ <span class="ley">Funcionalidad ● (clic para desplegar)<i style="background:#a78bfa;clip-path:polygon(50% 0,100% 100%,0 100%)"></i>Pantalla<i style="background:#34d1b5;border-radius:50%"></i>Código<i style="background:#ffb020"></i>Tabla<i style="background:#ff6b7d;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)"></i>Servicio</span></div>`;
  gN=new vis.DataSet();gE=new vis.DataSet();refN.clear();refE.clear();
  // Centro: el isotipo de Colm3na (5 veces el ícono de una funcionalidad), unido a las seis apps.
  if(LOGO)gN.add({id:"c:colm3na",shape:"image",image:LOGO,size:60,mass:8,title:"Colm3na"});
- apps.forEach(a=>gN.add({id:"a:"+a,label:a.toUpperCase(),shape:"box",margin:10,mass:3,color:{background:COL_APP[a],border:COL_APP[a]},font:{color:"#fff",size:18,bold:true}}));
+ apps.forEach(a=>gN.add({id:"a:"+a,label:a.toUpperCase(),shape:"box",margin:10,mass:3,color:{background:COL_APP[a],border:COL_APP[a]},font:{color:"#0d1626",size:18,face:"Barlow Condensed, Arial Narrow, sans-serif",bold:true}}));
  if(LOGO)apps.forEach(a=>gE.add({id:"c|a:"+a,from:"c:colm3na",to:"a:"+a,color:{color:COL_APP[a],opacity:.6},width:3,length:170}));
  D.funcionalidades.forEach((f,i)=>{gN.add(nodoFunc(i));gE.add({id:"a:"+f.app+"|f:"+i,from:"a:"+f.app,to:"f:"+i,color:{color:COL_APP[f.app],opacity:.5},width:2})});
  red=new vis.Network(document.getElementById("g"),{nodes:gN,edges:gE},{
   physics:{solver:"forceAtlas2Based",forceAtlas2Based:{gravitationalConstant:-90,springLength:110,avoidOverlap:.6},stabilization:{iterations:500}},
-  edges:{smooth:{type:"continuous"},color:{color:"#b8c0cf",highlight:"#111827"}},interaction:{hover:true,tooltipDelay:150}});
+  edges:{smooth:{type:"continuous"},color:{color:"rgba(255,255,255,.28)",highlight:"#ffb020",hover:"#ffffff"}},interaction:{hover:true,tooltipDelay:150}});
  red.on("stabilizationIterationsDone",()=>red.setOptions({physics:{enabled:false}}));
  red.on("click",p=>{if(!p.nodes.length)return;const id=p.nodes[0];
   if(id.startsWith("f:"))alternar(+id.slice(2));else if(!/^[ac]:/.test(id))detalleComp(id)});
@@ -524,7 +566,7 @@ function desplegar(i,sinAcomodar){const f=D.funcionalidades[i],fid="f:"+i;exp.ad
  f.nodos.forEach(n=>{if(n.id==="m:main")return;if(!refN.has(n.id))refN.set(n.id,new Set());refN.get(n.id).add(i)});
  nuevos.forEach((n,k)=>{const s=TIPO[n.col],ang=2*Math.PI*k/nuevos.length;
    gN.add({id:n.id,label:n.label,shape:s.shape,size:s.size,color:{background:s.color,border:s.color},
-   font:{size:12,color:"#1d2230",strokeWidth:3,strokeColor:"#fff"},
+   font:{...FUENTE,size:12,strokeWidth:3},
    x:base?base.x+radio*Math.cos(ang):undefined,y:base?base.y+radio*Math.sin(ang):undefined,fixed:false,
    title:COLS[n.col]+": "+n.label})});
  f.aristas.forEach(([a,z])=>{const A=mapa(a),Z=mapa(z),eid=A+"|"+Z;if(A===Z)return;
@@ -554,13 +596,78 @@ const ini=parseInt((location.hash||"#-1").slice(1));ir(isNaN(ini)||!D.funcionali
 </script></body></html>"""
 
 
+def pagina(datos, vis_src, logo_src, fuente_src, acciones_html=""):
+    """El HTML completo. Lo usan la versión local (main, abajo) y /entornos/mapa
+    (main.py), cada uno con sus rutas a la librería del grafo, el isotipo y la
+    fuente: en la app van por /static/ con su sello; en local, relativas."""
+    return (PAGINA.replace("__DATOS__", json.dumps(datos, ensure_ascii=False))
+            .replace("__VIS__", vis_src).replace("__LOGO__", logo_src)
+            .replace("__FUENTE__", fuente_src).replace("__ACCIONES__", acciones_html))
+
+
+PROMPT_MD = RAIZ / "docs" / "prompts" / "MAPA_FUNCIONAL.md"
+PROMPT_HTML = RAIZ / "recursos" / "prompt-mapa-funcional.html"
+
+
+def publicar_prompt():
+    """docs/prompts/MAPA_FUNCIONAL.md -> recursos/prompt-mapa-funcional.html, el
+    Recurso de /entornos. El Markdown es la fuente: se edita ahí y se vuelve a
+    publicar con `python mapa_funcional.py --publicar-prompt`. Usa markdown-it
+    (solo en la PC de quien publica; la app sirve el HTML ya hecho)."""
+    from markdown_it import MarkdownIt
+    cuerpo = MarkdownIt("commonmark").enable("table").render(PROMPT_MD.read_text(encoding="utf-8"))
+    # El bloque del prompt (el único ```text) lleva botón de copiar.
+    cuerpo = cuerpo.replace('<pre><code class="language-text">',
+                            '<div class="copiar"><button type="button" onclick="copiar(this)">Copiar el prompt</button></div>'
+                            '<pre class="prompt"><code class="language-text">', 1)
+    PROMPT_HTML.write_text(PAGINA_PROMPT.replace("__CUERPO__", cuerpo), encoding="utf-8")
+    print(f"{PROMPT_HTML.relative_to(RAIZ)} publicado desde {PROMPT_MD.relative_to(RAIZ)}")
+
+
+PAGINA_PROMPT = r"""<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex, nofollow">
+<title>Colm3na — Prompt: mapa funcional</title>
+<style>
+@font-face{font-family:'Barlow Condensed';font-weight:700;src:url('/static/fonts/barlow-condensed-bold.woff2') format('woff2')}
+:root{--tinta:#152238;--agua:#1a7a6b;--ambar:#ffb020;--texto:#e8edf5;--suave:rgba(232,237,245,.62);--linea:rgba(255,255,255,.14);
+ --display:'Barlow Condensed','Arial Narrow',sans-serif;--mono:ui-monospace,'Cascadia Mono',Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;padding:34px 16px 70px;font:15px/1.6 system-ui,-apple-system,Segoe UI,sans-serif;color:var(--texto);
+ background:radial-gradient(900px 480px at 78% -10%,color-mix(in srgb,var(--agua) 26%,transparent),transparent 62%),
+  linear-gradient(160deg,#0d1626 20%,var(--tinta) 70%,color-mix(in srgb,var(--tinta) 72%,#4a6da8)) fixed}
+main{max-width:920px;margin:0 auto}
+h1{font-family:var(--display);font-size:44px;line-height:1.02;letter-spacing:1.5px;text-transform:uppercase;margin:0 0 12px}
+h2{font-family:var(--display);font-size:28px;letter-spacing:1px;text-transform:uppercase;color:var(--ambar);margin:34px 0 8px}
+p,li{color:var(--texto)}a{color:#9cc3ff}strong{color:#fff}hr{border:0;border-top:1px solid var(--linea);margin:28px 0}
+code{font-family:var(--mono);font-size:.88em;background:rgba(255,255,255,.1);padding:1px 5px;border-radius:4px}
+pre{background:rgba(9,15,26,.72);border:1px solid var(--linea);border-radius:14px;padding:18px 20px;overflow:auto;font-size:13px;line-height:1.55}
+pre code{background:none;padding:0;white-space:pre-wrap}
+pre.prompt{border-color:rgba(255,176,32,.55);box-shadow:0 0 0 5px rgba(255,176,32,.08)}
+.copiar{display:flex;justify-content:flex-end;margin:0 0 -6px}
+.copiar button{appearance:none;cursor:pointer;border:0;border-radius:999px;padding:7px 16px;font:inherit;font-size:13px;font-weight:600;background:var(--ambar);color:#1b1508}
+table{border-collapse:collapse;width:100%;font-size:13px;margin:8px 0;display:block;overflow-x:auto}
+th,td{border:1px solid var(--linea);padding:6px 8px;text-align:left;vertical-align:top}th{color:var(--ambar);font-weight:600}
+</style></head><body><main>
+__CUERPO__
+</main>
+<script>
+function copiar(b){const t=b.parentElement.nextElementSibling.innerText;
+ navigator.clipboard.writeText(t).then(()=>{b.textContent="Copiado";setTimeout(()=>b.textContent="Copiar el prompt",1800)},
+ ()=>{b.textContent="Seleccioná y copiá a mano"})}
+</script></body></html>"""
+
+
 def main():
+    if "--publicar-prompt" in sys.argv:
+        return publicar_prompt()
+    import fechas
     datos = armar()
+    datos["generado"] = "Generado " + fechas.ahora_texto()
     SALIDA.parent.mkdir(exist_ok=True)
     logo = RAIZ / "static" / "colmena_dorada.webp"   # el isotipo, sin la palabra
     logo_uri = ("data:image/webp;base64," + base64.b64encode(logo.read_bytes()).decode()) if logo.exists() else ""
-    SALIDA.write_text(PAGINA.replace("__DATOS__", json.dumps(datos, ensure_ascii=False))
-                      .replace("__LOGO__", logo_uri), encoding="utf-8")
+    SALIDA.write_text(pagina(datos, "../static/vendor/vis-network/vis-network.min.js", logo_uri,
+                             "../static/fonts/barlow-condensed-bold.woff2"), encoding="utf-8")
     print(f"{SALIDA.relative_to(RAIZ)}: {len(datos['funcionalidades'])} funcionalidades, "
           f"{datos['total_rutas']} rutas, {len(datos['sin_clasificar'])} sin clasificar")
     if "--no-abrir" not in sys.argv:

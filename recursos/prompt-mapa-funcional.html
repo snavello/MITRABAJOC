@@ -1,0 +1,216 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex, nofollow">
+<title>Colm3na — Prompt: mapa funcional</title>
+<style>
+@font-face{font-family:'Barlow Condensed';font-weight:700;src:url('/static/fonts/barlow-condensed-bold.woff2') format('woff2')}
+:root{--tinta:#152238;--agua:#1a7a6b;--ambar:#ffb020;--texto:#e8edf5;--suave:rgba(232,237,245,.62);--linea:rgba(255,255,255,.14);
+ --display:'Barlow Condensed','Arial Narrow',sans-serif;--mono:ui-monospace,'Cascadia Mono',Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;padding:34px 16px 70px;font:15px/1.6 system-ui,-apple-system,Segoe UI,sans-serif;color:var(--texto);
+ background:radial-gradient(900px 480px at 78% -10%,color-mix(in srgb,var(--agua) 26%,transparent),transparent 62%),
+  linear-gradient(160deg,#0d1626 20%,var(--tinta) 70%,color-mix(in srgb,var(--tinta) 72%,#4a6da8)) fixed}
+main{max-width:920px;margin:0 auto}
+h1{font-family:var(--display);font-size:44px;line-height:1.02;letter-spacing:1.5px;text-transform:uppercase;margin:0 0 12px}
+h2{font-family:var(--display);font-size:28px;letter-spacing:1px;text-transform:uppercase;color:var(--ambar);margin:34px 0 8px}
+p,li{color:var(--texto)}a{color:#9cc3ff}strong{color:#fff}hr{border:0;border-top:1px solid var(--linea);margin:28px 0}
+code{font-family:var(--mono);font-size:.88em;background:rgba(255,255,255,.1);padding:1px 5px;border-radius:4px}
+pre{background:rgba(9,15,26,.72);border:1px solid var(--linea);border-radius:14px;padding:18px 20px;overflow:auto;font-size:13px;line-height:1.55}
+pre code{background:none;padding:0;white-space:pre-wrap}
+pre.prompt{border-color:rgba(255,176,32,.55);box-shadow:0 0 0 5px rgba(255,176,32,.08)}
+.copiar{display:flex;justify-content:flex-end;margin:0 0 -6px}
+.copiar button{appearance:none;cursor:pointer;border:0;border-radius:999px;padding:7px 16px;font:inherit;font-size:13px;font-weight:600;background:var(--ambar);color:#1b1508}
+table{border-collapse:collapse;width:100%;font-size:13px;margin:8px 0;display:block;overflow-x:auto}
+th,td{border:1px solid var(--linea);padding:6px 8px;text-align:left;vertical-align:top}th{color:var(--ambar);font-weight:600}
+</style></head><body><main>
+<h1>Prompt reutilizable — Mapa funcional de un proyecto</h1>
+<p>Fecha: 2026-09-30 · Origen: sesión de Claude Code en <code>snavello/MITRABAJOC</code>
+(ver <code>docs/chat/2026-09-26-graphify-orientacion.md</code> y
+<code>docs/chat/2026-09-30-mapa-funcional.md</code>) · Quién: SDN</p>
+<p><strong>Para qué sirve.</strong> Pegar el bloque de abajo en Claude Code dentro de OTRO
+proyecto para construir su mapa funcional: una página que muestra la
+aplicación como la piensa una persona (app → funcionalidad → de qué está
+hecha) y qué se afecta si se toca una pieza. Resume lo que se aprendió acá,
+incluidos los caminos que NO funcionaron, para no repetirlos.</p>
+<p><strong>Implementación de referencia</strong> (Python + FastAPI + SQLModel):
+<a href="https://github.com/snavello/MITRABAJOC/blob/main/mapa_funcional.py"><code>mapa_funcional.py</code></a>
+en <code>snavello/MITRABAJOC</code>. Para otro stack se adapta la lectura (tabla al
+final); la idea, la página y las reglas son las mismas.</p>
+<p><strong>Dónde verlo funcionando</strong>: en Colm3na, <code>/entornos</code> → pestaña <strong>Mapa
+funcional</strong> (Pruebas y local), que lo genera desde el código desplegado y
+tiene el botón &quot;Actualizar desde el código&quot;. Este prompt se publica también
+como Recurso de esa landing (<code>python mapa_funcional.py --publicar-prompt</code>).</p>
+<hr />
+<h2>El prompt (copiar desde acá)</h2>
+<div class="copiar"><button type="button" onclick="copiar(this)">Copiar el prompt</button></div><pre class="prompt"><code class="language-text">Quiero un MAPA FUNCIONAL de este proyecto: una ayuda de orientación, no una
+fuente de verdad. Todo lo que ya tenemos (CLAUDE.md, historial, bitácora,
+fichas) se sigue respetando y manda sobre el mapa; el código manda sobre
+todo. No quiero automatismos (hooks, reglas que empujen a consultarlo) ni
+sugerencias mandatarias. Antes de ejecutar nada, analizá el código, mostrame
+el plan y esperá mi OK. Preguntá ante cualquier ambigüedad, de a UNA
+pregunta por vez.
+
+QUÉ ES EL MAPA
+- Nivel 1: la APP o el rol (ej.: afiliado, empresa, backoffice, plataforma,
+  herramientas internas; más &quot;Común&quot; para login, salud, archivos).
+- Nivel 2: la FUNCIONALIDAD, con el nombre que ve una persona (la pestaña o
+  pantalla: &quot;Tu Recibo&quot;, &quot;Trámites&quot;, &quot;Panel&quot;), no el nombre de un archivo.
+- Nivel 3, para cada funcionalidad, cinco columnas: Pantalla (plantilla/
+  componente + JS) → Rutas → Código (módulos con nombre en castellano que
+  diga qué hacen: &quot;Georreferenciación de domicilios&quot;, nunca &quot;geo&quot;) → Datos
+  (tablas) → Servicios externos (APIs, OCR, colas, correo...). Si existen,
+  también el permiso o el módulo contratado que la habilita.
+
+CÓMO SE ARMA (reglas)
+1. Todo se LEE DEL CÓDIGO con análisis estático (ast o el parser del
+   lenguaje), sin IA y sin red: rutas de sus declaraciones; qué código corre
+   cada ruta siguiendo las llamadas entre funciones del propio proyecto;
+   qué tablas toca por el uso de los modelos Y por su nombre dentro del SQL
+   escrito a mano; qué servicios por la librería importada, las URLs y las
+   variables de entorno de claves (ANTHROPIC_, GRAFANA_...). Cuidado con
+   dos casos que se escapan fácil: el cliente creado a nivel de módulo
+   (`client = Anthropic()`) y el importado dentro de una función
+   (`from extractor import client`).
+2. Lo único escrito a mano: una tabla corta &quot;prefijo de ruta →
+   (app, funcionalidad)&quot; y los nombres legibles de módulos y servicios.
+   Gana la primera regla que encaje.
+3. FAIL-VISIBLE: una ruta que no encaja en ninguna regla aparece en
+   &quot;Sin clasificar&quot;, a la vista. Nunca se descarta en silencio.
+4. Filtros de ruido: NO recorrer los guardianes de sesión/permiso (todas las
+   rutas los usan y repetirían lo mismo en cada funcionalidad) y no mostrar
+   utilidades transversales (fechas, errores, versión).
+5. Límite dicho en la página: las llamadas dinámicas (getattr, callbacks por
+   texto, inyección) no se ven.
+6. VERIFICAR antes de mostrarme: contrastá el resultado con lo que ya dicen
+   CLAUDE.md y la documentación (qué funcionalidad usa qué servicio o
+   tabla). Cada diferencia es un hueco del detector o un hallazgo: decime
+   cuál es cuál.
+
+LA PÁGINA (un solo HTML autocontenido, generado; NO se versiona)
+- Barra izquierda: apps y funcionalidades, con cantidad de rutas.
+- Vista LISTA: la funcionalidad elegida en las cinco columnas unidas por
+  líneas; tocar una caja resalta sus conexiones y muestra al costado sus
+  funciones y &quot;También lo usan: ...&quot; (en qué otras funcionalidades aparece:
+  para saber qué se afecta si se cambia). Arriba, una vista general con
+  todas las apps.
+- Vista GRAFO (misma página, botón Lista | Grafo):
+  - Al inicio: el ISOTIPO del proyecto (sin la palabra, fondo transparente,
+    embebido en base64) al centro, unido a las apps, y cada app a sus
+    funcionalidades. Tamaño del logo: 5 veces el ícono de una
+    funcionalidad, para que se vea sin molestar.
+  - Clic en una funcionalidad (en el grafo o en la barra): DESPLIEGA
+    alrededor su pantalla, código, tablas y servicios, cada tipo con su
+    forma y color (triángulo, círculo, cuadrado, hexágono) y leyenda.
+  - Clic en otra: SE SUMA sin perder la anterior. Lo ya dibujado se congela
+    (no se mueve); lo nuevo se ubica en anillo alrededor de su
+    funcionalidad y la física solo lo acomoda un poco. Lo compartido queda
+    como UN nodo unido a ambas, y al costado &quot;En común entre las
+    desplegadas&quot;.
+  - Otro clic la repliega y saca solo lo que ninguna otra desplegada usa
+    (contar referencias por nodo y por arista). Botones Limpiar, Enfocar
+    desplegadas y Ver todo.
+  - Una vez acomodado, la física se apaga: nada queda calculando.
+- Nombres legibles en todos lados; nada de siglas ni nombres de archivo
+  sueltos.
+
+LO QUE YA SABEMOS QUE NO SIRVE (no repetirlo)
+- Un grafo por FUNCIÓN: miles de nodos (5.700 en el caso de origen) y el
+  visor del navegador se traba (&quot;nube densa que desaparece&quot;).
+- Un grafo por ARCHIVO: no dice nada, porque un archivo no es una
+  funcionalidad (un main con todas las rutas, un db con todas las tablas) y
+  los nombres de archivo no explican qué hacen.
+- Herramientas de grafo genéricas que infieren relaciones: se probó una
+  (graphify) y asociaba decoradores de rutas a funciones homónimas de otra
+  carpeta, marcándolas como EXTRACTED con confianza 1.0. La etiqueta de
+  confianza de una herramienta no garantiza nada: se verifica en el código.
+- Instalar hooks que obliguen a consultar el grafo antes de leer archivos.
+
+ENTREGABLES Y CIERRE
+- Un script generador versionado en la raíz (ej. `mapa_funcional.py`) que
+  escriba y abra `mapa-funcional/mapa.html`, con esa carpeta en .gitignore.
+- Una entrada corta en CLAUDE.md: qué es, que ORIENTA pero manda el código,
+  cómo se regenera y qué hacer con &quot;Sin clasificar&quot;.
+- Cierre de bloque según las reglas del proyecto (bitácora, documento del
+  bloque, commit en rama propia). Si el proyecto no tiene esas reglas,
+  preguntame antes de inventarlas.
+- Probalo en un navegador real antes de dármelo (desplegar, sumar,
+  replegar, limpiar; sin errores de consola) y mostrame el resultado.
+</code></pre>
+<hr />
+<h2>Cómo adaptar la lectura a otros stacks</h2>
+<table>
+<thead>
+<tr>
+<th>Qué hay que leer</th>
+<th>Python (FastAPI/Flask)</th>
+<th>Django</th>
+<th>Node (Express/Nest)</th>
+<th>Next.js</th>
+<th>Rails</th>
+<th>Java (Spring)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rutas</td>
+<td>decoradores <code>@app.get(...)</code> / <code>@bp.route</code></td>
+<td><code>urls.py</code> (<code>path(...)</code>)</td>
+<td><code>app.get/router.get</code>, <code>@Get()</code></td>
+<td>carpetas <code>app/</code> o <code>pages/</code>, <code>route.ts</code></td>
+<td><code>config/routes.rb</code></td>
+<td><code>@GetMapping</code>, <code>@RequestMapping</code></td>
+</tr>
+<tr>
+<td>Pantalla</td>
+<td><code>TemplateResponse(&quot;x.html&quot;)</code> / <code>render_template</code></td>
+<td><code>render(request, &quot;x.html&quot;)</code></td>
+<td><code>res.render</code>, componentes</td>
+<td>el <code>page.tsx</code> de la ruta</td>
+<td>vista por convención</td>
+<td><code>return &quot;vista&quot;</code> / Thymeleaf</td>
+</tr>
+<tr>
+<td>Llamadas</td>
+<td><code>ast</code> (Name/Attribute + imports)</td>
+<td><code>ast</code></td>
+<td>TypeScript Compiler API / ts-morph</td>
+<td>ts-morph</td>
+<td>Ripper / Prism</td>
+<td>JavaParser</td>
+</tr>
+<tr>
+<td>Tablas</td>
+<td>clases <code>table=True</code> (SQLModel), <code>Base</code> (SQLAlchemy) + SQL crudo</td>
+<td><code>models.Model</code> + SQL crudo</td>
+<td>Prisma <code>schema.prisma</code>, TypeORM <code>@Entity</code></td>
+<td>Prisma / Drizzle</td>
+<td><code>ApplicationRecord</code> + <code>schema.rb</code></td>
+<td><code>@Entity</code> / <code>@Table</code></td>
+</tr>
+<tr>
+<td>Servicios</td>
+<td>imports (<code>anthropic</code>, <code>boto3</code>...), URLs, <code>os.environ[&quot;X_&quot;]</code></td>
+<td>idem</td>
+<td>imports, <code>process.env.X_</code></td>
+<td>idem</td>
+<td>gems, <code>ENV[&quot;X_&quot;]</code></td>
+<td>dependencias, <code>@Value(&quot;${x}&quot;)</code></td>
+</tr>
+</tbody>
+</table>
+<p>En todos los casos: si una parte no se puede leer con seguridad, se dice
+en la página en vez de adivinarla.</p>
+<h2>Resultado de referencia (Colm3na, 2026-09-30)</h2>
+<p>6 apps, 49 funcionalidades, 245 rutas (ninguna sin clasificar), 64 tablas.
+Verificado contra CLAUDE.md: la lectura de recibos usa la API de Anthropic,
+el OCR y el enmascarado; el convenio usa Anthropic y embeddings locales;
+seccionales y padrón usan Georef y Nominatim; observabilidad usa Sentry,
+Grafana y Telegram. En la verificación aparecieron y se corrigieron tres
+huecos del detector: el cliente de la IA creado a nivel de módulo, el
+importado dentro de una función y las tablas nombradas en SQL escrito a mano.</p>
+
+</main>
+<script>
+function copiar(b){const t=b.parentElement.nextElementSibling.innerText;
+ navigator.clipboard.writeText(t).then(()=>{b.textContent="Copiado";setTimeout(()=>b.textContent="Copiar el prompt",1800)},
+ ()=>{b.textContent="Seleccioná y copiá a mano"})}
+</script></body></html>
