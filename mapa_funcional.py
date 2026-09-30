@@ -40,8 +40,9 @@ FUNCIONALIDADES = [
     ("Común", "Marca de la plataforma", r"^/logo-plataforma", None),
 
     ("Afiliado", "Ingreso y registro", r"^/(ingresar$|trabajador/|app/(elegir|cambiar))", "trabajador_login.html"),
-    ("Afiliado", "Portada", r"^/app/inicio$", "trabajador_portada.html"),
-    ("Afiliado", "Tu Recibo", r"^/(app$|api/(leer|validar|reportar|mis-recibos|enviar-sindicato))", "trabajador.html"),
+    ("Afiliado", "Portada", r"^/app/inicio$", "portada.html"),
+    ("Afiliado", "Página de la app (carga inicial)", r"^/app$", "trabajador.html"),
+    ("Afiliado", "Tu Recibo", r"^/api/(leer|validar|reportar|mis-recibos|enviar-sindicato)", "trabajador.html"),
     ("Afiliado", "Mis Aportes (semáforo ARCA)", r"^/api/aportes", "trabajador.html"),
     ("Afiliado", "Credencial", r"^/(api/credencial|v/)", "trabajador.html"),
     ("Afiliado", "Novedades y beneficios", r"^/(api/(noticia|beneficio)|noticia-imagen|beneficio-imagen)", "trabajador.html"),
@@ -52,12 +53,14 @@ FUNCIONALIDADES = [
     ("Afiliado", "Perfil y domicilio", r"^/(api/(perfil|geocodificar|localidades|seccionales)|perfil-foto)", None),
 
     ("Empresa", "Ingreso y registro", r"^/(ingresar-empresa|empresa/(login|registro|salir|elegir|cambiar))", None),
-    ("Empresa", "Portada y panel", r"^/empresa(/inicio)?$", None),
+    ("Empresa", "Portada", r"^/empresa/inicio$", None),
+    ("Empresa", "Página de la app (carga inicial)", r"^/empresa$", None),
     ("Empresa", "Perfil", r"^/(api/empresa/perfil|perfil-empleador-foto)", "empresa.html"),
     ("Empresa", "Notificaciones", r"^/(api/empresa/notificacion|notificacion-empresa-adjunto)", "empresa.html"),
     ("Empresa", "Trámites", r"^/(api/empresa/tramite|tramite-empresa-)", "empresa.html"),
 
-    ("Sindicato", "Ingreso y portada", r"^/admin(/(login|salir|inicio))?$", None),
+    ("Sindicato", "Ingreso y portada", r"^/admin/(login|salir|inicio)$", None),
+    ("Sindicato", "Página del panel (carga inicial)", r"^/admin$", None),
     ("Sindicato", "Panel Sindical", r"^/admin/dashboard", "dashboard.html"),
     ("Sindicato", "Reportes", r"^/admin/reportes", "admin.html"),
     ("Sindicato", "Reglas de control", r"^/admin/formula", "admin.html"),
@@ -75,14 +78,16 @@ FUNCIONALIDADES = [
     ("Sindicato", "Encuestas", r"^/admin/encuesta", "admin.html"),
     ("Sindicato", "Marca del sindicato", r"^/(logo|firma)/", None),
 
-    ("Plataforma", "Ingreso y usuarios nominales", r"^/plataforma(/(login|salir|inicio|completar|usuario|usuarios|reset-clave|admins).*)?$", None),
+    ("Plataforma", "Ingreso y usuarios nominales", r"^/plataforma/(login|salir|inicio|completar|usuario|usuarios|reset-clave|admins)", None),
+    ("Plataforma", "Página del panel (carga inicial)", r"^/plataforma$", None),
     ("Plataforma", "Sindicatos y marca", r"^/plataforma/(sindicato|marca)", "plataforma.html"),
     ("Plataforma", "Configuración y topes", r"^/plataforma/(config|tope)", "plataforma.html"),
     ("Plataforma", "Uso de IA", r"^/plataforma/(modelos-ia|probar-modelos|enmascarado)", "plataforma.html"),
     ("Plataforma", "Recibos con alerta", r"^/plataforma/recibos-sospechosos", "plataforma.html"),
     ("Plataforma", "Trabajadores de la plataforma", r"^/plataforma/trabajadores", "plataforma.html"),
 
-    ("Entornos", "Landing y acceso", r"^/(entornos(/(login|pin|salir))?$|api/version)", None),
+    ("Entornos", "Acceso y versión", r"^/(entornos/(login|pin|salir)$|api/version)", None),
+    ("Entornos", "Página de la landing (carga inicial)", r"^/entornos$", None),
     ("Entornos", "Recursos", r"^/recursos", None),
     ("Entornos", "Sala de mando", r"^/(entornos|api/entornos)/esquema", None),
     ("Entornos", "Observabilidad", r"^/(entornos|api/entornos)/observabilidad", None),
@@ -108,7 +113,8 @@ NOMBRES = {
     "push": "Notificaciones push", "permisos": "Permisos por área",
     "modulos": "Módulos contratados", "entorno": "Entorno (local/pruebas/demo)",
     "qr": "Código QR", "filigrana": "Filigrana de la credencial", "chequeo": "Autodiagnóstico",
-    "pg_cliente": "Cliente de Postgres",
+    "pg_cliente": "Cliente de Postgres", "empaquetar": "Empaquetado de descargas (sin conexión)",
+    "mapa_funcional": "Generador del mapa funcional",
     "observabilidad.panel": "Semáforo de Observabilidad", "observabilidad.metricas_panel": "Gráficos de Grafana",
     "observabilidad.sentry_panel": "Lectura de errores de Sentry", "observabilidad.metricas_dia": "Métricas del día",
     "observabilidad.reglas": "Reglas de alertas", "observabilidad.hilo_colector": "Colector de métricas (hilo)",
@@ -119,7 +125,13 @@ NOMBRES = {
 OCULTOS = {"fechas", "errores", "version"}
 # Guardianes de sesión/permiso: todas las rutas los usan; no se entra en ellos.
 NO_SEGUIR = re.compile(r"^(_?exigir|sesion_actual|_cuil_seguro|_cuit_seguro|sindicato_activo|"
-                       r"_rol_de|_panel_de|_sello_static|_es_navegacion|_contexto_base|marca_)")
+                       r"_rol_de|_panel_de|_sello_static|_es_navegacion|_contexto_base|marca_|"
+                       r"_pase_landing)")
+# Consultas de "¿está configurado?": una pantalla que muestra si Telegram tiene
+# clave o si hay OCR instalado NO llama a Telegram ni corre el OCR. El módulo
+# queda a la vista (la funcionalidad sí depende de él), pero no se entra.
+RX_SQL_TABLA = re.compile(r'\b(?:from|join|update|into)\s+"?(\w+)', re.I)
+SOLO_CONSULTA = re.compile(r"^(configurado|habilitado|disponible|token|\w*_disponible|\w*_habilitado)$")
 
 SERVICIOS_LIB = {
     "anthropic": "API de Anthropic (Claude)", "fastembed": "Embeddings locales (fastembed)",
@@ -142,7 +154,7 @@ SERVICIOS_HOST = [
 
 # ---------------------------------------------------------------- lectura del código
 def cargar_modulos():
-    rutas = [p for p in RAIZ.glob("*.py") if not re.match(r"(test_|conftest|mapa_funcional)", p.name)]
+    rutas = [p for p in RAIZ.glob("*.py") if not re.match(r"(test_|conftest)", p.name)]
     rutas += [p for d in ("observabilidad", "xsk/motor") for p in (RAIZ / d).glob("*.py")]
     mods = {}
     for p in rutas:
@@ -204,7 +216,6 @@ class Indice:
         # SQLModel nombra la tabla con el nombre de la clase en minúsculas: así
         # aparece en el SQL escrito a mano (dashboard.py, reportes...).
         self.tabla_sql = {t.lower(): t for t in self.tablas}
-        self.rx_sql = re.compile(r"\b(" + "|".join(sorted(self.tabla_sql, key=len, reverse=True)) + r")\b")
 
     def resolver(self, m, nodo):
         """Qué función local o tabla nombra una expresión (Name o Attribute)."""
@@ -234,7 +245,14 @@ class Indice:
         m, _ = clave
         f = self.funcs[clave]
         llama, tablas, servicios = set(), set(), set()
+        # Los comentarios de documentación no son código: una docstring que
+        # diga "saca el nombre from el trabajador" no toca la tabla Trabajador.
+        docstrings = {id(x.body[0].value) for x in ast.walk(f)
+                      if isinstance(x, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and x.body
+                      and isinstance(x.body[0], ast.Expr) and isinstance(x.body[0].value, ast.Constant)}
         for n in ast.walk(f):
+            if id(n) in docstrings:
+                continue
             if isinstance(n, (ast.Name, ast.Attribute)):
                 r = self.resolver(m, n)
                 if r and r[0] == "f" and r[1] != clave:
@@ -250,9 +268,10 @@ class Indice:
                     dm, dn = self.desde[m][n.id]      # p. ej. `from extractor import client`
                     if dn in self.urls.get(dm, {}):
                         servicios.add(self.urls[dm][dn])
-            elif isinstance(n, ast.Constant) and isinstance(n.value, str) and re.search(
-                    r"\b(select|from|join|update|insert into|delete from)\b", n.value, re.I):
-                tablas.update(self.tabla_sql[x] for x in self.rx_sql.findall(n.value.lower()))
+            elif isinstance(n, ast.Constant) and isinstance(n.value, str):
+                # SQL escrito a mano: solo el nombre que sigue a FROM/JOIN/UPDATE/INTO.
+                tablas.update(self.tabla_sql[x.lower()] for x in RX_SQL_TABLA.findall(n.value)
+                              if x.lower() in self.tabla_sql)
             if isinstance(n, ast.Constant) and isinstance(n.value, str) and ("://" in n.value or n.value.isupper()):
                 for rx, srv in SERVICIOS_HOST:
                     if re.search(rx, n.value):
@@ -300,6 +319,12 @@ def armar():
         if k not in cache:
             cache[k] = idx.analizar(k)
         return cache[k]
+
+    def es_utilidad(k):
+        """Función privada de OTRO módulo que no llama a nada del proyecto ni
+        toca tablas ni servicios: una utilidad (limpiar un CUIL, normalizar un
+        texto). Contarla como uso del módulo entero lo mezclaría todo."""
+        return k[1].startswith("_") and k in idx.funcs and not any(info(k))
 
     permisos = {}
     for n in ast.walk(idx.mods["main"][0]):
@@ -355,8 +380,13 @@ def armar():
             for d in llama:
                 if NO_SEGUIR.match(d[1]) or d[0] in OCULTOS:
                     continue
+                if d[0] != m and es_utilidad(d):
+                    continue    # p. ej. validador._norm_cuil: no es "usar el motor de validación"
                 if d[0] != m:
                     aristas.add((origen, "m:" + d[0]))
+                if SOLO_CONSULTA.match(d[1]):
+                    funciones_por_mod[d[0]].add(d[1])
+                    continue
                 pendientes.append(d)
         for m, fs in funciones_por_mod.items():
             if m != "main":
@@ -499,7 +529,7 @@ function vista(f){let h=`<h2 class="t">${esc(f.app)} · ${esc(f.nombre)}</h2><di
   h+="</div></div>"});
  h+=`</div><details class="rutas"><summary>Las ${f.rutas.length} rutas</summary><table>`+
   f.rutas.map(r=>`<tr><td><code>${r.metodo}</code></td><td><code>${esc(r.ruta)}</code></td><td>${esc(r.funcion)}()</td></tr>`).join("")+
-  `</table></details><div class="aviso">Orientación, no verdad: se leen las llamadas directas entre funciones; las dinámicas no se ven. Los guardianes de sesión no se recorren para no repetir lo mismo en todas.</div>`;
+  `</table></details><div class="aviso">Orientación, no verdad: se leen las llamadas directas entre funciones; las dinámicas no se ven. Los guardianes de sesión no se recorren para no repetir lo mismo en todas. Una función que sirve a afiliados y a empresas según un parámetro trae las tablas de las dos: el mapa no sabe qué rama corre.</div>`;
  document.getElementById("main").innerHTML=h;requestAnimationFrame(lineas)}
 function lineas(){const f=D.funcionalidades[actual];if(!f)return;const cols=document.getElementById("cols"),svg=document.getElementById("lin");
  if(!cols)return;const b=cols.getBoundingClientRect();let h="";

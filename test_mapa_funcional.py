@@ -39,6 +39,24 @@ def test_lee_el_codigo_y_encuentra_lo_que_ya_se_sabe():
     assert ("Entornos", "Mapa funcional") in por_nombre
 
 
+def test_no_vuelven_las_distorsiones_de_la_revision():
+    """Las cuatro que se encontraron revisando el mapa pieza por pieza
+    (2026-09-30), más la de las docstrings."""
+    por_nombre = {(f["app"], f["nombre"]): {n["id"] for n in f["nodos"]}
+                  for f in mapa_funcional.armar()["funcionalidades"]}
+    # a. La página completa de la app no se le carga a una pestaña.
+    assert not {"m:qr", "m:filigrana"} & por_nombre[("Afiliado", "Tu Recibo")]
+    assert {"m:qr", "m:filigrana"} <= por_nombre[("Afiliado", "Página de la app (carga inicial)")]
+    # b. Mostrar si Telegram está configurado no es llamar a Telegram.
+    assert "s:Telegram" not in por_nombre[("Entornos", "Sala de mando")]
+    # c. El pase de la landing es un guardián, no uso del catálogo de Recursos.
+    assert "m:recursos" not in por_nombre[("Entornos", "Tests de carga")]
+    # d. Limpiar un CUIL con validador._norm_cuil no es usar el motor de validación.
+    assert "m:validador" not in por_nombre[("Sindicato", "Reportes")]
+    # Una docstring que dice "...del JOIN" y nombra "empleador" no es SQL.
+    assert "t:Empleador" not in por_nombre[("Plataforma", "Trabajadores de la plataforma")]
+
+
 def test_sin_pase_no_se_ve_y_con_pase_se_arma():
     c = TestClient(main.app)
     assert c.get("/api/entornos/mapa").status_code == 403

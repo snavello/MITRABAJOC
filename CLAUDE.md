@@ -162,6 +162,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   mano, librerías y URLs de servicios); lo único a mano es `FUNCIONALIDADES`
   (qué prefijo de ruta es de qué funcionalidad) y los nombres legibles. Una
   ruta nueva que no encaje sale en "Sin clasificar": sumarle su regla.
+  Revisado pieza por pieza el 2026-09-30: la ruta que arma la página entera
+  de cada app va en su propia funcionalidad "(carga inicial)", las consultas
+  de "¿está configurado?" no cuentan como llamar al servicio, las utilidades
+  privadas de otro módulo no cuentan como usarlo, y las docstrings no son
+  código. `test_mapa_funcional.py` verifica que no vuelvan.
   **Orientación, nunca fuente de verdad**: no ve llamadas dinámicas; ante la
   duda manda el código. **Es herramienta del proyecto en `/entornos` →
   pestaña "Mapa funcional"** (`/entornos/mapa`, mismo pase y 404 en demo):
