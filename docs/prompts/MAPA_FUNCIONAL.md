@@ -85,6 +85,13 @@ CÓMO SE ARMA (reglas)
    comentario que dice "...del JOIN" y nombra "empleador" sumaba esa
    tabla), y del SQL escrito a mano solo vale el nombre que sigue a
    FROM/JOIN/UPDATE/INTO.
+   PANTALLAS: no las asignes a mano. Una plantilla es pantalla de una
+   funcionalidad si LLAMA a sus rutas (fetch o action de formulario, en la
+   plantilla o en el JS que carga con <script src>). No cuentan: enlaces de
+   navegación, imágenes (el logo está en todas), el login que una ruta
+   muestra cuando no hay sesión, parciales citados por nombre en el código,
+   ni un .js nombrado en un comentario. A mano solo lo que el detector no
+   puede ver (URLs armadas con variables).
    Para encontrar el resto: una auditoría que liste, por funcionalidad,
    cada pieza con cuántas de sus rutas la traen y el camino de llamadas más
    corto. Lo que no se explica en una frase es sospechoso.
