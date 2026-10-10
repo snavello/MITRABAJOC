@@ -30,7 +30,7 @@ from playwright.sync_api import expect
 
 BASE = os.environ.get("E2E_BASE_URL", "http://localhost:8000")
 
-ADMIN_UOM = {"usuario": "20111111110", "clave": "uom-demo"}
+ADMIN_UOM = {"usuario": "20111111120", "clave": "uom-demo"}
 # Primer trabajador del lote de la UOM (clave = 5 primeros dígitos del CUIL).
 TRABAJADOR_UOM = {"cuil": "27660000000", "clave": "27660"}
 

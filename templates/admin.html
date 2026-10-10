@@ -1384,11 +1384,11 @@
         </div>
         <div class="campo full" id="notif-valores-cuil">
           <label>CUIL(es), separados por coma</label>
-          <input type="text" id="notif-valores-cuil-input" placeholder="20111111119, 27222222224">
+          <input type="text" id="notif-valores-cuil-input" placeholder="20111111112, 27222222228">
         </div>
         <div class="campo full oculto" id="notif-valores-cuit_empleador">
           <label>CUIT(s) de empresa, separados por coma</label>
-          <input type="text" id="notif-valores-cuit_empleador-input" placeholder="30111222339">
+          <input type="text" id="notif-valores-cuit_empleador-input" placeholder="30111222335">
         </div>
         {% if seccionales %}
         <div class="campo full oculto" id="notif-valores-seccional">
@@ -1947,7 +1947,7 @@
           <div class="campo oculto" id="pub-texto" style="margin-top:10px;">
             <label id="pub-texto-label">Valores, separados por coma</label>
             <input type="text" name="valores" id="pub-texto-input" class="pub-valor"
-                   oninput="contarDestinatarios()" placeholder="20111111119, 27222222224">
+                   oninput="contarDestinatarios()" placeholder="20111111112, 27222222228">
           </div>
           <p id="pub-cuenta" style="margin:14px 0 0; font-size:13.5px;"></p>
           <div style="margin-top:14px;">
@@ -2074,7 +2074,7 @@
           </div>
           <div class="campo full oculto" id="notifemp-valores-cuit">
             <label>CUIT(s), separados por coma</label>
-            <input type="text" id="notifemp-valores-cuit-input" placeholder="30111222339, 30500000001">
+            <input type="text" id="notifemp-valores-cuit-input" placeholder="30111222335, 30500000003">
           </div>
           <div class="campo full oculto" id="notifemp-valores-provincia">
             <label>Provincias</label>
@@ -6123,8 +6123,8 @@ function cambioCriterioPublicar() {
     !['provincia', 'cuit_empleador', 'cuil'].includes(c));
   const etiquetas = {
     provincia: ['Provincias, separadas por coma', 'Santa Fe, Córdoba'],
-    cuit_empleador: ['CUIT de las empresas, separados por coma', '30999888776, 30111222339'],
-    cuil: ['CUIL, separados por coma', '20111111119, 27222222224'],
+    cuit_empleador: ['CUIT de las empresas, separados por coma', '30999888778, 30111222335'],
+    cuil: ['CUIL, separados por coma', '20111111112, 27222222228'],
   };
   if (etiquetas[c]) {
     document.getElementById('pub-texto-label').textContent = etiquetas[c][0];

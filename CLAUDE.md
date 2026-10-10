@@ -279,21 +279,24 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 
 ## Accesos de la demo
 - Plataforma: CUIT 20000000000 + PLATAFORMA_PASSWORD.
-- Admin UOM: CUIT 20111111110 / uom-demo (Super Admin).
-- Admin Gastronómica: CUIT 20222222220 / fega-demo (Super Admin).
-- UOM, Admin de Seccional de Rosario: 20555555553 / rosario-demo.
+- Admin UOM: CUIT 20111111120 / uom-demo (Super Admin).
+- Admin Gastronómica: CUIT 20222222223 / fega-demo (Super Admin).
+- UOM, Admin de Seccional de Rosario: 20555555556 / rosario-demo.
 - UOM, un usuario por área (la lista completa la imprime `cargar_demo.py`
   al terminar). Los dos que muestran el contraste de un vistazo:
-  27777777774 / prensa-demo (Prensa de Sede Central, alcanza a todo el
-  país) y 20888888887 / prensacba-demo (el mismo perfil, recortado a
+  27777777772 / prensa-demo (Prensa de Sede Central, alcanza a todo el
+  país) y 20888888889 / prensacba-demo (el mismo perfil, recortado a
   Córdoba). El de Prensa central, además, NO está en el padrón a propósito:
   trabaja en el gremio sin estar afiliado.
-- Trabajador un solo sindicato: CUIL 20111111119 (UOM).
-- Trabajador pluriempleo (ambos): CUIL 27222222224.
-- Empresa un solo sindicato: CUIT 30999888776 (UOM) — registrarse en `/ingresar-empresa`.
-- Empresa multisindicato (ambos): CUIT 30111222339.
-- Admin La Bancaria: CUIT 20333444550 / bancaria-demo (sindicato con lote
+- Trabajador un solo sindicato: CUIL 20111111112 (UOM).
+- Trabajador pluriempleo (ambos): CUIL 27222222228.
+- Empresa un solo sindicato: CUIT 30999888778 (UOM) — registrarse en `/ingresar-empresa`.
+- Empresa multisindicato (ambos): CUIT 30111222335.
+- Admin La Bancaria: CUIT 20333444551 / bancaria-demo (sindicato con lote
   sintético completo, recibos según CCT 18/75 — ver `cargar_bancaria.py`).
+- Todos estos números cumplen el módulo 11 desde 2026-10-10 (PLAN_CUIT_MOD11.md,
+  etapa 3). Los de antes (`20111111110`, `20111111119`...) ya no sirven en una
+  base cargada de cero; el mapa viejo → nuevo es `identificadores_demo.py`.
 
 ## Decisiones tomadas (no rediscutir sin motivo)
 - **Motor: Render Postgres** (no Supabase). La app ya tiene auth propia, que es el

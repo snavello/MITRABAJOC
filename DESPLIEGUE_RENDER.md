@@ -223,11 +223,11 @@ Restaurar en una base descartable: `pg_restore -d "<URL destino>" --clean --if-e
 
 ## Accesos de la demo
 - Plataforma:  /plataforma  → CUIT 20000000000 + `PLATAFORMA_PASSWORD` del entorno
-- UOM:         /admin        → CUIT 20111111110 / uom-demo
-- Gastronómica:/admin        → CUIT 20222222220 / fega-demo
-- La Bancaria: /admin        → CUIT 20333444550 / bancaria-demo
-- Trabajador:  /ingresar     → CUIL 20111111119 (UOM); pluriempleo 27222222224
-- Empresa:     /ingresar-empresa → CUIT 30999888776 (UOM); multisindicato 30111222339
+- UOM:         /admin        → CUIT 20111111120 / uom-demo
+- Gastronómica:/admin        → CUIT 20222222223 / fega-demo
+- La Bancaria: /admin        → CUIT 20333444551 / bancaria-demo
+- Trabajador:  /ingresar     → CUIL 20111111112 (UOM); pluriempleo 27222222228
+- Empresa:     /ingresar-empresa → CUIT 30999888778 (UOM); multisindicato 30111222335
 
 ## Inspeccionar la base con SQL
 Con la External Database URL de cada base, cualquier cliente Postgres
