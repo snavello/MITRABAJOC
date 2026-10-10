@@ -885,6 +885,8 @@
   <h2 class="titulo-pagina" id="conceptos">Conceptos ({{ conceptos|length }})</h2>
   {% if request.query_params.get('error') == 'cuitconcepto' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó el concepto: el CUIT del empleador no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
+  {% elif request.query_params.get('error') == 'cuitconfirmar' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se confirmó el concepto: el CUIT del empleador que se leyó del recibo no es válido (seguramente un dígito mal leído). Corregilo con Editar y guardá.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
   {% endif %}
   {% if request.query_params.get('universales') == 'ok' %}
   <div class="msg ok">✓ Se cargaron los conceptos/fórmulas de aportes de ley que faltaban.</div>
@@ -1988,6 +1990,9 @@
   {% endif %}
   {% if request.query_params.get('importados') %}
   <div class="msg ok">✓ Se importaron {{ request.query_params.get('importados') }} empleador(es) nuevo(s) desde Conceptos.</div>
+  {% if request.query_params.get('cuitinvalidos') %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se importaron {{ request.query_params.get('cuitinvalidos') }} CUIT de conceptos porque no son válidos (revisá los 11 números en Conceptos): <code>{{ request.query_params.get('cuitmuestra') }}</code><br><small style="opacity:.8;">Código E-IDENT-02</small></div>
+  {% endif %}
   {% endif %}
 
   <div class="subtabs">
@@ -5675,8 +5680,12 @@ async function aplicarAprendizaje() {
     method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({aprobados})
   });
   const data = await r.json();
+  // Los conceptos con un CUIT de empleador que no cumple el módulo 11 no se
+  // dan de alta (E-IDENT-02): se dice cuáles, para cargarlos a mano.
+  const malos = (data.cuit_invalidos || []).map(c => String(c).replace(/[<>&"]/g, '')).join(', ');
   document.getElementById('ap-final').innerHTML =
-    `<div class="msg ok">Se dieron de alta ${data.altas} concepto(s). <a href="/admin#conceptos">Ver en la tabla de conceptos</a> (actualizá la página).</div>`;
+    `<div class="msg ok">Se dieron de alta ${data.altas} concepto(s). <a href="/admin#conceptos">Ver en la tabla de conceptos</a> (actualizá la página).</div>` +
+    (malos ? `<div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se dieron de alta ${data.cuit_invalidos.length} concepto(s) porque el CUIT del empleador no es válido: ${malos}. Cargalos a mano en Conceptos con el CUIT correcto.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>` : '');
 }
 {% endif %}
 

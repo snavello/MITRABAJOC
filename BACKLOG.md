@@ -16,7 +16,7 @@ se hace.
   a veces negativo. Hoy no rompe nada (el validador usa `abs()` y el banco ya
   no lo marca), pero el motor v2 debería normalizarlo en un solo lugar.
 
-- [x] **Validar el módulo 11 (dígito verificador) de CUIL y CUIT** (2026-09-24,
+- [ ] **Validar el módulo 11 (dígito verificador) de CUIL y CUIT** (2026-09-24,
   decisión de SDN al construir el enmascarado: "por ahora no lo testeamos,
   lo anotamos para cuando avancemos en ese tema"). Hoy la app no valida el
   verificador en ningún lado, y **ninguno de los CUIL/CUIT de la demo lo

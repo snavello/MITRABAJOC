@@ -2320,6 +2320,11 @@ def confirmar_concepto(request: Request, id: int = Form(...)):
     with db.get_session() as s:
         c = s.get(Concepto, id)
         if c and c.sindicato_id == sid:
+            # Confirmar un concepto pendiente es darlo de alta con el CUIT que
+            # leyó la IA: si ese CUIT no cumple el módulo 11 no se confirma
+            # (se corrige con Editar, que lo valida). PLAN_CUIT_MOD11.md, D2.
+            if c.cuit_empleador and not cuit.es_valido(c.cuit_empleador):
+                return RedirectResponse("/admin?error=cuitconfirmar#conceptos", status_code=303)
             c.pendiente_revision = False
             s.add(c)
             s.commit()
@@ -2788,8 +2793,12 @@ def admin_empleador_reactivar(request: Request, id: int = Form(...)):
 def admin_empleador_importar(request: Request):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "empleadores")
-    agregados = db.importar_cuits_de_conceptos(sid)
-    return RedirectResponse(f"/admin?importados={agregados}#empleadores", status_code=303)
+    invalidos = []
+    agregados = db.importar_cuits_de_conceptos(sid, invalidos=invalidos)
+    destino = f"/admin?importados={agregados}"
+    if invalidos:
+        destino += f"&cuitinvalidos={len(invalidos)}&cuitmuestra=" + quote(", ".join(invalidos[:10]))
+    return RedirectResponse(destino + "#empleadores", status_code=303)
 
 
 # ---------- Notificaciones (Fase 2 de Módulos + Notificaciones + Trámites) ----------
@@ -4800,10 +4809,19 @@ def aprender_aplicar(request: Request, payload: dict):
     _exigir_modulo(sid, "recibos")
     aprobados = payload.get("aprobados", [])
     altas = 0
+    # El CUIT del empleador lo propuso la IA leyendo recibos, y al aprobar el
+    # lote el concepto nace CONFIRMADO: es una puerta de alta como
+    # /admin/concepto (PLAN_CUIT_MOD11.md, D2). Un CUIT que no cumple el
+    # módulo 11 (casi siempre, un dígito mal leído) no entra: ese concepto
+    # queda afuera y se informa, para cargarlo a mano con el CUIT correcto.
+    cuit_invalidos = []
     with db.get_session() as s:
         existentes = {(c.codigo, c.cuit_empleador or "") for c in s.exec(select(Concepto).where(
             Concepto.sindicato_id == sid)).all()}
         for c in aprobados:
+            if _cuit_mal(c.get("cuit_empleador", ""), opcional=True):
+                cuit_invalidos.append(c.get("codigo", ""))
+                continue
             cuit_empleador = _norm_cuil(c.get("cuit_empleador", "")) or None
             clave = (c["codigo"], cuit_empleador or "")
             if clave not in existentes:
@@ -4818,7 +4836,7 @@ def aprender_aplicar(request: Request, payload: dict):
                 existentes.add(clave)
                 altas += 1
         s.commit()
-    return {"ok": True, "altas": altas}
+    return {"ok": True, "altas": altas, "cuit_invalidos": cuit_invalidos}
 
 
 # ================= Admin de plataforma =================

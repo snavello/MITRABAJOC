@@ -61,6 +61,7 @@ from sqlalchemy.pool import NullPool
 # `test_migraciones.py` la marca.
 JSON_TIPO = JSON().with_variant(postgresql.JSONB(), "postgresql")
 
+import cuit
 import encuestas
 import fechas
 import precios_ia
@@ -2523,24 +2524,35 @@ def sindicatos_de_cuil(cuil: str) -> list:
         return resultado
 
 
-def importar_cuits_de_conceptos(sindicato_id: int) -> int:
+def importar_cuits_de_conceptos(sindicato_id: int, invalidos: Optional[list] = None) -> int:
     """CUITs distintos de Concepto.cuit_empleador de ESTE sindicato que
     todavía no tienen fila en Empleador -- crea una fila mínima (solo
     cuit) por cada uno, registrado=False, activo=True. Idempotente: se
     puede volver a correr cuando aparezcan CUITs nuevos en Conceptos
     (botón "Importar CUITs de conceptos" en el CRUD). Devuelve cuántos
-    se agregaron."""
+    se agregaron.
+
+    Acá NACE un empleador, así que su CUIT tiene que cumplir el módulo 11
+    (PLAN_CUIT_MOD11.md, D2): los de un concepto que no lo cumplen (un
+    dígito mal leído por la IA, casi siempre) no se importan, y si se pasa
+    `invalidos` se agregan ahí para que la pantalla los muestre. Se compara
+    normalizado: un concepto con '30-11122233-5' es el mismo empleador que
+    '30111222335'."""
     with Session(engine) as s:
         conceptos = s.exec(select(Concepto).where(
             Concepto.sindicato_id == sindicato_id)).all()
         cuits_concepto = {
-            c.cuit_empleador.strip() for c in conceptos if (c.cuit_empleador or "").strip()
+            cuit.normalizar(c.cuit_empleador) for c in conceptos
+            if cuit.normalizar(c.cuit_empleador)
         }
-        existentes = {e.cuit for e in s.exec(select(Empleador).where(
+        malos = sorted(n for n in cuits_concepto if not cuit.es_valido(n))
+        if invalidos is not None:
+            invalidos.extend(malos)
+        existentes = {cuit.normalizar(e.cuit) for e in s.exec(select(Empleador).where(
             Empleador.sindicato_id == sindicato_id)).all()}
-        nuevos = cuits_concepto - existentes
-        for cuit in nuevos:
-            s.add(Empleador(sindicato_id=sindicato_id, cuit=cuit))
+        nuevos = cuits_concepto - existentes - set(malos)
+        for numero in nuevos:     # no `cuit`: taparía al módulo en toda la función
+            s.add(Empleador(sindicato_id=sindicato_id, cuit=numero))
         s.commit()
         return len(nuevos)
 
@@ -4107,12 +4119,17 @@ def resolver_destinatarios(sindicato_id: int, criterio: str, valores: list,
         filas = s.exec(q).all()
     if criterio == "todos":
         return sorted({t.cuil for t, _prov in filas})
+    # CUIL y CUIT se comparan NORMALIZADOS de los dos lados: el admin los tipea
+    # con o sin guiones y las filas viejas pueden tenerlos guardados de las
+    # dos formas (PLAN_CUIT_MOD11.md; antes "30-11122233-5" no encontraba a
+    # quien tenía "30111222335").
     if criterio == "cuil":
-        objetivo = set(valores)
-        return sorted({t.cuil for t, _prov in filas if t.cuil in objetivo})
+        objetivo = {cuit.normalizar(v) for v in valores} - {""}
+        return sorted({t.cuil for t, _prov in filas if cuit.normalizar(t.cuil) in objetivo})
     if criterio == "cuit_empleador":
-        objetivo = set(valores)
-        return sorted({t.cuil for t, _prov in filas if t.cuit_empleador in objetivo})
+        objetivo = {cuit.normalizar(v) for v in valores} - {""}
+        return sorted({t.cuil for t, _prov in filas
+                       if cuit.normalizar(t.cuit_empleador) in objetivo})
     if criterio == "seccional":
         objetivo = {int(v) for v in valores if v.isdigit()}
         return sorted({t.cuil for t, _prov in filas if t.seccional_id in objetivo})
@@ -4355,8 +4372,9 @@ def resolver_destinatarios_empleador(sindicato_id: int, criterio: str, valores: 
     if not valores:
         return []
     if criterio == "cuit":
-        objetivo = set(valores)
-        return sorted({e.cuit for e in empleadores if e.cuit in objetivo})
+        # Normalizado de los dos lados, como en resolver_destinatarios.
+        objetivo = {cuit.normalizar(v) for v in valores} - {""}
+        return sorted({e.cuit for e in empleadores if cuit.normalizar(e.cuit) in objetivo})
     if criterio == "provincia":
         objetivo = set(valores)
         return sorted({e.cuit for e in empleadores if e.provincia in objetivo})
@@ -6618,7 +6636,7 @@ def registrar_respuesta_encuesta(encuesta_id: int, cuil: str, sindicato_id: int,
                 if "provincia" in cortes:
                     datos_corte["provincia"] = provincia or ""
                 if "empleador" in cortes:
-                    datos_corte["cuit_empleador"] = t.cuit_empleador or ""
+                    datos_corte["cuit_empleador"] = cuit.normalizar(t.cuit_empleador)   # sin guiones: un empleador, un grupo
 
     dia = fechas.hoy_texto()
     with Session(engine) as s:

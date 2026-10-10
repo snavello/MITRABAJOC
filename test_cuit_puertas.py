@@ -931,3 +931,150 @@ def test_un_cuit_opcional_escrito_con_letras_no_pasa_como_vacio():
     assert "error=cuitconcepto" in r.headers["location"], r.headers
     assert _contar(Concepto) == antes
     print("OK  test_un_cuit_opcional_escrito_con_letras_no_pasa_como_vacio")
+
+
+# =============================================================================
+# Puertas que encontró el revisor general (2026-10-10): el aprendizaje, la
+# importación de CUIT desde conceptos y la confirmación de un concepto
+# pendiente también hacen NACER un CUIT confirmado.
+# =============================================================================
+
+def test_aprender_aplicar_no_da_de_alta_un_concepto_con_cuit_invalido():
+    c = _admin()
+    antes = _contar(Concepto, Concepto.sindicato_id == SID)
+    r = c.post("/admin/aprender/aplicar", json={"aprobados": [
+        {"codigo": "AP-MAL", "descripcion": "Leído mal", "tipo": "ingreso",
+         "cuit_empleador": "30-12345678-9"},                          # inválido
+        {"codigo": "AP-BIEN", "descripcion": "Leído bien", "tipo": "ingreso",
+         "cuit_empleador": CUIT_EMPRESA_OK},
+        {"codigo": "AP-GEN", "descripcion": "Genérico", "tipo": "ingreso"},
+    ]})
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["altas"] == 2 and data["cuit_invalidos"] == ["AP-MAL"], data
+    assert _contar(Concepto, Concepto.sindicato_id == SID) == antes + 2
+    assert _contar(Concepto, Concepto.codigo == "AP-MAL") == 0
+    print("OK  test_aprender_aplicar_no_da_de_alta_un_concepto_con_cuit_invalido")
+
+
+def test_importar_cuits_de_conceptos_saltea_los_invalidos():
+    with db.get_session() as s:
+        s.add(Concepto(sindicato_id=SID, codigo="IMP-MAL", nombre="x", tipo="ingreso",
+                       cuit_empleador="30123456789"))                  # inválido
+        s.add(Concepto(sindicato_id=SID, codigo="IMP-BIEN", nombre="y", tipo="ingreso",
+                       cuit_empleador=cuit.formatear("30712345671")))  # válido, con guiones
+        s.commit()
+    assert cuit.es_valido("30712345671") and not cuit.es_valido("30123456789")
+    c = _admin()
+    r = c.post("/admin/empleador/importar-cuits", follow_redirects=False)
+    loc = r.headers["location"]
+    assert "cuitinvalidos=" in loc and "30123456789" in loc, loc
+    assert _contar(Empleador, Empleador.sindicato_id == SID, Empleador.cuit == "30123456789") == 0
+    # El válido entra normalizado, y una segunda corrida no lo duplica.
+    assert _contar(Empleador, Empleador.sindicato_id == SID, Empleador.cuit == "30712345671") == 1
+    c.post("/admin/empleador/importar-cuits", follow_redirects=False)
+    assert _contar(Empleador, Empleador.sindicato_id == SID, Empleador.cuit == "30712345671") == 1
+    assert "E-IDENT-02" in c.get(loc).text
+    print("OK  test_importar_cuits_de_conceptos_saltea_los_invalidos")
+
+
+def test_confirmar_un_concepto_pendiente_con_cuit_invalido_se_frena():
+    with db.get_session() as s:
+        malo = Concepto(sindicato_id=SID, codigo="CONF-MAL", nombre="x", tipo="ingreso",
+                        cuit_empleador="30123456789", pendiente_revision=True)
+        bueno = Concepto(sindicato_id=SID, codigo="CONF-BIEN", nombre="y", tipo="ingreso",
+                         cuit_empleador=CUIT_EMPRESA_OK, pendiente_revision=True)
+        s.add(malo); s.add(bueno); s.commit(); s.refresh(malo); s.refresh(bueno)
+        id_malo, id_bueno = malo.id, bueno.id
+    c = _admin()
+    r = c.post("/admin/concepto/confirmar", data={"id": id_malo}, follow_redirects=False)
+    assert "error=cuitconfirmar" in r.headers["location"], r.headers
+    r = c.post("/admin/concepto/confirmar", data={"id": id_bueno}, follow_redirects=False)
+    assert "error=" not in r.headers["location"]
+    with Session(db.engine) as s:
+        assert s.get(Concepto, id_malo).pendiente_revision is True
+        assert s.get(Concepto, id_bueno).pendiente_revision is False
+    assert "E-IDENT-02" in c.get("/admin?error=cuitconfirmar").text
+    print("OK  test_confirmar_un_concepto_pendiente_con_cuit_invalido_se_frena")
+
+
+def test_los_criterios_de_notificacion_comparan_normalizado():
+    """El admin tipea con o sin guiones y las filas viejas pueden tener el
+    CUIT del empleador guardado de las dos formas."""
+    cuil_a, cuil_b = cuit.siguiente_libre("20515151510"), cuit.siguiente_libre("20525252520")
+    with db.get_session() as s:
+        s.add(Trabajador(sindicato_id=SID, cuil=cuil_a, activo=True,
+                         cuit_empleador=cuit.formatear("30716161619")))   # guardado con guiones (legacy)
+        s.add(Trabajador(sindicato_id=SID, cuil=cuil_b, activo=True, cuit_empleador="30716161619"))
+        s.commit()
+    for tipeado in ("30716161619", "30-71616161-9"):
+        assert set(db.resolver_destinatarios(SID, "cuit_empleador", [tipeado])) == {cuil_a, cuil_b}, tipeado
+    assert db.resolver_destinatarios(SID, "cuil", [cuit.formatear(cuil_a)]) == [cuil_a]
+    print("OK  test_los_criterios_de_notificacion_comparan_normalizado")
+
+
+# Todo lugar de main.py y db.py que ESCRIBE un CUIL/CUIT en un modelo de
+# identidad, y por qué está bien. Si aparece uno nuevo, este test falla: hay
+# que decidir si es una puerta (y entonces validar) o una referencia/derivado.
+ESCRITURAS_DE_IDENTIDAD = {
+    "main.api_validar": "lectura: concepto PENDIENTE con el CUIT que leyó la IA (se valida al confirmar)",
+    "main.admin_trabajador_alta": "puerta",
+    "main.admin_trabajador_masivo": "puerta",
+    "main.admin_usuario_alta": "puerta",
+    "main.abm_concepto": "puerta",
+    "main.admin_empleador_alta": "puerta",
+    "main.aprender_aplicar": "puerta",
+    "main.plataforma_alta_sindicato": "puerta",
+    "main.plataforma_alta_usuario": "puerta",
+    "main.plataforma_editar_sindicato": "puerta",
+    "main.empresa_registro": "puerta",
+    "db.crear_usuario_plataforma": "no es un CUIL: usuario nominal de plataforma",
+    "db.sembrar_superadmins_iniciales": "no es un CUIL: usuario nominal de plataforma",
+    "db.completar_usuario_plataforma": "derivado: lo llama /plataforma/completar, que valida",
+    "db.importar_cuits_de_conceptos": "puerta (saltea los inválidos)",
+    "db.asegurar_cuenta": "derivado: la persona de un empadronamiento o de un registro ya validados",
+    "db.guardar_suscripcion_push": "derivado: el CUIL de la sesión firmada",
+}
+_MODELOS_DE_IDENTIDAD = {"Trabajador", "CuentaTrabajador", "UsuarioSindicato", "UsuarioPlataforma",
+                         "Empleador", "CuentaEmpleador", "Sindicato", "Concepto"}
+_CAMPOS_DE_IDENTIDAD = {"cuil", "cuit", "cuit_empleador", "usuario"}
+_VERIFICADORES = {"_cuil_mal", "_cuit_mal", "_cuit_empresa_mal", "es_valido"}
+
+
+def _escrituras_de_identidad():
+    encontradas = {}
+    for archivo in ("main.py", "db.py"):
+        arbol = ast.parse((RAIZ / archivo).read_text(encoding="utf-8"))
+        for fn in ast.walk(arbol):
+            if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            escribe = False
+            for n in ast.walk(fn):
+                if (isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+                        and n.func.id in _MODELOS_DE_IDENTIDAD
+                        and {k.arg for k in n.keywords} & _CAMPOS_DE_IDENTIDAD):
+                    escribe = True
+                if isinstance(n, ast.Assign):
+                    for destino in n.targets:
+                        for e in (destino.elts if isinstance(destino, ast.Tuple) else [destino]):
+                            if isinstance(e, ast.Attribute) and e.attr in _CAMPOS_DE_IDENTIDAD:
+                                escribe = True
+            if escribe:
+                llamadas = {(n.func.id if isinstance(n.func, ast.Name) else
+                             n.func.attr if isinstance(n.func, ast.Attribute) else "")
+                            for n in ast.walk(fn) if isinstance(n, ast.Call)}
+                encontradas[f"{archivo[:-3]}.{fn.name}"] = llamadas
+    return encontradas
+
+
+def test_toda_escritura_de_un_cuil_o_cuit_esta_clasificada():
+    encontradas = _escrituras_de_identidad()
+    sin_decidir = sorted(set(encontradas) - set(ESCRITURAS_DE_IDENTIDAD))
+    assert not sin_decidir, ("estas funciones escriben un CUIL/CUIT y nadie decidió si son una "
+                             "puerta (validar) o un derivado: " + ", ".join(sin_decidir))
+    sobran = sorted(set(ESCRITURAS_DE_IDENTIDAD) - set(encontradas))
+    assert not sobran, f"ya no escriben un CUIL/CUIT, sacalas de la lista: {sobran}"
+    sin_verificar = sorted(f for f, motivo in ESCRITURAS_DE_IDENTIDAD.items()
+                           if motivo.startswith("puerta") and not encontradas[f] & _VERIFICADORES)
+    assert not sin_verificar, f"son puertas y no llaman al verificador: {sin_verificar}"
+    print("OK  test_toda_escritura_de_un_cuil_o_cuit_esta_clasificada")
