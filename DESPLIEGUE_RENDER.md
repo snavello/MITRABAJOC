@@ -237,29 +237,56 @@ set DATABASE_URL=<External Database URL>      (PowerShell: $env:DATABASE_URL="..
 set ENTORNO=pruebas
 python regularizar_cuit.py diagnostico
 ```
+**Definí `ENTORNO` siempre.** Sin esa variable la herramienta avisa (en los
+dos comandos) que la traza y la planilla van a decir `local`. Y al empezar,
+`diagnostico` y `aplicar` imprimen **contra qué base van** (host y nombre) y
+en qué entorno: mirá esa línea antes de seguir; es lo único que impide
+convertir la base equivocada.
+
 1. **Diagnóstico** (no escribe nada): imprime cuántos números inválidos hay
    por tabla y por origen, y deja `regularizacion_cuit_pruebas.csv` (con `;`,
    para el Excel de Argentina). Una fila por número: el nuevo propuesto, el
    origen (`demo` = el nuevo exacto de `identificadores_demo.py`; `manual` =
    el mismo número con el verificador corregido; `lote` y `lectura` = no se
-   tocan), a quién pertenece y en qué tablas aparece.
+   tocan; un CUIT leído de un recibo sin que nadie lo haya cargado a mano,
+   tampoco: es `lectura`), a quién pertenece y en qué tablas aparece.
 2. **Revisar la planilla.** Llegan con `convertir=si` los `demo` y los
-   `manual` sin problemas. Una fila `COLISION` (el número corregido ya es de
-   otra persona, o dos viejos dan el mismo) llega en `no`: si son dos
-   personas distintas, copiar la `alternativa` en `nuevo` y poner `si`. Si
-   fueran la MISMA persona con un dígito mal tipeado, la herramienta no
-   fusiona: se resuelve a mano.
+   `manual` sin problemas. En la columna `convertir` vale `si`, `s`, `x`, `1`,
+   `true` o `verdadero` (sin importar mayúsculas ni tildes); cualquier otra cosa
+   no convierte. Las filas con `no` y un `motivo`:
+   - `COLISION` (el número corregido ya es de otra persona, o dos viejos dan
+     el mismo): si son dos personas distintas, copiar la `alternativa` en
+     `nuevo` y poner `si`. Si fueran la MISMA persona con un dígito mal
+     tipeado, la herramienta no fusiona: se resuelve a mano.
+   - `ANOMALIA`: es un CUIL cargado con prefijo de empresa (o un CUIT con
+     prefijo de persona donde se espera una empresa). Corregirle el
+     verificador no lo arregla: se corrige a mano el dato.
+   - `LOTE`, `LECTURA`, `SIN_CORRECCION`, `FORMATO`: ver el encabezado de
+     `regularizar_cuit.py`.
+
+   Con `si` y el motivo **`RESTO`**: ese número ya se convirtió en una corrida
+   anterior (la traza lo dice) y volvió a aparecer, porque un pedido que
+   estaba en vuelo escribió con el número viejo justo después del COMMIT. Es
+   la misma persona o empresa: se completa lo que quedó atrás. Si hay una fila
+   del número viejo y otra del nuevo en una columna única (`cuentatrabajador`,
+   `cuentaempleador`), `aplicar` se niega y hay que juntarlas a mano.
 3. **Ensayo**: `python regularizar_cuit.py aplicar --planilla regularizacion_cuit_pruebas.csv`
    hace la conversión entera dentro de una transacción, muestra qué cambiaría
-   y la deshace.
-4. **Aplicar**: el mismo comando con `--si --quien SDN`. Hace un `pg_dump`
-   antes (no convierte sin copia), convierte todo en una transacción,
-   verifica antes de confirmar que cada número nuevo quedó exactamente donde
-   estaba el viejo, y deja una fila por número en `cambioidentificador`
-   (quién, cuándo, cuántas filas). Si algo no cierra, deshace todo.
+   (y cuántas filas tomó de la planilla) y la deshace. No escribe nada ni
+   hace backup.
+4. **Aplicar**: el mismo comando con `--si --quien SDN`. Primero valida todo lo
+   que no escribe; recién después hace un `pg_dump` (no convierte sin copia;
+   `--directorio-backup <carpeta>` elige dónde queda, por defecto la raíz del
+   proyecto, que no se versiona), y convierte todo en una transacción con las
+   tablas bloqueadas para escritura. Verifica antes de confirmar que cada
+   número nuevo quedó exactamente donde estaba el viejo, y deja una fila por
+   número en `cambioidentificador` (quién, cuándo, cuántas filas). Si algo no
+   cierra, deshace todo. Un aborto antes del backup no deja ningún `.dump`; si
+   algo falla después, la herramienta dice dónde quedó (lleva datos
+   personales: borrarlo).
 5. Al final imprime **las personas y empresas cuyo número cambió**: tienen
    que enterarse, porque entran con el nuevo. Volver a correr el diagnóstico
-   tiene que dar 0 `manual` y 0 `demo`.
+   tiene que dar 0 `manual` y 0 `demo` (y ningún `RESTO`).
 
 Las bitácoras (`logplataforma`, chats de trámites, eventos) NO se reescriben:
 dicen lo que pasó con el número de ese momento, y `cambioidentificador`

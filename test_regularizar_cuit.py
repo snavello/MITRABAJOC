@@ -257,13 +257,16 @@ def test_todo_lo_del_inventario_y_de_las_excluidas_existe():
     columnas = {f"{t}.{c.name}" for t, tabla in SQLModel.metadata.tables.items() for c in tabla.columns}
     claves = [c.clave for c in rc.INVENTARIO]
     assert len(claves) == len(set(claves)), "columna repetida en INVENTARIO"
-    assert not set(claves) & set(rc.EXCLUIDAS), "una columna no puede estar en las dos listas"
-    for clave in claves + list(rc.EXCLUIDAS):
+    assert not {c.columna_db for c in rc.INVENTARIO} & set(rc.EXCLUIDAS), \
+        "una columna no puede estar en las dos listas"
+    for clave in [c.columna_db for c in rc.INVENTARIO] + list(rc.EXCLUIDAS):
         assert clave in columnas, f"{clave} no existe en el esquema"
     for c in rc.INVENTARIO:
         assert c.clase in (rc.PERSONA, rc.EMPRESA, rc.CUALQUIERA)
         assert c.valor in (rc.TEXTO, rc.JSON) and c.fuente in (rc.ALTA, rc.LECTURA, rc.COPIA)
-        assert (c.valor == rc.JSON) or not c.donde, "el filtro de filas es solo para JSON"
+        # Dos entradas de la misma columna se distinguen por etiqueta y filtro de filas.
+        otras = [x for x in rc.INVENTARIO if x.columna_db == c.columna_db and x is not c]
+        assert bool(c.etiqueta) == bool(otras) and (not c.etiqueta or c.donde), c.clave
     for motivo in rc.EXCLUIDAS.values():
         assert motivo.strip(), "toda exclusión tiene su motivo"
 
@@ -278,7 +281,7 @@ def test_el_inventario_tiene_todo_lo_pedido():
         notificacionempleador.criterio_valores encuesta.criterio_valores encuestaparticipante.cuil
         respuestanominal.cuil respuestaencuesta.cuit_empleador suscripcionpush.cuil
         consultaconvenio.cuil""".split()
-    assert set(pedido) <= {c.clave for c in rc.INVENTARIO}
+    assert set(pedido) <= {c.columna_db for c in rc.INVENTARIO}
     for excluida in ("logplataforma.detalle", "tramitelog.detalle", "tramiteempleadorlog.detalle",
                      "eventoencuesta.detalle", "cambioplan.detalle", "registroenmascarado.cuil_encontrado",
                      "consultaasistente.filtros", "testcarga.parametros"):
@@ -392,7 +395,7 @@ def test_diagnostico_cuenta_las_apariciones_por_tabla_y_columna(base):
     # sindicato.cuit y trabajador.cuit_empleador están con guiones: igual cuentan
     assert empresa == {
         "empleador.cuit": 2, "cuentaempleador.cuit": 1, "trabajador.cuit_empleador": 2,
-        "concepto.cuit_empleador": 1, "reciboverificado.cuit_empleador": 1,
+        "concepto.cuit_empleador[confirmado]": 1, "reciboverificado.cuit_empleador": 1,
         "reciboverificado.detalle": 1, "enviosindicato.detalle": 1, "reporte.detalle": 1,
         "tramiteempleador.cuit": 1, "notificacionempleador.criterio_valores": 1,
         "notificacionempleadordestinatario.cuit": 1, "respuestaencuesta.cuit_empleador": 1,
@@ -533,7 +536,7 @@ def test_aplicar_convierte_todas_las_tablas(base):
                   "trabajador.semaforo_datos"):
         assert a[PERSONA_NUEVO][clave] == 1, clave
     for clave, n in {"empleador.cuit": 2, "cuentaempleador.cuit": 1, "trabajador.cuit_empleador": 2,
-                     "concepto.cuit_empleador": 1, "reciboverificado.cuit_empleador": 1,
+                     "concepto.cuit_empleador[confirmado]": 1, "reciboverificado.cuit_empleador": 1,
                      "reciboverificado.detalle": 1, "tramiteempleador.cuit": 1,
                      "notificacionempleador.criterio_valores": 1,
                      "notificacionempleadordestinatario.cuit": 1, "respuestaencuesta.cuit_empleador": 1,
@@ -721,7 +724,8 @@ def _fila(anterior, nuevo, convertir="si"):
     ([_fila(EMPRESA, VALIDO_E)], "no fusiona"),          # el CUIT de otra empresa
     ([_fila(PERSONA, LECTURA_NUEVO), _fila(EMPRESA, PERSONA_NUEVO)], "misma clase"),   # cambia de tipo
     ([_fila(PERSONA, "27999999990")], "no es un CUIL/CUIT válido"),     # nuevo inválido
-    ([_fila(PERSONA, "2799999994")], "no es un CUIL/CUIT válido"),      # 10 dígitos
+    ([_fila(PERSONA, "2799999994")], "'nuevo' no tiene 11 dígitos"),    # 10 dígitos
+    ([_fila(PERSONA, "2,79999E+10")], "notación científica"),           # lo que hace Excel
     ([_fila(PERSONA, "")], "no tiene 'nuevo'"),
     ([_fila("27888888888", "27888888883")], "no está en la base"),      # el viejo no existe
     ([_fila(PERSONA, PERSONA_NUEVO), _fila(COL_A, PERSONA_NUEVO)], "repetido"),   # dos viejos, un nuevo
@@ -1010,3 +1014,366 @@ def test_la_herramienta_no_importa_los_scripts_que_cargan_la_demo():
         elif isinstance(nodo, ast.ImportFrom) and nodo.module:
             importados.add(nodo.module.split(".")[0])
     assert not importados & {"cargar_demo", "cargar_bancaria"}
+
+
+# ===========================================================================
+# Arreglos de la QA-1 (2026-10-10)
+# ===========================================================================
+
+# ---- 1. La planilla con campos de más --------------------------------------
+def test_la_planilla_con_separadores_de_mas_vacios_se_lee(tmp_path):
+    """Excel deja ';' de más al final de las filas: se ignoran si están vacíos."""
+    ruta = tmp_path / "p.csv"
+    ruta.write_text("anterior;nuevo;convertir\n27999999999;27999999994;si;;\n\n"
+                    "30777777770;30777777773;si;\n", encoding="utf-8-sig")
+    filas = rc.leer_planilla(ruta)
+    assert [f["anterior"] for f in filas] == ["27999999999", "30777777770"]
+    assert [f["_linea"] for f in filas] == [2, 4], "la línea es la del archivo, con la fila en blanco incluida"
+    assert len(rc._cambios_de_la_planilla(filas)) == 2
+
+
+def test_la_planilla_con_datos_de_mas_aborta_diciendo_la_linea(tmp_path):
+    ruta = tmp_path / "p.csv"
+    ruta.write_text("anterior;nuevo;convertir\n27999999999;27999999994;si\n"
+                    "30777777770;30777777773;si;sobra\n", encoding="utf-8-sig")
+    with pytest.raises(rc.ErrorRegularizacion) as e:
+        rc.leer_planilla(ruta)
+    assert "línea 3" in str(e.value) and "sobra" in str(e.value) and "No se aplicó nada" in str(e.value)
+
+
+def test_un_error_de_una_fila_dice_la_linea_del_archivo(tmp_path):
+    ruta = tmp_path / "p.csv"
+    ruta.write_text("anterior;nuevo;convertir\n\n\n27999999999;27999999990;si\n", encoding="utf-8-sig")
+    with pytest.raises(rc.ErrorRegularizacion) as e:
+        rc.aplicar(ruta, si=False, salida=lambda *_: None)
+    assert "línea 4" in " ".join(e.value.errores)
+
+
+# ---- 2. Un número en una columna de otro tipo -------------------------------
+def test_un_cuit_cargado_como_cuil_es_una_anomalia_y_no_se_convierte(base):
+    anomalo = "30444555667"                                    # prefijo de empresa en una columna de persona
+    assert not cuit.es_valido(anomalo)
+    with db.get_session() as s:
+        db.guardar_datos_personales(s, anomalo, nombre="Cargado Mal")
+        s.add(Trabajador(sindicato_id=base.a, cuil=anomalo, activo=True))
+        # Una persona física con CUIT de empleador en una columna "cualquiera": eso NO es una anomalía.
+        s.add(Empleador(sindicato_id=base.a, cuit="20555666770", razon_social="Monotributista"))
+        s.commit()
+    diag = _diagnostico()
+    f = _filas(diag)
+    assert (f[anomalo].motivo, f[anomalo].convertir, f[anomalo].nuevo, f[anomalo].origen) == (
+        "ANOMALIA", False, "", "manual")
+    assert not f[anomalo].alternativa
+    assert (f["20555666770"].motivo, f["20555666770"].convertir, f["20555666770"].nuevo) == (
+        "", True, "20555666773")
+    # el aviso dice la verdad: los inválidos NO se convierten
+    texto = rc.resumen_texto(diag)
+    assert "ANOMALIA" in texto and "NO se convierten" in texto
+    assert ("cuentatrabajador.cuil", anomalo, "empresa", "persona") in diag.escaneo.anomalias
+    # y si la persona fuerza el convertir=si con un nuevo válido, es decisión suya y se respeta
+    _aplicar([_fila(anomalo, "30444555668")], si=True)
+    assert "30444555668" in _apariciones() and anomalo not in _apariciones()
+
+
+def test_un_numero_valido_en_una_columna_de_otro_tipo_no_sale_en_la_planilla(base):
+    with db.get_session() as s:
+        s.add(Trabajador(sindicato_id=base.a, cuil=VALIDO_E, activo=True))
+        s.commit()
+    diag = _diagnostico()
+    assert VALIDO_E not in _filas(diag)
+    assert "aparición(es)" in rc.resumen_texto(diag)
+
+
+# ---- 3. El backup va DESPUÉS de las validaciones ----------------------------
+@pytest.mark.parametrize("planilla, mensaje", [
+    ([_fila("27888888888", "27888888883")], "no está en la base"),
+    ([_fila(PERSONA, VALIDO_P)], "no fusiona"),
+    ([_fila(PERSONA, "27999999990")], "no es un CUIL/CUIT válido"),
+])
+def test_un_abort_de_validacion_no_deja_ningun_dump(base, tmp_path, planilla, mensaje):
+    with pytest.raises(rc.ErrorRegularizacion) as e:
+        _aplicar(planilla, si=True, sin_backup=False, directorio_backup=tmp_path / "backups")
+    assert mensaje in " ".join([str(e.value), *e.value.errores])
+    assert not (tmp_path / "backups").exists() or list((tmp_path / "backups").iterdir()) == []
+
+
+def test_una_planilla_ya_aplicada_aborta_sin_dump(base, tmp_path):
+    _aplicar(_planilla_basica(), si=True)
+    with pytest.raises(rc.ErrorRegularizacion, match="La planilla no se puede aplicar") as e:
+        _aplicar(_planilla_basica(), si=True, sin_backup=False, directorio_backup=tmp_path)
+    assert "no está en la base" in " ".join(e.value.errores)
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.skipif(not shutil.which("pg_dump") or not shutil.which("psql"),
+                    reason="hace falta pg_dump y psql para probar el backup")
+def test_si_algo_falla_despues_del_backup_se_avisa_donde_quedo(base, tmp_path, monkeypatch):
+    def explota(*a, **k):
+        raise rc.ErrorRegularizacion("falla simulada dentro de la transacción")
+
+    monkeypatch.setattr(rc, "_aplicar_en_transaccion", explota)
+    lineas = []
+    try:
+        with pytest.raises(rc.ErrorRegularizacion, match="falla simulada"):
+            rc.aplicar(_planilla_basica(), si=True, quien="T", sin_backup=False,
+                       directorio_backup=tmp_path, salida=lineas.append)
+    except rc.ErrorRegularizacion as e:       # pragma: no cover
+        pytest.skip(f"este equipo no tiene un pg_dump compatible: {e}")
+    dumps = list(tmp_path.glob("backup_regularizacion_*.dump"))
+    if not dumps:                              # pragma: no cover
+        pytest.skip("este equipo no tiene un pg_dump compatible")
+    assert len(dumps) == 1
+    texto = "\n".join(lineas)
+    assert "La base no cambió" in texto and str(dumps[0]) in texto
+
+
+@pytest.mark.skipif(not shutil.which("pg_dump") or not shutil.which("psql"),
+                    reason="hace falta pg_dump y psql para probar el backup")
+def test_cli_directorio_backup(base, tmp_path, capsys):
+    ruta = tmp_path / "p.csv"
+    ruta.write_text(f"anterior;nuevo;convertir\n{PERSONA};{PERSONA_NUEVO};si\n", encoding="utf-8-sig")
+    destino = tmp_path / "copias" / "hoy"
+    codigo = rc.main(["aplicar", "--planilla", str(ruta), "--si", "--quien", "SDN",
+                      "--directorio-backup", str(destino)])
+    salida = capsys.readouterr().out
+    if codigo == 1 and "No se pudo preparar el backup" in salida:
+        pytest.skip("este equipo no tiene un pg_dump compatible")
+    assert codigo == 0, salida
+    assert len(list(destino.glob("backup_regularizacion_*.dump"))) == 1
+    assert PERSONA_NUEVO in _apariciones()
+
+
+# ---- 4. Contra qué base se va a escribir ------------------------------------
+def test_aplicar_dice_contra_que_base_y_entorno_va_a_escribir(base, monkeypatch):
+    monkeypatch.setattr(rc.entorno, "ENTORNO", "")
+    lineas = []
+    rc.aplicar(_planilla_basica(), si=False, salida=lineas.append)
+    texto = "\n".join(lineas)
+    assert lineas[0].startswith("Base: ") and db.engine.url.database in lineas[0]
+    assert "postgres:" not in texto, "la contraseña no se imprime"
+    assert "ENTORNO sin definir" in lineas[0]
+    assert any("ENTORNO no está definida" in x and "'local'" in x for x in lineas)
+
+
+def test_con_entorno_definido_no_hay_aviso_y_la_traza_lo_dice(base, monkeypatch):
+    monkeypatch.setattr(rc.entorno, "ENTORNO", "pruebas")
+    lineas = []
+    rc.aplicar(_planilla_basica(), si=True, quien="SDN", sin_backup=True, salida=lineas.append)
+    assert "Entorno: pruebas" in lineas[0] and not any("no está definida" in x for x in lineas)
+    with db.get_session() as s:
+        assert {x.entorno for x in s.exec(select(CambioIdentificador)).all()} == {"pruebas"}
+
+
+def test_cli_diagnostico_tambien_avisa_la_base_y_el_entorno(base, tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(rc.entorno, "ENTORNO", "")
+    rc.main(["diagnostico", "--salida", str(tmp_path / "d.csv")])
+    out = capsys.readouterr().out
+    assert out.startswith("Base: ") and "ENTORNO sin definir" in out and "van a decir 'local'" in out
+
+
+# ---- 5. Un concepto pendiente es una lectura ---------------------------------
+def test_un_cuit_mal_leido_con_un_concepto_pendiente_sigue_siendo_lectura(base):
+    leido = "30666666660"                                      # lo leyó la IA de un recibo
+    assert not cuit.es_valido(leido)
+    with db.get_session() as s:
+        s.add(ReciboVerificado(sindicato_id=base.a, cuil=VALIDO_P, periodo="2026-07", estado="OK",
+                               cuit_empleador=leido,
+                               detalle={"recibo": {"empleador": {"cuit": leido}}}))
+        s.add(Concepto(sindicato_id=base.a, codigo="Y9", nombre="Concepto nuevo", tipo="ingreso",
+                       cuit_empleador=leido, pendiente_revision=True))     # lo creó /api/validar
+        s.commit()
+    f = _filas(_diagnostico())[leido]
+    assert (f.origen, f.motivo, f.convertir) == ("lectura", "LECTURA", False)
+    assert set(f.apariciones) == {"reciboverificado.cuit_empleador", "reciboverificado.detalle",
+                                  "concepto.cuit_empleador[pendiente]"}
+
+
+def test_con_un_concepto_confirmado_el_mismo_cuit_pasa_a_manual_y_se_convierte_entero(base):
+    leido = "30666666660"
+    with db.get_session() as s:
+        s.add(ReciboVerificado(sindicato_id=base.a, cuil=VALIDO_P, periodo="2026-07", estado="OK",
+                               cuit_empleador=leido,
+                               detalle={"recibo": {"empleador": {"cuit": leido}}}))
+        s.add(Concepto(sindicato_id=base.a, codigo="Y9", nombre="Pendiente", tipo="ingreso",
+                       cuit_empleador=leido, pendiente_revision=True))
+        s.add(Concepto(sindicato_id=base.a, codigo="Y8", nombre="Confirmado", tipo="ingreso",
+                       cuit_empleador=leido, pendiente_revision=False))     # lo cargó una persona
+        s.commit()
+    f = _filas(_diagnostico())[leido]
+    assert (f.origen, f.motivo, f.convertir, f.nuevo) == ("manual", "", True, "30666666662")
+    previo = _apariciones()[leido]
+    _aplicar([_fila(leido, "30666666662")], si=True)
+    a = _apariciones()
+    assert leido not in a and a["30666666662"] == previo, "los dos conceptos se convierten, cada uno en su entrada"
+    with db.get_session() as s:
+        assert {c.cuit_empleador for c in s.exec(select(Concepto).where(Concepto.codigo.in_(["Y8", "Y9"]))).all()} == {
+            "30666666662"}
+
+
+# ---- 6. Completar una conversión ya hecha ------------------------------------
+def _huerfanos_de_la_ventana(base):
+    """Lo que escribe un pedido que pasó el chequeo de sesión ANTES del COMMIT de
+    la conversión y grabó DESPUÉS, con el número viejo."""
+    with db.get_session() as s:
+        s.add(ReciboVerificado(sindicato_id=base.a, cuil=PERSONA, periodo="2026-10", estado="OK",
+                               detalle=_detalle_recibo("27-99999999-9", PERSONA, "30-77777777-0")))
+        # Un recibo que menciona al viejo Y al nuevo en la MISMA fila (el JSON cuenta filas).
+        s.add(ReciboVerificado(sindicato_id=base.a, cuil=PERSONA, periodo="2026-11", estado="OK",
+                               detalle={"recibo": {"empleado": {"cuil": PERSONA}},
+                                        "resultado": {"cuil": PERSONA_NUEVO}}))
+        s.add(SuscripcionPush(cuil=PERSONA, endpoint="https://push.example/huerfano"))
+        s.commit()
+
+
+def test_los_huerfanos_de_la_ventana_se_completan(base):
+    _aplicar(_planilla_basica(), si=True)
+    previo = _apariciones()[PERSONA_NUEVO]
+    _huerfanos_de_la_ventana(base)
+    assert PERSONA in _apariciones()
+
+    diag = _diagnostico()
+    f = _filas(diag)[PERSONA]
+    assert (f.motivo, f.convertir, f.nuevo) == ("RESTO", True, PERSONA_NUEVO)
+    assert not f.alternativa
+    assert "Persona Manual" in f.nombre, "el viejo ya no está en el padrón: el nombre sale del nuevo"
+    assert rc.resumen_de_filas(diag.filas)["convertibles"] >= 1
+
+    # la planilla tal cual sale del diagnóstico se aplica
+    res = _aplicar([_fila(f.anterior, f.nuevo)], si=True)
+    assert res.cambios[0].resto
+    a = _apariciones()
+    assert PERSONA not in a
+    assert a[PERSONA_NUEVO]["suscripcionpush.cuil"] == previo["suscripcionpush.cuil"] + 1
+    assert a[PERSONA_NUEVO]["reciboverificado.cuil"] == previo["reciboverificado.cuil"] + 2
+    assert a[PERSONA_NUEVO]["reciboverificado.detalle"] == previo["reciboverificado.detalle"] + 2
+    # y queda OTRA fila en la traza: la primera conversión y la que la completó
+    with db.get_session() as s:
+        filas = s.exec(select(CambioIdentificador).where(CambioIdentificador.anterior == PERSONA)
+                       .order_by(CambioIdentificador.id)).all()
+    assert len(filas) == 2 and {x.nuevo for x in filas} == {PERSONA_NUEVO}
+    assert filas[1].detalle == {"reciboverificado.cuil": 2, "reciboverificado.detalle": 2,
+                                "suscripcionpush.cuil": 1} and filas[1].filas == 5
+    # y la corrida siguiente ya no la ve
+    assert PERSONA not in _filas(_diagnostico())
+
+
+def test_el_informe_marca_el_resto(base):
+    _aplicar(_planilla_basica(), si=True)
+    _huerfanos_de_la_ventana(base)
+    lineas = []
+    rc.aplicar([_fila(PERSONA, PERSONA_NUEVO)], si=True, quien="SDN", sin_backup=True, salida=lineas.append)
+    assert any("completa una conversión anterior" in x and PERSONA in x for x in lineas)
+
+
+def test_un_par_que_no_esta_en_la_traza_sigue_siendo_colision(base):
+    viejo, nuevo = "27555444330", "27555444333"
+    assert cuit.corregir(viejo) == nuevo
+    with db.get_session() as s:
+        for numero, nombre in ((viejo, "Persona Vieja"), (nuevo, "Persona Nueva")):
+            db.guardar_datos_personales(s, numero, nombre=nombre)
+            s.add(Trabajador(sindicato_id=base.a, cuil=numero, activo=True))
+        s.commit()
+    f = _filas(_diagnostico())[viejo]
+    assert (f.motivo, f.convertir) == ("COLISION", False) and f.alternativa
+    antes = _volcado()
+    with pytest.raises(rc.ErrorRegularizacion, match="no se puede aplicar") as e:
+        _aplicar([_fila(viejo, nuevo)], si=True)
+    assert "no fusiona" in " ".join(e.value.errores)
+    assert _volcado() == antes
+
+
+def test_el_resto_solo_vale_para_el_par_exacto_de_la_traza(base):
+    """La traza dice PERSONA -> PERSONA_NUEVO: ese nuevo existe y se acepta. Pero
+    otro nuevo que también existe, no."""
+    _aplicar(_planilla_basica(), si=True)
+    _huerfanos_de_la_ventana(base)
+    antes = _volcado()
+    with pytest.raises(rc.ErrorRegularizacion) as e:
+        _aplicar([_fila(PERSONA, VALIDO_P)], si=True)
+    assert "no fusiona" in " ".join(e.value.errores)
+    assert _volcado() == antes
+
+
+def test_con_dos_destinos_en_la_traza_no_se_adivina(base):
+    """Si la traza registra dos nuevos distintos para el mismo viejo, el diagnóstico
+    no elige: sale como una fila común (acá, COLISION)."""
+    _aplicar(_planilla_basica(), si=True)
+    _huerfanos_de_la_ventana(base)
+    with db.get_session() as s:
+        s.add(CambioIdentificador(anterior=PERSONA, nuevo=VALIDO_P, tipo="persona", origen="manual",
+                                  entorno="local", fecha="2026-10-10 10:00", quien="X", filas=0, detalle={}))
+        s.commit()
+    f = _filas(_diagnostico())[PERSONA]
+    assert (f.motivo, f.convertir) == ("COLISION", False)
+
+
+def test_un_conflicto_de_unicidad_aborta_sin_escribir_nada(base):
+    """cuentatrabajador.cuil es única: si después de la conversión aparece OTRA cuenta
+    con el número viejo, son dos filas de la misma persona y hay que juntarlas a mano."""
+    _aplicar(_planilla_basica(), si=True)
+    with db.get_session() as s:
+        s.add(CuentaTrabajador(cuil=PERSONA, nombre="Cuenta huérfana", clave_hash=HASH))
+        s.commit()
+    antes = _volcado()
+    f = _filas(_diagnostico())[PERSONA]
+    assert f.motivo == "RESTO"            # el diagnóstico lo propone; es aplicar el que se niega
+    with pytest.raises(rc.ErrorRegularizacion) as e:
+        _aplicar([_fila(PERSONA, PERSONA_NUEVO)], si=True)
+    texto = " ".join(e.value.errores)
+    assert "cuentatrabajador.cuil" in texto and "columna única" in texto and "a mano" in texto
+    assert _volcado() == antes
+
+
+def test_las_columnas_unicas_se_leen_de_la_base(base):
+    with db.engine.connect() as c:
+        unicas = rc.columnas_unicas(c)
+    assert {"cuentatrabajador.cuil", "cuentaempleador.cuit"} <= unicas
+    assert "trabajador.cuil" not in unicas and "reciboverificado.cuil" not in unicas
+
+
+def test_el_resto_de_una_empresa_tambien_se_completa(base):
+    _aplicar(_planilla_basica(), si=True)
+    with db.get_session() as s:
+        s.add(Concepto(sindicato_id=base.b, codigo="Z1", nombre="Huérfano", tipo="ingreso",
+                       cuit_empleador=EMPRESA))
+        s.add(TramiteEmpleador(sindicato_id=base.a, tipo_tramite_id=s.exec(select(TipoTramiteEmpleador)).first().id,
+                               numero_expediente="E01-2026-000002", cuit=EMPRESA))
+        s.commit()
+    f = _filas(_diagnostico())[EMPRESA]
+    assert (f.motivo, f.convertir, f.nuevo) == ("RESTO", True, EMPRESA_NUEVO)
+    _aplicar([_fila(EMPRESA, EMPRESA_NUEVO)], si=True)
+    a = _apariciones()
+    assert EMPRESA not in a
+    assert a[EMPRESA_NUEVO]["concepto.cuit_empleador[confirmado]"] == 2
+    assert a[EMPRESA_NUEVO]["tramiteempleador.cuit"] == 2
+
+
+# ---- 7. Lo que vale como "sí" -------------------------------------------------
+@pytest.mark.parametrize("valor", ["si", "SI", "Sí", "sí", "s", "S", "x", "X", "1", "true", "TRUE",
+                                   "Verdadero", "verdadero", " si "])
+def test_convertir_acepta_estas_formas_de_decir_que_si(valor):
+    cambios = rc._cambios_de_la_planilla([{"anterior": PERSONA, "nuevo": PERSONA_NUEVO, "convertir": valor}])
+    assert len(cambios) == 1
+
+
+@pytest.mark.parametrize("valor", ["no", "n", "0", "", "false", "talvez", "sii"])
+def test_convertir_con_cualquier_otra_cosa_no_convierte(valor):
+    assert rc._cambios_de_la_planilla([{"anterior": PERSONA, "nuevo": PERSONA_NUEVO, "convertir": valor}]) == []
+
+
+def test_el_ensayo_dice_cuantas_filas_tomo(base):
+    lineas = []
+    planilla = [{"anterior": PERSONA, "nuevo": PERSONA_NUEVO, "convertir": "x"},
+                {"anterior": EMPRESA, "nuevo": EMPRESA_NUEVO, "convertir": "1"},
+                {"anterior": COL_A, "nuevo": "", "convertir": "no"}]
+    rc.aplicar(planilla, si=False, salida=lineas.append)
+    assert any("Planilla: 3 fila(s), 2 con convertir=si." in x for x in lineas)
+
+
+def test_notacion_cientifica_en_nuevo_da_el_mismo_consejo_que_en_anterior():
+    for campo, fila in (("anterior", {"anterior": "2,79999E+10", "nuevo": PERSONA_NUEVO}),
+                        ("nuevo", {"anterior": PERSONA, "nuevo": "2,79999E+10"})):
+        with pytest.raises(rc.ErrorRegularizacion) as e:
+            rc._cambios_de_la_planilla([{**fila, "convertir": "si"}])
+        texto = " ".join(e.value.errores)
+        assert f"'{campo}' no tiene 11 dígitos" in texto and "notación científica" in texto

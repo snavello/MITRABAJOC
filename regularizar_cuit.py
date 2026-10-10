@@ -42,6 +42,27 @@ viejos) frena esa fila: sale como COLISION y la persona elige. La FUSIÓN de
 dos personas no la hace esta herramienta jamás; renumerar sí (columna
 `alternativa`).
 
+Otros motivos por los que una fila llega con convertir=no:
+
+    ANOMALIA        el número está en una columna de OTRO tipo (un CUIL con
+                    prefijo de empresa en una columna de persona, o al
+                    revés). Corregirle el verificador no lo arregla: es un
+                    dato cargado en el lugar equivocado y se corrige a mano.
+    LOTE / LECTURA  ver arriba.
+    SIN_CORRECCION  un 23/33 sin verificador posible; se ofrece renumerar.
+    FORMATO         no es un número (o el prefijo no existe).
+
+Y una que llega con convertir=si:
+
+    RESTO           la traza (`cambioidentificador`) ya registra EXACTAMENTE
+                    este `anterior -> nuevo`: el número viejo reapareció
+                    después de la conversión (un pedido que pasó el chequeo
+                    de sesión justo antes del COMMIT y escribió después). Es
+                    la misma persona: se completa lo que quedó atrás. Único
+                    caso en que `aplicar` acepta que el nuevo ya exista, y
+                    aborta si una columna única tiene filas con el viejo Y
+                    con el nuevo.
+
 Qué NO se reescribe (D5, la historia no se toca) está en EXCLUIDAS con su
 motivo; la traza de lo que sí se cambió queda en `cambioidentificador`.
 
@@ -55,6 +76,7 @@ import io
 import re
 import subprocess
 import sys
+import unicodedata
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -103,8 +125,12 @@ class Columna:
     fuente  de dónde sale el dato: ALTA (lo escribe un alta, el registro, un
             panel o la sesión), LECTURA (lo que leyó la IA de un documento) o
             COPIA (una copia de un dato que ya vive en otro lado).
-    donde   filtro SQL de filas (solo JSON): una columna `criterio_valores`
-            guarda ids o nombres salvo cuando el criterio es por CUIL/CUIT.
+    donde   filtro SQL de filas: una columna `criterio_valores` guarda ids o
+            nombres salvo cuando el criterio es por CUIL/CUIT; un concepto
+            pendiente de revisión lo creó la lectura de un recibo y uno
+            confirmado, una persona.
+    etiqueta  distingue DOS entradas de la misma columna con `donde` distinto
+            (la clave de cada una tiene que ser única: es la que se cuenta).
     estricta  (solo TEXTO) todo valor no vacío TIENE que ser un número; si no
             lo es sale como FORMATO. False para un campo libre como
             `usuariosindicato.usuario`, que puede ser un login que no es un
@@ -116,12 +142,25 @@ class Columna:
     valor: str
     fuente: str
     donde: str = ""
+    etiqueta: str = ""
     estricta: bool = True
     nota: str = ""
 
     @property
-    def clave(self) -> str:
+    def columna_db(self) -> str:
+        """La columna de la base, sin etiqueta: 'concepto.cuit_empleador'."""
         return f"{self.tabla}.{self.columna}"
+
+    @property
+    def clave(self) -> str:
+        """Única por entrada: 'concepto.cuit_empleador[pendiente]'. Es la que
+        usan los conteos, la planilla y la traza."""
+        return self.columna_db + (f"[{self.etiqueta}]" if self.etiqueta else "")
+
+    @property
+    def filtro(self) -> str:
+        """El `AND (...)` que acota las filas de esta entrada, o ''."""
+        return f" AND ({self.donde})" if self.donde else ""
 
 
 def _c(tabla, columna, clase, valor, fuente, **kw) -> Columna:
@@ -168,9 +207,16 @@ INVENTARIO = (
        nota="el CUIT del gremio; en la demo se guardó con guiones"),
     _c("trabajador", "cuit_empleador", CUALQUIERA, TEXTO, ALTA,
        nota="lo carga el admin en el alta (sin normalizar: puede traer guiones)"),
+    # Un concepto lo crea una persona desde el panel (confirmado) o lo crea la
+    # lectura de un recibo (/api/validar con conceptos_nuevos, /admin/aprender),
+    # y nace PENDIENTE de revisión con el CUIT que leyó la IA. Ese CUIT es una
+    # lectura y no se corrige (un CUIT mal leído de un recibo no pasa a manual).
     _c("concepto", "cuit_empleador", CUALQUIERA, TEXTO, ALTA,
-       nota="origen mixto: el panel (alta) o el aprendizaje desde un recibo (lectura); "
-            "se toma como alta para que nunca quede sin convertir un número tipeado"),
+       donde="pendiente_revision = false", etiqueta="confirmado",
+       nota="el concepto lo cargó una persona desde el panel"),
+    _c("concepto", "cuit_empleador", CUALQUIERA, TEXTO, LECTURA,
+       donde="pendiente_revision = true", etiqueta="pendiente",
+       nota="el concepto lo creó la lectura de un recibo y nadie lo confirmó todavía"),
     _c("reciboverificado", "cuit_empleador", CUALQUIERA, TEXTO, LECTURA,
        nota="el CUIT que leyó la IA del recibo"),
     _c("respuestaencuesta", "cuit_empleador", CUALQUIERA, TEXTO, COPIA,
@@ -260,7 +306,7 @@ def columnas_sin_decidir(metadata=None) -> list:
     Vacía = el inventario cubre el esquema. Es lo que verifica el test."""
     from sqlmodel import SQLModel
     metadata = metadata if metadata is not None else SQLModel.metadata
-    decididas = {c.clave for c in INVENTARIO} | set(EXCLUIDAS)
+    decididas = {c.columna_db for c in INVENTARIO} | set(EXCLUIDAS)
     pendientes = []
     for nombre_tabla, tabla in sorted(metadata.tables.items()):
         for col in tabla.columns:
@@ -417,7 +463,7 @@ def verificar_esquema(conexion, columnas=INVENTARIO) -> None:
         if not insp.has_table(c.tabla):
             faltan.append(f"tabla {c.tabla}")
         elif c.columna not in {x["name"] for x in insp.get_columns(c.tabla)}:
-            faltan.append(f"columna {c.clave}")
+            faltan.append(f"columna {c.columna_db}")
     if faltan:
         raise ErrorRegularizacion(
             "La base no tiene lo que el inventario espera (" + ", ".join(sorted(set(faltan))) +
@@ -442,7 +488,7 @@ def _escanear_texto(conn, c: Columna, esc: Escaneo) -> None:
     col, tabla = f'"{c.columna}"', f'"{c.tabla}"'
     filas = conn.execute(sa.text(
         f"SELECT {col}, COUNT(*) FROM {tabla} "
-        f"WHERE {col} IS NOT NULL AND {col} <> '' GROUP BY {col}")).all()
+        f"WHERE {col} IS NOT NULL AND {col} <> ''{c.filtro} GROUP BY {col}")).all()
     for valor, n in filas:
         if not valor.strip():
             continue
@@ -583,20 +629,52 @@ def diagnosticar(conexion, lote: Optional[frozenset] = None) -> Diagnostico:
     conn = _conexion(conexion)
     verificar_esquema(conn)
     esc = escanear(conn)
-    filas, validos = filas_de_escaneo(esc, identificadores_de_lote() if lote is None else lote)
-    nombres = nombres_de(conn, {f.anterior for f in filas})
+    filas, validos = filas_de_escaneo(esc, identificadores_de_lote() if lote is None else lote,
+                                      cargar_traza(conn))
+    # Un RESTO ya no tiene al viejo en el padrón: el nombre se busca por el nuevo.
+    nombres = nombres_de(conn, {f.anterior for f in filas} | {f.nuevo for f in filas if f.motivo == "RESTO"})
     for f in filas:
-        f.nombre = nombres.get(f.anterior, "")
+        f.nombre = nombres.get(f.anterior) or (nombres.get(f.nuevo, "") if f.motivo == "RESTO" else "")
     return Diagnostico(filas=filas, escaneo=esc, entorno=entorno.ENTORNO or "local",
                        validos=validos)
 
 
-def filas_de_escaneo(esc: Escaneo, lote: frozenset) -> tuple:
+def cargar_traza(conexion) -> dict:
+    """{número anterior: {números nuevos}} de lo que esta herramienta ya
+    convirtió (`cambioidentificador`). Vacío si la tabla todavía no existe."""
+    conn = _conexion(conexion)
+    if not sa.inspect(conn).has_table(TABLA_TRAZA):
+        return {}
+    traza = defaultdict(set)
+    for anterior, nuevo in conn.execute(sa.text(f'SELECT anterior, nuevo FROM "{TABLA_TRAZA}"')):
+        traza[cuit.normalizar(anterior)].add(cuit.normalizar(nuevo))
+    return dict(traza)
+
+
+def _resto_de(numero: str, traza: dict) -> str:
+    """Si la traza ya registra EXACTAMENTE un `numero -> nuevo`, ese nuevo: el
+    número viejo reapareció después de la conversión (un pedido que pasó el
+    chequeo de sesión justo antes del COMMIT y escribió después). Es la misma
+    persona o empresa: lo que corresponde es completar la conversión. Con dos
+    destinos distintos en la traza no se elige: sale como una fila común."""
+    nuevos = traza.get(numero) or set()
+    if len(nuevos) != 1:
+        return ""
+    nuevo = next(iter(nuevos))
+    return nuevo if cuit.es_valido(nuevo) and cuit.tipo(nuevo) == cuit.tipo(numero) else ""
+
+
+def filas_de_escaneo(esc: Escaneo, lote: frozenset, traza: Optional[dict] = None) -> tuple:
     """(filas, cantidad de números válidos) a partir de un Escaneo. Puro: no
     toca la base (los nombres se agregan aparte). Es lo que comparan el antes
     y el después de `aplicar`."""
+    traza = traza or {}
     por_clave = inventario_por_clave()
     ocupados = esc.ocupados
+    # Los que están en una columna de OTRO tipo (un CUIL con prefijo de empresa
+    # en una columna de persona, o al revés): corregirles el verificador no lo
+    # arregla, es otro problema. Las columnas "cualquiera" no producen anomalía.
+    anomalos = {numero for _clave, numero, _tipo, _clase in esc.anomalias}
 
     filas, validos = [], 0
     for numero in sorted(ocupados):
@@ -606,9 +684,13 @@ def filas_de_escaneo(esc: Escaneo, lote: frozenset) -> tuple:
         origen = clasificar_origen(numero, esc.apariciones[numero], lote, por_clave)
         f = Fila(anterior=numero, tipo=cuit.tipo(numero), origen=origen,
                  apariciones=dict(esc.apariciones[numero]))
+        resto = _resto_de(numero, traza) if f.tipo else ""
         # Un prefijo desconocido no tiene corrección posible: forma rota.
         if not f.tipo:
             f.motivo = "FORMATO"
+        elif resto:
+            # Ya se convirtió una vez a este mismo nuevo: completar lo que quedó.
+            f.nuevo, f.motivo, f.convertir = resto, "RESTO", True
         else:
             f.nuevo = (identificadores_demo.REEMPLAZOS_MOD11[numero] if origen == ORIGEN_DEMO
                        else cuit.corregir(numero))
@@ -616,6 +698,8 @@ def filas_de_escaneo(esc: Escaneo, lote: frozenset) -> tuple:
                 f.motivo = "LOTE"
             elif origen == ORIGEN_LECTURA:
                 f.motivo = "LECTURA"
+            elif numero in anomalos:
+                f.nuevo, f.motivo = "", "ANOMALIA"
             elif not f.nuevo:
                 f.motivo = "SIN_CORRECCION"
             else:
@@ -652,7 +736,7 @@ def _resolver_colisiones(filas: list, ocupados: set) -> None:
     Las filas LOTE y LECTURA no participan: no se convierten ahora; si algún
     día se convierten, el número que hoy ocupa otra fila ya no estará libre y
     lo dirá esa corrida."""
-    candidatas = [f for f in filas if f.convertir]
+    candidatas = [f for f in filas if f.convertir and f.motivo != "RESTO"]
     reclamos = defaultdict(int)
     for f in candidatas:
         reclamos[f.nuevo] += 1
@@ -664,7 +748,7 @@ def _resolver_colisiones(filas: list, ocupados: set) -> None:
     # Alternativas: hay que evitar los ocupados, TODO lo que se propone y las
     # alternativas ya repartidas (dos números que difieren solo en el
     # verificador tienen el mismo "siguiente DNI libre").
-    reservados = set(ocupados) | {f.nuevo for f in candidatas}
+    reservados = set(ocupados) | {f.nuevo for f in filas if f.nuevo}
     for f in sorted((f for f in filas if f.motivo in ("COLISION", "SIN_CORRECCION")),
                     key=lambda f: f.anterior):
         alt = cuit.siguiente_libre(f.anterior, reservados)
@@ -692,8 +776,12 @@ def resumen_texto(diag: Diagnostico, base: str = "") -> str:
     for k in sorted(por_columna):
         p(f"    {k:<42} {por_columna[k]}")
     if diag.escaneo.anomalias:
-        p(f"  Aviso: {len(diag.escaneo.anomalias)} número(s) con prefijo de otro tipo que su columna "
-          "(un CUIL con prefijo de empresa, o al revés); no se tocan:")
+        invalidos = {n for _c, n, _t, _cl in diag.escaneo.anomalias if not cuit.es_valido(n)}
+        p(f"  Aviso: {len(diag.escaneo.anomalias)} aparición(es) de un número con prefijo de OTRO tipo "
+          "que su columna (un CUIL con prefijo de empresa, o al revés). "
+          f"{len(invalidos)} número(s) además son inválidos: salen en la planilla como ANOMALIA y NO se "
+          "convierten, porque corregirles el verificador no arregla el problema (es un dato cargado "
+          "en la columna equivocada: se corrige a mano). Los válidos no se tocan:")
         for clave, numero, t, clase in diag.escaneo.anomalias[:10]:
             p(f"    {clave}: {numero} es de {t}, la columna espera {clase}")
     return out.getvalue().rstrip()
@@ -721,9 +809,12 @@ def escribir_planilla(diag: Diagnostico, ruta, separador: str = SEPARADOR) -> Pa
 
 
 def leer_planilla(ruta) -> list:
-    """Lista de dicts con las columnas de la planilla. Tolera lo que le hace
-    Excel: separador ';' o ',', BOM, y el guardado en cp1252 (el "CSV" común,
-    sin UTF-8, que rompe los acentos de un nombre)."""
+    """Lista de dicts con las columnas de la planilla (más `_linea`, la línea
+    del archivo). Tolera lo que le hace Excel: separador ';' o ',', BOM, y el
+    guardado en cp1252 (el "CSV" común, sin UTF-8, que rompe los acentos de un
+    nombre). Una fila con MÁS campos que el encabezado: si los sobrantes están
+    vacíos (Excel deja ';' de más) se ignoran; si traen datos, se aborta
+    diciendo la línea, porque algo se corrió de columna."""
     crudo = Path(ruta).read_bytes()
     try:
         texto = crudo.decode("utf-8-sig")
@@ -732,18 +823,36 @@ def leer_planilla(ruta) -> list:
     primera = texto.splitlines()[0] if texto.strip() else ""
     separador = ";" if primera.count(";") > primera.count(",") else ","
     lector = csv.DictReader(io.StringIO(texto), delimiter=separador)
-    filas = []
-    for fila in lector:
-        filas.append({(k or "").strip().lower(): (v or "").strip() for k, v in fila.items()})
-    faltan = {"anterior", "nuevo", "convertir"} - set(k.strip().lower() for k in (lector.fieldnames or []))
+    encabezado = [(k or "").strip().lower() for k in (lector.fieldnames or [])]
+    faltan = {"anterior", "nuevo", "convertir"} - set(encabezado)
     if faltan:
         raise ErrorRegularizacion(
             f"La planilla no tiene las columnas {sorted(faltan)}. ¿Es la que generó `diagnostico`?")
+    filas = []
+    for fila in lector:
+        sobrantes = fila.pop(None, None) or []          # los campos que no tienen encabezado
+        if any((x or "").strip() for x in sobrantes):
+            raise ErrorRegularizacion(
+                f"La línea {lector.line_num} de la planilla tiene {len(encabezado) + len(sobrantes)} campos y "
+                f"el encabezado {len(encabezado)}: sobran datos ({[x for x in sobrantes if (x or '').strip()]}). "
+                "Probablemente un separador escrito dentro de una celda. No se aplicó nada.")
+        d = {(k or "").strip().lower(): (v or "").strip() for k, v in fila.items()}
+        d["_linea"] = lector.line_num
+        filas.append(d)
     return filas
 
 
+# Lo que vale como "sí" en la columna `convertir` (sin distinguir mayúsculas ni
+# tildes): la persona la edita a mano en Excel y no hay que hacerla adivinar.
+_VALE_COMO_SI = frozenset({"si", "s", "x", "1", "true", "verdadero"})
+
+
+def _sin_tildes(texto: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", texto or "") if not unicodedata.combining(c))
+
+
 def _quiere_convertir(valor: str) -> bool:
-    return (valor or "").strip().lower() in ("si", "sí")
+    return _sin_tildes(valor).strip().lower() in _VALE_COMO_SI
 
 
 # ---------------------------------------------------------------------------
@@ -758,6 +867,7 @@ class Cambio:
     nombre: str = ""
     filas: int = 0
     detalle: dict = field(default_factory=dict)
+    resto: bool = False        # completa una conversión que la traza ya registra
 
 
 @dataclass
@@ -771,6 +881,10 @@ class Resultado:
     despues: dict = field(default_factory=dict)     # ... y de cómo quedaría / quedó
 
 
+_CONSEJO_EXCEL = ("Si abriste la planilla en Excel, revisá que no haya convertido el número a "
+                  "notación científica (2,01E+10) y que no le haya sacado dígitos.")
+
+
 def _cambios_de_la_planilla(filas) -> list:
     """Las filas con convertir=si, ya con los números normalizados. Valida
     todo lo que se puede validar SIN mirar la base; junta TODOS los errores."""
@@ -780,13 +894,16 @@ def _cambios_de_la_planilla(filas) -> list:
             continue
         viejo = cuit.normalizar(fila.get("anterior", ""))
         nuevo = cuit.normalizar(fila.get("nuevo", ""))
-        donde = f"fila {i} ({fila.get('anterior', '')!r} -> {fila.get('nuevo', '')!r})"
+        donde = (f"línea {fila.get('_linea') or i} "
+                 f"({fila.get('anterior', '')!r} -> {fila.get('nuevo', '')!r})")
         if len(viejo) != 11:
-            errores.append(f"{donde}: 'anterior' no tiene 11 dígitos. Si abriste la planilla en "
-                           "Excel, revisá que no haya convertido el número a notación científica.")
+            errores.append(f"{donde}: 'anterior' no tiene 11 dígitos. {_CONSEJO_EXCEL}")
             continue
-        if not nuevo:
+        if not (fila.get("nuevo", "") or "").strip():
             errores.append(f"{donde}: dice convertir=si pero no tiene 'nuevo'.")
+            continue
+        if len(nuevo) != 11:
+            errores.append(f"{donde}: 'nuevo' no tiene 11 dígitos. {_CONSEJO_EXCEL}")
             continue
         if cuit.es_valido(viejo):
             errores.append(f"{donde}: el anterior ya cumple el módulo 11; esta herramienta no renumera "
@@ -819,20 +936,71 @@ def _cambios_de_la_planilla(filas) -> list:
     return cambios
 
 
-def _validar_contra_la_base(cambios: list, esc: Escaneo) -> None:
+def columnas_unicas(conexion, columnas=INVENTARIO) -> set:
+    """Claves de las entradas del inventario cuya columna de texto es ÚNICA
+    (índice o restricción de una sola columna): `cuentatrabajador.cuil`,
+    `cuentaempleador.cuit` y lo que se agregue mañana. Se lee de la base, no
+    se escribe a mano."""
+    insp = sa.inspect(_conexion(conexion))
+    por_tabla, unicas = {}, set()
+    for c in columnas:
+        if c.valor != TEXTO:
+            continue
+        if c.tabla not in por_tabla:
+            por_tabla[c.tabla] = (
+                {tuple(i["column_names"]) for i in insp.get_indexes(c.tabla) if i.get("unique")} |
+                {tuple(u["column_names"]) for u in insp.get_unique_constraints(c.tabla)})
+        if (c.columna,) in por_tabla[c.tabla]:
+            unicas.add(c.clave)
+    return unicas
+
+
+def _validar_contra_la_base(cambios: list, esc: Escaneo, traza: Optional[dict] = None,
+                            unicas: Optional[set] = None) -> None:
+    """Lo que hay que mirar en la base antes de escribir. El nuevo NO puede
+    existir (no se fusiona a nadie), con una sola excepción: si la traza ya
+    registra EXACTAMENTE ese `anterior -> nuevo`, el nuevo ya existe porque es
+    la misma persona o empresa y lo que se hace es completar lo que quedó
+    atrás (`Cambio.resto`). Aun así, en una columna única no pueden convivir
+    una fila con el viejo y otra con el nuevo: el UPDATE chocaría y, sobre
+    todo, serían dos filas de la misma persona que alguien tiene que juntar."""
+    traza = traza or {}
+    unicas = unicas or set()
     errores = []
     ocupados = esc.ocupados
     for c in cambios:
+        c.resto = False
         if c.anterior not in ocupados:
             errores.append(f"El anterior {c.anterior} no está en la base (¿ya se convirtió, o la "
                            "planilla es de otro entorno?).")
-        if c.nuevo in ocupados:
+            continue
+        if c.nuevo not in ocupados:
+            continue
+        if c.nuevo not in traza.get(c.anterior, set()):
             errores.append(
                 f"El nuevo {c.nuevo} (de {c.anterior}) YA existe en la base. Esta herramienta no "
                 "fusiona dos personas ni dos empresas: si es la misma persona con un dígito mal "
                 "tipeado hay que resolverlo a mano; si no, usá otro número (columna 'alternativa').")
+            continue
+        c.resto = True
+        for clave in sorted(unicas & set(esc.apariciones[c.anterior]) & set(esc.apariciones[c.nuevo])):
+            errores.append(
+                f"{c.anterior} -> {c.nuevo}: ya se convirtió una vez, pero {clave} (columna única) tiene "
+                "filas con el número viejo Y con el nuevo. Son dos filas de la misma persona o empresa: "
+                "hay que juntarlas a mano antes de completar la conversión.")
     if errores:
         raise ErrorRegularizacion("La planilla no se puede aplicar (no se escribió nada):", errores)
+
+
+def _validar_en(conn, cambios: list) -> Escaneo:
+    """Todo lo que se puede comprobar SIN escribir: el esquema, la tabla de la
+    traza, y la planilla contra lo que hay en la base. Devuelve el escaneo."""
+    verificar_esquema(conn)
+    if not sa.inspect(conn).has_table(TABLA_TRAZA):
+        raise ErrorRegularizacion(f"Falta la tabla {TABLA_TRAZA}: corré `alembic upgrade head`.")
+    antes = escanear(conn)
+    _validar_contra_la_base(cambios, antes, cargar_traza(conn), columnas_unicas(conn))
+    return antes
 
 
 def _reescribir_texto(conn, c: Columna, mapa: dict) -> dict:
@@ -841,7 +1009,7 @@ def _reescribir_texto(conn, c: Columna, mapa: dict) -> dict:
     guiones). Devuelve {número viejo: filas}."""
     tabla, col = f'"{c.tabla}"', f'"{c.columna}"'
     valores = [r[0] for r in conn.execute(sa.text(
-        f"SELECT DISTINCT {col} FROM {tabla} WHERE {col} IS NOT NULL AND {col} <> ''"))]
+        f"SELECT DISTINCT {col} FROM {tabla} WHERE {col} IS NOT NULL AND {col} <> ''{c.filtro}"))]
     filas = defaultdict(int)
     for valor in valores:
         if not _es_hoja_de_numero(valor):
@@ -849,7 +1017,7 @@ def _reescribir_texto(conn, c: Columna, mapa: dict) -> dict:
         numero = cuit.normalizar(valor)
         if numero not in mapa:
             continue
-        r = conn.execute(sa.text(f"UPDATE {tabla} SET {col} = :nuevo WHERE {col} = :viejo"),
+        r = conn.execute(sa.text(f"UPDATE {tabla} SET {col} = :nuevo WHERE {col} = :viejo{c.filtro}"),
                          {"nuevo": cuit.con_formato_de(valor, mapa[numero]), "viejo": valor})
         filas[numero] += r.rowcount
     return dict(filas)
@@ -904,8 +1072,14 @@ def _reescribir_json(conn, c: Columna, mapa: dict, rutas: dict) -> dict:
 
 def _verificar(cambios: list, antes: Escaneo, despues: Escaneo) -> None:
     """Dentro de la transacción y antes del COMMIT: de cada viejo no queda ni
-    una aparición, el nuevo tiene EXACTAMENTE las que tenía el viejo (por
-    columna y por ruta de JSON), y ningún otro número cambió."""
+    una aparición, el nuevo tiene EXACTAMENTE lo que tenía el viejo más lo que
+    ya tenía él (nada, salvo en un RESTO), por columna y por ruta de JSON, y
+    ningún otro número cambió.
+
+    Un JSON cuenta FILAS: si una misma fila mencionaba al viejo y al nuevo, el
+    conteo del nuevo puede ser menos que la suma; las rutas, que cuentan
+    ocurrencias, sí tienen que dar la suma exacta."""
+    por_clave = inventario_por_clave()
     errores = []
     viejos = {c.anterior for c in cambios}
     nuevos = {c.nuevo for c in cambios}
@@ -916,15 +1090,26 @@ def _verificar(cambios: list, antes: Escaneo, despues: Escaneo) -> None:
         if despues.rutas.get(c.anterior):
             errores.append(f"{c.anterior}: quedaron rutas de JSON con el número viejo: "
                            f"{sorted(despues.rutas[c.anterior])}")
-        esperado = {k: v for k, v in antes.apariciones[c.anterior].items()}
-        obtenido = dict(despues.apariciones.get(c.nuevo, {}))
-        if obtenido != esperado:
-            errores.append(f"{c.anterior} -> {c.nuevo}: el nuevo tiene {obtenido} y el viejo tenía {esperado}")
-        esperado_r = dict(antes.rutas.get(c.anterior, {}))
+        del_viejo = antes.apariciones[c.anterior]
+        del_nuevo = antes.apariciones.get(c.nuevo, {})
+        obtenido = despues.apariciones.get(c.nuevo, {})
+        for clave in sorted(set(del_viejo) | set(del_nuevo) | set(obtenido)):
+            o, n, d = del_viejo.get(clave, 0), del_nuevo.get(clave, 0), obtenido.get(clave, 0)
+            if por_clave[clave].valor == JSON and o and n:
+                bien = max(o, n) <= d <= o + n
+            else:
+                bien = d == o + n
+            if not bien:
+                errores.append(f"{c.anterior} -> {c.nuevo}: en {clave} el nuevo quedó con {d} fila(s) y "
+                               f"el viejo tenía {o}" + (f" (más {n} que ya tenía el nuevo)" if n else ""))
+        esperado_r = defaultdict(int)
+        for fuente in (antes.rutas.get(c.anterior, {}), antes.rutas.get(c.nuevo, {})):
+            for ruta, n in fuente.items():
+                esperado_r[ruta] += n
         obtenido_r = dict(despues.rutas.get(c.nuevo, {}))
-        if obtenido_r != esperado_r:
+        if obtenido_r != dict(esperado_r):
             errores.append(f"{c.anterior} -> {c.nuevo}: las rutas de JSON no coinciden "
-                           f"({obtenido_r} contra {esperado_r})")
+                           f"({obtenido_r} contra {dict(esperado_r)})")
     for numero in (set(antes.apariciones) | set(despues.apariciones)) - viejos - nuevos:
         if dict(antes.apariciones.get(numero, {})) != dict(despues.apariciones.get(numero, {})):
             errores.append(f"{numero}: cambió y no estaba en la planilla")
@@ -941,15 +1126,19 @@ def url_para_cliente(url: str) -> str:
 
 def hacer_backup(url: str, directorio: Path = RAIZ) -> Path:
     """pg_dump de la base, con el cliente que elige pg_cliente.py (el de la
-    misma versión que el servidor), como `promover_demo.py`."""
+    misma versión que el servidor), como `promover_demo.py`. El dump lleva
+    datos personales: por eso se hace DESPUÉS de todas las validaciones que no
+    escriben, y no antes (un abort no tiene que dejar uno en el disco)."""
     url = url_para_cliente(url)
+    directorio = Path(directorio)
     try:
-        version = pg_cliente.version_de_servidor(url, "la base", cwd=directorio)
+        version = pg_cliente.version_de_servidor(url, "la base", cwd=directorio if directorio.is_dir() else RAIZ)
         comando, de_donde = pg_cliente.cliente_para("pg_dump", version)
     except pg_cliente.ErrorPg as e:
         raise ErrorRegularizacion(f"No se pudo preparar el backup: {e}\n"
                                   "Resolvelo, o corré con --sin-backup si de verdad no querés copia.")
-    destino = Path(directorio) / (
+    directorio.mkdir(parents=True, exist_ok=True)
+    destino = directorio / (
         f"backup_regularizacion_{entorno.ENTORNO or 'local'}_{fechas.ahora():%Y-%m-%d-%H%M}.dump")
     with open(destino, "wb") as salida:
         r = subprocess.run([*comando, url, "-Fc", "--no-owner", "--no-privileges"],
@@ -960,11 +1149,29 @@ def hacer_backup(url: str, directorio: Path = RAIZ) -> Path:
     return destino
 
 
+def describir_destino(engine) -> list:
+    """Contra qué base se va a trabajar y en qué entorno, para que nadie escriba
+    en la equivocada sin darse cuenta. Sin contraseña."""
+    u = engine.url
+    base = f"{u.host or 'socket local'}{f':{u.port}' if u.port else ''}/{u.database}"
+    lineas = [f"Base: {base}   Entorno: {entorno.ENTORNO or '(ENTORNO sin definir)'}"]
+    if not entorno.ENTORNO:
+        lineas.append("ATENCIÓN: la variable ENTORNO no está definida: la traza y la planilla van a decir "
+                      "'local'. Si esta base no es la de tu PC, definí ENTORNO (pruebas, demo o prod) y "
+                      "volvé a correr.")
+    return lineas
+
+
 def aplicar(planilla, *, si: bool = False, quien: str = "", sin_backup: bool = False,
             engine=None, salida=print, directorio_backup: Path = RAIZ) -> Resultado:
     """Convierte las filas con convertir=si. Sin `si` es un ensayo completo
     (hace los UPDATE y los deshace). Todo o nada: ante cualquier problema se
     lanza ErrorRegularizacion y la base queda como estaba.
+
+    Orden (con --si): 1) lo que se valida sin tocar la base, 2) las
+    validaciones contra la base que no escriben, 3) recién ahí el backup, 4) la
+    transacción, que vuelve a validar con el candado puesto. El backup lleva
+    datos personales: un abort de los pasos 1 y 2 no deja ninguno.
 
     `planilla`: la ruta de un CSV o una lista de dicts con las columnas
     anterior / nuevo / convertir."""
@@ -972,39 +1179,59 @@ def aplicar(planilla, *, si: bool = False, quien: str = "", sin_backup: bool = F
     cambios = _cambios_de_la_planilla(filas)
     if si and not quien.strip():
         raise ErrorRegularizacion("Con --si hace falta --quien: queda registrado en la traza.")
-    if not cambios:
-        salida("La planilla no tiene ninguna fila con convertir=si: no hay nada para hacer.")
-        return Resultado([], {}, {}, aplicado=False)
-
-    backup = None
-    if si and not sin_backup:
-        salida("Backup previo de la base (pg_dump)...")
-        backup = hacer_backup(db.DATABASE_URL, directorio_backup)
-        salida(f"  {backup.name} ({backup.stat().st_size // 1024} KB)")
-    elif si:
-        salida("ATENCIÓN: se aplica SIN backup (--sin-backup).")
 
     propio = engine is None
     engine = engine or db.engine_para_migraciones()
+    backup = None
+
+    def aviso_del_backup():
+        if backup:
+            salida(f"La base no cambió. El backup {backup} quedó en el disco (lleva datos personales): "
+                   "borralo si no lo necesitás.")
+
     try:
-        with engine.connect() as conn:
-            tx = conn.begin()
-            try:
-                resultado = _aplicar_en_transaccion(conn, cambios, si, quien.strip(), salida)
-                resultado.backup = backup
-                if si:
-                    tx.commit()
-                    resultado.aplicado = True
-                else:
+        for linea in describir_destino(engine):
+            salida(linea)
+        salida(f"Planilla: {len(filas)} fila(s), {len(cambios)} con convertir=si.")
+        if not cambios:
+            salida("No hay nada para hacer.")
+            return Resultado([], {}, {}, aplicado=False)
+
+        if si and not sin_backup:
+            with engine.connect() as conn:
+                try:
+                    _validar_en(conn, cambios)
+                finally:
+                    conn.rollback()
+            salida("Backup previo de la base (pg_dump)...")
+            backup = hacer_backup(db.DATABASE_URL, directorio_backup)
+            salida(f"  {backup} ({backup.stat().st_size // 1024} KB)")
+        elif si:
+            salida("ATENCIÓN: se aplica SIN backup (--sin-backup).")
+
+        try:
+            with engine.connect() as conn:
+                tx = conn.begin()
+                try:
+                    resultado = _aplicar_en_transaccion(conn, cambios, si, quien.strip())
+                    resultado.backup = backup
+                    if si:
+                        tx.commit()
+                        resultado.aplicado = True
+                    else:
+                        tx.rollback()
+                except BaseException:
                     tx.rollback()
-            except BaseException:
-                tx.rollback()
-                raise
-    except sa.exc.OperationalError as e:
-        if "lock" in str(e).lower():
-            raise ErrorRegularizacion("La base está ocupada (no se pudo tomar el candado de las tablas "
-                                      "en 5 segundos). No se escribió nada; reintentá en un momento.")
-        raise
+                    raise
+        except sa.exc.OperationalError as e:
+            aviso_del_backup()
+            if "lock" in str(e).lower():
+                raise ErrorRegularizacion("La base está ocupada (no se pudo tomar el candado de las tablas "
+                                          "en 5 segundos). No se escribió nada; reintentá en un momento.")
+            raise
+        except Exception:
+            aviso_del_backup()
+            raise
     finally:
         if propio:
             engine.dispose()
@@ -1012,28 +1239,27 @@ def aplicar(planilla, *, si: bool = False, quien: str = "", sin_backup: bool = F
     return resultado
 
 
-def _aplicar_en_transaccion(conn, cambios: list, si: bool, quien: str, salida) -> Resultado:
-    verificar_esquema(conn)
-    if not sa.inspect(conn).has_table(TABLA_TRAZA):
-        raise ErrorRegularizacion(f"Falta la tabla {TABLA_TRAZA}: corré `alembic upgrade head`.")
+def _aplicar_en_transaccion(conn, cambios: list, si: bool, quien: str) -> Resultado:
     if si:
         # Nadie escribe estas tablas mientras dura la conversión (se puede
         # leer). Sin esto, un alta que entre justo después del escaneo dejaría
         # un número viejo sin convertir y la verificación no lo vería. El
         # ensayo no lo toma: no tiene por qué frenar a la app.
+        verificar_esquema(conn)
+        if not sa.inspect(conn).has_table(TABLA_TRAZA):
+            raise ErrorRegularizacion(f"Falta la tabla {TABLA_TRAZA}: corré `alembic upgrade head`.")
         tablas = sorted({c.tabla for c in INVENTARIO} | {TABLA_TRAZA})
         conn.execute(sa.text("LOCK TABLE " + ", ".join(f'"{t}"' for t in tablas) +
                              " IN SHARE ROW EXCLUSIVE MODE"))
 
-    antes = escanear(conn)
-    _validar_contra_la_base(cambios, antes)
+    antes = _validar_en(conn, cambios)
 
     por_clave = inventario_por_clave()
     lote = identificadores_de_lote()
-    nombres = nombres_de(conn, {c.anterior for c in cambios})
+    nombres = nombres_de(conn, {c.anterior for c in cambios} | {c.nuevo for c in cambios if c.resto})
     for c in cambios:
         c.origen = clasificar_origen(c.anterior, antes.apariciones[c.anterior], lote, por_clave)
-        c.nombre = nombres.get(c.anterior, "")
+        c.nombre = nombres.get(c.anterior) or (nombres.get(c.nuevo, "") if c.resto else "")
 
     mapa = {c.anterior: c.nuevo for c in cambios}
     filas_por_numero = defaultdict(lambda: defaultdict(int))     # número -> {clave: filas}
@@ -1050,8 +1276,9 @@ def _aplicar_en_transaccion(conn, cambios: list, si: bool, quien: str, salida) -
 
     despues = escanear(conn)
     _verificar(cambios, antes, despues)
-    resumen_antes = resumen_de_filas(filas_de_escaneo(antes, lote)[0])
-    resumen_despues = resumen_de_filas(filas_de_escaneo(despues, lote)[0])
+    traza = cargar_traza(conn)
+    resumen_antes = resumen_de_filas(filas_de_escaneo(antes, lote, traza)[0])
+    resumen_despues = resumen_de_filas(filas_de_escaneo(despues, lote, traza)[0])
 
     conn.execute(sa.insert(db.CambioIdentificador.__table__), [{
         "anterior": c.anterior, "nuevo": c.nuevo, "tipo": c.tipo, "origen": c.origen,
@@ -1071,11 +1298,11 @@ def _informe(res: Resultado, si: bool, salida) -> None:
     salida(f"\n{titulo}: {len(res.cambios)} número(s)")
     salida("  Filas tocadas por tabla.columna:")
     for k in sorted(res.por_columna):
-        salida(f"    {k:<42} {res.por_columna[k]}")
+        salida(f"    {k:<54} {res.por_columna[k]}")
     if res.rutas:
         salida("  Rutas dentro de los JSON:")
         for k in sorted(res.rutas):
-            salida(f"    {k:<60} {res.rutas[k]}")
+            salida(f"    {k:<70} {res.rutas[k]}")
     if res.antes:
         for nombre, r in (("Antes  ", res.antes), ("Después", res.despues)):
             origenes = ", ".join(f"{o} {r['por_origen'].get(o, 0)}" for o in ORDEN_ORIGEN)
@@ -1085,7 +1312,8 @@ def _informe(res: Resultado, si: bool, salida) -> None:
            "sesión abierta con el viejo queda sin acceso hasta que vuelva a entrar (como mucho 15 "
            "minutos).")
     for c in sorted(res.cambios, key=lambda c: (c.tipo, c.anterior)):
-        salida(f"    {c.tipo:<8} {c.nombre or '(sin nombre)':<34} {c.anterior} -> {c.nuevo}   [{c.origen}]")
+        marca = "completa una conversión anterior" if c.resto else c.origen
+        salida(f"    {c.tipo:<8} {c.nombre or '(sin nombre)':<34} {c.anterior} -> {c.nuevo}   [{marca}]")
     if not si:
         salida("\nPara aplicarlo de verdad: el mismo comando con --si --quien <iniciales>.")
 
@@ -1093,14 +1321,11 @@ def _informe(res: Resultado, si: bool, salida) -> None:
 # ---------------------------------------------------------------------------
 # Línea de comandos
 # ---------------------------------------------------------------------------
-def _nombre_de_base() -> str:
-    u = db.engine.url
-    return f"{u.host or 'local'}/{u.database}"
-
-
 def comando_diagnostico(args) -> int:
     engine = db.engine_para_migraciones()
     try:
+        for linea in describir_destino(engine):
+            print(linea)
         with engine.connect() as conn:
             diag = diagnosticar(conn)
             conn.rollback()
@@ -1111,7 +1336,7 @@ def comando_diagnostico(args) -> int:
         engine.dispose()
     salida = Path(args.salida or f"regularizacion_cuit_{diag.entorno}.csv")
     escribir_planilla(diag, salida, separador=args.separador)
-    print(resumen_texto(diag, _nombre_de_base()))
+    print(resumen_texto(diag))
     print(f"\nPlanilla: {salida} ({len(diag.filas)} fila(s)). Se abre con Excel; editá solo la "
           "columna 'convertir' y, si hace falta, 'nuevo'.")
     return 0
@@ -1122,7 +1347,8 @@ def comando_aplicar(args) -> int:
         print("ABORTADO: con --si hace falta --quien <iniciales> (queda en la traza).")
         return 2
     try:
-        aplicar(args.planilla, si=args.si, quien=args.quien or "", sin_backup=args.sin_backup)
+        aplicar(args.planilla, si=args.si, quien=args.quien or "", sin_backup=args.sin_backup,
+                directorio_backup=Path(args.directorio_backup) if args.directorio_backup else RAIZ)
     except ErrorRegularizacion as e:
         print(f"ABORTADO: {e}")
         for linea in e.errores:
@@ -1145,6 +1371,8 @@ def armar_parser() -> argparse.ArgumentParser:
     a.add_argument("--si", action="store_true", help="aplicar de verdad (sin esto es un ensayo)")
     a.add_argument("--quien", default="", help="iniciales de quien lo corre (obligatorio con --si)")
     a.add_argument("--sin-backup", action="store_true", help="no hacer pg_dump antes (no recomendado)")
+    a.add_argument("--directorio-backup", default="",
+                   help="dónde dejar el pg_dump (default: la carpeta del proyecto, que no se versiona)")
     a.set_defaults(func=comando_aplicar)
     return ap
 
