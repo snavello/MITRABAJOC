@@ -32,19 +32,19 @@ from db import Sindicato, Empleador
 
 def test_salida_menciona_empresa():
     assert "Empresa:" in SALIDA
-    assert "30111222339" in SALIDA
+    assert "30111222335" in SALIDA
     print("OK  test_salida_menciona_empresa")
 
 
 def test_cuit_compartido_resuelve_dos_sindicatos():
-    sinds = db.sindicatos_de_cuit_empleador("30111222339")
+    sinds = db.sindicatos_de_cuit_empleador("30111222335")
     nombres = {s["nombre"] for s in sinds}
     assert nombres == {"Unión Obrera Metalúrgica", "Federación Gastronómica"}
     print("OK  test_cuit_compartido_resuelve_dos_sindicatos")
 
 
 def test_cuit_no_compartido_resuelve_un_solo_sindicato():
-    sinds = db.sindicatos_de_cuit_empleador("30999888776")
+    sinds = db.sindicatos_de_cuit_empleador("30999888778")
     assert len(sinds) == 1
     assert sinds[0]["nombre"] == "Unión Obrera Metalúrgica"
     print("OK  test_cuit_no_compartido_resuelve_un_solo_sindicato")

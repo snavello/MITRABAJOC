@@ -17,12 +17,12 @@ with db.get_session() as s:
     sind = Sindicato(nombre="Federación Gastronómica", slug="fega", modulos_habilitados=list(MODULOS_INICIALES))
     s.add(sind); s.commit(); s.refresh(sind)
     SID = sind.id
-    s.add(UsuarioSindicato(sindicato_id=SID, usuario="20222222220", nombre="Admin",
+    s.add(UsuarioSindicato(sindicato_id=SID, usuario="20222222223", nombre="Admin",
                             clave_hash=auth.hashear_clave("fega-demo"), debe_cambiar_clave=False, es_super_admin=True))
     s.commit()
 
 client = TestClient(main.app)
-client.post("/admin/login", data={"usuario": "20222222220", "clave": "fega-demo"})
+client.post("/admin/login", data={"usuario": "20222222223", "clave": "fega-demo"})
 
 
 def test_listado_muestra_codigo_generico_sin_cuit():
@@ -53,11 +53,11 @@ def test_alta_concepto_especifico_guarda_cuit_y_generico():
     client.post("/admin/concepto", data={
         "codigo": "060", "nombre": "Jubilacion Ley 24241", "tipo": "descuento",
         "remunerativo": "si", "alias": "",
-        "cuit_empleador": "30-11111111-2", "codigo_generico": "JUB",
+        "cuit_empleador": "30-11111111-8", "codigo_generico": "JUB",
     })
     with Session(db.engine) as s:
         c = s.exec(select(Concepto).where(Concepto.sindicato_id == SID, Concepto.codigo == "060")).first()
-        assert c.cuit_empleador == "30111111112", c.cuit_empleador
+        assert c.cuit_empleador == "30111111118", c.cuit_empleador
         assert c.codigo_generico == "JUB"
     print("OK  test_alta_concepto_especifico_guarda_cuit_y_generico")
 
@@ -83,12 +83,12 @@ def test_codigo_generico_se_guarda_incluso_sin_cuit():
 def test_aprender_aplicar_persiste_cuit_y_generico():
     r = client.post("/admin/aprender/aplicar", json={"aprobados": [
         {"codigo": "APJUB", "descripcion": "Ap. Jubilatorio", "tipo": "descuento",
-         "remunerativo": True, "cuit_empleador": "30222222223", "codigo_generico": "JUB"},
+         "remunerativo": True, "cuit_empleador": "30222222229", "codigo_generico": "JUB"},
     ]})
     assert r.status_code == 200 and r.json()["altas"] == 1
     with Session(db.engine) as s:
         c = s.exec(select(Concepto).where(Concepto.sindicato_id == SID, Concepto.codigo == "APJUB")).first()
-        assert c.cuit_empleador == "30222222223"
+        assert c.cuit_empleador == "30222222229"
         assert c.codigo_generico == "JUB"
     print("OK  test_aprender_aplicar_persiste_cuit_y_generico")
 
@@ -96,11 +96,11 @@ def test_aprender_aplicar_persiste_cuit_y_generico():
 def test_aprender_aplicar_no_duplica_mismo_codigo_mismo_cuit():
     r1 = client.post("/admin/aprender/aplicar", json={"aprobados": [
         {"codigo": "VIAT", "descripcion": "Viáticos", "tipo": "ingreso",
-         "remunerativo": False, "cuit_empleador": "30222222223"},
+         "remunerativo": False, "cuit_empleador": "30222222229"},
     ]})
     r2 = client.post("/admin/aprender/aplicar", json={"aprobados": [
         {"codigo": "VIAT", "descripcion": "Viáticos", "tipo": "ingreso",
-         "remunerativo": False, "cuit_empleador": "30222222223"},
+         "remunerativo": False, "cuit_empleador": "30222222229"},
     ]})
     assert r1.json()["altas"] == 1
     assert r2.json()["altas"] == 0, "no debe duplicar el mismo código para el mismo CUIT"
@@ -110,11 +110,11 @@ def test_aprender_aplicar_no_duplica_mismo_codigo_mismo_cuit():
 def test_aprender_aplicar_mismo_codigo_distinto_cuit_no_es_duplicado():
     r1 = client.post("/admin/aprender/aplicar", json={"aprobados": [
         {"codigo": "999", "descripcion": "Concepto A", "tipo": "ingreso",
-         "remunerativo": False, "cuit_empleador": "30111111112"},
+         "remunerativo": False, "cuit_empleador": "30111111118"},
     ]})
     r2 = client.post("/admin/aprender/aplicar", json={"aprobados": [
         {"codigo": "999", "descripcion": "Concepto B (otro empleador)", "tipo": "ingreso",
-         "remunerativo": False, "cuit_empleador": "30222222223"},
+         "remunerativo": False, "cuit_empleador": "30222222229"},
     ]})
     assert r1.json()["altas"] == 1
     assert r2.json()["altas"] == 1, "mismo código pero distinto CUIT no es duplicado"

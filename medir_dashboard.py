@@ -35,6 +35,25 @@ HOY = fechas.hoy()
 
 rnd = random.Random(42)
 
+# El único usuario del panel del sindicato sintético. Numérico a propósito: el
+# login de /admin normaliza el usuario a dígitos (es un CUIT/CUIL).
+USUARIO_ADMIN = "27999999990"
+
+
+def cuil_sintetico(i: int) -> str:
+    """El CUIL del trabajador sintético número `i`: "20" + 9 dígitos. El
+    `[:11]` es parte de la regla (descarta el último 9), no un descuido."""
+    return f"20{900000000 + i}9"[:11]
+
+
+def identificadores_sinteticos() -> tuple:
+    """(CUILs, CUITs) que este generador produce, para que
+    `regularizar_cuit.py` reconozca un número sintético sin copiar la regla
+    (PLAN_CUIT_MOD11.md, D3). Puro: no toca la base. El usuario del panel
+    entra entre los CUIL porque es uno."""
+    return ({cuil_sintetico(i) for i in range(TRABAJADORES)} | {USUARIO_ADMIN},
+            set(EMPRESAS))
+
 
 def _ts(dias_atras, hora=None):
     h = hora if hora is not None else rnd.randrange(8, 20)
@@ -78,8 +97,8 @@ def sembrar():
         conn.execute(sa.text("""
             INSERT INTO usuariosindicato (sindicato_id, usuario, nombre, clave_hash,
                 debe_cambiar_clave, activo)
-            VALUES (:sid, '27999999990', 'Medición', :hash, false, true)"""),
-            {"sid": sid, "hash": auth.hashear_clave("zzz-medicion")})
+            VALUES (:sid, :usuario, 'Medición', :hash, false, true)"""),
+            {"sid": sid, "usuario": USUARIO_ADMIN, "hash": auth.hashear_clave("zzz-medicion")})
 
         secc_ids = [conn.execute(sa.text(
             "INSERT INTO seccional (sindicato_id, nombre) "
@@ -92,7 +111,7 @@ def sembrar():
                 "VALUES (:sid, :c, :rs, '', '', '', '', false, true)"),
                 {"sid": sid, "c": cuit, "rs": f"Empresa Sintética {i + 1}"})
 
-        cuils = [f"20{900000000 + i}9"[:11] for i in range(TRABAJADORES)]
+        cuils = [cuil_sintetico(i) for i in range(TRABAJADORES)]
         # Dos inserts porque son dos cosas: la PERSONA (nombre y domicilio,
         # una por CUIL) y el EMPADRONAMIENTO en este sindicato.
         _insertar(conn, """
@@ -211,16 +230,16 @@ def medir():
     # Autoreparación de siembras viejas que usaban un usuario no numérico.
     with db.engine.begin() as conn:
         conn.execute(sa.text(
-            "UPDATE usuariosindicato SET usuario = '27999999990' "
+            "UPDATE usuariosindicato SET usuario = :u "
             "WHERE nombre = 'Medición' AND sindicato_id IN "
-            "(SELECT id FROM sindicato WHERE nombre = :n)"), {"n": NOMBRE})
+            "(SELECT id FROM sindicato WHERE nombre = :n)"), {"n": NOMBRE, "u": USUARIO_ADMIN})
     # Sin estadísticas frescas el planificador elige planes malos sobre las
     # tablas recién sembradas (medido: 5,6 s vs 41 ms el mismo endpoint).
     # En producción esto lo hace el autovacuum solo; acá no le damos tiempo.
     with db.engine.begin() as conn:
         conn.execute(sa.text("ANALYZE"))
     c = TestClient(main.app)
-    r = c.post("/admin/login", data={"usuario": "27999999990", "clave": "zzz-medicion"})
+    r = c.post("/admin/login", data={"usuario": USUARIO_ADMIN, "clave": "zzz-medicion"})
     rango = {"desde": (HOY - timedelta(days=90)).isoformat(), "hasta": HOY.isoformat()}
     endpoints = ["kpis", "serie-recibos", "validacion", "diferencias-empresa",
                  "tramites-seccional", "notificaciones", "formato-semana", "semaforo",

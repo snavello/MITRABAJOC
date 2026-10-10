@@ -38,6 +38,20 @@ import geo
 BASE_CUIL = 48000000
 CANTIDAD = 96
 
+
+def cuil_del_padron(i: int) -> str:
+    """El CUIL del afiliado sintético número `i`. El verificador es un derivado
+    del índice, no el módulo 11 (por azar sale válido uno de cada once)."""
+    return f"{'20' if i % 3 else '27'}{BASE_CUIL + i:08d}{(i * 7) % 10}"
+
+
+def identificadores_sinteticos() -> tuple:
+    """(CUILs, CUITs) que este generador produce, para que
+    `regularizar_cuit.py` reconozca un número sintético sin copiar la regla
+    (PLAN_CUIT_MOD11.md, D3). Puro: no toca la base. No genera CUIT."""
+    return {cuil_del_padron(i) for i in range(CANTIDAD)}, set()
+
+
 NOMBRES = ["Juan", "María", "Carlos", "Ana", "Jorge", "Lucía", "Pedro", "Sofía",
            "Miguel", "Valentina", "Ricardo", "Camila", "Héctor", "Julieta", "Oscar",
            "Paula", "Rubén", "Florencia", "Daniel", "Marina", "Néstor", "Silvia",
@@ -129,7 +143,7 @@ def _padron(sid: int, secs: dict, cuits: list, rnd) -> list:
                  for sec in s.exec(db.select(db.Seccional).where(
                      db.Seccional.id.in_(list(secs.values())))).all()}
         for i in range(CANTIDAD):
-            cuil = f"{'20' if i % 3 else '27'}{BASE_CUIL + i:08d}{(i * 7) % 10}"
+            cuil = cuil_del_padron(i)
             seccional = nombres_sec[i % len(nombres_sec)]
             cuit = cuits[i % len(cuits)] if cuits else None
             s.add(db.Trabajador(

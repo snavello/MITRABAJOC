@@ -163,12 +163,12 @@ def test_alta_de_usuario_de_area_con_ajustes_individuales():
     c = _sa()
     aid = _crear_area(c, "Legales Dos", ["reportes", "formulas", "conceptos"])
     r = c.post("/admin/usuario", data={
-        "usuario": "20333333330", "nombre": "Gabriel", "clave_inicial": "gab",
+        "usuario": "20333333342", "nombre": "Gabriel", "clave_inicial": "gab",
         "rol": "area", "area_id": str(aid), "seccional_id": str(SEC),
         "agregar": ["noticias"], "bloquear": ["formulas"],
     }, follow_redirects=False)
     assert r.status_code == 303, r.text
-    u = [x for x in db.usuarios_del_sindicato(SID) if x["usuario"] == "20333333330"][0]
+    u = [x for x in db.usuarios_del_sindicato(SID) if x["usuario"] == "20333333342"][0]
     assert u["es_super_admin"] is False
     assert u["area_id"] == aid and u["seccional_id"] == SEC
     assert u["agregados"] == ["noticias"] and u["bloqueados"] == ["formulas"]
@@ -180,13 +180,13 @@ def test_alta_de_usuario_de_area_con_ajustes_individuales():
 def test_usuario_de_area_sin_area_se_rechaza():
     c = _sa()
     r = c.post("/admin/usuario", data={
-        "usuario": "20333333331", "nombre": "Sin Área", "clave_inicial": "x",
+        "usuario": "20333333350", "nombre": "Sin Área", "clave_inicial": "x",
         "rol": "area", "area_id": "", "seccional_id": str(SEC),
     }, follow_redirects=False)
     assert "err=sinarea" in r.headers.get("location", "")
     with Session(db.engine) as s:
         assert s.exec(select(UsuarioSindicato).where(
-            UsuarioSindicato.usuario == "20333333331")).first() is None
+            UsuarioSindicato.usuario == "20333333350")).first() is None
     print("OK  test_usuario_de_area_sin_area_se_rechaza")
 
 
@@ -195,13 +195,13 @@ def test_area_y_seccional_de_otro_sindicato_no_entran():
     a mano. Cae en el mismo rechazo que si no hubiera venido nada."""
     c = _sa()
     r = c.post("/admin/usuario", data={
-        "usuario": "20333333332", "nombre": "Colado", "clave_inicial": "x",
+        "usuario": "20333333369", "nombre": "Colado", "clave_inicial": "x",
         "rol": "area", "area_id": str(AREA_AJENA), "seccional_id": str(SEC_AJENA),
     }, follow_redirects=False)
     assert "err=sinarea" in r.headers.get("location", ""), "el área ajena se descarta"
     with Session(db.engine) as s:
         assert s.exec(select(UsuarioSindicato).where(
-            UsuarioSindicato.usuario == "20333333332")).first() is None
+            UsuarioSindicato.usuario == "20333333369")).first() is None
     print("OK  test_area_y_seccional_de_otro_sindicato_no_entran")
 
 
@@ -209,12 +209,12 @@ def test_alta_de_super_admin_ignora_area_y_permisos():
     c = _sa()
     aid = _crear_area(c, "Área Irrelevante", ["reportes"])
     r = c.post("/admin/usuario", data={
-        "usuario": "20333333333", "nombre": "Segunda Jefa", "clave_inicial": "x",
+        "usuario": "20333333377", "nombre": "Segunda Jefa", "clave_inicial": "x",
         "rol": "super", "area_id": str(aid), "seccional_id": str(SEC),
         "agregar": ["noticias"],
     }, follow_redirects=False)
     assert r.status_code == 303
-    u = [x for x in db.usuarios_del_sindicato(SID) if x["usuario"] == "20333333333"][0]
+    u = [x for x in db.usuarios_del_sindicato(SID) if x["usuario"] == "20333333377"][0]
     assert u["es_super_admin"] is True
     assert u["area_id"] is None, "un Super Admin no cuelga de un área"
     assert u["agregados"] == [] and u["bloqueados"] == []
@@ -297,11 +297,11 @@ def test_el_panel_no_manda_los_datos_de_secciones_sin_permiso():
     c = _sa()
     aid = _crear_area(c, "Área Acotada", ["trabajadores"])
     c.post("/admin/usuario", data={
-        "usuario": "20555555550", "nombre": "Acotado", "clave_inicial": "acot",
+        "usuario": "20555555564", "nombre": "Acotado", "clave_inicial": "acot",
         "rol": "area", "area_id": str(aid), "seccional_id": str(SEC),
     }, follow_redirects=False)
 
-    html = _panel_de("20555555550", "acot")
+    html = _panel_de("20555555564", "acot")
     for marca in ['id="panel-formulas"', 'id="panel-conceptos"', 'id="panel-reportes"',
                   'id="panel-noticias"', 'id="panel-beneficios"', 'id="panel-seccionales"',
                   'id="panel-empleadores"', 'id="panel-administradores"', 'id="form-usuario"',
@@ -331,10 +331,10 @@ def test_responder_tramites_no_muestra_el_constructor_de_formularios():
     c = _sa()
     aid = _crear_area(c, "Área Solo Responder", ["tramites_recibidos"])
     c.post("/admin/usuario", data={
-        "usuario": "20555555551", "nombre": "Solo Responde", "clave_inicial": "resp",
+        "usuario": "20555555572", "nombre": "Solo Responde", "clave_inicial": "resp",
         "rol": "area", "area_id": str(aid), "seccional_id": str(SEC),
     }, follow_redirects=False)
-    html = _panel_de("20555555551", "resp")
+    html = _panel_de("20555555572", "resp")
     assert 'id="tramite-sub-recibidos"' in html
     assert 'id="tramite-sub-tipos"' not in html, "no puede ver el constructor"
     assert 'id="form-tramite-tipo"' not in html
@@ -344,7 +344,7 @@ def test_responder_tramites_no_muestra_el_constructor_de_formularios():
 def test_el_javascript_de_areas_solo_se_emite_para_el_super_admin():
     """Un init de <script> sobre un panel que no se renderiza rompe TODO el
     script de ahí para abajo (ya pasó con el semáforo del trabajador)."""
-    html = _panel_de("20555555550", "acot")
+    html = _panel_de("20555555564", "acot")
     assert "PERMISOS_POR_AREA" not in html
     assert "function pintarHerencia" not in html
     assert "PERMISOS_POR_AREA" in _panel_de("20111111110", "jefa")
@@ -360,7 +360,7 @@ def test_los_otros_bloques_de_javascript_tambien_estan_guardados():
 
     El sindicato de la fixture tiene TODOS los módulos, así que si estos
     bloques aparecen es por el permiso y no por otra cosa."""
-    html = _panel_de("20555555551", "resp")   # solo tramites_recibidos
+    html = _panel_de("20555555572", "resp")   # solo tramites_recibidos
     assert "getElementById('ap-drop')" not in html, "init de Aprendizaje sin su panel"
     assert "conv-nombre" not in html, "JS de Convenio sin su panel"
     assert "actualizarBadgeTramitesEmpresaNuevos" not in html, \

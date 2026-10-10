@@ -43,6 +43,8 @@ import re
 import unicodedata
 from dataclasses import dataclass, field
 
+import cuit
+
 # ======================= Tipos =======================
 
 
@@ -149,9 +151,10 @@ def _digitos(s: str) -> str:
 
 # ======================= CUIL / CUIT / DNI =======================
 
-PREFIJOS_PERSONA = {"20", "23", "24", "25", "26", "27"}
-PREFIJOS_EMPRESA = {"30", "33", "34"}
-_PESOS = (5, 4, 3, 2, 7, 6, 5, 4, 3, 2)
+# Los prefijos y el verificador viven en cuit.py, la única implementación
+# del módulo 11 (PLAN_CUIT_MOD11.md, D1).
+PREFIJOS_PERSONA = cuit.PREFIJOS_PERSONA
+PREFIJOS_EMPRESA = cuit.PREFIJOS_EMPRESA
 
 # 11 dígitos con o sin separadores (guion, punto, barra, espacios alrededor),
 # sin estar pegados a otros dígitos: "27-99999999-9", "30444640975",
@@ -176,13 +179,12 @@ _RE_DNI = re.compile(r"(?<!\d)\d{1,2}\s?\.?\s?\d{3}\s?\.?\s?\d{3}(?!\d)")
 
 
 def dv_valido(once: str) -> bool:
-    """Dígito verificador de un CUIL/CUIT de 11 dígitos (módulo 11)."""
+    """Dígito verificador de un CUIL/CUIT de 11 dígitos pegados (módulo 11).
+    No mira el prefijo: eso lo hacen quienes la llaman. El cálculo es el de
+    cuit.py."""
     if not re.fullmatch(r"\d{11}", once or ""):
         return False
-    s = sum(int(d) * p for d, p in zip(once[:10], _PESOS))
-    r = 11 - s % 11
-    r = 0 if r == 11 else r
-    return r != 10 and r == int(once[10])
+    return cuit.digito_verificador(once[:10]) == int(once[10])
 
 
 def parece_cuil(crudo: str, once: str) -> bool:

@@ -11,7 +11,7 @@ etapa5: en_curso
 etapa6: hecha
 etapa7: hecha
 etapa9: pendiente
-actualizado: 2026-09-23
+actualizado: 2026-10-10
 ---
 
 ## Cómo seguir
@@ -27,6 +27,13 @@ semilla de los dos superadmin de plataforma están en el repositorio, que es
 público, y `arsantagati` todavía no hizo su primer ingreso ni en Pruebas ni
 en Demo, así que esa clave sirve hoy. SDN decidió dejarlo anotado sin tocar
 los usuarios.
+
+2026-10-10: arranca la serie para regularizar las observaciones, con el
+CUIL/CUIT (`PLAN_CUIT_MOD11.md`): test **IDS-06** nuevo en el catálogo,
+**H-0020** en corrección (las altas ya exigen el módulo 11; falta correr
+`regularizar_cuit.py` en Pruebas y Demo) y **H-0021** abierto (reportar y
+enviar al sindicato toman el CUIL y el recibo del cuerpo del pedido: IDOR
+dentro del sindicato). La medida que sigue es el alta de usuarios (H-0017).
 
 El único que bloquea es H-0008 (rate-limit de login), que cierra con el
 **perímetro (INF-05, Cloudflare + dominio propio)** — depende de infra de SDN.

@@ -161,7 +161,7 @@ def test_email_duplicado_se_rechaza():
     c2 = _cli(); c2.post("/plataforma/login", data={"usuario": "arsantagati", "clave": "arsAlejandro"})
     r = c2.post("/plataforma/completar", data={
         "clave_nueva": "otraClave2026", "clave_repetir": "otraClave2026",
-        "cuil": "20320002224", "dni": "32000222", "email": "compartido@colmena.ar",
+        "cuil": "20320002223", "dni": "32000222", "email": "compartido@colmena.ar",
         "direccion": "y", "telefono": "2"})
     assert r.status_code == 400 and "ya está en uso" in r.text
     print("OK  test_email_duplicado_se_rechaza")

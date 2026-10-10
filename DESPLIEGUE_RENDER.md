@@ -213,6 +213,119 @@ de esas guardas se saltea con un flag.
 trabajadores reales, copiarlos a un entorno con otros secretos y más gente
 con acceso deja de ser inocuo — los recibos son datos personales.
 
+## Regularizar CUIL/CUIT (módulo 11)
+
+Desde el 2026-10-10 las altas exigen el dígito verificador del CUIL/CUIT
+(`PLAN_CUIT_MOD11.md`). Las bases que ya existían tienen números que no lo
+cumplen: los de la demo de antes (`20111111110`, `30999888776`...), los que
+cargaron a mano los testers (`27999999999`) y los de los lotes sintéticos.
+`regularizar_cuit.py` convierte los dos primeros a un número válido **en
+todas las tablas a la vez**; los de los lotes quedan como están (siguen
+pudiendo entrar: los logins no validan el verificador).
+
+**Cuándo**: en cada entorno, apenas se despliega la versión que trae la regla
+(el Pre-Deploy ya crea la tabla `cambioidentificador`). Hasta que se corre,
+los accesos de la demo de `CLAUDE.md` (los números nuevos) no existen en esa
+base. Correrlo en un momento tranquilo: con `--si` toma un candado de
+escritura sobre las tablas mientras dura (segundos a un minuto).
+
+**Las sesiones abiertas NO caducan solas a los 15 minutos**: la sesión se
+renueva con cada pedido, así que una persona que está usando la app sigue
+escribiendo con el número VIEJO (un recibo, una suscripción push) aunque la
+conversión ya haya terminado. Por eso, después de aplicar: esperar **al menos
+15 minutos SIN actividad** de esas personas (o hasta el día siguiente), volver
+a correr `diagnostico` y aplicar los `RESTO` que aparezcan (paso 2).
+
+**Desde la PC**, con la External Database URL del entorno (la planilla se
+abre en Excel, y el backup queda en la PC):
+```
+set DATABASE_URL=<External Database URL>      (PowerShell: $env:DATABASE_URL="...")
+set ENTORNO=pruebas
+python regularizar_cuit.py diagnostico
+```
+**Definí `ENTORNO` siempre.** Sin esa variable la herramienta avisa (en los
+dos comandos) que la traza y la planilla van a decir `local`. Y al empezar,
+`diagnostico` y `aplicar` imprimen **contra qué base van** (host y nombre) y
+en qué entorno: mirá esa línea antes de seguir.
+
+**La planilla sabe de qué entorno es**: `diagnostico` escribe el entorno en la
+última columna (`entorno`) de cada fila, y `aplicar --si` **se niega** si el
+entorno actual (`ENTORNO`) no es el de TODAS las filas: es la red contra
+aplicar la planilla de Pruebas sobre la demo. En el ensayo solo avisa. Una
+planilla vieja, sin esa columna (o con celdas vacías), no dice de dónde viene:
+con `--si` hay que confirmarlo con `--entorno pruebas` (el actual).
+
+1. **Diagnóstico** (no escribe nada): imprime cuántos números inválidos hay
+   por tabla y por origen, y deja `regularizacion_cuit_pruebas.csv` (con `;`,
+   para el Excel de Argentina). Una fila por número: el nuevo propuesto, el
+   origen (`demo` = el nuevo exacto de `identificadores_demo.py`; `manual` =
+   el mismo número con el verificador corregido; `lote` y `lectura` = no se
+   tocan; un CUIT leído de un recibo sin que nadie lo haya cargado a mano,
+   tampoco: es `lectura`), a quién pertenece y en qué tablas aparece. Una
+   celda de texto que empieza con `=`, `+`, `-` o `@` sale con un `'` adelante
+   (para que Excel no la tome por una fórmula: el nombre lo escribe el afiliado);
+   al leer la planilla ese `'` se saca de `anterior` y `nuevo`.
+2. **Revisar la planilla.** Llegan con `convertir=si` los `demo` y los
+   `manual` sin problemas. En la columna `convertir` vale `si`, `s`, `x`, `1`,
+   `true` o `verdadero` (sin importar mayúsculas ni tildes); cualquier otra cosa
+   no convierte. Las filas con `no` y un `motivo`:
+   - `COLISION` (el número corregido ya es de otra persona, o dos viejos dan
+     el mismo): si son dos personas distintas, copiar la `alternativa` en
+     `nuevo` y poner `si`. Si fueran la MISMA persona con un dígito mal
+     tipeado, la herramienta no fusiona: se resuelve a mano.
+   - `ANOMALIA`: es un CUIL cargado con prefijo de empresa (o un CUIT con
+     prefijo de persona donde se espera una empresa). Corregirle el
+     verificador no lo arregla: se corrige a mano el dato.
+   - `LOTE`, `LECTURA`, `SIN_CORRECCION`, `FORMATO`: ver el encabezado de
+     `regularizar_cuit.py`.
+
+   Con `si` y el motivo **`RESTO`**: ese número ya se convirtió en una corrida
+   anterior (la traza lo dice) y volvió a aparecer, porque un pedido que
+   estaba en vuelo escribió con el número viejo justo después del COMMIT. Es
+   la misma persona o empresa: se completa lo que quedó atrás. Si hay una fila
+   del número viejo y otra del nuevo en una columna única (`cuentatrabajador`,
+   `cuentaempleador`), `aplicar` se niega y hay que juntarlas a mano.
+
+   **Si el número cumple el verificador pero es de otra persona** (o de otra
+   empresa: se cargó mal el DNI, o se le asignó a quien no era), ni el panel
+   (E-IDENT-03) ni el diagnóstico lo tocan, porque para ellos es un número
+   válido. Se renumera con `--permitir-validos`: se agrega a mano a la planilla
+   una fila con ese `anterior`, el `nuevo` y `convertir=si` (las columnas
+   `entorno`, o `--entorno`, igual que en las demás). Sin la opción, `aplicar` la
+   rechaza y el mensaje dice que existe. Las garantías son las de siempre: el
+   nuevo tiene que ser válido, del mismo tipo (CUIL por CUIL, CUIT por CUIT) y
+   estar libre (si ya existe en cualquier tabla, la herramienta no fusiona), y
+   la conversión es la misma transacción con la misma verificación. En
+   `cambioidentificador` queda con `origen = renumeracion`.
+3. **Ensayo**: `python regularizar_cuit.py aplicar --planilla regularizacion_cuit_pruebas.csv`
+   hace la conversión entera dentro de una transacción, muestra qué cambiaría
+   (y cuántas filas tomó de la planilla) y la deshace. No escribe nada ni
+   hace backup.
+4. **Aplicar**: el mismo comando con `--si --quien SDN`. Primero valida todo lo
+   que no escribe; recién después hace un `pg_dump` (no convierte sin copia).
+   El dump queda en `backups/` (la misma carpeta que usa `promover_demo.py`, que
+   el `.gitignore` cubre; `--directorio-backup <carpeta>` elige otra), con
+   permisos 0600, y el informe imprime su ruta completa. Después convierte
+   todo en una transacción con las tablas bloqueadas para escritura. Verifica antes de confirmar que cada
+   número nuevo quedó exactamente donde estaba el viejo, y deja una fila por
+   número en `cambioidentificador` (quién, cuándo, cuántas filas). Si algo no
+   cierra, deshace todo. Un aborto antes del backup no deja ningún `.dump`; si
+   algo falla después, la herramienta dice dónde quedó (lleva datos
+   personales: borrarlo).
+5. Al final imprime **las personas y empresas cuyo número cambió**: tienen
+   que enterarse, porque entran con el nuevo. **No alcanza con correr el
+   diagnóstico enseguida**: esperar al menos 15 minutos sin actividad de esas
+   personas (o hasta el día siguiente; ver "Las sesiones abiertas" arriba),
+   volver a correr `diagnostico` y aplicar los `RESTO` que aparezcan. Recién
+   cuando da 0 `manual`, 0 `demo` y ningún `RESTO` terminó.
+
+Las bitácoras (`logplataforma`, chats de trámites, eventos) NO se reescriben:
+dicen lo que pasó con el número de ese momento, y `cambioidentificador`
+permite seguirlo hasta el nuevo. Un CUIL/CUIT ya cargado tampoco se cambia
+desde las ediciones del panel (E-IDENT-03): cambiarlo en una sola tabla
+cortaba la cuenta, los recibos y los trámites de la persona. Esta herramienta
+es la única vía.
+
 ## Backup manual de la base de demo
 Desde la PC de desarrollo, con el Docker local levantado (trae `pg_dump`
 sin instalar nada):
@@ -223,11 +336,11 @@ Restaurar en una base descartable: `pg_restore -d "<URL destino>" --clean --if-e
 
 ## Accesos de la demo
 - Plataforma:  /plataforma  → CUIT 20000000000 + `PLATAFORMA_PASSWORD` del entorno
-- UOM:         /admin        → CUIT 20111111110 / uom-demo
-- Gastronómica:/admin        → CUIT 20222222220 / fega-demo
-- La Bancaria: /admin        → CUIT 20333444550 / bancaria-demo
-- Trabajador:  /ingresar     → CUIL 20111111119 (UOM); pluriempleo 27222222224
-- Empresa:     /ingresar-empresa → CUIT 30999888776 (UOM); multisindicato 30111222339
+- UOM:         /admin        → CUIT 20111111120 / uom-demo
+- Gastronómica:/admin        → CUIT 20222222223 / fega-demo
+- La Bancaria: /admin        → CUIT 20333444551 / bancaria-demo
+- Trabajador:  /ingresar     → CUIL 20111111112 (UOM); pluriempleo 27222222228
+- Empresa:     /ingresar-empresa → CUIT 30999888778 (UOM); multisindicato 30111222335
 
 ## Inspeccionar la base con SQL
 Con la External Database URL de cada base, cualquier cliente Postgres

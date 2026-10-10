@@ -28,7 +28,7 @@ filtro de empresa 30 veces en 60 s, disparando los 12 pedidos del panel juntos y
 abandonándolos a los 250 ms, mientras 20 lectores recorren la app del
 trabajador. Es opcional en `correr.sh`: se corre solo si está `ADMIN_CLAVE`
 (clave de un admin de sindicato con el módulo `dashboard`; `ADMIN_CUIT` default
-`20111111110`, el Super Admin de UOM de la demo):
+`20111111120`, el Super Admin de UOM de la demo):
 ```
 BASE_URL=https://mitrabajo-pruebas.onrender.com ADMIN_CLAVE=<clave> ./carga/correr.sh
 ```

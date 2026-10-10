@@ -26,12 +26,12 @@ with db.get_session() as s:
     SID_UOM, SID_FEGA = uom.id, fega.id
 
     # CUIT multisindicato (dado de alta en ambos, activo).
-    s.add(Empleador(sindicato_id=SID_UOM, cuit="30700000001", razon_social="Constructora Demo"))
-    s.add(Empleador(sindicato_id=SID_FEGA, cuit="30700000001", razon_social="Constructora Demo"))
+    s.add(Empleador(sindicato_id=SID_UOM, cuit="30700000016", razon_social="Constructora Demo"))
+    s.add(Empleador(sindicato_id=SID_FEGA, cuit="30700000016", razon_social="Constructora Demo"))
     # CUIT en un solo sindicato.
-    s.add(Empleador(sindicato_id=SID_UOM, cuit="30700000002", razon_social="Metalúrgica Sur"))
+    s.add(Empleador(sindicato_id=SID_UOM, cuit="30700000024", razon_social="Metalúrgica Sur"))
     # CUIT dado de baja (inactivo) -- no debería habilitar registro ni login.
-    s.add(Empleador(sindicato_id=SID_UOM, cuit="30700000003", razon_social="De baja SA", activo=False))
+    s.add(Empleador(sindicato_id=SID_UOM, cuit="30700000032", razon_social="De baja SA", activo=False))
     s.commit()
 
 
@@ -41,32 +41,32 @@ def _cliente():
 
 def test_registro_rechazado_si_cuit_no_es_empleador_de_ningun_sindicato():
     c = _cliente()
-    r = c.post("/empresa/registro", data={"cuit": "30799999999", "clave": "clave123"}, follow_redirects=False)
+    r = c.post("/empresa/registro", data={"cuit": "30799999990", "clave": "clave123"}, follow_redirects=False)
     assert r.status_code == 303
     assert "error=nohabilitado" in r.headers["location"]
     with Session(db.engine) as s:
-        cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == "30799999999")).first()
+        cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == "30799999990")).first()
         assert cuenta is None
     print("OK  test_registro_rechazado_si_cuit_no_es_empleador_de_ningun_sindicato")
 
 
 def test_registro_ok_marca_empleador_registrado_true():
     c = _cliente()
-    r = c.post("/empresa/registro", data={"cuit": "30700000002", "clave": "clave123"}, follow_redirects=False)
+    r = c.post("/empresa/registro", data={"cuit": "30700000024", "clave": "clave123"}, follow_redirects=False)
     assert r.status_code == 303
     assert r.headers["location"] == "/empresa/inicio"
     with Session(db.engine) as s:
-        cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == "30700000002")).first()
+        cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == "30700000024")).first()
         assert cuenta is not None
         e = s.exec(select(Empleador).where(
-            Empleador.sindicato_id == SID_UOM, Empleador.cuit == "30700000002")).first()
+            Empleador.sindicato_id == SID_UOM, Empleador.cuit == "30700000024")).first()
         assert e.registrado is True
     print("OK  test_registro_ok_marca_empleador_registrado_true")
 
 
 def test_login_clave_incorrecta_rechazada():
     c = _cliente()
-    r = c.post("/empresa/login", data={"cuit": "30700000002", "clave": "clave-mala"}, follow_redirects=False)
+    r = c.post("/empresa/login", data={"cuit": "30700000024", "clave": "clave-mala"}, follow_redirects=False)
     assert r.status_code == 303
     assert "error=login" in r.headers["location"]
     print("OK  test_login_clave_incorrecta_rechazada")
@@ -74,7 +74,7 @@ def test_login_clave_incorrecta_rechazada():
 
 def test_login_ok_redirige_a_empresa_y_un_solo_sindicato_entra_directo():
     c = _cliente()
-    r = c.post("/empresa/login", data={"cuit": "30700000002", "clave": "clave123"}, follow_redirects=False)
+    r = c.post("/empresa/login", data={"cuit": "30700000024", "clave": "clave123"}, follow_redirects=False)
     assert r.status_code == 303
     assert r.headers["location"] == "/empresa/inicio"
     r2 = c.get("/empresa/inicio")
@@ -86,14 +86,14 @@ def test_login_ok_redirige_a_empresa_y_un_solo_sindicato_entra_directo():
 
 def test_empleador_inactivo_no_puede_registrarse():
     c = _cliente()
-    r = c.post("/empresa/registro", data={"cuit": "30700000003", "clave": "clave123"}, follow_redirects=False)
+    r = c.post("/empresa/registro", data={"cuit": "30700000032", "clave": "clave123"}, follow_redirects=False)
     assert "error=nohabilitado" in r.headers["location"]
     print("OK  test_empleador_inactivo_no_puede_registrarse")
 
 
 def test_multisindicato_muestra_selector_y_elegir_fija_cookie():
     c = _cliente()
-    c.post("/empresa/registro", data={"cuit": "30700000001", "clave": "clave123"})
+    c.post("/empresa/registro", data={"cuit": "30700000016", "clave": "clave123"})
     r = c.get("/empresa")
     assert r.status_code == 200
     assert "UOM Empresa Sesion" in r.text and "Fega Empresa Sesion" in r.text
@@ -118,8 +118,8 @@ def test_sesion_empleador_no_pisa_sesion_trabajador_en_el_mismo_navegador():
     c = _cliente()
     c.cookies.set(main.COOKIE_TRABAJADOR, auth.crear_sesion("trabajador", sindicato_id=0, ident="20111111119"))
     c.cookies.set("cuil_trab", "20111111119")
-    c.cookies.set(main.COOKIE_EMPLEADOR, auth.crear_sesion("empleador", sindicato_id=0, ident="30700000002"))
-    c.cookies.set("cuit_emp", "30700000002")
+    c.cookies.set(main.COOKIE_EMPLEADOR, auth.crear_sesion("empleador", sindicato_id=0, ident="30700000024"))
+    c.cookies.set("cuit_emp", "30700000024")
 
     r_app = c.get("/app", follow_redirects=False)
     assert r_app.status_code == 200, "la sesión de trabajador no debería haberse perdido"

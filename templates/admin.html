@@ -11,7 +11,11 @@
 <script src="/static/vendor/leaflet/leaflet.js?v={{ sello_static('vendor/leaflet/leaflet.js') }}"></script>
 <script src="/static/mapa.js?v={{ sello_static('mapa.js') }}"></script>
 <script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
+<script src="/static/cuit.js?v={{ sello_static('cuit.js') }}"></script>
 <style>
+/* El CUIL/CUIT de una ficha que se está editando no se cambia (E-IDENT-03):
+   que se vea fijo, no solo al pasar el mouse. */
+#trab-cuil[readonly], #emp-cuit[readonly] { background:#eef0f3; color:#5b6472; cursor:not-allowed; }
   :root { --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e; --linea:#e2ded5; --gris:#5c5a54;
     /* color_base es el único color validado como oscuro -- el encabezado usa
        ese, no color_primario (que puede ser cualquier tono). */
@@ -879,6 +883,11 @@
   <div class="panel" id="panel-conceptos">
   <!-- ============ CONCEPTOS ============ -->
   <h2 class="titulo-pagina" id="conceptos">Conceptos ({{ conceptos|length }})</h2>
+  {% if request.query_params.get('error') == 'cuitconcepto' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó el concepto: el CUIT del empleador no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
+  {% elif request.query_params.get('error') == 'cuitconfirmar' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se confirmó el concepto: el CUIT del empleador que se leyó del recibo no es válido (seguramente un dígito mal leído). Corregilo con Editar y guardá.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
+  {% endif %}
   {% if request.query_params.get('universales') == 'ok' %}
   <div class="msg ok">✓ Se cargaron los conceptos/fórmulas de aportes de ley que faltaban.</div>
   {% elif request.query_params.get('universales') == 'nada' %}
@@ -977,7 +986,7 @@
       <option value="afiliacion">categoría sindical: cuota de afiliación</option>
     </select>
     <input name="alias" id="c-alias" placeholder="Alias (separados por coma)" style="min-width:180px;">
-    <input name="cuit_empleador" id="c-cuit" placeholder="CUIT empleador (vacío = genérico)" style="width:170px;">
+    <input name="cuit_empleador" id="c-cuit" data-cuit="cualquiera" placeholder="CUIT empleador (vacío = genérico)" style="width:170px;">
     <input name="codigo_generico" id="c-generico" placeholder="Código genérico" list="dl-genericos" style="width:140px;">
     <datalist id="dl-genericos">{% for g in genericos %}<option value="{{ g.codigo }}">{% endfor %}</datalist>
     <button type="submit" id="c-btn">Agregar concepto</button>
@@ -1005,10 +1014,17 @@
   <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: falta {{ request.query_params.get('faltan') }}. El sindicato necesita al menos la provincia y la localidad de cada afiliado para agruparlo por zona.</div>
   {% elif request.query_params.get('err') == 'datos' %}
   <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: revisá el CUIL (11 dígitos) y el nombre.</div>
+  {% elif request.query_params.get('err') == 'cuil' %}
+  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: el CUIL no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
+  {% elif request.query_params.get('err') == 'cuilfijo' %}
+  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: el CUIL no se cambia desde una edición, porque es la identidad de la persona en todo el sistema (su cuenta, sus recibos, sus trámites). Si está mal, pedile a la plataforma que lo corrija.<br><small style="opacity:.8;">Código E-IDENT-03</small></div>
+  {% elif request.query_params.get('err') == 'cuitempleador' %}
+  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: el CUIT del empleador no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
   {% endif %}
   {% if request.query_params.get('altas') %}
   <div class="msg ok">{{ request.query_params.get('altas') }} trabajador{{ 'es' if request.query_params.get('altas') != '1' else '' }} cargado{{ 's' if request.query_params.get('altas') != '1' else '' }} de la lista.
     {% if request.query_params.get('omitidas') %}<br>Quedaron afuera {{ request.query_params.get('omitidas') }} línea{{ 's' if request.query_params.get('omitidas') != '1' else '' }}: les falta el CUIL, el nombre, la localidad o la provincia, o el CUIL ya estaba cargado. Por ejemplo: <code>{{ request.query_params.get('muestra') }}</code>{% endif %}
+    {% if request.query_params.get('cuilinvalidos') %}<br>Quedaron afuera {{ request.query_params.get('cuilinvalidos') }} línea{{ 's' if request.query_params.get('cuilinvalidos') != '1' else '' }} porque el CUIL no es válido (revisá los 11 números): <code>{{ request.query_params.get('cuilmuestra') }}</code> <small style="opacity:.8;">Código E-IDENT-01</small>{% endif %}
   </div>
   {% endif %}
 
@@ -1079,7 +1095,7 @@
     <form method="post" action="/admin/trabajador" class="form-trab">
       <input type="hidden" name="id" id="trab-id">
       <div class="grid2">
-        <div class="campo"><label>CUIL *</label><input name="cuil" id="trab-cuil" required placeholder="20123456789"></div>
+        <div class="campo"><label>CUIL *</label><input name="cuil" id="trab-cuil" required data-cuit="persona" placeholder="20123456786"></div>
         <div class="campo"><label>Nombre *</label><input name="nombre" id="trab-nombre" required></div>
         {# Del domicilio, provincia y localidad son OBLIGATORIAS y el resto no
            (geo.OBLIGATORIOS_AFILIADO): sin esos dos campos el sindicato no
@@ -1112,7 +1128,7 @@
             {% for sec in seccionales %}<option value="{{ sec.id }}">{{ sec.nombre }}</option>{% endfor %}
           </select>
         </div>
-        <div class="campo"><label>CUIT del empleador</label><input name="cuit_empleador" id="trab-cuit-empleador" placeholder="Para notificar por empresa"></div>
+        <div class="campo"><label>CUIT del empleador</label><input name="cuit_empleador" id="trab-cuit-empleador" data-cuit="cualquiera" placeholder="Para notificar por empresa"></div>
       </div>
       <input type="hidden" name="latitud" id="trab-lat">
       <input type="hidden" name="longitud" id="trab-lon">
@@ -1143,7 +1159,7 @@
       cuil, nombre, calle, numero, piso, localidad, provincia, telefono, mail, cp, seccional</p>
     <p class="muted">Obligatorios: <b>cuil</b>, <b>nombre</b>, <b>localidad</b> y <b>provincia</b>; el resto puede ir vacío (pero respetá las comas si querés cargar un campo posterior). Las líneas que no traigan esos cuatro datos quedan afuera y te decimos cuántas. La <b>seccional</b> va por nombre, tal como figura en la pestaña Seccionales: si no coincide con ninguna, el trabajador queda sin asignar.</p>
     <form method="post" action="/admin/trabajador/masivo">
-      <textarea name="lista" rows="6" placeholder="20123456789, Juan Pérez, Av. Siempreviva, 742, , Rosario, Santa Fe, 341-555-5555, juan@mail.com, 2000, Rosario&#10;27987654321, Ana López" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:7px; font-family:Consolas,monospace; font-size:13px;"></textarea>
+      <textarea name="lista" rows="6" placeholder="20123456786, Juan Pérez, Av. Siempreviva, 742, , Rosario, Santa Fe, 341-555-5555, juan@mail.com, 2000, Rosario&#10;27987654320, Ana López" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:7px; font-family:Consolas,monospace; font-size:13px;"></textarea>
       <button type="submit" style="margin-top:10px;">Cargar lista</button>
     </form>
 
@@ -1384,11 +1400,11 @@
         </div>
         <div class="campo full" id="notif-valores-cuil">
           <label>CUIL(es), separados por coma</label>
-          <input type="text" id="notif-valores-cuil-input" placeholder="20111111119, 27222222224">
+          <input type="text" id="notif-valores-cuil-input" placeholder="20111111112, 27222222228">
         </div>
         <div class="campo full oculto" id="notif-valores-cuit_empleador">
           <label>CUIT(s) de empresa, separados por coma</label>
-          <input type="text" id="notif-valores-cuit_empleador-input" placeholder="30111222339">
+          <input type="text" id="notif-valores-cuit_empleador-input" placeholder="30111222335">
         </div>
         {% if seccionales %}
         <div class="campo full oculto" id="notif-valores-seccional">
@@ -1947,7 +1963,7 @@
           <div class="campo oculto" id="pub-texto" style="margin-top:10px;">
             <label id="pub-texto-label">Valores, separados por coma</label>
             <input type="text" name="valores" id="pub-texto-input" class="pub-valor"
-                   oninput="contarDestinatarios()" placeholder="20111111119, 27222222224">
+                   oninput="contarDestinatarios()" placeholder="20111111112, 27222222228">
           </div>
           <p id="pub-cuenta" style="margin:14px 0 0; font-size:13.5px;"></p>
           <div style="margin-top:14px;">
@@ -1968,10 +1984,15 @@
   <div class="panel" id="panel-empleadores">
   <!-- ============ EMPLEADORES ============ -->
   {% if request.query_params.get('error') == 'cuit' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">CUIT inválido -- tiene que tener 11 dígitos.</div>
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El CUIT no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
+  {% elif request.query_params.get('error') == 'cuitfijo' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó: el CUIT no se cambia desde una edición, porque une al empleador con su cuenta, sus empleados, sus recibos y sus trámites. Si está mal, pedile a la plataforma que lo corrija.<br><small style="opacity:.8;">Código E-IDENT-03</small></div>
   {% endif %}
   {% if request.query_params.get('importados') %}
   <div class="msg ok">✓ Se importaron {{ request.query_params.get('importados') }} empleador(es) nuevo(s) desde Conceptos.</div>
+  {% if request.query_params.get('cuitinvalidos') %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se importaron {{ request.query_params.get('cuitinvalidos') }} CUIT de conceptos porque no son válidos (revisá los 11 números en Conceptos): <code>{{ request.query_params.get('cuitmuestra') }}</code><br><small style="opacity:.8;">Código E-IDENT-02</small></div>
+  {% endif %}
   {% endif %}
 
   <div class="subtabs">
@@ -2000,7 +2021,7 @@
       <form method="post" action="/admin/empleador" id="form-empleador">
         <input type="hidden" name="id" id="emp-id">
         <div class="grid2">
-          <div class="campo"><label>CUIT *</label><input name="cuit" id="emp-cuit" required placeholder="30123456789"></div>
+          <div class="campo"><label>CUIT *</label><input name="cuit" id="emp-cuit" required data-cuit="cualquiera" placeholder="30123456781"></div>
           <div class="campo"><label>Razón social</label><input name="razon_social" id="emp-razon"></div>
           <div class="campo full"><label>Domicilio</label><input name="domicilio" id="emp-domicilio"></div>
           <div class="campo"><label>Teléfono</label><input name="telefono" id="emp-telefono"></div>
@@ -2074,7 +2095,7 @@
           </div>
           <div class="campo full oculto" id="notifemp-valores-cuit">
             <label>CUIT(s), separados por coma</label>
-            <input type="text" id="notifemp-valores-cuit-input" placeholder="30111222339, 30500000001">
+            <input type="text" id="notifemp-valores-cuit-input" placeholder="30111222335, 30500000003">
           </div>
           <div class="campo full oculto" id="notifemp-valores-provincia">
             <label>Provincias</label>
@@ -2687,6 +2708,8 @@
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No podés dar de baja al último administrador activo del sindicato -- te quedarías sin nadie que pueda entrar a este panel.</div>
   {% elif request.query_params.get('err') == 'datos' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">CUIT/CUIL o clave inválidos.</div>
+  {% elif request.query_params.get('err') == 'cuilusuario' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El CUIL no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
   {% elif request.query_params.get('err') == 'sinarea' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Un usuario de área necesita un área. Elegile una, o dejalo como administrador de seccional.</div>
   {% elif request.query_params.get('err') == 'sinseccional' %}
@@ -2700,7 +2723,7 @@
     <form method="post" action="/admin/usuario" id="form-usuario">
       <input type="hidden" name="id" id="usu-id">
       <div class="grid2">
-        <div class="campo"><label>CUIT/CUIL *</label><input name="usuario" id="usu-usuario" required placeholder="20123456789"></div>
+        <div class="campo"><label>CUIT/CUIL *</label><input name="usuario" id="usu-usuario" required data-cuit="persona" placeholder="20123456786"></div>
         <div class="campo"><label>Nombre</label><input name="nombre" id="usu-nombre"></div>
         <div class="campo" id="usu-clave-campo"><label>Clave inicial *</label><input name="clave_inicial" id="usu-clave" type="password" required></div>
         <div class="campo"><label>Rol</label>
@@ -3402,6 +3425,10 @@ function cambiarSubEmpleador(dest) {
 function editarEmpleador(e) {
   document.getElementById('emp-id').value = e.id;
   document.getElementById('emp-cuit').value = e.cuit || '';
+  // El CUIT no se cambia desde una edición (E-IDENT-03). El servidor lo frena igual.
+  document.getElementById('emp-cuit').readOnly = true;
+  document.getElementById('emp-cuit').title = 'El CUIT no se cambia desde una edición: si está mal, pedile a la plataforma que lo corrija.';
+  if (window.CuitMT) CuitMT.limpiar(document.getElementById('form-empleador'));   // sin marcas de un número anterior
   document.getElementById('emp-razon').value = e.razon_social || '';
   document.getElementById('emp-domicilio').value = e.domicilio || '';
   document.getElementById('emp-telefono').value = e.telefono || '';
@@ -3415,6 +3442,8 @@ function editarEmpleador(e) {
 function cancelarEmpleador() {
   document.getElementById('form-empleador').reset();
   document.getElementById('emp-id').value = '';
+  document.getElementById('emp-cuit').readOnly = false;
+  document.getElementById('emp-cuit').title = '';
   document.getElementById('empleador-titulo').textContent = 'Dar de alta un empleador';
   document.getElementById('form-empleador').querySelector('button[type=submit]').textContent = 'Guardar empleador';
   document.getElementById('emp-cancel').classList.add('oculto');
@@ -4573,6 +4602,11 @@ function refrescarTramiteEmpresaDetalle(id) {
 function editarTrab(t) {
   document.getElementById('trab-id').value = t.id;
   document.getElementById('trab-cuil').value = t.cuil || '';
+  // El CUIL no se cambia desde una edición (E-IDENT-03): es la identidad de
+  // la persona en todo el sistema. El servidor lo frena igual.
+  document.getElementById('trab-cuil').readOnly = true;
+  document.getElementById('trab-cuil').title = 'El CUIL no se cambia desde una edición: si está mal, pedile a la plataforma que lo corrija.';
+  if (window.CuitMT) CuitMT.limpiar(document.querySelector('.form-trab'));   // sin marcas de un número anterior
   document.getElementById('trab-nombre').value = t.nombre || '';
   document.getElementById('trab-calle').value = t.calle || '';
   document.getElementById('trab-numero').value = t.numero || '';
@@ -4608,6 +4642,8 @@ function editarTrab(t) {
 function resetTrab() {
   document.querySelector('.form-trab').reset();
   document.getElementById('trab-id').value = '';
+  document.getElementById('trab-cuil').readOnly = false;
+  document.getElementById('trab-cuil').title = '';
   document.getElementById('trab-precision').value = 'sin_geo';
   document.getElementById('trab-submit').textContent = 'Agregar trabajador';
   document.getElementById('trab-cancelar').style.display = 'none';
@@ -4822,6 +4858,7 @@ function editarConcepto(id, codigo, nombre, tipo, remun, alias, categoriaSindica
   document.getElementById('c-alias').value = alias;
   document.getElementById('c-cuit').value = cuitEmpleador || '';
   document.getElementById('c-generico').value = codigoGenerico || '';
+  if (window.CuitMT) CuitMT.limpiar(document.getElementById('form-concepto'));   // sin marcas de un número anterior
   document.getElementById('c-btn').textContent = 'Guardar cambios';
   document.getElementById('c-cancel').classList.remove('oculto');
   document.getElementById('form-concepto').scrollIntoView({behavior:'smooth', block:'center'});
@@ -5643,8 +5680,12 @@ async function aplicarAprendizaje() {
     method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({aprobados})
   });
   const data = await r.json();
+  // Los conceptos con un CUIT de empleador que no cumple el módulo 11 no se
+  // dan de alta (E-IDENT-02): se dice cuáles, para cargarlos a mano.
+  const malos = (data.cuit_invalidos || []).map(c => String(c).replace(/[<>&"]/g, '')).join(', ');
   document.getElementById('ap-final').innerHTML =
-    `<div class="msg ok">Se dieron de alta ${data.altas} concepto(s). <a href="/admin#conceptos">Ver en la tabla de conceptos</a> (actualizá la página).</div>`;
+    `<div class="msg ok">Se dieron de alta ${data.altas} concepto(s). <a href="/admin#conceptos">Ver en la tabla de conceptos</a> (actualizá la página).</div>` +
+    (malos ? `<div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se dieron de alta ${data.cuit_invalidos.length} concepto(s) porque el CUIT del empleador no es válido: ${malos}. Cargalos a mano en Conceptos con el CUIT correcto.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>` : '');
 }
 {% endif %}
 
@@ -6123,8 +6164,8 @@ function cambioCriterioPublicar() {
     !['provincia', 'cuit_empleador', 'cuil'].includes(c));
   const etiquetas = {
     provincia: ['Provincias, separadas por coma', 'Santa Fe, Córdoba'],
-    cuit_empleador: ['CUIT de las empresas, separados por coma', '30999888776, 30111222339'],
-    cuil: ['CUIL, separados por coma', '20111111119, 27222222224'],
+    cuit_empleador: ['CUIT de las empresas, separados por coma', '30999888778, 30111222335'],
+    cuil: ['CUIL, separados por coma', '20111111112, 27222222228'],
   };
   if (etiquetas[c]) {
     document.getElementById('pub-texto-label').textContent = etiquetas[c][0];

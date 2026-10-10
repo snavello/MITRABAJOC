@@ -32,16 +32,16 @@ def test_importar_cuits_de_conceptos_crea_filas_minimas():
     _limpiar()
     with db.get_session() as s:
         s.add(Concepto(sindicato_id=SID_UOM, codigo="C1", nombre="Concepto 1",
-                        tipo="descuento", remunerativo=False, cuit_empleador="30111111111"))
+                        tipo="descuento", remunerativo=False, cuit_empleador="30111111118"))
         s.add(Concepto(sindicato_id=SID_UOM, codigo="C2", nombre="Concepto 2",
-                        tipo="descuento", remunerativo=False, cuit_empleador="30222222222"))
+                        tipo="descuento", remunerativo=False, cuit_empleador="30222222229"))
         s.commit()
     agregados = db.importar_cuits_de_conceptos(SID_UOM)
     assert agregados == 2
     with db.get_session() as s:
         cuits = {e.cuit for e in s.exec(select(Empleador).where(
             Empleador.sindicato_id == SID_UOM)).all()}
-    assert cuits == {"30111111111", "30222222222"}
+    assert cuits == {"30111111118", "30222222229"}
     print("OK  test_importar_cuits_de_conceptos_crea_filas_minimas")
 
 
@@ -49,7 +49,7 @@ def test_importar_cuits_de_conceptos_es_idempotente():
     _limpiar()
     with db.get_session() as s:
         s.add(Concepto(sindicato_id=SID_UOM, codigo="C3", nombre="Concepto 3",
-                        tipo="descuento", remunerativo=False, cuit_empleador="30333333333"))
+                        tipo="descuento", remunerativo=False, cuit_empleador="33333333339"))
         s.commit()
     primero = db.importar_cuits_de_conceptos(SID_UOM)
     segundo = db.importar_cuits_de_conceptos(SID_UOM)
@@ -57,7 +57,7 @@ def test_importar_cuits_de_conceptos_es_idempotente():
     assert segundo == 0
     with db.get_session() as s:
         filas = s.exec(select(Empleador).where(
-            Empleador.sindicato_id == SID_UOM, Empleador.cuit == "30333333333")).all()
+            Empleador.sindicato_id == SID_UOM, Empleador.cuit == "33333333339")).all()
     assert len(filas) == 1
     print("OK  test_importar_cuits_de_conceptos_es_idempotente")
 
@@ -66,7 +66,7 @@ def test_importar_cuits_ignora_otro_sindicato():
     _limpiar()
     with db.get_session() as s:
         s.add(Concepto(sindicato_id=SID_FEGA, codigo="C4", nombre="Concepto 4",
-                        tipo="descuento", remunerativo=False, cuit_empleador="30444444444"))
+                        tipo="descuento", remunerativo=False, cuit_empleador="30444444440"))
         s.commit()
     agregados = db.importar_cuits_de_conceptos(SID_UOM)
     assert agregados == 0
