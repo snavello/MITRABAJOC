@@ -66,6 +66,7 @@ cuenta), no en cada commit.
 | `docs/chat/` | Documentos que salen de Chat y Cowork, con prefijo de fecha (`AAAA-MM-DD-tema.md`). Ver `OPERATIVA.md`. |
 | `docs/prompts/` | Prompts reutilizables para aplicar en OTROS proyectos con Claude Code, con lo aprendido acá. Primero: `MAPA_FUNCIONAL.md` (mapa app → funcionalidad → código, datos y servicios), publicado también como Recurso de `/entornos`. |
 | `docs/generador/` | Genera `recursos/documentacion-tecnica.html` desde el código. |
+| `docs/bancaria/` | Documentos de la implementación en La Bancaria: plan resumido (4 hojas A4) y hoja guía de la reunión con autoridades. Fuente de los artifacts y de los PDF. |
 | `docs/capturas-georef/` | Capturas de las pantallas de georreferenciación. |
 | `recursos/` | Documentos publicados en `/entornos` (HTML + miniatura), registrados en `recursos.SEMILLA`. |
 | `carga/` | Test de estrés: `INFORME.md`, experimentos, scripts. |
@@ -112,6 +113,8 @@ a SDN. **No se escribe en ningún documento.**
 | Motor v2 · Avance | Tablero de los 46 ítems del plan con checklist. | *(completar link)* |
 | Colm3na · Mi Trabajo (presentación v3) | Presentación HTML para sindicatos. | *(completar link)* |
 | Bitácora Colm3na (Claude Doc) | Espejo de `BITACORA.md` para leer desde Claude. | https://claude.ai/code/artifact/d5f13de8-bbd4-4f3b-93a0-7f32b5772c33 |
+| Plan de implementación La Bancaria (resumido) | Borrador v0.1, 4 hojas A4: seis fases, hitos, responsables, datos, indicadores y riesgos. Fuente: `docs/bancaria/plan-implementacion-bancaria.html`. | https://claude.ai/artifact/JMGWcmEMgiJWQB7n3c8eNb |
+| Guía de reunión La Bancaria | Hoja de una página para la reunión con las autoridades. Fuente: `docs/bancaria/guia-reunion-autoridades-bancaria.html`. | https://claude.ai/artifact/BQoR9L61oWHGEHd6X5ttTg |
 
 ### Chats del proyecto (por fecha; el id corto es el que cita `BITACORA.md`)
 
