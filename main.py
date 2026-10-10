@@ -1668,7 +1668,7 @@ def admin_trabajador_alta(
                                             status_code=303)
                 t.vigencia_credencial = vigencia_credencial or None
                 t.seccional_id = sec_id
-                t.cuit_empleador = cuit_empleador.strip() or None
+                t.cuit_empleador = _norm_cuil(cuit_empleador) or None   # sin guiones, como empleador.cuit
                 s.add(t)
                 # El nombre, el domicilio y el contacto son de la PERSONA:
                 # se escriben en un solo lugar y por eso el cambio se ve
@@ -1690,7 +1690,7 @@ def admin_trabajador_alta(
                 s.add(Trabajador(
                     sindicato_id=sid, cuil=cuil_norm,
                     vigencia_credencial=vigencia_credencial or None, seccional_id=sec_id,
-                    cuit_empleador=cuit_empleador.strip() or None))
+                    cuit_empleador=_norm_cuil(cuit_empleador) or None))
                 db.guardar_datos_personales(s, cuil_norm, nombre=nombre,
                                             domicilio=domicilio, telefono=telefono, mail=mail)
         s.commit()
