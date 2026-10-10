@@ -66,7 +66,7 @@ cuenta), no en cada commit.
 | `docs/chat/` | Documentos que salen de Chat y Cowork, con prefijo de fecha (`AAAA-MM-DD-tema.md`). Ver `OPERATIVA.md`. |
 | `docs/prompts/` | Prompts reutilizables para aplicar en OTROS proyectos con Claude Code, con lo aprendido acá. Primero: `MAPA_FUNCIONAL.md` (mapa app → funcionalidad → código, datos y servicios), publicado también como Recurso de `/entornos`. |
 | `docs/generador/` | Genera `recursos/documentacion-tecnica.html` desde el código. |
-| `docs/bancaria/` | Documentos de la implementación en La Bancaria: plan resumido (4 hojas A4) y hoja guía de la reunión con autoridades. Fuente de los artifacts y de los PDF. |
+| `docs/bancaria/` | Documentos de la implementación en La Bancaria: plan resumido (4 hojas A4) y hoja guía de la reunión con autoridades. Fuente de los artifacts y de los PDF. Versiones Word para corregir (con control de cambios) generadas por `generar_docx.js`. |
 | `docs/capturas-georef/` | Capturas de las pantallas de georreferenciación. |
 | `recursos/` | Documentos publicados en `/entornos` (HTML + miniatura), registrados en `recursos.SEMILLA`. |
 | `carga/` | Test de estrés: `INFORME.md`, experimentos, scripts. |
