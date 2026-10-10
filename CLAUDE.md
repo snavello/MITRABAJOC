@@ -876,8 +876,8 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     Sigue en el próximo sprint: términos y condiciones del afiliado en el
     primer uso. Admin 0.45.01, Plataforma 0.37.01.
 
-31. **CUIL/CUIT con módulo 11** (2026-10-10, rama
-    `claude/optimistic-noether-8up69e`, **sin desplegar**; plan
+31. **CUIL/CUIT con módulo 11** (2026-10-10, PR #84, **en Pruebas y
+    regularizado; falta la Demo**, que va con la próxima promoción; plan
     `PLAN_CUIT_MOD11.md`, primera medida para las observaciones de XSK —
     la siguiente es el alta de usuarios, H-0017). `cuit.py` como única
     implementación; las puertas de alta exigen el verificador y el
@@ -888,7 +888,13 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     `CambioIdentificador` (migración `b6d3f1a8c902`). **Al desplegar en
     cada entorno hay que correrla** (`DESPLIEGUE_RENDER.md`, "Regularizar
     CUIL/CUIT"): hasta entonces los accesos nuevos de la demo no existen en
-    esa base. Hecho por un equipo de agentes (3 de desarrollo, 2 de QA y un
+    esa base. **Pruebas, hecho el 2026-10-10**: corrida como Job de Render
+    dentro del servicio (desde un contenedor en la nube no hay red al
+    puerto de Postgres; el Job usa la base y las variables del propio
+    servicio), con la exportación de Render y la recuperación a un momento
+    puntual como respaldo (el disco de un Job se borra al terminar). 22
+    números convertidos y 4 que no tenían corrección eliminados o vaciados
+    con autorización de SDN; el diagnóstico quedó en 0 manuales y 0 demo. Hecho por un equipo de agentes (3 de desarrollo, 2 de QA y un
     revisor) con QA sobre una copia de la base como estaba Pruebas. XSK:
     test IDS-06, H-0020 (este) y H-0021 (abierto, encontrado de paso).
     Trabajador 0.44.01, Admin 0.47.01, Plataforma 0.43.01.
