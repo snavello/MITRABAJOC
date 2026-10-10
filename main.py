@@ -1798,8 +1798,10 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
     if cuil_invalidos:
         # Acá sí van todos (hasta diez): son CUIL de once números, no líneas
         # enteras, y la persona los tiene que poder corregir de a uno.
-        destino += (f"&cuilinvalidos={len(cuil_invalidos)}&cuilmuestra="
-                    + quote(", ".join(cuil_invalidos[:10])))
+        muestra = ", ".join(cuil_invalidos[:10])
+        if len(cuil_invalidos) > 10:
+            muestra += f" y {len(cuil_invalidos) - 10} más"
+        destino += (f"&cuilinvalidos={len(cuil_invalidos)}&cuilmuestra=" + quote(muestra))
     return RedirectResponse(destino + "#trabajadores", status_code=303)
 
 
@@ -1903,7 +1905,7 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
         return _volver_a_au("usuarios", err="datos")
     # El usuario ES el CUIL de la persona: nace acá, con su verificador.
     if _cuil_mal(cuit):
-        return _volver_a_au("usuarios", err="cuil")
+        return _volver_a_au("usuarios", err="cuilusuario")
     es_super = (rol == "super")
     es_admin_local = (rol == "seccional")
     # Otorgar Super Admin es del administrador general y de nadie más: si un
@@ -2264,6 +2266,10 @@ def abm_concepto(
         aliases.append(nombre)
     es_remun = remunerativo == "si"
     categoria = categoria_sindical if categoria_sindical in CATEGORIAS_SINDICALES else ""
+    # Texto sin dígitos ("abc") no es un campo vacío: se frena acá, antes de
+    # que normalizar lo convierta en "concepto genérico" sin avisar.
+    if (cuit_empleador or "").strip() and not _norm_cuil(cuit_empleador):
+        return RedirectResponse("/admin?error=cuitconcepto#conceptos", status_code=303)
     cuit_empleador = _norm_cuil(cuit_empleador) or None
     codigo_gen = codigo_generico.strip() or None
     with db.get_session() as s:
@@ -6323,7 +6329,10 @@ def _norm_cuil(cuil: str) -> str:
 def _identificador_mal(numero, de=None, guardado=None, opcional=False) -> bool:
     n = cuit.normalizar(numero)
     if not n:
-        return not opcional
+        # Vacío de verdad: lo decide `opcional`. Pero un texto sin un solo
+        # dígito ("abc") no es un campo vacío, es un número mal escrito, y
+        # antes pasaba como vacío (QA, 2026-10-10).
+        return (not opcional) or bool(str(numero or "").strip())
     if guardado is not None and n == cuit.normalizar(guardado):
         return False
     return not cuit.es_valido(n, de)

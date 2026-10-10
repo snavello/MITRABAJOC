@@ -37,6 +37,8 @@
   var PREFIJOS_PERSONA = ["20", "23", "24", "25", "26", "27"];
   var PREFIJOS_EMPRESA = ["30", "33", "34"];
   var MENSAJE = "El CUIL/CUIT no es válido: revisá los 11 números";
+  var MENSAJE_CUIL = "El CUIL no es válido: revisá los 11 números";
+  var MENSAJE_CUIT = "El CUIT no es válido: revisá los 11 números";
 
   function normalizar(valor) {
     return String(valor == null ? "" : valor).replace(/\D/g, "");
@@ -59,7 +61,8 @@
     return r === Number(d.charAt(10));
   }
 
-  var api = { esValido: esValido, normalizar: normalizar, MENSAJE: MENSAJE };
+  var api = { esValido: esValido, normalizar: normalizar, MENSAJE: MENSAJE,
+              limpiar: function () {} };   // en la página, la de abajo
   var raiz = (typeof window !== "undefined") ? window
            : (typeof globalThis !== "undefined" ? globalThis : {});
   raiz.CuitMT = api;
@@ -94,8 +97,13 @@
     quitarAviso(campo);
   }
 
+  function mensajeDe(campo) {
+    return tipoDe(campo) === "persona" ? MENSAJE_CUIL : MENSAJE_CUIT;
+  }
+
   function marcar(campo) {
-    campo.setCustomValidity(MENSAJE);
+    var mensaje = mensajeDe(campo);
+    campo.setCustomValidity(mensaje);
     campo.setAttribute("aria-invalid", "true");
     if (campo.__cuitBorde === undefined) campo.__cuitBorde = campo.style.borderColor;
     campo.style.borderColor = "#b23a2e";
@@ -103,7 +111,7 @@
     var aviso = document.createElement("div");
     aviso.className = "cuit-aviso";
     aviso.setAttribute("role", "alert");
-    aviso.textContent = MENSAJE;
+    aviso.textContent = mensaje;
     // El color lo pone cada pantalla con --cuit-aviso-color (las de fondo
     // oscuro lo aclaran); flex-basis para no romper una fila de campos.
     aviso.style.cssText = "display:block;flex:0 0 100%;width:100%;margin-top:4px;" +
@@ -161,6 +169,29 @@
     }
     return primerMalo;
   }
+
+  /* Un formulario que el CÓDIGO rellena ("Editar") o vacía ("Cancelar",
+     form.reset()) no dispara input ni focusout, así que la marca de un número
+     que se juzgó antes quedaba pegada a uno que no tiene nada que ver (QA,
+     2026-10-10). `CuitMT.limpiar(formulario o campo)` borra los veredictos;
+     las funciones que rellenan un formulario la llaman, y el reset se limpia
+     solo. */
+  function limpiarTodo(objetivo) {
+    if (!objetivo) return;
+    var campos = esCampo(objetivo) ? [objetivo]
+               : (objetivo.querySelectorAll ? objetivo.querySelectorAll("input[data-cuit]") : []);
+    for (var i = 0; i < campos.length; i++) {
+      campos[i].__cuitRevisado = undefined;
+      campos[i].__cuitAlEntrar = campos[i].value;
+      limpiar(campos[i]);
+    }
+  }
+  api.limpiar = limpiarTodo;
+
+  document.addEventListener("reset", function (ev) {
+    var form = ev.target;
+    setTimeout(function () { limpiarTodo(form); }, 0);   // después de que el reset vacía los campos
+  }, true);
 
   document.addEventListener("click", function (ev) {
     var boton = ev.target && ev.target.closest ? ev.target.closest("button, input[type=submit]") : null;

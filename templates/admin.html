@@ -13,6 +13,9 @@
 <script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
 <script src="/static/cuit.js?v={{ sello_static('cuit.js') }}"></script>
 <style>
+/* El CUIL/CUIT de una ficha que se está editando no se cambia (E-IDENT-03):
+   que se vea fijo, no solo al pasar el mouse. */
+#trab-cuil[readonly], #emp-cuit[readonly] { background:#eef0f3; color:#5b6472; cursor:not-allowed; }
   :root { --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e; --linea:#e2ded5; --gris:#5c5a54;
     /* color_base es el único color validado como oscuro -- el encabezado usa
        ese, no color_primario (que puede ser cualquier tono). */
@@ -2700,7 +2703,7 @@
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No podés dar de baja al último administrador activo del sindicato -- te quedarías sin nadie que pueda entrar a este panel.</div>
   {% elif request.query_params.get('err') == 'datos' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">CUIT/CUIL o clave inválidos.</div>
-  {% elif request.query_params.get('err') == 'cuil' %}
+  {% elif request.query_params.get('err') == 'cuilusuario' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El CUIL no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
   {% elif request.query_params.get('err') == 'sinarea' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Un usuario de área necesita un área. Elegile una, o dejalo como administrador de seccional.</div>
@@ -3420,6 +3423,7 @@ function editarEmpleador(e) {
   // El CUIT no se cambia desde una edición (E-IDENT-03). El servidor lo frena igual.
   document.getElementById('emp-cuit').readOnly = true;
   document.getElementById('emp-cuit').title = 'El CUIT no se cambia desde una edición: si está mal, pedile a la plataforma que lo corrija.';
+  if (window.CuitMT) CuitMT.limpiar(document.getElementById('form-empleador'));   // sin marcas de un número anterior
   document.getElementById('emp-razon').value = e.razon_social || '';
   document.getElementById('emp-domicilio').value = e.domicilio || '';
   document.getElementById('emp-telefono').value = e.telefono || '';
@@ -4597,6 +4601,7 @@ function editarTrab(t) {
   // la persona en todo el sistema. El servidor lo frena igual.
   document.getElementById('trab-cuil').readOnly = true;
   document.getElementById('trab-cuil').title = 'El CUIL no se cambia desde una edición: si está mal, pedile a la plataforma que lo corrija.';
+  if (window.CuitMT) CuitMT.limpiar(document.querySelector('.form-trab'));   // sin marcas de un número anterior
   document.getElementById('trab-nombre').value = t.nombre || '';
   document.getElementById('trab-calle').value = t.calle || '';
   document.getElementById('trab-numero').value = t.numero || '';
@@ -4848,6 +4853,7 @@ function editarConcepto(id, codigo, nombre, tipo, remun, alias, categoriaSindica
   document.getElementById('c-alias').value = alias;
   document.getElementById('c-cuit').value = cuitEmpleador || '';
   document.getElementById('c-generico').value = codigoGenerico || '';
+  if (window.CuitMT) CuitMT.limpiar(document.getElementById('form-concepto'));   // sin marcas de un número anterior
   document.getElementById('c-btn').textContent = 'Guardar cambios';
   document.getElementById('c-cancel').classList.remove('oculto');
   document.getElementById('form-concepto').scrollIntoView({behavior:'smooth', block:'center'});

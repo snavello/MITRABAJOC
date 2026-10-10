@@ -306,10 +306,13 @@ def test_admin_usuario_rechaza_cuil_invalido_y_no_escribe():
     antes = _contar(UsuarioSindicato)
     r = c.post("/admin/usuario", data={"usuario": CUIL_MAL, "nombre": "Mal", "clave_inicial": "x",
                                        "rol": "super"}, follow_redirects=False)
-    assert "err=cuil" in r.headers["location"], r.headers
+    assert "err=cuilusuario" in r.headers["location"], r.headers
     assert _contar(UsuarioSindicato) == antes
-    page = c.get("/admin?err=cuil&sub=usuarios")
+    page = c.get("/admin?err=cuilusuario&sub=usuarios")
     assert "El CUIL no es válido -- revisá" in page.text and "E-IDENT-01" in page.text
+    # Una sola vez: el cartel del alta de trabajadores usa otra clave (err=cuil)
+    # y no se tiene que prender en la otra pestaña (QA, 2026-10-10).
+    assert page.text.count("Código E-IDENT-01") == 1
     print("OK  test_admin_usuario_rechaza_cuil_invalido_y_no_escribe")
 
 
@@ -318,7 +321,7 @@ def test_admin_usuario_rechaza_un_cuit_de_empresa_y_acepta_uno_valido():
     antes = _contar(UsuarioSindicato)
     r = c.post("/admin/usuario", data={"usuario": CUIT_EMPRESA_OK, "nombre": "Empresa",
                                        "clave_inicial": "x", "rol": "super"}, follow_redirects=False)
-    assert "err=cuil" in r.headers["location"] and _contar(UsuarioSindicato) == antes
+    assert "err=cuilusuario" in r.headers["location"] and _contar(UsuarioSindicato) == antes
     r = c.post("/admin/usuario", data={"usuario": CUIL_OK_2, "nombre": "Bien", "clave_inicial": "x",
                                        "rol": "super"}, follow_redirects=False)
     assert "ok=usuario" in r.headers["location"], r.headers
@@ -908,3 +911,23 @@ def test_cuit_js_corrido_en_node_da_lo_mismo_que_python(tmp_path):
     # el barrido tiene de los dos lados, si no no prueba nada
     assert any(e[0] for e in esperado) and not all(e[0] for e in esperado)
     print(f"OK  test_cuit_js_corrido_en_node_da_lo_mismo_que_python ({len(numeros)} números)")
+
+
+def test_un_cuit_opcional_escrito_con_letras_no_pasa_como_vacio():
+    """QA, 2026-10-10: "abc" en el CUIT (opcional) del empleador se tomaba como
+    campo vacío: en el alta de trabajador se guardaba "abc" y en el concepto
+    quedaba genérico sin aviso. Un texto sin dígitos es un número mal escrito."""
+    c = _admin()
+    cuil = cuit.siguiente_libre("20456456450")
+    antes = _contar(Trabajador)
+    r = c.post("/admin/trabajador", data={"cuil": cuil, "nombre": "Con Letras",
+                                          "cuit_empleador": "abc", **DOM}, follow_redirects=False)
+    assert "err=cuitempleador" in r.headers["location"], r.headers
+    assert _contar(Trabajador) == antes
+    antes = _contar(Concepto)
+    r = c.post("/admin/concepto", data={"codigo": "LETRAS", "nombre": "Letras", "tipo": "ingreso",
+                                        "remunerativo": "si", "cuit_empleador": "abc"},
+               follow_redirects=False)
+    assert "error=cuitconcepto" in r.headers["location"], r.headers
+    assert _contar(Concepto) == antes
+    print("OK  test_un_cuit_opcional_escrito_con_letras_no_pasa_como_vacio")
