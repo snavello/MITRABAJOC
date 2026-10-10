@@ -6237,3 +6237,89 @@ Probado con la IA real (claude-sonnet-4-6) sobre la imagen del registro 11 y
 la foto original, conociendo el CUIT y sin conocerlo: las cuatro veces
 salieron el CUIL 20202790411 y el CUIT 33693450239. Trabajador 0.43.02,
 Admin 0.46.03 (aprendizaje).
+
+## CUIL/CUIT con módulo 11: el número nace válido y no se cambia por partes (2026-10-10)
+
+Primera medida de la serie para regularizar las observaciones de XSANDERS
+(XSK). Plan acordado decisión por decisión en `PLAN_CUIT_MOD11.md`; lo
+ejecutó un equipo de agentes coordinado por Code: tres de desarrollo en
+paralelo (herramienta de regularización; números de la demo; puertas de
+alta), dos de QA y un revisor general.
+
+**Por qué en este orden.** Exigir el verificador sin más dejaba inválida a
+casi toda la base: ninguno de los CUIL/CUIT de la demo lo cumplía y los
+testers cargaban números inventados. Primero se identifica, después se
+convierte, y recién entonces se exige.
+
+**Una sola implementación** (`cuit.py`, puro). El enmascarado tenía su
+propia copia del cálculo y `_norm_cuil` estaba copiado en `main.py` y
+`validador.py`; ahora todos delegan, y `test_cuit.py` falla si un .py vuelve
+a escribir los pesos. `normalizar` deja solo dígitos ASCII: con `\D` pasaban
+los de ancho completo ("２０"), que `int()` acepta y ninguna búsqueda por
+texto vuelve a encontrar. El navegador tiene su espejo (`static/cuit.js`),
+cortesía y no control, comparado con el de Python por un test que lo corre
+en Node contra 800 números.
+
+**Dónde se exige (D2).** Donde un número NACE: altas del panel, carga
+masiva (la línea inválida queda afuera y se cuenta aparte), alta de usuario
+del panel y de plataforma, alta y edición del CUIT del sindicato, datos del
+usuario de plataforma, y los dos registros (afiliado y empresa) antes de
+buscar en el padrón. Donde se REFERENCIA uno que ya existe —los logins, el
+reset de clave, los criterios de notificación, los filtros— se busca tal
+cual: los miles de CUIL sintéticos de los lotes no cumplen el verificador y
+quedan así, y tienen que seguir entrando. `test_cuit_puertas.py` recorre con
+`ast` toda ruta POST que reciba un CUIL/CUIT y falla si no está clasificada.
+Un texto sin dígitos en un CUIT opcional ("abc") pasaba como campo vacío;
+QA lo encontró y ya no.
+
+**El número no se cambia desde una edición (E-IDENT-03).** Apareció al
+revisar el trabajo del desarrollador de las puertas: el formulario de
+edición de afiliado y de empleador dejaba cambiar el CUIL/CUIT, y eso
+cambiaba UNA tabla. La persona quedaba separada de su cuenta (la clave, la
+foto), de sus recibos, sus trámites y sus otros empadronamientos, y
+`guardar_datos_personales` le creaba una cuenta nueva sin clave. Ya pasaba
+antes, pero con el verificador nuevo un admin iba a tener todos los motivos
+para "corregir" el número justo ahí. Ahora el campo queda de solo lectura
+en la edición y el servidor lo frena aunque se arme el POST a mano.
+
+**La demo con números válidos** (`identificadores_demo.py`). Los nuevos
+conservan los diez primeros dígitos con el verificador correcto, salvo el
+admin de la UOM: `20111111110` y `20111111119` (Juan Molina) se corrigen los
+dos a `20111111112`, y como el operador se vincula al padrón por CUIL, la
+corrección ciega lo habría fusionado con el afiliado. Es el caso que dio la
+regla de colisiones (D4). El mapa vive en un módulo propio porque
+**`cargar_demo.py` carga la demo al importarse** (no tiene
+`if __name__ == "__main__"`): si la herramienta lo hubiera importado para
+leer una constante, habría borrado y recreado la demo de la base contra la
+que corría.
+
+**La herramienta** (`regularizar_cuit.py`). Su `INVENTARIO` es la lista de
+dónde vive un CUIL/CUIT: 32 lugares entre columnas de texto y JSON, con lo
+que se excluye a propósito y por qué (las bitácoras dicen lo que pasó con el
+número de ese momento y no se reescriben; la traza nueva,
+`CambioIdentificador`, permite seguirlas). Un test falla si aparece una
+columna con `cuil`/`cuit` en el nombre, o cualquier columna JSON, sin
+decidir. Clasifica cada número inválido por origen —`demo` (el nuevo exacto
+del mapa), `manual` (se corrige), `lote` (la regla de cada generador; no se
+toca), `lectura` (solo lo leyó la IA de un documento: no se "corrige" lo que
+dice un papel)— y marca colisiones con una alternativa. La conversión es
+todo o nada: valida todo antes del backup, toma un candado de escritura,
+reescribe columnas y JSON en el formato que tenían, y antes del COMMIT
+verifica que cada nuevo tenga exactamente las apariciones que tenía el
+viejo y que ningún otro número haya cambiado.
+
+**Lo que encontró QA sobre la base "como Pruebas"** (demo vieja + lotes +
+datos cargados a mano con las rutas reales del código viejo): diff celda por
+celda contra el backup restaurado, 0 diferencias colaterales; 31 relaciones
+por texto idénticas antes y después; las 422 páginas del admin iguales con
+el código viejo sobre la base vieja y el nuevo sobre la convertida. Y una
+ventana real: un pedido que pasó el chequeo de sesión antes del COMMIT
+escribe después con el número viejo. Para eso la herramienta "completa" una
+conversión ya registrada en la traza (motivo `RESTO`), lo único que acepta
+con el número nuevo ya ocupado. De paso salió **H-0021**: reportar y enviar
+al sindicato toman el CUIL y el id del recibo del cuerpo del pedido, así que
+un afiliado podía marcar como enviado el recibo de otro.
+
+Al desplegar, en cada entorno hay que correr la regularización
+(`DESPLIEGUE_RENDER.md`): hasta entonces los accesos nuevos de la demo no
+existen en esa base. Trabajador 0.44.01, Admin 0.47.01, Plataforma 0.43.01.

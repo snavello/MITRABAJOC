@@ -16,7 +16,7 @@ se hace.
   a veces negativo. Hoy no rompe nada (el validador usa `abs()` y el banco ya
   no lo marca), pero el motor v2 debería normalizarlo en un solo lugar.
 
-- [ ] **Validar el módulo 11 (dígito verificador) de CUIL y CUIT** (2026-09-24,
+- [x] **Validar el módulo 11 (dígito verificador) de CUIL y CUIT** (2026-09-24,
   decisión de SDN al construir el enmascarado: "por ahora no lo testeamos,
   lo anotamos para cuando avancemos en ese tema"). Hoy la app no valida el
   verificador en ningún lado, y **ninguno de los CUIL/CUIT de la demo lo
@@ -31,7 +31,10 @@ se hace.
   en `enmascarado.pertenece`, que es más firme que la distancia.
   **Plan propuesto el 2026-10-10: [`PLAN_CUIT_MOD11.md`](PLAN_CUIT_MOD11.md)**
   (diagnóstico, conversión de los números cargados a mano y recién después
-  exigir el verificador en las puertas de alta).
+  exigir el verificador en las puertas de alta). **Hechos (1) y (2) el
+  2026-10-10** (CLAUDE.md, "Estado actual" 31). Queda (3), el verificador en
+  `enmascarado.pertenece`, y convertir los lotes sintéticos (etapa 5 del
+  plan, opcional).
 
 - [ ] **El empleador quedó con el defecto que se le corrigió al trabajador**
   (2026-09-22, al terminar "Una persona, un domicilio" en HISTORIAL.md).
