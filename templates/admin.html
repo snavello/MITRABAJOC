@@ -1011,6 +1011,8 @@
   <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: revisá el CUIL (11 dígitos) y el nombre.</div>
   {% elif request.query_params.get('err') == 'cuil' %}
   <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: el CUIL no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
+  {% elif request.query_params.get('err') == 'cuilfijo' %}
+  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: el CUIL no se cambia desde una edición, porque es la identidad de la persona en todo el sistema (su cuenta, sus recibos, sus trámites). Si está mal, pedile a la plataforma que lo corrija.<br><small style="opacity:.8;">Código E-IDENT-03</small></div>
   {% elif request.query_params.get('err') == 'cuitempleador' %}
   <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: el CUIT del empleador no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
   {% endif %}
@@ -1088,7 +1090,7 @@
     <form method="post" action="/admin/trabajador" class="form-trab">
       <input type="hidden" name="id" id="trab-id">
       <div class="grid2">
-        <div class="campo"><label>CUIL *</label><input name="cuil" id="trab-cuil" required data-cuit="persona" placeholder="20123456789"></div>
+        <div class="campo"><label>CUIL *</label><input name="cuil" id="trab-cuil" required data-cuit="persona" placeholder="20123456786"></div>
         <div class="campo"><label>Nombre *</label><input name="nombre" id="trab-nombre" required></div>
         {# Del domicilio, provincia y localidad son OBLIGATORIAS y el resto no
            (geo.OBLIGATORIOS_AFILIADO): sin esos dos campos el sindicato no
@@ -1152,7 +1154,7 @@
       cuil, nombre, calle, numero, piso, localidad, provincia, telefono, mail, cp, seccional</p>
     <p class="muted">Obligatorios: <b>cuil</b>, <b>nombre</b>, <b>localidad</b> y <b>provincia</b>; el resto puede ir vacío (pero respetá las comas si querés cargar un campo posterior). Las líneas que no traigan esos cuatro datos quedan afuera y te decimos cuántas. La <b>seccional</b> va por nombre, tal como figura en la pestaña Seccionales: si no coincide con ninguna, el trabajador queda sin asignar.</p>
     <form method="post" action="/admin/trabajador/masivo">
-      <textarea name="lista" rows="6" placeholder="20123456789, Juan Pérez, Av. Siempreviva, 742, , Rosario, Santa Fe, 341-555-5555, juan@mail.com, 2000, Rosario&#10;27987654321, Ana López" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:7px; font-family:Consolas,monospace; font-size:13px;"></textarea>
+      <textarea name="lista" rows="6" placeholder="20123456786, Juan Pérez, Av. Siempreviva, 742, , Rosario, Santa Fe, 341-555-5555, juan@mail.com, 2000, Rosario&#10;27987654320, Ana López" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:7px; font-family:Consolas,monospace; font-size:13px;"></textarea>
       <button type="submit" style="margin-top:10px;">Cargar lista</button>
     </form>
 
@@ -1978,6 +1980,8 @@
   <!-- ============ EMPLEADORES ============ -->
   {% if request.query_params.get('error') == 'cuit' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El CUIT no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
+  {% elif request.query_params.get('error') == 'cuitfijo' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó: el CUIT no se cambia desde una edición, porque une al empleador con su cuenta, sus empleados, sus recibos y sus trámites. Si está mal, pedile a la plataforma que lo corrija.<br><small style="opacity:.8;">Código E-IDENT-03</small></div>
   {% endif %}
   {% if request.query_params.get('importados') %}
   <div class="msg ok">✓ Se importaron {{ request.query_params.get('importados') }} empleador(es) nuevo(s) desde Conceptos.</div>
@@ -2009,7 +2013,7 @@
       <form method="post" action="/admin/empleador" id="form-empleador">
         <input type="hidden" name="id" id="emp-id">
         <div class="grid2">
-          <div class="campo"><label>CUIT *</label><input name="cuit" id="emp-cuit" required data-cuit="cualquiera" placeholder="30123456789"></div>
+          <div class="campo"><label>CUIT *</label><input name="cuit" id="emp-cuit" required data-cuit="cualquiera" placeholder="30123456781"></div>
           <div class="campo"><label>Razón social</label><input name="razon_social" id="emp-razon"></div>
           <div class="campo full"><label>Domicilio</label><input name="domicilio" id="emp-domicilio"></div>
           <div class="campo"><label>Teléfono</label><input name="telefono" id="emp-telefono"></div>
@@ -2711,7 +2715,7 @@
     <form method="post" action="/admin/usuario" id="form-usuario">
       <input type="hidden" name="id" id="usu-id">
       <div class="grid2">
-        <div class="campo"><label>CUIT/CUIL *</label><input name="usuario" id="usu-usuario" required data-cuit="persona" placeholder="20123456789"></div>
+        <div class="campo"><label>CUIT/CUIL *</label><input name="usuario" id="usu-usuario" required data-cuit="persona" placeholder="20123456786"></div>
         <div class="campo"><label>Nombre</label><input name="nombre" id="usu-nombre"></div>
         <div class="campo" id="usu-clave-campo"><label>Clave inicial *</label><input name="clave_inicial" id="usu-clave" type="password" required></div>
         <div class="campo"><label>Rol</label>
@@ -3413,6 +3417,9 @@ function cambiarSubEmpleador(dest) {
 function editarEmpleador(e) {
   document.getElementById('emp-id').value = e.id;
   document.getElementById('emp-cuit').value = e.cuit || '';
+  // El CUIT no se cambia desde una edición (E-IDENT-03). El servidor lo frena igual.
+  document.getElementById('emp-cuit').readOnly = true;
+  document.getElementById('emp-cuit').title = 'El CUIT no se cambia desde una edición: si está mal, pedile a la plataforma que lo corrija.';
   document.getElementById('emp-razon').value = e.razon_social || '';
   document.getElementById('emp-domicilio').value = e.domicilio || '';
   document.getElementById('emp-telefono').value = e.telefono || '';
@@ -3426,6 +3433,8 @@ function editarEmpleador(e) {
 function cancelarEmpleador() {
   document.getElementById('form-empleador').reset();
   document.getElementById('emp-id').value = '';
+  document.getElementById('emp-cuit').readOnly = false;
+  document.getElementById('emp-cuit').title = '';
   document.getElementById('empleador-titulo').textContent = 'Dar de alta un empleador';
   document.getElementById('form-empleador').querySelector('button[type=submit]').textContent = 'Guardar empleador';
   document.getElementById('emp-cancel').classList.add('oculto');
@@ -4584,6 +4593,10 @@ function refrescarTramiteEmpresaDetalle(id) {
 function editarTrab(t) {
   document.getElementById('trab-id').value = t.id;
   document.getElementById('trab-cuil').value = t.cuil || '';
+  // El CUIL no se cambia desde una edición (E-IDENT-03): es la identidad de
+  // la persona en todo el sistema. El servidor lo frena igual.
+  document.getElementById('trab-cuil').readOnly = true;
+  document.getElementById('trab-cuil').title = 'El CUIL no se cambia desde una edición: si está mal, pedile a la plataforma que lo corrija.';
   document.getElementById('trab-nombre').value = t.nombre || '';
   document.getElementById('trab-calle').value = t.calle || '';
   document.getElementById('trab-numero').value = t.numero || '';
@@ -4619,6 +4632,8 @@ function editarTrab(t) {
 function resetTrab() {
   document.querySelector('.form-trab').reset();
   document.getElementById('trab-id').value = '';
+  document.getElementById('trab-cuil').readOnly = false;
+  document.getElementById('trab-cuil').title = '';
   document.getElementById('trab-precision').value = 'sin_geo';
   document.getElementById('trab-submit').textContent = 'Agregar trabajador';
   document.getElementById('trab-cancelar').style.display = 'none';

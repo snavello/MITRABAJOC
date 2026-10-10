@@ -287,7 +287,7 @@
       <input type="hidden" name="id" id="sind-id">
       <div class="grid">
         <div class="campo"><label>Nombre *</label><input name="nombre" required></div>
-        <div class="campo"><label>CUIT</label><input name="cuit" data-cuit="empresa" placeholder="30-12345678-9"></div>
+        <div class="campo"><label>CUIT</label><input name="cuit" data-cuit="empresa" placeholder="30-12345678-1"></div>
         <div class="campo full"><label>Descripción</label><input name="descripcion" placeholder="Breve descripción del gremio"></div>
         <div class="campo"><label>Mail</label><input name="mail" type="email"></div>
         <div class="campo"><label>Teléfonos</label><input name="telefonos"></div>
@@ -403,7 +403,7 @@
             {% endfor %}
           </select>
         </div>
-        <div class="campo"><label>CUIT / CUIL del administrador *</label><input name="usuario" required inputmode="numeric" data-cuit="persona" placeholder="20123456789"></div>
+        <div class="campo"><label>CUIT / CUIL del administrador *</label><input name="usuario" required inputmode="numeric" data-cuit="persona" placeholder="20123456786"></div>
         <div class="campo"><label>Nombre</label><input name="nombre"></div>
         <div class="campo"><label>Clave inicial *</label><input id="na-clave" name="clave_inicial" required placeholder="La cambiará en el primer ingreso"></div>
         <div class="campo"><label>Repetir clave inicial *</label><input id="na-repetir" required></div>
@@ -435,7 +435,7 @@
           </select>
           <span class="muted" style="font-size:11px;">Son cuentas separadas aunque compartan CUIT/CUIL: elegí la que corresponda al login que querés cambiar.</span>
         </div>
-        <div class="campo"><label>CUIT / CUIL *</label><input name="identificador" required inputmode="numeric" placeholder="20123456789"></div>
+        <div class="campo"><label>CUIT / CUIL *</label><input name="identificador" required inputmode="numeric" placeholder="20123456786"></div>
         <div class="campo"><label>Nueva clave *</label><input id="rc-clave" name="clave_nueva" required></div>
         <div class="campo"><label>Repetir nueva clave *</label><input id="rc-repetir" required></div>
       </div>

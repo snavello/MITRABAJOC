@@ -36,7 +36,10 @@ PREFIJOS_EMPRESA = frozenset({"30", "33", "34"})
 PERSONA = "persona"
 EMPRESA = "empresa"
 
-_NO_DIGITO = re.compile(r"\D")
+# [^0-9] y no \D: \D deja pasar dígitos Unicode ("２０" de ancho completo, que
+# int() acepta) y el número quedaría guardado con caracteres que ninguna
+# búsqueda por texto vuelve a encontrar.
+_NO_DIGITO = re.compile(r"[^0-9]")
 _SEPARADOR = re.compile(r"\d\D+\d")
 
 

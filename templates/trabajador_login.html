@@ -134,7 +134,7 @@
 
     <form class="form activo" id="form-login" method="post" action="/trabajador/login">
       <label>CUIL</label>
-      <input name="cuil" inputmode="numeric" placeholder="20123456789" required>
+      <input name="cuil" inputmode="numeric" placeholder="20123456786" required>
       <label>Clave</label>
       <input type="password" name="clave" required>
       <button class="enviar" type="submit">Ingresar</button>
@@ -143,7 +143,7 @@
 
     <form class="form" id="form-registro" method="post" action="/trabajador/registro" onsubmit="return confirmarClaves(this, 'reg-clave', 'reg-repetir', 'reg-error')">
       <label>CUIL</label>
-      <input name="cuil" inputmode="numeric" data-cuit="persona" placeholder="20123456789" required>
+      <input name="cuil" inputmode="numeric" data-cuit="persona" placeholder="20123456786" required>
       <label>Elegí una clave</label>
       <input type="password" id="reg-clave" name="clave" required minlength="4">
       <label>Repetí la clave</label>

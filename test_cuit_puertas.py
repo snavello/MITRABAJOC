@@ -215,7 +215,7 @@ def test_admin_trabajador_edicion_que_cambia_el_numero_a_uno_invalido_se_bloquea
     t = _trabajador(SINT_CUIL)
     r = c.post("/admin/trabajador", data={
         "id": str(t.id), "cuil": CUIL_MAL, "nombre": "No debería", **DOM}, follow_redirects=False)
-    assert "err=cuil" in r.headers["location"], r.headers
+    assert "err=cuilfijo" in r.headers["location"], r.headers
     assert _trabajador(SINT_CUIL) is not None and _trabajador(CUIL_MAL) is None
     # y cambiar solo el CUIT del empleador a uno inválido también
     r = c.post("/admin/trabajador", data={
@@ -226,7 +226,11 @@ def test_admin_trabajador_edicion_que_cambia_el_numero_a_uno_invalido_se_bloquea
     print("OK  test_admin_trabajador_edicion_que_cambia_el_numero_a_uno_invalido_se_bloquea")
 
 
-def test_admin_trabajador_edicion_que_cambia_a_un_numero_valido_pasa():
+def test_admin_trabajador_edicion_no_cambia_el_cuil_ni_a_uno_valido():
+    """El CUIL no se cambia desde una edición (E-IDENT-03), ni siquiera para
+    "corregirlo" a uno válido: cambiaba solo esta fila y dejaba atrás la
+    cuenta (clave, foto), los recibos y los trámites de la persona. Se
+    corrige con regularizar_cuit.py, en todas las tablas a la vez."""
     c = _admin()
     cuil_viejo = "20650000020"
     assert not cuit.es_valido(cuil_viejo)
@@ -236,11 +240,17 @@ def test_admin_trabajador_edicion_que_cambia_a_un_numero_valido_pasa():
         s.commit()
     t = _trabajador(cuil_viejo)
     nuevo = cuit.corregir(cuil_viejo)
-    r = c.post("/admin/trabajador", data={"id": str(t.id), "cuil": nuevo, "nombre": "Para Corregir", **DOM},
+    r = c.post("/admin/trabajador", data={"id": str(t.id), "cuil": nuevo, "nombre": "Otro Nombre", **DOM},
                follow_redirects=False)
-    assert "err=" not in r.headers["location"], r.headers
-    assert _trabajador(nuevo) is not None
-    print("OK  test_admin_trabajador_edicion_que_cambia_a_un_numero_valido_pasa")
+    assert "err=cuilfijo" in r.headers["location"], r.headers
+    assert _trabajador(nuevo) is None and _trabajador(cuil_viejo) is not None
+    with Session(db.engine) as s:
+        assert s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == nuevo)).first() is None
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil_viejo)).first()
+        assert cuenta.nombre == "Para Corregir", "no se tiene que haber guardado nada"
+    pagina = c.get("/admin?err=cuilfijo")
+    assert "E-IDENT-03" in pagina.text
+    print("OK  test_admin_trabajador_edicion_no_cambia_el_cuil_ni_a_uno_valido")
 
 
 # =============================================================================
@@ -357,12 +367,17 @@ def test_admin_empleador_edicion_con_el_mismo_numero_viejo_no_se_bloquea():
     with Session(db.engine) as s:
         e = s.get(Empleador, eid)
         assert e.razon_social == "Sintética Editada" and e.cuit == SINT_CUIT
-    # cambiarlo a otro inválido sí se frena, y no toca la fila
-    r = c.post("/admin/empleador", data={"id": str(eid), "cuit": CUIT_MAL, "razon_social": "No"},
-               follow_redirects=False)
-    assert "error=cuit" in r.headers["location"]
-    with Session(db.engine) as s:
-        assert s.get(Empleador, eid).cuit == SINT_CUIT
+    # cambiarlo -- a un inválido o a uno válido -- se frena (E-IDENT-03) y no
+    # toca la fila: el CUIT une al empleador con su cuenta, sus empleados y sus
+    # recibos, y se corrige con regularizar_cuit.py en todas las tablas.
+    for otro in (CUIT_MAL, cuit.corregir(SINT_CUIT)):
+        r = c.post("/admin/empleador", data={"id": str(eid), "cuit": otro, "razon_social": "No"},
+                   follow_redirects=False)
+        assert "error=cuitfijo" in r.headers["location"], (otro, r.headers)
+        with Session(db.engine) as s:
+            e = s.get(Empleador, eid)
+            assert e.cuit == SINT_CUIT and e.razon_social == "Sintética Editada"
+    assert "E-IDENT-03" in c.get("/admin?error=cuitfijo").text
     print("OK  test_admin_empleador_edicion_con_el_mismo_numero_viejo_no_se_bloquea")
 
 

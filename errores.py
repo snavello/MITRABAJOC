@@ -67,6 +67,12 @@ MENSAJES = {
     "E-IDENT-01": (422, "El CUIL no es válido: revisá los 11 números. Si es el que "
                         "figura en tu recibo de sueldo, avisale a tu sindicato."),
     "E-IDENT-02": (422, "El CUIT no es válido: revisá los 11 números."),
+    # El número ya existe y alguien intenta cambiarlo desde una edición. No se
+    # puede: une a la persona con su cuenta, sus recibos y sus trámites, y
+    # cambiarlo en una sola tabla corta todo eso en silencio.
+    "E-IDENT-03": (409, "El CUIL/CUIT no se cambia desde una edición: es la identidad "
+                        "de la persona en todo el sistema. Si está mal, pedile a la "
+                        "plataforma que lo corrija."),
     # --- Asistente del Panel Sindical (docs/ASISTENTE_PANEL.md) -----------
     "E-ASISTENTE-01": (502, "El asistente no pudo responder en este momento. Los filtros "
                             "del panel siguen funcionando a mano; probá de nuevo en un rato."),

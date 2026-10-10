@@ -1652,15 +1652,20 @@ def admin_trabajador_alta(
         if id:  # modificación (solo si es de este sindicato)
             t = s.get(Trabajador, int(id))
             if t and t.sindicato_id == sid:
-                # El verificador se exige solo si el número CAMBIÓ: un padrón
-                # cargado antes (o un lote sintético) tiene CUIL que no lo
-                # cumplen, y corregirle el teléfono no puede chocar con eso.
-                if _cuil_mal(cuil_norm, guardado=t.cuil):
-                    return RedirectResponse("/admin?err=cuil#trabajadores", status_code=303)
+                # El CUIL NO se cambia desde una edición (E-IDENT-03): es la
+                # identidad de la persona en todo el sistema y entre tablas
+                # se une por texto. Cambiarlo acá movía solo esta fila y
+                # dejaba atrás su cuenta, sus recibos, sus trámites y su
+                # empadronamiento en otros gremios. Si está mal, se corrige
+                # con regularizar_cuit.py, que lo cambia en todas las tablas
+                # a la vez (PLAN_CUIT_MOD11.md). Reenviar el mismo número --
+                # aunque no cumpla el verificador, como los de un lote -- no
+                # frena la edición de los otros campos.
+                if _norm_cuil(cuil_norm) != _norm_cuil(t.cuil):
+                    return RedirectResponse("/admin?err=cuilfijo#trabajadores", status_code=303)
                 if _cuit_mal(cuit_empleador, guardado=t.cuit_empleador, opcional=True):
                     return RedirectResponse("/admin?err=cuitempleador#trabajadores",
                                             status_code=303)
-                t.cuil = cuil_norm
                 t.vigencia_credencial = vigencia_credencial or None
                 t.seccional_id = sec_id
                 t.cuit_empleador = cuit_empleador.strip() or None
@@ -1669,7 +1674,7 @@ def admin_trabajador_alta(
                 # se escriben en un solo lugar y por eso el cambio se ve
                 # también en los otros gremios donde esté empadronada. Es la
                 # contracara de que no puedan existir dos versiones.
-                db.guardar_datos_personales(s, cuil_norm, nombre=nombre,
+                db.guardar_datos_personales(s, t.cuil, nombre=nombre,
                                             domicilio=domicilio, telefono=telefono, mail=mail)
         else:    # alta — evitar duplicado de CUIL en el mismo sindicato
             # Un número que NACE en el sistema: el CUIL con su verificador, y
@@ -2724,10 +2729,13 @@ def admin_empleador_alta(
         if id:
             e = s.get(Empleador, int(id))
             if e and e.sindicato_id == sid:
-                # Edición: el verificador se exige solo si el CUIT cambió.
-                if _cuit_mal(cuit_norm, guardado=e.cuit):
-                    return RedirectResponse("/admin?error=cuit#empleadores", status_code=303)
-                e.cuit, e.razon_social = cuit_norm, razon_social.strip()
+                # El CUIT NO se cambia desde una edición (E-IDENT-03), por lo
+                # mismo que el CUIL del afiliado: une al empleador con su
+                # cuenta, sus empleados, sus recibos y sus trámites. Si está
+                # mal, se corrige con regularizar_cuit.py en todas las tablas.
+                if _norm_cuil(cuit_norm) != _norm_cuil(e.cuit):   # `cuit` es el campo del formulario: tapa al módulo
+                    return RedirectResponse("/admin?error=cuitfijo#empleadores", status_code=303)
+                e.razon_social = razon_social.strip()
                 e.domicilio, e.telefono = domicilio, telefono
                 e.provincia, e.mail = provincia, mail
                 s.add(e)

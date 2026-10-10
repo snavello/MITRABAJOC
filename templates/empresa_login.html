@@ -118,7 +118,7 @@
 
     <form class="form activo" id="form-login" method="post" action="/empresa/login">
       <label>CUIT</label>
-      <input name="cuit" inputmode="numeric" placeholder="30123456789" required>
+      <input name="cuit" inputmode="numeric" placeholder="30123456781" required>
       <label>Clave</label>
       <input type="password" name="clave" required>
       <button class="enviar" type="submit">Ingresar</button>
@@ -127,7 +127,7 @@
 
     <form class="form" id="form-registro" method="post" action="/empresa/registro" onsubmit="return confirmarClaves(this, 'reg-clave', 'reg-repetir', 'reg-error')">
       <label>CUIT</label>
-      <input name="cuit" inputmode="numeric" data-cuit="cualquiera" placeholder="30123456789" required>
+      <input name="cuit" inputmode="numeric" data-cuit="cualquiera" placeholder="30123456781" required>
       <label>Elegí una clave</label>
       <input type="password" id="reg-clave" name="clave" required minlength="4">
       <label>Repetí la clave</label>

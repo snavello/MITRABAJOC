@@ -23,6 +23,7 @@ RAIZ = Path(__file__).resolve().parent
     (None, ""),
     ("", ""),
     ("sin numeros", ""),
+    ("２０２０２７９０４１１", ""),   # dígitos de ancho completo: no son dígitos ASCII
 ])
 def test_normalizar(entrada, salida):
     assert cuit.normalizar(entrada) == salida
