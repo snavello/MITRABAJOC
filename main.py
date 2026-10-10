@@ -46,6 +46,7 @@ from psycopg.errors import QueryCanceled
 from sqlalchemy.exc import OperationalError, TimeoutError as PoolTimeoutError
 from sqlmodel import select
 
+import cuit
 import encuestas
 import esquema
 import resumen_diario
@@ -6216,8 +6217,7 @@ def plataforma_reset_clave(
 
 
 def _norm_cuil(cuil: str) -> str:
-    import re
-    return re.sub(r"[^0-9]", "", cuil or "")
+    return cuit.normalizar(cuil)
 
 
 def _fmt_fecha_ar(iso: str) -> str:

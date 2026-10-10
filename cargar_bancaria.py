@@ -44,7 +44,7 @@ from db import Sindicato, UsuarioSindicato, Concepto, Formula
 import cargar_lote_sindicato as lote
 
 NOMBRE = "La Bancaria"
-ADMIN = ("20333444550", "bancaria-demo")
+ADMIN = ("20333444551", "bancaria-demo")
 
 # Julio 2026, acordado con las cámaras empresariales bancarias.
 SUELDO_INICIAL = 2_463_757.68      # Auxiliar inicial, art. 5 (coeficiente 1,00)
@@ -291,7 +291,7 @@ def crear_sindicato() -> int:
         sind = Sindicato(
             nombre=NOMBRE, slug="la-bancaria",
             descripcion="Asociación Bancaria — Sociedad de Empleados de Banco (CCT 18/75)",
-            cuit="30-52573385-9", mail="info@labancaria.org",
+            cuit="30-52573385-4", mail="info@labancaria.org",
             autoridad="Comisión Directiva Nacional", cargo_autoridad="Secretaría General",
             color_base="#132a4a", color_primario="#1d4e89",
             color_acento="#e8b84b", color_secundario="#2f8f83",

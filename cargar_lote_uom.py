@@ -634,4 +634,4 @@ if __name__ == "__main__":
     print("\nLote UOM cargado. Accesos de ejemplo (clave = 5 primeros dígitos del CUIL):")
     for t in trabajadores[:3]:
         print(f"  Trabajador {t['nombre']}: CUIL {t['cuil']} / clave {t['cuil'][:5]}")
-    print("  Admin UOM: 20111111110 / uom-demo  →  /admin/dashboard")
+    print("  Admin UOM: 20111111120 / uom-demo  →  /admin/dashboard")

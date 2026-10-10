@@ -868,7 +868,7 @@ class ReciboVerificado(SQLModel, table=True):
     # estaba ("dd/mm/AAAA HH:MM", NO ordenable) para no romper lo que la
     # muestra; `procesado_en` es la MISMA fecha en formato ordenable.
     procesado_en: Optional[str] = Field(default=None)   # "AAAA-MM-DD HH:MM"
-    cuit_empleador: str = ""                            # solo dígitos (validador._norm_cuil)
+    cuit_empleador: str = ""                            # solo dígitos (cuit.normalizar)
     categoria: str = ""                                 # texto libre leído del recibo (no hay catálogo CCT)
     formato: str = ""                                   # "clasico" | "nuevo" (Ley 27.802)
     bruto: Optional[float] = Field(default=None)        # resultado.totales.ingresos

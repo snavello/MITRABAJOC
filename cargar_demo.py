@@ -42,13 +42,18 @@ TELEFONOS_DEMO = {
     "Salta": "387 421 0640",
 }
 
+# Los CUIL/CUIT de esta demo cumplen el dígito verificador desde el
+# 2026-10-10 (PLAN_CUIT_MOD11.md). Los números de antes y su reemplazo están
+# en identificadores_demo.py, NO acá: este script carga la demo al importarse,
+# así que nadie puede importarlo para leer una constante.
+
 SINDICATOS = [
     {
         "nombre": "Unión Obrera Metalúrgica", "descripcion": "Trabajadores del metal",
-        "cuit": "30-11111111-1", "mail": "info@uom.org.ar", "autoridad": "Ana Pérez",
+        "cuit": "30-11111111-8", "mail": "info@uom.org.ar", "autoridad": "Ana Pérez",
         "cargo_autoridad": "Secretaria General",
         "color_primario": "#1a3d6b", "color_secundario": "#2fa88f", "color_acento": "#e8b84b",
-        "admin": ("20111111110", "uom-demo"),   # CUIT del admin UOM
+        "admin": ("20111111120", "uom-demo"),   # CUIT del admin UOM
         "conceptos": [
             ("SUELDO", "Sueldo básico", "ingreso", True),
             ("PRESENT", "Presentismo", "ingreso", True),
@@ -106,36 +111,36 @@ SINDICATOS = [
         # de pase) sin nadie adentro es un trámite que en la demo no lo
         # atiende nadie, y el circuito se corta a la vista del sindicato.
         "usuarios": [
-            ("20555555553", "rosario-demo", "Carla Ruiz", "admin_seccional",
+            ("20555555556", "rosario-demo", "Carla Ruiz", "admin_seccional",
              "Rosario", "Mesa de Entradas"),
-            ("20666666665", "mesa-demo", "Diego Sosa", "area",
+            ("20666666667", "mesa-demo", "Diego Sosa", "area",
              "Rosario", "Mesa de Entradas"),
-            ("27131313136", "legalros-demo", "Nadia Ortiz", "area",
+            ("27131313131", "legalros-demo", "Nadia Ortiz", "area",
              "Rosario", "Legales"),
-            ("20101010109", "mesacentral-demo", "Inés Ferrer", "area",
+            ("20101010105", "mesacentral-demo", "Inés Ferrer", "area",
              "Sede Central", "Mesa de Entradas"),
-            ("20121212127", "legalcentral-demo", "Hugo Peña", "area",
+            ("23121212129", "legalcentral-demo", "Hugo Peña", "area",
              "Sede Central", "Legales"),
-            ("27777777774", "prensa-demo", "Elena Vidal", "area",
+            ("27777777772", "prensa-demo", "Elena Vidal", "area",
              "Sede Central", "Prensa"),
-            ("20141414145", "mesacba-demo", "Raúl Bravo", "area",
+            ("20141414144", "mesacba-demo", "Raúl Bravo", "area",
              "Córdoba", "Mesa de Entradas"),
-            ("20888888887", "prensacba-demo", "Fabián Luna", "area",
+            ("20888888889", "prensacba-demo", "Fabián Luna", "area",
              "Córdoba", "Prensa"),
         ],
         # (CUIL, nombre, seccional) del padrón de afiliados.
         "cuils": [
-            ("20111111119", "Juan Molina", "Sede Central"),
-            ("27222222224", "María Sánchez", "Rosario"),
-            ("20333333336", "Pedro Ibarra", "Córdoba"),
+            ("20111111112", "Juan Molina", "Sede Central"),
+            ("27222222228", "María Sánchez", "Rosario"),
+            ("20333333334", "Pedro Ibarra", "Córdoba"),
         ],
         # Empleados del sindicato que ADEMÁS están afiliados: entran al
         # padrón y `sincronizar_por_cuil` les prende la marca sola. Elena
         # Vidal (Prensa) queda afuera a propósito -- trabaja en el gremio
         # sin estar afiliada a él, que es un caso real y no un error.
-        "empleados_afiliados": ["20555555553", "20666666665", "27131313136",
-                                "20101010109", "20121212127", "20141414145",
-                                "20888888887"],
+        "empleados_afiliados": ["20555555556", "20666666667", "27131313131",
+                                "20101010105", "23121212129", "20141414144",
+                                "20888888889"],
         # Formularios con ruteo por área. El primero habilita el pase; el
         # segundo no, para que se vea el contraste en el chat del trabajador.
         "tramites": [
@@ -166,16 +171,16 @@ SINDICATOS = [
             },
         ],
         "empleadores": [
-            ("30111222339", "Constructora Ejemplo SA"),
-            ("30999888776", "Metalúrgica del Sur SRL"),
+            ("30111222335", "Constructora Ejemplo SA"),
+            ("30999888778", "Metalúrgica del Sur SRL"),
         ],
     },
     {
         "nombre": "Federación Gastronómica", "descripcion": "Trabajadores gastronómicos",
-        "cuit": "30-22222222-2", "mail": "info@fega.org.ar", "autoridad": "Luis Gómez",
+        "cuit": "30-22222222-9", "mail": "info@fega.org.ar", "autoridad": "Luis Gómez",
         "cargo_autoridad": "Secretario General",
         "color_primario": "#7a1f2b", "color_secundario": "#c19a3e", "color_acento": "#3d6b4a",
-        "admin": ("20222222220", "fega-demo"),  # CUIT del admin Gastronómica
+        "admin": ("20222222223", "fega-demo"),  # CUIT del admin Gastronómica
         "conceptos": [
             ("BASICO", "Sueldo básico", "ingreso", True),
             ("ADIC", "Adicional por categoría", "ingreso", True),
@@ -210,15 +215,15 @@ SINDICATOS = [
              ["tramites_recibidos", "trabajadores", "noticias", "beneficios", "notificaciones"]),
         ],
         "usuarios": [
-            ("20999999991", "atencion-demo", "Gabriela Paz", "area",
+            ("23999999999", "atencion-demo", "Gabriela Paz", "area",
              "Sede Central", "Atención al Afiliado"),
         ],
         "cuils": [
             # el 222 también está en UOM (pluriempleo)
-            ("27222222224", "María Sánchez", "Sede Central"),
-            ("20444444440", "Sergio Ledesma", "Sede Central"),
+            ("27222222228", "María Sánchez", "Sede Central"),
+            ("20444444445", "Sergio Ledesma", "Sede Central"),
         ],
-        "empleados_afiliados": ["20999999991"],
+        "empleados_afiliados": ["23999999999"],
         "tramites": [
             {
                 "titulo": "Reclamo por propinas", "codigo": "F20 FEGA",
@@ -231,7 +236,7 @@ SINDICATOS = [
         # el CUIT de "Constructora Ejemplo SA" también está en UOM -- mismo
         # criterio que el CUIL de pluriempleo, para probar el selector
         # multisindicato del lado del empleador.
-        "empleadores": [("30111222339", "Constructora Ejemplo SA")],
+        "empleadores": [("30111222335", "Constructora Ejemplo SA")],
     },
 ]
 
@@ -431,13 +436,13 @@ for d in SINDICATOS:
 
 print("\nDemo cargada. Accesos:")
 print("  Plataforma:  /plataforma  (clave en variable PLATAFORMA_PASSWORD)")
-print("  UOM:         /admin  →  CUIT 20111111110 / uom-demo  (Super Admin)")
-print("  Gastronómica:/admin  →  CUIT 20222222220 / fega-demo  (Super Admin)")
+print("  UOM:         /admin  →  CUIT 20111111120 / uom-demo  (Super Admin)")
+print("  Gastronómica:/admin  →  CUIT 20222222223 / fega-demo  (Super Admin)")
 print("  Otros usuarios del panel (misma pantalla /admin):")
 for linea in resumen_usuarios:
     print(linea)
 print("  Trabajador:  /ingresar  →  registrarse con un CUIL habilitado")
-print("  Pluriempleo: CUIL 27222222224 está en ambos sindicatos")
+print("  Pluriempleo: CUIL 27222222228 está en ambos sindicatos")
 print("  Empresa:     /ingresar-empresa  →  registrarse con un CUIT habilitado")
-print("  Empresa multisindicato: CUIT 30111222339 está en ambos sindicatos")
-print("  Empleado sin afiliar: 27777777774 (Prensa) NO está en el padrón, a propósito")
+print("  Empresa multisindicato: CUIT 30111222335 está en ambos sindicatos")
+print("  Empleado sin afiliar: 27777777772 (Prensa) NO está en el padrón, a propósito")

@@ -9,6 +9,8 @@ import difflib
 import unicodedata
 from collections import defaultdict
 
+import cuit
+
 TOLERANCIA_TOTALES = 1.0  # pesos
 
 # Código que se le pone a un concepto detectado en un recibo cuando la IA no
@@ -79,7 +81,7 @@ def normalizar(texto) -> str:
 
 
 def _norm_cuil(cuil: str) -> str:
-    return re.sub(r"[^0-9]", "", cuil or "")
+    return cuit.normalizar(cuil)
 
 
 def a_numero(valor):

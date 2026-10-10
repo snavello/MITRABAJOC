@@ -60,6 +60,13 @@ MENSAJES = {
     "E-SESION-01": (400, "No pudimos determinar tu sindicato. Volvé a ingresar."),
     "E-SESION-02": (400, "No pudimos determinar tu identidad. Volvé a ingresar."),
 
+    # --- CUIL / CUIT con dígito verificador (PLAN_CUIT_MOD11.md) ---------
+    # Se exigen donde un número NACE (altas, registro, carga masiva); donde se
+    # referencia uno que ya existe (logins, filtros) no se mira el verificador.
+    # No hablan de la foto: no es un error de lectura, es un número mal escrito.
+    "E-IDENT-01": (422, "El CUIL no es válido: revisá los 11 números. Si es el que "
+                        "figura en tu recibo de sueldo, avisale a tu sindicato."),
+    "E-IDENT-02": (422, "El CUIT no es válido: revisá los 11 números."),
     # --- Asistente del Panel Sindical (docs/ASISTENTE_PANEL.md) -----------
     "E-ASISTENTE-01": (502, "El asistente no pudo responder en este momento. Los filtros "
                             "del panel siguen funcionando a mano; probá de nuevo en un rato."),
