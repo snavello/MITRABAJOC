@@ -145,6 +145,13 @@ CUITS_EMPRESA = [_cuit_empresa(j) for j in range(len(EMPRESAS))]
 CODIGOS_TIPO = [codigo for _, codigo, _ in TIPOS_TRAMITE]
 
 
+def identificadores_sinteticos() -> tuple:
+    """(CUILs, CUITs) que este generador produce, para que
+    `regularizar_cuit.py` reconozca un número sintético sin copiar la regla
+    (PLAN_CUIT_MOD11.md, D3). Puro: no toca la base."""
+    return set(CUILS), set(CUITS_EMPRESA)
+
+
 def _ts(dias_atras: int, hora: int = None) -> str:
     h = hora if hora is not None else rnd.randint(8, 20)
     return f"{(HOY - timedelta(days=dias_atras)).isoformat()} {h:02d}:{rnd.randint(0, 59):02d}"

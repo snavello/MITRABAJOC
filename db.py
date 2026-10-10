@@ -462,6 +462,33 @@ class LogPlataforma(SQLModel, table=True):
     detalle: str = ""
 
 
+class CambioIdentificador(SQLModel, table=True):
+    """Traza de la regularización de un CUIL/CUIT (PLAN_CUIT_MOD11.md, D5):
+    una fila por número que `regularizar_cuit.py aplicar --si` convirtió.
+
+    Existe porque la HISTORIA no se reescribe: las bitácoras (`logplataforma`,
+    `tramitelog`, ...), los textos libres y los archivos siguen diciendo el
+    número que tenían. Una entrada vieja de la bitácora con el número anterior
+    se sigue hasta la persona o la empresa buscándolo acá. Se guardan hechos,
+    no derivados: el número anterior y el nuevo, quién lo decidió y cuántas
+    filas de cada tabla se tocaron.
+
+    Los números van como DÍGITOS (11, sin guiones) aunque en alguna columna
+    estuvieran con guiones: es lo que se compara. `detalle` es el conteo de
+    filas por `tabla.columna`. Es de solo agregar: nada de la app la lee ni la
+    modifica, solo la herramienta la escribe."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    anterior: str = Field(index=True)
+    nuevo: str = Field(index=True)
+    tipo: str = ""                 # "persona" | "empresa"
+    origen: str = ""               # "manual" | "demo" | "lote" | ...
+    entorno: str = ""              # local | pruebas | demo | prod
+    fecha: str = ""                # "AAAA-MM-DD HH:MM", hora de Buenos Aires
+    quien: str = ""                # quien corrió la herramienta
+    filas: int = 0                 # total de filas tocadas
+    detalle: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+
+
 class CuentaTrabajador(SQLModel, table=True):
     """**La PERSONA**: una fila por CUIL en toda la plataforma, y la única
     dueña de sus datos personales -- nombre, domicilio, teléfono, mail y
