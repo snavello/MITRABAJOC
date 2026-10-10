@@ -533,7 +533,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   comprobante ajeno además se guardaba como semáforo propio. El chequeo de
   `/api/validar` SIGUE además de este: esa ruta se puede llamar sola con
   cualquier payload. Una ruta nueva que lea el documento de una persona suma
-  el suyo. Detalle en HISTORIAL.md.
+  el suyo. **Lo mismo vale para lo que el afiliado manda al sindicato**
+  (`/api/reportar`, `/api/enviar-sindicato`, XSK H-0021, 2026-10-10): el CUIL
+  sale de la sesión y el recibo tiene que ser suyo (`_envio_del_afiliado`,
+  `_recibo_propio`); antes un afiliado podía marcar como enviado el recibo de
+  otro. Detalle en HISTORIAL.md.
 
 - **El CUIL/CUIT cumple el módulo 11 donde NACE, y no se cambia desde una
   edición** (2026-10-10, `PLAN_CUIT_MOD11.md`, primera medida de la serie

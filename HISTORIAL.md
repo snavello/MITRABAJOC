@@ -6341,3 +6341,25 @@ aplicar los `RESTO`.
 Al desplegar, en cada entorno hay que correr la regularización
 (`DESPLIEGUE_RENDER.md`): hasta entonces los accesos nuevos de la demo no
 existen en esa base. Trabajador 0.44.01, Admin 0.47.01, Plataforma 0.43.01.
+
+## Lo que el afiliado manda al sindicato es suyo (XSK H-0021, 2026-10-10)
+
+`/api/reportar` y `/api/enviar-sindicato` guardaban el `Reporte` y el
+`EnvioSindicato` con el CUIL que mandaba el navegador, y marcaban como
+"enviado" cualquier recibo del sindicato cuyo id viniera en el pedido. Lo vio
+el desarrollador de las puertas de alta durante el plan del módulo 11. Dos
+consecuencias: un afiliado podía fabricar la prueba de afiliado cotizante
+(art. 21 bis) a nombre de otro, y con un id ajeno (son consecutivos) podía
+marcar el recibo de otra persona, que desde ese momento aparecía en Reportes
+y en el Panel con nombre, CUIL y empresa sin haberlo consentido: dato
+sensible por la Ley 25.326.
+
+Ahora las dos rutas pasan por `_envio_del_afiliado`, que toma el CUIL de la
+sesión firmada y corta con E-RECIBO-04 si el cuerpo trae otro (en el
+resultado o en el recibo), y por `_recibo_propio`, que exige que el recibo sea
+de la persona además del sindicato. Ante cualquiera de los dos no se escribe
+nada. Tests en `test_envio_sindicato_idor.py`. Trabajador 0.44.02.
+
+En el mismo bloque se arregló `test_panel_avisos.py`, que tenía el CI en rojo
+desde el 2026-09-30: buscaba el título de Seccionales sin la clase
+`titulo-pagina` que le sumó la regla de títulos del 2026-09-24.

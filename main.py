@@ -915,30 +915,25 @@ def api_reportar(request: Request, payload: dict):
     sindicato lo revise) se registra como EnvioSindicato -- el mismo padrón
     de afiliados cotizantes que ya arma /api/enviar-sindicato para los
     recibos sin discrepancias. No reemplaza al Reporte, se suma."""
-    sid = sindicato_activo_trabajador(request)
-    if not sid:
-        raise ErrorApp("E-SESION-01")
-    resultado = payload.get("resultado") or {}
+    sid, cuil, resultado = _envio_del_afiliado(request, payload)
     fecha = fechas.ahora().strftime("%d/%m/%Y %H:%M")
     monto = (resultado.get("retencion_sindical") or {}).get("total", 0.0)
     with db.get_session() as s:
+        registro = _recibo_propio(s, resultado, sid, cuil)
         s.add(Reporte(
             sindicato_id=sid, fecha=fecha,
-            cuil=resultado.get("cuil", ""), periodo=resultado.get("periodo", ""),
+            cuil=cuil, periodo=resultado.get("periodo", ""),
             estado="nuevo", detalle=payload,
         ))
         s.add(EnvioSindicato(
-            sindicato_id=sid, cuil=resultado.get("cuil", ""),
+            sindicato_id=sid, cuil=cuil,
             periodo=resultado.get("periodo", ""), monto_cuota=monto,
             fecha=fecha, detalle=payload,
         ))
-        recibo_id = resultado.get("recibo_verificado_id")
-        if recibo_id:
-            registro = s.get(ReciboVerificado, recibo_id)
-            if registro and registro.sindicato_id == sid:
-                registro.enviado_sindicato = True
-                registro.fecha_envio = fecha
-                s.add(registro)
+        if registro:
+            registro.enviado_sindicato = True
+            registro.fecha_envio = fecha
+            s.add(registro)
         s.commit()
     return {"ok": True}
 
@@ -951,27 +946,63 @@ def api_enviar_sindicato(request: Request, payload: dict):
     payload = {"recibo": {...}, "resultado": {...}} (lo mismo que se guarda en
     el historial propio del trabajador — ver ReciboVerificado). "resultado"
     trae "recibo_verificado_id" del intento EXACTO que se está enviando."""
-    sid = sindicato_activo_trabajador(request)
-    if not sid:
-        raise ErrorApp("E-SESION-01")
-    resultado = payload.get("resultado") or {}
+    sid, cuil, resultado = _envio_del_afiliado(request, payload)
     monto = (resultado.get("retencion_sindical") or {}).get("total", 0.0)
     fecha = fechas.ahora().strftime("%d/%m/%Y %H:%M")
     with db.get_session() as s:
+        registro = _recibo_propio(s, resultado, sid, cuil)
         s.add(EnvioSindicato(
-            sindicato_id=sid, cuil=resultado.get("cuil", ""),
+            sindicato_id=sid, cuil=cuil,
             periodo=resultado.get("periodo", ""), monto_cuota=monto,
             fecha=fecha, detalle=payload,
         ))
-        recibo_id = resultado.get("recibo_verificado_id")
-        if recibo_id:
-            registro = s.get(ReciboVerificado, recibo_id)
-            if registro and registro.sindicato_id == sid:
-                registro.enviado_sindicato = True
-                registro.fecha_envio = fecha
-                s.add(registro)
+        if registro:
+            registro.enviado_sindicato = True
+            registro.fecha_envio = fecha
+            s.add(registro)
         s.commit()
     return {"ok": True}
+
+
+def _envio_del_afiliado(request: Request, payload: dict):
+    """Lo común a /api/reportar y /api/enviar-sindicato (XSK H-0021): de quién
+    es el envío lo dice la SESIÓN FIRMADA, nunca el cuerpo del pedido. Antes
+    las dos rutas guardaban el CUIL que mandaba el navegador, así que un
+    afiliado podía fabricar la prueba de "afiliado cotizante" (art. 21 bis) a
+    nombre de otro. Si el cuerpo trae un CUIL -- el del resultado o el del
+    recibo -- y no es el de la sesión, se corta con E-RECIBO-04 sin escribir
+    nada, igual que /api/validar. Devuelve (sindicato, cuil, resultado)."""
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise ErrorApp("E-SESION-01")
+    cuil = _cuil_seguro(request)
+    if not cuil:
+        raise ErrorApp("E-SESION-02")
+    resultado = payload.get("resultado") or {}
+    if (cuiles_distintos(resultado.get("cuil"), cuil)
+            or cuil_no_coincide(payload.get("recibo") or {}, cuil)):
+        raise ErrorApp("E-RECIBO-04")
+    return sid, _norm_cuil(cuil), resultado
+
+
+def _recibo_propio(s, resultado: dict, sid: int, cuil: str):
+    """El ReciboVerificado que el envío dice mandar, solo si es DE ESTA
+    PERSONA y de este sindicato (XSK H-0021). Antes alcanzaba con que fuera
+    del sindicato: con un id ajeno (son consecutivos) un afiliado marcaba como
+    enviado el recibo de otro, y desde ahí Reportes y el Panel mostraban su
+    nombre, CUIL y empresa sin que lo hubiera consentido. Un id que no es
+    suyo corta con E-RECIBO-04 antes de escribir nada; sin id, None."""
+    recibo_id = resultado.get("recibo_verificado_id")
+    if not recibo_id:
+        return None
+    try:
+        registro = s.get(ReciboVerificado, int(recibo_id))
+    except (TypeError, ValueError):
+        registro = None
+    if (not registro or registro.sindicato_id != sid
+            or _norm_cuil(registro.cuil) != _norm_cuil(cuil)):
+        raise ErrorApp("E-RECIBO-04")
+    return registro
 
 
 @app.get("/api/mis-recibos")
