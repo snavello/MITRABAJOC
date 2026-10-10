@@ -57,7 +57,7 @@ def test_aprender_sugiere_generico_por_categoria_universal():
 
     recibo_mock = {
         "periodo": "2026-08", "empleado": {"cuil": "20111111119"},
-        "empleador": {"nombre": "Empleador Nuevo SA", "cuit": "30111222339"},
+        "empleador": {"nombre": "Empleador Nuevo SA", "cuit": "30111222335"},
         "lineas": [
             {"codigo": "AB12", "descripcion": "Retención previsional Art.11", "importe": -110000,
              "tipo": "aporte_trabajador", "categoria_universal": "jubilacion"},
@@ -87,13 +87,13 @@ def test_aprender_sugiere_generico_por_categoria_universal():
 def test_aprender_aplicar_con_vinculo_sugerido_persiste_codigo_generico():
     r = client.post("/admin/aprender/aplicar", json={"aprobados": [
         {"codigo": "AB12", "descripcion": "Retención previsional Art.11", "tipo": "descuento",
-         "remunerativo": True, "cuit_empleador": "30111222339", "codigo_generico": "JUBILACION"},
+         "remunerativo": True, "cuit_empleador": "30111222335", "codigo_generico": "JUBILACION"},
     ]})
     assert r.status_code == 200 and r.json()["altas"] == 1
     with Session(db.engine) as s:
         c = s.exec(select(Concepto).where(Concepto.sindicato_id == SID, Concepto.codigo == "AB12")).first()
         assert c.codigo_generico == "JUBILACION"
-        assert c.cuit_empleador == "30111222339"
+        assert c.cuit_empleador == "30111222335"
     print("OK  test_aprender_aplicar_con_vinculo_sugerido_persiste_codigo_generico")
 
 
