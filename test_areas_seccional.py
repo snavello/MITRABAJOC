@@ -131,13 +131,13 @@ def test_crea_areas_y_usuarios_en_su_seccional():
     assert creada and creada[0]["seccional_id"] == SEC_ROSARIO
 
     r = c.post("/admin/usuario", data={
-        "usuario": "20777777770", "nombre": "Nuevo Rosario", "clave_inicial": "x",
+        "usuario": "20777777786", "nombre": "Nuevo Rosario", "clave_inicial": "x",
         "rol": "area", "area_id": str(AREA_ROS), "seccional_id": str(SEC_ROSARIO),
     }, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
         u = s.exec(select(UsuarioSindicato).where(
-            UsuarioSindicato.usuario == "20777777770")).first()
+            UsuarioSindicato.usuario == "20777777786")).first()
         assert u is not None and u.seccional_id == SEC_ROSARIO
     print("OK  test_crea_areas_y_usuarios_en_su_seccional")
 
@@ -149,13 +149,13 @@ def test_no_puede_otorgar_el_rol_general():
     dejaría de significar nada."""
     c = _raul()
     r = c.post("/admin/usuario", data={
-        "usuario": "20777777771", "nombre": "Colado", "clave_inicial": "x",
+        "usuario": "20777777794", "nombre": "Colado", "clave_inicial": "x",
         "rol": "super", "seccional_id": str(SEC_ROSARIO),
     }, follow_redirects=False)
     assert r.status_code == 403
     with Session(db.engine) as s:
         assert s.exec(select(UsuarioSindicato).where(
-            UsuarioSindicato.usuario == "20777777771")).first() is None
+            UsuarioSindicato.usuario == "20777777794")).first() is None
     print("OK  test_no_puede_otorgar_el_rol_general")
 
 
@@ -268,13 +268,13 @@ def test_no_puede_tocar_usuarios_de_otra_seccional():
 def test_no_puede_crear_usuarios_en_otra_seccional():
     c = _raul()
     r = c.post("/admin/usuario", data={
-        "usuario": "20777777772", "nombre": "Infiltrado", "clave_inicial": "x",
+        "usuario": "20777777808", "nombre": "Infiltrado", "clave_inicial": "x",
         "rol": "area", "area_id": str(AREA_CBA), "seccional_id": str(SEC_CORDOBA),
     }, follow_redirects=False)
     assert r.status_code == 403
     with Session(db.engine) as s:
         assert s.exec(select(UsuarioSindicato).where(
-            UsuarioSindicato.usuario == "20777777772")).first() is None
+            UsuarioSindicato.usuario == "20777777808")).first() is None
     print("OK  test_no_puede_crear_usuarios_en_otra_seccional")
 
 
@@ -285,21 +285,21 @@ def test_area_y_seccional_del_usuario_tienen_que_coincidir():
     qué ve. El general tampoco puede armarlo."""
     c = _marta()
     r = c.post("/admin/usuario", data={
-        "usuario": "20777777773", "nombre": "Mezclado", "clave_inicial": "x",
+        "usuario": "20777777816", "nombre": "Mezclado", "clave_inicial": "x",
         "rol": "area", "area_id": str(AREA_ROS), "seccional_id": str(SEC_CORDOBA),
     }, follow_redirects=False)
     assert r.status_code == 303
     assert "err=areaajena" in r.headers.get("location", "")
     with Session(db.engine) as s:
         assert s.exec(select(UsuarioSindicato).where(
-            UsuarioSindicato.usuario == "20777777773")).first() is None
+            UsuarioSindicato.usuario == "20777777816")).first() is None
     print("OK  test_area_y_seccional_del_usuario_tienen_que_coincidir")
 
 
 def test_un_admin_de_seccional_sin_seccional_se_rechaza():
     c = _marta()
     r = c.post("/admin/usuario", data={
-        "usuario": "20777777774", "nombre": "Sin Alcance", "clave_inicial": "x",
+        "usuario": "20777777824", "nombre": "Sin Alcance", "clave_inicial": "x",
         "rol": "seccional", "seccional_id": "",
     }, follow_redirects=False)
     assert "err=sinseccional" in r.headers.get("location", "")

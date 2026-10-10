@@ -11,6 +11,7 @@
 <script src="/static/vendor/leaflet/leaflet.js?v={{ sello_static('vendor/leaflet/leaflet.js') }}"></script>
 <script src="/static/mapa.js?v={{ sello_static('mapa.js') }}"></script>
 <script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
+<script src="/static/cuit.js?v={{ sello_static('cuit.js') }}"></script>
 <style>
   :root { --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e; --linea:#e2ded5; --gris:#5c5a54;
     /* color_base es el único color validado como oscuro -- el encabezado usa
@@ -879,6 +880,9 @@
   <div class="panel" id="panel-conceptos">
   <!-- ============ CONCEPTOS ============ -->
   <h2 class="titulo-pagina" id="conceptos">Conceptos ({{ conceptos|length }})</h2>
+  {% if request.query_params.get('error') == 'cuitconcepto' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó el concepto: el CUIT del empleador no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
+  {% endif %}
   {% if request.query_params.get('universales') == 'ok' %}
   <div class="msg ok">✓ Se cargaron los conceptos/fórmulas de aportes de ley que faltaban.</div>
   {% elif request.query_params.get('universales') == 'nada' %}
@@ -977,7 +981,7 @@
       <option value="afiliacion">categoría sindical: cuota de afiliación</option>
     </select>
     <input name="alias" id="c-alias" placeholder="Alias (separados por coma)" style="min-width:180px;">
-    <input name="cuit_empleador" id="c-cuit" placeholder="CUIT empleador (vacío = genérico)" style="width:170px;">
+    <input name="cuit_empleador" id="c-cuit" data-cuit="cualquiera" placeholder="CUIT empleador (vacío = genérico)" style="width:170px;">
     <input name="codigo_generico" id="c-generico" placeholder="Código genérico" list="dl-genericos" style="width:140px;">
     <datalist id="dl-genericos">{% for g in genericos %}<option value="{{ g.codigo }}">{% endfor %}</datalist>
     <button type="submit" id="c-btn">Agregar concepto</button>
@@ -1005,10 +1009,15 @@
   <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: falta {{ request.query_params.get('faltan') }}. El sindicato necesita al menos la provincia y la localidad de cada afiliado para agruparlo por zona.</div>
   {% elif request.query_params.get('err') == 'datos' %}
   <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: revisá el CUIL (11 dígitos) y el nombre.</div>
+  {% elif request.query_params.get('err') == 'cuil' %}
+  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: el CUIL no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
+  {% elif request.query_params.get('err') == 'cuitempleador' %}
+  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: el CUIT del empleador no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
   {% endif %}
   {% if request.query_params.get('altas') %}
   <div class="msg ok">{{ request.query_params.get('altas') }} trabajador{{ 'es' if request.query_params.get('altas') != '1' else '' }} cargado{{ 's' if request.query_params.get('altas') != '1' else '' }} de la lista.
     {% if request.query_params.get('omitidas') %}<br>Quedaron afuera {{ request.query_params.get('omitidas') }} línea{{ 's' if request.query_params.get('omitidas') != '1' else '' }}: les falta el CUIL, el nombre, la localidad o la provincia, o el CUIL ya estaba cargado. Por ejemplo: <code>{{ request.query_params.get('muestra') }}</code>{% endif %}
+    {% if request.query_params.get('cuilinvalidos') %}<br>Quedaron afuera {{ request.query_params.get('cuilinvalidos') }} línea{{ 's' if request.query_params.get('cuilinvalidos') != '1' else '' }} porque el CUIL no es válido (revisá los 11 números): <code>{{ request.query_params.get('cuilmuestra') }}</code> <small style="opacity:.8;">Código E-IDENT-01</small>{% endif %}
   </div>
   {% endif %}
 
@@ -1079,7 +1088,7 @@
     <form method="post" action="/admin/trabajador" class="form-trab">
       <input type="hidden" name="id" id="trab-id">
       <div class="grid2">
-        <div class="campo"><label>CUIL *</label><input name="cuil" id="trab-cuil" required placeholder="20123456789"></div>
+        <div class="campo"><label>CUIL *</label><input name="cuil" id="trab-cuil" required data-cuit="persona" placeholder="20123456789"></div>
         <div class="campo"><label>Nombre *</label><input name="nombre" id="trab-nombre" required></div>
         {# Del domicilio, provincia y localidad son OBLIGATORIAS y el resto no
            (geo.OBLIGATORIOS_AFILIADO): sin esos dos campos el sindicato no
@@ -1112,7 +1121,7 @@
             {% for sec in seccionales %}<option value="{{ sec.id }}">{{ sec.nombre }}</option>{% endfor %}
           </select>
         </div>
-        <div class="campo"><label>CUIT del empleador</label><input name="cuit_empleador" id="trab-cuit-empleador" placeholder="Para notificar por empresa"></div>
+        <div class="campo"><label>CUIT del empleador</label><input name="cuit_empleador" id="trab-cuit-empleador" data-cuit="cualquiera" placeholder="Para notificar por empresa"></div>
       </div>
       <input type="hidden" name="latitud" id="trab-lat">
       <input type="hidden" name="longitud" id="trab-lon">
@@ -1968,7 +1977,7 @@
   <div class="panel" id="panel-empleadores">
   <!-- ============ EMPLEADORES ============ -->
   {% if request.query_params.get('error') == 'cuit' %}
-  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">CUIT inválido -- tiene que tener 11 dígitos.</div>
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El CUIT no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
   {% endif %}
   {% if request.query_params.get('importados') %}
   <div class="msg ok">✓ Se importaron {{ request.query_params.get('importados') }} empleador(es) nuevo(s) desde Conceptos.</div>
@@ -2000,7 +2009,7 @@
       <form method="post" action="/admin/empleador" id="form-empleador">
         <input type="hidden" name="id" id="emp-id">
         <div class="grid2">
-          <div class="campo"><label>CUIT *</label><input name="cuit" id="emp-cuit" required placeholder="30123456789"></div>
+          <div class="campo"><label>CUIT *</label><input name="cuit" id="emp-cuit" required data-cuit="cualquiera" placeholder="30123456789"></div>
           <div class="campo"><label>Razón social</label><input name="razon_social" id="emp-razon"></div>
           <div class="campo full"><label>Domicilio</label><input name="domicilio" id="emp-domicilio"></div>
           <div class="campo"><label>Teléfono</label><input name="telefono" id="emp-telefono"></div>
@@ -2687,6 +2696,8 @@
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No podés dar de baja al último administrador activo del sindicato -- te quedarías sin nadie que pueda entrar a este panel.</div>
   {% elif request.query_params.get('err') == 'datos' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">CUIT/CUIL o clave inválidos.</div>
+  {% elif request.query_params.get('err') == 'cuil' %}
+  <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El CUIL no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
   {% elif request.query_params.get('err') == 'sinarea' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Un usuario de área necesita un área. Elegile una, o dejalo como administrador de seccional.</div>
   {% elif request.query_params.get('err') == 'sinseccional' %}
@@ -2700,7 +2711,7 @@
     <form method="post" action="/admin/usuario" id="form-usuario">
       <input type="hidden" name="id" id="usu-id">
       <div class="grid2">
-        <div class="campo"><label>CUIT/CUIL *</label><input name="usuario" id="usu-usuario" required placeholder="20123456789"></div>
+        <div class="campo"><label>CUIT/CUIL *</label><input name="usuario" id="usu-usuario" required data-cuit="persona" placeholder="20123456789"></div>
         <div class="campo"><label>Nombre</label><input name="nombre" id="usu-nombre"></div>
         <div class="campo" id="usu-clave-campo"><label>Clave inicial *</label><input name="clave_inicial" id="usu-clave" type="password" required></div>
         <div class="campo"><label>Rol</label>

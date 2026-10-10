@@ -69,6 +69,8 @@
     font-family:var(--fuente-display); font-size:18px; letter-spacing:1.6px; text-transform:uppercase;
     background:linear-gradient(90deg, var(--miel), color-mix(in srgb, var(--miel) 82%, #8a5f14)); color:#231a08; }
   button.enviar:hover { filter:brightness(1.06); }
+  /* El aviso en línea de static/cuit.js: sobre la credencial oscura va claro. */
+  :root { --cuit-aviso-color:#f2b8ae; }
   .error { background:color-mix(in srgb, var(--alerta) 20%, transparent);
     border:1px solid color-mix(in srgb, var(--alerta) 55%, transparent);
     color:#f2b8ae; font-size:13px; padding:11px 13px; border-radius:9px; margin-bottom:16px; line-height:1.4; }
@@ -106,6 +108,7 @@
     {% elif err == 'nohabilitado' %}<div class="error">Tu CUIT no está habilitado en ningún sindicato todavía. Pedile al sindicato que te agregue como empleador.</div>
     {% elif err == 'yaexiste' %}<div class="error">Ya tenés una cuenta con ese CUIT. Ingresá con tu clave.</div>
     {% elif err == 'sinsind' %}<div class="error">Tu cuenta no está asociada a ningún sindicato activo.</div>
+    {% elif err == 'cuit' %}<div class="error">El CUIT no es válido: revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
     {% endif %}
 
     <div class="tabs">
@@ -124,7 +127,7 @@
 
     <form class="form" id="form-registro" method="post" action="/empresa/registro" onsubmit="return confirmarClaves(this, 'reg-clave', 'reg-repetir', 'reg-error')">
       <label>CUIT</label>
-      <input name="cuit" inputmode="numeric" placeholder="30123456789" required>
+      <input name="cuit" inputmode="numeric" data-cuit="cualquiera" placeholder="30123456789" required>
       <label>Elegí una clave</label>
       <input type="password" id="reg-clave" name="clave" required minlength="4">
       <label>Repetí la clave</label>
@@ -138,6 +141,7 @@
   </div>
   <div class="pie">Notificaciones del sindicato · Trámites con expediente y seguimiento</div>
 
+<script src="/static/cuit.js?v={{ sello_static('cuit.js') }}"></script>
 <script>
 function mostrar(cual) {
   document.getElementById('tab-login').classList.toggle('activo', cual==='login');
@@ -145,6 +149,15 @@ function mostrar(cual) {
   document.getElementById('form-login').classList.toggle('activo', cual==='login');
   document.getElementById('form-registro').classList.toggle('activo', cual==='registro');
 }
+
+// Un error del REGISTRO tiene que dejar abierta la pestaña de registro: sin
+// esto, quien se equivoca vuelve con "Ingresar" adelante y lee un mensaje
+// que habla de un formulario que no ve. Mismo patrón que la pantalla del
+// afiliado.
+(function () {
+  var err = new URLSearchParams(location.search).get('error');
+  if (['yaexiste', 'nohabilitado', 'cuit'].indexOf(err) >= 0) mostrar('registro');
+})();
 
 function confirmarClaves(form, idClave, idRepetir, idError) {
   const clave = document.getElementById(idClave).value;

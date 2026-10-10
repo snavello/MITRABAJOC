@@ -53,11 +53,11 @@ def test_alta_concepto_especifico_guarda_cuit_y_generico():
     client.post("/admin/concepto", data={
         "codigo": "060", "nombre": "Jubilacion Ley 24241", "tipo": "descuento",
         "remunerativo": "si", "alias": "",
-        "cuit_empleador": "30-11111111-2", "codigo_generico": "JUB",
+        "cuit_empleador": "30-11111111-8", "codigo_generico": "JUB",
     })
     with Session(db.engine) as s:
         c = s.exec(select(Concepto).where(Concepto.sindicato_id == SID, Concepto.codigo == "060")).first()
-        assert c.cuit_empleador == "30111111112", c.cuit_empleador
+        assert c.cuit_empleador == "30111111118", c.cuit_empleador
         assert c.codigo_generico == "JUB"
     print("OK  test_alta_concepto_especifico_guarda_cuit_y_generico")
 
@@ -110,7 +110,7 @@ def test_aprender_aplicar_no_duplica_mismo_codigo_mismo_cuit():
 def test_aprender_aplicar_mismo_codigo_distinto_cuit_no_es_duplicado():
     r1 = client.post("/admin/aprender/aplicar", json={"aprobados": [
         {"codigo": "999", "descripcion": "Concepto A", "tipo": "ingreso",
-         "remunerativo": False, "cuit_empleador": "30111111112"},
+         "remunerativo": False, "cuit_empleador": "30111111118"},
     ]})
     r2 = client.post("/admin/aprender/aplicar", json={"aprobados": [
         {"codigo": "999", "descripcion": "Concepto B (otro empleador)", "tipo": "ingreso",

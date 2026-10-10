@@ -49,13 +49,13 @@ admin_fega = _admin_client("20222222220", "fega-demo")
 
 def test_alta_empleador_ok():
     r = admin_uom.post("/admin/empleador", data={
-        "cuit": "30-111222-334", "razon_social": "Constructora Demo",
+        "cuit": "30-111222-335", "razon_social": "Constructora Demo",
         "provincia": "Buenos Aires",
     }, follow_redirects=False)
     assert r.status_code == 303
     with Session(db.engine) as s:
         e = s.exec(select(Empleador).where(
-            Empleador.sindicato_id == SID_UOM, Empleador.cuit == "30111222334")).first()
+            Empleador.sindicato_id == SID_UOM, Empleador.cuit == "30111222335")).first()
         assert e is not None
         assert e.razon_social == "Constructora Demo"
         assert e.activo is True
@@ -77,18 +77,18 @@ def test_alta_empleador_cuit_invalido_no_crea():
 def test_edicion_empleador_solo_de_su_sindicato():
     with Session(db.engine) as s:
         e = s.exec(select(Empleador).where(
-            Empleador.sindicato_id == SID_UOM, Empleador.cuit == "30111222334")).first()
+            Empleador.sindicato_id == SID_UOM, Empleador.cuit == "30111222335")).first()
         eid = e.id
     # El admin de OTRO sindicato intenta editar el empleador de UOM.
     admin_otro.post("/admin/empleador", data={
-        "id": str(eid), "cuit": "30111222334", "razon_social": "Nombre pisado por otro admin",
+        "id": str(eid), "cuit": "30111222335", "razon_social": "Nombre pisado por otro admin",
     })
     with Session(db.engine) as s:
         e = s.get(Empleador, eid)
         assert e.razon_social == "Constructora Demo", "un admin de otro sindicato no puede editar"
     # El admin dueño sí puede.
     admin_uom.post("/admin/empleador", data={
-        "id": str(eid), "cuit": "30111222334", "razon_social": "Constructora Demo (renombrada)",
+        "id": str(eid), "cuit": "30111222335", "razon_social": "Constructora Demo (renombrada)",
     })
     with Session(db.engine) as s:
         e = s.get(Empleador, eid)
@@ -99,7 +99,7 @@ def test_edicion_empleador_solo_de_su_sindicato():
 def test_baja_y_reactivacion_logica():
     with Session(db.engine) as s:
         e = s.exec(select(Empleador).where(
-            Empleador.sindicato_id == SID_UOM, Empleador.cuit == "30111222334")).first()
+            Empleador.sindicato_id == SID_UOM, Empleador.cuit == "30111222335")).first()
         eid = e.id
     admin_uom.post("/admin/empleador/baja", data={"id": str(eid)})
     with Session(db.engine) as s:

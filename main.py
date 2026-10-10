@@ -1618,6 +1618,11 @@ def admin_trabajador_alta(
     """Alta o modificación manual de un trabajador. Obligatorios: cuil,
     nombre y **provincia y localidad** (geo.OBLIGATORIOS_AFILIADO).
 
+    El CUIL -- y el CUIT del empleador, si viene -- tienen que cumplir el
+    dígito verificador (módulo 11, PLAN_CUIT_MOD11.md). En una EDICIÓN solo se
+    exige si el número cambió: un padrón cargado antes de la regla tiene CUIL
+    que no lo cumplen y corregirle un teléfono no puede chocar con eso.
+
     El domicilio usa la misma carga guiada y el mismo armado que el de la
     seccional (geo.campos_para_guardar): es la única forma de que el mismo
     domicilio no quede distinto según lo cargue el admin acá o el propio
@@ -1647,6 +1652,14 @@ def admin_trabajador_alta(
         if id:  # modificación (solo si es de este sindicato)
             t = s.get(Trabajador, int(id))
             if t and t.sindicato_id == sid:
+                # El verificador se exige solo si el número CAMBIÓ: un padrón
+                # cargado antes (o un lote sintético) tiene CUIL que no lo
+                # cumplen, y corregirle el teléfono no puede chocar con eso.
+                if _cuil_mal(cuil_norm, guardado=t.cuil):
+                    return RedirectResponse("/admin?err=cuil#trabajadores", status_code=303)
+                if _cuit_mal(cuit_empleador, guardado=t.cuit_empleador, opcional=True):
+                    return RedirectResponse("/admin?err=cuitempleador#trabajadores",
+                                            status_code=303)
                 t.cuil = cuil_norm
                 t.vigencia_credencial = vigencia_credencial or None
                 t.seccional_id = sec_id
@@ -1659,6 +1672,13 @@ def admin_trabajador_alta(
                 db.guardar_datos_personales(s, cuil_norm, nombre=nombre,
                                             domicilio=domicilio, telefono=telefono, mail=mail)
         else:    # alta — evitar duplicado de CUIL en el mismo sindicato
+            # Un número que NACE en el sistema: el CUIL con su verificador, y
+            # el CUIT del empleador (opcional) también. Nada se escribió aún.
+            if _cuil_mal(cuil_norm):
+                return RedirectResponse("/admin?err=cuil#trabajadores", status_code=303)
+            if _cuit_mal(cuit_empleador, opcional=True):
+                return RedirectResponse("/admin?err=cuitempleador#trabajadores",
+                                        status_code=303)
             existe = s.exec(select(Trabajador).where(
                 Trabajador.sindicato_id == sid, Trabajador.cuil == cuil_norm)).first()
             if not existe:
@@ -1716,10 +1736,18 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
     sindicato creería que cargó 500 y tendría 497. Antes esta ruta ya
     descartaba en silencio las líneas sin CUIL o sin nombre; ahora el conteo
     vuelve y se ve.
+
+    **El CUIL tiene que cumplir el dígito verificador** (módulo 11, cuit.py;
+    PLAN_CUIT_MOD11.md): acá nacen números, así que una línea con un CUIL
+    inválido queda afuera como las demás, pero se cuenta APARTE
+    (`cuilinvalidos`) y la pantalla muestra cuáles son (`cuilmuestra`, hasta
+    diez), porque el arreglo es distinto -- corregir un dígito, no completar
+    una columna.
     """
     sid = exigir_sindicato(request)
     altas = 0
     omitidas = []
+    cuil_invalidos = []      # líneas con CUIL que no cumple el módulo 11
     por_nombre = {geo._norm(sec["nombre"]): sec["id"]
                   for sec in db.seccionales_del_sindicato(sid)}
     with db.get_session() as s:
@@ -1733,6 +1761,13 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
             nombre = campos[1] if len(campos) > 1 else ""
             if len(cuil) != 11 or not nombre or cuil in existentes:
                 omitidas.append(linea.strip()[:60])
+                continue
+            # Un CUIL cuyo verificador no cierra: la línea queda afuera y se
+            # cuenta aparte, con el número a la vista. Si entrara, el padrón
+            # se llenaría de personas que no pueden registrarse (el registro
+            # también lo exige) y nadie sabría por qué.
+            if _cuil_mal(cuil):
+                cuil_invalidos.append(campos[0][:20])
                 continue
             def campo(i): return campos[i] if len(campos) > i else ""
             if geo.faltan_campos({"localidad": campo(5), "provincia": campo(6)}):
@@ -1755,6 +1790,11 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
     destino = f"/admin?altas={altas}"
     if omitidas:
         destino += f"&omitidas={len(omitidas)}&muestra=" + quote(" | ".join(omitidas[:3]))
+    if cuil_invalidos:
+        # Acá sí van todos (hasta diez): son CUIL de once números, no líneas
+        # enteras, y la persona los tiene que poder corregir de a uno.
+        destino += (f"&cuilinvalidos={len(cuil_invalidos)}&cuilmuestra="
+                    + quote(", ".join(cuil_invalidos[:10])))
     return RedirectResponse(destino + "#trabajadores", status_code=303)
 
 
@@ -1856,6 +1896,9 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
     cuit = _norm_cuil(usuario)
     if len(cuit) != 11 or not clave_inicial:
         return _volver_a_au("usuarios", err="datos")
+    # El usuario ES el CUIL de la persona: nace acá, con su verificador.
+    if _cuil_mal(cuit):
+        return _volver_a_au("usuarios", err="cuil")
     es_super = (rol == "super")
     es_admin_local = (rol == "seccional")
     # Otorgar Super Admin es del administrador general y de nadie más: si un
@@ -2222,6 +2265,12 @@ def abm_concepto(
         if id:  # edición — solo si el concepto es de este sindicato
             c = s.get(Concepto, int(id))
             if c and c.sindicato_id == sid:
+                # El CUIT del empleador es opcional (vacío = concepto
+                # genérico) y su verificador se exige solo si CAMBIÓ: un
+                # concepto cargado antes puede traer uno que no lo cumple.
+                if _cuit_mal(cuit_empleador, guardado=c.cuit_empleador, opcional=True):
+                    return RedirectResponse("/admin?error=cuitconcepto#conceptos",
+                                            status_code=303)
                 c.codigo, c.nombre, c.tipo = codigo, nombre, tipo
                 c.remunerativo, c.alias = es_remun, aliases
                 c.categoria_sindical = categoria
@@ -2229,6 +2278,8 @@ def abm_concepto(
                 c.pendiente_revision = False
                 s.add(c)
         else:   # alta
+            if _cuit_mal(cuit_empleador, opcional=True):
+                return RedirectResponse("/admin?error=cuitconcepto#conceptos", status_code=303)
             s.add(Concepto(sindicato_id=sid, codigo=codigo, nombre=nombre, tipo=tipo,
                            remunerativo=es_remun, alias=aliases,
                            categoria_sindical=categoria,
@@ -2673,11 +2724,18 @@ def admin_empleador_alta(
         if id:
             e = s.get(Empleador, int(id))
             if e and e.sindicato_id == sid:
+                # Edición: el verificador se exige solo si el CUIT cambió.
+                if _cuit_mal(cuit_norm, guardado=e.cuit):
+                    return RedirectResponse("/admin?error=cuit#empleadores", status_code=303)
                 e.cuit, e.razon_social = cuit_norm, razon_social.strip()
                 e.domicilio, e.telefono = domicilio, telefono
                 e.provincia, e.mail = provincia, mail
                 s.add(e)
         else:
+            # Un empleador NUEVO: su CUIT nace acá. Cualquier tipo -- un
+            # monotributista con empleados tiene CUIT de persona.
+            if _cuit_mal(cuit_norm):
+                return RedirectResponse("/admin?error=cuit#empleadores", status_code=303)
             existe = s.exec(select(Empleador).where(
                 Empleador.sindicato_id == sid, Empleador.cuit == cuit_norm)).first()
             if not existe:
@@ -5030,10 +5088,10 @@ def plataforma_completar_guardar(
     if not fila:
         return RedirectResponse("/plataforma/inicio", status_code=303)
 
-    def _volver(msg):
+    def _volver(msg, codigo=""):
         return templates.TemplateResponse("plataforma_completar.html", {
             "request": request, "marca_plataforma": db.marca_plataforma(),
-            "u": fila, "error": msg,
+            "u": fila, "error": msg, "codigo_error": codigo,
             "datos": {"cuil": cuil, "dni": dni, "email": email,
                       "direccion": direccion, "telefono": telefono}}, status_code=400)
 
@@ -5045,6 +5103,9 @@ def plataforma_completar_guardar(
     cuil_n = re.sub(r"[^0-9]", "", cuil or "")
     if len(cuil_n) != 11:
         return _volver("El CUIL tiene que tener 11 dígitos.")
+    # El CUIL del usuario de plataforma nace acá: con su verificador.
+    if _cuil_mal(cuil_n):
+        return _volver("El CUIL no es válido: revisá los 11 números.", "E-IDENT-01")
     if not (dni or "").strip():
         return _volver("El DNI es obligatorio.")
     if not _RE_EMAIL.match((email or "").strip()):
@@ -5520,6 +5581,10 @@ async def plataforma_alta_sindicato(
     color_base = color_base or "#0f1b2d"
     if not _es_oscuro(color_base):
         return RedirectResponse("/plataforma?error=colorbase#sindicatos", status_code=303)
+    # El CUIT del gremio es opcional, pero si viene tiene que ser el de una
+    # persona jurídica con su verificador. Antes de leer ningún archivo.
+    if _cuit_empresa_mal(cuit):
+        return RedirectResponse("/plataforma?error=cuit#nuevo", status_code=303)
     contrato_leido = _leer_contrato(contrato)
     if contrato_leido == "invalido":
         return RedirectResponse("/plataforma?error=contrato#sindicatos", status_code=303)
@@ -6070,6 +6135,10 @@ def plataforma_alta_usuario(
     nombre: str = Form(""), clave_inicial: str = Form(...),
 ):
     exigir_plataforma(request)
+    # El CUIL del primer admin nace acá: con su verificador, y antes de
+    # escribir nada.
+    if _cuil_mal(usuario):
+        return RedirectResponse("/plataforma?error=cuil#admin", status_code=303)
     with db.get_session() as s:
         s.add(UsuarioSindicato(
             sindicato_id=sindicato_id, usuario=_norm_cuil(usuario), nombre=nombre,
@@ -6113,6 +6182,11 @@ async def plataforma_editar_sindicato(
     with db.get_session() as s:
         sind = s.get(Sindicato, id)
         if sind:
+            # Edición: el verificador se exige solo si el CUIT cambió (el de
+            # un sindicato cargado antes puede no cumplirlo). Va antes de
+            # tocar un solo campo del objeto.
+            if _cuit_empresa_mal(cuit, guardado=sind.cuit):
+                return RedirectResponse("/plataforma?error=cuit#nuevo", status_code=303)
             sind.nombre, sind.descripcion = nombre, descripcion
             sind.cuit, sind.direccion, sind.mail = cuit, direccion, mail
             sind.telefonos, sind.autoridad, sind.cargo_autoridad = telefonos, autoridad, cargo_autoridad
@@ -6218,6 +6292,49 @@ def plataforma_reset_clave(
 
 def _norm_cuil(cuil: str) -> str:
     return cuit.normalizar(cuil)
+
+
+# ---- Dígito verificador en las puertas de alta (PLAN_CUIT_MOD11.md, D2) ----
+# Se exige donde un número NACE en el sistema (altas, registro, carga masiva);
+# donde se REFERENCIA uno que ya existe (los cuatro logins, el reset de clave,
+# los criterios de notificación, los filtros) se busca tal cual, para que los
+# CUIL sintéticos de los lotes -- que no cumplen el módulo 11 y quedan así --
+# sigan pudiendo entrar. Estas funciones son el único punto de contacto de
+# las rutas con `cuit.py`, y viven acá a propósito: en varias rutas (empleador,
+# sindicato, registro de la empresa) el formulario trae un campo llamado
+# `cuit` y esa variable local tapa el módulo.
+#
+# Cada una devuelve True si hay que FRENAR el número. Reglas comunes:
+#   - `guardado`: en una edición, el número que la fila ya tenía. Si el que
+#     llega es el mismo (comparado sin guiones ni espacios), no se exige nada:
+#     reenviar un número viejo e inválido -- de un lote, o todavía sin
+#     convertir -- no puede bloquear la edición de los otros campos. El
+#     verificador se exige SOLO si el número cambió.
+#   - `opcional`: un campo opcional vacío sigue siendo opcional.
+
+def _identificador_mal(numero, de=None, guardado=None, opcional=False) -> bool:
+    n = cuit.normalizar(numero)
+    if not n:
+        return not opcional
+    if guardado is not None and n == cuit.normalizar(guardado):
+        return False
+    return not cuit.es_valido(n, de)
+
+
+def _cuil_mal(numero, guardado=None) -> bool:
+    """CUIL de una persona (afiliado, usuario del panel, usuario de plataforma)."""
+    return _identificador_mal(numero, cuit.PERSONA, guardado)
+
+
+def _cuit_mal(numero, guardado=None, opcional=False) -> bool:
+    """CUIT de un empleador: persona jurídica O física (un monotributista con
+    empleados tiene CUIT de persona), así que no restringe el tipo."""
+    return _identificador_mal(numero, None, guardado, opcional)
+
+
+def _cuit_empresa_mal(numero, guardado=None, opcional=True) -> bool:
+    """CUIT de una persona jurídica (el del sindicato)."""
+    return _identificador_mal(numero, cuit.EMPRESA, guardado, opcional)
 
 
 def _fmt_fecha_ar(iso: str) -> str:
@@ -6401,6 +6518,12 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
     después.
     """
     cuil = _norm_cuil(cuil)
+    # Primero que el número exista de verdad (verificador de AFIP) y recién
+    # después se lo busca en el padrón: un número que no pasa el módulo 11 no
+    # es de nadie, y decirle "no estás habilitado" a quien tipeó mal un dígito
+    # lo manda a reclamarle al sindicato por algo que es un error de tipeo.
+    if _cuil_mal(cuil):
+        return RedirectResponse("/ingresar?error=cuil", status_code=303)
     # Validar que el CUIL esté empadronado en al menos un sindicato
     sinds = db.sindicatos_de_cuil(cuil)
     if not sinds:
@@ -6827,6 +6950,10 @@ def empresa_login(request: Request, cuit: str = Form(...), clave: str = Form(...
 @app.post("/empresa/registro")
 def empresa_registro(request: Request, cuit: str = Form(...), clave: str = Form(...)):
     cuit = _norm_cuil(cuit)
+    # Antes de buscarlo: un CUIT sin verificador válido no es de nadie. Vale
+    # cualquier tipo (una empresa unipersonal tiene CUIT de persona).
+    if _cuit_mal(cuit):
+        return RedirectResponse("/ingresar-empresa?error=cuit", status_code=303)
     # Validar que el CUIT esté dado de alta como Empleador activo en al menos un sindicato
     sinds = db.sindicatos_de_cuit_empleador(cuit)
     if not sinds:
