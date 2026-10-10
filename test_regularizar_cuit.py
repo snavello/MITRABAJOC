@@ -168,6 +168,15 @@ def _sembrar() -> types.SimpleNamespace:
     return ns
 
 
+@pytest.fixture(autouse=True)
+def _entorno_de_los_tests(monkeypatch):
+    """La suite corre con ENTORNO=pruebas en la CI y sin la variable en la PC. La
+    herramienta lee `entorno.ENTORNO` al usarla (traza, nombre del backup, nombre
+    de la planilla, chequeo contra el entorno de la planilla): cada test parte
+    de "sin definir" (= 'local') y el que necesite otro lo fija él."""
+    monkeypatch.setattr(rc.entorno, "ENTORNO", "")
+
+
 @pytest.fixture
 def base():
     return _sembrar()
@@ -201,6 +210,7 @@ def _aplicar(planilla, **kw):
     kw.setdefault("sin_backup", True)
     kw.setdefault("quien", "TEST")
     kw.setdefault("salida", lambda *_: None)
+    kw.setdefault("entorno_declarado", rc._entorno_actual())     # las planillas armadas a mano no lo traen
     return rc.aplicar(planilla, **kw)
 
 
@@ -642,7 +652,8 @@ def test_el_informe_compara_el_antes_y_el_despues(base, capsys):
 
 def test_el_informe_impreso_trae_antes_despues_y_la_lista_de_afectados(base):
     lineas = []
-    rc.aplicar(_planilla_basica(), si=True, quien="SDN", sin_backup=True, salida=lineas.append)
+    rc.aplicar(_planilla_basica(), si=True, quien="SDN", sin_backup=True, salida=lineas.append,
+               entorno_declarado="local")
     texto = "\n".join(lineas)
     assert "CONVERSIÓN APLICADA: 2 número(s)" in texto and "SIN backup" in texto
     assert "Antes  : 10" in texto and "Después: 8" in texto
@@ -658,7 +669,7 @@ def test_aplicar_deja_la_traza(base):
     assert set(filas) == {PERSONA, EMPRESA}
     p = filas[PERSONA]
     assert (p.nuevo, p.tipo, p.origen, p.quien) == (PERSONA_NUEVO, "persona", "manual", "SDN")
-    assert p.entorno == "local" and len(p.fecha) == 16 and p.fecha[4] == "-" and p.fecha[10] == " "
+    assert p.entorno == rc._entorno_actual() and len(p.fecha) == 16 and p.fecha[4] == "-" and p.fecha[10] == " "
     assert p.detalle["cuentatrabajador.cuil"] == 1 and p.detalle["trabajador.cuil"] == 2
     assert p.filas == sum(p.detalle.values())
     assert sum(c.filas for c in res.cambios) == sum(res.por_columna.values())      # coherente con el informe
@@ -811,7 +822,8 @@ def test_con_la_base_ocupada_no_espera_para_siempre(base):
     with db.engine.connect() as ocupada:
         ocupada.execute(sa.text("UPDATE usuariosindicato SET nombre = nombre"))     # ROW EXCLUSIVE sin commit
         with pytest.raises(rc.ErrorRegularizacion, match="ocupada"):
-            rc.aplicar(_planilla_basica(), si=True, quien="T", sin_backup=True, salida=lambda *_: None)
+            rc.aplicar(_planilla_basica(), si=True, quien="T", sin_backup=True, salida=lambda *_: None,
+                       entorno_declarado="local")
         ocupada.rollback()
     assert _volcado() == antes
 
@@ -829,7 +841,8 @@ def test_aplicar_con_si_hace_el_backup_antes(base, tmp_path):
             pytest.skip(f"este equipo no tiene un pg_dump compatible: {e}")
         raise
     assert res.aplicado and res.backup.parent == tmp_path
-    assert res.backup.name.startswith("backup_regularizacion_local_") and res.backup.stat().st_size > 0
+    assert res.backup.name.startswith(f"backup_regularizacion_{rc._entorno_actual()}_")
+    assert res.backup.stat().st_size > 0
     assert PERSONA_NUEVO in _apariciones()
 
 
@@ -995,7 +1008,8 @@ def test_cli_aborta_con_codigo_1_y_dice_por_que(base, tmp_path, capsys):
     ruta = tmp_path / "mala.csv"
     ruta.write_text(f"anterior;nuevo;convertir\n{PERSONA};{VALIDO_P};si\n", encoding="utf-8-sig")
     antes = _volcado()
-    assert rc.main(["aplicar", "--planilla", str(ruta), "--si", "--quien", "SDN", "--sin-backup"]) == 1
+    assert rc.main(["aplicar", "--planilla", str(ruta), "--si", "--quien", "SDN", "--sin-backup",
+                    "--entorno", "local"]) == 1
     out = capsys.readouterr().out
     assert "ABORTADO" in out and "no fusiona" in out
     assert _volcado() == antes
@@ -1116,7 +1130,7 @@ def test_si_algo_falla_despues_del_backup_se_avisa_donde_quedo(base, tmp_path, m
     try:
         with pytest.raises(rc.ErrorRegularizacion, match="falla simulada"):
             rc.aplicar(_planilla_basica(), si=True, quien="T", sin_backup=False,
-                       directorio_backup=tmp_path, salida=lineas.append)
+                       directorio_backup=tmp_path, salida=lineas.append, entorno_declarado="local")
     except rc.ErrorRegularizacion as e:       # pragma: no cover
         pytest.skip(f"este equipo no tiene un pg_dump compatible: {e}")
     dumps = list(tmp_path.glob("backup_regularizacion_*.dump"))
@@ -1134,7 +1148,7 @@ def test_cli_directorio_backup(base, tmp_path, capsys):
     ruta.write_text(f"anterior;nuevo;convertir\n{PERSONA};{PERSONA_NUEVO};si\n", encoding="utf-8-sig")
     destino = tmp_path / "copias" / "hoy"
     codigo = rc.main(["aplicar", "--planilla", str(ruta), "--si", "--quien", "SDN",
-                      "--directorio-backup", str(destino)])
+                      "--directorio-backup", str(destino), "--entorno", "local"])
     salida = capsys.readouterr().out
     if codigo == 1 and "No se pudo preparar el backup" in salida:
         pytest.skip("este equipo no tiene un pg_dump compatible")
@@ -1158,7 +1172,8 @@ def test_aplicar_dice_contra_que_base_y_entorno_va_a_escribir(base, monkeypatch)
 def test_con_entorno_definido_no_hay_aviso_y_la_traza_lo_dice(base, monkeypatch):
     monkeypatch.setattr(rc.entorno, "ENTORNO", "pruebas")
     lineas = []
-    rc.aplicar(_planilla_basica(), si=True, quien="SDN", sin_backup=True, salida=lineas.append)
+    rc.aplicar(_planilla_basica(), si=True, quien="SDN", sin_backup=True, salida=lineas.append,
+               entorno_declarado="pruebas")
     assert "Entorno: pruebas" in lineas[0] and not any("no está definida" in x for x in lineas)
     with db.get_session() as s:
         assert {x.entorno for x in s.exec(select(CambioIdentificador)).all()} == {"pruebas"}
@@ -1261,7 +1276,8 @@ def test_el_informe_marca_el_resto(base):
     _aplicar(_planilla_basica(), si=True)
     _huerfanos_de_la_ventana(base)
     lineas = []
-    rc.aplicar([_fila(PERSONA, PERSONA_NUEVO)], si=True, quien="SDN", sin_backup=True, salida=lineas.append)
+    rc.aplicar([_fila(PERSONA, PERSONA_NUEVO)], si=True, quien="SDN", sin_backup=True, salida=lineas.append,
+               entorno_declarado="local")
     assert any("completa una conversión anterior" in x and PERSONA in x for x in lineas)
 
 
@@ -1377,3 +1393,304 @@ def test_notacion_cientifica_en_nuevo_da_el_mismo_consejo_que_en_anterior():
             rc._cambios_de_la_planilla([{**fila, "convertir": "si"}])
         texto = " ".join(e.value.errores)
         assert f"'{campo}' no tiene 11 dígitos" in texto and "notación científica" in texto
+
+
+# ===========================================================================
+# Revisión general (2026-10-10)
+# ===========================================================================
+
+# ---- 2. Renumerar un número válido pero equivocado (--permitir-validos) --------
+def _libre_para(numero) -> str:
+    """Un número válido, del mismo prefijo, que no está en ninguna parte de la base."""
+    return cuit.siguiente_libre(numero, set(_apariciones()))
+
+
+def test_sin_permitir_validos_el_error_dice_que_la_opcion_existe(base):
+    antes = _volcado()
+    with pytest.raises(rc.ErrorRegularizacion) as e:
+        _aplicar([_fila(VALIDO_P, _libre_para(VALIDO_P))], si=True)
+    texto = " ".join(e.value.errores)
+    assert "ya cumple el módulo 11" in texto and "--permitir-validos" in texto and "OTRA persona" in texto
+    assert _volcado() == antes
+
+
+def test_renumerar_una_persona_valida_con_permitir_validos(base):
+    nuevo = _libre_para(VALIDO_P)
+    assert cuit.es_valido(nuevo) and nuevo != VALIDO_P
+    previo = _apariciones()[VALIDO_P]
+    lineas = []
+    res = _aplicar([_fila(VALIDO_P, nuevo)], si=True, permitir_validos=True, salida=lineas.append)
+    assert res.aplicado and res.cambios[0].renumeracion
+    a = _apariciones()
+    assert VALIDO_P not in a and a[nuevo] == previo, "el nuevo queda exactamente donde estaba el viejo"
+    with db.get_session() as s:
+        fila = s.exec(select(CambioIdentificador)).one()
+        assert (fila.anterior, fila.nuevo, fila.origen, fila.tipo) == (VALIDO_P, nuevo, "renumeracion", "persona")
+        assert s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == nuevo)).one().nombre == "Persona Válida"
+    texto = "\n".join(lineas)
+    assert "renumeran un número que YA cumplía" in texto and "renumeración de un número válido" in texto
+    # y entra con el número nuevo, con la misma clave
+    c = TestClient(main.app)
+    r = c.post("/trabajador/login", data={"cuil": nuevo, "clave": CLAVE}, follow_redirects=False)
+    assert r.headers["location"] == "/app/inicio"
+    r = c.post("/trabajador/login", data={"cuil": VALIDO_P, "clave": CLAVE}, follow_redirects=False)
+    assert r.headers["location"] == "/ingresar?error=login"
+
+
+def test_renumerar_una_empresa_valida_en_todas_sus_tablas(base):
+    nuevo = _libre_para(VALIDO_E)
+    previo = _apariciones()[VALIDO_E]
+    assert "sindicato.cuit" in previo and "empleador.cuit" in previo
+    _aplicar([_fila(VALIDO_E, nuevo)], si=True, permitir_validos=True)
+    a = _apariciones()
+    assert VALIDO_E not in a and a[nuevo] == previo
+    with db.get_session() as s:
+        assert s.get(Sindicato, base.b).cuit == nuevo
+        assert s.exec(select(CambioIdentificador)).one().origen == "renumeracion"
+
+
+def test_en_una_misma_planilla_el_invalido_conserva_su_origen_y_el_valido_es_renumeracion(base):
+    nuevo = _libre_para(VALIDO_P)
+    _aplicar(_planilla_basica(extra=[_fila(VALIDO_P, nuevo)]), si=True, permitir_validos=True)
+    with db.get_session() as s:
+        origenes = {x.anterior: x.origen for x in s.exec(select(CambioIdentificador)).all()}
+    assert origenes == {PERSONA: "manual", EMPRESA: "manual", VALIDO_P: "renumeracion"}
+
+
+@pytest.mark.parametrize("planilla, mensaje", [
+    ([_fila(VALIDO_P, "20202790420")], "no es un CUIL/CUIT válido"),            # el verificador no cierra
+    ([_fila(VALIDO_P, VALIDO_E)], "cambia de tipo"),                             # persona -> empresa
+    ([_fila(VALIDO_E, VALIDO_P)], "cambia de tipo"),                             # empresa -> persona
+    ([_fila(VALIDO_P, EN_UN_JSON)], "no fusiona"),                               # ya existe, solo adentro de un JSON
+    ([_fila(VALIDO_P, VALIDO_P)], "no fusiona"),                                 # a sí mismo
+    ([_fila(COL_NUEVO, cuit.siguiente_libre(COL_NUEVO))], "no está en la base"),  # el anterior no existe
+    ([_fila(VALIDO_P, "")], "no tiene 'nuevo'"),
+])
+def test_renumerar_un_valido_tiene_las_mismas_garantias(base, planilla, mensaje):
+    antes = _volcado()
+    with pytest.raises(rc.ErrorRegularizacion) as e:
+        _aplicar(planilla, si=True, permitir_validos=True)
+    assert mensaje in " ".join([str(e.value), *e.value.errores])
+    assert _volcado() == antes
+
+
+def test_renumerar_un_valido_no_pisa_a_otra_persona_que_ya_tiene_ese_numero(base):
+    with db.get_session() as s:
+        db.guardar_datos_personales(s, PERSONA_NUEVO, nombre="Otra Persona")      # la cuenta del número destino
+        s.commit()
+    antes = _volcado()
+    with pytest.raises(rc.ErrorRegularizacion) as e:
+        _aplicar([_fila(VALIDO_P, PERSONA_NUEVO)], si=True, permitir_validos=True)
+    assert "no fusiona" in " ".join(e.value.errores)
+    assert _volcado() == antes
+
+
+def test_cli_permitir_validos(base, tmp_path, capsys):
+    nuevo = _libre_para(VALIDO_P)
+    ruta = tmp_path / "p.csv"
+    ruta.write_text(f"anterior;nuevo;convertir;entorno\n{VALIDO_P};{nuevo};si;local\n", encoding="utf-8-sig")
+    antes = _volcado()
+    base_args = ["aplicar", "--planilla", str(ruta), "--si", "--quien", "SDN", "--sin-backup"]
+    assert rc.main(base_args) == 1
+    assert "--permitir-validos" in capsys.readouterr().out
+    assert _volcado() == antes
+    assert rc.main([*base_args, "--permitir-validos"]) == 0
+    assert nuevo in _apariciones() and VALIDO_P not in _apariciones()
+
+
+def test_el_ensayo_con_permitir_validos_no_escribe(base):
+    antes = _volcado()
+    lineas = []
+    res = _aplicar([_fila(VALIDO_P, _libre_para(VALIDO_P))], si=False, permitir_validos=True,
+                   salida=lineas.append)
+    assert not res.aplicado and _volcado() == antes
+    assert any("renumeran un número que YA cumplía" in x for x in lineas)
+
+
+# ---- 3. El texto de las sesiones abiertas -------------------------------------
+def test_el_informe_no_promete_que_las_sesiones_caducan_en_15_minutos(base):
+    lineas = []
+    _aplicar(_planilla_basica(), si=True, salida=lineas.append)
+    texto = "\n".join(lineas)
+    assert "como mucho" not in texto and "queda sin acceso" not in texto
+    assert "se renueva con cada pedido" in texto and "SIN actividad" in texto
+    assert "15 minutos" in texto and "RESTO" in texto and "`diagnostico`" in texto
+
+
+# ---- 4. El entorno de la planilla ----------------------------------------------
+def _escribir(tmp_path, entornos, cabecera="anterior;nuevo;convertir;entorno"):
+    ruta = tmp_path / "p.csv"
+    filas = [f"{PERSONA};{PERSONA_NUEVO};si;{entornos[0]}"]
+    if len(entornos) > 1:
+        filas.append(f"{EMPRESA};{EMPRESA_NUEVO};si;{entornos[1]}")
+    ruta.write_text(cabecera + "\n" + "\n".join(filas) + "\n", encoding="utf-8-sig")
+    return ruta
+
+
+def test_el_diagnostico_escribe_el_entorno_en_cada_fila(base, tmp_path, monkeypatch):
+    monkeypatch.setattr(rc.entorno, "ENTORNO", "pruebas")
+    ruta = tmp_path / "d.csv"
+    assert rc.main(["diagnostico", "--salida", str(ruta)]) == 0
+    filas = rc.leer_planilla(ruta)
+    assert filas and {f["entorno"] for f in filas} == {"pruebas"}
+    assert rc.COLUMNAS_PLANILLA[-1] == "entorno"
+
+
+def test_una_planilla_del_mismo_entorno_se_aplica(base, tmp_path, monkeypatch):
+    monkeypatch.setattr(rc.entorno, "ENTORNO", "pruebas")
+    res = rc.aplicar(_escribir(tmp_path, ["pruebas", "Pruebas"]), si=True, quien="SDN", sin_backup=True,
+                     salida=lambda *_: None)
+    assert res.aplicado and PERSONA_NUEVO in _apariciones()
+
+
+@pytest.mark.parametrize("entornos", [["demo"], ["pruebas", "demo"], ["demo", "pruebas"], ["prod", "prod"]])
+def test_con_si_una_planilla_de_otro_entorno_aborta_sin_escribir(base, tmp_path, monkeypatch, entornos):
+    """Aunque UNA sola fila sea de otro entorno."""
+    monkeypatch.setattr(rc.entorno, "ENTORNO", "pruebas")
+    antes = _volcado()
+    with pytest.raises(rc.ErrorRegularizacion) as e:
+        rc.aplicar(_escribir(tmp_path, entornos), si=True, quien="SDN", sin_backup=False,
+                   directorio_backup=tmp_path / "bk", salida=lambda *_: None)
+    texto = " ".join([str(e.value), *e.value.errores])
+    assert "no coincide" in str(e.value) and "'pruebas'" in texto and "no es de la que salió la planilla" in texto
+    assert _volcado() == antes
+    assert not (tmp_path / "bk").exists(), "ni siquiera hizo el backup"
+
+
+def test_una_planilla_vieja_sin_la_columna_exige_entorno_explicito(base, tmp_path, monkeypatch):
+    monkeypatch.setattr(rc.entorno, "ENTORNO", "pruebas")
+    ruta = tmp_path / "vieja.csv"
+    ruta.write_text(f"anterior;nuevo;convertir\n{PERSONA};{PERSONA_NUEVO};si\n", encoding="utf-8-sig")
+    antes = _volcado()
+    with pytest.raises(rc.ErrorRegularizacion) as e:
+        rc.aplicar(ruta, si=True, quien="SDN", sin_backup=True, salida=lambda *_: None)
+    assert "no dice de qué entorno es" in " ".join(e.value.errores) and "--entorno pruebas" in " ".join(e.value.errores)
+    assert _volcado() == antes
+    # con el entorno explícito de OTRO entorno, tampoco
+    with pytest.raises(rc.ErrorRegularizacion, match="no coincide") as e:
+        rc.aplicar(ruta, si=True, quien="SDN", sin_backup=True, salida=lambda *_: None, entorno_declarado="demo")
+    assert "Pasaste --entorno demo" in " ".join(e.value.errores)
+    assert _volcado() == antes
+    # con el actual, sí
+    rc.aplicar(ruta, si=True, quien="SDN", sin_backup=True, salida=lambda *_: None, entorno_declarado="Pruebas")
+    assert PERSONA_NUEVO in _apariciones()
+
+
+def test_una_celda_de_entorno_vacia_cuenta_como_que_no_lo_dice(base, tmp_path, monkeypatch):
+    monkeypatch.setattr(rc.entorno, "ENTORNO", "pruebas")
+    with pytest.raises(rc.ErrorRegularizacion) as e:
+        rc.aplicar(_escribir(tmp_path, ["pruebas", ""]), si=True, quien="SDN", sin_backup=True,
+                   salida=lambda *_: None)
+    assert "no dice de qué entorno es" in " ".join(e.value.errores)
+
+
+def test_el_ensayo_solo_avisa_si_el_entorno_no_coincide(base, tmp_path, monkeypatch):
+    monkeypatch.setattr(rc.entorno, "ENTORNO", "pruebas")
+    antes = _volcado()
+    lineas = []
+    res = rc.aplicar(_escribir(tmp_path, ["demo"]), si=False, salida=lineas.append)
+    assert not res.aplicado and _volcado() == antes
+    assert any(x.startswith("ATENCIÓN (con --si esto abortaría)") and "'demo'" in x for x in lineas)
+
+
+def test_cli_entorno_explicito(base, tmp_path, capsys):
+    ruta = tmp_path / "vieja.csv"
+    ruta.write_text(f"anterior;nuevo;convertir\n{PERSONA};{PERSONA_NUEVO};si\n", encoding="utf-8-sig")
+    comun = ["aplicar", "--planilla", str(ruta), "--si", "--quien", "SDN", "--sin-backup"]
+    assert rc.main(comun) == 1 and "--entorno local" in capsys.readouterr().out
+    assert rc.main([*comun, "--entorno", "demo"]) == 1
+    capsys.readouterr()
+    assert rc.main([*comun, "--entorno", "local"]) == 0
+
+
+# ---- 5. Inyección de fórmulas en el CSV ----------------------------------------
+@pytest.mark.parametrize("valor", ["=HYPERLINK(\"http://x\")", "+54 11 4444", "-2+3", "@SUM(A1)", "\tcmd", "\rcmd"])
+def test_una_celda_que_empieza_como_una_formula_se_escapa(valor):
+    assert rc._celda_segura(valor) == "'" + valor
+
+
+@pytest.mark.parametrize("valor", ["Juan Pérez", "20111111112", "", None, "a=b", "x-y", "'ya"])
+def test_el_resto_de_las_celdas_queda_igual(valor):
+    assert rc._celda_segura(valor) == ("" if valor is None else valor)
+
+
+def test_la_planilla_escapa_los_nombres_y_los_valores_raros_y_se_lee_de_vuelta(base, tmp_path):
+    maligno = "=cmd|' /C calc'!A0"
+    with db.get_session() as s:
+        db.guardar_datos_personales(s, "20161616160", nombre=maligno)                 # el nombre lo escribe el afiliado
+        s.add(Trabajador(sindicato_id=base.a, cuil="20161616160", activo=True))
+        s.add(Trabajador(sindicato_id=base.a, cuil="=1+1", activo=True))                # un valor roto sale tal cual de la base
+        s.commit()
+    diag = _diagnostico()
+    ruta = rc.escribir_planilla(diag, tmp_path / "p.csv")
+    with open(ruta, encoding="utf-8-sig", newline="") as f:
+        crudo = list(csv.DictReader(f, delimiter=";"))
+    por_anterior = {x["anterior"]: x for x in crudo}
+    assert por_anterior["20161616160"]["nombre"] == "'" + maligno
+    assert "'=1+1" in por_anterior, "el valor roto que empieza con = también se escapa"
+    for fila in crudo:
+        for celda in fila.values():
+            assert not celda.startswith(("=", "+", "-", "@", "\t", "\r")), (fila, celda)
+    # al leer, el apóstrofo sale de anterior y nuevo
+    leidas = {x["anterior"]: x for x in rc.leer_planilla(ruta)}
+    assert "=1+1" in leidas and "'=1+1" not in leidas
+    assert leidas["20161616160"]["nuevo"] == "20161616169"
+
+
+def test_el_apostrofo_no_se_confunde_en_los_numeros_de_una_planilla_editada(tmp_path):
+    ruta = tmp_path / "e.csv"
+    ruta.write_text("anterior;nuevo;convertir\n'27999999999;'27999999994;si\n", encoding="utf-8-sig")
+    (fila,) = rc.leer_planilla(ruta)
+    assert (fila["anterior"], fila["nuevo"]) == ("27999999999", "27999999994")
+
+
+# ---- 6. El backup ----------------------------------------------------------------
+def test_el_backup_va_por_defecto_a_backups_que_el_gitignore_cubre():
+    assert rc.BACKUPS == rc.RAIZ / "backups"
+    assert "backups/" in [l.strip() for l in (rc.RAIZ / ".gitignore").read_text(encoding="utf-8").splitlines()]
+    import inspect
+    assert inspect.signature(rc.aplicar).parameters["directorio_backup"].default == rc.BACKUPS
+    assert inspect.signature(rc.hacer_backup).parameters["directorio"].default == rc.BACKUPS
+
+
+@pytest.mark.skipif(not shutil.which("pg_dump") or not shutil.which("psql"),
+                    reason="hace falta pg_dump y psql para probar el backup")
+def test_el_backup_tiene_permisos_0600_y_el_informe_dice_la_ruta_completa(base, tmp_path):
+    import os
+    import stat
+    lineas = []
+    try:
+        res = _aplicar(_planilla_basica(), si=True, sin_backup=False, directorio_backup=tmp_path / "bk",
+                       salida=lineas.append)
+    except rc.ErrorRegularizacion as e:
+        if "No se pudo preparar el backup" in str(e):
+            pytest.skip(f"este equipo no tiene un pg_dump compatible: {e}")
+        raise
+    assert res.backup.is_absolute() and res.backup.parent == (tmp_path / "bk").resolve()
+    if os.name != "nt":
+        assert stat.S_IMODE(res.backup.stat().st_mode) == 0o600
+    assert any(str(res.backup) in x for x in lineas), "el informe imprime la ruta completa"
+
+
+@pytest.mark.skipif(not shutil.which("pg_dump") or not shutil.which("psql"),
+                    reason="hace falta pg_dump y psql para probar el backup")
+def test_la_cli_sin_directorio_backup_usa_el_default(base, tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(rc, "BACKUPS", tmp_path / "por_defecto")
+    ruta = tmp_path / "p.csv"
+    ruta.write_text(f"anterior;nuevo;convertir;entorno\n{PERSONA};{PERSONA_NUEVO};si;local\n", encoding="utf-8-sig")
+    codigo = rc.main(["aplicar", "--planilla", str(ruta), "--si", "--quien", "SDN"])
+    salida = capsys.readouterr().out
+    if codigo == 1 and "No se pudo preparar el backup" in salida:
+        pytest.skip("este equipo no tiene un pg_dump compatible")
+    assert codigo == 0, salida
+    assert len(list((tmp_path / "por_defecto").glob("backup_regularizacion_*.dump"))) == 1
+
+
+# ---- 7. La nota de enviosindicato / reporte ---------------------------------------
+def test_la_nota_de_envios_y_reportes_no_dice_que_el_cuil_esta_verificado():
+    notas = {c.columna_db: c.nota for c in rc.INVENTARIO if c.columna_db in ("enviosindicato.cuil", "reporte.cuil")}
+    assert set(notas) == {"enviosindicato.cuil", "reporte.cuil"}
+    for nota in notas.values():
+        assert "ya verificado" not in nota
+        assert "H-0021" in nota and "payload" in nota
+    assert all(c.fuente == rc.COPIA for c in rc.INVENTARIO if c.columna_db in notas)

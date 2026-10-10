@@ -227,8 +227,14 @@ pudiendo entrar: los logins no validan el verificador).
 (el Pre-Deploy ya crea la tabla `cambioidentificador`). Hasta que se corre,
 los accesos de la demo de `CLAUDE.md` (los números nuevos) no existen en esa
 base. Correrlo en un momento tranquilo: con `--si` toma un candado de
-escritura sobre las tablas mientras dura (segundos a un minuto), y quien
-tenga una sesión abierta con un número viejo tiene que volver a entrar.
+escritura sobre las tablas mientras dura (segundos a un minuto).
+
+**Las sesiones abiertas NO caducan solas a los 15 minutos**: la sesión se
+renueva con cada pedido, así que una persona que está usando la app sigue
+escribiendo con el número VIEJO (un recibo, una suscripción push) aunque la
+conversión ya haya terminado. Por eso, después de aplicar: esperar **al menos
+15 minutos SIN actividad** de esas personas (o hasta el día siguiente), volver
+a correr `diagnostico` y aplicar los `RESTO` que aparezcan (paso 2).
 
 **Desde la PC**, con la External Database URL del entorno (la planilla se
 abre en Excel, y el backup queda en la PC):
@@ -240,8 +246,14 @@ python regularizar_cuit.py diagnostico
 **Definí `ENTORNO` siempre.** Sin esa variable la herramienta avisa (en los
 dos comandos) que la traza y la planilla van a decir `local`. Y al empezar,
 `diagnostico` y `aplicar` imprimen **contra qué base van** (host y nombre) y
-en qué entorno: mirá esa línea antes de seguir; es lo único que impide
-convertir la base equivocada.
+en qué entorno: mirá esa línea antes de seguir.
+
+**La planilla sabe de qué entorno es**: `diagnostico` escribe el entorno en la
+última columna (`entorno`) de cada fila, y `aplicar --si` **se niega** si el
+entorno actual (`ENTORNO`) no es el de TODAS las filas: es la red contra
+aplicar la planilla de Pruebas sobre la demo. En el ensayo solo avisa. Una
+planilla vieja, sin esa columna (o con celdas vacías), no dice de dónde viene:
+con `--si` hay que confirmarlo con `--entorno pruebas` (el actual).
 
 1. **Diagnóstico** (no escribe nada): imprime cuántos números inválidos hay
    por tabla y por origen, y deja `regularizacion_cuit_pruebas.csv` (con `;`,
@@ -249,7 +261,10 @@ convertir la base equivocada.
    origen (`demo` = el nuevo exacto de `identificadores_demo.py`; `manual` =
    el mismo número con el verificador corregido; `lote` y `lectura` = no se
    tocan; un CUIT leído de un recibo sin que nadie lo haya cargado a mano,
-   tampoco: es `lectura`), a quién pertenece y en qué tablas aparece.
+   tampoco: es `lectura`), a quién pertenece y en qué tablas aparece. Una
+   celda de texto que empieza con `=`, `+`, `-` o `@` sale con un `'` adelante
+   (para que Excel no la tome por una fórmula: el nombre lo escribe el afiliado);
+   al leer la planilla ese `'` se saca de `anterior` y `nuevo`.
 2. **Revisar la planilla.** Llegan con `convertir=si` los `demo` y los
    `manual` sin problemas. En la columna `convertir` vale `si`, `s`, `x`, `1`,
    `true` o `verdadero` (sin importar mayúsculas ni tildes); cualquier otra cosa
@@ -270,23 +285,39 @@ convertir la base equivocada.
    la misma persona o empresa: se completa lo que quedó atrás. Si hay una fila
    del número viejo y otra del nuevo en una columna única (`cuentatrabajador`,
    `cuentaempleador`), `aplicar` se niega y hay que juntarlas a mano.
+
+   **Si el número cumple el verificador pero es de otra persona** (o de otra
+   empresa: se cargó mal el DNI, o se le asignó a quien no era), ni el panel
+   (E-IDENT-03) ni el diagnóstico lo tocan, porque para ellos es un número
+   válido. Se renumera con `--permitir-validos`: se agrega a mano a la planilla
+   una fila con ese `anterior`, el `nuevo` y `convertir=si` (las columnas
+   `entorno`, o `--entorno`, igual que en las demás). Sin la opción, `aplicar` la
+   rechaza y el mensaje dice que existe. Las garantías son las de siempre: el
+   nuevo tiene que ser válido, del mismo tipo (CUIL por CUIL, CUIT por CUIT) y
+   estar libre (si ya existe en cualquier tabla, la herramienta no fusiona), y
+   la conversión es la misma transacción con la misma verificación. En
+   `cambioidentificador` queda con `origen = renumeracion`.
 3. **Ensayo**: `python regularizar_cuit.py aplicar --planilla regularizacion_cuit_pruebas.csv`
    hace la conversión entera dentro de una transacción, muestra qué cambiaría
    (y cuántas filas tomó de la planilla) y la deshace. No escribe nada ni
    hace backup.
 4. **Aplicar**: el mismo comando con `--si --quien SDN`. Primero valida todo lo
-   que no escribe; recién después hace un `pg_dump` (no convierte sin copia;
-   `--directorio-backup <carpeta>` elige dónde queda, por defecto la raíz del
-   proyecto, que no se versiona), y convierte todo en una transacción con las
-   tablas bloqueadas para escritura. Verifica antes de confirmar que cada
+   que no escribe; recién después hace un `pg_dump` (no convierte sin copia).
+   El dump queda en `backups/` (la misma carpeta que usa `promover_demo.py`, que
+   el `.gitignore` cubre; `--directorio-backup <carpeta>` elige otra), con
+   permisos 0600, y el informe imprime su ruta completa. Después convierte
+   todo en una transacción con las tablas bloqueadas para escritura. Verifica antes de confirmar que cada
    número nuevo quedó exactamente donde estaba el viejo, y deja una fila por
    número en `cambioidentificador` (quién, cuándo, cuántas filas). Si algo no
    cierra, deshace todo. Un aborto antes del backup no deja ningún `.dump`; si
    algo falla después, la herramienta dice dónde quedó (lleva datos
    personales: borrarlo).
 5. Al final imprime **las personas y empresas cuyo número cambió**: tienen
-   que enterarse, porque entran con el nuevo. Volver a correr el diagnóstico
-   tiene que dar 0 `manual` y 0 `demo` (y ningún `RESTO`).
+   que enterarse, porque entran con el nuevo. **No alcanza con correr el
+   diagnóstico enseguida**: esperar al menos 15 minutos sin actividad de esas
+   personas (o hasta el día siguiente; ver "Las sesiones abiertas" arriba),
+   volver a correr `diagnostico` y aplicar los `RESTO` que aparezcan. Recién
+   cuando da 0 `manual`, 0 `demo` y ningún `RESTO` terminó.
 
 Las bitácoras (`logplataforma`, chats de trámites, eventos) NO se reescriben:
 dicen lo que pasó con el número de ese momento, y `cambioidentificador`

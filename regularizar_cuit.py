@@ -18,11 +18,20 @@ Dos comandos:
         qué no. La planilla lleva nombres: no se versiona (.gitignore).
 
     python regularizar_cuit.py aplicar --planilla X.csv [--si --quien SDN]
-                                       [--sin-backup]
+                                       [--sin-backup] [--directorio-backup D]
+                                       [--entorno E] [--permitir-validos]
         Convierte las filas con convertir=si. SIN --si es un ensayo: hace
         todo adentro de una transacción, muestra qué cambiaría y la deshace;
         no escribe nada ni hace backup. CON --si exige --quien, hace el
-        backup (pg_dump) y deja una fila en `cambioidentificador` por número.
+        backup (pg_dump, en backups/ con permisos 0600) y deja una fila en
+        `cambioidentificador` por número.
+
+        La planilla trae el `entorno` del que salió y con --si la herramienta
+        se niega a escribir en otro (una planilla vieja sin esa columna pide
+        --entorno). --permitir-validos acepta filas cuyo anterior YA cumple
+        el módulo 11 (un número válido pero de otra persona): el diagnóstico
+        nunca las propone, se agregan a mano y la traza las anota como
+        `renumeracion`.
 
 Lo que decide cada fila (origen):
 
@@ -73,6 +82,7 @@ import argparse
 import csv
 import functools
 import io
+import os
 import re
 import subprocess
 import sys
@@ -99,6 +109,9 @@ except Exception:
     pass
 
 RAIZ = Path(__file__).resolve().parent
+# Donde queda el pg_dump: la misma carpeta que usa promover_demo.py (que el
+# .gitignore ya cubre). El dump lleva datos personales.
+BACKUPS = RAIZ / "backups"
 
 # ---------------------------------------------------------------------------
 # Inventario: cada lugar donde vive un CUIL/CUIT
@@ -184,9 +197,13 @@ INVENTARIO = (
     _c("reciboverificado", "cuil", PERSONA, TEXTO, ALTA,
        nota="el de la SESIÓN (cuil_sesion), no el que leyó la IA"),
     _c("enviosindicato", "cuil", PERSONA, TEXTO, COPIA,
-       nota="resultado.cuil, ya verificado contra el de la sesión"),
+       nota="resultado.cuil del CUERPO del pedido: /api/enviar-sindicato lo toma del payload y no de la "
+            "sesión (XSK H-0021, abierto), así que no se asume que coincida con el de la sesión; es "
+            "una copia de lo que mandó el cliente"),
     _c("reporte", "cuil", PERSONA, TEXTO, COPIA,
-       nota="resultado.cuil, ya verificado contra el de la sesión"),
+       nota="resultado.cuil del CUERPO del pedido: /api/reportar lo toma del payload y no de la "
+            "sesión (XSK H-0021, abierto), así que no se asume que coincida con el de la sesión; es "
+            "una copia de lo que mandó el cliente"),
     _c("recibosospechoso", "cuil", PERSONA, TEXTO, COPIA, nota="el de la sesión"),
     _c("usoia", "cuil", PERSONA, TEXTO, COPIA, nota="el de la sesión"),
     _c("tramite", "cuil", PERSONA, TEXTO, COPIA, nota="el de la sesión"),
@@ -548,7 +565,7 @@ class Fila:
 
 
 COLUMNAS_PLANILLA = ("anterior", "nuevo", "alternativa", "tipo", "origen",
-                     "convertir", "motivo", "nombre", "apariciones")
+                     "convertir", "motivo", "nombre", "apariciones", "entorno")
 
 
 @dataclass
@@ -797,14 +814,33 @@ def resumen_texto(diag: Diagnostico, base: str = "") -> str:
 SEPARADOR = ";"
 
 
+_INICIOS_DE_FORMULA = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _celda_segura(valor) -> str:
+    """Una celda de texto que empieza con =, +, - o @ (o con tab o CR) la abre
+    Excel como una FÓRMULA. El nombre de la persona lo escribe el afiliado o el
+    admin, y un valor raro de una columna de CUIL sale tal cual de la base: se
+    le antepone un apóstrofo (la mitigación estándar contra la inyección de
+    fórmulas en un CSV). `leer_planilla` lo saca de `anterior` y `nuevo`."""
+    texto = "" if valor is None else str(valor)
+    return "'" + texto if texto.startswith(_INICIOS_DE_FORMULA) else texto
+
+
+def _sin_apostrofo(texto: str) -> str:
+    return texto[1:] if texto.startswith("'") else texto
+
+
 def escribir_planilla(diag: Diagnostico, ruta, separador: str = SEPARADOR) -> Path:
+    """Cada fila lleva el `entorno` del que salió: `aplicar --si` se niega a
+    escribir en una base de otro entorno."""
     ruta = Path(ruta)
     with open(ruta, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, fieldnames=COLUMNAS_PLANILLA, delimiter=separador,
                            lineterminator="\r\n")
         w.writeheader()
         for fila in diag.filas:
-            w.writerow(fila.como_dict())
+            w.writerow({k: _celda_segura(v) for k, v in {**fila.como_dict(), "entorno": diag.entorno}.items()})
     return ruta
 
 
@@ -837,6 +873,9 @@ def leer_planilla(ruta) -> list:
                 f"el encabezado {len(encabezado)}: sobran datos ({[x for x in sobrantes if (x or '').strip()]}). "
                 "Probablemente un separador escrito dentro de una celda. No se aplicó nada.")
         d = {(k or "").strip().lower(): (v or "").strip() for k, v in fila.items()}
+        for campo in ("anterior", "nuevo"):           # el apóstrofo que pone escribir_planilla
+            if campo in d:
+                d[campo] = _sin_apostrofo(d[campo]).strip()
         d["_linea"] = lector.line_num
         filas.append(d)
     return filas
@@ -868,6 +907,7 @@ class Cambio:
     filas: int = 0
     detalle: dict = field(default_factory=dict)
     resto: bool = False        # completa una conversión que la traza ya registra
+    renumeracion: bool = False  # el anterior YA era válido (solo con --permitir-validos)
 
 
 @dataclass
@@ -885,9 +925,12 @@ _CONSEJO_EXCEL = ("Si abriste la planilla en Excel, revisá que no haya converti
                   "notación científica (2,01E+10) y que no le haya sacado dígitos.")
 
 
-def _cambios_de_la_planilla(filas) -> list:
+def _cambios_de_la_planilla(filas, permitir_validos: bool = False) -> list:
     """Las filas con convertir=si, ya con los números normalizados. Valida
-    todo lo que se puede validar SIN mirar la base; junta TODOS los errores."""
+    todo lo que se puede validar SIN mirar la base; junta TODOS los errores.
+
+    Un anterior que YA cumple el módulo 11 solo se acepta con `permitir_validos`
+    (la persona agrega esa fila a mano: el diagnóstico nunca la propone)."""
     cambios, errores = [], []
     for i, fila in enumerate(filas, start=2):          # la fila 1 es el encabezado
         if not _quiere_convertir(fila.get("convertir", "")):
@@ -905,15 +948,19 @@ def _cambios_de_la_planilla(filas) -> list:
         if len(nuevo) != 11:
             errores.append(f"{donde}: 'nuevo' no tiene 11 dígitos. {_CONSEJO_EXCEL}")
             continue
-        if cuit.es_valido(viejo):
-            errores.append(f"{donde}: el anterior ya cumple el módulo 11; esta herramienta no renumera "
-                           "números válidos.")
+        renumeracion = cuit.es_valido(viejo)
+        if renumeracion and not permitir_validos:
+            errores.append(f"{donde}: el anterior ya cumple el módulo 11. Si el número es válido pero es "
+                           "de OTRA persona o empresa y hay que renumerarlo, corré con --permitir-validos "
+                           "(la fila se agrega a mano a la planilla; mismas garantías: el nuevo tiene que "
+                           "ser válido, del mismo tipo y estar libre, y la traza lo anota como "
+                           "'renumeracion').")
         if not cuit.es_valido(nuevo):
             errores.append(f"{donde}: el nuevo no es un CUIL/CUIT válido (verificador o prefijo).")
         elif cuit.tipo(nuevo) != cuit.tipo(viejo):
             errores.append(f"{donde}: cambia de tipo ({cuit.tipo(viejo) or '?'} -> {cuit.tipo(nuevo)}); "
                            "el nuevo tiene que ser de la misma clase que el anterior.")
-        cambios.append(Cambio(anterior=viejo, nuevo=nuevo, tipo=cuit.tipo(viejo)))
+        cambios.append(Cambio(anterior=viejo, nuevo=nuevo, tipo=cuit.tipo(viejo), renumeracion=renumeracion))
 
     vistos_viejos, vistos_nuevos = defaultdict(int), defaultdict(int)
     for c in cambios:
@@ -990,6 +1037,41 @@ def _validar_contra_la_base(cambios: list, esc: Escaneo, traza: Optional[dict] =
                 "hay que juntarlas a mano antes de completar la conversión.")
     if errores:
         raise ErrorRegularizacion("La planilla no se puede aplicar (no se escribió nada):", errores)
+
+
+def _entorno_actual() -> str:
+    return entorno.ENTORNO or "local"
+
+
+def _chequear_entorno(filas: list, declarado: str, si: bool) -> list:
+    """¿Esta planilla salió del entorno en el que se está por escribir? Con `si`
+    un desacuerdo ABORTA; en el ensayo solo se avisa (devuelve los avisos).
+
+    - La planilla de `diagnostico` lleva el entorno en cada fila: tiene que ser el
+      actual en TODAS.
+    - Una planilla sin esa columna (o con celdas vacías) no dice de dónde viene:
+      con `si` hay que pasar `--entorno X` y X tiene que ser el actual.
+    - `--entorno X` distinto del actual aborta siempre."""
+    actual = _entorno_actual()
+    pedido = (declarado or "").strip().lower()
+    valores = [(f.get("entorno") or "").strip().lower() for f in filas if (f.get("anterior") or "").strip()]
+    problemas = []
+    if pedido and pedido != actual:
+        problemas.append(f"Pasaste --entorno {pedido} pero esta corrida es del entorno '{actual}' (variable "
+                         "ENTORNO): una de las dos está mal, y no se sabe cuál es la base correcta.")
+    if valores and all(valores):
+        otros = sorted({v for v in valores if v != actual})
+        if otros:
+            problemas.append(f"La planilla es del entorno {', '.join(repr(o) for o in otros)} y esta corrida "
+                             f"es del entorno '{actual}': estarías por escribir en una base que no es de "
+                             "la que salió la planilla. Revisá DATABASE_URL y ENTORNO.")
+    elif valores and not pedido:
+        problemas.append("La planilla no dice de qué entorno es (¿la generó una versión vieja de "
+                         "`diagnostico`?). Si estás seguro de que es de esta base, pasá --entorno "
+                         f"{actual} para confirmarlo.")
+    if problemas and si:
+        raise ErrorRegularizacion("El entorno de la planilla no coincide (no se escribió nada):", problemas)
+    return [f"ATENCIÓN (con --si esto abortaría): {p}" for p in problemas]
 
 
 def _validar_en(conn, cambios: list) -> Escaneo:
@@ -1124,7 +1206,7 @@ def url_para_cliente(url: str) -> str:
     return url.replace("postgresql+psycopg://", "postgresql://", 1)
 
 
-def hacer_backup(url: str, directorio: Path = RAIZ) -> Path:
+def hacer_backup(url: str, directorio: Path = BACKUPS) -> Path:
     """pg_dump de la base, con el cliente que elige pg_cliente.py (el de la
     misma versión que el servidor), como `promover_demo.py`. El dump lleva
     datos personales: por eso se hace DESPUÉS de todas las validaciones que no
@@ -1138,11 +1220,17 @@ def hacer_backup(url: str, directorio: Path = RAIZ) -> Path:
         raise ErrorRegularizacion(f"No se pudo preparar el backup: {e}\n"
                                   "Resolvelo, o corré con --sin-backup si de verdad no querés copia.")
     directorio.mkdir(parents=True, exist_ok=True)
-    destino = directorio / (
-        f"backup_regularizacion_{entorno.ENTORNO or 'local'}_{fechas.ahora():%Y-%m-%d-%H%M}.dump")
-    with open(destino, "wb") as salida:
+    destino = directorio.resolve() / (
+        f"backup_regularizacion_{_entorno_actual()}_{fechas.ahora():%Y-%m-%d-%H%M}.dump")
+    # Permisos 0600 desde que se crea: el dump lleva datos personales de todos.
+    fd = os.open(destino, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "wb") as salida:
         r = subprocess.run([*comando, url, "-Fc", "--no-owner", "--no-privileges"],
                            cwd=directorio, stdout=salida)
+    try:
+        os.chmod(destino, 0o600)          # por si el archivo ya existía con otro modo
+    except OSError:
+        pass
     if r.returncode != 0 or not destino.exists() or destino.stat().st_size == 0:
         destino.unlink(missing_ok=True)
         raise ErrorRegularizacion("El backup falló; no se convierte nada sin copia.")
@@ -1163,7 +1251,8 @@ def describir_destino(engine) -> list:
 
 
 def aplicar(planilla, *, si: bool = False, quien: str = "", sin_backup: bool = False,
-            engine=None, salida=print, directorio_backup: Path = RAIZ) -> Resultado:
+            engine=None, salida=print, directorio_backup: Path = BACKUPS,
+            permitir_validos: bool = False, entorno_declarado: str = "") -> Resultado:
     """Convierte las filas con convertir=si. Sin `si` es un ensayo completo
     (hace los UPDATE y los deshace). Todo o nada: ante cualquier problema se
     lanza ErrorRegularizacion y la base queda como estaba.
@@ -1174,11 +1263,17 @@ def aplicar(planilla, *, si: bool = False, quien: str = "", sin_backup: bool = F
     datos personales: un abort de los pasos 1 y 2 no deja ninguno.
 
     `planilla`: la ruta de un CSV o una lista de dicts con las columnas
-    anterior / nuevo / convertir."""
+    anterior / nuevo / convertir (y `entorno`).
+
+    `permitir_validos`: acepta filas cuyo anterior YA cumple el módulo 11 (un
+    número válido pero de otra persona); la traza las anota como
+    'renumeracion'. `entorno_declarado`: el --entorno de la CLI; ver
+    `_chequear_entorno`."""
     filas = leer_planilla(planilla) if isinstance(planilla, (str, Path)) else list(planilla)
-    cambios = _cambios_de_la_planilla(filas)
+    cambios = _cambios_de_la_planilla(filas, permitir_validos)
     if si and not quien.strip():
         raise ErrorRegularizacion("Con --si hace falta --quien: queda registrado en la traza.")
+    avisos_de_entorno = _chequear_entorno(filas, entorno_declarado, si) if cambios else []
 
     propio = engine is None
     engine = engine or db.engine_para_migraciones()
@@ -1190,9 +1285,12 @@ def aplicar(planilla, *, si: bool = False, quien: str = "", sin_backup: bool = F
                    "borralo si no lo necesitás.")
 
     try:
-        for linea in describir_destino(engine):
+        for linea in describir_destino(engine) + avisos_de_entorno:
             salida(linea)
         salida(f"Planilla: {len(filas)} fila(s), {len(cambios)} con convertir=si.")
+        if any(c.renumeracion for c in cambios):
+            salida(f"ATENCIÓN: {sum(c.renumeracion for c in cambios)} fila(s) renumeran un número que YA "
+                   "cumplía el módulo 11 (--permitir-validos).")
         if not cambios:
             salida("No hay nada para hacer.")
             return Resultado([], {}, {}, aplicado=False)
@@ -1205,7 +1303,7 @@ def aplicar(planilla, *, si: bool = False, quien: str = "", sin_backup: bool = F
                     conn.rollback()
             salida("Backup previo de la base (pg_dump)...")
             backup = hacer_backup(db.DATABASE_URL, directorio_backup)
-            salida(f"  {backup} ({backup.stat().st_size // 1024} KB)")
+            salida(f"  {backup} ({backup.stat().st_size // 1024} KB, permisos 0600)")
         elif si:
             salida("ATENCIÓN: se aplica SIN backup (--sin-backup).")
 
@@ -1258,7 +1356,8 @@ def _aplicar_en_transaccion(conn, cambios: list, si: bool, quien: str) -> Result
     lote = identificadores_de_lote()
     nombres = nombres_de(conn, {c.anterior for c in cambios} | {c.nuevo for c in cambios if c.resto})
     for c in cambios:
-        c.origen = clasificar_origen(c.anterior, antes.apariciones[c.anterior], lote, por_clave)
+        c.origen = ("renumeracion" if c.renumeracion
+                    else clasificar_origen(c.anterior, antes.apariciones[c.anterior], lote, por_clave))
         c.nombre = nombres.get(c.anterior) or (nombres.get(c.nuevo, "") if c.resto else "")
 
     mapa = {c.anterior: c.nuevo for c in cambios}
@@ -1308,11 +1407,16 @@ def _informe(res: Resultado, si: bool, salida) -> None:
             origenes = ", ".join(f"{o} {r['por_origen'].get(o, 0)}" for o in ORDEN_ORIGEN)
             salida(f"  {nombre}: {r['para_revisar']} número(s) inválido(s) o rotos ({origenes}); "
                    f"convertibles sin colisión: {r['convertibles']}; con colisión: {r['colisiones']}")
-    salida("\nTienen que enterarse: entran con el número NUEVO (la clave no cambia). Quien tenga la "
-           "sesión abierta con el viejo queda sin acceso hasta que vuelva a entrar (como mucho 15 "
-           "minutos).")
+    salida("\nTienen que enterarse: entran con el número NUEVO (la clave no cambia).")
+    if si:
+        salida("OJO con las sesiones abiertas: la sesión se renueva con cada pedido, así que una persona "
+               "que está usando la app sigue escribiendo con el número VIEJO (un recibo, una suscripción "
+               "push) aunque la conversión ya se haya hecho. Esperá al menos 15 minutos SIN actividad de "
+               "estas personas (o hasta el día siguiente), volvé a correr `diagnostico` y aplicá los RESTO "
+               "que aparezcan.")
     for c in sorted(res.cambios, key=lambda c: (c.tipo, c.anterior)):
-        marca = "completa una conversión anterior" if c.resto else c.origen
+        marca = ("completa una conversión anterior" if c.resto
+                 else "renumeración de un número válido" if c.renumeracion else c.origen)
         salida(f"    {c.tipo:<8} {c.nombre or '(sin nombre)':<34} {c.anterior} -> {c.nuevo}   [{marca}]")
     if not si:
         salida("\nPara aplicarlo de verdad: el mismo comando con --si --quien <iniciales>.")
@@ -1348,7 +1452,8 @@ def comando_aplicar(args) -> int:
         return 2
     try:
         aplicar(args.planilla, si=args.si, quien=args.quien or "", sin_backup=args.sin_backup,
-                directorio_backup=Path(args.directorio_backup) if args.directorio_backup else RAIZ)
+                directorio_backup=Path(args.directorio_backup) if args.directorio_backup else BACKUPS,
+                permitir_validos=args.permitir_validos, entorno_declarado=args.entorno)
     except ErrorRegularizacion as e:
         print(f"ABORTADO: {e}")
         for linea in e.errores:
@@ -1372,7 +1477,13 @@ def armar_parser() -> argparse.ArgumentParser:
     a.add_argument("--quien", default="", help="iniciales de quien lo corre (obligatorio con --si)")
     a.add_argument("--sin-backup", action="store_true", help="no hacer pg_dump antes (no recomendado)")
     a.add_argument("--directorio-backup", default="",
-                   help="dónde dejar el pg_dump (default: la carpeta del proyecto, que no se versiona)")
+                   help="dónde dejar el pg_dump (default: backups/ del proyecto, que no se versiona)")
+    a.add_argument("--permitir-validos", action="store_true",
+                   help="acepta filas cuyo anterior YA cumple el módulo 11 (un número válido pero de "
+                        "otra persona); la fila se agrega a mano a la planilla")
+    a.add_argument("--entorno", default="",
+                   help="el entorno de la base (local, pruebas, demo, prod); obligatorio con --si si la "
+                        "planilla no trae la columna 'entorno'. Tiene que coincidir con ENTORNO")
     a.set_defaults(func=comando_aplicar)
     return ap
 
