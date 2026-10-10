@@ -6320,6 +6320,24 @@ con el número nuevo ya ocupado. De paso salió **H-0021**: reportar y enviar
 al sindicato toman el CUIL y el id del recibo del cuerpo del pedido, así que
 un afiliado podía marcar como enviado el recibo de otro.
 
+**Lo que encontró la revisión general**, después de QA: tres puertas más
+por donde nacía un CUIT confirmado sin verificador —aplicar el aprendizaje,
+importar los CUIT de los conceptos como empleadores y confirmar un concepto
+pendiente, todas con el CUIT que leyó la IA—, ahora cerradas y vigiladas por
+un test que falla si una función de `main.py` o `db.py` escribe un CUIL/CUIT
+sin estar clasificada como puerta o como derivado; los criterios de
+notificación por CUIL o CUIT comparaban el texto tal cual, así que
+`30-11122233-5` no encontraba a quien tenía `30111222335` (ahora se compara
+normalizado de los dos lados); dos tests de la herramienta fallaban con
+`ENTORNO=pruebas`, que es lo que pone el CI; y no había forma de corregir un
+número VÁLIDO pero de otra persona (ahora `--permitir-validos`). Además la
+herramienta se niega a escribir en un entorno distinto del de la planilla,
+escapa las fórmulas del CSV, guarda el backup en `backups/` con permisos
+0600, y el texto sobre las sesiones abiertas se corrigió: no vencen solas en
+15 minutos, se renuevan con cada pedido, así que después de aplicar hay que
+esperar a que esas personas dejen de usar la app, volver a diagnosticar y
+aplicar los `RESTO`.
+
 Al desplegar, en cada entorno hay que correr la regularización
 (`DESPLIEGUE_RENDER.md`): hasta entonces los accesos nuevos de la demo no
 existen en esa base. Trabajador 0.44.01, Admin 0.47.01, Plataforma 0.43.01.
