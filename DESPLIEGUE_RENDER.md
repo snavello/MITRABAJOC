@@ -213,6 +213,61 @@ de esas guardas se saltea con un flag.
 trabajadores reales, copiarlos a un entorno con otros secretos y más gente
 con acceso deja de ser inocuo — los recibos son datos personales.
 
+## Regularizar CUIL/CUIT (módulo 11)
+
+Desde el 2026-10-10 las altas exigen el dígito verificador del CUIL/CUIT
+(`PLAN_CUIT_MOD11.md`). Las bases que ya existían tienen números que no lo
+cumplen: los de la demo de antes (`20111111110`, `30999888776`...), los que
+cargaron a mano los testers (`27999999999`) y los de los lotes sintéticos.
+`regularizar_cuit.py` convierte los dos primeros a un número válido **en
+todas las tablas a la vez**; los de los lotes quedan como están (siguen
+pudiendo entrar: los logins no validan el verificador).
+
+**Cuándo**: en cada entorno, apenas se despliega la versión que trae la regla
+(el Pre-Deploy ya crea la tabla `cambioidentificador`). Hasta que se corre,
+los accesos de la demo de `CLAUDE.md` (los números nuevos) no existen en esa
+base. Correrlo en un momento tranquilo: con `--si` toma un candado de
+escritura sobre las tablas mientras dura (segundos a un minuto), y quien
+tenga una sesión abierta con un número viejo tiene que volver a entrar.
+
+**Desde la PC**, con la External Database URL del entorno (la planilla se
+abre en Excel, y el backup queda en la PC):
+```
+set DATABASE_URL=<External Database URL>      (PowerShell: $env:DATABASE_URL="...")
+set ENTORNO=pruebas
+python regularizar_cuit.py diagnostico
+```
+1. **Diagnóstico** (no escribe nada): imprime cuántos números inválidos hay
+   por tabla y por origen, y deja `regularizacion_cuit_pruebas.csv` (con `;`,
+   para el Excel de Argentina). Una fila por número: el nuevo propuesto, el
+   origen (`demo` = el nuevo exacto de `identificadores_demo.py`; `manual` =
+   el mismo número con el verificador corregido; `lote` y `lectura` = no se
+   tocan), a quién pertenece y en qué tablas aparece.
+2. **Revisar la planilla.** Llegan con `convertir=si` los `demo` y los
+   `manual` sin problemas. Una fila `COLISION` (el número corregido ya es de
+   otra persona, o dos viejos dan el mismo) llega en `no`: si son dos
+   personas distintas, copiar la `alternativa` en `nuevo` y poner `si`. Si
+   fueran la MISMA persona con un dígito mal tipeado, la herramienta no
+   fusiona: se resuelve a mano.
+3. **Ensayo**: `python regularizar_cuit.py aplicar --planilla regularizacion_cuit_pruebas.csv`
+   hace la conversión entera dentro de una transacción, muestra qué cambiaría
+   y la deshace.
+4. **Aplicar**: el mismo comando con `--si --quien SDN`. Hace un `pg_dump`
+   antes (no convierte sin copia), convierte todo en una transacción,
+   verifica antes de confirmar que cada número nuevo quedó exactamente donde
+   estaba el viejo, y deja una fila por número en `cambioidentificador`
+   (quién, cuándo, cuántas filas). Si algo no cierra, deshace todo.
+5. Al final imprime **las personas y empresas cuyo número cambió**: tienen
+   que enterarse, porque entran con el nuevo. Volver a correr el diagnóstico
+   tiene que dar 0 `manual` y 0 `demo`.
+
+Las bitácoras (`logplataforma`, chats de trámites, eventos) NO se reescriben:
+dicen lo que pasó con el número de ese momento, y `cambioidentificador`
+permite seguirlo hasta el nuevo. Un CUIL/CUIT ya cargado tampoco se cambia
+desde las ediciones del panel (E-IDENT-03): cambiarlo en una sola tabla
+cortaba la cuenta, los recibos y los trámites de la persona. Esta herramienta
+es la única vía.
+
 ## Backup manual de la base de demo
 Desde la PC de desarrollo, con el Docker local levantado (trae `pg_dump`
 sin instalar nada):

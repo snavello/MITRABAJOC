@@ -69,7 +69,7 @@ with db.get_session() as s:
     s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111111", nombre="Raúl (Rosario)",
                            clave_hash=auth.hashear_clave("raul"), debe_cambiar_clave=False,
                            es_admin_seccional=True, seccional_id=SEC_ROSARIO))
-    s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111112", nombre="Cielo (Córdoba)",
+    s.add(UsuarioSindicato(sindicato_id=SID, usuario="20111111139", nombre="Cielo (Córdoba)",
                            clave_hash=auth.hashear_clave("cielo"), debe_cambiar_clave=False,
                            area_id=AREA_CBA, seccional_id=SEC_CORDOBA))
     s.commit()
@@ -80,7 +80,7 @@ with db.get_session() as s:
     U_RAUL = s.exec(select(UsuarioSindicato).where(
         UsuarioSindicato.usuario == "20111111111")).first().id
     U_CIELO = s.exec(select(UsuarioSindicato).where(
-        UsuarioSindicato.usuario == "20111111112")).first().id
+        UsuarioSindicato.usuario == "20111111139")).first().id
 
 
 def _cliente(usuario, clave):
@@ -322,7 +322,7 @@ def test_el_panel_del_admin_local_no_trae_las_otras_seccionales():
     assert U_CIELO not in ids, "un usuario de Córdoba no es asunto suyo"
 
     html = _raul().get("/admin").text
-    assert "20111111112" not in html, "se filtró el CUIT de la usuaria de Córdoba"
+    assert "20111111139" not in html, "se filtró el CUIT de la usuaria de Córdoba"
     print("OK  test_el_panel_del_admin_local_no_trae_las_otras_seccionales")
 
 
@@ -331,7 +331,7 @@ def test_el_general_si_ve_todo():
     areas = db.areas_del_sindicato(SID, db.alcance_seccional(U_MARTA))
     assert {AREA_ROS, AREA_CBA} <= {a["id"] for a in areas}
     html = _marta().get("/admin").text
-    assert "20111111112" in html
+    assert "20111111139" in html
     print("OK  test_el_general_si_ve_todo")
 
 
