@@ -48,10 +48,18 @@ def hoy_texto() -> str:
     return ahora().strftime("%Y-%m-%d")
 
 
+def a_texto(momento: datetime) -> str:
+    """Cualquier datetime naive de Buenos Aires como "AAAA-MM-DD HH:MM", el
+    mismo formato de `ahora_texto()`: sirve para escribir un vencimiento
+    ("ahora + 15 minutos") o un límite de ventana ("hace una hora") que se
+    compara como texto contra los sellos ya guardados."""
+    return momento.strftime("%Y-%m-%d %H:%M")
+
+
 def ahora_texto() -> str:
     """Fecha y hora como "AAAA-MM-DD HH:MM" -- el sello de tiempo estándar
     del proyecto (enviado_en, creada, leida_en, actualizado)."""
-    return ahora().strftime("%Y-%m-%d %H:%M")
+    return a_texto(ahora())
 
 
 def ahora_con_segundos() -> str:
