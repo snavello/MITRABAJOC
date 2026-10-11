@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Colm3na — Clave temporal</title>
+<style>
+  :root { --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e; --papel:#f7f5f0; --linea:#dcd8cf; --gris:#5c5a54; }
+  * { box-sizing:border-box; margin:0; font-family:system-ui,-apple-system,sans-serif; }
+  body { background:var(--papel); min-height:100vh; display:flex; align-items:center;
+         justify-content:center; padding:24px; }
+  .caja { background:#fff; border:1px solid var(--linea); border-radius:16px; max-width:420px;
+          width:100%; padding:28px 24px; text-align:center; box-shadow:0 3px 16px rgba(0,0,0,.10); }
+  h1 { font-size:18px; color:var(--tinta); margin-bottom:6px; }
+  .quien { font-size:14px; color:var(--gris); margin-bottom:18px; }
+  .clave { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:32px; letter-spacing:4px;
+           font-weight:700; color:var(--tinta); background:var(--papel); border:1px dashed var(--linea);
+           border-radius:10px; padding:14px 8px; user-select:all; }
+  .nota { font-size:13px; color:var(--gris); margin-top:16px; line-height:1.5; }
+  .aviso { font-size:13px; color:var(--alerta); margin-top:12px; font-weight:600; }
+  a.volver { display:inline-block; margin-top:20px; padding:10px 18px; border-radius:8px;
+             background:var(--tinta); color:#fff; text-decoration:none; font-size:14px; }
+</style>
+</head>
+<body>
+{% include "_entorno.html" %}
+  <div class="caja">
+    <h1>Clave temporal</h1>
+    <div class="quien">{{ quien }} · <code>{{ ident }}</code></div>
+    <div class="clave" id="clave-temporal">{{ clave }}</div>
+    <p class="nota">Dásela a la persona. Al entrar tiene que cambiarla por una propia.</p>
+    <p class="aviso">Se muestra una sola vez: no se puede volver a ver. Si la perdés, restablecé la clave de nuevo.</p>
+    <a class="volver" href="{{ volver }}">Volver al panel</a>
+  </div>
+</body>
+</html>

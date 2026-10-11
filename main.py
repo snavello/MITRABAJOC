@@ -56,6 +56,7 @@ import precios_ia
 import resultados_encuesta
 import fechas
 import geo
+import secrets
 import db
 import auth
 import validaciones_tramite
@@ -933,6 +934,19 @@ def api_validar(request: Request, payload: dict):
             **dashboard.campos_analiticos(recibo, resultado),
         )
         s.add(registro)
+        # Nivel 3 de fiabilidad (PLAN_REGISTRO.md, D3): un recibo validado
+        # cuyo CUIL, LEÍDO por la IA, es el de la sesión acredita que la
+        # persona tiene en su poder un documento suyo. Se exige el CUIL
+        # presente e igual (no alcanza con que no sea "distinto": un recibo
+        # donde la IA no leyó el CUIL pasa el corte de arriba, pero no
+        # acredita nada). Misma sesión y mismo commit que el historial;
+        # `subir_nivel` no baja un nivel 4.
+        cuil_leido = _norm_cuil((recibo.get("empleado") or {}).get("cuil"))
+        if cuil_sesion and cuil_leido and cuil_leido == _norm_cuil(cuil_sesion):
+            cuenta = s.exec(select(CuentaTrabajador).where(
+                CuentaTrabajador.cuil == cuil_sesion)).first()
+            if cuenta:
+                db.subir_nivel(s, cuenta, "recibo_propio")
         s.commit()
         resultado["recibo_verificado_id"] = registro.id
 
@@ -1150,6 +1164,8 @@ PERMISOS_RUTAS = {
     "/admin/trabajador/georreferenciar-pendientes": "trabajadores",
     "/admin/trabajador/baja":               "trabajadores",
     "/admin/trabajador/alta-logica":        "trabajadores",
+    "/admin/trabajador/confirmar-identidad": "trabajadores",
+    "/admin/trabajador/restablecer-clave":  "trabajadores",
 
     # La gestión de usuarios es del Super Admin y de nadie más: no es una
     # sección asignable (ver SECCION_SUPER_ADMIN en permisos.py).
@@ -1221,6 +1237,8 @@ PERMISOS_RUTAS = {
     "/admin/empleador":                     "emp_empresas",
     "/admin/empleador/baja":                "emp_empresas",
     "/admin/empleador/alta-logica":         "emp_empresas",
+    "/admin/empleador/confirmar-identidad": "emp_empresas",
+    "/admin/empleador/restablecer-clave":   "emp_empresas",
     "/admin/empleador/importar-cuits":      "emp_empresas",
     "/admin/notificacion-empresa":          "emp_notificaciones",
     "/admin/notificacion-empresa/preview":  "emp_notificaciones",
@@ -1432,6 +1450,16 @@ def admin(request: Request):
         empleadores = s.exec(select(Empleador).where(Empleador.sindicato_id == sid)
                              .order_by(Empleador.activo.desc(), Empleador.razon_social)).all() \
             if puede("emp_empresas") else []
+        # Nivel de fiabilidad de la cuenta de cada empresa (PLAN_REGISTRO.md),
+        # por CUIT: una cuenta es de la persona jurídica, no de este sindicato.
+        niveles_empleadores = {}
+        if empleadores:
+            for c in s.exec(select(CuentaEmpleador).where(
+                    CuentaEmpleador.cuit.in_([e.cuit for e in empleadores]))).all():
+                niveles_empleadores[c.cuit] = {
+                    "tiene_cuenta": bool(c.clave_hash),
+                    "nivel_fiabilidad": c.nivel_fiabilidad or 1,
+                    "nivel_origen": c.nivel_origen or ""}
     # Conceptos con código provisorio (la IA no pudo leer el código del recibo):
     # nunca matchean por código, así que hay que revisarlos.
     provisorios = detectar_provisorios([
@@ -1499,6 +1527,7 @@ def admin(request: Request):
         "rubro_visto": rubro_visto,
         "formulas": formulas,
         "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR,
+        "niveles_empleadores": niveles_empleadores,
         "clausula_confidencialidad": bool(sind and sind.clausula_confidencialidad),
         "usuarios_sindicato": usuarios_sindicato,
         "permisos": permisos, "es_super_admin": es_super_admin,
@@ -1934,6 +1963,78 @@ def admin_trabajador_reactivar(request: Request, id: int = Form(...)):
             t.activo = True
             s.add(t); s.commit()
     return RedirectResponse("/admin#trabajadores", status_code=303)
+
+
+# ---------- Confirmar identidad y restablecer clave (PLAN_REGISTRO.md, 4.4) ----------
+# Letras sin I ni O y dígitos sin 0 ni 1: la clave se dicta o se lee de una
+# pantalla, y "0/O" o "1/l" son los errores de siempre.
+_ALFABETO_CLAVE_TEMPORAL = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def _clave_temporal_nueva() -> str:
+    return "".join(secrets.choice(_ALFABETO_CLAVE_TEMPORAL) for _ in range(8))
+
+
+def _pagina_clave_temporal(request: Request, quien: str, ident: str, volver: str, clave: str):
+    """La clave temporal se muestra UNA vez, en la respuesta del propio POST:
+    no viaja en una URL (nada de redirect con la clave), no se guarda en
+    claro en ningún lado y la página no se cachea. Recargar re-envía el POST
+    y genera otra clave: la anterior deja de valer, así que no hay forma de
+    volver a verla."""
+    return templates.TemplateResponse(
+        "clave_temporal.html",
+        {"request": request, "quien": quien, "ident": ident, "clave": clave, "volver": volver},
+        headers={"Cache-Control": "no-store, max-age=0", "Pragma": "no-cache"})
+
+
+def _cuenta_y_empadronamiento(request: Request, sid: int, cuil: str):
+    """(empadronamiento, cuenta) de un afiliado DE ESTE sindicato y dentro del
+    alcance de seccional de quien opera. 404 si no es del sindicato; 403 si es
+    de otra seccional (mismo criterio que el resto de las rutas del panel)."""
+    with db.get_session() as s:
+        t = s.exec(select(Trabajador).where(
+            Trabajador.sindicato_id == sid, Trabajador.cuil == cuil)).first()
+        if not t:
+            raise HTTPException(404, "Ese CUIL no está en el padrón de este sindicato.")
+        _exigir_alcance_seccional(request, t.seccional_id)
+    return t
+
+
+@app.post("/admin/trabajador/confirmar-identidad")
+def admin_trabajador_confirmar_identidad(request: Request, cuil: str = Form(...)):
+    """Nivel 4: una persona del sindicato confirmó la identidad del afiliado
+    en persona. Solo si ya tiene cuenta, y dentro de su alcance de seccional."""
+    sid = exigir_sindicato(request)
+    cuil = _norm_cuil(cuil)
+    _cuenta_y_empadronamiento(request, sid, cuil)
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if not cuenta or not cuenta.clave_hash:
+            return RedirectResponse("/admin?err=sincuenta#trabajadores", status_code=303)
+        db.subir_nivel(s, cuenta, "presencial")
+        s.commit()
+    return RedirectResponse("/admin?ok=identidad#trabajadores", status_code=303)
+
+
+@app.post("/admin/trabajador/restablecer-clave")
+def admin_trabajador_restablecer_clave(request: Request, cuil: str = Form(...)):
+    """Pone una clave temporal de un solo uso a la cuenta de un afiliado (es lo
+    que le devuelve la cuenta al afiliado real cuando alguien llegó primero).
+    La clave se muestra una vez; el próximo ingreso obliga a cambiarla."""
+    sid = exigir_sindicato(request)
+    cuil = _norm_cuil(cuil)
+    _cuenta_y_empadronamiento(request, sid, cuil)
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if not cuenta or not cuenta.clave_hash:
+            return RedirectResponse("/admin?err=sincuenta#trabajadores", status_code=303)
+        clave = _clave_temporal_nueva()
+        cuenta.clave_hash = auth.hashear_clave(clave)
+        cuenta.clave_temporal = True
+        s.add(cuenta)
+        s.commit()
+        nombre = cuenta.nombre or cuil
+    return _pagina_clave_temporal(request, nombre, cuil, "/admin#trabajadores", clave)
 
 
 # ---------- ABM de administradores del propio sindicato ----------
@@ -2878,6 +2979,54 @@ def admin_empleador_reactivar(request: Request, id: int = Form(...)):
             e.activo = True
             s.add(e); s.commit()
     return RedirectResponse("/admin#empleadores", status_code=303)
+
+
+def _cuenta_de_empresa_del_sindicato(sid: int, cuit: str):
+    """404 si el CUIT no está dado de alta como Empleador en ESTE sindicato.
+    El empleador no tiene seccional: el alcance es el del sindicato, como
+    en el resto de las rutas de Empleadores."""
+    with db.get_session() as s:
+        e = s.exec(select(Empleador).where(
+            Empleador.sindicato_id == sid, Empleador.cuit == cuit)).first()
+        if not e:
+            raise HTTPException(404, "Ese CUIT no está cargado como empleador de este sindicato.")
+        return e
+
+
+@app.post("/admin/empleador/confirmar-identidad")
+def admin_empleador_confirmar_identidad(request: Request, cuit: str = Form(...)):
+    """Nivel 4 para la cuenta de una empresa (espejo de la del trabajador)."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    numero = _norm_cuil(cuit)
+    _cuenta_de_empresa_del_sindicato(sid, numero)
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == numero)).first()
+        if not cuenta or not cuenta.clave_hash:
+            return RedirectResponse("/admin?err=sincuenta#empleadores", status_code=303)
+        db.subir_nivel(s, cuenta, "presencial")
+        s.commit()
+    return RedirectResponse("/admin?ok=identidad#empleadores", status_code=303)
+
+
+@app.post("/admin/empleador/restablecer-clave")
+def admin_empleador_restablecer_clave(request: Request, cuit: str = Form(...)):
+    """Clave temporal para la cuenta de una empresa (espejo de la del trabajador)."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    numero = _norm_cuil(cuit)
+    e = _cuenta_de_empresa_del_sindicato(sid, numero)
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == numero)).first()
+        if not cuenta or not cuenta.clave_hash:
+            return RedirectResponse("/admin?err=sincuenta#empleadores", status_code=303)
+        clave = _clave_temporal_nueva()
+        cuenta.clave_hash = auth.hashear_clave(clave)
+        cuenta.clave_temporal = True
+        s.add(cuenta)
+        s.commit()
+    return _pagina_clave_temporal(request, e.razon_social or numero, numero,
+                                  "/admin#empleadores", clave)
 
 
 @app.post("/admin/empleador/importar-cuits")
@@ -5698,6 +5847,7 @@ async def plataforma_alta_sindicato(
     portada_clara: bool = Form(False),
     admin_portada_clara: bool = Form(False),
     clausula_confidencialidad: bool = Form(False),
+    acepta_mail_declarado: bool = Form(False),
     contrato: UploadFile = File(None),
 ):
     exigir_plataforma(request)
@@ -5734,6 +5884,7 @@ async def plataforma_alta_sindicato(
             modulos_habilitados=modulos_validos,
             portada_clara=portada_clara,
             admin_portada_clara=admin_portada_clara,
+            acepta_mail_declarado=acepta_mail_declarado,
         )
         if not _aplicar_contrato_y_clausula(request, sind, contrato_leido,
                                             clausula_confidencialidad):
@@ -6292,6 +6443,7 @@ async def plataforma_editar_sindicato(
     portada_clara: bool = Form(False),
     admin_portada_clara: bool = Form(False),
     clausula_confidencialidad: bool = Form(False),
+    acepta_mail_declarado: bool = Form(False),
     contrato: UploadFile = File(None),
 ):
     exigir_plataforma(request)
@@ -6321,6 +6473,7 @@ async def plataforma_editar_sindicato(
             sind.modulos_habilitados = modulos_validos
             sind.portada_clara = portada_clara
             sind.admin_portada_clara = admin_portada_clara
+            sind.acepta_mail_declarado = acepta_mail_declarado
             if logo and logo.filename:
                 datos, mime, flag = _leer_logo(logo)
                 if datos:

@@ -696,6 +696,9 @@ PUERTAS = {
 REFERENCIAS = {
     "admin_login", "plataforma_login", "trabajador_login", "empresa_login", "entornos_login",
     "plataforma_reset_clave",
+    # Confirmar identidad / restablecer clave desde el panel (PLAN_REGISTRO.md): actúan sobre una cuenta que ya existe.
+    "admin_trabajador_confirmar_identidad", "admin_trabajador_restablecer_clave",
+    "admin_empleador_confirmar_identidad", "admin_empleador_restablecer_clave",
 }
 # Un campo llamado `usuario` que no es un CUIL: el alias de un usuario nominal
 # de plataforma ("jperez").
