@@ -73,7 +73,7 @@ from extractor import (extraer, extraer_aportes, preparar_imagen, resumen_compar
                         comparar_lineas, ErrorLectura)
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, cuiles_distintos,
-                        error_de_expresion, totales_leidos,
+                        error_de_expresion, totales_leidos, clasificacion_vista,
                         CATEGORIAS_UNIVERSALES)
 from filigrana import filigrana_svg
 from qr import qr_svg, url_verificacion, codigo_efimero, verificar_codigo_efimero, TTL_QR_SEGUNDOS
@@ -1376,6 +1376,20 @@ def admin(request: Request):
             if puede("conceptos", "formulas", "aprendizaje") else []
         formulas = s.exec(select(Formula).where(Formula.sindicato_id == sid)).all() \
             if puede("formulas") else []
+        # Qué rubro sugieren los recibos para cada concepto (dónde leyó la IA
+        # sus líneas): se propone al confirmar un pendiente y se marca el
+        # revisado que está cargado en el rubro contrario. Con la misma
+        # sesión del request, no una propia.
+        rubro_visto = {}
+        if puede("conceptos") and conceptos:
+            vistas = db.secciones_vistas(s, sid)
+            especificos = {(c.codigo.strip(), c.cuit_empleador) for c in conceptos
+                           if c.cuit_empleador}
+            for c in conceptos:
+                propuesta = clasificacion_vista(db.secciones_del_concepto(
+                    vistas, c.codigo, c.cuit_empleador, especificos))
+                if propuesta:
+                    rubro_visto[c.id] = propuesta
         # Reportes ya no viaja en el HTML: son miles de recibos y se piden
         # paginados a /admin/reportes/lista (anonimizados en el servidor).
         # Viene como dicts con el empadronamiento y la persona ya unidos
@@ -1450,6 +1464,7 @@ def admin(request: Request):
         "marca": db.marca_sindicato(sid), "marca_plataforma": db.marca_plataforma(),
         "iniciales": _iniciales_sindicato(sind.nombre if sind else ""),
         "conceptos": conceptos, "genericos": genericos, "codigos_efectivos": codigos_efectivos,
+        "rubro_visto": rubro_visto,
         "formulas": formulas,
         "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR,
         "clausula_confidencialidad": bool(sind and sind.clausula_confidencialidad),
@@ -2346,10 +2361,16 @@ def borrar_concepto(request: Request, id: int = Form(...)):
 
 
 @app.post("/admin/concepto/confirmar")
-def confirmar_concepto(request: Request, id: int = Form(...)):
+def confirmar_concepto(request: Request, id: int = Form(...),
+                       tipo: str = Form(""), remunerativo: str = Form("")):
     """Saca la marca "por revisar" de un concepto sin abrir el formulario de
     edición -- antes solo se podía limpiar como efecto secundario de editar
-    y guardar (ver abm_concepto), lo cual no era evidente en la UI."""
+    y guardar (ver abm_concepto), lo cual no era evidente en la UI.
+
+    Con `tipo` (y opcionalmente `remunerativo`), lo confirma además en ese
+    rubro: es el botón "Confirmar como descuento" que aparece cuando los
+    recibos leídos dicen otra cosa que el tipo con que se dio de alta (ver
+    validador.clasificacion_vista)."""
     sid = exigir_sindicato(request)
     with db.get_session() as s:
         c = s.get(Concepto, id)
@@ -2359,6 +2380,10 @@ def confirmar_concepto(request: Request, id: int = Form(...)):
             # (se corrige con Editar, que lo valida). PLAN_CUIT_MOD11.md, D2.
             if c.cuit_empleador and not cuit.es_valido(c.cuit_empleador):
                 return RedirectResponse("/admin?error=cuitconfirmar#conceptos", status_code=303)
+            if tipo in ("ingreso", "descuento"):
+                c.tipo = tipo
+            if remunerativo in ("si", "no"):
+                c.remunerativo = remunerativo == "si"
             c.pendiente_revision = False
             s.add(c)
             s.commit()

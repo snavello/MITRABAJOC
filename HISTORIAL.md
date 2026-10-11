@@ -6434,3 +6434,57 @@ Tests: `test_reintegros.py` (el recibo con sus importes reales e identidad
 sintética, el concepto pendiente cargado por el signo, un reintegro debajo del
 tope, descuentos sin signo, la cuota sindical, el alta por sección y el tope).
 Trabajador 0.44.03, Admin 0.47.02.
+
+## Catálogo contra recibo: por qué no hay un rubro "reintegro" y qué pasa cuando el catálogo está mal (2026-10-11)
+
+Después del arreglo de los reintegros, SDN planteó si la devolución de
+Ganancias no debería tener un rubro propio, o pasar a "ingreso no
+remunerativo". Se evaluó y se decidió que **no**, por tres motivos:
+
+- **Hay dos "reintegros" distintos.** La devolución de algo retenido
+  (Ganancias, aportes en exceso, cuota cobrada de más) es plata del propio
+  trabajador que vuelve, va impresa entre los descuentos y el total de
+  descuentos la neta. El reintegro de gastos o de guardería (arts. 103 bis y
+  106 LCT) lo paga el empleador y va entre los haberes: ese sí es un ingreso
+  no remunerativo, y el sistema ya lo trata así. Un rubro único los mezclaría.
+- **"Ingreso no remunerativo" rompe tres cosas** si se usa para la
+  devolución: el control de totales (el bruto daría 107.924 contra 44.975
+  impreso y el total de descuentos deja de cerrar), el "bruto" del Panel
+  Sindical (sale de ese total) y toda fórmula sobre `total_ingresos` (una
+  cuota sindical sobre el total de haberes cobraría sobre la devolución).
+- **Ser reintegro es del mes, no del concepto.** El 433-001 retiene un mes y
+  devuelve otro; el 161-001 hace lo mismo en el ajuste anual. Además el tipo
+  binario está en unas 40 líneas de 8 archivos: un tercer valor caería en
+  silencio en la rama "descuento" de cada `if`.
+
+Queda el modelo de dos ejes: el catálogo dice la zona (haber o descuento) y
+el recibo dice el sentido de la línea dentro de su zona.
+
+**Lo que se reforzó**, porque el catálogo le ganaba a la sección leída en
+cuanto el concepto estaba revisado (alguien confirma la devolución como haber
+y vuelve el error):
+
+1. `validar` arbitra con los totales impresos. Si un concepto revisado está en
+   un rubro y la IA lo leyó en el otro, se arma el reparto también "según el
+   recibo" y se usa ese SOLO si con él cierran todos los totales que se pueden
+   controlar y con el catálogo no. Si no hay totales o no cierran de ninguna
+   forma, manda el catálogo. Cuando gana el recibo sale la alerta
+   `concepto_mal_clasificado` ("…figura entre los descuentos de tu recibo,
+   pero tu sindicato lo tiene cargado como haber…"). El control de totales se
+   mudó a `validador.controlar_totales`, única implementación para los
+   chequeos y para el arbitraje.
+2. La pestaña Conceptos dice dónde leyó la IA cada código:
+   `db.secciones_vistas` abre el JSON de los últimos 500 recibos del
+   sindicato (con la sesión del request) y `validador.clasificacion_vista`
+   propone el rubro por mayoría, sin proponer nada ante un empate. El
+   pendiente muestra "Confirmar como descuento"; el revisado en el rubro
+   contrario queda marcado, con un aviso arriba y el botón "Pasar a
+   descuento" (`/admin/concepto/confirmar` acepta ahora `tipo` y
+   `remunerativo`). Una ayuda fija explica cuándo una devolución va como
+   descuento y cuándo un reintegro es un haber no remunerativo; Aprendizaje
+   dice lo mismo.
+
+Tests: `test_reintegros.py` (arbitraje: gana el recibo, sin totales manda el
+catálogo, IA que ubica mal una línea, totales que no cierran) y
+`test_rubro_visto.py` (conteos por código y empleador, aislamiento entre
+sindicatos, la pantalla y el botón). Trabajador 0.44.04, Admin 0.48.01.

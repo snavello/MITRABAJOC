@@ -2419,6 +2419,70 @@ def crear_conceptos_universales(sindicato_id: int) -> list:
 
 
 # ---------- Topes de base imponible (jubilación, INSSJP, obra social) ----------
+def secciones_vistas(s: Session, sindicato_id: int, ultimos: int = 500) -> dict:
+    """{(codigo, cuit_empleador): {"haberes": n, "no_remunerativos": n,
+    "descuentos": n}} -- en qué sección del recibo leyó la IA cada código,
+    contado sobre los últimos `ultimos` recibos verificados del sindicato.
+
+    Es lo que dice el recibo de cada concepto, para contrastarlo con su
+    rubro en el catálogo (validador.clasificacion_vista): una devolución de
+    Ganancias confirmada como haber se ve acá como "leído 4 veces entre los
+    descuentos". Recibe la sesión del request (una conexión por request) y
+    se acota a los últimos recibos: la evidencia que importa es la reciente,
+    y la consulta abre el JSON de cada uno. Los recibos leídos antes de que
+    el extractor dijera la sección (2026-10-11) no aportan nada.
+    """
+    from validador import seccion_de
+    filas = s.execute(text("""
+        WITH r AS (
+            SELECT cuit_empleador, detalle->'recibo'->'lineas' AS lineas
+            FROM reciboverificado
+            WHERE sindicato_id = :sid
+            ORDER BY id DESC
+            LIMIT :n
+        )
+        SELECT l->>'codigo' AS codigo, r.cuit_empleador, l->>'seccion' AS seccion,
+               count(*) AS veces
+        FROM r, jsonb_array_elements(
+                 CASE WHEN jsonb_typeof(r.lineas) = 'array' THEN r.lineas
+                      ELSE '[]'::jsonb END) AS l
+        WHERE jsonb_typeof(l) = 'object'
+          AND jsonb_typeof(l->'seccion') = 'string'
+          AND l->>'codigo' IS NOT NULL
+        GROUP BY 1, 2, 3
+    """), {"sid": sindicato_id, "n": ultimos}).all()
+    vistas: dict = {}
+    for codigo, cuit_empleador, seccion, veces in filas:
+        seccion = seccion_de({"seccion": seccion})
+        if seccion is None:
+            continue
+        clave = ((codigo or "").strip(), cuit_empleador or "")
+        conteo = vistas.setdefault(clave, {})
+        conteo[seccion] = conteo.get(seccion, 0) + veces
+    return vistas
+
+
+def secciones_del_concepto(vistas: dict, codigo: str, cuit_empleador: str | None,
+                           especificos: set) -> dict:
+    """Los conteos de secciones_vistas que le corresponden a UN concepto: el
+    de un empleador, solo los recibos de ese CUIT; uno genérico, los de todos
+    los empleadores salvo los que tienen su propio concepto con ese código
+    (esos recibos matchean contra el específico, no contra este)."""
+    codigo = (codigo or "").strip()
+    total: dict = {}
+    for (cod, cuit_r), conteo in vistas.items():
+        if cod != codigo:
+            continue
+        if cuit_empleador:
+            if cuit_r != cuit_empleador:
+                continue
+        elif (cod, cuit_r) in especificos:
+            continue
+        for seccion, n in conteo.items():
+            total[seccion] = total.get(seccion, 0) + n
+    return total
+
+
 def topes_como_dicts() -> list:
     """Todos los topes, en el formato que espera el validador (sin filtro
     de sindicato: es una tabla nacional)."""

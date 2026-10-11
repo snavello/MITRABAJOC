@@ -932,8 +932,24 @@
   {% if pendientes %}
   <div class="aviso"><strong>{{ pendientes|length }} concepto(s) por revisar.</strong>
     Se detectaron en recibos y están marcados en amarillo. Revisá tipo y si son remunerativos y usá
-    "Confirmar" para sacarles la marca, o "Editar" si además hay que corregir algo.</div>
+    "Confirmar" para sacarles la marca, o "Editar" si además hay que corregir algo. Cuando los
+    recibos leídos sugieren otro rubro, el botón lo dice ("Confirmar como descuento").</div>
   {% endif %}
+  {# Revisados que los recibos imprimen en el rubro contrario: el validador
+     ya los toma como dice el recibo cuando así cierran los totales, pero el
+     catálogo sigue mal y conviene corregirlo (validador.clasificacion_vista). #}
+  {% set contradichos = [] %}
+  {% for c in conceptos if not c.pendiente_revision and rubro_visto.get(c.id) and rubro_visto[c.id].tipo != c.tipo %}{% set _ = contradichos.append(c) %}{% endfor %}
+  {% if contradichos %}
+  <div class="aviso"><strong>{{ contradichos|length }} concepto(s) cargado(s) en el rubro contrario al de los recibos.</strong>
+    En los recibos leídos figuran en la otra sección (están marcados abajo). Revisalos y usá
+    "Pasar a descuento" (o a ingreso) si corresponde.</div>
+  {% endif %}
+  <p class="muted" style="font-size:12.5px;">Una <b>devolución</b> que el recibo imprime entre los
+    descuentos (Impuesto a las Ganancias, aportes, una cuota cobrada de más) se carga como
+    <b>descuento</b>, no como ingreso: el mes que venga con el signo contrario, el sistema la toma
+    como reintegro (no suma al bruto ni lleva aportes). El reintegro de gastos o de guardería que
+    va entre los haberes, en cambio, es un ingreso no remunerativo.</p>
   <p class="muted" style="font-size:12.5px;">
     <span class="ref-cuadro" style="background:#f2f8fb;"></span> ingreso
     <span class="ref-cuadro" style="background:#f1efec; margin-left:10px;"></span> descuento
@@ -952,16 +968,25 @@
         data-cuil="{{ c.cuit_empleador or '' }}" data-nombre="{{ c.nombre }}">
       <td><code>{{ c.codigo }}</code></td>
       <td>{{ c.nombre }}{% if c.pendiente_revision %}<span class="tag tag-pend">nuevo</span>{% endif %}</td>
-      <td>{{ c.tipo }}</td>
+      {% set rv = rubro_visto.get(c.id) %}
+      <td>{{ c.tipo }}{% if rv and rv.tipo != c.tipo %}<span class="tag {{ 'tag-pend' if c.pendiente_revision else 'tag-no' }}"
+          title="La IA lo leyó {{ rv.veces }} de {{ rv.total }} veces entre los {{ 'descuentos' if rv.tipo=='descuento' else 'haberes' }} de los recibos de este sindicato.">en los recibos: {{ rv.tipo }}</span>{% endif %}</td>
       <td>{% if c.tipo=='ingreso' %}<span class="tag {{ 'tag-si' if c.remunerativo else 'tag-no' }}">{{ 'sí' if c.remunerativo else 'no' }}</span>{% else %}—{% endif %}</td>
       <td>{% if c.tipo=='descuento' and c.categoria_sindical %}<span class="tag tag-si">{{ 'convenio' if c.categoria_sindical=='convenio' else 'afiliación' }}</span>{% else %}—{% endif %}</td>
       <td class="muted">{% if c.cuit_empleador %}<code>{{ c.cuit_empleador }}</code>{% if c.codigo_generico %} → <code>{{ c.codigo_generico }}</code>{% endif %}{% else %}genérico{% if c.codigo_generico %} → <code>{{ c.codigo_generico }}</code>{% endif %}{% endif %}</td>
       <td class="muted">{{ c.alias|join(', ') }}</td>
       <td class="acc">
-        {% if c.pendiente_revision %}
+        {% set cambia = rv and (rv.tipo != c.tipo or (c.pendiente_revision and rv.tipo == 'ingreso' and rv.remunerativo != c.remunerativo)) %}
+        {% if c.pendiente_revision or cambia %}
         <form method="post" action="/admin/concepto/confirmar" style="display:inline;">
           <input type="hidden" name="id" value="{{ c.id }}">
+          {% if cambia %}
+          <input type="hidden" name="tipo" value="{{ rv.tipo }}">
+          <input type="hidden" name="remunerativo" value="{{ 'si' if rv.remunerativo else 'no' }}">
+          <button class="mini" type="submit" title="Lo deja en el rubro en que figura en los recibos leídos y lo marca como revisado">{{ 'Confirmar como' if c.pendiente_revision else 'Pasar a' }} {{ rv.tipo if rv.tipo == 'descuento' or rv.remunerativo else 'ingreso no remunerativo' }}</button>
+          {% else %}
           <button class="mini" type="submit" title="Marca el concepto como revisado, sin cambiar sus datos">Confirmar</button>
+          {% endif %}
         </form>
         {% endif %}
         <button class="sec mini" type="button"
@@ -978,7 +1003,7 @@
     <input type="hidden" name="id" id="c-id">
     <input name="codigo" id="c-codigo" placeholder="Código" required style="width:100px;">
     <input name="nombre" id="c-nombre" placeholder="Nombre" required style="flex:1; min-width:160px;">
-    <select name="tipo" id="c-tipo"><option value="ingreso">ingreso</option><option value="descuento">descuento</option></select>
+    <select name="tipo" id="c-tipo" title="Una devolución que figura entre los descuentos (Ganancias, aportes) se carga como descuento: el sistema la reconoce como reintegro por el signo."><option value="ingreso">ingreso</option><option value="descuento">descuento</option></select>
     <select name="remunerativo" id="c-remun"><option value="si">remunerativo: sí</option><option value="no">remunerativo: no</option></select>
     <select name="categoria_sindical" id="c-sindical" title="Convenio: cuota solidaria / fondos convencionales, sujeta al tope legal del 2% (Ley 27.802). Afiliación: cuota de afiliación, no cuenta para el tope pero sí se envía al sindicato como prueba de afiliado cotizante.">
       <option value="">categoría sindical: no aplica</option>
@@ -5618,7 +5643,9 @@ function renderPropuestas(data) {
   }
   let h = `<div class="aviso" style="margin-top:16px;">Se leyeron ${data.leidos} recibo(s)`;
   if (data.fallidos) h += ` (${data.fallidos} no se pudieron leer)`;
-  h += `. Encontramos ${propuestas.length} concepto(s) nuevo(s). Revisá y aprobá los que correspondan.</div>`;
+  h += `. Encontramos ${propuestas.length} concepto(s) nuevo(s). Revisá y aprobá los que correspondan.
+    El tipo se propone según dónde está impreso cada concepto en el recibo: una devolución que figura
+    entre los descuentos (Ganancias, aportes) va como <b>descuento</b> y se marca <i>reintegro</i>.</div>`;
   h += `<table><tr><th></th><th>Código</th><th>Nombre</th><th>Tipo</th><th>Remun.</th><th>Empleador</th><th>Vincular a genérico</th><th>Apariciones</th></tr>`;
   propuestas.forEach((p, i) => {
     // Si se parece a uno que ya está, viene DESMARCADO: aprobarlo crearía un
