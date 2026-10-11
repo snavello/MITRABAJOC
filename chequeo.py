@@ -215,6 +215,25 @@ else:
     print("\n9. Conexión con la API (omitida)")
     print("        → Para probarla: python chequeo.py --api")
 
+# 10. Canales del registro (mail y captcha). Apagados no son un error: la app
+# arranca igual y el registro cae al comportamiento anterior (PLAN_REGISTRO.md,
+# D9), pero en producción tienen que estar prendidos.
+print("\n10. Canales del registro (mail y captcha)")
+import correo
+import captcha
+if correo.habilitado():
+    ok("Canal de mail (Resend) prendido")
+else:
+    faltan = [v for v in ("RESEND_API_KEY", "MAIL_REMITENTE") if not os.getenv(v, "").strip()]
+    aviso("Canal de mail (Resend) apagado: el registro no puede confirmar por mail")
+    print(f"        → Falta(n): {', '.join(faltan)}. En producción tiene que estar prendido")
+if captcha.habilitado():
+    ok("Captcha (Turnstile) prendido")
+else:
+    faltan = [v for v in ("TURNSTILE_SITE_KEY", "TURNSTILE_SECRET") if not os.getenv(v, "").strip()]
+    aviso("Captcha (Turnstile) apagado: el registro no pide comprobar que es una persona")
+    print(f"        → Falta(n): {', '.join(faltan)}. En producción tiene que estar prendido")
+
 # Resumen
 print("\n" + "=" * 45)
 if fallos == 0:

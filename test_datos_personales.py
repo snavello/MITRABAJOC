@@ -172,13 +172,14 @@ def test_el_registro_pide_los_mismos_campos_que_el_perfil():
     no reciba se pierde igual sin avisar.
 
     Las diferencias que quedan son las dos que tienen que quedar: el registro
-    pide además el CUIL y la clave (es un alta), y el perfil recibe además el
+    pide además el CUIL, la clave y la respuesta del captcha (es un alta que
+    llega de afuera; PLAN_REGISTRO.md), y el perfil recibe además el
     globo del mapa, que a propósito no está en el registro -- ubicar un punto
     es una tarea de escritorio y el alta es el momento de menos paciencia de
     toda la app."""
     del_registro = set(inspect.signature(main.trabajador_registro).parameters)
     del_perfil = set(inspect.signature(main.api_actualizar_perfil).parameters)
-    solo_del_alta = {"cuil", "clave"}
+    solo_del_alta = {"cuil", "clave", "token_captcha"}
     solo_del_mapa = {"latitud", "longitud", "precision_geo"}
     assert (del_registro - solo_del_alta) == (del_perfil - solo_del_mapa), (
         "sobran en el registro: %s / faltan en el registro: %s" % (

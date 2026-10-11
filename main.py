@@ -46,6 +46,7 @@ from psycopg.errors import QueryCanceled
 from sqlalchemy.exc import OperationalError, TimeoutError as PoolTimeoutError
 from sqlmodel import select
 
+import captcha
 import cuit
 import encuestas
 import esquema
@@ -140,27 +141,37 @@ def set_cookie_segura(respuesta, nombre, valor, max_age=None, samesite="lax"):
 LOGIN_MAX_FALLOS = int(os.getenv("LOGIN_MAX_FALLOS", "10"))
 LOGIN_ESPERA_SEGUNDOS = int(os.getenv("LOGIN_ESPERA_SEGUNDOS", "60"))
 _intentos_login: dict[str, list] = {}
+# El registro tiene su PROPIA tabla (PLAN_REGISTRO.md, etapa 1): un tanteo de
+# CUILes contra el registro no tiene que dejar sin login a quien comparte la IP,
+# ni al revés. Mismo mecanismo y mismos umbrales que los logins.
+_intentos_registro: dict[str, list] = {}
 
 
-def _login_bloqueado(request) -> bool:
+def _login_bloqueado(request, tabla=None) -> bool:
     import time
-    estado = _intentos_login.get(_ip_de(request))
+    if tabla is None:
+        tabla = _intentos_login
+    estado = tabla.get(_ip_de(request))
     return bool(estado) and estado[1] > time.time()
 
 
-def _login_fallo(request) -> None:
+def _login_fallo(request, tabla=None) -> None:
     import time
-    estado = _intentos_login.setdefault(_ip_de(request), [0, 0.0])
+    if tabla is None:
+        tabla = _intentos_login
+    estado = tabla.setdefault(_ip_de(request), [0, 0.0])
     estado[0] += 1
     if estado[0] >= LOGIN_MAX_FALLOS:
         estado[0] = 0
         estado[1] = time.time() + LOGIN_ESPERA_SEGUNDOS
-    if len(_intentos_login) > 5000:      # que la tabla no crezca sin límite
-        _intentos_login.clear()
+    if len(tabla) > 5000:      # que la tabla no crezca sin límite
+        tabla.clear()
 
 
-def _login_ok(request) -> None:
-    _intentos_login.pop(_ip_de(request), None)
+def _login_ok(request, tabla=None) -> None:
+    if tabla is None:
+        tabla = _intentos_login
+    tabla.pop(_ip_de(request), None)
 
 
 @app.get("/sw.js")
@@ -374,15 +385,33 @@ async def sin_cache_en_paneles(request: Request, call_next):
 # cabeceras. Un `blob:` no es una fuente externa: lo fabrica el mismo
 # documento a partir de un archivo que la persona eligió, así que no abre
 # ninguna puerta que `data:` no tuviera ya abierta.
-CSP = ("default-src 'self'; "
-       "img-src 'self' data: blob: https:; "
-       "media-src 'self' data: blob:; "
-       "style-src 'self' 'unsafe-inline'; "
-       "script-src 'self' 'unsafe-inline'; "
-       "connect-src 'self' https:; "
-       "frame-ancestors 'none'; "
-       "base-uri 'self'; "
-       "form-action 'self'")
+def _armar_csp(captcha_activo=None) -> str:
+    """Arma la CSP. Con el captcha apagado devuelve la política de siempre,
+    byte por byte. Con Turnstile prendido suma `https://challenges.cloudflare.com`
+    en `script-src` (el api.js del widget) y un `frame-src` (el widget vive en un
+    iframe de Cloudflare).
+
+    **Es la excepción explícita D7 de PLAN_REGISTRO.md a "nada externo"**: se
+    carga un script y un marco de un tercero, solo en las pantallas de registro
+    y recuperación (el parcial `_captcha.html`), y solo si hay claves. Se evalúa
+    UNA vez al importar (`CSP`), igual que el global de Jinja `captcha_site_key`:
+    así la política y el widget nunca quedan desparejos."""
+    if captcha_activo is None:
+        captcha_activo = captcha.habilitado()
+    origen = " https://challenges.cloudflare.com" if captcha_activo else ""
+    partes = ["default-src 'self'",
+              "img-src 'self' data: blob: https:",
+              "media-src 'self' data: blob:",
+              "style-src 'self' 'unsafe-inline'",
+              f"script-src 'self' 'unsafe-inline'{origen}",
+              "connect-src 'self' https:"]
+    if captcha_activo:
+        partes.append("frame-src https://challenges.cloudflare.com")
+    partes += ["frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'"]
+    return "; ".join(partes)
+
+
+CSP = _armar_csp()
 
 
 @app.middleware("http")
@@ -609,6 +638,9 @@ def _sello_static(nombre: str) -> str:
 
 
 templates.env.globals["sello_static"] = _sello_static
+# Clave pública del widget de Turnstile; vacía = captcha apagado y el parcial
+# `_captcha.html` no dibuja nada. Se lee al arrancar, igual que la CSP.
+templates.env.globals["captcha_site_key"] = captcha.site_key()
 # Las fechas que lee una persona van en dd/mm/aaaa, también en las
 # plantillas: "2026-10-12" es el formato de la base, no el de la pantalla.
 templates.env.filters["dia"] = fechas.dia_legible
@@ -6566,7 +6598,8 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
                          provincia: str = Form(""), localidad: str = Form(""),
                          calle: str = Form(""), numero: str = Form(""),
                          piso_depto: str = Form(""), codigo_postal: str = Form(""),
-                         telefono: str = Form(""), mail: str = Form("")):
+                         telefono: str = Form(""), mail: str = Form(""),
+                         token_captcha: str = Form("", alias="cf-turnstile-response")):
     """Crea la cuenta del afiliado y, con ella, sus datos personales.
 
     **Pide exactamente los mismos campos que el perfil** (nombre, domicilio,
@@ -6611,16 +6644,27 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
     cargada, que es exactamente lo que "Georreferenciar pendientes" procesa
     después.
     """
+    # Freno y captcha ANTES de mirar el padrón (PLAN_REGISTRO.md, etapa 1): las
+    # respuestas de este registro revelan si un CUIL está afiliado, y sin esto
+    # son una enumeración gratis. Cada registro que no crea la cuenta cuenta
+    # como fallo de la IP; el que la crea limpia la tabla.
+    if _login_bloqueado(request, _intentos_registro):
+        return RedirectResponse("/ingresar?error=espera", status_code=303)
+    if not captcha.verificar(token_captcha, _ip_de(request)):
+        _login_fallo(request, _intentos_registro)
+        return RedirectResponse("/ingresar?error=captcha", status_code=303)
     cuil = _norm_cuil(cuil)
     # Primero que el número exista de verdad (verificador de AFIP) y recién
     # después se lo busca en el padrón: un número que no pasa el módulo 11 no
     # es de nadie, y decirle "no estás habilitado" a quien tipeó mal un dígito
     # lo manda a reclamarle al sindicato por algo que es un error de tipeo.
     if _cuil_mal(cuil):
+        _login_fallo(request, _intentos_registro)
         return RedirectResponse("/ingresar?error=cuil", status_code=303)
     # Validar que el CUIL esté empadronado en al menos un sindicato
     sinds = db.sindicatos_de_cuil(cuil)
     if not sinds:
+        _login_fallo(request, _intentos_registro)
         return RedirectResponse("/ingresar?error=nohabilitado", status_code=303)
     if geo.faltan_campos({"provincia": provincia, "localidad": localidad}):
         return RedirectResponse("/ingresar?error=domicilio", status_code=303)
@@ -6635,6 +6679,7 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
         # tiene, esto es un alta duplicada.
         persona = db.asegurar_cuenta(s, cuil)
         if persona.clave_hash:
+            _login_fallo(request, _intentos_registro)
             return RedirectResponse("/ingresar?error=yaexiste", status_code=303)
         persona.clave_hash = auth.hashear_clave(clave)
         # Cada `None` es "no lo toques": el domicilio idéntico no se reescribe
@@ -6650,6 +6695,7 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
             t.registrado = True
             s.add(t)
         s.commit()
+    _login_ok(request, _intentos_registro)
     token = auth.crear_sesion("trabajador", sindicato_id=0, ident=cuil)
     resp = RedirectResponse("/app/inicio", status_code=303)
     set_cookie_segura(resp, COOKIE_TRABAJADOR, token)
@@ -7042,19 +7088,30 @@ def empresa_login(request: Request, cuit: str = Form(...), clave: str = Form(...
 
 
 @app.post("/empresa/registro")
-def empresa_registro(request: Request, cuit: str = Form(...), clave: str = Form(...)):
+def empresa_registro(request: Request, cuit: str = Form(...), clave: str = Form(...),
+                     token_captcha: str = Form("", alias="cf-turnstile-response")):
+    # Freno y captcha antes de mirar el padrón: mismo criterio que el registro
+    # del afiliado (PLAN_REGISTRO.md, etapa 1), con la misma tabla de IPs.
+    if _login_bloqueado(request, _intentos_registro):
+        return RedirectResponse("/ingresar-empresa?error=espera", status_code=303)
+    if not captcha.verificar(token_captcha, _ip_de(request)):
+        _login_fallo(request, _intentos_registro)
+        return RedirectResponse("/ingresar-empresa?error=captcha", status_code=303)
     cuit = _norm_cuil(cuit)
     # Antes de buscarlo: un CUIT sin verificador válido no es de nadie. Vale
     # cualquier tipo (una empresa unipersonal tiene CUIT de persona).
     if _cuit_mal(cuit):
+        _login_fallo(request, _intentos_registro)
         return RedirectResponse("/ingresar-empresa?error=cuit", status_code=303)
     # Validar que el CUIT esté dado de alta como Empleador activo en al menos un sindicato
     sinds = db.sindicatos_de_cuit_empleador(cuit)
     if not sinds:
+        _login_fallo(request, _intentos_registro)
         return RedirectResponse("/ingresar-empresa?error=nohabilitado", status_code=303)
     with db.get_session() as s:
         existe = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == cuit)).first()
         if existe:
+            _login_fallo(request, _intentos_registro)
             return RedirectResponse("/ingresar-empresa?error=yaexiste", status_code=303)
         s.add(CuentaEmpleador(cuit=cuit, clave_hash=auth.hashear_clave(clave)))
         # marcar las altas de este CUIT como registradas
@@ -7062,6 +7119,7 @@ def empresa_registro(request: Request, cuit: str = Form(...), clave: str = Form(
             e.registrado = True
             s.add(e)
         s.commit()
+    _login_ok(request, _intentos_registro)
     token = auth.crear_sesion("empleador", sindicato_id=0, ident=cuit)
     resp = RedirectResponse("/empresa/inicio", status_code=303)
     set_cookie_segura(resp, COOKIE_EMPLEADOR, token)
