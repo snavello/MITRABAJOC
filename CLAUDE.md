@@ -1716,6 +1716,11 @@ se agrega ahí.
   en vez de seguir apilando todo en la misma conversación.
 
 ## Comandos útiles
+- **Sesiones de Code en la nube**: `.claude/hooks/session-start.sh` (registrado
+  en `.claude/settings.json`) levanta Postgres 16 con pgvector, arma `.venv`
+  con Python 3.12 + requirements + pytest/bandit y carga las variables del CI.
+  Idempotente (0,2 s si ya está todo); solo corre con `CLAUDE_CODE_REMOTE=true`.
+  Con eso `python -m pytest test_x.py` anda desde el primer minuto.
 - Correr local (Postgres vía Docker): `docker compose up -d`,
   después `alembic upgrade head`, después `uvicorn main:app --reload`.
 - Autodiagnóstico: `python chequeo.py`
