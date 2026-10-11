@@ -84,14 +84,14 @@ def _cuenta(cuil, mail="", declarado="", clave=VIEJA, sid=None, temporal=False, 
     with db.get_session() as s:
         s.add(Trabajador(sindicato_id=sid or SID, cuil=cuil, activo=True, registrado=True))
         s.add(CuentaTrabajador(cuil=cuil, clave_hash=auth.hashear_clave(clave) if clave else "",
-                               mail=mail, mail_declarado=declarado, clave_temporal=temporal,
+                               mail_padron=mail, mail_declarado=declarado, clave_temporal=temporal,
                                nivel_fiabilidad=nivel, nivel_origen=origen))
         s.commit()
 
 
 def _empresa(cuit, mail="", clave=VIEJA, temporal=False):
     with db.get_session() as s:
-        s.add(Empleador(sindicato_id=SID, cuit=cuit, razon_social="Empresa Test", mail=mail,
+        s.add(Empleador(sindicato_id=SID, cuit=cuit, razon_social="Empresa Test", mail_padron=mail,
                         activo=True, registrado=True))
         s.add(CuentaEmpleador(cuit=cuit, clave_hash=auth.hashear_clave(clave), clave_temporal=temporal))
         s.commit()
@@ -171,6 +171,17 @@ def test_solo_mail_declarado_no_manda_codigo(canal):
     r = _iniciar(TestClient(main.app), "20400000003")
     assert r.status_code == 200 and r.json()["paso"] == "sindicato"
     assert canal == [] and _codigos("20400000003") == []
+
+
+def test_el_mail_de_contacto_no_es_el_del_padron(canal):
+    """`mail` lo edita la persona desde su perfil: un impostor con sesión no
+    puede mandarse el código a un mail propio. Solo cuenta `mail_padron`."""
+    with db.get_session() as s:
+        s.add(Trabajador(sindicato_id=SID, cuil="20400000070", activo=True, registrado=True))
+        s.add(CuentaTrabajador(cuil="20400000070", clave_hash=auth.hashear_clave(VIEJA), mail=MAIL))
+        s.commit()
+    r = _iniciar(TestClient(main.app), "20400000070")
+    assert r.json()["paso"] == "sindicato" and canal == [] and _codigos("20400000070") == []
 
 
 def test_la_respuesta_es_identica_haya_o_no_cuenta(canal):
@@ -413,7 +424,7 @@ def test_confirmar_con_mail_del_padron_sube_a_nivel_2(canal):
     assert r.status_code == 200 and r.json() == {"ok": True, "nivel": 2}
     cuenta = _cuenta_db("20400000030")
     assert (cuenta.nivel_fiabilidad, cuenta.nivel_origen) == (2, "mail_padron")
-    assert cuenta.mail == MAIL and cuenta.mail_declarado == ""
+    assert cuenta.mail_padron == MAIL and cuenta.mail_declarado == ""
 
 
 def test_confirmar_con_mail_declarado_no_pisa_el_del_sindicato(canal):
@@ -427,7 +438,7 @@ def test_confirmar_con_mail_declarado_no_pisa_el_del_sindicato(canal):
     cuenta = _cuenta_db("20400000031")
     assert (cuenta.nivel_fiabilidad, cuenta.nivel_origen) == (2, "mail_declarado")
     assert cuenta.mail_declarado == "propio@ejemplo.com" and cuenta.mail_declarado_confirmado
-    assert cuenta.mail == ""                       # el mail del sindicato queda intacto
+    assert cuenta.mail == "" and cuenta.mail_padron == ""   # ni el de contacto ni el del sindicato se tocan
 
 
 def test_sindicato_estricto_sin_mail_del_padron_manda_a_pedirselo(canal):
