@@ -6649,7 +6649,7 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
     # son una enumeración gratis. Cada registro que no crea la cuenta cuenta
     # como fallo de la IP; el que la crea limpia la tabla.
     if _login_bloqueado(request, _intentos_registro):
-        return RedirectResponse("/ingresar?error=espera", status_code=303)
+        return RedirectResponse("/ingresar?error=espera_registro", status_code=303)
     if not captcha.verificar(token_captcha, _ip_de(request)):
         _login_fallo(request, _intentos_registro)
         return RedirectResponse("/ingresar?error=captcha", status_code=303)
@@ -7093,7 +7093,7 @@ def empresa_registro(request: Request, cuit: str = Form(...), clave: str = Form(
     # Freno y captcha antes de mirar el padrón: mismo criterio que el registro
     # del afiliado (PLAN_REGISTRO.md, etapa 1), con la misma tabla de IPs.
     if _login_bloqueado(request, _intentos_registro):
-        return RedirectResponse("/ingresar-empresa?error=espera", status_code=303)
+        return RedirectResponse("/ingresar-empresa?error=espera_registro", status_code=303)
     if not captcha.verificar(token_captcha, _ip_de(request)):
         _login_fallo(request, _intentos_registro)
         return RedirectResponse("/ingresar-empresa?error=captcha", status_code=303)

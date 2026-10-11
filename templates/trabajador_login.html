@@ -124,7 +124,7 @@
     {% elif err == 'yaexiste' %}<div class="error">Ya tenés una cuenta con ese CUIL. Ingresá con tu clave.</div>
     {% elif err == 'sinsind' %}<div class="error">Tu cuenta no está asociada a ningún sindicato activo.</div>
     {% elif err == 'domicilio' %}<div class="error">Elegí tu provincia y escribí tu localidad: tu sindicato las necesita para agruparte por zona.</div>
-    {% elif err == 'espera' %}<div class="error">Demasiados intentos seguidos. Esperá un minuto y volvé a intentar.</div>
+    {% elif err in ('espera', 'espera_registro') %}<div class="error">Demasiados intentos seguidos. Esperá un minuto y volvé a intentar.</div>
     {% elif err == 'captcha' %}<div class="error">No pudimos comprobar que sos una persona. Volvé a intentar.</div>
     {% elif err == 'cuil' %}<div class="error">El CUIL no es válido: revisá los 11 números. Si es el que figura en tu recibo de sueldo, avisale a tu sindicato.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
     {% endif %}
@@ -216,7 +216,7 @@ function mostrar(cual) {
 // hay que tocar "Registrarme" otra vez.
 (function () {
   var err = new URLSearchParams(location.search).get('error');
-  if (['yaexiste', 'nohabilitado', 'domicilio', 'cuil', 'captcha', 'espera'].indexOf(err) >= 0) mostrar('registro');
+  if (['yaexiste', 'nohabilitado', 'domicilio', 'cuil', 'captcha', 'espera_registro'].indexOf(err) >= 0) mostrar('registro');
 })();
 
 function confirmarClaves(form, idClave, idRepetir, idError) {

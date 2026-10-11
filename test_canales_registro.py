@@ -300,10 +300,10 @@ def test_el_freno_de_registro_bloquea_tras_n_fallos_y_no_toca_el_de_login():
         assert r.headers["location"] == "/ingresar?error=nohabilitado", r.headers
     r = c.post("/trabajador/registro", data={"cuil": CUIL_FUERA, "clave": "clave123", **DOM},
                follow_redirects=False)
-    assert r.status_code == 303 and r.headers["location"] == "/ingresar?error=espera", r.headers
+    assert r.status_code == 303 and r.headers["location"] == "/ingresar?error=espera_registro", r.headers
     # la empresa comparte la tabla de registro: la misma IP sigue frenada
     r = c.post("/empresa/registro", data={"cuit": CUIT_EMP, "clave": "clave123"}, follow_redirects=False)
-    assert r.headers["location"] == "/ingresar-empresa?error=espera", r.headers
+    assert r.headers["location"] == "/ingresar-empresa?error=espera_registro", r.headers
     # ...pero el login NO está bloqueado: otra tabla
     r = c.post("/trabajador/login", data={"cuil": CUIL_FUERA, "clave": "x"}, follow_redirects=False)
     assert r.headers["location"] == "/ingresar?error=login", r.headers
@@ -358,7 +358,7 @@ def test_un_fallo_de_captcha_cuenta_para_el_freno(monkeypatch):
         assert r.headers["location"] == "/ingresar?error=captcha", r.headers
     r = c.post("/trabajador/registro", data={"cuil": CUIL_FUERA, "clave": "x", **DOM,
                                              "cf-turnstile-response": "malo"}, follow_redirects=False)
-    assert r.headers["location"] == "/ingresar?error=espera", r.headers
+    assert r.headers["location"] == "/ingresar?error=espera_registro", r.headers
     _limpiar_frenos()
     print("OK  test_un_fallo_de_captcha_cuenta_para_el_freno")
 
@@ -468,8 +468,13 @@ def test_el_parcial_del_captcha_solo_dibuja_con_clave(monkeypatch):
 
 def test_las_pantallas_explican_la_espera_y_abren_el_registro():
     c = TestClient(main.app)
-    for ruta in ("/ingresar?error=espera", "/ingresar-empresa?error=espera"):
+    # El freno del registro tiene su propio código (`espera_registro`) para que
+    # la espera de un LOGIN no abra la pestaña "Registrarme": las dos muestran
+    # el mismo mensaje, pero solo la del registro figura en la lista del JS.
+    for ruta in ("/ingresar?error=espera", "/ingresar-empresa?error=espera",
+                 "/ingresar?error=espera_registro", "/ingresar-empresa?error=espera_registro"):
         page = c.get(ruta).text
         assert "Demasiados intentos seguidos" in page, ruta
-        assert "'espera'" in page, ruta
+        assert "'espera_registro'" in page, ruta
+        assert "'espera']" not in page and "'espera'," not in page, ruta
     print("OK  test_las_pantallas_explican_la_espera_y_abren_el_registro")

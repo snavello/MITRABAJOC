@@ -108,7 +108,7 @@
     {% elif err == 'nohabilitado' %}<div class="error">Tu CUIT no está habilitado en ningún sindicato todavía. Pedile al sindicato que te agregue como empleador.</div>
     {% elif err == 'yaexiste' %}<div class="error">Ya tenés una cuenta con ese CUIT. Ingresá con tu clave.</div>
     {% elif err == 'sinsind' %}<div class="error">Tu cuenta no está asociada a ningún sindicato activo.</div>
-    {% elif err == 'espera' %}<div class="error">Demasiados intentos seguidos. Esperá un minuto y volvé a intentar.</div>
+    {% elif err in ('espera', 'espera_registro') %}<div class="error">Demasiados intentos seguidos. Esperá un minuto y volvé a intentar.</div>
     {% elif err == 'captcha' %}<div class="error">No pudimos comprobar que sos una persona. Volvé a intentar.</div>
     {% elif err == 'cuit' %}<div class="error">El CUIT no es válido: revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
     {% endif %}
@@ -159,7 +159,7 @@ function mostrar(cual) {
 // afiliado.
 (function () {
   var err = new URLSearchParams(location.search).get('error');
-  if (['yaexiste', 'nohabilitado', 'cuit', 'captcha', 'espera'].indexOf(err) >= 0) mostrar('registro');
+  if (['yaexiste', 'nohabilitado', 'cuit', 'captcha', 'espera_registro'].indexOf(err) >= 0) mostrar('registro');
 })();
 
 function confirmarClaves(form, idClave, idRepetir, idError) {
