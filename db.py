@@ -3355,6 +3355,11 @@ def padron_del_sindicato(s: Session, sindicato_id: int) -> list:
             "seccional_id": t.seccional_id,
             "es_empleado_sindicato": t.es_empleado_sindicato,
             "cuit_empleador": t.cuit_empleador,
+            # Nivel de fiabilidad de la cuenta (PLAN_REGISTRO.md): solo tiene
+            # sentido si la persona ya eligió clave.
+            "tiene_cuenta": bool(c and c.clave_hash),
+            "nivel_fiabilidad": (c.nivel_fiabilidad or 1) if c else 1,
+            "nivel_origen": (c.nivel_origen or "") if c else "",
         })
         salida.append(fila)
     return salida
