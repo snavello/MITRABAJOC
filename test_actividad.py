@@ -96,8 +96,6 @@ if __name__ == "__main__":
     test_actividad_resumen_agrega_por_sindicato_y_totales()
     test_registrar_acceso_y_contarlo()
     test_login_trabajador_registra_acceso()
-    test_api_actividad_es_publica_y_con_cors_abierto()
-    test_entornos_renderiza_pestana_actividad()
     print("Todo OK")
 
 

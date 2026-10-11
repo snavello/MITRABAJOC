@@ -40,13 +40,14 @@ command -v "$PY" >/dev/null 2>&1 || PY=python3
 if [ ! -x .venv/bin/python ]; then
   "$PY" -m venv .venv
 fi
-# Solo se reinstala si cambió requirements.txt: el contenedor queda en caché.
-HUELLA="$(cat requirements.txt | sha256sum | cut -d' ' -f1)"
+# Solo se reinstala si cambió requirements.txt o este script: el contenedor
+# queda en caché.
+HUELLA="$(cat requirements.txt .claude/hooks/session-start.sh | sha256sum | cut -d' ' -f1)"
 if [ "$(cat .venv/.huella-requirements 2>/dev/null || true)" != "$HUELLA" ]; then
   .venv/bin/pip install -q -U pip setuptools wheel
-  # pytest y bandit con las versiones de requirements-dev.txt; Playwright no
-  # (los robots E2E no corren en la nube).
-  .venv/bin/pip install -q -r requirements.txt pytest==9.1.1 bandit==1.9.4
+  # pytest, bandit y ruff con las versiones de requirements-dev.txt;
+  # Playwright no (los robots E2E no corren en la nube).
+  .venv/bin/pip install -q -r requirements.txt pytest==9.1.1 bandit==1.9.4 ruff==0.13.3
   echo "$HUELLA" > .venv/.huella-requirements
 fi
 
