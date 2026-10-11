@@ -135,6 +135,12 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   de `diagramas.py` y los textos de `contenido.py`. Se corre a mano tras
   cambios grandes: `python docs/generador/extraer.py && python
   docs/generador/generar.py`.
+- correo.py — el canal de mail (Resend, un POST con urllib, sin librería):
+  códigos de registro y de recuperación de clave. `destino_valido` es la
+  única puerta por la que sale una dirección; `pista()` la muestra tapada.
+  Apagado sin `RESEND_API_KEY` + `MAIL_REMITENTE`.
+- captcha.py — Cloudflare Turnstile (`verificar`, falla cerrado); parcial
+  `templates/_captcha.html`. Apagado sin claves. Ver "Registro confirmado".
 - push.py — notificaciones Web Push a la PWA del trabajador (novedades de
   trámites; apagado sin claves VAPID).
 - xsk/ — **XSANDERS Security Kit** (plan en `PLAN_XSK.md`, método en
@@ -287,6 +293,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   contacto. Sin las dos, apagado en silencio. Ver "Estado actual" 25.
 - VAPID_PRIVATE_KEY / VAPID_PUBLIC_KEY / VAPID_CLAIM_EMAIL — Web Push de la
   PWA (push.py); sin las tres, el canal queda apagado en silencio.
+- RESEND_API_KEY / MAIL_REMITENTE — canal de mail del registro y la
+  recuperación de clave (`correo.py`); sin las dos, apagado en silencio y el
+  registro cae a nivel 1. TURNSTILE_SITE_KEY / TURNSTILE_SECRET — captcha de
+  los registros y la recuperación (`captcha.py`); sin las dos, apagado.
+  Detalle y prerrequisitos (Cloudflare, Resend) en `DESPLIEGUE_RENDER.md`.
 
 ## Accesos de la demo
 - Plataforma: CUIT 20000000000 + PLATAFORMA_PASSWORD.
@@ -569,7 +580,38 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   relaja es la verificación de pertenencia (un CUIL ajeno leído localmente
   corta como E-RECIBO-04): es seguridad, no enmascarado.
 
-## Estado actual (actualizado 2026-10-10)
+- **El registro se confirma por mail y el nivel de fiabilidad es dato de la
+  cuenta; ningún nivel esconde nada en la app** (2026-10-11,
+  `PLAN_REGISTRO.md`, segunda medida de la serie XSK, cierra H-0017). Tres
+  pasos: CUIL + captcha + freno → código de 6 dígitos al **mail del padrón**
+  (`CuentaTrabajador.mail_padron`, lo escribe SOLO el sindicato) o, si no hay
+  y el sindicato lo acepta (`Sindicato.acepta_mail_declarado`), a un mail que
+  la persona declara (`mail_declarado`, confirmado) → clave y datos. **Tres
+  mails y no se mezclan**: `mail` es el de CONTACTO (lo edita la persona, no
+  sirve para códigos), `mail_padron` el del sindicato, `mail_declarado` el
+  confirmado por la persona. Niveles 1 a 4 (`nivel_fiabilidad` + `nivel_origen`,
+  `db.subir_nivel` única escritura, nunca baja): 1 CUIL en el padrón, 2 mail
+  confirmado, 3 recibo propio **leído por la IA en `/api/leer`** (no en
+  `/api/validar`, cuyo payload lo arma el cliente), 4 confirmado por el
+  sindicato. El sindicato ve el nivel en Trabajadores y Empleadores y actúa:
+  confirmar identidad, restablecer una clave temporal (se muestra una vez,
+  obliga a cambiarla en el primer ingreso). **Un sindicato solo responde por
+  una cuenta si la persona ya estaba en SU padrón cuando la creó**
+  (`Trabajador.registrado`; `db.padron_responde_por`): si no, no le
+  restablece la clave, no la confirma, no le pisa los datos ni el mail del
+  padrón, y el panel no le muestra el nivel (un admin puede cargar CUALQUIER
+  CUIL, es público). Recuperación de clave autoservicio solo al mail del
+  padrón; la respuesta es la misma haya o no cuenta. **Canal de mail apagado
+  = las demos siguen**: el registro nace nivel 1 visible (D9). Captcha
+  (Turnstile) y la CSP ensanchada SOLO en `/ingresar*` (`RUTAS_CON_CAPTCHA`),
+  única excepción a "nada externo" (D7). El estado entre pasos viaja en
+  `auth.firmar_paso`/`leer_paso`, nunca en campo oculto ni cookie plana.
+  Riesgo residual aceptado (H-0022): el registro y la recuperación revelan
+  si un CUIL está afiliado o tiene mail del padrón; lo encarecen captcha y
+  freno, lo cierra el perímetro. Detalle en HISTORIAL.md, "Registro
+  confirmado por mail".
+
+## Estado actual (actualizado 2026-10-11)
 Todo lo listado acá está mergeado a `main` y desplegado en Pruebas (Render
 sigue `main`, cada push redeploya), **incluido el punto 21**, que ya se portó
 sobre `main`.
@@ -903,6 +945,26 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     test IDS-06, H-0020 (este) y H-0021 (abierto, encontrado de paso).
     Trabajador 0.44.01, Admin 0.47.01, Plataforma 0.43.01.
 
+32. **Registro confirmado por mail, niveles de fiabilidad y recuperación de
+    clave** (2026-10-11, PR #93, plan `PLAN_REGISTRO.md`; cierra H-0017, R2 y
+    R3). Hecho por un equipo de agentes (7 de desarrollo, 5 de QA, en olas,
+    coordinados por Code): `correo.py` (Resend) y `captcha.py` (Turnstile),
+    freno por IP y captcha en los registros, modelo (niveles, tres mails,
+    política por sindicato, tabla `CodigoVerificacion`, migración
+    `f2d3d0bcf179` con backfill), registro en tres pasos para trabajador y
+    empresa, nivel 3 en `/api/leer`, columna y botones en Trabajadores y
+    Empleadores, interruptor en la ficha del sindicato, recuperación
+    autoservicio, clave temporal con cambio obligatorio, aviso y confirmación
+    de mail a las cuentas viejas. El QA encontró y se cerró antes del merge:
+    el mail del padrón era la misma columna que edita la persona (→
+    `mail_padron`), el nivel 3 se falsificaba por `/api/validar` (→ `/api/leer`),
+    un admin tomaba cuentas de otro sindicato dándolas de alta en su padrón
+    (→ `padron_responde_por`), intentos de código que no se persistían y una
+    carrera entre dos intentos (→ commit interno y `FOR UPDATE`). **Canal de
+    mail y captcha APAGADOS hasta configurar** Cloudflare, Resend y las cuatro
+    variables en Render (`DESPLIEGUE_RENDER.md`): mientras tanto el registro
+    nace nivel 1 visible. Trabajador 0.45.01, Admin 0.49.01, Plataforma 0.43.03.
+
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
 plataforma), (b) sacar "Cambiar clave" transitorio de plataforma antes de
@@ -1124,13 +1186,14 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    porque esa ruta no existía en la versión anterior). Si una app no responde:
    `docs/OPERATIVA.md` §9.
 10. **Registro confirmado por mail y niveles de fiabilidad** (H-0017, R2 y
-    R3): plan acordado con SDN el 2026-10-11 en [`PLAN_REGISTRO.md`](PLAN_REGISTRO.md),
-    **sin código todavía**. Registro en tres pasos (CUIL + captcha → código
-    al mail del padrón o a uno declarado → clave y datos), nivel 1 a 4 como
-    dato de la cuenta visible en Trabajadores (ningún nivel esconde nada en
-    la app), recuperación de clave por mail del padrón o por el admin del
-    sindicato, Turnstile y freno en el registro. Prerrequisitos externos:
-    `colm3na.com.ar` en Cloudflare y Resend por `avisos.colm3na.com.ar`.
+    R3): plan en [`PLAN_REGISTRO.md`](PLAN_REGISTRO.md), **código HECHO**
+    (ver "Estado actual" 32). Queda de SDN: delegar `colm3na.com.ar` a
+    Cloudflare, dar de alta `avisos.colm3na.com.ar` en Resend, crear el sitio
+    de Turnstile y cargar `RESEND_API_KEY`, `MAIL_REMITENTE`,
+    `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET` en Pruebas; hasta entonces el
+    canal está apagado y el registro nace nivel 1. Después: smoke test del
+    widget en Pruebas y H-0017 → Solucionado. Pendientes menores anotados en
+    BACKLOG.md (bitácora de acciones del panel, teléfono como segundo canal).
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 
