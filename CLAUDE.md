@@ -1172,8 +1172,12 @@ Detalle completo en HISTORIAL.md. Reglas vigentes:
   a la migración) se muestra ESTIMADA con los precios de hoy y marcada; un
   modelo fuera del catálogo muestra "—". Nunca "US$ 0,00".
 - **Los precios van con fecha de lectura.** `data/precios_ia.json` se copia a
-  mano de anthropic.com/pricing (no hay scraper, a diferencia de
-  `render_planes.py`) y la pantalla muestra el `leido` al pie.
+  mano de la página de precios de la API de Anthropic
+  (platform.claude.com/docs/en/about-claude/pricing; no hay scraper, a
+  diferencia de `render_planes.py`) y la pantalla muestra el `leido` al pie.
+  Última lectura: 2026-10-11, cuando entraron Fable 5.1, Opus 5.5, Sonnet 5.5
+  y Haiku 5.5 (este último tiene precio escalonado: el del catálogo vale hasta
+  100.000 tokens de entrada por pedido, que ningún uso de la app supera).
 - **El listado cubre los TRES tipos de lectura de recibos** (recibo, aportes,
   aprendizaje) más `prueba`. El bot del convenio y el Asistente **no**
   registran acá (decisión de Sd, 2026-09-13): el total es el gasto de lectura
@@ -1202,8 +1206,13 @@ Detalle completo en HISTORIAL.md. Reglas vigentes:
   de un recibo de 17 líneas mide ~1.790: el modelo de producción pasaba al
   89% del tope y los que razonan por default (Opus 5, Sonnet 5) lo cruzaban y
   devolvían un JSON cortado. El tope no se paga, se paga lo generado. Esos
-  dos van con `effort: low` (`extractor.MODELOS_QUE_RAZONAN`); a los que no
-  razonan por default no se les toca la llamada.
+  dos, y los cuatro de la generación siguiente (Opus 5.5, Sonnet 5.5, Haiku
+  5.5 y Fable 5.1, que razonan siempre o por defecto), van con `effort: low`
+  (`extractor.MODELOS_QUE_RAZONAN`); a los que no razonan por default no se
+  les toca la llamada. **Un modelo nuevo en el catálogo obliga a decidir**:
+  `test_precios_ia.py` falla si no está en esa lista ni en la de los que no
+  razonan. Una lectura que el modelo declina (`stop_reason: refusal`) se
+  explica como tal, no como "JSON inválido".
 - **El banco de pruebas compara LÍNEA POR LÍNEA, no solo los totales**
   (`extractor.comparar_lineas`). Dos modelos pueden coincidir en el neto y
   clasificar distinto una línea, y ese campo (`lineas[].tipo`) alimenta la

@@ -221,9 +221,17 @@ MAX_TOKENS = 8000
 # Opus 5 y Sonnet 5 RAZONAN por default, y ese razonamiento sale del mismo
 # MAX_TOKENS que el JSON: por eso fueron los dos que se cortaron primero.
 # Leer un recibo es transcribir, no razonar, así que van con esfuerzo bajo.
+# La generación siguiente razona igual o más: Opus 5.5 y Fable 5.1 no dejan
+# apagarlo (pedir thinking desactivado es un 400), Sonnet 5.5 solo con un
+# modo propio, y Haiku 5.5 arranca con esfuerzo medio. El esfuerzo es la
+# única perilla que sirve en los cuatro, así que van en la misma lista.
 # A los que no razonan por default no se les toca la llamada -- uno de ellos
 # es el que hoy corre en producción, y no se cambia a ciegas lo que anda.
-MODELOS_QUE_RAZONAN = {"claude-opus-5", "claude-sonnet-5"}
+# test_precios_ia.py exige que todo modelo del catálogo esté acá o en la
+# lista de los que no razonan: uno nuevo obliga a decidir.
+MODELOS_QUE_RAZONAN = {"claude-opus-5", "claude-sonnet-5",
+                       "claude-opus-5-5", "claude-sonnet-5-5",
+                       "claude-haiku-5-5", "claude-fable-5-1"}
 
 
 # Se suma al pedido SOLO cuando la imagen va con datos tapados
@@ -268,6 +276,14 @@ def _parsear(msg, modelo: str, ms: int) -> tuple[dict, dict]:
     """El JSON que devolvió el modelo, o un ErrorLectura que dice por qué no
     se pudo -- con el uso adentro en los dos casos."""
     uso = _uso(msg, modelo, ms)
+    # Los modelos de la generación 5 traen filtros de seguridad que pueden
+    # declinar un pedido: la API contesta 200 con el contenido vacío. Sin
+    # esto el panel diría "no es un JSON válido", que manda a buscar el
+    # problema en el lugar equivocado.
+    if getattr(msg, "stop_reason", None) == "refusal":
+        detalle = getattr(msg, "stop_details", None)
+        motivo = getattr(detalle, "category", None) or "sin categoría"
+        raise ErrorLectura(f"el modelo declinó leer el documento (motivo: {motivo})", uso)
     if getattr(msg, "stop_reason", None) == "max_tokens":
         raise ErrorLectura(
             f"la respuesta se cortó en el tope de {MAX_TOKENS} tokens de salida "

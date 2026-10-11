@@ -84,7 +84,7 @@ def test_un_modelo_fuera_del_catalogo_no_vale_cero_sino_desconocido():
     assert precios_ia.segundos(0) == "—"
 
 
-def test_los_cuatro_precios_del_catalogo_son_positivos():
+def test_los_precios_del_catalogo_son_positivos():
     modelos = precios_ia.modelos()
     assert modelos, "sin data/precios_ia.json no se puede calcular ningún costo"
     for m in modelos:
@@ -525,6 +525,67 @@ def test_el_esfuerzo_bajo_va_solo_a_los_modelos_que_razonan():
     # Y el tope de salida es el mismo para todos, con aire de sobra.
     assert {kw["max_tokens"] for kw in pedidos.values()} == {extractor.MAX_TOKENS}
     assert extractor.MAX_TOKENS >= 4000, "un recibo largo mide ~1.800 tokens de salida"
+
+
+# Los del catálogo que NO razonan por default: a esos no se les toca la
+# llamada. Todo el resto tiene que estar en extractor.MODELOS_QUE_RAZONAN.
+NO_RAZONAN = {"claude-sonnet-4-6", "claude-haiku-4-5"}
+
+
+def test_todo_modelo_del_catalogo_tiene_decidido_si_razona():
+    """Fail-closed: los modelos nuevos razonan por defecto (Opus 5.5 y
+    Fable 5.1 ni siquiera dejan apagarlo) y ese razonamiento sale del mismo
+    tope que el JSON del recibo. Un modelo que entra al catálogo sin pasar
+    por esta decisión cortaría recibos a la mitad en la pantalla del
+    trabajador; acá falla antes, nombrándolo."""
+    sin_decidir = {m["id"] for m in precios_ia.modelos()} - extractor.MODELOS_QUE_RAZONAN - NO_RAZONAN
+    assert not sin_decidir, f"falta decidir si razonan: {sorted(sin_decidir)}"
+    assert not (extractor.MODELOS_QUE_RAZONAN & NO_RAZONAN)
+
+
+def test_los_modelos_nuevos_van_con_esfuerzo_bajo():
+    pedidos = {}
+    nuevos = ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-1"]
+    original = extractor.client.messages.create
+    extractor.client.messages.create = lambda **kw: (pedidos.update({kw["model"]: kw}),
+                                                     _mock_msg(RECIBO, 900, 90))[1]
+    try:
+        r = plataforma_client.post(
+            "/plataforma/probar-modelos",
+            data={"tipo": "recibo", "modelos": nuevos},
+            files={"archivo": ("r.png", b"fake", "image/png")})
+    finally:
+        extractor.client.messages.create = original
+    assert r.status_code == 200, r.text
+    for m in nuevos:
+        assert pedidos[m]["output_config"] == {"effort": "low"}, m
+        # Ninguno acepta apagar el razonamiento a mano: el pedido no lo intenta.
+        assert "thinking" not in pedidos[m], m
+
+
+def test_una_lectura_declinada_se_explica_como_tal():
+    """La API contesta 200 con el contenido vacío cuando un filtro de
+    seguridad declina el pedido. Antes eso salía como "no es un JSON
+    válido", que manda a buscar el problema en otro lado. Y la llamada se
+    paga igual, así que queda registrada."""
+    declinado = SimpleNamespace(
+        content=[], usage=SimpleNamespace(input_tokens=3123, output_tokens=0),
+        stop_reason="refusal", stop_details=SimpleNamespace(category="cyber"))
+    original = extractor.client.messages.create
+    extractor.client.messages.create = lambda **kw: declinado
+    try:
+        r = plataforma_client.post(
+            "/plataforma/probar-modelos",
+            data={"tipo": "recibo", "modelos": ["claude-opus-5-5"]},
+            files={"archivo": ("r.png", b"fake", "image/png")})
+    finally:
+        extractor.client.messages.create = original
+    assert r.status_code == 200, r.text
+    fila = r.json()["modelos"][0]
+    assert fila["ok"] is False
+    assert "declinó" in fila["error"] and "cyber" in fila["error"], fila["error"]
+    assert "JSON" not in fila["error"]
+    assert _fila_con(3123)["modelo"] == "claude-opus-5-5"
 
 
 def test_banco_de_pruebas_rechaza_lo_que_no_es_del_catalogo():
