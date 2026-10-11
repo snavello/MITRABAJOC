@@ -1123,6 +1123,14 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    vacío; ponerlo antes de promover habría hecho fallar sus deploys,
    porque esa ruta no existía en la versión anterior). Si una app no responde:
    `docs/OPERATIVA.md` §9.
+10. **Registro confirmado por mail y niveles de fiabilidad** (H-0017, R2 y
+    R3): plan acordado con SDN el 2026-10-11 en [`PLAN_REGISTRO.md`](PLAN_REGISTRO.md),
+    **sin código todavía**. Registro en tres pasos (CUIL + captcha → código
+    al mail del padrón o a uno declarado → clave y datos), nivel 1 a 4 como
+    dato de la cuenta visible en Trabajadores (ningún nivel esconde nada en
+    la app), recuperación de clave por mail del padrón o por el admin del
+    sindicato, Turnstile y freno en el registro. Prerrequisitos externos:
+    `colm3na.com.ar` en Cloudflare y Resend por `avisos.colm3na.com.ar`.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 
