@@ -144,6 +144,44 @@ def leer_sesion(token: str) -> dict | None:
     return payload
 
 
+def firmar_paso(datos: dict, minutos: int = 20, proposito: str = "") -> str:
+    """Token firmado para llevar el ESTADO ENTRE PASOS de un flujo de varias
+    pantallas (registro en tres pasos, recuperación de clave, confirmación de
+    mail): el CUIL, el id del código de verificación, el paso alcanzado.
+
+    Mismo formato y misma firma que la sesión (`crear_sesion`), pero con un
+    propósito propio y un vencimiento corto: un token de registro NO abre una
+    sesión y una sesión NO sirve como token de registro, aunque los dos salgan
+    del mismo secreto. Nada de esto viaja en una cookie plana ni en un campo
+    oculto sin firmar: es la regla de H-0004 llevada a los flujos nuevos."""
+    payload = {"p": proposito, "d": datos, "t": int(time.time()), "m": int(minutos)}
+    cuerpo = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+    firma = hmac.new(SECRETO.encode(), ("paso:" + cuerpo).encode(), hashlib.sha256).hexdigest()[:32]
+    return f"{cuerpo}.{firma}"
+
+
+def leer_paso(token: str, proposito: str = "") -> dict | None:
+    """Devuelve los datos de `firmar_paso`, o None si la firma no cierra, el
+    propósito no es el esperado o el token venció."""
+    if not token or "." not in token:
+        return None
+    cuerpo, firma = token.rsplit(".", 1)
+    esperada = hmac.new(SECRETO.encode(), ("paso:" + cuerpo).encode(), hashlib.sha256).hexdigest()[:32]
+    if not hmac.compare_digest(firma, esperada):
+        return None
+    try:
+        relleno = cuerpo + "=" * (-len(cuerpo) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(relleno.encode()).decode())
+    except Exception:
+        return None
+    if payload.get("p", "") != proposito:
+        return None
+    if time.time() - payload.get("t", 0) > payload.get("m", 0) * 60:
+        return None
+    datos = payload.get("d")
+    return datos if isinstance(datos, dict) else None
+
+
 def verificar_plataforma(clave: str, cuit: str = None) -> bool:
     ok_clave = hmac.compare_digest(clave, CLAVE_PLATAFORMA)
     if cuit is None:
