@@ -76,13 +76,19 @@ DOM = {"provincia": "Santa Fe", "localidad": "Rosario"}
 def _afiliado(cuil, sid=SID, mail=""):
     with db.get_session() as s:
         s.add(Trabajador(sindicato_id=sid, cuil=cuil, activo=True))
-        db.guardar_datos_personales(s, cuil, nombre="Persona de Prueba", mail=mail or None)
+        db.guardar_datos_personales(s, cuil, nombre="Persona de Prueba")
+        if mail:
+            # El mail que cargó el SINDICATO: columna `mail_padron`, aparte del
+            # `mail` de contacto que la persona edita en su perfil.
+            cuenta = db.asegurar_cuenta(s, cuil)
+            cuenta.mail_padron = mail
+            s.add(cuenta)
         s.commit()
 
 
 def _empresa(cuit_, sid=SID, mail=""):
     with db.get_session() as s:
-        s.add(Empleador(sindicato_id=sid, cuit=cuit_, razon_social="Empresa Flujo SA", mail=mail))
+        s.add(Empleador(sindicato_id=sid, cuit=cuit_, razon_social="Empresa Flujo SA", mail_padron=mail))
         s.commit()
 
 
@@ -165,7 +171,7 @@ def test_flujo_completo_con_mail_del_padron(entorno):
     p = _persona(cuil)
     assert p.clave_hash
     assert (p.nivel_fiabilidad, p.nivel_origen) == (2, "mail_padron")
-    assert p.mail == "juan.perez@gmail.com" and p.mail_declarado == ""
+    assert p.mail_padron == "juan.perez@gmail.com" and p.mail_declarado == ""
     assert "testclient" not in main._intentos_registro
 
 
@@ -188,7 +194,7 @@ def test_flujo_completo_con_mail_declarado(entorno):
     assert r.status_code == 303 and "error=" not in r.headers["location"]
     p = _persona(cuil)
     assert (p.nivel_fiabilidad, p.nivel_origen) == (2, "mail_declarado")
-    assert p.mail == "", "el mail del padrón queda como estaba"
+    assert p.mail == "" and p.mail_padron == "", "el mail del padrón y el de contacto quedan como estaban"
     assert p.mail_declarado == "laura@ejemplo.com" and p.mail_declarado_confirmado
 
 
