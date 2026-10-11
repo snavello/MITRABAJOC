@@ -3229,6 +3229,7 @@ function htmlDetalleRecibo(d) {
     const neto = t.neto != null ? t.neto : (t.ingresos || 0) - (t.descuentos || 0);
     h += '<div class="linea-concepto" style="border-top:2px solid var(--linea); margin-top:4px; font-weight:600;"><span>Total ingresos</span><span class="imp">' + _pesos(t.ingresos) + '</span></div>';
     h += '<div class="linea-concepto" style="font-weight:600;"><span>Total descuentos</span><span class="imp neg">' + _pesos(t.descuentos) + '</span></div>';
+    if (t.reintegros) h += '<div class="linea-concepto" style="font-weight:600;"><span>Reintegros</span><span class="imp">' + _pesos(t.reintegros) + '</span></div>';
     h += '<div class="linea-concepto" style="font-weight:600;"><span>Total neto</span><span class="imp">' + _pesos(neto) + '</span></div>';
     h += '<div class="rep-fila muted" style="margin-top:6px;">Total remunerativo: ' + _pesos(t.remunerativo) + '</div>';
   }
@@ -5625,7 +5626,7 @@ function renderPropuestas(data) {
     h += `<tr${p.similar ? ' class="pend"' : ''}>
       <td><input type="checkbox" ${p.similar ? '' : 'checked'} data-i="${i}" class="ap-check"></td>
       <td><code>${p.codigo}</code></td>
-      <td>${p.descripcion}</td>
+      <td>${p.descripcion}${p.reintegro ? ' <span class="tag" title="Impreso entre los descuentos con el signo contrario: es una devolución al trabajador, no un haber.">reintegro</span>' : ''}</td>
       <td><select data-i="${i}" class="ap-tipo">
         <option value="ingreso" ${p.tipo==='ingreso'?'selected':''}>ingreso</option>
         <option value="descuento" ${p.tipo==='descuento'?'selected':''}>descuento</option>

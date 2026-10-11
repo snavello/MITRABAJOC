@@ -861,6 +861,7 @@
       h += '<div class="det-sec">Totales</div>' +
         filaDet("Ingresos", '<span class="monto">' + fmtM(tot.ingresos) + "</span>") +
         filaDet("Descuentos", '<span class="monto">' + fmtM(tot.descuentos) + "</span>") +
+        (tot.reintegros ? filaDet("Reintegros", '<span class="monto">' + fmtM(tot.reintegros) + "</span>") : "") +
         filaDet("Neto", '<span class="monto">' + fmtM(tot.neto) + "</span>");
     }
     var disc = (d.resultado && d.resultado.discrepancias) || [];

@@ -56,7 +56,7 @@ def test_crear_tope_rechaza_vigencia_duplicada():
 def test_tope_anterior_a():
     anterior = db.tope_anterior_a("2026-08")
     assert anterior["vigencia_desde"] == "2026-07"
-    assert db.tope_anterior_a("2015-01") is None  # no hay ninguno antes del primero
+    assert db.tope_anterior_a("2014-09") is None  # no hay ninguno antes del primero
     print("OK  test_tope_anterior_a")
 
 

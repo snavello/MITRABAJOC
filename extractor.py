@@ -49,15 +49,15 @@ _RECIBO_MOCK = {
     "fecha_pago": "2026-09-01",
     "lineas": [
         {"codigo": "1", "descripcion": "Sueldo básico", "cantidad": None, "unidad": None,
-         "importe": 1000000, "tipo": "remuneracion", "categoria_universal": None},
+         "importe": 1000000, "tipo": "remuneracion", "seccion": "haberes", "categoria_universal": None},
         {"codigo": "2", "descripcion": "Jubilación", "cantidad": None, "unidad": None,
-         "importe": -110000, "tipo": "aporte_trabajador", "categoria_universal": "jubilacion"},
+         "importe": -110000, "tipo": "aporte_trabajador", "seccion": "descuentos", "categoria_universal": "jubilacion"},
         {"codigo": "3", "descripcion": "Ley 19032/PAMI", "cantidad": None, "unidad": None,
-         "importe": -30000, "tipo": "aporte_trabajador", "categoria_universal": "pami"},
+         "importe": -30000, "tipo": "aporte_trabajador", "seccion": "descuentos", "categoria_universal": "pami"},
         {"codigo": "4", "descripcion": "Obra Social", "cantidad": None, "unidad": None,
-         "importe": -30000, "tipo": "aporte_trabajador", "categoria_universal": "obra_social"},
+         "importe": -30000, "tipo": "aporte_trabajador", "seccion": "descuentos", "categoria_universal": "obra_social"},
         {"codigo": "5", "descripcion": "Cuota sindical", "cantidad": None, "unidad": None,
-         "importe": -20000, "tipo": "aporte_trabajador", "categoria_universal": "cuota_sindical"},
+         "importe": -20000, "tipo": "aporte_trabajador", "seccion": "descuentos", "categoria_universal": "cuota_sindical"},
     ],
     "totales_impresos": {"remuneraciones": 1000000, "descuentos": -190000, "neto": 810000},
     "contribuciones_patronales": [],
@@ -110,7 +110,7 @@ ESQUEMA = """Extraé los datos con este esquema exacto:
   "empleador": {"nombre": null, "cuit": null},
   "periodo": "AAAA-MM",
   "fecha_pago": null,
-  "lineas": [{"codigo": null, "descripcion": "", "cantidad": null, "unidad": null, "importe": 0, "tipo": "otro", "categoria_universal": null}],
+  "lineas": [{"codigo": null, "descripcion": "", "cantidad": null, "unidad": null, "importe": 0, "tipo": "otro", "seccion": null, "categoria_universal": null}],
   "totales_impresos": {"remuneraciones": null, "descuentos": null, "neto": null},
   "contribuciones_patronales": [],
   "costo_laboral_total": null,
@@ -129,6 +129,17 @@ Reglas para los campos nuevos:
   propios del trabajador que reducen su neto: jubilación, obra social, Ley
   19.032/PAMI, cuota sindical) u "otro" (cualquier otra línea: anticipos, embargos,
   ajustes, algo ambiguo).
+- "lineas[].seccion": en qué parte del recibo está IMPRESA la línea. Es un dato de
+  ubicación, no de signo: "haberes" (entre las remuneraciones con aportes, las que
+  forman el total de remuneraciones), "no_remunerativos" (columna o bloque de haberes
+  sin aportes / no remunerativos / exentos) o "descuentos" (entre los descuentos y
+  retenciones). Una línea impresa entre los descuentos va con "descuentos" AUNQUE su
+  importe tenga el signo contrario al de los demás descuentos: por ejemplo una
+  devolución o reintegro de Impuesto a las Ganancias, de aportes o de un descuento de
+  otro mes. Al revés, una línea negativa impresa entre los haberes (inasistencias,
+  ajuste de un mes anterior) va con "haberes". Transcribí el importe con el signo
+  impreso, sin corregirlo. Si el recibo no separa las secciones o no podés decidirlo,
+  null.
 - "lineas[].categoria_universal": SOLO para líneas con tipo "aporte_trabajador", que
   además reconozcas con confianza como uno de estos 4 aportes de ley (son casi
   iguales en cualquier recibo argentino en blanco, cambia el nombre/código que le
@@ -437,6 +448,7 @@ def lineas_comparables(datos: dict) -> list:
         "descripcion": _txt(ln.get("descripcion")),
         "importe": _num(ln.get("importe")),
         "tipo": _txt(ln.get("tipo")),
+        "seccion": _txt(ln.get("seccion")),
         "categoria": _txt(ln.get("categoria_universal")),
         "_cod": _norm_clave(ln.get("codigo")),
         "_desc": _norm_clave(ln.get("descripcion")),
@@ -493,6 +505,11 @@ def comparar_lineas(lecturas: list) -> dict:
                 celdas.append({"valor": "no la leyó", "igual": False, "falta": True})
                 continue
             valor = ln["tipo"] if ln["categoria"] == "—" else f'{ln["tipo"]} · {ln["categoria"]}'
+            # La sección decide si una línea en positivo entre los descuentos
+            # es un reintegro (validador.repartir_por_zona): leerla distinto
+            # es leer distinto el recibo.
+            if ln["seccion"] != "—":
+                valor += f' · {ln["seccion"]}'
             # Lo que difiere del renglón se dice en la celda: un importe o un
             # código distinto es tan diferencia como una clasificación
             # distinta, y si no se nombra, la fila parece coincidir.
