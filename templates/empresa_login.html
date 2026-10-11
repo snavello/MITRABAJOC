@@ -104,6 +104,7 @@
     <img class="logo" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Colm3na">
     <div class="chip-rol">Empresa</div>
     {% set err = request.query_params.get('error') %}
+    {% if request.query_params.get('ok') == 'clave' %}<div class="error" style="background:rgba(47,168,143,.18);border-color:rgba(47,168,143,.5);color:#bfeadf;">Listo, entrá con tu clave nueva.</div>{% endif %}
     {% if err == 'login' %}<div class="error">CUIT o clave incorrectos.</div>
     {% elif err == 'nohabilitado' %}<div class="error">Tu CUIT no está habilitado en ningún sindicato todavía. Pedile al sindicato que te agregue como empleador.</div>
     {% elif err == 'yaexiste' %}<div class="error">Ya tenés una cuenta con ese CUIT. Ingresá con tu clave.</div>
@@ -124,7 +125,7 @@
       <label>Clave</label>
       <input type="password" name="clave" required>
       <button class="enviar" type="submit">Ingresar</button>
-      <div class="ayuda">Si es tu primera vez, tocá "Registrarme".</div>
+      <div class="ayuda">Si es tu primera vez, tocá "Registrarme". <a href="/ingresar-empresa/recuperar" style="color:var(--miel);">Olvidé mi clave</a></div>
     </form>
 
     <form class="form" id="form-registro" method="post" action="/empresa/registro" onsubmit="return confirmarClaves(this, 'reg-clave', 'reg-repetir', 'reg-error')">

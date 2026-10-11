@@ -40,6 +40,8 @@ FUNCIONALIDADES = [
     ("Común", "Marca de la plataforma", r"^/logo-plataforma", None),
 
     ("Afiliado", "Ingreso y registro", r"^/(ingresar$|trabajador/|app/(elegir|cambiar))", "trabajador_login.html"),
+    ("Afiliado", "Recuperación de clave", r"^/ingresar/(recuperar|cambiar-clave)", "recuperar_clave.html"),
+    ("Afiliado", "Confirmación de mail", r"^/app/confirmar-mail", "confirmar_mail.html"),
     ("Afiliado", "Portada", r"^/app/inicio$", "portada.html"),
     ("Afiliado", "Página de la app (carga inicial)", r"^/app$", "trabajador.html"),
     ("Afiliado", "Tu Recibo", r"^/api/(leer|validar|reportar|mis-recibos|enviar-sindicato)", "trabajador.html"),
@@ -52,6 +54,7 @@ FUNCIONALIDADES = [
     ("Afiliado", "Consultas al convenio", r"^/(app/convenio|api/convenio)", None),
     ("Afiliado", "Perfil y domicilio", r"^/(api/(perfil|geocodificar|localidades|seccionales)|perfil-foto)", None),
 
+    ("Empresa", "Recuperación de clave", r"^/ingresar-empresa/(recuperar|cambiar-clave)", "recuperar_clave.html"),
     ("Empresa", "Ingreso y registro", r"^/(ingresar-empresa|empresa/(login|registro|salir|elegir|cambiar))", None),
     ("Empresa", "Portada", r"^/empresa/inicio$", None),
     ("Empresa", "Página de la app (carga inicial)", r"^/empresa$", None),

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirmar mail — {{ sindicato }}</title>
+<link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
+<style>
+  /* Confirmar el mail de una cuenta ya registrada (PLAN_REGISTRO.md, D10).
+     Pantalla interior clara: título en condensada sobre la franja de marca y
+     una tarjeta con los dos pasos (mail -> código). Nada de esto bloquea la
+     app: se llega desde una tarjeta de la portada y se sale con "Volver". */
+  :root {
+    --marca-base: {{ marca.color_base }};
+    --marca-primario: {{ marca.color_primario }};
+    --marca-acento: {{ marca.color_acento }};
+    --marca-apoyo: {{ marca.color_secundario }};
+  }
+  body { background: var(--papel); }
+  .cuerpo { max-width: 520px; margin: 0 auto; padding: 18px 15px 60px; }
+  .sub { font-size: 14px; line-height: 1.55; margin: 8px 0 18px; color: var(--gris); }
+  .tarjeta { background: #fff; border: 1px solid var(--linea); border-radius: 14px; padding: 18px 18px 20px; }
+  .tarjeta h2 { font-family: var(--fuente-display); font-size: 17px; letter-spacing: 1px; text-transform: uppercase;
+                margin-bottom: 8px; color: var(--tinta); }
+  .tarjeta p { font-size: 14px; line-height: 1.55; color: var(--gris); }
+  .paso { display: none; } .paso.activo { display: block; }
+  label { display: block; font-size: 12.5px; color: var(--gris); font-weight: 500; margin: 14px 0 5px; }
+  input { width: 100%; padding: 12px 13px; border: 1px solid var(--linea); border-radius: 9px; font-size: 16px;
+          font-family: inherit; background: #fff; color: var(--tinta); }
+  input:focus { outline: 2px solid var(--marca-acento); outline-offset: -1px; border-color: transparent; }
+  input.codigo { letter-spacing: 8px; text-align: center; font-size: 22px; font-family: ui-monospace, Consolas, monospace; }
+  .btn { display: inline-block; width: auto; margin-top: 16px; background: var(--marca-acento); color: #fff; border: none;
+         border-radius: 9px; padding: 12px 20px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .msg { font-size: 13.5px; line-height: 1.5; padding: 11px 13px; border-radius: 9px; margin-top: 14px; }
+  .msg.err { background: color-mix(in srgb, var(--alerta, #c0392b) 10%, #fff); color: var(--alerta, #c0392b);
+             border: 1px solid color-mix(in srgb, var(--alerta, #c0392b) 35%, #fff); }
+  .msg.ok { background: color-mix(in srgb, var(--verde, #0d7a5f) 10%, #fff); color: var(--verde, #0d7a5f);
+            border: 1px solid color-mix(in srgb, var(--verde, #0d7a5f) 35%, #fff); }
+  .msg[hidden] { display: none; }
+</style>
+{% include "_fondo_interior.html" %}
+</head>
+<body class="mesa franja">
+{% include "_entorno.html" %}
+{% set enc_volver = '/app/inicio' %}
+{% include "_encabezado.html" %}
+
+<div class="cuerpo mesa-cont">
+  <h1 class="titulo-pagina">Confirmá tu mail</h1>
+  <p class="sub">Con un código que te mandamos por mail, tu sindicato sabe que la cuenta es tuya y nadie más puede hacerse pasar por vos.</p>
+
+  <div class="tarjeta">
+  {% if ya_confirmado %}
+    <h2>Listo</h2>
+    <p>Tu cuenta ya tiene el mail confirmado. No tenés que hacer nada más.</p>
+  {% elif not canal %}
+    <h2>Por ahora no está disponible</h2>
+    <p>Todavía no podemos mandar códigos por mail. Vas a poder confirmarlo en cuanto esté listo.</p>
+  {% else %}
+    <div class="msg err" id="error" hidden></div>
+    <div class="msg ok" id="aviso" hidden></div>
+
+    <form class="paso activo" id="paso-1">
+      {% if pista %}
+        <h2>Te mandamos un código</h2>
+        <p>Tu sindicato tiene cargado un mail tuyo: <b>{{ pista }}</b>. Te mandamos ahí un código de 6 números.</p>
+      {% elif acepta_declarado %}
+        <h2>¿A qué mail te lo mandamos?</h2>
+        <p>Tu sindicato todavía no tiene un mail tuyo. Escribí el que usás y te mandamos un código de 6 números.</p>
+        <label for="mail">Tu mail</label>
+        <input id="mail" name="mail" type="email" autocomplete="email" required>
+      {% else %}
+        <h2>Pedile a tu sindicato</h2>
+        <p>Tu sindicato pide confirmar con el mail que ellos tienen cargado, y todavía no hay uno tuyo. Pedile que lo cargue y volvé a intentar.</p>
+      {% endif %}
+      {% if pista or acepta_declarado %}<button class="btn" type="submit">Mandarme el código</button>{% endif %}
+    </form>
+
+    <form class="paso" id="paso-2">
+      <h2>Escribí el código</h2>
+      <p id="bajada-2"></p>
+      <label for="codigo">Código de 6 números</label>
+      <input class="codigo" id="codigo" name="codigo" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code" required>
+      <button class="btn" type="submit">Confirmar mi mail</button>
+      <p style="margin-top:12px;font-size:12.5px;">Si no te llega, revisá el correo no deseado. El código vence en 15 minutos.</p>
+    </form>
+  {% endif %}
+  </div>
+</div>
+
+{% if canal and not ya_confirmado %}
+<script>
+(function () {
+  var token = "";
+  var $ = function (id) { return document.getElementById(id); };
+  function ir(n) {
+    $('paso-1').classList.toggle('activo', n === 1);
+    $('paso-2').classList.toggle('activo', n === 2);
+    if (n === 2) $('codigo').focus();
+  }
+  function decir(id, txt, codigo) {
+    var e = $(id);
+    e.textContent = txt || '';
+    if (txt && codigo) { var s = document.createElement('small'); s.style.cssText = 'display:block;opacity:.8;margin-top:3px;'; s.textContent = 'Código ' + codigo; e.appendChild(s); }
+    e.hidden = !txt;
+  }
+  async function mandar(url, form, extra) {
+    var fd = new FormData(form);
+    if (extra) Object.keys(extra).forEach(function (k) { fd.append(k, extra[k]); });
+    var r = await fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
+    var d = null; try { d = await r.json(); } catch (e) {}
+    return { ok: r.ok, d: d || {} };
+  }
+
+  $('paso-1').addEventListener('submit', async function (ev) {
+    ev.preventDefault(); decir('error', ''); decir('aviso', '');
+    var boton = ev.target.querySelector('.btn'); boton.disabled = true;
+    try {
+      var res = await mandar('/app/confirmar-mail/iniciar', ev.target);
+      if (!res.ok) { decir('error', res.d.detail || 'No pudimos mandar el código.', res.d.codigo); return; }
+      if (res.d.paso === 'codigo') {
+        token = res.d.token;
+        $('bajada-2').textContent = 'Te mandamos un código a ' + res.d.pista + '.';
+        ir(2);
+      } else {
+        decir('aviso', res.d.mensaje);
+      }
+    } catch (e) { decir('error', 'No pudimos conectar. Probá de nuevo.'); }
+    finally { boton.disabled = false; }
+  });
+
+  $('paso-2').addEventListener('submit', async function (ev) {
+    ev.preventDefault(); decir('error', '');
+    var boton = ev.target.querySelector('.btn'); boton.disabled = true;
+    try {
+      var res = await mandar('/app/confirmar-mail', ev.target, { token: token });
+      if (!res.ok) {
+        decir('error', res.d.detail || 'No pudimos confirmar el código.', res.d.codigo);
+        if (res.d.codigo === 'E-REGISTRO-02') $('codigo').select();
+        return;
+      }
+      decir('aviso', 'Listo: tu mail quedó confirmado. Volvemos al inicio.');
+      setTimeout(function () { location.href = '/app/inicio'; }, 1400);
+    } catch (e) { decir('error', 'No pudimos conectar. Probá de nuevo.'); }
+    finally { boton.disabled = false; }
+  });
+})();
+</script>
+{% endif %}
+</body>
+</html>

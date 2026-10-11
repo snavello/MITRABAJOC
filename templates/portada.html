@@ -28,6 +28,7 @@
   body { min-height: 100vh; }
   body.oscuro { background: radial-gradient(circle at 30% -10%, color-mix(in srgb, var(--marca-primario) 55%, var(--marca-base)) 0%, var(--marca-base) 46%); }
   body.claro { background: var(--papel); }
+  .pt-aviso { margin-top: 18px; }
   .fila-hola { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .hola { font-family: var(--fuente-display); font-weight: 700; font-size: 30px; letter-spacing: .002em;
     color: var(--sobre-base); margin-top: 6px; }
@@ -230,6 +231,17 @@
       {% endif %}
     </button>
   </div>
+
+  {% if aviso_mail %}
+  {# Cuenta de nivel 1 (PLAN_REGISTRO.md, D10): invitación, no bloqueo. Reusa la
+     fila de vidrio de la portada, así que sale bien en las dos variantes. #}
+  <a class="pt-fila pt-vid pt-aviso" href="/app/confirmar-mail">
+    <span class="pt-pastilla"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
+    <span class="pt-fila-txt"><span class="pt-fila-t">Confirmá tu mail para proteger tu cuenta</span>
+      <span class="pt-fila-e">Te mandamos un código y listo: te lleva un minuto.</span></span>
+    <span class="pt-fila-f"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>
+  </a>
+  {% endif %}
 
   <div class="pt-dos">
     <div>

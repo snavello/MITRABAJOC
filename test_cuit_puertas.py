@@ -696,6 +696,8 @@ PUERTAS = {
 REFERENCIAS = {
     "admin_login", "plataforma_login", "trabajador_login", "empresa_login", "entornos_login",
     "plataforma_reset_clave",
+    # Recuperación de clave autoservicio: busca la cuenta tal cual, no da de alta.
+    "recuperar_iniciar", "empresa_recuperar_iniciar",
 }
 # Un campo llamado `usuario` que no es un CUIL: el alias de un usuario nominal
 # de plataforma ("jperez").
