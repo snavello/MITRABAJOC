@@ -1,6 +1,6 @@
 // Genera las versiones Word (editables, con control de cambios activado) del
 // plan de implementación y de la hoja guía de La Bancaria. El contenido es el
-// mismo de los HTML de docs/bancaria/ (borrador v0.1).
+// mismo de los HTML de docs/bancaria/ (borrador v0.2).
 // Uso (desde la raíz del repo, con docx de npm instalado):
 //   node docs/bancaria/generar_docx.js [logo.png] [carpeta_salida]
 // Por defecto toma el logo de Colm3na para fondo claro y escribe en docs/bancaria/.
@@ -40,14 +40,6 @@ const destacado = (txt) => new Paragraph({
   shading: { type: ShadingType.CLEAR, fill: C.mielSuave, color: 'auto' },
   border: { left: { style: BorderStyle.SINGLE, size: 18, color: C.miel, space: 8 } },
   indent: { left: 160, right: 120 },
-});
-const instruccion = (txt) => new Paragraph({
-  children: runs(txt, { color: C.texto2, size: 18 }), spacing: { before: 60, after: 200 },
-  shading: { type: ShadingType.CLEAR, fill: C.papel2, color: 'auto' },
-  // Solo arriba y abajo: docx-js escribe los cuatro lados de un párrafo en un
-  // orden que el esquema de Word no acepta.
-  border: { top: { style: BorderStyle.DASHED, size: 6, color: C.texto2, space: 6 }, bottom: { style: BorderStyle.DASHED, size: 6, color: C.texto2, space: 6 } },
-  indent: { left: 140, right: 140 },
 });
 
 const bordeCelda = { style: BorderStyle.SINGLE, size: 4, color: C.linea };
@@ -93,7 +85,7 @@ function pie(txt) {
 }
 function documento(children, textoPie, titulo) {
   return new Document({
-    creator: 'Colm3na', title: titulo, description: 'Borrador v0.1 para revisión',
+    creator: 'Colm3na', title: titulo, description: 'Borrador v0.2',
     features: { trackRevisions: true }, // las correcciones quedan marcadas
     styles: {
       default: { document: { run: { font: FUENTE, size: 20, color: C.texto }, paragraph: { spacing: { line: 276, lineRule: LineRuleType.AUTO } } } },
@@ -119,24 +111,21 @@ function documento(children, textoPie, titulo) {
   });
 }
 
-const INSTRUCCION = (hojas) => `**Cómo corregir este documento** (este recuadro no va en la versión final). El control de cambios está activado: escribí, borrá y reemplazá directamente sobre el texto y tus correcciones quedan marcadas. Para dudas o pedidos que no son texto (por ejemplo «sumar una fase» o «esto va antes»), usá comentarios. Lo que figura como [completar] es un dato que falta. No hace falta cuidar el formato ni la cantidad de páginas: al regenerar se vuelve a armar el diseño y se ajusta a ${hojas}.`;
-
 // =====================================================================
 // PLAN DE IMPLEMENTACIÓN
 // =====================================================================
-function fase(num, nombre, semanas, objetivo, hace, aporta, cierra, responsables, tituloHace = 'Qué se hace') {
+function fase(num, nombre, semanas, objetivo, hace, aporta, cierra, responsables, tituloHace = 'Qué se hace', tituloAporta = 'Qué aporta el sindicato') {
   const out = [h2(`Fase ${num} · ${nombre} (${semanas})`), etiquetado('Objetivo', objetivo), h3(tituloHace), ...hace.map(t => vineta(t)),
-    h3('Qué aporta el sindicato'), ...aporta.map(t => vineta(t)), etiquetado('Cierra cuando', cierra)];
+    h3(tituloAporta), ...aporta.map(t => vineta(t)), etiquetado('Cierra cuando', cierra)];
   if (responsables) out.push(etiquetado('Responsables', responsables));
   return out;
 }
 
 const plan = [
-  ...encabezado('Propuesta para consensuar · Borrador v0.1 · octubre 2026', 'Plan de implementación en La Bancaria'),
-  instruccion(INSTRUCCION('4 hojas A4')),
-  p('Cómo pasamos de la primera reunión a toda la Asociación Bancaria usando Colm3na: seis fases, quién hace qué, qué datos hacen falta y cómo se mide cada paso. Un borrador para acordar en grande con las autoridades y ajustar con el equipo del sindicato.', { run: { size: 22 } }),
-  tabla(['6 fases', 'Semana 4', '50 a 500', '≈ 20 semanas'],
-    [['de la preparación a la implementación total', 'entorno de prueba con los datos de La Bancaria', 'afiliados reales en la prueba piloto', 'hasta el padrón completo (orientativo)']],
+  ...encabezado('Propuesta para consensuar · Borrador v0.2 · octubre 2026', 'Plan de implementación en La Bancaria'),
+  p('Implementación de Colm3na en la Asociación Bancaria: seis fases, quién hace qué, qué datos hacen falta y cómo se mide cada paso. Un borrador para acordar en grande con las autoridades y ajustar con el equipo del sindicato.', { run: { size: 22 } }),
+  tabla(['6 fases', 'Semana 4', '50 a 1.000', 'Semana 13'],
+    [['de la preparación a la implementación total', 'entorno de prueba con los datos de La Bancaria', 'afiliados reales en la prueba piloto; el tope (500 o 1.000) se define con el sindicato', 'en adelante: despliegue progresivo y plan de mejora continua hasta el padrón completo (orientativo)']],
     [2409, 2410, 2409, 2410]),
 
   h1('Cómo trabajamos'),
@@ -144,20 +133,22 @@ const plan = [
   vineta('**El sindicato es dueño de las reglas y los datos.** Conceptos, escalas, trámites y mensajes los define o valida su gente.'),
   vineta('**Avance gradual.** Cada funcionalidad avanza a su ritmo y cada fase cierra con un criterio que se puede verificar.'),
   vineta('**Datos protegidos desde el primer día.** El padrón real llega con el acuerdo de datos firmado y por un canal seguro.'),
+  vineta('**Trabajo continuo con las autoridades y el personal del sindicato** para una implementación exitosa en el menor tiempo posible, en un ambiente colaborativo y con responsabilidades definidas.'),
 
   h1('Calendario: seis fases, con el entorno de prueba en la semana 4'),
   p('El diagrama de barras de la versión final se arma a partir de esta tabla.', { run: { color: C.texto2, size: 18, italics: true } }),
   tabla(['Fase', 'Semanas', 'Hitos con el sindicato'], [
-    ['0 · Preparación', 'Semana 0', '—'],
+    ['0 · Preparación', 'Semana 0', 'Reunión de estrategias generales y anticipo de datos (semana 0)'],
     ['1 · Definición del plan', 'Semana 1', 'Lanzamiento (semana 1)'],
     ['2 · Relevamiento detallado', 'Semanas 2 y 3', 'Datos completos (semana 3)'],
     ['3 · Configuración e implementación', 'Semanas 3 a 6', 'Entorno de prueba disponible (semana 4), si los datos llegaron en la semana 3. Aceptación de la configuración (semana 6)'],
-    ['4 · Prueba piloto', 'Semanas 7 a 12: unos 50 afiliados en las semanas 7 y 8; hasta 500 en las semanas 9 a 12', 'Resultados del piloto (semana 12)'],
+    ['4 · Prueba piloto', 'Semanas 7 a 12: unos 50 afiliados en las semanas 7 y 8; hasta 500 o 1.000 en las semanas 9 a 12', 'Resultados del piloto (semana 12)'],
     ['5 · Implementación total', 'Semanas 13 a 20: oleada 1 en 13–15, oleada 2 en 16–17, oleada 3 en 18–20', 'Padrón completo y cierre (semana 20)'],
   ], [2700, 3600, 3338]),
 
   h1('Hitos y presentaciones'),
   tabla(['Sem.', 'Hito o presentación', 'Con quién'], [
+    ['0', 'Reunión de estrategias generales y anticipo de datos', 'Autoridades y Colm3na'],
     ['1', 'Lanzamiento: presentación de la plataforma y del plan', 'Secretarías, sistemas, prensa y seccionales'],
     ['2–3', 'Talleres de relevamiento, cada uno con su demostración', 'Referentes de cada tema'],
     ['3', 'Datos completos: padrón, convenio y escalas, bancos y documentos', 'Referentes técnico y de liquidación'],
@@ -178,8 +169,8 @@ const plan = [
     ['Credencial digital con código QR', 'Piloto'],
     ['Novedades y notificaciones del sindicato', 'Piloto'],
     ['Trámites con expediente y conversación', 'Piloto'],
-    ['Beneficios, encuestas y capacitación', 'Después'],
-    ['Consultas sobre el convenio', 'Después'],
+    ['Beneficios y encuestas', 'Piloto'],
+    ['Consultas sobre el convenio', 'Piloto'],
     { grupo: 'Para el sindicato, en su panel' },
     ['Padrón, seccionales y mapa de afiliados', 'Piloto'],
     ['Usuarios y áreas con permisos por seccional', 'Piloto'],
@@ -187,18 +178,20 @@ const plan = [
     ['Notificaciones por seccional, banco o provincia', 'Piloto'],
     ['Panel Sindical y reportes de recibos verificados', 'Piloto'],
     ['Avisos y trámites con los bancos empleadores', 'Después'],
-    ['Resultados de encuestas', 'Después'],
+    ['Resultados de encuestas', 'Piloto'],
   ], [7638, 2000]),
 
   h1('Fases 0 a 2: preparar, acordar y relevar'),
   p('Las tres primeras fases dejan todo listo para que el entorno de prueba esté disponible en la semana 4.', { run: { color: C.texto2 } }),
   ...fase(0, 'Preparación', 'Semana 0', 'Llegar al lanzamiento con todo listo, para no hacerle perder tiempo al sindicato.', [
+    'Reunión de estrategias generales con las autoridades y anticipo de datos del sindicato.',
     'Ajustar este plan con lo acordado en la reunión con las autoridades.',
     'Crear el espacio de La Bancaria en el entorno de prueba, con su nombre, sus colores y recibos de ejemplo armados según el CCT 18/75.',
     'Preparar el kit de relevamiento: formularios por tema, lista de documentos y modelo de planilla del padrón.',
     'Redactar el borrador del acuerdo de tratamiento de datos personales.',
     'Preparar la presentación de lanzamiento.',
   ], [
+    'Un anticipo de los datos disponibles: padrón, convenio y bancos.',
     'Una autoridad responsable del proyecto y un referente operativo para el día a día.',
     'Fecha del lanzamiento y lista de convocados.',
     'Logo y colores institucionales.',
@@ -207,7 +200,7 @@ const plan = [
     'Lanzamiento con secretarías, sistemas, prensa y seccionales: presentación de la plataforma y de este plan.',
     'Nombrar a los referentes del sindicato y fijar el día de la reunión semanal.',
     'Priorizar funcionalidades: cuáles entran en el piloto y cuáles después.',
-    'Definir el piloto: seccionales, bancos, cantidad y perfil de afiliados (entre 50 y 500).',
+    'Definir el piloto: seccionales, bancos, cantidad y perfil de afiliados (entre 50 y 500 o 1.000).',
     'Acordar el canal seguro para el padrón y la fecha de entrega de cada dato.',
     'Acordar cómo se verifica la identidad del afiliado cuando se registra.',
   ], [
@@ -216,24 +209,24 @@ const plan = [
     'Revisión del acuerdo de datos por su asesoría legal.',
   ], 'El sindicato aprueba la versión 1 de este plan, con nombres, prioridades y fechas.', 'Dirección del proyecto y autoridad responsable del sindicato.'),
   ...fase(2, 'Relevamiento detallado', 'Semanas 2 y 3', 'Conocer el sindicato lo suficiente para configurarlo sin suposiciones.', [
-    '**Estructura:** seccionales con su domicilio, áreas internas y quiénes operan el panel, con qué permisos.',
     '**Padrón y alta de afiliados:** dónde está, qué campos tiene, su calidad y cómo se actualiza (ver «Datos para el alta de afiliados»).',
+    '**Trámites y comunicación:** qué gestiones hace hoy el afiliado, quién las atiende y cómo se comunica el gremio.',
+    '**Estructura:** seccionales con su domicilio, áreas internas y quiénes operan el panel, con qué permisos.',
     '**Convenio y liquidación:** conceptos del CCT 18/75, escalas y acuerdos vigentes, cuota sindical y recibos de muestra de cada banco.',
     '**Empleadores:** bancos y entidades donde trabajan los afiliados, con su CUIT.',
-    '**Trámites y comunicación:** qué gestiones hace hoy el afiliado, quién las atiende y cómo se comunica el gremio.',
     '**Tecnología:** sistemas actuales, correo institucional y canal de transferencia de datos.',
   ], [
     'Estatuto, CCT, actas paritarias, escalas vigentes y formularios de trámites actuales.',
     'El padrón, por el canal acordado.',
-    'De 30 a 60 recibos reales de distintos bancos, con consentimiento o anonimizados.',
-    'La firma del Secretario General para la credencial y la lista de operadores del panel.',
-  ], 'Están respondidos los formularios, recibidos los documentos y el padrón, y firmado el acuerdo de datos.', 'Implementación funcional (Colm3na) y referentes del sindicato.', 'Qué se hace: talleres de dos horas por tema'),
+    'De 30 a 60 recibos reales de distintos bancos, con consentimiento o anonimizados (nombres tachados).',
+    'La firma del Secretario General para la credencial y la lista de operadores (usuarios iniciales).',
+  ], 'Están respondidos los formularios, recibidos los documentos y el padrón, y firmado el acuerdo de datos.', 'Implementación funcional (Colm3na) y referentes del sindicato.', 'Qué se hace: talleres de una hora por tema'),
   destacado('**La semana 4 depende de la semana 3.** Si al cierre del relevamiento falta algún dato, el entorno de prueba se arma igual con lo que haya y lo pendiente se suma cuando llega. Lo que no se puede reemplazar es el padrón y el convenio: sin ellos no hay prueba con datos propios.'),
 
   h1('Fases 3 a 5: configurar, probar con afiliados y llegar a todos'),
   p('Desde la fase 4 la plataforma la usan afiliados reales. Cada paso se amplía solo cuando el anterior funciona.', { run: { color: C.texto2 } }),
   ...fase(3, 'Configuración e implementación', 'Semanas 3 a 6', 'Que un afiliado del padrón pueda entrar, subir un recibo real y recibir una verificación correcta según su convenio.', [
-    'Cargar marca, seccionales, áreas y usuarios con sus permisos; cargar padrón y bancos y conciliar los totales con el sindicato.',
+    'Cargar marca, seccionales, áreas y usuarios con sus permisos; cargar padrón y bancos y conciliar los totales con el sindicato, de acuerdo con las definiciones iniciales.',
     'Cargar conceptos, reglas de control y escalas, cada una con su fuente (artículo del convenio o acta paritaria).',
     '**Semana 4:** el equipo del sindicato recorre el entorno de prueba con sus propios datos.',
     'Probar con los recibos de muestra hasta que el resultado sea correcto revisado a mano. La plataforma propone los conceptos nuevos que encuentra y el sindicato los aprueba.',
@@ -246,7 +239,7 @@ const plan = [
   ], 'Al menos 20 recibos reales de 4 bancos dan resultado correcto, el padrón está conciliado y los operadores capacitados. El referente operativo firma la aceptación.', 'Implementación funcional y desarrollo (Colm3na); referentes de convenio y sistemas.'),
   ...fase(4, 'Prueba piloto con afiliados reales', 'Semanas 7 a 12', 'Validar con uso real que la configuración es correcta, que la app se entiende y que el sindicato puede operarla.', [
     'Pasar la configuración aceptada al entorno definitivo y habilitar al grupo piloto.',
-    'Arranque escalonado: unos 50 afiliados de una o dos seccionales, y ampliación hasta 500 cuando el primer grupo funciona.',
+    'Arranque escalonado: unos 50 afiliados de una o dos seccionales, y ampliación hasta 500 o 1.000 cuando el primer grupo funciona.',
     'La verificación del recibo se habilita por grupos, a medida que la calidad medida de la lectura lo permite.',
     'Mesa de ayuda del piloto y revisión semanal de recibos dudosos, conceptos nuevos y trámites.',
     'Abarcar al menos dos cierres de mes, para ver dos recibos de cada afiliado.',
@@ -254,7 +247,7 @@ const plan = [
     'Elegir e invitar a los afiliados del piloto, con variedad de bancos.',
     'Delegados que acompañan el primer ingreso.',
     'Operadores que atienden trámites y responden cada semana sobre conceptos y diferencias.',
-  ], 'Se cumplen los indicadores del piloto o se decide en forma explícita cómo seguir. Las autoridades reciben el informe de resultados.', 'Dirección del proyecto e implementación funcional; referentes de las seccionales piloto.'),
+  ], 'Se cumplen los indicadores del piloto o se decide en forma explícita cómo seguir. Las autoridades reciben el informe de resultados.', 'Dirección del proyecto e implementación funcional; referentes de las seccionales piloto.', 'Qué se hace', 'Qué aporta el sindicato (se sugiere)'),
   ...fase(5, 'Implementación total', 'desde la semana 13', 'Llegar a todo el padrón, con el sindicato operando en forma autónoma y Colm3na como soporte.', [
     'Despliegue por oleadas de seccionales, con capacitación antes de cada una.',
     'Campaña a los afiliados: la app se instala en el teléfono desde un enlace, sin pasar por una tienda.',
@@ -304,9 +297,9 @@ const plan = [
     ['Afiliados del piloto que ingresaron', '70 % o más'],
     ['Verificaron al menos un recibo', '50 % o más'],
     ['Recibos leídos bien (muestra revisada)', '90 % o más'],
-    ['Trámites respondidos en 3 días hábiles', '80 % o más'],
+    ['Trámites respondidos en 2 días hábiles', '80 % o más'],
     ['Notificaciones leídas en 7 días', '50 % o más'],
-    ['Incidencias críticas abiertas al cierre', 'Ninguna'],
+    ['Incidencias críticas abiertas al cierre', 'Mínimas'],
   ], [7138, 2500]),
 
   h1('Riesgos y cómo se contienen'),
@@ -318,7 +311,7 @@ const plan = [
     ['Baja adopción', 'Delegados, ayuda en el primer ingreso y mensajes claros sobre privacidad'],
   ], [3800, 5838]),
 
-  destacado('**Cómo sigue este documento.** Esta versión 0.1 es la base para la reunión con las autoridades. Con lo que se acuerde ahí se arma la versión 1, que el sindicato aprueba al cierre de la fase 1 con nombres, prioridades y fechas. Desde entonces, toda decisión que cambie alcance, plazos o datos personales queda registrada con fecha y con quién la tomó.'),
+  destacado('**Cómo sigue este documento.** Esta versión 0.2 es la base para la reunión con las autoridades. Con lo que se acuerde ahí se arma la versión 1, que el sindicato aprueba al cierre de la fase 1 con nombres, prioridades y fechas. Desde entonces, toda decisión que cambie alcance, plazos o datos personales queda registrada con fecha y con quién la tomó.'),
 ];
 
 // =====================================================================
@@ -326,7 +319,6 @@ const plan = [
 // =====================================================================
 const guia = [
   ...encabezado('Hoja guía · Reunión con autoridades · octubre 2026', 'Reunión con las autoridades de La Bancaria'),
-  instruccion(INSTRUCCION('1 hoja A4')),
   etiquetado('Objetivo', 'acordar en grande cómo se implementa Colm3na en la Asociación Bancaria, quién lo conduce del lado del sindicato y qué necesita cada parte para que el sindicato pruebe la plataforma con sus propios datos en la semana 4.'),
   tabla(['Duración sugerida', 'Participan', 'Fecha', 'Lugar'],
     [['90 minutos', 'Secretaría General o Comisión Directiva, secretarías involucradas y Colm3na', '[completar]', '[completar]']],
@@ -336,7 +328,7 @@ const guia = [
   tabla(['N.º', 'Tema', 'Minutos'], [
     ['1', 'Apertura y objetivo de la reunión', '5'],
     ['2', 'Demostración con un recibo bancario', '15'],
-    ['3', 'El plan en seis fases y su calendario', '15'],
+    ['3', 'Metodología, plan en seis fases y calendario', '15'],
     ['4', 'Funcionalidades prioritarias', '15'],
     ['5', 'Datos disponibles para el alta de afiliados', '10'],
     ['6', 'Privacidad y protección de datos personales', '10'],
@@ -355,7 +347,7 @@ const guia = [
   casilla('Autoridad responsable del proyecto y referente operativo para el día a día.'),
   casilla('Referentes técnico, de convenio y liquidación, de comunicación y legal.'),
   casilla('Funcionalidades para el piloto y para después.'),
-  casilla('Alcance del piloto: seccionales, bancos y cantidad de afiliados, entre 50 y 500.'),
+  casilla('Alcance del piloto: seccionales, bancos y cantidad de afiliados, entre 50 y 500 o 1.000.'),
   casilla('Qué datos del padrón hay, en qué formato y para cuándo.'),
   casilla('Cómo se verifica la identidad del afiliado cuando se registra.'),
   casilla('Quién revisa y firma el acuerdo de tratamiento de datos personales.'),
@@ -371,9 +363,9 @@ const guia = [
     ['Credencial digital', 'Piloto'],
     ['Novedades y notificaciones', 'Piloto'],
     ['Trámites con expediente', 'Piloto'],
-    ['Beneficios', 'Después'],
-    ['Encuestas', 'Después'],
-    ['Consultas sobre el convenio', 'Después'],
+    ['Beneficios', 'Piloto'],
+    ['Encuestas', 'Piloto'],
+    ['Consultas sobre el convenio', 'Piloto'],
     { grupo: 'Para el sindicato' },
     ['Panel Sindical y reportes', 'Piloto'],
     ['Avisos y trámites con los bancos', 'Después'],
@@ -411,8 +403,8 @@ const guia = [
 
 (async () => {
   const salidas = [
-    [plan, 'Colm3na · Plan de implementación en La Bancaria · Borrador v0.1', 'Plan de implementación en La Bancaria', 'plan-implementacion-bancaria.docx'],
-    [guia, 'Colm3na · Hoja guía para la reunión con las autoridades de La Bancaria · Borrador v0.1', 'Reunión con las autoridades de La Bancaria', 'guia-reunion-autoridades-bancaria.docx'],
+    [plan, 'Colm3na · Plan de implementación en La Bancaria · Borrador v0.2', 'Plan de implementación en La Bancaria', 'plan-implementacion-bancaria-v0.2.docx'],
+    [guia, 'Colm3na · Hoja guía para la reunión con las autoridades de La Bancaria · Borrador v0.2', 'Reunión con las autoridades de La Bancaria', 'guia-reunion-autoridades-bancaria-v0.2.docx'],
   ];
   for (const [hijos, textoPie, titulo, archivo] of salidas) {
     const buf = await Packer.toBuffer(documento(hijos, textoPie, titulo));
