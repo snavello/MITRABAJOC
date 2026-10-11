@@ -42,6 +42,12 @@ prompt vía recibo y vía PDF, conceptos que entran a la base, gasto), **OBS**
 (alertas de ataque, registro de acciones, runbook) y **LEY** (consentimiento,
 retención, derechos, contrato de encargado, AAIP).
 
+Dentro de ENT entra la **revisión grupal de código de los avisos medios de
+bandit** (decisión de SDN, 2026-10-11): los 63 de la línea de base
+(`corridas/2026-10-11-2040-ENT.md`) y los que sume el CI hasta entonces. En
+equipo, de a uno: `# nosec` con motivo si está bien, hallazgo si no. Cuando
+quede limpio se decide si los medios pasan a frenar el PR.
+
 Con una salvedad: **R2 (niveles de fiabilidad de registro) es una decisión
 de producto que conviene diseñar antes del primer sindicato**, aunque su
 implementación entre en la iteración 2. IDS-06 la deja registrada como
