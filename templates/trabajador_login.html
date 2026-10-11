@@ -90,6 +90,11 @@
     border:1px solid color-mix(in srgb, var(--alerta) 55%, transparent);
     color:#f2b8ae; font-size:13px; padding:11px 13px; border-radius:9px; margin-bottom:16px; line-height:1.4; }
   .ayuda { font-size:12px; color:rgba(255,255,255,.5); margin-top:14px; line-height:1.5; text-align:center; }
+  .reg-pasos { text-align:center; font-size:11px; letter-spacing:3px; color:rgba(255,255,255,.35); margin:0 0 14px; }
+  .reg-pasos .on { color:var(--miel); font-weight:700; }
+  button.reg-link { background:none; border:none; padding:0; font:inherit; color:var(--miel);
+    text-decoration:underline; cursor:pointer; }
+  button.reg-link:disabled { display:none; }
   .form { display:none; } .form.activo { display:block; }
   .mrz { margin-top:20px; border-top:1px dashed rgba(255,255,255,.18); padding-top:10px;
     font-family:ui-monospace,Consolas,monospace; font-size:9.5px; letter-spacing:2px;
@@ -125,6 +130,8 @@
     {% elif err == 'sinsind' %}<div class="error">Tu cuenta no está asociada a ningún sindicato activo.</div>
     {% elif err == 'domicilio' %}<div class="error">Elegí tu provincia y escribí tu localidad: tu sindicato las necesita para agruparte por zona.</div>
     {% elif err in ('espera', 'espera_registro') %}<div class="error">Demasiados intentos seguidos. Esperá un minuto y volvé a intentar.</div>
+    {% elif err == 'codigo' %}<div class="error">El código no es correcto o venció. Pedí uno nuevo.</div>
+    {% elif err == 'paso' %}<div class="error">La verificación venció. Empezá de nuevo desde el primer paso.</div>
     {% elif err == 'captcha' %}<div class="error">No pudimos comprobar que sos una persona. Volvé a intentar.</div>
     {% elif err == 'cuil' %}<div class="error">El CUIL no es válido: revisá los 11 números. Si es el que figura en tu recibo de sueldo, avisale a tu sindicato.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
     {% endif %}
@@ -143,58 +150,90 @@
       <div class="ayuda">Si es tu primera vez, tocá "Registrarme".</div>
     </form>
 
-    <form class="form" id="form-registro" method="post" action="/trabajador/registro" onsubmit="return confirmarClaves(this, 'reg-clave', 'reg-repetir', 'reg-error')">
+    <form class="form" id="form-registro" method="post" action="/trabajador/registro" onsubmit="return regSubmit(this)">
+      {# Registro en tres pasos (PLAN_REGISTRO.md §4.1), todo en el mismo form:
+         1 CUIL + captcha -> 2 código por mail (o primero declarar un mail) ->
+         3 clave y datos. Los pasos 1 y 2 hablan con /trabajador/registro/iniciar
+         y /mail por fetch; el 3 envía el form clásico con `token` (firmado) y
+         `codigo` en campos ocultos. Los controles de los pasos que no se ven
+         van `disabled` (así no frenan la validación ni viajan en el POST). #}
+      <div class="reg-pasos" aria-label="Paso del registro"><span data-n="1" class="on">1</span> · <span data-n="2">2</span> · <span data-n="3">3</span></div>
+      <div class="error" id="reg-msg" role="alert" style="display:none"></div>
+
       <label>CUIL</label>
-      <input name="cuil" inputmode="numeric" data-cuit="persona" placeholder="20123456786" required>
-      <label>Elegí una clave</label>
-      <input type="password" id="reg-clave" name="clave" required minlength="4">
-      <label>Repetí la clave</label>
-      <input type="password" id="reg-repetir" required minlength="4">
-      <div id="reg-error" style="display:none; color:#f2b8ae; font-size:12px; margin-top:6px;">Las claves no coinciden.</div>
+      <input id="reg-cuil" name="cuil" inputmode="numeric" data-cuit="persona" placeholder="20123456786" required>
 
-      {# Son EXACTAMENTE los campos de "Tu perfil", en el mismo orden y con
-         la misma marca de obligatorio y opcional: nombre, domicilio,
-         teléfono y mail. Son el mismo dato y se guardan en el mismo lugar --
-         lo único que cambia es el momento. Antes acá se pedía solo el
-         domicilio, y quien se registraba abría después su perfil y se
-         encontraba con un formulario que no había visto nunca.
-
-         Del domicilio, provincia y localidad son lo único obligatorio
-         (geo.OBLIGATORIOS_AFILIADO). Lo fino se muestra igual pero dice
-         "opcional" al lado, que es lo que hace que nadie lo confunda con un
-         requisito. El mapa NO está acá a propósito: ubicar un globo es una
-         tarea de escritorio y este es el momento de menos paciencia de toda
-         la app -- queda para el perfil. #}
-      <div class="dom-titulo">Tus datos</div>
-      <label>Nombre y apellido</label>
-      <input name="nombre" required autocomplete="name" placeholder="Como figura en tu recibo">
-
-      <div class="dom-titulo">Tu domicilio</div>
-      <label>Provincia</label>
-      <select name="provincia" required>
-        <option value="">Elegí tu provincia</option>
-        {% for p in provincias %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
-      </select>
-      <label>Localidad</label>
-      <input name="localidad" required placeholder="Rosario" autocomplete="address-level2">
-      <div class="dom-fila">
-        <div><label>Calle <span class="opc">(opcional)</span></label><input name="calle" autocomplete="address-line1"></div>
-        <div><label>Altura <span class="opc">(opcional)</span></label><input name="numero" inputmode="numeric"></div>
-      </div>
-      <div class="dom-fila">
-        <div><label>Piso / depto <span class="opc">(opcional)</span></label><input name="piso_depto"></div>
-        <div><label>Código postal <span class="opc">(opcional)</span></label><input name="codigo_postal" inputmode="numeric" autocomplete="postal-code"></div>
+      <div data-reg="1">
+        {% include "_captcha.html" %}
+        <button class="enviar" type="submit">Continuar</button>
       </div>
 
-      <div class="dom-titulo">Para que tu sindicato pueda contactarte</div>
-      <div class="dom-fila">
-        <div><label>Teléfono <span class="opc">(opcional)</span></label><input name="telefono" inputmode="tel" autocomplete="tel"></div>
-        <div><label>Mail <span class="opc">(opcional)</span></label><input name="mail" type="email" autocomplete="email"></div>
+      <div data-reg="2c" style="display:none">
+        <div class="ayuda" style="margin-top:16px;">Te mandamos un código a <b id="reg-pista"></b>. Vence en 15 minutos.</div>
+        <label>Código de 6 números</label>
+        <input id="reg-codigo" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code" placeholder="123456" required>
+        <button class="enviar" type="submit">Continuar</button>
+        <div class="ayuda"><button type="button" class="reg-link" onclick="regReenviar()">Reenviar código</button> · <button type="button" class="reg-link" onclick="regReiniciar()">Cambiar CUIL</button></div>
       </div>
 
-      {% include "_captcha.html" %}
-      <button class="enviar" type="submit">Crear mi cuenta</button>
-      <div class="ayuda">Tu CUIL tiene que estar habilitado por tu sindicato. Con una sola cuenta accedés a todos tus sindicatos. La dirección completa y el mapa los podés cargar después, desde tu perfil.<br>Si tu sindicato ya tenía otros datos tuyos, quedan los que cargues acá; lo que dejes vacío no se borra.</div>
+      <div data-reg="2m" style="display:none">
+        <div class="ayuda" style="margin-top:16px;">Tu sindicato no tiene un mail tuyo cargado. Escribí el que uses: te mandamos un código para confirmarlo.</div>
+        <label>Tu mail</label>
+        <input id="reg-mail" type="email" maxlength="254" autocomplete="email" placeholder="nombre@ejemplo.com" required>
+        <button class="enviar" type="submit">Mandarme el código</button>
+        <div class="ayuda"><button type="button" class="reg-link" onclick="regReiniciar()">Cambiar CUIL</button></div>
+      </div>
+
+      <div data-reg="3" style="display:none">
+        <input type="hidden" name="token" id="reg-token">
+        <input type="hidden" name="codigo" id="reg-codigo-h">
+        <label>Elegí una clave</label>
+        <input type="password" id="reg-clave" name="clave" required minlength="4">
+        <label>Repetí la clave</label>
+        <input type="password" id="reg-repetir" required minlength="4">
+        <div id="reg-error" style="display:none; color:#f2b8ae; font-size:12px; margin-top:6px;">Las claves no coinciden.</div>
+
+        {# Son EXACTAMENTE los campos de "Tu perfil", en el mismo orden y con
+           la misma marca de obligatorio y opcional: nombre, domicilio y
+           teléfono. Son el mismo dato y se guardan en el mismo lugar -- lo
+           único que cambia es el momento. El MAIL ya no se pide acá: se
+           confirma en el paso 2 y no se tipea dos veces.
+
+           Del domicilio, provincia y localidad son lo único obligatorio
+           (geo.OBLIGATORIOS_AFILIADO). Lo fino se muestra igual pero dice
+           "opcional" al lado, que es lo que hace que nadie lo confunda con un
+           requisito. El mapa NO está acá a propósito: ubicar un globo es una
+           tarea de escritorio y este es el momento de menos paciencia de toda
+           la app -- queda para el perfil. #}
+        <div class="dom-titulo">Tus datos</div>
+        <label>Nombre y apellido</label>
+        <input name="nombre" required autocomplete="name" placeholder="Como figura en tu recibo">
+
+        <div class="dom-titulo">Tu domicilio</div>
+        <label>Provincia</label>
+        <select name="provincia" required>
+          <option value="">Elegí tu provincia</option>
+          {% for p in provincias %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+        </select>
+        <label>Localidad</label>
+        <input name="localidad" required placeholder="Rosario" autocomplete="address-level2">
+        <div class="dom-fila">
+          <div><label>Calle <span class="opc">(opcional)</span></label><input name="calle" autocomplete="address-line1"></div>
+          <div><label>Altura <span class="opc">(opcional)</span></label><input name="numero" inputmode="numeric"></div>
+        </div>
+        <div class="dom-fila">
+          <div><label>Piso / depto <span class="opc">(opcional)</span></label><input name="piso_depto"></div>
+          <div><label>Código postal <span class="opc">(opcional)</span></label><input name="codigo_postal" inputmode="numeric" autocomplete="postal-code"></div>
+        </div>
+
+        <div class="dom-titulo">Para que tu sindicato pueda contactarte</div>
+        <label>Teléfono <span class="opc">(opcional)</span></label>
+        <input name="telefono" inputmode="tel" autocomplete="tel">
+
+        <button class="enviar" type="submit">Crear mi cuenta</button>
+        <div class="ayuda">Con una sola cuenta accedés a todos tus sindicatos. La dirección completa y el mapa los podés cargar después, desde tu perfil.<br>Si tu sindicato ya tenía otros datos tuyos, quedan los que cargues acá; lo que dejes vacío no se borra.<br><button type="button" class="reg-link" onclick="regReiniciar()">Empezar de nuevo</button></div>
+      </div>
+      <div class="ayuda" data-reg-ayuda>Tu CUIL tiene que estar habilitado por tu sindicato.</div>
     </form>
     <div class="mrz">COLM3NA&lt;&lt;TRABAJADOR&lt;&lt;ACCESO&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div>
   </div>
@@ -216,8 +255,138 @@ function mostrar(cual) {
 // hay que tocar "Registrarme" otra vez.
 (function () {
   var err = new URLSearchParams(location.search).get('error');
-  if (['yaexiste', 'nohabilitado', 'domicilio', 'cuil', 'captcha', 'espera_registro'].indexOf(err) >= 0) mostrar('registro');
+  if (['yaexiste', 'nohabilitado', 'domicilio', 'cuil', 'captcha', 'espera_registro', 'codigo', 'paso'].indexOf(err) >= 0) mostrar('registro');
 })();
+
+// ---- Registro en tres pasos (PLAN_REGISTRO.md §4.1) ----
+// Estado en memoria: el token firmado que devuelve el servidor en cada paso.
+// Nada de esto es una credencial: el servidor vuelve a comprobar todo en el
+// POST del paso 3.
+var reg = { paso: '1', token: '', tokenMail: '' };
+var REG_URL = '/trabajador/registro';
+var REG_ID = 'reg-cuil';
+{% if captcha_site_key %}var REG_CAPTCHA_CAMPO = 'cf-turnstile-response', REG_CAPTCHA_WIDGET = '#form-registro .cf-turnstile';
+{% else %}var REG_CAPTCHA_CAMPO = '', REG_CAPTCHA_WIDGET = '';
+{% endif %}
+function regMsg(texto, codigo) {
+  var caja = document.getElementById('reg-msg');
+  caja.textContent = '';
+  if (!texto) { caja.style.display = 'none'; return; }
+  caja.appendChild(document.createTextNode(texto));
+  if (codigo) {
+    var chico = document.createElement('small');
+    chico.style.cssText = 'display:block;opacity:.8;margin-top:4px;';
+    chico.textContent = 'Código ' + codigo;
+    caja.appendChild(chico);
+  }
+  caja.style.display = 'block';
+}
+
+// Muestra UN paso ('1', '2c', '2m' o '3'): los demás se ocultan y se
+// deshabilitan (un control deshabilitado no frena la validación del form ni
+// viaja en el POST).
+function regPaso(cual) {
+  reg.paso = cual;
+  var form = document.getElementById('form-registro');
+  form.querySelectorAll('[data-reg]').forEach(function (sec) {
+    var visible = sec.getAttribute('data-reg') === cual;
+    sec.style.display = visible ? '' : 'none';
+    sec.querySelectorAll('input, select, button').forEach(function (c) { c.disabled = !visible; });
+  });
+  document.getElementById(REG_ID).readOnly = cual !== '1';
+  var n = cual === '1' ? '1' : (cual === '3' ? '3' : '2');
+  form.querySelectorAll('.reg-pasos span').forEach(function (sp) {
+    sp.classList.toggle('on', sp.getAttribute('data-n') === n);
+  });
+  var ayuda = form.querySelector('[data-reg-ayuda]');
+  if (ayuda) ayuda.style.display = cual === '1' ? '' : 'none';
+}
+
+function regReiniciar() {
+  reg.token = ''; reg.tokenMail = '';
+  regMsg('');
+  if (window.turnstile) { try { window.turnstile.reset(); } catch (e) {} }
+  regPaso('1');
+  document.getElementById(REG_ID).focus();
+}
+
+function regPedir(url, campos) {
+  var cuerpo = new URLSearchParams();
+  Object.keys(campos).forEach(function (k) { cuerpo.append(k, campos[k]); });
+  return fetch(url, { method: 'POST', body: cuerpo, headers: { 'Accept': 'application/json' } })
+    .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); })
+    .catch(function () { return { ok: false, d: { mensaje: 'No pudimos conectarnos. Revisá tu conexión y probá de nuevo.' } }; });
+}
+
+function regManejar(res) {
+  var d = res.d || {};
+  if (!res.ok || d.ok === false) {
+    regMsg(d.mensaje || d.detail || 'No pudimos continuar. Probá de nuevo.', d.codigo);
+    if (window.turnstile && reg.paso === '1') { try { window.turnstile.reset(); } catch (e) {} }
+    return;
+  }
+  regMsg('');
+  if (d.paso === 'datos') {
+    document.getElementById('reg-token').value = d.token;
+    reg.token = d.token;
+    regPaso('3');
+  } else if (d.paso === 'codigo') {
+    reg.token = d.token;
+    document.getElementById('reg-pista').textContent = d.pista || 'tu mail';
+    document.getElementById('reg-codigo').value = '';
+    regPaso('2c');
+    document.getElementById('reg-codigo').focus();
+  } else if (d.paso === 'mail') {
+    reg.tokenMail = d.token;
+    regPaso('2m');
+    document.getElementById('reg-mail').focus();
+  }
+}
+
+function regIniciar() {
+  var campos = { cuil: document.getElementById(REG_ID).value };
+  {# El nombre del campo del captcha solo se escribe si hay captcha configurado. #}
+  var widget = REG_CAPTCHA_CAMPO && document.querySelector('#form-registro [name="' + REG_CAPTCHA_CAMPO + '"]');
+  if (widget && widget.value) campos[REG_CAPTCHA_CAMPO] = widget.value;
+  regMsg('');
+  return regPedir(REG_URL + '/iniciar', campos).then(regManejar);
+}
+
+function regMandarMail() {
+  regMsg('');
+  return regPedir(REG_URL + '/mail', {
+    token: reg.tokenMail, mail: document.getElementById('reg-mail').value }).then(regManejar);
+}
+
+function regReenviar() {
+  if (reg.tokenMail) return regMandarMail();          // mail declarado: no pide captcha
+  if (window.turnstile && REG_CAPTCHA_WIDGET && document.querySelector(REG_CAPTCHA_WIDGET)) {
+    // Un token de captcha sirve una sola vez: hay que resolverlo de nuevo.
+    window.turnstile.reset();
+    regPaso('1');
+    regMsg('Confirmá otra vez que sos una persona para pedir un código nuevo.');
+    return;
+  }
+  return regIniciar();
+}
+
+function regContinuarCodigo() {
+  var codigo = document.getElementById('reg-codigo').value.replace(/\s+/g, '');
+  if (!/^[0-9]{6}$/.test(codigo)) { regMsg('El código tiene 6 números.'); return; }
+  regMsg('');
+  document.getElementById('reg-codigo-h').value = codigo;
+  document.getElementById('reg-token').value = reg.token;
+  regPaso('3');
+}
+
+function regSubmit(form) {
+  if (reg.paso === '1') { regIniciar(); return false; }
+  if (reg.paso === '2m') { regMandarMail(); return false; }
+  if (reg.paso === '2c') { regContinuarCodigo(); return false; }
+  return confirmarClaves(form, 'reg-clave', 'reg-repetir', 'reg-error');
+}
+
+regPaso('1');
 
 function confirmarClaves(form, idClave, idRepetir, idError) {
   const clave = document.getElementById(idClave).value;

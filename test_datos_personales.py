@@ -179,7 +179,7 @@ def test_el_registro_pide_los_mismos_campos_que_el_perfil():
     toda la app."""
     del_registro = set(inspect.signature(main.trabajador_registro).parameters)
     del_perfil = set(inspect.signature(main.api_actualizar_perfil).parameters)
-    solo_del_alta = {"cuil", "clave", "token_captcha"}
+    solo_del_alta = {"cuil", "clave", "token_captcha", "token", "codigo"}
     solo_del_mapa = {"latitud", "longitud", "precision_geo"}
     assert (del_registro - solo_del_alta) == (del_perfil - solo_del_mapa), (
         "sobran en el registro: %s / faltan en el registro: %s" % (
@@ -193,11 +193,12 @@ def test_la_pantalla_de_registro_muestra_esos_campos():
     obligatorio y opcional que en el perfil."""
     html = TestClient(main.app).get("/ingresar").text
     for campo in ("nombre", "provincia", "localidad", "calle", "numero",
-                  "piso_depto", "codigo_postal", "telefono", "mail"):
+                  "piso_depto", "codigo_postal", "telefono"):
         assert f'name="{campo}"' in html, campo
+    # El mail ya no se pide en el registro: se confirma en el paso 2 (PLAN_REGISTRO).
+    assert 'name="mail"' not in html
     assert 'name="nombre" required' in html, "el nombre es obligatorio, igual que en el perfil"
-    for campo in ("Teléfono", "Mail"):
-        assert f'{campo} <span class="opc">(opcional)</span>' in html, campo
+    assert 'Teléfono <span class="opc">(opcional)</span>' in html
     print("OK  test_la_pantalla_de_registro_muestra_esos_campos")
 
 

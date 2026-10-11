@@ -75,6 +75,11 @@
     border:1px solid color-mix(in srgb, var(--alerta) 55%, transparent);
     color:#f2b8ae; font-size:13px; padding:11px 13px; border-radius:9px; margin-bottom:16px; line-height:1.4; }
   .ayuda { font-size:12px; color:rgba(255,255,255,.5); margin-top:14px; line-height:1.5; text-align:center; }
+  .reg-pasos { text-align:center; font-size:11px; letter-spacing:3px; color:rgba(255,255,255,.35); margin:0 0 14px; }
+  .reg-pasos .on { color:var(--miel); font-weight:700; }
+  button.reg-link { background:none; border:none; padding:0; font:inherit; color:var(--miel);
+    text-decoration:underline; cursor:pointer; }
+  button.reg-link:disabled { display:none; }
   .form { display:none; } .form.activo { display:block; }
   .mrz { margin-top:20px; border-top:1px dashed rgba(255,255,255,.18); padding-top:10px;
     font-family:ui-monospace,Consolas,monospace; font-size:9.5px; letter-spacing:2px;
@@ -109,6 +114,8 @@
     {% elif err == 'yaexiste' %}<div class="error">Ya tenés una cuenta con ese CUIT. Ingresá con tu clave.</div>
     {% elif err == 'sinsind' %}<div class="error">Tu cuenta no está asociada a ningún sindicato activo.</div>
     {% elif err in ('espera', 'espera_registro') %}<div class="error">Demasiados intentos seguidos. Esperá un minuto y volvé a intentar.</div>
+    {% elif err == 'codigo' %}<div class="error">El código no es correcto o venció. Pedí uno nuevo.</div>
+    {% elif err == 'paso' %}<div class="error">La verificación venció. Empezá de nuevo desde el primer paso.</div>
     {% elif err == 'captcha' %}<div class="error">No pudimos comprobar que sos una persona. Volvé a intentar.</div>
     {% elif err == 'cuit' %}<div class="error">El CUIT no es válido: revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
     {% endif %}
@@ -127,17 +134,52 @@
       <div class="ayuda">Si es tu primera vez, tocá "Registrarme".</div>
     </form>
 
-    <form class="form" id="form-registro" method="post" action="/empresa/registro" onsubmit="return confirmarClaves(this, 'reg-clave', 'reg-repetir', 'reg-error')">
+    <form class="form" id="form-registro" method="post" action="/empresa/registro" onsubmit="return regSubmit(this)">
+      {# Registro en tres pasos (PLAN_REGISTRO.md §4.2), espejo del afiliado:
+         1 CUIT + captcha -> 2 código por mail (o primero declarar un mail) ->
+         3 clave. Los pasos 1 y 2 hablan con /empresa/registro/iniciar y /mail
+         por fetch; el 3 envía el form clásico con `token` (firmado) y `codigo`
+         en campos ocultos. Los controles de los pasos que no se ven van
+         `disabled`. #}
+      <div class="reg-pasos" aria-label="Paso del registro"><span data-n="1" class="on">1</span> · <span data-n="2">2</span> · <span data-n="3">3</span></div>
+      <div class="error" id="reg-msg" role="alert" style="display:none"></div>
+
       <label>CUIT</label>
-      <input name="cuit" inputmode="numeric" data-cuit="cualquiera" placeholder="30123456781" required>
-      <label>Elegí una clave</label>
-      <input type="password" id="reg-clave" name="clave" required minlength="4">
-      <label>Repetí la clave</label>
-      <input type="password" id="reg-repetir" required minlength="4">
-      <div id="reg-error" style="display:none; color:#f2b8ae; font-size:12px; margin-top:6px;">Las claves no coinciden.</div>
-      {% include "_captcha.html" %}
-      <button class="enviar" type="submit">Crear mi cuenta</button>
-      <div class="ayuda">Tu CUIT tiene que estar habilitado por el sindicato como empleador. Con una sola cuenta accedés a todos los sindicatos donde estés dado de alta.</div>
+      <input id="reg-cuil" name="cuit" inputmode="numeric" data-cuit="cualquiera" placeholder="30123456781" required>
+
+      <div data-reg="1">
+        {% include "_captcha.html" %}
+        <button class="enviar" type="submit">Continuar</button>
+      </div>
+
+      <div data-reg="2c" style="display:none">
+        <div class="ayuda" style="margin-top:16px;">Te mandamos un código a <b id="reg-pista"></b>. Vence en 15 minutos.</div>
+        <label>Código de 6 números</label>
+        <input id="reg-codigo" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code" placeholder="123456" required>
+        <button class="enviar" type="submit">Continuar</button>
+        <div class="ayuda"><button type="button" class="reg-link" onclick="regReenviar()">Reenviar código</button> · <button type="button" class="reg-link" onclick="regReiniciar()">Cambiar CUIT</button></div>
+      </div>
+
+      <div data-reg="2m" style="display:none">
+        <div class="ayuda" style="margin-top:16px;">El sindicato no tiene un mail de tu empresa cargado. Escribí el que uses: te mandamos un código para confirmarlo.</div>
+        <label>Mail de la empresa</label>
+        <input id="reg-mail" type="email" maxlength="254" autocomplete="email" placeholder="nombre@empresa.com" required>
+        <button class="enviar" type="submit">Mandarme el código</button>
+        <div class="ayuda"><button type="button" class="reg-link" onclick="regReiniciar()">Cambiar CUIT</button></div>
+      </div>
+
+      <div data-reg="3" style="display:none">
+        <input type="hidden" name="token" id="reg-token">
+        <input type="hidden" name="codigo" id="reg-codigo-h">
+        <label>Elegí una clave</label>
+        <input type="password" id="reg-clave" name="clave" required minlength="4">
+        <label>Repetí la clave</label>
+        <input type="password" id="reg-repetir" required minlength="4">
+        <div id="reg-error" style="display:none; color:#f2b8ae; font-size:12px; margin-top:6px;">Las claves no coinciden.</div>
+        <button class="enviar" type="submit">Crear mi cuenta</button>
+        <div class="ayuda">Con una sola cuenta accedés a todos los sindicatos donde estés dado de alta.<br><button type="button" class="reg-link" onclick="regReiniciar()">Empezar de nuevo</button></div>
+      </div>
+      <div class="ayuda" data-reg-ayuda>Tu CUIT tiene que estar habilitado por el sindicato como empleador.</div>
     </form>
     <div class="mrz">COLM3NA&lt;&lt;EMPRESA&lt;&lt;ACCESO&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div>
   </div>
@@ -159,8 +201,138 @@ function mostrar(cual) {
 // afiliado.
 (function () {
   var err = new URLSearchParams(location.search).get('error');
-  if (['yaexiste', 'nohabilitado', 'cuit', 'captcha', 'espera_registro'].indexOf(err) >= 0) mostrar('registro');
+  if (['yaexiste', 'nohabilitado', 'cuit', 'captcha', 'espera_registro', 'codigo', 'paso'].indexOf(err) >= 0) mostrar('registro');
 })();
+
+// ---- Registro en tres pasos (PLAN_REGISTRO.md §4.1) ----
+// Estado en memoria: el token firmado que devuelve el servidor en cada paso.
+// Nada de esto es una credencial: el servidor vuelve a comprobar todo en el
+// POST del paso 3.
+var reg = { paso: '1', token: '', tokenMail: '' };
+var REG_URL = '/empresa/registro';
+var REG_ID = 'reg-cuil';
+{% if captcha_site_key %}var REG_CAPTCHA_CAMPO = 'cf-turnstile-response', REG_CAPTCHA_WIDGET = '#form-registro .cf-turnstile';
+{% else %}var REG_CAPTCHA_CAMPO = '', REG_CAPTCHA_WIDGET = '';
+{% endif %}
+function regMsg(texto, codigo) {
+  var caja = document.getElementById('reg-msg');
+  caja.textContent = '';
+  if (!texto) { caja.style.display = 'none'; return; }
+  caja.appendChild(document.createTextNode(texto));
+  if (codigo) {
+    var chico = document.createElement('small');
+    chico.style.cssText = 'display:block;opacity:.8;margin-top:4px;';
+    chico.textContent = 'Código ' + codigo;
+    caja.appendChild(chico);
+  }
+  caja.style.display = 'block';
+}
+
+// Muestra UN paso ('1', '2c', '2m' o '3'): los demás se ocultan y se
+// deshabilitan (un control deshabilitado no frena la validación del form ni
+// viaja en el POST).
+function regPaso(cual) {
+  reg.paso = cual;
+  var form = document.getElementById('form-registro');
+  form.querySelectorAll('[data-reg]').forEach(function (sec) {
+    var visible = sec.getAttribute('data-reg') === cual;
+    sec.style.display = visible ? '' : 'none';
+    sec.querySelectorAll('input, select, button').forEach(function (c) { c.disabled = !visible; });
+  });
+  document.getElementById(REG_ID).readOnly = cual !== '1';
+  var n = cual === '1' ? '1' : (cual === '3' ? '3' : '2');
+  form.querySelectorAll('.reg-pasos span').forEach(function (sp) {
+    sp.classList.toggle('on', sp.getAttribute('data-n') === n);
+  });
+  var ayuda = form.querySelector('[data-reg-ayuda]');
+  if (ayuda) ayuda.style.display = cual === '1' ? '' : 'none';
+}
+
+function regReiniciar() {
+  reg.token = ''; reg.tokenMail = '';
+  regMsg('');
+  if (window.turnstile) { try { window.turnstile.reset(); } catch (e) {} }
+  regPaso('1');
+  document.getElementById(REG_ID).focus();
+}
+
+function regPedir(url, campos) {
+  var cuerpo = new URLSearchParams();
+  Object.keys(campos).forEach(function (k) { cuerpo.append(k, campos[k]); });
+  return fetch(url, { method: 'POST', body: cuerpo, headers: { 'Accept': 'application/json' } })
+    .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); })
+    .catch(function () { return { ok: false, d: { mensaje: 'No pudimos conectarnos. Revisá tu conexión y probá de nuevo.' } }; });
+}
+
+function regManejar(res) {
+  var d = res.d || {};
+  if (!res.ok || d.ok === false) {
+    regMsg(d.mensaje || d.detail || 'No pudimos continuar. Probá de nuevo.', d.codigo);
+    if (window.turnstile && reg.paso === '1') { try { window.turnstile.reset(); } catch (e) {} }
+    return;
+  }
+  regMsg('');
+  if (d.paso === 'datos') {
+    document.getElementById('reg-token').value = d.token;
+    reg.token = d.token;
+    regPaso('3');
+  } else if (d.paso === 'codigo') {
+    reg.token = d.token;
+    document.getElementById('reg-pista').textContent = d.pista || 'tu mail';
+    document.getElementById('reg-codigo').value = '';
+    regPaso('2c');
+    document.getElementById('reg-codigo').focus();
+  } else if (d.paso === 'mail') {
+    reg.tokenMail = d.token;
+    regPaso('2m');
+    document.getElementById('reg-mail').focus();
+  }
+}
+
+function regIniciar() {
+  var campos = { cuil: document.getElementById(REG_ID).value };
+  {# El nombre del campo del captcha solo se escribe si hay captcha configurado. #}
+  var widget = REG_CAPTCHA_CAMPO && document.querySelector('#form-registro [name="' + REG_CAPTCHA_CAMPO + '"]');
+  if (widget && widget.value) campos[REG_CAPTCHA_CAMPO] = widget.value;
+  regMsg('');
+  return regPedir(REG_URL + '/iniciar', campos).then(regManejar);
+}
+
+function regMandarMail() {
+  regMsg('');
+  return regPedir(REG_URL + '/mail', {
+    token: reg.tokenMail, mail: document.getElementById('reg-mail').value }).then(regManejar);
+}
+
+function regReenviar() {
+  if (reg.tokenMail) return regMandarMail();          // mail declarado: no pide captcha
+  if (window.turnstile && REG_CAPTCHA_WIDGET && document.querySelector(REG_CAPTCHA_WIDGET)) {
+    // Un token de captcha sirve una sola vez: hay que resolverlo de nuevo.
+    window.turnstile.reset();
+    regPaso('1');
+    regMsg('Confirmá otra vez que sos una persona para pedir un código nuevo.');
+    return;
+  }
+  return regIniciar();
+}
+
+function regContinuarCodigo() {
+  var codigo = document.getElementById('reg-codigo').value.replace(/\s+/g, '');
+  if (!/^[0-9]{6}$/.test(codigo)) { regMsg('El código tiene 6 números.'); return; }
+  regMsg('');
+  document.getElementById('reg-codigo-h').value = codigo;
+  document.getElementById('reg-token').value = reg.token;
+  regPaso('3');
+}
+
+function regSubmit(form) {
+  if (reg.paso === '1') { regIniciar(); return false; }
+  if (reg.paso === '2m') { regMandarMail(); return false; }
+  if (reg.paso === '2c') { regContinuarCodigo(); return false; }
+  return confirmarClaves(form, 'reg-clave', 'reg-repetir', 'reg-error');
+}
+
+regPaso('1');
 
 function confirmarClaves(form, idClave, idRepetir, idError) {
   const clave = document.getElementById(idClave).value;

@@ -690,7 +690,7 @@ PUERTAS = {
     "admin_trabajador_alta", "admin_trabajador_masivo", "admin_usuario_alta", "abm_concepto",
     "admin_empleador_alta", "plataforma_alta_sindicato", "plataforma_editar_sindicato",
     "plataforma_alta_usuario", "plataforma_completar_guardar", "trabajador_registro",
-    "empresa_registro",
+    "empresa_registro", "trabajador_registro_iniciar", "empresa_registro_iniciar",
 }
 # Rutas que REFERENCIAN un número que ya existe: se busca tal cual, SIN verificador.
 REFERENCIAS = {
