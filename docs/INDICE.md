@@ -58,6 +58,7 @@ cuenta), no en cada commit.
 | `SPRINT_R1.md` | Usuarios de plataforma nominales (sub-sprint de XSK: H-0002/H-0003/H-0016). | 2026-09-20 |
 | `PLAN_ENMASCARADO.md` | Paso cero del motor v2: los datos que identifican a la persona se tapan antes de salir hacia la IA. Revisión de `docs/chat/2026-08-28-arquitectura-enmascarado-pii.md`. | 2026-09-24 |
 | `xsk/XSANDERS_HERRAMIENTA.md` | Blueprint agnóstico de XSK como herramienta reutilizable: método, herramientas, aprendizajes de la iteración 1 y hoja de ruta del producto. Documento vivo. | 2026-09-21 |
+| `PLAN_CUIT_MOD11.md` | Validar CUIL/CUIT con el módulo 11 de AFIP (primera medida de la serie XSK): diagnóstico, conversión de los números cargados a mano y validación en las puertas de alta. Propuesta, a acordar con SDN. | 2026-10-10 |
 
 ### Carpetas
 

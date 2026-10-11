@@ -41,7 +41,7 @@ import fechas
 
 BASE = os.environ.get("E2E_BASE_URL", "http://localhost:8000")
 
-ADMIN_UOM = {"usuario": "20111111110", "clave": "uom-demo"}
+ADMIN_UOM = {"usuario": "20111111120", "clave": "uom-demo"}
 # Primer trabajador del lote de la UOM. El lote es determinista por sindicato
 # y usa los 5 primeros dígitos del CUIL como clave.
 TRABAJADOR_UOM = {"cuil": "27660000000", "clave": "27660"}

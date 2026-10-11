@@ -39,7 +39,7 @@ from sqlmodel import select
 db.crear_tablas()
 
 CLAVE_ADMIN = "admin-demo"
-CUIL_DOBLE = "27222222224"      # empadronado en los DOS sindicatos
+CUIL_DOBLE = "27222222228"      # empadronado en los DOS sindicatos
 
 with db.get_session() as s:
     uno = Sindicato(nombre="Gremio Uno", slug="gremio-uno", color_base="#101b2c")
@@ -82,14 +82,14 @@ def test_el_alta_del_padron_crea_la_persona_sin_clave():
     `auth.verificar_clave` devuelve False con un hash vacío, así que estas
     filas no son cuentas abiertas."""
     admin_uno.post("/admin/trabajador", data={
-        "cuil": "20333333336", "nombre": "Recién Cargado",
+        "cuil": "20333333334", "nombre": "Recién Cargado",
         "provincia": "Santa Fe", "localidad": "Rosario"})
-    p = _persona("20333333336")
+    p = _persona("20333333334")
     assert p is not None, "el alta tiene que dejar la fila de la persona"
     assert p.nombre == "Recién Cargado"
     assert p.clave_hash == "", "todavía no eligió clave"
     assert not auth.verificar_clave("", p.clave_hash), "una fila sin clave no deja entrar"
-    assert _persona("20333333336").localidad == "Rosario"
+    assert _persona("20333333334").localidad == "Rosario"
     print("OK  test_el_alta_del_padron_crea_la_persona_sin_clave")
 
 
@@ -97,10 +97,10 @@ def test_el_alta_del_padron_crea_la_persona_sin_clave():
 
 def test_lo_que_corrige_el_admin_lo_ve_el_afiliado():
     admin_uno.post("/admin/trabajador", data={
-        "cuil": "20444444440", "nombre": "Pedro Gómez",
+        "cuil": "20444444445", "nombre": "Pedro Gómez",
         "provincia": "Córdoba", "localidad": "Córdoba",
         "calle": "Colón", "numero": "1200", "telefono": "3511234567"})
-    perfil = db.perfil_trabajador("20444444440", SID_UNO)
+    perfil = db.perfil_trabajador("20444444445", SID_UNO)
     assert perfil["nombre"] == "Pedro Gómez"
     assert perfil["calle"] == "Colón" and perfil["numero"] == "1200"
     assert perfil["telefono"] == "3511234567"
@@ -108,13 +108,13 @@ def test_lo_que_corrige_el_admin_lo_ve_el_afiliado():
 
 
 def test_lo_que_edita_el_afiliado_lo_ve_el_admin():
-    c = _sesion_trabajador("20444444440", SID_UNO)
+    c = _sesion_trabajador("20444444445", SID_UNO)
     r = c.post("/api/perfil", data={
         "nombre": "Pedro Gómez Ruiz", "provincia": "Santa Fe", "localidad": "Rosario",
         "calle": "San Martín", "numero": "850", "telefono": "3415550000",
         "mail": "pedro@example.com"})
     assert r.status_code == 200, r.text
-    p = _persona("20444444440")
+    p = _persona("20444444445")
     assert p.nombre == "Pedro Gómez Ruiz"
     assert (p.provincia, p.localidad) == ("Santa Fe", "Rosario")
     assert p.mail == "pedro@example.com"
@@ -206,15 +206,15 @@ def test_el_registro_no_borra_lo_que_el_padron_ya_tenia():
     significa "no lo completé" y no "no tengo". En el perfil es al revés: ahí
     se ve lo cargado y borrarlo es una decisión."""
     admin_uno.post("/admin/trabajador", data={
-        "cuil": "20555555553", "nombre": "Con Telefono",
+        "cuil": "20555555556", "nombre": "Con Telefono",
         "provincia": "Santa Fe", "localidad": "Rosario",
         "telefono": "3411112222", "mail": "viejo@example.com"})
     r = TestClient(main.app).post("/trabajador/registro", data={
-        "cuil": "20555555553", "clave": "secreta", "nombre": "Con Telefono",
+        "cuil": "20555555556", "clave": "secreta", "nombre": "Con Telefono",
         "provincia": "Santa Fe", "localidad": "Rosario",
         "telefono": "", "mail": ""}, follow_redirects=False)
     assert r.status_code == 303 and "error=" not in r.headers["location"]
-    p = _persona("20555555553")
+    p = _persona("20555555556")
     assert p.telefono == "3411112222", "el teléfono del padrón no se borró"
     assert p.mail == "viejo@example.com"
     assert p.clave_hash, "y la clave sí quedó puesta"

@@ -101,6 +101,15 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   app NO se llama a `datetime.now()` ni a `date.today()`: el servidor de
   Render corre en UTC y toda la app compara fechas como texto. Lo verifica
   `test_fechas.py` recorriendo los archivos con `ast`.
+- cuit.py — el dígito verificador del CUIL/CUIT (módulo 11 de AFIP), ÚNICA
+  implementación: `es_valido`, `normalizar`, `corregir`, `siguiente_libre`.
+  Puro. `test_cuit.py` falla si otro .py escribe los pesos; `static/cuit.js`
+  es la cortesía del navegador (sus pesos los compara `test_cuit_puertas.py`).
+- regularizar_cuit.py — convierte los CUIL/CUIT inválidos cargados a mano (y
+  los viejos de la demo, `identificadores_demo.py`) a un número válido en
+  TODAS las tablas, en una transacción, con traza en `CambioIdentificador`.
+  Su `INVENTARIO` es la lista de dónde vive un CUIL/CUIT; un test falla si
+  aparece una columna nueva sin decidir. Uso en `DESPLIEGUE_RENDER.md`.
 - encuestas.py — catálogo y reglas PURAS del módulo Encuestas (modos,
   cortes, tipos de pregunta, estados, disclaimer, textos de los avisos). No
   importa `db`, así que se prueba solo y rápido.
@@ -140,6 +149,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   `probar_asistente.py` + `medicion_asistente/` = set de aceptación del
   prompt contra la API real (gasta créditos; a mano, nunca en CI).
 - cargar_demo.py — carga 2 sindicatos de demo desde cero (sin AEFIP).
+  **Carga la demo AL IMPORTARSE** (no tiene `if __name__`): nunca importarlo
+  para leer una constante. Sus números viejos → nuevos, en `identificadores_demo.py`.
 - cargar_marca_plataforma.py — siembra el logo y los colores de Colm3na
   (viven en la base, no en el código: sin esto un entorno nuevo arranca con
   el placeholder `static/logo_mitrabajo.svg`). Va primero al poblar.
@@ -279,21 +290,24 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 
 ## Accesos de la demo
 - Plataforma: CUIT 20000000000 + PLATAFORMA_PASSWORD.
-- Admin UOM: CUIT 20111111110 / uom-demo (Super Admin).
-- Admin Gastronómica: CUIT 20222222220 / fega-demo (Super Admin).
-- UOM, Admin de Seccional de Rosario: 20555555553 / rosario-demo.
+- Admin UOM: CUIT 20111111120 / uom-demo (Super Admin).
+- Admin Gastronómica: CUIT 20222222223 / fega-demo (Super Admin).
+- UOM, Admin de Seccional de Rosario: 20555555556 / rosario-demo.
 - UOM, un usuario por área (la lista completa la imprime `cargar_demo.py`
   al terminar). Los dos que muestran el contraste de un vistazo:
-  27777777774 / prensa-demo (Prensa de Sede Central, alcanza a todo el
-  país) y 20888888887 / prensacba-demo (el mismo perfil, recortado a
+  27777777772 / prensa-demo (Prensa de Sede Central, alcanza a todo el
+  país) y 20888888889 / prensacba-demo (el mismo perfil, recortado a
   Córdoba). El de Prensa central, además, NO está en el padrón a propósito:
   trabaja en el gremio sin estar afiliado.
-- Trabajador un solo sindicato: CUIL 20111111119 (UOM).
-- Trabajador pluriempleo (ambos): CUIL 27222222224.
-- Empresa un solo sindicato: CUIT 30999888776 (UOM) — registrarse en `/ingresar-empresa`.
-- Empresa multisindicato (ambos): CUIT 30111222339.
-- Admin La Bancaria: CUIT 20333444550 / bancaria-demo (sindicato con lote
+- Trabajador un solo sindicato: CUIL 20111111112 (UOM).
+- Trabajador pluriempleo (ambos): CUIL 27222222228.
+- Empresa un solo sindicato: CUIT 30999888778 (UOM) — registrarse en `/ingresar-empresa`.
+- Empresa multisindicato (ambos): CUIT 30111222335.
+- Admin La Bancaria: CUIT 20333444551 / bancaria-demo (sindicato con lote
   sintético completo, recibos según CCT 18/75 — ver `cargar_bancaria.py`).
+- Todos estos números cumplen el módulo 11 desde 2026-10-10 (PLAN_CUIT_MOD11.md,
+  etapa 3). Los de antes (`20111111110`, `20111111119`...) ya no sirven en una
+  base cargada de cero; el mapa viejo → nuevo es `identificadores_demo.py`.
 
 ## Decisiones tomadas (no rediscutir sin motivo)
 - **Motor: Render Postgres** (no Supabase). La app ya tiene auth propia, que es el
@@ -519,7 +533,27 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   comprobante ajeno además se guardaba como semáforo propio. El chequeo de
   `/api/validar` SIGUE además de este: esa ruta se puede llamar sola con
   cualquier payload. Una ruta nueva que lea el documento de una persona suma
-  el suyo. Detalle en HISTORIAL.md.
+  el suyo. **Lo mismo vale para lo que el afiliado manda al sindicato**
+  (`/api/reportar`, `/api/enviar-sindicato`, XSK H-0021, 2026-10-10): el CUIL
+  sale de la sesión y el recibo tiene que ser suyo (`_envio_del_afiliado`,
+  `_recibo_propio`); antes un afiliado podía marcar como enviado el recibo de
+  otro. Detalle en HISTORIAL.md.
+
+- **El CUIL/CUIT cumple el módulo 11 donde NACE, y no se cambia desde una
+  edición** (2026-10-10, `PLAN_CUIT_MOD11.md`, primera medida de la serie
+  XSK). Es el campo más importante del modelo y entre tablas se une POR
+  TEXTO, sin claves foráneas. El verificador (`cuit.py`) se exige en las
+  altas, la carga masiva, el registro de afiliado y de empresa, y los datos
+  de sindicato y usuarios (E-IDENT-01/02); donde se REFERENCIA un número que
+  ya existe (logins, reset de clave, filtros, criterios de notificación) se
+  busca tal cual, para que los sintéticos de los lotes —inválidos y que
+  quedan así— sigan entrando. Lo que lee la IA no se bloquea por el
+  verificador. Un número ya cargado **no se cambia desde el panel**
+  (E-IDENT-03): cambiarlo en una sola tabla cortaba la cuenta, los recibos y
+  los trámites de la persona; la única vía es `regularizar_cuit.py`, que lo
+  cambia en todas a la vez y no reescribe bitácoras. Una puerta de alta nueva
+  usa `_cuil_mal`/`_cuit_mal` de main.py (`test_cuit_puertas.py` clasifica
+  con `ast` toda ruta POST que reciba un CUIL/CUIT).
 
 - **El enmascarado es "mejor esfuerzo" y nunca estorba al análisis**
   (2026-09-24, definición de SDN, **reemplaza la línea roja 2 y el §6 de
@@ -535,7 +569,7 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   relaja es la verificación de pertenencia (un CUIL ajeno leído localmente
   corta como E-RECIBO-04): es seguridad, no enmascarado.
 
-## Estado actual (actualizado 2026-09-24)
+## Estado actual (actualizado 2026-10-10)
 Todo lo listado acá está mergeado a `main` y desplegado en Pruebas (Render
 sigue `main`, cada push redeploya), **incluido el punto 21**, que ya se portó
 sobre `main`.
@@ -845,6 +879,29 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     permiso `cotizantes` → `reportes`). Tests: `test_reportes_unificados.py`.
     Sigue en el próximo sprint: términos y condiciones del afiliado en el
     primer uso. Admin 0.45.01, Plataforma 0.37.01.
+
+31. **CUIL/CUIT con módulo 11** (2026-10-10, PR #84, **en Pruebas y
+    regularizado; falta la Demo**, que va con la próxima promoción; plan
+    `PLAN_CUIT_MOD11.md`, primera medida para las observaciones de XSK —
+    la siguiente es el alta de usuarios, H-0017). `cuit.py` como única
+    implementación; las puertas de alta exigen el verificador y el
+    navegador avisa antes (`static/cuit.js`); los accesos de la demo pasaron
+    a números válidos (`identificadores_demo.py`, `CLAUDE.md` → Accesos);
+    `regularizar_cuit.py` convierte las bases ya cargadas (diagnóstico →
+    planilla → ensayo → `--si` con backup), con tabla de traza
+    `CambioIdentificador` (migración `b6d3f1a8c902`). **Al desplegar en
+    cada entorno hay que correrla** (`DESPLIEGUE_RENDER.md`, "Regularizar
+    CUIL/CUIT"): hasta entonces los accesos nuevos de la demo no existen en
+    esa base. **Pruebas, hecho el 2026-10-10**: corrida como Job de Render
+    dentro del servicio (desde un contenedor en la nube no hay red al
+    puerto de Postgres; el Job usa la base y las variables del propio
+    servicio), con la exportación de Render y la recuperación a un momento
+    puntual como respaldo (el disco de un Job se borra al terminar). 22
+    números convertidos y 4 que no tenían corrección eliminados o vaciados
+    con autorización de SDN; el diagnóstico quedó en 0 manuales y 0 demo. Hecho por un equipo de agentes (3 de desarrollo, 2 de QA y un
+    revisor) con QA sobre una copia de la base como estaba Pruebas. XSK:
+    test IDS-06, H-0020 (este) y H-0021 (abierto, encontrado de paso).
+    Trabajador 0.44.01, Admin 0.47.01, Plataforma 0.43.01.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -1626,6 +1683,9 @@ se agrega ahí.
 - Migraciones: `alembic upgrade head` (aplicar) / `alembic revision --autogenerate -m "msg"` (crear)
 - Promover a la demo: `python promover_demo.py` (o `--solo-pr`). Nunca
   pushear a `demo` a mano.
+- Regularizar CUIL/CUIT de una base: `python regularizar_cuit.py diagnostico`
+  → revisar la planilla → `aplicar --planilla X.csv` (ensayo) → `--si --quien SDN`.
+  Detalle en `DESPLIEGUE_RENDER.md`.
 - En la Shell de Render, si `alembic` no se encuentra: usar `python -m alembic upgrade head`
 - Reset completo de la base local Postgres: `docker compose down -v && docker compose up -d`
   (espera a que el healthcheck pase) `&& alembic upgrade head && python cargar_demo.py`

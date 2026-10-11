@@ -202,13 +202,13 @@ def test_al_admin_local_no_le_llega_el_alta_de_seccional_abierta():
     # El encabezado VISIBLE, no la cadena suelta: el texto "Dar de alta una
     # seccional" también vive adentro del JS (la rama para el otro rol), y
     # buscarlo en todo el HTML daba un falso positivo.
-    assert '<h2 id="seccionales-titulo">Seccionales</h2>' in html
+    assert '<h2 class="titulo-pagina" id="seccionales-titulo">Seccionales</h2>' in html
     print("OK  test_al_admin_local_no_le_llega_el_alta_de_seccional_abierta")
 
 
 def test_al_super_admin_si_le_llega_abierta():
     html = _super().get("/admin").text
-    assert '<h2 id="seccionales-titulo">Dar de alta una seccional</h2>' in html
+    assert '<h2 class="titulo-pagina" id="seccionales-titulo">Dar de alta una seccional</h2>' in html
     caja = html[html.index('id="sec-card"') - 60:html.index('id="sec-card"') + 20]
     assert "oculto" not in caja
     print("OK  test_al_super_admin_si_le_llega_abierta")

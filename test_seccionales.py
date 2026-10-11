@@ -69,20 +69,20 @@ def test_alta_trabajador_con_seccional():
         sec = s.exec(select(Seccional).where(Seccional.sindicato_id == SID_UOM)).first()
         sec_id = sec.id
     admin_client.post("/admin/trabajador", data={
-        "cuil": "20111111119", "nombre": "Juan Pérez", "seccional_id": str(sec_id),
+        "cuil": "20111111112", "nombre": "Juan Pérez", "seccional_id": str(sec_id),
         **DOMICILIO_TRAB,
     })
     with Session(db.engine) as s:
-        t = s.exec(select(Trabajador).where(Trabajador.cuil == "20111111119")).first()
+        t = s.exec(select(Trabajador).where(Trabajador.cuil == "20111111112")).first()
         assert t.seccional_id == sec_id
     print("OK  test_alta_trabajador_con_seccional")
 
 
 def test_alta_trabajador_sin_seccional_es_opcional():
-    admin_client.post("/admin/trabajador", data={"cuil": "27222222224", "nombre": "Ana López",
+    admin_client.post("/admin/trabajador", data={"cuil": "27222222228", "nombre": "Ana López",
                                                 **DOMICILIO_TRAB})
     with Session(db.engine) as s:
-        t = s.exec(select(Trabajador).where(Trabajador.cuil == "27222222224")).first()
+        t = s.exec(select(Trabajador).where(Trabajador.cuil == "27222222228")).first()
         assert t.seccional_id is None
     print("OK  test_alta_trabajador_sin_seccional_es_opcional")
 
@@ -95,11 +95,11 @@ def test_no_se_puede_asignar_seccional_de_otro_sindicato():
         sec_fega = s.exec(select(Seccional).where(Seccional.sindicato_id == SID_FEGA)).first()
         sec_fega_id = sec_fega.id
     admin_client.post("/admin/trabajador", data={
-        "cuil": "20333333336", "nombre": "Pedro Gómez", "seccional_id": str(sec_fega_id),
+        "cuil": "20333333334", "nombre": "Pedro Gómez", "seccional_id": str(sec_fega_id),
         **DOMICILIO_TRAB,
     })
     with Session(db.engine) as s:
-        t = s.exec(select(Trabajador).where(Trabajador.cuil == "20333333336")).first()
+        t = s.exec(select(Trabajador).where(Trabajador.cuil == "20333333334")).first()
         assert t.seccional_id is None, "no debe poder asignar una seccional de otro sindicato"
     print("OK  test_no_se_puede_asignar_seccional_de_otro_sindicato")
 
@@ -108,14 +108,14 @@ def test_borrar_seccional_deja_a_los_trabajadores_sin_asignar():
     with Session(db.engine) as s:
         sec = s.exec(select(Seccional).where(Seccional.sindicato_id == SID_UOM)).first()
         sec_id = sec.id
-        t = s.exec(select(Trabajador).where(Trabajador.cuil == "20111111119")).first()
+        t = s.exec(select(Trabajador).where(Trabajador.cuil == "20111111112")).first()
         assert t.seccional_id == sec_id  # confirma el estado previo al borrado
 
     admin_client.post("/admin/seccional/borrar", data={"id": sec_id})
 
     with Session(db.engine) as s:
         assert s.get(Seccional, sec_id) is None
-        t = s.exec(select(Trabajador).where(Trabajador.cuil == "20111111119")).first()
+        t = s.exec(select(Trabajador).where(Trabajador.cuil == "20111111112")).first()
         assert t.seccional_id is None, "el trabajador debe quedar sin seccional, no bloquear el borrado"
     print("OK  test_borrar_seccional_deja_a_los_trabajadores_sin_asignar")
 

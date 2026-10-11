@@ -48,6 +48,13 @@ def _cuil(i: int) -> str:
     return f"{prefijo}{BASE_CUIL + i:08d}{i % 10}"
 
 
+def identificadores_sinteticos() -> tuple:
+    """(CUILs, CUITs) que este generador produce, para que
+    `regularizar_cuit.py` reconozca un número sintético sin copiar la regla
+    (PLAN_CUIT_MOD11.md, D3). Puro: no toca la base. No genera CUIT."""
+    return {_cuil(i) for i in range(CANTIDAD)}, set()
+
+
 def obtener_o_crear_sindicato() -> int:
     with db.get_session() as s:
         existente = s.exec(select(Sindicato).where(Sindicato.slug == SLUG_SINDICATO)).first()

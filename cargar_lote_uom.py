@@ -145,6 +145,13 @@ CUITS_EMPRESA = [_cuit_empresa(j) for j in range(len(EMPRESAS))]
 CODIGOS_TIPO = [codigo for _, codigo, _ in TIPOS_TRAMITE]
 
 
+def identificadores_sinteticos() -> tuple:
+    """(CUILs, CUITs) que este generador produce, para que
+    `regularizar_cuit.py` reconozca un número sintético sin copiar la regla
+    (PLAN_CUIT_MOD11.md, D3). Puro: no toca la base."""
+    return set(CUILS), set(CUITS_EMPRESA)
+
+
 def _ts(dias_atras: int, hora: int = None) -> str:
     h = hora if hora is not None else rnd.randint(8, 20)
     return f"{(HOY - timedelta(days=dias_atras)).isoformat()} {h:02d}:{rnd.randint(0, 59):02d}"
@@ -634,4 +641,4 @@ if __name__ == "__main__":
     print("\nLote UOM cargado. Accesos de ejemplo (clave = 5 primeros dígitos del CUIL):")
     for t in trabajadores[:3]:
         print(f"  Trabajador {t['nombre']}: CUIL {t['cuil']} / clave {t['cuil'][:5]}")
-    print("  Admin UOM: 20111111110 / uom-demo  →  /admin/dashboard")
+    print("  Admin UOM: 20111111120 / uom-demo  →  /admin/dashboard")

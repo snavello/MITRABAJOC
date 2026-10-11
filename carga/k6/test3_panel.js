@@ -23,7 +23,7 @@
 // Uso (SOLO contra Pruebas, con MOCK_EXTRACTOR=1; nunca demo ni producción --
 // correr.sh lo valida):
 //   BASE_URL=https://mitrabajo-pruebas.onrender.com \
-//   ADMIN_CUIT=20111111110 ADMIN_CLAVE=<clave del admin> \
+//   ADMIN_CUIT=20111111120 ADMIN_CLAVE=<clave del admin> \
 //   k6 run carga/k6/test3_panel.js
 // ADMIN_CUIT default = el Super Admin de UOM de la demo. El sindicato del admin
 // tiene que tener el módulo "dashboard" (el lote UOM lo trae) y al menos una
@@ -34,7 +34,7 @@ import { Rate, Counter } from 'k6/metrics';
 import { SharedArray } from 'k6/data';
 
 const BASE_URL = (__ENV.BASE_URL || 'https://mitrabajo-pruebas.onrender.com').replace(/\/$/, '');
-const ADMIN_CUIT = __ENV.ADMIN_CUIT || '20111111110';
+const ADMIN_CUIT = __ENV.ADMIN_CUIT || '20111111120';
 const ADMIN_CLAVE = __ENV.ADMIN_CLAVE || '';
 const RESUMEN = __ENV.RESUMEN_PANEL || 'test3_resumen.json';
 

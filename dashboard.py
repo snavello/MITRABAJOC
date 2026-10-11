@@ -29,7 +29,8 @@ from sqlalchemy import bindparam, text
 
 import fechas
 import db
-from validador import _norm_cuil, a_numero
+from cuit import normalizar as _norm_cuil
+from validador import a_numero
 
 
 # Estados del dashboard (3) <- estados reales de Tramite (5).

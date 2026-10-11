@@ -40,3 +40,8 @@ medicion_enmascarado/RESULTADO.json
 # Mapa funcional generado por mapa_funcional.py: se rehace del código en
 # segundos, no se versiona (ver CLAUDE.md).
 mapa-funcional/
+
+# Regularización de CUIL/CUIT (PLAN_CUIT_MOD11.md): la planilla lleva nombres de personas
+# y el backup previo lleva la base entera. Ninguno de los dos se versiona.
+regularizacion_cuit_*.csv
+backup_regularizacion_*

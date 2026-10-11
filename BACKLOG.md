@@ -29,6 +29,12 @@ se hace.
   los sintéticos) -- los tests y los accesos de CLAUDE.md usan esos números;
   (2) validar en el alta y el registro; (3) volver a exigir el verificador
   en `enmascarado.pertenece`, que es más firme que la distancia.
+  **Plan propuesto el 2026-10-10: [`PLAN_CUIT_MOD11.md`](PLAN_CUIT_MOD11.md)**
+  (diagnóstico, conversión de los números cargados a mano y recién después
+  exigir el verificador en las puertas de alta). **Hechos (1) y (2) el
+  2026-10-10** (CLAUDE.md, "Estado actual" 31). Queda (3), el verificador en
+  `enmascarado.pertenece`, y convertir los lotes sintéticos (etapa 5 del
+  plan, opcional).
 
 - [ ] **El empleador quedó con el defecto que se le corrigió al trabajador**
   (2026-09-22, al terminar "Una persona, un domicilio" en HISTORIAL.md).
