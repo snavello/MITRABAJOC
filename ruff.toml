@@ -1,0 +1,10 @@
+# Ruff: SOLO las reglas que encuentran errores reales, no estilo (2026-10-11).
+# E9 = el archivo no compila; F63 = comparaciones que siempre dan lo mismo
+# (`is` contra un literal, tuplas en un assert); F7 = break/continue/return
+# fuera de lugar; F82 = nombres sin definir. Son las cuatro que el CI de
+# GitHub usa por defecto con flake8: todo lo que marcan revienta al correr.
+# El estilo (imports sin usar, largo de línea) queda afuera a propósito.
+target-version = "py312"
+
+[lint]
+select = ["E9", "F63", "F7", "F82"]

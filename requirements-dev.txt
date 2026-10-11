@@ -14,6 +14,9 @@ pytest-playwright==0.9.0
 # XSK (XSANDERS Security Kit): análisis estático de seguridad. Dev/QA, no producción.
 bandit==1.9.4
 pip-audit==2.10.1
+# Errores de Python que revientan al correr (nombres sin definir, código que
+# no compila). Solo las reglas de ruff.toml, no estilo. Corre en el CI.
+ruff==0.13.3
 
 # Enmascarado (PLAN_ENMASCARADO.md): datos_prueba/enmascarado/generar.py dibuja
 # el recibo digital ficticio con reportlab.
