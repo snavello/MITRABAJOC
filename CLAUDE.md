@@ -930,8 +930,11 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
    advertencia visible). Es un riesgo de seguridad, sacar antes de usuarios reales.
    Se deja a propósito mientras dure la etapa de demos y pruebas.
 3. Los topes de base imponible previos a 2025 siguen marcados
-   `por_verificar` (menor urgencia, sin inconsistencia detectada) — ver
-   "Topes de base imponible" en HISTORIAL.md.
+   `por_verificar` (menor urgencia) — ver "Topes de base imponible" en
+   HISTORIAL.md. El primero ya no: la semilla arrancaba en un "2015-01" de
+   $37.191,95 que no existe, y un recibo real de feb-2015 mostró el valor
+   correcto, $36.531,48 desde 2014-09 (Res. ANSES 449/2014, migración
+   `e28e33b0aec5`). Los siguientes pueden tener errores parecidos.
 4. **Editor visual de formularios de Trámites con lienzo libre (drag X/Y)**,
    evaluado y pospuesto: se implementó en su lugar un camino más liviano
    (ancho por campo + reordenar arrastrando en lista + vista previa en
@@ -1603,6 +1606,17 @@ handler global (`error_no_manejado`) es genérico a propósito: cubre TODA la
 app, no solo recibos. El catálogo del sindicato tampoco se toma como
 confiable: códigos y alias se normalizan (`_clave`, `_alias_de`) antes de
 matchear. Detalle en HISTORIAL.md, "el 500 genérico que mentía".
+
+**Haber o descuento lo dice dónde está impresa la línea, nunca el signo**
+(2026-10-11). El extractor devuelve `lineas[].seccion` (`haberes` /
+`no_remunerativos` / `descuentos`) y `validador.repartir_por_zona` es la única
+implementación: una línea entre los descuentos con el signo contrario al de
+los descuentos de ESE recibo es un **reintegro** (devolución de Ganancias, de
+aportes): no suma al bruto ni a la base de los aportes, entra al neto, y el
+total de descuentos impreso puede venir bruto o neto de reintegros. Un haber
+negativo sigue siendo haber. Para un concepto pendiente de revisión manda la
+sección de la línea, no su tipo. Detalle en HISTORIAL.md, "Reintegros entre
+los descuentos".
 
 ## Códigos de error propios (`errores.py`)
 Todo error que ve una persona lleva un código (`raise ErrorApp("E-...")`),

@@ -6363,3 +6363,74 @@ nada. Tests en `test_envio_sindicato_idor.py`. Trabajador 0.44.02.
 En el mismo bloque se arregló `test_panel_avisos.py`, que tenía el CI en rojo
 desde el 2026-09-30: buscaba el título de Seccionales sin la clase
 `titulo-pagina` que le sumó la regla de títulos del 2026-09-24.
+
+## Reintegros entre los descuentos: la zona la dice dónde está impresa la línea, no el signo (2026-10-11)
+
+SDN subió un recibo de AEFIP de febrero de 2015, bien leído, que la app dio
+por mal. Entre los descuentos traía "IMP.GCIAS. PERIODOS ANTERIORES" en
+**+62.949,21**: una devolución de Impuesto a las Ganancias. El resultado decía
+"Total ingresos $107.924,61" (el impreso era 44.975,40), que la suma de
+descuentos (-16.489,08) no coincidía con la impresa (46.460,13), y una
+diferencia de $72,65 en jubilación y de $19,82 en PAMI y obra social.
+
+**Causa.** El código 433-001 no estaba en el catálogo, y
+`detectar_nuevos` decidía el tipo de un concepto nuevo **por el signo**:
+positivo = haber. El afiliado vio el "¿Remunerativo?" con el Sí marcado de
+fábrica, y el concepto quedó dado de alta como haber remunerativo (pendiente de
+revisión, pero los pendientes participan igual del cálculo). De ahí el bruto
+inflado, la base de los aportes inflada (no se notó porque el sueldo ya pasaba
+el tope) y los dos totales que no cerraban. El total de descuentos de AEFIP es
+la suma con signo de su columna: 62.949,21 - 16.489,08 = 46.460,13.
+
+**La regla.** Un recibo tiene dos zonas, haberes y descuentos, y a cuál
+pertenece una línea lo dice **dónde está impresa**. El signo solo dice si va
+en el sentido de su zona o al revés:
+
+- entre los descuentos y con el signo contrario al de los descuentos =
+  **reintegro**: no es remuneración (no suma al bruto ni a la base de los
+  aportes) y entra entero al neto;
+- entre los haberes y en negativo (inasistencias, ajuste de otro mes) = haber
+  que resta: baja el bruto y la base.
+
+El "signo de los descuentos" es de cada recibo: unos los imprimen en negativo
+y otros sin signo en su columna (ya se había visto en el banco de pruebas, con
+"173.520,83" contra "-173.520,83"). Lo define la mayoría de los aportes de ley,
+que son descuentos por definición.
+
+**Cómo quedó.**
+
+- `extractor.py` pide un dato nuevo por línea, `seccion`
+  (`haberes` / `no_remunerativos` / `descuentos`): es ubicación, no cálculo, y
+  con el recibo a la vista la IA lo ve sin dificultad. El banco de pruebas lo
+  compara entre modelos.
+- `validador.repartir_por_zona` es la ÚNICA implementación de la regla. La
+  usan `validar` (zona por el catálogo; para un concepto **pendiente** manda la
+  sección de la línea, porque ese tipo no lo eligió nadie), `totales_leidos`
+  (los totales de la pantalla de confirmar, que antes sumaba el navegador por
+  el signo) y `detectar_nuevos` (tipo por sección; el reintegro sale
+  `reintegro: true` y nunca remunerativo; los no remunerativos, en No). Sin
+  sección, el criterio viejo del signo.
+- El total de descuentos impreso se compara sin signo y, con reintegros, vale
+  tanto el bruto como el neto de reintegros. El neto se suma con el signo de
+  cada zona, así que también cierra en los recibos con descuentos sin signo,
+  que antes daban siempre "no coincide".
+- `totales` suma `reintegros` y el resultado trae la lista, más una alerta
+  `reintegro` que explica qué es y que no cambia los aportes. El reintegro de
+  una cuota sindical resta de la retención. En las pantallas: fila
+  "Reintegros" en los totales (afiliado, Reportes y modal del Panel), el chip
+  del concepto nuevo dice "reintegro" y el "¿Remunerativo?" solo se pregunta
+  para un haber.
+
+**El tope de esa fecha.** Con la regla aplicada, el recibo seguía marcando
+$72,65 de menos en jubilación. El recibo estaba bien: aplicaba $36.531,48, el
+tope de la Res. ANSES 449/2014 (art. 7, vigente desde el devengado septiembre
+2014). La semilla arrancaba en una vigencia "2015-01" de $37.191,95 marcada
+por_verificar, que no existe (el tope cambia en marzo y septiembre). Se corrigió
+el CSV y la migración `e28e33b0aec5` corrige las bases ya sembradas, solo si
+la fila sigue como la dejó la semilla. Probada sobre Postgres en los tres
+casos: fila de la semilla, vuelta atrás, y 2014-09 ya cargada a mano.
+
+Tests: `test_reintegros.py` (el recibo con sus importes reales e identidad
+sintética, el concepto pendiente cargado por el signo, un reintegro debajo del
+tope, descuentos sin signo, la cuota sindical, el alta por sección y el tope).
+Trabajador 0.44.03, Admin 0.47.02.

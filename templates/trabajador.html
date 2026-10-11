@@ -1628,25 +1628,19 @@ function dato(k, v) {
     <span class="v ${vacio?'vacio':''}">${vacio ? 'sin dato' : v}</span></div>`;
 }
 
-// Suma ingresos/descuentos a partir de las líneas crudas del recibo (preview,
-// antes de validar contra el catálogo de conceptos).
-function renderTotalesIngresosDescuentos(lineas) {
-  let ingresos = 0, descuentos = 0;
-  for (const ln of (lineas || [])) {
-    const imp = ln.importe || 0;
-    if (imp >= 0) ingresos += imp; else descuentos += Math.abs(imp);
-  }
-  return renderTotalesResumen({ingresos, descuentos, neto: ingresos - descuentos});
-}
-
-// Suma ingresos/descuentos/neto ya validados (resultado.totales, matcheados
-// contra el catálogo del sindicato) — la versión oficial, post-verificación.
+// Ingresos/descuentos/reintegros/neto. Los suma SIEMPRE el servidor, con la
+// regla de zonas de validador.py: en la pantalla de confirmar vienen en
+// totales_leidos (/api/leer) y en el resultado en totales (/api/validar).
+// Antes el preview los sumaba acá por el signo, y un reintegro de Ganancias
+// impreso en positivo entre los descuentos salía como ingreso.
 function renderTotalesResumen(totales) {
   if (!totales) return '';
-  const neto = totales.neto != null ? totales.neto : (totales.ingresos || 0) - (totales.descuentos || 0);
+  const neto = totales.neto != null ? totales.neto
+    : (totales.ingresos || 0) - (totales.descuentos || 0) + (totales.reintegros || 0);
   return `<div class="rc-card rc-totales">
     <div class="t"><span>Total ingresos</span><span class="imp">${peso(totales.ingresos || 0)}</span></div>
     <div class="t"><span>Total descuentos</span><span class="imp neg">${peso(totales.descuentos || 0)}</span></div>
+    ${totales.reintegros ? `<div class="t"><span>Reintegros</span><span class="imp">${peso(totales.reintegros)}</span></div>` : ''}
     <div class="t neto"><span>Total neto</span><span class="imp">${peso(neto)}</span></div>
   </div>`;
 }
@@ -1703,7 +1697,7 @@ function renderPreview(d) {
     h += `<div class="fila"><span>${ln.descripcion || ln.codigo || '—'}</span>
       <span class="imp ${neg?'neg':''}">${peso(ln.importe || 0)}</span></div>`;
   }
-  h += renderTotalesIngresosDescuentos(r.lineas);
+  h += renderTotalesResumen(d.totales_leidos);
   h += `</div>`;
 
   // Recibo formato nuevo (Anexo III): contribuciones patronales + costo laboral total.
@@ -1723,25 +1717,31 @@ function renderPreview(d) {
   // Conceptos nuevos detectados
   if (d.conceptos_nuevos && d.conceptos_nuevos.length) {
     h += `<div class="nuevos"><h2>Conceptos nuevos detectados</h2>
-      <p>Estos conceptos no estaban registrados. Marcá si cada uno es remunerativo (si suma para calcular los aportes). Al continuar se agregan y quedan marcados para que el sindicato los revise.</p>`;
+      <p>Estos conceptos no estaban registrados. En los haberes, marcá si cada uno es remunerativo (si suma para calcular los aportes). Al continuar se agregan y quedan marcados para que el sindicato los revise.</p>`;
     d.conceptos_nuevos.forEach((n, i) => {
       const neg = (n.importe || 0) < 0;
-      h += `<div class="chip ${n.tipo==='descuento'?'chip-descuento':''}">
+      h += `<div class="chip ${n.tipo==='descuento' && !n.reintegro ?'chip-descuento':''}">
         <div class="chip-info">
           <span class="chip-desc">${n.descripcion}</span>
-          <span class="tag">${n.tipo}</span>
+          <span class="tag">${n.reintegro ? 'reintegro' : n.tipo}</span>
         </div>
         <span class="imp ${neg?'neg':''}">${peso(n.importe)}</span>
-      </div>
-      <div class="remun" data-idx="${i}">
-        <span class="remun-lbl">¿Remunerativo?</span>
-        <div class="toggle" role="group">
-          <button type="button" class="tg-si activo" onclick="setRemun(${i}, true, this)">Sí</button>
-          <button type="button" class="tg-no" onclick="setRemun(${i}, false, this)">No</button>
-        </div>
       </div>`;
-      // Por defecto: remunerativo = true
-      n.remunerativo = true;
+      // "¿Remunerativo?" solo tiene sentido en un haber: la base de los
+      // aportes suma haberes. El valor de arranque lo propone el servidor
+      // según la sección del recibo (los no remunerativos vienen en No).
+      if (n.remunerativo === undefined) n.remunerativo = n.tipo === 'ingreso';
+      if (n.tipo === 'ingreso') {
+        h += `<div class="remun" data-idx="${i}">
+          <span class="remun-lbl">¿Remunerativo?</span>
+          <div class="toggle" role="group">
+            <button type="button" class="tg-si ${n.remunerativo ? 'activo' : ''}" onclick="setRemun(${i}, true, this)">Sí</button>
+            <button type="button" class="tg-no ${n.remunerativo ? '' : 'activo'}" onclick="setRemun(${i}, false, this)">No</button>
+          </div>
+        </div>`;
+      } else if (n.reintegro) {
+        h += `<div class="remun"><span class="remun-lbl">Plata que te devuelven: no suma a tu remuneración ni lleva aportes.</span></div>`;
+      }
     });
     h += `</div>`;
   }

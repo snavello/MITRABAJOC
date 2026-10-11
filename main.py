@@ -73,7 +73,7 @@ from extractor import (extraer, extraer_aportes, preparar_imagen, resumen_compar
                         comparar_lineas, ErrorLectura)
 from validador import (validar, detectar_nuevos, detectar_provisorios, buscar_similar,
                         rangos_se_superponen, cuil_no_coincide, cuiles_distintos,
-                        error_de_expresion,
+                        error_de_expresion, totales_leidos,
                         CATEGORIAS_UNIVERSALES)
 from filigrana import filigrana_svg
 from qr import qr_svg, url_verificacion, codigo_efimero, verificar_codigo_efimero, TTL_QR_SEGUNDOS
@@ -818,6 +818,9 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
     nuevos = detectar_nuevos(db.conceptos_como_dicts(sid), recibo["lineas"], cuit_empleador)
     return {
         "recibo": recibo, "conceptos_nuevos": nuevos,
+        # Los totales de la pantalla de confirmar los suma el servidor con la
+        # misma regla de zonas que la validación (reintegros incluidos).
+        "totales_leidos": totales_leidos(recibo),
         "advertencia_deposito": advertencia_ultimo_deposito(recibo),
         "alerta_adulteracion": alerta if alerta.get("detectada") else None,
     }
@@ -870,7 +873,7 @@ def api_validar(request: Request, payload: dict):
                     s.add(Concepto(
                         sindicato_id=sid,
                         codigo=n["codigo"], nombre=n["descripcion"], tipo=n["tipo"],
-                        remunerativo=n.get("remunerativo", True),
+                        remunerativo=n.get("remunerativo", n.get("tipo") == "ingreso"),
                         alias=[n["descripcion"]], pendiente_revision=True,
                         cuit_empleador=cuit_empleador or None,
                         codigo_generico=codigo_generico,
@@ -4788,7 +4791,7 @@ async def aprender(request: Request, archivos: list[UploadFile] = File(...)):
             if clave in acumulados:
                 acumulados[clave]["veces"] += 1
             else:
-                acumulados[clave] = {**n, "remunerativo": n["tipo"] == "ingreso", "veces": 1,
+                acumulados[clave] = {**n, "veces": 1,
                                       "cuit_empleador": cuit_empleador}
 
     # Antes de que el admin apruebe el lote, avisar si alguna propuesta se
