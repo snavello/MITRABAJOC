@@ -20,6 +20,7 @@ import urllib.request
 log = logging.getLogger(__name__)
 
 URL_VERIFICACION = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+LARGO_MAX_TOKEN = 2048
 TIMEOUT_SEGUNDOS = 5
 
 
@@ -42,6 +43,11 @@ def verificar(token: str, ip: str) -> bool:
     token = (token or "").strip()
     if not token:
         log.info("captcha: pedido sin token")
+        return False
+    if len(token) > LARGO_MAX_TOKEN:
+        # Un token de Turnstile mide unos cientos de caracteres; uno enorme no
+        # es un token, y no hay por qué mandárselo entero a Cloudflare.
+        log.info("captcha: token demasiado largo")
         return False
     try:
         campos = {"secret": _secret(), "response": token}

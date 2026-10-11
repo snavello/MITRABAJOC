@@ -17,6 +17,7 @@ Reglas:
   `Colm3na <no-responder@avisos.colm3na.com.ar>`.
 """
 import json
+import re
 import logging
 import os
 import urllib.request
@@ -46,7 +47,11 @@ def enviar(destino: str, asunto: str, texto: str) -> bool:
     if not habilitado():
         return False
     destino = (destino or "").strip()
-    if not destino:
+    if not destino_valido(destino):
+        # Un destino con coma, punto y coma, "<", saltos de línea o dos arrobas
+        # no sale nunca: el mail declarado lo escribe la persona (o un
+        # atacante), y un código de registro no puede llegar a un tercero.
+        log.info("correo: destino inválido, no se envía")
         return False
     try:
         cuerpo = json.dumps({"from": _remitente(), "to": [destino],
@@ -70,16 +75,35 @@ def enviar(destino: str, asunto: str, texto: str) -> bool:
         return False
 
 
+# Un mail "razonable": una sola arroba, sin espacios ni separadores de lista
+# ni los caracteres con que se arma una cabecera, y un dominio con punto.
+# No pretende validar RFC 5322: pretende que lo que se le pasa a Resend sea
+# UNA dirección y no dos, ni una cabecera.
+_MAIL_RE = re.compile(r"^[^@\s,;<>\"'()\[\]\\]{1,64}@[^@\s,;<>\"'()\[\]\\]+\.[^@\s,;<>\"'()\[\]\\.]{2,}$")
+LARGO_MAX_MAIL = 254
+
+
+def destino_valido(mail: str) -> bool:
+    mail = (mail or "").strip()
+    return 0 < len(mail) <= LARGO_MAX_MAIL and bool(_MAIL_RE.match(mail))
+
+
 def pista(mail: str) -> str:
     """'juan.perez@gmail.com' -> 'j***@gmail.com'. Lo justo para que la persona
-    reconozca su mail sin que la pantalla se lo regale a un tercero."""
+    reconozca su mail sin que la pantalla se lo regale a un tercero. Un mail
+    que no es válido no tiene pista (""), y una parte local de una sola letra
+    se tapa entera: 'j@x.com' -> '***@x.com'."""
     mail = (mail or "").strip()
-    if not mail:
+    if not destino_valido(mail):
         return ""
-    local, arroba, dominio = mail.partition("@")
-    if not arroba or not local:
-        return ""
+    local, _, dominio = mail.partition("@")
+    if len(local) == 1:
+        return f"***@{dominio}"
     return f"{local[0]}***@{dominio}"
+
+
+def _minutos(n: int) -> str:
+    return "1 minuto" if int(n) == 1 else f"{n} minutos"
 
 
 def texto_codigo_registro(codigo: str, minutos: int) -> tuple[str, str]:
@@ -88,7 +112,7 @@ def texto_codigo_registro(codigo: str, minutos: int) -> tuple[str, str]:
     cuerpo = (
         f"Tu código para crear tu cuenta en Colm3na es:\n\n"
         f"    {codigo}\n\n"
-        f"Ingresalo en la pantalla de registro. Vence en {minutos} minutos.\n\n"
+        f"Ingresalo en la pantalla de registro. Vence en {_minutos(minutos)}.\n\n"
         f"Si no lo pediste vos, ignorá este mensaje: no se crea ninguna cuenta "
         f"y nadie accede a tus datos.\n\n"
         f"Colm3na"
@@ -102,7 +126,7 @@ def texto_codigo_recuperacion(codigo: str, minutos: int) -> tuple[str, str]:
     cuerpo = (
         f"Tu código para elegir una clave nueva en Colm3na es:\n\n"
         f"    {codigo}\n\n"
-        f"Ingresalo en la pantalla de recuperación. Vence en {minutos} minutos.\n\n"
+        f"Ingresalo en la pantalla de recuperación. Vence en {_minutos(minutos)}.\n\n"
         f"Si no lo pediste vos, ignorá este mensaje: tu clave actual sigue "
         f"siendo la misma.\n\n"
         f"Colm3na"

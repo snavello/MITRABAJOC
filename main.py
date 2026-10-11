@@ -411,7 +411,16 @@ def _armar_csp(captcha_activo=None) -> str:
     return "; ".join(partes)
 
 
-CSP = _armar_csp()
+CSP = _armar_csp(False)          # la de siempre: la llevan todas las pantallas
+CSP_INGRESOS = _armar_csp()      # con Turnstile si hay claves: SOLO los ingresos
+# Dónde se dibuja el captcha: los dos logins con su pestaña de registro y las
+# pantallas de recuperación de clave. El resto de la app sigue con la CSP de
+# siempre, aunque el captcha esté prendido (QA etapa 1, hallazgo 3).
+RUTAS_CON_CAPTCHA = ("/ingresar", "/ingresar-empresa")
+
+
+def _csp_para(path: str) -> str:
+    return CSP_INGRESOS if any(path == r or path.startswith(r + "/") for r in RUTAS_CON_CAPTCHA) else CSP
 
 
 @app.middleware("http")
@@ -420,7 +429,7 @@ async def cabeceras_de_seguridad(request: Request, call_next):
     respuesta.headers.setdefault("X-Content-Type-Options", "nosniff")
     respuesta.headers.setdefault("X-Frame-Options", "DENY")
     respuesta.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-    respuesta.headers.setdefault("Content-Security-Policy", CSP)
+    respuesta.headers.setdefault("Content-Security-Policy", _csp_para(request.url.path))
     if COOKIE_SECURE:      # demo/prod, servidos por HTTPS
         respuesta.headers.setdefault(
             "Strict-Transport-Security", "max-age=31536000; includeSubDomains")

@@ -308,12 +308,20 @@ def test_la_csp_con_captcha_solo_se_ensancha_en_las_pantallas_de_registro(monkey
     poco, pero es superficie que D7 decía acotar.) Arreglo mínimo: que el
     middleware use `_armar_csp(True)` solo para `/ingresar`, `/ingresar-empresa`
     (y las de recuperación después) y la CSP de siempre para el resto."""
-    monkeypatch.setattr(main, "CSP", main._armar_csp(True))
+    # Arreglado: `CSP` (la de siempre) va a todas las pantallas y
+    # `CSP_INGRESOS` (con Turnstile si hay claves) solo a `RUTAS_CON_CAPTCHA`;
+    # el middleware elige con `_csp_para(path)`. Simulamos el captcha prendido
+    # sobre la de los ingresos, que es la única que puede ensancharse.
+    monkeypatch.setattr(main, "CSP_INGRESOS", main._armar_csp(True))
     c = TestClient(main.app)
-    for ruta in ("/plataforma", "/admin", "/ingresar-plataforma"):
+    for ruta in ("/plataforma", "/admin", "/ingresar-plataforma", "/app", "/entornos"):
         r = c.get(ruta, follow_redirects=False)
         csp = r.headers.get("Content-Security-Policy", "")
         assert "cloudflare" not in csp, f"{ruta} lleva la CSP ensanchada: {csp}"
+    for ruta in ("/ingresar", "/ingresar-empresa", "/ingresar?error=captcha"):
+        r = c.get(ruta, follow_redirects=False)
+        csp = r.headers.get("Content-Security-Policy", "")
+        assert "frame-src https://challenges.cloudflare.com" in csp, f"{ruta} sin la CSP del captcha: {csp}"
 
 
 # =============================================================================
