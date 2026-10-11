@@ -350,7 +350,10 @@ def test_todo_apagado_el_registro_hace_lo_mismo_que_antes(monkeypatch):
         t = s.exec(select(Trabajador).where(Trabajador.cuil == cuil)).first()
         assert t.registrado is True
         persona = db.asegurar_cuenta(s, cuil)
-        assert persona.clave_hash and persona.mail == "yo@correo.ar" and persona.telefono == "341555"
+        # Desde el registro en tres pasos el mail NO se pide ni se escribe en el
+        # alta (D1: el de contacto lo carga la persona en su perfil; el declarado
+        # va a `mail_declarado` solo tras confirmarlo con el código).
+        assert persona.clave_hash and persona.mail == "" and persona.telefono == "341555"
     _limpiar()
 
 
@@ -433,11 +436,16 @@ def test_el_widget_no_se_dibuja_sin_clave_y_va_antes_del_boton(monkeypatch):
     c = TestClient(main.app)
     monkeypatch.setitem(main.templates.env.globals, "captcha_site_key", "")
     for ruta in ("/ingresar", "/ingresar-empresa"):
-        assert "turnstile" not in c.get(ruta).text.lower()
+        # Sin clave no hay widget ni script de Cloudflare (el JS del registro
+        # puede nombrar `window.turnstile` para resetearlo: eso no carga nada).
+        pagina = c.get(ruta).text.lower()
+        assert "cf-turnstile" not in pagina and "challenges.cloudflare.com" not in pagina
     monkeypatch.setitem(main.templates.env.globals, "captcha_site_key", "k")
     for ruta in ("/ingresar", "/ingresar-empresa"):
         h = c.get(ruta).text
-        assert h.count("cf-turnstile") == 1                      # una sola instancia, no una por pestaña
+        # Una sola instancia del WIDGET (el JS del registro nombra la clase
+        # para resetearlo, eso no es un widget), no una por pestaña.
+        assert h.count('class="cf-turnstile"') == 1
         reg = h[h.index('id="form-registro"'):]
-        assert reg.index("cf-turnstile") < reg.index("Crear mi cuenta")
+        assert reg.index('class="cf-turnstile"') < reg.index("Crear mi cuenta")
         assert "cf-turnstile" not in h[:h.index('id="form-registro"')]
