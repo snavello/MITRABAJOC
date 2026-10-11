@@ -1692,8 +1692,10 @@ se agrega ahí.
   simulada. Preferir cambios quirúrgicos y probar antes de avanzar.
 - Sd tiene skills intermedias de Python, trabaja en Argentina, deploya con
   GitHub + Render (push dispara redeploy).
-- Preferencia: durante la construcción mostrar poco output intermedio; dar un
-  resumen claro al final.
+- **Reportes, no narración** (regla de SDN, 2026-10-11): no contar paso por
+  paso lo que se va haciendo. Mientras dura el trabajo, un reporte cada ~10
+  minutos o al terminar, con tres partes: qué se hizo, qué quedó listo y qué
+  queda pendiente. Entre reporte y reporte, nada.
 - Sesiones largas acumulan contexto y eso enlentece cada respuesta — para
   bloques de trabajo sin relación entre sí, preferir abrir una sesión nueva
   en vez de seguir apilando todo en la misma conversación.
