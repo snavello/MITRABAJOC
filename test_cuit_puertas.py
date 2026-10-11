@@ -699,6 +699,8 @@ REFERENCIAS = {
     # Confirmar identidad / restablecer clave desde el panel (PLAN_REGISTRO.md): actúan sobre una cuenta que ya existe.
     "admin_trabajador_confirmar_identidad", "admin_trabajador_restablecer_clave",
     "admin_empleador_confirmar_identidad", "admin_empleador_restablecer_clave",
+    # Recuperación de clave autoservicio: busca la cuenta tal cual, no da de alta.
+    "recuperar_iniciar", "empresa_recuperar_iniciar",
 }
 # Un campo llamado `usuario` que no es un CUIL: el alias de un usuario nominal
 # de plataforma ("jperez").

@@ -6719,6 +6719,24 @@ def ingresar(request: Request):
         "provincias": db.PROVINCIAS_AR})
 
 
+def _abrir_sesion_trabajador(cuil: str, cuenta_id: int):
+    """Abre la sesión del afiliado y devuelve la respuesta que lo lleva a la
+    portada, o None si su CUIL ya no está en ningún sindicato activo. Es el
+    bloque del login, sacado a una función para que el cambio de la clave
+    temporal (que abre la sesión recién DESPUÉS de cambiarla) abra exactamente
+    la misma."""
+    sinds = db.sindicatos_de_cuil(cuil)
+    if not sinds:
+        return None
+    token = auth.crear_sesion("trabajador", id_usuario=cuenta_id, sindicato_id=0, ident=cuil)
+    db.registrar_acceso("trabajador", sindicato_id=sinds[0]["id"] if len(sinds) == 1 else None)
+    # sindicato_id 0 = todavía no eligió; se define en /elegir o directo si hay uno solo
+    resp = RedirectResponse("/app/inicio", status_code=303)
+    set_cookie_segura(resp, COOKIE_TRABAJADOR, token)
+    set_cookie_segura(resp, "cuil_trab", cuil)
+    return resp
+
+
 @app.post("/trabajador/login")
 def trabajador_login(request: Request, cuil: str = Form(...), clave: str = Form(...)):
     if _login_bloqueado(request):
@@ -6730,16 +6748,17 @@ def trabajador_login(request: Request, cuil: str = Form(...), clave: str = Form(
             _login_fallo(request)
             return RedirectResponse("/ingresar?error=login", status_code=303)
         cuenta_id = cuenta.id   # capturar el id ANTES de cerrar la sesión
+        temporal = bool(cuenta.clave_temporal)
     _login_ok(request)
-    sinds = db.sindicatos_de_cuil(cuil)
-    if not sinds:
+    if temporal:
+        # La puso el administrador del sindicato (PLAN_REGISTRO.md, D6): la
+        # clave es correcta pero NO se abre sesión hasta que la persona elija la
+        # suya. El token firmado dura 10 minutos y solo sirve para esa pantalla.
+        token = auth.firmar_paso({"cuil": cuil}, minutos=10, proposito="cambio_clave")
+        return RedirectResponse(f"/ingresar/cambiar-clave?token={token}", status_code=303)
+    resp = _abrir_sesion_trabajador(cuil, cuenta_id)
+    if resp is None:
         return RedirectResponse("/ingresar?error=sinsind", status_code=303)
-    token = auth.crear_sesion("trabajador", id_usuario=cuenta_id, sindicato_id=0, ident=cuil)
-    db.registrar_acceso("trabajador", sindicato_id=sinds[0]["id"] if len(sinds) == 1 else None)
-    # sindicato_id 0 = todavía no eligió; se define en /elegir o directo si hay uno solo
-    resp = RedirectResponse("/app/inicio", status_code=303)
-    set_cookie_segura(resp, COOKIE_TRABAJADOR, token)
-    set_cookie_segura(resp, "cuil_trab", cuil)
     return resp
 
 
@@ -7199,12 +7218,152 @@ def app_portada(request: Request):
             "encuestas_pendientes": db.contar_encuestas_pendientes(cuil, sid_activo)
                                     if "encuestas" in _modulos_de(sid_activo) else 0,
             "modulos": _modulos_de(sid_activo),
+            # Tarjeta no bloqueante "Confirmá tu mail" para las cuentas de nivel 1.
+            "aviso_mail": _aviso_mail_de(cuil),
             "version": VERSION_TRABAJADOR, "fecha_version": FECHA_VERSION,
         })
     # Varios y no eligió → selector (mismo criterio que /app)
     return templates.TemplateResponse("elegir_sindicato.html", {
         "request": request, "sindicatos": sinds, "marca_plataforma": db.marca_plataforma(),
     })
+
+
+# ---------- Confirmar el mail de una cuenta ya registrada (PLAN_REGISTRO.md, D10 y §4.6) ----------
+# Las cuentas creadas antes del registro por mail quedaron en nivel 1. La portada
+# les muestra una tarjeta NO bloqueante que lleva acá; con el código la cuenta
+# pasa a nivel 2. Exige la sesión de trabajador y toma el CUIL de ella, nunca de
+# un campo del formulario.
+_RX_MAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]{2,}$")
+
+
+def _aviso_mail_de(cuil: str) -> bool:
+    """¿Va la tarjeta de confirmar el mail en la portada? Solo para el nivel 1 y
+    solo si el canal de mail está prendido: sin canal no habría cómo confirmar."""
+    if not correo.habilitado():
+        return False
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        return bool(cuenta) and (cuenta.nivel_fiabilidad or 1) == 1
+
+
+def _texto_codigo_confirmacion(codigo: str, minutos: int) -> tuple[str, str]:
+    """(asunto, cuerpo) del mail que confirma el mail de una cuenta existente.
+    Mismo criterio que correo.py: sin nombre de la persona y sin enlaces."""
+    asunto = f"Tu código para confirmar tu mail en Colm3na: {codigo}"
+    cuerpo = (
+        f"Tu código para confirmar tu mail en Colm3na es:\n\n"
+        f"    {codigo}\n\n"
+        f"Ingresalo en la pantalla donde lo pediste. Vence en {minutos} minutos.\n\n"
+        f"Si no lo pediste vos, ignorá este mensaje: tu cuenta no cambia.\n\n"
+        f"Colm3na"
+    )
+    return asunto, cuerpo
+
+
+@app.get("/app/confirmar-mail", response_class=HTMLResponse)
+def confirmar_mail_pagina(request: Request):
+    """Pantalla de dos pasos (mail -> código) para subir la cuenta a nivel 2."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = _cuil_seguro(request)
+    if not ses or not cuil:
+        return RedirectResponse("/ingresar", status_code=303)
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        return RedirectResponse("/app/inicio", status_code=303)
+    marca = db.marca_sindicato(sid)
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        nivel = (cuenta.nivel_fiabilidad or 1) if cuenta else 1
+        pista = correo.pista(db.mail_padron_de(s, cuil))
+        acepta_declarado = db.acepta_mail_declarado(s, cuil)
+    return templates.TemplateResponse("confirmar_mail.html", {
+        "request": request, "sindicato": marca["nombre"], "marca": marca,
+        "marca_plataforma": db.marca_plataforma(),
+        "canal": correo.habilitado(), "ya_confirmado": nivel >= 2,
+        "pista": pista, "acepta_declarado": acepta_declarado})
+
+
+@app.post("/app/confirmar-mail/iniciar")
+def confirmar_mail_iniciar(request: Request, mail: str = Form("")):
+    """Manda el código: al mail del padrón si el sindicato cargó uno; si no, y el
+    sindicato acepta el declarado, al que escribió la persona. Si no hay a dónde
+    mandarlo, lo dice: el camino es pedirle al sindicato que cargue el mail."""
+    cuil = _cuil_seguro(request)
+    if not sesion_actual(request, "trabajador") or not cuil:
+        raise HTTPException(403, "No autorizado")
+    if _login_bloqueado(request, _intentos_registro):
+        raise ErrorApp("E-REGISTRO-05")
+    if not correo.habilitado():
+        raise ErrorApp("E-REGISTRO-06")
+    mail = (mail or "").strip()
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if not cuenta:
+            raise HTTPException(403, "No autorizado")
+        if (cuenta.nivel_fiabilidad or 1) >= 2:
+            return JSONResponse({"paso": "listo", "mensaje": "Tu cuenta ya tiene el mail confirmado."})
+        destino = db.mail_padron_de(s, cuil)
+        origen = "padron"
+        if not destino:
+            if not (db.acepta_mail_declarado(s, cuil) and mail):
+                return JSONResponse({"paso": "sindicato", "mensaje":
+                    "Tu sindicato todavía no tiene un mail tuyo cargado. Pedile que lo cargue "
+                    "y volvé a intentar."})
+            if not _RX_MAIL.match(mail) or len(mail) > 200:
+                raise HTTPException(400, "Escribí un mail válido.")
+            destino, origen = mail, "declarado"
+        if db.codigos_recientes(s, "trabajador", cuil, "confirmacion") >= db.CODIGOS_POR_HORA:
+            raise ErrorApp("E-REGISTRO-03")
+        fila, codigo = db.crear_codigo(s, "trabajador", cuil, "confirmacion", destino, origen,
+                                       _ip_de(request))
+        s.commit()          # el pedido cuenta para el cupo aunque el mail no salga
+        codigo_id = fila.id
+    asunto, cuerpo = _texto_codigo_confirmacion(codigo, db.CODIGO_VIGENCIA_MINUTOS)
+    if not correo.enviar(destino, asunto, cuerpo):
+        raise ErrorApp("E-REGISTRO-06")
+    return JSONResponse({
+        "paso": "codigo", "pista": correo.pista(destino),
+        "token": auth.firmar_paso({"cuil": cuil, "codigo_id": codigo_id},
+                                  proposito="confirmar_mail")})
+
+
+@app.post("/app/confirmar-mail")
+def confirmar_mail(request: Request, token: str = Form(""), codigo: str = Form("")):
+    """Verifica el código y sube la cuenta a nivel 2 (`mail_padron` o
+    `mail_declarado`). El mail declarado va a `mail_declarado`; `mail` es del
+    sindicato y esta ruta NUNCA lo escribe."""
+    cuil = _cuil_seguro(request)
+    if not sesion_actual(request, "trabajador") or not cuil:
+        raise HTTPException(403, "No autorizado")
+    if _login_bloqueado(request, _intentos_registro):
+        raise ErrorApp("E-REGISTRO-05")
+    d = auth.leer_paso(token, "confirmar_mail")
+    if not d or d.get("cuil") != cuil:          # un token de otra persona no sirve
+        raise ErrorApp("E-REGISTRO-02")
+    with db.get_session() as s:
+        fila = s.get(db.CodigoVerificacion, d.get("codigo_id") or 0)
+        if (not fila or fila.tipo != "trabajador" or fila.proposito != "confirmacion"
+                or fila.identificador != cuil):
+            raise ErrorApp("E-REGISTRO-02")
+        resultado = db.verificar_codigo(s, fila.id, codigo)
+        s.commit()          # también tras "incorrecto": el intento tiene que contar
+        if resultado != "ok":
+            _login_fallo(request, _intentos_registro)
+            raise ErrorApp("E-REGISTRO-02")
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if not cuenta:
+            raise ErrorApp("E-REGISTRO-02")
+        if fila.origen_destino == "declarado":
+            db.subir_nivel(s, cuenta, "mail_declarado")
+            cuenta.mail_declarado = fila.destino
+            cuenta.mail_declarado_confirmado = fechas.ahora_texto()
+        else:
+            db.subir_nivel(s, cuenta, "mail_padron")
+        s.add(cuenta)
+        s.commit()
+        nivel = cuenta.nivel_fiabilidad
+    _login_ok(request, _intentos_registro)
+    return {"ok": True, "nivel": nivel}
 
 
 @app.post("/api/perfil")
@@ -7431,6 +7590,207 @@ def verificar_credencial(token: str, request: Request, k: str = ""):
     })
 
 
+# ---------- Recuperación de clave y cambio de la clave temporal (PLAN_REGISTRO.md, D6) ----------
+# El afiliado y la empresa comparten la mecánica y no las tablas: cada rol tiene
+# sus rutas, su cuenta y su tipo de código (aislamiento total trabajador/
+# empleador), y lo común vive en estas funciones que reciben el rol.
+CLAVE_MINIMA = 6
+MENSAJE_RECUPERACION_SINDICATO = (
+    "Si tu cuenta tiene un mail cargado por el sindicato, te mandamos un código. "
+    "Si no te llega, pedile al sindicato que te restablezca la clave.")
+
+# rol -> cómo se llama su cuenta, su identificador y cómo se ve su mail del padrón.
+_ROLES_CLAVE = {
+    "trabajador": {"tipo": "trabajador", "cuenta": CuentaTrabajador, "campo": "cuil",
+                   "mail_padron": db.mail_padron_de, "login": "/ingresar",
+                   "base": "/ingresar", "etiqueta": "CUIL", "abrir": lambda ident, cid: _abrir_sesion_trabajador(ident, cid)},
+    "empleador": {"tipo": "empleador", "cuenta": CuentaEmpleador, "campo": "cuit",
+                  "mail_padron": db.mail_padron_de_empresa, "login": "/ingresar-empresa",
+                  "base": "/ingresar-empresa", "etiqueta": "CUIT", "abrir": lambda ident, cid: _abrir_sesion_empleador(ident, cid)},
+}
+
+
+def _fila_de_codigo_valida(s, d: dict, rol: str, proposito: str):
+    """La fila del código que nombra un token firmado, SI es de esta persona,
+    de este rol y de este propósito. El token ya viene firmado, pero un código
+    de otro CUIL o de otro trámite no tiene que servir ni por error."""
+    cfg = _ROLES_CLAVE[rol]
+    fila = s.get(db.CodigoVerificacion, d.get("codigo_id") or 0)
+    if (not fila or fila.tipo != cfg["tipo"] or fila.proposito != proposito
+            or fila.identificador != d.get(cfg["campo"])):
+        return None
+    return fila
+
+
+def _validar_claves_nuevas(clave: str, clave2: str):
+    if clave != clave2:
+        raise HTTPException(400, "Las dos claves no coinciden.")
+    if len(clave) < CLAVE_MINIMA:
+        raise HTTPException(400, f"La clave tiene que tener al menos {CLAVE_MINIMA} caracteres.")
+
+
+def _pagina_recuperar(request: Request, rol: str):
+    cfg = _ROLES_CLAVE[rol]
+    return templates.TemplateResponse("recuperar_clave.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "rol": rol, "etiqueta": cfg["etiqueta"], "base": cfg["base"], "login": cfg["login"],
+        "campo": cfg["campo"], "clave_minima": CLAVE_MINIMA})
+
+
+def _recuperar_iniciar(request: Request, rol: str, identificador: str, token_captcha: str):
+    """Paso 1: freno -> captcha -> busca la cuenta TAL CUAL (es una referencia,
+    no un alta: sin verificador). Solo si hay cuenta con clave, mail del PADRÓN
+    y canal de mail prendido se manda el código; en cualquier otro caso la
+    respuesta es la misma, palabra por palabra, para no revelar si el número
+    tiene cuenta. Un mail solo declarado no alcanza: la recuperación sin el
+    mail del sindicato la hace el administrador."""
+    cfg = _ROLES_CLAVE[rol]
+    if _login_bloqueado(request, _intentos_registro):
+        raise ErrorApp("E-REGISTRO-05")
+    if not captcha.verificar(token_captcha, _ip_de(request)):
+        _login_fallo(request, _intentos_registro)
+        raise ErrorApp("E-REGISTRO-01")
+    ident = _norm_cuil(identificador)
+    with db.get_session() as s:
+        modelo = cfg["cuenta"]
+        cuenta = s.exec(select(modelo).where(getattr(modelo, cfg["campo"]) == ident)).first()
+        mail = ""
+        if cuenta and cuenta.clave_hash and correo.habilitado():
+            mail = cfg["mail_padron"](s, ident)
+        if not mail:
+            _login_fallo(request, _intentos_registro)
+            return JSONResponse({"paso": "sindicato", "mensaje": MENSAJE_RECUPERACION_SINDICATO})
+        if db.codigos_recientes(s, cfg["tipo"], ident, "recuperacion") >= db.CODIGOS_POR_HORA:
+            raise ErrorApp("E-REGISTRO-03")
+        fila, codigo = db.crear_codigo(s, cfg["tipo"], ident, "recuperacion", mail, "padron",
+                                       _ip_de(request))
+        s.commit()          # el pedido cuenta para el cupo aunque el mail no salga
+        codigo_id = fila.id
+    asunto, cuerpo = correo.texto_codigo_recuperacion(codigo, db.CODIGO_VIGENCIA_MINUTOS)
+    if not correo.enviar(mail, asunto, cuerpo):
+        raise ErrorApp("E-REGISTRO-06")
+    return JSONResponse({
+        "paso": "codigo", "pista": correo.pista(mail),
+        "token": auth.firmar_paso({cfg["campo"]: ident, "codigo_id": codigo_id},
+                                  proposito="recuperacion")})
+
+
+def _recuperar_confirmar(request: Request, rol: str, token: str, codigo: str,
+                         clave: str, clave2: str):
+    """Paso 3: el token del paso 1 + el código + la clave nueva dos veces. Las
+    claves se validan ANTES de gastar el código, así un error de tipeo no
+    obliga a pedir otro."""
+    cfg = _ROLES_CLAVE[rol]
+    if _login_bloqueado(request, _intentos_registro):
+        raise ErrorApp("E-REGISTRO-05")
+    d = auth.leer_paso(token, "recuperacion")
+    if not d or not d.get(cfg["campo"]):
+        raise ErrorApp("E-REGISTRO-02")
+    _validar_claves_nuevas(clave, clave2)
+    with db.get_session() as s:
+        fila = _fila_de_codigo_valida(s, d, rol, "recuperacion")
+        if not fila:
+            raise ErrorApp("E-REGISTRO-02")
+        resultado = db.verificar_codigo(s, fila.id, codigo)
+        s.commit()          # también tras "incorrecto": el intento tiene que contar
+        if resultado != "ok":
+            _login_fallo(request, _intentos_registro)
+            raise ErrorApp("E-REGISTRO-02")
+        modelo = cfg["cuenta"]
+        cuenta = s.exec(select(modelo).where(getattr(modelo, cfg["campo"]) == d[cfg["campo"]])).first()
+        if not cuenta:
+            raise ErrorApp("E-REGISTRO-02")
+        cuenta.clave_hash = auth.hashear_clave(clave)
+        cuenta.clave_temporal = False
+        s.add(cuenta)
+        s.commit()
+    _login_ok(request, _intentos_registro)
+    return RedirectResponse(f"{cfg['login']}?ok=clave", status_code=303)
+
+
+def _pagina_cambiar_clave(request: Request, rol: str, token: str, error: str = "", status: int = 200):
+    cfg = _ROLES_CLAVE[rol]
+    d = auth.leer_paso(token, "cambio_clave")
+    vigente = bool(d and d.get(cfg["campo"]))
+    return templates.TemplateResponse("cambiar_clave.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "rol": rol, "etiqueta": cfg["etiqueta"], "base": cfg["base"], "login": cfg["login"],
+        "token": token if vigente else "", "vencido": not vigente, "error": error,
+        "clave_minima": CLAVE_MINIMA}, status_code=status)
+
+
+def _cambiar_clave_temporal(request: Request, rol: str, token: str, clave_actual: str,
+                            clave: str, clave2: str):
+    """Reemplaza la clave temporal por la que elige la persona y RECIÉN ahí abre
+    la sesión. Verificar la temporal acá (y no solo en el login) es lo que impide
+    que el token firmado, por sí solo, alcance para elegir una clave. Los
+    intentos con una temporal equivocada cuentan para el freno de los logins."""
+    cfg = _ROLES_CLAVE[rol]
+    if _login_bloqueado(request):
+        return _pagina_cambiar_clave(request, rol, token,
+                                     "Demasiados intentos seguidos. Esperá un minuto y volvé a intentar.", 429)
+    d = auth.leer_paso(token, "cambio_clave")
+    if not d or not d.get(cfg["campo"]):
+        return _pagina_cambiar_clave(request, rol, "")
+    if clave != clave2:
+        return _pagina_cambiar_clave(request, rol, token, "Las dos claves no coinciden.", 400)
+    if len(clave) < CLAVE_MINIMA:
+        return _pagina_cambiar_clave(request, rol, token,
+                                     f"La clave tiene que tener al menos {CLAVE_MINIMA} caracteres.", 400)
+    if clave == clave_actual:
+        return _pagina_cambiar_clave(request, rol, token,
+                                     "Elegí una clave distinta de la temporal.", 400)
+    with db.get_session() as s:
+        modelo = cfg["cuenta"]
+        cuenta = s.exec(select(modelo).where(getattr(modelo, cfg["campo"]) == d[cfg["campo"]])).first()
+        if not cuenta or not cuenta.clave_temporal:
+            return _pagina_cambiar_clave(request, rol, "")
+        if not auth.verificar_clave(clave_actual, cuenta.clave_hash):
+            _login_fallo(request)
+            return _pagina_cambiar_clave(request, rol, token, "La clave temporal no es correcta.", 400)
+        cuenta.clave_hash = auth.hashear_clave(clave)
+        cuenta.clave_temporal = False
+        s.add(cuenta)
+        s.commit()
+        cuenta_id = cuenta.id
+    _login_ok(request)
+    resp = cfg["abrir"](d[cfg["campo"]], cuenta_id)
+    if resp is None:
+        return RedirectResponse(f"{cfg['login']}?error=sinsind", status_code=303)
+    return resp
+
+
+@app.get("/ingresar/recuperar", response_class=HTMLResponse)
+def recuperar_clave_pagina(request: Request):
+    """Recuperar la clave del afiliado: CUIL + captcha, código al mail del
+    padrón y clave nueva, los tres pasos en una página."""
+    return _pagina_recuperar(request, "trabajador")
+
+
+@app.post("/ingresar/recuperar/iniciar")
+def recuperar_iniciar(request: Request, cuil: str = Form(""),
+                      token_captcha: str = Form("", alias="cf-turnstile-response")):
+    return _recuperar_iniciar(request, "trabajador", cuil, token_captcha)
+
+
+@app.post("/ingresar/recuperar")
+def recuperar_confirmar(request: Request, token: str = Form(""), codigo: str = Form(""),
+                        clave: str = Form(""), clave2: str = Form("")):
+    return _recuperar_confirmar(request, "trabajador", token, codigo, clave, clave2)
+
+
+@app.get("/ingresar/cambiar-clave", response_class=HTMLResponse)
+def cambiar_clave_pagina(request: Request, token: str = ""):
+    """Cambio obligatorio de la clave temporal que puso el sindicato."""
+    return _pagina_cambiar_clave(request, "trabajador", token)
+
+
+@app.post("/ingresar/cambiar-clave")
+def cambiar_clave_temporal(request: Request, token: str = Form(""), clave_actual: str = Form(""),
+                           clave: str = Form(""), clave2: str = Form("")):
+    return _cambiar_clave_temporal(request, "trabajador", token, clave_actual, clave, clave2)
+
+
 @app.get("/trabajador/salir")
 def trabajador_salir():
     resp = RedirectResponse("/ingresar", status_code=303)
@@ -7452,6 +7812,19 @@ def ingresar_empresa(request: Request):
         "request": request, "marca_plataforma": db.marca_plataforma()})
 
 
+def _abrir_sesion_empleador(cuit: str, cuenta_id: int):
+    """Lo mismo que `_abrir_sesion_trabajador`, para la empresa."""
+    sinds = db.sindicatos_de_cuit_empleador(cuit)
+    if not sinds:
+        return None
+    token = auth.crear_sesion("empleador", id_usuario=cuenta_id, sindicato_id=0, ident=cuit)
+    db.registrar_acceso("empresa", sindicato_id=sinds[0]["id"] if len(sinds) == 1 else None)
+    resp = RedirectResponse("/empresa/inicio", status_code=303)
+    set_cookie_segura(resp, COOKIE_EMPLEADOR, token)
+    set_cookie_segura(resp, "cuit_emp", cuit)
+    return resp
+
+
 @app.post("/empresa/login")
 def empresa_login(request: Request, cuit: str = Form(...), clave: str = Form(...)):
     if _login_bloqueado(request):
@@ -7463,15 +7836,14 @@ def empresa_login(request: Request, cuit: str = Form(...), clave: str = Form(...
             _login_fallo(request)
             return RedirectResponse("/ingresar-empresa?error=login", status_code=303)
         cuenta_id = cuenta.id   # capturar el id ANTES de cerrar la sesión
+        temporal = bool(cuenta.clave_temporal)
     _login_ok(request)
-    sinds = db.sindicatos_de_cuit_empleador(cuit)
-    if not sinds:
+    if temporal:
+        token = auth.firmar_paso({"cuit": cuit}, minutos=10, proposito="cambio_clave")
+        return RedirectResponse(f"/ingresar-empresa/cambiar-clave?token={token}", status_code=303)
+    resp = _abrir_sesion_empleador(cuit, cuenta_id)
+    if resp is None:
         return RedirectResponse("/ingresar-empresa?error=sinsind", status_code=303)
-    token = auth.crear_sesion("empleador", id_usuario=cuenta_id, sindicato_id=0, ident=cuit)
-    db.registrar_acceso("empresa", sindicato_id=sinds[0]["id"] if len(sinds) == 1 else None)
-    resp = RedirectResponse("/empresa/inicio", status_code=303)
-    set_cookie_segura(resp, COOKIE_EMPLEADOR, token)
-    set_cookie_segura(resp, "cuit_emp", cuit)
     return resp
 
 
@@ -7647,6 +8019,37 @@ def empresa_cambiar():
     resp = RedirectResponse("/empresa/inicio", status_code=303)
     resp.delete_cookie("sind_elegido_emp")
     return resp
+
+
+# ---------- Recuperación de clave y cambio de la clave temporal de la empresa ----------
+# Espejo de las rutas del afiliado (ver `_ROLES_CLAVE`): CuentaEmpleador, CUIT y
+# el mail del primer alta de Empleador que lo tenga.
+@app.get("/ingresar-empresa/recuperar", response_class=HTMLResponse)
+def empresa_recuperar_pagina(request: Request):
+    return _pagina_recuperar(request, "empleador")
+
+
+@app.post("/ingresar-empresa/recuperar/iniciar")
+def empresa_recuperar_iniciar(request: Request, cuit: str = Form(""),
+                              token_captcha: str = Form("", alias="cf-turnstile-response")):
+    return _recuperar_iniciar(request, "empleador", cuit, token_captcha)
+
+
+@app.post("/ingresar-empresa/recuperar")
+def empresa_recuperar_confirmar(request: Request, token: str = Form(""), codigo: str = Form(""),
+                                clave: str = Form(""), clave2: str = Form("")):
+    return _recuperar_confirmar(request, "empleador", token, codigo, clave, clave2)
+
+
+@app.get("/ingresar-empresa/cambiar-clave", response_class=HTMLResponse)
+def empresa_cambiar_clave_pagina(request: Request, token: str = ""):
+    return _pagina_cambiar_clave(request, "empleador", token)
+
+
+@app.post("/ingresar-empresa/cambiar-clave")
+def empresa_cambiar_clave_temporal(request: Request, token: str = Form(""), clave_actual: str = Form(""),
+                                   clave: str = Form(""), clave2: str = Form("")):
+    return _cambiar_clave_temporal(request, "empleador", token, clave_actual, clave, clave2)
 
 
 @app.get("/empresa/salir")
