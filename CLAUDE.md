@@ -1700,6 +1700,13 @@ se agrega ahí.
   simulada. Preferir cambios quirúrgicos y probar antes de avanzar.
 - Sd tiene skills intermedias de Python, trabaja en Argentina, deploya con
   GitHub + Render (push dispara redeploy).
+- **Code mergea sus propios PR sin preguntar** (autorización permanente de
+  SDN, 2026-10-11): con el CI en verde y sin conflictos, el PR se mergea a
+  `main` (o se le activa el auto-merge) y se avisa en el reporte. Preguntar
+  antes cada vez demoraba todo una vuelta de conversación.
+- **La suite completa la corre el CI, no la sesión** (2026-10-11): en local
+  se corren los `test_*.py` del área tocada; las 4 tandas del CI corren los
+  127 archivos en ~4 minutos, contra 20 a 25 en un contenedor de la nube.
 - **Reportes, no narración** (regla de SDN, 2026-10-11): no contar paso por
   paso lo que se va haciendo. Mientras dura el trabajo, un reporte cada ~10
   minutos o al terminar, con tres partes: qué se hizo, qué quedó listo y qué
