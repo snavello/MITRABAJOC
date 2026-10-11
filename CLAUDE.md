@@ -1721,11 +1721,11 @@ se agrega ahí.
   con Python 3.12 + requirements + pytest/bandit y carga las variables del CI.
   Idempotente (0,2 s si ya está todo); solo corre con `CLAUDE_CODE_REMOTE=true`.
   Con eso `python -m pytest test_x.py` anda desde el primer minuto.
-- **Análisis estático** (corre en el job `auditoria` del CI, informativo
-  hasta que SDN defina en qué nivel frena): `ruff check .` (solo errores que
-  revientan al correr, reglas en `ruff.toml`) y `bandit -r . -x
-  ./.venv,./e2e,./carga -ll` (seguridad, XSK ENT-04; línea de base y niveles
-  posibles en `xsk/proyectos/mitrabajo/corridas/2026-10-11-2040-ENT.md`).
+- **Análisis estático** (job `auditoria` del CI): **frenan el PR** `ruff
+  check .` (solo errores que revientan al correr, reglas en `ruff.toml`) y
+  `bandit -r . -x ./.venv,./e2e,./carga -lll` (seguridad, severidad alta, XSK
+  ENT-04). Los de severidad media (`-ll`) solo se informan y van a una
+  revisión grupal de código registrada en XSK (`avance.md`, `alcance.md`).
 - Correr local (Postgres vía Docker): `docker compose up -d`,
   después `alembic upgrade head`, después `uvicorn main:app --reload`.
 - Autodiagnóstico: `python chequeo.py`

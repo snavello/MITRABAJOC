@@ -11,7 +11,7 @@ etapa5: en_curso
 etapa6: hecha
 etapa7: hecha
 etapa9: pendiente
-actualizado: 2026-10-10
+actualizado: 2026-10-11
 ---
 
 ## Cómo seguir
@@ -34,6 +34,16 @@ CUIL/CUIT (`PLAN_CUIT_MOD11.md`): test **IDS-06** nuevo en el catálogo,
 `regularizar_cuit.py` en Pruebas y Demo) y **H-0021** abierto (reportar y
 enviar al sindicato toman el CUIL y el recibo del cuerpo del pedido: IDOR
 dentro del sindicato). La medida que sigue es el alta de usuarios (H-0017).
+
+2026-10-11: **análisis estático continuo en el CI** (job `auditoria`).
+Frenan el PR, por decisión de SDN: `ruff` (errores de Python, `ruff.toml`) y
+`bandit` de **severidad alta**. Los de **severidad media** no frenan: quedan
+informados en el CI y van a una **revisión grupal de código**, pendiente de
+programar: los 63 de la línea de base (8 `B310` de `urlopen`, 55 `B608` de SQL
+armado con texto; detalle en `corridas/2026-10-11-2040-ENT.md`) se miran uno
+por uno en equipo, se marcan `# nosec` con su motivo los que estén bien y se
+abre hallazgo por los que no. Es el cierre manual de ENT-04 y entra en la
+iteración 2 (ver `alcance.md`).
 
 El único que bloquea es H-0008 (rate-limit de login), que cierra con el
 **perímetro (INF-05, Cloudflare + dominio propio)** — depende de infra de SDN.
