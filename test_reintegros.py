@@ -122,12 +122,74 @@ def test_concepto_pendiente_cargado_por_el_signo_no_cuenta_como_haber():
     assert r["totales"]["reintegros"] == 62949.21
 
 
-def test_un_concepto_revisado_manda_sobre_la_seccion():
-    # Si el sindicato lo revisó y lo dejó como haber, es decisión suya.
+def test_un_concepto_revisado_en_el_rubro_equivocado_lo_corrigen_los_totales():
+    # Alguien CONFIRMÓ la devolución como haber. Con el catálogo no cierra
+    # ningún total impreso y con lo que dice el recibo cierran todos: gana el
+    # recibo, y se avisa para que el sindicato corrija su catálogo.
     revisado = {"tipo": "ingreso", "remunerativo": False, "pendiente_revision": False}
     r = _validar(_conceptos(revisado), _recibo())
+    assert r["estado"] == "OK", r["discrepancias"]
+    assert r["totales"]["ingresos"] == 44975.40
+    assert r["totales"]["reintegros"] == 62949.21
+    aviso = _alerta(r, "concepto_mal_clasificado")
+    assert aviso and aviso["codigos"] == ["433-001"]
+    assert ("IMP.GCIAS. PERIODOS ANTERIORES figura entre los descuentos de tu recibo, "
+            "pero tu sindicato lo tiene cargado como haber") in aviso["detalle"]
+
+
+def test_sin_totales_impresos_que_lo_decidan_manda_el_catalogo():
+    revisado = {"tipo": "ingreso", "remunerativo": False, "pendiente_revision": False}
+    recibo = _recibo()
+    recibo["totales_impresos"] = {}
+    r = _validar(_conceptos(revisado), recibo)
     assert r["totales"]["ingresos"] == round(44975.40 + 62949.21, 2)
     assert r["totales"]["reintegros"] == 0.0
+    assert _alerta(r, "concepto_mal_clasificado") is None
+
+
+def test_si_la_ia_ubica_mal_una_linea_y_el_catalogo_cierra_manda_el_catalogo():
+    # Al revés: el catálogo tiene bien la devolución (descuento) y la IA la
+    # leyó entre los haberes. Con el catálogo cierran los totales: no se
+    # toca nada ni se avisa.
+    recibo = _recibo()
+    next(ln for ln in recibo["lineas"] if ln["codigo"] == "433-001")["seccion"] = "haberes"
+    r = _validar(_conceptos({"tipo": "descuento", "remunerativo": False}), recibo)
+    assert r["estado"] == "OK", r["discrepancias"]
+    assert r["totales"]["reintegros"] == 62949.21
+    assert _alerta(r, "concepto_mal_clasificado") is None
+
+
+def test_un_descuento_que_el_recibo_imprime_como_no_remunerativo_no_entra_a_la_base():
+    # Al revés del caso real: cargado como descuento (con la marca de
+    # remunerativo que traen los descuentos por defecto) e impreso en la
+    # columna de no remunerativos. Gana el recibo, y su marca de
+    # remunerativo no cuenta: lo dice la sección.
+    conceptos = [
+        {"codigo": "SUELDO", "nombre": "Sueldo", "tipo": "ingreso", "remunerativo": True, "alias": []},
+        {"codigo": "JUBILACION", "nombre": "Jubilación", "tipo": "descuento", "remunerativo": True, "alias": []},
+        {"codigo": "ACUERDO", "nombre": "Suma acuerdo", "tipo": "descuento", "remunerativo": True, "alias": []},
+    ]
+    recibo = {"empleado": {"cuil": CUIL}, "periodo": "2026-08", "lineas": [
+        {"codigo": "SUELDO", "importe": 100000, "seccion": "haberes"},
+        {"codigo": "ACUERDO", "importe": 20000, "seccion": "no_remunerativos"},
+        {"codigo": "JUBILACION", "importe": -11000, "seccion": "descuentos",
+         "categoria_universal": "jubilacion"},
+    ], "totales_impresos": {"remuneraciones": 120000, "descuentos": 11000, "neto": 109000}}
+    r = validador.validar(conceptos, [{**FORMULAS[0], "sujeto_a_tope": False}], recibo,
+                          cuil_sesion=CUIL)
+    assert r["estado"] == "OK", r["discrepancias"]
+    assert r["totales"]["ingresos"] == 120000.0
+    assert r["totales"]["remunerativo"] == 100000.0
+    assert _alerta(r, "concepto_mal_clasificado")
+
+
+def test_si_los_totales_no_cierran_de_ninguna_forma_manda_el_catalogo():
+    revisado = {"tipo": "ingreso", "remunerativo": False, "pendiente_revision": False}
+    recibo = _recibo()
+    recibo["totales_impresos"]["remuneraciones"] = 1.0   # mal leído
+    r = _validar(_conceptos(revisado), recibo)
+    assert r["totales"]["reintegros"] == 0.0
+    assert _alerta(r, "concepto_mal_clasificado") is None
 
 
 def test_el_total_de_descuentos_impreso_sin_restar_el_reintegro_tambien_cierra():
@@ -244,6 +306,18 @@ def test_seccion_de_tolera_variantes_y_descarta_lo_que_no_es():
              "otra": None, None: None, 3: None}
     for valor, esperado in casos.items():
         assert validador.seccion_de({"seccion": valor}) == esperado, valor
+
+
+# ------------------------------- qué rubro sugieren los recibos leídos ---
+def test_clasificacion_vista_propone_por_mayoria_y_no_ante_un_empate():
+    cv = validador.clasificacion_vista
+    assert cv({}) is None
+    assert cv({"descuentos": 2, "haberes": 2}) is None
+    assert cv({"descuentos": 3, "haberes": 1}) == {
+        "tipo": "descuento", "remunerativo": False, "veces": 3, "total": 4}
+    assert cv({"haberes": 1, "no_remunerativos": 4})["remunerativo"] is False
+    assert cv({"haberes": 5})["tipo"] == "ingreso"
+    assert cv({"haberes": 5})["remunerativo"] is True
 
 
 # ------------------------------------------------- el tope de esa fecha ---

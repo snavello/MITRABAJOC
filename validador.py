@@ -393,6 +393,17 @@ def _zona_catalogo(m) -> str:
     return concepto.get("tipo")
 
 
+def _es_remunerativa(m) -> bool:
+    """¿Suma a la base de los aportes esta línea de haberes? Lo dice el
+    concepto si es un haber en el catálogo. Si está entre los haberes por lo
+    que leyó la IA y no por el catálogo (un concepto cargado como descuento),
+    la marca de remunerativo de ese concepto no significa nada y lo dice la
+    sección: la columna de no remunerativos no suma."""
+    if m["concepto"].get("tipo") == "ingreso":
+        return bool(m["concepto"].get("remunerativo", True))
+    return seccion_de(m) != "no_remunerativos"
+
+
 def _es_aporte_de_ley(linea) -> bool:
     if linea.get("tipo") == "aporte_trabajador":
         return True
@@ -457,6 +468,85 @@ def totales_leidos(recibo: dict) -> dict:
         "reintegros": round(z["total_reintegros"], 2),
         "neto": round(z["neto"], 2),
     }
+
+
+def _zona_impresa(m) -> str | None:
+    """'ingreso' o 'descuento' según DÓNDE leyó la IA la línea, o None."""
+    seccion = seccion_de(m)
+    if seccion is None:
+        return None
+    return "descuento" if seccion == "descuentos" else "ingreso"
+
+
+def _cierra(calculado, impreso) -> bool:
+    return abs(round(calculado - impreso, 2)) <= TOLERANCIA_TOTALES
+
+
+def _total_haberes(zonas: dict) -> float | None:
+    """Lo que se compara contra el total de remuneraciones impreso. Sin
+    ningún haber reconocido, None: ese chequeo no dice nada (la validación
+    usa ahí el impreso como base aproximada)."""
+    return zonas["total_haberes"] if zonas["haberes"] else None
+
+
+def controlar_totales(zonas: dict, impresos: dict) -> dict:
+    """¿Cierran las sumas de ESTE reparto contra los totales impresos?
+
+    Por cada total, True / False, o None si el recibo no lo trae (o no se
+    pudo leer). El de descuentos se compara SIN signo -- que esté impreso
+    con o sin el menos es presentación, igual que en cada línea -- y, si hay
+    reintegros, vale cualquiera de las dos formas de imprimirlo: solo los
+    descuentos, o los descuentos menos los reintegros (un recibo de AEFIP
+    imprime 46.460,13 = 62.949,21 de reintegro - 16.489,08 de descuentos);
+    `descuentos_neto_de_reintegros` dice si cerró de la segunda forma.
+
+    Es la ÚNICA implementación de este control: la usan los chequeos de
+    totales de `validar` y el arbitraje entre el catálogo y el recibo."""
+    rem, neto, desc = (impresos.get("remuneraciones"), impresos.get("neto"),
+                       impresos.get("descuentos"))
+    haberes = _total_haberes(zonas)
+    r = {
+        "remuneraciones": None if rem is None or haberes is None else _cierra(haberes, rem),
+        "neto": None if neto is None else _cierra(zonas["neto"], neto),
+        "descuentos": None, "descuentos_neto_de_reintegros": False,
+    }
+    if desc is not None:
+        if _cierra(zonas["total_descuentos"], abs(desc)):
+            r["descuentos"] = True
+        elif zonas["reintegros"] and _cierra(
+                abs(zonas["total_descuentos"] - zonas["total_reintegros"]), abs(desc)):
+            r["descuentos"] = True
+            r["descuentos_neto_de_reintegros"] = True
+        else:
+            r["descuentos"] = False
+    return r
+
+
+def _fallas(control: dict) -> tuple[int, int]:
+    """(totales que no cierran, totales que se pudieron controlar)."""
+    valores = [control[k] for k in ("remuneraciones", "descuentos", "neto")]
+    return sum(1 for v in valores if v is False), sum(1 for v in valores if v is not None)
+
+
+def clasificacion_vista(conteos: dict) -> dict | None:
+    """Qué rubro sugieren los recibos para un concepto, a partir de cuántas
+    veces la IA lo leyó en cada sección ({"haberes": n, "descuentos": n,
+    "no_remunerativos": n}). None si no hay datos o si empatan: no se
+    propone nada que los recibos no digan con claridad.
+
+    Un reintegro (Ganancias o aportes devueltos) se lee entre los
+    descuentos y por eso se propone como descuento: el sistema lo reconoce
+    como reintegro por el signo, el mes que venga así (ver repartir_por_zona)."""
+    hab = conteos.get("haberes", 0)
+    no_rem = conteos.get("no_remunerativos", 0)
+    desc = conteos.get("descuentos", 0)
+    if desc == hab + no_rem:
+        return None
+    if desc > hab + no_rem:
+        return {"tipo": "descuento", "remunerativo": False, "veces": desc,
+                "total": desc + hab + no_rem}
+    return {"tipo": "ingreso", "remunerativo": hab >= no_rem, "veces": hab + no_rem,
+            "total": desc + hab + no_rem}
 
 
 import ast as _ast
@@ -579,6 +669,25 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
     # repartir_por_zona. Un reintegro no está en `ingresos`, así que no suma
     # al bruto ni a la base de los aportes.
     zonas = repartir_por_zona(matcheadas, _zona_catalogo)
+    # Catálogo contra recibo. Si un concepto YA REVISADO está cargado en un
+    # rubro y la IA lo leyó impreso en el otro (alguien confirmó como haber
+    # una devolución de Ganancias), deciden los totales impresos: se usa lo
+    # que dice el recibo SOLO si así cierran todos los que se pueden
+    # controlar y con el catálogo no. Si los totales no lo deciden (no están,
+    # o no cierran de ninguna de las dos formas), manda el catálogo, que es
+    # del sindicato. Cuando gana el recibo se avisa, para que lo corrijan.
+    mal_clasificados = []
+    en_conflicto = [m for m in matcheadas
+                    if _zona_catalogo(m) in ("ingreso", "descuento")
+                    and _zona_impresa(m) not in (None, _zona_catalogo(m))]
+    if en_conflicto:
+        ids = {id(m) for m in en_conflicto}
+        segun_recibo = repartir_por_zona(
+            matcheadas, lambda m: _zona_impresa(m) if id(m) in ids else _zona_catalogo(m))
+        fallas_recibo, controlados = _fallas(controlar_totales(segun_recibo, impresos))
+        fallas_catalogo, _ = _fallas(controlar_totales(zonas, impresos))
+        if controlados and fallas_recibo == 0 and fallas_catalogo > 0:
+            zonas, mal_clasificados = segun_recibo, en_conflicto
     ingresos, descuentos, reintegros = zonas["haberes"], zonas["descuentos"], zonas["reintegros"]
     for m in reintegros:
         m["reintegro"] = True
@@ -593,10 +702,7 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
     codigos_automaticos = {codigo_efectivo(m["concepto"]) for m in matcheadas if m.get("chequeo_automatico")}
 
     total_ingresos = sum(m["importe"] for m in ingresos)
-    base_remunerativa = sum(
-        m["importe"] for m in ingresos
-        if m["concepto"].get("remunerativo", True)
-    )
+    base_remunerativa = sum(m["importe"] for m in ingresos if _es_remunerativa(m))
     # Si no matcheó NINGÚN ingreso (típico junto con la red de seguridad de
     # categoría universal: un sindicato que solo cargó los 3 conceptos
     # genéricos de descuento, sin ningún concepto de haberes para este
@@ -715,10 +821,9 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
     # chequeo se saltea, igual que cuando el recibo no los trae).
     total_descuentos = zonas["total_descuentos"]
     total_reintegros = zonas["total_reintegros"]
-    descuentos_menos_reintegros = abs(total_descuentos - total_reintegros)
-
-    def _cierra(calculado, impreso) -> bool:
-        return abs(round(calculado - impreso, 2)) <= TOLERANCIA_TOTALES
+    control = controlar_totales(zonas, impresos)
+    impreso_descuentos = impresos.get("descuentos")
+    impreso_neto_de_reintegros = control["descuentos_neto_de_reintegros"]
 
     def _no_cierra(nombre, calculado_txt, impreso):
         discrepancias.append({
@@ -728,26 +833,15 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
                        "conviene revisar la foto antes de reportar.",
         })
 
-    for nombre, calculado, impreso in (
-        ("remuneraciones", variables["total_ingresos"], impresos.get("remuneraciones")),
-        ("neto", zonas["neto"], impresos.get("neto")),
-    ):
-        if impreso is not None and not _cierra(calculado, impreso):
-            _no_cierra(nombre, f"${calculado:,.2f}", impreso)
-    # El total de descuentos se compara SIN signo: que esté impreso con o sin
-    # el menos es presentación, igual que en cada línea. Y si hay reintegros
-    # vale cualquiera de las dos formas de imprimirlo: solo los descuentos, o
-    # los descuentos menos los reintegros (un recibo de AEFIP imprime
-    # 46.460,13 = 62.949,21 de reintegro - 16.489,08 de descuentos).
-    impreso_descuentos = impresos.get("descuentos")
-    impreso_neto_de_reintegros = False
-    if impreso_descuentos is not None and not _cierra(total_descuentos, abs(impreso_descuentos)):
-        if reintegros and _cierra(descuentos_menos_reintegros, abs(impreso_descuentos)):
-            impreso_neto_de_reintegros = True
-        else:
-            _no_cierra("descuentos", f"${total_descuentos:,.2f}" + (
-                f"; ${descuentos_menos_reintegros:,.2f} restando los reintegros"
-                if reintegros else ""), abs(impreso_descuentos))
+    if control["remuneraciones"] is False:
+        _no_cierra("remuneraciones", f"${zonas['total_haberes']:,.2f}",
+                   impresos["remuneraciones"])
+    if control["descuentos"] is False:
+        _no_cierra("descuentos", f"${total_descuentos:,.2f}" + (
+            f"; ${abs(total_descuentos - total_reintegros):,.2f} restando los reintegros"
+            if reintegros else ""), abs(impreso_descuentos))
+    if control["neto"] is False:
+        _no_cierra("neto", f"${zonas['neto']:,.2f}", impresos["neto"])
 
     avisos = [{
         "codigo": ln.get("codigo"), "descripcion": ln.get("descripcion"),
@@ -781,6 +875,36 @@ def validar(conceptos: list, formulas: list, recibo: dict, tope_sindical_pct: fl
             "detalle": f"No pudimos chequear {cuales}: la fórmula que cargó tu "
                        "sindicato tiene un error de escritura. El resto del recibo se "
                        "verificó igual. Conviene avisarle al sindicato.",
+        })
+
+    # Conceptos que el catálogo tiene en un rubro y el recibo en el otro, y
+    # que se tomaron como dice el recibo (ver el arbitraje de arriba).
+    if mal_clasificados:
+        def _nombre(m):
+            return m.get("descripcion") or m["concepto"].get("nombre") or m.get("codigo") or "?"
+
+        def _rubro(zona):
+            return "haber" if zona == "ingreso" else "descuento"
+
+        def _seccion(zona):
+            return "haberes" if zona == "ingreso" else "descuentos"
+
+        if len(mal_clasificados) == 1:
+            m = mal_clasificados[0]
+            que = (f"{_nombre(m)} figura entre los {_seccion(_zona_impresa(m))} de tu recibo, "
+                   f"pero tu sindicato lo tiene cargado como {_rubro(_zona_catalogo(m))}. "
+                   "Lo tomamos como figura en el recibo")
+        else:
+            cuales = ", ".join(
+                f"{_nombre(m)} (en el recibo, entre los {_seccion(_zona_impresa(m))}; "
+                f"cargado como {_rubro(_zona_catalogo(m))})" for m in mal_clasificados)
+            que = (f"Hay conceptos que tu sindicato tiene cargados en otro rubro del que "
+                   f"figuran en tu recibo: {cuales}. Los tomamos como figuran en el recibo")
+        alertas.append({
+            "tipo": "concepto_mal_clasificado",
+            "codigos": [_clave(m.get("codigo")) for m in mal_clasificados],
+            "detalle": f"{que}, porque así cierran los totales impresos. Conviene "
+                       "avisarle al sindicato para que lo corrija en su catálogo.",
         })
 
     # Reintegros: no son un error, pero hacen que el recibo "no cierre" a

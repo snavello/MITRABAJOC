@@ -1615,8 +1615,16 @@ los descuentos de ESE recibo es un **reintegro** (devolución de Ganancias, de
 aportes): no suma al bruto ni a la base de los aportes, entra al neto, y el
 total de descuentos impreso puede venir bruto o neto de reintegros. Un haber
 negativo sigue siendo haber. Para un concepto pendiente de revisión manda la
-sección de la línea, no su tipo. Detalle en HISTORIAL.md, "Reintegros entre
-los descuentos".
+sección de la línea, no su tipo. Para uno ya revisado manda el catálogo,
+salvo que con la sección leída cierren todos los totales impresos y con el
+catálogo no: ahí se toma el recibo y sale la alerta `concepto_mal_clasificado`.
+**No hay un tercer rubro "reintegro" en el catálogo** (decisión de SDN): ser
+reintegro es del mes, no del concepto (Ganancias retiene un mes y devuelve
+otro), y un reintegro de gastos o guardería es otra cosa: un haber no
+remunerativo. La pestaña Conceptos dice en qué sección leyó la IA cada código
+(`db.secciones_vistas`, últimos 500 recibos) y ofrece "Confirmar como …" /
+"Pasar a …". Detalle en HISTORIAL.md, "Reintegros entre los descuentos" y
+"Catálogo contra recibo".
 
 ## Códigos de error propios (`errores.py`)
 Todo error que ve una persona lleva un código (`raise ErrorApp("E-...")`),
