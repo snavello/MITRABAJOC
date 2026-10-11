@@ -66,6 +66,7 @@ JSON_TIPO = JSON().with_variant(postgresql.JSONB(), "postgresql")
 
 import cuit
 import encuestas
+import errores
 import fechas
 import precios_ia
 # geo.py importa db DENTRO de sus funciones, no en el encabezado, así que
@@ -525,6 +526,25 @@ class CuentaTrabajador(SQLModel, table=True):
     persona ya se registró sigue siendo `Trabajador.registrado`, que es por
     sindicato y alimenta el KPI del panel.
 
+    **Los TRES mails** (PLAN_REGISTRO.md, Q-6). Parecen uno y no lo son:
+
+    1. `mail` es el mail de CONTACTO de la persona. Lo escribe ella desde
+       `/api/perfil` y el admin desde el alta; es un dato personal como el
+       teléfono y se puede cambiar cuando quiera. NO prueba nada.
+    2. `mail_padron` es el mail que cargó EL SINDICATO (alta individual y
+       alta masiva del panel, nunca el perfil ni el registro). Que lo haya
+       puesto un tercero con acceso al padrón es lo que lo hace una prueba:
+       un código mandado ahí llega a quien el gremio conoce, no a quien
+       llegó primero con un CUIL público.
+    3. `mail_declarado` es el que dio la persona al registrarse, sin que el
+       sindicato lo conozca, y vale recién cuando `mail_declarado_confirmado`
+       tiene fecha (confirmó un código ahí).
+
+    Por eso los códigos de verificación solo van al 2.º o al 3.º confirmado:
+    si fueran al 1.º, quien se registra primero (el impostor) lo cambia desde
+    el perfil y recibe en su casilla el código para recuperar la cuenta de
+    otro. `mail_padron_de` lee el 2.º y nada más.
+
     El domicilio usa el MISMO bloque de campos que `Seccional` (ver
     `geo.CAMPOS_DOMICILIO`), con la misma carga guiada y la misma función de
     guardado; `test_seccional_geo.py` verifica que las dos tablas no se
@@ -549,7 +569,11 @@ class CuentaTrabajador(SQLModel, table=True):
     geo_actualizado: str = ""
     # ---- Contacto
     telefono: str = ""
-    mail: str = ""
+    mail: str = ""                         # CONTACTO: lo escribe la persona (ver "Los TRES mails")
+    # El mail que cargó EL SINDICATO (alta individual y masiva). Solo
+    # `guardar_datos_personales(mail_padron=...)` desde esas dos rutas lo
+    # escribe; ni el perfil ni el registro. Es al que van los códigos.
+    mail_padron: str = ""
     # ---- Foto de perfil (bytes en la base, mismo patrón que el logo del sindicato)
     foto_datos: Optional[bytes] = Field(default=None)
     foto_mime: str = ""
@@ -560,9 +584,9 @@ class CuentaTrabajador(SQLModel, table=True):
     # mail_declarado | recibo_propio | presencial (ver ORIGENES_NIVEL).
     nivel_origen: str = ""
     nivel_actualizado: str = ""            # "AAAA-MM-DD HH:MM", hora de Buenos Aires
-    # El mail que dio la persona al registrarse. NUNCA pisa `mail` (el del
-    # padrón, que cargó el sindicato): si quien se registra es un impostor,
-    # el contacto de la persona real tiene que quedar intacto.
+    # El mail que dio la persona al registrarse. NUNCA pisa `mail_padron` (el
+    # que cargó el sindicato): si quien se registra es un impostor, el mail
+    # de la persona real tiene que quedar intacto.
     mail_declarado: str = ""
     mail_declarado_confirmado: str = ""    # cuándo se confirmó con un código; vacío = no
     # La puso el admin del sindicato al restablecer la clave: el primer
@@ -647,9 +671,9 @@ class CuentaEmpleador(SQLModel, table=True):
     # mail_declarado | recibo_propio | presencial (ver ORIGENES_NIVEL).
     nivel_origen: str = ""
     nivel_actualizado: str = ""            # "AAAA-MM-DD HH:MM", hora de Buenos Aires
-    # El mail que dio la persona al registrarse. NUNCA pisa `mail` (el del
-    # padrón, que cargó el sindicato; en la empresa, Empleador.mail): si quien se registra es un impostor,
-    # el contacto de la persona real tiene que quedar intacto.
+    # El mail que dio la persona al registrarse. NUNCA pisa
+    # `Empleador.mail_padron` (el que cargó el sindicato): si quien se registra
+    # es un impostor, el mail de la empresa real tiene que quedar intacto.
     mail_declarado: str = ""
     mail_declarado_confirmado: str = ""    # cuándo se confirmó con un código; vacío = no
     # La puso el admin del sindicato al restablecer la clave: el primer
@@ -670,7 +694,12 @@ class Empleador(SQLModel, table=True):
     domicilio: str = ""
     telefono: str = ""
     provincia: str = ""
-    mail: str = ""
+    mail: str = ""                         # CONTACTO: lo edita la empresa desde su perfil
+    # El mail que cargó EL SINDICATO (solo `POST /admin/empleador`). Es al que
+    # van los códigos; `actualizar_perfil_empleador` NO lo toca. Por sindicato,
+    # como `mail` (el empleador no está unificado). Mismo criterio que
+    # `CuentaTrabajador.mail_padron`.
+    mail_padron: str = ""
     registrado: bool = False               # True cuando el CUIT ya creó su CuentaEmpleador
     activo: bool = True                    # baja lógica: False = dado de baja (recuperable)
 
@@ -697,11 +726,13 @@ class CodigoVerificacion(SQLModel, table=True):
     en el padrón (`origen_destino = "padron"`) o uno que la persona declaró y
     confirmó (`"declarado"`).
 
-    **Se guarda el hash, nunca el código**: `sha256(codigo:identificador:
-    creado)`. Seis dígitos son un millón de combinaciones, así que el hash
-    solo protege de quien lea la base sin poder probar; lo que frena la
-    fuerza bruta son los 5 intentos y los 15 minutos de vigencia
-    (`CODIGO_MAX_INTENTOS`, `CODIGO_VIGENCIA_MINUTOS`). Hay un solo código
+    **Se guarda el hash, nunca el código**: HMAC-SHA256 con el secreto del
+    servidor (`auth.SECRETO`) sobre `codigo:identificador:creado`. Seis
+    dígitos son un millón de combinaciones; con un sha256 simple, quien leyera
+    la base las probaba todas en segundos, porque el resto de los datos está
+    en la misma fila. Con la clave del servidor el hash no sirve fuera de él.
+    Lo que frena la fuerza bruta DENTRO de la app son los 5 intentos y los 15
+    minutos de vigencia (`CODIGO_MAX_INTENTOS`, `CODIGO_VIGENCIA_MINUTOS`). Hay un solo código
     vivo por persona y propósito: pedir otro vence el anterior.
 
     **Un código usado o vencido NO se borra**: es la traza de quién pidió qué
@@ -2730,19 +2761,27 @@ def sindicatos_de_cuit_empleador(cuit: str) -> list:
 
 
 # ---------- Registro confirmado por mail: niveles y códigos (PLAN_REGISTRO.md) ----------
-# Todos reciben la sesión y NO abren la suya (regla "una sesión por request"),
-# y ninguno hace commit: lo hace quien los llama, junto con el resto del acto.
+# Todos reciben la sesión y NO abren la suya (regla "una sesión por request").
+# Ninguno hace commit (lo hace quien los llama, junto con el resto del acto),
+# con UNA excepción con motivo: `verificar_codigo` (ver su docstring).
 def subir_nivel(s, cuenta, origen: str) -> bool:
     """Sube la cuenta (CuentaTrabajador o CuentaEmpleador) al nivel que
     acredita `origen`. Única escritura de `nivel_fiabilidad`: el nivel SUBE y
     no baja, así que un recibo propio (3) posterior a la confirmación del
     sindicato (4) no lo rebaja. Devuelve True si cambió algo, False si la
     cuenta ya tenía ese nivel o más (y entonces no toca nada). Un origen que
-    no está en ORIGENES_NIVEL es un error de programación: ValueError."""
+    no está en ORIGENES_NIVEL es un error de programación: ValueError.
+
+    Excepción (Q-5): si el nivel pedido es IGUAL al actual y la cuenta no
+    tiene `nivel_origen` (una cuenta nueva, que nace en 1 sin origen), se
+    registran el origen y la fecha y devuelve True. Así "nivel 1, CUIL en el
+    padrón" queda escrito también en las cuentas nuevas, por el mismo y único
+    camino, y no hace falta escribirlo a mano desde la ruta."""
     if origen not in ORIGENES_NIVEL:
         raise ValueError(f"origen de nivel desconocido: {origen!r}")
     nivel = ORIGENES_NIVEL[origen]
-    if nivel <= (cuenta.nivel_fiabilidad or 1):
+    actual = cuenta.nivel_fiabilidad or 1
+    if nivel < actual or (nivel == actual and (cuenta.nivel_origen or "")):
         return False
     cuenta.nivel_fiabilidad = nivel
     cuenta.nivel_origen = origen
@@ -2752,20 +2791,24 @@ def subir_nivel(s, cuenta, origen: str) -> bool:
 
 
 def mail_padron_de(s, cuil: str) -> str:
-    """El mail que el sindicato cargó para este CUIL ("" si no hay)."""
+    """El mail que el SINDICATO cargó para este CUIL ("" si no hay): lee
+    `mail_padron`, nunca `mail` (el de contacto, que la persona cambia desde
+    su perfil) ni `mail_declarado`. Ver "Los TRES mails" en CuentaTrabajador."""
     c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
-    return (c.mail or "").strip() if c else ""
+    return (c.mail_padron or "").strip() if c else ""
 
 
 def mail_padron_de_empresa(s, cuit: str) -> str:
-    """El mail del padrón de una empresa: el primer `Empleador.mail` no vacío
-    entre sus altas, las activas primero (el empleador no está unificado, el
-    mail es por sindicato). "" si ninguna lo tiene."""
+    """El mail del padrón de una empresa: el primer `Empleador.mail_padron` no
+    vacío entre sus altas, las activas primero (el empleador no está
+    unificado, el mail es por sindicato). "" si ninguna lo tiene. Lee
+    `mail_padron` (lo que cargó el sindicato), no `mail` (el contacto que
+    edita la empresa)."""
     filas = s.exec(select(Empleador).where(Empleador.cuit == cuit)
                    .order_by(Empleador.activo.desc(), Empleador.id)).all()
     for e in filas:
-        if (e.mail or "").strip():
-            return e.mail.strip()
+        if (e.mail_padron or "").strip():
+            return e.mail_padron.strip()
     return ""
 
 
@@ -2805,7 +2848,11 @@ def codigos_recientes(s, tipo: str, identificador: str, proposito: str, horas: i
 
 
 def _hash_codigo(codigo: str, identificador: str, creado: str) -> str:
-    return hashlib.sha256(f"{codigo}:{identificador}:{creado}".encode()).hexdigest()
+    """HMAC-SHA256 con `auth.SECRETO` como clave (Q-4): sin el secreto del
+    servidor el hash no se puede probar contra el millón de códigos posibles."""
+    import auth       # adentro de la función: así db no queda atado al orden de carga de auth
+    return hmac.new(auth.SECRETO.encode(), f"{codigo}:{identificador}:{creado}".encode(),
+                    hashlib.sha256).hexdigest()
 
 
 def crear_codigo(s, tipo: str, identificador: str, proposito: str, destino: str,
@@ -2814,7 +2861,16 @@ def crear_codigo(s, tipo: str, identificador: str, proposito: str, destino: str,
     izquierda), guarda SOLO su hash y devuelve (fila, codigo_en_claro) para
     mandarlo por mail. Antes vence los pendientes de la misma persona y
     propósito: un solo código vivo a la vez, así el que se pidió primero no
-    queda abierto para adivinarlo mientras llega el segundo."""
+    queda abierto para adivinarlo mientras llega el segundo.
+
+    Aplica el cupo él mismo (Q-3): si ya hay `CODIGOS_POR_HORA` pedidos en la
+    última hora para esa persona y propósito, levanta `ErrorApp("E-REGISTRO-03")`
+    sin crear nada. Las rutas ya consultan `codigos_recientes` antes (para
+    contestar sin gastar nada); esto es defensa en profundidad, para que una
+    ruta que se olvide no deje bombardear un mail ni ganar 5 intentos por
+    código nuevo."""
+    if codigos_recientes(s, tipo, identificador, proposito) >= CODIGOS_POR_HORA:
+        raise errores.ErrorApp("E-REGISTRO-03")
     ahora = fechas.ahora()
     ahora_t = fechas.a_texto(ahora)
     pendientes = s.exec(select(CodigoVerificacion).where(
@@ -2844,25 +2900,45 @@ def verificar_codigo(s, codigo_id: int, codigo: str) -> str:
     "vencido", "agotado" (ya gastó sus 5 intentos: ni el código correcto
     sirve), "incorrecto" (suma un intento) u "ok" (lo marca usado). Se
     consulta en ese orden, así que un código usado o vencido no gasta
-    intentos. No hace commit: el llamador tiene que confirmar el intento
-    fallido también, o el contador no avanza."""
-    fila = s.get(CodigoVerificacion, codigo_id)
+    intentos.
+
+    **EXCEPCIÓN con motivo a "ningún helper hace commit" (Q-1)**: acá SÍ se
+    hace commit, tras "incorrecto" y tras "ok" (y en las demás salidas, solo para
+    soltar el bloqueo de la fila). El idioma de las rutas es
+    `with db.get_session() as s:` + `raise ErrorApp(...)`, y al salir del with
+    sin commit la sesión hace rollback: el intento fallido se perdía y el tope
+    de 5 intentos no existía (el código se podía tantear durante los 15
+    minutos). Un contador de seguridad no puede depender de que cada ruta se
+    acuerde de confirmar. Efecto lateral aceptado: el commit confirma también
+    lo que la sesión llevara pendiente; las rutas llaman a esto primero.
+
+    **Lectura con bloqueo de fila (Q-2)**: `SELECT ... FOR UPDATE`, así dos
+    requests simultáneos con el mismo código se serializan: los dos intentos
+    erróneos cuentan dos (no uno) y un código correcto se consume UNA sola
+    vez. El bloqueo se suelta con ese mismo commit."""
+    fila = s.exec(select(CodigoVerificacion).where(
+        CodigoVerificacion.id == codigo_id).with_for_update()).first()
     if not fila:
         return "inexistente"
     if fila.usado_en:
+        s.commit()            # suelta el bloqueo de la fila
         return "usado"
     ahora_t = fechas.ahora_texto()
     if fila.vence <= ahora_t:
+        s.commit()
         return "vencido"
     if fila.intentos >= CODIGO_MAX_INTENTOS:
+        s.commit()
         return "agotado"
     esperado = _hash_codigo((codigo or "").strip(), fila.identificador, fila.creado)
     if not hmac.compare_digest(esperado, fila.codigo_hash):
         fila.intentos += 1
         s.add(fila)
+        s.commit()
         return "incorrecto"
     fila.usado_en = ahora_t
     s.add(fila)
+    s.commit()
     return "ok"
 
 
@@ -3290,7 +3366,8 @@ def asegurar_cuenta(s: Session, cuil: str) -> CuentaTrabajador:
 
 def guardar_datos_personales(s: Session, cuil: str, nombre: str = None,
                              domicilio: dict = None, telefono: str = None,
-                             mail: str = None) -> CuentaTrabajador:
+                             mail: str = None,
+                             mail_padron: str = None) -> CuentaTrabajador:
     """Escribe el bloque personal de un CUIL. Lo que llega en `None` no se
     toca -- así una pantalla que edita solo el domicilio no borra el teléfono
     que cargó otra.
@@ -3303,7 +3380,13 @@ def guardar_datos_personales(s: Session, cuil: str, nombre: str = None,
 
     Un `nombre` vacío tampoco pisa al que había: es el caso del alta masiva y
     del registro, donde el campo puede venir en blanco y el padrón ya tenía
-    el nombre bueno."""
+    el nombre bueno.
+
+    `mail` es el mail de CONTACTO de la persona; `mail_padron` es el que
+    cargó el SINDICATO (ver "Los TRES mails" en `CuentaTrabajador`). Solo el
+    alta individual y el alta masiva del panel pasan `mail_padron`; el perfil
+    y el registro NO (lo verifica `test_registro_modelo.py`). `None` = no
+    tocar, como los demás."""
     c = asegurar_cuenta(s, cuil)
     if nombre is not None and nombre.strip():
         c.nombre = nombre.strip()[:200]
@@ -3314,6 +3397,8 @@ def guardar_datos_personales(s: Session, cuil: str, nombre: str = None,
         c.telefono = telefono.strip()[:40]
     if mail is not None:
         c.mail = mail.strip()[:200]
+    if mail_padron is not None:
+        c.mail_padron = mail_padron.strip()[:200]
     s.add(c)
     return c
 
