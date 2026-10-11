@@ -47,6 +47,7 @@ from sqlalchemy.exc import OperationalError, TimeoutError as PoolTimeoutError
 from sqlmodel import select
 
 import captcha
+import correo
 import cuit
 import encuestas
 import esquema
@@ -6592,6 +6593,204 @@ def _domicilio_distinto(persona, domicilio: dict) -> bool:
                              "provincia", "codigo_postal"))
 
 
+# ---- Registro en tres pasos (PLAN_REGISTRO.md, §4.1 y §4.2) ----
+# Paso 1 `/iniciar` (CUIL/CUIT + captcha) -> paso 2 `/mail` (solo si hay que
+# declarar uno) -> paso 3 el POST de siempre, con `token` y `codigo`. El estado
+# entre pasos viaja en un token firmado (`auth.firmar_paso`, propósito
+# "registro"): nunca en un campo oculto sin firmar ni en la cookie plana. La
+# cuenta NO existe hasta el paso 3. Las rutas de la empresa son el espejo
+# exacto: aislamiento total entre trabajador y empleador, a costa de repetir.
+# Los helpers de abajo son lo único compartido y solo reciben el `tipo`.
+_PROPOSITO_REGISTRO = "registro"
+_MAIL_FORMATO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _registro_error(status: int, error: str, mensaje: str) -> JSONResponse:
+    """Un fallo del registro que no tiene código E-... propio ("no habilitado",
+    "ya tiene cuenta", token vencido): `error` es la clave que el JS conoce."""
+    return JSONResponse(status_code=status, content={
+        "ok": False, "error": error, "mensaje": mensaje, "detail": mensaje})
+
+
+def _mail_declarable(mail: str) -> str:
+    """El mail que la persona declara, limpio, o "" si no sirve: formato simple,
+    254 caracteres como máximo y ningún espacio ni salto de línea (inyección de
+    cabeceras)."""
+    mail = (mail or "").strip()
+    if not mail or len(mail) > 254 or any(c.isspace() or ord(c) < 32 for c in mail):
+        return ""
+    return mail if _MAIL_FORMATO.match(mail) else ""
+
+
+def _mandar_codigo_registro(s, request: Request, tipo: str, identificador: str,
+                            destino: str, origen_destino: str) -> int:
+    """Cupo -> código -> mail. Devuelve el id de la fila del código. Lanza
+    E-REGISTRO-03 si ya pidió el cupo de la hora y E-REGISTRO-06 si el mail no
+    salió (el código queda en la tabla igual: es traza, y cuenta para el cupo)."""
+    if db.codigos_recientes(s, tipo, identificador, _PROPOSITO_REGISTRO) >= db.CODIGOS_POR_HORA:
+        raise ErrorApp("E-REGISTRO-03")
+    fila, codigo = db.crear_codigo(s, tipo, identificador, _PROPOSITO_REGISTRO,
+                                   destino, origen_destino, _ip_de(request))
+    fila_id = fila.id
+    s.commit()
+    asunto, cuerpo = correo.texto_codigo_registro(codigo, db.CODIGO_VIGENCIA_MINUTOS)
+    if not correo.enviar(destino, asunto, cuerpo):
+        raise ErrorApp("E-REGISTRO-06")
+    return fila_id
+
+
+def _registro_iniciar_previo(request: Request, token_captcha: str) -> None:
+    """Primera mitad del paso 1: freno por IP y captcha, ANTES de mirar nada.
+    La segunda mitad (verificador, padrón, canal) vive en `_registro_iniciar`;
+    el verificador lo llama cada ruta, que es la puerta (test_cuit_puertas)."""
+    if _login_bloqueado(request, _intentos_registro):
+        raise ErrorApp("E-REGISTRO-05")
+    if not captcha.verificar(token_captcha, _ip_de(request)):
+        _login_fallo(request, _intentos_registro)
+        raise ErrorApp("E-REGISTRO-01")
+
+
+def _registro_iniciar(request: Request, tipo: str, numero: str):
+    """Segunda mitad del paso 1, con el número ya normalizado y con el
+    verificador comprobado (el tipo decide dónde se busca). Todo fallo cuenta
+    para el freno de la IP."""
+    es_trab = tipo == "trabajador"
+    sinds = db.sindicatos_de_cuil(numero) if es_trab else db.sindicatos_de_cuit_empleador(numero)
+    if not sinds:
+        _login_fallo(request, _intentos_registro)
+        return _registro_error(403, "nohabilitado", (
+            "Tu CUIL no está habilitado en ningún sindicato todavía. Pedile a tu sindicato que te agregue."
+            if es_trab else
+            "Tu CUIT no está habilitado en ningún sindicato todavía. Pedile al sindicato que te agregue como empleador."))
+    try:
+        with db.get_session() as s:
+            if es_trab:
+                cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == numero)).first()
+            else:
+                cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == numero)).first()
+            if cuenta and cuenta.clave_hash:
+                _login_fallo(request, _intentos_registro)
+                return _registro_error(409, "yaexiste", (
+                    "Ya tenés una cuenta con ese %s. Ingresá con tu clave." % ("CUIL" if es_trab else "CUIT")))
+            if not correo.habilitado():
+                # D9: el canal de mail apagado no frena el registro; la cuenta
+                # nace nivel 1, como hasta ahora.
+                return {"ok": True, "paso": "datos", "token": auth.firmar_paso(
+                    {"id": numero, "nivel_origen": "cuil_padron"}, proposito=_PROPOSITO_REGISTRO)}
+            mail = (db.mail_padron_de(s, numero) if es_trab
+                    else db.mail_padron_de_empresa(s, numero))
+            if mail:
+                codigo_id = _mandar_codigo_registro(s, request, tipo, numero, mail, "padron")
+                return {"ok": True, "paso": "codigo", "pista": correo.pista(mail),
+                        "token": auth.firmar_paso(
+                            {"id": numero, "codigo_id": codigo_id, "origen": "mail_padron"},
+                            proposito=_PROPOSITO_REGISTRO)}
+            acepta = (db.acepta_mail_declarado(s, numero) if es_trab
+                      else db.acepta_mail_declarado_empresa(s, numero))
+            if not acepta:
+                raise ErrorApp("E-REGISTRO-04")
+            return {"ok": True, "paso": "mail", "token": auth.firmar_paso(
+                {"id": numero}, proposito=_PROPOSITO_REGISTRO)}
+    except ErrorApp:
+        _login_fallo(request, _intentos_registro)
+        raise
+
+
+def _registro_mail(request: Request, tipo: str, token: str, mail: str):
+    """Paso 2: la persona declara un mail y se le manda el código. Solo vale
+    un token de `/iniciar` que dijo `paso: mail` (trae el número y nada más)."""
+    if _login_bloqueado(request, _intentos_registro):
+        raise ErrorApp("E-REGISTRO-05")
+    datos = auth.leer_paso(token, _PROPOSITO_REGISTRO)
+    if not datos or set(datos) != {"id"}:
+        _login_fallo(request, _intentos_registro)
+        return _registro_error(400, "paso", "La verificación venció. Empezá de nuevo.")
+    numero = str(datos["id"])
+    mail_ok = _mail_declarable(mail)
+    if not mail_ok:
+        _login_fallo(request, _intentos_registro)
+        return _registro_error(422, "mail", "Escribí un mail válido.")
+    try:
+        with db.get_session() as s:
+            acepta = (db.acepta_mail_declarado(s, numero) if tipo == "trabajador"
+                      else db.acepta_mail_declarado_empresa(s, numero))
+            if not acepta:
+                raise ErrorApp("E-REGISTRO-04")
+            codigo_id = _mandar_codigo_registro(s, request, tipo, numero, mail_ok, "declarado")
+    except ErrorApp:
+        _login_fallo(request, _intentos_registro)
+        raise
+    return {"ok": True, "paso": "codigo", "pista": correo.pista(mail_ok),
+            "token": auth.firmar_paso(
+                {"id": numero, "codigo_id": codigo_id, "origen": "mail_declarado", "mail": mail_ok},
+                proposito=_PROPOSITO_REGISTRO)}
+
+
+def _registro_confirmar(s, tipo: str, numero: str, token: str, codigo: str):
+    """Paso 3, la parte del código. Devuelve (origen, mail_declarado, error):
+    `error` es la clave del `?error=` a la que hay que redirigir, o "" si todo
+    cerró; `origen` es el de `db.ORIGENES_NIVEL` que justifica el nivel.
+    Con el canal de mail prendido exige un token con código; apagado, el token
+    de `/iniciar` sin código (o ningún token) deja nacer la cuenta en nivel 1.
+    El origen y el mail salen de la FILA del código, no del token, y la fila
+    tiene que ser de este número y de este tipo. Se hace commit siempre,
+    TAMBIÉN con "incorrecto", o el contador de intentos no avanza."""
+    datos = auth.leer_paso(token, _PROPOSITO_REGISTRO) if token else None
+    if datos is not None and _norm_cuil(str(datos.get("id", ""))) != numero:
+        return "", "", "paso"
+    con_codigo = datos is not None and "codigo_id" in datos
+    if correo.habilitado() and not con_codigo:
+        return "", "", "paso"
+    if not con_codigo:
+        return "cuil_padron", "", ""
+    fila = s.get(db.CodigoVerificacion, datos["codigo_id"])
+    if (not fila or fila.tipo != tipo or fila.identificador != numero
+            or fila.proposito != _PROPOSITO_REGISTRO):
+        return "", "", "codigo"
+    resultado = db.verificar_codigo(s, fila.id, codigo)
+    s.commit()
+    if resultado != "ok":
+        return "", "", "codigo"
+    if fila.origen_destino == "padron":
+        return "mail_padron", "", ""
+    return "mail_declarado", fila.destino, ""
+
+
+def _registro_nivel(s, cuenta, origen: str) -> None:
+    """Deja a la cuenta recién creada en el nivel que acredita `origen`.
+    `db.subir_nivel` solo SUBE, así que para el nivel 1 (`cuil_padron`, el del
+    canal de mail apagado) no escribe nada: acá se deja asentado el origen, que
+    es lo que el panel muestra como "CUIL en el padrón"."""
+    if not db.subir_nivel(s, cuenta, origen) and not cuenta.nivel_origen:
+        cuenta.nivel_origen = origen
+        cuenta.nivel_actualizado = fechas.ahora_texto()
+        s.add(cuenta)
+
+
+@app.post("/trabajador/registro/iniciar")
+def trabajador_registro_iniciar(request: Request, cuil: str = Form(""),
+                                token_captcha: str = Form("", alias="cf-turnstile-response")):
+    """Paso 1 del registro del afiliado. Contrato JSON:
+    200 `{ok, paso: "datos"|"codigo"|"mail", token, pista?}`; 403 `nohabilitado`;
+    409 `yaexiste`; errores con código (E-REGISTRO-01/03/04/05/06, E-IDENT-01)
+    como `{detail, codigo}`. Todo fallo cuenta para el freno de la IP."""
+    _registro_iniciar_previo(request, token_captcha)
+    cuil = _norm_cuil(cuil)
+    if _cuil_mal(cuil):
+        _login_fallo(request, _intentos_registro)
+        raise ErrorApp("E-IDENT-01")
+    return _registro_iniciar(request, "trabajador", cuil)
+
+
+@app.post("/trabajador/registro/mail")
+def trabajador_registro_mail(request: Request, token: str = Form(""), mail: str = Form("")):
+    """Paso 2 (solo si el padrón no tiene mail y el sindicato acepta uno
+    declarado): manda el código al mail que la persona declara. Contrato JSON:
+    200 `{ok, paso: "codigo", pista, token}`; 400 `paso` (token vencido);
+    422 `mail`; E-REGISTRO-03/04/05/06 como `{detail, codigo}`."""
+    return _registro_mail(request, "trabajador", token, mail)
+
+
 @app.post("/trabajador/registro")
 def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Form(...),
                          nombre: str = Form(""),
@@ -6599,8 +6798,20 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
                          calle: str = Form(""), numero: str = Form(""),
                          piso_depto: str = Form(""), codigo_postal: str = Form(""),
                          telefono: str = Form(""), mail: str = Form(""),
+                         token: str = Form(""), codigo: str = Form(""),
                          token_captcha: str = Form("", alias="cf-turnstile-response")):
-    """Crea la cuenta del afiliado y, con ella, sus datos personales.
+    """Crea la cuenta del afiliado y, con ella, sus datos personales. Es el
+    PASO 3 del registro (PLAN_REGISTRO.md §4.1): llega con el `token` firmado
+    de `/trabajador/registro/iniciar` (o `/mail`) y el `codigo` que la persona
+    recibió por mail. La cuenta nace con el nivel que acredita ese camino
+    (`mail_padron` o `mail_declarado` = 2); con el canal de mail apagado, o sin
+    token (cliente viejo), sigue como siempre y nace nivel 1 `cuil_padron`.
+
+    **El campo `mail` ya NO se escribe desde el registro**: la pantalla dejó de
+    pedirlo (el mail se confirma en el paso 2, no se tipea dos veces) y el del
+    padrón es del sindicato. Si la persona declaró uno, va a
+    `mail_declarado` (confirmado), nunca a `mail`. El parámetro se queda en la
+    firma para que sea idéntica a la del perfil (`test_datos_personales.py`).
 
     **Pide exactamente los mismos campos que el perfil** (nombre, domicilio,
     teléfono y mail), y con la misma marca de obligatorio y opcional. Antes
@@ -6650,10 +6861,13 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
     # como fallo de la IP; el que la crea limpia la tabla.
     if _login_bloqueado(request, _intentos_registro):
         return RedirectResponse("/ingresar?error=espera_registro", status_code=303)
-    if not captcha.verificar(token_captcha, _ip_de(request)):
-        _login_fallo(request, _intentos_registro)
-        return RedirectResponse("/ingresar?error=captcha", status_code=303)
     cuil = _norm_cuil(cuil)
+    # Con un token válido del paso 1 el captcha ya se resolvió ahí (un token de
+    # Turnstile sirve una sola vez); sin él, esta es la única puerta y se exige.
+    if auth.leer_paso(token, _PROPOSITO_REGISTRO) is None:
+        if not captcha.verificar(token_captcha, _ip_de(request)):
+            _login_fallo(request, _intentos_registro)
+            return RedirectResponse("/ingresar?error=captcha", status_code=303)
     # Primero que el número exista de verdad (verificador de AFIP) y recién
     # después se lo busca en el padrón: un número que no pasa el módulo 11 no
     # es de nadie, y decirle "no estás habilitado" a quien tipeó mal un dígito
@@ -6661,13 +6875,17 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
     if _cuil_mal(cuil):
         _login_fallo(request, _intentos_registro)
         return RedirectResponse("/ingresar?error=cuil", status_code=303)
+    # El domicilio se valida ANTES de mirar el padrón y cuenta como fallo: si
+    # el redirect `domicilio` saliera solo para quien está afiliado, mandar
+    # CUILes sin provincia enumeraría el padrón sin frenarse nunca (QA, etapa 1).
+    if geo.faltan_campos({"provincia": provincia, "localidad": localidad}):
+        _login_fallo(request, _intentos_registro)
+        return RedirectResponse("/ingresar?error=domicilio", status_code=303)
     # Validar que el CUIL esté empadronado en al menos un sindicato
     sinds = db.sindicatos_de_cuil(cuil)
     if not sinds:
         _login_fallo(request, _intentos_registro)
         return RedirectResponse("/ingresar?error=nohabilitado", status_code=303)
-    if geo.faltan_campos({"provincia": provincia, "localidad": localidad}):
-        return RedirectResponse("/ingresar?error=domicilio", status_code=303)
     domicilio = geo.campos_para_guardar(
         {"calle": calle, "numero": numero, "piso_depto": piso_depto,
          "localidad": localidad, "provincia": provincia, "codigo_postal": codigo_postal},
@@ -6681,6 +6899,10 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
         if persona.clave_hash:
             _login_fallo(request, _intentos_registro)
             return RedirectResponse("/ingresar?error=yaexiste", status_code=303)
+        origen, mail_declarado, error = _registro_confirmar(s, "trabajador", cuil, token, codigo)
+        if error:
+            _login_fallo(request, _intentos_registro)
+            return RedirectResponse(f"/ingresar?error={error}", status_code=303)
         persona.clave_hash = auth.hashear_clave(clave)
         # Cada `None` es "no lo toques": el domicilio idéntico no se reescribe
         # (ver `_domicilio_distinto`), y el teléfono o el mail en blanco
@@ -6688,8 +6910,12 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
         db.guardar_datos_personales(
             s, cuil, nombre=nombre,
             domicilio=domicilio if _domicilio_distinto(persona, domicilio) else None,
-            telefono=telefono if telefono.strip() else None,
-            mail=mail if mail.strip() else None)
+            telefono=telefono if telefono.strip() else None)
+        if mail_declarado:
+            persona.mail_declarado = mail_declarado
+            persona.mail_declarado_confirmado = fechas.ahora_texto()
+        _registro_nivel(s, persona, origen)
+        s.add(persona)
         # marcar los empadronamientos como registrados
         for t in s.exec(select(Trabajador).where(Trabajador.cuil == cuil)).all():
             t.registrado = True
@@ -7087,17 +7313,45 @@ def empresa_login(request: Request, cuit: str = Form(...), clave: str = Form(...
     return resp
 
 
+@app.post("/empresa/registro/iniciar")
+def empresa_registro_iniciar(request: Request, cuit: str = Form(""),
+                             token_captcha: str = Form("", alias="cf-turnstile-response")):
+    """Paso 1 del registro de la empresa: espejo de `/trabajador/registro/iniciar`
+    con el CUIT, `CuentaEmpleador` y el mail de `Empleador`."""
+    _registro_iniciar_previo(request, token_captcha)
+    cuit = _norm_cuil(cuit)
+    if _cuit_mal(cuit):
+        _login_fallo(request, _intentos_registro)
+        raise ErrorApp("E-IDENT-02")
+    return _registro_iniciar(request, "empleador", cuit)
+
+
+@app.post("/empresa/registro/mail")
+def empresa_registro_mail(request: Request, token: str = Form(""), mail: str = Form("")):
+    """Paso 2 del registro de la empresa: espejo de `/trabajador/registro/mail`."""
+    return _registro_mail(request, "empleador", token, mail)
+
+
 @app.post("/empresa/registro")
 def empresa_registro(request: Request, cuit: str = Form(...), clave: str = Form(...),
+                     token: str = Form(""), codigo: str = Form(""),
                      token_captcha: str = Form("", alias="cf-turnstile-response")):
+    """Paso 3 del registro de la empresa (form clásico con redirect). Espejo
+    de `trabajador_registro`: con el canal de mail prendido exige el token del
+    paso 1 y el código; la cuenta nace con el nivel que acredita el origen y,
+    si el mail fue declarado, queda en `mail_declarado` (el del padrón es del
+    sindicato). Apagado y sin token, sigue como siempre y nace nivel 1."""
     # Freno y captcha antes de mirar el padrón: mismo criterio que el registro
     # del afiliado (PLAN_REGISTRO.md, etapa 1), con la misma tabla de IPs.
     if _login_bloqueado(request, _intentos_registro):
         return RedirectResponse("/ingresar-empresa?error=espera_registro", status_code=303)
-    if not captcha.verificar(token_captcha, _ip_de(request)):
-        _login_fallo(request, _intentos_registro)
-        return RedirectResponse("/ingresar-empresa?error=captcha", status_code=303)
     cuit = _norm_cuil(cuit)
+    # Con un token válido del paso 1 el captcha ya se resolvió ahí (un token de
+    # Turnstile sirve una sola vez); sin él, es la única puerta y se exige.
+    if auth.leer_paso(token, _PROPOSITO_REGISTRO) is None:
+        if not captcha.verificar(token_captcha, _ip_de(request)):
+            _login_fallo(request, _intentos_registro)
+            return RedirectResponse("/ingresar-empresa?error=captcha", status_code=303)
     # Antes de buscarlo: un CUIT sin verificador válido no es de nadie. Vale
     # cualquier tipo (una empresa unipersonal tiene CUIT de persona).
     if _cuit_mal(cuit):
@@ -7110,19 +7364,29 @@ def empresa_registro(request: Request, cuit: str = Form(...), clave: str = Form(
         return RedirectResponse("/ingresar-empresa?error=nohabilitado", status_code=303)
     with db.get_session() as s:
         existe = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == cuit)).first()
-        if existe:
+        if existe and existe.clave_hash:
             _login_fallo(request, _intentos_registro)
             return RedirectResponse("/ingresar-empresa?error=yaexiste", status_code=303)
-        s.add(CuentaEmpleador(cuit=cuit, clave_hash=auth.hashear_clave(clave)))
+        origen, mail_declarado, error = _registro_confirmar(s, "empleador", cuit, token, codigo)
+        if error:
+            _login_fallo(request, _intentos_registro)
+            return RedirectResponse(f"/ingresar-empresa?error={error}", status_code=303)
+        cuenta = existe or CuentaEmpleador(cuit=cuit)
+        cuenta.clave_hash = auth.hashear_clave(clave)
+        if mail_declarado:
+            cuenta.mail_declarado = mail_declarado
+            cuenta.mail_declarado_confirmado = fechas.ahora_texto()
+        s.add(cuenta)
+        _registro_nivel(s, cuenta, origen)
         # marcar las altas de este CUIT como registradas
         for e in s.exec(select(Empleador).where(Empleador.cuit == cuit)).all():
             e.registrado = True
             s.add(e)
         s.commit()
     _login_ok(request, _intentos_registro)
-    token = auth.crear_sesion("empleador", sindicato_id=0, ident=cuit)
+    token_sesion = auth.crear_sesion("empleador", sindicato_id=0, ident=cuit)
     resp = RedirectResponse("/empresa/inicio", status_code=303)
-    set_cookie_segura(resp, COOKIE_EMPLEADOR, token)
+    set_cookie_segura(resp, COOKIE_EMPLEADOR, token_sesion)
     set_cookie_segura(resp, "cuit_emp", cuit)
     return resp
 

@@ -224,7 +224,9 @@ def test_el_registro_guarda_los_datos_en_la_persona_y_los_ven_los_dos_gremios():
     # El teléfono y el mail se piden acá desde el 2026-09-22: son los mismos
     # campos que el perfil, y pedirlos recién después era hacerle descubrir un
     # formulario nuevo a quien creía haber terminado de registrarse.
-    assert p.telefono == "3511234567" and p.mail == "pedro@example.com"
+    # El mail ya NO se escribe desde el registro (PLAN_REGISTRO.md §4.1): se
+    # confirma en el paso 2 y el del padrón es del sindicato.
+    assert p.telefono == "3511234567" and p.mail == ""
     # El texto lo arma el servidor, igual que en las otras tres puertas.
     assert p.direccion_texto == "Boulevard San Juan 430, Córdoba"
     # Y NO se geocodifica: el alta no espera a un servicio ajeno.
