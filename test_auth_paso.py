@@ -38,3 +38,21 @@ def test_vence(monkeypatch):
     ahora = time.time()
     monkeypatch.setattr(time, "time", lambda: ahora + 61)
     assert auth.leer_paso(tok, "x") is None
+
+
+def test_firmar_paso_exige_un_dict():
+    """Los datos se leen como dict o no se leen: firmar otra cosa es un error de
+    programación y tiene que saltar acá, no meses después al leerlo."""
+    import pytest
+    for raro in (["a"], "texto", 5, None):
+        with pytest.raises(TypeError):
+            auth.firmar_paso(raro, proposito="x")
+
+
+def test_leer_paso_exige_el_proposito():
+    """Sin default: quien lee tiene que decir qué flujo espera."""
+    import pytest
+    tok = auth.firmar_paso({"a": 1}, proposito="registro")
+    with pytest.raises(TypeError):
+        auth.leer_paso(tok)
+    assert auth.leer_paso(tok, "registro") == {"a": 1}

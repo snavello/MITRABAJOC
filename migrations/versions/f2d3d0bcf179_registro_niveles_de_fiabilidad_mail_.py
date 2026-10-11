@@ -13,10 +13,21 @@ PLAN_REGISTRO.md, modelo de datos (§3). Cuatro cosas del mismo bloque:
    había de hecho (nadie pedía mail para registrarse).
 3. Tabla `codigoverificacion`: los códigos de 6 dígitos del registro y la
    recuperación de clave, con su hash y su traza.
-4. Backfill (D10): las cuentas YA registradas (con clave) quedan en nivel 1
+4. `mail_padron` (Q-6 de la QA): el mail que cargó EL SINDICATO, aparte del
+   `mail` de contacto que la persona (o la empresa) edita desde su perfil.
+   `cuentatrabajador.mail_padron` y `empleador.mail_padron`, con
+   `server_default ''`. Backfill conservador: si la persona nunca eligió clave
+   (`clave_hash = ''`) ese `mail` lo cargó el sindicato y se copia; las cuentas
+   ya registradas quedan con `mail_padron` vacío (no se sabe de dónde salió su
+   `mail`: pudo cambiarlo ella) y el gremio lo recarga por alta masiva. En
+   `empleador` se copia cuando el CUIT no tiene `cuentaempleador` (nadie pudo
+   editar ese mail todavía).
+5. Backfill (D10): las cuentas YA registradas (con clave) quedan en nivel 1
    con origen "cuil_padron" (CUIL en el padrón, anterior a este plan); las de
    trabajador que además tienen al menos un recibo verificado propio suben a
-   nivel 3 ("recibo_propio"). Las empresas quedan en 1: no suben recibos.
+   nivel 3 ("recibo_propio"; el CUIL del recibo se compara solo con sus
+   dígitos de los dos lados, porque `reciboverificado.cuil` puede haberse
+   guardado con guiones: Q-7). Las empresas quedan en 1: no suben recibos.
    Las filas del padrón que todavía no eligieron clave (clave_hash vacío)
    quedan sin origen: no tienen nivel que justificar.
 
@@ -74,6 +85,10 @@ def upgrade() -> None:
 
     op.add_column('sindicato', sa.Column('acepta_mail_declarado', sa.Boolean(), nullable=False, server_default=sa.true()))
 
+    # El mail que cargó el sindicato, aparte del de contacto (Q-6).
+    op.add_column('cuentatrabajador', sa.Column('mail_padron', sqlmodel.sql.sqltypes.AutoString(), nullable=False, server_default=''))
+    op.add_column('empleador', sa.Column('mail_padron', sqlmodel.sql.sqltypes.AutoString(), nullable=False, server_default=''))
+
     # ---- Backfill (D10) ----
     # La hora de Buenos Aires, en el formato de todo el proyecto. Se calcula acá
     # y no importando fechas.py: una migración tiene que seguir andando aunque
@@ -83,15 +98,27 @@ def upgrade() -> None:
         op.execute(sa.text(
             f"UPDATE {tabla} SET nivel_origen = 'cuil_padron', nivel_actualizado = :ahora "
             "WHERE clave_hash <> ''").bindparams(ahora=ahora))
+    # Q-7: se comparan solo los dígitos de los dos lados (un recibo puede
+    # estar guardado como '20-11111111-6'). Con IN sobre una subconsulta
+    # Postgres arma una tabla hash de los CUIL de recibos y no cruza cuentas
+    # por recibos.
     op.execute(sa.text(
         "UPDATE cuentatrabajador SET nivel_fiabilidad = 3, nivel_origen = 'recibo_propio', "
         "nivel_actualizado = :ahora "
-        "WHERE clave_hash <> '' AND EXISTS ("
-        "SELECT 1 FROM reciboverificado r WHERE r.cuil = cuentatrabajador.cuil)"
+        "WHERE clave_hash <> '' AND regexp_replace(cuil, '[^0-9]', '', 'g') IN ("
+        "SELECT regexp_replace(r.cuil, '[^0-9]', '', 'g') FROM reciboverificado r)"
     ).bindparams(ahora=ahora))
+    # Q-6: mail del padrón. Ver el docstring: solo donde se sabe que lo cargó el sindicato.
+    op.execute(sa.text(
+        "UPDATE cuentatrabajador SET mail_padron = mail WHERE clave_hash = ''"))
+    op.execute(sa.text(
+        "UPDATE empleador SET mail_padron = mail WHERE NOT EXISTS ("
+        "SELECT 1 FROM cuentaempleador c WHERE c.cuit = empleador.cuit)"))
 
 
 def downgrade() -> None:
+    op.drop_column('empleador', 'mail_padron')
+    op.drop_column('cuentatrabajador', 'mail_padron')
     op.drop_column('sindicato', 'acepta_mail_declarado')
     for tabla in CUENTAS:
         op.drop_column(tabla, 'clave_temporal')

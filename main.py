@@ -1794,8 +1794,17 @@ def admin_trabajador_alta(
                 # se escriben en un solo lugar y por eso el cambio se ve
                 # también en los otros gremios donde esté empadronada. Es la
                 # contracara de que no puedan existir dos versiones.
+                # `mail_padron` es el que carga el SINDICATO (acá y en el alta
+                # masiva, y en ningún otro lugar). El formulario de edición
+                # llega precargado con el mail de CONTACTO, que la persona
+                # puede haber cambiado desde su perfil: reenviarlo sin tocar
+                # no puede convertirlo en "mail del padrón". Solo se escribe
+                # cuando el admin lo CAMBIÓ.
+                actual = db.asegurar_cuenta(s, t.cuil).mail or ""
+                cambio_mail = (mail or "").strip() != actual.strip()
                 db.guardar_datos_personales(s, t.cuil, nombre=nombre,
-                                            domicilio=domicilio, telefono=telefono, mail=mail)
+                                            domicilio=domicilio, telefono=telefono, mail=mail,
+                                            mail_padron=mail if cambio_mail else None)
         else:    # alta — evitar duplicado de CUIL en el mismo sindicato
             # Un número que NACE en el sistema: el CUIL con su verificador, y
             # el CUIT del empleador (opcional) también. Nada se escribió aún.
@@ -1811,8 +1820,11 @@ def admin_trabajador_alta(
                     sindicato_id=sid, cuil=cuil_norm,
                     vigencia_credencial=vigencia_credencial or None, seccional_id=sec_id,
                     cuit_empleador=_norm_cuil(cuit_empleador) or None))
+                # En el alta, un mail en blanco NO borra el que ya hubiera
+                # cargado otro gremio para esta persona (`or None` = no tocar).
                 db.guardar_datos_personales(s, cuil_norm, nombre=nombre,
-                                            domicilio=domicilio, telefono=telefono, mail=mail)
+                                            domicilio=domicilio, telefono=telefono, mail=mail,
+                                            mail_padron=mail or None)
         s.commit()
     # Las dos altas pueden venir en cualquier orden: si a este CUIL ya se le
     # había dado usuario del panel, acá se arma el vínculo y se prende la
@@ -1868,9 +1880,17 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
     (`cuilinvalidos`) y la pantalla muestra cuáles son (`cuilmuestra`, hasta
     diez), porque el arreglo es distinto -- corregir un dígito, no completar
     una columna.
+
+    **Un CUIL que ya está en el padrón de este sindicato** no es una alta ni
+    una omitida si su línea trae mail: se actualiza SOLO su `mail_padron`
+    (PLAN_REGISTRO.md, Q-6) y se cuenta aparte (`mailsactualizados`). Es la
+    única vía del gremio para cargar el mail de quienes ya se registraron. Sin
+    mail, el CUIL repetido sigue yendo a `omitidas`. En una alta nueva, un
+    mail en blanco no borra el `mail_padron` que otro gremio ya hubiera cargado.
     """
     sid = exigir_sindicato(request)
     altas = 0
+    mails_actualizados = 0   # CUIL ya en el padrón cuya línea trajo mail (solo mail_padron)
     omitidas = []
     cuil_invalidos = []      # líneas con CUIL que no cumple el módulo 11
     por_nombre = {geo._norm(sec["nombre"]): sec["id"]
@@ -1884,6 +1904,16 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
             campos = [c.strip() for c in linea.split(",")]
             cuil = _norm_cuil(campos[0]) if campos else ""
             nombre = campos[1] if len(campos) > 1 else ""
+            def campo(i): return campos[i] if len(campos) > i else ""
+            if len(cuil) == 11 and cuil in existentes and campo(8):
+                # Ya está en el padrón de este sindicato (quizá ya registrado):
+                # no es un alta, pero la línea trae el mail y esta es la ÚNICA
+                # vía que tiene el gremio para cargar el mail del padrón de
+                # quien ya tiene cuenta. Solo `mail_padron`: ni el contacto ni
+                # el resto de los datos de la persona se tocan.
+                db.guardar_datos_personales(s, cuil, mail_padron=campo(8))
+                mails_actualizados += 1
+                continue
             if len(cuil) != 11 or not nombre or cuil in existentes:
                 omitidas.append(linea.strip()[:60])
                 continue
@@ -1894,7 +1924,6 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
             if _cuil_mal(cuil):
                 cuil_invalidos.append(campos[0][:20])
                 continue
-            def campo(i): return campos[i] if len(campos) > i else ""
             if geo.faltan_campos({"localidad": campo(5), "provincia": campo(6)}):
                 omitidas.append(linea.strip()[:60])
                 continue
@@ -1906,13 +1935,16 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
                 sindicato_id=sid, cuil=cuil,
                 seccional_id=por_nombre.get(geo._norm(campo(10)))))
             db.guardar_datos_personales(s, cuil, nombre=nombre, domicilio=domicilio,
-                                        telefono=campo(7), mail=campo(8))
+                                        telefono=campo(7), mail=campo(8),
+                                        mail_padron=campo(8) or None)
             existentes.add(cuil); altas += 1
         s.commit()
     # Las primeras tres líneas rechazadas alcanzan para que la persona vea el
     # patrón (casi siempre es la misma columna que falta en todas) sin armar
     # una query string de diez mil caracteres con la planilla entera.
     destino = f"/admin?altas={altas}"
+    if mails_actualizados:
+        destino += f"&mailsactualizados={mails_actualizados}"
     if omitidas:
         destino += f"&omitidas={len(omitidas)}&muestra=" + quote(" | ".join(omitidas[:3]))
     if cuil_invalidos:
@@ -2949,8 +2981,15 @@ def admin_empleador_alta(
                 if _norm_cuil(cuit_norm) != _norm_cuil(e.cuit):   # `cuit` es el campo del formulario: tapa al módulo
                     return RedirectResponse("/admin?error=cuitfijo#empleadores", status_code=303)
                 e.razon_social = razon_social.strip()
+                mail_anterior = e.mail
                 e.domicilio, e.telefono = domicilio, telefono
                 e.provincia, e.mail = provincia, mail
+                # `mail_padron` lo escribe SOLO esta ruta (la empresa edita su
+                # contacto desde /api/empresa/perfil y no lo toca). Mismo
+                # criterio que el afiliado: solo si el admin cambió el mail
+                # del formulario, que llega precargado con el de contacto.
+                if (mail or "").strip() != (mail_anterior or "").strip():
+                    e.mail_padron = (mail or "").strip()[:200]
                 s.add(e)
         else:
             # Un empleador NUEVO: su CUIT nace acá. Cualquier tipo -- un
@@ -2962,7 +3001,8 @@ def admin_empleador_alta(
             if not existe:
                 s.add(Empleador(sindicato_id=sid, cuit=cuit_norm,
                                  razon_social=razon_social.strip(), domicilio=domicilio,
-                                 telefono=telefono, provincia=provincia, mail=mail))
+                                 telefono=telefono, provincia=provincia, mail=mail,
+                                 mail_padron=mail.strip()[:200]))
         s.commit()
     return RedirectResponse("/admin#empleadores", status_code=303)
 

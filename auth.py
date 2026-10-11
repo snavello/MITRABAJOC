@@ -153,16 +153,24 @@ def firmar_paso(datos: dict, minutos: int = 20, proposito: str = "") -> str:
     propósito propio y un vencimiento corto: un token de registro NO abre una
     sesión y una sesión NO sirve como token de registro, aunque los dos salgan
     del mismo secreto. Nada de esto viaja en una cookie plana ni en un campo
-    oculto sin firmar: es la regla de H-0004 llevada a los flujos nuevos."""
+    oculto sin firmar: es la regla de H-0004 llevada a los flujos nuevos.
+
+    `datos` tiene que ser un dict (TypeError si no): `leer_paso` solo devuelve
+    dicts, así que firmar otra cosa produciría un token que nunca se puede
+    leer, y el error aparecería lejos de donde está el defecto."""
+    if not isinstance(datos, dict):
+        raise TypeError("firmar_paso: `datos` tiene que ser un dict")
     payload = {"p": proposito, "d": datos, "t": int(time.time()), "m": int(minutos)}
     cuerpo = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
     firma = hmac.new(SECRETO.encode(), ("paso:" + cuerpo).encode(), hashlib.sha256).hexdigest()[:32]
     return f"{cuerpo}.{firma}"
 
 
-def leer_paso(token: str, proposito: str = "") -> dict | None:
+def leer_paso(token: str, proposito: str) -> dict | None:
     """Devuelve los datos de `firmar_paso`, o None si la firma no cierra, el
-    propósito no es el esperado o el token venció."""
+    propósito no es el esperado o el token venció. El propósito es OBLIGATORIO
+    (sin default): un lector que se olvidara de pedirlo aceptaría tokens de
+    otro flujo, que es justo lo que el propósito evita."""
     if not token or "." not in token:
         return None
     cuerpo, firma = token.rsplit(".", 1)

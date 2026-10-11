@@ -132,8 +132,12 @@ def test_usado_y_vencido_no_suman_intentos_y_no_dejan_tantear():
 ])
 def test_entradas_raras_no_rompen_ni_se_cuelan(monkeypatch, entrada, esperado):
     monkeypatch.setattr(db.secrets, "randbelow", lambda tope: 123456)
+    # Un CUIL distinto por caso: `verificar_codigo` ahora hace commit (Q-1), así que
+    # los códigos de cada caso quedan guardados y, con el mismo CUIL, el cupo por hora
+    # (Q-3) cortaría el cuarto. El rollback del final ya no deshace lo que importa.
+    ident = f"2091{abs(hash(repr(entrada))) % 10 ** 7:07d}"
     with db.get_session() as s:
-        fila, _ = db.crear_codigo(s, "trabajador", "20910000010", "registro", "a@b.com", "padron", "ip")
+        fila, _ = db.crear_codigo(s, "trabajador", ident, "registro", "a@b.com", "padron", "ip")
         assert db.verificar_codigo(s, fila.id, entrada) == esperado
         s.rollback()
 
@@ -449,16 +453,21 @@ def test_acepta_mail_declarado_empresa_es_coherente_con_sindicatos_de_cuit_emple
 
 
 def test_la_persona_no_puede_cambiar_el_mail_del_padron_desde_su_perfil():
-    """ROJO. D1/§3: `mail` es del padrón y 'nunca se pisa'. Pero /api/perfil
-    (y el registro de hoy) llaman a guardar_datos_personales(mail=…) sobre la
-    MISMA columna que `mail_padron_de` toma como confiable. Un impostor que
-    llegó primero (o cualquier cuenta de hoy, nivel 1) pone su mail en el
-    perfil y la recuperación de clave por 'mail del padrón' (D6) y el código
-    de registro de los otros gremios pasan a ir a él."""
+    """Q-6 (era ROJO). D1/§3: el mail del padrón 'nunca se pisa'. Antes
+    /api/perfil (y el registro) escribían `CuentaTrabajador.mail`, la MISMA
+    columna que `mail_padron_de` toma como confiable: un impostor que llegó
+    primero ponía su mail en el perfil y los códigos pasaban a ir a él.
+
+    Adaptado al diseño decidido (columna aparte `mail_padron`, que escribe solo
+    el sindicato): el perfil SÍ cambia `mail` (es el contacto de la persona,
+    regla de CLAUDE.md) y NO cambia `mail_padron`, que es lo que
+    `mail_padron_de` lee. El test original sembraba el mail del sindicato en
+    `mail`; ahora lo siembra en `mail_padron`, que es donde vive."""
     with db.get_session() as s:
         sind = _sindicato(s, "QA Perfil")
         cuil = "20940000001"
         c = CuentaTrabajador(cuil=cuil, nombre="Ana Real", mail="real@sindicato.com",
+                             mail_padron="real@sindicato.com",
                              clave_hash=auth.hashear_clave("clave-larga-123"))
         s.add(c)
         s.add(Trabajador(sindicato_id=sind.id, cuil=cuil, registrado=True))
@@ -473,6 +482,9 @@ def test_la_persona_no_puede_cambiar_el_mail_del_padron_desde_su_perfil():
     assert r.status_code == 200, r.text
     with db.get_session() as s:
         assert db.mail_padron_de(s, cuil) == "real@sindicato.com"
+        # y el contacto sí cambió: es de la persona
+        assert s.exec(select(CuentaTrabajador).where(
+            CuentaTrabajador.cuil == cuil)).first().mail == "impostor@malo.com"
 
 
 # ===========================================================================
@@ -482,10 +494,11 @@ MIGRACION = next((RAIZ / "migrations" / "versions").glob("f2d3d0bcf179_*.py"))
 REV_ANTERIOR = "e28e33b0aec5"
 COLUMNAS_NUEVAS = {
     "cuentatrabajador": ["nivel_fiabilidad", "nivel_origen", "nivel_actualizado", "mail_declarado",
-                         "mail_declarado_confirmado", "clave_temporal"],
+                         "mail_declarado_confirmado", "clave_temporal", "mail_padron"],
     "cuentaempleador": ["nivel_fiabilidad", "nivel_origen", "nivel_actualizado", "mail_declarado",
                         "mail_declarado_confirmado", "clave_temporal"],
     "sindicato": ["acepta_mail_declarado"],
+    "empleador": ["mail_padron"],
 }
 
 
@@ -541,18 +554,22 @@ def test_migracion_backfill_downgrade_exacto_y_reupgrade(base_migracion):
             c.execute("SET session_replication_role = replica")     # sin armar sindicatos para las FK
         except Exception:
             pytest.skip("hace falta superusuario para insertar sin armar el árbol de FK")
-        c.execute("""INSERT INTO cuentatrabajador (cuil, clave_hash, nombre) VALUES
-            ('20111111112','h','con recibo propio'),
-            ('20111111113','h','sin recibo'),
-            ('20111111114','','padron sin clave'),
-            ('20111111116','h','recibo guardado con guiones'),
-            ('20111111117','','padron sin clave pero con recibo')""")
+        c.execute("""INSERT INTO cuentatrabajador (cuil, clave_hash, nombre, mail) VALUES
+            ('20111111112','h','con recibo propio','registrada@x.com'),
+            ('20111111113','h','sin recibo',''),
+            ('20111111114','','padron sin clave','padron@x.com'),
+            ('20111111116','h','recibo guardado con guiones',''),
+            ('20111111117','','padron sin clave pero con recibo','')""")
         c.execute("""INSERT INTO reciboverificado (sindicato_id,cuil,periodo,fecha,estado) VALUES
             (1,'20111111112','2026-01','x','OK'),
             (1,'20-11111111-6','2026-01','x','OK'),
             (1,'20111111117','2026-01','x','OK'),
             (1,'20999999999','2026-01','x','OK')""")
         c.execute("INSERT INTO cuentaempleador (cuit, clave_hash) VALUES ('30111222335','h'),('30111222336','')")
+        c.execute("""INSERT INTO empleador (sindicato_id, cuit, razon_social, domicilio, telefono,
+                                            provincia, mail, registrado, activo) VALUES
+            (1,'30111222335','con cuenta','','','','empresa@x.com',true,true),
+            (1,'30555666777','sin cuenta','','','','gremio@x.com',false,true)""")
         c.execute("INSERT INTO sindicato (nombre, slug, color_base, activo) VALUES ('X','x','#101b2c', true)") \
             if False else None
     r = _alembic(url, "upgrade", "head")
@@ -562,6 +579,9 @@ def test_migracion_backfill_downgrade_exacto_y_reupgrade(base_migracion):
             "SELECT cuil, nivel_fiabilidad, nivel_origen, nivel_actualizado FROM cuentatrabajador")}
         emp = {cuit: (n, o) for cuit, n, o in c.execute(
             "SELECT cuit, nivel_fiabilidad, nivel_origen FROM cuentaempleador")}
+        # Q-6: backfill de mail_padron
+        mails = dict(c.execute("SELECT cuil, mail_padron FROM cuentatrabajador").fetchall())
+        mails_emp = dict(c.execute("SELECT cuit, mail_padron FROM empleador").fetchall())
         # server_default en TODAS las columnas nuevas
         sin_default = [(t, col) for t, cols in COLUMNAS_NUEVAS.items() for col in cols
                        if c.execute("SELECT column_default FROM information_schema.columns "
@@ -578,9 +598,15 @@ def test_migracion_backfill_downgrade_exacto_y_reupgrade(base_migracion):
     assert emp["30111222335"] == (1, "cuil_padron") and emp["30111222336"] == (1, "")
     # El caso 20111111116: su recibo quedó guardado como '20-11111111-6'
     # (ReciboVerificado.cuil sale de `cuil_sesion or resultado["cuil"]`, este último crudo).
-    # La migración compara sin normalizar: la cuenta NO sube. Es conservador (queda en 1);
-    # se documenta como Q-7 (Bajo).
-    assert filas["20111111116"][:2] == (1, "cuil_padron")
+    # Q-7 (era un hallazgo: la migración comparaba sin normalizar y la cuenta no subía).
+    # Corregido: se comparan solo los dígitos de los dos lados, así que SÍ sube a 3.
+    assert filas["20111111116"][:2] == (3, "recibo_propio")
+    # Q-6: el mail del sindicato se copia SOLO donde se sabe que lo cargó el sindicato
+    # (la persona nunca eligió clave / la empresa no tiene cuenta); el de una cuenta
+    # ya registrada es de procedencia desconocida y queda vacío.
+    assert mails["20111111114"] == "padron@x.com"
+    assert mails["20111111112"] == "" and mails["20111111113"] == ""
+    assert mails_emp["30555666777"] == "gremio@x.com" and mails_emp["30111222335"] == ""
     posterior = _instantanea(url)
     # downgrade: el esquema vuelve EXACTAMENTE al de antes (columnas, defaults, índices, constraints)
     r = _alembic(url, "downgrade", "-1")
@@ -656,10 +682,28 @@ def test_minutos_cero_o_negativos_producen_un_token_ya_vencido(monkeypatch, minu
     assert auth.leer_paso(tok, "x") is None
 
 
-def test_datos_que_no_son_dict_no_se_leen_y_el_token_no_explota():
+def test_datos_que_no_son_dict_no_se_firman_y_un_token_forjado_no_se_lee():
+    """Q-8. Adaptado: el test original afirmaba que `firmar_paso` aceptaba
+    cualquier cosa y que `leer_paso` después devolvía None. Con el diseño
+    decidido `firmar_paso` rechaza lo que no es dict (TypeError, el defecto
+    aparece donde está y no en la lectura). La otra mitad (un token bien
+    firmado cuyos datos NO son un dict tampoco se lee) se conserva forjando
+    el token con la clave, como lo haría quien tuviera el secreto."""
     for raro in (["a"], "texto", 5, None):
-        tok = auth.firmar_paso(raro, proposito="x")
-        assert auth.leer_paso(tok, "x") is None
+        with pytest.raises(TypeError):
+            auth.firmar_paso(raro, proposito="x")
+        payload = {"p": "x", "d": raro, "t": int(time.time()), "m": 20}
+        cuerpo = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+        import hmac as _h
+        firma = _h.new(auth.SECRETO.encode(), ("paso:" + cuerpo).encode(), hashlib.sha256).hexdigest()[:32]
+        assert auth.leer_paso(f"{cuerpo}.{firma}", "x") is None
+
+
+def test_leer_paso_exige_el_proposito():
+    """Q-8: sin default, un lector que se olvida del propósito falla fuerte."""
+    tok = auth.firmar_paso({"a": 1}, proposito="x")
+    with pytest.raises(TypeError):
+        auth.leer_paso(tok)
 
 
 def test_el_paso_vive_lo_que_dice_y_un_segundo_menos(monkeypatch):
