@@ -1,0 +1,1734 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<title>Instructivo de montaje Colm3na</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: documento paginado de hojas blancas A4 sobre una mesa gris; cada hoja empieza página nueva al imprimir. Tema claro a propósito. Estética Colm3na: condensada en títulos, tinta azul noche, acento ámbar. */
+:root{
+  color-scheme:light;
+  --mesa:#e4e7eb; --hoja:#ffffff; --ink:#18202b; --muted:#5b6574; --line:#dde1e7; --suave:#f5f6f8;
+  --accent:#b86e0c; --navy:#1d2a3f; --llano-bg:#eef5ee; --llano-ink:#24563a; --llano-line:#9cc7a8;
+  --ok-bg:#eef4fb; --ok-ink:#1d4f86; --nv:#b42318; --nv-bg:#fde8e6; --vp:#8a5a00; --vp-bg:#fdf0dc;
+  --f-display:"Barlow Condensed","Arial Narrow","Liberation Sans Narrow",sans-serif;
+  --f-body:"Barlow","Liberation Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono","DejaVu Sans Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{background:var(--mesa);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;margin:0;counter-reset:pagina}
+.doc{max-width:900px;margin:0 auto;padding-inline:16px;padding-block:28px 60px;display:flex;flex-direction:column;gap:28px}
+.hoja{background:var(--hoja);border:1px solid #d3d8df;box-shadow:0 2px 10px rgba(24,32,43,.08);padding:44px 50px 28px;display:flex;flex-direction:column;gap:12px;min-height:1100px;counter-increment:pagina;scroll-margin-top:16px}
+.hoja>.pie{margin-top:auto;padding-top:14px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;font-size:11.5px;color:var(--muted);font-family:var(--f-display);letter-spacing:.06em;text-transform:uppercase}
+.hoja>.pie .num::after{content:"Página " counter(pagina)}
+@media (max-width:700px){.hoja{padding:24px 16px 18px;min-height:0}.hoja .ui{white-space:normal}}
+.marca{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--navy);padding-bottom:9px;font-family:var(--f-display);text-transform:uppercase;letter-spacing:.1em;font-size:12.5px;color:var(--muted);gap:10px;flex-wrap:wrap}
+.marca b{color:var(--navy);font-size:15px;letter-spacing:.14em}
+.kicker{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.12em;color:var(--accent);font-size:14px}
+h1{font-family:var(--f-display);font-weight:700;font-size:42px;line-height:1.02;margin:0;text-transform:uppercase;color:var(--navy);text-wrap:balance}
+h2{font-family:var(--f-display);font-weight:700;font-size:27px;text-transform:uppercase;margin:0;text-wrap:balance;display:flex;gap:12px;align-items:baseline;color:var(--navy)}
+h2 .n{color:var(--accent);font-size:21px}
+h3{font-family:var(--f-display);font-weight:600;font-size:18px;margin:4px 0 0;text-transform:uppercase;letter-spacing:.02em;color:var(--navy)}
+p{margin:0;max-width:82ch}
+a{color:var(--ok-ink)}
+.intro{font-size:14.5px}
+.pre{font-size:13px;background:var(--suave);border:1px solid var(--line);border-radius:4px;padding:6px 10px}
+.nota{color:var(--muted);font-size:13px}
+.llano{background:var(--llano-bg);color:var(--llano-ink);border-left:3px solid var(--llano-line);padding:6px 10px;font-size:13px;line-height:1.45;border-radius:0 4px 4px 0}
+.llano::before{content:"En simple: ";font-weight:600}
+code{font-family:var(--f-mono);font-size:11.5px;background:var(--suave);padding:1px 4px;border-radius:3px;word-break:break-word}
+pre.cmd{font-family:var(--f-mono);font-size:11px;background:#1d2a3f;color:#e8edf3;padding:8px 10px;border-radius:4px;white-space:pre-wrap;word-break:break-word;margin:4px 0}
+.ui{font-family:var(--f-display);font-weight:600;font-size:13.5px;letter-spacing:.02em;background:#eef1f5;border:1px solid #d3d8df;border-radius:3px;padding:0 5px;white-space:nowrap}
+.url{font-family:var(--f-mono);font-size:11.5px;color:var(--ok-ink)}
+.flag{display:inline-block;font-family:var(--f-display);font-weight:700;font-size:11px;letter-spacing:.06em;padding:0 6px;border-radius:999px;border:1px solid currentColor;vertical-align:1px;white-space:nowrap}
+.flag.nv{color:var(--nv);background:var(--nv-bg)} .flag.vp{color:var(--vp);background:var(--vp-bg)}
+/* paso */
+.paso{display:grid;grid-template-columns:52px minmax(0,1fr);gap:4px 12px;border-top:1px solid var(--line);padding-top:9px;break-inside:avoid}
+.pn{font-family:var(--f-display);font-weight:700;font-size:17px;color:var(--accent);display:flex;gap:6px;align-items:flex-start}
+.box{display:inline-block;width:12px;height:12px;border:1.5px solid var(--muted);border-radius:2px;margin-top:4px;flex:0 0 12px}
+.pc{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pt{font-weight:600;font-size:14.5px;color:var(--navy)}
+.pq{font-size:12.5px;color:var(--muted)}
+.ruta{font-size:13px;line-height:1.9}
+ul.campos{margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:2px}
+.ok{font-size:12.5px;background:var(--ok-bg);color:var(--ok-ink);padding:4px 9px;border-radius:3px}
+.ok::before{content:"✓ "}
+.fuente{font-size:11.5px;color:var(--muted);word-break:break-word}
+table.t{border-collapse:collapse;width:100%;font-size:12px}
+table.t th{font-family:var(--f-display);font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:11.5px;color:var(--muted);text-align:left;padding:5px 7px;border-bottom:1px solid var(--line);background:var(--suave)}
+table.t td{padding:5px 7px;border-bottom:1px solid var(--line);vertical-align:top;word-break:break-word}
+table.t tr{break-inside:avoid}
+.tw{overflow-x:auto}
+ul.lista{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+.entra{font-size:13px;background:#fbf3e4;border-left:3px solid var(--accent);padding:4px 9px;border-radius:0 3px 3px 0}
+.etapa{border:1px solid var(--line);border-radius:4px;padding:8px 12px;break-inside:avoid}
+.etapa h3{margin:0 0 4px}
+table.t td.q{white-space:nowrap}
+/* página 1 */
+.comp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px}
+.c{border:1px solid var(--line);border-left:4px solid var(--navy);border-radius:4px;padding:7px 10px;break-inside:avoid}
+.c b{font-family:var(--f-display);font-size:15px;color:var(--navy);text-transform:uppercase;letter-spacing:.03em;display:block}
+.c span{font-size:12.5px;display:block}
+.c i{font-style:normal;font-size:11.5px;color:var(--muted);display:block;margin-top:2px}
+.c.cod{border-left-color:#5b4fa8} .c.srv{border-left-color:#1d6b8a} .c.dat{border-left-color:#2f7d4f} .c.red{border-left-color:var(--accent)} .c.mon{border-left-color:#8a1f15}
+.ley{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted)}
+.ley span{display:flex;gap:6px;align-items:center}
+.ley i{display:inline-block;width:14px;height:10px;border-left:4px solid}
+@media (max-width:640px){.comp{grid-template-columns:minmax(0,1fr)}}
+.diag{width:100%;height:auto;max-width:100%}
+@page{size:A4;margin:11mm}
+@media print{
+  body{background:#fff;font-size:11.6px;line-height:1.42}
+  .paso{padding-top:6px;gap:2px 10px}
+  .ruta{line-height:1.65;font-size:11.8px}
+  ul.campos,.ok,.llano,.pre,.nota{font-size:11.2px}
+  .pt{font-size:13px}
+  .fuente{font-size:10px}
+  table.t{font-size:10.6px}
+  table.t td,table.t th{padding:3px 5px}
+  pre.cmd{font-size:9.8px;padding:6px 8px}
+  .ui{font-size:12px}
+  .entra{font-size:11.4px}
+  h2{font-size:23px}
+  .doc{padding:0;gap:0;max-width:none}
+  .hoja{box-shadow:none;border:0;padding:0;min-height:0;break-after:page}
+  .hoja:last-child{break-after:auto}
+  .hoja>.pie{margin-top:14px}
+  h2,h3,.pt{break-after:avoid}
+  h1{font-size:34px}
+  .intro{font-size:12.5px}
+  .comp{gap:5px 10px}
+  .c{padding:4px 8px}
+  .c b{font-size:13px}
+  .c span{font-size:10.6px;line-height:1.32}
+  .hoja>.pie{margin-top:8px;padding-top:6px;break-before:avoid}
+  #solucion p{font-size:11.8px;line-height:1.4}
+  #solucion h1{font-size:30px}
+  #solucion .comp{gap:4px 9px}
+  .c i{font-size:10px}
+  .hoja{gap:8px}
+  /* Las dos hojas que crecieron al sumar a GCF: más compactas al imprimir */
+  #quien table.t{font-size:9.8px} #quien table.t td{padding:2px 5px} #quien .intro{font-size:11.6px;line-height:1.38}
+  #i0 table.t{font-size:10px} #i0 table.t td{padding:2px 5px} #i0 .nota,#i0 ul.campos,#i0 .llano,#i0 .ok{font-size:10.6px} #i0 .paso{padding-top:4px}
+}
+</style>
+</head>
+<body>
+<div class="doc">
+<article class="hoja" id="solucion">
+  <div class="marca"><b>Colm3na</b><span>Instructivo de montaje · octubre de 2026</span></div>
+  <span class="kicker">Cuentas y entornos a nombre de XP</span>
+  <h1>Instructivo de montaje</h1>
+  <p class="intro">Hoy las cuentas de Colm3na están a nombre personal de SDN. Este instructivo las arma de nuevo <b>a nombre de XP</b>, de a poco y sin cortar nada: mientras tanto, SDN puede seguir usando sus cuentas viejas en paralelo. <b>AKG es la titular de todas las cuentas</b>: las crea con su usuario, carga la tarjeta de XP y después invita a SDN y a ARS. <b>GCF</b> (ATS, coordinación con el sindicato) se suma como miembro de <b>Claude Team</b> para trabajar en los documentos y presentaciones del proyecto. Cada paso dice quién se sienta frente al teclado y con qué usuario entra.</p>
+
+  <h3>Cómo funciona la solución</h3>
+  <p>SDN y ARS escriben el código con ayuda de <b>Claude</b> y lo guardan en <b>GitHub</b>. Cada cambio aprobado se publica solo en <b>Pruebas</b>. Desde ahí se lleva, por separado, a <b>Demo</b>, a <b>PRODU</b> o a los dos. Los tres entornos funcionan en <b>Render</b>, cada uno con su propia base de datos. La gente entra por las direcciones de <b>cm3.com.ar</b>, que pasan primero por <b>Cloudflare</b>. Para leer los recibos, la app usa la <b>IA de Anthropic</b>. Las copias de seguridad de PRODU se guardan en <b>Amazon S3</b>. Los avisos de problemas llegan por <b>Sentry</b>, <b>Grafana</b> y <b>Telegram</b>.</p>
+
+  <div class="ley">
+    <span><i style="border-color:#5b4fa8"></i>Trabajo y código</span>
+    <span><i style="border-color:#1d6b8a"></i>Servidores</span>
+    <span><i style="border-color:#2f7d4f"></i>Datos y copias</span>
+    <span><i style="border-color:#b86e0c"></i>Dirección web y correo</span>
+    <span><i style="border-color:#8a1f15"></i>Monitoreo y avisos</span>
+  </div>
+  <div class="comp">
+    <div class="c red"><b>Correo de XP · @cm3.com.ar</b><span>Usuarios akg@, sdn@, ars@ y gcf@ del Google Workspace de XP. Con ellos se crean y se usan todas las cuentas (gcf@ solo entra a Claude Team). El grupo alertas@ recibe los avisos y facturacion@ las facturas.</span><i>Etapa Inicial · I1 e I4</i></div>
+    <div class="c red"><b>Dominios · cm3.com.ar</b><span>La dirección propia: app.cm3.com.ar (producción), demo.cm3.com.ar y pruebas.cm3.com.ar. colm3na.com.ar y colm3na.com llevan al mismo lugar.</span><i>Registro en la Etapa Inicial · I2</i></div>
+    <div class="c red"><b>Cloudflare</b><span>Administra las direcciones del dominio. Más adelante funciona además como portero: frena ataques y limita los intentos de adivinar contraseñas.</span><i>Etapa Inicial (direcciones) y Etapa 2 (protección)</i></div>
+    <div class="c cod"><b>API de Anthropic</b><span>La inteligencia artificial que lee los recibos. Cada entorno tiene su propia clave y su tope de gasto.</span><i>Etapa Inicial · I5</i></div>
+    <div class="c cod"><b>Claude Team</b><span>El asistente con el que el equipo programa y documenta. Cada persona tiene su usuario y los proyectos se comparten. GCF participa como miembro.</span><i>Etapa Inicial · I6</i></div>
+    <div class="c cod"><b>GitHub</b><span>Donde se guarda el código y su historia. Controla quién aprueba cada cambio antes de que llegue a Demo o a producción.</span><i>Etapa Inicial · I7</i></div>
+    <div class="c srv"><b>Render</b><span>Los servidores donde funciona la app, en la región Ohio. En la Etapa Inicial: Pruebas. En la Etapa 2: Demo y PRODU, cada uno con su base de datos.</span><i>Etapa Inicial · I8</i></div>
+    <div class="c mon"><b>Sentry</b><span>Registra cada error inesperado de la app con el detalle necesario para corregirlo.</span><i>Plan gratuito, usuario AKG · I9</i></div>
+    <div class="c mon"><b>Telegram</b><span>Un bot de XP manda alertas, errores y un resumen diario a un grupo con AKG, SDN y ARS.</span><i>Etapa Inicial · I10</i></div>
+    <div class="c mon"><b>Grafana Cloud</b><span>Mira desde afuera si cada entorno está funcionando y avisa si algo se cae.</span><i>Etapa 2</i></div>
+    <div class="c dat"><b>Copias en Amazon S3</b><span>Una copia diaria de la base de producción, guardada en otra empresa y protegida contra borrado.</span><i>Etapa 2</i></div>
+    <div class="c red"><b>Correo de la app · Resend</b><span>Para que la app mande mails sola, por ejemplo "recuperá tu clave".</span><i>Etapa 2</i></div>
+    <div class="c dat"><b>Documento cifrado de claves</b><span>Todas las contraseñas y claves nuevas se anotan en un documento protegido que guarda AKG. Nunca se mandan por mail ni por mensajería.</span><i>Desde el primer paso · I0</i></div>
+    <div class="c cod"><b>Cambios en el código</b><span>Ajustes de programación que hacen SDN o ARS. Uno es obligatorio en la Etapa Inicial, antes de mover el repositorio; el resto va en la Etapa 2.</span><i>I7 y Etapa 2</i></div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja" id="orden">
+  <div class="marca"><b>Colm3na</b><span>Etapas y orden de las tareas</span></div>
+  <h2>Tres etapas</h2>
+  <div class="comp" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+    <div class="c srv"><b>1 · Etapa Inicial</b><span>Lo imprescindible. Pruebas funciona igual que hoy, pero ya en cuentas de XP. La Demo vieja sigue en la cuenta de SDN. Se hace en pocas sesiones.</span><i>Detallada paso a paso en este instructivo</i></div>
+    <div class="c cod"><b>2 · Implementación y configuración</b><span>Durante los dos meses previos al piloto: Demo y PRODU nuevas, dominios en la app, protección, copias, monitoreo completo, cambios de código y baja de las cuentas viejas.</span><i>Lista de tareas · página final</i></div>
+    <div class="c mon"><b>3 · Piloto real</b><span>Los controles antes de abrir PRODU a los primeros usuarios reales.</span><i>Lista de controles · página final</i></div>
+  </div>
+
+  <h3>Orden de la Etapa Inicial</h3>
+  <p class="nota">Una flecha llena indica que la fase de origen tiene que estar terminada antes de empezar la otra. Una flecha punteada es un orden sugerido.</p>
+  <svg class="diag" viewBox="0 0 800 320" role="img" aria-label="Orden de las fases de la Etapa Inicial">
+    <defs>
+      <marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1d2a3f"/></marker>
+      <marker id="fp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8a96a6"/></marker>
+    </defs>
+    <g font-family="Barlow Condensed, Arial Narrow, sans-serif" font-size="12.5" fill="#5b6574" letter-spacing="1">
+      <text x="10" y="20">SESIÓN 1 · BASE (LA HACE AKG)</text>
+      <text x="10" y="96">SESIÓN 2 · CUENTAS DE SERVICIO (AKG CREA, SDN CONFIGURA)</text>
+      <text x="470" y="238">SESIÓN 3 · PRUEBAS NUEVA Y CONTROL</text>
+    </g>
+    <g fill="none" stroke="#1d2a3f" stroke-width="1.6" marker-end="url(#fl)">
+      <path d="M150 52 H168"/><path d="M470 52 H488"/><path d="M630 52 H648"/>
+      <path d="M720 74 V108"/>
+      <path d="M720 108 H80 V138"/>
+      <path d="M240 108 V138"/><path d="M400 108 V138"/><path d="M560 108 V138"/>
+      <path d="M310 161 H328"/>
+      <path d="M80 182 V270 H248"/>
+      <path d="M400 182 V246"/>
+      <path d="M450 270 H558"/>
+    </g>
+    <g fill="none" stroke="#8a96a6" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#fp)">
+      <path d="M560 182 V214 H440 V246"/>
+      <path d="M720 182 V214 H560"/>
+      <path d="M310 52 H328"/>
+      <path d="M720 108 V138"/>
+    </g>
+    <g font-family="Barlow, Liberation Sans, sans-serif">
+      <g><rect x="10" y="30" width="140" height="44" rx="4" fill="#f5f6f8" stroke="#b9c1cc"/><text x="20" y="49" font-size="12.5" font-weight="700" fill="#b86e0c">I0</text><text x="40" y="49" font-size="13" font-weight="600" fill="#1d2a3f">Preparación</text><text x="20" y="66" font-size="10.5" fill="#5b6574">documento cifrado</text></g>
+      <g><rect x="170" y="30" width="140" height="44" rx="4" fill="#fff" stroke="#b86e0c" stroke-width="1.5"/><text x="180" y="49" font-size="12.5" font-weight="700" fill="#b86e0c">I1</text><text x="200" y="49" font-size="13" font-weight="600" fill="#1d2a3f">Usuarios</text><text x="180" y="66" font-size="10.5" fill="#5b6574">sdn@, ars@ y gcf@</text></g>
+      <g><rect x="330" y="30" width="140" height="44" rx="4" fill="#fff" stroke="#b86e0c" stroke-width="1.5"/><text x="340" y="49" font-size="12.5" font-weight="700" fill="#b86e0c">I2</text><text x="360" y="49" font-size="13" font-weight="600" fill="#1d2a3f">Dominios</text><text x="340" y="66" font-size="10.5" fill="#5b6574">cm3.com.ar en NIC</text></g>
+      <g><rect x="490" y="30" width="140" height="44" rx="4" fill="#fff" stroke="#b86e0c" stroke-width="1.5"/><text x="500" y="49" font-size="12.5" font-weight="700" fill="#b86e0c">I3</text><text x="520" y="49" font-size="13" font-weight="600" fill="#1d2a3f">Cloudflare</text><text x="500" y="66" font-size="10.5" fill="#5b6574">direcciones del dominio</text></g>
+      <g><rect x="650" y="30" width="140" height="44" rx="4" fill="#fff" stroke="#b86e0c" stroke-width="1.5"/><text x="660" y="49" font-size="12.5" font-weight="700" fill="#b86e0c">I4</text><text x="680" y="49" font-size="13" font-weight="600" fill="#1d2a3f">Correo @cm3</text><text x="660" y="66" font-size="10.5" fill="#5b6574">alias y grupos</text></g>
+
+      <g><rect x="10" y="140" width="140" height="42" rx="4" fill="#fff" stroke="#5b4fa8" stroke-width="1.5"/><text x="20" y="158" font-size="12.5" font-weight="700" fill="#b86e0c">I5</text><text x="40" y="158" font-size="13" font-weight="600" fill="#1d2a3f">Anthropic</text><text x="20" y="174" font-size="10.5" fill="#5b6574">clave de IA de Pruebas</text></g>
+      <g><rect x="170" y="140" width="140" height="42" rx="4" fill="#fff" stroke="#5b4fa8" stroke-width="1.5"/><text x="180" y="158" font-size="12.5" font-weight="700" fill="#b86e0c">I6</text><text x="200" y="158" font-size="13" font-weight="600" fill="#1d2a3f">Claude Team</text><text x="180" y="174" font-size="10.5" fill="#5b6574">usuarios y Claude Code</text></g>
+      <g><rect x="330" y="140" width="140" height="42" rx="4" fill="#fff" stroke="#5b4fa8" stroke-width="1.5"/><text x="340" y="158" font-size="12.5" font-weight="700" fill="#b86e0c">I7</text><text x="360" y="158" font-size="13" font-weight="600" fill="#1d2a3f">GitHub</text><text x="340" y="174" font-size="10.5" fill="#5b6574">organización y repo</text></g>
+      <g><rect x="490" y="140" width="140" height="42" rx="4" fill="#fff" stroke="#8a1f15" stroke-width="1.5"/><text x="500" y="158" font-size="12.5" font-weight="700" fill="#b86e0c">I9</text><text x="520" y="158" font-size="13" font-weight="600" fill="#1d2a3f">Sentry</text><text x="500" y="174" font-size="10.5" fill="#5b6574">registro de errores</text></g>
+      <g><rect x="650" y="140" width="140" height="42" rx="4" fill="#fff" stroke="#8a1f15" stroke-width="1.5"/><text x="660" y="158" font-size="12.5" font-weight="700" fill="#b86e0c">I10</text><text x="684" y="158" font-size="13" font-weight="600" fill="#1d2a3f">Telegram</text><text x="660" y="174" font-size="10.5" fill="#5b6574">bot y grupo</text></g>
+
+      <g><rect x="250" y="248" width="200" height="44" rx="4" fill="#fff" stroke="#1d6b8a" stroke-width="1.8"/><text x="260" y="267" font-size="12.5" font-weight="700" fill="#b86e0c">I8</text><text x="280" y="267" font-size="13" font-weight="600" fill="#1d2a3f">Render: Pruebas nueva</text><text x="260" y="284" font-size="10.5" fill="#5b6574">cuenta de XP, base y servidor</text></g>
+      <g><rect x="560" y="248" width="140" height="44" rx="4" fill="#1d2a3f" stroke="#1d2a3f"/><text x="570" y="267" font-size="12.5" font-weight="700" fill="#f0a83a">I11</text><text x="594" y="267" font-size="13" font-weight="600" fill="#ffffff">Verificación</text><text x="570" y="284" font-size="10.5" fill="#c3cad5">como hoy, en cuentas XP</text></g>
+    </g>
+  </svg>
+  <div class="comp">
+    <div class="c"><b>Obligatorio</b><span>
+      I0 → I1 y I0 → I2 → I3 → I4: I4 necesita los usuarios de I1 y el dominio activo de I3. Sin el correo @cm3.com.ar no se crean las cuentas.<br>
+      I4 → I5, I6, I7, I9: esas cuentas nuevas se crean con @cm3.com.ar.<br>
+      I6 → I7: en I7 se conecta Claude Code del Team al repositorio.<br>
+      I5 → I8: Pruebas necesita su clave de IA.<br>
+      I7 → I8: Render se conecta al repositorio ya movido a la organización de XP.<br>
+      I8 → I11: la verificación se hace sobre Pruebas nueva.</span></div>
+    <div class="c"><b>Sugerido</b><span>
+      I1 antes de I2: así AKG hace todo lo de Google en una misma sesión.<br>
+      I10 no necesita ninguna fase previa (Telegram no usa correo); conviene hacerlo después de I4, en la misma tanda.<br>
+      I9 e I10 antes de I8: así sus datos se cargan en Render de una sola vez. Si no, se agregan después.<br>
+      En I7 se apaga la tarea de GitHub que manda métricas al Grafana viejo de SDN (paso 7.12); su permiso vence igual el 18/10. No afecta a la app: el monitoreo nuevo se arma en la Etapa 2.</span></div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja" id="quien">
+  <div class="marca"><b>Colm3na</b><span>Quién entra a dónde</span></div>
+  <h2>Quién entra a dónde</h2>
+  <p class="intro"><b>Regla general:</b> AKG hace todos los trámites de XP y todo lo que use la tarjeta. Crea cada cuenta con su usuario y queda como titular. Después invita a SDN y a ARS, que entran con su propio usuario; a GCF lo invita solo a Claude Team. Nadie comparte contraseñas: cada uno tiene la suya. Las contraseñas de AKG, los códigos de respaldo y las claves de servicio (API keys, tokens) se anotan en el documento cifrado. Las contraseñas personales de SDN, ARS y GCF las guarda cada uno.</p>
+  <div class="tw"><table class="t">
+    <thead><tr><th>Sistema</th><th>Crea la cuenta y es titular</th><th>Usuario con el que entra cada uno (y su rol)</th><th>Fase</th></tr></thead>
+    <tbody>
+      <tr><td><b>Google Workspace de XP</b> (correo)</td><td>Ya existe: AKG es administradora</td><td>AKG: <code>akg@xpertsconsulting.com</code><br>SDN: <code>sdn@xpertsconsulting.com</code> (lo crea AKG)<br>ARS: <code>ars@xpertsconsulting.com</code> (lo crea AKG)<br>GCF: <code>gcf@xpertsconsulting.com</code> (lo crea AKG)<br>Cuando funciona el alias, cada uno recibe también <code>…@cm3.com.ar</code></td><td>I1, I4</td></tr>
+      <tr><td><b>NIC Argentina</b> (dominios .com.ar)</td><td>AKG, con la clave fiscal de XP (titular XP)</td><td>Solo AKG</td><td>I2</td></tr>
+      <tr><td><b>Cloudflare</b></td><td>AKG</td><td>AKG: <code>akg@xpertsconsulting.com</code>. Es la única cuenta creada antes del correo @cm3, porque se necesita para activarlo.<br>SDN se suma en la Etapa 2</td><td>I3</td></tr>
+      <tr><td><b>API de Anthropic</b> (platform.claude.com)</td><td>AKG</td><td>AKG: <code>akg@cm3.com.ar</code> (crea la organización "XP – Colm3na")<br>SDN: <code>sdn@cm3.com.ar</code> (invitado, rol <b>Admin</b>: crea el workspace Pruebas y su clave)<br>ARS: <code>ars@cm3.com.ar</code> (invitado, rol <b>Developer</b>)</td><td>I5</td></tr>
+      <tr><td><b>Claude Team</b> (claude.ai)</td><td>AKG</td><td>AKG: <code>akg@cm3.com.ar</code> (Primary Owner)<br>SDN: <code>sdn@cm3.com.ar</code> (invitado, rol <b>Owner</b>)<br>ARS: <code>ars@cm3.com.ar</code> (invitado, rol <b>Member</b>)<br>GCF: <code>gcf@cm3.com.ar</code> (invitado, rol <b>Member</b>, asiento Standard)<br>SDN conserva aparte su cuenta personal hasta terminar de pasar su contenido (Etapa 2)</td><td>I6</td></tr>
+      <tr><td><b>GitHub</b></td><td>AKG crea su usuario de GitHub con <code>akg@cm3.com.ar</code> y la organización <code>cm3-xp</code>. La organización es la titular del código</td><td>AKG: su usuario nuevo (por ejemplo <code>akg-cm3</code>), <b>Owner</b><br>SDN: su usuario actual <code>snavello</code> (invitado, <b>Owner</b>)<br>ARS: su usuario de GitHub (invitado, <b>Member</b>)</td><td>I7</td></tr>
+      <tr><td><b>Render</b></td><td>AKG</td><td>Workspace "Colm3na"<br>AKG: <code>akg@cm3.com.ar</code><br>SDN: <code>sdn@cm3.com.ar</code> (invitado, rol <b>Admin</b>: hace la parte técnica)<br>ARS: <code>ars@cm3.com.ar</code> (invitado, rol <b>Developer</b>)</td><td>I8</td></tr>
+      <tr><td><b>Sentry</b></td><td>AKG</td><td>Solo AKG: <code>akg@cm3.com.ar</code>. El plan gratuito admite un usuario. AKG le pasa a SDN el DSN (la dirección a la que la app manda los errores). SDN y ARS ven los errores en la pestaña Observabilidad de la app y en Telegram</td><td>I9</td></tr>
+      <tr><td><b>Telegram</b></td><td>AKG crea el bot desde su Telegram</td><td>Cada uno con su propio Telegram. Grupo "Colm3na avisos": AKG, SDN, ARS y el bot</td><td>I10</td></tr>
+      <tr><td>Grafana Cloud, AWS (S3), Resend, Cloudflare Registrar</td><td>AKG</td><td>Mismo criterio: AKG titular con <code>akg@cm3.com.ar</code>, SDN y ARS invitados donde el plan lo permita. GCF no entra a los sistemas técnicos (GitHub, Render, API, Sentry, Cloudflare)</td><td>Etapa 2</td></tr>
+    </tbody>
+  </table></div>
+  <div class="llano">Titular quiere decir dueña de la cuenta: la que paga, la que puede sumar y sacar personas y la que firma las condiciones. Si mañana alguien deja el equipo, se lo quita de la cuenta y no se pierde nada.</div>
+  <h3>Cuentas viejas de SDN</h3>
+  <p>Siguen funcionando en paralelo hasta la Etapa 2: la Demo vieja (servicio <code>mitrabajo-demo</code>), el Render viejo, la organización vieja de Anthropic, la cuenta personal de Claude de SDN, su Grafana, su Sentry y el bot viejo. El usuario de GitHub <code>snavello</code> no es una cuenta vieja: sigue siendo el de SDN, ahora como miembro de <code>cm3-xp</code>. Se dan de baja cuando lo nuevo ya cubre todo (Etapa 2). Durante la Etapa Inicial no se borra nada.</p>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<!-- ===================== I0 · PREPARACIÓN ===================== -->
+<article class="hoja" id="i0">
+  <div class="marca"><b>Colm3na</b><span>I0 · Preparación</span></div>
+  <h2><span class="n">I0</span>Preparación</h2>
+  <p class="intro"><b>Para qué sirve:</b> juntar antes de empezar lo que se va a pedir en cada pantalla, para no cortar una sesión a la mitad. Y armar el lugar seguro donde se anotan las contraseñas y claves que van a ir saliendo.</p>
+  <div class="pre"><b>Necesitás antes:</b> nada. <b>Al terminar tenés:</b> el documento cifrado creado, la tarjeta y la clave fiscal de XP a mano, y una app autenticadora instalada en el teléfono de AKG, SDN, ARS y GCF.</div>
+
+  <table class="t">
+    <thead><tr><th>Sigla</th><th>Quién es</th><th>Usuario que va a tener</th></tr></thead>
+    <tbody>
+      <tr><td><b>AKG</b></td><td>Dueña de XP. Titular de todas las cuentas, paga con la tarjeta de XP, hace los trámites de XP.</td><td><code>akg@xpertsconsulting.com</code> (ya existe) y, desde I4, también <code>akg@cm3.com.ar</code></td></tr>
+      <tr><td><b>SDN</b></td><td>Técnico principal. Hace la configuración técnica.</td><td><code>sdn@xpertsconsulting.com</code> (se crea en I1) y <code>sdn@cm3.com.ar</code></td></tr>
+      <tr><td><b>ARS</b></td><td>Segundo técnico.</td><td><code>ars@xpertsconsulting.com</code> (se crea en I1) y <code>ars@cm3.com.ar</code></td></tr>
+      <tr><td><b>GCF</b></td><td>ATS. Coordinación con el sindicato y presentaciones. Entra solo a Claude Team, como miembro, para trabajar en los documentos y proyectos compartidos.</td><td><code>gcf@xpertsconsulting.com</code> (se crea en I1) y <code>gcf@cm3.com.ar</code></td></tr>
+    </tbody>
+  </table>
+  <div class="llano">Regla de toda la etapa: cada cuenta de servicio la crea <b>AKG</b> a nombre de XP y después <b>invita</b> a SDN y ARS (y a GCF, solo en Claude Team). Ninguna cuenta nueva queda a nombre personal de SDN. Mientras tanto SDN sigue usando sus cuentas viejas: la Demo actual no se toca hasta la Etapa 2.</div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>0.1</div>
+    <div class="pc">
+      <div class="pt">Crear el documento cifrado</div>
+      <div class="entra">Entra: <b>AKG</b> en su computadora, con Microsoft Word (o LibreOffice Writer)</div>
+      <div class="ruta">Word: documento nuevo → <span class="ui">Archivo</span> → <span class="ui">Información</span> → <span class="ui">Proteger documento</span> → <span class="ui">Cifrar con contraseña</span> → escribir la contraseña dos veces → guardar como <code>Colm3na-claves.docx</code></div>
+      <ul class="campos">
+        <li>LibreOffice: <span class="ui">Archivo</span> → <span class="ui">Guardar como</span> → tildar <span class="ui">Guardar con contraseña</span>.</li>
+        <li>Adentro, una tabla con columnas: <b>Servicio · Usuario · Contraseña · Códigos de respaldo · Fecha</b>.</li>
+        <li>La contraseña del documento la sabe solo AKG. Se guarda una copia en un pendrive que también guarda AKG.</li>
+      </ul>
+      <div class="ok">Verificar: al cerrar y volver a abrir el archivo, Word pide la contraseña.</div>
+      <div class="nota">Van a este documento: las contraseñas de AKG, los códigos de respaldo de todos y las claves de servicio (API keys, tokens, direcciones de la base). Las contraseñas personales que elige cada uno (SDN, ARS y GCF) las guarda cada uno. Nunca nada de esto por mail, WhatsApp ni Telegram. Si SDN necesita un valor, lo lee de la pantalla de AKG en la misma sesión.</div>
+      <div class="fuente">Fuente: <a href="https://support.microsoft.com/es-es/office/proteger-un-documento-con-una-contrase%C3%B1a-05084cc3-300d-4c1a-8416-38d3e37d6826">Microsoft — Proteger un documento con una contraseña</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>0.2</div>
+    <div class="pc">
+      <div class="pt">Tener a mano los datos de XP</div>
+      <div class="entra">Entra: <b>AKG</b> (no hay sistema: es una lista para tener sobre la mesa)</div>
+      <ul class="campos">
+        <li>Tarjeta de crédito de XP (se usa en I2, I5, I6, I7 e I8).</li>
+        <li>CUIT de XP, razón social y domicilio fiscal.</li>
+        <li>Clave Fiscal de XP de <b>nivel 2 o superior</b> (se usa en I2 y I3 para NIC Argentina).</li>
+      </ul>
+      <div class="ok">Verificar: AKG puede entrar a <span class="url">arca.gob.ar</span> con el CUIT y la Clave Fiscal de XP.</div>
+      <div class="fuente">Fuente: <a href="https://nic.ar/es/ayuda/instructivos/registro-de-dominio">nic.ar — Registro de Dominio</a> (exige Clave Fiscal nivel 2 o más)</div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>0.3</div>
+    <div class="pc">
+      <div class="pt">Instalar una app autenticadora en cuatro teléfonos</div>
+      <div class="entra">Entra: <b>AKG</b>, <b>SDN</b>, <b>ARS</b> y <b>GCF</b>, cada uno en su propio teléfono, en la tienda de apps</div>
+      <ul class="campos"><li>Instalar <b>Google Authenticator</b> (o Microsoft Authenticator). Es gratis.</li></ul>
+      <div class="llano"><b>Verificación en dos pasos:</b> además de la contraseña, el sistema pide un código de 6 números que cambia cada 30 segundos y que solo muestra la app de tu teléfono. Si alguien roba la contraseña, sin el teléfono no entra.</div>
+      <div class="ok">Verificar: la app abre en los cuatro teléfonos.</div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<!-- ===================== I1 · USUARIOS DE GOOGLE WORKSPACE ===================== -->
+<article class="hoja" id="i1">
+  <div class="marca"><b>Colm3na</b><span>I1 · Usuarios de Google Workspace</span></div>
+  <h2><span class="n">I1</span>Usuarios de Google Workspace</h2>
+  <p class="intro"><b>Para qué sirve:</b> que SDN, ARS y GCF tengan un correo de XP. Con ese correo se los invita después a cada servicio, así las cuentas quedan en la empresa y no en casillas personales.</p>
+  <div class="pre"><b>Necesitás antes:</b> I0 terminada. <b>Al terminar tenés:</b> <code>sdn@xpertsconsulting.com</code>, <code>ars@xpertsconsulting.com</code> y <code>gcf@xpertsconsulting.com</code> funcionando, y los cuatro usuarios con verificación en dos pasos obligatoria.</div>
+  <div class="llano"><b>Google Workspace</b> es el correo de XP (Gmail con el dominio de la empresa). <b>Admin console</b> (<span class="url">admin.google.com</span>) es el panel donde la administradora crea usuarios. Cada usuario nuevo suma una licencia al plan de XP (costo mensual por persona).</div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>1.1</div>
+    <div class="pc">
+      <div class="pt">AKG activa su propia verificación en dos pasos</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@xpertsconsulting.com</code> en <span class="url">myaccount.google.com</span></div>
+      <div class="ruta"><span class="ui">Seguridad</span> → <span class="ui">Verificación en 2 pasos</span> → <span class="ui">Activar</span> → agregar <span class="ui">App de autenticación</span> → escanear el código QR con la app del teléfono → escribir el código de 6 números</div>
+      <ul class="campos"><li>En la misma página, <span class="ui">Códigos de seguridad</span> (códigos de respaldo) → <code>[guardar en el documento cifrado]</code>.</li></ul>
+      <div class="ok">Verificar: la página muestra la verificación en 2 pasos activada.</div>
+      <div class="nota">Si AKG ya la tenía activa, saltear este paso. Hacerlo antes de 1.6 evita que AKG quede afuera de su propia consola.</div>
+      <div class="fuente">Fuente: <a href="https://support.google.com/accounts/answer/185839">Google — Activar la verificación en 2 pasos</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>1.2</div>
+    <div class="pc">
+      <div class="pt">Crear el usuario de SDN</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@xpertsconsulting.com</code> en <span class="url">admin.google.com</span></div>
+      <div class="ruta"><span class="ui">Menu</span> → <span class="ui">Directory</span> → <span class="ui">Users</span> → <span class="ui">Add new user</span></div>
+      <ul class="campos">
+        <li><span class="ui">First name</span> / <span class="ui">Last name</span>: nombre y apellido de SDN.</li>
+        <li><span class="ui">Primary email</span>: <code>sdn</code> @ <code>xpertsconsulting.com</code>.</li>
+        <li><span class="ui">Secondary email</span>: el correo personal de SDN (para recuperar la cuenta).</li>
+        <li>Abrir <span class="ui">Manage user's password, organizational unit, and profile photo</span> → elegir crear la contraseña y tildar que la cambie al primer ingreso <span class="flag vp">VERIFICAR EN PANTALLA</span> (nombre exacto de la casilla).</li>
+        <li><span class="ui">Add New User</span> → <span class="ui">Copy Password</span> → <span class="ui">Done</span>.</li>
+      </ul>
+      <div class="ok">Verificar: <code>sdn@xpertsconsulting.com</code> aparece en la lista de <span class="ui">Users</span>.</div>
+      <div class="nota">La contraseña provisoria se la dice AKG a SDN en persona o por teléfono, no por escrito. No usar <span class="ui">Preview And Send</span>.</div>
+      <div class="fuente">Fuente: <a href="https://knowledge.workspace.google.com/admin/users/add-an-account-for-a-new-user">Google Workspace — Add an account for a new user</a></div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I1 · Usuarios de Google Workspace (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>1.3</div>
+    <div class="pc">
+      <div class="pt">Crear los usuarios de ARS y de GCF</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@xpertsconsulting.com</code> en <span class="url">admin.google.com</span></div>
+      <div class="ruta">Igual que 1.2: <span class="ui">Menu</span> → <span class="ui">Directory</span> → <span class="ui">Users</span> → <span class="ui">Add new user</span></div>
+      <ul class="campos"><li><span class="ui">Primary email</span>: <code>ars</code> @ <code>xpertsconsulting.com</code>. Resto de los campos con los datos de ARS.</li><li>Repetir para GCF: <span class="ui">Primary email</span> <code>gcf</code> @ <code>xpertsconsulting.com</code>, con sus datos y su correo de ATS como <span class="ui">Secondary email</span>. Suma una licencia más al plan de XP.</li></ul>
+      <div class="ok">Verificar: <code>ars@xpertsconsulting.com</code> y <code>gcf@xpertsconsulting.com</code> aparecen en <span class="ui">Users</span>.</div>
+      <div class="fuente">Fuente: <a href="https://knowledge.workspace.google.com/admin/users/add-an-account-for-a-new-user">Google Workspace — Add an account for a new user</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>1.4</div>
+    <div class="pc">
+      <div class="pt">Primer ingreso de SDN y su verificación en dos pasos</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@xpertsconsulting.com</code> en <span class="url">gmail.com</span> (en una ventana de incógnito, para no mezclar con su Gmail personal)</div>
+      <ul class="campos">
+        <li>Contraseña provisoria de 1.2 → el sistema pide una nueva → SDN la elige y la guarda él. Si la pierde, AKG la reinicia desde la consola.</li>
+        <li>Después: <span class="url">myaccount.google.com</span> → <span class="ui">Seguridad</span> → <span class="ui">Verificación en 2 pasos</span> → <span class="ui">Activar</span> → <span class="ui">App de autenticación</span> con su teléfono.</li>
+        <li><span class="ui">Códigos de seguridad</span> (códigos de respaldo) → SDN se los muestra a AKG y ella los pega en el documento cifrado en ese momento.</li>
+      </ul>
+      <div class="ok">Verificar: SDN cierra sesión, vuelve a entrar y le pide el código de la app.</div>
+      <div class="fuente">Fuente: <a href="https://support.google.com/accounts/answer/185839">Google — Activar la verificación en 2 pasos</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>1.5</div>
+    <div class="pc">
+      <div class="pt">Primer ingreso de ARS y de GCF, con su verificación en dos pasos</div>
+      <div class="entra">Entra: <b>ARS</b> con <code>ars@xpertsconsulting.com</code> en <span class="url">gmail.com</span>. Después lo mismo <b>GCF</b> con <code>gcf@xpertsconsulting.com</code>.</div>
+      <div class="ruta">Igual que 1.4: nueva contraseña (la guarda cada uno) → <span class="ui">Seguridad</span> → <span class="ui">Verificación en 2 pasos</span> → <span class="ui">App de autenticación</span> → códigos de respaldo al documento cifrado de AKG</div>
+      <div class="ok">Verificar: a ARS y a GCF, al volver a entrar, les pide el código de la app.</div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>1.6</div>
+    <div class="pc">
+      <div class="pt">Hacer obligatoria la verificación en dos pasos</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@xpertsconsulting.com</code> en <span class="url">admin.google.com</span> (tiene que ser superadministradora)</div>
+      <div class="ruta"><span class="ui">Menu</span> → <span class="ui">Security</span> → <span class="ui">Authentication</span> → <span class="ui">2-step verification</span></div>
+      <ul class="campos">
+        <li>Tildar <span class="ui">Allow users to turn on 2-Step Verification</span>.</li>
+        <li><span class="ui">Enforcement</span>: <span class="ui">On</span>.</li>
+        <li><span class="ui">New user enrollment period</span>: <b>1 week</b> (le da tiempo a un usuario nuevo de configurarla).</li>
+        <li><span class="ui">Methods</span>: <span class="ui">Any</span>.</li>
+        <li>Guardar.</li>
+      </ul>
+      <div class="ok">Verificar: los cuatro (AKG, SDN, ARS y GCF) siguen entrando con su código. Si alguien no la configuró, a partir de ahora no puede entrar.</div>
+      <div class="nota">Esto aplica a toda la organización de XP. Si hay otros usuarios en el Workspace que todavía no la activaron, avisarles antes o usar <span class="ui">Turn on enforcement from date</span> con una fecha de acá a una semana.</div>
+      <div class="fuente">Fuente: <a href="https://knowledge.workspace.google.com/admin/security/deploy-2-step-verification">Google Workspace — Deploy 2-Step Verification</a></div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<!-- ===================== I2 · DOMINIOS ===================== -->
+<article class="hoja" id="i2">
+  <div class="marca"><b>Colm3na</b><span>I2 · Dominios</span></div>
+  <h2><span class="n">I2</span>Dominios</h2>
+  <p class="intro"><b>Para qué sirve:</b> que XP sea dueña de la dirección de internet de la plataforma. <code>cm3.com.ar</code> va a ser la dirección principal (la app y los correos <code>@cm3.com.ar</code>); <code>colm3na.com.ar</code> se reserva para que nadie más lo tome.</p>
+  <div class="pre"><b>Necesitás antes:</b> I0 (Clave Fiscal de XP y tarjeta). <b>Al terminar tenés:</b> <code>cm3.com.ar</code> y <code>colm3na.com.ar</code> registrados con XP como titular.</div>
+  <div class="llano"><b>Dominio:</b> el nombre que se escribe en el navegador. Los terminados en <code>.com.ar</code> solo se registran en <b>NIC Argentina</b> (<span class="url">nic.ar</span>), que se entra con la Clave Fiscal de ARCA. Se paga por año. <code>colm3na.com</code> (sin <code>.ar</code>) queda para la Etapa 2.</div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>2.1</div>
+    <div class="pc">
+      <div class="pt">Registrar <code>cm3.com.ar</code></div>
+      <div class="entra">Entra: <b>AKG</b> con el <b>CUIT de XP</b> y la <b>Clave Fiscal de XP</b> en <span class="url">nic.ar</span></div>
+      <div class="ruta"><span class="ui">Buscador de Dominios</span>: escribir <code>cm3</code>, zona <code>.com.ar</code> → <span class="ui">Buscar</span> → <span class="ui">Quiero registrarlo</span> → <span class="ui">N° de CUIT/CUIL y Clave Fiscal</span> → (login de ARCA) → <span class="ui">Registrar</span> → <span class="ui">Confirmar Trámite</span></div>
+      <ul class="campos">
+        <li><span class="ui">Tus datos</span>: datos de facturación de XP (<span class="ui">Editar</span> si hace falta).</li>
+        <li><span class="ui">Orden</span>: revisar que diga exactamente <code>cm3.com.ar</code>. Un trámite pagado no se puede revocar.</li>
+        <li><span class="ui">Medio de pago</span>: tarjeta de crédito de XP. Arancel leído el 2026-10-10: alta $8.500, renovación anual $8.500.</li>
+      </ul>
+      <div class="ok">Verificar: <code>cm3.com.ar</code> aparece en <span class="ui">Mis dominios</span>, con XP como titular (puede tardar hasta 24 h en acreditarse el pago).</div>
+      <div class="nota"><span class="flag vp">VERIFICAR EN PANTALLA</span> Si el trámite queda en "Pago Dominio" (NIC pide aprobación previa para nombres cortos), ir a <span class="ui">Mis Trámites</span> → <span class="ui">Tareas pendientes</span> → <span class="ui">Pagar</span>.</div>
+      <div class="fuente">Fuente: <a href="https://nic.ar/es/ayuda/instructivos/registro-de-dominio">nic.ar — Registro de Dominio</a> · <a href="https://nic.ar/es/dominios/aranceles">Dominios y Aranceles</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>2.2</div>
+    <div class="pc">
+      <div class="pt">Registrar <code>colm3na.com.ar</code></div>
+      <div class="entra">Entra: <b>AKG</b> con el CUIT y la Clave Fiscal de XP en <span class="url">nic.ar</span></div>
+      <div class="ruta">Igual que 2.1, buscando <code>colm3na</code> en zona <code>.com.ar</code></div>
+      <div class="ok">Verificar: los dos dominios en <span class="ui">Mis dominios</span>, titular XP.</div>
+      <div class="fuente">Fuente: <a href="https://nic.ar/es/ayuda/instructivos/registro-de-dominio">nic.ar — Registro de Dominio</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>2.3</div>
+    <div class="pc">
+      <div class="pt">Agendar la renovación</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@xpertsconsulting.com</code> en <span class="url">calendar.google.com</span></div>
+      <ul class="campos"><li>Un evento 30 días antes de la fecha de vencimiento que muestra <span class="ui">Mis dominios</span>, para cada dominio. Si no se renueva, el dominio se pierde y la app deja de responder.</li></ul>
+      <div class="ok">Verificar: los dos recordatorios están en el calendario de AKG.</div>
+      <div class="nota">Si renueva solo o no: <span class="flag nv">NO VERIFICADO</span>. Por eso el recordatorio.</div>
+    </div>
+  </div>
+  <div class="nota">Si en lugar de la Clave Fiscal de XP AKG usara su CUIL personal, primero tendría que apoderarse en nombre de XP (nic.ar → <span class="ui">Apoderados</span>). Con la clave de XP no hace falta.</div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<!-- ===================== I3 · CLOUDFLARE ===================== -->
+<article class="hoja" id="i3">
+  <div class="marca"><b>Colm3na</b><span>I3 · Cloudflare</span></div>
+  <h2><span class="n">I3</span>Cloudflare (solo DNS)</h2>
+  <p class="intro"><b>Para qué sirve:</b> Cloudflare va a ser la "guía telefónica" de <code>cm3.com.ar</code>: dice a qué servidor va cada nombre (el correo, y más adelante la app). En esta etapa solo se deja el dominio activo ahí.</p>
+  <div class="pre"><b>Necesitás antes:</b> I2 terminada. <b>Al terminar tenés:</b> la zona <code>cm3.com.ar</code> en estado activo en una cuenta de Cloudflare de XP.</div>
+  <div class="llano"><b>DNS:</b> el sistema que traduce un nombre (<code>cm3.com.ar</code>) a la dirección de un servidor. <b>Nameservers:</b> los dos servidores que tienen esa información para un dominio; NIC tiene que saber cuáles son. <b>Zona:</b> así llama Cloudflare a un dominio cargado en su cuenta.</div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>3.1</div>
+    <div class="pc">
+      <div class="pt">Crear la cuenta de Cloudflare</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@xpertsconsulting.com</code> en <span class="url">dash.cloudflare.com/sign-up</span></div>
+      <ul class="campos">
+        <li><span class="ui">Email</span>: <code>akg@xpertsconsulting.com</code>. Es la única cuenta que no usa <code>@cm3.com.ar</code>: ese correo todavía no existe, y para que exista hace falta justamente esta cuenta.</li>
+        <li><span class="ui">Password</span>: <code>[guardar en el documento cifrado]</code> → <span class="ui">Create Account</span>.</li>
+        <li>Llega un mail de verificación a la bandeja de AKG → abrir el enlace.</li>
+      </ul>
+      <div class="ok">Verificar: AKG entra al panel de Cloudflare y no aparece el aviso de correo sin verificar.</div>
+      <div class="fuente">Fuente: <a href="https://developers.cloudflare.com/fundamentals/account/create-account/">Cloudflare — Create account</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>3.2</div>
+    <div class="pc">
+      <div class="pt">Verificación en dos pasos en Cloudflare</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@xpertsconsulting.com</code> en <span class="url">dash.cloudflare.com</span></div>
+      <div class="ruta">Menú de usuario arriba a la derecha → <span class="ui">My Profile</span> → <span class="ui">Authentication</span> → <span class="ui">Mobile App Authentication</span> → <span class="ui">Add</span> → escanear el QR con la app del teléfono</div>
+      <ul class="campos"><li>Códigos de respaldo (<span class="ui">Download</span> o <span class="ui">Copy</span>) → <code>[guardar en el documento cifrado]</code>.</li></ul>
+      <div class="ok">Verificar: al volver a entrar, Cloudflare pide el código de la app.</div>
+      <div class="fuente">Fuente: <a href="https://developers.cloudflare.com/fundamentals/user-profiles/2fa/">Cloudflare — Two-factor authentication</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>3.3</div>
+    <div class="pc">
+      <div class="pt">Agregar <code>cm3.com.ar</code> en plan Free</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@xpertsconsulting.com</code> en <span class="url">dash.cloudflare.com</span></div>
+      <div class="ruta"><span class="ui">Domains</span> → <span class="ui">Onboard a domain</span> → escribir <code>cm3.com.ar</code> → (dominio nuevo: nada para importar) → <span class="ui">Continue</span> → plan <b>Free</b> → revisar DNS (vacío) → <span class="ui">Continue</span></div>
+      <div class="ok">Verificar: Cloudflare muestra <b>dos nameservers</b>, del estilo <code>nombre.ns.cloudflare.com</code>. Copiarlos tal cual (se usan en 3.4).</div>
+      <div class="fuente">Fuente: <a href="https://developers.cloudflare.com/fundamentals/manage-domains/add-site/">Cloudflare — Add a site</a></div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I3 · Cloudflare (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>3.4</div>
+    <div class="pc">
+      <div class="pt">Delegar <code>cm3.com.ar</code> a Cloudflare en NIC Argentina</div>
+      <div class="entra">Entra: <b>AKG</b> con el CUIT y la Clave Fiscal de XP en <span class="url">nic.ar</span> → <span class="ui">INGRESO</span> → <span class="ui">N° de CUIT/CUIL y Clave Fiscal</span></div>
+      <div class="ruta">Lista de dominios → <span class="ui">Delegar</span> junto a <code>cm3.com.ar</code> → <span class="ui">Agregar una nueva delegación</span> → primer nameserver → <span class="ui">Guardar</span> → repetir con el segundo → <span class="ui">Ejecutar Cambios</span></div>
+      <ul class="campos">
+        <li>Cargar exactamente los dos nameservers de 3.3. NIC exige al menos dos.</li>
+        <li>No usar <span class="ui">Autodelegar</span>.</li>
+      </ul>
+      <div class="llano"><b>Delegar:</b> decirle a NIC "la información de este dominio la tiene Cloudflare".</div>
+      <div class="ok">Verificar: en nic.ar el dominio muestra los dos nameservers de Cloudflare.</div>
+      <div class="fuente">Fuente: <a href="https://nic.ar/es/ayuda/instructivos/delegacion-de-dominios">nic.ar — Delegación de Dominios</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>3.5</div>
+    <div class="pc">
+      <div class="pt">Esperar a que la zona quede activa</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@xpertsconsulting.com</code> en <span class="url">dash.cloudflare.com</span></div>
+      <div class="ruta"><span class="ui">Domains</span> → <code>cm3.com.ar</code></div>
+      <div class="ok">Verificar: la zona figura como <b>Active</b> <span class="flag vp">VERIFICAR EN PANTALLA</span> (texto exacto del estado). NIC dice que la delegación se ve el mismo día; Cloudflare también avisa por mail a <code>akg@xpertsconsulting.com</code>.</div>
+      <div class="nota">Si a las 24 h sigue pendiente, revisar en nic.ar que los nameservers estén bien escritos.</div>
+      <div class="fuente">Fuente: <a href="https://developers.cloudflare.com/fundamentals/manage-domains/add-site/">Cloudflare — Add a site</a> · <a href="https://nic.ar/es/ayuda/instructivos/delegacion-de-dominios">nic.ar — Delegación</a></div>
+    </div>
+  </div>
+  <div class="nota">Esto se completa en la Etapa 2: invitar a SDN y ARS a la cuenta, cargar <code>colm3na.com.ar</code> y <code>colm3na.com</code>, certificados, reglas de seguridad y los nombres de la app (<code>pruebas.cm3.com.ar</code>, etc.).</div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<!-- ===================== I4 · CORREO @cm3.com.ar ===================== -->
+<article class="hoja" id="i4">
+  <div class="marca"><b>Colm3na</b><span>I4 · Correo @cm3.com.ar</span></div>
+  <h2><span class="n">I4</span>Correo @cm3.com.ar</h2>
+  <p class="intro"><b>Para qué sirve:</b> que cada persona de XP reciba también en <code>@cm3.com.ar</code>, en su misma bandeja y sin costo extra, y que existan dos casillas de grupo para avisos técnicos y facturas. Con estos correos se crean las cuentas de I5 en adelante.</p>
+  <div class="pre"><b>Necesitás antes:</b> I1 e I3 terminadas. <b>Al terminar tenés:</b> <code>akg@</code>, <code>sdn@</code>, <code>ars@</code> y <code>gcf@cm3.com.ar</code> recibiendo correo, y los grupos <code>alertas@cm3.com.ar</code> y <code>facturacion@cm3.com.ar</code>.</div>
+  <div class="llano"><b>Dominio alias (user alias domain):</b> un segundo dominio que Google le suma a cada usuario y grupo existente. <code>sdn@xpertsconsulting.com</code> pasa a recibir también lo que llega a <code>sdn@cm3.com.ar</code>. Es la misma casilla, no una nueva.</div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>4.1</div>
+    <div class="pc">
+      <div class="pt">Agregar <code>cm3.com.ar</code> como dominio alias</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@xpertsconsulting.com</code> en <span class="url">admin.google.com</span></div>
+      <div class="ruta"><span class="ui">Menu</span> → <span class="ui">Account</span> → <span class="ui">Domains</span> → <span class="ui">Manage domains</span> → <span class="ui">Add a domain</span> → <code>cm3.com.ar</code> → <span class="ui">User alias domain</span> → <span class="ui">Add domain &amp; start verification</span></div>
+      <div class="ok">Verificar: Google muestra un texto del tipo <code>google-site-verification=…</code>. Dejar esa pestaña abierta.</div>
+      <div class="fuente">Fuente: <a href="https://knowledge.workspace.google.com/admin/domains/add-a-user-alias-domain-or-secondary-domain">Google Workspace — Add a user alias domain</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>4.2</div>
+    <div class="pc">
+      <div class="pt">Cargar el registro de verificación en Cloudflare</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@xpertsconsulting.com</code> en <span class="url">dash.cloudflare.com</span> (en otra pestaña)</div>
+      <div class="ruta"><code>cm3.com.ar</code> → <span class="ui">DNS</span> → <span class="ui">Records</span> → <span class="ui">Add record</span></div>
+      <ul class="campos"><li><span class="ui">Type</span> <code>TXT</code> · <span class="ui">Name</span> <code>@</code> · <span class="ui">Content</span> el texto de 4.1 · <span class="ui">TTL</span> Auto → <span class="ui">Save</span>.</li></ul>
+      <div class="llano"><b>Registro TXT:</b> un texto que se publica en el DNS. Google lo lee para comprobar que XP controla el dominio.</div>
+      <div class="ok">Verificar: el registro aparece en la lista de <span class="ui">Records</span>.</div>
+      <div class="fuente">Fuente: <a href="https://knowledge.workspace.google.com/admin/domains/verify-your-domain-with-a-txt-record">Google Workspace — Verify your domain with a TXT record</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>4.3</div>
+    <div class="pc">
+      <div class="pt">Confirmar la verificación en Google</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@xpertsconsulting.com</code> en <span class="url">admin.google.com</span></div>
+      <div class="ruta"><span class="ui">Menu</span> → <span class="ui">Account</span> → <span class="ui">Domains</span> → <span class="ui">Manage domains</span> → <span class="ui">Verify domain</span> en <code>cm3.com.ar</code> → <span class="ui">Confirm</span></div>
+      <div class="ok">Verificar: <code>cm3.com.ar</code> figura como verificado. Puede tardar hasta 72 h. No borrar el TXT.</div>
+      <div class="fuente">Fuente: <a href="https://knowledge.workspace.google.com/admin/domains/verify-your-domain-with-a-txt-record">Google Workspace — Verify your domain</a></div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I4 · Correo @cm3.com.ar (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>4.4</div>
+    <div class="pc">
+      <div class="pt">Cargar el MX y el SPF de Google en Cloudflare</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@xpertsconsulting.com</code> en <span class="url">dash.cloudflare.com</span></div>
+      <div class="ruta"><code>cm3.com.ar</code> → <span class="ui">DNS</span> → <span class="ui">Records</span> → <span class="ui">Add record</span> (dos veces)</div>
+      <table class="t">
+        <thead><tr><th>Type</th><th>Name</th><th>Valor</th><th>Otros</th></tr></thead>
+        <tbody>
+          <tr><td>MX</td><td><code>@</code></td><td><span class="ui">Mail server</span>: <code>smtp.google.com</code></td><td><span class="ui">Priority</span> <code>1</code></td></tr>
+          <tr><td>TXT</td><td><code>@</code></td><td><code>v=spf1 include:_spf.google.com ~all</code></td><td>TTL Auto</td></tr>
+        </tbody>
+      </table>
+      <div class="llano"><b>MX:</b> le dice al mundo a qué servidor entregar los mails de <code>@cm3.com.ar</code> (a Gmail). <b>SPF:</b> dice qué servidores pueden mandar mails en nombre del dominio, para que no caigan en spam.</div>
+      <div class="ok">Verificar: los dos registros aparecen en <span class="ui">Records</span>, y no hay ningún otro MX.</div>
+      <div class="fuente">Fuente: <a href="https://knowledge.workspace.google.com/admin/domains/set-up-mx-records-for-google-workspace">Google Workspace — Set up MX records</a> · <a href="https://knowledge.workspace.google.com/admin/security/set-up-spf">Set up SPF</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>4.5</div>
+    <div class="pc">
+      <div class="pt">Activar Gmail en el dominio alias</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@xpertsconsulting.com</code> en <span class="url">admin.google.com</span></div>
+      <div class="ruta"><span class="ui">Menu</span> → <span class="ui">Account</span> → <span class="ui">Domains</span> → <span class="ui">Manage domains</span> → <code>cm3.com.ar</code> → <span class="ui">Activate Gmail</span> → seguir los pasos</div>
+      <div class="ok">Verificar: el dominio deja de mostrar el aviso de Gmail sin activar.</div>
+      <div class="fuente">Fuente: <a href="https://knowledge.workspace.google.com/admin/domains/set-up-mx-records-for-google-workspace">Google Workspace — Set up MX records</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>4.6</div>
+    <div class="pc">
+      <div class="pt">Crear los grupos <code>alertas</code> y <code>facturacion</code></div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@xpertsconsulting.com</code> en <span class="url">admin.google.com</span></div>
+      <div class="ruta"><span class="ui">Menu</span> → <span class="ui">Directory</span> → <span class="ui">Groups</span> → <span class="ui">Create group</span> → datos → <span class="ui">Next</span> → <span class="ui">Next</span> → acceso → <span class="ui">Create Group</span>; después <span class="ui">Add members</span> → <span class="ui">Add To Group</span></div>
+      <table class="t">
+        <thead><tr><th>Group name</th><th>Group email</th><th>Recibe también en</th><th>Miembros</th></tr></thead>
+        <tbody>
+          <tr><td>Colm3na alertas</td><td><code>alertas@xpertsconsulting.com</code></td><td><code>alertas@cm3.com.ar</code></td><td>AKG, SDN, ARS</td></tr>
+          <tr><td>Colm3na facturación</td><td><code>facturacion@xpertsconsulting.com</code></td><td><code>facturacion@cm3.com.ar</code></td><td>AKG</td></tr>
+        </tbody>
+      </table>
+      <ul class="campos">
+        <li>En el paso de acceso, columna <b>External</b> de <span class="ui">Who can post</span>: tildada. Los proveedores escriben desde afuera de XP.</li>
+        <li>Si el nombre ya está usado en XP, usar <code>colm3na-alertas</code> y <code>colm3na-facturacion</code>.</li>
+      </ul>
+      <div class="ok">Verificar: los dos grupos aparecen en <span class="ui">Groups</span> con sus miembros.</div>
+      <div class="fuente">Fuente: <a href="https://knowledge.workspace.google.com/admin/groups/create-a-group-in-your-organization">Google Workspace — Create a group in your organization</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>4.7</div>
+    <div class="pc">
+      <div class="pt">Prueba: que llegue un mail a <code>sdn@cm3.com.ar</code></div>
+      <div class="entra">Entra: <b>AKG</b> con su correo personal (uno que no sea de XP, por ejemplo un Gmail) en <span class="url">gmail.com</span></div>
+      <ul class="campos"><li>Mandar un mail a <code>sdn@cm3.com.ar</code>, otro a <code>alertas@cm3.com.ar</code> y otro a <code>facturacion@cm3.com.ar</code>.</li></ul>
+      <div class="ok">Verificar: SDN lo recibe en la bandeja de <code>sdn@xpertsconsulting.com</code>; el de <code>alertas@</code> le llega a los tres; el de <code>facturacion@</code> a AKG. Si a las 72 h no llega, revisar 4.3 y 4.4.</div>
+    </div>
+  </div>
+  <div class="nota">Esto se completa en la Etapa 2: firma DKIM y DMARC del dominio (para que los mails salientes no caigan en spam).</div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<!-- ===================== I5 · API DE ANTHROPIC ===================== -->
+<article class="hoja" id="i5">
+  <div class="marca"><b>Colm3na</b><span>I5 · API de Anthropic</span></div>
+  <h2><span class="n">I5</span>API de Anthropic</h2>
+  <p class="intro"><b>Para qué sirve:</b> es la IA que usa la app para leer recibos y responder consultas. Se paga por uso. Se crea la cuenta de XP y una clave para que la app de Pruebas la use.</p>
+  <div class="pre"><b>Necesitás antes:</b> I4 terminada (correos <code>@cm3.com.ar</code> recibiendo). <b>Al terminar tenés:</b> la organización "XP – Colm3na" con saldo, SDN y ARS invitados, el espacio <b>Pruebas</b> con tope de gasto y su clave guardada.</div>
+  <div class="llano"><b>API:</b> la puerta por la que un programa (nuestra app) le habla a la IA. <b>API key:</b> la contraseña que usa la app para pasar por esa puerta; quien la tiene gasta a cuenta de XP. <b>Workspace:</b> un compartimento dentro de la cuenta, con su propio tope de gasto y sus propias claves (uno por entorno). No confundir con Claude Team (I6): esa es la cuenta de las personas; esta es la de la app.</div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>5.1</div>
+    <div class="pc">
+      <div class="pt">Crear la cuenta de la API</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@cm3.com.ar</code> en <span class="url">platform.claude.com</span></div>
+      <ul class="campos">
+        <li>Registrarse con el correo <code>akg@cm3.com.ar</code> usando la opción de correo electrónico, <b>no</b> "Continuar con Google" (Google entregaría <code>akg@xpertsconsulting.com</code>) <span class="flag vp">VERIFICAR EN PANTALLA</span> (rótulo del botón).</li>
+        <li>Llega un código o enlace a la bandeja de AKG → usarlo. No hay contraseña que guardar: la protección es el correo de AKG, que ya tiene verificación en dos pasos (I1).</li>
+        <li>Si pregunta cuenta individual u organización: <b>organización</b>.</li>
+        <li>Nombre de la organización: <code>XP – Colm3na</code>. Caso de uso: "lectura de recibos de sueldo para sindicatos argentinos".</li>
+      </ul>
+      <div class="ok">Verificar: AKG entra a la consola y arriba figura "XP – Colm3na".</div>
+      <div class="nota"><span class="flag nv">NO VERIFICADO</span> nombres exactos de los campos del alta. Al aceptar los términos comerciales en el alta, XP acepta también el acuerdo de tratamiento de datos (DPA).</div>
+      <div class="fuente">Fuente: <a href="https://support.claude.com/en/articles/8114531-i-created-a-claude-console-organization-how-do-i-start-using-the-claude-api">Claude Help — Start using the Claude API</a> · <a href="https://www.anthropic.com/legal/commercial-terms">Commercial Terms</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>5.2</div>
+    <div class="pc">
+      <div class="pt">Tarjeta, créditos y CUIT</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@cm3.com.ar</code> en <span class="url">platform.claude.com/settings/billing</span></div>
+      <div class="ruta"><span class="ui">Settings</span> → <span class="ui">Billing</span> → <span class="ui">Buy credits</span> → monto → cargar la tarjeta de XP (con el domicilio fiscal de XP) → confirmar</div>
+      <ul class="campos">
+        <li>Monto inicial: lo decide AKG (sugerido USD 50, alcanza para Pruebas). Los créditos vencen al año y no se reembolsan.</li>
+        <li>CUIT: <span class="ui">Settings</span> → <span class="ui">Organization</span> → campo de Tax ID → <span class="ui">Save changes</span>. Si para Argentina el campo no aparece, no es un error.</li>
+      </ul>
+      <div class="ok">Verificar: el saldo aparece en <span class="ui">Billing</span> y llega un recibo a <code>akg@cm3.com.ar</code> (reenviarlo a <code>facturacion@cm3.com.ar</code>).</div>
+      <div class="fuente">Fuente: <a href="https://support.claude.com/en/articles/8977456-how-do-i-pay-for-my-api-usage">Claude Help — How do I pay for my API usage</a> · <a href="https://support.claude.com/en/articles/9889428-add-or-update-your-claude-console-organization-s-tax-or-vat-id">Tax or VAT ID</a></div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I5 · API de Anthropic (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>5.3</div>
+    <div class="pc">
+      <div class="pt">Invitar a SDN y ARS</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@cm3.com.ar</code> en <span class="url">platform.claude.com/settings/members</span></div>
+      <div class="ruta"><span class="ui">Settings</span> → <span class="ui">Members</span> → <span class="ui">Invite</span> → correo → rol → enviar</div>
+      <table class="t">
+        <thead><tr><th>Correo</th><th>Rol</th><th>Por qué</th></tr></thead>
+        <tbody>
+          <tr><td><code>sdn@cm3.com.ar</code></td><td><b>Admin</b></td><td>Solo un Admin puede crear workspaces y cuentas de servicio (5.5 y 5.6).</td></tr>
+          <tr><td><code>ars@cm3.com.ar</code></td><td><b>Developer</b></td><td>Usa la API y maneja claves en los workspaces donde se lo agregue.</td></tr>
+        </tbody>
+      </table>
+      <div class="ok">Verificar: los dos figuran en <span class="ui">Members</span> como invitados. La invitación vence a los 21 días.</div>
+      <div class="nota"><span class="flag vp">VERIFICAR EN PANTALLA</span> qué rol figura al lado de AKG (debería ser Admin u Owner) y que la lista de roles incluya Admin y Developer.</div>
+      <div class="fuente">Fuente: <a href="https://support.claude.com/en/articles/10186004-claude-console-roles-and-permissions">Claude Help — Console roles and permissions</a> · <a href="https://platform.claude.com/docs/en/manage-claude/workspaces">Workspaces</a> ("Only organization admins can create workspaces")</div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>5.4</div>
+    <div class="pc">
+      <div class="pt">SDN y ARS aceptan la invitación</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en el mail de invitación (llega a su bandeja de Gmail de XP). Después lo mismo <b>ARS</b> con <code>ars@cm3.com.ar</code>.</div>
+      <ul class="campos"><li>Abrir el enlace → entrar con la opción de correo electrónico usando la dirección <code>@cm3.com.ar</code> (no "Continuar con Google").</li></ul>
+      <div class="ok">Verificar: SDN ve la organización "XP – Colm3na". Si además tiene la consola vieja personal, elegir XP en el selector de organización.</div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>5.5</div>
+    <div class="pc">
+      <div class="pt">Crear el workspace Pruebas con tope de gasto</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en <span class="url">platform.claude.com/settings/workspaces</span></div>
+      <div class="ruta"><span class="ui">Settings</span> → <span class="ui">Workspaces</span> → <span class="ui">Create workspace</span> → nombre <code>Pruebas</code> + un color → <span class="ui">Create workspace</span></div>
+      <ul class="campos">
+        <li>Tope: hacer clic en <code>Pruebas</code> en la lista → en el panel, <span class="ui">Spend limits</span> → tope mensual <b>USD 50</b> y una alerta al 80%.</li>
+        <li>ARS: <span class="ui">Settings</span> → <span class="ui">Members</span> → <span class="ui">Add to workspace</span> → <code>Pruebas</code>, ARS, <span class="ui">Workspace Developer</span> → <span class="ui">Add to workspace</span>.</li>
+      </ul>
+      <div class="ok">Verificar: <code>Pruebas</code> figura en la lista con su tope, y ARS figura como miembro.</div>
+      <div class="nota">No usar el <span class="ui">Default Workspace</span>: no admite topes. Si aparece solo un workspace "Claude Code", no archivarlo.</div>
+      <div class="fuente">Fuente: <a href="https://platform.claude.com/docs/en/manage-claude/workspaces">Claude Platform — Workspaces</a> (Create a workspace · Set workspace limits · Add members)</div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I5 · API de Anthropic (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>5.6</div>
+    <div class="pc">
+      <div class="pt">Crear la cuenta de servicio de Pruebas <span class="flag vp">VERIFICAR EN PANTALLA</span></div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en <span class="url">platform.claude.com/settings/service-accounts</span></div>
+      <div class="ruta"><span class="ui">Settings</span> → <span class="ui">Service accounts</span> → crear una cuenta llamada <code>sa-pruebas</code> → en su menú, <span class="ui">Add to workspace</span> → <code>Pruebas</code></div>
+      <div class="llano"><b>Cuenta de servicio:</b> un "usuario" que no es una persona (no tiene mail ni contraseña). La clave de la app cuelga de ella, así sigue andando aunque una persona deje el equipo.</div>
+      <div class="ok">Verificar: <code>sa-pruebas</code> aparece en la lista y, filtrando por workspace, figura en <code>Pruebas</code>.</div>
+      <div class="nota">La ayuda oficial no nombra el botón para crearla ni sus campos: seguir lo que muestre la pantalla. Si la pantalla no ofrece cuentas de servicio, saltear este paso y crear la clave en 5.7 sin el campo <span class="ui">Linked account</span>.</div>
+      <div class="fuente">Fuente: <a href="https://platform.claude.com/docs/en/manage-claude/authentication">Claude Platform — Authentication</a> (Key types) · <a href="https://platform.claude.com/docs/en/manage-claude/workspaces">Workspaces</a> (Role inheritance)</div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>5.7</div>
+    <div class="pc">
+      <div class="pt">Crear la API key de Pruebas</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en <span class="url">platform.claude.com/settings/keys</span>. AKG al lado, con el documento cifrado abierto.</div>
+      <div class="ruta"><span class="ui">Settings</span> → <span class="ui">API keys</span> → <span class="ui">Create key</span></div>
+      <ul class="campos">
+        <li>Nombre: <code>colm3na-pruebas-2026-10</code>.</li>
+        <li><span class="ui">Expiration</span>: custom de 365 días (Anthropic avisa por mail a SDN 7 días antes). No se puede cambiar después.</li>
+        <li><span class="ui">Linked account</span>: <code>sa-pruebas</code>.</li>
+        <li>Workspace: solo <code>Pruebas</code>. Así el gasto de la app queda dentro del tope de 5.5.</li>
+        <li>Valor <code>sk-ant-api…</code>: AKG lo pega en el documento cifrado en ese momento. Se carga en Render en I8.</li>
+      </ul>
+      <div class="ok">Verificar: la key figura en la lista con su vencimiento y el workspace <code>Pruebas</code>.</div>
+      <div class="nota"><span class="flag nv">NO VERIFICADO</span> que se muestre una sola vez: copiarla en el momento. Agendar en el calendario de AKG la fecha de vencimiento.</div>
+      <div class="fuente">Fuente: <a href="https://platform.claude.com/docs/en/manage-claude/authentication">Claude Platform — Authentication</a> (Create and use a key · Key expiration)</div>
+    </div>
+  </div>
+  <div class="nota">Esto se completa en la Etapa 2: workspaces y claves de Demo y PRODU, límites de velocidad, auto-recarga, nivel de uso y retención de datos.</div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<!-- ===================== I6 · CLAUDE TEAM ===================== -->
+<article class="hoja" id="i6">
+  <div class="marca"><b>Colm3na</b><span>I6 · Claude Team</span></div>
+  <h2><span class="n">I6</span>Claude Team</h2>
+  <p class="intro"><b>Para qué sirve:</b> son las cuentas de las personas para trabajar con Claude: el chat y <b>Claude Code</b>, el asistente que hoy escribe código y abre cambios en GitHub. Al pasarlo a XP, el trabajo queda en la empresa.</p>
+  <div class="pre"><b>Necesitás antes:</b> I4 terminada. <b>Al terminar tenés:</b> el Team de XP pago, con AKG, SDN, ARS y GCF adentro, SDN como Owner y Claude Code habilitado. La conexión con GitHub se termina en I7.</div>
+  <div class="llano"><b>Asiento:</b> el lugar pago de cada persona en el Team. <b>Premium</b> trae mucho más uso (para quien programa todo el día); <b>Standard</b> alcanza para uso normal (chat, documentos, proyectos). <b>Member</b> (en algunas pantallas figura como <b>User</b>): usa el Team y sus proyectos, sin tocar la configuración. <b>Owner:</b> el rol que puede configurar Claude Code y los conectores para todo el Team.</div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>6.1</div>
+    <div class="pc">
+      <div class="pt">Crear el Team de XP</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@cm3.com.ar</code> en <span class="url">claude.ai/login</span></div>
+      <ul class="campos">
+        <li>Entrar con la opción de correo electrónico y <code>akg@cm3.com.ar</code> (no "Continuar con Google"). Llega un código o enlace a su bandeja.</li>
+        <li>En las pantallas de bienvenida elegir <span class="ui">Team plan</span> → facturación mensual o anual (decide AKG) → asientos y pago con la tarjeta de XP.</li>
+        <li>Si AKG ya tenía una cuenta personal de Claude con ese mismo correo y aparece <span class="ui">Keep your personal account separate</span>: tildarlo.</li>
+      </ul>
+      <div class="ok">Verificar: AKG ve <span class="ui">Organization settings</span> en el menú (queda como <b>Primary Owner</b>).</div>
+      <div class="nota"><span class="flag vp">VERIFICAR EN PANTALLA</span> mínimo de miembros del Team: la versión nueva de la ayuda dice 2, una vieja dice 5. Somos 4.</div>
+      <div class="fuente">Fuente: <a href="https://support.claude.com/en/articles/9267247-get-started-with-the-team-plan">Claude Help — Get started with the Team plan</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>6.2</div>
+    <div class="pc">
+      <div class="pt">Comprar los asientos</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@cm3.com.ar</code> en <span class="url">claude.ai</span></div>
+      <div class="ruta"><span class="ui">Organization settings</span> → <span class="ui">Organization and access</span> → <span class="ui">Manage</span> (bajo <span class="ui">Total seats</span>) → <span class="ui">Add or change seats</span> → <span class="ui">+</span> → <span class="ui">Next</span> → tildar la confirmación → <span class="ui">Confirm &amp; purchase</span></div>
+      <table class="t">
+        <thead><tr><th>Asiento</th><th>Para</th><th>Cant.</th><th>USD por mes (mensual · anual)</th></tr></thead>
+        <tbody>
+          <tr><td>Premium</td><td>SDN y ARS</td><td>2</td><td>125 · 100 cada uno</td></tr>
+          <tr><td>Standard</td><td>AKG y GCF</td><td>2</td><td>25 · 20 cada uno</td></tr>
+        </tbody>
+      </table>
+      <div class="ok">Verificar: <span class="ui">Total seats</span> muestra 2 Premium y 2 Standard. Precios sin impuestos, leídos el 2026-10-10.</div>
+      <div class="fuente">Fuente: <a href="https://support.claude.com/en/articles/12004354-purchasing-and-managing-seats-on-team-plans">Claude Help — Purchasing and managing seats</a> · <a href="https://support.claude.com/en/articles/9266767-what-is-the-claude-team-plan">What is the Team plan</a></div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I6 · Claude Team (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>6.3</div>
+    <div class="pc">
+      <div class="pt">Invitar a SDN, ARS y GCF</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@cm3.com.ar</code> en <span class="url">claude.ai</span></div>
+      <div class="ruta"><span class="ui">Organization settings</span> → <span class="ui">Members</span> → <span class="ui">Add member</span> → correo → tipo de asiento → rol → <span class="ui">Add members</span></div>
+      <table class="t">
+        <thead><tr><th>Correo</th><th>Asiento</th><th>Rol</th></tr></thead>
+        <tbody>
+          <tr><td><code>sdn@cm3.com.ar</code></td><td>Premium</td><td><b>Owner</b> (si al invitar no lo ofrece, se le cambia en 6.5)</td></tr>
+          <tr><td><code>ars@cm3.com.ar</code></td><td>Premium</td><td>Member (puede figurar como User)</td></tr>
+          <tr><td><code>gcf@cm3.com.ar</code></td><td>Standard</td><td>Member (puede figurar como User)</td></tr>
+        </tbody>
+      </table>
+      <div class="ok">Verificar: los tres figuran en <span class="ui">Members</span> como invitados. La invitación vence a los 21 días.</div>
+      <div class="nota">No invitar el Gmail personal de SDN ni el correo de ATS de GCF: todos entran con <code>@cm3.com.ar</code>. <span class="flag vp">VERIFICAR EN PANTALLA</span> si el Team pide cargar <code>cm3.com.ar</code> como dominio permitido antes de invitar.</div>
+      <div class="fuente">Fuente: <a href="https://support.claude.com/en/articles/13133750-manage-members-on-team-and-enterprise-plans">Claude Help — Manage members</a> · <a href="https://support.claude.com/en/articles/9267276-roles-and-permissions">Roles and permissions</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>6.4</div>
+    <div class="pc">
+      <div class="pt">SDN, ARS y GCF aceptan la invitación</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en el mail de invitación (bandeja de Gmail de XP) → <span class="url">claude.ai</span>. Después lo mismo <b>ARS</b> con <code>ars@cm3.com.ar</code> y <b>GCF</b> con <code>gcf@cm3.com.ar</code>.</div>
+      <ul class="campos">
+        <li>Entrar con la opción de correo electrónico, no con Google.</li>
+        <li>SDN conserva aparte su cuenta personal (<code>snavello@gmail.com</code>) y la sigue usando en paralelo. Para pasar de una a otra, iniciales abajo a la izquierda.</li>
+        <li>GCF trabaja en el chat y en los proyectos compartidos del Team (plan de implementación, presentaciones al sindicato). No necesita Claude Code ni GitHub.</li>
+      </ul>
+      <div class="ok">Verificar: SDN, ARS y GCF ven el nombre de la organización de XP abajo a la izquierda.</div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>6.5</div>
+    <div class="pc">
+      <div class="pt">Darle a SDN el rol Owner (si no quedó en 6.3)</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@cm3.com.ar</code> en <span class="url">claude.ai</span></div>
+      <div class="ruta"><span class="ui">Organization settings</span> → <span class="ui">Members</span> → SDN → desplegable <span class="ui">Role</span> → <span class="ui">Owner</span></div>
+      <div class="ok">Verificar: SDN figura como Owner.</div>
+      <div class="fuente">Fuente: <a href="https://support.claude.com/en/articles/13133750-manage-members-on-team-and-enterprise-plans">Claude Help — Manage members</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>6.6</div>
+    <div class="pc">
+      <div class="pt">Habilitar Claude Code y el conector de GitHub</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en <span class="url">claude.ai/admin-settings</span></div>
+      <ul class="campos">
+        <li><span class="ui">Organization settings</span> → <span class="ui">Connectors</span> (<span class="url">claude.ai/admin-settings/connectors</span>) → activar <b>GitHub</b>.</li>
+        <li><span class="ui">Organization settings</span> → <span class="ui">Claude Code</span> (<span class="url">claude.ai/admin-settings/claude-code</span>) → permitir las sesiones en la nube <span class="flag vp">VERIFICAR EN PANTALLA</span> (nombre del interruptor).</li>
+      </ul>
+      <div class="ok">Verificar: GitHub figura activo en <span class="ui">Connectors</span> y SDN puede abrir <span class="url">claude.ai/code</span> con <code>sdn@cm3.com.ar</code>.</div>
+      <div class="nota">Conectar el repositorio se hace en I7, cuando exista la organización de GitHub de XP. Pasar el contenido de la cuenta personal de SDN (proyecto, chats, artifacts) es Etapa 2; mientras tanto SDN sigue con su cuenta personal en paralelo.</div>
+      <div class="fuente">Fuente: <a href="https://code.claude.com/docs/en/web-quickstart">Claude Code — Web quickstart (Connect GitHub)</a> · <a href="https://code.claude.com/docs/en/claude-code-on-the-web">Claude Code on the web</a></div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<!-- ===================== I7 · GitHub ===================== -->
+<article class="hoja" id="i7">
+  <div class="marca"><b>Colm3na</b><span>I7 · GitHub</span></div>
+  <h2><span class="n">I7</span>GitHub</h2>
+  <p class="intro"><b>Para qué sirve:</b> GitHub guarda el código de la app y su historia. Hoy está en la cuenta personal de SDN (<code>snavello/MITRABAJOC</code>); en esta fase pasa a una <b>organización</b> de XP, sin cambiar la forma de trabajar: Claude Code propone cambios, se aprueban y van a Pruebas.</p>
+  <div class="pre"><b>Necesitás antes:</b> I4 terminada (<code>akg@cm3.com.ar</code> recibe correo) e I6 (Claude Team con SDN adentro). <b>Al terminar tenés:</b> el repositorio en <code>github.com/cm3-xp/MITRABAJOC</code>, con SDN y ARS como miembros, Render y Claude conectados, y la Demo vieja funcionando igual que antes.</div>
+  <div class="llano"><b>En simple.</b> Un <b>repositorio</b> ("repo") es la carpeta con todo el código. Una <b>organización</b> es una cuenta de empresa en GitHub: el código queda a nombre de XP y no de una persona, y las personas entran con su propio usuario. Los usuarios de GitHub son siempre personales: AKG crea el suyo, SDN usa el que ya tiene (<code>snavello</code>) y ARS el suyo.</div>
+  <div class="nota">Nombre de la organización en este instructivo: <code>cm3-xp</code>. Si GitHub dice que está tomado, elegir otro y reemplazarlo en todos los pasos (también en el cambio de 7.6).</div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>7.1</div>
+    <div class="pc">
+      <div class="pt">Crear la cuenta de GitHub de AKG</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@cm3.com.ar</code> en <span class="url">github.com/signup</span></div>
+      <ul class="campos">
+        <li><span class="ui">Email</span>: <code>akg@cm3.com.ar</code> · <span class="ui">Password</span>: una nueva → documento cifrado · <span class="ui">Username</span>: por ejemplo <code>akg-cm3</code> (es público y personal).</li>
+        <li>GitHub manda un código al correo: llega a la bandeja de Gmail de AKG (el alias <code>@cm3.com.ar</code> cae en la misma casilla). Ingresarlo para verificar el correo.</li>
+      </ul>
+      <div class="ok">Verificar: AKG entra a <span class="url">github.com</span> y arriba a la derecha ve su foto de perfil. Anotar el usuario en el documento cifrado.</div>
+      <div class="nota"><span class="flag vp">VERIFICAR EN PANTALLA</span> el orden de los campos del alta: GitHub no lo documenta.</div>
+      <div class="fuente">Fuente: <a href="https://docs.github.com/en/get-started/start-your-journey/creating-an-account-on-github">docs.github.com — Creating an account on GitHub</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>7.2</div>
+    <div class="pc">
+      <div class="pt">Verificación en dos pasos de AKG</div>
+      <div class="entra">Entra: <b>AKG</b> con su usuario de GitHub de 7.1 (por ejemplo <code>akg-cm3</code>) en <span class="url">github.com/settings/security</span></div>
+      <div class="ruta">Foto de perfil → <span class="ui">Settings</span> → <span class="ui">Password and authentication</span> → <span class="ui">Enable two-factor authentication</span> → escanear el código con la app autenticadora del teléfono → <span class="ui">Download</span> (códigos de recuperación) → <span class="ui">I have saved my recovery codes</span></div>
+      <ul class="campos"><li>Códigos de recuperación: <code>[guardar en el documento cifrado]</code>.</li></ul>
+      <div class="ok">Verificar: la sección muestra la verificación en dos pasos activada.</div>
+      <div class="nota">SDN y ARS hacen lo mismo en sus cuentas si todavía no la tienen (lo confirman en 7.5).</div>
+      <div class="fuente">Fuente: <a href="https://docs.github.com/en/authentication/securing-your-account-with-two-factor-authentication-2fa/configuring-two-factor-authentication">docs.github.com — Configuring two-factor authentication</a></div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I7 · GitHub (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>7.3</div>
+    <div class="pc">
+      <div class="pt">Crear la organización con plan Team</div>
+      <div class="entra">Entra: <b>AKG</b> con su usuario de GitHub de 7.1 (por ejemplo <code>akg-cm3</code>) en <span class="url">github.com/settings/organizations</span></div>
+      <div class="ruta">Foto de perfil → <span class="ui">Settings</span> → <span class="ui">Organizations</span> → <span class="ui">New organization</span> → elegir el plan <span class="ui">Team</span></div>
+      <ul class="campos">
+        <li><span class="ui">Organization name</span>: <code>cm3-xp</code> · <span class="ui">Contact email</span>: <code>akg@cm3.com.ar</code></li>
+        <li>Pertenece a: <span class="ui">A business or institution</span> → razón social de XP.</li>
+        <li>Pago: tarjeta de XP. Team se cobra por persona (US$ 4 por usuario por mes; son 3: AKG, SDN y ARS) <span class="flag vp">VERIFICAR EN PANTALLA</span> el precio en <span class="url">github.com/pricing</span>.</li>
+      </ul>
+      <div class="ruta">Si el asistente solo ofrece el plan gratuito: crearla así y después <code>cm3-xp</code> → <span class="ui">Settings</span> → <span class="ui">Billing and licensing</span> → <span class="ui">Upgrade to Team</span> → tarjeta → tildar <span class="ui">This organization is owned by a business</span> → razón social → <span class="ui">Upgrade my organization's account</span></div>
+      <div class="ok">Verificar: la organización existe, sin repositorios, y en <span class="ui">Billing and licensing</span> figura el plan Team.</div>
+      <div class="llano">Team hace falta porque permite, más adelante, reglas que impiden subir código directo a la Demo y a PRODU sin aprobación de otra persona (eso se arma en la Etapa 2).</div>
+      <div class="fuente">Fuente: <a href="https://docs.github.com/en/organizations/collaborating-with-groups-in-organizations/creating-a-new-organization-from-scratch">docs.github.com — Creating a new organization</a> · <a href="https://docs.github.com/en/billing/managing-the-plan-for-your-github-account/upgrading-your-accounts-plan">Upgrading your plan</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>7.4</div>
+    <div class="pc">
+      <div class="pt">Invitar a SDN y a ARS</div>
+      <div class="entra">Entra: <b>AKG</b> con su usuario de GitHub de 7.1 (por ejemplo <code>akg-cm3</code>) en <span class="url">github.com/orgs/cm3-xp/people</span></div>
+      <div class="ruta"><span class="ui">People</span> → <span class="ui">Invite member</span> → escribir el usuario → <span class="ui">Invite</span> → <span class="ui">Role in the organization</span> → <span class="ui">Send invitation</span></div>
+      <ul class="campos">
+        <li><code>snavello</code> (SDN) → <span class="ui">Owner</span>: es quien transfiere el repo e instala las conexiones.</li>
+        <li>usuario de GitHub de ARS (pedírselo) → <span class="ui">Member</span>.</li>
+      </ul>
+      <div class="ok">Verificar: los dos figuran como invitaciones pendientes.</div>
+      <div class="llano"><b>Owner</b> = administra todo. <b>Member</b> = trabaja con el código, sin tocar la configuración de la organización. Con dos Owner (AKG y SDN) nadie queda bloqueado si falta uno.</div>
+      <div class="fuente">Fuente: <a href="https://docs.github.com/en/organizations/managing-membership-in-your-organization/inviting-users-to-join-your-organization">docs.github.com — Inviting users</a> · <a href="https://docs.github.com/en/organizations/managing-peoples-access-to-your-organization-with-roles/roles-in-an-organization">Roles in an organization</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>7.5</div>
+    <div class="pc">
+      <div class="pt">Aceptar la invitación</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>snavello</code> en <span class="url">github.com/orgs/cm3-xp/invitation</span>. Después lo mismo <b>ARS</b> con su usuario.</div>
+      <ul class="campos">
+        <li>Antes, confirmar la verificación en dos pasos propia (ruta de 7.2). Si no está activa, activarla primero.</li>
+        <li><span class="ui">Join cm3-xp</span>.</li>
+      </ul>
+      <div class="ok">Verificar: en <span class="ui">People</span> de la organización aparecen AKG y SDN como Owner y ARS como Member.</div>
+      <div class="fuente">Fuente: <a href="https://docs.github.com/en/organizations/managing-membership-in-your-organization/inviting-users-to-join-your-organization">docs.github.com — Inviting users</a></div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I7 · GitHub (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>7.6</div>
+    <div class="pc">
+      <div class="pt">Cambio previo obligatorio en el código (antes de transferir)</div>
+      <div class="entra">Entra: <b>SDN</b> con su cuenta personal de Claude de siempre en <span class="url">claude.ai/code</span> (o en su PC), sobre <code>snavello/MITRABAJOC</code>; en GitHub, con <code>snavello</code>. Hace el cambio en una rama nueva desde <code>main</code> y abre un PR hacia <code>main</code>.</div>
+      <div class="llano"><b>Rama:</b> una copia de trabajo del código donde se hace un cambio sin tocar la versión principal (<code>main</code>). <b>PR</b> (pedido de cambio): la propuesta de sumar esa rama a <code>main</code>, donde se ve qué cambia y corren los controles. <b>Mergear:</b> aceptar el PR, es decir, incorporar el cambio a <code>main</code>.</div>
+      <div class="llano"><b>Por qué.</b> Cada vez que llega código, GitHub corre solo los controles automáticos (los tests: la "CI"). Esos controles tienen escrita una condición: "correr solo si el repo se llama <code>snavello/MITRABAJOC</code>". Apenas se transfiere, el repo pasa a llamarse <code>cm3-xp/MITRABAJOC</code>, la condición deja de cumplirse y los controles se <b>saltean</b>. Lo grave es que GitHub (y Render) cuentan un control salteado como <b>aprobado</b>: la app seguiría desplegándose sin que se haya probado nada, y sin ningún aviso. El cambio hace que la condición acepte los dos nombres.</div>
+      <div class="tw"><table class="t">
+        <thead><tr><th>Archivo:línea</th><th>Hoy dice</th><th>Tiene que decir</th></tr></thead>
+        <tbody>
+          <tr><td><code>.github/workflows/ci.yml:28</code> (tests)</td><td rowspan="3"><code>if: github.repository == 'snavello/MITRABAJOC'</code></td><td rowspan="3"><code>if: github.repository == 'snavello/MITRABAJOC' || github.repository == 'cm3-xp/MITRABAJOC'</code></td></tr>
+          <tr><td><code>.github/workflows/ci.yml:83</code> (auditoría)</td></tr>
+          <tr><td><code>.github/workflows/metricas-render.yml:36</code></td></tr>
+          <tr><td><code>test_observabilidad_metricas.py:369</code></td><td><code>assert "github.repository == 'snavello/MITRABAJOC'" in FLUJO</code></td><td>dejar esa línea y sumar debajo <code>assert "github.repository == 'cm3-xp/MITRABAJOC'" in FLUJO</code></td></tr>
+        </tbody>
+      </table></div>
+      <div class="ok">Verificar: en el PR, los controles <code>tests (parte 0)</code> a <code>tests (parte 3)</code> terminan en verde. Recién ahí, mergear a <code>main</code>.</div>
+      <div class="nota"><b>No transferir sin este cambio mergeado.</b> El resto de las menciones a <code>snavello/MITRABAJOC</code> (documentación, <code>CLAUDE.md</code>, Grafana) no rompen nada: se actualizan en la Etapa 2.</div>
+      <div class="fuente">Fuente: <a href="https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-jobs-with-conditions">docs.github.com — Control jobs with conditions</a> ("A job that is skipped will report its status as Success") · <a href="https://render.com/docs/deploys">render.com/docs/deploys</a> ("Integrating with CI")</div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I7 · GitHub (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>7.7</div>
+    <div class="pc">
+      <div class="pt">Transferir el repositorio a la organización</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>snavello</code> en <span class="url">github.com/snavello/MITRABAJOC</span></div>
+      <div class="ruta"><span class="ui">Settings</span> → <span class="ui">General</span> → al pie, <span class="ui">Danger Zone</span> → <span class="ui">Transfer</span> → <span class="ui">Select one of my organizations</span> → <code>cm3-xp</code> (sin cambiarle el nombre) → escribir <code>snavello/MITRABAJOC</code> para confirmar → <span class="ui">I understand, transfer this repository</span></div>
+      <ul class="campos">
+        <li>Momento: sin cambios de Claude a medio camino y fuera de horario de demos.</li>
+        <li>Viajan la historia, los PR, los colaboradores y los secretos. Los enlaces viejos redirigen solos.</li>
+        <li>SDN <b>no debe volver a crear nunca</b> un repo llamado <code>snavello/MITRABAJOC</code>: se perderían las redirecciones.</li>
+      </ul>
+      <div class="ok">Verificar: el repo abre en <code>github.com/cm3-xp/MITRABAJOC</code>.</div>
+      <div class="nota"><span class="flag vp">VERIFICAR EN PANTALLA</span> que <span class="ui">Danger Zone</span> esté al pie de <span class="ui">Settings</span> → <span class="ui">General</span>.</div>
+      <div class="fuente">Fuente: <a href="https://docs.github.com/en/repositories/creating-and-managing-repositories/transferring-a-repository">docs.github.com — Transferring a repository</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>7.8</div>
+    <div class="pc">
+      <div class="pt">Conectar Render y Claude a la organización</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>snavello</code> (Owner de <code>cm3-xp</code>) en <span class="url">github.com/apps/render/installations/new</span> y después en <span class="url">github.com/apps/claude/installations/new</span></div>
+      <div class="ruta">En cada una: elegir <code>cm3-xp</code> → <span class="ui">Only select repositories</span> → <code>MITRABAJOC</code> → revisar permisos → <span class="ui">Install</span></div>
+      <div class="ok">Verificar: <code>cm3-xp</code> → <span class="ui">Settings</span> → <span class="ui">GitHub Apps</span> lista "Render" y "Claude", cada una con acceso solo a <code>MITRABAJOC</code>.</div>
+      <div class="llano">Una <b>GitHub App</b> es un permiso que la organización le da a otro servicio para leer (y en el caso de Claude, también proponer cambios en) el repo. Sin la de Render, Render no puede desplegar; sin la de Claude, Claude Code en la nube no puede trabajar sobre un repo privado.</div>
+      <div class="fuente">Fuente: <a href="https://docs.github.com/en/apps/using-github-apps/installing-a-github-app-from-a-third-party">docs.github.com — Installing a GitHub App</a> · <a href="https://render.com/docs/git-provider">render.com/docs/git-provider</a> · <a href="https://code.claude.com/docs/en/claude-code-on-the-web">code.claude.com — Claude Code on the web</a></div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I7 · GitHub (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>7.9</div>
+    <div class="pc">
+      <div class="pt">Claude Code del Team sobre el repo nuevo</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> (cuenta del Team) en <span class="url">claude.ai/code</span>; cuando lo pide, conecta GitHub con <code>snavello</code></div>
+      <ul class="campos">
+        <li>Elegir el repo <code>cm3-xp/MITRABAJOC</code> en el selector.</li>
+        <li>Si aparece "GitHub access is required for Claude Code cloud sessions": SDN (Owner del Team) revisa que GitHub siga activo en <span class="url">claude.ai/admin-settings/connectors</span> (paso 6.6) y vuelve a intentar.</li>
+        <li>ARS hace lo mismo con <code>ars@cm3.com.ar</code> y su usuario de GitHub.</li>
+      </ul>
+      <div class="ok">Verificar: una sesión nueva abre el repo de <code>cm3-xp</code> y puede leer sus archivos.</div>
+      <div class="fuente">Fuente: <a href="https://code.claude.com/docs/en/web-quickstart">code.claude.com — Web quickstart</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>7.10</div>
+    <div class="pc">
+      <div class="pt">Actualizar la copia del código en cada PC</div>
+      <div class="entra">Entra: <b>SDN</b> en su PC, en la carpeta del proyecto (terminal). Después lo mismo <b>ARS</b> en la suya.</div>
+      <pre class="cmd">git remote set-url origin https://github.com/cm3-xp/MITRABAJOC.git
+git remote -v
+git fetch origin --prune</pre>
+      <div class="ok">Verificar: <code>git remote -v</code> muestra <code>cm3-xp/MITRABAJOC</code> y un <code>git push</code> ya no avisa que "el repositorio se movió".</div>
+      <div class="llano">La PC guarda la dirección del repo. Sin este cambio funciona igual (GitHub redirige), pero conviene apuntar a la dirección real.</div>
+      <div class="fuente">Fuente: <a href="https://docs.github.com/en/repositories/creating-and-managing-repositories/transferring-a-repository">docs.github.com — Transferring a repository</a></div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I7 · GitHub (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>7.11</div>
+    <div class="pc">
+      <div class="pt">Mantener la Demo vieja enganchada al repo transferido</div>
+      <div class="entra">Entra: <b>SDN</b> con su cuenta personal vieja de Render (la de siempre, no <code>sdn@cm3.com.ar</code>) en <span class="url">dashboard.render.com</span>, servicio <code>mitrabajo-demo</code></div>
+      <div class="ruta"><code>mitrabajo-demo</code> → <span class="ui">Settings</span> → <span class="ui">Build</span> → <span class="ui">Source</span> → <span class="ui">Edit</span> → en <span class="ui">Update Source</span> elegir <code>cm3-xp/MITRABAJOC</code> → confirmar rama <code>demo</code>, <span class="ui">Runtime</span>, <span class="ui">Build Command</span> y <span class="ui">Start Command</span> sin cambios → guardar</div>
+      <ul class="campos">
+        <li>Al guardar, Render despliega la Demo de nuevo desde la rama <code>demo</code> (mismo código: no cambia nada a la vista).</li>
+        <li>Si el repo de <code>cm3-xp</code> no aparece en la lista: la app de Render de 7.8 no se instaló o no incluye <code>MITRABAJOC</code>.</li>
+        <li>Si SDN quiere que la Pruebas vieja siga recibiendo cambios hasta terminar I8, hacer lo mismo con <code>mitrabajo-pruebas</code> (rama <code>main</code>).</li>
+      </ul>
+      <div class="ok">Verificar: en <span class="ui">Events</span> del servicio, un deploy nuevo termina en "Live" y <span class="url">mitrabajo.onrender.com</span> abre como siempre.</div>
+      <div class="nota">Qué hace Render solo con un repo transferido no está documentado <span class="flag nv">NO VERIFICADO</span>; por eso se vuelve a apuntar a mano. <span class="flag vp">VERIFICAR EN PANTALLA</span> los rótulos: la opción es de mayo de 2026. <code>promover_demo.py</code> no necesita cambios: toma la dirección del repo de la PC (7.10).</div>
+      <div class="fuente">Fuente: <a href="https://render.com/changelog/change-your-services-backing-repo-or-image-in-the-render-dashboard">render.com/changelog — Change your service's backing repo</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>7.12</div>
+    <div class="pc">
+      <div class="pt">Apagar el colector de métricas viejo</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>snavello</code> en <span class="url">github.com/cm3-xp/MITRABAJOC/actions</span></div>
+      <div class="ruta"><span class="ui">Actions</span> → en la lista de la izquierda, <span class="ui">Métricas de Render a Grafana</span> → menú <span class="ui">•••</span> → <span class="ui">Disable workflow</span></div>
+      <div class="llano"><b>Por qué.</b> Esa tarea automática corre cada 5 minutos para mandar métricas al Grafana viejo de SDN. En la organización consume los minutos pagos de XP (estimado: varias veces lo que incluye el plan) y su permiso de disparo vence el 18/10/2026. La Pruebas vieja sigue mandando sus métricas por su cuenta. El monitoreo nuevo se arma en la Etapa 2.</div>
+      <div class="ok">Verificar: el workflow figura como "Disabled". El control <span class="ui">CI</span> sigue activo.</div>
+      <div class="fuente">Fuente: <a href="https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows">docs.github.com — Disabling and enabling a workflow</a> · <a href="https://docs.github.com/en/billing/concepts/product-billing/github-actions">GitHub Actions billing</a></div>
+    </div>
+  </div>
+
+  <div class="nota"><b>Esto se completa en la Etapa 2:</b> reglas de ramas para <code>demo</code> y <code>produ</code>, CODEOWNERS, presupuesto de minutos y la actualización del nombre del repo en la documentación.</div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<!-- ===================== I8 · Render: Pruebas nueva ===================== -->
+<article class="hoja" id="i8">
+  <div class="marca"><b>Colm3na</b><span>I8 · Render: Pruebas nueva</span></div>
+  <h2><span class="n">I8</span>Render: Pruebas nueva</h2>
+  <p class="intro"><b>Para qué sirve:</b> Render es el servicio donde "vive" la app y su base de datos. Acá XP abre su propia cuenta y arma una Pruebas nueva, igual a la de hoy, que se actualiza sola con cada cambio aprobado en <code>main</code>.</p>
+  <div class="pre"><b>Necesitás antes:</b> I5 (API key del workspace Pruebas) e I7 terminadas. Sugerido: I9 e I10 antes, así todas las variables se cargan de una vez (si no, se agregan al final de esas fases). <b>Al terminar tenés:</b> Pruebas funcionando en <code>colm3na-pruebas.onrender.com</code> con datos de demostración, y la Pruebas vieja sin recibir más cambios.</div>
+  <div class="llano"><b>En simple.</b> En Render, un <b>workspace</b> es la cuenta de empresa: ahí se paga y se invita a las personas (no es lo mismo que el workspace de Anthropic de I5). Adentro van dos piezas: la <b>base Postgres</b> (donde se guardan los datos) y el <b>Web Service</b> (la app que la gente abre en el navegador). <b>Deploy:</b> cada vez que Render publica una versión nueva de la app; cuando termina bien, el estado dice "Live".</div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>8.1</div>
+    <div class="pc">
+      <div class="pt">Crear la cuenta de Render de AKG</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@cm3.com.ar</code> en <span class="url">dashboard.render.com/register</span></div>
+      <ul class="campos">
+        <li>Método: <b>correo y contraseña</b> (no "entrar con GitHub"). Correo <code>akg@cm3.com.ar</code>; contraseña nueva → documento cifrado.</li>
+        <li>Render manda un correo de confirmación a la bandeja de AKG: abrir el enlace.</li>
+        <li>Verificación en dos pasos: <span class="ui">Account Settings</span> → <span class="ui">Account Security</span> → activar <span class="ui">Two-factor authentication</span> con la app autenticadora. Códigos de respaldo → documento cifrado.</li>
+      </ul>
+      <div class="ok">Verificar: al salir y volver a entrar, Render pide el código del teléfono.</div>
+      <div class="nota"><span class="flag vp">VERIFICAR EN PANTALLA</span> el rótulo del interruptor de dos pasos.</div>
+      <div class="fuente">Fuente: <a href="https://render.com/docs/login-settings">render.com/docs/login-settings</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>8.2</div>
+    <div class="pc">
+      <div class="pt">Crear el workspace "Colm3na" en plan Pro</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@cm3.com.ar</code> en <span class="url">dashboard.render.com</span></div>
+      <div class="ruta">Menú del workspace (arriba a la izquierda) → <span class="ui">+ New Workspace</span> → nombre <code>Colm3na</code>, plan <span class="ui">Pro</span>, tarjeta de XP → <span class="ui">Create Workspace</span></div>
+      <div class="ok">Verificar: el workspace "Colm3na" aparece con plan Pro y en <span class="ui">Billing</span> se ve la tarjeta de XP.</div>
+      <div class="llano">Pro (US$ 25 por mes más lo que consuman los servicios) hace falta porque el plan gratuito no deja invitar a otras personas.</div>
+      <div class="fuente">Fuente: <a href="https://render.com/docs/team-members">render.com/docs/team-members</a> ("Create a workspace") · <a href="https://render.com/pricing">render.com/pricing</a></div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I8 · Render: Pruebas nueva (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>8.3</div>
+    <div class="pc">
+      <div class="pt">Invitar a SDN y a ARS</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@cm3.com.ar</code> en el workspace "Colm3na"</div>
+      <div class="ruta"><span class="ui">Settings</span> → <span class="ui">Team members</span> → <span class="ui">+ Invite members</span> → correo + rol</div>
+      <ul class="campos">
+        <li><code>sdn@cm3.com.ar</code> → <span class="ui">Admin</span> (hace toda la parte técnica).</li>
+        <li><code>ars@cm3.com.ar</code> → <span class="ui">Developer</span>.</li>
+      </ul>
+      <div class="ok">Verificar: las dos invitaciones figuran pendientes.</div>
+      <div class="fuente">Fuente: <a href="https://render.com/docs/team-members">render.com/docs/team-members</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>8.4</div>
+    <div class="pc">
+      <div class="pt">Crear la cuenta de Render de SDN (y de ARS) desde la invitación</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code>: abre el correo de invitación de Render en su Gmail. Después lo mismo <b>ARS</b> con <code>ars@cm3.com.ar</code>.</div>
+      <ul class="campos">
+        <li>Aceptar la invitación → crear la cuenta con <b>correo y contraseña</b> (<code>sdn@cm3.com.ar</code>). Es una cuenta <b>distinta</b> de la cuenta vieja de SDN, que sigue existiendo.</li>
+        <li>Activar la verificación en dos pasos (misma ruta que en 8.1).</li>
+      </ul>
+      <div class="ok">Verificar: SDN ve el workspace "Colm3na" en el menú y en <span class="ui">Team members</span> figura como Admin.</div>
+      <div class="fuente">Fuente: <a href="https://render.com/docs/team-members">render.com/docs/team-members</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>8.5</div>
+    <div class="pc">
+      <div class="pt">Conectar GitHub a la cuenta de SDN en Render</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en <span class="url">dashboard.render.com/u/settings#account-security</span>; GitHub le pide autorizar con <code>snavello</code></div>
+      <div class="ruta"><span class="ui">Account Settings</span> → <span class="ui">Account Security</span> → <span class="ui">Git Deployment Credentials</span> → <span class="ui">Add credential</span> → <span class="ui">GitHub</span> → autorizar</div>
+      <div class="ok">Verificar: en el workspace "Colm3na", <span class="ui">+ New</span> → <span class="ui">Web Service</span> lista <code>cm3-xp/MITRABAJOC</code>. Cancelar sin crear nada todavía.</div>
+      <div class="nota">El servicio queda desplegando con el permiso de GitHub de quien lo crea (SDN). Si algún día SDN sale del equipo, otra persona lo reemplaza en el servicio: <span class="ui">Settings</span> → <span class="ui">Git Credentials</span>.</div>
+      <div class="fuente">Fuente: <a href="https://render.com/docs/git-provider">render.com/docs/git-provider</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>8.6</div>
+    <div class="pc">
+      <div class="pt">Crear el proyecto "Colm3na" con el entorno Pruebas</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en el workspace "Colm3na"</div>
+      <div class="ruta"><span class="ui">+ New</span> → <span class="ui">Project</span> → <span class="ui">Project name</span>: <code>Colm3na</code> · primer environment: <code>Pruebas</code> → <span class="ui">Create a project</span></div>
+      <div class="ok">Verificar: el proyecto muestra el entorno "Pruebas" vacío.</div>
+      <div class="llano">Es solo una carpeta para ordenar. En la Etapa 2 se suman ahí "Demo" y "PRODU".</div>
+      <div class="fuente">Fuente: <a href="https://render.com/docs/projects">render.com/docs/projects</a></div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I8 · Render: Pruebas nueva (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>8.7</div>
+    <div class="pc">
+      <div class="pt">Crear la base de datos de Pruebas</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en <span class="url">dashboard.render.com/new/database</span> (<span class="ui">+ New</span> → <span class="ui">Postgres</span>)</div>
+      <ul class="campos">
+        <li><span class="ui">Name</span>: <code>colm3na-pruebas-db</code> · <span class="ui">Database</span>: <code>mitrabajo_pruebas</code> · <span class="ui">User</span>: vacío (lo genera Render)</li>
+        <li>Proyecto / entorno: <code>Colm3na</code> / <code>Pruebas</code> · <span class="ui">Region</span>: <span class="ui">Ohio (US East)</span> · <span class="ui">PostgreSQL Version</span>: <code>18</code> (la que se usa hoy)</li>
+        <li>Plan: el mismo que tiene hoy <code>mitrabajo-pruebas-db</code> (mirarlo en el Render viejo, base → <span class="ui">Info</span>).</li>
+      </ul>
+      <div class="ok">Verificar: la base queda en estado "Available".</div>
+      <div class="nota">La región y los campos <span class="ui">Database</span> y <span class="ui">User</span> no se cambian nunca después. El nombre con "pruebas" importa: el script <code>clonar_demo_a_pruebas.py</code> se niega a escribir en una base cuya dirección no lo diga. <span class="flag vp">VERIFICAR EN PANTALLA</span> que el alta ofrezca elegir el proyecto; si no, moverla después con <span class="ui">•••</span> → <span class="ui">Move</span>.</div>
+      <div class="fuente">Fuente: <a href="https://render.com/docs/postgresql-creating-connecting">render.com/docs/postgresql-creating-connecting</a> · <a href="https://render.com/docs/regions">render.com/docs/regions</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>8.8</div>
+    <div class="pc">
+      <div class="pt">Copiar la dirección interna de la base</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code>, base <code>colm3na-pruebas-db</code></div>
+      <div class="ruta">Botón <span class="ui">Connect</span> (arriba a la derecha) → pestaña <span class="ui">Internal</span> → copiar la <span class="ui">Internal Database URL</span></div>
+      <ul class="campos"><li>Valor: <code>[guardar en el documento cifrado]</code>. Es <code>DATABASE_URL</code> en 8.9.</li></ul>
+      <div class="ok">Verificar: el valor copiado empieza con <code>postgresql://</code> y contiene <code>mitrabajo_pruebas</code>.</div>
+      <div class="llano">La <b>dirección interna</b> solo funciona entre servicios del mismo workspace y la misma región: no sale a internet. Incluye usuario y contraseña de la base, por eso es secreta.</div>
+      <div class="fuente">Fuente: <a href="https://render.com/docs/postgresql-creating-connecting">render.com/docs/postgresql-creating-connecting</a></div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I8 · Render: Pruebas nueva (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>8.9</div>
+    <div class="pc">
+      <div class="pt">Preparar las variables de entorno (la lista mínima)</div>
+      <div class="entra">Entra: <b>SDN</b> en su PC (terminal) y, para copiar valores, con su cuenta personal vieja de Render → servicio <code>mitrabajo-pruebas</code> → <span class="ui">Environment</span>. AKG al lado, con el documento cifrado abierto.</div>
+      <div class="llano">Las <b>variables de entorno</b> son los datos de configuración que la app lee al arrancar (a qué base conectarse, qué clave usar con la IA, etc.). No van en el código, se cargan en Render.</div>
+      <div class="tw"><table class="t">
+        <thead><tr><th>Variable</th><th>Valor</th><th>De dónde sale</th></tr></thead>
+        <tbody>
+          <tr><td><code>DATABASE_URL</code></td><td>la de 8.8</td><td><b>Nueva</b></td></tr>
+          <tr><td><code>ENTORNO</code></td><td><code>pruebas</code></td><td>igual que hoy</td></tr>
+          <tr><td><code>PYTHON_VERSION</code></td><td><code>3.12.8</code></td><td>igual que hoy (sin ella Render usa 3.14 y la app no arranca)</td></tr>
+          <tr><td><code>SESSION_SECRET</code></td><td>texto al azar</td><td><b>Nueva</b>: generarla con el comando de abajo</td></tr>
+          <tr><td><code>PLATAFORMA_PASSWORD</code></td><td>texto al azar</td><td><b>Nueva</b>: mismo comando. Sin ella la app no arranca</td></tr>
+          <tr><td><code>ANTHROPIC_API_KEY</code></td><td>key del workspace Pruebas</td><td><b>Nueva</b>: I5</td></tr>
+          <tr><td><code>SENTRY_DSN</code></td><td>DSN del proyecto <code>colm3na</code></td><td><b>Nueva</b>: I9</td></tr>
+          <tr><td><code>TELEGRAM_BOT_TOKEN</code> · <code>TELEGRAM_CHAT_ID</code></td><td>bot y grupo nuevos</td><td><b>Nuevas</b>: I10</td></tr>
+          <tr><td><code>ENMASCARADO</code></td><td>hoy <code>activo</code></td><td><b>Copiar</b> de la Pruebas vieja</td></tr>
+          <tr><td><code>ENMASCARADO_GUARDAR_IMAGENES</code></td><td>hoy <code>1</code></td><td><b>Copiar</b> de la Pruebas vieja, si está</td></tr>
+          <tr><td><code>VAPID_PRIVATE_KEY</code> · <code>VAPID_PUBLIC_KEY</code></td><td>par de claves del aviso al celular</td><td><b>Copiar</b> de la Pruebas vieja, si están</td></tr>
+          <tr><td><code>VAPID_CLAIM_EMAIL</code></td><td><code>alertas@cm3.com.ar</code></td><td><b>Nueva</b> (solo si se copiaron las dos de arriba)</td></tr>
+        </tbody>
+      </table></div>
+      <pre class="cmd">python -c "import secrets; print(secrets.token_urlsafe(48))"</pre>
+      <ul class="campos">
+        <li>Correr el comando dos veces: una para <code>SESSION_SECRET</code> y otra para <code>PLATAFORMA_PASSWORD</code>. Los dos → <code>[guardar en el documento cifrado]</code>. Nunca reutilizar los de la Pruebas vieja.</li>
+        <li><b>No copiar</b> <code>MOCK_EXTRACTOR</code> aunque esté en la vieja: hace que la IA se simule y los recibos no se lean de verdad.</li>
+      </ul>
+      <div class="ok">Verificar: la lista quedó armada en un archivo de texto temporal (formato <code>NOMBRE=valor</code>) con todas las filas de la tabla que correspondan. Se usa en 8.10 y después se borra.</div>
+      <div class="nota">Quedan para la Etapa 2 (sin ellas la app funciona y la pantalla dice qué falta): <code>GRAFANA_*</code>, <code>SENTRY_AUTH_TOKEN</code> y <code>RENDER_API_KEY</code> / <code>RENDER_WEB_SERVICE_ID</code> / <code>RENDER_DB_ID</code> (solapa Planes).</div>
+      <div class="fuente">Fuente: repo, <code>DESPLIEGUE_RENDER.md</code> ("Variables de entorno"), <code>auth.py:49-53</code>, <code>extractor.py:25</code>, <code>push.py:29-35</code> · <a href="https://render.com/docs/python-version">render.com/docs/python-version</a></div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I8 · Render: Pruebas nueva (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>8.10</div>
+    <div class="pc">
+      <div class="pt">Crear el Web Service de Pruebas</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en el workspace "Colm3na"</div>
+      <div class="ruta"><span class="ui">+ New</span> → <span class="ui">Web Service</span> → <span class="ui">Git Provider</span> → <code>cm3-xp/MITRABAJOC</code></div>
+      <ul class="campos">
+        <li><span class="ui">Name</span>: <code>colm3na-pruebas</code> · proyecto / entorno: <code>Colm3na</code> / <code>Pruebas</code> · <span class="ui">Region</span>: <span class="ui">Ohio</span> (la misma de la base)</li>
+        <li><span class="ui">Branch</span>: <code>main</code> · <span class="ui">Language</span>: <span class="ui">Python 3</span></li>
+        <li><span class="ui">Build Command</span>: <code>pip install -r requirements.txt</code></li>
+        <li><span class="ui">Start Command</span>: <code>uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1</code></li>
+        <li>Plan: <span class="ui">Starter</span> (0,5 CPU / 512 MB, US$ 7), el mismo de hoy.</li>
+        <li><span class="ui">Advanced</span> → <span class="ui">Environment Variables</span> → <span class="ui">Add from .env</span>: pegar las de 8.9 (formato <code>NOMBRE=valor</code>, una por línea).</li>
+        <li><span class="ui">Advanced</span> → <span class="ui">Pre-Deploy Command</span>: <code>python -m alembic upgrade head</code> · <span class="ui">Health Check Path</span>: <code>/healthz</code> · <span class="ui">Auto-Deploy</span>: <span class="ui">On Commit</span></li>
+        <li><span class="ui">Create Web Service</span>.</li>
+      </ul>
+      <div class="ok">Verificar: el primer deploy termina en "Live". Anotar la dirección que muestra Render arriba (se espera <code>colm3na-pruebas.onrender.com</code>).</div>
+      <div class="llano"><b>Pre-Deploy</b>: un comando que corre antes de cada versión nueva; acá prepara las tablas de la base. Si falla, Render no pasa a la versión nueva. <b>Health check</b>: la dirección que Render consulta para saber si la app está viva. <b>Auto-Deploy</b>: cada cambio aprobado en <code>main</code> se publica solo. <code>--workers 1</code>: un solo proceso, como hoy (más procesos en medio núcleo empeoran todo).</div>
+      <div class="nota">Si <span class="ui">Pre-Deploy Command</span>, <span class="ui">Health Check Path</span> o <span class="ui">Auto-Deploy</span> no aparecen en el alta, completarlos después en <span class="ui">Settings</span> <span class="flag vp">VERIFICAR EN PANTALLA</span>. Si el nombre ya estuviera tomado en Render, la dirección puede salir con un agregado <span class="flag nv">NO VERIFICADO</span>: usar la que muestre Render.</div>
+      <div class="fuente">Fuente: <a href="https://render.com/docs/web-services">render.com/docs/web-services</a> · <a href="https://render.com/docs/deploys">render.com/docs/deploys</a> ("Pre-deploy command", "Configuring auto-deploys") · <a href="https://render.com/docs/health-checks">render.com/docs/health-checks</a> · repo <code>DESPLIEGUE_RENDER.md</code></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>8.11</div>
+    <div class="pc">
+      <div class="pt">Comprobar que la app está viva</div>
+      <div class="entra">Entra: <b>SDN</b> en el navegador, sin usuario</div>
+      <ul class="campos">
+        <li><span class="url">https://colm3na-pruebas.onrender.com/healthz</span> → responde <code>{"ok": true}</code>.</li>
+        <li><span class="url">https://colm3na-pruebas.onrender.com/api/version</span> → dice <code>pruebas</code> y la versión actual.</li>
+      </ul>
+      <div class="ok">Verificar: las dos responden. Las pantallas todavía se ven sin logo ni datos: es normal hasta 8.12.</div>
+      <div class="fuente">Fuente: repo, <code>DESPLIEGUE_RENDER.md</code> ("Configuración común")</div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I8 · Render: Pruebas nueva (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>8.12</div>
+    <div class="pc">
+      <div class="pt">Cargar los datos de demostración</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code>, servicio <code>colm3na-pruebas</code> → pestaña <span class="ui">Shell</span></div>
+      <pre class="cmd">python cargar_marca_plataforma.py
+python cargar_demo.py
+python cargar_lote_sindicato.py --sindicato "Obrera"
+python cargar_bancaria.py</pre>
+      <ul class="campos">
+        <li>En ese orden, de a uno, esperando que cada uno termine. El primero carga el logo y los colores de Colm3na (viven en la base, no en el código): sin él todas las pantallas muestran un logo provisorio.</li>
+        <li><code>cargar_demo.py</code> imprime al final los accesos de prueba: copiarlos al documento cifrado.</li>
+        <li>Los dos últimos (lotes de datos sintéticos) tardan varios minutos.</li>
+      </ul>
+      <div class="ok">Verificar: la portada de <span class="url">colm3na-pruebas.onrender.com</span> muestra el logo de Colm3na.</div>
+      <div class="llano">La <b>Shell</b> es una terminal que corre adentro del servidor de Render, con acceso a la base. Son datos inventados para mostrar: nada real.</div>
+      <div class="fuente">Fuente: repo, <code>DESPLIEGUE_RENDER.md</code> ("Paso a paso — crear Pruebas"), <code>cargar_marca_plataforma.py</code> · <a href="https://render.com/docs/ssh">render.com/docs/ssh</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>8.13</div>
+    <div class="pc">
+      <div class="pt">Entrar a plataforma por primera vez</div>
+      <div class="entra">Entra: <b>SDN</b> con su usuario <b>de la app</b> <code>snavello</code> (es el usuario de plataforma de Colm3na, no el de GitHub aunque se llame igual) en <span class="url">colm3na-pruebas.onrender.com/plataforma</span></div>
+      <ul class="campos">
+        <li>Estos dos usuarios los crea solo la base nueva, con una clave inicial que SDN y ARS ya conocen (la misma con la que estrenaron sus usuarios en la Pruebas vieja). La app obliga a cambiarla y a completar los datos en este primer ingreso. La clave nueva la guarda SDN.</li>
+        <li>Después <b>ARS</b> hace lo mismo en su navegador con su usuario de la app <code>arsantagati</code>.</li>
+      </ul>
+      <div class="ok">Verificar: SDN entra al panel de plataforma y ve los sindicatos de demostración (UOM, Gastronómica, La Bancaria).</div>
+      <div class="fuente">Fuente: repo, <code>CLAUDE.md</code> ("Sub-sprint R1"), <code>db.py</code> (<code>SUPERADMINS_INICIALES</code>)</div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>8.14</div>
+    <div class="pc">
+      <div class="pt">Dejar de actualizar la Pruebas vieja</div>
+      <div class="entra">Entra: <b>SDN</b> con su cuenta personal vieja de Render, servicio <code>mitrabajo-pruebas</code></div>
+      <div class="ruta"><span class="ui">Settings</span> → <span class="ui">Auto-Deploy</span> → elegir <span class="ui">Off</span> → guardar <span class="flag vp">VERIFICAR EN PANTALLA</span> el botón de guardar</div>
+      <ul class="campos"><li>Solo cuando la Pruebas nueva pasó 8.11 a 8.13. La vieja sigue encendida con su versión actual (se borra en la Etapa 2).</li></ul>
+      <div class="ok">Verificar: el próximo cambio que entre a <code>main</code> aparece en <span class="ui">Events</span> de <code>colm3na-pruebas</code> y no en <code>mitrabajo-pruebas</code>.</div>
+      <div class="fuente">Fuente: <a href="https://render.com/docs/deploys">render.com/docs/deploys</a> ("Configuring auto-deploys")</div>
+    </div>
+  </div>
+
+  <div class="nota"><b>Esto se completa en la Etapa 2:</b> Demo y PRODU nuevas, dominio propio (<code>pruebas.cm3.com.ar</code>), solapa Planes, Grafana, avisos de Render por correo y la baja del Render viejo.</div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<!-- ===================== I9 · Sentry ===================== -->
+<article class="hoja" id="i9">
+  <div class="marca"><b>Colm3na</b><span>I9 · Sentry</span></div>
+  <h2><span class="n">I9</span>Sentry</h2>
+  <p class="intro"><b>Para qué sirve:</b> Sentry junta los errores inesperados de la app (qué pasó, en qué pantalla, sin datos de personas) para poder investigarlos después. Pruebas nueva le manda sus errores a una cuenta de XP.</p>
+  <div class="pre"><b>Necesitás antes:</b> I4 terminada. Para cargar el resultado, el servicio de I8 creado. <b>Al terminar tenés:</b> el proyecto <code>colm3na</code> en Sentry recibiendo los errores de Pruebas nueva.</div>
+  <div class="llano"><b>Un solo usuario.</b> El plan gratuito de Sentry admite <b>una sola persona</b>: es AKG. SDN y ARS no entran a Sentry en esta etapa; ven los errores en la pestaña Observabilidad de la app y les llegan al instante por Telegram (I10).</div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>9.1</div>
+    <div class="pc">
+      <div class="pt">Crear la cuenta de Sentry de AKG</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@cm3.com.ar</code> en <span class="url">sentry.io/signup</span>. SDN la acompaña y le dicta los valores.</div>
+      <ul class="campos">
+        <li>Correo <code>akg@cm3.com.ar</code>, contraseña nueva → documento cifrado. Confirmar el correo con el enlace que llega a la bandeja de AKG.</li>
+        <li>Organización: <code>XP Colm3na</code>.</li>
+        <li><span class="ui">Data Storage Location</span>: <b>US</b>. No se cambia después.</li>
+        <li>Plan: no cargar tarjeta. Arranca con una prueba de 14 días y pasa solo al plan gratuito (Developer).</li>
+        <li>Verificación en dos pasos: <span class="ui">User Settings</span> → <span class="ui">Security</span> → <span class="ui">Two-Factor Authentication</span> → app autenticadora. Códigos de recuperación → documento cifrado.</li>
+      </ul>
+      <div class="ok">Verificar: AKG entra a su organización de Sentry y le pide el código del teléfono.</div>
+      <div class="nota">US y no EU porque la pantalla de errores de la app ya está programada para leer de la región US; EU obliga a cambiar código. <span class="flag vp">VERIFICAR EN PANTALLA</span> el orden del alta y la ruta de dos pasos.</div>
+      <div class="fuente">Fuente: <a href="https://docs.sentry.io/organization/data-storage-location/">docs.sentry.io — Data Storage Location</a> · <a href="https://sentry.io/pricing/">sentry.io/pricing</a> ("1 User") · repo <code>observabilidad/sentry_panel.py</code></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>9.2</div>
+    <div class="pc">
+      <div class="pt">Crear el proyecto</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@cm3.com.ar</code> en <span class="url">sentry.io</span>. SDN la acompaña y le dicta los valores.</div>
+      <div class="ruta">Ícono de la organización (arriba a la izquierda) → <span class="ui">Projects</span> → <span class="ui">Create Project</span></div>
+      <ul class="campos">
+        <li>Plataforma: <span class="ui">FastAPI</span> · <span class="ui">Project name</span>: <code>colm3na</code></li>
+        <li>Alertas: la opción de crearlas más tarde <span class="flag vp">VERIFICAR EN PANTALLA</span> el texto.</li>
+      </ul>
+      <div class="ok">Verificar: el proyecto <code>colm3na</code> aparece en <span class="ui">Projects</span>.</div>
+      <div class="fuente">Fuente: <a href="https://docs.sentry.io/product/sentry-basics/integrate-frontend/create-new-project/">docs.sentry.io — Create a project</a></div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I9 · Sentry (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>9.3</div>
+    <div class="pc">
+      <div class="pt">Copiar el DSN</div>
+      <div class="entra">Entra: <b>AKG</b> con <code>akg@cm3.com.ar</code> en el proyecto <code>colm3na</code></div>
+      <div class="ruta"><span class="ui">Project Settings</span> → <span class="ui">Client Keys (DSN)</span> → copiar el <span class="ui">DSN</span></div>
+      <ul class="campos"><li>Valor: <code>[guardar en el documento cifrado]</code>. AKG se lo pasa a SDN en persona o abriendo juntos el documento, nunca por mail ni mensajería.</li></ul>
+      <div class="ok">Verificar: el valor guardado empieza con <code>https://</code> y contiene <code>sentry.io</code>.</div>
+      <div class="llano">El <b>DSN</b> es la dirección a la que la app manda sus errores. Solo sirve para enviar, no para leer, pero igual se trata como secreto.</div>
+      <div class="fuente">Fuente: <a href="https://docs.sentry.io/concepts/key-terms/dsn-explainer/">docs.sentry.io — Data Source Name (DSN)</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>9.4</div>
+    <div class="pc">
+      <div class="pt">Cargar el DSN en Pruebas nueva</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en Render, servicio <code>colm3na-pruebas</code></div>
+      <div class="ruta"><span class="ui">Environment</span> → <span class="ui">+ Add Environment Variable</span> → <code>SENTRY_DSN</code> = el DSN → <span class="ui">Save, rebuild, and deploy</span></div>
+      <div class="ok">Verificar: el deploy termina en "Live". (Si ya se cargó en 8.10, saltear este paso.)</div>
+      <div class="fuente">Fuente: <a href="https://render.com/docs/configure-environment-variables">render.com/docs/configure-environment-variables</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>9.5</div>
+    <div class="pc">
+      <div class="pt">Mandar un error de prueba</div>
+      <div class="entra">Entra: <b>SDN</b> con su usuario de la app <code>snavello</code> en <span class="url">colm3na-pruebas.onrender.com/entornos</span>. Al mismo tiempo, en otra computadora, <b>AKG</b> con <code>akg@cm3.com.ar</code> en <span class="url">sentry.io</span>.</div>
+      <div class="ruta">SDN: pestaña <span class="ui">Observabilidad</span> → <span class="ui">Observación técnica</span> → <span class="ui">Mandar error de prueba</span></div>
+      <div class="ruta">AKG: <span class="ui">Issues</span> → filtro de entorno <code>prueba-de-conexion</code></div>
+      <div class="ok">Verificar: AKG ve el error "Error de PRUEBA mandado desde la pestaña Observabilidad". En la app es normal que diga "Lectura: falta el token": la lectura desde la app se conecta en la Etapa 2.</div>
+      <div class="fuente">Fuente: repo, <code>observabilidad/sentry_panel.py</code> (<code>mandar_prueba</code>), <code>docs/OBSERVABILIDAD.md</code></div>
+    </div>
+  </div>
+
+  <div class="nota"><b>Esto se completa en la Etapa 2:</b> token de lectura para que la pestaña Observabilidad muestre los errores, reglas de alerta y filtrado de datos personales del lado de Sentry.</div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<!-- ===================== I10 · Telegram ===================== -->
+<article class="hoja" id="i10">
+  <div class="marca"><b>Colm3na</b><span>I10 · Telegram</span></div>
+  <h2><span class="n">I10</span>Telegram</h2>
+  <p class="intro"><b>Para qué sirve:</b> un "bot" (una cuenta automática de Telegram) de XP escribe en un grupo donde están AKG, SDN y ARS. Ahí llega al instante cada error inesperado de Pruebas y, a las 21:00, el resumen del día.</p>
+  <div class="pre"><b>Necesitás antes:</b> nada obligatorio. Para cargar el resultado, el servicio de I8 creado. <b>Al terminar tenés:</b> el grupo "Colm3na avisos" con el bot, y Pruebas nueva escribiendo ahí.</div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>10.1</div>
+    <div class="pc">
+      <div class="pt">Tener Telegram (solo si alguno no lo tiene)</div>
+      <div class="entra">Entra: <b>AKG</b>, <b>SDN</b> y <b>ARS</b>, cada uno en su teléfono</div>
+      <ul class="campos"><li>Instalar Telegram desde la tienda del teléfono y registrarse con el número propio (llega un código por SMS). Activar la verificación en dos pasos: <span class="ui">Settings</span> → <span class="ui">Privacy and Security</span> → <span class="ui">Two-Step Verification</span>; la de AKG → documento cifrado.</li></ul>
+      <div class="ok">Verificar: AKG tiene a SDN y a ARS en sus contactos de Telegram.</div>
+      <div class="fuente">Fuente: <a href="https://telegram.org/faq#q-how-does-2-step-verification-work">telegram.org — FAQ: Two-Step Verification</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>10.2</div>
+    <div class="pc">
+      <div class="pt">Crear el bot</div>
+      <div class="entra">Entra: <b>AKG</b> en su Telegram, conversación con <span class="url">@BotFather</span> (<span class="url">t.me/botfather</span>, el que tiene la tilde azul de verificado). SDN la acompaña y le dicta los valores.</div>
+      <ul class="campos">
+        <li>Mandar <code>/newbot</code>.</li>
+        <li>Nombre visible: <code>Colm3na avisos</code>.</li>
+        <li>Username: tiene que terminar en <code>bot</code> y no se cambia después; por ejemplo <code>colm3na_avisos_bot</code> (si está tomado, probar otro).</li>
+        <li>BotFather responde con el <b>token</b>: <code>[guardar en el documento cifrado]</code>. Es <code>TELEGRAM_BOT_TOKEN</code>.</li>
+      </ul>
+      <div class="ok">Verificar: buscando el username en Telegram aparece el bot.</div>
+      <div class="llano">El <b>token</b> es la llave del bot: quien lo tiene puede escribir en su nombre. Si se filtra, en BotFather <code>/revoke</code> genera uno nuevo.</div>
+      <div class="fuente">Fuente: <a href="https://core.telegram.org/bots/features#botfather">core.telegram.org — Bot features: BotFather</a></div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I10 · Telegram (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>10.3</div>
+    <div class="pc">
+      <div class="pt">Crear el grupo y sumar al bot</div>
+      <div class="entra">Entra: <b>AKG</b> en su Telegram</div>
+      <ul class="campos">
+        <li>Nuevo grupo → nombre <code>Colm3na avisos</code> → sumar a SDN y a ARS.</li>
+        <li>Dentro del grupo → agregar miembro → buscar el username del bot → sumarlo. No hace falta hacerlo administrador.</li>
+      </ul>
+      <div class="ok">Verificar: el bot figura entre los miembros del grupo.</div>
+      <div class="fuente">Fuente: <a href="https://core.telegram.org/bots/features#privacy-mode">core.telegram.org — Privacy mode</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>10.4</div>
+    <div class="pc">
+      <div class="pt">Obtener el número del grupo (chat id)</div>
+      <div class="entra">Entra: <b>AKG</b> en el grupo de Telegram y después en una <b>ventana privada</b> del navegador de su PC</div>
+      <ul class="campos">
+        <li>En el grupo, mandar <code>/start@colm3na_avisos_bot</code> (con el username real del bot).</li>
+        <li>En la ventana privada, abrir la dirección de abajo, reemplazando <code>&lt;TOKEN&gt;</code> por el token de 10.2:</li>
+      </ul>
+      <pre class="cmd">https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</pre>
+      <ul class="campos">
+        <li>Buscar en el texto <code>"chat":{"id":</code> seguido de un número <b>negativo</b>: ese número (con el signo) es <code>TELEGRAM_CHAT_ID</code> → documento cifrado. Cerrar la ventana privada.</li>
+      </ul>
+      <div class="ok">Verificar: junto a ese número figura <code>"title":"Colm3na avisos"</code>.</div>
+      <div class="nota">Si la respuesta viene vacía (<code>"result":[]</code>), mandar de nuevo el <code>/start@…</code> en el grupo y recargar. Ventana privada para que el token no quede en el historial del navegador.</div>
+      <div class="fuente">Fuente: <a href="https://core.telegram.org/bots/api#getupdates">core.telegram.org — Bot API: getUpdates</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>10.5</div>
+    <div class="pc">
+      <div class="pt">Cargar el bot en Pruebas nueva</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en Render, servicio <code>colm3na-pruebas</code></div>
+      <div class="ruta"><span class="ui">Environment</span> → <span class="ui">+ Add Environment Variable</span> → <code>TELEGRAM_BOT_TOKEN</code> y <code>TELEGRAM_CHAT_ID</code> → <span class="ui">Save, rebuild, and deploy</span></div>
+      <div class="ok">Verificar: el deploy termina en "Live". (Si ya se cargaron en 8.10, saltear este paso.)</div>
+      <div class="fuente">Fuente: repo, <code>telegram.py</code>, <code>DESPLIEGUE_RENDER.md</code></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>10.6</div>
+    <div class="pc">
+      <div class="pt">Probar</div>
+      <div class="entra">Entra: <b>SDN</b> con su usuario de la app <code>snavello</code> en <span class="url">colm3na-pruebas.onrender.com/entornos</span></div>
+      <div class="ruta"><span class="ui">Observabilidad</span> → <span class="ui">Observación técnica</span> → <span class="ui">Enviar prueba a Telegram</span></div>
+      <div class="ok">Verificar: AKG, SDN y ARS ven el mensaje en el grupo "Colm3na avisos".</div>
+      <div class="fuente">Fuente: repo, <code>templates/_observabilidad.html</code></div>
+    </div>
+  </div>
+
+  <div class="nota"><b>Esto se completa en la Etapa 2:</b> impedir que se sume el bot a otros grupos (<code>/setjoingroups</code>), avisos de Grafana al mismo grupo y los avisos de Demo y PRODU.</div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<!-- ===================== I11 · Verificación final ===================== -->
+<article class="hoja" id="i11">
+  <div class="marca"><b>Colm3na</b><span>I11 · Verificación final</span></div>
+  <h2><span class="n">I11</span>Verificación final</h2>
+  <p class="intro"><b>Para qué sirve:</b> confirmar, control por control, que Pruebas nueva hace todo lo que hacía la vieja y que lo de SDN que sigue en paralelo (la Demo vieja) no se rompió. Si un control falla, la Etapa Inicial no está cerrada.</p>
+  <div class="pre"><b>Necesitás antes:</b> I5 a I10 terminadas. <b>Al terminar tenés:</b> la Etapa Inicial cerrada, con cada casilla tildada.</div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>11.1</div>
+    <div class="pc">
+      <div class="pt">Pruebas nueva responde</div>
+      <div class="entra">Entra: <b>SDN</b> en el navegador, sin usuario</div>
+      <div class="ok">Verificar: <span class="url">colm3na-pruebas.onrender.com/healthz</span> da <code>{"ok": true}</code> y <span class="url">/api/version</span> dice <code>pruebas</code> y la misma versión que tiene <code>main</code>. La portada muestra el logo de Colm3na y el distintivo de entorno.</div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>11.2</div>
+    <div class="pc">
+      <div class="pt">Entran los cuatro roles</div>
+      <div class="entra">Entra: <b>SDN</b> en <span class="url">colm3na-pruebas.onrender.com</span>, con un usuario distinto por rol (accesos impresos en 8.12)</div>
+      <ul class="campos">
+        <li>Plataforma: <span class="url">/plataforma</span> con el usuario de la app <code>snavello</code>.</li>
+        <li>Sindicato: <span class="url">/admin</span> con CUIT <code>20111111110</code> y clave <code>uom-demo</code> (UOM).</li>
+        <li>Trabajador: <span class="url">/ingresar</span>, registrarse con CUIL <code>20111111119</code> y entrar.</li>
+        <li>Empresa: <span class="url">/ingresar-empresa</span>, registrarse con CUIT <code>30999888776</code> y entrar.</li>
+      </ul>
+      <div class="ok">Verificar: los cuatro llegan a su portada.</div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>11.3</div>
+    <div class="pc">
+      <div class="pt">La IA lee un recibo con la key nueva</div>
+      <div class="entra">Entra: <b>SDN</b> como trabajador (CUIL <code>20111111119</code>) en Pruebas nueva; después <b>SDN</b> con <code>sdn@cm3.com.ar</code> en <span class="url">platform.claude.com</span>, organización "XP – Colm3na"</div>
+      <ul class="campos">
+        <li>En la app: <span class="ui">Tu Recibo</span> → subir la foto o PDF de un recibo de ejemplo → confirmar.</li>
+        <li>En la consola de la API: el uso del día aparece en el workspace <b>Pruebas</b> de XP.</li>
+      </ul>
+      <div class="ok">Verificar: el recibo se lee y se valida; el consumo figura en la cuenta de XP (no en la vieja de SDN). En <span class="url">/plataforma</span> → <span class="ui">Uso de IA</span> aparece la fila con su costo.</div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>11.4</div>
+    <div class="pc">
+      <div class="pt">Los errores llegan a Sentry y a Telegram</div>
+      <div class="entra">Entra: <b>SDN</b> con su usuario de la app <code>snavello</code> en <span class="url">colm3na-pruebas.onrender.com/entornos</span> → <span class="ui">Observabilidad</span> → <span class="ui">Observación técnica</span>; al mismo tiempo <b>AKG</b> con <code>akg@cm3.com.ar</code> en <span class="url">sentry.io</span></div>
+      <div class="ok">Verificar: <span class="ui">Mandar error de prueba</span> aparece en Sentry (9.5) y <span class="ui">Enviar prueba a Telegram</span> llega al grupo (10.6). Los tres lo ven.</div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja">
+  <div class="marca"><b>Colm3na</b><span>I11 · Verificación final (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>11.5</div>
+    <div class="pc">
+      <div class="pt">Un cambio de Claude Code llega solo a Pruebas nueva</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en <span class="url">claude.ai/code</span>, repo <code>cm3-xp/MITRABAJOC</code>; después en GitHub con <code>snavello</code> y en Render con <code>sdn@cm3.com.ar</code></div>
+      <ul class="campos">
+        <li>Pedirle a Claude un cambio mínimo e inofensivo (por ejemplo, una línea en la bitácora) y que abra el PR.</li>
+        <li>En el PR, los controles <code>tests (parte 0)</code> a <code>tests (parte 3)</code> figuran <b>ejecutados</b> y en verde (no "This check was skipped").</li>
+        <li>Mergear a <code>main</code>.</li>
+      </ul>
+      <div class="ok">Verificar: en <span class="ui">Events</span> de <code>colm3na-pruebas</code> aparece un deploy con ese cambio y termina en "Live". En el Render viejo, <code>mitrabajo-pruebas</code> <b>no</b> despliega.</div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>11.6</div>
+    <div class="pc">
+      <div class="pt">La Demo vieja sigue funcionando</div>
+      <div class="entra">Entra: <b>SDN</b> en <span class="url">mitrabajo.onrender.com/admin</span> con CUIT <code>20111111110</code> y clave <code>uom-demo</code></div>
+      <div class="ok">Verificar: la Demo abre con sus datos de siempre y el admin de UOM entra.</div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>11.7</div>
+    <div class="pc">
+      <div class="pt">Promover a la Demo sigue funcionando</div>
+      <div class="entra">Entra: <b>SDN</b> en su PC, en la carpeta del proyecto (terminal), con su <code>.env</code> de siempre</div>
+      <pre class="cmd">python promover_demo.py --solo-pr</pre>
+      <div class="ok">Verificar: hace el backup de la base de la Demo vieja (queda en <code>backups/</code>) e imprime el enlace del PR con <code>cm3-xp/MITRABAJOC</code>. No cambia la Demo. La primera promoción real (<code>python promover_demo.py</code>) tiene que terminar con un deploy de <code>mitrabajo-demo</code> en el Render viejo.</div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>11.8</div>
+    <div class="pc">
+      <div class="pt">Todo quedó anotado</div>
+      <div class="entra">Entra: <b>AKG</b> en el documento cifrado. SDN la acompaña.</div>
+      <ul class="campos">
+        <li>Cuentas nuevas con usuario, titular y verificación en dos pasos: Google (códigos de respaldo de AKG, SDN, ARS y GCF), Cloudflare (AKG), API de Anthropic (organización "XP – Colm3na"), Claude Team (AKG; miembros SDN, ARS y GCF), GitHub (AKG y la organización <code>cm3-xp</code>), Render (AKG), Sentry (AKG), Telegram (bot y grupo).</li>
+        <li>Secretos: <code>ANTHROPIC_API_KEY</code> (con su fecha de vencimiento), <code>DATABASE_URL</code>, <code>SESSION_SECRET</code>, <code>PLATAFORMA_PASSWORD</code>, DSN de Sentry, token del bot, chat id, accesos de prueba de 8.12.</li>
+      </ul>
+      <div class="ok">Verificar: no hay ninguna clave en mails, chats ni archivos sueltos (incluido el archivo temporal de 8.9, ya borrado).</div>
+    </div>
+  </div>
+
+  <div class="nota">Con los ocho controles tildados, la Etapa Inicial está cerrada. SDN sigue usando sus cuentas viejas (Demo vieja, Render viejo, su cuenta personal de Claude, Grafana, Sentry y bot viejos) en paralelo hasta la Etapa 2.</div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja" id="etapa2">
+  <div class="marca"><b>Colm3na</b><span>Etapa 2 · Implementación y configuración</span></div>
+  <h2><span class="n">2</span>Implementación y configuración</h2>
+  <p class="intro">Se hace durante los dos meses previos al piloto, sin apuro y con calma para configurar cada servicio en detalle. Cada bloque se va a detallar paso a paso cuando llegue su momento. Se mantiene la misma regla: AKG crea las cuentas y paga, y SDN o ARS configuran con su propio usuario.</p>
+  <div class="tw"><table class="t">
+    <thead><tr><th></th><th>Tarea</th><th>Para qué sirve</th><th>Quién entra</th></tr></thead>
+    <tbody>
+      <tr><td><span class="box"></span></td><td><b>Demo nueva</b> en el Render de XP: copiar la base de la Demo vieja y crear su servidor (rama <code>demo</code>). Después del primer taller con La Bancaria</td><td>Que lo que se muestra al sindicato también sea de XP, sin perder los datos cargados</td><td>SDN (<code>sdn@cm3.com.ar</code>)</td></tr>
+      <tr><td><span class="box"></span></td><td><b>PRODU</b>: servidor y base nuevos, con la base duplicada para que no se caiga, rama <code>produ</code> y <code>ENTORNO=prod</code></td><td>El entorno real, separado de Pruebas y Demo</td><td>AKG paga el plan; SDN configura</td></tr>
+      <tr><td><span class="box"></span></td><td><b>Dominios en la app</b>: <code>pruebas.</code>, <code>demo.</code> y <code>app.cm3.com.ar</code>, con su certificado. <code>colm3na.com.ar</code> y <code>colm3na.com</code> redirigen. Registro de <code>colm3na.com</code></td><td>Direcciones propias y definitivas en lugar de las de Render</td><td>SDN (Render) y AKG (Cloudflare)</td></tr>
+      <tr><td><span class="box"></span></td><td><b>Protección en Cloudflare</b>: invitar a SDN y ARS a la cuenta, certificado estricto, firewall (WAF), límite de intentos en los ingresos</td><td>Frenar ataques y el intento de adivinar contraseñas (cierra el hallazgo de seguridad H-0008)</td><td>AKG invita; SDN configura con <code>sdn@cm3.com.ar</code></td></tr>
+      <tr><td><span class="box"></span></td><td><b>Correo</b>: firmas de autenticidad de los mails (DKIM, DMARC) y cuenta de <b>Resend</b> para el correo automático de la app</td><td>Que los mails no lleguen como spam y que la app pueda mandar "recuperá tu clave"</td><td>AKG crea; SDN configura</td></tr>
+      <tr><td><span class="box"></span></td><td><b>Grafana Cloud</b>: control de que cada entorno esté funcionando, alertas al grupo y métricas propias de Render (reemplaza al colector viejo)</td><td>Enterarse antes que los usuarios si algo se cae</td><td>AKG crea; SDN configura</td></tr>
+      <tr><td><span class="box"></span></td><td><b>Sentry completo</b>: entornos Demo y PRODU, alertas y ocultamiento de datos personales; clave de lectura para la pestaña Observabilidad</td><td>Errores separados por entorno y sin datos personales</td><td>AKG (<code>akg@cm3.com.ar</code>, única usuaria del plan gratuito); SDN le dicta los valores</td></tr>
+      <tr><td><span class="box"></span></td><td><b>Copias en Amazon S3</b>: cuenta de AWS de XP, depósito protegido, copia diaria de PRODU y prueba mensual de recuperación</td><td>Que los datos de producción estén a salvo aunque falle Render</td><td>AKG crea y paga; SDN configura</td></tr>
+      <tr><td><span class="box"></span></td><td><b>Reglas de GitHub</b> en <code>cm3-xp</code>: Demo y PRODU solo por pedido de cambio (PR) aprobado por otra persona; quién revisa qué; presupuesto de minutos</td><td>Que nada llegue a producción sin una segunda mirada</td><td>SDN (<code>snavello</code>, Owner) con AKG presente</td></tr>
+      <tr><td><span class="box"></span></td><td><b>Anthropic</b>: workspaces y claves de Demo y PRODU, topes de gasto, pedido de no retención de datos y del nivel de uso necesario</td><td>Controlar el gasto y cuidar los datos de los recibos</td><td>AKG (pago y pedidos); SDN (claves)</td></tr>
+      <tr><td><span class="box"></span></td><td><b>Contenido de Claude de SDN</b>: pasar el proyecto, los documentos y los artifacts (páginas publicadas) de su cuenta personal al Team</td><td>Que todo el conocimiento del proyecto quede en la cuenta de XP y compartido con el equipo, GCF incluido. Después SDN deja de usar su cuenta personal</td><td>SDN (con <code>sdn@cm3.com.ar</code> y su cuenta personal)</td></tr>
+      <tr><td><span class="box"></span></td><td><b>Cambios en el código</b>: leer la dirección real detrás de Cloudflare, recuperar la clave por mail, sacar la pestaña transitoria "Cambiar clave", script de pase a PRODU, direcciones del dominio nuevo, configuración del monitoreo por entorno</td><td>Dejar la app lista para usuarios reales</td><td>SDN y ARS</td></tr>
+      <tr><td><span class="box"></span></td><td><b>Baja de lo viejo</b>: Render, Anthropic, Grafana, Sentry y bot de SDN; revocar las claves viejas</td><td>Que no quede nada funcionando ni cobrando a nombre personal</td><td>SDN (en sus cuentas viejas)</td></tr>
+    </tbody>
+  </table></div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja" id="etapa3">
+  <div class="marca"><b>Colm3na</b><span>Etapa 3 · Piloto real</span></div>
+  <h2><span class="n">3</span>Piloto real</h2>
+  <p class="intro">Antes de que los primeros afiliados reales usen PRODU, se controla que esté todo esto. Si falta alguno, el piloto espera.</p>
+  <div class="tw"><table class="t">
+    <thead><tr><th></th><th>Control</th><th>Por qué</th></tr></thead>
+    <tbody>
+      <tr><td><span class="box"></span></td><td>Contrato y acuerdo de tratamiento de datos con La Bancaria, firmados</td><td>Sin firma no se puede recibir el padrón</td></tr>
+      <tr><td><span class="box"></span></td><td>Copia diaria de PRODU funcionando y una recuperación probada</td><td>Saber que, si algo se rompe, los datos vuelven</td></tr>
+      <tr><td><span class="box"></span></td><td>"Olvidé mi clave" por mail funcionando y pestaña "Cambiar clave" retirada</td><td>Que cada persona recupere su acceso sola y nadie pueda cambiar claves ajenas</td></tr>
+      <tr><td><span class="box"></span></td><td>Protección de Cloudflare activa y la app leyendo la dirección real</td><td>Frenar los intentos de adivinar contraseñas</td></tr>
+      <tr><td><span class="box"></span></td><td>Hallazgos de seguridad que bloquean producción cerrados (claves iniciales del código y límite de intentos)</td><td>Es la regla de salida acordada: nada crítico ni alto abierto</td></tr>
+      <tr><td><span class="box"></span></td><td>Control automático de cambios (los tests) en verde y obligatorio para incorporar un cambio</td><td>Que ningún error conocido llegue a producción</td></tr>
+      <tr><td><span class="box"></span></td><td>Monitoreo de PRODU con alertas al grupo de Telegram y a alertas@</td><td>Enterarse primero si algo falla</td></tr>
+      <tr><td><span class="box"></span></td><td>Anthropic: nivel de uso y tope de gasto de PRODU suficientes para el piloto; no retención de datos pedida</td><td>Que la lectura de recibos no se corte por tope y cuidar los datos</td></tr>
+      <tr><td><span class="box"></span></td><td>Prueba de carga sobre el servidor real de PRODU</td><td>Confirmar que aguanta antes de sumar usuarios</td></tr>
+      <tr><td><span class="box"></span></td><td>Enmascarado de datos personales activo en PRODU</td><td>Que la IA no reciba nombres ni CUIL</td></tr>
+      <tr><td><span class="box"></span></td><td>Planes de Sentry y Grafana: revisar si alcanzan los gratuitos</td><td>Con usuarios reales conviene que más de una persona vea los errores</td></tr>
+      <tr><td><span class="box"></span></td><td>Padrón del grupo piloto cargado y conciliado; usuarios del sindicato creados</td><td>Que los afiliados del piloto puedan registrarse</td></tr>
+      <tr><td><span class="box"></span></td><td>Mesa de ayuda y guía rápida para el afiliado</td><td>Que cada consulta tenga a dónde ir</td></tr>
+    </tbody>
+  </table></div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+</div>
+</body>
+</html>

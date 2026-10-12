@@ -65,6 +65,27 @@ TIPOS = {
 # y migrations/); su miniatura es una captura de la portada.
 SEMILLA = [
     {
+        "clave": "instructivo-montaje",
+        "titulo": "Instructivo de montaje: cuentas y entornos a nombre de XP",
+        "descripcion": "Paso a paso para rearmar las cuentas de Colm3na a nombre de XP sin cortar nada: "
+                       "AKG titular; SDN, ARS y GCF invitados (GCF como miembro de Claude Team). "
+                       "Correo y dominio, GitHub, Render, Cloudflare, Anthropic, AWS y observabilidad, "
+                       "con quién se sienta en cada paso y el control final. Interno del equipo.",
+        "fecha": date(2026, 10, 12),
+        "archivo": "colm3na-instructivo-montaje.html",
+        "miniatura": "colm3na-instructivo-montaje.jpg",
+        "fragmento": "",
+    },
+    {
+        "clave": "instructivo-montaje-pdf",
+        "titulo": "Instructivo de montaje (PDF para imprimir)",
+        "descripcion": "El mismo instructivo en A4, 36 páginas, para seguirlo en papel o adjuntarlo.",
+        "fecha": date(2026, 10, 12),
+        "archivo": "colm3na-instructivo-montaje.pdf",
+        "miniatura": "",
+        "fragmento": "",
+    },
+    {
         "clave": "prompt-mapa-funcional",
         "titulo": "Prompt reutilizable: mapa funcional de un proyecto",
         "descripcion": "Para pegar en Claude Code en OTRO proyecto y construir su mapa funcional "
