@@ -37,7 +37,7 @@ import main
 from db import (CodigoVerificacion, CuentaEmpleador, CuentaTrabajador, Empleador,
                 Sindicato, Trabajador)
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import Session, delete, select
 
 db.crear_tablas()
 
@@ -109,6 +109,11 @@ def entorno(monkeypatch):
     cero. `correo.enviar` guarda lo que se mandó en `salida`."""
     main._intentos_login.clear()
     main._intentos_registro.clear()
+    # El cupo por MAIL de destino (QA-REG-03) es de la base y los tests comparten
+    # direcciones: cada uno empieza sin pedidos de la última hora.
+    with db.get_session() as s:
+        s.exec(delete(CodigoVerificacion))
+        s.commit()
     monkeypatch.setenv("RESEND_API_KEY", "clave-de-prueba")
     monkeypatch.setenv("MAIL_REMITENTE", "Colm3na <no-responder@avisos.example.com>")
     class Salida(list):
@@ -298,15 +303,15 @@ def test_el_codigo_de_otro_cuil_no_crea_la_cuenta(entorno):
     tok_a = _iniciar(c, a).json()["token"]
     cod_a = _codigo_de(entorno)
     # (1) el token de A usado con el número de B
-    r = _final(c, b, tok_a, cod_a)
+    r = _final(c, b, tok_a, cod_a, **{"cf-turnstile-response": "ok"})
     assert r.headers["location"].endswith("error=paso")
     # (2) un token fabricado para B que apunta al código de A
     with Session(db.engine) as s:
         fila_a = s.exec(select(CodigoVerificacion).where(
             CodigoVerificacion.identificador == a)).one()
         fila_a_id = fila_a.id
-    falso = auth.firmar_paso({"id": b, "codigo_id": fila_a_id, "origen": "mail_padron"},
-                             proposito="registro")
+    falso = auth.firmar_paso({"id": b, "tipo": "trabajador", "codigo_id": fila_a_id,
+                              "origen": "mail_padron"}, proposito="registro")
     r = _final(c, b, falso, cod_a)
     assert r.headers["location"].endswith("error=codigo")
     assert not _persona(b).clave_hash
@@ -434,12 +439,15 @@ def test_el_camino_feliz_del_paso_1_no_limpia_el_freno(entorno):
     cuil = _cuil()
     _afiliado(cuil, mail="a@ejemplo.com")
     assert _iniciar(c, cuil).status_code == 200
-    assert main._intentos_registro["testclient"][0] == 1
+    # el fallo de antes y este pedido, que salió bien, suman (QA-REG-04); no se limpia
+    assert main._intentos_registro["testclient"][0] == 2
 
 
-def test_el_redirect_domicilio_ya_no_enumera_afiliados(entorno):
+def test_el_redirect_domicilio_ya_no_enumera_afiliados(entorno, monkeypatch):
     """Sin provincia, un CUIL afiliado y uno que no lo es dan el MISMO redirect,
-    y los dos cuentan para el freno."""
+    y los dos cuentan para el freno. Con el canal prendido y sin token corta antes
+    (`paso`, QA-REG-01); el redirect `domicilio` es el del camino sin canal."""
+    monkeypatch.delenv("RESEND_API_KEY")
     afiliado, ajeno = _cuil(), _cuil()
     _afiliado(afiliado)
     c = TestClient(main.app)
@@ -508,7 +516,8 @@ def test_empresa_estricta_codigo_incorrecto_y_canal_apagado(entorno, monkeypatch
     _empresa(a, mail="a@empresa.com")
     _empresa(b, mail="b@empresa.com")
     tok_a = _iniciar(c, a, ruta="/empresa/registro/iniciar", campo="cuit").json()["token"]
-    assert _final_emp(c, b, tok_a, _codigo_de(entorno)).headers["location"].endswith("error=paso")
+    assert _final_emp(c, b, tok_a, _codigo_de(entorno), **{"cf-turnstile-response": "ok"}
+                      ).headers["location"].endswith("error=paso")
     assert _final_emp(c, a, tok_a, "000000" if _codigo_de(entorno) != "000000" else "111111"
                       ).headers["location"].endswith("error=codigo")
     assert _cuenta_emp(a) is None and _cuenta_emp(b) is None
@@ -532,3 +541,124 @@ def test_empresa_captcha_malo_y_mail_que_no_sale(entorno):
     r = _iniciar(c, cuit_, ruta="/empresa/registro/iniciar", campo="cuit")
     assert r.status_code == 503 and r.json()["codigo"] == "E-REGISTRO-06"
     assert _cuenta_emp(cuit_) is None
+
+
+# ---------------------------------------------------------------------------
+# Contrato de la tanda de QA (QA-REG-01 a 07)
+# ---------------------------------------------------------------------------
+def _filas_codigo(identificador):
+    with Session(db.engine) as s:
+        return s.exec(select(CodigoVerificacion).where(
+            CodigoVerificacion.identificador == identificador)).all()
+
+
+def test_todos_los_tokens_del_registro_llevan_el_tipo(entorno, monkeypatch):
+    """QA-REG-02: sin el tipo, el `{id}` del afiliado sirve en la empresa."""
+    c = TestClient(main.app)
+    con_mail, sin_mail, empresa = _cuil(), _cuil(), _cuit()
+    _afiliado(con_mail, mail="a@ejemplo.com")
+    _afiliado(sin_mail)
+    _empresa(empresa, mail="e@empresa.com")
+    d = _iniciar(c, con_mail).json()
+    assert auth.leer_paso(d["token"], "registro")["tipo"] == "trabajador"           # paso: codigo
+    d = _iniciar(c, sin_mail).json()
+    assert d["paso"] == "mail"
+    assert auth.leer_paso(d["token"], "registro") == {"id": sin_mail, "tipo": "trabajador"}
+    d2 = c.post("/trabajador/registro/mail", data={"token": d["token"], "mail": "yo@ejemplo.com"}).json()
+    assert auth.leer_paso(d2["token"], "registro")["tipo"] == "trabajador"           # tras declarar el mail
+    d3 = _iniciar(c, empresa, ruta="/empresa/registro/iniciar", campo="cuit").json()
+    assert auth.leer_paso(d3["token"], "registro")["tipo"] == "empleador"
+    monkeypatch.delenv("RESEND_API_KEY")
+    libre = _cuil()
+    _afiliado(libre)
+    d4 = _iniciar(c, libre).json()
+    assert d4["paso"] == "datos" and auth.leer_paso(d4["token"], "registro")["tipo"] == "trabajador"
+
+
+def test_token_sin_tipo_o_con_otro_tipo_no_sirve_en_el_paso_mail(entorno):
+    cuil = _cuil()
+    _afiliado(cuil)
+    c = TestClient(main.app)
+    for datos in ({"id": cuil}, {"id": cuil, "tipo": "empleador"}, {"id": cuil, "tipo": "trabajador", "x": 1}):
+        r = c.post("/trabajador/registro/mail",
+                   data={"token": auth.firmar_paso(datos, proposito="registro"), "mail": "yo@ejemplo.com"})
+        assert r.status_code == 400 and r.json()["error"] == "paso", datos
+    assert entorno == [] and _filas_codigo(cuil) == []
+
+
+def test_cupo_por_destino_en_la_base(entorno):
+    """QA-REG-03: el cupo por mail de destino cuenta pedidos de cualquier persona
+    y propósito, sin distinguir mayúsculas, y `crear_codigo` lo aplica solo."""
+    from errores import ErrorApp
+    assert db.CODIGOS_POR_HORA_DESTINO == 5
+    with db.get_session() as s:
+        for i in range(db.CODIGOS_POR_HORA_DESTINO):
+            db.crear_codigo(s, "trabajador", f"2000000000{i}", "registro", "Ajeno@Ejemplo.com", "declarado", "1.1.1.1")
+        s.commit()
+        assert db.codigos_recientes_destino(s, "ajeno@ejemplo.com") == db.CODIGOS_POR_HORA_DESTINO
+        assert db.codigos_recientes_destino(s, "otro@ejemplo.com") == 0
+        with pytest.raises(ErrorApp) as e:
+            db.crear_codigo(s, "empleador", "30999999990", "recuperacion", "ajeno@ejemplo.com", "padron", "1.1.1.1")
+        assert "E-REGISTRO-03" in str(e.value) or getattr(e.value, "codigo", "") == "E-REGISTRO-03"
+        db.crear_codigo(s, "empleador", "30999999990", "recuperacion", "otro@ejemplo.com", "padron", "1.1.1.1")
+
+
+def test_clave_corta_no_gasta_el_codigo(entorno):
+    """QA-REG-07: la clave mínima se exige ANTES de consumir el código."""
+    cuil = _cuil()
+    _afiliado(cuil, mail="a@ejemplo.com")
+    c = TestClient(main.app)
+    d = _iniciar(c, cuil).json()
+    cod = _codigo_de(entorno)
+    r = _final(c, cuil, d["token"], cod, clave="a" * (main.CLAVE_MINIMA - 1))
+    assert r.headers["location"] == "/ingresar?error=clave"
+    fila = _filas_codigo(cuil)[0]
+    assert not fila.usado_en and fila.intentos == 0
+    assert _final(c, cuil, d["token"], cod, clave="a" * main.CLAVE_MINIMA).headers["location"] == "/app/inicio"
+
+
+def test_clave_corta_de_la_empresa_tampoco_gasta_el_codigo(entorno):
+    cuit_ = _cuit()
+    _empresa(cuit_, mail="e@empresa.com")
+    c = TestClient(main.app)
+    d = _iniciar(c, cuit_, ruta="/empresa/registro/iniciar", campo="cuit").json()
+    cod = _codigo_de(entorno)
+    r = _final_emp(c, cuit_, d["token"], cod, clave="abc")
+    assert r.headers["location"] == "/ingresar-empresa?error=clave"
+    assert not _filas_codigo(cuit_)[0].usado_en and _cuenta_emp(cuit_) is None
+    assert _final_emp(c, cuit_, d["token"], cod).headers["location"] == "/empresa/inicio"
+
+
+def test_las_pantallas_piden_la_misma_clave_minima_que_el_servidor():
+    for ruta in ("/ingresar", "/ingresar-empresa"):
+        html = TestClient(main.app).get(ruta).text
+        assert html.count(f'minlength="{main.CLAVE_MINIMA}"') >= 2, ruta
+        assert 'minlength="4"' not in html
+
+
+def test_mail_invalido_en_el_paso_mail_es_422_sin_fila_ni_cupo(entorno):
+    cuil = _cuil()
+    _afiliado(cuil)
+    c = TestClient(main.app)
+    token = _iniciar(c, cuil).json()["token"]
+    for mail in ("a,b@ejemplo.com", "<a@ejemplo.com>", "a@ejemplo.c"):
+        r = c.post("/trabajador/registro/mail", data={"token": token, "mail": mail})
+        assert r.status_code == 422 and r.json()["error"] == "mail", mail
+    assert _filas_codigo(cuil) == [] and entorno == []
+    assert not hasattr(main, "_mail_declarable") and not hasattr(main, "_RX_MAIL")
+
+
+def test_cada_pedido_que_sale_bien_suma_al_freno_y_el_exito_final_lo_limpia(entorno):
+    """QA-REG-04: una IP no puede pedir códigos sin límite aunque salgan bien; la
+    cuenta creada limpia el contador."""
+    c = TestClient(main.app)
+    for _ in range(3):
+        cuil = _cuil()
+        _afiliado(cuil, mail="a@ejemplo.com")
+        assert _iniciar(c, cuil).status_code == 200
+    assert main._intentos_registro["testclient"][0] == 3
+    cuil = _cuil()
+    _afiliado(cuil, mail="b@ejemplo.com")
+    d = _iniciar(c, cuil).json()
+    assert _final(c, cuil, d["token"], _codigo_de(entorno)).headers["location"] == "/app/inicio"
+    assert "testclient" not in main._intentos_registro

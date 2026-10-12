@@ -125,13 +125,23 @@ def crear_sesion(rol: str, id_usuario: int = 0, sindicato_id: int = 0, ident: st
     return f"{cuerpo}.{firma}"
 
 
+def _firma_igual(firma: str, esperada: str) -> bool:
+    """Compara dos firmas en tiempo constante. Se compara en BYTES: con `str`,
+    `hmac.compare_digest` levanta TypeError si alguna tiene caracteres no ASCII,
+    y el token llega tal cual de un formulario, una URL o una cookie (QR-8: un
+    "é.é" hacía un 500 en cinco rutas públicas, y cada 500 avisa a Sentry y a
+    Telegram). Una firma que no es ASCII simplemente no cierra."""
+    return hmac.compare_digest(firma.encode("utf-8", "surrogatepass"),
+                               esperada.encode("utf-8"))
+
+
 def leer_sesion(token: str) -> dict | None:
     """Valida la firma del token y devuelve el payload, o None si es inválido."""
     if not token or "." not in token:
         return None
     cuerpo, firma = token.rsplit(".", 1)
     esperada = hmac.new(SECRETO.encode(), cuerpo.encode(), hashlib.sha256).hexdigest()[:32]
-    if not hmac.compare_digest(firma, esperada):
+    if not _firma_igual(firma, esperada):
         return None
     try:
         # Re-agregar el padding "=" que crear_sesion quita (múltiplo de 4).
@@ -175,7 +185,7 @@ def leer_paso(token: str, proposito: str) -> dict | None:
         return None
     cuerpo, firma = token.rsplit(".", 1)
     esperada = hmac.new(SECRETO.encode(), ("paso:" + cuerpo).encode(), hashlib.sha256).hexdigest()[:32]
-    if not hmac.compare_digest(firma, esperada):
+    if not _firma_igual(firma, esperada):
         return None
     try:
         relleno = cuerpo + "=" * (-len(cuerpo) % 4)

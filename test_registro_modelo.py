@@ -22,7 +22,7 @@ import hmac
 from datetime import datetime, timedelta
 
 import pytest
-from sqlmodel import select
+from sqlmodel import delete, select
 
 import auth
 import db
@@ -48,6 +48,17 @@ def _sindicato(s, nombre, acepta=True, activo=True):
 # ---------------------------------------------------------------------------
 # Constantes
 # ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def _sin_pedidos_previos():
+    """El cupo por MAIL de destino (QA-REG-03, `CODIGOS_POR_HORA_DESTINO`) es de
+    la base y estos tests comparten direcciones: cada uno empieza sin pedidos de
+    la última hora."""
+    with db.get_session() as s:
+        s.exec(delete(CodigoVerificacion))
+        s.commit()
+
+
 def test_constantes_del_plan():
     assert db.CODIGO_VIGENCIA_MINUTOS == 15
     assert db.CODIGO_MAX_INTENTOS == 5
@@ -215,8 +226,8 @@ def test_acepta_mail_declarado_empresa():
 # ---------------------------------------------------------------------------
 # Códigos de verificación
 # ---------------------------------------------------------------------------
-def _crear(s, ident="20500000001", proposito="registro", tipo="trabajador"):
-    fila, codigo = db.crear_codigo(s, tipo, ident, proposito, "ana@ejemplo.com", "padron", "1.2.3.4")
+def _crear(s, ident="20500000001", proposito="registro", tipo="trabajador", destino="ana@ejemplo.com"):
+    fila, codigo = db.crear_codigo(s, tipo, ident, proposito, destino, "padron", "1.2.3.4")
     s.commit()
     return fila, codigo
 
@@ -329,25 +340,27 @@ def test_el_hash_depende_de_la_persona():
 
 
 def test_codigos_recientes_cuenta_solo_la_ultima_hora():
+    # Un mail distinto por pedido: acá se prueba el cupo por PERSONA, no el de
+    # destino (CODIGOS_POR_HORA_DESTINO).
     with db.get_session() as s:
         ident = "20700000001"
         assert db.codigos_recientes(s, "trabajador", ident, "registro") == 0
         for _ in range(2):
-            _crear(s, ident)
-        viejo, _ = _crear(s, ident)
+            _crear(s, ident, destino="d1@ejemplo.com")
+        viejo, _ = _crear(s, ident, destino="d2@ejemplo.com")
         viejo.creado = fechas.a_texto(fechas.ahora() - timedelta(minutes=90))
         s.add(viejo)
         # otro propósito, otro tipo y otra persona no suman
-        _crear(s, ident, proposito="recuperacion")
-        _crear(s, ident, tipo="empleador")
-        _crear(s, "20700000002")
+        _crear(s, ident, proposito="recuperacion", destino="d3@ejemplo.com")
+        _crear(s, ident, tipo="empleador", destino="d4@ejemplo.com")
+        _crear(s, "20700000002", destino="d5@ejemplo.com")
         s.commit()
         assert db.codigos_recientes(s, "trabajador", ident, "registro") == 2
         assert db.codigos_recientes(s, "trabajador", ident, "registro", horas=2) == 3
         assert db.codigos_recientes(s, "trabajador", ident, "recuperacion") == 1
         assert db.codigos_recientes(s, "empleador", ident, "registro") == 1
         # un código usado igual cuenta para el cupo: se cuentan pedidos
-        fila, codigo = _crear(s, "20700000003")
+        fila, codigo = _crear(s, "20700000003", destino="d6@ejemplo.com")
         assert db.verificar_codigo(s, fila.id, codigo) == "ok"
         s.commit()
         assert db.codigos_recientes(s, "trabajador", "20700000003", "registro") == 1

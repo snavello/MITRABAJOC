@@ -708,6 +708,7 @@ class Empleador(SQLModel, table=True):
 CODIGO_VIGENCIA_MINUTOS = 15      # D2: cuánto vive un código
 CODIGO_MAX_INTENTOS = 5           # D2: intentos erróneos antes de quedar agotado
 CODIGOS_POR_HORA = 3              # D2: cupo por persona y propósito, para no bombardear un mail
+CODIGOS_POR_HORA_DESTINO = 5       # QA-REG-03: cupo por MAIL de destino, sea de quien sea el CUIL
 # Niveles de fiabilidad de una cuenta (R2). Sube y no baja.
 NIVELES_FIABILIDAD = {1: "CUIL en el padrón", 2: "mail confirmado",
                       3: "recibo propio verificado", 4: "confirmado por el sindicato"}
@@ -2847,6 +2848,21 @@ def codigos_recientes(s, tipo: str, identificador: str, proposito: str, horas: i
     return len(filas)
 
 
+def codigos_recientes_destino(s, destino: str, horas: int = 1) -> int:
+    """Cuántos códigos se mandaron a este mail en las últimas `horas`, de
+    cualquier persona, tipo o propósito (el cupo cuenta pedidos). El cupo por
+    persona no alcanza: quien conoce N CUIL sin mail en el padrón declara el
+    mismo mail ajeno en todos y le manda 3 códigos por CUIL, a nombre de
+    Colm3na y gastando los mails del mes. Se compara sin distinguir
+    mayúsculas: `A@x.com` y `a@x.com` son la misma casilla."""
+    from sqlalchemy import func
+    desde = fechas.a_texto(fechas.ahora() - timedelta(hours=horas))
+    filas = s.exec(select(CodigoVerificacion.id).where(
+        func.lower(CodigoVerificacion.destino) == (destino or "").strip().lower(),
+        CodigoVerificacion.creado >= desde)).all()
+    return len(filas)
+
+
 def _hash_codigo(codigo: str, identificador: str, creado: str) -> str:
     """HMAC-SHA256 con `auth.SECRETO` como clave (Q-4): sin el secreto del
     servidor el hash no se puede probar contra el millón de códigos posibles."""
@@ -2863,13 +2879,14 @@ def crear_codigo(s, tipo: str, identificador: str, proposito: str, destino: str,
     propósito: un solo código vivo a la vez, así el que se pidió primero no
     queda abierto para adivinarlo mientras llega el segundo.
 
-    Aplica el cupo él mismo (Q-3): si ya hay `CODIGOS_POR_HORA` pedidos en la
-    última hora para esa persona y propósito, levanta `ErrorApp("E-REGISTRO-03")`
-    sin crear nada. Las rutas ya consultan `codigos_recientes` antes (para
-    contestar sin gastar nada); esto es defensa en profundidad, para que una
-    ruta que se olvide no deje bombardear un mail ni ganar 5 intentos por
-    código nuevo."""
-    if codigos_recientes(s, tipo, identificador, proposito) >= CODIGOS_POR_HORA:
+    Aplica los cupos él mismo (Q-3): si ya hay `CODIGOS_POR_HORA` pedidos en
+    la última hora para esa persona y propósito, o `CODIGOS_POR_HORA_DESTINO`
+    para ese mail (QA-REG-03), levanta `ErrorApp("E-REGISTRO-03")` sin crear
+    nada. Las rutas NO lo chequean antes: lo resuelve acá, en un solo lugar,
+    así ninguna se olvida de ninguno de los dos cupos ni se puede ganar 5
+    intentos por código nuevo."""
+    if (codigos_recientes(s, tipo, identificador, proposito) >= CODIGOS_POR_HORA
+            or codigos_recientes_destino(s, destino) >= CODIGOS_POR_HORA_DESTINO):
         raise errores.ErrorApp("E-REGISTRO-03")
     ahora = fechas.ahora()
     ahora_t = fechas.a_texto(ahora)

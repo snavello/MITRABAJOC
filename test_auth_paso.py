@@ -56,3 +56,20 @@ def test_leer_paso_exige_el_proposito():
     with pytest.raises(TypeError):
         auth.leer_paso(tok)
     assert auth.leer_paso(tok, "registro") == {"a": 1}
+
+
+def test_un_token_con_caracteres_no_ascii_no_levanta_nada():
+    """QR-8: `hmac.compare_digest(str, str)` levanta TypeError si algún texto
+    tiene caracteres no ASCII, y el token llega tal cual de un formulario, una
+    URL o una cookie: un "é.é" hacía un 500 en cinco rutas públicas. Tiene que
+    devolver None, como cualquier firma que no cierra."""
+    for raro in ("é.é", "abc.ñññ", "ééé." + "0" * 32, "x.😀"):
+        assert auth.leer_paso(raro, "x") is None
+        assert auth.leer_sesion(raro) is None
+
+
+def test_la_firma_valida_sigue_valiendo_tras_comparar_en_bytes():
+    tok = auth.firmar_paso({"a": 1}, proposito="x")
+    assert auth.leer_paso(tok, "x") == {"a": 1}
+    ses = auth.crear_sesion("trabajador", ident="20111111112")
+    assert auth.leer_sesion(ses)["ident"] == "20111111112"

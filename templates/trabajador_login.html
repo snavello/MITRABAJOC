@@ -132,6 +132,7 @@
     {% elif err == 'domicilio' %}<div class="error">Elegí tu provincia y escribí tu localidad: tu sindicato las necesita para agruparte por zona.</div>
     {% elif err in ('espera', 'espera_registro') %}<div class="error">Demasiados intentos seguidos. Esperá un minuto y volvé a intentar.</div>
     {% elif err == 'codigo' %}<div class="error">El código no es correcto o venció. Pedí uno nuevo.</div>
+    {% elif err == 'clave' %}<div class="error">La clave tiene que tener al menos {{ clave_minima }} caracteres.</div>
     {% elif err == 'paso' %}<div class="error">La verificación venció. Empezá de nuevo desde el primer paso.</div>
     {% elif err == 'captcha' %}<div class="error">No pudimos comprobar que sos una persona. Volvé a intentar.</div>
     {% elif err == 'cuil' %}<div class="error">El CUIL no es válido: revisá los 11 números. Si es el que figura en tu recibo de sueldo, avisale a tu sindicato.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
@@ -172,7 +173,7 @@
       <div data-reg="2c" style="display:none">
         <div class="ayuda" style="margin-top:16px;">Te mandamos un código a <b id="reg-pista"></b>. Vence en 15 minutos.</div>
         <label>Código de 6 números</label>
-        <input id="reg-codigo" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code" placeholder="123456" required>
+        <input id="reg-codigo" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" required oninput="this.value=this.value.replace(/\D/g,'').slice(0,6)">
         <button class="enviar" type="submit">Continuar</button>
         <div class="ayuda"><button type="button" class="reg-link" onclick="regReenviar()">Reenviar código</button> · <button type="button" class="reg-link" onclick="regReiniciar()">Cambiar CUIL</button></div>
       </div>
@@ -189,9 +190,9 @@
         <input type="hidden" name="token" id="reg-token">
         <input type="hidden" name="codigo" id="reg-codigo-h">
         <label>Elegí una clave</label>
-        <input type="password" id="reg-clave" name="clave" required minlength="4">
+        <input type="password" id="reg-clave" name="clave" required minlength="{{ clave_minima }}">
         <label>Repetí la clave</label>
-        <input type="password" id="reg-repetir" required minlength="4">
+        <input type="password" id="reg-repetir" required minlength="{{ clave_minima }}">
         <div id="reg-error" style="display:none; color:#f2b8ae; font-size:12px; margin-top:6px;">Las claves no coinciden.</div>
 
         {# Son EXACTAMENTE los campos de "Tu perfil", en el mismo orden y con
@@ -256,7 +257,7 @@ function mostrar(cual) {
 // hay que tocar "Registrarme" otra vez.
 (function () {
   var err = new URLSearchParams(location.search).get('error');
-  if (['yaexiste', 'nohabilitado', 'domicilio', 'cuil', 'captcha', 'espera_registro', 'codigo', 'paso'].indexOf(err) >= 0) mostrar('registro');
+  if (['yaexiste', 'nohabilitado', 'domicilio', 'cuil', 'captcha', 'espera_registro', 'codigo', 'paso', 'clave'].indexOf(err) >= 0) mostrar('registro');
 })();
 
 // ---- Registro en tres pasos (PLAN_REGISTRO.md §4.1) ----

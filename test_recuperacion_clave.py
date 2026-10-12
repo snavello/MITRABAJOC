@@ -36,7 +36,7 @@ from db import (CodigoVerificacion, CuentaEmpleador, CuentaTrabajador, Empleador
                 Sindicato, Trabajador)
 from fastapi.testclient import TestClient
 from modulos import MODULOS_INICIALES
-from sqlmodel import select
+from sqlmodel import delete, select
 
 db.crear_tablas()
 
@@ -71,6 +71,11 @@ def canal(monkeypatch):
     monkeypatch.setattr(captcha, "verificar", lambda token, ip: True)
     main._intentos_registro.clear()
     main._intentos_login.clear()
+    # El cupo por MAIL de destino (QA-REG-03) es de la base y los tests comparten
+    # direcciones: cada uno empieza sin pedidos de la última hora.
+    with db.get_session() as s:
+        s.exec(delete(CodigoVerificacion))
+        s.commit()
     return enviados
 
 

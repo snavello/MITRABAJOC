@@ -27,7 +27,7 @@ import main
 from db import (CodigoVerificacion, CuentaEmpleador, CuentaTrabajador, Empleador,
                 Sindicato, Trabajador)
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import Session, delete, select
 
 db.crear_tablas()
 
@@ -93,6 +93,11 @@ def _filas_codigo(identificador):
 def entorno(monkeypatch):
     main._intentos_login.clear()
     main._intentos_registro.clear()
+    # El cupo por MAIL de destino (QA-REG-03) es de la base y los tests comparten
+    # direcciones: cada uno empieza sin pedidos de la última hora.
+    with db.get_session() as s:
+        s.exec(delete(CodigoVerificacion))
+        s.commit()
     monkeypatch.setenv("RESEND_API_KEY", "clave-de-prueba")
     monkeypatch.setenv("MAIL_REMITENTE", "Colm3na <no-responder@avisos.example.com>")
     salida = []
@@ -242,8 +247,8 @@ def test_codigo_de_recuperacion_del_mismo_cuil_no_sirve_para_registrar(entorno):
                                        "a@ejemplo.com", "padron", "1.2.3.4")
         fila_id = fila.id
         s.commit()
-    falso = auth.firmar_paso({"id": cuil, "codigo_id": fila_id, "origen": "mail_padron"},
-                             proposito="registro")
+    falso = auth.firmar_paso({"id": cuil, "tipo": "trabajador", "codigo_id": fila_id,
+                              "origen": "mail_padron"}, proposito="registro")
     r = _final(TestClient(main.app), cuil, falso, codigo)
     assert r.headers["location"].endswith("error=codigo")
     assert not _persona(cuil).clave_hash
@@ -256,8 +261,10 @@ def test_codigo_de_empleador_con_el_mismo_numero_no_sirve_para_el_trabajador(ent
     c = TestClient(main.app)
     d = _iniciar(c, x, ruta="/empresa/registro/iniciar", campo="cuit").json()
     cod = _codigo_de(entorno)
-    r = _final(c, x, d["token"], cod)             # el token y el código son de la empresa
-    assert r.headers["location"].endswith("error=codigo")
+    r = _final(c, x, d["token"], cod, **{"cf-turnstile-response": "ok"})   # token y código son de la empresa
+    # Antes llegaba hasta "codigo"; desde QA-REG-01 el token de otro TIPO es "sin
+    # token" y con el canal prendido corta antes de mirar el padrón: `paso`.
+    assert r.headers["location"].endswith("error=paso")
     assert not _persona(x).clave_hash
     assert _final_emp(c, x, d["token"], cod).headers["location"] == "/empresa/inicio"
 
@@ -351,13 +358,15 @@ def test_un_mismo_destino_no_recibe_codigos_de_muchos_cuiles(entorno):
     victima = "tercero@ejemplo.com"
     c = TestClient(main.app)
     for _ in range(6):
+        main._intentos_registro.clear()        # acá se prueba el cupo por destino, no el freno de la IP
         cuil = _cuil()
         _afiliado(cuil)
         token = _iniciar(c, cuil).json()["token"]
         for _ in range(db.CODIGOS_POR_HORA):
             c.post("/trabajador/registro/mail", data={"token": token, "mail": victima})
     recibidos = [m for m in entorno if m[0] == victima]
-    assert len(recibidos) <= db.CODIGOS_POR_HORA, f"{len(recibidos)} mails al mismo destino en una hora"
+    # El tope es por DESTINO (CODIGOS_POR_HORA_DESTINO), aparte del de cada CUIL.
+    assert len(recibidos) == db.CODIGOS_POR_HORA_DESTINO, f"{len(recibidos)} mails al mismo destino en una hora"
 
 
 def test_pedir_codigos_con_exito_tambien_cuenta_para_el_freno_de_la_ip(entorno):
@@ -374,6 +383,10 @@ def test_pedir_codigos_con_exito_tambien_cuenta_para_el_freno_de_la_ip(entorno):
     assert 429 in estados, f"{len(entorno)} códigos mandados desde una IP sin ningún freno"
 
 
+@pytest.mark.xfail(strict=True, reason=(
+    "BACKLOG / H-0008: el freno por IP toma el primer X-Forwarded-For, que escribe el "
+    "cliente. Se cierra en el perimetro (Cloudflare: usar la IP que el perimetro firma), "
+    "no en la app."))
 def test_el_freno_por_ip_no_se_evade_cambiando_x_forwarded_for(entorno):
     """ROJO (QA-REG-05, ya conocido: H-0008 Parcial). `_ip_de` toma el PRIMER valor
     de X-Forwarded-For, que lo escribe el cliente; Render agrega la IP real al
@@ -396,7 +409,7 @@ def test_canal_apagado_con_token_del_paso_mail_tambien_crea_nivel_1(entorno, mon
     cuil = _cuil()
     _afiliado(cuil)
     c = TestClient(main.app)
-    token = auth.firmar_paso({"id": cuil}, proposito="registro")
+    token = auth.firmar_paso({"id": cuil, "tipo": "trabajador"}, proposito="registro")
     assert _final(c, cuil, token, "").headers["location"] == "/app/inicio"
     p = _persona(cuil)
     assert (p.nivel_fiabilidad, p.nivel_origen) == (1, "cuil_padron")
@@ -485,7 +498,7 @@ def test_el_mail_pisado_en_el_form_final_no_cambia_el_declarado_confirmado(entor
     token = _iniciar(c, cuil).json()["token"]
     d = c.post("/trabajador/registro/mail", data={"token": token, "mail": "real@ejemplo.com"}).json()
     # token con otro mail embebido: no se usa
-    falso = auth.firmar_paso({"id": cuil, "codigo_id": _filas_codigo(cuil)[0].id,
+    falso = auth.firmar_paso({"id": cuil, "tipo": "trabajador", "codigo_id": _filas_codigo(cuil)[0].id,
                               "origen": "mail_declarado", "mail": "falso@ejemplo.com"},
                              proposito="registro")
     assert d["token"]
@@ -499,9 +512,10 @@ def test_paso_mail_tambien_cuenta_para_el_freno_si_el_mail_es_malo_o_el_token_no
     _afiliado(cuil)
     c = TestClient(main.app)
     token = _iniciar(c, cuil).json()["token"]
+    antes = main._intentos_registro["testclient"][0]      # el iniciar que salió bien ya sumó (QA-REG-04)
     c.post("/trabajador/registro/mail", data={"token": token, "mail": "mal"})
     c.post("/trabajador/registro/mail", data={"token": "basura", "mail": "a@ejemplo.com"})
-    assert main._intentos_registro["testclient"][0] == 2
+    assert main._intentos_registro["testclient"][0] == antes + 2
 
 
 # ---------------------------------------------------------------------------
