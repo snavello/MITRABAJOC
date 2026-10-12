@@ -1,0 +1,7 @@
+{#- Widget de Cloudflare Turnstile (PLAN_REGISTRO.md, D7). Solo se dibuja si el
+    captcha está configurado; el widget agrega al POST el campo
+    `cf-turnstile-response`. Sin claves no renderiza nada. -#}
+{% if captcha_site_key %}
+<div class="cf-turnstile" data-sitekey="{{ captcha_site_key }}" data-theme="auto"></div>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+{% endif %}

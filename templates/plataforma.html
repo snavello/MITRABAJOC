@@ -234,7 +234,7 @@
       <td><button type="button" class="link-num" onclick="verAdmins({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.usuarios }}</button></td>
       <td><button type="button" class="link-num" onclick="verTrabajadores({{ i.s.id }}, '{{ i.s.nombre }}')">{{ i.trabajadores }}</button></td>
       <td style="white-space:nowrap; text-align:right;">
-        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base,"modulos_habilitados":i.s.modulos_habilitados,"portada_clara":i.s.portada_clara,"admin_portada_clara":i.s.admin_portada_clara,"logo":i.s.logo,"firma":i.s.firma,"clausula":i.s.clausula_confidencialidad,"clausula_en":i.s.clausula_aceptada_en,"clausula_por":i.s.clausula_aceptada_por,"contrato_nombre":i.s.contrato_nombre if i.s.contrato_datos else ""} | tojson }})'>Editar</button>
+        <button type="button" class="mini" onclick='editarSind({{ {"id":i.s.id,"nombre":i.s.nombre,"descripcion":i.s.descripcion,"cuit":i.s.cuit,"direccion":i.s.direccion,"mail":i.s.mail,"telefonos":i.s.telefonos,"autoridad":i.s.autoridad,"cargo_autoridad":i.s.cargo_autoridad,"color_primario":i.s.color_primario,"color_secundario":i.s.color_secundario,"color_acento":i.s.color_acento,"color_base":i.s.color_base,"modulos_habilitados":i.s.modulos_habilitados,"portada_clara":i.s.portada_clara,"admin_portada_clara":i.s.admin_portada_clara,"logo":i.s.logo,"firma":i.s.firma,"clausula":i.s.clausula_confidencialidad,"acepta_mail_declarado":i.s.acepta_mail_declarado,"clausula_en":i.s.clausula_aceptada_en,"clausula_por":i.s.clausula_aceptada_por,"contrato_nombre":i.s.contrato_nombre if i.s.contrato_datos else ""} | tojson }})'>Editar</button>
         <button type="button" class="mini borrar" onclick="borrarSind({{ i.s.id }}, '{{ i.s.nombre }}', {{ i.usuarios }}, {{ i.trabajadores }})">Borrar</button>
       </td>
     </tr>
@@ -378,6 +378,11 @@
         <label class="chk-modulo"><input type="checkbox" name="clausula_confidencialidad" value="true" id="sind-clausula"> Aceptó la cláusula de confidencialidad</label>
         <span class="muted" style="font-size:11px;">Tildado: en Reportes y en el explorador del Panel Sindical ve también los recibos que los afiliados verificaron y NO enviaron, siempre anonimizados (sin nombre, CUIL ni empresa). Sin tildar, ve solo los enviados. Exige el contrato cargado.</span>
         <span class="muted" id="sind-clausula-quien" style="font-size:11px; display:block;"></span>
+      </div>
+
+      <div class="campo" style="margin-top:8px;">
+        <label class="chk-modulo"><input type="checkbox" name="acepta_mail_declarado" value="true" id="sind-acepta-mail-declarado" checked> Acepta registro con mail declarado</label>
+        <span class="muted" style="font-size:11px;">Tildado: el afiliado que no tiene mail cargado en el padrón puede registrarse declarando uno propio (queda en nivel 2, marcado como "mail declarado"). Sin tildar, solo puede registrarse con el mail que el sindicato cargó.</span>
       </div>
 
       <button type="submit">Crear sindicato</button>
@@ -1293,6 +1298,7 @@ function editarSind(s) {
   document.getElementById('sind-portada-clara').checked = !!s.portada_clara;
   document.getElementById('sind-admin-portada-clara').checked = !!s.admin_portada_clara;
   document.getElementById('sind-clausula').checked = !!s.clausula;
+  document.getElementById('sind-acepta-mail-declarado').checked = s.acepta_mail_declarado !== false;
   document.getElementById('sind-clausula-quien').textContent = s.clausula
     ? 'Aceptada el ' + s.clausula_en + ' (cargó: ' + s.clausula_por + ').' : '';
   const contratoBox = document.getElementById('sind-contrato-actual');

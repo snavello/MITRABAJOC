@@ -50,6 +50,26 @@ PUBLICAS = {
     ("GET", "/logo-plataforma-oscuro"): "logo de Colm3na",
     ("GET", "/noticia-imagen/{noticia_id}/{n}"): "imagen de noticia (contenido público del gremio)",
     ("GET", "/beneficio-imagen/{beneficio_id}"): "imagen de beneficio (ídem)",
+    # Pasos 1 y 2 del registro (PLAN_REGISTRO.md): son anteriores a toda sesión
+    # por definición, con captcha y freno por IP; no entregan datos de nadie.
+    ("POST", "/trabajador/registro/iniciar"): "paso 1 del registro del afiliado",
+    ("POST", "/trabajador/registro/mail"): "paso 2 del registro del afiliado",
+    ("POST", "/empresa/registro/iniciar"): "paso 1 del registro de la empresa",
+    ("POST", "/empresa/registro/mail"): "paso 2 del registro de la empresa",
+    # Recuperación de clave autoservicio y cambio de la clave temporal
+    # (PLAN_REGISTRO.md D6): por definición se usan SIN sesión, con captcha,
+    # freno por IP y un token firmado de paso; la respuesta es la misma haya o
+    # no cuenta, así que no entregan datos de nadie.
+    ("GET", "/ingresar/recuperar"): "pantalla de recuperación del afiliado",
+    ("POST", "/ingresar/recuperar/iniciar"): "paso 1 de la recuperación del afiliado",
+    ("POST", "/ingresar/recuperar"): "paso 3 de la recuperación del afiliado",
+    ("GET", "/ingresar/cambiar-clave"): "cambio de la clave temporal del afiliado",
+    ("POST", "/ingresar/cambiar-clave"): "cambio de la clave temporal del afiliado",
+    ("GET", "/ingresar-empresa/recuperar"): "pantalla de recuperación de la empresa",
+    ("POST", "/ingresar-empresa/recuperar/iniciar"): "paso 1 de la recuperación de la empresa",
+    ("POST", "/ingresar-empresa/recuperar"): "paso 3 de la recuperación de la empresa",
+    ("GET", "/ingresar-empresa/cambiar-clave"): "cambio de la clave temporal de la empresa",
+    ("POST", "/ingresar-empresa/cambiar-clave"): "cambio de la clave temporal de la empresa",
 }
 
 # Pantallas con sesión que, sin ella, responden 200 con el FORMULARIO de

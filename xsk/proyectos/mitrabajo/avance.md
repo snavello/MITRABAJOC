@@ -52,3 +52,16 @@ Pendientes que quedan: H-0019 (claves semilla públicas), follow-up de H-0014
 (fastapi/starlette 1.x), H-0018 (panel cross-entorno público), H-0010/H-0012 (con un cambio de sesión), carga
 DIS-01/02, INF-02/03/05 (accesos, backups, perímetro), y la iteración 2
 (ENT/IA/OBS/LEY).
+
+2026-10-11: **segunda medida de la serie, el registro** (`PLAN_REGISTRO.md`,
+PR #93): registro confirmado por mail con niveles de fiabilidad 1-4 como dato
+de la cuenta, recuperacion de clave, clave temporal con cambio obligatorio,
+Turnstile y freno en el registro. **H-0017 en correccion** (codigo completo;
+Solucionado cuando Resend y Turnstile esten configurados en Pruebas) y
+**H-0022 abierto y aceptado** (enumeracion inherente al diseno, D11). El QA
+del sprint encontro cinco defectos de seguridad que se cerraron antes del
+merge (detalle en `corridas/2026-10-11-2300-IDS.md`). Metodo nuevo que vale
+registrar: desarrollo por agentes en olas con QA adversarial por bloque, y
+los hallazgos del QA quedan como tests `test_qa_*.py` que pasan de rojo a
+verde con el arreglo.
+

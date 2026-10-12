@@ -26,6 +26,7 @@ Arrancar con:  uvicorn main:app --reload   (ver README.md)
 """
 
 import asyncio
+import logging
 import os
 import re
 import threading
@@ -46,6 +47,8 @@ from psycopg.errors import QueryCanceled
 from sqlalchemy.exc import OperationalError, TimeoutError as PoolTimeoutError
 from sqlmodel import select
 
+import captcha
+import correo
 import cuit
 import encuestas
 import esquema
@@ -55,6 +58,7 @@ import precios_ia
 import resultados_encuesta
 import fechas
 import geo
+import secrets
 import db
 import auth
 import validaciones_tramite
@@ -95,6 +99,17 @@ import planificador
 import preparacion
 import lectores
 from xsk.motor import tablero as xsk_tablero
+
+# Traza de las acciones del panel del sindicato sobre cuentas de personas
+# (restablecer clave, confirmar identidad). Uvicorn no configura el logger raíz
+# y por defecto descartaría el INFO: este logger lleva su propio handler para
+# que la línea llegue al log de Render. Nunca se escribe la clave temporal.
+log = logging.getLogger("mitrabajo.panel")
+if not log.handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("%(message)s"))
+    log.addHandler(_h)
+    log.setLevel(logging.INFO)
 from xsk.motor.registro import ErrorRegistro as XSKErrorRegistro
 from modulos import MODULOS, MODULOS_INICIALES
 import dashboard
@@ -140,27 +155,37 @@ def set_cookie_segura(respuesta, nombre, valor, max_age=None, samesite="lax"):
 LOGIN_MAX_FALLOS = int(os.getenv("LOGIN_MAX_FALLOS", "10"))
 LOGIN_ESPERA_SEGUNDOS = int(os.getenv("LOGIN_ESPERA_SEGUNDOS", "60"))
 _intentos_login: dict[str, list] = {}
+# El registro tiene su PROPIA tabla (PLAN_REGISTRO.md, etapa 1): un tanteo de
+# CUILes contra el registro no tiene que dejar sin login a quien comparte la IP,
+# ni al revés. Mismo mecanismo y mismos umbrales que los logins.
+_intentos_registro: dict[str, list] = {}
 
 
-def _login_bloqueado(request) -> bool:
+def _login_bloqueado(request, tabla=None) -> bool:
     import time
-    estado = _intentos_login.get(_ip_de(request))
+    if tabla is None:
+        tabla = _intentos_login
+    estado = tabla.get(_ip_de(request))
     return bool(estado) and estado[1] > time.time()
 
 
-def _login_fallo(request) -> None:
+def _login_fallo(request, tabla=None) -> None:
     import time
-    estado = _intentos_login.setdefault(_ip_de(request), [0, 0.0])
+    if tabla is None:
+        tabla = _intentos_login
+    estado = tabla.setdefault(_ip_de(request), [0, 0.0])
     estado[0] += 1
     if estado[0] >= LOGIN_MAX_FALLOS:
         estado[0] = 0
         estado[1] = time.time() + LOGIN_ESPERA_SEGUNDOS
-    if len(_intentos_login) > 5000:      # que la tabla no crezca sin límite
-        _intentos_login.clear()
+    if len(tabla) > 5000:      # que la tabla no crezca sin límite
+        tabla.clear()
 
 
-def _login_ok(request) -> None:
-    _intentos_login.pop(_ip_de(request), None)
+def _login_ok(request, tabla=None) -> None:
+    if tabla is None:
+        tabla = _intentos_login
+    tabla.pop(_ip_de(request), None)
 
 
 @app.get("/sw.js")
@@ -374,15 +399,42 @@ async def sin_cache_en_paneles(request: Request, call_next):
 # cabeceras. Un `blob:` no es una fuente externa: lo fabrica el mismo
 # documento a partir de un archivo que la persona eligió, así que no abre
 # ninguna puerta que `data:` no tuviera ya abierta.
-CSP = ("default-src 'self'; "
-       "img-src 'self' data: blob: https:; "
-       "media-src 'self' data: blob:; "
-       "style-src 'self' 'unsafe-inline'; "
-       "script-src 'self' 'unsafe-inline'; "
-       "connect-src 'self' https:; "
-       "frame-ancestors 'none'; "
-       "base-uri 'self'; "
-       "form-action 'self'")
+def _armar_csp(captcha_activo=None) -> str:
+    """Arma la CSP. Con el captcha apagado devuelve la política de siempre,
+    byte por byte. Con Turnstile prendido suma `https://challenges.cloudflare.com`
+    en `script-src` (el api.js del widget) y un `frame-src` (el widget vive en un
+    iframe de Cloudflare).
+
+    **Es la excepción explícita D7 de PLAN_REGISTRO.md a "nada externo"**: se
+    carga un script y un marco de un tercero, solo en las pantallas de registro
+    y recuperación (el parcial `_captcha.html`), y solo si hay claves. Se evalúa
+    UNA vez al importar (`CSP`), igual que el global de Jinja `captcha_site_key`:
+    así la política y el widget nunca quedan desparejos."""
+    if captcha_activo is None:
+        captcha_activo = captcha.habilitado()
+    origen = " https://challenges.cloudflare.com" if captcha_activo else ""
+    partes = ["default-src 'self'",
+              "img-src 'self' data: blob: https:",
+              "media-src 'self' data: blob:",
+              "style-src 'self' 'unsafe-inline'",
+              f"script-src 'self' 'unsafe-inline'{origen}",
+              "connect-src 'self' https:"]
+    if captcha_activo:
+        partes.append("frame-src https://challenges.cloudflare.com")
+    partes += ["frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'"]
+    return "; ".join(partes)
+
+
+CSP = _armar_csp(False)          # la de siempre: la llevan todas las pantallas
+CSP_INGRESOS = _armar_csp()      # con Turnstile si hay claves: SOLO los ingresos
+# Dónde se dibuja el captcha: los dos logins con su pestaña de registro y las
+# pantallas de recuperación de clave. El resto de la app sigue con la CSP de
+# siempre, aunque el captcha esté prendido (QA etapa 1, hallazgo 3).
+RUTAS_CON_CAPTCHA = ("/ingresar", "/ingresar-empresa")
+
+
+def _csp_para(path: str) -> str:
+    return CSP_INGRESOS if any(path == r or path.startswith(r + "/") for r in RUTAS_CON_CAPTCHA) else CSP
 
 
 @app.middleware("http")
@@ -391,7 +443,7 @@ async def cabeceras_de_seguridad(request: Request, call_next):
     respuesta.headers.setdefault("X-Content-Type-Options", "nosniff")
     respuesta.headers.setdefault("X-Frame-Options", "DENY")
     respuesta.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-    respuesta.headers.setdefault("Content-Security-Policy", CSP)
+    respuesta.headers.setdefault("Content-Security-Policy", _csp_para(request.url.path))
     if COOKIE_SECURE:      # demo/prod, servidos por HTTPS
         respuesta.headers.setdefault(
             "Strict-Transport-Security", "max-age=31536000; includeSubDomains")
@@ -609,6 +661,20 @@ def _sello_static(nombre: str) -> str:
 
 
 templates.env.globals["sello_static"] = _sello_static
+
+
+def _url_static(nombre: str) -> str:
+    """La URL completa de un archivo de /static CON su sello (`?v=`). Es lo que
+    usan las plantillas de la recuperación de clave (`url_static('...')`) y el
+    mapa funcional: un solo lugar donde se arma, en vez de escribir la ruta y
+    acordarse del sello a mano (QR-7)."""
+    return f"/static/{nombre}?v={_sello_static(nombre)}"
+
+
+templates.env.globals["url_static"] = _url_static
+# Clave pública del widget de Turnstile; vacía = captcha apagado y el parcial
+# `_captcha.html` no dibuja nada. Se lee al arrancar, igual que la CSP.
+templates.env.globals["captcha_site_key"] = captcha.site_key()
 # Las fechas que lee una persona van en dd/mm/aaaa, también en las
 # plantillas: "2026-10-12" es el formato de la base, no el de la pantalla.
 templates.env.filters["dia"] = fechas.dia_legible
@@ -758,6 +824,31 @@ def _para_la_ia(prep) -> dict:
     return {"imagen": prep.imagen, "aviso_enmascarado": prep.tapado}
 
 
+def _acreditar_recibo_propio(cuil_sesion: str, recibo: dict) -> None:
+    """Nivel 3 de fiabilidad (PLAN_REGISTRO.md, D3): "recibo propio verificado
+    por la IA". Se otorga en `/api/leer`, DESPUÉS del corte de pertenencia
+    (E-RECIBO-04), porque ahí la que leyó el documento fue la IA: el CUIL
+    sale del archivo y no de un JSON que arma el cliente (`/api/validar`
+    recibe el recibo del cliente y no acredita nada).
+
+    Se exige el CUIL leído presente e igual al de la sesión FIRMADA: un recibo
+    donde la IA no pudo leer el CUIL pasa el corte de pertenencia pero no
+    acredita nada. `subir_nivel` solo sube, así que no baja un nivel 4. Sesión
+    corta y propia (a esta altura de `/api/leer` no hay ninguna abierta).
+
+    Con `MOCK_EXTRACTOR=1` (Pruebas) el mock devuelve el CUIL de la sesión y
+    el nivel sube igual: no hay lectura real, pero es el entorno de pruebas."""
+    cuil_sesion = _norm_cuil(cuil_sesion)
+    cuil_leido = _norm_cuil((recibo.get("empleado") or {}).get("cuil"))
+    if not cuil_sesion or not cuil_leido or cuil_leido != cuil_sesion:
+        return
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaTrabajador).where(
+            CuentaTrabajador.cuil == cuil_sesion)).first()
+        if cuenta and db.subir_nivel(s, cuenta, "recibo_propio"):
+            s.commit()
+
+
 @app.post("/api/leer")
 async def api_leer(request: Request, archivo: UploadFile = File(...)):
     _exigir_trabajador_logueado(request)
@@ -805,6 +896,7 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
     # propósito: de un recibo ajeno no se guarda nada, ni el archivo.
     if cuil_no_coincide(recibo, _cuil_seguro(request)):
         raise ErrorApp("E-RECIBO-04")
+    _acreditar_recibo_propio(_cuil_seguro(request), recibo)
     # Alerta de posible adulteración (totales, CUIL, CUIT del empleador o
     # fechas): no bloquea el proceso, solo avisa y guarda una copia del
     # archivo original para que la plataforma la pueda revisar.
@@ -901,6 +993,11 @@ def api_validar(request: Request, payload: dict):
             **dashboard.campos_analiticos(recibo, resultado),
         )
         s.add(registro)
+        # OJO: el nivel 3 (recibo propio) NO se otorga acá. Esta ruta recibe
+        # el recibo del CLIENTE y se puede llamar sola con cualquier JSON: un
+        # impostor que solo conoce el CUIL (público) lo escribiría en
+        # `recibo.empleado.cuil` y subiría de nivel sin ningún documento. El
+        # nivel 3 sube en `/api/leer`, que es donde la IA lee el archivo.
         s.commit()
         resultado["recibo_verificado_id"] = registro.id
 
@@ -1118,6 +1215,8 @@ PERMISOS_RUTAS = {
     "/admin/trabajador/georreferenciar-pendientes": "trabajadores",
     "/admin/trabajador/baja":               "trabajadores",
     "/admin/trabajador/alta-logica":        "trabajadores",
+    "/admin/trabajador/confirmar-identidad": "trabajadores",
+    "/admin/trabajador/restablecer-clave":  "trabajadores",
 
     # La gestión de usuarios es del Super Admin y de nadie más: no es una
     # sección asignable (ver SECCION_SUPER_ADMIN en permisos.py).
@@ -1189,6 +1288,8 @@ PERMISOS_RUTAS = {
     "/admin/empleador":                     "emp_empresas",
     "/admin/empleador/baja":                "emp_empresas",
     "/admin/empleador/alta-logica":         "emp_empresas",
+    "/admin/empleador/confirmar-identidad": "emp_empresas",
+    "/admin/empleador/restablecer-clave":   "emp_empresas",
     "/admin/empleador/importar-cuits":      "emp_empresas",
     "/admin/notificacion-empresa":          "emp_notificaciones",
     "/admin/notificacion-empresa/preview":  "emp_notificaciones",
@@ -1400,6 +1501,23 @@ def admin(request: Request):
         empleadores = s.exec(select(Empleador).where(Empleador.sindicato_id == sid)
                              .order_by(Empleador.activo.desc(), Empleador.razon_social)).all() \
             if puede("emp_empresas") else []
+        # Nivel de fiabilidad de la cuenta de cada empresa (PLAN_REGISTRO.md),
+        # por CUIT: una cuenta es de la persona jurídica, no de este sindicato.
+        niveles_empleadores = {}
+        if empleadores:
+            for c in s.exec(select(CuentaEmpleador).where(
+                    CuentaEmpleador.cuit.in_([e.cuit for e in empleadores]))).all():
+                niveles_empleadores[c.cuit] = {
+                    "tiene_cuenta": bool(c.clave_hash),
+                    "nivel_fiabilidad": c.nivel_fiabilidad or 1,
+                    "nivel_origen": c.nivel_origen or ""}
+            # ¿Este sindicato responde por la cuenta? (db.responde_por): si la
+            # empresa ya se registró y este padrón no la tenía cuando lo hizo,
+            # la pantalla no muestra su nivel ni los botones.
+            for e in empleadores:
+                cta = niveles_empleadores.get(e.cuit)
+                if cta:
+                    cta["responde"] = db.responde_por(cta["tiene_cuenta"], e.registrado)
     # Conceptos con código provisorio (la IA no pudo leer el código del recibo):
     # nunca matchean por código, así que hay que revisarlos.
     provisorios = detectar_provisorios([
@@ -1467,6 +1585,10 @@ def admin(request: Request):
         "rubro_visto": rubro_visto,
         "formulas": formulas,
         "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR,
+        "niveles_empleadores": niveles_empleadores,
+        # Sobre qué seccionales opera quien mira: None = todas, {id} = esa,
+        # set() = ninguna. Los botones de cuenta solo se dibujan dentro.
+        "alcance_propio": alcance_propio,
         "clausula_confidencialidad": bool(sind and sind.clausula_confidencialidad),
         "usuarios_sindicato": usuarios_sindicato,
         "permisos": permisos, "es_super_admin": es_super_admin,
@@ -1694,6 +1816,7 @@ def admin_trabajador_alta(
         {"calle": calle, "numero": numero, "piso_depto": piso_depto,
          "localidad": localidad, "provincia": provincia, "codigo_postal": codigo_postal},
         precision_geo, latitud, longitud)
+    datos_ajenos = False   # la cuenta es de una persona que este padrón no tenía al registrarse
     with db.get_session() as s:
         if sec_id and not s.exec(select(Seccional).where(
                 Seccional.id == sec_id, Seccional.sindicato_id == sid)).first():
@@ -1723,8 +1846,25 @@ def admin_trabajador_alta(
                 # se escriben en un solo lugar y por eso el cambio se ve
                 # también en los otros gremios donde esté empadronada. Es la
                 # contracara de que no puedan existir dos versiones.
-                db.guardar_datos_personales(s, t.cuil, nombre=nombre,
-                                            domicilio=domicilio, telefono=telefono, mail=mail)
+                # `mail_padron` es el que carga el SINDICATO (acá y en el alta
+                # masiva, y en ningún otro lugar). El formulario de edición
+                # llega precargado con el mail de CONTACTO, que la persona
+                # puede haber cambiado desde su perfil: reenviarlo sin tocar
+                # no puede convertirlo en "mail del padrón". Solo se escribe
+                # cuando el admin lo CAMBIÓ.
+                #
+                # Salvo que la persona haya creado su cuenta ANTES de estar en
+                # este padrón (`db.padron_responde_por`): sus datos son suyos y
+                # un admin que cargó su CUIL a mano no los reescribe -- sobre
+                # todo el mail del padrón, que es el canal de recuperación.
+                if db.padron_responde_por(s, sid, t.cuil):
+                    actual = db.asegurar_cuenta(s, t.cuil).mail or ""
+                    cambio_mail = (mail or "").strip() != actual.strip()
+                    db.guardar_datos_personales(s, t.cuil, nombre=nombre,
+                                                domicilio=domicilio, telefono=telefono, mail=mail,
+                                                mail_padron=mail if cambio_mail else None)
+                else:
+                    datos_ajenos = True
         else:    # alta — evitar duplicado de CUIL en el mismo sindicato
             # Un número que NACE en el sistema: el CUIL con su verificador, y
             # el CUIT del empleador (opcional) también. Nada se escribió aún.
@@ -1736,18 +1876,31 @@ def admin_trabajador_alta(
             existe = s.exec(select(Trabajador).where(
                 Trabajador.sindicato_id == sid, Trabajador.cuil == cuil_norm)).first()
             if not existe:
+                # Se decide ANTES de crear el empadronamiento. Si la persona ya
+                # tiene cuenta con clave (se registró en otro gremio), este
+                # padrón no responde por ella: se crea el empadronamiento y
+                # nada más -- ni nombre, ni domicilio, ni teléfono, ni mails.
+                responde = db.padron_responde_por(s, sid, cuil_norm)
                 s.add(Trabajador(
                     sindicato_id=sid, cuil=cuil_norm,
                     vigencia_credencial=vigencia_credencial or None, seccional_id=sec_id,
                     cuit_empleador=_norm_cuil(cuit_empleador) or None))
-                db.guardar_datos_personales(s, cuil_norm, nombre=nombre,
-                                            domicilio=domicilio, telefono=telefono, mail=mail)
+                if responde:
+                    # En el alta, un mail en blanco NO borra el que ya hubiera
+                    # cargado otro gremio para esta persona (`or None` = no tocar).
+                    db.guardar_datos_personales(s, cuil_norm, nombre=nombre,
+                                                domicilio=domicilio, telefono=telefono, mail=mail,
+                                                mail_padron=mail or None)
+                else:
+                    datos_ajenos = True
         s.commit()
     # Las dos altas pueden venir en cualquier orden: si a este CUIL ya se le
     # había dado usuario del panel, acá se arma el vínculo y se prende la
     # marca de empleado. Sin esto quedaría en el padrón sin marca, en
     # silencio.
     db.sincronizar_por_cuil(sid, cuil_norm)
+    if datos_ajenos:
+        return RedirectResponse("/admin?aviso=datosajenos#trabajadores", status_code=303)
     return RedirectResponse("/admin#trabajadores", status_code=303)
 
 
@@ -1797,22 +1950,51 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
     (`cuilinvalidos`) y la pantalla muestra cuáles son (`cuilmuestra`, hasta
     diez), porque el arreglo es distinto -- corregir un dígito, no completar
     una columna.
+
+    **Un CUIL que ya está en el padrón de este sindicato** no es una alta ni
+    una omitida si su línea trae mail: se actualiza SOLO su `mail_padron`
+    (PLAN_REGISTRO.md, Q-6) y se cuenta aparte (`mailsactualizados`). Es la
+    única vía del gremio para cargar el mail de quienes ya se registraron. Sin
+    mail, el CUIL repetido sigue yendo a `omitidas`. En una alta nueva, un
+    mail en blanco no borra el `mail_padron` que otro gremio ya hubiera cargado.
     """
     sid = exigir_sindicato(request)
     altas = 0
+    mails_actualizados = 0   # CUIL ya en el padrón cuya línea trajo mail (solo mail_padron)
+    datos_ajenos = 0         # líneas cuya persona ya tenía cuenta antes de este padrón: sin tocar sus datos
     omitidas = []
     cuil_invalidos = []      # líneas con CUIL que no cumple el módulo 11
     por_nombre = {geo._norm(sec["nombre"]): sec["id"]
                   for sec in db.seccionales_del_sindicato(sid)}
     with db.get_session() as s:
-        existentes = {t.cuil for t in s.exec(select(Trabajador).where(
+        propios = {t.cuil: t for t in s.exec(select(Trabajador).where(
             Trabajador.sindicato_id == sid)).all()}
+        existentes = set(propios)
+        # Quiénes ya se registraron (una consulta para toda la lista): sobre
+        # esas cuentas este padrón solo responde si ya tenía a la persona
+        # cargada cuando se registró (`db.responde_por`). Si no, la línea crea
+        # el empadronamiento y NO escribe nombre, domicilio, contacto ni mails.
+        con_clave = db.cuiles_con_clave(s, {
+            _norm_cuil(ln.split(",")[0]) for ln in lista.strip().splitlines() if ln.strip()})
         for linea in lista.strip().splitlines():
             if not linea.strip():
                 continue
             campos = [c.strip() for c in linea.split(",")]
             cuil = _norm_cuil(campos[0]) if campos else ""
             nombre = campos[1] if len(campos) > 1 else ""
+            def campo(i): return campos[i] if len(campos) > i else ""
+            if len(cuil) == 11 and cuil in existentes and campo(8):
+                # Ya está en el padrón de este sindicato (quizá ya registrado):
+                # no es un alta, pero la línea trae el mail y esta es la ÚNICA
+                # vía que tiene el gremio para cargar el mail del padrón de
+                # quien ya tiene cuenta. Solo `mail_padron`: ni el contacto ni
+                # el resto de los datos de la persona se tocan.
+                if db.responde_por(cuil in con_clave, propios[cuil].registrado):
+                    db.guardar_datos_personales(s, cuil, mail_padron=campo(8))
+                    mails_actualizados += 1
+                else:
+                    datos_ajenos += 1
+                continue
             if len(cuil) != 11 or not nombre or cuil in existentes:
                 omitidas.append(linea.strip()[:60])
                 continue
@@ -1823,7 +2005,6 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
             if _cuil_mal(cuil):
                 cuil_invalidos.append(campos[0][:20])
                 continue
-            def campo(i): return campos[i] if len(campos) > i else ""
             if geo.faltan_campos({"localidad": campo(5), "provincia": campo(6)}):
                 omitidas.append(linea.strip()[:60])
                 continue
@@ -1834,14 +2015,22 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
             s.add(Trabajador(
                 sindicato_id=sid, cuil=cuil,
                 seccional_id=por_nombre.get(geo._norm(campo(10)))))
-            db.guardar_datos_personales(s, cuil, nombre=nombre, domicilio=domicilio,
-                                        telefono=campo(7), mail=campo(8))
+            if cuil in con_clave:
+                datos_ajenos += 1     # empadronamiento nuevo sobre una cuenta ya hecha: solo eso
+            else:
+                db.guardar_datos_personales(s, cuil, nombre=nombre, domicilio=domicilio,
+                                            telefono=campo(7), mail=campo(8),
+                                            mail_padron=campo(8) or None)
             existentes.add(cuil); altas += 1
         s.commit()
     # Las primeras tres líneas rechazadas alcanzan para que la persona vea el
     # patrón (casi siempre es la misma columna que falta en todas) sin armar
     # una query string de diez mil caracteres con la planilla entera.
     destino = f"/admin?altas={altas}"
+    if mails_actualizados:
+        destino += f"&mailsactualizados={mails_actualizados}"
+    if datos_ajenos:
+        destino += f"&datosajenos={datos_ajenos}"
     if omitidas:
         destino += f"&omitidas={len(omitidas)}&muestra=" + quote(" | ".join(omitidas[:3]))
     if cuil_invalidos:
@@ -1902,6 +2091,92 @@ def admin_trabajador_reactivar(request: Request, id: int = Form(...)):
             t.activo = True
             s.add(t); s.commit()
     return RedirectResponse("/admin#trabajadores", status_code=303)
+
+
+# ---------- Confirmar identidad y restablecer clave (PLAN_REGISTRO.md, 4.4) ----------
+# Letras sin I ni O y dígitos sin 0 ni 1: la clave se dicta o se lee de una
+# pantalla, y "0/O" o "1/l" son los errores de siempre.
+_ALFABETO_CLAVE_TEMPORAL = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def _clave_temporal_nueva() -> str:
+    return "".join(secrets.choice(_ALFABETO_CLAVE_TEMPORAL) for _ in range(8))
+
+
+def _pagina_clave_temporal(request: Request, quien: str, ident: str, volver: str, clave: str):
+    """La clave temporal se muestra UNA vez, en la respuesta del propio POST:
+    no viaja en una URL (nada de redirect con la clave), no se guarda en
+    claro en ningún lado y la página no se cachea. Recargar re-envía el POST
+    y genera otra clave: la anterior deja de valer, así que no hay forma de
+    volver a verla."""
+    # Pantalla interior del panel: lleva el encabezado y la marca del sindicato
+    # de quien opera (el sindicato sale de la sesión, nunca de un parámetro).
+    ses = sesion_actual(request, "sindicato") or {}
+    marca = db.marca_sindicato(ses.get("sid", 0))
+    return templates.TemplateResponse(
+        "clave_temporal.html",
+        {"request": request, "quien": quien, "ident": ident, "clave": clave, "volver": volver,
+         "sindicato": marca.get("nombre", ""), "marca": marca,
+         "marca_plataforma": db.marca_plataforma()},
+        headers={"Cache-Control": "no-store, max-age=0", "Pragma": "no-cache"})
+
+
+def _cuenta_y_empadronamiento(request: Request, sid: int, cuil: str):
+    """(empadronamiento, cuenta) de un afiliado DE ESTE sindicato y dentro del
+    alcance de seccional de quien opera. 404 si no es del sindicato; 403 si es
+    de otra seccional (mismo criterio que el resto de las rutas del panel)."""
+    with db.get_session() as s:
+        t = s.exec(select(Trabajador).where(
+            Trabajador.sindicato_id == sid, Trabajador.cuil == cuil)).first()
+        if not t:
+            raise HTTPException(404, "Ese CUIL no está en el padrón de este sindicato.")
+        _exigir_alcance_seccional(request, t.seccional_id)
+    return t
+
+
+@app.post("/admin/trabajador/confirmar-identidad")
+def admin_trabajador_confirmar_identidad(request: Request, cuil: str = Form(...)):
+    """Nivel 4: una persona del sindicato confirmó la identidad del afiliado
+    en persona. Solo si ya tiene cuenta, y dentro de su alcance de seccional."""
+    sid = exigir_sindicato(request)
+    cuil = _norm_cuil(cuil)
+    _cuenta_y_empadronamiento(request, sid, cuil)
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if not cuenta or not cuenta.clave_hash:
+            return RedirectResponse("/admin?err=sincuenta#trabajadores", status_code=303)
+        if not db.padron_responde_por(s, sid, cuil):
+            return RedirectResponse("/admin?err=cuentaajena#trabajadores", status_code=303)
+        db.subir_nivel(s, cuenta, "presencial")
+        s.commit()
+    log.info("panel: %s %s por usuario %s del sindicato %s",
+             "confirmar-identidad", cuil, _uid_sesion(request), sid)
+    return RedirectResponse("/admin?ok=identidad#trabajadores", status_code=303)
+
+
+@app.post("/admin/trabajador/restablecer-clave")
+def admin_trabajador_restablecer_clave(request: Request, cuil: str = Form(...)):
+    """Pone una clave temporal de un solo uso a la cuenta de un afiliado (es lo
+    que le devuelve la cuenta al afiliado real cuando alguien llegó primero).
+    La clave se muestra una vez; el próximo ingreso obliga a cambiarla."""
+    sid = exigir_sindicato(request)
+    cuil = _norm_cuil(cuil)
+    _cuenta_y_empadronamiento(request, sid, cuil)
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if not cuenta or not cuenta.clave_hash:
+            return RedirectResponse("/admin?err=sincuenta#trabajadores", status_code=303)
+        if not db.padron_responde_por(s, sid, cuil):
+            return RedirectResponse("/admin?err=cuentaajena#trabajadores", status_code=303)
+        clave = _clave_temporal_nueva()
+        cuenta.clave_hash = auth.hashear_clave(clave)
+        cuenta.clave_temporal = True
+        s.add(cuenta)
+        s.commit()
+        nombre = cuenta.nombre or cuil
+    log.info("panel: %s %s por usuario %s del sindicato %s",
+             "restablecer-clave", cuil, _uid_sesion(request), sid)
+    return _pagina_clave_temporal(request, nombre, cuil, "/admin#trabajadores", clave)
 
 
 # ---------- ABM de administradores del propio sindicato ----------
@@ -2806,8 +3081,20 @@ def admin_empleador_alta(
                 if _norm_cuil(cuit_norm) != _norm_cuil(e.cuit):   # `cuit` es el campo del formulario: tapa al módulo
                     return RedirectResponse("/admin?error=cuitfijo#empleadores", status_code=303)
                 e.razon_social = razon_social.strip()
+                mail_anterior = e.mail
                 e.domicilio, e.telefono = domicilio, telefono
                 e.provincia, e.mail = provincia, mail
+                # `mail_padron` lo escribe SOLO esta ruta (la empresa edita su
+                # contacto desde /api/empresa/perfil y no lo toca). Mismo
+                # criterio que el afiliado: solo si el admin cambió el mail
+                # del formulario, que llega precargado con el de contacto.
+                # Salvo que la empresa ya tenga cuenta y este padrón no la
+                # tuviera cargada cuando se registró: ese mail es el canal de
+                # recuperación y no lo puede reescribir quien cargó el CUIT
+                # a mano (db.padron_responde_por_empresa).
+                if (mail or "").strip() != (mail_anterior or "").strip() \
+                        and db.padron_responde_por_empresa(s, sid, e.cuit):
+                    e.mail_padron = (mail or "").strip()[:200]
                 s.add(e)
         else:
             # Un empleador NUEVO: su CUIT nace acá. Cualquier tipo -- un
@@ -2817,9 +3104,14 @@ def admin_empleador_alta(
             existe = s.exec(select(Empleador).where(
                 Empleador.sindicato_id == sid, Empleador.cuit == cuit_norm)).first()
             if not existe:
+                # Antes de crear la fila: si la empresa ya tiene cuenta con
+                # clave, este padrón no responde por ella y su `mail_padron`
+                # queda vacío (la fila propia sí se crea).
+                responde = db.padron_responde_por_empresa(s, sid, cuit_norm)
                 s.add(Empleador(sindicato_id=sid, cuit=cuit_norm,
                                  razon_social=razon_social.strip(), domicilio=domicilio,
-                                 telefono=telefono, provincia=provincia, mail=mail))
+                                 telefono=telefono, provincia=provincia, mail=mail,
+                                 mail_padron=mail.strip()[:200] if responde else ""))
         s.commit()
     return RedirectResponse("/admin#empleadores", status_code=303)
 
@@ -2846,6 +3138,62 @@ def admin_empleador_reactivar(request: Request, id: int = Form(...)):
             e.activo = True
             s.add(e); s.commit()
     return RedirectResponse("/admin#empleadores", status_code=303)
+
+
+def _cuenta_de_empresa_del_sindicato(sid: int, cuit: str):
+    """404 si el CUIT no está dado de alta como Empleador en ESTE sindicato.
+    El empleador no tiene seccional: el alcance es el del sindicato, como
+    en el resto de las rutas de Empleadores."""
+    with db.get_session() as s:
+        e = s.exec(select(Empleador).where(
+            Empleador.sindicato_id == sid, Empleador.cuit == cuit)).first()
+        if not e:
+            raise HTTPException(404, "Ese CUIT no está cargado como empleador de este sindicato.")
+        return e
+
+
+@app.post("/admin/empleador/confirmar-identidad")
+def admin_empleador_confirmar_identidad(request: Request, cuit: str = Form(...)):
+    """Nivel 4 para la cuenta de una empresa (espejo de la del trabajador)."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    numero = _norm_cuil(cuit)
+    _cuenta_de_empresa_del_sindicato(sid, numero)
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == numero)).first()
+        if not cuenta or not cuenta.clave_hash:
+            return RedirectResponse("/admin?err=sincuenta#empleadores", status_code=303)
+        if not db.padron_responde_por_empresa(s, sid, numero):
+            return RedirectResponse("/admin?err=cuentaajena#empleadores", status_code=303)
+        db.subir_nivel(s, cuenta, "presencial")
+        s.commit()
+    log.info("panel: %s %s por usuario %s del sindicato %s",
+             "confirmar-identidad-empresa", numero, _uid_sesion(request), sid)
+    return RedirectResponse("/admin?ok=identidad#empleadores", status_code=303)
+
+
+@app.post("/admin/empleador/restablecer-clave")
+def admin_empleador_restablecer_clave(request: Request, cuit: str = Form(...)):
+    """Clave temporal para la cuenta de una empresa (espejo de la del trabajador)."""
+    sid = exigir_sindicato(request)
+    _exigir_modulo(sid, "empleadores")
+    numero = _norm_cuil(cuit)
+    e = _cuenta_de_empresa_del_sindicato(sid, numero)
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == numero)).first()
+        if not cuenta or not cuenta.clave_hash:
+            return RedirectResponse("/admin?err=sincuenta#empleadores", status_code=303)
+        if not db.padron_responde_por_empresa(s, sid, numero):
+            return RedirectResponse("/admin?err=cuentaajena#empleadores", status_code=303)
+        clave = _clave_temporal_nueva()
+        cuenta.clave_hash = auth.hashear_clave(clave)
+        cuenta.clave_temporal = True
+        s.add(cuenta)
+        s.commit()
+    log.info("panel: %s %s por usuario %s del sindicato %s",
+             "restablecer-clave-empresa", numero, _uid_sesion(request), sid)
+    return _pagina_clave_temporal(request, e.razon_social or numero, numero,
+                                  "/admin#empleadores", clave)
 
 
 @app.post("/admin/empleador/importar-cuits")
@@ -5666,6 +6014,7 @@ async def plataforma_alta_sindicato(
     portada_clara: bool = Form(False),
     admin_portada_clara: bool = Form(False),
     clausula_confidencialidad: bool = Form(False),
+    acepta_mail_declarado: bool = Form(False),
     contrato: UploadFile = File(None),
 ):
     exigir_plataforma(request)
@@ -5702,6 +6051,7 @@ async def plataforma_alta_sindicato(
             modulos_habilitados=modulos_validos,
             portada_clara=portada_clara,
             admin_portada_clara=admin_portada_clara,
+            acepta_mail_declarado=acepta_mail_declarado,
         )
         if not _aplicar_contrato_y_clausula(request, sind, contrato_leido,
                                             clausula_confidencialidad):
@@ -6260,6 +6610,7 @@ async def plataforma_editar_sindicato(
     portada_clara: bool = Form(False),
     admin_portada_clara: bool = Form(False),
     clausula_confidencialidad: bool = Form(False),
+    acepta_mail_declarado: bool = Form(False),
     contrato: UploadFile = File(None),
 ):
     exigir_plataforma(request)
@@ -6289,6 +6640,7 @@ async def plataforma_editar_sindicato(
             sind.modulos_habilitados = modulos_validos
             sind.portada_clara = portada_clara
             sind.admin_portada_clara = admin_portada_clara
+            sind.acepta_mail_declarado = acepta_mail_declarado
             if logo and logo.filename:
                 datos, mime, flag = _leer_logo(logo)
                 if datos:
@@ -6521,7 +6873,25 @@ def ingresar(request: Request):
     filtro por zona."""
     return templates.TemplateResponse("trabajador_login.html", {
         "request": request, "marca_plataforma": db.marca_plataforma(),
-        "provincias": db.PROVINCIAS_AR})
+        "provincias": db.PROVINCIAS_AR, "clave_minima": CLAVE_MINIMA})
+
+
+def _abrir_sesion_trabajador(cuil: str, cuenta_id: int):
+    """Abre la sesión del afiliado y devuelve la respuesta que lo lleva a la
+    portada, o None si su CUIL ya no está en ningún sindicato activo. Es el
+    bloque del login, sacado a una función para que el cambio de la clave
+    temporal (que abre la sesión recién DESPUÉS de cambiarla) abra exactamente
+    la misma."""
+    sinds = db.sindicatos_de_cuil(cuil)
+    if not sinds:
+        return None
+    token = auth.crear_sesion("trabajador", id_usuario=cuenta_id, sindicato_id=0, ident=cuil)
+    db.registrar_acceso("trabajador", sindicato_id=sinds[0]["id"] if len(sinds) == 1 else None)
+    # sindicato_id 0 = todavía no eligió; se define en /elegir o directo si hay uno solo
+    resp = RedirectResponse("/app/inicio", status_code=303)
+    set_cookie_segura(resp, COOKIE_TRABAJADOR, token)
+    set_cookie_segura(resp, "cuil_trab", cuil)
+    return resp
 
 
 @app.post("/trabajador/login")
@@ -6535,16 +6905,17 @@ def trabajador_login(request: Request, cuil: str = Form(...), clave: str = Form(
             _login_fallo(request)
             return RedirectResponse("/ingresar?error=login", status_code=303)
         cuenta_id = cuenta.id   # capturar el id ANTES de cerrar la sesión
+        temporal = bool(cuenta.clave_temporal)
     _login_ok(request)
-    sinds = db.sindicatos_de_cuil(cuil)
-    if not sinds:
+    if temporal:
+        # La puso el administrador del sindicato (PLAN_REGISTRO.md, D6): la
+        # clave es correcta pero NO se abre sesión hasta que la persona elija la
+        # suya. El token firmado dura 10 minutos y solo sirve para esa pantalla.
+        token = auth.firmar_paso({"cuil": cuil}, minutos=10, proposito="cambio_clave")
+        return RedirectResponse(f"/ingresar/cambiar-clave?token={token}", status_code=303)
+    resp = _abrir_sesion_trabajador(cuil, cuenta_id)
+    if resp is None:
         return RedirectResponse("/ingresar?error=sinsind", status_code=303)
-    token = auth.crear_sesion("trabajador", id_usuario=cuenta_id, sindicato_id=0, ident=cuil)
-    db.registrar_acceso("trabajador", sindicato_id=sinds[0]["id"] if len(sinds) == 1 else None)
-    # sindicato_id 0 = todavía no eligió; se define en /elegir o directo si hay uno solo
-    resp = RedirectResponse("/app/inicio", status_code=303)
-    set_cookie_segura(resp, COOKIE_TRABAJADOR, token)
-    set_cookie_segura(resp, "cuil_trab", cuil)
     return resp
 
 
@@ -6560,14 +6931,243 @@ def _domicilio_distinto(persona, domicilio: dict) -> bool:
                              "provincia", "codigo_postal"))
 
 
+# ---- Registro en tres pasos (PLAN_REGISTRO.md, §4.1 y §4.2) ----
+# Paso 1 `/iniciar` (CUIL/CUIT + captcha) -> paso 2 `/mail` (solo si hay que
+# declarar uno) -> paso 3 el POST de siempre, con `token` y `codigo`. El estado
+# entre pasos viaja en un token firmado (`auth.firmar_paso`, propósito
+# "registro"): nunca en un campo oculto sin firmar ni en la cookie plana. La
+# cuenta NO existe hasta el paso 3. Las rutas de la empresa son el espejo
+# exacto: aislamiento total entre trabajador y empleador, a costa de repetir.
+# Los helpers de abajo son lo único compartido y solo reciben el `tipo`.
+_PROPOSITO_REGISTRO = "registro"
+
+
+def _registro_error(status: int, error: str, mensaje: str) -> JSONResponse:
+    """Un fallo del registro que no tiene código E-... propio ("no habilitado",
+    "ya tiene cuenta", token vencido): `error` es la clave que el JS conoce."""
+    return JSONResponse(status_code=status, content={
+        "ok": False, "error": error, "mensaje": mensaje, "detail": mensaje})
+
+
+def _contar_pedido(request: Request) -> None:
+    """Un pedido de código que SALIÓ BIEN también suma al freno de la IP
+    (QA-REG-04). Si solo contaran los fallos, desde una IP se podría mandar un
+    mail por segundo a afiliados distintos, y averiguar quién está afiliado y
+    la pista de su mail, sin llegar nunca a E-REGISTRO-05. Una persona real
+    pide uno, dos a lo sumo, y `LOGIN_MAX_FALLOS` (10 por minuto) no la toca; el
+    éxito FINAL (cuenta creada, clave cambiada, mail confirmado) hace
+    `_login_ok` y limpia la cuenta."""
+    _login_fallo(request, _intentos_registro)
+
+
+def _registro_token_ok(token: str, tipo: str, numero: str) -> bool:
+    """¿Es `token` un token de registro de ESTE tipo y de ESTE número? Es lo que
+    permite saltear el captcha del paso 3 (un token de Turnstile sirve una sola
+    vez y ya se resolvió en el paso 1). Un token de otro número o del otro tipo
+    no vale ni para eso (QA-REG-01): si valiera, con un solo captcha resuelto se
+    tantearía el padrón entero."""
+    datos = auth.leer_paso(token, _PROPOSITO_REGISTRO) if token else None
+    return bool(datos) and datos.get("tipo") == tipo and _norm_cuil(str(datos.get("id", ""))) == numero
+
+
+def _mandar_codigo_registro(s, request: Request, tipo: str, identificador: str,
+                            destino: str, origen_destino: str) -> int:
+    """Código -> mail. Devuelve el id de la fila del código. `db.crear_codigo`
+    aplica los cupos (por persona y por mail de destino) y levanta E-REGISTRO-03;
+    acá se levanta E-REGISTRO-06 si el mail no salió (el código queda en la
+    tabla igual: es traza, y cuenta para el cupo)."""
+    fila, codigo = db.crear_codigo(s, tipo, identificador, _PROPOSITO_REGISTRO,
+                                   destino, origen_destino, _ip_de(request))
+    fila_id = fila.id
+    s.commit()
+    asunto, cuerpo = correo.texto_codigo_registro(codigo, db.CODIGO_VIGENCIA_MINUTOS)
+    if not correo.enviar(destino, asunto, cuerpo):
+        raise ErrorApp("E-REGISTRO-06")
+    return fila_id
+
+
+def _registro_iniciar_previo(request: Request, token_captcha: str) -> None:
+    """Primera mitad del paso 1: freno por IP y captcha, ANTES de mirar nada.
+    La segunda mitad (verificador, padrón, canal) vive en `_registro_iniciar`;
+    el verificador lo llama cada ruta, que es la puerta (test_cuit_puertas)."""
+    if _login_bloqueado(request, _intentos_registro):
+        raise ErrorApp("E-REGISTRO-05")
+    if not captcha.verificar(token_captcha, _ip_de(request)):
+        _login_fallo(request, _intentos_registro)
+        raise ErrorApp("E-REGISTRO-01")
+
+
+def _registro_iniciar(request: Request, tipo: str, numero: str):
+    """Segunda mitad del paso 1, con el número ya normalizado y con el
+    verificador comprobado (el tipo decide dónde se busca). Todo fallo cuenta
+    para el freno de la IP."""
+    es_trab = tipo == "trabajador"
+    sinds = db.sindicatos_de_cuil(numero) if es_trab else db.sindicatos_de_cuit_empleador(numero)
+    if not sinds:
+        _login_fallo(request, _intentos_registro)
+        return _registro_error(403, "nohabilitado", (
+            "Tu CUIL no está habilitado en ningún sindicato todavía. Pedile a tu sindicato que te agregue."
+            if es_trab else
+            "Tu CUIT no está habilitado en ningún sindicato todavía. Pedile al sindicato que te agregue como empleador."))
+    try:
+        with db.get_session() as s:
+            if es_trab:
+                cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == numero)).first()
+            else:
+                cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == numero)).first()
+            if cuenta and cuenta.clave_hash:
+                _login_fallo(request, _intentos_registro)
+                return _registro_error(409, "yaexiste", (
+                    "Ya tenés una cuenta con ese %s. Ingresá con tu clave." % ("CUIL" if es_trab else "CUIT")))
+            if not correo.habilitado():
+                # D9: el canal de mail apagado no frena el registro; la cuenta
+                # nace nivel 1, como hasta ahora.
+                _contar_pedido(request)
+                return {"ok": True, "paso": "datos", "token": auth.firmar_paso(
+                    {"id": numero, "tipo": tipo, "nivel_origen": "cuil_padron"},
+                    proposito=_PROPOSITO_REGISTRO)}
+            mail = (db.mail_padron_de(s, numero) if es_trab
+                    else db.mail_padron_de_empresa(s, numero))
+            if mail:
+                codigo_id = _mandar_codigo_registro(s, request, tipo, numero, mail, "padron")
+                _contar_pedido(request)
+                return {"ok": True, "paso": "codigo", "pista": correo.pista(mail),
+                        "token": auth.firmar_paso(
+                            {"id": numero, "tipo": tipo, "codigo_id": codigo_id,
+                             "origen": "mail_padron"},
+                            proposito=_PROPOSITO_REGISTRO)}
+            acepta = (db.acepta_mail_declarado(s, numero) if es_trab
+                      else db.acepta_mail_declarado_empresa(s, numero))
+            if not acepta:
+                raise ErrorApp("E-REGISTRO-04")
+            _contar_pedido(request)
+            return {"ok": True, "paso": "mail", "token": auth.firmar_paso(
+                {"id": numero, "tipo": tipo}, proposito=_PROPOSITO_REGISTRO)}
+    except ErrorApp:
+        _login_fallo(request, _intentos_registro)
+        raise
+
+
+def _registro_mail(request: Request, tipo: str, token: str, mail: str):
+    """Paso 2: la persona declara un mail y se le manda el código. Solo vale
+    un token de `/iniciar` que dijo `paso: mail` (trae el número y el TIPO, y
+    nada más): sin el tipo, el `{id}` de un afiliado sin mail en el padrón
+    serviría en el registro de la empresa con el mismo número (QA-REG-02)."""
+    if _login_bloqueado(request, _intentos_registro):
+        raise ErrorApp("E-REGISTRO-05")
+    datos = auth.leer_paso(token, _PROPOSITO_REGISTRO)
+    if not datos or set(datos) != {"id", "tipo"} or datos["tipo"] != tipo:
+        _login_fallo(request, _intentos_registro)
+        return _registro_error(400, "paso", "La verificación venció. Empezá de nuevo.")
+    numero = str(datos["id"])
+    mail_ok = (mail or "").strip()
+    if not correo.destino_valido(mail_ok):          # la única puerta de una dirección (QA-REG-06)
+        _login_fallo(request, _intentos_registro)
+        return _registro_error(422, "mail", "Escribí un mail válido.")
+    try:
+        with db.get_session() as s:
+            acepta = (db.acepta_mail_declarado(s, numero) if tipo == "trabajador"
+                      else db.acepta_mail_declarado_empresa(s, numero))
+            if not acepta:
+                raise ErrorApp("E-REGISTRO-04")
+            codigo_id = _mandar_codigo_registro(s, request, tipo, numero, mail_ok, "declarado")
+    except ErrorApp:
+        _login_fallo(request, _intentos_registro)
+        raise
+    return {"ok": True, "paso": "codigo", "pista": correo.pista(mail_ok),
+            "token": auth.firmar_paso(
+                {"id": numero, "tipo": tipo, "codigo_id": codigo_id,
+                 "origen": "mail_declarado", "mail": mail_ok},
+                proposito=_PROPOSITO_REGISTRO)}
+
+
+def _registro_confirmar(s, tipo: str, numero: str, token: str, codigo: str):
+    """Paso 3, la parte del código. Devuelve (origen, mail_declarado, error):
+    `error` es la clave del `?error=` a la que hay que redirigir, o "" si todo
+    cerró; `origen` es el de `db.ORIGENES_NIVEL` que justifica el nivel.
+    Con el canal de mail prendido exige un token con código; apagado, el token
+    de `/iniciar` sin código (o ningún token) deja nacer la cuenta en nivel 1.
+    El origen y el mail salen de la FILA del código, no del token, y la fila
+    tiene que ser de este número y de este tipo. Se hace commit siempre,
+    TAMBIÉN con "incorrecto", o el contador de intentos no avanza."""
+    datos = auth.leer_paso(token, _PROPOSITO_REGISTRO) if token else None
+    if datos is not None and (datos.get("tipo") != tipo
+                              or _norm_cuil(str(datos.get("id", ""))) != numero):
+        return "", "", "paso"
+    con_codigo = datos is not None and "codigo_id" in datos
+    if correo.habilitado() and not con_codigo:
+        return "", "", "paso"
+    if not con_codigo:
+        return "cuil_padron", "", ""
+    fila = s.get(db.CodigoVerificacion, datos["codigo_id"])
+    if (not fila or fila.tipo != tipo or fila.identificador != numero
+            or fila.proposito != _PROPOSITO_REGISTRO):
+        return "", "", "codigo"
+    resultado = db.verificar_codigo(s, fila.id, codigo)
+    s.commit()
+    if resultado != "ok":
+        return "", "", "codigo"
+    if fila.origen_destino == "padron":
+        return "mail_padron", "", ""
+    return "mail_declarado", fila.destino, ""
+
+
+def _registro_nivel(s, cuenta, origen: str) -> None:
+    """Deja a la cuenta recién creada en el nivel que acredita `origen`.
+    `db.subir_nivel` solo SUBE, así que para el nivel 1 (`cuil_padron`, el del
+    canal de mail apagado) no escribe nada: acá se deja asentado el origen, que
+    es lo que el panel muestra como "CUIL en el padrón"."""
+    if not db.subir_nivel(s, cuenta, origen) and not cuenta.nivel_origen:
+        cuenta.nivel_origen = origen
+        cuenta.nivel_actualizado = fechas.ahora_texto()
+        s.add(cuenta)
+
+
+@app.post("/trabajador/registro/iniciar")
+def trabajador_registro_iniciar(request: Request, cuil: str = Form(""),
+                                token_captcha: str = Form("", alias="cf-turnstile-response")):
+    """Paso 1 del registro del afiliado. Contrato JSON:
+    200 `{ok, paso: "datos"|"codigo"|"mail", token, pista?}`; 403 `nohabilitado`;
+    409 `yaexiste`; errores con código (E-REGISTRO-01/03/04/05/06, E-IDENT-01)
+    como `{detail, codigo}`. Todo fallo cuenta para el freno de la IP."""
+    _registro_iniciar_previo(request, token_captcha)
+    cuil = _norm_cuil(cuil)
+    if _cuil_mal(cuil):
+        _login_fallo(request, _intentos_registro)
+        raise ErrorApp("E-IDENT-01")
+    return _registro_iniciar(request, "trabajador", cuil)
+
+
+@app.post("/trabajador/registro/mail")
+def trabajador_registro_mail(request: Request, token: str = Form(""), mail: str = Form("")):
+    """Paso 2 (solo si el padrón no tiene mail y el sindicato acepta uno
+    declarado): manda el código al mail que la persona declara. Contrato JSON:
+    200 `{ok, paso: "codigo", pista, token}`; 400 `paso` (token vencido);
+    422 `mail`; E-REGISTRO-03/04/05/06 como `{detail, codigo}`."""
+    return _registro_mail(request, "trabajador", token, mail)
+
+
 @app.post("/trabajador/registro")
 def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Form(...),
                          nombre: str = Form(""),
                          provincia: str = Form(""), localidad: str = Form(""),
                          calle: str = Form(""), numero: str = Form(""),
                          piso_depto: str = Form(""), codigo_postal: str = Form(""),
-                         telefono: str = Form(""), mail: str = Form("")):
-    """Crea la cuenta del afiliado y, con ella, sus datos personales.
+                         telefono: str = Form(""), mail: str = Form(""),
+                         token: str = Form(""), codigo: str = Form(""),
+                         token_captcha: str = Form("", alias="cf-turnstile-response")):
+    """Crea la cuenta del afiliado y, con ella, sus datos personales. Es el
+    PASO 3 del registro (PLAN_REGISTRO.md §4.1): llega con el `token` firmado
+    de `/trabajador/registro/iniciar` (o `/mail`) y el `codigo` que la persona
+    recibió por mail. La cuenta nace con el nivel que acredita ese camino
+    (`mail_padron` o `mail_declarado` = 2); con el canal de mail apagado, o sin
+    token (cliente viejo), sigue como siempre y nace nivel 1 `cuil_padron`.
+
+    **El campo `mail` ya NO se escribe desde el registro**: la pantalla dejó de
+    pedirlo (el mail se confirma en el paso 2, no se tipea dos veces) y el del
+    padrón es del sindicato. Si la persona declaró uno, va a
+    `mail_declarado` (confirmado), nunca a `mail`. El parámetro se queda en la
+    firma para que sea idéntica a la del perfil (`test_datos_personales.py`).
 
     **Pide exactamente los mismos campos que el perfil** (nombre, domicilio,
     teléfono y mail), y con la misma marca de obligatorio y opcional. Antes
@@ -6611,19 +7211,51 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
     cargada, que es exactamente lo que "Georreferenciar pendientes" procesa
     después.
     """
+    # Freno y captcha ANTES de mirar el padrón (PLAN_REGISTRO.md, etapa 1): las
+    # respuestas de este registro revelan si un CUIL está afiliado, y sin esto
+    # son una enumeración gratis. Cada registro que no crea la cuenta cuenta
+    # como fallo de la IP; el que la crea limpia la tabla.
+    if _login_bloqueado(request, _intentos_registro):
+        return RedirectResponse("/ingresar?error=espera_registro", status_code=303)
     cuil = _norm_cuil(cuil)
+    # Con un token válido del paso 1 PARA ESTE CUIL el captcha ya se resolvió
+    # ahí (un token de Turnstile sirve una sola vez); sin él, esta es la única
+    # puerta y se exige. El número del token se compara ANTES de mirar nada
+    # (QA-REG-01): un token de otro CUIL es "sin token".
+    if not _registro_token_ok(token, "trabajador", cuil):
+        if not captcha.verificar(token_captcha, _ip_de(request)):
+            _login_fallo(request, _intentos_registro)
+            return RedirectResponse("/ingresar?error=captcha", status_code=303)
+        if correo.habilitado():
+            # Con el canal prendido no hay cuenta sin código, así que lo que
+            # falta (el token) corta ANTES de consultar el padrón: si no, el
+            # redirect distinguiría afiliados de ajenos (`paso` / `nohabilitado`).
+            _login_fallo(request, _intentos_registro)
+            return RedirectResponse("/ingresar?error=paso", status_code=303)
     # Primero que el número exista de verdad (verificador de AFIP) y recién
     # después se lo busca en el padrón: un número que no pasa el módulo 11 no
     # es de nadie, y decirle "no estás habilitado" a quien tipeó mal un dígito
     # lo manda a reclamarle al sindicato por algo que es un error de tipeo.
     if _cuil_mal(cuil):
+        _login_fallo(request, _intentos_registro)
         return RedirectResponse("/ingresar?error=cuil", status_code=303)
+    # El domicilio se valida ANTES de mirar el padrón y cuenta como fallo: si
+    # el redirect `domicilio` saliera solo para quien está afiliado, mandar
+    # CUILes sin provincia enumeraría el padrón sin frenarse nunca (QA, etapa 1).
+    if geo.faltan_campos({"provincia": provincia, "localidad": localidad}):
+        _login_fallo(request, _intentos_registro)
+        return RedirectResponse("/ingresar?error=domicilio", status_code=303)
+    # La clave mínima, ANTES de consumir el código (QA-REG-07): el mismo piso que
+    # la recuperación y el cambio de clave temporal. La pantalla ya lo pide con
+    # `minlength`; esto es para quien arma el POST a mano.
+    if len(clave) < CLAVE_MINIMA:
+        _login_fallo(request, _intentos_registro)
+        return RedirectResponse("/ingresar?error=clave", status_code=303)
     # Validar que el CUIL esté empadronado en al menos un sindicato
     sinds = db.sindicatos_de_cuil(cuil)
     if not sinds:
+        _login_fallo(request, _intentos_registro)
         return RedirectResponse("/ingresar?error=nohabilitado", status_code=303)
-    if geo.faltan_campos({"provincia": provincia, "localidad": localidad}):
-        return RedirectResponse("/ingresar?error=domicilio", status_code=303)
     domicilio = geo.campos_para_guardar(
         {"calle": calle, "numero": numero, "piso_depto": piso_depto,
          "localidad": localidad, "provincia": provincia, "codigo_postal": codigo_postal},
@@ -6635,7 +7267,12 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
         # tiene, esto es un alta duplicada.
         persona = db.asegurar_cuenta(s, cuil)
         if persona.clave_hash:
+            _login_fallo(request, _intentos_registro)
             return RedirectResponse("/ingresar?error=yaexiste", status_code=303)
+        origen, mail_declarado, error = _registro_confirmar(s, "trabajador", cuil, token, codigo)
+        if error:
+            _login_fallo(request, _intentos_registro)
+            return RedirectResponse(f"/ingresar?error={error}", status_code=303)
         persona.clave_hash = auth.hashear_clave(clave)
         # Cada `None` es "no lo toques": el domicilio idéntico no se reescribe
         # (ver `_domicilio_distinto`), y el teléfono o el mail en blanco
@@ -6643,13 +7280,18 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
         db.guardar_datos_personales(
             s, cuil, nombre=nombre,
             domicilio=domicilio if _domicilio_distinto(persona, domicilio) else None,
-            telefono=telefono if telefono.strip() else None,
-            mail=mail if mail.strip() else None)
+            telefono=telefono if telefono.strip() else None)
+        if mail_declarado:
+            persona.mail_declarado = mail_declarado
+            persona.mail_declarado_confirmado = fechas.ahora_texto()
+        _registro_nivel(s, persona, origen)
+        s.add(persona)
         # marcar los empadronamientos como registrados
         for t in s.exec(select(Trabajador).where(Trabajador.cuil == cuil)).all():
             t.registrado = True
             s.add(t)
         s.commit()
+    _login_ok(request, _intentos_registro)
     token = auth.crear_sesion("trabajador", sindicato_id=0, ident=cuil)
     resp = RedirectResponse("/app/inicio", status_code=303)
     set_cookie_segura(resp, COOKIE_TRABAJADOR, token)
@@ -6765,12 +7407,150 @@ def app_portada(request: Request):
             "encuestas_pendientes": db.contar_encuestas_pendientes(cuil, sid_activo)
                                     if "encuestas" in _modulos_de(sid_activo) else 0,
             "modulos": _modulos_de(sid_activo),
+            # Tarjeta no bloqueante "Confirmá tu mail" para las cuentas de nivel 1.
+            "aviso_mail": _aviso_mail_de(cuil),
             "version": VERSION_TRABAJADOR, "fecha_version": FECHA_VERSION,
         })
     # Varios y no eligió → selector (mismo criterio que /app)
     return templates.TemplateResponse("elegir_sindicato.html", {
         "request": request, "sindicatos": sinds, "marca_plataforma": db.marca_plataforma(),
     })
+
+
+# ---------- Confirmar el mail de una cuenta ya registrada (PLAN_REGISTRO.md, D10 y §4.6) ----------
+# Las cuentas creadas antes del registro por mail quedaron en nivel 1. La portada
+# les muestra una tarjeta NO bloqueante que lleva acá; con el código la cuenta
+# pasa a nivel 2. Exige la sesión de trabajador y toma el CUIL de ella, nunca de
+# un campo del formulario.
+
+
+def _aviso_mail_de(cuil: str) -> bool:
+    """¿Va la tarjeta de confirmar el mail en la portada? Solo para el nivel 1 y
+    solo si el canal de mail está prendido: sin canal no habría cómo confirmar."""
+    if not correo.habilitado():
+        return False
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        return bool(cuenta) and (cuenta.nivel_fiabilidad or 1) == 1
+
+
+def _texto_codigo_confirmacion(codigo: str, minutos: int) -> tuple[str, str]:
+    """(asunto, cuerpo) del mail que confirma el mail de una cuenta existente.
+    Mismo criterio que correo.py: sin nombre de la persona y sin enlaces."""
+    asunto = f"Tu código para confirmar tu mail en Colm3na: {codigo}"
+    cuerpo = (
+        f"Tu código para confirmar tu mail en Colm3na es:\n\n"
+        f"    {codigo}\n\n"
+        f"Ingresalo en la pantalla donde lo pediste. Vence en {minutos} minutos.\n\n"
+        f"Si no lo pediste vos, ignorá este mensaje: tu cuenta no cambia.\n\n"
+        f"Colm3na"
+    )
+    return asunto, cuerpo
+
+
+@app.get("/app/confirmar-mail", response_class=HTMLResponse)
+def confirmar_mail_pagina(request: Request):
+    """Pantalla de dos pasos (mail -> código) para subir la cuenta a nivel 2."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = _cuil_seguro(request)
+    if not ses or not cuil:
+        return RedirectResponse("/ingresar", status_code=303)
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        return RedirectResponse("/app/inicio", status_code=303)
+    marca = db.marca_sindicato(sid)
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        nivel = (cuenta.nivel_fiabilidad or 1) if cuenta else 1
+        pista = correo.pista(db.mail_padron_de(s, cuil))
+        acepta_declarado = db.acepta_mail_declarado(s, cuil)
+    return templates.TemplateResponse("confirmar_mail.html", {
+        "request": request, "sindicato": marca["nombre"], "marca": marca,
+        "marca_plataforma": db.marca_plataforma(),
+        "canal": correo.habilitado(), "ya_confirmado": nivel >= 2,
+        "pista": pista, "acepta_declarado": acepta_declarado})
+
+
+@app.post("/app/confirmar-mail/iniciar")
+def confirmar_mail_iniciar(request: Request, mail: str = Form("")):
+    """Manda el código: al mail del padrón si el sindicato cargó uno; si no, y el
+    sindicato acepta el declarado, al que escribió la persona. Si no hay a dónde
+    mandarlo, lo dice: el camino es pedirle al sindicato que cargue el mail."""
+    cuil = _cuil_seguro(request)
+    if not sesion_actual(request, "trabajador") or not cuil:
+        raise HTTPException(403, "No autorizado")
+    if _login_bloqueado(request, _intentos_registro):
+        raise ErrorApp("E-REGISTRO-05")
+    if not correo.habilitado():
+        raise ErrorApp("E-REGISTRO-06")
+    mail = (mail or "").strip()
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if not cuenta:
+            raise HTTPException(403, "No autorizado")
+        if (cuenta.nivel_fiabilidad or 1) >= 2:
+            return JSONResponse({"paso": "listo", "mensaje": "Tu cuenta ya tiene el mail confirmado."})
+        destino = db.mail_padron_de(s, cuil)
+        origen = "padron"
+        if not destino:
+            if not (db.acepta_mail_declarado(s, cuil) and mail):
+                return JSONResponse({"paso": "sindicato", "mensaje":
+                    "Tu sindicato todavía no tiene un mail tuyo cargado. Pedile que lo cargue "
+                    "y volvé a intentar."})
+            if not correo.destino_valido(mail):         # la única puerta (QR-6)
+                raise HTTPException(400, "Escribí un mail válido.")
+            destino, origen = mail, "declarado"
+        fila, codigo = db.crear_codigo(s, "trabajador", cuil, "confirmacion", destino, origen,
+                                       _ip_de(request))
+        s.commit()          # el pedido cuenta para el cupo aunque el mail no salga
+        codigo_id = fila.id
+    asunto, cuerpo = _texto_codigo_confirmacion(codigo, db.CODIGO_VIGENCIA_MINUTOS)
+    if not correo.enviar(destino, asunto, cuerpo):
+        raise ErrorApp("E-REGISTRO-06")
+    _contar_pedido(request)
+    return JSONResponse({
+        "paso": "codigo", "pista": correo.pista(destino),
+        "token": auth.firmar_paso({"cuil": cuil, "codigo_id": codigo_id},
+                                  proposito="confirmar_mail")})
+
+
+@app.post("/app/confirmar-mail")
+def confirmar_mail(request: Request, token: str = Form(""), codigo: str = Form("")):
+    """Verifica el código y sube la cuenta a nivel 2 (`mail_padron` o
+    `mail_declarado`). El mail declarado va a `mail_declarado`; `mail` es del
+    sindicato y esta ruta NUNCA lo escribe."""
+    cuil = _cuil_seguro(request)
+    if not sesion_actual(request, "trabajador") or not cuil:
+        raise HTTPException(403, "No autorizado")
+    if _login_bloqueado(request, _intentos_registro):
+        raise ErrorApp("E-REGISTRO-05")
+    d = auth.leer_paso(token, "confirmar_mail")
+    if not d or d.get("cuil") != cuil:          # un token de otra persona no sirve
+        raise ErrorApp("E-REGISTRO-02")
+    with db.get_session() as s:
+        fila = s.get(db.CodigoVerificacion, d.get("codigo_id") or 0)
+        if (not fila or fila.tipo != "trabajador" or fila.proposito != "confirmacion"
+                or fila.identificador != cuil):
+            raise ErrorApp("E-REGISTRO-02")
+        resultado = db.verificar_codigo(s, fila.id, codigo)
+        s.commit()          # también tras "incorrecto": el intento tiene que contar
+        if resultado != "ok":
+            _login_fallo(request, _intentos_registro)
+            raise ErrorApp("E-REGISTRO-02")
+        cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        if not cuenta:
+            raise ErrorApp("E-REGISTRO-02")
+        if fila.origen_destino == "declarado":
+            db.subir_nivel(s, cuenta, "mail_declarado")
+            cuenta.mail_declarado = fila.destino
+            cuenta.mail_declarado_confirmado = fechas.ahora_texto()
+        else:
+            db.subir_nivel(s, cuenta, "mail_padron")
+        s.add(cuenta)
+        s.commit()
+        nivel = cuenta.nivel_fiabilidad
+    _login_ok(request, _intentos_registro)
+    return {"ok": True, "nivel": nivel}
 
 
 @app.post("/api/perfil")
@@ -6997,6 +7777,206 @@ def verificar_credencial(token: str, request: Request, k: str = ""):
     })
 
 
+# ---------- Recuperación de clave y cambio de la clave temporal (PLAN_REGISTRO.md, D6) ----------
+# El afiliado y la empresa comparten la mecánica y no las tablas: cada rol tiene
+# sus rutas, su cuenta y su tipo de código (aislamiento total trabajador/
+# empleador), y lo común vive en estas funciones que reciben el rol.
+CLAVE_MINIMA = 6
+MENSAJE_RECUPERACION_SINDICATO = (
+    "Si tu cuenta tiene un mail cargado por el sindicato, te mandamos un código. "
+    "Si no te llega, pedile al sindicato que te restablezca la clave.")
+
+# rol -> cómo se llama su cuenta, su identificador y cómo se ve su mail del padrón.
+_ROLES_CLAVE = {
+    "trabajador": {"tipo": "trabajador", "cuenta": CuentaTrabajador, "campo": "cuil",
+                   "mail_padron": db.mail_padron_de, "login": "/ingresar",
+                   "base": "/ingresar", "etiqueta": "CUIL", "abrir": lambda ident, cid: _abrir_sesion_trabajador(ident, cid)},
+    "empleador": {"tipo": "empleador", "cuenta": CuentaEmpleador, "campo": "cuit",
+                  "mail_padron": db.mail_padron_de_empresa, "login": "/ingresar-empresa",
+                  "base": "/ingresar-empresa", "etiqueta": "CUIT", "abrir": lambda ident, cid: _abrir_sesion_empleador(ident, cid)},
+}
+
+
+def _fila_de_codigo_valida(s, d: dict, rol: str, proposito: str):
+    """La fila del código que nombra un token firmado, SI es de esta persona,
+    de este rol y de este propósito. El token ya viene firmado, pero un código
+    de otro CUIL o de otro trámite no tiene que servir ni por error."""
+    cfg = _ROLES_CLAVE[rol]
+    fila = s.get(db.CodigoVerificacion, d.get("codigo_id") or 0)
+    if (not fila or fila.tipo != cfg["tipo"] or fila.proposito != proposito
+            or fila.identificador != d.get(cfg["campo"])):
+        return None
+    return fila
+
+
+def _validar_claves_nuevas(clave: str, clave2: str):
+    if clave != clave2:
+        raise HTTPException(400, "Las dos claves no coinciden.")
+    if len(clave) < CLAVE_MINIMA:
+        raise HTTPException(400, f"La clave tiene que tener al menos {CLAVE_MINIMA} caracteres.")
+
+
+def _pagina_recuperar(request: Request, rol: str):
+    cfg = _ROLES_CLAVE[rol]
+    return templates.TemplateResponse("recuperar_clave.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "rol": rol, "etiqueta": cfg["etiqueta"], "base": cfg["base"], "login": cfg["login"],
+        "campo": cfg["campo"], "clave_minima": CLAVE_MINIMA})
+
+
+def _recuperar_iniciar(request: Request, rol: str, identificador: str, token_captcha: str):
+    """Paso 1: freno -> captcha -> busca la cuenta TAL CUAL (es una referencia,
+    no un alta: sin verificador). Solo si hay cuenta con clave, mail del PADRÓN
+    y canal de mail prendido se manda el código; en cualquier otro caso la
+    respuesta es la misma, palabra por palabra, para no revelar si el número
+    tiene cuenta. Un mail solo declarado no alcanza: la recuperación sin el
+    mail del sindicato la hace el administrador."""
+    cfg = _ROLES_CLAVE[rol]
+    if _login_bloqueado(request, _intentos_registro):
+        raise ErrorApp("E-REGISTRO-05")
+    if not captcha.verificar(token_captcha, _ip_de(request)):
+        _login_fallo(request, _intentos_registro)
+        raise ErrorApp("E-REGISTRO-01")
+    ident = _norm_cuil(identificador)
+    with db.get_session() as s:
+        modelo = cfg["cuenta"]
+        cuenta = s.exec(select(modelo).where(getattr(modelo, cfg["campo"]) == ident)).first()
+        mail = ""
+        if cuenta and cuenta.clave_hash and correo.habilitado():
+            mail = cfg["mail_padron"](s, ident)
+        if not mail:
+            _login_fallo(request, _intentos_registro)
+            return JSONResponse({"paso": "sindicato", "mensaje": MENSAJE_RECUPERACION_SINDICATO})
+        fila, codigo = db.crear_codigo(s, cfg["tipo"], ident, "recuperacion", mail, "padron",
+                                       _ip_de(request))
+        s.commit()          # el pedido cuenta para el cupo aunque el mail no salga
+        codigo_id = fila.id
+    asunto, cuerpo = correo.texto_codigo_recuperacion(codigo, db.CODIGO_VIGENCIA_MINUTOS)
+    if not correo.enviar(mail, asunto, cuerpo):
+        raise ErrorApp("E-REGISTRO-06")
+    _contar_pedido(request)            # también el que sale bien (QR-5)
+    return JSONResponse({
+        "paso": "codigo", "pista": correo.pista(mail),
+        "token": auth.firmar_paso({cfg["campo"]: ident, "codigo_id": codigo_id},
+                                  proposito="recuperacion")})
+
+
+def _recuperar_confirmar(request: Request, rol: str, token: str, codigo: str,
+                         clave: str, clave2: str):
+    """Paso 3: el token del paso 1 + el código + la clave nueva dos veces. Las
+    claves se validan ANTES de gastar el código, así un error de tipeo no
+    obliga a pedir otro."""
+    cfg = _ROLES_CLAVE[rol]
+    if _login_bloqueado(request, _intentos_registro):
+        raise ErrorApp("E-REGISTRO-05")
+    d = auth.leer_paso(token, "recuperacion")
+    if not d or not d.get(cfg["campo"]):
+        raise ErrorApp("E-REGISTRO-02")
+    _validar_claves_nuevas(clave, clave2)
+    with db.get_session() as s:
+        fila = _fila_de_codigo_valida(s, d, rol, "recuperacion")
+        if not fila:
+            raise ErrorApp("E-REGISTRO-02")
+        resultado = db.verificar_codigo(s, fila.id, codigo)
+        s.commit()          # también tras "incorrecto": el intento tiene que contar
+        if resultado != "ok":
+            _login_fallo(request, _intentos_registro)
+            raise ErrorApp("E-REGISTRO-02")
+        modelo = cfg["cuenta"]
+        cuenta = s.exec(select(modelo).where(getattr(modelo, cfg["campo"]) == d[cfg["campo"]])).first()
+        if not cuenta:
+            raise ErrorApp("E-REGISTRO-02")
+        cuenta.clave_hash = auth.hashear_clave(clave)
+        cuenta.clave_temporal = False
+        s.add(cuenta)
+        s.commit()
+    _login_ok(request, _intentos_registro)
+    return RedirectResponse(f"{cfg['login']}?ok=clave", status_code=303)
+
+
+def _pagina_cambiar_clave(request: Request, rol: str, token: str, error: str = "", status: int = 200):
+    cfg = _ROLES_CLAVE[rol]
+    d = auth.leer_paso(token, "cambio_clave")
+    vigente = bool(d and d.get(cfg["campo"]))
+    return templates.TemplateResponse("cambiar_clave.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "rol": rol, "etiqueta": cfg["etiqueta"], "base": cfg["base"], "login": cfg["login"],
+        "token": token if vigente else "", "vencido": not vigente, "error": error,
+        "clave_minima": CLAVE_MINIMA}, status_code=status)
+
+
+def _cambiar_clave_temporal(request: Request, rol: str, token: str, clave_actual: str,
+                            clave: str, clave2: str):
+    """Reemplaza la clave temporal por la que elige la persona y RECIÉN ahí abre
+    la sesión. Verificar la temporal acá (y no solo en el login) es lo que impide
+    que el token firmado, por sí solo, alcance para elegir una clave. Los
+    intentos con una temporal equivocada cuentan para el freno de los logins."""
+    cfg = _ROLES_CLAVE[rol]
+    if _login_bloqueado(request):
+        return _pagina_cambiar_clave(request, rol, token,
+                                     "Demasiados intentos seguidos. Esperá un minuto y volvé a intentar.", 429)
+    d = auth.leer_paso(token, "cambio_clave")
+    if not d or not d.get(cfg["campo"]):
+        return _pagina_cambiar_clave(request, rol, "")
+    if clave != clave2:
+        return _pagina_cambiar_clave(request, rol, token, "Las dos claves no coinciden.", 400)
+    if len(clave) < CLAVE_MINIMA:
+        return _pagina_cambiar_clave(request, rol, token,
+                                     f"La clave tiene que tener al menos {CLAVE_MINIMA} caracteres.", 400)
+    if clave == clave_actual:
+        return _pagina_cambiar_clave(request, rol, token,
+                                     "Elegí una clave distinta de la temporal.", 400)
+    with db.get_session() as s:
+        modelo = cfg["cuenta"]
+        cuenta = s.exec(select(modelo).where(getattr(modelo, cfg["campo"]) == d[cfg["campo"]])).first()
+        if not cuenta or not cuenta.clave_temporal:
+            return _pagina_cambiar_clave(request, rol, "")
+        if not auth.verificar_clave(clave_actual, cuenta.clave_hash):
+            _login_fallo(request)
+            return _pagina_cambiar_clave(request, rol, token, "La clave temporal no es correcta.", 400)
+        cuenta.clave_hash = auth.hashear_clave(clave)
+        cuenta.clave_temporal = False
+        s.add(cuenta)
+        s.commit()
+        cuenta_id = cuenta.id
+    _login_ok(request)
+    resp = cfg["abrir"](d[cfg["campo"]], cuenta_id)
+    if resp is None:
+        return RedirectResponse(f"{cfg['login']}?error=sinsind", status_code=303)
+    return resp
+
+
+@app.get("/ingresar/recuperar", response_class=HTMLResponse)
+def recuperar_clave_pagina(request: Request):
+    """Recuperar la clave del afiliado: CUIL + captcha, código al mail del
+    padrón y clave nueva, los tres pasos en una página."""
+    return _pagina_recuperar(request, "trabajador")
+
+
+@app.post("/ingresar/recuperar/iniciar")
+def recuperar_iniciar(request: Request, cuil: str = Form(""),
+                      token_captcha: str = Form("", alias="cf-turnstile-response")):
+    return _recuperar_iniciar(request, "trabajador", cuil, token_captcha)
+
+
+@app.post("/ingresar/recuperar")
+def recuperar_confirmar(request: Request, token: str = Form(""), codigo: str = Form(""),
+                        clave: str = Form(""), clave2: str = Form("")):
+    return _recuperar_confirmar(request, "trabajador", token, codigo, clave, clave2)
+
+
+@app.get("/ingresar/cambiar-clave", response_class=HTMLResponse)
+def cambiar_clave_pagina(request: Request, token: str = ""):
+    """Cambio obligatorio de la clave temporal que puso el sindicato."""
+    return _pagina_cambiar_clave(request, "trabajador", token)
+
+
+@app.post("/ingresar/cambiar-clave")
+def cambiar_clave_temporal(request: Request, token: str = Form(""), clave_actual: str = Form(""),
+                           clave: str = Form(""), clave2: str = Form("")):
+    return _cambiar_clave_temporal(request, "trabajador", token, clave_actual, clave, clave2)
+
+
 @app.get("/trabajador/salir")
 def trabajador_salir():
     resp = RedirectResponse("/ingresar", status_code=303)
@@ -7015,7 +7995,21 @@ def trabajador_salir():
 def ingresar_empresa(request: Request):
     """Pantalla de login/registro del empleador."""
     return templates.TemplateResponse("empresa_login.html", {
-        "request": request, "marca_plataforma": db.marca_plataforma()})
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "clave_minima": CLAVE_MINIMA})
+
+
+def _abrir_sesion_empleador(cuit: str, cuenta_id: int):
+    """Lo mismo que `_abrir_sesion_trabajador`, para la empresa."""
+    sinds = db.sindicatos_de_cuit_empleador(cuit)
+    if not sinds:
+        return None
+    token = auth.crear_sesion("empleador", id_usuario=cuenta_id, sindicato_id=0, ident=cuit)
+    db.registrar_acceso("empresa", sindicato_id=sinds[0]["id"] if len(sinds) == 1 else None)
+    resp = RedirectResponse("/empresa/inicio", status_code=303)
+    set_cookie_segura(resp, COOKIE_EMPLEADOR, token)
+    set_cookie_segura(resp, "cuit_emp", cuit)
+    return resp
 
 
 @app.post("/empresa/login")
@@ -7029,42 +8023,98 @@ def empresa_login(request: Request, cuit: str = Form(...), clave: str = Form(...
             _login_fallo(request)
             return RedirectResponse("/ingresar-empresa?error=login", status_code=303)
         cuenta_id = cuenta.id   # capturar el id ANTES de cerrar la sesión
+        temporal = bool(cuenta.clave_temporal)
     _login_ok(request)
-    sinds = db.sindicatos_de_cuit_empleador(cuit)
-    if not sinds:
+    if temporal:
+        token = auth.firmar_paso({"cuit": cuit}, minutos=10, proposito="cambio_clave")
+        return RedirectResponse(f"/ingresar-empresa/cambiar-clave?token={token}", status_code=303)
+    resp = _abrir_sesion_empleador(cuit, cuenta_id)
+    if resp is None:
         return RedirectResponse("/ingresar-empresa?error=sinsind", status_code=303)
-    token = auth.crear_sesion("empleador", id_usuario=cuenta_id, sindicato_id=0, ident=cuit)
-    db.registrar_acceso("empresa", sindicato_id=sinds[0]["id"] if len(sinds) == 1 else None)
-    resp = RedirectResponse("/empresa/inicio", status_code=303)
-    set_cookie_segura(resp, COOKIE_EMPLEADOR, token)
-    set_cookie_segura(resp, "cuit_emp", cuit)
     return resp
 
 
-@app.post("/empresa/registro")
-def empresa_registro(request: Request, cuit: str = Form(...), clave: str = Form(...)):
+@app.post("/empresa/registro/iniciar")
+def empresa_registro_iniciar(request: Request, cuit: str = Form(""),
+                             token_captcha: str = Form("", alias="cf-turnstile-response")):
+    """Paso 1 del registro de la empresa: espejo de `/trabajador/registro/iniciar`
+    con el CUIT, `CuentaEmpleador` y el mail de `Empleador`."""
+    _registro_iniciar_previo(request, token_captcha)
     cuit = _norm_cuil(cuit)
+    if _cuit_mal(cuit):
+        _login_fallo(request, _intentos_registro)
+        raise ErrorApp("E-IDENT-02")
+    return _registro_iniciar(request, "empleador", cuit)
+
+
+@app.post("/empresa/registro/mail")
+def empresa_registro_mail(request: Request, token: str = Form(""), mail: str = Form("")):
+    """Paso 2 del registro de la empresa: espejo de `/trabajador/registro/mail`."""
+    return _registro_mail(request, "empleador", token, mail)
+
+
+@app.post("/empresa/registro")
+def empresa_registro(request: Request, cuit: str = Form(...), clave: str = Form(...),
+                     token: str = Form(""), codigo: str = Form(""),
+                     token_captcha: str = Form("", alias="cf-turnstile-response")):
+    """Paso 3 del registro de la empresa (form clásico con redirect). Espejo
+    de `trabajador_registro`: con el canal de mail prendido exige el token del
+    paso 1 y el código; la cuenta nace con el nivel que acredita el origen y,
+    si el mail fue declarado, queda en `mail_declarado` (el del padrón es del
+    sindicato). Apagado y sin token, sigue como siempre y nace nivel 1."""
+    # Freno y captcha antes de mirar el padrón: mismo criterio que el registro
+    # del afiliado (PLAN_REGISTRO.md, etapa 1), con la misma tabla de IPs.
+    if _login_bloqueado(request, _intentos_registro):
+        return RedirectResponse("/ingresar-empresa?error=espera_registro", status_code=303)
+    cuit = _norm_cuil(cuit)
+    # Con un token válido del paso 1 PARA ESTE CUIT el captcha ya se resolvió
+    # ahí (un token de Turnstile sirve una sola vez); sin él, es la única
+    # puerta y se exige. Mismo criterio que el afiliado (QA-REG-01).
+    if not _registro_token_ok(token, "empleador", cuit):
+        if not captcha.verificar(token_captcha, _ip_de(request)):
+            _login_fallo(request, _intentos_registro)
+            return RedirectResponse("/ingresar-empresa?error=captcha", status_code=303)
+        if correo.habilitado():
+            _login_fallo(request, _intentos_registro)
+            return RedirectResponse("/ingresar-empresa?error=paso", status_code=303)
     # Antes de buscarlo: un CUIT sin verificador válido no es de nadie. Vale
     # cualquier tipo (una empresa unipersonal tiene CUIT de persona).
     if _cuit_mal(cuit):
+        _login_fallo(request, _intentos_registro)
         return RedirectResponse("/ingresar-empresa?error=cuit", status_code=303)
+    if len(clave) < CLAVE_MINIMA:                       # antes de consumir el código (QA-REG-07)
+        _login_fallo(request, _intentos_registro)
+        return RedirectResponse("/ingresar-empresa?error=clave", status_code=303)
     # Validar que el CUIT esté dado de alta como Empleador activo en al menos un sindicato
     sinds = db.sindicatos_de_cuit_empleador(cuit)
     if not sinds:
+        _login_fallo(request, _intentos_registro)
         return RedirectResponse("/ingresar-empresa?error=nohabilitado", status_code=303)
     with db.get_session() as s:
         existe = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == cuit)).first()
-        if existe:
+        if existe and existe.clave_hash:
+            _login_fallo(request, _intentos_registro)
             return RedirectResponse("/ingresar-empresa?error=yaexiste", status_code=303)
-        s.add(CuentaEmpleador(cuit=cuit, clave_hash=auth.hashear_clave(clave)))
+        origen, mail_declarado, error = _registro_confirmar(s, "empleador", cuit, token, codigo)
+        if error:
+            _login_fallo(request, _intentos_registro)
+            return RedirectResponse(f"/ingresar-empresa?error={error}", status_code=303)
+        cuenta = existe or CuentaEmpleador(cuit=cuit)
+        cuenta.clave_hash = auth.hashear_clave(clave)
+        if mail_declarado:
+            cuenta.mail_declarado = mail_declarado
+            cuenta.mail_declarado_confirmado = fechas.ahora_texto()
+        s.add(cuenta)
+        _registro_nivel(s, cuenta, origen)
         # marcar las altas de este CUIT como registradas
         for e in s.exec(select(Empleador).where(Empleador.cuit == cuit)).all():
             e.registrado = True
             s.add(e)
         s.commit()
-    token = auth.crear_sesion("empleador", sindicato_id=0, ident=cuit)
+    _login_ok(request, _intentos_registro)
+    token_sesion = auth.crear_sesion("empleador", sindicato_id=0, ident=cuit)
     resp = RedirectResponse("/empresa/inicio", status_code=303)
-    set_cookie_segura(resp, COOKIE_EMPLEADOR, token)
+    set_cookie_segura(resp, COOKIE_EMPLEADOR, token_sesion)
     set_cookie_segura(resp, "cuit_emp", cuit)
     return resp
 
@@ -7163,6 +8213,37 @@ def empresa_cambiar():
     resp = RedirectResponse("/empresa/inicio", status_code=303)
     resp.delete_cookie("sind_elegido_emp")
     return resp
+
+
+# ---------- Recuperación de clave y cambio de la clave temporal de la empresa ----------
+# Espejo de las rutas del afiliado (ver `_ROLES_CLAVE`): CuentaEmpleador, CUIT y
+# el mail del primer alta de Empleador que lo tenga.
+@app.get("/ingresar-empresa/recuperar", response_class=HTMLResponse)
+def empresa_recuperar_pagina(request: Request):
+    return _pagina_recuperar(request, "empleador")
+
+
+@app.post("/ingresar-empresa/recuperar/iniciar")
+def empresa_recuperar_iniciar(request: Request, cuit: str = Form(""),
+                              token_captcha: str = Form("", alias="cf-turnstile-response")):
+    return _recuperar_iniciar(request, "empleador", cuit, token_captcha)
+
+
+@app.post("/ingresar-empresa/recuperar")
+def empresa_recuperar_confirmar(request: Request, token: str = Form(""), codigo: str = Form(""),
+                                clave: str = Form(""), clave2: str = Form("")):
+    return _recuperar_confirmar(request, "empleador", token, codigo, clave, clave2)
+
+
+@app.get("/ingresar-empresa/cambiar-clave", response_class=HTMLResponse)
+def empresa_cambiar_clave_pagina(request: Request, token: str = ""):
+    return _pagina_cambiar_clave(request, "empleador", token)
+
+
+@app.post("/ingresar-empresa/cambiar-clave")
+def empresa_cambiar_clave_temporal(request: Request, token: str = Form(""), clave_actual: str = Form(""),
+                                   clave: str = Form(""), clave2: str = Form("")):
+    return _cambiar_clave_temporal(request, "empleador", token, clave_actual, clave, clave2)
 
 
 @app.get("/empresa/salir")
@@ -7703,10 +8784,6 @@ def api_entornos_esquema(request: Request):
 _MAPA_FUNCIONAL: dict = {}
 _MAPA_LOCK = threading.Lock()
 PROMPT_MAPA_FUNCIONAL = "/recursos/prompt-mapa-funcional/archivo"
-
-
-def _url_static(nombre: str) -> str:
-    return f"/static/{nombre}?v={_sello_static(nombre)}"
 
 
 def _mapa_funcional(forzar: bool = False) -> dict:

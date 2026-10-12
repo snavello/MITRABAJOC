@@ -240,6 +240,9 @@ INVENTARIO = (
        nota="corte por empleador de la urna; reescribirlo no suma ningún vínculo a una persona"),
     _c("tramiteempleador", "cuit", CUALQUIERA, TEXTO, COPIA, nota="el de la sesión"),
     _c("notificacionempleadordestinatario", "cuit", CUALQUIERA, TEXTO, COPIA),
+    _c("codigoverificacion", "identificador", CUALQUIERA, TEXTO, COPIA,
+       nota="el CUIL o el CUIT para el que se pidió un código de registro o de recuperación "
+            "(`tipo` dice cuál); es la traza del pedido y se reescribe junto con la cuenta"),
     # ---- JSON: el número puede estar en cualquier ruta -----------------
     _c("reciboverificado", "detalle", CUALQUIERA, JSON, LECTURA,
        nota="{recibo, resultado}: lo que leyó la IA + lo que calculó el motor"),

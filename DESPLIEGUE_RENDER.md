@@ -62,6 +62,9 @@ corre solo en cada deploy** (Pre-Deploy Command), ya no a mano.
 | `TELEGRAM_CHAT_ID` | — | Id numérico del chat del equipo | Adónde van los avisos. No es secreto. Con `TELEGRAM_RESUMEN_HORA` (HH:MM, opcional, 21:00 por defecto) se cambia la hora del resumen. |
 | `SENTRY_AUTH_TOKEN` | — | Token personal de Sentry, solo lectura (Project, Issue & Event y Organization: Read) | Lo usa la pestaña Observabilidad para MOSTRAR los errores (`observabilidad/sentry_panel.py`). Sin él se siguen enviando errores pero la pestaña dice "falta el token". No vence: revocarlo si se deja de usar. Reemplaza a la vieja `SENTRY_URL`, que ya no se lee. |
 | `VAPID_PRIVATE_KEY` / `VAPID_PUBLIC_KEY` / `VAPID_CLAIM_EMAIL` | propias | propias (o ninguna: el push queda apagado) | Las suscripciones push son por origen; no se comparten entre URLs. |
+| `RESEND_API_KEY` | clave del equipo "Demo" de Resend | clave del equipo "Pruebas" | Canal de mail del registro y la recuperación de clave (`correo.py`, PLAN_REGISTRO.md). Sin ella y sin `MAIL_REMITENTE` el canal queda apagado en silencio: el registro cae a nivel 1 visible y la recuperación deriva al sindicato (D9). Rotar en Resend → API Keys. |
+| `MAIL_REMITENTE` | `Colm3na <no-responder@avisos.colm3na.com.ar>` | ídem | Remitente de los códigos. El subdominio `avisos.colm3na.com.ar` tiene que estar verificado en Resend (DKIM/SPF en Cloudflare); el dominio raíz queda para el mail humano (Google Workspace). No es secreto. |
+| `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET` | sitio Turnstile "demo" | sitio Turnstile "pruebas" | Captcha de Cloudflare en los dos registros y en la recuperación (`captcha.py`). Sin las dos, apagado en silencio. La `SITE_KEY` se imprime en el HTML (no es secreta); el `SECRET` no sale nunca. Cambiarlas exige reiniciar el servicio: la CSP y el widget se fijan al arrancar. |
 
 `DATABASE_URL` es obligatoria en los dos servicios: la app no tiene otro motor.
 

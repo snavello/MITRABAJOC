@@ -1,3 +1,19 @@
+{# Nivel de fiabilidad de la cuenta (PLAN_REGISTRO.md): lo dice el origen,
+     no solo el número, porque un nivel 2 puede ser mail del padrón (lo cargó
+     el sindicato) o declarado (lo dio la persona, sin que nadie lo avale).
+     Una fila sin cuenta no tiene nivel: no hay nada que acreditar.
+     Si la cuenta es anterior al empadronamiento en ESTE sindicato (`responde`
+     en falso), tampoco se muestra: el nivel y el origen de la cuenta de una
+     persona que este padrón no tenía al registrarse no son asunto suyo. -#}
+  {% macro nivel_cuenta(c) %}
+    {% if c.get('responde', True) == False %}<span class="muted" title="cuenta creada antes de este empadronamiento">—</span>
+    {% elif not c.tiene_cuenta %}<span class="muted">—</span>
+    {% elif c.nivel_fiabilidad >= 4 %}<span class="tag tag-si" title="Una persona del sindicato confirmó su identidad en persona.">4 · confirmado</span>
+    {% elif c.nivel_fiabilidad == 3 %}<span class="tag tag-si" title="Subió un recibo propio y la IA leyó su CUIL.">3 · recibo</span>
+    {% elif c.nivel_fiabilidad == 2 and c.nivel_origen == 'mail_declarado' %}<span class="tag tag-pend" title="Confirmó un mail que declaró ella misma al registrarse: nadie del sindicato lo avala y todavía no verificó ningún recibo.">2 · mail declarado</span>
+    {% elif c.nivel_fiabilidad == 2 %}<span class="tag tag-si" title="Confirmó el mail que el sindicato tiene cargado en el padrón.">2 · mail padrón</span>
+    {% else %}<span class="tag tag-pend" title="Solo acreditó que su CUIL está en el padrón (el CUIL es un dato público).">1 · CUIL</span>{% endif %}
+  {% endmacro -%}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1045,6 +1061,17 @@
   <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: el CUIL no se cambia desde una edición, porque es la identidad de la persona en todo el sistema (su cuenta, sus recibos, sus trámites). Si está mal, pedile a la plataforma que lo corrija.<br><small style="opacity:.8;">Código E-IDENT-03</small></div>
   {% elif request.query_params.get('err') == 'cuitempleador' %}
   <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: el CUIT del empleador no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
+  {% elif request.query_params.get('err') == 'sincuenta' %}
+  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">Esa persona todavía no creó su cuenta en la app: no hay nada que confirmar ni clave que restablecer.</div>
+  {% elif request.query_params.get('err') == 'cuentaajena' %}
+  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">Esta persona creó su cuenta antes de que la cargaras en tu padrón: por seguridad, solo plataforma puede restablecerle la clave o confirmar su identidad.</div>
+  {% elif request.query_params.get('aviso') == 'datosajenos' %}
+  <div class="msg">Se guardó el empadronamiento, pero no el nombre, el domicilio, el teléfono ni los mails: esta persona creó su cuenta antes de que la cargaras en tu padrón y esos datos son suyos.</div>
+  {% elif request.query_params.get('ok') == 'identidad' %}
+  <div class="msg ok">Identidad confirmada: la cuenta pasó a nivel 4.</div>
+  {% endif %}
+  {% if request.query_params.get('datosajenos') %}
+  <div class="msg">{{ request.query_params.get('datosajenos') }} línea{{ 's' if request.query_params.get('datosajenos') != '1' else '' }} de la lista corresponde{{ 'n' if request.query_params.get('datosajenos') != '1' else '' }} a personas que ya habían creado su cuenta antes de que las cargaras en tu padrón: se las empadronó, pero no se tocaron su nombre, domicilio, teléfono ni mails.</div>
   {% endif %}
   {% if request.query_params.get('altas') %}
   <div class="msg ok">{{ request.query_params.get('altas') }} trabajador{{ 'es' if request.query_params.get('altas') != '1' else '' }} cargado{{ 's' if request.query_params.get('altas') != '1' else '' }} de la lista.
@@ -1064,13 +1091,16 @@
     <div class="filtros">
       <input type="text" id="f-trab-cuit" placeholder="Buscar por CUIL" oninput="aplicarFiltro('trab','.fila-trabajador')">
       <input type="text" id="f-trab-nombre" placeholder="Buscar por nombre" oninput="aplicarFiltro('trab','.fila-trabajador')">
+      <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px;" title="Cuentas cuyo único respaldo es un mail que la propia persona declaró: ni el sindicato lo cargó ni subió un recibo propio.">
+        <input type="checkbox" id="f-trab-declarados" onchange="aplicarFiltro('trab','.fila-trabajador')"> Declarados sin recibo
+      </label>
       <button type="button" class="sec mini" onclick="limpiarFiltro('trab','.fila-trabajador')">Limpiar</button>
       <span class="f-cant" id="f-trab-cant"></span>
     </div>
     <table>
-      <tr><th>CUIL</th><th>Nombre</th><th>Ubicación</th><th>Seccional</th><th>CUIT empleador</th><th>Estado</th><th>Credencial</th><th></th></tr>
+      <tr><th>CUIL</th><th>Nombre</th><th>Ubicación</th><th>Seccional</th><th>CUIT empleador</th><th>Estado</th><th>Nivel</th><th>Credencial</th><th></th></tr>
       {% for t in trabajadores %}
-      <tr class="fila-trabajador" data-cuil="{{ t.cuil }}" data-nombre="{{ t.nombre }}" {% if not t.activo %}style="opacity:.5;"{% endif %}>
+      <tr class="fila-trabajador" data-cuil="{{ t.cuil }}" data-nombre="{{ t.nombre }}" data-declarado="{{ 1 if (t.tiene_cuenta and t.nivel_fiabilidad == 2 and t.nivel_origen == 'mail_declarado') else 0 }}" {% if not t.activo %}style="opacity:.5;"{% endif %}>
         <td><code>{{ t.cuil }}</code></td>
         <td>{{ t.nombre or '—' }}</td>
         <td class="muted">{{ t.localidad }}{% if t.provincia %}, {{ t.provincia }}{% endif %}
@@ -1087,6 +1117,7 @@
              habría padrones diciendo "empleado" sin nadie que pueda entrar. #}
           {% if t.es_empleado_sindicato %}<br><span class="tag tag-pend" title="Además opera el panel del sindicato">empleado del sindicato</span>{% endif %}
         </td>
+        <td style="white-space:nowrap;">{{ nivel_cuenta(t) }}</td>
         <td class="muted" style="white-space:nowrap;">
           {% if t.codigo_credencial %}
           <code>{{ t.codigo_credencial }}</code>{% if t.vigencia_credencial %}<br>vence {{ t.vigencia_credencial }}{% endif %}
@@ -1098,6 +1129,19 @@
           <form method="post" action="/admin/trabajador/generar-credencial" style="display:inline;" onsubmit="return confirm('{% if t.codigo_credencial %}¿Regenerar el código de credencial? El anterior deja de ser válido.{% else %}¿Generar el código de credencial?{% endif %}');">
             <input type="hidden" name="id" value="{{ t.id }}"><button class="mini">{% if t.codigo_credencial %}Regenerar{% else %}Generar{% endif %} credencial</button>
           </form>
+          {# Los botones de cuenta: solo si este sindicato responde por ella y
+             la fila cae dentro del alcance de seccional de quien mira (el
+             servidor igual rechaza el resto). #}
+          {% if t.tiene_cuenta and t.responde and (alcance_propio is none or t.seccional_id in alcance_propio) %}
+          {% if t.nivel_fiabilidad < 4 %}
+          <form method="post" action="/admin/trabajador/confirmar-identidad" style="display:inline;" onsubmit="return confirm('¿Confirmás que verificaste en persona la identidad de esta persona? La cuenta pasa a nivel 4.');">
+            <input type="hidden" name="cuil" value="{{ t.cuil }}"><button class="mini">Confirmé su identidad</button>
+          </form>
+          {% endif %}
+          <form method="post" action="/admin/trabajador/restablecer-clave" style="display:inline;" onsubmit="return confirm('¿Restablecer la clave de esta persona? La clave actual deja de servir y se muestra una clave temporal UNA sola vez. La clave es una sola por persona: vale para todos los sindicatos donde esté empadronada.');">
+            <input type="hidden" name="cuil" value="{{ t.cuil }}"><button class="mini">Restablecer clave</button>
+          </form>
+          {% endif %}
           {% if t.activo %}
           <form method="post" action="/admin/trabajador/baja" style="display:inline;" onsubmit="return confirm('¿Dar de baja a este trabajador? Se puede reactivar después.');">
             <input type="hidden" name="id" value="{{ t.id }}"><button class="mini borrar">Baja</button>
@@ -1110,7 +1154,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="8" class="muted">No hay trabajadores cargados. Usá "Alta manual" o "Alta masiva".</td></tr>
+      <tr><td colspan="9" class="muted">No hay trabajadores cargados. Usá "Alta manual" o "Alta masiva".</td></tr>
       {% endfor %}
     </table>
   </div>
@@ -2068,17 +2112,36 @@
       <button type="submit" class="sec mini">Importar CUITs de conceptos</button>
     </form>
 
+    {% if request.query_params.get('err') == 'sincuenta' %}
+    <div class="msg" style="background:#f8e5e2; color:#b23a2e;">Esa empresa todavía no creó su cuenta en la app: no hay nada que confirmar ni clave que restablecer.</div>
+    {% elif request.query_params.get('err') == 'cuentaajena' %}
+    <div class="msg" style="background:#f8e5e2; color:#b23a2e;">Esta empresa creó su cuenta antes de que la cargaras en tu padrón: por seguridad, solo plataforma puede restablecerle la clave o confirmar su identidad.</div>
+    {% elif request.query_params.get('ok') == 'identidad' %}
+    <div class="msg ok">Identidad confirmada: la cuenta pasó a nivel 4.</div>
+    {% endif %}
     <h2>Empleadores cargados ({{ empleadores|length }})</h2>
     <table>
-      <tr><th>CUIT</th><th>Razón social</th><th>Provincia</th><th>Estado</th><th></th></tr>
+      <tr><th>CUIT</th><th>Razón social</th><th>Provincia</th><th>Estado</th><th>Nivel</th><th></th></tr>
       {% for e in empleadores %}
+      {% set cta = niveles_empleadores.get(e.cuit, {'tiene_cuenta': False, 'nivel_fiabilidad': 1, 'nivel_origen': ''}) %}
       <tr>
         <td><code>{{ e.cuit }}</code></td>
         <td>{{ e.razon_social or '—' }}</td>
         <td class="muted">{{ e.provincia or '—' }}</td>
         <td>{% if e.activo %}<span class="tag tag-si">activo</span>{% else %}<span class="tag" style="background:#eee;color:#888;">inactivo</span>{% endif %}</td>
+        <td style="white-space:nowrap;">{{ nivel_cuenta(cta) }}</td>
         <td style="white-space:nowrap; text-align:right;">
           <button type="button" class="mini" onclick='editarEmpleador({{ {"id":e.id,"cuit":e.cuit,"razon_social":e.razon_social,"domicilio":e.domicilio,"telefono":e.telefono,"provincia":e.provincia,"mail":e.mail} | tojson }})'>Editar</button>
+          {% if cta.tiene_cuenta and cta.get('responde', True) %}
+          {% if cta.nivel_fiabilidad < 4 %}
+          <form method="post" action="/admin/empleador/confirmar-identidad" style="display:inline;" onsubmit="return confirm('¿Confirmás que verificaste en persona la identidad de esta empresa? La cuenta pasa a nivel 4.');">
+            <input type="hidden" name="cuit" value="{{ e.cuit }}"><button class="mini" type="submit">Confirmé su identidad</button>
+          </form>
+          {% endif %}
+          <form method="post" action="/admin/empleador/restablecer-clave" style="display:inline;" onsubmit="return confirm('¿Restablecer la clave de esta empresa? La clave actual deja de servir y se muestra una clave temporal UNA sola vez. La clave es una sola por empresa: vale para todos los sindicatos donde esté dada de alta.');">
+            <input type="hidden" name="cuit" value="{{ e.cuit }}"><button class="mini" type="submit">Restablecer clave</button>
+          </form>
+          {% endif %}
           {% if e.activo %}
           <form method="post" action="/admin/empleador/baja" style="display:inline;" onsubmit="return confirm('¿Dar de baja este empleador?')">
             <input type="hidden" name="id" value="{{ e.id }}">
@@ -2093,7 +2156,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="5" class="muted">Todavía no cargaste ningún empleador.</td></tr>
+      <tr><td colspan="6" class="muted">Todavía no cargaste ningún empleador.</td></tr>
       {% endfor %}
     </table>
   </div>
@@ -3088,6 +3151,7 @@ function parseFechaHoraAR(s) {
 function aplicarFiltro(prefix, selectorFilas) {
   const cuit = normDigitos(document.getElementById('f-'+prefix+'-cuit')?.value);
   const nombre = normTexto(document.getElementById('f-'+prefix+'-nombre')?.value);
+  const declarados = !!document.getElementById('f-'+prefix+'-declarados')?.checked;
   const desdeEl = document.getElementById('f-'+prefix+'-desde');
   const hastaEl = document.getElementById('f-'+prefix+'-hasta');
   const desde = desdeEl && desdeEl.value ? new Date(desdeEl.value + 'T00:00:00') : null;
@@ -3098,6 +3162,7 @@ function aplicarFiltro(prefix, selectorFilas) {
     let visible = true;
     if (cuit && !normDigitos(fila.dataset.cuil).includes(cuit)) visible = false;
     if (visible && nombre && !normTexto(fila.dataset.nombre).includes(nombre)) visible = false;
+    if (visible && declarados && fila.dataset.declarado !== '1') visible = false;
     if (visible && (desde || hasta) && fila.dataset.fecha) {
       const f = parseFechaHoraAR(fila.dataset.fecha);
       if (f) {
@@ -3122,6 +3187,8 @@ function limpiarFiltro(prefix, selectorFilas) {
     const el = document.getElementById('f-'+prefix+'-'+campo);
     if (el) el.value = '';
   });
+  const dec = document.getElementById('f-'+prefix+'-declarados');
+  if (dec) dec.checked = false;
   aplicarFiltro(prefix, selectorFilas);
 }
 

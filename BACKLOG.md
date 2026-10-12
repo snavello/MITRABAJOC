@@ -169,6 +169,26 @@ se hace.
   expedientes emitidos parte la serie — decidir si se normaliza solo para los
   nuevos.
 
+- [ ] **Sesiones que sobreviven al cambio de clave** (2026-10-12, QR-1 de la
+  revisión de QA del registro): huella de `clave_hash` en el token de sesión y
+  chequeo en `sesion_actual`; hoy un impostor activo sigue adentro tras una
+  recuperación. Cuesta una consulta por request. Test que lo mide:
+  `test_qa_recuperacion_clave.py::test_rojo_qr1_...` (`xfail(strict=True)`: al
+  arreglarlo hay que sacarle la marca).
+- [ ] **Un tercero puede invalidar el código vivo** (2026-10-12, QR-4): pedir
+  otro código vence el anterior ("un solo código vivo"), así que quien resuelve
+  el captcha le pisa el código a la persona. Reusar el código vivo si tiene
+  menos de N minutos en vez de vencerlo. Tensión con el diseño actual, hay que
+  decidirla. Test: `test_qa_recuperacion_clave.py::test_rojo_qr4_...`
+  (`xfail(strict=True)`).
+- [ ] **Verificar el código en el paso 2 del registro** (2026-10-12, QA-REG-08b):
+  `POST /registro/verificar`, para que un error de tipeo no devuelva al paso 1
+  ni gaste cupo y captcha. Hoy el código recién se comprueba en el paso 3.
+- [ ] **El freno por IP toma el primer `X-Forwarded-For`** (2026-10-12, QA-REG-05,
+  ya es H-0008): lo escribe el cliente. Con Cloudflare, usar la IP que firma el
+  perímetro. Test: `test_qa_registro_flujo.py::test_el_freno_por_ip_no_se_evade_...`
+  (`xfail(strict=True)`).
+
 ## Hecho
 
 - [x] **Mergear `areas-permisos` a `main`** y **Sprint "Admin de Seccional"**
@@ -197,3 +217,4 @@ se hace.
 - [x] **Badge "NEW" en la tarjeta del Panel Sindical** (2026-08-31): estrella
   + etiqueta "NUEVO" en `/admin/inicio`. **Sacarla a mano** en un deploy
   posterior: no expira sola.
+- [ ] **Bitácora de acciones del panel del sindicato** (2026-10-11, QD-7 de la revisión de QA del registro): quién restableció una clave o confirmó una identidad, cuándo y sobre quién. Hoy solo queda una línea en el log (`mitrabajo.panel`), sin tabla ni pantalla.

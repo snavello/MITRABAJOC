@@ -1,0 +1,109 @@
+{#- ============================================================
+   Base de las dos pantallas de clave del ingreso: recuperar la clave y cambiar
+   la temporal (PLAN_REGISTRO.md, D6). Misma estética que los logins ("credencial
+   viva sobre colmena nocturna"): standalone, todo inline, sin marca.css.
+
+   Bloques:  titulo   <title> sin el prefijo "Colm3na — "
+             chip     la etiqueta de la credencial ("Trabajador" / "Empresa")
+             cuerpo   lo de adentro de la credencial
+             scripts  el JS de la pantalla
+   ============================================================ -#}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Colm3na — {% block titulo %}{% endblock %}</title>
+<style>
+  @font-face {
+    font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal;
+    src: url('{{ url_static('fonts/barlow-condensed-bold.woff2') }}') format('woff2');
+  }
+  :root {
+    --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
+    --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
+    --alerta: {{ marca_plataforma.color_acento if marca_plataforma else '#b23a2e' }};
+    --miel:#f0a01e;
+    --fuente-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  }
+  * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
+  body { min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:24px 18px; position:relative; overflow:hidden;
+    background:radial-gradient(900px 480px at 78% -10%, color-mix(in srgb, var(--agua) 26%, transparent), transparent 62%),
+               linear-gradient(160deg, #0d1626 20%, var(--tinta) 70%, color-mix(in srgb, var(--tinta) 72%, #4a6da8)); }
+  .panal { position:fixed; pointer-events:none; z-index:0; animation:respira 9s ease-in-out infinite; }
+  .panal.a { top:-40px; right:-30px; }
+  .panal.b { bottom:-60px; left:-40px; animation-delay:-4s; }
+  @keyframes respira { 0%,100% { opacity:.10; } 50% { opacity:.2; } }
+  @keyframes entra { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+  @media (max-width:600px) { .panal { width:220px; height:auto; } }
+
+  .escena { position:relative; z-index:2; width:min(410px,100%); }
+  .cred { border-radius:20px; position:relative; padding:30px 30px 24px;
+    background:linear-gradient(150deg, color-mix(in srgb, var(--tinta) 78%, #4a6da8), var(--tinta) 55%, color-mix(in srgb, var(--tinta) 72%, var(--agua)));
+    border:1px solid rgba(255,255,255,.14); box-shadow:0 34px 80px rgba(0,0,0,.55);
+    animation:entra .6s ease both; }
+  .banda { position:absolute; top:0; left:24px; right:24px; height:5px; border-radius:0 0 5px 5px;
+    background:linear-gradient(90deg, var(--miel), var(--agua)); }
+  .logo { display:block; margin:6px auto 14px; max-width:220px; max-height:132px; width:auto; height:auto; object-fit:contain; }
+  @media (max-width:600px) { .logo { max-width:170px; max-height:100px; } }
+  .chip-rol { display:table; margin:0 auto 20px; font-family:var(--fuente-display); font-size:14px;
+    letter-spacing:2.4px; text-transform:uppercase; color:var(--miel);
+    border:1px solid color-mix(in srgb, var(--miel) 55%, transparent); border-radius:20px; padding:4px 14px; }
+  h1 { font-family:var(--fuente-display); font-size:25px; letter-spacing:1.4px; text-transform:uppercase;
+    color:#fff; margin-bottom:6px; font-weight:700; }
+  .bajada { font-size:13px; line-height:1.5; color:rgba(255,255,255,.65); margin-bottom:18px; }
+  label { display:block; font-size:10px; letter-spacing:1.6px; text-transform:uppercase; font-weight:600;
+    color:rgba(255,255,255,.55); margin-bottom:6px; margin-top:15px; }
+  label:first-of-type { margin-top:0; }
+  input { width:100%; padding:13px 14px; border-radius:10px; font-size:16px; font-family:inherit;
+    background:rgba(9,15,26,.6); border:1px solid rgba(255,255,255,.14); color:#fff; }
+  input::placeholder { color:rgba(255,255,255,.3); }
+  input:focus { outline:none; border-color:var(--miel);
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--miel) 20%, transparent); }
+  input.codigo { letter-spacing:8px; text-align:center; font-size:24px; font-family:ui-monospace,Consolas,monospace; }
+  button.enviar { width:100%; margin-top:20px; padding:14px; border:none; border-radius:10px; cursor:pointer;
+    font-family:var(--fuente-display); font-size:18px; letter-spacing:1.6px; text-transform:uppercase;
+    background:linear-gradient(90deg, var(--miel), color-mix(in srgb, var(--miel) 82%, #8a5f14)); color:#231a08; }
+  button.enviar:hover { filter:brightness(1.06); }
+  button.enviar:disabled { opacity:.55; cursor:default; filter:none; }
+  .error { background:color-mix(in srgb, var(--alerta) 20%, transparent);
+    border:1px solid color-mix(in srgb, var(--alerta) 55%, transparent);
+    color:#f2b8ae; font-size:13px; padding:11px 13px; border-radius:9px; margin-bottom:16px; line-height:1.4; }
+  .error[hidden], .aviso[hidden] { display:none; }
+  .aviso { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.16);
+    color:rgba(255,255,255,.85); font-size:13px; padding:11px 13px; border-radius:9px; margin-bottom:16px; line-height:1.45; }
+  .ayuda { font-size:12px; color:rgba(255,255,255,.5); margin-top:14px; line-height:1.5; text-align:center; }
+  .ayuda a { color:var(--miel); }
+  .paso { display:none; } .paso.activo { display:block; }
+  .mrz { margin-top:20px; border-top:1px dashed rgba(255,255,255,.18); padding-top:10px;
+    font-family:ui-monospace,Consolas,monospace; font-size:9.5px; letter-spacing:2px;
+    color:rgba(255,255,255,.35); overflow:hidden; white-space:nowrap; }
+  @media (prefers-reduced-motion:reduce) { *, *::before { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+{% include "_entorno.html" %}
+  <svg class="panal a" width="360" height="300" viewBox="0 0 360 300" fill="none" aria-hidden="true">
+    <g stroke="rgba(255,255,255,.9)" stroke-width="1.1">
+      <path d="M60 20 105 45v50L60 120 15 95V45zM165 20l45 25v50l-45 25-45-25V45zM270 20l45 25v50l-45 25-45-25V45zM112 105l45 25v50l-45 25-45-25v-50zM217 105l45 25v50l-45 25-45-25v-50zM322 105l45 25v50l-45 25-45-25v-50zM60 190l45 25v50l-45 25-45-25v-50zM165 190l45 25v50l-45 25-45-25v-50z"/>
+    </g>
+  </svg>
+  <svg class="panal b" width="300" height="260" viewBox="0 0 360 300" fill="none" aria-hidden="true">
+    <g stroke="rgba(255,255,255,.9)" stroke-width="1.1">
+      <path d="M60 20 105 45v50L60 120 15 95V45zM165 20l45 25v50l-45 25-45-25V45zM112 105l45 25v50l-45 25-45-25v-50zM217 105l45 25v50l-45 25-45-25v-50zM60 190l45 25v50l-45 25-45-25v-50z"/>
+    </g>
+  </svg>
+
+  <div class="escena">
+  <div class="cred">
+    <div class="banda"></div>
+    <img class="logo" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else url_static('logo_mitrabajo.svg')) }}" alt="Colm3na">
+    <div class="chip-rol">{% block chip %}{% endblock %}</div>
+    {% block cuerpo %}{% endblock %}
+    <div class="mrz">COLM3NA&lt;&lt;{% block mrz %}ACCESO{% endblock %}&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div>
+  </div>
+  </div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

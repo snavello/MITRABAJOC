@@ -73,6 +73,17 @@ MENSAJES = {
     "E-IDENT-03": (409, "El CUIL/CUIT no se cambia desde una edición: es la identidad "
                         "de la persona en todo el sistema. Si está mal, pedile a la "
                         "plataforma que lo corrija."),
+    # --- Registro y recuperación de cuenta (PLAN_REGISTRO.md) ---------------
+    # Ninguno habla de la foto: son errores de la persona o del canal de mail.
+    "E-REGISTRO-01": (400, "No pudimos comprobar que sos una persona. Probá de nuevo."),
+    "E-REGISTRO-02": (400, "El código es incorrecto o ya venció. Pedí uno nuevo."),
+    "E-REGISTRO-03": (429, "Ya pediste varios códigos. Esperá una hora para pedir otro."),
+    "E-REGISTRO-04": (403, "Tu sindicato pide confirmar con el mail que ellos tienen cargado, "
+                           "y todavía no hay uno. Pedile al sindicato que lo cargue."),
+    "E-REGISTRO-05": (429, "Hiciste demasiados intentos desde este lugar. "
+                           "Esperá un minuto y probá de nuevo."),
+    "E-REGISTRO-06": (503, "No pudimos mandar el mail en este momento. "
+                           "Probá de nuevo en unos minutos."),
     # --- Asistente del Panel Sindical (docs/ASISTENTE_PANEL.md) -----------
     "E-ASISTENTE-01": (502, "El asistente no pudo responder en este momento. Los filtros "
                             "del panel siguen funcionando a mano; probá de nuevo en un rato."),

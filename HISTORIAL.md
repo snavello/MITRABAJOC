@@ -6488,3 +6488,128 @@ Tests: `test_reintegros.py` (arbitraje: gana el recibo, sin totales manda el
 catálogo, IA que ubica mal una línea, totales que no cierran) y
 `test_rubro_visto.py` (conteos por código y empleador, aislamiento entre
 sindicatos, la pantalla y el botón). Trabajador 0.44.04, Admin 0.48.01.
+
+## Registro confirmado por mail, niveles de fiabilidad y recuperación de clave (2026-10-11)
+
+Plan acordado con SDN decisión por decisión en `PLAN_REGISTRO.md` y
+construido el mismo día por un equipo de agentes en olas (siete de
+desarrollo, cinco de QA), con Code como coordinador: cada desarrollador en
+un worktree propio contra un contrato de firmas fijado de antemano, QA
+adversarial sobre cada bloque, y lo que el QA encontró se cerró antes del
+merge. Cierra H-0017 (el alta acreditaba identidad solo con el CUIL, que es
+público: el primero que llegaba se quedaba con la cuenta) y las decisiones
+R2 (niveles de fiabilidad) y R3 (recuperación de clave) del relevamiento.
+
+**Lo que se construyó.** `correo.py` (Resend por `avisos.colm3na.com.ar`,
+un POST con urllib, sin librería, el patrón de `telegram.py`) y
+`captcha.py` (Cloudflare Turnstile, falla cerrado, tope al largo del token);
+freno por IP y captcha en los dos registros, con su propio código de error
+para que la espera de un login no abra la pestaña "Registrarme"; la CSP
+ensanchada con Cloudflare SOLO en `/ingresar*` (`RUTAS_CON_CAPTCHA`). El
+modelo: `nivel_fiabilidad`/`nivel_origen`/`nivel_actualizado`,
+`mail_padron`, `mail_declarado`/`mail_declarado_confirmado` y
+`clave_temporal` en las dos cuentas, `Sindicato.acepta_mail_declarado`, la
+tabla `CodigoVerificacion` (un código usado o vencido no se borra: es la
+traza), migración `f2d3d0bcf179` con backfill (las cuentas existentes
+quedan nivel 1 `cuil_padron`, y a 3 las que ya tienen un recibo propio). El
+registro en tres pasos para trabajador y empresa (`/registro/iniciar`,
+`/registro/mail`, `/registro`), con el estado entre pasos en un token firmado
+(`auth.firmar_paso`/`leer_paso`, propósito y vencimiento propios: una sesión
+no sirve como token de paso ni al revés). Nivel 3 automático, columna y
+botones en Trabajadores y Empleadores, interruptor en la ficha del
+sindicato, recuperación autoservicio (`/ingresar/recuperar`), clave
+temporal desde el panel con cambio obligatorio en el primer ingreso, y la
+tarjeta "Confirmá tu mail" para las cuentas viejas.
+
+**Lo que el QA encontró, y cómo se decidió.**
+
+- *El mail del padrón era el mail que la persona edita.* `CuentaTrabajador.mail`
+  lo escribe el afiliado desde su perfil (regla vigente: la persona es dueña
+  de sus datos), así que mandar ahí los códigos permitía a un impostor
+  redirigírselos. Decisión: tres mails que no se mezclan. `mail` es contacto
+  y no sirve para códigos; `mail_padron` lo escribe solo el sindicato (alta
+  individual y masiva, que ahora también lo actualiza para un CUIL ya
+  existente); `mail_declarado` lo da la persona y se confirma con código. En
+  la edición desde el panel, `mail_padron` se escribe solo si el admin
+  cambió el mail respecto del contacto actual: si reenviaba el formulario
+  precargado, el contacto del impostor se volvía mail del padrón. Las
+  cuentas ya registradas quedan con `mail_padron` vacío (procedencia
+  desconocida: conservador); el sindicato lo recarga por alta masiva.
+- *El nivel 3 se falsificaba con un POST.* `/api/validar` recibe el recibo
+  del cliente (CLAUDE.md ya decía que "se puede llamar sola con cualquier
+  payload"), así que un impostor subía a nivel 3 sin documento. Decisión: el
+  nivel sube en `/api/leer`, después del corte de pertenencia, solo si el
+  CUIL leído por la IA es el de la sesión. Es la letra de R2: "recibo propio
+  verificado por la IA".
+- *Un admin tomaba la cuenta de alguien de otro sindicato.* Cargaba el CUIL
+  (público) en su padrón, le restablecía la clave y entraba. Decisión: un
+  sindicato responde por una cuenta solo si la persona ya estaba en SU padrón
+  cuando la creó (`Trabajador.registrado`, que el registro marca sobre los
+  empadronamientos que existían en ese momento; `db.padron_responde_por`).
+  Si no, no restablece, no confirma, no pisa nombre ni mail del padrón, y el
+  panel muestra "—" sin botones. Condiciona en parte D6 (un gremio que carga
+  a una persona ya registrada no puede restablecerle la clave: lo hace
+  plataforma o la persona por el mail del padrón) a favor de no abrir una
+  toma de cuentas entre sindicatos.
+- *Los intentos del código no se persistían y dos intentos paralelos
+  contaban uno.* `verificar_codigo` incrementaba `intentos` sin commit y el
+  idioma de las rutas (`with get_session(): ... raise ErrorApp`) hace
+  rollback: el tope de 5 no existía. Decisión: el helper hace commit él
+  mismo (excepción con motivo a "ningún helper hace commit") y lee la fila
+  con `FOR UPDATE`, así un código correcto se consume una sola vez. El hash
+  del código pasó a HMAC con `SESSION_SECRET` (con la base filtrada, un
+  SHA-256 pelado de 6 dígitos se rompe en segundos) y `crear_codigo` aplica
+  el cupo por sí mismo, como defensa en profundidad.
+- *El error `domicilio` enumeraba afiliados sin frenarse.* Se decidía
+  después de consultar el padrón y no sumaba al freno. Ahora se valida antes
+  del padrón y cuenta.
+- *Un token propio salteaba el captcha del paso 3 y enumeraba el padrón.*
+  Bastaba un token de paso válido (de cualquier CUIL) para no exigir captcha,
+  y el número del token se comparaba después de mirar el padrón. Ahora se
+  compara antes, y con el canal prendido el token válido es condición para
+  consultar el padrón. El token del paso de mail lleva además el `tipo`
+  (trabajador/empleador): sin eso cruzaba entre las dos apps para un número
+  que fuera afiliado y empleador a la vez.
+- *El canal de mail como arma.* El cupo era solo por CUIL: con N afiliados
+  sin mail del padrón se mandaban 3×N códigos a un mismo mail ajeno, y con
+  mil CUILes se agotaba el plan gratuito de Resend en una hora. Ahora hay
+  también cupo por destino, y cada pedido de código suma al freno de la IP
+  aunque salga bien (antes los exitosos eran gratis, y cada uno devolvía la
+  pista del mail de otra persona).
+- *Un token no ASCII daba 500.* `hmac.compare_digest` sobre `str` levanta
+  `TypeError` con caracteres fuera de ASCII: cinco rutas públicas devolvían
+  500 (y una alerta a Sentry y Telegram) con `token=é.é`. Se compara en
+  bytes, también en `leer_sesion`.
+- *Dos cosas quedan diferidas a BACKLOG con test `xfail`*: la sesión abierta
+  sobrevive a un cambio de clave (hace falta una huella de la clave en el
+  token y una consulta por request), y un tercero puede invalidar el código
+  vivo de una persona pidiendo otro (tensión con "un solo código vivo").
+- Menores: destino del mail validado antes de salir hacia Resend (con un
+  mail declarado `a@b.com\r\nBcc:` no sale nada), `pista()` estricta, la
+  pantalla de la clave temporal avisa que la clave es una sola para todos los
+  sindicatos, el Admin de Seccional ve los botones solo en su alcance, y las
+  cuatro acciones del panel quedan en el log con operador y CUIL (la tabla
+  de bitácora del sindicato va al backlog).
+
+**Riesgo residual, aceptado (H-0022).** El registro y la recuperación
+responden distinto según el CUIL esté afiliado o tenga mail del padrón; con
+la variante de mail declarado no hay forma de no decirlo, y la persona
+necesita saber que tiene que ir al sindicato. Lo encarecen captcha y freno
+(que se saltea rotando `X-Forwarded-For`, parcial a propósito como H-0008) y
+lo cierra el perímetro de Cloudflare.
+
+**Canal apagado = las demos siguen (D9).** Sin `RESEND_API_KEY` +
+`MAIL_REMITENTE` el registro salta el código y la cuenta nace nivel 1
+visible; sin `TURNSTILE_*` no hay captcha. `chequeo.py` lo reporta. Los
+prerrequisitos (Cloudflare para `colm3na.com.ar`, Resend verificando
+`avisos.colm3na.com.ar`, el sitio de Turnstile, las cuatro variables) están
+en `DESPLIEGUE_RENDER.md`; hasta configurarlos en Pruebas, H-0017 queda en
+corrección.
+
+Tests: `test_canales_registro.py`, `test_registro_modelo.py`,
+`test_auth_paso.py`, `test_registro_flujo.py`, `test_registro_panel.py`,
+`test_recuperacion_clave.py`, más los cinco archivos `test_qa_*.py` que
+dejaron los QA (sus hallazgos en rojo pasaron a verde con los arreglos; los
+dos `xfail` documentan el límite del freno por IP). Trabajador 0.45.01,
+Admin 0.49.01, Plataforma 0.43.03.
+

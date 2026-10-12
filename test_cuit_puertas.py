@@ -690,12 +690,17 @@ PUERTAS = {
     "admin_trabajador_alta", "admin_trabajador_masivo", "admin_usuario_alta", "abm_concepto",
     "admin_empleador_alta", "plataforma_alta_sindicato", "plataforma_editar_sindicato",
     "plataforma_alta_usuario", "plataforma_completar_guardar", "trabajador_registro",
-    "empresa_registro",
+    "empresa_registro", "trabajador_registro_iniciar", "empresa_registro_iniciar",
 }
 # Rutas que REFERENCIAN un número que ya existe: se busca tal cual, SIN verificador.
 REFERENCIAS = {
     "admin_login", "plataforma_login", "trabajador_login", "empresa_login", "entornos_login",
     "plataforma_reset_clave",
+    # Confirmar identidad / restablecer clave desde el panel (PLAN_REGISTRO.md): actúan sobre una cuenta que ya existe.
+    "admin_trabajador_confirmar_identidad", "admin_trabajador_restablecer_clave",
+    "admin_empleador_confirmar_identidad", "admin_empleador_restablecer_clave",
+    # Recuperación de clave autoservicio: busca la cuenta tal cual, no da de alta.
+    "recuperar_iniciar", "empresa_recuperar_iniciar",
 }
 # Un campo llamado `usuario` que no es un CUIL: el alias de un usuario nominal
 # de plataforma ("jperez").
