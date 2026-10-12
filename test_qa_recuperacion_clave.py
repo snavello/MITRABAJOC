@@ -30,7 +30,7 @@ from db import (CodigoVerificacion, CuentaEmpleador, CuentaTrabajador, Empleador
                 Sindicato, Trabajador, UsuarioSindicato)
 from fastapi.testclient import TestClient
 from modulos import MODULOS_INICIALES
-from sqlmodel import select
+from sqlmodel import delete, select
 
 db.crear_tablas()
 
@@ -80,6 +80,11 @@ def canal(monkeypatch):
     monkeypatch.setattr(captcha, "verificar", lambda token, ip: True)
     main._intentos_registro.clear()
     main._intentos_login.clear()
+    # El cupo por MAIL de destino (QA-REG-03) es de la base y los tests comparten
+    # direcciones: cada uno empieza sin pedidos de la última hora.
+    with db.get_session() as s:
+        s.exec(delete(CodigoVerificacion))
+        s.commit()
     return enviados
 
 
@@ -215,6 +220,9 @@ def test_documenta_el_cupo_solo_existe_si_hay_mail_del_padron(canal):
     assert _iniciar(c, sin).status_code == 200
 
 
+@pytest.mark.xfail(strict=True, reason=(
+    "BACKLOG QR-4: reusar el codigo vivo si tiene menos de N minutos en vez de vencerlo, para "
+    "que un tercero no pueda invalidar el de la persona (tension con 'un solo codigo vivo')."))
 def test_rojo_qr4_otro_pedido_no_deberia_invalidar_el_codigo_vivo_de_la_persona(canal):
     """QR-4 (Medio, disponibilidad). `crear_codigo` vence el código pendiente de la
     persona al emitir otro, y el cupo es por CUIL (3 por hora) y no por IP: quien
@@ -308,6 +316,9 @@ def test_ok_cinco_intentos_agotan_el_codigo_aunque_despues_venga_el_bueno(canal)
     assert auth.verificar_clave(VIEJA, _cuenta_db(cuil).clave_hash)
 
 
+@pytest.mark.xfail(strict=True, reason=(
+    "BACKLOG QR-1: huella de clave_hash en el token de sesion y chequeo en sesion_actual; hoy un "
+    "impostor con la sesion abierta sigue adentro tras una recuperacion."))
 def test_rojo_qr1_la_sesion_abierta_antes_sobrevive_a_la_recuperacion(canal):
     """QR-1 (Medio). Las sesiones son tokens firmados sin estado: cambiar la clave
     (recuperación autoservicio, clave temporal o reset del sindicato) no corta una

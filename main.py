@@ -661,6 +661,17 @@ def _sello_static(nombre: str) -> str:
 
 
 templates.env.globals["sello_static"] = _sello_static
+
+
+def _url_static(nombre: str) -> str:
+    """La URL completa de un archivo de /static CON su sello (`?v=`). Es lo que
+    usan las plantillas de la recuperación de clave (`url_static('...')`) y el
+    mapa funcional: un solo lugar donde se arma, en vez de escribir la ruta y
+    acordarse del sello a mano (QR-7)."""
+    return f"/static/{nombre}?v={_sello_static(nombre)}"
+
+
+templates.env.globals["url_static"] = _url_static
 # Clave pública del widget de Turnstile; vacía = captcha apagado y el parcial
 # `_captcha.html` no dibuja nada. Se lee al arrancar, igual que la CSP.
 templates.env.globals["captcha_site_key"] = captcha.site_key()
@@ -6862,7 +6873,7 @@ def ingresar(request: Request):
     filtro por zona."""
     return templates.TemplateResponse("trabajador_login.html", {
         "request": request, "marca_plataforma": db.marca_plataforma(),
-        "provincias": db.PROVINCIAS_AR})
+        "provincias": db.PROVINCIAS_AR, "clave_minima": CLAVE_MINIMA})
 
 
 def _abrir_sesion_trabajador(cuil: str, cuenta_id: int):
@@ -6929,7 +6940,6 @@ def _domicilio_distinto(persona, domicilio: dict) -> bool:
 # exacto: aislamiento total entre trabajador y empleador, a costa de repetir.
 # Los helpers de abajo son lo único compartido y solo reciben el `tipo`.
 _PROPOSITO_REGISTRO = "registro"
-_MAIL_FORMATO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def _registro_error(status: int, error: str, mensaje: str) -> JSONResponse:
@@ -6939,23 +6949,33 @@ def _registro_error(status: int, error: str, mensaje: str) -> JSONResponse:
         "ok": False, "error": error, "mensaje": mensaje, "detail": mensaje})
 
 
-def _mail_declarable(mail: str) -> str:
-    """El mail que la persona declara, limpio, o "" si no sirve: formato simple,
-    254 caracteres como máximo y ningún espacio ni salto de línea (inyección de
-    cabeceras)."""
-    mail = (mail or "").strip()
-    if not mail or len(mail) > 254 or any(c.isspace() or ord(c) < 32 for c in mail):
-        return ""
-    return mail if _MAIL_FORMATO.match(mail) else ""
+def _contar_pedido(request: Request) -> None:
+    """Un pedido de código que SALIÓ BIEN también suma al freno de la IP
+    (QA-REG-04). Si solo contaran los fallos, desde una IP se podría mandar un
+    mail por segundo a afiliados distintos, y averiguar quién está afiliado y
+    la pista de su mail, sin llegar nunca a E-REGISTRO-05. Una persona real
+    pide uno, dos a lo sumo, y `LOGIN_MAX_FALLOS` (10 por minuto) no la toca; el
+    éxito FINAL (cuenta creada, clave cambiada, mail confirmado) hace
+    `_login_ok` y limpia la cuenta."""
+    _login_fallo(request, _intentos_registro)
+
+
+def _registro_token_ok(token: str, tipo: str, numero: str) -> bool:
+    """¿Es `token` un token de registro de ESTE tipo y de ESTE número? Es lo que
+    permite saltear el captcha del paso 3 (un token de Turnstile sirve una sola
+    vez y ya se resolvió en el paso 1). Un token de otro número o del otro tipo
+    no vale ni para eso (QA-REG-01): si valiera, con un solo captcha resuelto se
+    tantearía el padrón entero."""
+    datos = auth.leer_paso(token, _PROPOSITO_REGISTRO) if token else None
+    return bool(datos) and datos.get("tipo") == tipo and _norm_cuil(str(datos.get("id", ""))) == numero
 
 
 def _mandar_codigo_registro(s, request: Request, tipo: str, identificador: str,
                             destino: str, origen_destino: str) -> int:
-    """Cupo -> código -> mail. Devuelve el id de la fila del código. Lanza
-    E-REGISTRO-03 si ya pidió el cupo de la hora y E-REGISTRO-06 si el mail no
-    salió (el código queda en la tabla igual: es traza, y cuenta para el cupo)."""
-    if db.codigos_recientes(s, tipo, identificador, _PROPOSITO_REGISTRO) >= db.CODIGOS_POR_HORA:
-        raise ErrorApp("E-REGISTRO-03")
+    """Código -> mail. Devuelve el id de la fila del código. `db.crear_codigo`
+    aplica los cupos (por persona y por mail de destino) y levanta E-REGISTRO-03;
+    acá se levanta E-REGISTRO-06 si el mail no salió (el código queda en la
+    tabla igual: es traza, y cuenta para el cupo)."""
     fila, codigo = db.crear_codigo(s, tipo, identificador, _PROPOSITO_REGISTRO,
                                    destino, origen_destino, _ip_de(request))
     fila_id = fila.id
@@ -7002,22 +7022,27 @@ def _registro_iniciar(request: Request, tipo: str, numero: str):
             if not correo.habilitado():
                 # D9: el canal de mail apagado no frena el registro; la cuenta
                 # nace nivel 1, como hasta ahora.
+                _contar_pedido(request)
                 return {"ok": True, "paso": "datos", "token": auth.firmar_paso(
-                    {"id": numero, "nivel_origen": "cuil_padron"}, proposito=_PROPOSITO_REGISTRO)}
+                    {"id": numero, "tipo": tipo, "nivel_origen": "cuil_padron"},
+                    proposito=_PROPOSITO_REGISTRO)}
             mail = (db.mail_padron_de(s, numero) if es_trab
                     else db.mail_padron_de_empresa(s, numero))
             if mail:
                 codigo_id = _mandar_codigo_registro(s, request, tipo, numero, mail, "padron")
+                _contar_pedido(request)
                 return {"ok": True, "paso": "codigo", "pista": correo.pista(mail),
                         "token": auth.firmar_paso(
-                            {"id": numero, "codigo_id": codigo_id, "origen": "mail_padron"},
+                            {"id": numero, "tipo": tipo, "codigo_id": codigo_id,
+                             "origen": "mail_padron"},
                             proposito=_PROPOSITO_REGISTRO)}
             acepta = (db.acepta_mail_declarado(s, numero) if es_trab
                       else db.acepta_mail_declarado_empresa(s, numero))
             if not acepta:
                 raise ErrorApp("E-REGISTRO-04")
+            _contar_pedido(request)
             return {"ok": True, "paso": "mail", "token": auth.firmar_paso(
-                {"id": numero}, proposito=_PROPOSITO_REGISTRO)}
+                {"id": numero, "tipo": tipo}, proposito=_PROPOSITO_REGISTRO)}
     except ErrorApp:
         _login_fallo(request, _intentos_registro)
         raise
@@ -7025,16 +7050,18 @@ def _registro_iniciar(request: Request, tipo: str, numero: str):
 
 def _registro_mail(request: Request, tipo: str, token: str, mail: str):
     """Paso 2: la persona declara un mail y se le manda el código. Solo vale
-    un token de `/iniciar` que dijo `paso: mail` (trae el número y nada más)."""
+    un token de `/iniciar` que dijo `paso: mail` (trae el número y el TIPO, y
+    nada más): sin el tipo, el `{id}` de un afiliado sin mail en el padrón
+    serviría en el registro de la empresa con el mismo número (QA-REG-02)."""
     if _login_bloqueado(request, _intentos_registro):
         raise ErrorApp("E-REGISTRO-05")
     datos = auth.leer_paso(token, _PROPOSITO_REGISTRO)
-    if not datos or set(datos) != {"id"}:
+    if not datos or set(datos) != {"id", "tipo"} or datos["tipo"] != tipo:
         _login_fallo(request, _intentos_registro)
         return _registro_error(400, "paso", "La verificación venció. Empezá de nuevo.")
     numero = str(datos["id"])
-    mail_ok = _mail_declarable(mail)
-    if not mail_ok:
+    mail_ok = (mail or "").strip()
+    if not correo.destino_valido(mail_ok):          # la única puerta de una dirección (QA-REG-06)
         _login_fallo(request, _intentos_registro)
         return _registro_error(422, "mail", "Escribí un mail válido.")
     try:
@@ -7049,7 +7076,8 @@ def _registro_mail(request: Request, tipo: str, token: str, mail: str):
         raise
     return {"ok": True, "paso": "codigo", "pista": correo.pista(mail_ok),
             "token": auth.firmar_paso(
-                {"id": numero, "codigo_id": codigo_id, "origen": "mail_declarado", "mail": mail_ok},
+                {"id": numero, "tipo": tipo, "codigo_id": codigo_id,
+                 "origen": "mail_declarado", "mail": mail_ok},
                 proposito=_PROPOSITO_REGISTRO)}
 
 
@@ -7063,7 +7091,8 @@ def _registro_confirmar(s, tipo: str, numero: str, token: str, codigo: str):
     tiene que ser de este número y de este tipo. Se hace commit siempre,
     TAMBIÉN con "incorrecto", o el contador de intentos no avanza."""
     datos = auth.leer_paso(token, _PROPOSITO_REGISTRO) if token else None
-    if datos is not None and _norm_cuil(str(datos.get("id", ""))) != numero:
+    if datos is not None and (datos.get("tipo") != tipo
+                              or _norm_cuil(str(datos.get("id", ""))) != numero):
         return "", "", "paso"
     con_codigo = datos is not None and "codigo_id" in datos
     if correo.habilitado() and not con_codigo:
@@ -7189,12 +7218,20 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
     if _login_bloqueado(request, _intentos_registro):
         return RedirectResponse("/ingresar?error=espera_registro", status_code=303)
     cuil = _norm_cuil(cuil)
-    # Con un token válido del paso 1 el captcha ya se resolvió ahí (un token de
-    # Turnstile sirve una sola vez); sin él, esta es la única puerta y se exige.
-    if auth.leer_paso(token, _PROPOSITO_REGISTRO) is None:
+    # Con un token válido del paso 1 PARA ESTE CUIL el captcha ya se resolvió
+    # ahí (un token de Turnstile sirve una sola vez); sin él, esta es la única
+    # puerta y se exige. El número del token se compara ANTES de mirar nada
+    # (QA-REG-01): un token de otro CUIL es "sin token".
+    if not _registro_token_ok(token, "trabajador", cuil):
         if not captcha.verificar(token_captcha, _ip_de(request)):
             _login_fallo(request, _intentos_registro)
             return RedirectResponse("/ingresar?error=captcha", status_code=303)
+        if correo.habilitado():
+            # Con el canal prendido no hay cuenta sin código, así que lo que
+            # falta (el token) corta ANTES de consultar el padrón: si no, el
+            # redirect distinguiría afiliados de ajenos (`paso` / `nohabilitado`).
+            _login_fallo(request, _intentos_registro)
+            return RedirectResponse("/ingresar?error=paso", status_code=303)
     # Primero que el número exista de verdad (verificador de AFIP) y recién
     # después se lo busca en el padrón: un número que no pasa el módulo 11 no
     # es de nadie, y decirle "no estás habilitado" a quien tipeó mal un dígito
@@ -7208,6 +7245,12 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
     if geo.faltan_campos({"provincia": provincia, "localidad": localidad}):
         _login_fallo(request, _intentos_registro)
         return RedirectResponse("/ingresar?error=domicilio", status_code=303)
+    # La clave mínima, ANTES de consumir el código (QA-REG-07): el mismo piso que
+    # la recuperación y el cambio de clave temporal. La pantalla ya lo pide con
+    # `minlength`; esto es para quien arma el POST a mano.
+    if len(clave) < CLAVE_MINIMA:
+        _login_fallo(request, _intentos_registro)
+        return RedirectResponse("/ingresar?error=clave", status_code=303)
     # Validar que el CUIL esté empadronado en al menos un sindicato
     sinds = db.sindicatos_de_cuil(cuil)
     if not sinds:
@@ -7379,7 +7422,6 @@ def app_portada(request: Request):
 # les muestra una tarjeta NO bloqueante que lleva acá; con el código la cuenta
 # pasa a nivel 2. Exige la sesión de trabajador y toma el CUIL de ella, nunca de
 # un campo del formulario.
-_RX_MAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]{2,}$")
 
 
 def _aviso_mail_de(cuil: str) -> bool:
@@ -7455,11 +7497,9 @@ def confirmar_mail_iniciar(request: Request, mail: str = Form("")):
                 return JSONResponse({"paso": "sindicato", "mensaje":
                     "Tu sindicato todavía no tiene un mail tuyo cargado. Pedile que lo cargue "
                     "y volvé a intentar."})
-            if not _RX_MAIL.match(mail) or len(mail) > 200:
+            if not correo.destino_valido(mail):         # la única puerta (QR-6)
                 raise HTTPException(400, "Escribí un mail válido.")
             destino, origen = mail, "declarado"
-        if db.codigos_recientes(s, "trabajador", cuil, "confirmacion") >= db.CODIGOS_POR_HORA:
-            raise ErrorApp("E-REGISTRO-03")
         fila, codigo = db.crear_codigo(s, "trabajador", cuil, "confirmacion", destino, origen,
                                        _ip_de(request))
         s.commit()          # el pedido cuenta para el cupo aunque el mail no salga
@@ -7467,6 +7507,7 @@ def confirmar_mail_iniciar(request: Request, mail: str = Form("")):
     asunto, cuerpo = _texto_codigo_confirmacion(codigo, db.CODIGO_VIGENCIA_MINUTOS)
     if not correo.enviar(destino, asunto, cuerpo):
         raise ErrorApp("E-REGISTRO-06")
+    _contar_pedido(request)
     return JSONResponse({
         "paso": "codigo", "pista": correo.pista(destino),
         "token": auth.firmar_paso({"cuil": cuil, "codigo_id": codigo_id},
@@ -7806,8 +7847,6 @@ def _recuperar_iniciar(request: Request, rol: str, identificador: str, token_cap
         if not mail:
             _login_fallo(request, _intentos_registro)
             return JSONResponse({"paso": "sindicato", "mensaje": MENSAJE_RECUPERACION_SINDICATO})
-        if db.codigos_recientes(s, cfg["tipo"], ident, "recuperacion") >= db.CODIGOS_POR_HORA:
-            raise ErrorApp("E-REGISTRO-03")
         fila, codigo = db.crear_codigo(s, cfg["tipo"], ident, "recuperacion", mail, "padron",
                                        _ip_de(request))
         s.commit()          # el pedido cuenta para el cupo aunque el mail no salga
@@ -7815,6 +7854,7 @@ def _recuperar_iniciar(request: Request, rol: str, identificador: str, token_cap
     asunto, cuerpo = correo.texto_codigo_recuperacion(codigo, db.CODIGO_VIGENCIA_MINUTOS)
     if not correo.enviar(mail, asunto, cuerpo):
         raise ErrorApp("E-REGISTRO-06")
+    _contar_pedido(request)            # también el que sale bien (QR-5)
     return JSONResponse({
         "paso": "codigo", "pista": correo.pista(mail),
         "token": auth.firmar_paso({cfg["campo"]: ident, "codigo_id": codigo_id},
@@ -7955,7 +7995,8 @@ def trabajador_salir():
 def ingresar_empresa(request: Request):
     """Pantalla de login/registro del empleador."""
     return templates.TemplateResponse("empresa_login.html", {
-        "request": request, "marca_plataforma": db.marca_plataforma()})
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "clave_minima": CLAVE_MINIMA})
 
 
 def _abrir_sesion_empleador(cuit: str, cuenta_id: int):
@@ -8026,17 +8067,24 @@ def empresa_registro(request: Request, cuit: str = Form(...), clave: str = Form(
     if _login_bloqueado(request, _intentos_registro):
         return RedirectResponse("/ingresar-empresa?error=espera_registro", status_code=303)
     cuit = _norm_cuil(cuit)
-    # Con un token válido del paso 1 el captcha ya se resolvió ahí (un token de
-    # Turnstile sirve una sola vez); sin él, es la única puerta y se exige.
-    if auth.leer_paso(token, _PROPOSITO_REGISTRO) is None:
+    # Con un token válido del paso 1 PARA ESTE CUIT el captcha ya se resolvió
+    # ahí (un token de Turnstile sirve una sola vez); sin él, es la única
+    # puerta y se exige. Mismo criterio que el afiliado (QA-REG-01).
+    if not _registro_token_ok(token, "empleador", cuit):
         if not captcha.verificar(token_captcha, _ip_de(request)):
             _login_fallo(request, _intentos_registro)
             return RedirectResponse("/ingresar-empresa?error=captcha", status_code=303)
+        if correo.habilitado():
+            _login_fallo(request, _intentos_registro)
+            return RedirectResponse("/ingresar-empresa?error=paso", status_code=303)
     # Antes de buscarlo: un CUIT sin verificador válido no es de nadie. Vale
     # cualquier tipo (una empresa unipersonal tiene CUIT de persona).
     if _cuit_mal(cuit):
         _login_fallo(request, _intentos_registro)
         return RedirectResponse("/ingresar-empresa?error=cuit", status_code=303)
+    if len(clave) < CLAVE_MINIMA:                       # antes de consumir el código (QA-REG-07)
+        _login_fallo(request, _intentos_registro)
+        return RedirectResponse("/ingresar-empresa?error=clave", status_code=303)
     # Validar que el CUIT esté dado de alta como Empleador activo en al menos un sindicato
     sinds = db.sindicatos_de_cuit_empleador(cuit)
     if not sinds:
@@ -8736,10 +8784,6 @@ def api_entornos_esquema(request: Request):
 _MAPA_FUNCIONAL: dict = {}
 _MAPA_LOCK = threading.Lock()
 PROMPT_MAPA_FUNCIONAL = "/recursos/prompt-mapa-funcional/archivo"
-
-
-def _url_static(nombre: str) -> str:
-    return f"/static/{nombre}?v={_sello_static(nombre)}"
 
 
 def _mapa_funcional(forzar: bool = False) -> dict:

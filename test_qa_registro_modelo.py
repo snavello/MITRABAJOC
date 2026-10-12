@@ -29,7 +29,7 @@ from urllib.parse import urlsplit, urlunsplit
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import select
+from sqlmodel import delete, select
 
 import auth
 import db
@@ -67,6 +67,17 @@ def _malo(codigo):
 # ===========================================================================
 # 1. CÓDIGOS DE VERIFICACIÓN
 # ===========================================================================
+
+@pytest.fixture(autouse=True)
+def _sin_pedidos_previos():
+    """El cupo por MAIL de destino (QA-REG-03, `CODIGOS_POR_HORA_DESTINO`) es de
+    la base y estos tests comparten direcciones: cada uno empieza sin pedidos de
+    la última hora."""
+    with db.get_session() as s:
+        s.exec(delete(CodigoVerificacion))
+        s.commit()
+
+
 def test_el_codigo_sale_de_secrets_y_siempre_tiene_seis_digitos(monkeypatch):
     """Formato: 6 dígitos con ceros a la izquierda, también en los extremos del
     rango, y la fuente de azar es `secrets` (no `random`)."""
@@ -82,7 +93,7 @@ def test_el_codigo_sale_de_secrets_y_siempre_tiene_seis_digitos(monkeypatch):
         s.rollback()
     monkeypatch.undo()
     with db.get_session() as s:
-        codigos = {db.crear_codigo(s, "trabajador", f"2091{i:07d}", "registro", "a@b.com", "padron", "ip")[1]
+        codigos = {db.crear_codigo(s, "trabajador", f"2091{i:07d}", "registro", f"u{i}@b.com", "padron", "ip")[1]
                    for i in range(300)}
         s.rollback()
     assert all(re.fullmatch(r"\d{6}", c) for c in codigos)
