@@ -6833,3 +6833,60 @@ la demo + lote UOM y 90 días de filtro:
 
 La cuarta condición de D9 dice "no es más pesada": por peso de JS no se
 cumple. Queda para SDN junto con su uso en Pruebas.
+
+**Movimiento, caso cero (2026-10-12, Admin 0.53.01).** SDN probó la v2,
+pidió conservar las dos versiones para comparar mientras se mejora la nueva, y
+marcó que las animaciones de los gráficos y la apertura de los modales eran
+tan rápidas que casi no se veían. Lo planteó como el caso cero para mejorar de
+a poco la interfaz de toda la plataforma.
+
+El diagnóstico no fue la duración. Los gráficos se animaban **cuando llegaban
+los datos**, y en un monitor se ven 2 o 3 de los 9 paneles al abrir: el resto
+terminaba su entrada fuera de pantalla. Además la curva (easeOutQuart en 600
+ms) hace casi todo el recorrido en el primer cuarto, así que se percibía como
+150 ms. Y el modal abría recién cuando llegaba el detalle: primero una espera
+sin nada y después una caja que aparecía casi de golpe.
+
+Antes de construir se instaló la skill `emil-design-eng` de Emil Kowalski
+(`.claude/skills/emil-design-eng/`, copia textual fijada a un commit, leída
+entera, licencia MIT; `ORIGEN.md` dice de dónde sale y que ante un choque
+manda `diseno-mi-trabajo`). Una regla suya cambió lo propuesto: el modal no
+crece desde la fila tocada, porque eso es para popovers; los modales escalan
+desde su centro.
+
+Lo que se hizo:
+- **Tokens de movimiento** (`--mov-*`, `--ease-*`) en `panel_v2/panel.css`.
+  `panel/movimiento` los lee para Chart.js: CSS y gráficos usan los mismos
+  números. Las reglas quedaron en `diseno-mi-trabajo` → "Movimiento".
+- **Entradas al hacer scroll.** Un solo IntersectionObserver para todos los
+  paneles (`alEntrar`), con escalón entre los que entran juntos. El gráfico se
+  crea igual apenas llegan los datos, quieto y con el panel invisible (así el
+  robot de paridad lo sigue leyendo), y al entrar en pantalla vuelve a cero y
+  se dibuja (`reset()` + `update()`). La dona no giraba: `reset()` leía las
+  opciones viejas, que todavía decían "sin animación". Se arregló aplicando
+  primero las opciones de la entrada con `update("none")`.
+- **El modal "Ver"** abre en el momento del clic con un esqueleto. Va arriba
+  y no al medio de la pantalla, para que al llegar el detalle crezca hacia
+  abajo sin saltar. El fondo se desenfoca apenas y el contenido llega nítido
+  desde un desenfoque leve. Abre en 420 ms y cierra en 260.
+- **Hover solo con mouse**, y solo levanta los gráficos, que se tocan. Los
+  indicadores se aclaran. Todo botón se achica a .97 al apretarlo; la regla va
+  con `:where()`, que no pesa, así cada botón conserva su propia transición.
+- **El explorador**: la marca de la pestaña es una pastilla aparte que se
+  desliza, las filas de "Ver más" entran escalonadas y un cambio de filtros
+  renueva la tabla con un fundido corto.
+- **Esqueletos con brillo** en los paneles y los indicadores mientras llegan
+  los primeros datos.
+- **Tooltips de la casa**: base oscura del sindicato, cifra en monoespaciada,
+  sin muestra de color en los gráficos de una sola serie. La manito aparece
+  sobre lo que filtra.
+
+Los 31 robots de siempre siguen en verde, pero corren con "reducir
+movimiento" y no prueban nada de esto. Por eso se sumó
+`test_la_v2_con_movimiento`, el único que corre con el movimiento prendido.
+Verifica que un panel de abajo espere a verse con sus datos ya cargados, que
+el gráfico se dibuje al entrar, que el modal abra con el esqueleto antes de
+que llegue el detalle (el detalle se retiene en el robot), que la marca quede
+debajo de la pestaña elegida y que las filas nuevas entren escalonadas. Se
+revisaron además cuadros a lo largo de cada animación, en escritorio y
+teléfono.

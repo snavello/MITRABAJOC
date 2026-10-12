@@ -30,9 +30,13 @@ misma dirección: controles y cajón, gráficos, mapa, explorador y modal, y el
 Asistente. Este último contesta con respuestas armadas por el test (no llama
 al modelo), pero la app tiene que arrancar con una `ANTHROPIC_API_KEY`,
 aunque sea falsa, para que el botón exista.
+
+Todos corren con "reducir movimiento" (para leer valores quietos), salvo
+`test_la_v2_con_movimiento`, que prueba el movimiento mismo.
 """
 import json
 import re
+import time
 from datetime import timedelta
 from urllib.parse import parse_qsl
 
@@ -394,3 +398,97 @@ def test_el_asistente_de_la_v2_hace_lo_mismo_que_el_de_la_v1(page, informe):
     assert ("resultado", "con_diferencias") in v2["urls"]["filtró"]
     assert ("tab", "tramites") in v2["urls"]["eligió homónimo"]
     informe.paso("La dirección quedó igual al filtrar, al elegir el homónimo y al volver")
+
+
+def _hasta_que(page, js, args=None, segundos=8.0):
+    """Repite `js` (una función) hasta que dé verdadero. No `wait_for_function`:
+    la CSP de la app no deja evaluar texto como JavaScript."""
+    fin = time.time() + segundos
+    while time.time() < fin:
+        if page.evaluate(js, args):
+            return True
+        page.wait_for_timeout(50)
+    return False
+
+
+_ANIMANDO = """(panel) => {
+    const ch = Chart.getChart(document.querySelector('[data-panel="' + panel + '"] canvas'));
+    return !!ch && Chart.animator.running(ch);
+}"""
+_CON_DATOS = """(panel) => {
+    const ch = Chart.getChart(document.querySelector('[data-panel="' + panel + '"] canvas'));
+    return !!ch && ch.data.datasets.length > 0 && ch.data.datasets[0].data.length > 0;
+}"""
+
+
+def test_la_v2_con_movimiento(page, informe):
+    """Los otros robots corren con "reducir movimiento", para leer valores
+    quietos; este no. Verifica el movimiento de la v2: un panel de abajo
+    espera a que se lo mire (su gráfico ya tiene los datos, pero se dibuja al
+    entrar en pantalla), el modal "Ver" abre al instante con un esqueleto, la
+    marca de la pestaña se desliza, las filas de "Ver más" entran escalonadas,
+    y nada de eso deja errores en la consola."""
+    paridad.entrar_como_admin(page)
+    if not paridad.existe(page, "v2"):
+        pytest.skip("La v2 todavía no existe en este entorno (PLAN_DASHBOARD_V2.md, bloque 1).")
+    errores = []
+    page.on("console", lambda m: errores.append(m.text)
+            if m.type == "error" and not m.text.startswith("Failed to load resource") else None)
+    page.on("pageerror", lambda e: errores.append(str(e)))
+    page.emulate_media(reduced_motion="no-preference")
+    page.set_viewport_size({"width": 1366, "height": 800})
+    hoy = fechas.hoy()
+    page.goto(f"{paridad.BASE}{paridad.RUTAS['v2']}?desde={(hoy - timedelta(days=89)).isoformat()}&hasta={hoy.isoformat()}",
+              wait_until="domcontentloaded")
+    expect(page.locator("#v-recibos")).to_have_text(re.compile(r"\d"), timeout=15000)
+    visto = re.compile(r"\bvisto\b")
+
+    expect(page.locator('[data-panel="serie"]')).to_have_class(visto)
+    formato = page.locator('[data-panel="formato"]')
+    assert _hasta_que(page, _CON_DATOS, "formato"), "el gráfico de formato no recibió sus datos"
+    expect(formato).not_to_have_class(visto)
+    informe.paso("Arriba, los paneles ya entraron; el de formato, fuera de pantalla, espera con sus datos cargados")
+
+    formato.scroll_into_view_if_needed()
+    expect(formato).to_have_class(visto)
+    assert _hasta_que(page, _ANIMANDO, "formato", 2), "el gráfico no se dibujó al entrar en pantalla"
+    assert _hasta_que(page, f"(p) => !({_ANIMANDO})(p)", "formato", 4), "la entrada no terminó"
+    informe.paso("Al bajar, el panel de formato entró y su gráfico se dibujó delante de quien mira")
+
+    # El modal abre en el momento del clic: el detalle se retiene para ver el esqueleto.
+    retenidos = []
+    page.route("**/admin/dashboard/detalle/**", lambda r: retenidos.append(r))
+    page.locator("#tabla-body .btn-ver").first.scroll_into_view_if_needed()
+    page.locator("#tabla-body .btn-ver").first.click()
+    expect(page.locator("#overlay-det")).to_have_class(re.compile(r"\babierto\b"))
+    expect(page.locator(".v2-det-esqueleto")).to_be_visible()
+    informe.paso("El modal abrió al instante del clic, con el esqueleto mientras llega el detalle")
+    fin = time.time() + 5
+    while not retenidos and time.time() < fin:
+        page.wait_for_timeout(50)
+    assert retenidos, "el detalle no se pidió"
+    retenidos[0].continue_()
+    page.unroute("**/admin/dashboard/detalle/**")
+    expect(page.locator("#det-contenido")).to_contain_text("Recibo verificado", timeout=10000)
+    expect(page.locator("#det-cerrar")).to_be_focused()
+    page.keyboard.press("Escape")
+    expect(page.locator("#overlay-det")).not_to_have_class(re.compile(r"\babierto\b"))
+
+    # La marca de la pestaña va a parar debajo de la pestaña elegida.
+    page.click('#tabs-datos [data-t="tramites"]')
+    assert _hasta_que(page, """() => {
+        const i = document.querySelector('.v2-indicador'), b = document.querySelector('.tab-d.act');
+        if (!i || !b) return false;
+        const ri = i.getBoundingClientRect(), rb = b.getBoundingClientRect();
+        return Math.abs(ri.left - rb.left) < 1.5 && Math.abs(ri.width - rb.width) < 1.5;
+    }""", None, 3), "la marca de la pestaña no quedó debajo de la elegida"
+    informe.paso("La marca de la pestaña se deslizó hasta «Trámites»")
+
+    if page.locator("#ver-mas").is_visible():
+        antes = page.locator("#tabla-body tr").count()
+        page.click("#ver-mas")
+        expect(page.locator("#tabla-body tr")).not_to_have_count(antes, timeout=10000)
+        nuevas = page.locator("#tabla-body tr.v2-fila-nueva").count()
+        assert nuevas == page.locator("#tabla-body tr").count() - antes, nuevas
+        informe.paso(f"«Ver más» sumó {nuevas} filas, que entraron escalonadas")
+    assert not errores, errores

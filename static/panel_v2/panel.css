@@ -377,6 +377,30 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
    (degradé base -> primario, grano, filo de acento); los filtros, en una
    barra arriba y en un cajón. Sobre la franja de marca la tarjeta se separa
    por LUZ (filo de 1px y brillo), no por color (regla de la mesa). */
+
+/* ---------- Movimiento: el caso cero de toda la plataforma ----------
+   Las duraciones y las curvas con nombre. Las usa este archivo y las lee
+   panel/movimiento para Chart.js: un solo lugar. Reglas (skill
+   `diseno-mi-trabajo`, "Movimiento"; referencia, `emil-design-eng`):
+   - lo que aparece usa `--ease-salida` (arranca rápido y frena: responde ya);
+     lo que se mueve de un lugar a otro, `--ease-mueve`; nunca `ease-in`;
+   - cerrar es más rápido que abrir; lo que se usa muchas veces seguidas
+     (cambiar un filtro, pasar el mouse) es corto;
+   - con "reducir movimiento" no se anima nada (marca.css lo corta todo). */
+:root {
+  --mov-presion: 120ms;   /* un botón que se aprieta */
+  --mov-rapido: 160ms;    /* pasar el mouse, tooltips */
+  --mov-medio: 260ms;     /* cambios de estado, cierres */
+  --mov-lento: 420ms;     /* apertura de modales y cajones */
+  --mov-entrada: 640ms;   /* un panel que entra al hacer scroll */
+  --mov-cambio: 500ms;    /* un gráfico que pasa de un valor a otro */
+  --mov-datos: 900ms;     /* un gráfico que se dibuja por primera vez */
+  --mov-correr: 900ms;    /* un indicador que corre hasta su número */
+  --mov-escalon: 60ms;    /* entre dos que entran juntos */
+  --ease-salida: cubic-bezier(.23, 1, .32, 1);
+  --ease-mueve: cubic-bezier(.77, 0, .175, 1);
+  --ease-hoja: cubic-bezier(.32, .72, 0, 1);
+}
 .v2 { padding-top: 18px; }
 .v2-cabeza { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .v2-cabeza .titulo-pagina { margin: 0 0 4px; }
@@ -401,7 +425,8 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
 .v2-presets { display: flex; flex-wrap: wrap; gap: 6px; }
 .v2-chip, .v2-btn-filtros, .v2-reiniciar { border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: #e3e9f1;
   border-radius: var(--r-chip); padding: 6px 13px; font: 600 12.5px var(--fuente); cursor: pointer;
-  transition: background .2s, border-color .2s, box-shadow .2s, color .2s; }
+  transition: background var(--mov-rapido) ease, border-color var(--mov-rapido) ease, box-shadow var(--mov-rapido) ease,
+    color var(--mov-rapido) ease, scale var(--mov-presion) var(--ease-salida); }
 .v2-chip:hover, .v2-btn-filtros:hover { border-color: color-mix(in srgb, var(--destacado) 60%, white); }
 .v2-chip.act { background: var(--destacado); border-color: var(--destacado); color: #fff; box-shadow: 0 4px 14px -6px var(--destacado); }
 /* "Más filtros" tiene que verse distinto de las pastillas de período: abre el
@@ -414,7 +439,7 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
 .v2-puestos { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }
 .v2-puesto { display: inline-flex; align-items: center; gap: 6px; background: color-mix(in srgb, var(--destacado) 22%, transparent);
   border: 1px solid color-mix(in srgb, var(--destacado) 55%, transparent); color: #fff; border-radius: 99px;
-  padding: 3px 4px 3px 11px; font-size: 12px; font-weight: 700; animation: v2-entra .3s cubic-bezier(.2,.8,.2,1) both; }
+  padding: 3px 4px 3px 11px; font-size: 12px; font-weight: 700; animation: v2-entra var(--mov-medio) var(--ease-salida) both; }
 .v2-puesto button { border: 0; background: rgba(255,255,255,.16); color: #fff; width: 20px; height: 20px; border-radius: 50%;
   cursor: pointer; font-size: 10px; }
 .v2-reiniciar { margin-left: auto; border-color: color-mix(in srgb, var(--destacado) 70%, white); color: #fff; background: none; }
@@ -442,12 +467,12 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
    Entra de costado en escritorio y desde abajo en teléfono. Se anima con
    `translate` y no con `transform` (D5: misma regla que los modales). */
 .v2-cajon-fondo { position: fixed; inset: 0; z-index: 900; background: rgba(8,12,20,0); visibility: hidden;
-  transition: background .26s, visibility 0s .26s; }
-.v2-cajon-fondo.abierto { background: rgba(8,12,20,.45); visibility: visible; transition: background .26s; }
+  transition: background var(--mov-medio) ease, visibility 0s var(--mov-medio); }
+.v2-cajon-fondo.abierto { background: rgba(8,12,20,.45); visibility: visible; transition: background var(--mov-lento) ease; }
 .v2-cajon { position: fixed; z-index: 910; top: 0; right: 0; bottom: 0; width: min(420px, 100%); background: var(--blanco); color: var(--tinta);
   display: flex; flex-direction: column; box-shadow: -20px 0 60px -20px rgba(0,0,0,.45);
-  translate: 105% 0; visibility: hidden; transition: translate .32s cubic-bezier(.2,.8,.2,1), visibility 0s .32s; }
-.v2-cajon.abierto { translate: 0 0; visibility: visible; transition: translate .32s cubic-bezier(.2,.8,.2,1); }
+  translate: 105% 0; visibility: hidden; transition: translate var(--mov-medio) var(--ease-salida), visibility 0s var(--mov-medio); }
+.v2-cajon.abierto { translate: 0 0; visibility: visible; transition: translate var(--mov-lento) var(--ease-hoja); }
 .v2-cajon-enc { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px;
   background: var(--marca-base); color: #fff; }
 .v2-cajon-enc h2 { margin: 0; font-family: var(--fuente-display); font-size: 22px; text-transform: uppercase; letter-spacing: .4px; }
@@ -478,39 +503,57 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
 .v2-acciones { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .v2-grid { margin-top: 16px; }
 .v2-grid .panel { box-shadow: 0 1px 2px rgba(21,34,56,.05), 0 10px 28px -18px rgba(21,34,56,.2); }
-/* Los paneles entran escalonados la primera vez; después no se mueven. */
-.v2-grid > .panel { animation: v2-entra .5s cubic-bezier(.2,.8,.2,1) both; }
-.v2-grid > .panel:nth-child(2) { animation-delay: 40ms; } .v2-grid > .panel:nth-child(3) { animation-delay: 80ms; }
-.v2-grid > .panel:nth-child(4) { animation-delay: 120ms; } .v2-grid > .panel:nth-child(5) { animation-delay: 160ms; }
-.v2-grid > .panel:nth-child(n+6) { animation-delay: 200ms; }
-.v2-aparece { animation: v2-entra .35s cubic-bezier(.2,.8,.2,1) both; }
+/* Cada panel entra en escena cuando se lo mira (panel/movimiento marca
+   `.visto`), con el escalón que le toca en `--retraso`. Antes de eso está
+   invisible: así su gráfico se dibuja delante de la persona y no fuera de
+   pantalla. `backwards` y no `both`: terminada la entrada, el panel vuelve a
+   sus reglas y el hover lo puede levantar. */
+.v2-grid > .panel:not(.visto) { opacity: 0; }
+.v2-grid > .panel.visto { animation: v2-revela var(--mov-entrada) var(--ease-salida) var(--retraso, 0ms) backwards; }
+@keyframes v2-revela { from { opacity: 0; translate: 0 18px; } }
+.v2-aparece { animation: v2-entra var(--mov-medio) var(--ease-salida) both; }
 
-/* El modal "Ver": el fondo se oscurece de a poco y la caja entra con una
-   escala corta (D5). Se anima `scale`/`translate`/`opacity`, nunca
-   `transform`: modales.js lo usa para el arrastre y se pisarían. */
-.overlay-det.v2-anim { display: flex; visibility: hidden; background: rgba(8,12,20,0); z-index: 920;
-  transition: background .26s, visibility 0s .26s; }
-.overlay-det.v2-anim.abierto { visibility: visible; background: rgba(8,12,20,.55); transition: background .26s; }
-.overlay-det.v2-anim .modal-det { opacity: 0; scale: .94; translate: 0 14px;
-  transition: opacity .26s cubic-bezier(.2,.8,.2,1), scale .32s cubic-bezier(.2,.8,.2,1), translate .32s cubic-bezier(.2,.8,.2,1); }
-.overlay-det.v2-anim.abierto .modal-det { opacity: 1; scale: 1; translate: 0 0; }
+/* El modal "Ver". Abre al instante del clic con un esqueleto; el fondo se
+   oscurece y se desenfoca apenas, y la caja entra centrada con una escala
+   corta (desde .96, nunca desde cero). Va arriba y no al medio de la
+   pantalla: cuando llega el detalle la caja crece hacia abajo, sin saltar.
+   Se anima `scale`/`translate`/`opacity`, nunca `transform`: modales.js lo
+   usa para el arrastre y se pisarían. Cerrar es más rápido que abrir. */
+.overlay-det.v2-anim { display: flex; align-items: flex-start; padding-top: max(18px, 7vh); visibility: hidden;
+  background: rgba(8,12,20,0); z-index: 920;
+  transition: background var(--mov-medio) ease, backdrop-filter var(--mov-medio) ease, visibility 0s var(--mov-medio); }
+.overlay-det.v2-anim.abierto { visibility: visible; background: rgba(8,12,20,.5); backdrop-filter: blur(4px);
+  transition: background var(--mov-lento) ease, backdrop-filter var(--mov-lento) ease; }
+.overlay-det.v2-anim .modal-det { opacity: 0; scale: .96; translate: 0 12px;
+  box-shadow: 0 30px 70px -20px rgba(8,12,20,.55), 0 0 0 1px rgba(8,12,20,.06);
+  transition: opacity var(--mov-medio) var(--ease-salida), scale var(--mov-medio) var(--ease-salida),
+    translate var(--mov-medio) var(--ease-salida); }
+.overlay-det.v2-anim.abierto .modal-det { opacity: 1; scale: 1; translate: 0 0;
+  transition: opacity var(--mov-medio) var(--ease-salida), scale var(--mov-lento) var(--ease-salida),
+    translate var(--mov-lento) var(--ease-salida); }
+/* El detalle llega nítido desde un desenfoque leve: borra el salto entre el
+   esqueleto y el contenido. */
+.v2-nitido { animation: v2-nitido var(--mov-medio) var(--ease-salida); }
+@keyframes v2-nitido { from { opacity: 0; filter: blur(3px); } }
 @media (prefers-reduced-motion: reduce) {
-  .v2-grid > .panel, .v2-aparece { animation: none; }
-  .overlay-det.v2-anim, .overlay-det.v2-anim .modal-det { transition: none; }
+  .v2-grid > .panel, .v2-aparece, .v2-nitido { animation: none; }
+  .overlay-det.v2-anim, .overlay-det.v2-anim .modal-det { transition: none; backdrop-filter: none; }
 }
 
 /* ---- Bloque 6: el Asistente (D5) ----
    El cajón de la v1, con la entrada más suave y cada burbuja que aparece
    subiendo. Se anima `translate` y no `transform`: así ninguna regla de la
    v1 que use transform lo pisa. Con "reducir movimiento", quieto. */
-.v2-acciones .btn-asist { padding-top: 4px; padding-bottom: 4px; }
-.v2-asist { transform: none; translate: 105% 0; transition: translate .45s cubic-bezier(.22,1,.36,1); }
-.v2-asist.abierto { translate: 0 0; }
+.v2-acciones .btn-asist { padding-top: 4px; padding-bottom: 4px;
+  transition: box-shadow var(--mov-rapido) ease, border-color var(--mov-rapido) ease, transform var(--mov-rapido) var(--ease-salida),
+    scale var(--mov-presion) var(--ease-salida); }
+.v2-asist { transform: none; translate: 105% 0; transition: translate var(--mov-medio) var(--ease-salida); }
+.v2-asist.abierto { translate: 0 0; transition: translate var(--mov-lento) var(--ease-hoja); }
 @media (max-width: 640px) {
-  .v2-asist { transform: none; translate: 0 105%; transition: translate .45s cubic-bezier(.22,1,.36,1), height .3s ease; }
-  .v2-asist.abierto { translate: 0 0; }
+  .v2-asist { transform: none; translate: 0 105%; transition: translate var(--mov-medio) var(--ease-salida), height var(--mov-medio) var(--ease-salida); }
+  .v2-asist.abierto { translate: 0 0; transition: translate var(--mov-lento) var(--ease-hoja), height var(--mov-medio) var(--ease-salida); }
 }
-.v2-asist .burb { animation: v2-burb .34s cubic-bezier(.22,1,.36,1) both; }
+.v2-asist .burb { animation: v2-burb var(--mov-medio) var(--ease-salida) both; }
 @keyframes v2-burb { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
 @media (prefers-reduced-motion: reduce) {
   .v2-asist { transition: none; }
@@ -522,4 +565,71 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
 @media (max-width: 640px) {
   .v2-puestos { order: 5; flex-basis: 100%; }
   .v2-puestos:empty { display: none; }
+}
+
+/* ---------- Movimiento: hover, presión, esqueletos y explorador ---------- */
+
+/* Pasar el mouse sobre un gráfico lo levanta apenas: se puede tocar. Solo
+   con mouse (en el teléfono un "hover" es un toque y se quedaría pegado), y
+   no en el mapa ni en el explorador, que se arrastran y se leen. Los
+   indicadores no se levantan porque no se tocan: solo se aclaran. */
+@media (hover: hover) and (pointer: fine) {
+  .v2-grid > .panel.visto:not([data-panel="explorador"]):not([data-panel="seccionales-geo"]) {
+    transition: translate var(--mov-rapido) var(--ease-salida), box-shadow var(--mov-rapido) var(--ease-salida),
+      border-color var(--mov-rapido) ease; }
+  .v2-grid > .panel.visto:not([data-panel="explorador"]):not([data-panel="seccionales-geo"]):hover {
+    translate: 0 -3px; border-color: color-mix(in srgb, var(--marca-primario) 22%, var(--linea));
+    box-shadow: 0 2px 4px rgba(21,34,56,.06), 0 20px 40px -20px rgba(21,34,56,.34); }
+  .v2-hero, .v2-mini { transition: background var(--mov-rapido) ease, box-shadow var(--mov-rapido) ease; }
+  .v2-hero:hover { background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px rgba(255,255,255,.16); }
+  .v2-mini:hover { background: color-mix(in srgb, var(--marca-base) 72%, var(--marca-primario)); }
+}
+
+/* Todo lo que se aprieta se achica apenas al apretarlo: la pantalla
+   contesta antes de que llegue nada del servidor. :where() no pesa nada, así
+   que el botón que ya tiene su propia transición la conserva. */
+:where(#panel, #capas) :where(button, a.v2-volver) {
+  transition: scale var(--mov-presion) var(--ease-salida), background-color var(--mov-rapido) ease,
+    border-color var(--mov-rapido) ease, color var(--mov-rapido) ease; }
+:where(#panel, #capas) :where(button:not(:disabled), a.v2-volver):active { scale: .97; }
+
+/* Esperando los primeros datos: un esqueleto con un brillo que lo recorre,
+   en vez de un hueco. El brillo es movimiento constante: curva lineal. */
+.v2-grid > .panel.esperando { min-height: 210px; }
+.panel.esperando.cargando { opacity: 1; }
+.panel.esperando .vacio-exp { visibility: hidden; }
+.v2-esqueleto { position: absolute; left: 16px; right: 16px; top: 66px; bottom: 18px; display: flex;
+  flex-direction: column; justify-content: flex-end; gap: 12px; pointer-events: none; }
+.v2-esqueleto i, .v2-det-esqueleto i { display: block; height: 14px; border-radius: 7px;
+  background: linear-gradient(90deg, var(--linea) 0%, color-mix(in srgb, var(--linea) 35%, white) 45%, var(--linea) 90%);
+  background-size: 220% 100%; animation: v2-brillo 1.4s linear infinite; }
+.v2-esqueleto i:nth-child(1) { width: 58%; } .v2-esqueleto i:nth-child(2) { width: 86%; }
+.v2-esqueleto i:nth-child(3) { width: 44%; } .v2-esqueleto i:nth-child(4) { width: 72%; }
+.v2-esq-num { display: inline-block; width: 64%; max-width: 170px; height: .72em; border-radius: 6px; vertical-align: middle;
+  background: linear-gradient(90deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,.2) 45%, rgba(255,255,255,.07) 90%);
+  background-size: 220% 100%; animation: v2-brillo 1.4s linear infinite; }
+.v2-tablero.cargando .v2-heroes.esperando, .v2-tablero.cargando .v2-minis.esperando { animation: none; }
+@keyframes v2-brillo { from { background-position: 120% 0; } to { background-position: -100% 0; } }
+.v2-det-esqueleto { display: flex; flex-direction: column; gap: 12px; min-height: 260px; padding: 2px 0 8px; }
+.v2-det-esqueleto i.t { height: 22px; width: 46%; } .v2-det-esqueleto i.s { height: 11px; width: 30%; margin-bottom: 10px; }
+.v2-det-esqueleto i:nth-child(3) { width: 92%; } .v2-det-esqueleto i:nth-child(4) { width: 78%; }
+.v2-det-esqueleto i:nth-child(5) { width: 88%; } .v2-det-esqueleto i:nth-child(6) { width: 64%; }
+.v2-det-esqueleto i:nth-child(7) { width: 82%; }
+
+/* Explorador: la marca de la pestaña elegida es una pastilla aparte que se
+   desliza (algo que se mueve de un lugar a otro: `--ease-mueve`). Las filas
+   que suma "Ver más" entran escalonadas; un cambio de filtros renueva la
+   tabla con un fundido corto. */
+.v2-tabs { position: relative; }
+.v2-tabs .tab-d { position: relative; z-index: 1; }
+.v2-tabs .tab-d.act { background: transparent; }
+.v2-tabs .tab-d .cnt { transition: background var(--mov-medio) ease, color var(--mov-medio) ease; }
+.v2-indicador { position: absolute; top: 4px; bottom: 4px; left: 0; z-index: 0; border-radius: 8px;
+  background: var(--destacado); box-shadow: 0 4px 14px -6px var(--destacado); }
+.v2-indicador.listo { transition: translate var(--mov-medio) var(--ease-mueve), width var(--mov-medio) var(--ease-mueve); }
+.v2-fila-nueva { animation: v2-entra var(--mov-medio) var(--ease-salida) backwards; }
+.v2-recarga { animation: v2-funde var(--mov-medio) ease-out; }
+@keyframes v2-funde { from { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) {
+  .v2-esqueleto i, .v2-det-esqueleto i, .v2-esq-num, .v2-fila-nueva, .v2-recarga { animation: none; }
 }

@@ -5,15 +5,15 @@
    mismos ids que la v1 (`v-recibos`, `v-pdif`...): el robot de paridad los
    lee igual en las dos versiones.
 
-   El número corre hasta su valor (D5): sale del que se ve en ese momento, no
-   pasa de 600 ms, si llega otro a mitad de camino arranca desde donde está,
-   y con prefers-reduced-motion aparece directo. */
+   El número corre hasta su valor (D5): sale del que se ve en ese momento,
+   tarda `--mov-correr` (son lo primero que se ve: se bancan un poco más que
+   el resto), si llega otro a mitad de camino arranca desde donde está, y con
+   prefers-reduced-motion aparece directo. Mientras no llegó el primero, en
+   lugar del "—" va un esqueleto con brillo. */
 import { useEffect, useRef, useState } from "preact/hooks";
 import { html } from "panel/html";
 import { fmtN, fmtM, fmtPct, deltaRecibos } from "panel/formato";
-
-const DURACION = 600;
-const menosMovimiento = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+import { menosMovimiento, ms } from "panel/movimiento";
 
 export function useCorrer(valor) {
   const [mostrado, setMostrado] = useState(menosMovimiento() ? valor : null);
@@ -24,9 +24,10 @@ export function useCorrer(valor) {
     }
     const desde = enPantalla.current === null || enPantalla.current === undefined ? 0 : enPantalla.current;
     const t0 = performance.now();
+    const duracion = ms("--mov-correr");
     let raf = 0;
     const paso = (t) => {
-      const p = Math.min(1, (t - t0) / DURACION);
+      const p = Math.min(1, (t - t0) / duracion);
       const v = p < 1 ? desde + (valor - desde) * (1 - Math.pow(1 - p, 3)) : valor;
       enPantalla.current = v;
       setMostrado(v);
@@ -41,8 +42,11 @@ export function useCorrer(valor) {
 /* Un decimal mientras corre; el valor final, tal cual lo manda el servidor. */
 const unDecimal = (v, final) => (v === final ? v : Math.round(v * 10) / 10);
 
-function Valor({ id, valor, formato, clase = "val num" }) {
+function Valor({ id, valor, formato, clase = "val num", esperando }) {
   const v = useCorrer(valor);
+  if ((v === null || v === undefined) && esperando) {
+    return html`<div class=${clase} id=${"v-" + id}><span class="v2-esq-num" aria-label="Cargando"></span></div>`;
+  }
   const texto = v === null || v === undefined ? "—" : formato(v);
   return html`<div class=${clase} id=${"v-" + id}>${texto}</div>`;
 }
@@ -53,6 +57,7 @@ export function Kpis({ datos, consultas, error, reintentar }) {
   const n = (v) => fmtN(Math.round(v));
   const pct = (final) => (v) => fmtPct(unDecimal(v, final));
   const total = a.padron_total;
+  const esperando = !datos && !error;
   const minis = [
     ["enviados", "Enviados al sindicato", a.enviados_sindicato, n],
     ["tramites", "Trámites del período", a.tramites, n],
@@ -63,23 +68,23 @@ export function Kpis({ datos, consultas, error, reintentar }) {
   return html`
     ${error && html`<div class="v2-error-kpis">No se pudieron cargar los indicadores.
       <button type="button" onClick=${reintentar}>Reintentar</button></div>`}
-    <div class="v2-heroes">
+    <div class=${"v2-heroes" + (esperando ? " esperando" : "")}>
       <div class="v2-hero grande">
         <div class="v2-kicker">Recibos analizados</div>
-        <${Valor} id="recibos" valor=${a.recibos} formato=${n} />
+        <${Valor} id="recibos" valor=${a.recibos} formato=${n} esperando=${esperando} />
         ${delta && html`<div class=${"delta " + delta.clase} id="d-recibos">${delta.texto}</div>`}
       </div>
       <div class="v2-hero"><div class="et">% con diferencias</div>
-        <${Valor} id="pdif" valor=${a.pct_con_diferencias} formato=${pct(a.pct_con_diferencias)} /></div>
+        <${Valor} id="pdif" valor=${a.pct_con_diferencias} formato=${pct(a.pct_con_diferencias)} esperando=${esperando} /></div>
       <div class="v2-hero ancho-movil"><div class="et">Monto observado</div>
-        <${Valor} id="monto" valor=${a.monto_observado} formato=${fmtM} /></div>
+        <${Valor} id="monto" valor=${a.monto_observado} formato=${fmtM} esperando=${esperando} /></div>
       <div class="v2-hero"><div class="et">Trámites sin resolver</div>
-        <${Valor} id="tabiertos" valor=${a.tramites_sin_resolver} formato=${n} /></div>
+        <${Valor} id="tabiertos" valor=${a.tramites_sin_resolver} formato=${n} esperando=${esperando} /></div>
     </div>
-    <div class=${"v2-minis" + (minis.length > 5 ? " seis" : "")}>
+    <div class=${"v2-minis" + (minis.length > 5 ? " seis" : "") + (esperando ? " esperando" : "")}>
       ${minis.map(([id, et, valor, formato]) => html`
         <div class="v2-mini"><div class="et">${et}</div>
-          <${Valor} id=${id} valor=${valor} formato=${formato} clase="val num" />
+          <${Valor} id=${id} valor=${valor} formato=${formato} clase="val num" esperando=${esperando} />
           ${id === "padron" && total ? html`<div class="delta neu" id="d-padron">${Math.round(a.padron_registrados / total * 100)}% del padrón</div>` : ""}
         </div>`)}
     </div>`;

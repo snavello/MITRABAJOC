@@ -220,8 +220,12 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   tokens), con su fuente y su fecha de lectura. A mano, no hay scraper.
 - data/topes_ss.csv — vigencias de topes de la seguridad social (ver
   "Topes de base imponible" en HISTORIAL.md).
-- .claude/skills/diseno-mi-trabajo/ — skill con las reglas del sistema de diseño;
-  .claude/skills/frontend-design/ — skill oficial de Anthropic para dirección visual general.
+- .claude/skills/diseno-mi-trabajo/ — skill con las reglas del sistema de diseño
+  (incluido "Movimiento": tokens de duración y curva, caso cero en la v2 del Panel);
+  .claude/skills/frontend-design/ — skill oficial de Anthropic para dirección visual general;
+  .claude/skills/emil-design-eng/ — skill de Emil Kowalski sobre animación y pulido de
+  interfaz, copia textual fijada a un commit (`ORIGEN.md`): es referencia, y ante un
+  choque manda `diseno-mi-trabajo`.
 - **FLUJO.md** — el ciclo de un cambio en una página: de tu PC a Pruebas y de
   Pruebas a la demo, con los comandos y las tres reglas.
 - **HISTORIAL.md** — changelog técnico detallado, no se carga automático.
@@ -1247,7 +1251,15 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     peso. `<link rel="modulepreload">` por módulo, para que no bajen en
     cascada. **Falta: que SDN la use en Pruebas y decida (D9) reemplazar,
     seguir conviviendo o descartar.** El reemplazo NO se hace sin esa
-    decisión.
+    decisión. SDN la probó y pidió conservar las dos mientras mejora la v2.
+    **Movimiento, caso cero** (2026-10-12, Admin 0.53.01): tokens de duración
+    y curva en `panel_v2/panel.css` que también lee Chart.js
+    (`panel/movimiento`); cada panel entra y se dibuja cuando se lo mira y no
+    cuando llegan los datos (la causa de que "casi no se vieran"); modal que
+    abre al clic con esqueleto; hover solo con mouse; presión en botones;
+    marca de pestaña que se desliza; esqueletos con brillo; tooltips de la
+    casa. Reglas en `diseno-mi-trabajo` → "Movimiento"; robot
+    `test_la_v2_con_movimiento`, el único que corre sin reducir movimiento.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 

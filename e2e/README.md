@@ -82,8 +82,12 @@ eso se ve exactamente en qué punto se rompió algo, sin volver a correr nada.
   modal, Asistente) comparando con la v1 en cada paso. El robot del
   Asistente simula las respuestas del servidor (no gasta créditos) pero
   necesita que la app arranque con una `ANTHROPIC_API_KEY`, aunque sea
-  falsa, para que el botón exista; sin ella se saltea. Un robot salteado
-  sale como SALTEADO en el informe, con su motivo, no como FALLÓ.
+  falsa, para que el botón exista; sin ella se saltea. Todos corren con
+  "reducir movimiento" para leer valores quietos, menos
+  `test_la_v2_con_movimiento`, que verifica justamente el movimiento: los
+  paneles de abajo esperan a verse, el gráfico se dibuja al entrar, el modal
+  abre al instante con su esqueleto. Un robot salteado sale como SALTEADO en
+  el informe, con su motivo, no como FALLÓ.
 
 ## Al escribir uno nuevo
 
