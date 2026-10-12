@@ -71,7 +71,6 @@ def tablero(nombre: str) -> dict:
             "iteracion": est["avance"]["iteracion"],
             "etapa_actual": est["avance"]["etapa_actual"],
             "etapas": est["avance"]["etapas"],
-            "como_seguir": est["avance"]["cuerpo"].split("## Cómo seguir")[-1].strip(),
         },
         "resumen": est["resumen"],
         "ranking": [_hallazgo_publico(h) for h in est["ranking"]],

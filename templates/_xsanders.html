@@ -41,8 +41,6 @@
   .xsk-eje .barra .fallo { background:#ff6b6b; }
   .xsk-eje .barra .sin { background:rgba(255,255,255,.15); }
   .xsk-eje .cuenta { font-family:var(--mono); font-size:11px; color:rgba(255,255,255,.55); margin-top:6px; }
-  .xsk-como { margin-top:18px; padding:14px 16px; border-radius:12px; background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.1); font-size:13.5px; color:rgba(255,255,255,.75); white-space:pre-wrap; line-height:1.5; }
   /* Estado de resolucion (Solucionado / Parcial / Pendiente / Aceptado) */
   .xsk-resumen-res { display:flex; flex-wrap:wrap; gap:10px; margin:0 0 18px; }
   .xsk-rchip { padding:8px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.14);
@@ -89,8 +87,6 @@
   <h3 class="planes-titulo">Cobertura por eje</h3>
   <div class="xsk-ejes"></div>
 
-  <h3 class="planes-titulo">Cómo seguir</h3>
-  <div class="xsk-como"></div>
 </template>
 
 <script>
@@ -202,8 +198,6 @@
         + (total ? ' · ' + paso + ' ok · ' + fallo + ' falla · ' + sin + ' sin correr' : '') + '</div>';
       ejesCont.appendChild(div);
     });
-
-    tpl.querySelector('.xsk-como').textContent = d.avance.como_seguir || '—';
 
     cont.innerHTML = '';
     cont.appendChild(tpl);
