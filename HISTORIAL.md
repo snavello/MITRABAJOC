@@ -6613,3 +6613,53 @@ dejaron los QA (sus hallazgos en rojo pasaron a verde con los arreglos; los
 dos `xfail` documentan el límite del freno por IP). Trabajador 0.45.01,
 Admin 0.49.01, Plataforma 0.43.03.
 
+
+## Panel Sindical v2: el plan y el robot de paridad (2026-10-12)
+
+**De dónde sale.** SDN preguntó si se podía usar React para mejorar la
+estética y lo que la interfaz puede ofrecer, sin tocar la lógica ni arriesgar
+lo que funciona, empezando de a poco. La respuesta fue sí para las pantallas
+que ya hablan JSON con el servidor, y el Panel Sindical es la mejor candidata:
+página propia, todos los datos desde `/admin/dashboard/*` y nada de negocio en
+el cliente. Al comparar React con Preact pesó lo que el proyecto ya tiene como
+regla: nada de CDN, todo vendoreado, el deploy de Render es `pip install` y
+los tests leen el JS que corre. Preact + htm se usan sin build, como Chart.js
+y Leaflet; React 19 ya no publica versiones para cargar directo en el
+navegador. El plan (`PLAN_DASHBOARD_V2.md`) se acordó decisión por decisión;
+SDN sumó animaciones fluidas en gráficos, KPIs y modales, para que el piloto
+muestre una mejora visual además del cambio técnico.
+
+**Las reglas del front que hay que portar.** El plan las lista en §3.1 porque
+ninguna se ve y cada una costó un incidente: la fecha de hoy que manda el
+servidor, la cola de 4 pedidos y el reintento ante un 503 (el cuelgue del
+2026-09-18), el motivo del 422 a la vista, el saneo de la URL. La v2 tiene que
+cumplirlas todas.
+
+**El robot de paridad (bloque 0).** `e2e/paridad.py` + `e2e/test_paridad_dashboard.py`.
+Abre la v1 con 7 combinaciones de filtros (las 6 del plan más una URL con
+fecha futura, para el saneo) y arma una LECTURA de lo que el panel muestra:
+KPIs, contadores, tabla, semáforo, burbujas del mapa, filtros activos, los
+datos de cada gráfico leídos de Chart.js con `Chart.getChart` (son canvas, no
+hay texto) y **los pedidos que hizo al servidor**, con los parámetros
+ordenados. Ese último punto es la línea roja 3 del plan: si la v2 pide
+exactamente lo mismo que la v1, el servidor le devuelve lo mismo. Los textos
+se comparan por sus números, no por su formato, porque la v2 va a cambiar la
+estética (D5). Corre con `prefers-reduced-motion` para que ninguna animación
+deje un valor a medio camino.
+
+Tres cosas que salieron al armarlo:
+- **La cola de 4 se midió en un navegador de verdad**: contando pedidos en
+  vuelo con los eventos de Playwright, la v1 llega a 4 y no pasa, en las 7
+  combinaciones. Hasta ahora eso solo lo probaba `test_dashboard_cola_front.py`
+  sobre el código.
+- **El robot necesita su propia baranda**: `test_la_lectura_es_estable` lee la
+  v1 dos veces con los mismos filtros y exige lo mismo. Si no, una diferencia
+  con la v2 podría ser del robot y no de la v2.
+- **El informe de los robots marcaba "FALLÓ" a los salteados**: un
+  `pytest.skip` dentro del test (prerequisito que falta, o la v2 que todavía
+  no existe) salía en rojo. Ahora sale como SALTEADO, con su motivo, y no
+  cuenta para el total en verde.
+
+Corrido en una sesión de Code en la nube: base nueva con la demo y el lote
+UOM, uvicorn local y el Chromium preinstalado (`E2E_CHROMIUM_PATH`). 8 en
+verde y los 7 de comparación salteados, como corresponde.

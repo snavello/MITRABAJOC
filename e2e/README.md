@@ -73,6 +73,12 @@ eso se ve exactamente en qué punto se rompió algo, sin volver a correr nada.
 - `test_robot_tramite_guarderia.py` — ciclo completo de un trámite con dos
   actores: el trabajador lo presenta, el admin responde y lo cierra, el
   trabajador ve la respuesta.
+- `test_paridad_dashboard.py` + `paridad.py` — paridad del Panel Sindical
+  v1 / v2 (`PLAN_DASHBOARD_V2.md`). Abre la v1 con 7 combinaciones de
+  filtros, verifica que nunca haya más de 4 pedidos en vuelo y deja lectura
+  (JSON) y captura en `e2e/resultados/paridad/`. La comparación con la v2
+  se saltea, diciendo por qué, hasta que la v2 tenga su lector. Un robot
+  salteado sale como SALTEADO en el informe, con su motivo, no como FALLÓ.
 
 ## Al escribir uno nuevo
 
