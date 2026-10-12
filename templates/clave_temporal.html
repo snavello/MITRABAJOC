@@ -4,34 +4,49 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Colm3na — Clave temporal</title>
+<title>Clave temporal — {{ sindicato }}</title>
+<link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
 <style>
-  :root { --tinta:#152238; --agua:#1a7a6b; --alerta:#b23a2e; --papel:#f7f5f0; --linea:#dcd8cf; --gris:#5c5a54; }
-  * { box-sizing:border-box; margin:0; font-family:system-ui,-apple-system,sans-serif; }
-  body { background:var(--papel); min-height:100vh; display:flex; align-items:center;
-         justify-content:center; padding:24px; }
-  .caja { background:#fff; border:1px solid var(--linea); border-radius:16px; max-width:420px;
-          width:100%; padding:28px 24px; text-align:center; box-shadow:0 3px 16px rgba(0,0,0,.10); }
-  h1 { font-size:18px; color:var(--tinta); margin-bottom:6px; }
+  :root {
+    --marca-base: {{ marca.color_base if marca else '#152238' }};
+    --marca-primario: {{ marca.color_primario if marca else '#1a3d6b' }};
+    --marca-acento: {{ marca.color_acento if marca else '#2fa88f' }};
+    --marca-apoyo: {{ marca.color_secundario if marca else '#e8b84b' }};
+    --tinta:#152238; --alerta:#b23a2e; --papel:#f6f7f9; --linea:#e4e7ec; --gris:#5b6478;
+  }
+  * { box-sizing:border-box; margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  body { background:var(--papel); color:var(--tinta); min-height:100vh; }
+  .cuerpo { max-width:460px; margin:0 auto; padding:18px 15px 60px; }
+  .caja { background:#fff; border:1px solid var(--linea); border-radius:16px; width:100%;
+          padding:26px 22px; text-align:center; box-shadow:0 3px 16px rgba(0,0,0,.08); margin-top:18px; }
   .quien { font-size:14px; color:var(--gris); margin-bottom:18px; }
   .clave { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:32px; letter-spacing:4px;
            font-weight:700; color:var(--tinta); background:var(--papel); border:1px dashed var(--linea);
-           border-radius:10px; padding:14px 8px; user-select:all; }
+           border-radius:10px; padding:14px 8px; user-select:all; word-break:break-all; }
   .nota { font-size:13px; color:var(--gris); margin-top:16px; line-height:1.5; }
-  .aviso { font-size:13px; color:var(--alerta); margin-top:12px; font-weight:600; }
+  .aviso { font-size:13px; color:var(--alerta); margin-top:12px; font-weight:600; line-height:1.5; }
   a.volver { display:inline-block; margin-top:20px; padding:10px 18px; border-radius:8px;
              background:var(--tinta); color:#fff; text-decoration:none; font-size:14px; }
 </style>
+{% include "_fondo_interior.html" %}
 </head>
-<body>
+<body class="mesa franja">
 {% include "_entorno.html" %}
+
+{% set enc_volver = volver %}
+{% set enc_fija = True %}
+{% include "_encabezado.html" %}
+
+<div class="cuerpo mesa-cont">
+  <h1 class="titulo-pagina">Clave temporal</h1>
   <div class="caja">
-    <h1>Clave temporal</h1>
     <div class="quien">{{ quien }} · <code>{{ ident }}</code></div>
     <div class="clave" id="clave-temporal">{{ clave }}</div>
     <p class="nota">Dásela a la persona. Al entrar tiene que cambiarla por una propia.</p>
+    <p class="nota">La clave es una sola por persona: vale para todos los sindicatos donde esté empadronada.</p>
     <p class="aviso">Se muestra una sola vez: no se puede volver a ver. Si la perdés, restablecé la clave de nuevo.</p>
     <a class="volver" href="{{ volver }}">Volver al panel</a>
   </div>
+</div>
 </body>
 </html>

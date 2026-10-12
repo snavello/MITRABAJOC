@@ -3443,11 +3443,69 @@ def padron_del_sindicato(s: Session, sindicato_id: int) -> list:
             # Nivel de fiabilidad de la cuenta (PLAN_REGISTRO.md): solo tiene
             # sentido si la persona ya eligió clave.
             "tiene_cuenta": bool(c and c.clave_hash),
+            # ¿Este sindicato responde por esa cuenta? (ver `responde_por`).
+            # Si no, la pantalla no muestra su nivel ni sus botones.
+            "responde": responde_por(bool(c and c.clave_hash), t.registrado),
             "nivel_fiabilidad": (c.nivel_fiabilidad or 1) if c else 1,
             "nivel_origen": (c.nivel_origen or "") if c else "",
         })
         salida.append(fila)
     return salida
+
+
+# ---------- ¿Este sindicato responde por la cuenta de esta persona? ----------
+# Un admin puede cargar en SU padrón cualquier CUIL (es un dato público, y el
+# alta solo exige el dígito verificador). Sin esta regla, cargar el CUIL de
+# alguien que está en OTRO sindicato y apretar "Restablecer clave" le daría la
+# cuenta entera -- y con ella sus recibos y su identidad en todos los gremios.
+# La regla: un sindicato solo "responde" por una cuenta si la persona YA
+# estaba en su padrón cuando la creó. `Trabajador.registrado` / `Empleador.
+# registrado` se marcan en el registro sobre los empadronamientos que
+# EXISTÍAN en ese momento (y en el reset de plataforma de una cuenta sin
+# clave): un empadronamiento posterior a la cuenta queda en False.
+def responde_por(tiene_clave: bool, registrado: bool) -> bool:
+    """La regla, pura. Sin clave no hay cuenta que tomar (la persona todavía
+    no se registró y el padrón la mandó a elegir una); con clave, solo
+    responde el padrón que ya la tenía cargada al registrarse."""
+    return (not tiene_clave) or bool(registrado)
+
+
+def padron_responde_por(s, sindicato_id: int, cuil: str) -> bool:
+    """True si `sindicato_id` puede tocar la cuenta de `cuil` (restablecerle
+    la clave, confirmar su identidad, escribirle nombre o mails): la
+    CuentaTrabajador no existe o todavía no tiene clave, o el empadronamiento
+    de este sindicato es `registrado` (la persona ya estaba en este padrón
+    cuando creó la cuenta). Un CUIL que ni siquiera está en el padrón de este
+    sindicato con una cuenta ya hecha devuelve False: no hay de qué responder.
+    Recibe la sesión, no abre la suya."""
+    c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+    if c is None or not c.clave_hash:
+        return True
+    t = s.exec(select(Trabajador).where(Trabajador.sindicato_id == sindicato_id,
+                                        Trabajador.cuil == cuil)).first()
+    return responde_por(True, bool(t and t.registrado))
+
+
+def padron_responde_por_empresa(s, sindicato_id: int, cuit: str) -> bool:
+    """Lo mismo que `padron_responde_por`, para la cuenta de una empresa
+    (`CuentaEmpleador` y `Empleador.registrado`)."""
+    c = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == cuit)).first()
+    if c is None or not c.clave_hash:
+        return True
+    e = s.exec(select(Empleador).where(Empleador.sindicato_id == sindicato_id,
+                                       Empleador.cuit == cuit)).first()
+    return responde_por(True, bool(e and e.registrado))
+
+
+def cuiles_con_clave(s, cuiles) -> set:
+    """De estos CUIL, los que ya tienen cuenta con clave (la persona ya se
+    registró). Una sola consulta: lo usa la carga masiva, que no puede hacer
+    una por línea."""
+    cuiles = list(cuiles)
+    if not cuiles:
+        return set()
+    return set(s.exec(select(CuentaTrabajador.cuil).where(
+        CuentaTrabajador.cuil.in_(cuiles), CuentaTrabajador.clave_hash != "")).all())
 
 
 def datos_personales(cuil: str) -> Optional[dict]:
