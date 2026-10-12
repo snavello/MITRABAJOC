@@ -34,3 +34,9 @@ export function deltaRecibos(actual, anterior) {
   return { clase: pct >= 0 ? "up" : "down",
     texto: (pct >= 0 ? "▲ " : "▼ ") + Math.abs(pct).toFixed(0) + "% vs período anterior" };
 }
+
+/* "AAAA-MM-DD" -> "dd/mm", para los ejes de los gráficos (`fCorta` de la v1). */
+export function fCorta(iso) {
+  const p = String(iso).split("-");
+  return p[2] + "/" + p[1];
+}

@@ -135,6 +135,11 @@ def test_con_todo_abre_con_la_fecha_del_servidor_y_el_importmap():
         assert re.search(r"\?v=\d+-\d+$", url), f"{nombre} sale sin sello: {url}"
     assert re.search(r'<script type="module" src="/static/panel_v2/app\.js\?v=\d+-\d+">',
                      r.text), "la raíz de la v2 se carga sin sello"
+    # Cada módulo del mapa se precarga (y con el mismo sello): sin eso se
+    # descubren en cascada, un viaje al servidor por escalón.
+    precargas = set(re.findall(r'<link rel="modulepreload" href="([^"]+)">', r.text))
+    assert precargas == set(mapa.values()), set(mapa.values()) ^ precargas
+    assert r.text.index('type="importmap"') < r.text.index('rel="modulepreload"') < r.text.index("</head>")
 
 
 # ---------------------------------------------------------------------------

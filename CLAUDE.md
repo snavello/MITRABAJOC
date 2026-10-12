@@ -1197,8 +1197,8 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     canal está apagado y el registro nace nivel 1. Después: smoke test del
     widget en Pruebas y H-0017 → Solucionado. Pendientes menores anotados en
     BACKLOG.md (bitácora de acciones del panel, teléfono como segundo canal).
-11. **Panel Sindical v2 con Preact** (plan acordado el 2026-10-12, **sin
-    código**): [`PLAN_DASHBOARD_V2.md`](PLAN_DASHBOARD_V2.md). Primer piloto
+11. **Panel Sindical v2 con Preact** (2026-10-12, **completa en Pruebas,
+    falta la decisión D9**): [`PLAN_DASHBOARD_V2.md`](PLAN_DASHBOARD_V2.md). Primer piloto
     de una capa de componentes: Preact 10.29.8 + htm 3.1.1 vendoreados, sin
     build, en `/admin/dashboard-v2` (solo local y Pruebas) al lado de la v1,
     con los mismos endpoints y sin tocar el backend. Estética mejorada sobre
@@ -1228,8 +1228,20 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     corre. El cajón va AFUERA de `<main>` (`panel/capa`): `.mesa-cont` arma su
     propia capa con z-index 1. El robot compara la v2 con la v1 en
     indicadores y filtros en las 7 combinaciones y manejando los controles, y
-    exige que la v2 no pida nada que la v1 no pida. **Punto de control: SDN
-    lo mira en Pruebas y decide si el piloto sigue.**
+    exige que la v2 no pida nada que la v1 no pida. **Bloques 4 a 6 HECHOS**
+    (Admin 0.52.01): gráficos con transición del valor viejo al nuevo,
+    semáforo, mapa, explorador, modal "Ver" y el Asistente con voz
+    (`panel/graficos`, `panel/explorador`, `panel/asistente`). **Bloque 7**:
+    `test_paridad_v1_v2` en verde en las 7 combinaciones (mismos datos y
+    mismos pedidos) y robots que manejan la v2 y comparan con la v1 paso a
+    paso, el del Asistente con respuestas simuladas (alcanza una
+    `ANTHROPIC_API_KEY` falsa). Medido en HTTP/2 como Render: mismo tiempo
+    hasta los indicadores (1,73 s contra 1,74 s) pero **+22 KB de JS
+    comprimido** (+15%), así que la cuarta condición de D9 no se cumple por
+    peso. `<link rel="modulepreload">` por módulo, para que no bajen en
+    cascada. **Falta: que SDN la use en Pruebas y decida (D9) reemplazar,
+    seguir conviviendo o descartar.** El reemplazo NO se hace sin esa
+    decisión.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 

@@ -163,6 +163,38 @@ export function aDireccion(e, lim) {
   return q;
 }
 
+/* El estado del panel como lo espera el Asistente (`estadoPlano` de la v1):
+   las claves de la dirección, con el salario en pesos y solo si se movió del
+   límite, más el afiliado y la pestaña. Es lo que viaja al servidor con cada
+   pregunta y la foto que se restaura con "Volver". */
+export function estadoPlano(e, lim) {
+  const q = aParams(e, lim);
+  return {
+    desde: q.get("desde"), hasta: q.get("hasta"),
+    seccionales: q.getAll("seccionales").map(Number),
+    empresas: q.getAll("empresas").map(Number),
+    formato: q.get("formato") || "", resultado: q.get("resultado") || "",
+    estado_tramite: q.get("estado_tramite") || "", tipo_notif: q.get("tipo_notif") || "",
+    sal_min: q.get("sal_min") ? +q.get("sal_min") : null,
+    sal_max: q.get("sal_max") ? +q.get("sal_max") : null,
+    tema: q.get("tema") || "", afiliado: e.afiliado, tab: e.tab,
+  };
+}
+
+/* Unos filtros planos (los que manda el Asistente, o la foto de
+   `estadoPlano`) como params para la acción "aplicar", con el armado de
+   `aplicarEstado` de la v1: lo vacío no viaja y las listas se repiten. */
+export function comoParams(filtros) {
+  const q = new URLSearchParams();
+  Object.keys(filtros || {}).forEach((k) => {
+    const v = filtros[k];
+    if (v === null || v === undefined || v === "") return;
+    if (Array.isArray(v)) v.forEach((x) => q.append(k, x));
+    else q.set(k, v);
+  });
+  return q;
+}
+
 /* El atajo de período que corresponde al rango, o null: "hoy", "7", "30" o
    "90" solo si el rango termina hoy y dura eso (`presetActivo` de la v1). */
 export function presetActivo(e, hoy) {

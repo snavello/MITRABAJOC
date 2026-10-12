@@ -76,9 +76,14 @@ eso se ve exactamente en qué punto se rompió algo, sin volver a correr nada.
 - `test_paridad_dashboard.py` + `paridad.py` — paridad del Panel Sindical
   v1 / v2 (`PLAN_DASHBOARD_V2.md`). Abre la v1 con 7 combinaciones de
   filtros, verifica que nunca haya más de 4 pedidos en vuelo y deja lectura
-  (JSON) y captura en `e2e/resultados/paridad/`. La comparación con la v2
-  se saltea, diciendo por qué, hasta que la v2 tenga su lector. Un robot
-  salteado sale como SALTEADO en el informe, con su motivo, no como FALLÓ.
+  (JSON) y captura en `e2e/resultados/paridad/`. Después lee la v2 con las
+  mismas combinaciones y exige los mismos datos y los mismos pedidos, y
+  maneja la v2 como una persona (controles, gráficos, mapa, explorador,
+  modal, Asistente) comparando con la v1 en cada paso. El robot del
+  Asistente simula las respuestas del servidor (no gasta créditos) pero
+  necesita que la app arranque con una `ANTHROPIC_API_KEY`, aunque sea
+  falsa, para que el botón exista; sin ella se saltea. Un robot salteado
+  sale como SALTEADO en el informe, con su motivo, no como FALLÓ.
 
 ## Al escribir uno nuevo
 

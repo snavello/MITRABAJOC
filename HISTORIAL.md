@@ -6770,3 +6770,66 @@ Cómo se verificó, sin mirar el código de la v1 sino la v1 andando:
   mismas miles de direcciones, y los textos de las pastillas contra los de
   `pintarChips`.
 
+
+**Gráficos, mapa y explorador (bloques 4 y 5).** Los siete paneles, el
+semáforo, el mapa de seccionales, el explorador con sus pestañas y "Ver más",
+y el modal "Ver" con sus cuatro fichas (recibo, trámite, consulta,
+notificaciones del día). Cada gráfico es Chart.js detrás de un `useGrafico`
+que lo crea la primera vez y después le cambia los datos y llama a
+`update()`: así anima del valor viejo al nuevo en vez de volver a dibujarse
+desde cero (D5). El clic en un gráfico despacha una LISTA de acciones al
+reductor (filtrar y cambiar de pestaña en un solo paso), y una pestaña nueva
+con los mismos filtros trae solo el explorador, como la v1. El mapa usa la
+misma `MapaMT` de la v1; el globo de cada burbuja se arma con Preact sobre
+un nodo propio, sin `innerHTML`.
+
+**El Asistente y la voz (bloque 6).** El cajón de la v1 con el mismo
+recorrido: la foto del estado que viaja con cada pregunta, el historial de
+cuatro intercambios en memoria, "Volver", los homónimos elegidos con un clic
+sin volver al modelo, el micrófono con envío solo a los cuatro segundos, y la
+barra chica del teléfono. La foto del estado (`estadoPlano`) y su vuelta a
+parámetros (`comoParams`) pasaron a `estado.js`, y el test de Node las
+compara contra el `estadoPlano` de la v1 en los mismos 3.600 cambios
+encadenados. Lo nuevo es la entrada de cada burbuja y una salida más suave
+del cajón; con "reducir movimiento", quieto. De paso, en el teléfono las
+pastillas de filtros puestos bajan a su propio renglón: entre "Más filtros" y
+"Reiniciar" no tenían lugar y una se partía en tres líneas.
+
+Cómo se probó sin gastar créditos: `test_el_asistente_de_la_v2_hace_lo_mismo_que_el_de_la_v1`
+intercepta en el navegador el POST a `/admin/dashboard/asistente` y contesta
+cuatro respuestas armadas con datos reales del sindicato (una que filtra, una
+que no toca el panel, homónimos y un 429). Las dos versiones reciben las
+mismas preguntas y tienen que mandarle al servidor exactamente lo mismo
+(pregunta, foto y historial), decir lo mismo en el hilo y dejar la misma
+dirección al filtrar, al elegir el homónimo y al volver. Para que el botón
+exista hace falta una `ANTHROPIC_API_KEY`, pero alcanza con una falsa: el
+modelo nunca se llama.
+
+**Paridad y medición (bloque 7).** Con la v2 completa, `test_paridad_v1_v2`
+dejó de saltearse: las 7 combinaciones del robot dan los mismos indicadores,
+gráficos, semáforo, mapa, explorador y contadores, y los mismos pedidos al
+servidor, nunca más de 4 en vuelo. Los robots de controles, de gráficos y del
+Asistente manejan la v2 como una persona y, en cada paso, la v1 abierta con
+la misma dirección muestra lo mismo. Uno de ellos fallaba una vez de cada
+tres: apretaba Escape un cuadro antes de que el modal empezara a escuchar la
+tecla. Ahora espera el foco en la X, que se pone en el mismo paso.
+
+La medición de D9 (tiempo hasta ver los indicadores y peso), con la base de
+la demo + lote UOM y 90 días de filtro:
+- **Tiempo**: medido primero con uvicorn, la v2 salía 0,26 s más lenta con
+  150 ms de latencia simulada. No era la v2 sino el banco: uvicorn sirve
+  HTTP/1.1, el navegador abre 6 conexiones y la v2 pide 18 archivos de JS
+  contra 5. Render sirve HTTP/2 (todo en paralelo por una conexión), así que
+  se volvió a medir con hypercorn en HTTP/2: **1,73 s la v1 y 1,74 s la v2**,
+  con los mismos 13 pedidos de datos. Antes se sumó `<link rel="modulepreload">`
+  para cada módulo del importmap (y el importmap pasó al `<head>`): sin eso el
+  navegador los descubre en cascada, un viaje al servidor por escalón.
+- **Peso**: la v2 es **más pesada**. El JS que viaja comprimido es ~165 KB
+  contra ~143 KB (+22 KB, +15%); la diferencia es Preact (~7 KB) y que los
+  módulos de la v2 van con sus comentarios y sin minificar (no hay build, D1).
+  Los estilos van en un archivo aparte que el navegador cachea (21 KB contra
+  11 KB de `marca.css`), mientras la v1 los trae dentro del HTML en cada
+  visita (45 KB sin comprimir contra 5 KB de la v2).
+
+La cuarta condición de D9 dice "no es más pesada": por peso de JS no se
+cumple. Queda para SDN junto con su uso en Pruebas.
