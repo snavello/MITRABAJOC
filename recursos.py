@@ -86,6 +86,45 @@ SEMILLA = [
         "fragmento": "",
     },
     {
+        "clave": "plan-implementacion-bancaria",
+        "titulo": "Plan de implementación en La Bancaria: seis fases (borrador v0.2)",
+        "descripcion": "La propuesta para consensuar con las autoridades: preparación, definición del plan, "
+                       "relevamiento, configuración, piloto con 50 a 1.000 afiliados e implementación total, "
+                       "con el entorno de prueba en la semana 4, responsables, datos e indicadores. 4 hojas A4.",
+        "fecha": date(2026, 10, 11),
+        "archivo": "colm3na-plan-implementacion-bancaria.html",
+        "miniatura": "colm3na-plan-implementacion-bancaria.jpg",
+        "fragmento": "",
+    },
+    {
+        "clave": "plan-implementacion-bancaria-pdf",
+        "titulo": "Plan de implementación en La Bancaria (PDF)",
+        "descripcion": "El mismo plan v0.2 en PDF, 4 hojas A4, para imprimir o adjuntar.",
+        "fecha": date(2026, 10, 11),
+        "archivo": "colm3na-plan-implementacion-bancaria.pdf",
+        "miniatura": "",
+        "fragmento": "",
+    },
+    {
+        "clave": "guia-reunion-bancaria",
+        "titulo": "Guía de la reunión estratégica con las autoridades de La Bancaria (v0.2)",
+        "descripcion": "Una hoja para conducir la reunión: orden del día de 90 minutos, lo que buscamos "
+                       "acordar, funcionalidades prioritarias y datos disponibles para el alta de afiliados.",
+        "fecha": date(2026, 10, 11),
+        "archivo": "colm3na-guia-reunion-autoridades-bancaria.html",
+        "miniatura": "colm3na-guia-reunion-autoridades-bancaria.jpg",
+        "fragmento": "",
+    },
+    {
+        "clave": "guia-reunion-bancaria-pdf",
+        "titulo": "Guía de la reunión con La Bancaria (PDF)",
+        "descripcion": "La misma hoja guía v0.2 en PDF, una hoja A4, para imprimir y llevar a la reunión.",
+        "fecha": date(2026, 10, 11),
+        "archivo": "colm3na-guia-reunion-autoridades-bancaria.pdf",
+        "miniatura": "",
+        "fragmento": "",
+    },
+    {
         "clave": "prompt-mapa-funcional",
         "titulo": "Prompt reutilizable: mapa funcional de un proyecto",
         "descripcion": "Para pegar en Claude Code en OTRO proyecto y construir su mapa funcional "
