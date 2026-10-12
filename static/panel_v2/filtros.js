@@ -27,8 +27,11 @@ export function BarraFiltros({ estado, despachar, hoy, lim, catalogo, afiliados,
           <button type="button" class=${"v2-chip" + (p === valor ? " act" : "")}
             aria-pressed=${p === valor} onClick=${() => despachar({ tipo: "preset", valor })}>${txt}</button>`)}
       </div>
-      <button type="button" class="v2-btn-filtros" onClick=${abrirCajon} aria-haspopup="dialog">
-        Filtros${puestos.length ? html` <span class="v2-num" id="num-filtros">${puestos.length}</span>` : ""}
+      <button type="button" class="v2-btn-filtros" onClick=${abrirCajon} aria-haspopup="dialog"
+        title="Calendario, formato, seccionales, empresas, salario y afiliado">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 5h16l-6 7.5V19l-4-2v-4.5z"
+          fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+        Más filtros${puestos.length ? html` <span class="v2-num" id="num-filtros">${puestos.length}</span>` : ""}
       </button>
       <div class="v2-puestos" aria-live="polite">
         ${puestos.map((f) => html`

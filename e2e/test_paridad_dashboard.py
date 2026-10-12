@@ -11,7 +11,7 @@ Y se corre con:
 
     .venv/Scripts/python.exe -m pytest e2e/test_paridad_dashboard.py -q
 
-Tres tests:
+Los de paridad:
 
 - `test_linea_de_base_v1` abre la v1 con cada combinación de filtros de
   `paridad.NOMBRES` y verifica que esté sana: ningún panel en error, ningún
@@ -23,10 +23,17 @@ Tres tests:
   dos veces lo mismo diera distinto, la comparación con la v2 fallaría por
   el robot y no por la v2.
 - `test_paridad_v1_v2` lee las dos versiones con cada combinación y exige
-  los mismos datos y los mismos pedidos al servidor. Se saltea, diciendo por
-  qué, hasta que exista la v2 y su lector (bloque 7 del plan).
+  los mismos datos y los mismos pedidos al servidor.
+
+Y los que manejan la v2 como una persona y, en cada paso, abren la v1 con la
+misma dirección: controles y cajón, gráficos, mapa, explorador y modal, y el
+Asistente. Este último contesta con respuestas armadas por el test (no llama
+al modelo), pero la app tiene que arrancar con una `ANTHROPIC_API_KEY`,
+aunque sea falsa, para que el botón exista.
 """
+import json
 import re
+from datetime import timedelta
 from urllib.parse import parse_qsl
 
 import pytest
@@ -53,8 +60,9 @@ def test_linea_de_base_v1(page, informe, nombre):
     assert not lectura["aviso"], f"el servidor rechazó los filtros: {lectura['aviso']}"
     assert not lectura["pedidos_fallidos"], lectura["pedidos_fallidos"]
     assert lectura["pedidos"], "el panel no le pidió nada al servidor"
-    assert lectura["max_en_vuelo"] <= 4, (
-        f"{lectura['max_en_vuelo']} pedidos en vuelo a la vez; el cupo del servidor es de 4")
+    assert 1 <= lectura["max_en_vuelo"] <= 4, (
+        f"{lectura['max_en_vuelo']} pedidos en vuelo a la vez; el cupo del servidor es de 4 "
+        "(0 sería que el contador de la página no se instaló)")
     assert paridad.numeros(lectura["kpis"].get("recibos")), lectura["kpis"]
 
     if nombre == "url-con-fecha-futura":
@@ -91,8 +99,8 @@ def test_paridad_v1_v2(page, informe, nombre):
     paridad.guardar(page, "v2", nombre, v2)
     diferencias = paridad.comparar(v1, v2)
     assert not diferencias, f"«{nombre}»: la v2 no muestra lo mismo que la v1:\n" + "\n".join(diferencias)
-    assert v2["max_en_vuelo"] <= 4, v2["max_en_vuelo"]
-    informe.paso(f"«{nombre}»: la v1 y la v2 muestran los mismos datos")
+    assert 1 <= v2["max_en_vuelo"] <= 4, v2["max_en_vuelo"]
+    informe.paso(f"«{nombre}»: la v1 y la v2 muestran los mismos datos y piden lo mismo")
 
 
 @pytest.mark.parametrize("nombre", paridad.NOMBRES)
@@ -133,7 +141,10 @@ def test_los_controles_de_la_v2_dan_lo_mismo_que_la_v1(page, informe):
     def comparar_con_v1(paso):
         actual = paridad.lectura_actual(page, "v2", monitor)
         de_la_v1 = paridad.leer(v1, "v1", dict(parse_qsl(actual["url"])))
-        dif = paridad.comparar(de_la_v1, actual, partes)
+        # Los pedidos no se comparan acá: la v2 los acumula desde que abrió y
+        # la v1 recién abre. Lo que se compara es lo que muestran.
+        dif = paridad.comparar(de_la_v1, actual, [x for x in paridad.PARTES if x != "pedidos"]
+                               if partes == "todo" else partes)
         assert not dif, f"«{paso}»: la v2 no muestra lo mismo que la v1:\n" + "\n".join(dif)
         informe.paso(f"«{paso}»: igual a la v1 ({actual['kpis'].get('recibos')} recibos, "
                      f"{len(actual['filtros_activos'])} filtros)")
@@ -160,6 +171,86 @@ def test_los_controles_de_la_v2_dan_lo_mismo_que_la_v1(page, informe):
     tocar("quitar la pastilla de la seccional", lambda: page.locator(".v2-puesto button").first.click())
     tocar("Reiniciar", lambda: page.click(".v2-reiniciar"))
     assert monitor.maximo <= 4, monitor.maximo
+
+
+def _clic_en_grafico(page, panel, serie=0, indice=0):
+    """Hace clic donde Chart.js dibujó ese dato (las barras y los segmentos son
+    canvas: no hay elemento que tocar)."""
+    punto = page.evaluate("""([panel, serie, indice]) => {
+        const cv = document.querySelector('[data-panel="' + panel + '"] canvas');
+        const ch = Chart.getChart(cv);
+        const el = ch.getDatasetMeta(serie).data[indice];
+        const p = el.getCenterPoint(), r = cv.getBoundingClientRect();
+        return { x: r.left + p.x, y: r.top + p.y };
+    }""", [panel, serie, indice])
+    page.mouse.click(punto["x"], punto["y"])
+
+
+def test_los_graficos_el_mapa_y_el_explorador_de_la_v2(page, informe):
+    """El filtrado cruzado de la v2 tocando los gráficos y el mapa, el cambio
+    de pestaña, "Ver más" y el modal "Ver". Después de cada filtro, la v1
+    abierta con la misma dirección tiene que mostrar lo mismo."""
+    params = _preparar(page, "90-dias")
+    if not paridad.existe(page, "v2"):
+        pytest.skip("La v2 todavía no existe en este entorno (PLAN_DASHBOARD_V2.md, bloque 1).")
+    page.set_viewport_size({"width": 1366, "height": 2600})
+    monitor = paridad.abrir(page, "v2", params)
+    v1 = page.context.new_page()
+    sin_pedidos = [x for x in paridad.PARTES if x != "pedidos"]
+
+    def tocar(paso, accion, comparar=True):
+        antes = len(monitor.hechos)
+        accion()
+        paridad.esperar_ronda(page, "v2", monitor, antes)
+        actual = paridad.lectura_actual(page, "v2", monitor)
+        if comparar:
+            de_la_v1 = paridad.leer(v1, "v1", dict(parse_qsl(actual["url"])))
+            dif = paridad.comparar(de_la_v1, actual, sin_pedidos)
+            assert not dif, f"«{paso}»: la v2 no muestra lo mismo que la v1:\n" + "\n".join(dif)
+        informe.paso(f"«{paso}»: {actual['url']}")
+        return actual
+
+    a = tocar("clic en «Con diferencias» de la dona", lambda: _clic_en_grafico(page, "validacion", 0, 1))
+    assert "resultado=con_diferencias" in a["url"] and a["explorador"]["pestana"] == "recibos"
+    a = tocar("clic en la primera empresa", lambda: _clic_en_grafico(page, "empresas", 0, 0))
+    assert "empresas=" in a["url"]
+    a = tocar("clic en una barra de trámites", lambda: _clic_en_grafico(page, "tramites", 1, 0))
+    assert "estado_tramite=en_proceso" in a["url"] and a["explorador"]["pestana"] == "tramites"
+    a = tocar("Reiniciar", lambda: page.click(".v2-reiniciar"))
+    tocar("90 días", lambda: page.click('.v2-presets button:has-text("90 días")'))
+    a = tocar("clic en una burbuja del mapa", lambda: page.locator('[data-panel="seccionales-geo"] .mt-burbuja').first.click())
+    assert "seccionales=" in a["url"]
+
+    # Cambiar SOLO de pestaña trae solo el explorador, como la v1.
+    antes = set(monitor.hechos)
+    a = tocar("pestaña Notificaciones", lambda: page.click('#tabs-datos [data-t="notificaciones"]'))
+    nuevos = set(monitor.hechos) - antes
+    assert nuevos and all("/explorador/notificaciones" in x for x in nuevos), nuevos
+    assert a["explorador"]["pestana"] == "notificaciones"
+
+    tocar("pestaña Recibos", lambda: page.click('#tabs-datos [data-t="recibos"]'), comparar=False)
+    filas = paridad.lectura_actual(page, "v2", monitor)["explorador"]["filas"]
+    if page.locator("#ver-mas").is_visible():
+        tocar("Ver más", lambda: page.click("#ver-mas"), comparar=False)
+        despues = paridad.lectura_actual(page, "v2", monitor)["explorador"]["filas"]
+        assert despues > filas, (filas, despues)
+        assert any("page=2" in x for x in monitor.hechos)
+        informe.paso(f"«Ver más» sumó filas: {filas} → {despues}")
+
+    # La v1 se abrió en otra pestaña para comparar: las teclas van a la que
+    # está al frente, así que la v2 vuelve adelante antes de usar Escape.
+    page.bring_to_front()
+    page.locator("#tabla-body .btn-ver").first.click()
+    expect(page.locator("#overlay-det")).to_have_class(re.compile(r"\babierto\b"), timeout=10000)
+    expect(page.locator("#det-contenido")).to_contain_text("Recibo verificado")
+    informe.paso("El modal «Ver» abrió con el recibo")
+    # El modal enfoca la X en el mismo paso en que empieza a escuchar el
+    # Escape: esperar el foco evita apretar la tecla un cuadro antes.
+    expect(page.locator("#det-cerrar")).to_be_focused()
+    page.keyboard.press("Escape")
+    expect(page.locator("#overlay-det")).not_to_have_class(re.compile(r"\babierto\b"))
+    informe.paso("El modal cerró con Escape")
+    assert 1 <= monitor.maximo <= 4, monitor.maximo
 
 
 def test_la_v2_abre_sin_errores(page, informe):
@@ -205,3 +296,101 @@ def test_la_v2_abre_sin_errores(page, informe):
     page.click("text=Probar la versión nueva")
     page.wait_for_url(re.compile(r"/admin/dashboard-v2\?.*desde=2026-01-01"), wait_until="commit")
     informe.paso("El enlace «Probar la versión nueva» llevó a la v2 con los filtros de la v1")
+
+
+def _respuestas_del_asistente(page):
+    """Cuatro respuestas armadas a mano, con datos reales del sindicato, para
+    no llamar al modelo (gastaría créditos en cada corrida): una que filtra,
+    una que no toca el panel, una con homónimos y un rechazo del servidor."""
+    cat = paridad.catalogo(page)
+    hoy = fechas.hoy()
+    r = page.request.get(f"{paridad.BASE}/admin/dashboard/afiliados?q=a")
+    candidatos = (r.json().get("items") if r.status == 200 else [])[:2]
+    if not cat.get("seccionales") or len(candidatos) < 2:
+        pytest.skip("Hace falta el lote de la UOM con seccionales y padrón. " + paridad.COMO_PREPARAR_LOTE)
+    seccional = cat["seccionales"][0]
+
+    def hace(dias):
+        return (hoy - timedelta(days=dias)).isoformat()
+    filtra = {"respuesta": "En los últimos 30 días hubo recibos con diferencias en " + seccional["nombre"] + ".",
+              "filtros": {"desde": hace(29), "hasta": hoy.isoformat(), "seccionales": [seccional["id"]],
+                          "resultado": "con_diferencias", "tab": "recibos"},
+              "aplicar": True, "afiliado": None, "candidatos": [], "filtros_pendientes": {}}
+    repregunta = {"respuesta": "¿De qué período querés ver los trámites?", "filtros": {}, "aplicar": False,
+                  "afiliado": None, "candidatos": [], "filtros_pendientes": {}}
+    homonimos = {"respuesta": "Encontré más de un afiliado con ese nombre. ¿Cuál es?", "filtros": {},
+                 "aplicar": False, "afiliado": None, "candidatos": candidatos,
+                 "filtros_pendientes": {"desde": hace(89), "hasta": hoy.isoformat(), "tab": "tramites"}}
+    tope = {"detail": "El asistente llegó al tope de preguntas por día de tu sindicato.", "codigo": "E-PRUEBA-01"}
+    return [(200, filtra), (200, repregunta), (200, homonimos), (429, tope)]
+
+
+def _recorrer_asistente(page, version, params, respuestas):
+    """Hace las mismas cuatro preguntas en una versión y devuelve lo que viajó
+    al servidor, lo que dijo el hilo y cómo quedó la dirección en cada paso."""
+    enviados, cola = [], list(respuestas)
+
+    def responder(route):
+        enviados.append(route.request.post_data_json)
+        status, cuerpo = cola.pop(0)
+        route.fulfill(status=status, content_type="application/json", body=json.dumps(cuerpo))
+    page.route("**/admin/dashboard/asistente", responder)
+    monitor = paridad.abrir(page, version, params)
+    if page.locator("#btn-asist").count() == 0:
+        pytest.skip("El Asistente no está en este entorno (sin ANTHROPIC_API_KEY). Para el robot alcanza "
+                    "una clave cualquiera: las respuestas las arma el test, no el modelo.")
+    page.click("#btn-asist")
+    expect(page.locator("#asist")).to_have_class(re.compile(r"\babierto\b"))
+    urls = {}
+
+    def burbujas():
+        return [" ".join(t.split()) for t in page.locator("#asist-hilo .burb").all_inner_texts()]
+
+    def preguntar(texto, ronda):
+        n = len(burbujas())
+        antes = len(monitor.hechos)
+        page.fill("#asist-caja", texto)
+        page.press("#asist-caja", "Enter")
+        expect(page.locator("#asist-hilo .burb:not(.pensando)")).to_have_count(n + 2, timeout=10000)
+        if ronda:
+            paridad.esperar_ronda(page, version, monitor, antes)
+
+    def tocar(selector):
+        antes = len(monitor.hechos)
+        page.locator(selector).last.click()
+        paridad.esperar_ronda(page, version, monitor, antes)
+
+    preguntar("recibos con diferencias del último mes", ronda=True)
+    urls["filtró"] = sorted(parse_qsl(page.url.split("?", 1)[1]))
+    preguntar("y los trámites?", ronda=False)
+    preguntar("recibos de García", ronda=False)
+    tocar("#asist-hilo .candidatos button")
+    urls["eligió homónimo"] = sorted(parse_qsl(page.url.split("?", 1)[1]))
+    tocar('#asist-hilo .aplicado button:has-text("Volver")')
+    urls["volvió"] = sorted(parse_qsl(page.url.split("?", 1)[1]))
+    preguntar("una más", ronda=False)
+    return {"enviados": enviados, "burbujas": burbujas(), "urls": urls}
+
+
+def test_el_asistente_de_la_v2_hace_lo_mismo_que_el_de_la_v1(page, informe):
+    """Las mismas cuatro preguntas en las dos versiones, con las respuestas
+    del servidor simuladas: tiene que viajar exactamente lo mismo (la pregunta,
+    la foto del estado y el historial), el hilo tiene que decir lo mismo, y la
+    dirección tiene que quedar igual al filtrar, al elegir un homónimo y al
+    "Volver"."""
+    params = _preparar(page, "90-dias")
+    if not paridad.existe(page, "v2"):
+        pytest.skip("La v2 todavía no existe en este entorno (PLAN_DASHBOARD_V2.md, bloque 1).")
+    respuestas = _respuestas_del_asistente(page)
+    v1 = _recorrer_asistente(page, "v1", params, respuestas)
+    otra = page.context.new_page()
+    v2 = _recorrer_asistente(otra, "v2", params, respuestas)
+    assert v1["enviados"] == v2["enviados"], (v1["enviados"], v2["enviados"])
+    informe.paso(f"Al servidor le llegó lo mismo en las {len(v2['enviados'])} preguntas")
+    assert v1["burbujas"] == v2["burbujas"], (v1["burbujas"], v2["burbujas"])
+    informe.paso(f"El hilo dice lo mismo ({len(v2['burbujas'])} burbujas)")
+    assert v1["urls"] == v2["urls"], (v1["urls"], v2["urls"])
+    assert v2["urls"]["volvió"] == v2["urls"]["filtró"], "«Volver» no dejó el panel como estaba"
+    assert ("resultado", "con_diferencias") in v2["urls"]["filtró"]
+    assert ("tab", "tramites") in v2["urls"]["eligió homónimo"]
+    informe.paso("La dirección quedó igual al filtrar, al elegir el homónimo y al volver")
