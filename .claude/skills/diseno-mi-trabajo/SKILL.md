@@ -172,6 +172,57 @@ cursor en `marca.css`, o ese modal va a ser el único que no se mueve. En
 teléfono no se arrastran: ahí el modal ocupa el ancho completo y no hay nada
 atrás que destapar.
 
+## Movimiento (caso cero: la v2 del Panel Sindical, 2026-10-12)
+
+Hoy vive SOLO en la v2 del Panel (`static/panel_v2/panel.css`, bloque
+"Movimiento", y `static/panel_v2/movimiento.js`). Cuando SDN lo apruebe, los
+tokens pasan a `marca.css` y se llevan pantalla por pantalla, empezando por
+los modales que más se usan. La referencia es la skill `emil-design-eng`;
+**ante un choque mandan las reglas de este archivo** (nada de CDN ni de paso
+de compilación, así que nada de Framer Motion; reducir movimiento apaga todo).
+
+**Duraciones y curvas con nombre, nunca un número suelto:**
+
+| Token | Valor | Para qué |
+|---|---|---|
+| `--mov-presion` | 120ms | un botón que se aprieta (`scale: .97`) |
+| `--mov-rapido` | 160ms | pasar el mouse, tooltips |
+| `--mov-medio` | 260ms | cambios de estado y todo CIERRE |
+| `--mov-lento` | 420ms | APERTURA de modales y cajones |
+| `--mov-entrada` | 640ms | un panel que entra al hacer scroll |
+| `--mov-cambio` | 500ms | un gráfico que pasa de un valor a otro |
+| `--mov-datos` | 900ms | un gráfico que se dibuja por primera vez |
+| `--mov-escalon` | 60ms | entre dos que entran juntos |
+| `--ease-salida` | `cubic-bezier(.23,1,.32,1)` | todo lo que APARECE |
+| `--ease-mueve` | `cubic-bezier(.77,0,.175,1)` | lo que se MUEVE de un lugar a otro |
+| `--ease-hoja` | `cubic-bezier(.32,.72,0,1)` | cajones y hojas que entran |
+
+**Reglas:**
+- **Se anima cuando la persona lo ve, no cuando llegan los datos.** Un panel
+  entra en escena al entrar en pantalla (`alEntrar`, IntersectionObserver) y
+  recién ahí se dibuja su gráfico. Esa fue la causa de "casi no se ven": la
+  mitad terminaba de animarse fuera de vista.
+- **Nunca `ease-in`** en algo de la interfaz: arranca lento y se siente
+  pesado. Lo que aparece usa `--ease-salida`; lo que se mueve en pantalla
+  (la marca de una pestaña, una barra que cambia), `--ease-mueve`.
+- **Cerrar es más rápido que abrir** (`--mov-medio` contra `--mov-lento`).
+- **Lo que se repite seguido es corto**: cambiar un filtro anima en
+  `--mov-cambio`, nunca en `--mov-datos`.
+- **Nada aparece desde cero**: un modal entra desde `scale: .96` + opacidad.
+  Los modales escalan desde su centro; lo que escala desde su disparador son
+  los popovers.
+- **Se anima `scale`, `translate` y `opacity`**, nunca `transform` en algo que
+  `modales.js` arrastra, y nunca propiedades que reacomodan la página
+  (`height`, `margin`).
+- **Hover solo con mouse** (`@media (hover: hover) and (pointer: fine)`), y
+  solo levanta lo que se puede tocar: lo que solo se lee, a lo sumo se aclara.
+- **Esperar se ve**: un esqueleto con un brillo que lo recorre (curva lineal,
+  es movimiento constante), nunca un hueco ni un "—" mientras carga.
+- **El modal abre en el momento del clic**, con un esqueleto, y el contenido
+  llega nítido desde un desenfoque leve.
+- **Con reducir movimiento no se mueve nada** (`marca.css` lo corta con
+  `!important`) y todo se dibuja de una.
+
 ## El flujo del recibo (2026-09-14, "Marco")
 
 Los cinco momentos están en `trabajador.html` (`.rc-*` para la estructura,

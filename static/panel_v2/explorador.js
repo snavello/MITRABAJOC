@@ -9,7 +9,8 @@
    Privacidad: lo que se muestra es lo que manda el servidor. Un recibo que el
    trabajador no envió llega ya anonimizado (`dashboard.anonimizar_detalle`):
    acá no se decide nada sobre eso, solo se avisa en pantalla. */
-import { useEffect, useRef, useState } from "preact/hooks";
+import { cloneElement } from "preact";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { html } from "panel/html";
 import { fmtN, fmtM, fFecha } from "panel/formato";
 
@@ -86,16 +87,57 @@ function subDe(def, estado) {
   return def.sub;
 }
 
+const SIN_FILAS = [];
+
+/* La marca de la pestaña elegida se DESLIZA de una pestaña a otra (D5): es
+   una pastilla aparte, debajo de los botones, que se mide contra el botón
+   activo. La primera vez se pone en su lugar sin moverse. */
+function useIndicador(caja, deps) {
+  const [ind, setInd] = useState(null);
+  useLayoutEffect(() => {
+    const medir = () => {
+      const b = caja.current && caja.current.querySelector(".tab-d.act");
+      if (!b) return;
+      setInd((v) => ({ x: b.offsetLeft, w: b.offsetWidth, listo: v !== null }));
+    };
+    medir();
+    window.addEventListener("resize", medir);
+    return () => window.removeEventListener("resize", medir);
+  }, deps);
+  return ind;
+}
+
 /* `datos`: {items, total, modo} con TODAS las filas pedidas hasta ahora (la
    página 1 más los "Ver más"). `contadores`: el total de cada pestaña. */
 export function Explorador({ datos, estado, despachar, tabs, contadores, abrirDetalle }) {
   let def = TABLAS[estado.tab] || TABLAS.recibos;
   if (estado.tab === "notificaciones" && datos && datos.modo === "afiliado") def = TABLAS.notificaciones_afiliado;
-  const items = datos ? datos.items : [];
+  const items = datos ? datos.items : SIN_FILAS;
   const total = datos ? datos.total : 0;
+  const pestanas = useRef(null);
+  const ind = useIndicador(pestanas, [estado.tab, tabs.map((t) => contadores[t]).join(",")]);
+  /* Qué filas son nuevas. "Ver más" suma filas a las que ya estaban (las
+     primeras son LOS MISMOS objetos), y esas entran escalonadas. Cualquier
+     otro cambio reemplaza la tabla, que se renueva con un fundido corto: un
+     filtro se cambia muchas veces seguidas y no tiene que hacerse esperar. */
+  const memo = useRef({ items: null, desde: -1, version: 0 });
+  if (items !== memo.current.items) {
+    const ant = memo.current.items || SIN_FILAS;
+    const suma = ant.length > 0 && items.length > ant.length && items[0] === ant[0];
+    memo.current = { items, desde: suma ? ant.length : -1, version: memo.current.version + (suma ? 0 : 1) };
+  }
+  const { desde, version } = memo.current;
+  const fila = (it, i) => {
+    const tr = def.fila(it, abrirDetalle);
+    return desde >= 0 && i >= desde
+      ? cloneElement(tr, { class: "v2-fila-nueva", style: { animationDelay: Math.min((i - desde) * 30, 270) + "ms" } })
+      : tr;
+  };
   return html`
     <div class="sub" id="tabla-sub">${datos ? subDe(def, estado) : "El detalle responde a todos los filtros. Al tocar un gráfico, la pestaña correspondiente se abre sola."}</div>
-    <div class="tabs-datos" id="tabs-datos" role="tablist">
+    <div class="tabs-datos v2-tabs" id="tabs-datos" role="tablist" ref=${pestanas}>
+      ${ind && html`<span class=${"v2-indicador" + (ind.listo ? " listo" : "")} aria-hidden="true"
+        style=${{ translate: ind.x + "px 0", width: ind.w + "px" }}></span>`}
       ${tabs.map((t) => html`
         <button type="button" role="tab" aria-selected=${estado.tab === t} class=${"tab-d" + (estado.tab === t ? " act" : "")} data-t=${t}
           onClick=${() => despachar({ tipo: "tab", valor: t })}>${NOMBRE_TAB[t]}
@@ -104,8 +146,8 @@ export function Explorador({ datos, estado, despachar, tabs, contadores, abrirDe
     <div class="tabla-scroll">
       <table class="tabla-exp">
         <thead id="tabla-head"><tr>${def.cols.map((c) => html`<th>${c}</th>`)}</tr></thead>
-        <tbody id="tabla-body">
-          ${items.length ? items.map((it) => def.fila(it, abrirDetalle))
+        <tbody id="tabla-body" key=${version} class=${version > 1 ? "v2-recarga" : ""}>
+          ${items.length ? items.map(fila)
             : html`<tr><td colspan=${def.cols.length} class="vacio-exp">Sin registros para los filtros actuales. Probá ampliar el período o quitar filtros.</td></tr>`}
         </tbody>
       </table>
@@ -120,25 +162,31 @@ export function Explorador({ datos, estado, despachar, tabs, contadores, abrirDe
 /* ---------------- El modal "Ver" ----------------
    El fondo es `.overlay-det` y la caja `.modal-det`, las mismas clases que la
    v1: así `modales.js` la deja arrastrar en escritorio y la vuelve a su
-   lugar al cerrar. Abre con un fundido y una escala corta (D5), animando
-   `opacity` y `scale` y nunca `transform`, que es lo que usa el arrastre. */
+   lugar al cerrar. Anima `opacity`, `scale` y `translate`, nunca
+   `transform`, que es lo que usa el arrastre.
+
+   Abre EN EL MOMENTO del clic, con un esqueleto, y no cuando llegó el
+   detalle: la respuesta inmediata es lo que hace sentir rápida a la
+   pantalla. Cuando llega, el contenido aparece nítido desde un desenfoque
+   leve. Entra en `--mov-lento` y sale más rápido, en `--mov-medio`. */
 export function Detalle({ pedido, cerrar }) {
-  const [contenido, setContenido] = useState(null);   // {ok, datos} cuando llega
+  const [contenido, setContenido] = useState(null);   // {para, ok, datos} cuando llega
   const cerrarRef = useRef(null);
   // Al cerrar, el contenido sigue a la vista mientras el modal se desvanece.
   const ultimo = useRef(null);
   if (pedido) ultimo.current = pedido;
   useEffect(() => {
     if (!pedido) return undefined;
-    setContenido(null);
     let vivo = true;
     fetch("/admin/dashboard/" + pedido.ruta)
       .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
-      .then((d) => { if (vivo) setContenido({ ok: true, datos: d }); })
-      .catch(() => { if (vivo) setContenido({ ok: false }); });
+      .then((d) => { if (vivo) setContenido({ para: pedido, ok: true, datos: d }); })
+      .catch(() => { if (vivo) setContenido({ para: pedido, ok: false }); });
     return () => { vivo = false; };
   }, [pedido]);
-  const abierto = !!(pedido && contenido);
+  const abierto = !!pedido;
+  // Solo se muestra lo que llegó para ESTE pedido: el de la vez anterior no.
+  const listo = contenido && contenido.para === ultimo.current ? contenido : null;
   useEffect(() => {
     if (!abierto) return undefined;
     if (cerrarRef.current) cerrarRef.current.focus();
@@ -147,18 +195,21 @@ export function Detalle({ pedido, cerrar }) {
     return () => document.removeEventListener("keydown", tecla);
   }, [abierto]);
   let cuerpo = null;
-  if (contenido && !contenido.ok) {
+  if (listo && !listo.ok) {
     cuerpo = html`<h3>No se pudo cargar el detalle</h3><div class="det-sub">Probá de nuevo en un momento.</div>`;
-  } else if (contenido && ultimo.current) {
-    const d = contenido.datos, p = ultimo.current;
+  } else if (listo && ultimo.current) {
+    const d = listo.datos, p = ultimo.current;
     cuerpo = { recibo: () => html`<${DetRecibo} d=${d} />`, tramite: () => html`<${DetTramite} d=${d} />`,
       consulta: () => html`<${DetConsulta} d=${d} />`, notif: () => html`<${DetNotifs} d=${d} dia=${p.dia} />` }[p.tipo]();
+  } else if (ultimo.current) {
+    cuerpo = html`<div class="v2-det-esqueleto" aria-label="Cargando el detalle"><i class="t"></i><i class="s"></i>
+      <i></i><i></i><i></i><i></i><i></i></div>`;
   }
   return html`<div class=${"overlay-det v2-anim" + (abierto ? " abierto" : "")} id="overlay-det"
       onClick=${(e) => { if (e.target === e.currentTarget) cerrar(); }}>
     <div class="modal-det" role="dialog" aria-modal="true" aria-hidden=${!abierto}>
       <button type="button" class="modal-det-cerrar" id="det-cerrar" ref=${cerrarRef} aria-label="Cerrar" onClick=${cerrar}>✕</button>
-      <div id="det-contenido">${cuerpo}</div>
+      <div id="det-contenido">${listo ? html`<div class="v2-nitido">${cuerpo}</div>` : cuerpo}</div>
     </div>
   </div>`;
 }
