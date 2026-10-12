@@ -54,7 +54,7 @@ def _v1_como_js(consultas: bool) -> str:
                        "el encaje del salario de initCatalogo")
     funciones = "".join(_funcion_v1(n) for n in (
         "paramsDeEstado", "estadoDeParams", "setPreset", "reiniciar",
-        "alternarSeccional", "aplicarEstado"))
+        "alternarSeccional", "aplicarEstado", "presetActivo"))
     return f"""
 const V1 = (() => {{
   var HOY = new Date(2026, 9, 12);
@@ -66,7 +66,7 @@ const V1 = (() => {{
   {s_inicial.replace("var S =", "var S; function nuevoS() { return", 1).rstrip().rstrip(";")} ; }}
   {funciones}
   function encajar() {{ if (LIM.min !== null && LIM.max !== null) {{ {encaje} }} }}
-  function salida() {{ return paramsDeEstado().toString() + "|tab=" + S.tab; }}
+  function salida() {{ return paramsDeEstado().toString() + "|tab=" + S.tab + "|preset=" + presetActivo(); }}
   return {{
     cargar(qs, lim) {{ S = nuevoS(); LIM = lim; estadoDeParams(new URLSearchParams(qs)); encajar(); return salida(); }},
     preset(p) {{ setPreset(p); return salida(); }},
@@ -125,9 +125,11 @@ const LIMITES = [{ min: null, max: null }, { min: 1150, max: 3700 }, { min: 0, m
 
 _V2_IMPORTS = """
 import { desdeParams, conLimites, aDireccion, crearReductor, limitesSalario,
-         estadoInicial } from "./estado.mjs";
+         estadoInicial, presetActivo, filtrosActivos } from "./estado.mjs";
 const HOY = "2026-10-12";
-function salidaV2(e, lim) { return aDireccion(e, lim).toString().replace(/&?tab=[^&]*/, "") + "|tab=" + e.tab; }
+function salidaV2(e, lim) {
+  return aDireccion(e, lim).toString().replace(/&?tab=[^&]*/, "") + "|tab=" + e.tab + "|preset=" + presetActivo(e, HOY);
+}
 """
 
 
@@ -332,9 +334,61 @@ console.log(JSON.stringify(res));
 def test_el_nucleo_no_toca_el_dom():
     """estado.js y api.js se prueban en Node justamente porque no dependen
     del navegador: que siga siendo así."""
-    for nombre in ("estado.js", "api.js"):
+    for nombre in ("estado.js", "api.js", "formato.js"):
         js = re.sub(r"/\*.*?\*/", "", (RAIZ / "static" / "panel_v2" / nombre).read_text(encoding="utf-8"),
                     flags=re.S)
         for prohibido in ("document.", "window.", "localStorage", "sessionStorage"):
             assert prohibido not in js, f"{nombre} usa {prohibido}"
         assert "import " not in js, f"{nombre} importa algo: el núcleo no depende de nadie"
+
+
+def test_las_pastillas_de_filtros_dicen_lo_mismo_que_en_la_v1(tmp_path):
+    """Los textos y el orden de `pintarChips` de la v1, y cada pastilla trae
+    la acción que la saca."""
+    js = _V2_IMPORTS + """
+const r = crearReductor({ hoy: HOY });
+const catalogo = { seccionales: [{ id: 3, nombre: "Córdoba" }], empresas: [{ id: 9, nombre: "Metalsur SA" }] };
+const lim = { min: 1150, max: 3700 };
+let e = Object.assign(estadoInicial(HOY), { seccionales: [3, 77], empresas: [9], formato: "nuevo",
+  resultado: "con_diferencias", estadoTramite: "en_proceso", tipoNotif: "sistema", tema: "licencias",
+  afiliado: 12, salMin: 1200, salMax: 3700 });
+const f = filtrosActivos(e, { catalogo, lim, afiliados: { 12: { nombre: "Diego Sosa" } } });
+const sin = f.reduce((x, p) => r(x, p.accion), e);
+const sinAfiliado = filtrosActivos(Object.assign({}, e, { afiliado: 5 }), { catalogo, lim });
+console.log(JSON.stringify({ textos: f.map((p) => p.txt), quedan: filtrosActivos(sin, { catalogo, lim }).length,
+  salario: [sin.salMin, sin.salMax], sinNombre: sinAfiliado.find((p) => p.txt.startsWith("Afiliado")).txt,
+  sinLimites: filtrosActivos(e, { catalogo }).some((p) => p.txt.startsWith("Bruto")) }));
+"""
+    r = _correr(js, tmp_path, modulos=("estado",))
+    assert r["textos"] == [
+        "Seccional: Córdoba", "Seccional: #77", "Empresa: Metalsur SA", "Formato: Ley 27.802",
+        "Resultado: Con diferencias", "Trámites: En proceso", "Notif.: Trámites", "Tema: licencias",
+        "Afiliado: Diego Sosa", "Bruto: $1.200k – $3.700k"]
+    assert r["quedan"] == 0, "sacar cada pastilla con su acción deja el panel sin filtros"
+    assert r["salario"] == [1150, 3700], "sacar el salario lo vuelve a los límites"
+    assert r["sinNombre"] == "Afiliado: #5", "sin el nombre todavía, el id"
+    assert r["sinLimites"] is False, "sin slider no hay pastilla de salario"
+
+
+def test_los_formatos_son_los_de_la_v1(tmp_path):
+    (tmp_path / "formato.mjs").write_text(
+        (RAIZ / "static" / "panel_v2" / "formato.js").read_text(encoding="utf-8"), encoding="utf-8")
+    js = """
+import { fmtN, fmtM, fmtPct, fFecha, fechaLarga, deltaRecibos } from "./formato.mjs";
+console.log(JSON.stringify({
+  n: [fmtN(4707), fmtN(null), fmtN(0)], m: [fmtM(25217857.29), fmtM(undefined)],
+  pct: [fmtPct(20.8), fmtPct(20), fmtPct(null)], fecha: [fFecha("2026-10-12 18:15"), fFecha("")],
+  larga: fechaLarga("2026-10-12"),
+  delta: [deltaRecibos(4707, 293), deltaRecibos(90, 100), deltaRecibos(5, 0)],
+}));
+"""
+    r = _correr(js, tmp_path, modulos=())
+    assert r["n"] == ["4.707", "—", "0"]
+    assert r["m"] == ["$ 25.217.857", "—"]
+    assert r["pct"] == ["20,8 %", "20 %", "—"]
+    assert r["fecha"] == ["12/10/2026", "—"]
+    assert r["larga"] == "lunes, 12 de octubre de 2026"
+    assert r["delta"] == [{"clase": "up", "texto": "▲ 1506% vs período anterior"},
+                          {"clase": "down", "texto": "▼ 10% vs período anterior"},
+                          {"clase": "neu", "texto": "s/d período anterior"}]
+
