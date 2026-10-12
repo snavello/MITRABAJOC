@@ -106,6 +106,16 @@ SEMILLA = [
         "fragmento": "",
     },
     {
+        "clave": "plan-implementacion-bancaria-word",
+        "titulo": "Plan de implementación en La Bancaria (Word editable)",
+        "descripcion": "El mismo plan v0.2 en Word, con control de cambios activado, para corregirlo "
+                       "y devolverlo. Fuente: docs/bancaria/generar_docx.js.",
+        "fecha": date(2026, 10, 11),
+        "archivo": "colm3na-plan-implementacion-bancaria-v0.2.docx",
+        "miniatura": "",
+        "fragmento": "",
+    },
+    {
         "clave": "guia-reunion-bancaria",
         "titulo": "Guía de la reunión estratégica con las autoridades de La Bancaria (v0.2)",
         "descripcion": "Una hoja para conducir la reunión: orden del día de 90 minutos, lo que buscamos "
@@ -121,6 +131,16 @@ SEMILLA = [
         "descripcion": "La misma hoja guía v0.2 en PDF, una hoja A4, para imprimir y llevar a la reunión.",
         "fecha": date(2026, 10, 11),
         "archivo": "colm3na-guia-reunion-autoridades-bancaria.pdf",
+        "miniatura": "",
+        "fragmento": "",
+    },
+    {
+        "clave": "guia-reunion-bancaria-word",
+        "titulo": "Guía de la reunión con La Bancaria (Word editable)",
+        "descripcion": "La misma hoja guía v0.2 en Word, con control de cambios activado, para corregirla "
+                       "y devolverla. Fuente: docs/bancaria/generar_docx.js.",
+        "fecha": date(2026, 10, 11),
+        "archivo": "colm3na-guia-reunion-autoridades-bancaria-v0.2.docx",
         "miniatura": "",
         "fragmento": "",
     },

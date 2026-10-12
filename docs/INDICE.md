@@ -86,8 +86,8 @@ a SDN. **No se escribe en ningún documento.**
 | Recurso | Origen |
 |---|---|
 | Instructivo de montaje: cuentas y entornos a nombre de XP | `recursos/colm3na-instructivo-montaje.html` y `.pdf` (A4, 36 páginas) ← artifact `PdD98igB` (versión 4). **Interno del equipo.** |
-| Plan de implementación en La Bancaria (seis fases, v0.2) | `recursos/colm3na-plan-implementacion-bancaria.html` y `.pdf` (4 hojas A4) ← `docs/bancaria/plan-implementacion-bancaria.html` |
-| Guía de la reunión con las autoridades de La Bancaria (v0.2) | `recursos/colm3na-guia-reunion-autoridades-bancaria.html` y `.pdf` (1 hoja A4) ← `docs/bancaria/guia-reunion-autoridades-bancaria.html` |
+| Plan de implementación en La Bancaria (seis fases, v0.2) | `recursos/colm3na-plan-implementacion-bancaria.html`, `.pdf` (4 hojas A4) y `-v0.2.docx` (Word editable) ← `docs/bancaria/plan-implementacion-bancaria.html` |
+| Guía de la reunión con las autoridades de La Bancaria (v0.2) | `recursos/colm3na-guia-reunion-autoridades-bancaria.html`, `.pdf` (1 hoja A4) y `-v0.2.docx` (Word editable) ← `docs/bancaria/guia-reunion-autoridades-bancaria.html` |
 | Bitácora del proyecto | `recursos/bitacora.html` ← `generar_bitacora.py` ← `BITACORA.md` |
 | Motor de recibos: de la foto al veredicto | `recursos/motor-recibos.html` |
 | Anatomía del análisis inteligente (caso Marina) | `recursos/anatomia-analisis-inteligente.html` ← `docs/chat/2026-09-26-anatomia-analisis-inteligente.md` |
