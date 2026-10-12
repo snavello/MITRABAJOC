@@ -6702,3 +6702,32 @@ v2, controla que no haya errores en la consola ni archivos de `/static/`
 rechazados, que se pinte la fecha del servidor, y que los dos enlaces lleven
 de una versión a la otra con los filtros.
 
+**El núcleo sin pantalla (bloque 2, Admin 0.50.02).** `estado.js` tiene el
+estado de los filtros y la única función que lo cambia (D8); `api.js`, los
+pedidos al servidor. Ninguno toca el DOM ni importa nada, así que Node los
+corre de verdad.
+
+La pregunta de este bloque era cómo saber que la v2 le pide al servidor lo
+mismo que la v1, sin confiar en haber leído bien `dashboard.js`. La respuesta
+fue no compararla contra la lectura sino contra la v1 misma:
+`test_dashboard_v2_nucleo.py` extrae de `dashboard.js` las funciones que arman
+y sanean el estado (`paramsDeEstado`, `estadoDeParams`, `setPreset`,
+`reiniciar`, `alternarSeccional`, `aplicarEstado` y el encaje del salario de
+`initCatalogo`) y las corre al lado de las de la v2. Con 8.000 direcciones al
+azar (fechas que no existen, futuras o invertidas, ids rotos, salarios que no
+son número, pestañas que no están) y 3.600 cambios encadenados, las dos tienen
+que dar exactamente los mismos parámetros. Para confirmar que el test detecta
+una diferencia, se cambió a propósito una regla en la v2 y falló mostrando las
+direcciones exactas.
+
+Lo que salió de comparar así son las rarezas de la v1, que la v2 copia para
+pedir lo mismo: un día que no existe se corre (2026-02-30 es el 2 de marzo),
+un `sal_min` que no es número cuenta como puesto, y **sin `sal_min` se
+descarta el `sal_max` de la dirección**. Esa última es un bug de la v1: un
+enlace con solo "hasta $2.000.000" abre sin ese filtro. Quedó en BACKLOG.md
+para arreglarlo en las dos a la vez (D10), y el test lo va a exigir.
+
+`api.js` es la `pedir` y la `enCola` de la v1 con lo de afuera inyectado
+(fetch, la espera, qué hacer al perder la sesión). Una diferencia buscada: si
+la ronda ya se abortó, la espera del reintento ni empieza.
+

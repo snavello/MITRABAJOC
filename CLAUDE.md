@@ -1212,8 +1212,16 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     archivo con sello (recorre `static/panel_v2/`: un archivo nuevo entra
     solo), enlace entre versiones solo con distintivo, y
     `test_dashboard_v2.py` (puertas, todo import resuelve por el mapa, nada
-    de `innerHTML`, SHA-256 de lo vendoreado). Sigue el bloque 2 (estado y
-    pedidos, sin pantalla); punto de control al terminar el bloque 3.
+    de `innerHTML`, SHA-256 de lo vendoreado). **Bloque 2 HECHO**
+    (2026-10-12, Admin 0.50.02): `static/panel_v2/estado.js` (estado y
+    reductor, puros) y `api.js` (pedidos con la cola de 4, reintento del 503,
+    403 y 422), probados con Node en `test_dashboard_v2_nucleo.py` **contra
+    la v1 misma**: se extraen sus funciones de `dashboard.js` y tienen que dar
+    los mismos parámetros con miles de direcciones al azar. Una rareza de la
+    v1 que salió de ahí (sin `sal_min` se pierde el `sal_max`) quedó copiada a
+    propósito y anotada en BACKLOG.md, para arreglarla en las dos (D10).
+    **Sigue el mockup de D5, que necesita la elección de SDN**, y después el
+    bloque 3; punto de control al terminarlo.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 

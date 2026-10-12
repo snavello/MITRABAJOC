@@ -4,6 +4,16 @@ Anotaciones para no desviar el bloque de trabajo en curso (ver "Backlog
 técnico" en la memoria del proyecto). Cada ítem se tacha o se borra cuando
 se hace.
 
+- [ ] **Panel Sindical: una dirección con solo `sal_max` pierde ese filtro**
+  (2026-10-12, encontrado al portar el estado a la v2, `PLAN_DASHBOARD_V2.md`
+  bloque 2). En `initCatalogo` de `static/dashboard.js`, si la dirección no
+  trae `sal_min`, el salario se vuelve a los dos límites y el `sal_max` que
+  venía se descarta: un enlace compartido con "hasta $2.000.000" abre sin ese
+  filtro. La v2 copia la rareza a propósito (`estado.conLimites`), porque
+  tiene que pedir exactamente lo mismo que la v1. Por D10 se arregla en las
+  DOS en el mismo PR; `test_dashboard_v2_nucleo.py` compara las dos y lo va a
+  exigir.
+
 - [ ] **Para el motor v2: dos variaciones del modelo con el MISMO recibo**
   (2026-09-24, medición del enmascarado, `medicion_enmascarado/RESULTADO.md`).
   (1) "SEGURO OBLIGATORIO - DGI" ($380 fijo) sale `aporte_trabajador` en una
