@@ -1220,8 +1220,16 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     los mismos parámetros con miles de direcciones al azar. Una rareza de la
     v1 que salió de ahí (sin `sal_min` se pierde el `sal_max`) quedó copiada a
     propósito y anotada en BACKLOG.md, para arreglarla en las dos (D10).
-    **Sigue el mockup de D5, que necesita la elección de SDN**, y después el
-    bloque 3; punto de control al terminarlo.
+    **Mockup de D5 hecho y elegida la dirección B, "Sala de mando"**
+    (`disenos/panel-v2-propuestas.html`, fuera de git). **Bloque 3 HECHO**
+    (2026-10-12, Admin 0.51.01): la barra de período y filtros puestos, el
+    cajón con el resto (calendario, formato, seccionales, empresas, salario,
+    afiliado) y los 10 indicadores sobre la tarjeta oscura, con el número que
+    corre. El cajón va AFUERA de `<main>` (`panel/capa`): `.mesa-cont` arma su
+    propia capa con z-index 1. El robot compara la v2 con la v1 en
+    indicadores y filtros en las 7 combinaciones y manejando los controles, y
+    exige que la v2 no pida nada que la v1 no pida. **Punto de control: SDN
+    lo mira en Pruebas y decide si el piloto sigue.**
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 

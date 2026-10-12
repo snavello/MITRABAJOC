@@ -227,6 +227,34 @@ def abrir(page, version: str, params: dict, timeout_s: float = 40) -> "_Monitor"
                          f"(en vuelo: {monitor.en_vuelo}, hechos: {len(monitor.hechos)})")
 
 
+def esperar_ronda(page, version: str, monitor: "_Monitor", antes: int, timeout_s: float = 20):
+    """Después de tocar un control: espera a que salga y termine una ronda
+    NUEVA (hay que dejar pasar la espera de 400 ms antes de pedir) y a que el
+    panel se calme."""
+    lector = LECTORES[version]
+    fin = time.time() + timeout_s
+    quieto_desde = None
+    while time.time() < fin:
+        nueva = len(monitor.hechos) > antes
+        if nueva and monitor.en_vuelo == 0 and page.locator(lector["cargando"]).count() == 0:
+            quieto_desde = quieto_desde or time.time()
+            if time.time() - quieto_desde >= 1.0:
+                return
+        else:
+            quieto_desde = None
+        page.wait_for_timeout(100)
+    raise AssertionError(f"el panel {version} no hizo una ronda nueva en {timeout_s:.0f} s")
+
+
+def lectura_actual(page, version: str, monitor: "_Monitor") -> dict:
+    """Lo que el panel muestra ahora, sin volver a abrirlo."""
+    lectura = page.evaluate(LECTORES[version]["js"])
+    lectura["pedidos"] = sorted(set(monitor.hechos))
+    lectura["max_en_vuelo"] = monitor.maximo
+    lectura["url"] = urlsplit(page.url).query
+    return lectura
+
+
 def leer(page, version: str, params: dict) -> dict:
     """Abre el panel y devuelve la lectura completa (ver docstring del módulo)."""
     monitor = abrir(page, version, params)
@@ -309,8 +337,40 @@ _JS_V1 = r"""
 }
 """
 
+# La v2 se arma por bloques (PLAN_DASHBOARD_V2.md): su lector dice qué partes
+# ya tiene (`cubre`), y la comparación mira solo esas. La paridad completa
+# (`test_paridad_v1_v2`) espera a que cubra todo.
+_JS_V2 = r"""
+() => {
+  const q = (s) => document.querySelector(s);
+  const texto = (s) => { const e = q(s); return e ? e.textContent.trim() : null; };
+  const kpis = {};
+  document.querySelectorAll('[data-panel="kpis"] [id^="v-"]').forEach((e) => {
+    kpis[e.id.replace(/^v-/, "")] = e.textContent.trim();
+  });
+  const aviso = q(".aviso-error");
+  return {
+    version: "v2",
+    kpis,
+    delta_recibos: texto("#d-recibos"),
+    delta_padron: texto("#d-padron"),
+    rango: texto("#rango-texto"),
+    contadores: {},
+    explorador: { pestana: null, filas: 0, primeras: [], total: null },
+    graficos: {},
+    semaforo: { resumen: null, empresas: 0 },
+    mapa: { burbujas: 0 },
+    filtros_activos: [...document.querySelectorAll(".v2-puesto")]
+      .map((c) => c.firstChild.textContent.trim()),
+    paneles_con_error: q(".v2-error-kpis") ? ["kpis"] : [],
+    aviso: aviso ? aviso.textContent.trim() : "",
+  };
+}
+"""
+
 LECTORES = {
-    "v1": {"js": _JS_V1, "cargando": "[data-panel].cargando, #kpis.cargando"},
+    "v1": {"js": _JS_V1, "cargando": "[data-panel].cargando, #kpis.cargando", "cubre": "todo"},
+    "v2": {"js": _JS_V2, "cargando": "[data-panel].cargando", "cubre": ("kpis", "filtros")},
 }
 
 
@@ -331,19 +391,29 @@ def numeros(texto) -> list:
     return salida
 
 
-def comparar(a: dict, b: dict) -> list:
+PARTES = ("kpis", "filtros", "explorador", "graficos", "semaforo", "mapa", "pedidos")
+
+
+def comparar(a: dict, b: dict, partes=PARTES) -> list:
     """Las diferencias de DATOS entre dos lecturas, en castellano. Vacío si
-    muestran lo mismo."""
+    muestran lo mismo. `partes` limita la comparación a lo que la v2 ya tiene
+    (`LECTORES["v2"]["cubre"]`)."""
     dif = []
 
     def igual(nombre, x, y):
         if x != y:
             dif.append(f"{nombre}: {a['version']}={x!r} / {b['version']}={y!r}")
 
-    for clave in sorted(set(a["kpis"]) | set(b["kpis"])):
-        igual(f"KPI {clave}", numeros(a["kpis"].get(clave)), numeros(b["kpis"].get(clave)))
-    igual("variación de recibos", numeros(a["delta_recibos"]), numeros(b["delta_recibos"]))
-    igual("rango de fechas", numeros(a["rango"]), numeros(b["rango"]))
+    if "kpis" in partes:
+        for clave in sorted(set(a["kpis"]) | set(b["kpis"])):
+            igual(f"KPI {clave}", numeros(a["kpis"].get(clave)), numeros(b["kpis"].get(clave)))
+        igual("variación de recibos", numeros(a["delta_recibos"]), numeros(b["delta_recibos"]))
+        igual("porcentaje del padrón", numeros(a["delta_padron"]), numeros(b["delta_padron"]))
+        igual("rango de fechas", numeros(a["rango"]), numeros(b["rango"]))
+    if "filtros" in partes:
+        igual("filtros activos", a["filtros_activos"], b["filtros_activos"])
+    if "explorador" not in partes:
+        return dif
     for clave in sorted(set(a["contadores"]) | set(b["contadores"])):
         igual(f"contador {clave}", numeros(a["contadores"].get(clave)),
               numeros(b["contadores"].get(clave)))
@@ -363,6 +433,5 @@ def comparar(a: dict, b: dict) -> list:
           numeros(b["semaforo"]["resumen"]))
     igual("semáforo: empresas", a["semaforo"]["empresas"], b["semaforo"]["empresas"])
     igual("mapa: burbujas", a["mapa"]["burbujas"], b["mapa"]["burbujas"])
-    igual("cantidad de filtros activos", len(a["filtros_activos"]), len(b["filtros_activos"]))
     igual("pedidos al servidor", a["pedidos"], b["pedidos"])
     return dif

@@ -40,6 +40,10 @@
   <div id="panel"></div>
   <noscript><p>El Panel Sindical necesita JavaScript.</p></noscript>
 </main>
+{# Lo que se abre por encima de todo (el cajón de filtros, los modales) va
+   AFUERA de <main>: .mesa-cont arma su propia capa con z-index 1 y nada de
+   adentro podría tapar el encabezado (static/panel_v2/capa.js). #}
+<div id="capas"></div>
 
 {# Cada módulo se pide por nombre y el mapa lo traduce a su archivo CON su
    sello ?v= (D3). Lo arma main._importmap_panel_v2() recorriendo la carpeta:

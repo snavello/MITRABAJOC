@@ -163,6 +163,50 @@ export function aDireccion(e, lim) {
   return q;
 }
 
+/* El atajo de período que corresponde al rango, o null: "hoy", "7", "30" o
+   "90" solo si el rango termina hoy y dura eso (`presetActivo` de la v1). */
+export function presetActivo(e, hoy) {
+  if (e.hasta !== hoy) return null;
+  const dias = Math.round((deISO(e.hasta) - deISO(e.desde)) / 864e5) + 1;
+  return { 1: "hoy", 7: "7", 30: "30", 90: "90" }[dias] || null;
+}
+
+const ESTADO_TRAMITE_TXT = { abierto: "Abiertos", en_proceso: "En proceso", resuelto: "Resueltos" };
+
+function nombreDe(lista, id) {
+  const it = (lista || []).find((x) => x.id === id);
+  return it ? it.nombre : "#" + id;
+}
+
+/* Los filtros puestos, como pastillas que se sacan de a una: el mismo texto y
+   el mismo orden que `pintarChips` de la v1. Cada una trae la acción que la
+   saca. El período no es una pastilla: siempre hay uno. */
+export function filtrosActivos(e, { catalogo = {}, lim = { min: null, max: null }, afiliados = {} } = {}) {
+  const salida = [];
+  const poner = (campo, valor) => ({ tipo: "poner", campo, valor });
+  e.seccionales.forEach((id) => salida.push({ txt: "Seccional: " + nombreDe(catalogo.seccionales, id),
+    accion: { tipo: "alternar", campo: "seccionales", id } }));
+  e.empresas.forEach((id) => salida.push({ txt: "Empresa: " + nombreDe(catalogo.empresas, id),
+    accion: { tipo: "alternar", campo: "empresas", id } }));
+  if (e.formato) salida.push({ txt: "Formato: " + (e.formato === "nuevo" ? "Ley 27.802" : "Anterior"),
+    accion: poner("formato", "") });
+  if (e.resultado) salida.push({ txt: "Resultado: " + (e.resultado === "ok" ? "Correctos" : "Con diferencias"),
+    accion: poner("resultado", "") });
+  if (e.estadoTramite) salida.push({ txt: "Trámites: " + ESTADO_TRAMITE_TXT[e.estadoTramite],
+    accion: poner("estadoTramite", "") });
+  if (e.tipoNotif) salida.push({ txt: "Notif.: " + (e.tipoNotif === "manual" ? "Comunicaciones" : "Trámites"),
+    accion: poner("tipoNotif", "") });
+  if (e.tema) salida.push({ txt: "Tema: " + e.tema, accion: poner("tema", "") });
+  if (e.afiliado) salida.push({ txt: "Afiliado: " + (afiliados[e.afiliado] ? afiliados[e.afiliado].nombre : "#" + e.afiliado),
+    accion: poner("afiliado", null) });
+  if (lim.min !== null && e.salMin !== null && (e.salMin > lim.min || e.salMax < lim.max)) {
+    const n = (v) => Number(v).toLocaleString("es-AR");
+    salida.push({ txt: "Bruto: $" + n(e.salMin) + "k – $" + n(e.salMax) + "k",
+      accion: { tipo: "salario", min: lim.min, max: lim.max } });
+  }
+  return salida;
+}
+
 /* ---------------- Cambios ---------------- */
 
 function sinFiltros(e, lim) {
@@ -217,6 +261,8 @@ export function crearReductor({ hoy, consultas = false }) {
       }
       case "salario":
         return Object.assign({}, e, { salMin: a.min, salMax: a.max, paginas: 1 });
+      case "encajar":             // llegó el catálogo: el salario entra en los límites
+        return conLimites(e, a.lim);
       case "tab":
         // Una pestaña que no existe (consultas apagado) no se elige.
         return tabs.indexOf(a.valor) < 0 ? e : Object.assign({}, e, { tab: a.valor, paginas: 1 });

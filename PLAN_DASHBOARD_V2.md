@@ -138,6 +138,11 @@ el piloto.
   `disenos/` (fuera de git, como los demás) y se acuerda con SDN. Si no, las
   mejoras se improvisan pantalla por pantalla.
 
+**Dirección elegida por SDN el 2026-10-12 sobre el mockup
+(`disenos/panel-v2-propuestas.html`): B, "Sala de mando"** — los números
+grandes sobre la tarjeta oscura de la marca y el resto de los filtros en un
+cajón. Las otras dos eran A "Continuidad" y C "Por tema".
+
 **Acordada con SDN el 2026-10-12, con un agregado: animaciones fluidas.** El
 piloto tiene que poder mostrarle al proyecto una mejora visual de la
 interfaz, además del cambio técnico. El mockup trae 2 o 3 direcciones, ya

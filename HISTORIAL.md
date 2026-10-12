@@ -6731,3 +6731,42 @@ para arreglarlo en las dos a la vez (D10), y el test lo va a exigir.
 (fetch, la espera, qué hacer al perder la sesión). Una diferencia buscada: si
 la ronda ya se abortó, la espera del reintento ni empieza.
 
+**El mockup y la dirección B.** Antes del bloque 3, `disenos/panel-v2-propuestas.html`
+(fuera de git; fuentes en `disenos/panel-v2/`) mostró tres direcciones con los
+números reales de la demo + lote UOM, pedidos a los mismos endpoints del
+panel, y las animaciones de D5 hechas con el mismo Chart.js de la app, para
+no prometer nada que después no se pudiera hacer. A "Continuidad" mantenía el
+orden de hoy; B "Sala de mando" ponía los números grandes sobre la tarjeta
+oscura del vocabulario "Hilo" y los filtros en una barra; C "Por tema"
+llevaba los filtros a un riel lateral y ordenaba el tablero por recibos,
+trámites y comunicación. SDN eligió B.
+
+**Filtros e indicadores (bloque 3, Admin 0.51.01).** La barra de la tarjeta
+tiene el período rápido, los filtros puestos como pastillas que se sacan de a
+una y Reiniciar; el resto va en un cajón que entra de costado (desde abajo en
+el teléfono): el calendario pintable, formato, seccionales, empresas, el
+salario de dos manijas y el buscador de afiliado. Cada control se comporta
+como su par de la v1 y todos cambian el estado por el reductor (D8).
+
+Lo que costó: el cajón quedaba debajo del encabezado aunque tuviera z-index
+900. `<main class="mesa-cont">` se levanta sobre el fondo de la mesa con
+z-index 1, y eso arma una capa propia: nada de adentro puede tapar lo que
+está afuera. La v1 tiene su modal después de `</main>` por lo mismo. La v2
+pinta lo que se abre por encima de todo en `#capas`, afuera de `<main>`, con
+un "portal" de diez líneas (`panel/capa`). Otro detalle: el robot no puede
+usar `wait_for_function` en estas pantallas, porque la CSP no deja evaluar
+texto como JavaScript (no hay 'unsafe-eval', y está bien que no haya).
+
+Cómo se verificó, sin mirar el código de la v1 sino la v1 andando:
+- Un lector parcial de la v2 en el robot (`cubre`: indicadores y filtros) y
+  `test_lo_que_ya_tiene_la_v2_coincide`: las 7 combinaciones dan los mismos
+  indicadores, las mismas pastillas y la misma dirección que la v1, y la v2 no
+  le pide al servidor nada que la v1 no pida.
+- `test_los_controles_de_la_v2_dan_lo_mismo_que_la_v1`: el robot maneja la
+  v2 como una persona (período, una seccional desde el cajón, formato, quitar
+  una pastilla, Reiniciar) y en cada paso abre la v1 con la misma dirección.
+  Las cinco veces, lo mismo.
+- En Node, el atajo de período contra el `presetActivo` de la v1 con las
+  mismas miles de direcciones, y los textos de las pastillas contra los de
+  `pintarChips`.
+
