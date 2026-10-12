@@ -11,7 +11,7 @@ etapa5: en_curso
 etapa6: hecha
 etapa7: hecha
 etapa9: pendiente
-actualizado: 2026-10-11
+actualizado: 2026-10-12
 ---
 
 ## Cómo seguir
@@ -75,3 +75,18 @@ INF en la iteración 2: los vendoreados de JavaScript (Chart.js 4.4.9, Leaflet
 1.9.4, vis-network, Preact, htm) no tienen hoy ninguna auditoría automática de
 CVE. La v2 además prohíbe por test armar HTML como texto (`innerHTML` y
 afines), que en la v1 es la única barrera contra XSS en lo que pinta el panel.
+
+2026-10-12: **verificación** (`corridas/2026-10-12-2215-VERIFICACION.md`). Se
+re-corrieron sobre `main` los tests de regresión de todo lo `corregido`:
+H-0001, H-0002, H-0003, H-0005, H-0006, H-0009, H-0015, H-0016 y H-0021 pasan
+a `verificado` (H-0004 ya lo estaba). Siguen igual, mirado en vivo: H-0017
+(captcha y mail apagados en Pruebas), H-0020 (la Demo sigue en 0.40.01 sin
+regularizar), H-0014 (fastapi 0.115.5), H-0018, H-0010 y H-0012. La solapa
+Seguridad de `/entornos` dejó de mostrar esta sección (pedido de SDN): lo
+pendiente se lee en "Estado de resolución".
+
+Estado del kit: 10 Solucionado (todos verificados), 5 Parcial, 4 Pendiente,
+3 Aceptado; bloquean producción 3: **H-0019** (claves semilla públicas: que
+`arsantagati` entre o se le resetee la clave en Pruebas y Demo), **H-0008**
+(cierra con el perímetro INF-05) y **H-0020** (regularizar la Demo en la
+próxima promoción).

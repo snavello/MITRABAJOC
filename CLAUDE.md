@@ -851,6 +851,12 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     H-0003 y H-0016 → Solucionado.** Plataforma 0.33.01. Estado del kit: 8
     Solucionado, 2 Parcial, 6 Pendiente, 2 Aceptado; bloquean 1 (H-0008,
     cierra con el perímetro INF-05).
+    **Verificación del 2026-10-12** (`corridas/2026-10-12-2215-VERIFICACION.md`):
+    re-corridos los tests de regresión, todo lo corregido pasó a
+    `verificado`. Estado: 10 Solucionado, 5 Parcial, 4 Pendiente, 3
+    Aceptado (22 hallazgos); bloquean 3: H-0019 (claves semilla públicas),
+    H-0008 (perímetro) y H-0020 (regularizar la Demo). La solapa Seguridad
+    ya no tiene "Cómo seguir": lo pendiente se lee en "Estado de resolución".
 
 27. **Sala de mando: el esquema físico de la plataforma, vivo** (2026-09-21,
     rama `feature/esquema-fisico`): el boceto en papel de Sd llevado a una
