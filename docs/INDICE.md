@@ -60,6 +60,7 @@ cuenta), no en cada commit.
 | `xsk/XSANDERS_HERRAMIENTA.md` | Blueprint agnóstico de XSK como herramienta reutilizable: método, herramientas, aprendizajes de la iteración 1 y hoja de ruta del producto. Documento vivo. | 2026-09-21 |
 | `PLAN_CUIT_MOD11.md` | Validar CUIL/CUIT con el módulo 11 de AFIP (primera medida de la serie XSK): diagnóstico, conversión de los números cargados a mano y validación en las puertas de alta. Propuesta, a acordar con SDN. | 2026-10-10 |
 | `PLAN_REGISTRO.md` | Registro confirmado por mail con niveles de fiabilidad (R2), recuperación de clave (R3), captcha y freno en el registro (segunda medida de la serie XSK, cierra H-0017). Acordado con SDN decisión por decisión. | 2026-10-11 |
+| `PLAN_DASHBOARD_V2.md` | Panel Sindical v2 con Preact sin build, en paralelo a la v1 (`/admin/dashboard-v2`, solo local y Pruebas): primer piloto de una capa de componentes, sin tocar el backend. Acordado con SDN decisión por decisión. | 2026-10-12 |
 
 ### Carpetas
 

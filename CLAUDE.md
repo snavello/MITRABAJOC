@@ -1194,6 +1194,14 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     canal está apagado y el registro nace nivel 1. Después: smoke test del
     widget en Pruebas y H-0017 → Solucionado. Pendientes menores anotados en
     BACKLOG.md (bitácora de acciones del panel, teléfono como segundo canal).
+11. **Panel Sindical v2 con Preact** (plan acordado el 2026-10-12, **sin
+    código**): [`PLAN_DASHBOARD_V2.md`](PLAN_DASHBOARD_V2.md). Primer piloto
+    de una capa de componentes: Preact 10.29.8 + htm 3.1.1 vendoreados, sin
+    build, en `/admin/dashboard-v2` (solo local y Pruebas) al lado de la v1,
+    con los mismos endpoints y sin tocar el backend. Estética mejorada sobre
+    un mockup previo, con animaciones en gráficos, KPIs y modales; mientras
+    dure, la v1 recibe solo arreglos. Sigue el bloque 0 (robot de paridad);
+    punto de control al terminar el bloque 3.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 
