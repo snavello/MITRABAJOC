@@ -404,7 +404,19 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
   transition: background .2s, border-color .2s, box-shadow .2s, color .2s; }
 .v2-chip:hover, .v2-btn-filtros:hover { border-color: color-mix(in srgb, var(--destacado) 60%, white); }
 .v2-chip.act { background: var(--destacado); border-color: var(--destacado); color: #fff; box-shadow: 0 4px 14px -6px var(--destacado); }
-.v2-btn-filtros { display: inline-flex; align-items: center; gap: 6px; }
+/* "Más filtros" tiene que verse distinto de las pastillas de período: abre el
+   cajón con el resto de los filtros (calendario, seccionales, empresas...). */
+.v2-btn-filtros { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.14);
+  border: 1.5px solid color-mix(in srgb, var(--destacado) 70%, white); color: #fff; font-weight: 700; }
+.v2-btn-filtros:hover { background: rgba(255,255,255,.22); }
+
+/* Mientras la v2 no tiene paneles: dice qué falta, en vez de dejar un hueco
+   que parece una falla. Se va cuando lleguen los gráficos. */
+.v2-proximo { margin-top: 16px; background: var(--blanco); border: 1px dashed color-mix(in srgb, var(--gris) 45%, white);
+  border-radius: var(--r-card); padding: 16px 18px; }
+.v2-proximo .v2-kicker { color: var(--marca-primario); }
+.v2-proximo p { margin: 6px 0 10px; font-size: 14px; color: var(--tinta); max-width: 760px; }
+.v2-proximo a { font-weight: 700; font-size: 13px; color: var(--marca-primario); }
 .v2-num { background: var(--destacado); color: #fff; border-radius: 99px; min-width: 19px; height: 19px; display: inline-grid;
   place-items: center; font: 700 11px var(--fuente-num); padding: 0 5px; }
 .v2-puestos { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }

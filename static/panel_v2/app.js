@@ -137,6 +137,13 @@ function Panel() {
       <${BarraFiltros} ...${comun} afiliados=${afiliados} abrirCajon=${() => setCajon(true)} />
       <${Kpis} datos=${kpis} consultas=${CONSULTAS} error=${fallo} reintentar=${refrescar} />
     </section>
+    <div class="v2-proximo" data-v2="proximo">
+      <span class="v2-kicker">En construcción</span>
+      <p>Los gráficos, el mapa de seccionales, el semáforo de aportes y el explorador de datos se suman
+        en los próximos bloques. Mientras tanto están en la versión actual, con estos mismos filtros.</p>
+      <a href="/admin/dashboard"
+        onClick=${(ev) => { ev.preventDefault(); location.href = "/admin/dashboard" + location.search; }}>Abrir la versión actual con estos filtros →</a>
+    </div>
     <${Capa}><${Cajon} ...${comun} abierto=${cajon} cerrar=${() => setCajon(false)} alElegirAfiliado=${elegirAfiliado} /><//>
   </div>`;
 }
