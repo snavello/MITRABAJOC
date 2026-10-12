@@ -85,6 +85,7 @@ a SDN. **No se escribe en ningún documento.**
 
 | Recurso | Origen |
 |---|---|
+| Instructivo de montaje: cuentas y entornos a nombre de XP | `recursos/colm3na-instructivo-montaje.html` y `.pdf` (A4, 36 páginas) ← artifact `PdD98igB` (versión 4). **Interno del equipo.** |
 | Bitácora del proyecto | `recursos/bitacora.html` ← `generar_bitacora.py` ← `BITACORA.md` |
 | Motor de recibos: de la foto al veredicto | `recursos/motor-recibos.html` |
 | Anatomía del análisis inteligente (caso Marina) | `recursos/anatomia-analisis-inteligente.html` ← `docs/chat/2026-09-26-anatomia-analisis-inteligente.md` |
@@ -118,7 +119,7 @@ a SDN. **No se escribe en ningún documento.**
 | Bitácora Colm3na (Claude Doc) | Espejo de `BITACORA.md` para leer desde Claude. | https://claude.ai/code/artifact/d5f13de8-bbd4-4f3b-93a0-7f32b5772c33 |
 | Plan de implementación La Bancaria (resumido) | Borrador v0.1, 4 hojas A4: seis fases, hitos, responsables, datos, indicadores y riesgos. Fuente: `docs/bancaria/plan-implementacion-bancaria.html`. | https://claude.ai/artifact/JMGWcmEMgiJWQB7n3c8eNb |
 | Guía de reunión La Bancaria | Hoja de una página para la reunión con las autoridades. Fuente: `docs/bancaria/guia-reunion-autoridades-bancaria.html`. | https://claude.ai/artifact/BQoR9L61oWHGEHd6X5ttTg |
-| Instructivo de montaje Colm3na | Paso a paso para rearmar las cuentas y entornos a nombre de XP (AKG titular; SDN, ARS y GCF invitados). Solo vive como artifact. **Interno del equipo.** | https://claude.ai/artifact/PdD98igBPewGzzZRCUBiKb |
+| Instructivo de montaje Colm3na | Paso a paso para rearmar las cuentas y entornos a nombre de XP (AKG titular; SDN, ARS y GCF invitados). Copia en Recursos (`recursos/colm3na-instructivo-montaje.html` y `.pdf`): si cambia el artifact, volver a copiarla. **Interno del equipo.** | https://claude.ai/artifact/PdD98igBPewGzzZRCUBiKb |
 
 ### Chats del proyecto (por fecha; el id corto es el que cita `BITACORA.md`)
 
