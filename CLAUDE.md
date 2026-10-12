@@ -1200,8 +1200,10 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     build, en `/admin/dashboard-v2` (solo local y Pruebas) al lado de la v1,
     con los mismos endpoints y sin tocar el backend. Estética mejorada sobre
     un mockup previo, con animaciones en gráficos, KPIs y modales; mientras
-    dure, la v1 recibe solo arreglos. Sigue el bloque 0 (robot de paridad);
-    punto de control al terminar el bloque 3.
+    dure, la v1 recibe solo arreglos. **Bloque 0 HECHO** (2026-10-12): robot
+    de paridad `e2e/test_paridad_dashboard.py` (7 combinaciones, mide la cola
+    de 4 en el navegador, compara datos y pedidos). Sigue el bloque 1
+    (andamio); punto de control al terminar el bloque 3.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 
