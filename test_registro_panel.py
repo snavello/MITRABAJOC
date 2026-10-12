@@ -2,7 +2,7 @@
 nivel 3 automático, nivel 4 a mano, restablecer clave y el interruptor por sindicato.
 
 Cubre:
-- /api/validar: un recibo propio sube la cuenta a nivel 3; un nivel 4 no baja;
+- /api/leer: un recibo propio leído por la IA sube la cuenta a nivel 3 (/api/validar no); un nivel 4 no baja;
   un recibo AJENO se corta antes y no toca el nivel; un recibo sin CUIL leído no
   acredita nada.
 - Confirmar identidad (nivel 4) dentro del alcance de seccional: el Admin de
@@ -79,7 +79,10 @@ with db.get_session() as s:
     _cuenta(s, CUIL_DECLARADO, "Dora Declarada", nivel=2, origen="mail_declarado")
     _cuenta(s, CUIL_AJENO, "Ajeno Total")
 
-    s.add(Empleador(sindicato_id=SID, cuit=CUIT_EMP, razon_social="Con Cuenta SA"))
+    # `registrado=True`: como lo deja el registro real (la empresa ya estaba
+    # cargada en este padrón cuando creó su cuenta), así que el sindicato
+    # responde por ella (db.padron_responde_por_empresa).
+    s.add(Empleador(sindicato_id=SID, cuit=CUIT_EMP, razon_social="Con Cuenta SA", registrado=True))
     s.add(Empleador(sindicato_id=SID, cuit=CUIT_EMP_SIN, razon_social="Sin Cuenta SRL"))
     s.add(CuentaEmpleador(cuit=CUIT_EMP, clave_hash=auth.hashear_clave(CLAVE_INICIAL)))
 
@@ -146,30 +149,54 @@ def _payload(cuil_recibo):
 SUPER = _admin("20577777771", "super-demo")
 
 
-# ---------- 1. Nivel 3 automático (/api/validar) ----------
+# ---------- 1. Nivel 3 automático (/api/leer) ----------
+# El nivel 3 es "recibo propio verificado POR LA IA": sube en /api/leer, donde la
+# IA lee el archivo, y NO en /api/validar, que recibe el recibo del cliente y se
+# puede llamar sola con cualquier JSON (QD-2 de la revisión de QA).
+
+def _leido(cuil_recibo, confianza="alta"):
+    empleado = {"cuil": cuil_recibo} if cuil_recibo is not None else {}
+    return {"periodo": "2026-08", "empleado": empleado,
+            "empleador": {"nombre": "Algo SA", "cuit": None},
+            "lineas": [], "totales_impresos": {}, "confianza": confianza,
+            "alerta_adulteracion": {"detectada": False, "motivo": None}}
+
+
+def _leer(cuil_sesion, recibo):
+    """POST /api/leer con la lectura por IA reemplazada: no gasta créditos."""
+    def fake(contenido, content_type, modelo=None, **_):
+        return recibo, {"modelo": modelo or "claude-sonnet-4-6", "tokens_entrada": 100,
+                        "tokens_salida": 50, "duracion_ms": 1}
+    original = main.extraer
+    main.extraer = fake
+    try:
+        return _afiliado(cuil_sesion).post(
+            "/api/leer", files={"archivo": ("recibo.png", b"contenido-fake", "image/png")})
+    finally:
+        main.extraer = original
+
 
 def test_recibo_propio_sube_a_nivel_3():
     assert _nivel(CUIL_PROPIO) == (1, "cuil_padron")
-    r = _afiliado(CUIL_PROPIO).post("/api/validar", json=_payload(CUIL_PROPIO))
+    r = _leer(CUIL_PROPIO, _leido(CUIL_PROPIO))
     assert r.status_code == 200, r.text
-    assert r.json().get("estado") != "CUIL_NO_COINCIDE"
     assert _nivel(CUIL_PROPIO) == (3, "recibo_propio")
     print("OK  test_recibo_propio_sube_a_nivel_3")
 
 
 def test_un_nivel_4_no_baja_con_un_recibo_propio():
-    r = _afiliado(CUIL_NIVEL4).post("/api/validar", json=_payload(CUIL_NIVEL4))
+    r = _leer(CUIL_NIVEL4, _leido(CUIL_NIVEL4))
     assert r.status_code == 200, r.text
     assert _nivel(CUIL_NIVEL4) == (4, "presencial")
     print("OK  test_un_nivel_4_no_baja_con_un_recibo_propio")
 
 
 def test_un_recibo_ajeno_se_corta_y_no_toca_el_nivel():
-    antes = _nivel(CUIL_OTRA_SEC)
-    r = _afiliado(CUIL_OTRA_SEC).post("/api/validar", json=_payload(CUIL_PROPIO))
-    assert r.status_code == 200
-    assert r.json()["estado"] == "CUIL_NO_COINCIDE"
-    assert _nivel(CUIL_OTRA_SEC) == antes == (1, "cuil_padron")
+    antes_s, antes_o = _nivel(CUIL_OTRA_SEC), _nivel(CUIL_SIN_CUENTA)
+    r = _leer(CUIL_OTRA_SEC, _leido(CUIL_SIN_CUENTA))
+    assert r.status_code == 403 and r.json()["codigo"] == "E-RECIBO-04", r.text
+    assert _nivel(CUIL_OTRA_SEC) == antes_s == (1, "cuil_padron")
+    assert _nivel(CUIL_SIN_CUENTA) == antes_o
     print("OK  test_un_recibo_ajeno_se_corta_y_no_toca_el_nivel")
 
 
@@ -177,10 +204,28 @@ def test_un_recibo_sin_cuil_leido_no_acredita_nada():
     """Pasa el corte de pertenencia (no hay un CUIL distinto que comparar), pero
     sin el CUIL leído no hay nada que acredite que el recibo es de la persona."""
     antes = _nivel(CUIL_DECLARADO)
-    r = _afiliado(CUIL_DECLARADO).post("/api/validar", json=_payload(None))
+    r = _leer(CUIL_DECLARADO, _leido(None))
     assert r.status_code == 200, r.text
     assert _nivel(CUIL_DECLARADO) == antes == (2, "mail_declarado")
     print("OK  test_un_recibo_sin_cuil_leido_no_acredita_nada")
+
+
+def test_una_lectura_de_confianza_baja_no_acredita_nada():
+    antes = _nivel(CUIL_DECLARADO)
+    r = _leer(CUIL_DECLARADO, _leido(CUIL_DECLARADO, confianza="baja"))
+    assert r.status_code != 200
+    assert _nivel(CUIL_DECLARADO) == antes
+    print("OK  test_una_lectura_de_confianza_baja_no_acredita_nada")
+
+
+def test_validar_ya_no_otorga_el_nivel_3():
+    """/api/validar recibe el recibo del cliente: aunque el JSON diga el CUIL de la
+    sesión, no hay ningún documento detrás y el nivel no se mueve."""
+    antes = _nivel(CUIL_DECLARADO)
+    r = _afiliado(CUIL_DECLARADO).post("/api/validar", json=_payload(CUIL_DECLARADO))
+    assert r.status_code == 200, r.text
+    assert _nivel(CUIL_DECLARADO) == antes == (2, "mail_declarado")
+    print("OK  test_validar_ya_no_otorga_el_nivel_3")
 
 
 # ---------- 2. Confirmar identidad (nivel 4) ----------
@@ -397,3 +442,132 @@ def test_el_filtro_de_declarados_marca_solo_nivel_2_mail_declarado():
     assert marcadas == [CUIL_DECLARADO], marcadas
     assert "2 · mail declarado" in html
     print("OK  test_el_filtro_de_declarados_marca_solo_nivel_2_mail_declarado")
+
+
+# ---------- 5. Un sindicato solo responde por las cuentas que ya tenía (QD-1 / QD-6) ----------
+# Un admin puede cargar en su padrón CUALQUIER CUIL (es público). Si la persona ya
+# había creado su cuenta en OTRO gremio, este padrón no responde por ella: puede
+# empadronarla, pero no restablecerle la clave, confirmarla ni escribirle datos.
+
+import cuit as _cuit
+
+DOM = {"provincia": "Santa Fe", "localidad": "Rosario"}
+
+
+def _persona_de_otro_gremio(base, nombre="Persona Ajena"):
+    """Una persona registrada (con clave y mail del padrón) en el sindicato AJENO."""
+    cuil = _cuit.corregir(base)
+    with db.get_session() as s:
+        s.add(Trabajador(sindicato_id=SID_OTRO, cuil=cuil, registrado=True))
+        db.guardar_datos_personales(s, cuil, nombre=nombre, mail="ajena@otro.com",
+                                    mail_padron="ajena@otro.com")
+        c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        c.clave_hash = auth.hashear_clave(CLAVE_INICIAL)
+        s.add(c); s.commit()
+    return cuil
+
+
+def _datos(cuil):
+    with db.get_session() as s:
+        c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        return c.nombre, c.mail, c.mail_padron, c.telefono, c.clave_hash
+
+
+def test_el_alta_de_un_cuil_ajeno_no_pisa_nombre_ni_mail_del_padron():
+    cuil = _persona_de_otro_gremio("20700000110")
+    antes = _datos(cuil)
+    r = SUPER.post("/admin/trabajador", data={
+        "cuil": cuil, "nombre": "Nombre Falso", "telefono": "999", "mail": "atacante@x.com", **DOM},
+        follow_redirects=False)
+    assert r.status_code == 303 and "aviso=datosajenos" in r.headers["location"], r.headers
+    assert _datos(cuil) == antes
+    with db.get_session() as s:     # el empadronamiento sí se creó, sin registrar
+        t = s.exec(select(Trabajador).where(Trabajador.sindicato_id == SID,
+                                            Trabajador.cuil == cuil)).first()
+        assert t is not None and t.registrado is False
+    # el panel de este sindicato no revela nivel ni ofrece botones para esa fila
+    html = SUPER.get("/admin").text
+    fila = re.search(r'<tr class="fila-trabajador" data-cuil="%s".*?</tr>' % cuil, html, re.S).group(0)
+    assert "cuenta creada antes de este empadronamiento" in fila
+    assert "1 · CUIL" not in fila and "confirmado" not in fila
+    assert "restablecer-clave" not in fila and "confirmar-identidad" not in fila
+    # y las rutas lo rechazan igual aunque se arme el POST a mano
+    for ruta in ("restablecer-clave", "confirmar-identidad"):
+        r = SUPER.post(f"/admin/trabajador/{ruta}", data={"cuil": cuil}, follow_redirects=False)
+        assert r.status_code == 303 and "err=cuentaajena" in r.headers["location"], (ruta, r.headers)
+    assert _datos(cuil) == antes
+    print("OK  test_el_alta_de_un_cuil_ajeno_no_pisa_nombre_ni_mail_del_padron")
+
+
+def test_la_edicion_y_la_carga_masiva_tampoco_pisan_una_cuenta_ajena():
+    cuil = _persona_de_otro_gremio("20700000220")
+    antes = _datos(cuil)
+    SUPER.post("/admin/trabajador", data={"cuil": cuil, "nombre": "Alta", **DOM})
+    with db.get_session() as s:
+        tid = s.exec(select(Trabajador).where(Trabajador.sindicato_id == SID,
+                                              Trabajador.cuil == cuil)).first().id
+    SUPER.post("/admin/trabajador", data={"id": str(tid), "cuil": cuil, "nombre": "Editado",
+                                          "mail": "atacante@x.com", **DOM})
+    assert _datos(cuil) == antes
+    nuevo = _persona_de_otro_gremio("20700000330")
+    antes2 = _datos(nuevo)
+    lista = "\n".join([
+        f"{nuevo}, Falso, , , , Rosario, Santa Fe, 111, atacante@x.com",    # alta sobre cuenta ajena
+        f"{cuil}, Falso, , , , Rosario, Santa Fe, 111, atacante@x.com"])    # existente, con mail
+    r = SUPER.post("/admin/trabajador/masivo", data={"lista": lista}, follow_redirects=False)
+    assert "datosajenos=2" in r.headers["location"], r.headers["location"]
+    assert "mailsactualizados" not in r.headers["location"]
+    assert _datos(nuevo) == antes2 and _datos(cuil) == antes
+    print("OK  test_la_edicion_y_la_carga_masiva_tampoco_pisan_una_cuenta_ajena")
+
+
+def test_el_sindicato_que_ya_tenia_a_la_persona_si_responde():
+    """Pluriempleo legítimo: la persona estaba en el padrón de este sindicato cuando
+    se registró (registrado=True), así que sigue pudiendo restablecerle la clave."""
+    html = SUPER.get("/admin").text
+    fila = re.search(r'<tr class="fila-trabajador" data-cuil="%s".*?</tr>' % CUIL_PROPIO,
+                     html, re.S).group(0)
+    assert "restablecer-clave" in fila
+    print("OK  test_el_sindicato_que_ya_tenia_a_la_persona_si_responde")
+
+
+def test_helper_padron_responde_por():
+    with db.get_session() as s:
+        assert db.padron_responde_por(s, SID, "20000000019") is True          # sin cuenta
+        assert db.padron_responde_por(s, SID, CUIL_SIN_CUENTA) is True        # cuenta sin clave
+        assert db.padron_responde_por(s, SID, CUIL_PROPIO) is True            # registrada con este padrón
+        assert db.padron_responde_por(s, SID, CUIL_AJENO) is False           # con clave, no es de este padrón
+        assert db.padron_responde_por_empresa(s, SID, CUIT_EMP) is True
+        assert db.padron_responde_por_empresa(s, SID, CUIT_EMP_SIN) is True   # sin cuenta
+    print("OK  test_helper_padron_responde_por")
+
+
+def test_empresa_ajena_no_se_toma_ni_se_le_pisa_el_mail_del_padron():
+    cuit_emp = _cuit.corregir("30700000040")
+    with db.get_session() as s:
+        s.add(Empleador(sindicato_id=SID_OTRO, cuit=cuit_emp, razon_social="Ajena SA",
+                        mail_padron="rrhh@ajena.com", registrado=True))
+        s.add(CuentaEmpleador(cuit=cuit_emp, clave_hash=auth.hashear_clave(CLAVE_INICIAL)))
+        s.commit()
+        antes = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == cuit_emp)).first().clave_hash
+    SUPER.post("/admin/empleador", data={"cuit": cuit_emp, "razon_social": "Ajena SA",
+                                         "mail": "atacante@x.com"})
+    with db.get_session() as s:
+        e = s.exec(select(Empleador).where(Empleador.sindicato_id == SID, Empleador.cuit == cuit_emp)).first()
+        assert e is not None and e.mail_padron == ""
+        eid = e.id
+    SUPER.post("/admin/empleador", data={"id": str(eid), "cuit": cuit_emp, "razon_social": "Ajena SA",
+                                         "mail": "otro@x.com"})
+    with db.get_session() as s:
+        assert s.get(Empleador, eid).mail_padron == ""
+        assert s.exec(select(Empleador).where(Empleador.sindicato_id == SID_OTRO,
+                                              Empleador.cuit == cuit_emp)).first().mail_padron == "rrhh@ajena.com"
+    for ruta in ("restablecer-clave", "confirmar-identidad"):
+        r = SUPER.post(f"/admin/empleador/{ruta}", data={"cuit": cuit_emp}, follow_redirects=False)
+        assert "err=cuentaajena" in r.headers["location"], (ruta, r.headers)
+    with db.get_session() as s:
+        assert s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == cuit_emp)).first().clave_hash == antes
+    html = SUPER.get("/admin").text.split("Empleadores cargados")[1]
+    fila = re.search(r"<tr>\s*<td><code>%s</code>.*?</tr>" % cuit_emp, html, re.S).group(0)
+    assert "restablecer-clave" not in fila and "cuenta creada antes" in fila
+    print("OK  test_empresa_ajena_no_se_toma_ni_se_le_pisa_el_mail_del_padron")

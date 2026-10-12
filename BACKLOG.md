@@ -197,3 +197,4 @@ se hace.
 - [x] **Badge "NEW" en la tarjeta del Panel Sindical** (2026-08-31): estrella
   + etiqueta "NUEVO" en `/admin/inicio`. **Sacarla a mano** en un deploy
   posterior: no expira sola.
+- [ ] **Bitácora de acciones del panel del sindicato** (2026-10-11, QD-7 de la revisión de QA del registro): quién restableció una clave o confirmó una identidad, cuándo y sobre quién. Hoy solo queda una línea en el log (`mitrabajo.panel`), sin tabla ni pantalla.

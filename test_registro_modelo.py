@@ -486,6 +486,9 @@ def test_alta_masiva_de_un_cuil_existente_actualiza_solo_mail_padron():
     with db.get_session() as s:                                          # ya se registró y puso su contacto
         db.guardar_datos_personales(s, cuil, mail="carla@casa.com", telefono="341-555")
         db.asegurar_cuenta(s, cuil).clave_hash = auth.hashear_clave("clave-larga-123")
+        # El registro real marca los empadronamientos que ya existían: este
+        # padrón tenía a Carla cuando se registró, así que responde por su cuenta.
+        s.exec(select(Trabajador).where(Trabajador.cuil == cuil)).first().registrado = True
         s.commit()
     assert _cuenta(cuil).mail_padron == ""
     sin_alta = _cuit.corregir("27300000040")
@@ -532,6 +535,8 @@ def test_el_perfil_de_la_empresa_no_toca_mail_padron_y_el_alta_del_admin_si_lo_c
         assert (e.mail, e.mail_padron) == ("rrhh@gremio.com", "rrhh@gremio.com")
         assert db.mail_padron_de_empresa(s, cuit_emp) == "rrhh@gremio.com"
         s.add(CuentaEmpleador(cuit=cuit_emp, clave_hash=auth.hashear_clave("clave-larga-123")))
+        e.registrado = True     # como lo deja el registro real: este padrón ya la tenía cargada
+        s.add(e)
         s.commit()
     emp = TestClient(main.app)
     emp.cookies.set(main.COOKIE_EMPLEADOR, auth.crear_sesion("empleador", sindicato_id=0, ident=cuit_emp))

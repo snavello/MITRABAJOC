@@ -26,6 +26,7 @@ Arrancar con:  uvicorn main:app --reload   (ver README.md)
 """
 
 import asyncio
+import logging
 import os
 import re
 import threading
@@ -98,6 +99,17 @@ import planificador
 import preparacion
 import lectores
 from xsk.motor import tablero as xsk_tablero
+
+# Traza de las acciones del panel del sindicato sobre cuentas de personas
+# (restablecer clave, confirmar identidad). Uvicorn no configura el logger raíz
+# y por defecto descartaría el INFO: este logger lleva su propio handler para
+# que la línea llegue al log de Render. Nunca se escribe la clave temporal.
+log = logging.getLogger("mitrabajo.panel")
+if not log.handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("%(message)s"))
+    log.addHandler(_h)
+    log.setLevel(logging.INFO)
 from xsk.motor.registro import ErrorRegistro as XSKErrorRegistro
 from modulos import MODULOS, MODULOS_INICIALES
 import dashboard
@@ -801,6 +813,31 @@ def _para_la_ia(prep) -> dict:
     return {"imagen": prep.imagen, "aviso_enmascarado": prep.tapado}
 
 
+def _acreditar_recibo_propio(cuil_sesion: str, recibo: dict) -> None:
+    """Nivel 3 de fiabilidad (PLAN_REGISTRO.md, D3): "recibo propio verificado
+    por la IA". Se otorga en `/api/leer`, DESPUÉS del corte de pertenencia
+    (E-RECIBO-04), porque ahí la que leyó el documento fue la IA: el CUIL
+    sale del archivo y no de un JSON que arma el cliente (`/api/validar`
+    recibe el recibo del cliente y no acredita nada).
+
+    Se exige el CUIL leído presente e igual al de la sesión FIRMADA: un recibo
+    donde la IA no pudo leer el CUIL pasa el corte de pertenencia pero no
+    acredita nada. `subir_nivel` solo sube, así que no baja un nivel 4. Sesión
+    corta y propia (a esta altura de `/api/leer` no hay ninguna abierta).
+
+    Con `MOCK_EXTRACTOR=1` (Pruebas) el mock devuelve el CUIL de la sesión y
+    el nivel sube igual: no hay lectura real, pero es el entorno de pruebas."""
+    cuil_sesion = _norm_cuil(cuil_sesion)
+    cuil_leido = _norm_cuil((recibo.get("empleado") or {}).get("cuil"))
+    if not cuil_sesion or not cuil_leido or cuil_leido != cuil_sesion:
+        return
+    with db.get_session() as s:
+        cuenta = s.exec(select(CuentaTrabajador).where(
+            CuentaTrabajador.cuil == cuil_sesion)).first()
+        if cuenta and db.subir_nivel(s, cuenta, "recibo_propio"):
+            s.commit()
+
+
 @app.post("/api/leer")
 async def api_leer(request: Request, archivo: UploadFile = File(...)):
     _exigir_trabajador_logueado(request)
@@ -848,6 +885,7 @@ async def api_leer(request: Request, archivo: UploadFile = File(...)):
     # propósito: de un recibo ajeno no se guarda nada, ni el archivo.
     if cuil_no_coincide(recibo, _cuil_seguro(request)):
         raise ErrorApp("E-RECIBO-04")
+    _acreditar_recibo_propio(_cuil_seguro(request), recibo)
     # Alerta de posible adulteración (totales, CUIL, CUIT del empleador o
     # fechas): no bloquea el proceso, solo avisa y guarda una copia del
     # archivo original para que la plataforma la pueda revisar.
@@ -944,19 +982,11 @@ def api_validar(request: Request, payload: dict):
             **dashboard.campos_analiticos(recibo, resultado),
         )
         s.add(registro)
-        # Nivel 3 de fiabilidad (PLAN_REGISTRO.md, D3): un recibo validado
-        # cuyo CUIL, LEÍDO por la IA, es el de la sesión acredita que la
-        # persona tiene en su poder un documento suyo. Se exige el CUIL
-        # presente e igual (no alcanza con que no sea "distinto": un recibo
-        # donde la IA no leyó el CUIL pasa el corte de arriba, pero no
-        # acredita nada). Misma sesión y mismo commit que el historial;
-        # `subir_nivel` no baja un nivel 4.
-        cuil_leido = _norm_cuil((recibo.get("empleado") or {}).get("cuil"))
-        if cuil_sesion and cuil_leido and cuil_leido == _norm_cuil(cuil_sesion):
-            cuenta = s.exec(select(CuentaTrabajador).where(
-                CuentaTrabajador.cuil == cuil_sesion)).first()
-            if cuenta:
-                db.subir_nivel(s, cuenta, "recibo_propio")
+        # OJO: el nivel 3 (recibo propio) NO se otorga acá. Esta ruta recibe
+        # el recibo del CLIENTE y se puede llamar sola con cualquier JSON: un
+        # impostor que solo conoce el CUIL (público) lo escribiría en
+        # `recibo.empleado.cuil` y subiría de nivel sin ningún documento. El
+        # nivel 3 sube en `/api/leer`, que es donde la IA lee el archivo.
         s.commit()
         resultado["recibo_verificado_id"] = registro.id
 
@@ -1470,6 +1500,13 @@ def admin(request: Request):
                     "tiene_cuenta": bool(c.clave_hash),
                     "nivel_fiabilidad": c.nivel_fiabilidad or 1,
                     "nivel_origen": c.nivel_origen or ""}
+            # ¿Este sindicato responde por la cuenta? (db.responde_por): si la
+            # empresa ya se registró y este padrón no la tenía cuando lo hizo,
+            # la pantalla no muestra su nivel ni los botones.
+            for e in empleadores:
+                cta = niveles_empleadores.get(e.cuit)
+                if cta:
+                    cta["responde"] = db.responde_por(cta["tiene_cuenta"], e.registrado)
     # Conceptos con código provisorio (la IA no pudo leer el código del recibo):
     # nunca matchean por código, así que hay que revisarlos.
     provisorios = detectar_provisorios([
@@ -1538,6 +1575,9 @@ def admin(request: Request):
         "formulas": formulas,
         "trabajadores": trabajadores, "provincias": db.PROVINCIAS_AR,
         "niveles_empleadores": niveles_empleadores,
+        # Sobre qué seccionales opera quien mira: None = todas, {id} = esa,
+        # set() = ninguna. Los botones de cuenta solo se dibujan dentro.
+        "alcance_propio": alcance_propio,
         "clausula_confidencialidad": bool(sind and sind.clausula_confidencialidad),
         "usuarios_sindicato": usuarios_sindicato,
         "permisos": permisos, "es_super_admin": es_super_admin,
@@ -1765,6 +1805,7 @@ def admin_trabajador_alta(
         {"calle": calle, "numero": numero, "piso_depto": piso_depto,
          "localidad": localidad, "provincia": provincia, "codigo_postal": codigo_postal},
         precision_geo, latitud, longitud)
+    datos_ajenos = False   # la cuenta es de una persona que este padrón no tenía al registrarse
     with db.get_session() as s:
         if sec_id and not s.exec(select(Seccional).where(
                 Seccional.id == sec_id, Seccional.sindicato_id == sid)).first():
@@ -1800,11 +1841,19 @@ def admin_trabajador_alta(
                 # puede haber cambiado desde su perfil: reenviarlo sin tocar
                 # no puede convertirlo en "mail del padrón". Solo se escribe
                 # cuando el admin lo CAMBIÓ.
-                actual = db.asegurar_cuenta(s, t.cuil).mail or ""
-                cambio_mail = (mail or "").strip() != actual.strip()
-                db.guardar_datos_personales(s, t.cuil, nombre=nombre,
-                                            domicilio=domicilio, telefono=telefono, mail=mail,
-                                            mail_padron=mail if cambio_mail else None)
+                #
+                # Salvo que la persona haya creado su cuenta ANTES de estar en
+                # este padrón (`db.padron_responde_por`): sus datos son suyos y
+                # un admin que cargó su CUIL a mano no los reescribe -- sobre
+                # todo el mail del padrón, que es el canal de recuperación.
+                if db.padron_responde_por(s, sid, t.cuil):
+                    actual = db.asegurar_cuenta(s, t.cuil).mail or ""
+                    cambio_mail = (mail or "").strip() != actual.strip()
+                    db.guardar_datos_personales(s, t.cuil, nombre=nombre,
+                                                domicilio=domicilio, telefono=telefono, mail=mail,
+                                                mail_padron=mail if cambio_mail else None)
+                else:
+                    datos_ajenos = True
         else:    # alta — evitar duplicado de CUIL en el mismo sindicato
             # Un número que NACE en el sistema: el CUIL con su verificador, y
             # el CUIT del empleador (opcional) también. Nada se escribió aún.
@@ -1816,21 +1865,31 @@ def admin_trabajador_alta(
             existe = s.exec(select(Trabajador).where(
                 Trabajador.sindicato_id == sid, Trabajador.cuil == cuil_norm)).first()
             if not existe:
+                # Se decide ANTES de crear el empadronamiento. Si la persona ya
+                # tiene cuenta con clave (se registró en otro gremio), este
+                # padrón no responde por ella: se crea el empadronamiento y
+                # nada más -- ni nombre, ni domicilio, ni teléfono, ni mails.
+                responde = db.padron_responde_por(s, sid, cuil_norm)
                 s.add(Trabajador(
                     sindicato_id=sid, cuil=cuil_norm,
                     vigencia_credencial=vigencia_credencial or None, seccional_id=sec_id,
                     cuit_empleador=_norm_cuil(cuit_empleador) or None))
-                # En el alta, un mail en blanco NO borra el que ya hubiera
-                # cargado otro gremio para esta persona (`or None` = no tocar).
-                db.guardar_datos_personales(s, cuil_norm, nombre=nombre,
-                                            domicilio=domicilio, telefono=telefono, mail=mail,
-                                            mail_padron=mail or None)
+                if responde:
+                    # En el alta, un mail en blanco NO borra el que ya hubiera
+                    # cargado otro gremio para esta persona (`or None` = no tocar).
+                    db.guardar_datos_personales(s, cuil_norm, nombre=nombre,
+                                                domicilio=domicilio, telefono=telefono, mail=mail,
+                                                mail_padron=mail or None)
+                else:
+                    datos_ajenos = True
         s.commit()
     # Las dos altas pueden venir en cualquier orden: si a este CUIL ya se le
     # había dado usuario del panel, acá se arma el vínculo y se prende la
     # marca de empleado. Sin esto quedaría en el padrón sin marca, en
     # silencio.
     db.sincronizar_por_cuil(sid, cuil_norm)
+    if datos_ajenos:
+        return RedirectResponse("/admin?aviso=datosajenos#trabajadores", status_code=303)
     return RedirectResponse("/admin#trabajadores", status_code=303)
 
 
@@ -1891,13 +1950,21 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
     sid = exigir_sindicato(request)
     altas = 0
     mails_actualizados = 0   # CUIL ya en el padrón cuya línea trajo mail (solo mail_padron)
+    datos_ajenos = 0         # líneas cuya persona ya tenía cuenta antes de este padrón: sin tocar sus datos
     omitidas = []
     cuil_invalidos = []      # líneas con CUIL que no cumple el módulo 11
     por_nombre = {geo._norm(sec["nombre"]): sec["id"]
                   for sec in db.seccionales_del_sindicato(sid)}
     with db.get_session() as s:
-        existentes = {t.cuil for t in s.exec(select(Trabajador).where(
+        propios = {t.cuil: t for t in s.exec(select(Trabajador).where(
             Trabajador.sindicato_id == sid)).all()}
+        existentes = set(propios)
+        # Quiénes ya se registraron (una consulta para toda la lista): sobre
+        # esas cuentas este padrón solo responde si ya tenía a la persona
+        # cargada cuando se registró (`db.responde_por`). Si no, la línea crea
+        # el empadronamiento y NO escribe nombre, domicilio, contacto ni mails.
+        con_clave = db.cuiles_con_clave(s, {
+            _norm_cuil(ln.split(",")[0]) for ln in lista.strip().splitlines() if ln.strip()})
         for linea in lista.strip().splitlines():
             if not linea.strip():
                 continue
@@ -1911,8 +1978,11 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
                 # vía que tiene el gremio para cargar el mail del padrón de
                 # quien ya tiene cuenta. Solo `mail_padron`: ni el contacto ni
                 # el resto de los datos de la persona se tocan.
-                db.guardar_datos_personales(s, cuil, mail_padron=campo(8))
-                mails_actualizados += 1
+                if db.responde_por(cuil in con_clave, propios[cuil].registrado):
+                    db.guardar_datos_personales(s, cuil, mail_padron=campo(8))
+                    mails_actualizados += 1
+                else:
+                    datos_ajenos += 1
                 continue
             if len(cuil) != 11 or not nombre or cuil in existentes:
                 omitidas.append(linea.strip()[:60])
@@ -1934,9 +2004,12 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
             s.add(Trabajador(
                 sindicato_id=sid, cuil=cuil,
                 seccional_id=por_nombre.get(geo._norm(campo(10)))))
-            db.guardar_datos_personales(s, cuil, nombre=nombre, domicilio=domicilio,
-                                        telefono=campo(7), mail=campo(8),
-                                        mail_padron=campo(8) or None)
+            if cuil in con_clave:
+                datos_ajenos += 1     # empadronamiento nuevo sobre una cuenta ya hecha: solo eso
+            else:
+                db.guardar_datos_personales(s, cuil, nombre=nombre, domicilio=domicilio,
+                                            telefono=campo(7), mail=campo(8),
+                                            mail_padron=campo(8) or None)
             existentes.add(cuil); altas += 1
         s.commit()
     # Las primeras tres líneas rechazadas alcanzan para que la persona vea el
@@ -1945,6 +2018,8 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
     destino = f"/admin?altas={altas}"
     if mails_actualizados:
         destino += f"&mailsactualizados={mails_actualizados}"
+    if datos_ajenos:
+        destino += f"&datosajenos={datos_ajenos}"
     if omitidas:
         destino += f"&omitidas={len(omitidas)}&muestra=" + quote(" | ".join(omitidas[:3]))
     if cuil_invalidos:
@@ -2023,9 +2098,15 @@ def _pagina_clave_temporal(request: Request, quien: str, ident: str, volver: str
     claro en ningún lado y la página no se cachea. Recargar re-envía el POST
     y genera otra clave: la anterior deja de valer, así que no hay forma de
     volver a verla."""
+    # Pantalla interior del panel: lleva el encabezado y la marca del sindicato
+    # de quien opera (el sindicato sale de la sesión, nunca de un parámetro).
+    ses = sesion_actual(request, "sindicato") or {}
+    marca = db.marca_sindicato(ses.get("sid", 0))
     return templates.TemplateResponse(
         "clave_temporal.html",
-        {"request": request, "quien": quien, "ident": ident, "clave": clave, "volver": volver},
+        {"request": request, "quien": quien, "ident": ident, "clave": clave, "volver": volver,
+         "sindicato": marca.get("nombre", ""), "marca": marca,
+         "marca_plataforma": db.marca_plataforma()},
         headers={"Cache-Control": "no-store, max-age=0", "Pragma": "no-cache"})
 
 
@@ -2053,8 +2134,12 @@ def admin_trabajador_confirmar_identidad(request: Request, cuil: str = Form(...)
         cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
         if not cuenta or not cuenta.clave_hash:
             return RedirectResponse("/admin?err=sincuenta#trabajadores", status_code=303)
+        if not db.padron_responde_por(s, sid, cuil):
+            return RedirectResponse("/admin?err=cuentaajena#trabajadores", status_code=303)
         db.subir_nivel(s, cuenta, "presencial")
         s.commit()
+    log.info("panel: %s %s por usuario %s del sindicato %s",
+             "confirmar-identidad", cuil, _uid_sesion(request), sid)
     return RedirectResponse("/admin?ok=identidad#trabajadores", status_code=303)
 
 
@@ -2070,12 +2155,16 @@ def admin_trabajador_restablecer_clave(request: Request, cuil: str = Form(...)):
         cuenta = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
         if not cuenta or not cuenta.clave_hash:
             return RedirectResponse("/admin?err=sincuenta#trabajadores", status_code=303)
+        if not db.padron_responde_por(s, sid, cuil):
+            return RedirectResponse("/admin?err=cuentaajena#trabajadores", status_code=303)
         clave = _clave_temporal_nueva()
         cuenta.clave_hash = auth.hashear_clave(clave)
         cuenta.clave_temporal = True
         s.add(cuenta)
         s.commit()
         nombre = cuenta.nombre or cuil
+    log.info("panel: %s %s por usuario %s del sindicato %s",
+             "restablecer-clave", cuil, _uid_sesion(request), sid)
     return _pagina_clave_temporal(request, nombre, cuil, "/admin#trabajadores", clave)
 
 
@@ -2988,7 +3077,12 @@ def admin_empleador_alta(
                 # contacto desde /api/empresa/perfil y no lo toca). Mismo
                 # criterio que el afiliado: solo si el admin cambió el mail
                 # del formulario, que llega precargado con el de contacto.
-                if (mail or "").strip() != (mail_anterior or "").strip():
+                # Salvo que la empresa ya tenga cuenta y este padrón no la
+                # tuviera cargada cuando se registró: ese mail es el canal de
+                # recuperación y no lo puede reescribir quien cargó el CUIT
+                # a mano (db.padron_responde_por_empresa).
+                if (mail or "").strip() != (mail_anterior or "").strip() \
+                        and db.padron_responde_por_empresa(s, sid, e.cuit):
                     e.mail_padron = (mail or "").strip()[:200]
                 s.add(e)
         else:
@@ -2999,10 +3093,14 @@ def admin_empleador_alta(
             existe = s.exec(select(Empleador).where(
                 Empleador.sindicato_id == sid, Empleador.cuit == cuit_norm)).first()
             if not existe:
+                # Antes de crear la fila: si la empresa ya tiene cuenta con
+                # clave, este padrón no responde por ella y su `mail_padron`
+                # queda vacío (la fila propia sí se crea).
+                responde = db.padron_responde_por_empresa(s, sid, cuit_norm)
                 s.add(Empleador(sindicato_id=sid, cuit=cuit_norm,
                                  razon_social=razon_social.strip(), domicilio=domicilio,
                                  telefono=telefono, provincia=provincia, mail=mail,
-                                 mail_padron=mail.strip()[:200]))
+                                 mail_padron=mail.strip()[:200] if responde else ""))
         s.commit()
     return RedirectResponse("/admin#empleadores", status_code=303)
 
@@ -3054,8 +3152,12 @@ def admin_empleador_confirmar_identidad(request: Request, cuit: str = Form(...))
         cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == numero)).first()
         if not cuenta or not cuenta.clave_hash:
             return RedirectResponse("/admin?err=sincuenta#empleadores", status_code=303)
+        if not db.padron_responde_por_empresa(s, sid, numero):
+            return RedirectResponse("/admin?err=cuentaajena#empleadores", status_code=303)
         db.subir_nivel(s, cuenta, "presencial")
         s.commit()
+    log.info("panel: %s %s por usuario %s del sindicato %s",
+             "confirmar-identidad-empresa", numero, _uid_sesion(request), sid)
     return RedirectResponse("/admin?ok=identidad#empleadores", status_code=303)
 
 
@@ -3070,11 +3172,15 @@ def admin_empleador_restablecer_clave(request: Request, cuit: str = Form(...)):
         cuenta = s.exec(select(CuentaEmpleador).where(CuentaEmpleador.cuit == numero)).first()
         if not cuenta or not cuenta.clave_hash:
             return RedirectResponse("/admin?err=sincuenta#empleadores", status_code=303)
+        if not db.padron_responde_por_empresa(s, sid, numero):
+            return RedirectResponse("/admin?err=cuentaajena#empleadores", status_code=303)
         clave = _clave_temporal_nueva()
         cuenta.clave_hash = auth.hashear_clave(clave)
         cuenta.clave_temporal = True
         s.add(cuenta)
         s.commit()
+    log.info("panel: %s %s por usuario %s del sindicato %s",
+             "restablecer-clave-empresa", numero, _uid_sesion(request), sid)
     return _pagina_clave_temporal(request, e.razon_social or numero, numero,
                                   "/admin#empleadores", clave)
 
