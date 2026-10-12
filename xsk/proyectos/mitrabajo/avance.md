@@ -65,3 +65,13 @@ registrar: desarrollo por agentes en olas con QA adversarial por bloque, y
 los hallazgos del QA quedan como tests `test_qa_*.py` que pasan de rojo a
 verde con el arreglo.
 
+
+2026-10-12: **entra una dependencia de JavaScript vendoreada**, Preact
+10.29.8 + htm 3.1.1, solo para la v2 del Panel Sindical
+(`PLAN_DASHBOARD_V2.md`, bloque 1). No pasa por pip-audit: su control es
+`static/vendor/preact/ORIGEN.md` (versión, integridad de npm y SHA-256 de cada
+archivo), que `test_dashboard_v2.py` compara byte a byte. Queda anotado para
+INF en la iteración 2: los vendoreados de JavaScript (Chart.js 4.4.9, Leaflet
+1.9.4, vis-network, Preact, htm) no tienen hoy ninguna auditoría automática de
+CVE. La v2 además prohíbe por test armar HTML como texto (`innerHTML` y
+afines), que en la v1 es la única barrera contra XSS en lo que pinta el panel.

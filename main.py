@@ -1348,8 +1348,11 @@ PERMISOS_RUTAS = {
 # panel en vez de tirar 403. Su permiso se chequea adentro del handler, con
 # el mismo criterio -- una pantalla que redirige es mejor que un 403 seco.
 # Sus endpoints de datos (/admin/dashboard/*) sí están todos gateados.
+# /admin/dashboard-v2 (PLAN_DASHBOARD_V2.md) está por la misma razón: es la
+# misma página en su versión nueva, con el mismo chequeo adentro, y pide sus
+# datos a los mismos endpoints gateados.
 RUTAS_ADMIN_SIN_PERMISO = {"/admin", "/admin/inicio", "/admin/login", "/admin/salir",
-                           "/admin/dashboard"}
+                           "/admin/dashboard", "/admin/dashboard-v2"}
 
 
 def _sin_permiso(mensaje: str) -> HTTPException:
@@ -1683,6 +1686,64 @@ def admin_dashboard_pagina(request: Request):
         # misma regla que `fechas.py` impone en el backend, del lado del
         # cliente: la fecha la decide el servidor.
         "hoy": fechas.hoy_texto(),
+        "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
+    })
+
+
+# ---------- Panel Sindical v2 (PLAN_DASHBOARD_V2.md) ----------
+# La v2 del panel, hecha con Preact + htm sin build, convive con la v1 mientras
+# dura el piloto. Usa los MISMOS endpoints /admin/dashboard/* (línea roja 1 del
+# plan: el backend no se toca), así que acá solo vive la página.
+
+# Las librerías vendoreadas, por el nombre con que las importa el código.
+# `hooks.module.js` importa "preact" por nombre: sin esta entrada no carga.
+_VENDOR_PANEL_V2 = {
+    "preact": "vendor/preact/preact.module.js",
+    "preact/hooks": "vendor/preact/hooks.module.js",
+    "htm": "vendor/preact/htm.module.js",
+}
+
+
+def _importmap_panel_v2() -> str:
+    """El importmap de la v2 (D3): cada módulo se importa POR NOMBRE y el mapa
+    lo traduce a su archivo de /static CON su sello `?v=`. Un `import
+    "./filtros.js"` saldría sin sello y quedaría cacheado una hora después de
+    un deploy: la página nueva con un módulo viejo. Los módulos propios salen
+    de recorrer static/panel_v2/, así que un archivo nuevo entra solo
+    (`panel/<nombre>`); test_dashboard_v2.py exige que todo import resuelva."""
+    import json
+    imports = {nombre: _url_static(ruta) for nombre, ruta in _VENDOR_PANEL_V2.items()}
+    for js in sorted((Path("static") / "panel_v2").glob("*.js")):
+        imports[f"panel/{js.stem}"] = _url_static(f"panel_v2/{js.name}")
+    return json.dumps({"imports": imports}, ensure_ascii=False)
+
+
+@app.get("/admin/dashboard-v2", response_class=HTMLResponse)
+def admin_dashboard_v2_pagina(request: Request):
+    """Página del Panel Sindical v2 (PLAN_DASHBOARD_V2.md). Mismas puertas que
+    la v1 (sesión, módulo y permiso de la sección "dashboard") y, mientras dure
+    el piloto, solo donde hay distintivo de entorno: en demo y prod no existe
+    (D4), igual que /entornos. MUESTRA_DISTINTIVO se lee por request para que
+    un test pueda simular la demo."""
+    if not entorno.MUESTRA_DISTINTIVO:
+        raise HTTPException(404, "No existe en este entorno")
+    ses = sesion_actual(request, "sindicato")
+    if not ses:
+        return templates.TemplateResponse("admin_login.html", {
+            "request": request, "marca_plataforma": db.marca_plataforma()})
+    sid = ses.get("sid", 0)
+    if not db.modulo_habilitado(sid, "dashboard") \
+            or not db.tiene_permiso(ses.get("uid", 0), "dashboard"):
+        return RedirectResponse("/admin", status_code=303)
+    marca = db.marca_sindicato(sid)
+    return templates.TemplateResponse("dashboard_v2.html", {
+        "request": request, "sindicato": marca.get("nombre", ""),
+        "marca": marca, "marca_plataforma": db.marca_plataforma(),
+        "iniciales": _iniciales_sindicato(marca.get("nombre", "")),
+        "consultas_bot": db.config_dashboard()["consultas_bot_habilitado"],
+        "asistente": asistente.disponible(),
+        "hoy": fechas.hoy_texto(),
+        "importmap": _importmap_panel_v2(),
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
 

@@ -26,6 +26,8 @@ Tres tests:
   los mismos datos y los mismos pedidos al servidor. Se saltea, diciendo por
   qué, hasta que exista la v2 y su lector (bloque 7 del plan).
 """
+import re
+
 import pytest
 
 import fechas
@@ -87,3 +89,34 @@ def test_paridad_v1_v2(page, informe, nombre):
     assert not diferencias, f"«{nombre}»: la v2 no muestra lo mismo que la v1:\n" + "\n".join(diferencias)
     assert v2["max_en_vuelo"] <= 4, v2["max_en_vuelo"]
     informe.paso(f"«{nombre}»: la v1 y la v2 muestran los mismos datos")
+
+
+def test_la_v2_abre_sin_errores(page, informe):
+    """La v2 abre en un navegador de verdad: todos sus módulos cargan por el
+    importmap, sin errores en la consola ni pedidos rechazados, y pinta la
+    fecha de hoy que manda el servidor (PLAN_DASHBOARD_V2.md, bloque 1)."""
+    paridad.entrar_como_admin(page)
+    if not paridad.existe(page, "v2"):
+        pytest.skip("La v2 todavía no existe en este entorno (PLAN_DASHBOARD_V2.md, bloque 1).")
+    errores, rechazados = [], []
+    page.on("console", lambda m: errores.append(m.text) if m.type == "error" else None)
+    page.on("pageerror", lambda e: errores.append(str(e)))
+    page.on("response", lambda r: rechazados.append(f"{r.status} {r.url}")
+            if r.status >= 400 and "/static/" in r.url else None)
+    page.goto(f"{paridad.BASE}{paridad.RUTAS['v2']}", wait_until="domcontentloaded")
+    hoy = page.locator('[data-v2="hoy"]')
+    hoy.wait_for(timeout=10000)
+    assert str(fechas.hoy().year) in hoy.inner_text()
+    assert not errores, errores
+    assert not rechazados, rechazados
+    informe.paso(f"La v2 abrió y pintó la fecha del servidor: {hoy.inner_text()}")
+    page.click("text=Ver en la versión actual")
+    page.wait_for_url(re.compile(r"/admin/dashboard(\?|$)"), wait_until="commit")
+    informe.paso("El enlace «Ver en la versión actual» llevó a la v1")
+
+    # Y al revés (D6): desde la v1 con filtros, el enlace lleva esos filtros.
+    page.goto(f"{paridad.BASE}{paridad.RUTAS['v1']}?desde=2026-01-01&hasta={fechas.hoy().isoformat()}",
+              wait_until="domcontentloaded")
+    page.click("text=Probar la versión nueva")
+    page.wait_for_url(re.compile(r"/admin/dashboard-v2\?.*desde=2026-01-01"), wait_until="commit")
+    informe.paso("El enlace «Probar la versión nueva» llevó a la v2 con los filtros de la v1")

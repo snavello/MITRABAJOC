@@ -6,7 +6,7 @@ se tocó. Ante la duda de si un cambio es "funcionalidad nueva", lo decide Sd.
 """
 
 VERSION_TRABAJADOR = "0.45.01"
-VERSION_ADMIN = "0.49.01"
+VERSION_ADMIN = "0.50.01"
 VERSION_PLATAFORMA = "0.43.03"
 
-FECHA_VERSION = "2026-10-11 23:01"
+FECHA_VERSION = "2026-10-12 17:11"

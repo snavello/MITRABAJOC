@@ -211,7 +211,10 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   sobre Leaflet y las burbujas de los dos mapas de tablero, compartida por las
   cinco pantallas con mapa) +
   modales.js (arrastre de modales en escritorio, ver "Modales") +
-  static/vendor/leaflet/ (Leaflet 1.9.4 vendoreado, jamás CDN).
+  static/vendor/leaflet/ (Leaflet 1.9.4 vendoreado, jamás CDN) +
+  static/vendor/preact/ (Preact 10.29.8 + htm 3.1.1, solo para la v2 del
+  Panel Sindical; `ORIGEN.md` guarda el SHA-256 de cada archivo y un test lo
+  compara) + static/panel_v2/ (los módulos de la v2, ver Pendientes 11).
 - data/seed_aefip.json — semilla histórica; ya NO se carga por defecto.
 - data/precios_ia.json — precios de la API de Anthropic (USD por millón de
   tokens), con su fuente y su fecha de lectura. A mano, no hay scraper.
@@ -1202,8 +1205,15 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     un mockup previo, con animaciones en gráficos, KPIs y modales; mientras
     dure, la v1 recibe solo arreglos. **Bloque 0 HECHO** (2026-10-12): robot
     de paridad `e2e/test_paridad_dashboard.py` (7 combinaciones, mide la cola
-    de 4 en el navegador, compara datos y pedidos). Sigue el bloque 1
-    (andamio); punto de control al terminar el bloque 3.
+    de 4 en el navegador, compara datos y pedidos). **Bloque 1 HECHO**
+    (2026-10-12, Admin 0.50.01): `/admin/dashboard-v2` con las puertas de la
+    v1 y 404 sin distintivo, `templates/dashboard_v2.html`, los módulos se
+    importan POR NOMBRE y `main._importmap_panel_v2()` los traduce a su
+    archivo con sello (recorre `static/panel_v2/`: un archivo nuevo entra
+    solo), enlace entre versiones solo con distintivo, y
+    `test_dashboard_v2.py` (puertas, todo import resuelve por el mapa, nada
+    de `innerHTML`, SHA-256 de lo vendoreado). Sigue el bloque 2 (estado y
+    pedidos, sin pantalla); punto de control al terminar el bloque 3.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 

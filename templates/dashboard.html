@@ -403,6 +403,8 @@
    servidor rechaza un "hasta" futuro (ver el comentario en main.py). #}
 <main class="mesa-cont" data-consultas="{{ '1' if consultas_bot else '0' }}" data-asistente="{{ '1' if asistente else '0' }}"
       data-hoy="{{ hoy }}">
+  {# Enlace a la v2 (PLAN_DASHBOARD_V2.md, D6), solo donde hay distintivo de entorno: en la demo no se dibuja. Lleva los filtros que haya en la dirección al momento del clic. #}
+  {% if distintivo_entorno %}<p style="text-align:right;margin:12px 0 0"><a href="/admin/dashboard-v2" onclick="this.href='/admin/dashboard-v2'+location.search" style="display:inline-block;background:rgba(255,255,255,.94);color:var(--marca-primario);border-radius:99px;padding:5px 13px;font-weight:700;font-size:12.5px;text-decoration:none">Probar la versión nueva</a></p>{% endif %}
 
   <div class="filtros-card">
     <div class="f-cabecera">
