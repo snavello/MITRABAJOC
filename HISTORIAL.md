@@ -6563,6 +6563,27 @@ tarjeta "Confirmá tu mail" para las cuentas viejas.
 - *El error `domicilio` enumeraba afiliados sin frenarse.* Se decidía
   después de consultar el padrón y no sumaba al freno. Ahora se valida antes
   del padrón y cuenta.
+- *Un token propio salteaba el captcha del paso 3 y enumeraba el padrón.*
+  Bastaba un token de paso válido (de cualquier CUIL) para no exigir captcha,
+  y el número del token se comparaba después de mirar el padrón. Ahora se
+  compara antes, y con el canal prendido el token válido es condición para
+  consultar el padrón. El token del paso de mail lleva además el `tipo`
+  (trabajador/empleador): sin eso cruzaba entre las dos apps para un número
+  que fuera afiliado y empleador a la vez.
+- *El canal de mail como arma.* El cupo era solo por CUIL: con N afiliados
+  sin mail del padrón se mandaban 3×N códigos a un mismo mail ajeno, y con
+  mil CUILes se agotaba el plan gratuito de Resend en una hora. Ahora hay
+  también cupo por destino, y cada pedido de código suma al freno de la IP
+  aunque salga bien (antes los exitosos eran gratis, y cada uno devolvía la
+  pista del mail de otra persona).
+- *Un token no ASCII daba 500.* `hmac.compare_digest` sobre `str` levanta
+  `TypeError` con caracteres fuera de ASCII: cinco rutas públicas devolvían
+  500 (y una alerta a Sentry y Telegram) con `token=é.é`. Se compara en
+  bytes, también en `leer_sesion`.
+- *Dos cosas quedan diferidas a BACKLOG con test `xfail`*: la sesión abierta
+  sobrevive a un cambio de clave (hace falta una huella de la clave en el
+  token y una consulta por request), y un tercero puede invalidar el código
+  vivo de una persona pidiendo otro (tensión con "un solo código vivo").
 - Menores: destino del mail validado antes de salir hacia Resend (con un
   mail declarado `a@b.com\r\nBcc:` no sale nada), `pista()` estricta, la
   pantalla de la clave temporal avisa que la clave es una sola para todos los
