@@ -78,6 +78,7 @@ DEVUELVEN_LOGIN = {
     "/admin": "/admin/login",
     "/admin/inicio": "/admin/login",
     "/admin/dashboard": "/admin/login",
+    "/admin/dashboard-v2": "/admin/login",   # la v2 del panel (PLAN_DASHBOARD_V2.md)
     "/admin/encuesta/{encuesta_id}/resultados": "/admin/login",
     "/plataforma": "/plataforma/login",
     "/plataforma/inicio": "/plataforma/login",

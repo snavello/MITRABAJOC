@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="{{ marca.color_base }}">
+<title>Panel Sindical — {{ sindicato }}</title>
+{# Panel Sindical v2 (PLAN_DASHBOARD_V2.md). Convive con la v1
+   (dashboard.html) mientras dura el piloto, y solo existe donde hay
+   distintivo de entorno (D4). Los datos no viajan acá: los pide la v2 a los
+   mismos endpoints que la v1 (línea roja 1). #}
+<link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
+<link rel="stylesheet" href="/static/panel_v2/panel.css?v={{ sello_static('panel_v2/panel.css') }}">
+<style>
+  {# Los colores del sindicato, igual que en la v1. Es lo único de estilo que
+     queda en la plantilla: el resto vive en panel.css (D7). #}
+  :root {
+    --marca-base: {{ marca.color_base }};
+    --marca-primario: {{ marca.color_primario }};
+    --marca-acento: {{ marca.color_acento }};
+    --marca-apoyo: {{ marca.color_secundario }};
+    --destacado: {{ marca.color_destacado }};
+    --destacado-suave: color-mix(in srgb, var(--destacado) 12%, white);
+    --destacado-borde: color-mix(in srgb, var(--destacado) 45%, white);
+    --destacado-osc: color-mix(in srgb, var(--destacado) 78%, black);
+  }
+</style>
+{% include "_fondo_interior.html" %}
+</head>
+<body class="mesa franja">
+{% include "_entorno.html" %}
+
+{% set enc_fecha = True %}
+{% include "_encabezado.html" %}
+
+{# Lo mismo que lee la v1: la fecha de hoy SEGÚN EL SERVIDOR y si el carril
+   de consultas y el Asistente existen. Lo decide el servidor, no el JS. #}
+<main class="mesa-cont" data-consultas="{{ '1' if consultas_bot else '0' }}" data-asistente="{{ '1' if asistente else '0' }}"
+      data-hoy="{{ hoy }}">
+  <div id="panel"></div>
+  <noscript><p>El Panel Sindical necesita JavaScript.</p></noscript>
+</main>
+
+{# Cada módulo se pide por nombre y el mapa lo traduce a su archivo CON su
+   sello ?v= (D3). Lo arma main._importmap_panel_v2() recorriendo la carpeta:
+   un archivo nuevo de static/panel_v2/ entra solo. #}
+<script type="importmap">{{ importmap | safe }}</script>
+<script type="module" src="/static/panel_v2/app.js?v={{ sello_static('panel_v2/app.js') }}"></script>
+</body>
+</html>

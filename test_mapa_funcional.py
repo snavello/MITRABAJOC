@@ -64,7 +64,10 @@ def test_pantallas_por_quien_llama_de_verdad():
     assert "p:portada.html" in por_nombre[("Afiliado", "Perfil y domicilio")]
     # Ni el login que se muestra sin sesión, ni un parcial citado por nombre,
     # ni un .js nombrado en un comentario del encabezado.
-    assert por_nombre[("Sindicato", "Panel Sindical")] == {"p:dashboard.html"}
+    # La v2 del panel (PLAN_DASHBOARD_V2.md) es la misma funcionalidad, con su
+    # propia pantalla mientras conviven.
+    assert por_nombre[("Sindicato", "Panel Sindical")] == {"p:dashboard.html",
+                                                          "p:dashboard_v2.html"}
     # La pestaña transitoria de plataforma queda a la vista con nombre propio.
     assert any(a == "Plataforma" and n.startswith("Cambiar clave") for a, n in por_nombre)
 
@@ -90,3 +93,13 @@ def test_en_la_demo_no_existe(monkeypatch):
     for ruta in ("/entornos/mapa", "/api/entornos/mapa"):
         assert c.get(ruta).status_code == 404
     assert c.post("/entornos/mapa/actualizar").status_code == 404
+
+
+def test_un_script_module_trae_su_carpeta():
+    """Los módulos de la v2 del panel se importan entre sí por un importmap
+    que la plantilla recibe ya armado: el mapa no lo puede leer, así que un
+    <script type="module"> trae todos los .js de su carpeta."""
+    js = mapa_funcional.js_de_plantilla("dashboard_v2.html")
+    assert {"panel_v2/app.js", "panel_v2/html.js"} <= set(js), js
+    assert not any("vendor" in j for j in js), js
+

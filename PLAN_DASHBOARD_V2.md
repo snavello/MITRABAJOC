@@ -84,7 +84,10 @@ así que no hace falta compilar nada.
   Es demasiado nueva para estrenar una herramienta; se evalúa al cerrar el
   piloto.
 - **htm 3.1.1:** es estable desde 2022.
-- Licencia MIT las dos.
+- Licencias: Preact es MIT y htm es Apache-2.0 (corregido el 2026-10-12 al
+  vendorear: acá decía "MIT las dos"). Las dos permiten usarlas sin
+  restricciones; Apache pide conservar su archivo de licencia, que va en
+  `static/vendor/preact/LICENSE-htm`.
 - Se vendorean los módulos ES oficiales de cada paquete (`preact.module.js`,
   `hooks.module.js`, `htm.module.js`), **no** el `htm/preact/standalone`: ese
   trae adentro una copia vieja de Preact.

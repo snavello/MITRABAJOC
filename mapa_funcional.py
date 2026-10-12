@@ -309,8 +309,16 @@ def js_de_plantilla(nombre):
         return []
     txt = p.read_text(encoding="utf-8", errors="ignore")
     # Solo un <script src=...> de verdad: un comentario que nombra un .js no lo carga.
-    return sorted({j for j in re.findall(r"""<script[^>]+src=["'][^"']*static/([\w\-/]+\.js)""", txt)
-                   if "vendor" not in j and ".min." not in j})
+    js = {j for j in re.findall(r"""<script[^>]+src=["'][^"']*static/([\w\-/]+\.js)""", txt)
+          if "vendor" not in j and ".min." not in j}
+    # Un <script type="module"> trae su carpeta entera: sus módulos se importan
+    # entre sí por el importmap, que la plantilla recibe ya armado y no se
+    # puede leer acá (el Panel Sindical v2, static/panel_v2/).
+    for j in re.findall(r"""<script[^>]+type=["']module["'][^>]+src=["'][^"']*static/([\w\-/]+\.js)""", txt):
+        carpeta = (RAIZ / "static" / j).parent
+        if "/" in j and "vendor" not in j:
+            js |= {h.relative_to(RAIZ / "static").as_posix() for h in carpeta.glob("*.js")}
+    return sorted(js)
 
 
 # Una plantilla es pantalla de una ruta si la LLAMA: fetch(...) o action= de un

@@ -6663,3 +6663,42 @@ Tres cosas que salieron al armarlo:
 Corrido en una sesión de Code en la nube: base nueva con la demo y el lote
 UOM, uvicorn local y el Chromium preinstalado (`E2E_CHROMIUM_PATH`). 8 en
 verde y los 7 de comparación salteados, como corresponde.
+
+**El andamio (bloque 1, Admin 0.50.01).** `/admin/dashboard-v2` tiene las
+mismas puertas que la v1 (sesión, módulo y permiso de la sección "dashboard")
+y además responde 404 donde no hay distintivo de entorno, como `/entornos`
+(D4). La página es una cáscara: encabezado común, mesa, los colores del
+sindicato en `:root`, la fecha de hoy del servidor en `data-hoy` y un
+`<div id="panel">` donde Preact monta todo.
+
+Lo que tuvo vueltas fue la regla del sello `?v=` con módulos ES. Un
+`import "./filtros.js"` sale sin sello y el navegador lo cachea una hora, así
+que después de un deploy podría correr la página nueva con un módulo viejo:
+la misma rotura que el modal de noticias del 2026-09-03. Por eso el código de
+la v2 importa siempre por nombre (`"panel/filtros"`, `"preact"`) y la
+plantilla recibe un `importmap` que arma `main._importmap_panel_v2()`
+recorriendo `static/panel_v2/`, con el sello de cada archivo. `hooks.module.js`
+de Preact importa `"preact"` por nombre, y el mismo mapa lo resuelve.
+`test_dashboard_v2.py` busca todo `import` de la v2 y de lo vendoreado y exige
+que esté en el mapa; probado al revés, un import por ruta lo hace fallar.
+
+Otras tres cosas:
+- **Lo vendoreado es byte a byte lo de npm**: `ORIGEN.md` guarda versión,
+  integridad del paquete y SHA-256 de cada archivo, y el test los compara. Al
+  vendorear apareció que htm es Apache-2.0 y no MIT, como decía el plan; se
+  corrigió ahí y su licencia va como `LICENSE-htm`. pip-audit no mira
+  JavaScript: quedó anotado en XSK (`avance.md`) que los vendoreados no tienen
+  auditoría automática de CVE.
+- **`mapa_funcional.py` no puede leer un importmap**: la plantilla lo recibe
+  ya armado. Regla nueva: un `<script type="module">` trae todos los `.js` de
+  su carpeta.
+- **El enlace de la v1 a la v2 (D6)** es la única línea que se le agregó a la
+  v1, y solo se dibuja con distintivo. Lleva los filtros que haya en la
+  dirección al momento del clic: un `onclick` en línea, para no tocar
+  `dashboard.js`.
+
+Verificado en un navegador de verdad: `test_la_v2_abre_sin_errores` abre la
+v2, controla que no haya errores en la consola ni archivos de `/static/`
+rechazados, que se pinte la fecha del servidor, y que los dos enlaces lleven
+de una versión a la otra con los filtros.
+
