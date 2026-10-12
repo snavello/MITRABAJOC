@@ -1,7 +1,7 @@
 # PLAN_DASHBOARD_V2.md — Panel Sindical v2 con Preact, en paralelo
 
-**Estado:** propuesta del 2026-10-12, **a acordar con SDN decisión por
-decisión** antes de tocar código. Sale de la conversación de ese día: se
+**Estado:** **acordado con SDN decisión por decisión el 2026-10-12** (D1 a
+D10, §2), sin código todavía. Sale de la conversación de ese día: se
 evaluó React para mejorar la estética y lo que la interfaz puede ofrecer, y se
 eligió **Preact sin build** para un primer piloto (§2, D1).
 
@@ -46,7 +46,7 @@ mismos números.
    `/admin/dashboard/*`, ni su cupo, ni sus permisos. Si la v2 necesita un dato
    que hoy no viene, se anota y se decide aparte; nunca se agrega de pasada.
 2. **La v1 no se toca durante el piloto.** Ni su plantilla, ni su JS, ni su
-   ruta. La única excepción es el enlace de D6, y solo si se acuerda. Mientras
+   ruta. La única excepción es el enlace de D6. Mientras
    dure el piloto, la v1 recibe solo arreglos (D10).
 3. **Mismo contrato con el servidor que la v1.**
    - Los mismos parámetros en la URL: un enlace de la v1 abre igual en la v2
@@ -68,14 +68,15 @@ mismos números.
 
 ---
 
-## 2. Decisiones a acordar
+## 2. Decisiones
 
-Cada una con la recomendación. Se cierran con SDN antes del bloque 1.
+Las diez se acordaron con SDN una por una el 2026-10-12; en todas se tomó la
+recomendación, y en D5 se agregaron las animaciones.
 
 **D1. Librería: Preact + hooks + htm, sin build.** `htm` permite escribir las
 plantillas en JavaScript común (`` html`<div class=${x}>` ``) en lugar de JSX,
 así que no hace falta compilar nada.
-*Recomendación: sí. Ya conversado.*
+**Acordada con SDN el 2026-10-12.**
 
 **D2. Versiones: Preact 10.29.8 y htm 3.1.1.**
 - **Preact 10.29.8:** del 2026-08-01, la última de la rama 10, que es madura.
@@ -88,7 +89,7 @@ así que no hace falta compilar nada.
   `hooks.module.js`, `htm.module.js`), **no** el `htm/preact/standalone`: ese
   trae adentro una copia vieja de Preact.
 
-*Recomendación: esas versiones, fijas.*
+**Acordada con SDN el 2026-10-12:** Preact 10.29.8 y htm 3.1.1, fijas.
 
 **D3. Cómo se cargan los módulos: un `importmap` armado por el servidor, con
 sello por archivo.**
@@ -109,7 +110,7 @@ Funciona con la CSP de hoy (`script-src 'self' 'unsafe-inline'`). Los
 `importmap` andan en todos los navegadores actuales, desde Safari 16.4 de
 2023.
 
-*Recomendación: sí.*
+**Acordada con SDN el 2026-10-12.**
 
 **D4. Dónde vive y quién la ve: `/admin/dashboard-v2`, solo en local y en
 Pruebas durante el piloto.**
@@ -122,7 +123,8 @@ Pruebas durante el piloto.**
   los endpoints, que ya tienen su control. `test_areas_rutas.py` fija ese
   conjunto exacto y se actualiza con el motivo escrito.
 
-*Recomendación: sí.*
+**Acordada con SDN el 2026-10-12.** Mostrarla en la demo se decide al cerrar
+el piloto.
 
 **D5. Estética: ¿copia exacta o se mejora?**
 - **Paridad obligatoria de DATOS y COMPORTAMIENTO:** los mismos números para
@@ -133,19 +135,44 @@ Pruebas durante el piloto.**
   `disenos/` (fuera de git, como los demás) y se acuerda con SDN. Si no, las
   mejoras se improvisan pantalla por pantalla.
 
-*Recomendación: así.* Si el piloto solo replicara la v1, no respondería la
-pregunta de fondo: si esto mejora la interfaz.
+**Acordada con SDN el 2026-10-12, con un agregado: animaciones fluidas.** El
+piloto tiene que poder mostrarle al proyecto una mejora visual de la
+interfaz, además del cambio técnico. El mockup trae 2 o 3 direcciones, ya
+con las animaciones funcionando.
+
+**Dónde va cada animación:**
+- **Gráficos al generarse** (bloque 4): las barras crecen desde la base, la
+  línea se dibuja de izquierda a derecha y la dona gira hasta su lugar, con
+  una entrada escalonada por serie.
+- **Gráficos al cambiar los filtros:** pasan del valor viejo al nuevo en
+  lugar de redibujarse desde cero.
+- **KPIs** (bloque 3): el número corre hasta el valor nuevo en lugar de
+  saltar.
+- **Modales** (bloque 5): el fondo se oscurece de a poco y la caja entra con
+  una escala corta.
+
+**Reglas de las animaciones:**
+- **`prefers-reduced-motion` las apaga todas.** Es la regla que ya cumple la
+  v1 (`Chart.defaults.animation = false`).
+- **Nunca demoran un dato.** El número o la barra está desde el primer
+  cuadro y la animación no pasa de ~600 ms. En la medición de D9 el tiempo
+  se cuenta hasta que llega el dato, no hasta que termina la animación.
+- **Se cortan, no se encolan.** Si cambian los filtros a mitad de una
+  animación, sale la siguiente desde donde está. No se reproducen una
+  detrás de otra.
+- **El modal no anima con `transform`.** `modales.js` usa
+  `style.transform` para el arrastre y se pisarían. Se anima con las
+  propiedades `scale` y `opacity`, que van por separado.
 
 **D6. Enlace entre versiones, solo en Pruebas.**
 - La v1 muestra un enlace chico, "Probar la versión nueva", que lleva los
   mismos filtros.
-- La v2 muestra "Volver a la versión actual".
+- La v2 muestra "Ver en la versión actual".
 
 Es el único cambio a la v1: una línea de plantilla, condicionada al
 distintivo de entorno.
 
-*Recomendación: sí.* Es lo que hace cómoda la comparación. La alternativa es
-cambiar la ruta a mano en la barra del navegador.
+**Acordada con SDN el 2026-10-12.**
 
 **D7. CSS: una copia propia, no compartida.**
 - Los estilos del panel viven hoy en un `<style>` de unas 380 líneas dentro
@@ -154,7 +181,7 @@ cambiar la ruta a mano en la barra del navegador.
   Así mejorar la v2 no mueve la v1.
 - Si la v2 reemplaza a la v1, la copia queda como la única.
 
-*Recomendación: sí.*
+**Acordada con SDN el 2026-10-12.**
 
 **D8. Estado: un solo `useReducer` con el mismo objeto que la v1.**
 - Es el objeto `S` de `dashboard.js`, con las mismas reglas de saneo de
@@ -164,7 +191,7 @@ cambiar la ruta a mano en la barra del navegador.
   `docs/DASHBOARD.md` dice 250, pero se subió en el arreglo del cuelgue del
   2026-09-18; manda el código.
 
-*Recomendación: sí.*
+**Acordada con SDN el 2026-10-12.**
 
 **D9. Cuándo la v2 reemplaza a la v1.**
 
@@ -182,13 +209,16 @@ Los resultados posibles son tres:
 - **Descartar:** se borran la ruta, la plantilla y `static/panel_v2/` sin
   dejar rastro.
 
+**Acordada con SDN el 2026-10-12.** Al reemplazar, la v1 queda 30 días en
+`/admin/dashboard-v1` como salida de emergencia (bloque 7).
+
 **D10. Durante el piloto, la v1 recibe solo arreglos.**
 - La funcionalidad nueva del Panel espera o va directo a la v2.
 - Si hace falta en la v1 (por una demo), va a las dos en el mismo PR.
 
 Dos versiones que se separan en silencio es el riesgo más caro del piloto.
 
-*Recomendación: sí.*
+**Acordada con SDN el 2026-10-12.**
 
 ---
 
@@ -314,11 +344,13 @@ nada. Admin sube de versión según la regla 3 de `FLUJO.md`.
   - El 503 se reintenta y el 403 redirige.
   - Una ronda abortada no lanza tareas.
 
-**Mockup de D5, antes del bloque 3.** Se acuerda con SDN.
+**Mockup de D5, antes del bloque 3.** 2 o 3 direcciones, con las
+animaciones funcionando. Se acuerda con SDN.
 
 **Bloque 3 — Filtros y KPIs. Medio. Primer resultado visible.**
 - Período con calendario, pastillas, formato, salario, afiliado, filtros
-  activos y Reiniciar, más los 10 KPIs.
+  activos y Reiniciar, más los 10 KPIs con el número que corre hasta su
+  valor.
 - **Punto de control:** SDN lo mira en Pruebas y decide si el piloto sigue.
   Hasta acá el costo es chico y ya se ve cómo se escribe y cómo se ve.
 
@@ -326,8 +358,10 @@ nada. Admin sube de versión según la regla 3 de `FLUJO.md`.
 - `<Grafico>` sobre Chart.js y los siete paneles.
 - El clic que filtra y cambia la pestaña.
 - El semáforo y el mapa con `MapaMT`.
+- Las animaciones de entrada y de cambio de filtro (D5).
 
-**Bloque 5 — Explorador y modal "Ver". Medio.**
+**Bloque 5 — Explorador y modal "Ver", con la animación de apertura (D5).
+Medio.**
 
 **Bloque 6 — Asistente y voz. Medio.**
 
