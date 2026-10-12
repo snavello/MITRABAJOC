@@ -159,20 +159,49 @@ def existe(page, version: str) -> bool:
     return page.request.get(f"{BASE}{RUTAS[version]}").status == 200
 
 
+# El máximo en vuelo se cuenta ADENTRO de la página, envolviendo `fetch`: un
+# pedido ocupa lugar desde que sale hasta que llega la respuesta, que es
+# justo lo que mide el cupo del servidor. Contarlo con los eventos de red de
+# Playwright no sirve para el máximo: llegan con atraso y en desorden (el
+# fin de un pedido puede llegar después del comienzo del que lo reemplazó),
+# y eso sumaba uno de más cuando la página encadena rápido.
+_CONTAR_EN_VUELO = r"""
+(() => {
+  if (window.__vueloInstalado) return;
+  window.__vueloInstalado = true;
+  window.__vuelo = 0; window.__pico = 0;
+  const original = window.fetch;
+  window.fetch = function (recurso) {
+    const url = String((recurso && recurso.url) || recurso);
+    const cuenta = url.includes("/admin/dashboard/") && !url.includes("/admin/dashboard/asistente");
+    if (cuenta) { window.__vuelo++; window.__pico = Math.max(window.__pico, window.__vuelo); }
+    const p = original.apply(this, arguments);
+    if (cuenta) p.then(() => { window.__vuelo--; }, () => { window.__vuelo--; });
+    return p;
+  };
+})();
+"""
+
+
 class _Monitor:
-    """Cuenta los pedidos de datos del panel: cuáles terminaron bien y
-    cuántos hubo en vuelo a la vez. Un pedido abortado (cambio de filtros,
-    AbortController) no cuenta como hecho, pero sí ocupó lugar mientras
-    estuvo en vuelo."""
+    """Cuenta los pedidos de datos del panel: cuáles terminaron bien, cuáles
+    volvieron con error, y si la página se calmó. El máximo en vuelo lo
+    cuenta la propia página (`_CONTAR_EN_VUELO`). Un pedido abortado (cambio
+    de filtros, AbortController) no cuenta como hecho."""
 
     def __init__(self, page):
+        self.page = page
         self.en_vuelo = 0
-        self.maximo = 0
         self.hechos = []        # "ruta?a=1&b=2", con los parámetros ordenados
         self.fallidos = []      # (ruta, status) de los que volvieron con error
+        page.add_init_script(_CONTAR_EN_VUELO)
         page.on("request", self._salio)
         page.on("requestfinished", self._volvio)
         page.on("requestfailed", self._cayo)
+
+    @property
+    def maximo(self) -> int:
+        return self.page.evaluate("() => window.__pico || 0")
 
     @staticmethod
     def _es_de_la_ronda(url: str) -> bool:
@@ -182,7 +211,6 @@ class _Monitor:
     def _salio(self, req):
         if self._es_de_la_ronda(req.url):
             self.en_vuelo += 1
-            self.maximo = max(self.maximo, self.en_vuelo)
 
     def _volvio(self, req):
         if not self._es_de_la_ronda(req.url):
@@ -337,40 +365,23 @@ _JS_V1 = r"""
 }
 """
 
-# La v2 se arma por bloques (PLAN_DASHBOARD_V2.md): su lector dice qué partes
-# ya tiene (`cubre`), y la comparación mira solo esas. La paridad completa
-# (`test_paridad_v1_v2`) espera a que cubra todo.
-_JS_V2 = r"""
-() => {
-  const q = (s) => document.querySelector(s);
-  const texto = (s) => { const e = q(s); return e ? e.textContent.trim() : null; };
-  const kpis = {};
-  document.querySelectorAll('[data-panel="kpis"] [id^="v-"]').forEach((e) => {
-    kpis[e.id.replace(/^v-/, "")] = e.textContent.trim();
-  });
-  const aviso = q(".aviso-error");
-  return {
-    version: "v2",
-    kpis,
-    delta_recibos: texto("#d-recibos"),
-    delta_padron: texto("#d-padron"),
-    rango: texto("#rango-texto"),
-    contadores: {},
-    explorador: { pestana: null, filas: 0, primeras: [], total: null },
-    graficos: {},
-    semaforo: { resumen: null, empresas: 0 },
-    mapa: { burbujas: 0 },
-    filtros_activos: [...document.querySelectorAll(".v2-puesto")]
-      .map((c) => c.firstChild.textContent.trim()),
-    paneles_con_error: q(".v2-error-kpis") ? ["kpis"] : [],
-    aviso: aviso ? aviso.textContent.trim() : "",
-  };
-}
-"""
+# El lector de la v2: lo mismo que el de la v1 salvo dónde están los KPIs,
+# las pastillas de filtros y el aviso, que la v2 dibuja distinto. Los ids de
+# los números, los nombres de los paneles (`data-panel`) y los de la tabla
+# son los mismos a propósito: así el robot compara dato por dato.
+_JS_V2 = (_JS_V1
+          .replace('version: "v1"', 'version: "v2"')
+          .replace('document.querySelectorAll("#kpis .val")',
+                   "document.querySelectorAll('[data-panel=\"kpis\"] [id^=\"v-\"]')")
+          .replace('document.querySelectorAll("#chips .chipf")', 'document.querySelectorAll(".v2-puesto")')
+          .replace('const aviso = q("#aviso-error");', 'const aviso = q(".aviso-error");')
+          .replace("aviso: aviso && !aviso.hidden ? aviso.textContent.trim() : \"\",",
+                   "aviso: aviso ? aviso.textContent.trim() : \"\","))
+assert _JS_V2 != _JS_V1 and "v2-puesto" in _JS_V2 and "[data-panel=" in _JS_V2
 
 LECTORES = {
     "v1": {"js": _JS_V1, "cargando": "[data-panel].cargando, #kpis.cargando", "cubre": "todo"},
-    "v2": {"js": _JS_V2, "cargando": "[data-panel].cargando", "cubre": ("kpis", "filtros")},
+    "v2": {"js": _JS_V2, "cargando": "[data-panel].cargando", "cubre": "todo"},
 }
 
 
@@ -412,26 +423,29 @@ def comparar(a: dict, b: dict, partes=PARTES) -> list:
         igual("rango de fechas", numeros(a["rango"]), numeros(b["rango"]))
     if "filtros" in partes:
         igual("filtros activos", a["filtros_activos"], b["filtros_activos"])
-    if "explorador" not in partes:
-        return dif
-    for clave in sorted(set(a["contadores"]) | set(b["contadores"])):
-        igual(f"contador {clave}", numeros(a["contadores"].get(clave)),
-              numeros(b["contadores"].get(clave)))
-    igual("pestaña del explorador", a["explorador"]["pestana"], b["explorador"]["pestana"])
-    igual("filas del explorador", a["explorador"]["filas"], b["explorador"]["filas"])
-    igual("total del explorador", numeros(a["explorador"]["total"]),
-          numeros(b["explorador"]["total"]))
-    for panel in sorted(set(a["graficos"]) | set(b["graficos"])):
-        ga, gb = a["graficos"].get(panel), b["graficos"].get(panel)
-        if ga is None or gb is None:
-            igual(f"gráfico {panel}", ga is not None, gb is not None)
-            continue
-        igual(f"gráfico {panel}: etiquetas", ga["labels"], gb["labels"])
-        igual(f"gráfico {panel}: datos", [s["data"] for s in ga["series"]],
-              [s["data"] for s in gb["series"]])
-    igual("semáforo: resumen", numeros(a["semaforo"]["resumen"]),
-          numeros(b["semaforo"]["resumen"]))
-    igual("semáforo: empresas", a["semaforo"]["empresas"], b["semaforo"]["empresas"])
-    igual("mapa: burbujas", a["mapa"]["burbujas"], b["mapa"]["burbujas"])
-    igual("pedidos al servidor", a["pedidos"], b["pedidos"])
+    if "explorador" in partes:
+        for clave in sorted(set(a["contadores"]) | set(b["contadores"])):
+            igual(f"contador {clave}", numeros(a["contadores"].get(clave)),
+                  numeros(b["contadores"].get(clave)))
+        igual("pestaña del explorador", a["explorador"]["pestana"], b["explorador"]["pestana"])
+        igual("filas del explorador", a["explorador"]["filas"], b["explorador"]["filas"])
+        igual("total del explorador", numeros(a["explorador"]["total"]),
+              numeros(b["explorador"]["total"]))
+    if "graficos" in partes:
+        for panel in sorted(set(a["graficos"]) | set(b["graficos"])):
+            ga, gb = a["graficos"].get(panel), b["graficos"].get(panel)
+            if ga is None or gb is None:
+                igual(f"gráfico {panel}", ga is not None, gb is not None)
+                continue
+            igual(f"gráfico {panel}: etiquetas", ga["labels"], gb["labels"])
+            igual(f"gráfico {panel}: datos", [s["data"] for s in ga["series"]],
+                  [s["data"] for s in gb["series"]])
+    if "semaforo" in partes:
+        igual("semáforo: resumen", numeros(a["semaforo"]["resumen"]),
+              numeros(b["semaforo"]["resumen"]))
+        igual("semáforo: empresas", a["semaforo"]["empresas"], b["semaforo"]["empresas"])
+    if "mapa" in partes:
+        igual("mapa: burbujas", a["mapa"]["burbujas"], b["mapa"]["burbujas"])
+    if "pedidos" in partes:
+        igual("pedidos al servidor", a["pedidos"], b["pedidos"])
     return dif

@@ -409,14 +409,6 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
 .v2-btn-filtros { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.14);
   border: 1.5px solid color-mix(in srgb, var(--destacado) 70%, white); color: #fff; font-weight: 700; }
 .v2-btn-filtros:hover { background: rgba(255,255,255,.22); }
-
-/* Mientras la v2 no tiene paneles: dice qué falta, en vez de dejar un hueco
-   que parece una falla. Se va cuando lleguen los gráficos. */
-.v2-proximo { margin-top: 16px; background: var(--blanco); border: 1px dashed color-mix(in srgb, var(--gris) 45%, white);
-  border-radius: var(--r-card); padding: 16px 18px; }
-.v2-proximo .v2-kicker { color: var(--marca-primario); }
-.v2-proximo p { margin: 6px 0 10px; font-size: 14px; color: var(--tinta); max-width: 760px; }
-.v2-proximo a { font-weight: 700; font-size: 13px; color: var(--marca-primario); }
 .v2-num { background: var(--destacado); color: #fff; border-radius: 99px; min-width: 19px; height: 19px; display: inline-grid;
   place-items: center; font: 700 11px var(--fuente-num); padding: 0 5px; }
 .v2-puestos { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }
@@ -480,4 +472,54 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
   .v2-minis, .v2-minis.seis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .v2-cajon { top: auto; left: 0; width: 100%; max-height: 86vh; border-radius: 16px 16px 0 0; translate: 0 105%; }
   .v2-cajon-enc { border-radius: 16px 16px 0 0; }
+}
+
+/* ---------- v2: paneles, explorador y modal (bloques 4 y 5) ---------- */
+.v2-acciones { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.v2-grid { margin-top: 16px; }
+.v2-grid .panel { box-shadow: 0 1px 2px rgba(21,34,56,.05), 0 10px 28px -18px rgba(21,34,56,.2); }
+/* Los paneles entran escalonados la primera vez; después no se mueven. */
+.v2-grid > .panel { animation: v2-entra .5s cubic-bezier(.2,.8,.2,1) both; }
+.v2-grid > .panel:nth-child(2) { animation-delay: 40ms; } .v2-grid > .panel:nth-child(3) { animation-delay: 80ms; }
+.v2-grid > .panel:nth-child(4) { animation-delay: 120ms; } .v2-grid > .panel:nth-child(5) { animation-delay: 160ms; }
+.v2-grid > .panel:nth-child(n+6) { animation-delay: 200ms; }
+.v2-aparece { animation: v2-entra .35s cubic-bezier(.2,.8,.2,1) both; }
+
+/* El modal "Ver": el fondo se oscurece de a poco y la caja entra con una
+   escala corta (D5). Se anima `scale`/`translate`/`opacity`, nunca
+   `transform`: modales.js lo usa para el arrastre y se pisarían. */
+.overlay-det.v2-anim { display: flex; visibility: hidden; background: rgba(8,12,20,0); z-index: 920;
+  transition: background .26s, visibility 0s .26s; }
+.overlay-det.v2-anim.abierto { visibility: visible; background: rgba(8,12,20,.55); transition: background .26s; }
+.overlay-det.v2-anim .modal-det { opacity: 0; scale: .94; translate: 0 14px;
+  transition: opacity .26s cubic-bezier(.2,.8,.2,1), scale .32s cubic-bezier(.2,.8,.2,1), translate .32s cubic-bezier(.2,.8,.2,1); }
+.overlay-det.v2-anim.abierto .modal-det { opacity: 1; scale: 1; translate: 0 0; }
+@media (prefers-reduced-motion: reduce) {
+  .v2-grid > .panel, .v2-aparece { animation: none; }
+  .overlay-det.v2-anim, .overlay-det.v2-anim .modal-det { transition: none; }
+}
+
+/* ---- Bloque 6: el Asistente (D5) ----
+   El cajón de la v1, con la entrada más suave y cada burbuja que aparece
+   subiendo. Se anima `translate` y no `transform`: así ninguna regla de la
+   v1 que use transform lo pisa. Con "reducir movimiento", quieto. */
+.v2-acciones .btn-asist { padding-top: 4px; padding-bottom: 4px; }
+.v2-asist { transform: none; translate: 105% 0; transition: translate .45s cubic-bezier(.22,1,.36,1); }
+.v2-asist.abierto { translate: 0 0; }
+@media (max-width: 640px) {
+  .v2-asist { transform: none; translate: 0 105%; transition: translate .45s cubic-bezier(.22,1,.36,1), height .3s ease; }
+  .v2-asist.abierto { translate: 0 0; }
+}
+.v2-asist .burb { animation: v2-burb .34s cubic-bezier(.22,1,.36,1) both; }
+@keyframes v2-burb { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .v2-asist { transition: none; }
+  .v2-asist .burb { animation: none; }
+}
+/* En el teléfono, las pastillas de los filtros puestos bajan a su propio
+   renglón: entre "Más filtros" y "Reiniciar" no tenían lugar y una se
+   partía en tres líneas encima del botón. */
+@media (max-width: 640px) {
+  .v2-puestos { order: 5; flex-basis: 100%; }
+  .v2-puestos:empty { display: none; }
 }

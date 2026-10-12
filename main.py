@@ -1718,6 +1718,15 @@ def _importmap_panel_v2() -> str:
     return json.dumps({"imports": imports}, ensure_ascii=False)
 
 
+def _precarga_panel_v2() -> list:
+    """Las URL del importmap, para `<link rel="modulepreload">`: sin esto el
+    navegador descubre los módulos en cascada (app.js, después lo que importa,
+    después preact) y cada escalón es un viaje de ida y vuelta al servidor.
+    Con la precarga salen todos juntos, en paralelo."""
+    import json
+    return list(json.loads(_importmap_panel_v2())["imports"].values())
+
+
 @app.get("/admin/dashboard-v2", response_class=HTMLResponse)
 def admin_dashboard_v2_pagina(request: Request):
     """Página del Panel Sindical v2 (PLAN_DASHBOARD_V2.md). Mismas puertas que
@@ -1744,6 +1753,7 @@ def admin_dashboard_v2_pagina(request: Request):
         "asistente": asistente.disponible(),
         "hoy": fechas.hoy_texto(),
         "importmap": _importmap_panel_v2(),
+        "precarga": _precarga_panel_v2(),
         "version": VERSION_ADMIN, "fecha_version": FECHA_VERSION,
     })
 

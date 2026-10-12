@@ -54,7 +54,7 @@ def _v1_como_js(consultas: bool) -> str:
                        "el encaje del salario de initCatalogo")
     funciones = "".join(_funcion_v1(n) for n in (
         "paramsDeEstado", "estadoDeParams", "setPreset", "reiniciar",
-        "alternarSeccional", "aplicarEstado", "presetActivo"))
+        "alternarSeccional", "aplicarEstado", "presetActivo", "estadoPlano"))
     return f"""
 const V1 = (() => {{
   var HOY = new Date(2026, 9, 12);
@@ -73,6 +73,7 @@ const V1 = (() => {{
     alternarSeccional(id) {{ alternarSeccional(id); return salida(); }},
     reiniciar() {{ reiniciar(); return salida(); }},
     aplicar(filtros) {{ aplicarEstado(filtros); return salida(); }},
+    plano() {{ return JSON.stringify(estadoPlano()); }},
   }};
 }})();
 """
@@ -125,7 +126,7 @@ const LIMITES = [{ min: null, max: null }, { min: 1150, max: 3700 }, { min: 0, m
 
 _V2_IMPORTS = """
 import { desdeParams, conLimites, aDireccion, crearReductor, limitesSalario,
-         estadoInicial, presetActivo, filtrosActivos } from "./estado.mjs";
+         estadoInicial, presetActivo, filtrosActivos, estadoPlano, comoParams } from "./estado.mjs";
 const HOY = "2026-10-12";
 function salidaV2(e, lim) {
   return aDireccion(e, lim).toString().replace(/&?tab=[^&]*/, "") + "|tab=" + e.tab + "|preset=" + presetActivo(e, HOY);
@@ -155,7 +156,8 @@ console.log(JSON.stringify({{ casos, distintas }}));
 def test_los_cambios_de_la_v2_dan_lo_mismo_que_los_de_la_v1(tmp_path):
     """Después de cargar una dirección, una serie al azar de los cambios que
     la v1 tiene como función propia: período rápido, seccional, reiniciar y
-    aplicar filtros (el Asistente). Tras cada paso, mismos parámetros."""
+    aplicar filtros (el Asistente). Tras cada paso, mismos parámetros y la
+    misma foto del estado que viaja al Asistente."""
     js = _V2_IMPORTS + _v1_como_js(False) + _AZAR + """
 const reducir = crearReductor({ hoy: HOY, consultas: false });
 function filtrosAzar() {
@@ -169,15 +171,6 @@ function filtrosAzar() {
   if (azar() < 0.4) f.resultado = uno(["ok", "", "con_diferencias"]);
   if (azar() < 0.3) f.tab = uno(["tramites", "notificaciones", "consultas"]);
   return f;
-}
-function comoParams(filtros) {   // el armado de `aplicarEstado` de la v1
-  const q = new URLSearchParams();
-  Object.keys(filtros).forEach((k) => {
-    const v = filtros[k];
-    if (v === null || v === undefined || v === "") return;
-    if (Array.isArray(v)) v.forEach((x) => q.append(k, x)); else q.set(k, v);
-  });
-  return q;
 }
 const distintas = [];
 let pasos = 0;
@@ -204,6 +197,9 @@ for (let i = 0; i < 600; i++) {
     pasos++;
     const v2 = salidaV2(e, lim);
     if (v1 !== v2 && distintas.length < 5) distintas.push({ qs, lim, paso: nombre, v1, v2 });
+    // La foto que viaja al Asistente con cada pregunta (y que vuelve con "Volver").
+    const p1 = V1.plano(), p2 = JSON.stringify(estadoPlano(e, lim));
+    if (p1 !== p2 && distintas.length < 5) distintas.push({ qs, lim, paso: nombre + " (foto)", v1: p1, v2: p2 });
   }
 }
 console.log(JSON.stringify({ pasos, distintas }));
