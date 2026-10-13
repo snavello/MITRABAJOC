@@ -199,6 +199,17 @@ se hace.
   perímetro. Test: `test_qa_registro_flujo.py::test_el_freno_por_ip_no_se_evade_...`
   (`xfail(strict=True)`).
 
+- [ ] **Calculadora bancaria: horas extras, averiguar antes de construir**
+  (2026-10-13, decisión de SDN: "no construir en falso"). El CCT 18/75 no las
+  regula (solo las nombra en el art. 43) y la grilla de agosto 2026 no trae
+  valor hora: rige la LCT, art. 201 (50% días comunes, 100% sábados después
+  de las 13, domingos y feriados). Falta saber, con el sindicato o con
+  recibos reales: (1) el divisor del valor hora (cuántas horas por mes toma
+  la banca) y (2) qué conceptos entran en la base (básico solo, o también
+  conformado, ROE y adicionales). Hasta entonces la calculadora no las
+  contempla; un recibo real que las traiga las deja en "renglones que la
+  calculadora no tiene".
+
 ## Hecho
 
 - [x] **Mergear `areas-permisos` a `main`** y **Sprint "Admin de Seccional"**
