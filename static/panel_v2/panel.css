@@ -378,40 +378,11 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
    barra arriba y en un cajón. Sobre la franja de marca la tarjeta se separa
    por LUZ (filo de 1px y brillo), no por color (regla de la mesa). */
 
-/* ---------- Movimiento: el caso cero de toda la plataforma ----------
-   Las duraciones y las curvas con nombre. Las usa este archivo y las lee
-   panel/movimiento para Chart.js: un solo lugar. Reglas (skill
-   `diseno-mi-trabajo`, "Movimiento"; referencia, `emil-design-eng`):
-   - lo que tiene que VERSE entrar (paneles, gráficos, modales) usa
-     `--ease-entrada`, que reparte el recorrido; la respuesta inmediata
-     (hover, apretar, cerrar) usa `--ease-salida`, que hace casi todo al
-     principio; lo que se mueve de un lugar a otro, `--ease-mueve`; nunca
-     `ease-in`;
-   - cerrar es más rápido que abrir; lo que se usa muchas veces seguidas
-     (pasar el mouse, apretar) es corto;
-   - con "reducir movimiento" solo quedan fundidos suaves, sin nada que se
-     desplace (al final del archivo).
-
-   Las entradas son de PRESENTACIÓN, a pedido de SDN (2026-10-13): con las
-   duraciones cortas de una interfaz de todos los días (~300 ms, lo que
-   recomienda `emil-design-eng`) y una curva de salida fuerte, medido en el
-   navegador el modal ya estaba al 95% a los 150 ms y se veía "rápido y
-   brusco". Este panel se muestra; lo de todos los días sigue corto. */
-:root {
-  --mov-presion: 120ms;   /* un botón que se aprieta */
-  --mov-rapido: 180ms;    /* pasar el mouse, tooltips */
-  --mov-medio: 320ms;     /* cambios de estado, cierres */
-  --mov-lento: 650ms;     /* apertura de modales y cajones */
-  --mov-entrada: 900ms;   /* un panel que entra al hacer scroll */
-  --mov-cambio: 800ms;    /* un gráfico que pasa de un valor a otro */
-  --mov-datos: 1400ms;    /* un gráfico que se dibuja por primera vez */
-  --mov-correr: 1600ms;   /* un indicador que corre hasta su número */
-  --mov-escalon: 120ms;   /* entre dos que entran juntos */
-  --ease-entrada: cubic-bezier(.33, 1, .68, 1);
-  --ease-salida: cubic-bezier(.23, 1, .32, 1);
-  --ease-mueve: cubic-bezier(.65, 0, .35, 1);
-  --ease-hoja: cubic-bezier(.32, .72, 0, 1);
-}
+/* ---------- Movimiento ----------
+   Las duraciones y las curvas con nombre (`--mov-*`, `--ease-*`) viven en
+   static/movimiento.css, que esta pantalla carga antes que este archivo: la
+   v2 fue el caso cero y de ahí se llevó a los modales de toda la plataforma.
+   panel/movimiento las lee para Chart.js. */
 .v2 { padding-top: 18px; }
 .v2-cabeza { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .v2-cabeza .titulo-pagina { margin: 0 0 4px; }
@@ -533,17 +504,27 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
 .overlay-det.v2-anim { display: flex; align-items: flex-start; padding-top: max(18px, 7vh); visibility: hidden;
   background: rgba(8,12,20,0); z-index: 920;
   transition: background var(--mov-medio) ease, backdrop-filter var(--mov-medio) ease, visibility 0s var(--mov-medio); }
-.overlay-det.v2-anim.abierto { visibility: visible; background: rgba(8,12,20,.5); backdrop-filter: blur(6px);
+.overlay-det.v2-anim.abierto { visibility: visible; background: rgba(8,12,20,.4); backdrop-filter: blur(2px);
   transition: background var(--mov-lento) ease, backdrop-filter var(--mov-lento) ease; }
-.overlay-det.v2-anim .modal-det { opacity: 0; scale: .92; translate: 0 28px; filter: blur(6px);
+.overlay-det.v2-anim .modal-det { opacity: 0; scale: .94; translate: 0 26px;
   box-shadow: 0 30px 70px -20px rgba(8,12,20,.55), 0 0 0 1px rgba(8,12,20,.06);
   transition: opacity var(--mov-medio) var(--ease-salida), scale var(--mov-medio) var(--ease-salida),
-    translate var(--mov-medio) var(--ease-salida), filter var(--mov-medio) var(--ease-salida); }
-/* Entra subiendo y enfocándose, con la curva que reparte el recorrido: así
-   se ve llegar en vez de aparecer. */
-.overlay-det.v2-anim.abierto .modal-det { opacity: 1; scale: 1; translate: 0 0; filter: none;
-  transition: opacity calc(var(--mov-lento) * .7) var(--ease-entrada), scale var(--mov-lento) var(--ease-entrada),
-    translate var(--mov-lento) var(--ease-entrada), filter calc(var(--mov-lento) * .8) var(--ease-entrada); }
+    translate var(--mov-medio) var(--ease-salida); }
+/* Entra subiendo, con la curva que reparte el recorrido. La caja se vuelve
+   opaca enseguida (un velo translúcido se leía como "pantalla gris"): lo que
+   se ve es la caja llegar y su contenido armarse. */
+.overlay-det.v2-anim.abierto .modal-det { opacity: 1; scale: 1; translate: 0 0;
+  transition: opacity 220ms ease-out, scale var(--mov-lento) var(--ease-entrada), translate var(--mov-lento) var(--ease-entrada); }
+/* La ficha se arma pieza por pieza (explorador.js marca cada una con
+   data-armado y su escalón) y la caja crece de a poco hasta su alto. */
+.v2-alto { overflow: hidden; transition: height var(--mov-lento) var(--ease-entrada); }
+.v2-construye > [data-armado] { animation: v2-arma var(--mov-lento) var(--ease-entrada) backwards; }
+@keyframes v2-arma { from { opacity: 0; translate: 0 12px; } }
+.v2-det-cargando { display: flex; align-items: center; gap: 12px; margin-top: 16px; font-size: 12px; color: var(--gris); }
+.v2-det-cargando i { flex: 1; height: 3px; border-radius: 2px; background: var(--linea); position: relative; overflow: hidden; }
+.v2-det-cargando i::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 35%; border-radius: 2px;
+  background: var(--marca-primario); animation: v2-recorre 1.1s var(--ease-mueve) infinite; }
+@keyframes v2-recorre { from { translate: -100% 0; } to { translate: 290% 0; } }
 /* El detalle llega nítido desde un desenfoque leve: borra el salto entre el
    esqueleto y el contenido. */
 .v2-nitido { animation: v2-nitido var(--mov-lento) var(--ease-entrada); }
@@ -679,3 +660,53 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
   box-shadow: 0 6px 18px -10px rgba(8,12,20,.35); }
 .v2-aviso-mov b { color: var(--marca-primario); }
 .v2-aviso-mov button { margin-left: auto; flex: none; border: 0; background: none; color: var(--gris); font-size: 15px; cursor: pointer; }
+
+/* ---------- Esperando datos: el panel se ARMA, no se apaga ----------
+   Primera carga: se trazan las líneas de la grilla de un gráfico (o los
+   renglones de una lista) una por una, y después un brillo las recorre
+   mientras falta. Al cambiar un filtro el panel queda nítido (antes se ponía
+   translúcido y se leía como un velo gris) y una línea fina corre arriba. */
+.v2-armando { position: absolute; left: 16px; right: 16px; top: 70px; bottom: 22px; display: flex; flex-direction: column;
+  justify-content: space-between; pointer-events: none; overflow: hidden; }
+.v2-armando.grafico i { display: block; height: 1px; background: var(--linea); scale: 1 1; transform-origin: left center;
+  animation: v2-traza var(--mov-entrada) var(--ease-entrada) backwards; }
+.v2-armando.grafico i:last-child { height: 2px; background: color-mix(in srgb, var(--gris) 45%, var(--linea)); }
+@keyframes v2-traza { from { scale: 0 1; opacity: 0; } }
+.v2-armando.lista { justify-content: flex-start; gap: 14px; }
+.v2-armando.lista i { display: block; height: 34px; border-radius: 9px; border: 1px solid var(--linea);
+  background: linear-gradient(var(--linea), var(--linea)) 14px 50% / 38% 9px no-repeat,
+    linear-gradient(var(--linea), var(--linea)) calc(100% - 14px) 50% / 10% 9px no-repeat;
+  animation: v2-arma var(--mov-lento) var(--ease-entrada) backwards; }
+.v2-armando::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.75) 50%, transparent 70%) no-repeat;
+  background-size: 60% 100%; animation: v2-barre 1.6s linear 900ms infinite; opacity: .8; }
+@keyframes v2-barre { from { background-position: -80% 0; } to { background-position: 180% 0; } }
+
+.v2-grid > .panel.cargando { opacity: 1; }
+.v2-grid > .panel.cargando:not(.esperando)::after { content: ""; position: absolute; left: 14px; right: 14px; top: 0; height: 2px;
+  border-radius: 0 0 2px 2px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--marca-primario), transparent) no-repeat;
+  background-size: 40% 100%; animation: v2-barre 1.1s var(--ease-mueve) infinite; }
+.v2-tablero.cargando .v2-heroes, .v2-tablero.cargando .v2-minis { animation: none; }
+.v2-tablero > .v2-cargador { position: absolute; left: 0; right: 0; top: 0; height: 2px; z-index: 2; opacity: 0;
+  pointer-events: none; transition: opacity var(--mov-medio) ease;
+  background: linear-gradient(90deg, transparent, var(--marca-acento), transparent) no-repeat; background-size: 40% 100%; }
+.v2-tablero.cargando > .v2-cargador { opacity: 1; animation: v2-barre 1.1s var(--ease-mueve) infinite; }
+
+/* Explorador: cada vez que la tabla se renueva, se arma fila por fila; al
+   pasar el mouse, la fila se marca con un filo y su "Ver" se enciende. */
+.v2-fila-arma { animation: v2-arma var(--mov-lento) var(--ease-entrada) backwards; }
+.v2-tabs ~ .tabla-scroll .tabla-exp tr:hover td { background: color-mix(in srgb, var(--marca-primario) 5%, var(--blanco)); }
+.v2-tabs ~ .tabla-scroll .tabla-exp tr:hover td:first-child { box-shadow: inset 3px 0 0 var(--destacado); }
+.v2-tabs ~ .tabla-scroll .tabla-exp tr:hover .btn-ver { background: var(--marca-primario); border-color: var(--marca-primario); color: #fff; }
+.v2-tabs ~ .tabla-scroll .tabla-exp td { transition: background var(--mov-rapido) ease, box-shadow var(--mov-rapido) ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-construye > [data-armado], .v2-fila-arma, .v2-armando.lista i { animation: v2-solo-funde 300ms ease-out backwards !important; }
+  .v2-armando.grafico i { animation: v2-solo-funde 300ms ease-out backwards !important; }
+  .v2-alto { transition: none !important; }
+}
+/* Donde arriba hay más que el título y su bajada, el armado empieza debajo. */
+[data-panel="semaforo"] .v2-armando { top: 96px; }
+[data-panel="seccionales-geo"] .v2-armando { top: 124px; }
+[data-panel="explorador"] .v2-armando { top: 140px; }

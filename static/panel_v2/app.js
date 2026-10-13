@@ -253,6 +253,7 @@ function PanelSindical() {
       <button type="button" aria-label="Cerrar el aviso" onClick=${() => setAvisoCerrado(true)}>✕</button></div>`}
     ${aviso && html`<div class="aviso-error" role="alert">${aviso}</div>`}
     <section class=${"v2-tablero" + (kpi.cargando ? " cargando" : "")} data-panel="kpis" aria-busy=${!!kpi.cargando}>
+      <span class="v2-cargador" aria-hidden="true"></span>
       <${BarraFiltros} ...${comun} afiliados=${afiliados} abrirCajon=${() => setCajon(true)} />
       <${Kpis} datos=${kpi.datos || null} consultas=${CONSULTAS}
         error=${kpi.error !== undefined && kpi.error !== null} reintentar=${reintentar} />
@@ -273,14 +274,14 @@ function PanelSindical() {
         estado=${p("bot")} reintentar=${reintentar}><${Consultas} datos=${datos("bot")} ...${graf} /><//>`}
       <${Panel} nombre="formato" titulo="Adopción del nuevo formato (Ley 27.802)" sub="Recibos por formato, semana a semana"
         clase="span7" estado=${p("formato")} reintentar=${reintentar}><${Formato} datos=${datos("formato")} /><//>
-      <${Panel} nombre="semaforo" titulo="Semáforo de aportes"
+      <${Panel} nombre="semaforo" forma="lista" titulo="Semáforo de aportes"
         sub="Días desde el último depósito que imprime el recibo (formato Ley 27.802 — todavía son pocos recibos en relación al total, tomalo como indicativo)"
         clase="span5" estado=${p("semaforo")} reintentar=${reintentar}><${Semaforo} datos=${datos("semaforo")} /><//>
       <${Panel} nombre="seccionales-geo" titulo="Mapa de seccionales"
         sub=${html`Tocá un marcador para filtrar todo el panel por esa seccional. <b>Afiliados</b> y <b>ingresaron</b> son una foto del padrón y no cambian con el período; los otros cuatro sí.`}
         estado=${p("seccionales-geo")} reintentar=${reintentar}>
         <${MapaSeccionales} datos=${datos("seccionales-geo")} ...${graf} logo=${LOGO} /><//>
-      <${Panel} nombre="explorador" titulo="Explorador de datos" estado=${p("explorador")} reintentar=${reintentar}>
+      <${Panel} nombre="explorador" forma="lista" titulo="Explorador de datos" estado=${p("explorador")} reintentar=${reintentar}>
         <${Explorador} datos=${datos("explorador")} ...${graf} tabs=${TABS} contadores=${contadores}
           abrirDetalle=${setDetalle} /><//>
     </div>

@@ -168,7 +168,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   existente (`--sindicato "AEFIP"`); `cargar_lote_uom.py` es la versión
   anterior, específica de la UOM. Ver "Lotes de datos sintéticos".
 - cargar_bancaria.py — alta de "La Bancaria" con los conceptos del CCT 18/75
-  (ver `docs/cct-1875-bancarios.md`) + su lote.
+  (ver `docs/cct-1875-bancarios.md`) + su lote. `--rehacer-recibos` regenera
+  solo los recibos del lote; `--borrar-recibos-de CUIL [--si]` borra los de
+  una persona. Los montos salen de `grilla_bancaria.py` (puro: la grilla
+  vigente, hoy la de agosto 2026); `docs/recibos-bancaria-prueba/` tiene diez
+  recibos PDF simulados del CUIL de prueba 27999999994, con su generador.
 - medir_dashboard.py — mide los endpoints del Panel Sindical con 50.000 recibos.
 - e2e/ — robots de QA con Playwright (ver `e2e/README.md`).
 - chequeo.py — autodiagnóstico de la instalación.
@@ -210,7 +214,9 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   static/fonts/ (Barlow Condensed, licencia SIL OFL) + mapa.js (capa fina
   sobre Leaflet y las burbujas de los dos mapas de tablero, compartida por las
   cinco pantallas con mapa) +
-  modales.js (arrastre de modales en escritorio, ver "Modales") +
+  modales.js (arrastre de modales en escritorio y su movimiento, ver "Modales") +
+  movimiento.css (las duraciones y curvas `--mov-*`/`--ease-*` de TODA la app,
+  en un solo lugar, y cómo entran, se arman y se van los modales) +
   static/vendor/leaflet/ (Leaflet 1.9.4 vendoreado, jamás CDN) +
   static/vendor/preact/ (Preact 10.29.8 + htm 3.1.1, solo para la v2 del
   Panel Sindical; `ORIGEN.md` guarda el SHA-256 de cada archivo y un test lo
@@ -475,6 +481,16 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   donde el modal es una hoja pegada al borde. Una FAMILIA nueva de modal tiene
   que sumarse a `CAJAS` de ese archivo y al cursor de marca.css; `test_modales.py`
   verifica que toda plantilla con modales cargue el script.
+  **Y entran con movimiento** (2026-10-13, `static/movimiento.css` + el segundo
+  bloque de modales.js): la entrada es CSS, la salida la sostiene el script
+  con `mov-sale`, el contenido se arma en cascada, lo que dice "Cargando…" se
+  dibuja como la forma de lo que viene y la caja crece de a poco al llegar el
+  detalle. Ninguna función de abrir o cerrar se tocó. Una familia nueva suma
+  su fondo a `FONDOS_MOV` y sus reglas a movimiento.css (lo verifica el mismo
+  test); el "Ver" del Panel queda afuera a propósito. Las vistas que cambian
+  adentro de una pestaña sin ser modales (los trámites del afiliado y de la
+  empresa) llevan `data-mov-vista` y reciben lo mismo, menos el crecer de a
+  poco. Reglas en la skill `diseno-mi-trabajo` → "Movimiento".
 - **Patrón portada + panel interno**, repetido para los 3 roles con login
   (`/app/inicio`+`/app`, `/admin/inicio`+`/admin`, `/empresa/inicio`+`/empresa`)
   — cualquier rol nuevo que se agregue debería seguir el mismo patrón.
@@ -1265,7 +1281,17 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     duraciones de presentación (gráficos 1,4 s en cascada, modal 650 ms que
     llega desenfocado y se enfoca) y una curva `--ease-entrada` que reparte
     el recorrido. Con "reducir movimiento" ya no queda todo quieto: fundidos
-    suaves y un aviso que dice cómo apagarlo.
+    suaves y un aviso que dice cómo apagarlo. **Tercera vuelta** (Admin
+    0.53.03): esperar ya no es una pantalla gris. El modal se arma con lo que
+    la fila ya sabe y crece de a poco; los paneles trazan su grilla; al
+    filtrar, una línea fina arriba en vez de ponerse translúcidos; y el
+    explorador arma sus filas en cascada, marca la fila bajo el mouse y sus
+    totales corren. **Llevado a todos los modales de la plataforma**
+    (2026-10-13; Trabajador 0.45.02, Admin 0.53.04, Plataforma 0.43.05): ver
+    "Los modales se mueven" en Decisiones. De paso se corrigió que en `/admin`
+    cinco modales quedaban debajo de la barra de pestañas y, en un trámite
+    largo, sin título ni X visibles. Y a las vistas de Trámites del afiliado
+    y de la empresa, que no son modales (`data-mov-vista`, Trabajador 0.45.03).
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 
@@ -1533,9 +1559,12 @@ existente: 6 seccionales, ~12 empresas, 100 trabajadores con cuenta (**clave
 - **Perfiles de recibo por convenio**: un sindicato puede registrar en
   `cargar_lote_sindicato.PERFILES` una función que arma sus líneas de ingreso
   según SU convenio, en vez del armado genérico. `cargar_bancaria.py` es el
-  ejemplo: reproduce el CCT 18/75 (adicionales como % del **sueldo inicial**,
-  antigüedad embebida en el básico, cajero función + falla de caja como dos
-  líneas). Los rasgos estables del trabajador (antigüedad, si es cajero,
+  ejemplo: reproduce el CCT 18/75 con la **grilla firmada de agosto 2026**
+  (básico de la categoría + "Complemento salario conformado" hasta el
+  conformado, adicionales en **montos fijos**, ROE por la tabla de tramo de
+  bruto × ROE del banco, antigüedad embebida en el básico, cajero función +
+  falla de caja como dos líneas). Hasta el 2026-10-13 tomaba el conformado
+  como básico y los adicionales como % del inicial, y estaba mal. Los rasgos estables del trabajador (antigüedad, si es cajero,
   título) salen de `trab["semilla"]`, derivada del CUIL — no se sortean en
   cada recibo.
 

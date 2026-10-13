@@ -6928,3 +6928,142 @@ Lo que se hizo:
 Las reglas quedaron en `diseno-mi-trabajo` → "Movimiento", incluida una
 nueva: medir el porcentaje que ya pasó a los 100, 200 y 300 ms antes de
 opinar sobre una animación. La duración escrita no dice cómo se ve.
+
+**Movimiento, tercera vuelta (2026-10-13, Admin 0.53.03).** SDN vio mejor los
+gráficos, pero el modal todavía aparecía "como un rayo, ya completo", después
+de "una pantalla gris translúcida por una fracción de segundo"; lo mismo le
+pasaba a los gráficos al esperar datos. Además, en el explorador no encontraba
+diferencias con la v1. Eran tres cosas distintas:
+- **El modal** abría con un esqueleto gris, desenfocado y casi transparente.
+  Cuando llegaba el detalle, la caja saltaba a su alto. Ahora se arma con lo
+  que la fila ya sabe (`previa`: título, fecha, empresa...), pieza por pieza.
+  Lo que llega del servidor se suma debajo, también en cascada, y la caja
+  crece de a poco: un ResizeObserver mide el contenido y anima el alto. Las
+  fichas llevan `key` en cada pieza, así lo que llega después se inserta en
+  su lugar sin pisar lo que ya estaba. La caja se vuelve opaca en 220 ms.
+- **Los paneles**, al cambiar un filtro, se ponían translúcidos (`opacity:
+  .55`) hasta tener datos. Ahora quedan nítidos y corre una línea fina
+  arriba. En la primera carga, en vez de barras grises, trazan las líneas de
+  la grilla del gráfico (o los renglones de una lista) una por una.
+- **El explorador**: sus cambios (la marca que se desliza, "Ver más"
+  escalonado) eran demasiado sutiles. Ahora arma sus filas en cascada cada
+  vez que la tabla se renueva, marca la fila bajo el mouse con un filo y
+  enciende su "Ver", y los totales de las pestañas corren hasta su número.
+
+**El movimiento, a todos los modales (2026-10-13; Trabajador 0.45.02, Admin
+0.53.04, Plataforma 0.43.05).** SDN aprobó la tercera vuelta y pidió llevarla
+"al modal de perfil, noticias, trámites, recibo y los que falten, sin afectar
+funcionalidad". Relevados, son 25 modales en 9 pantallas, de seis familias de
+caja (`.modal-hoja`, `.modal-notif-caja`, `.modal-articulo`, `.modal-recibo`,
+`.overlay-ayuda-caja` y las imágenes ampliadas), y TODOS se abren y se cierran
+igual: la clase `abierto` en el fondo, que pasa de `display:none` a `flex`.
+Eso decidió el diseño, para no tocar ninguna de las ~40 funciones de abrir y
+cerrar:
+- **Las duraciones se mudaron a `static/movimiento.css`** (de `panel.css`, que
+  ahora la carga antes). Ahí van también las reglas de los modales.
+- **Entrar es CSS**: una animación arranca sola cuando el elemento aparece;
+  una transición desde `display:none`, no. La caja centrada llega desde .94 y
+  26 px más abajo, opaca en 220 ms; la hoja pegada abajo (perfil, "Acerca
+  de", notificaciones) sube desde el borde con `--ease-hoja`. El fondo anima
+  su color, no su opacidad, para no llevarse la caja con él.
+- **Irse lo sostiene `modales.js`**: al ver que el fondo perdió `abierto`, le
+  pone `mov-sale` el tiempo de la salida (320 ms) y después lo saca. El
+  arrastre espera a que termine para devolver la caja a su lugar (si no, se
+  la vería saltar al centro mientras se va), y si el modal se vuelve a abrir
+  a mitad de la salida, vuelve a su lugar en el acto.
+- **El contenido se arma**: los bloques del cuerpo (o los del contenedor que
+  cada pantalla llena con innerHTML) entran en cascada, de a 45 ms. Lo que
+  dice exactamente "Cargando…" -- hay once lugares que lo escriben -- se marca
+  `mov-cargando` y se dibuja como tres líneas que respiran (un título, el
+  título mismo respira); en la noticia y el beneficio, que dejan el cuerpo
+  vacío mientras esperan, las líneas van en el cuerpo. Cuando llega el
+  detalle, se arma de nuevo y la caja crece de su alto viejo al nuevo, todo
+  antes de que el navegador pinte (los MutationObserver corren antes), así
+  que el salto nunca se ve. Un repintado cualquiera, como un mensaje nuevo en
+  el chat de un trámite, solo ajusta el alto: rearmar todo cada vez sería
+  ruido.
+- **Afuera, a propósito**: el "Ver" del Panel (`.overlay-det`). La v1 recibe
+  solo arreglos mientras SDN decide D9 y la v2 trae su propio movimiento.
+- **Medido cuadro por cuadro** dentro de la página (requestAnimationFrame),
+  con la red frenada por CDP y el service worker bloqueado: con el worker
+  activo los pedidos de la página no pasan por el freno y "llegaban" en el
+  primer cuadro.
+
+Un error que estaba de antes y apareció al mirarlo: **cinco modales de
+`/admin` (trámite, trámite de empresa, seccional, avisar y publicar encuesta)
+quedaban DEBAJO de la barra fija de pestañas.** Viven adentro de
+`.mesa-cont`, que desde la "mesa" (2026-09-24) arma su propia capa con
+`z-index: 1`, y el 250 del modal solo valía adentro de ella. En un trámite
+largo la caja, centrada, metía su encabezado detrás de la barra: no se veían
+ni el número de expediente ni la X de cerrar. Arreglo en `interior.css`:
+mientras hay un modal abierto adentro, la capa sube a 45 (arriba de la barra,
+21, y de los botones flotantes, 40), pero no a más: el detalle de un mensaje
+vive afuera (250) y se abre ENCIMA del trámite, y tiene que seguir arriba.
+
+El robot del arrastre (`e2e/test_robot_modales.py`) medía la caja apenas
+visible, a mitad de su entrada: ahora espera a que termine de llegar
+(`_quieto`, que ignora las animaciones infinitas) y prueba además reabrir el
+perfil mientras se está cerrando.
+
+**Y las vistas de Trámites (2026-10-13, Trabajador 0.45.03).** SDN lo probó en
+Pruebas: "se ve bien; los trámites del trabajador no tienen el efecto". No lo
+tenían porque no son modales: la pestaña Trámites del afiliado (y su espejo en
+la app de empresa) cambia de VISTA adentro de la pestaña -- lista, formularios,
+formulario, detalle --, con `style.display`, y espera con la ruedita de
+`.cargando`. La marca `data-mov-vista` (en la pestaña y sus cuatro vistas) les
+da el mismo tratamiento desde `modales.js`: al aparecer, sus piezas entran en
+cascada; la ruedita se esconde y quedan las líneas que respiran (el detalle
+muestra ya el número de expediente, que es lo que se sabe); y cuando llega la
+respuesta se arma LO QUE LLEGÓ (los nodos nuevos, sin repetir los que vienen
+adentro de otro y en orden de lectura), no la vista entera. Lo que no hacen es
+crecer de a poco: una vista está en el flujo de la página y animar su alto
+reacomodaría todo lo de abajo cuadro por cuadro. Cambiar un filtro de la
+lista, que repinta sin esperar, no rearma: sería ruido.
+
+
+## La Bancaria con la grilla de agosto 2026: básico no es conformado (2026-10-13)
+
+Al relevar la web oficial de La Bancaria se leyó la grilla firmada de agosto
+2026 (`GRILLAS-AGOSTO-2026.pdf`, 8 páginas escaneadas, transcriptas a mano a
+`docs/cct-1875-bancarios.md`) y el modelo de `cargar_bancaria.py` estaba mal
+en tres cosas:
+
+1. **Tomaba el conformado como básico.** `SUELDO_INICIAL = 2.463.757,68` era
+   el "Salario Inicial" del comunicado de julio, que es el **conformado**: la
+   remuneración mínima garantizada hasta los 15 años de antigüedad. El básico
+   del inicial es $ 1.642.764,63. Ahora el recibo lleva el básico de la
+   grilla y una línea "Complemento salario conformado" por la diferencia. El
+   nombre y la mecánica (piso del básico, sin contar los adicionales de
+   función) son un supuesto: la grilla no dice cómo lo imprime un banco y no
+   se encontró fuente. SDN decidió dejarlo así hasta saberlo.
+2. **Los adicionales como % del inicial de 1975.** Hoy la grilla publica
+   montos fijos (cajero $ 163.963,06, falla $ 287.355,05, títulos, zona
+   patagónica en tres tramos). Computación, técnicos, máquinas, portavalores
+   y nocturno no tienen monto vigente y se dejaron de simular.
+3. **El ROE como un solo monto.** Sale de una tabla de 4 tramos de bruto × 6
+   tramos de ROE del banco, anual, de a 1/12; cada banco del lote tiene su
+   tramo fijo y uno no paga. Verificado: el inicial en el tramo 3,5–8,75% da
+   los $ 72.413,50 del comunicado.
+
+Los coeficientes de la rama administrativa resultaron ser los mismos del
+art. 5 de 1975 (lo distinto son maestranza y ordenanza, que el lote no usa).
+La grilla pasó a un módulo puro, `grilla_bancaria.py`, para que el lote, el
+generador de PDF y el test lean los mismos números.
+
+**Regenerar sin re-sembrar.** `lote.sembrar_base` es idempotente para las
+filas pero vuelve a sortear el nombre de cada afiliado y lo escribe en su
+cuenta: llamarlo para regenerar recibos le cambiaba el nombre a los cien.
+`--rehacer-recibos` arma la lista de trabajadores desde la base. Por la misma
+razón la antigüedad del agente pasó a derivarse del CUIL (`antiguedad_de`):
+el valor sorteado por el lote no quedaba en ninguna columna.
+
+**Diez PDF de prueba** (`docs/recibos-bancaria-prueba/`), del CUIL de prueba
+de Pruebas, siete bien y tres con error. Un caso previsto se cayó al
+verificarlo: una cuota sindical al 2,5% no es un error para la app, porque el
+tope del 2% (art. 133) solo mira las cuotas de **convenio** y la de La
+Bancaria está cargada como **afiliación**; se cambió por un neto mal sumado.
+El test arma cada caso como el PDF y lo pasa por el camino de `/api/leer` +
+`/api/validar` (alta de los códigos nuevos como pendientes, aportes
+vinculados a su genérico): sin ese paso, con códigos que el catálogo no
+conoce, todo da diferencia.
+

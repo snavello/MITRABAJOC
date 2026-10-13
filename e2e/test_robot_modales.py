@@ -38,6 +38,25 @@ COMO_PREPARAR = ("Falta la demo o su lote. Corré: python cargar_demo.py && "
                  'python cargar_lote_sindicato.py --sindicato "Unión Obrera Metalúrgica"')
 
 
+def _quieto(page, fondo):
+    """Espera a que el modal termine de llegar: los modales entran con
+    movimiento (static/movimiento.css) y una caja medida a mitad de camino
+    no está donde va a quedar. Si estaba cargando algo, espera también a que
+    llegue y a que el contenido termine de armarse. Las animaciones infinitas
+    (lo que "respira" mientras espera) no cuentan: nunca terminan."""
+    page.locator(fondo).evaluate("""async (f) => {
+      const finitas = () => f.getAnimations({ subtree: true })
+        .filter(a => a.effect && a.effect.getTiming().iterations !== Infinity);
+      const fin = Date.now() + 8000;
+      while (Date.now() < fin) {
+        await Promise.all(finitas().map(a => a.finished.catch(() => {})));
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        if (!f.querySelector('.mov-cargando') && !f.querySelector('.mov-crece') && !finitas().length) return;
+        await new Promise(r => setTimeout(r, 60));
+      }
+    }""")
+
+
 def _arrastrar(page, agarre, dx, dy):
     """Arrastra desde el centro del agarre. Devuelve nada: lo que se mide
     después es dónde quedó la caja."""
@@ -62,6 +81,7 @@ def test_el_modal_de_perfil_se_mueve_y_vuelve(nuevo_actor, informe):
         pytest.skip(COMO_PREPARAR)
     page.click("button.circulo-acento")
     expect(page.locator("#overlay-perfil")).to_have_class("overlay abierto")
+    _quieto(page, "#overlay-perfil")
     informe.paso("El afiliado abrió su perfil")
 
     caja = page.locator("#overlay-perfil .modal-notif-caja")
@@ -83,9 +103,12 @@ def test_el_modal_de_perfil_se_mueve_y_vuelve(nuevo_actor, informe):
     assert lejos["y"] >= -1 and lejos["y"] + lejos["height"] <= alto + 1, lejos
     informe.paso("Empujándolo contra el borde queda entero adentro de la ventana")
 
+    # Se vuelve a abrir enseguida, mientras todavía se está yendo: es el caso
+    # en que más fácil quedaría corrido.
     page.click("#overlay-perfil .modal-cerrar-clara")
     page.click("button.circulo-acento")
     expect(page.locator("#overlay-perfil")).to_have_class("overlay abierto")
+    _quieto(page, "#overlay-perfil")
     vuelta = caja.bounding_box()
     assert abs(vuelta["x"] - antes["x"]) < 2 and abs(vuelta["y"] - antes["y"]) < 2, (antes, vuelta)
     informe.paso("Al cerrarlo y volver a abrirlo aparece en su lugar de siempre")
@@ -111,6 +134,7 @@ def test_un_modal_del_panel_del_sindicato_tambien_se_mueve(nuevo_actor, informe)
         pytest.skip("No hay seccionales cargadas. " + COMO_PREPARAR)
     fila.locator('button:has-text("Ver")').click()
     expect(page.locator("#modal-seccional")).to_be_visible()
+    _quieto(page, "#modal-seccional")
     informe.paso("El admin abrió la ficha de una seccional")
 
     caja = page.locator("#modal-seccional .modal-recibo")

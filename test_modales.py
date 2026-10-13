@@ -105,3 +105,113 @@ def test_la_tarjeta_de_contenido_no_es_un_modal():
     cajas = re.search(r'var CAJAS = "([^"]+)"', js).group(1)
     assert "modal-recibo-card" not in cajas, cajas
     print("OK  test_la_tarjeta_de_contenido_no_es_un_modal")
+
+
+# ---------- El movimiento de los modales (2026-10-13) ----------
+# Mismo criterio que el arrastre: el movimiento vive en dos archivos
+# compartidos (static/movimiento.css y el segundo bloque de modales.js) para
+# que no pase que tres modales entren con movimiento y el cuarto aparezca de
+# golpe. Lo que se prueba acá es la cobertura; cómo se ve, los robots.
+
+# La v1 del Panel recibe solo arreglos mientras SDN decide D9: su "Ver" queda
+# como está, a propósito.
+SIN_MOVIMIENTO = {"dashboard.html"}
+
+
+def test_todas_las_pantallas_con_modales_cargan_el_movimiento():
+    faltan = [nombre for nombre, html in _con_modales()
+              if nombre not in SIN_MOVIMIENTO
+              and "movimiento.css?v={{ sello_static('movimiento.css') }}" not in html]
+    assert not faltan, ("estas pantallas tienen modales y no cargan movimiento.css "
+                        f"(o lo cargan sin sello): sus modales aparecerían de golpe: {faltan}")
+    print("OK  test_todas_las_pantallas_con_modales_cargan_el_movimiento")
+
+
+def _fondos_js():
+    with open("static/modales.js", encoding="utf-8") as f:
+        js = f.read()
+    lista = re.search(r'var FONDOS_MOV = "([^"]+)"', js).group(1)
+    return [x.strip().lstrip(".") for x in lista.split(",")]
+
+
+def test_el_css_cubre_los_mismos_fondos_que_el_script():
+    """El script sostiene la salida con `mov-sale` y el CSS es el que la deja
+    visible: un fondo que esté en uno solo se cerraría de golpe (o quedaría
+    abierto, invisible y sin recibir clics, el tiempo de la salida)."""
+    with open("static/movimiento.css", encoding="utf-8") as f:
+        css = f.read()
+    fondos = _fondos_js()
+    assert len(fondos) >= 4, fondos
+    for fondo in fondos:
+        assert f".{fondo}.mov-sale" in css, f"{fondo}: falta su regla de salida en movimiento.css"
+    print("OK  test_el_css_cubre_los_mismos_fondos_que_el_script")
+
+
+def test_el_ver_del_panel_no_entra_en_el_movimiento_compartido():
+    """`.overlay-det` es el "Ver" del Panel Sindical: la v1 no se toca y la v2
+    trae su propio movimiento en panel.css. Si entrara acá, la v2 tendría dos
+    motores peleándose por la misma caja."""
+    assert "overlay-det" not in _fondos_js()
+    with open("static/movimiento.css", encoding="utf-8") as f:
+        css = f.read()
+    sin_comentarios = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    assert "overlay-det" not in sin_comentarios and "modal-det" not in sin_comentarios
+    print("OK  test_el_ver_del_panel_no_entra_en_el_movimiento_compartido")
+
+
+def test_las_duraciones_viven_en_un_solo_lugar():
+    """Los `--mov-*` y `--ease-*` se definen solo en movimiento.css: con dos
+    copias, cambiar una duración en una dejaría la otra pantalla con la vieja,
+    y la v2 del Panel (que los lee desde JS para Chart.js) dejaría de coincidir
+    con su propio CSS."""
+    definiciones = re.compile(r"--(mov|ease)-[a-z]+\s*:")
+    for raiz, _, archivos in os.walk("static"):
+        if "vendor" in raiz:
+            continue
+        for nombre in archivos:
+            if not nombre.endswith(".css"):
+                continue
+            ruta = os.path.join(raiz, nombre)
+            with open(ruta, encoding="utf-8") as f:
+                hay = definiciones.findall(re.sub(r"/\*.*?\*/", "", f.read(), flags=re.S))
+            if ruta.replace(os.sep, "/") == "static/movimiento.css":
+                assert len(hay) >= 10, "movimiento.css perdió sus duraciones"
+            else:
+                assert not hay, f"{ruta} define duraciones propias: van en movimiento.css"
+    with open("templates/dashboard_v2.html", encoding="utf-8") as f:
+        v2 = f.read()
+    assert v2.index("movimiento.css") < v2.index("panel_v2/panel.css"), \
+        "la v2 tiene que cargar movimiento.css antes que su panel.css"
+    print("OK  test_las_duraciones_viven_en_un_solo_lugar")
+
+
+def test_nada_del_movimiento_anima_transform():
+    """modales.js arrastra la caja con `style.transform`: una animación sobre
+    `transform` lo pisaría y el modal saltaría al centro en plena entrada o
+    salida. Se anima `scale` y `translate`, que se suman al arrastre."""
+    with open("static/movimiento.css", encoding="utf-8") as f:
+        css = re.sub(r"/\*.*?\*/", "", f.read(), flags=re.S)
+    for bloque in re.findall(r"@keyframes\s+[\w-]+\s*\{(.*?)\}\s*\}", css, flags=re.S):
+        assert "transform" not in bloque, bloque
+    print("OK  test_nada_del_movimiento_anima_transform")
+
+
+def test_las_vistas_de_tramites_se_arman_como_un_modal():
+    """Los trámites del afiliado y de la empresa no abren un modal: cambian de
+    vista adentro de la pestaña. SDN lo notó en Pruebas ("los trámites del
+    trabajador no tienen el efecto", 2026-10-13). La pestaña y sus cuatro
+    vistas llevan `data-mov-vista`, que modales.js vigila y movimiento.css
+    arma; si una vista nueva no la lleva, cambia de golpe."""
+    for plantilla, prefijo in (("trabajador.html", "tram"), ("empresa.html", "trx")):
+        with open(os.path.join(PLANTILLAS, plantilla), encoding="utf-8") as f:
+            html = f.read()
+        assert 'id="tp-tramites" data-mov-vista' in html, plantilla
+        for vista in ("inicio", "tipos", "form", "detalle"):
+            assert f'id="{prefijo}-{vista}" data-mov-vista' in html, (plantilla, vista)
+    with open("static/modales.js", encoding="utf-8") as f:
+        js = f.read()
+    assert 'querySelectorAll("[data-mov-vista]")' in js
+    with open("static/movimiento.css", encoding="utf-8") as f:
+        css = f.read()
+    assert "[data-mov-vista]) [data-armado]" in css
+    print("OK  test_las_vistas_de_tramites_se_arman_como_un_modal")

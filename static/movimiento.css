@@ -1,0 +1,186 @@
+/* El movimiento de la plataforma: duraciones, curvas y los modales.
+
+   Nació como el "caso cero" de la v2 del Panel Sindical (2026-10-12) y se
+   mudó acá el 2026-10-13, cuando SDN pidió llevarlo a todos los modales:
+   perfil, noticias, beneficios, trámites, recibos, ayuda, "Acerca de". Lo
+   cargan las pantallas con modales y la v2 del Panel (que además lee estos
+   números desde JS para Chart.js, `panel/movimiento`). Un solo lugar: cambiar
+   una duración es cambiarla en este archivo.
+
+   Reglas (skill `diseno-mi-trabajo`, "Movimiento"; referencia,
+   `emil-design-eng`):
+   - lo que tiene que VERSE entrar (paneles, gráficos, modales) usa
+     `--ease-entrada`, que reparte el recorrido; la respuesta inmediata
+     (hover, apretar, cerrar) usa `--ease-salida`, que hace casi todo al
+     principio; lo que se mueve de un lugar a otro, `--ease-mueve`; una hoja
+     que sube desde abajo, `--ease-hoja`; nunca `ease-in`;
+   - cerrar es más rápido que abrir; lo que se usa muchas veces seguidas
+     (pasar el mouse, apretar) es corto;
+   - nada aparece desde escala cero: desde .94 como mucho;
+   - se anima `opacity`, `scale` y `translate`, nunca `transform`:
+     modales.js lo usa para el arrastre y se pisarían;
+   - con "reducir movimiento" solo quedan fundidos suaves, sin nada que se
+     desplace (al final del archivo).
+
+   Las entradas son de PRESENTACIÓN, a pedido de SDN (2026-10-13): con las
+   duraciones cortas de una interfaz de todos los días (~300 ms, lo que
+   recomienda `emil-design-eng`) y una curva de salida fuerte, medido en el
+   navegador el modal ya estaba al 95% a los 150 ms y se veía "rápido y
+   brusco". */
+:root {
+  --mov-presion: 120ms;   /* un botón que se aprieta */
+  --mov-rapido: 180ms;    /* pasar el mouse, tooltips */
+  --mov-medio: 320ms;     /* cambios de estado, cierres */
+  --mov-lento: 650ms;     /* apertura de modales y cajones */
+  --mov-entrada: 900ms;   /* un panel que entra al hacer scroll */
+  --mov-cambio: 800ms;    /* un gráfico que pasa de un valor a otro */
+  --mov-datos: 1400ms;    /* un gráfico que se dibuja por primera vez */
+  --mov-correr: 1600ms;   /* un indicador que corre hasta su número */
+  --mov-escalon: 120ms;   /* entre dos que entran juntos */
+  --ease-entrada: cubic-bezier(.33, 1, .68, 1);
+  --ease-salida: cubic-bezier(.23, 1, .32, 1);
+  --ease-mueve: cubic-bezier(.65, 0, .35, 1);
+  --ease-hoja: cubic-bezier(.32, .72, 0, 1);
+}
+
+/* ================= Los modales =================
+   Todos se abren y se cierran con la clase `abierto` en el fondo, que pasa
+   de `display:none` a `display:flex`. Por eso la ENTRADA va con keyframes
+   (una animación arranca sola cuando el elemento aparece; una transición
+   no) y la SALIDA la sostiene modales.js: al sacarse `abierto` le pone
+   `mov-sale` al fondo, que lo deja visible el tiempo de irse. Si modales.js
+   no carga, los modales siguen andando: entran con movimiento y se cierran
+   de golpe, como siempre.
+
+   Afuera, a propósito: el "Ver" de la v1 del Panel (`.overlay-det`), que
+   recibe solo arreglos mientras SDN decide D9, y el de la v2, que tiene su
+   propio movimiento en panel.css. */
+
+/* ---- El fondo: se oscurece y, con mouse, se desenfoca apenas ----
+   Se anima el color del fondo y no su opacidad: la opacidad se llevaría
+   también la caja, que tiene su propio ritmo. */
+:is(.overlay, .modal-recibo-overlay, .overlay-ayuda, .overlay-foto-grande).abierto {
+  animation: mov-fondo-entra var(--mov-medio) ease-out backwards; }
+.overlay.mov-sale, .modal-recibo-overlay.mov-sale, .overlay-ayuda.mov-sale, .overlay-foto-grande.mov-sale {
+  display: flex; pointer-events: none;
+  animation: mov-fondo-sale var(--mov-medio) var(--ease-salida) forwards; }
+@keyframes mov-fondo-entra { from { background-color: rgba(8, 12, 20, 0); } }
+@keyframes mov-fondo-sale { to { background-color: rgba(8, 12, 20, 0); backdrop-filter: blur(0); } }
+@media (hover: hover) and (pointer: fine) {
+  :is(.overlay, .modal-recibo-overlay, .overlay-ayuda, .overlay-foto-grande):is(.abierto, .mov-sale) {
+    backdrop-filter: blur(2px); }
+  @keyframes mov-fondo-entra { from { background-color: rgba(8, 12, 20, 0); backdrop-filter: blur(0); } }
+}
+
+/* ---- La caja ----
+   Centrada, llega subiendo un poco desde .94: opaca enseguida (un velo
+   translúcido se lee como "pantalla gris") y el recorrido con la curva que
+   lo reparte. La hoja pegada abajo (el fondo `.overlay` sin centrar) sube
+   desde el borde, como una hoja de verdad. */
+.overlay-centro.abierto > :is(.modal-hoja, .modal-notif-caja, img),
+.overlay-articulo.abierto > .modal-articulo,
+.modal-recibo-overlay.abierto > .modal-recibo,
+.overlay-ayuda.abierto > .overlay-ayuda-caja,
+.overlay-foto-grande.abierto > img {
+  animation: mov-aparece 220ms ease-out backwards, mov-llega var(--mov-lento) var(--ease-entrada) backwards; }
+.overlay:not(.overlay-centro):not(.overlay-articulo).abierto > :is(.modal-hoja, .modal-notif-caja) {
+  animation: mov-aparece 160ms ease-out backwards, mov-sube var(--mov-lento) var(--ease-hoja) backwards; }
+@keyframes mov-aparece { from { opacity: 0; } }
+@keyframes mov-llega { from { scale: .94; translate: 0 26px; } }
+@keyframes mov-sube { from { translate: 0 100%; } }
+
+/* Y se va más rápido de lo que vino, con la curva que hace casi todo al
+   principio: el cierre es una respuesta, no una presentación. */
+.overlay-centro.mov-sale > :is(.modal-hoja, .modal-notif-caja, img),
+.overlay-articulo.mov-sale > .modal-articulo,
+.modal-recibo-overlay.mov-sale > .modal-recibo,
+.overlay-ayuda.mov-sale > .overlay-ayuda-caja,
+.overlay-foto-grande.mov-sale > img {
+  animation: mov-se-va var(--mov-medio) var(--ease-salida) forwards; }
+.overlay:not(.overlay-centro):not(.overlay-articulo).mov-sale > :is(.modal-hoja, .modal-notif-caja) {
+  animation: mov-baja var(--mov-medio) var(--ease-salida) forwards; }
+@keyframes mov-se-va { to { opacity: 0; scale: .97; translate: 0 10px; } }
+@keyframes mov-baja { to { translate: 0 100%; } }
+
+/* ---- El contenido se arma pieza por pieza ----
+   modales.js marca cada bloque con `data-armado` y su escalón al abrir, y
+   otra vez cuando llega lo que se estaba cargando. Lo mismo en las vistas
+   que cambian adentro de una pestaña (`data-mov-vista`: los trámites del
+   afiliado y de la empresa). */
+:is(.modal-hoja, .modal-notif-caja, .modal-articulo, .modal-recibo, .overlay-ayuda-caja, [data-mov-vista]) [data-armado] {
+  animation: mov-arma var(--mov-lento) var(--ease-entrada) backwards; }
+@keyframes mov-arma { from { opacity: 0; translate: 0 12px; } }
+
+/* ---- Esperar es armar, nunca apagar ----
+   Lo que dice "Cargando…" (lo marca modales.js con `mov-cargando`) no queda
+   como un texto suelto: en el cuerpo se ve la forma de lo que viene, unas
+   líneas que respiran; en un título (o en el encabezado oscuro del modal), el
+   título mismo respira. El texto se
+   queda, chico, para quien no ve la pantalla y para los robots.
+   `currentColor` hace que las líneas sirvan igual sobre la hoja oscura
+   (perfil del afiliado) que sobre la clara. */
+:is(.modal-hoja, .modal-notif-caja, .modal-articulo, .modal-recibo, .overlay-ayuda-caja, [data-mov-vista]) .mov-cargando:not(h1, h2, h3, h4):not(:is(.modal-articulo-enc, .modal-notif-enc, .modal-recibo-enc) *) {
+  display: block; font-size: 12px; opacity: .7; }
+:is(.modal-hoja, .modal-notif-caja, .modal-articulo, .modal-recibo, .overlay-ayuda-caja, [data-mov-vista]) .mov-cargando:not(h1, h2, h3, h4):not(:is(.modal-articulo-enc, .modal-notif-enc, .modal-recibo-enc) *)::after,
+.mov-esperando > :is(.modal-articulo-body, .modal-notif-body):not(:has(.mov-cargando))::before {
+  content: ""; display: block; height: 52px; margin-top: 10px; border-radius: 5px;
+  --mov-esq: rgba(128, 132, 140, .2);
+  background:
+    linear-gradient(var(--mov-esq), var(--mov-esq)) 0 0 / 94% 9px no-repeat,
+    linear-gradient(var(--mov-esq), var(--mov-esq)) 0 21px / 76% 9px no-repeat,
+    linear-gradient(var(--mov-esq), var(--mov-esq)) 0 42px / 58% 9px no-repeat;
+  animation: mov-respira 1.1s ease-in-out infinite alternate; }
+.mov-esperando > :is(.modal-articulo-body, .modal-notif-body):not(:has(.mov-cargando))::before { margin: 0 0 14px; }
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  :is(.modal-hoja, .modal-notif-caja, .modal-articulo, .modal-recibo, .overlay-ayuda-caja, [data-mov-vista]) .mov-cargando:not(h1, h2, h3, h4):not(:is(.modal-articulo-enc, .modal-notif-enc, .modal-recibo-enc) *)::after,
+  .mov-esperando > :is(.modal-articulo-body, .modal-notif-body):not(:has(.mov-cargando))::before {
+    --mov-esq: color-mix(in srgb, currentColor 16%, transparent); }
+}
+:is(.modal-hoja, .modal-notif-caja, .modal-articulo, .modal-recibo, .overlay-ayuda-caja) :is(h1, h2, h3, h4).mov-cargando,
+:is(.modal-articulo-enc, .modal-notif-enc, .modal-recibo-enc) .mov-cargando {
+  animation: mov-respira 1.1s ease-in-out infinite alternate; }
+@keyframes mov-respira { from { opacity: .45; } to { opacity: 1; } }
+/* En las vistas, la espera es la ruedita de `.cargando`: se esconde y quedan
+   las líneas, alineadas como el contenido que va a llegar. */
+[data-mov-vista] .cargando.mov-cargando { text-align: left; }
+[data-mov-vista] .cargando.mov-cargando > .spin { display: none; }
+
+/* ---- Cuando llega lo que faltaba, la caja crece de a poco ----
+   modales.js fija el alto viejo, y el nuevo llega con esta transición. */
+.mov-crece { overflow: hidden !important; transition: height var(--mov-lento) var(--ease-entrada); }
+
+/* ---- El cajón del cruce (dashboard de una encuesta) ----
+   Entra como una hoja, con su curva, y se va más rápido; el velo de atrás
+   aparece en vez de encenderse. */
+aside.cruce { transition: transform var(--mov-medio) var(--ease-salida); }
+aside.cruce.abierto { transition: transform var(--mov-lento) var(--ease-hoja); }
+.velo.abierto { animation: mov-aparece var(--mov-medio) ease-out backwards; }
+
+/* ---- Con "reducir movimiento": fundidos suaves y nada que se desplace ----
+   marca.css corta TODA animación con `!important` sobre `*`; estas reglas
+   son más específicas y la vuelven a permitir, solo para fundir. */
+@media (prefers-reduced-motion: reduce) {
+  :is(.overlay, .modal-recibo-overlay, .overlay-ayuda, .overlay-foto-grande).abierto {
+    animation: mov-fondo-entra 200ms ease-out backwards !important; backdrop-filter: none !important; }
+  .overlay.mov-sale, .modal-recibo-overlay.mov-sale, .overlay-ayuda.mov-sale, .overlay-foto-grande.mov-sale {
+    animation: mov-fondo-sale 160ms ease-out forwards !important; backdrop-filter: none !important; }
+  .overlay.abierto > :is(.modal-hoja, .modal-notif-caja, .modal-articulo, img),
+  .modal-recibo-overlay.abierto > .modal-recibo,
+  .overlay-ayuda.abierto > .overlay-ayuda-caja,
+  .overlay-foto-grande.abierto > img {
+    animation: mov-aparece 200ms ease-out backwards !important; }
+  .overlay.mov-sale > :is(.modal-hoja, .modal-notif-caja, .modal-articulo, img),
+  .modal-recibo-overlay.mov-sale > .modal-recibo,
+  .overlay-ayuda.mov-sale > .overlay-ayuda-caja,
+  .overlay-foto-grande.mov-sale > img {
+    animation: mov-desvanece 160ms ease-out forwards !important; }
+  :is(.modal-hoja, .modal-notif-caja, .modal-articulo, .modal-recibo, .overlay-ayuda-caja, [data-mov-vista]) [data-armado] {
+    animation: mov-aparece 300ms ease-out backwards !important; }
+  :is(.modal-hoja, .modal-notif-caja, .modal-articulo, .modal-recibo, .overlay-ayuda-caja, [data-mov-vista]) .mov-cargando,
+  :is(.modal-hoja, .modal-notif-caja, .modal-articulo, .modal-recibo, .overlay-ayuda-caja, [data-mov-vista]) .mov-cargando::after,
+  .mov-esperando > :is(.modal-articulo-body, .modal-notif-body)::before { animation: none !important; }
+  .mov-crece { transition: none !important; }
+  aside.cruce, aside.cruce.abierto { transition: transform 1ms !important; }
+  .velo.abierto { animation: mov-aparece 200ms ease-out backwards !important; }
+}
+@keyframes mov-desvanece { to { opacity: 0; } }

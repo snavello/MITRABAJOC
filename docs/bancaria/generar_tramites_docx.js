@@ -199,7 +199,7 @@ NO_AF.forEach(x => cuerpo.push(vineta([r(x.nombre + ': ', { bold: true }), r(x.c
 cuerpo.push(h2('Qué cambió respecto de la primera versión'));
 [['Turismo', 'La primera versión decía que había «un sistema completo de reservas». Es un sistema interno de las seccionales; para el afiliado la reserva sigue siendo semi-online.'],
  ['Tus Datos', 'Es online de punta a punta y no tiene paso de aprobación del sindicato. Comparte la cuenta con el kit escolar.'],
- ['El recibo', 'El control del CCT 18/75 no está listo, es desarrollo. El «salario inicial» de los comunicados es el conformado, no el básico (agosto 2026: básico $1.642.764,63, conformado $2.505.061,24). Los adicionales hoy son montos fijos y el ROE sale de una tabla por tramos. El modelo de la demo de La Bancaria tiene ese error.'],
+ ['El recibo', 'El control del CCT 18/75 no está listo, es desarrollo. El «salario inicial» de los comunicados es el conformado, no el básico (agosto 2026: básico $1.642.764,63, conformado $2.505.061,24). Los adicionales hoy son montos fijos y el ROE sale de una tabla por tramos. La demo de La Bancaria tenía ese error y se corrigió el mismo día con la grilla firmada (grilla_bancaria.py).'],
  ['Denuncias por violencia', 'Pasan de «listo» a «ajuste»: hoy los administradores ven todos los trámites. El protocolo interno de 2023 es para la gente del sindicato; la violencia en el banco va por los protocolos de cada banco.'],
  ['Guardia gremial', 'Era el canal de emergencia de la cuarentena de 2020, no un servicio vigente.'],
  ['Previsión', 'La «clave de la seguridad social» es lo que pide ANSES para su web, no lo que pide el sindicato. Ningún formulario de Colm3na pide claves.'],

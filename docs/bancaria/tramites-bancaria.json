@@ -645,7 +645,7 @@
    "formulario": "",
    "encadenados": "",
    "area": "Acción Gremial (Secretaría de Acción Gremial nacional) + Prensa para cargar la grilla",
-   "falta": "1) Tabla mensual de parámetros (básico por rama×categoría, conformado, adicionales en pesos, ROE por tramo, Día del Bancario). 2) El motor de fórmulas solo admite +,−,×,÷, base_remunerativa, total_ingresos y c(\"COD\"): faltan reglas de mínimo, condicionales y búsqueda por categoría/antigüedad (el extractor ya lee empleado.categoria y fecha_ingreso, el validador no los usa). 3) Corregir el modelo: el CCT doc y cargar_bancaria.py calculan básico = inicial conformado × coeficiente y adicionales como % de 1975; la grilla real usa una base ≈$1.474.067 × coef con piso $1.642.764,63, un conformado aparte y adicionales en pesos fijos (cajero $163.963,06, falla de caja $287.355,05…). Con el modelo actual daría diferencias falsas."
+   "falta": "1) Tabla mensual de parámetros (básico por rama×categoría, conformado, adicionales en pesos, ROE por tramo, Día del Bancario). 2) El motor de fórmulas solo admite +,−,×,÷, base_remunerativa, total_ingresos y c(\"COD\"): faltan reglas de mínimo, condicionales y búsqueda por categoría/antigüedad (el extractor ya lee empleado.categoria y fecha_ingreso, el validador no los usa). 3) El modelo de la demo ya está corregido con la grilla firmada de agosto 2026 (grilla_bancaria.py: básico de la grilla, complemento hasta el conformado, adicionales en pesos fijos, ROE por tabla); falta llevar esa grilla al motor de control."
   },
   "kit_inicio": {
    "candidato": true,

@@ -11,6 +11,7 @@
 <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
 <title>Revisá tu recibo — {{ sindicato or 'Colm3na' }}</title>
+<link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
 <style>
   /* La condensada y las variables de fuente viven en marca.css, que ESTA
      plantilla no carga (tiene su propio CSS). Se declaran acá para que los
@@ -1260,9 +1261,9 @@
 
   <!-- ============ PESTAÑA: TRÁMITES ============ -->
   {% if 'tramites' in modulos %}
-  <div class="tpanel" id="tp-tramites">
+  <div class="tpanel" id="tp-tramites" data-mov-vista>
 
-    <div id="tram-inicio">
+    <div id="tram-inicio" data-mov-vista>
       <h1 class="titulo-pagina">Trámites</h1>
       <p class="sub">Formularios de tu sindicato y seguimiento de tus expedientes.</p>
 
@@ -1291,7 +1292,7 @@
       <div id="tram-lista"><div class="cargando" style="padding:20px 0;"><div class="spin"></div></div></div>
     </div>
 
-    <div id="tram-tipos" style="display:none;">
+    <div id="tram-tipos" data-mov-vista style="display:none;">
       <div class="tram-box">
         <div class="tram-box-enc">
           <div class="tit">Iniciar un trámite</div>
@@ -1304,7 +1305,7 @@
       <button class="btn sec" id="tram-tipos-volver" style="margin-top:16px;">Volver</button>
     </div>
 
-    <div id="tram-form" style="display:none;">
+    <div id="tram-form" data-mov-vista style="display:none;">
       <div class="tram-box" style="position:relative;">
         <!-- El sello de ENVIADO cae sobre el formulario (ver enviarTramiteOk) -->
         <div class="tram-sello-overlay" id="tram-sello"></div>
@@ -1329,7 +1330,7 @@
       <button class="btn sec" id="tram-form-volver" style="margin-top:16px;">Cancelar</button>
     </div>
 
-    <div id="tram-detalle" style="display:none;">
+    <div id="tram-detalle" data-mov-vista style="display:none;">
       <div class="tram-box">
         <div class="tram-box-enc">
           <div class="tit" id="tram-det-expediente">Trámite</div>

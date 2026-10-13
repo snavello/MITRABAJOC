@@ -130,6 +130,18 @@ body.mesa .mesa-cont {
   position: relative;
   z-index: 1;
 }
+/* Pero esa capa propia encierra también a los modales que viven adentro del
+   contenedor (en /admin, el de un trámite, una seccional, una encuesta): su
+   z-index alto solo valía DENTRO de ella, y quedaban debajo de la barra fija
+   de pestañas. En un trámite largo eso tapaba el título y la X de cerrar.
+   Mientras un modal está abierto -- o yéndose (`mov-sale`, modales.js) --,
+   la capa sube por encima de la barra (21) y de los botones flotantes (40),
+   pero NO de los modales que viven afuera (100 a 250): alguno se abre
+   encima de uno de adentro, como el detalle de un mensaje sobre su trámite.
+   Sin `:has()` (navegadores viejos) queda como estaba. */
+body.mesa .mesa-cont:has(:is(.overlay, .modal-recibo-overlay, .overlay-ayuda, .overlay-foto-grande):is(.abierto, .mov-sale)) {
+  z-index: 45;
+}
 
 /* En teléfono se apaga todo: la columna YA ocupa el ancho completo, la
    franja solo le quitaría contraste a lo primero que se lee y la textura no

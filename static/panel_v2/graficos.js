@@ -165,9 +165,12 @@ function useGrafico(tipo, armar, deps) {
    reintento (DASHBOARD.md §4.6: un panel caído no rompe el resto).
 
    Entra en escena cuando se lo mira (`visto`, con el escalón que le toca si
-   entran varios juntos) y, mientras espera sus primeros datos, muestra un
-   esqueleto con un brillo que lo recorre en vez de un hueco. */
-export function Panel({ nombre, titulo, sub, clase = "", estado = {}, reintentar, children }) {
+   entran varios juntos). Mientras espera sus primeros datos se va ARMANDO a
+   la vista: se trazan las líneas de la grilla de un gráfico (o los renglones
+   de una lista, `forma="lista"`), en vez de un bloque gris. Y al cambiar un
+   filtro no se apaga: una línea fina corre por arriba mientras llega lo
+   nuevo. */
+export function Panel({ nombre, titulo, sub, clase = "", estado = {}, reintentar, forma = "grafico", children }) {
   const caja = useRef(null);
   const [vista, setVista] = useState(() => (menosMovimiento() ? { visto: true, retraso: 0, desde: 0 }
     : { visto: false, retraso: 0, desde: 0 }));
@@ -180,7 +183,8 @@ export function Panel({ nombre, titulo, sub, clase = "", estado = {}, reintentar
       style=${{ "--retraso": vista.retraso + "ms" }}>
     <h3>${titulo}</h3>${sub && html`<div class="sub">${sub}</div>`}
     <${Vista.Provider} value=${vista}>${children}<//>
-    ${esperando && html`<div class="v2-esqueleto" aria-hidden="true"><i></i><i></i><i></i><i></i></div>`}
+    ${esperando && html`<div class=${"v2-armando " + forma} aria-hidden="true">${[0, 1, 2, 3, 4, 5].map((i) =>
+      html`<i style=${{ animationDelay: vista.retraso + i * 110 + "ms" }}></i>`)}</div>`}
     <div class="panel-error"><span>${estado.error || "No se pudo cargar este panel."}</span>
       <button type="button" onClick=${reintentar}>Reintentar</button></div>
   </div>`;
