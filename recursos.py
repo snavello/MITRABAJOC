@@ -86,6 +86,28 @@ SEMILLA = [
         "fragmento": "",
     },
     {
+        "clave": "tramites-bancaria-resumen",
+        "titulo": "Trámites de La Bancaria en Colm3na: resumen (Word, 6 páginas)",
+        "descripcion": "Para leer primero: lo que hay que saber, los sistemas que ya tiene el sindicato, la "
+                       "propuesta de kit de inicio y las 81 gestiones del afiliado de un vistazo, cada una con "
+                       "su código. Control de cambios activado. Fuente: docs/bancaria/generar_tramites_docx.js.",
+        "fecha": date(2026, 10, 13),
+        "archivo": "colm3na-tramites-bancaria-resumen.docx",
+        "miniatura": "colm3na-tramites-bancaria-resumen.jpg",
+        "fragmento": "",
+    },
+    {
+        "clave": "tramites-bancaria-completo",
+        "titulo": "Trámites de La Bancaria en Colm3na: catálogo completo (Word)",
+        "descripcion": "Las 81 gestiones verificadas una por una: cómo se hacen hoy y con qué fuentes, cómo "
+                       "las resuelve Colm3na (formulario, encadenados, área) y qué validar con el sindicato, "
+                       "con un recuadro de observaciones por gestión. Para consultar por código desde el resumen.",
+        "fecha": date(2026, 10, 13),
+        "archivo": "colm3na-tramites-bancaria-completo.docx",
+        "miniatura": "colm3na-tramites-bancaria-completo.jpg",
+        "fragmento": "",
+    },
+    {
         "clave": "plan-implementacion-bancaria",
         "titulo": "Plan de implementación en La Bancaria: seis fases (borrador v0.2)",
         "descripcion": "La propuesta para consensuar con las autoridades: preparación, definición del plan, "
