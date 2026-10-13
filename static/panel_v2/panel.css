@@ -378,40 +378,11 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
    barra arriba y en un cajón. Sobre la franja de marca la tarjeta se separa
    por LUZ (filo de 1px y brillo), no por color (regla de la mesa). */
 
-/* ---------- Movimiento: el caso cero de toda la plataforma ----------
-   Las duraciones y las curvas con nombre. Las usa este archivo y las lee
-   panel/movimiento para Chart.js: un solo lugar. Reglas (skill
-   `diseno-mi-trabajo`, "Movimiento"; referencia, `emil-design-eng`):
-   - lo que tiene que VERSE entrar (paneles, gráficos, modales) usa
-     `--ease-entrada`, que reparte el recorrido; la respuesta inmediata
-     (hover, apretar, cerrar) usa `--ease-salida`, que hace casi todo al
-     principio; lo que se mueve de un lugar a otro, `--ease-mueve`; nunca
-     `ease-in`;
-   - cerrar es más rápido que abrir; lo que se usa muchas veces seguidas
-     (pasar el mouse, apretar) es corto;
-   - con "reducir movimiento" solo quedan fundidos suaves, sin nada que se
-     desplace (al final del archivo).
-
-   Las entradas son de PRESENTACIÓN, a pedido de SDN (2026-10-13): con las
-   duraciones cortas de una interfaz de todos los días (~300 ms, lo que
-   recomienda `emil-design-eng`) y una curva de salida fuerte, medido en el
-   navegador el modal ya estaba al 95% a los 150 ms y se veía "rápido y
-   brusco". Este panel se muestra; lo de todos los días sigue corto. */
-:root {
-  --mov-presion: 120ms;   /* un botón que se aprieta */
-  --mov-rapido: 180ms;    /* pasar el mouse, tooltips */
-  --mov-medio: 320ms;     /* cambios de estado, cierres */
-  --mov-lento: 650ms;     /* apertura de modales y cajones */
-  --mov-entrada: 900ms;   /* un panel que entra al hacer scroll */
-  --mov-cambio: 800ms;    /* un gráfico que pasa de un valor a otro */
-  --mov-datos: 1400ms;    /* un gráfico que se dibuja por primera vez */
-  --mov-correr: 1600ms;   /* un indicador que corre hasta su número */
-  --mov-escalon: 120ms;   /* entre dos que entran juntos */
-  --ease-entrada: cubic-bezier(.33, 1, .68, 1);
-  --ease-salida: cubic-bezier(.23, 1, .32, 1);
-  --ease-mueve: cubic-bezier(.65, 0, .35, 1);
-  --ease-hoja: cubic-bezier(.32, .72, 0, 1);
-}
+/* ---------- Movimiento ----------
+   Las duraciones y las curvas con nombre (`--mov-*`, `--ease-*`) viven en
+   static/movimiento.css, que esta pantalla carga antes que este archivo: la
+   v2 fue el caso cero y de ahí se llevó a los modales de toda la plataforma.
+   panel/movimiento las lee para Chart.js. */
 .v2 { padding-top: 18px; }
 .v2-cabeza { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .v2-cabeza .titulo-pagina { margin: 0 0 4px; }

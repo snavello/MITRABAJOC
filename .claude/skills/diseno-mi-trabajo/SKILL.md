@@ -174,10 +174,12 @@ atrás que destapar.
 
 ## Movimiento (caso cero: la v2 del Panel Sindical, 2026-10-12)
 
-Hoy vive SOLO en la v2 del Panel (`static/panel_v2/panel.css`, bloque
-"Movimiento", y `static/panel_v2/movimiento.js`). Cuando SDN lo apruebe, los
-tokens pasan a `marca.css` y se llevan pantalla por pantalla, empezando por
-los modales que más se usan. La referencia es la skill `emil-design-eng`;
+Nació en la v2 del Panel y el 2026-10-13 se llevó a **todos los modales**.
+Los tokens viven en **`static/movimiento.css`** (y en ningún otro lado: lo
+verifica `test_modales.py`), que cargan las pantallas con modales y la v2;
+el motor de los modales es el segundo bloque de `static/modales.js`. Lo que
+sigue pendiente de llevar pantalla por pantalla es el resto (tarjetas,
+pestañas, listas). La referencia es la skill `emil-design-eng`;
 **ante un choque mandan las reglas de este archivo** (nada de CDN ni de paso
 de compilación, así que nada de Framer Motion).
 
@@ -222,8 +224,8 @@ quiere VER entrar usa `--ease-entrada`, que lo reparte.
 - **Cerrar es más rápido que abrir** (`--mov-medio` contra `--mov-lento`).
 - **Lo que se repite seguido es corto**: cambiar un filtro anima en
   `--mov-cambio`, nunca en `--mov-datos`.
-- **Nada aparece desde cero**: un modal entra desde `scale: .92`, 28px más
-  abajo y desenfocado, y llega nítido.
+- **Nada aparece desde cero**: un modal centrado entra desde `scale: .94` y
+  26px más abajo; una hoja pegada abajo sube desde el borde con `--ease-hoja`.
   Los modales escalan desde su centro; lo que escala desde su disparador son
   los popovers.
 - **Se anima `scale`, `translate` y `opacity`**, nunca `transform` en algo que
@@ -248,6 +250,31 @@ quiere VER entrar usa `--ease-entrada`, que lo reparte.
   `!important`. Y lo dice en pantalla (`.v2-aviso-mov`), con el camino para
   apagarlo en Windows, iPhone, Mac y Android: quien lo tiene prendido sin
   saberlo veía todo quieto y no sabía por qué.
+
+**Los modales de toda la plataforma (2026-10-13).** Todos se abren poniendo
+`abierto` en el fondo, que pasa de `display:none` a `flex`. Por eso:
+- **La entrada es CSS** (keyframes en `movimiento.css`, que arrancan solos
+  cuando el fondo aparece) y **la salida la sostiene `modales.js`**: al
+  sacarse `abierto` le pone `mov-sale` al fondo el tiempo de irse. Las
+  funciones de abrir y cerrar de cada pantalla no se tocan, y si el script
+  no carga el modal anda igual, solo que se cierra de golpe.
+- **El contenido se arma en cascada** (`data-armado`) al abrir y otra vez
+  cuando llega lo que se estaba cargando. Un repintado cualquiera (un
+  mensaje nuevo en el chat) NO se rearma: sería ruido.
+- **"Cargando…" no es un texto suelto**: lo que dice exactamente eso queda
+  marcado `mov-cargando` y se dibuja como la forma de lo que viene (líneas
+  que respiran; un título que respira). Una pantalla nueva que escriba
+  "Cargando…" en su modal lo hereda sola.
+- **La caja crece de a poco** cuando cambia su contenido con el modal abierto.
+- **Una familia nueva de modal** suma su fondo a `FONDOS_MOV` (modales.js) y
+  sus reglas de entrada y `mov-sale` a `movimiento.css`, o va a ser la única
+  que aparece de golpe (lo cuida `test_modales.py`). El "Ver" del Panel
+  (`.overlay-det`) queda afuera a propósito: la v1 no se toca y la v2 trae
+  el suyo.
+- **Un modal adentro de `.mesa-cont`** quedaba debajo de la barra fija de
+  pestañas (la capa de la mesa encerraba su z-index). Mientras hay un modal
+  abierto la capa sube a 45: arriba de la barra y los botones flotantes,
+  abajo de los modales que viven afuera (`interior.css`).
 
 ## El flujo del recibo (2026-09-14, "Marco")
 

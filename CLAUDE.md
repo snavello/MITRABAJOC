@@ -210,7 +210,9 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   static/fonts/ (Barlow Condensed, licencia SIL OFL) + mapa.js (capa fina
   sobre Leaflet y las burbujas de los dos mapas de tablero, compartida por las
   cinco pantallas con mapa) +
-  modales.js (arrastre de modales en escritorio, ver "Modales") +
+  modales.js (arrastre de modales en escritorio y su movimiento, ver "Modales") +
+  movimiento.css (las duraciones y curvas `--mov-*`/`--ease-*` de TODA la app,
+  en un solo lugar, y cómo entran, se arman y se van los modales) +
   static/vendor/leaflet/ (Leaflet 1.9.4 vendoreado, jamás CDN) +
   static/vendor/preact/ (Preact 10.29.8 + htm 3.1.1, solo para la v2 del
   Panel Sindical; `ORIGEN.md` guarda el SHA-256 de cada archivo y un test lo
@@ -475,6 +477,14 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   donde el modal es una hoja pegada al borde. Una FAMILIA nueva de modal tiene
   que sumarse a `CAJAS` de ese archivo y al cursor de marca.css; `test_modales.py`
   verifica que toda plantilla con modales cargue el script.
+  **Y entran con movimiento** (2026-10-13, `static/movimiento.css` + el segundo
+  bloque de modales.js): la entrada es CSS, la salida la sostiene el script
+  con `mov-sale`, el contenido se arma en cascada, lo que dice "Cargando…" se
+  dibuja como la forma de lo que viene y la caja crece de a poco al llegar el
+  detalle. Ninguna función de abrir o cerrar se tocó. Una familia nueva suma
+  su fondo a `FONDOS_MOV` y sus reglas a movimiento.css (lo verifica el mismo
+  test); el "Ver" del Panel queda afuera a propósito. Reglas en la skill
+  `diseno-mi-trabajo` → "Movimiento".
 - **Patrón portada + panel interno**, repetido para los 3 roles con login
   (`/app/inicio`+`/app`, `/admin/inicio`+`/admin`, `/empresa/inicio`+`/empresa`)
   — cualquier rol nuevo que se agregue debería seguir el mismo patrón.
@@ -1270,7 +1280,11 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     la fila ya sabe y crece de a poco; los paneles trazan su grilla; al
     filtrar, una línea fina arriba en vez de ponerse translúcidos; y el
     explorador arma sus filas en cascada, marca la fila bajo el mouse y sus
-    totales corren.
+    totales corren. **Llevado a todos los modales de la plataforma**
+    (2026-10-13; Trabajador 0.45.02, Admin 0.53.04, Plataforma 0.43.05): ver
+    "Los modales se mueven" en Decisiones. De paso se corrigió que en `/admin`
+    cinco modales quedaban debajo de la barra de pestañas y, en un trámite
+    largo, sin título ni X visibles.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 
