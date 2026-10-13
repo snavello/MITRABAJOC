@@ -771,6 +771,9 @@
     tabs.forEach(t => t.classList.toggle('activa', t.dataset.tab === nombre));
     tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === nombre ? 'true' : 'false'));
     paneles.forEach(p => { p.hidden = p.dataset.panel !== nombre; });
+    // Herramientas ocupa la pantalla sola: sin Recursos debajo (pedido de SDN).
+    const recursos = document.getElementById('recursos');
+    if (recursos) recursos.hidden = nombre === 'herramientas';
     if (nombre !== 'accesos') location.hash = nombre; else history.replaceState(null, '', location.pathname + location.search);
   }
   tabs.forEach(t => t.addEventListener('click', () => { if (!t.disabled) activar(t.dataset.tab); }));

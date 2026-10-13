@@ -7121,3 +7121,14 @@ rama, chequear, renglón extra, guardar, revisar, cambiar estado, reabrir el
 caso en la calculadora, la pestaña de la landing y el ancho de un teléfono).
 Dos detalles que salieron de ahí: la nota de la categoría ("coef. 1,00") y un
 fondo con `background-attachment: fixed` que no pintaba la página entera.
+
+**Primera vuelta de SDN** (mismo día, Plataforma 0.45.01): en la pestaña
+Herramientas ya no aparecen los Recursos debajo; la calculadora dice qué no
+contempla (Ganancias, retroactivos y ajustes de otros meses); y "Chequear
+recibo" suma la lectura con IA. La carga a mano había quedado como única vía
+porque en la pregunta de diseño se anotó esa opción; SDN esperaba las dos.
+La lectura reusa el extractor y el enmascarado de `/api/leer`, ubica cada
+línea por su texto (cada banco numera a su manera), manda lo desconocido y
+los reintegros a la vista, elige la categoría por el básico leído y avisa en
+rojo si el entorno tiene el extractor simulado (`MOCK_EXTRACTOR`).
+

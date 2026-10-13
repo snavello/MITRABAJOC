@@ -98,6 +98,13 @@
   .aviso { font-size:13.5px; margin-top:10px; min-height:1em; }
   .aviso.mal { color:var(--mal); } .aviso.bien { color:var(--bien); }
   .tabla-scroll { overflow-x:auto; }
+  .aclara { font-size:13px; line-height:1.45; color:var(--suave); background:rgba(255,176,32,.08);
+    border-left:3px solid var(--ambar); border-radius:6px; padding:8px 11px; margin:-4px 0 12px; }
+  .aclara b { color:#fff; }
+  .leer { display:flex; gap:14px; align-items:center; flex-wrap:wrap; background:rgba(255,255,255,.05);
+    border:1px dashed rgba(255,255,255,.25); border-radius:12px; padding:12px 14px; }
+  .leer > div { flex:1 1 260px; }
+  .leer .boton { cursor:pointer; }
 
   .estado { font:600 12px system-ui; border-radius:999px; padding:3px 9px; display:inline-block; }
   .estado.nuevo { background:var(--ambar); color:#1b1508; }
@@ -165,6 +172,7 @@
 
       <div class="tarjeta" id="recibo">
         <h2>Recibo esperado</h2>
+        <p class="aclara">Calcula solo el mes, con la grilla elegida. <b>No contempla</b> retenciones ni reintegros de Ganancias (el importe se carga a mano), ni conceptos de períodos anteriores (retroactivos, ajustes o diferencias de otros meses).</p>
         <div class="tabla-scroll">
           <table>
             <thead><tr><th>Concepto</th><th class="num">Esperado</th><th class="num real-col">Recibo real</th><th class="num real-col">Diferencia</th></tr></thead>
@@ -180,7 +188,16 @@
         <div class="chequeo">
           <hr class="separa">
           <h2>Del recibo real</h2>
-          <p class="fuente" style="margin-bottom:10px">Cargá al lado de cada renglón lo que dice el recibo. Si el recibo trae algo que la calculadora no tiene, sumalo acá abajo.</p>
+          <div class="leer">
+            <div>
+              <b>Leer el recibo con IA</b>
+              <p class="fuente">Subí el PDF o una foto: la IA lo lee y completa los importes. Revisalos antes de guardar. Usa créditos de la API (queda en Uso de IA de /plataforma); no se guarda el archivo ni el nombre o CUIL.</p>
+            </div>
+            <label class="boton suave" for="archivo-recibo">Elegir archivo</label>
+            <input type="file" id="archivo-recibo" accept="application/pdf,image/*" hidden>
+          </div>
+          <div class="aviso" id="aviso-leer" role="status"></div>
+          <p class="fuente" style="margin:10px 0">O cargá a mano, al lado de cada renglón, lo que dice el recibo. Si el recibo trae algo que la calculadora no tiene, va acá abajo.</p>
           <div class="grupo-t" style="margin-bottom:6px">Totales impresos</div>
           <div class="totales-reales">
             <label class="campo"><span>Total bruto</span><input type="text" id="real-bruto" inputmode="decimal"></label>
@@ -391,6 +408,51 @@
     calcular();
   });
   $('btn-extra').addEventListener('click', () => agregarExtra());
+  $('archivo-recibo').addEventListener('change', async () => {
+    const f = $('archivo-recibo').files[0];
+    if (!f) return;
+    const aviso = $('aviso-leer');
+    aviso.className = 'aviso'; aviso.textContent = 'Leyendo ' + f.name + '… (puede tardar unos segundos)';
+    const datos = new FormData(); datos.append('archivo', f);
+    try {
+      const r = await fetch(API + '/leer', { method: 'POST', body: datos });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.detail || ('Error ' + r.status));
+      for (const k of Object.keys(reales)) delete reales[k];
+      for (const [k, v] of Object.entries(d.renglones || {})) reales[k] = String(v).replace('.', ',');
+      for (const k of ['bruto', 'descuentos', 'neto']) $('real-' + k).value = d.totales?.[k] != null ? String(d.totales[k]).replace('.', ',') : '';
+      $('extras').replaceChildren();
+      for (const x of d.extras || []) {
+        agregarExtra();
+        const fila = $('extras').lastElementChild;
+        fila.querySelector('[data-k=concepto]').value = x.concepto || '';
+        fila.querySelector('[data-k=seccion]').value = x.seccion || 'haberes';
+        fila.querySelector('[data-k=importe]').value = String(x.importe).replace('.', ',');
+      }
+      if (!$('banco').value && d.banco) $('banco').value = d.banco;
+      const partes = [`Leído: ${d.ubicados} renglones ubicados`];
+      // La categoría, por el básico leído: la de la rama elegida si coincide alguna.
+      const cats = d.categorias || [];
+      const elegida = cats.find(c => c.rama === rama) || cats[0];
+      if (elegida) {
+        if (elegida.rama !== rama) { rama = elegida.rama; marcarRamas(); cargarCategorias(); }
+        $('categoria').value = elegida.categoria;
+        partes.push(cats.length > 1 ? `el básico coincide con ${cats.length} categorías: quedó "${elegida.nombre}", cambiala si no es`
+                                    : `categoría por el básico: ${elegida.nombre}`);
+      } else if (d.renglones && d.renglones.BAS) {
+        partes.push('el básico no coincide con ninguna categoría de la grilla: elegila a mano');
+      }
+      if ((d.extras || []).length) partes.push(`${d.extras.length} a revisar en "Renglones que la calculadora no tiene"`);
+      if (d.reintegros) partes.push(`${d.reintegros} reintegro(s) que la calculadora no contempla`);
+      if (d.periodo && d.periodo !== $('grilla').value) partes.push(`ojo: el recibo es de ${d.periodo} y la grilla elegida es ${$('grilla').value}`);
+      aviso.className = 'aviso ' + (d.mock ? 'mal' : 'bien');
+      aviso.textContent = (d.mock ? 'LECTURA SIMULADA (MOCK_EXTRACTOR activo en este entorno): los importes no son del recibo. ' : '')
+        + partes.join(' · ') + '. Revisá los importes antes de guardar.';
+      calcular();
+    } catch (e) {
+      aviso.className = 'aviso mal'; aviso.textContent = e.message;
+    } finally { $('archivo-recibo').value = ''; }
+  });
   function agregarExtra() {
     const quitar = el('button', { type: 'button', class: 'quitar', 'aria-label': 'Quitar renglón', text: '×' });
     const fila = el('div', { class: 'extras-fila' },
