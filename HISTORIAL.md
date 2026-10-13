@@ -6949,3 +6949,58 @@ diferencias con la v1. Eran tres cosas distintas:
   escalonado) eran demasiado sutiles. Ahora arma sus filas en cascada cada
   vez que la tabla se renueva, marca la fila bajo el mouse con un filo y
   enciende su "Ver", y los totales de las pestañas corren hasta su número.
+
+**El movimiento, a todos los modales (2026-10-13; Trabajador 0.45.02, Admin
+0.53.04, Plataforma 0.43.05).** SDN aprobó la tercera vuelta y pidió llevarla
+"al modal de perfil, noticias, trámites, recibo y los que falten, sin afectar
+funcionalidad". Relevados, son 25 modales en 9 pantallas, de seis familias de
+caja (`.modal-hoja`, `.modal-notif-caja`, `.modal-articulo`, `.modal-recibo`,
+`.overlay-ayuda-caja` y las imágenes ampliadas), y TODOS se abren y se cierran
+igual: la clase `abierto` en el fondo, que pasa de `display:none` a `flex`.
+Eso decidió el diseño, para no tocar ninguna de las ~40 funciones de abrir y
+cerrar:
+- **Las duraciones se mudaron a `static/movimiento.css`** (de `panel.css`, que
+  ahora la carga antes). Ahí van también las reglas de los modales.
+- **Entrar es CSS**: una animación arranca sola cuando el elemento aparece;
+  una transición desde `display:none`, no. La caja centrada llega desde .94 y
+  26 px más abajo, opaca en 220 ms; la hoja pegada abajo (perfil, "Acerca
+  de", notificaciones) sube desde el borde con `--ease-hoja`. El fondo anima
+  su color, no su opacidad, para no llevarse la caja con él.
+- **Irse lo sostiene `modales.js`**: al ver que el fondo perdió `abierto`, le
+  pone `mov-sale` el tiempo de la salida (320 ms) y después lo saca. El
+  arrastre espera a que termine para devolver la caja a su lugar (si no, se
+  la vería saltar al centro mientras se va), y si el modal se vuelve a abrir
+  a mitad de la salida, vuelve a su lugar en el acto.
+- **El contenido se arma**: los bloques del cuerpo (o los del contenedor que
+  cada pantalla llena con innerHTML) entran en cascada, de a 45 ms. Lo que
+  dice exactamente "Cargando…" -- hay once lugares que lo escriben -- se marca
+  `mov-cargando` y se dibuja como tres líneas que respiran (un título, el
+  título mismo respira); en la noticia y el beneficio, que dejan el cuerpo
+  vacío mientras esperan, las líneas van en el cuerpo. Cuando llega el
+  detalle, se arma de nuevo y la caja crece de su alto viejo al nuevo, todo
+  antes de que el navegador pinte (los MutationObserver corren antes), así
+  que el salto nunca se ve. Un repintado cualquiera, como un mensaje nuevo en
+  el chat de un trámite, solo ajusta el alto: rearmar todo cada vez sería
+  ruido.
+- **Afuera, a propósito**: el "Ver" del Panel (`.overlay-det`). La v1 recibe
+  solo arreglos mientras SDN decide D9 y la v2 trae su propio movimiento.
+- **Medido cuadro por cuadro** dentro de la página (requestAnimationFrame),
+  con la red frenada por CDP y el service worker bloqueado: con el worker
+  activo los pedidos de la página no pasan por el freno y "llegaban" en el
+  primer cuadro.
+
+Un error que estaba de antes y apareció al mirarlo: **cinco modales de
+`/admin` (trámite, trámite de empresa, seccional, avisar y publicar encuesta)
+quedaban DEBAJO de la barra fija de pestañas.** Viven adentro de
+`.mesa-cont`, que desde la "mesa" (2026-09-24) arma su propia capa con
+`z-index: 1`, y el 250 del modal solo valía adentro de ella. En un trámite
+largo la caja, centrada, metía su encabezado detrás de la barra: no se veían
+ni el número de expediente ni la X de cerrar. Arreglo en `interior.css`:
+mientras hay un modal abierto adentro, la capa sube a 45 (arriba de la barra,
+21, y de los botones flotantes, 40), pero no a más: el detalle de un mensaje
+vive afuera (250) y se abre ENCIMA del trámite, y tiene que seguir arriba.
+
+El robot del arrastre (`e2e/test_robot_modales.py`) medía la caja apenas
+visible, a mitad de su entrada: ahora espera a que termine de llegar
+(`_quieto`, que ignora las animaciones infinitas) y prueba además reabrir el
+perfil mientras se está cerrando.

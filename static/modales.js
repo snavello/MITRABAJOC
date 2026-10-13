@@ -90,7 +90,9 @@
     if (!fondo || fondo.dataset.vigilado) return;
     fondo.dataset.vigilado = "1";
     new MutationObserver(function () {
-      if (!fondo.classList.contains("abierto")) {
+      // Mientras se está yendo (`mov-sale`, abajo) se queda donde estaba:
+      // volver al centro en medio del cierre se vería como un salto.
+      if (!fondo.classList.contains("abierto") && !fondo.classList.contains("mov-sale")) {
         fondo.querySelectorAll(CAJAS).forEach(resetear);
       }
     }).observe(fondo, { attributes: true, attributeFilter: ["class"] });
@@ -143,4 +145,220 @@
       trasladar(caja, x + (p.izq - r.left), y + (p.arr - r.top));
     });
   });
+
+  /* ================= Cómo entran, se arman y se van =================
+     El movimiento de los modales (2026-10-13, pedido de SDN después del caso
+     cero de la v2 del Panel). La entrada la hace el CSS solo
+     (static/movimiento.css); acá va lo que el CSS no puede:
+
+     - **Sostener la salida.** Todos los modales se cierran sacando `abierto`
+       del fondo, que vuelve a `display:none` en el acto. Al verlo, se le
+       pone `mov-sale`, que lo deja visible el tiempo de irse, y después se
+       saca. Las funciones de cerrar de cada pantalla no se tocan.
+     - **Armar el contenido pieza por pieza** al abrir, y otra vez cuando
+       llega lo que se estaba cargando (`data-armado` + su escalón).
+     - **Que esperar sea armar.** Lo que dice "Cargando…" se marca con
+       `mov-cargando` y el CSS lo dibuja como la forma de lo que viene.
+     - **Crecer de a poco.** Cuando el contenido cambia con el modal abierto
+       (llega el detalle de un recibo, la conversación de un trámite), la
+       caja pasa de su alto viejo al nuevo en vez de saltar.
+
+     Nada de esto toca lo que hace el modal: si este bloque falla, el modal
+     abre y cierra igual, sin movimiento.
+
+     Afuera: el "Ver" del Panel Sindical (`.overlay-det`). La v1 recibe solo
+     arreglos mientras SDN decide D9, y la v2 trae su propio movimiento. */
+  var FONDOS_MOV = ".overlay, .modal-recibo-overlay, .overlay-ayuda, .overlay-foto-grande";
+  var CAJAS_MOV = ":scope > .modal-hoja, :scope > .modal-notif-caja, :scope > .modal-articulo, " +
+    ":scope > .modal-recibo, :scope > .overlay-ayuda-caja, :scope > img";
+  var CUERPOS = ":scope > .modal-notif-body, :scope > .modal-articulo-body, :scope > .modal-recibo-body";
+  // Lo que no se arma: los botones de cerrar van fijos en su esquina, y lo
+  // invisible no tiene nada que mostrar (y si se marcara, se armaría tarde,
+  // el día que aparezca).
+  var NO_ARMAR = ".modal-cerrar, .modal-cerrar-clara, .modal-recibo-cerrar, .overlay-ayuda-cerrar, " +
+    "script, style, template, input[type=hidden]";
+  var CARGANDO = /^Cargando(…|\.\.\.)$/;
+  var ESCALON = 45, TOPE_PIEZAS = 10;
+  var reducido = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  function ms(token, defecto) {
+    var v = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+    var n = parseFloat(v);
+    if (isNaN(n)) return defecto;
+    return /ms$/.test(v) ? n : n * 1000;
+  }
+
+  function cajaDe(fondo) {
+    try { return fondo.querySelector(CAJAS_MOV); } catch (e) { return null; }
+  }
+
+  function visibles(el) {
+    return Array.prototype.filter.call(el.children, function (c) {
+      return !c.matches(NO_ARMAR) && c.getClientRects().length > 0;
+    });
+  }
+
+  /* Qué piezas se arman: los bloques del cuerpo. Si el cuerpo tiene una sola
+     caja adentro (el contenedor que cada pantalla llena con innerHTML), se
+     entra en ella: la pieza es lo que trae, no el contenedor entero. */
+  function piezas(caja) {
+    var cuerpo = caja.querySelector(CUERPOS) || caja;
+    var xs = visibles(cuerpo);
+    for (var prof = 0; xs.length === 1 && prof < 2; prof++) {
+      var adentro = visibles(xs[0]);
+      if (adentro.length < 2) break;
+      xs = adentro;
+    }
+    return xs;
+  }
+
+  function desarmar(xs) {
+    xs.forEach(function (el) { el.removeAttribute("data-armado"); el.style.animationDelay = ""; });
+  }
+
+  /* `extra` son piezas fuera del cuerpo que también se arman (el título que
+     decía "Cargando…" y ya dice lo que es). */
+  function armar(caja, base, extra) {
+    if (caja.tagName === "IMG") return;
+    var xs = (extra || []).concat(piezas(caja));
+    // Las marcas de la vez anterior se sacan primero y se deja que el
+    // navegador lo note: si una pieza ya tenía la marca, volver a ponérsela
+    // no reinicia su animación, y lo que llegó del servidor aparecería de
+    // golpe sobre un hueco que ya se había "armado" vacío.
+    clearTimeout(caja._movArmado);
+    desarmar(caja._movPiezas || []);
+    void caja.offsetWidth;
+    xs.forEach(function (el, i) {
+      el.setAttribute("data-armado", "");
+      el.style.animationDelay = (base + Math.min(i, TOPE_PIEZAS) * ESCALON) + "ms";
+    });
+    caja._movPiezas = xs;
+    // Una sola limpieza para todas, cuando ya terminaron. Si la marca se
+    // quedara, la pieza volvería a armarse cada vez que se oculte y se
+    // muestre (una pestaña adentro del modal, por ejemplo).
+    caja._movArmado = setTimeout(function () {
+      desarmar(xs);
+      if (caja._movPiezas === xs) caja._movPiezas = null;
+    }, base + TOPE_PIEZAS * ESCALON + ms("--mov-lento", 650) + 120);
+  }
+
+  /* Marca con `mov-cargando` lo que dice exactamente "Cargando…" y le saca la
+     marca a lo que ya no lo dice. Devuelve si quedó algo esperando. */
+  function marcarCarga(caja, soltados) {
+    var hay = false;
+    var vistos = [];
+    var w = document.createTreeWalker(caja, NodeFilter.SHOW_TEXT, null);
+    for (var n = w.nextNode(); n; n = w.nextNode()) {
+      var el = n.parentElement;
+      if (el && CARGANDO.test((n.nodeValue || "").trim()) && CARGANDO.test(el.textContent.trim())) {
+        vistos.push(el);
+      }
+    }
+    caja.querySelectorAll(".mov-cargando").forEach(function (el) {
+      if (vistos.indexOf(el) >= 0) return;
+      el.classList.remove("mov-cargando");
+      if (soltados && /^H[1-4]$/.test(el.tagName)) soltados.push(el);
+    });
+    vistos.forEach(function (el) { el.classList.add("mov-cargando"); hay = true; });
+    caja.classList.toggle("mov-esperando", hay);
+    return hay;
+  }
+
+  /* El alto: se fija el que se veía, se mide el nuevo y se va de uno al otro.
+     Todo pasa antes de que el navegador pinte (los MutationObserver corren
+     antes), así que nunca se ve el salto. */
+  var alturas = typeof ResizeObserver === "function" ? new ResizeObserver(function (es) {
+    es.forEach(function (e) {
+      if (!e.target.classList.contains("mov-crece")) e.target._movAlto = e.target.offsetHeight;
+    });
+  }) : null;
+
+  function crecer(caja) {
+    if (caja.tagName === "IMG") return;
+    var viejo = caja.offsetHeight;  // en medio de otro crecimiento, el alto de ese momento
+    if (caja.classList.contains("mov-crece")) {
+      caja.style.height = "";
+      caja.classList.remove("mov-crece");
+    } else if (caja._movAlto) {
+      viejo = caja._movAlto;
+    }
+    var nuevo = caja.offsetHeight;
+    caja._movAlto = nuevo;
+    if (reducido.matches || !viejo || Math.abs(nuevo - viejo) < 6) return;
+    caja.style.height = viejo + "px";
+    caja.classList.add("mov-crece");
+    void caja.offsetHeight;  // que el navegador tome el alto viejo como punto de partida
+    caja.style.height = nuevo + "px";
+    clearTimeout(caja._movCrece);
+    caja._movCrece = setTimeout(function () {
+      caja.classList.remove("mov-crece");
+      caja.style.height = "";
+      caja._movAlto = caja.offsetHeight;
+    }, ms("--mov-lento", 650) + 60);
+  }
+
+  function terminarSalida(fondo) {
+    clearTimeout(fondo._movSale);
+    if (fondo.classList.contains("mov-sale")) fondo.classList.remove("mov-sale");
+    fondo.querySelectorAll(CAJAS).forEach(resetear);
+  }
+
+  function alAbrir(fondo) {
+    var caja = cajaDe(fondo);
+    terminarSalida(fondo);
+    if (!caja) return;
+    if (alturas) alturas.observe(caja);
+    caja._movCargando = marcarCarga(caja);
+    // Se mide después de marcar la espera: el esqueleto ya es parte del alto
+    // con el que entra, no algo que crece después.
+    caja._movAlto = caja.offsetHeight;
+    armar(caja, 90);
+  }
+
+  function alCerrar(fondo) {
+    var caja = cajaDe(fondo);
+    if (caja && alturas) alturas.unobserve(caja);
+    if (caja) {
+      clearTimeout(caja._movCrece);
+      caja.classList.remove("mov-crece");
+      caja.style.height = "";
+    }
+    fondo.classList.add("mov-sale");
+    fondo._movSale = setTimeout(function () { terminarSalida(fondo); },
+      (reducido.matches ? 160 : ms("--mov-medio", 320)) + 40);
+  }
+
+  function alCambiar(fondo) {
+    if (!fondo._movAbierto) return;
+    var caja = cajaDe(fondo);
+    if (!caja) return;
+    var esperaba = caja._movCargando, titulos = [];
+    caja._movCargando = marcarCarga(caja, titulos);
+    // Llegó lo que se estaba esperando: se arma de nuevo, desde ya, junto con
+    // el título que decía "Cargando…". Un repintado cualquiera (un mensaje
+    // nuevo en el chat) no se re-arma: ver todo rearmarse cada vez sería ruido.
+    if (esperaba && !caja._movCargando) armar(caja, 0, titulos);
+    crecer(caja);
+  }
+
+  function vigilar(fondo) {
+    if (fondo._movVigilado) return;
+    fondo._movVigilado = true;
+    fondo._movAbierto = fondo.classList.contains("abierto");
+    if (fondo._movAbierto) alAbrir(fondo);
+    new MutationObserver(function () {
+      var abierto = fondo.classList.contains("abierto");
+      if (abierto === fondo._movAbierto) return;
+      fondo._movAbierto = abierto;
+      if (abierto) alAbrir(fondo); else alCerrar(fondo);
+    }).observe(fondo, { attributes: true, attributeFilter: ["class"] });
+    new MutationObserver(function () { alCambiar(fondo); })
+      .observe(fondo, { childList: true, characterData: true, subtree: true });
+  }
+
+  function arrancar() {
+    document.querySelectorAll(FONDOS_MOV).forEach(vigilar);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", arrancar);
+  else arrancar();
 })();

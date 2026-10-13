@@ -28,8 +28,9 @@ del proyecto:
 - **Las duraciones de la v2 del Panel son de presentación** (SDN, 2026-10-13):
   más largas que los ~300 ms que recomienda la skill, con una curva que
   reparte el recorrido para lo que tiene que verse entrar.
-- **`prefers-reduced-motion`**: la v2 sigue a la skill y deja fundidos suaves.
-  El resto de la app todavía corta todo vía `marca.css`, hasta que el
+- **`prefers-reduced-motion`**: la v2 y los modales de toda la plataforma
+  (`static/movimiento.css`) siguen a la skill y dejan fundidos suaves. El
+  resto de la app todavía corta todo vía `marca.css`, hasta que el
   movimiento se lleve pantalla por pantalla.
 
 ## Para actualizarla
