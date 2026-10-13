@@ -312,6 +312,59 @@ FUERA_DEL_ESPERADO = {
     "GANANC": ("Impuesto a las Ganancias", "descuentos", "Cargá el importe en Ganancias si corresponde."),
 }
 
+# Renglones del convenio que, si no coinciden, pueden deberse a un control mal
+# elegido (el ROE del banco, el título, la zona, la conectividad).
+AJUSTABLES_SI_DIFIEREN = {"ROE", "TITULO", "ZONA", "CONECT"}
+
+
+def ajuste_sugerido(codigo: str, importe: float, esperado: dict) -> dict | None:
+    """Qué tocar en la calculadora para que un renglón del recibo esté, cuando
+    el recibo lo dice sin dudas (SDN, 2026-10-13): {"campos": {control:
+    valor}, "texto": "..."}. Se PROPONE con un botón "Ajustar al recibo",
+    igual que la categoría; nunca se aplica solo. None si no hay un caso claro
+    (un importe que no es ninguno de la grilla no se adivina)."""
+    g = grilla(esperado["periodo"])
+    adic = g["adicionales"]
+    cerca = lambda a, b: abs(a - b) < 1
+    simples = {"CAJFUN": ("cajero", "Tildar «Cajero»"), "CAJFAL": ("cajero", "Tildar «Cajero»"),
+               "CAJFME": ("falla_me", "Tildar «Falla de caja moneda extranjera»"),
+               "GUARDE": ("guarderia", "Tildar «Guardería»"),
+               "DIABAN": ("dia_bancario", "Tildar «Día del Bancario»")}
+    if codigo in simples:
+        campo, texto = simples[codigo]
+        return {"campos": {campo: True}, "texto": texto}
+    if codigo == "TITULO":
+        for nombre, valor in adic["titulos"].items():
+            if cerca(importe, valor):
+                return {"campos": {"titulo": nombre}, "texto": f"Elegir título {nombre}"}
+    if codigo == "ZONA":
+        for nombre, valor in adic["zona_patagonica"].items():
+            if cerca(importe, valor):
+                return {"campos": {"zona": nombre}, "texto": f"Elegir zona {nombre}"}
+    if codigo == "CONECT":
+        con = _conectividad(g)
+        for modo in ("mas_de_4_dias", "mensual"):
+            if cerca(importe, con[modo]):
+                return {"campos": {"conectividad": modo}, "texto": f"Elegir conectividad {MODOS_CONECTIVIDAD[modo].lower()}"}
+        for dias in range(1, 5):
+            if cerca(importe, con["diario"] * dias):
+                return {"campos": {"conectividad": "diario", "dias_conectividad": dias},
+                        "texto": f"Elegir conectividad de {dias} día(s)"}
+    if codigo == "ROE":
+        base = sum(r["importe"] for r in esperado["renglones"] if r["seccion"] == "haberes" and r["codigo"] != "ROE")
+        tramos = [t for t in range(len(g["roe"]["tramos"])) if cerca(roe_mensual(base, t, g), importe)]
+        if len(tramos) == 1:
+            return {"campos": {"tramo_roe": tramos[0]}, "texto": f"Elegir ROE del banco {g['roe']['tramos'][tramos[0]]}"}
+    if codigo == "CUOTA":
+        rem = esperado["totales"]["remunerativo"]
+        pct = round(importe / rem * 100, 2) if rem else 0
+        if 0 < pct <= 10:
+            return {"campos": {"afiliado": True, "cuota_pct": pct}, "texto": f"Tildar «Afiliado» con cuota del {pct:g}%"}
+    if codigo == "GANANC" and importe > 0:
+        return {"campos": {"ganancias": round(importe, 2)}, "texto": f"Cargar Ganancias {_pesos(importe)}"}
+    return None
+
+
 TOLERANCIA_LEVE = 0.01   # hasta el 1% de lo esperado: diferencia pintada en amarillo
 
 
@@ -392,9 +445,12 @@ def comparar(esperado: dict, real: dict) -> dict:
             mas = otros["renglones"].get(r["codigo"], 0.0)
             espera = round(r["importe"] + mas, 2)
             dif = round(cargados[r["codigo"]] - espera, 2)
-            diferencias.append({"codigo": r["codigo"], "concepto": r["concepto"], "esperado": r["importe"],
-                                "otros": mas, "real": cargados[r["codigo"]], "diferencia": dif,
-                                "coincide": abs(dif) < 1, "gravedad": gravedad(dif, espera)})
+            fila = {"codigo": r["codigo"], "concepto": r["concepto"], "esperado": r["importe"],
+                    "otros": mas, "real": cargados[r["codigo"]], "diferencia": dif,
+                    "coincide": abs(dif) < 1, "gravedad": gravedad(dif, espera)}
+            if not fila["coincide"] and r["codigo"] in AJUSTABLES_SI_DIFIEREN:
+                fila["ajuste"] = ajuste_sugerido(r["codigo"], cargados[r["codigo"]], esperado)
+            diferencias.append(fila)
     en_esperado = {r["codigo"] for r in esperado["renglones"]}
     for codigo, importe in cargados.items():
         if codigo in en_esperado or codigo not in FUERA_DEL_ESPERADO:
@@ -403,7 +459,8 @@ def comparar(esperado: dict, real: dict) -> dict:
         diferencias.append({"codigo": codigo, "concepto": concepto, "seccion": seccion, "esperado": 0.0,
                             "otros": 0.0, "real": importe, "diferencia": round(importe, 2),
                             "coincide": abs(importe) < 1, "gravedad": gravedad(importe, 0),
-                            "fuera": True, "como": como})
+                            "fuera": True, "como": como,
+                            "ajuste": ajuste_sugerido(codigo, importe, esperado)})
     totales = []
     for clave in ("bruto", "descuentos", "neto"):
         v = (real.get("totales") or {}).get(clave)

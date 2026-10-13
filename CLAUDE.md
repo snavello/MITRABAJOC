@@ -1341,8 +1341,11 @@ su página (`/entornos/herramientas/<nombre>`) y la pestaña solo la presenta.
 - **Lo que dice el recibo se PROPONE, nunca se aplica solo** (SDN,
   2026-10-13): el básico del recibo real, leído o cargado a mano, sugiere la
   categoría con un botón "Ajustar al recibo"; un adicional que el recibo trae
-  y la calculadora no tiene elegido sale como renglón con esperado $ 0 y qué
-  tildar (`grilla_bancaria.FUERA_DEL_ESPERADO`).
+  y la calculadora no tiene elegido sale como renglón con esperado $ 0, y si
+  el recibo lo dice sin dudas (un importe de la grilla), con un botón que
+  tilda o elige el control (`grilla_bancaria.ajuste_sugerido`; también el ROE,
+  el título, la zona y la conectividad cuando difieren). En el recuadro de la
+  IA, "Ajustar todo al recibo".
 - **Lo que no es de convenio va a "Otros del recibo", a la par** (SDN,
   2026-10-13; `grilla_bancaria.otros_del_recibo`): los renglones que la
   calculadora no tiene se suman en su propia columna, en violeta y "sin
