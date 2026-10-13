@@ -796,7 +796,7 @@
   {% endif %}
   {% if 'recibos' in modulos %}
   {% if 'reportes' in permisos %}
-  <div class="panel" id="panel-reportes">
+  <div class="panel" data-mov-vista id="panel-reportes">
   <!-- ============ REPORTES ============ -->
   <h2 class="titulo-pagina" id="reportes">Reportes</h2>
   <p class="muted">Todos los recibos que verificaron los afiliados. Los que el afiliado <strong>envió</strong> al sindicato se ven con sus datos; los que verificó y <strong>no envió</strong> se ven anonimizados, sin nombre, CUIL ni empresa.</p>
@@ -831,7 +831,7 @@
   {% endif %}
   {% if 'recibos' in modulos %}
   {% if 'formulas' in permisos %}
-  <div class="panel" id="panel-formulas">
+  <div class="panel" data-mov-vista id="panel-formulas">
   <!-- ============ FÓRMULAS ============ -->
   <h2 class="titulo-pagina" id="formulas">Reglas de control</h2>
   <p class="muted">La variable <code>base_remunerativa</code> es la suma de los ingresos marcados como remunerativos. También está <code>total_ingresos</code>.
@@ -897,7 +897,7 @@
   {% endif %}
   {% if 'recibos' in modulos %}
   {% if 'conceptos' in permisos %}
-  <div class="panel" id="panel-conceptos">
+  <div class="panel" data-mov-vista id="panel-conceptos">
   <!-- ============ CONCEPTOS ============ -->
   <h2 class="titulo-pagina" id="conceptos">Conceptos ({{ conceptos|length }})</h2>
   {% if request.query_params.get('error') == 'cuitconcepto' %}
@@ -1039,7 +1039,7 @@
   {% endif %}
   {% endif %}
   {% if 'trabajadores' in permisos %}
-  <div class="panel" id="panel-trabajadores">
+  <div class="panel" data-mov-vista id="panel-trabajadores">
   <!-- ============ TRABAJADORES ============ -->
   <h2 class="titulo-pagina" id="trabajadores">Trabajadores ({{ trabajadores|selectattr('activo')|list|length }} activos)</h2>
   <p class="muted">Los trabajadores cargados acá pueden registrarse en la app con su CUIL. Podés darlos de alta de a uno o pegar una lista.</p>
@@ -1088,7 +1088,7 @@
   </div>
 
   <!-- Sub-panel: LISTADO -->
-  <div class="subpanel activo" id="sub-listado">
+  <div class="subpanel activo" data-mov-vista id="sub-listado">
     <div class="filtros">
       <input type="text" id="f-trab-cuit" placeholder="Buscar por CUIL" oninput="aplicarFiltro('trab','.fila-trabajador')">
       <input type="text" id="f-trab-nombre" placeholder="Buscar por nombre" oninput="aplicarFiltro('trab','.fila-trabajador')">
@@ -1161,7 +1161,7 @@
   </div>
 
   <!-- Sub-panel: ALTA MANUAL -->
-  <div class="subpanel" id="sub-manual">
+  <div class="subpanel" data-mov-vista id="sub-manual">
     <form method="post" action="/admin/trabajador" class="form-trab">
       <input type="hidden" name="id" id="trab-id">
       <div class="grid2">
@@ -1223,7 +1223,7 @@
   </div>
 
   <!-- Sub-panel: ALTA MASIVA -->
-  <div class="subpanel" id="sub-masivo">
+  <div class="subpanel" data-mov-vista id="sub-masivo">
     <p class="muted">Pegá una línea por trabajador, con los campos separados por coma, en este orden:</p>
     <p class="muted" style="font-family:Consolas,monospace; font-size:12.5px; background:#f4f2ec; padding:8px 10px; border-radius:6px;">
       cuil, nombre, calle, numero, piso, localidad, provincia, telefono, mail, cp, seccional</p>
@@ -1249,7 +1249,7 @@
 
   {% if 'recibos' in modulos %}
   {% if 'aprendizaje' in permisos %}
-  <div class="panel" id="panel-aprendizaje">
+  <div class="panel" data-mov-vista id="panel-aprendizaje">
   <!-- ============ APRENDIZAJE ============ -->
   <h2 class="titulo-pagina" id="aprendizaje">Aprendizaje — incorporar conceptos desde recibos</h2>
   <p class="muted">Subí varios recibos del mismo convenio (lo ideal es entre 3 y 10, de distintos empleados o meses). El sistema los lee, junta los conceptos que no están en el catálogo y te propone darlos de alta. Revisá tipo y remunerativo antes de aprobar.</p>
@@ -1273,7 +1273,7 @@
 
   {% if 'noticias' in modulos %}
   {% if 'noticias' in permisos %}
-  <div class="panel" id="panel-noticias">
+  <div class="panel" data-mov-vista id="panel-noticias">
   <!-- ============ NOTICIAS ============ -->
   <h2 id="noticias-titulo" class="titulo-pagina ct-secc">Dar de alta una noticia</h2>
   <div class="card">
@@ -1361,7 +1361,7 @@
 
   {% if 'beneficios' in modulos %}
   {% if 'beneficios' in permisos %}
-  <div class="panel" id="panel-beneficios">
+  <div class="panel" data-mov-vista id="panel-beneficios">
   <!-- ============ BENEFICIOS ============ -->
   <h2 id="beneficios-titulo" class="titulo-pagina ct-secc">Dar de alta un beneficio</h2>
   <div class="card">
@@ -1449,7 +1449,7 @@
   {% if 'notificaciones' in modulos %}
   {% set CRITERIO_LABELS = {'cuil': 'CUIL', 'cuit_empleador': 'CUIT empresa', 'seccional': 'Seccional', 'provincia': 'Provincia'} %}
   {% if 'notificaciones' in permisos %}
-  <div class="panel" id="panel-notificaciones">
+  <div class="panel" data-mov-vista id="panel-notificaciones">
   <!-- ============ NOTIFICACIONES ============ -->
   <h2 class="titulo-pagina ct-secc">Nueva notificación</h2>
   <div class="card">
@@ -1555,7 +1555,7 @@
 
   {% if 'tramites' in modulos %}
   {% if 'tramites_recibidos' in permisos or 'tramites_formularios' in permisos %}
-  <div class="panel" id="panel-tramites">
+  <div class="panel" data-mov-vista id="panel-tramites">
   <!-- ============ TRÁMITES ============ -->
   {% if request.query_params.get('error') == 'campos' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Revisá los campos del formulario: necesita al menos uno con etiqueta y tipo de dato válidos.</div>
@@ -1581,7 +1581,7 @@
 
   <!-- Sub: TRÁMITES RECIBIDOS -->
   {% if 'tramites_recibidos' in permisos %}
-  <div class="tramite-subpanel activo" id="tramite-sub-recibidos">
+  <div class="tramite-subpanel activo" data-mov-vista id="tramite-sub-recibidos">
     <h2 class="titulo-pagina">Trámites recibidos ({{ tramites|length }})</h2>
     <div class="filtros">
       <input type="text" id="f-tramites-cuit" placeholder="Buscar por CUIL" oninput="filtrarTramites()">
@@ -1613,7 +1613,7 @@
 
   <!-- Sub: TIPOS DE FORMULARIO -->
   {% if 'tramites_formularios' in permisos %}
-  <div class="tramite-subpanel {% if 'tramites_recibidos' not in permisos %}activo{% endif %}" id="tramite-sub-tipos">
+  <div class="tramite-subpanel {% if 'tramites_recibidos' not in permisos %}activo{% endif %}" data-mov-vista id="tramite-sub-tipos">
     <h2 class="titulo-pagina" id="tt-h2">Nuevo tipo de trámite</h2>
     <div class="card">
       <form method="post" action="/admin/tramite-tipo" id="form-tramite-tipo">
@@ -1770,7 +1770,7 @@
 
   {% if 'encuestas' in modulos %}
   {% if 'encuestas' in permisos or 'encuestas_resultados' in permisos %}
-  <div class="panel" id="panel-encuestas">
+  <div class="panel" data-mov-vista id="panel-encuestas">
   <!-- ============ ENCUESTAS (SPRINT_ENCUESTAS.md) ============ -->
   {% if request.query_params.get('error') == 'encuesta' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">{{ request.query_params.get('motivo') }}</div>
@@ -1796,7 +1796,7 @@
   </div>
 
   {% if 'encuestas' in permisos %}
-  <div class="enc-subpanel {% if not encuestas %}activo{% endif %}" id="enc-sub-nueva">
+  <div class="enc-subpanel {% if not encuestas %}activo{% endif %}" data-mov-vista id="enc-sub-nueva">
   <h2 class="titulo-pagina" id="enc-h2">Nueva encuesta</h2>
   <div class="card">
     <form method="post" action="/admin/encuesta" id="form-encuesta" onsubmit="return prepararEnvioEncuesta()">
@@ -1885,7 +1885,7 @@
   </div>
   {% endif %}
 
-  <div class="enc-subpanel {% if encuestas or 'encuestas' not in permisos %}activo{% endif %}" id="enc-sub-lista">
+  <div class="enc-subpanel {% if encuestas or 'encuestas' not in permisos %}activo{% endif %}" data-mov-vista id="enc-sub-lista">
   <h2 class="titulo-pagina">Encuestas ({{ encuestas|length }})</h2>
   <div class="enc-tabla">
   <table>
@@ -2051,7 +2051,7 @@
 
   {% if 'empleadores' in modulos %}
   {% if 'emp_empresas' in permisos or 'emp_notificaciones' in permisos or 'emp_tramites_recibidos' in permisos or 'emp_tramites_formularios' in permisos %}
-  <div class="panel" id="panel-empleadores">
+  <div class="panel" data-mov-vista id="panel-empleadores">
   <!-- ============ EMPLEADORES ============ -->
   {% if request.query_params.get('error') == 'cuit' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El CUIT no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
@@ -2084,7 +2084,7 @@
 
   <!-- Sub: EMPRESAS (CRUD) -->
   {% if 'emp_empresas' in permisos %}
-  <div class="emp-subpanel {% if emp_primera == 'empresas' %}activo{% endif %}" id="emp-sub-empresas">
+  <div class="emp-subpanel {% if emp_primera == 'empresas' %}activo{% endif %}" data-mov-vista id="emp-sub-empresas">
     <h2 class="titulo-pagina" id="empleador-titulo">Dar de alta un empleador</h2>
     <p class="muted">CUIT, razón social y datos de contacto de las empresas de este sindicato -- cargalos a mano o importá los CUIT que ya aparecen en Conceptos.</p>
     <div class="card">
@@ -2166,7 +2166,7 @@
   <!-- Sub: NOTIFICACIONES A EMPLEADORES -->
   {% set CRITERIO_LABELS_EMP = {'cuit': 'CUIT', 'todos': 'Todos', 'provincia': 'Provincia'} %}
   {% if 'emp_notificaciones' in permisos %}
-  <div class="emp-subpanel {% if emp_primera == 'notificaciones' %}activo{% endif %}" id="emp-sub-notificaciones">
+  <div class="emp-subpanel {% if emp_primera == 'notificaciones' %}activo{% endif %}" data-mov-vista id="emp-sub-notificaciones">
     <h2 class="titulo-pagina">Nueva notificación a empleadores</h2>
     <div class="card">
       <form method="post" action="/admin/notificacion-empresa" enctype="multipart/form-data" id="form-notificacion-emp">
@@ -2238,7 +2238,7 @@
 
   <!-- Sub: TRÁMITES EXTERNOS -->
   {% if 'emp_tramites_recibidos' in permisos or 'emp_tramites_formularios' in permisos %}
-  <div class="emp-subpanel {% if emp_primera == 'tramites' %}activo{% endif %}" id="emp-sub-tramites">
+  <div class="emp-subpanel {% if emp_primera == 'tramites' %}activo{% endif %}" data-mov-vista id="emp-sub-tramites">
     {% if request.query_params.get('error') == 'campos' %}
     <div class="msg" style="background:#f8e5e2;color:#b23a2e;">Revisá los campos del formulario: necesita al menos uno con etiqueta y tipo de dato válidos.</div>
     {% elif request.query_params.get('error') == 'tramitesenviados' %}
@@ -2259,7 +2259,7 @@
 
     <!-- Sub: TRÁMITES DE EMPRESA RECIBIDOS -->
   {% if 'emp_tramites_recibidos' in permisos %}
-    <div class="emptram-subpanel activo" id="emptram-sub-recibidos">
+    <div class="emptram-subpanel activo" data-mov-vista id="emptram-sub-recibidos">
       <h2 class="titulo-pagina">Trámites recibidos ({{ tramites_empresa|length }})</h2>
       <div class="filtros">
         <input type="text" id="f-tramitesemp-cuit" placeholder="Buscar por CUIT" oninput="filtrarTramitesEmpresa()">
@@ -2291,7 +2291,7 @@
 
     <!-- Sub: TIPOS DE FORMULARIO EXTERNO -->
   {% if 'emp_tramites_formularios' in permisos %}
-    <div class="emptram-subpanel {% if 'emp_tramites_recibidos' not in permisos %}activo{% endif %}" id="emptram-sub-tipos">
+    <div class="emptram-subpanel {% if 'emp_tramites_recibidos' not in permisos %}activo{% endif %}" data-mov-vista id="emptram-sub-tipos">
       <h2 class="titulo-pagina" id="te-h2">Nuevo tipo de trámite externo</h2>
       <div class="card">
         <form method="post" action="/admin/tramite-tipo-empresa" id="form-tramite-tipo-empresa">
@@ -2392,7 +2392,7 @@
 
   {% if 'convenio' in modulos %}
   {% if 'convenio' in permisos %}
-  <div class="panel" id="panel-convenio">
+  <div class="panel" data-mov-vista id="panel-convenio">
   <!-- ============ CONVENIO (RAG) ============ -->
   {% if request.query_params.get('error') == 'formato' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El archivo tiene que ser un PDF.</div>
@@ -2522,7 +2522,7 @@
   {% endif %}
 
   {% if 'seccionales' in permisos %}
-  <div class="panel" id="panel-seccionales">
+  <div class="panel" data-mov-vista id="panel-seccionales">
   <!-- ============ SECCIONALES ============ -->
   {# CREAR una seccional es del administrador general y de nadie más, pero
      el Admin de Seccional entra igual a esta pantalla porque tiene que
@@ -2685,7 +2685,7 @@
   {% endif %}
 
   {% if administra_areas %}
-  <div class="panel" id="panel-administradores">
+  <div class="panel" data-mov-vista id="panel-administradores">
   <!-- ============ ADMINISTRADORES ============ -->
   <h2 class="titulo-pagina" id="administradores-titulo">Áreas y Usuarios</h2>
   <p class="muted">Las <b>áreas</b> agrupan permisos (Legales, Tesorería, Prensa...). Cada <b>usuario</b> pertenece a un área -- de donde hereda lo que puede tocar -- y a una <b>seccional</b>, que define sobre qué trabajadores trabaja. A un usuario suelto se le puede agregar o quitar algo puntual sin inventarle un área propia.</p>
@@ -2696,7 +2696,7 @@
   </div>
 
   <!-- Sub: ÁREAS -->
-  <div class="au-subpanel activo" id="au-sub-areas">
+  <div class="au-subpanel activo" data-mov-vista id="au-sub-areas">
   {% if request.query_params.get('err') == 'sinpermiso' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No tenés permiso para esa sección del panel. Si te hace falta, pedísela al administrador de tu sindicato.</div>
   {% endif %}
@@ -2776,7 +2776,7 @@
   </div>
 
   <!-- Sub: USUARIOS -->
-  <div class="au-subpanel" id="au-sub-usuarios">
+  <div class="au-subpanel" data-mov-vista id="au-sub-usuarios">
   {# El título dice si estás dando de alta o editando, igual que en Áreas y
      en Seccionales. Antes lo que cambiaba al tocar "Editar" era el título
      del PANEL ("Áreas y Usuarios"), arriba de las sub-pestañas, y este

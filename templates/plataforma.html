@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Colm3na — Plataforma</title>
 <link rel="stylesheet" href="/static/marca.css?v={{ sello_static('marca.css') }}">
+<link rel="stylesheet" href="/static/movimiento.css?v={{ sello_static('movimiento.css') }}">
 <script src="/static/cuit.js?v={{ sello_static('cuit.js') }}"></script>
 <style>
   :root {
@@ -214,7 +215,7 @@
   {% if request.query_params.get('marca') == 'ok' %}<div style="background:#e8f3ef; border:1px solid #b8ddd0; color:#0f6e56; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">✓ Marca de la plataforma actualizada.</div>{% endif %}
   {% if request.query_params.get('error') == 'guardado' %}<div style="background:#fdf3e7; border:1px solid #e8d9b0; color:#8a5a1a; padding:11px 14px; border-radius:8px; margin-bottom:16px; font-size:14px;">No se pudo guardar -- probá de nuevo en un momento. Si se repite, puede ser un problema pasajero de conexión. {% if request.query_params.get('ref') %}<br><small style="opacity:.8;">Código E-INTERNO-00 · ref {{ request.query_params.get('ref') }}</small>{% endif %}</div>{% endif %}
 
-  <div class="ppanel activo" id="pp-lista">
+  <div class="ppanel activo" data-mov-vista id="pp-lista">
   <h2 class="titulo-pagina">Sindicatos en la plataforma ({{ sindicatos|length }})</h2>
   <table>
     <tr><th>Sindicato</th><th>CUIT</th><th>Marca</th><th>Admins</th><th>Trabaj.</th><th></th></tr>
@@ -268,7 +269,7 @@
 
   </div>
 
-  <div class="ppanel" id="pp-nuevo">
+  <div class="ppanel" data-mov-vista id="pp-nuevo">
   <h2 class="titulo-pagina" id="form-sind-titulo">Dar de alta un sindicato</h2>
   <div class="card">
     {% if request.query_params.get('error') == 'clausula' %}
@@ -391,7 +392,7 @@
 
   </div>
 
-  <div class="ppanel" id="pp-admin">
+  <div class="ppanel" data-mov-vista id="pp-admin">
   <h2 class="titulo-pagina">Crear un administrador de sindicato</h2>
   <div class="card">
     {% if request.query_params.get('error') == 'cuil' %}
@@ -422,7 +423,7 @@
   </div>
   </div>
 
-  <div class="ppanel" id="pp-clave">
+  <div class="ppanel" data-mov-vista id="pp-clave">
   <h2 class="titulo-pagina">Cambiar la clave de un usuario</h2>
   <div class="card">
     <div style="background:#fdf3e7; border:1px solid #e8cfa8; border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:#8a5a1a;">
@@ -450,7 +451,7 @@
   </div>
   </div>
 
-  <div class="ppanel" id="pp-marca">
+  <div class="ppanel" data-mov-vista id="pp-marca">
   <h2 class="titulo-pagina">Marca de la plataforma</h2>
   <div class="card">
     <p class="muted" style="margin-bottom:14px;">Es la marca de Colm3na en sí — el logo y los colores de las pantallas de login y de este panel, antes de entrar a un sindicato en particular. La marca de cada sindicato se edita aparte, desde "Sindicatos".</p>
@@ -497,7 +498,7 @@
   </div>
   </div>
 
-  <div class="ppanel" id="pp-config">
+  <div class="ppanel" data-mov-vista id="pp-config">
   <h2 class="titulo-pagina">Configuración legal</h2>
   <div class="card">
     <div style="background:#fdf3e7; border:1px solid #e8cfa8; border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:#8a5a1a;">
@@ -542,7 +543,7 @@
   </div>
   </div>
 
-  <div class="ppanel" id="pp-usoia">
+  <div class="ppanel" data-mov-vista id="pp-usoia">
   <h2 class="titulo-pagina">Uso de la API de IA</h2>
   <div class="subtabs">
     <button type="button" class="ia-subtab activa" data-ia-sub="consumo"
@@ -556,7 +557,7 @@
   </div>
 
   {# ---------------- Consumo y costo ---------------- #}
-  <div class="ia-subpanel activo" id="ia-sub-consumo">
+  <div class="ia-subpanel activo" data-mov-vista id="ia-sub-consumo">
   <p class="muted" style="margin-bottom:14px; max-width:700px;">Una fila por cada llamada real a la API de Anthropic, con los tokens que devolvió la propia respuesta, lo que tardó y lo que costó. Se registra apenas se llama a la IA, no solo cuando el trabajador reporta el recibo. El costo sale de los tokens por el precio del modelo <strong>que regía en ese momento</strong>: actualizar la lista de precios no reescribe el gasto de los meses anteriores.</p>
 
   <div class="card">
@@ -619,7 +620,7 @@
   </div>
 
   {# ---------------- Modelos: qué modelo usa cada parte ---------------- #}
-  <div class="ia-subpanel" id="ia-sub-modelos">
+  <div class="ia-subpanel" data-mov-vista id="ia-sub-modelos">
   <div class="aviso-caja">
     <strong>Esto cambia lo que corre en producción.</strong> El modelo elegido se usa desde la
     llamada siguiente, sin reiniciar nada y para todos los sindicatos a la vez. El precio se ve
@@ -649,7 +650,7 @@
   </div>
 
   {# ---------------- Enmascarado ---------------- #}
-  <div class="ia-subpanel" id="ia-sub-enmascarado">
+  <div class="ia-subpanel" data-mov-vista id="ia-sub-enmascarado">
   <p class="muted" style="margin-bottom:10px; max-width:760px;">Cada recibo, comprobante de ARCA o aprendizaje que pasa por el enmascarado deja una fila: si se tapó lo que identifica a la persona antes de mandarlo a la IA, por qué camino y, si no se pudo, por qué. <strong>Es mejor esfuerzo:</strong> si algo no se tapa, el recibo se analiza igual y queda anotado acá. Las filas no tienen ningún dato personal.</p>
   <div class="aviso-caja" style="margin-bottom:14px;">
     Modo en este servidor: <strong>{{ enmascarado_modo }}</strong>
@@ -736,7 +737,7 @@
   </div>
 
   {# ---------------- Banco de pruebas ---------------- #}
-  <div class="ia-subpanel" id="ia-sub-probar">
+  <div class="ia-subpanel" data-mov-vista id="ia-sub-probar">
   <div class="aviso-caja">
     <strong>Cada prueba gasta créditos de verdad.</strong> Se hace una llamada a la API por cada
     modelo tildado, con el archivo que subas. Cada una queda registrada en «Consumo y costo»
@@ -775,7 +776,7 @@
 
   </div>
 
-  <div class="ppanel" id="pp-sospechosos">
+  <div class="ppanel" data-mov-vista id="pp-sospechosos">
   <h2 class="titulo-pagina">Recibos con alerta de posible adulteración ({{ recibos_sospechosos|length }})</h2>
   <p class="muted" style="margin-bottom:14px; max-width:640px;">La IA marca un recibo acá cuando ve, con alto grado de certeza, señales de edición en los totales, el CUIL del trabajador, el CUIT del empleador o alguna fecha. No bloquea al trabajador — solo guarda una copia del archivo original para revisión. Todavía es una función a modo de prueba.</p>
   <table>
@@ -792,7 +793,7 @@
   </table>
   </div>
 
-  <div class="ppanel" id="pp-topes">
+  <div class="ppanel" data-mov-vista id="pp-topes">
   <h2 class="titulo-pagina">Topes de la seguridad social ({{ topes|length }})</h2>
   <p class="muted" style="margin-bottom:14px; max-width:680px;">Tope máximo y piso mínimo de la base imponible de jubilación, INSSJP y obra social (art. 9 Ley 24.241) — se actualiza todos los meses por resolución de ANSES. Ordenados del período más nuevo al más viejo; el estado (chip de color) indica cuánto se puede confiar en cada valor. <strong>Los montos van sin punto de separador de miles, con coma para los decimales</strong> (ej. 4594798,23).</p>
   {% if request.query_params.get('error') == 'topebajo' %}
@@ -1440,5 +1441,6 @@ function prepararEnvioTope(form) {
   }
 })();
 </script>
+<script src="/static/modales.js?v={{ sello_static('modales.js') }}"></script>
 </body>
 </html>

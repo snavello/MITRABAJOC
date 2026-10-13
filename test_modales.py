@@ -215,3 +215,28 @@ def test_las_vistas_de_tramites_se_arman_como_un_modal():
         css = f.read()
     assert "[data-mov-vista]) [data-armado]" in css
     print("OK  test_las_vistas_de_tramites_se_arman_como_un_modal")
+
+
+def test_las_pestanas_de_las_cuatro_apps_se_arman():
+    """Cada pestaña de las cuatro apps (y las sub-pestañas del panel del
+    sindicato y de plataforma) lleva `data-mov-vista`: una pestaña nueva sin
+    la marca aparece de golpe mientras las demás se arman. Se cuentan los
+    `<div>` de cada clase de pestaña y se exige la marca en todos."""
+    clases = {
+        "trabajador.html": ["tpanel"],
+        "empresa.html": ["tpanel"],
+        "admin.html": ["panel", "subpanel", "tramite-subpanel", "emp-subpanel",
+                       "emptram-subpanel", "enc-subpanel", "au-subpanel"],
+        "plataforma.html": ["ppanel", "ia-subpanel"],
+    }
+    for plantilla, nombres in clases.items():
+        with open(os.path.join(PLANTILLAS, plantilla), encoding="utf-8") as f:
+            html = f.read()
+        for nombre in nombres:
+            divs = re.findall(r'<div class="%s(?:[ "][^>]*)?>' % re.escape(nombre), html)
+            assert divs, (plantilla, nombre)
+            sin = [d for d in divs if "data-mov-vista" not in d]
+            assert not sin, (plantilla, nombre, sin)
+        assert "modales.js?v={{ sello_static('modales.js') }}" in html, plantilla
+        assert "movimiento.css?v={{ sello_static('movimiento.css') }}" in html, plantilla
+    print("OK  test_las_pestanas_de_las_cuatro_apps_se_arman")

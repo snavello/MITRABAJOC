@@ -266,12 +266,14 @@ quiere VER entrar usa `--ease-entrada`, que lo reparte.
   que respiran; un título que respira). Una pantalla nueva que escriba
   "Cargando…" en su modal lo hereda sola.
 - **La caja crece de a poco** cuando cambia su contenido con el modal abierto.
-- **Una vista que cambia adentro de una pestaña** (los trámites del afiliado
-  y de la empresa: lista, formularios, formulario, detalle) lleva
-  `data-mov-vista` y recibe lo mismo: piezas en cascada al aparecer, la
+- **Toda pestaña, sub-pestaña o vista que cambia adentro de una pestaña**
+  (las de las cuatro apps; los trámites del afiliado y de la empresa: lista,
+  formularios, formulario, detalle) lleva `data-mov-vista` y recibe lo mismo: piezas en cascada al aparecer, la
   ruedita de `.cargando` dibujada como líneas, y lo que llega se arma. Lo
   único que no hace es crecer de a poco: está en el flujo de la página y
-  animar su alto reacomodaría todo lo de abajo.
+  animar su alto reacomodaría todo lo de abajo. Y una pieza más alta que dos
+  pantallas (una tabla de miles de filas) no se anima entera: se arma lo que
+  se ve de adentro, o queda quieta. Medido, animarla costaba 100 a 200 ms.
 - **Una familia nueva de modal** suma su fondo a `FONDOS_MOV` (modales.js) y
   sus reglas de entrada y `mov-sale` a `movimiento.css`, o va a ser la única
   que aparece de golpe (lo cuida `test_modales.py`). El "Ver" del Panel

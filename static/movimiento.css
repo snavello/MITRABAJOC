@@ -121,6 +121,9 @@
    (perfil del afiliado) que sobre la clara. */
 :is(.modal-hoja, .modal-notif-caja, .modal-articulo, .modal-recibo, .overlay-ayuda-caja, [data-mov-vista]) .mov-cargando:not(h1, h2, h3, h4):not(:is(.modal-articulo-enc, .modal-notif-enc, .modal-recibo-enc) *) {
   display: block; font-size: 12px; opacity: .7; }
+/* Una celda de tabla ("Cargando…" en la fila única de una tabla del panel)
+   sigue siendo celda: como bloque desarmaría la tabla. */
+:is(td, th).mov-cargando { display: table-cell !important; }
 :is(.modal-hoja, .modal-notif-caja, .modal-articulo, .modal-recibo, .overlay-ayuda-caja, [data-mov-vista]) .mov-cargando:not(h1, h2, h3, h4):not(:is(.modal-articulo-enc, .modal-notif-enc, .modal-recibo-enc) *)::after,
 .mov-esperando > :is(.modal-articulo-body, .modal-notif-body):not(:has(.mov-cargando))::before {
   content: ""; display: block; height: 52px; margin-top: 10px; border-radius: 5px;

@@ -178,7 +178,10 @@
   var NO_ARMAR = ".modal-cerrar, .modal-cerrar-clara, .modal-recibo-cerrar, .overlay-ayuda-cerrar, " +
     "script, style, template, input[type=hidden]";
   var CARGANDO = /^Cargando(…|\.\.\.)$/;
-  var ESCALON = 45, TOPE_PIEZAS = 10;
+  // Una lista larga (los 2000 trámites del panel del sindicato) no se arma
+  // entera: lo que entra en cascada es lo primero que se ve, y el resto ya
+  // está debajo del borde. Marcar todo costaría un repintado pesado.
+  var ESCALON = 45, TOPE_PIEZAS = 10, TOPE_LLEGADOS = 40;
   var reducido = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   function ms(token, defecto) {
@@ -223,7 +226,26 @@
     armarLista(caja, (extra || []).concat(piezas(caja)), base);
   }
 
+  /* Una pieza más alta que dos pantallas (la tabla de los 2000 trámites del
+     panel del sindicato) no se anima entera: subirla a su propia capa para
+     moverla y fundirla costaba 100 a 200 ms en cada cambio de pestaña. Se
+     entra en ella y se arma lo que se ve de lo que trae adentro; si es una
+     sola cosa enorme (la tabla misma), queda quieta. */
+  function aLaVista(xs) {
+    var tope = window.innerHeight * 2, salida = [];
+    xs.forEach(function (el) {
+      if (el.offsetHeight <= tope) { salida.push(el); return; }
+      var adentro = visibles(el).filter(function (h) {
+        var r = h.getBoundingClientRect();
+        return r.bottom > 0 && r.top < window.innerHeight && h.offsetHeight <= tope;
+      });
+      if (adentro.length > 1) salida = salida.concat(adentro.slice(0, TOPE_LLEGADOS));
+    });
+    return salida;
+  }
+
   function armarLista(caja, xs, base) {
+    xs = aLaVista(xs);
     // Las marcas de la vez anterior se sacan primero y se deja que el
     // navegador lo note: si una pieza ya tenía la marca, volver a ponérsela
     // no reinicia su animación, y lo que llegó del servidor aparecería de
@@ -259,8 +281,10 @@
     }
     // La ruedita de las vistas del afiliado y de la empresa (`.cargando` con
     // su `.spin`) es la misma espera con otra cara.
+    // Solo la ruedita sola: si trae un texto ("Leyendo tu comprobante…") es
+    // una espera que explica qué pasa, y se queda como está.
     caja.querySelectorAll(".cargando").forEach(function (el) {
-      if (el.querySelector(".spin") && vistos.indexOf(el) < 0) vistos.push(el);
+      if (el.querySelector(".spin") && !el.textContent.trim() && vistos.indexOf(el) < 0) vistos.push(el);
     });
     caja.querySelectorAll(".mov-cargando").forEach(function (el) {
       if (vistos.indexOf(el) >= 0) return;
@@ -381,18 +405,31 @@
 
   // Lo que llegó, sin repetir lo que ya viene adentro de otra pieza que
   // llegó en el mismo paso, y en el orden en que se lee.
-  function llegados(regs) {
-    var xs = [];
+  function llegados(regs, raiz) {
+    var todos = new Set();
     regs.forEach(function (r) {
       r.addedNodes.forEach(function (n) {
-        if (n.nodeType === 1 && n.isConnected && xs.indexOf(n) < 0 && !n.matches(NO_ARMAR)) xs.push(n);
+        if (n.nodeType === 1 && n.isConnected && !n.matches(NO_ARMAR)) todos.add(n);
       });
     });
-    xs = xs.filter(function (n) {
-      return seVe(n) && !xs.some(function (m) { return m !== n && m.contains(n); });
+    var xs = [];
+    todos.forEach(function (n) {
+      if (xs.length >= TOPE_LLEGADOS) return;
+      for (var p = n.parentElement; p && p !== raiz; p = p.parentElement) if (todos.has(p)) return;
+      if (seVe(n)) xs.push(n);
     });
     return xs.sort(function (a, b) {
       return a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+    });
+  }
+
+  function traeEspera(regs) {
+    return regs.some(function (r) {
+      if (r.type === "characterData") return CARGANDO.test((r.target.nodeValue || "").trim());
+      return Array.prototype.some.call(r.addedNodes, function (n) {
+        if (n.nodeType === 3) return CARGANDO.test((n.nodeValue || "").trim());
+        return n.nodeType === 1 && (/Cargando/.test(n.textContent) || n.matches(".cargando") || !!n.querySelector(".spin"));
+      });
     });
   }
 
@@ -409,12 +446,16 @@
     if (v.parentElement && v.parentElement.closest("[data-mov-vista]")) return;
     v._movCargando = marcarCarga(v);
     new MutationObserver(function (regs) {
+      // Un panel que se repinta seguido (la vista previa que sigue a lo que
+      // se escribe) no tiene que recorrerse entero en cada tecla: solo hace
+      // falta mirar si había una espera o si lo que llegó trae una.
+      if (!v._movCargando && !traeEspera(regs)) return;
       var esperaba = v._movCargando;
       v._movCargando = marcarCarga(v);
       // Llegó lo que se esperaba: se arma lo que llegó. Un repintado sin
       // espera (cambiar un filtro) no se rearma, igual que en los modales.
       if (!esperaba || v._movCargando) return;
-      var xs = llegados(regs);
+      var xs = llegados(regs, v);
       if (xs.length) armarLista(v, xs, 0);
     }).observe(v, { childList: true, characterData: true, subtree: true });
   }

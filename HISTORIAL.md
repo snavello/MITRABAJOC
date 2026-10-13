@@ -7020,6 +7020,25 @@ crecer de a poco: una vista está en el flujo de la página y animar su alto
 reacomodaría todo lo de abajo cuadro por cuadro. Cambiar un filtro de la
 lista, que repinta sin esperar, no rearma: sería ruido.
 
+**Y todas las pestañas de las cuatro apps (2026-10-13; Trabajador 0.45.04,
+Admin 0.53.05, Plataforma 0.43.06).** Con "seguí", lo que faltaba de la misma
+familia: las 7 pestañas del afiliado (y el historial de recibos), las de la
+empresa, las 14 del panel del sindicato con sus sub-pestañas y las 9 de
+plataforma con las de Uso de IA llevan `data-mov-vista`; plataforma empezó a
+cargar `modales.js` y `movimiento.css`. Tres ajustes que salieron al medirlo:
+- **Una pieza más alta que dos pantallas no se anima entera.** En la pestaña
+  Trámites del panel (2000 filas), subir la tabla a su propia capa para
+  fundirla y moverla le sumaba 100 a 200 ms al cambio de pestaña (medido
+  contra la misma página sin `modales.js`: 337 contra 237 ms). Ahora se entra
+  en ella y se arma lo que se ve; si es una sola cosa enorme, queda quieta.
+  Con eso, el cambio cuesta lo mismo que sin el efecto.
+- **Lo que llega se arma hasta 40 piezas**, en orden de lectura y sin
+  comparar cada una contra todas (eso era cuadrático con 2000 filas).
+- **Un panel que se repinta en cada tecla** (la vista previa de Noticias)
+  no se recorre entero: solo se mira si había una espera o si lo que llegó
+  trae una. Y la ruedita que viene con un texto ("Leyendo tu comprobante…")
+  se queda como está: explica qué pasa. "Cargando…" en la celda única de una
+  tabla sigue siendo celda.
 
 ## La Bancaria con la grilla de agosto 2026: básico no es conformado (2026-10-13)
 
