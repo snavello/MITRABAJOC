@@ -7236,3 +7236,13 @@ Un importe que no es de la grilla no se adivina: queda sin botón y con el
 "Tildá…" de antes. En pantalla, un botón chico de contorno en el renglón
 (↳ Tildar «Cajero») y, en el recuadro de la IA, la lista con "Ajustar todo al
 recibo". Nunca se aplica solo, como la categoría. Plataforma 0.47.01.
+
+### Botones del chequeo y edición plegada (2026-10-13)
+
+SDN: "Analizar con IA Colm3na" pasa primero y destacado, con el isotipo de
+Colm3na (`static/icons/favicon-64.png`), y "Chequear recibo" pasa a
+"Chequeo manual recibo". Después de leer con IA, la edición de importes
+(totales impresos y renglones que la calculadora no tiene) queda plegada en
+"Editar importes del recibo": lo leído ya está en la tabla y tenerla abierta
+confundía. Con el chequeo manual se abre sola. Guardar caso sigue a la
+vista. Plataforma 0.47.02.
