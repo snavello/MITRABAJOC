@@ -1,10 +1,13 @@
-// Genera la versión Word del catálogo de trámites de La Bancaria, para revisar
-// y anotar: cada gestión termina con un recuadro de observaciones y el control
-// de cambios queda activado. Los datos salen de tramites-bancaria.json (lo
-// mismo que la página HTML); los textos fijos (criterio, hallazgos, cambios)
-// repiten los de tramites-bancaria.plantilla.html: si cambian allá, cambiarlos acá.
+// Genera las dos versiones Word del catálogo de trámites de La Bancaria:
+//   tramites-bancaria.docx          completo, una ficha por gestión con su
+//                                   recuadro de observaciones (~90 páginas)
+//   tramites-bancaria-resumen.docx  resumen de 6 páginas para leer primero
+// Las dos con control de cambios activado. Los datos salen de
+// tramites-bancaria.json (lo mismo que la página HTML); los textos fijos
+// (criterio, hallazgos, cambios) repiten los de tramites-bancaria.plantilla.html:
+// si cambian allá, cambiarlos acá.
 // Uso (desde la raíz del repo, con docx de npm):
-//   node docs/bancaria/generar_tramites_docx.js [logo.png] [salida.docx]
+//   node docs/bancaria/generar_tramites_docx.js [logo.png] [carpeta_salida]
 const fs = require('fs');
 const path = require('path');
 const {
@@ -13,8 +16,7 @@ const {
   Footer, PageNumber, TabStopType, LineRuleType, PageBreak,
 } = require('docx');
 
-const [LOGO = 'static/marca/logo_plataforma_claro.png',
-  SALIDA = 'docs/bancaria/tramites-bancaria.docx'] = process.argv.slice(2);
+const [LOGO = 'static/marca/logo_plataforma_claro.png', CARPETA = 'docs/bancaria'] = process.argv.slice(2);
 const D = JSON.parse(fs.readFileSync(path.join(__dirname, 'tramites-bancaria.json'), 'utf8'));
 const logo = fs.readFileSync(LOGO);
 
@@ -210,35 +212,142 @@ cuerpo.push(h2('Método y límites'),
   p('No se pudo ver: el interior de los sistemas con usuario, quién autoriza las reservas de turismo, y si los cambios de Tus Datos pasan solos al padrón del sindicato. Antes de usarlo afuera, validar con Acción Social, Previsión, Acción Gremial y DDHH qué gestiones existen hoy, en qué seccionales y por qué canal entran.'),
   ...observaciones('Ideas generales', 6));
 
-// ---------- documento ----------
-const pie = new Footer({ children: [new Paragraph({
-  tabStops: [{ type: TabStopType.RIGHT, position: ANCHO }],
-  border: { top: { style: BorderStyle.SINGLE, size: 4, color: C.linea, space: 4 } },
-  children: [r('Colm3na · Trámites de La Bancaria · versión 2 · uso interno', { size: 17, color: C.texto2 }), r('\tPágina ', { size: 17, color: C.texto2 }),
-    new TextRun({ children: [PageNumber.CURRENT], size: 17, color: C.texto2 }), r(' de ', { size: 17, color: C.texto2 }),
-    new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 17, color: C.texto2 })] })] });
-const numeracionKit = ['kit1', 'kit2', 'kit3'].map(reference => ({ reference, levels: [
-  { level: 0, format: LevelFormat.DECIMAL, text: '%1.', alignment: AlignmentType.LEFT, style: { run: { bold: true, color: C.mielOsc }, paragraph: { indent: { left: 480, hanging: 360 } } } }] }));
-const doc = new Document({
-  creator: 'Colm3na', title: 'Trámites de La Bancaria en Colm3na', description: 'Versión 2, verificada',
-  features: { trackRevisions: true },
-  styles: {
-    default: { document: { run: { font: FUENTE, size: 24, color: C.texto }, paragraph: { spacing: { line: 288, lineRule: LineRuleType.AUTO } } } },
-    paragraphStyles: [
-      { id: 'Title', name: 'Title', basedOn: 'Normal', next: 'Normal', run: { font: FUENTE, size: 52, bold: true, color: C.tinta }, paragraph: { spacing: { after: 200 } } },
-      { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { font: FUENTE, size: 36, bold: true, color: C.tinta }, paragraph: { spacing: { before: 120, after: 160 }, outlineLevel: 0, border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: C.miel, space: 4 } } } },
-      { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { font: FUENTE, size: 29, bold: true, color: C.tinta }, paragraph: { spacing: { before: 320, after: 80 }, outlineLevel: 1 } },
-      { id: 'Heading3', name: 'Heading 3', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { font: FUENTE, size: 22, bold: true, color: C.mielOsc, allCaps: true }, paragraph: { spacing: { before: 160, after: 60 }, outlineLevel: 2 } },
-    ],
-  },
-  numbering: { config: [
-    { reference: 'vinetas', levels: [{ level: 0, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.LEFT, style: { run: { color: C.mielOsc }, paragraph: { indent: { left: 400, hanging: 260 } } } }] },
-    ...numeracionKit,
-  ] },
-  sections: [{
-    properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 } } },
-    footers: { default: pie },
-    children: cuerpo,
-  }],
+
+// =====================================================================
+// RESUMEN (6 páginas): lo mismo, en tablas; el detalle queda en el completo
+// =====================================================================
+const T = 20; // letra de las tablas del resumen: 10 pt
+const rt = (text, o = {}) => r(text, { size: T, ...o });
+// Tabla compacta: celdas con texto o con [runs]; filas {grupo} ocupan todo el ancho.
+function tablaR(cab, filas, anchos) {
+  const total = anchos.reduce((a, b) => a + b, 0);
+  const cel = (contenido, ancho, o = {}) => new TableCell({
+    width: { size: ancho, type: WidthType.DXA }, borders: bordes, columnSpan: o.span,
+    margins: { top: 25, bottom: 25, left: 90, right: 90 },
+    shading: o.fill ? { type: ShadingType.CLEAR, fill: o.fill, color: 'auto' } : undefined,
+    children: [new Paragraph({ spacing: { after: 0, line: 252, lineRule: LineRuleType.AUTO },
+      children: Array.isArray(contenido) ? contenido : [rt(String(contenido), o.run || {})] })] });
+  const filaCab = new TableRow({ tableHeader: true, children: cab.map((t, i) => cel(t, anchos[i], { fill: C.tinta, run: { bold: true, color: 'FFFFFF' } })) });
+  const cuerpoT = filas.map(f => f.grupo
+    ? new TableRow({ cantSplit: true, children: [cel(f.grupo, total, { span: anchos.length, fill: C.papel2, run: { bold: true, color: C.texto } })] })
+    : new TableRow({ cantSplit: true, children: f.map((t, i) => cel(t, anchos[i])) }));
+  return new Table({ width: { size: total, type: WidthType.DXA }, columnWidths: anchos, rows: [filaCab, ...cuerpoT] });
+}
+const espacio = (n = 120) => p('', { spacing: { after: n } });
+const corto = (t) => String(t).split(/\s*[(;]/)[0].trim();
+// Corta en el último espacio antes del límite, con puntos suspensivos.
+const recorte = (t, n) => t.length <= n ? t : t.slice(0, t.lastIndexOf(' ', n)).replace(/[,:.]$/, '') + '…';
+const h2r = (t) => new Paragraph({ heading: HeadingLevel.HEADING_2, children: [r(t)], keepNext: true, spacing: { before: 200, after: 80 } });
+const NIVEL_CORTO = { listo: 'Listo', ajuste: 'Ajuste', desarrollo: 'Desarrollo', fuera: 'Fuera' };
+const HOY_CORTO = { online: 'Online', 'semi-online': 'Semi-online', presencial: 'Presencial', no_dice: 'Existe, sin canal', no_existe: 'Sin canal' };
+const ESTR_CORTA = { crear_de_cero: 'Nuevo', reemplazar: 'Reemplaza', puerta_y_encadenado: 'Puerta', informar: 'Informar' };
+
+const resumen = [];
+resumen.push(
+  new Paragraph({ children: [new ImageRun({ type: 'png', data: logo, transformation: { width: 130, height: 35 } })], spacing: { after: 160 } }),
+  p([r('ASOCIACIÓN BANCARIA · RESUMEN DEL CATÁLOGO VERIFICADO · OCTUBRE 2026', { bold: true, color: C.mielOsc, size: 18, characterSpacing: 20 })], { spacing: { after: 60 } }),
+  new Paragraph({ heading: HeadingLevel.TITLE, children: [r('Trámites de La Bancaria en Colm3na')], spacing: { after: 100 } }),
+  p([r('Resumen para leer primero. Cada gestión lleva su código (T01, T39…): el detalle, las fuentes y el recuadro para anotar están en el Word completo.', { color: C.texto2 })]),
+  tablaR(['Gestiones del afiliado', 'Online hoy', 'Sin canal publicado', 'Listas hoy en Colm3na'],
+    [[String(AF.length), String(cm.online || 0), String(sinCanal), String(cn.listo || 0)]], [2410, 2409, 2410, 2409]),
+  h2r('Lo que hay que saber'),
+);
+[[`Online hay poco. `, `${cm.online || 0} de ${AF.length} gestiones son online, y casi todas son para informarse. Lo único que el afiliado tramita online es Tus Datos.`],
+ [`Para ${sinCanal} no hay a quién pedir. `, 'Reclamos, denuncias, licencias, accidentes, consultas de jubilados: la web muestra acción colectiva, no un canal individual. Es el campo más grande.'],
+ ['Turismo es interno. ', 'El sistema de reservas lo usan las seccionales. Colm3na pone la puerta del afiliado: pedido, boleta y comprobante por trámites encadenados.'],
+ ['El recibo. ', 'Hoy se controlan los aportes de ley, el tope del 2% y la cuota. Controlar el CCT 18/75 necesita la grilla del mes como parámetro: es desarrollo.'],
+ ['Lo sensible pide un ajuste. ', 'Hoy los administradores ven todos los trámites; una denuncia por violencia necesita un trámite confidencial y un aviso con texto neutro.'],
+ ['Mucho depende de la seccional. ', 'Kit recién nacido, guardapolvos, Megatlon, vacuna y cultura solo aparecen en la Seccional Buenos Aires.'],
+].forEach(([t, d]) => resumen.push(vineta([r(t, { bold: true }), r(d)])));
+resumen.push(h2r('El criterio'), p([r('Foco en el afiliado, su familia y los jubilados. Los sistemas internos del sindicato no se tocan: Colm3na pone la puerta. Online solo si lo es de punta a punta. Cada gestión dice si está verificada o deducida.')]));
+
+// Hoy y en Colm3na: una tabla de dos columnas pares
+const hoyFilas = Object.keys(MODALIDAD).filter(k => cm[k]).map(k => [MODALIDAD[k], String(cm[k])]);
+const colFilas = Object.keys(ESTRATEGIA).filter(k => ce[k]).map(k => [ESTRATEGIA[k], String(ce[k])]);
+const nFilas = Math.max(hoyFilas.length, colFilas.length);
+resumen.push(h2r('Hoy y en Colm3na'), tablaR(['Cómo se hacen hoy', 'N.º', 'Qué haría Colm3na', 'N.º'],
+  Array.from({ length: nFilas }, (_, i) => [...(hoyFilas[i] || ['', '']), ...(colFilas[i] || ['', ''])]), [3200, 900, 4638, 900]),
+  p([rt(`En Colm3na: ${cn.listo || 0} listas hoy, ${cn.ajuste || 0} con un ajuste menor y ${cn.desarrollo || 0} que necesitan desarrollo.`, { color: C.texto2 })], { spacing: { before: 80, after: 80 } }));
+
+resumen.push(h2r('Los sistemas que La Bancaria ya tiene'), tablaR(['Sistema', 'Quién lo usa', 'Relación con Colm3na'], [
+  ['Tus Datos', 'El afiliado, online de punta a punta. Las seccionales ven los cambios, sin aprobar.', 'Perfil de Colm3na; faltan campos. Segunda tanda.'],
+  ['Kit escolar', 'El afiliado lo pide online; se retira en persona.', 'Reemplazable cuando haya grupo familiar. Segunda tanda.'],
+  ['Reservas de turismo', 'Solo las seccionales. El afiliado entra por seccional, mail o WhatsApp y paga en el banco.', 'Se queda. Colm3na pone la puerta con encadenados.'],
+  ['Dónde voto', 'El afiliado, online.', 'Se enlaza desde la app con el aviso de la elección.'],
+  ['Formularios de Google', 'El afiliado (afiliación, vacuna, torneos, cultura); la respuesta llega por fuera.', 'Se reemplazan por trámites con expediente.'],
+  ['Fundación Bancar', 'El afiliado, online. Entidad aparte.', 'Se informa con noticia y aviso.'],
+], [2000, 4038, 3600]));
+
+// Kit
+const filaKit = (id, i) => { const x = porId[id]; return [String(i + 1), [rt(x.nombre, { bold: true }), rt(`  ${x.id}`, { color: C.texto2 })], corto(x.colm3na.area) || '—', MODALIDAD[x.hoy.modalidad]]; };
+resumen.push(h2r(`Kit de inicio: ${KIT.length} formularios listos para el primer día`),
+  tablaR(['#', 'Gestión', 'Área que lo atiende', 'Hoy'], KIT.map(filaKit), [500, 4438, 2900, 1800]));
+resumen.push(h2r('Lo que el afiliado usa sin formulario nuevo'),
+  tablaR(['#', 'Gestión', 'Cómo', 'Hoy'], SIN_FORMULARIO.map((id, i) => { const x = porId[id]; return [String(i + 1), [rt(x.nombre, { bold: true }), rt(`  ${x.id}`, { color: C.texto2 })], ESTRATEGIA[x.colm3na.estrategia], MODALIDAD[x.hoy.modalidad]]; }), [500, 4438, 2900, 1800]));
+resumen.push(h2r(`Segunda tanda: ${SEG.length} gestiones con un ajuste o que ya funcionan online`),
+  tablaR(['#', 'Gestión', 'Qué falta', 'Nivel'], SEG.map((id, i) => { const x = porId[id]; return [String(i + 1), [rt(x.nombre, { bold: true }), rt(`  ${x.id}`, { color: C.texto2 })], recorte(corto(x.colm3na.falta || x.colm3na.propuesta), 70), NIVEL_CORTO[x.colm3na.nivel]]; }), [500, 4338, 3800, 1000]));
+
+// Las 81 de un vistazo
+const vistazo = [];
+EJES.forEach(([k, t]) => {
+  const items = AF.filter(x => x.eje === k);
+  if (!items.length) return;
+  vistazo.push({ grupo: `${t} (${items.length})` });
+  items.forEach(x => vistazo.push([x.id, x.nombre + (x.kit === 'kit' ? '  ★' : ''), HOY_CORTO[x.hoy.modalidad], ESTR_CORTA[x.colm3na.estrategia], NIVEL_CORTO[x.colm3na.nivel]]));
 });
-Packer.toBuffer(doc).then(b => { fs.writeFileSync(SALIDA, b); console.log(`${SALIDA}: ${AF.length} gestiones, kit ${KIT.length} + ${SEG.length}`); });
+resumen.push(h2r(`Las ${AF.length} gestiones de un vistazo`),
+  p([rt('★ = en el kit de inicio. Colm3na: Nuevo (hoy no hay canal), Reemplaza (papel, Google Form o WhatsApp), Puerta (convive con su sistema interno), Informar (aviso, noticia o enlace).', { color: C.texto2 })], { spacing: { after: 80 } }),
+  tablaR(['Código', 'Gestión', 'Hoy', 'Colm3na', 'Nivel'], vistazo, [1100, 4250, 1800, 1300, 1188]));
+
+resumen.push(h2r('Qué validar primero con el sindicato'));
+['¿Qué servicios ofrece cada seccional? Varios solo aparecen en la Seccional Buenos Aires.',
+ '¿Quién autoriza las reservas de turismo, y aceptan recibir el pedido y el comprobante por Colm3na?',
+ '¿Cómo reciben hoy una denuncia de violencia, y aceptan que solo la vea el área de Género?',
+ '¿Los cambios de Tus Datos pasan solos al padrón (SAF) o alguien los copia a mano?',
+ '¿Nos pueden pasar las grillas salariales en planilla, en vez del escaneo firmado?',
+].forEach(t => resumen.push(vineta(t)));
+resumen.push(...observaciones('Mis observaciones', 2));
+
+// ---------- documentos ----------
+function pie(texto) {
+  return new Footer({ children: [new Paragraph({
+    tabStops: [{ type: TabStopType.RIGHT, position: ANCHO }],
+    border: { top: { style: BorderStyle.SINGLE, size: 4, color: C.linea, space: 4 } },
+    children: [r(texto, { size: 17, color: C.texto2 }), r('\tPágina ', { size: 17, color: C.texto2 }),
+      new TextRun({ children: [PageNumber.CURRENT], size: 17, color: C.texto2 }), r(' de ', { size: 17, color: C.texto2 }),
+      new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 17, color: C.texto2 })] })] });
+}
+function documento(children, { titulo, textoPie, letra }) {
+  const numeracionKit = ['kit1', 'kit2', 'kit3'].map(reference => ({ reference, levels: [
+    { level: 0, format: LevelFormat.DECIMAL, text: '%1.', alignment: AlignmentType.LEFT, style: { run: { bold: true, color: C.mielOsc }, paragraph: { indent: { left: 480, hanging: 360 } } } }] }));
+  return new Document({
+    creator: 'Colm3na', title: titulo, description: 'Versión 2, verificada',
+    features: { trackRevisions: true },
+    styles: {
+      default: { document: { run: { font: FUENTE, size: letra, color: C.texto }, paragraph: { spacing: { line: 288, lineRule: LineRuleType.AUTO } } } },
+      paragraphStyles: [
+        { id: 'Title', name: 'Title', basedOn: 'Normal', next: 'Normal', run: { font: FUENTE, size: 48, bold: true, color: C.tinta }, paragraph: { spacing: { after: 200 } } },
+        { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { font: FUENTE, size: 36, bold: true, color: C.tinta }, paragraph: { spacing: { before: 120, after: 160 }, outlineLevel: 0, border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: C.miel, space: 4 } } } },
+        { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { font: FUENTE, size: 28, bold: true, color: C.tinta }, paragraph: { spacing: { before: 320, after: 80 }, outlineLevel: 1 } },
+        { id: 'Heading3', name: 'Heading 3', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { font: FUENTE, size: 22, bold: true, color: C.mielOsc, allCaps: true }, paragraph: { spacing: { before: 160, after: 60 }, outlineLevel: 2 } },
+      ],
+    },
+    numbering: { config: [
+      { reference: 'vinetas', levels: [{ level: 0, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.LEFT, style: { run: { color: C.mielOsc }, paragraph: { indent: { left: 400, hanging: 260 } } } }] },
+      ...numeracionKit,
+    ] },
+    sections: [{
+      properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 } } },
+      footers: { default: pie(textoPie) },
+      children,
+    }],
+  });
+}
+const salidas = [
+  ['tramites-bancaria.docx', documento(cuerpo, { titulo: 'Trámites de La Bancaria en Colm3na', textoPie: 'Colm3na · Trámites de La Bancaria · versión 2 · uso interno', letra: 24 })],
+  ['tramites-bancaria-resumen.docx', documento(resumen, { titulo: 'Trámites de La Bancaria en Colm3na (resumen)', textoPie: 'Colm3na · Trámites de La Bancaria · resumen · uso interno', letra: 22 })],
+];
+salidas.forEach(([nombre, d]) => Packer.toBuffer(d).then(b => {
+  fs.writeFileSync(path.join(CARPETA, nombre), b);
+  console.log(`${nombre}: ${AF.length} gestiones, kit ${KIT.length} + ${SEG.length}`);
+}));
