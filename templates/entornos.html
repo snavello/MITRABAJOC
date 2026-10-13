@@ -384,6 +384,7 @@
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="planes"{% if entorno_actual != 'pruebas' %} disabled title="Cambiar de plan reinicia el servicio: se administra solo desde Pruebas"{% endif %}>Planes</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="observabilidad">Observabilidad</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="mapa">Mapa funcional</button>
+      <button type="button" class="etab" role="tab" aria-selected="false" data-tab="herramientas">Herramientas</button>
       <button type="button" class="etab" role="tab" aria-selected="false" data-tab="xsanders">Seguridad</button>
     </nav>
 
@@ -486,6 +487,20 @@
           <a class="boton suave" href="/recursos/prompt-mapa-funcional/archivo" target="_blank" rel="noopener">Prompt para otros proyectos</a>
         </div>
         <div class="mapa-estado" id="mapa-estado">Se lee al abrir esta pestaña…</div>
+      </div>
+    </div>
+
+    <div class="panel-etab" data-panel="herramientas" hidden>
+      {# Herramientas (2026-10-13): asistentes de la implementación, desarrollos
+         chicos que no van en las apps de sindicato ni de trabajador. Cada uno
+         abre su propia página. #}
+      <div class="sala-tarjeta">
+        <p><b>Calculadora bancaria.</b> El recibo que corresponde según la grilla firmada de La Bancaria (CCT 18/75): las tres ramas, adicionales, ROE, conformado, aportes con tope y cuota. Con "Chequear recibo" se compara contra un recibo real cargado a mano, y el caso se guarda para revisar y corregir la calculadora o el auditor de recibos.</p>
+        <div class="mapa-botones">
+          <a class="boton" href="/entornos/herramientas/calculadora-bancaria">Abrir la calculadora</a>
+          <a class="boton suave" href="/entornos/herramientas/calculadora-bancaria#casos">Casos guardados</a>
+        </div>
+        <div class="mapa-estado" id="herramientas-estado">Se lee al abrir esta pestaña…</div>
       </div>
     </div>
 
@@ -760,7 +775,7 @@
   }
   tabs.forEach(t => t.addEventListener('click', () => { if (!t.disabled) activar(t.dataset.tab); }));
   const inicial = location.hash.replace('#', '');
-  if (['tests-pruebas', 'tests-demo', 'planes', 'observabilidad', 'mapa', 'xsanders'].includes(inicial)) activar(inicial);
+  if (['tests-pruebas', 'tests-demo', 'planes', 'observabilidad', 'mapa', 'herramientas', 'xsanders'].includes(inicial)) activar(inicial);
 })();
 
 // Mapa funcional (2026-09-30): el estado se pide recién al abrir la pestaña,
@@ -783,6 +798,23 @@
   }
   tab.addEventListener('click', cargar);
   if (location.hash === '#mapa') cargar();
+})();
+
+// Herramientas (2026-10-13): cuántos casos guardó la Calculadora bancaria.
+(function () {
+  const tab = document.querySelector('.etab[data-tab="herramientas"]');
+  const estado = document.getElementById('herramientas-estado');
+  function cargar() {
+    fetch('/api/entornos/herramientas/bancaria/casos', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(d => {
+        const nuevos = d.casos.filter(c => c.estado === 'nuevo').length;
+        estado.textContent = d.casos.length ? `${d.casos.length} casos guardados, ${nuevos} sin revisar.` : 'Todavía no hay casos guardados.';
+      })
+      .catch(() => { estado.textContent = 'No se pudo leer cuántos casos hay.'; });
+  }
+  tab.addEventListener('click', cargar);
+  if (location.hash === '#herramientas') cargar();
 })();
 
 // Observabilidad, pastillas (2026-09-21): Sala de mando por defecto. El iframe

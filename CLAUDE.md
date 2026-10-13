@@ -170,9 +170,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - cargar_bancaria.py — alta de "La Bancaria" con los conceptos del CCT 18/75
   (ver `docs/cct-1875-bancarios.md`) + su lote. `--rehacer-recibos` regenera
   solo los recibos del lote; `--borrar-recibos-de CUIL [--si]` borra los de
-  una persona. Los montos salen de `grilla_bancaria.py` (puro: la grilla
-  vigente, hoy la de agosto 2026); `docs/recibos-bancaria-prueba/` tiene diez
-  recibos PDF simulados del CUIL de prueba 27999999994, con su generador.
+  una persona. Los montos salen de `grilla_bancaria.py` (puro), que lee las
+  grillas de `data/grillas_bancarias/AAAA-MM.json` (una por mes, transcriptas
+  del PDF firmado; hoy agosto 2026) y arma el recibo que corresponde para la
+  Calculadora bancaria (ver "Herramientas"); `docs/recibos-bancaria-prueba/`
+  tiene diez recibos PDF simulados del CUIL de prueba 27999999994.
 - medir_dashboard.py — mide los endpoints del Panel Sindical con 50.000 recibos.
 - e2e/ — robots de QA con Playwright (ver `e2e/README.md`).
 - chequeo.py — autodiagnóstico de la instalación.
@@ -635,7 +637,7 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   freno, lo cierra el perímetro. Detalle en HISTORIAL.md, "Registro
   confirmado por mail".
 
-## Estado actual (actualizado 2026-10-11)
+## Estado actual (actualizado 2026-10-13)
 Todo lo listado acá está mergeado a `main` y desplegado en Pruebas (Render
 sigue `main`, cada push redeploya), **incluido el punto 21**, que ya se portó
 sobre `main`.
@@ -995,6 +997,14 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     variables en Render (`DESPLIEGUE_RENDER.md`): mientras tanto el registro
     nace nivel 1 visible. Trabajador 0.45.01, Admin 0.49.01, Plataforma 0.43.03.
 
+33. **Herramientas en `/entornos` y la Calculadora bancaria** (2026-10-13,
+    Plataforma 0.44.01): pestaña nueva para los asistentes de la
+    implementación, que no van en las apps de sindicato ni de trabajador. La
+    primera calcula el recibo bancario que corresponde (tres ramas,
+    conformado, adicionales, ROE, aportes con tope, cuota), lo compara con un
+    recibo real cargado a mano y guarda casos para revisar (tabla
+    `CasoHerramienta`, migración `a3c7e91d4b26`). Ver "Herramientas".
+
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
 plataforma), (b) sacar "Cambiar clave" transitorio de plataforma antes de
@@ -1295,6 +1305,36 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     y de la empresa, que no son modales (`data-mov-vista`, Trabajador 0.45.03),
     y a TODAS las pestañas y sub-pestañas de las cuatro apps (Trabajador
     0.45.04, Admin 0.53.05, Plataforma 0.43.06).
+
+## Herramientas (solapa de `/entornos`)
+
+Asistentes de la implementación: desarrollos chicos que ayudan a poner en
+marcha un sindicato y **no van en las apps de sindicato ni de trabajador**.
+Existen donde existe `/entornos` (local y Pruebas, 404 en Demo) y con su
+misma puerta (`_exigir_herramientas`, `_exigir_pase`). Cada herramienta abre
+su página (`/entornos/herramientas/<nombre>`) y la pestaña solo la presenta.
+
+**Calculadora bancaria** (`templates/calculadora_bancaria.html`, rutas
+`/api/entornos/herramientas/bancaria/*`):
+- **El cálculo lo hace el servidor** (`grilla_bancaria.calcular_recibo`,
+  puro); el navegador solo muestra. Al guardar un caso el esperado y las
+  diferencias se RECALCULAN con la entrada: no se guarda lo que mande el
+  navegador. Tolerancia de $ 1 al comparar.
+- **Una grilla por mes**, en `data/grillas_bancarias/AAAA-MM.json`. Una
+  nueva es un archivo nuevo (procedimiento en `docs/cct-1875-bancarios.md`):
+  la calculadora la ofrece sola y las constantes del lote pasan a ser las de
+  la más nueva. `test_calculadora_bancaria.py` controla cada grilla (todo
+  básico sobre el piso es coeficiente × la misma unidad: atrapa un dígito mal
+  copiado).
+- **Supuestos marcados en pantalla** (`supuesto: true` en el renglón): el
+  nombre "Complemento salario conformado", y guardería y conectividad como no
+  remunerativos. El Día del Bancario va no remunerativo por el acta de 2020.
+  Ganancias no se calcula: se carga a mano.
+- **Casos** (`CasoHerramienta`, genérica por `herramienta`): entrada,
+  esperado, real, diferencias, banco opcional y nota; **sin nombre ni CUIL**.
+  Estados nuevo / revisado / aplicado / descartado, con quién y cuándo, y
+  descarga en CSV. Los textos que escribe una persona se dibujan con
+  `textContent`, nunca como HTML.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 
