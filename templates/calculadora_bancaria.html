@@ -119,6 +119,13 @@
   /* El análisis con IA, en su propio recuadro: la misma espera que el
      análisis de recibo del afiliado (aro con el reloj y las fases). */
   .ia-caja { border-color:color-mix(in srgb, var(--ambar) 45%, transparent); }
+  /* "Analizar con IA Colm3na": el camino principal, primero y con el isotipo. */
+  .boton-ia { display:inline-flex; align-items:center; gap:9px; padding:7px 16px 7px 8px; font-size:15px;
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--ambar) 22%, transparent); }
+  .boton-ia img { border-radius:7px; display:block; }
+  .editar-real summary { cursor:pointer; font:600 14px system-ui; color:var(--suave); padding:6px 0; }
+  .editar-real summary:hover, .editar-real[open] summary { color:#fff; }
+  .editar-real summary small { font-weight:400; color:var(--suave); }
   .ia-cab { display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; }
   .ia-cab > div { flex:1 1 260px; }
   .ia-cab h2 { margin-bottom:4px; }
@@ -236,8 +243,8 @@
         </div>
         <div class="resumen-dif" id="resumen-dif"></div>
         <div class="acciones">
-          <button type="button" class="boton suave" id="btn-chequear" aria-pressed="false">Chequear recibo</button>
-          <button type="button" class="boton suave" id="btn-ia">Analizar con IA</button>
+          <button type="button" class="boton boton-ia" id="btn-ia"><img src="/static/icons/favicon-64.png?v={{ sello_static('icons/favicon-64.png') }}" alt="" width="26" height="26">Analizar con IA Colm3na</button>
+          <button type="button" class="boton suave" id="btn-chequear" aria-pressed="false">Chequeo manual recibo</button>
           <span class="fuente" id="estado-calc"></span>
         </div>
       </div>
@@ -269,7 +276,9 @@
       <div class="tarjeta chequeo" id="chequeo" hidden>
           <h2>Del recibo real</h2>
           <p class="fuente" style="margin:0 0 10px">Al lado de cada renglón del recibo esperado va lo que dice el recibo real: lo completa el análisis con IA o se carga a mano. Si el recibo trae algo que la calculadora no tiene, va acá abajo.</p>
-          <div class="grupo-t" style="margin-bottom:6px">Totales impresos</div>
+          <details class="editar-real" id="editar-real">
+          <summary>Editar importes del recibo <small>(totales impresos y renglones que la calculadora no tiene)</small></summary>
+          <div class="grupo-t" style="margin:10px 0 6px">Totales impresos</div>
           <div class="totales-reales">
             <label class="campo"><span>Total bruto</span><input type="text" id="real-bruto" inputmode="decimal"></label>
             <label class="campo"><span>Total descuentos</span><input type="text" id="real-descuentos" inputmode="decimal"></label>
@@ -278,6 +287,7 @@
           <div class="grupo-t" style="margin:4px 0 6px">Renglones que la calculadora no tiene</div>
           <div id="extras"></div>
           <button type="button" class="boton suave" id="btn-extra">+ Agregar renglón</button>
+          </details>
           <hr class="separa">
           <h2>Guardar caso</h2>
           <label class="campo"><span>Banco (opcional)</span><input type="text" id="banco" maxlength="120" placeholder="Ej.: Banco Nación"></label>
@@ -594,13 +604,19 @@
     $('recibo').classList.toggle('chequeando', si);
     $('chequeo').hidden = !si;
     $('btn-chequear').setAttribute('aria-pressed', String(si));
-    $('btn-chequear').textContent = si ? 'Ocultar el recibo real' : 'Chequear recibo';
+    $('btn-chequear').textContent = si ? 'Ocultar el recibo real' : 'Chequeo manual recibo';
     if (!si) $('ia-caja').hidden = true;
     calcular();
   }
-  $('btn-chequear').addEventListener('click', () => ponerChequeo(!chequeando));
+  // Chequeo manual: la edición de importes abierta. Con la IA queda plegada
+  // (lo leído ya está en la tabla) y se abre si hace falta corregir algo.
+  $('btn-chequear').addEventListener('click', () => {
+    ponerChequeo(!chequeando);
+    if (chequeando) $('editar-real').open = true;
+  });
   $('btn-ia').addEventListener('click', () => {
     if (!chequeando) ponerChequeo(true);
+    $('editar-real').open = false;
     $('ia-caja').hidden = false;
     $('ia-caja').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
     if (!leyendo) $('archivo-recibo').click();
@@ -658,6 +674,7 @@
         fila.querySelector('[data-k=importe]').value = String(x.importe).replace('.', ',');
       }
       if (!$('banco').value && d.banco) $('banco').value = d.banco;
+      $('editar-real').open = false;
       const items = [`${d.ubicados} renglones ubicados en el recibo esperado.`];
       if (!(d.renglones || {}).BAS) items.push('No se leyó el sueldo básico: elegí la categoría a mano.');
       if ((d.extras || []).length) items.push(`${d.extras.length} a revisar en "Renglones que la calculadora no tiene".`);
