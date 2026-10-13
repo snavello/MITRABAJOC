@@ -194,3 +194,24 @@ def test_nada_del_movimiento_anima_transform():
     for bloque in re.findall(r"@keyframes\s+[\w-]+\s*\{(.*?)\}\s*\}", css, flags=re.S):
         assert "transform" not in bloque, bloque
     print("OK  test_nada_del_movimiento_anima_transform")
+
+
+def test_las_vistas_de_tramites_se_arman_como_un_modal():
+    """Los trámites del afiliado y de la empresa no abren un modal: cambian de
+    vista adentro de la pestaña. SDN lo notó en Pruebas ("los trámites del
+    trabajador no tienen el efecto", 2026-10-13). La pestaña y sus cuatro
+    vistas llevan `data-mov-vista`, que modales.js vigila y movimiento.css
+    arma; si una vista nueva no la lleva, cambia de golpe."""
+    for plantilla, prefijo in (("trabajador.html", "tram"), ("empresa.html", "trx")):
+        with open(os.path.join(PLANTILLAS, plantilla), encoding="utf-8") as f:
+            html = f.read()
+        assert 'id="tp-tramites" data-mov-vista' in html, plantilla
+        for vista in ("inicio", "tipos", "form", "detalle"):
+            assert f'id="{prefijo}-{vista}" data-mov-vista' in html, (plantilla, vista)
+    with open("static/modales.js", encoding="utf-8") as f:
+        js = f.read()
+    assert 'querySelectorAll("[data-mov-vista]")' in js
+    with open("static/movimiento.css", encoding="utf-8") as f:
+        css = f.read()
+    assert "[data-mov-vista]) [data-armado]" in css
+    print("OK  test_las_vistas_de_tramites_se_arman_como_un_modal")

@@ -483,8 +483,10 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   dibuja como la forma de lo que viene y la caja crece de a poco al llegar el
   detalle. Ninguna función de abrir o cerrar se tocó. Una familia nueva suma
   su fondo a `FONDOS_MOV` y sus reglas a movimiento.css (lo verifica el mismo
-  test); el "Ver" del Panel queda afuera a propósito. Reglas en la skill
-  `diseno-mi-trabajo` → "Movimiento".
+  test); el "Ver" del Panel queda afuera a propósito. Las vistas que cambian
+  adentro de una pestaña sin ser modales (los trámites del afiliado y de la
+  empresa) llevan `data-mov-vista` y reciben lo mismo, menos el crecer de a
+  poco. Reglas en la skill `diseno-mi-trabajo` → "Movimiento".
 - **Patrón portada + panel interno**, repetido para los 3 roles con login
   (`/app/inicio`+`/app`, `/admin/inicio`+`/admin`, `/empresa/inicio`+`/empresa`)
   — cualquier rol nuevo que se agregue debería seguir el mismo patrón.
@@ -1284,7 +1286,8 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     (2026-10-13; Trabajador 0.45.02, Admin 0.53.04, Plataforma 0.43.05): ver
     "Los modales se mueven" en Decisiones. De paso se corrigió que en `/admin`
     cinco modales quedaban debajo de la barra de pestañas y, en un trámite
-    largo, sin título ni X visibles.
+    largo, sin título ni X visibles. Y a las vistas de Trámites del afiliado
+    y de la empresa, que no son modales (`data-mov-vista`, Trabajador 0.45.03).
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 
