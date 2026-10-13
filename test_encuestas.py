@@ -1671,13 +1671,13 @@ def test_el_panel_arranca_en_la_lista_salvo_que_no_haya_ninguna():
     _sesion(sid, uid)
     html = cliente.get("/admin").text
     # Sin encuestas, la abierta es la de crear: es lo único que se puede hacer.
-    assert '<div class="enc-subpanel activo" id="enc-sub-nueva">' in html
-    assert '<div class="enc-subpanel " id="enc-sub-lista">' in html
+    assert '<div class="enc-subpanel activo" data-mov-vista id="enc-sub-nueva">' in html
+    assert '<div class="enc-subpanel " data-mov-vista id="enc-sub-lista">' in html
 
     _alta()
     html = cliente.get("/admin").text
-    assert '<div class="enc-subpanel activo" id="enc-sub-lista">' in html
-    assert '<div class="enc-subpanel " id="enc-sub-nueva">' in html
+    assert '<div class="enc-subpanel activo" data-mov-vista id="enc-sub-lista">' in html
+    assert '<div class="enc-subpanel " data-mov-vista id="enc-sub-nueva">' in html
     assert "Ver / editar encuestas (1)" in html
 
     # A quien solo puede LEER no se le promete editar.
