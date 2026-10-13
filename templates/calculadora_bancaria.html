@@ -92,7 +92,6 @@
   .otros-col { display:none; }
   .chequeando.con-otros .otros-col { display:table-cell; }
   td.otros-col, th.otros-col { color:var(--violeta); }
-  tr.otro td .nota, td .nota.de-otros { color:var(--violeta); }
   .dif.sin-chequear { color:var(--violeta); font-family:system-ui; font-size:12px; font-weight:600; letter-spacing:.02em; }
   .resumen-dif .sin-chequear { color:var(--violeta); font-weight:600; }
   td.real-col input { width:130px; text-align:right; font-family:var(--mono); padding:6px 8px; }
@@ -226,7 +225,7 @@
         <p class="aclara">Calcula solo el mes, con la grilla elegida. <b>No contempla</b> retenciones ni reintegros de Ganancias (el importe se carga a mano), ni conceptos de períodos anteriores (retroactivos, ajustes o diferencias de otros meses). Si el recibo trae algo que no es de convenio, va a la columna <b>Otros del recibo</b>: se suma a la par, con sus aportes, sin chequearlo.</p>
         <div class="tabla-scroll">
           <table>
-            <thead><tr><th>Concepto</th><th class="num">Convenio</th><th class="num otros-col" title="Lo que el recibo trae y no es de convenio: se suma a la par, sin juzgarlo">Otros del recibo</th><th class="num real-col">Recibo leído IA</th><th class="num real-col">Diferencia</th></tr></thead>
+            <thead><tr><th>Concepto</th><th class="num">Convenio</th><th class="num real-col">Recibo leído IA</th><th class="num otros-col" title="Lo que el recibo trae y no es de convenio: se suma a la par, sin juzgarlo">Otros del recibo</th><th class="num real-col">Diferencia</th></tr></thead>
             <tbody id="renglones"></tbody>
           </table>
         </div>
@@ -440,21 +439,18 @@
       filas.push(el('tr', { class: 'seccion' }, el('td', { colspan: 5, text: SECCIONES[seccion] })));
       for (const r of propios) {
         const nota = r.nota ? el('span', { class: 'nota' + (r.supuesto ? ' supuesto' : ''), text: r.nota }) : null;
-        const mas = otros.renglones[r.codigo];
-        const notaOtros = mas ? el('span', { class: 'nota de-otros',
-          text: 'Más ' + pesos(mas) + ' por los otros del recibo' + (r.codigo === 'CUOTA' ? ' (supuesto: la cuota sobre todo el remunerativo).' : '.') }) : null;
-        filas.push(el('tr', {}, el('td', {}, r.concepto, nota, notaOtros), el('td', { class: 'num', text: pesos(r.importe) }),
-          celdaOtros(mas), el('td', { class: 'num real-col' }, entradaReal(r.codigo, r.concepto)), celdaDif(comp[r.codigo])));
+        filas.push(el('tr', {}, el('td', {}, r.concepto, nota), el('td', { class: 'num', text: pesos(r.importe) }),
+          el('td', { class: 'num real-col' }, entradaReal(r.codigo, r.concepto)), celdaOtros(otros.renglones[r.codigo]),
+          celdaDif(comp[r.codigo])));
       }
       for (const c of ajenos) {
         const nota = el('span', { class: 'nota fuera', text: 'Está en el recibo y no en la calculadora. ' + c.como });
         filas.push(el('tr', { class: 'fuera' }, el('td', {}, c.concepto, nota), el('td', { class: 'num', text: '—' }),
-          celdaOtros(0), el('td', { class: 'num real-col' }, entradaReal(c.codigo, c.concepto)), celdaDif(c)));
+          el('td', { class: 'num real-col' }, entradaReal(c.codigo, c.concepto)), celdaOtros(0), celdaDif(c)));
       }
       for (const e of suyos) {
-        const nota = el('span', { class: 'nota', text: 'No es de convenio: se toma como dato. Se corrige en «Renglones que la calculadora no tiene».' });
-        filas.push(el('tr', { class: 'otro' }, el('td', {}, e.concepto, nota), el('td', { class: 'num', text: '—' }),
-          celdaOtros(e.importe || 0), el('td', { class: 'num real-col', text: pesos(e.importe || 0) }),
+        filas.push(el('tr', { class: 'otro' }, el('td', { text: e.concepto }), el('td', { class: 'num', text: '—' }),
+          el('td', { class: 'num real-col', text: pesos(e.importe || 0) }), celdaOtros(e.importe || 0),
           el('td', { class: 'num real-col dif sin-chequear', text: 'sin chequear', title: 'No es de convenio: no se compara' })));
       }
     }
@@ -464,8 +460,8 @@
     const filaTotal = (nombre, clave, valor, cls, claveOtros) => {
       const c = compT[clave];
       return el('tr', { class: cls }, el('td', { text: nombre }), el('td', { class: 'num', text: pesos(valor) }),
-        celdaOtros(otros.totales[claveOtros || clave]),
         el('td', { class: 'num real-col', text: c ? pesos(c.real) : '' }),
+        celdaOtros(otros.totales[claveOtros || clave]),
         celdaDif(c));
     };
     filas.push(filaTotal('Total remunerativo', '', t.remunerativo, 'total', 'remunerativo'));

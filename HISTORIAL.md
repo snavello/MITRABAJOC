@@ -7210,3 +7210,7 @@ convenio y sin tocarla (`grilla_bancaria.otros_del_recibo`):
   aparte, en rojo y con qué tildar: no son "otros", hay que elegirlos.
 
 El CSV de casos suma la columna "otros". Plataforma 0.46.01.
+
+Primera vuelta de SDN sobre la columna, el mismo día: sin las aclaraciones en
+violeta debajo de cada renglón (ensuciaban la tabla; la aclaración de alcance
+de arriba ya lo dice) y "Recibo leído IA" antes que "Otros del recibo".
