@@ -186,6 +186,28 @@ def test_otros_respetan_el_tope_de_aportes():
     assert no_rem["renglones"] == {} and no_rem["totales"]["neto"] == 9_000     # sin aportes
 
 
+def test_ajuste_sugerido_solo_en_casos_claros():
+    """Lo que el recibo trae y la calculadora no tiene elegido se PROPONE con
+    qué tocar (SDN, 2026-10-13); un importe que no es de la grilla no se adivina."""
+    esperado = g.calcular_recibo({"categoria": 7, "tramo_roe": 1, "afiliado": True})
+    adic = g.grilla(esperado["periodo"])["adicionales"]
+    assert g.ajuste_sugerido("CAJFUN", 1, esperado)["campos"] == {"cajero": True}
+    assert g.ajuste_sugerido("TITULO", adic["titulos"]["secundario"], esperado)["campos"] == {"titulo": "secundario"}
+    assert g.ajuste_sugerido("TITULO", 12_345, esperado) is None
+    assert g.ajuste_sugerido("ZONA", adic["zona_patagonica"]["La Pampa"], esperado)["campos"] == {"zona": "La Pampa"}
+    assert g.ajuste_sugerido("CONFOR", 1_000, esperado) is None             # la categoría tiene su propio botón
+    # ROE: el tramo que da ese importe con la base del recibo esperado
+    base = sum(r["importe"] for r in esperado["renglones"] if r["seccion"] == "haberes" and r["codigo"] != "ROE")
+    roe2 = g.roe_mensual(base, 2)
+    comp = g.comparar(esperado, {"renglones": {"ROE": roe2, "CAJFAL": adic["falla_caja"], "BAS": esperado["renglones"][0]["importe"]}})
+    por = {d["codigo"]: d for d in comp["renglones"]}
+    assert por["ROE"]["ajuste"]["campos"] == {"tramo_roe": 2}
+    assert por["CAJFAL"]["ajuste"]["campos"] == {"cajero": True}
+    assert "ajuste" not in por["BAS"]                                         # coincide: nada que proponer
+    con = g.calcular_recibo({"categoria": 7, "tramo_roe": 2, "cajero": True, "afiliado": True})
+    assert g.comparar(con, {"renglones": {"CAJFAL": adic["falla_caja"]}})["renglones"][0]["coincide"]
+
+
 @pytest.mark.parametrize("diferencia, esperado, gravedad", [
     (0.99, 1000, "coincide"),          # menos de $ 1
     (10, 1000, "leve"),                # justo el 1%

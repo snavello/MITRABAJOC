@@ -149,6 +149,11 @@
   .sugerencia .opciones-cat { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
   .sugerencia .boton { padding:7px 11px; font-size:13px; }
   .ia-caja .sugerencia { margin:12px 0 0; }
+  /* "Ajustar al recibo" en el renglón: chico y de contorno, para no tapar la tabla. */
+  td .ajustar { margin-top:5px; background:none; color:var(--ambar); border:1px solid color-mix(in srgb, var(--ambar) 60%, transparent);
+    border-radius:999px; padding:3px 10px; font:600 12px system-ui; cursor:pointer; }
+  td .ajustar:hover { background:color-mix(in srgb, var(--ambar) 14%, transparent); }
+  .sugerencia ul { margin:6px 0 0 18px; }
   @media (prefers-reduced-motion:reduce) {
     .ia-fase.activa .pt { animation:none; }
     .ia-aro .avance { transition:none; }
@@ -258,6 +263,7 @@
         </div>
         <div class="ia-resultado" id="ia-resultado" role="status"></div>
         <div class="sugerencia" id="sug-ia" hidden></div>
+        <div class="sugerencia" id="ajustes-ia" hidden></div>
       </div>
 
       <div class="tarjeta chequeo" id="chequeo" hidden>
@@ -439,13 +445,13 @@
       filas.push(el('tr', { class: 'seccion' }, el('td', { colspan: 5, text: SECCIONES[seccion] })));
       for (const r of propios) {
         const nota = r.nota ? el('span', { class: 'nota' + (r.supuesto ? ' supuesto' : ''), text: r.nota }) : null;
-        filas.push(el('tr', {}, el('td', {}, r.concepto, nota), el('td', { class: 'num', text: pesos(r.importe) }),
+        filas.push(el('tr', {}, el('td', {}, r.concepto, nota, botonAjuste(comp[r.codigo])), el('td', { class: 'num', text: pesos(r.importe) }),
           el('td', { class: 'num real-col' }, entradaReal(r.codigo, r.concepto)), celdaOtros(otros.renglones[r.codigo]),
           celdaDif(comp[r.codigo])));
       }
       for (const c of ajenos) {
-        const nota = el('span', { class: 'nota fuera', text: 'Está en el recibo y no en la calculadora. ' + c.como });
-        filas.push(el('tr', { class: 'fuera' }, el('td', {}, c.concepto, nota), el('td', { class: 'num', text: '—' }),
+        const nota = el('span', { class: 'nota fuera', text: 'Está en el recibo y no en la calculadora.' + (c.ajuste ? '' : ' ' + c.como) });
+        filas.push(el('tr', { class: 'fuera' }, el('td', {}, c.concepto, nota, botonAjuste(c)), el('td', { class: 'num', text: '—' }),
           el('td', { class: 'num real-col' }, entradaReal(c.codigo, c.concepto)), celdaOtros(0), celdaDif(c)));
       }
       for (const e of suyos) {
@@ -486,6 +492,41 @@
       }
     }
     sugerirCategoria();
+    sugerirAjustes(d);
+  }
+  // ---------- lo que el recibo dice que hay que tildar ----------
+  // El servidor dice qué tocar cuando el recibo no deja dudas
+  // (grilla_bancaria.ajuste_sugerido); como la categoría, se propone con un
+  // botón y nunca se aplica solo.
+  const CONTROLES = ['cajero', 'falla_me', 'titulo', 'zona', 'guarderia', 'conectividad', 'dias_conectividad',
+                     'dia_bancario', 'afiliado', 'cuota_pct', 'ganancias', 'tramo_roe'];
+  function aplicarAjuste(campos) {
+    for (const [k, v] of Object.entries(campos)) {
+      if (!CONTROLES.includes(k)) continue;
+      const c = $(k);
+      if (c.type === 'checkbox') c.checked = !!v;
+      else c.value = typeof v === 'number' && c.tagName !== 'SELECT' ? String(v).replace('.', ',') : String(v);
+    }
+  }
+  function botonAjuste(c) {
+    if (!c || !c.ajuste) return null;
+    const b = el('button', { type: 'button', class: 'ajustar', text: '↳ ' + c.ajuste.texto, title: 'Ajustar la calculadora al recibo' });
+    b.addEventListener('click', () => { aplicarAjuste(c.ajuste.campos); calcular(); });
+    return el('div', {}, b);
+  }
+  function sugerirAjustes(d) {
+    const caja = $('ajustes-ia');
+    const vistos = new Map();
+    for (const c of (d.comparacion?.renglones || []))
+      if (c.ajuste) vistos.set(JSON.stringify(c.ajuste.campos), c.ajuste);
+    if ($('ia-caja').hidden || !$('ia-resultado').childElementCount || !vistos.size) { caja.hidden = true; return; }
+    const ajustes = [...vistos.values()];
+    const todos = el('button', { type: 'button', class: 'boton', text: 'Ajustar todo al recibo' });
+    todos.addEventListener('click', () => { ajustes.forEach(a => aplicarAjuste(a.campos)); calcular(); });
+    caja.hidden = false;
+    caja.className = 'sugerencia';
+    caja.replaceChildren('Según el recibo, conviene ajustar en la calculadora:',
+      el('ul', {}, ...ajustes.map(a => el('li', { text: a.texto }))), el('div', { class: 'opciones-cat' }, todos));
   }
   function entradaReal(codigo, concepto) {
     const input = el('input', { type: 'text', inputmode: 'decimal', 'aria-label': 'Recibo leído: ' + concepto });
@@ -598,6 +639,7 @@
     $('btn-archivo').hidden = true;
     $('ia-resultado').replaceChildren(el('p', { class: 'fuente', text: 'Leyendo ' + f.name + '… suele tardar menos de un minuto.' }));
     $('sug-ia').hidden = true;
+    $('ajustes-ia').hidden = true;
     esperaIA(true);
     const datos = new FormData(); datos.append('archivo', f);
     try {

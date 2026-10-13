@@ -7214,3 +7214,25 @@ El CSV de casos suma la columna "otros". Plataforma 0.46.01.
 Primera vuelta de SDN sobre la columna, el mismo día: sin las aclaraciones en
 violeta debajo de cada renglón (ensuciaban la tabla; la aclaración de alcance
 de arriba ya lo dice) y "Recibo leído IA" antes que "Otros del recibo".
+
+### Ajustar al recibo también los adicionales (2026-10-13)
+
+SDN: en casos claros, como función cajero y falla de caja leídas del recibo
+sin "Cajero" tildado, la calculadora tiene que proponer el ajuste igual que
+hace con la categoría, en vez de solo decir "Tildá «Cajero»".
+
+`grilla_bancaria.ajuste_sugerido(codigo, importe, esperado)` dice qué control
+tocar cuando el recibo no deja dudas, y `comparar` lo agrega como `ajuste` a:
+
+- los renglones que el recibo trae y la calculadora no tiene elegidos
+  (cajero y falla de caja → Cajero; falla en moneda extranjera; guardería;
+  Día del Bancario; título y zona si el importe es uno de la grilla;
+  conectividad por modo o por días; cuota con su %; Ganancias con su importe);
+- y los que difieren por un control mal elegido: ROE (el tramo que da ese
+  importe con la base del esperado, solo si es uno), título, zona y
+  conectividad.
+
+Un importe que no es de la grilla no se adivina: queda sin botón y con el
+"Tildá…" de antes. En pantalla, un botón chico de contorno en el renglón
+(↳ Tildar «Cajero») y, en el recuadro de la IA, la lista con "Ajustar todo al
+recibo". Nunca se aplica solo, como la categoría. Plataforma 0.47.01.
