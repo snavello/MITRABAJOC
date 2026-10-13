@@ -69,7 +69,7 @@ cuenta), no en cada commit.
 | `docs/chat/` | Documentos que salen de Chat y Cowork, con prefijo de fecha (`AAAA-MM-DD-tema.md`). Ver `OPERATIVA.md`. |
 | `docs/prompts/` | Prompts reutilizables para aplicar en OTROS proyectos con Claude Code, con lo aprendido acá. Primero: `MAPA_FUNCIONAL.md` (mapa app → funcionalidad → código, datos y servicios), publicado también como Recurso de `/entornos`. |
 | `docs/generador/` | Genera `recursos/documentacion-tecnica.html` desde el código. |
-| `docs/bancaria/` | Documentos de la implementación en La Bancaria: plan resumido (4 hojas A4), hoja guía de la reunión con autoridades y catálogo de trámites (`tramites-bancaria.json` con las 86 gestiones verificadas → `tramites-bancaria.html` con `generar_tramites.py`, y → `tramites-bancaria.docx` para revisar y anotar con `generar_tramites_docx.js`). Fuente de los artifacts y de los PDF. Versiones Word para corregir (con control de cambios) generadas por `generar_docx.js`. |
+| `docs/bancaria/` | Documentos de la implementación en La Bancaria: plan resumido (4 hojas A4), hoja guía de la reunión con autoridades y catálogo de trámites (`tramites-bancaria.json` con las 86 gestiones verificadas → `tramites-bancaria.html` con `generar_tramites.py`, y → `tramites-bancaria.docx` (completo) y `tramites-bancaria-resumen.docx` (6 páginas) con `generar_tramites_docx.js`). Fuente de los artifacts y de los PDF. Versiones Word para corregir (con control de cambios) generadas por `generar_docx.js`. |
 | `docs/capturas-georef/` | Capturas de las pantallas de georreferenciación. |
 | `recursos/` | Documentos publicados en `/entornos` (HTML + miniatura), registrados en `recursos.SEMILLA`. |
 | `carga/` | Test de estrés: `INFORME.md`, experimentos, scripts. |
@@ -88,6 +88,7 @@ a SDN. **No se escribe en ningún documento.**
 | Instructivo de montaje: cuentas y entornos a nombre de XP | `recursos/colm3na-instructivo-montaje.html` y `.pdf` (A4, 36 páginas) ← artifact `PdD98igB` (versión 4). **Interno del equipo.** |
 | Plan de implementación en La Bancaria (seis fases, v0.2) | `recursos/colm3na-plan-implementacion-bancaria.html`, `.pdf` (4 hojas A4) y `-v0.2.docx` (Word editable) ← `docs/bancaria/plan-implementacion-bancaria.html` |
 | Guía de la reunión con las autoridades de La Bancaria (v0.2) | `recursos/colm3na-guia-reunion-autoridades-bancaria.html`, `.pdf` (1 hoja A4) y `-v0.2.docx` (Word editable) ← `docs/bancaria/guia-reunion-autoridades-bancaria.html` |
+| Trámites de La Bancaria en Colm3na: resumen (6 páginas) y catálogo completo, en Word | `recursos/colm3na-tramites-bancaria-resumen.docx` y `-completo.docx` (con miniatura) ← `docs/bancaria/generar_tramites_docx.js` ← `tramites-bancaria.json` |
 | Bitácora del proyecto | `recursos/bitacora.html` ← `generar_bitacora.py` ← `BITACORA.md` |
 | Motor de recibos: de la foto al veredicto | `recursos/motor-recibos.html` |
 | Anatomía del análisis inteligente (caso Marina) | `recursos/anatomia-analisis-inteligente.html` ← `docs/chat/2026-09-26-anatomia-analisis-inteligente.md` |
