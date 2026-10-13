@@ -7155,3 +7155,30 @@ Test: `test_preparacion.py::test_lo_aprendido_de_la_razon_social_no_se_tapa_en_l
 con el PDF 02. Además la calculadora avisa cuando no se leyó el básico, en
 vez de quedarse callada con la primera categoría. Trabajador 0.45.05,
 Plataforma 0.45.02.
+
+### Calculadora bancaria, segunda vuelta de SDN (2026-10-13)
+
+Con el recibo 02 leído bien (después del arreglo del enmascarado), SDN pidió:
+
+- **El análisis con IA en su propio recuadro**, que se abre con "Analizar con
+  IA" (al lado de "Chequear recibo") y muestra la misma espera que el
+  análisis de recibo del afiliado: aro con el reloj y las fases (abrir,
+  tapar datos personales, leer con IA, ubicar cada renglón). "Del recibo
+  real" pasó también a un recuadro aparte.
+- **La categoría no se cambia sola.** Antes la lectura la elegía por el
+  básico sin preguntar. Ahora se propone, debajo del selector de categoría y
+  en el recuadro de la IA, con un botón "Ajustar al recibo" por cada
+  categoría que tiene ese básico (las tres ramas pueden compartirlo). Vale
+  igual si el básico se carga a mano.
+- **Colores de la diferencia**: rojo si pasa el 1% de lo esperado, amarillo
+  hasta el 1% (`grilla_bancaria.gravedad`). Es solo el color: la tolerancia
+  de $ 1 y el resumen ("n de m no coinciden") no cambian. Como el amarillo
+  quedó para eso, los totales pasaron al celeste de los gráficos de
+  `/entornos` (#8ecbff).
+
+De paso, al probarlo con un robot apareció que la IA ubicaba 10 renglones y
+la tabla mostraba 7: función cajero, falla de caja y título se perdían en
+silencio porque la calculadora no los tenía elegidos. Ahora salen en su
+sección con esperado "—", diferencia en rojo y qué tildar
+(`FUERA_DEL_ESPERADO`); cuando se tilda, pasan a ser renglones comunes.
+Plataforma 0.45.03.

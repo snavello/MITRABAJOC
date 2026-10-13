@@ -1320,7 +1320,10 @@ su página (`/entornos/herramientas/<nombre>`) y la pestaña solo la presenta.
 - **El cálculo lo hace el servidor** (`grilla_bancaria.calcular_recibo`,
   puro); el navegador solo muestra. Al guardar un caso el esperado y las
   diferencias se RECALCULAN con la entrada: no se guarda lo que mande el
-  navegador. Tolerancia de $ 1 al comparar.
+  navegador. Tolerancia de $ 1 al comparar. La diferencia se pinta en
+  amarillo hasta el 1% de lo esperado y en rojo arriba de eso
+  (`grilla_bancaria.gravedad`): es SOLO el color, no cambia qué coincide. Los
+  totales van en celeste.
 - **Una grilla por mes**, en `data/grillas_bancarias/AAAA-MM.json`. Una
   nueva es un archivo nuevo (procedimiento en `docs/cct-1875-bancarios.md`):
   la calculadora la ofrece sola y las constantes del lote pasan a ser las de
@@ -1331,9 +1334,15 @@ su página (`/entornos/herramientas/<nombre>`) y la pestaña solo la presenta.
   el mismo extractor y enmascarado que `/api/leer`, tipo `herramienta` en
   Uso de IA). `grilla_bancaria.mapear_recibo_leido` ubica cada línea por lo
   que dice, no por su código; lo que no reconoce y los reintegros van a
-  "renglones que la calculadora no tiene", nunca a un renglón ajeno. La
-  categoría se elige por el básico leído. Solo vuelven importes: ni el
-  archivo ni el nombre o CUIL se guardan ni se devuelven.
+  "renglones que la calculadora no tiene", nunca a un renglón ajeno. Solo
+  vuelven importes: ni el archivo ni el nombre o CUIL se guardan ni se
+  devuelven. La lectura va en su propio recuadro, con la espera del afiliado
+  (aro con reloj y fases).
+- **Lo que dice el recibo se PROPONE, nunca se aplica solo** (SDN,
+  2026-10-13): el básico del recibo real, leído o cargado a mano, sugiere la
+  categoría con un botón "Ajustar al recibo"; un adicional que el recibo trae
+  y la calculadora no tiene elegido sale como renglón con esperado $ 0 y qué
+  tildar (`grilla_bancaria.FUERA_DEL_ESPERADO`).
 - **Alcance dicho en pantalla**: solo el mes; no contempla retenciones ni
   reintegros de Ganancias ni conceptos de períodos anteriores.
 - **Supuestos marcados en pantalla** (`supuesto: true` en el renglón): el

@@ -157,7 +157,8 @@ def opciones(periodo: str = "") -> dict:
         "fuentes": g.get("fuentes", []),
         "grillas": [{"periodo": p, "nombre": GRILLAS[p]["nombre"]} for p in sorted(GRILLAS, reverse=True)],
         "ramas": {k: {"nombre": r["nombre"],
-                      "categorias": [{"nombre": c["nombre"], "anios": c["anios"], "coef": c["coef"]}
+                      "categorias": [{"nombre": c["nombre"], "anios": c["anios"], "coef": c["coef"],
+                                      "basico": c["basico"]}
                                      for c in r["categorias"]]}
                   for k, r in g["ramas"].items()},
         "titulos": list(g["adicionales"]["titulos"]),
@@ -288,12 +289,50 @@ def calcular_recibo(entrada: dict) -> dict:
     }
 
 
+# Un renglón que el recibo real trae y el esperado no (la calculadora no lo
+# tiene elegido): se muestra igual, con esperado $ 0 y qué tocar para que esté.
+# Nunca se tilda solo, por lo mismo que la categoría (SDN, 2026-10-13).
+FUERA_DEL_ESPERADO = {
+    "BAS": ("Sueldo básico", "haberes", ""),
+    "CONFOR": ("Complemento salario conformado", "haberes",
+               "La categoría elegida no tiene complemento: revisá la categoría."),
+    "CAJFUN": ("Adicional función cajero", "haberes", "Tildá «Cajero» en Adicionales si corresponde."),
+    "CAJFAL": ("Falla de caja", "haberes", "Tildá «Cajero» en Adicionales si corresponde."),
+    "CAJFME": ("Falla de caja moneda extranjera", "haberes",
+               "Tildá «Falla de caja moneda extranjera» en Adicionales si corresponde."),
+    "TITULO": ("Adicional título", "haberes", "Elegí el título en Adicionales si corresponde."),
+    "ZONA": ("Adicional zona patagónica", "haberes", "Elegí la zona en Adicionales si corresponde."),
+    "ROE": ("Participación en las ganancias (ROE)", "haberes",
+            "El tramo de ROE elegido no paga: revisá el ROE del banco."),
+    "GUARDE": ("Guardería", "no_remunerativos", "Tildá «Guardería» si corresponde."),
+    "CONECT": ("Mayores gastos de conectividad", "no_remunerativos", "Elegí la conectividad si corresponde."),
+    "DIABAN": ("Día del Bancario", "no_remunerativos", "Tildá «Día del Bancario» si corresponde."),
+    "CUOTA": ("Cuota sindical Asociación Bancaria", "descuentos", "Tildá «Afiliado» si corresponde."),
+    "GANANC": ("Impuesto a las Ganancias", "descuentos", "Cargá el importe en Ganancias si corresponde."),
+}
+
+TOLERANCIA_LEVE = 0.01   # hasta el 1% de lo esperado: diferencia pintada en amarillo
+
+
+def gravedad(diferencia: float, esperado: float) -> str:
+    """"coincide" (menos de $ 1), "leve" (hasta el 1% de lo esperado) o
+    "grave" (más; también cualquier diferencia donde se esperaba $ 0). Solo
+    decide el COLOR de la diferencia en pantalla (SDN, 2026-10-13): no cambia
+    la tolerancia ni cuántos valores "no coinciden"."""
+    if abs(diferencia) < 1:
+        return "coincide"
+    if esperado and abs(diferencia) <= abs(esperado) * TOLERANCIA_LEVE:
+        return "leve"
+    return "grave"
+
+
 def comparar(esperado: dict, real: dict) -> dict:
     """Renglón por renglón contra lo que dice el recibo real (cargado a mano).
 
     `real`: {"renglones": {codigo: importe}, "extras": [{concepto, seccion,
     importe}], "totales": {bruto, descuentos, neto}}. Lo que no se cargó no
-    se compara. Devuelve las diferencias real - esperado."""
+    se compara. Devuelve las diferencias real - esperado, cada una con su
+    gravedad (`gravedad()`)."""
     cargados = {k: _num(v, f"Importe de {k}", -1e12) for k, v in (real.get("renglones") or {}).items()
                 if v not in (None, "")}
     diferencias = []
@@ -301,7 +340,16 @@ def comparar(esperado: dict, real: dict) -> dict:
         if r["codigo"] in cargados:
             dif = round(cargados[r["codigo"]] - r["importe"], 2)
             diferencias.append({"codigo": r["codigo"], "concepto": r["concepto"], "esperado": r["importe"],
-                                "real": cargados[r["codigo"]], "diferencia": dif, "coincide": abs(dif) < 1})
+                                "real": cargados[r["codigo"]], "diferencia": dif, "coincide": abs(dif) < 1,
+                                "gravedad": gravedad(dif, r["importe"])})
+    en_esperado = {r["codigo"] for r in esperado["renglones"]}
+    for codigo, importe in cargados.items():
+        if codigo in en_esperado or codigo not in FUERA_DEL_ESPERADO:
+            continue
+        concepto, seccion, como = FUERA_DEL_ESPERADO[codigo]
+        diferencias.append({"codigo": codigo, "concepto": concepto, "seccion": seccion, "esperado": 0.0,
+                            "real": importe, "diferencia": round(importe, 2), "coincide": abs(importe) < 1,
+                            "gravedad": gravedad(importe, 0), "fuera": True, "como": como})
     extras = []
     for e in real.get("extras") or []:
         concepto = str(e.get("concepto") or "").strip()[:120]
@@ -316,7 +364,8 @@ def comparar(esperado: dict, real: dict) -> dict:
             v = _num(v, f"Total {clave}", -1e12)
             dif = round(v - esperado["totales"][clave], 2)
             totales.append({"total": clave, "esperado": esperado["totales"][clave], "real": v,
-                            "diferencia": dif, "coincide": abs(dif) < 1})
+                            "diferencia": dif, "coincide": abs(dif) < 1,
+                            "gravedad": gravedad(dif, esperado["totales"][clave])})
     distintos = sum(1 for d in diferencias + totales if not d["coincide"])
     return {"renglones": diferencias, "extras": extras, "totales": totales, "distintos": distintos}
 
