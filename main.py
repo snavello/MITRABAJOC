@@ -9068,17 +9068,18 @@ def entornos_bancaria_casos_csv(request: Request):
     salida = io.StringIO()
     w = csv.writer(salida, delimiter=";")
     w.writerow(["caso", "creado", "quien", "estado", "grilla", "banco", "categoria", "renglon", "concepto",
-                "esperado", "real", "diferencia", "coincide", "nota"])
+                "esperado", "otros", "real", "diferencia", "coincide", "nota"])
     for c in db.casos_herramienta(HERRAMIENTA_BANCARIA):
         r = _caso_resumen(c)
         base = [c.id, c.creado, c.quien, c.estado, c.grilla, c.banco, r["categoria"]]
-        filas = [[d["codigo"], d["concepto"], d["esperado"], d["real"], d["diferencia"], d["coincide"]]
-                 for d in (c.diferencias.get("renglones") or [])]
-        filas += [["TOTAL", d["total"], d["esperado"], d["real"], d["diferencia"], d["coincide"]]
+        # "otros": lo que no es de convenio, sumado a la par (grilla_bancaria.otros_del_recibo).
+        filas = [[d["codigo"], d["concepto"], d["esperado"], d.get("otros", ""), d["real"], d["diferencia"],
+                  d["coincide"]] for d in (c.diferencias.get("renglones") or [])]
+        filas += [["TOTAL", d["total"], d["esperado"], d.get("otros", ""), d["real"], d["diferencia"], d["coincide"]]
                   for d in (c.diferencias.get("totales") or [])]
-        filas += [["EXTRA", f"{e['concepto']} ({e['seccion']})", "", e["importe"], "", ""]
+        filas += [["EXTRA", f"{e['concepto']} ({e['seccion']})", "", e["importe"], e["importe"], "", "sin chequear"]
                   for e in (c.diferencias.get("extras") or [])]
-        for f in filas or [["", "", "", "", "", ""]]:
+        for f in filas or [["", "", "", "", "", "", ""]]:
             w.writerow(base + f + [c.nota])
     contenido = "﻿" + salida.getvalue()      # BOM: Excel lo abre con tildes
     return BinResponse(contenido.encode("utf-8"), media_type="text/csv; charset=utf-8",

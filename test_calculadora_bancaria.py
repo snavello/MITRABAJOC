@@ -126,7 +126,8 @@ def test_una_entrada_rara_se_rechaza_con_un_mensaje(entrada):
 def test_comparar_marca_lo_que_no_coincide():
     esperado = g.calcular_recibo({"categoria": 0, "tramo_roe": 1})
     comp = g.comparar(esperado, {"renglones": {"BAS": 1_642_764.63, "ROE": 70_000, "JUBILACION": ""},
-                                 "totales": {"neto": esperado["totales"]["neto"] + 0.4},
+                                 # neto real = convenio + la bonificación menos sus aportes (17%) + $ 0,40
+                                 "totales": {"neto": esperado["totales"]["neto"] + 4_150 + 0.4},
                                  "extras": [{"concepto": "Bonificación especial", "seccion": "haberes",
                                              "importe": 5000}, {"concepto": "", "importe": None}]})
     por = {d["codigo"]: d for d in comp["renglones"]}
@@ -149,6 +150,40 @@ def test_lo_que_el_recibo_trae_y_la_calculadora_no_tiene_elegido_se_muestra():
     con_cajero = g.calcular_recibo({"categoria": 0, "tramo_roe": 1, "cajero": True})
     (c,) = g.comparar(con_cajero, {"renglones": {"CAJFUN": 163_963.06}})["renglones"]
     assert c["coincide"] and not c.get("fuera")
+
+
+def test_otros_del_recibo_suman_a_la_par_sin_tocar_el_convenio():
+    """Un concepto ajeno al convenio (SDN, 2026-10-13): va a "Otros", no se
+    juzga, y arrastra sus aportes y su cuota; el convenio queda igual."""
+    entrada = {"categoria": 7, "tramo_roe": 2, "cajero": True, "titulo": "secundario", "afiliado": True}
+    esperado = g.calcular_recibo(entrada)
+    conv = {r["codigo"]: r["importe"] for r in esperado["renglones"]}
+    real = {"renglones": {"JUBILACION": conv["JUBILACION"] + 5_500, "CUOTA": conv["CUOTA"] + 1_000,
+                          "BAS": conv["BAS"]},
+            "extras": [{"concepto": "Bonificación especial", "seccion": "haberes", "importe": 50_000},
+                       {"concepto": "Devolución Ganancias", "seccion": "descuentos", "importe": -12_000}],
+            "totales": {"bruto": esperado["totales"]["bruto"] + 50_000,
+                        "descuentos": esperado["totales"]["descuentos"] + 8_500 + 1_000 - 12_000,
+                        "neto": esperado["totales"]["neto"] + 50_000 - 8_500 - 1_000 + 12_000}}
+    comp = g.comparar(esperado, real)
+    otros = comp["otros"]
+    assert otros["renglones"] == {"JUBILACION": 5_500, "PAMI": 1_500, "OBRASOCIAL": 1_500, "CUOTA": 1_000}
+    assert otros["totales"]["bruto"] == 50_000 and otros["totales"]["descuentos"] == -2_500
+    assert comp["distintos"] == 0, comp                     # todo cierra con convenio + otros
+    assert g.calcular_recibo(entrada) == esperado           # el convenio no se tocó
+    por = {d["codigo"]: d for d in comp["renglones"]}
+    assert por["JUBILACION"]["esperado"] == conv["JUBILACION"] and por["JUBILACION"]["otros"] == 5_500
+
+
+def test_otros_respetan_el_tope_de_aportes():
+    entrada = {"categoria": 0, "tramo_roe": 1}
+    esperado = g.calcular_recibo(entrada)
+    tope = esperado["tope"]["maximo"]
+    otros = g.otros_del_recibo(esperado, [{"concepto": "x", "seccion": "haberes", "importe": tope * 3}])
+    assert otros["renglones"]["JUBILACION"] == round(round(tope * 0.11, 2) - esperado["renglones"][[
+        r["codigo"] for r in esperado["renglones"]].index("JUBILACION")]["importe"], 2)
+    no_rem = g.otros_del_recibo(esperado, [{"concepto": "x", "seccion": "no_remunerativos", "importe": 9_000}])
+    assert no_rem["renglones"] == {} and no_rem["totales"]["neto"] == 9_000     # sin aportes
 
 
 @pytest.mark.parametrize("diferencia, esperado, gravedad", [

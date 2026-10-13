@@ -270,8 +270,9 @@ def calcular_recibo(entrada: dict) -> dict:
             nota_base = f"Sobre el tope vigente desde {tope['desde']} ({_pesos(tope['maximo'])}), no sobre el remunerativo."
     for codigo, concepto, pct in APORTES:
         agregar(codigo, concepto, "descuentos", base * pct, f"{pct * 100:g}%. {nota_base}".strip())
+    cuota_pct = None
     if entrada.get("afiliado"):
-        pct = _num(entrada.get("cuota_pct", 2), "Cuota sindical", 0, 10)
+        pct = cuota_pct = _num(entrada.get("cuota_pct", 2), "Cuota sindical", 0, 10)
         agregar("CUOTA", "Cuota sindical Asociación Bancaria", "descuentos", remunerativo * pct / 100,
                 f"{pct:g}% del remunerativo. El convenio no fija el porcentaje.")
     ganancias = _num(entrada.get("ganancias"), "Ganancias")
@@ -285,7 +286,7 @@ def calcular_recibo(entrada: dict) -> dict:
                     "bruto": round(remunerativo + no_remunerativo, 2), "descuentos": descuentos,
                     "neto": round(remunerativo + no_remunerativo - descuentos, 2),
                     "base_aportes": round(base, 2)},
-        "tope": tope,
+        "tope": tope, "cuota_pct": cuota_pct,
     }
 
 
@@ -326,48 +327,96 @@ def gravedad(diferencia: float, esperado: float) -> str:
     return "grave"
 
 
+SECCIONES = ("haberes", "no_remunerativos", "descuentos")
+
+
+def _extras(real: dict) -> list:
+    salida = []
+    for e in real.get("extras") or []:
+        concepto = str(e.get("concepto") or "").strip()[:120]
+        importe = _num(e.get("importe"), "Importe del renglón extra", -1e12)
+        if concepto or importe:
+            seccion = e.get("seccion") if e.get("seccion") in SECCIONES else "haberes"
+            salida.append({"concepto": concepto or "(sin nombre)", "seccion": seccion, "importe": importe})
+    return salida
+
+
+def otros_del_recibo(esperado: dict, extras: list) -> dict:
+    """La columna "Otros del recibo" (SDN, 2026-10-13): lo que el recibo trae y
+    no es de convenio, A LA PAR de lo esperado y sin tocarlo. Se toma como dato
+    (no se juzga) y arrastra lo que arrastraría en el recibo: un haber
+    remunerativo suma a la base de los aportes (mismo % y mismo tope) y a la
+    de la cuota sindical. Lo esperado de cada renglón pasa a ser convenio +
+    otros, así una diferencia es de convenio y no de un concepto ajeno.
+
+    Devuelve {"renglones": {codigo: importe}, "totales": {...}}: lo que suma
+    cada renglón del convenio (los aportes y la cuota) y cada total."""
+    rem = round(sum(e["importe"] for e in extras if e["seccion"] == "haberes"), 2)
+    no_rem = round(sum(e["importe"] for e in extras if e["seccion"] == "no_remunerativos"), 2)
+    desc = round(sum(e["importe"] for e in extras if e["seccion"] == "descuentos"), 2)
+    por = {}
+    if rem:
+        conv = {r["codigo"]: r["importe"] for r in esperado["renglones"]}
+        total_rem = esperado["totales"]["remunerativo"] + rem
+        base = total_rem
+        tope = esperado.get("tope")
+        if tope:
+            base = min(max(total_rem, tope["minimo"]), tope["maximo"])
+        for codigo, _, pct in APORTES:
+            por[codigo] = round(round(base * pct, 2) - conv.get(codigo, 0), 2)
+        if esperado.get("cuota_pct") is not None and "CUOTA" in conv:
+            por["CUOTA"] = round(round(total_rem * esperado["cuota_pct"] / 100, 2) - conv["CUOTA"], 2)
+        por = {k: v for k, v in por.items() if v}
+    descuentos = round(desc + sum(por.values()), 2)
+    return {"renglones": por,
+            "totales": {"remunerativo": rem, "no_remunerativo": no_rem, "bruto": round(rem + no_rem, 2),
+                        "descuentos": descuentos, "neto": round(rem + no_rem - descuentos, 2)}}
+
+
 def comparar(esperado: dict, real: dict) -> dict:
-    """Renglón por renglón contra lo que dice el recibo real (cargado a mano).
+    """Renglón por renglón contra lo que dice el recibo real (leído por la IA
+    o cargado a mano).
 
     `real`: {"renglones": {codigo: importe}, "extras": [{concepto, seccion,
     importe}], "totales": {bruto, descuentos, neto}}. Lo que no se cargó no
-    se compara. Devuelve las diferencias real - esperado, cada una con su
-    gravedad (`gravedad()`)."""
+    se compara. Los extras van a la columna "Otros" (`otros_del_recibo`) y no
+    se juzgan; cada diferencia es real - (esperado + otros), con su gravedad
+    (`gravedad()`)."""
     cargados = {k: _num(v, f"Importe de {k}", -1e12) for k, v in (real.get("renglones") or {}).items()
                 if v not in (None, "")}
+    extras = _extras(real)
+    otros = otros_del_recibo(esperado, extras)
     diferencias = []
     for r in esperado["renglones"]:
         if r["codigo"] in cargados:
-            dif = round(cargados[r["codigo"]] - r["importe"], 2)
+            mas = otros["renglones"].get(r["codigo"], 0.0)
+            espera = round(r["importe"] + mas, 2)
+            dif = round(cargados[r["codigo"]] - espera, 2)
             diferencias.append({"codigo": r["codigo"], "concepto": r["concepto"], "esperado": r["importe"],
-                                "real": cargados[r["codigo"]], "diferencia": dif, "coincide": abs(dif) < 1,
-                                "gravedad": gravedad(dif, r["importe"])})
+                                "otros": mas, "real": cargados[r["codigo"]], "diferencia": dif,
+                                "coincide": abs(dif) < 1, "gravedad": gravedad(dif, espera)})
     en_esperado = {r["codigo"] for r in esperado["renglones"]}
     for codigo, importe in cargados.items():
         if codigo in en_esperado or codigo not in FUERA_DEL_ESPERADO:
             continue
         concepto, seccion, como = FUERA_DEL_ESPERADO[codigo]
         diferencias.append({"codigo": codigo, "concepto": concepto, "seccion": seccion, "esperado": 0.0,
-                            "real": importe, "diferencia": round(importe, 2), "coincide": abs(importe) < 1,
-                            "gravedad": gravedad(importe, 0), "fuera": True, "como": como})
-    extras = []
-    for e in real.get("extras") or []:
-        concepto = str(e.get("concepto") or "").strip()[:120]
-        importe = _num(e.get("importe"), "Importe del renglón extra", -1e12)
-        if concepto or importe:
-            seccion = e.get("seccion") if e.get("seccion") in ("haberes", "no_remunerativos", "descuentos") else "haberes"
-            extras.append({"concepto": concepto or "(sin nombre)", "seccion": seccion, "importe": importe})
+                            "otros": 0.0, "real": importe, "diferencia": round(importe, 2),
+                            "coincide": abs(importe) < 1, "gravedad": gravedad(importe, 0),
+                            "fuera": True, "como": como})
     totales = []
     for clave in ("bruto", "descuentos", "neto"):
         v = (real.get("totales") or {}).get(clave)
         if v not in (None, ""):
             v = _num(v, f"Total {clave}", -1e12)
-            dif = round(v - esperado["totales"][clave], 2)
-            totales.append({"total": clave, "esperado": esperado["totales"][clave], "real": v,
-                            "diferencia": dif, "coincide": abs(dif) < 1,
-                            "gravedad": gravedad(dif, esperado["totales"][clave])})
+            mas = otros["totales"][clave]
+            espera = round(esperado["totales"][clave] + mas, 2)
+            dif = round(v - espera, 2)
+            totales.append({"total": clave, "esperado": esperado["totales"][clave], "otros": mas, "real": v,
+                            "diferencia": dif, "coincide": abs(dif) < 1, "gravedad": gravedad(dif, espera)})
     distintos = sum(1 for d in diferencias + totales if not d["coincide"])
-    return {"renglones": diferencias, "extras": extras, "totales": totales, "distintos": distintos}
+    return {"renglones": diferencias, "extras": extras, "otros": otros, "totales": totales,
+            "distintos": distintos}
 
 
 # ---------------------------------------------------------------- recibo leído
