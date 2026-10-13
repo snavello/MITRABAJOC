@@ -7004,3 +7004,18 @@ El robot del arrastre (`e2e/test_robot_modales.py`) medía la caja apenas
 visible, a mitad de su entrada: ahora espera a que termine de llegar
 (`_quieto`, que ignora las animaciones infinitas) y prueba además reabrir el
 perfil mientras se está cerrando.
+
+**Y las vistas de Trámites (2026-10-13, Trabajador 0.45.03).** SDN lo probó en
+Pruebas: "se ve bien; los trámites del trabajador no tienen el efecto". No lo
+tenían porque no son modales: la pestaña Trámites del afiliado (y su espejo en
+la app de empresa) cambia de VISTA adentro de la pestaña -- lista, formularios,
+formulario, detalle --, con `style.display`, y espera con la ruedita de
+`.cargando`. La marca `data-mov-vista` (en la pestaña y sus cuatro vistas) les
+da el mismo tratamiento desde `modales.js`: al aparecer, sus piezas entran en
+cascada; la ruedita se esconde y quedan las líneas que respiran (el detalle
+muestra ya el número de expediente, que es lo que se sabe); y cuando llega la
+respuesta se arma LO QUE LLEGÓ (los nodos nuevos, sin repetir los que vienen
+adentro de otro y en orden de lectura), no la vista entera. Lo que no hacen es
+crecer de a poco: una vista está en el flujo de la página y animar su alto
+reacomodaría todo lo de abajo cuadro por cuadro. Cambiar un filtro de la
+lista, que repinta sin esperar, no rearma: sería ruido.

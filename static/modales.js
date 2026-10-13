@@ -220,7 +220,10 @@
      decía "Cargando…" y ya dice lo que es). */
   function armar(caja, base, extra) {
     if (caja.tagName === "IMG") return;
-    var xs = (extra || []).concat(piezas(caja));
+    armarLista(caja, (extra || []).concat(piezas(caja)), base);
+  }
+
+  function armarLista(caja, xs, base) {
     // Las marcas de la vez anterior se sacan primero y se deja que el
     // navegador lo note: si una pieza ya tenía la marca, volver a ponérsela
     // no reinicia su animación, y lo que llegó del servidor aparecería de
@@ -254,6 +257,11 @@
         vistos.push(el);
       }
     }
+    // La ruedita de las vistas del afiliado y de la empresa (`.cargando` con
+    // su `.spin`) es la misma espera con otra cara.
+    caja.querySelectorAll(".cargando").forEach(function (el) {
+      if (el.querySelector(".spin") && vistos.indexOf(el) < 0) vistos.push(el);
+    });
     caja.querySelectorAll(".mov-cargando").forEach(function (el) {
       if (vistos.indexOf(el) >= 0) return;
       el.classList.remove("mov-cargando");
@@ -356,8 +364,64 @@
       .observe(fondo, { childList: true, characterData: true, subtree: true });
   }
 
+  /* ---------- Las vistas que se arman como un modal ----------
+     Algunas pantallas no abren un modal: cambian de vista adentro de la
+     pestaña (los trámites del afiliado y de la empresa: la lista, los
+     formularios, el formulario, el detalle). La marca `data-mov-vista` les
+     da el mismo tratamiento: al aparecer, sus piezas entran en cascada; lo
+     que espera (la ruedita de `.cargando`, o "Cargando…") se dibuja como la
+     forma de lo que viene; y cuando llega, lo que llegó se arma. Lo que no
+     hacen es crecer de a poco: una vista está en el flujo de la página, y
+     animar su alto reacomodaría todo lo de abajo cuadro por cuadro.
+
+     Se vigilan los atributos de cada vista (las pantallas las cambian con
+     `style.display` o con la clase `activo` de la pestaña) y, desde la vista
+     de más afuera, el contenido de todas las de adentro. */
+  function seVe(el) { return el.getClientRects().length > 0; }
+
+  // Lo que llegó, sin repetir lo que ya viene adentro de otra pieza que
+  // llegó en el mismo paso, y en el orden en que se lee.
+  function llegados(regs) {
+    var xs = [];
+    regs.forEach(function (r) {
+      r.addedNodes.forEach(function (n) {
+        if (n.nodeType === 1 && n.isConnected && xs.indexOf(n) < 0 && !n.matches(NO_ARMAR)) xs.push(n);
+      });
+    });
+    xs = xs.filter(function (n) {
+      return seVe(n) && !xs.some(function (m) { return m !== n && m.contains(n); });
+    });
+    return xs.sort(function (a, b) {
+      return a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+    });
+  }
+
+  function vigilarVista(v) {
+    if (v._movVigilada) return;
+    v._movVigilada = true;
+    v._movVisible = seVe(v);
+    new MutationObserver(function () {
+      var ahora = seVe(v);
+      if (ahora === v._movVisible) return;
+      v._movVisible = ahora;
+      if (ahora) armar(v, 0);
+    }).observe(v, { attributes: true, attributeFilter: ["style", "class", "hidden"] });
+    if (v.parentElement && v.parentElement.closest("[data-mov-vista]")) return;
+    v._movCargando = marcarCarga(v);
+    new MutationObserver(function (regs) {
+      var esperaba = v._movCargando;
+      v._movCargando = marcarCarga(v);
+      // Llegó lo que se esperaba: se arma lo que llegó. Un repintado sin
+      // espera (cambiar un filtro) no se rearma, igual que en los modales.
+      if (!esperaba || v._movCargando) return;
+      var xs = llegados(regs);
+      if (xs.length) armarLista(v, xs, 0);
+    }).observe(v, { childList: true, characterData: true, subtree: true });
+  }
+
   function arrancar() {
     document.querySelectorAll(FONDOS_MOV).forEach(vigilar);
+    document.querySelectorAll("[data-mov-vista]").forEach(vigilarVista);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", arrancar);
   else arrancar();
