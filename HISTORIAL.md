@@ -7132,3 +7132,26 @@ línea por su texto (cada banco numera a su manera), manda lo desconocido y
 los reintegros a la vista, elige la categoría por el básico leído y avisa en
 rojo si el entorno tiene el extractor simulado (`MOCK_EXTRACTOR`).
 
+
+### El enmascarado tapaba "Sueldo" en "Sueldo básico" (2026-10-13)
+
+SDN leyó con IA el recibo simulado 02 en la Calculadora bancaria: el bruto
+cerraba pero el básico no aparecía, la categoría quedaba en la primera y el
+complemento esperado salía en $ 862.296,61 (conformado menos el básico del
+piso) contra los $ 686.978,98 del recibo.
+
+La causa estaba en el enmascarado y no en la calculadora. Al pie del recibo
+dice "Acreditado en cuenta sueldo BANCO DE PRUEBAS DEL LITORAL S.A.": una
+frase sin números que lleva una forma jurídica se toma entera como razón
+social (paso 4 de `enmascarado.analizar`), y el paso 5 aprende esa razón y
+busca sus pedazos de 6+ letras en todo el documento. "sueldo" es uno, así
+que se tapaba en "Sueldo básico" y la IA perdía el renglón. Afecta igual a
+`/api/leer`: esa frase es muy común en los recibos bancarios reales.
+
+Arreglo: lo aprendido de la razón social no se busca adentro de la tabla de
+conceptos (`_en_tabla`). La razón social ahí no aporta identidad y tapar un
+concepto va contra la regla del enmascarado (nunca estorba al análisis).
+Test: `test_preparacion.py::test_lo_aprendido_de_la_razon_social_no_se_tapa_en_la_tabla`,
+con el PDF 02. Además la calculadora avisa cuando no se leyó el básico, en
+vez de quedarse callada con la primera categoría. Trabajador 0.45.05,
+Plataforma 0.45.02.
