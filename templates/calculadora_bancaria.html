@@ -22,6 +22,7 @@
     --mal: #ff6b6b;
     --leve: #ffd27a;      /* diferencia de hasta el 1%: el amarillo de /entornos */
     --celeste: #8ecbff;   /* totales: el celeste de los gráficos de /entornos */
+    --violeta: #c4a7ff;   /* otros del recibo: se toman como dato, sin chequear */
     --linea: rgba(255,255,255,.12);
     --suave: rgba(255,255,255,.62);
     --fuente-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
@@ -86,6 +87,13 @@
   tr.neto td { font-size:18px; font-weight:700; color:var(--celeste); border-bottom:0; }
   .real-col { display:none; }
   .chequeando .real-col { display:table-cell; }
+  /* "Otros del recibo": lo que no es de convenio, a la par y sin juzgar. La
+     columna aparece solo si el recibo trae algo así. */
+  .otros-col { display:none; }
+  .chequeando.con-otros .otros-col { display:table-cell; }
+  td.otros-col, th.otros-col { color:var(--violeta); }
+  .dif.sin-chequear { color:var(--violeta); font-family:system-ui; font-size:12px; font-weight:600; letter-spacing:.02em; }
+  .resumen-dif .sin-chequear { color:var(--violeta); font-weight:600; }
   td.real-col input { width:130px; text-align:right; font-family:var(--mono); padding:6px 8px; }
   .dif.bien { color:var(--bien); } .dif.mal { color:var(--mal); font-weight:700; } .dif.leve { color:var(--leve); font-weight:700; }
   .acciones { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:14px; }
@@ -214,10 +222,10 @@
       <div class="columna">
       <div class="tarjeta" id="recibo">
         <h2>Recibo esperado</h2>
-        <p class="aclara">Calcula solo el mes, con la grilla elegida. <b>No contempla</b> retenciones ni reintegros de Ganancias (el importe se carga a mano), ni conceptos de períodos anteriores (retroactivos, ajustes o diferencias de otros meses).</p>
+        <p class="aclara">Calcula solo el mes, con la grilla elegida. <b>No contempla</b> retenciones ni reintegros de Ganancias (el importe se carga a mano), ni conceptos de períodos anteriores (retroactivos, ajustes o diferencias de otros meses). Si el recibo trae algo que no es de convenio, va a la columna <b>Otros del recibo</b>: se suma a la par, con sus aportes, sin chequearlo.</p>
         <div class="tabla-scroll">
           <table>
-            <thead><tr><th>Concepto</th><th class="num">Esperado</th><th class="num real-col">Recibo real</th><th class="num real-col">Diferencia</th></tr></thead>
+            <thead><tr><th>Concepto</th><th class="num">Convenio</th><th class="num real-col">Recibo leído IA</th><th class="num otros-col" title="Lo que el recibo trae y no es de convenio: se suma a la par, sin juzgarlo">Otros del recibo</th><th class="num real-col">Diferencia</th></tr></thead>
             <tbody id="renglones"></tbody>
           </table>
         </div>
@@ -411,37 +419,54 @@
   function dibujar(d) {
     const comp = {};
     for (const c of (d.comparacion?.renglones || [])) comp[c.codigo] = c;
-    // Por sección: lo esperado y, debajo, lo que el recibo real trae y la
-    // calculadora no tiene elegido (esperado $ 0, con qué tocar para que esté).
+    // "Otros del recibo": lo que no es de convenio (los renglones que la
+    // calculadora no tiene) y lo que arrastra en los aportes y la cuota. Lo
+    // calcula el servidor (grilla_bancaria.otros_del_recibo).
+    const otros = d.comparacion?.otros || { renglones: {}, totales: {} };
+    const extras = d.comparacion?.extras || [];
+    $('recibo').classList.toggle('con-otros', extras.length > 0);
+    const celdaOtros = v => el('td', { class: 'num otros-col', text: v ? pesos(v) : '' });
+    // Por sección: lo de convenio; debajo, lo que el recibo trae y la
+    // calculadora no tiene elegido (esperado $ 0, con qué tocar para que esté);
+    // y al final, lo que no es de convenio.
     const fuera = (d.comparacion?.renglones || []).filter(c => c.fuera);
     const filas = [];
     for (const seccion of Object.keys(SECCIONES)) {
       const propios = d.esperado.renglones.filter(r => r.seccion === seccion);
       const ajenos = fuera.filter(c => c.seccion === seccion);
-      if (!propios.length && !ajenos.length) continue;
-      filas.push(el('tr', { class: 'seccion' }, el('td', { colspan: 4, text: SECCIONES[seccion] })));
+      const suyos = extras.filter(e => e.seccion === seccion);
+      if (!propios.length && !ajenos.length && !suyos.length) continue;
+      filas.push(el('tr', { class: 'seccion' }, el('td', { colspan: 5, text: SECCIONES[seccion] })));
       for (const r of propios) {
         const nota = r.nota ? el('span', { class: 'nota' + (r.supuesto ? ' supuesto' : ''), text: r.nota }) : null;
         filas.push(el('tr', {}, el('td', {}, r.concepto, nota), el('td', { class: 'num', text: pesos(r.importe) }),
-          el('td', { class: 'num real-col' }, entradaReal(r.codigo, r.concepto)), celdaDif(comp[r.codigo])));
+          el('td', { class: 'num real-col' }, entradaReal(r.codigo, r.concepto)), celdaOtros(otros.renglones[r.codigo]),
+          celdaDif(comp[r.codigo])));
       }
       for (const c of ajenos) {
         const nota = el('span', { class: 'nota fuera', text: 'Está en el recibo y no en la calculadora. ' + c.como });
         filas.push(el('tr', { class: 'fuera' }, el('td', {}, c.concepto, nota), el('td', { class: 'num', text: '—' }),
-          el('td', { class: 'num real-col' }, entradaReal(c.codigo, c.concepto)), celdaDif(c)));
+          el('td', { class: 'num real-col' }, entradaReal(c.codigo, c.concepto)), celdaOtros(0), celdaDif(c)));
+      }
+      for (const e of suyos) {
+        filas.push(el('tr', { class: 'otro' }, el('td', { text: e.concepto }), el('td', { class: 'num', text: '—' }),
+          el('td', { class: 'num real-col', text: pesos(e.importe || 0) }), celdaOtros(e.importe || 0),
+          el('td', { class: 'num real-col dif sin-chequear', text: 'sin chequear', title: 'No es de convenio: no se compara' })));
       }
     }
     const t = d.esperado.totales;
     const compT = {};
     for (const c of (d.comparacion?.totales || [])) compT[c.total] = c;
-    const filaTotal = (nombre, clave, valor, cls) => {
+    const filaTotal = (nombre, clave, valor, cls, claveOtros) => {
       const c = compT[clave];
       return el('tr', { class: cls }, el('td', { text: nombre }), el('td', { class: 'num', text: pesos(valor) }),
         el('td', { class: 'num real-col', text: c ? pesos(c.real) : '' }),
+        celdaOtros(otros.totales[claveOtros || clave]),
         celdaDif(c));
     };
-    filas.push(filaTotal('Total remunerativo', '', t.remunerativo, 'total'));
-    if (t.no_remunerativo) filas.push(filaTotal('Total no remunerativo', '', t.no_remunerativo, 'subtotal'));
+    filas.push(filaTotal('Total remunerativo', '', t.remunerativo, 'total', 'remunerativo'));
+    if (t.no_remunerativo || otros.totales.no_remunerativo)
+      filas.push(filaTotal('Total no remunerativo', '', t.no_remunerativo, 'subtotal', 'no_remunerativo'));
     filas.push(filaTotal('Total bruto', 'bruto', t.bruto, 'total'));
     filas.push(filaTotal('Total descuentos', 'descuentos', t.descuentos, 'subtotal'));
     filas.push(filaTotal('Neto a cobrar', 'neto', t.neto, 'neto'));
@@ -454,14 +479,16 @@
       if (cargados) {
         const n = d.comparacion.distintos;
         res.classList.add(n ? 'mal' : 'bien');
-        res.textContent = n ? `${n} de ${cargados} valores cargados no coinciden con lo que corresponde (tolerancia $ 1).`
-                            : `Los ${cargados} valores cargados coinciden con lo que corresponde.`;
+        const sin = extras.length ? el('span', { class: 'sin-chequear',
+          text: ` ${extras.length} renglón(es) que no son de convenio quedan sin chequear; se suman a la par en "Otros del recibo".` }) : '';
+        res.replaceChildren(n ? `${n} de ${cargados} valores cargados no coinciden con lo que corresponde (tolerancia $ 1).`
+                              : `Los ${cargados} valores cargados coinciden con lo que corresponde.`, sin);
       }
     }
     sugerirCategoria();
   }
   function entradaReal(codigo, concepto) {
-    const input = el('input', { type: 'text', inputmode: 'decimal', 'aria-label': 'Recibo real: ' + concepto });
+    const input = el('input', { type: 'text', inputmode: 'decimal', 'aria-label': 'Recibo leído: ' + concepto });
     input.value = reales[codigo] ?? '';
     input.addEventListener('input', () => { reales[codigo] = input.value; calcular(); });
     return input;
@@ -472,7 +499,8 @@
   function celdaDif(c) {
     if (!c) return el('td', { class: 'num real-col dif' });
     const clase = { coincide: ' bien', leve: ' leve', grave: ' mal' }[c.gravedad] || ' mal';
-    const pct = c.esperado ? ' (' + fmt.format(Math.abs(c.diferencia / c.esperado) * 100) + '%)' : '';
+    const espera = c.esperado + (c.otros || 0);
+    const pct = espera ? ' (' + fmt.format(Math.abs(c.diferencia / espera) * 100) + '%)' : '';
     return el('td', { class: 'num real-col dif' + clase, text: c.coincide ? '✓' : pesos(c.diferencia),
       title: c.coincide ? 'Coincide (tolerancia $ 1)' : 'Diferencia' + pct });
   }

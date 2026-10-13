@@ -1343,6 +1343,12 @@ su página (`/entornos/herramientas/<nombre>`) y la pestaña solo la presenta.
   categoría con un botón "Ajustar al recibo"; un adicional que el recibo trae
   y la calculadora no tiene elegido sale como renglón con esperado $ 0 y qué
   tildar (`grilla_bancaria.FUERA_DEL_ESPERADO`).
+- **Lo que no es de convenio va a "Otros del recibo", a la par** (SDN,
+  2026-10-13; `grilla_bancaria.otros_del_recibo`): los renglones que la
+  calculadora no tiene se suman en su propia columna, en violeta y "sin
+  chequear", sin tocar la de convenio. Un haber remunerativo arrastra sus
+  aportes (mismo % y tope) y la cuota (supuesto), y cada diferencia es
+  recibo − (convenio + otros): lo que no cierra es de convenio.
 - **Alcance dicho en pantalla**: solo el mes; no contempla retenciones ni
   reintegros de Ganancias ni conceptos de períodos anteriores.
 - **Supuestos marcados en pantalla** (`supuesto: true` en el renglón): el

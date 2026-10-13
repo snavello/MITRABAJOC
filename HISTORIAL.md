@@ -7182,3 +7182,35 @@ silencio porque la calculadora no los tenía elegidos. Ahora salen en su
 sección con esperado "—", diferencia en rojo y qué tildar
 (`FUERA_DEL_ESPERADO`); cuando se tilda, pasan a ser renglones comunes.
 Plataforma 0.45.03.
+
+### Otros del recibo: lo que no es de convenio, a la par (2026-10-13)
+
+SDN: un recibo puede traer conceptos de ingreso o de egreso que la
+calculadora no tiene, y alguno puede ser una condición especial; si no se
+muestran se pierden. Hasta acá iban a "Renglones que la calculadora no
+tiene", fuera de la tabla, y no sumaban a nada: el bruto y el neto daban
+diferencia sin decir de dónde, y si eran remunerativos también la
+jubilación, el INSSJP, la obra social y la cuota.
+
+Ahora van a una columna propia, **"Otros del recibo"**, al lado de la de
+convenio y sin tocarla (`grilla_bancaria.otros_del_recibo`):
+
+- Cada concepto ajeno es un renglón en su sección, con el importe del
+  recibo, en violeta y con "sin chequear" en la diferencia: se toma como dato.
+- Un haber remunerativo arrastra sus aportes con el mismo % y el mismo tope,
+  y la cuota sindical sobre todo el remunerativo (marcada como supuesto: el
+  convenio no fija la base). Decisiones 1 y 2 de SDN.
+- La diferencia de cada renglón y de cada total es recibo − (convenio +
+  otros): si algo no cierra, es de convenio.
+- Los reintegros (devolución de Ganancias) entran ahí con signo negativo, y
+  la sección que dijo la IA vale tal cual y se corrige a mano (decisión 4).
+- La columna "Recibo real" pasó a llamarse "Recibo leído IA" y "Esperado",
+  "Convenio". La de "Otros" aparece solo si hay algo que poner.
+- Los adicionales DEL convenio que no están tildados (cajero, título) siguen
+  aparte, en rojo y con qué tildar: no son "otros", hay que elegirlos.
+
+El CSV de casos suma la columna "otros". Plataforma 0.46.01.
+
+Primera vuelta de SDN sobre la columna, el mismo día: sin las aclaraciones en
+violeta debajo de cada renglón (ensuciaban la tabla; la aclaración de alcance
+de arriba ya lo dice) y "Recibo leído IA" antes que "Otros del recibo".
