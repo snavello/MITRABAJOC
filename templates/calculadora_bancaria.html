@@ -441,11 +441,13 @@
                                     : `categoría por el básico: ${elegida.nombre}`);
       } else if (d.renglones && d.renglones.BAS) {
         partes.push('el básico no coincide con ninguna categoría de la grilla: elegila a mano');
+      } else {
+        partes.push('no se leyó el sueldo básico: elegí la categoría a mano, si no la calculadora usa la primera');
       }
       if ((d.extras || []).length) partes.push(`${d.extras.length} a revisar en "Renglones que la calculadora no tiene"`);
       if (d.reintegros) partes.push(`${d.reintegros} reintegro(s) que la calculadora no contempla`);
       if (d.periodo && d.periodo !== $('grilla').value) partes.push(`ojo: el recibo es de ${d.periodo} y la grilla elegida es ${$('grilla').value}`);
-      aviso.className = 'aviso ' + (d.mock ? 'mal' : 'bien');
+      aviso.className = 'aviso ' + (d.mock || !elegida ? 'mal' : 'bien');
       aviso.textContent = (d.mock ? 'LECTURA SIMULADA (MOCK_EXTRACTOR activo en este entorno): los importes no son del recibo. ' : '')
         + partes.join(' · ') + '. Revisá los importes antes de guardar.';
       calcular();

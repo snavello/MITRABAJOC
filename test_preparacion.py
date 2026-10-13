@@ -101,6 +101,20 @@ def test_tipo_no_soportado():
     assert p.registro["motivo"] == "tipo_no_soportado" and not p.tapado
 
 
+def test_lo_aprendido_de_la_razon_social_no_se_tapa_en_la_tabla():
+    """Recibo bancario simulado 02: al pie dice "Acreditado en cuenta sueldo
+    BANCO ... S.A.", que se toma entero como razón social. "sueldo" se
+    aprendía de ahí y se tapaba en "Sueldo básico": la IA perdía el renglón
+    del básico (lo encontró SDN en la Calculadora bancaria, 2026-10-13)."""
+    pdf = (Path(__file__).parent / "docs" / "recibos-bancaria-prueba"
+           / "02-cajero-titulo-secundario.pdf").read_bytes()
+    p = preparacion.preparar(pdf, "application/pdf", E.Conocidos(), "activo")
+    tapadas = {k.texto.lower() for k in p.analisis.cajas}
+    assert "sueldo" not in tapadas or all(
+        k.motivo == "forma_juridica" for k in p.analisis.cajas if k.texto.lower() == "sueldo")
+    assert {"prueba,", "27-99999999-4"} <= tapadas      # la identidad se sigue tapando
+
+
 # ======================= Rearmar =======================
 
 

@@ -811,7 +811,13 @@ def analizar(palabras: list[Palabra], conocidos: Conocidos | None = None) -> Ana
             if _nombre_en(p.texto, aprendido_nombre):
                 marcar([i], "nombre", "aprendido")
     if aprendidas_razones:
+        # Nunca adentro de la tabla de conceptos: la razón social aprendida
+        # puede traer palabras del renglón donde apareció ("Acreditado en
+        # cuenta sueldo BANCO X S.A." enseñaba "sueldo"), y tapar "Sueldo" en
+        # "Sueldo básico" le sacaba a la IA el renglón entero.
         for f in frases:
+            if _en_tabla(f, zonas):
+                continue
             for idx in _tramos_razon(f, aprendidas_razones):
                 marcar(idx, "razon_social", "aprendido")
 
