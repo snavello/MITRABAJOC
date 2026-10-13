@@ -1,0 +1,3013 @@
+[
+ {
+  "id": "T01",
+  "nombre": "Quiero afiliarme",
+  "dirigido_al_afiliado": true,
+  "quien": "Bancario/a no afiliado/a (activo o jubilado)",
+  "hoy": {
+   "modalidad": "semi-online",
+   "circuito": "Dos puertas web: el formulario de labancaria.org/afiliate (Nombre, Apellido, Banco en texto libre, Provincia, Ciudad, E-mail, Teléfono) y el Google Form «Presolicitud de Afiliación» de la Seccional Buenos Aires (Nombre, Apellido, Teléfono, N° DNI, Banco/Entidad de una lista, Modalidad de trabajo Remota/Virtual/Ambas, Comentarios). Las dos dicen lo mismo: «te contactaremos para formalizar tu inscripción» / «se estarán contactando con usted para continuar con el trámite». El resto del circuito (quién llama, qué se firma, dónde) no está publicado; la firma de una ficha en papel es deducida, no está escrita en ninguna fuente.",
+   "requisitos": "Ser trabajador/a de una entidad del CCT 18/75. La web no publica documentación ni plazos.",
+   "sistema_interno": "Padrón de afiliados de la Bancaria (SAF, deducido por el sistema de reservas); destino del Google Form desconocido.",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/afiliate/",
+    "https://www.bancariasba.com.ar/ (botón «Quiero Afiliarme»)",
+    "https://docs.google.com/forms/d/e/1FAIpQLSdpCrNdDPEHLG8Ypu6-HCt-tKSjBtIPJpDRQbP0nQW_OdwdnQ/viewform",
+    "https://www.bancariasba.com.ar/ (formulario de afiliación)"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "puerta_y_encadenado",
+   "nivel": "ajuste",
+   "propuesta": "Formulario público «Quiero afiliarme» (sin login, con captcha) que cae al área de Afiliaciones de la seccional elegida y abre expediente; el sindicato contacta por el chat o por teléfono, carga el alta en su sistema y, ya en el padrón, la persona se registra en la app. Si hace falta firma, el sindicato le encadena «Ficha de afiliación firmada» (archivo).",
+   "formulario": "Nombre y apellido (texto), DNI (numero), CUIL (numero), Banco empleador (seleccion), Sucursal (texto), Provincia y localidad (seleccion/texto), Seccional (seleccion), Mail (texto), Celular (texto), Modalidad de trabajo (opcion_unica), Último recibo de sueldo (archivo pdf/jpg, opcional)",
+   "encadenados": "«Ficha de afiliación firmada» (archivo) si el sindicato exige firma; aviso de alta con la invitación a registrarse.",
+   "area": "Afiliaciones / Secretaría de Organización (deducido) de cada seccional",
+   "falta": "Hoy el registro y los trámites exigen estar en el padrón: falta una entrada pública (sin cuenta) que abra un expediente con captcha y freno. La lectura del recibo por IA para prellenar banco y categoría solo existe con sesión."
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Visibilidad máxima: cada comunicado salarial cierra con «AFILIATE» y hay dos formularios sueltos sin seguimiento. Mostrar la afiliación con expediente es el argumento comercial más fuerte, pero exige el ajuste de entrada pública."
+  },
+  "validar_con_sindicato": "¿Qué pasa después del formulario: quién llama, se firma una ficha en papel, cuánto tarda el alta en SAF? ¿Quién recibe hoy los envíos de labancaria.org/afiliate y del Google Form de SBA?",
+  "eje": "afil",
+  "incluye": [],
+  "kit": "segunda"
+ },
+ {
+  "id": "T02",
+  "nombre": "Actualizar mis datos («Tus Datos»)",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a (activo o jubilado)",
+  "hoy": {
+   "modalidad": "online",
+   "circuito": "En tusdatos.bancaria.org.ar el afiliado se registra con N.º de documento (el sistema valida contra el padrón y completa solo el N.º de afiliado), mail, contraseña y reCAPTCHA; confirma con el enlace que le llega por mail («Estamos validando tu cuenta» es esa validación del token, no una aprobación). Después entra con mail + contraseña a la «Ficha de actualización», corrige y aprieta «Actualizar»: ve «Muchas gracias por su colaboración» y lo devuelve a labancaria.org. No hay paso de aprobación visible: el mismo portal tiene una vista para usuarios de seccional (o central, seccional 99) con «Listado Afiliados» filtrable por Actualizados/No actualizados, fechas, banco y sucursal, el detalle con los cambios «pintados en verde» (valor anterior vs. actual) y la impresión en PDF. Comparte usuario con el portal de Kit Escolar.",
+   "requisitos": "Campos obligatorios: Apellido, Nombre, Fecha de nacimiento (mayor de 18), Estado civil, Domicilio, Código postal, Localidad, Provincia, CUIL (validado), Email, Seccional, Entidad bancaria, Sucursal, Fecha de ingreso al banco. Opcionales: piso, depto, nacionalidad, teléfono, celular, domicilio de la sucursal, Observaciones (200 caracteres). N.º de afiliado y documento no se editan; a los jubilados se les bloquean Seccional, Banco, Sucursal y Domicilio de sucursal.",
+   "sistema_interno": "Portal «Tus Datos» (API tusdatos.bancaria.org.ar/api/v1, Departamento de Sistemas) sobre el padrón de afiliados (SAF, deducido).",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://tusdatos.bancaria.org.ar/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "reemplazar",
+   "nivel": "ajuste",
+   "propuesta": "El afiliado corrige sus datos en el Perfil de Colm3na (un solo dueño por CUIL, con domicilio estructurado). El sindicato ve en Trabajadores quién actualizó y qué cambió, y lo pasa a SAF como hoy pasa lo de Tus Datos. Lo que el sindicato debe validar (banco, sucursal, seccional) va por el trámite NUEVO-A-1.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Afiliaciones / Organización (central) y cada seccional",
+   "falta": "Agregar al perfil: fecha de nacimiento, estado civil, nacionalidad, fecha de ingreso al banco, sucursal, N.º de afiliado (solo lectura) y Observaciones; registrar el valor anterior de cada cambio y un filtro «actualizó desde/hasta» con exportación en Trabajadores. Bloquear banco/seccional para jubilados requiere la condición en el padrón."
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Es el servicio digital más parecido a Colm3na que ya tienen y lo usa todo afiliado (comparte cuenta con Kit Escolar). Reemplazarlo junta datos, credencial y trámites en una sola app."
+  },
+  "validar_con_sindicato": "¿Los cambios de Tus Datos impactan solos en SAF o un operador los copia a mano? ¿Cuántos afiliados se registraron? ¿Quieren que el banco/seccional lo cambie el afiliado directo o con validación?",
+  "eje": "afil",
+  "incluye": [],
+  "kit": "segunda"
+ },
+ {
+  "id": "T03",
+  "nombre": "Mi carnet de afiliado (sacarlo, reponerlo, mostrarlo)",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "Carnet físico. Se pide mostrarlo para retirar el kit escolar, pedir el kit recién nacido, Megatlon (planes y jubilados), Diarco, Hertz y Librería Hernández («sin excepción la credencial»). El sepelio no pide carnet sino el N.º de afiliado por teléfono. El viaje de bodas NO lo pide (pide solicitud de Acción Social, turno o certificado de matrimonio y licencia del banco). Ninguna fuente dice cómo se emite, cuánto tarda ni cómo se repone.",
+   "requisitos": "No publicados.",
+   "sistema_interno": "Padrón (SAF, deducido)",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://www.bancariasba.com.ar/service/kit-recien-nacido/",
+    "https://www.bancariasba.com.ar/service/red-megatlon/",
+    "https://www.bancariasba.com.ar/service/supermercado-diarco-2/",
+    "https://www.bancariasba.com.ar/service/alquiler-de-autos-hertz-2/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "reemplazar",
+   "nivel": "ajuste",
+   "propuesta": "Credencial digital con QR verificable en la app; el comercio o la seccional la valida en el momento. Si se pierde el teléfono, se vuelve a entrar y la credencial sigue ahí: la reposición deja de ser un trámite.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Afiliaciones / Organización",
+   "falta": "Hoy el código de credencial se genera uno por uno con un botón del admin: falta la generación masiva (70.000 afiliados) y mostrar el N.º de afiliado de la Bancaria en la credencial (no existe ese campo en el padrón). Falta acordar que los convenios (Megatlon, Diarco, Hertz, Hernández) acepten la credencial digital."
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Visible, diaria y sin costo para el afiliado: la credencial en el teléfono es lo primero que se muestra en una demo."
+  },
+  "validar_con_sindicato": "¿Cómo se emite y repone hoy el carnet, cuánto cuesta y quién lo imprime? ¿Los comercios con convenio aceptarían una credencial digital con QR?",
+  "eje": "afil",
+  "incluye": [],
+  "kit": "segunda"
+ },
+ {
+  "id": "T04",
+  "nombre": "Reafiliarme al jubilarme",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a que se jubila",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "Solo existe la pieza gráfica de la Secretaría de Previsión Nacional: «Cuando te jubilés REAFILIATE. No pierdas tu afiliación, tu carnet vale: turismo, act. recreativas, Megatlon bonificado». No dice canal, requisitos ni plazos. Hay una ficha aparte «¿Tenés pensado jubilarte? Te asesoramos».",
+   "requisitos": "No publicados. Beneficio verificado para jubilados: Megatlon sin cargo (DNI + carnet).",
+   "sistema_interno": "Padrón (SAF, deducido)",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/beneficios/cuando-te-jubiles-reafiliate/",
+    "https://www.bancariasba.com.ar/service/red-megatlon/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "ajuste",
+   "propuesta": "Trámite «Reafiliación como jubilado/a» al área Previsión: el afiliado adjunta la resolución de su jubilación y elige seccional; Previsión lo da de alta como jubilado en su sistema y en Colm3na, y le confirma por el chat.",
+   "formulario": "Fecha de jubilación (fecha), Resolución o constancia de jubilación (archivo pdf/jpg), Caja (seleccion: ANSES / Caja Bapro / otra), Último banco (seleccion), Seccional donde quiere seguir (seleccion), Forma de pago de la cuota (opcion_unica, si corresponde)",
+   "encadenados": "«Autorización de débito de cuota» (archivo) si la cuota del jubilado no se descuenta por planilla.",
+   "area": "Previsión",
+   "falta": "Falta la condición activo/jubilado en el padrón para que la credencial y los beneficios de jubilado salgan solos. Ojo (deducido): si al jubilarse la persona sale del padrón, no puede entrar a la app; hay que mantenerla en el padrón como «jubilado pendiente» o resolverlo con la entrada pública de T01."
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Trámite simple, de una vez por persona y con valor de retención (la web insiste en no perder afiliados al jubilarse). Muestra Previsión en la app."
+  },
+  "validar_con_sindicato": "¿Cómo se reafilia hoy un jubilado, cómo paga la cuota (descuento en el haber de la Caja, débito, efectivo)? ¿Al jubilarse se lo da de baja automáticamente?",
+  "eje": "afil",
+  "incluye": [
+   "Al jubilarme, seguir afiliado/a (reafiliación)"
+  ],
+  "kit": "segunda"
+ },
+ {
+  "id": "T05",
+  "nombre": "Reconocimiento de afiliado/a vitalicio/a (50 años)",
+  "dirigido_al_afiliado": true,
+  "quien": "Sindicato (Previsión Nacional); el afiliado es invitado",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "Acto anual de la Secretaría de Previsión Nacional en la sede central con entrega de diploma y medalla a quienes cumplieron 50 años de afiliación (2021 nov, 2022 sep, 2023 nov, 2024 oct, 2025 nov). No se publica cómo se arma la lista ni cómo se invita; el afiliado no lo pide.",
+   "requisitos": "50 años de afiliación.",
+   "sistema_interno": "Padrón (SAF, deducido)",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/emotivo-homenaje-a-las-y-los-afiliados-vitalicios/",
+    "https://labancaria.org/prevision-entrega-de-diplomas-a-afiliados-as-vitalicios-as/",
+    "https://labancaria.org/homenaje-a-las-y-los-companeros-vitalicios/",
+    "https://labancaria.org/nuestros-afiliados-vitalicios/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "Previsión manda una notificación por CUIL a la lista que ya arma, con un formulario para confirmar asistencia y acompañantes; después, noticia del acto. Con la fecha de afiliación en el padrón, la lista saldría sola.",
+   "formulario": "Confirmo asistencia (booleano), Cantidad de acompañantes (numero), Necesito traslado o accesibilidad (texto)",
+   "encadenados": "",
+   "area": "Previsión",
+   "falta": "Para que la app arme la lista sola: fecha de afiliación en el padrón (hecho, no derivado) y la condición vitalicio."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Es anual y para pocas personas; buena historia para la demo, no para el kit."
+  },
+  "validar_con_sindicato": "¿Cómo arman hoy la lista de vitalicios y cómo los invitan? ¿La condición vitalicio exime de cuota?",
+  "eje": "afil",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T06",
+  "nombre": "Cargar mi grupo familiar",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "No hay un trámite único: cada servicio pide la familia de nuevo. El portal Kit Escolar tiene «Mis Familiares» (Hijo o Nieto, vínculo, DNI de ambos lados y partida, archivos de hasta 4 MB) que el afiliado carga online. Megatlon familiar pide actas de matrimonio/convivencia y de nacimiento en Sarmiento 341 PB. El sepelio cubre cónyuge, hijos hasta 21 e hijos con discapacidad pero se pide por teléfono con el N.º de afiliado. En reservas de turismo los pasajeros y su parentesco los carga el operador de la seccional, no el afiliado (sistema interno).",
+   "requisitos": "DNI y partida de cada familiar; actas de matrimonio o convivencia para cónyuge.",
+   "sistema_interno": "Portal Kit Escolar (Mis Familiares); sistema de reservas de turismo (interno)",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://kitescolar.bancaria.org.ar/static/manual-usuario.pdf",
+    "https://kitescolar.bancaria.org.ar/",
+    "https://reservasturismo.bancaria.org.ar/",
+    "https://www.bancariasba.com.ar/service/red-megatlon/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "desarrollo",
+   "propuesta": "Grupo familiar en el perfil del afiliado (P05), con documentación y vencimientos, que el sindicato valida una vez y reutilizan kit escolar, Megatlon, turismo, guardería y sepelio. Mientras no exista, cada trámite pide los familiares como campos y adjuntos.",
+   "formulario": "Familiar: Nombre (texto), DNI (numero), Fecha de nacimiento (fecha), Vínculo (seleccion: cónyuge, conviviente, hijo/a, nieto/a), Discapacidad (booleano), DNI ambos lados (archivo), Partida o acta (archivo)",
+   "encadenados": "",
+   "area": "Acción Social",
+   "falta": "Pieza nueva: entidad familiar ligada al CUIL, validación por el sindicato y reutilización desde los formularios."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Destraba muchos beneficios, pero es desarrollo; no entra en un kit «solo configurar»."
+  },
+  "validar_con_sindicato": "¿Kit Escolar y SAF comparten los familiares o son bases separadas? ¿Qué familiares cubre cada beneficio?",
+  "eje": "afil",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T68",
+  "nombre": "¿Dónde voto?",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a",
+  "hoy": {
+   "modalidad": "online",
+   "circuito": "dondevoto.bancaria.org.ar (hoy dice «Consulta del padrón electoral – Elecciones 2026»): el afiliado elige consultar por Documento o por N.º de afiliado, marca sexo y resuelve un reCAPTCHA. Recibe N.º de documento, N.º de afiliado, seccional, banco, sucursal, dirección y localidad, tipo de urna y número, un mapa, código de referencia y fecha, con botón «Imprimir constancia». Si no está: «No se encontró información sobre la ubicación de voto». Si el banco o sucursal está mal, hay un botón para avisarlo (ver NUEVO-A-1). Regla publicada en 2021: activos votan en su lugar de trabajo, teletrabajadores en la sucursal cercana o una delegación, jubilados en Sarmiento 337, Gaona 1645 o las delegaciones del GBA.",
+   "requisitos": "Estar en el padrón electoral (6 meses de afiliación a la fecha del comicio, regla 2021).",
+   "sistema_interno": "Padrón electoral de la Junta Electoral (API dondevoto.bancaria.org.ar/padron/getUbicacion)",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://dondevoto.bancaria.org.ar/",
+    "https://labancaria.org/eleccion-diciembre-14-donde-se-vota/",
+    "https://labancaria.org/convocatoria-a-elecciones-en-seccionales/",
+    "https://labancaria.org/elecciones-bancarias-y-bancarios-decidieron/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "listo",
+   "propuesta": "Ya es online y anda: Colm3na avisa la elección por notificación y noticia con el enlace a dondevoto. Más adelante (P33) la tarjeta nativa con lugar, urna y mapa, importando el padrón electoral.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Junta Electoral / Prensa",
+   "falta": "Para la tarjeta nativa: importar el lugar de votación por afiliado en cada elección (P33)."
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Las elecciones de seccionales son en noviembre de 2026: un aviso con el enlace es inmediato y visible."
+  },
+  "validar_con_sindicato": "¿La Junta Electoral aceptaría que la app enlace o, más adelante, muestre el lugar de votación? ¿Fecha exacta de las elecciones de seccionales 2026?",
+  "eje": "inst",
+  "incluye": [
+   "¿Estoy habilitado para votar?"
+  ],
+  "kit": ""
+ },
+ {
+  "id": "T70",
+  "nombre": "Enterarme de elecciones, congresos y plenarios",
+  "dirigido_al_afiliado": true,
+  "quien": "Sindicato (Secretariado, Junta Electoral)",
+  "hoy": {
+   "modalidad": "online",
+   "circuito": "Comunicados en labancaria.org; las resoluciones de convocatoria electoral se publican en Diario Popular y el recorrido de urnas en el Boletín Oficial (2021). Congresos (anual, LIII° en junio de 2026) y plenarios convocan a congresales y secretarios, no al afiliado; al afiliado le llega la noticia. Elecciones nacionales: 7 de agosto de 2025 (período 2025-2029); de seccionales: noviembre de 2026.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/convocatoria-electoral-resoluciones-del-consejo-directivo-y-la-junta-electoral/",
+    "https://labancaria.org/7-de-agosto-elecciones-nacionales-bancarias/",
+    "https://labancaria.org/proclamacion-del-nuevo-secretariado-nacional/",
+    "https://labancaria.org/liii-congreso-nacional-bancario/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "listo",
+   "propuesta": "Notificación push y noticia por seccional (o a todo el padrón en una nacional), con el enlace a dondevoto y los resultados después.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Prensa / Secretaría General",
+   "falta": "Para convocar solo a delegados o congresales falta marcarlos en el padrón."
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Ya hay elecciones de seccionales en noviembre de 2026: es un uso inmediato de Notificaciones."
+  },
+  "validar_con_sindicato": "",
+  "eje": "inst",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T71",
+  "nombre": "Presentación de listas y avales",
+  "dirigido_al_afiliado": false,
+  "quien": "Agrupaciones / listas",
+  "hoy": {
+   "modalidad": "presencial",
+   "circuito": "Las listas se presentan ante la Junta Electoral Nacional en la sede, con escribano y veedores de la Dirección Nacional de Asociaciones Sindicales; en 2021 la Lista 1 presentó 26.165 avales.",
+   "requisitos": "Decreto 467/88 y Ley 23.551.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/elecciones-bancarias-lista-1-celeste-y-blanca/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "fuera",
+   "propuesta": "No es un trámite del afiliado: lo regula la ley de asociaciones sindicales y lo maneja la Junta Electoral.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Junta Electoral",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Fuera del alcance."
+  },
+  "validar_con_sindicato": "",
+  "eje": "inst",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T72",
+  "nombre": "Elección de delegados y comisiones internas",
+  "dirigido_al_afiliado": true,
+  "quien": "Trabajadores de cada banco o sucursal; convoca la seccional",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "Se eligen por banco y establecimiento; la web solo publica balances: en 2022 hubo 555 procesos electorales y se eligieron 3.678 delegados y miembros de mesa ejecutiva (dato del L° Congreso, 2023; en junio de 2022 llevaban 2.974). No se publica cómo se convoca, quién vota ni dónde. Por la Ley 23.551 votan todos los trabajadores del lugar y los candidatos deben ser afiliados (deducido, no está en la web).",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/l-congreso-bancario-sergio-palazzo-realizo-el-balance/",
+    "https://labancaria.org/xlix-congreso-nacional-bancario-apertura/",
+    "https://labancaria.org/nacion-servicios-cumplan-con-la-ley/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "ajuste",
+   "propuesta": "Aviso de convocatoria y del resultado a los afiliados del banco (notificación por CUIT del empleador) y noticia; el acto electoral sigue siendo presencial.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Acción Gremial / seccional",
+   "falta": "Para dirigir por sucursal hace falta la sucursal en el padrón; para mostrar «tu delegado» hace falta la marca de delegado (P11)."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Útil pero secundario; depende de datos que hoy no están en el padrón."
+  },
+  "validar_con_sindicato": "¿Cómo se convoca hoy una elección de delegados y quién la difunde? ¿Tienen el listado de delegados por sucursal?",
+  "eje": "inst",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T73",
+  "nombre": "Responder la Encuesta Nacional Bancaria",
+  "dirigido_al_afiliado": true,
+  "quien": "Secretaría Nacional de DDHH, Género e Igualdad con las 53 seccionales; responde el trabajador",
+  "hoy": {
+   "modalidad": "online",
+   "circuito": "Se lanza con un enlace (2022: bit.ly, del 11 al 22 de abril) difundido por la web y las seccionales; el trabajador responde online. Los informes se publican como libros. Sí dicen cuántos respondieron: 2022, más de 3.500 respuestas (5,5% de los afiliados); 2024, 2.259 casos en una muestra por cuotas no probabilística.",
+   "requisitos": "",
+   "sistema_interno": "Formulario externo (enlace acortado; plataforma no verificada)",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/encuesta-nacional-bancaria-2022/",
+    "https://labancaria.org/libros/situacion-economica-e-impacto-en-el-consumo-de-las-y-los-trabajadoras-es-bancarias-os/",
+    "https://labancaria.org/libros/mundo-del-trabajo-y-reconversion-tecnologica/",
+    "https://labancaria.org/libros/mundo-del-trabajo-y-reconversion-tecnologica-completo/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "reemplazar",
+   "nivel": "listo",
+   "propuesta": "Encuesta anónima al padrón con cortes por seccional y banco, umbral de anonimato, aviso y recordatorio solo a los que faltan, y comparación con la toma anterior. La de 2026 sería la primera en la app.",
+   "formulario": "Las preguntas de la toma anterior, con los 10 tipos de pregunta de Encuestas.",
+   "encadenados": "",
+   "area": "DDHH, Género e Igualdad",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Listo sin desarrollo y con un número para mejorar a la vista: 5,5% de respuesta en 2022."
+  },
+  "validar_con_sindicato": "¿Con qué herramienta hicieron las encuestas (Google Forms, otra)? ¿Hay toma prevista para 2026?",
+  "eje": "inst",
+  "incluye": [
+   "Responder la Encuesta Nacional Bancaria"
+  ],
+  "kit": ""
+ },
+ {
+  "id": "T74",
+  "nombre": "Relevamiento de afectados por una emergencia",
+  "dirigido_al_afiliado": true,
+  "quien": "Seccional; responde el afiliado afectado",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "En la inundación de 2025 la Seccional Bahía Blanca «hizo un relevamiento de los compañeros bancarios más afectados» (entrevista en Intereses Colectivos N° 145); no se dice cómo (que fuera «a mano» es deducido). La colecta nacional se hizo por la Secretaría de Acción Social y Deportes con donaciones en Sarmiento 341.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/intereses-colectivos-programa-n-145/",
+    "https://labancaria.org/colecta-por-damnificados-as-de-bahia-blanca-2/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "Encuesta nominal a los afiliados de la seccional o provincia afectada («¿Te afectó? ¿Qué necesitás?»), y un trámite «Pedido de ayuda por emergencia» que cae a Acción Social con seguimiento por chat.",
+   "formulario": "Me afectó (booleano), Tipo de daño (multiple: vivienda, auto, salud, trabajo), Necesito (multiple), Teléfono de contacto (texto), Fotos (archivo)",
+   "encadenados": "",
+   "area": "Acción Social / seccional",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Es por evento; buen caso de demostración, no para el arranque."
+  },
+  "validar_con_sindicato": "",
+  "eje": "inst",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T76",
+  "nombre": "Leer noticias, escuchar la radio y la síntesis de prensa",
+  "dirigido_al_afiliado": true,
+  "quien": "Sindicato (Secretaría de Prensa); lo lee el afiliado",
+  "hoy": {
+   "modalidad": "online",
+   "circuito": "labancaria.org publica unas 210-380 notas por año desde 2020; el programa «Intereses Colectivos» sale los martes por Radio Gráfica FM 89.3 (N° 222 el 6 de octubre de 2026) y se reseña en la web; la «Síntesis de prensa» es una página que se reemplaza cada día con enlaces a medios.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/sintesis-de-prensa/",
+    "https://labancaria.org/intereses-colectivos-programa-n-222/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "listo",
+   "propuesta": "Noticias con vigencia e imagen, dirigidas por seccional, con enlace al programa o a la nota completa.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Prensa",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Contenido que ya existe y genera hábito de abrir la app."
+  },
+  "validar_con_sindicato": "¿Quién cargaría las noticias en la app: Prensa nacional y cada seccional?",
+  "eje": "inst",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T77",
+  "nombre": "Oficios judiciales",
+  "dirigido_al_afiliado": false,
+  "quien": "Juzgados",
+  "hoy": {
+   "modalidad": "online",
+   "circuito": "El pie de todas las páginas de labancaria.org indica «Oficios Judiciales sadministracion@bancaria.org.ar».",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/afiliate/ (pie de página)"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "fuera",
+   "propuesta": "Es correspondencia judicial, no un trámite del afiliado.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Administración",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Fuera del alcance."
+  },
+  "validar_con_sindicato": "",
+  "eje": "inst",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "NUEVO-A-1",
+  "nombre": "Corregir mi banco, sucursal o seccional en el padrón",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a activo/a (cambio de banco, fusión, traslado, error)",
+  "hoy": {
+   "modalidad": "semi-online",
+   "circuito": "Dos caminos: (1) en Tus Datos el activo cambia Seccional, Entidad bancaria y Sucursal él mismo (a los jubilados se les bloquea); (2) en dondevoto, si el lugar de votación muestra mal el banco o la sucursal, el botón «Si el banco o sucursal es incorrecto» abre «Cumplo mis funciones en…» (banco, sucursal, teléfono de contacto, reCAPTCHA) y manda un mensaje a la Junta/Afiliaciones; la respuesta no vuelve por el sistema. El mismo cartel ofrece teléfono 011 4328-5011 int. 4279 o afiliaciones@bancaria.org.ar.",
+   "requisitos": "Banco y sucursal donde trabaja; teléfono.",
+   "sistema_interno": "Portal Tus Datos; dondevoto (POST mensaje/errorAfiliado)",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://tusdatos.bancaria.org.ar/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "puerta_y_encadenado",
+   "nivel": "listo",
+   "propuesta": "Trámite «Cambié de banco, sucursal o seccional» con el último recibo adjunto; Afiliaciones valida, actualiza su sistema y el padrón de Colm3na (CUIT del empleador y seccional) y responde por el chat.",
+   "formulario": "Banco actual (seleccion), Sucursal (texto), Fecha del cambio (fecha), Motivo (opcion_unica: traslado, fusión o venta del banco, cambio de domicilio, error), Seccional que corresponde (seleccion), Último recibo (archivo pdf/jpg)",
+   "encadenados": "",
+   "area": "Afiliaciones / Organización",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Frecuente con fusiones y traspasos; mantiene limpio el padrón (y con él la seccional, las notificaciones por banco y el lugar de votación)."
+  },
+  "validar_con_sindicato": "¿Quién atiende hoy afiliaciones@ e int. 4279? ¿El cambio de seccional lo decide el afiliado o el sindicato?",
+  "eje": "afil",
+  "incluye": [],
+  "kit": "kit"
+ },
+ {
+  "id": "NUEVO-A-2",
+  "nombre": "Saber mi número de afiliado",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a",
+  "hoy": {
+   "modalidad": "online",
+   "circuito": "No hay un trámite: se obtiene al registrarse en Tus Datos (al tipear el DNI el sistema completa el N.º de afiliado) o consultando dondevoto por DNI. Hace falta para pedir el sepelio por teléfono y figura en el carnet.",
+   "requisitos": "DNI.",
+   "sistema_interno": "Tus Datos (GET /usuario/validar-documento); dondevoto",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://tusdatos.bancaria.org.ar/",
+    "https://www.bancariasba.com.ar/service/servicio-por-fallecimiento/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "reemplazar",
+   "nivel": "ajuste",
+   "propuesta": "El N.º de afiliado se muestra en la credencial y el perfil de la app.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Afiliaciones",
+   "falta": "Campo N.º de afiliado en el padrón (importado de SAF) y visible en credencial y perfil; va junto con T03."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Se resuelve con la credencial (T03)."
+  },
+  "validar_con_sindicato": "",
+  "eje": "afil",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "NUEVO-A-3",
+  "nombre": "Pedir una constancia de afiliación",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "Ninguna fuente publica cómo pedir una constancia de afiliación; se deduce que se pide en la seccional.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "deducido",
+   "fuentes": []
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "La credencial digital con QR ya sirve como constancia verificable; si piden un papel, trámite «Constancia de afiliación» y el sindicato responde por el chat con el PDF firmado.",
+   "formulario": "Para presentar ante (texto), Necesito firma ológrafa (booleano)",
+   "encadenados": "",
+   "area": "Afiliaciones",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Demanda desconocida; validar antes."
+  },
+  "validar_con_sindicato": "¿Piden constancias de afiliación? ¿Para qué y quién las firma?",
+  "eje": "afil",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "NUEVO-A-4",
+  "nombre": "Darme de baja del sindicato",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "No hay canal publicado para renunciar a la afiliación. Se deduce que se hace por nota en la seccional o que el banco deja de descontar la cuota.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "deducido",
+   "fuentes": []
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "Si el sindicato lo quiere ofrecer: trámite «Baja de afiliación» con motivo, que cae a Afiliaciones; permite una conversación de retención antes de procesarla.",
+   "formulario": "Motivo (seleccion), Comentarios (texto), Confirmo que entiendo que pierdo los beneficios (booleano)",
+   "encadenados": "",
+   "area": "Afiliaciones / Organización",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Sensible: decide el sindicato si lo expone."
+  },
+  "validar_con_sindicato": "¿Cómo se procesa hoy una renuncia? ¿Quieren que esté en la app o prefieren que se haga en la seccional?",
+  "eje": "afil",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T07",
+  "nombre": "Verificar mi recibo contra el convenio",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "El sindicato no ofrece ningún control del recibo. Cada mes publica un post «GRILLAS ACTUALIZACIÓN SALARIAL» sin texto: solo un PDF embebido. El de agosto 2026 son 8 páginas ESCANEADAS (HP Scan) del acta firmada: básicos por categoría de las ramas administrativa, maestranza y ordenanza; adicionales y conectividad; tabla del ROE; Día del Bancario por rama. El afiliado lo abre o lo baja, busca a mano su fila y compara con su recibo. No puede buscar texto ni ve «su» número.",
+   "requisitos": "Saber su rama, categoría o años de antigüedad. Las grillas valen para el mes liquidado (agosto 2026: básico coef. 1,00 $1.642.764,63; conformado inicial $2.505.061,24 hasta 15 años).",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/grillas-actualizacion-salarial-11-09-26/",
+    "https://labancaria.org/wp-content/uploads/2026/09/GRILLAS-AGOSTO-2026.pdf"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "desarrollo",
+   "propuesta": "HOY Tu Recibo ya lee el recibo y controla para La Bancaria: jubilación 11%, PAMI 3% y obra social 3% con topes, el tope del 2% de cargas sindicales, la cuota sindical si el sindicato carga su porcentaje, y que cierren los totales. Lo propio del CCT NO se controla: en cargar_bancaria.py los conceptos (básico, ROE, cajero, título, zona…) están en el catálogo pero sin fórmula; solo arman recibos sintéticos. Para controlarlos hace falta una pieza nueva: la grilla del mes como parámetro (cargada por el sindicato o leída del PDF por la IA y confirmada) y reglas por categoría/antigüedad, de mínimo (≥) y condicionales (solo si la línea existe).",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Acción Gremial (Secretaría de Acción Gremial nacional) + Prensa para cargar la grilla",
+   "falta": "1) Tabla mensual de parámetros (básico por rama×categoría, conformado, adicionales en pesos, ROE por tramo, Día del Bancario). 2) El motor de fórmulas solo admite +,−,×,÷, base_remunerativa, total_ingresos y c(\"COD\"): faltan reglas de mínimo, condicionales y búsqueda por categoría/antigüedad (el extractor ya lee empleado.categoria y fecha_ingreso, el validador no los usa). 3) El modelo de la demo ya está corregido con la grilla firmada de agosto 2026 (grilla_bancaria.py: básico de la grilla, complemento hasta el conformado, adicionales en pesos fijos, ROE por tabla); falta llevar esa grilla al motor de control."
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Es la propuesta estrella y el afiliado la usa cada mes. Para el kit va en su versión de hoy: aportes de ley, tope sindical y cuota; el control del CCT entra cuando esté la grilla como parámetro."
+  },
+  "validar_con_sindicato": "¿Qué líneas forman el «conformado» y cómo se llama esa línea en los recibos de cada banco? ¿Nos pasan las grillas en planilla (Excel) en vez del escaneo firmado?",
+  "eje": "recibo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T08",
+  "nombre": "Enterarme de la actualización salarial del mes",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado (lo publica el Secretariado General Nacional)",
+  "hoy": {
+   "modalidad": "online",
+   "circuito": "Cada mes la web publica en «Acuerdos Salariales» un comunicado del Secretariado General Nacional, entre el 11 y el 20 del mes siguiente (2026: 20/1, 12/2, 13/3, 16/4, 18/5, 16/6, 16/7, 18/8, 11/9). El porcentaje va en el título; el cuerpo trae el inicial (con el ROE algunos meses), el mínimo del Día del Bancario y el acumulado; se adjunta el mismo comunicado en PDF (de Word, con texto). El mismo día sale aparte el post de la grilla escaneada. Es información pública: no hay trámite ni aviso personal.",
+   "requisitos": "Ninguno (público). 2026: 2,9 · 2,9 · 3,4 · 2,6 · 2,1 · 1,9 · 2,1 · 1,7% (enero a agosto); acumulado agosto 21,3% sobre diciembre 2025. Rige «para todas las remuneraciones… incluyendo los adicionales convencionales y no convencionales».",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/actualizacion-salarial-agosto-2026-17/",
+    "https://labancaria.org/wp-content/uploads/2026/09/Actualizacion-AGOSTO.pdf",
+    "https://labancaria.org/actualizacion-salarial-enero-2026-29/",
+    "https://labancaria.org/actualizacion-salarial-septiembre-2025-21/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "reemplazar",
+   "nivel": "listo",
+   "propuesta": "El sindicato publica el comunicado como Noticia y manda una Notificación push a todo el padrón (o por CUIT de banco cuando es un acuerdo por entidad) con el PDF del comunicado y el de la grilla adjuntos. El afiliado se entera en el teléfono el mismo día. El control automático de que el recibo lo aplicó es T07/T09 (grilla) o T11 (dos recibos).",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Prensa y Difusión",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Sale todos los meses, llega a todos, cero desarrollo y es lo que más se comparte del sindicato."
+  },
+  "validar_con_sindicato": "El formato NO es fijo: de sep-2025 a abr-2026 el ROE no figura (salvo dic-2025, y sep-2025 dice «más ROE según escala»), y desde nov-2025 ya no dice cuándo se paga el retroactivo. ¿Quién carga la noticia en cada seccional?",
+  "eje": "recibo",
+  "incluye": [
+   "Enterarme de la actualización salarial del mes"
+  ],
+  "kit": ""
+ },
+ {
+  "id": "T09",
+  "nombre": "Que mi sueldo no quede debajo del inicial del mes",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "No hay control. El comunicado da el «Salario inicial» (agosto 2026: $2.505.061,24), pero ese número es el CONFORMADO inicial, no el básico: en la grilla el básico de coef. 1,00 es $1.642.764,63. El básico sale de una base (≈$1.474.067) × el coeficiente, con piso en $1.642.764,63, y el conformado de $2.505.061,24 rige como mínimo hasta 15 años de antigüedad en las tres ramas.",
+   "requisitos": "Grilla del mes liquidado, rama y antigüedad.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/actualizacion-salarial-agosto-2026-17/",
+    "https://labancaria.org/grillas-actualizacion-salarial-11-09-26/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "ajuste",
+   "propuesta": "Regla de piso: la remuneración conformada del recibo no puede ser menor al conformado inicial del mes liquidado. El valor se carga cada mes como una fórmula nueva con vigencia (ya existe vigencia por período). La regla «básico ≥ inicial × coeficiente» del informe original está MAL: daría diferencias falsas en todos los recibos.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Acción Gremial",
+   "falta": "Un tipo de regla «mínimo» (≥) en el validador, que hoy solo compara igualdad con tolerancia. Definir qué líneas suman al conformado."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Útil pero depende de una regla nueva y de saber qué es «conformado» en cada banco."
+  },
+  "validar_con_sindicato": "¿Qué conceptos integran el conformado? ¿El conformado mínimo sigue rigiendo arriba de 15 años en maestranza y ordenanza (la grilla deja la columna vacía)?",
+  "eje": "recibo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T10",
+  "nombre": "Participación en las ganancias (ROE) bien pagada",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "No hay control. El ROE se cobra todos los meses en una línea aparte. El monto no es un % del inicial: sale de una tabla de la grilla («ROE – AGOSTO 2026») con 4 tramos de sueldo bruto (hasta $3.275.626; hasta $4.242.954; hasta $5.091.586; más) × 6 tramos de ROE del sistema según BCRA. Los montos son anuales y se pagan de a 1/12: $868.962,01 / 12 = $72.413,50, el número del comunicado. Si el ROE del sistema está entre 0 y 3,5% no se paga (pasó en septiembre de 2021). La relación con el inicial cambia porque cambia el tramo (4,97% en ene-2025; 3,61% en jun-2025; 2,89% desde jul-2025).",
+   "requisitos": "Sueldo bruto del afiliado y tramo de ROE vigente.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/wp-content/uploads/2026/09/GRILLAS-AGOSTO-2026.pdf",
+    "https://labancaria.org/para-tener-en-cuenta-consejo-directivo-plenario-de-secretarios-generales/",
+    "https://labancaria.org/intereses-colectivos-programa-n-88/",
+    "https://labancaria.org/actualizacion-salarial-agosto-2026-17/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "ajuste",
+   "propuesta": "Regla: la línea ROE tiene que existir y valer la celda de la tabla del mes que corresponde a SU sueldo bruto, dividida por 12. La tabla se carga con la grilla (pieza de T07).",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Acción Gremial",
+   "falta": "Búsqueda por tramo (comparar el bruto contra límites): el motor no tiene comparaciones ni tablas. Tabla del ROE como parámetro mensual."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Afecta a todos, pero pide la tabla por tramos."
+  },
+  "validar_con_sindicato": "¿El «sueldo bruto» del tramo es el del mes o otro promedio? ¿Cuál es hoy el tramo de ROE vigente y quién lo informa?",
+  "eje": "recibo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T11",
+  "nombre": "Cobrar el retroactivo del aumento",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "No hay control. Hasta octubre de 2025 el comunicado decía «el retroactivo correspondiente se abonará junto con los salarios del mes de [N+1]» (y en oct-2025, también el retroactivo del Día del Bancario). Desde noviembre de 2025 los comunicados ya no lo mencionan. Como el aumento de N se publica a mitad de N+1, en la práctica se cobra con el sueldo de N+1 (deducido).",
+   "requisitos": "Recibos de N y de N+1.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/actualizacion-salarial-octubre-2025-23/",
+    "https://labancaria.org/actualizacion-salarial-agosto-2025/",
+    "https://labancaria.org/actualizacion-salarial-noviembre-2025-25/",
+    "https://labancaria.org/actualizacion-salarial-agosto-2026-17/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "desarrollo",
+   "propuesta": "Comparar dos recibos seguidos de la misma persona: que en N+1 aparezca la diferencia del porcentaje sobre todos los conceptos de N. Es del motor de recibos v2 (comparar recibos).",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Acción Gremial",
+   "falta": "Comparación entre dos recibos de la misma persona (motor v2)."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Depende del motor v2."
+  },
+  "validar_con_sindicato": "Desde nov-2025 el comunicado no dice cuándo se paga el retroactivo: ¿sigue siendo con el sueldo del mes siguiente?",
+  "eje": "recibo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T12",
+  "nombre": "Compensación del Día del Bancario (6 de noviembre)",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "No hay control. Es una compensación anual NO remunerativa que se paga antes del 6/11. No es «mínimo × coeficiente»: es una suma fija igual para todos ($1.973.675,85 en agosto 2026) más un monto por coeficiente ($259.499,59 × el coeficiente de la categoría). El mínimo del comunicado ($2.233.175,44) es el de la categoría inicial. Cada rama tiene su tabla en la grilla. El ajuste de octubre se cobra con el sueldo de noviembre (dicho en oct-2025). Que sea el 89,15% del inicial es una coincidencia, no la regla.",
+   "requisitos": "Categoría/antigüedad y rama. Pago antes del 6 de noviembre.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/compensacion-dia-del-bancario-compensacion-minima-64-53040/",
+    "https://labancaria.org/dia-del-bancario-a-no-laborable/",
+    "https://labancaria.org/actualizacion-salarial-octubre-2025-23/",
+    "https://labancaria.org/banco-santander-mesa-de-dialogo/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "ajuste",
+   "propuesta": "Dos partes. Ya: Notificación push a fin de octubre «revisá que te paguen el Día del Bancario» con la tabla adjunta (listo). Después: regla estacional en los recibos de octubre/noviembre: que figure como no remunerativa y valga al menos suma fija + monto × coeficiente de su categoría.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Acción Gremial + Prensa",
+   "falta": "Regla por categoría y de mínimo (misma pieza de T07/T09). El aviso push está listo."
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "El aviso push de fin de octubre es simple y muy visible; la regla, más adelante."
+  },
+  "validar_con_sindicato": "¿Se paga en una sola línea o en varias? ¿Se paga junto con el sueldo de octubre o en un pago aparte?",
+  "eje": "recibo",
+  "incluye": [],
+  "kit": "segunda"
+ },
+ {
+  "id": "T13",
+  "nombre": "Gastos de conectividad por teletrabajo",
+  "dirigido_al_afiliado": true,
+  "quien": "Teletrabajador",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "No hay control. Hasta 2023 la web publicaba un post aparte con cada ajuste trimestral (por el IPC de comunicaciones). Ahora los montos van en la página de adicionales de la grilla mensual escaneada: junio–agosto 2026 $2.890 por día, $26.011 (más de 4 días) y $63.571 (mes completo); septiembre–noviembre 2026 $3.055, $27.493 y $67.193. Es no remunerativo y exento de Ganancias (Ley 27.555).",
+   "requisitos": "Días trabajados en forma remota en el mes. El monto de «más de 4 días» es un mínimo hasta 9 días inclusive (post de 2023).",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/actualizacion-gastos-por-conectividad-2/",
+    "https://labancaria.org/actualizacion-gastos-por-conectividad/",
+    "https://labancaria.org/se-sanciono-la-ley-sobre-teletrabajo/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "ajuste",
+   "propuesta": "Regla condicional: si el recibo trae la línea de conectividad, que valga días × diario, con el mínimo y el tope del trimestre, en el rubro no remunerativo. Los tres valores se cargan cada trimestre.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Acción Gremial",
+   "falta": "Regla condicional (solo si existe la línea), mínimo/tope y usar la «cantidad» (días) que el extractor ya lee por línea."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Afecta a pocos y pide una regla nueva."
+  },
+  "validar_con_sindicato": "¿El tramo de «más de 4 días» sigue siendo hasta 9 días? ¿Los bancos ponen los días en la línea?",
+  "eje": "recibo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T14",
+  "nombre": "Cobro del adicional por guardería",
+  "dirigido_al_afiliado": true,
+  "quien": "Madre o padre bancario con hijo en edad de guardería",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "Lo paga el banco como adicional en el recibo: $416.341,95 por mes en agosto 2026 (página de adicionales de la grilla). Universal (madres y padres) desde marzo de 2023; se basa en el art. 179 de la LCT y el banco puede pagarlo en vez de tener jardín maternal. El pedido se hace ante Recursos Humanos del banco; la web no dice requisitos (edad del hijo, comprobantes). El sindicato no tiene ningún paso en el circuito: solo interviene si no se paga (vía reclamo).",
+   "requisitos": "No publicados. Se deduce: acreditar el hijo y su edad ante el banco.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/acuerdo-salarial-2023/",
+    "https://labancaria.org/plenario-de-secretarios-generales/",
+    "https://labancaria.org/paritarias-2022-2/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "ajuste",
+   "propuesta": "Ya: ficha en el bot del convenio (cargando el acta) y una Noticia que explique qué es y que se pide en el banco (listo). Después: regla condicional del monto si la línea aparece. Si no le pagan, va por el reclamo de T17. Avisar «a vos te corresponde y no lo cobrás» necesita el grupo familiar (P05).",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Acción Gremial / DDHH, Género e Igualdad",
+   "falta": "Regla condicional del monto (pieza de T07). Grupo familiar (P05) para avisar a quien le correspondería."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Informar es fácil, pero el pedido es ante el banco."
+  },
+  "validar_con_sindicato": "¿Hasta qué edad del hijo se paga y qué le pide el banco? ¿Hay un formulario modelo del sindicato?",
+  "eje": "recibo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T15",
+  "nombre": "Deducciones especiales de Ganancias",
+  "dirigido_al_afiliado": true,
+  "quien": "Trabajador alcanzado por Ganancias",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "El sindicato no ofrece ayuda individual con Ganancias: su acción es colectiva (dictamen 2023, presentación judicial de julio de 2024). El dictamen de marzo de 2023 permitía desglosar 6 ítems (bono por productividad, bono por productividad ROE, falla de caja, viáticos, gastos de movilidad, vales alimentarios) con tope anual de $180.673,28 cada uno ($1.084.039,68 en total). La web no habla de SIRADIG: lo aplica el banco como agente de retención (deducido). En julio de 2024 La Bancaria dijo que la ley que repuso el impuesto «no permite hacer ningún tipo de deducciones que se podían realizar con la antigua ley», así que el dictamen probablemente ya no sirve.",
+   "requisitos": "Sin canal para el afiliado.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/impuesto-a-las-ganancias-historico-dictamen/",
+    "https://labancaria.org/el-salario-no-es-ganancia-fuimos-a-la-justicia/",
+    "https://labancaria.org/impuesto-a-las-ganancias-es-inconstitucional/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "listo",
+   "propuesta": "Solo informar: Noticia y bot del convenio con lo que hoy rige (lo confirma el sindicato). Controlar la retención de Ganancias del recibo es un cálculo impositivo completo: queda fuera del alcance.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Prensa / Acción Gremial",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Información de baja frecuencia y probablemente vencida."
+  },
+  "validar_con_sindicato": "¿Sigue vigente algo del dictamen de 2023 después de la ley de 2024? ¿El sindicato asesora a alguien individualmente sobre Ganancias?",
+  "eje": "recibo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T16",
+  "nombre": "Consultar grillas, escalas y actas",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado, delegado, liquidador",
+  "hoy": {
+   "modalidad": "online",
+   "circuito": "La categoría «Actas» de la web tiene 80 posts (2016–2026): actas por cámara (ABAPPRA, ADEBA, ABA, ABE) y las grillas mensuales; «Otros acuerdos» tiene 20 (por banco, vacaciones, violencia de género). TODOS son solo un PDF embebido, sin texto en el post; las grillas son escaneos firmados. Se ven y se bajan sin login, pero no se puede buscar ni preguntar. La Seccional Buenos Aires repite actas en su web.",
+   "requisitos": "Ninguno.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/categoria/actas/",
+    "https://labancaria.org/categoria/otros-acuerdos/",
+    "https://labancaria.org/grillas-actualizacion-salarial-11-09-26/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "reemplazar",
+   "nivel": "listo",
+   "propuesta": "El sindicato carga el CCT y cada acta/grilla en el bot del convenio (rag.py detecta los PDF escaneados y los pasa por OCR con IA; cuesta por página y el admin lo ve antes). El afiliado pregunta «¿cuánto es la falla de caja?» y el bot responde citando el acta. Cada grilla nueva sale también como Notificación con el PDF adjunto (T08). El simulador por categoría es aparte (NUEVO-B-1).",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Prensa / Acción Gremial",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Ya funciona con lo que hay y saca a las grillas del PDF escaneado."
+  },
+  "validar_con_sindicato": "Las tablas escaneadas pueden salir mal en el OCR: probar con la grilla de agosto 2026 antes de mostrarlo. ¿Quieren el bot abierto a todos o solo a afiliados?",
+  "eje": "recibo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T17",
+  "nombre": "Reclamo por mi sueldo (liquidación, categoría, adicional no pagado)",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado",
+  "hoy": {
+   "modalidad": "semi-online",
+   "circuito": "No hay un canal individual descripto. El único camino publicado (guardia gremial, 2020) es: 1) los delegados de la Comisión Gremial Interna del banco; 2) si no, el mail del Secretario General de la seccional (lista de 50 casillas sNOMBRE@bancaria.org.ar). A nivel nacional está la Secretaría de Acción Gremial (sgremiales@bancaria.org.ar, 4131-4229/4230). La respuesta llega por fuera (llamado, mail). Los casos que trascienden se vuelven colectivos: denuncia ante la Secretaría de Trabajo (Santander 2026: «modificar rubros en los recibos de sueldo»; Santander 2019: «liquidación incorrecta de los salarios»).",
+   "requisitos": "Recibo de sueldo; datos del banco y sucursal.",
+   "sistema_interno": "",
+   "confianza": "deducido",
+   "fuentes": [
+    "https://labancaria.org/guardia-gremial-contactos-actualizados/",
+    "https://labancaria.org/estado-de-alerta-banco-santander/",
+    "https://labancaria.org/por-los-bancos-2019/",
+    "https://labancaria.org/banco-santander-mesa-de-dialogo/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "Trámite «Reclamo sobre mi sueldo» con motivo (liquidación, categoría, adicional no pagado, Día del Bancario, guardería, traspaso), recibo adjunto y descripción. Cae al área Gremiales de SU seccional, que responde por el chat y puede pasarlo a la Comisión Gremial Interna o a Acción Gremial nacional. El sindicato ve en el panel cuántos reclamos hay por banco. Iniciarlo con un clic desde una diferencia de Tu Recibo es un ajuste chico (P10).",
+   "formulario": "Banco empleador (selección), Sucursal (texto), Motivo (opción única: liquidación / categoría / adicional no pagado / Día del Bancario / guardería / traspaso / otro), Mes del recibo (fecha), Recibo (archivo pdf/jpg), Qué pasó (texto), Autorizo a compartirlo con la comisión interna (booleano)",
+   "encadenados": "Pedido de más datos (otro recibo, documentación del banco)",
+   "area": "Acción Gremial (seccional) → Comisión Gremial Interna / Secretaría de Acción Gremial nacional",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Es el canal que hoy no existe y el que más valor muestra junto a Tu Recibo; listo sin desarrollo."
+  },
+  "validar_con_sindicato": "¿El reclamo lo toma la seccional o la comisión interna del banco? ¿La guardia gremial de 2020 sigue siendo el canal?",
+  "eje": "recibo",
+  "incluye": [
+   "Reclamo de categoría"
+  ],
+  "kit": "kit"
+ },
+ {
+  "id": "T19",
+  "nombre": "Pedir que me encuadren como bancario (fintech, tercerizadas)",
+  "dirigido_al_afiliado": false,
+  "quien": "Trabajador de fintech o tercerizada, todavía no afiliado",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "No hay canal para un trabajador suelto. Los encuadramientos son reclamos colectivos del sindicato ante la empresa, el Ministerio de Trabajo o la justicia: Nación Servicios (1.300 familias, acuerdo 2022), Openbank (2022), Provincia Microempresas (más de 300, homologado 2024), Bank of China (2023), Banco del Chaco por su fintech (2019) y el pedido de reencuadramiento de Mercado Libre (2020, sin acuerdo publicado).",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/provincia-microempresas-son-bancarios/",
+    "https://labancaria.org/nacion-servicios-denuncia-al-ministerio-de-trabajo/",
+    "https://labancaria.org/banco-del-chaco-fintech/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "desarrollo",
+   "propuesta": "Formulario abierto, sin login: «trabajo en X, hago tareas bancarias» con recibo adjunto, que cae a Acción Gremial. Mostrar cuánto cobraría con el CCT requiere la grilla (T07).",
+   "formulario": "Empresa (texto), CUIT de la empresa (texto), Tareas (texto), Cantidad de compañeros en la misma situación (número), Recibo (archivo)",
+   "encadenados": "",
+   "area": "Acción Gremial nacional",
+   "falta": "Colm3na no tiene entrada sin login: el registro exige estar en el padrón. Es la misma pieza que la afiliación online."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "No es del afiliado y necesita la entrada sin login."
+  },
+  "validar_con_sindicato": "¿Les sirve recibir pedidos individuales de encuadramiento o lo manejan solo por empresa?",
+  "eje": "recibo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T20",
+  "nombre": "Me traspasan de banco: que respeten mi antigüedad",
+  "dirigido_al_afiliado": true,
+  "quien": "Personal transferido por venta o fusión",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "No hay trámite: el sindicato firma un acuerdo con el comprador y lo publica. Patagonia–Industrial (3/9/2026: absorbe a todos, reconoce categorías, antigüedad y CCT 18/75), Columbia (1/7/2026: 35 sucursales de Compañía Financiera Argentina y 92 trabajadores encuadrados) y Galicia–HSBC (2024: salarios, antigüedad, jerarquía y categorías). Si algo no se respeta, el canal es el de T17.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/acuerdo-asociacion-bancaria-banco-patagonia-por-la-compra-de-sucursales-del-bco-industrial/",
+    "https://labancaria.org/acuerdo-asociacion-bancaria-banco-columbia/",
+    "https://labancaria.org/venta-hsbc-galicia-garantizamos-la-totalidad-de-los-puestos-de-trabajo/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "listo",
+   "propuesta": "Notificación push solo a los afiliados del banco vendido (filtro por CUIT del empleador) con el acuerdo adjunto; dudas o incumplimientos por el reclamo de T17 (motivo traspaso). Verificar que el recibo nuevo conserve la antigüedad: con un recibo se puede mirar la fecha de ingreso que lee el extractor (ajuste); comparar contra el recibo del banco anterior es motor v2.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Acción Gremial + Prensa",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Eventual; la notificación ya sale con lo que hay."
+  },
+  "validar_con_sindicato": "¿El banco comprador mantiene la fecha de ingreso original impresa en el recibo?",
+  "eje": "recibo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T21",
+  "nombre": "Ver si me depositaron jubilación y obra social",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "El sindicato no ofrece este control (deducido: el trabajador puede mirarlo solo en ARCA con su clave). Para el Banco Provincia, la jubilación va a su propia caja (Ley 15.008; cautelar de 2023 que suspende arts. 39, 41, 42 y 57; alcanza a ~10.000 activos y 15.000 jubilados): ese aporte no aparece en ARCA.",
+   "requisitos": "Clave fiscal para bajar el comprobante de ARCA.",
+   "sistema_interno": "",
+   "confianza": "deducido",
+   "fuentes": [
+    "https://labancaria.org/la-justicia-nos-dio-la-razon-ley-15008-cautelar-favorable/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "Mis aportes: el afiliado sube el comprobante de ARCA, la IA lo lee y el semáforo dice pagado/parcial/impago por mes. Para empleados del Banco Provincia, aclarar en pantalla que la jubilación no figura en ARCA (texto fijo o noticia dirigida por CUIT del BAPRO).",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Previsión",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Funciona hoy, es mensual y se entiende solo."
+  },
+  "validar_con_sindicato": "¿Cómo ve un empleado del Banco Provincia sus aportes a la caja propia?",
+  "eje": "recibo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T22",
+  "nombre": "Mi cuota sindical retenida (y su cruce con lo depositado)",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado (ver su cuota) · Sindicato (cruce)",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "La web no publica el porcentaje de la cuota de afiliación ni ofrece ver lo retenido. En 2022 Palazzo dijo que casi el 60% de los ingresos del gremio viene de la afiliación y el 26% de la cuota solidaria. El CCT no fija cuota mensual (solo un aporte solidario por única vez). El cruce retención contra depósito es una tarea interna del sindicato, no del afiliado.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/xlix-congreso-nacional-bancario-clausura/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "Parte del afiliado (listo): si el sindicato carga su porcentaje como fórmula, Tu Recibo controla la cuota retenida; además ya controla el tope del 2% de cargas sindicales. Parte del sindicato (desarrollo, P15): cruzar lo retenido en los recibos con lo que depositó cada banco; no es del afiliado.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Finanzas / Administración",
+   "falta": "Para el cruce: datos de depósitos por banco (P15)."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "La parte del afiliado viene sola con T07; el cruce es interno."
+  },
+  "validar_con_sindicato": "¿Cuál es el porcentaje de la cuota de afiliación y sobre qué base? ¿Los bancos retienen la cuota solidaria a los no afiliados?",
+  "eje": "recibo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "NUEVO-B-1",
+  "nombre": "Cuánto me corresponde por mi categoría (simulador)",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "No existe. El afiliado tiene que abrir la grilla escaneada del mes y encontrar su fila (rama, años o categoría) y sumar a mano adicionales, ROE y conectividad.",
+   "requisitos": "Rama, categoría o antigüedad, adicionales que cobra.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/grillas-actualizacion-salarial-11-09-26/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "desarrollo",
+   "propuesta": "Pantalla donde el afiliado elige rama, categoría y adicionales y ve su básico, conformado, ROE y Día del Bancario del mes. Usa la misma tabla de parámetros de T07.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Acción Gremial",
+   "falta": "Tabla de la grilla como parámetro (T07) y la pantalla nueva (P14)."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Muy pedido en sindicatos, pero depende de T07."
+  },
+  "validar_con_sindicato": "¿Les sirve publicar la grilla en datos (no solo el escaneo)?",
+  "eje": "recibo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T23",
+  "nombre": "Consultar qué licencias me corresponden",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "La licencia se pide al banco (RRHH), no al sindicato. Lo que el sindicato ofrece es orientar y reclamar si el banco la niega, pero la web no publica cómo consultarle: no hay formulario ni mail para esto. Lo único que hay son noticias sobre licencias conquistadas.",
+   "requisitos": "Varían por banco. CCT 18/75 + acuerdos por entidad. BNA (15/06/2023): flexibiliza licencias por cuidados, discapacidad, violencia de género y derechos sexuales, y suma licencias por acompañar a un familiar directo con enfermedad de extrema gravedad, congelamiento de óvulos, gestación por sustitución, regreso progresivo tras maternidad/adopción, estudios médicos preventivos, trámites personales y violencia intrafamiliar o doméstica. Las noticias mencionan 'días por estudio' y 'régimen de licencias extendidas' sin detalle. Toda la actividad (2021): licencia especial por violencia de género de 5+5 días hábiles. No se publican días ni requisitos por licencia.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/banco-nacion-ampliacion-de-licencias-y-beneficios-para-los-y-las-trabajadoras/",
+    "https://labancaria.org/dia-del-bancario-y-bancaria/",
+    "https://labancaria.org/dia-del-bancario-a-no-laborable/",
+    "https://labancaria.org/por-los-bancos-2019/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "El afiliado le pregunta al bot del convenio (que cita el artículo o el acta). Si no alcanza o el banco se la niega, inicia el trámite 'Consulta o reclamo gremial' (T37) eligiendo el tema 'Licencias'. Acción Gremial responde por el chat.",
+   "formulario": "Tema (seleccion: Licencias…), Banco donde trabajo (texto), Qué licencia (seleccion: enfermedad, familiar enfermo, estudio, maternidad/paternidad, violencia de género, trámites personales, otra), Fecha en que la pedí (fecha), ¿El banco la negó? (booleano), Respuesta del banco (archivo pdf/jpg, opcional), Detalle (texto)",
+   "encadenados": "",
+   "area": "Acción Gremial (de la seccional)",
+   "falta": "Para que el bot responda bien hay que cargarle el CCT 18/75 y los acuerdos de licencias por banco en PDF (la web no los publica en texto)."
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Pregunta frecuente de todo afiliado; el bot la contesta sin trabajo del sindicato y el reclamo usa el formulario genérico."
+  },
+  "validar_con_sindicato": "¿Tienen el texto vigente del CCT 18/75 y de los acuerdos de licencias por banco (BNA 2023, licencias extendidas) en PDF para cargar al bot? ¿Quién atiende hoy estas consultas: la comisión gremial interna o la Secretaría Gremial de la seccional?",
+  "eje": "trabajo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T24",
+  "nombre": "Denunciar violencia, acoso o discriminación en el banco",
+  "dirigido_al_afiliado": true,
+  "quien": "Trabajador/a afectado/a o testigo (también vía delegado/a)",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "No hay un canal de recepción publicado. La guía sindical 'Violencias en el mundo del trabajo' (2019) le dice a la víctima que lleve registro de los hechos y se contacte con su representante sindical (delegado/comisión gremial interna) y con las Secretarías de DDHH, Género e Igualdad, que la acompañan. La denuncia formal se hace ante el banco según su protocolo propio (p. ej. Hipotecario: comisión ad hoc y Comité de Ética).",
+   "requisitos": "Protocolos firmados banco por banco (Citibank 2018, Cabal 2018, Hipotecario 2019, Municipal de Rosario 2020, Santa Fe/Entre Ríos/San Juan/Santa Cruz 2020, Chubut 2021). Principios: confidencialidad, no revictimización, celeridad. La AB propuso en paritaria sumar al CCT un 'Protocolo de actuación ante la violencia laboral y de género' (no consta que esté vigente). Mails publicados de las secretarías: secretariaddhh@bancaria.org.ar (4131-4231, nacional) y sddhhba@bancaria.org.ar (int. 5313, Seccional Buenos Aires).",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/libros/violencias-en-el-mundo-del-trabajo/",
+    "https://labancaria.org/protocolo-genero-bancos-santa-fe-entre-rios-san-juan-santa-cruz/",
+    "https://labancaria.org/protocolo-violencia-de-genero-banco-hipotecario-01-11-2019/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "ajuste",
+   "propuesta": "El afiliado abre un trámite confidencial que va solo al área de DDHH, Género e Igualdad de su seccional. La conversación sigue en el chat del expediente. El área le propone una entrevista con dos integrantes (presencial o videollamada) y la acompaña ante el banco. Cerrar el trámite o derivarlo lo decide la persona.",
+   "formulario": "Separador con el texto de confidencialidad, ¿Sos la persona afectada o testigo? (opcion_unica), ¿Qué pasó? (seleccion: acoso laboral, acoso sexual, discriminación, violencia de género, agresión física, otro), Quién lo ejerce (opcion_unica: superior, par, subordinado/a, cliente, otro), Banco y sucursal (texto), Desde cuándo (fecha), Relato breve (texto, opcional: se puede contar en la entrevista), Pruebas (archivo, opcional), Cómo preferís que te contactemos (opcion_unica: chat de la app / teléfono / entrevista presencial), Teléfono seguro (texto, opcional), ¿Ya lo informaste al banco? (booleano)",
+   "encadenados": "'Acta de confidencialidad' (firma por adjunto) y 'Coordinar entrevista' si la persona la pide.",
+   "area": "DDHH, Género e Igualdad (de la seccional; la nacional como pase si la seccional lo pide)",
+   "falta": "Ajuste: hoy el Super Admin y el Admin de Seccional ven TODOS los trámites sin recorte por área (db.areas_y_seccionales_de_tramites / puede_escribir_tramite), y el Panel Sindical muestra detalle de trámites. Falta un tipo de trámite 'confidencial' que solo vea el área destino (sin admins ni panel/explorador) y un texto de push neutro ('Tenés una novedad en un trámite') para que el asunto no aparezca en la pantalla bloqueada. Además el formulario no debería poder pasarse a otras áreas salvo Legales, con la lista cerrada del pase."
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Hoy no hay canal publicado y es un derecho muy visible (C190 OIT). Alto valor de imagen; requiere primero el ajuste de confidencialidad."
+  },
+  "validar_con_sindicato": "¿Cómo reciben hoy una denuncia de violencia en el banco: comisión interna, Secretaría DDHH de la seccional, mail? ¿Qué datos piden al inicio y cuáles prefieren tomar en la entrevista? ¿Está vigente el protocolo de violencia laboral en el CCT o sigue banco por banco? ¿Aceptan que el Secretario General NO vea estos expedientes?",
+  "eje": "trabajo",
+  "incluye": [],
+  "kit": "segunda"
+ },
+ {
+  "id": "T25",
+  "nombre": "Pedir ayuda por consumo problemático",
+  "dirigido_al_afiliado": true,
+  "quien": "Trabajador/a, compañero/a o delegado/a",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "Convenio Banco Nación–SEDRONAR (mayo 2023) firmado con participación de la AB y una Mesa Interdisciplinaria para abordar consumos en el ámbito laboral. La web no dice cómo pide ayuda un trabajador ni qué papel tiene el sindicato. La Seccional Mendoza tiene un convenio propio con la Fundación Nuestros Cimientos para abordar adicciones (2022), tampoco con canal publicado.",
+   "requisitos": "No constan.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/convenio-consumo-problematico-en-el-ambito-laboral/",
+    "https://labancaria.org/intereses-colectivos-programa-trigesimo-segundo/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "ajuste",
+   "propuesta": "Trámite confidencial 'Necesito orientación por consumo problemático' para uno mismo o para un compañero, que va solo al área que el sindicato designe (DDHH o Acción Social de la seccional). El área orienta por el chat y deriva al programa del banco, SEDRONAR o la fundación que corresponda.",
+   "formulario": "¿Es para vos o para otra persona? (opcion_unica), Banco (texto), Qué necesitás (seleccion: orientación, tratamiento, acompañamiento ante el banco, información para un familiar), Cómo preferís que te contactemos (opcion_unica), Teléfono (texto, opcional), Comentario (texto, opcional)",
+   "encadenados": "",
+   "area": "La que designe el sindicato (DDHH, Género e Igualdad o Acción Social)",
+   "falta": "Ajuste: hoy el Super Admin y el Admin de Seccional ven TODOS los trámites sin recorte por área (db.areas_y_seccionales_de_tramites / puede_escribir_tramite), y el Panel Sindical muestra detalle de trámites. Falta un tipo de trámite 'confidencial' que solo vea el área destino (sin admins ni panel/explorador) y un texto de push neutro ('Tenés una novedad en un trámite') para que el asunto no aparezca en la pantalla bloqueada. Si se quiere solo para el BNA: hoy un formulario se restringe por seccional, no por empleador (se puede emparchar con una pregunta 'Trabajo en el Banco Nación' que bloquee si es No)."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "No hay circuito publicado del sindicato y es sensible; mejor después de validar el circuito real."
+  },
+  "validar_con_sindicato": "¿El sindicato recibe hoy pedidos de ayuda por consumo (BNA/SEDRONAR, Mendoza/Nuestros Cimientos)? ¿Quién los atiende y a dónde derivan? ¿Lo quieren para toda la actividad o solo para el BNA?",
+  "eje": "trabajo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T26",
+  "nombre": "Denunciar un problema de higiene y seguridad en mi lugar de trabajo",
+  "dirigido_al_afiliado": true,
+  "quien": "Trabajador/a o delegado/a",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "No hay canal individual publicado: el afiliado se lo dice a su delegado/comisión interna. El sindicato actúa colectivamente: reclama ante el Ministerio de Trabajo, el BCRA y las cámaras. El acuerdo paritario del 15/05/2013 (homologado, Expte. MTESS 1.539.252/12) prevé Comités Mixtos de Higiene y Seguridad por entidad con representantes de la AB, pero en 2021 la AB denunciaba que los bancos no los implementaban. En Santa Fe funcionan comités mixtos provinciales.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/obligatorio-cuidar-para-cuidar/",
+    "https://labancaria.org/comite-provincial-de-salud-higiene-y-seguridad/",
+    "https://labancaria.org/marzo-abril-2020-los-pagos-de-la-seguridad-social/",
+    "https://labancaria.org/estan-contra-nuestros-derechos-el-18-de-octubre-nos-movilizamos/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "El afiliado denuncia con fotos el problema (aire, ergonomía, edificio, seguridad física) y Acción Gremial lo lleva al banco o al comité mixto, si existe, y responde por el chat. Con una encuesta por banco el sindicato junta los datos para el reclamo colectivo.",
+   "formulario": "Banco y sucursal (texto), Tipo de problema (seleccion: ventilación/temperatura, ergonomía/mobiliario, edificio/instalaciones, limpieza, falta de personal de seguridad, otro), Desde cuándo (fecha), Descripción (texto), Fotos (archivo jpg/png), ¿Lo reportaste al banco? (booleano)",
+   "encadenados": "",
+   "area": "Acción Gremial (de la seccional)",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Útil pero poco frecuente como pedido individual; entra como tema del formulario genérico de reclamo gremial (T37)."
+  },
+  "validar_con_sindicato": "¿Funciona hoy algún comité mixto de higiene y seguridad (por banco o provincial) al que derivar estos reclamos? ¿Quién los recibe hoy?",
+  "eje": "trabajo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T27",
+  "nombre": "Avisar un hecho de inseguridad en la sucursal (asalto, balacera, falta de custodia)",
+  "dirigido_al_afiliado": true,
+  "quien": "Personal de la sucursal o delegado/a",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "No hay canal individual publicado. El sindicato actúa colectivamente: denuncias al BCRA (BNA 2017), notas a gobernadores (Santa Fe, balaceras 2023) y la Comisión Permanente de Seguridad Bancaria, que se reactivó en 2020 con participación de la AB. El 31/01/2020 fue asesinado en un asalto Germán Chávez, de la sucursal Isidro Casanova del BNA.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/seguridad-bancaria-nuestra-posicion/",
+    "https://labancaria.org/comision-permanente-de-seguridad-bancaria-por-medidas-urgentes-de-seguridad/",
+    "https://labancaria.org/repudiable-exigimos-seguridad/",
+    "https://labancaria.org/mario-german-chavez-torrez/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "Después del hecho (la emergencia sigue siendo el 911), el trabajador o delegado deja asentado lo que pasó y lo que falta (custodia, personal). Acción Gremial lo usa para el reclamo y el sindicato avisa por notificación a los afiliados del banco o de la zona.",
+   "formulario": "Banco y sucursal (texto), Fecha del hecho (fecha), Tipo (seleccion: asalto/robo, balacera/ataque al edificio, amenaza, falta de custodia policial, falla de monitoreo, otro), ¿Hubo heridos? (booleano), Descripción (texto), Fotos o denuncia policial (archivo, opcional), ¿Necesitás asistencia médica o psicológica? (booleano)",
+   "encadenados": "",
+   "area": "Acción Gremial (de la seccional)",
+   "falta": "Sería bueno un aviso inmediato a los operadores del área cuando entra un trámite de este tipo (hoy se ven al entrar al panel). El botón SOS y la ficha de emergencias (P29) son desarrollo."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Eventual. Se puede sumar como tema del formulario genérico."
+  },
+  "validar_con_sindicato": "Después de un asalto, ¿qué hace hoy el sindicato con el trabajador afectado (asistencia, licencia, denuncia)? ¿Quieren que esto lo cargue solo el delegado?",
+  "eje": "trabajo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T28",
+  "nombre": "Asesoramiento por accidente de trabajo o enfermedad profesional",
+  "dirigido_al_afiliado": true,
+  "quien": "Trabajador/a o su familia",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "La web no describe ningún servicio del sindicato para accidentes o enfermedades ante la ART: el trámite es entre el trabajador, el banco y la ART. La ley de teletrabajo 27.555 (nota de 2020) da al teletrabajador los mismos derechos que al presencial (la nota no habla de presunción de accidente en el domicilio). Hay una 'asesoría legal laboral' citada en 2021 y un servicio de asesoramiento jurídico laboral de la Seccional Buenos Aires sin contenido (ver NUEVO-C-3).",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "deducido",
+   "fuentes": [
+    "https://labancaria.org/se-sanciono-la-ley-sobre-teletrabajo/",
+    "https://labancaria.org/exceptuados-de-asistencia/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "El afiliado o un familiar cuenta qué pasó y adjunta lo que tenga. Acción Gremial o Legales le responde por el chat y le dice cómo seguir con la ART.",
+   "formulario": "Fecha del accidente o diagnóstico (fecha), Tipo (opcion_unica: accidente en el trabajo, in itinere, teletrabajo, enfermedad profesional), Banco (texto), ¿Hiciste la denuncia a la ART? (booleano), N.º de siniestro (texto, opcional), Qué necesitás (seleccion: rechazo de la ART, alta mal dada, incapacidad, licencia, otro), Documentación (archivo pdf/jpg), Detalle (texto)",
+   "encadenados": "",
+   "area": "Acción Gremial o Legales (si existe el área)",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Eventual. Hoy no hay servicio declarado; conviene fusionarlo con la consulta jurídica (NUEVO-C-3) cuando se valide."
+  },
+  "validar_con_sindicato": "¿El sindicato asesora en accidentes y enfermedades laborales frente a la ART? ¿Con abogados propios? ¿En qué seccionales?",
+  "eje": "trabajo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T29",
+  "nombre": "Consultar antes de firmar un retiro voluntario, prejubilación o despido",
+  "dirigido_al_afiliado": true,
+  "quien": "Trabajador/a presionado/a",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "No hay canal individual publicado. El sindicato actúa colectivamente: comunicados de rechazo y denuncias ante la Secretaría de Trabajo (BNA: régimen prejubilatorio de 'desvinculación por mutuo acuerdo' en 2024, desde 58 años mujeres y 63 varones; Santander: 'presiones para aceptar retiros voluntarios' en 2021 y cierres con despidos en 2025-2026; Supervielle 2026). La frase 'No vamos a tolerar que presionen a ningún trabajador' no aparece en las fuentes revisadas.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/defender-al-nacion-es-defender-la-nacion-rechazamos-el-plan-de-ajuste-en-el-bna/",
+    "https://labancaria.org/santander-en-alerta-cierres-y-precarizacion-retiros-y-presiones/",
+    "https://labancaria.org/estado-de-alerta-banco-santander/",
+    "https://labancaria.org/banco-supervielle-asambleas-y-cese-de-actividades/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "El afiliado sube la propuesta que le hicieron antes de firmar y Acción Gremial le responde por el chat (si conviene, si está bien calculada, qué pierde). Si está cerca de jubilarse, el trámite pasa a Previsión, un pase declarado en el formulario. El sindicato además ve cuántos casos hay por banco.",
+   "formulario": "Banco (texto), Qué te ofrecieron (seleccion: retiro voluntario, prejubilación/desvinculación por mutuo acuerdo, despido, traslado), Fecha límite para firmar (fecha), Edad (numero), Antigüedad en el banco (numero), ¿Te presionaron? (booleano), Propuesta del banco (archivo pdf/jpg), Último recibo de sueldo (archivo), Consulta (texto)",
+   "encadenados": "",
+   "area": "Acción Gremial; pase a Previsión",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Tema candente 2024-2026 (BNA, Santander, Hipotecario, Supervielle), alto impacto individual y simple de configurar."
+  },
+  "validar_con_sindicato": "¿Quién revisa hoy las propuestas de retiro (comisión interna, abogados de la seccional)? ¿Puede responder el sindicato antes de la fecha límite que pone el banco?",
+  "eje": "trabajo",
+  "incluye": [],
+  "kit": "kit"
+ },
+ {
+  "id": "T30",
+  "nombre": "Me cierran la sucursal: avisos y qué me ofrecen",
+  "dirigido_al_afiliado": true,
+  "quien": "Personal afectado",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "Acción solo colectiva: denuncias ante la Secretaría de Trabajo y el BCRA, estado de alerta y paros (Santander, más de 40 sucursales en 2026; BCRA, cierre de 12 de 21 tesorerías regionales; Hipotecario). No hay canal para que el afectado informe su caso.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/paro-nacional-en-el-bcra-y-banco-hipotecario/",
+    "https://labancaria.org/estado-de-alerta-banco-santander/",
+    "https://labancaria.org/estado-de-alerta-y-movilizacion-3/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "El sindicato notifica a los afiliados del banco (por CUIT del empleador) o de la seccional y les manda una encuesta nominal corta: dónde trabajan, qué les ofrecieron, si aceptan el traslado. Quien necesita una respuesta individual usa el trámite de T29.",
+   "formulario": "Encuesta nominal: Sucursal (texto), Qué te ofrecieron (opcion_unica: traslado, retiro, despido, nada todavía), Distancia a la nueva sucursal en km (numero), ¿Aceptás el traslado? (opcion_unica), Comentario (texto)",
+   "encadenados": "",
+   "area": "Acción Gremial",
+   "falta": "Hace falta que el padrón tenga cargado el CUIT del empleador de cada afiliado."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Es una herramienta del sindicato en conflictos puntuales más que un trámite del afiliado; sirve como demo de notificaciones y encuestas."
+  },
+  "validar_con_sindicato": "¿El padrón del sindicato tiene el banco empleador de cada afiliado (y la sucursal)?",
+  "eje": "trabajo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T31",
+  "nombre": "Consultar sobre teletrabajo (consentimiento, desconexión, gastos)",
+  "dirigido_al_afiliado": true,
+  "quien": "Teletrabajador/a",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "Acción colectiva: comisión colectiva de la Ley 27.555 en el Ministerio de Trabajo con las cámaras, donde la AB denunció contratos de novación impuestos y pidió subir el pago por conectividad (2023). En 2022 la Secretaría de DDHH relevó el teletrabajo con la Encuesta Nacional Bancaria. No hay canal de consulta individual.",
+   "requisitos": "Ley 27.555: el pase a teletrabajo es voluntario y por escrito, reversible, con derecho a desconexión y compensación de gastos.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/comision-colectiva-ley-27555-teletrabajo/",
+    "https://labancaria.org/se-sanciono-la-ley-sobre-teletrabajo/",
+    "https://labancaria.org/encuesta-nacional-bancaria-2022/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "El bot del convenio contesta sobre la ley y los acuerdos de teletrabajo, y si el banco quiere hacer firmar una novación, el afiliado inicia el trámite genérico de consulta (T37) con el tema 'Teletrabajo' y adjunta el contrato.",
+   "formulario": "Tema = Teletrabajo; Banco (texto), Qué pasa (seleccion: me piden firmar un contrato nuevo, no me pagan conectividad, me contactan fuera de horario, quiero volver a presencial, otro), Contrato o nota del banco (archivo, opcional), Detalle (texto)",
+   "encadenados": "",
+   "area": "Acción Gremial",
+   "falta": "Cargar en el bot la Ley 27.555 y los acuerdos de la comisión de teletrabajo."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Va como tema del formulario genérico; no merece un formulario propio."
+  },
+  "validar_con_sindicato": "¿Hay un acuerdo de actividad sobre teletrabajo vigente (monto de conectividad) que se pueda cargar al bot?",
+  "eje": "trabajo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T32",
+  "nombre": "Reclamo por condiciones de trabajo (jornada, horas extra, vacaciones, objetivos)",
+  "dirigido_al_afiliado": true,
+  "quien": "Trabajador/a, normalmente vía comisión interna",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "No hay canal individual publicado: el reclamo lo lleva la comisión gremial interna y el sindicato lo plantea en pliegos, audiencias o denuncias (Santander 2021: jornada incumplida y 'objetivos inalcanzables'; Grupo Petersen 2025: incumplimiento del Decreto 2289/76). La jornada es de 7,5 h de lunes a viernes.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/santander-en-alerta-cierres-y-precarizacion-retiros-y-presiones/",
+    "https://labancaria.org/grupo-petersen-estado-de-alerta-y-movilizacion/",
+    "https://labancaria.org/dia-del-bancario-a-no-laborable/",
+    "https://labancaria.org/vacaciones-pendientes/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "Es el trámite genérico 'Consulta o reclamo gremial' (T37) con un tema elegido. Acción Gremial de la seccional responde por el chat y, si se repite en un banco, lo lleva a la comisión interna. Una encuesta anónima por banco mide las presiones sin exponer a nadie.",
+   "formulario": "Tema (seleccion: jornada/horas extra, vacaciones, objetivos y presiones, categoría/ascenso, licencias, teletrabajo, higiene y seguridad, otro), Banco y sucursal (texto), Desde cuándo (fecha), ¿Querés que el reclamo sea anónimo frente al banco? (booleano), Detalle (texto), Adjuntos (archivo, opcional)",
+   "encadenados": "",
+   "area": "Acción Gremial (de la seccional)",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Es el reclamo más común; con un solo formulario se cubren T31, T32 y T33."
+  },
+  "validar_con_sindicato": "¿Prefieren que el reclamo individual vaya a la comisión gremial interna del banco o a la Secretaría Gremial de la seccional?",
+  "eje": "trabajo",
+  "incluye": [
+   "Vacaciones negadas o forzadas"
+  ],
+  "kit": "kit"
+ },
+ {
+  "id": "T34",
+  "nombre": "Enterarme de un paro o medida de fuerza (y reclamar si me descuentan el día)",
+  "dirigido_al_afiliado": true,
+  "quien": "Sindicato (aviso); afiliado (reclamo por descuento)",
+  "hoy": {
+   "modalidad": "online",
+   "circuito": "El Secretariado Nacional publica el comunicado en la web y redes (p. ej. paro general del 9/5/2024 'sin concurrencia a los lugares de trabajo'; ceses 'bajo las modalidades que determine cada Seccional'). No hay confirmación de adhesión. Si el banco descuenta el día, el reclamo es colectivo, por negociación o judicial (Bapro devolvió en 2021 los descuentos de 2017-2018).",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/9-de-mayo-paro-general/",
+    "https://labancaria.org/banco-supervielle-asambleas-y-cese-de-actividades/",
+    "https://labancaria.org/estado-de-alerta-y-movilizacion-3/",
+    "https://labancaria.org/bapro-devolucion-descuentos-de-vidal-por-dias-de-paro/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "listo",
+   "propuesta": "El sindicato manda una notificación push con el comunicado, por banco (CUIT) o por seccional, con la modalidad que define cada seccional. Si a alguien le descuentan el día, inicia el trámite genérico (T37) con el tema 'Descuento por paro' y adjunta el recibo. No proponemos una 'confirmación de adhesión': el sindicato no la hace hoy y una lista nominal de quién paró es un dato sensible (deducido, a validar).",
+   "formulario": "Para el descuento: Banco (texto), Fecha de la medida (fecha), Monto descontado (numero), Recibo de sueldo (archivo pdf/jpg)",
+   "encadenados": "",
+   "area": "Secretaría de Prensa (aviso) / Acción Gremial (descuento)",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Varias veces por año, a todo el padrón; muestra el valor de las notificaciones push segmentadas."
+  },
+  "validar_con_sindicato": "¿Les sirve saber cuántos adhieren por banco (encuesta ANÓNIMA con corte por empleador) o prefieren no medirlo? ¿Cómo reclaman hoy un descuento por paro?",
+  "eje": "trabajo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T35",
+  "nombre": "Denunciar persecución o amenazas a un delegado",
+  "dirigido_al_afiliado": true,
+  "quien": "Delegado/a o comisión interna",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "Acción colectiva: denuncia del sindicato ante la Secretaría de Trabajo y audiencias (Santander 2026: 'amenazas hacia dirigentes gremiales'); estado de alerta por 'persecución, aprietes, hostigamiento' (marzo 2026). El delegado lo canaliza dentro de la estructura gremial; no hay canal publicado.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/estado-de-alerta-banco-santander/",
+    "https://labancaria.org/estado-de-alerta-y-movilizacion-3/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "El delegado deja asentado el hecho con pruebas para que Acción Gremial lo lleve a la Secretaría de Trabajo. Queda un registro fechado.",
+   "formulario": "Banco y sucursal (texto), Fecha (fecha), Tipo (seleccion: sanción, traslado, amenaza, hostigamiento, impedimento de la tarea gremial, despido), Quién (texto), Descripción (texto), Pruebas (archivo)",
+   "encadenados": "",
+   "area": "Acción Gremial (de la seccional; pase a la nacional)",
+   "falta": "Colm3na no tiene marca de delegado en el padrón: hoy cualquier afiliado vería el formulario (ajuste si se lo quiere solo para delegados)."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Es para la estructura gremial más que para el afiliado común."
+  },
+  "validar_con_sindicato": "¿Les interesa que los delegados usen Colm3na para su tarea gremial (formularios solo para delegados)?",
+  "eje": "trabajo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T36",
+  "nombre": "«¿Cómo me afecta la reforma laboral?»",
+  "dirigido_al_afiliado": true,
+  "quien": "Trabajador/a",
+  "hoy": {
+   "modalidad": "online",
+   "circuito": "Guía explicativa en la web (9/2/2026), escrita cuando era un proyecto. Después la ley se aprobó (febrero 2026) y se promulgó, un amparo de la CGT suspendió 83 artículos (marzo 2026) y el gobierno la reglamentó por decreto (junio 2026); la web lo trata en noticias y en el programa de radio, sin una guía actualizada. Antes, la AB consiguió en 2024 una cautelar contra el DNU 70/23 para sus representados.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/como-te-puede-afectar-la-reforma-laboral-de-milei/",
+    "https://labancaria.org/intereses-colectivos-programa-n-196/",
+    "https://labancaria.org/intereses-colectivos-programa-n-205/",
+    "https://labancaria.org/la-justicia-resuelve-a-favor-de-las-y-los-bancarios/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "listo",
+   "propuesta": "La guía (actualizada por el sindicato) sale como Noticia para todo el padrón. La Capacitación de plataforma ya explica el recibo nuevo de la reforma. Para preguntas puntuales, el trámite genérico (T37).",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Secretaría de Prensa / Acción Gremial",
+   "falta": "Una sección de Capacitación propia del sindicato sería desarrollo. Cargar la guía al bot es posible pero el bot está pensado para citar artículos del convenio (a probar)."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Es contenido, no trámite; se publica como Noticia desde el día uno."
+  },
+  "validar_con_sindicato": "¿Tienen una guía actualizada a la ley promulgada y su reglamentación, con lo suspendido por la justicia?",
+  "eje": "trabajo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T37",
+  "nombre": "Contactar al delegado o a la seccional / consulta o reclamo gremial",
+  "dirigido_al_afiliado": true,
+  "quien": "Trabajador/a",
+  "hoy": {
+   "modalidad": "semi-online",
+   "circuito": "La 'Guardia gremial' se publicó el 20 y el 26/03/2020 para emergencias durante el aislamiento por COVID, no como servicio permanente. Pedía consultar 1) a los delegados por celular (no se publican), 2) al mail del Secretario General de la seccional (52 mails), 3) a bancarios@bancaria.org.ar y 4) a los teléfonos 011-4131-4244/4229/4257. Hoy la página de Seccionales solo da responsable, teléfono y dirección (sin mails); la de Autoridades lista Acción Gremial nacional (sgremiales@bancaria.org.ar, 4131-4229/4230) y Seccionales (4131-4257); bancarios@ figura como contacto de prensa de la revista. La respuesta llega por mail o teléfono, fuera de cualquier sistema.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/guardia-gremial-contactos-actualizados/",
+    "https://labancaria.org/aislamiento-obligatorio-guardia-gremial/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "reemplazar",
+   "nivel": "listo",
+   "propuesta": "En 'Mi seccional' el afiliado ve dirección, teléfono, WhatsApp, mail, horario y mapa. Desde ahí inicia el trámite genérico 'Consulta o reclamo gremial', que cae en Acción Gremial de su seccional con pase a DDHH, Previsión o Legales. La respuesta queda en el chat del expediente.",
+   "formulario": "Tema (seleccion: licencias, jornada/horas extra, vacaciones, objetivos y presiones, teletrabajo, retiro o despido, descuento por paro, higiene y seguridad, otro), Banco (texto), Sucursal (texto), Detalle (texto), Adjuntos (archivo, opcional), ¿Preferís que te llamen? (booleano), Teléfono (texto)",
+   "encadenados": "",
+   "area": "Acción Gremial (de la seccional)",
+   "falta": "El directorio de delegados por banco y sucursal es desarrollo (P11)."
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Es la puerta de entrada de todo el eje gremial: reemplaza una cadena de mails y teléfonos que solo se publicó en una emergencia."
+  },
+  "validar_con_sindicato": "¿Siguen vigentes los mails s<seccional>@bancaria.org.ar de 2020? ¿Quién responde hoy una consulta gremial individual: delegado, comisión interna o Secretaría Gremial de la seccional? ¿Pueden pasar la lista de delegados por banco y sucursal?",
+  "eje": "trabajo",
+  "incluye": [],
+  "kit": "kit"
+ },
+ {
+  "id": "T38",
+  "nombre": "Cupo laboral travesti-trans (BNA y BCRA)",
+  "dirigido_al_afiliado": false,
+  "quien": "Persona que busca empleo",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "Acta AB–BNA de 2020 con un cupo no menor al 1% del personal; en octubre de 2021 se extendió al BCRA y en 2023 había más de 50 personas ingresadas en la actividad. La postulación es ante el banco; la web no dice cómo.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/trans-formando-el-mundo-del-trabajo/",
+    "https://labancaria.org/cupo-laboral-conversatorio-por-el-aniversario-del-acta-acuerdo-en-el-bna/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "fuera",
+   "propuesta": "Colm3na no gestiona postulaciones de no afiliados. Se puede difundir como Noticia.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "DDHH, Género e Igualdad",
+   "falta": "Entrada para no afiliados (no existe)."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "No es del afiliado."
+  },
+  "validar_con_sindicato": "",
+  "eje": "trabajo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "NUEVO-C-1",
+  "nombre": "Pedir acompañamiento por violencia de género o doméstica (licencia especial, préstamo, reubicación)",
+  "dirigido_al_afiliado": true,
+  "quien": "Trabajadora/or víctima de violencia de género o intrafamiliar",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "Por el acuerdo de actividad 2021 (CCT 18/75), cada banco debe tener una Comisión de Asistencia a las Víctimas de Violencia de Género con representación sindical y del banco, que coordina asistencia jurídica, social, psicológica, médica y económica. La licencia la otorga RRHH del banco al recibir la denuncia. La web no dice cómo la persona contacta al sindicato para que la acompañe.",
+   "requisitos": "Licencia especial de 5 días hábiles desde la recepción de la denuncia, renovable por otros 5 y ampliable según el caso; préstamo de emergencia no renovable (alquiler, garantía, mudanza); reubicación con prioridad a pedido de la víctima. Algunos bancos dan más: Chubut 10 días hábiles por año, Hipotecario hasta 10 días hábiles con denuncia o certificado profesional; BNA 2023 licencia por violencia intrafamiliar o doméstica.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/acuerdo-salarial-2021/",
+    "https://www.bancariasba.com.ar/wp-content/uploads/2021/08/Acuerdo-salarial-2021_compressed-1_compressed-1-10.pdf",
+    "https://labancaria.org/convenio-oit-190-reflexiones/",
+    "https://labancaria.org/banco-nacion-ampliacion-de-licencias-y-beneficios-para-los-y-las-trabajadoras/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "ajuste",
+   "propuesta": "Trámite confidencial al área DDHH, Género e Igualdad de la seccional. La persona dice qué necesita y el área la acompaña ante la comisión del banco, por el chat o por teléfono si lo prefiere. No se piden pruebas en el formulario.",
+   "formulario": "Separador con el texto de confidencialidad, Banco (texto), Qué necesitás (multiple: licencia especial, préstamo de emergencia, cambio de lugar de trabajo, asesoramiento legal, contención psicológica), ¿Ya hiciste la denuncia? (booleano), Cómo preferís que te contactemos (opcion_unica: chat / teléfono / presencial), Teléfono seguro y horario (texto, opcional)",
+   "encadenados": "",
+   "area": "DDHH, Género e Igualdad (de la seccional)",
+   "falta": "Ajuste: hoy el Super Admin y el Admin de Seccional ven TODOS los trámites sin recorte por área (db.areas_y_seccionales_de_tramites / puede_escribir_tramite), y el Panel Sindical muestra detalle de trámites. Falta un tipo de trámite 'confidencial' que solo vea el área destino (sin admins ni panel/explorador) y un texto de push neutro ('Tenés una novedad en un trámite') para que el asunto no aparezca en la pantalla bloqueada."
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Derecho de toda la actividad sin canal publicado; muy visible para la Secretaría de DDHH. Requiere primero el ajuste de confidencialidad."
+  },
+  "validar_con_sindicato": "¿Funcionan las comisiones de asistencia por banco? ¿Quién de la seccional participa? ¿Cómo prefieren que llegue el primer contacto?",
+  "eje": "trabajo",
+  "incluye": [],
+  "kit": "segunda"
+ },
+ {
+  "id": "NUEVO-C-2",
+  "nombre": "Denunciar violencia o acoso de un dirigente, delegado o empleado del sindicato",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a, integrante de un órgano o trabajador/a del sindicato",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "Protocolo interno aprobado en el L Congreso (29/06/2023), publicado en 2024. Aplica a hechos de integrantes de la AB, no del banco. La consulta o denuncia puede ser personal, verbal o escrita, o por delegado. La recibe la Secretaría DDHH de la seccional (con aviso a la Secretaría General) o la Secretaría Nacional de DDHH si involucra a dirigentes nacionales. Un comité interdisciplinario (secretaría DDHH + abogado/a + psicólogo/a o trabajador/a social) evalúa y eleva un informe al órgano estatutario. El protocolo dice que se difundirá el contacto, pero no está publicado.",
+   "requisitos": "Entrevista en un máximo de 10 días, siempre con dos integrantes presentes, en persona o por sala virtual. Acta de confidencialidad para firmar. Informe en 30 días, prorrogable; dictamen en 10 días corridos, prorrogable 5. Medidas urgentes (separación, horarios) y sanciones según el Estatuto, arts. 151 a 157.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/libros/protocolo-interno-de-actuacion-para-situaciones-de-discriminacion-acoso-y-violencia-laboral-y-violencia-por-razones-de-genero-2/",
+    "https://labancaria.org/wp-content/uploads/2024/02/protocolo-24-_-ok.pdf"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "ajuste",
+   "propuesta": "Trámite confidencial que va al área DDHH de la seccional o, si la persona elige 'involucra a un dirigente nacional', a la Secretaría Nacional de DDHH. El área coordina la entrevista y lleva el expediente por el chat.",
+   "formulario": "Separador con el texto del protocolo, ¿A quién involucra? (opcion_unica: delegado/a o comisión interna, dirigente de la seccional, dirigente nacional, empleado/a del sindicato), Seccional (seleccion), Qué pasó (seleccion: acoso, discriminación, violencia de género, violencia física, otra), Relato breve (texto, opcional), Cómo preferís el contacto (opcion_unica), Teléfono (texto, opcional)",
+   "encadenados": "'Acta de confidencialidad' y 'Coordinar entrevista'.",
+   "area": "DDHH, Género e Igualdad (seccional o nacional según a quién involucre)",
+   "falta": "Ajuste: hoy el Super Admin y el Admin de Seccional ven TODOS los trámites sin recorte por área (db.areas_y_seccionales_de_tramites / puede_escribir_tramite), y el Panel Sindical muestra detalle de trámites. Falta un tipo de trámite 'confidencial' que solo vea el área destino (sin admins ni panel/explorador) y un texto de push neutro ('Tenés una novedad en un trámite') para que el asunto no aparezca en la pantalla bloqueada. Acá es crítico: la persona denunciada puede ser un administrador o un usuario del panel. Hace falta además rutear por respuesta (dirigente nacional → área nacional), que hoy no existe (el ruteo es por seccional): mientras tanto, dos formularios."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Muy sensible: conviene validar el circuito y cerrar el ajuste antes de ofrecerlo."
+  },
+  "validar_con_sindicato": "¿Qué canal de contacto se definió al aplicar el protocolo interno (art. IX)? ¿Están conformados los comités interdisciplinarios por seccional?",
+  "eje": "trabajo",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "NUEVO-C-3",
+  "nombre": "Consulta con un abogado laboralista del sindicato",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "La Seccional Buenos Aires lista el servicio 'Asesoramiento Jurídico Laboral' (creado el 27/10/2020), pero la página está vacía, también vista en vivo y por su API. La AB nacional menciona su 'asesoría legal laboral' (2021) solo para dictámenes generales. La web no dice cómo pedir una consulta.",
+   "requisitos": "No constan.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://www.bancariasba.com.ar/service/asesoramiento-juridico-laboral/",
+    "https://labancaria.org/exceptuados-de-asistencia/",
+    "https://labancaria.org/intereses-colectivos-programa-n-192/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "puerta_y_encadenado",
+   "nivel": "listo",
+   "propuesta": "El afiliado pide la consulta, adjunta los papeles y elige si la quiere por el chat o con turno. El área le contesta o le manda un formulario encadenado 'Confirmar turno' con día y lugar. La agenda queda en el sistema del sindicato.",
+   "formulario": "Tema (seleccion: despido, retiro voluntario, accidente/ART, diferencias salariales, sanción, otro), Banco (texto), Documentación (archivo pdf/jpg), Detalle (texto), ¿Preferís consulta presencial? (booleano)",
+   "encadenados": "'Confirmar turno' (día, hora y lugar, que el afiliado acepta)",
+   "area": "Legales o Acción Gremial (de la seccional)",
+   "falta": "Turnos con agenda sería desarrollo (P12); con el encadenado alcanza."
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Servicio clásico de todo sindicato que hoy no tiene puerta de entrada; agrupa T28 y parte de T29."
+  },
+  "validar_con_sindicato": "¿Qué ofrece el servicio de asesoramiento jurídico laboral de la Seccional Buenos Aires (días, lugar, costo)? ¿Existe en otras seccionales?",
+  "eje": "trabajo",
+  "incluye": [
+   "Asesoramiento jurídico laboral"
+  ],
+  "kit": "kit"
+ },
+ {
+  "id": "T39",
+  "nombre": "Pedir una reserva de hotel o paquete",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado activo o jubilado, para él y sus acompañantes (familiares o invitados)",
+  "hoy": {
+   "modalidad": "semi-online",
+   "circuito": "El afiliado pregunta en su seccional, a saccionsocial@bancaria.org.ar o por WhatsApp 11 2638 1654. El operador de la seccional entra a reservasturismo.bancaria.org.ar (login eligiendo la seccional + contraseña), tipea el n.º de afiliado y carga la 'solicitud web' (hotel, temporada, fechas, régimen, habitaciones, pasajeros); queda 'PENDIENTE DE AUTORIZACIÓN' y otra instancia la autoriza o la deniega. Autorizada, la seccional genera la boleta (depósito en Banco Nación Suc. Plaza de Mayo cta. 27.744/10, o tarjeta en cuotas con interés) y después carga el comprobante. El afiliado nunca entra al sistema: todo le llega por la seccional, mail o WhatsApp, y paga en el banco.",
+   "requisitos": "N.º de afiliado; por pasajero: apellido, nombre, DNI, fecha de nacimiento, edad y vínculo (un solo cónyuge, sin DNI repetidos); '¿el afiliado es pasajero?'; 'a cargo del afiliado' Sí/No (si No, el costo queda a cargo de la Asociación Bancaria con un motivo). Tarifas distintas para afiliado, jubilado e invitado (Hotel Buenos Aires: desayuno o media pensión). Estados del sistema: pendiente de autorización, activa, abonada parcialmente, totalmente abonada, denegada, anulada, anulada vía web; hay lista de 'solicitudes por vencer' y motivo de baja.",
+   "sistema_interno": "reservasturismo.bancaria.org.ar (sistema interno de seccionales; numera 'solicitud web' aparte del n.º de reserva)",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://reservasturismo.bancaria.org.ar/",
+    "https://www.bancariasba.com.ar/service/promo-dia-del-bancario-hotel-buenos-aires/",
+    "https://labancaria.org/beneficios/4x3-en-mar-del-plata/",
+    "https://labancaria.org/beneficios/en-noviembre-veni-a-mar-del-plata/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "puerta_y_encadenado",
+   "nivel": "listo",
+   "propuesta": "El afiliado pide la reserva con un formulario (hotel, fechas, régimen, pasajeros) desde la app o desde el Beneficio de cada hotel/promo 'para iniciar'. Cae al área Turismo/Acción Social de SU seccional, que la sigue cargando en reservasturismo como hoy y contesta por el chat (disponibilidad, n.º de solicitud, boleta en PDF adjunta). El pago y el voucher viajan por trámites encadenados; Colm3na no toca cupos ni el sistema interno.",
+   "formulario": "Hotel (selección: hoteles propios y en convenio) · Fecha de ingreso (fecha) · Fecha de salida (fecha; validación ingreso < salida) · Régimen (selección: desayuno / media pensión / pensión completa) · Habitaciones (selección: single, doble, triple, cuádruple; número de habitaciones) · ¿Viajás vos? (booleano) · Sos jubilado/a (booleano, tarifa jubilado) · Separador 'Pasajero 1..6': apellido y nombre (texto, mitad), DNI (número, tercio), fecha de nacimiento (fecha, tercio), vínculo (selección: cónyuge, hijo/a, padre/madre, otro familiar, invitado) · Forma de pago preferida (selección: depósito/transferencia BNA, tarjeta en cuotas) · Observaciones (texto)",
+   "encadenados": "1) 'Datos de pasajeros' (si faltan o cambian, con DNI adjuntos si el hotel los pide). 2) 'Comprobante de pago': fecha del comprobante (fecha), importe (número con decimales), medio (selección: depósito BNA cta. 27.744/10, transferencia, tarjeta), n.º de comprobante (texto), archivo (pdf/jpg); se usa una vez por seña y otra por saldo. 3) 'Anulación de reserva': motivo (selección) + observaciones. Estados: iniciado = pedido recibido; en_tratamiento = cargada en el sistema / pendiente de autorización; espera_info = falta un dato, boleta emitida esperando pago o abonada parcialmente; respondido = reserva confirmada con voucher, o denegada con motivo; terminado = totalmente abonada y estadía cumplida, o anulada.",
+   "area": "Acción Social y Turismo de cada seccional (destino por seccional); promos nacionales, a la Secretaría de Acción Social, Turismo y Deportes nacional",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Es el servicio más buscado todo el año (picos en invierno, fines de semana largos y noviembre); hoy depende de WhatsApp y mail sueltos; sirve para mostrar el encadenado completo pedido → boleta → comprobante sin tocar el sistema interno."
+  },
+  "validar_con_sindicato": "¿Quién autoriza la solicitud (Secretaría Nacional o cada seccional)? ¿Todas las seccionales usan reservasturismo? ¿Las reservas de hoteles en convenio (20% de descuento) pasan por el sindicato o el afiliado reserva directo con el hotel mostrando el carnet? ¿Aceptan pagos por transferencia además de depósito?",
+  "eje": "social",
+  "incluye": [
+   "Reservar directo en el Hotel Buenos Aires"
+  ],
+  "kit": "kit"
+ },
+ {
+  "id": "T40",
+  "nombre": "Pedir el viaje de bodas sin cargo",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a que se casa",
+  "hoy": {
+   "modalidad": "semi-online",
+   "circuito": "El afiliado completa la 'solicitud emitida por la Secretaría de Acción Social Nacional' y la presenta con el turno del Registro Civil o el certificado de matrimonio y la licencia del banco. La Seccional Buenos Aires da como contacto saccionsocialba@bancaria.org.ar y los teléfonos 4131-4241/4431 (lunes a viernes de 9 a 17). La estadía es en el hotel Mirador del Tafí (Tafí del Valle, Tucumán), hasta 7 días, todo el año. La web no dice cómo llega la solicitud ni cómo se confirma; se deduce que se carga en el sistema de reservas como estadía 'a cargo de la Asociación Bancaria'.",
+   "requisitos": "Solicitud de Acción Social Nacional; turno del Registro Civil o certificado de matrimonio; licencia del banco. Máximo 7 días, válido todo el año, en Mirador del Tafí.",
+   "sistema_interno": "reservasturismo.bancaria.org.ar (deducido: campo 'a cargo del afiliado = No' con motivo)",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://www.bancariasba.com.ar/service/viaje-de-bodas-sin-cargo/",
+    "https://labancaria.org/beneficios/viaje-de-bodas/",
+    "https://reservasturismo.bancaria.org.ar/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "puerta_y_encadenado",
+   "nivel": "listo",
+   "propuesta": "El formulario de Colm3na ES la solicitud: el afiliado pide fechas y adjunta los dos papeles. Acción Social Nacional confirma fechas por el chat y adjunta el voucher; el operador sigue cargando la estadía en reservasturismo.",
+   "formulario": "Fecha de casamiento (fecha) · Turno del Registro Civil o certificado de matrimonio (archivo pdf/jpg) · Licencia del banco (archivo pdf/jpg) · Cónyuge: apellido y nombre (texto), DNI (número) · Fecha de ingreso (fecha) · Fecha de salida (fecha; validación ingreso < salida) · Hotel (valor fijo: Mirador del Tafí) · Observaciones (texto)",
+   "encadenados": "'Datos de pasajeros' solo si el hotel pide algo más; si el turno era del Registro Civil, 'Certificado de matrimonio' (archivo) después de la boda.",
+   "area": "Secretaría de Acción Social, Turismo y Deportes (nacional), con la seccional como apoyo",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Simple, de alto impacto emocional y con papeles claros; hoy no tiene canal digital propio."
+  },
+  "validar_con_sindicato": "¿La solicitud la emite solo la Secretaría Nacional o también cada seccional? ¿Incluye traslado o solo alojamiento, y con qué régimen? ¿Plazo mínimo de anticipación? ¿Sirve también para uniones convivenciales? (el tope de 7 días no se puede validar en el formulario: lo controla el operador).",
+  "eje": "social",
+  "incluye": [],
+  "kit": "kit"
+ },
+ {
+  "id": "T41",
+  "nombre": "Pedir el kit escolar",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a titular con hijos o nietos a cargo en edad escolar",
+  "hoy": {
+   "modalidad": "semi-online",
+   "circuito": "Portal nacional kitescolar.bancaria.org.ar, hecho por el Departamento de Sistemas de la AB, que el afiliado usa directo: se registra con mail, n.º de afiliado (debe coincidir con el DNI) y captcha, confirma el mail y entra; carga 'Mis datos' (4 pasos, a actualizar cada ciclo), 'Mis familiares' (hijo o nieto, vínculo, DNI ambas caras y partida) y una solicitud por chico (nivel, grado y certificado de escolaridad). Ve el estado de cada solicitud y puede modificarla o eliminarla. Cada usuario queda atado a una seccional y el portal tiene un lado /admin (deducido: la seccional revisa y aprueba). La entrega es física: las seccionales recorren las sucursales o el afiliado retira presentando la credencial.",
+   "requisitos": "Primera vez: DNI del chico, partida de nacimiento, constancia de alumno regular con firma y sello (o boletín, o comprobante de pago de matrícula) y datos del afiliado y del chico. Años siguientes: solo la constancia actualizada. Archivos JPG, PNG, PDF, SVG, BMP o HEIC de hasta 4 MB. Nivel: Inicial, Primaria hasta 3.º, Primaria de 4.º en adelante, Secundaria. Ventana corta: en 2025 cerró el 24/01.",
+   "sistema_interno": "kitescolar.bancaria.org.ar (portal del afiliado + back-office /admin de seccionales)",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://kitescolar.bancaria.org.ar/static/manual-usuario.pdf",
+    "https://kitescolar.bancaria.org.ar/",
+    "https://www.bancariasba.com.ar/service/kit-escolar-2026/",
+    "https://www.bancariasba.com.ar/2025/01/23/kit-escolar-2025/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "reemplazar",
+   "nivel": "ajuste",
+   "propuesta": "Un trámite por chico con los mismos campos y adjuntos, con la identidad ya validada por el padrón (sin registro aparte). La seccional aprueba o pide corrección por el chat y avisa por notificación dónde y cuándo retirar. Hasta tener el grupo familiar conviene arrancar informando (Beneficio con link al portal + notificación de apertura y cierre) y reemplazar el portal en el ciclo siguiente.",
+   "formulario": "¿Es la primera vez que lo pedís para este chico? (booleano) · Apellido y nombre del chico (texto) · DNI (número) · Fecha de nacimiento (fecha) · Tipo de familiar (selección: hijo/a, nieto/a) · Vínculo (selección) · Nivel (selección: Inicial / Primaria 1.º a 3.º / Primaria 4.º en adelante / Secundaria) · Grado o año (selección) · DNI del chico, ambas caras (archivo) · Partida de nacimiento (archivo) · Constancia de alumno regular, boletín o pago de matrícula (archivo pdf/jpg) · Lugar de retiro (selección: sede, delegación, comisión gremial)",
+   "encadenados": "'Corrección de documentación' (archivo) si falta o está vencida la constancia; aviso de retiro por notificación.",
+   "area": "Acción Social de cada seccional",
+   "falta": "Grupo familiar (P05) para no volver a subir DNI y partida cada año (el portal hoy los guarda); abrir y cerrar el formulario por fechas (ventana de campaña, P04); listado exportable por seccional, nivel y grado para compras y entrega; confirmar que la validación de consistencia cubra nivel ↔ grado (dos selecciones)."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Ya existe un portal nacional que el afiliado usa solo y funciona; reemplazarlo hoy sería un paso atrás sin grupo familiar. Para el inicio alcanza con informarlo; es buen candidato para la segunda etapa (volumen alto y muy visible en enero)."
+  },
+  "validar_con_sindicato": "¿Quién aprueba en el /admin del portal: la seccional o Acción Social Nacional? ¿Cómo se avisa al afiliado que el kit está listo y dónde se retira? ¿Querrían migrar el kit escolar a Colm3na para el ciclo siguiente? ¿Qué preguntas Sí/No pide el portal sobre el familiar?",
+  "eje": "social",
+  "incluye": [],
+  "kit": "segunda"
+ },
+ {
+  "id": "T42",
+  "nombre": "Pedir el kit recién nacido",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a de la Seccional Buenos Aires que tuvo un hijo",
+  "hoy": {
+   "modalidad": "presencial",
+   "circuito": "La Seccional Buenos Aires publica un formulario en papel (imagen) que el afiliado imprime, completa, firma y entrega a la comisión gremial interna de su banco, con el acta de nacimiento, el carnet de afiliado y el DNI. La web no dice cómo ni cuándo se entrega el kit. Solo figura en la web de la Seccional Buenos Aires; labancaria.org no lo menciona.",
+   "requisitos": "Formulario: apellido y nombres, DNI, n.º de afiliado, banco, sucursal, teléfono laboral, particular y celular, e-mail, nombre del recién nacido, fecha de nacimiento, delegado referente y firma. Adjuntos: acta de nacimiento, carnet de afiliado y DNI. Contacto de la secretaría: 4131-4294, saccionsocialba@bancaria.com.ar.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://www.bancariasba.com.ar/service/kit-recien-nacido/",
+    "https://www.bancariasba.com.ar/wp-content/uploads/2022/07/Imagen-de-WhatsApp-2023-12-04-a-las-12.30.23_5d09a7cd-2.jpg"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "reemplazar",
+   "nivel": "listo",
+   "propuesta": "El afiliado lo pide desde la app con la partida adjunta, sin imprimir ni firmar: nombre, DNI, banco y contacto ya salen del perfil y del padrón. Acción Social de la seccional confirma por el chat y avisa dónde se entrega (o lo lleva el delegado).",
+   "formulario": "Nombre del bebé (texto) · Fecha de nacimiento (fecha) · Acta o partida de nacimiento (archivo pdf/jpg) · Sucursal donde trabajás (texto) · Delegado referente (texto, opcional) · Dónde preferís recibirlo (selección: mi comisión gremial / sede / delegación)",
+   "encadenados": "",
+   "area": "Acción Social y Deportes de la Seccional Buenos Aires (formulario de una seccional)",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Hoy es papel y firma; el reemplazo es directo y se puede mostrar el primer día. Volumen chico pero constante y muy valorado."
+  },
+  "validar_con_sindicato": "¿Lo dan otras seccionales o solo Buenos Aires? ¿Quién entrega el kit y en cuánto tiempo? ¿Hay plazo máximo desde el nacimiento? ¿Sirve también para adopción?",
+  "eje": "social",
+  "incluye": [],
+  "kit": "kit"
+ },
+ {
+  "id": "T43",
+  "nombre": "Comprar guardapolvos a precio subsidiado",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a de la Seccional Buenos Aires con hijos en edad escolar",
+  "hoy": {
+   "modalidad": "presencial",
+   "circuito": "La Seccional Buenos Aires vende guardapolvos 2026 a precio subsidiado, talles 6 a 18, en Sarmiento 342 (CABA). Las dudas van a saccionsocialba@bancaria.org.ar. La web no publica precio, fechas, ni si se puede encargar antes.",
+   "requisitos": "Talles 6 a 18. Precio subsidiado no publicado. Solo Seccional Buenos Aires.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://www.bancariasba.com.ar/service/guardapolvos-con-descuento/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "Beneficio en el carrusel (temporada febrero-marzo) que abre un pedido: talles y cantidades por chico y dónde retirar. La seccional contesta por el chat cuándo pasar y cuánto pagar.",
+   "formulario": "Separador por chico: talle (selección 6 a 18), cantidad (número) · Lugar de retiro (selección: sede Sarmiento / delegación) · Observaciones (texto)",
+   "encadenados": "'Comprobante de pago' (fecha, importe, archivo) solo si la seccional decide cobrar por transferencia.",
+   "area": "Acción Social y Deportes de la Seccional Buenos Aires",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Es estacional y de una sola seccional; depende de stock y de cobro presencial. Mejor como Beneficio informativo hasta saber si aceptan encargos."
+  },
+  "validar_con_sindicato": "¿Aceptarían encargos previos con talle? ¿Cómo se cobra (efectivo en sede, transferencia, descuento)? ¿La dirección es Sarmiento 342 o 341? ¿Llega a las delegaciones?",
+  "eje": "social",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T44",
+  "nombre": "Usar el servicio de sepelio",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a o un familiar, ante el fallecimiento del titular, cónyuge o hijos",
+  "hoy": {
+   "modalidad": "semi-online",
+   "circuito": "Es una cobertura nacional con la Compañía de Seguros El Surco. Se llama al 0810-999-3441 (Buenos Aires) o al 0800-666-1575 (resto del país), se da el n.º de afiliado, se elige una de las cocherías disponibles y se acuerda el servicio. El sindicato no interviene en el circuito.",
+   "requisitos": "Cubre traslado, sala velatoria y féretro del titular, cónyuge, hijos hasta 21 años e hijos con discapacidad de por vida. No cubre cremación ni impuestos municipales del cementerio. Un servicio superior se paga la diferencia. No hay que pagar nada extra por lo cubierto.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://www.bancariasba.com.ar/service/servicio-por-fallecimiento/",
+    "https://labancaria.org/beneficios/compania-de-seguros-el-surco/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "listo",
+   "propuesta": "Ficha en Beneficios (rubro Acción Social) con los dos teléfonos como enlace para llamar y qué cubre; el n.º de afiliado a mano en la credencial digital. Opcional: un trámite 'Avisar un fallecimiento' para que la seccional acompañe (otras gestiones, baja del padrón).",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Acción Social (la cobertura la presta El Surco)",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "No es un trámite del sindicato; va en la carga inicial de Beneficios porque se busca en un momento crítico."
+  },
+  "validar_con_sindicato": "¿El 'n.º de afiliado' que pide El Surco es el mismo número de credencial que tendría Colm3na en el padrón? ¿Quieren que el sindicato se entere del fallecimiento por la app?",
+  "eje": "social",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T45",
+  "nombre": "Darse de alta en Megatlon por convenio",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a, su grupo familiar o jubilado/a",
+  "hoy": {
+   "modalidad": "presencial",
+   "circuito": "Para asociarse hay que ir a Sarmiento 341, planta baja (CABA) con la documentación. La ficha de labancaria.org muestra el convenio como nacional con los mismos precios, pero la única vía publicada es presencial en Buenos Aires.",
+   "requisitos": "Individual $46.660; familiar $93.320; jubilados sin cargo (precios desde marzo). Individual y jubilado: DNI y carnet de afiliado. Familiar: además DNI del grupo, acta de matrimonio, de convivencia o certificado de nacimiento, para constatar el vínculo.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://www.bancariasba.com.ar/service/red-megatlon/",
+    "https://labancaria.org/beneficios/megatlon-convenio-para-afiliadas-y-afiliados/",
+    "https://labancaria.org/intereses-colectivos-programa-vigesimo-octavo/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "reemplazar",
+   "nivel": "listo",
+   "propuesta": "El afiliado elige el plan y adjunta los papeles desde la app; la seccional verifica y le contesta por el chat con el alta o los pasos con Megatlon, sin ir a la sede. Para jubilados el formulario pregunta la condición y la seccional la verifica.",
+   "formulario": "Plan (selección: individual / familiar / jubilado sin cargo) · DNI del afiliado (archivo) · Separador 'Integrante 1..4' (solo plan familiar): apellido y nombre (texto), DNI (número), vínculo (selección), DNI (archivo) · Acta de matrimonio o convivencia (archivo) · Certificados de nacimiento (archivo, varios) · Sede de Megatlon preferida (texto)",
+   "encadenados": "'Comprobante de pago' si el pago lo recibe el sindicato; si cobra Megatlon, no hace falta.",
+   "area": "Acción Social y Deportes (Seccional Buenos Aires; otras seccionales si el convenio es nacional)",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Hoy obliga a ir a la sede con fotocopias; el reemplazo ahorra el viaje y es fácil de mostrar."
+  },
+  "validar_con_sindicato": "¿El convenio vale en todo el país o solo en AMBA? ¿Quién cobra la cuota y cómo (débito, descuento por recibo, en Megatlon)? ¿El alta la carga el sindicato en un sistema de Megatlon o le manda un listado? ¿Aceptan la credencial digital en lugar del carnet?",
+  "eje": "social",
+  "incluye": [],
+  "kit": "kit"
+ },
+ {
+  "id": "T46",
+  "nombre": "Usar los descuentos en comercios y servicios",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a (algunos convenios suman un acompañante o tarifa de jubilado)",
+  "hoy": {
+   "modalidad": "presencial",
+   "circuito": "Cada convenio tiene su mecánica y el sindicato no interviene: Diarco 10% (tope $25.000 por mes) registrándose en Diarco Club y mostrando carnet y DNI en el local; Hertz 25% con el código LABANCARIA y el carnet (reservas@hertz.com.ar, 11 7090 4000); Carpincho 10% online con el código LABANCARIA; Librería Hernández 15% presencial en Corrientes 1436 mostrando la credencial 'sin excepción'; Avis 12%, Rutaatlántica 30% en larga distancia y CFMOTO sin canal explicado; hoteles en convenio con 20% (25% jubilados en algunos). El 10% de Aerolíneas (afiliado + acompañante) es un convenio de 2021 que no figura en la página de beneficios actual.",
+   "requisitos": "Carnet de afiliado (en casi todos) y DNI; códigos LABANCARIA en Hertz y Carpincho; condiciones de Diarco (no billeteras virtuales, no ofertas, no carnes ni kosher).",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/beneficios/",
+    "https://www.bancariasba.com.ar/service/supermercado-diarco-2/",
+    "https://www.bancariasba.com.ar/service/alquiler-de-autos-hertz-2/",
+    "https://www.bancariasba.com.ar/service/cfmoto/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "listo",
+   "propuesta": "Una ficha por convenio en Beneficios (rubro, descripción, código, link, vigencia, imagen) y la credencial digital con QR como comprobante. Notificaciones cuando entra un convenio nuevo.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Acción Social, Turismo y Deportes (nacional) y de cada seccional para convenios locales",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "No es un trámite; va en la carga inicial de Beneficios y es lo más visible para el afiliado el primer día."
+  },
+  "validar_con_sindicato": "¿Los comercios aceptan la credencial digital o exigen el carnet plástico? ¿Sigue vigente el 10% de Aerolíneas? ¿Cómo se usan Avis y Rutaatlántica? Los hoteles con 20%, ¿se reservan directo o por la seccional?",
+  "eje": "social",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T47",
+  "nombre": "Consultar una vacante en el jardín maternal",
+  "dirigido_al_afiliado": true,
+  "quien": "Madre o padre afiliado de una seccional con jardín propio",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "La ficha nacional dice solo '¡Consultá vacantes para tu hijo/a!' sin canal. Por las noticias, hay jardín maternal propio en la Seccional Río Cuarto (en funcionamiento desde 2023, unos 25 chicos de 45 días a 3 años) y uno en obra en la Seccional Santa Fe (2021). Aparte, el CCT obliga a los bancos a pagar guardería, pero eso es otro derecho.",
+   "requisitos": "No publicados (edad 45 días a 3 años en Río Cuarto).",
+   "sistema_interno": "",
+   "confianza": "deducido",
+   "fuentes": [
+    "https://labancaria.org/beneficios/jardin-maternopaternal/",
+    "https://labancaria.org/intereses-colectivos-programa-n-87/",
+    "https://labancaria.org/santa-fe-la-importancia-de-votar/",
+    "https://labancaria.org/plenario-de-secretarios-generales/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "Formulario de UNA seccional (las que tengan jardín) para pedir vacante: la seccional contesta por el chat si hay lugar y qué papeles faltan.",
+   "formulario": "Nombre del chico (texto) · Fecha de nacimiento (fecha) · Fecha desde la que necesitás la vacante (fecha) · Turno u horario (selección) · Banco y sucursal donde trabajás (texto) · Partida de nacimiento (archivo) · Observaciones (texto)",
+   "encadenados": "'Documentación de ingreso' (certificados de salud, vacunas, etc.) si hay vacante.",
+   "area": "Acción Social de la seccional que tiene el jardín",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Muy local (una o dos seccionales) y de bajo volumen."
+  },
+  "validar_con_sindicato": "¿Qué seccionales tienen jardín hoy y con qué edades y cupos? ¿Es solo para afiliados? ¿Tiene costo? ¿Cómo se pide hoy?",
+  "eje": "social",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T48",
+  "nombre": "Anotarse para la vacuna antigripal",
+  "dirigido_al_afiliado": true,
+  "quien": "Bancarios de la Seccional Buenos Aires (quiénes exactamente no consta: la noticia de 2022 habla de 'trabajadoras y trabajadores bancarios'; en 2020 hubo campaña para jubilados y grupos de riesgo)",
+  "hoy": {
+   "modalidad": "semi-online",
+   "circuito": "Cada otoño la Seccional Buenos Aires abre un Google Form ('Vacunación Antigripal 2026', hoy cerrado) desde su portada; después 'te llamaremos para asignar tu turno' y se vacuna en los vacunatorios propios de las delegaciones. Solo con inscripción previa. La respuesta llega por teléfono, fuera del formulario.",
+   "requisitos": "Inscripción previa en el formulario; turno asignado por llamado; vacunatorio de la delegación. En 2022 se vacunaron 9.000 personas.",
+   "sistema_interno": "Google Forms",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://www.bancariasba.com.ar/2024/05/14/anotate-vacunacion-antigripal-2023/",
+    "https://www.bancariasba.com.ar/2025/05/20/ya-empezo-la-campana-de-vacunacion-antigripal-2025-abierta-la-inscripcion/",
+    "https://labancaria.org/cierre-de-campana-vacunacion-2022/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "reemplazar",
+   "nivel": "listo",
+   "propuesta": "Formulario de la Seccional Buenos Aires abierto en otoño: el afiliado se anota (él y sus familiares) eligiendo delegación y franja; la seccional le contesta por el chat con día y hora en vez de llamarlo, y una notificación avisa la apertura a todo el padrón de la seccional.",
+   "formulario": "¿A quién vacunamos? (selección: a mí / a un familiar) · Apellido y nombre y DNI del familiar (texto/número, si aplica) · Fecha de nacimiento (fecha) · Delegación (selección: Sede, Norte, Lomas, Quilmes, San Martín, Avellaneda, Morón, Pilar, San Justo, San Miguel, Centro Gaona) · Franja horaria preferida (selección) · ¿Sos de grupo de riesgo? (booleano)",
+   "encadenados": "",
+   "area": "Acción Social / Salud de la Seccional Buenos Aires (formulario de una seccional)",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Masivo (miles por año), estacional y hoy en Google Forms + llamado: el reemplazo es directo y muy visible. Ojo: no afiliados necesitarían la entrada sin login (ajuste) y una agenda de turnos real es P12; la respuesta por chat ya alcanza."
+  },
+  "validar_con_sindicato": "¿Pueden anotarse no afiliados y familiares? ¿Cuántas dosis por delegación (cupo)? ¿Lo hacen otras seccionales? ¿Qué campos pide hoy el Google Form?",
+  "eje": "social",
+  "incluye": [],
+  "kit": "kit"
+ },
+ {
+  "id": "T49",
+  "nombre": "Inscribirse en torneos y encuentros deportivos",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a (y en algunos casos su familia)",
+  "hoy": {
+   "modalidad": "semi-online",
+   "circuito": "La Secretaría de Acción Social, Turismo y Deportes nacional inscribe por Google Form: el primer Torneo Virtual de Ajedrez (inscripción gratuita hasta el 09/10, torneo el sábado 24/10/2026) con consultas a la seccional o a saccionsocial@bancaria.org.ar. Las Olimpíadas Nacionales de Deportes y Unidad Bancaria (9.ª edición 2019-2020, unas 20 disciplinas) se juegan por etapas regionales armadas por las seccionales; la web no dice cómo se inscribe. La maratón 'Mirador del Tafí' es de la Seccional Tucumán y abierta al público (2.500 inscriptos), no es un servicio al afiliado. La confirmación y los datos para jugar llegan por fuera del formulario (deducido).",
+   "requisitos": "Ajedrez: gratuito, con fecha de cierre. Olimpíadas: equipos por seccional, sin requisitos publicados.",
+   "sistema_interno": "Google Forms",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/torneo-virtual-de-ajedrez/",
+    "https://labancaria.org/olimpiadas-bancarias-2019/",
+    "https://labancaria.org/sergio-palazzo-en-la-maraton-mirador-del-tafi/",
+    "https://labancaria.org/primer-encuentro-deportivo-de-la-juventud-bancaria/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "reemplazar",
+   "nivel": "listo",
+   "propuesta": "Cada torneo es un formulario de inscripción con fecha de cierre, ofrecido 'para iniciar' desde una Noticia; la secretaría confirma por el chat y manda el fixture o el link de juego como adjunto. Para olimpíadas, inscripción por disciplina y seccional.",
+   "formulario": "Torneo (valor fijo) · Disciplina (selección, si aplica) · Categoría (selección: libre / veteranos / femenino / mixto) · Usuario en la plataforma de juego (texto, ajedrez) · Talle de remera (selección, opcional) · Acepto el reglamento (booleano)",
+   "encadenados": "",
+   "area": "Acción Social, Turismo y Deportes (nacional); olimpíadas, la de cada seccional",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Reemplaza Google Forms con algo propio, sin datos personales repetidos y con aviso por notificación; patrón repetible para cualquier evento."
+  },
+  "validar_con_sindicato": "¿Cada cuánto se hacen las Olimpíadas y cómo se inscribe hoy? ¿Hay cupos por disciplina? ¿Familiares pueden participar?",
+  "eje": "social",
+  "incluye": [],
+  "kit": "kit"
+ },
+ {
+  "id": "T50",
+  "nombre": "Anotar a los chicos para el Día del Niño",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a con hijos, según su seccional",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "Lo organiza cada seccional a su modo. La única evidencia es la Seccional San Salvador de Jujuy, que festeja el Día del Niño/a en su predio deportivo (2024). No hay inscripción ni regalos publicados en ninguna web.",
+   "requisitos": "No publicados.",
+   "sistema_interno": "",
+   "confianza": "deducido",
+   "fuentes": [
+    "https://labancaria.org/intereses-colectivos-programa-n-128/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "Notificación a la seccional con la fecha y un formulario de una seccional para anotar a los chicos (edad para armar regalos y cantidad para la logística).",
+   "formulario": "Separador por chico: nombre (texto), edad (número), género para el regalo (selección, opcional) · ¿Venís al festejo? (booleano) · Cantidad de adultos (número)",
+   "encadenados": "",
+   "area": "Acción Social de cada seccional",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Depende de cada seccional y no hay circuito publicado; sirve como caso de uso, no para el arranque."
+  },
+  "validar_con_sindicato": "¿Qué seccionales festejan el Día del Niño o entregan regalos? ¿Cómo se anotan hoy los chicos?",
+  "eje": "social",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T51",
+  "nombre": "Anotarse en actividades y viajes para jubilados",
+  "dirigido_al_afiliado": true,
+  "quien": "Jubilado/a afiliado de la Seccional Buenos Aires",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "La Secretaría de Previsión de la Seccional Buenos Aires y la Comisión de Jubilados organizan viajes subsidiados (Termas de Río Hondo, Mar del Plata/Gesell), días de campo, cine debate los sábados, olimpíadas de juegos de mesa en las delegaciones y cumpleaños del mes; salen del Centro de Jubilados de Gaona (Av. Gaona 1645). Además tienen Megatlon sin cargo. La web no dice cómo se inscriben.",
+   "requisitos": "Ser jubilado afiliado (reafiliado). Costos no publicados.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/intereses-colectivos-programa-vigesimo-octavo/",
+    "https://www.bancariasba.com.ar/2023/05/06/tarde-de-cine-y-viaje-a-rio-hondo-con-nuestrs-jubilados/",
+    "https://www.bancariasba.com.ar/2022/03/31/nuestros-jubilados-en-gesell/",
+    "https://www.bancariasba.com.ar/2022/05/06/festejamos-los-cumpleanos-de-nuestros-jubilados/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "ajuste",
+   "propuesta": "Notificación solo a jubilados con cada actividad y un formulario de inscripción por actividad (ofrecido 'para iniciar' desde la notificación); Previsión confirma por el chat y manda el detalle del viaje.",
+   "formulario": "Actividad (valor fijo) · ¿Vas con acompañante? (booleano) · Acompañante: nombre y DNI (texto/número) · Punto de salida (selección: Centro Gaona / sede) · Restricciones de salud o comida (texto)",
+   "encadenados": "'Comprobante de pago' (fecha, importe, archivo) en los viajes con aporte.",
+   "area": "Previsión de la Seccional Buenos Aires (Comisión de Jubilados)",
+   "falta": "Condición activo/jubilado en el padrón para dirigir notificaciones y restringir el formulario a jubilados (hoy solo se puede por seccional)."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Depende de un dato que el padrón no tiene; además muchos jubilados se manejan presencialmente en Gaona."
+  },
+  "validar_con_sindicato": "¿Cómo se anotan hoy los jubilados a los viajes? ¿El sindicato tiene marcada la condición de jubilado en su padrón? ¿Hay actividades parecidas en otras seccionales?",
+  "eje": "social",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T52",
+  "nombre": "Sumarse a colectas y a la donación de sangre",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a",
+  "hoy": {
+   "modalidad": "presencial",
+   "circuito": "Campañas puntuales de la Secretaría de Acción Social nacional: donaciones de alimentos, agua y limpieza para damnificados de Bahía Blanca (2023 y 2025) y por los incendios de Corrientes (2022), recibidas en la sede de Sarmiento 341 (piso 8). La Colecta Nacional de Sangre del 16/07/2026 fue para el Hospital de Niños Ricardo Gutiérrez y la Obra Social Bancaria; la web no publica inscripción previa.",
+   "requisitos": "Llevar las donaciones a la sede dentro del plazo de cada campaña.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/colecta-por-damnificados-as-de-bahia-blanca-2/",
+    "https://labancaria.org/solidaridad-con-corrientes/",
+    "https://labancaria.org/la-solidaridad-se-lleva-en-la-sangre/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "listo",
+   "propuesta": "Noticia + notificación (nacional o por provincia afectada) con qué se recibe, dónde y hasta cuándo. Para sangre, un formulario de inscripción del donante con franja horaria; si hay afiliados afectados, una encuesta nominal para relevarlos.",
+   "formulario": "Donación de sangre: ¿Donaste antes? (booleano) · Franja horaria (selección) · Lugar (selección) · Peso mayor a 50 kg (booleano, validación que avisa)",
+   "encadenados": "",
+   "area": "Acción Social, Turismo y Deportes (nacional)",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Son campañas esporádicas; muestran bien las notificaciones pero no son un trámite recurrente."
+  },
+  "validar_con_sindicato": "¿La colecta de sangre necesita turnos previos? ¿Quieren relevar afiliados damnificados cuando hay catástrofes (no se encontró una ayuda económica publicada)?",
+  "eje": "social",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "NUEVO-D-2",
+  "nombre": "Reservar una promo de temporada",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a y jubilado/a",
+  "hoy": {
+   "modalidad": "semi-online",
+   "circuito": "Acción Social, Turismo y Deportes publica promos con plazas limitadas: 4x3 en el Hotel Mar del Plata para el Día del Bancario (reservas del 5 al 9 de noviembre, cena show el 6), 4 noches al precio de 3 + una comida en el Hotel Buenos Aires el fin de semana largo de noviembre, paquetes 'Mendoza a full', 'Mendoza Express', 'Mendoza nieve y aventura', 'San Rafael a full' (precio por persona con desayuno) y vacaciones de invierno en Córdoba (1/06 al 31/07). Siempre se reservan 'comunicándote con tu seccional', por saccionsocial@bancaria.org.ar o WhatsApp 11 2638 1654, y terminan en el sistema de reservas.",
+   "requisitos": "Plazas limitadas, fechas fijas, precio por persona o por habitación según la promo.",
+   "sistema_interno": "reservasturismo.bancaria.org.ar",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/beneficios/4x3-en-mar-del-plata/",
+    "https://labancaria.org/beneficios/en-noviembre-veni-a-mar-del-plata/",
+    "https://www.bancariasba.com.ar/service/promo-dia-del-bancario-hotel-buenos-aires/",
+    "https://labancaria.org/beneficios/mendoza-a-full/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "puerta_y_encadenado",
+   "nivel": "listo",
+   "propuesta": "Cada promo es un Beneficio (o Noticia) con vigencia que ofrece 'para iniciar' el formulario de T39 con hotel y fechas precargados por valor fijo; una notificación nacional la lanza. Mismo encadenado de pago y voucher que T39.",
+   "formulario": "T39 con: Promo (valor fijo) · Hotel (valor fijo) · Fechas dentro de la ventana de la promo (validación que avisa) · Cantidad de personas (número)",
+   "encadenados": "'Comprobante de pago' y voucher como en T39.",
+   "area": "Acción Social, Turismo y Deportes (nacional), con destino a la seccional del afiliado",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Es la vidriera más visible del sindicato y la que genera picos de consultas por WhatsApp; con Beneficio + notificación + formulario se muestra todo Colm3na junto."
+  },
+  "validar_con_sindicato": "¿Las promos tienen cupo nacional o por seccional? ¿Quién confirma las plazas?",
+  "eje": "social",
+  "incluye": [],
+  "kit": "kit"
+ },
+ {
+  "id": "NUEVO-D-3",
+  "nombre": "Hacer una consulta a Acción Social y Turismo",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a o jubilado/a",
+  "hoy": {
+   "modalidad": "semi-online",
+   "circuito": "Para casi todo el tema (turismo, beneficios, torneos, kits) la indicación es 'comunicate con tu seccional o escribinos a saccionsocial@bancaria.org.ar o por WhatsApp al 11 2638 1654' (nacional) o a saccionsocialba@bancaria.org.ar (Seccional Buenos Aires); teléfonos 4131-4241/4431 de lunes a viernes. La respuesta llega por WhatsApp, mail o teléfono, sin seguimiento.",
+   "requisitos": "Ninguno.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/beneficios/hosteria-fitx-roy-chalten/",
+    "https://labancaria.org/torneo-virtual-de-ajedrez/",
+    "https://www.bancariasba.com.ar/service/guardapolvos-con-descuento/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "reemplazar",
+   "nivel": "listo",
+   "propuesta": "Un trámite corto de consulta con tema y mensaje que cae al área Acción Social de la seccional del afiliado; se contesta por el chat y, si la consulta se vuelve pedido, la seccional le encadena el formulario que corresponda (reserva, kit, Megatlon).",
+   "formulario": "Tema (selección: turismo, kit escolar, kit recién nacido, Megatlon, descuentos, deportes, otro) · Mensaje (texto) · Adjunto (archivo, opcional)",
+   "encadenados": "El formulario del pedido concreto (T39, T40, T42, T45…) cuando corresponda.",
+   "area": "Acción Social, Turismo y Deportes de cada seccional",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Reemplaza el WhatsApp suelto con seguimiento y deja registro de la demanda; es la puerta de entrada a todos los demás trámites del tema."
+  },
+  "validar_con_sindicato": "¿Cuántas consultas reciben hoy por el WhatsApp 11 2638 1654 y quién lo atiende?",
+  "eje": "social",
+  "incluye": [],
+  "kit": "kit"
+ },
+ {
+  "id": "T54",
+  "nombre": "Anotarme a un curso o diplomatura de Bancar",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a o familiar directo",
+  "hoy": {
+   "modalidad": "online",
+   "circuito": "Lo da la Fundación Bancar (entidad aparte, info@bancar.org.ar, tel. +54 9 11 2408-3039), no una secretaría del gremio. Cursos bimestrales gratuitos y online (el 6/10/2026 arrancaron 17). Quien ya cursó se anota sola/o en el campus Moodle (formacion.bancar.org.ar, usuario y clave); quien nunca cursó llena un Google Form «Formulario de Inscripción Fundación Bancar» (el post de enero 2026 apunta en cambio a inscripciones.bancar.org.ar:8200) o escribe al mail. El alta en el campus y el aviso de acceso llegan, se deduce, por mail.",
+   "requisitos": "Gratis. Afiliados/as y «grupo familiar directo». El formulario pide (todo obligatorio): nombre, apellido, DNI, mail, teléfono, n.º de afiliado, entidad (banco), ciudad, provincia y seccional (lista de las 53). No tiene campo para indicar que se anota un familiar. Certificado: las diplomaturas 2022 con la UNDAV tenían «certificación universitaria»; para los cursos bimestrales la web no dice si hay certificado.",
+   "sistema_interno": "Campus Moodle de Bancar (formacion.bancar.org.ar) + Google Form de inscripción",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://www.bancar.org.ar/formacion/",
+    "https://forms.gle/fCVBgbKjE4hiSTsL7",
+    "https://formacion.bancar.org.ar/login/index.php",
+    "https://labancaria.org/bancar-verano-2026-cursos-febrero/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "listo",
+   "propuesta": "Colm3na no se mete en el circuito de Bancar: cada apertura bimestral sale como Noticia + Beneficio («Cursos bimestrales de Bancar») con el enlace, y una Notificación push a todo el padrón. Si Bancar quisiera recibir inscripciones desde Colm3na, sería un trámite que precarga los datos del padrón y Bancar los pasa a Moodle (ajuste: Bancar como área externa).",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Cultura y Educación (nacional) / Fundación Bancar",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Muy visible y frecuente (cada dos meses, miles de inscriptos: 1.401 en cursos y 1.487 en diplomaturas en 2022-23). Se hace solo con Noticia + Notificación."
+  },
+  "validar_con_sindicato": "¿Bancar acepta que la inscripción llegue desde Colm3na, con los datos del padrón ya cargados? ¿Emite certificado de los cursos bimestrales? ¿Cómo se anota un familiar si el formulario pide n.º de afiliado?",
+  "eje": "form",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T55",
+  "nombre": "Curso «Activos y conectados» para adultos mayores",
+  "dirigido_al_afiliado": true,
+  "quien": "Adulto mayor: jubilado/a o afiliado/a",
+  "hoy": {
+   "modalidad": "online",
+   "circuito": "Curso de Bancar (está en la ficha «Cursos bimestrales de Bancar»). Se publicó una sola edición: 8 encuentros virtuales, jueves 10:30 a 12, desde el 17/9/2026. Inscripción y consultas por WhatsApp al 11 7820-8368; la respuesta llega por el mismo WhatsApp.",
+   "requisitos": "Pensado para adultos mayores. Virtual. No consta costo ni cupo.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/activos-y-conectados-nuevo-curso-para-adultos-mayores/",
+    "https://labancaria.org/beneficios/cursos-bimestrales-de-bancar/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "puerta_y_encadenado",
+   "nivel": "listo",
+   "propuesta": "El jubilado se anota desde Colm3na con un formulario corto; Bancar (o Previsión) lo confirma por el chat y le manda el enlace de la clase. Es el canal ideal para un público que hoy depende de que alguien le pase un número de WhatsApp.",
+   "formulario": "Nombre (texto, precargado), Teléfono con WhatsApp (texto), ¿Tenés celular o computadora para conectarte? (opcion_unica), ¿Usás mail? (booleano), ¿Necesitás ayuda para entrar a la clase? (booleano)",
+   "encadenados": "",
+   "area": "Cultura y Educación / Previsión",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Una sola edición publicada (la fila decía «cada dos meses»: no consta). Bueno como ejemplo para jubilados, pero no es volumen."
+  },
+  "validar_con_sindicato": "¿Es de Bancar o de Previsión? ¿Habrá nuevas ediciones? ¿Quién atiende el 11 7820-8368?",
+  "eje": "form",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T56",
+  "nombre": "Ciclo de formación para delegados",
+  "dirigido_al_afiliado": true,
+  "quien": "Delegado/a o miembro de comisión interna (son afiliados)",
+  "hoy": {
+   "modalidad": "presencial",
+   "circuito": "Los organiza cada seccional con la Secretaría de Organización y Capacitación Sindical (en la Seccional Buenos Aires: Ciclo de Formación Sindical 2024, cuatro módulos en cinco jornadas, para «nuevos delegados»; jornadas de 2019 con apuntes descargables; capacitación en violencias). La convocatoria va a las comisiones gremiales internas y a la estructura sindical; no hay inscripción abierta publicada.",
+   "requisitos": "Ser delegado/a o integrante de la estructura sindical. Material de 2019 (CCT 18/75, Ley 23.551, rol del delegado, liquidaciones, salud ocupacional, protocolos).",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://www.bancariasba.com.ar/seminare/jornadas-de-capacitacion-gremial/",
+    "https://www.bancariasba.com.ar/seminare/capacitacion-en-violencias/",
+    "https://labancaria.org/palazzo-cerro-el-ciclo-de-formacion-sindical-2024/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "ajuste",
+   "propuesta": "Convocatoria por Notificación y formulario de inscripción al ciclo; el material queda en Capacitación del sindicato. Mientras no exista la marca de delegado, la convocatoria va por CUIL (lista que arma la seccional).",
+   "formulario": "Banco y sucursal (texto), Rol (opcion_unica: delegado/a, comisión interna, otro), Módulos a los que asiste (multiple), Modalidad (opcion_unica: presencial/virtual)",
+   "encadenados": "Constancia de asistencia (el sindicato la adjunta por el chat)",
+   "area": "Organización y Capacitación Sindical",
+   "falta": "Marca de delegado en el padrón para dirigir la convocatoria; Capacitación propia del sindicato (hoy solo hay contenido fijo de plataforma) para subir el material."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Público chico y anual."
+  },
+  "validar_con_sindicato": "¿Cuántos delegados por año? ¿Lo organiza cada seccional o la nacional?",
+  "eje": "form",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T57",
+  "nombre": "Diplomaturas con universidades",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a (algunas abiertas al público)",
+  "hoy": {
+   "modalidad": "semi-online",
+   "circuito": "Cada diplomatura tiene su propio circuito y la inscripción la lleva la universidad: Seguridad Bancaria y Tecnología Aplicada (UNLZ, Facultad de Derecho) se pide por mail a diploseguridadbancaria@derecho.unlz.edu.ar y se cursa por Zoom; los certificados se entregaron en un acto en la sede (2021). Derecho Laboral con la UNPAZ: ediciones 2020 y 2021 de la Seccional Buenos Aires, sin canal de inscripción publicado y sin ediciones posteriores. ESiGen: formulario propio en esigen.com.ar, abierto al público. Las diplomaturas de Bancar (UNDAV 2022, «Comunicación digital» 2026) entran por T54.",
+   "requisitos": "Variables por diplomatura. UNLZ 2025: inicio 10/4, jueves 18 a 21, virtual.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/diplomatura-en-seguridad-bancaria/",
+    "https://labancaria.org/seguridad-bancaria-diplomatura/",
+    "https://labancaria.org/diplomatura-derecho-laboral-y-relaciones-de-trabajo/",
+    "https://labancaria.org/diplomatura-universitaria-escuela-sindical-de-genero/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "listo",
+   "propuesta": "Noticia con el mail o enlace de inscripción de la universidad y Notificación; las diplomaturas de Bancar van con T54.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Cultura y Educación / Organización y Capacitación",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Anual y el circuito es de la universidad."
+  },
+  "validar_con_sindicato": "¿Siguen vigentes los convenios con la UNPAZ y la UNLZ? ¿El sindicato lleva algún registro de inscriptos o lo hace todo la universidad?",
+  "eje": "form",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T58",
+  "nombre": "Entradas gratis a la Feria del Libro",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a (en la práctica, cualquiera con el enlace)",
+  "hoy": {
+   "modalidad": "online",
+   "circuito": "La Seccional Buenos Aires publicó (2022 y 2023) un enlace del sistema de la Feria (libro.ar). Cada persona se registra y recibe por mail la invitación en PDF, que imprime y presenta en la entrada. No pasa por el sindicato ni valida afiliación. La presentación de libros de escritores bancarios no tiene canal propio: entra por el formulario «Sumá tu propuesta» de T59.",
+   "requisitos": "Una entrada por mail, válida de lunes a jueves, una visita. En 2022 también se sortearon entradas en la radio del gremio.",
+   "sistema_interno": "Sistema de entradas de la Feria (libro.ar / el-libro.org.ar)",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/feria-del-libro-2023/",
+    "https://labancaria.org/la-bancaria-en-la-feria-del-libro-2/",
+    "https://labancaria.org/intereses-colectivos-octavo-programa/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "listo",
+   "propuesta": "Noticia con el enlace de entradas dirigida a la seccional (abril) y Notificación. Pedir entradas por trámite sería peor que el enlace directo. La postulación de un libro se hace con el trámite de T59.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Cultura (Seccional Buenos Aires)",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Anual y con enlace externo; no hace falta trámite."
+  },
+  "validar_con_sindicato": "¿Siguen dando entradas? En 2024-2026 solo constan presentaciones de libros.",
+  "eje": "form",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T59",
+  "nombre": "Proponer mi proyecto cultural (música, teatro, libro, muestra)",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a, o hijo/a o cónyuge de afiliado/a",
+  "hoy": {
+   "modalidad": "semi-online",
+   "circuito": "Es de la Secretaría de Cultura y Educación de la Seccional Buenos Aires (culturabancaria.com, Sarmiento 341 piso 3, tel. 4131-4216, sculturaba@gmail.com). El afiliado llena el Google Form «Sumá tu propuesta» para tocar en el Auditorio Malvinas, ir a las ferias del libro, festivales, encuentros de poesía o el Encuentro de Bandas Bancarias. La secretaría lo contacta después por teléfono o mail.",
+   "requisitos": "Ser afiliado/a o familiar (el formulario pide vínculo + nombre + DNI del titular). Datos de hasta 3 afiliados del proyecto: nombre, DNI, n.º de afiliado, banco, teléfono, mail, Instagram. Propuesta: género (7 opciones), nombre de la obra, descripción, cómo articular, redes, si conoce el auditorio, los festivales y el programa de radio.",
+   "sistema_interno": "Google Form «Sumá tu propuesta»",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://www.culturabancaria.com/",
+    "https://forms.gle/Sd9ixLfta1oQpygdA"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "reemplazar",
+   "nivel": "listo",
+   "propuesta": "Trámite al área Cultura, solo para la Seccional Buenos Aires: reemplaza el Google Form 1 a 1, con el afiliado ya identificado. La secretaría responde y coordina fecha por el chat del expediente.",
+   "formulario": "Género (seleccion: artes escénicas, música, coro, artes visuales, audiovisual, escritura, gestión cultural), Detalle del género (texto), Nombre de la obra o proyecto (texto), Contanos la propuesta (texto), ¿Cómo te gustaría articular? (opcion_unica: Auditorio, Feria del Libro, festival, encuentro de poesía, otra), Redes o web (texto), Otros afiliados del proyecto: nombre y CUIL (texto), Lo presenta un familiar: vínculo y nombre (texto), Material (archivo pdf/jpg/mp3/mp4)",
+   "encadenados": "Confirmación de fecha y ficha técnica del espectáculo (si se aprueba)",
+   "area": "Cultura y Educación (Seccional Buenos Aires)",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Reemplaza un Google Form sin cambiar nada del circuito: buen ejemplo de formulario de UNA seccional. Volumen bajo."
+  },
+  "validar_con_sindicato": "¿Otras seccionales tienen algo parecido? Hoy el familiar puede proponer: en Colm3na tendría que hacerlo el titular.",
+  "eje": "form",
+  "incluye": [],
+  "kit": "kit"
+ },
+ {
+  "id": "T60",
+  "nombre": "Consultar la Biblioteca Norberto Galasso",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a, investigador/a, público",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "Catálogo Koha público (cualquiera busca sin clave; «número de carnet o usuario» solo para socios). Tiene dos bibliotecas: la del Pensamiento Nacional «Norberto Galasso» (sede central, inaugurada en noviembre de 2024, más de 6.000 volúmenes) y la Biblioteca La Bancaria Bahía Blanca. La web no dice cómo pedir una consulta en sala, un préstamo o hacerse socio.",
+   "requisitos": "No constan.",
+   "sistema_interno": "Koha (labancaria.koha.theke.io)",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.koha.theke.io/cgi-bin/koha/opac-main.pl",
+    "https://labancaria.org/acto-del-centenario-conversatorio-y-conmemoracion/",
+    "https://labancaria.org/hasta-siempre-querido-companero/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "listo",
+   "propuesta": "Beneficio o Noticia con el enlace al catálogo. Si la biblioteca atiende consultas en sala, un trámite corto «Pedir una consulta» (libro buscado y fecha) al área Cultura.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Cultura y Educación (nacional)",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Uso esporádico."
+  },
+  "validar_con_sindicato": "¿Se puede consultar en sala o pedir prestado? ¿Quién da el carnet de socio?",
+  "eje": "form",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T61",
+  "nombre": "Quiero jubilarme: asesoramiento",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a activo/a cerca de la edad",
+  "hoy": {
+   "modalidad": "semi-online",
+   "circuito": "La Secretaría de Previsión Nacional asesora sobre cómo iniciar la jubilación, análisis del historial laboral y regularización previsional. El afiliado consulta por teléfono (4131-4250/4252), WhatsApp (11 3832-7679), mail (sprevision@bancaria.org.ar) o en Sarmiento 337 piso 11 contrafrente. La respuesta llega por el mismo canal o en la oficina, y el trámite jubilatorio en sí lo hace el afiliado ante ANSES (o ante la caja provincial). La Seccional Buenos Aires tiene además su propia Secretaría de Previsión (sprevisionba@bancaria.org.ar, int. 5201).",
+   "requisitos": "La web no publica la lista de documentos. Para analizar el historial laboral hace falta, se deduce, el historial de aportes o la certificación de servicios.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/beneficios/tenes-pensando-jubilarte-te-asesoramos/",
+    "https://labancaria.org/prevision-asignaciones-familiares-moratoria/",
+    "https://labancaria.org/jubilados-anses/",
+    "https://labancaria.org/prevision-nos-movilizamos-y-juntamos-firmas/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "puerta_y_encadenado",
+   "nivel": "listo",
+   "propuesta": "El afiliado inicia «Quiero jubilarme» y adjunta lo que él mismo baja de Mi ANSES; Previsión responde por el chat y, si hace falta, le pide más papeles o le encadena «Turno de atención». NUNCA se pide la clave de la seguridad social ni la de ARCA: lo dice un separador del formulario y lo repite el operador.",
+   "formulario": "Separador: «Nunca te vamos a pedir tu clave de la seguridad social ni la de ARCA», Fecha de nacimiento (fecha), Fecha de ingreso al banco (fecha), Banco o caja (seleccion: ANSES/SIPA, Caja Bapro, Caja de Córdoba, otra), ¿Tenés períodos sin aportes? (booleano), Historial laboral o Mis aportes de Mi ANSES (archivo pdf, obligatorio), DNI frente y dorso (archivo jpg/pdf), Último recibo (archivo), Consulta (texto)",
+   "encadenados": "Pedido de documentación (Certificación de servicios del banco), Turno de atención presencial",
+   "area": "Previsión",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Frecuente, de alto valor para el afiliado y simple: formulario + chat."
+  },
+  "validar_con_sindicato": "¿Qué documentos piden hoy realmente? ¿Atiende la nacional o la de cada seccional (Buenos Aires tiene la suya)? ¿El Centro de Jubilados Gaona (Av. Gaona 1645, delegación de la Seccional Buenos Aires, 4581-2432) atiende trámites o solo es punto de encuentro?",
+  "eje": "prev",
+  "incluye": [
+   "Moratoria previsional"
+  ],
+  "kit": "kit"
+ },
+ {
+  "id": "T62",
+  "nombre": "Consulta o gestión ante ANSES",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a, jubilado/a o familiar",
+  "hoy": {
+   "modalidad": "semi-online",
+   "circuito": "La Secretaría de Previsión hace de nexo con ANSES para trámites de jubilación o prejubilatorios, trámites pendientes y documentación física (2020). Los trámites web de ANSES (iniciar jubilación o pensión, haber no cobrado, desempleo, asignaciones, apoderado) los hace el propio afiliado en anses.gob.ar. CORRECCIÓN: el «CUIL, clave de la seguridad social y fotocopia del DNI» son lo que pide ANSES para entrar a su web, no lo que pide el sindicato.",
+   "requisitos": "Según el trámite de ANSES. El sindicato no publica requisitos propios.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/prevision-tramites-anses/",
+    "https://labancaria.org/jubilados-anses/",
+    "https://labancaria.org/a-las-companeras-y-companeros-jubilados-y-pensionados/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "puerta_y_encadenado",
+   "nivel": "listo",
+   "propuesta": "Formulario «Necesito ayuda con ANSES» con el tipo de gestión; Previsión responde por el chat o pide documentación. La clave de la seguridad social no se pide nunca: si el trámite es web, se le explica al afiliado cómo hacerlo él o cómo nombrar apoderado.",
+   "formulario": "Separador sobre la clave, Tipo de gestión (seleccion: jubilación en curso, haber no cobrado, cambio de lugar de cobro, apoderado, asignaciones, otra), N.º de expediente ANSES si tiene (texto), Descripción (texto), Constancia o pantalla de Mi ANSES (archivo pdf/jpg), DNI (archivo)",
+   "encadenados": "Pedido de documentación, Turno de atención",
+   "area": "Previsión",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Continuo y con mucho público de jubilados; mismo esquema que T61."
+  },
+  "validar_con_sindicato": "¿Hoy siguen presentando documentación física ante ANSES por los afiliados?",
+  "eje": "prev",
+  "incluye": [],
+  "kit": "kit"
+ },
+ {
+  "id": "T64",
+  "nombre": "Consulta de jubilado/a o pensionado/a (mi haber, PAMI, medicamentos)",
+  "dirigido_al_afiliado": true,
+  "quien": "Jubilado/a o pensionado/a",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "No hay un servicio específico publicado. Los canales de Previsión (teléfono, WhatsApp, mail) se ofrecen para «cualquier inquietud» de los afiliados. CORRECCIÓN: la fuente no ofrece juicios de reajuste; es el despacho de la comisión de jubilados del Congreso 2021, que advierte que judicializar genera «expectativas que muchas veces no se cumplen».",
+   "requisitos": "No constan.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/prevision-no-pueden-seguir-perdiendo/",
+    "https://labancaria.org/prevision-asignaciones-familiares-moratoria/",
+    "https://labancaria.org/recorte-en-los-medicamentos-otra-vez-con-los-jubilados-as/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "Trámite único de consulta para jubilados: el tema (haber, movilidad, PAMI, medicamentos, otro), la consulta y un adjunto. Previsión responde por el chat y, si es un caso judicial, lo pasa al área Legal (pase declarado en el formulario).",
+   "formulario": "Tema (seleccion: mi haber o movilidad, PAMI o medicamentos, cobro, otro), Organismo (opcion_unica: ANSES, Caja Bapro, Caja de Córdoba, otra), Consulta (texto), Recibo de haberes o constancia (archivo pdf/jpg)",
+   "encadenados": "",
+   "area": "Previsión (pase a Legal)",
+   "falta": "Para mostrarlo solo a jubilados hace falta la condición activo/jubilado en el padrón; mientras tanto se ofrece a todos."
+  },
+  "kit_inicio": {
+   "candidato": true,
+   "por_que": "Junta en un solo formulario lo que hoy no tiene canal; público grande de jubilados."
+  },
+  "validar_con_sindicato": "¿El sindicato patrocina reclamos individuales por haberes? ¿A qué área van?",
+  "eje": "prev",
+  "incluye": [
+   "Inscripción a los medicamentos gratuitos de PAMI"
+  ],
+  "kit": "kit"
+ },
+ {
+  "id": "T65",
+  "nombre": "Jubilación en las cajas de Banco Provincia y Córdoba",
+  "dirigido_al_afiliado": true,
+  "quien": "Activos y jubilados del Bapro y del Banco de Córdoba",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "Es lucha gremial, no un servicio. Bapro: la Ley 15.008 (2017) generó miles de cautelares y una demanda colectiva del gremio; cautelar de la Suprema Corte bonaerense en marzo de 2023; reforma de diciembre de 2024 que vuelve al 82% y a los 60 años para las mujeres. Córdoba: rechazo a la Ley 10.694 (2020). La web no dice cómo consulta un afiliado su caso.",
+   "requisitos": "La cautelar alcanzó a unos 25.000 trabajadores del Bapro «entre activos y pasivos». El desglose de 15.000 jubilados y 10.000 activos de la fila no lo encontré.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/banco-provincia-recuperamos-los-derechos-de-sus-jubilados-y-jubiladas/",
+    "https://labancaria.org/la-justicia-nos-dio-la-razon-ley-15008-cautelar-favorable/",
+    "https://labancaria.org/vienen-por-todo/",
+    "https://labancaria.org/cordoba-rechazo-a-la-reforma-jubilatoria/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "listo",
+   "propuesta": "Notificación a los activos filtrada por el CUIT del Bapro o del Bancor y Noticia por seccional. Las consultas individuales entran por T61/T64, eligiendo la caja en el formulario.",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Previsión / Gremiales",
+   "falta": "Para llegar a los jubilados de esas cajas hace falta la condición jubilado y su caja en el padrón: el CUIT del empleador solo alcanza a los activos."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Eventual; se cubre con notificaciones y con T61/T64."
+  },
+  "validar_con_sindicato": "¿Quedan cautelares individuales en trámite que haya que seguir con los afiliados?",
+  "eje": "prev",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T67",
+  "nombre": "Sumarme a firmas y marchas por los jubilados",
+  "dirigido_al_afiliado": true,
+  "quien": "Jubilado/a, afiliado/a o delegado/a",
+  "hoy": {
+   "modalidad": "presencial",
+   "circuito": "Jubilazo Federal (Multisectorial en Defensa de la Seguridad Social): en 2025 se juntaron firmas en papel («sumate y envianos las planillas firmadas») por la prórroga de la moratoria, un aumento de emergencia y los medicamentos de PAMI; en 2026 se busca un millón de firmas. Marchas de los miércoles al Congreso. No hay planilla descargable ni dirección de envío publicada.",
+   "requisitos": "Firma de puño y letra en la planilla de la Multisectorial.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/jubilazo-federal/",
+    "https://labancaria.org/prevision-nos-movilizamos-y-juntamos-firmas/",
+    "https://labancaria.org/2-jubilazo-federal-multitudinario-acto-en-ferro/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "informar",
+   "nivel": "listo",
+   "propuesta": "Notificación con la convocatoria y la planilla en PDF adjunta, más una encuesta nominal «Me sumo» para saber quién junta firmas y dónde entrega. La firma con validez sigue siendo en papel.",
+   "formulario": "Encuesta nominal: ¿Te sumás? (opcion_unica), ¿Cuántas firmas podés juntar? (numero), ¿Dónde las entregás? (seleccion de seccional)",
+   "encadenados": "",
+   "area": "Previsión / Prensa",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Campaña puntual, no trámite."
+  },
+  "validar_con_sindicato": "¿A dónde se entregan las planillas? ¿Lo coordina Previsión o la seccional?",
+  "eje": "prev",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T78",
+  "nombre": "Avisos y actas con los bancos empleadores",
+  "dirigido_al_afiliado": false,
+  "quien": "Sindicato",
+  "hoy": {
+   "modalidad": "presencial",
+   "circuito": "Negociación y firma de actas con las cámaras (ABAPPRA, ADEBA, ABA, ABE) y acuerdos por banco. Es gestión del sindicato con el empleador, no del afiliado.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/categoria/otros-acuerdos/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "Módulo Empleadores: notificaciones y trámites con cada banco por CUIT, después del piloto. Lo que sí le sirve al afiliado es enterarse del acta de SU banco: Notificación filtrada por CUIT del empleador (va en el grupo de acuerdos y actas).",
+   "formulario": "",
+   "encadenados": "",
+   "area": "Gremiales / Secretaría General",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "No es del afiliado."
+  },
+  "validar_con_sindicato": "",
+  "eje": "emp",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T79",
+  "nombre": "Endeudamiento de los trabajadores",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "No hay asesoramiento individual ni ayuda para deudas. El gremio marchó con la CGT contra el endeudamiento familiar (20/8/2026) y publica un tablero de deuda de consumo con datos del BCRA de toda la población (agregados sin CUIL, abierto desde agosto de 2026). CORRECCIÓN: el foro «La deuda no puede mandar» habla de la deuda pública, no de la de las familias.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/marchamos-contra-el-sobrendeeudamiento-familiar/",
+    "https://labancaria.org/deudores/",
+    "https://labancaria.org/foro-economia-y-trabajo-la-deuda-no-puede-mandar-iii/",
+    "https://labancaria.org/la-bancaria-realizo-el-primer-plenario-nacional-de-la-juventud-bancaria/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "Hoy mismo: encuesta anónima al padrón sobre deudas (con cortes por seccional y banco). Después: agregados anónimos de descuentos por préstamos y embargos leídos de los recibos (P25) y aviso al afiliado cuando la cuota pesa demasiado (P32).",
+   "formulario": "Encuesta anónima: ¿Tenés deudas? (opcion_unica), ¿Con quién? (multiple: banco, tarjeta, billetera virtual, financiera, prestamista), ¿Para qué? (multiple), ¿Cuánto de tu sueldo se va en cuotas? (escala), ¿Te sirve un asesoramiento? (booleano)",
+   "encadenados": "",
+   "area": "Secretaría General / Juventud / Acción Social",
+   "falta": "P25 y P32 son desarrollo (agregados por concepto del recibo en el Panel y alerta al afiliado)."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "No hay servicio que reemplazar; la encuesta sí es un buen gancho para la reunión."
+  },
+  "validar_con_sindicato": "¿Quieren ofrecer asesoramiento sobre deudas? ¿Qué área lo tomaría?",
+  "eje": "emp",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "T80",
+  "nombre": "Vivienda",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a",
+  "hoy": {
+   "modalidad": "no_existe",
+   "circuito": "Hay Secretaría de Vivienda nacional (sviviendas@bancaria.org.ar, tel. 4131-4322/5338) y de la Seccional Buenos Aires (sviviendasba@bancaria.org.ar, int. 5236), pero no hay plan ni inscripción publicados. La Seccional Jujuy contó por radio (mayo de 2025) que avanza un plan con el gobierno local y el Instituto de la Vivienda, sin canal de inscripción.",
+   "requisitos": "",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/intereses-colectivos-programa-n-156/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "Cuando haya un plan: formulario de inscripción de UNA seccional (por ejemplo, Jujuy) con los requisitos del plan y documentación adjunta. Antes, una encuesta nominal de interés sirve para dimensionar la demanda.",
+   "formulario": "Grupo familiar conviviente (numero), ¿Tenés vivienda propia? (booleano), Ingresos del grupo (numero), Localidad donde buscás (texto), DNI (archivo), Último recibo (archivo)",
+   "encadenados": "Pedido de documentación del plan",
+   "area": "Vivienda (seccional)",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "No hay plan activo."
+  },
+  "validar_con_sindicato": "¿El plan de Jujuy existe? ¿Qué hace hoy la Secretaría de Vivienda por el afiliado?",
+  "eje": "emp",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "NUEVO-E-1",
+  "nombre": "Pensión por fallecimiento",
+  "dirigido_al_afiliado": true,
+  "quien": "Viudo/a o hijo/a de un bancario o jubilado (puede no ser afiliado)",
+  "hoy": {
+   "modalidad": "semi-online",
+   "circuito": "Previsión ofrece ayuda para iniciar la pensión por fallecimiento ante ANSES por sus canales (teléfono 4131-4252, WhatsApp 11 3832-7679, mail). El trámite lo hace el familiar ante ANSES. No hay un servicio propio publicado.",
+   "requisitos": "Los de ANSES (no los publica el sindicato).",
+   "sistema_interno": "",
+   "confianza": "deducido",
+   "fuentes": [
+    "https://labancaria.org/prevision-tramites-anses/",
+    "https://labancaria.org/jubilados-anses/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "puerta_y_encadenado",
+   "nivel": "desarrollo",
+   "propuesta": "Formulario «Falleció un familiar bancario»: datos del fallecido, vínculo y certificado de defunción; Previsión orienta la pensión y Acción Social activa el servicio por fallecimiento (pase entre áreas declarado).",
+   "formulario": "CUIL del fallecido (texto), Fecha de fallecimiento (fecha), Vínculo (seleccion), Certificado de defunción (archivo), Partida de matrimonio o de nacimiento (archivo), Teléfono de contacto (texto)",
+   "encadenados": "Pedido de documentación, Servicio por fallecimiento (Acción Social)",
+   "area": "Previsión (pase a Acción Social)",
+   "falta": "Entrada para el familiar no afiliado (hoy solo se registran CUIL del padrón). Si quien inicia es otro afiliado o el jubilado reafiliado, es listo."
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Muy sensible pero el que lo inicia muchas veces no puede entrar a Colm3na."
+  },
+  "validar_con_sindicato": "Coordinar con la fila de «Servicio por fallecimiento» de Acción Social para no duplicar.",
+  "eje": "prev",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "NUEVO-E-3",
+  "nombre": "Anotarme a cursos y talleres de Cultura (Seccional Buenos Aires)",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a y familia",
+  "hoy": {
+   "modalidad": "semi-online",
+   "circuito": "La Secretaría de Cultura y Educación de la Seccional Buenos Aires ofrece cursos y talleres (presenciales y mixtos). Para inscribirse: teléfono 4131-4216 o sculturaba@gmail.com; la página de cursos y talleres hoy da error 404.",
+   "requisitos": "No constan cupos ni costos.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://www.culturabancaria.com/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "puerta_y_encadenado",
+   "nivel": "listo",
+   "propuesta": "Noticia por taller con el formulario de inscripción ofrecido «para iniciar» desde la Noticia; Cultura confirma la vacante por el chat.",
+   "formulario": "Taller (seleccion), Turno (opcion_unica), Participante (opcion_unica: yo, familiar), Nombre del familiar (texto)",
+   "encadenados": "Confirmación de vacante",
+   "area": "Cultura y Educación (Seccional Buenos Aires)",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Útil pero no consta la oferta actual."
+  },
+  "validar_con_sindicato": "¿Qué talleres hay hoy y cuántos inscriptos?",
+  "eje": "form",
+  "incluye": [],
+  "kit": ""
+ },
+ {
+  "id": "NUEVO-E-4",
+  "nombre": "Pedir una beca de estudio (seccional)",
+  "dirigido_al_afiliado": true,
+  "quien": "Afiliado/a o hijo/a de afiliado/a",
+  "hoy": {
+   "modalidad": "no_dice",
+   "circuito": "La Seccional Concepción del Uruguay dijo por radio (2024) que da becas universitarias a hijos de bancarios y a bancarios que estudian, y una beca para estudiar instrumentos musicales. No hay canal ni requisitos publicados.",
+   "requisitos": "No constan.",
+   "sistema_interno": "",
+   "confianza": "verificado",
+   "fuentes": [
+    "https://labancaria.org/intereses-colectivos-programa-n-114/"
+   ]
+  },
+  "colm3na": {
+   "estrategia": "crear_de_cero",
+   "nivel": "listo",
+   "propuesta": "Formulario de UNA seccional con los datos del estudiante y la constancia de alumno regular; la seccional responde por el chat.",
+   "formulario": "Estudiante (opcion_unica: yo, hijo/a), Nombre del estudiante (texto), Carrera e institución (texto), Año que cursa (numero), Constancia de alumno regular (archivo pdf), Último recibo (archivo)",
+   "encadenados": "Renovación anual de la beca (constancia nueva)",
+   "area": "Acción Social / Cultura (seccional)",
+   "falta": ""
+  },
+  "kit_inicio": {
+   "candidato": false,
+   "por_que": "Una sola seccional y sin datos de volumen."
+  },
+  "validar_con_sindicato": "¿Qué seccionales dan becas y con qué requisitos?",
+  "eje": "form",
+  "incluye": [],
+  "kit": ""
+ }
+]

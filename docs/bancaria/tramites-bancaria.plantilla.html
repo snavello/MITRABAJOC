@@ -1,0 +1,291 @@
+<title>Trámites de La Bancaria en Colm3na</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: banda oscura de marca, columna de lectura de 1120px, el catálogo en fichas "hoy | en Colm3na" por eje. Letra grande a propósito: se lee en pantalla. */
+:root{
+  --mesa:#e6eaf0; --papel:#ffffff; --papel2:#f3f5f8; --linea:#d6dde6;
+  --tinta:#0a1421; --texto:#17253a; --texto2:#475870;
+  --miel:#f0a01e; --miel-osc:#a8660a;
+  --banda1:#0d1626; --banda2:#22334c;
+  --verde:#0f8a6a; --verde-f:#e2f4ee; --ambar:#a8660a; --ambar-f:#fdf1dc;
+  --azul:#3d5fa8; --azul-f:#e6ecf8; --gris:#6b7686; --gris-f:#eceff3; --rojo:#b3261e; --rojo-f:#fbe9e7;
+  --violeta:#7046a8; --violeta-f:#efe8f8;
+  --display:'Barlow Condensed','Arial Narrow','Roboto Condensed',sans-serif;
+  --body:'Barlow','Segoe UI',Roboto,Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --mesa:#070c14; --papel:#101a28; --papel2:#152234; --linea:#26364c;
+  --tinta:#f2f5f9; --texto:#dbe3ee; --texto2:#9fb0c6; --miel:#f3ac36; --miel-osc:#f3ac36;
+  --verde:#4fd1a8; --verde-f:#0f2a23; --ambar:#f3ac36; --ambar-f:#2a2010; --azul:#8fb0f2; --azul-f:#17233d;
+  --gris:#9aa6b6; --gris-f:#1b2533; --rojo:#f08a80; --rojo-f:#2d1513; --violeta:#c3a6ec; --violeta-f:#241a33; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --mesa:#070c14; --papel:#101a28; --papel2:#152234; --linea:#26364c;
+  --tinta:#f2f5f9; --texto:#dbe3ee; --texto2:#9fb0c6; --miel:#f3ac36; --miel-osc:#f3ac36;
+  --verde:#4fd1a8; --verde-f:#0f2a23; --ambar:#f3ac36; --ambar-f:#2a2010; --azul:#8fb0f2; --azul-f:#17233d;
+  --gris:#9aa6b6; --gris-f:#1b2533; --rojo:#f08a80; --rojo-f:#2d1513; --violeta:#c3a6ec; --violeta-f:#241a33; color-scheme:dark}
+
+*{box-sizing:border-box}
+html{font-size:17px}
+body{background:var(--mesa);color:var(--texto);font-family:var(--body);font-size:1rem;line-height:1.55;margin:0;padding-block:0 48px}
+a{color:var(--miel-osc)}
+a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid var(--miel);outline-offset:2px}
+h1,h2,h3,h4{font-family:var(--display);color:var(--tinta);text-wrap:balance;margin:0;line-height:1.12}
+p{margin:0}
+b,strong{font-weight:600;color:var(--tinta)}
+
+.banda{background:radial-gradient(700px 360px at 88% -30%,rgba(160,3,11,.42),transparent 64%),linear-gradient(158deg,var(--banda1) 18%,#0a1421 66%,var(--banda2));color:#fff;padding-block:44px 96px;padding-inline:16px;position:relative;overflow:hidden}
+.banda::before{content:"";position:absolute;inset:0;opacity:.10;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='104' viewBox='0 0 60 104'%3E%3Cpath d='M30 2 56 17v30L30 62 4 47V17zM30 54l26 15v30L30 114 4 99V69z' fill='none' stroke='%23f0a01e' stroke-width='1.2'/%3E%3C/svg%3E");background-size:30px 52px}
+.banda>*{position:relative}
+.ancho{max-width:1120px;margin:0 auto}
+.kicker{font-family:var(--display);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#f3ac36;font-size:1rem}
+.banda h1{color:#fff;font-size:clamp(2.2rem,5vw,3.4rem);font-weight:700;margin-block:8px 14px;text-transform:uppercase;letter-spacing:.01em}
+.banda .bajada{max-width:64ch;font-size:1.12rem;color:#d8e0ec}
+.banda .firma{margin-top:16px;font-size:.95rem;color:#aab8cc;max-width:90ch}
+
+main{padding-inline:16px}
+.hoja{background:var(--papel);border-radius:10px;box-shadow:0 10px 30px rgba(10,20,33,.10);padding:32px clamp(18px,4vw,44px);margin-top:28px}
+.hoja>h2{font-size:2rem;margin-bottom:6px}
+.intro{color:var(--texto2);max-width:72ch;margin-bottom:22px}
+
+.cifras{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr));gap:12px;margin-top:-60px;position:relative}
+.cifra{background:var(--papel);border-radius:10px;padding:18px 20px;box-shadow:0 8px 24px rgba(10,20,33,.12);border-top:4px solid var(--miel)}
+.cifra .num{font-family:var(--display);font-size:2.6rem;font-weight:700;color:var(--tinta);line-height:1;font-variant-numeric:tabular-nums}
+.cifra .et{font-size:.98rem;color:var(--texto2);margin-top:6px}
+
+.criterio{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:14px}
+.criterio div{background:var(--papel2);border-radius:8px;padding:14px 16px}
+.criterio b{display:block;margin-bottom:4px;font-family:var(--display);font-size:1.2rem}
+
+.hallazgos{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:18px}
+.hallazgo{border-left:4px solid var(--miel);padding:4px 0 4px 16px}
+.hallazgo h3{font-size:1.35rem;margin-bottom:6px}
+
+.dos-barras{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(380px,100%),1fr));gap:30px}
+.dos-barras h3{font-size:1.35rem;margin-bottom:10px}
+.barra-g{display:flex;height:22px;border-radius:5px;overflow:hidden;background:var(--papel2)}
+.ley-g{list-style:none;padding:0;margin:12px 0 0;display:grid;gap:6px}
+.ley-g li{display:flex;align-items:center;gap:8px}
+.ley-g b{margin-left:auto;font-variant-numeric:tabular-nums}
+.pt{width:12px;height:12px;border-radius:3px;flex:none}
+.tot{color:var(--texto2);font-size:.92rem;margin-top:8px}
+
+.tabla-cont{overflow-x:auto;border:1px solid var(--linea);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:.97rem}
+th{font-family:var(--display);font-weight:600;font-size:1.02rem;letter-spacing:.04em;text-transform:uppercase;text-align:left;color:var(--texto2);background:var(--papel2);padding:10px 14px;border-bottom:1px solid var(--linea)}
+td{padding:14px;vertical-align:top;border-top:1px solid var(--linea)}
+tbody tr:first-child td{border-top:0}
+td:first-child{font-weight:600;color:var(--tinta);width:18%}
+td code{font-size:.88rem;background:var(--papel2);padding:1px 6px;border-radius:4px;overflow-wrap:anywhere;font-weight:400}
+
+.kit-bloque{margin-top:24px}
+.kit-bloque h3{font-size:1.45rem;margin-bottom:4px}
+.kit-bloque>p{color:var(--texto2);margin-bottom:10px;max-width:72ch}
+.kit{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr));gap:2px 28px;counter-reset:k}
+.kit li{counter-increment:k;display:grid;grid-template-columns:2.2rem 1fr;column-gap:10px;padding:10px 0;border-top:1px solid var(--linea)}
+.kit li::before{content:counter(k);grid-row:span 3;font-family:var(--display);font-weight:700;font-size:1.5rem;color:var(--miel-osc);line-height:1.15}
+.kit li a{text-decoration:none}
+.kit li a b{color:var(--tinta)}
+.kit li a:hover b{text-decoration:underline}
+.kit-area{display:block;color:var(--texto2);font-size:.88rem;margin-top:2px}
+.kit li>span:last-child{color:var(--texto2);font-size:.93rem;margin-top:3px}
+
+.filtros{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--papel);padding-block:10px;z-index:2}
+.f{font:inherit;font-size:.93rem;border:1px solid var(--linea);background:var(--papel);color:var(--texto);border-radius:99px;padding:5px 13px;cursor:pointer}
+.f:hover{border-color:var(--miel)}
+.f.activo{background:var(--tinta);color:var(--papel);border-color:var(--tinta)}
+.eje{margin-top:30px}
+.eje-cab{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;margin-bottom:12px}
+.eje-cab h3{font-size:1.6rem}
+.eje-res{color:var(--texto2);font-size:.95rem}
+
+.tr{border:1px solid var(--linea);border-radius:10px;padding:18px 20px;margin-bottom:14px;scroll-margin-top:70px}
+.tr-cab{display:grid;gap:4px;margin-bottom:12px}
+.tr-cab h4{font-size:1.4rem}
+.tr-chips{display:flex;flex-wrap:wrap;gap:6px}
+.quien{color:var(--texto2);font-size:.95rem}
+.inc{color:var(--texto2);font-size:.9rem;font-style:italic}
+.tr-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr));gap:18px 28px}
+.tr-cols section{display:grid;gap:8px;align-content:start;min-width:0}
+.tr-col{border-left:3px solid var(--miel);padding-left:16px}
+.rot{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-family:var(--display);font-weight:600;font-size:1.1rem;letter-spacing:.04em;text-transform:uppercase;color:var(--texto2)}
+.req{font-size:.94rem;color:var(--texto)}
+.fuentes{display:flex;flex-direction:column;gap:2px;font-size:.86rem}
+.fuentes a,.fuentes span{overflow-wrap:anywhere;color:var(--texto2)}
+.fuentes a{color:var(--miel-osc)}
+details{background:var(--papel2);border-radius:8px;padding:8px 12px}
+summary{cursor:pointer;font-weight:600;color:var(--tinta)}
+dl{margin:8px 0 2px;display:grid;gap:6px}
+dt{font-family:var(--display);font-weight:600;font-size:1.02rem;color:var(--texto2);text-transform:uppercase;letter-spacing:.04em}
+dd{margin:0 0 6px;font-size:.95rem}
+.validar{margin-top:12px;padding-top:10px;border-top:1px dashed var(--linea);font-size:.94rem;color:var(--texto)}
+
+.chip-e{display:inline-block;font-family:var(--body);font-weight:600;font-size:.82rem;letter-spacing:.02em;text-transform:none;border-radius:5px;padding:1px 8px;line-height:1.6}
+.m-online,.seg.m-online,.pt.m-online{background:var(--verde-f);color:var(--verde)}
+.m-semi-online{background:var(--ambar-f);color:var(--ambar)}
+.m-presencial{background:var(--rojo-f);color:var(--rojo)}
+.m-no_dice{background:var(--gris-f);color:var(--gris)}
+.m-no_existe{background:var(--gris-f);color:var(--gris);border:1px dashed var(--gris)}
+.e-crear_de_cero{background:var(--violeta-f);color:var(--violeta)}
+.e-reemplazar{background:var(--azul-f);color:var(--azul)}
+.e-puerta_y_encadenado{background:var(--ambar-f);color:var(--ambar)}
+.e-informar{background:var(--gris-f);color:var(--gris)}
+.n-listo{background:var(--verde-f);color:var(--verde)}
+.n-ajuste{background:var(--ambar-f);color:var(--ambar)}
+.n-desarrollo{background:var(--azul-f);color:var(--azul)}
+.n-fuera{background:var(--gris-f);color:var(--gris)}
+.k-kit{background:var(--tinta);color:var(--papel)}
+.k-seg{border:1px solid var(--tinta);color:var(--tinta)}
+.k-ded{border:1px dashed var(--texto2);color:var(--texto2);font-weight:500}
+.seg.m-online,.pt.m-online{background:var(--verde)} .seg.m-semi-online,.pt.m-semi-online{background:var(--ambar)}
+.seg.m-presencial,.pt.m-presencial{background:var(--rojo)} .seg.m-no_dice,.pt.m-no_dice{background:var(--gris)}
+.seg.m-no_existe,.pt.m-no_existe{background:var(--linea);border:0}
+.seg.e-crear_de_cero,.pt.e-crear_de_cero{background:var(--violeta)} .seg.e-reemplazar,.pt.e-reemplazar{background:var(--azul)}
+.seg.e-puerta_y_encadenado,.pt.e-puerta_y_encadenado{background:var(--ambar)} .seg.e-informar,.pt.e-informar{background:var(--gris)}
+
+.cambios{display:grid;gap:10px;max-width:80ch;padding-left:20px;margin:0}
+.cambios li::marker{color:var(--miel-osc)}
+.fuera{display:grid;gap:8px;max-width:80ch;padding-left:20px;margin:0}
+.metodo{display:grid;gap:12px;max-width:78ch}
+.pie{max-width:1120px;margin:28px auto 0;padding-inline:16px;color:var(--texto2);font-size:.9rem}
+
+@media (max-width:640px){html{font-size:16px}.cifras{margin-top:-60px}.tr{padding:14px}.tr-col{border-left:0;padding-left:0;border-top:3px solid var(--miel);padding-top:12px}}
+@media (prefers-reduced-motion:no-preference){.f{transition:background .15s,color .15s,border-color .15s}}
+</style>
+
+<header class="banda">
+  <div class="ancho">
+    <p class="kicker">Asociación Bancaria · versión 2, verificada fila por fila · octubre 2026</p>
+    <h1>Trámites de La Bancaria en Colm3na</h1>
+    <p class="bajada">Todo lo que un bancario, un jubilado o su familia le puede pedir al sindicato: cómo se hace hoy de verdad, y cómo lo reemplaza, lo complementa o lo crea Colm3na. Es la base para ofrecerle al sindicato un kit de inicio.</p>
+    <p class="firma">Fuentes: labancaria.org entera (2.436 noticias, páginas, 46 fichas de beneficios, 13 publicaciones), el sitio de la Seccional Buenos Aires, los sistemas propios del sindicato leídos por dentro (sin usuario) y las grillas salariales firmadas. Cada gestión fue revisada contra sus fuentes por separado.</p>
+  </div>
+</header>
+
+<main>
+  <div class="ancho">
+    <div class="cifras">
+      <div class="cifra"><div class="num">{{AF}}</div><div class="et">gestiones del afiliado, de su familia o de los jubilados</div></div>
+      <div class="cifra"><div class="num">{{ONLINE}}</div><div class="et">son online hoy, de punta a punta</div></div>
+      <div class="cifra"><div class="num">{{SINCANAL}}</div><div class="et">no tienen canal publicado: el afiliado no sabe a quién pedirlas</div></div>
+      <div class="cifra"><div class="num">{{LISTO}}</div><div class="et">se pueden hacer en Colm3na hoy, solo configurando</div></div>
+    </div>
+
+    <section class="hoja" id="criterio">
+      <h2>El criterio</h2>
+      <p class="intro">Acordado antes de verificar. Ordena qué entra al informe y cómo se propone cada gestión.</p>
+      <div class="criterio">
+        <div><b>El foco es el afiliado</b>Servicios hacia el afiliado y pedidos del afiliado, de su familia y de los jubilados. Lo interno del sindicato queda aparte, al final.</div>
+        <div><b>Los sistemas internos no se tocan</b>Si el sindicato ya usa un sistema propio, Colm3na pone la puerta del afiliado: el pedido, la respuesta y hasta los comprobantes de pago van por trámites encadenados, y el operador sigue cargando donde carga hoy.</div>
+        <div><b>Online es online de verdad</b>Online solo si todo el circuito se resuelve por internet y la respuesta llega por el mismo medio. Si hay papel, pago en banco, paso por la sede o una respuesta por WhatsApp suelto, es semi-online.</div>
+        <div><b>Verificado o deducido</b>Cada gestión dice de dónde sale. Lo que se deduce de la web y no está escrito como trámite lleva la marca «deducido» y una pregunta para validar con el sindicato.</div>
+      </div>
+    </section>
+
+    <section class="hoja" id="resumen">
+      <h2>Lo que hay que saber</h2>
+      <div class="hallazgos">
+        <div class="hallazgo"><h3>Online hay poco, y es casi todo para informarse</h3><p>De {{AF}} gestiones, {{ONLINE}} son online: noticias, comunicados salariales, grillas, Dónde voto, la encuesta nacional, los cursos de Bancar. Lo único que el afiliado tramita online es actualizar sus datos en Tus Datos.</p></div>
+        <div class="hallazgo"><h3>Para {{SINCANAL}} no hay a quién pedir</h3><p>Reclamos por el sueldo o las condiciones de trabajo, denuncias, licencias, accidentes, consultas previsionales de jubilados: la web muestra la acción colectiva del sindicato, pero no un canal individual. La única guía de contacto («guardia gremial») es de marzo de 2020, armada para la cuarentena.</p></div>
+        <div class="hallazgo"><h3>Turismo: el sistema es de las seccionales</h3><p>reservasturismo.bancaria.org.ar lo usan los operadores, no el afiliado. Colm3na no lo reemplaza: el afiliado pide la reserva en la app y recibe por el chat del expediente la boleta, sube el comprobante y sigue el estado. La seccional sigue cargando en su sistema.</p></div>
+        <div class="hallazgo"><h3>El recibo: lo que hay y lo que falta</h3><p>Hoy Colm3na controla para La Bancaria los aportes de ley con sus topes, el tope del 2% de cargas sindicales y la cuota. Controlar el CCT 18/75 (básico por categoría, ROE, Día del Bancario) necesita la grilla del mes como parámetro y reglas por categoría: es desarrollo. Las grillas se publican escaneadas, sin texto.</p></div>
+        <div class="hallazgo"><h3>Lo sensible pide un ajuste antes</h3><p>Una denuncia por violencia tiene que verla solo el área de Género. Hoy los administradores ven todos los trámites, así que hace falta un tipo de trámite confidencial y un aviso push con texto neutro.</p></div>
+        <div class="hallazgo"><h3>Mucho depende de la seccional</h3><p>El kit recién nacido, los guardapolvos, Megatlon, la vacuna antigripal y los talleres de cultura solo aparecen en la Seccional Buenos Aires. Colm3na tiene formularios por seccional; hay que preguntar qué ofrece cada una de las otras.</p></div>
+      </div>
+    </section>
+
+    <section class="hoja" id="panorama">
+      <h2>Hoy y en Colm3na</h2>
+      <p class="intro">A la izquierda, cómo se hace hoy cada gestión. A la derecha, qué haría Colm3na. En Colm3na: {{LISTO}} listas hoy, {{AJUSTE}} con un ajuste menor y {{DESARROLLO}} que necesitan desarrollo.</p>
+      <div class="dos-barras">
+        <div><h3>Cómo se hacen hoy</h3>{{BARRA_HOY}}</div>
+        <div><h3>Qué haría Colm3na</h3>{{BARRA_EST}}</div>
+      </div>
+    </section>
+
+    <section class="hoja" id="sistemas">
+      <h2>Los sistemas que La Bancaria ya tiene</h2>
+      <p class="intro">Leídos por dentro: los textos y campos de sus pantallas, sus rutas y el manual del kit escolar. No se entró con usuario.</p>
+      <div class="tabla-cont"><table>
+        <thead><tr><th>Sistema</th><th>Quién lo usa y cómo</th><th>¿Online para el afiliado?</th><th>Relación con Colm3na</th></tr></thead>
+        <tbody>
+          <tr><td>Tus Datos<br><code>tusdatos.bancaria.org.ar</code></td><td>El afiliado: se registra con su DNI (se valida contra el padrón), mail, clave y captcha, y actualiza sus datos. Las seccionales ven en un listado lo que cambió cada uno, sin aprobar nada. La cuenta es la misma del kit escolar.</td><td>Sí, de punta a punta.</td><td>El perfil de Colm3na hace lo mismo con un solo dueño por CUIL; faltan algunos campos (fecha de ingreso al banco, sucursal, estado civil). Como hoy funciona, va en la segunda tanda.</td></tr>
+          <tr><td>Kit escolar<br><code>kitescolar.bancaria.org.ar</code></td><td>El afiliado: carga sus datos, sus hijos o nietos con DNI y partida, y una solicitud por chico con nivel, grado y certificado. Las seccionales revisan. El kit se retira en persona.</td><td>Semi-online: se pide online y se retira presencial.</td><td>Reemplazable con un trámite por chico, pero el portal guarda la familia de un año a otro y Colm3na todavía no tiene grupo familiar. Segunda tanda.</td></tr>
+          <tr><td>Reservas de turismo<br><code>reservasturismo.bancaria.org.ar</code></td><td>Solo las seccionales: eligen la seccional y ponen su clave, tipean el número de afiliado, cargan la solicitud, generan la boleta y suben el comprobante. Otra instancia autoriza.</td><td>No: el afiliado pide por la seccional, el mail o el WhatsApp de Acción Social y paga en el banco.</td><td>Se queda. Colm3na pone la puerta del afiliado con trámites encadenados (pedido, boleta, comprobante, anulación).</td></tr>
+          <tr><td>Dónde voto<br><code>dondevoto.bancaria.org.ar</code></td><td>El afiliado: DNI o número de afiliado, sexo y captcha. Devuelve seccional, banco, sucursal, dirección, urna, mapa y una constancia imprimible.</td><td>Sí.</td><td>Se enlaza desde la app con el aviso de la elección. La tarjeta propia en Colm3na (P33) puede venir después.</td></tr>
+          <tr><td>Formularios de Google<br><code>Seccional Buenos Aires</code></td><td>El afiliado: presolicitud de afiliación, vacuna antigripal, torneo de ajedrez, propuestas de cultura. Después lo llaman o le escriben.</td><td>Semi-online: la respuesta llega por fuera.</td><td>Se reemplazan por trámites con expediente, respuesta en el chat y estado a la vista.</td></tr>
+          <tr><td>Fundación Bancar<br><code>bancar.org.ar</code></td><td>El afiliado: campus de cursos y un Google Form para quien se anota por primera vez. Es una entidad aparte.</td><td>Sí.</td><td>Se informa: noticia y aviso con el enlace en cada apertura.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="hoja" id="kit">
+      <h2>Propuesta de kit de inicio</h2>
+      <p class="intro">Para conversar con el sindicato, no para imponer. Se eligieron gestiones listas hoy, que hoy se hacen con papel, WhatsApp, un Google Form o sin canal, y que tocan a mucha gente o se repiten todo el año. Cada nombre lleva a su ficha en el catálogo.</p>
+      <div class="kit-bloque">
+        <h3>{{NKIT}} formularios listos para el primer día</h3>
+        <p>Cada uno es un trámite con expediente, respuesta en el chat y estado a la vista. El área es la que propone la verificación; la define el sindicato.</p>
+        <ol class="kit">{{KIT}}</ol>
+      </div>
+      <div class="kit-bloque">
+        <h3>Lo que el afiliado usa sin formulario nuevo</h3>
+        <p>Vienen con la plataforma o con una noticia, un aviso o el bot del convenio.</p>
+        <ol class="kit">{{SINFORM}}</ol>
+      </div>
+      <div class="kit-bloque">
+        <h3>Segunda tanda: {{NSEG}} gestiones que piden un ajuste o conviven con lo que ya funciona</h3>
+        <p>Muy valiosas, pero necesitan un cambio chico en Colm3na (entrada sin login, trámite confidencial, campos del perfil, condición de jubilado) o hoy ya funcionan online.</p>
+        <ol class="kit">{{SEGUNDA}}</ol>
+      </div>
+    </section>
+
+    <section class="hoja" id="catalogo">
+      <h2>Catálogo verificado</h2>
+      <p class="intro">Una ficha por gestión. A la izquierda, cómo se hace hoy, con sus fuentes. A la derecha, qué haría Colm3na, con el diseño del formulario y los formularios encadenados. Abajo, lo que hay que preguntarle al sindicato.</p>
+      {{FILTROS}}
+      {{CATALOGO}}
+    </section>
+
+    <section class="hoja" id="fuera">
+      <h2>Fuera del foco</h2>
+      <p class="intro">Aparecen en la web pero no son gestiones del afiliado.</p>
+      <ul class="fuera">{{FUERA}}</ul>
+    </section>
+
+    <section class="hoja" id="cambios">
+      <h2>Qué cambió respecto de la primera versión</h2>
+      <ul class="cambios">
+        <li><b>Turismo.</b> La primera versión decía que había «un sistema completo de reservas». Es un sistema interno de las seccionales; para el afiliado la reserva sigue siendo semi-online.</li>
+        <li><b>Tus Datos</b> es online de punta a punta y no tiene paso de aprobación del sindicato. Comparte la cuenta con el kit escolar.</li>
+        <li><b>El recibo.</b> El control del CCT 18/75 no está listo, es desarrollo. El «salario inicial» de los comunicados es el conformado, no el básico (agosto 2026: básico $1.642.764,63, conformado $2.505.061,24). Los adicionales hoy son montos fijos y el ROE sale de una tabla por tramos. La demo de La Bancaria tenía ese error y se corrigió el mismo día con la grilla firmada (<code>grilla_bancaria.py</code>).</li>
+        <li><b>Denuncias por violencia.</b> Pasan de «listo» a «ajuste»: hoy los administradores ven todos los trámites. El protocolo interno de 2023 es para dirigentes, delegados y empleados del sindicato; la violencia en el banco va por los protocolos de cada banco, acompañada por la Secretaría de DDHH, Género e Igualdad.</li>
+        <li><b>Guardia gremial.</b> Era el canal de emergencia de la cuarentena de 2020, no un servicio vigente.</li>
+        <li><b>Previsión.</b> La «clave de la seguridad social» es lo que pide ANSES para su web, no lo que pide el sindicato. Ningún formulario de Colm3na pide claves.</li>
+        <li><b>Altas, fusiones y bajas.</b> Se agregaron 17 gestiones que faltaban (constancia y baja de la afiliación, corregir banco o seccional, abogado laboralista, acompañamiento por violencia doméstica, pensión por fallecimiento, promos de turismo, consulta a Acción Social, becas, talleres de cultura, entre otras) y se fusionaron o sacaron 11 que estaban repetidas o no correspondían.</li>
+      </ul>
+    </section>
+
+    <section class="hoja" id="metodo">
+      <h2>Método y límites</h2>
+      <div class="metodo">
+        <p><b>Primera pasada.</b> Toda labancaria.org por su API pública (2.436 noticias de 2015 a octubre de 2026, páginas, 46 fichas de beneficios, 13 publicaciones), el sitio de la Seccional Buenos Aires y los sistemas propios del sindicato.</p>
+        <p><b>Verificación.</b> Cinco revisiones independientes, una por tema, volvieron sobre cada gestión: releyeron las fuentes, abrieron las páginas en vivo, leyeron el código de las pantallas de Tus Datos, Reservas de turismo, Kit escolar y Dónde voto, el manual del kit escolar, los formularios de Google, el formulario en papel del kit recién nacido y las grillas salariales firmadas. Cada ficha dice si lo que afirma está verificado o deducido.</p>
+        <p><b>Lo que no se pudo ver.</b> El interior de los sistemas con usuario, quién autoriza las reservas de turismo, y si los cambios de Tus Datos pasan solos al padrón del sindicato. Las preguntas quedaron en cada ficha.</p>
+        <p><b>Antes de usarlo afuera.</b> Validar con Acción Social, Previsión, Acción Gremial y DDHH qué gestiones existen hoy, en qué seccionales, y por qué canal entran.</p>
+      </div>
+    </section>
+  </div>
+</main>
+<p class="pie">Colm3na · Trámites de La Bancaria · versión 2 · 13 de octubre de 2026 · uso interno.</p>
+
+<script>
+(function(){
+  var botones=document.querySelectorAll('.f');
+  function aplicar(f){
+    botones.forEach(function(b){var on=b.dataset.f===f;b.classList.toggle('activo',on);b.setAttribute('aria-pressed',on)});
+    var p=f.split(':'),clave=p[0],valor=p[1];
+    document.querySelectorAll('#catalogo .tr').forEach(function(t){t.hidden=!(f==='todos'||t.dataset[clave]===valor)});
+    document.querySelectorAll('#catalogo .eje').forEach(function(s){s.hidden=!s.querySelector('.tr:not([hidden])')});
+  }
+  botones.forEach(function(b){b.addEventListener('click',function(){aplicar(b.dataset.f)})});
+})();
+</script>

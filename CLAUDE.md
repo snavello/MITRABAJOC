@@ -168,7 +168,11 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   existente (`--sindicato "AEFIP"`); `cargar_lote_uom.py` es la versión
   anterior, específica de la UOM. Ver "Lotes de datos sintéticos".
 - cargar_bancaria.py — alta de "La Bancaria" con los conceptos del CCT 18/75
-  (ver `docs/cct-1875-bancarios.md`) + su lote.
+  (ver `docs/cct-1875-bancarios.md`) + su lote. `--rehacer-recibos` regenera
+  solo los recibos del lote; `--borrar-recibos-de CUIL [--si]` borra los de
+  una persona. Los montos salen de `grilla_bancaria.py` (puro: la grilla
+  vigente, hoy la de agosto 2026); `docs/recibos-bancaria-prueba/` tiene diez
+  recibos PDF simulados del CUIL de prueba 27999999994, con su generador.
 - medir_dashboard.py — mide los endpoints del Panel Sindical con 50.000 recibos.
 - e2e/ — robots de QA con Playwright (ver `e2e/README.md`).
 - chequeo.py — autodiagnóstico de la instalación.
@@ -1558,9 +1562,12 @@ existente: 6 seccionales, ~12 empresas, 100 trabajadores con cuenta (**clave
 - **Perfiles de recibo por convenio**: un sindicato puede registrar en
   `cargar_lote_sindicato.PERFILES` una función que arma sus líneas de ingreso
   según SU convenio, en vez del armado genérico. `cargar_bancaria.py` es el
-  ejemplo: reproduce el CCT 18/75 (adicionales como % del **sueldo inicial**,
-  antigüedad embebida en el básico, cajero función + falla de caja como dos
-  líneas). Los rasgos estables del trabajador (antigüedad, si es cajero,
+  ejemplo: reproduce el CCT 18/75 con la **grilla firmada de agosto 2026**
+  (básico de la categoría + "Complemento salario conformado" hasta el
+  conformado, adicionales en **montos fijos**, ROE por la tabla de tramo de
+  bruto × ROE del banco, antigüedad embebida en el básico, cajero función +
+  falla de caja como dos líneas). Hasta el 2026-10-13 tomaba el conformado
+  como básico y los adicionales como % del inicial, y estaba mal. Los rasgos estables del trabajador (antigüedad, si es cajero,
   título) salen de `trab["semilla"]`, derivada del CUIL — no se sortean en
   cada recibo.
 
