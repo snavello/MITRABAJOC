@@ -231,10 +231,15 @@ quiere VER entrar usa `--ease-entrada`, que lo reparte.
   (`height`, `margin`).
 - **Hover solo con mouse** (`@media (hover: hover) and (pointer: fine)`), y
   solo levanta lo que se puede tocar: lo que solo se lee, a lo sumo se aclara.
-- **Esperar se ve**: un esqueleto con un brillo que lo recorre (curva lineal,
-  es movimiento constante), nunca un hueco ni un "—" mientras carga.
-- **El modal abre en el momento del clic**, con un esqueleto, y el contenido
-  llega nítido desde un desenfoque leve.
+- **Esperar es armar, nunca apagar.** En la primera carga, el panel traza
+  las líneas de la grilla de su gráfico (o los renglones de una lista) una
+  por una. Al cambiar un filtro queda nítido y corre una línea fina arriba.
+  Nada se pone translúcido ni gris: SDN lo leía como "una pantalla gris".
+- **El modal abre en el momento del clic y se arma a la vista** con lo que la
+  fila ya sabe (título, fecha, empresa). Lo que llega del servidor se suma
+  debajo en cascada, y la caja crece de a poco hasta su alto, sin saltar.
+  La caja se vuelve opaca enseguida (en 220 ms): un velo translúcido no se
+  lee como movimiento sino como espera.
 - **Con reducir movimiento quedan solo fundidos suaves** (200 a 500 ms): nada
   se desplaza, crece ni gira, y los gráficos se dibujan quietos. Reducir es
   "menos y más suave", no "nada": sin fundidos, un modal aparece de golpe y
