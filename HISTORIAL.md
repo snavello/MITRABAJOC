@@ -7019,3 +7019,51 @@ adentro de otro y en orden de lectura), no la vista entera. Lo que no hacen es
 crecer de a poco: una vista está en el flujo de la página y animar su alto
 reacomodaría todo lo de abajo cuadro por cuadro. Cambiar un filtro de la
 lista, que repinta sin esperar, no rearma: sería ruido.
+
+
+## La Bancaria con la grilla de agosto 2026: básico no es conformado (2026-10-13)
+
+Al relevar la web oficial de La Bancaria se leyó la grilla firmada de agosto
+2026 (`GRILLAS-AGOSTO-2026.pdf`, 8 páginas escaneadas, transcriptas a mano a
+`docs/cct-1875-bancarios.md`) y el modelo de `cargar_bancaria.py` estaba mal
+en tres cosas:
+
+1. **Tomaba el conformado como básico.** `SUELDO_INICIAL = 2.463.757,68` era
+   el "Salario Inicial" del comunicado de julio, que es el **conformado**: la
+   remuneración mínima garantizada hasta los 15 años de antigüedad. El básico
+   del inicial es $ 1.642.764,63. Ahora el recibo lleva el básico de la
+   grilla y una línea "Complemento salario conformado" por la diferencia. El
+   nombre y la mecánica (piso del básico, sin contar los adicionales de
+   función) son un supuesto: la grilla no dice cómo lo imprime un banco y no
+   se encontró fuente. SDN decidió dejarlo así hasta saberlo.
+2. **Los adicionales como % del inicial de 1975.** Hoy la grilla publica
+   montos fijos (cajero $ 163.963,06, falla $ 287.355,05, títulos, zona
+   patagónica en tres tramos). Computación, técnicos, máquinas, portavalores
+   y nocturno no tienen monto vigente y se dejaron de simular.
+3. **El ROE como un solo monto.** Sale de una tabla de 4 tramos de bruto × 6
+   tramos de ROE del banco, anual, de a 1/12; cada banco del lote tiene su
+   tramo fijo y uno no paga. Verificado: el inicial en el tramo 3,5–8,75% da
+   los $ 72.413,50 del comunicado.
+
+Los coeficientes de la rama administrativa resultaron ser los mismos del
+art. 5 de 1975 (lo distinto son maestranza y ordenanza, que el lote no usa).
+La grilla pasó a un módulo puro, `grilla_bancaria.py`, para que el lote, el
+generador de PDF y el test lean los mismos números.
+
+**Regenerar sin re-sembrar.** `lote.sembrar_base` es idempotente para las
+filas pero vuelve a sortear el nombre de cada afiliado y lo escribe en su
+cuenta: llamarlo para regenerar recibos le cambiaba el nombre a los cien.
+`--rehacer-recibos` arma la lista de trabajadores desde la base. Por la misma
+razón la antigüedad del agente pasó a derivarse del CUIL (`antiguedad_de`):
+el valor sorteado por el lote no quedaba en ninguna columna.
+
+**Diez PDF de prueba** (`docs/recibos-bancaria-prueba/`), del CUIL de prueba
+de Pruebas, siete bien y tres con error. Un caso previsto se cayó al
+verificarlo: una cuota sindical al 2,5% no es un error para la app, porque el
+tope del 2% (art. 133) solo mira las cuotas de **convenio** y la de La
+Bancaria está cargada como **afiliación**; se cambió por un neto mal sumado.
+El test arma cada caso como el PDF y lo pasa por el camino de `/api/leer` +
+`/api/validar` (alta de los códigos nuevos como pendientes, aportes
+vinculados a su genérico): sin ese paso, con códigos que el catálogo no
+conoce, todo da diferencia.
+
