@@ -25,9 +25,12 @@ del proyecto:
   o `useSpring` no aplican; acá se anima con CSS (transiciones y keyframes) y
   con lo que traen Chart.js y Leaflet.
 - **La tipografía, los colores y el encabezado** son los de `diseno-mi-trabajo`.
-- **`prefers-reduced-motion` apaga todo**: `marca.css` corta transiciones y
-  animaciones con `!important`. La skill sugiere dejar los fundidos; acá se
-  mantiene la regla del proyecto (D5 del plan del Panel v2).
+- **Las duraciones de la v2 del Panel son de presentación** (SDN, 2026-10-13):
+  más largas que los ~300 ms que recomienda la skill, con una curva que
+  reparte el recorrido para lo que tiene que verse entrar.
+- **`prefers-reduced-motion`**: la v2 sigue a la skill y deja fundidos suaves.
+  El resto de la app todavía corta todo vía `marca.css`, hasta que el
+  movimiento se lleve pantalla por pantalla.
 
 ## Para actualizarla
 

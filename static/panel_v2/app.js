@@ -30,6 +30,7 @@ import { Panel, Serie, Validacion, Tramites, Notificaciones, Empresas, Consultas
   MapaSeccionales } from "panel/graficos";
 import { Explorador, Detalle } from "panel/explorador";
 import { Asistente, BotonAsistente } from "panel/asistente";
+import { menosMovimiento } from "panel/movimiento";
 
 const MAIN = document.querySelector("main");
 /* Hoy lo dice el SERVIDOR (data-hoy), nunca el reloj del navegador: el
@@ -63,6 +64,8 @@ function PanelSindical() {
   const [cajon, setCajon] = useState(false);
   const [detalle, setDetalle] = useState(null);
   const [asist, setAsist] = useState("cerrado");          // "cerrado", "abierto" o "mini" (celular)
+  const [reducido, setReducido] = useState(menosMovimiento);
+  const [avisoCerrado, setAvisoCerrado] = useState(false);
   const ronda = useRef(null);
   const soloExplorador = useRef(null);
   const primera = useRef(true);
@@ -198,6 +201,16 @@ function PanelSindical() {
   }, [estado.paginas]);
   useEffect(() => { queryPrevia.current = query; });
 
+  /* Si el sistema pide reducir el movimiento, el panel solo usa fundidos y
+     lo dice: si no, quien tiene la opción prendida ve todo quieto y no sabe
+     por qué. Se sigue el cambio en vivo. */
+  useEffect(() => {
+    const m = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const cambio = () => setReducido(m.matches);
+    m.addEventListener("change", cambio);
+    return () => m.removeEventListener("change", cambio);
+  }, []);
+
   // El encabezado común muestra la fecha de hoy y el rango que contestó el servidor.
   useEffect(() => {
     const h = document.getElementById("hoy-fecha");
@@ -233,6 +246,11 @@ function PanelSindical() {
           onClick=${(ev) => { ev.preventDefault(); location.href = "/admin/dashboard" + location.search; }}>Ver en la versión actual</a>
       </div>
     </div>
+    ${reducido && !avisoCerrado && html`<div class="v2-aviso-mov" role="note">
+      <span><b>Tu equipo tiene activado «reducir movimiento».</b> El panel muestra solo fundidos suaves. Para ver las
+        animaciones completas, desactivalo en el sistema: en Windows, Configuración → Accesibilidad → Efectos visuales →
+        Efectos de animación; en iPhone y Mac, Accesibilidad → Reducir movimiento; en Android, Accesibilidad → Quitar animaciones.</span>
+      <button type="button" aria-label="Cerrar el aviso" onClick=${() => setAvisoCerrado(true)}>✕</button></div>`}
     ${aviso && html`<div class="aviso-error" role="alert">${aviso}</div>`}
     <section class=${"v2-tablero" + (kpi.cargando ? " cargando" : "")} data-panel="kpis" aria-busy=${!!kpi.cargando}>
       <${BarraFiltros} ...${comun} afiliados=${afiliados} abrirCajon=${() => setCajon(true)} />

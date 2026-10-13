@@ -179,23 +179,33 @@ Hoy vive SOLO en la v2 del Panel (`static/panel_v2/panel.css`, bloque
 tokens pasan a `marca.css` y se llevan pantalla por pantalla, empezando por
 los modales que más se usan. La referencia es la skill `emil-design-eng`;
 **ante un choque mandan las reglas de este archivo** (nada de CDN ni de paso
-de compilación, así que nada de Framer Motion; reducir movimiento apaga todo).
+de compilación, así que nada de Framer Motion).
 
 **Duraciones y curvas con nombre, nunca un número suelto:**
 
 | Token | Valor | Para qué |
 |---|---|---|
 | `--mov-presion` | 120ms | un botón que se aprieta (`scale: .97`) |
-| `--mov-rapido` | 160ms | pasar el mouse, tooltips |
-| `--mov-medio` | 260ms | cambios de estado y todo CIERRE |
-| `--mov-lento` | 420ms | APERTURA de modales y cajones |
-| `--mov-entrada` | 640ms | un panel que entra al hacer scroll |
-| `--mov-cambio` | 500ms | un gráfico que pasa de un valor a otro |
-| `--mov-datos` | 900ms | un gráfico que se dibuja por primera vez |
-| `--mov-escalon` | 60ms | entre dos que entran juntos |
-| `--ease-salida` | `cubic-bezier(.23,1,.32,1)` | todo lo que APARECE |
-| `--ease-mueve` | `cubic-bezier(.77,0,.175,1)` | lo que se MUEVE de un lugar a otro |
+| `--mov-rapido` | 180ms | pasar el mouse, tooltips |
+| `--mov-medio` | 320ms | cambios de estado y todo CIERRE |
+| `--mov-lento` | 650ms | APERTURA de modales y cajones |
+| `--mov-entrada` | 900ms | un panel que entra al hacer scroll |
+| `--mov-cambio` | 800ms | un gráfico que pasa de un valor a otro |
+| `--mov-datos` | 1400ms | un gráfico que se dibuja por primera vez |
+| `--mov-correr` | 1600ms | un indicador que corre hasta su número |
+| `--mov-escalon` | 120ms | entre dos que entran juntos |
+| `--ease-entrada` | `cubic-bezier(.33,1,.68,1)` | lo que tiene que VERSE entrar |
+| `--ease-salida` | `cubic-bezier(.23,1,.32,1)` | la respuesta inmediata: hover, apretar, cerrar |
+| `--ease-mueve` | `cubic-bezier(.65,0,.35,1)` | lo que se MUEVE de un lugar a otro |
 | `--ease-hoja` | `cubic-bezier(.32,.72,0,1)` | cajones y hojas que entran |
+
+**Son duraciones de presentación, a pedido de SDN (2026-10-13).** La primera
+vuelta usó las de una interfaz de todos los días (~300 ms con una curva de
+salida fuerte, lo que recomienda `emil-design-eng`), y medido en el
+navegador el modal ya estaba al 95% a los 150 ms: se veía "rápido y brusco".
+La curva importa tanto como la duración: `--ease-salida` hace casi todo el
+recorrido al principio y una entrada de 420 ms se percibe de 120. Lo que se
+quiere VER entrar usa `--ease-entrada`, que lo reparte.
 
 **Reglas:**
 - **Se anima cuando la persona lo ve, no cuando llegan los datos.** Un panel
@@ -203,12 +213,17 @@ de compilación, así que nada de Framer Motion; reducir movimiento apaga todo).
   recién ahí se dibuja su gráfico. Esa fue la causa de "casi no se ven": la
   mitad terminaba de animarse fuera de vista.
 - **Nunca `ease-in`** en algo de la interfaz: arranca lento y se siente
-  pesado. Lo que aparece usa `--ease-salida`; lo que se mueve en pantalla
-  (la marca de una pestaña, una barra que cambia), `--ease-mueve`.
+  pesado. Lo que entra a la vista usa `--ease-entrada`; la respuesta
+  inmediata, `--ease-salida`; lo que se mueve en pantalla (la marca de una
+  pestaña, una barra que cambia), `--ease-mueve`.
+- **Medir antes de opinar**: el porcentaje de la animación que ya pasó a los
+  100, 200 y 300 ms, tomado en el navegador, dice cómo se ve. La duración
+  escrita no lo dice.
 - **Cerrar es más rápido que abrir** (`--mov-medio` contra `--mov-lento`).
 - **Lo que se repite seguido es corto**: cambiar un filtro anima en
   `--mov-cambio`, nunca en `--mov-datos`.
-- **Nada aparece desde cero**: un modal entra desde `scale: .96` + opacidad.
+- **Nada aparece desde cero**: un modal entra desde `scale: .92`, 28px más
+  abajo y desenfocado, y llega nítido.
   Los modales escalan desde su centro; lo que escala desde su disparador son
   los popovers.
 - **Se anima `scale`, `translate` y `opacity`**, nunca `transform` en algo que
@@ -220,8 +235,14 @@ de compilación, así que nada de Framer Motion; reducir movimiento apaga todo).
   es movimiento constante), nunca un hueco ni un "—" mientras carga.
 - **El modal abre en el momento del clic**, con un esqueleto, y el contenido
   llega nítido desde un desenfoque leve.
-- **Con reducir movimiento no se mueve nada** (`marca.css` lo corta con
-  `!important`) y todo se dibuja de una.
+- **Con reducir movimiento quedan solo fundidos suaves** (200 a 500 ms): nada
+  se desplaza, crece ni gira, y los gráficos se dibujan quietos. Reducir es
+  "menos y más suave", no "nada": sin fundidos, un modal aparece de golpe y
+  se pierde qué cambió. `marca.css` corta todo con `* { ... !important }`;
+  la v2 devuelve la opacidad con reglas más específicas, también con
+  `!important`. Y lo dice en pantalla (`.v2-aviso-mov`), con el camino para
+  apagarlo en Windows, iPhone, Mac y Android: quien lo tiene prendido sin
+  saberlo veía todo quieto y no sabía por qué.
 
 ## El flujo del recibo (2026-09-14, "Marco")
 

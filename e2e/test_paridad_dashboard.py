@@ -452,7 +452,7 @@ def test_la_v2_con_movimiento(page, informe):
     formato.scroll_into_view_if_needed()
     expect(formato).to_have_class(visto)
     assert _hasta_que(page, _ANIMANDO, "formato", 2), "el gráfico no se dibujó al entrar en pantalla"
-    assert _hasta_que(page, f"(p) => !({_ANIMANDO})(p)", "formato", 4), "la entrada no terminó"
+    assert _hasta_que(page, f"(p) => !({_ANIMANDO})(p)", "formato", 8), "la entrada no terminó"
     informe.paso("Al bajar, el panel de formato entró y su gráfico se dibujó delante de quien mira")
 
     # El modal abre en el momento del clic: el detalle se retiene para ver el esqueleto.

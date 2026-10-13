@@ -6890,3 +6890,41 @@ que llegue el detalle (el detalle se retiene en el robot), que la marca quede
 debajo de la pestaña elegida y que las filas nuevas entren escalonadas. Se
 revisaron además cuadros a lo largo de cada animación, en escritorio y
 teléfono.
+
+**Movimiento, segunda vuelta (2026-10-13, Admin 0.53.02).** SDN probó en
+Pruebas: los gráficos le seguían pareciendo muy rápidos y los modales
+aparecían "sin ningún efecto, rápido y brusco". En los cuadros de la primera
+vuelta el modal sí se animaba. La diferencia estaba en cómo se medía: en vez
+de sacar fotos sueltas, se tomó en el navegador, cuadro por cuadro, qué
+porcentaje de cada animación ya había pasado. Salieron dos causas:
+
+- **Con el movimiento normal**, el modal estaba al 79% de opacidad a los 100
+  ms y al 95% a los 150. Duraba 420 ms en el papel, pero la curva de salida
+  fuerte (la que recomienda `emil-design-eng` para la interfaz de todos los
+  días) hace casi todo al principio, y la escala de .96 apenas se notaba. Los
+  gráficos crecían visiblemente durante unos 600 ms.
+- **Con "reducir movimiento" prendido en el sistema** no había ningún efecto:
+  marca.css corta todo con `!important`. El celular de SDN ya lo tenía
+  prendido (por eso la colmena del Asistente se mueve igual desde el
+  2026-09-05), y en una PC con Windows lo prende "Efectos de animación"
+  apagado.
+
+Lo que se hizo:
+- **Duraciones de presentación** en los tokens: gráficos 1,4 s, con las barras
+  en cascada (hasta 900 ms entre la primera y la última) y la línea que se
+  dibuja de punta a punta; modal 650 ms; paneles 900 ms con 36 px de
+  recorrido; indicadores 1,6 s. Y una curva nueva, `--ease-entrada`
+  (easeOutCubic), para lo que tiene que verse entrar. Medido después: el
+  modal llega al 52% a los 100 ms y sigue moviéndose hasta los 400; una barra
+  crece durante más de un segundo.
+- **El modal entra desde más lejos**: escala .92, 28 px más abajo y
+  desenfocado, y llega nítido.
+- **Con "reducir movimiento" quedan fundidos suaves** (200 a 500 ms) en
+  paneles, modal, cajón y Asistente, sin nada que se desplace. Es lo que pide
+  la skill de Emil ("menos y más suave, no nada"). Y un aviso arriba del
+  panel dice que el sistema lo tiene prendido y cómo apagarlo en Windows,
+  iPhone, Mac y Android.
+
+Las reglas quedaron en `diseno-mi-trabajo` → "Movimiento", incluida una
+nueva: medir el porcentaje que ya pasó a los 100, 200 y 300 ms antes de
+opinar sobre una animación. La duración escrita no dice cómo se ve.
