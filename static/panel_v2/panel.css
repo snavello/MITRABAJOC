@@ -382,23 +382,34 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
    Las duraciones y las curvas con nombre. Las usa este archivo y las lee
    panel/movimiento para Chart.js: un solo lugar. Reglas (skill
    `diseno-mi-trabajo`, "Movimiento"; referencia, `emil-design-eng`):
-   - lo que aparece usa `--ease-salida` (arranca rápido y frena: responde ya);
-     lo que se mueve de un lugar a otro, `--ease-mueve`; nunca `ease-in`;
+   - lo que tiene que VERSE entrar (paneles, gráficos, modales) usa
+     `--ease-entrada`, que reparte el recorrido; la respuesta inmediata
+     (hover, apretar, cerrar) usa `--ease-salida`, que hace casi todo al
+     principio; lo que se mueve de un lugar a otro, `--ease-mueve`; nunca
+     `ease-in`;
    - cerrar es más rápido que abrir; lo que se usa muchas veces seguidas
-     (cambiar un filtro, pasar el mouse) es corto;
-   - con "reducir movimiento" no se anima nada (marca.css lo corta todo). */
+     (pasar el mouse, apretar) es corto;
+   - con "reducir movimiento" solo quedan fundidos suaves, sin nada que se
+     desplace (al final del archivo).
+
+   Las entradas son de PRESENTACIÓN, a pedido de SDN (2026-10-13): con las
+   duraciones cortas de una interfaz de todos los días (~300 ms, lo que
+   recomienda `emil-design-eng`) y una curva de salida fuerte, medido en el
+   navegador el modal ya estaba al 95% a los 150 ms y se veía "rápido y
+   brusco". Este panel se muestra; lo de todos los días sigue corto. */
 :root {
   --mov-presion: 120ms;   /* un botón que se aprieta */
-  --mov-rapido: 160ms;    /* pasar el mouse, tooltips */
-  --mov-medio: 260ms;     /* cambios de estado, cierres */
-  --mov-lento: 420ms;     /* apertura de modales y cajones */
-  --mov-entrada: 640ms;   /* un panel que entra al hacer scroll */
-  --mov-cambio: 500ms;    /* un gráfico que pasa de un valor a otro */
-  --mov-datos: 900ms;     /* un gráfico que se dibuja por primera vez */
-  --mov-correr: 900ms;    /* un indicador que corre hasta su número */
-  --mov-escalon: 60ms;    /* entre dos que entran juntos */
+  --mov-rapido: 180ms;    /* pasar el mouse, tooltips */
+  --mov-medio: 320ms;     /* cambios de estado, cierres */
+  --mov-lento: 650ms;     /* apertura de modales y cajones */
+  --mov-entrada: 900ms;   /* un panel que entra al hacer scroll */
+  --mov-cambio: 800ms;    /* un gráfico que pasa de un valor a otro */
+  --mov-datos: 1400ms;    /* un gráfico que se dibuja por primera vez */
+  --mov-correr: 1600ms;   /* un indicador que corre hasta su número */
+  --mov-escalon: 120ms;   /* entre dos que entran juntos */
+  --ease-entrada: cubic-bezier(.33, 1, .68, 1);
   --ease-salida: cubic-bezier(.23, 1, .32, 1);
-  --ease-mueve: cubic-bezier(.77, 0, .175, 1);
+  --ease-mueve: cubic-bezier(.65, 0, .35, 1);
   --ease-hoja: cubic-bezier(.32, .72, 0, 1);
 }
 .v2 { padding-top: 18px; }
@@ -444,7 +455,7 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
   cursor: pointer; font-size: 10px; }
 .v2-reiniciar { margin-left: auto; border-color: color-mix(in srgb, var(--destacado) 70%, white); color: #fff; background: none; }
 .v2-reiniciar:hover { background: var(--destacado); }
-@keyframes v2-entra { from { opacity: 0; translate: 0 6px; } to { opacity: 1; translate: 0 0; } }
+@keyframes v2-entra { from { opacity: 0; translate: 0 10px; } to { opacity: 1; translate: 0 0; } }
 
 .v2-heroes { display: grid; grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr)); gap: 12px; }
 .v2-hero { border-radius: 12px; padding: 14px; background: rgba(255,255,255,.05); box-shadow: inset 0 0 0 1px rgba(255,255,255,.09); min-width: 0; }
@@ -509,9 +520,9 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
    pantalla. `backwards` y no `both`: terminada la entrada, el panel vuelve a
    sus reglas y el hover lo puede levantar. */
 .v2-grid > .panel:not(.visto) { opacity: 0; }
-.v2-grid > .panel.visto { animation: v2-revela var(--mov-entrada) var(--ease-salida) var(--retraso, 0ms) backwards; }
-@keyframes v2-revela { from { opacity: 0; translate: 0 18px; } }
-.v2-aparece { animation: v2-entra var(--mov-medio) var(--ease-salida) both; }
+.v2-grid > .panel.visto { animation: v2-revela var(--mov-entrada) var(--ease-entrada) var(--retraso, 0ms) backwards; }
+@keyframes v2-revela { from { opacity: 0; translate: 0 36px; } }
+.v2-aparece { animation: v2-entra var(--mov-lento) var(--ease-entrada) both; }
 
 /* El modal "Ver". Abre al instante del clic con un esqueleto; el fondo se
    oscurece y se desenfoca apenas, y la caja entra centrada con una escala
@@ -522,19 +533,21 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
 .overlay-det.v2-anim { display: flex; align-items: flex-start; padding-top: max(18px, 7vh); visibility: hidden;
   background: rgba(8,12,20,0); z-index: 920;
   transition: background var(--mov-medio) ease, backdrop-filter var(--mov-medio) ease, visibility 0s var(--mov-medio); }
-.overlay-det.v2-anim.abierto { visibility: visible; background: rgba(8,12,20,.5); backdrop-filter: blur(4px);
+.overlay-det.v2-anim.abierto { visibility: visible; background: rgba(8,12,20,.5); backdrop-filter: blur(6px);
   transition: background var(--mov-lento) ease, backdrop-filter var(--mov-lento) ease; }
-.overlay-det.v2-anim .modal-det { opacity: 0; scale: .96; translate: 0 12px;
+.overlay-det.v2-anim .modal-det { opacity: 0; scale: .92; translate: 0 28px; filter: blur(6px);
   box-shadow: 0 30px 70px -20px rgba(8,12,20,.55), 0 0 0 1px rgba(8,12,20,.06);
   transition: opacity var(--mov-medio) var(--ease-salida), scale var(--mov-medio) var(--ease-salida),
-    translate var(--mov-medio) var(--ease-salida); }
-.overlay-det.v2-anim.abierto .modal-det { opacity: 1; scale: 1; translate: 0 0;
-  transition: opacity var(--mov-medio) var(--ease-salida), scale var(--mov-lento) var(--ease-salida),
-    translate var(--mov-lento) var(--ease-salida); }
+    translate var(--mov-medio) var(--ease-salida), filter var(--mov-medio) var(--ease-salida); }
+/* Entra subiendo y enfocándose, con la curva que reparte el recorrido: así
+   se ve llegar en vez de aparecer. */
+.overlay-det.v2-anim.abierto .modal-det { opacity: 1; scale: 1; translate: 0 0; filter: none;
+  transition: opacity calc(var(--mov-lento) * .7) var(--ease-entrada), scale var(--mov-lento) var(--ease-entrada),
+    translate var(--mov-lento) var(--ease-entrada), filter calc(var(--mov-lento) * .8) var(--ease-entrada); }
 /* El detalle llega nítido desde un desenfoque leve: borra el salto entre el
    esqueleto y el contenido. */
-.v2-nitido { animation: v2-nitido var(--mov-medio) var(--ease-salida); }
-@keyframes v2-nitido { from { opacity: 0; filter: blur(3px); } }
+.v2-nitido { animation: v2-nitido var(--mov-lento) var(--ease-entrada); }
+@keyframes v2-nitido { from { opacity: 0; filter: blur(4px); translate: 0 6px; } }
 @media (prefers-reduced-motion: reduce) {
   .v2-grid > .panel, .v2-aparece, .v2-nitido { animation: none; }
   .overlay-det.v2-anim, .overlay-det.v2-anim .modal-det { transition: none; backdrop-filter: none; }
@@ -553,7 +566,7 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
   .v2-asist { transform: none; translate: 0 105%; transition: translate var(--mov-medio) var(--ease-salida), height var(--mov-medio) var(--ease-salida); }
   .v2-asist.abierto { translate: 0 0; transition: translate var(--mov-lento) var(--ease-hoja), height var(--mov-medio) var(--ease-salida); }
 }
-.v2-asist .burb { animation: v2-burb var(--mov-medio) var(--ease-salida) both; }
+.v2-asist .burb { animation: v2-burb var(--mov-lento) var(--ease-entrada) both; }
 @keyframes v2-burb { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
 @media (prefers-reduced-motion: reduce) {
   .v2-asist { transition: none; }
@@ -627,9 +640,42 @@ footer.dash { max-width: 1280px; margin: 0 auto; padding: 10px 16px 26px; font-s
 .v2-indicador { position: absolute; top: 4px; bottom: 4px; left: 0; z-index: 0; border-radius: 8px;
   background: var(--destacado); box-shadow: 0 4px 14px -6px var(--destacado); }
 .v2-indicador.listo { transition: translate var(--mov-medio) var(--ease-mueve), width var(--mov-medio) var(--ease-mueve); }
-.v2-fila-nueva { animation: v2-entra var(--mov-medio) var(--ease-salida) backwards; }
+.v2-fila-nueva { animation: v2-entra var(--mov-lento) var(--ease-entrada) backwards; }
 .v2-recarga { animation: v2-funde var(--mov-medio) ease-out; }
 @keyframes v2-funde { from { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) {
   .v2-esqueleto i, .v2-det-esqueleto i, .v2-esq-num, .v2-fila-nueva, .v2-recarga { animation: none; }
 }
+
+/* ---------- Con "reducir movimiento": fundidos suaves, nada que se mueva ----------
+   Reducir es "menos y más suave", no "nada" (emil-design-eng): sin fundidos,
+   un panel o un modal aparecen de golpe y se pierde qué cambió. marca.css
+   corta TODA animación con `* { ... !important }`; estas reglas, más
+   específicas y también con !important, devuelven solo la opacidad. Nada se
+   desplaza, crece ni gira: los gráficos se dibujan quietos. */
+@media (prefers-reduced-motion: reduce) {
+  .v2-grid > .panel.visto { animation: v2-solo-funde 500ms ease-out var(--retraso, 0ms) backwards !important; }
+  .overlay-det.v2-anim .modal-det { scale: 1 !important; translate: 0 0 !important; filter: none !important;
+    transition: opacity 200ms ease-out !important; }
+  .overlay-det.v2-anim.abierto .modal-det { transition: opacity 350ms ease-out !important; }
+  .overlay-det.v2-anim { transition: background 200ms ease-out, visibility 0s 200ms !important; }
+  .overlay-det.v2-anim.abierto { transition: background 350ms ease-out !important; }
+  .v2-nitido, .v2-aparece, .v2-fila-nueva, .v2-asist .burb, .v2-puesto { animation: v2-solo-funde 300ms ease-out backwards !important; }
+  .v2-cajon, .v2-asist { translate: 0 0 !important; opacity: 0; transition: opacity 200ms ease-out, visibility 0s 200ms !important; }
+  .v2-cajon.abierto, .v2-asist.abierto { opacity: 1; transition: opacity 350ms ease-out !important; }
+  /* Sin desplazarse, el Asistente cerrado quedaría transparente pero encima
+     de la página: se oculta del todo al terminar de desvanecerse. */
+  .v2-asist { visibility: hidden; } .v2-asist.abierto { visibility: visible; }
+  .v2-cajon-fondo { transition: background 200ms ease-out, visibility 0s 200ms !important; }
+  .v2-cajon-fondo.abierto { transition: background 350ms ease-out !important; }
+}
+@keyframes v2-solo-funde { from { opacity: 0; } }
+
+/* El aviso de que el sistema pide reducir el movimiento (solo en la v2, que
+   hoy existe solo en local y Pruebas): sin él, quien tiene la opción
+   prendida ve todo quieto y no sabe por qué. */
+.v2-aviso-mov { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 9px 14px; border-radius: 12px;
+  background: rgba(255,255,255,.94); color: var(--tinta); font-size: 12.5px; line-height: 1.4;
+  box-shadow: 0 6px 18px -10px rgba(8,12,20,.35); }
+.v2-aviso-mov b { color: var(--marca-primario); }
+.v2-aviso-mov button { margin-left: auto; flex: none; border: 0; background: none; color: var(--gris); font-size: 15px; cursor: pointer; }

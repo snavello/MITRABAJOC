@@ -130,7 +130,7 @@ export function Explorador({ datos, estado, despachar, tabs, contadores, abrirDe
   const fila = (it, i) => {
     const tr = def.fila(it, abrirDetalle);
     return desde >= 0 && i >= desde
-      ? cloneElement(tr, { class: "v2-fila-nueva", style: { animationDelay: Math.min((i - desde) * 30, 270) + "ms" } })
+      ? cloneElement(tr, { class: "v2-fila-nueva", style: { animationDelay: Math.min((i - desde) * 60, 540) + "ms" } })
       : tr;
   };
   return html`

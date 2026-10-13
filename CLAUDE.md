@@ -1260,6 +1260,12 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     marca de pestaña que se desliza; esqueletos con brillo; tooltips de la
     casa. Reglas en `diseno-mi-trabajo` → "Movimiento"; robot
     `test_la_v2_con_movimiento`, el único que corre sin reducir movimiento.
+    **Segunda vuelta** (2026-10-13, Admin 0.53.02): SDN los seguía viendo
+    rápidos y el modal brusco. Medido, el modal estaba al 95% a los 150 ms:
+    duraciones de presentación (gráficos 1,4 s en cascada, modal 650 ms que
+    llega desenfocado y se enfoca) y una curva `--ease-entrada` que reparte
+    el recorrido. Con "reducir movimiento" ya no queda todo quieto: fundidos
+    suaves y un aviso que dice cómo apagarlo.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 

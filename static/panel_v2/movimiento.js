@@ -17,7 +17,7 @@
 
 export const menosMovimiento = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const DEFECTOS = { "--mov-datos": 900, "--mov-cambio": 500, "--mov-correr": 900, "--mov-escalon": 60 };
+const DEFECTOS = { "--mov-datos": 1400, "--mov-cambio": 800, "--mov-correr": 1600, "--mov-escalon": 120 };
 
 export function ms(token) {
   const v = getComputedStyle(document.documentElement).getPropertyValue(token).trim();

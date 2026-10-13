@@ -10,11 +10,14 @@
    - cada gráfico se dibuja CUANDO SU PANEL ENTRA EN PANTALLA, no cuando
      llegan los datos: si no, los de abajo terminaban de animarse sin que
      nadie los viera (`alEntrar` de panel/movimiento);
-   - al aparecer, las barras crecen desde la base y la línea sube desde el
-     cero, escalonadas (la última arranca antes de 360 ms), en `--mov-datos`;
+   - al aparecer, las barras crecen desde la base una detrás de otra (la
+     última arranca antes de 900 ms) y la línea se va dibujando de izquierda
+     a derecha, en `--mov-datos`, con una curva que reparte el recorrido
+     (easeOutCubic): con la de salida fuerte se veía terminado enseguida;
    - al cambiar los filtros, cada gráfico pasa del valor viejo al nuevo en
-     `--mov-cambio`, más corto: es lo que se hace decenas de veces seguidas;
-   - con prefers-reduced-motion no se anima nada y todo se dibuja de una.
+     `--mov-cambio`;
+   - con prefers-reduced-motion no se anima nada y todo se dibuja de una (el
+     panel entra con un fundido, en panel.css).
 
    Chart.js, Leaflet y MapaMT llegan como scripts comunes (las globales
    `Chart`, `L` y `MapaMT`), igual que en la v1. */
@@ -24,7 +27,7 @@ import { html } from "panel/html";
 import { fmtN, fmtM, fFecha, fCorta } from "panel/formato";
 import { menosMovimiento, ms, alEntrar } from "panel/movimiento";
 
-const TOPE_ENTRADA = 360;
+const TOPE_ENTRADA = 900;
 
 let PALETA = null;
 /* Los colores salen de las variables CSS, como en la v1: la marca del
@@ -70,7 +73,7 @@ export function mezcla(hex, pct) {
 
 function animEntrada(paso, porSerie, extra) {
   if (menosMovimiento()) return { animation: false };
-  return Object.assign({ animation: { duration: ms("--mov-datos"), easing: "easeOutQuart",
+  return Object.assign({ animation: { duration: ms("--mov-datos"), easing: "easeOutCubic",
     delay: (c) => (c.type === "data" && c.mode === "default")
       ? Math.min(TOPE_ENTRADA, c.dataIndex * paso + c.datasetIndex * porSerie) : 0 } }, extra || {});
 }
@@ -199,9 +202,12 @@ export function Serie({ datos }) {
       scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 9, maxRotation: 0 } },
         y: { beginAtZero: true, grid: { color: C.linea } } } },
     // La línea sube desde el cero, de izquierda a derecha.
-    entrada: animEntrada(4, 0, menosMovimiento() ? {} : { animations: { y: { duration: ms("--mov-datos"), easing: "easeOutCubic",
+    entrada: animEntrada(4, 0, menosMovimiento() ? {} : { animations: { y: { duration: ms("--mov-datos") * 0.65, easing: "easeOutCubic",
       from: (c) => (c.type === "data" ? c.chart.scales.y.getPixelForValue(0) : undefined),
-      delay: (c) => (c.type === "data" && c.mode === "default" ? Math.min(TOPE_ENTRADA, c.dataIndex * 4) : 0) } } }),
+      // Cada punto arranca un poco después del anterior: en total, la línea
+      // tarda TOPE_ENTRADA en recorrer el gráfico de punta a punta.
+      delay: (c) => (c.type === "data" && c.mode === "default"
+        ? Math.round(c.dataIndex / Math.max(1, c.chart.data.labels.length - 1) * TOPE_ENTRADA) : 0) } } }),
   }, [datos]);
   return html`<div class="c-wrap"><canvas ref=${lienzo}></canvas></div>`;
 }
@@ -226,7 +232,7 @@ export function Validacion({ datos, estado, despachar }) {
       },
       plugins: { legend: { position: "bottom", labels: { usePointStyle: true, pointStyle: "circle", padding: 14 } } } }),
     entrada: menosMovimiento() ? { animation: false }
-      : { animation: { duration: ms("--mov-datos") + 200, easing: "easeOutQuart", animateRotate: true, animateScale: true } },
+      : { animation: { duration: ms("--mov-datos") + 300, easing: "easeOutCubic", animateRotate: true, animateScale: true } },
   }, [datos, estado.resultado]);
   return html`<div class="c-wrap"><canvas ref=${lienzo}></canvas></div>`;
 }
@@ -260,7 +266,7 @@ export function Tramites({ datos, estado, despachar }) {
         { tipo: "alternarValor", campo: "estadoTramite", valor: ESTADOS[item.datasetIndex] },
         { tipo: "tab", valor: "tramites" }]) }) },
       scales: { x: { stacked: true, grid: { color: C.linea } }, y: { stacked: true, grid: { display: false } } } }),
-    entrada: animEntrada(70, 110),
+    entrada: animEntrada(110, 160),
   }, [datos, elegidas.join(","), estado.estadoTramite]);
   return html`<div class="c-wrap chica"><canvas ref=${lienzo}></canvas></div>`;
 }
@@ -285,7 +291,7 @@ export function Notificaciones({ datos, estado, despachar }) {
       },
       plugins: { legend: LEYENDA },
       scales: { x: { stacked: true, grid: { color: C.linea } }, y: { stacked: true, grid: { display: false } } } }),
-    entrada: animEntrada(90, 140),
+    entrada: animEntrada(120, 180),
   }, [datos, estado.tipoNotif]);
   return html`
     <div class="notif-resumen" id="notif-resumen">${datos && html`
@@ -316,7 +322,7 @@ export function Empresas({ datos, estado, despachar }) {
       scales: { x: { grid: { color: C.linea }, ticks: { callback: (v) => (v >= 1e6
         ? "$" + (v / 1e6).toLocaleString("es-AR", { maximumFractionDigits: 1 }) + "M" : "$" + Math.round(v / 1000) + "k") } },
         y: { grid: { display: false } } } }),
-    entrada: animEntrada(60, 0),
+    entrada: animEntrada(110, 0),
   }, [datos, elegidas.join(",")]);
   return html`<div class="c-wrap chica"><canvas ref=${lienzo}></canvas></div>`;
 }
@@ -337,7 +343,7 @@ export function Consultas({ datos, estado, despachar }) {
       },
       plugins: { legend: { display: false }, tooltip: UNA_SERIE },
       scales: { x: { grid: { color: C.linea } }, y: { grid: { display: false } } } }),
-    entrada: animEntrada(60, 0),
+    entrada: animEntrada(110, 0),
   }, [datos, estado.tema]);
   return html`<div class="c-wrap chica"><canvas ref=${lienzo}></canvas></div>`;
 }
@@ -354,7 +360,7 @@ export function Formato({ datos }) {
       plugins: { legend: { position: "bottom", labels: { usePointStyle: true, pointStyle: "circle", padding: 14 } } },
       scales: { x: { stacked: true, grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true } },
         y: { stacked: true, grid: { color: C.linea } } } },
-    entrada: animEntrada(30, 60),
+    entrada: animEntrada(70, 120),
   }, [datos]);
   return html`<div class="c-wrap chica"><canvas ref=${lienzo}></canvas></div>`;
 }
@@ -372,7 +378,7 @@ export function Semaforo({ datos }) {
     </div>
     <div class="sem-lista" id="sem-lista">${datos.empresas.length ? datos.empresas.map((e, i) => html`
       <div class=${"sem-item" + (vista.visto ? " v2-aparece" : "")}
-        style=${{ "--lc": "var(" + ESTADO_SEM[e.estado][0] + ")", animationDelay: vista.retraso + Math.min(i * 30, 300) + "ms" }}>
+        style=${{ "--lc": "var(" + ESTADO_SEM[e.estado][0] + ")", animationDelay: vista.retraso + Math.min(i * 70, 700) + "ms" }}>
         <span class="luz"></span>
         <div><div class="emp">${e.nombre}</div>
           <div class="dep">Último depósito: ${fFecha(e.ultimo_deposito)} · ${ESTADO_SEM[e.estado][2]}</div></div>
