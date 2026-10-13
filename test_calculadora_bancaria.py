@@ -135,6 +135,34 @@ def test_comparar_marca_lo_que_no_coincide():
     assert comp["totales"][0]["coincide"]              # tolerancia de $ 1
     assert comp["extras"] == [{"concepto": "Bonificación especial", "seccion": "haberes", "importe": 5000.0}]
     assert comp["distintos"] == 1
+    assert por["BAS"]["gravedad"] == "coincide" and por["ROE"]["gravedad"] == "grave"   # 3,3% de 72.413,50
+
+
+def test_lo_que_el_recibo_trae_y_la_calculadora_no_tiene_elegido_se_muestra():
+    """El recibo trae función cajero y la calculadora no tiene tildado Cajero:
+    no se pierde. Sale con esperado $ 0 y qué tocar; nunca se tilda solo."""
+    esperado = g.calcular_recibo({"categoria": 0, "tramo_roe": 1})
+    comp = g.comparar(esperado, {"renglones": {"CAJFUN": 163_963.06, "XYZ": 5}})
+    (c,) = comp["renglones"]                            # un código desconocido no se inventa
+    assert c["fuera"] and c["esperado"] == 0 and c["gravedad"] == "grave" and "Cajero" in c["como"]
+    assert comp["distintos"] == 1
+    con_cajero = g.calcular_recibo({"categoria": 0, "tramo_roe": 1, "cajero": True})
+    (c,) = g.comparar(con_cajero, {"renglones": {"CAJFUN": 163_963.06}})["renglones"]
+    assert c["coincide"] and not c.get("fuera")
+
+
+@pytest.mark.parametrize("diferencia, esperado, gravedad", [
+    (0.99, 1000, "coincide"),          # menos de $ 1
+    (10, 1000, "leve"),                # justo el 1%
+    (-10, 1000, "leve"),
+    (10.01, 1000, "grave"),            # más del 1%
+    (5, 0, "grave"),                   # se esperaba $ 0
+    (-25_000, 2_505_061.24, "leve"),   # $ 25.000 sobre el conformado: 0,998%
+    (-30_000, 2_505_061.24, "grave"),  # $ 30.000: 1,2%
+])
+def test_gravedad_de_una_diferencia(diferencia, esperado, gravedad):
+    """Rojo más del 1% de lo esperado, amarillo hasta el 1% (pedido de SDN)."""
+    assert g.gravedad(diferencia, esperado) == gravedad
 
 
 # ---------------------------------------------------------------- rutas

@@ -20,6 +20,8 @@
     --ambar: #ffb020;
     --bien: #3ecfae;
     --mal: #ff6b6b;
+    --leve: #ffd27a;      /* diferencia de hasta el 1%: el amarillo de /entornos */
+    --celeste: #8ecbff;   /* totales: el celeste de los gráficos de /entornos */
     --linea: rgba(255,255,255,.12);
     --suave: rgba(255,255,255,.62);
     --fuente-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
@@ -73,14 +75,19 @@
   td.num, th.num { text-align:right; font-family:var(--mono); white-space:nowrap; }
   td .nota { display:block; font-size:12px; color:var(--suave); margin-top:2px; line-height:1.35; }
   td .nota.supuesto::before { content:"supuesto · "; color:var(--ambar); font-weight:600; }
+  td .nota.fuera { color:#ffb3b3; }
+  tr.fuera { display:none; }
+  .chequeando tr.fuera { display:table-row; }
   tr.seccion td { font-family:var(--fuente-display); font-size:15px; letter-spacing:1px; text-transform:uppercase;
     color:var(--ambar); padding-top:14px; border-bottom:0; }
+  /* Los totales en celeste: el amarillo quedó para las diferencias menores. */
+  tr.total td, tr.subtotal td { color:var(--celeste); }
   tr.total td { font-weight:700; border-top:1px solid var(--linea); }
-  tr.neto td { font-size:18px; font-weight:700; color:var(--ambar); border-bottom:0; }
+  tr.neto td { font-size:18px; font-weight:700; color:var(--celeste); border-bottom:0; }
   .real-col { display:none; }
   .chequeando .real-col { display:table-cell; }
   td.real-col input { width:130px; text-align:right; font-family:var(--mono); padding:6px 8px; }
-  .dif.bien { color:var(--bien); } .dif.mal { color:var(--mal); font-weight:700; }
+  .dif.bien { color:var(--bien); } .dif.mal { color:var(--mal); font-weight:700; } .dif.leve { color:var(--leve); font-weight:700; }
   .acciones { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:14px; }
   .boton { background:var(--ambar); color:#1b1508; border:0; border-radius:10px; padding:10px 16px; font:700 14px system-ui; cursor:pointer; text-decoration:none; display:inline-block; }
   .boton.suave { background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2); }
@@ -88,8 +95,8 @@
   .resumen-dif { font-size:14px; padding:10px 12px; border-radius:10px; margin-top:12px; display:none; }
   .resumen-dif.bien { display:block; background:color-mix(in srgb, var(--bien) 16%, transparent); border:1px solid var(--bien); }
   .resumen-dif.mal { display:block; background:color-mix(in srgb, var(--mal) 14%, transparent); border:1px solid var(--mal); }
-  .chequeo { display:none; margin-top:16px; }
-  .chequeando .chequeo { display:block; }
+  .columna { display:flex; flex-direction:column; gap:18px; min-width:0; }
+  .chequeo[hidden] { display:none; }
   .extras-fila { display:grid; grid-template-columns:1fr 150px 130px 34px; gap:6px; margin-bottom:6px; }
   @media (max-width:600px) { .extras-fila { grid-template-columns:1fr 1fr; } }
   .quitar { background:none; border:1px solid rgba(255,255,255,.2); color:#fff; border-radius:8px; cursor:pointer; }
@@ -101,10 +108,43 @@
   .aclara { font-size:13px; line-height:1.45; color:var(--suave); background:rgba(255,176,32,.08);
     border-left:3px solid var(--ambar); border-radius:6px; padding:8px 11px; margin:-4px 0 12px; }
   .aclara b { color:#fff; }
-  .leer { display:flex; gap:14px; align-items:center; flex-wrap:wrap; background:rgba(255,255,255,.05);
-    border:1px dashed rgba(255,255,255,.25); border-radius:12px; padding:12px 14px; }
-  .leer > div { flex:1 1 260px; }
-  .leer .boton { cursor:pointer; }
+  /* El análisis con IA, en su propio recuadro: la misma espera que el
+     análisis de recibo del afiliado (aro con el reloj y las fases). */
+  .ia-caja { border-color:color-mix(in srgb, var(--ambar) 45%, transparent); }
+  .ia-cab { display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; }
+  .ia-cab > div { flex:1 1 260px; }
+  .ia-cab h2 { margin-bottom:4px; }
+  .ia-cab .cerrar { background:none; border:0; color:var(--suave); font-size:22px; line-height:1; cursor:pointer; }
+  .ia-cron { display:grid; grid-template-columns:148px 1fr; gap:22px; align-items:center; padding:18px 0 4px; }
+  @media (max-width:600px) { .ia-cron { grid-template-columns:1fr; justify-items:center; } }
+  .ia-aro { position:relative; width:148px; height:148px; }
+  .ia-aro svg { width:100%; height:100%; transform:rotate(-90deg); }
+  .ia-aro .pista { fill:none; stroke:var(--linea); stroke-width:7; }
+  .ia-aro .avance { fill:none; stroke:var(--ambar); stroke-width:7; stroke-linecap:round;
+    stroke-dasharray:414; stroke-dashoffset:414; transition:stroke-dashoffset .95s linear; }
+  .ia-aro .centro { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .ia-aro .centro .n { font-family:var(--mono); font-size:32px; font-weight:600; letter-spacing:-1px; }
+  .ia-aro .centro .et { font-size:9.5px; letter-spacing:2px; text-transform:uppercase; color:var(--suave); }
+  .ia-fases { display:grid; gap:1px; background:var(--linea); border:1px solid var(--linea); border-radius:12px; overflow:hidden; width:100%; }
+  .ia-fase { background:#111d31; padding:11px 14px; display:flex; align-items:center; gap:11px; font-size:13.5px; color:var(--suave); }
+  .ia-fase .pt { width:9px; height:9px; border-radius:50%; background:var(--linea); flex:none; }
+  .ia-fase.hecha { color:#fff; } .ia-fase.hecha .pt { background:var(--bien); }
+  .ia-fase.activa { color:#fff; font-weight:600; }
+  .ia-fase.activa .pt { background:var(--ambar); box-shadow:0 0 0 0 color-mix(in srgb, var(--ambar) 60%, transparent);
+    animation:ia-pulso 1.6s ease-out infinite; }
+  @keyframes ia-pulso { to { box-shadow:0 0 0 10px transparent; } }
+  .ia-resultado ul { margin:10px 0 0 18px; font-size:14px; line-height:1.55; }
+  /* La categoría que dice el recibo: se propone, no se cambia sola. */
+  .sugerencia { font-size:13px; line-height:1.45; border-radius:10px; padding:9px 11px; margin:-4px 0 13px;
+    background:rgba(142,203,255,.08); border:1px solid color-mix(in srgb, var(--celeste) 45%, transparent); }
+  .sugerencia.ok { background:none; border-color:transparent; padding:0 2px; color:var(--bien); }
+  .sugerencia .opciones-cat { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .sugerencia .boton { padding:7px 11px; font-size:13px; }
+  .ia-caja .sugerencia { margin:12px 0 0; }
+  @media (prefers-reduced-motion:reduce) {
+    .ia-fase.activa .pt { animation:none; }
+    .ia-aro .avance { transition:none; }
+  }
 
   .estado { font:600 12px system-ui; border-radius:999px; padding:3px 9px; display:inline-block; }
   .estado.nuevo { background:var(--ambar); color:#1b1508; }
@@ -147,6 +187,7 @@
         <h2>Categoría</h2>
         <div class="campo"><span>Rama</span><div class="segmentos" id="ramas"></div></div>
         <label class="campo"><span>Categoría</span><select id="categoria"></select></label>
+        <div class="sugerencia" id="sug-form" role="status" hidden></div>
         <label class="campo"><span>ROE del banco (lo publica el BCRA)</span><select id="tramo_roe"></select></label>
         <hr class="separa">
         <h2>Adicionales</h2>
@@ -170,6 +211,7 @@
         <label class="campo"><span>Impuesto a las Ganancias (a mano, no se calcula)</span><input type="text" id="ganancias" inputmode="decimal" placeholder="0,00"></label>
       </form>
 
+      <div class="columna">
       <div class="tarjeta" id="recibo">
         <h2>Recibo esperado</h2>
         <p class="aclara">Calcula solo el mes, con la grilla elegida. <b>No contempla</b> retenciones ni reintegros de Ganancias (el importe se carga a mano), ni conceptos de períodos anteriores (retroactivos, ajustes o diferencias de otros meses).</p>
@@ -182,22 +224,37 @@
         <div class="resumen-dif" id="resumen-dif"></div>
         <div class="acciones">
           <button type="button" class="boton suave" id="btn-chequear" aria-pressed="false">Chequear recibo</button>
+          <button type="button" class="boton suave" id="btn-ia">Analizar con IA</button>
           <span class="fuente" id="estado-calc"></span>
         </div>
+      </div>
 
-        <div class="chequeo">
-          <hr class="separa">
-          <h2>Del recibo real</h2>
-          <div class="leer">
-            <div>
-              <b>Leer el recibo con IA</b>
-              <p class="fuente">Subí el PDF o una foto: la IA lo lee y completa los importes. Revisalos antes de guardar. Usa créditos de la API (queda en Uso de IA de /plataforma); no se guarda el archivo ni el nombre o CUIL.</p>
-            </div>
-            <label class="boton suave" for="archivo-recibo">Elegir archivo</label>
-            <input type="file" id="archivo-recibo" accept="application/pdf,image/*" hidden>
+      <div class="tarjeta ia-caja" id="ia-caja" hidden>
+        <div class="ia-cab">
+          <div>
+            <h2>Análisis con IA</h2>
+            <p class="fuente">Subí el PDF o una foto del recibo: la IA lo lee y completa los importes del recibo real. Revisalos antes de guardar. Usa créditos de la API (queda en Uso de IA de /plataforma); no se guarda el archivo ni el nombre o CUIL.</p>
           </div>
-          <div class="aviso" id="aviso-leer" role="status"></div>
-          <p class="fuente" style="margin:10px 0">O cargá a mano, al lado de cada renglón, lo que dice el recibo. Si el recibo trae algo que la calculadora no tiene, va acá abajo.</p>
+          <label class="boton suave" for="archivo-recibo" id="btn-archivo">Elegir archivo</label>
+          <button type="button" class="cerrar" id="ia-cerrar" aria-label="Cerrar el análisis con IA">×</button>
+        </div>
+        <input type="file" id="archivo-recibo" accept="application/pdf,image/*" hidden>
+        <div id="ia-espera" hidden>
+          <div class="ia-cron">
+            <div class="ia-aro">
+              <svg viewBox="0 0 148 148" aria-hidden="true"><circle class="pista" cx="74" cy="74" r="66"/><circle class="avance" id="ia-avance" cx="74" cy="74" r="66"/></svg>
+              <div class="centro"><span class="n" id="ia-reloj">00:00</span><span class="et">Segundos</span></div>
+            </div>
+            <div class="ia-fases" id="ia-fases"></div>
+          </div>
+        </div>
+        <div class="ia-resultado" id="ia-resultado" role="status"></div>
+        <div class="sugerencia" id="sug-ia" hidden></div>
+      </div>
+
+      <div class="tarjeta chequeo" id="chequeo" hidden>
+          <h2>Del recibo real</h2>
+          <p class="fuente" style="margin:0 0 10px">Al lado de cada renglón del recibo esperado va lo que dice el recibo real: lo completa el análisis con IA o se carga a mano. Si el recibo trae algo que la calculadora no tiene, va acá abajo.</p>
           <div class="grupo-t" style="margin-bottom:6px">Totales impresos</div>
           <div class="totales-reales">
             <label class="campo"><span>Total bruto</span><input type="text" id="real-bruto" inputmode="decimal"></label>
@@ -214,7 +271,7 @@
           <p class="fuente">No pongas nombre ni CUIL: el caso es para revisar la cuenta, no a la persona.</p>
           <div class="acciones"><button type="button" class="boton" id="btn-guardar">Guardar caso</button></div>
           <div class="aviso" id="aviso-guardar" role="status"></div>
-        </div>
+      </div>
       </div>
     </div>
   </section>
@@ -354,21 +411,25 @@
   function dibujar(d) {
     const comp = {};
     for (const c of (d.comparacion?.renglones || [])) comp[c.codigo] = c;
+    // Por sección: lo esperado y, debajo, lo que el recibo real trae y la
+    // calculadora no tiene elegido (esperado $ 0, con qué tocar para que esté).
+    const fuera = (d.comparacion?.renglones || []).filter(c => c.fuera);
     const filas = [];
-    let seccion = null;
-    for (const r of d.esperado.renglones) {
-      if (r.seccion !== seccion) {
-        seccion = r.seccion;
-        filas.push(el('tr', { class: 'seccion' }, el('td', { colspan: 4, text: SECCIONES[seccion] })));
+    for (const seccion of Object.keys(SECCIONES)) {
+      const propios = d.esperado.renglones.filter(r => r.seccion === seccion);
+      const ajenos = fuera.filter(c => c.seccion === seccion);
+      if (!propios.length && !ajenos.length) continue;
+      filas.push(el('tr', { class: 'seccion' }, el('td', { colspan: 4, text: SECCIONES[seccion] })));
+      for (const r of propios) {
+        const nota = r.nota ? el('span', { class: 'nota' + (r.supuesto ? ' supuesto' : ''), text: r.nota }) : null;
+        filas.push(el('tr', {}, el('td', {}, r.concepto, nota), el('td', { class: 'num', text: pesos(r.importe) }),
+          el('td', { class: 'num real-col' }, entradaReal(r.codigo, r.concepto)), celdaDif(comp[r.codigo])));
       }
-      const nota = r.nota ? el('span', { class: 'nota' + (r.supuesto ? ' supuesto' : ''), text: r.nota }) : null;
-      const input = el('input', { type: 'text', inputmode: 'decimal', 'aria-label': 'Recibo real: ' + r.concepto });
-      input.value = reales[r.codigo] ?? '';
-      input.addEventListener('input', () => { reales[r.codigo] = input.value; calcular(); });
-      const c = comp[r.codigo];
-      const dif = el('td', { class: 'num real-col dif' + (c ? (c.coincide ? ' bien' : ' mal') : ''), text: c ? (c.coincide ? '✓' : pesos(c.diferencia)) : '' });
-      filas.push(el('tr', {}, el('td', {}, r.concepto, nota), el('td', { class: 'num', text: pesos(r.importe) }),
-        el('td', { class: 'num real-col' }, input), dif));
+      for (const c of ajenos) {
+        const nota = el('span', { class: 'nota fuera', text: 'Está en el recibo y no en la calculadora. ' + c.como });
+        filas.push(el('tr', { class: 'fuera' }, el('td', {}, c.concepto, nota), el('td', { class: 'num', text: '—' }),
+          el('td', { class: 'num real-col' }, entradaReal(c.codigo, c.concepto)), celdaDif(c)));
+      }
     }
     const t = d.esperado.totales;
     const compT = {};
@@ -377,12 +438,12 @@
       const c = compT[clave];
       return el('tr', { class: cls }, el('td', { text: nombre }), el('td', { class: 'num', text: pesos(valor) }),
         el('td', { class: 'num real-col', text: c ? pesos(c.real) : '' }),
-        el('td', { class: 'num real-col dif' + (c ? (c.coincide ? ' bien' : ' mal') : ''), text: c ? (c.coincide ? '✓' : pesos(c.diferencia)) : '' }));
+        celdaDif(c));
     };
     filas.push(filaTotal('Total remunerativo', '', t.remunerativo, 'total'));
-    if (t.no_remunerativo) filas.push(filaTotal('Total no remunerativo', '', t.no_remunerativo, ''));
+    if (t.no_remunerativo) filas.push(filaTotal('Total no remunerativo', '', t.no_remunerativo, 'subtotal'));
     filas.push(filaTotal('Total bruto', 'bruto', t.bruto, 'total'));
-    filas.push(filaTotal('Total descuentos', 'descuentos', t.descuentos, ''));
+    filas.push(filaTotal('Total descuentos', 'descuentos', t.descuentos, 'subtotal'));
     filas.push(filaTotal('Neto a cobrar', 'neto', t.neto, 'neto'));
     $('renglones').replaceChildren(...filas);
 
@@ -397,22 +458,119 @@
                             : `Los ${cargados} valores cargados coinciden con lo que corresponde.`;
       }
     }
+    sugerirCategoria();
+  }
+  function entradaReal(codigo, concepto) {
+    const input = el('input', { type: 'text', inputmode: 'decimal', 'aria-label': 'Recibo real: ' + concepto });
+    input.value = reales[codigo] ?? '';
+    input.addEventListener('input', () => { reales[codigo] = input.value; calcular(); });
+    return input;
+  }
+  // Solo el COLOR de la diferencia: rojo más del 1% de lo esperado, amarillo
+  // hasta el 1%. Coincidir sigue siendo menos de $ 1. La regla está en el
+  // servidor (grilla_bancaria.gravedad); acá solo se pinta.
+  function celdaDif(c) {
+    if (!c) return el('td', { class: 'num real-col dif' });
+    const clase = { coincide: ' bien', leve: ' leve', grave: ' mal' }[c.gravedad] || ' mal';
+    const pct = c.esperado ? ' (' + fmt.format(Math.abs(c.diferencia / c.esperado) * 100) + '%)' : '';
+    return el('td', { class: 'num real-col dif' + clase, text: c.coincide ? '✓' : pesos(c.diferencia),
+      title: c.coincide ? 'Coincide (tolerancia $ 1)' : 'Diferencia' + pct });
+  }
+
+  // ---------- la categoría que dice el recibo ----------
+  // El básico del recibo real (leído por la IA o cargado a mano) dice qué
+  // categoría es. No se cambia sola: se propone, y "Ajustar al recibo" la aplica.
+  function sugerirCategoria() {
+    const cajas = [$('sug-form'), $('sug-ia')];
+    const basico = aNumero(reales.BAS);
+    if (!opciones || basico === null || Number.isNaN(basico)) { cajas.forEach(c => { c.hidden = true; }); return; }
+    const actual = opciones.ramas[rama].categorias[Number($('categoria').value)];
+    const coinciden = [];
+    for (const [clave, r] of Object.entries(opciones.ramas))
+      r.categorias.forEach((c, i) => { if (Math.abs(c.basico - basico) < 1) coinciden.push({ rama: clave, i, c, nombreRama: r.nombre }); });
+    const arma = caja => {
+      caja.hidden = false;
+      if (actual && Math.abs(actual.basico - basico) < 1) {
+        caja.className = 'sugerencia ok';
+        caja.replaceChildren('✓ La categoría elegida coincide con el básico del recibo (' + pesos(basico) + ').');
+        return;
+      }
+      caja.className = 'sugerencia';
+      if (!coinciden.length) {
+        caja.replaceChildren('El básico del recibo (' + pesos(basico) + ') no coincide con ninguna categoría de la grilla: elegila a mano.');
+        return;
+      }
+      const botones = coinciden.map(o => {
+        const b = el('button', { type: 'button', class: 'boton', text: 'Ajustar al recibo: ' + o.nombreRama + ' · ' + o.c.nombre });
+        b.addEventListener('click', () => ajustarCategoria(o.rama, o.i));
+        return b;
+      });
+      caja.replaceChildren('El básico del recibo (' + pesos(basico) + ') no es el de la categoría elegida'
+        + (actual ? ' (' + pesos(actual.basico) + ')' : '') + '. Corresponde a'
+        + (coinciden.length > 1 ? ' cualquiera de estas (tienen el mismo básico):' : ':'),
+        el('div', { class: 'opciones-cat' }, ...botones));
+    };
+    arma($('sug-form'));
+    if ($('ia-caja').hidden || !$('ia-resultado').childElementCount) $('sug-ia').hidden = true; else arma($('sug-ia'));
+  }
+  function ajustarCategoria(nuevaRama, i) {
+    if (nuevaRama !== rama) { rama = nuevaRama; marcarRamas(); cargarCategorias(); }
+    $('categoria').value = i;
+    calcular();
   }
 
   // ---------- chequear y guardar ----------
-  $('btn-chequear').addEventListener('click', () => {
-    chequeando = !chequeando;
-    $('recibo').classList.toggle('chequeando', chequeando);
-    $('btn-chequear').setAttribute('aria-pressed', String(chequeando));
-    $('btn-chequear').textContent = chequeando ? 'Ocultar el recibo real' : 'Chequear recibo';
+  function ponerChequeo(si) {
+    chequeando = si;
+    $('recibo').classList.toggle('chequeando', si);
+    $('chequeo').hidden = !si;
+    $('btn-chequear').setAttribute('aria-pressed', String(si));
+    $('btn-chequear').textContent = si ? 'Ocultar el recibo real' : 'Chequear recibo';
+    if (!si) $('ia-caja').hidden = true;
     calcular();
+  }
+  $('btn-chequear').addEventListener('click', () => ponerChequeo(!chequeando));
+  $('btn-ia').addEventListener('click', () => {
+    if (!chequeando) ponerChequeo(true);
+    $('ia-caja').hidden = false;
+    $('ia-caja').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    if (!leyendo) $('archivo-recibo').click();
   });
+  $('ia-cerrar').addEventListener('click', () => { $('ia-caja').hidden = true; });
+
+  // La espera: el mismo aro con reloj y las fases del análisis de recibo del
+  // afiliado (trabajador.html). Las fases avanzan por tiempo; la última queda
+  // activa hasta que llega la respuesta.
+  const IA_FASES = ['Abriendo el archivo', 'Tapando los datos personales', 'Leyendo los conceptos con IA', 'Ubicando cada renglón en la calculadora'];
+  const IA_ARO = 414;   // 2·PI·66, el perímetro del círculo del SVG
+  let cronometro = null, leyendo = false;
+  function esperaIA(prender) {
+    clearInterval(cronometro); cronometro = null;
+    $('ia-espera').hidden = !prender;
+    if (!prender) return;
+    $('ia-fases').replaceChildren(...IA_FASES.map(f => el('div', { class: 'ia-fase' }, el('span', { class: 'pt' }), el('span', { text: f }))));
+    let s = 0;
+    const mmss = n => String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
+    const tic = () => {
+      $('ia-reloj').textContent = mmss(s);
+      $('ia-avance').style.strokeDashoffset = IA_ARO - IA_ARO * ((s % 45) / 45);
+      const fase = s < 2 ? 0 : s < 4 ? 1 : 2;
+      document.querySelectorAll('#ia-fases .ia-fase').forEach((e, i) => {
+        e.classList.toggle('activa', i === fase); e.classList.toggle('hecha', i < fase);
+      });
+      s++;
+    };
+    tic(); cronometro = setInterval(tic, 1000);
+  }
   $('btn-extra').addEventListener('click', () => agregarExtra());
   $('archivo-recibo').addEventListener('change', async () => {
     const f = $('archivo-recibo').files[0];
     if (!f) return;
-    const aviso = $('aviso-leer');
-    aviso.className = 'aviso'; aviso.textContent = 'Leyendo ' + f.name + '… (puede tardar unos segundos)';
+    leyendo = true;
+    $('btn-archivo').hidden = true;
+    $('ia-resultado').replaceChildren(el('p', { class: 'fuente', text: 'Leyendo ' + f.name + '… suele tardar menos de un minuto.' }));
+    $('sug-ia').hidden = true;
+    esperaIA(true);
     const datos = new FormData(); datos.append('archivo', f);
     try {
       const r = await fetch(API + '/leer', { method: 'POST', body: datos });
@@ -423,39 +581,32 @@
       for (const k of ['bruto', 'descuentos', 'neto']) $('real-' + k).value = d.totales?.[k] != null ? String(d.totales[k]).replace('.', ',') : '';
       $('extras').replaceChildren();
       for (const x of d.extras || []) {
-        agregarExtra();
+        agregarExtra(false);
         const fila = $('extras').lastElementChild;
         fila.querySelector('[data-k=concepto]').value = x.concepto || '';
         fila.querySelector('[data-k=seccion]').value = x.seccion || 'haberes';
         fila.querySelector('[data-k=importe]').value = String(x.importe).replace('.', ',');
       }
       if (!$('banco').value && d.banco) $('banco').value = d.banco;
-      const partes = [`Leído: ${d.ubicados} renglones ubicados`];
-      // La categoría, por el básico leído: la de la rama elegida si coincide alguna.
-      const cats = d.categorias || [];
-      const elegida = cats.find(c => c.rama === rama) || cats[0];
-      if (elegida) {
-        if (elegida.rama !== rama) { rama = elegida.rama; marcarRamas(); cargarCategorias(); }
-        $('categoria').value = elegida.categoria;
-        partes.push(cats.length > 1 ? `el básico coincide con ${cats.length} categorías: quedó "${elegida.nombre}", cambiala si no es`
-                                    : `categoría por el básico: ${elegida.nombre}`);
-      } else if (d.renglones && d.renglones.BAS) {
-        partes.push('el básico no coincide con ninguna categoría de la grilla: elegila a mano');
-      } else {
-        partes.push('no se leyó el sueldo básico: elegí la categoría a mano, si no la calculadora usa la primera');
-      }
-      if ((d.extras || []).length) partes.push(`${d.extras.length} a revisar en "Renglones que la calculadora no tiene"`);
-      if (d.reintegros) partes.push(`${d.reintegros} reintegro(s) que la calculadora no contempla`);
-      if (d.periodo && d.periodo !== $('grilla').value) partes.push(`ojo: el recibo es de ${d.periodo} y la grilla elegida es ${$('grilla').value}`);
-      aviso.className = 'aviso ' + (d.mock || !elegida ? 'mal' : 'bien');
-      aviso.textContent = (d.mock ? 'LECTURA SIMULADA (MOCK_EXTRACTOR activo en este entorno): los importes no son del recibo. ' : '')
-        + partes.join(' · ') + '. Revisá los importes antes de guardar.';
+      const items = [`${d.ubicados} renglones ubicados en el recibo esperado.`];
+      if (!(d.renglones || {}).BAS) items.push('No se leyó el sueldo básico: elegí la categoría a mano.');
+      if ((d.extras || []).length) items.push(`${d.extras.length} a revisar en "Renglones que la calculadora no tiene".`);
+      if (d.reintegros) items.push(`${d.reintegros} reintegro(s) que la calculadora no contempla.`);
+      if (d.periodo && d.periodo !== $('grilla').value) items.push(`Ojo: el recibo es de ${d.periodo} y la grilla elegida es ${$('grilla').value}.`);
+      const titulo = d.mock ? 'LECTURA SIMULADA (MOCK_EXTRACTOR activo en este entorno): los importes no son del recibo.'
+                            : 'Listo: ' + f.name + '. Revisá los importes antes de guardar.';
+      $('ia-resultado').replaceChildren(el('p', { class: 'aviso ' + (d.mock ? 'mal' : 'bien'), text: titulo }),
+        el('ul', {}, ...items.map(t => el('li', { text: t }))));
       calcular();
     } catch (e) {
-      aviso.className = 'aviso mal'; aviso.textContent = e.message;
-    } finally { $('archivo-recibo').value = ''; }
+      $('ia-resultado').replaceChildren(el('p', { class: 'aviso mal', text: e.message }));
+    } finally {
+      esperaIA(false); leyendo = false;
+      $('btn-archivo').hidden = false; $('btn-archivo').textContent = 'Leer otro recibo';
+      $('archivo-recibo').value = '';
+    }
   });
-  function agregarExtra() {
+  function agregarExtra(enfocar = true) {
     const quitar = el('button', { type: 'button', class: 'quitar', 'aria-label': 'Quitar renglón', text: '×' });
     const fila = el('div', { class: 'extras-fila' },
       el('input', { type: 'text', 'data-k': 'concepto', placeholder: 'Concepto (como figura en el recibo)', maxlength: 120 }),
@@ -465,7 +616,7 @@
     quitar.addEventListener('click', () => { fila.remove(); calcular(); });
     fila.addEventListener('input', calcular);
     $('extras').append(fila);
-    fila.querySelector('input').focus();
+    if (enfocar) fila.querySelector('input').focus();
   }
   ['real-bruto', 'real-descuentos', 'real-neto'].forEach(id => $(id).addEventListener('input', calcular));
 
