@@ -1265,7 +1265,12 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     duraciones de presentación (gráficos 1,4 s en cascada, modal 650 ms que
     llega desenfocado y se enfoca) y una curva `--ease-entrada` que reparte
     el recorrido. Con "reducir movimiento" ya no queda todo quieto: fundidos
-    suaves y un aviso que dice cómo apagarlo.
+    suaves y un aviso que dice cómo apagarlo. **Tercera vuelta** (Admin
+    0.53.03): esperar ya no es una pantalla gris. El modal se arma con lo que
+    la fila ya sabe y crece de a poco; los paneles trazan su grilla; al
+    filtrar, una línea fina arriba en vez de ponerse translúcidos; y el
+    explorador arma sus filas en cascada, marca la fila bajo el mouse y sus
+    totales corren.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 

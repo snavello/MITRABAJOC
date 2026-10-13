@@ -6928,3 +6928,24 @@ Lo que se hizo:
 Las reglas quedaron en `diseno-mi-trabajo` → "Movimiento", incluida una
 nueva: medir el porcentaje que ya pasó a los 100, 200 y 300 ms antes de
 opinar sobre una animación. La duración escrita no dice cómo se ve.
+
+**Movimiento, tercera vuelta (2026-10-13, Admin 0.53.03).** SDN vio mejor los
+gráficos, pero el modal todavía aparecía "como un rayo, ya completo", después
+de "una pantalla gris translúcida por una fracción de segundo"; lo mismo le
+pasaba a los gráficos al esperar datos. Además, en el explorador no encontraba
+diferencias con la v1. Eran tres cosas distintas:
+- **El modal** abría con un esqueleto gris, desenfocado y casi transparente.
+  Cuando llegaba el detalle, la caja saltaba a su alto. Ahora se arma con lo
+  que la fila ya sabe (`previa`: título, fecha, empresa...), pieza por pieza.
+  Lo que llega del servidor se suma debajo, también en cascada, y la caja
+  crece de a poco: un ResizeObserver mide el contenido y anima el alto. Las
+  fichas llevan `key` en cada pieza, así lo que llega después se inserta en
+  su lugar sin pisar lo que ya estaba. La caja se vuelve opaca en 220 ms.
+- **Los paneles**, al cambiar un filtro, se ponían translúcidos (`opacity:
+  .55`) hasta tener datos. Ahora quedan nítidos y corre una línea fina
+  arriba. En la primera carga, en vez de barras grises, trazan las líneas de
+  la grilla del gráfico (o los renglones de una lista) una por una.
+- **El explorador**: sus cambios (la marca que se desliza, "Ver más"
+  escalonado) eran demasiado sutiles. Ahora arma sus filas en cascada cada
+  vez que la tabla se renueva, marca la fila bajo el mouse con un filo y
+  enciende su "Ver", y los totales de las pestañas corren hasta su número.

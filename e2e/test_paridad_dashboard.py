@@ -461,15 +461,18 @@ def test_la_v2_con_movimiento(page, informe):
     page.locator("#tabla-body .btn-ver").first.scroll_into_view_if_needed()
     page.locator("#tabla-body .btn-ver").first.click()
     expect(page.locator("#overlay-det")).to_have_class(re.compile(r"\babierto\b"))
-    expect(page.locator(".v2-det-esqueleto")).to_be_visible()
-    informe.paso("El modal abrió al instante del clic, con el esqueleto mientras llega el detalle")
+    # Se arma con lo que la fila ya sabe, mientras el resto viaja.
+    expect(page.locator("#det-contenido")).to_contain_text("Recibo verificado")
+    expect(page.locator(".v2-det-cargando")).to_be_visible()
+    informe.paso("El modal abrió al instante del clic y se armó con lo que ya sabía la fila mientras llega el detalle")
     fin = time.time() + 5
     while not retenidos and time.time() < fin:
         page.wait_for_timeout(50)
     assert retenidos, "el detalle no se pidió"
     retenidos[0].continue_()
     page.unroute("**/admin/dashboard/detalle/**")
-    expect(page.locator("#det-contenido")).to_contain_text("Recibo verificado", timeout=10000)
+    expect(page.locator(".v2-det-cargando")).to_have_count(0, timeout=10000)
+    expect(page.locator("#det-contenido")).to_contain_text("Totales")
     expect(page.locator("#det-cerrar")).to_be_focused()
     page.keyboard.press("Escape")
     expect(page.locator("#overlay-det")).not_to_have_class(re.compile(r"\babierto\b"))
