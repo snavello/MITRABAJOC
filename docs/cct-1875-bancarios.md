@@ -265,6 +265,25 @@ cubre 120 días hacia atrás y no llega a un noviembre.
 - **Irreductibilidad** (art. 45): retirar una función no baja la remuneración;
   el adicional sigue hasta que lo absorban aumentos futuros.
 
+## Cuando sale una grilla nueva
+
+La simulación y la Calculadora bancaria de `/entornos` → Herramientas leen
+las grillas de `data/grillas_bancarias/AAAA-MM.json`, una por mes. Para
+sumar una:
+
+1. Bajar el PDF firmado de labancaria.org (sección "Grillas") y leer las
+   páginas: son escaneadas, sin texto.
+2. Copiar el JSON del mes anterior como `AAAA-MM.json` y cambiar `periodo`,
+   `nombre`, `firmada`, `fuentes` y todos los montos (las tres ramas, los
+   adicionales, la conectividad del trimestre, el ROE y el Día del Bancario).
+3. `python -m pytest test_calculadora_bancaria.py`: el test de coherencia
+   falla si un básico no es coeficiente × la misma unidad que los demás (un
+   dígito mal copiado) o si falta algo de la estructura.
+4. Con la grilla nueva, el lote (`cargar_bancaria.py`) pasa a usar sus
+   montos; `--rehacer-recibos` regenera los recibos de la demo.
+
+Este documento conserva la transcripción de agosto 2026 como referencia.
+
 ## Fuentes
 
 - `1875.pdf` (38 páginas, texto ordenado del CCT 18/75).

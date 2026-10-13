@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Colm3na — Calculadora bancaria</title>
+<style>
+  @font-face {
+    font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal;
+    src: url('/static/fonts/barlow-condensed-bold.woff2?v={{ sello_static('fonts/barlow-condensed-bold.woff2') }}') format('woff2');
+  }
+  /* Herramientas de /entornos (2026-10-13): la Calculadora bancaria, asistente
+     de la implementación. Misma "colmena nocturna" de la landing (entornos.html),
+     standalone, sin marca.css. Los números en monoespaciada; el ámbar es el de
+     Pruebas, porque esta herramienta solo existe donde existe /entornos. */
+  :root {
+    --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
+    --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
+    --ambar: #ffb020;
+    --bien: #3ecfae;
+    --mal: #ff6b6b;
+    --linea: rgba(255,255,255,.12);
+    --suave: rgba(255,255,255,.62);
+    --fuente-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  }
+  * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
+  html { background:#0d1626; }
+  body { min-height:100vh; padding:22px 16px 70px; color:#fff;
+    background:radial-gradient(900px 480px at 78% -10%, color-mix(in srgb, var(--agua) 22%, transparent), transparent 62%),
+               linear-gradient(160deg, #0d1626 20%, var(--tinta) 75%, color-mix(in srgb, var(--tinta) 72%, #4a6da8)); }
+  a { color:var(--ambar); }
+  .pagina { max-width:1180px; margin:0 auto; }
+  .cab { display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+  .cab .volver { font-size:13px; text-decoration:none; color:var(--suave); display:block; margin-bottom:6px; }
+  .cab .volver:hover { color:#fff; }
+  .cab h1 { font-family:var(--fuente-display); font-size:42px; line-height:1; letter-spacing:2px; text-transform:uppercase; }
+  .cab .lede { font-size:13.5px; color:var(--suave); margin-top:6px; max-width:640px; line-height:1.45; }
+  .cab .grilla-sel { margin-left:auto; display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--suave); }
+  .fuente { font-size:12px; color:var(--suave); margin-top:4px; }
+
+  .pestanas { display:flex; gap:6px; border-bottom:1px solid var(--linea); margin-bottom:18px; }
+  .pestana { background:none; border:0; color:var(--suave); font:600 14px system-ui; padding:10px 14px; cursor:pointer;
+    border-bottom:3px solid transparent; margin-bottom:-1px; }
+  .pestana[aria-selected="true"] { color:#fff; border-bottom-color:var(--ambar); }
+  .pestana .cuenta { font-family:var(--mono); font-size:12px; background:rgba(255,255,255,.12); border-radius:999px; padding:1px 7px; margin-left:4px; }
+
+  .grid { display:grid; grid-template-columns:340px 1fr; gap:18px; align-items:start; }
+  @media (max-width:900px) { .grid { grid-template-columns:1fr; } }
+  .tarjeta { background:rgba(9,15,26,.55); border:1px solid var(--linea); border-radius:16px; padding:18px; }
+  .tarjeta h2 { font-family:var(--fuente-display); font-size:22px; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; }
+  .campo { display:flex; flex-direction:column; gap:5px; margin-bottom:13px; }
+  .campo > span, .grupo-t { font-size:12px; color:var(--suave); letter-spacing:.02em; }
+  select, input[type=text], input[type=number], textarea {
+    width:100%; background:rgba(255,255,255,.07); color:#fff; border:1px solid rgba(255,255,255,.18);
+    border-radius:9px; padding:9px 10px; font-size:14px; }
+  select option, select optgroup { background:#13213a; color:#fff; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline:2px solid var(--ambar); outline-offset:1px; }
+  .segmentos { display:flex; gap:4px; background:rgba(255,255,255,.06); border-radius:10px; padding:3px; }
+  .segmentos button { flex:1; background:none; border:0; color:var(--suave); padding:8px 4px; border-radius:8px; font:600 13px system-ui; cursor:pointer; }
+  .segmentos button[aria-pressed="true"] { background:var(--ambar); color:#1b1508; }
+  .tilde { display:flex; align-items:center; gap:9px; font-size:14px; margin-bottom:9px; cursor:pointer; }
+  .tilde input { width:17px; height:17px; accent-color:var(--ambar); }
+  .tilde small { color:var(--suave); }
+  .fila2 { display:grid; grid-template-columns:1fr 90px; gap:8px; }
+  .separa { border:0; border-top:1px solid var(--linea); margin:14px 0; }
+
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th { text-align:left; font-size:11.5px; color:var(--suave); font-weight:600; text-transform:uppercase; letter-spacing:.05em;
+    padding:6px 8px; border-bottom:1px solid var(--linea); }
+  td { padding:8px; border-bottom:1px solid rgba(255,255,255,.06); vertical-align:top; }
+  td.num, th.num { text-align:right; font-family:var(--mono); white-space:nowrap; }
+  td .nota { display:block; font-size:12px; color:var(--suave); margin-top:2px; line-height:1.35; }
+  td .nota.supuesto::before { content:"supuesto · "; color:var(--ambar); font-weight:600; }
+  tr.seccion td { font-family:var(--fuente-display); font-size:15px; letter-spacing:1px; text-transform:uppercase;
+    color:var(--ambar); padding-top:14px; border-bottom:0; }
+  tr.total td { font-weight:700; border-top:1px solid var(--linea); }
+  tr.neto td { font-size:18px; font-weight:700; color:var(--ambar); border-bottom:0; }
+  .real-col { display:none; }
+  .chequeando .real-col { display:table-cell; }
+  td.real-col input { width:130px; text-align:right; font-family:var(--mono); padding:6px 8px; }
+  .dif.bien { color:var(--bien); } .dif.mal { color:var(--mal); font-weight:700; }
+  .acciones { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:14px; }
+  .boton { background:var(--ambar); color:#1b1508; border:0; border-radius:10px; padding:10px 16px; font:700 14px system-ui; cursor:pointer; text-decoration:none; display:inline-block; }
+  .boton.suave { background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2); }
+  .boton:disabled { opacity:.5; cursor:default; }
+  .resumen-dif { font-size:14px; padding:10px 12px; border-radius:10px; margin-top:12px; display:none; }
+  .resumen-dif.bien { display:block; background:color-mix(in srgb, var(--bien) 16%, transparent); border:1px solid var(--bien); }
+  .resumen-dif.mal { display:block; background:color-mix(in srgb, var(--mal) 14%, transparent); border:1px solid var(--mal); }
+  .chequeo { display:none; margin-top:16px; }
+  .chequeando .chequeo { display:block; }
+  .extras-fila { display:grid; grid-template-columns:1fr 150px 130px 34px; gap:6px; margin-bottom:6px; }
+  @media (max-width:600px) { .extras-fila { grid-template-columns:1fr 1fr; } }
+  .quitar { background:none; border:1px solid rgba(255,255,255,.2); color:#fff; border-radius:8px; cursor:pointer; }
+  .totales-reales { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
+  @media (max-width:600px) { .totales-reales { grid-template-columns:1fr; } }
+  .aviso { font-size:13.5px; margin-top:10px; min-height:1em; }
+  .aviso.mal { color:var(--mal); } .aviso.bien { color:var(--bien); }
+  .tabla-scroll { overflow-x:auto; }
+
+  .estado { font:600 12px system-ui; border-radius:999px; padding:3px 9px; display:inline-block; }
+  .estado.nuevo { background:var(--ambar); color:#1b1508; }
+  .estado.revisado { background:rgba(255,255,255,.18); }
+  .estado.aplicado { background:var(--bien); color:#06231c; }
+  .estado.descartado { background:rgba(255,255,255,.08); color:var(--suave); text-decoration:line-through; }
+  tr.caso { cursor:pointer; }
+  tr.caso:hover td { background:rgba(255,255,255,.04); }
+  tr.detalle td { background:rgba(0,0,0,.18); }
+  .detalle-caja { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:6px 2px; }
+  @media (max-width:800px) { .detalle-caja { grid-template-columns:1fr; } }
+  .detalle-caja h3 { font-size:12px; color:var(--suave); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+  .detalle-caja p { font-size:14px; line-height:1.45; white-space:pre-wrap; }
+  .vacio { color:var(--suave); font-size:14px; padding:18px 4px; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <div class="cab">
+    <div>
+      <a class="volver" href="/entornos#herramientas">← Entornos · Herramientas</a>
+      <h1>Calculadora bancaria</h1>
+      <p class="lede">El recibo que corresponde según la grilla firmada de La Bancaria (CCT 18/75): elegí la categoría y lo que cobra, y si tenés un recibo real, chequealo renglón por renglón. Los casos que guardes quedan para revisar y corregir la calculadora o el auditor de recibos.</p>
+    </div>
+    <label class="grilla-sel">Grilla
+      <select id="grilla" aria-label="Grilla salarial"></select>
+      <span class="fuente" id="fuente"></span>
+    </label>
+  </div>
+
+  <nav class="pestanas" role="tablist">
+    <button class="pestana" role="tab" aria-selected="true" data-vista="calcular">Calcular</button>
+    <button class="pestana" role="tab" aria-selected="false" data-vista="casos">Casos guardados <span class="cuenta" id="cuenta-casos">…</span></button>
+  </nav>
+
+  <section id="vista-calcular">
+    <div class="grid">
+      <form class="tarjeta" id="form" autocomplete="off" onsubmit="return false">
+        <h2>Categoría</h2>
+        <div class="campo"><span>Rama</span><div class="segmentos" id="ramas"></div></div>
+        <label class="campo"><span>Categoría</span><select id="categoria"></select></label>
+        <label class="campo"><span>ROE del banco (lo publica el BCRA)</span><select id="tramo_roe"></select></label>
+        <hr class="separa">
+        <h2>Adicionales</h2>
+        <label class="tilde"><input type="checkbox" id="cajero"> Cajero <small>(función + falla de caja)</small></label>
+        <label class="tilde"><input type="checkbox" id="falla_me"> Falla de caja moneda extranjera</label>
+        <label class="campo"><span>Título</span><select id="titulo"><option value="">Sin título</option></select></label>
+        <label class="campo"><span>Zona patagónica</span><select id="zona"><option value="">No corresponde</option></select></label>
+        <hr class="separa">
+        <h2>No remunerativos</h2>
+        <label class="tilde"><input type="checkbox" id="guarderia"> Guardería</label>
+        <div class="campo"><span>Conectividad</span>
+          <div class="fila2"><select id="conectividad"></select><input type="number" id="dias_conectividad" min="1" max="4" value="1" aria-label="Días" title="Días (1 a 4)" hidden></div>
+        </div>
+        <label class="tilde"><input type="checkbox" id="dia_bancario"> Día del Bancario <small>(recibo de noviembre)</small></label>
+        <hr class="separa">
+        <h2>Descuentos</h2>
+        <div class="fila2">
+          <label class="tilde"><input type="checkbox" id="afiliado" checked> Afiliado (cuota sindical)</label>
+          <input type="text" id="cuota_pct" value="2" inputmode="decimal" aria-label="Porcentaje de cuota" title="% de cuota sindical">
+        </div>
+        <label class="campo"><span>Impuesto a las Ganancias (a mano, no se calcula)</span><input type="text" id="ganancias" inputmode="decimal" placeholder="0,00"></label>
+      </form>
+
+      <div class="tarjeta" id="recibo">
+        <h2>Recibo esperado</h2>
+        <div class="tabla-scroll">
+          <table>
+            <thead><tr><th>Concepto</th><th class="num">Esperado</th><th class="num real-col">Recibo real</th><th class="num real-col">Diferencia</th></tr></thead>
+            <tbody id="renglones"></tbody>
+          </table>
+        </div>
+        <div class="resumen-dif" id="resumen-dif"></div>
+        <div class="acciones">
+          <button type="button" class="boton suave" id="btn-chequear" aria-pressed="false">Chequear recibo</button>
+          <span class="fuente" id="estado-calc"></span>
+        </div>
+
+        <div class="chequeo">
+          <hr class="separa">
+          <h2>Del recibo real</h2>
+          <p class="fuente" style="margin-bottom:10px">Cargá al lado de cada renglón lo que dice el recibo. Si el recibo trae algo que la calculadora no tiene, sumalo acá abajo.</p>
+          <div class="grupo-t" style="margin-bottom:6px">Totales impresos</div>
+          <div class="totales-reales">
+            <label class="campo"><span>Total bruto</span><input type="text" id="real-bruto" inputmode="decimal"></label>
+            <label class="campo"><span>Total descuentos</span><input type="text" id="real-descuentos" inputmode="decimal"></label>
+            <label class="campo"><span>Neto</span><input type="text" id="real-neto" inputmode="decimal"></label>
+          </div>
+          <div class="grupo-t" style="margin:4px 0 6px">Renglones que la calculadora no tiene</div>
+          <div id="extras"></div>
+          <button type="button" class="boton suave" id="btn-extra">+ Agregar renglón</button>
+          <hr class="separa">
+          <h2>Guardar caso</h2>
+          <label class="campo"><span>Banco (opcional)</span><input type="text" id="banco" maxlength="120" placeholder="Ej.: Banco Nación"></label>
+          <label class="campo"><span>Nota: qué viste, qué está mal, cómo lo llama el banco</span><textarea id="nota" rows="3" maxlength="4000"></textarea></label>
+          <p class="fuente">No pongas nombre ni CUIL: el caso es para revisar la cuenta, no a la persona.</p>
+          <div class="acciones"><button type="button" class="boton" id="btn-guardar">Guardar caso</button></div>
+          <div class="aviso" id="aviso-guardar" role="status"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="vista-casos" hidden>
+    <div class="tarjeta">
+      <div class="acciones" style="margin:0 0 12px">
+        <label class="campo" style="margin:0;min-width:200px"><span>Estado</span>
+          <select id="filtro-estado"><option value="">Todos</option>{% for e in estados %}<option value="{{ e }}">{{ e|capitalize }}</option>{% endfor %}</select></label>
+        <a class="boton suave" href="/entornos/herramientas/bancaria/casos.csv" style="margin-left:auto">Descargar CSV</a>
+      </div>
+      <div class="tabla-scroll">
+        <table>
+          <thead><tr><th>#</th><th>Fecha</th><th>Quién</th><th>Grilla</th><th>Banco</th><th>Categoría</th><th class="num">Distintos</th><th>Estado</th></tr></thead>
+          <tbody id="casos"></tbody>
+        </table>
+      </div>
+      <div class="vacio" id="casos-vacio" hidden>Todavía no hay casos guardados.</div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  const API = '/api/entornos/herramientas/bancaria';
+  const ESTADOS = {{ estados|list|tojson }};
+  const $ = id => document.getElementById(id);
+  const fmt = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const pesos = n => (n < 0 ? '−$ ' : '$ ') + fmt.format(Math.abs(n));
+  const SECCIONES = { haberes: 'Haberes remunerativos', no_remunerativos: 'No remunerativos', descuentos: 'Descuentos' };
+
+  // Construye nodos a mano: todo texto que llega (notas, bancos) va como textContent, nunca como HTML.
+  function el(tag, attrs, ...hijos) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v; else n.setAttribute(k, v);
+    }
+    for (const h of hijos) if (h != null) n.append(h);
+    return n;
+  }
+  // "1.234.567,89", "1234567.89" o "1234567,89" -> número; vacío -> null.
+  function aNumero(s) {
+    s = String(s || '').trim().replace(/\$|\s/g, '');
+    if (!s) return null;
+    if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+    else if ((s.match(/\./g) || []).length > 1) s = s.replace(/\./g, '');
+    const n = Number(s);
+    return Number.isFinite(n) ? n : NaN;
+  }
+
+  let opciones = null, rama = 'administrativa', chequeando = false, ultimo = null;
+  const reales = {};          // código -> texto cargado (sobrevive a cada recálculo)
+
+  async function pedir(url, cuerpo) {
+    const r = await fetch(url, cuerpo === undefined ? { cache: 'no-store' } : {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.detail || ('Error ' + r.status));
+    return d;
+  }
+
+  // ---------- controles de la grilla elegida ----------
+  async function cargarOpciones(periodo) {
+    opciones = await pedir(API + '/opciones' + (periodo ? '?periodo=' + encodeURIComponent(periodo) : ''));
+    const sel = $('grilla');
+    sel.replaceChildren(...opciones.grillas.map(g => el('option', { value: g.periodo, text: g.nombre })));
+    sel.value = opciones.periodo;
+    $('fuente').textContent = 'Firmada el ' + opciones.firmada.split('-').reverse().join('/');
+    $('ramas').replaceChildren(...Object.entries(opciones.ramas).map(([k, r]) => {
+      const b = el('button', { type: 'button', 'aria-pressed': String(k === rama), text: r.nombre });
+      b.addEventListener('click', () => { rama = k; cargarCategorias(); marcarRamas(); calcular(); });
+      b.dataset.rama = k; return b;
+    }));
+    $('tramo_roe').replaceChildren(...opciones.tramos_roe.map((t, i) => el('option', { value: i, text: 'ROE ' + t + (i === 0 ? ' (no paga)' : '') })));
+    $('tramo_roe').value = 1;
+    rellenar('titulo', opciones.titulos, 'Sin título');
+    rellenar('zona', opciones.zonas, 'No corresponde');
+    $('conectividad').replaceChildren(...Object.entries(opciones.conectividad).map(([k, v]) => el('option', { value: k, text: v })));
+    cargarCategorias();
+  }
+  function rellenar(id, valores, vacio) {
+    const actual = $(id).value;
+    $(id).replaceChildren(el('option', { value: '', text: vacio }), ...valores.map(v => el('option', { value: v, text: v[0].toUpperCase() + v.slice(1) })));
+    if (valores.includes(actual)) $(id).value = actual;
+  }
+  function marcarRamas() {
+    document.querySelectorAll('#ramas button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.rama === rama)));
+  }
+  function cargarCategorias() {
+    const cats = opciones.ramas[rama].categorias;
+    const grupo = (titulo, filtro) => el('optgroup', { label: titulo },
+      ...cats.map((c, i) => [c, i]).filter(([c]) => filtro(c)).map(([c, i]) =>
+        el('option', { value: i, text: c.nombre + ' · coef. ' + c.coef.toFixed(2).replace('.', ',') })));
+    $('categoria').replaceChildren(grupo('Por antigüedad', c => c.anios !== null), grupo('Por jerarquía', c => c.anios === null));
+    $('categoria').value = 0;
+  }
+
+  // ---------- cálculo ----------
+  function entrada() {
+    return {
+      periodo: $('grilla').value, rama, categoria: Number($('categoria').value),
+      tramo_roe: Number($('tramo_roe').value), cajero: $('cajero').checked, falla_me: $('falla_me').checked,
+      titulo: $('titulo').value, zona: $('zona').value, guarderia: $('guarderia').checked,
+      conectividad: $('conectividad').value, dias_conectividad: Number($('dias_conectividad').value || 1),
+      dia_bancario: $('dia_bancario').checked, afiliado: $('afiliado').checked,
+      cuota_pct: aNumero($('cuota_pct').value) ?? 0, ganancias: aNumero($('ganancias').value) ?? 0,
+    };
+  }
+  function real() {
+    const renglones = {};
+    for (const [k, v] of Object.entries(reales)) { const n = aNumero(v); if (n !== null && !Number.isNaN(n)) renglones[k] = n; }
+    const totales = {};
+    for (const k of ['bruto', 'descuentos', 'neto']) { const n = aNumero($('real-' + k).value); if (n !== null && !Number.isNaN(n)) totales[k] = n; }
+    const extras = [...document.querySelectorAll('#extras .extras-fila')].map(f => ({
+      concepto: f.querySelector('[data-k=concepto]').value, seccion: f.querySelector('[data-k=seccion]').value,
+      importe: aNumero(f.querySelector('[data-k=importe]').value) })).filter(e => e.concepto || (e.importe !== null && !Number.isNaN(e.importe)));
+    return { renglones, totales, extras };
+  }
+
+  let temporizador = null, turno = 0;
+  function calcular() {
+    $('dias_conectividad').hidden = $('conectividad').value !== 'diario';
+    $('cuota_pct').disabled = !$('afiliado').checked;
+    clearTimeout(temporizador);
+    temporizador = setTimeout(async () => {
+      const mio = ++turno;
+      try {
+        const d = await pedir(API + '/calcular', { entrada: entrada(), real: chequeando ? real() : null });
+        if (mio !== turno) return;
+        ultimo = d; dibujar(d); $('estado-calc').textContent = '';
+      } catch (e) {
+        if (mio === turno) $('estado-calc').textContent = e.message;
+      }
+    }, 120);
+  }
+
+  function dibujar(d) {
+    const comp = {};
+    for (const c of (d.comparacion?.renglones || [])) comp[c.codigo] = c;
+    const filas = [];
+    let seccion = null;
+    for (const r of d.esperado.renglones) {
+      if (r.seccion !== seccion) {
+        seccion = r.seccion;
+        filas.push(el('tr', { class: 'seccion' }, el('td', { colspan: 4, text: SECCIONES[seccion] })));
+      }
+      const nota = r.nota ? el('span', { class: 'nota' + (r.supuesto ? ' supuesto' : ''), text: r.nota }) : null;
+      const input = el('input', { type: 'text', inputmode: 'decimal', 'aria-label': 'Recibo real: ' + r.concepto });
+      input.value = reales[r.codigo] ?? '';
+      input.addEventListener('input', () => { reales[r.codigo] = input.value; calcular(); });
+      const c = comp[r.codigo];
+      const dif = el('td', { class: 'num real-col dif' + (c ? (c.coincide ? ' bien' : ' mal') : ''), text: c ? (c.coincide ? '✓' : pesos(c.diferencia)) : '' });
+      filas.push(el('tr', {}, el('td', {}, r.concepto, nota), el('td', { class: 'num', text: pesos(r.importe) }),
+        el('td', { class: 'num real-col' }, input), dif));
+    }
+    const t = d.esperado.totales;
+    const compT = {};
+    for (const c of (d.comparacion?.totales || [])) compT[c.total] = c;
+    const filaTotal = (nombre, clave, valor, cls) => {
+      const c = compT[clave];
+      return el('tr', { class: cls }, el('td', { text: nombre }), el('td', { class: 'num', text: pesos(valor) }),
+        el('td', { class: 'num real-col', text: c ? pesos(c.real) : '' }),
+        el('td', { class: 'num real-col dif' + (c ? (c.coincide ? ' bien' : ' mal') : ''), text: c ? (c.coincide ? '✓' : pesos(c.diferencia)) : '' }));
+    };
+    filas.push(filaTotal('Total remunerativo', '', t.remunerativo, 'total'));
+    if (t.no_remunerativo) filas.push(filaTotal('Total no remunerativo', '', t.no_remunerativo, ''));
+    filas.push(filaTotal('Total bruto', 'bruto', t.bruto, 'total'));
+    filas.push(filaTotal('Total descuentos', 'descuentos', t.descuentos, ''));
+    filas.push(filaTotal('Neto a cobrar', 'neto', t.neto, 'neto'));
+    $('renglones').replaceChildren(...filas);
+
+    const res = $('resumen-dif');
+    res.className = 'resumen-dif';
+    if (d.comparacion) {
+      const cargados = d.comparacion.renglones.length + d.comparacion.totales.length;
+      if (cargados) {
+        const n = d.comparacion.distintos;
+        res.classList.add(n ? 'mal' : 'bien');
+        res.textContent = n ? `${n} de ${cargados} valores cargados no coinciden con lo que corresponde (tolerancia $ 1).`
+                            : `Los ${cargados} valores cargados coinciden con lo que corresponde.`;
+      }
+    }
+  }
+
+  // ---------- chequear y guardar ----------
+  $('btn-chequear').addEventListener('click', () => {
+    chequeando = !chequeando;
+    $('recibo').classList.toggle('chequeando', chequeando);
+    $('btn-chequear').setAttribute('aria-pressed', String(chequeando));
+    $('btn-chequear').textContent = chequeando ? 'Ocultar el recibo real' : 'Chequear recibo';
+    calcular();
+  });
+  $('btn-extra').addEventListener('click', () => agregarExtra());
+  function agregarExtra() {
+    const quitar = el('button', { type: 'button', class: 'quitar', 'aria-label': 'Quitar renglón', text: '×' });
+    const fila = el('div', { class: 'extras-fila' },
+      el('input', { type: 'text', 'data-k': 'concepto', placeholder: 'Concepto (como figura en el recibo)', maxlength: 120 }),
+      el('select', { 'data-k': 'seccion' }, ...Object.entries(SECCIONES).map(([k, v]) => el('option', { value: k, text: v }))),
+      el('input', { type: 'text', 'data-k': 'importe', inputmode: 'decimal', placeholder: 'Importe' }),
+      quitar);
+    quitar.addEventListener('click', () => { fila.remove(); calcular(); });
+    fila.addEventListener('input', calcular);
+    $('extras').append(fila);
+    fila.querySelector('input').focus();
+  }
+  ['real-bruto', 'real-descuentos', 'real-neto'].forEach(id => $(id).addEventListener('input', calcular));
+
+  $('btn-guardar').addEventListener('click', async () => {
+    const aviso = $('aviso-guardar');
+    const r = real();
+    const malos = [...Object.values(reales), $('real-bruto').value, $('real-descuentos').value, $('real-neto').value]
+      .filter(v => Number.isNaN(aNumero(v)));
+    if (malos.length) { aviso.className = 'aviso mal'; aviso.textContent = 'Hay importes que no se entienden: ' + malos.join(', '); return; }
+    $('btn-guardar').disabled = true;
+    try {
+      const d = await pedir(API + '/casos', { entrada: entrada(), real: r, banco: $('banco').value, nota: $('nota').value });
+      aviso.className = 'aviso bien'; aviso.textContent = 'Caso #' + d.id + ' guardado. Está en "Casos guardados".';
+      $('nota').value = '';
+      cargarCasos();
+    } catch (e) {
+      aviso.className = 'aviso mal'; aviso.textContent = e.message;
+    } finally { $('btn-guardar').disabled = false; }
+  });
+
+  // ---------- casos ----------
+  let casos = [];
+  async function cargarCasos() {
+    try {
+      const d = await pedir(API + '/casos');
+      casos = d.casos;
+      $('cuenta-casos').textContent = casos.filter(c => c.estado === 'nuevo').length + ' nuevos · ' + casos.length;
+      dibujarCasos();
+    } catch (e) { $('cuenta-casos').textContent = '!'; }
+  }
+  function dibujarCasos() {
+    const filtro = $('filtro-estado').value;
+    const lista = casos.filter(c => !filtro || c.estado === filtro);
+    $('casos-vacio').hidden = lista.length > 0;
+    $('casos').replaceChildren(...lista.map(c => {
+      const tr = el('tr', { class: 'caso', tabindex: 0 },
+        el('td', { class: 'num', text: c.id }), el('td', { text: c.creado }), el('td', { text: c.quien }),
+        el('td', { text: c.grilla }), el('td', { text: c.banco || '—' }), el('td', { text: c.categoria }),
+        el('td', { class: 'num' + (c.distintos ? ' dif mal' : ''), text: c.distintos }),
+        el('td', {}, el('span', { class: 'estado ' + c.estado, text: c.estado })));
+      const abrir = () => alternarDetalle(tr, c.id);
+      tr.addEventListener('click', abrir);
+      tr.addEventListener('keydown', e => { if (e.key === 'Enter') abrir(); });
+      return tr;
+    }));
+  }
+  $('filtro-estado').addEventListener('change', dibujarCasos);
+
+  async function alternarDetalle(tr, id) {
+    if (tr.nextElementSibling?.classList.contains('detalle')) { tr.nextElementSibling.remove(); return; }
+    const c = await pedir(API + '/casos/' + id);
+    const dif = c.diferencias || {};
+    const lineas = [...(dif.renglones || []).map(d => `${d.concepto}: esperado ${pesos(d.esperado)}, real ${pesos(d.real)}` + (d.coincide ? ' ✓' : ` → ${pesos(d.diferencia)}`)),
+      ...(dif.totales || []).map(d => `Total ${d.total}: esperado ${pesos(d.esperado)}, real ${pesos(d.real)}` + (d.coincide ? ' ✓' : ` → ${pesos(d.diferencia)}`)),
+      ...(dif.extras || []).map(e => `Extra (${SECCIONES[e.seccion]}): ${e.concepto} ${e.importe === null ? '' : pesos(e.importe)}`)];
+    const sel = el('select', { 'aria-label': 'Estado del caso' }, ...ESTADOS.map(e => el('option', { value: e, text: e[0].toUpperCase() + e.slice(1) })));
+    sel.value = c.estado;
+    const aviso = el('span', { class: 'fuente' });
+    sel.addEventListener('change', async () => {
+      try { await pedir(API + '/casos/' + id + '/estado', { estado: sel.value }); aviso.textContent = 'Guardado.'; cargarCasos(); }
+      catch (e) { aviso.textContent = e.message; }
+    });
+    const reabrir = el('button', { type: 'button', class: 'boton suave', text: 'Abrir en la calculadora' });
+    reabrir.addEventListener('click', () => abrirEnCalculadora(c));
+    const caja = el('div', { class: 'detalle-caja' },
+      el('div', {}, el('h3', { text: 'Diferencias' }), el('p', { text: lineas.join('\n') || 'Sin valores del recibo real.' })),
+      el('div', {}, el('h3', { text: 'Nota' }), el('p', { text: c.nota || '—' }),
+        el('h3', { text: 'Estado', style: 'margin-top:12px' }), el('div', { class: 'acciones', style: 'margin-top:0' }, sel, reabrir, aviso),
+        c.estado_cambiado ? el('p', { class: 'fuente', text: `Último cambio: ${c.estado_cambiado} (${c.estado_quien})` }) : null));
+    tr.after(el('tr', { class: 'detalle' }, el('td', { colspan: 8 }, caja)));
+  }
+
+  // Volver a cargar un caso en la calculadora (para ver qué daba, o con la grilla corregida).
+  async function abrirEnCalculadora(c) {
+    const e = c.entrada || {};
+    rama = e.rama || 'administrativa';
+    await cargarOpciones(e.periodo);
+    marcarRamas(); cargarCategorias();
+    $('categoria').value = e.categoria ?? 0;
+    for (const k of ['cajero', 'falla_me', 'guarderia', 'dia_bancario', 'afiliado']) $(k).checked = !!e[k];
+    for (const k of ['tramo_roe', 'titulo', 'zona', 'conectividad', 'dias_conectividad']) if (e[k] !== undefined) $(k).value = e[k];
+    $('cuota_pct').value = String(e.cuota_pct ?? 2).replace('.', ',');
+    $('ganancias').value = e.ganancias ? String(e.ganancias).replace('.', ',') : '';
+    for (const k of Object.keys(reales)) delete reales[k];
+    const r = c.real || {};
+    for (const [k, v] of Object.entries(r.renglones || {})) reales[k] = String(v).replace('.', ',');
+    for (const k of ['bruto', 'descuentos', 'neto']) $('real-' + k).value = r.totales?.[k] != null ? String(r.totales[k]).replace('.', ',') : '';
+    $('extras').replaceChildren();
+    for (const x of r.extras || []) {
+      agregarExtra();
+      const f = $('extras').lastElementChild;
+      f.querySelector('[data-k=concepto]').value = x.concepto || '';
+      f.querySelector('[data-k=seccion]').value = x.seccion || 'haberes';
+      f.querySelector('[data-k=importe]').value = x.importe != null ? String(x.importe).replace('.', ',') : '';
+    }
+    $('banco').value = c.banco || ''; $('nota').value = '';
+    if (!chequeando) $('btn-chequear').click(); else calcular();
+    mostrar('calcular');
+  }
+
+  // ---------- pestañas ----------
+  function mostrar(vista) {
+    document.querySelectorAll('.pestana').forEach(p => p.setAttribute('aria-selected', String(p.dataset.vista === vista)));
+    $('vista-calcular').hidden = vista !== 'calcular';
+    $('vista-casos').hidden = vista !== 'casos';
+    history.replaceState(null, '', vista === 'casos' ? '#casos' : location.pathname);
+    if (vista === 'casos') cargarCasos();
+  }
+  document.querySelectorAll('.pestana').forEach(p => p.addEventListener('click', () => mostrar(p.dataset.vista)));
+
+  $('form').addEventListener('input', calcular);
+  $('form').addEventListener('change', calcular);
+  $('grilla').addEventListener('change', async () => { await cargarOpciones($('grilla').value); calcular(); });
+
+  cargarOpciones().then(() => { calcular(); cargarCasos(); if (location.hash === '#casos') mostrar('casos'); })
+    .catch(e => { $('estado-calc').textContent = 'No se pudo cargar la grilla: ' + e.message; });
+})();
+</script>
+</body>
+</html>

@@ -503,6 +503,10 @@ def test_la_persona_no_puede_cambiar_el_mail_del_padron_desde_su_perfil():
 # ===========================================================================
 MIGRACION = next((RAIZ / "migrations" / "versions").glob("f2d3d0bcf179_*.py"))
 REV_ANTERIOR = "e28e33b0aec5"
+# Se sube y se baja a revisiones NOMBRADAS, no a "head" / "-1": una migración
+# posterior (casoherramienta, 2026-10-13) corría la cuenta y el test comparaba
+# contra el esquema equivocado.
+REV_REGISTRO = "f2d3d0bcf179"
 COLUMNAS_NUEVAS = {
     "cuentatrabajador": ["nivel_fiabilidad", "nivel_origen", "nivel_actualizado", "mail_declarado",
                          "mail_declarado_confirmado", "clave_temporal", "mail_padron"],
@@ -583,7 +587,7 @@ def test_migracion_backfill_downgrade_exacto_y_reupgrade(base_migracion):
             (1,'30555666777','sin cuenta','','','','gremio@x.com',false,true)""")
         c.execute("INSERT INTO sindicato (nombre, slug, color_base, activo) VALUES ('X','x','#101b2c', true)") \
             if False else None
-    r = _alembic(url, "upgrade", "head")
+    r = _alembic(url, "upgrade", REV_REGISTRO)
     assert r.returncode == 0, r.stderr[-1500:]
     with psycopg.connect(_psy(url)) as c:
         filas = {cuil: (n, o, a) for cuil, n, o, a in c.execute(
@@ -620,11 +624,11 @@ def test_migracion_backfill_downgrade_exacto_y_reupgrade(base_migracion):
     assert mails_emp["30555666777"] == "gremio@x.com" and mails_emp["30111222335"] == ""
     posterior = _instantanea(url)
     # downgrade: el esquema vuelve EXACTAMENTE al de antes (columnas, defaults, índices, constraints)
-    r = _alembic(url, "downgrade", "-1")
+    r = _alembic(url, "downgrade", REV_ANTERIOR)
     assert r.returncode == 0, r.stderr[-1500:]
     assert _instantanea(url) == previo
     # y volver a subir da el mismo esquema
-    r = _alembic(url, "upgrade", "head")
+    r = _alembic(url, "upgrade", REV_REGISTRO)
     assert r.returncode == 0, r.stderr[-1500:]
     assert _instantanea(url) == posterior
 

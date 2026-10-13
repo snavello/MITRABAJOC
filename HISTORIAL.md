@@ -7086,3 +7086,38 @@ El test arma cada caso como el PDF y lo pasa por el camino de `/api/leer` +
 vinculados a su genérico): sin ese paso, con códigos que el catálogo no
 conoce, todo da diferencia.
 
+
+## Herramientas en /entornos y la Calculadora bancaria (2026-10-13)
+
+SDN pidió retomar una calculadora de sueldos bancarios que había quedado a
+medio hacer en otro chat (no llegó al repo: ni rama ni commit), ahora con la
+grilla de agosto 2026 ya transcripta, como **asistente de la implementación**.
+No va en las apps de sindicato ni de trabajador: se abrió una pestaña
+**Herramientas** en `/entornos` para este tipo de desarrollos. Las decisiones,
+tomadas con SDN una por una antes de construir:
+
+- Arma el **recibo esperado** y, con un botón opcional, **chequea un recibo
+  real** cargado **a mano** renglón por renglón (sin IA ni costo), con los
+  totales impresos y renglones que la calculadora no tiene.
+- **Las tres ramas completas**, por antigüedad y por jerarquía.
+- **Varias grillas con mes**: la de agosto pasó de constantes en
+  `grilla_bancaria.py` a `data/grillas_bancarias/2026-08.json`, armado desde
+  las tablas de `docs/cct-1875-bancarios.md` (no se volvió a tipear ningún
+  número) y controlado con la regla de que todo básico sobre el piso es
+  coeficiente × la misma unidad (≈ $ 1.474.068): las tres ramas cierran.
+  Las constantes que usan el lote y los PDF siguen existiendo, derivadas de
+  la grilla más nueva, y el lote da lo mismo que antes.
+- Suma falla de caja en moneda extranjera, guardería, conectividad, Día del
+  Bancario y cuota (afiliado sí/no, % editable). **Ganancias no se calcula**
+  (deducciones, cargas de familia y acumulado anual la harían más grande que
+  todo lo demás): renglón a mano.
+- **Casos guardados** con nota libre, para revisarlos y corregir la
+  calculadora o el auditor de recibos: lista con estado (nuevo / revisado /
+  aplicado / descartado) y CSV. Sin nombre ni CUIL.
+- Solo local y Pruebas, con la puerta de `/entornos`.
+
+Probado con un robot de Playwright contra la app local (calcular, cambiar de
+rama, chequear, renglón extra, guardar, revisar, cambiar estado, reabrir el
+caso en la calculadora, la pestaña de la landing y el ancho de un teléfono).
+Dos detalles que salieron de ahí: la nota de la categoría ("coef. 1,00") y un
+fondo con `background-attachment: fixed` que no pintaba la página entera.

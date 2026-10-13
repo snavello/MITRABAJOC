@@ -89,6 +89,7 @@ from permisos import SECCION_SUPER_ADMIN
 import recursos
 import empaquetar
 import render_admin
+import grilla_bancaria
 import render_planes
 from observabilidad import panel as observabilidad_panel
 from observabilidad import hilo_colector
@@ -8904,6 +8905,149 @@ def api_entornos_mapa(request: Request):
     if not _pase_landing(request):
         raise HTTPException(403, "Ingresá a la landing.")
     return _mapa_funcional()["resumen"]
+
+
+# ==================== Solapa "Herramientas" ====================
+# Asistentes de la implementación (2026-10-13, pedido de SDN): desarrollos
+# chicos que ayudan a poner en marcha un sindicato y no van en las apps de
+# sindicato ni de trabajador. Viven donde vive /entornos (local y Pruebas, 404
+# en Demo) y con su misma puerta. La primera es la Calculadora bancaria: el
+# recibo que corresponde según la grilla de La Bancaria (grilla_bancaria.py),
+# la comparación con un recibo real cargado a mano y los casos guardados para
+# revisarlos. Los cálculos los hace el servidor: el navegador solo los muestra.
+HERRAMIENTA_BANCARIA = "bancaria"
+
+
+def _exigir_herramientas(request: Request) -> str:
+    """Puerta de las API de Herramientas. Devuelve quién está (para guardar
+    casos y cambios de estado): el usuario de plataforma, o "pase" si entró
+    con el PIN de la transición."""
+    _exigir_landing()
+    if not _pase_landing(request):
+        raise HTTPException(403, "Ingresá a la landing.")
+    sesion = sesion_actual(request, "plataforma")
+    return (sesion or {}).get("ident") or ("plataforma" if sesion else "pase")
+
+
+@app.get("/entornos/herramientas/calculadora-bancaria", response_class=HTMLResponse)
+def entornos_calculadora_bancaria(request: Request):
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    return templates.TemplateResponse("calculadora_bancaria.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "estados": db.ESTADOS_CASO,
+    })
+
+
+@app.get("/api/entornos/herramientas/bancaria/opciones")
+def api_bancaria_opciones(request: Request, periodo: str = ""):
+    _exigir_herramientas(request)
+    try:
+        return grilla_bancaria.opciones(periodo)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.post("/api/entornos/herramientas/bancaria/calcular")
+def api_bancaria_calcular(request: Request, payload: dict = Body(...)):
+    """El recibo esperado y, si vino el recibo real, la comparación."""
+    _exigir_herramientas(request)
+    try:
+        esperado = grilla_bancaria.calcular_recibo(payload.get("entrada") or {})
+        real = payload.get("real")
+        return {"esperado": esperado,
+                "comparacion": grilla_bancaria.comparar(esperado, real) if real else None}
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/api/entornos/herramientas/bancaria/casos")
+def api_bancaria_guardar_caso(request: Request, payload: dict = Body(...)):
+    """Guarda un caso. El esperado y las diferencias se recalculan acá con la
+    entrada: no se guarda lo que diga el navegador."""
+    quien = _exigir_herramientas(request)
+    entrada = payload.get("entrada") or {}
+    real = payload.get("real") or {}
+    try:
+        esperado = grilla_bancaria.calcular_recibo(entrada)
+        comparacion = grilla_bancaria.comparar(esperado, real)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    nota = str(payload.get("nota") or "").strip()[:4000]
+    banco = str(payload.get("banco") or "").strip()[:120]
+    if not nota and not comparacion["renglones"] and not comparacion["totales"] and not comparacion["extras"]:
+        raise HTTPException(422, "Cargá algo del recibo real o escribí una nota: un caso vacío no sirve para revisar.")
+    caso_id = db.guardar_caso_herramienta(
+        herramienta=HERRAMIENTA_BANCARIA, quien=quien, grilla=esperado["periodo"], banco=banco, nota=nota,
+        entrada=entrada, esperado=esperado, real=real, diferencias=comparacion,
+        distintos=comparacion["distintos"])
+    return {"ok": True, "id": caso_id}
+
+
+def _caso_resumen(c) -> dict:
+    return {"id": c.id, "creado": c.creado, "quien": c.quien, "grilla": c.grilla, "banco": c.banco,
+            "nota": c.nota, "distintos": c.distintos, "estado": c.estado,
+            "estado_cambiado": c.estado_cambiado, "estado_quien": c.estado_quien,
+            "categoria": (c.esperado.get("renglones") or [{}])[0].get("nota", ""),
+            "neto": (c.esperado.get("totales") or {}).get("neto")}
+
+
+@app.get("/api/entornos/herramientas/bancaria/casos")
+def api_bancaria_casos(request: Request):
+    _exigir_herramientas(request)
+    return {"casos": [_caso_resumen(c) for c in db.casos_herramienta(HERRAMIENTA_BANCARIA)],
+            "estados": db.ESTADOS_CASO}
+
+
+@app.get("/api/entornos/herramientas/bancaria/casos/{caso_id}")
+def api_bancaria_caso(request: Request, caso_id: int):
+    _exigir_herramientas(request)
+    c = db.caso_herramienta(HERRAMIENTA_BANCARIA, caso_id)
+    if not c:
+        raise HTTPException(404, "No existe ese caso.")
+    return {**_caso_resumen(c), "entrada": c.entrada, "esperado": c.esperado, "real": c.real,
+            "diferencias": c.diferencias}
+
+
+@app.post("/api/entornos/herramientas/bancaria/casos/{caso_id}/estado")
+def api_bancaria_caso_estado(request: Request, caso_id: int, payload: dict = Body(...)):
+    quien = _exigir_herramientas(request)
+    try:
+        if not db.cambiar_estado_caso(HERRAMIENTA_BANCARIA, caso_id, str(payload.get("estado") or ""), quien):
+            raise HTTPException(404, "No existe ese caso.")
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return {"ok": True}
+
+
+@app.get("/entornos/herramientas/bancaria/casos.csv")
+def entornos_bancaria_casos_csv(request: Request):
+    """Todos los casos, uno por renglón comparado (más uno por caso sin
+    renglones), para analizarlos en una planilla."""
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    import csv
+    import io
+    salida = io.StringIO()
+    w = csv.writer(salida, delimiter=";")
+    w.writerow(["caso", "creado", "quien", "estado", "grilla", "banco", "categoria", "renglon", "concepto",
+                "esperado", "real", "diferencia", "coincide", "nota"])
+    for c in db.casos_herramienta(HERRAMIENTA_BANCARIA):
+        r = _caso_resumen(c)
+        base = [c.id, c.creado, c.quien, c.estado, c.grilla, c.banco, r["categoria"]]
+        filas = [[d["codigo"], d["concepto"], d["esperado"], d["real"], d["diferencia"], d["coincide"]]
+                 for d in (c.diferencias.get("renglones") or [])]
+        filas += [["TOTAL", d["total"], d["esperado"], d["real"], d["diferencia"], d["coincide"]]
+                  for d in (c.diferencias.get("totales") or [])]
+        filas += [["EXTRA", f"{e['concepto']} ({e['seccion']})", "", e["importe"], "", ""]
+                  for e in (c.diferencias.get("extras") or [])]
+        for f in filas or [["", "", "", "", "", ""]]:
+            w.writerow(base + f + [c.nota])
+    contenido = "﻿" + salida.getvalue()      # BOM: Excel lo abre con tildes
+    return BinResponse(contenido.encode("utf-8"), media_type="text/csv; charset=utf-8",
+                       headers={"Content-Disposition": f'attachment; filename="casos-calculadora-bancaria-{fechas.hoy_texto()}.csv"'})
 
 
 # ==================== Solapa "Observabilidad" ====================

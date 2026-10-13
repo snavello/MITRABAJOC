@@ -99,6 +99,7 @@ FUNCIONALIDADES = [
     ("Entornos", "Planes de Render", r"^/(entornos|api/entornos)/planes", "_planes.html"),
     ("Entornos", "Tests de carga", r"^/(entornos|api/entornos)/(tests|informe)", None),
     ("Entornos", "Mapa funcional", r"^/(entornos|api/entornos)/mapa", None),
+    ("Entornos", "Herramientas: Calculadora bancaria", r"^/(entornos|api/entornos)/herramientas", None),
 ]
 
 NOMBRES = {

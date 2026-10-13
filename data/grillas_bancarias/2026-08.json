@@ -1,0 +1,910 @@
+{
+ "periodo": "2026-08",
+ "nombre": "Agosto 2026",
+ "firmada": "2026-09-11",
+ "fuentes": [
+  "https://labancaria.org/grillas-actualizacion-salarial-11-09-26/",
+  "https://labancaria.org/actualizacion-salarial-agosto-2026-17/"
+ ],
+ "transcripta": "2026-10-13, a mano de las 8 páginas escaneadas (docs/cct-1875-bancarios.md)",
+ "ramas": {
+  "administrativa": {
+   "nombre": "Administrativa",
+   "categorias": [
+    {
+     "nombre": "Inicial",
+     "anios": 0,
+     "coef": 1.0,
+     "basico": 1642764.63,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "1 año",
+     "anios": 1,
+     "coef": 1.04,
+     "basico": 1642764.63,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "2 años",
+     "anios": 2,
+     "coef": 1.08,
+     "basico": 1642764.63,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "3 años",
+     "anios": 3,
+     "coef": 1.11,
+     "basico": 1642764.63,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "4 años",
+     "anios": 4,
+     "coef": 1.13,
+     "basico": 1665695.64,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "5 años",
+     "anios": 5,
+     "coef": 1.17,
+     "basico": 1724658.32,
+     "conformado": 2508315.25
+    },
+    {
+     "nombre": "6 años",
+     "anios": 6,
+     "coef": 1.2,
+     "basico": 1768880.32,
+     "conformado": 2511567.97
+    },
+    {
+     "nombre": "7 años",
+     "anios": 7,
+     "coef": 1.24,
+     "basico": 1827843.0,
+     "conformado": 2514821.98
+    },
+    {
+     "nombre": "8 años",
+     "anios": 8,
+     "coef": 1.26,
+     "basico": 1857324.34,
+     "conformado": 2518074.7
+    },
+    {
+     "nombre": "9 años",
+     "anios": 9,
+     "coef": 1.3,
+     "basico": 1916287.02,
+     "conformado": 2521328.7
+    },
+    {
+     "nombre": "10 años",
+     "anios": 10,
+     "coef": 1.35,
+     "basico": 1989990.36,
+     "conformado": 2524582.71
+    },
+    {
+     "nombre": "11 años",
+     "anios": 11,
+     "coef": 1.39,
+     "basico": 2048953.04,
+     "conformado": 2527836.71
+    },
+    {
+     "nombre": "12 años",
+     "anios": 12,
+     "coef": 1.43,
+     "basico": 2107915.72,
+     "conformado": 2531089.44
+    },
+    {
+     "nombre": "13 años",
+     "anios": 13,
+     "coef": 1.48,
+     "basico": 2181619.07,
+     "conformado": 2534342.13
+    },
+    {
+     "nombre": "14 años",
+     "anios": 14,
+     "coef": 1.52,
+     "basico": 2240581.74,
+     "conformado": 2537595.99
+    },
+    {
+     "nombre": "15 años",
+     "anios": 15,
+     "coef": 1.63,
+     "basico": 2402729.11,
+     "conformado": 2540849.85
+    },
+    {
+     "nombre": "20 años",
+     "anios": 20,
+     "coef": 1.74,
+     "basico": 2564876.47,
+     "conformado": null
+    },
+    {
+     "nombre": "25 años",
+     "anios": 25,
+     "coef": 1.96,
+     "basico": 2889171.2,
+     "conformado": null
+    },
+    {
+     "nombre": "30 años",
+     "anios": 30,
+     "coef": 2.07,
+     "basico": 3051318.56,
+     "conformado": null
+    },
+    {
+     "nombre": "35 años",
+     "anios": 35,
+     "coef": 2.17,
+     "basico": 3198725.25,
+     "conformado": null
+    },
+    {
+     "nombre": "2º Jefe Div. de 3a.",
+     "anios": null,
+     "coef": 1.96,
+     "basico": 2889171.2,
+     "conformado": null
+    },
+    {
+     "nombre": "2º Jefe Div. de 2a.",
+     "anios": null,
+     "coef": 2.07,
+     "basico": 3051318.56,
+     "conformado": null
+    },
+    {
+     "nombre": "2º Jefe Div. de 1a.",
+     "anios": null,
+     "coef": 2.17,
+     "basico": 3198725.25,
+     "conformado": null
+    },
+    {
+     "nombre": "Jefe Div. de 3a.",
+     "anios": null,
+     "coef": 2.28,
+     "basico": 3360872.62,
+     "conformado": null
+    },
+    {
+     "nombre": "Jefe Div. de 2a.",
+     "anios": null,
+     "coef": 2.5,
+     "basico": 3685167.34,
+     "conformado": null
+    },
+    {
+     "nombre": "Jefe Div. de 1a.",
+     "anios": null,
+     "coef": 2.61,
+     "basico": 3847314.71,
+     "conformado": null
+    },
+    {
+     "nombre": "2º Jefe Dep. de 3a.",
+     "anios": null,
+     "coef": 2.83,
+     "basico": 4171609.43,
+     "conformado": null
+    },
+    {
+     "nombre": "2º Jefe Dep. de 2a.",
+     "anios": null,
+     "coef": 2.93,
+     "basico": 4319016.12,
+     "conformado": null
+    },
+    {
+     "nombre": "2º Jefe Dep. de 1a.",
+     "anios": null,
+     "coef": 3.04,
+     "basico": 4481163.49,
+     "conformado": null
+    },
+    {
+     "nombre": "Jefe Dep. de 3a.",
+     "anios": null,
+     "coef": 3.26,
+     "basico": 4805458.21,
+     "conformado": null
+    },
+    {
+     "nombre": "Jefe Dep. de 2a.",
+     "anios": null,
+     "coef": 3.48,
+     "basico": 5129752.94,
+     "conformado": null
+    },
+    {
+     "nombre": "Jefe Dep. de 1a.",
+     "anios": null,
+     "coef": 3.7,
+     "basico": 5454047.67,
+     "conformado": null
+    },
+    {
+     "nombre": "Jefe Ppal. de Dpto.",
+     "anios": null,
+     "coef": 4.02,
+     "basico": 5925749.09,
+     "conformado": null
+    },
+    {
+     "nombre": "SubGte. Deptal de 3a.",
+     "anios": null,
+     "coef": 4.35,
+     "basico": 6412191.18,
+     "conformado": null
+    },
+    {
+     "nombre": "SubGte. Deptal de 2a.",
+     "anios": null,
+     "coef": 4.65,
+     "basico": 6854411.26,
+     "conformado": null
+    },
+    {
+     "nombre": "SubGte. Deptal de 1a.",
+     "anios": null,
+     "coef": 4.89,
+     "basico": 7208187.32,
+     "conformado": null
+    }
+   ]
+  },
+  "maestranza": {
+   "nombre": "Maestranza",
+   "categorias": [
+    {
+     "nombre": "Inicial",
+     "anios": 0,
+     "coef": 1.0,
+     "basico": 1642764.63,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "1 año",
+     "anios": 1,
+     "coef": 1.03,
+     "basico": 1642764.63,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "2 años",
+     "anios": 2,
+     "coef": 1.04,
+     "basico": 1642764.63,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "3 años",
+     "anios": 3,
+     "coef": 1.06,
+     "basico": 1642764.63,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "4 años",
+     "anios": 4,
+     "coef": 1.08,
+     "basico": 1642764.63,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "5 años",
+     "anios": 5,
+     "coef": 1.11,
+     "basico": 1642764.63,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "6 años",
+     "anios": 6,
+     "coef": 1.13,
+     "basico": 1665695.64,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "7 años",
+     "anios": 7,
+     "coef": 1.14,
+     "basico": 1680436.31,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "8 años",
+     "anios": 8,
+     "coef": 1.16,
+     "basico": 1709917.65,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "9 años",
+     "anios": 9,
+     "coef": 1.17,
+     "basico": 1724658.32,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "10 años",
+     "anios": 10,
+     "coef": 1.22,
+     "basico": 1798361.66,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "11 años",
+     "anios": 11,
+     "coef": 1.24,
+     "basico": 1827843.0,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "12 años",
+     "anios": 12,
+     "coef": 1.26,
+     "basico": 1857324.34,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "13 años",
+     "anios": 13,
+     "coef": 1.29,
+     "basico": 1901546.35,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "14 años",
+     "anios": 14,
+     "coef": 1.3,
+     "basico": 1916287.02,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "15 años",
+     "anios": 15,
+     "coef": 1.33,
+     "basico": 1960509.03,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "16 años",
+     "anios": 16,
+     "coef": 1.35,
+     "basico": 1989990.36,
+     "conformado": null
+    },
+    {
+     "nombre": "17 años",
+     "anios": 17,
+     "coef": 1.39,
+     "basico": 2048953.04,
+     "conformado": null
+    },
+    {
+     "nombre": "18 años",
+     "anios": 18,
+     "coef": 1.41,
+     "basico": 2078434.38,
+     "conformado": null
+    },
+    {
+     "nombre": "19 años",
+     "anios": 19,
+     "coef": 1.44,
+     "basico": 2122656.39,
+     "conformado": null
+    },
+    {
+     "nombre": "20 años",
+     "anios": 20,
+     "coef": 1.48,
+     "basico": 2181619.07,
+     "conformado": null
+    },
+    {
+     "nombre": "25 años",
+     "anios": 25,
+     "coef": 1.53,
+     "basico": 2255322.41,
+     "conformado": null
+    },
+    {
+     "nombre": "30 años",
+     "anios": 30,
+     "coef": 1.62,
+     "basico": 2387988.44,
+     "conformado": null
+    },
+    {
+     "nombre": "35 años",
+     "anios": 35,
+     "coef": 1.66,
+     "basico": 2446951.12,
+     "conformado": null
+    },
+    {
+     "nombre": "Jefe de Equipo de 3º",
+     "anios": null,
+     "coef": 1.48,
+     "basico": 2181619.07,
+     "conformado": null
+    },
+    {
+     "nombre": "Jefe de Equipo de 2º",
+     "anios": null,
+     "coef": 1.53,
+     "basico": 2255322.41,
+     "conformado": null
+    },
+    {
+     "nombre": "Jefe de Equipo de 1º",
+     "anios": null,
+     "coef": 1.62,
+     "basico": 2387988.44,
+     "conformado": null
+    },
+    {
+     "nombre": "Sub-Jefe taller 3º",
+     "anios": null,
+     "coef": 1.66,
+     "basico": 2446951.12,
+     "conformado": null
+    },
+    {
+     "nombre": "Sub-Jefe taller 2º",
+     "anios": null,
+     "coef": 1.67,
+     "basico": 2461691.78,
+     "conformado": null
+    },
+    {
+     "nombre": "Sub-Jefe taller 1º",
+     "anios": null,
+     "coef": 1.72,
+     "basico": 2535395.13,
+     "conformado": null
+    },
+    {
+     "nombre": "Jefe taller de 3º",
+     "anios": null,
+     "coef": 1.73,
+     "basico": 2550135.8,
+     "conformado": null
+    },
+    {
+     "nombre": "Jefe taller de 2º",
+     "anios": null,
+     "coef": 1.77,
+     "basico": 2609098.48,
+     "conformado": null
+    },
+    {
+     "nombre": "Jefe taller de 1º",
+     "anios": null,
+     "coef": 1.81,
+     "basico": 2668061.16,
+     "conformado": null
+    },
+    {
+     "nombre": "Supervisor de taller 3º",
+     "anios": null,
+     "coef": 1.84,
+     "basico": 2712283.16,
+     "conformado": null
+    },
+    {
+     "nombre": "Supervisor de taller 2º",
+     "anios": null,
+     "coef": 1.9,
+     "basico": 2800727.18,
+     "conformado": null
+    },
+    {
+     "nombre": "Supervisor de taller 1º",
+     "anios": null,
+     "coef": 2.0,
+     "basico": 2948133.87,
+     "conformado": null
+    },
+    {
+     "nombre": "Subcapataz Gral.",
+     "anios": null,
+     "coef": 2.17,
+     "basico": 3198725.25,
+     "conformado": null
+    },
+    {
+     "nombre": "Capataz Gral.",
+     "anios": null,
+     "coef": 2.36,
+     "basico": 3478797.97,
+     "conformado": null
+    }
+   ]
+  },
+  "ordenanza": {
+   "nombre": "Ordenanza",
+   "categorias": [
+    {
+     "nombre": "Inicial",
+     "anios": 0,
+     "coef": 1.0,
+     "basico": 1642764.49,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "1 año",
+     "anios": 1,
+     "coef": 1.02,
+     "basico": 1642764.49,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "2 años",
+     "anios": 2,
+     "coef": 1.03,
+     "basico": 1642764.49,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "3 años",
+     "anios": 3,
+     "coef": 1.04,
+     "basico": 1642764.49,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "4 años",
+     "anios": 4,
+     "coef": 1.06,
+     "basico": 1642764.49,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "5 años",
+     "anios": 5,
+     "coef": 1.09,
+     "basico": 1642764.49,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "6 años",
+     "anios": 6,
+     "coef": 1.1,
+     "basico": 1642764.49,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "7 años",
+     "anios": 7,
+     "coef": 1.11,
+     "basico": 1642764.49,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "8 años",
+     "anios": 8,
+     "coef": 1.13,
+     "basico": 1665694.65,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "9 años",
+     "anios": 9,
+     "coef": 1.14,
+     "basico": 1680434.59,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "10 años",
+     "anios": 10,
+     "coef": 1.19,
+     "basico": 1754139.22,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "11 años",
+     "anios": 11,
+     "coef": 1.2,
+     "basico": 1768880.39,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "12 años",
+     "anios": 12,
+     "coef": 1.22,
+     "basico": 1798361.66,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "13 años",
+     "anios": 13,
+     "coef": 1.24,
+     "basico": 1827843.0,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "14 años",
+     "anios": 14,
+     "coef": 1.27,
+     "basico": 1872065.01,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "15 años",
+     "anios": 15,
+     "coef": 1.3,
+     "basico": 1916287.02,
+     "conformado": 2505061.24
+    },
+    {
+     "nombre": "16 años",
+     "anios": 16,
+     "coef": 1.32,
+     "basico": 1945768.36,
+     "conformado": null
+    },
+    {
+     "nombre": "17 años",
+     "anios": 17,
+     "coef": 1.35,
+     "basico": 1989990.36,
+     "conformado": null
+    },
+    {
+     "nombre": "18 años",
+     "anios": 18,
+     "coef": 1.38,
+     "basico": 2034212.37,
+     "conformado": null
+    },
+    {
+     "nombre": "19 años",
+     "anios": 19,
+     "coef": 1.4,
+     "basico": 2063693.71,
+     "conformado": null
+    },
+    {
+     "nombre": "20 años",
+     "anios": 20,
+     "coef": 1.42,
+     "basico": 2093175.05,
+     "conformado": null
+    },
+    {
+     "nombre": "25 años",
+     "anios": 25,
+     "coef": 1.44,
+     "basico": 2122656.39,
+     "conformado": null
+    },
+    {
+     "nombre": "30 años",
+     "anios": 30,
+     "coef": 1.46,
+     "basico": 2152137.73,
+     "conformado": null
+    },
+    {
+     "nombre": "35 años",
+     "anios": 35,
+     "coef": 1.48,
+     "basico": 2181619.07,
+     "conformado": null
+    },
+    {
+     "nombre": "Subjefe serv. 3ª",
+     "anios": null,
+     "coef": 1.42,
+     "basico": 2093175.05,
+     "conformado": null
+    },
+    {
+     "nombre": "Subjefe serv. 2ª",
+     "anios": null,
+     "coef": 1.44,
+     "basico": 2122656.39,
+     "conformado": null
+    },
+    {
+     "nombre": "Subjefe serv. 1ª",
+     "anios": null,
+     "coef": 1.46,
+     "basico": 2152137.73,
+     "conformado": null
+    },
+    {
+     "nombre": "Jefe serv. 3ª",
+     "anios": null,
+     "coef": 1.48,
+     "basico": 2181619.07,
+     "conformado": null
+    },
+    {
+     "nombre": "Jefe serv. 2ª",
+     "anios": null,
+     "coef": 1.5,
+     "basico": 2211100.41,
+     "conformado": null
+    },
+    {
+     "nombre": "Jefe serv. 1ª",
+     "anios": null,
+     "coef": 1.53,
+     "basico": 2255322.41,
+     "conformado": null
+    },
+    {
+     "nombre": "Superv. Serv. 3ª",
+     "anios": null,
+     "coef": 1.55,
+     "basico": 2284803.75,
+     "conformado": null
+    },
+    {
+     "nombre": "Superv. Serv. 2ª",
+     "anios": null,
+     "coef": 1.59,
+     "basico": 2343766.43,
+     "conformado": null
+    },
+    {
+     "nombre": "Superv. Serv. 1ª",
+     "anios": null,
+     "coef": 1.62,
+     "basico": 2387988.44,
+     "conformado": null
+    },
+    {
+     "nombre": "Submay. Espec. 3ª",
+     "anios": null,
+     "coef": 1.67,
+     "basico": 2461691.78,
+     "conformado": null
+    },
+    {
+     "nombre": "Submay. Espec. 2ª",
+     "anios": null,
+     "coef": 1.72,
+     "basico": 2535395.13,
+     "conformado": null
+    },
+    {
+     "nombre": "Submay. Espec. 1ª",
+     "anios": null,
+     "coef": 1.81,
+     "basico": 2668061.16,
+     "conformado": null
+    },
+    {
+     "nombre": "Submayordomo Gral.",
+     "anios": null,
+     "coef": 2.17,
+     "basico": 3198725.25,
+     "conformado": null
+    },
+    {
+     "nombre": "Mayordomo Gral.",
+     "anios": null,
+     "coef": 2.54,
+     "basico": 3744130.02,
+     "conformado": null
+    }
+   ]
+  }
+ },
+ "adicionales": {
+  "funcion_cajero": 163963.06,
+  "falla_caja": 287355.05,
+  "falla_caja_moneda_extranjera": 82261.33,
+  "titulos": {
+   "secundario": 27979.69,
+   "terciario": 65069.99,
+   "universitario": 97604.47
+  },
+  "zona_patagonica": {
+   "La Pampa": 455489.91,
+   "Patagones, Río Negro y Neuquén": 498870.24,
+   "Chubut, Santa Cruz y Tierra del Fuego": 585630.91
+  },
+  "guarderia": 416341.95
+ },
+ "conectividad": [
+  {
+   "meses": [
+    "2026-06",
+    "2026-07",
+    "2026-08"
+   ],
+   "diario": 2890,
+   "mas_de_4_dias": 26011,
+   "mensual": 63571
+  },
+  {
+   "meses": [
+    "2026-09",
+    "2026-10",
+    "2026-11"
+   ],
+   "diario": 3055,
+   "mas_de_4_dias": 27493,
+   "mensual": 67193
+  }
+ ],
+ "roe": {
+  "tramos": [
+   "0% a 3,5%",
+   "3,5% a 8,75%",
+   "8,75% a 14,5%",
+   "14,5% a 19,75%",
+   "19,75% a 25%",
+   "más de 25%"
+  ],
+  "filas": [
+   {
+    "hasta": 3275626,
+    "anual": [
+     0,
+     868962.01,
+     1086228.18,
+     1357708.22,
+     1493550.92,
+     1642844.4
+    ]
+   },
+   {
+    "hasta": 4242954,
+    "anual": [
+     0,
+     1629290.94,
+     2036613.67,
+     2545792.76,
+     2800330.96,
+     3080333.26
+    ]
+   },
+   {
+    "hasta": 5091586,
+    "anual": [
+     0,
+     2389619.86,
+     2986999.16,
+     3733774.62,
+     4107213.69,
+     4517924.79
+    ]
+   },
+   {
+    "hasta": null,
+    "anual": [
+     0,
+     2824049.53,
+     3530164.59,
+     4412680.07,
+     4853989.15,
+     5339346.99
+    ]
+   }
+  ]
+ },
+ "dia_bancario": {
+  "suma_fija": 1973675.85,
+  "por_coeficiente": 259499.59,
+  "minimo": 2233175.44
+ }
+}

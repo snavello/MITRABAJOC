@@ -6211,6 +6211,68 @@ class CambioPlan(SQLModel, table=True):
     error: str = ""
 
 
+class CasoHerramienta(SQLModel, table=True):
+    """Un caso guardado desde una herramienta de /entornos → Herramientas (la
+    primera, la Calculadora bancaria): lo que se eligió, lo que la
+    herramienta calculó, lo que decía el recibo real y una nota. Existe para
+    revisarlos después y corregir la calculadora o el auditor de recibos.
+    Sin nombre ni CUIL: el banco es opcional y la nota, libre."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    herramienta: str = Field(default="bancaria", index=True)
+    creado: str = Field(default_factory=fechas.ahora_con_segundos)     # hora de Buenos Aires
+    quien: str = ""                       # usuario de plataforma, o "pase" si entró con el PIN
+    grilla: str = ""                      # período de la grilla usada (AAAA-MM)
+    banco: str = ""
+    nota: str = ""
+    entrada: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+    esperado: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+    real: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+    diferencias: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+    distintos: int = 0                    # renglones y totales que no coinciden
+    estado: str = "nuevo"                 # nuevo | revisado | aplicado | descartado
+    estado_cambiado: str = ""
+    estado_quien: str = ""
+
+
+ESTADOS_CASO = ("nuevo", "revisado", "aplicado", "descartado")
+
+
+def guardar_caso_herramienta(**campos) -> int:
+    with Session(engine) as s:
+        caso = CasoHerramienta(**campos)
+        s.add(caso)
+        s.commit()
+        s.refresh(caso)
+        return caso.id
+
+
+def casos_herramienta(herramienta: str) -> list:
+    with Session(engine) as s:
+        return list(s.exec(select(CasoHerramienta).where(CasoHerramienta.herramienta == herramienta)
+                           .order_by(CasoHerramienta.id.desc())).all())
+
+
+def caso_herramienta(herramienta: str, caso_id: int):
+    with Session(engine) as s:
+        caso = s.get(CasoHerramienta, caso_id)
+        return caso if caso and caso.herramienta == herramienta else None
+
+
+def cambiar_estado_caso(herramienta: str, caso_id: int, estado: str, quien: str) -> bool:
+    if estado not in ESTADOS_CASO:
+        raise ValueError("Estado desconocido.")
+    with Session(engine) as s:
+        caso = s.get(CasoHerramienta, caso_id)
+        if not caso or caso.herramienta != herramienta:
+            return False
+        caso.estado = estado
+        caso.estado_cambiado = fechas.ahora_con_segundos()
+        caso.estado_quien = quien
+        s.add(caso)
+        s.commit()
+        return True
+
+
 def planes_programados() -> list:
     with Session(engine) as s:
         filas = s.exec(select(PlanProgramado).order_by(
