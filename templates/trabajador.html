@@ -1025,7 +1025,7 @@
 
   <!-- ============ PESTAÑA: TU RECIBO ============ -->
   {% if 'recibos' in modulos %}
-  <div class="tpanel" id="tp-recibo">
+  <div class="tpanel" data-mov-vista id="tp-recibo">
     <!-- PASO 1 DE 3 -- subir el archivo.
          DOS ESTADOS EN EL MISMO PANEL: sin archivo (guía de foto + los dos
          botones de carga) y con archivo elegido (el archivo + "Leer recibo").
@@ -1090,7 +1090,7 @@
     </div>
 
     <!-- Historial: mis recibos verificados -->
-    <div id="misrecibos" style="display:none;">
+    <div id="misrecibos" data-mov-vista style="display:none;">
       <h1 class="titulo-pagina">Mis recibos verificados</h1>
       <p class="sub">Historial privado: todo lo que verificaste, lo hayas enviado a tu sindicato o no.</p>
       <div id="historial-contenido"></div>
@@ -1122,7 +1122,7 @@
 
   <!-- ============ PESTAÑA: NOVEDADES ============ -->
   {% if 'noticias' in modulos %}
-  <div class="tpanel" id="tp-novedades">
+  <div class="tpanel" data-mov-vista id="tp-novedades">
     {% if noticias %}
       <h1 class="titulo-pagina" style="margin-bottom:6px;">Novedades</h1>
       {# Hilo: un hito por día (fecha_hora es "DD/MM HH:MM"), una burbuja por noticia #}
@@ -1152,7 +1152,7 @@
 
   <!-- ============ PESTAÑA: MIS APORTES ============ -->
   {% if 'aportes' in modulos %}
-  <div class="tpanel" id="tp-aportes">
+  <div class="tpanel" data-mov-vista id="tp-aportes">
     <h1 class="titulo-pagina">Mis aportes</h1>
     <div class="sem-card">
       <div class="th-head">
@@ -1167,7 +1167,7 @@
 
   <!-- ============ PESTAÑA: CAPACITACIÓN ============ -->
   {% if 'capacitacion' in modulos %}
-  <div class="tpanel" id="tp-capacitacion">
+  <div class="tpanel" data-mov-vista id="tp-capacitacion">
     <h1 class="titulo-pagina">Capacitación</h1>
     <div class="cap-card">
       <div class="th-head">
@@ -1196,7 +1196,7 @@
   <!-- ============ PESTAÑA: CREDENCIAL ============ -->
   {# Solo con sesión de trabajador: la ruta / (demo sin login) no tiene marca. #}
   {% if marca and 'credencial' in modulos %}
-  <div class="tpanel" id="tp-credencial">
+  <div class="tpanel" data-mov-vista id="tp-credencial">
     <h1 class="titulo-pagina">Credencial</h1>
     <div class="cred" style="margin-top:16px;">
       {% if tiene_foto_perfil %}
@@ -1347,7 +1347,7 @@
   {% endif %}
 
   {% if 'encuestas' in modulos %}
-  <div class="tpanel" id="tp-encuestas">
+  <div class="tpanel" data-mov-vista id="tp-encuestas">
     <!-- ======= ENCUESTAS (SPRINT_ENCUESTAS.md, Fase 2) ======= -->
     <div id="enc-lista"><p class="muted" style="font-size:13px;">Cargando…</p></div>
     <div id="enc-responder" class="oculto"></div>
