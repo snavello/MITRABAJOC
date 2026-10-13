@@ -319,3 +319,106 @@ def comparar(esperado: dict, real: dict) -> dict:
                             "diferencia": dif, "coincide": abs(dif) < 1})
     distintos = sum(1 for d in diferencias + totales if not d["coincide"])
     return {"renglones": diferencias, "extras": extras, "totales": totales, "distintos": distintos}
+
+
+# ---------------------------------------------------------------- recibo leído
+# Del recibo que lee la IA (extractor.extraer) a los renglones de la
+# calculadora. Se ubica por lo que dice la línea, no por el código: cada banco
+# numera sus conceptos a su manera. Lo que no se reconoce va a "extras", a la
+# vista, y nunca se suma a un renglón ajeno.
+_AL_CODIGO_UNIVERSAL = {"jubilacion": "JUBILACION", "pami": "PAMI",
+                        "obra_social": "OBRASOCIAL", "cuota_sindical": "CUOTA"}
+_PALABRAS_HABERES = [   # el orden importa: "falla ... extranjera" antes que "falla"
+    ("CONFOR", ("conformado",)),
+    ("BAS", ("basico",)),
+    ("ROE", ("roe", "participacion en las ganancias", "particip")),
+    ("CAJFME", ("moneda extranjera", "m. extranjera", "caja m.e", "caja me", "falla m.e", "falla me")),
+    ("CAJFAL", ("falla",)),
+    ("CAJFUN", ("cajero", "funcion caj")),
+    ("TITULO", ("titulo",)),
+    ("ZONA", ("zona", "patagon")),
+    ("GUARDE", ("guarder",)),
+    ("CONECT", ("conectividad",)),
+    ("DIABAN", ("dia del bancario", "dia bancario")),
+]
+_PALABRAS_DESCUENTOS = [
+    ("JUBILACION", ("jubil", "sipa", "24.241", "24241")),
+    ("PAMI", ("19.032", "19032", "inssjp", "pami")),
+    ("OBRASOCIAL", ("obra social", "o.social", "o. social", "osba")),
+    ("CUOTA", ("cuota sindical", "asociacion bancaria", "aporte sindical")),
+    ("GANANC", ("ganancia",)),
+]
+
+
+def _llano(texto: str) -> str:
+    import unicodedata
+    t = unicodedata.normalize("NFKD", str(texto or "")).encode("ascii", "ignore").decode()
+    return " ".join(t.lower().split())
+
+
+def _importe(valor):
+    try:
+        return float(str(valor).replace(",", "."))
+    except (TypeError, ValueError):
+        return None
+
+
+def mapear_recibo_leido(recibo: dict) -> dict:
+    """{"renglones": {codigo: importe}, "extras": [...], "totales": {...},
+    "ubicados": n, "reintegros": n}: lo que se carga en "Chequear recibo".
+
+    Los descuentos van en positivo, como los muestra la calculadora. Una
+    línea entre los descuentos con el signo contrario al de los demás es un
+    reintegro (validador.repartir_por_zona usa la misma regla): la
+    calculadora no los contempla, así que va a extras con su signo."""
+    lineas = [ln for ln in (recibo.get("lineas") or []) if _importe(ln.get("importe")) is not None]
+
+    def seccion(ln):
+        s = ln.get("seccion")
+        if s in ("haberes", "no_remunerativos", "descuentos"):
+            return s
+        return "descuentos" if ln.get("tipo") == "aporte_trabajador" or _importe(ln["importe"]) < 0 else "haberes"
+
+    signos = [1 if _importe(ln["importe"]) >= 0 else -1 for ln in lineas if seccion(ln) == "descuentos"]
+    signo_desc = 1 if signos.count(1) >= signos.count(-1) else -1
+    renglones, extras, reintegros = {}, [], 0
+    for ln in lineas:
+        sec = seccion(ln)
+        imp = _importe(ln["importe"])
+        texto = _llano(ln.get("descripcion"))
+        codigo = None
+        if sec == "descuentos":
+            if signos and (1 if imp >= 0 else -1) != signo_desc:
+                reintegros += 1
+                extras.append({"concepto": f"{ln.get('descripcion') or '(sin nombre)'} (reintegro)",
+                               "seccion": "descuentos", "importe": -abs(imp)})
+                continue
+            codigo = _AL_CODIGO_UNIVERSAL.get(ln.get("categoria_universal") or "")
+            if not codigo:
+                codigo = next((c for c, pals in _PALABRAS_DESCUENTOS if any(p in texto for p in pals)), None)
+            imp = abs(imp)
+        else:
+            codigo = next((c for c, pals in _PALABRAS_HABERES if any(p in texto for p in pals)), None)
+        if codigo and codigo not in renglones:
+            renglones[codigo] = round(imp, 2)
+        else:
+            extras.append({"concepto": ln.get("descripcion") or "(sin nombre)", "seccion": sec,
+                           "importe": round(imp, 2)})
+    impresos = recibo.get("totales_impresos") or {}
+    totales = {}
+    for clave, origen in (("bruto", "remuneraciones"), ("descuentos", "descuentos"), ("neto", "neto")):
+        v = _importe(impresos.get(origen))
+        if v is not None:
+            totales[clave] = round(abs(v), 2)
+    return {"renglones": renglones, "extras": extras, "totales": totales,
+            "ubicados": len(renglones), "reintegros": reintegros}
+
+
+def categorias_por_basico(basico: float, periodo: str = "") -> list:
+    """Las categorías de la grilla cuyo básico coincide con el leído ($ 1 de
+    tolerancia). El piso hace que varias compartan básico: van todas."""
+    if basico is None:
+        return []
+    return [{"rama": clave, "categoria": i, "nombre": c["nombre"]}
+            for clave, rama in grilla(periodo)["ramas"].items()
+            for i, c in enumerate(rama["categorias"]) if abs(c["basico"] - basico) < 1]

@@ -1004,6 +1004,7 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     conformado, adicionales, ROE, aportes con tope, cuota), lo compara con un
     recibo real cargado a mano y guarda casos para revisar (tabla
     `CasoHerramienta`, migración `a3c7e91d4b26`). Ver "Herramientas".
+    El mismo día sumó la lectura del recibo real con IA (Plataforma 0.45.01).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -1326,6 +1327,15 @@ su página (`/entornos/herramientas/<nombre>`) y la pestaña solo la presenta.
   la más nueva. `test_calculadora_bancaria.py` controla cada grilla (todo
   básico sobre el piso es coeficiente × la misma unidad: atrapa un dígito mal
   copiado).
+- **El recibo real entra a mano o leído por la IA** (`POST .../bancaria/leer`,
+  el mismo extractor y enmascarado que `/api/leer`, tipo `herramienta` en
+  Uso de IA). `grilla_bancaria.mapear_recibo_leido` ubica cada línea por lo
+  que dice, no por su código; lo que no reconoce y los reintegros van a
+  "renglones que la calculadora no tiene", nunca a un renglón ajeno. La
+  categoría se elige por el básico leído. Solo vuelven importes: ni el
+  archivo ni el nombre o CUIL se guardan ni se devuelven.
+- **Alcance dicho en pantalla**: solo el mes; no contempla retenciones ni
+  reintegros de Ganancias ni conceptos de períodos anteriores.
 - **Supuestos marcados en pantalla** (`supuesto: true` en el renglón): el
   nombre "Complemento salario conformado", y guardería y conectividad como no
   remunerativos. El Día del Bancario va no remunerativo por el acta de 2020.

@@ -906,8 +906,8 @@ class UsoIA(SQLModel, table=True):
     sindicato y por tipo de llamada en el panel de plataforma."""
     id: Optional[int] = Field(default=None, primary_key=True)
     sindicato_id: Optional[int] = Field(default=None, foreign_key="sindicato.id", index=True)
-    cuil: str = ""  # vacío en "aprendizaje" y "prueba": no son de un trabajador puntual
-    tipo: str = ""  # "recibo" | "aportes" | "aprendizaje" | "prueba"
+    cuil: str = ""  # vacío en "aprendizaje", "prueba" y "herramienta": no son de un trabajador puntual
+    tipo: str = ""  # "recibo" | "aportes" | "aprendizaje" | "prueba" | "herramienta"
     modelo: str = ""
     tokens_entrada: int = 0
     tokens_salida: int = 0

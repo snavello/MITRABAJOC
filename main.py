@@ -8962,6 +8962,41 @@ def api_bancaria_calcular(request: Request, payload: dict = Body(...)):
         raise HTTPException(422, str(e))
 
 
+LEER_MAX_BYTES = 10 * 1024 * 1024
+
+
+@app.post("/api/entornos/herramientas/bancaria/leer")
+async def api_bancaria_leer(request: Request, archivo: UploadFile = File(...)):
+    """Lee un recibo real con la IA (el mismo extractor y el mismo enmascarado
+    que /api/leer) y lo devuelve ubicado en los renglones de la calculadora,
+    para revisarlo en "Chequear recibo". No se guarda el archivo ni el nombre
+    o CUIL leídos: solo vuelven importes. La llamada se paga y queda en Uso de
+    IA de /plataforma con tipo "herramienta"."""
+    _exigir_herramientas(request)
+    contenido = await archivo.read()
+    if not contenido:
+        raise HTTPException(422, "El archivo está vacío.")
+    if len(contenido) > LEER_MAX_BYTES:
+        raise HTTPException(422, "El archivo pasa de 10 MB.")
+    conocidos = None if preparacion.modo() == "apagado" else preparacion.E.Conocidos()
+    prep = await _preparar_para_ia(contenido, archivo.content_type, conocidos, None, "herramienta")
+    try:
+        recibo, uso = await run_in_threadpool(extraer, contenido, archivo.content_type,
+                                              db.modelo_ia("recibos"), **_para_la_ia(prep))
+    except Exception as e:
+        _registrar_uso_fallido(e, None, "", "herramienta")
+        raise HTTPException(422, "No se pudo leer el recibo. Probá con otra foto o el PDF original.")
+    db.registrar_uso_ia(None, "", "herramienta", uso["modelo"], uso["tokens_entrada"],
+                        uso["tokens_salida"], uso.get("duracion_ms", 0))
+    leido = grilla_bancaria.mapear_recibo_leido(recibo)
+    periodo = recibo.get("periodo") if recibo.get("periodo") in grilla_bancaria.GRILLAS else ""
+    return {**leido, "periodo": recibo.get("periodo") or "",
+            "categorias": grilla_bancaria.categorias_por_basico(leido["renglones"].get("BAS"), periodo),
+            "banco": (recibo.get("empleador") or {}).get("nombre") or "",
+            "confianza": recibo.get("confianza") or "",
+            "mock": os.getenv("MOCK_EXTRACTOR") == "1"}
+
+
 @app.post("/api/entornos/herramientas/bancaria/casos")
 def api_bancaria_guardar_caso(request: Request, payload: dict = Body(...)):
     """Guarda un caso. El esperado y las diferencias se recalculan acá con la

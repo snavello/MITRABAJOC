@@ -217,3 +217,67 @@ def test_con_el_pin_queda_como_pase():
         pytest.skip("El PIN de la transición está apagado en este entorno de tests.")
     caso_id = r.json()["id"]
     assert c.get(API + f"/casos/{caso_id}").json()["quien"] == "pase"
+
+
+# ---------------------------------------------------------------- leer con IA
+RECIBO_LEIDO = {
+    "periodo": "2026-08", "empleador": {"nombre": "Banco de Prueba", "cuit": "30710000011"},
+    "empleado": {"cuil": "27999999994", "apellido_nombre": "PRUEBA, USUARIA"},
+    "lineas": [
+        {"descripcion": "Sueldo Básico", "importe": 1642764.63, "seccion": "haberes"},
+        {"descripcion": "Adic. Salario Conformado", "importe": 862296.61, "seccion": "haberes"},
+        {"descripcion": "Participación en las Ganancias", "importe": 72413.5, "seccion": "haberes"},
+        {"descripcion": "Falla de caja M.E.", "importe": 82261.33, "seccion": "haberes"},
+        {"descripcion": "Falla de caja", "importe": 287355.05, "seccion": "haberes"},
+        {"descripcion": "Bonificación especial", "importe": 15000, "seccion": "haberes"},
+        {"descripcion": "Jubilación", "importe": -283522.22, "seccion": "descuentos", "categoria_universal": "jubilacion"},
+        {"descripcion": "Ley 19032", "importe": -77324.24, "seccion": "descuentos"},
+        {"descripcion": "OSBA", "importe": -77324.24, "seccion": "descuentos", "categoria_universal": "obra_social"},
+        {"descripcion": "Impuesto a las Ganancias", "importe": -50000, "seccion": "descuentos"},
+        {"descripcion": "Devolución Ganancias", "importe": 12000, "seccion": "descuentos"},
+        {"descripcion": "Retroactivo julio", "importe": 30000, "seccion": "haberes"},
+    ],
+    "totales_impresos": {"remuneraciones": 2962090.12, "descuentos": -476170.70, "neto": 2485919.42},
+}
+
+
+def test_lo_leido_se_ubica_en_los_renglones():
+    m = g.mapear_recibo_leido(RECIBO_LEIDO)
+    r = m["renglones"]
+    assert r["BAS"] == 1642764.63 and r["CONFOR"] == 862296.61 and r["ROE"] == 72413.5
+    assert r["CAJFME"] == 82261.33 and r["CAJFAL"] == 287355.05      # "M.E." no cae en falla común
+    assert r["JUBILACION"] == 283522.22 and r["PAMI"] == 77324.24 and r["OBRASOCIAL"] == 77324.24
+    assert r["GANANC"] == 50000                                       # descuento en positivo
+    # Lo que no se reconoce y el reintegro van a la vista, nunca a un renglón ajeno.
+    extras = {e["concepto"]: e for e in m["extras"]}
+    assert extras["Bonificación especial"]["importe"] == 15000
+    assert extras["Retroactivo julio"]["seccion"] == "haberes"
+    assert extras["Devolución Ganancias (reintegro)"]["importe"] == -12000 and m["reintegros"] == 1
+    assert m["totales"] == {"bruto": 2962090.12, "descuentos": 476170.7, "neto": 2485919.42}
+
+
+def test_leer_con_ia_por_la_api(monkeypatch):
+    llamadas = []
+
+    def falso_extraer(contenido, content_type, modelo=None, **kw):
+        llamadas.append(content_type)
+        return RECIBO_LEIDO, {"modelo": "claude-sonnet-4-6", "tokens_entrada": 1000, "tokens_salida": 500,
+                              "duracion_ms": 10}
+    monkeypatch.setattr(main, "extraer", falso_extraer)
+    c = _con_plataforma()
+    r = c.post(API + "/leer", files={"archivo": ("recibo.pdf", b"%PDF-1.4 falso", "application/pdf")})
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert d["renglones"]["BAS"] == 1642764.63 and d["banco"] == "Banco de Prueba" and d["periodo"] == "2026-08"
+    # El básico del piso lo comparten varias categorías: vuelven todas.
+    assert {"rama": "administrativa", "categoria": 0, "nombre": "Inicial"} in d["categorias"]
+    assert g.categorias_por_basico(2_402_729.11) == [{"rama": "administrativa", "categoria": 15, "nombre": "15 años"}]
+    # Solo vuelven importes: ni el CUIL ni el nombre de la persona.
+    assert "27999999994" not in r.text and "PRUEBA" not in r.text
+    assert llamadas == ["application/pdf"]
+    with db.get_session() as s:
+        from sqlmodel import select
+        assert s.exec(select(db.UsoIA).where(db.UsoIA.tipo == "herramienta")).first()
+    assert c.post(API + "/leer", files={"archivo": ("vacio.pdf", b"", "application/pdf")}).status_code == 422
+    # Sin pase, no se lee nada.
+    assert TestClient(main.app).post(API + "/leer", files={"archivo": ("r.pdf", b"x", "application/pdf")}).status_code == 403
