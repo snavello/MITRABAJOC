@@ -70,8 +70,9 @@ SEMILLA = [
         "descripcion": "Paso a paso para rearmar las cuentas de Colm3na a nombre de XP sin cortar nada: "
                        "AKG titular; SDN, ARS y GCF invitados (GCF como miembro de Claude Team). "
                        "Correo y dominio, GitHub, Render, Cloudflare, Anthropic, AWS y observabilidad, "
-                       "con quién se sienta en cada paso y el control final. Interno del equipo.",
-        "fecha": date(2026, 10, 12),
+                       "los certificados de seguridad (HTTPS) paso a paso, con quién se sienta en cada "
+                       "paso y el control final. Interno del equipo.",
+        "fecha": date(2026, 10, 14),
         "archivo": "colm3na-instructivo-montaje.html",
         "miniatura": "colm3na-instructivo-montaje.jpg",
         "fragmento": "",
@@ -79,8 +80,8 @@ SEMILLA = [
     {
         "clave": "instructivo-montaje-pdf",
         "titulo": "Instructivo de montaje (PDF para imprimir)",
-        "descripcion": "El mismo instructivo en A4, 36 páginas, para seguirlo en papel o adjuntarlo.",
-        "fecha": date(2026, 10, 12),
+        "descripcion": "El mismo instructivo en A4, 39 páginas, para seguirlo en papel o adjuntarlo.",
+        "fecha": date(2026, 10, 14),
         "archivo": "colm3na-instructivo-montaje.pdf",
         "miniatura": "",
         "fragmento": "",
