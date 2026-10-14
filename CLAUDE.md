@@ -1352,6 +1352,16 @@ su página (`/entornos/herramientas/<nombre>`) y la pestaña solo la presenta.
   chequear", sin tocar la de convenio. Un haber remunerativo arrastra sus
   aportes (mismo % y tope) y la cuota (supuesto), y cada diferencia es
   recibo − (convenio + otros): lo que no cierra es de convenio.
+- **v2 en Preact, conviviendo con la v1** (2026-10-14, pedido de SDN,
+  mismo criterio que la v2 del Panel): `/entornos/herramientas/calculadora-bancaria-v2`
+  (`templates/calculadora_bancaria_v2.html` + `static/calc_v2/`, importmap
+  `main._importmap_calculadora_v2`), con un botón de ida y vuelta. MISMAS
+  rutas de la API: no hay cálculo nuevo. Lo nuevo es la interfaz: importes
+  que corren de un valor a otro, el ✓ que se dibuja, filas que entran,
+  veredicto con barra por valor y luz cuando todo coincide, lo que toca un
+  "Ajustar" se ilumina, tarjetas con textura y luz que sigue al mouse. Solo
+  con los tokens de `movimiento.css`. La v1 recibe solo arreglos hasta que
+  SDN decida. Tests: `test_calculadora_bancaria_v2.py`.
 - **Alcance dicho en pantalla**: solo el mes; no contempla retenciones ni
   reintegros de Ganancias ni conceptos de períodos anteriores.
 - **Supuestos marcados en pantalla** (`supuesto: true` en el renglón): el

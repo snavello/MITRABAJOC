@@ -7246,3 +7246,34 @@ Colm3na (`static/icons/favicon-64.png`), y "Chequear recibo" pasa a
 "Editar importes del recibo": lo leído ya está en la tabla y tenerla abierta
 confundía. Con el chequeo manual se abre sola. Guardar caso sigue a la
 vista. Plataforma 0.47.02.
+
+### Calculadora bancaria v2 (2026-10-14)
+
+SDN: llevar a la calculadora la fluidez que ya tiene la v2 del Panel (Preact
+y movimiento), sin riesgo: una v2 copia, con un botón de ida y vuelta desde
+la v1, hasta reemplazarla. Mismo criterio que `PLAN_DASHBOARD_V2.md`.
+
+- **Dónde**: `/entornos/herramientas/calculadora-bancaria-v2`, misma puerta
+  que la v1 (`_exigir_landing` + pase; 404 en demo). Plantilla
+  `calculadora_bancaria_v2.html`, módulos en `static/calc_v2/` (`app`,
+  `piezas`, `movimiento`, `html`) y `calc.css`. Preact y htm son los mismos
+  vendoreados de la v2 del Panel; el importmap
+  (`main._importmap_calculadora_v2`) les pone el sello `?v=` y precarga todo.
+- **Sin cálculo nuevo**: pide a las mismas rutas
+  `/api/entornos/herramientas/bancaria/*`; el servidor sigue decidiendo.
+- **Lo que se mueve** (skill `emil-design-eng` + "Movimiento" de
+  `diseno-mi-trabajo`, solo con los tokens de `movimiento.css`):
+  los importes corren de su valor anterior al nuevo (`--mov-cambio`, curva
+  de `--ease-mueve`, interrumpible) con un destello breve que dice qué
+  cambió; el ✓ se dibuja con trazo; las filas entran en cascada corta y un
+  adicional que se tilda entra solo; el input del recibo leído se enmarca en
+  verde, amarillo o rojo; el **veredicto** (convenio + otros contra el
+  recibo) tiene una barra con un segmento por valor comparado y, si todo
+  coincide, una luz lo cruza una vez; lo que toca un "Ajustar al recibo" se
+  ilumina para que se vea qué cambió; las pestañas tienen una marca que se
+  desliza; las tarjetas tienen retícula de colmena, grano, filo de luz y una
+  luz que sigue al mouse (en su propio nodo, con `transform`, para no
+  recalcular la tabla). Con "reducir movimiento" quedan solo fundidos.
+- Medido en el navegador: al cambiar la categoría el neto corre en ~800 ms.
+- Tests: `test_calculadora_bancaria_v2.py` (puerta, importmap y precarga, ida
+  y vuelta, imports, nada de `innerHTML`, mismas rutas, tokens). Plataforma 0.48.01.
