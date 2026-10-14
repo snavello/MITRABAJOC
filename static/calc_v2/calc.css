@@ -20,6 +20,10 @@
   --leve: #ffd27a;
   --celeste: #8ecbff;
   --violeta: #c4a7ff;
+  /* Lo que la calculadora PROPONE y espera una acción (ajustar al recibo).
+     Fucsia: no se confunde con el ámbar de los botones ni con el amarillo
+     de las diferencias leves, que son permanentes (SDN, 2026-10-14). */
+  --propuesta: #ff4db8;
   --linea: rgba(255,255,255,.12);
   --suave: rgba(255,255,255,.62);
   --fuente-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
@@ -164,10 +168,23 @@ td input.real.mal { border-color: color-mix(in srgb, var(--mal) 70%, transparent
 .dif { transition: color var(--mov-medio) var(--ease-salida); }
 .dif.bien { color: var(--bien); } .dif.mal { color: var(--mal); font-weight: 700; } .dif.leve { color: var(--leve); font-weight: 700; }
 .dif.sin-chequear { color: var(--violeta); font-family: system-ui; font-size: 12px; font-weight: 600; }
-.ajustar { margin-top: 5px; background: none; color: var(--ambar); border: 1px solid color-mix(in srgb, var(--ambar) 60%, transparent);
+.ajustar { margin-top: 5px; background: rgba(255,77,184,.10); color: var(--propuesta); border: 1px solid color-mix(in srgb, var(--propuesta) 75%, transparent);
   border-radius: 999px; padding: 3px 10px; font: 600 12px system-ui; cursor: pointer;
   transition: background-color var(--mov-rapido) var(--ease-salida), scale var(--mov-presion) var(--ease-salida); }
-@media (hover: hover) and (pointer: fine) { .ajustar:hover { background: rgba(255,176,32,.14); } }
+@media (hover: hover) and (pointer: fine) { .ajustar:hover { background: rgba(255,77,184,.22); } }
+
+/* Una propuesta pendiente titila: un halo fucsia que se enciende y se apaga
+   alrededor, en su propia capa (solo opacity y scale). Es lo único de la
+   pantalla que se mueve solo, a propósito: espera que alguien la toque.
+   Se va sola cuando se aplica, porque el servidor deja de proponerla. */
+.propuesta { position: relative; isolation: isolate; }
+.propuesta::after { content: ""; position: absolute; inset: -3px; border-radius: inherit; pointer-events: none; z-index: -1;
+  box-shadow: 0 0 0 2px rgba(255,77,184,.55), 0 0 16px 3px rgba(255,77,184,.45);
+  opacity: 0; animation: titila calc(var(--mov-correr) + var(--mov-lento)) var(--ease-mueve) infinite; }
+@keyframes titila { 0%, 100% { opacity: 0; scale: .96; } 45% { opacity: 1; scale: 1.04; } }
+@media (hover: hover) and (pointer: fine) { .propuesta:hover::after { animation-play-state: paused; opacity: 1; scale: 1; } }
+.boton.propuesta { background: var(--propuesta); color: #2a0a1d; box-shadow: 0 6px 18px -8px rgba(255,77,184,.9); }
+.boton.propuesta.suave { background: rgba(255,77,184,.12); color: var(--propuesta); border: 1px solid color-mix(in srgb, var(--propuesta) 75%, transparent); box-shadow: none; }
 
 /* El ✓: el aro y la marca se dibujan con trazo cuando aparece. */
 .tilde { display: inline-block; vertical-align: middle; overflow: visible; }
@@ -201,6 +218,10 @@ td input.real.mal { border-color: color-mix(in srgb, var(--mal) 70%, transparent
 .veredicto-neto span { font-size: 11px; color: var(--suave); text-transform: uppercase; letter-spacing: .05em; }
 .veredicto-neto b { font-family: var(--mono); font-size: 17px; color: var(--celeste); }
 .neto-dif.bien b { color: var(--bien); } .neto-dif.leve b { color: var(--leve); } .neto-dif.mal b { color: var(--mal); }
+.aviso-propuestas { margin-left: 30px; background: rgba(255,77,184,.12); color: var(--propuesta); border: 1px solid color-mix(in srgb, var(--propuesta) 75%, transparent);
+  border-radius: 999px; padding: 4px 12px; font: 700 12px system-ui; cursor: pointer;
+  transition: scale var(--mov-presion) var(--ease-salida); }
+.aviso-propuestas:active { scale: .97; }
 .barra { display: flex; gap: 3px; margin-top: 12px; }
 .seg { flex: 1; height: 7px; border-radius: 4px; background: var(--mal); transform-origin: left;
   animation: seg-entra var(--mov-cambio) var(--ease-entrada) both; animation-delay: calc(var(--i, 0) * var(--mov-escalon) / 3);
@@ -215,6 +236,9 @@ td input.real.mal { border-color: color-mix(in srgb, var(--mal) 70%, transparent
 .sugerencia.ok { background: none; border-color: transparent; padding: 0 2px; color: var(--bien); display: flex; gap: 6px; align-items: center; }
 .sugerencia ul { margin: 6px 0 0 18px; }
 .opciones-cat { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.sugerencia.pendiente { background: rgba(255,77,184,.07); border-color: color-mix(in srgb, var(--propuesta) 50%, transparent); }
+.sugerencia.pendiente b.que { color: var(--propuesta); }
+.propuestas { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; align-items: flex-start; }
 .ia-caja .sugerencia { margin: 12px 0 0; }
 
 /* ---------- análisis con IA ---------- */
@@ -283,6 +307,7 @@ tr.detalle td { background: rgba(0,0,0,.18); }
   .veredicto.todo-bien::after { display: none; }
   .resalta { animation: resalta-quieto var(--mov-datos) ease; }
   .luz { display: none; }
+  .propuesta::after { animation: none; opacity: .8; scale: 1; }
   .pestana-marca { transition: none; }
 }
 @keyframes fundido { from { opacity: 0; } }

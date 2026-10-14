@@ -229,7 +229,8 @@ function App() {
           cambiarGrilla=${async (p) => { await cargarOpciones(p); }} />
         <div class="columna">
           <${Recibo} d=${d} error=${error} chequeando=${chequeando} reales=${reales} setReales=${setReales}
-            aplicarAjuste=${aplicarAjuste} abrirIA=${abrirIA} alternarManual=${alternarManual} />
+            aplicarAjuste=${aplicarAjuste} abrirIA=${abrirIA} alternarManual=${alternarManual}
+            propuestas=${chequeando ? contarPropuestas(d, opciones, c, reales) : 0} />
           ${ia.abierta && html`<${CajaIA} ia=${ia} iaRef=${iaRef} archivoRef=${archivoRef} d=${d} opciones=${opciones} c=${c}
             reales=${reales} cerrar=${() => setIa((v) => ({ ...v, abierta: false }))} aplicarAjuste=${aplicarAjuste}
             ajustarCategoria=${ajustarCategoria} />`}
@@ -351,16 +352,16 @@ function SugerenciaCategoria({ opciones, c, reales, ajustarCategoria }) {
   if (!s) return null;
   if (s.ok) return html`<div class="sugerencia ok"><${Tilde} titulo="Coincide" /> La categoría coincide con el básico del recibo (${pesos(s.basico)}).</div>`;
   if (!s.coinciden.length) return html`<div class="sugerencia">El básico del recibo (${pesos(s.basico)}) no coincide con ninguna categoría de la grilla: elegila a mano.</div>`;
-  return html`<div class="sugerencia">
+  return html`<div class="sugerencia pendiente">
     El básico del recibo (${pesos(s.basico)}) no es el de la categoría elegida${s.actual ? " (" + pesos(s.actual.basico) + ")" : ""}.
     Corresponde a${s.coinciden.length > 1 ? " cualquiera de estas (tienen el mismo básico):" : ":"}
-    <div class="opciones-cat">${s.coinciden.map((o) => html`<button type="button" class="boton chico"
+    <div class="opciones-cat">${s.coinciden.map((o) => html`<button type="button" class="boton chico propuesta" data-propuesta
       onClick=${() => ajustarCategoria(o.rama, o.i)}>Ajustar al recibo: ${o.nombreRama} · ${o.x.nombre}</button>`)}</div>
   </div>`;
 }
 
 // ---------- el recibo esperado y la comparación ----------
-function Recibo({ d, error, chequeando, reales, setReales, aplicarAjuste, abrirIA, alternarManual }) {
+function Recibo({ d, error, chequeando, reales, setReales, aplicarAjuste, abrirIA, alternarManual, propuestas }) {
   if (!d) return html`<div class="tarjeta recibo"><h2>Recibo esperado</h2><p class="fuente">${error || "Calculando…"}</p></div>`;
   const comp = {};
   for (const x of d.comparacion?.renglones || []) comp[x.codigo] = x;
@@ -421,7 +422,7 @@ function Recibo({ d, error, chequeando, reales, setReales, aplicarAjuste, abrirI
         </tbody>
       </table>
     </div>
-    ${chequeando && d.comparacion && html`<${Veredicto} comp=${d.comparacion} esperado=${d.esperado} />`}
+    ${chequeando && d.comparacion && html`<${Veredicto} comp=${d.comparacion} esperado=${d.esperado} propuestas=${propuestas} />`}
     <div class="acciones">
       <button type="button" class="boton boton-ia" onClick=${abrirIA}><img src=${ISOTIPO} alt="" width="26" height="26" />Analizar con IA Colm3na</button>
       <button type="button" class="boton suave" aria-pressed=${chequeando} onClick=${alternarManual}>${chequeando ? "Ocultar el recibo real" : "Chequeo manual recibo"}</button>
@@ -436,7 +437,7 @@ function Fila({ i, concepto, nota, supuesto, esperado, codigo, comp, otros, fuer
     <td>${concepto}
       ${fuera ? html`<span class="nota fuera-nota">Está en el recibo y no en la calculadora.${fuera.ajuste ? "" : " " + fuera.como}</span>`
               : nota && html`<span class=${"nota" + (supuesto ? " supuesto" : "")}>${nota}</span>`}
-      ${comp && comp.ajuste && html`<div><button type="button" class="ajustar" title="Ajustar la calculadora al recibo"
+      ${comp && comp.ajuste && html`<div><button type="button" class="ajustar propuesta" data-propuesta title="Ajustar la calculadora al recibo"
         onClick=${() => aplicarAjuste(comp.ajuste.campos)}>↳ ${comp.ajuste.texto}</button></div>`}
     </td>
     <td class="num">${fuera ? "—" : html`<${Numero} valor=${esperado} />`}</td>
@@ -461,7 +462,7 @@ function CeldaDif({ comp }) {
 }
 
 // ---------- el veredicto: convenio + otros contra el recibo ----------
-function Veredicto({ comp, esperado }) {
+function Veredicto({ comp, esperado, propuestas }) {
   const valores = [...comp.renglones, ...comp.totales];
   if (!valores.length) return null;
   const n = comp.distintos;
@@ -477,6 +478,8 @@ function Veredicto({ comp, esperado }) {
         ${todoBien ? html`<${Tilde} key="vt" titulo="Todo coincide" />` : html`<span class="marca-mal" aria-hidden="true">!</span>`}
         <b>${todoBien ? `Los ${valores.length} valores coinciden con lo que corresponde` : `${n} de ${valores.length} valores no coinciden`}</b>
         <small>tolerancia $ 1${extras.length ? ` · ${extras.length} sin chequear (no son de convenio)` : ""}</small>
+        ${propuestas > 0 && html`<button type="button" class="aviso-propuestas propuesta" onClick=${irALaPropuesta}>
+          ${propuestas === 1 ? "1 ajuste propuesto por el recibo" : propuestas + " ajustes propuestos por el recibo"} ↓</button>`}
       </div>
       ${netoReal && html`<div class="veredicto-neto">
         <div><span>Neto que corresponde</span><b><${Numero} valor=${netoEsperado} dur="--mov-correr" /></b></div>
@@ -490,6 +493,23 @@ function Veredicto({ comp, esperado }) {
       ${segmentos.map((s, i) => html`<span key=${i} class=${"seg " + s.g} style=${{ "--i": Math.min(i, 20) }}></span>`)}
     </div>
   </div>`;
+}
+
+// Lleva a la primera propuesta pendiente (la categoría o un "Ajustar").
+function irALaPropuesta() {
+  const b = document.querySelector("[data-propuesta]");
+  if (!b) return;
+  b.scrollIntoView({ behavior: menosMovimiento() ? "auto" : "smooth", block: "center" });
+  b.focus({ preventScroll: true });
+}
+
+// Cuántas propuestas esperan una acción: la categoría que dice el básico y
+// cada ajuste distinto del servidor (cajero se propone en dos renglones y es uno).
+function contarPropuestas(d, opciones, c, reales) {
+  const distintas = new Set();
+  for (const x of d?.comparacion?.renglones || []) if (x.ajuste) distintas.add(JSON.stringify(x.ajuste.campos));
+  const cat = sugerenciaCategoria(opciones, c, reales);
+  return distintas.size + (cat && !cat.ok && cat.coinciden.length ? 1 : 0);
 }
 
 // ---------- el análisis con IA ----------
@@ -520,10 +540,12 @@ function CajaIA({ ia, iaRef, archivoRef, d, opciones, c, reales, cerrar, aplicar
       <p class=${"aviso " + (ia.resultado.ok ? "bien" : "mal")}>${ia.resultado.titulo}</p>
       ${ia.resultado.items.length > 0 && html`<ul>${ia.resultado.items.map((t) => html`<li>${t}</li>`)}</ul>`}
       <${SugerenciaCategoria} opciones=${opciones} c=${c} reales=${reales} ajustarCategoria=${ajustarCategoria} />
-      ${ajustes.size > 0 && html`<div class="sugerencia">Según el recibo, conviene ajustar en la calculadora:
-        <ul>${[...ajustes.values()].map((a) => html`<li>${a.texto}</li>`)}</ul>
-        <div class="opciones-cat"><button type="button" class="boton chico"
-          onClick=${() => [...ajustes.values()].forEach((a) => aplicarAjuste(a.campos))}>Ajustar todo al recibo</button></div>
+      ${ajustes.size > 0 && html`<div class="sugerencia pendiente">Según el recibo, conviene ajustar en la calculadora
+        (<b class="que">${ajustes.size === 1 ? "1 ajuste" : ajustes.size + " ajustes"}</b>; tocá cada uno o todos juntos):
+        <div class="propuestas">${[...ajustes.values()].map((a) => html`<button type="button" class="ajustar propuesta" data-propuesta
+          key=${a.texto} onClick=${() => aplicarAjuste(a.campos)}>↳ ${a.texto}</button>`)}</div>
+        ${ajustes.size > 1 && html`<div class="opciones-cat"><button type="button" class="boton chico propuesta"
+          onClick=${() => [...ajustes.values()].forEach((a) => aplicarAjuste(a.campos))}>Ajustar todo al recibo</button></div>`}
       </div>`}
     </div>`}
   </div>`;

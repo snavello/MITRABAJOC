@@ -102,3 +102,18 @@ def test_el_movimiento_sale_de_los_tokens():
     assert "prefers-reduced-motion" in css
     # Nada aparece desde escala cero (salvo la barra, que crece de su borde).
     assert "scale: 0;" not in css and "scale(0)" not in css
+
+
+def test_las_propuestas_se_distinguen_y_titilan():
+    """Lo que la calculadora propone y espera una acción (la categoría, cada
+    "Ajustar al recibo") va en su propio color, no en el ámbar ni el amarillo
+    de lo permanente, y titila hasta que se aplica (SDN, 2026-10-14: en el
+    recibo 04 no se vio que proponía Cajero y el ROE)."""
+    app = (CARPETA / "app.js").read_text(encoding="utf-8")
+    css = _sin_comentarios((CARPETA / "calc.css").read_text(encoding="utf-8"))
+    assert app.count("data-propuesta") >= 3          # categoría, renglón y caja de la IA
+    assert 'class="ajustar propuesta"' in app and "aviso-propuestas" in app
+    assert re.search(r"\.ajustar \{[^}]*var\(--propuesta\)", css)
+    assert "--propuesta:" in css and "@keyframes titila" in css
+    quieto = css[css.index("prefers-reduced-motion"):]
+    assert ".propuesta::after { animation: none" in quieto, "con menos movimiento no titila"

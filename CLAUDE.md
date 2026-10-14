@@ -1360,8 +1360,15 @@ su página (`/entornos/herramientas/<nombre>`) y la pestaña solo la presenta.
   que corren de un valor a otro, el ✓ que se dibuja, filas que entran,
   veredicto con barra por valor y luz cuando todo coincide, lo que toca un
   "Ajustar" se ilumina, tarjetas con textura y luz que sigue al mouse. Solo
-  con los tokens de `movimiento.css`. La v1 recibe solo arreglos hasta que
-  SDN decida. Tests: `test_calculadora_bancaria_v2.py`.
+  con los tokens de `movimiento.css`. Tests: `test_calculadora_bancaria_v2.py`.
+  **SDN eligió la v2 (2026-10-14)**: la pestaña Herramientas abre la v2; la
+  v1 sigue a un botón de distancia y no recibe cambios.
+- **Lo que se propone y espera una acción va en fucsia y titila**
+  (`--propuesta`, clase `propuesta` + `data-propuesta`; SDN, 2026-10-14): la
+  categoría y cada "Ajustar al recibo", nunca en el ámbar de los botones ni
+  en el amarillo de las diferencias leves, que son permanentes. El veredicto
+  dice cuántos ajustes hay pendientes y lleva al primero. Una propuesta
+  aplicada se va sola (el servidor deja de proponerla).
 - **Alcance dicho en pantalla**: solo el mes; no contempla retenciones ni
   reintegros de Ganancias ni conceptos de períodos anteriores.
 - **Supuestos marcados en pantalla** (`supuesto: true` en el renglón): el
