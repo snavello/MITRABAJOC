@@ -1,0 +1,289 @@
+/* Calculadora bancaria v2: la interfaz.
+
+   La misma "colmena nocturna" de la v1 y de /entornos, con superficie: cada
+   tarjeta tiene textura (retícula de colmena y grano), una luz que sigue al
+   mouse y un filo de luz arriba. El movimiento usa SOLO los tokens de
+   static/movimiento.css (`--mov-*`, `--ease-*`; acá no se define ninguno):
+   - lo que entra a la vista (filas, tarjetas, el veredicto) usa
+     `--ease-entrada`, en cascada con `--mov-escalon` acotado;
+   - la respuesta inmediata (hover, apretar, cerrar) usa `--ease-salida`;
+   - lo que se mueve en pantalla (la marca de las pestañas), `--ease-mueve`;
+   - se anima opacity, translate, scale, filter y colores, nunca medidas;
+   - con "reducir movimiento" quedan solo fundidos (al final). */
+
+:root {
+  --tinta: #152238;
+  --agua: #1a7a6b;
+  --ambar: #ffb020;
+  --bien: #3ecfae;
+  --mal: #ff6b6b;
+  --leve: #ffd27a;
+  --celeste: #8ecbff;
+  --violeta: #c4a7ff;
+  --linea: rgba(255,255,255,.12);
+  --suave: rgba(255,255,255,.62);
+  --fuente-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  /* Retícula de colmena y grano: las texturas de las tarjetas. */
+  --colmena: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'%3E%3Cpath d='M28 0l28 16v32L28 64 0 48V16zM28 64v33' fill='none' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E");
+  --grano: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+}
+* { box-sizing: border-box; margin: 0; font-family: system-ui, sans-serif; }
+html { background: #0d1626; }
+body { min-height: 100vh; padding: 22px 16px 70px; color: #fff;
+  background: radial-gradient(900px 480px at 78% -10%, color-mix(in srgb, var(--agua) 22%, transparent), transparent 62%),
+              linear-gradient(160deg, #0d1626 20%, var(--tinta) 75%, color-mix(in srgb, var(--tinta) 72%, #4a6da8)); }
+a { color: var(--ambar); }
+[hidden] { display: none !important; }
+.pagina { max-width: 1240px; margin: 0 auto; }
+
+/* ---------- encabezado ---------- */
+.cab { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.cab .volver { font-size: 13px; text-decoration: none; color: var(--suave); display: inline-block; margin-bottom: 6px; }
+.cab h1 { font-family: var(--fuente-display); font-size: 42px; line-height: 1; letter-spacing: 2px; text-transform: uppercase; }
+.cab h1 .v2 { font-size: 16px; letter-spacing: 1px; vertical-align: super; color: var(--ambar); margin-left: 6px; }
+.cab .lede { font-size: 13.5px; color: var(--suave); margin-top: 6px; max-width: 660px; line-height: 1.45; }
+.cab .otra-version { margin-left: auto; }
+.cargando { color: var(--suave); padding: 30px 4px; }
+
+/* ---------- tarjetas con superficie ---------- */
+.grid { display: grid; grid-template-columns: 340px 1fr; gap: 18px; align-items: start; }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+.columna { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.tarjeta { position: relative; overflow: hidden; isolation: isolate; border-radius: 18px; padding: 20px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,0) 120px),
+    rgba(9,15,26,.6);
+  border: 1px solid var(--linea);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 18px 40px -24px rgba(0,0,0,.6);
+  animation: tarjeta-entra var(--mov-lento) var(--ease-entrada) both; }
+.columna > .tarjeta:nth-child(2) { animation-delay: var(--mov-escalon); }
+.tarjeta::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background-image: var(--colmena), var(--grano); background-size: 56px 97px, 160px 160px;
+  opacity: .045; mix-blend-mode: screen; }
+@keyframes tarjeta-entra { from { opacity: 0; translate: 0 14px; filter: blur(3px); } }
+.luz { position: absolute; top: 0; left: 0; width: 520px; height: 520px; z-index: -1; pointer-events: none; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,176,32,.10), rgba(142,203,255,.04) 40%, transparent 68%);
+  opacity: 0; transition: opacity var(--mov-medio) var(--ease-salida); will-change: transform; }
+.luz.prendida { opacity: 1; }
+.tarjeta h2 { font-family: var(--fuente-display); font-size: 22px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+
+/* ---------- pestañas: la marca se desliza ---------- */
+.pestanas { position: relative; display: flex; gap: 6px; border-bottom: 1px solid var(--linea); margin-bottom: 18px; }
+.pestana { background: none; border: 0; color: var(--suave); font: 600 14px system-ui; padding: 10px 14px; cursor: pointer;
+  transition: color var(--mov-rapido) var(--ease-salida); }
+.pestana[aria-selected="true"] { color: #fff; }
+.pestana .cuenta { font-family: var(--mono); font-size: 12px; background: rgba(255,255,255,.12); border-radius: 999px; padding: 1px 7px; margin-left: 4px; }
+.pestana-marca { position: absolute; left: 0; bottom: -1px; height: 3px; border-radius: 3px; background: var(--ambar);
+  box-shadow: 0 0 12px rgba(255,176,32,.6);
+  transition: translate var(--mov-medio) var(--ease-mueve), width var(--mov-medio) var(--ease-mueve); }
+.vista { animation: vista-entra var(--mov-medio) var(--ease-entrada) both; }
+@keyframes vista-entra { from { opacity: 0; translate: 0 6px; } }
+
+/* ---------- controles ---------- */
+.campo { display: flex; flex-direction: column; gap: 5px; margin-bottom: 13px; border-radius: 10px; }
+.campo > span, .grupo-t { font-size: 12px; color: var(--suave); letter-spacing: .02em; }
+.grupo-t { margin: 10px 0 6px; }
+.grilla-sel { margin-bottom: 16px; }
+select, input[type=text], input[type=number], textarea {
+  width: 100%; background: rgba(255,255,255,.07); color: #fff; border: 1px solid rgba(255,255,255,.18);
+  border-radius: 9px; padding: 9px 10px; font-size: 14px;
+  transition: border-color var(--mov-rapido) var(--ease-salida), box-shadow var(--mov-rapido) var(--ease-salida), background-color var(--mov-rapido) var(--ease-salida); }
+select option, select optgroup { background: #13213a; color: #fff; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; border-color: var(--ambar); box-shadow: 0 0 0 3px rgba(255,176,32,.22); }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--ambar); outline-offset: 2px; }
+.segmentos { display: flex; gap: 4px; background: rgba(255,255,255,.06); border-radius: 10px; padding: 3px; }
+.segmentos button { flex: 1; background: none; border: 0; color: var(--suave); padding: 8px 4px; border-radius: 8px; font: 600 13px system-ui; cursor: pointer;
+  transition: background-color var(--mov-medio) var(--ease-salida), color var(--mov-medio) var(--ease-salida), scale var(--mov-presion) var(--ease-salida); }
+.segmentos button[aria-pressed="true"] { background: var(--ambar); color: #1b1508; box-shadow: 0 4px 14px -4px rgba(255,176,32,.6); }
+.segmentos button:active { scale: .97; }
+.tilde-campo { display: flex; align-items: center; gap: 9px; font-size: 14px; margin-bottom: 9px; cursor: pointer; border-radius: 8px; }
+.tilde-campo input { width: 17px; height: 17px; accent-color: var(--ambar); }
+.tilde-campo small { color: var(--suave); }
+.fila2 { display: grid; grid-template-columns: 1fr 90px; gap: 8px; align-items: center; border-radius: 10px; }
+.separa { border: 0; border-top: 1px solid var(--linea); margin: 14px 0; }
+.fuente { font-size: 12px; color: var(--suave); line-height: 1.45; }
+.fuente.error { color: var(--mal); }
+/* Lo que tocó un "Ajustar al recibo" se ilumina: se ve qué cambió y dónde. */
+.resalta { animation: resalta var(--mov-datos) var(--ease-salida); }
+@keyframes resalta {
+  0% { box-shadow: 0 0 0 0 rgba(255,176,32,0); background-color: rgba(255,176,32,0); }
+  18% { box-shadow: 0 0 0 4px rgba(255,176,32,.45); background-color: rgba(255,176,32,.14); }
+  100% { box-shadow: 0 0 0 10px rgba(255,176,32,0); background-color: rgba(255,176,32,0); }
+}
+
+/* ---------- botones ---------- */
+.boton { background: var(--ambar); color: #1b1508; border: 0; border-radius: 10px; padding: 10px 16px; font: 700 14px system-ui; cursor: pointer;
+  text-decoration: none; display: inline-block;
+  transition: scale var(--mov-presion) var(--ease-salida), box-shadow var(--mov-rapido) var(--ease-salida), background-color var(--mov-rapido) var(--ease-salida); }
+.boton:active, .ajustar:active, .quitar:active, .cerrar:active { scale: .97; }
+.boton.suave { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.2); }
+.boton.chico { padding: 7px 11px; font-size: 13px; }
+.boton-ia { display: inline-flex; align-items: center; gap: 9px; padding: 7px 16px 7px 8px; font-size: 15px;
+  box-shadow: 0 0 0 3px rgba(255,176,32,.22), 0 8px 22px -8px rgba(255,176,32,.7); }
+.boton-ia img { border-radius: 7px; display: block; }
+@media (hover: hover) and (pointer: fine) {
+  .boton:hover { box-shadow: 0 6px 18px -6px rgba(255,176,32,.7); }
+  .boton.suave:hover { background: rgba(255,255,255,.16); box-shadow: none; }
+  .boton-ia:hover { box-shadow: 0 0 0 5px rgba(255,176,32,.28), 0 10px 26px -8px rgba(255,176,32,.85); }
+  .segmentos button:not([aria-pressed="true"]):hover { color: #fff; background: rgba(255,255,255,.06); }
+}
+.acciones { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
+.acciones.arriba { margin: 0 0 12px; justify-content: space-between; align-items: flex-end; }
+.acciones.arriba .campo { margin: 0; min-width: 200px; }
+
+/* ---------- tabla ---------- */
+.aclara { font-size: 13px; line-height: 1.45; color: var(--suave); background: rgba(255,176,32,.08);
+  border-left: 3px solid var(--ambar); border-radius: 6px; padding: 8px 11px; margin: -4px 0 12px; }
+.aclara b { color: #fff; }
+.tabla-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-size: 11.5px; color: var(--suave); font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
+  padding: 6px 8px; border-bottom: 1px solid var(--linea); }
+td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,.06); vertical-align: top; }
+td.num, th.num { text-align: right; font-family: var(--mono); white-space: nowrap; }
+th.otros, td.otros { color: var(--violeta); }
+td .nota { display: block; font-size: 12px; color: var(--suave); margin-top: 2px; line-height: 1.35; }
+td .nota.supuesto::before { content: "supuesto · "; color: var(--ambar); font-weight: 600; }
+td .fuera-nota { color: #ffb3b3; }
+tr.seccion td { font-family: var(--fuente-display); font-size: 15px; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--ambar); padding-top: 14px; border-bottom: 0; }
+/* Las filas entran en cascada; las que aparecen después (un adicional que se
+   tilda) entran solas. El escalón está acotado: la tabla no espera a nadie. */
+tr.fila { animation: fila-entra var(--mov-medio) var(--ease-entrada) both; animation-delay: calc(var(--i, 0) * var(--mov-escalon) / 3); }
+@keyframes fila-entra { from { opacity: 0; translate: 0 6px; } }
+@media (hover: hover) and (pointer: fine) { tr.fila:hover td { background: rgba(255,255,255,.025); } }
+tr.total-fila td, tr.subtotal td { color: var(--celeste); }
+tr.total td { font-weight: 700; border-top: 1px solid var(--linea); }
+tr.neto td { font-size: 18px; font-weight: 700; color: var(--celeste); border-bottom: 0; }
+.numero { border-radius: 5px; padding: 0 2px; margin: 0 -2px; font-variant-numeric: tabular-nums; }
+td input.real { width: 132px; text-align: right; font-family: var(--mono); padding: 6px 8px; }
+td input.real.ok { border-color: color-mix(in srgb, var(--bien) 70%, transparent); box-shadow: 0 0 0 3px rgba(62,207,174,.14); }
+td input.real.leve { border-color: color-mix(in srgb, var(--leve) 70%, transparent); }
+td input.real.mal { border-color: color-mix(in srgb, var(--mal) 70%, transparent); box-shadow: 0 0 0 3px rgba(255,107,107,.14); }
+.dif { transition: color var(--mov-medio) var(--ease-salida); }
+.dif.bien { color: var(--bien); } .dif.mal { color: var(--mal); font-weight: 700; } .dif.leve { color: var(--leve); font-weight: 700; }
+.dif.sin-chequear { color: var(--violeta); font-family: system-ui; font-size: 12px; font-weight: 600; }
+.ajustar { margin-top: 5px; background: none; color: var(--ambar); border: 1px solid color-mix(in srgb, var(--ambar) 60%, transparent);
+  border-radius: 999px; padding: 3px 10px; font: 600 12px system-ui; cursor: pointer;
+  transition: background-color var(--mov-rapido) var(--ease-salida), scale var(--mov-presion) var(--ease-salida); }
+@media (hover: hover) and (pointer: fine) { .ajustar:hover { background: rgba(255,176,32,.14); } }
+
+/* El ✓: el aro y la marca se dibujan con trazo cuando aparece. */
+.tilde { display: inline-block; vertical-align: middle; overflow: visible; }
+.tilde-aro { fill: rgba(62,207,174,.14); stroke: var(--bien); stroke-width: 1.6; stroke-dasharray: 63; stroke-dashoffset: 0;
+  animation: tilde-aro var(--mov-lento) var(--ease-entrada) both; }
+.tilde-marca { fill: none; stroke: var(--bien); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 16; stroke-dashoffset: 0; animation: tilde-marca var(--mov-medio) var(--ease-entrada) both; animation-delay: var(--mov-rapido); }
+@keyframes tilde-aro { from { stroke-dashoffset: 63; fill: rgba(62,207,174,0); } }
+@keyframes tilde-marca { from { stroke-dashoffset: 16; } }
+
+/* ---------- el veredicto: convenio + otros contra el recibo ---------- */
+.veredicto { position: relative; overflow: hidden; margin-top: 16px; border-radius: 14px; padding: 14px 16px;
+  background: linear-gradient(180deg, rgba(255,107,107,.10), rgba(255,107,107,.04)); border: 1px solid rgba(255,107,107,.45);
+  animation: tarjeta-entra var(--mov-lento) var(--ease-entrada) both;
+  transition: background-color var(--mov-medio) var(--ease-salida), border-color var(--mov-medio) var(--ease-salida); }
+.veredicto.todo-bien { background: linear-gradient(180deg, rgba(62,207,174,.14), rgba(62,207,174,.04)); border-color: rgba(62,207,174,.55); }
+/* Todo coincide: una luz cruza el veredicto una sola vez. Es raro y es el
+   momento que se busca: vale un poco de celebración. */
+.veredicto.todo-bien::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.22) 48%, transparent 66%);
+  translate: -110% 0; animation: barrido var(--mov-correr) var(--ease-mueve) var(--mov-rapido) both; }
+@keyframes barrido { to { translate: 110% 0; } }
+.veredicto-cab { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.veredicto-titulo { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.veredicto-titulo b { font-size: 15px; }
+.veredicto-titulo small { color: var(--suave); font-size: 12px; width: 100%; padding-left: 30px; }
+.marca-mal { width: 20px; height: 20px; border-radius: 50%; display: inline-grid; place-items: center; font-weight: 800; font-size: 13px;
+  background: rgba(255,107,107,.2); color: var(--mal); border: 1.6px solid var(--mal); }
+.veredicto-neto { display: flex; gap: 18px; flex-wrap: wrap; }
+.veredicto-neto > div { display: flex; flex-direction: column; gap: 2px; align-items: flex-end; }
+.veredicto-neto span { font-size: 11px; color: var(--suave); text-transform: uppercase; letter-spacing: .05em; }
+.veredicto-neto b { font-family: var(--mono); font-size: 17px; color: var(--celeste); }
+.neto-dif.bien b { color: var(--bien); } .neto-dif.leve b { color: var(--leve); } .neto-dif.mal b { color: var(--mal); }
+.barra { display: flex; gap: 3px; margin-top: 12px; }
+.seg { flex: 1; height: 7px; border-radius: 4px; background: var(--mal); transform-origin: left;
+  animation: seg-entra var(--mov-cambio) var(--ease-entrada) both; animation-delay: calc(var(--i, 0) * var(--mov-escalon) / 3);
+  transition: background-color var(--mov-medio) var(--ease-salida); }
+.seg.coincide { background: var(--bien); } .seg.leve { background: var(--leve); } .seg.otro { background: var(--violeta); opacity: .75; }
+@keyframes seg-entra { from { scale: 0 1; opacity: 0; } }
+
+/* ---------- sugerencias ---------- */
+.sugerencia { font-size: 13px; line-height: 1.45; border-radius: 10px; padding: 9px 11px; margin: -4px 0 13px;
+  background: rgba(142,203,255,.08); border: 1px solid color-mix(in srgb, var(--celeste) 45%, transparent);
+  animation: vista-entra var(--mov-medio) var(--ease-entrada) both; }
+.sugerencia.ok { background: none; border-color: transparent; padding: 0 2px; color: var(--bien); display: flex; gap: 6px; align-items: center; }
+.sugerencia ul { margin: 6px 0 0 18px; }
+.opciones-cat { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ia-caja .sugerencia { margin: 12px 0 0; }
+
+/* ---------- análisis con IA ---------- */
+.ia-caja { border-color: color-mix(in srgb, var(--ambar) 45%, transparent); }
+.ia-cab { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.ia-cab > div { flex: 1 1 260px; }
+.cerrar { background: none; border: 0; color: var(--suave); font-size: 22px; line-height: 1; cursor: pointer; transition: scale var(--mov-presion) var(--ease-salida); }
+.ia-cron { display: grid; grid-template-columns: 148px 1fr; gap: 22px; align-items: center; padding: 18px 0 4px; }
+.ia-cron > .fuente { grid-column: 1 / -1; }
+@media (max-width: 600px) { .ia-cron { grid-template-columns: 1fr; justify-items: center; } }
+.ia-aro { position: relative; width: 148px; height: 148px; }
+.ia-aro svg { width: 100%; height: 100%; rotate: -90deg; }
+.ia-aro .pista { fill: none; stroke: var(--linea); stroke-width: 7; }
+.ia-aro .avance { fill: none; stroke: var(--ambar); stroke-width: 7; stroke-linecap: round; stroke-dasharray: 414;
+  /* lineal y casi un segundo: acompaña al reloj, que avanza de a uno */
+  transition: stroke-dashoffset 950ms linear; filter: drop-shadow(0 0 6px rgba(255,176,32,.5)); }
+.ia-aro .centro { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ia-aro .centro .n { font-family: var(--mono); font-size: 32px; font-weight: 600; letter-spacing: -1px; }
+.ia-aro .centro .et { font-size: 9.5px; letter-spacing: 2px; text-transform: uppercase; color: var(--suave); }
+.ia-fases { display: grid; gap: 1px; background: var(--linea); border: 1px solid var(--linea); border-radius: 12px; overflow: hidden; width: 100%; }
+.ia-fase { background: #111d31; padding: 11px 14px; display: flex; align-items: center; gap: 11px; font-size: 13.5px; color: var(--suave);
+  transition: color var(--mov-medio) var(--ease-salida); }
+.ia-fase .pt { width: 9px; height: 9px; border-radius: 50%; background: var(--linea); flex: none; transition: background-color var(--mov-medio) var(--ease-salida); }
+.ia-fase.hecha { color: #fff; } .ia-fase.hecha .pt { background: var(--bien); }
+.ia-fase.activa { color: #fff; font-weight: 600; }
+.ia-fase.activa .pt { background: var(--ambar); animation: ia-pulso var(--mov-correr) var(--ease-salida) infinite; }
+@keyframes ia-pulso { 0% { box-shadow: 0 0 0 0 rgba(255,176,32,.6); } 100% { box-shadow: 0 0 0 10px rgba(255,176,32,0); } }
+.ia-resultado ul { margin: 10px 0 0 18px; font-size: 14px; line-height: 1.55; }
+.aviso { font-size: 13.5px; margin-top: 10px; }
+.aviso.mal { color: var(--mal); } .aviso.bien { color: var(--bien); }
+.entra { animation: vista-entra var(--mov-medio) var(--ease-entrada) both; }
+
+/* ---------- recibo real ---------- */
+.editar-real summary { cursor: pointer; font: 600 14px system-ui; color: var(--suave); padding: 6px 0; list-style: none;
+  transition: color var(--mov-rapido) var(--ease-salida); }
+.editar-real summary::before { content: "▸"; display: inline-block; margin-right: 6px; transition: rotate var(--mov-medio) var(--ease-mueve); }
+.editar-real[open] summary::before { rotate: 90deg; }
+.editar-real summary:hover, .editar-real[open] summary { color: #fff; }
+.editar-real summary small { font-weight: 400; color: var(--suave); }
+.editar-real[open] > :not(summary) { animation: vista-entra var(--mov-medio) var(--ease-entrada) both; }
+.totales-reales { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+@media (max-width: 600px) { .totales-reales { grid-template-columns: 1fr; } }
+.extras-fila { display: grid; grid-template-columns: 1fr 150px 130px 34px; gap: 6px; margin-bottom: 6px; }
+@media (max-width: 600px) { .extras-fila { grid-template-columns: 1fr 1fr; } }
+.quitar { background: none; border: 1px solid rgba(255,255,255,.2); color: #fff; border-radius: 8px; cursor: pointer; transition: scale var(--mov-presion) var(--ease-salida); }
+
+/* ---------- casos ---------- */
+.estado { font: 600 12px system-ui; border-radius: 999px; padding: 3px 9px; display: inline-block; }
+.estado.nuevo { background: var(--ambar); color: #1b1508; }
+.estado.revisado { background: rgba(255,255,255,.18); }
+.estado.aplicado { background: var(--bien); color: #06231c; }
+.estado.descartado { background: rgba(255,255,255,.08); color: var(--suave); text-decoration: line-through; }
+tr.caso { cursor: pointer; }
+tr.detalle td { background: rgba(0,0,0,.18); }
+.detalle-caja { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 6px 2px; }
+@media (max-width: 800px) { .detalle-caja { grid-template-columns: 1fr; } }
+.detalle-caja h3 { font-size: 12px; color: var(--suave); text-transform: uppercase; letter-spacing: .05em; margin: 10px 0 6px; }
+.detalle-caja p { font-size: 14px; line-height: 1.45; white-space: pre-wrap; }
+.vacio { color: var(--suave); font-size: 14px; padding: 18px 4px; }
+
+/* ---------- reducir movimiento: solo fundidos ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .tarjeta, .veredicto, .vista, .entra, .sugerencia, tr.fila, .editar-real[open] > :not(summary) { animation: fundido var(--mov-rapido) ease both; animation-delay: 0ms; }
+  .seg { animation: fundido var(--mov-rapido) ease both; animation-delay: 0ms; }
+  .tilde-aro, .tilde-marca { animation: none; }
+  .veredicto.todo-bien::after { display: none; }
+  .resalta { animation: resalta-quieto var(--mov-datos) ease; }
+  .luz { display: none; }
+  .pestana-marca { transition: none; }
+}
+@keyframes fundido { from { opacity: 0; } }
+@keyframes resalta-quieto { 0%, 40% { background-color: rgba(255,176,32,.16); } 100% { background-color: rgba(255,176,32,0); } }

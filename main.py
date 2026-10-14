@@ -8940,6 +8940,36 @@ def entornos_calculadora_bancaria(request: Request):
     })
 
 
+def _importmap_calculadora_v2() -> str:
+    """El importmap de la Calculadora bancaria v2: el mismo esquema que la v2
+    del Panel (`_importmap_panel_v2`), con sus módulos como `calc/<nombre>`.
+    Cada uno sale con su sello ?v=; un archivo nuevo de static/calc_v2/ entra
+    solo, y test_calculadora_bancaria_v2.py exige que todo import resuelva."""
+    import json
+    imports = {nombre: _url_static(ruta) for nombre, ruta in _VENDOR_PANEL_V2.items()}
+    for js in sorted((Path("static") / "calc_v2").glob("*.js")):
+        imports[f"calc/{js.stem}"] = _url_static(f"calc_v2/{js.name}")
+    return json.dumps({"imports": imports}, ensure_ascii=False)
+
+
+@app.get("/entornos/herramientas/calculadora-bancaria-v2", response_class=HTMLResponse)
+def entornos_calculadora_bancaria_v2(request: Request):
+    """La Calculadora bancaria v2: la misma herramienta, con la interfaz en
+    Preact y el movimiento de la plataforma. Usa las MISMAS rutas que la v1
+    (no hay cálculo nuevo) y convive con ella, con un enlace de ida y vuelta,
+    hasta que SDN decida reemplazarla. Misma puerta que la v1."""
+    import json
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    mapa = _importmap_calculadora_v2()
+    return templates.TemplateResponse("calculadora_bancaria_v2.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "estados": json.dumps(list(db.ESTADOS_CASO)),
+        "importmap": mapa, "precarga": list(json.loads(mapa)["imports"].values()),
+    })
+
+
 @app.get("/api/entornos/herramientas/bancaria/opciones")
 def api_bancaria_opciones(request: Request, periodo: str = ""):
     _exigir_herramientas(request)
