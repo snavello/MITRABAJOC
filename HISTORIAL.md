@@ -7277,3 +7277,23 @@ la v1, hasta reemplazarla. Mismo criterio que `PLAN_DASHBOARD_V2.md`.
 - Medido en el navegador: al cambiar la categoría el neto corre en ~800 ms.
 - Tests: `test_calculadora_bancaria_v2.py` (puerta, importmap y precarga, ida
   y vuelta, imports, nada de `innerHTML`, mismas rutas, tokens). Plataforma 0.48.01.
+
+## Las propuestas de la calculadora se ven (2026-10-14, Plataforma 0.48.02)
+
+SDN probó la v2 con el recibo 04 (Jefe de Sección, cajero, ROE "más de 25%")
+y dijo que solo proponía la categoría. No era así: el servidor proponía
+Cajero y el ROE (`grilla_bancaria.ajuste_sugerido`; el caso 3 guardado en
+Pruebas tiene la misma lectura, y el robot con esa lectura muestra los tres),
+pero las cápsulas "↳ Tildar «Cajero»" iban en el mismo ámbar que todos los
+botones y, en la caja de la IA, los ajustes eran una lista de texto con un
+solo botón. El problema era de lectura de la pantalla, no de cálculo.
+
+- Color propio, `--propuesta` (fucsia): no se confunde con el ámbar de los
+  botones ni con el amarillo de las diferencias leves, que son permanentes.
+- Una propuesta pendiente titila: un halo en su propia capa (opacity y
+  scale, `calc(--mov-correr + --mov-lento)`), quieto al pasar el mouse y sin
+  animar con "reducir movimiento". Es lo único que se mueve solo.
+- La caja de la IA da un botón por ajuste, más "Ajustar todo" si hay varios.
+- El veredicto dice "N ajustes propuestos por el recibo ↓" y lleva al primero.
+- SDN eligió la v2: la pestaña Herramientas de `/entornos` la abre; la v1
+  sigue a un botón de distancia.
