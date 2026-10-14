@@ -113,6 +113,9 @@ table.t td.q{white-space:nowrap}
   /* Las dos hojas que crecieron al sumar a GCF: más compactas al imprimir */
   #quien table.t{font-size:9.8px} #quien table.t td{padding:2px 5px} #quien .intro{font-size:11.6px;line-height:1.38}
   #i0 table.t{font-size:10px} #i0 table.t td{padding:2px 5px} #i0 .nota,#i0 ul.campos,#i0 .llano,#i0 .ok{font-size:10.6px} #i0 .paso{padding-top:4px}
+  /* Hojas de certificados: más compactas al imprimir para que cada una entre en su A4 */
+  #certificados table.t{font-size:10px} #certificados table.t td{padding:2px 5px} #certificados .llano,#certificados .pre,#certificados ul.lista{font-size:10.8px}
+  #cpasos .nota,#cpasos ul.campos,#cpasos .llano,#cpasos .ok,#cpasos .pre,#cpasos .ruta,#cpasos .entra,#cpasos2 .nota,#cpasos2 ul.campos,#cpasos2 .ok,#cpasos2 .ruta,#cpasos2 .entra{font-size:10.6px} #cpasos .paso,#cpasos2 .paso{padding-top:4px} #cpasos .ruta,#cpasos2 .ruta{line-height:1.5}
 }
 </style>
 </head>
@@ -137,7 +140,7 @@ table.t td.q{white-space:nowrap}
   <div class="comp">
     <div class="c red"><b>Correo de XP · @cm3.com.ar</b><span>Usuarios akg@, sdn@, ars@ y gcf@ del Google Workspace de XP. Con ellos se crean y se usan todas las cuentas (gcf@ solo entra a Claude Team). El grupo alertas@ recibe los avisos y facturacion@ las facturas.</span><i>Etapa Inicial · I1 e I4</i></div>
     <div class="c red"><b>Dominios · cm3.com.ar</b><span>La dirección propia: app.cm3.com.ar (producción), demo.cm3.com.ar y pruebas.cm3.com.ar. colm3na.com.ar y colm3na.com llevan al mismo lugar.</span><i>Registro en la Etapa Inicial · I2</i></div>
-    <div class="c red"><b>Cloudflare</b><span>Administra las direcciones del dominio. Más adelante funciona además como portero: frena ataques y limita los intentos de adivinar contraseñas.</span><i>Etapa Inicial (direcciones) y Etapa 2 (protección)</i></div>
+    <div class="c red"><b>Cloudflare</b><span>Administra las direcciones del dominio y, junto con Render, da los certificados del candado (gratis y se renuevan solos). Más adelante funciona además como portero: frena ataques y limita los intentos de adivinar contraseñas.</span><i>Etapa Inicial (direcciones) y Etapa 2 (certificados y protección)</i></div>
     <div class="c cod"><b>API de Anthropic</b><span>La inteligencia artificial que lee los recibos. Cada entorno tiene su propia clave y su tope de gasto.</span><i>Etapa Inicial · I5</i></div>
     <div class="c cod"><b>Claude Team</b><span>El asistente con el que el equipo programa y documenta. Cada persona tiene su usuario y los proyectos se comparten. GCF participa como miembro.</span><i>Etapa Inicial · I6</i></div>
     <div class="c cod"><b>GitHub</b><span>Donde se guarda el código y su historia. Controla quién aprueba cada cambio antes de que llegue a Demo o a producción.</span><i>Etapa Inicial · I7</i></div>
@@ -158,7 +161,7 @@ table.t td.q{white-space:nowrap}
   <h2>Tres etapas</h2>
   <div class="comp" style="grid-template-columns:repeat(3,minmax(0,1fr))">
     <div class="c srv"><b>1 · Etapa Inicial</b><span>Lo imprescindible. Pruebas funciona igual que hoy, pero ya en cuentas de XP. La Demo vieja sigue en la cuenta de SDN. Se hace en pocas sesiones.</span><i>Detallada paso a paso en este instructivo</i></div>
-    <div class="c cod"><b>2 · Implementación y configuración</b><span>Durante los dos meses previos al piloto: Demo y PRODU nuevas, dominios en la app, protección, copias, monitoreo completo, cambios de código y baja de las cuentas viejas.</span><i>Lista de tareas · página final</i></div>
+    <div class="c cod"><b>2 · Implementación y configuración</b><span>Durante los dos meses previos al piloto: Demo y PRODU nuevas, dominios en la app con sus certificados, protección, copias, monitoreo completo, cambios de código y baja de las cuentas viejas.</span><i>Lista de tareas y hoja de certificados (C), al final</i></div>
     <div class="c mon"><b>3 · Piloto real</b><span>Los controles antes de abrir PRODU a los primeros usuarios reales.</span><i>Lista de controles · página final</i></div>
   </div>
 
@@ -1583,7 +1586,7 @@ python cargar_bancaria.py</pre>
     <div class="pc">
       <div class="pt">Pruebas nueva responde</div>
       <div class="entra">Entra: <b>SDN</b> en el navegador, sin usuario</div>
-      <div class="ok">Verificar: <span class="url">colm3na-pruebas.onrender.com/healthz</span> da <code>{"ok": true}</code> y <span class="url">/api/version</span> dice <code>pruebas</code> y la misma versión que tiene <code>main</code>. La portada muestra el logo de Colm3na y el distintivo de entorno.</div>
+      <div class="ok">Verificar: <span class="url">colm3na-pruebas.onrender.com/healthz</span> da <code>{"ok": true}</code> y <span class="url">/api/version</span> dice <code>pruebas</code> y la misma versión que tiene <code>main</code>. La portada muestra el logo de Colm3na y el distintivo de entorno, y el navegador muestra el candado (Render ya trae el certificado de su dirección; no hay nada que configurar en esta etapa).</div>
     </div>
   </div>
 
@@ -1688,10 +1691,10 @@ python cargar_bancaria.py</pre>
     <tbody>
       <tr><td><span class="box"></span></td><td><b>Demo nueva</b> en el Render de XP: copiar la base de la Demo vieja y crear su servidor (rama <code>demo</code>). Después del primer taller con La Bancaria</td><td>Que lo que se muestra al sindicato también sea de XP, sin perder los datos cargados</td><td>SDN (<code>sdn@cm3.com.ar</code>)</td></tr>
       <tr><td><span class="box"></span></td><td><b>PRODU</b>: servidor y base nuevos, con la base duplicada para que no se caiga, rama <code>produ</code> y <code>ENTORNO=prod</code></td><td>El entorno real, separado de Pruebas y Demo</td><td>AKG paga el plan; SDN configura</td></tr>
-      <tr><td><span class="box"></span></td><td><b>Dominios en la app</b>: <code>pruebas.</code>, <code>demo.</code> y <code>app.cm3.com.ar</code>, con su certificado. <code>colm3na.com.ar</code> y <code>colm3na.com</code> redirigen. Registro de <code>colm3na.com</code></td><td>Direcciones propias y definitivas en lugar de las de Render</td><td>SDN (Render) y AKG (Cloudflare)</td></tr>
-      <tr><td><span class="box"></span></td><td><b>Protección en Cloudflare</b>: invitar a SDN y ARS a la cuenta, certificado estricto, firewall (WAF), límite de intentos en los ingresos</td><td>Frenar ataques y el intento de adivinar contraseñas (cierra el hallazgo de seguridad H-0008)</td><td>AKG invita; SDN configura con <code>sdn@cm3.com.ar</code></td></tr>
+      <tr><td><span class="box"></span></td><td><b>Dominios en la app con sus certificados</b>: <code>pruebas.</code>, <code>demo.</code> y <code>app.cm3.com.ar</code>, en ese orden, cada una con su candado (paso a paso en la hoja C, que sigue). <code>colm3na.com.ar</code> y <code>colm3na.com</code> redirigen. Registro de <code>colm3na.com</code></td><td>Direcciones propias y definitivas en lugar de las de Render, cifradas de punta a punta</td><td>SDN (Render y Cloudflare, invitado por AKG); AKG registra <code>colm3na.com</code></td></tr>
+      <tr><td><span class="box"></span></td><td><b>Protección en Cloudflare</b>: invitar a SDN y ARS a la cuenta (va primero: los certificados lo necesitan), modo estricto <b>Full (strict)</b> y siempre HTTPS (C.6 y C.8), firewall (WAF), límite de intentos en los ingresos</td><td>Frenar ataques y el intento de adivinar contraseñas (cierra el hallazgo de seguridad H-0008)</td><td>AKG invita; SDN configura con <code>sdn@cm3.com.ar</code></td></tr>
       <tr><td><span class="box"></span></td><td><b>Correo</b>: firmas de autenticidad de los mails (DKIM, DMARC) y cuenta de <b>Resend</b> para el correo automático de la app</td><td>Que los mails no lleguen como spam y que la app pueda mandar "recuperá tu clave"</td><td>AKG crea; SDN configura</td></tr>
-      <tr><td><span class="box"></span></td><td><b>Grafana Cloud</b>: control de que cada entorno esté funcionando, alertas al grupo y métricas propias de Render (reemplaza al colector viejo)</td><td>Enterarse antes que los usuarios si algo se cae</td><td>AKG crea; SDN configura</td></tr>
+      <tr><td><span class="box"></span></td><td><b>Grafana Cloud</b>: control de que cada entorno esté funcionando, alerta de vencimiento de cada certificado (C.9), alertas al grupo y métricas propias de Render (reemplaza al colector viejo)</td><td>Enterarse antes que los usuarios si algo se cae</td><td>AKG crea; SDN configura</td></tr>
       <tr><td><span class="box"></span></td><td><b>Sentry completo</b>: entornos Demo y PRODU, alertas y ocultamiento de datos personales; clave de lectura para la pestaña Observabilidad</td><td>Errores separados por entorno y sin datos personales</td><td>AKG (<code>akg@cm3.com.ar</code>, única usuaria del plan gratuito); SDN le dicta los valores</td></tr>
       <tr><td><span class="box"></span></td><td><b>Copias en Amazon S3</b>: cuenta de AWS de XP, depósito protegido, copia diaria de PRODU y prueba mensual de recuperación</td><td>Que los datos de producción estén a salvo aunque falle Render</td><td>AKG crea y paga; SDN configura</td></tr>
       <tr><td><span class="box"></span></td><td><b>Reglas de GitHub</b> en <code>cm3-xp</code>: Demo y PRODU solo por pedido de cambio (PR) aprobado por otra persona; quién revisa qué; presupuesto de minutos</td><td>Que nada llegue a producción sin una segunda mirada</td><td>SDN (<code>snavello</code>, Owner) con AKG presente</td></tr>
@@ -1701,6 +1704,182 @@ python cargar_bancaria.py</pre>
       <tr><td><span class="box"></span></td><td><b>Baja de lo viejo</b>: Render, Anthropic, Grafana, Sentry y bot de SDN; revocar las claves viejas</td><td>Que no quede nada funcionando ni cobrando a nombre personal</td><td>SDN (en sus cuentas viejas)</td></tr>
     </tbody>
   </table></div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<!-- ===================== ETAPA 2 · CERTIFICADOS ===================== -->
+<article class="hoja" id="certificados">
+  <div class="marca"><b>Colm3na</b><span>Etapa 2 · Certificados de seguridad</span></div>
+  <h2><span class="n">C</span>Certificados de seguridad (el candado)</h2>
+  <p class="intro"><b>Para qué sirve:</b> que el navegador muestre el candado y que todo lo que viaja entre el teléfono del afiliado y la app (su clave, su CUIL, la foto del recibo) vaya cifrado. Sin un certificado válido, el navegador muestra "No seguro" o directamente no abre la página. Es obligatorio antes del piloto.</p>
+  <div class="pre"><b>En corto:</b> los certificados <b>no se compran ni se instalan a mano</b>. Son gratis: los emiten Cloudflare y Render solos y los renuevan solos. Lo que sí hay que hacer es <b>configurarlos bien una vez por dirección</b> (pasos C.1 a C.10) y <b>vigilar que no venzan</b> (alerta en Grafana, paso C.9).</div>
+  <div class="llano"><b>Certificado:</b> un documento digital, firmado por una entidad que los navegadores reconocen (Let's Encrypt, Google), que prueba que <code>app.cm3.com.ar</code> es de verdad nuestra y permite cifrar la conexión. Vence cada pocos meses y se renueva automáticamente. Con Cloudflare en el medio hay <b>dos tramos</b>, y cada uno tiene su certificado: del navegador a Cloudflare, y de Cloudflare a Render.</div>
+
+  <h3>Dónde se necesitan</h3>
+  <div class="tw"><table class="t">
+    <thead><tr><th>Dónde</th><th>¿Hace falta?</th><th>Quién lo da</th><th>Qué hay que hacer</th></tr></thead>
+    <tbody>
+      <tr><td><b>Pruebas en la dirección de Render</b> (<code>colm3na-pruebas.onrender.com</code>), Etapa Inicial</td><td>Sí, ya viene</td><td>Render</td><td>Nada. Se mira el candado en I11.1</td></tr>
+      <tr><td><b><code>pruebas.</code>, <code>demo.</code> y <code>app.cm3.com.ar</code></b>: tramo navegador → Cloudflare</td><td>Sí</td><td>Cloudflare (certificado universal, gratis)</td><td>Se emite solo cuando la zona queda activa (I3). Se verifica en C.1</td></tr>
+      <tr><td>Las mismas tres: tramo Cloudflare → Render</td><td>Sí</td><td>Render (Let's Encrypt o Google Trust Services, gratis)</td><td>Se emite al agregar la dirección en Render: C.2 a C.5</td></tr>
+      <tr><td><b><code>colm3na.com.ar</code> y <code>colm3na.com</code></b> (redirigen a la app)</td><td>Sí: sin él, el navegador avisa antes de redirigir</td><td>Cloudflare, en la zona de cada dominio</td><td>Se emite solo al activar cada zona. La redirección se arma en Cloudflare y no pasa por Render</td></tr>
+      <tr><td><b>Correo</b> <code>@cm3.com.ar</code> y mails de la app (Resend)</td><td>No se compra</td><td>Google y Resend cifran solos</td><td>Configurar SPF, DKIM y DMARC (tarea Correo de la Etapa 2)</td></tr>
+      <tr><td>Base de datos, IA de Anthropic, Amazon S3, GitHub, Sentry, Grafana, Telegram</td><td>No</td><td>Cada proveedor</td><td>Nada: ya se usan por <code>https</code></td></tr>
+      <tr><td><b>Certificado digital de ARCA</b></td><td>No, hoy</td><td>ARCA</td><td>Solo si un día la app consultara ARCA sola. Hoy el afiliado sube la captura</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Cuándo</h3>
+  <ul class="lista">
+    <li><b>Etapa Inicial:</b> nada. Pruebas usa la dirección de Render, que ya tiene su certificado, y el universal de Cloudflare se emite solo al activar la zona en I3.</li>
+    <li><b>Etapa 2:</b> al poner cada dirección propia, una por entorno y en este orden: <b>Pruebas, Demo y PRODU</b>. Primero se invita a SDN a Cloudflare. El certificado de Render tiene que estar emitido antes de prender el proxy de Cloudflare (C.7).</li>
+    <li><b>Etapa 3:</b> control antes del piloto (las tres direcciones con candado y la alerta de vencimiento activa).</li>
+    <li><b>Siempre:</b> se renuevan solos. Si una renovación falla, Grafana avisa 14 días antes del vencimiento. Si se llega a vencer, la app deja de abrir.</li>
+  </ul>
+  <div class="llano"><b>¿Conviene comprar uno pago?</b> No. Los certificados pagos "de organización" o "extendidos" se ven igual en el navegador, con el mismo candado, y Render emite y renueva el suyo solo. Pagar no agrega seguridad acá.</div>
+  <div class="fuente">Fuente: <a href="https://render.com/docs/custom-domains">Render — Custom Domains</a> · <a href="https://render.com/docs/tls">Render — Fully Managed TLS Certificates</a> · <a href="https://developers.cloudflare.com/ssl/edge-certificates/universal-ssl/">Cloudflare — Universal SSL</a></div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja" id="cpasos">
+  <div class="marca"><b>Colm3na</b><span>Etapa 2 · Certificados: paso a paso</span></div>
+  <h3>Paso a paso para cada dirección</h3>
+  <div class="pre"><b>Necesitás antes:</b> SDN invitado a la cuenta de Cloudflare (primer punto de la tarea Protección), el servicio del entorno creado en Render y, solo para C.9, Grafana Cloud. <b>Al terminar tenés:</b> la dirección propia del entorno abriendo con candado, Cloudflare en modo estricto y la alerta de vencimiento activa. El ejemplo es <code>pruebas.cm3.com.ar</code>; C.10 dice qué cambia para Demo y PRODU.</div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>C.1</div>
+    <div class="pc">
+      <div class="pt">Ver el certificado universal de Cloudflare</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en <span class="url">dash.cloudflare.com</span></div>
+      <div class="ruta">zona <code>cm3.com.ar</code> → <span class="ui">SSL/TLS</span> → <span class="ui">Edge Certificates</span></div>
+      <div class="ok">Verificar: hay un certificado de tipo <b>Universal</b> que cubre <code>cm3.com.ar</code> y <code>*.cm3.com.ar</code>, en estado <b>Active</b>. Cubre las tres direcciones, porque son de primer nivel.</div>
+      <div class="fuente">Fuente: <a href="https://developers.cloudflare.com/ssl/edge-certificates/universal-ssl/">Cloudflare — Universal SSL</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>C.2</div>
+    <div class="pc">
+      <div class="pt">Sacar los registros AAAA de esa dirección, si hay</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en <span class="url">dash.cloudflare.com</span></div>
+      <div class="ruta">zona <code>cm3.com.ar</code> → <span class="ui">DNS</span> → <span class="ui">Records</span> → si hay un registro <b>AAAA</b> con el nombre <code>pruebas</code>, borrarlo</div>
+      <div class="ok">Verificar: no queda ningún AAAA con ese nombre. Render no usa IPv6 y ese registro le traba la verificación.</div>
+      <div class="fuente">Fuente: <a href="https://render.com/docs/configure-cloudflare-dns">Render — Configuring Cloudflare DNS</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>C.3</div>
+    <div class="pc">
+      <div class="pt">Agregar la dirección en Render</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en <span class="url">dashboard.render.com</span>, workspace "Colm3na"</div>
+      <div class="ruta">servicio <code>colm3na-pruebas</code> → <span class="ui">Settings</span> → <span class="ui">Custom Domains</span> → <span class="ui">Add Custom Domain</span> → <code>pruebas.cm3.com.ar</code> → <span class="ui">Save</span> <span class="flag vp">VERIFICAR EN PANTALLA</span></div>
+      <div class="ok">Verificar: la dirección aparece en la lista, todavía sin verificar, y Render indica a qué nombre hay que apuntarla (se espera <code>colm3na-pruebas.onrender.com</code>).</div>
+      <div class="fuente">Fuente: <a href="https://render.com/docs/custom-domains">Render — Custom Domains</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>C.4</div>
+    <div class="pc">
+      <div class="pt">Crear el registro en Cloudflare, todavía sin proxy</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en <span class="url">dash.cloudflare.com</span></div>
+      <div class="ruta">zona <code>cm3.com.ar</code> → <span class="ui">DNS</span> → <span class="ui">Records</span> → <span class="ui">Add record</span></div>
+      <ul class="campos">
+        <li><span class="ui">Type</span>: <code>CNAME</code> · <span class="ui">Name</span>: <code>pruebas</code> · <span class="ui">Target</span>: <code>colm3na-pruebas.onrender.com</code></li>
+        <li><span class="ui">Proxy status</span>: <b>DNS only</b> (nube gris) → <span class="ui">Save</span></li>
+      </ul>
+      <div class="llano"><b>Nube gris:</b> Cloudflare solo dice a qué servidor ir y deja pasar el tráfico directo. Así Render puede comprobar que la dirección es nuestra y emitir su certificado. La nube naranja (proxy) se prende recién en C.7.</div>
+      <div class="ok">Verificar: el registro aparece con la nube gris.</div>
+      <div class="fuente">Fuente: <a href="https://render.com/docs/configure-cloudflare-dns">Render — Configuring Cloudflare DNS</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>C.5</div>
+    <div class="pc">
+      <div class="pt">Esperar el certificado de Render</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en <span class="url">dashboard.render.com</span></div>
+      <div class="ruta">servicio <code>colm3na-pruebas</code> → <span class="ui">Settings</span> → <span class="ui">Custom Domains</span>. Si no se verifica sola, esperar unos minutos y apretar <span class="ui">Verify</span> <span class="flag vp">VERIFICAR EN PANTALLA</span></div>
+      <div class="ok">Verificar: la dirección figura verificada y con el certificado emitido. <span class="url">https://pruebas.cm3.com.ar/healthz</span> responde <code>{"ok": true}</code> y el navegador muestra el candado.</div>
+      <div class="nota">Si no se verifica después de un rato largo, revisar C.2 y C.4: un AAAA olvidado o la nube naranja prendida antes de tiempo son las causas habituales.</div>
+      <div class="fuente">Fuente: <a href="https://render.com/docs/tls">Render — Fully Managed TLS Certificates</a></div>
+    </div>
+  </div>
+  <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
+</article>
+
+<article class="hoja" id="cpasos2">
+  <div class="marca"><b>Colm3na</b><span>Etapa 2 · Certificados: paso a paso (cont.)</span></div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>C.6</div>
+    <div class="pc">
+      <div class="pt">Modo estricto en Cloudflare</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en <span class="url">dash.cloudflare.com</span></div>
+      <div class="ruta">zona <code>cm3.com.ar</code> → <span class="ui">SSL/TLS</span> → <span class="ui">Overview</span> → modo de cifrado <b>Full (strict)</b>. Si la pantalla ofrece el modo automático, elegir el personalizado y ahí <b>Full (strict)</b> <span class="flag vp">VERIFICAR EN PANTALLA</span></div>
+      <ul class="campos">
+        <li><b>Nunca Flexible:</b> Cloudflare le hablaría a Render sin cifrar, Render lo mandaría a <code>https</code> y la página quedaría en un bucle.</li>
+        <li>Render recomienda <b>Full</b>. Se usa <b>Full (strict)</b>, que además exige que el certificado de Render sea válido: lo es, porque es público y lo renueva Render.</li>
+      </ul>
+      <div class="ok">Verificar: la pantalla muestra <b>Full (strict)</b>. Se hace una sola vez por zona y vale para las tres direcciones.</div>
+      <div class="nota">Si un día la app muestra el error <b>526</b> de Cloudflare, falló el certificado de Render: volver a C.5.</div>
+      <div class="fuente">Fuente: <a href="https://developers.cloudflare.com/ssl/origin-configuration/ssl-modes/full-strict/">Cloudflare — Full (strict)</a> · <a href="https://render.com/docs/configure-cloudflare-dns">Render — Configuring Cloudflare DNS</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>C.7</div>
+    <div class="pc">
+      <div class="pt">Prender el proxy</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en <span class="url">dash.cloudflare.com</span></div>
+      <div class="ruta">zona <code>cm3.com.ar</code> → <span class="ui">DNS</span> → <span class="ui">Records</span> → registro <code>pruebas</code> → <span class="ui">Edit</span> → <span class="ui">Proxy status</span>: <b>Proxied</b> (nube naranja) → <span class="ui">Save</span></div>
+      <div class="ok">Verificar: <span class="url">https://pruebas.cm3.com.ar</span> sigue abriendo con candado. Desde acá el tráfico pasa por Cloudflare, que puede frenar ataques (tarea Protección).</div>
+      <div class="fuente">Fuente: <a href="https://render.com/docs/configure-cloudflare-dns">Render — Configuring Cloudflare DNS</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>C.8</div>
+    <div class="pc">
+      <div class="pt">Siempre HTTPS y versión mínima de cifrado</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en <span class="url">dash.cloudflare.com</span></div>
+      <div class="ruta">zona <code>cm3.com.ar</code> → <span class="ui">SSL/TLS</span> → <span class="ui">Edge Certificates</span></div>
+      <ul class="campos">
+        <li><span class="ui">Always Use HTTPS</span>: <b>On</b>. Quien escriba <code>http://</code> va a parar a <code>https://</code>.</li>
+        <li><span class="ui">Minimum TLS Version</span>: <b>TLS 1.2</b>.</li>
+        <li><span class="ui">Automatic HTTPS Rewrites</span>: <b>On</b>.</li>
+        <li><b>HSTS no se activa acá:</b> la app ya lo manda sola en Demo y PRODU, y la opción "preload" de Cloudflare es muy difícil de deshacer.</li>
+      </ul>
+      <div class="ok">Verificar: <span class="url">http://pruebas.cm3.com.ar</span> redirige solo a <span class="url">https://pruebas.cm3.com.ar</span>. Se hace una sola vez por zona.</div>
+      <div class="fuente">Fuente: <a href="https://developers.cloudflare.com/ssl/edge-certificates/additional-options/always-use-https/">Cloudflare — Always Use HTTPS</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>C.9</div>
+    <div class="pc">
+      <div class="pt">Alerta de vencimiento en Grafana</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en Grafana Cloud (después de la tarea Grafana de la Etapa 2)</div>
+      <div class="ruta"><span class="ui">Testing &amp; synthetics</span> → <span class="ui">Synthetics</span> → <span class="ui">Checks</span> → el control HTTP de <span class="url">https://pruebas.cm3.com.ar/healthz</span> (crearlo si no está) → <span class="ui">Alerting</span> → <span class="ui">Per-check alerts</span> → tildar <span class="ui">TLS certificate expiration</span> → <b>14</b> días</div>
+      <div class="ok">Verificar: la alerta figura activa en el control. Si una renovación automática falla, el aviso llega a alertas@ y a Telegram dos semanas antes del vencimiento.</div>
+      <div class="fuente">Fuente: <a href="https://grafana.com/docs/grafana-cloud/testing/synthetic-monitoring/configure-alerts/configure-per-check-alerts/">Grafana Cloud — Per-check alerts</a></div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="pn"><span class="box"></span>C.10</div>
+    <div class="pc">
+      <div class="pt">Repetir para Demo y PRODU, y avisarle a la app</div>
+      <div class="entra">Entra: <b>SDN</b> con <code>sdn@cm3.com.ar</code> en Render y en Cloudflare; el cambio de código, <b>SDN</b> o <b>ARS</b></div>
+      <ul class="campos">
+        <li>C.2 a C.5, C.7 y C.9 para <code>demo.cm3.com.ar</code> (servicio de Demo) y después para <code>app.cm3.com.ar</code> (servicio de PRODU). C.1, C.6 y C.8 no se repiten: valen para toda la zona.</li>
+        <li><code>colm3na.com.ar</code> y <code>colm3na.com</code>: en cada zona, mirar C.1 (su propio certificado universal) y aplicar C.8. No se agregan en Render: la redirección la hace Cloudflare.</li>
+        <li>En el código, las direcciones nuevas en la lista de entornos (tarea Cambios en el código).</li>
+      </ul>
+      <div class="ok">Verificar: las tres direcciones abren con candado, <code>http://</code> redirige a <code>https://</code> en todas y cada una tiene su alerta de vencimiento.</div>
+    </div>
+  </div>
   <div class="pie"><span>Instructivo de montaje · Colm3na</span><span class="num"></span></div>
 </article>
 
@@ -1714,6 +1893,7 @@ python cargar_bancaria.py</pre>
       <tr><td><span class="box"></span></td><td>Contrato y acuerdo de tratamiento de datos con La Bancaria, firmados</td><td>Sin firma no se puede recibir el padrón</td></tr>
       <tr><td><span class="box"></span></td><td>Copia diaria de PRODU funcionando y una recuperación probada</td><td>Saber que, si algo se rompe, los datos vuelven</td></tr>
       <tr><td><span class="box"></span></td><td>"Olvidé mi clave" por mail funcionando y pestaña "Cambiar clave" retirada</td><td>Que cada persona recupere su acceso sola y nadie pueda cambiar claves ajenas</td></tr>
+      <tr><td><span class="box"></span></td><td>Certificados: <code>app.cm3.com.ar</code>, <code>demo.</code> y <code>pruebas.</code> con candado, <code>http://</code> redirigiendo a <code>https://</code>, Cloudflare en Full (strict) y la alerta de vencimiento activa (prueba INF-05 del kit de seguridad)</td><td>Sin certificado válido el navegador bloquea la app y lo que viaja (claves, recibos) no va cifrado</td></tr>
       <tr><td><span class="box"></span></td><td>Protección de Cloudflare activa y la app leyendo la dirección real</td><td>Frenar los intentos de adivinar contraseñas</td></tr>
       <tr><td><span class="box"></span></td><td>Hallazgos de seguridad que bloquean producción cerrados (claves iniciales del código y límite de intentos)</td><td>Es la regla de salida acordada: nada crítico ni alto abierto</td></tr>
       <tr><td><span class="box"></span></td><td>Control automático de cambios (los tests) en verde y obligatorio para incorporar un cambio</td><td>Que ningún error conocido llegue a producción</td></tr>

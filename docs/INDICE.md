@@ -85,7 +85,7 @@ a SDN. **No se escribe en ningún documento.**
 
 | Recurso | Origen |
 |---|---|
-| Instructivo de montaje: cuentas y entornos a nombre de XP | `recursos/colm3na-instructivo-montaje.html` y `.pdf` (A4, 36 páginas) ← artifact `PdD98igB` (versión 4). **Interno del equipo.** |
+| Instructivo de montaje: cuentas y entornos a nombre de XP | `recursos/colm3na-instructivo-montaje.html` y `.pdf` (A4, 39 páginas) ← artifact `PdD98igB` (versión 5, con la hoja C de certificados). **Interno del equipo.** |
 | Plan de implementación en La Bancaria (seis fases, v0.2) | `recursos/colm3na-plan-implementacion-bancaria.html`, `.pdf` (4 hojas A4) y `-v0.2.docx` (Word editable) ← `docs/bancaria/plan-implementacion-bancaria.html` |
 | Guía de la reunión con las autoridades de La Bancaria (v0.2) | `recursos/colm3na-guia-reunion-autoridades-bancaria.html`, `.pdf` (1 hoja A4) y `-v0.2.docx` (Word editable) ← `docs/bancaria/guia-reunion-autoridades-bancaria.html` |
 | Trámites de La Bancaria en Colm3na: resumen (6 páginas) y catálogo completo, en Word | `recursos/colm3na-tramites-bancaria-resumen.docx` y `-completo.docx` (con miniatura) ← `docs/bancaria/generar_tramites_docx.js` ← `tramites-bancaria.json` |
