@@ -1870,9 +1870,17 @@ def admin_trabajador_alta(
     telefono: str = Form(""), mail: str = Form(""),
     vigencia_credencial: str = Form(""), seccional_id: str = Form(""),
     cuit_empleador: str = Form(""),
+    fecha_afiliacion: str = Form(""), fecha_nacimiento: str = Form(""),
 ):
     """Alta o modificación manual de un trabajador. Obligatorios: cuil,
     nombre y **provincia y localidad** (geo.OBLIGATORIOS_AFILIADO).
+
+    Las dos fechas del padrón (PLAN_LISTAS_VALIDACIONES.md, D4) son
+    opcionales y van cada una a su dueño: `fecha_afiliacion` al
+    empadronamiento (es de ESTE gremio) y `fecha_nacimiento` a la persona,
+    con la misma regla que el nombre y el domicilio (solo si este padrón
+    responde por la cuenta). Una fecha ilegible frena el alta (`err=fecha`)
+    en vez de guardarse como texto.
 
     El CUIL -- y el CUIT del empleador, si viene -- tienen que cumplir el
     dígito verificador (módulo 11, PLAN_CUIT_MOD11.md). En una EDICIÓN solo se
@@ -1896,6 +1904,10 @@ def admin_trabajador_alta(
     if faltan:
         return RedirectResponse("/admin?err=domicilio&faltan=" + quote(", ".join(faltan))
                                 + "#trabajadores", status_code=303)
+    f_afiliacion = _fecha_formulario(fecha_afiliacion)
+    f_nacimiento = _fecha_formulario(fecha_nacimiento)
+    if f_afiliacion is None or f_nacimiento is None:
+        return RedirectResponse("/admin?err=fecha#trabajadores", status_code=303)
     sec_id = int(seccional_id) if seccional_id else None
     domicilio = geo.campos_para_guardar(
         {"calle": calle, "numero": numero, "piso_depto": piso_depto,
@@ -1924,6 +1936,7 @@ def admin_trabajador_alta(
                     return RedirectResponse("/admin?err=cuitempleador#trabajadores",
                                             status_code=303)
                 t.vigencia_credencial = vigencia_credencial or None
+                t.fecha_afiliacion = f_afiliacion or None
                 t.seccional_id = sec_id
                 t.cuit_empleador = _norm_cuil(cuit_empleador) or None   # sin guiones, como empleador.cuit
                 s.add(t)
@@ -1945,9 +1958,12 @@ def admin_trabajador_alta(
                 if db.padron_responde_por(s, sid, t.cuil):
                     actual = db.asegurar_cuenta(s, t.cuil).mail or ""
                     cambio_mail = (mail or "").strip() != actual.strip()
+                    # La fecha de nacimiento llega precargada como el resto:
+                    # en blanco, acá SÍ borra (el admin la está viendo).
                     db.guardar_datos_personales(s, t.cuil, nombre=nombre,
                                                 domicilio=domicilio, telefono=telefono, mail=mail,
-                                                mail_padron=mail if cambio_mail else None)
+                                                mail_padron=mail if cambio_mail else None,
+                                                fecha_nacimiento=f_nacimiento)
                 else:
                     datos_ajenos = True
         else:    # alta — evitar duplicado de CUIL en el mismo sindicato
@@ -1969,13 +1985,16 @@ def admin_trabajador_alta(
                 s.add(Trabajador(
                     sindicato_id=sid, cuil=cuil_norm,
                     vigencia_credencial=vigencia_credencial or None, seccional_id=sec_id,
-                    cuit_empleador=_norm_cuil(cuit_empleador) or None))
+                    cuit_empleador=_norm_cuil(cuit_empleador) or None,
+                    fecha_afiliacion=f_afiliacion or None))
                 if responde:
                     # En el alta, un mail en blanco NO borra el que ya hubiera
                     # cargado otro gremio para esta persona (`or None` = no tocar).
+                    # La fecha de nacimiento, lo mismo.
                     db.guardar_datos_personales(s, cuil_norm, nombre=nombre,
                                                 domicilio=domicilio, telefono=telefono, mail=mail,
-                                                mail_padron=mail or None)
+                                                mail_padron=mail or None,
+                                                fecha_nacimiento=f_nacimiento or None)
                 else:
                     datos_ajenos = True
         s.commit()
@@ -2007,7 +2026,17 @@ def admin_generar_credencial(request: Request, id: int = Form(...)):
 def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
     """Alta masiva: una línea por trabajador, campos separados por coma.
     Orden: cuil, nombre, calle, numero, piso, localidad, provincia, telefono,
-    mail, CP, seccional. Obligatorios los dos primeros (cuil y nombre).
+    mail, CP, seccional, fecha_afiliacion, fecha_nacimiento. Obligatorios los
+    dos primeros (cuil y nombre).
+
+    **Las dos fechas** (PLAN_LISTAS_VALIDACIONES.md, D4) van al final para
+    que una planilla armada antes siga entrando igual. Son opcionales, pero
+    una fecha que no se entiende deja la línea afuera (`omitidas`, con la
+    línea a la vista): si entrara sin la fecha, el sindicato creería que la
+    cargó. En un CUIL que YA está en el padrón, la fecha de afiliación sí se
+    actualiza (es del empadronamiento, siempre de este gremio) y se cuenta en
+    `fechasactualizadas`; la de nacimiento no, porque es de la persona y en
+    esa línea no se tocan sus datos.
 
     **Nadie se geocodifica acá.** Cien direcciones a un pedido por segundo
     son cien segundos con el navegador colgado, y Nominatim bloqueando de
@@ -2046,6 +2075,7 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
     sid = exigir_sindicato(request)
     altas = 0
     mails_actualizados = 0   # CUIL ya en el padrón cuya línea trajo mail (solo mail_padron)
+    fechas_actualizadas = 0  # CUIL ya en el padrón cuya línea trajo fecha de afiliación
     datos_ajenos = 0         # líneas cuya persona ya tenía cuenta antes de este padrón: sin tocar sus datos
     omitidas = []
     cuil_invalidos = []      # líneas con CUIL que no cumple el módulo 11
@@ -2068,17 +2098,27 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
             cuil = _norm_cuil(campos[0]) if campos else ""
             nombre = campos[1] if len(campos) > 1 else ""
             def campo(i): return campos[i] if len(campos) > i else ""
-            if len(cuil) == 11 and cuil in existentes and campo(8):
+            f_afiliacion = _fecha_formulario(campo(11))
+            f_nacimiento = _fecha_formulario(campo(12))
+            if f_afiliacion is None or f_nacimiento is None:
+                omitidas.append(linea.strip()[:60])
+                continue
+            if len(cuil) == 11 and cuil in existentes and (campo(8) or f_afiliacion):
                 # Ya está en el padrón de este sindicato (quizá ya registrado):
                 # no es un alta, pero la línea trae el mail y esta es la ÚNICA
                 # vía que tiene el gremio para cargar el mail del padrón de
                 # quien ya tiene cuenta. Solo `mail_padron`: ni el contacto ni
                 # el resto de los datos de la persona se tocan.
-                if db.responde_por(cuil in con_clave, propios[cuil].registrado):
-                    db.guardar_datos_personales(s, cuil, mail_padron=campo(8))
-                    mails_actualizados += 1
-                else:
-                    datos_ajenos += 1
+                if f_afiliacion:
+                    propios[cuil].fecha_afiliacion = f_afiliacion
+                    s.add(propios[cuil])
+                    fechas_actualizadas += 1
+                if campo(8):
+                    if db.responde_por(cuil in con_clave, propios[cuil].registrado):
+                        db.guardar_datos_personales(s, cuil, mail_padron=campo(8))
+                        mails_actualizados += 1
+                    else:
+                        datos_ajenos += 1
                 continue
             if len(cuil) != 11 or not nombre or cuil in existentes:
                 omitidas.append(linea.strip()[:60])
@@ -2099,13 +2139,15 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
                 "codigo_postal": campo(9)}, precision="sin_geo")
             s.add(Trabajador(
                 sindicato_id=sid, cuil=cuil,
-                seccional_id=por_nombre.get(geo._norm(campo(10)))))
+                seccional_id=por_nombre.get(geo._norm(campo(10))),
+                fecha_afiliacion=f_afiliacion or None))
             if cuil in con_clave:
                 datos_ajenos += 1     # empadronamiento nuevo sobre una cuenta ya hecha: solo eso
             else:
                 db.guardar_datos_personales(s, cuil, nombre=nombre, domicilio=domicilio,
                                             telefono=campo(7), mail=campo(8),
-                                            mail_padron=campo(8) or None)
+                                            mail_padron=campo(8) or None,
+                                            fecha_nacimiento=f_nacimiento or None)
             existentes.add(cuil); altas += 1
         s.commit()
     # Las primeras tres líneas rechazadas alcanzan para que la persona vea el
@@ -2114,6 +2156,8 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
     destino = f"/admin?altas={altas}"
     if mails_actualizados:
         destino += f"&mailsactualizados={mails_actualizados}"
+    if fechas_actualizadas:
+        destino += f"&fechasactualizadas={fechas_actualizadas}"
     if datos_ajenos:
         destino += f"&datosajenos={datos_ajenos}"
     if omitidas:
@@ -6947,6 +6991,18 @@ def plataforma_reset_clave(
     return RedirectResponse("/plataforma?reset=nohay", status_code=303)
 
 
+def _fecha_formulario(valor: str):
+    """Una fecha que llega de un formulario: "" si vino en blanco, ISO si es
+    una fecha (AAAA-MM-DD o DD/MM/AAAA) y None si no se entiende. Las dos
+    fechas del padrón (PLAN_LISTAS_VALIDACIONES.md, D4) pasan por acá en las
+    cinco puertas por las que entran, así una fecha ilegible se rechaza en
+    la puerta y no se guarda como texto cualquiera."""
+    v = (valor or "").strip()
+    if not v:
+        return ""
+    return listas_mod.normalizar_fecha(v)
+
+
 def _norm_cuil(cuil: str) -> str:
     return cuit.normalizar(cuil)
 
@@ -7368,6 +7424,7 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
                          calle: str = Form(""), numero: str = Form(""),
                          piso_depto: str = Form(""), codigo_postal: str = Form(""),
                          telefono: str = Form(""), mail: str = Form(""),
+                         fecha_nacimiento: str = Form(""),
                          token: str = Form(""), codigo: str = Form(""),
                          token_captcha: str = Form("", alias="cf-turnstile-response")):
     """Crea la cuenta del afiliado y, con ella, sus datos personales. Es el
@@ -7459,6 +7516,13 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
     if geo.faltan_campos({"provincia": provincia, "localidad": localidad}):
         _login_fallo(request, _intentos_registro)
         return RedirectResponse("/ingresar?error=domicilio", status_code=303)
+    # La fecha de nacimiento es opcional (PLAN_LISTAS_VALIDACIONES.md, D4),
+    # pero si vino tiene que ser una fecha; se mira acá, antes del padrón,
+    # por la misma razón que el domicilio.
+    f_nacimiento = _fecha_formulario(fecha_nacimiento)
+    if f_nacimiento is None:
+        _login_fallo(request, _intentos_registro)
+        return RedirectResponse("/ingresar?error=fecha", status_code=303)
     # La clave mínima, ANTES de consumir el código (QA-REG-07): el mismo piso que
     # la recuperación y el cambio de clave temporal. La pantalla ya lo pide con
     # `minlength`; esto es para quien arma el POST a mano.
@@ -7494,7 +7558,8 @@ def trabajador_registro(request: Request, cuil: str = Form(...), clave: str = Fo
         db.guardar_datos_personales(
             s, cuil, nombre=nombre,
             domicilio=domicilio if _domicilio_distinto(persona, domicilio) else None,
-            telefono=telefono if telefono.strip() else None)
+            telefono=telefono if telefono.strip() else None,
+            fecha_nacimiento=f_nacimiento or None)
         if mail_declarado:
             persona.mail_declarado = mail_declarado
             persona.mail_declarado_confirmado = fechas.ahora_texto()
@@ -7773,8 +7838,13 @@ async def api_actualizar_perfil(request: Request, nombre: str = Form(...), calle
                                  localidad: str = Form(""), provincia: str = Form(""),
                                  codigo_postal: str = Form(""), latitud: str = Form(""),
                                  longitud: str = Form(""), precision_geo: str = Form(""),
-                                 telefono: str = Form(""), mail: str = Form("")):
+                                 telefono: str = Form(""), mail: str = Form(""),
+                                 fecha_nacimiento: str = Form("")):
     """El trabajador edita su propio perfil -- todo menos el CUIL.
+
+    `fecha_nacimiento` (PLAN_LISTAS_VALIDACIONES.md, D4) es un dato más de
+    la persona: opcional, en blanco borra como el resto, y una fecha que no
+    se entiende es un 400 y no un texto guardado.
 
     Escribe en la PERSONA (`CuentaTrabajador`), así que el cambio se ve en
     TODOS los sindicatos donde esté empadronada. Hasta el 2026-09-22 escribía
@@ -7814,6 +7884,9 @@ async def api_actualizar_perfil(request: Request, nombre: str = Form(...), calle
                             + (": tu sindicato las necesita" if cuantos > 1
                                else ": tu sindicato la necesita")
                             + " para agruparte por zona.")
+    f_nacimiento = _fecha_formulario(fecha_nacimiento)
+    if f_nacimiento is None:
+        raise HTTPException(400, "La fecha de nacimiento no se entiende: usá el formato AAAA-MM-DD.")
     sid = sindicato_activo_trabajador(request)
     if not sid:
         raise HTTPException(403, "No autorizado")
@@ -7821,7 +7894,8 @@ async def api_actualizar_perfil(request: Request, nombre: str = Form(...), calle
         {"calle": calle, "numero": numero, "piso_depto": piso_depto,
          "localidad": localidad, "provincia": provincia, "codigo_postal": codigo_postal},
         precision_geo, latitud, longitud)
-    if not db.actualizar_perfil_trabajador(cuil, sid, nombre, domicilio, telefono, mail):
+    if not db.actualizar_perfil_trabajador(cuil, sid, nombre, domicilio, telefono, mail,
+                                           fecha_nacimiento=f_nacimiento):
         raise HTTPException(404, "No se encontró tu empadronamiento en este sindicato.")
     nombre_guardado = db.nombre_trabajador(cuil, sid)
     return {"ok": True, "nombre": nombre_guardado,

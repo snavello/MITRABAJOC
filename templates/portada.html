@@ -470,6 +470,12 @@
         <div class="perfil-campo">
           <label>Mail <span class="opc">(opcional)</span></label><input type="email" id="pf-mail" value="{{ perfil.mail if perfil else '' }}">
         </div>
+        {# Fecha de nacimiento (PLAN_LISTAS_VALIDACIONES.md, D4): un dato más
+           de la persona, opcional; la usan las validaciones de un trámite
+           que la necesite (la edad se calcula ahí, no se guarda). #}
+        <div class="perfil-campo">
+          <label>Fecha de nacimiento <span class="opc">(opcional)</span></label><input type="date" id="pf-fecha-nacimiento" value="{{ perfil.fecha_nacimiento or '' if perfil else '' }}">
+        </div>
 
         {# Ubicar el domicilio es opcional y bajo demanda: el mapa no se
            dibuja hasta que la persona lo pide. Sirve para que el sindicato
@@ -683,6 +689,7 @@ async function guardarPerfil(ev) {
     longitud: document.getElementById('pf-lon').value,
     precision_geo: document.getElementById('pf-precision').value,
     telefono: document.getElementById('pf-telefono').value, mail: document.getElementById('pf-mail').value,
+    fecha_nacimiento: document.getElementById('pf-fecha-nacimiento').value,
   });
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {

@@ -130,6 +130,7 @@
     {% elif err == 'yaexiste' %}<div class="error">Ya tenés una cuenta con ese CUIL. Ingresá con tu clave.</div>
     {% elif err == 'sinsind' %}<div class="error">Tu cuenta no está asociada a ningún sindicato activo.</div>
     {% elif err == 'domicilio' %}<div class="error">Elegí tu provincia y escribí tu localidad: tu sindicato las necesita para agruparte por zona.</div>
+    {% elif err == 'fecha' %}<div class="error">La fecha de nacimiento no se entiende: revisala o dejala vacía.</div>
     {% elif err in ('espera', 'espera_registro') %}<div class="error">Demasiados intentos seguidos. Esperá un minuto y volvé a intentar.</div>
     {% elif err == 'codigo' %}<div class="error">El código no es correcto o venció. Pedí uno nuevo.</div>
     {% elif err == 'clave' %}<div class="error">La clave tiene que tener al menos {{ clave_minima }} caracteres.</div>
@@ -210,6 +211,8 @@
         <div class="dom-titulo">Tus datos</div>
         <label>Nombre y apellido</label>
         <input name="nombre" required autocomplete="name" placeholder="Como figura en tu recibo">
+        <label>Fecha de nacimiento <span class="opc">(opcional)</span></label>
+        <input name="fecha_nacimiento" type="date" autocomplete="bday">
 
         <div class="dom-titulo">Tu domicilio</div>
         <label>Provincia</label>
@@ -257,7 +260,7 @@ function mostrar(cual) {
 // hay que tocar "Registrarme" otra vez.
 (function () {
   var err = new URLSearchParams(location.search).get('error');
-  if (['yaexiste', 'nohabilitado', 'domicilio', 'cuil', 'captcha', 'espera_registro', 'codigo', 'paso', 'clave'].indexOf(err) >= 0) mostrar('registro');
+  if (['yaexiste', 'nohabilitado', 'domicilio', 'fecha', 'cuil', 'captcha', 'espera_registro', 'codigo', 'paso', 'clave'].indexOf(err) >= 0) mostrar('registro');
 })();
 
 // ---- Registro en tres pasos (PLAN_REGISTRO.md §4.1) ----

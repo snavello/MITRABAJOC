@@ -574,6 +574,12 @@ class CuentaTrabajador(SQLModel, table=True):
     # `guardar_datos_personales(mail_padron=...)` desde esas dos rutas lo
     # escribe; ni el perfil ni el registro. Es al que van los códigos.
     mail_padron: str = ""
+    # ---- Fecha de nacimiento (PLAN_LISTAS_VALIDACIONES.md, D4): de la
+    # PERSONA, la carga el afiliado en el registro o el perfil y el sindicato
+    # en Trabajadores. Texto ISO "AAAA-MM-DD" como todas las fechas del
+    # proyecto; NULL = no se cargó. Hechos, no derivados: la edad se calcula
+    # donde se necesita (una validación de trámite), nunca se guarda.
+    fecha_nacimiento: Optional[str] = Field(default=None)
     # ---- Foto de perfil (bytes en la base, mismo patrón que el logo del sindicato)
     foto_datos: Optional[bytes] = Field(default=None)
     foto_mime: str = ""
@@ -629,6 +635,12 @@ class Trabajador(SQLModel, table=True):
     # del trabajador. Fecha como string "AAAA-MM-DD" (formato de <input
     # type=date>), igual que se recibe del formulario.
     vigencia_credencial: Optional[str] = Field(default=None)
+    # Fecha de afiliación a ESTE sindicato (PLAN_LISTAS_VALIDACIONES.md, D4):
+    # es del empadronamiento, no de la persona (una misma persona se afilió a
+    # cada gremio en una fecha distinta), y la carga solo el sindicato (alta,
+    # edición y carga masiva). ISO "AAAA-MM-DD"; NULL = no se cargó. La
+    # antigüedad se calcula en la validación que la necesite, no se guarda.
+    fecha_afiliacion: Optional[str] = Field(default=None)
     # Seccional del sindicato a la que pertenece (opcional -- no todos los
     # sindicatos cargan seccionales, y un trabajador puede quedar sin asignar).
     seccional_id: Optional[int] = Field(default=None, foreign_key="seccional.id", index=True)
@@ -3387,7 +3399,8 @@ def asegurar_cuenta(s: Session, cuil: str) -> CuentaTrabajador:
 def guardar_datos_personales(s: Session, cuil: str, nombre: str = None,
                              domicilio: dict = None, telefono: str = None,
                              mail: str = None,
-                             mail_padron: str = None) -> CuentaTrabajador:
+                             mail_padron: str = None,
+                             fecha_nacimiento: str = None) -> CuentaTrabajador:
     """Escribe el bloque personal de un CUIL. Lo que llega en `None` no se
     toca -- así una pantalla que edita solo el domicilio no borra el teléfono
     que cargó otra.
@@ -3406,7 +3419,10 @@ def guardar_datos_personales(s: Session, cuil: str, nombre: str = None,
     cargó el SINDICATO (ver "Los TRES mails" en `CuentaTrabajador`). Solo el
     alta individual y el alta masiva del panel pasan `mail_padron`; el perfil
     y el registro NO (lo verifica `test_registro_modelo.py`). `None` = no
-    tocar, como los demás."""
+    tocar, como los demás.
+
+    `fecha_nacimiento` llega ya normalizada a ISO (o "" para borrarla): quien
+    la recibe de un formulario la pasa antes por `listas.normalizar_fecha`."""
     c = asegurar_cuenta(s, cuil)
     if nombre is not None and nombre.strip():
         c.nombre = nombre.strip()[:200]
@@ -3419,6 +3435,8 @@ def guardar_datos_personales(s: Session, cuil: str, nombre: str = None,
         c.mail = mail.strip()[:200]
     if mail_padron is not None:
         c.mail_padron = mail_padron.strip()[:200]
+    if fecha_nacimiento is not None:
+        c.fecha_nacimiento = fecha_nacimiento.strip()[:10] or None
     s.add(c)
     return c
 
@@ -3445,7 +3463,7 @@ def padron_del_sindicato(s: Session, sindicato_id: int) -> list:
     salida = []
     vacios = {campo: "" for campo in ("nombre", *geo.CAMPOS_DOMICILIO)}
     vacios.update({"latitud": None, "longitud": None, "precision_geo": "sin_geo",
-                   "telefono": "", "mail": ""})
+                   "telefono": "", "mail": "", "fecha_nacimiento": None})
     for t, c in filas:
         # Un afiliado sin fila de persona no debería existir (la crea el
         # alta), pero si alguna vez pasara la pantalla tiene que mostrar la
@@ -3457,6 +3475,7 @@ def padron_del_sindicato(s: Session, sindicato_id: int) -> list:
             "registrado": t.registrado, "activo": t.activo,
             "codigo_credencial": t.codigo_credencial,
             "vigencia_credencial": t.vigencia_credencial,
+            "fecha_afiliacion": t.fecha_afiliacion,
             "seccional_id": t.seccional_id,
             "es_empleado_sindicato": t.es_empleado_sindicato,
             "cuit_empleador": t.cuit_empleador,
@@ -3545,6 +3564,7 @@ def _dict_personales(c: CuentaTrabajador) -> dict:
         "latitud": c.latitud, "longitud": c.longitud,
         "precision_geo": c.precision_geo, "geo_actualizado": c.geo_actualizado,
         "telefono": c.telefono, "mail": c.mail,
+        "fecha_nacimiento": c.fecha_nacimiento,
     }
 
 
@@ -3573,7 +3593,8 @@ def perfil_trabajador(cuil: str, sindicato_id: int) -> Optional[dict]:
 
 
 def actualizar_perfil_trabajador(cuil: str, sindicato_id: int, nombre: str,
-                                  domicilio: dict, telefono: str, mail: str) -> bool:
+                                  domicilio: dict, telefono: str, mail: str,
+                                  fecha_nacimiento: str = None) -> bool:
     """El trabajador edita sus propios datos -- todo menos el CUIL (identidad,
     no se toca acá) y los campos de gestión del sindicato (seccional,
     vigencia de credencial, etc.), que siguen siendo resorte del admin.
@@ -3588,7 +3609,8 @@ def actualizar_perfil_trabajador(cuil: str, sindicato_id: int, nombre: str,
         if not t:
             return False
         guardar_datos_personales(s, cuil, nombre=nombre, domicilio=domicilio,
-                                 telefono=telefono, mail=mail)
+                                 telefono=telefono, mail=mail,
+                                 fecha_nacimiento=fecha_nacimiento)
         s.commit()
         return True
 

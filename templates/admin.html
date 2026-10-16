@@ -1062,6 +1062,8 @@
   <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: el CUIL no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-01</small></div>
   {% elif request.query_params.get('err') == 'cuilfijo' %}
   <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: el CUIL no se cambia desde una edición, porque es la identidad de la persona en todo el sistema (su cuenta, sus recibos, sus trámites). Si está mal, pedile a la plataforma que lo corrija.<br><small style="opacity:.8;">Código E-IDENT-03</small></div>
+  {% elif request.query_params.get('err') == 'fecha' %}
+  <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: una de las fechas no se entiende. Usá el formato AAAA-MM-DD (o DD/MM/AAAA).</div>
   {% elif request.query_params.get('err') == 'cuitempleador' %}
   <div class="msg" style="background:#f8e5e2; color:#b23a2e;">No se guardó: el CUIT del empleador no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
   {% elif request.query_params.get('err') == 'sincuenta' %}
@@ -1078,7 +1080,9 @@
   {% endif %}
   {% if request.query_params.get('altas') %}
   <div class="msg ok">{{ request.query_params.get('altas') }} trabajador{{ 'es' if request.query_params.get('altas') != '1' else '' }} cargado{{ 's' if request.query_params.get('altas') != '1' else '' }} de la lista.
-    {% if request.query_params.get('omitidas') %}<br>Quedaron afuera {{ request.query_params.get('omitidas') }} línea{{ 's' if request.query_params.get('omitidas') != '1' else '' }}: les falta el CUIL, el nombre, la localidad o la provincia, o el CUIL ya estaba cargado. Por ejemplo: <code>{{ request.query_params.get('muestra') }}</code>{% endif %}
+    {% if request.query_params.get('omitidas') %}<br>Quedaron afuera {{ request.query_params.get('omitidas') }} línea{{ 's' if request.query_params.get('omitidas') != '1' else '' }}: les falta el CUIL, el nombre, la localidad o la provincia, el CUIL ya estaba cargado, o traen una fecha que no se entiende. Por ejemplo: <code>{{ request.query_params.get('muestra') }}</code>{% endif %}
+    {% if request.query_params.get('mailsactualizados') %}<br>{{ request.query_params.get('mailsactualizados') }} afiliado{{ 's' if request.query_params.get('mailsactualizados') != '1' else '' }} que ya estaba{{ 'n' if request.query_params.get('mailsactualizados') != '1' else '' }} en el padrón recibi{{ 'eron' if request.query_params.get('mailsactualizados') != '1' else 'ó' }} el mail del padrón de su línea.{% endif %}
+    {% if request.query_params.get('fechasactualizadas') %}<br>{{ request.query_params.get('fechasactualizadas') }} afiliado{{ 's' if request.query_params.get('fechasactualizadas') != '1' else '' }} que ya estaba{{ 'n' if request.query_params.get('fechasactualizadas') != '1' else '' }} en el padrón recibi{{ 'eron' if request.query_params.get('fechasactualizadas') != '1' else 'ó' }} la fecha de afiliación de su línea.{% endif %}
     {% if request.query_params.get('cuilinvalidos') %}<br>Quedaron afuera {{ request.query_params.get('cuilinvalidos') }} línea{{ 's' if request.query_params.get('cuilinvalidos') != '1' else '' }} porque el CUIL no es válido (revisá los 11 números): <code>{{ request.query_params.get('cuilmuestra') }}</code> <small style="opacity:.8;">Código E-IDENT-01</small>{% endif %}
   </div>
   {% endif %}
@@ -1119,6 +1123,7 @@
              de solo lectura es a propósito -- si se pudiera tildar a mano,
              habría padrones diciendo "empleado" sin nadie que pueda entrar. #}
           {% if t.es_empleado_sindicato %}<br><span class="tag tag-pend" title="Además opera el panel del sindicato">empleado del sindicato</span>{% endif %}
+          {% if t.fecha_afiliacion %}<br><span class="muted" style="font-size:11px;">afiliado desde {{ t.fecha_afiliacion }}</span>{% endif %}
         </td>
         <td style="white-space:nowrap;">{{ nivel_cuenta(t) }}</td>
         <td class="muted" style="white-space:nowrap;">
@@ -1128,7 +1133,7 @@
         </td>
         <td style="white-space:nowrap; text-align:right;">
           <button type="button" class="mini"
-            onclick='editarTrab({{ {"id":t.id,"cuil":t.cuil,"nombre":t.nombre,"calle":t.calle,"numero":t.numero,"piso_depto":t.piso_depto,"localidad":t.localidad,"provincia":t.provincia,"codigo_postal":t.codigo_postal,"latitud":t.latitud,"longitud":t.longitud,"precision_geo":t.precision_geo,"telefono":t.telefono,"mail":t.mail,"vigencia_credencial":t.vigencia_credencial,"seccional_id":t.seccional_id,"cuit_empleador":t.cuit_empleador} | tojson }})'>Editar</button>
+            onclick='editarTrab({{ {"id":t.id,"cuil":t.cuil,"nombre":t.nombre,"calle":t.calle,"numero":t.numero,"piso_depto":t.piso_depto,"localidad":t.localidad,"provincia":t.provincia,"codigo_postal":t.codigo_postal,"latitud":t.latitud,"longitud":t.longitud,"precision_geo":t.precision_geo,"telefono":t.telefono,"mail":t.mail,"vigencia_credencial":t.vigencia_credencial,"seccional_id":t.seccional_id,"cuit_empleador":t.cuit_empleador,"fecha_afiliacion":t.fecha_afiliacion,"fecha_nacimiento":t.fecha_nacimiento} | tojson }})'>Editar</button>
           <form method="post" action="/admin/trabajador/generar-credencial" style="display:inline;" onsubmit="return confirm('{% if t.codigo_credencial %}¿Regenerar el código de credencial? El anterior deja de ser válido.{% else %}¿Generar el código de credencial?{% endif %}');">
             <input type="hidden" name="id" value="{{ t.id }}"><button class="mini">{% if t.codigo_credencial %}Regenerar{% else %}Generar{% endif %} credencial</button>
           </form>
@@ -1194,6 +1199,13 @@
         <div class="campo"><label>Teléfono <span class="opc">(opcional)</span></label><input name="telefono" id="trab-telefono"></div>
         <div class="campo"><label>Mail <span class="opc">(opcional)</span></label><input name="mail" id="trab-mail" type="email"></div>
         <div class="campo"><label>Vigencia de credencial</label><input name="vigencia_credencial" id="trab-vigencia" type="date"></div>
+        {# Las dos fechas del padrón (PLAN_LISTAS_VALIDACIONES.md, D4): la de
+           afiliación es de ESTE gremio y la carga solo el sindicato; la de
+           nacimiento es de la persona (la puede cargar ella desde su perfil).
+           Hechos, no derivados: la antigüedad y la edad se calculan donde
+           hacen falta. #}
+        <div class="campo"><label>Fecha de afiliación <span class="opc">(opcional)</span></label><input name="fecha_afiliacion" id="trab-fecha-afiliacion" type="date"></div>
+        <div class="campo"><label>Fecha de nacimiento <span class="opc">(opcional)</span></label><input name="fecha_nacimiento" id="trab-fecha-nacimiento" type="date"></div>
         <div class="campo"><label>Seccional</label>
           <select name="seccional_id" id="trab-seccional">
             <option value="">Sin asignar</option>
@@ -1228,8 +1240,8 @@
   <div class="subpanel" data-mov-vista id="sub-masivo">
     <p class="muted">Pegá una línea por trabajador, con los campos separados por coma, en este orden:</p>
     <p class="muted" style="font-family:Consolas,monospace; font-size:12.5px; background:#f4f2ec; padding:8px 10px; border-radius:6px;">
-      cuil, nombre, calle, numero, piso, localidad, provincia, telefono, mail, cp, seccional</p>
-    <p class="muted">Obligatorios: <b>cuil</b>, <b>nombre</b>, <b>localidad</b> y <b>provincia</b>; el resto puede ir vacío (pero respetá las comas si querés cargar un campo posterior). Las líneas que no traigan esos cuatro datos quedan afuera y te decimos cuántas. La <b>seccional</b> va por nombre, tal como figura en la pestaña Seccionales: si no coincide con ninguna, el trabajador queda sin asignar.</p>
+      cuil, nombre, calle, numero, piso, localidad, provincia, telefono, mail, cp, seccional, fecha_afiliacion, fecha_nacimiento</p>
+    <p class="muted">Obligatorios: <b>cuil</b>, <b>nombre</b>, <b>localidad</b> y <b>provincia</b>; el resto puede ir vacío (pero respetá las comas si querés cargar un campo posterior). Las líneas que no traigan esos cuatro datos quedan afuera y te decimos cuántas. La <b>seccional</b> va por nombre, tal como figura en la pestaña Seccionales: si no coincide con ninguna, el trabajador queda sin asignar. Las dos <b>fechas</b> van al final, como AAAA-MM-DD o DD/MM/AAAA, y son opcionales; una fecha que no se entiende deja la línea afuera. En un CUIL que ya está cargado, la línea actualiza su mail del padrón y su fecha de afiliación.</p>
     <form method="post" action="/admin/trabajador/masivo">
       <textarea name="lista" rows="6" placeholder="20123456786, Juan Pérez, Av. Siempreviva, 742, , Rosario, Santa Fe, 341-555-5555, juan@mail.com, 2000, Rosario&#10;27987654320, Ana López" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:7px; font-family:Consolas,monospace; font-size:13px;"></textarea>
       <button type="submit" style="margin-top:10px;">Cargar lista</button>
@@ -4880,6 +4892,8 @@ function editarTrab(t) {
   document.getElementById('trab-vigencia').value = t.vigencia_credencial || '';
   document.getElementById('trab-seccional').value = t.seccional_id || '';
   document.getElementById('trab-cuit-empleador').value = t.cuit_empleador || '';
+  document.getElementById('trab-fecha-afiliacion').value = t.fecha_afiliacion || '';
+  document.getElementById('trab-fecha-nacimiento').value = t.fecha_nacimiento || '';
   document.getElementById('trab-lat').value = t.latitud == null ? '' : t.latitud;
   document.getElementById('trab-lon').value = t.longitud == null ? '' : t.longitud;
   document.getElementById('trab-precision').value = t.precision_geo || 'sin_geo';
