@@ -2708,7 +2708,7 @@
         <b>{{ p.nombre }}</b>
         <p class="muted" style="margin:4px 0 8px;">{{ p.descripcion }}</p>
         <div class="muted" style="font-size:12px;">Columnas: {% for c in p.columnas %}<code>{{ c.clave }}</code>{% if c.busqueda %} <span class="tag tag-si">clave {{ c.busqueda }}</span>{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</div>
-        <div style="margin-top:8px;"><a class="mini" style="display:inline-block; text-decoration:none;" href="/admin/listas/modelo/{{ p.clave }}.csv">Descargar modelo</a></div>
+        <div style="margin-top:8px;"><button type="button" class="sec mini" style="margin-left:0;" onclick="location.href='/admin/listas/modelo/{{ p.clave }}.csv'">Descargar modelo</button></div>
       </div>
       {% endfor %}
     </div>
@@ -2759,7 +2759,7 @@
       <td class="muted">{{ l.cargada_en }}{% if l.cargada_por %} · {{ l.cargada_por }}{% endif %}</td>
       <td style="white-space:nowrap; text-align:right;">
         <button type="button" class="mini" onclick="listaVer({{ l.id }})">Ver</button>
-        <a class="mini" style="display:inline-block; text-decoration:none;" href="/admin/lista/{{ l.id }}/datos.csv">Descargar</a>
+        <button type="button" class="mini" onclick="location.href='/admin/lista/{{ l.id }}/datos.csv'">Descargar</button>
         <form method="post" action="/admin/lista/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar esta lista? Las validaciones que la usen dejan de encontrar a nadie.')">
           <input type="hidden" name="id" value="{{ l.id }}">
           <button class="peligro mini" type="submit">Borrar</button>
