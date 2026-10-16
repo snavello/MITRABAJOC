@@ -193,7 +193,7 @@ def test_la_pantalla_de_registro_muestra_esos_campos():
     obligatorio y opcional que en el perfil."""
     html = TestClient(main.app).get("/ingresar").text
     for campo in ("nombre", "provincia", "localidad", "calle", "numero",
-                  "piso_depto", "codigo_postal", "telefono"):
+                  "piso_depto", "codigo_postal", "telefono", "fecha_nacimiento"):
         assert f'name="{campo}"' in html, campo
     # El mail ya no se pide en el registro: se confirma en el paso 2 (PLAN_REGISTRO).
     assert 'name="mail"' not in html

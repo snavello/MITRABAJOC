@@ -7427,3 +7427,55 @@ alcance, aislamiento, cada plantilla con su propio modelo).
 **Queda del plan**: bloque 2 (las dos fechas en el padrón), bloque 3 (la
 fuente `funcion` en `validaciones_tramite`, requisitos y campo calculado),
 bloque 4 (en vivo con tope) y bloque 5 (las brechas del asistente).
+
+## Las dos fechas del padrón (2026-10-16, Admin 0.54.02, Trabajador 0.45.07)
+
+Bloque 2 de `PLAN_LISTAS_VALIDACIONES.md` (rama `feature/padron-fechas`,
+decisión D4). La fuente `sistema` de las validaciones (bloque 3) necesita
+dos datos que el padrón no tenía: desde cuándo está afiliada la persona a
+ESTE gremio y cuándo nació. Se guardan como hechos, nunca como derivados:
+la antigüedad y la edad se calculan en la validación que las pide, con la
+fecha del día de Buenos Aires (`fechas.hoy`), y no envejecen en la base.
+
+**Cada fecha va a su dueño.** `Trabajador.fecha_afiliacion` es del
+empadronamiento (una persona se afilió a cada gremio en una fecha
+distinta) y la escribe solo el sindicato: alta manual, edición y carga
+masiva. `CuentaTrabajador.fecha_nacimiento` es de la PERSONA y sigue la
+regla del nombre y el domicilio: la carga ella en el registro y en el
+perfil, y el sindicato en Trabajadores solo si su padrón responde por la
+cuenta (`db.padron_responde_por`). Una cuenta creada antes de entrar a
+este padrón recibe la fecha de afiliación (que es nuestra) y no la de
+nacimiento (que es suya). Migración `f6a2d4c8e1b7`, dos columnas de texto
+ISO nulas.
+
+**Cinco puertas, una sola regla de formato.** `main._fecha_formulario`
+devuelve `""` si vino en blanco, ISO si es una fecha (AAAA-MM-DD o
+DD/MM/AAAA, vía `listas.normalizar_fecha`) y `None` si no se entiende; y
+en las cinco puertas el `None` corta antes de escribir: `err=fecha` en el
+alta y la edición, línea omitida (y contada, con la línea a la vista) en
+la carga masiva, 400 en el perfil y `error=fecha` en el registro, contado
+como fallo de la IP como el domicilio (si no, un CUIL ajeno con una fecha
+rota se distinguiría de uno propio). Nada se guarda como texto cualquiera.
+
+**En blanco significa lo mismo que el resto de los campos de esa
+pantalla.** En la edición y en el perfil la persona está viendo el valor
+cargado, así que en blanco borra; en el alta, la carga masiva y el
+registro, en blanco es "no lo completé" y no toca lo que ya hubiera.
+
+**La carga masiva las lleva al final.** Columnas 12 y 13
+(`fecha_afiliacion`, `fecha_nacimiento`), para que una planilla armada
+antes entre sin cambios. En un CUIL que YA está en el padrón, la línea
+actualiza su fecha de afiliación (es del empadronamiento, siempre de este
+gremio) y se cuenta en `fechasactualizadas`; la de nacimiento no, porque
+en esa línea no se tocan los datos de la persona. De paso la pantalla
+pasó a decir cuántos mails del padrón actualizó (`mailsactualizados`
+viajaba en la URL desde PLAN_REGISTRO y nadie lo mostraba).
+
+Lo que ve cada uno: el admin tiene los dos campos en el alta y la edición
+(precargados al editar) y "afiliado desde" bajo el estado en el listado;
+el afiliado, "Fecha de nacimiento (opcional)" en el registro y en el
+perfil. El registro y el perfil siguen pidiendo los mismos campos
+(`test_datos_personales` compara las firmas). Tests: `test_fechas_padron.py`
+(11: las cinco puertas, la fecha ilegible en cada una, la cuenta ajena y
+la planilla vieja).
+

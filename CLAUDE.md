@@ -1031,8 +1031,12 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     `PLAN_LISTAS_VALIDACIONES.md`): pestaña Listas propia de `/admin` con
     permiso `listas`, plantillas tipadas sobre una tabla genérica, carga por
     CSV con ensayo y reemplazo entero, alcance por seccional. Ver "Listas del
-    sindicato". Quedan los bloques 2 a 5 (fechas del padrón, fuente
-    `funcion`, en vivo, brechas del asistente).
+    sindicato". **Bloque 2 HECHO** el mismo día (Admin 0.54.02, Trabajador
+    0.45.07): `Trabajador.fecha_afiliacion` (la carga solo el sindicato) y
+    `CuentaTrabajador.fecha_nacimiento` (de la persona) en las cinco puertas
+    del padrón, con la fecha ilegible rechazada en cada una (HISTORIAL, "Las
+    dos fechas del padrón"). Quedan los bloques 3 a 5 (fuente `funcion`, en
+    vivo, brechas del asistente).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -1352,8 +1356,8 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     admin desde una pestaña Listas propia; validación de fuente `funcion`
     (requisito para iniciar, validación de campo, campo calculado) con la
     sintaxis de las Reglas y nombres cerrados; dos fechas nuevas en el
-    padrón. Cierra las fases 2 y 3 de validaciones del BACKLOG. Trabajador
-    primero, empresa después. **Quedan los bloques 2 a 5.**
+    padrón (**bloque 2 HECHO**). Cierra las fases 2 y 3 de validaciones del
+    BACKLOG. Trabajador primero, empresa después. **Quedan los bloques 3 a 5.**
 
 ## Herramientas (solapa de `/entornos`)
 
@@ -1609,7 +1613,16 @@ validaciones de Trámites lo consulten. Reglas vigentes:
   administrador general. El recorte va EN LA CONSULTA.
 - `db.buscar_en_lista(sid, plantilla, cuil, clave2, seccional_id)` es la
   puerta que van a usar las validaciones de fuente `funcion` (bloque 3).
-- Tests: `test_listas.py`.
+- **Las dos fechas del padrón** (bloque 2, D4): `Trabajador.fecha_afiliacion`
+  es del empadronamiento y la escribe solo el sindicato (alta, edición,
+  carga masiva: columna 12); `CuentaTrabajador.fecha_nacimiento` es de la
+  persona (registro, perfil, y Trabajadores solo si el padrón responde por
+  la cuenta). Texto ISO, NULL = no se cargó; hechos, no derivados. Toda
+  fecha de formulario pasa por `main._fecha_formulario`: en blanco, ISO o
+  rechazo en la puerta (`err=fecha` / línea omitida / 400 / `error=fecha`).
+  En blanco borra donde la persona ve el valor (edición, perfil) y no toca
+  donde no lo ve (alta, masiva, registro).
+- Tests: `test_listas.py`, `test_fechas_padron.py`.
 
 ## Validaciones en formularios de Trámites
 Capa de validaciones acordada 2026-09-01, cuatro fuentes: `fija` (valor
