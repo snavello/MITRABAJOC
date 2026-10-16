@@ -765,6 +765,7 @@
   {% if 'empleadores' in modulos and ('emp_empresas' in permisos or 'emp_notificaciones' in permisos or 'emp_tramites_recibidos' in permisos or 'emp_tramites_formularios' in permisos) %}<button class="tab-btn" data-panel="empleadores" style="position:relative;"><svg viewBox="0 0 24 24"><use href="#ic-empleadores"/></svg><span>Empleadores</span>{% if tramites_empresa_nuevos %}<span class="badge-noleidas" id="badge-tramites-empresa-nuevos-tab">{{ tramites_empresa_nuevos }}</span>{% endif %}</button>{% endif %}
   {% if 'convenio' in modulos and 'convenio' in permisos %}<button class="tab-btn" data-panel="convenio"><svg viewBox="0 0 24 24"><use href="#ic-conceptos"/></svg><span>Convenio</span></button>{% endif %}
   {% if 'seccionales' in permisos %}<button class="tab-btn" data-panel="seccionales"><svg viewBox="0 0 24 24"><use href="#ic-seccionales"/></svg><span>Seccionales</span></button>{% endif %}
+  {% if 'listas' in permisos %}<button class="tab-btn" data-panel="listas"><svg viewBox="0 0 24 24"><use href="#ic-listas"/></svg><span>Listas</span></button>{% endif %}
   {% if administra_areas %}<button class="tab-btn" data-panel="administradores"><svg viewBox="0 0 24 24"><use href="#ic-admins"/></svg><span>Áreas y Usuarios</span></button>{% endif %}
 </nav>
 </div>
@@ -783,6 +784,7 @@
     <g id="ic-encuestas"><circle cx="6.5" cy="7" r="2"/><line x1="11" y1="7" x2="20" y2="7"/><circle cx="6.5" cy="12.5" r="2"/><line x1="11" y1="12.5" x2="20" y2="12.5"/><path d="m4.7 17.6 1.4 1.4 2.6-2.8"/><line x1="11" y1="18" x2="20" y2="18"/></g>
     <g id="ic-tramites"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></g>
     <g id="ic-seccionales"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></g>
+    <g id="ic-listas"><rect x="4" y="4" width="16" height="16" rx="1.5"/><line x1="4" y1="9.5" x2="20" y2="9.5"/><line x1="4" y1="14.5" x2="20" y2="14.5"/><line x1="10" y1="4" x2="10" y2="20"/></g>
     <g id="ic-empleadores"><rect x="4" y="9" width="16" height="12" rx="1.2"/><path d="M9 9V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4"/><circle cx="9" cy="14" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="0.9" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="0.9" fill="currentColor" stroke="none"/></g>
     <g id="ic-admins"><path d="M12 3l7 3v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6z"/><circle cx="12" cy="10" r="2.3"/><path d="M8.4 15c.7-1.5 2-2.3 3.6-2.3s2.9.8 3.6 2.3"/></g>
     <g id="ic-perfil"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/></g>
@@ -2684,6 +2686,94 @@
   </div>
   {% endif %}
 
+  {% if 'listas' in permisos %}
+  <div class="panel" data-mov-vista id="panel-listas">
+  <!-- ============ LISTAS DEL SINDICATO ============ -->
+  {# PLAN_LISTAS_VALIDACIONES.md, bloque 1. Pestaña propia al nivel de
+     Trámites (D5): hoy las usan las validaciones de Trámites, mañana otras
+     funciones. El admin elige una plantilla, baja el CSV modelo, lo completa
+     y lo sube: primero ENSAYO (cuántas filas entran, cuáles tienen error) y
+     recién con Confirmar se REEMPLAZA la lista entera. El parseo lo hace el
+     servidor; esta pantalla solo muestra. #}
+  <h2 class="titulo-pagina">Listas del sindicato</h2>
+  <p class="muted">Datos que el sindicato tiene en sus planillas y Colm3na no: el grupo familiar de cada afiliado, su fecha de afiliación, quiénes están en una lista. Se cargan por CSV y los usan las validaciones de los formularios de Trámites (por ejemplo, «el DNI del chico tiene que estar en el grupo familiar del afiliado»).
+  {% if alcance_propio is not none %}<br>Las listas que cargues valen para <b>tu seccional</b>; una lista para todo el sindicato la carga el administrador general.{% endif %}</p>
+
+  <div class="card">
+    <h3 style="margin-top:0;">Plantillas</h3>
+    <p class="muted" style="margin-top:0;">Cada plantilla es un CSV con cabecera fija. Descargá el modelo, completalo (Excel lo abre y lo guarda como CSV) y subilo abajo. El CUIL va con dígito verificador; las fechas, como AAAA-MM-DD o DD/MM/AAAA.</p>
+    <div class="grid2">
+      {% for p in plantillas_listas %}
+      <div class="campo" style="border:1px solid var(--linea, #e4e7ec); border-radius:10px; padding:12px;">
+        <b>{{ p.nombre }}</b>
+        <p class="muted" style="margin:4px 0 8px;">{{ p.descripcion }}</p>
+        <div class="muted" style="font-size:12px;">Columnas: {% for c in p.columnas %}<code>{{ c.clave }}</code>{% if c.busqueda %} <span class="tag tag-si">clave {{ c.busqueda }}</span>{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</div>
+        <div style="margin-top:8px;"><a class="mini" style="display:inline-block; text-decoration:none;" href="/admin/listas/modelo/{{ p.clave }}.csv">Descargar modelo</a></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0;">Subir una lista</h3>
+    <form id="form-lista" onsubmit="return false;">
+      <div class="grid2">
+        <div class="campo"><label>Plantilla *</label>
+          <select name="plantilla" id="lista-plantilla" onchange="listaNombreSugerido()">
+            {% for p in plantillas_listas %}<option value="{{ p.clave }}">{{ p.nombre }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="campo"><label>Nombre de la lista</label>
+          <input name="nombre" id="lista-nombre" placeholder="{{ plantillas_listas[0].nombre if plantillas_listas else '' }}" maxlength="80">
+          <small class="muted">Subir otra con el mismo nombre la reemplaza entera.</small>
+        </div>
+        <div class="campo"><label>Vale para</label>
+          <select name="seccional_id" id="lista-seccional">
+            {% if alcance_propio is none %}<option value="">Todo el sindicato</option>{% endif %}
+            {% for sec in seccionales_visibles %}<option value="{{ sec.id }}">{{ sec.nombre }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="campo"><label>Archivo CSV *</label>
+          <input type="file" name="archivo" id="lista-archivo" accept=".csv,text/csv,.txt">
+        </div>
+      </div>
+      <div class="msg oculto" id="lista-msg"></div>
+      <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <button type="button" id="lista-btn-ensayar" onclick="listaEnsayar()">Ensayar (no guarda nada)</button>
+        <button type="button" class="sec oculto" id="lista-btn-confirmar" onclick="listaConfirmar()">Confirmar y reemplazar la lista</button>
+        <span class="muted" id="lista-estado"></span>
+      </div>
+    </form>
+    <div id="lista-ensayo" class="oculto" style="margin-top:14px;"></div>
+  </div>
+
+  <h2>Listas cargadas ({{ listas|length }})</h2>
+  <table>
+    <tr><th>Lista</th><th>Plantilla</th><th>Vale para</th><th>Filas</th><th>Cargada</th><th></th></tr>
+    {% for l in listas %}
+    <tr>
+      <td><b>{{ l.nombre }}</b><br><span class="muted" style="font-size:12px;">{{ l.archivo }}</span></td>
+      <td>{{ l.plantilla }}</td>
+      <td>{{ l.seccional or 'Todo el sindicato' }}</td>
+      <td>{{ l.filas }}</td>
+      <td class="muted">{{ l.cargada_en }}{% if l.cargada_por %} · {{ l.cargada_por }}{% endif %}</td>
+      <td style="white-space:nowrap; text-align:right;">
+        <button type="button" class="mini" onclick="listaVer({{ l.id }})">Ver</button>
+        <a class="mini" style="display:inline-block; text-decoration:none;" href="/admin/lista/{{ l.id }}/datos.csv">Descargar</a>
+        <form method="post" action="/admin/lista/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar esta lista? Las validaciones que la usen dejan de encontrar a nadie.')">
+          <input type="hidden" name="id" value="{{ l.id }}">
+          <button class="peligro mini" type="submit">Borrar</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="muted">Todavía no hay listas cargadas.</td></tr>
+    {% endfor %}
+  </table>
+  <div id="lista-detalle" class="oculto" style="margin-top:12px;"></div>
+  </div>
+  {% endif %}
+
   {% if administra_areas %}
   <div class="panel" data-mov-vista id="panel-administradores">
   <!-- ============ ADMINISTRADORES ============ -->
@@ -2985,6 +3075,83 @@ var AYUDA_GUARDADA = {{ ayuda_guardada | tojson }};
 // permisos distintos. NO reemplaza a ningún chequeo: lo que se puede hacer
 // lo decide el servidor, esto solo evita ofrecer lo que va a rechazar.
 var ES_SUPER_ADMIN = {{ 'true' if es_super_admin else 'false' }};
+// ---------- Listas del sindicato (PLAN_LISTAS_VALIDACIONES.md) ----------
+// El parseo lo hace el servidor: ensayar y confirmar mandan el MISMO
+// archivo a /admin/lista/cargar; sin `confirmar` no se escribe nada.
+const PLANTILLAS_LISTAS = {{ plantillas_listas | tojson }};
+function listaNombreSugerido() {
+  const sel = document.getElementById('lista-plantilla'), inp = document.getElementById('lista-nombre');
+  const p = PLANTILLAS_LISTAS.find(x => x.clave === sel.value);
+  if (inp && p) inp.placeholder = p.nombre;
+}
+function _listaMsg(texto, mal) {
+  const m = document.getElementById('lista-msg');
+  m.textContent = texto; m.classList.toggle('oculto', !texto);
+  m.style.background = mal ? '#f8e5e2' : '#e6f4ea'; m.style.color = mal ? '#b23a2e' : '#1d6b3a';
+}
+async function _listaMandar(confirmar) {
+  const archivo = document.getElementById('lista-archivo');
+  if (!archivo.files.length) { _listaMsg('Elegí el archivo CSV.', true); return null; }
+  const fd = new FormData();
+  fd.append('plantilla', document.getElementById('lista-plantilla').value);
+  fd.append('nombre', document.getElementById('lista-nombre').value);
+  fd.append('seccional_id', document.getElementById('lista-seccional').value);
+  fd.append('confirmar', confirmar ? '1' : '');
+  fd.append('archivo', archivo.files[0]);
+  document.getElementById('lista-estado').textContent = confirmar ? 'Cargando…' : 'Ensayando…';
+  try {
+    const r = await fetch('/admin/lista/cargar', { method: 'POST', body: fd });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { _listaMsg(d.detail || ('Error ' + r.status), true); return null; }
+    _listaMsg('', false);
+    return d;
+  } catch (e) { _listaMsg('No se pudo mandar el archivo.', true); return null; }
+  finally { document.getElementById('lista-estado').textContent = ''; }
+}
+function _listaTablaErrores(errores, conError) {
+  if (!conError) return '';
+  const filas = errores.map(e => `<tr><td>${e.linea}</td><td>${escHtml(e.motivo)}</td></tr>`).join('');
+  const mas = conError > errores.length ? `<tr><td colspan="2" class="muted">… y ${conError - errores.length} más.</td></tr>` : '';
+  return `<h4 style="margin:10px 0 4px;">Filas con error (quedan afuera)</h4><table><tr><th>Línea</th><th>Motivo</th></tr>${filas}${mas}</table>`;
+}
+function _listaMuestra(columnas, muestra) {
+  if (!muestra.length) return '';
+  const cab = columnas.map(c => `<th>${escHtml(c.clave)}</th>`).join('');
+  const filas = muestra.map(f => '<tr>' + columnas.map(c => `<td>${escHtml(String(f[c.clave] ?? ''))}</td>`).join('') + '</tr>').join('');
+  return `<h4 style="margin:10px 0 4px;">Así quedan las primeras filas</h4><div style="overflow-x:auto;"><table><tr>${cab}</tr>${filas}</table></div>`;
+}
+async function listaEnsayar() {
+  const d = await _listaMandar(false);
+  if (!d) return;
+  const caja = document.getElementById('lista-ensayo');
+  caja.classList.remove('oculto');
+  const vale = d.seccional_id ? 'la seccional elegida' : 'todo el sindicato';
+  caja.innerHTML = `<div class="msg" style="background:${d.validas ? '#e6f4ea' : '#f8e5e2'};color:${d.validas ? '#1d6b3a' : '#b23a2e'};">
+      <b>Ensayo:</b> ${d.total} filas leídas, <b>${d.validas} entran</b>${d.con_error ? `, <b>${d.con_error} con error</b> quedan afuera` : ''}.
+      Lista «${escHtml(d.nombre)}» (${escHtml(d.plantilla)}), vale para ${vale}. Todavía no se guardó nada.</div>`
+    + _listaMuestra(d.columnas, d.muestra) + _listaTablaErrores(d.errores, d.con_error);
+  document.getElementById('lista-btn-confirmar').classList.toggle('oculto', !d.validas);
+}
+async function listaConfirmar() {
+  const d = await _listaMandar(true);
+  if (!d) return;
+  location.hash = '#listas';
+  location.reload();
+}
+async function listaVer(id) {
+  const caja = document.getElementById('lista-detalle');
+  caja.classList.remove('oculto');
+  caja.innerHTML = '<p class="muted">Cargando…</p>';
+  try {
+    const r = await fetch('/admin/lista/' + id, { cache: 'no-store' });
+    const d = await r.json();
+    if (!r.ok) { caja.innerHTML = `<p class="muted">${escHtml(d.detail || 'No se pudo abrir.')}</p>`; return; }
+    caja.innerHTML = `<h3 style="margin:0 0 4px;">${escHtml(d.nombre)} <span class="muted" style="font-weight:400;">· ${d.filas} filas${d.filas > 200 ? ', se muestran 200' : ''}</span></h3>`
+      + _listaMuestra(d.columnas, d.muestra)
+      + `<button type="button" class="mini" style="margin-top:8px;" onclick="document.getElementById('lista-detalle').classList.add('oculto')">Cerrar</button>`;
+    caja.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (e) { caja.innerHTML = '<p class="muted">No se pudo abrir la lista.</p>'; }
+}
 // ---------- Navegación por pestañas ----------
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {

@@ -43,6 +43,11 @@ SECCIONES = {
     "dashboard":                ("Panel Sindical",           "dashboard",      "Recibos"),
     "trabajadores":             ("Trabajadores",             "",               "Padrón"),
     "seccionales":              ("Seccionales",              "",               "Padrón"),
+    # Listas que sube el sindicato (grupo familiar, datos del afiliado, lista
+    # simple). Pestaña propia al nivel de Trámites y sin módulo (D5 de
+    # PLAN_LISTAS_VALIDACIONES.md): hoy las usan las validaciones de
+    # Trámites, mañana Denuncias o Reclamos.
+    "listas":                   ("Listas",                   "",               "Padrón"),
     "noticias":                 ("Noticias",                 "noticias",       "Comunicación"),
     "beneficios":               ("Beneficios",               "beneficios",     "Comunicación"),
     "notificaciones":           ("Notificaciones",           "notificaciones", "Comunicación"),

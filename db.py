@@ -37,7 +37,7 @@ from datetime import date, datetime, timedelta
 from dotenv import load_dotenv
 from typing import Any
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON, text
-from sqlalchemy import or_, bindparam, UniqueConstraint, delete as sa_delete
+from sqlalchemy import or_, bindparam, UniqueConstraint, Index, delete as sa_delete
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import NullPool
@@ -7313,3 +7313,143 @@ def avisos_de_encuesta(encuesta_id: int) -> list:
                 "leidos": sum(1 for d in destinatarios if d.leida_en),
             })
         return salida
+
+
+# ==================== Listas del sindicato (PLAN_LISTAS_VALIDACIONES.md) ====================
+
+class ListaSindicato(SQLModel, table=True):
+    """Una lista que subió el admin del sindicato por CSV: la tabla genérica
+    por debajo de las plantillas tipadas de `listas.PLANTILLAS` (D1). Se
+    identifica por sindicato + plantilla + nombre + seccional, y una carga
+    nueva la REEMPLAZA entera (D5): es una foto del padrón del sindicato.
+    `seccional_id` NULL = vale para todo el sindicato."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sindicato_id: int = Field(foreign_key="sindicato.id", index=True)
+    plantilla: str
+    nombre: str
+    seccional_id: Optional[int] = Field(default=None, foreign_key="seccional.id", index=True)
+    columnas: list = Field(default=[], sa_column=Column(JSON_TIPO, nullable=False))
+    filas: int = 0
+    archivo: str = ""                      # nombre del CSV que se subió
+    cargada_en: str = ""                   # hora de Buenos Aires
+    cargada_por: str = ""                  # usuario del panel
+
+
+class FilaLista(SQLModel, table=True):
+    """Una fila de una lista. `clave1` es SIEMPRE el CUIL del afiliado
+    (normalizado); `clave2` la segunda clave de la plantilla (el DNI del
+    familiar) o "". `datos` trae todas las columnas ya normalizadas."""
+    __table_args__ = (Index("ix_filalista_claves", "lista_id", "clave1", "clave2"),)
+    id: Optional[int] = Field(default=None, primary_key=True)
+    lista_id: int = Field(foreign_key="listasindicato.id", index=True)
+    clave1: str
+    clave2: str = ""
+    datos: dict = Field(default={}, sa_column=Column(JSON_TIPO, nullable=False))
+
+
+def _lista_a_dict(l: "ListaSindicato", seccional: str = "") -> dict:
+    return {"id": l.id, "plantilla": l.plantilla, "nombre": l.nombre, "seccional_id": l.seccional_id,
+            "seccional": seccional, "columnas": l.columnas or [], "filas": l.filas, "archivo": l.archivo,
+            "cargada_en": l.cargada_en, "cargada_por": l.cargada_por}
+
+
+def listas_del_sindicato(sindicato_id: int, alcance=None) -> list:
+    """Las listas del sindicato, recortadas al alcance de quien mira EN LA
+    CONSULTA (None = todas; un set = solo las de esas seccionales; una lista
+    sin seccional la alcanza solo quien tiene alcance total)."""
+    with Session(engine) as s:
+        q = select(ListaSindicato).where(ListaSindicato.sindicato_id == sindicato_id)
+        if alcance is not None:
+            if not alcance:
+                return []
+            q = q.where(ListaSindicato.seccional_id.in_(list(alcance)))
+        listas = s.exec(q.order_by(ListaSindicato.plantilla, ListaSindicato.nombre)).all()
+        secs = {x.id: x.nombre for x in s.exec(select(Seccional).where(Seccional.sindicato_id == sindicato_id)).all()}
+        return [_lista_a_dict(l, secs.get(l.seccional_id, "")) for l in listas]
+
+
+def lista_del_sindicato(sindicato_id: int, lista_id: int) -> Optional[dict]:
+    with Session(engine) as s:
+        l = s.get(ListaSindicato, lista_id)
+        if not l or l.sindicato_id != sindicato_id:
+            return None
+        sec = s.get(Seccional, l.seccional_id) if l.seccional_id else None
+        return _lista_a_dict(l, sec.nombre if sec else "")
+
+
+def reemplazar_lista(sindicato_id: int, plantilla: str, nombre: str, seccional_id: Optional[int],
+                     columnas: list, filas: list, archivo: str, quien: str) -> int:
+    """Crea la lista o la REEMPLAZA entera (misma plantilla + nombre +
+    seccional), en una transacción: si algo falla a mitad, la lista anterior
+    queda como estaba."""
+    with Session(engine) as s:
+        l = s.exec(select(ListaSindicato).where(
+            ListaSindicato.sindicato_id == sindicato_id, ListaSindicato.plantilla == plantilla,
+            ListaSindicato.nombre == nombre, ListaSindicato.seccional_id == seccional_id)).first()
+        if l:
+            s.exec(sa_delete(FilaLista).where(FilaLista.lista_id == l.id))
+        else:
+            l = ListaSindicato(sindicato_id=sindicato_id, plantilla=plantilla, nombre=nombre, seccional_id=seccional_id)
+            s.add(l)
+            s.flush()
+        l.columnas = columnas
+        l.filas = len(filas)
+        l.archivo = archivo[:200]
+        l.cargada_en = fechas.ahora_texto()
+        l.cargada_por = quien
+        s.add_all(FilaLista(lista_id=l.id, clave1=f["clave1"], clave2=f.get("clave2") or "", datos=f["datos"]) for f in filas)
+        s.add(l)
+        s.commit()
+        return l.id
+
+
+def borrar_lista(sindicato_id: int, lista_id: int) -> bool:
+    with Session(engine) as s:
+        l = s.get(ListaSindicato, lista_id)
+        if not l or l.sindicato_id != sindicato_id:
+            return False
+        s.exec(sa_delete(FilaLista).where(FilaLista.lista_id == lista_id))
+        s.delete(l)
+        s.commit()
+        return True
+
+
+def filas_de_lista(lista_id: int, limite: Optional[int] = 200) -> list:
+    with Session(engine) as s:
+        q = select(FilaLista).where(FilaLista.lista_id == lista_id).order_by(FilaLista.id)
+        if limite:
+            q = q.limit(limite)
+        return [f.datos for f in s.exec(q).all()]
+
+
+def buscar_en_lista(sindicato_id: int, plantilla: str, clave1: str, clave2: str = "",
+                    seccional_id: Optional[int] = None, nombre: Optional[str] = None) -> Optional[dict]:
+    """La fila que coincide, o None. Busca en las listas de esa plantilla del
+    sindicato que valgan para todos (sin seccional) o para `seccional_id`;
+    con `nombre`, solo en esa. Es lo que van a usar las validaciones de
+    fuente `funcion` (bloque 3)."""
+    with Session(engine) as s:
+        q = select(ListaSindicato.id).where(ListaSindicato.sindicato_id == sindicato_id,
+                                            ListaSindicato.plantilla == plantilla)
+        if nombre:
+            q = q.where(ListaSindicato.nombre == nombre)
+        ids = [i for i in s.exec(q).all()]
+        if not ids:
+            return None
+        q = select(FilaLista).where(FilaLista.lista_id.in_(ids), FilaLista.clave1 == cuit.normalizar(clave1),
+                                    FilaLista.clave2 == (clave2 or ""))
+        for f in s.exec(q).all():
+            l = s.get(ListaSindicato, f.lista_id)
+            if l.seccional_id is None or l.seccional_id == seccional_id:
+                return dict(f.datos)
+        return None
+
+
+def quien_es_usuario_sindicato(usuario_id: int) -> str:
+    """«Nombre (CUIT)» del usuario del panel, para dejar escrito quién cargó
+    una lista. Vacío si no existe."""
+    with Session(engine) as s:
+        u = s.get(UsuarioSindicato, usuario_id)
+        if not u:
+            return ""
+        return f"{u.nombre} ({u.usuario})" if u.nombre else u.usuario

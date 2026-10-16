@@ -77,6 +77,7 @@ FUNCIONALIDADES = [
     ("Sindicato", "Empleadores", r"^/admin/empleador", "admin.html"),
     ("Sindicato", "Convenio (RAG)", r"^/admin/convenio", "admin.html"),
     ("Sindicato", "Seccionales", r"^/admin/seccional", "admin.html"),
+    ("Sindicato", "Listas", r"^/admin/listas?(/|$)", "admin.html"),
     ("Sindicato", "Áreas y Usuarios", r"^/admin/(area|usuario)", "admin.html"),
     ("Sindicato", "Encuestas", r"^/admin/encuesta", "admin.html"),
     ("Sindicato", "Marca del sindicato", r"^/(logo|firma)/", None),

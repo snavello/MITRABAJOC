@@ -92,6 +92,7 @@ import render_admin
 import grilla_bancaria
 import asistente_tramites
 import asistente_tramites_ia
+import listas as listas_mod
 import render_planes
 from observabilidad import panel as observabilidad_panel
 from observabilidad import hilo_colector
@@ -1246,6 +1247,12 @@ PERMISOS_RUTAS = {
     "/admin/noticia/borrar":                "noticias",
     "/admin/beneficio":                     "beneficios",
     "/admin/beneficio/borrar":              "beneficios",
+    "/admin/listas":                        "listas",
+    "/admin/lista/cargar":                  "listas",
+    "/admin/lista/borrar":                  "listas",
+    "/admin/listas/modelo/{plantilla}.csv": "listas",
+    "/admin/lista/{lista_id}":              "listas",
+    "/admin/lista/{lista_id}/datos.csv":    "listas",
     "/admin/seccional":                     "seccionales",
     "/admin/seccional/borrar":              "seccionales",
     "/admin/seccional/{seccional_id}/ficha": "seccionales",
@@ -1619,6 +1626,10 @@ def admin(request: Request):
         "encuestas_tipos_anonima": [t for t, _ in encuestas.tipos_para(encuestas.ANONIMA)],
         "encuestas_ayuda": encuestas.AYUDA_POR_TIPO,
         "encuestas_umbral": db.umbral_encuestas(),
+        # Listas del sindicato: recortadas al alcance EN LA CONSULTA, como
+        # las seccionales (una lista sin seccional la ve solo el alcance total).
+        "listas": db.listas_del_sindicato(sid, alcance_propio) if puede("listas") else [],
+        "plantillas_listas": listas_mod.resumen_plantillas() if puede("listas") else [],
         "tipos_tramite": db.tipos_tramite_del_sindicato(sid)
                          if puede("tramites_formularios", "tramites_recibidos") else [],
         "tramites": db.tramites_del_sindicato(sid, usuario_id=uid)
@@ -2955,6 +2966,115 @@ def borrar_beneficio(request: Request, id: int = Form(...)):
             s.delete(b)
             s.commit()
     return RedirectResponse("/admin#beneficios", status_code=303)
+
+
+# ==================== Listas del sindicato (PLAN_LISTAS_VALIDACIONES.md, bloque 1) ====================
+# Plantillas tipadas sobre una tabla genérica (D1); carga por CSV con ENSAYO
+# y reemplazo entero (D5); pestaña propia con permiso `listas`. El parseo es
+# puro (listas.py) y lo comparten el ensayo y la carga: lo que el ensayo
+# muestra es exactamente lo que la carga escribe.
+
+def _seccional_para_lista(request: Request, seccional_id: str) -> int | None:
+    """La seccional de una lista, dentro del alcance de quien carga. Con
+    alcance total, vacío = vale para todo el sindicato; un admin local solo
+    puede cargar sobre las suyas y nunca una lista global."""
+    alcance = _alcance_de(request)
+    try:
+        sec = int(seccional_id or 0) or None
+    except ValueError:
+        raise HTTPException(422, "Seccional inválida.")
+    if not _en_alcance(alcance, sec):
+        raise _sin_permiso("Esa lista es de otra seccional." if sec else
+                           "Elegí tu seccional: una lista para todo el sindicato la carga el administrador general.")
+    return sec
+
+
+@app.get("/admin/listas")
+def admin_listas(request: Request):
+    sid = exigir_sindicato(request)
+    alcance = _alcance_de(request)
+    return {"listas": db.listas_del_sindicato(sid, alcance), "plantillas": listas_mod.resumen_plantillas(),
+            "alcance": None if alcance is None else sorted(alcance)}
+
+
+@app.post("/admin/lista/cargar")
+async def admin_lista_cargar(request: Request, plantilla: str = Form(...), nombre: str = Form(""),
+                             seccional_id: str = Form(""), confirmar: str = Form(""),
+                             archivo: UploadFile = File(...)):
+    """Sin `confirmar`, ENSAYO: parsea y cuenta, no escribe. Con `confirmar`,
+    reemplaza la lista entera con las filas válidas (las que tienen error
+    quedan afuera y se informan: el ensayo ya las mostró)."""
+    sid = exigir_sindicato(request)
+    if plantilla not in listas_mod.PLANTILLAS:
+        raise HTTPException(422, "Plantilla desconocida.")
+    sec = _seccional_para_lista(request, seccional_id)
+    nombre = (nombre or "").strip()[:80] or listas_mod.PLANTILLAS[plantilla]["nombre"]
+    contenido = await archivo.read()
+    if len(contenido) > 5 * 1024 * 1024:
+        raise HTTPException(422, "El archivo pasa de 5 MB.")
+    r = listas_mod.parsear_csv(plantilla, contenido)
+    resumen = {"plantilla": plantilla, "nombre": nombre, "seccional_id": sec, "archivo": archivo.filename or "",
+               "total": r["total"], "validas": r["validas"], "con_error": r["con_error"], "errores": r["errores"],
+               "muestra": [f["datos"] for f in r["filas"][:5]], "columnas": r["columnas"]}
+    if not confirmar:
+        return {"ensayo": True, **resumen}
+    if not r["validas"]:
+        raise HTTPException(422, "Ninguna fila es válida: no hay nada que cargar.")
+    lista_id = db.reemplazar_lista(sid, plantilla, nombre, sec, r["columnas"], r["filas"],
+                                   archivo.filename or "", db.quien_es_usuario_sindicato(_uid_sesion(request)))
+    return {"ensayo": False, "id": lista_id, **resumen}
+
+
+@app.post("/admin/lista/borrar")
+def admin_lista_borrar(request: Request, id: int = Form(...)):
+    sid = exigir_sindicato(request)
+    lista = db.lista_del_sindicato(sid, id)
+    if not lista:
+        raise HTTPException(404, "No existe esa lista.")
+    _exigir_alcance_seccional(request, lista["seccional_id"])
+    db.borrar_lista(sid, id)
+    return RedirectResponse("/admin#listas", status_code=303)
+
+
+@app.get("/admin/listas/modelo/{plantilla}.csv")
+def admin_lista_modelo(request: Request, plantilla: str):
+    exigir_sindicato(request)
+    if plantilla not in listas_mod.PLANTILLAS:
+        raise HTTPException(404, "Plantilla desconocida.")
+    return BinResponse(listas_mod.csv_modelo(plantilla).encode("utf-8"), media_type="text/csv; charset=utf-8",
+                       headers={"Content-Disposition": f'attachment; filename="modelo-{plantilla}.csv"'})
+
+
+@app.get("/admin/lista/{lista_id}")
+def admin_lista_detalle(request: Request, lista_id: int):
+    sid = exigir_sindicato(request)
+    lista = db.lista_del_sindicato(sid, lista_id)
+    if not lista:
+        raise HTTPException(404, "No existe esa lista.")
+    _exigir_alcance_seccional(request, lista["seccional_id"])
+    return {**lista, "muestra": db.filas_de_lista(lista_id, limite=200)}
+
+
+@app.get("/admin/lista/{lista_id}/datos.csv")
+def admin_lista_datos_csv(request: Request, lista_id: int):
+    """Lo cargado, tal cual quedó (normalizado), para revisarlo o corregirlo
+    y volver a subirlo."""
+    sid = exigir_sindicato(request)
+    lista = db.lista_del_sindicato(sid, lista_id)
+    if not lista:
+        raise HTTPException(404, "No existe esa lista.")
+    _exigir_alcance_seccional(request, lista["seccional_id"])
+    import csv
+    import io
+    salida = io.StringIO()
+    w = csv.writer(salida, delimiter=";", lineterminator="\n")
+    claves = [c["clave"] for c in lista["columnas"]]
+    w.writerow(claves)
+    for fila in db.filas_de_lista(lista_id, limite=None):
+        w.writerow([fila.get(k, "") for k in claves])
+    nombre = re.sub(r"[^A-Za-z0-9_-]+", "-", lista["nombre"]).strip("-") or lista["plantilla"]
+    return BinResponse(("\ufeff" + salida.getvalue()).encode("utf-8"), media_type="text/csv; charset=utf-8",
+                       headers={"Content-Disposition": f'attachment; filename="lista-{nombre}.csv"'})
 
 
 @app.post("/admin/seccional")

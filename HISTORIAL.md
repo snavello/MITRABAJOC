@@ -7371,3 +7371,59 @@ asistente usa el suyo y el test compara conjuntos.
 JSON (contrato en `docs/chat/2026-10-16-contrato-importacion-tramites.md`,
 después de probar con trámites reales de La Bancaria), la entrada por foto o
 PDF del formulario actual, y el uso desde el panel del sindicato.
+
+## Listas del sindicato (2026-10-16, Admin 0.54.01)
+
+Bloque 1 de `PLAN_LISTAS_VALIDACIONES.md` (rama `feature/listas-sindicato`).
+Lo que el sindicato tiene en sus planillas y Colm3na no: el grupo familiar de
+cada afiliado, su fecha de afiliación, quiénes están en una lista. Es la base
+sobre la que el bloque 3 monta las validaciones de fuente `funcion` (el DNI
+del chico contra el grupo familiar, la antigüedad para habilitar un trámite).
+
+**Plantillas tipadas sobre una tabla genérica (D1).** `listas.py` es puro:
+`PLANTILLAS` (grupo familiar, datos del afiliado, lista simple) declara las
+columnas con tipo (cuil / dni / texto / fecha) y cuáles son las claves de
+búsqueda —la primera es SIEMPRE el CUIL del afiliado—; `csv_modelo` arma el
+archivo para completar (con punto y coma, que Excel en castellano abre sin
+pelear) y `parsear_csv` lee lo que subió el admin: detecta el separador,
+acepta la cabecera por clave o por rótulo, decodifica UTF-8 o Latin-1,
+normaliza (CUIL con `cuit.normalizar`, fechas DD/MM/AAAA → ISO) y valida FILA
+POR FILA (módulo 11 del CUIL porque acá el número NACE, DNI de 6 a 9
+dígitos, fecha legible, claves repetidas), devolviendo las filas buenas y
+los errores con su línea. Nunca escribe. En la base, `ListaSindicato`
+(plantilla + nombre + seccional, columnas, quién y cuándo) y `FilaLista`
+(clave1, clave2, datos JSONB) con índice por claves — migración
+`e5f1c3a9b2d4`. Una plantilla nueva es una entrada en `PLANTILLAS`, no un
+modelo nuevo.
+
+**Ensayo y reemplazo entero (D5).** `POST /admin/lista/cargar` sin
+`confirmar` parsea y cuenta (cuántas filas entran, cuáles tienen error, las
+primeras cinco como quedan) y no escribe nada; con `confirmar`, las filas
+válidas REEMPLAZAN la lista entera (misma plantilla + nombre + seccional), en
+una transacción. El ensayo y la carga usan el mismo parseo: lo que el ensayo
+muestra es exactamente lo que la carga escribe. Sin filas válidas, 422.
+
+**Pestaña propia, permiso `listas`, alcance por seccional.** Sección nueva
+en `permisos.SECCIONES` (grupo Padrón, sin módulo, como Trabajadores): la
+tienen los dos roles de administrador y se puede dar a un área. Las rutas
+entran al gateo fail-closed de `PERMISOS_RUTAS`. Un Admin de Seccional
+carga solo sobre la suya (nunca una lista global, que es del administrador
+general), ve solo las suyas (el recorte va EN LA CONSULTA,
+`db.listas_del_sindicato(sid, alcance)`), y no abre, baja ni borra una
+ajena. `db.buscar_en_lista` ya está escrita para el bloque 3: busca en las
+listas de esa plantilla que valgan para todos o para la seccional del
+afiliado.
+
+**La pantalla**: las plantillas con su descripción, columnas y "Descargar
+modelo"; el formulario de carga (plantilla, nombre, para quién vale,
+archivo) con "Ensayar (no guarda nada)" y recién después "Confirmar y
+reemplazar"; la tabla de listas cargadas con Ver (las primeras 200 filas),
+Descargar (lo cargado tal cual quedó, para corregir y volver a subir) y
+Borrar. Probada en Chromium contra uvicorn local: subir el modelo con una
+fila rota, ensayar (2 entran, 1 con error), confirmar y verla cargada.
+Tests: `test_listas.py` (parseo, permiso, ensayo sin escritura, reemplazo,
+alcance, aislamiento, cada plantilla con su propio modelo).
+
+**Queda del plan**: bloque 2 (las dos fechas en el padrón), bloque 3 (la
+fuente `funcion` en `validaciones_tramite`, requisitos y campo calculado),
+bloque 4 (en vivo con tope) y bloque 5 (las brechas del asistente).
