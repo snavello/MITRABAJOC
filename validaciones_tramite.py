@@ -75,6 +75,8 @@ DATOS_SISTEMA = {
     "semaforo": ("texto", "Color del último semáforo de aportes (verde, amarillo, rojo o gris)"),
     "fecha_afiliacion": ("fecha", "Fecha de afiliación a este sindicato"),
     "fecha_nacimiento": ("fecha", "Fecha de nacimiento"),
+    "tramites_de_este_tipo": ("numero", "Cuántas veces ya pidió este mismo trámite (en cualquier estado)"),
+    "tramites_abiertos_de_este_tipo": ("numero", "Cuántos pedidos de este mismo trámite tiene sin terminar"),
 }
 
 # Las funciones que una fórmula puede llamar, con su ayuda. Las de fechas

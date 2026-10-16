@@ -209,7 +209,17 @@
           "validaciones": []
         }
       ],
-      "reglas_consistencia": []
+      "reglas_consistencia": [],
+      "requisitos": [
+        {
+          "origen": "sistema",
+          "trae": "en_padron",
+          "operador": "==",
+          "valor": "si",
+          "mensaje": "Tenés que estar en el padrón del sindicato como titular.",
+          "bloquea": true
+        }
+      ]
     }
   ],
   "circuito": {
@@ -512,12 +522,6 @@
         "provisorio": "Alguien del sindicato activa el formulario el día de apertura y lo desactiva al cierre. La noticia que lo anuncia sí vence sola."
       },
       {
-        "clave": "requisitos",
-        "nivel": "desarrollo",
-        "motivo": "Requisitos: ser el afiliado titular, tener un familiar a cargo, una edad (propia o del familiar).",
-        "provisorio": "Cualquier afiliado puede iniciarlo. El área controla el requisito al revisar y, si no lo cumple, responde y cierra."
-      },
-      {
         "clave": "familia",
         "nivel": "desarrollo",
         "motivo": "Se pide por familiar.",
@@ -526,8 +530,8 @@
       {
         "clave": "duplicados",
         "nivel": "ajuste",
-        "motivo": "Tiene límite de pedidos. Campo «DNI del chico»: no repetir entre pedidos.",
-        "provisorio": "Nada impide presentar dos veces lo mismo. El área lo detecta al revisar."
+        "motivo": "Se puede pedir más de una vez (por familiar o por período). Campo «DNI del chico»: no repetir entre pedidos.",
+        "provisorio": "«Una sola vez» ya se controla con un requisito (sistema.tramites_de_este_tipo). Por familiar o por período nada lo impide: el área lo detecta al revisar."
       },
       {
         "clave": "cupo",
@@ -558,9 +562,8 @@
       "¿Aprueba la seccional o Acción Social Nacional?",
       "¿Desde qué grado o año ya no corresponde el kit?",
       "¿Aceptan arrancar así mientras tanto? Abrir y cerrar el formulario por fechas: Alguien del sindicato activa el formulario el día de apertura y lo desactiva al cierre. La noticia que lo anuncia sí vence sola.",
-      "¿Aceptan arrancar así mientras tanto? Controlar requisitos antes de dejar iniciar: Cualquier afiliado puede iniciarlo. El área controla el requisito al revisar y, si no lo cumple, responde y cierra.",
       "¿Aceptan arrancar así mientras tanto? Familiares declarados una sola vez: El formulario pide los datos y documentos del familiar en cada pedido.",
-      "¿Aceptan arrancar así mientras tanto? Evitar pedidos repetidos: Nada impide presentar dos veces lo mismo. El área lo detecta al revisar.",
+      "¿Aceptan arrancar así mientras tanto? Evitar pedidos repetidos por familiar o por período: «Una sola vez» ya se controla con un requisito (sistema.tramites_de_este_tipo). Por familiar o por período nada lo impide: el área lo detecta al revisar.",
       "¿Aceptan arrancar así mientras tanto? Cupo o stock por seccional: El área lleva las unidades en su planilla y avisa por el chat si se agotaron.",
       "¿Aceptan arrancar así mientras tanto? Listado de pedidos con sus respuestas: El Panel Sindical lista expediente, seccional, estado y días, pero no las respuestas.",
       "¿Aceptan arrancar así mientras tanto? Registrar la entrega: Al entregar, el área pasa el trámite a Terminado con un mensaje. El afiliado se identifica con su credencial digital.",

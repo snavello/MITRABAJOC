@@ -70,7 +70,13 @@ def test_las_preguntas_viajan_como_datos():
 def test_el_kit_escolar_sale_igual_que_el_prototipo():
     """El JSON que generó el prototipo de Chat para el kit escolar es el caso
     dorado: el motor tiene que reproducirlo exacto (misma fecha de
-    generación). Si una diferencia es a propósito, se anota acá."""
+    generación). Si una diferencia es a propósito, se anota acá.
+
+    Diferencias a propósito respecto del prototipo de Chat (2026-10-16,
+    bloque 5 de PLAN_LISTAS_VALIDACIONES.md): el formulario trae
+    `requisitos` (ser titular sale como requisito sobre `sistema.en_padron`),
+    y `requisitos` y `lista` dejaron de ser brechas porque existen; el
+    archivo dorado se regeneró con el motor ese día."""
     esperado = json.loads(DORADO.read_text(encoding="utf-8"))
     generado = at.resolver(_ejemplo(), hoy=HOY)["json"]
     assert generado == esperado
@@ -104,6 +110,26 @@ def test_un_control_sin_soporte_marca_pendiente_y_no_inventa_validacion():
     assert campos[0]["x_pendiente"] == "No repetir entre pedidos" and campos[0]["validaciones"] == []
     assert campos[1]["validaciones"][0]["operador"] == "<=" and "x_pendiente" not in campos[1]
     assert campos[2]["x_pendiente"] == "Formato (mail, teléfono)"
+
+
+def test_el_control_contra_una_lista_exporta_una_validacion_real():
+    """Desde el bloque 3 de Listas y validaciones, «contra una lista del
+    sindicato» no es una brecha: sale como validación por función (el dato
+    tiene que estar en el grupo familiar, buscado por este mismo campo) y
+    pasa entera por el saneo real del constructor."""
+    campos = at.campos_colm3na([
+        at.sanear_campo({"etiqueta": "", "tipo": "separador"}),          # no se exporta: el índice lo saltea
+        at.sanear_campo({"etiqueta": "Grado", "tipo": "seleccion", "opciones": "1º,2º"}),
+        at.sanear_campo({"etiqueta": "DNI del chico", "tipo": "texto", "control": "lista"}),
+    ])
+    v = campos[-1]["validaciones"][0]
+    assert v["fuente"] == "funcion" and v["lista"] == "grupo_familiar" and v["clave2"] == len(campos) - 1
+    assert v["trae"] == "existe" and v["en_vivo"] is True and "x_pendiente" not in campos[-1]
+    saneados = main._campos_tramite_validos(copy.deepcopy(campos))
+    assert saneados[-1]["validaciones"] == [v]
+    reqs = at.requisitos_colm3na({"requisitos": ["antiguedad", "titular", "edad"], "frecuencia": "unica"})
+    assert [q.get("trae") or q["formula"][:11] for q in reqs] == ["meses_entre", "en_padron", "tramites_de_este_tipo"]
+    assert len(validaciones_tramite.requisitos_saneados(reqs, campos)) == 3, "los tres pasan el saneo real"
 
 
 # ---------------------------------------------------------------- saneo
@@ -197,7 +223,9 @@ def test_preparar_dice_que_existe_y_que_falta_con_el_sindicato_elegido():
     sin = at.resolver(e, hoy=HOY)["preparar"]
     assert {x["estado"] for x in sin["configurar"]} == {"sin_verificar"}
     assert [x["clave"] for x in r["preparar"]["ajuste"]] == ["ventana", "duplicados", "exportar", "entrega", "dependencia"]
-    assert [x["clave"] for x in r["preparar"]["desarrollo"]] == ["requisitos", "familia", "cupo"]
+    assert [x["clave"] for x in r["preparar"]["desarrollo"]] == ["familia", "cupo"]
+    assert "requisitos" not in at.BRECHAS and "lista" not in at.BRECHAS, "existen desde el bloque 3: no son brechas"
+    assert "requisitos" in [p["clave"] for p in r["instruccion"]["pasos"]]
 
 
 def test_las_pendientes_incluyen_dudas_preguntas_sin_responder_y_brechas():
@@ -211,7 +239,8 @@ def test_las_pendientes_incluyen_dudas_preguntas_sin_responder_y_brechas():
 def test_la_instruccion_y_los_estados_siguen_a_las_respuestas():
     r = at.resolver(_ejemplo(), hoy=HOY)
     claves = [p["clave"] for p in r["instruccion"]["pasos"]]
-    assert claves == ["crear", "destino", "pase", "probar", "anunciar"]
+    assert claves == ["crear", "destino", "pase", "requisitos", "probar", "anunciar"]
+    assert "en «Requisitos para iniciar»" in r["instruccion"]["pasos"][3]["texto"] and "grupo familiar" in r["instruccion"]["pasos"][3]["texto"]
     assert "Sin pase entre áreas." in r["instruccion"]["pasos"][2]["texto"]
     assert "13. Lugar de retiro — Lista desplegable, obligatorio — Sede de la seccional" in r["instruccion"]["texto"]
     assert [x["estado"] for x in r["estados"]] == ["iniciado", "en_tratamiento", "espera_info", "respondido", "terminado"]

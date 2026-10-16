@@ -7597,3 +7597,41 @@ cumplir, validar-campo sin fila, el tope de diez y su limpieza con el envío,
 la app pide las dos rutas). Humo con Playwright: Juan ve el error al salir
 del DNI y la edad al corregirlo; Ana ve los requisitos en vez de los campos.
 
+
+## Cierre de Listas y validaciones: el asistente deja de marcar lo que ya existe (2026-10-16, Plataforma 0.49.02)
+
+Bloque 5 de `PLAN_LISTAS_VALIDACIONES.md` (rama `feature/validaciones-cierre`).
+El plan decía que al terminar, el Asistente de trámites dejara de marcar
+como brecha `duplicados`, `lista` y `requisitos`. Se hizo con una
+salvedad honesta:
+
+- **`lista` y `requisitos` salieron de `BRECHAS`** porque existen. El
+  control «contra una lista del sindicato» sobre un campo ya no es un
+  `x_pendiente`: exporta una validación por función real (el dato tiene que
+  estar en el grupo familiar, buscado por el CUIL de la sesión y por ese
+  mismo campo, con aviso en vivo), que pasa entera por el saneo del
+  constructor. Las respuestas a «¿Qué tiene que cumplir quien lo pide?»
+  salen como `requisitos` del formulario en el JSON (`requisitos_colm3na`):
+  antigüedad mínima (con `MESES_ANTIGUEDAD` = 6 como número de partida, la
+  instrucción dice que se ajusta) y ser titular (`sistema.en_padron`). Lo
+  que mira al familiar (tenerlo, su edad) no es un requisito del tipo sino
+  una validación sobre el campo del DNI: la instrucción lo dice en un paso
+  nuevo, «Requisitos».
+- **`duplicados` quedó, más chica.** «Una sola vez» (`frecuencia: unica`)
+  se cierra con un requisito sobre dos datos nuevos del sistema,
+  `sistema.tramites_de_este_tipo` y `sistema.tramites_abiertos_de_este_tipo`
+  (`db.contexto_validaciones` los cuenta por tipo; un formulario sin
+  guardar tiene cero). Pero «no repetir por familiar o por período» (el
+  mismo DNI dos veces) sigue sin existir: eso es unicidad por VALOR de un
+  campo entre pedidos, y el BACKLOG lo conserva como la mitad mediana del
+  punto 6.
+- El JSON dorado del kit escolar se regeneró con el motor: la única
+  diferencia es `requisitos` (ser titular) y las brechas que ya no están,
+  anotada en el test. El contrato de importación suma `requisitos` a cada
+  formulario.
+
+Estado del plan: **los cinco bloques hechos** el mismo día en que se
+acordó. Fuera del plan quedan, como decía: la tabla de columnas libres, la
+carga incremental, la fuente `externa` (fase 4 del BACKLOG) y la segunda
+vuelta de empresa (D7).
+

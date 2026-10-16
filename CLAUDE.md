@@ -1042,8 +1042,12 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     pruebas contra un afiliado real (HISTORIAL, "Validaciones por función en
     Trámites"). **Bloque 4 HECHO** (Trabajador 0.46.02): requisitos al abrir
     el formulario y validación en vivo contra el servidor con tope de diez
-    intentos (HISTORIAL, "Validación en vivo y requisitos al abrir"). Queda
-    el bloque 5 (brechas del asistente y cierre).
+    intentos (HISTORIAL, "Validación en vivo y requisitos al abrir").
+    **Bloque 5 HECHO, plan COMPLETO** (Plataforma 0.49.02): el asistente
+    dejó de marcar `lista` y `requisitos` como brechas (exporta la
+    validación y los requisitos reales) y `duplicados` quedó solo para
+    «por familiar o por período» (HISTORIAL, "Cierre de Listas y
+    validaciones").
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -1363,8 +1367,9 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     admin desde una pestaña Listas propia; validación de fuente `funcion`
     (requisito para iniciar, validación de campo, campo calculado) con la
     sintaxis de las Reglas y nombres cerrados; dos fechas nuevas en el
-    padrón (**bloques 2 a 4 HECHOS**). Cierra las fases 2 y 3 de validaciones
-    del BACKLOG. Trabajador primero, empresa después. **Queda el bloque 5.**
+    padrón. **Los cinco bloques HECHOS el 2026-10-16** (ver "Estado actual"
+    35): cierra las fases 2 y 3 de validaciones del BACKLOG. Queda la segunda
+    vuelta de empresa (D7) y la fuente `externa` (fase 4).
 
 ## Herramientas (solapa de `/entornos`)
 
@@ -1470,6 +1475,10 @@ plan `PLAN_ASISTENTE_TRAMITES.md`):
   nombres de personas), con el resultado recalculado al guardar, y la
   pestaña **Brechas**: cada brecha con cuántos casos no descartados la
   pidieron y de qué sindicatos. Es el inventario de lo que falta desarrollar.
+- **Lo que ya existe no es brecha** (2026-10-16): el control «contra una
+  lista» exporta una validación por función real y las respuestas de
+  requisitos salen como `requisitos` del formulario (`requisitos_colm3na`);
+  `duplicados` quedó solo para «por familiar o por período».
 - **El importador NO existe** (D7): se construye después de probar con uno o
   dos trámites reales de La Bancaria, con el contrato
   `docs/chat/2026-10-16-contrato-importacion-tramites.md`.
@@ -1655,6 +1664,9 @@ por función en Trámites"); la 4 (externa) sigue en BACKLOG.md. Reglas vigentes
   mensajes en vez de los campos, y trae los calculados que no dependen de
   otro campo). **Campo `calculado`**: su única validación es la fórmula; lo
   calcula el servidor en `/api/tramite` y lo que mande el navegador se ignora.
+- `sistema.tramites_de_este_tipo` / `tramites_abiertos_de_este_tipo` cuentan
+  los pedidos del afiliado de ESE formulario: «una sola vez» es un requisito
+  (`== 0`), no una brecha.
 - **En vivo** (`POST /api/tramite/validar-campo`, D3): solo las funciones
   marcadas `en_vivo`, respuesta pasa / no pasa con el mensaje y NUNCA la fila;
   **diez intentos por sesión y formulario** (`EN_VIVO_MAX_INTENTOS`, 429
