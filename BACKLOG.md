@@ -4,6 +4,52 @@ Anotaciones para no desviar el bloque de trabajo en curso (ver "Backlog
 técnico" en la memoria del proyecto). Cada ítem se tacha o se borra cuando
 se hace.
 
+- [ ] **Trámites: seis brechas verificadas contra el código** (2026-10-16,
+  Parte 2 del cierre del Asistente de trámites, aprobadas por SDN; las
+  mismas seis viven en `BRECHAS` de `asistente_tramites.py` cuando exista,
+  `PLAN_ASISTENTE_TRAMITES.md` D10). Confirmadas una por una con archivo y
+  función:
+  1. **Ventana por fechas** (chico): `TipoTramite` solo tiene `activo`
+     (db.py); el afiliado lo lista con `db.tipos_tramite_del_sindicato(
+     solo_activos=True)` y `/api/tramite` solo chequea `tipo["activo"]`.
+     Dos columnas `fecha_desde`/`fecha_hasta` (patrón de `Noticia`),
+     migración, el WHERE de esa función, el chequeo del envío, dos inputs
+     en el constructor y el espejo en `TipoTramiteEmpleador`.
+  2. **Marca «solo encadenado»** (chico): para adjuntarse en una nota el
+     formulario tiene que estar activo (`main._formulario_para_chat`,
+     `db.formulario_activo_de`) y entonces también sale en "Iniciar
+     trámite" (`/api/tramites/tipos`). Peor: `origen_tramite_id` es
+     opcional en `/api/tramite`, así que un encadenado se puede enviar
+     SIN trámite de origen ni aprobación previa. Una marca en el tipo,
+     excluirla del listado del afiliado y exigir origen válido al enviar.
+  3. **Extensiones jpg/jpeg** — **se arregla aparte, como fix, no espera
+     a esta lista**: la comparación es literal en las dos rutas de envío
+     (main.py, `ext not in permitidos`, trabajador y empresa), el `accept`
+     del navegador se arma de la misma lista (trabajador.html) y el
+     constructor empuja al error con el placeholder "pdf,jpg". Mapa de
+     equivalencias (jpg↔jpeg, tif↔tiff) al comparar y al armar el
+     `accept`, sin tocar lo guardado.
+  4. **Exportar trámites con sus respuestas** (mediano): no hay CSV de
+     trámites; `dashboard.explorador_tramites` devuelve expediente, fecha,
+     seccional, tipo, estado y días, y las respuestas solo se ven de a
+     una en el modal "Ver". Una ruta por tipo con una columna por campo,
+     dentro del alcance de seccional y área del operador, registrando
+     cada descarga como hace Encuestas (nombres y DNI de familiares son
+     dato sensible).
+  5. **Opciones que dependen de otra respuesta** (mediano, prioridad
+     baja): `validaciones_tramite.TIPOS_VALIDABLES = ("numero", "fecha")`
+     y `reglas_saneadas` descarta una regla si los dos campos no son del
+     mismo tipo; no existe nada de opciones dependientes. Modelo en el
+     campo (opciones por valor del padre), constructor, JS de afiliado y
+     empresa, y validación en el servidor del subconjunto. Provisorio:
+     unir las dos listas en una ("Primaria 1.º", "Primaria 2.º"…).
+  6. **Pedidos repetidos**: `/api/tramite` verifica tipo activo, sindicato
+     y seccional, nada más; `db.tramites_de_trabajador` existe pero no se
+     consulta al crear. Son dos: "uno por afiliado por formulario" es
+     chico (marca en el tipo + consulta antes de crear); "único por valor
+     de un campo" (el DNI del chico) es mediano y encaja como función de
+     la Fase 2 `sistema` de abajo, con `bloquea`/`avisa`.
+
 - [ ] **Panel Sindical: una dirección con solo `sal_max` pierde ese filtro**
   (2026-10-12, encontrado al portar el estado a la v2, `PLAN_DASHBOARD_V2.md`
   bloque 2). En `initCatalogo` de `static/dashboard.js`, si la dirección no
