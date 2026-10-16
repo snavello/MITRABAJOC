@@ -707,7 +707,10 @@ if (document.getElementById('tp-tramites')) {
   function campoInputHtmlTrx(c) {
     const id = 'txc_' + c.id;
     if (c.tipo_dato === 'archivo') {
-      const accept = (c.tipos_archivo_permitidos || '').split(',').map(e => e.trim()).filter(Boolean).map(e => '.' + e).join(',');
+      // jpg vale también para jpeg (y tif para tiff): el servidor compara igual.
+      const EQUIV = { jpg: 'jpeg', jpeg: 'jpg', tif: 'tiff', tiff: 'tif' };
+      const accept = [...new Set((c.tipos_archivo_permitidos || '').split(',').map(e => e.trim().toLowerCase().replace(/^\./, '')).filter(Boolean)
+        .flatMap(e => EQUIV[e] ? [e, EQUIV[e]] : [e]))].map(e => '.' + e).join(',');
       return `<label class="btn sec archivo-trigger" for="${id}">📎 Elegir archivo</label>
         <input type="file" id="${id}" ${accept ? `accept="${accept}"` : ''} onchange="document.getElementById('${id}-nombre').textContent = this.files[0] ? this.files[0].name : '';">
         <div class="archivo-nombre" id="${id}-nombre"></div>`;

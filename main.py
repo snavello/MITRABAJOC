@@ -3597,6 +3597,24 @@ ARCHIVO_MIMES_TRAMITE = {
     ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 MAX_ARCHIVO_TRAMITE = 10 * 1024 * 1024  # 10 MB
+# Extensiones que son el mismo formato con otro nombre. "pdf,jpg" en un
+# formulario rechazaba una foto .jpeg -- que es lo que generan muchos
+# teléfonos -- porque la comparación era letra por letra (BACKLOG, brecha 3
+# del 2026-10-16). Se aplica al comparar, nunca sobre lo guardado.
+EXTENSIONES_EQUIVALENTES = {"jpg": "jpeg", "jpeg": "jpg", "tif": "tiff", "tiff": "tif", "htm": "html", "html": "htm"}
+
+
+def extensiones_permitidas(lista: str) -> list:
+    """«pdf, JPG» → ["pdf", "jpg", "jpeg"]: normalizadas, sin punto ni
+    repetidas, y con la equivalente de cada una. Lista vacía = cualquiera."""
+    salida = []
+    for e in (lista or "").split(","):
+        e = e.strip().lower().lstrip(".")
+        if e:
+            for x in (e, EXTENSIONES_EQUIVALENTES.get(e)):
+                if x and x not in salida:
+                    salida.append(x)
+    return salida
 
 
 def _leer_archivo_tramite(archivo: UploadFile):
@@ -4627,7 +4645,7 @@ async def api_enviar_tramite(request: Request):
                 continue
             import os
             ext = os.path.splitext(archivo.filename)[1].lower().lstrip(".")
-            permitidos = [e.strip().lower() for e in (campo["tipos_archivo_permitidos"] or "").split(",") if e.strip()]
+            permitidos = extensiones_permitidas(campo["tipos_archivo_permitidos"])
             if permitidos and ext not in permitidos:
                 errores.append(f'"{campo["etiqueta"]}": el archivo tiene que ser {", ".join(permitidos)}.')
                 continue
@@ -4963,7 +4981,7 @@ async def api_enviar_tramite_empresa(request: Request):
                 continue
             import os
             ext = os.path.splitext(archivo.filename)[1].lower().lstrip(".")
-            permitidos = [e.strip().lower() for e in (campo["tipos_archivo_permitidos"] or "").split(",") if e.strip()]
+            permitidos = extensiones_permitidas(campo["tipos_archivo_permitidos"])
             if permitidos and ext not in permitidos:
                 errores.append(f'"{campo["etiqueta"]}": el archivo tiene que ser {", ".join(permitidos)}.')
                 continue
