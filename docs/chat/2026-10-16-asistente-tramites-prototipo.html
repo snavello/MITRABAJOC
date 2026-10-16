@@ -1,0 +1,926 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body>
+<title>Piloto de trámites Colm3na</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: banda oscura de credencial; debajo, una sola tarjeta por paso del onboarding y, al final, el resultado en una columna. */
+:root{
+  --tinta:#0a1421; --miel:#f0a01e; --miel-tx:#8f5800;
+  --mesa:#eef1f5; --hoja:#ffffff; --tx:#16202e; --tx2:#556172; --linea:#d5dbe3; --campo:#f7f9fb;
+  --ok:#1f7a4d; --ok-bg:#e3f3ea; --aj:#8a5a00; --aj-bg:#fff1d6; --dv:#a0281e; --dv-bg:#fbe5e2; --ia:#5b3fb8; --ia-bg:#eeeafb;
+  --f-disp:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-tx:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --mesa:#0d1724; --hoja:#142131; --tx:#e6ebf2; --tx2:#9aa7b8; --linea:#26364b; --campo:#0f1a28; --miel-tx:#f3b24a;
+  --ok:#5fd09a; --ok-bg:#12321f; --aj:#f3b24a; --aj-bg:#3a2a0b; --dv:#ff8a7c; --dv-bg:#3d1714; --ia:#b8a6ff; --ia-bg:#241c45; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --mesa:#0d1724; --hoja:#142131; --tx:#e6ebf2; --tx2:#9aa7b8; --linea:#26364b; --campo:#0f1a28; --miel-tx:#f3b24a;
+  --ok:#5fd09a; --ok-bg:#12321f; --aj:#f3b24a; --aj-bg:#3a2a0b; --dv:#ff8a7c; --dv-bg:#3d1714; --ia:#b8a6ff; --ia-bg:#241c45; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--mesa);color:var(--tx);font:16px/1.5 var(--f-tx);margin:0}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.ancho{max-width:880px;margin:0 auto}
+.banda{background:var(--tinta);color:#f4f1ea;position:relative;overflow:hidden}
+.banda canvas{position:absolute;inset:0;width:100%;height:100%}
+.banda .ancho{position:relative;padding-block:24px 20px;display:grid;gap:8px}
+.kicker{font:600 12px/1 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--miel)}
+h1{font:800 clamp(30px,5.4vw,46px)/.98 var(--f-disp);text-transform:uppercase;margin:0;text-wrap:balance}
+.bajada{max-width:60ch;color:#c9d2de;margin:0}
+.progreso{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.progreso span{font:600 12px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:#8f9bad;padding:4px 0;border-bottom:2px solid #ffffff22;flex:1;min-width:90px}
+.progreso span.hecho{color:#f4f1ea;border-color:#f0a01e88}.progreso span.ahora{color:var(--miel);border-color:var(--miel)}
+main{padding-block:24px 64px}
+.tarjeta{background:var(--hoja);border:1px solid var(--linea);border-radius:12px;padding:clamp(18px,4vw,30px);display:grid;gap:18px}
+.tarjeta h2{font:800 clamp(26px,4.4vw,34px)/1.02 var(--f-disp);text-transform:uppercase;margin:0;text-wrap:balance}
+.ayuda{color:var(--tx2);margin:-8px 0 0;max-width:62ch}
+.contador{font:600 13px var(--f-mono);color:var(--miel-tx);letter-spacing:.06em}
+.barra{height:4px;background:var(--linea);border-radius:4px;overflow:hidden}.barra i{display:block;height:100%;background:var(--miel);transition:width .3s}
+textarea,input[type=text],select{font:16px var(--f-tx);color:var(--tx);background:var(--campo);border:1px solid var(--linea);border-radius:8px;padding:10px 12px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:180px;line-height:1.5}
+.btn{font:600 15px var(--f-tx);border:1px solid var(--linea);background:var(--hoja);color:var(--tx);padding:10px 16px;border-radius:8px;cursor:pointer}
+.btn:hover{border-color:var(--miel)}
+.btn-miel{background:var(--miel);border-color:var(--miel);color:#1a1205}
+.btn:disabled{opacity:.55;cursor:default}
+.btn-link{all:unset;cursor:pointer;color:var(--miel-tx);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+:focus-visible{outline:2px solid var(--miel);outline-offset:2px}
+.acciones{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.acciones .der{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.estado-ia{color:var(--tx2);font-size:15px}
+.opciones{display:grid;gap:10px}
+.op{display:flex;gap:12px;align-items:center;padding:13px 14px;border:1.5px solid var(--linea);border-radius:10px;cursor:pointer;background:var(--hoja)}
+.op:hover{border-color:var(--miel)}
+.op input{appearance:none;-webkit-appearance:none;width:20px;height:20px;flex:none;margin:0;border:2px solid var(--tx2);background:var(--hoja);display:grid;place-content:center;cursor:pointer}
+.op input[type=radio]{border-radius:50%}
+.op input[type=checkbox]{border-radius:5px}
+.op input:checked{border-color:var(--miel);background:var(--miel)}
+.op input[type=radio]:checked::after{content:"";width:8px;height:8px;border-radius:50%;background:#1a1205}
+.op input[type=checkbox]:checked::after{content:"";width:5px;height:10px;border:solid #1a1205;border-width:0 2.5px 2.5px 0;transform:translateY(-1px) rotate(45deg)}
+.op.excl{border-style:dashed}
+.multi-nota{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:14px;color:var(--tx2)}
+.multi-nota b{font:600 13px var(--f-mono);color:var(--miel-tx)}
+.op.sel{border-color:var(--miel);background:color-mix(in srgb,var(--miel) 9%,var(--hoja))}
+.op .t{flex:1;min-width:0}
+.marca-ia{font:600 11px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ia);background:var(--ia-bg);padding:5px 7px;border-radius:4px;white-space:nowrap}
+.extra{display:grid;gap:6px;font-weight:600;font-size:15px}
+.entendi{display:grid;gap:0;border:1px solid var(--linea);border-radius:10px;overflow:hidden}
+.entendi div{display:grid;grid-template-columns:170px 1fr;gap:12px;padding:10px 14px;border-top:1px solid var(--linea)}
+.entendi div:first-child{border-top:0}
+.entendi dt{color:var(--tx2);font-weight:600;font-size:14px}.entendi dd{margin:0;min-width:0}
+@media (max-width:560px){.entendi div{grid-template-columns:1fr;gap:2px}}
+.dudas{margin:0;padding-left:20px;color:var(--tx2)}
+.tabla-wrap{overflow-x:auto;border:1px solid var(--linea);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{font:600 12px var(--f-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--tx2);text-align:left;padding:8px;background:var(--campo);border-bottom:1px solid var(--linea);white-space:nowrap}
+td{padding:6px 8px;border-bottom:1px solid var(--linea);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td input[type=text],td select{padding:7px 8px;font-size:14px}
+.x{all:unset;cursor:pointer;color:var(--tx2);padding:4px 8px;border-radius:6px}.x:hover{color:var(--dv)}
+.mono{font-family:var(--f-mono);font-size:13px}
+/* resultado */
+.res{display:grid;gap:22px}
+.res-cab{display:grid;gap:6px}
+.res-cab h2{font:800 clamp(30px,5vw,40px)/1 var(--f-disp);text-transform:uppercase;margin:0}
+.sec{background:var(--hoja);border:1px solid var(--linea);border-radius:12px;padding:clamp(16px,3.5vw,26px);display:grid;gap:14px;min-width:0}
+.sec h3{font:700 22px/1.05 var(--f-disp);text-transform:uppercase;letter-spacing:.02em;margin:0}
+.sec-cab{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.pestanas{display:inline-flex;border:1px solid var(--linea);border-radius:8px;overflow:hidden}
+.pestanas button{all:unset;cursor:pointer;padding:7px 12px;font:600 14px var(--f-tx);color:var(--tx2)}
+.pestanas button[aria-pressed="true"]{background:var(--miel);color:#1a1205}
+.diagrama{overflow-x:auto;border:1px solid var(--linea);border-radius:10px;background:var(--campo)}
+.diagrama svg{display:block}
+svg .carril-fondo{fill:var(--hoja)} svg .carril-alt{fill:var(--campo)} svg .carril-cab{fill:var(--mesa)}
+svg .carril-sub.fuera{font-style:italic}
+svg .nodo.gate{fill:var(--hoja);stroke:var(--miel);stroke-width:1.6}
+svg .gate-x{fill:var(--miel-tx);font:700 18px var(--f-tx)}
+svg .nodo.cierra{stroke:var(--ok);stroke-width:2}
+svg .evento{fill:var(--hoja);stroke:var(--tx2);stroke-width:1.6}
+svg .evento.fin{stroke:var(--ok);stroke-width:4}
+svg .evento-tx{fill:var(--tx);font:600 12px var(--f-tx)}
+svg .flecha.msg{stroke-dasharray:6 4}
+svg .punta-m{fill:var(--hoja);stroke:var(--tx2);stroke-width:1.2}
+svg .flecha-tx{paint-order:stroke;stroke:var(--hoja);stroke-width:4px;stroke-linejoin:round}
+.leyenda{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px;color:var(--tx2)}
+.leyenda span{display:inline-flex;align-items:center;gap:6px}
+.leyenda svg{overflow:visible}
+svg .carril-tx{fill:var(--tx);font:700 14px var(--f-disp);text-transform:uppercase;letter-spacing:.03em}
+svg .carril-sub{fill:var(--tx2);font:12px var(--f-tx)}
+svg .div{stroke:var(--linea)}
+svg .nodo{fill:var(--hoja);stroke:var(--tx2);stroke-width:1.2}
+svg .nodo.enc{fill:var(--ia-bg);stroke:var(--ia);stroke-dasharray:5 3}
+svg .nodo.ext{fill:var(--campo);stroke:var(--tx2);stroke-dasharray:3 3}
+svg .nodo.fin{stroke:var(--ok);stroke-width:2}
+svg .nodo-tx{fill:var(--tx);font:600 13px var(--f-tx)}
+svg .nodo-est{letter-spacing:.06em;fill:var(--miel-tx);font:600 10.5px var(--f-mono);letter-spacing:.04em;text-transform:uppercase}
+svg .flecha{fill:none;stroke:var(--tx2);stroke-width:1.5}
+svg .flecha.alt{stroke-dasharray:5 4}
+svg .flecha-tx{fill:var(--tx2);font:12px var(--f-tx)}
+svg .punta{fill:var(--tx2)}
+.estados{display:grid;gap:0}
+.est{display:grid;grid-template-columns:28px 1fr;gap:14px}
+.est .pto{display:flex;flex-direction:column;align-items:center}
+.est .pto b{width:14px;height:14px;border-radius:50%;border:2px solid var(--miel);background:var(--hoja);margin-top:5px;flex:none}
+.est .pto i{flex:1;width:2px;background:var(--linea);margin-top:2px}
+.est:last-child .pto i{display:none}
+.est.fin .pto b{background:var(--ok);border-color:var(--ok)}
+.est .cuerpo{padding-bottom:18px;min-width:0}
+.est .nom{font:700 13px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--miel-tx)}
+.burbuja{margin-top:6px;background:var(--campo);border:1px solid var(--linea);border-radius:12px 12px 12px 3px;padding:9px 12px;max-width:52ch;font-size:15px}
+.burbuja small{display:block;color:var(--tx2);font-size:12px;margin-bottom:2px}
+.instr{margin:0;padding-left:22px;display:grid;gap:10px}
+.instr li::marker{font:700 16px var(--f-disp);color:var(--miel-tx)}
+.ruta{font:500 13px var(--f-mono);background:var(--campo);border:1px solid var(--linea);padding:1px 6px;border-radius:4px;white-space:nowrap}
+.grupo{display:grid;gap:10px}
+.grupo h4{font:700 15px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;margin:4px 0 0;display:flex;gap:10px;align-items:center}
+.sello{display:inline-block;font:700 11px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;padding:5px 7px;border-radius:4px;border:1.5px solid currentColor;white-space:nowrap}
+.s-ok{color:var(--ok);background:var(--ok-bg)}.s-aj{color:var(--aj);background:var(--aj-bg)}.s-dv{color:var(--dv);background:var(--dv-bg)}
+.item{border:1px solid var(--linea);border-radius:8px;padding:12px 14px;display:grid;gap:4px}
+.item b{font-weight:600}
+.item p{margin:0;color:var(--tx2);font-size:15px}
+.item.aj{border-left:4px solid var(--aj)}.item.dv{border-left:4px solid var(--dv)}.item.ok{border-left:4px solid var(--ok)}
+.preguntas{margin:0;padding-left:22px;display:grid;gap:6px}
+pre.json{white-space:pre;font:12.5px/1.5 var(--f-mono);background:var(--campo);border:1px solid var(--linea);border-radius:8px;padding:14px;max-height:340px;overflow:auto;margin:0}
+.nota{font-size:14px;color:var(--tx2);margin:0}
+.salida-ia{white-space:pre-wrap;background:var(--campo);border:1px solid var(--linea);border-radius:8px;padding:12px;font-size:15px}
+/* Teléfono "Vista del afiliado": copia del constructor de Trámites (admin.html, .ttp-*). Colores de marca fijos del sindicato, no del tema. */
+.vp-fila{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start}
+.vp-col{display:grid;gap:8px;width:340px;max-width:100%}
+.vp-rot{font:700 15px var(--f-disp);text-transform:uppercase;letter-spacing:.04em;color:var(--tx2)}
+.vp-marco{--mb:#132a4a;--mp:#1d4e89;--ma:#e8b84b;--vt:#152238;--vg:#5b6478;--vl:#e4e7ec;--vpap:#f6f7f9;background:var(--mb);border-radius:26px;padding:10px;box-shadow:0 16px 38px rgba(15,27,45,.30);color-scheme:light}
+.vp-pant{background:var(--vpap);border-radius:18px;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--vt);line-height:1.5}
+.vp-car{color:#fff;padding:14px 14px 11px;background:var(--mb);background-image:linear-gradient(140deg,var(--mb) 30%,color-mix(in srgb,var(--mp) 60%,var(--mb)))}
+.vp-car .tit{font:700 18px/1.02 var(--f-disp);letter-spacing:.012em;text-transform:uppercase}
+.vp-car .meta{display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap}
+.vp-car .cod{font:9.5px ui-monospace,Consolas,monospace;border:1px solid rgba(255,255,255,.34);border-radius:4px;padding:1px 7px;letter-spacing:1px}
+.vp-car .exp{font:9px ui-monospace,Consolas,monospace;color:rgba(255,255,255,.6)}
+.vp-cuerpo{padding:12px}
+.vp-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:0 12px}
+.vp-completo{grid-column:span 12}.vp-mitad{grid-column:span 6}.vp-tercio{grid-column:span 4}
+.vp-campo{margin-bottom:14px;min-width:0}
+.vp-campo>label{display:block;font-size:10.5px;color:var(--vg);margin-bottom:6px}
+.vp-sep{grid-column:1/-1;border:none;border-top:1px solid var(--vl);margin:2px 0 12px}
+.vp-in{display:block;width:100%;padding:7px 9px;border:1px solid var(--vl);border-radius:10px;font:12px system-ui,sans-serif;background:#fff;color:var(--vt);min-height:31px}
+.vp-in.ph{color:#9aa2b1}
+.vp-arch{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:8px;border:1px solid #b4b2a9;border-radius:10px;background:#fff;font-size:12px;color:var(--vt)}
+.vp-op{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px;color:var(--vt)}
+.vp-op i{width:16px;height:16px;border:1.5px solid #8a93a3;flex:none;background:#fff}
+.vp-op i.r{border-radius:50%}.vp-op i.c{border-radius:3px}
+.vp-bool{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--vt)}
+.vp-bool i{width:18px;height:18px;border:1.5px solid #8a93a3;border-radius:3px;flex:none;background:#fff}
+.vp-probar{width:100%;background:var(--ma);color:var(--mb);border:none;border-radius:9px;padding:9px;margin-top:4px;font:700 15px var(--f-disp);letter-spacing:.8px;text-transform:uppercase;cursor:default}
+.vp-pend{display:inline-block;margin-left:4px;font:600 9px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:#8a5a00;background:#fff1d6;border-radius:3px;padding:1px 4px;vertical-align:1px}
+@media (prefers-reduced-motion:no-preference){.tarjeta,.res{animation:entra .3s ease-out}@keyframes entra{from{opacity:.5;transform:translateY(5px)}to{opacity:1;transform:none}}}
+</style>
+
+<header class="banda">
+  <canvas id="panal" aria-hidden="true"></canvas>
+  <div class="ancho gut">
+    <div class="kicker">Colm3na · Asistente de trámites</div>
+    <h1>Del pedido del sindicato al formulario</h1>
+    <p class="bajada">Contá qué necesitan, respondé unas preguntas y te queda la instrucción para crear el formulario, el circuito dibujado y lo que hay que preparar antes.</p>
+    <div class="progreso" id="progreso"></div>
+  </div>
+</header>
+<main class="gut"><div class="ancho" id="raiz"></div></main>
+
+<script>
+/* ===== Lo que Colm3na tiene hoy (verificado en el código, oct 2026) ===== */
+const TIPOS = {texto:"Texto", numero:"Número", fecha:"Fecha", archivo:"Archivo", seleccion:"Lista desplegable",
+  opcion_unica:"Opción única", multiple:"Opción múltiple", booleano:"Sí / No", separador:"Separador"};
+const ANCHO = {texto:"completo", numero:"tercio", fecha:"tercio", archivo:"completo", seleccion:"mitad", opcion_unica:"mitad", multiple:"completo", booleano:"mitad", separador:"completo"};
+const CON_OPC = ["seleccion","opcion_unica","multiple"];
+const ARCH_DEF = "pdf,jpg,jpeg,png";
+const CONTROLES = {"":"Ninguno", no_futura:"Fecha no futura", desde_hoy:"Fecha desde hoy", rango:"Número entre mín. y máx.", largo_max:"Largo máximo", largo_exacto:"Largo exacto",
+  unico:"No repetir entre pedidos", depende:"Depende de otra respuesta", lista:"Contra una lista del sindicato", formato:"Formato (mail, teléfono)"};
+const CONTROL_BRECHA = {unico:"duplicados", depende:"dependencia", lista:"lista", formato:"formato"};
+const ESTADOS = {iniciado:"Iniciado", en_tratamiento:"En tratamiento", espera_info:"A la espera de info", respondido:"Respondido", terminado:"Terminado"};
+
+const BRECHAS = {
+  ventana:{t:"Abrir y cerrar el formulario por fechas", n:"aj", tam:"chico",
+    hoy:"Alguien del sindicato activa el formulario el día de apertura y lo desactiva al cierre. La noticia que lo anuncia sí vence sola.",
+    rec:"Fecha desde / hasta en el tipo de trámite, con el mismo criterio de vigencia que Noticias."},
+  requisitos:{t:"Controlar requisitos antes de dejar iniciar", n:"dv", tam:"mediano",
+    hoy:"Cualquier afiliado puede iniciarlo. El área controla el requisito al revisar y, si no lo cumple, responde y cierra.",
+    rec:"Fase 2 de validaciones del BACKLOG (fuente «sistema»): antigüedad, titularidad y edad calculadas desde el padrón, antes de mostrar los campos."},
+  familia:{t:"Familiares declarados una sola vez", n:"dv", tam:"grande",
+    hoy:"El formulario pide los datos y documentos del familiar en cada pedido.",
+    rec:"Grupo familiar en el perfil del afiliado, validado una vez y reutilizable por todos los trámites."},
+  duplicados:{t:"Evitar pedidos repetidos", n:"aj", tam:"chico",
+    hoy:"Nada impide presentar dos veces lo mismo. El área lo detecta al revisar.",
+    rec:"Marca «único por afiliado» sobre un campo clave (DNI del familiar, período) que avise o bloquee."},
+  dependencia:{t:"Una respuesta que depende de otra", n:"aj", tam:"chico",
+    hoy:"Las reglas entre campos comparan solo números o fechas. Salida: unir las dos preguntas en una lista («Primaria 1.º», «Primaria 2.º»…).",
+    rec:"Opciones dependientes en el constructor, evaluadas también en el servidor."},
+  lista:{t:"Controlar contra una lista del sindicato", n:"dv", tam:"mediano",
+    hoy:"El área lo verifica a mano contra su propia base.",
+    rec:"Fase 3 de validaciones del BACKLOG (fuente «lista»): lista cargada por CSV, con límite de intentos."},
+  formato:{t:"Validar mail o teléfono", n:"aj", tam:"chico",
+    hoy:"Se carga como texto libre; solo se controla el largo.",
+    rec:"Formatos cerrados (mail, teléfono, CBU/CVU) como validación fija sobre texto."},
+  cupo:{t:"Cupo o stock por seccional", n:"dv", tam:"mediano",
+    hoy:"El área lleva las unidades en su planilla y avisa por el chat si se agotaron.",
+    rec:"Cupos por formulario y seccional que se descuentan al aprobar y cierran el formulario al llegar a cero."},
+  exportar:{t:"Listado de pedidos con sus respuestas", n:"aj", tam:"chico",
+    hoy:"El Panel Sindical lista expediente, seccional, estado y días, pero no las respuestas.",
+    rec:"Exportar a CSV los trámites de un formulario con una columna por campo, filtrado por seccional y estado."},
+  entrega:{t:"Registrar la entrega", n:"aj", tam:"mediano",
+    hoy:"Al entregar, el área pasa el trámite a Terminado con un mensaje. El afiliado se identifica con su credencial digital.",
+    rec:"Cerrar el expediente escaneando el QR de la credencial desde el panel, con fecha, lugar y operador."},
+  turnos:{t:"Turnos con agenda", n:"dv", tam:"grande",
+    hoy:"El área le manda un formulario «Confirmar turno» con día, hora y lugar.",
+    rec:"Agenda por área y seccional con franjas y cupo, que el afiliado elige en el trámite."},
+  pago:{t:"Pago o reintegro dentro del trámite", n:"dv", tam:"grande",
+    hoy:"El sindicato paga por su circuito y lo informa por el chat; el afiliado adjunta comprobantes como archivo.",
+    rec:"Evaluar con el sindicato si hace falta: muchas veces el comprobante adjunto alcanza."},
+  publico:{t:"Que lo inicie alguien fuera del padrón", n:"dv", tam:"grande",
+    hoy:"Solo inician trámites los afiliados del padrón con cuenta.",
+    rec:"Entrada pública con captcha y mail confirmado que abra un expediente sin cuenta."},
+  encadenado:{t:"Formularios que solo se mandan desde el chat", n:"aj", tam:"chico",
+    hoy:"Para poder adjuntarse en el chat, el formulario tiene que estar activo, y entonces el afiliado también lo ve en «Iniciar trámite». Salida: titularlo «(solo si te lo pide el sindicato)».",
+    rec:"Marca «solo encadenado»: se adjunta desde el chat pero no se lista para iniciar."}
+};
+
+/* ===== Preguntas del onboarding ===== */
+const PREG = [
+  {k:"quien", t:"¿Quién inicia el pedido?", a:"La persona que completa el formulario.",
+    ops:[["afiliado","El afiliado, desde la app"],["empresa","La empresa empleadora"],["publico","Alguien que no está en el padrón (un familiar, un no afiliado)"]]},
+  {k:"frecuencia", t:"¿Cuántas veces lo puede pedir?", a:"Esto define si hace falta controlar pedidos repetidos.",
+    ops:[["libre","Cada vez que lo necesite"],["periodo","Una vez por período o campaña"],["familiar","Uno por cada familiar"],["unica","Una sola vez"]]},
+  {k:"atiende", t:"¿Quién lo recibe y lo revisa?", a:"En Colm3na cada área pertenece a una seccional.",
+    ops:[["seccional","Un área de la seccional del afiliado"],["central","Siempre la misma área central"]], txt:{k:"area", l:"Nombre del área", ph:"Acción Social"}},
+  {k:"aprueba", t:"¿Hace falta una aprobación?", a:"Si aprueba otra área, el trámite se le pasa desde el chat.",
+    ops:[["misma","Sí, la misma área que lo revisa"],["otra","Sí, otra área"],["no","No, solo se responde"]], txt:{k:"area_aprueba", si:"otra", l:"¿Qué área aprueba?", ph:"Secretaría General"}},
+  {k:"segundo", t:"Después de aprobarlo, ¿hay que pedirle datos nuevos?", a:"Un segundo formulario que el área le manda desde el chat, con datos que después se procesan. Por ejemplo, aprobada la plaza de hotel, el registro de pasajeros que se envía al hotel. Para corregir o completar lo ya enviado alcanza con el chat.",
+    cuando:r => r.aprueba && r.aprueba!=="no", ops:[["no","No, con el chat alcanza"],["si","Sí, un segundo formulario"]],
+    txt:{k:"enc_nombre", si:"si", l:"Nombre del segundo formulario", ph:"Registro de pasajeros"}, txt2:{k:"enc_datos", si:"si", l:"Qué datos pide, separados por coma", ph:"Apellido y nombre, DNI, fecha de nacimiento, parentesco"}},
+  {k:"ventana", t:"¿Tiene fecha de apertura y cierre?", a:"Una campaña con fechas, o un formulario siempre disponible.",
+    ops:[["si","Sí, es una campaña con fechas"],["no","No, está siempre abierto"]], txt:{k:"fechas", si:"si", l:"Fechas aproximadas", ph:"del 1/12 al 31/1"}},
+  {k:"requisitos", t:"¿Qué tiene que cumplir quien lo pide?", a:"Marcá todas las que correspondan.", multi:true, excl:"ninguno",
+    ops:[["antiguedad","Una antigüedad mínima como afiliado"],["titular","Ser el afiliado titular"],["familiar","Tener un familiar a cargo"],["edad","Una edad (propia o del familiar)"],["ninguno","Ninguna: alcanza con estar afiliado"]]},
+  {k:"fin", t:"¿Cómo termina?", a:"Lo último que pasa antes de cerrar el expediente.",
+    ops:[["entrega","Se entrega algo en persona"],["respuesta","Con una respuesta o un documento por el chat"],["turno","Con un turno o una entrevista"],["pago","Con un pago o un reintegro"]], txt:{k:"lugar", si:"entrega", l:"¿Dónde se entrega o retira?", ph:"Sede, delegación, comisión gremial"}},
+  {k:"entrega", t:"¿Quién entrega?", a:"Quien da en mano lo que se pidió. Si no usa el panel de Colm3na, el área registra la entrega después.", cuando:r => r.fin === "entrega",
+    ops:[["area","La misma área que lo atiende"],["delegado_panel","Un delegado que usa el panel de Colm3na"],["delegado","Un delegado sin acceso al panel"],["proveedor","El proveedor lo entrega o lo envía"]],
+    txt:{k:"entrega_quien", si:["delegado_panel","delegado"], l:"¿Cómo se llama ese rol?", ph:"Delegado de la comisión gremial"}},
+  {k:"cupo", t:"¿La cantidad es limitada?", a:"Por ejemplo, unidades por seccional.", cuando:r => r.fin === "entrega",
+    ops:[["si","Sí, hay cupo o stock"],["no","No"]]},
+  {k:"listado", t:"¿Necesitan un listado de los pedidos?", a:"Para compras, logística o para rendir cuentas.",
+    ops:[["si","Sí"],["no","No"]]},
+  {k:"tercero", t:"¿Interviene alguien fuera del sindicato?", a:"Un proveedor, la obra social, un banco. No usa la app.",
+    ops:[["no","No"],["si","Sí"]], txt:{k:"tercero_nombre", si:"si", l:"¿Quién?", ph:"Proveedor de kits"}},
+  {k:"actores", t:"¿Están todos los que intervienen?", a:"Cada uno con lo que hace en el circuito. Si falta alguien, agregalo con su acción y el momento en que actúa.", actores:true},
+  {k:"campos", t:"¿Estos son los datos que se piden?", a:"Revisá, corregí o agregá. El tipo y el control salen del constructor de Colm3na.", campos:true}
+];
+
+/* ===== Ejemplo: kit escolar de La Bancaria (relevamiento T41) ===== */
+const RELATO_EJ = "En La Bancaria queremos pasar a Colm3na el pedido del kit escolar. Lo pide el afiliado titular, uno por cada hijo o nieto en edad escolar, entre principios de diciembre y fines de enero. Carga los datos del chico (apellido y nombre, DNI, fecha de nacimiento y vínculo), el nivel (inicial, primaria hasta 3.º, primaria de 4.º en adelante, secundaria) y el grado, y sube el DNI del chico, la partida de nacimiento la primera vez y la constancia de alumno regular. Lo revisa Acción Social de la seccional del afiliado; si falta algo le pide que lo complete. Cuando lo aprueba, le avisa dónde y cuándo retirarlo: en la sede, en una delegación o en la comisión gremial del banco. Se retira mostrando la credencial. Los kits son limitados por seccional y necesitamos el listado por nivel para la compra al proveedor.";
+const PROP_EJ = {nombre:"Kit escolar 2027", codigo:"KE27",
+  objetivo:"El afiliado pide un kit escolar por cada hijo o nieto en edad escolar y la seccional le avisa dónde retirarlo.",
+  r:{quien:"afiliado", frecuencia:"familiar", atiende:"seccional", area:"Acción Social", aprueba:"misma", area_aprueba:"", segundo:"no", ventana:"si", fechas:"de principios de diciembre a fines de enero",
+     requisitos:["titular","familiar","edad"], fin:"entrega", lugar:"Sede, delegación o comisión gremial del banco", entrega:"delegado", entrega_quien:"Delegado de la comisión gremial", cupo:"si", listado:"si", tercero:"si", tercero_nombre:"Proveedor de kits"},
+  campos:[
+    {e:"¿Es la primera vez que lo pedís para este chico?", t:"booleano", ob:true, op:"", ch:""},
+    {e:"Datos del chico", t:"separador", ob:false, op:"", ch:""},
+    {e:"Apellido y nombre del chico", t:"texto", ob:true, op:"", ch:""},
+    {e:"DNI del chico", t:"numero", ob:true, op:"", ch:"unico"},
+    {e:"Fecha de nacimiento", t:"fecha", ob:true, op:"", ch:"no_futura"},
+    {e:"Vínculo", t:"seleccion", ob:true, op:"Hijo/a, Nieto/a", ch:""},
+    {e:"Nivel", t:"seleccion", ob:true, op:"Inicial, Primaria 1.º a 3.º, Primaria 4.º en adelante, Secundaria", ch:""},
+    {e:"Grado o año", t:"seleccion", ob:true, op:"Sala de 3, Sala de 4, Sala de 5, 1.º, 2.º, 3.º, 4.º, 5.º, 6.º, 7.º", ch:"depende"},
+    {e:"Documentación", t:"separador", ob:false, op:"", ch:""},
+    {e:"DNI del chico, ambas caras", t:"archivo", ob:true, op:ARCH_DEF, ch:""},
+    {e:"Partida de nacimiento (solo la primera vez)", t:"archivo", ob:false, op:ARCH_DEF, ch:""},
+    {e:"Constancia de alumno regular", t:"archivo", ob:true, op:ARCH_DEF, ch:""},
+    {e:"Lugar de retiro", t:"seleccion", ob:true, op:"Sede de la seccional, Delegación, Comisión gremial del banco", ch:""}],
+  dudas:["¿Aprueba la seccional o Acción Social Nacional?","¿Desde qué grado o año ya no corresponde el kit?"]};
+
+/* ===== Estado ===== */
+const clon = o => JSON.parse(JSON.stringify(o));
+const NUEVO = () => ({vista:"inicio", qi:0, relato:"", nombre:"", codigo:"", objetivo:"", r:{requisitos:[]}, ia:[], campos:[], dudas:[], deIA:false, extras:[]});
+let E = NUEVO();
+try{ const g = JSON.parse(localStorage.getItem("asistente-tramites-v2")||"null"); if(g && g.vista) E = Object.assign(NUEVO(), g); }catch(e){}
+const guardar = () => { try{ localStorage.setItem("asistente-tramites-v2", JSON.stringify(E)); }catch(e){} };
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const sigla = s => (s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6);
+const codigoDe = n => sigla((n||"").split(/\s+/).filter(w => w.length > 2 || /\d/.test(w)).map(w => /\d/.test(w) ? w.slice(-2) : w[0]).join("")) || "NUEVO";
+const preguntas = () => PREG.filter(p => !p.cuando || p.cuando(E.r));
+
+/* La IA propone, el motor decide: toda propuesta pasa por acá */
+function aplicarPropuesta(o, deIA){
+  o = o || {};
+  E.nombre = String(o.nombre||"").slice(0,120); E.objetivo = String(o.objetivo||"").slice(0,300);
+  E.codigo = sigla(o.codigo) || codigoDe(E.nombre);
+  const r = o.r || {}, nr = {requisitos:[]}, ia = [];
+  PREG.forEach(p => {
+    if(p.campos || p.actores) return;
+    const v = r[p.k];
+    if(p.multi){ const ok = (Array.isArray(v)?v:[]).filter(x => p.ops.some(([k]) => k===x)); nr[p.k] = ok; if(ok.length) ia.push(p.k); }
+    else if(p.ops.some(([k]) => k===v)){ nr[p.k] = v; ia.push(p.k); }
+    if(p.txt && r[p.txt.k]) nr[p.txt.k] = String(r[p.txt.k]).slice(0,120);
+    if(p.txt2 && r[p.txt2.k]) nr[p.txt2.k] = String(r[p.txt2.k]).slice(0,400);
+  });
+  E.r = nr; E.ia = deIA ? ia : [];
+  E.campos = (Array.isArray(o.campos)?o.campos:[]).slice(0,40).map(c => {
+    const t = TIPOS[c.t] ? c.t : "texto";
+    return {e:String(c.e||"").slice(0,200), t, ob:c.ob !== false && t !== "separador", op:String(c.op || (t==="archivo"?ARCH_DEF:"")).slice(0,500), ch:CONTROLES[c.ch]!==undefined ? c.ch : ""};
+  });
+  if(E.campos.length && E.campos.some(c => c.t==="archivo")) E.campos.forEach(c => { if(c.t==="archivo") c.op = normalizarExt(c.op); });
+  E.dudas = (Array.isArray(o.dudas)?o.dudas:[]).map(String).slice(0,8);
+  E.deIA = !!deIA;
+}
+function normalizarExt(s){
+  let l = (s||"").toLowerCase().split(/[\s,;]+/).map(x => x.replace(/^\./,"")).filter(Boolean);
+  if(!l.length) l = ARCH_DEF.split(",");
+  if(l.includes("jpg") && !l.includes("jpeg")) l.push("jpeg");
+  if(l.includes("jpeg") && !l.includes("jpg")) l.push("jpg");
+  return [...new Set(l)].join(",");
+}
+
+/* ===== Motor: respuestas -> circuito, brechas, configuración ===== */
+function areaAtiende(){ return (E.r.area||"").trim() || "Área que atiende"; }
+const muestraTxt = (tx, v) => tx && (!tx.si || (Array.isArray(tx.si) ? tx.si.includes(v) : tx.si === v));
+const ORDEN_CARRIL = {af:0, at:1, ap:2, dl:3, ex:4};
+function circuito(){
+  const r = E.r, A = areaAtiende(), terc = r.tercero==="si";
+  const L = [], N = [], F = [], D = [], enc = [];
+  const lane = (k, n, s, colm3na=true) => { if(!L.some(l => l.k===k)) L.push({k, n, s, colm3na}); return k; };
+  const nomL = k => (L.find(l => l.k===k)||{}).n;
+  let col = 0;
+  const nd = (id, ln, tipo, txt, est) => { N.push({id, ln, col, tipo, txt, est:est||""}); return id; };
+  const fl = (de, a, t, tipo="seq") => F.push({de, a, t:t||"", tipo});
+  const dato = (d, de, a, canal) => D.push({d, de, a, canal});
+  const AF = r.quien==="empresa" ? "Empresa" : r.quien==="publico" ? "Solicitante" : "Afiliado";
+  lane("af", AF, r.quien==="publico" ? "sin cuenta en la app" : "desde la app");
+  lane("at", A, r.atiende==="central" ? "área central" : "de su seccional");
+  const TN = () => lane("ex", (r.tercero_nombre||"Proveedor").trim(), "fuera de Colm3na", false);
+  const hayArch = E.campos.some(c => c.t==="archivo");
+  nd("ini","af","inicio","Necesita el trámite");
+  col++; nd("env","af","tarea","Completa y envía el formulario","iniciado"); fl("ini","env");
+  dato("Datos del formulario" + (hayArch ? " y documentación adjunta" : ""), AF, A, "Formulario del trámite");
+  col++; nd("rev","at","tarea", hayArch ? "Revisa datos y documentación" : "Revisa los datos","en_tratamiento"); fl("env","rev","envía");
+  let ult = "rev", lbl = "", dec = "at";
+  const hayDocs = hayArch || (r.requisitos||[]).some(x => x!=="ninguno");
+  if(hayDocs){
+    col++; nd("g1","at","gate","¿Está completo?"); fl("rev","g1");
+    nd("corr","af","tarea","Responde en el chat y adjunta lo que falta","espera_info"); fl("g1","corr","No: lo pide por el chat");
+    fl("corr","rev","","vuelta");
+    dato("Pedido de lo que falta", A, AF, "Chat del trámite"); dato("Dato o documento faltante", AF, A, "Chat del trámite, con adjunto");
+    ult = "g1"; lbl = "Sí";
+  }
+  if(r.aprueba==="misma" || r.aprueba==="otra"){
+    if(r.aprueba==="otra"){ dec = lane("ap", (r.area_aprueba||"Área que aprueba").trim(), "recibe el pase"); dato("Trámite completo", A, nomL("ap"), "Pase entre áreas"); }
+    col++; nd("dec", dec, "tarea", r.aprueba==="otra" ? "Recibe el pase, evalúa y decide" : "Evalúa y decide"); fl(ult, "dec", r.aprueba==="otra" ? (lbl ? lbl+": pase" : "pase") : lbl);
+    col++; nd("g2", dec, "gate", "¿Aprobado?"); fl("dec","g2");
+    nd("rech","af","fin","Rechazado","terminado"); fl("g2","rech","No: explica el motivo");
+    dato("Motivo del rechazo", nomL(dec), AF, "Chat del trámite");
+    ult = "g2"; lbl = "Sí";
+  }
+  if(r.segundo==="si" && (r.aprueba==="misma" || r.aprueba==="otra")){
+    const nom = (r.enc_nombre||"Segundo formulario").trim();
+    enc.push({n:nom, campos:datosACampos(r.enc_datos)});
+    col++; nd("pide2", dec, "tarea", `Le manda «${nom}» por el chat`, "respondido"); fl(ult,"pide2",lbl); lbl = "";
+    col++; nd("enc","af","tarea",`Completa «${nom}»`); fl("pide2","enc");
+    dato(nom, AF, nomL(dec), "Segundo formulario (expediente vinculado)");
+    col++; nd("rec", dec, "tarea", "Recibe los datos", "en_tratamiento"); fl("enc","rec","envía");
+    ult = "rec";
+    if(terc){ TN(); nd("ext2","ex","tarea","Recibe los datos"); fl("rec","ext2",nom,"msg"); dato(nom, nomL(dec), nomL("ex"), "Fuera de Colm3na (mail, planilla)"); }
+  }
+  const fin = r.fin || "respuesta";
+  if(fin==="entrega"){
+    const quien = r.entrega || "area", QN = (r.entrega_quien||"Delegado").trim();
+    if(terc || quien==="proveedor"){
+      TN(); nd("prov","ex","tarea", quien==="proveedor" ? "Prepara los envíos" : "Provee lo que se entrega"); fl(ult, "prov", r.listado==="si" ? "listado de pedidos" : "pedido", "msg");
+      dato(r.listado==="si" ? "Listado de pedidos aprobados" : "Pedido de compra", nomL(dec), nomL("ex"), "Fuera de Colm3na (hoy sin exportación)");
+    } else if(r.listado==="si") dato("Listado de pedidos aprobados", nomL(dec), "Compras del sindicato", "Planilla (hoy sin exportación)");
+    col++; nd("aviso", dec, "tarea", quien==="proveedor" ? "Avisa cuándo llega" : "Avisa dónde y cuándo retirar", "respondido"); fl(ult,"aviso",lbl); lbl = "";
+    dato(quien==="proveedor" ? "Fecha de envío" : "Lugar y fecha de retiro", nomL(dec), AF, "Chat del trámite y aviso en la app");
+    if(quien==="proveedor"){
+      col++; nd("entr","ex","tarea","Entrega o envía al afiliado"); fl("prov","entr");
+      col++; nd("cierra", dec, "tarea", "Confirma la entrega y cierra", "terminado"); fl("entr","cierra","informa la entrega","msg");
+      dato("Constancia de entrega", nomL("ex"), nomL(dec), "Fuera de Colm3na");
+    } else {
+      col++; nd("va","af","tarea","Va a retirar con la credencial"); fl("aviso","va");
+      if(quien==="area"){
+        col++; nd("cierra", dec, "tarea", "Entrega, controla la credencial y cierra", "terminado"); fl("va","cierra","muestra la credencial");
+        dato("Credencial digital (QR)", AF, nomL(dec), "Presencial");
+      } else if(quien==="delegado_panel"){
+        lane("dl", QN, "usa el panel");
+        col++; nd("cierra","dl","tarea","Entrega, controla la credencial y cierra","terminado"); fl("va","cierra","muestra la credencial"); fl("aviso","cierra","pase del trámite");
+        dato("Trámite aprobado", nomL(dec), QN, "Pase entre áreas"); dato("Credencial digital (QR)", AF, QN, "Presencial");
+      } else {
+        lane("dl", QN, "sin acceso al panel", false);
+        col++; nd("ent","dl","tarea","Entrega y controla la credencial"); fl("va","ent","muestra la credencial"); fl("aviso","ent","lista de entregas","msg");
+        col++; nd("cierra", dec, "tarea", "Registra la entrega y cierra", "terminado"); fl("ent","cierra","informa la entrega","msg");
+        dato("Lista de quiénes retiran", nomL(dec), QN, "Fuera de Colm3na (planilla)"); dato("Credencial digital (QR)", AF, QN, "Presencial"); dato("Constancia de entrega", QN, nomL(dec), "Fuera de Colm3na");
+      }
+    }
+  } else if(fin==="turno"){
+    col++; nd("tur", dec, "tarea", "Propone día, hora y lugar por el chat", "respondido"); fl(ult,"tur",lbl);
+    col++; nd("conf","af","tarea","Confirma o pide otro horario"); fl("tur","conf");
+    col++; nd("cierra", dec, "tarea", "Atiende y cierra", "terminado"); fl("conf","cierra","asiste");
+    dato("Propuesta de turno", nomL(dec), AF, "Chat del trámite"); dato("Confirmación", AF, nomL(dec), "Chat del trámite");
+  } else if(fin==="pago"){
+    col++; nd("cierra", dec, "tarea", "Paga o reintegra y cierra", "terminado"); fl(ult,"cierra",lbl);
+    dato("Comprobante de pago", nomL(dec), AF, "Chat del trámite, con adjunto");
+    if(terc){ TN(); nd("pagx","ex","tarea","Acredita el pago"); fl("cierra","pagx","orden de pago","msg"); }
+  } else {
+    col++; nd("cierra", dec, "tarea", "Responde por el chat y cierra", "terminado"); fl(ult,"cierra",lbl);
+    dato("Respuesta", nomL(dec), AF, "Chat del trámite");
+  }
+  const lnC = N.find(n => n.id==="cierra").ln;
+  col++; nd("fin", lnC, "fin", "Fin"); fl("cierra","fin");
+  (E.extras||[]).forEach((x,i) => {
+    if(!(x.n||"").trim()) return;
+    const k = "x"+i, ref = N.find(n => n.id===x.despues) || N.find(n => n.id==="rev");
+    lane(k, x.n.trim(), x.colm3na ? "usa Colm3na" : "fuera de Colm3na", !!x.colm3na);
+    N.push({id:k+"n", ln:k, col:ref.col, tipo:"tarea", txt:(x.hace||"Interviene").trim(), est:""});
+    fl(ref.id, k+"n", "", x.colm3na ? "seq" : "msg");
+    if((x.dato||"").trim()) dato(x.dato.trim(), nomL(ref.ln), x.n.trim(), x.colm3na ? "Colm3na" : "Fuera de Colm3na");
+  });
+  L.sort((a,b) => (ORDEN_CARRIL[a.k] ?? 5) - (ORDEN_CARRIL[b.k] ?? 5));
+  return {L, N, F, D, enc, cols:col+1};
+}
+function datosACampos(s){
+  const l = String(s||"").split(",").map(x => x.trim()).filter(Boolean);
+  if(!l.length) return [{e:"Datos solicitados", t:"texto", ob:true, op:"", ch:""}];
+  return l.slice(0,30).map(e => { const n = e.toLowerCase();
+    const t = /fecha|nacimiento|desde|hasta/.test(n) ? "fecha" : /^(dni|cuil|cuit|cantidad|edad)\b/.test(n) ? "numero" : /constancia|comprobante|archivo|foto|copia/.test(n) ? "archivo" : "texto";
+    return {e, t, ob:true, op:t==="archivo"?ARCH_DEF:"", ch:/nacimiento/.test(n)?"no_futura":""}; });
+}
+function brechas(){
+  const r = E.r, b = new Map(), add = (k, why) => { if(!b.has(k)) b.set(k, []); b.get(k).push(why); };
+  if(r.ventana==="si") add("ventana","Es una campaña con fechas.");
+  const req = (r.requisitos||[]).filter(x => x!=="ninguno");
+  if(req.length) add("requisitos","Requisitos: " + req.map(x => PREG.find(p => p.k==="requisitos").ops.find(o=>o[0]===x)[1].toLowerCase()).join(", ") + ".");
+  if(r.frecuencia==="familiar" || req.includes("familiar")) add("familia","Se pide por familiar.");
+  if(["familiar","periodo","unica"].includes(r.frecuencia)) add("duplicados","Tiene límite de pedidos.");
+  if(r.cupo==="si") add("cupo","La cantidad es limitada.");
+  if(r.listado==="si") add("exportar","Piden un listado de los pedidos.");
+  if(r.fin==="entrega") add("entrega","Termina con una entrega en persona.");
+  if(r.fin==="turno") add("turnos","Termina con un turno.");
+  if(r.fin==="pago") add("pago","Termina con un pago o reintegro.");
+  if(r.quien==="publico") add("publico","Lo inicia alguien fuera del padrón.");
+  E.campos.forEach(c => { const k = CONTROL_BRECHA[c.ch]; if(k) add(k, `Campo «${c.e}»: ${CONTROLES[c.ch].toLowerCase()}.`); });
+  if(circuito().enc.length) add("encadenado","Hay formularios que se mandan desde el chat.");
+  return b;
+}
+function camposColm3na(campos){
+  return campos.filter(c => c.e.trim() || c.t==="separador").map(c => {
+    const o = {etiqueta:c.e.trim(), tipo_dato:c.t, longitud_maxima:null, longitud_exacta:null, decimales:null,
+      tipos_archivo_permitidos: c.t==="archivo" ? normalizarExt(c.op) : "", opciones: CON_OPC.includes(c.t) ? c.op.split(",").map(s=>s.trim()).filter(Boolean).join(",") : "",
+      ancho:ANCHO[c.t], obligatorio: c.t==="separador" ? false : !!c.ob, validaciones:[]};
+    if(c.t==="numero") o.decimales = 0;
+    if(c.ch==="no_futura" && c.t==="fecha") o.validaciones.push({fuente:"fija", operador:"<=", valor:"hoy", mensaje:"No puede ser una fecha futura.", bloquea:true});
+    if(c.ch==="desde_hoy" && c.t==="fecha") o.validaciones.push({fuente:"fija", operador:">=", valor:"hoy", mensaje:"Tiene que ser desde hoy en adelante.", bloquea:true});
+    if(CONTROL_BRECHA[c.ch]) o.x_pendiente = CONTROLES[c.ch];
+    return o;
+  });
+}
+function configuracion(){
+  const r = E.r, A = areaAtiende(), c = circuito();
+  const modulos = ["tramites"]; if(r.ventana==="si") modulos.push("notificaciones","noticias");
+  if(r.quien==="empresa") modulos.push("empleadores");
+  const enSecc = r.atiende==="seccional" ? "cada_seccional" : "sede_central";
+  const areas = [{area:A, en:enSecc, permisos:["tramites_recibidos"], para:"recibe y revisa"}], pase = [];
+  if(r.aprueba==="otra" && (r.area_aprueba||"").trim()){ pase.push({area:r.area_aprueba.trim(), en:"sede_central"}); areas.push({area:r.area_aprueba.trim(), en:"sede_central", permisos:["tramites_recibidos"], para:"aprueba"}); }
+  if(r.fin==="entrega" && r.entrega==="delegado_panel"){ const q = (r.entrega_quien||"Delegados").trim(); pase.push({area:q, en:enSecc}); areas.push({area:q, en:enSecc, permisos:["tramites_recibidos"], para:"entrega y cierra"}); }
+  const destino = r.atiende==="seccional"
+    ? {modo:"misma_area_en_cada_seccional", area:A, por_defecto:{area:A, seccional:"Sede Central"}}
+    : {modo:"una_sola_area", area:A, por_defecto:{area:A, seccional:"Sede Central"}};
+  const forms = [{clave:"principal", titulo:E.nombre, codigo:E.codigo || codigoDe(E.nombre), activo:true, seccional:null,
+      destino, permite_pase: pase.length>0, areas_pase: pase, campos:camposColm3na(E.campos), reglas_consistencia:[]}];
+  c.enc.forEach((f,i) => forms.push({clave:"encadenado_"+(i+1), titulo:f.n + " · " + E.nombre, codigo:(E.codigo||"X").slice(0,4)+"C"+(i+1), activo:true, seccional:null,
+      x_solo_encadenado:true, destino, permite_pase:false, areas_pase:[], campos:camposColm3na(f.campos), reglas_consistencia:[]}));
+  return {modulos:[...new Set(modulos)], forms, pase, areas, c};
+}
+const txtPase = pase => pase.map(p => `«${p.area}»${p.en==="cada_seccional" ? " (la de cada seccional)" : ""}`).join(" y ");
+
+/* ===== Vistas ===== */
+const raiz = document.getElementById("raiz");
+function progreso(){
+  const etapas = [["inicio","El pedido"],["entendi","Lo que entendí"],["pregunta","Preguntas"],["resultado","Resultado"]];
+  const i = etapas.findIndex(e => e[0]===E.vista);
+  document.getElementById("progreso").innerHTML = etapas.map((e,j) => `<span class="${j<i?"hecho":j===i?"ahora":""}">${j+1} · ${e[1]}</span>`).join("");
+}
+function ir(v, qi){ E.vista = v; if(qi!==undefined) E.qi = qi; guardar(); render(); window.scrollTo({top:0}); }
+function render(){ progreso(); raiz.innerHTML = ({inicio:vInicio, entendi:vEntendi, pregunta:vPregunta, resultado:vResultado})[E.vista](); enlazar(); }
+
+function vInicio(){
+  return `<section class="tarjeta">
+    <div class="contador">PASO 1</div>
+    <h2>Contá qué necesita el sindicato</h2>
+    <p class="ayuda">Escribilo como te lo contaron: qué quieren resolver, quién lo pide, qué datos y papeles piden, quién lo revisa y cómo termina. Lo que escribís acá manda sobre cualquier otra fuente.</p>
+    <label class="extra" for="relato"><span class="sr" hidden>Relato</span><textarea id="relato" placeholder="Ej.: Queremos que el afiliado pida la ayuda por nacimiento. Manda la partida y el DNI del bebé, lo revisa Acción Social de su seccional y se paga por transferencia…">${esc(E.relato)}</textarea></label>
+    <div class="acciones">
+      <button class="btn-link" type="button" id="usarEj">Cargar el ejemplo del kit escolar</button>
+      <div class="der"><span class="estado-ia" id="estIA" role="status"></span><button class="btn" type="button" id="stopIA" hidden>Detener</button><button class="btn" type="button" id="sinIA">Seguir sin IA</button><button class="btn btn-miel" type="button" id="conIA" hidden>Analizar con IA</button></div>
+    </div>
+  </section>`;
+}
+function vEntendi(){
+  const r = E.r, pq = preguntas();
+  const fila = (t, v) => `<div><dt>${t}</dt><dd>${v || '<span style="color:var(--tx2)">Lo vemos en las preguntas</span>'}</dd></div>`;
+  const etq = (k) => { const p = PREG.find(x => x.k===k); const v = r[k]; if(!v || (Array.isArray(v)&&!v.length)) return ""; return Array.isArray(v) ? v.map(x => p.ops.find(o=>o[0]===x)[1]).join(", ") : (p.ops.find(o=>o[0]===v)||[,""])[1]; };
+  return `<section class="tarjeta">
+    <div class="contador">PASO 2 · ${E.deIA ? "PROPUESTA DE LA IA" : E.nombre ? "PROPUESTA DE EJEMPLO" : "SIN PROPUESTA"}</div>
+    <h2>${E.nombre ? "Esto entendí" : "Arrancamos de cero"}</h2>
+    <p class="ayuda">${E.nombre ? "Todavía no es una conclusión. Ahora vienen las preguntas: lo que ya está propuesto aparece marcado y se confirma con un clic." : "No hay propuesta previa. Las preguntas arman el trámite paso a paso."}</p>
+    <div class="grupo"><label class="extra" for="nombre">Nombre del trámite, como lo va a ver el afiliado<input type="text" id="nombre" value="${esc(E.nombre)}" placeholder="Kit escolar 2027"></label></div>
+    ${E.nombre ? `<dl class="entendi" style="margin:0">
+      ${fila("Para qué sirve", esc(E.objetivo))}
+      ${fila("Quién lo pide", esc(etq("quien")))}
+      ${fila("Quién lo revisa", esc([etq("atiende"), r.area].filter(Boolean).join(" · ")))}
+      ${fila("Cómo termina", esc([etq("fin"), r.lugar].filter(Boolean).join(" · ")))}
+      ${fila("Datos que se piden", E.campos.length ? `${E.campos.filter(c=>c.t!=="separador").length} preguntas, ${E.campos.filter(c=>c.t==="archivo").length} de documentación` : "")}
+    </dl>` : ""}
+    ${E.dudas.length ? `<div class="grupo"><b>Lo que no quedó claro en el relato</b><ul class="dudas">${E.dudas.map(d => `<li>${esc(d)}</li>`).join("")}</ul><p class="nota">Va a quedar en las preguntas pendientes del final.</p></div>` : ""}
+    <div class="acciones"><button class="btn" type="button" data-ir="inicio">← Volver al relato</button><button class="btn btn-miel" type="button" id="aPreg">Empezar las preguntas (${pq.length}) →</button></div>
+  </section>`;
+}
+function vPregunta(){
+  const pq = preguntas(); if(E.qi >= pq.length) E.qi = pq.length - 1;
+  const p = pq[E.qi], r = E.r, deIA = E.ia.includes(p.k);
+  let cuerpo = "";
+  if(p.actores){
+    const c = circuito(), tareas = c.N.filter(n => n.tipo==="tarea" && !/^x\d/.test(n.ln));
+    const actoresBase = c.L.filter(l => !/^x\d/.test(l.k));
+    cuerpo = `<div class="tabla-wrap"><table><thead><tr><th>Actor</th><th>Qué hace</th><th>Usa Colm3na</th></tr></thead><tbody>
+      ${actoresBase.map(l => `<tr><td><b>${esc(l.n)}</b></td><td>${esc(c.N.filter(n => n.ln===l.k && n.tipo==="tarea").map(n => n.txt).join(" · "))}</td><td>${l.colm3na?"Sí":"No"}</td></tr>`).join("")}
+      </tbody></table></div>
+      <p class="nota">Salen de tus respuestas. Para cambiarlos, volvé a la pregunta que corresponde.</p>
+      <b>Agregar a alguien que falta</b>
+      ${(E.extras||[]).length ? `<div class="tabla-wrap"><table><thead><tr><th>Actor</th><th>Qué hace</th><th>Después de</th><th>Dato que recibe</th><th>Usa Colm3na</th><th></th></tr></thead><tbody>
+      ${E.extras.map((x,i) => `<tr>
+        <td style="min-width:150px"><input type="text" id="xn${i}" aria-label="Actor" data-x="${i}" data-f="n" value="${esc(x.n)}" placeholder="Auditoría"></td>
+        <td style="min-width:170px"><input type="text" id="xh${i}" aria-label="Qué hace" data-x="${i}" data-f="hace" value="${esc(x.hace)}" placeholder="Controla el padrón"></td>
+        <td style="min-width:170px"><select id="xd${i}" aria-label="Después de" data-x="${i}" data-f="despues">${tareas.map(n => `<option value="${n.id}" ${x.despues===n.id?"selected":""}>${esc(n.txt)}</option>`).join("")}</select></td>
+        <td style="min-width:150px"><input type="text" id="xa${i}" aria-label="Dato que recibe" data-x="${i}" data-f="dato" value="${esc(x.dato)}" placeholder="opcional"></td>
+        <td><input type="checkbox" id="xc${i}" aria-label="Usa Colm3na" data-x="${i}" data-f="colm3na" ${x.colm3na?"checked":""}></td>
+        <td><button class="x" type="button" data-qx="${i}" aria-label="Quitar">✕</button></td></tr>`).join("")}
+      </tbody></table></div>` : ""}
+      <div><button class="btn" type="button" id="masActor">Agregar actor</button></div>`;
+  } else if(p.campos){
+    cuerpo = `<div class="tabla-wrap"><table><thead><tr><th>Pregunta</th><th>Tipo</th><th>Oblig.</th><th>Opciones o archivos</th><th>Control</th><th></th></tr></thead><tbody>
+      ${E.campos.map((c,i) => `<tr>
+        <td style="min-width:200px"><input type="text" id="ce${i}" aria-label="Pregunta ${i+1}" data-c="${i}" data-f="e" value="${esc(c.e)}"></td>
+        <td style="min-width:150px"><select id="ct${i}" aria-label="Tipo" data-c="${i}" data-f="t">${Object.entries(TIPOS).map(([k,v]) => `<option value="${k}" ${k===c.t?"selected":""}>${v}</option>`).join("")}</select></td>
+        <td><input type="checkbox" id="co${i}" aria-label="Obligatorio" data-c="${i}" data-f="ob" ${c.ob?"checked":""} ${c.t==="separador"?"disabled":""}></td>
+        <td style="min-width:170px"><input type="text" id="cp${i}" aria-label="Opciones" data-c="${i}" data-f="op" value="${esc(c.op)}" placeholder="${CON_OPC.includes(c.t)?"separadas por coma":c.t==="archivo"?ARCH_DEF:"—"}" ${CON_OPC.includes(c.t)||c.t==="archivo"?"":"disabled"}></td>
+        <td style="min-width:170px"><select id="cc${i}" aria-label="Control" data-c="${i}" data-f="ch">${Object.entries(CONTROLES).map(([k,v]) => `<option value="${k}" ${k===c.ch?"selected":""}>${v}</option>`).join("")}</select></td>
+        <td><button class="x" type="button" data-quitar="${i}" aria-label="Quitar">✕</button></td></tr>`).join("")}
+      </tbody></table></div>
+      <div><button class="btn" type="button" id="masCampo">Agregar pregunta</button></div>`;
+  } else {
+    const sel = v => p.multi ? (r[p.k]||[]).includes(v) : r[p.k]===v;
+    const nMarc = p.multi ? (r[p.k]||[]).filter(x => x!==p.excl).length : 0;
+    cuerpo = `${p.multi ? `<div class="multi-nota"><b>VARIAS RESPUESTAS</b><span>${nMarc ? nMarc + (nMarc===1?" marcada":" marcadas") : "Ninguna marcada todavía"}</span>${p.excl ? `<span>«${esc(p.ops.find(o=>o[0]===p.excl)[1].split(":")[0])}» desmarca las demás.</span>` : ""}</div>` : ""}
+    <div class="opciones" role="${p.multi?"group":"radiogroup"}" aria-label="${esc(p.t)}">${p.ops.map(([k,t],j) => `<label class="op ${sel(k)?"sel":""} ${p.excl===k?"excl":""}" for="o${j}">
+      <input type="${p.multi?"checkbox":"radio"}" name="op" id="o${j}" value="${k}" ${sel(k)?"checked":""}><span class="t">${t}</span>${deIA && sel(k) ? '<span class="marca-ia">Propuesto</span>':""}</label>`).join("")}</div>
+      ${muestraTxt(p.txt, r[p.k]) ? `<label class="extra" for="txt">${p.txt.l}<input type="text" id="txt" value="${esc(r[p.txt.k]||"")}" placeholder="${esc(p.txt.ph)}"></label>` : ""}
+      ${muestraTxt(p.txt2, r[p.k]) ? `<label class="extra" for="txt2">${p.txt2.l}<input type="text" id="txt2" value="${esc(r[p.txt2.k]||"")}" placeholder="${esc(p.txt2.ph)}"></label>` : ""}`;
+  }
+  const respondida = p.actores ? true : p.campos ? E.campos.some(c => c.e.trim()) : p.multi ? (r[p.k]||[]).length : !!r[p.k];
+  return `<section class="tarjeta">
+    <div class="contador">PREGUNTA ${E.qi+1} DE ${pq.length}${deIA?" · LA IA PROPUSO UNA RESPUESTA":""}</div>
+    <div class="barra"><i style="width:${Math.round((E.qi+1)/pq.length*100)}%"></i></div>
+    <h2>${p.t}</h2><p class="ayuda">${p.a}</p>
+    ${cuerpo}
+    <div class="acciones"><button class="btn" type="button" id="atras">← ${E.qi?"Anterior":"Lo que entendí"}</button>
+      <div class="der">${respondida?"":'<span class="estado-ia">Sin responder: queda como pendiente</span>'}<button class="btn btn-miel" type="button" id="sig">${E.qi===pq.length-1?"Ver el resultado →":"Siguiente →"}</button></div></div>
+  </section>`;
+}
+
+function svgCircuito(){
+  const {L, N, F, cols} = circuito();
+  const LX = 150, CW = 172, LH = 124, TW = 140, TH = 72, GR = 22, ER = 15;
+  const W = LX + cols*CW + 12, H = L.length*LH;
+  const li = Object.fromEntries(L.map((l,i) => [l.k,i])), ext = Object.fromEntries(L.map(l => [l.k, !l.colm3na]));
+  const G = {};
+  N.forEach(n => { const cx = LX + n.col*CW + CW/2, cy = li[n.ln]*LH + LH/2;
+    const hw = n.tipo==="tarea" ? TW/2 : n.tipo==="gate" ? GR : ER, hh = n.tipo==="tarea" ? TH/2 : n.tipo==="gate" ? GR : ER;
+    G[n.id] = {n, cx, cy, hw, hh, l:cx-hw, r:cx+hw, t:cy-hh, b:cy+hh}; });
+  const partir = (t, m) => { const w = String(t).split(" "), l = [""]; w.forEach(p => { if((l[l.length-1]+" "+p).trim().length > m) l.push(p); else l[l.length-1] = (l[l.length-1]+" "+p).trim(); }); return l.slice(0,3); };
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Diagrama de flujo del trámite por actor">
+  <defs><marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="punta" d="M0,0 L10,5 L0,10 z"/></marker>
+  <marker id="flm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path class="punta-m" d="M1,1 L9,5 L1,9 z"/></marker>
+  <marker id="om" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7"><circle class="punta-m" cx="5" cy="5" r="3.5"/></marker></defs>`;
+  L.forEach((l,i) => { const y = i*LH, lin = partir(l.n, 15);
+    s += `<rect class="${i%2?"carril-alt":"carril-fondo"}" x="0" y="${y}" width="${W}" height="${LH}"/><rect class="carril-cab" x="0" y="${y}" width="${LX-10}" height="${LH}"/>`;
+    lin.forEach((t,j) => s += `<text class="carril-tx" x="12" y="${y+LH/2-6-(lin.length-1)*8+j*16}">${esc(t)}</text>`);
+    s += `<text class="carril-sub ${l.colm3na?"":"fuera"}" x="12" y="${y+LH/2+12+(lin.length-1)*8}">${esc(l.s)}</text>`;
+    if(i) s += `<line class="div" x1="0" x2="${W}" y1="${y}" y2="${y}"/>`; });
+  s += `<line class="div" x1="${LX-10}" x2="${LX-10}" y1="0" y2="${H}"/>`;
+  F.forEach(f => {
+    const a = G[f.de], b = G[f.a]; if(!a || !b) return;
+    let d, tx, ty, anc = "middle";
+    if(f.tipo==="vuelta"){ d = `M${a.l},${a.cy} H${b.cx} V${b.cy>a.cy ? b.t : b.b}`; }
+    else if(a.cy===b.cy && b.cx>a.cx){ d = `M${a.r},${a.cy} H${b.l}`; tx = (a.r+b.l)/2; ty = a.cy-7; }
+    else if(a.cx===b.cx){ const up = b.cy<a.cy; d = `M${a.cx},${up?a.t:a.b} V${up?b.b:b.t}`; tx = a.cx+7; ty = (a.cy+b.cy)/2+4; anc = "start"; }
+    else if(b.cx>a.cx){ const mx = Math.round((a.r+b.l)/2); d = `M${a.r},${a.cy} H${mx} V${b.cy} H${b.l}`; tx = mx+6; ty = (a.cy+b.cy)/2+4; anc = "start"; }
+    else { d = `M${a.cx},${b.cy>a.cy?a.b:a.t} V${b.cy} H${b.r}`; tx = a.cx+7; ty = (a.cy+b.cy)/2; anc = "start"; }
+    const msg = f.tipo==="msg";
+    s += `<path class="flecha ${msg?"msg":""}" d="${d}" marker-end="url(#${msg?"flm":"fl"})" ${msg?'marker-start="url(#om)"':""}/>`;
+    if(f.t) partir(f.t, 22).forEach((t,j) => s += `<text class="flecha-tx" x="${tx}" y="${ty+j*13}" text-anchor="${anc}">${esc(t)}</text>`);
+  });
+  N.forEach(n => { const g = G[n.id];
+    if(n.tipo==="tarea"){ const l = partir(n.txt, 19), fuera = ext[n.ln];
+      s += `<rect class="nodo ${fuera?"ext":""} ${n.id==="cierra"?"cierra":""}" x="${g.l}" y="${g.t}" width="${TW}" height="${TH}" rx="10"/>`;
+      if(n.est) s += `<text class="nodo-est" x="${g.cx}" y="${g.t+14}" text-anchor="middle">${ESTADOS[n.est]}</text>`;
+      const y0 = g.cy + (n.est ? 12 : 5) - (l.length-1)*8;
+      l.forEach((t,j) => s += `<text class="nodo-tx" x="${g.cx}" y="${y0+j*16}" text-anchor="middle">${esc(t)}</text>`);
+    } else if(n.tipo==="gate"){
+      s += `<polygon class="nodo gate" points="${g.cx},${g.t} ${g.r},${g.cy} ${g.cx},${g.b} ${g.l},${g.cy}"/><text class="gate-x" x="${g.cx}" y="${g.cy+6}" text-anchor="middle">×</text>`;
+      s += `<text class="nodo-tx" x="${g.cx-10}" y="${g.t-4}" text-anchor="end">${esc(n.txt)}</text>`;
+    } else {
+      s += `<circle class="evento ${n.tipo}" cx="${g.cx}" cy="${g.cy}" r="${ER}"/>`;
+      partir(n.txt, 16).forEach((t,j) => s += `<text class="evento-tx" x="${g.cx}" y="${g.b+16+j*14}" text-anchor="middle">${esc(t)}</text>`);
+    }
+  });
+  return s + "</svg>";
+}
+const LEYENDA = `<div class="leyenda" aria-label="Referencias del diagrama">
+  <span><svg width="22" height="22" viewBox="0 0 22 22"><circle class="evento inicio" cx="11" cy="11" r="8"/></svg>Inicio</span>
+  <span><svg width="30" height="20" viewBox="0 0 30 20"><rect class="nodo" x="1" y="2" width="28" height="16" rx="4"/></svg>Acción en Colm3na</span>
+  <span><svg width="30" height="20" viewBox="0 0 30 20"><rect class="nodo ext" x="1" y="2" width="28" height="16" rx="4"/></svg>Acción fuera de Colm3na</span>
+  <span><svg width="22" height="22" viewBox="0 0 22 22"><polygon class="nodo gate" points="11,2 20,11 11,20 2,11"/></svg>Decisión</span>
+  <span><svg width="22" height="22" viewBox="0 0 22 22"><circle class="evento fin" cx="11" cy="11" r="8"/></svg>Fin</span>
+  <span><svg width="34" height="12" viewBox="0 0 34 12"><path class="flecha" d="M1,6 H30" marker-end="url(#fl)"/></svg>Sigue el flujo</span>
+  <span><svg width="34" height="12" viewBox="0 0 34 12"><path class="flecha msg" d="M4,6 H30"/></svg>Mensaje o dato fuera de Colm3na</span>
+</div>`;
+function vistaEstados(){
+  const r = E.r, A = areaAtiende(), cod = E.codigo||"COD", c = circuito();
+  const usados = new Set(c.N.filter(n => n.id!=="rech").map(n => n.est).filter(Boolean));
+  const msg = {iniciado:`Recibimos tu pedido. Expediente ${cod}-AAAA-000001.`, en_tratamiento:`${A} está revisando tu pedido.`,
+    espera_info:`Nos falta la constancia de alumno regular. Respondenos por acá y adjuntala.`,
+    respondido: r.segundo==="si" && r.aprueba!=="no" ? `Tu pedido fue aprobado. Para seguir, completá «${(r.enc_nombre||"el formulario").trim()}» que te mandamos acá.` : r.fin==="turno" ? "Te proponemos el martes a las 10 en la sede. Confirmanos por acá o pedinos otro horario." : r.aprueba==="no" ? "Te respondimos." : `Tu pedido fue aprobado.${r.fin==="entrega"?" Retiralo en "+(r.lugar||"el lugar indicado")+" con tu credencial.":""}`,
+    terminado: r.fin==="entrega" ? "Entregado. Cerramos el trámite." : "Trámite terminado."};
+  return `<div class="estados">${Object.keys(ESTADOS).filter(k => usados.has(k)).map(k => `<div class="est ${k==="terminado"?"fin":""}"><div class="pto"><b></b><i></i></div>
+    <div class="cuerpo"><div class="nom">${ESTADOS[k]}${k==="espera_info"?" · puede repetirse":""}</div><div class="burbuja"><small>${esc(A)} · en el chat del trámite</small>${esc(msg[k])}</div></div></div>`).join("")}</div>
+    <p class="nota">Así lo ve el afiliado en el chat de su trámite. Cada cambio de estado va con un mensaje, en un solo acto.</p>`;
+}
+function vResultado(){
+  const r = E.r, A = areaAtiende(), cfg = configuracion(), B = brechas(), principal = cfg.forms[0];
+  const nCampos = principal.campos.filter(c => c.tipo_dato!=="separador").length;
+  const listaB = [...B.entries()];
+  const dev = listaB.filter(([k]) => BRECHAS[k].n==="dv"), aj = listaB.filter(([k]) => BRECHAS[k].n==="aj");
+  const pendientes = [...E.dudas];
+  preguntas().forEach(p => { if(p.actores) return; const v = p.campos ? E.campos.length : p.multi ? (r[p.k]||[]).length : r[p.k]; if(!v) pendientes.push(p.t); });
+  listaB.forEach(([k]) => pendientes.push(`¿Aceptan arrancar así mientras tanto? ${BRECHAS[k].t}: ${BRECHAS[k].hoy}`));
+  const destinoTxt = r.atiende==="seccional"
+    ? `Que caiga a «${esc(A)}» de la seccional de cada afiliado: en el mapa por seccional, cada seccional apunta a su propia «${esc(A)}». Destino por defecto: «${esc(A)}» de Sede Central.`
+    : `Que caiga siempre a «${esc(A)}». Destino por defecto: esa misma área.`;
+  return `<div class="res">
+    <div class="res-cab"><div class="contador">RESULTADO</div><h2>${esc(E.nombre||"Trámite sin nombre")}</h2><p class="ayuda" style="margin:0">${esc(E.objetivo)}</p></div>
+
+    <section class="sec"><div class="sec-cab"><h3>El circuito</h3><div class="pestanas" role="group" aria-label="Vista del circuito">
+      <button type="button" data-vc="carriles" aria-pressed="${E.vc!=="estados"}">Diagrama de flujo</button><button type="button" data-vc="estados" aria-pressed="${E.vc==="estados"}">Lo que ve el afiliado</button></div></div>
+      ${E.vc==="estados" ? vistaEstados() : `<p class="nota">Un carril por actor. Se lee de izquierda a derecha, del inicio al fin. Arriba de cada acción, el estado en que queda el expediente.</p>
+        <div class="diagrama">${svgCircuito()}</div>${LEYENDA}`}
+    </section>
+
+    <section class="sec"><h3>Quién hace qué</h3>
+      <div class="tabla-wrap"><table><thead><tr><th>Actor</th><th>Usa Colm3na</th><th>Qué hace</th><th>Qué necesita</th></tr></thead><tbody>
+      ${cfg.c.L.map(l => `<tr><td><b>${esc(l.n)}</b></td><td>${l.colm3na ? "Sí" : "No"}</td><td>${esc(cfg.c.N.filter(n => n.ln===l.k && n.tipo==="tarea").map(n => n.txt).join(" · "))}</td><td>${esc(necesita(l, cfg))}</td></tr>`).join("")}
+      </tbody></table></div>
+    </section>
+
+    <section class="sec"><h3>Qué datos circulan</h3>
+      <div class="tabla-wrap"><table><thead><tr><th>Dato</th><th>De</th><th>A</th><th>Por dónde</th></tr></thead><tbody>
+      ${cfg.c.D.map(d => `<tr><td>${esc(d.d)}</td><td>${esc(d.de)}</td><td>${esc(d.a)}</td><td>${esc(d.canal)}</td></tr>`).join("")}
+      </tbody></table></div>
+      <p class="nota">Lo que va «fuera de Colm3na» queda sin registro en el expediente: conviene acordar el canal con el sindicato.</p>
+    </section>
+
+    <section class="sec"><h3>Instrucción para crear el formulario</h3>
+      <ol class="instr">
+        ${cfg.forms.length>1 ? `<li>Crear primero ${cfg.forms.slice(1).map(f => `«${esc(f.titulo)}»`).join(" y ")}, cada uno con ${cfg.forms.slice(1).map(f => f.campos.length).join(" y ")} campos (están en el JSON), mismo destino que el principal. Dejarlos activos: se adjuntan desde el chat.</li>` : ""}
+        <li>En <span class="ruta">Trámites → Crear formularios</span>, crear «${esc(principal.titulo||"…")}» con código <span class="mono">${esc(principal.codigo)}</span>, para todo el sindicato, con ${nCampos} preguntas:
+          <div class="tabla-wrap" style="margin-top:8px"><table><thead><tr><th>#</th><th>Pregunta</th><th>Tipo</th><th>Oblig.</th><th>Opciones / archivos</th><th>Control</th></tr></thead><tbody>
+          ${principal.campos.map((c,i) => `<tr><td class="mono">${i+1}</td><td>${esc(c.etiqueta||"(raya)")}</td><td>${TIPOS[c.tipo_dato]}</td><td>${c.tipo_dato==="separador"?"—":c.obligatorio?"Sí":"No"}</td><td class="mono">${esc(c.opciones||c.tipos_archivo_permitidos)||"—"}</td>
+            <td>${c.validaciones.length ? esc(c.validaciones.map(v => v.mensaje).join(" ")) : c.x_pendiente ? `<span class="sello s-aj">Pendiente</span> ${esc(c.x_pendiente)}` : "—"}</td></tr>`).join("")}
+          </tbody></table></div></li>
+        <li>${destinoTxt}</li>
+        <li>${cfg.pase.length ? `Tildar «Permite pase» y agregar a la lista ${esc(txtPase(cfg.pase))}.` : "Sin pase entre áreas."}</li>
+        <li>Probar con el banco de pruebas del constructor y con un pedido de punta a punta en Pruebas.</li>
+        ${r.ventana==="si" ? `<li>Anunciarlo con una Noticia con el formulario para iniciar${r.fechas?" ("+esc(r.fechas)+")":""}, y una Notificación a las seccionales. Activar el formulario al abrir y desactivarlo al cerrar.</li>` : ""}
+      </ol>
+    </section>
+
+    <section class="sec"><h3>Así queda el formulario</h3>
+      <p class="nota">La misma «Vista del afiliado» que muestra el constructor de Trámites al terminar de crearlo, con los colores de La Bancaria de la demo. En cada sindicato toma su marca. ${cfg.forms.some(f => f.campos.some(c => c.x_pendiente)) ? "La etiqueta <span class=\"vp-pend\">pendiente</span> marca un control que todavía no existe; no aparece en el formulario real." : ""}</p>
+      <div class="vp-fila">${cfg.forms.map((f,i) => telefono(f, i)).join("")}</div>
+    </section>
+
+    <section class="sec"><h3>Antes de crearlo</h3>
+      <div class="grupo"><h4><span class="sello s-ok">Configurar</span> Sin programar</h4>
+        <div class="item ok"><b>Módulos del sindicato: ${cfg.modulos.map(m => ({tramites:"Trámites",notificaciones:"Notificaciones",noticias:"Noticias",empleadores:"Empleadores"})[m]).join(", ")}</b><p>Los habilita el admin de plataforma si faltan.</p></div>
+        ${cfg.areas.map(a => `<div class="item ok"><b>Área «${esc(a.area)}»${a.en==="cada_seccional"?" en cada seccional":" en Sede Central"} · ${esc(a.para)}</b><p>En <span class="ruta">Áreas y Usuarios</span>, con el permiso «Trámites recibidos» y sus usuarios asignados.</p></div>`).join("")}
+        <div class="item ok"><b>Quien arma el formulario</b><p>Necesita el permiso «Crear formularios». Conviene alguien de Sede Central, porque elige a qué área cae cada pedido.</p></div>
+        ${cfg.c.L.filter(l => !l.colm3na).map(l => `<div class="item ok"><b>Acordar el canal con ${esc(l.n)}</b><p>Actúa fuera de Colm3na: definir cómo recibe y devuelve los datos (${esc(cfg.c.D.filter(d => d.a===l.n || d.de===l.n).map(d => d.d.toLowerCase()).join(", "))}).</p></div>`).join("")}
+      </div>
+      ${aj.length ? `<div class="grupo"><h4><span class="sello s-aj">Ajuste</span> Se arranca igual con una salida provisoria</h4>${aj.map(([k,w]) => itemB(k,w)).join("")}</div>` : ""}
+      ${dev.length ? `<div class="grupo"><h4><span class="sello s-dv">Desarrollo</span> Se arranca con la salida provisoria; la solución definitiva requiere programar</h4>${dev.map(([k,w]) => itemB(k,w)).join("")}</div>` : ""}
+    </section>
+
+    <section class="sec"><h3>Preguntas pendientes para el sindicato</h3>
+      ${pendientes.length ? `<ol class="preguntas">${pendientes.map(p => `<li>${esc(p)}</li>`).join("")}</ol>` : `<p class="nota">No quedaron preguntas abiertas.</p>`}
+      <div class="acciones" id="cajaIA2" hidden><span class="nota">¿Querés que la IA sume preguntas sobre casos borde?</span><div class="der"><span class="estado-ia" id="est2" role="status"></span><button class="btn" type="button" id="stop2" hidden>Detener</button><button class="btn" type="button" id="ia2">Sumar preguntas con IA</button></div></div>
+      <div class="salida-ia" id="out2" hidden></div>
+    </section>
+
+    <section class="sec"><h3>Para importar en Colm3na</h3>
+      <p class="nota">Formato <span class="mono">colm3na.tramite v1</span>. Cada campo tiene la misma forma que guarda hoy el constructor. Las áreas van por nombre: el importador las busca en el sindicato y, si falta alguna, no importa y la informa. Lo marcado con <span class="mono">x_</span> no se importa todavía.</p>
+      <pre class="json" id="json">${esc(JSON.stringify(exportJSON(cfg, B, pendientes), null, 2))}</pre>
+      <div class="acciones"><button class="btn" type="button" data-ir2="pregunta">← Volver a las preguntas</button>
+        <div class="der"><span class="estado-ia" id="cop" role="status"></span><button class="btn" type="button" id="copInstr">Copiar instrucción</button><button class="btn" type="button" id="bajar" hidden>Descargar JSON</button><button class="btn btn-miel" type="button" id="copJson">Copiar JSON</button></div></div>
+    </section>
+    <div class="acciones"><span></span><button class="btn-link" type="button" id="otro">Relevar otro trámite</button></div>
+  </div>`;
+}
+function telefono(f, i){
+  const campo = c => {
+    if(c.tipo_dato==="separador") return '<hr class="vp-sep">';
+    const et = esc(c.etiqueta) + (c.obligatorio ? " *" : "") + (c.x_pendiente ? '<span class="vp-pend">pendiente</span>' : "");
+    const cls = "vp-campo vp-" + (c.ancho||"completo");
+    if(c.tipo_dato==="booleano") return `<div class="${cls}"><div class="vp-bool"><i></i> ${et}</div></div>`;
+    const ops = (c.opciones||"").split(",").map(o => o.trim()).filter(Boolean);
+    let x;
+    if(c.tipo_dato==="opcion_unica" || c.tipo_dato==="multiple") x = (ops.length?ops:["(sin opciones cargadas)"]).map(o => `<div class="vp-op"><i class="${c.tipo_dato==="multiple"?"c":"r"}"></i> ${esc(o)}</div>`).join("");
+    else if(c.tipo_dato==="seleccion") x = `<div class="vp-in ph">${ops.length?"Elegí una opción":"(sin opciones cargadas)"} ▾</div>`;
+    else if(c.tipo_dato==="fecha") x = `<div class="vp-in ph">dd/mm/aaaa</div>`;
+    else if(c.tipo_dato==="archivo") x = `<span class="vp-arch">📎 Elegir archivo</span>`;
+    else if(c.tipo_dato==="numero") x = `<div class="vp-in ph">Ej: 1234</div>`;
+    else x = `<div class="vp-in ph">${c.longitud_exacta ? c.longitud_exacta + " caracteres" : "Texto"}</div>`;
+    return `<div class="${cls}"><label>${et}</label>${x}</div>`;
+  };
+  return `<div class="vp-col"><div class="vp-rot">${i ? "Segundo formulario · se manda desde el chat" : "Formulario principal"}</div>
+    <div class="vp-marco" role="img" aria-label="Vista del afiliado de ${esc(f.titulo)}"><div class="vp-pant">
+      <div class="vp-car"><div class="tit">${esc(f.titulo||"Trámite")}</div><div class="meta"><span class="cod">${esc(f.codigo||"—")}</span><span class="exp">EXP — se numera al enviar</span></div></div>
+      <div class="vp-cuerpo"><div class="vp-grid">${f.campos.length ? f.campos.map(campo).join("") : '<p style="font-size:12px;color:#5b6478;grid-column:1/-1">Agregá campos para ver la vista previa.</p>'}</div>
+        <button type="button" class="vp-probar" tabindex="-1" aria-hidden="true">Probar el formulario</button></div>
+    </div></div></div>`;
+}
+function necesita(l, cfg){
+  if(l.k==="af") return E.r.quien==="publico" ? "Entrada pública (hoy no existe)" : E.r.quien==="empresa" ? "Estar dada de alta como empleador, con cuenta" : "Estar en el padrón, con cuenta en la app";
+  if(!l.colm3na) return "Acordar el canal fuera de Colm3na";
+  const a = cfg.areas.find(x => x.area===l.n);
+  if(a) return `Área «${a.area}»${a.en==="cada_seccional"?" en cada seccional":""} con «Trámites recibidos»${cfg.pase.some(p => p.area===a.area) ? "; en la lista de pase" : ""}`;
+  return "Usuario en Colm3na con el permiso que corresponda";
+}
+function itemB(k, why){ const b = BRECHAS[k]; return `<div class="item ${b.n}"><b>${b.t} <span class="mono" style="color:var(--tx2)">· ${b.tam}</span></b><p><b style="color:var(--tx)">Por qué:</b> ${esc(why.join(" "))}</p><p><b style="color:var(--tx)">Mientras tanto:</b> ${b.hoy}</p><p><b style="color:var(--tx)">Recomendación:</b> ${b.rec}</p></div>`; }
+function exportJSON(cfg, B, pendientes){
+  return {formato:"colm3na.tramite", version:1, generado:new Date().toISOString().slice(0,10), estado:"borrador",
+    tramite:{nombre:E.nombre, objetivo:E.objetivo, relato:E.relato},
+    requisitos_previos:{modulos:cfg.modulos, areas:cfg.areas.map(a => ({area:a.area, en:a.en, permisos:a.permisos}))},
+    formularios:cfg.forms,
+    circuito:{
+      actores:cfg.c.L.map(l => ({actor:l.n, usa_colm3na:l.colm3na})),
+      pasos:cfg.c.N.map(n => ({id:n.id, tipo:{inicio:"inicio", tarea:"accion", gate:"decision", fin:"fin"}[n.tipo], texto:n.txt, actor:cfg.c.L.find(l => l.k===n.ln).n, estado:n.est||null})),
+      flujos:cfg.c.F.map(f => ({de:f.de, a:f.a, etiqueta:f.t||null, tipo:{seq:"secuencia", vuelta:"secuencia", msg:"mensaje_fuera_de_colm3na"}[f.tipo]})),
+      datos:cfg.c.D.map(d => ({dato:d.d, de:d.de, a:d.a, canal:d.canal}))},
+    respuestas:E.r,
+    pendientes:{brechas:[...B.entries()].map(([k,w]) => ({clave:k, nivel:BRECHAS[k].n==="dv"?"desarrollo":"ajuste", motivo:w.join(" "), provisorio:BRECHAS[k].hoy})), preguntas:pendientes}};
+}
+function instruccionTexto(){
+  const cfg = configuracion(), p = cfg.forms[0], A = areaAtiende(), r = E.r;
+  const L = [`Trámite: ${E.nombre} (código ${p.codigo})`, E.objetivo, "", "Antes: habilitar módulos " + cfg.modulos.join(", ") + `; crear el área «${A}»${r.atiende==="seccional"?" en cada seccional":""} con permiso «Trámites recibidos».`];
+  if(cfg.forms.length>1) L.push("Crear primero: " + cfg.forms.slice(1).map(f => f.titulo).join(", ") + ".");
+  L.push("", "Campos:", ...p.campos.map((c,i) => `${i+1}. ${c.etiqueta||"(separador)"} — ${TIPOS[c.tipo_dato]}${c.tipo_dato!=="separador"?(c.obligatorio?", obligatorio":", opcional"):""}${c.opciones?" — "+c.opciones:""}${c.tipos_archivo_permitidos?" — "+c.tipos_archivo_permitidos:""}${c.x_pendiente?" — pendiente: "+c.x_pendiente:""}`));
+  L.push("", r.atiende==="seccional" ? `Destino: «${A}» de cada seccional; por defecto, la de Sede Central.` : `Destino: «${A}».`, cfg.pase.length ? `Pase permitido a ${txtPase(cfg.pase)}.` : "Sin pase.");
+  const B = brechas(); if(B.size){ L.push("", "Pendiente de desarrollo o ajuste:"); B.forEach((w,k) => L.push(`- ${BRECHAS[k].t}. Mientras tanto: ${BRECHAS[k].hoy}`)); }
+  return L.join("\n");
+}
+
+/* ===== Eventos ===== */
+function enlazar(){
+  raiz.querySelectorAll("[data-ir]").forEach(b => b.onclick = () => ir(b.dataset.ir));
+  const $ = id => document.getElementById(id);
+  if(E.vista==="inicio"){
+    $("relato").oninput = e => { E.relato = e.target.value; guardar(); };
+    $("usarEj").onclick = () => { E.relato = RELATO_EJ; guardar(); render(); };
+    $("sinIA").onclick = () => {
+      if(E.relato.trim()===RELATO_EJ){ aplicarPropuesta(PROP_EJ, false); }
+      else if(!E.nombre){ aplicarPropuesta({nombre:"", campos:[{e:"",t:"texto"}]}, false); }
+      ir("entendi");
+    };
+    activarIA();
+  }
+  if(E.vista==="entendi"){
+    $("nombre").oninput = e => { E.nombre = e.target.value; if(!E.codigo || E.codigo===codigoDe(E.nombre.slice(0,-1))) E.codigo = codigoDe(E.nombre); guardar(); };
+    $("aPreg").onclick = () => { if(!E.campos.length) E.campos = [{e:"",t:"texto",ob:true,op:"",ch:""}]; ir("pregunta", 0); };
+  }
+  if(E.vista==="pregunta"){
+    const pq = preguntas(), p = pq[E.qi];
+    raiz.querySelectorAll('input[name="op"]').forEach(inp => inp.onchange = () => {
+      if(p.multi){ let v = new Set(E.r[p.k]||[]); inp.checked ? v.add(inp.value) : v.delete(inp.value);
+        if(p.excl){ if(inp.value===p.excl && inp.checked) v = new Set([p.excl]); else if(inp.checked) v.delete(p.excl); } E.r[p.k] = [...v]; }
+      else E.r[p.k] = inp.value;
+      E.ia = E.ia.filter(k => k!==p.k); guardar(); render(); });
+    const t = $("txt"); if(t) t.oninput = e => { E.r[p.txt.k] = e.target.value; guardar(); };
+    const t2 = $("txt2"); if(t2) t2.oninput = e => { E.r[p.txt2.k] = e.target.value; guardar(); };
+    raiz.querySelectorAll("[data-c]").forEach(el => el.addEventListener(el.type==="text"?"input":"change", () => {
+      const c = E.campos[+el.dataset.c], f = el.dataset.f; c[f] = el.type==="checkbox" ? el.checked : el.value;
+      if(f==="t"){ if(c.t==="archivo" && !c.op) c.op = ARCH_DEF; if(!CON_OPC.includes(c.t) && c.t!=="archivo") c.op = ""; if(c.t==="separador") c.ob = false; }
+      guardar(); if(el.tagName==="SELECT") render(); }));
+    raiz.querySelectorAll("[data-quitar]").forEach(b => b.onclick = () => { E.campos.splice(+b.dataset.quitar,1); guardar(); render(); });
+    raiz.querySelectorAll("[data-x]").forEach(el => el.addEventListener(el.type==="text"?"input":"change", () => {
+      const x = E.extras[+el.dataset.x]; x[el.dataset.f] = el.type==="checkbox" ? el.checked : el.value; guardar(); }));
+    raiz.querySelectorAll("[data-qx]").forEach(b => b.onclick = () => { E.extras.splice(+b.dataset.qx,1); guardar(); render(); });
+    const ma = $("masActor"); if(ma) ma.onclick = () => { E.extras = E.extras||[]; E.extras.push({n:"", hace:"", despues:"rev", dato:"", colm3na:false}); guardar(); render(); };
+    const mc = $("masCampo"); if(mc) mc.onclick = () => { E.campos.push({e:"",t:"texto",ob:true,op:"",ch:""}); guardar(); render(); };
+    $("atras").onclick = () => E.qi ? ir("pregunta", E.qi-1) : ir("entendi");
+    $("sig").onclick = () => E.qi < pq.length-1 ? ir("pregunta", E.qi+1) : ir("resultado");
+  }
+  if(E.vista==="resultado"){
+    raiz.querySelectorAll("[data-vc]").forEach(b => b.onclick = () => { E.vc = b.dataset.vc; guardar(); render(); });
+    raiz.querySelectorAll("[data-ir2]").forEach(b => b.onclick = () => ir("pregunta", 0));
+    const copiar = async (txt, ok, nodo) => { try{ await navigator.clipboard.writeText(txt); $("cop").textContent = ok; }
+      catch(e){ if(nodo){ const rg = document.createRange(); rg.selectNodeContents(nodo); const s = getSelection(); s.removeAllRanges(); s.addRange(rg); } $("cop").textContent = "Seleccionado: copialo con Ctrl+C."; } };
+    $("copJson").onclick = () => copiar($("json").textContent, "JSON copiado.", $("json"));
+    $("copInstr").onclick = () => copiar(instruccionTexto(), "Instrucción copiada.");
+    $("otro").onclick = () => { E = NUEVO(); guardar(); render(); window.scrollTo({top:0}); };
+    activarDescarga(); activarIA();
+  }
+}
+
+/* ===== IA y descarga: opcionales; la guía funciona sin ellas ===== */
+let sample = null, downloads = null;
+if(window.claude && claude.use){
+  claude.use("sample").then(s => { sample = s; activarIA(); });
+  claude.use("downloads").then(d => { downloads = d; activarDescarga(); });
+}
+const errIA = e => ({not_granted:"No se habilitó el uso de Claude en esta página. Podés seguir sin IA.", rate_limited:"Hay muchos pedidos en curso. Probá en un minuto."}[e && e.code] || "No se pudo analizar. Probá de nuevo o seguí sin IA.");
+function activarDescarga(){
+  const b = document.getElementById("bajar"); if(!b || !downloads) return; b.hidden = false;
+  b.onclick = async () => { try{ await downloads.save({filename:`tramite-${(E.codigo||"nuevo").toLowerCase()}.json`, data:document.getElementById("json").textContent}); document.getElementById("cop").textContent = "Guardado."; }
+    catch(e){ document.getElementById("cop").textContent = e && e.code==="declined" ? "" : "No se pudo guardar acá. Usá Copiar JSON."; } };
+}
+function activarIA(){
+  if(!sample) return;
+  const conIA = document.getElementById("conIA");
+  if(conIA){ conIA.hidden = false; const est = document.getElementById("estIA"), stop = document.getElementById("stopIA"); let ctl;
+    stop.onclick = () => ctl && ctl.abort();
+    conIA.onclick = async () => {
+      if(E.relato.trim().length < 40){ est.textContent = "Contá un poco más: quién lo pide, qué datos y cómo termina."; return; }
+      ctl = new AbortController(); conIA.disabled = true; stop.hidden = false; est.textContent = "Leyendo el relato…";
+      const esquema = {nombre:"str", codigo:"str corto sin tildes", objetivo:"una oración",
+        r:Object.fromEntries(PREG.filter(p=>!p.campos && !p.actores).flatMap(p => [[p.k, p.multi ? "lista de: "+p.ops.map(o=>o[0]).join("|") : p.ops.map(o=>o[0]).join("|")+" o null"]].concat(p.txt?[[p.txt.k,"texto o vacío"]]:[]).concat(p.txt2?[[p.txt2.k,"texto o vacío"]]:[]))),
+        campos:[{e:"etiqueta", t:Object.keys(TIPOS).join("|"), ob:"bool", op:"opciones separadas por coma; si es archivo, extensiones", ch:Object.keys(CONTROLES).filter(Boolean).join("|")+" o vacío"}],
+        dudas:["preguntas cortas sobre lo que el relato no aclara"]};
+      const prompt = `Sos analista funcional de Colm3na, plataforma para sindicatos argentinos. Leé el relato de un trámite y devolvé SOLO un objeto JSON con esta forma:
+${JSON.stringify(esquema, null, 1)}
+Reglas:
+- Usá únicamente los valores permitidos. Si el relato no lo dice con claridad, poné null (o lista vacía) y sumá la pregunta a "dudas". No inventes.
+- "campos": las preguntas del formulario que el afiliado completa, en orden, con separadores para agrupar. Los documentos son tipo "archivo". Una lista cerrada de opciones es "seleccion".
+- "ch": elegí un control solo si el relato lo pide o es evidente (fecha de nacimiento → no_futura; un dato que no puede repetirse → unico; una opción que depende de otra → depende).
+- Castellano rioplatense, etiquetas cortas como las vería el afiliado.
+Relato:
+"""${E.relato.trim()}"""`;
+      try{
+        const o = await sample.json(prompt, {signal:ctl.signal, onText:() => { est.textContent = "Armando la propuesta…"; }});
+        aplicarPropuesta(o, true); ir("entendi");
+      }catch(e){ est.textContent = e && e.code==="aborted" ? "Detenido." : errIA(e); }
+      finally{ const a = document.getElementById("conIA"), b = document.getElementById("stopIA"); if(a) a.disabled = false; if(b) b.hidden = true; }
+    };
+  }
+  const caja = document.getElementById("cajaIA2");
+  if(caja){ caja.hidden = false; const b = document.getElementById("ia2"), stop = document.getElementById("stop2"), est = document.getElementById("est2"), out = document.getElementById("out2"); let ctl;
+    stop.onclick = () => ctl && ctl.abort();
+    b.onclick = async () => { ctl = new AbortController(); b.disabled = true; stop.hidden = false; est.textContent = "Pensando…";
+      const prompt = `Sos implementador de Colm3na en un sindicato argentino. Con este trámite, escribí entre 4 y 8 preguntas NUEVAS para el sindicato sobre casos borde (rechazos, plazos, excepciones, qué pasa si…). No repitas las ya listadas. Numeradas, una línea cada una, sin introducción, en castellano rioplatense.
+
+${instruccionTexto()}
+
+Ya listadas:
+${document.querySelector(".preguntas") ? document.querySelector(".preguntas").innerText : "(ninguna)"}`;
+      try{ const {text} = await sample(prompt, {signal:ctl.signal, onText:({text}) => { out.hidden = false; out.textContent = text; est.textContent = ""; }}); out.hidden = false; out.textContent = text; est.textContent = ""; }
+      catch(e){ est.textContent = e && e.code==="aborted" ? "Detenido." : errIA(e); if(e && e.text){ out.hidden = false; out.textContent = e.text; } }
+      finally{ b.disabled = false; stop.hidden = true; } };
+  }
+}
+
+/* ===== Panal de fondo ===== */
+(function(){ const c = document.getElementById("panal"), x = c.getContext("2d");
+  function dib(){ const r = c.getBoundingClientRect(), d = devicePixelRatio||1; c.width = r.width*d; c.height = r.height*d; x.setTransform(d,0,0,d,0,0); x.clearRect(0,0,r.width,r.height);
+    const s = 20, h = Math.sqrt(3)*s;
+    for(let row=0; row*h*.5 < r.height+h; row++) for(let col=0; col*s*3 < r.width+s*3; col++){
+      const cx = col*s*3 + (row%2?s*1.5:0), cy = row*h*.5, k = Math.max(0, 1 - Math.hypot(cx-r.width*.88, cy-r.height*.15)/(r.width*.55));
+      x.strokeStyle = `rgba(240,160,30,${0.04+0.24*k})`; x.beginPath();
+      for(let i=0;i<6;i++){ const a = Math.PI/3*i; x.lineTo(cx+s*.92*Math.cos(a), cy+s*.92*Math.sin(a)); } x.closePath(); x.stroke(); } }
+  dib(); addEventListener("resize", dib); })();
+
+/* Primera vista: con el relato de ejemplo listo para que se vea qué hace */
+if(E.vista==="inicio" && !E.relato) E.relato = RELATO_EJ;
+render();
+</script>
+
+</body>
+</html>
