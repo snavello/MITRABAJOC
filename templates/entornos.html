@@ -502,6 +502,18 @@
         </div>
         <div class="mapa-estado" id="herramientas-estado">Se lee al abrir esta pestaña…</div>
       </div>
+      {# Asistente de trámites (2026-10-16, PLAN_ASISTENTE_TRAMITES.md): del
+         relato del sindicato al circuito, la instrucción, la vista previa y
+         el JSON importable. La IA propone, el motor decide. #}
+      <div class="sala-tarjeta">
+        <p><b>Asistente de trámites.</b> Contás el trámite como te lo contó el sindicato; la IA propone respuestas y campos, vos confirmás pregunta por pregunta, y el asistente arma el circuito por actor, quién hace qué, la instrucción y la vista previa del formulario, lo que hay que preparar antes (configurar, ajuste o desarrollo) y el JSON <code>colm3na.tramite</code> para importar. Cada caso se guarda, y la pestaña Brechas acumula lo que los sindicatos piden y Colm3na todavía no tiene.</p>
+        <div class="mapa-botones">
+          <a class="boton" href="/entornos/herramientas/asistente-tramites">Abrir el asistente</a>
+          <a class="boton suave" href="/entornos/herramientas/asistente-tramites#casos">Casos guardados</a>
+          <a class="boton suave" href="/entornos/herramientas/asistente-tramites#brechas">Brechas acumuladas</a>
+        </div>
+        <div class="mapa-estado" id="asistente-estado">Se lee al abrir esta pestaña…</div>
+      </div>
     </div>
 
     <div class="panel-etab" data-panel="xsanders" hidden>
@@ -816,8 +828,18 @@
       })
       .catch(() => { estado.textContent = 'No se pudo leer cuántos casos hay.'; });
   }
-  tab.addEventListener('click', cargar);
-  if (location.hash === '#herramientas') cargar();
+  const estadoAsist = document.getElementById('asistente-estado');
+  function cargarAsistente() {
+    fetch('/api/entornos/herramientas/asistente/brechas', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(d => {
+        const pedidas = d.brechas.filter(b => b.casos > 0).length;
+        estadoAsist.textContent = d.casos ? `${d.casos} trámites relevados; ${pedidas} brechas pedidas por algún sindicato.` : 'Todavía no hay trámites relevados.';
+      })
+      .catch(() => { estadoAsist.textContent = 'No se pudo leer cuántos trámites hay.'; });
+  }
+  tab.addEventListener('click', () => { cargar(); cargarAsistente(); });
+  if (location.hash === '#herramientas') { cargar(); cargarAsistente(); }
 })();
 
 // Observabilidad, pastillas (2026-09-21): Sala de mando por defecto. El iframe

@@ -154,6 +154,13 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   natural → filtros del panel + resumen (ficha: `docs/ASISTENTE_PANEL.md`).
   `probar_asistente.py` + `medicion_asistente/` = set de aceptación del
   prompt contra la API real (gasta créditos; a mano, nunca en CI).
+- asistente_tramites.py — Asistente de trámites (Herramientas de `/entornos`,
+  `PLAN_ASISTENTE_TRAMITES.md`): el motor PURO que convierte las respuestas
+  del onboarding en circuito por actor, formulario con la forma exacta del
+  constructor, brechas, instrucción y JSON `colm3na.tramite` v1. `BRECHAS` es
+  la lista cerrada de lo que Colm3na no hace; cuando algo se desarrolla, se
+  saca de ahí. `asistente_tramites_ia.py` es la llamada a la IA (propone,
+  nunca decide). Ver "Herramientas".
 - cargar_demo.py — carga 2 sindicatos de demo desde cero (sin AEFIP).
   **Carga la demo AL IMPORTARSE** (no tiene `if __name__`): nunca importarlo
   para leer una constante. Sus números viejos → nuevos, en `identificadores_demo.py`.
@@ -637,7 +644,7 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   freno, lo cierra el perímetro. Detalle en HISTORIAL.md, "Registro
   confirmado por mail".
 
-## Estado actual (actualizado 2026-10-13)
+## Estado actual (actualizado 2026-10-16)
 Todo lo listado acá está mergeado a `main` y desplegado en Pruebas (Render
 sigue `main`, cada push redeploya), **incluido el punto 21**, que ya se portó
 sobre `main`.
@@ -1006,6 +1013,16 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     `CasoHerramienta`, migración `a3c7e91d4b26`). Ver "Herramientas".
     El mismo día sumó la lectura del recibo real con IA (Plataforma 0.45.01).
 
+34. **Asistente de trámites como Herramienta de `/entornos`** (2026-10-16,
+    Plataforma 0.49.01, `PLAN_ASISTENTE_TRAMITES.md` D1–D10): del relato del
+    sindicato al circuito por actor, la instrucción, la vista previa y el JSON
+    importable, con la IA que propone (cuarto uso de IA, elegible desde
+    `/plataforma`) y el motor puro que decide, casos guardados y el inventario
+    de brechas (lo que los sindicatos piden y Colm3na no tiene). Ver
+    "Herramientas". El importador del JSON queda para después de probar con
+    trámites reales de La Bancaria. El mismo día se acordó el plan de Listas
+    y validaciones por función (`PLAN_LISTAS_VALIDACIONES.md`, PR #127).
+
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
 plataforma), (b) sacar "Cambiar clave" transitorio de plataforma antes de
@@ -1306,15 +1323,25 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     y de la empresa, que no son modales (`data-mov-vista`, Trabajador 0.45.03),
     y a TODAS las pestañas y sub-pestañas de las cuatro apps (Trabajador
     0.45.04, Admin 0.53.05, Plataforma 0.43.06).
-12. **Asistente de trámites e importación de formularios** (prototipo de Chat,
-    2026-10-16; `docs/chat/2026-10-16-asistente-tramites.md`): onboarding que
-    convierte el pedido de un sindicato en circuito, instrucción y vista previa
-    del formulario, y exporta un JSON `colm3na.tramite` v1 con la forma exacta
-    de `_campos_tramite_validos`. El importador está especificado como propuesta
-    en `docs/chat/2026-10-16-contrato-importacion-tramites.md` y NO se
-    construye hasta tener un trámite acordado con el sindicato. Criterios: las
-    correcciones van por el chat del trámite; los formularios encadenados son
-    solo para datos nuevos después de la aprobación.
+12. **Asistente de trámites e importación de formularios** (prototipo de Chat
+    del 2026-10-16, **construido el mismo día como Herramienta de `/entornos`**,
+    ver "Estado actual" 34 y "Herramientas"): el JSON `colm3na.tramite` v1
+    sale con la forma exacta de `_campos_tramite_validos`. **Lo que queda**: el
+    importador, especificado como propuesta en
+    `docs/chat/2026-10-16-contrato-importacion-tramites.md`, que NO se
+    construye hasta probar el asistente con un trámite acordado con el
+    sindicato; la entrada por foto o PDF del formulario actual; y el uso desde
+    el panel del sindicato. Criterios: las correcciones van por el chat del
+    trámite; los formularios encadenados son solo para datos nuevos después de
+    la aprobación.
+13. **Listas del sindicato y validaciones por función en Trámites**
+    (`PLAN_LISTAS_VALIDACIONES.md`, acordado el 2026-10-16, D1–D7, **sin
+    código**): plantillas tipadas (grupo familiar, datos del afiliado, lista
+    simple) sobre una tabla genérica que sube el admin desde una pestaña
+    Listas propia; validación de fuente `funcion` (requisito para iniciar,
+    validación de campo, campo calculado) con la sintaxis de las Reglas y
+    nombres cerrados; dos fechas nuevas en el padrón. Cierra las fases 2 y 3
+    de validaciones del BACKLOG. Trabajador primero, empresa después.
 
 ## Herramientas (solapa de `/entornos`)
 
@@ -1389,6 +1416,43 @@ su página (`/entornos/herramientas/<nombre>`) y la pestaña solo la presenta.
   Estados nuevo / revisado / aplicado / descartado, con quién y cuándo, y
   descarga en CSV. Los textos que escribe una persona se dibujan con
   `textContent`, nunca como HTML.
+
+**Asistente de trámites** (`templates/asistente_tramites.html` +
+`static/asistente_tramites/`, rutas `/api/entornos/herramientas/asistente/*`,
+plan `PLAN_ASISTENTE_TRAMITES.md`):
+- **La IA propone, el código arma** (D1). `asistente_tramites_ia.entender`
+  lee el relato y devuelve, por una herramienta con esquema cerrado, nombre,
+  respuestas a las preguntas, campos y dudas; TODO pasa por
+  `asistente_tramites.sanear_propuesta`, que descarta lo que no está en el
+  catálogo. Circuito, instrucción, vista previa, brechas y JSON los arma el
+  motor puro (`resolver`), que se llama en cada cambio de respuesta. Nada de
+  lo que la herramienta afirma sobre Colm3na sale del modelo.
+- **El catálogo se compara contra el código** (D4): `test_asistente_tramites.py`
+  falla si el constructor suma un tipo de campo, un ancho o un estado que el
+  asistente no conoce. `BRECHAS` es la lista cerrada de lo que no existe, con
+  nivel (ajuste / desarrollo), esfuerzo, salida provisoria y referencia al
+  BACKLOG; **cuando una se desarrolla se saca de la lista** y deja de
+  señalarse y de contarse.
+- **El kit escolar es el caso dorado**: el JSON que genera el motor tiene
+  que ser idéntico al del prototipo de Chat. Una diferencia a propósito se
+  anota en el test.
+- **Cuarto uso de IA** `asistente_tramites` (default `claude-sonnet-5`,
+  `db.modelo_ia("asistente_tramites")`, columna
+  `ConfiguracionPlataforma.modelo_asistente_tramites`), registrado en `UsoIA`
+  con tipo `herramienta` a nombre del sindicato elegido. Sin cliente, la
+  pantalla sigue a mano ("Seguir sin IA").
+- **Sindicato de la lista o texto libre** (D6): con uno elegido, "Antes de
+  crearlo" dice qué módulo y qué área ya existen y cuáles faltan.
+- **Casos** en `CasoHerramienta` (`herramienta="asistente_tramites"`, sin
+  nombres de personas), con el resultado recalculado al guardar, y la
+  pestaña **Brechas**: cada brecha con cuántos casos no descartados la
+  pidieron y de qué sindicatos. Es el inventario de lo que falta desarrollar.
+- **El importador NO existe** (D7): se construye después de probar con uno o
+  dos trámites reales de La Bancaria, con el contrato
+  `docs/chat/2026-10-16-contrato-importacion-tramites.md`.
+- Tests: `test_asistente_tramites.py` (motor), `test_asistente_tramites_api.py`
+  (rutas e IA simulada), `test_asistente_tramites_v2.py` (pantalla) y el robot
+  `e2e/test_robot_asistente_tramites.py`.
 
 ## Planes de Render desde la app (solapa "Planes" de `/entornos`)
 

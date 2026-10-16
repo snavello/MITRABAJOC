@@ -7297,3 +7297,77 @@ solo botón. El problema era de lectura de la pantalla, no de cálculo.
 - El veredicto dice "N ajustes propuestos por el recibo ↓" y lleva al primero.
 - SDN eligió la v2: la pestaña Herramientas de `/entornos` la abre; la v1
   sigue a un botón de distancia.
+
+## El Asistente de trámites como Herramienta de /entornos (2026-10-16, Plataforma 0.49.01)
+
+Rama `feature/asistente-tramites`, plan `PLAN_ASISTENTE_TRAMITES.md` (D1–D10,
+acordado el mismo día). El prototipo HTML de Chat (`docs/chat/2026-10-16-asistente-tramites-prototipo.html`)
+pasó a ser una Herramienta de `/entornos`, al lado de la Calculadora bancaria,
+con la IA del lado del servidor y el motor en Python.
+
+**La IA propone, el código arma (D1).** `asistente_tramites.py` es un módulo
+PURO (no importa `db` ni `main`): las catorce preguntas del onboarding con
+sus opciones y su `cuando` como dato, el catálogo de lo que Colm3na tiene
+(tipos de campo, anchos, controles, estados), la lista cerrada `BRECHAS` de
+lo que no tiene (con nivel ajuste/desarrollo, esfuerzo, salida provisoria y
+recomendación), y el motor: `sanear_propuesta` (toda propuesta, de la IA o del
+navegador, entra por acá y lo que no está en el catálogo se descarta),
+`circuito` (carriles, nodos, flujos y datos, traducción fiel del prototipo),
+`brechas_de`, `configuracion` (módulos, áreas, pase y los formularios con la
+forma exacta de `main._campos_tramite_validos`), `preparar` (configurar /
+ajuste / desarrollo, y con el sindicato elegido dice qué módulo o área YA
+existe y cuál falta), `instruccion`, `mensajes_estados` y `exportar` (el JSON
+`colm3na.tramite` v1). `test_asistente_tramites.py` compara el catálogo contra
+las constantes reales (fail-closed: un tipo de campo nuevo en el constructor
+hace fallar el test), verifica que cada campo exportado pase por el saneo del
+constructor sin cambiar, y tiene al **kit escolar de La Bancaria como caso
+dorado**: el JSON que genera el motor es idéntico, byte a byte, al que generó
+el prototipo (`docs/chat/2026-10-16-ejemplo-kit-escolar.colm3na.json`).
+
+**La llamada a la IA** (`asistente_tramites_ia.py`): una herramienta con
+esquema cerrado (`proponer_tramite`, las respuestas son enumeraciones de las
+preguntas y los campos son tipos del catálogo), `tool_choice: any`, `effort:
+low`, prompt de sistema con caché, cliente inyectable para los tests y la
+duración medida pegada a `messages.create`. Cuarto uso de IA
+`asistente_tramites` en `precios_ia.USOS` (default `claude-sonnet-5`), columna
+`modelo_asistente_tramites` en `ConfiguracionPlataforma` (migración
+`d4e8b2a1c7f3`) y elegible en `/plataforma` → Uso de IA → Modelos. Cada llamada
+queda en `UsoIA` con tipo `herramienta`, a nombre del sindicato elegido; si la
+API contestó pero no propuso nada, el uso igual se registra (ya se pagó).
+
+**Las rutas** (`/api/entornos/herramientas/asistente/*`, puerta
+`_exigir_herramientas`, 404 en Demo): `catalogo` (preguntas, capacidades,
+brechas, sindicatos del entorno, si hay IA), `entender` (la IA; sin cliente,
+`{"disponible": false}` y la pantalla sigue a mano), `resolver` (el motor, se
+llama en cada cambio de respuesta con 250 ms de debounce), `preguntas-extra`
+(entre 4 y 8 preguntas sobre casos borde), los casos (`CasoHerramienta` con
+`herramienta="asistente_tramites"`, el resultado y el JSON se RECALCULAN al
+guardar), `brechas` (el inventario: cada brecha con cuántos casos no
+descartados la pidieron, de qué sindicatos y cuándo fue el último) y el CSV.
+
+**La pantalla** (`templates/asistente_tramites.html` + `static/asistente_tramites/`,
+Preact sin build con el importmap `_importmap_asistente_tramites`): las cuatro
+etapas del prototipo, el diagrama BPMN simplificado dibujado en SVG desde lo
+que manda el servidor (`circuito.js`), la vista "lo que ve el afiliado", la
+vista previa con el teléfono del constructor, "Antes de crearlo" con el
+estado de cada ítem de configuración, y las pestañas Casos y Brechas. Lo que
+la IA propuso se marca en fucsia (`.marca-ia`, el color de las propuestas de
+la Calculadora) hasta que se confirma. El estado vive en `localStorage` para
+retomar donde se dejó. Tests: `test_asistente_tramites_api.py` (rutas, IA
+simulada, casos, inventario), `test_asistente_tramites_v2.py` (importmap,
+sin `innerHTML`, tokens de movimiento, rutas) y el robot
+`e2e/test_robot_asistente_tramites.py` (las cuatro etapas sin IA, guardar y
+encontrar el caso). Probado además en Chromium contra uvicorn local: las
+catorce preguntas, el resultado completo y las dos pestañas sin errores.
+
+**Lo que se encontró de paso.** Un formulario encadenado no solo aparece en
+"Iniciar trámite": `origen_tramite_id` es opcional en `/api/tramite`, así que
+se puede ENVIAR sin trámite de origen ni aprobación previa (la brecha
+`encadenado` lo dice ahora). Y el orden de `db.ESTADOS_TRAMITE` (respondido
+antes que espera_info) no es el cronológico que la pantalla muestra: el
+asistente usa el suyo y el test compara conjuntos.
+
+**Queda para después** (fuera de este bloque, en orden): el importador del
+JSON (contrato en `docs/chat/2026-10-16-contrato-importacion-tramites.md`,
+después de probar con trámites reales de La Bancaria), la entrada por foto o
+PDF del formulario actual, y el uso desde el panel del sindicato.
