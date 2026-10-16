@@ -691,6 +691,57 @@ def requisitos_saneados(crudos, campos) -> list:
     return salida
 
 
+def evaluar_campo_en_vivo(campos, indice, valores, contexto) -> dict:
+    """La validación EN VIVO de un campo (D3, bloque 4): solo sus funciones
+    marcadas `en_vivo`, y solo pasa / no pasa con el mensaje del admin --
+    nunca la fila ni el dato que se miró. Recalcula además los campos
+    `calculado` que usan a este campo como segunda clave, porque es el
+    momento en que se puede. Devuelve {"pasa", "mensaje", "calculados"}."""
+    campos = list(campos or [])
+    try:
+        campo = campos[int(indice)]
+    except (IndexError, TypeError, ValueError):
+        return {"pasa": True, "mensaje": "", "calculados": {}}
+    ns_campo = _namespace_campos(campos, valores)
+    cache = {}
+    pasa, mensaje = True, ""
+    if str(valores.get(campo.get("id")) or "").strip():
+        for v in campo.get("validaciones") or []:
+            if v.get("fuente") != "funcion" or not v.get("en_vivo"):
+                continue
+            ok, _r, _m = _evaluar_funcion(v, ns_campo, contexto, campos, valores, cache)
+            if not ok and v.get("bloquea", True):
+                pasa, mensaje = False, v.get("mensaje") or ""
+                break
+    calculados = {}
+    for c in campos:
+        if c.get("tipo_dato") != TIPO_CALCULADO:
+            continue
+        f = next((v for v in (c.get("validaciones") or []) if v.get("fuente") == "funcion"), None)
+        if not f or f.get("clave2") is None or int(f["clave2"]) != int(indice):
+            continue
+        ok, resultado, _m = _evaluar_funcion(f, ns_campo, contexto, campos, valores, cache)
+        calculados[c.get("id")] = _texto_resultado(resultado) if ok else ""
+    return {"pasa": pasa, "mensaje": mensaje, "calculados": calculados}
+
+
+def requisitos_al_abrir(campos, requisitos, contexto) -> dict:
+    """Al abrir el formulario (bloque 4): si los requisitos no se cumplen,
+    los mensajes en vez de los campos; y los calculados que ya se pueden
+    completar (los que no dependen de una segunda clave del formulario)."""
+    v = evaluar_envio(campos, [], {}, contexto, requisitos)
+    calculados = {}
+    for c in campos or []:
+        if c.get("tipo_dato") != TIPO_CALCULADO:
+            continue
+        f = next((x for x in (c.get("validaciones") or []) if x.get("fuente") == "funcion"), None)
+        if f and f.get("clave2") is None and v["calculados"].get(c.get("id")):
+            calculados[c.get("id")] = v["calculados"][c.get("id")]
+    mensajes = [r.get("mensaje") for r in (requisitos or [])
+                if r.get("mensaje") in v["errores"]]
+    return {"cumple": not mensajes, "mensajes": mensajes, "calculados": calculados}
+
+
 def _texto_resultado(resultado) -> str:
     if resultado is None:
         return ""

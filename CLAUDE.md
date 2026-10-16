@@ -1040,8 +1040,10 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     0.46.01): fuente `funcion` (lista o padrón, fórmula con nombres
     cerrados), requisitos para iniciar y campo `calculado`, con el banco de
     pruebas contra un afiliado real (HISTORIAL, "Validaciones por función en
-    Trámites"). Quedan los bloques 4 y 5 (en vivo y requisitos al abrir;
-    brechas del asistente).
+    Trámites"). **Bloque 4 HECHO** (Trabajador 0.46.02): requisitos al abrir
+    el formulario y validación en vivo contra el servidor con tope de diez
+    intentos (HISTORIAL, "Validación en vivo y requisitos al abrir"). Queda
+    el bloque 5 (brechas del asistente y cierre).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -1361,9 +1363,8 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     admin desde una pestaña Listas propia; validación de fuente `funcion`
     (requisito para iniciar, validación de campo, campo calculado) con la
     sintaxis de las Reglas y nombres cerrados; dos fechas nuevas en el
-    padrón (**bloques 2 y 3 HECHOS**). Cierra las fases 2 y 3 de validaciones
-    del BACKLOG. Trabajador primero, empresa después. **Quedan los bloques 4
-    y 5.**
+    padrón (**bloques 2 a 4 HECHOS**). Cierra las fases 2 y 3 de validaciones
+    del BACKLOG. Trabajador primero, empresa después. **Queda el bloque 5.**
 
 ## Herramientas (solapa de `/entornos`)
 
@@ -1649,17 +1650,23 @@ por función en Trámites"); la 4 (externa) sigue en BACKLOG.md. Reglas vigentes
   nombra algo que no existe no se guarda (`error_de_formula`). Un dato que
   falta no vale 0: la validación no pasa.
 - **Requisitos para iniciar** (`TipoTramite.requisitos`): funciones sin
-  segunda clave, siempre bloqueantes, evaluadas al enviar (y al abrir, bloque
-  4). **Campo `calculado`**: su única validación es la fórmula; lo calcula el
-  servidor en `/api/tramite` y lo que mande el navegador se ignora.
+  segunda clave, siempre bloqueantes, evaluadas al enviar y **al abrir**
+  (`GET /api/tramite/requisitos/{id}`: si no se cumplen, la app muestra los
+  mensajes en vez de los campos, y trae los calculados que no dependen de
+  otro campo). **Campo `calculado`**: su única validación es la fórmula; lo
+  calcula el servidor en `/api/tramite` y lo que mande el navegador se ignora.
+- **En vivo** (`POST /api/tramite/validar-campo`, D3): solo las funciones
+  marcadas `en_vivo`, respuesta pasa / no pasa con el mensaje y NUNCA la fila;
+  **diez intentos por sesión y formulario** (`EN_VIVO_MAX_INTENTOS`, 429
+  después, se limpia con el envío que entra) para que la respuesta no sirva
+  para enumerar una lista. Cortesía: el servidor decide al enviar.
 - **`db.contexto_validaciones(sid, cuil, tipo, valores)`** arma en UNA sesión
   los datos del sistema (`DATOS_SISTEMA`) y trae de antemano las filas de
   lista que el envío necesita: `evaluar_envio` sigue siendo puro. Sin contexto
   (banco de pruebas sin CUIL) las funciones no se evalúan y se cuenta
   `sin_contexto`; el banco las prueba contra un afiliado real del padrón.
-- El constructor de empresa no ofrece funciones ni calculados (D7); la
-  validación en vivo del afiliado sigue siendo solo de las fijas hasta el
-  bloque 4.
+- El constructor de empresa no ofrece funciones ni calculados (D7, segunda
+  vuelta).
 
 - **No son tipos de dato**: capa componible sobre el campo (0..N por campo),
   cada una con `bloquea` (frena con mensaje) o `avisa` (pasa y queda en

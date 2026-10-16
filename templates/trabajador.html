@@ -444,6 +444,11 @@
     transition:all .25s cubic-bezier(.2,1.6,.4,1); }
   .campo-tram.ok .tram-tick { opacity:1; transform:scale(1); }
   .tram-input.tram-calculado { background:#f1f5f9; color:#475569; font-style:italic; }
+  .tram-requisitos { border:1px solid color-mix(in srgb, var(--error) 35%, white); background:color-mix(in srgb, var(--error) 7%, white);
+    border-radius:12px; padding:14px 16px; margin-bottom:14px; }
+  .tram-requisitos b { display:block; margin-bottom:6px; }
+  .tram-requisitos li { margin:4px 0 0 18px; }
+  .tram-requisitos.espera { border-color:var(--linea); background:#f7f7f4; color:var(--gris); }
   .campo-tram.ok .tram-input { border-color:color-mix(in srgb, var(--ok) 40%, white); }
   /* La ✗ roja es simétrica al tilde: mismo lugar, mismo pop */
   .campo-tram.mal .tram-tick { opacity:1; transform:scale(1); color:var(--error); }
@@ -1320,6 +1325,9 @@
         </div>
         <div class="tram-box-body">
           <div id="tram-form-error" class="banner mal" style="display:none;"></div>
+          {# Requisitos para iniciar (bloque 4): si no se cumplen, los
+             mensajes en vez de los campos. #}
+          <div id="tram-form-requisitos" class="tram-requisitos" style="display:none;"></div>
           <div class="tram-prog" id="tram-prog" style="display:none;">
             <span>Completaste <b id="tram-prog-n">0 de 0</b></span>
             <div class="tram-prog-bar"><i id="tram-prog-fill"></i></div>
@@ -2370,6 +2378,7 @@ if (document.getElementById('tp-tramites')) {
   window.abrirFormularioTramite = function (tipo) {
     tipoTramiteActual = tipo;
     tramiteOrigenParaEnvio = null;
+    enVivoAgotado = false;
     document.getElementById('tram-form-titulo').textContent = tipo.titulo;
     document.getElementById('tram-form-codigo').textContent = tipo.codigo;
     document.getElementById('tram-form-error').style.display = 'none';
@@ -2388,7 +2397,77 @@ if (document.getElementById('tp-tramites')) {
     }).join('');
     iniciarValidacionTram(tipo);
     verTram('tram-form');
+    abrirConRequisitos(tipo);
   };
+
+  // ---- Requisitos al abrir y calculados (bloque 4) ----
+  // El servidor dice si el afiliado de la sesión cumple los requisitos del
+  // formulario; si no, se muestran los mensajes en vez de los campos. Los
+  // calculados que no dependen de otro campo se completan acá.
+  async function abrirConRequisitos(tipo) {
+    const caja = document.getElementById('tram-form-requisitos');
+    const campos = document.getElementById('tram-form-campos');
+    const enviar = document.getElementById('tram-form-enviar');
+    const prog = document.getElementById('tram-prog');
+    caja.style.display = 'none'; caja.className = 'tram-requisitos';
+    campos.style.display = ''; enviar.style.display = '';
+    const hayAlgo = (tipo.requisitos || []).length || tipo.campos.some(c => c.tipo_dato === 'calculado');
+    if (!hayAlgo) return;
+    try {
+      const r = await fetch('/api/tramite/requisitos/' + tipo.id);
+      if (!r.ok) return;                 // sin respuesta, el envío decide igual
+      const d = await r.json();
+      if (tipoTramiteActual !== tipo) return;
+      if (!d.cumple) {
+        caja.innerHTML = '<b>Por ahora no podés iniciar este trámite:</b><ul>' +
+          (d.mensajes || []).map(m => `<li>${escTram(m)}</li>`).join('') + '</ul>';
+        caja.style.display = ''; campos.style.display = 'none'; enviar.style.display = 'none'; prog.style.display = 'none';
+        return;
+      }
+      pintarCalculados(d.calculados);
+    } catch (e) { /* cortesía: el servidor decide al enviar */ }
+  }
+  function pintarCalculados(calculados) {
+    Object.entries(calculados || {}).forEach(([cid, texto]) => {
+      const el = document.getElementById('tc_' + cid);
+      if (el) el.value = texto;
+    });
+  }
+  // Validación en vivo contra el servidor (solo las funciones que el admin
+  // marcó "en vivo"): pasa / no pasa y el mensaje, nunca el dato. Diez
+  // intentos por formulario; después se deja de preguntar y decide el envío.
+  let enVivoAgotado = false;
+  async function tvEnVivo(tipo, c) {
+    if (enVivoAgotado || tipoTramiteActual !== tipo) return;
+    const idx = tipo.campos.indexOf(c);
+    const valor = tvValorCampo(c);
+    if (!String(valor).trim()) return;
+    const valores = {};
+    tipo.campos.forEach((o, i) => { if (['texto', 'numero', 'fecha', 'seleccion'].includes(o.tipo_dato)) valores[i] = tvValorCampo(o); });
+    let d;
+    try {
+      const r = await fetch('/api/tramite/validar-campo', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo_tramite_id: tipo.id, indice_campo: idx, valor, valores }) });
+      if (r.status === 429) { enVivoAgotado = true; return; }
+      if (!r.ok) return;
+      d = await r.json();
+    } catch (e) { return; }
+    if (tipoTramiteActual !== tipo || tvValorCampo(c) !== valor) return;
+    const cont = document.getElementById('ctw_' + c.id);
+    const errEl = document.getElementById('ctw_' + c.id + '_err');
+    if (!cont) return;
+    if (!d.pasa) {
+      cont.classList.remove('ok', 'avs'); cont.classList.add('mal');
+      const tick = cont.querySelector('.tram-tick'); if (tick) tick.textContent = '✗';
+      if (errEl) errEl.textContent = d.mensaje || 'Revisá este dato.';
+    }
+    pintarCalculados(d.calculados);
+    tvProgreso(tipo);
+  }
+  function tieneEnVivo(c) {
+    return (c.validaciones || []).some(v => v.fuente === 'funcion' && v.en_vivo)
+      || tipoTramiteActual.campos.some(o => o.tipo_dato === 'calculado' && (o.validaciones || []).some(v => v.fuente === 'funcion' && v.clave2 != null && tipoTramiteActual.campos[v.clave2] === c));
+  }
 
   /* ---- Validación en vivo (rediseño 2026-09-01) ----
      Espejo JS de validaciones_tramite.evaluar_envio: fuente "fija" del
@@ -2521,8 +2600,9 @@ if (document.getElementById('tp-tramites')) {
       }
       const el = document.getElementById('tc_' + c.id);
       if (!el) return;
-      el.addEventListener('blur', () => { tvPintaCampo(tipo, c); tvProgreso(tipo); });
-      el.addEventListener('change', () => { tvPintaCampo(tipo, c); tvProgreso(tipo); });
+      const enVivo = tieneEnVivo(c);
+      el.addEventListener('blur', () => { if (tvPintaCampo(tipo, c) && enVivo) tvEnVivo(tipo, c); tvProgreso(tipo); });
+      el.addEventListener('change', () => { if (tvPintaCampo(tipo, c) && enVivo) tvEnVivo(tipo, c); tvProgreso(tipo); });
       el.addEventListener('input', () => {
         // mientras escribe solo se limpia un error viejo, no se lo apura
         const cont = document.getElementById('ctw_' + c.id);
