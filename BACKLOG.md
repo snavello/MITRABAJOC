@@ -41,12 +41,12 @@ se hace.
      campo (opciones por valor del padre), constructor, JS de afiliado y
      empresa, y validación en el servidor del subconjunto. Provisorio:
      unir las dos listas en una ("Primaria 1.º", "Primaria 2.º"…).
-  6. **Pedidos repetidos**: `/api/tramite` verifica tipo activo, sindicato
-     y seccional, nada más; `db.tramites_de_trabajador` existe pero no se
-     consulta al crear. Son dos: "uno por afiliado por formulario" es
-     chico (marca en el tipo + consulta antes de crear); "único por valor
-     de un campo" (el DNI del chico) es mediano y encaja como función de
-     la Fase 2 `sistema` de abajo, con `bloquea`/`avisa`.
+  6. **Pedidos repetidos**: "uno por afiliado por formulario" **HECHO el
+     2026-10-16** como requisito sobre `sistema.tramites_de_este_tipo`
+     (bloque 5 de `PLAN_LISTAS_VALIDACIONES.md`). Queda "único por valor
+     de un campo" (el mismo DNI del chico en dos pedidos): mediano, una
+     marca «único» sobre el campo y una consulta a las respuestas de los
+     trámites del tipo antes de crear, con `bloquea`/`avisa`.
 
 - [ ] **Panel Sindical: una dirección con solo `sal_max` pierde ese filtro**
   (2026-10-12, encontrado al portar el estado a la v2, `PLAN_DASHBOARD_V2.md`
@@ -188,6 +188,10 @@ se hace.
 - [ ] **Validaciones de Trámites, fases 2–4** (2026-09-01): la Fase 1
   (fuente `fija` + consistencia entre campos) está HECHA y en el código —
   ver "Validaciones en formularios de Trámites" en CLAUDE.md/HISTORIAL.md.
+  **Fases 2 y 3 HECHAS el 2026-10-16 como una sola fuente `funcion`**
+  (`PLAN_LISTAS_VALIDACIONES.md`, cinco bloques): listas tipadas por CSV,
+  datos del padrón, fórmulas con nombres cerrados, requisitos para iniciar,
+  campo calculado, en vivo con tope de intentos. Queda la Fase 4.
   Decisiones YA CERRADAS con Sd para lo que sigue:
   - **Fase 2 — fuente `sistema`**: catálogo cerrado de funciones sobre
     datos que la app ya tiene (padrón, antigüedad como afiliado calculada

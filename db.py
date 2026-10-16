@@ -7504,6 +7504,17 @@ def contexto_validaciones(sindicato_id: int, cuil: str, tipo: dict, valores: dic
             ReciboVerificado.sindicato_id == sindicato_id,
             ReciboVerificado.cuil == cuil)).one()
         semaforo = (t.semaforo_datos or {}).get("color") if t else None
+        # "Una sola vez" / "no repetir mientras haya uno abierto": cuenta los
+        # pedidos de ESTE formulario del afiliado. Un tipo sin id (el banco
+        # de pruebas con un formulario sin guardar) no tiene pedidos.
+        de_este_tipo = abiertos = 0
+        if tipo.get("id"):
+            de_este_tipo = s.exec(select(func.count(Tramite.id)).where(
+                Tramite.sindicato_id == sindicato_id, Tramite.cuil == cuil,
+                Tramite.tipo_tramite_id == tipo["id"])).one() or 0
+            abiertos = s.exec(select(func.count(Tramite.id)).where(
+                Tramite.sindicato_id == sindicato_id, Tramite.cuil == cuil,
+                Tramite.tipo_tramite_id == tipo["id"], Tramite.estado != "terminado")).one() or 0
         sistema = {
             "en_padron": t is not None,
             "activo": bool(t and t.activo),
@@ -7516,6 +7527,8 @@ def contexto_validaciones(sindicato_id: int, cuil: str, tipo: dict, valores: dic
             "semaforo": semaforo or None,
             "fecha_afiliacion": (t.fecha_afiliacion or None) if t else None,
             "fecha_nacimiento": (c.fecha_nacimiento or None) if c else None,
+            "tramites_de_este_tipo": float(de_este_tipo),
+            "tramites_abiertos_de_este_tipo": float(abiertos),
         }
         seccional_id = t.seccional_id if t else None
     filas = {}

@@ -67,7 +67,12 @@ CONTROLES = {
     "lista": "Contra una lista del sindicato",
     "formato": "Formato (mail, teléfono)",
 }
-CONTROL_BRECHA = {"unico": "duplicados", "depende": "dependencia", "lista": "lista", "formato": "formato"}
+# "lista" dejó de ser brecha el 2026-10-16: es una validación por función
+# contra el grupo familiar (bloque 3 de PLAN_LISTAS_VALIDACIONES.md).
+CONTROL_BRECHA = {"unico": "duplicados", "depende": "dependencia", "formato": "formato"}
+# Lo que un control sobre un campo exporta como validación real de Colm3na.
+LISTA_FAMILIAR = "grupo_familiar"
+MESES_ANTIGUEDAD = 6     # el requisito de antigüedad sale con este número; el admin lo ajusta
 ESTADOS = {
     "iniciado": "Iniciado", "en_tratamiento": "En tratamiento",
     "espera_info": "A la espera de info", "respondido": "Respondido", "terminado": "Terminado",
@@ -88,31 +93,21 @@ BRECHAS = {
         "hoy": "Alguien del sindicato activa el formulario el día de apertura y lo desactiva al cierre. La noticia que lo anuncia sí vence sola.",
         "rec": "Fecha desde / hasta en el tipo de trámite, con el mismo criterio de vigencia que Noticias.",
         "backlog": "Trámites: seis brechas · 1"},
-    "requisitos": {
-        "titulo": "Controlar requisitos antes de dejar iniciar", "nivel": "desarrollo", "tam": "mediano",
-        "hoy": "Cualquier afiliado puede iniciarlo. El área controla el requisito al revisar y, si no lo cumple, responde y cierra.",
-        "rec": "Fase 2 de validaciones del BACKLOG (fuente «sistema»): antigüedad, titularidad y edad calculadas desde el padrón, antes de mostrar los campos.",
-        "backlog": "Validaciones de Trámites, fases 2–4 · Fase 2"},
     "familia": {
         "titulo": "Familiares declarados una sola vez", "nivel": "desarrollo", "tam": "grande",
         "hoy": "El formulario pide los datos y documentos del familiar en cada pedido.",
         "rec": "Grupo familiar en el perfil del afiliado, validado una vez y reutilizable por todos los trámites.",
         "backlog": ""},
     "duplicados": {
-        "titulo": "Evitar pedidos repetidos", "nivel": "ajuste", "tam": "chico",
-        "hoy": "Nada impide presentar dos veces lo mismo. El área lo detecta al revisar.",
-        "rec": "Marca «único por afiliado» sobre un campo clave (DNI del familiar, período) que avise o bloquee.",
+        "titulo": "Evitar pedidos repetidos por familiar o por período", "nivel": "ajuste", "tam": "mediano",
+        "hoy": "«Una sola vez» ya se controla con un requisito (sistema.tramites_de_este_tipo). Por familiar o por período nada lo impide: el área lo detecta al revisar.",
+        "rec": "Marca «único por valor de un campo» (DNI del familiar, período) que avise o bloquee.",
         "backlog": "Trámites: seis brechas · 6"},
     "dependencia": {
         "titulo": "Una respuesta que depende de otra", "nivel": "ajuste", "tam": "mediano",
         "hoy": "Las reglas entre campos comparan solo números o fechas. Salida: unir las dos preguntas en una lista («Primaria 1.º», «Primaria 2.º»…).",
         "rec": "Opciones dependientes en el constructor, evaluadas también en el servidor.",
         "backlog": "Trámites: seis brechas · 5"},
-    "lista": {
-        "titulo": "Controlar contra una lista del sindicato", "nivel": "desarrollo", "tam": "mediano",
-        "hoy": "El área lo verifica a mano contra su propia base.",
-        "rec": "Fase 3 de validaciones del BACKLOG (fuente «lista»): lista cargada por CSV, con límite de intentos.",
-        "backlog": "Validaciones de Trámites, fases 2–4 · Fase 3"},
     "formato": {
         "titulo": "Validar mail o teléfono", "nivel": "ajuste", "tam": "chico",
         "hoy": "Se carga como texto libre; solo se controla el largo.",
@@ -574,12 +569,11 @@ def brechas_de(entrada: dict, circ: Optional[dict] = None) -> dict:
     if r.get("ventana") == "si":
         add("ventana", "Es una campaña con fechas.")
     req = [x for x in (r.get("requisitos") or []) if x != "ninguno"]
-    if req:
-        add("requisitos", "Requisitos: " + ", ".join(etiqueta_opcion("requisitos", x).lower() for x in req) + ".")
     if r.get("frecuencia") == "familiar" or "familiar" in req:
         add("familia", "Se pide por familiar.")
-    if r.get("frecuencia") in ("familiar", "periodo", "unica"):
-        add("duplicados", "Tiene límite de pedidos.")
+    # "unica" ya no es brecha: sale como requisito sobre sistema.tramites_de_este_tipo.
+    if r.get("frecuencia") in ("familiar", "periodo"):
+        add("duplicados", "Se puede pedir más de una vez (por familiar o por período).")
     if r.get("cupo") == "si":
         add("cupo", "La cantidad es limitada.")
     if r.get("listado") == "si":
@@ -623,9 +617,39 @@ def campos_colm3na(campos: list) -> list:
         if c["control"] == "desde_hoy" and c["tipo"] == "fecha":
             o["validaciones"].append({"fuente": "fija", "operador": ">=", "valor": "hoy",
                                       "mensaje": "Tiene que ser desde hoy en adelante.", "bloquea": True})
+        if c["control"] == "lista" and c["tipo"] in ("texto", "numero"):
+            # Validación por función real (bloque 3): el dato tiene que estar
+            # en el grupo familiar que cargó el sindicato, buscado por el CUIL
+            # de la sesión y por este mismo campo (su índice en la lista que
+            # se exporta), con aviso al salir del campo.
+            o["validaciones"].append({"fuente": "funcion", "origen": "lista", "lista": LISTA_FAMILIAR,
+                                      "clave2": len(salida), "trae": "existe", "formula": None,
+                                      "operador": "==", "valor": "si",
+                                      "mensaje": "Tiene que figurar en tu grupo familiar cargado por el sindicato.",
+                                      "bloquea": True, "en_vivo": True})
         if c["control"] in CONTROL_BRECHA:
             o["x_pendiente"] = CONTROLES[c["control"]]
         salida.append(o)
+    return salida
+
+
+def requisitos_colm3na(respuestas: dict) -> list:
+    """Los requisitos para iniciar (TipoTramite.requisitos) que salen de las
+    respuestas, con la forma que acepta validaciones_tramite.requisitos_saneados.
+    Lo que mira al familiar (tener uno, su edad) no es un requisito del tipo
+    sino una validación sobre el campo del DNI: la instrucción lo dice."""
+    r = respuestas
+    req = [x for x in (r.get("requisitos") or []) if x != "ninguno"]
+    salida = []
+    if "antiguedad" in req:
+        salida.append({"origen": "sistema", "formula": f"meses_entre(sistema.fecha_afiliacion, hoy()) >= {MESES_ANTIGUEDAD}",
+                       "mensaje": f"Necesitás {MESES_ANTIGUEDAD} meses de antigüedad como afiliado para pedirlo.", "bloquea": True})
+    if "titular" in req:
+        salida.append({"origen": "sistema", "trae": "en_padron", "operador": "==", "valor": "si",
+                       "mensaje": "Tenés que estar en el padrón del sindicato como titular.", "bloquea": True})
+    if r.get("frecuencia") == "unica":
+        salida.append({"origen": "sistema", "trae": "tramites_de_este_tipo", "operador": "==", "valor": "0",
+                       "mensaje": "Este trámite se pide una sola vez, y ya lo pediste.", "bloquea": True})
     return salida
 
 
@@ -656,12 +680,13 @@ def configuracion(entrada: dict, circ: Optional[dict] = None) -> dict:
     codigo = entrada["codigo"] or codigo_de(entrada["nombre"])
     forms = [{"clave": "principal", "titulo": entrada["nombre"], "codigo": codigo, "activo": True, "seccional": None,
               "destino": destino, "permite_pase": bool(pase), "areas_pase": pase,
-              "campos": campos_colm3na(entrada["campos"]), "reglas_consistencia": []}]
+              "campos": campos_colm3na(entrada["campos"]), "reglas_consistencia": [],
+              "requisitos": requisitos_colm3na(r)}]
     for i, f in enumerate(c["encadenados"]):
         forms.append({"clave": f"encadenado_{i + 1}", "titulo": f"{f['nombre']} · {entrada['nombre']}",
                       "codigo": f"{(codigo or 'X')[:4]}C{i + 1}", "activo": True, "seccional": None,
                       "x_solo_encadenado": True, "destino": destino, "permite_pase": False, "areas_pase": [],
-                      "campos": campos_colm3na(f["campos"]), "reglas_consistencia": []})
+                      "campos": campos_colm3na(f["campos"]), "reglas_consistencia": [], "requisitos": []})
     return {"modulos": list(dict.fromkeys(mods)), "formularios": forms, "pase": pase, "areas": areas, "circuito": c}
 
 
@@ -742,6 +767,17 @@ def instruccion(entrada: dict, cfg: dict) -> dict:
         destino = f"Que caiga siempre a «{A}». Destino por defecto: esa misma área."
     pasos.append({"clave": "destino", "texto": destino})
     pasos.append({"clave": "pase", "texto": f"Tildar «Permite pase» y agregar a la lista {texto_pase(cfg['pase'])}." if cfg["pase"] else "Sin pase entre áreas."})
+    req = [x for x in (r.get("requisitos") or []) if x != "ninguno"]
+    if p.get("requisitos") or "familiar" in req or "edad" in req:
+        partes = []
+        if p.get("requisitos"):
+            partes.append("en «Requisitos para iniciar», " + " y ".join(f"«{q['mensaje']}»" for q in p["requisitos"])
+                          + (f" (ajustar los {MESES_ANTIGUEDAD} meses de antigüedad al valor real)" if "antiguedad" in req else ""))
+        if "familiar" in req or "edad" in req:
+            partes.append("sobre el campo del DNI del familiar, una validación «contra una lista o el padrón» del grupo familiar"
+                          + (" y una fórmula con la edad (anios_entre(lista.fecha_nacimiento, hoy()))" if "edad" in req else "")
+                          + "; el sindicato carga antes el grupo familiar en la pestaña Listas")
+        pasos.append({"clave": "requisitos", "texto": "Requisitos: " + "; ".join(partes) + "."})
     pasos.append({"clave": "probar", "texto": "Probar con el banco de pruebas del constructor y con un pedido de punta a punta en Pruebas."})
     if r.get("ventana") == "si":
         pasos.append({"clave": "anunciar",

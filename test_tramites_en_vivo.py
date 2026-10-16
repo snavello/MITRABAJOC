@@ -168,6 +168,11 @@ def test_diez_intentos_por_sesion_y_formulario_y_el_envio_los_limpia():
     r = juan.post("/api/tramite", data={"tipo_tramite_id": TIPO["id"], f'campo_{ids["DNI del chico"]}': "55123456"})
     assert r.status_code == 200, r.text
     assert juan.post("/api/tramite/validar-campo", json=cuerpo).status_code == 200
+    # Y el sistema ya sabe que pidió este trámite (cierra «una sola vez» con un requisito).
+    sistema = db.contexto_validaciones(SID, JUAN, TIPO, {})["sistema"]
+    assert sistema["tramites_de_este_tipo"] == 1 and sistema["tramites_abiertos_de_este_tipo"] == 1
+    assert db.contexto_validaciones(SID, ANA, TIPO, {})["sistema"]["tramites_de_este_tipo"] == 0
+    assert db.contexto_validaciones(SID, JUAN, {"campos": [], "requisitos": []}, {})["sistema"]["tramites_de_este_tipo"] == 0, "sin id no hay pedidos"
 
 
 def test_la_app_del_afiliado_pide_requisitos_y_valida_en_vivo():

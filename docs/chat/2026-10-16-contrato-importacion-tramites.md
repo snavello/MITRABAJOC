@@ -20,7 +20,7 @@ Cada campo tiene la MISMA forma que guarda hoy el constructor (`main._campos_tra
   destino: { modo: "misma_area_en_cada_seccional" | "una_sola_area", area, por_defecto: {area, seccional} },
   permite_pase, areas_pase: [{area, en}],
   campos: [ { etiqueta, tipo_dato, longitud_maxima, longitud_exacta, decimales, tipos_archivo_permitidos, opciones, ancho, obligatorio, validaciones[], x_pendiente? } ],
-  reglas_consistencia: [], x_solo_encadenado? } ]
+  reglas_consistencia: [], requisitos: [ <validación de fuente funcion, ver validaciones_tramite.requisitos_saneados> ], x_solo_encadenado? } ]
   - Los encadenados sirven para pedir DATOS NUEVOS después de la aprobación. Corregir o completar lo ya enviado va por el chat del trámite.
 - `circuito`: es una guía para el operador; Colm3na no tiene un objeto «circuito». Usa notación de flujo tipo BPMN:
   - `actores`: [{ actor, usa_colm3na }]
