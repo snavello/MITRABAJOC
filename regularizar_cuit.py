@@ -257,6 +257,13 @@ INVENTARIO = (
        donde="criterio IN ('cuil', 'cuit_empleador')",
        nota="los criterios de una encuesta son los de Notificacion: cuil, cuit_empleador, "
             "seccional, provincia y todos"),
+    # ---- Listas del sindicato (PLAN_LISTAS_VALIDACIONES.md) -----------
+    _c("filalista", "clave1", PERSONA, TEXTO, ALTA,
+       nota="la primera clave de búsqueda de toda lista es el CUIL del afiliado, que llega "
+            "por CSV con el verificador exigido; va atado al del padrón"),
+    _c("filalista", "datos", PERSONA, JSON, ALTA,
+       nota="la fila entera de la lista, con el mismo CUIL repetido en `cuil`; el DNI del "
+            "familiar tiene 7 u 8 dígitos y no tiene forma de número"),
 )
 
 # Lo que NO se reescribe, con el motivo. Clave = "tabla.columna".
@@ -312,6 +319,7 @@ EXCLUIDAS = {
     "tipotramite.reglas_consistencia": "reglas entre campos, por orden",
     "tipotramiteempleador.reglas_consistencia": "reglas entre campos, por orden",
     "tramite.advertencias": "mensajes de advertencia del formulario (texto del admin)",
+    "listasindicato.columnas": "declaración de las columnas de la lista (clave, tipo, rótulo): sin identidades",
     "tramiteempleador.advertencias": "mensajes de advertencia del formulario (texto del admin)",
 }
 

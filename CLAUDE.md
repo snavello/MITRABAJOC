@@ -124,6 +124,10 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   sintéticas" en DESPLIEGUE_RENDER.md.
 - rag.py — piloto de consultas sobre el convenio: extracción de PDF,
   troceo, embeddings locales e indexación en segundo plano.
+- listas.py — Listas del sindicato (`PLAN_LISTAS_VALIDACIONES.md`): las
+  plantillas tipadas (grupo familiar, datos del afiliado, lista simple), el
+  CSV modelo y el parseo con validación fila por fila. Puro, no importa
+  `db`; el ensayo y la carga usan el mismo parseo. Ver "Listas del sindicato".
 - validaciones_tramite.py — motor puro de validaciones de formularios de
   Trámites (fija + consistencia; ver sección propia).
 - recursos.py — Recursos de la landing `/entornos`: catálogo de la
@@ -1023,6 +1027,13 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     trámites reales de La Bancaria. El mismo día se acordó el plan de Listas
     y validaciones por función (`PLAN_LISTAS_VALIDACIONES.md`, PR #127).
 
+35. **Listas del sindicato** (2026-10-16, Admin 0.54.01, bloque 1 de
+    `PLAN_LISTAS_VALIDACIONES.md`): pestaña Listas propia de `/admin` con
+    permiso `listas`, plantillas tipadas sobre una tabla genérica, carga por
+    CSV con ensayo y reemplazo entero, alcance por seccional. Ver "Listas del
+    sindicato". Quedan los bloques 2 a 5 (fechas del padrón, fuente
+    `funcion`, en vivo, brechas del asistente).
+
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
 plataforma), (b) sacar "Cambiar clave" transitorio de plataforma antes de
@@ -1335,13 +1346,14 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     trámite; los formularios encadenados son solo para datos nuevos después de
     la aprobación.
 13. **Listas del sindicato y validaciones por función en Trámites**
-    (`PLAN_LISTAS_VALIDACIONES.md`, acordado el 2026-10-16, D1–D7, **sin
-    código**): plantillas tipadas (grupo familiar, datos del afiliado, lista
-    simple) sobre una tabla genérica que sube el admin desde una pestaña
-    Listas propia; validación de fuente `funcion` (requisito para iniciar,
-    validación de campo, campo calculado) con la sintaxis de las Reglas y
-    nombres cerrados; dos fechas nuevas en el padrón. Cierra las fases 2 y 3
-    de validaciones del BACKLOG. Trabajador primero, empresa después.
+    (`PLAN_LISTAS_VALIDACIONES.md`, acordado el 2026-10-16, D1–D7; **bloque
+    1 HECHO**, ver "Estado actual" 35): plantillas tipadas (grupo familiar,
+    datos del afiliado, lista simple) sobre una tabla genérica que sube el
+    admin desde una pestaña Listas propia; validación de fuente `funcion`
+    (requisito para iniciar, validación de campo, campo calculado) con la
+    sintaxis de las Reglas y nombres cerrados; dos fechas nuevas en el
+    padrón. Cierra las fases 2 y 3 de validaciones del BACKLOG. Trabajador
+    primero, empresa después. **Quedan los bloques 2 a 5.**
 
 ## Herramientas (solapa de `/entornos`)
 
@@ -1571,6 +1583,33 @@ Detalle completo en HISTORIAL.md. Reglas vigentes:
 - Tests: `test_precios_ia.py` (18). Uno es fail-closed y hay que respetarlo:
   los `default` de `precios_ia.USOS` tienen que ser las constantes de los
   tres módulos.
+
+## Listas del sindicato (pestaña Listas de `/admin`)
+
+Bloque 1 de `PLAN_LISTAS_VALIDACIONES.md` (2026-10-16). Lo que el sindicato
+tiene en sus planillas y Colm3na no, cargado por CSV para que las
+validaciones de Trámites lo consulten. Reglas vigentes:
+
+- **Plantillas tipadas sobre una tabla genérica** (D1): `listas.PLANTILLAS`
+  declara columnas con tipo (cuil / dni / texto / fecha) y claves de
+  búsqueda; la primera clave es SIEMPRE el CUIL del afiliado. Una plantilla
+  nueva es una entrada ahí, no un modelo nuevo (`ListaSindicato` +
+  `FilaLista`, datos en JSONB, índice por claves).
+- **El parseo es puro y único** (`listas.parsear_csv`): el ensayo y la carga
+  lo comparten, así lo que el ensayo muestra es exactamente lo que la carga
+  escribe. El CUIL se exige con módulo 11 porque acá NACE; las fechas entran
+  como AAAA-MM-DD o DD/MM/AAAA y se guardan ISO. Hechos, no derivados.
+- **Ensayo y reemplazo entero** (D5): sin `confirmar` no se escribe nada;
+  con `confirmar`, las filas válidas reemplazan la lista entera (misma
+  plantilla + nombre + seccional) en una transacción. Las filas con error
+  quedan afuera y se informan con su línea.
+- **Permiso `listas`** (grupo Padrón, sin módulo): lo tienen los dos roles de
+  administrador, se puede dar a un área. Un Admin de Seccional carga y ve
+  solo las de su seccional; una lista para todo el sindicato la carga el
+  administrador general. El recorte va EN LA CONSULTA.
+- `db.buscar_en_lista(sid, plantilla, cuil, clave2, seccional_id)` es la
+  puerta que van a usar las validaciones de fuente `funcion` (bloque 3).
+- Tests: `test_listas.py`.
 
 ## Validaciones en formularios de Trámites
 Capa de validaciones acordada 2026-09-01, cuatro fuentes: `fija` (valor
