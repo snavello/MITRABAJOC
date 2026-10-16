@@ -317,6 +317,7 @@ EXCLUIDAS = {
     "campotramite.validaciones": "reglas de validación del formulario: no son identidad de nadie",
     "campotramiteempleador.validaciones": "reglas de validación del formulario: no son identidad de nadie",
     "tipotramite.reglas_consistencia": "reglas entre campos, por orden",
+    "tipotramite.requisitos": "validaciones por función para iniciar el trámite: fórmulas y mensajes, sin identidades",
     "tipotramiteempleador.reglas_consistencia": "reglas entre campos, por orden",
     "tramite.advertencias": "mensajes de advertencia del formulario (texto del admin)",
     "listasindicato.columnas": "declaración de las columnas de la lista (clave, tipo, rótulo): sin identidades",

@@ -101,7 +101,7 @@ def herramienta() -> dict:
                                      "required": ["etiqueta", "tipo", "obligatorio", "opciones", "control"],
                                      "properties": {
                                          "etiqueta": {"type": "string", "description": "Etiqueta corta, como la vería el afiliado."},
-                                         "tipo": _enum(at.TIPOS, " / ".join(f"{k}: {v}" for k, v in at.TIPOS.items()) + ". Un documento es archivo; una lista cerrada de opciones es seleccion.", nulo=False),
+                                         "tipo": _enum(at.TIPOS_QUE_PROPONE, " / ".join(f"{k}: {v}" for k, v in at.TIPOS.items() if k in at.TIPOS_QUE_PROPONE) + ". Un documento es archivo; una lista cerrada de opciones es seleccion.", nulo=False),
                                          "obligatorio": {"type": "boolean"},
                                          "opciones": {"type": "string", "description": "Opciones separadas por coma si el tipo las lleva; extensiones si es archivo; vacío si no."},
                                          "control": _enum([k for k in at.CONTROLES if k] + [""], "Solo si el relato lo pide o es evidente: " + " / ".join(f"{k}: {v}" for k, v in at.CONTROLES.items() if k) + ". Vacío si no.", nulo=False),
