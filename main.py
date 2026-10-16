@@ -163,6 +163,12 @@ _intentos_login: dict[str, list] = {}
 # CUILes contra el registro no tiene que dejar sin login a quien comparte la IP,
 # ni al revés. Mismo mecanismo y mismos umbrales que los logins.
 _intentos_registro: dict[str, list] = {}
+# Validación en vivo de un campo de trámite (PLAN_LISTAS_VALIDACIONES.md,
+# D3): {(cuil, tipo_tramite_id): intentos}. Diez por sesión y formulario, para
+# que la respuesta "está / no está en la lista" no sirva para enumerar la
+# lista probando DNI. Se limpia al enviar el trámite.
+_intentos_en_vivo: dict[tuple, int] = {}
+EN_VIVO_MAX_INTENTOS = 10
 
 
 def _login_bloqueado(request, tabla=None) -> bool:
@@ -4916,6 +4922,7 @@ async def api_enviar_tramite(request: Request):
             "errores": errores, "errores_campos": veredicto["errores_campos"]})
     for cid, texto in veredicto["calculados"].items():
         respuestas.append({"campo_tramite_id": cid, "valor_texto": texto})
+    _intentos_en_vivo.pop((cuil, tipo_tramite_id), None)
 
     # Trámite encadenado: si el formulario se abrió desde el CHAT de otro
     # trámite, el nuevo queda vinculado. Solo vale un trámite DEL MISMO
@@ -4936,6 +4943,84 @@ async def api_enviar_tramite(request: Request):
     if not resultado:
         raise HTTPException(400, "No se pudo crear el trámite.")
     return resultado
+
+
+@app.get("/api/tramite/requisitos/{tipo_tramite_id}")
+def api_tramite_requisitos(tipo_tramite_id: int, request: Request):
+    """Al abrir el formulario (bloque 4 de PLAN_LISTAS_VALIDACIONES.md): si
+    los requisitos del tipo no se cumplen para el afiliado de la SESIÓN,
+    los mensajes en vez de los campos; y los calculados que ya se pueden
+    completar (los que no dependen de una segunda clave). Misma puerta que
+    el envío: sesión, módulo, tipo activo de su sindicato y seccional."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = _cuil_seguro(request)
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise HTTPException(403, "No autorizado")
+    _exigir_modulo(sid, "tramites")
+    tipo = _tipo_tramite_del_afiliado(tipo_tramite_id, sid, cuil)
+    contexto = db.contexto_validaciones(sid, cuil, tipo, {})
+    return validaciones_tramite.requisitos_al_abrir(tipo["campos"], tipo.get("requisitos"), contexto)
+
+
+@app.post("/api/tramite/validar-campo")
+async def api_tramite_validar_campo(request: Request):
+    """Validación EN VIVO de un campo (D3): `{tipo_tramite_id, indice_campo,
+    valor, valores}` → `{pasa, mensaje, calculados}`. Solo las funciones que
+    el admin marcó "en vivo", y solo pasa / no pasa con su mensaje: nunca
+    la fila ni el dato que se miró. **Diez intentos por sesión y formulario**
+    (`EN_VIVO_MAX_INTENTOS`): después, 429 y el afiliado sigue hasta el
+    envío, donde todo se evalúa igual. Es cortesía: el servidor decide al
+    enviar."""
+    ses = sesion_actual(request, "trabajador")
+    cuil = _cuil_seguro(request)
+    if not ses or not cuil:
+        raise HTTPException(403, "No autorizado")
+    sid = sindicato_activo_trabajador(request)
+    if not sid:
+        raise HTTPException(403, "No autorizado")
+    _exigir_modulo(sid, "tramites")
+    cuerpo = await request.json()
+    try:
+        tipo_id = int(cuerpo.get("tipo_tramite_id") or 0)
+        indice = int(cuerpo.get("indice_campo"))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "Pedido inválido")
+    tipo = _tipo_tramite_del_afiliado(tipo_id, sid, cuil)
+    campos = tipo["campos"]
+    if not (0 <= indice < len(campos)):
+        raise HTTPException(400, "Pedido inválido")
+    llave = (cuil, tipo_id)
+    if _intentos_en_vivo.get(llave, 0) >= EN_VIVO_MAX_INTENTOS:
+        raise HTTPException(429, "Ya probaste este dato muchas veces: completá el formulario y envialo, lo revisamos al recibirlo.")
+    if len(_intentos_en_vivo) > 5000:
+        _intentos_en_vivo.clear()
+    _intentos_en_vivo[llave] = _intentos_en_vivo.get(llave, 0) + 1
+    crudos = cuerpo.get("valores") or {}
+    valores = {}
+    for clave, valor in (crudos.items() if isinstance(crudos, dict) else []):
+        try:
+            i = int(clave)
+        except (TypeError, ValueError):
+            continue
+        if 0 <= i < len(campos):
+            valores[campos[i]["id"]] = str(valor or "")[:500]
+    valores[campos[indice]["id"]] = str(cuerpo.get("valor") or "")[:500]
+    contexto = db.contexto_validaciones(sid, cuil, tipo, valores)
+    return validaciones_tramite.evaluar_campo_en_vivo(campos, indice, valores, contexto)
+
+
+def _tipo_tramite_del_afiliado(tipo_tramite_id: int, sid: int, cuil: str) -> dict:
+    """El tipo, si es activo de SU sindicato y de su seccional (o global);
+    si no, 404 -- mismo criterio que api_enviar_tramite."""
+    tipo = db.tipo_tramite_por_id(tipo_tramite_id)
+    if not tipo or tipo["sindicato_id"] != sid or not tipo["activo"]:
+        raise HTTPException(404, "Tipo de trámite inválido")
+    if tipo.get("seccional_id") and tipo["seccional_id"] != db.seccional_de_trabajador(cuil, sid):
+        raise HTTPException(404, "Tipo de trámite inválido")
+    return tipo
 
 
 @app.post("/api/tramite/{tramite_id}/nota")

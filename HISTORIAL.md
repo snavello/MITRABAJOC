@@ -7558,3 +7558,42 @@ pruebas con CUIL, envío frenado por la lista y por el requisito, calculado
 guardado por el servidor) y el humo con Playwright del constructor y del
 afiliado.
 
+
+## Validación en vivo y requisitos al abrir (2026-10-16, Trabajador 0.46.02)
+
+Bloque 4 de `PLAN_LISTAS_VALIDACIONES.md` (rama `feature/validaciones-en-vivo`,
+decisión D3). Hasta acá las validaciones por función se evaluaban solo al
+enviar: el afiliado cargaba todo el formulario y recién al final se enteraba
+de que el DNI no estaba en su grupo familiar. Ahora:
+
+- **`GET /api/tramite/requisitos/{tipo_id}`, al abrir el formulario.** Si
+  los requisitos del tipo no se cumplen para el afiliado de la SESIÓN, la
+  app muestra los mensajes en vez de los campos (caja `tram-form-requisitos`,
+  sin botón de enviar) -- postergar es no responder, y un formulario que se
+  va a rechazar al final es peor que uno que dice por qué al principio.
+  Misma respuesta trae los **calculados que ya se pueden completar** (los
+  que no dependen de una segunda clave del formulario, como la antigüedad):
+  se dibujan apenas se abre. Misma puerta que el envío
+  (`_tipo_tramite_del_afiliado`: sesión, módulo, tipo activo de su
+  sindicato y seccional).
+- **`POST /api/tramite/validar-campo`, al salir del campo.** Solo las
+  funciones que el admin marcó "en vivo", y la respuesta es **pasa / no
+  pasa con el mensaje del admin, nunca la fila ni el dato que se miró**
+  (`vt.evaluar_campo_en_vivo`; el test lo verifica sobre las claves de la
+  respuesta). Recalcula además los calculados que usan ese campo como
+  segunda clave (la edad del chico aparece al escribir el DNI). **Diez
+  intentos por sesión y formulario** (`main._intentos_en_vivo`,
+  `EN_VIVO_MAX_INTENTOS`; después, 429): es lo que impide usar la respuesta
+  para enumerar una lista probando DNI. El contador se limpia con el envío
+  que ENTRA, no con uno rechazado. Del lado del navegador, un 429 apaga las
+  consultas (`enVivoAgotado`) y el afiliado sigue hasta el envío, donde todo
+  se evalúa igual: es cortesía, el servidor decide al enviar.
+- La validación en vivo de las fijas sigue siendo el espejo JS de siempre;
+  la de función se pregunta al servidor solo si el campo pasó las fijas y
+  tiene alguna marcada "en vivo" (o un calculado que depende de él).
+
+Tests: `test_tramites_en_vivo.py` (6: motor, requisitos al abrir con y sin
+cumplir, validar-campo sin fila, el tope de diez y su limpieza con el envío,
+la app pide las dos rutas). Humo con Playwright: Juan ve el error al salir
+del DNI y la edad al corregirlo; Ana ve los requisitos en vez de los campos.
+
