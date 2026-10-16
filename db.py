@@ -1147,6 +1147,11 @@ class TipoTramite(SQLModel, table=True):
     # editar el tipo REEMPLAZA los campos (ids nuevos en cada edición). Se
     # sanean en validaciones_tramite.reglas_saneadas antes de llegar acá.
     reglas_consistencia: list = Field(default=[], sa_column=Column(JSON_TIPO))
+    # Requisitos para INICIAR el trámite (PLAN_LISTAS_VALIDACIONES.md, bloque
+    # 3): validaciones de fuente `funcion`, todas bloqueantes, que se evalúan
+    # contra el padrón y las listas antes de mostrar el formulario y otra
+    # vez al enviar. Saneadas en validaciones_tramite.requisitos_saneados.
+    requisitos: list = Field(default=[], sa_column=Column(JSON_TIPO))
     # NULL = formulario GLOBAL, lo ve todo el sindicato. Con seccional, solo
     # lo ven los trabajadores de esa seccional y solo su admin local lo
     # edita (decisión N7 de SPRINT_AREAS_V2.md).
@@ -4981,14 +4986,15 @@ def _campo_tramite_a_dict(c: "CampoTramite") -> dict:
 
 def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list,
                         reglas: list = None, area_destino_default_id: int = None,
-                        seccional_id: int = None, permite_pase: bool = False) -> int:
+                        seccional_id: int = None, permite_pase: bool = False,
+                        requisitos: list = None) -> int:
     """Crea el tipo y sus campos en un solo alta. `campos` es una lista de
     dicts con las claves de CampoTramite (sin id/tipo_tramite_id); `reglas`
     son las reglas de consistencia ya saneadas
     (validaciones_tramite.reglas_saneadas)."""
     with Session(engine) as s:
         t = TipoTramite(sindicato_id=sindicato_id, titulo=titulo, codigo=codigo,
-                         reglas_consistencia=reglas or [],
+                         reglas_consistencia=reglas or [], requisitos=requisitos or [],
                          area_destino_default_id=area_destino_default_id,
                          seccional_id=seccional_id, permite_pase=permite_pase,
                          creado=fechas.ahora_texto())
@@ -5009,7 +5015,8 @@ def crear_tipo_tramite(sindicato_id: int, titulo: str, codigo: str, campos: list
 def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: str,
                          activo: bool, campos: list, reglas: list = None,
                          area_destino_default_id: int = None,
-                         permite_pase: Optional[bool] = None) -> bool:
+                         permite_pase: Optional[bool] = None,
+                         requisitos: Optional[list] = None) -> bool:
     """Actualiza título/código/activo y SINCRONIZA los campos por id: el
     constructor sigue siendo "lo que ves es lo que queda", pero borrar y
     recrear (como se hacía antes) reventaba con FK en cuanto el tipo tenía
@@ -5032,6 +5039,8 @@ def editar_tipo_tramite(tipo_id: int, sindicato_id: int, titulo: str, codigo: st
             t.area_destino_default_id = area_destino_default_id
         if permite_pase is not None:
             t.permite_pase = permite_pase
+        if requisitos is not None:
+            t.requisitos = requisitos
         t.reglas_consistencia = reglas or []
         s.add(t)
         existentes = {c.id: c for c in s.exec(select(CampoTramite).where(
@@ -5116,6 +5125,7 @@ def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False,
                 "id": t.id, "titulo": t.titulo, "codigo": t.codigo, "activo": t.activo,
                 "creado": t.creado, "campos": [_campo_tramite_a_dict(c) for c in campos],
                 "reglas_consistencia": t.reglas_consistencia or [],
+                "requisitos": t.requisitos or [],
                 "seccional_id": t.seccional_id,
                 "area_destino_default_id": t.area_destino_default_id,
                 "permite_pase": t.permite_pase,
@@ -5221,6 +5231,7 @@ def tipo_tramite_por_id(tipo_id: int) -> Optional[dict]:
             "id": t.id, "sindicato_id": t.sindicato_id, "titulo": t.titulo, "codigo": t.codigo,
             "activo": t.activo, "creado": t.creado, "campos": [_campo_tramite_a_dict(c) for c in campos],
             "reglas_consistencia": t.reglas_consistencia or [],
+            "requisitos": t.requisitos or [],
             "seccional_id": t.seccional_id,
             "area_destino_default_id": t.area_destino_default_id,
         }
@@ -7465,6 +7476,54 @@ def buscar_en_lista(sindicato_id: int, plantilla: str, clave1: str, clave2: str 
             if l.seccional_id is None or l.seccional_id == seccional_id:
                 return dict(f.datos)
         return None
+
+
+def contexto_validaciones(sindicato_id: int, cuil: str, tipo: dict, valores: dict = None) -> dict:
+    """Lo que las validaciones de fuente `funcion` miran fuera del formulario
+    (PLAN_LISTAS_VALIDACIONES.md, bloque 3), para `cuil` en este sindicato:
+
+    - `sistema`: los datos del padrón que nombra `validaciones_tramite.DATOS_SISTEMA`.
+    - `buscar(plantilla, clave2)`: la fila de la lista, YA TRAÍDA. Las
+      búsquedas que el envío necesita salen de `busquedas_necesarias` y se
+      hacen acá, antes de evaluar, con el CUIL de la SESIÓN como primera
+      clave siempre (nunca uno que venga del formulario). Así la evaluación
+      queda pura y el request no abre una sesión adentro de otra.
+
+    Un CUIL que no está en este padrón devuelve `en_padron=False` y lo
+    demás vacío: una validación que lo mire no pasa, no revienta."""
+    from sqlalchemy import func
+    import validaciones_tramite as _vt
+    valores = valores or {}
+    cuil = cuit.normalizar(cuil) or (cuil or "")
+    with Session(engine) as s:
+        t = s.exec(select(Trabajador).where(
+            Trabajador.cuil == cuil, Trabajador.sindicato_id == sindicato_id)).first()
+        c = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil)).first()
+        sec = s.get(Seccional, t.seccional_id) if t and t.seccional_id else None
+        recibos = s.exec(select(func.count(ReciboVerificado.id)).where(
+            ReciboVerificado.sindicato_id == sindicato_id,
+            ReciboVerificado.cuil == cuil)).one()
+        semaforo = (t.semaforo_datos or {}).get("color") if t else None
+        sistema = {
+            "en_padron": t is not None,
+            "activo": bool(t and t.activo),
+            "registrado": bool(t and t.registrado),
+            "seccional": sec.nombre if sec else None,
+            "provincia": (c.provincia or None) if c else None,
+            "localidad": (c.localidad or None) if c else None,
+            "nivel_fiabilidad": float(c.nivel_fiabilidad or 1) if (c and c.clave_hash) else None,
+            "recibos_verificados": float(recibos or 0),
+            "semaforo": semaforo or None,
+            "fecha_afiliacion": (t.fecha_afiliacion or None) if t else None,
+            "fecha_nacimiento": (c.fecha_nacimiento or None) if c else None,
+        }
+        seccional_id = t.seccional_id if t else None
+    filas = {}
+    for plantilla, clave2 in _vt.busquedas_necesarias(tipo.get("campos"), tipo.get("requisitos"), valores):
+        filas[(plantilla, clave2)] = buscar_en_lista(sindicato_id, plantilla, cuil, clave2,
+                                                    seccional_id=seccional_id)
+    return {"sistema": sistema, "buscar": lambda plantilla, clave2: filas.get((plantilla, clave2)),
+            "cuil": cuil}
 
 
 def quien_es_usuario_sindicato(usuario_id: int) -> str:

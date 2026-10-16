@@ -1285,6 +1285,7 @@ PERMISOS_RUTAS = {
 
     "/admin/tramite-tipo":                  "tramites_formularios",
     "/admin/tramite-tipo/probar":           "tramites_formularios",
+    "/admin/tramite-tipo/nombres":          "tramites_formularios",
     "/admin/tramite-tipo/borrar":           "tramites_formularios",
     "/admin/tramite/{tramite_id}":          "tramites_recibidos",
     "/admin/tramite/{tramite_id}/nota":     "tramites_recibidos",
@@ -1630,6 +1631,9 @@ def admin(request: Request):
         # las seccionales (una lista sin seccional la ve solo el alcance total).
         "listas": db.listas_del_sindicato(sid, alcance_propio) if puede("listas") else [],
         "plantillas_listas": listas_mod.resumen_plantillas() if puede("listas") else [],
+        # Lo que el constructor de Trámites ofrece para una validación por
+        # función: datos del sistema, funciones y listas con sus columnas.
+        "catalogo_funcion": validaciones_tramite.catalogo_funcion(),
         "tipos_tramite": db.tipos_tramite_del_sindicato(sid)
                          if puede("tramites_formularios", "tramites_recibidos") else [],
         "tramites": db.tramites_del_sindicato(sid, usuario_id=uid)
@@ -3804,7 +3808,8 @@ def _notificar_cambio_tramite(sid: int, cuil: str, numero: str, texto: str) -> N
 
 
 TIPOS_DATO_TRAMITE = ("texto", "numero", "fecha", "archivo", "seleccion",
-                       "opcion_unica", "multiple", "booleano", "separador")
+                       "opcion_unica", "multiple", "booleano", "separador",
+                       validaciones_tramite.TIPO_CALCULADO)
 ANCHOS_CAMPO_TRAMITE = ("completo", "mitad", "tercio")
 
 
@@ -3813,7 +3818,12 @@ def _campos_tramite_validos(campos_crudos: list) -> list:
     request armado a mano -- misma lógica de saneo defensivo que ya usan
     _destinos_validos/_modulos_de para otros datos que vienen del cliente.
     "separador" es el único tipo_dato sin etiqueta obligatoria (es una raya
-    visual, no junta respuesta)."""
+    visual, no junta respuesta).
+
+    Dos pasadas: primero los campos, después sus validaciones, porque una de
+    fuente `funcion` nombra a OTROS campos del formulario (la segunda clave
+    por orden, `campo.<nombre>` en la fórmula) y hay que tener la lista
+    entera para sanearla."""
     validos = []
     for c in campos_crudos:
         if not isinstance(c, dict):
@@ -3844,11 +3854,13 @@ def _campos_tramite_validos(campos_crudos: list) -> list:
             "opciones": str(c.get("opciones") or "").strip()[:500],
             "ancho": c.get("ancho") if c.get("ancho") in ANCHOS_CAMPO_TRAMITE else "completo",
             "obligatorio": bool(c.get("obligatorio", True)),
-            # Una validación mal formada no se guarda (se descarta acá, no
-            # explota después en la pantalla del trabajador).
-            "validaciones": validaciones_tramite.validaciones_saneadas(
-                c.get("validaciones"), c["tipo_dato"]),
+            "_validaciones_crudas": c.get("validaciones"),
         })
+    for i, c in enumerate(validos):
+        # Una validación mal formada no se guarda (se descarta acá, no
+        # explota después en la pantalla del trabajador).
+        c["validaciones"] = validaciones_tramite.validaciones_saneadas(
+            c.pop("_validaciones_crudas"), c["tipo_dato"], campos=validos, indice=i)
     return validos
 
 
@@ -3857,7 +3869,7 @@ async def abm_tramite_tipo(
     request: Request,
     id: str = Form(""), titulo: str = Form(...), codigo: str = Form(...),
     activo: str = Form("si"), campos_json: str = Form(...),
-    reglas_json: str = Form("[]"),
+    reglas_json: str = Form("[]"), requisitos_json: str = Form("[]"),
     area_destino_default_id: str = Form(""), seccional_id: str = Form(""),
     destinos_json: str = Form("{}"),
     permite_pase: str = Form(""), areas_pase: list[str] = Form(default=[]),
@@ -3873,6 +3885,8 @@ async def abm_tramite_tipo(
         assert isinstance(campos_crudos, list)
         reglas_crudas = json.loads(reglas_json or "[]")
         assert isinstance(reglas_crudas, list)
+        requisitos_crudos = json.loads(requisitos_json or "[]")
+        assert isinstance(requisitos_crudos, list)
         destinos_crudos = json.loads(destinos_json or "{}")
         assert isinstance(destinos_crudos, dict)
     except Exception:
@@ -3881,6 +3895,7 @@ async def abm_tramite_tipo(
     if not campos:
         return RedirectResponse("/admin?error=campos#tramites", status_code=303)
     reglas = validaciones_tramite.reglas_saneadas(reglas_crudas, campos)
+    requisitos = validaciones_tramite.requisitos_saneados(requisitos_crudos, campos)
     with db.get_session() as s:
         destino_default = _id_propio(s, Area, area_destino_default_id, sid)
         del_seccional = _id_propio(s, Seccional, seccional_id, sid)
@@ -3907,14 +3922,15 @@ async def abm_tramite_tipo(
             _exigir_alcance_seccional(request, tipo["seccional_id"])
         db.editar_tipo_tramite(int(id), sid, titulo, codigo, activo == "si", campos, reglas,
                                area_destino_default_id=destino_default,
-                               permite_pase=bool(permite_pase))
+                               permite_pase=bool(permite_pase), requisitos=requisitos)
         db.set_destinos_tipo_tramite(int(id), mapa, sid)
         db.set_areas_de_pase(int(id), _ids_int(areas_pase), sid)
     else:
         nuevo_id = db.crear_tipo_tramite(sid, titulo, codigo, campos, reglas,
                                          area_destino_default_id=destino_default,
                                          seccional_id=del_seccional,
-                                         permite_pase=bool(permite_pase))
+                                         permite_pase=bool(permite_pase),
+                                         requisitos=requisitos)
         db.set_destinos_tipo_tramite(nuevo_id, mapa, sid)
         db.set_areas_de_pase(nuevo_id, _ids_int(areas_pase), sid)
     return RedirectResponse("/admin#tramites", status_code=303)
@@ -3929,13 +3945,20 @@ async def probar_tramite_tipo(request: Request):
     error sería silencioso porque nadie los compara (el criterio de
     resolver_destinatarios en Notificaciones). Sirve para los dos
     constructores (trabajador y empresa): la lógica es pura, no toca tablas,
-    por eso alcanza con tener habilitado cualquiera de los dos módulos."""
+    por eso alcanza con tener habilitado cualquiera de los dos módulos.
+
+    Las validaciones de fuente `funcion` y los requisitos (bloque 3) se
+    evalúan contra un CUIL DE PRUEBA que elige el admin (`cuil` en el
+    cuerpo), con el padrón y las listas reales de SU sindicato
+    (`db.contexto_validaciones`). Sin CUIL no se evalúan y la respuesta
+    lo dice (`sin_contexto`), en vez de dar un verde que no vale."""
     sid = exigir_sindicato(request)
     if "tramites" not in _modulos_de(sid):
         _exigir_modulo(sid, "empleadores")
     cuerpo = await request.json()
     campos = _campos_tramite_validos(cuerpo.get("campos") or [])
     reglas = validaciones_tramite.reglas_saneadas(cuerpo.get("reglas") or [], campos)
+    requisitos = validaciones_tramite.requisitos_saneados(cuerpo.get("requisitos") or [], campos)
     # Los campos todavía no tienen id (no están guardados): se usa el índice
     # como id, y el cliente referencia sus inputs de prueba igual.
     for i, c in enumerate(campos):
@@ -3947,7 +3970,30 @@ async def probar_tramite_tipo(request: Request):
             valores[int(clave)] = str(valor)
         except (TypeError, ValueError):
             continue
-    return validaciones_tramite.evaluar_envio(campos, reglas, valores)
+    cuil_prueba = _norm_cuil(str(cuerpo.get("cuil") or ""))
+    contexto = None
+    if len(cuil_prueba) == 11:
+        contexto = db.contexto_validaciones(sid, cuil_prueba,
+                                            {"campos": campos, "requisitos": requisitos}, valores)
+    veredicto = validaciones_tramite.evaluar_envio(campos, reglas, valores, contexto, requisitos)
+    veredicto["nombres"] = validaciones_tramite.nombres_de_campos(campos)
+    veredicto["cuil"] = cuil_prueba if contexto else ""
+    return veredicto
+
+
+@app.post("/admin/tramite-tipo/nombres")
+async def nombres_tramite_tipo(request: Request):
+    """Los nombres con los que una fórmula nombra a cada campo del
+    formulario tal cual está en pantalla (`campo.<nombre>`). Los arma el
+    servidor y no el JS: es la misma función que después evalúa, y dos
+    normalizaciones distintas serían un nombre que el constructor muestra y
+    la fórmula no encuentra."""
+    sid = exigir_sindicato(request)
+    if "tramites" not in _modulos_de(sid):
+        _exigir_modulo(sid, "empleadores")
+    cuerpo = await request.json()
+    campos = _campos_tramite_validos(cuerpo.get("campos") or [])
+    return {"nombres": validaciones_tramite.nombres_de_campos(campos)}
 
 
 @app.post("/admin/tramite-tipo/borrar")
@@ -4782,6 +4828,8 @@ async def api_enviar_tramite(request: Request):
     for campo in tipo["campos"]:
         if campo["tipo_dato"] == "separador":
             continue  # raya visual, no junta respuesta
+        if campo["tipo_dato"] == validaciones_tramite.TIPO_CALCULADO:
+            continue  # lo calcula el servidor más abajo; lo que mande el cliente se ignora
         if campo["tipo_dato"] == "booleano":
             # Un checkbox desmarcado ni siquiera viaja en el form -- "No" es
             # una respuesta válida en sí misma, no aplica el chequeo de
@@ -4848,19 +4896,26 @@ async def api_enviar_tramite(request: Request):
             continue
         respuestas.append({"campo_tramite_id": campo["id"], "valor_texto": valor})
 
-    # Capa de validaciones del formulario (fija + consistencia): corre
-    # SIEMPRE en el servidor aunque el cliente valide lo mismo en vivo --
-    # esto es lo que decide qué se persiste. "avisa" no frena: queda como
-    # advertencia para el operador en el detalle del trámite.
+    # Capa de validaciones del formulario (fija + consistencia + función):
+    # corre SIEMPRE en el servidor aunque el cliente valide lo mismo en vivo
+    # -- esto es lo que decide qué se persiste. "avisa" no frena: queda como
+    # advertencia para el operador en el detalle del trámite. Las de fuente
+    # `funcion` y los requisitos miran el padrón y las listas con el CUIL de
+    # la SESIÓN (db.contexto_validaciones); un campo `calculado` se guarda
+    # con lo que calculó el servidor, nunca con lo que mande el cliente.
     valores = {r["campo_tramite_id"]: r.get("valor_texto", "")
                for r in respuestas if "valor_texto" in r}
+    contexto = db.contexto_validaciones(sid, cuil, tipo, valores)
     veredicto = validaciones_tramite.evaluar_envio(
-        tipo["campos"], tipo.get("reglas_consistencia"), valores)
+        tipo["campos"], tipo.get("reglas_consistencia"), valores,
+        contexto, tipo.get("requisitos"))
     errores += veredicto["errores"]
 
     if errores:
         return JSONResponse(status_code=422, content={
             "errores": errores, "errores_campos": veredicto["errores_campos"]})
+    for cid, texto in veredicto["calculados"].items():
+        respuestas.append({"campo_tramite_id": cid, "valor_texto": texto})
 
     # Trámite encadenado: si el formulario se abrió desde el CHAT de otro
     # trámite, el nuevo queda vinculado. Solo vale un trámite DEL MISMO
