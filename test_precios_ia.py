@@ -25,6 +25,7 @@ import extractor
 import precios_ia
 import rag
 import asistente
+import asistente_tramites_ia
 from db import Sindicato, Trabajador, UsoIA
 from modulos import MODULOS_INICIALES
 import main
@@ -100,6 +101,7 @@ def test_los_defaults_son_las_constantes_de_los_modulos():
     assert precios_ia.USOS["recibos"]["default"] == extractor.MODELO
     assert precios_ia.USOS["convenio"]["default"] == rag.MODELO_RESPUESTA
     assert precios_ia.USOS["asistente"]["default"] == asistente.MODELO
+    assert precios_ia.USOS["asistente_tramites"]["default"] == asistente_tramites_ia.MODELO
     for uso in precios_ia.USOS:
         assert precios_ia.modelo_valido(precios_ia.default_de(uso)), uso
 
@@ -203,10 +205,11 @@ def test_api_leer_usa_el_modelo_que_eligio_plataforma():
 def test_guardar_los_modelos_desde_el_panel():
     r = plataforma_client.post("/plataforma/modelos-ia", data={
         "modelo_recibos": "claude-sonnet-5", "modelo_convenio": "claude-opus-5",
-        "modelo_asistente": "claude-haiku-4-5"}, follow_redirects=False)
+        "modelo_asistente": "claude-haiku-4-5", "modelo_asistente_tramites": "claude-opus-5"},
+        follow_redirects=False)
     assert r.status_code == 303
     assert db.modelos_ia() == {"recibos": "claude-sonnet-5", "convenio": "claude-opus-5",
-                               "asistente": "claude-haiku-4-5"}
+                               "asistente": "claude-haiku-4-5", "asistente_tramites": "claude-opus-5"}
     # Dejarlo como estaba para no contaminar los tests de abajo.
     db.set_modelos_ia({uso: precios_ia.default_de(uso) for uso in precios_ia.USOS})
 

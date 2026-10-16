@@ -956,6 +956,7 @@ class ConfiguracionPlataforma(SQLModel, table=True):
     modelo_recibos: str = ""
     modelo_convenio: str = ""
     modelo_asistente: str = ""
+    modelo_asistente_tramites: str = ""   # Asistente de trámites (Herramientas de /entornos)
     # Marca de la plataforma "Mi Trabajo" (pantallas de login y panel de
     # plataforma, antes de entrar a un sindicato en particular). Mismo patrón
     # que Sindicato: logo en la base (Opción B), colores editables. Si no se
@@ -3254,7 +3255,7 @@ def set_config_dashboard(verde_hasta: int, amarillo_hasta: int, bot_habilitado: 
 
 
 def modelos_ia() -> dict:
-    """{uso: modelo_id} para los tres usos de precios_ia.USOS, ya resuelto:
+    """{uso: modelo_id} para los usos de precios_ia.USOS, ya resuelto:
     lo que eligió plataforma o, si no eligió nada, el default del módulo.
     Quien llama nunca tiene que preguntarse si hay configuración."""
     with Session(engine) as s:
@@ -3263,6 +3264,7 @@ def modelos_ia() -> dict:
             "recibos": (cfg.modelo_recibos if cfg else "") or "",
             "convenio": (cfg.modelo_convenio if cfg else "") or "",
             "asistente": (cfg.modelo_asistente if cfg else "") or "",
+            "asistente_tramites": (cfg.modelo_asistente_tramites if cfg else "") or "",
         }
     return {uso: elegidos.get(uso) or precios_ia.default_de(uso) for uso in precios_ia.USOS}
 
@@ -3283,7 +3285,8 @@ def set_modelos_ia(elegidos: dict) -> None:
     with Session(engine) as s:
         cfg = s.get(ConfiguracionPlataforma, 1) or ConfiguracionPlataforma(id=1)
         for uso, columna in (("recibos", "modelo_recibos"), ("convenio", "modelo_convenio"),
-                             ("asistente", "modelo_asistente")):
+                             ("asistente", "modelo_asistente"),
+                             ("asistente_tramites", "modelo_asistente_tramites")):
             valor = (elegidos.get(uso) or "").strip()
             if valor and precios_ia.modelo_valido(valor):
                 setattr(cfg, columna, valor)
@@ -6244,6 +6247,14 @@ def guardar_caso_herramienta(**campos) -> int:
         s.commit()
         s.refresh(caso)
         return caso.id
+
+
+def sindicatos_para_asistente() -> list:
+    """Los sindicatos activos del entorno, para elegir uno en el Asistente
+    de trámites (Herramientas de /entornos, D6). Solo id y nombre."""
+    with Session(engine) as s:
+        return [{"id": x.id, "nombre": x.nombre} for x in
+                s.exec(select(Sindicato).where(Sindicato.activo == True).order_by(Sindicato.nombre)).all()]  # noqa: E712
 
 
 def casos_herramienta(herramienta: str) -> list:

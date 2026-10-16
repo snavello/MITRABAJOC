@@ -90,6 +90,8 @@ import recursos
 import empaquetar
 import render_admin
 import grilla_bancaria
+import asistente_tramites
+import asistente_tramites_ia
 import render_planes
 from observabilidad import panel as observabilidad_panel
 from observabilidad import hilo_colector
@@ -5774,7 +5776,8 @@ def plataforma_config_dashboard(
 def plataforma_modelos_ia(request: Request,
                           modelo_recibos: str = Form(""),
                           modelo_convenio: str = Form(""),
-                          modelo_asistente: str = Form("")):
+                          modelo_asistente: str = Form(""),
+                          modelo_asistente_tramites: str = Form("")):
     """Qué modelo de Anthropic usa cada parte de la app. Solo plataforma: la
     API la paga la plataforma, no el sindicato, y un cambio acá vale para
     todos los sindicatos a la vez.
@@ -5784,7 +5787,8 @@ def plataforma_modelos_ia(request: Request,
     con otra cosa significa un POST armado a mano."""
     exigir_plataforma(request)
     db.set_modelos_ia({"recibos": modelo_recibos, "convenio": modelo_convenio,
-                       "asistente": modelo_asistente})
+                       "asistente": modelo_asistente,
+                       "asistente_tramites": modelo_asistente_tramites})
     return RedirectResponse("/plataforma?config=ok#usoia-modelos", status_code=303)
 
 
@@ -9114,6 +9118,239 @@ def entornos_bancaria_casos_csv(request: Request):
     contenido = "﻿" + salida.getvalue()      # BOM: Excel lo abre con tildes
     return BinResponse(contenido.encode("utf-8"), media_type="text/csv; charset=utf-8",
                        headers={"Content-Disposition": f'attachment; filename="casos-calculadora-bancaria-{fechas.hoy_texto()}.csv"'})
+
+
+# ==================== Herramientas: Asistente de trámites ====================
+# PLAN_ASISTENTE_TRAMITES.md. La IA propone (asistente_tramites_ia), el motor
+# puro decide (asistente_tramites); acá solo viven la puerta, el sindicato
+# elegido, el registro del uso de IA y los casos guardados.
+HERRAMIENTA_ASISTENTE = "asistente_tramites"
+API_ASISTENTE = "/api/entornos/herramientas/asistente"
+
+
+def _importmap_asistente_tramites() -> str:
+    """Mismo esquema que la Calculadora v2: módulos `asistente/<nombre>` desde
+    static/asistente_tramites/, cada uno con su sello; un archivo nuevo entra solo."""
+    import json
+    imports = {nombre: _url_static(ruta) for nombre, ruta in _VENDOR_PANEL_V2.items()}
+    for js in sorted((Path("static") / "asistente_tramites").glob("*.js")):
+        imports[f"asistente/{js.stem}"] = _url_static(f"asistente_tramites/{js.name}")
+    return json.dumps({"imports": imports}, ensure_ascii=False)
+
+
+@app.get("/entornos/herramientas/asistente-tramites", response_class=HTMLResponse)
+def entornos_asistente_tramites(request: Request):
+    """El Asistente de trámites: del relato del sindicato al circuito, la
+    instrucción, la vista previa y el JSON importable. Misma puerta que la
+    Calculadora (landing + pase); 404 en Demo."""
+    import json
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    mapa = _importmap_asistente_tramites()
+    return templates.TemplateResponse("asistente_tramites.html", {
+        "request": request, "marca_plataforma": db.marca_plataforma(),
+        "estados": json.dumps(list(db.ESTADOS_CASO)),
+        "importmap": mapa, "precarga": list(json.loads(mapa)["imports"].values()),
+    })
+
+
+def _sindicatos_para_asistente() -> list:
+    return [{"id": s["id"], "nombre": s["nombre"]} for s in db.sindicatos_para_asistente()]
+
+
+def _sindicato_para_asistente(sindicato_id) -> dict | None:
+    """Lo que el motor necesita del sindicato elegido (D6): módulos
+    encendidos, seccionales y áreas con su seccional. None si no se eligió
+    ninguno o el id no existe."""
+    try:
+        sid = int(sindicato_id or 0)
+    except (TypeError, ValueError):
+        return None
+    if not sid:
+        return None
+    nombre = next((s["nombre"] for s in _sindicatos_para_asistente() if s["id"] == sid), None)
+    if nombre is None:
+        return None
+    return {"id": sid, "nombre": nombre, "modulos": db.modulos_habilitados(sid),
+            "seccionales": [s["nombre"] for s in db.seccionales_del_sindicato(sid)],
+            "areas": [{"nombre": a["nombre"], "seccional": a["seccional"]}
+                      for a in db.areas_del_sindicato(sid) if a["activo"]]}
+
+
+@app.get(API_ASISTENTE + "/catalogo")
+def api_asistente_catalogo(request: Request):
+    """Todo lo que la pantalla necesita para andar sin IA."""
+    _exigir_herramientas(request)
+    return {**asistente_tramites.catalogo(), "sindicatos": _sindicatos_para_asistente(),
+            "ia": asistente_tramites_ia.disponible(), "estados_caso": list(db.ESTADOS_CASO)}
+
+
+def _registrar_uso_asistente(uso: dict | None, sindicato_id) -> None:
+    if uso:
+        db.registrar_uso_ia(sindicato_id or None, "", "herramienta", uso["modelo"],
+                            uso["tokens_entrada"], uso["tokens_salida"], uso.get("duracion_ms", 0))
+
+
+@app.post(API_ASISTENTE + "/entender")
+def api_asistente_entender(request: Request, payload: dict = Body(...)):
+    """La IA lee el relato y PROPONE; lo que vuelve ya pasó por el saneo del
+    motor. Sin cliente configurado, {"disponible": false} y la pantalla sigue a
+    mano. La llamada se paga y queda en Uso de IA con tipo "herramienta"."""
+    _exigir_herramientas(request)
+    if not asistente_tramites_ia.disponible():
+        return {"disponible": False}
+    sind = _sindicato_para_asistente(payload.get("sindicato_id"))
+    sid = sind["id"] if sind else None
+    try:
+        propuesta, uso = asistente_tramites_ia.entender(str(payload.get("relato") or ""),
+                                                         db.modelo_ia("asistente_tramites"))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except asistente_tramites_ia.ErrorModelo as e:
+        _registrar_uso_asistente(getattr(e, "uso", None), sid)
+        raise HTTPException(502, "No se pudo analizar el relato. Probá de nuevo o seguí sin IA.")
+    _registrar_uso_asistente(uso, sid)
+    return {"disponible": True, "propuesta": propuesta, "uso": uso}
+
+
+def _resolver_pedido(payload: dict) -> tuple:
+    """(entrada saneada, sindicato elegido o None, resultado del motor)."""
+    entrada = asistente_tramites.sanear_propuesta(payload.get("entrada"))
+    sind = _sindicato_para_asistente(payload.get("sindicato_id"))
+    return entrada, sind, asistente_tramites.resolver(entrada, sind)
+
+
+@app.post(API_ASISTENTE + "/resolver")
+def api_asistente_resolver(request: Request, payload: dict = Body(...)):
+    """El motor puro: lo que la pantalla muestra en Resultado. Se recalcula
+    en cada cambio de respuesta; sin IA."""
+    _exigir_herramientas(request)
+    entrada, sind, resultado = _resolver_pedido(payload)
+    return {"entrada": entrada, "sindicato": sind, "resultado": resultado}
+
+
+@app.post(API_ASISTENTE + "/preguntas-extra")
+def api_asistente_preguntas_extra(request: Request, payload: dict = Body(...)):
+    """Entre 4 y 8 preguntas nuevas para el sindicato sobre casos borde."""
+    _exigir_herramientas(request)
+    if not asistente_tramites_ia.disponible():
+        return {"disponible": False, "preguntas": []}
+    entrada, sind, resultado = _resolver_pedido(payload)
+    sid = sind["id"] if sind else None
+    try:
+        preguntas, uso = asistente_tramites_ia.preguntas_extra(
+            resultado["instruccion"]["texto"], resultado["pendientes"], db.modelo_ia("asistente_tramites"))
+    except asistente_tramites_ia.ErrorModelo as e:
+        _registrar_uso_asistente(getattr(e, "uso", None), sid)
+        raise HTTPException(502, "No se pudieron sumar preguntas. Probá de nuevo.")
+    _registrar_uso_asistente(uso, sid)
+    return {"disponible": True, "preguntas": preguntas, "uso": uso}
+
+
+def _caso_asistente_resumen(c) -> dict:
+    return {"id": c.id, "creado": c.creado, "quien": c.quien, "nota": c.nota, "estado": c.estado,
+            "estado_cambiado": c.estado_cambiado, "estado_quien": c.estado_quien,
+            "nombre": (c.entrada or {}).get("nombre", ""), "codigo": (c.esperado or {}).get("codigo", ""),
+            "sindicato": ((c.entrada or {}).get("sindicato") or {}).get("nombre", ""),
+            "brechas": [b["clave"] for b in (c.diferencias.get("brechas") or [])], "distintos": c.distintos}
+
+
+@app.post(API_ASISTENTE + "/casos")
+def api_asistente_guardar_caso(request: Request, payload: dict = Body(...)):
+    """Guarda un caso: la entrada, el resultado RECALCULADO acá y el JSON.
+    No se guarda lo que diga el navegador. Sin nombres de personas: el
+    relato es del trámite."""
+    quien = _exigir_herramientas(request)
+    entrada, sind, resultado = _resolver_pedido(payload)
+    if not entrada["nombre"] and not entrada["relato"]:
+        raise HTTPException(422, "Un caso sin nombre ni relato no sirve para revisar.")
+    nota = str(payload.get("nota") or "").strip()[:4000]
+    brechas = [{"clave": k, "nivel": asistente_tramites.BRECHAS[k]["nivel"]} for k in resultado["brechas"]]
+    caso_id = db.guardar_caso_herramienta(
+        herramienta=HERRAMIENTA_ASISTENTE, quien=quien, nota=nota,
+        entrada={**entrada, "sindicato": sind}, esperado={k: v for k, v in resultado.items() if k != "json"},
+        real=resultado["json"], diferencias={"brechas": brechas}, distintos=len(brechas))
+    return {"ok": True, "id": caso_id}
+
+
+@app.get(API_ASISTENTE + "/casos")
+def api_asistente_casos(request: Request):
+    _exigir_herramientas(request)
+    return {"casos": [_caso_asistente_resumen(c) for c in db.casos_herramienta(HERRAMIENTA_ASISTENTE)],
+            "estados": db.ESTADOS_CASO}
+
+
+@app.get(API_ASISTENTE + "/casos/{caso_id}")
+def api_asistente_caso(request: Request, caso_id: int):
+    _exigir_herramientas(request)
+    c = db.caso_herramienta(HERRAMIENTA_ASISTENTE, caso_id)
+    if not c:
+        raise HTTPException(404, "No existe ese caso.")
+    return {**_caso_asistente_resumen(c), "entrada": c.entrada, "resultado": {**c.esperado, "json": c.real}}
+
+
+@app.post(API_ASISTENTE + "/casos/{caso_id}/estado")
+def api_asistente_caso_estado(request: Request, caso_id: int, payload: dict = Body(...)):
+    quien = _exigir_herramientas(request)
+    try:
+        if not db.cambiar_estado_caso(HERRAMIENTA_ASISTENTE, caso_id, str(payload.get("estado") or ""), quien):
+            raise HTTPException(404, "No existe ese caso.")
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return {"ok": True}
+
+
+@app.get(API_ASISTENTE + "/brechas")
+def api_asistente_brechas(request: Request):
+    """El inventario (D5): cada brecha del catálogo con cuántos trámites la
+    pidieron (sin los descartados), de qué sindicatos y cuándo fue el último.
+    Una brecha que ya no está en el catálogo (se desarrolló) sale aparte."""
+    _exigir_herramientas(request)
+    casos = [c for c in db.casos_herramienta(HERRAMIENTA_ASISTENTE) if c.estado != "descartado"]
+    conteo = {}
+    for c in casos:
+        r = _caso_asistente_resumen(c)
+        for clave in r["brechas"]:
+            x = conteo.setdefault(clave, {"casos": 0, "sindicatos": set(), "ultimo": "", "tramites": []})
+            x["casos"] += 1
+            if r["sindicato"]:
+                x["sindicatos"].add(r["sindicato"])
+            x["ultimo"] = max(x["ultimo"], c.creado or "")
+            if len(x["tramites"]) < 6:
+                x["tramites"].append({"id": c.id, "nombre": r["nombre"], "sindicato": r["sindicato"]})
+    filas = []
+    for clave, b in asistente_tramites.BRECHAS.items():
+        x = conteo.get(clave, {"casos": 0, "sindicatos": set(), "ultimo": "", "tramites": []})
+        filas.append({"clave": clave, "titulo": b["titulo"], "nivel": b["nivel"], "tam": b["tam"],
+                      "backlog": b["backlog"], "recomendacion": b["rec"], "provisorio": b["hoy"],
+                      "casos": x["casos"], "sindicatos": sorted(x["sindicatos"]), "ultimo": x["ultimo"],
+                      "tramites": x["tramites"]})
+    filas.sort(key=lambda f: (-f["casos"], f["nivel"], f["titulo"]))
+    resueltas = [{"clave": k, "casos": v["casos"]} for k, v in conteo.items() if k not in asistente_tramites.BRECHAS]
+    return {"brechas": filas, "resueltas": resueltas, "casos": len(casos)}
+
+
+@app.get("/entornos/herramientas/asistente/casos.csv")
+def entornos_asistente_casos_csv(request: Request):
+    """Todos los casos, uno por brecha (más uno por caso sin brechas)."""
+    _exigir_landing()
+    if (sin_pase := _exigir_pase(request)):
+        return sin_pase
+    import csv
+    import io
+    salida = io.StringIO()
+    w = csv.writer(salida, delimiter=";")
+    w.writerow(["caso", "creado", "quien", "estado", "sindicato", "tramite", "codigo", "brecha", "nivel", "nota"])
+    for c in db.casos_herramienta(HERRAMIENTA_ASISTENTE):
+        r = _caso_asistente_resumen(c)
+        base = [c.id, c.creado, c.quien, c.estado, r["sindicato"], r["nombre"], r["codigo"]]
+        filas = [[b["clave"], b["nivel"]] for b in (c.diferencias.get("brechas") or [])] or [["", ""]]
+        for f in filas:
+            w.writerow(base + f + [c.nota])
+    contenido = "﻿" + salida.getvalue()
+    return BinResponse(contenido.encode("utf-8"), media_type="text/csv; charset=utf-8",
+                       headers={"Content-Disposition": f'attachment; filename="casos-asistente-tramites-{fechas.hoy_texto()}.csv"'})
 
 
 # ==================== Solapa "Observabilidad" ====================
