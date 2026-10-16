@@ -281,8 +281,9 @@ def codigo_de(nombre: str) -> str:
 
 
 def normalizar_extensiones(s: str) -> str:
-    """«pdf,jpg» → «pdf,jpg,jpeg»: hoy el servidor compara la extensión tal
-    cual (BACKLOG, brecha 3), así que el asistente propone siempre las dos."""
+    """«pdf,jpg» → «pdf,jpg,jpeg». El servidor ya trata jpg y jpeg como lo
+    mismo (main.extensiones_permitidas, 2026-10-16); se escriben las dos
+    igual, para que el formulario diga lo que acepta."""
     lista = [x.lstrip(".") for x in re.split(r"[\s,;]+", (s or "").lower()) if x.strip(". ")]
     if not lista:
         lista = EXTENSIONES_DEFAULT.split(",")

@@ -131,6 +131,27 @@ def test_validacion_tipo_archivo_no_permitido():
     print("OK  test_validacion_tipo_archivo_no_permitido")
 
 
+def test_jpeg_vale_como_jpg_y_al_reves():
+    """«pdf,jpg» rechazaba una foto .jpeg, que es lo que generan muchos
+    teléfonos: la comparación era letra por letra (BACKLOG 2026-10-16,
+    brecha 3). Las equivalencias se aplican al comparar, no a lo guardado."""
+    assert main.extensiones_permitidas("pdf, JPG") == ["pdf", "jpg", "jpeg"]
+    assert main.extensiones_permitidas(".jpeg,tif") == ["jpeg", "jpg", "tif", "tiff"]
+    assert main.extensiones_permitidas("") == []
+    trab = _sesion_trabajador("20111111119")
+    r = trab.post("/api/tramite", data={
+        "tipo_tramite_id": TIPO_ID,
+        f"campo_{_campo_id('Solicitud')}": "Pido reintegro",
+        f"campo_{_campo_id('CVU')}": "0" * 22,
+        f"campo_{_campo_id('Monto')}": "1000",
+    }, files={f"archivo_{_campo_id('Comprobante')}": ("foto.JPEG", b"\xff\xd8\xff fake", "image/jpeg")})
+    assert r.status_code == 200, r.text
+    with Session(db.engine) as s:
+        campo = s.get(db.CampoTramite, _campo_id("Comprobante"))
+        assert campo.tipos_archivo_permitidos == "pdf,jpg", "lo guardado no se toca"
+    print("OK  test_jpeg_vale_como_jpg_y_al_reves")
+
+
 def test_envio_tramite_completo_ok():
     trab = _sesion_trabajador("20111111119")
     r = trab.post("/api/tramite", data={

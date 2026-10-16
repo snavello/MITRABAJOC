@@ -22,13 +22,11 @@ se hace.
      opcional en `/api/tramite`, así que un encadenado se puede enviar
      SIN trámite de origen ni aprobación previa. Una marca en el tipo,
      excluirla del listado del afiliado y exigir origen válido al enviar.
-  3. **Extensiones jpg/jpeg** — **se arregla aparte, como fix, no espera
-     a esta lista**: la comparación es literal en las dos rutas de envío
-     (main.py, `ext not in permitidos`, trabajador y empresa), el `accept`
-     del navegador se arma de la misma lista (trabajador.html) y el
-     constructor empuja al error con el placeholder "pdf,jpg". Mapa de
-     equivalencias (jpg↔jpeg, tif↔tiff) al comparar y al armar el
-     `accept`, sin tocar lo guardado.
+  3. ~~**Extensiones jpg/jpeg**~~ **HECHO el 2026-10-16** (Trabajador
+     0.45.06, Admin 0.53.06): `main.extensiones_permitidas` suma la
+     equivalente de cada una (jpg↔jpeg, tif↔tiff) al comparar en las dos
+     rutas de envío y al armar el `accept` del navegador, sin tocar lo
+     guardado; la ayuda del constructor lo dice.
   4. **Exportar trámites con sus respuestas** (mediano): no hay CSV de
      trámites; `dashboard.explorador_tramites` devuelve expediente, fecha,
      seccional, tipo, estado y días, y las respuestas solo se ven de a
