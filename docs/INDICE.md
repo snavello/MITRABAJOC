@@ -41,6 +41,7 @@ cuenta), no en cada commit.
 | `docs/ASISTENTE_PANEL.md` | Ficha rectora del Asistente del Panel Sindical (se actualiza esta ficha, no otra). |
 | `docs/DASHBOARD.md` | Especificación funcional y técnica del Panel Sindical. |
 | `docs/cct-1875-bancarios.md` | Lo que la simulación usa del CCT 18/75. |
+| `docs/chat/2026-10-16-asistente-tramites.md` + `-contrato-importacion-tramites.md` | **Asistente de trámites** (prototipo de Chat, 2026-10-16): onboarding que convierte el pedido de un sindicato en circuito por actor, instrucción, vista previa del formulario y JSON importable `colm3na.tramite` v1; el segundo es el contrato de ese JSON y las reglas propuestas del importador (no construido). Van con el prototipo `-asistente-tramites-prototipo.html` (se abre solo en el navegador) y el ejemplo `-ejemplo-kit-escolar.colm3na.json`. |
 
 ### Planes y sprints (documentan el plan **tal cual se acordó**, no se actualizan; el avance va en `CLAUDE.md`)
 
@@ -124,6 +125,7 @@ a SDN. **No se escribe en ningún documento.**
 | Guía de reunión La Bancaria | Hoja de una página para la reunión con las autoridades. Fuente: `docs/bancaria/guia-reunion-autoridades-bancaria.html`; la v0.2 está en Recursos. | https://claude.ai/artifact/BQoR9L61oWHGEHd6X5ttTg |
 | Trámites de La Bancaria en Colm3na | Versión 2: 81 gestiones del afiliado verificadas una por una (cómo se hacen hoy, cómo las resuelve Colm3na, qué validar con el sindicato) y la propuesta de kit de inicio. Datos en `docs/bancaria/tramites-bancaria.json`; se regenera con `generar_tramites.py`. | https://claude.ai/artifact/8LPgWSNEf5swpqqmsoNfru |
 | Instructivo de montaje Colm3na | Paso a paso para rearmar las cuentas y entornos a nombre de XP (AKG titular; SDN, ARS y GCF invitados). Copia en Recursos (`recursos/colm3na-instructivo-montaje.html` y `.pdf`): si cambia el artifact, volver a copiarla. **Interno del equipo.** | https://claude.ai/artifact/PdD98igBPewGzzZRCUBiKb |
+| Piloto de trámites Colm3na (Asistente de trámites) | Prototipo del onboarding: relato → preguntas guiadas → circuito, instrucción, vista previa y JSON `colm3na.tramite` v1 (versión 8). Fuente en el repo: `docs/chat/2026-10-16-asistente-tramites-prototipo.html` y los tres documentos del mismo día. | https://claude.ai/artifact/BgZ441HNMwtQw2jFPsALsd |
 
 ### Chats del proyecto (por fecha; el id corto es el que cita `BITACORA.md`)
 

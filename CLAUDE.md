@@ -1306,6 +1306,15 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     y de la empresa, que no son modales (`data-mov-vista`, Trabajador 0.45.03),
     y a TODAS las pestañas y sub-pestañas de las cuatro apps (Trabajador
     0.45.04, Admin 0.53.05, Plataforma 0.43.06).
+12. **Asistente de trámites e importación de formularios** (prototipo de Chat,
+    2026-10-16; `docs/chat/2026-10-16-asistente-tramites.md`): onboarding que
+    convierte el pedido de un sindicato en circuito, instrucción y vista previa
+    del formulario, y exporta un JSON `colm3na.tramite` v1 con la forma exacta
+    de `_campos_tramite_validos`. El importador está especificado como propuesta
+    en `docs/chat/2026-10-16-contrato-importacion-tramites.md` y NO se
+    construye hasta tener un trámite acordado con el sindicato. Criterios: las
+    correcciones van por el chat del trámite; los formularios encadenados son
+    solo para datos nuevos después de la aprobación.
 
 ## Herramientas (solapa de `/entornos`)
 
