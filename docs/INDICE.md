@@ -62,6 +62,7 @@ cuenta), no en cada commit.
 | `PLAN_CUIT_MOD11.md` | Validar CUIL/CUIT con el módulo 11 de AFIP (primera medida de la serie XSK): diagnóstico, conversión de los números cargados a mano y validación en las puertas de alta. Propuesta, a acordar con SDN. | 2026-10-10 |
 | `PLAN_REGISTRO.md` | Registro confirmado por mail con niveles de fiabilidad (R2), recuperación de clave (R3), captcha y freno en el registro (segunda medida de la serie XSK, cierra H-0017). Acordado con SDN decisión por decisión. | 2026-10-11 |
 | `PLAN_DASHBOARD_V2.md` | Panel Sindical v2 con Preact sin build, en paralelo a la v1 (`/admin/dashboard-v2`, solo local y Pruebas): primer piloto de una capa de componentes, sin tocar el backend. Acordado con SDN decisión por decisión. | 2026-10-12 |
+| `PLAN_ASISTENTE_TRAMITES.md` | El Asistente de trámites como Herramienta de `/entornos` (IA que propone, motor que arma con el catálogo real, casos guardados y vista de brechas; el importador queda para después). Acordado con SDN decisión por decisión (D1–D10). | 2026-10-16 |
 
 ### Carpetas
 
