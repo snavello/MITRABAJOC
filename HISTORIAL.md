@@ -7479,3 +7479,82 @@ perfil. El registro y el perfil siguen pidiendo los mismos campos
 (11: las cinco puertas, la fecha ilegible en cada una, la cuenta ajena y
 la planilla vieja).
 
+
+## Validaciones por función en Trámites (2026-10-16, Admin 0.55.01, Trabajador 0.46.01)
+
+Bloque 3 de `PLAN_LISTAS_VALIDACIONES.md` (rama `feature/validaciones-funcion`,
+decisiones D2, D3 parcial, D6). Hasta acá una validación de formulario solo
+comparaba el campo con un valor fijo o con otro campo. Ahora puede mirar
+AFUERA del formulario: una fila de una lista del sindicato (bloque 1) o un
+dato del padrón (bloque 2), y evaluar una fórmula escrita como las Reglas de
+control. Es la fase 2 y 3 de validaciones del BACKLOG en una sola fuente,
+`funcion`.
+
+**El contrato** es el del plan: `{fuente: "funcion", origen: lista|sistema,
+lista, clave2, trae, formula, operador, valor, mensaje, bloquea, en_vivo}`.
+`trae: "existe"` es "el DNI está en el grupo familiar"; `trae: <columna>` +
+operador es la comparación simple; `formula` es la general. **El CUIL de la
+sesión es SIEMPRE la primera clave** de toda búsqueda en una lista: nunca
+viene del formulario (`db.contexto_validaciones` lo toma de la sesión, y el
+test prueba que Ana no puede usar la familia de Juan). La segunda clave es
+un campo del formulario, por orden (como las reglas de consistencia) y puede
+ser el mismo campo que se valida, que es el caso típico.
+
+**La fórmula se parsea con `ast` y se recorre a mano**, como
+`validador._ev_nodo` (XSK H-0005), en un evaluador propio de
+`validaciones_tramite` (`_ev`): números, textos entre comillas, los tres
+espacios de nombres (`campo.<etiqueta_normalizada>`, `lista.<columna>`,
+`sistema.<dato>`), aritmética, comparaciones encadenadas, `y` / `o` / `no`
+(se traducen a los operadores de Python sin tocar lo que va entre comillas)
+y nueve funciones cerradas (`hoy`, `dias_entre`, `meses_entre`,
+`anios_entre` en unidades CUMPLIDAS, `min`, `max`, `redondear`, `largo`,
+`existe`). Cualquier otra cosa es SyntaxError. **Los nombres de los campos
+los arma el servidor** (`nombres_de_campos`, ruta
+`POST /admin/tramite-tipo/nombres`) y no el JS: es la misma función que
+después evalúa, y dos normalizaciones distintas serían un nombre que el
+constructor muestra y la fórmula no encuentra. Una fórmula que nombra algo
+que no existe **no se guarda** (`error_de_formula`, contra un namespace de
+juguete con los nombres reales: el mismo criterio que `error_de_expresion`
+en las Reglas). Un dato que falta (`None`) en una cuenta o una comparación
+hace que la validación NO pase: nunca vale 0.
+
+**Lo que mira el sistema** (`DATOS_SISTEMA`): en el padrón, activo,
+registrado, seccional, provincia, localidad, nivel de fiabilidad, recibos
+verificados, color del semáforo y las dos fechas del bloque 2. Lo arma
+`db.contexto_validaciones(sid, cuil, tipo, valores)` en UNA sesión, y
+además trae de antemano las filas de lista que el envío va a necesitar
+(`busquedas_necesarias`): la evaluación queda pura y el request no abre una
+sesión adentro de otra (regla del 2026-09-19).
+
+**Requisitos para iniciar** (`TipoTramite.requisitos`, migración
+`a9c4e7f2d1b6`): la misma validación, sin segunda clave y siempre
+bloqueante, que se evalúa al enviar (y en el bloque 4, al abrir). **Campo
+`calculado`**: un tipo de dato nuevo cuya única validación es la fórmula
+que dice qué se muestra; el servidor lo calcula en `/api/tramite`, lo guarda
+como respuesta y **lo que mande el navegador se ignora**. Si no se puede
+calcular, queda vacío con un aviso al operador. En la app del afiliado se
+dibuja como un campo de solo lectura ("Se calcula al enviar").
+
+**El banco de pruebas prueba contra un afiliado real.** Sin un CUIL de
+prueba, las validaciones por función y los requisitos no se evalúan y la
+respuesta lo dice (`sin_contexto`), en vez de dar un verde que no vale.
+Con el CUIL, se usa el padrón y las listas reales del sindicato. El
+constructor dibuja las filas por función en violeta (lo que mira afuera del
+formulario), con el origen, la lista, la segunda clave, qué se controla
+(que esté / un dato / una fórmula), el comparador, el mensaje, Bloquea /
+Avisa y la marca "en vivo" (que el bloque 4 hace funcionar), más una ayuda
+desplegable con todos los nombres y funciones y un `datalist` sobre el
+campo de la fórmula. `__formula` es una marca SOLO del constructor ("lo que
+se mira es una fórmula", aunque todavía no se haya escrito); el servidor la
+lee como vacío.
+
+Lo que NO cambió: el constructor de empresa (D7, segunda vuelta) no ofrece
+funciones ni calculados; la validación en vivo del afiliado (`tvEvaluaCampo`)
+sigue siendo solo de las fijas, porque las de función necesitan al servidor
+(bloque 4). El asistente de trámites conoce el tipo `calculado` pero no lo
+propone (`TIPOS_QUE_PROPONE`). Tests: `test_validaciones_funcion.py` (11:
+motor, saneo, evaluación con contexto simulado, alta por la ruta, banco de
+pruebas con CUIL, envío frenado por la lista y por el requisito, calculado
+guardado por el servidor) y el humo con Playwright del constructor y del
+afiliado.
+

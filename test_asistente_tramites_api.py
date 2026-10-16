@@ -185,7 +185,9 @@ def test_la_herramienta_de_la_ia_enumera_las_opciones_del_catalogo():
     props = esquema["properties"]["respuestas"]["properties"]
     assert props["quien"]["anyOf"][0]["enum"] == ["afiliado", "empresa", "publico"]
     assert props["requisitos"]["items"]["enum"][-1] == "ninguno"
-    assert set(esquema["properties"]["campos"]["items"]["properties"]["tipo"]["enum"]) == set(at.TIPOS)
+    # El calculado lo arma el constructor con una fórmula: la IA no lo propone.
+    assert set(esquema["properties"]["campos"]["items"]["properties"]["tipo"]["enum"]) == set(at.TIPOS_QUE_PROPONE)
+    assert set(at.TIPOS) - set(at.TIPOS_QUE_PROPONE) == {"calculado"}
     assert "unico" in esquema["properties"]["campos"]["items"]["properties"]["control"]["enum"]
 
 

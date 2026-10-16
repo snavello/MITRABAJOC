@@ -129,7 +129,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   CSV modelo y el parseo con validación fila por fila. Puro, no importa
   `db`; el ensayo y la carga usan el mismo parseo. Ver "Listas del sindicato".
 - validaciones_tramite.py — motor puro de validaciones de formularios de
-  Trámites (fija + consistencia; ver sección propia).
+  Trámites (fija + consistencia + `funcion`: listas, padrón y fórmulas con
+  su propio evaluador `ast`; ver sección propia).
 - recursos.py — Recursos de la landing `/entornos`: catálogo de la
   documentación del proyecto (los versionados en `recursos/` + los subidos
   a la base), el pase de 30 días que deja el PIN y la clasificación por tipo.
@@ -1035,8 +1036,12 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     0.45.07): `Trabajador.fecha_afiliacion` (la carga solo el sindicato) y
     `CuentaTrabajador.fecha_nacimiento` (de la persona) en las cinco puertas
     del padrón, con la fecha ilegible rechazada en cada una (HISTORIAL, "Las
-    dos fechas del padrón"). Quedan los bloques 3 a 5 (fuente `funcion`, en
-    vivo, brechas del asistente).
+    dos fechas del padrón"). **Bloque 3 HECHO** (Admin 0.55.01, Trabajador
+    0.46.01): fuente `funcion` (lista o padrón, fórmula con nombres
+    cerrados), requisitos para iniciar y campo `calculado`, con el banco de
+    pruebas contra un afiliado real (HISTORIAL, "Validaciones por función en
+    Trámites"). Quedan los bloques 4 y 5 (en vivo y requisitos al abrir;
+    brechas del asistente).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -1356,8 +1361,9 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     admin desde una pestaña Listas propia; validación de fuente `funcion`
     (requisito para iniciar, validación de campo, campo calculado) con la
     sintaxis de las Reglas y nombres cerrados; dos fechas nuevas en el
-    padrón (**bloque 2 HECHO**). Cierra las fases 2 y 3 de validaciones del
-    BACKLOG. Trabajador primero, empresa después. **Quedan los bloques 3 a 5.**
+    padrón (**bloques 2 y 3 HECHOS**). Cierra las fases 2 y 3 de validaciones
+    del BACKLOG. Trabajador primero, empresa después. **Quedan los bloques 4
+    y 5.**
 
 ## Herramientas (solapa de `/entornos`)
 
@@ -1628,7 +1634,32 @@ validaciones de Trámites lo consulten. Reglas vigentes:
 Capa de validaciones acordada 2026-09-01, cuatro fuentes: `fija` (valor
 prefijado), `lista` (datos del admin), `sistema` (padrón/recibos), `externa`
 (API catalogada). **Fase 1 HECHA** (fija + consistencia entre dos campos);
-fases 2–4 anotadas en BACKLOG.md con decisiones cerradas. Reglas vigentes:
+**fases 2 y 3 HECHAS como la fuente `funcion`** (2026-10-16,
+`PLAN_LISTAS_VALIDACIONES.md` bloque 3; detalle en HISTORIAL, "Validaciones
+por función en Trámites"); la 4 (externa) sigue en BACKLOG.md. Reglas vigentes:
+
+- **Fuente `funcion`** (`origen` lista o sistema): busca una fila de una
+  lista del sindicato o un dato del padrón y compara, o evalúa una fórmula
+  escrita como las Reglas (`campo.*`, `lista.*`, `sistema.*`, `y`/`o`/`no`,
+  nueve funciones cerradas; evaluador `ast` propio en
+  `validaciones_tramite`, sin `eval`). **El CUIL de la sesión es siempre la
+  primera clave de la búsqueda**; la segunda es un campo del formulario por
+  orden. Los nombres de los campos los arma el servidor
+  (`nombres_de_campos`, `POST /admin/tramite-tipo/nombres`). Una fórmula que
+  nombra algo que no existe no se guarda (`error_de_formula`). Un dato que
+  falta no vale 0: la validación no pasa.
+- **Requisitos para iniciar** (`TipoTramite.requisitos`): funciones sin
+  segunda clave, siempre bloqueantes, evaluadas al enviar (y al abrir, bloque
+  4). **Campo `calculado`**: su única validación es la fórmula; lo calcula el
+  servidor en `/api/tramite` y lo que mande el navegador se ignora.
+- **`db.contexto_validaciones(sid, cuil, tipo, valores)`** arma en UNA sesión
+  los datos del sistema (`DATOS_SISTEMA`) y trae de antemano las filas de
+  lista que el envío necesita: `evaluar_envio` sigue siendo puro. Sin contexto
+  (banco de pruebas sin CUIL) las funciones no se evalúan y se cuenta
+  `sin_contexto`; el banco las prueba contra un afiliado real del padrón.
+- El constructor de empresa no ofrece funciones ni calculados (D7); la
+  validación en vivo del afiliado sigue siendo solo de las fijas hasta el
+  bloque 4.
 
 - **No son tipos de dato**: capa componible sobre el campo (0..N por campo),
   cada una con `bloquea` (frena con mensaje) o `avisa` (pasa y queda en

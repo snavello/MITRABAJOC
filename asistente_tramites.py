@@ -39,14 +39,18 @@ TIPOS = {
     "texto": "Texto", "numero": "Número", "fecha": "Fecha", "archivo": "Archivo",
     "seleccion": "Lista desplegable", "opcion_unica": "Opción única",
     "multiple": "Opción múltiple", "booleano": "Sí / No", "separador": "Separador",
+    # Lo completa el servidor con una fórmula (bloque 3 de Listas y
+    # validaciones); el asistente no lo propone, el constructor lo ofrece.
+    "calculado": "Calculado (fórmula)",
 }
+TIPOS_QUE_PROPONE = tuple(t for t in TIPOS if t != "calculado")
 ANCHOS = ("completo", "mitad", "tercio")
 # El ancho que el asistente propone para cada tipo (lo que mejor queda en el
 # teléfono del afiliado); el constructor deja cambiarlo.
 ANCHO_POR_TIPO = {
     "texto": "completo", "numero": "tercio", "fecha": "tercio", "archivo": "completo",
     "seleccion": "mitad", "opcion_unica": "mitad", "multiple": "completo",
-    "booleano": "mitad", "separador": "completo",
+    "booleano": "mitad", "separador": "completo", "calculado": "tercio",
 }
 CON_OPCIONES = ("seleccion", "opcion_unica", "multiple")
 EXTENSIONES_DEFAULT = "pdf,jpg,jpeg,png"

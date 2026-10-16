@@ -443,6 +443,7 @@
     color:var(--ok); opacity:0; transform:scale(.4); pointer-events:none;
     transition:all .25s cubic-bezier(.2,1.6,.4,1); }
   .campo-tram.ok .tram-tick { opacity:1; transform:scale(1); }
+  .tram-input.tram-calculado { background:#f1f5f9; color:#475569; font-style:italic; }
   .campo-tram.ok .tram-input { border-color:color-mix(in srgb, var(--ok) 40%, white); }
   /* La ✗ roja es simétrica al tilde: mismo lugar, mismo pop */
   .campo-tram.mal .tram-tick { opacity:1; transform:scale(1); color:var(--error); }
@@ -2341,6 +2342,9 @@ if (document.getElementById('tp-tramites')) {
     }
     if (c.tipo_dato === 'fecha') return `<input type="date" class="tram-input" id="${id}">`;
     if (c.tipo_dato === 'numero') return `<input type="text" inputmode="decimal" class="tram-input" id="${id}" placeholder="${c.decimales ? 'Ej: 1234.56' : 'Ej: 1234'}">`;
+    // Un calculado lo completa el servidor (con el padrón y las listas del
+    // sindicato): acá solo se muestra, y lo que diga el navegador no viaja.
+    if (c.tipo_dato === 'calculado') return `<input type="text" class="tram-input tram-calculado" id="${id}" readonly placeholder="Se calcula al enviar">`;
     if (c.tipo_dato === 'seleccion') {
       const opciones = (c.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
       return `<select class="tram-input" id="${id}">
@@ -2538,7 +2542,7 @@ if (document.getElementById('tp-tramites')) {
     if (tramiteOrigenParaEnvio) fd.append('origen_tramite_id', tramiteOrigenParaEnvio);
     const faltan = [];
     tipoTramiteActual.campos.forEach(c => {
-      if (c.tipo_dato === 'separador') return;
+      if (c.tipo_dato === 'separador' || c.tipo_dato === 'calculado') return;
       if (c.tipo_dato === 'booleano') {
         // Un checkbox sin marcar es "No", una respuesta válida -- nunca bloquea por obligatorio.
         const el = document.getElementById('tc_' + c.id);

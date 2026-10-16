@@ -254,6 +254,21 @@
   .ct-mas-valid { border:1px dashed #c3cbd8; background:none; color:var(--gris);
     border-radius:8px; font-size:11px; padding:3px 9px; cursor:pointer; align-self:flex-start; }
   .ct-mas-valid:hover { color:var(--tinta); border-color:var(--gris); }
+  /* Validaciones por función (lista del sindicato o padrón): en violeta,
+     como todo lo que mira afuera del formulario */
+  .ct-vrow.funcion { border-color:#cdbde9; background:#f8f4fe; }
+  .ct-vrow.funcion .ct-fuente { color:#7a56b5; width:auto; }
+  .ct-vrow .ct-formula { flex:1 1 260px; font-family:var(--fuente-num); font-size:12px; }
+  .ct-vrow .ct-chk { display:inline-flex; align-items:center; gap:3px; font-size:11px; color:var(--gris); white-space:nowrap; }
+  .ct-req-vacio { font-size:12px; color:var(--gris); }
+  .ct-ayuda-formula { font-size:11.5px; color:var(--gris); margin-top:10px; }
+  .ct-ayuda-formula summary { cursor:pointer; font-weight:600; color:var(--tinta); }
+  .ct-ayuda-formula code { font-size:11px; background:#f1eefa; padding:1px 4px; border-radius:4px; }
+  .ct-ayuda-formula ul { margin:4px 0 8px 16px; padding:0; }
+  .ttp-calculado { background:#f1f5f9 !important; color:#475569 !important; font-style:italic; }
+  .ttp-cuil { display:flex; gap:6px; align-items:center; margin-top:10px; }
+  .ttp-cuil input { flex:1 1 120px; padding:6px 8px; font-size:12px; font-family:var(--fuente-num); }
+  .ttp-nota { font-size:11.5px; color:#7a56b5; margin-top:6px; }
   /* Reglas de consistencia */
   .ct-regla { display:flex; align-items:center; gap:6px; flex-wrap:wrap;
     background:#fff; border:1px solid var(--linea); border-radius:8px; padding:7px 10px; margin-bottom:6px; }
@@ -1714,6 +1729,21 @@
             <div id="tt-reglas-lista"></div>
             <button type="button" class="sec mini" style="margin-top:8px;" onclick="agregarReglaTramite()">+ Agregar regla</button>
 
+            {# Requisitos para iniciar (PLAN_LISTAS_VALIDACIONES.md, bloque 3):
+               validaciones por función sobre el padrón o las listas, todas
+               bloqueantes, que se controlan antes de mostrar el formulario y
+               otra vez al enviar. #}
+            <h3 class="ct-secc" style="margin-top:22px;">Requisitos para iniciar</h3>
+            <p class="muted" style="font-size:11.5px;">Se controlan contra el padrón y las listas del sindicato antes de mostrar el formulario, y otra vez al enviar. Todos frenan.</p>
+            <div id="tt-requisitos-lista"></div>
+            <button type="button" class="sec mini" style="margin-top:8px;" onclick="agregarRequisitoTramite()">+ Agregar requisito</button>
+            <input type="hidden" name="requisitos_json" id="tt-requisitos-json">
+            <details class="ct-ayuda-formula" id="tt-ayuda-formula">
+              <summary>Nombres y funciones para las fórmulas</summary>
+              <div id="tt-ayuda-formula-cuerpo"></div>
+            </details>
+            <datalist id="tt-nombres-datalist"></datalist>
+
             <div style="margin-top:18px;">
               <button type="submit" id="tt-submit">Crear tipo de trámite</button>
               <button type="button" class="sec oculto" id="tt-cancel" onclick="cancelarTramiteTipo()">Cancelar edición</button>
@@ -1729,6 +1759,10 @@
               </div>
               <div class="ttp-cuerpo">
                 <div class="tram-preview-grid" id="tt-vista-previa"></div>
+                {# Las validaciones por función y los requisitos se prueban
+                   contra un afiliado REAL del padrón: sin CUIL no se evalúan
+                   y el resultado lo dice. #}
+                <div class="ttp-cuil"><input id="tt-cuil-prueba" inputmode="numeric" placeholder="CUIL de prueba (un afiliado del padrón)" title="Las validaciones por función y los requisitos se evalúan contra este afiliado"></div>
                 <button type="button" class="ttp-probar" onclick="probarFormularioTramite()">Probar el formulario</button>
                 <div class="ttp-resultado" id="tt-probar-res"></div>
               </div>
@@ -3728,7 +3762,16 @@ const TIPOS_DATO_TRAMITE_LABEL = {
   texto: 'Texto', numero: 'Número', fecha: 'Fecha', archivo: 'Archivo',
   seleccion: 'Selección fija (desplegable)', opcion_unica: 'Opción única (radio)',
   multiple: 'Selección múltiple (checkbox)', booleano: 'Sí/No (marcado)', separador: 'Raya separadora',
+  calculado: 'Calculado (fórmula)',
 };
+// Lo que una validación por función puede mirar afuera del formulario
+// (PLAN_LISTAS_VALIDACIONES.md, bloque 3): lo arma el servidor del código
+// (validaciones_tramite.catalogo_funcion), acá solo se dibuja.
+const CATALOGO_FUNCION = {{ catalogo_funcion | tojson }};
+const TIPOS_CON_FUNCION = ['texto', 'numero', 'fecha', 'seleccion', 'opcion_unica', 'calculado'];
+// Un calculado solo existe en el constructor del trabajador: el de empresa
+// sigue sin validaciones por función (D7, segunda vuelta).
+const TIPOS_DATO_TRAMITE_EMP = Object.fromEntries(Object.entries(TIPOS_DATO_TRAMITE_LABEL).filter(([v]) => v !== 'calculado'));
 const TIENE_OPCIONES_TRAMITE = new Set(['seleccion', 'opcion_unica', 'multiple']);
 
 function renderCamposTramite() {
@@ -3762,8 +3805,8 @@ function renderCamposTramite() {
         <option value="mitad" ${c.ancho==='mitad'?'selected':''}>Mitad</option>
         <option value="tercio" ${c.ancho==='tercio'?'selected':''}>Un tercio</option>
       </select>
-      <label style="display:flex; align-items:center; gap:3px; white-space:nowrap;" ${c.tipo_dato==='separador'?'class="oculto"':''}>
-        <input type="checkbox" ${c.obligatorio?'checked':''} ${c.tipo_dato==='separador'?'disabled':''} onchange="actualizarCampoTramite(${i},'obligatorio',this.checked)"> Oblig.
+      <label style="display:flex; align-items:center; gap:3px; white-space:nowrap;" ${['separador','calculado'].includes(c.tipo_dato)?'class="oculto"':''}>
+        <input type="checkbox" ${c.obligatorio?'checked':''} ${['separador','calculado'].includes(c.tipo_dato)?'disabled':''} onchange="actualizarCampoTramite(${i},'obligatorio',this.checked)"> Oblig.
       </label>
       <button type="button" class="sec mini" ${i===0?'disabled':''} onclick="moverCampoTramite(${i},-1)" title="Subir">↑</button>
       <button type="button" class="sec mini" ${i===camposTramiteActuales.length-1?'disabled':''} onclick="moverCampoTramite(${i},1)" title="Bajar">↓</button>
@@ -3772,6 +3815,8 @@ function renderCamposTramite() {
     </div>
   `).join('');
   renderReglasTramite();
+  renderRequisitosTramite();
+  refrescarNombresTramite();
   renderVistaPreviaTramite();
 }
 
@@ -3825,8 +3870,11 @@ function htmlValorValidacion(c, v, i, vi, ns) {
       onchange="vtOffsetValidacion('${ns}',${i},${vi},this.value)">`;
 }
 function htmlValidacionesCampo(c, i, ns) {
-  if (!['numero', 'fecha'].includes(c.tipo_dato)) return '';
-  const filas = (c.validaciones || []).map((v, vi) => `
+  const conFija = ['numero', 'fecha'].includes(c.tipo_dato);
+  const conFuncion = ns === 'Tramite' && TIPOS_CON_FUNCION.includes(c.tipo_dato);
+  if (!conFija && !conFuncion) return '';
+  const esCalc = c.tipo_dato === 'calculado';
+  const filas = (c.validaciones || []).map((v, vi) => v.fuente === 'funcion' ? (conFuncion ? htmlFuncionRow(v, i, vi, ns, esCalc ? 'calculado' : 'campo') : '') : !conFija ? '' : `
     <div class="ct-vrow">
       <span class="ct-fuente">Fijo</span>
       <select onchange="actualizarValidacion${ns}(${i},${vi},'operador',this.value)">
@@ -3842,9 +3890,171 @@ function htmlValidacionesCampo(c, i, ns) {
       </span>
       <button type="button" class="peligro mini" onclick="quitarValidacion${ns}(${i},${vi})" title="Quitar">✕</button>
     </div>`).join('');
-  return `<div class="ct-valids">${filas}
-    <button type="button" class="ct-mas-valid" onclick="agregarValidacion${ns}(${i})">+ validación</button>
-  </div>`;
+  const botones = (conFija ? `<button type="button" class="ct-mas-valid" onclick="agregarValidacion${ns}(${i})">+ validación</button>` : '')
+    + (conFuncion && !esCalc ? `<button type="button" class="ct-mas-valid" onclick="agregarFuncionTramite(${i})">+ contra una lista o el padrón</button>` : '');
+  return `<div class="ct-valids">${filas}${botones ? `<div style="display:flex; gap:6px;">${botones}</div>` : ''}</div>`;
+}
+
+// ---------- Validaciones por función (PLAN_LISTAS_VALIDACIONES.md, bloque 3) ----------
+// Miran afuera del formulario: una fila de una lista del sindicato (por el
+// CUIL de la sesión y, si hace falta, un segundo dato del formulario) o un
+// dato del padrón; y pueden evaluar una fórmula escrita como las Reglas de
+// control. `modo`: 'campo' (validación de un campo), 'calculado' (lo que
+// se muestra es el resultado) o 'requisito' (para iniciar; i = -1).
+let requisitosTramiteActuales = [];
+let nombresCamposTramite = [];
+function nuevaFuncionTramite(i, origen) {
+  return { fuente: 'funcion', origen: origen || 'lista', lista: origen === 'sistema' ? null : 'grupo_familiar',
+           clave2: i == null || i < 0 ? null : i, trae: origen === 'sistema' ? '' : 'existe',
+           formula: '', operador: '', valor: '', mensaje: '', bloquea: true, en_vivo: false };
+}
+function funcionDe(i, vi) {
+  return i < 0 ? requisitosTramiteActuales[vi] : camposTramiteActuales[i].validaciones[vi];
+}
+function listaDe(clave) { return CATALOGO_FUNCION.listas.find(l => l.clave === clave) || CATALOGO_FUNCION.listas[0]; }
+function htmlFuncionRow(v, i, vi, ns, modo) {
+  const upd = (k) => `onchange="actualizarFuncionTramite(${i},${vi},'${k}',this.value)"`;
+  const esLista = v.origen === 'lista';
+  const lista = esLista ? listaDe(v.lista) : null;
+  // '__formula' es una marca SOLO del constructor ("lo que se mira es una
+  // fórmula", aunque todavía no se haya escrito); el servidor la lee como ''.
+  const traeActual = (v.formula || v.trae === '__formula') ? '__formula' : (v.trae || (esLista ? 'existe' : '__formula'));
+  let partes = `<span class="ct-fuente">${modo === 'requisito' ? 'Requisito' : modo === 'calculado' ? 'Cálculo' : 'Función'}</span>
+    <select ${upd('origen')} title="Dónde se busca">
+      <option value="lista" ${esLista?'selected':''}>en una lista del sindicato</option>
+      <option value="sistema" ${!esLista?'selected':''}>en el padrón</option>
+    </select>`;
+  if (esLista) {
+    partes += `<select ${upd('lista')} title="Qué lista">${CATALOGO_FUNCION.listas.map(l =>
+      `<option value="${l.clave}" ${v.lista===l.clave?'selected':''}>${escHtml(l.nombre)}</option>`).join('')}</select>`;
+    const col2 = lista.columnas.find(c => c.busqueda === 2);
+    if (col2 && modo !== 'requisito') {
+      const candidatos = camposTramiteActuales.map((c, ci) => ({ c, ci }))
+        .filter(x => !['separador', 'archivo', 'booleano', 'multiple', 'calculado'].includes(x.c.tipo_dato));
+      partes += `<span class="ct-chk">${escHtml(col2.rotulo)} =</span><select ${upd('clave2')} title="Con qué dato del formulario se busca la fila">
+        <option value="">(sin segunda clave)</option>${candidatos.map(x =>
+          `<option value="${x.ci}" ${String(v.clave2)===String(x.ci)?'selected':''}>${String(x.ci+1).padStart(2,'0')} · ${escHtml(x.c.etiqueta || '(sin etiqueta)')}</option>`).join('')}</select>`;
+    }
+  }
+  // qué se mira: que esté / no esté, una columna o dato, o una fórmula
+  const opcionesTrae = [];
+  if (esLista) {
+    opcionesTrae.push(['existe', 'que esté en la lista']);
+    lista.columnas.filter(c => !c.busqueda).forEach(c => opcionesTrae.push([c.clave, 'el dato «' + c.rotulo + '»']));
+  } else {
+    CATALOGO_FUNCION.sistema.forEach(d => opcionesTrae.push([d.clave, d.rotulo]));
+  }
+  opcionesTrae.push(['__formula', 'una fórmula']);
+  if (modo === 'calculado') {
+    partes += `<select ${upd('trae')} title="Qué se muestra">${opcionesTrae.filter(([k]) => k !== 'existe').map(([k, l]) =>
+      `<option value="${k}" ${traeActual===k?'selected':''}>${escHtml(l)}</option>`).join('')}</select>`;
+  } else {
+    partes += `<select ${upd('trae')} title="Qué se controla">${opcionesTrae.map(([k, l]) =>
+      `<option value="${k}" ${traeActual===k?'selected':''}>${escHtml(l)}</option>`).join('')}</select>`;
+  }
+  if (traeActual === '__formula') {
+    partes += `<input class="ct-formula" list="tt-nombres-datalist" placeholder="p. ej. anios_entre(lista.fecha_nacimiento, hoy()) <= 12" value="${escHtml(v.formula || '')}" oninput="actualizarFuncionTramite(${i},${vi},'formula',this.value,true)">`;
+  }
+  if (traeActual === 'existe') {
+    partes += `<select ${upd('operador')}><option value="==" ${v.operador!=='!='?'selected':''}>tiene que estar</option><option value="!=" ${v.operador==='!='?'selected':''}>no tiene que estar</option></select>`;
+  } else if (modo !== 'calculado') {
+    partes += `<select ${upd('operador')} title="Comparar el resultado con un valor (vacío: la fórmula ya dice sí o no)">
+      <option value="" ${!v.operador?'selected':''}>${traeActual === '__formula' ? '(la fórmula dice sí o no)' : 'comparar…'}</option>
+      ${Object.entries(OPERADORES_VALIDACION).map(([op, l]) => `<option value="${op}" ${v.operador===op?'selected':''}>${l}</option>`).join('')}</select>
+      ${v.operador ? `<input style="width:110px;" placeholder="valor (o hoy-365)" value="${escHtml(v.valor || '')}" oninput="actualizarFuncionTramite(${i},${vi},'valor',this.value,true)">` : ''}`;
+  }
+  if (modo !== 'calculado') {
+    partes += `<input class="ct-vmsj" placeholder="Mensaje si no pasa (opcional)" value="${escHtml(v.mensaje || '')}" oninput="actualizarFuncionTramite(${i},${vi},'mensaje',this.value,true)">`;
+  }
+  if (modo === 'campo') {
+    partes += `<span class="ct-sello-sw">
+        <b class="${v.bloquea!==false?'on-blq':''}" onclick="actualizarFuncionTramite(${i},${vi},'bloquea',true)">Bloquea</b>
+        <b class="${v.bloquea===false?'on-avs':''}" onclick="actualizarFuncionTramite(${i},${vi},'bloquea',false)">Avisa</b>
+      </span>
+      <label class="ct-chk" title="Avisar al salir del campo, antes de enviar (con tope de intentos)"><input type="checkbox" ${v.en_vivo?'checked':''} onchange="actualizarFuncionTramite(${i},${vi},'en_vivo',this.checked,true)"> en vivo</label>`;
+  }
+  if (modo !== 'calculado') {
+    partes += `<button type="button" class="peligro mini" onclick="quitarFuncionTramite(${i},${vi})" title="Quitar">✕</button>`;
+  }
+  return `<div class="ct-vrow funcion">${partes}</div>`;
+}
+function agregarFuncionTramite(i) {
+  const c = camposTramiteActuales[i];
+  (c.validaciones = c.validaciones || []).push(nuevaFuncionTramite(i, 'lista'));
+  renderCamposTramite();
+}
+function actualizarFuncionTramite(i, vi, k, valor, sinRender) {
+  const v = funcionDe(i, vi);
+  if (!v) return;
+  if (k === 'origen') {
+    Object.assign(v, nuevaFuncionTramite(i, valor), { mensaje: v.mensaje, bloquea: v.bloquea, en_vivo: v.en_vivo });
+  } else if (k === 'trae') {
+    if (valor === '__formula') { v.trae = '__formula'; v.formula = v.formula || ''; v.operador = ''; }
+    else { v.trae = valor; v.formula = ''; v.operador = valor === 'existe' ? '==' : (v.operador || ''); if (valor === 'existe') v.valor = 'si'; }
+  } else if (k === 'clave2') {
+    v.clave2 = valor === '' ? null : parseInt(valor, 10);
+  } else if (k === 'lista') {
+    v.lista = valor; v.trae = 'existe'; v.formula = ''; v.operador = '=='; v.valor = 'si';
+  } else {
+    v[k] = valor;
+  }
+  if (!sinRender) (i < 0 ? renderRequisitosTramite() : renderCamposTramite());
+}
+function quitarFuncionTramite(i, vi) {
+  if (i < 0) { requisitosTramiteActuales.splice(vi, 1); renderRequisitosTramite(); }
+  else { camposTramiteActuales[i].validaciones.splice(vi, 1); renderCamposTramite(); }
+}
+function agregarRequisitoTramite() {
+  requisitosTramiteActuales.push(nuevaFuncionTramite(-1, 'sistema'));
+  renderRequisitosTramite();
+}
+function renderRequisitosTramite() {
+  const cont = document.getElementById('tt-requisitos-lista');
+  if (!cont) return;
+  cont.innerHTML = requisitosTramiteActuales.length
+    ? requisitosTramiteActuales.map((v, vi) => htmlFuncionRow(v, -1, vi, 'Tramite', 'requisito')).join('')
+    : '<p class="ct-req-vacio">Sin requisitos: cualquier afiliado puede iniciarlo.</p>';
+}
+function serializarRequisitosTramite() {
+  return requisitosTramiteActuales.map(r => ({ ...r, clave2: null, bloquea: true, en_vivo: false }));
+}
+// Los nombres con los que una fórmula nombra a cada campo los arma el
+// SERVIDOR (/admin/tramite-tipo/nombres): es la misma función que evalúa.
+let _nombresTimer = null;
+function refrescarNombresTramite() {
+  clearTimeout(_nombresTimer);
+  _nombresTimer = setTimeout(async () => {
+    try {
+      const r = await fetch('/admin/tramite-tipo/nombres', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campos: camposTramiteActuales }) });
+      if (!r.ok) return;
+      nombresCamposTramite = (await r.json()).nombres || [];
+    } catch (e) { return; }
+    renderAyudaFormula();
+  }, 300);
+}
+function renderAyudaFormula() {
+  const cuerpo = document.getElementById('tt-ayuda-formula-cuerpo');
+  const dl = document.getElementById('tt-nombres-datalist');
+  if (!cuerpo || !dl) return;
+  const validos = camposTramiteActuales.filter(c => !['separador', 'archivo', 'booleano', 'multiple'].includes(c.tipo_dato));
+  const sugerencias = [];
+  const campos = [];
+  camposTramiteActuales.forEach((c, i) => {
+    const n = nombresCamposTramite[i];
+    if (!n || !validos.includes(c)) return;
+    campos.push(`<li><code>campo.${escHtml(n)}</code> — ${escHtml(c.etiqueta || '(sin etiqueta)')}</li>`);
+    sugerencias.push('campo.' + n);
+  });
+  const listas = CATALOGO_FUNCION.listas.map(l => `<li><b>${escHtml(l.nombre)}</b>: ${l.columnas.map(c => { sugerencias.push('lista.' + c.clave); return `<code>lista.${c.clave}</code>`; }).join(' ')}</li>`);
+  const sistema = CATALOGO_FUNCION.sistema.map(d => { sugerencias.push('sistema.' + d.clave); return `<li><code>sistema.${d.clave}</code> — ${escHtml(d.rotulo)}</li>`; });
+  const funciones = CATALOGO_FUNCION.funciones.map(f => { sugerencias.push(f.nombre + '('); return `<li><code>${escHtml(f.ayuda)}</code></li>`; });
+  cuerpo.innerHTML = `<p>Se escriben como las Reglas de control: <code>+ - * /</code>, comparaciones (<code>&lt;= &gt;= &lt; &gt; == !=</code>), <code>y</code> / <code>o</code> / <code>no</code>, textos entre comillas y fechas como AAAA-MM-DD.</p>
+    <b>Campos de este formulario</b><ul>${campos.join('') || '<li class="muted">Todavía no hay campos con nombre.</li>'}</ul>
+    <b>Listas del sindicato</b> (la fila encontrada)<ul>${listas.join('')}</ul>
+    <b>Padrón</b><ul>${sistema.join('')}</ul>
+    <b>Funciones</b><ul>${funciones.join('')}</ul>`;
+  dl.innerHTML = sugerencias.map(x => `<option value="${escHtml(x)}">`).join('');
 }
 function agregarValidacionTramite(i) {
   const c = camposTramiteActuales[i];
@@ -3938,10 +4148,19 @@ function agregarCampoTramite() {
 function actualizarCampoTramite(i, campo, valor) {
   camposTramiteActuales[i][campo] = valor;
   if (campo === 'tipo_dato') {
-    if (valor === 'separador') camposTramiteActuales[i].ancho = 'completo';
-    // si dejó de ser número/fecha, sus validaciones ya no aplican; las
-    // reglas que lo referencian las poda renderReglasTramite
-    if (!['numero', 'fecha'].includes(valor)) camposTramiteActuales[i].validaciones = [];
+    const c = camposTramiteActuales[i];
+    if (valor === 'separador') c.ancho = 'completo';
+    // si dejó de ser número/fecha, las fijas ya no aplican (las reglas que
+    // lo referencian las poda renderReglasTramite); las de función siguen
+    // mientras el tipo las admita. Un calculado lleva exactamente UNA
+    // función, la que dice qué se muestra, y nunca es obligatorio.
+    c.validaciones = (c.validaciones || []).filter(v =>
+      v.fuente === 'funcion' ? TIPOS_CON_FUNCION.includes(valor) : ['numero', 'fecha'].includes(valor));
+    if (valor === 'calculado') {
+      c.validaciones = c.validaciones.filter(v => v.fuente === 'funcion').slice(0, 1);
+      if (!c.validaciones.length) c.validaciones = [nuevaFuncionTramite(null, 'sistema')];
+      c.obligatorio = false;
+    }
     renderCamposTramite();
   }
   else if (campo === 'etiqueta') { renderReglasTramite(); renderVistaPreviaTramite(); }
@@ -4033,6 +4252,8 @@ function htmlCampoPreview(c, i, ns) {
     campo = `<span class="tp-archivo">📎 Elegir archivo</span>`;
   } else if (c.tipo_dato === 'numero') {
     campo = `<input type="number" class="tram-input" id="${idp}" value="${valor}" placeholder="Ej: 1234" ${guarda}>`;
+  } else if (c.tipo_dato === 'calculado') {
+    campo = `<input type="text" class="tram-input ttp-calculado" id="${idp}" value="" readonly placeholder="Se calcula solo">`;
   } else {
     campo = `<input type="text" class="tram-input" id="${idp}" value="${valor}" placeholder="${c.longitud_exacta ? c.longitud_exacta + ' caracteres' : 'Texto'}" ${guarda}>`;
   }
@@ -4062,15 +4283,18 @@ function limpiarResultadoPrueba(pref) {
 async function probarFormularioTramite() {
   const valores = {};
   camposTramiteActuales.forEach((c, i) => {
+    if (c.tipo_dato === 'calculado') return;
     const el = document.getElementById(`ttp_Tramite_${i}`);
     if (el && el.value !== undefined) valores[i] = el.value;
   });
   limpiarResultadoPrueba('tt');
   let data;
   try {
+    const cuilEl = document.getElementById('tt-cuil-prueba');
     const r = await fetch('/admin/tramite-tipo/probar', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ campos: camposTramiteActuales, reglas: serializarReglasTramite(), valores }),
+      body: JSON.stringify({ campos: camposTramiteActuales, reglas: serializarReglasTramite(), valores,
+                             requisitos: serializarRequisitosTramite(), cuil: cuilEl ? cuilEl.value : '' }),
     });
     data = await r.json();
     if (!r.ok) throw new Error();
@@ -4085,8 +4309,14 @@ async function probarFormularioTramite() {
     if (err) err.textContent = mensaje;
   });
   pintarMarcasPrueba('Tramite', camposTramiteActuales, valores, data.errores_campos);
+  Object.entries(data.calculados || {}).forEach(([idx, texto]) => {
+    const el = document.getElementById(`ttp_Tramite_${idx}`);
+    if (el) el.value = texto;
+  });
   const res = document.getElementById('tt-probar-res');
-  res.innerHTML = (data.advertencias || []).map(a => `<div class="adv">Aviso al operador: ${escHtml(a)}</div>`).join('');
+  res.innerHTML = (data.advertencias || []).map(a => `<div class="adv">Aviso al operador: ${escHtml(a)}</div>`).join('')
+    + (data.sin_contexto ? `<div class="ttp-nota">${data.sin_contexto === 1 ? 'Una validación por función no se evaluó' : data.sin_contexto + ' validaciones por función no se evaluaron'}: escribí el CUIL de un afiliado del padrón para probarlas.</div>` : '')
+    + (data.cuil ? `<div class="ttp-nota">Probado como el afiliado ${escHtml(data.cuil)}.</div>` : '');
   const overlay = document.getElementById('tt-probar-sello');
   const conErrores = (data.errores || []).length > 0;
   overlay.innerHTML = conErrores
@@ -4101,6 +4331,7 @@ if (formTramiteTipo) {
   formTramiteTipo.addEventListener('submit', () => {
     document.getElementById('tt-campos-json').value = JSON.stringify(camposTramiteActuales);
     document.getElementById('tt-reglas-json').value = JSON.stringify(serializarReglasTramite());
+    document.getElementById('tt-requisitos-json').value = JSON.stringify(serializarRequisitosTramite());
     // El mapa viaja como {seccional_id: area_id}. Las que quedaron en
     // "— por defecto —" NO se mandan: no mandarlas ES elegir el default.
     const mapa = {};
@@ -4151,6 +4382,7 @@ function editarTramiteTipo(t) {
     b: camposTramiteActuales[r.campo_b], mensaje: r.mensaje || '',
     bloquea: r.bloquea !== false,
   })).filter(r => r.a && r.b);
+  requisitosTramiteActuales = (t.requisitos || []).map(r => ({ ...r }));
   renderCamposTramite();
   document.getElementById('tt-area-default').value = t.area_destino_default_id || '';
   document.getElementById('tt-permite-pase').checked = !!t.permite_pase;
@@ -4182,6 +4414,7 @@ function cancelarTramiteTipo() {
   cambioPermitePase();
   camposTramiteActuales = [];
   reglasTramiteActuales = [];
+  requisitosTramiteActuales = [];
   renderCamposTramite();
   document.getElementById('tt-h2').textContent = 'Nuevo tipo de trámite';
   document.getElementById('tt-submit').textContent = 'Crear tipo de trámite';
@@ -4541,7 +4774,7 @@ function renderCamposTramiteEmpresa() {
       <input class="ct-etiqueta" placeholder="${c.tipo_dato==='separador' ? 'Etiqueta (opcional, solo referencia)' : 'Etiqueta'}"
              value="${escHtml(c.etiqueta)}" oninput="actualizarCampoTramiteEmpresa(${i},'etiqueta',this.value)">
       <select class="ct-tipo" onchange="actualizarCampoTramiteEmpresa(${i},'tipo_dato',this.value)">
-        ${Object.entries(TIPOS_DATO_TRAMITE_LABEL).map(([v, l]) =>
+        ${Object.entries(TIPOS_DATO_TRAMITE_EMP).map(([v, l]) =>
           `<option value="${v}" ${c.tipo_dato===v?'selected':''}>${l}</option>`).join('')}
       </select>
       <input class="ct-num" type="number" min="0" placeholder="Long. máx." value="${c.longitud_maxima ?? ''}" ${c.tipo_dato!=='texto'?'disabled':''} oninput="actualizarCampoTramiteEmpresa(${i},'longitud_maxima',this.value)">

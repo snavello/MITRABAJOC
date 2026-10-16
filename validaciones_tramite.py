@@ -627,6 +627,8 @@ def funcion_saneada(v: dict, campos, indice=None, calculado=False, requisito=Fal
         if (campos[clave2].get("tipo_dato") or "") in ("separador", "archivo", "booleano", "multiple", TIPO_CALCULADO):
             return None
     trae = str(v.get("trae") or "").strip()
+    if trae == "__formula":        # marca del constructor: "lo que se mira es una fórmula"
+        trae = ""
     formula = str(v.get("formula") or "").strip() or None
     if origen == "lista":
         columnas = {c["clave"] for c in listas_mod.columnas(plantilla)}
