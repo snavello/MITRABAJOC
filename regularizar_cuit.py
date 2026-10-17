@@ -192,6 +192,8 @@ INVENTARIO = (
        nota="el login del operador (hoy es su CUIL); puede no ser un número"),
     _c("usuariosindicato", "cuil", PERSONA, TEXTO, ALTA,
        nota="quién es el operador; lo vincula al padrón"),
+    _c("cuentapanel", "cuil", PERSONA, TEXTO, ALTA,
+       nota="la clave del operador del panel: una fila por CUIL (único)"),
     _c("usuarioplataforma", "cuil", PERSONA, TEXTO, ALTA,
        nota="lo carga la persona en su primer ingreso"),
     _c("reciboverificado", "cuil", PERSONA, TEXTO, ALTA,

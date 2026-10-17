@@ -394,7 +394,7 @@ def test_diagnostico_cuenta_las_apariciones_por_tabla_y_columna(base):
     persona = f[PERSONA].apariciones
     esperadas = {
         "cuentatrabajador.cuil": 1, "trabajador.cuil": 2, "usuariosindicato.usuario": 1,
-        "usuariosindicato.cuil": 1, "usuarioplataforma.cuil": 1, "reciboverificado.cuil": 1,
+        "usuariosindicato.cuil": 1, "cuentapanel.cuil": 1, "usuarioplataforma.cuil": 1, "reciboverificado.cuil": 1,
         "reciboverificado.detalle": 1, "enviosindicato.cuil": 1, "enviosindicato.detalle": 1,
         "reporte.cuil": 1, "reporte.detalle": 1, "recibosospechoso.cuil": 1, "usoia.cuil": 1,
         "suscripcionpush.cuil": 1, "consultaconvenio.cuil": 1, "notificaciondestinatario.cuil": 1,
@@ -534,10 +534,11 @@ def test_aplicar_convierte_todas_las_tablas(base):
     # LO CENTRAL: el nuevo tiene EXACTAMENTE las apariciones que tenía el viejo,
     # en cada tabla.columna, y del viejo no queda ninguna.
     assert a[PERSONA_NUEVO] == previo[PERSONA] and a[EMPRESA_NUEVO] == previo[EMPRESA]
-    assert len(previo[PERSONA]) == 22 and len(previo[EMPRESA]) == 13
+    assert len(previo[PERSONA]) == 23 and len(previo[EMPRESA]) == 13
     assert PERSONA not in a and EMPRESA not in a, "quedó el número viejo en alguna parte"
     assert a[PERSONA_NUEVO]["cuentatrabajador.cuil"] == 1 and a[PERSONA_NUEVO]["trabajador.cuil"] == 2
-    for clave in ("usuariosindicato.usuario", "usuariosindicato.cuil", "usuarioplataforma.cuil",
+    for clave in ("usuariosindicato.usuario", "usuariosindicato.cuil", "cuentapanel.cuil",
+                  "usuarioplataforma.cuil",
                   "reciboverificado.cuil", "reciboverificado.detalle", "enviosindicato.cuil",
                   "enviosindicato.detalle", "reporte.cuil", "reporte.detalle", "recibosospechoso.cuil",
                   "usoia.cuil", "suscripcionpush.cuil", "consultaconvenio.cuil",

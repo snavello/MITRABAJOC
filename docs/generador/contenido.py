@@ -112,7 +112,7 @@ RUTAS = {
     ("POST", "/api/convenio/consultar"): ("trab-convenio", "trabajador", "Búsqueda vectorial y respuesta citando el artículo."),
     ("GET", "/admin"): ("admin-acceso", "sindicato", "Panel de quince pestañas; sin sesión, el login."),
     ("GET", "/admin/inicio"): ("admin-acceso", "sindicato", "Portada de tarjetas."),
-    ("POST", "/admin/login"): ("admin-acceso", "público", "CUIT + clave contra UsuarioSindicato."),
+    ("POST", "/admin/login"): ("admin-acceso", "público", "CUIT + clave contra CuentaPanel (una por persona); con varios sindicatos, va al selector."),
     ("GET", "/admin/salir"): ("admin-acceso", "sindicato", "Cierra la sesión."),
     ("GET", "/admin/dashboard"): ("admin-acceso", "sindicato", "Página del Panel Sindical; sin módulo, vuelve a /admin."),
     ("POST", "/admin/trabajador"): ("admin-padron", "sindicato", "Alta o edición de un trabajador."),

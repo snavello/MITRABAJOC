@@ -1038,6 +1038,7 @@ ESCRITURAS_DE_IDENTIDAD = {
     "db.completar_usuario_plataforma": "derivado: lo llama /plataforma/completar, que valida",
     "db.importar_cuits_de_conceptos": "puerta (saltea los inválidos)",
     "db.asegurar_cuenta": "derivado: la persona de un empadronamiento o de un registro ya validados",
+    "db._mover_clave_a_la_cuenta": "derivado: el CUIL del usuario del panel que se está dando de alta, validado en su puerta",
     "db.guardar_suscripcion_push": "derivado: el CUIL de la sesión firmada",
 }
 _MODELOS_DE_IDENTIDAD = {"Trabajador", "CuentaTrabajador", "UsuarioSindicato", "UsuarioPlataforma",

@@ -2943,6 +2943,8 @@
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El área y la seccional del usuario tienen que ser la misma. Elegí un área de esa seccional.</div>
   {% elif request.query_params.get('ok') == 'usuario' %}
   <div class="msg" style="background:#e3f3ec;color:#1d6b52;">Usuario guardado.</div>
+  {% elif request.query_params.get('ok') == 'usuariocuenta' %}
+  <div class="msg" style="background:#e3f3ec;color:#1d6b52;">Usuario guardado. Esta persona ya tenía clave del panel, así que entra con la suya de siempre: la clave inicial no se usó. Al ingresar va a poder elegir este sindicato.</div>
   {% endif %}
   <div class="card">
     <form method="post" action="/admin/usuario" id="form-usuario">
@@ -2950,7 +2952,9 @@
       <div class="grid2">
         <div class="campo"><label>CUIT/CUIL *</label><input name="usuario" id="usu-usuario" required data-cuit="persona" placeholder="20123456786"></div>
         <div class="campo"><label>Nombre</label><input name="nombre" id="usu-nombre"></div>
-        <div class="campo" id="usu-clave-campo"><label>Clave inicial *</label><input name="clave_inicial" id="usu-clave" type="password" required></div>
+        <div class="campo" id="usu-clave-campo"><label>Clave inicial *</label><input name="clave_inicial" id="usu-clave" type="password" required>
+          {# Una persona, una clave para todos los sindicatos (CuentaPanel). #}
+          <span class="muted" style="font-size:12px;">Si la persona ya usa el panel en otro sindicato, entra con su clave de siempre y esta no se usa.</span></div>
         <div class="campo"><label>Rol</label>
           <select name="rol" id="usu-rol" onchange="cambioRolUsuario()">
             <option value="area">Usuario de área</option>
@@ -3035,7 +3039,8 @@
           {% else %}<span class="muted">no empadronado</span>{% endif %}</td>
       <td>
         {% if not u.activo %}<span class="tag" style="background:#eee;color:#888;">baja</span>
-        {% elif u.debe_cambiar_clave %}<span class="tag tag-pend">clave pendiente</span>
+        {% elif u.sin_clave %}<span class="tag tag-pend">sin clave</span>
+        {% elif u.debe_cambiar_clave %}<span class="tag tag-pend">clave inicial</span>
         {% else %}<span class="tag tag-si">activo</span>{% endif %}
       </td>
       <td style="white-space:nowrap; text-align:right;">
