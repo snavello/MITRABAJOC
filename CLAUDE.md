@@ -346,6 +346,12 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - Empresa multisindicato (ambos): CUIT 30111222335.
 - Admin La Bancaria: CUIT 20333444551 / bancaria-demo (sindicato con lote
   sintético completo, recibos según CCT 18/75 — ver `cargar_bancaria.py`).
+- **Usuarios de prueba que se CONSERVAN en Pruebas** (La Bancaria, seccional
+  Lomas de Zamora, pedido de SDN 2026-10-17; no son de nadie): 23010101018 /
+  23010 (Admin de Seccional, el que destapó el bloque 7 del alcance),
+  20900000015 / diag-code-2026 (Admin de Seccional) y 20900000023 /
+  diag-code-2026 (usuario de área Secretaría General). Sirven para repetir
+  cualquier verificación del alcance sin crear nada.
 - Todos estos números cumplen el módulo 11 desde 2026-10-10 (PLAN_CUIT_MOD11.md,
   etapa 3). Los de antes (`20111111110`, `20111111119`...) ya no sirven en una
   base cargada de cero; el mapa viejo → nuevo es `identificadores_demo.py`.
