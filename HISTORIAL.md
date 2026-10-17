@@ -7919,3 +7919,16 @@ Code, que además repitió en Pruebas la verificación con 23010101018.
 del HTML (no solo los conocidos) y falla si a un acotado se le ofrece un
 id fuera de su alcance; `test_alcance_seccional_panel.py` suma los tres
 tests de la noticia de la encuesta.
+
+Lo que encontraron los dos QA, y se corrigió antes del merge: (1) al sacar
+"Por seccional" para el acotado, Notificaciones (que no tiene criterio
+"todos") le quitó al admin local la única forma de decir "a toda mi
+seccional", y el general de un sindicato con UNA sola seccional también la
+perdió; ahora el acotado ve primero "A toda tu seccional (X)" con su
+casilla tildada y oculta, y el general con una seccional sigue viendo "Por
+seccional" (el robot lo confirmó: 28 destinatarios de Rosario guardados).
+(2) Un usuario de área sin el permiso Seccionales recibía un `TypeError`
+de JS en cada carga del panel, anterior al bloque, porque el script de
+georreferenciación enganchaba `form-seccional` sin comprobar que exista.
+(3) El texto del modal "Avisale a los afiliados" decía que la noticia la
+ve cualquiera; para el acotado ahora dice que es de su seccional.
