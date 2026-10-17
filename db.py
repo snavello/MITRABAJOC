@@ -3506,7 +3506,29 @@ def guardar_datos_personales(s: Session, cuil: str, nombre: str = None,
     return c
 
 
-def padron_del_sindicato(s: Session, sindicato_id: int) -> list:
+def publicacion_en_alcance(destino_seccionales, alcance) -> bool:
+    """¿Quien tiene este alcance puede EDITAR o BORRAR una noticia o un
+    beneficio con estos destinos? Solo si TODOS sus destinos caen en el
+    alcance. Una publicación "a todas" (lista vacía) o dirigida a otra
+    seccional la toca solo quien tiene alcance total: fail-closed, como
+    `_en_alcance` (PLAN_ALCANCE_SECCIONAL.md, bloque 2)."""
+    if alcance is None:
+        return True
+    return bool(destino_seccionales) and all(d in alcance for d in destino_seccionales)
+
+
+def publicacion_visible(destino_seccionales, alcance) -> bool:
+    """¿Quien tiene este alcance VE la publicación en el panel? Si va "a
+    todas" o alguno de sus destinos cae en el alcance: la misma regla que el
+    historial de Notificaciones (ve lo que le llega a su gente)."""
+    if alcance is None:
+        return True
+    if not alcance:
+        return False
+    return not destino_seccionales or any(d in alcance for d in destino_seccionales)
+
+
+def padron_del_sindicato(s: Session, sindicato_id: int, alcance=None) -> list:
     """El padrón completo de un sindicato, con los datos personales de cada
     afiliado ya unidos por CUIL.
 
@@ -3519,12 +3541,20 @@ def padron_del_sindicato(s: Session, sindicato_id: int) -> list:
     (seccional, credencial, empleador, estado) y la persona (nombre,
     domicilio, contacto). Que se arme acá y no en la plantilla es lo que
     permite que el resto de la app pida "el padrón" sin tener que acordarse
-    del JOIN."""
-    filas = s.exec(
-        select(Trabajador, CuentaTrabajador)
-        .join(CuentaTrabajador, CuentaTrabajador.cuil == Trabajador.cuil, isouter=True)
-        .where(Trabajador.sindicato_id == sindicato_id)
-        .order_by(Trabajador.activo.desc(), CuentaTrabajador.nombre)).all()
+    del JOIN.
+
+    `alcance` (ver alcance_seccional) recorta EN LA CONSULTA: None = todo,
+    un set = solo esas seccionales (un afiliado sin seccional no lo alcanza
+    nadie acotado), set() = nada. Es la única lectura del padrón del panel,
+    así que lo que no entra acá no viaja a ninguna pantalla."""
+    if alcance is not None and not alcance:
+        return []
+    q = (select(Trabajador, CuentaTrabajador)
+         .join(CuentaTrabajador, CuentaTrabajador.cuil == Trabajador.cuil, isouter=True)
+         .where(Trabajador.sindicato_id == sindicato_id))
+    if alcance is not None:
+        q = q.where(Trabajador.seccional_id.in_(list(alcance)))
+    filas = s.exec(q.order_by(Trabajador.activo.desc(), CuentaTrabajador.nombre)).all()
     salida = []
     vacios = {campo: "" for campo in ("nombre", *geo.CAMPOS_DOMICILIO)}
     vacios.update({"latitud": None, "longitud": None, "precision_geo": "sin_geo",
@@ -3851,13 +3881,22 @@ def visible_para_seccional(destino_seccionales: list, seccional_id: Optional[int
     return not destino_seccionales or seccional_id in destino_seccionales
 
 
-def noticias_del_sindicato(sindicato_id: int) -> list:
-    """Todas las noticias del sindicato (para el panel de admin), más
-    recientes primero."""
+def noticias_del_sindicato(sindicato_id: int, alcance=None) -> list:
+    """Las noticias del sindicato para el panel de admin, más recientes
+    primero. Con `alcance`, solo las que le llegan a la gente de esas
+    seccionales (`publicacion_visible`), y cada una dice si quien mira puede
+    editarla o borrarla (`propia`, ver `publicacion_en_alcance`)."""
     with Session(engine) as s:
         noticias = s.exec(select(Noticia).where(Noticia.sindicato_id == sindicato_id)
                           .order_by(Noticia.creada.desc(), Noticia.id.desc())).all()
-        return [_noticia_a_dict(n) for n in noticias]
+        salida = []
+        for n in noticias:
+            if not publicacion_visible(n.destino_seccionales or [], alcance):
+                continue
+            d = _noticia_a_dict(n)
+            d["propia"] = publicacion_en_alcance(n.destino_seccionales or [], alcance)
+            salida.append(d)
+        return salida
 
 
 def noticias_vigentes(sindicato_id: int, seccional_id: Optional[int] = None, limite: int = None) -> list:
@@ -3895,13 +3934,20 @@ def _beneficio_a_dict(b: "Beneficio") -> dict:
     }
 
 
-def beneficios_del_sindicato(sindicato_id: int) -> list:
-    """Todos los beneficios del sindicato (para el panel de admin), más
-    recientes primero."""
+def beneficios_del_sindicato(sindicato_id: int, alcance=None) -> list:
+    """Los beneficios del sindicato para el panel de admin, más recientes
+    primero. Mismo recorte y misma marca `propia` que noticias_del_sindicato."""
     with Session(engine) as s:
         beneficios = s.exec(select(Beneficio).where(Beneficio.sindicato_id == sindicato_id)
                             .order_by(Beneficio.creada.desc(), Beneficio.id.desc())).all()
-        return [_beneficio_a_dict(b) for b in beneficios]
+        salida = []
+        for b in beneficios:
+            if not publicacion_visible(b.destino_seccionales or [], alcance):
+                continue
+            d = _beneficio_a_dict(b)
+            d["propia"] = publicacion_en_alcance(b.destino_seccionales or [], alcance)
+            salida.append(d)
+        return salida
 
 
 def beneficios_vigentes(sindicato_id: int, seccional_id: Optional[int] = None) -> list:

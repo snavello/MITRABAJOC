@@ -1490,6 +1490,11 @@ def admin(request: Request):
     def puede(*secciones) -> bool:
         return any(x in permisos for x in secciones)
 
+    # Sobre qué seccionales opera quien mira (db.alcance_seccional): None =
+    # todas, {id} = esa, set() = ninguna. Recorta el padrón, las
+    # publicaciones, las seccionales, las áreas y los usuarios EN LA CONSULTA.
+    alcance_propio = db.alcance_seccional(uid)
+
     with db.get_session() as s:
         sind = s.get(Sindicato, sid)
         # Los conceptos alimentan además los <select> de Fórmulas y el panel
@@ -1518,7 +1523,7 @@ def admin(request: Request):
         # Viene como dicts con el empadronamiento y la persona ya unidos
         # (db.padron_del_sindicato): el nombre y el domicilio son de la
         # persona, no de esta fila.
-        trabajadores = db.padron_del_sindicato(s, sid) \
+        trabajadores = db.padron_del_sindicato(s, sid, alcance_propio) \
             if puede("trabajadores") else []
         empleadores = s.exec(select(Empleador).where(Empleador.sindicato_id == sid)
                              .order_by(Empleador.activo.desc(), Empleador.razon_social)).all() \
@@ -1566,7 +1571,6 @@ def admin(request: Request):
     # porque necesita editar la suya. El servidor rechazaba el intento, así
     # que no había agujero, pero la pantalla ofrecía lo que no se podía
     # hacer y encima dejaba ver las delegaciones ajenas.
-    alcance_propio = db.alcance_seccional(uid)
     seccionales_visibles = [
         x for x in seccionales
         if alcance_propio is None or x["id"] in (alcance_propio or set())]
@@ -1620,8 +1624,8 @@ def admin(request: Request):
         "etiquetas_secciones": {k: v[0] for k, v in permisos_mod.SECCIONES.items()},
         "provisorios": provisorios,
         "debe_cambiar": ses.get("cambiar", False),
-        "noticias": db.noticias_del_sindicato(sid) if puede("noticias") else [],
-        "beneficios": db.beneficios_del_sindicato(sid) if puede("beneficios") else [],
+        "noticias": db.noticias_del_sindicato(sid, alcance_propio) if puede("noticias") else [],
+        "beneficios": db.beneficios_del_sindicato(sid, alcance_propio) if puede("beneficios") else [],
         "notificaciones": db.notificaciones_del_sindicato(sid, usuario_id=uid)
                           if puede("notificaciones") else [],
         # Encuestas: la lista se recorta por alcance de seccional EN LA
@@ -2003,9 +2007,14 @@ def admin_trabajador_alta(
         if sec_id and not s.exec(select(Seccional).where(
                 Seccional.id == sec_id, Seccional.sindicato_id == sid)).first():
             sec_id = None  # seccional ajena o inexistente: se ignora, no se rechaza el alta
+        # Un admin acotado solo carga gente EN su seccional (vacía = la suya;
+        # otra = 403). PLAN_ALCANCE_SECCIONAL.md, bloque 1.
+        sec_id = _seccional_en_alcance(request, sec_id)
         if id:  # modificación (solo si es de este sindicato)
             t = s.get(Trabajador, int(id))
             if t and t.sindicato_id == sid:
+                # Y solo edita a quien ya alcanza.
+                _exigir_alcance_seccional(request, t.seccional_id)
                 # El CUIL NO se cambia desde una edición (E-IDENT-03): es la
                 # identidad de la persona en todo el sistema y entre tablas
                 # se une por texto. Cambiarlo acá movía solo esta fila y
@@ -2166,6 +2175,10 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
     cuil_invalidos = []      # líneas con CUIL que no cumple el módulo 11
     por_nombre = {geo._norm(sec["nombre"]): sec["id"]
                   for sec in db.seccionales_del_sindicato(sid)}
+    # Un admin acotado carga solo en su seccional: una línea con otra
+    # seccional queda omitida (y se informa), una sin seccional va a la suya.
+    alcance = _alcance_de(request)
+    fuera_de_alcance = 0
     with db.get_session() as s:
         propios = {t.cuil: t for t in s.exec(select(Trabajador).where(
             Trabajador.sindicato_id == sid)).all()}
@@ -2218,13 +2231,21 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
             if geo.faltan_campos({"localidad": campo(5), "provincia": campo(6)}):
                 omitidas.append(linea.strip()[:60])
                 continue
+            sec_linea = por_nombre.get(geo._norm(campo(10)))
+            if alcance is not None:
+                if not sec_linea and len(alcance) == 1:
+                    sec_linea = next(iter(alcance))
+                if not _en_alcance(alcance, sec_linea):
+                    fuera_de_alcance += 1
+                    omitidas.append(linea.strip()[:60])
+                    continue
             domicilio = geo.campos_para_guardar({
                 "calle": campo(2), "numero": campo(3), "piso_depto": campo(4),
                 "localidad": campo(5), "provincia": campo(6),
                 "codigo_postal": campo(9)}, precision="sin_geo")
             s.add(Trabajador(
                 sindicato_id=sid, cuil=cuil,
-                seccional_id=por_nombre.get(geo._norm(campo(10))),
+                seccional_id=sec_linea,
                 fecha_afiliacion=f_afiliacion or None))
             if cuil in con_clave:
                 datos_ajenos += 1     # empadronamiento nuevo sobre una cuenta ya hecha: solo eso
@@ -2247,6 +2268,8 @@ def admin_trabajador_masivo(request: Request, lista: str = Form(...)):
         destino += f"&datosajenos={datos_ajenos}"
     if omitidas:
         destino += f"&omitidas={len(omitidas)}&muestra=" + quote(" | ".join(omitidas[:3]))
+    if fuera_de_alcance:
+        destino += f"&fueraalcance={fuera_de_alcance}"
     if cuil_invalidos:
         # Acá sí van todos (hasta diez): son CUIL de once números, no líneas
         # enteras, y la persona los tiene que poder corregir de a uno.
@@ -2728,6 +2751,28 @@ def _exigir_alcance_seccional(request: Request, seccional_id) -> None:
         raise _sin_permiso("Esto es de otra seccional.")
 
 
+def _seccional_en_alcance(request: Request, seccional_id):
+    """La seccional en la que un usuario acotado puede CREAR algo (un
+    afiliado, un formulario). Con alcance total devuelve lo que vino; con
+    alcance a una seccional, vacío = la suya (no puede crear "sin
+    seccional": nadie acotado lo alcanzaría) y otra = 403."""
+    alcance = _alcance_de(request)
+    if alcance is None:
+        return seccional_id
+    if not seccional_id and len(alcance) == 1:
+        return next(iter(alcance))
+    if not _en_alcance(alcance, seccional_id):
+        raise _sin_permiso("Esto es de otra seccional.")
+    return seccional_id
+
+
+def _exigir_alcance_publicacion(request: Request, destino_seccionales) -> None:
+    """403 si una noticia o un beneficio con esos destinos está fuera del
+    alcance de quien quiere editarla o borrarla (db.publicacion_en_alcance)."""
+    if not db.publicacion_en_alcance(destino_seccionales or [], _alcance_de(request)):
+        raise _sin_permiso("Esa publicación es de otra seccional o de todo el sindicato.")
+
+
 def _exigir_super_admin(request: Request) -> None:
     """Para lo que es del administrador general y de nadie más: crear o
     borrar seccionales, tildar `ve_todas`, y otorgar el rol de Super Admin.
@@ -3047,6 +3092,7 @@ async def abm_noticia(
         if id:
             n = s.get(Noticia, int(id))
             if n and n.sindicato_id == sid:
+                _exigir_alcance_publicacion(request, n.destino_seccionales)
                 n.titulo, n.bajada, n.texto_completo = titulo, bajada, texto_completo
                 n.fecha_desde, n.fecha_hasta = fecha_desde, fecha_hasta
                 n.destino_seccionales = destinos
@@ -3086,6 +3132,7 @@ def borrar_noticia(request: Request, id: int = Form(...)):
     with db.get_session() as s:
         n = s.get(Noticia, id)
         if n and n.sindicato_id == sid:
+            _exigir_alcance_publicacion(request, n.destino_seccionales)
             s.delete(n)
             s.commit()
     return RedirectResponse("/admin#noticias", status_code=303)
@@ -3107,6 +3154,7 @@ async def abm_beneficio(
         if id:
             b = s.get(Beneficio, int(id))
             if b and b.sindicato_id == sid:
+                _exigir_alcance_publicacion(request, b.destino_seccionales)
                 b.rubro, b.descripcion, b.link = rubro, descripcion, link
                 b.fecha_desde, b.fecha_hasta = fecha_desde, fecha_hasta
                 b.destino_seccionales = destinos
@@ -3138,6 +3186,7 @@ def borrar_beneficio(request: Request, id: int = Form(...)):
     with db.get_session() as s:
         b = s.get(Beneficio, id)
         if b and b.sindicato_id == sid:
+            _exigir_alcance_publicacion(request, b.destino_seccionales)
             s.delete(b)
             s.commit()
     return RedirectResponse("/admin#beneficios", status_code=303)
