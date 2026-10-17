@@ -1165,6 +1165,13 @@
             <input type="hidden" name="cuil" value="{{ t.cuil }}"><button class="mini">Restablecer clave</button>
           </form>
           {% endif %}
+          {# Un afiliado que además trabaja en el gremio: de acá a darle usuario
+             del panel con el CUIL, el nombre y la seccional ya puestos. Solo
+             para quien administra usuarios y dentro de su alcance; si ya es
+             empleado, el usuario ya existe. #}
+          {% if administra_areas and t.activo and not t.es_empleado_sindicato and (alcance_propio is none or t.seccional_id in alcance_propio) %}
+          <a class="mini" style="display:inline-block; text-decoration:none;" href="/admin?sub=usuarios&cuil={{ t.cuil }}&nombre={{ t.nombre | urlencode }}&seccional={{ t.seccional_id or '' }}#administradores">Dar usuario del panel</a>
+          {% endif %}
           {% if t.activo %}
           <form method="post" action="/admin/trabajador/baja" style="display:inline;" onsubmit="return confirm('¿Dar de baja a este trabajador? Se puede reactivar después.');">
             <input type="hidden" name="id" value="{{ t.id }}"><button class="mini borrar">Baja</button>
@@ -2950,7 +2957,11 @@
     <form method="post" action="/admin/usuario" id="form-usuario">
       <input type="hidden" name="id" id="usu-id">
       <div class="grid2">
-        <div class="campo"><label>CUIT/CUIL *</label><input name="usuario" id="usu-usuario" required data-cuit="persona" placeholder="20123456786"></div>
+        <div class="campo"><label>CUIT/CUIL *</label><input name="usuario" id="usu-usuario" required data-cuit="persona" placeholder="20123456786">
+          {# Al salir del campo se consulta el padrón de ESTE sindicato
+             (/admin/usuario/padron): si está, se completan nombre y
+             seccional; si no, se avisa que nace como empleado sin afiliar. #}
+          <span class="muted" style="font-size:12px;" id="usu-padron-aviso"></span></div>
         <div class="campo"><label>Nombre</label><input name="nombre" id="usu-nombre"></div>
         <div class="campo" id="usu-clave-campo"><label>Clave inicial *</label><input name="clave_inicial" id="usu-clave" type="password" required>
           {# Una persona, una clave para todos los sindicatos (CuentaPanel). #}
@@ -6073,9 +6084,65 @@ cambioRolUsuario();
 // el aviso -- si lo había -- fuera de la vista. Se veía igual que si el
 // botón no hubiera hecho nada.
 (function abrirSubDesdeURL() {
-  const sub = new URLSearchParams(location.search).get('sub');
+  const params = new URLSearchParams(location.search);
+  const sub = params.get('sub');
   if (sub === 'usuarios' || sub === 'areas') cambiarSubAU(sub);
+  // "Dar usuario del panel" desde la fila del padrón: llega con el CUIL,
+  // el nombre y la seccional, y el formulario arranca con eso puesto.
+  if (sub === 'usuarios' && params.get('cuil')) {
+    cancelarUsuario();
+    document.getElementById('usu-usuario').value = params.get('cuil');
+    document.getElementById('usu-nombre').value = params.get('nombre') || '';
+    const sec = document.getElementById('usu-seccional');
+    if (params.get('seccional') && [...sec.options].some(o => o.value === params.get('seccional'))) {
+      sec.value = params.get('seccional');
+      filtrarAreasPorSeccional();
+    }
+    consultarPadronUsuario();
+    document.getElementById('form-usuario').scrollIntoView({behavior:'smooth', block:'center'});
+  }
 })();
+
+// Una persona, una clave (CuentaPanel): antes de dar de alta se mira qué
+// sabe el panel de ese CUIL. Si está en el padrón se completan el nombre y
+// la seccional que falten; si ya tiene clave por otro sindicato, la clave
+// inicial no se pide. El servidor decide igual: esto es cortesía.
+async function consultarPadronUsuario() {
+  const campo = document.getElementById('usu-usuario');
+  const aviso = document.getElementById('usu-padron-aviso');
+  const clave = document.getElementById('usu-clave');
+  const cuil = (campo.value || '').replace(/\D/g, '');
+  aviso.textContent = '';
+  if (campo.disabled || cuil.length !== 11) return;
+  let d;
+  try {
+    const r = await fetch('/admin/usuario/padron?cuil=' + cuil, { cache: 'no-store' });
+    if (!r.ok) return;
+    d = await r.json();
+  } catch (e) { return; }
+  if (document.getElementById('usu-usuario').value.replace(/\D/g, '') !== cuil) return;
+  const partes = [];
+  if (d.ya_es_usuario) partes.push('Ya tiene usuario en este sindicato.');
+  else if (d.en_padron && d.fuera_alcance) partes.push('Está en el padrón, en una seccional fuera de tu alcance.');
+  else if (d.en_padron) {
+    partes.push('Está en el padrón' + (d.nombre ? ' como ' + d.nombre : '') + (d.seccional ? ' (' + d.seccional + ')' : '') + '.');
+    const nombre = document.getElementById('usu-nombre');
+    if (!nombre.value && d.nombre) nombre.value = d.nombre;
+    const sec = document.getElementById('usu-seccional');
+    if (!sec.value && d.seccional_id && [...sec.options].some(o => o.value === String(d.seccional_id))) {
+      sec.value = String(d.seccional_id);
+      filtrarAreasPorSeccional();
+    }
+  } else if (d.valido) partes.push('No está en el padrón: se crea como empleado sin afiliar.');
+  if (d.tiene_clave_panel && !d.ya_es_usuario) {
+    partes.push('Ya tiene clave del panel por otro sindicato: entra con esa, la clave inicial no se usa.');
+    clave.required = false;
+  } else if (!campo.disabled) {
+    clave.required = true;
+  }
+  aviso.textContent = partes.join(' ');
+}
+document.getElementById('usu-usuario').addEventListener('change', consultarPadronUsuario);
 {% endif %}
 
 {% if 'recibos' in modulos and 'aprendizaje' in permisos %}

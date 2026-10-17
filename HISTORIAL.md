@@ -7699,3 +7699,58 @@ Tests: `test_cuenta_panel.py` (11). Se ajustaron `test_admin_usuarios.py`, las
 exentas de `test_areas_rutas.py`, el inventario de `test_regularizar_cuit.py`
 (la cuenta es una columna de CUIL más que se regulariza) y la clasificación de
 `test_cuit_puertas.py`.
+
+## El alta de usuario consulta el padrón, y la auditoría del alcance (2026-10-17, Admin 0.57.01)
+
+**Lo que preguntó SDN.** Si el alta de un usuario en Áreas y Usuarios falla
+"por CUIL inválido" cuando la persona no está primero en Trabajadores, y si
+convenía mover el alta del padrón a esa pestaña y eliminar Trabajadores.
+
+**Lo primero: no.** Las dos altas usan la misma `_cuil_mal` (módulo 11 y
+prefijo de persona) y ninguna consulta la otra tabla; el test de ayer da de
+alta un usuario que no está en ningún padrón. El número que rebotó,
+2301010101014, tiene 13 dígitos; sus dos recortes de 11 tampoco cumplen el
+módulo 11 (el válido es 23010101018). La ilusión de dependencia viene de que
+un CUIL copiado del padrón ya pasó la validación al entrar, o entró por un
+lote (inválido a propósito) que escribe directo.
+
+**Lo segundo: tampoco**, y quedó dicho en la conversación: Trabajadores es
+el padrón (miles de afiliados, sección del grupo Padrón que se da a un área
+y se recorta por seccional, siempre visible) y Áreas y Usuarios es el equipo
+del gremio (decenas de operadores, la única sección que no se puede dar a
+un área). Dos credenciales distintas, dos "Restablecer clave" con efectos
+distintos sobre la misma persona si vivieran en una pantalla. Lo que sí
+molestaba era tipear el CUIL dos veces: eso se resolvió con dos piezas
+chicas.
+
+- `GET /admin/usuario/padron?cuil=` (sección `areas_usuarios`): si está en
+  el padrón de ESTE sindicato devuelve nombre y seccional, si ya es usuario,
+  y si ya tiene clave del panel por otro sindicato. Un admin de seccional no
+  lee el padrón de otra delegación por acá (`fuera_alcance`, sin nombre). Un
+  CUIL que no está no revela nada más que eso.
+- En el formulario, al salir del campo CUIL, el aviso completa nombre y
+  seccional si faltan, y si la persona ya tiene clave del panel deja de
+  exigir la clave inicial (que el servidor igual descarta).
+- En la fila del padrón, "Dar usuario del panel" (solo si administra, dentro
+  del alcance y si la persona todavía no es empleada del sindicato) abre el
+  alta con CUIL, nombre y seccional puestos, por la URL: el mismo `sub=`
+  que ya usa el servidor al volver de un alta.
+- Tests: `test_alta_usuario_padron.py` (8).
+
+**Lo tercero, lo grave: el Admin de Seccional ve y toca todo el sindicato
+en la mitad del panel.** Se midió con datos (lote de La Bancaria, un admin
+local creado por la ruta real, comparado sección por sección con el
+general). Recortan bien Trámites (431 de 2.000), Notificaciones (89 de 200),
+Reportes (389 de 1.597), Encuestas, Listas, Seccionales, Usuarios y toda
+acción sobre un afiliado de otra seccional. No recortan: Trabajadores (lista
+los 100 del padrón, da de alta y carga masiva en otra seccional), Noticias y
+Beneficios (lista todo, edita y borra ajenas; al editar una ajena la
+redirige a su seccional), formularios de trámite (crea, edita y borra
+globales: el chequeo solo corre si la seccional vino cargada) y el Panel
+Sindical entero (5.000 recibos, filtros con las seis seccionales, explorador
+y mapa). Empleadores no tiene seccional (N11) y el catálogo del sindicato
+tampoco: son decisiones. El plan de corrección, por bloques, sin migraciones
+y con la regla de "fail-closed" que ya existe, está en
+`PLAN_ALCANCE_SECCIONAL.md`. Sobre "ve todos los trámites" en Pruebas: en el
+código la bandeja recorta; si ahí ve todos, revisar si Lomas de Zamora tiene
+"ve todas" tildado o si el usuario es administrador general.
