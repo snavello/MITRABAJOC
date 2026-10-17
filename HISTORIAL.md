@@ -7825,3 +7825,51 @@ esconde las acciones (Aprendizaje entero, que es acción). Un Admin de
 Seccional de una seccional con `ve_todas` no está acotado y conserva todo:
 lo fija un test. `test_areas_seccional.py` pasó de "las mismas secciones" a
 "las mismas menos Empleadores".
+
+## Alcance del Admin de Seccional, bloque 4: el Panel Sindical (2026-10-17, Admin 0.60.01)
+
+El bloque más grande del plan, y el que más pesaba en la auditoría: un
+admin local veía los 5.000 recibos, los 2.000 trámites, las seis
+seccionales en los filtros y en el mapa, y el explorador entero.
+
+**Un solo lugar.** `dashboard.imponer_alcance(f, alcance)` se llama desde
+`main._filtros_dashboard`, que ya era el único parseo de filtros del panel:
+los once endpoints de agregados, el explorador y el mapa lo heredan sin
+tocarlos uno por uno (igual que Encuestas con N18 y Reportes con su
+`alcance`). La regla: `f["seccionales"]` pasa a ser lo pedido ∩ el alcance,
+o el alcance entero si no pidió nada; una intersección vacía o un alcance
+vacío se traduce a `[0]`, un id que no existe, así el SQL no devuelve filas
+(un `IN ()` vacío no es SQL). Queda además `f["alcance"]`, porque el mapa
+necesita distinguir el alcance IMPUESTO del filtro ELEGIDO: ignora el
+segundo (el mapa es el selector) y respeta el primero
+(`_seccionales_impuestas`), y además no dibuja las burbujas de las otras.
+
+**Lo que recibe un id de persona chequea aparte.** Los cuatro detalles del
+modal "Ver" (recibo, trámite, grupo de notificaciones y sus destinatarios,
+consulta) reciben el alcance y devuelven `None` → 404 cuando la fila es de
+un afiliado fuera de él o sin seccional (fail-closed, con `_en_alcance`
+copiada en `dashboard.py` para no importar `main`). El catálogo de filtros
+no ofrece las otras seccionales y el buscador de afiliados (`buscar_afiliados`,
+`afiliado_por_id`) no las encuentra ni por id. El Asistente pasa por el
+mismo `imponer_alcance` en `_validar`, y busca personas con el mismo
+alcance: el modelo no puede pedir más de lo que el panel muestra.
+
+**La v2 (Preact) queda cubierta sola**: usa los mismos endpoints. Nada
+cambia para el general ni para una seccional con `ve_todas`; un test lo
+fija con los KPIs del local iguales a los del general filtrado por su
+seccional, y otro con el admin de una seccional `ve_todas` viendo los tres
+recibos. Cinco tests nuevos; la regresión del panel (46 de `test_dashboard`,
+cupo, concurrencia, v2, asistente, mapa, reportes, encuestas) en verde.
+
+## Alcance del Admin de Seccional, cierre (2026-10-17)
+
+Con los seis bloques en `main` se repitió la auditoría del mediodía, con la
+misma base (lote de La Bancaria) y el mismo método. Los números, antes y
+después, están en `docs/chat/2026-10-17-auditoria-alcance.md`: el padrón del
+local pasó de 100 a 20, el Panel de 5.000 a 1.180 recibos y de 6 a 1
+seccional en filtros y mapa, y las nueve escrituras ajenas que antes
+pasaban (alta y carga masiva en otra seccional, editar y borrar
+publicaciones ajenas, crear, editar y borrar formularios globales, el
+catálogo, los detalles del Panel, las rutas de Empleadores) quedaron
+bloqueadas. El general no cambió en nada. Seis PRs en el día (#135 a #139
+más el de cierre), cada uno con su CI y su regresión; sin migraciones.

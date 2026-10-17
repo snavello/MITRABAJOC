@@ -42,6 +42,7 @@ cuenta), no en cada commit.
 | `docs/DASHBOARD.md` | Especificación funcional y técnica del Panel Sindical. |
 | `docs/cct-1875-bancarios.md` | Lo que la simulación usa del CCT 18/75. |
 | `docs/chat/2026-10-16-asistente-tramites.md` + `-contrato-importacion-tramites.md` | **Asistente de trámites** (prototipo de Chat, 2026-10-16): onboarding que convierte el pedido de un sindicato en circuito por actor, instrucción, vista previa del formulario y JSON importable `colm3na.tramite` v1; el segundo es el contrato de ese JSON y las reglas propuestas del importador (no construido). Van con el prototipo `-asistente-tramites-prototipo.html` (se abre solo en el navegador) y el ejemplo `-ejemplo-kit-escolar.colm3na.json`. |
+| `docs/chat/2026-10-17-auditoria-alcance.md` | **Auditoría del alcance del Admin de Seccional** (Code, 2026-10-17): qué veía y qué podía hacer un admin local sobre el lote de La Bancaria antes y después de `PLAN_ALCANCE_SECCIONAL.md`, sección por sección, con los números. |
 
 ### Planes y sprints (documentan el plan **tal cual se acordó**, no se actualizan; el avance va en `CLAUDE.md`)
 
