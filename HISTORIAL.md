@@ -7754,3 +7754,45 @@ y con la regla de "fail-closed" que ya existe, está en
 `PLAN_ALCANCE_SECCIONAL.md`. Sobre "ve todos los trámites" en Pruebas: en el
 código la bandeja recorta; si ahí ve todos, revisar si Lomas de Zamora tiene
 "ve todas" tildado o si el usuario es administrador general.
+
+## Alcance del Admin de Seccional, bloques 0 a 2 (2026-10-17, Admin 0.58.01)
+
+SDN aprobó `PLAN_ALCANCE_SECCIONAL.md` con las dos decisiones: Empleadores
+(a), el admin local no los ve; catálogo (a), solo lectura. Y aclaró que
+Lomas de Zamora tiene "ve solo la suya": la excepción de `ve_todas` no
+explica lo que vio en Trámites, que sigue abierto (ver abajo).
+
+**Bloque 0, la red.** `test_alcance_seccional_panel.py` lleva
+`ALCANCE_POR_PREFIJO`: cada prefijo de ruta `/admin/*` con su relación con
+la seccional (`seccional` recorta o exige alcance, `sindicato` es del
+sindicato entero, `entrada` login y pantallas). Una ruta nueva sin
+clasificar hace fallar el test, y un prefijo que no calza con ninguna ruta
+también. Mismo criterio fail-closed que `PERMISOS_RUTAS`.
+
+**Bloque 1, Trabajadores.** `db.padron_del_sindicato(s, sid, alcance)`
+recorta en el `WHERE` (`seccional_id IN alcance`; `set()` devuelve vacío);
+es la única lectura del padrón del panel, así que el "Dar usuario del
+panel" y cualquier pantalla futura heredan el recorte. Plataforma sigue
+llamando sin alcance. En el alta, `_seccional_en_alcance` decide la
+seccional de quien está acotado: vacía = la suya (no puede crear "sin
+seccional", que nadie acotado alcanzaría), otra = 403; y la edición exige
+alcance sobre la fila que ya existe. La carga masiva aplica lo mismo línea
+por línea: sin seccional va a la suya, con otra queda omitida y la pantalla
+dice cuántas (`fueraalcance`). El `<select>` del formulario ofrece solo
+`seccionales_visibles` y, para el acotado, no ofrece "Sin asignar".
+
+**Bloque 2, Noticias y Beneficios.** Dos reglas puras en `db.py`:
+`publicacion_visible` (la ve si va a todas o alguno de sus destinos cae en
+el alcance: la misma regla que el historial de Notificaciones) y
+`publicacion_en_alcance` (la edita o borra solo si TODOS sus destinos caen
+en el alcance: una global o una de otra seccional la toca solo el alcance
+total). `noticias_del_sindicato` y `beneficios_del_sindicato` reciben el
+alcance, filtran y marcan cada fila con `propia`; la plantilla dibuja
+Editar y Borrar solo en las propias y en las otras dice por qué no. Las
+cuatro rutas de escritura pasan por `_exigir_alcance_publicacion`. Antes un
+admin local editaba una publicación ajena y, al guardarla, la redirigía a
+su seccional, o la borraba.
+
+Trece tests nuevos, cada bloque con su "el general sigue viendo todo".
+Nada cambia para el administrador general ni para una seccional con
+`ve_todas`.

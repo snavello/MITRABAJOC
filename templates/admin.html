@@ -1096,6 +1096,7 @@
   {% if request.query_params.get('altas') %}
   <div class="msg ok">{{ request.query_params.get('altas') }} trabajador{{ 'es' if request.query_params.get('altas') != '1' else '' }} cargado{{ 's' if request.query_params.get('altas') != '1' else '' }} de la lista.
     {% if request.query_params.get('omitidas') %}<br>Quedaron afuera {{ request.query_params.get('omitidas') }} línea{{ 's' if request.query_params.get('omitidas') != '1' else '' }}: les falta el CUIL, el nombre, la localidad o la provincia, el CUIL ya estaba cargado, o traen una fecha que no se entiende. Por ejemplo: <code>{{ request.query_params.get('muestra') }}</code>{% endif %}
+    {% if request.query_params.get('fueraalcance') %}<br>De esas, {{ request.query_params.get('fueraalcance') }} traían una seccional que no es la tuya: un administrador de seccional carga solo en la suya.{% endif %}
     {% if request.query_params.get('mailsactualizados') %}<br>{{ request.query_params.get('mailsactualizados') }} afiliado{{ 's' if request.query_params.get('mailsactualizados') != '1' else '' }} que ya estaba{{ 'n' if request.query_params.get('mailsactualizados') != '1' else '' }} en el padrón recibi{{ 'eron' if request.query_params.get('mailsactualizados') != '1' else 'ó' }} el mail del padrón de su línea.{% endif %}
     {% if request.query_params.get('fechasactualizadas') %}<br>{{ request.query_params.get('fechasactualizadas') }} afiliado{{ 's' if request.query_params.get('fechasactualizadas') != '1' else '' }} que ya estaba{{ 'n' if request.query_params.get('fechasactualizadas') != '1' else '' }} en el padrón recibi{{ 'eron' if request.query_params.get('fechasactualizadas') != '1' else 'ó' }} la fecha de afiliación de su línea.{% endif %}
     {% if request.query_params.get('cuilinvalidos') %}<br>Quedaron afuera {{ request.query_params.get('cuilinvalidos') }} línea{{ 's' if request.query_params.get('cuilinvalidos') != '1' else '' }} porque el CUIL no es válido (revisá los 11 números): <code>{{ request.query_params.get('cuilmuestra') }}</code> <small style="opacity:.8;">Código E-IDENT-01</small>{% endif %}
@@ -1230,8 +1231,10 @@
         <div class="campo"><label>Fecha de nacimiento <span class="opc">(opcional)</span></label><input name="fecha_nacimiento" id="trab-fecha-nacimiento" type="date"></div>
         <div class="campo"><label>Seccional</label>
           <select name="seccional_id" id="trab-seccional">
-            <option value="">Sin asignar</option>
-            {% for sec in seccionales %}<option value="{{ sec.id }}">{{ sec.nombre }}</option>{% endfor %}
+            {# Un admin acotado solo carga en su seccional: no se le ofrecen
+               las otras ni "sin asignar" (el servidor lo fuerza igual). #}
+            {% if alcance_propio is none %}<option value="">Sin asignar</option>{% endif %}
+            {% for sec in seccionales_visibles %}<option value="{{ sec.id }}">{{ sec.nombre }}</option>{% endfor %}
           </select>
         </div>
         <div class="campo"><label>CUIT del empleador</label><input name="cuit_empleador" id="trab-cuit-empleador" data-cuit="cualquiera" placeholder="Para notificar por empresa"></div>
@@ -1380,11 +1383,16 @@
       <td class="muted">{% if n.destino_seccionales %}{% for sid in n.destino_seccionales %}{{ seccional_por_id.get(sid, '?') }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}Todas{% endif %}</td>
       <td>{{ n.creada }}</td>
       <td style="white-space:nowrap; text-align:right;">
+        {# Editar y borrar solo lo que cae entero en el alcance de quien mira
+           (`propia`, db.publicacion_en_alcance); una publicación a todas o de
+           otra seccional se ve porque le llega a su gente, pero no se toca. #}
+        {% if n.propia %}
         <button type="button" class="mini" onclick='editarNoticia({{ n | tojson }})'>Editar</button>
         <form method="post" action="/admin/noticia/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar esta noticia?')">
           <input type="hidden" name="id" value="{{ n.id }}">
           <button class="peligro mini" type="submit">Borrar</button>
         </form>
+        {% else %}<span class="muted" style="font-size:12px;">de otra seccional o de todo el sindicato</span>{% endif %}
       </td>
     </tr>
     {% else %}
@@ -1467,11 +1475,13 @@
       <td class="muted">{% if b.destino_seccionales %}{% for sid in b.destino_seccionales %}{{ seccional_por_id.get(sid, '?') }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}Todas{% endif %}</td>
       <td>{{ b.creada }}</td>
       <td style="white-space:nowrap; text-align:right;">
+        {% if b.propia %}
         <button type="button" class="mini" onclick='editarBeneficio({{ b | tojson }})'>Editar</button>
         <form method="post" action="/admin/beneficio/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar este beneficio?')">
           <input type="hidden" name="id" value="{{ b.id }}">
           <button class="peligro mini" type="submit">Borrar</button>
         </form>
+        {% else %}<span class="muted" style="font-size:12px;">de otra seccional o de todo el sindicato</span>{% endif %}
       </td>
     </tr>
     {% else %}

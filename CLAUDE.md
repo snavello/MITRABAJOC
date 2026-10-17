@@ -1095,9 +1095,20 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     y borra noticias y beneficios ajenos; crea, edita y borra formularios
     globales; el Panel Sindical muestra todo el sindicato). Plan de
     corrección por bloques, sin migraciones, en
-    [`PLAN_ALCANCE_SECCIONAL.md`](PLAN_ALCANCE_SECCIONAL.md): **sin
-    empezar**, espera el OK de SDN y sus dos decisiones (Empleadores y
-    catálogo).
+    [`PLAN_ALCANCE_SECCIONAL.md`](PLAN_ALCANCE_SECCIONAL.md), aprobado por
+    SDN el mismo día con las dos decisiones: Empleadores (a) el admin local
+    no los ve; catálogo (a) solo lectura para el admin local.
+    **Bloques 0, 1 y 2 HECHOS** (Admin 0.58.01): la red
+    `test_alcance_seccional_panel.py` (toda ruta `/admin/*` clasificada por
+    su relación con la seccional, fail-closed), el padrón recortado en la
+    consulta (`db.padron_del_sindicato(s, sid, alcance)`), alta y carga
+    masiva solo en la propia seccional (`_seccional_en_alcance`; vacía = la
+    suya, otra = 403 u omitida con aviso), y Noticias y Beneficios: el local
+    ve las suyas y las globales, no las de otra, y edita o borra solo las
+    que caen enteras en su alcance (`db.publicacion_en_alcance`,
+    `_exigir_alcance_publicacion`, marca `propia` en la fila). Quedan los
+    bloques 3 (formularios), 4 (Panel Sindical), 5 (Empleadores y catálogo)
+    y 6 (cierre).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -1411,9 +1422,11 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     trámite; los formularios encadenados son solo para datos nuevos después de
     la aprobación.
 14. **El Admin de Seccional acotado en todo el panel**
-    (`PLAN_ALCANCE_SECCIONAL.md`, 2026-10-17): seis bloques (red de tests,
-    Trabajadores, Noticias y Beneficios, formularios de trámite, Panel
-    Sindical, decisiones de Empleadores y catálogo). Sin empezar.
+    (`PLAN_ALCANCE_SECCIONAL.md`, 2026-10-17): seis bloques. Hechos 0, 1 y
+    2 (red de tests, Trabajadores, Noticias y Beneficios); quedan 3
+    (formularios de trámite), 4 (Panel Sindical), 5 (Empleadores fuera para
+    el local, catálogo en solo lectura) y 6 (cierre con la auditoría
+    repetida). Ver "Estado actual" 37.
 13. **Listas del sindicato y validaciones por función en Trámites**
     (`PLAN_LISTAS_VALIDACIONES.md`, acordado el 2026-10-16, D1–D7; **bloque
     1 HECHO**, ver "Estado actual" 35): plantillas tipadas (grupo familiar,
