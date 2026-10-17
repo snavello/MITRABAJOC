@@ -37,7 +37,7 @@ from datetime import date, datetime, timedelta
 from dotenv import load_dotenv
 from typing import Any
 from sqlmodel import SQLModel, Field, create_engine, Session, select, Column, JSON, text
-from sqlalchemy import or_, bindparam, UniqueConstraint, Index, delete as sa_delete
+from sqlalchemy import or_, bindparam, UniqueConstraint, Index, delete as sa_delete, event
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import NullPool
@@ -416,8 +416,13 @@ class UsuarioSindicato(SQLModel, table=True):
     # es un caso real y no un error.
     trabajador_id: Optional[int] = Field(default=None, foreign_key="trabajador.id", index=True)
     nombre: str = ""
+    # La clave NO vive acá (2026-10-17): vive en `CuentaPanel`, una por CUIL.
+    # Estas dos columnas quedan solo como la puerta de entrada de un alta: lo
+    # que traiga `clave_hash` al insertar lo mueve a la cuenta el enganche
+    # `_mover_clave_a_la_cuenta` (si la persona todavía no tenía), y la fila
+    # queda SIEMPRE con la clave vacía. Ver CuentaPanel.
     clave_hash: str = ""
-    debe_cambiar_clave: bool = True             # la primera clave la pone el admin de plataforma
+    debe_cambiar_clave: bool = True
     activo: bool = True
     # Default False a propósito: si alguna alta se olvida de setearlo, el
     # usuario nace SIN poder, no con todo. Los tres lugares que crean Super
@@ -427,6 +432,61 @@ class UsuarioSindicato(SQLModel, table=True):
     es_admin_seccional: bool = False
     area_id: Optional[int] = Field(default=None, foreign_key="area.id", index=True)
     seccional_id: Optional[int] = Field(default=None, foreign_key="seccional.id", index=True)
+
+
+class CuentaPanel(SQLModel, table=True):
+    """**La credencial del operador**: una fila por CUIL para el panel de
+    TODOS los sindicatos (2026-10-17). Es a `UsuarioSindicato` lo que
+    `CuentaTrabajador` es a `Trabajador`: el usuario dice en qué sindicato
+    trabaja la persona y con qué rol; la cuenta dice con qué clave entra.
+
+    Hasta esta fecha la clave estaba en cada `UsuarioSindicato`, una por
+    sindicato, y el login buscaba el CUIL en todos y probaba la clave contra
+    la PRIMERA fila que encontraba: quien trabajaba en dos sindicatos solo
+    podía entrar a uno, y a cuál dependía del orden de la base.
+
+    Reglas:
+    - Una persona, una clave. Entra con ella y, si trabaja en más de un
+      sindicato, elige a cuál después del login (como el afiliado con
+      pluriempleo).
+    - La clave la fija el PRIMER sindicato que da de alta a la persona. Los
+      que la suman después no la pisan: si pudieran, el admin de un gremio
+      entraría al panel de otro con la clave que él mismo eligió.
+    - Es una credencial aparte de la del afiliado (`CuentaTrabajador`):
+      distinto rol, distinta cookie, distinto nivel de confianza.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cuil: str = Field(index=True, unique=True)
+    clave_hash: str = ""
+    # La clave la puso otra persona (el alta o un reseteo de plataforma).
+    debe_cambiar_clave: bool = True
+
+
+@event.listens_for(UsuarioSindicato, "before_insert")
+def _mover_clave_a_la_cuenta(mapper, connection, target):
+    """La clave que trae un alta va a la CUENTA de la persona, nunca a la fila.
+
+    Vive en el modelo y no en las rutas a propósito: hay cinco lugares que
+    dan de alta usuarios del panel (el panel del sindicato, plataforma,
+    `cargar_demo`, `cargar_bancaria` y los robots) y todos escriben
+    `clave_hash` en la fila. Con esto ninguno puede crear una segunda clave
+    para el mismo CUIL, ni pisar la que la persona ya tiene: si la cuenta
+    existe, la clave del alta se descarta. La fila queda siempre vacía."""
+    # El login siempre fue el CUIL: si la fila no trae `cuil` y el usuario
+    # es uno, se toma de ahí. Un login que no es un CUIL no se copia (no
+    # puede entrar: el login normaliza a dígitos) y no tiene cuenta.
+    if not target.cuil and (target.usuario or "").isdigit() and len(target.usuario) == 11:
+        target.cuil = target.usuario
+    if target.clave_hash and target.cuil:
+        tabla = CuentaPanel.__table__
+        existe = connection.execute(
+            select(tabla.c.id).where(tabla.c.cuil == target.cuil)).first()
+        if not existe:
+            connection.execute(postgresql.insert(tabla).values(
+                cuil=target.cuil, clave_hash=target.clave_hash,
+                debe_cambiar_clave=bool(target.debe_cambiar_clave),
+            ).on_conflict_do_nothing(index_elements=["cuil"]))
+    target.clave_hash = ""
 
 
 class UsuarioPlataforma(SQLModel, table=True):
@@ -4143,6 +4203,74 @@ def sincronizar_por_cuil(sindicato_id: int, cuil: str) -> None:
         sincronizar_empleado(uid)
 
 
+# ---------- Cuenta del panel: una clave por CUIL (2026-10-17) ----------
+
+def cuenta_panel(cuil: str):
+    """La cuenta del panel de ese CUIL, o None."""
+    with Session(engine) as s:
+        return s.exec(select(CuentaPanel).where(CuentaPanel.cuil == cuil)).first()
+
+
+def fijar_clave_panel(cuil: str, clave_hash: str, debe_cambiar: bool) -> None:
+    """Única escritura de la clave del panel: la crea si no existe. La
+    llaman el reseteo de plataforma y el cambio de clave de la persona."""
+    with Session(engine) as s:
+        c = s.exec(select(CuentaPanel).where(CuentaPanel.cuil == cuil)).first()
+        if not c:
+            c = CuentaPanel(cuil=cuil)
+        c.clave_hash = clave_hash
+        c.debe_cambiar_clave = debe_cambiar
+        s.add(c)
+        s.commit()
+
+
+def sindicatos_del_operador(cuil: str) -> list:
+    """Los usuarios ACTIVOS del panel de ese CUIL, uno por sindicato activo,
+    con lo que el selector de después del login necesita mostrar. Ordenado
+    por nombre del sindicato: el orden de la base no es un criterio."""
+    with Session(engine) as s:
+        filas = s.exec(select(UsuarioSindicato, Sindicato).where(
+            UsuarioSindicato.cuil == cuil, UsuarioSindicato.activo == True,
+            Sindicato.id == UsuarioSindicato.sindicato_id,
+            Sindicato.activo == True)).all()
+        areas = {a.id: a.nombre for a in s.exec(select(Area).where(
+            Area.id.in_([u.area_id for u, _ in filas if u.area_id] or [0]))).all()}
+        secs = {x.id: x.nombre for x in s.exec(select(Seccional).where(
+            Seccional.id.in_([u.seccional_id for u, _ in filas if u.seccional_id] or [0]))).all()}
+        salida = [{
+            "usuario_id": u.id, "sindicato_id": sind.id, "sindicato": sind.nombre,
+            "logo": bool(sind.logo_datos),
+            "rol": ("Super Admin" if u.es_super_admin else
+                    "Admin de Seccional" if u.es_admin_seccional else "Usuario de área"),
+            "area": areas.get(u.area_id, ""), "seccional": secs.get(u.seccional_id, ""),
+        } for u, sind in filas]
+    return sorted(salida, key=lambda x: x["sindicato"].lower())
+
+
+def operadores_de_todos_los_sindicatos() -> list:
+    """Para plataforma: una fila por PERSONA (CUIL) con todos los sindicatos
+    en los que tiene usuario del panel y el estado de su cuenta. Es la vista
+    que permite ver de un vistazo quién trabaja en más de un gremio."""
+    with Session(engine) as s:
+        filas = s.exec(select(UsuarioSindicato, Sindicato).where(
+            Sindicato.id == UsuarioSindicato.sindicato_id)).all()
+        cuentas = {c.cuil: c for c in s.exec(select(CuentaPanel)).all()}
+    personas: dict = {}
+    for u, sind in filas:
+        p = personas.setdefault(u.cuil, {"cuil": u.cuil, "nombre": "", "sindicatos": []})
+        p["nombre"] = p["nombre"] or u.nombre
+        p["sindicatos"].append({
+            "sindicato": sind.nombre, "activo": bool(u.activo and sind.activo),
+            "rol": ("Super Admin" if u.es_super_admin else
+                    "Admin de Seccional" if u.es_admin_seccional else "Usuario de área")})
+    for p in personas.values():
+        c = cuentas.get(p["cuil"])
+        p["cuenta"] = ("sin clave" if not c or not c.clave_hash else
+                       "clave inicial" if c.debe_cambiar_clave else "clave propia")
+        p["sindicatos"].sort(key=lambda x: x["sindicato"].lower())
+    return sorted(personas.values(), key=lambda p: ((p["nombre"] or "").lower(), p["cuil"]))
+
+
 def empleados_del_sindicato(sindicato_id: int) -> list:
     """CUILs del padrón marcados como empleados del sindicato. Lo usa la
     pantalla de Trabajadores para distinguirlos de un afiliado común."""
@@ -4264,6 +4392,9 @@ def usuarios_del_sindicato(sindicato_id: int, alcance=None) -> list:
             Area.sindicato_id == sindicato_id)).all()}
         secs = {x.id: x.nombre for x in s.exec(select(Seccional).where(
             Seccional.sindicato_id == sindicato_id)).all()}
+        cuiles = [u.cuil for u in usuarios if u.cuil] or [""]
+        cuentas = {c.cuil: c for c in s.exec(select(CuentaPanel).where(
+            CuentaPanel.cuil.in_(cuiles))).all()}
         salida = []
         for u in usuarios:
             ind = permisos_individuales(u.id)
@@ -4271,7 +4402,10 @@ def usuarios_del_sindicato(sindicato_id: int, alcance=None) -> list:
                 "id": u.id, "usuario": u.usuario, "nombre": u.nombre, "activo": u.activo,
                 "cuil": u.cuil, "trabajador_id": u.trabajador_id,
                 "es_afiliado": bool(u.trabajador_id),
-                "debe_cambiar_clave": u.debe_cambiar_clave,
+                # De la CUENTA de la persona, no de la fila: la clave es una
+                # sola para todos los sindicatos en los que trabaja.
+                "debe_cambiar_clave": bool(cuentas.get(u.cuil) and cuentas[u.cuil].debe_cambiar_clave),
+                "sin_clave": not (cuentas.get(u.cuil) and cuentas[u.cuil].clave_hash),
                 "es_super_admin": u.es_super_admin,
                 "es_admin_seccional": u.es_admin_seccional,
                 "area_id": u.area_id, "area": areas.get(u.area_id, ""),

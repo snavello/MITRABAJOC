@@ -7635,3 +7635,67 @@ acordó. Fuera del plan quedan, como decía: la tabla de columnas libres, la
 carga incremental, la fuente `externa` (fase 4 del BACKLOG) y la segunda
 vuelta de empresa (D7).
 
+
+## Una clave por persona en el panel (2026-10-17, Admin 0.56.01, Plataforma 0.50.01)
+
+**El síntoma.** SDN dio de alta en La Bancaria a un usuario de área de la
+seccional Lomas de Zamora (CUIL 27000000006, área Secretaria General) y la
+persona no podía entrar. La pantalla de Usuarios lo mostraba bien: rol, área,
+seccional, "afiliado" y "clave pendiente".
+
+**La causa.** El alta impedía repetir un CUIL dentro de un sindicato, pero no
+entre sindicatos, y cada `UsuarioSindicato` guardaba su propia clave. El login
+de `/admin` buscaba ese CUIL en TODOS los sindicatos, se quedaba con la
+primera fila (sin `ORDER BY`: en Postgres el orden no está garantizado) y
+probaba la clave solo contra esa. Reproducido en una base descartable: con el
+CUIL solo en La Bancaria entra; con el mismo CUIL también en otro sindicato,
+uno de los dos recibe "Usuario o clave incorrectos". La definición del
+proyecto era otra: un CUIL, una clave, y si trabaja en más de un lado elige
+después del login, como el afiliado con pluriempleo. Se cumplía para el
+afiliado (`CuentaTrabajador`) y la empresa (`CuentaEmpleador`), no para el
+panel. No se pudo confirmar contra la base de Pruebas: la política de red del
+entorno de Code no deja llegar a `mitrabajo-pruebas.onrender.com`.
+
+**El arreglo, con el mismo patrón que el afiliado.**
+- `CuentaPanel` (una fila por CUIL) guarda la clave; `UsuarioSindicato` dice
+  en qué sindicato trabaja la persona y con qué rol.
+- El enganche `db._mover_clave_a_la_cuenta` (`before_insert` del modelo) lleva
+  la clave de un alta a la cuenta solo si la persona no tenía, y deja la fila
+  vacía. Vive en el modelo porque hay cinco puertas de alta (panel,
+  plataforma, `cargar_demo`, `cargar_bancaria`, robots): ninguna puede crear
+  una segunda clave. `medir_dashboard.py`, que inserta con SQL a mano, crea la
+  cuenta él mismo.
+- **La clave la fija el primer sindicato.** Si un segundo sindicato suma a la
+  persona, la clave inicial del formulario se descarta y el aviso lo dice
+  (`ok=usuariocuenta`). Si se usara, el admin de un gremio entraría al panel
+  de otro con una clave elegida por él.
+- Login: valida contra la cuenta; con un solo usuario activo entra directo,
+  con varios va a `/admin/elegir` (token firmado de 10 minutos, propósito
+  `elegir_panel`; el `usuario_id` elegido se valida contra los de esa
+  persona). "Cambiar de sindicato" en la portada vuelve al selector sin pedir
+  la clave. Clave correcta sin usuarios activos contesta igual que una clave
+  mala.
+- Aislamiento: el sindicato no ve en qué otro gremio trabaja la persona. Se
+  probó mostrarlo y se sacó. Lo ve plataforma, en la sección nueva "Usuarios
+  de los paneles" (una fila por CUIL, sus sindicatos con rol y el estado de la
+  clave), que responde a otra observación de SDN: `/plataforma` no tenía un
+  listado general de usuarios de admin.
+- El reseteo transitorio de plataforma escribe la cuenta (`db.fijar_clave_panel`).
+- La etiqueta "clave pendiente" pasó a "clave inicial" o "sin clave", leída de
+  la cuenta. El panel todavía no obliga a cambiarla ni deja que la persona
+  cambie la suya: queda como pendiente.
+
+**Migración `b8d2f6a4c1e9`.** Crea la tabla, completa `cuil = usuario` en filas
+viejas solo si el usuario es un CUIL de 11 dígitos, y por cada CUIL copia la
+clave de su fila ACTIVA más vieja (la del primer sindicato, que es la que la
+regla nueva hubiera conservado). Si una persona tenía claves distintas, la del
+sindicato más nuevo deja de valer y plataforma se la puede restablecer.
+Después vacía `clave_hash` de todas las filas. Ensayada ida y vuelta con datos
+(dos claves distintas, fila inactiva más vieja, fila sin `cuil`, login que no
+es CUIL). La demo cargada de cero entra con los once accesos de panel
+documentados.
+
+Tests: `test_cuenta_panel.py` (11). Se ajustaron `test_admin_usuarios.py`, las
+exentas de `test_areas_rutas.py`, el inventario de `test_regularizar_cuit.py`
+(la cuenta es una columna de CUIL más que se regulariza) y la clasificación de
+`test_cuit_puertas.py`.

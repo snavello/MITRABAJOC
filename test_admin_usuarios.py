@@ -55,8 +55,11 @@ def test_alta_de_un_segundo_admin_queda_en_el_sindicato_de_la_sesion():
         assert u is not None
         assert u.sindicato_id == SID_A          # no un campo del form -- sale de la sesión
         assert u.nombre == "Admin Dos"
-        assert u.debe_cambiar_clave is True
-        assert auth.verificar_clave("nueva-clave", u.clave_hash)
+        # La clave es de la persona: vive en su cuenta, la fila queda vacía.
+        assert u.clave_hash == ""
+        cuenta = db.cuenta_panel("20333333334")
+        assert cuenta.debe_cambiar_clave is True
+        assert auth.verificar_clave("nueva-clave", cuenta.clave_hash)
     print("OK  test_alta_de_un_segundo_admin_queda_en_el_sindicato_de_la_sesion")
 
 

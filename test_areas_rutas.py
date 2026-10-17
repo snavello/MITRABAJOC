@@ -129,10 +129,14 @@ def test_las_exentas_son_solo_entrar_salir_y_las_pantallas():
     endpoints de datos (/admin/dashboard/*) sí están todos gateados, y eso
     lo fija test_los_datos_del_dashboard_si_estan_gateados.
     /admin/dashboard-v2 es la misma pantalla en su versión nueva
-    (PLAN_DASHBOARD_V2.md): mismo chequeo adentro, mismos endpoints."""
+    (PLAN_DASHBOARD_V2.md): mismo chequeo adentro, mismos endpoints.
+    /admin/elegir y /admin/cambiar-sindicato son parte de ENTRAR: el
+    selector de quien trabaja en más de un sindicato (una persona, una
+    clave), que todavía no tiene sesión o la está cambiando."""
     assert main.RUTAS_ADMIN_SIN_PERMISO == {
         "/admin", "/admin/inicio", "/admin/login", "/admin/salir",
-        "/admin/dashboard", "/admin/dashboard-v2"}
+        "/admin/dashboard", "/admin/dashboard-v2",
+        "/admin/elegir", "/admin/cambiar-sindicato"}
     print("OK  test_las_exentas_son_solo_entrar_salir_y_las_pantallas")
 
 

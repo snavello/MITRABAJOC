@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Colm3na — Elegí el sindicato</title>
+<style>
+  @font-face {
+    font-family: 'Barlow Condensed'; font-weight: 700; font-style: normal;
+    src: url('/static/fonts/barlow-condensed-bold.woff2') format('woff2');
+  }
+  /* Rediseño "credencial viva sobre colmena nocturna" (2026-09-02, elegido
+     por Sd entre 4 propuestas): fondo oscuro de marca con el panal de
+     Colm3na respirando, y el formulario como una credencial con brillo y
+     tilt 3D leves. Todo inline: estas pantallas son standalone, no
+     importan marca.css. */
+  :root {
+    --tinta: {{ marca_plataforma.color_primario if marca_plataforma else '#152238' }};
+    --agua: {{ marca_plataforma.color_secundario if marca_plataforma else '#1a7a6b' }};
+    --alerta: {{ marca_plataforma.color_acento if marca_plataforma else '#b23a2e' }};
+    /* La miel es el ámbar del panal del LOGO de Colm3na (contenido fijo,
+       no configurable): banda, chip de rol y botón armonizan con él. El
+       acento configurable queda para los errores. */
+    --miel:#f0a01e;
+    --fuente-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  }
+  * { box-sizing:border-box; margin:0; font-family:system-ui,sans-serif; }
+  body { min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:24px 18px; position:relative; overflow:hidden;
+    background:radial-gradient(900px 480px at 78% -10%, color-mix(in srgb, var(--agua) 26%, transparent), transparent 62%),
+               linear-gradient(160deg, #0d1626 20%, var(--tinta) 70%, color-mix(in srgb, var(--tinta) 72%, #4a6da8)); }
+  body::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.08; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .panal { position:fixed; pointer-events:none; z-index:0; animation:respira 9s ease-in-out infinite; }
+  .panal.a { top:-40px; right:-30px; }
+  .panal.b { bottom:-60px; left:-40px; animation-delay:-4s; }
+  @keyframes respira { 0%,100% { opacity:.10; } 50% { opacity:.2; } }
+  @keyframes entra { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+  @media (max-width:600px) { .panal { width:220px; height:auto; } }
+
+  .escena { perspective:1100px; position:relative; z-index:2; width:min(410px,100%); }
+  .cred { border-radius:20px; position:relative; transform-style:preserve-3d;
+    transition:transform .18s ease-out; padding:30px 30px 24px;
+    background:linear-gradient(150deg, color-mix(in srgb, var(--tinta) 78%, #4a6da8), var(--tinta) 55%, color-mix(in srgb, var(--tinta) 72%, var(--agua)));
+    border:1px solid rgba(255,255,255,.14); box-shadow:0 34px 80px rgba(0,0,0,.55);
+    animation:entra .6s ease both; }
+  .cred::before { content:""; position:absolute; inset:0; border-radius:20px; pointer-events:none;
+    background:radial-gradient(340px 200px at var(--mx,70%) var(--my,20%), rgba(255,255,255,.13), transparent 65%); }
+  .banda { position:absolute; top:0; left:24px; right:24px; height:5px; border-radius:0 0 5px 5px;
+    background:linear-gradient(90deg, var(--miel), var(--agua)); }
+  .logo { display:block; margin:6px auto 14px; max-width:220px; max-height:132px; width:auto; height:auto; object-fit:contain; }
+  @media (max-width:600px) { .logo { max-width:170px; max-height:100px; } }
+  .chip-rol { display:table; margin:0 auto 20px; font-family:var(--fuente-display); font-size:14px;
+    letter-spacing:2.4px; text-transform:uppercase; color:var(--miel);
+    border:1px solid color-mix(in srgb, var(--miel) 55%, transparent); border-radius:20px; padding:4px 14px; }
+  .tabs { display:flex; gap:6px; margin-bottom:18px; background:rgba(255,255,255,.07); padding:4px; border-radius:10px; }
+  .tab { flex:1; text-align:center; padding:9px; border-radius:7px; font-size:13.5px; font-weight:600;
+    cursor:pointer; color:rgba(255,255,255,.6); border:none; background:none; font-family:inherit; }
+  .tab.activo { background:rgba(255,255,255,.92); color:var(--tinta); }
+  label { display:block; font-size:10px; letter-spacing:1.6px; text-transform:uppercase; font-weight:600;
+    color:rgba(255,255,255,.55); margin-bottom:6px; margin-top:15px; }
+  label:first-of-type { margin-top:0; }
+  input { width:100%; padding:13px 14px; border-radius:10px; font-size:16px; font-family:inherit;
+    background:rgba(9,15,26,.6); border:1px solid rgba(255,255,255,.14); color:#fff; }
+  input::placeholder { color:rgba(255,255,255,.3); }
+  input:focus { outline:none; border-color:var(--miel);
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--miel) 20%, transparent); }
+  button.enviar { width:100%; margin-top:20px; padding:14px; border:none; border-radius:10px; cursor:pointer;
+    font-family:var(--fuente-display); font-size:18px; letter-spacing:1.6px; text-transform:uppercase;
+    background:linear-gradient(90deg, var(--miel), color-mix(in srgb, var(--miel) 82%, #8a5f14)); color:#231a08; }
+  button.enviar:hover { filter:brightness(1.06); }
+  .error { background:color-mix(in srgb, var(--alerta) 20%, transparent);
+    border:1px solid color-mix(in srgb, var(--alerta) 55%, transparent);
+    color:#f2b8ae; font-size:13px; padding:11px 13px; border-radius:9px; margin-bottom:16px; line-height:1.4; }
+  .ayuda { font-size:12px; color:rgba(255,255,255,.5); margin-top:14px; line-height:1.5; text-align:center; }
+  .form { display:none; } .form.activo { display:block; }
+  .mrz { margin-top:20px; border-top:1px dashed rgba(255,255,255,.18); padding-top:10px;
+    font-family:ui-monospace,Consolas,monospace; font-size:9.5px; letter-spacing:2px;
+    color:rgba(255,255,255,.35); overflow:hidden; white-space:nowrap; }
+  .pie { position:fixed; bottom:14px; left:0; right:0; text-align:center; font-size:10px;
+    letter-spacing:2px; text-transform:uppercase; color:rgba(255,255,255,.35); z-index:1; }
+  @media (max-height:640px) { .pie { display:none; } }
+  @media (prefers-reduced-motion:reduce) { *, *::before { animation:none !important; transition:none !important; } }
+  /* Selector de sindicato (2026-10-17): la persona trabaja en el panel de
+     más de un sindicato y elige a cuál entra, como el afiliado con
+     pluriempleo. Una fila por sindicato, toda la fila es el botón. */
+  .intro { color:rgba(255,255,255,.72); font-size:14px; line-height:1.5; text-align:center; margin-bottom:16px; }
+  .opciones { display:flex; flex-direction:column; gap:10px; }
+  .opcion { display:flex; align-items:center; gap:14px; width:100%; text-align:left; cursor:pointer;
+    padding:12px 14px; border-radius:12px; font-family:inherit; color:#fff;
+    background:rgba(9,15,26,.55); border:1px solid rgba(255,255,255,.14);
+    transition:border-color .15s ease, transform .15s ease; }
+  .opcion:hover { border-color:var(--miel); }
+  .opcion:active { transform:scale(.98); }
+  .opcion:focus-visible { outline:none; border-color:var(--miel);
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--miel) 20%, transparent); }
+  .opcion img, .opcion .ini { width:48px; height:48px; flex:none; object-fit:contain; border-radius:10px; }
+  .opcion .ini { display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.1);
+    font-family:var(--fuente-display); font-size:20px; color:var(--miel); }
+  .opcion .nom { font-family:var(--fuente-display); font-size:19px; letter-spacing:.6px; text-transform:uppercase; line-height:1.1; }
+  .opcion .rol { font-size:12px; color:rgba(255,255,255,.6); margin-top:3px; }
+  .otra { display:block; text-align:center; margin-top:16px; font-size:12px; color:rgba(255,255,255,.5); }
+</style>
+</head>
+<body>
+{% include "_entorno.html" %}
+  <div class="escena">
+  <div class="cred" id="cred">
+    <div class="banda"></div>
+    <img class="logo" src="{{ '/logo-plataforma-oscuro' if marca_plataforma and marca_plataforma.logo_oscuro else ('/logo-plataforma' if marca_plataforma and marca_plataforma.logo else '/static/logo_mitrabajo.svg') }}" alt="Colm3na">
+    <div class="chip-rol">Panel del sindicato</div>
+    <p class="intro">Trabajás en el panel de más de un sindicato. Elegí a cuál querés entrar: tu clave es la misma para todos.</p>
+    <div class="opciones">
+      {% for o in opciones %}
+      <form method="post" action="/admin/elegir">
+        <input type="hidden" name="token" value="{{ token }}">
+        <input type="hidden" name="usuario_id" value="{{ o.usuario_id }}">
+        <button class="opcion" type="submit">
+          {% if o.logo %}<img src="/logo/{{ o.sindicato_id }}" alt="">{% else %}<span class="ini">{{ o.sindicato[:1] }}</span>{% endif %}
+          <span><span class="nom">{{ o.sindicato }}</span>
+            <span class="rol" style="display:block;">{{ o.rol }}{% if o.area %} · {{ o.area }}{% endif %}{% if o.seccional %} · {{ o.seccional }}{% endif %}</span></span>
+        </button>
+      </form>
+      {% else %}
+      <p class="intro">No tenés ningún sindicato activo en el panel.</p>
+      {% endfor %}
+    </div>
+    <a class="otra" href="/admin">Ingresar con otra cuenta</a>
+    <div class="mrz">COLM3NA&lt;&lt;SINDICATO&lt;&lt;PANEL&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div>
+  </div>
+  </div>
+</body>
+</html>

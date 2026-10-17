@@ -1369,7 +1369,8 @@ PERMISOS_RUTAS = {
 # misma página en su versión nueva, con el mismo chequeo adentro, y pide sus
 # datos a los mismos endpoints gateados.
 RUTAS_ADMIN_SIN_PERMISO = {"/admin", "/admin/inicio", "/admin/login", "/admin/salir",
-                           "/admin/dashboard", "/admin/dashboard-v2"}
+                           "/admin/dashboard", "/admin/dashboard-v2",
+                           "/admin/elegir", "/admin/cambiar-sindicato"}
 
 
 def _sin_permiso(mensaje: str) -> HTTPException:
@@ -1837,6 +1838,7 @@ def admin_inicio(request: Request):
         "seccional_admin": (sec_admin["nombre"] if sec_admin else ""),
         "area_admin": area_admin,
         "tiene_foto_perfil": bool(cuil_admin and db.foto_trabajador(cuil_admin)),
+        "trabaja_en_varios": bool(cuil_admin) and len(db.sindicatos_del_operador(cuil_admin)) > 1,
         "tramites_nuevos": tramites_nuevos,
         "tramites_empresa_nuevos": tramites_empresa_nuevos,
         "modulos": modulos,
@@ -1846,20 +1848,92 @@ def admin_inicio(request: Request):
 
 @app.post("/admin/login")
 def admin_login(request: Request, usuario: str = Form(...), clave: str = Form(...)):
+    """Una persona, una clave (2026-10-17): la clave se valida contra la
+    CUENTA del CUIL (`CuentaPanel`), no contra un usuario de un sindicato.
+    Si la persona trabaja en un solo sindicato entra directo; si trabaja en
+    varios, elige a cuál, igual que el afiliado con pluriempleo.
+
+    Antes se buscaba la primera fila con ese CUIL en CUALQUIER sindicato y la
+    clave se probaba solo contra esa: quien estaba en dos gremios entraba a
+    uno solo, y a cuál lo decidía el orden de la base."""
     if _login_bloqueado(request):
         return RedirectResponse("/admin?error=espera", status_code=303)
-    cuit = _norm_cuil(usuario)   # todos los usuarios se identifican con CUIT/CUIL
-    with db.get_session() as s:
-        user = s.exec(select(UsuarioSindicato).where(
-            UsuarioSindicato.usuario == cuit, UsuarioSindicato.activo == True)).first()
-        if not user or not auth.verificar_clave(clave, user.clave_hash):
-            _login_fallo(request)
-            return RedirectResponse("/admin?error=1", status_code=303)
-        token = auth.crear_sesion("sindicato", id_usuario=user.id, sindicato_id=user.sindicato_id)
-        db.registrar_acceso("admin", sindicato_id=user.sindicato_id)
+    cuil = _norm_cuil(usuario)   # todos los usuarios se identifican con CUIT/CUIL
+    cuenta = db.cuenta_panel(cuil)
+    if not cuenta or not cuenta.clave_hash or not auth.verificar_clave(clave, cuenta.clave_hash):
+        _login_fallo(request)
+        return RedirectResponse("/admin?error=1", status_code=303)
+    opciones = db.sindicatos_del_operador(cuil)
+    if not opciones:
+        # Clave correcta pero sin ningún usuario activo: se contesta igual
+        # que una clave mala, para no confirmar que la cuenta existe.
+        _login_fallo(request)
+        return RedirectResponse("/admin?error=1", status_code=303)
     _login_ok(request)
+    if len(opciones) == 1:
+        return _abrir_sesion_panel(opciones[0]["usuario_id"])
+    token = auth.firmar_paso({"cuil": cuil}, minutos=10, proposito=_PROPOSITO_ELEGIR_PANEL)
+    return RedirectResponse(f"/admin/elegir?token={token}", status_code=303)
+
+
+_PROPOSITO_ELEGIR_PANEL = "elegir_panel"
+
+
+def _abrir_sesion_panel(usuario_id: int):
+    """Abre la sesión del panel para ESE usuario (un sindicato) y lleva a
+    la portada. Lo comparten el login directo y el selector."""
+    with db.get_session() as s:
+        user = s.get(UsuarioSindicato, usuario_id)
+        token = auth.crear_sesion("sindicato", id_usuario=user.id, sindicato_id=user.sindicato_id)
+        sid = user.sindicato_id
+    db.registrar_acceso("admin", sindicato_id=sid)
     resp = RedirectResponse("/admin/inicio", status_code=303)
     set_cookie_segura(resp, COOKIE_SINDICATO, token)
+    return resp
+
+
+@app.get("/admin/elegir", response_class=HTMLResponse)
+def admin_elegir(request: Request, token: str = ""):
+    """El selector de sindicato de quien trabaja en más de uno. El CUIL viaja
+    en un token firmado de 10 minutos que solo sirve para esta pantalla:
+    nunca en la URL ni en un campo oculto sin firmar."""
+    datos = auth.leer_paso(token, _PROPOSITO_ELEGIR_PANEL)
+    if not datos:
+        return RedirectResponse("/admin", status_code=303)
+    return templates.TemplateResponse("admin_elegir.html", {
+        "request": request, "token": token,
+        "opciones": db.sindicatos_del_operador(datos.get("cuil", "")),
+        "marca_plataforma": db.marca_plataforma()})
+
+
+@app.post("/admin/elegir")
+def admin_elegir_post(token: str = Form(...), usuario_id: int = Form(...)):
+    """Abre la sesión en el sindicato elegido, solo si ese usuario es de la
+    persona del token y sigue activo: el id viaja en el form y se valida."""
+    datos = auth.leer_paso(token, _PROPOSITO_ELEGIR_PANEL)
+    if not datos:
+        return RedirectResponse("/admin", status_code=303)
+    validos = {o["usuario_id"] for o in db.sindicatos_del_operador(datos.get("cuil", ""))}
+    if usuario_id not in validos:
+        return RedirectResponse("/admin", status_code=303)
+    return _abrir_sesion_panel(usuario_id)
+
+
+@app.get("/admin/cambiar-sindicato")
+def admin_cambiar_sindicato(request: Request):
+    """Desde la portada, volver al selector sin pedir la clave otra vez: la
+    sesión vigente ya dice quién es la persona."""
+    ses = sesion_actual(request, "sindicato")
+    if not ses:
+        return RedirectResponse("/admin", status_code=303)
+    with db.get_session() as s:
+        u = s.get(UsuarioSindicato, ses.get("uid", 0))
+        cuil = u.cuil if u else ""
+    if len(db.sindicatos_del_operador(cuil)) < 2:
+        return RedirectResponse("/admin/inicio", status_code=303)
+    token = auth.firmar_paso({"cuil": cuil}, minutos=10, proposito=_PROPOSITO_ELEGIR_PANEL)
+    resp = RedirectResponse(f"/admin/elegir?token={token}", status_code=303)
+    resp.delete_cookie(COOKIE_SINDICATO)
     return resp
 
 
@@ -2351,7 +2425,7 @@ def _volver_a_au(sub: str, err: str = "", ok: str = "") -> RedirectResponse:
 
 @app.post("/admin/usuario")
 def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str = Form(""),
-                        clave_inicial: str = Form(...), rol: str = Form("area"),
+                        clave_inicial: str = Form(""), rol: str = Form("area"),
                         area_id: str = Form(""), seccional_id: str = Form(""),
                         agregar: list[str] = Form(default=[]),
                         bloquear: list[str] = Form(default=[])):
@@ -2361,10 +2435,17 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
     `rol` se pide EXPLÍCITO y su default es "area", no "super": si el campo
     llegara a faltar, el usuario nace SIN poder en vez de con todo. Antes
     de las Áreas todo usuario nacía omnipotente, que es lo que este default
-    corrige."""
+    corrige.
+
+    La clave es de la PERSONA, no del sindicato (`CuentaPanel`): si ese CUIL
+    ya trabaja en el panel de otro sindicato, entra con la clave que ya
+    tiene y la de este formulario no se pide ni se usa -- si se usara, el
+    admin de un gremio le fijaría la clave con la que la persona entra al
+    panel de otro. El aviso de vuelta (`ok=usuariocuenta`) lo dice."""
     sid = exigir_sindicato(request)
     cuit = _norm_cuil(usuario)
-    if len(cuit) != 11 or not clave_inicial:
+    ya_tiene_clave = bool(len(cuit) == 11 and (c := db.cuenta_panel(cuit)) and c.clave_hash)
+    if len(cuit) != 11 or (not clave_inicial and not ya_tiene_clave):
         return _volver_a_au("usuarios", err="datos")
     # El usuario ES el CUIL de la persona: nace acá, con su verificador.
     if _cuil_mal(cuit):
@@ -2408,7 +2489,10 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
             # mañana se habilita entrar con mail, `usuario` cambia y la
             # identidad de la persona sigue en pie.
             cuil=cuit,
-            clave_hash=auth.hashear_clave(clave_inicial), debe_cambiar_clave=True,
+            # Va a la cuenta de la persona solo si todavía no tiene una
+            # (db._mover_clave_a_la_cuenta); la fila queda sin clave.
+            clave_hash="" if ya_tiene_clave else auth.hashear_clave(clave_inicial),
+            debe_cambiar_clave=True,
             es_super_admin=es_super,
             es_admin_seccional=es_admin_local,
             # Ni un Super Admin ni un admin de seccional cuelgan de un área:
@@ -2429,7 +2513,7 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
     if not es_super and not es_admin_local:
         db.set_permisos_usuario(nuevo_id, _secciones_que_puede_dar(request, agregar),
                                 _secciones_que_puede_dar(request, bloquear), sid)
-    return _volver_a_au("usuarios", ok="usuario")
+    return _volver_a_au("usuarios", ok="usuariocuenta" if ya_tiene_clave else "usuario")
 
 
 @app.post("/admin/usuario/editar")
@@ -5759,6 +5843,7 @@ def plataforma(request: Request):
                    "tope_maximo": t.tope_maximo, "base_minima": t.base_minima} for t in topes]
     return templates.TemplateResponse("plataforma.html", {
         "request": request, "sindicatos": info,
+        "operadores": db.operadores_de_todos_los_sindicatos(),
         "tope_sindical_pct": db.obtener_tope_sindical(),
         "config_dashboard": db.config_dashboard(),
         "marca_plataforma": db.marca_plataforma(),
@@ -7108,9 +7193,11 @@ def plataforma_reset_clave(
     hasheada = auth.hashear_clave(clave_nueva)
     with db.get_session() as s:
         if tipo == "sindicato":
-            u = s.exec(select(UsuarioSindicato).where(UsuarioSindicato.usuario == ident)).first()
+            # La clave es de la persona (CuentaPanel): una para todos los
+            # sindicatos en los que trabaja.
+            u = s.exec(select(UsuarioSindicato).where(UsuarioSindicato.cuil == ident)).first()
             if u:
-                u.clave_hash = hasheada; u.debe_cambiar_clave = False; s.add(u); s.commit()
+                db.fijar_clave_panel(ident, hasheada, debe_cambiar=False)
                 return RedirectResponse("/plataforma?reset=ok", status_code=303)
         elif tipo == "trabajador":
             # Desde que la fila de la persona nace con el alta del padrón, un

@@ -84,7 +84,9 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 - main.py — servidor y todas las rutas.
 - db.py — modelos SQLModel, engine dual, acceso a datos, marca_sindicato().
   `CuentaTrabajador` es la PERSONA (una fila por CUIL, dueña de sus datos
-  personales) y `Trabajador` el EMPADRONAMIENTO en un sindicato.
+  personales) y `Trabajador` el EMPADRONAMIENTO en un sindicato. Lo mismo en
+  el panel: `CuentaPanel` es la clave del operador (por CUIL) y
+  `UsuarioSindicato` su rol en cada sindicato.
 - auth.py — hash de claves y sesiones.
 - extractor.py — lee recibos y comprobantes de aportes con IA.
 - validador.py — motor de validación de fórmulas.
@@ -254,7 +256,8 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
 1. Admin de plataforma — /plataforma con CUIT + PLATAFORMA_PASSWORD. Da de alta
    sindicatos (con marca y logo) y sus admins. Login → `/plataforma/inicio`
    (portada de tarjetas) → `/plataforma` (panel de siempre).
-2. Usuario de sindicato — /admin con CUIT + clave. Gestiona conceptos, fórmulas,
+2. Usuario de sindicato — /admin con CUIT + clave (una sola clave aunque
+   trabaje en varios sindicatos: elige a cuál después del login). Gestiona conceptos, fórmulas,
    trabajadores, empleadores y reportes SOLO de su sindicato (aislamiento
    total). Login → `/admin/inicio` (portada) → `/admin` (panel con 14
    entradas en una tira de pestañas deslizable: Panel Sindical, Reportes,
@@ -618,6 +621,25 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   relaja es la verificación de pertenencia (un CUIL ajeno leído localmente
   corta como E-RECIBO-04): es seguridad, no enmascarado.
 
+- **Una persona, una clave para el panel de todos los sindicatos**
+  (2026-10-17). La clave del operador vive en `CuentaPanel` (una fila por
+  CUIL), no en cada `UsuarioSindicato`: el usuario dice dónde trabaja y con
+  qué rol, la cuenta con qué clave entra. Quien está en el panel de más de un
+  sindicato entra con su única clave y **elige a cuál después del login**
+  (`/admin/elegir`, token firmado de 10 minutos; "Cambiar de sindicato" en la
+  portada), como el afiliado con pluriempleo. **La clave la fija el primer
+  sindicato que da de alta a la persona**: los que la suman después no la
+  pisan (si pudieran, el admin de un gremio entraría al panel de otro con una
+  clave elegida por él). Lo garantiza el enganche
+  `db._mover_clave_a_la_cuenta` en el modelo, así que ninguna de las cinco
+  puertas de alta puede crear una segunda clave: la fila queda SIEMPRE con
+  `clave_hash` vacío. Es una credencial aparte de la del afiliado. El
+  sindicato no ve en qué otro gremio trabaja la persona (aislamiento);
+  plataforma sí, en "Usuarios de los paneles". Antes el login probaba la
+  clave contra la primera fila con ese CUIL en cualquier sindicato, y quien
+  estaba en dos entraba a uno solo. Detalle en HISTORIAL.md, "Una clave por
+  persona en el panel".
+
 - **El registro se confirma por mail y el nivel de fiabilidad es dato de la
   cuenta; ningún nivel esconde nada en la app** (2026-10-11,
   `PLAN_REGISTRO.md`, segunda medida de la serie XSK, cierra H-0017). Tres
@@ -649,7 +671,7 @@ Objetivo comercial: mostrarla a sindicatos y a un inversor como algo escalable.
   freno, lo cierra el perímetro. Detalle en HISTORIAL.md, "Registro
   confirmado por mail".
 
-## Estado actual (actualizado 2026-10-16)
+## Estado actual (actualizado 2026-10-17)
 Todo lo listado acá está mergeado a `main` y desplegado en Pruebas (Render
 sigue `main`, cada push redeploya), **incluido el punto 21**, que ya se portó
 sobre `main`.
@@ -1048,6 +1070,16 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     validación y los requisitos reales) y `duplicados` quedó solo para
     «por familiar o por período» (HISTORIAL, "Cierre de Listas y
     validaciones").
+
+36. **Una clave por persona en el panel** (2026-10-17, Admin 0.56.01,
+    Plataforma 0.50.01): `CuentaPanel` con la clave por CUIL, selector de
+    sindicato después del login, "Cambiar de sindicato" en la portada, alta
+    que no pisa la clave de quien ya trabaja en otro sindicato, y en
+    `/plataforma` la lista general "Usuarios de los paneles". Migración
+    `b8d2f6a4c1e9`: si una persona tenía claves distintas, queda la de su fila
+    activa más vieja. Ver la decisión en "Decisiones tomadas".
+    **Queda**: que el panel obligue a cambiar la clave inicial en el primer
+    ingreso y que la persona pueda cambiar la suya (hoy solo plataforma).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

@@ -94,11 +94,17 @@ def sembrar():
 
         # El login de /admin normaliza el usuario a dígitos (es un CUIT): tiene
         # que ser numérico o el login no matchea nunca.
+        # La clave vive en la cuenta de la persona (CuentaPanel), no en la
+        # fila: este INSERT es SQL a mano y no pasa por el enganche del modelo.
         conn.execute(sa.text("""
-            INSERT INTO usuariosindicato (sindicato_id, usuario, nombre, clave_hash,
+            INSERT INTO usuariosindicato (sindicato_id, usuario, cuil, nombre, clave_hash,
                 debe_cambiar_clave, activo)
-            VALUES (:sid, :usuario, 'Medición', :hash, false, true)"""),
-            {"sid": sid, "usuario": USUARIO_ADMIN, "hash": auth.hashear_clave("zzz-medicion")})
+            VALUES (:sid, :usuario, :usuario, 'Medición', '', false, true)"""),
+            {"sid": sid, "usuario": USUARIO_ADMIN})
+        conn.execute(sa.text("""
+            INSERT INTO cuentapanel (cuil, clave_hash, debe_cambiar_clave)
+            VALUES (:usuario, :hash, false) ON CONFLICT (cuil) DO NOTHING"""),
+            {"usuario": USUARIO_ADMIN, "hash": auth.hashear_clave("zzz-medicion")})
 
         secc_ids = [conn.execute(sa.text(
             "INSERT INTO seccional (sindicato_id, nombre) "

@@ -253,6 +253,29 @@
     <div id="admins-lista"></div>
   </div>
 
+  {# Todas las personas con usuario en algún panel, una fila por CUIL
+     (2026-10-17). La clave es UNA por persona (CuentaPanel), así que esta
+     vista muestra en qué sindicatos trabaja cada una y si ya eligió su
+     clave. Antes solo existía la lista de un sindicato, escondida en el
+     número de la tabla. #}
+  <details style="margin-top:14px; background:#fff; border:1px solid var(--linea); border-radius:10px; padding:12px 16px;">
+    <summary style="cursor:pointer; font-weight:700;">Usuarios de los paneles ({{ operadores|length }} personas)</summary>
+    <p class="muted" style="font-size:12.5px; margin:8px 0 10px;">Una persona tiene una sola clave para todos los sindicatos en los que trabaja y, si son varios, elige a cuál entra después del login. «Clave inicial» es la que puso quien la dio de alta; «sin clave» no puede entrar hasta que se le restablezca.</p>
+    <table>
+      <tr><th>CUIL</th><th>Nombre</th><th>Sindicatos y rol</th><th>Clave</th></tr>
+      {% for o in operadores %}
+      <tr>
+        <td><code>{{ o.cuil }}</code></td>
+        <td>{{ o.nombre or '—' }}</td>
+        <td>{% for x in o.sindicatos %}<div{% if not x.activo %} class="muted" style="text-decoration:line-through;"{% endif %}>{{ x.sindicato }} · {{ x.rol }}</div>{% endfor %}</td>
+        <td>{{ o.cuenta }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="muted">No hay usuarios de panel cargados.</td></tr>
+      {% endfor %}
+    </table>
+  </details>
+
   <!-- Panel de trabajadores (se llena al clickear el número) -->
   <div id="trabajadores-box" style="display:none; margin-top:14px; background:#fff; border:1px solid var(--linea); border-radius:10px; padding:16px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
