@@ -20,7 +20,9 @@ os.environ["PLATAFORMA_PASSWORD"] = "test-plataforma"
 import db
 import auth
 import main
-from db import (Sindicato, UsuarioSindicato, Seccional, Trabajador, Noticia, Beneficio)
+from db import (Sindicato, UsuarioSindicato, Seccional, Trabajador, Noticia, Beneficio,
+                Area, TipoTramite, Concepto)
+import json
 from modulos import MODULOS
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
@@ -44,6 +46,10 @@ with db.get_session() as s:
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=LOCAL, cuil=LOCAL, nombre="Local Rosario",
                            clave_hash=auth.hashear_clave("loc"), es_admin_seccional=True,
                            seccional_id=SEC_ROS))
+    area_ros = Area(sindicato_id=SID, nombre="Mesa Rosario", seccional_id=SEC_ROS)
+    area_cba = Area(sindicato_id=SID, nombre="Mesa Córdoba", seccional_id=SEC_CBA)
+    s.add(area_ros); s.add(area_cba); s.commit(); s.refresh(area_ros); s.refresh(area_cba)
+    AREA_ROS, AREA_CBA = area_ros.id, area_cba.id
     for cuil, nombre, sec in ((ANA, "Ana Rosario", SEC_ROS), (FABIAN, "Fabián Córdoba", SEC_CBA),
                               (SIN_SEC, "Sin Seccional", None)):
         s.add(Trabajador(sindicato_id=SID, cuil=cuil, seccional_id=sec, activo=True))
@@ -267,3 +273,128 @@ def test_2_el_general_edita_y_borra_cualquiera():
     c.post("/admin/beneficio/borrar", data={"id": b.id}, follow_redirects=False)
     with Session(db.engine) as s:
         assert s.get(Beneficio, b.id) is None
+
+
+# ====================== Bloque 3: formularios de trámite ======================
+
+CAMPOS = json.dumps([{"etiqueta": "Nombre", "tipo_dato": "texto", "longitud_maxima": 100, "obligatorio": True}])
+
+
+def _tipo(codigo):
+    with Session(db.engine) as s:
+        return s.exec(select(TipoTramite).where(TipoTramite.sindicato_id == SID, TipoTramite.codigo == codigo)).first()
+
+
+def _crear_tipo(c, codigo, seccional_id, area):
+    return c.post("/admin/tramite-tipo", data={
+        "titulo": codigo, "codigo": codigo, "campos_json": CAMPOS,
+        "area_destino_default_id": str(area), "seccional_id": seccional_id, "destinos_json": "{}",
+    }, follow_redirects=False)
+
+
+def test_3_el_general_arma_un_global_y_uno_de_cordoba_el_local_solo_de_su_seccional():
+    g = _cliente(GENERAL, "gen")
+    _crear_tipo(g, "GLOBAL", "", AREA_ROS)
+    _crear_tipo(g, "CBA", str(SEC_CBA), AREA_CBA)
+    assert _tipo("GLOBAL").seccional_id is None and _tipo("CBA").seccional_id == SEC_CBA
+    loc = _cliente(LOCAL, "loc")
+    _crear_tipo(loc, "ROS-VACIO", "", AREA_ROS)
+    _crear_tipo(loc, "ROS-OTRA", str(SEC_CBA), AREA_ROS)
+    assert _tipo("ROS-VACIO").seccional_id == SEC_ROS, "vacía = la suya, nunca global"
+    assert _tipo("ROS-OTRA") is None, "otra seccional = 403"
+
+
+def test_3_el_local_ve_los_globales_y_los_suyos_pero_no_los_de_otra():
+    vistos = {t["codigo"]: t["propio"] for t in db.tipos_tramite_del_sindicato(SID, alcance=db.alcance_seccional(_uid(LOCAL)))}
+    assert vistos == {"GLOBAL": False, "ROS-VACIO": True}
+    todos = {t["codigo"]: t["propio"] for t in db.tipos_tramite_del_sindicato(SID, alcance=None)}
+    assert todos == {"GLOBAL": True, "CBA": True, "ROS-VACIO": True}
+    html = _cliente(LOCAL, "loc").get("/admin").text
+    assert "<code>CBA</code>" not in html and "<code>GLOBAL</code>" in html
+    fila = html[html.index("<code>GLOBAL</code>"):]
+    fila = fila[:fila.index("</tr>")]
+    assert "editarTramiteTipo" not in fila and "/admin/tramite-tipo/borrar" not in fila
+    sel = html[html.index('id="tt-seccional"'):]
+    sel = sel[:sel.index("</select>")]
+    assert "global" not in sel and "Rosario" in sel and "Córdoba" not in sel
+
+
+def test_3_el_local_no_edita_ni_borra_un_global_ni_uno_de_otra_y_si_el_suyo():
+    loc = _cliente(LOCAL, "loc")
+    for codigo in ("GLOBAL", "CBA"):
+        t = _tipo(codigo)
+        loc.post("/admin/tramite-tipo", data={"id": str(t.id), "titulo": "PISADO", "codigo": codigo,
+                                              "campos_json": CAMPOS, "area_destino_default_id": str(AREA_ROS),
+                                              "seccional_id": "", "destinos_json": "{}"}, follow_redirects=False)
+        loc.post("/admin/tramite-tipo/borrar", data={"id": t.id}, follow_redirects=False)
+        with Session(db.engine) as s:
+            sigue = s.get(TipoTramite, t.id)
+            assert sigue and sigue.titulo == codigo
+    t = _tipo("ROS-VACIO")
+    loc.post("/admin/tramite-tipo", data={"id": str(t.id), "titulo": "Rosario editado", "codigo": "ROS-VACIO",
+                                          "campos_json": CAMPOS, "area_destino_default_id": str(AREA_ROS),
+                                          "seccional_id": "", "destinos_json": "{}"}, follow_redirects=False)
+    with Session(db.engine) as s:
+        assert s.get(TipoTramite, t.id).titulo == "Rosario editado"
+    loc.post("/admin/tramite-tipo/borrar", data={"id": t.id}, follow_redirects=False)
+    assert _tipo("ROS-VACIO") is None
+
+
+def test_3_el_general_edita_y_borra_un_global():
+    g = _cliente(GENERAL, "gen")
+    t = _tipo("GLOBAL")
+    g.post("/admin/tramite-tipo", data={"id": str(t.id), "titulo": "Global editado", "codigo": "GLOBAL",
+                                        "campos_json": CAMPOS, "area_destino_default_id": str(AREA_ROS),
+                                        "seccional_id": "", "destinos_json": "{}"}, follow_redirects=False)
+    with Session(db.engine) as s:
+        assert s.get(TipoTramite, t.id).titulo == "Global editado"
+    g.post("/admin/tramite-tipo/borrar", data={"id": t.id}, follow_redirects=False)
+    assert _tipo("GLOBAL") is None
+
+
+# ====================== Bloque 5: Empleadores y catálogo ======================
+
+def test_5_quien_esta_acotado_no_tiene_las_secciones_de_empleadores():
+    from permisos import SECCIONES_EMPLEADORES
+    general = db.permisos_efectivos(_uid(GENERAL))
+    local = db.permisos_efectivos(_uid(LOCAL))
+    assert SECCIONES_EMPLEADORES <= general
+    assert not (SECCIONES_EMPLEADORES & local)
+    assert local == general - SECCIONES_EMPLEADORES
+    assert 'data-panel="empleadores"' in _cliente(GENERAL, "gen").get("/admin").text
+    assert 'data-panel="empleadores"' not in _cliente(LOCAL, "loc").get("/admin").text
+    r = _cliente(LOCAL, "loc").post("/admin/empleador", data={"cuit": "30999888778", "razon_social": "X"},
+                                    follow_redirects=False)
+    assert r.status_code in (303, 403)
+    with Session(db.engine) as s:
+        assert not s.exec(select(db.Empleador).where(db.Empleador.sindicato_id == SID)).first()
+
+
+def test_5_el_catalogo_es_de_solo_lectura_para_el_acotado():
+    loc = _cliente(LOCAL, "loc")
+    html = loc.get("/admin").text
+    assert 'id="panel-conceptos"' in html and "Solo lectura: el catálogo" in html
+    r = loc.post("/admin/concepto", data={"codigo": "999", "nombre": "Del local", "tipo": "descuento"},
+                 follow_redirects=False)
+    assert r.status_code in (303, 403)
+    with Session(db.engine) as s:
+        assert not s.exec(select(Concepto).where(Concepto.sindicato_id == SID, Concepto.codigo == "999")).first()
+    g = _cliente(GENERAL, "gen")
+    assert "Solo lectura: el catálogo" not in g.get("/admin").text
+    g.post("/admin/concepto", data={"codigo": "999", "nombre": "Del general", "tipo": "descuento"},
+           follow_redirects=False)
+    with Session(db.engine) as s:
+        assert s.exec(select(Concepto).where(Concepto.sindicato_id == SID, Concepto.codigo == "999")).first()
+
+
+def test_5_el_general_de_una_seccional_que_ve_todas_no_esta_acotado():
+    with db.get_session() as s:
+        central = Seccional(sindicato_id=SID, nombre="Sede Central", ve_todas=True)
+        s.add(central); s.commit(); s.refresh(central)
+        s.add(UsuarioSindicato(sindicato_id=SID, usuario="27777777772", cuil="27777777772",
+                               nombre="Admin Central", clave_hash=auth.hashear_clave("cen"),
+                               es_admin_seccional=True, seccional_id=central.id))
+        s.commit()
+    uid = _uid("27777777772")
+    assert db.alcance_seccional(uid) is None and not db.es_acotado(uid)
+    assert db.permisos_efectivos(uid) == db.permisos_efectivos(_uid(GENERAL))

@@ -738,6 +738,16 @@
 </head>
 <body class="mesa franja">
 {% include "_entorno.html" %}
+{% if catalogo_solo_lectura %}
+<style>
+  /* Catálogo en solo lectura para quien está acotado a una seccional
+     (bloque 5): las acciones no se dibujan; el servidor las rechaza igual. */
+  #panel-conceptos form button, #panel-formulas form button, #panel-convenio form button,
+  #panel-conceptos .peligro, #panel-formulas .peligro, #panel-convenio .peligro,
+  #panel-aprendizaje > *:not(.solo-lectura):not(.titulo-pagina) { display: none !important; }
+</style>
+{% endif %}
+
 <div class="app-bar-fija">
 {# Encabezado normalizado. La pantalla de la derecha la escribe el JS de la
    tira de pestañas; el sticky lo da .app-bar-fija, no el parcial. #}
@@ -851,6 +861,7 @@
   <div class="panel" data-mov-vista id="panel-formulas">
   <!-- ============ FÓRMULAS ============ -->
   <h2 class="titulo-pagina" id="formulas">Reglas de control</h2>
+  {% if catalogo_solo_lectura %}<div class="msg solo-lectura" style="background:#fdf3e7;color:#8a5a1a;">Solo lectura: el catálogo del sindicato (conceptos, reglas, aprendizaje y convenio) lo edita el administrador general.</div>{% endif %}
   <p class="muted">La variable <code>base_remunerativa</code> es la suma de los ingresos marcados como remunerativos. También está <code>total_ingresos</code>.
   La expresión es una cuenta: punto decimal (<code>0.015</code>, no <code>0,015</code>), <code>*</code> para multiplicar y sin el signo <code>%</code>. Se prueba al guardar.</p>
   {% if request.query_params.get('error') == 'formulaexpr' %}
@@ -917,6 +928,7 @@
   <div class="panel" data-mov-vista id="panel-conceptos">
   <!-- ============ CONCEPTOS ============ -->
   <h2 class="titulo-pagina" id="conceptos">Conceptos ({{ conceptos|length }})</h2>
+  {% if catalogo_solo_lectura %}<div class="msg solo-lectura" style="background:#fdf3e7;color:#8a5a1a;">Solo lectura: el catálogo del sindicato (conceptos, reglas, aprendizaje y convenio) lo edita el administrador general.</div>{% endif %}
   {% if request.query_params.get('error') == 'cuitconcepto' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">No se guardó el concepto: el CUIT del empleador no es válido -- revisá los 11 números.<br><small style="opacity:.8;">Código E-IDENT-02</small></div>
   {% elif request.query_params.get('error') == 'cuitconfirmar' %}
@@ -1291,6 +1303,7 @@
   <div class="panel" data-mov-vista id="panel-aprendizaje">
   <!-- ============ APRENDIZAJE ============ -->
   <h2 class="titulo-pagina" id="aprendizaje">Aprendizaje — incorporar conceptos desde recibos</h2>
+  {% if catalogo_solo_lectura %}<div class="msg solo-lectura" style="background:#fdf3e7;color:#8a5a1a;">Solo lectura: el catálogo del sindicato (conceptos, reglas, aprendizaje y convenio) lo edita el administrador general.</div>{% endif %}
   <p class="muted">Subí varios recibos del mismo convenio (lo ideal es entre 3 y 10, de distintos empleados o meses). El sistema los lee, junta los conceptos que no están en el catálogo y te propone darlos de alta. Revisá tipo y remunerativo antes de aprobar.</p>
 
   <form id="form-aprender" style="margin-top:14px;">
@@ -1686,7 +1699,8 @@
           </div>
           <div class="campo" id="tt-seccional-campo"><label>¿Quién lo ve?</label>
             <select name="seccional_id" id="tt-seccional">
-              <option value="">Todas las seccionales (global)</option>
+              {# Un global lo arma solo el alcance total (bloque 3). #}
+              {% if alcance_propio is none %}<option value="">Todas las seccionales (global)</option>{% endif %}
               {% for sec in seccionales_alcance %}<option value="{{ sec.id }}">Solo {{ sec.nombre }}</option>{% endfor %}
             </select>
             <span class="muted" style="font-size:11.5px;">No se puede cambiar después: al trabajador que ya lo tenía disponible se le sacaría de la vista.</span>
@@ -1801,11 +1815,15 @@
         <td class="muted">{{ t.creado }}</td>
         <td style="white-space:nowrap; text-align:right;">
           <button type="button" class="mini" onclick="copiarLinkFormulario({{ t.id }}, this)" title="Link directo al formulario, para pegar en una notificación o noticia">Link</button>
+          {# Un global o uno de otra seccional se ve (le llega a su gente)
+             pero lo edita y borra solo quien tiene alcance total (bloque 3). #}
+          {% if t.propio %}
           <button type="button" class="mini" onclick='editarTramiteTipo({{ t | tojson }})'>Editar</button>
           <form method="post" action="/admin/tramite-tipo/borrar" style="display:inline;" onsubmit="return confirm('¿Borrar este tipo de trámite?')">
             <input type="hidden" name="id" value="{{ t.id }}">
             <button class="peligro mini" type="submit">Borrar</button>
           </form>
+          {% else %}<span class="muted" style="font-size:12px;">de todo el sindicato</span>{% endif %}
         </td>
       </tr>
       {% else %}
@@ -2459,6 +2477,7 @@
   {% if 'convenio' in permisos %}
   <div class="panel" data-mov-vista id="panel-convenio">
   <!-- ============ CONVENIO (RAG) ============ -->
+  {% if catalogo_solo_lectura %}<div class="msg solo-lectura" style="background:#fdf3e7;color:#8a5a1a;">Solo lectura: el catálogo del sindicato (conceptos, reglas, aprendizaje y convenio) lo edita el administrador general.</div>{% endif %}
   {% if request.query_params.get('error') == 'formato' %}
   <div class="msg" style="background:#f8e5e2;color:#b23a2e;">El archivo tiene que ser un PDF.</div>
   {% elif request.query_params.get('error') == 'tamano' %}

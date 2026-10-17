@@ -7796,3 +7796,32 @@ su seccional, o la borraba.
 Trece tests nuevos, cada bloque con su "el general sigue viendo todo".
 Nada cambia para el administrador general ni para una seccional con
 `ve_todas`.
+
+## Alcance del Admin de Seccional, bloques 3 y 5 (2026-10-17, Admin 0.59.01)
+
+**Bloque 3, formularios de trámite.** El alta pasa por
+`_seccional_en_alcance`: para un acotado, seccional vacía = la suya (antes
+vacía era GLOBAL y el chequeo de alcance ni corría), otra = 403. La edición
+y el borrado exigen alcance sobre la seccional del formulario también cuando
+es `None` (global): `_en_alcance` deja pasar un `None` solo al alcance total,
+que es exactamente lo que N7 dice ("no edita los globales"). El borrado no
+chequeaba nada. El listado (`tipos_tramite_del_sindicato(..., alcance)`) trae
+los globales (le llegan a su gente) más los de su alcance, con la marca
+`propio` para que la plantilla dibuje Editar y Borrar solo donde el servidor
+los aceptaría; el `<select>` de "¿Quién lo ve?" ya no ofrece "global" al
+acotado.
+
+**Bloque 5, las dos decisiones de SDN.** `Empleador` no tiene seccional
+(N11), así que un usuario acotado a una seccional sin `ve_todas` (admin
+local o usuario de área) no tiene las cuatro secciones `emp_*`:
+`db.permisos_efectivos` las descuenta (`permisos.SECCIONES_EMPLEADORES`),
+resolviendo "acotado" con la misma sesión para no abrir otra. Con eso la
+pestaña no se dibuja, las listas no se consultan y las rutas dan 403, todo
+por el mismo camino de siempre. El catálogo (Conceptos, Reglas, Aprendizaje,
+Convenio: `permisos.SECCIONES_CATALOGO`) queda en solo lectura para el
+acotado: `_exigir_permiso_de_ruta` rechaza todo POST de esas secciones si
+`db.es_acotado`, y la pantalla pone un banner en los cuatro paneles y
+esconde las acciones (Aprendizaje entero, que es acción). Un Admin de
+Seccional de una seccional con `ve_todas` no está acotado y conserva todo:
+lo fija un test. `test_areas_seccional.py` pasó de "las mismas secciones" a
+"las mismas menos Empleadores".
