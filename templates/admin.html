@@ -1533,18 +1533,22 @@
         <div class="campo full"><label>Mensaje *</label>
           <textarea name="texto" id="notif-texto" rows="5" required placeholder="Puede incluir URLs, se muestran como link"></textarea>
         </div>
+        {# Acotado a UNA seccional: "a toda tu seccional" es el criterio normal y
+           va primero (no hay criterio "todos"); su casilla viaja tildada y oculta. #}
+        {% set notif_sec_unica = alcance_propio is not none and seccionales_visibles|length == 1 %}
         {% if alcance_propio is not none and seccionales_visibles %}
         <div class="campo full muted" id="notif-alcance-aviso" style="font-size:12.5px;">Las notificaciones llegan solo a afiliados de tu seccional ({{ seccionales_visibles | map(attribute='nombre') | join(', ') }}); los demás criterios se aplican dentro de ella.</div>
         {% endif %}
         <div class="campo full"><label>Destinatarios *</label>
           <select name="criterio" id="notif-criterio" onchange="cambiarCriterioNotif()">
+            {% if notif_sec_unica %}<option value="seccional">A toda tu seccional ({{ seccionales_visibles[0].nombre }})</option>{% endif %}
             <option value="cuil">Por CUIL</option>
             <option value="cuit_empleador">Por CUIT de empresa</option>
-            {% if seccionales_visibles|length > 1 %}<option value="seccional">Por seccional</option>{% endif %}
+            {% if seccionales_visibles and not notif_sec_unica %}<option value="seccional">Por seccional</option>{% endif %}
             <option value="provincia">Por provincia</option>
           </select>
         </div>
-        <div class="campo full" id="notif-valores-cuil">
+        <div class="campo full{% if notif_sec_unica %} oculto{% endif %}" id="notif-valores-cuil">
           <label>CUIL(es), separados por coma</label>
           <input type="text" id="notif-valores-cuil-input" placeholder="20111111112, 27222222228">
         </div>
@@ -1552,14 +1556,19 @@
           <label>CUIT(s) de empresa, separados por coma</label>
           <input type="text" id="notif-valores-cuit_empleador-input" placeholder="30111222335">
         </div>
-        {% if seccionales_visibles|length > 1 %}
-        <div class="campo full oculto" id="notif-valores-seccional">
+        {% if seccionales_visibles %}
+        <div class="campo full{% if not notif_sec_unica %} oculto{% endif %}" id="notif-valores-seccional">
+          {% if notif_sec_unica %}
+          <div class="muted" style="font-size:13px;">Va a toda tu seccional: <b>{{ seccionales_visibles[0].nombre }}</b></div>
+          <div class="check-seccionales" id="notif-check-seccionales" hidden style="display:none"><input type="checkbox" value="{{ seccionales_visibles[0].id }}" checked hidden></div>
+          {% else %}
           <label>Seccionales</label>
           <div class="check-seccionales" id="notif-check-seccionales">
             {% for sec in seccionales_visibles %}
             <label class="chk-seccional"><input type="checkbox" value="{{ sec.id }}"> {{ sec.nombre }}</label>
             {% endfor %}
           </div>
+          {% endif %}
         </div>
         {% endif %}
         <div class="campo full oculto" id="notif-valores-provincia">
@@ -2112,16 +2121,20 @@
             Al publicar se <b>fija el padrón</b>: se resuelve ahora quiénes pueden responder y
             esa lista no se recalcula nunca más. Es lo que hace que "respondieron 620 de 1.000"
             signifique algo. No se puede deshacer.</p>
+          {# El acotado ya tiene "A todo el padrón de tu seccional": "Por seccional"
+             solo si puede elegir entre varias. El general la ve siempre que haya
+             alguna (aunque sea una). #}
+          {% set pub_ofrece_seccional = (alcance_propio is none and seccionales_visibles) or seccionales_visibles|length > 1 %}
           <div class="campo"><label>¿A quiénes?</label>
             <select name="criterio" id="pub-criterio" onchange="cambioCriterioPublicar()">
               <option value="todos">A todo el padrón{% if alcance_propio is not none %} de tu seccional{% endif %}</option>
-              {% if seccionales_visibles|length > 1 %}<option value="seccional">Por seccional</option>{% endif %}
+              {% if pub_ofrece_seccional %}<option value="seccional">Por seccional</option>{% endif %}
               <option value="provincia">Por provincia</option>
               <option value="cuit_empleador">Por empresa (CUIT)</option>
               <option value="cuil">Por CUIL</option>
             </select>
           </div>
-          {% if seccionales_visibles|length > 1 %}
+          {% if pub_ofrece_seccional %}
           <div class="campo oculto" id="pub-seccionales" style="margin-top:10px;">
             <label>Seccionales</label>
             <div class="check-seccionales">

@@ -22,7 +22,7 @@ from html.parser import HTMLParser
 import db
 import auth
 import main
-from db import Sindicato, UsuarioSindicato, Seccional
+from db import Sindicato, UsuarioSindicato, Seccional, Area, PermisoArea
 from modulos import MODULOS
 from fastapi.testclient import TestClient
 
@@ -30,6 +30,7 @@ db.crear_tablas()
 
 # CUIL con módulo 11 (`cuit.corregir`), distintos de los de otros tests.
 GENERAL, LOCAL = "20314159269", "20314159277"
+DE_AREA, GENERAL_UNICO = "20314159285", "20314159293"
 
 with db.get_session() as s:
     sind = Sindicato(nombre="Sindicato Alcance Pantalla", slug="alcance-pantalla",
@@ -47,6 +48,25 @@ with db.get_session() as s:
     s.add(UsuarioSindicato(sindicato_id=SID, usuario=LOCAL, cuil=LOCAL, nombre="Local Rosario",
                            clave_hash=auth.hashear_clave("loc"), es_admin_seccional=True,
                            seccional_id=SEC_ROS))
+    # Un usuario de ÁREA de Rosario con las cuatro secciones de comunicación:
+    # recibe la misma regla de alcance que el administrador de seccional.
+    area = Area(sindicato_id=SID, seccional_id=SEC_ROS, nombre="Prensa Rosario")
+    s.add(area); s.commit(); s.refresh(area)
+    for seccion in ("noticias", "beneficios", "notificaciones", "encuestas"):
+        s.add(PermisoArea(area_id=area.id, seccion=seccion))
+    s.add(UsuarioSindicato(sindicato_id=SID, usuario=DE_AREA, cuil=DE_AREA, nombre="Prensa Ros",
+                           clave_hash=auth.hashear_clave("area"), area_id=area.id,
+                           seccional_id=SEC_ROS))
+    s.commit()
+
+    # Otro sindicato, con UNA sola seccional y su general.
+    sind2 = Sindicato(nombre="Sindicato Una Seccional", slug="alcance-pantalla-una",
+                      color_base="#0f1b2d", modulos_habilitados=list(MODULOS.keys()))
+    s.add(sind2); s.commit(); s.refresh(sind2)
+    s.add(Seccional(sindicato_id=sind2.id, nombre="Sede Única", latitud=-34.6, longitud=-58.4))
+    s.add(UsuarioSindicato(sindicato_id=sind2.id, usuario=GENERAL_UNICO, cuil=GENERAL_UNICO,
+                           nombre="General Único", clave_hash=auth.hashear_clave("uni"),
+                           es_super_admin=True))
     s.commit()
 
 OTRA = "Córdoba"
@@ -73,6 +93,8 @@ class _Pagina(HTMLParser):
         self.bloques = []
         self.capturas = {}
         self.opciones = {}
+        self.textos_opcion = {}  # select -> {value: texto}
+        self._opcion = None
         self._bloque = None      # [profundidad, dict]
         self._abiertas = []      # [id, tag, profundidad]
         self._select = None
@@ -83,6 +105,8 @@ class _Pagina(HTMLParser):
             self.inputs_destino.append(a.get("value"))
         if tag == "input" and self._bloque is not None:
             self._bloque[1]["inputs"].append((a.get("name"), a.get("value")))
+            if "checked" in a:
+                self._bloque[1]["marcados"].append(a.get("value"))
         for c in self._abiertas:
             if c[1] == tag:
                 c[2] += 1
@@ -94,13 +118,17 @@ class _Pagina(HTMLParser):
             self.opciones[self._select] = []
         if tag == "option" and self._select:
             self.opciones[self._select].append(a.get("value"))
+            self.textos_opcion.setdefault(self._select, {})[a.get("value")] = ""
+            self._opcion = (self._select, a.get("value"))
         if tag == "div":
             if self._bloque is not None:
                 self._bloque[0] += 1
             elif "check-seccionales" in (a.get("class") or "").split():
-                self._bloque = [1, {"id": a.get("id"), "inputs": [], "texto": ""}]
+                self._bloque = [1, {"id": a.get("id"), "inputs": [], "marcados": [], "texto": ""}]
 
     def handle_endtag(self, tag):
+        if tag == "option":
+            self._opcion = None
         if tag == "select":
             self._select = None
         for c in list(self._abiertas):
@@ -115,6 +143,8 @@ class _Pagina(HTMLParser):
                 self._bloque = None
 
     def handle_data(self, data):
+        if self._opcion:
+            self.textos_opcion[self._opcion[0]][self._opcion[1]] += data
         for c in self._abiertas:
             self.capturas[c[0]]["texto"] += data
         if self._bloque is not None:
@@ -142,10 +172,9 @@ def _bloques_de_seccionales(p):
             and not any(n in NO_SECCIONALES for n, _ in b["inputs"])]
 
 
-# ---------------------------------------------------------------- el local
+# ---------------------------------------------------------------- el acotado
 
-def test_local_destino_de_noticias_y_beneficios_no_ofrece_otras_seccionales():
-    p = _pagina(LOCAL, "loc")
+def _check_acotado_destino_de_noticias_y_beneficios_no_ofrece_otras_seccionales(p):
     ajenos = [v for v in p.inputs_destino if v != str(SEC_ROS)]
     assert ajenos == [], f"el local ve destinos fuera de su alcance: {ajenos}"
     # Con una sola seccional en el alcance no hay nada que elegir: una línea
@@ -162,29 +191,34 @@ def test_local_destino_de_noticias_y_beneficios_no_ofrece_otras_seccionales():
         assert "todas las seccionales" not in p.capturas[form]["texto"], form
 
 
-def test_local_ningun_bloque_de_seccionales_tiene_un_id_ajeno():
-    p = _pagina(LOCAL, "loc")
+def _check_acotado_ningun_bloque_de_seccionales_tiene_un_id_ajeno(p):
     for b in _bloques_de_seccionales(p):
         for nombre, valor in b["inputs"]:
             assert valor != str(SEC_CBA), (b["id"], nombre, valor)
         assert OTRA not in b["texto"], (b["id"], b["texto"])
 
 
-def test_local_notificaciones_no_ofrece_por_seccional_y_dice_el_alcance():
-    p = _pagina(LOCAL, "loc")
-    assert "seccional" not in p.opciones["notif-criterio"]
-    # Los demás criterios siguen: se aplican dentro de su seccional.
+def _check_acotado_notificaciones_dice_el_alcance_y_ofrece_toda_la_seccional(p):
+    # No hay criterio "todos": la opción "A toda tu seccional" va PRIMERA y su
+    # única casilla viaja tildada y oculta, solo la de Rosario.
+    assert p.opciones["notif-criterio"][0] == "seccional"
+    assert p.textos_opcion["notif-criterio"]["seccional"].strip() == "A toda tu seccional (Rosario)"
+    assert "Por seccional" not in p.capturas["notif-criterio"]["texto"]
     for criterio in ("cuil", "cuit_empleador", "provincia"):
         assert criterio in p.opciones["notif-criterio"]
-    assert "notif-valores-seccional" not in p.capturas
-    assert "notif-check-seccionales" not in [b["id"] for b in p.bloques]
+    por_id = {b["id"]: b for b in p.bloques}
+    caja = por_id["notif-check-seccionales"]
+    assert caja["inputs"] == [(None, str(SEC_ROS))]
+    assert caja["marcados"] == [str(SEC_ROS)]
+    assert "Va a toda tu seccional" in p.capturas["notif-valores-seccional"]["texto"]
+    assert "Rosario" in p.capturas["notif-valores-seccional"]["texto"]
+    assert OTRA not in p.capturas["notif-valores-seccional"]["texto"]
     aviso = p.capturas["notif-alcance-aviso"]["texto"]
     assert "llegan solo a afiliados de tu seccional" in aviso
     assert "Rosario" in aviso and OTRA not in aviso
 
 
-def test_local_encuesta_publicar_no_ofrece_por_seccional():
-    p = _pagina(LOCAL, "loc")
+def _check_acotado_encuesta_publicar_no_ofrece_por_seccional(p):
     assert "pub-criterio" in p.opciones, "el modal de publicar no se dibujó"
     assert "seccional" not in p.opciones["pub-criterio"]
     for criterio in ("todos", "provincia", "cuit_empleador", "cuil"):
@@ -194,15 +228,33 @@ def test_local_encuesta_publicar_no_ofrece_por_seccional():
     assert OTRA not in p.capturas["pub-criterio"]["texto"]
 
 
-def test_local_la_otra_seccional_no_aparece_en_ningun_selector_de_seccional():
-    p = _pagina(LOCAL, "loc")
+def _check_acotado_la_otra_seccional_no_aparece_en_ningun_selector_de_seccional(p):
     for ident in ("notif-criterio", "pub-criterio", "form-noticia", "form-beneficio"):
         assert OTRA not in p.capturas[ident]["texto"], ident
 
 
-def test_local_aviso_de_seccionales_sin_ubicacion_no_cuenta_las_ajenas():
-    p = _pagina(LOCAL, "loc")
+def _check_acotado_aviso_de_seccionales_sin_ubicacion_no_cuenta_las_ajenas(p):
     assert not re.search(r"seccionales? sin ubicación", p.html)
+
+
+
+def _todo_lo_acotado(p):
+    for nombre, fn in list(globals().items()):
+        if nombre.startswith("_check_acotado_"):
+            fn(p)
+
+
+def test_local_la_pantalla_no_ofrece_lo_que_el_servidor_descarta():
+    _todo_lo_acotado(_pagina(LOCAL, "loc"))
+
+
+def test_usuario_de_area_de_rosario_recibe_la_misma_regla_que_el_local():
+    p = _pagina(DE_AREA, "area")
+    # La pantalla del área trae las cuatro secciones: si alguna no se dibujara
+    # los chequeos de abajo fallarían por ausencia, no pasarían de largo.
+    for ident in ("form-noticia", "form-beneficio", "notif-criterio", "pub-criterio"):
+        assert ident in p.capturas, ident
+    _todo_lo_acotado(p)
 
 
 # --------------------------------------------------------------- el general
@@ -234,3 +286,15 @@ def test_general_sigue_viendo_las_dos_seccionales_en_los_cuatro_bloques():
 def test_general_ve_el_aviso_de_seccionales_sin_ubicacion():
     p = _pagina(GENERAL, "gen")
     assert "1 seccional sin ubicación" in p.html
+
+
+def test_general_de_un_sindicato_con_una_sola_seccional_sigue_viendo_por_seccional():
+    p = _pagina(GENERAL_UNICO, "uni")
+    assert "seccional" in p.opciones["notif-criterio"]
+    assert p.textos_opcion["notif-criterio"]["seccional"].strip() == "Por seccional"
+    assert "seccional" in p.opciones["pub-criterio"]
+    por_id = {b["id"]: b for b in p.bloques}
+    assert [n for n, _ in por_id["notif-check-seccionales"]["inputs"]] == [None]
+    assert por_id["notif-check-seccionales"]["marcados"] == []   # el general elige
+    assert "notif-alcance-aviso" not in p.capturas
+    assert "A todo el padrón de tu seccional" not in p.html
