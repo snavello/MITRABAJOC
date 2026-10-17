@@ -7873,3 +7873,62 @@ publicaciones ajenas, crear, editar y borrar formularios globales, el
 catálogo, los detalles del Panel, las rutas de Empleadores) quedaron
 bloqueadas. El general no cambió en nada. Seis PRs en el día (#135 a #139
 más el de cierre), cada uno con su CI y su regresión; sin migraciones.
+
+## Alcance del Admin de Seccional, bloque 7: lo que la pantalla ofrecía (2026-10-17, Admin 0.60.02)
+
+El cierre del plan duró una hora. SDN entró en Pruebas con el Admin de
+Seccional de Lomas de Zamora (23010101018) y lo vio elegir cualquiera de las
+siete seccionales de La Bancaria como destino de una noticia, un beneficio,
+una notificación o una encuesta. La auditoría de los bloques 0 a 6 había
+medido lo que el servidor DEVUELVE (listas recortadas) y lo que ACEPTA
+(escrituras ajenas rechazadas), y en los dos frentes estaba bien: los
+destinos fuera del alcance se descartan (`_destinos_de_publicacion`,
+`resolver_destinatarios` con `usuario_id`), y en Pruebas una notificación
+"a Rosario" del admin de Lomas daba cero destinatarios. Lo que nunca se
+midió fue lo que la pantalla OFRECE: las casillas iteraban `seccionales`
+(todas las del sindicato) y no `seccionales_visibles`. El servidor tenía
+razón y la pantalla mentía, que es exactamente lo que el código del
+catálogo de permisos ya decía que no había que hacer ("ofrecérselo en
+pantalla para después descartarlo en el POST sería mentirle"). Quedó como
+regla 8 del plan.
+
+De paso apareció un agujero real de servidor, el único del bloque:
+`db.noticia_de_encuesta` creaba la `Noticia` que anuncia una encuesta sin
+`destino_seccionales`, y en este modelo lista vacía es "a todas". Una
+encuesta creada por un admin local lleva su seccional (N18), pero su
+noticia salía a todo el sindicato. Ahora hereda la seccional de la
+encuesta: `[seccional_id]` si la tiene, `[]` si la creó el general.
+
+**Pantalla** (`templates/admin.html`): Noticias y Beneficios iteran las
+visibles y, con una sola, en vez de casillas va "Va a tu seccional: X"
+(sin input: el servidor fuerza el destino igual); Notificaciones y
+Publicar encuesta muestran "Por seccional" solo con más de una visible,
+con un aviso de alcance arriba del criterio y "A todo el padrón de tu
+seccional"; el aviso de Seccionales "sin ubicación" cuenta las visibles.
+Provincia, CUIT y CUIL siguen para el acotado: son filtros dentro de su
+alcance y el preview dice el número real.
+
+**Método**, pedido por SDN después del tropiezo: dos desarrolladores en
+paralelo (servidor y pantalla, cada uno en su worktree), dos QA
+independientes (uno de código, con intentos de escape por POST y búsqueda
+de la otra seccional en todo el HTML del acotado y de un usuario de área;
+otro de uso, un robot Playwright contra la demo local como Rosario, como
+el general y como Prensa Córdoba, con capturas) y la aprobación final de
+Code, que además repitió en Pruebas la verificación con 23010101018.
+`test_alcance_seccional_pantalla.py` recorre TODOS los bloques de casillas
+del HTML (no solo los conocidos) y falla si a un acotado se le ofrece un
+id fuera de su alcance; `test_alcance_seccional_panel.py` suma los tres
+tests de la noticia de la encuesta.
+
+Lo que encontraron los dos QA, y se corrigió antes del merge: (1) al sacar
+"Por seccional" para el acotado, Notificaciones (que no tiene criterio
+"todos") le quitó al admin local la única forma de decir "a toda mi
+seccional", y el general de un sindicato con UNA sola seccional también la
+perdió; ahora el acotado ve primero "A toda tu seccional (X)" con su
+casilla tildada y oculta, y el general con una seccional sigue viendo "Por
+seccional" (el robot lo confirmó: 28 destinatarios de Rosario guardados).
+(2) Un usuario de área sin el permiso Seccionales recibía un `TypeError`
+de JS en cada carga del panel, anterior al bloque, porque el script de
+georreferenciación enganchaba `form-seccional` sin comprobar que exista.
+(3) El texto del modal "Avisale a los afiliados" decía que la noticia la
+ve cualquiera; para el acotado ahora dice que es de su seccional.

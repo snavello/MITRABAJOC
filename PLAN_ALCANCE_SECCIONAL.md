@@ -191,3 +191,92 @@ nuevos al lado de los de hoy; CLAUDE.md, HISTORIAL, BITACORA; versión.
   agrega un camino nuevo. Se mide con `medir_dashboard.py` antes y después.
 - **Demo**: Rosario (20555555556) es el admin local de la UOM; los robots
   de `e2e/` que entran con él se vuelven a correr al final de cada bloque.
+
+## 5. Segunda vuelta (2026-10-17, tarde) — Bloque 7: lo que la auditoría no midió
+
+SDN entró en Pruebas con el Admin de Seccional de Lomas de Zamora
+(23010101018) después de los seis bloques y lo vio **elegir otras
+seccionales como destino** en Noticias, Beneficios, Notificaciones y
+Encuestas. La auditoría del bloque 6 midió lo que el servidor DEVUELVE y
+lo que ACEPTA, no lo que la pantalla OFRECE: ese fue el agujero del
+método, y por eso este bloque arranca por la pantalla.
+
+### Lo medido en Pruebas con 23010101018 (Admin 0.60.01)
+| # | Dónde | Lo que ofrece la pantalla | Lo que hace el servidor |
+|---|---|---|---|
+| G1 | Encuestas → "Publicar la noticia" | — | **Agujero real**: `db.noticia_de_encuesta` crea la `Noticia` sin `destino_seccionales`, o sea "a todas": la noticia de una encuesta de Lomas de Zamora sale a todo el sindicato. |
+| G2 | Noticias y Beneficios, alta y edición | Las 7 seccionales como casillas de destino (`seccionales`, no `seccionales_visibles`) y el texto "Sin marcar ninguna = todas las seccionales". | Recorta (`_destinos_de_publicacion`): lo tildado fuera del alcance se descarta y vacío = su seccional. |
+| G3 | Notificaciones | Criterio "Por seccional" con las 7 casillas; "Por provincia" con las 24. | Recorta (`resolver_destinatarios` con `usuario_id`): Rosario = 0, Lomas = 1, Santa Fe = 0, Buenos Aires = 1. |
+| G4 | Encuestas → Publicar | "A todo el padrón", "Por seccional" con las 7 casillas, provincia, CUIT, CUIL. | Recorta igual que G3 (`publicar_encuesta` pasa `usuario_id`). |
+| G5 | Seccionales | El aviso "N seccionales sin ubicación" cuenta las del sindicato entero. | Solo lectura; la tabla ya muestra las visibles. |
+| G6 | Trámites | Formularios: seccional, área por defecto, áreas de pase y mapa por seccional ya recortados (verificado: solo "Secretaria General · Lomas de Zamora"). La bandeja recorta. | Nada que corregir en el servidor; QA lo vuelve a recorrer con el robot por si SDN vio otra cosa. |
+
+### Regla que se agrega a los principios
+8. **La pantalla no ofrece lo que el servidor va a descartar.** Ya estaba
+   escrito en el código del catálogo de permisos ("ofrecérselo en pantalla
+   para después descartarlo en el POST sería mentirle") y no se aplicó a
+   los destinos. Para alguien acotado, todo selector de seccional dibuja
+   `seccionales_visibles`; si el alcance es UNA seccional, no hay nada que
+   elegir y se dice en texto ("Va a tu seccional: Lomas de Zamora"). El
+   recorte del servidor se queda igual: la pantalla es cortesía.
+
+### Bloque 7 — Destinos acotados en pantalla y la noticia de la encuesta. Admin 0.60.02
+Sin migraciones. Dos frentes que se pueden hacer en paralelo:
+
+**7a, servidor (G1).** `db.noticia_de_encuesta` escribe
+`destino_seccionales = [e["seccional_id"]]` cuando la encuesta tiene
+seccional (la creó un acotado, N18) y `[]` (todas) cuando no la tiene (la
+creó el general). La encuesta ya guarda su seccional, así que no hace falta
+mirar el alcance del que publica: la noticia hereda el alcance de la
+encuesta. Tests en `test_alcance_seccional_panel.py`: la noticia de una
+encuesta del local sale con destino su seccional y el local de la OTRA
+seccional no la ve en su lista; la del general sale a todas; y el
+recordatorio/lanzamiento de la encuesta del local alcanzan solo a su
+padrón (ya era así: queda fijado).
+
+**7b, pantalla (G2–G5), en `templates/admin.html`**, usando las variables
+que `admin()` ya manda (`alcance_propio`, `seccionales_visibles`):
+- Noticias y Beneficios: las casillas de destino iteran
+  `seccionales_visibles`. Con `alcance_propio` no nulo y una sola visible,
+  en lugar de casillas va una línea fija "Va a tu seccional: X" (sin
+  input: el servidor ya fuerza el destino). El texto "Sin marcar ninguna =
+  todas las seccionales" solo para el alcance total; para el acotado con
+  varias visibles: "Sin marcar ninguna = todas las de tu alcance".
+- Notificaciones: la opción "Por seccional" existe solo si hay más de una
+  visible; sus casillas iteran las visibles. Para el acotado, una línea
+  arriba del criterio: "Las notificaciones llegan solo a afiliados de tu
+  seccional (X); los demás criterios se aplican dentro de ella". Provincia,
+  CUIT y CUIL siguen (son filtros dentro del alcance y el preview dice el
+  número real).
+- Encuestas → Publicar: "A todo el padrón" pasa a "A todo el padrón de tu
+  seccional" para el acotado; "Por seccional" y sus casillas con la misma
+  regla que Notificaciones.
+- Seccionales: el aviso de "sin ubicación" cuenta `seccionales_visibles`.
+- Ningún cambio en `main.py` salvo que haga falta una variable nueva; no se
+  toca ninguna ruta.
+- Tests nuevos en `test_alcance_seccional_pantalla.py`: se pide `/admin`
+  con el local y con el general y se parsea el HTML. Para el local: ningún
+  `destino_seccionales` ni casilla de `#notif-check-seccionales` ni de
+  `#pub-seccionales` con un id fuera de su alcance, no aparece "Por
+  seccional" en los dos `<select>` de criterio, y el nombre de la otra
+  seccional no aparece en esos bloques. Para el general: las casillas
+  siguen siendo todas y las opciones siguen (contrapeso). Fail-closed: el
+  test recorre TODOS los `<input name="destino_seccionales">` y
+  `.check-seccionales` del HTML, no solo los que conocemos hoy.
+
+**QA (dos personas, independientes del desarrollo):**
+- QA de código: corre `test_alcance_seccional_panel.py`,
+  `test_alcance_seccional_pantalla.py`, `test_encuestas*.py`,
+  `test_notificaciones*.py`, `test_noticias*.py`, `test_areas_*.py`,
+  `test_modales.py`, `ruff`; revisa el diff contra esta sección punto por
+  punto y busca en el HTML servido al local cualquier otra mención de las
+  otras seccionales.
+- QA de uso: Playwright contra uvicorn local con la demo cargada
+  (`cargar_demo.py`), entra como Rosario (20555555556 / rosario-demo) y
+  recorre Noticias, Beneficios, Notificaciones, Encuestas (crea, publica,
+  manda la noticia) y Trámites, con captura de cada formulario; después lo
+  mismo como el general (20111111120 / uom-demo) para ver que no cambió.
+
+**Aprobación final** (Code, independiente de los dos equipos): revisión del
+diff, corrida de la suite tocada, y después del deploy la misma
+verificación en Pruebas con 23010101018 que destapó esto.

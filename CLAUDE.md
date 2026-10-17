@@ -1127,6 +1127,18 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     `docs/chat/2026-10-17-auditoria-alcance.md` (padrón 100 → 20, Panel
     5.000 → 1.180 recibos, filtros y mapa 6 → 1, todas las escrituras
     ajenas bloqueadas, el general sin cambios).
+    **Bloque 7 HECHO** (misma tarde, Admin 0.60.02): SDN entró en Pruebas
+    con el admin de Lomas de Zamora y lo vio ELEGIR las otras seccionales
+    como destino. La auditoría medía lo que el servidor acepta, no lo que
+    la pantalla ofrece. Regla 8 del plan: **la pantalla no ofrece lo que el
+    servidor va a descartar** (todo selector de seccional dibuja
+    `seccionales_visibles`; con una sola, texto fijo "Va a tu seccional").
+    Y un agujero real de servidor: la noticia que anuncia una encuesta
+    salía sin destino (a todas); ahora hereda la seccional de la encuesta.
+    Tests `test_alcance_seccional_pantalla.py` (recorre TODOS los bloques
+    de casillas del HTML del acotado, fail-closed). Hecho por dos
+    desarrolladores y dos QA independientes (código y robot Playwright
+    contra la demo local), con aprobación final de Code.
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de

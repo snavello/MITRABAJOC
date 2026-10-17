@@ -7512,6 +7512,14 @@ def noticia_de_encuesta(encuesta_id: int, sindicato_id: int, usuario_id: Optiona
     A diferencia de la notificación, la noticia es PÚBLICA en la portada y
     no se dirige al padrón: la puede ver alguien que no fue invitado. Por
     eso su vigencia es la ventana de la encuesta y ni un día más.
+
+    **Hereda el alcance de la encuesta** (PLAN_ALCANCE_SECCIONAL.md, bloque
+    7, G1): si la encuesta nació en una seccional (la creó un Admin de
+    Seccional, N18), la noticia va solo a esa seccional; si la creó el
+    general (`seccional_id` NULL), va a todas, como siempre. No hace falta
+    mirar el alcance de quien publica la noticia: la encuesta ya lo lleva, y
+    sin esto una encuesta de una seccional se anunciaba a todo el sindicato
+    (`destino_seccionales` vacío = todas).
     """
     e = encuesta_por_id(encuesta_id, sindicato_id)
     if not e:
@@ -7524,7 +7532,8 @@ def noticia_de_encuesta(encuesta_id: int, sindicato_id: int, usuario_id: Optiona
         s.add(Noticia(sindicato_id=sindicato_id, titulo=titulo.strip(),
                       bajada=(bajada or "").strip(), texto_completo=(texto or "").strip(),
                       fecha_desde=e["fecha_desde"], fecha_hasta=e["fecha_hasta"],
-                      creada=fechas.ahora_texto(), encuesta_id=encuesta_id))
+                      creada=fechas.ahora_texto(), encuesta_id=encuesta_id,
+                      destino_seccionales=([e["seccional_id"]] if e.get("seccional_id") else [])))
         s.commit()
     registrar_evento_encuesta(encuesta_id, usuario_id, "noticia", titulo.strip()[:200])
     return {"ok": True, "error": ""}

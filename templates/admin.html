@@ -1352,15 +1352,22 @@
           <span class="muted" style="font-size:11.5px;">El afiliado ve un ícono que le abre el formulario — escribí en el texto algo como "completá los datos haciendo click acá".</span>
         </div>
         {% endif %}
-        {% if seccionales %}
+        {# La pantalla no ofrece lo que el servidor va a descartar: quien está
+           acotado ve solo las seccionales de su alcance, y con una sola no hay
+           nada que elegir (el servidor fuerza el destino). #}
+        {% if seccionales_visibles %}
         <div class="campo full">
           <label>Destino</label>
+          {% if alcance_propio is not none and seccionales_visibles|length == 1 %}
+          <div class="muted" id="not-destino-fijo" style="font-size:13px;">Va a tu seccional: <b>{{ seccionales_visibles[0].nombre }}</b></div>
+          {% else %}
           <div class="check-seccionales" id="not-destino">
-            {% for sec in seccionales %}
+            {% for sec in seccionales_visibles %}
             <label class="chk-seccional"><input type="checkbox" name="destino_seccionales" value="{{ sec.id }}"> {{ sec.nombre }}</label>
             {% endfor %}
           </div>
-          <span class="muted" style="font-size:11.5px;">Sin marcar ninguna = todas las seccionales (default).</span>
+          <span class="muted" style="font-size:11.5px;">{% if alcance_propio is none %}Sin marcar ninguna = todas las seccionales (default).{% else %}Sin marcar ninguna = todas las de tu alcance.{% endif %}</span>
+          {% endif %}
         </div>
         {% endif %}
       </div>
@@ -1444,15 +1451,22 @@
           <span class="muted" style="font-size:11.5px;">El afiliado ve un ícono que le abre el formulario (ej.: la reserva del beneficio).</span>
         </div>
         {% endif %}
-        {% if seccionales %}
+        {# La pantalla no ofrece lo que el servidor va a descartar: quien está
+           acotado ve solo las seccionales de su alcance, y con una sola no hay
+           nada que elegir (el servidor fuerza el destino). #}
+        {% if seccionales_visibles %}
         <div class="campo full">
           <label>Destino</label>
+          {% if alcance_propio is not none and seccionales_visibles|length == 1 %}
+          <div class="muted" id="ben-destino-fijo" style="font-size:13px;">Va a tu seccional: <b>{{ seccionales_visibles[0].nombre }}</b></div>
+          {% else %}
           <div class="check-seccionales" id="ben-destino">
-            {% for sec in seccionales %}
+            {% for sec in seccionales_visibles %}
             <label class="chk-seccional"><input type="checkbox" name="destino_seccionales" value="{{ sec.id }}"> {{ sec.nombre }}</label>
             {% endfor %}
           </div>
-          <span class="muted" style="font-size:11.5px;">Sin marcar ninguna = todas las seccionales (default).</span>
+          <span class="muted" style="font-size:11.5px;">{% if alcance_propio is none %}Sin marcar ninguna = todas las seccionales (default).{% else %}Sin marcar ninguna = todas las de tu alcance.{% endif %}</span>
+          {% endif %}
         </div>
         {% endif %}
       </div>
@@ -1519,15 +1533,22 @@
         <div class="campo full"><label>Mensaje *</label>
           <textarea name="texto" id="notif-texto" rows="5" required placeholder="Puede incluir URLs, se muestran como link"></textarea>
         </div>
+        {# Acotado a UNA seccional: "a toda tu seccional" es el criterio normal y
+           va primero (no hay criterio "todos"); su casilla viaja tildada y oculta. #}
+        {% set notif_sec_unica = alcance_propio is not none and seccionales_visibles|length == 1 %}
+        {% if alcance_propio is not none and seccionales_visibles %}
+        <div class="campo full muted" id="notif-alcance-aviso" style="font-size:12.5px;">Las notificaciones llegan solo a afiliados de tu seccional ({{ seccionales_visibles | map(attribute='nombre') | join(', ') }}); los demás criterios se aplican dentro de ella.</div>
+        {% endif %}
         <div class="campo full"><label>Destinatarios *</label>
           <select name="criterio" id="notif-criterio" onchange="cambiarCriterioNotif()">
+            {% if notif_sec_unica %}<option value="seccional">A toda tu seccional ({{ seccionales_visibles[0].nombre }})</option>{% endif %}
             <option value="cuil">Por CUIL</option>
             <option value="cuit_empleador">Por CUIT de empresa</option>
-            {% if seccionales %}<option value="seccional">Por seccional</option>{% endif %}
+            {% if seccionales_visibles and not notif_sec_unica %}<option value="seccional">Por seccional</option>{% endif %}
             <option value="provincia">Por provincia</option>
           </select>
         </div>
-        <div class="campo full" id="notif-valores-cuil">
+        <div class="campo full{% if notif_sec_unica %} oculto{% endif %}" id="notif-valores-cuil">
           <label>CUIL(es), separados por coma</label>
           <input type="text" id="notif-valores-cuil-input" placeholder="20111111112, 27222222228">
         </div>
@@ -1535,14 +1556,19 @@
           <label>CUIT(s) de empresa, separados por coma</label>
           <input type="text" id="notif-valores-cuit_empleador-input" placeholder="30111222335">
         </div>
-        {% if seccionales %}
-        <div class="campo full oculto" id="notif-valores-seccional">
+        {% if seccionales_visibles %}
+        <div class="campo full{% if not notif_sec_unica %} oculto{% endif %}" id="notif-valores-seccional">
+          {% if notif_sec_unica %}
+          <div class="muted" style="font-size:13px;">Va a toda tu seccional: <b>{{ seccionales_visibles[0].nombre }}</b></div>
+          <div class="check-seccionales" id="notif-check-seccionales" hidden style="display:none"><input type="checkbox" value="{{ seccionales_visibles[0].id }}" checked hidden></div>
+          {% else %}
           <label>Seccionales</label>
           <div class="check-seccionales" id="notif-check-seccionales">
-            {% for sec in seccionales %}
+            {% for sec in seccionales_visibles %}
             <label class="chk-seccional"><input type="checkbox" value="{{ sec.id }}"> {{ sec.nombre }}</label>
             {% endfor %}
           </div>
+          {% endif %}
         </div>
         {% endif %}
         <div class="campo full oculto" id="notif-valores-provincia">
@@ -2058,7 +2084,7 @@
 
         <h3 class="ct-secc" style="margin-top:22px;">Noticia en la portada</h3>
         <p class="muted" style="font-size:11.5px; margin:0 0 8px;">
-          Opcional y pública: la ve cualquiera que entre a la app, esté o no en el padrón.
+          {% if alcance_propio is not none %}Opcional y pública para tu seccional: la ve cualquiera de tu seccional que entre a la app, esté o no en el padrón.{% else %}Opcional y pública: la ve cualquiera que entre a la app, esté o no en el padrón.{% endif %}
           Vigente exactamente durante la ventana de la encuesta.</p>
         <form method="post" action="/admin/encuesta/noticia">
           <input type="hidden" name="id" class="av-id">
@@ -2095,24 +2121,30 @@
             Al publicar se <b>fija el padrón</b>: se resuelve ahora quiénes pueden responder y
             esa lista no se recalcula nunca más. Es lo que hace que "respondieron 620 de 1.000"
             signifique algo. No se puede deshacer.</p>
+          {# El acotado ya tiene "A todo el padrón de tu seccional": "Por seccional"
+             solo si puede elegir entre varias. El general la ve siempre que haya
+             alguna (aunque sea una). #}
+          {% set pub_ofrece_seccional = (alcance_propio is none and seccionales_visibles) or seccionales_visibles|length > 1 %}
           <div class="campo"><label>¿A quiénes?</label>
             <select name="criterio" id="pub-criterio" onchange="cambioCriterioPublicar()">
-              <option value="todos">A todo el padrón</option>
-              {% if seccionales %}<option value="seccional">Por seccional</option>{% endif %}
+              <option value="todos">A todo el padrón{% if alcance_propio is not none %} de tu seccional{% endif %}</option>
+              {% if pub_ofrece_seccional %}<option value="seccional">Por seccional</option>{% endif %}
               <option value="provincia">Por provincia</option>
               <option value="cuit_empleador">Por empresa (CUIT)</option>
               <option value="cuil">Por CUIL</option>
             </select>
           </div>
+          {% if pub_ofrece_seccional %}
           <div class="campo oculto" id="pub-seccionales" style="margin-top:10px;">
             <label>Seccionales</label>
             <div class="check-seccionales">
-              {% for sec in seccionales %}
+              {% for sec in seccionales_visibles %}
               <label class="chk-seccional"><input type="checkbox" name="valores" value="{{ sec.id }}"
                      class="pub-valor" onchange="contarDestinatarios()"> {{ sec.nombre }}</label>
               {% endfor %}
             </div>
           </div>
+          {% endif %}
           <div class="campo oculto" id="pub-texto" style="margin-top:10px;">
             <label id="pub-texto-label">Valores, separados por coma</label>
             <input type="text" name="valores" id="pub-texto-input" class="pub-valor"
@@ -2716,7 +2748,7 @@
 
   {# El aviso solo aparece si hay algo que hacer, y recién después de que
      exista al menos una seccional: en un sindicato nuevo sería ruido. #}
-  {% set sin_ubicar = seccionales | rejectattr('latitud') | list %}
+  {% set sin_ubicar = seccionales_visibles | rejectattr('latitud') | list %}
   {% if sin_ubicar %}
   <div class="msg" style="background:#fdf3e7; color:#8a5a1a;">
     {{ sin_ubicar|length }} seccional{{ 'es' if sin_ubicar|length > 1 else '' }} sin ubicación: no aparece{{ 'n' if sin_ubicar|length > 1 else '' }} en el mapa del Panel Sindical ni en la app del afiliado. Editala{{ 's' if sin_ubicar|length > 1 else '' }} y usá "Buscar en el mapa".
@@ -5853,7 +5885,9 @@ function cancelarSeccional() {
 // "Guardar" con el formulario a medias (por ejemplo editando una seccional
 // vieja, que abre directo en el paso 2). Lleva a la persona AL PASO donde
 // está el problema, en vez de dejarle un mensaje lejos del campo.
-document.getElementById('form-seccional').addEventListener('submit', function (ev) {
+// (guarda: el formulario no se dibuja sin el permiso Seccionales)
+var formSeccional = document.getElementById('form-seccional');
+if (formSeccional) formSeccional.addEventListener('submit', function (ev) {
   var faltan = secFaltantes();
   if (faltan.length) {
     ev.preventDefault();
@@ -6770,7 +6804,7 @@ function cerrarPublicar() {
 }
 function cambioCriterioPublicar() {
   const c = document.getElementById('pub-criterio').value;
-  document.getElementById('pub-seccionales').classList.toggle('oculto', c !== 'seccional');
+  document.getElementById('pub-seccionales')?.classList.toggle('oculto', c !== 'seccional');
   document.getElementById('pub-texto').classList.toggle('oculto',
     !['provincia', 'cuit_empleador', 'cuil'].includes(c));
   const etiquetas = {
