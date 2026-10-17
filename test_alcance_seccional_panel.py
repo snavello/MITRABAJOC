@@ -560,3 +560,50 @@ def test_7_el_aviso_de_lanzamiento_de_la_encuesta_del_local_llega_solo_a_su_padr
             db.NotificacionDestinatario.notificacion_id == notif.id)).all()}
     assert ANA in cuils
     assert FABIAN not in cuils and SIN_SEC not in cuils
+
+
+def test_7_el_recordatorio_de_la_encuesta_del_local_llega_solo_a_los_que_faltan_de_su_padron():
+    # Un segundo afiliado de Rosario, para que "los que faltan" no sea todo el padrón.
+    BETO = "27131313132"
+    with db.get_session() as s:
+        s.add(Trabajador(sindicato_id=SID, cuil=BETO, seccional_id=SEC_ROS, activo=True))
+        db.asegurar_cuenta(s, BETO).nombre = "Beto Rosario"
+        s.commit()
+    try:
+        c = _cliente(LOCAL, "loc")
+        eid, _ = _encuesta_con_noticia(c, "Encuesta Recordatorio Rosario")
+        # Todos respondieron salvo BETO. FABIAN y SIN_SEC nunca estuvieron en el padrón fijado.
+        with Session(db.engine) as s:
+            part = {p.cuil: p for p in s.exec(select(db.EncuestaParticipante).where(
+                db.EncuestaParticipante.encuesta_id == eid)).all()}
+            de_rosario = {t.cuil for t in s.exec(select(Trabajador).where(
+                Trabajador.sindicato_id == SID, Trabajador.seccional_id == SEC_ROS)).all()}
+            assert set(part) == de_rosario and {ANA, BETO} <= set(part), \
+                "el padrón fijado es solo el de Rosario"
+            for cuil, p in part.items():
+                if cuil != BETO:
+                    p.respondio = True
+                    s.add(p)
+            s.commit()
+        r = c.post("/admin/encuesta/notificar", data={"id": eid, "texto": "Lanzamiento"},
+                   follow_redirects=False)
+        assert r.headers["location"].startswith(f"/admin?aviso={len(de_rosario)}"), r.headers["location"]
+        r = c.post("/admin/encuesta/notificar", data={"id": eid, "texto": "Recordatorio",
+                                                      "tipo": "recordatorio"},
+                   follow_redirects=False)
+        assert r.headers["location"].startswith("/admin?aviso=1"), r.headers["location"]
+        with Session(db.engine) as s:
+            notifs = s.exec(select(db.Notificacion).where(db.Notificacion.encuesta_id == eid)
+                            .order_by(db.Notificacion.id)).all()
+            assert len(notifs) == 2
+            cuils = {d.cuil for d in s.exec(select(db.NotificacionDestinatario).where(
+                db.NotificacionDestinatario.notificacion_id == notifs[1].id)).all()}
+        assert cuils == {BETO}
+        assert FABIAN not in cuils and SIN_SEC not in cuils
+    finally:
+        with Session(db.engine) as s:
+            for t in s.exec(select(Trabajador).where(Trabajador.cuil == BETO)).all():
+                s.delete(t)
+            for cta in s.exec(select(db.CuentaTrabajador).where(db.CuentaTrabajador.cuil == BETO)).all():
+                s.delete(cta)
+            s.commit()
