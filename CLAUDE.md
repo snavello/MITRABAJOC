@@ -1106,9 +1106,17 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     suya, otra = 403 u omitida con aviso), y Noticias y Beneficios: el local
     ve las suyas y las globales, no las de otra, y edita o borra solo las
     que caen enteras en su alcance (`db.publicacion_en_alcance`,
-    `_exigir_alcance_publicacion`, marca `propia` en la fila). Quedan los
-    bloques 3 (formularios), 4 (Panel Sindical), 5 (Empleadores y catálogo)
-    y 6 (cierre).
+    `_exigir_alcance_publicacion`, marca `propia` en la fila).
+    **Bloques 3 y 5 HECHOS** (Admin 0.59.01): formularios de trámite (un
+    acotado crea solo de su seccional, vacía = la suya; ve los globales pero
+    no los edita ni borra: `_exigir_alcance_seccional` también con `None`,
+    `tipos_tramite_del_sindicato(..., alcance)` con marca `propio`);
+    Empleadores fuera para quien está acotado (`permisos.SECCIONES_EMPLEADORES`
+    descontadas en `db.permisos_efectivos`, también para un usuario de área
+    de una seccional sin `ve_todas`); catálogo en solo lectura (todo POST de
+    `permisos.SECCIONES_CATALOGO` rechazado en `_exigir_permiso_de_ruta` si
+    `db.es_acotado`, banner y acciones ocultas en los cuatro paneles).
+    Quedan los bloques 4 (Panel Sindical) y 6 (cierre).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -1422,10 +1430,10 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     trámite; los formularios encadenados son solo para datos nuevos después de
     la aprobación.
 14. **El Admin de Seccional acotado en todo el panel**
-    (`PLAN_ALCANCE_SECCIONAL.md`, 2026-10-17): seis bloques. Hechos 0, 1 y
-    2 (red de tests, Trabajadores, Noticias y Beneficios); quedan 3
-    (formularios de trámite), 4 (Panel Sindical), 5 (Empleadores fuera para
-    el local, catálogo en solo lectura) y 6 (cierre con la auditoría
+    (`PLAN_ALCANCE_SECCIONAL.md`, 2026-10-17): seis bloques. Hechos 0, 1,
+    2, 3 y 5 (red de tests, Trabajadores, Noticias y Beneficios, formularios
+    de trámite, Empleadores fuera para el acotado y catálogo en solo
+    lectura); quedan 4 (Panel Sindical) y 6 (cierre con la auditoría
     repetida). Ver "Estado actual" 37.
 13. **Listas del sindicato y validaciones por función en Trámites**
     (`PLAN_LISTAS_VALIDACIONES.md`, acordado el 2026-10-16, D1–D7; **bloque

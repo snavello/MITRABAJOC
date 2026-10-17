@@ -3160,11 +3160,19 @@ def permisos_efectivos(usuario_id: int) -> set:
     Devuelve set() para un usuario inexistente o dado de baja -- sin
     excepción: quien llama decide si eso es un 403 o simplemente no mostrar
     nada."""
-    from permisos import calcular_efectivos, secciones_de_modulos
+    from permisos import calcular_efectivos, secciones_de_modulos, SECCIONES_EMPLEADORES
     with Session(engine) as s:
         u = s.get(UsuarioSindicato, usuario_id)
         if not u or not u.activo:
             return set()
+        # ¿Está ACOTADO a una seccional? (la misma regla que alcance_seccional,
+        # resuelta con esta sesión para no abrir otra.) Quien lo está no ve
+        # Empleadores: no tienen seccional (PLAN_ALCANCE_SECCIONAL.md, bloque 5).
+        sec = s.get(Seccional, u.seccional_id) if u.seccional_id else None
+        acotado = not u.es_super_admin and not (sec and sec.sindicato_id == u.sindicato_id
+                                                 and sec.ve_todas)
+        def _recortar(secciones: set) -> set:
+            return secciones - SECCIONES_EMPLEADORES if acotado else secciones
         # Los módulos se leen con ESTA sesión. Llamar a modulos_habilitados()
         # abría una segunda conexión con la primera todavía tomada, y como
         # esto corre en cada ruta /admin/* (vía exigir_sindicato), cada request
@@ -3182,7 +3190,7 @@ def permisos_efectivos(usuario_id: int) -> set:
         # las rutas que administran áreas y usuarios. Separar las dos cosas
         # es lo que hace que no haya dos catálogos que mantener.
         if u.es_super_admin or u.es_admin_seccional:
-            return set(secciones_de_modulos(mods))
+            return _recortar(set(secciones_de_modulos(mods)))
         del_area = []
         if u.area_id:
             area = s.get(Area, u.area_id)
@@ -3195,7 +3203,13 @@ def permisos_efectivos(usuario_id: int) -> set:
             PermisoUsuario.usuario_id == usuario_id)).all()
         agregados = [x.seccion for x in individuales if x.tipo == "agregar"]
         bloqueados = [x.seccion for x in individuales if x.tipo == "bloquear"]
-        return calcular_efectivos(del_area, agregados, bloqueados, mods)
+        return _recortar(calcular_efectivos(del_area, agregados, bloqueados, mods))
+
+
+def es_acotado(usuario_id: int) -> bool:
+    """¿Este usuario trabaja acotado a una seccional? (alcance_seccional
+    distinto de None.) Lo usan las reglas de solo lectura del catálogo."""
+    return alcance_seccional(usuario_id) is not None
 
 
 def tiene_permiso(usuario_id: int, seccion: str) -> bool:
@@ -5275,7 +5289,7 @@ def borrar_tipo_tramite(tipo_id: int, sindicato_id: int) -> bool:
 
 
 def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False,
-                                 seccional_id: Optional[int] = "todas") -> list:
+                                 seccional_id: Optional[int] = "todas", alcance=None) -> list:
     """Tipos de trámite del sindicato con sus campos, para el constructor de
     admin y el listado que ve el trabajador (con solo_activos=True).
 
@@ -5294,6 +5308,15 @@ def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False,
             q = q.where((TipoTramite.seccional_id == None) |  # noqa: E711
                         (TipoTramite.seccional_id == seccional_id)) \
                 if seccional_id else q.where(TipoTramite.seccional_id == None)  # noqa: E711
+        # `alcance` recorta lo que ve un USUARIO DEL PANEL acotado (bloque 3):
+        # los globales (le llegan a su gente) más los de su alcance; los de
+        # otras seccionales no viajan. Cada fila dice si es `propio` (la puede
+        # editar o borrar): un global lo toca solo el alcance total.
+        if alcance is not None:
+            if not alcance:
+                return []
+            q = q.where((TipoTramite.seccional_id == None) |  # noqa: E711
+                        (TipoTramite.seccional_id.in_(list(alcance))))
         tipos = s.exec(q.order_by(TipoTramite.creado.desc())).all()
         resultado = []
         for t in tipos:
@@ -5307,6 +5330,7 @@ def tipos_tramite_del_sindicato(sindicato_id: int, solo_activos: bool = False,
                 "reglas_consistencia": t.reglas_consistencia or [],
                 "requisitos": t.requisitos or [],
                 "seccional_id": t.seccional_id,
+                "propio": alcance is None or (t.seccional_id in alcance),
                 "area_destino_default_id": t.area_destino_default_id,
                 "permite_pase": t.permite_pase,
                 "areas_pase": sorted({x.area_id for x in s.exec(

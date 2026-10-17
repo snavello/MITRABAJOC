@@ -80,6 +80,16 @@ SECCIONES = {
 # como un check más en la pantalla de permisos y sería asignable.
 SECCION_SUPER_ADMIN = "areas_usuarios"
 
+# PLAN_ALCANCE_SECCIONAL.md, bloque 5 (decisiones de SDN, 2026-10-17):
+# - Empleadores no tiene seccional (N11), así que un usuario ACOTADO a una
+#   seccional no los ve: estas secciones se le descuentan en
+#   db.permisos_efectivos.
+# - El catálogo (Conceptos, Reglas, Aprendizaje, Convenio) es del sindicato
+#   entero: un usuario acotado lo ve en solo lectura, no lo edita (todo POST
+#   de estas secciones se rechaza en main._exigir_permiso_de_ruta).
+SECCIONES_EMPLEADORES = frozenset(s for s in SECCIONES if s.startswith("emp_"))
+SECCIONES_CATALOGO = frozenset({"conceptos", "formulas", "aprendizaje", "convenio"})
+
 # Orden en que se muestran los grupos en la UI.
 ORDEN_GRUPOS = ["Recibos", "Padrón", "Comunicación", "Trámites", "Empleadores"]
 

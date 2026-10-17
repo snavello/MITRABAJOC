@@ -103,8 +103,12 @@ def _marta():
 
 def test_tiene_las_mismas_secciones_que_el_general():
     """No es un descuido: lo que lo achica es el alcance, no el catálogo.
-    Tener dos catálogos sería tener dos cosas que mantener."""
-    assert db.permisos_efectivos(U_RAUL) == db.permisos_efectivos(U_MARTA)
+    Tener dos catálogos sería tener dos cosas que mantener.
+
+    La única resta (PLAN_ALCANCE_SECCIONAL.md, bloque 5, decisión de SDN):
+    Empleadores no tiene seccional, así que quien está acotado no los ve."""
+    from permisos import SECCIONES_EMPLEADORES
+    assert db.permisos_efectivos(U_RAUL) == db.permisos_efectivos(U_MARTA) - SECCIONES_EMPLEADORES
     print("OK  test_tiene_las_mismas_secciones_que_el_general")
 
 

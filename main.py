@@ -1421,6 +1421,12 @@ def _exigir_permiso_de_ruta(request: Request, ses: dict) -> None:
         return
     if not db.tiene_permiso(uid, seccion):
         raise _sin_permiso("No tenés permiso para esta sección del panel.")
+    # El catálogo del sindicato es de solo lectura para quien está acotado a
+    # una seccional (PLAN_ALCANCE_SECCIONAL.md, bloque 5): lo ve, no lo edita.
+    if (seccion in permisos_mod.SECCIONES_CATALOGO and request.method == "POST"
+            and db.es_acotado(uid)):
+        raise _sin_permiso("El catálogo del sindicato (conceptos, reglas, aprendizaje y "
+                           "convenio) lo edita el administrador general.")
 
 
 def exigir_sindicato(request: Request) -> int:
@@ -1646,8 +1652,10 @@ def admin(request: Request):
         # Lo que el constructor de Trámites ofrece para una validación por
         # función: datos del sistema, funciones y listas con sus columnas.
         "catalogo_funcion": validaciones_tramite.catalogo_funcion(),
-        "tipos_tramite": db.tipos_tramite_del_sindicato(sid)
+        "tipos_tramite": db.tipos_tramite_del_sindicato(sid, alcance=alcance_propio)
                          if puede("tramites_formularios", "tramites_recibidos") else [],
+        # El catálogo es de solo lectura para quien está acotado (bloque 5).
+        "catalogo_solo_lectura": alcance_propio is not None,
         "tramites": db.tramites_del_sindicato(sid, usuario_id=uid)
                     if puede("tramites_recibidos") else [],
         "tramites_nuevos": db.contar_tramites_nuevos(sid, uid)
@@ -4079,10 +4087,10 @@ async def abm_tramite_tipo(
     # mapeó dejaría trámites sin dueño y nadie los vería en ninguna bandeja.
     if not destino_default:
         return RedirectResponse("/admin?error=sindestino#tramites", status_code=303)
-    # Un admin local solo arma formularios DE su seccional, y su destino y
-    # su mapa tienen que caer dentro de su alcance.
-    if del_seccional:
-        _exigir_alcance_seccional(request, del_seccional)
+    # Un admin local solo arma formularios DE su seccional (vacía = la suya;
+    # un global lo arma solo el alcance total), y su destino y su mapa
+    # tienen que caer dentro de su alcance. Bloque 3.
+    del_seccional = _seccional_en_alcance(request, del_seccional)
     mapa = {}
     for k, v in destinos_crudos.items():
         try:
@@ -4094,8 +4102,8 @@ async def abm_tramite_tipo(
         if not tipo or tipo["sindicato_id"] != sid:
             return RedirectResponse("/admin#tramites", status_code=303)
         # La seccional de un formulario no se edita (ver editar_tipo_tramite).
-        if tipo.get("seccional_id"):
-            _exigir_alcance_seccional(request, tipo["seccional_id"])
+        # Un global (None) lo edita solo el alcance total: fail-closed.
+        _exigir_alcance_seccional(request, tipo.get("seccional_id"))
         db.editar_tipo_tramite(int(id), sid, titulo, codigo, activo == "si", campos, reglas,
                                area_destino_default_id=destino_default,
                                permite_pase=bool(permite_pase), requisitos=requisitos)
@@ -4176,6 +4184,11 @@ async def nombres_tramite_tipo(request: Request):
 def borrar_tramite_tipo(request: Request, id: int = Form(...)):
     sid = exigir_sindicato(request)
     _exigir_modulo(sid, "tramites")
+    tipo = db.tipo_tramite_por_id(id)
+    if not tipo or tipo["sindicato_id"] != sid:
+        return RedirectResponse("/admin#tramites", status_code=303)
+    # Un global o uno de otra seccional no lo borra un admin acotado (bloque 3).
+    _exigir_alcance_seccional(request, tipo.get("seccional_id"))
     ok = db.borrar_tipo_tramite(id, sid)
     if not ok:
         return RedirectResponse("/admin?error=tramitesenviados#tramites", status_code=303)
