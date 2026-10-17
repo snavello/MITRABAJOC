@@ -6771,10 +6771,14 @@ def _cupo_panel():
 
 
 def _filtros_dashboard(request: Request) -> dict:
+    """Los filtros del Panel, con el alcance de seccional de quien pide YA
+    impuesto (dashboard.imponer_alcance, bloque 4): los once endpoints de
+    agregados, el explorador y el mapa lo heredan de acá, en un solo lugar."""
     try:
-        return dashboard.parsear_filtros(request.query_params)
+        f = dashboard.parsear_filtros(request.query_params)
     except ValueError as e:
         raise HTTPException(422, str(e))
+    return dashboard.imponer_alcance(f, _alcance_de(request))
 
 
 @app.post("/admin/dashboard/asistente")
@@ -6803,7 +6807,8 @@ def dashboard_asistente(request: Request, cuerpo: dict = Body(default={})):
                                  f"por día de tu sindicato. Mañana vuelve a estar disponible; los "
                                  f"filtros del panel siguen funcionando a mano.")
     try:
-        salida = asistente.responder(sid, pregunta, filtros, historial)
+        salida = asistente.responder(sid, pregunta, filtros, historial,
+                                     alcance=_alcance_de(request))
     except asistente.ErrorModelo as e:
         print(f"[asistente] sindicato {sid}: {e}")
         raise ErrorApp("E-ASISTENTE-01")
@@ -6945,7 +6950,7 @@ def dashboard_detalle_recibo(request: Request, recibo_id: int):
     """Modal "Ver" del explorador. La anonimización de un recibo NO enviado
     la hace dashboard.detalle_recibo en el servidor, no el frontend."""
     sid = _exigir_dashboard_detalle(request)
-    d = dashboard.detalle_recibo(sid, recibo_id)
+    d = dashboard.detalle_recibo(sid, recibo_id, _alcance_de(request))
     if not d:
         raise HTTPException(404, "Recibo inexistente.")
     return d
@@ -6984,7 +6989,7 @@ def admin_reportes_recibo(request: Request, recibo_id: int):
 @app.get("/admin/dashboard/detalle/tramite/{tramite_id}")
 def dashboard_detalle_tramite(request: Request, tramite_id: int):
     sid = _exigir_dashboard_detalle(request)
-    d = dashboard.detalle_tramite(sid, tramite_id)
+    d = dashboard.detalle_tramite(sid, tramite_id, _alcance_de(request))
     if not d:
         raise HTTPException(404, "Trámite inexistente.")
     return d
@@ -7001,7 +7006,7 @@ def dashboard_detalle_notificaciones(request: Request, dia: str, tipo: str,
     if tipo not in dashboard.TIPOS_NOTIF:
         raise HTTPException(422, "'tipo' admite 'manual' o 'sistema'.")
     return {"notificaciones": dashboard.detalle_notificaciones_grupo(
-        sid, dia, seccional_id or None, tipo)}
+        sid, dia, seccional_id or None, tipo, _alcance_de(request))}
 
 
 @app.get("/admin/dashboard/detalle/notificacion/{notificacion_id}/destinatarios")
@@ -7009,7 +7014,7 @@ def dashboard_detalle_notif_destinatarios(request: Request, notificacion_id: int
     """Último nivel del modal de notificaciones: quién la recibió y cuándo
     la leyó, persona por persona."""
     sid = _exigir_dashboard_detalle(request)
-    d = dashboard.destinatarios_notificacion(sid, notificacion_id)
+    d = dashboard.destinatarios_notificacion(sid, notificacion_id, _alcance_de(request))
     if d is None:
         raise HTTPException(404, "Notificación inexistente.")
     return d
@@ -7020,7 +7025,7 @@ def dashboard_detalle_consulta(request: Request, consulta_id: int):
     sid = _exigir_dashboard_detalle(request)
     if not db.config_dashboard()["consultas_bot_habilitado"]:
         raise HTTPException(404, "No disponible.")
-    d = dashboard.detalle_consulta(sid, consulta_id)
+    d = dashboard.detalle_consulta(sid, consulta_id, _alcance_de(request))
     if not d:
         raise HTTPException(404, "Consulta inexistente.")
     return d
@@ -7033,10 +7038,11 @@ def dashboard_buscar_afiliados(request: Request, q: str = "", id: int = 0):
     devuelve ese afiliado solo (para etiquetar el chip de un link con
     ?afiliado=). Gate del explorador: mirar a una persona es detalle."""
     sid = _exigir_dashboard_detalle(request)
+    alcance = _alcance_de(request)
     if id:
-        uno = dashboard.afiliado_por_id(sid, id)
+        uno = dashboard.afiliado_por_id(sid, id, alcance)
         return {"items": [uno] if uno else []}
-    return {"items": dashboard.buscar_afiliados(sid, q[:80])}
+    return {"items": dashboard.buscar_afiliados(sid, q[:80], alcance=alcance)}
 
 
 @app.get("/admin/dashboard/filtros")
@@ -7046,8 +7052,11 @@ def dashboard_catalogo_filtros(request: Request):
     (percentiles 1 y 99 del tenant, §4.3 -- se calculan en Fase 2 si hace
     falta afinar; por ahora min/max reales)."""
     sid = _exigir_dashboard(request)
+    alcance = _alcance_de(request)
     with db.get_session() as s:
-        secc = db.seccionales_del_sindicato(sid)
+        # Un admin acotado no elige entre las otras seccionales (bloque 4).
+        secc = [x for x in db.seccionales_del_sindicato(sid)
+                if alcance is None or x["id"] in alcance]
         from sqlalchemy import text as _text
         categorias = [f[0] for f in s.execute(_text(
             "SELECT DISTINCT categoria FROM reciboverificado "

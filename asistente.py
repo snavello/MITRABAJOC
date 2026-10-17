@@ -276,7 +276,7 @@ def _pestana(crudo: dict, cat: dict) -> str:
     return tab if tab in PESTANAS else "recibos"
 
 
-def _validar(sid: int, entrada: dict, cat: dict, hoy: date) -> tuple:
+def _validar(sid: int, entrada: dict, cat: dict, hoy: date, alcance=None) -> tuple:
     """Salida de la herramienta -> (estado crudo para el JS, filtros parseados
     para dashboard.py, pestaña). Lanza ValueError con el mismo mensaje que ve
     el frontend; el modelo lo recibe como error y corrige. `persona` se
@@ -308,16 +308,18 @@ def _validar(sid: int, entrada: dict, cat: dict, hoy: date) -> tuple:
         # Las empresas ya filtradas acotan la búsqueda: "Pérez, el del banco
         # Galicia" desempata homónimos sin que el modelo vea el padrón.
         cuits = [e["cuit"] for e in cat["empresas"] if e["id"] in set(crudo["empresas"])] or None
-        candidatos = dashboard.buscar_afiliados(sid, persona, cuits=cuits, limite=6)
+        candidatos = dashboard.buscar_afiliados(sid, persona, cuits=cuits, limite=6, alcance=alcance)
         if not candidatos:
             raise PersonaNoEncontrada(persona)
         if len(candidatos) > 1:
             raise PersonaAmbigua(persona, candidatos, crudo)
         afiliado = candidatos[0]["id"]
-    elif afiliado and not dashboard.afiliado_por_id(sid, afiliado):
+    elif afiliado and not dashboard.afiliado_por_id(sid, afiliado, alcance):
         afiliado = None          # id ajeno o inexistente: no es de este sindicato
     crudo["afiliado"] = afiliado
-    f = dashboard.parsear_filtros(_a_params(crudo), hoy)
+    # El alcance de quien pregunta se impone acá, como en _filtros_dashboard:
+    # el modelo no puede pedir más de lo que el panel le muestra (bloque 4).
+    f = dashboard.imponer_alcance(dashboard.parsear_filtros(_a_params(crudo), hoy), alcance)
     return crudo, f, crudo["tab"]
 
 
@@ -461,7 +463,7 @@ def _llamar(cli, sistema: str, mensajes: list, modelo: str = MODELO):
 
 
 def responder(sid: int, pregunta: str, filtros_actuales: dict, historial: list,
-              hoy: date | None = None) -> dict:
+              hoy: date | None = None, alcance=None) -> dict:
     """Una pregunta -> {"respuesta", "filtros" (o None), "aplicar", "uso"}.
 
     Bucle de a lo sumo MAX_VUELTAS llamadas: el modelo llama la herramienta,
@@ -501,7 +503,7 @@ def responder(sid: int, pregunta: str, filtros_actuales: dict, historial: list,
         resultados = []
         for u in usos:
             try:
-                crudo, f, tab = _validar(sid, u.input or {}, cat, hoy)
+                crudo, f, tab = _validar(sid, u.input or {}, cat, hoy, alcance=alcance)
                 datos = _agregados(sid, crudo, f, tab, cat)
                 filtros_salida = crudo
                 resultados.append({"type": "tool_result", "tool_use_id": u.id,
@@ -530,6 +532,6 @@ def responder(sid: int, pregunta: str, filtros_actuales: dict, historial: list,
                  else "No pude resolver la consulta. Probá con una pregunta más simple.")
     afiliado = None
     if filtros_salida and filtros_salida.get("afiliado"):
-        afiliado = dashboard.afiliado_por_id(sid, filtros_salida["afiliado"])   # para el chip
+        afiliado = dashboard.afiliado_por_id(sid, filtros_salida["afiliado"], alcance)   # para el chip
     return {"respuesta": texto, "filtros": filtros_salida, "aplicar": filtros_salida is not None,
             "afiliado": afiliado, "candidatos": [], "filtros_pendientes": None, "uso": uso}

@@ -1116,7 +1116,14 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     de una seccional sin `ve_todas`); catálogo en solo lectura (todo POST de
     `permisos.SECCIONES_CATALOGO` rechazado en `_exigir_permiso_de_ruta` si
     `db.es_acotado`, banner y acciones ocultas en los cuatro paneles).
-    Quedan los bloques 4 (Panel Sindical) y 6 (cierre).
+    **Bloque 4 HECHO** (Admin 0.60.01): el Panel Sindical, v1 y v2, impone
+    el alcance en un solo lugar (`dashboard.imponer_alcance` desde
+    `main._filtros_dashboard`: lo pedido ∩ el alcance, vacío = sin filas),
+    el mapa ignora el filtro elegido pero no el impuesto, el catálogo de
+    filtros y el buscador de afiliados no ofrecen las otras seccionales, los
+    cuatro detalles del modal "Ver" devuelven 404 fuera del alcance y el
+    Asistente pasa por el mismo `imponer_alcance`. Queda el bloque 6
+    (cierre: repetir la auditoría contra el lote).
 
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
@@ -1431,9 +1438,9 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     la aprobación.
 14. **El Admin de Seccional acotado en todo el panel**
     (`PLAN_ALCANCE_SECCIONAL.md`, 2026-10-17): seis bloques. Hechos 0, 1,
-    2, 3 y 5 (red de tests, Trabajadores, Noticias y Beneficios, formularios
-    de trámite, Empleadores fuera para el acotado y catálogo en solo
-    lectura); quedan 4 (Panel Sindical) y 6 (cierre con la auditoría
+    2, 3, 4 y 5 (red de tests, Trabajadores, Noticias y Beneficios,
+    formularios de trámite, Panel Sindical, Empleadores fuera para el
+    acotado y catálogo en solo lectura); queda 6 (cierre con la auditoría
     repetida). Ver "Estado actual" 37.
 13. **Listas del sindicato y validaciones por función en Trámites**
     (`PLAN_LISTAS_VALIDACIONES.md`, acordado el 2026-10-16, D1–D7; **bloque
@@ -1819,6 +1826,14 @@ Especificación rectora en [`docs/DASHBOARD.md`](docs/DASHBOARD.md) (+ mockup
 habilitable `"dashboard"` (opt-in, fuera de `MODULOS_INICIALES`). Reglas
 vigentes:
 
+- **El alcance de seccional se impone en los filtros, en un solo lugar**
+  (2026-10-17, `PLAN_ALCANCE_SECCIONAL.md` bloque 4): `main._filtros_dashboard`
+  llama a `dashboard.imponer_alcance(f, alcance)`, que deja `f["seccionales"]`
+  = lo pedido ∩ el alcance (o el alcance entero; vacío = `[0]`, sin filas) y
+  `f["alcance"]` para lo que distingue impuesto de elegido (el mapa). Los
+  detalles del modal "Ver", el buscador de afiliados y el Asistente reciben
+  el alcance aparte. Un endpoint nuevo del panel que use `_filtros_dashboard`
+  lo hereda; uno que reciba un id de persona tiene que chequearlo.
 - **Agregados 100% en SQL** (`dashboard.py`), con índices compuestos que
   empiezan por `sindicato_id` + fecha. Columnas analíticas en
   `ReciboVerificado` (`procesado_en` ordenable, `cuit_empleador`, `bruto`,

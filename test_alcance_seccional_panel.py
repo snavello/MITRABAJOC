@@ -21,8 +21,11 @@ import db
 import auth
 import main
 from db import (Sindicato, UsuarioSindicato, Seccional, Trabajador, Noticia, Beneficio,
-                Area, TipoTramite, Concepto)
+                Area, TipoTramite, Concepto, ReciboVerificado)
+import dashboard
+import fechas
 import json
+from datetime import timedelta
 from modulos import MODULOS
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
@@ -58,6 +61,16 @@ with db.get_session() as s:
                          ("Noticia Córdoba", [SEC_CBA]), ("Noticia ambas", [SEC_ROS, SEC_CBA])):
         s.add(Noticia(sindicato_id=SID, titulo=titulo, fecha_desde="2026-01-01", fecha_hasta="2027-01-01",
                       creada="2026-10-17 10:00", destino_seccionales=dest))
+    # Un recibo por afiliado, todos enviados (así el explorador los lista sin
+    # cláusula), para el Panel Sindical (bloque 4).
+    HOY = fechas.hoy()
+    for cuil, bruto in ((ANA, 900000.0), (FABIAN, 500000.0), (SIN_SEC, 300000.0)):
+        s.add(ReciboVerificado(
+            sindicato_id=SID, cuil=cuil, periodo="2026-09", fecha="01/10/2026 10:00",
+            estado="OK", enviado_sindicato=True, fecha_envio=HOY.isoformat() + " 10:00",
+            detalle={"recibo": {"empleado": {"cuil": cuil}}, "resultado": {"cuil": cuil, "totales": {}}},
+            procesado_en=HOY.isoformat() + " 10:00", cuit_empleador="30111111117",
+            categoria="Operario", formato="nuevo", bruto=bruto, monto_diferencia=0.0))
     for rubro, dest in (("Beneficio global", []), ("Beneficio Rosario", [SEC_ROS]),
                         ("Beneficio Córdoba", [SEC_CBA])):
         s.add(Beneficio(sindicato_id=SID, rubro=rubro, fecha_desde="2026-01-01", fecha_hasta="2027-01-01",
@@ -398,3 +411,74 @@ def test_5_el_general_de_una_seccional_que_ve_todas_no_esta_acotado():
     uid = _uid("27777777772")
     assert db.alcance_seccional(uid) is None and not db.es_acotado(uid)
     assert db.permisos_efectivos(uid) == db.permisos_efectivos(_uid(GENERAL))
+
+
+# ====================== Bloque 4: Panel Sindical ======================
+
+def _rango():
+    hoy = fechas.hoy()
+    return f"desde={(hoy - timedelta(days=30)).isoformat()}&hasta={hoy.isoformat()}"
+
+
+def _recibo_de(cuil):
+    with Session(db.engine) as s:
+        return s.exec(select(ReciboVerificado).where(ReciboVerificado.sindicato_id == SID,
+                                                     ReciboVerificado.cuil == cuil)).first()
+
+
+def test_4_los_kpis_del_local_son_los_del_general_filtrado_por_su_seccional():
+    g, loc = _cliente(GENERAL, "gen"), _cliente(LOCAL, "loc")
+    todos = g.get(f"/admin/dashboard/kpis?{_rango()}").json()["actual"]
+    filtrado = g.get(f"/admin/dashboard/kpis?{_rango()}&seccionales={SEC_ROS}").json()["actual"]
+    local = loc.get(f"/admin/dashboard/kpis?{_rango()}").json()["actual"]
+    assert todos["recibos"] == 3 and filtrado["recibos"] == 1
+    assert local == filtrado
+    # Pedir otra seccional a mano no le abre nada: lo pedido ∩ el alcance.
+    otra = loc.get(f"/admin/dashboard/kpis?{_rango()}&seccionales={SEC_CBA}").json()["actual"]
+    assert otra["recibos"] == 0
+
+
+def test_4_imponer_alcance_es_una_funcion_pura_y_fail_closed():
+    f = {"seccionales": []}
+    assert dashboard.imponer_alcance(dict(f), None)["seccionales"] == []
+    assert dashboard.imponer_alcance(dict(f), {SEC_ROS})["seccionales"] == [SEC_ROS]
+    assert dashboard.imponer_alcance({"seccionales": [SEC_CBA]}, {SEC_ROS})["seccionales"] == [0]
+    assert dashboard.imponer_alcance({"seccionales": [SEC_ROS, SEC_CBA]}, {SEC_ROS})["seccionales"] == [SEC_ROS]
+    assert dashboard.imponer_alcance(dict(f), set())["seccionales"] == [0]
+
+
+def test_4_el_explorador_y_el_detalle_del_local_no_llegan_a_otra_seccional():
+    g, loc = _cliente(GENERAL, "gen"), _cliente(LOCAL, "loc")
+    # Sin `resultado` el explorador lista solo los con diferencias; los de la
+    # fixture están OK, así que se pide ese resultado.
+    assert g.get(f"/admin/dashboard/explorador/recibos?{_rango()}&resultado=ok&page=1").json()["total"] == 3
+    r = loc.get(f"/admin/dashboard/explorador/recibos?{_rango()}&resultado=ok&page=1").json()
+    assert r["total"] == 1
+    ajeno, propio, sin = _recibo_de(FABIAN), _recibo_de(ANA), _recibo_de(SIN_SEC)
+    assert g.get(f"/admin/dashboard/detalle/recibo/{ajeno.id}").status_code == 200
+    assert loc.get(f"/admin/dashboard/detalle/recibo/{ajeno.id}").status_code in (403, 404)
+    assert loc.get(f"/admin/dashboard/detalle/recibo/{sin.id}").status_code in (403, 404)
+    assert loc.get(f"/admin/dashboard/detalle/recibo/{propio.id}").status_code == 200
+
+
+def test_4_los_filtros_el_mapa_y_el_buscador_del_local_no_ofrecen_las_otras():
+    g, loc = _cliente(GENERAL, "gen"), _cliente(LOCAL, "loc")
+    assert {x["nombre"] for x in g.get("/admin/dashboard/filtros").json()["seccionales"]} >= {"Rosario", "Córdoba"}
+    assert {x["nombre"] for x in loc.get("/admin/dashboard/filtros").json()["seccionales"]} == {"Rosario"}
+    geo = loc.get(f"/admin/dashboard/seccionales-geo?{_rango()}").json()
+    nombres = {x["nombre"] for x in geo["seccionales"] + geo["sin_ubicar"]}
+    assert nombres == {"Rosario"}
+    geo_g = g.get(f"/admin/dashboard/seccionales-geo?{_rango()}").json()
+    assert {"Rosario", "Córdoba"} <= {x["nombre"] for x in geo_g["seccionales"] + geo_g["sin_ubicar"]}
+    assert [x["nombre"] for x in g.get("/admin/dashboard/afiliados?q=Fabi").json()["items"]] == ["Fabián Córdoba"]
+    assert loc.get("/admin/dashboard/afiliados?q=Fabi").json()["items"] == []
+    assert [x["nombre"] for x in loc.get("/admin/dashboard/afiliados?q=Ana").json()["items"]] == ["Ana Rosario"]
+    with Session(db.engine) as s:
+        fab = s.exec(select(Trabajador).where(Trabajador.cuil == FABIAN)).first()
+    assert loc.get(f"/admin/dashboard/afiliados?id={fab.id}").json()["items"] == []
+    assert g.get(f"/admin/dashboard/afiliados?id={fab.id}").json()["items"][0]["nombre"] == "Fabián Córdoba"
+
+
+def test_4_el_general_de_una_seccional_que_ve_todas_sigue_viendo_todo_el_panel():
+    c = _cliente("27777777772", "cen")
+    assert c.get(f"/admin/dashboard/kpis?{_rango()}").json()["actual"]["recibos"] == 3
