@@ -228,6 +228,14 @@ def _check_acotado_encuesta_publicar_no_ofrece_por_seccional(p):
     assert OTRA not in p.capturas["pub-criterio"]["texto"]
 
 
+def _check_acotado_la_noticia_de_la_encuesta_dice_que_es_de_su_seccional(p):
+    # Con el bloque 7 la noticia de la encuesta de un acotado va solo a su
+    # seccional: el texto del modal "Avisale a los afiliados" no puede decir
+    # que la ve cualquiera que entre a la app.
+    assert "Opcional y pública para tu seccional" in p.html
+    assert "Opcional y pública: la ve cualquiera" not in p.html
+
+
 def _check_acotado_la_otra_seccional_no_aparece_en_ningun_selector_de_seccional(p):
     for ident in ("notif-criterio", "pub-criterio", "form-noticia", "form-beneficio"):
         assert OTRA not in p.capturas[ident]["texto"], ident
@@ -255,6 +263,11 @@ def test_usuario_de_area_de_rosario_recibe_la_misma_regla_que_el_local():
     for ident in ("form-noticia", "form-beneficio", "notif-criterio", "pub-criterio"):
         assert ident in p.capturas, ident
     _todo_lo_acotado(p)
+    # Sin el permiso Seccionales el formulario no se dibuja, y el script que
+    # lo engancha tiene que tolerarlo (antes: TypeError en cada carga).
+    assert 'id="form-seccional"' not in p.html
+    assert "if (formSeccional) formSeccional.addEventListener" in p.html
+    assert "document.getElementById('form-seccional').addEventListener" not in p.html
 
 
 # --------------------------------------------------------------- el general
@@ -281,6 +294,9 @@ def test_general_sigue_viendo_las_dos_seccionales_en_los_cuatro_bloques():
     assert "Sin marcar ninguna = todas las seccionales" in p.capturas["form-noticia"]["texto"]
     assert "Sin marcar ninguna = todas las seccionales" in p.capturas["form-beneficio"]["texto"]
     assert "A todo el padrón de tu seccional" not in p.html
+    # La noticia de la encuesta del general sí sale a todos.
+    assert "Opcional y pública: la ve cualquiera que entre a la app" in p.html
+    assert "para tu seccional" not in p.html
 
 
 def test_general_ve_el_aviso_de_seccionales_sin_ubicacion():

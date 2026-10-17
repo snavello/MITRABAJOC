@@ -2084,7 +2084,7 @@
 
         <h3 class="ct-secc" style="margin-top:22px;">Noticia en la portada</h3>
         <p class="muted" style="font-size:11.5px; margin:0 0 8px;">
-          Opcional y pública: la ve cualquiera que entre a la app, esté o no en el padrón.
+          {% if alcance_propio is not none %}Opcional y pública para tu seccional: la ve cualquiera de tu seccional que entre a la app, esté o no en el padrón.{% else %}Opcional y pública: la ve cualquiera que entre a la app, esté o no en el padrón.{% endif %}
           Vigente exactamente durante la ventana de la encuesta.</p>
         <form method="post" action="/admin/encuesta/noticia">
           <input type="hidden" name="id" class="av-id">
@@ -5885,7 +5885,9 @@ function cancelarSeccional() {
 // "Guardar" con el formulario a medias (por ejemplo editando una seccional
 // vieja, que abre directo en el paso 2). Lleva a la persona AL PASO donde
 // está el problema, en vez de dejarle un mensaje lejos del campo.
-document.getElementById('form-seccional').addEventListener('submit', function (ev) {
+// (guarda: el formulario no se dibuja sin el permiso Seccionales)
+var formSeccional = document.getElementById('form-seccional');
+if (formSeccional) formSeccional.addEventListener('submit', function (ev) {
   var faltan = secFaltantes();
   if (faltan.length) {
     ev.preventDefault();
