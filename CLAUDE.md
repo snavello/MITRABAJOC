@@ -1081,6 +1081,24 @@ técnico completo de cada uno está en HISTORIAL.md, buscar por el mismo título
     **Queda**: que el panel obligue a cambiar la clave inicial en el primer
     ingreso y que la persona pueda cambiar la suya (hoy solo plataforma).
 
+37. **El alta de usuario consulta el padrón y el padrón ofrece dar usuario**
+    (2026-10-17, Admin 0.57.01): al salir del campo CUIL en Áreas y Usuarios,
+    `GET /admin/usuario/padron` dice si la persona está en el padrón de este
+    sindicato (y completa nombre y seccional), si ya es usuario y si ya tiene
+    clave del panel por otro sindicato (la inicial no se pide). En
+    Trabajadores, "Dar usuario del panel" abre el alta con todo puesto. Las
+    dos pestañas siguen separadas a propósito (padrón ≠ equipo del gremio).
+    **Auditoría del alcance del Admin de Seccional hecha con datos** el mismo
+    día: la mitad del panel recorta (Trámites, Notificaciones, Reportes,
+    Encuestas, Listas, Seccionales, Usuarios) y la otra mitad no
+    (Trabajadores lista todo el padrón y da de alta en otra seccional; edita
+    y borra noticias y beneficios ajenos; crea, edita y borra formularios
+    globales; el Panel Sindical muestra todo el sindicato). Plan de
+    corrección por bloques, sin migraciones, en
+    [`PLAN_ALCANCE_SECCIONAL.md`](PLAN_ALCANCE_SECCIONAL.md): **sin
+    empezar**, espera el OK de SDN y sus dos decisiones (Empleadores y
+    catálogo).
+
 **Qué queda pendiente** — ver "Pendientes (features)" más abajo para el
 detalle; resumen: (a) capacitación por-sindicato (además de la fija de
 plataforma), (b) sacar "Cambiar clave" transitorio de plataforma antes de
@@ -1392,6 +1410,10 @@ Seccional" que figuraban acá los absorbió el punto 21: la rama vieja quedó
     el panel del sindicato. Criterios: las correcciones van por el chat del
     trámite; los formularios encadenados son solo para datos nuevos después de
     la aprobación.
+14. **El Admin de Seccional acotado en todo el panel**
+    (`PLAN_ALCANCE_SECCIONAL.md`, 2026-10-17): seis bloques (red de tests,
+    Trabajadores, Noticias y Beneficios, formularios de trámite, Panel
+    Sindical, decisiones de Empleadores y catálogo). Sin empezar.
 13. **Listas del sindicato y validaciones por función en Trámites**
     (`PLAN_LISTAS_VALIDACIONES.md`, acordado el 2026-10-16, D1–D7; **bloque
     1 HECHO**, ver "Estado actual" 35): plantillas tipadas (grupo familiar,

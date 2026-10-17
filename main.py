@@ -1231,6 +1231,7 @@ PERMISOS_RUTAS = {
     # La gestión de usuarios es del Super Admin y de nadie más: no es una
     # sección asignable (ver SECCION_SUPER_ADMIN en permisos.py).
     "/admin/usuario":                       SECCION_SUPER_ADMIN,
+    "/admin/usuario/padron":                SECCION_SUPER_ADMIN,
     "/admin/usuario/editar":                SECCION_SUPER_ADMIN,
     "/admin/usuario/baja":                  SECCION_SUPER_ADMIN,
     "/admin/usuario/alta-logica":           SECCION_SUPER_ADMIN,
@@ -2514,6 +2515,42 @@ def admin_usuario_alta(request: Request, usuario: str = Form(...), nombre: str =
         db.set_permisos_usuario(nuevo_id, _secciones_que_puede_dar(request, agregar),
                                 _secciones_que_puede_dar(request, bloquear), sid)
     return _volver_a_au("usuarios", ok="usuariocuenta" if ya_tiene_clave else "usuario")
+
+
+@app.get("/admin/usuario/padron")
+def admin_usuario_padron(request: Request, cuil: str = ""):
+    """Qué sabe el panel de ese CUIL antes de darle usuario (2026-10-17):
+    si está en el padrón de ESTE sindicato (nombre y seccional, para
+    autocompletar), si ya tiene usuario acá y si ya tiene clave del panel
+    por otro sindicato (la clave inicial no se va a usar).
+
+    Solo dice el nombre si la fila cae dentro del alcance de quien pregunta:
+    un admin de seccional no lee el padrón de otra delegación por acá. Un
+    CUIL que no está devuelve `en_padron: false` y nada más: el padrón de
+    este sindicato no es consultable fuera de su pantalla."""
+    sid = exigir_sindicato(request)
+    cuil_n = _norm_cuil(cuil)
+    if len(cuil_n) != 11:
+        return {"en_padron": False, "valido": False}
+    salida = {"en_padron": False, "valido": not _cuil_mal(cuil_n),
+              "tiene_clave_panel": bool((c := db.cuenta_panel(cuil_n)) and c.clave_hash)}
+    with db.get_session() as s:
+        t = db._trabajador_por_cuil(s, sid, cuil_n)
+        if not t:
+            return salida
+        salida["en_padron"] = True
+        if not _en_alcance(_alcance_de(request), t.seccional_id):
+            salida["fuera_alcance"] = True
+            return salida
+        persona = s.exec(select(CuentaTrabajador).where(CuentaTrabajador.cuil == cuil_n)).first()
+        sec = s.get(Seccional, t.seccional_id) if t.seccional_id else None
+        salida.update({
+            "nombre": (persona.nombre if persona else "") or "",
+            "seccional_id": t.seccional_id, "seccional": sec.nombre if sec else "",
+            "ya_es_usuario": bool(s.exec(select(UsuarioSindicato).where(
+                UsuarioSindicato.sindicato_id == sid, UsuarioSindicato.cuil == cuil_n)).first()),
+        })
+    return salida
 
 
 @app.post("/admin/usuario/editar")
