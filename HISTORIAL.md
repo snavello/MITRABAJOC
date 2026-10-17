@@ -7860,3 +7860,16 @@ fija con los KPIs del local iguales a los del general filtrado por su
 seccional, y otro con el admin de una seccional `ve_todas` viendo los tres
 recibos. Cinco tests nuevos; la regresión del panel (46 de `test_dashboard`,
 cupo, concurrencia, v2, asistente, mapa, reportes, encuestas) en verde.
+
+## Alcance del Admin de Seccional, cierre (2026-10-17)
+
+Con los seis bloques en `main` se repitió la auditoría del mediodía, con la
+misma base (lote de La Bancaria) y el mismo método. Los números, antes y
+después, están en `docs/chat/2026-10-17-auditoria-alcance.md`: el padrón del
+local pasó de 100 a 20, el Panel de 5.000 a 1.180 recibos y de 6 a 1
+seccional en filtros y mapa, y las nueve escrituras ajenas que antes
+pasaban (alta y carga masiva en otra seccional, editar y borrar
+publicaciones ajenas, crear, editar y borrar formularios globales, el
+catálogo, los detalles del Panel, las rutas de Empleadores) quedaron
+bloqueadas. El general no cambió en nada. Seis PRs en el día (#135 a #139
+más el de cierre), cada uno con su CI y su regresión; sin migraciones.
