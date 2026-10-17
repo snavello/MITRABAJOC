@@ -482,3 +482,81 @@ def test_4_los_filtros_el_mapa_y_el_buscador_del_local_no_ofrecen_las_otras():
 def test_4_el_general_de_una_seccional_que_ve_todas_sigue_viendo_todo_el_panel():
     c = _cliente("27777777772", "cen")
     assert c.get(f"/admin/dashboard/kpis?{_rango()}").json()["actual"]["recibos"] == 3
+
+
+# ====================== Bloque 7 (servidor): la noticia de la encuesta ======================
+# G1: `db.noticia_de_encuesta` creaba la Noticia sin destino, o sea "a todas":
+# la noticia de una encuesta de Rosario salía a todo el sindicato. Ahora hereda
+# el alcance de la encuesta.
+
+LOCAL_CBA = "23010101018"
+
+with db.get_session() as s:
+    s.add(UsuarioSindicato(sindicato_id=SID, usuario=LOCAL_CBA, cuil=LOCAL_CBA, nombre="Local Córdoba",
+                           clave_hash=auth.hashear_clave("cba"), es_admin_seccional=True,
+                           seccional_id=SEC_CBA))
+    s.commit()
+
+
+def _encuesta_con_noticia(cliente, titulo):
+    """Crea, publica (todo el padrón al que alcanza) y anuncia una encuesta con
+    el cliente dado. Devuelve (id de la encuesta, Noticia creada)."""
+    hoy = fechas.hoy()
+    preguntas = [{"etiqueta": "¿Conforme?", "tipo_dato": "escala", "escala_min": 1, "escala_max": 5,
+                  "etiqueta_min": "Nada", "etiqueta_max": "Mucho", "ancho": "completo",
+                  "obligatorio": True}]
+    cliente.post("/admin/encuesta", data={
+        "titulo": titulo, "descripcion": "x", "modo": "nominal",
+        "fecha_desde": (hoy - timedelta(days=1)).isoformat(),
+        "fecha_hasta": (hoy + timedelta(days=30)).isoformat(),
+        "preguntas_json": json.dumps(preguntas)}, follow_redirects=False)
+    with Session(db.engine) as s:
+        eid = s.exec(select(db.Encuesta).where(db.Encuesta.sindicato_id == SID,
+                                               db.Encuesta.titulo == titulo)).first().id
+    r = cliente.post("/admin/encuesta/publicar", data={"id": eid, "criterio": "todos"},
+                     follow_redirects=False)
+    assert r.headers["location"] == f"/admin?avisar={eid}#encuestas", r.headers["location"]
+    r = cliente.post("/admin/encuesta/noticia", data={"id": eid, "titulo": f"Noticia de {titulo}"},
+                     follow_redirects=False)
+    assert r.headers["location"] == "/admin?noticia=ok#encuestas", r.headers["location"]
+    return eid, _noticia(f"Noticia de {titulo}")
+
+
+def test_7_la_noticia_de_la_encuesta_del_local_sale_solo_a_su_seccional():
+    eid, n = _encuesta_con_noticia(_cliente(LOCAL, "loc"), "Encuesta Rosario")
+    assert n.encuesta_id == eid
+    assert n.destino_seccionales == [SEC_ROS]
+    titulos = lambda alcance: {x["titulo"] for x in db.noticias_del_sindicato(SID, alcance)}
+    assert n.titulo in titulos(None), "el general la ve"
+    assert n.titulo in titulos({SEC_ROS})
+    assert n.titulo not in titulos({SEC_CBA}), "el local de Córdoba no ve la noticia de Rosario"
+    # Y lo mismo por la pantalla del admin local de Córdoba.
+    assert n.titulo not in _cliente(LOCAL_CBA, "cba").get("/admin").text
+    # Del lado del afiliado: la de Rosario no llega a Córdoba.
+    assert n.titulo in {x["titulo"] for x in db.noticias_vigentes(SID, SEC_ROS)}
+    assert n.titulo not in {x["titulo"] for x in db.noticias_vigentes(SID, SEC_CBA)}
+
+
+def test_7_la_noticia_de_la_encuesta_del_general_sale_a_todas():
+    eid, n = _encuesta_con_noticia(_cliente(GENERAL, "gen"), "Encuesta General")
+    assert n.destino_seccionales == []
+    for alcance in (None, {SEC_ROS}, {SEC_CBA}):
+        assert n.titulo in {x["titulo"] for x in db.noticias_del_sindicato(SID, alcance)}
+    assert n.titulo in {x["titulo"] for x in db.noticias_vigentes(SID, SEC_CBA)}
+
+
+def test_7_el_aviso_de_lanzamiento_de_la_encuesta_del_local_llega_solo_a_su_padron():
+    c = _cliente(LOCAL, "loc")
+    eid, _ = _encuesta_con_noticia(c, "Encuesta Aviso Rosario")
+    with Session(db.engine) as s:
+        assert s.get(db.Encuesta, eid).seccional_id == SEC_ROS
+    r = c.post("/admin/encuesta/notificar", data={"id": eid, "texto": "Hay una encuesta nueva"},
+               follow_redirects=False)
+    assert r.headers["location"].startswith("/admin?aviso="), r.headers["location"]
+    with Session(db.engine) as s:
+        notif = s.exec(select(db.Notificacion).where(db.Notificacion.encuesta_id == eid)).first()
+        assert notif
+        cuils = {d.cuil for d in s.exec(select(db.NotificacionDestinatario).where(
+            db.NotificacionDestinatario.notificacion_id == notif.id)).all()}
+    assert ANA in cuils
+    assert FABIAN not in cuils and SIN_SEC not in cuils
