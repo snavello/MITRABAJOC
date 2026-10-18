@@ -73,8 +73,9 @@ def test_usa_solo_las_rutas_del_asistente():
     rutas del asistente y a ninguna otra; no calcula circuitos ni brechas."""
     app = (CARPETA / "app.js").read_text(encoding="utf-8")
     assert 'const API = "/api/entornos/herramientas/asistente"' in app
-    for ruta in ("/catalogo", "/entender", "/resolver", "/preguntas-extra", "/casos", "/brechas"):
+    for ruta in ("/catalogo", "/entender", "/resolver", "/casos", "/brechas"):
         assert f'API + "{ruta}' in app or f"API + `{ruta}" in app, ruta
+    assert "preguntas-extra" not in app, "el segundo cuestionario se fue (2026-10-18)"
     otras = set(re.findall(r'fetch\(\s*"([^"]+)"', app)) - set()
     assert not otras, otras
 

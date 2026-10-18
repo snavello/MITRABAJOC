@@ -141,7 +141,8 @@ def test_la_ia_propone_y_el_motor_sanea_y_se_registra_el_uso(sindicato):
     assert r.status_code == 200
     p = r.json()["propuesta"]
     assert p["codigo"] == "KE27" and p["respuestas"]["fin"] == "entrega"
-    assert "atiende" not in p["respuestas"] and p["respuestas"]["requisitos"] == ["titular"]
+    assert p["respuestas"]["atiende"] == "seccional" and "atiende" in p["recomendadas"], "un valor inválido cae a la recomendada"
+    assert p["respuestas"]["requisitos"] == ["titular"]
     assert p["campos"][1]["opciones"] == "jpg,jpeg"
     assert set(p["de_ia"]) == {"quien", "fin", "requisitos"}
     assert r.json()["uso"]["tokens_entrada"] == 1200
@@ -205,11 +206,21 @@ def test_resolver_devuelve_el_resultado_del_motor_con_el_sindicato(sindicato):
     assert sin["sindicato"] is None
 
 
-def test_preguntas_extra_con_ia_simulada():
-    ia.usar_cliente(ClienteFalso(_respuesta(SimpleNamespace(
-        type="text", text="1. ¿Qué pasa si el chico repite el grado?\n2) ¿Y si son mellizos?\nsin signo\n"))))
-    r = _con_plataforma().post(API + "/preguntas-extra", json={"entrada": at.EJEMPLO_PROPUESTA}).json()
-    assert r["preguntas"] == ["¿Qué pasa si el chico repite el grado?", "¿Y si son mellizos?"]
+def test_el_segundo_cuestionario_ya_no_existe():
+    """SDN, 2026-10-18: se pregunta una vez. La ruta de preguntas extra se fue."""
+    assert _con_plataforma().post(API + "/preguntas-extra", json={"entrada": at.EJEMPLO_PROPUESTA}).status_code == 404
+    assert not hasattr(ia, "preguntas_extra")
+
+
+def test_el_prompt_de_la_ia_lleva_el_catalogo_de_funciones():
+    """La IA solo puede proponer fórmulas con lo que existe: el catálogo va
+    en el prompt de sistema, sacado del código, y la herramienta pide por
+    campo la regla, la fórmula y la función nueva."""
+    assert "sistema.credencial_vigente" in ia.PROMPT_SISTEMA and "lista.fecha_nacimiento" in ia.PROMPT_SISTEMA
+    assert "anios_entre" in ia.PROMPT_SISTEMA
+    props = ia.herramienta()["input_schema"]["properties"]["campos"]["items"]["properties"]
+    assert {"aclaracion", "regla", "formula", "funcion_nueva"} <= set(props)
+    assert "segundo" in ia.herramienta()["input_schema"]["properties"]["respuestas"]["properties"], "las inferidas también las propone"
 
 
 # ---------- Casos y brechas ----------

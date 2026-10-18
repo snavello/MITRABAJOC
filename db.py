@@ -7717,6 +7717,26 @@ def contexto_validaciones(sindicato_id: int, cuil: str, tipo: dict, valores: dic
             ReciboVerificado.sindicato_id == sindicato_id,
             ReciboVerificado.cuil == cuil)).one()
         semaforo = (t.semaforo_datos or {}).get("color") if t else None
+        hoy = fechas.hoy_texto()
+        # La credencial: generada y, si el admin le puso vigencia, no vencida
+        # (sin fecha, vigente: es lo que muestra la app). Decisión de SDN,
+        # 2026-10-18.
+        credencial = bool(t and t.codigo_credencial and (not t.vigencia_credencial or t.vigencia_credencial >= hoy))
+        ultimo = s.exec(select(ReciboVerificado).where(
+            ReciboVerificado.cuil == cuil, ReciboVerificado.sindicato_id == sindicato_id)
+            .order_by(ReciboVerificado.periodo.desc(), ReciboVerificado.procesado_en.desc()).limit(1)).first()
+        empleador = None
+        if t and t.cuit_empleador:
+            empleador = s.exec(select(Empleador).where(
+                Empleador.sindicato_id == sindicato_id, Empleador.cuit == t.cuit_empleador)).first()
+        abiertos_todos = s.exec(select(func.count(Tramite.id)).where(
+            Tramite.sindicato_id == sindicato_id, Tramite.cuil == cuil,
+            Tramite.estado != "terminado")).one() or 0
+        ultimo_pedido = None
+        if tipo.get("id"):
+            ultimo_pedido = s.exec(select(Tramite.creado).where(
+                Tramite.sindicato_id == sindicato_id, Tramite.cuil == cuil,
+                Tramite.tipo_tramite_id == tipo["id"]).order_by(Tramite.creado.desc()).limit(1)).first()
         # "Una sola vez" / "no repetir mientras haya uno abierto": cuenta los
         # pedidos de ESTE formulario del afiliado. Un tipo sin id (el banco
         # de pruebas con un formulario sin guardar) no tiene pedidos.
@@ -7742,6 +7762,19 @@ def contexto_validaciones(sindicato_id: int, cuil: str, tipo: dict, valores: dic
             "fecha_nacimiento": (c.fecha_nacimiento or None) if c else None,
             "tramites_de_este_tipo": float(de_este_tipo),
             "tramites_abiertos_de_este_tipo": float(abiertos),
+            "credencial_vigente": credencial,
+            "numero_credencial": (t.codigo_credencial or None) if t else None,
+            "edad": _vt.anios_cumplidos(c.fecha_nacimiento) if c else None,
+            "antiguedad_meses": _vt.meses_cumplidos(t.fecha_afiliacion) if t else None,
+            "ultimo_recibo_periodo": (ultimo.periodo or None) if ultimo else None,
+            "meses_sin_recibo": _vt.meses_cumplidos(ultimo.periodo) if ultimo else None,
+            "ultimo_recibo_bruto": (float(ultimo.bruto) if ultimo.bruto is not None else None) if ultimo else None,
+            "empleador_cuit": (t.cuit_empleador or None) if t else None,
+            "empleador_nombre": (empleador.razon_social or None) if empleador else None,
+            "tramites_abiertos": float(abiertos_todos),
+            "dias_desde_ultimo_pedido_de_este_tipo": (
+                (fechas.hoy() - date.fromisoformat(ultimo_pedido[:10])).days
+                if ultimo_pedido and _vt._RE_FECHA.match(ultimo_pedido[:10]) else None),
         }
         seccional_id = t.seccional_id if t else None
     filas = {}

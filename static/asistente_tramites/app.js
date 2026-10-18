@@ -1,8 +1,11 @@
 /* Asistente de trámites (Herramientas de /entornos, PLAN_ASISTENTE_TRAMITES.md).
 
-   Cuatro etapas: el pedido (relato), lo que entendí (la propuesta de la IA
-   o del ejemplo), las preguntas una por pantalla, y el resultado. Más dos
-   pestañas: los casos guardados y el inventario de brechas.
+   Cinco etapas: el pedido (relato), lo que entendí (la propuesta de la IA
+   o del ejemplo, con lo inferido del relato), SEIS preguntas una por
+   pantalla (cada una con una recomendada y una respuesta libre), los datos
+   del formulario (con aclaración y regla por campo) y el resultado, que
+   trae además el prompt para Code. Más dos pestañas: los casos guardados y
+   el inventario de brechas.
 
    La regla de la casa: la IA PROPONE (`/entender`) y el servidor DECIDE
    (`/resolver`, el motor puro). Esta pantalla no sabe qué es una brecha ni
@@ -18,7 +21,7 @@ const API = "/api/entornos/herramientas/asistente";
 const raiz = document.getElementById("asistente");
 const ISOTIPO = raiz.dataset.isotipo;
 const GUARDA = "asistente-tramites-v1";
-const ETAPAS = [["inicio", "El pedido"], ["entendi", "Lo que entendí"], ["pregunta", "Preguntas"], ["resultado", "Resultado"]];
+const ETAPAS = [["inicio", "El pedido"], ["entendi", "Lo que entendí"], ["pregunta", "Preguntas"], ["datos", "Los datos"], ["resultado", "Resultado"]];
 
 async function pedir(url, cuerpo) {
   const r = await fetch(url, cuerpo === undefined ? { cache: "no-store" } : {
@@ -29,9 +32,9 @@ async function pedir(url, cuerpo) {
 }
 
 const NUEVO = () => ({ vista: "inicio", qi: 0, relato: "", sindicato_id: "", nombre: "", codigo: "", objetivo: "",
-  respuestas: { requisitos: [] }, campos: [], extras: [], dudas: [], de_ia: [], vc: "carriles" });
+  respuestas: { requisitos: [] }, campos: [], extras: [], dudas: [], de_ia: [], recomendadas: [], vc: "carriles" });
 const clon = (o) => JSON.parse(JSON.stringify(o));
-const campoNuevo = (tipo = "texto") => ({ etiqueta: "", tipo, obligatorio: tipo !== "separador", opciones: "", control: "" });
+const campoNuevo = (tipo = "texto") => ({ etiqueta: "", tipo, obligatorio: tipo !== "separador", opciones: "", control: "", aclaracion: "", regla: "", formula: "", funcion_nueva: "" });
 
 function leerGuardado() {
   try { const g = JSON.parse(localStorage.getItem(GUARDA) || "null"); if (g && g.vista) return Object.assign(NUEVO(), g); } catch (e) { /* sin memoria del navegador */ }
@@ -99,7 +102,6 @@ function App() {
   const [res, setRes] = useState(null);        // lo que devolvió /resolver
   const [sind, setSind] = useState(null);
   const [estadoIA, setEstadoIA] = useState({ texto: "", clase: "" });
-  const [extraIA, setExtraIA] = useState([]);
   const [nota, setNota] = useState("");
   const [guardado, setGuardado] = useState("");
   const [casos, setCasos] = useState(null);
@@ -132,7 +134,8 @@ function App() {
 
   /* La IA propone, el motor decide: lo que vuelve ya está saneado por el servidor. */
   const aplicarPropuesta = (p, deIA) => set((e) => ({ ...e, nombre: p.nombre, codigo: p.codigo, objetivo: p.objetivo,
-    respuestas: p.respuestas, campos: p.campos, dudas: p.dudas, de_ia: deIA ? p.de_ia : [], extras: [], vista: "entendi" }));
+    respuestas: p.respuestas, campos: p.campos, dudas: p.dudas, de_ia: deIA ? p.de_ia : [], recomendadas: p.recomendadas || [],
+    extras: [], vista: "entendi" }));
 
   const analizar = async () => {
     setEstadoIA({ texto: "Leyendo el relato…", clase: "" });
@@ -148,17 +151,12 @@ function App() {
     if (E.relato.trim() === cat.ejemplo.relato.trim()) {
       pedir(API + "/resolver", { entrada: { ...cat.ejemplo.propuesta, relato: E.relato }, sindicato_id: E.sindicato_id })
         .then((d) => aplicarPropuesta({ ...d.entrada, de_ia: [] }, false)).catch((e) => setError(e.message));
-    } else if (!E.nombre) aplicarPropuesta({ nombre: "", codigo: "", objetivo: "", respuestas: { requisitos: [] }, campos: [campoNuevo()], dudas: [], de_ia: [] }, false);
-    else ir("entendi");
+    } else if (!E.nombre) {
+      // Sin propuesta, el motor igual contesta con las recomendadas: se piden saneadas.
+      pedir(API + "/resolver", { entrada: { nombre: "", respuestas: {}, campos: [campoNuevo()] }, sindicato_id: E.sindicato_id })
+        .then((d) => aplicarPropuesta({ ...d.entrada, de_ia: [] }, false)).catch((e) => setError(e.message));
+    } else ir("entendi");
     arriba();
-  };
-  const sumarPreguntas = async () => {
-    setEstadoIA({ texto: "Pensando…", clase: "" });
-    try {
-      const d = await pedir(API + "/preguntas-extra", { entrada: entradaDe(E), sindicato_id: E.sindicato_id });
-      if (!d.disponible) { setEstadoIA({ texto: "La IA no está configurada en este entorno.", clase: "mal" }); return; }
-      setExtraIA(d.preguntas); setEstadoIA({ texto: d.preguntas.length ? "" : "No sumó preguntas nuevas.", clase: "" });
-    } catch (e) { setEstadoIA({ texto: e.message, clase: "mal" }); }
   };
   const guardarCaso = async () => {
     setGuardado("Guardando…");
@@ -186,7 +184,8 @@ function App() {
   const retomarCaso = (d) => {
     const en = d.entrada;
     set((e) => ({ ...NUEVO(), relato: en.relato, nombre: en.nombre, codigo: en.codigo, objetivo: en.objetivo, respuestas: en.respuestas,
-      campos: en.campos, extras: en.extras || [], dudas: en.dudas || [], sindicato_id: en.sindicato ? String(en.sindicato.id) : "", vista: "resultado" }));
+      campos: en.campos, extras: en.extras || [], dudas: en.dudas || [], recomendadas: en.recomendadas || [],
+      sindicato_id: en.sindicato ? String(en.sindicato.id) : "", vista: "resultado" }));
     location.hash = ""; setPestana("asistente"); arriba();
   };
   const cambiarEstado = async (id, estado) => {
@@ -208,14 +207,14 @@ function App() {
   if (pestana === "brechas") return html`${cabecera}<${Brechas} inv=${inventario} catalogo=${cat.brechas} />`;
 
   // ---------- el asistente ----------
-  const vistas = { inicio: Inicio, entendi: Entendi, pregunta: Pregunta, resultado: Resultado };
+  const vistas = { inicio: Inicio, entendi: Entendi, pregunta: Pregunta, datos: Datos, resultado: Resultado };
   const Vista = vistas[E.vista] || Inicio;
   return html`${cabecera}<${Etapas} vista=${E.vista} />
     <div class="vista" key=${E.vista + E.qi}>
       <${Vista} E=${E} set=${set} ir=${ir} cat=${cat} res=${res} sind=${sind} preguntas=${preguntas} estadoIA=${estadoIA}
-        analizar=${analizar} sinIA=${sinIA} sumarPreguntas=${sumarPreguntas} extraIA=${extraIA}
+        analizar=${analizar} sinIA=${sinIA}
         nota=${nota} setNota=${setNota} guardarCaso=${guardarCaso} guardado=${guardado} copiar=${copiar} descargar=${descargar}
-        nuevo=${() => { setExtraIA([]); setGuardado(""); set(NUEVO()); arriba(); }} />
+        nuevo=${() => { setGuardado(""); set(NUEVO()); arriba(); }} />
     </div>`;
 }
 
@@ -263,7 +262,11 @@ function Inicio({ E, set, cat, estadoIA, analizar, sinIA }) {
 // ---------------------------------------------------------------- etapa 2: lo que entendí
 function Entendi({ E, set, ir, cat, preguntas }) {
   const r = E.respuestas;
-  const p = (k) => cat.preguntas.find((x) => x.clave === k);
+  const p = (k) => cat.preguntas.concat(cat.inferidas).find((x) => x.clave === k);
+  const inferidas = cat.inferidas.filter((q) => vigente(q, r));
+  const cambiarInferida = (clave, valor) => set((e) => ({ ...e, respuestas: { ...e.respuestas, [clave]: valor },
+    de_ia: e.de_ia.filter((k) => k !== clave), recomendadas: e.recomendadas.filter((k) => k !== clave) }));
+  const origen = (k) => (E.de_ia.includes(k) ? html`<span class="marca-ia">IA</span>` : E.recomendadas.includes(k) ? html`<span class="marca-rec">por defecto</span>` : null);
   const et = (k) => { const v = r[k]; if (!v || (Array.isArray(v) && !v.length)) return ""; return etiquetaOp(p(k), v); };
   const fila = (t, v, i) => html`<div style=${`--i:${i}`}><dt>${t}</dt><dd class=${v ? "" : "vacio"}>${v || "Lo vemos en las preguntas"}</dd></div>`;
   const deIA = E.de_ia.length > 0;
@@ -280,9 +283,15 @@ function Entendi({ E, set, ir, cat, preguntas }) {
       ${fila("Cómo termina", [et("fin"), r.lugar].filter(Boolean).join(" · "), 3)}
       ${fila("Datos que se piden", E.campos.length ? `${E.campos.filter((c) => c.tipo !== "separador").length} preguntas, ${E.campos.filter((c) => c.tipo === "archivo").length} de documentación` : "", 4)}
     </dl>` : null}
-    ${E.dudas.length ? html`<div class="grupo"><b>Lo que no quedó claro en el relato</b><ul class="dudas">${E.dudas.map((d) => html`<li>${d}</li>`)}</ul><p class="nota">Va a quedar en las preguntas pendientes del final.</p></div>` : null}
+    ${E.nombre ? html`<div class="grupo"><b>Lo que se infiere del relato</b><p class="nota">No se pregunta: queda así salvo que lo cambies acá.</p>
+      <div class="inferidas">${inferidas.map((q) => html`<label class="campo" key=${q.clave}><span>${q.titulo} ${origen(q.clave)}</span>
+        <select value=${r[q.clave] || ""} onChange=${(e) => cambiarInferida(q.clave, e.target.value)}>${q.opciones.map(([k, t]) => html`<option value=${k}>${t}</option>`)}</select>
+        ${muestraTexto(q.texto, r[q.clave]) ? html`<input type="text" value=${r[q.texto.clave] || ""} placeholder=${q.texto.ejemplo} aria-label=${q.texto.rotulo} onInput=${(e) => set((x) => ({ ...x, respuestas: { ...x.respuestas, [q.texto.clave]: e.target.value } }))} />` : null}
+        ${muestraTexto(q.texto2, r[q.clave]) ? html`<input type="text" value=${r[q.texto2.clave] || ""} placeholder=${q.texto2.ejemplo} aria-label=${q.texto2.rotulo} onInput=${(e) => set((x) => ({ ...x, respuestas: { ...x.respuestas, [q.texto2.clave]: e.target.value } }))} />` : null}
+      </label>`)}</div></div>` : null}
+    ${E.dudas.length ? html`<div class="grupo"><b>Lo que no quedó claro en el relato</b><ul class="dudas">${E.dudas.map((d) => html`<li>${d}</li>`)}</ul><p class="nota">Queda en el prompt, para confirmarlo con el sindicato.</p></div>` : null}
     <div class="acciones"><button class="boton suave" type="button" onClick=${() => ir("inicio")}>← Volver al relato</button>
-      <button class="boton" type="button" onClick=${() => { if (!E.campos.length) set({ campos: [campoNuevo()] }); ir("pregunta", 0); }}>Empezar las preguntas (${preguntas.length}) →</button></div>
+      <button class="boton" type="button" onClick=${() => { if (!E.campos.length) set({ campos: [campoNuevo()] }); ir("pregunta", 0); }}>Las ${preguntas.length} preguntas →</button></div>
   </section>`;
 }
 
@@ -293,6 +302,7 @@ function Pregunta({ E, set, ir, cat, res, preguntas }) {
   if (!p) return null;
   const r = E.respuestas;
   const deIA = E.de_ia.includes(p.clave);
+  const recomendada = !deIA && E.recomendadas.includes(p.clave);
   const responder = (valor) => set((e) => {
     const rr = { ...e.respuestas };
     if (p.multiple) {
@@ -301,13 +311,11 @@ function Pregunta({ E, set, ir, cat, res, preguntas }) {
       if (p.excluyente) { if (valor === p.excluyente && v.has(valor)) v = new Set([p.excluyente]); else if (v.has(valor)) v.delete(p.excluyente); }
       rr[p.clave] = [...v];
     } else rr[p.clave] = valor;
-    return { ...e, respuestas: rr, de_ia: e.de_ia.filter((k) => k !== p.clave) };
+    return { ...e, respuestas: rr, de_ia: e.de_ia.filter((k) => k !== p.clave), recomendadas: e.recomendadas.filter((k) => k !== p.clave) };
   });
   const texto = (clave, valor) => set((e) => ({ ...e, respuestas: { ...e.respuestas, [clave]: valor } }));
   let cuerpo;
-  if (p.actores) cuerpo = html`<${Actores} E=${E} set=${set} res=${res} />`;
-  else if (p.campos) cuerpo = html`<${Campos} E=${E} set=${set} cat=${cat} />`;
-  else {
+  {
     const sel = (v) => (p.multiple ? (r[p.clave] || []).includes(v) : r[p.clave] === v);
     const nMarc = p.multiple ? (r[p.clave] || []).filter((x) => x !== p.excluyente).length : 0;
     cuerpo = html`
@@ -315,20 +323,33 @@ function Pregunta({ E, set, ir, cat, res, preguntas }) {
       <div class="opciones" role=${p.multiple ? "group" : "radiogroup"} aria-label=${p.titulo}>
         ${p.opciones.map(([k, t], j) => html`<label class=${"op" + (sel(k) ? " sel" : "") + (p.excluyente === k ? " excl" : "")} style=${`--i:${j}`}>
           <input type=${p.multiple ? "checkbox" : "radio"} name="op" value=${k} checked=${sel(k)} onChange=${() => responder(k)} />
-          <span class="t">${t}</span>${deIA && sel(k) ? html`<span class="marca-ia">Propuesto</span>` : null}</label>`)}
+          <span class="t">${t}</span>${deIA && sel(k) ? html`<span class="marca-ia">Propuesto por la IA</span>` : recomendada && sel(k) ? html`<span class="marca-rec">Recomendada</span>` : null}</label>`)}
       </div>
       ${muestraTexto(p.texto, r[p.clave]) ? html`<label class="campo"><span>${p.texto.rotulo}</span><input type="text" value=${r[p.texto.clave] || ""} placeholder=${p.texto.ejemplo} onInput=${(e) => texto(p.texto.clave, e.target.value)} /></label>` : null}
-      ${muestraTexto(p.texto2, r[p.clave]) ? html`<label class="campo"><span>${p.texto2.rotulo}</span><input type="text" value=${r[p.texto2.clave] || ""} placeholder=${p.texto2.ejemplo} onInput=${(e) => texto(p.texto2.clave, e.target.value)} /></label>` : null}`;
+      ${muestraTexto(p.texto2, r[p.clave]) ? html`<label class="campo"><span>${p.texto2.rotulo}</span><input type="text" value=${r[p.texto2.clave] || ""} placeholder=${p.texto2.ejemplo} onInput=${(e) => texto(p.texto2.clave, e.target.value)} /></label>` : null}
+      <label class="campo"><span>Otra respuesta o aclaración <small>(opcional: va al prompt)</small></span><input type="text" value=${r["nota_" + p.clave] || ""} placeholder="Lo que no entra en las opciones" onInput=${(e) => texto("nota_" + p.clave, e.target.value)} /></label>`;
   }
-  const respondida = p.actores ? true : p.campos ? E.campos.some((c) => c.etiqueta.trim()) : p.multiple ? (r[p.clave] || []).length : !!r[p.clave];
   return html`<section class="tarjeta">
-    <div class="contador">Pregunta ${qi + 1} de ${preguntas.length}${deIA ? " · la IA propuso una respuesta" : ""}</div>
+    <div class="contador">Pregunta ${qi + 1} de ${preguntas.length}${deIA ? " · la IA propuso una respuesta" : recomendada ? " · recomendada puesta" : ""}</div>
     <div class="barra"><i style=${`scale:${(qi + 1) / preguntas.length} 1`}></i></div>
     <h2>${p.titulo}</h2><p class="ayuda">${p.ayuda}</p>
     ${cuerpo}
     <div class="acciones"><button class="boton suave" type="button" onClick=${() => (qi ? ir("pregunta", qi - 1) : ir("entendi"))}>← ${qi ? "Anterior" : "Lo que entendí"}</button>
-      <div class="der">${respondida ? null : html`<span class="estado-ia">Sin responder: queda como pendiente</span>`}
-        <button class="boton" type="button" onClick=${() => (qi < preguntas.length - 1 ? ir("pregunta", qi + 1) : ir("resultado"))}>${qi === preguntas.length - 1 ? "Ver el resultado →" : "Siguiente →"}</button></div></div>
+      <div class="der">
+        <button class="boton" type="button" onClick=${() => (qi < preguntas.length - 1 ? ir("pregunta", qi + 1) : ir("datos"))}>${qi === preguntas.length - 1 ? "Los datos del formulario →" : "Siguiente →"}</button></div></div>
+  </section>`;
+}
+
+// ---------------------------------------------------------------- etapa 4: los datos del formulario
+function Datos({ E, set, ir, cat, res, preguntas }) {
+  return html`<section class="tarjeta">
+    <div class="contador">Los datos</div>
+    <h2>¿Estos son los datos que se piden?</h2>
+    <p class="ayuda">Revisá, corregí o agregá. El tipo y el control salen del constructor de Colm3na. En «Aclaración» explicá el dato si no es obvio; en «Regla» qué hay que controlar, y si se puede, la fórmula con el catálogo (abajo): si no, el prompt dice qué función habría que desarrollar.</p>
+    <${Campos} E=${E} set=${set} cat=${cat} />
+    <details class="grupo"><summary><b>Agregar a alguien que falta en el circuito</b></summary><${Actores} E=${E} set=${set} res=${res} /></details>
+    <div class="acciones"><button class="boton suave" type="button" onClick=${() => ir("pregunta", preguntas.length - 1)}>← Preguntas</button>
+      <button class="boton" type="button" onClick=${() => ir("resultado")}>Ver el resultado →</button></div>
   </section>`;
 }
 
@@ -362,7 +383,10 @@ function Campos({ E, set, cat }) {
     if (f === "tipo") { if (c.tipo === "archivo" && !c.opciones) c.opciones = cat.extensiones_default; if (!conOpc.includes(c.tipo) && c.tipo !== "archivo") c.opciones = ""; if (c.tipo === "separador") c.obligatorio = false; }
     return { ...e, campos: cs };
   });
+  const nombres = (cat.funciones || { sistema: [], listas: [], funciones: [] });
+  const sugerencias = [...nombres.sistema.map((d) => "sistema." + d.clave), ...nombres.listas.flatMap((l) => l.columnas.map((x) => "lista." + x.clave)), ...nombres.funciones.map((f) => f.nombre + "(")];
   return html`
+    <datalist id="at-nombres">${sugerencias.map((x) => html`<option value=${x} />`)}</datalist>
     <div class="tabla-wrap"><table><thead><tr><th>Pregunta</th><th>Tipo</th><th>Oblig.</th><th>Opciones o archivos</th><th>Control</th><th></th></tr></thead><tbody>
       ${E.campos.map((c, i) => html`<tr key=${i} class="fila" style=${`--i:${i}`}>
         <td style="min-width:200px"><input type="text" aria-label=${"Pregunta " + (i + 1)} value=${c.etiqueta} onInput=${(e) => cambiar(i, "etiqueta", e.target.value)} /></td>
@@ -370,13 +394,25 @@ function Campos({ E, set, cat }) {
         <td><input type="checkbox" aria-label="Obligatorio" checked=${c.obligatorio} disabled=${c.tipo === "separador"} onChange=${(e) => cambiar(i, "obligatorio", e.target.checked)} /></td>
         <td style="min-width:170px"><input type="text" aria-label="Opciones" value=${c.opciones} placeholder=${conOpc.includes(c.tipo) ? "separadas por coma" : c.tipo === "archivo" ? cat.extensiones_default : "—"} disabled=${!(conOpc.includes(c.tipo) || c.tipo === "archivo")} onInput=${(e) => cambiar(i, "opciones", e.target.value)} /></td>
         <td style="min-width:170px"><select aria-label="Control" value=${c.control} onChange=${(e) => cambiar(i, "control", e.target.value)}>${Object.entries(cat.controles).map(([k, v]) => html`<option value=${k}>${v}${cat.control_brecha[k] ? " · hoy no existe" : ""}</option>`)}</select></td>
-        <td><button class="quitar" type="button" aria-label="Quitar" onClick=${() => set((e) => ({ ...e, campos: e.campos.filter((_, j) => j !== i) }))}>✕</button></td></tr>`)}
+        <td><button class="quitar" type="button" aria-label="Quitar" onClick=${() => set((e) => ({ ...e, campos: e.campos.filter((_, j) => j !== i) }))}>✕</button></td></tr>
+        ${c.tipo === "separador" ? null : html`<tr key=${"x" + i} class="fila extra"><td colspan="6"><div class="campo-extra">
+          <input type="text" aria-label="Aclaración" value=${c.aclaracion || ""} placeholder="Aclaración (opcional): qué es, de dónde sale, por qué se pide" onInput=${(e) => cambiar(i, "aclaracion", e.target.value)} />
+          <input type="text" aria-label="Regla" value=${c.regla || ""} placeholder="Regla (opcional): qué hay que controlar sobre este dato" onInput=${(e) => cambiar(i, "regla", e.target.value)} />
+          <input type="text" class="mono" list="at-nombres" aria-label="Fórmula" value=${c.formula || ""} placeholder="Fórmula con el catálogo, si se puede: anios_entre(lista.fecha_nacimiento, hoy()) <= 12" onInput=${(e) => cambiar(i, "formula", e.target.value)} />
+          <input type="text" aria-label="Función nueva" value=${c.funcion_nueva || ""} placeholder="Función a desarrollar, si hace falta: nombre: qué devuelve" onInput=${(e) => cambiar(i, "funcion_nueva", e.target.value)} />
+        </div></td></tr>`}`)}
     </tbody></table></div>
-    <div><button class="boton suave chico" type="button" disabled=${E.campos.length >= cat.max_campos} onClick=${() => set((e) => ({ ...e, campos: [...e.campos, campoNuevo()] }))}>Agregar pregunta</button></div>`;
+    <div class="acciones"><button class="boton suave chico" type="button" disabled=${E.campos.length >= cat.max_campos} onClick=${() => set((e) => ({ ...e, campos: [...e.campos, campoNuevo()] }))}>Agregar pregunta</button>
+      <details class="catalogo"><summary>Catálogo de datos y funciones</summary>
+        <b>Padrón</b><ul>${nombres.sistema.map((d) => html`<li><code>sistema.${d.clave}</code> — ${d.rotulo}</li>`)}</ul>
+        <b>Listas</b><ul>${nombres.listas.map((l) => html`<li><b>${l.nombre}</b>: ${l.columnas.map((x) => "lista." + x.clave).join(", ")}</li>`)}</ul>
+        <b>Funciones</b><ul>${nombres.funciones.map((f) => html`<li><code>${f.ayuda}</code></li>`)}</ul>
+        <p class="nota">Los campos del formulario se nombran <code>campo.&lt;etiqueta en minúsculas, sin tildes, con guion bajo&gt;</code>; <code>y</code> / <code>o</code> / <code>no</code> para combinar.</p>
+      </details></div>`;
 }
 
 // ---------------------------------------------------------------- etapa 4: el resultado
-function Resultado({ E, set, ir, cat, res, sind, sumarPreguntas, extraIA, estadoIA, nota, setNota, guardarCaso, guardado, copiar, descargar, nuevo }) {
+function Resultado({ E, set, ir, cat, res, sind, nota, setNota, guardarCaso, guardado, copiar, descargar, nuevo }) {
   if (!res) return html`<p class="cargando">Armando el resultado…</p>`;
   const principal = res.formularios[0];
   const nCampos = principal.campos.filter((c) => c.tipo_dato !== "separador").length;
@@ -410,8 +446,8 @@ function Resultado({ E, set, ir, cat, res, sind, sumarPreguntas, extraIA, estado
     ${sec("Instrucción para crear el formulario", html`<ol class="instr">
       ${res.instruccion.pasos.map((p) => html`<li key=${p.clave}>${p.ruta ? html`En <span class="ruta">${p.ruta}</span>, ` : null}${p.texto}
         ${p.clave === "crear" ? html`<div class="tabla-wrap" style="margin-top:8px"><table><thead><tr><th>#</th><th>Pregunta</th><th>Tipo</th><th>Oblig.</th><th>Opciones / archivos</th><th>Control</th></tr></thead><tbody>
-          ${principal.campos.map((c, k) => html`<tr class="fila" style=${`--i:${k}`}><td class="mono">${k + 1}</td><td>${c.etiqueta || "(raya)"}</td><td>${cat.tipos[c.tipo_dato]}</td><td>${c.tipo_dato === "separador" ? "—" : c.obligatorio ? "Sí" : "No"}</td><td class="mono">${c.opciones || c.tipos_archivo_permitidos || "—"}</td>
-            <td>${c.validaciones.length ? c.validaciones.map((v) => v.mensaje).join(" ") : c.x_pendiente ? html`<span class="sello s-aj">Pendiente</span> ${c.x_pendiente}` : "—"}</td></tr>`)}</tbody></table></div>` : null}</li>`)}
+          ${principal.campos.map((c, k) => html`<tr class="fila" style=${`--i:${k}`}><td class="mono">${k + 1}</td><td>${c.etiqueta || "(raya)"}${c.x_aclaracion ? html`<span class="nota"> · ${c.x_aclaracion}</span>` : null}</td><td>${cat.tipos[c.tipo_dato]}</td><td>${c.tipo_dato === "separador" ? "—" : c.obligatorio ? "Sí" : "No"}</td><td class="mono">${c.opciones || c.tipos_archivo_permitidos || "—"}</td>
+            <td>${c.validaciones.length ? c.validaciones.map((v) => v.formula || v.mensaje).join(" · ") : null}${c.x_pendiente ? html` <span class="sello s-aj">Pendiente</span> ${c.x_pendiente}` : null}${c.x_regla ? html` <span class="sello s-aj">A controlar</span> ${c.x_regla}` : null}${c.x_funcion_nueva ? html` <span class="sello s-dv">Desarrollar</span> ${c.x_funcion_nueva}` : null}${!c.validaciones.length && !c.x_pendiente && !c.x_regla && !c.x_funcion_nueva ? "—" : null}</td></tr>`)}</tbody></table></div>` : null}</li>`)}
       </ol>
       <div class="acciones"><span class="nota">${nCampos} preguntas en el formulario principal.</span><div class="der"><button class="boton suave chico" type="button" onClick=${() => copiar(res.instruccion.texto, "Instrucción copiada.")}>Copiar instrucción</button></div></div>`)}
 
@@ -424,15 +460,16 @@ function Resultado({ E, set, ir, cat, res, sind, sumarPreguntas, extraIA, estado
       ${prep.ajuste.length ? html`<div class="grupo"><h4><span class="sello s-aj">Ajuste</span> Se arranca igual con una salida provisoria</h4>${prep.ajuste.map(itemB)}</div>` : null}
       ${prep.desarrollo.length ? html`<div class="grupo"><h4><span class="sello s-dv">Desarrollo</span> Se arranca con la salida provisoria; la solución definitiva requiere programar</h4>${prep.desarrollo.map(itemB)}</div>` : null}`)}
 
-    ${sec("Preguntas pendientes para el sindicato", html`
-      ${res.pendientes.length || extraIA.length ? html`<ol class="preguntas">${res.pendientes.map((p, k) => html`<li key=${k}>${p}</li>`)}${extraIA.map((p, k) => html`<li class="extra" key=${"x" + k}>${p}</li>`)}</ol>` : html`<p class="nota">No quedaron preguntas abiertas.</p>`}
-      ${cat.ia ? html`<div class="acciones"><span class="nota">¿Querés que la IA sume preguntas sobre casos borde?</span><div class="der"><span class="estado-ia ${estadoIA.clase}" role="status">${estadoIA.texto}</span><button class="boton suave chico" type="button" onClick=${sumarPreguntas}>Sumar preguntas con IA</button></div></div>` : null}`)}
+    ${sec("Prompt para Code", html`
+      <p class="nota">Qué configurar en el panel, qué validar con las funciones que existen y qué función habría que desarrollar. Para pegar en Claude Code o pasarle a quien arma el formulario.</p>
+      <pre class="json prompt">${res.prompt}</pre>
+      <div class="acciones"><span></span><div class="der"><button class="boton suave chico" type="button" onClick=${() => copiar(res.prompt, "Prompt copiado.")}>Copiar prompt</button></div></div>`)}
 
     ${sec("Para importar en Colm3na", html`
       <p class="nota">Formato <span class="mono">colm3na.tramite v1</span>. Cada campo tiene la misma forma que guarda hoy el constructor. Las áreas van por nombre: el importador las busca en el sindicato y, si falta alguna, no importa y la informa. Lo marcado con <span class="mono">x_</span> no se importa todavía.</p>
       <pre class="json">${JSON.stringify(res.json, null, 2)}</pre>
       <label class="campo"><span>Nota para el caso (opcional)</span><input type="text" value=${nota} placeholder="Qué falta acordar con el sindicato, qué se probó…" onInput=${(e) => setNota(e.target.value)} /></label>
-      <div class="acciones"><button class="boton suave" type="button" onClick=${() => ir("pregunta", 0)}>← Volver a las preguntas</button>
+      <div class="acciones"><button class="boton suave" type="button" onClick=${() => ir("datos")}>← Volver a los datos</button>
         <div class="der"><span class="estado-ia" role="status">${guardado}</span>
           <button class="boton suave" type="button" onClick=${() => copiar(JSON.stringify(res.json, null, 2), "JSON copiado.")}>Copiar JSON</button>
           <button class="boton suave" type="button" onClick=${descargar}>Descargar JSON</button>

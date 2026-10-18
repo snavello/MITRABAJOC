@@ -1554,9 +1554,26 @@ plan `PLAN_ASISTENTE_TRAMITES.md`):
   lee el relato y devuelve, por una herramienta con esquema cerrado, nombre,
   respuestas a las preguntas, campos y dudas; TODO pasa por
   `asistente_tramites.sanear_propuesta`, que descarta lo que no está en el
-  catálogo. Circuito, instrucción, vista previa, brechas y JSON los arma el
-  motor puro (`resolver`), que se llama en cada cambio de respuesta. Nada de
-  lo que la herramienta afirma sobre Colm3na sale del modelo.
+  catálogo. Circuito, instrucción, vista previa, brechas, prompt y JSON los
+  arma el motor puro (`resolver`), que se llama en cada cambio de respuesta.
+  Nada de lo que la herramienta afirma sobre Colm3na sale del modelo.
+- **Seis preguntas, cada una con una recomendada y una respuesta libre;
+  nada se pregunta dos veces** (SDN, 2026-10-18). `PREGUNTAS` son seis
+  (quién inicia, quién recibe, aprobación, requisitos, cómo termina,
+  cuántas veces) con `recomendada`, que queda puesta si la IA no propuso
+  (`recomendadas` en la entrada) y se confirma con un clic; `nota_<clave>`
+  es la respuesta libre y va al prompt. Lo demás que el motor necesita son
+  `INFERIDAS` (segundo formulario, ventana, quién entrega, cupo, listado,
+  tercero): las completa la IA y se corrigen en "Lo que entendí". No hay
+  segundo cuestionario: `pendientes` son solo las dudas de la IA.
+- **Por campo, aclaración y regla** (`aclaracion`, `regla`, `formula`,
+  `funcion_nueva` en `sanear_campo`): la fórmula que compila contra el
+  catálogo se exporta como validación por función real; la que no, queda
+  `x_regla`; la función nueva, `x_funcion_nueva`. La IA recibe el catálogo
+  de `validaciones_tramite.catalogo_funcion()` en su prompt de sistema y
+  solo puede nombrar lo que existe. El resultado trae **"Prompt para
+  Code"** (`prompt_para_code`): qué configurar, qué validar con qué
+  función y qué función desarrollar, al lado de la instrucción.
 - **El catálogo se compara contra el código** (D4): `test_asistente_tramites.py`
   falla si el constructor suma un tipo de campo, un ancho o un estado que el
   asistente no conoce. `BRECHAS` es la lista cerrada de lo que no existe, con
@@ -1768,7 +1785,14 @@ por función en Trámites"); la 4 (externa) sigue en BACKLOG.md. Reglas vigentes
   calcula el servidor en `/api/tramite` y lo que mande el navegador se ignora.
 - `sistema.tramites_de_este_tipo` / `tramites_abiertos_de_este_tipo` cuentan
   los pedidos del afiliado de ESE formulario: «una sola vez» es un requisito
-  (`== 0`), no una brecha.
+  (`== 0`), no una brecha. **Desde 2026-10-18, once datos más**
+  (`DATOS_SISTEMA`; los calcula `db.contexto_validaciones`, ninguno se
+  guarda): `credencial_vigente` (código generado y vigencia no vencida; sin
+  fecha, vigente), `numero_credencial`, `edad`, `antiguedad_meses`,
+  `ultimo_recibo_periodo`, `meses_sin_recibo`, `ultimo_recibo_bruto`,
+  `empleador_cuit`, `empleador_nombre`, `tramites_abiertos` y
+  `dias_desde_ultimo_pedido_de_este_tipo`. Un dato nuevo es una entrada ahí
+  más su cálculo en `contexto_validaciones`.
 - **En vivo** (`POST /api/tramite/validar-campo`, D3): solo las funciones
   marcadas `en_vivo`, respuesta pasa / no pasa con el mensaje y NUNCA la fila;
   **diez intentos por sesión y formulario** (`EN_VIVO_MAX_INTENTOS`, 429

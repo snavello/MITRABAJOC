@@ -289,3 +289,18 @@ tr.caso { cursor: pointer; }
   .pestana-marca, .barra i { transition: none; }
 }
 @keyframes fundido { from { opacity: 0; } }
+
+/* 2026-10-18: recomendada, inferidas, extras por campo y prompt */
+.marca-rec { font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--agua); border: 1px solid color-mix(in srgb, var(--agua) 40%, white); border-radius: 999px; padding: 1px 7px; margin-left: 6px; }
+.inferidas { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px 16px; margin-top: 8px; }
+.inferidas .campo span { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.campo-extra { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 2px 0 8px; }
+.campo-extra input { width: 100%; }
+.campo-extra .mono { font-family: var(--fuente-num, ui-monospace, monospace); font-size: 12px; }
+tr.extra td { border-top: none !important; padding-top: 0 !important; }
+.catalogo { font-size: 12px; color: #5b6478; margin-top: 8px; }
+.catalogo summary { cursor: pointer; font-weight: 600; }
+.catalogo ul { margin: 4px 0 8px 16px; padding: 0; }
+.catalogo code { background: #f1eefa; padding: 1px 4px; border-radius: 4px; font-size: 11px; }
+pre.prompt { white-space: pre-wrap; }
+details.grupo summary { cursor: pointer; }

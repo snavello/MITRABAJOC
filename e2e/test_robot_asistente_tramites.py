@@ -2,7 +2,7 @@
 """Robot E2E: el Asistente de trámites de punta a punta, sin IA.
 
 Recorre las cuatro etapas con el ejemplo del kit escolar (el pedido → lo que
-entendí → las catorce preguntas → el resultado), verifica que el resultado
+entendí → las seis preguntas → los datos → el resultado), verifica que el resultado
 traiga el diagrama, la vista previa, lo que falta configurar en el sindicato
 elegido y el JSON `colm3na.tramite`, guarda un caso y lo encuentra en Casos y
 en el inventario de Brechas. La IA no se toca: `/entender` no se llama
@@ -57,18 +57,20 @@ def test_del_relato_al_json_sin_ia(nuevo_actor, informe):
     expect(page.get_by_text("Esto entendí")).to_be_visible()
     informe.paso(f"Cargó el ejemplo para «{sindicato}» y siguió sin IA")
 
-    page.locator("button", has_text="Empezar las preguntas").click()
+    page.locator("button", has_text="preguntas →").click()
     vistas = 0
     for _ in range(20):
         expect(page.locator("h2").first).to_be_visible()
         vistas += 1
-        boton = page.locator("button", has_text="Ver el resultado")
+        boton = page.locator("button", has_text="Los datos del formulario")
         if boton.count():
             boton.click()
             break
         page.locator("button", has_text="Siguiente").click()
     informe.dato("Preguntas recorridas", vistas)
-    assert vistas == 14, "el kit escolar contesta aprobación y entrega: tienen que ser las catorce"
+    assert vistas == 6, "seis preguntas, cada una con su recomendada (SDN, 2026-10-18)"
+    expect(page.get_by_text("¿Estos son los datos que se piden?")).to_be_visible()
+    page.locator("button", has_text="Ver el resultado").click()
 
     expect(page.get_by_text("Para importar en Colm3na")).to_be_visible()
     page.wait_for_timeout(600)   # el motor responde 250 ms después del último cambio

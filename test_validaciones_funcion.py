@@ -16,6 +16,7 @@ from datetime import timedelta
 
 import auth
 import cuit
+from sqlmodel import select
 import db
 import fechas
 import main
@@ -102,7 +103,7 @@ def test_la_formula_se_escribe_como_las_reglas_y_falla_al_guardar():
     assert vt.error_de_formula("campo.dias * 2 >= 10 y no (campo.desde < hoy())", campos) is None
     assert vt.error_de_formula("lista.vinculo == 'Hijo' o lista.vinculo == 'Hija'", campos, "grupo_familiar") is None
     assert "campo.dias_x" in vt.error_de_formula("campo.dias_x > 1", campos)
-    assert "sistema.edad" in vt.error_de_formula("sistema.edad > 1", campos)
+    assert "sistema.nada" in vt.error_de_formula("sistema.nada > 1", campos)
     assert "fórmula válida" in vt.error_de_formula("campo.dias ** 2", campos)
     assert "divide por cero" in vt.error_de_formula("campo.dias / 0", campos)
     assert vt.error_de_formula("__import__('os')", campos)
@@ -289,3 +290,46 @@ def test_el_contexto_del_sistema_sale_del_padron():
     assert ctx["buscar"]("grupo_familiar", "55123456") is None, "sin valores no se buscó nada"
     ctx = db.contexto_validaciones(SID, JUAN, TIPO, {TIPO["campos"][0]["id"]: "55.123.456"})
     assert ctx["buscar"]("grupo_familiar", "55123456")["apellido_nombre"] == "Pérez, Martina"
+
+
+def test_los_datos_del_sistema_nuevos_salen_del_padron_y_de_los_recibos():
+    """Las funciones pedidas el 2026-10-18: credencial, edad, antigüedad,
+    último recibo, empleador y pedidos abiertos. Todo del CUIL de la sesión."""
+    from db import Empleador, ReciboVerificado, Trabajador
+    cuil = cuit.corregir("20300000060")
+    with db.get_session() as s:
+        s.add(Trabajador(sindicato_id=SID, cuil=cuil, activo=True, registrado=True, fecha_afiliacion="2019-05-02",
+                         codigo_credencial="GREMI1234ABCD", vigencia_credencial="2030-12-31",
+                         cuit_empleador="30999888778"))
+        db.guardar_datos_personales(s, cuil, nombre="Credencial", fecha_nacimiento="1988-07-15")
+        s.add(Empleador(sindicato_id=SID, cuit="30999888778", razon_social="Banco Humo S.A."))
+        s.add(ReciboVerificado(sindicato_id=SID, cuil=cuil, periodo="2026-06", estado="OK", bruto=1500000.0))
+        s.add(ReciboVerificado(sindicato_id=SID, cuil=cuil, periodo="2026-08", estado="OK", bruto=1650000.5))
+        s.commit()
+    sis = db.contexto_validaciones(SID, cuil, {"campos": [], "requisitos": []}, {})["sistema"]
+    assert sis["credencial_vigente"] is True and sis["numero_credencial"] == "GREMI1234ABCD"
+    assert sis["edad"] == vt.anios_cumplidos("1988-07-15") and sis["antiguedad_meses"] == vt.meses_cumplidos("2019-05-02")
+    assert sis["ultimo_recibo_periodo"] == "2026-08" and sis["ultimo_recibo_bruto"] == 1650000.5
+    assert sis["meses_sin_recibo"] == vt.meses_cumplidos("2026-08")
+    assert sis["empleador_cuit"] == "30999888778" and sis["empleador_nombre"] == "Banco Humo S.A."
+    assert sis["tramites_abiertos"] == 0 and sis["dias_desde_ultimo_pedido_de_este_tipo"] is None
+    # Credencial vencida, o sin generar: no vigente. Sin fecha: vigente.
+    with db.get_session() as s:
+        t = s.exec(select(Trabajador).where(Trabajador.cuil == cuil, Trabajador.sindicato_id == SID)).first()
+        t.vigencia_credencial = "2020-01-01"; s.add(t); s.commit()
+    assert db.contexto_validaciones(SID, cuil, {"campos": [], "requisitos": []}, {})["sistema"]["credencial_vigente"] is False
+    with db.get_session() as s:
+        t = s.exec(select(Trabajador).where(Trabajador.cuil == cuil, Trabajador.sindicato_id == SID)).first()
+        t.vigencia_credencial = None; s.add(t); s.commit()
+    assert db.contexto_validaciones(SID, cuil, {"campos": [], "requisitos": []}, {})["sistema"]["credencial_vigente"] is True
+    # Y en una fórmula se usan como cualquier dato: la credencial frena, la edad compara.
+    campos = [{"id": 1, "etiqueta": "Nada", "tipo_dato": "texto", "validaciones": []}]
+    req = vt.requisitos_saneados([{"origen": "sistema", "formula": "sistema.credencial_vigente y sistema.edad >= 18",
+                                   "mensaje": "Necesitás credencial vigente y ser mayor."}], campos)
+    ctx = db.contexto_validaciones(SID, cuil, {"campos": campos, "requisitos": req}, {})
+    assert vt.evaluar_envio(campos, [], {}, ctx, req)["errores"] == []
+    assert vt.evaluar_envio(campos, [], {}, db.contexto_validaciones(SID, ANA, {"campos": campos, "requisitos": req}, {}), req)["errores"] == [
+        "Necesitás credencial vigente y ser mayor."]
+    # Alguien que no está en el padrón: todo vacío, nada revienta.
+    vacio = db.contexto_validaciones(SID, AJENO, {"campos": [], "requisitos": []}, {})["sistema"]
+    assert vacio["credencial_vigente"] is False and vacio["edad"] is None and vacio["ultimo_recibo_periodo"] is None

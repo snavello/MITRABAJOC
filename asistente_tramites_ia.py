@@ -7,8 +7,9 @@ Dos cosas y nada más:
   (las respuestas son enumeraciones de asistente_tramites.PREGUNTAS) y
   después pasa IGUAL por `asistente_tramites.sanear_propuesta`: la IA
   propone, el motor decide.
-- `preguntas_extra(instruccion, ya_listadas)`: entre 4 y 8 preguntas nuevas
-  para el sindicato sobre casos borde, en texto.
+
+Hasta el 2026-10-18 había también `preguntas_extra` (un segundo cuestionario
+sobre casos borde): SDN lo sacó, el asistente pregunta una vez.
 
 Misma receta que asistente.py: cliente inyectable (`usar_cliente`) para
 probar el circuito sin gastar créditos, prompt de sistema con caché, el
@@ -21,6 +22,7 @@ import os
 import time
 
 import asistente_tramites as at
+import validaciones_tramite
 
 # El DEFAULT: plataforma puede elegir otro desde /plataforma (uso
 # "asistente_tramites" de precios_ia.USOS).
@@ -65,9 +67,7 @@ def esquema_respuestas() -> dict:
     """Las respuestas del onboarding, una propiedad por pregunta (enum de sus
     opciones, o lista para las múltiples) más los textos libres."""
     props, requeridas = {}, []
-    for p in at.PREGUNTAS:
-        if p.get("campos") or p.get("actores"):
-            continue
+    for p in at.PREGUNTAS_TODAS:
         claves = [k for k, _ in p["opciones"]]
         desc = p["titulo"] + " " + " / ".join(f"{k}: {t}" for k, t in p["opciones"])
         if p.get("multiple"):
@@ -98,13 +98,18 @@ def herramienta() -> dict:
                 "respuestas": esquema_respuestas(),
                 "campos": {"type": "array", "description": "Las preguntas del formulario que completa quien lo pide, en orden, con separadores para agrupar.",
                            "items": {"type": "object", "additionalProperties": False,
-                                     "required": ["etiqueta", "tipo", "obligatorio", "opciones", "control"],
+                                     "required": ["etiqueta", "tipo", "obligatorio", "opciones", "control",
+                                                  "aclaracion", "regla", "formula", "funcion_nueva"],
                                      "properties": {
                                          "etiqueta": {"type": "string", "description": "Etiqueta corta, como la vería el afiliado."},
                                          "tipo": _enum(at.TIPOS_QUE_PROPONE, " / ".join(f"{k}: {v}" for k, v in at.TIPOS.items() if k in at.TIPOS_QUE_PROPONE) + ". Un documento es archivo; una lista cerrada de opciones es seleccion.", nulo=False),
                                          "obligatorio": {"type": "boolean"},
                                          "opciones": {"type": "string", "description": "Opciones separadas por coma si el tipo las lleva; extensiones si es archivo; vacío si no."},
                                          "control": _enum([k for k in at.CONTROLES if k] + [""], "Solo si el relato lo pide o es evidente: " + " / ".join(f"{k}: {v}" for k, v in at.CONTROLES.items() if k) + ". Vacío si no.", nulo=False),
+                                         "aclaracion": {"type": "string", "description": "Una frase que explica el dato a quien arma el formulario, solo si no es obvio (qué es, de dónde sale, por qué se pide). Vacío si es obvio."},
+                                         "regla": {"type": "string", "description": "Qué hay que controlar sobre este dato, en una frase, solo si el relato lo pide. Vacío si nada."},
+                                         "formula": {"type": "string", "description": "Si la regla se puede escribir con el CATÁLOGO de datos y funciones del sistema (campo.*, lista.*, sistema.*, y/o/no, las funciones listadas), la fórmula exacta. Vacío si no se puede."},
+                                         "funcion_nueva": {"type": "string", "description": "Si la regla necesita un dato o una función que NO está en el catálogo: 'nombre_en_minusculas: qué tiene que devolver y de dónde sale'. Vacío si no hace falta."},
                                      }}},
                 "dudas": {"type": "array", "items": {"type": "string"},
                           "description": "Preguntas cortas sobre lo que el relato no aclara. Lista vacía si no hay."},
@@ -113,14 +118,35 @@ def herramienta() -> dict:
     }
 
 
+def _catalogo_para_el_prompt() -> str:
+    """El catálogo de datos y funciones que una fórmula puede nombrar, tal
+    cual lo tiene el código (validaciones_tramite.catalogo_funcion): la IA
+    solo puede proponer fórmulas con esto, y lo que no esté acá es una
+    función a desarrollar."""
+    cat = validaciones_tramite.catalogo_funcion()
+    L = ["Datos del sistema (sistema.<dato>, del afiliado que inicia el trámite):"]
+    L += [f"- sistema.{d['clave']} ({d['tipo']}): {d['rotulo']}" for d in cat["sistema"]]
+    L.append("Listas que el sindicato carga por CSV (lista.<columna>, la fila del afiliado):")
+    L += [f"- {l['nombre']}: " + ", ".join(f"lista.{c['clave']} ({c['tipo']})" for c in l["columnas"]) for l in cat["listas"]]
+    L.append("Funciones: " + "; ".join(f["ayuda"] for f in cat["funciones"]) + ".")
+    L.append("Sintaxis: + - * /, comparaciones (<= >= < > == !=), y / o / no, textos entre comillas, fechas AAAA-MM-DD. "
+             "Los campos del formulario se nombran campo.<etiqueta en minúsculas, sin tildes, espacios como guion bajo>.")
+    return "\n".join(L)
+
+
 PROMPT_SISTEMA = """Sos analista funcional de Colm3na, la plataforma para sindicatos argentinos donde el afiliado inicia trámites desde su app, un área del sindicato los atiende por un chat con estados (iniciado, en tratamiento, a la espera de info, respondido, terminado) y los formularios los arma el sindicato en un constructor.
 Vas a leer el relato de un trámite y llamar a la herramienta proponer_tramite UNA vez.
 Reglas:
-- Solo proponés. Si el relato no lo dice con claridad, poné null (o lista vacía) y sumá la pregunta a "dudas". No inventes requisitos, áreas ni documentos.
+- Proponé con criterio y lo mínimo: pocas preguntas al afiliado, sin repetir lo que el sindicato ya sabe del padrón (nombre, CUIL, seccional, empleador, credencial), y separadores solo si hay más de seis campos.
+- Respondé TODAS las preguntas de "respuestas" con tu mejor lectura del relato. Si el relato no lo dice, elegí la opción más común para ese tipo de trámite y, si de verdad hace falta confirmarlo, sumá UNA pregunta corta a "dudas". No inventes requisitos, áreas ni documentos.
 - Usá únicamente los valores permitidos de cada enumeración.
-- "campos": las preguntas del formulario que completa quien lo pide, en orden, con separadores para agrupar. Los documentos son tipo "archivo". Una lista cerrada de opciones es "seleccion".
-- "control": elegí uno solo si el relato lo pide o es evidente (fecha de nacimiento → no_futura; un dato que no puede repetirse → unico; una opción que depende de otra → depende; un dato a cotejar con una base del sindicato → lista).
-- Castellano rioplatense, etiquetas cortas como las vería el afiliado. Nada de nombres de personas."""
+- "campos": las preguntas del formulario que completa quien lo pide, en orden. Los documentos son tipo "archivo". Una lista cerrada de opciones es "seleccion".
+- "control": solo si el relato lo pide o es evidente (fecha de nacimiento → no_futura; un dato que no puede repetirse → unico; una opción que depende de otra → depende; un dato a cotejar con el grupo familiar del sindicato → lista).
+- "regla" / "formula" / "funcion_nueva": cuando el relato pide controlar algo sobre un dato, decí qué (regla) y, si se puede escribir con el catálogo de abajo, la fórmula exacta; si el control necesita un dato que el catálogo no tiene, proponé la función nueva con nombre y qué devuelve. Nunca inventes datos del sistema que no estén en el catálogo.
+- Castellano rioplatense, etiquetas cortas como las vería el afiliado. Nada de nombres de personas.
+
+CATÁLOGO DE DATOS Y FUNCIONES PARA LAS FÓRMULAS
+""" + _catalogo_para_el_prompt()
 
 
 def _llamar(cli, sistema: str, mensajes: list, modelo: str, tools=None):
@@ -159,27 +185,6 @@ def entender(relato: str, modelo: str) -> tuple:
         raise ErrorModelo("el modelo no devolvió una propuesta", uso)
     crudo = usos[0].input if isinstance(usos[0].input, dict) else {}
     return at.sanear_propuesta(crudo, de_ia=True, relato=relato), uso
-
-
-def preguntas_extra(instruccion: str, ya_listadas: list, modelo: str) -> tuple:
-    """Entre 4 y 8 preguntas nuevas para el sindicato (texto, una por
-    línea). Devuelve (lista de preguntas, uso)."""
-    cli = cliente()
-    if cli is None:
-        raise ErrorModelo("sin cliente de Anthropic configurado")
-    sistema = ("Sos implementador de Colm3na en un sindicato argentino. Con el trámite que te paso, escribí "
-               "entre 4 y 8 preguntas NUEVAS para el sindicato sobre casos borde (rechazos, plazos, excepciones, "
-               "qué pasa si…). No repitas las ya listadas. Una por línea, numeradas, sin introducción, en "
-               "castellano rioplatense.")
-    cuerpo = instruccion.strip()[:8000] + "\n\nYa listadas:\n" + ("\n".join(f"- {p}" for p in ya_listadas[:40]) or "(ninguna)")
-    msg, ms = _llamar(cli, sistema, [{"role": "user", "content": cuerpo}], modelo)
-    texto = "".join(getattr(b, "text", "") for b in msg.content if getattr(b, "type", "") == "text")
-    preguntas = []
-    for linea in texto.splitlines():
-        limpia = linea.strip().lstrip("-•*0123456789.) ").strip()
-        if limpia.endswith("?") or limpia.startswith("¿"):
-            preguntas.append(limpia[:300])
-    return preguntas[:8], _uso(msg, modelo, ms)
 
 
 class ErrorModelo(ErrorModelo):  # noqa: F811 -- misma clase, con el uso adentro
