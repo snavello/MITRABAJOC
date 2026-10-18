@@ -380,8 +380,11 @@ def evaluar_envio(campos, reglas, valores, contexto=None, requisitos=None) -> di
                 sin_contexto += 1
                 continue
             pasa, resultado, motivo = _resolver(funcion[0])
-            calculados[cid] = _texto_resultado(resultado) if pasa else ""
-            if not pasa:
+            # Un calculado MUESTRA el resultado, no valida: una fórmula que da
+            # "no" (sistema.edad > 65 con 40 años) se muestra como "No", no
+            # queda vacía con un aviso (bug visto por SDN el 2026-10-18).
+            calculados[cid] = _texto_resultado(resultado) if resultado is not None else ""
+            if resultado is None:
                 advertencias.append(f'"{campo.get("etiqueta")}": no se pudo calcular ({motivo}).')
             continue
         if funcion and str(valores.get(cid) or "").strip():
@@ -814,8 +817,8 @@ def evaluar_campo_en_vivo(campos, indice, valores, contexto) -> dict:
         f = next((v for v in (c.get("validaciones") or []) if v.get("fuente") == "funcion"), None)
         if not f or f.get("clave2") is None or int(f["clave2"]) != int(indice):
             continue
-        ok, resultado, _m = _evaluar_funcion(f, ns_campo, contexto, campos, valores, cache)
-        calculados[c.get("id")] = _texto_resultado(resultado) if ok else ""
+        _ok, resultado, _m = _evaluar_funcion(f, ns_campo, contexto, campos, valores, cache)
+        calculados[c.get("id")] = _texto_resultado(resultado) if resultado is not None else ""
     return {"pasa": pasa, "mensaje": mensaje, "calculados": calculados}
 
 

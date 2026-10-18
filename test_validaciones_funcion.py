@@ -375,3 +375,28 @@ def test_el_constructor_muestra_la_ayuda_de_cada_dato():
     assert "function htmlAyudaElegido" in html and "function abrirAyudaFunciones" in html
     assert "tituloDe(k)" in html, "el title de la opción es el tooltip antes de elegir"
     assert 'class="ct-fn-mas" onclick="abrirAyudaFunciones()"' in html, "el enlace al pie del constructor"
+
+
+def test_un_calculado_con_condicion_muestra_si_o_no_y_nunca_frena():
+    """SDN (2026-10-18) puso en un campo calculado `sistema.edad > 1000000` y
+    vio que "pasaba todo": un calculado MUESTRA el resultado, no valida. Lo
+    que sí estaba mal: cuando la fórmula daba "no", el campo quedaba vacío
+    con el aviso "no se pudo calcular (no cumple la condición)". Ahora
+    muestra "No"; el aviso queda solo para cuando falta un dato."""
+    ctx = {"sistema": {"edad": 40.0}, "buscar": lambda *a: None}
+
+    def calc(formula):
+        campos = [{"id": 1, "etiqueta": "Edad", "tipo_dato": "calculado",
+                   "validaciones": [{"fuente": "funcion", "origen": "sistema", "formula": formula, "trae": "", "operador": "", "valor": ""}]}]
+        return vt.evaluar_envio(campos, [], {}, ctx, [])
+
+    assert calc("sistema.edad > 1")["calculados"] == {1: "Sí"}
+    r = calc("sistema.edad > 1000000")
+    assert r["calculados"] == {1: "No"} and r["errores"] == [] and r["advertencias"] == []
+    assert calc("sistema.edad")["calculados"] == {1: "40"}
+    r = calc("sistema.fecha_nacimiento")   # no está en el contexto: falta el dato
+    assert r["calculados"] == {1: ""} and r["advertencias"] and "no se pudo calcular" in r["advertencias"][0]
+    # Lo mismo al abrir y en vivo (los calculados sin segunda clave).
+    campos = [{"id": 1, "etiqueta": "Edad", "tipo_dato": "calculado",
+               "validaciones": [{"fuente": "funcion", "origen": "sistema", "formula": "sistema.edad > 1000000", "trae": "", "operador": "", "valor": ""}]}]
+    assert vt.requisitos_al_abrir(campos, [], ctx)["calculados"] == {1: "No"}
