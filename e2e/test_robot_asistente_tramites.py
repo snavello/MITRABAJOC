@@ -76,7 +76,7 @@ def test_del_relato_al_json_sin_ia(nuevo_actor, informe):
     page.wait_for_timeout(600)   # el motor responde 250 ms después del último cambio
     expect(page.locator("svg[role=img]")).to_have_count(1)
     expect(page.locator(".vp-marco")).to_have_count(1)
-    json_texto = page.locator("pre.json").inner_text()
+    json_texto = page.locator("pre.json:not(.prompt)").inner_text()   # el prompt para Code también es un pre.json (2026-10-18)
     assert '"formato": "colm3na.tramite"' in json_texto and '"KE27"' in json_texto
     assert page.locator(".item.ok").count() >= 3, "módulos, área y quien arma el formulario"
     assert page.locator(".item.aj").count() >= 1 and page.locator(".item.dv").count() >= 1

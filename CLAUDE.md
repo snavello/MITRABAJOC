@@ -1574,6 +1574,14 @@ plan `PLAN_ASISTENTE_TRAMITES.md`):
   solo puede nombrar lo que existe. El resultado trae **"Prompt para
   Code"** (`prompt_para_code`): qué configurar, qué validar con qué
   función y qué función desarrollar, al lado de la instrucción.
+- **"Los datos" son tarjetas, no una tabla** (2026-10-18, pedido de SDN
+  con la skill `emil-design-eng`): la pregunta grande, abajo tipo /
+  control / opciones / obligatorio con rótulo, y un renglón plegado
+  «Aclaración y control» que resume en chips lo escrito (aclaración,
+  regla, fórmula, función nueva) y abierto muestra los cuatro campos con
+  su rótulo. Nada se perdió, solo se plegó. El catálogo de datos y
+  funciones (con qué devuelve cada uno y ejemplo) se abre debajo, con
+  buscador. Se anima opacity, translate y el chevrón; nunca el alto.
 - **El catálogo se compara contra el código** (D4): `test_asistente_tramites.py`
   falla si el constructor suma un tipo de campo, un ancho o un estado que el
   asistente no conoce. `BRECHAS` es la lista cerrada de lo que no existe, con
@@ -1792,7 +1800,14 @@ por función en Trámites"); la 4 (externa) sigue en BACKLOG.md. Reglas vigentes
   `ultimo_recibo_periodo`, `meses_sin_recibo`, `ultimo_recibo_bruto`,
   `empleador_cuit`, `empleador_nombre`, `tramites_abiertos` y
   `dias_desde_ultimo_pedido_de_este_tipo`. Un dato nuevo es una entrada ahí
-  más su cálculo en `contexto_validaciones`.
+  más su cálculo en `contexto_validaciones` **y su ayuda en `AYUDA_SISTEMA`**
+  (grupo, qué devuelve, ejemplo, qué significa; `AYUDA_FUNCION` para las
+  funciones; `COMO_SE_COMPARA` por tipo): sin ayuda el test falla, y cada
+  ejemplo tiene que compilar. El constructor la muestra al elegir (línea
+  bajo la fila + `title` de la opción) y entera en el modal "Datos y
+  funciones" (`overlay-ayuda-funciones`, buscable); el asistente, en su
+  catálogo (`Catalogo` de app.js). Las tres pantallas leen
+  `catalogo_funcion()`, nada a mano.
 - **En vivo** (`POST /api/tramite/validar-campo`, D3): solo las funciones
   marcadas `en_vivo`, respuesta pasa / no pasa con el mensaje y NUNCA la fila;
   **diez intentos por sesión y formulario** (`EN_VIVO_MAX_INTENTOS`, 429
