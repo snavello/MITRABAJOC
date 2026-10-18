@@ -109,6 +109,63 @@ FUNCIONES_FORMULA = {
 }
 PALABRAS_FORMULA = {"y": "and", "o": "or", "no": "not", "verdadero": "True", "falso": "False"}
 
+# ---- la ayuda de cada dato y de cada función (2026-10-18) -----------------
+# Con 22 datos del sistema ya no alcanza el rótulo: el constructor y el
+# asistente muestran, al elegir cada uno, qué devuelve y un ejemplo de cómo
+# se compara. Un dato nuevo en DATOS_SISTEMA tiene que tener su entrada acá
+# (lo exige test_validaciones_funcion): sin ejemplo no se ofrece.
+GRUPOS_SISTEMA = (("padron", "Padrón"), ("credencial", "Credencial"), ("recibos", "Recibos"),
+                  ("tramites", "Trámites"), ("domicilio", "Domicilio"))
+
+# tipo -> cómo se compara un dato de ese tipo, en una frase.
+COMO_SE_COMPARA = {
+    "booleano": "Vale sí o no. Como control: «es igual a» sí (o no). En una fórmula va solo, o con «no» adelante.",
+    "numero": "Es un número: se compara con <= >= < > == != contra un valor fijo o contra otro dato.",
+    "texto": "Es un texto: igual (==) o distinto (!=) a un valor entre comillas, o se mide con largo().",
+    "fecha": "Es una fecha AAAA-MM-DD: se compara contra hoy, hoy-365 (días) u otra fecha, o se mide con dias_entre, meses_entre y anios_entre.",
+}
+
+# dato -> (grupo, qué devuelve, ejemplo, qué significa el ejemplo).
+AYUDA_SISTEMA = {
+    "en_padron": ("padron", "sí / no", "sistema.en_padron", "está en el padrón de este sindicato"),
+    "activo": ("padron", "sí / no", "sistema.activo", "no fue dado de baja"),
+    "registrado": ("padron", "sí / no", "no sistema.registrado", "todavía no se registró en la app"),
+    "seccional": ("padron", "texto", 'sistema.seccional == "Rosario"', "pertenece a la seccional Rosario"),
+    "nivel_fiabilidad": ("padron", "número de 1 a 4", "sistema.nivel_fiabilidad >= 3", "subió un recibo propio o el sindicato la confirmó"),
+    "fecha_afiliacion": ("padron", "fecha AAAA-MM-DD", "dias_entre(sistema.fecha_afiliacion, hoy()) >= 180", "se afilió hace 180 días o más"),
+    "fecha_nacimiento": ("padron", "fecha AAAA-MM-DD", "anios_entre(sistema.fecha_nacimiento, hoy()) >= 18", "es mayor de edad"),
+    "edad": ("padron", "años cumplidos", "sistema.edad < 60", "tiene menos de 60 años"),
+    "antiguedad_meses": ("padron", "meses cumplidos", "sistema.antiguedad_meses >= 6", "lleva al menos seis meses de afiliación"),
+    "empleador_cuit": ("padron", "CUIT sin guiones", 'sistema.empleador_cuit == "30999888778"', "trabaja en esa empresa"),
+    "empleador_nombre": ("padron", "texto (vacío si no está cargado)", "existe(sistema.empleador_nombre)", "el sindicato tiene cargada su empresa"),
+    "credencial_vigente": ("credencial", "sí / no", "sistema.credencial_vigente", "tiene credencial generada y no vencida"),
+    "numero_credencial": ("credencial", "texto (vacío si no se generó)", "campo.credencial == sistema.numero_credencial", "escribió el número de su credencial"),
+    "recibos_verificados": ("recibos", "cantidad", "sistema.recibos_verificados >= 1", "verificó al menos un recibo"),
+    "semaforo": ("recibos", "verde, amarillo, rojo o gris", 'sistema.semaforo != "rojo"', "sus aportes no están impagos"),
+    "ultimo_recibo_periodo": ("recibos", "período AAAA-MM", 'sistema.ultimo_recibo_periodo >= "2026-06"', "su último recibo es de junio o después"),
+    "meses_sin_recibo": ("recibos", "meses cumplidos", "sistema.meses_sin_recibo <= 2", "verificó un recibo en los últimos dos meses"),
+    "ultimo_recibo_bruto": ("recibos", "importe en pesos", "sistema.ultimo_recibo_bruto <= 1500000", "cobra hasta 1.500.000 de bruto"),
+    "tramites_de_este_tipo": ("tramites", "cantidad", "sistema.tramites_de_este_tipo == 0", "nunca pidió este trámite (una sola vez)"),
+    "tramites_abiertos_de_este_tipo": ("tramites", "cantidad", "sistema.tramites_abiertos_de_este_tipo == 0", "no tiene otro pedido de este trámite en curso"),
+    "tramites_abiertos": ("tramites", "cantidad", "sistema.tramites_abiertos < 3", "tiene menos de tres trámites sin terminar"),
+    "dias_desde_ultimo_pedido_de_este_tipo": ("tramites", "días (vacío si nunca lo pidió)", "sistema.dias_desde_ultimo_pedido_de_este_tipo >= 365", "pasó un año desde la última vez"),
+    "provincia": ("domicilio", "texto", 'sistema.provincia == "Santa Fe"', "vive en Santa Fe"),
+    "localidad": ("domicilio", "texto", 'sistema.localidad == "Rafaela"', "vive en Rafaela"),
+}
+
+# función -> (ejemplo, qué significa).
+AYUDA_FUNCION = {
+    "hoy": ("campo.fecha_del_hecho <= hoy()", "la fecha que escribió no es futura"),
+    "dias_entre": ("dias_entre(campo.fecha_del_hecho, hoy()) <= 30", "pasaron 30 días o menos"),
+    "meses_entre": ("meses_entre(sistema.fecha_afiliacion, hoy()) >= 6", "seis meses cumplidos de afiliación"),
+    "anios_entre": ("anios_entre(lista.fecha_nacimiento, hoy()) <= 12", "el familiar tiene hasta 12 años"),
+    "min": ("min(campo.monto, 50000)", "el menor de los dos: un tope de 50.000"),
+    "max": ("max(campo.cuotas, 1)", "nunca menos de una cuota"),
+    "redondear": ("redondear(campo.monto * 0.1, 2)", "el 10 %, con dos decimales"),
+    "largo": ("largo(campo.legajo) == 6", "el legajo tiene exactamente seis caracteres"),
+    "existe": ("existe(lista.fecha_nacimiento)", "la fila de la lista trae la fecha de nacimiento"),
+}
+
 _RE_FECHA = re.compile(r"^\d{4}-\d{2}-\d{2}$")  # lo que emite <input type=date>
 
 # Límite dinámico para validaciones de fecha: "hoy", "hoy+10", "hoy-3". Se
@@ -834,11 +891,17 @@ def busquedas_necesarias(campos, requisitos, valores) -> set:
 
 def catalogo_funcion() -> dict:
     """Lo que el constructor ofrece para armar una validación por función:
-    los datos del sistema, las funciones de fórmula y las listas con sus
-    columnas. Es el catálogo del código, no una lista a mano."""
+    los datos del sistema (con grupo, qué devuelve y un ejemplo), las
+    funciones de fórmula (con ejemplo) y las listas con sus columnas. Es el
+    catálogo del código, no una lista a mano."""
     return {
-        "sistema": [{"clave": k, "tipo": t, "rotulo": r} for k, (t, r) in DATOS_SISTEMA.items()],
-        "funciones": [{"nombre": k, "ayuda": v} for k, v in FUNCIONES_FORMULA.items()],
+        "sistema": [{"clave": k, "tipo": t, "rotulo": r, "grupo": AYUDA_SISTEMA[k][0], "devuelve": AYUDA_SISTEMA[k][1],
+                     "ejemplo": AYUDA_SISTEMA[k][2], "significa": AYUDA_SISTEMA[k][3]}
+                    for k, (t, r) in DATOS_SISTEMA.items()],
+        "grupos": [{"clave": k, "nombre": n} for k, n in GRUPOS_SISTEMA],
+        "comparar": dict(COMO_SE_COMPARA),
+        "funciones": [{"nombre": k, "ayuda": v, "ejemplo": AYUDA_FUNCION[k][0], "significa": AYUDA_FUNCION[k][1]}
+                      for k, v in FUNCIONES_FORMULA.items()],
         "listas": [{"clave": k, "nombre": p["nombre"],
                     "columnas": [{"clave": c["clave"], "tipo": c["tipo"], "rotulo": c["rotulo"],
                                   "busqueda": c.get("busqueda", 0)} for c in p["columnas"]]}

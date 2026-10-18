@@ -12,6 +12,7 @@ Correr con: python -m pytest test_validaciones_funcion.py -q
 """
 import io
 import json
+import re
 from datetime import timedelta
 
 import auth
@@ -198,6 +199,33 @@ def test_el_catalogo_sale_del_codigo():
     assert {x["nombre"] for x in cat["funciones"]} == set(vt.FUNCIONES_FORMULA)
     assert [x["clave"] for x in cat["listas"]] == ["grupo_familiar", "datos_afiliado", "simple"]
     assert cat["operadores"] == list(vt.OPERADORES)
+    assert [g["clave"] for g in cat["grupos"]] == [g for g, _ in vt.GRUPOS_SISTEMA]
+    assert set(cat["comparar"]) == {"booleano", "numero", "texto", "fecha"}
+
+
+def test_cada_dato_y_cada_funcion_traen_su_ejemplo():
+    """Con 22 datos del sistema el rótulo no alcanza: el constructor y el
+    asistente muestran qué devuelve cada uno y un ejemplo (2026-10-18). Un
+    dato sin ayuda no se ofrece, y cada ejemplo tiene que compilar contra el
+    catálogo: una ayuda que enseña una fórmula rota es peor que ninguna."""
+    assert set(vt.AYUDA_SISTEMA) == set(vt.DATOS_SISTEMA)
+    assert set(vt.AYUDA_FUNCION) == set(vt.FUNCIONES_FORMULA)
+    grupos = {g for g, _ in vt.GRUPOS_SISTEMA}
+    campos = [{"id": 1, "etiqueta": "Fecha del hecho", "tipo_dato": "fecha"}, {"id": 2, "etiqueta": "Monto", "tipo_dato": "numero"},
+              {"id": 3, "etiqueta": "Cuotas", "tipo_dato": "numero"}, {"id": 4, "etiqueta": "Legajo", "tipo_dato": "texto"},
+              {"id": 5, "etiqueta": "Credencial", "tipo_dato": "texto"}]
+    for clave, (grupo, devuelve, ejemplo, significa) in vt.AYUDA_SISTEMA.items():
+        assert grupo in grupos and devuelve and significa, clave
+        assert f"sistema.{clave}" in ejemplo, clave
+        assert vt.error_de_formula(ejemplo, campos, "grupo_familiar") is None, (clave, ejemplo)
+    for nombre, (ejemplo, significa) in vt.AYUDA_FUNCION.items():
+        assert nombre + "(" in ejemplo and significa, nombre
+        assert vt.error_de_formula(ejemplo, campos, "grupo_familiar") is None, (nombre, ejemplo)
+    for tipo in ("booleano", "numero", "texto", "fecha"):
+        assert tipo in vt.COMO_SE_COMPARA
+    cat = vt.catalogo_funcion()
+    assert all(d["ejemplo"] and d["devuelve"] and d["grupo"] for d in cat["sistema"])
+    assert all(f["ejemplo"] for f in cat["funciones"])
 
 
 # ------------------------------------------------------------------ rutas
@@ -333,3 +361,17 @@ def test_los_datos_del_sistema_nuevos_salen_del_padron_y_de_los_recibos():
     # Alguien que no está en el padrón: todo vacío, nada revienta.
     vacio = db.contexto_validaciones(SID, AJENO, {"campos": [], "requisitos": []}, {})["sistema"]
     assert vacio["credencial_vigente"] is False and vacio["edad"] is None and vacio["ultimo_recibo_periodo"] is None
+
+
+def test_el_constructor_muestra_la_ayuda_de_cada_dato():
+    """Al elegir un dato del padrón, la fila dice qué devuelve y un ejemplo; y
+    la referencia completa (modal `.overlay-ayuda`, buscable) sale del mismo
+    catálogo (2026-10-18). El title de cada opción es el tooltip al recorrer
+    la lista."""
+    html = admin.get("/admin").text
+    cat = json.loads(re.search(r"const CATALOGO_FUNCION = (\{.*?\});\n", html).group(1))
+    assert cat["comparar"] and cat["grupos"] and all(d["ejemplo"] and d["devuelve"] for d in cat["sistema"])
+    assert 'id="overlay-ayuda-funciones"' in html and 'id="cf-buscar"' in html
+    assert "function htmlAyudaElegido" in html and "function abrirAyudaFunciones" in html
+    assert "tituloDe(k)" in html, "el title de la opción es el tooltip antes de elegir"
+    assert 'class="ct-fn-mas" onclick="abrirAyudaFunciones()"' in html, "el enlace al pie del constructor"

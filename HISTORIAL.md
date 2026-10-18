@@ -8014,3 +8014,81 @@ de JS en cada carga del panel, anterior al bloque, porque el script de
 georreferenciación enganchaba `form-seccional` sin comprobar que exista.
 (3) El texto del modal "Avisale a los afiliados" decía que la noticia la
 ve cualquiera; para el acotado ahora dice que es de su seccional.
+
+
+## Cada dato explicado con un ejemplo, y los datos del asistente en tarjetas (2026-10-18, Admin 0.61.01, Plataforma 0.52.01)
+
+Con 22 datos del sistema (`DATOS_SISTEMA`) el rótulo solo no alcanzaba:
+SDN pidió que cada función esté explicada en unas palabras y con un ejemplo,
+en el constructor y en el asistente, porque en varias no se sabe qué devuelve
+ni cómo se compara. Y que el paso "Los datos" del asistente, que mostraba
+cuatro cajas sueltas por fila, se rediseñe limpio con la skill de Emil
+Kowalski, respetando la marca y sin perder un dato.
+
+**Una sola fuente.** `validaciones_tramite.AYUDA_SISTEMA` (dato → grupo,
+qué devuelve, ejemplo, qué significa), `AYUDA_FUNCION` (función → ejemplo,
+significa) y `COMO_SE_COMPARA` (tipo → cómo se compara, en una frase).
+`catalogo_funcion()` las expone (`grupo`, `devuelve`, `ejemplo`,
+`significa` por dato; `grupos`; `comparar`), y de ahí leen las tres
+pantallas y el prompt de la IA (`_catalogo_para_el_prompt`, que ahora lleva
+el ejemplo de cada dato y de cada función). Fail-closed:
+`test_cada_dato_y_cada_funcion_traen_su_ejemplo` exige una entrada por dato
+y por función, y que **cada ejemplo compile** con `error_de_formula`
+contra un formulario de prueba: una ayuda que enseña una fórmula rota es
+peor que ninguna (el primer borrador tenía dos así: `hoy-180` es un límite
+de los controles, no de las fórmulas, y `lista.fecha_baja` no existe).
+
+**Constructor (`templates/admin.html`).** Tres lugares, todos del mismo
+catálogo:
+- la **línea bajo la fila** (`htmlAyudaElegido`, `.ct-fn-ayuda`): al elegir
+  un dato del padrón dice "Devuelve sí / no. Vale sí o no. Como control…
+  Ej.: `sistema.credencial_vigente` → tiene credencial generada y no
+  vencida", con "Ver todos"; al elegir una columna de lista, el tipo y cómo
+  se compara; al elegir "una fórmula", con qué se escribe. "Que esté en la
+  lista" no lleva línea.
+- el **`title` de cada opción** del select (`tituloDe`): el tooltip del
+  navegador al recorrer la lista, antes de elegir.
+- el **modal "Datos y funciones para las fórmulas"**
+  (`#overlay-ayuda-funciones`, familia `.overlay-ayuda`, así movimiento.css
+  y modales.js ya lo cubren; `renderAyudaFormula` arma su cuerpo): buscador
+  (`filtrarAyudaFunciones`, por data-texto, esconde los grupos vacíos solo
+  mientras hay texto), "Cómo se compara cada tipo", los campos de este
+  formulario, el padrón por grupo (Padrón, Credencial, Recibos, Trámites,
+  Domicilio), las listas y las funciones, cada uno con tipo, rótulo y
+  ejemplo. "Ver todos" desde una fila abre el modal **en ese dato**
+  (`data-ancla`, `scrollIntoView` y un resalte de 1,8 s). El `<details>`
+  "Nombres y funciones para las fórmulas" que había al pie se reemplazó por
+  una línea con el enlace al modal. Un detalle de CSS: los botones primarios
+  de admin van en condensada mayúscula por una regla con trece `:not()`; el
+  enlace `.ct-fn-mas` se sumó a esa lista de excepciones, que es el patrón
+  de la hoja.
+
+**Asistente (`static/asistente_tramites/app.js`, `Campos` y `Catalogo`).**
+Cada dato es una tarjeta `.cp`: número en ámbar, la pregunta grande (16px,
+600; un separador va en condensada mayúscula), abajo tipo / control /
+opciones / obligatorio con rótulo chico en mono, y un renglón `.cp-det`
+plegado, "Aclaración y control", que **resume en chips** lo que está
+escrito (`.cp-chip`, con el valor entero en `title`) y abierto muestra los
+cuatro campos con rótulo y ayuda (aclaración, regla, fórmula con `datalist`
+y placeholder, función nueva) más "Ver los datos y las funciones, con
+ejemplos", que abre el catálogo debajo. Los chips se esconden mientras el
+detalle está abierto para no decir dos veces lo mismo. `Catalogo` es el
+mismo contenido que el modal del constructor, en la colmena nocturna de la
+herramienta, con buscador que filtra los tres grupos a la vez. Reglas de
+`emil-design-eng` y de `diseno-mi-trabajo` aplicadas: se anima opacity y
+translate al entrar (`fila-entra`, cascada con `--mov-escalon`), el chevrón
+gira con `--ease-mueve`, el renglón plegable se aprieta (`scale: .995`),
+hover solo con mouse, nada anima el alto, y con "reducir movimiento" quedan
+fundidos. De paso se corrigió el `.catalogo` viejo, que tenía colores de
+pantalla clara (gris `#5b6478`, código sobre `#f1eefa`) sobre el fondo
+oscuro. htm no decodifica entidades: los `<=` del texto del catálogo van
+como expresión `${"<= >= < > == !="}`, no como `&lt;=`.
+
+**Verificado** con dos robots Playwright contra la app local (constructor:
+línea de ayuda, title de la opción, modal abierto en el dato, buscador,
+"sin resultados", enlace del pie; asistente: tarjetas, plegado y chips,
+catálogo y búsqueda, y el prompt del resultado que sigue llevando
+aclaración, regla, fórmula y función nueva) y con
+`test_validaciones_funcion.py` (14), `test_asistente_tramites_v2.py` (8),
+`test_asistente_tramites_api.py`, `test_tramites.py`, `test_modales.py` y
+`test_alcance_seccional_pantalla.py`.

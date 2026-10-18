@@ -345,7 +345,7 @@ function Datos({ E, set, ir, cat, res, preguntas }) {
   return html`<section class="tarjeta">
     <div class="contador">Los datos</div>
     <h2>¿Estos son los datos que se piden?</h2>
-    <p class="ayuda">Revisá, corregí o agregá. El tipo y el control salen del constructor de Colm3na. En «Aclaración» explicá el dato si no es obvio; en «Regla» qué hay que controlar, y si se puede, la fórmula con el catálogo (abajo): si no, el prompt dice qué función habría que desarrollar.</p>
+    <p class="ayuda">Revisá, corregí o agregá. Tipo y control son los del constructor de Colm3na. En «Aclaración y control» de cada dato: qué es si no es obvio, qué hay que controlar y, si se puede, la fórmula con el catálogo; si no, el prompt dirá qué función habría que desarrollar.</p>
     <${Campos} E=${E} set=${set} cat=${cat} />
     <details class="grupo"><summary><b>Agregar a alguien que falta en el circuito</b></summary><${Actores} E=${E} set=${set} res=${res} /></details>
     <div class="acciones"><button class="boton suave" type="button" onClick=${() => ir("pregunta", preguntas.length - 1)}>← Preguntas</button>
@@ -377,7 +377,14 @@ function Actores({ E, set, res }) {
 }
 
 function Campos({ E, set, cat }) {
+  /* Cada dato es una tarjeta: la pregunta grande, abajo tipo / control /
+     opciones / obligatorio, y un renglón plegado "Aclaración y control" que
+     resume lo escrito en chips y, abierto, muestra los cuatro campos con su
+     rótulo (2026-10-18; antes eran cuatro cajas sueltas por fila). Nada se
+     pierde: lo plegado se lee en los chips. El catálogo se abre aparte. */
   const conOpc = cat.con_opciones;
+  const [abiertos, setAbiertos] = useState({});
+  const [verCat, setVerCat] = useState(false);
   const cambiar = (i, f, v) => set((e) => {
     const cs = clon(e.campos); const c = cs[i]; c[f] = v;
     if (f === "tipo") { if (c.tipo === "archivo" && !c.opciones) c.opciones = cat.extensiones_default; if (!conOpc.includes(c.tipo) && c.tipo !== "archivo") c.opciones = ""; if (c.tipo === "separador") c.obligatorio = false; }
@@ -385,30 +392,70 @@ function Campos({ E, set, cat }) {
   });
   const nombres = (cat.funciones || { sistema: [], listas: [], funciones: [] });
   const sugerencias = [...nombres.sistema.map((d) => "sistema." + d.clave), ...nombres.listas.flatMap((l) => l.columnas.map((x) => "lista." + x.clave)), ...nombres.funciones.map((f) => f.nombre + "(")];
+  const DETALLE = [["aclaracion", "Aclaración", "Qué es, de dónde sale, por qué se pide"], ["regla", "Regla", "Qué hay que controlar sobre este dato"],
+    ["formula", "Fórmula", "Con el catálogo, si se puede"], ["funcion_nueva", "Función nueva", "A desarrollar, si hace falta: nombre y qué devuelve"]];
+  const abrirCatalogo = () => { setVerCat(true); requestAnimationFrame(() => { const el = document.getElementById("at-catalogo"); if (el) el.scrollIntoView({ block: "start", behavior: "smooth" }); }); };
   return html`
     <datalist id="at-nombres">${sugerencias.map((x) => html`<option value=${x} />`)}</datalist>
-    <div class="tabla-wrap"><table><thead><tr><th>Pregunta</th><th>Tipo</th><th>Oblig.</th><th>Opciones o archivos</th><th>Control</th><th></th></tr></thead><tbody>
-      ${E.campos.map((c, i) => html`<tr key=${i} class="fila" style=${`--i:${i}`}>
-        <td style="min-width:200px"><input type="text" aria-label=${"Pregunta " + (i + 1)} value=${c.etiqueta} onInput=${(e) => cambiar(i, "etiqueta", e.target.value)} /></td>
-        <td style="min-width:150px"><select aria-label="Tipo" value=${c.tipo} onChange=${(e) => cambiar(i, "tipo", e.target.value)}>${Object.entries(cat.tipos).map(([k, v]) => html`<option value=${k}>${v}</option>`)}</select></td>
-        <td><input type="checkbox" aria-label="Obligatorio" checked=${c.obligatorio} disabled=${c.tipo === "separador"} onChange=${(e) => cambiar(i, "obligatorio", e.target.checked)} /></td>
-        <td style="min-width:170px"><input type="text" aria-label="Opciones" value=${c.opciones} placeholder=${conOpc.includes(c.tipo) ? "separadas por coma" : c.tipo === "archivo" ? cat.extensiones_default : "—"} disabled=${!(conOpc.includes(c.tipo) || c.tipo === "archivo")} onInput=${(e) => cambiar(i, "opciones", e.target.value)} /></td>
-        <td style="min-width:170px"><select aria-label="Control" value=${c.control} onChange=${(e) => cambiar(i, "control", e.target.value)}>${Object.entries(cat.controles).map(([k, v]) => html`<option value=${k}>${v}${cat.control_brecha[k] ? " · hoy no existe" : ""}</option>`)}</select></td>
-        <td><button class="quitar" type="button" aria-label="Quitar" onClick=${() => set((e) => ({ ...e, campos: e.campos.filter((_, j) => j !== i) }))}>✕</button></td></tr>
-        ${c.tipo === "separador" ? null : html`<tr key=${"x" + i} class="fila extra"><td colspan="6"><div class="campo-extra">
-          <input type="text" aria-label="Aclaración" value=${c.aclaracion || ""} placeholder="Aclaración (opcional): qué es, de dónde sale, por qué se pide" onInput=${(e) => cambiar(i, "aclaracion", e.target.value)} />
-          <input type="text" aria-label="Regla" value=${c.regla || ""} placeholder="Regla (opcional): qué hay que controlar sobre este dato" onInput=${(e) => cambiar(i, "regla", e.target.value)} />
-          <input type="text" class="mono" list="at-nombres" aria-label="Fórmula" value=${c.formula || ""} placeholder="Fórmula con el catálogo, si se puede: anios_entre(lista.fecha_nacimiento, hoy()) <= 12" onInput=${(e) => cambiar(i, "formula", e.target.value)} />
-          <input type="text" aria-label="Función nueva" value=${c.funcion_nueva || ""} placeholder="Función a desarrollar, si hace falta: nombre: qué devuelve" onInput=${(e) => cambiar(i, "funcion_nueva", e.target.value)} />
-        </div></td></tr>`}`)}
-    </tbody></table></div>
+    <div class="cps">
+      ${E.campos.map((c, i) => {
+        const sep = c.tipo === "separador"; const ab = !!abiertos[i];
+        const lleno = DETALLE.filter(([k]) => (c[k] || "").trim());
+        return html`<div key=${i} class=${"cp" + (sep ? " sep" : "")} style=${`--i:${i}`}>
+          <span class="cp-n">${String(i + 1).padStart(2, "0")}</span>
+          <div class="cp-cuerpo">
+            <div class="cp-fila">
+              <input class="cp-etq" type="text" aria-label=${"Pregunta " + (i + 1)} value=${c.etiqueta} placeholder=${sep ? "Título del separador" : "La pregunta, como la ve el afiliado"} onInput=${(e) => cambiar(i, "etiqueta", e.target.value)} />
+              <button class="quitar" type="button" aria-label="Quitar" onClick=${() => set((e) => ({ ...e, campos: e.campos.filter((_, j) => j !== i) }))}>✕</button>
+            </div>
+            <div class="cp-fila ctls">
+              <label class="cp-ctl"><span>Tipo</span><select aria-label="Tipo" value=${c.tipo} onChange=${(e) => cambiar(i, "tipo", e.target.value)}>${Object.entries(cat.tipos).map(([k, v]) => html`<option value=${k}>${v}</option>`)}</select></label>
+              ${sep ? null : html`<label class="cp-ctl"><span>Control</span><select aria-label="Control" value=${c.control} onChange=${(e) => cambiar(i, "control", e.target.value)}>${Object.entries(cat.controles).map(([k, v]) => html`<option value=${k}>${v}${cat.control_brecha[k] ? " · hoy no existe" : ""}</option>`)}</select></label>`}
+              ${conOpc.includes(c.tipo) || c.tipo === "archivo" ? html`<label class="cp-ctl crece"><span>${c.tipo === "archivo" ? "Archivos permitidos" : "Opciones, separadas por coma"}</span><input type="text" aria-label="Opciones" value=${c.opciones} placeholder=${c.tipo === "archivo" ? cat.extensiones_default : "Una, otra, otra"} onInput=${(e) => cambiar(i, "opciones", e.target.value)} /></label>` : null}
+              ${sep ? null : html`<label class="cp-oblig"><input type="checkbox" aria-label="Obligatorio" checked=${c.obligatorio} onChange=${(e) => cambiar(i, "obligatorio", e.target.checked)} /> Obligatorio</label>`}
+            </div>
+            ${sep ? null : html`<div class="cp-det">
+              <button type="button" class="cp-det-cab" aria-expanded=${ab} onClick=${() => setAbiertos({ ...abiertos, [i]: !ab })}>
+                <svg class="cp-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+                <span class="cp-det-tit">Aclaración y control</span>
+                ${ab ? null : lleno.length ? lleno.map(([k, rot]) => html`<span class="cp-chip" title=${c[k]}><b>${rot}</b>${c[k]}</span>`) : html`<span class="cp-det-vacio">opcional</span>`}
+              </button>
+              ${ab ? html`<div class="cp-det-cuerpo">
+                ${DETALLE.map(([k, rot, ayuda]) => html`<label class="cp-ctl" key=${k}><span>${rot} <i>· ${ayuda}</i></span>
+                  <input type="text" class=${k === "formula" ? "mono" : ""} list=${k === "formula" ? "at-nombres" : null} placeholder=${k === "formula" ? "anios_entre(lista.fecha_nacimiento, hoy()) <= 12" : ""} aria-label=${rot} value=${c[k] || ""} onInput=${(e) => cambiar(i, k, e.target.value)} /></label>`)}
+                <p class="cp-det-pie">La fórmula nombra <code>campo.…</code>, <code>lista.…</code> y <code>sistema.…</code>. <button type="button" class="boton-link" onClick=${abrirCatalogo}>Ver los datos y las funciones, con ejemplos</button></p>
+              </div>` : null}
+            </div>`}
+          </div>
+        </div>`; })}
+    </div>
     <div class="acciones"><button class="boton suave chico" type="button" disabled=${E.campos.length >= cat.max_campos} onClick=${() => set((e) => ({ ...e, campos: [...e.campos, campoNuevo()] }))}>Agregar pregunta</button>
-      <details class="catalogo"><summary>Catálogo de datos y funciones</summary>
-        <b>Padrón</b><ul>${nombres.sistema.map((d) => html`<li><code>sistema.${d.clave}</code> — ${d.rotulo}</li>`)}</ul>
-        <b>Listas</b><ul>${nombres.listas.map((l) => html`<li><b>${l.nombre}</b>: ${l.columnas.map((x) => "lista." + x.clave).join(", ")}</li>`)}</ul>
-        <b>Funciones</b><ul>${nombres.funciones.map((f) => html`<li><code>${f.ayuda}</code></li>`)}</ul>
-        <p class="nota">Los campos del formulario se nombran <code>campo.&lt;etiqueta en minúsculas, sin tildes, con guion bajo&gt;</code>; <code>y</code> / <code>o</code> / <code>no</code> para combinar.</p>
-      </details></div>`;
+      <button class="boton suave chico" type="button" aria-pressed=${verCat} onClick=${() => setVerCat(!verCat)}>${verCat ? "Ocultar el catálogo" : "Datos y funciones"}</button></div>
+    ${verCat ? html`<${Catalogo} cat=${nombres} />` : null}`;
+}
+
+/* El catálogo de datos y funciones, con qué devuelve cada uno y un ejemplo:
+   sale del código (validaciones_tramite.catalogo_funcion), acá solo se
+   dibuja y se filtra. */
+function Catalogo({ cat }) {
+  const [q, setQ] = useState("");
+  const t = q.trim().toLowerCase();
+  const pasa = (...xs) => !t || xs.join(" ").toLowerCase().includes(t);
+  const comparar = cat.comparar || {};
+  const grupos = (cat.grupos || []).map((g) => ({ ...g, items: cat.sistema.filter((d) => d.grupo === g.clave && pasa("sistema." + d.clave, d.rotulo, d.devuelve, d.ejemplo, d.significa)) })).filter((g) => g.items.length);
+  const listas = cat.listas.map((l) => ({ ...l, columnas: l.columnas.filter((x) => pasa("lista." + x.clave, x.rotulo, x.tipo, l.nombre)) })).filter((l) => l.columnas.length);
+  const funciones = cat.funciones.filter((f) => pasa(f.nombre, f.ayuda, f.ejemplo, f.significa));
+  const tipos = [["booleano", "sí / no"], ["numero", "número"], ["texto", "texto"], ["fecha", "fecha"]].filter(([k, n]) => pasa(k, n, comparar[k]));
+  const nada = !grupos.length && !listas.length && !funciones.length && !tipos.length;
+  return html`<section class="cat" id="at-catalogo" style="--i:1">
+    <div class="cat-cab"><h3>Datos y funciones</h3><input type="search" class="cat-buscar" aria-label="Buscar en el catálogo" placeholder="Buscar: credencial, recibo, fecha, edad…" value=${q} onInput=${(e) => setQ(e.target.value)} /></div>
+    <p class="nota">Se escriben como las Reglas de control: <code>+ - * /</code>, comparaciones (<code>${"<= >= < > == !="}</code>), <code>y</code> / <code>o</code> / <code>no</code>, textos entre comillas y fechas AAAA-MM-DD. Los campos del formulario se nombran <code>${"campo.<etiqueta en minúsculas, sin tildes, con guion bajo>"}</code>. Un dato que falta no vale 0: la validación no pasa.</p>
+    ${tipos.length ? html`<div class="cat-grupo"><h4>Cómo se compara cada tipo</h4>${tipos.map(([k, n]) => html`<div class="cat-item" key=${k}><code>${n}</code><p>${comparar[k]}</p></div>`)}</div>` : null}
+    ${grupos.map((g) => html`<div class="cat-grupo" key=${g.clave}><h4>Padrón · ${g.nombre}</h4>${g.items.map((d) => html`<div class="cat-item" key=${d.clave}><code>sistema.${d.clave}</code><span class="cat-tipo">${d.devuelve}</span><p>${d.rotulo}</p><small>Ej.: <code>${d.ejemplo}</code> → ${d.significa}</small></div>`)}</div>`)}
+    ${listas.map((l) => html`<div class="cat-grupo" key=${l.clave}><h4>Lista «${l.nombre}» · la fila del afiliado</h4>${l.columnas.map((x) => html`<div class="cat-item" key=${x.clave}><code>lista.${x.clave}</code><span class="cat-tipo">${x.tipo}${x.busqueda ? " · clave" : ""}</span><p>${x.rotulo}</p></div>`)}</div>`)}
+    ${funciones.length ? html`<div class="cat-grupo"><h4>Funciones</h4>${funciones.map((f) => html`<div class="cat-item" key=${f.nombre}><code>${f.ayuda}</code><small>Ej.: <code>${f.ejemplo}</code> → ${f.significa}</small></div>`)}</div>` : null}
+    ${nada ? html`<p class="vacio">Nada coincide con la búsqueda.</p>` : null}
+  </section>`;
 }
 
 // ---------------------------------------------------------------- etapa 4: el resultado

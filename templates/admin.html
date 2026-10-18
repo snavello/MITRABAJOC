@@ -262,9 +262,37 @@
   .ct-vrow .ct-chk { display:inline-flex; align-items:center; gap:3px; font-size:11px; color:var(--gris); white-space:nowrap; }
   .ct-req-vacio { font-size:12px; color:var(--gris); }
   .ct-ayuda-formula { font-size:11.5px; color:var(--gris); margin-top:10px; }
-  .ct-ayuda-formula summary { cursor:pointer; font-weight:600; color:var(--tinta); }
-  .ct-ayuda-formula code { font-size:11px; background:#f1eefa; padding:1px 4px; border-radius:4px; }
-  .ct-ayuda-formula ul { margin:4px 0 8px 16px; padding:0; }
+  /* La ayuda de lo elegido (2026-10-18): una línea abajo de la fila, con qué
+     devuelve el dato y un ejemplo; el enlace abre la referencia completa. */
+  .ct-fn-ayuda { flex:1 1 100%; font-size:11.5px; line-height:1.6; color:var(--gris); padding:1px 2px 2px 4px; }
+  .ct-fn-ayuda .ct-fn-mas { margin-left:6px; }
+  .ct-fn-ayuda b { color:var(--tinta); font-weight:600; }
+  .ct-fn-ayuda code { font-family:var(--fuente-num); font-size:11px; background:#f1eefa; color:#4b3a7a;
+    padding:1px 5px; border-radius:4px; white-space:nowrap; }
+  .ct-fn-mas { background:none; border:0; padding:0; color:#7a56b5; font:600 11.5px/1.5 system-ui, sans-serif; cursor:pointer;
+    text-transform:none; letter-spacing:0; text-decoration:underline; text-underline-offset:3px; white-space:nowrap; border-radius:0; }
+  .ct-fn-mas:hover { color:var(--tinta); }
+  /* La referencia de datos y funciones: un modal ancho de la familia
+     .overlay-ayuda (ya cubierta por modales.js y movimiento.css). */
+  .overlay-ayuda-caja.cf-caja { max-width:760px; max-height:84vh; padding:20px 24px 24px; }
+  .cf-buscar { width:100%; margin:0 0 12px; padding:8px 11px; font-size:13px; border:1px solid var(--linea);
+    border-radius:9px; background:var(--papel); }
+  .cf-buscar:focus { outline:none; border-color:#7a56b5; box-shadow:0 0 0 3px rgba(122,86,181,.18); }
+  .cf-sintaxis { font-size:12.5px; color:var(--gris); line-height:1.55; margin:0 0 6px !important; }
+  .cf-sintaxis code, .cf-item code, .cf-ej code { font-family:var(--fuente-num); font-size:11.5px; background:#f1eefa;
+    color:#4b3a7a; padding:1px 5px; border-radius:4px; }
+  .cf-grupo h4 { margin:16px 0 6px !important; }
+  .cf-lista { display:grid; gap:5px; }
+  .cf-item { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:1px 10px; align-items:baseline;
+    padding:7px 10px; border:1px solid var(--linea); border-radius:9px; background:#fff;
+    transition:background-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out), border-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out); }
+  .cf-item.cf-foco { background:#f8f4fe; border-color:#cdbde9; }
+  .cf-item > code { justify-self:start; }
+  .cf-item .cf-tipo { font-size:10.5px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; color:#7a56b5; white-space:nowrap; }
+  .cf-item .cf-rot { grid-column:1 / -1; font-size:12.5px; color:var(--tinta); }
+  .cf-item .cf-ej { grid-column:1 / -1; font-size:11.5px; color:var(--gris); display:flex; flex-wrap:wrap; gap:2px 8px; align-items:baseline; }
+  .cf-item .cf-ej code { white-space:nowrap; }
+  .cf-vacio { font-size:12.5px; color:var(--gris); padding:8px 2px; }
   .ttp-calculado { background:#f1f5f9 !important; color:#475569 !important; font-style:italic; }
   .ttp-cuil { display:flex; gap:6px; align-items:center; margin-top:10px; }
   .ttp-cuil input { flex:1 1 120px; padding:6px 8px; font-size:12px; font-family:var(--fuente-num); }
@@ -576,7 +604,7 @@
   .subtab, .tramite-subtab, .emp-subtab, .emptram-subtab, .subtab-au, .enc-subtab { font-family:var(--fuente-display); font-weight:700; font-size:13px; letter-spacing:.8px;
     text-transform:uppercase; background:#fff; border-radius:20px; }
   th { font-size:10.5px; letter-spacing:1px; font-weight:700; color:var(--gris); background:#f4f2ec; }
-  button:not(.sec):not(.mini):not(.tab-btn):not(.ptab):not(.subtab):not(.tramite-subtab):not(.emp-subtab):not(.emptram-subtab):not(.subtab-au):not(.enc-subtab):not(.btn-ayuda):not(.link-num):not(.geo-cand) {
+  button:not(.sec):not(.mini):not(.tab-btn):not(.ptab):not(.subtab):not(.tramite-subtab):not(.emp-subtab):not(.emptram-subtab):not(.subtab-au):not(.enc-subtab):not(.btn-ayuda):not(.link-num):not(.geo-cand):not(.ct-fn-mas) {
     font-family:var(--fuente-display); font-weight:700; font-size:15px; letter-spacing:1px; text-transform:uppercase;
     background:var(--marca-acento); color:var(--marca-base); border-radius:9px; }
   button.mini { border-radius:7px; }
@@ -770,6 +798,20 @@
       <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
     </button>
     <div id="overlay-ayuda-contenido"></div>
+  </div>
+</div>
+
+<!-- Overlay: la referencia de datos y funciones para las fórmulas del
+     constructor de Trámites (2026-10-18). Misma familia .overlay-ayuda: la
+     entrada y la salida ya las sostienen movimiento.css y modales.js. -->
+<div class="overlay-ayuda" id="overlay-ayuda-funciones" onclick="if (event.target === this) cerrarAyudaFunciones()">
+  <div class="overlay-ayuda-caja cf-caja" role="dialog" aria-labelledby="cf-titulo">
+    <button type="button" class="overlay-ayuda-cerrar" onclick="cerrarAyudaFunciones()" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+    </button>
+    <h3 id="cf-titulo">Datos y funciones para las fórmulas</h3>
+    <input type="search" class="cf-buscar" id="cf-buscar" placeholder="Buscar: credencial, recibo, fecha, edad…" oninput="filtrarAyudaFunciones(this.value)" autocomplete="off">
+    <div id="tt-ayuda-formula-cuerpo"></div>
   </div>
 </div>
 
@@ -1795,10 +1837,8 @@
             <div id="tt-requisitos-lista"></div>
             <button type="button" class="sec mini" style="margin-top:8px;" onclick="agregarRequisitoTramite()">+ Agregar requisito</button>
             <input type="hidden" name="requisitos_json" id="tt-requisitos-json">
-            <details class="ct-ayuda-formula" id="tt-ayuda-formula">
-              <summary>Nombres y funciones para las fórmulas</summary>
-              <div id="tt-ayuda-formula-cuerpo"></div>
-            </details>
+            <p class="ct-ayuda-formula" id="tt-ayuda-formula">Las fórmulas nombran los campos de este formulario, la fila de una lista y los datos del padrón.
+              <button type="button" class="ct-fn-mas" onclick="abrirAyudaFunciones()">Ver todos los datos y funciones, con ejemplos</button></p>
             <datalist id="tt-nombres-datalist"></datalist>
 
             <div style="margin-top:18px;">
@@ -4022,16 +4062,23 @@ function htmlFuncionRow(v, i, vi, ns, modo) {
     CATALOGO_FUNCION.sistema.forEach(d => opcionesTrae.push([d.clave, d.rotulo]));
   }
   opcionesTrae.push(['__formula', 'una fórmula']);
+  // El title de cada opción es el tooltip del navegador al recorrer la lista:
+  // qué devuelve y el ejemplo, antes de elegir.
+  const tituloDe = (k) => {
+    const d = !esLista && CATALOGO_FUNCION.sistema.find(x => x.clave === k);
+    return d ? ` title="${escHtml(`Devuelve ${d.devuelve}. Ej.: ${d.ejemplo} → ${d.significa}`)}"` : '';
+  };
   if (modo === 'calculado') {
     partes += `<select ${upd('trae')} title="Qué se muestra">${opcionesTrae.filter(([k]) => k !== 'existe').map(([k, l]) =>
-      `<option value="${k}" ${traeActual===k?'selected':''}>${escHtml(l)}</option>`).join('')}</select>`;
+      `<option value="${k}"${tituloDe(k)} ${traeActual===k?'selected':''}>${escHtml(l)}</option>`).join('')}</select>`;
   } else {
     partes += `<select ${upd('trae')} title="Qué se controla">${opcionesTrae.map(([k, l]) =>
-      `<option value="${k}" ${traeActual===k?'selected':''}>${escHtml(l)}</option>`).join('')}</select>`;
+      `<option value="${k}"${tituloDe(k)} ${traeActual===k?'selected':''}>${escHtml(l)}</option>`).join('')}</select>`;
   }
   if (traeActual === '__formula') {
     partes += `<input class="ct-formula" list="tt-nombres-datalist" placeholder="p. ej. anios_entre(lista.fecha_nacimiento, hoy()) <= 12" value="${escHtml(v.formula || '')}" oninput="actualizarFuncionTramite(${i},${vi},'formula',this.value,true)">`;
   }
+  const ayudaElegido = htmlAyudaElegido(traeActual, esLista, lista);
   if (traeActual === 'existe') {
     partes += `<select ${upd('operador')}><option value="==" ${v.operador!=='!='?'selected':''}>tiene que estar</option><option value="!=" ${v.operador==='!='?'selected':''}>no tiene que estar</option></select>`;
   } else if (modo !== 'calculado') {
@@ -4053,7 +4100,61 @@ function htmlFuncionRow(v, i, vi, ns, modo) {
   if (modo !== 'calculado') {
     partes += `<button type="button" class="peligro mini" onclick="quitarFuncionTramite(${i},${vi})" title="Quitar">✕</button>`;
   }
-  return `<div class="ct-vrow funcion">${partes}</div>`;
+  return `<div class="ct-vrow funcion">${partes}${ayudaElegido}</div>`;
+}
+// Qué devuelve lo elegido y cómo se compara, en una línea abajo de la fila
+// (2026-10-18): con 22 datos del padrón el nombre solo no alcanza. Sale del
+// catálogo del código (validaciones_tramite.AYUDA_SISTEMA / COMO_SE_COMPARA).
+function htmlAyudaElegido(traeActual, esLista, lista) {
+  const mas = (ancla) => `<button type="button" class="ct-fn-mas" onclick="abrirAyudaFunciones(${ancla ? `'${ancla}'` : ''})">${ancla ? 'Ver todos' : 'Ver datos y funciones, con ejemplos'}</button>`;
+  if (traeActual === '__formula') {
+    return `<div class="ct-fn-ayuda">Escribila con <code>campo.…</code>, <code>lista.…</code>, <code>sistema.…</code> y las funciones. ${mas('')}</div>`;
+  }
+  if (traeActual === 'existe') return '';
+  if (esLista) {
+    const col = (lista.columnas || []).find(c => c.clave === traeActual);
+    if (!col) return '';
+    const tipo = ['numero', 'fecha', 'booleano'].includes(col.tipo) ? col.tipo : 'texto';
+    return `<div class="ct-fn-ayuda"><b>${escHtml(col.rotulo)}</b> de la fila encontrada. ${escHtml(CATALOGO_FUNCION.comparar[tipo] || '')} ${mas('lista.' + col.clave)}</div>`;
+  }
+  const d = CATALOGO_FUNCION.sistema.find(x => x.clave === traeActual);
+  if (!d) return '';
+  return `<div class="ct-fn-ayuda">Devuelve <b>${escHtml(d.devuelve)}</b>. ${escHtml(CATALOGO_FUNCION.comparar[d.tipo] || '')}
+    Ej.: <code>${escHtml(d.ejemplo)}</code> → ${escHtml(d.significa)}. ${mas('sistema.' + d.clave)}</div>`;
+}
+function abrirAyudaFunciones(ancla) {
+  renderAyudaFormula();
+  const fondo = document.getElementById('overlay-ayuda-funciones');
+  const buscar = document.getElementById('cf-buscar');
+  if (buscar) { buscar.value = ''; filtrarAyudaFunciones(''); }
+  fondo.classList.add('abierto');
+  const item = ancla ? fondo.querySelector(`.cf-item[data-ancla="${ancla}"]`) : null;
+  if (item) {
+    requestAnimationFrame(() => {
+      item.scrollIntoView({ block: 'center' });
+      item.classList.add('cf-foco');
+      setTimeout(() => item.classList.remove('cf-foco'), 1800);
+    });
+  } else if (buscar) {
+    requestAnimationFrame(() => buscar.focus());
+  }
+}
+function cerrarAyudaFunciones() { document.getElementById('overlay-ayuda-funciones').classList.remove('abierto'); }
+function filtrarAyudaFunciones(texto) {
+  const t = (texto || '').trim().toLowerCase();
+  const cuerpo = document.getElementById('tt-ayuda-formula-cuerpo');
+  if (!cuerpo) return;
+  cuerpo.querySelectorAll('.cf-grupo').forEach(g => {
+    let visibles = 0;
+    g.querySelectorAll('.cf-item').forEach(it => {
+      const ok = !t || (it.dataset.texto || '').includes(t);
+      it.hidden = !ok;
+      if (ok) visibles++;
+    });
+    g.hidden = !!t && !visibles;
+  });
+  const nada = document.getElementById('cf-nada');
+  if (nada) nada.hidden = !!cuerpo.querySelector('.cf-grupo:not([hidden])');
 }
 function agregarFuncionTramite(i) {
   const c = camposTramiteActuales[i];
@@ -4116,22 +4217,45 @@ function renderAyudaFormula() {
   if (!cuerpo || !dl) return;
   const validos = camposTramiteActuales.filter(c => !['separador', 'archivo', 'booleano', 'multiple'].includes(c.tipo_dato));
   const sugerencias = [];
+  // Cada ítem lleva data-texto para el buscador y data-ancla para que "Ver
+  // todos" desde una fila caiga justo en el dato elegido.
+  const item = (ancla, tipo, rotulo, ejemplo, significa, textoExtra) => {
+    const texto = [ancla, tipo, rotulo, ejemplo, significa, textoExtra].join(' ').toLowerCase();
+    return `<div class="cf-item" data-ancla="${escHtml(ancla)}" data-texto="${escHtml(texto)}"><code>${escHtml(ancla)}</code>${tipo ? `<span class="cf-tipo">${escHtml(tipo)}</span>` : ''}
+      <div class="cf-rot">${escHtml(rotulo)}</div>${ejemplo ? `<div class="cf-ej">Ej.: <code>${escHtml(ejemplo)}</code><span>→ ${escHtml(significa)}</span></div>` : ''}</div>`;
+  };
+  const grupo = (titulo, items, vacio) => `<div class="cf-grupo"><h4>${titulo}</h4><div class="cf-lista">${items.join('') || `<div class="cf-vacio">${vacio || ''}</div>`}</div></div>`;
+  const comparar = CATALOGO_FUNCION.comparar || {};
   const campos = [];
   camposTramiteActuales.forEach((c, i) => {
     const n = nombresCamposTramite[i];
     if (!n || !validos.includes(c)) return;
-    campos.push(`<li><code>campo.${escHtml(n)}</code> — ${escHtml(c.etiqueta || '(sin etiqueta)')}</li>`);
+    const tipo = ['numero', 'fecha'].includes(c.tipo_dato) ? c.tipo_dato : 'texto';
+    campos.push(item('campo.' + n, tipo, c.etiqueta || '(sin etiqueta)', '', '', comparar[tipo] || ''));
     sugerencias.push('campo.' + n);
   });
-  const listas = CATALOGO_FUNCION.listas.map(l => `<li><b>${escHtml(l.nombre)}</b>: ${l.columnas.map(c => { sugerencias.push('lista.' + c.clave); return `<code>lista.${c.clave}</code>`; }).join(' ')}</li>`);
-  const sistema = CATALOGO_FUNCION.sistema.map(d => { sugerencias.push('sistema.' + d.clave); return `<li><code>sistema.${d.clave}</code> — ${escHtml(d.rotulo)}</li>`; });
-  const funciones = CATALOGO_FUNCION.funciones.map(f => { sugerencias.push(f.nombre + '('); return `<li><code>${escHtml(f.ayuda)}</code></li>`; });
-  cuerpo.innerHTML = `<p>Se escriben como las Reglas de control: <code>+ - * /</code>, comparaciones (<code>&lt;= &gt;= &lt; &gt; == !=</code>), <code>y</code> / <code>o</code> / <code>no</code>, textos entre comillas y fechas como AAAA-MM-DD.</p>
-    <b>Campos de este formulario</b><ul>${campos.join('') || '<li class="muted">Todavía no hay campos con nombre.</li>'}</ul>
-    <b>Listas del sindicato</b> (la fila encontrada)<ul>${listas.join('')}</ul>
-    <b>Padrón</b><ul>${sistema.join('')}</ul>
-    <b>Funciones</b><ul>${funciones.join('')}</ul>`;
+  const listas = CATALOGO_FUNCION.listas.map(l => grupo(`Lista «${escHtml(l.nombre)}» (la fila del afiliado)`, l.columnas.map(c => {
+    sugerencias.push('lista.' + c.clave);
+    const tipo = ['numero', 'fecha', 'booleano'].includes(c.tipo) ? c.tipo : 'texto';
+    return item('lista.' + c.clave, c.tipo, c.rotulo + (c.busqueda ? ' (clave de búsqueda)' : ''), '', '', comparar[tipo] || '');
+  })));
+  const porGrupo = {};
+  CATALOGO_FUNCION.sistema.forEach(d => {
+    sugerencias.push('sistema.' + d.clave);
+    (porGrupo[d.grupo] = porGrupo[d.grupo] || []).push(item('sistema.' + d.clave, d.devuelve, d.rotulo, d.ejemplo, d.significa, comparar[d.tipo] || ''));
+  });
+  const sistema = (CATALOGO_FUNCION.grupos || []).map(g => grupo(`Padrón · ${escHtml(g.nombre)}`, porGrupo[g.clave] || []));
+  const funciones = CATALOGO_FUNCION.funciones.map(f => { sugerencias.push(f.nombre + '('); return item(f.ayuda, '', '', f.ejemplo, f.significa, f.nombre); });
+  cuerpo.innerHTML = `<p class="cf-sintaxis">Se escriben como las Reglas de control: <code>+ - * /</code>, comparaciones (<code>&lt;= &gt;= &lt; &gt; == !=</code>), <code>y</code> / <code>o</code> / <code>no</code>, textos entre comillas y fechas como AAAA-MM-DD. Un dato que falta no vale 0: la validación no pasa.</p>
+    <div class="cf-grupo"><h4>Cómo se compara cada tipo</h4><div class="cf-lista">${['booleano', 'numero', 'texto', 'fecha'].map(t => `<div class="cf-item" data-ancla="tipo.${t}" data-texto="${escHtml((t + ' ' + (comparar[t] || '')).toLowerCase())}"><code>${t === 'booleano' ? 'sí / no' : t === 'numero' ? 'número' : t}</code><div class="cf-rot">${escHtml(comparar[t] || '')}</div></div>`).join('')}</div></div>
+    ${grupo('Campos de este formulario', campos, 'Todavía no hay campos con nombre.')}
+    ${sistema.join('')}
+    ${listas.join('')}
+    ${grupo('Funciones', funciones)}
+    <div class="cf-vacio" id="cf-nada" hidden>Nada coincide con la búsqueda.</div>`;
   dl.innerHTML = sugerencias.map(x => `<option value="${escHtml(x)}">`).join('');
+  const buscar = document.getElementById('cf-buscar');
+  if (buscar && buscar.value) filtrarAyudaFunciones(buscar.value);
 }
 function agregarValidacionTramite(i) {
   const c = camposTramiteActuales[i];

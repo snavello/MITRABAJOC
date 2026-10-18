@@ -103,3 +103,21 @@ def test_la_pestana_herramientas_la_presenta():
     html = _con_plataforma().get("/entornos").text
     assert f'href="{PAGINA}"' in html and "Asistente de trámites" in html
     assert f'href="{PAGINA}#brechas"' in html
+
+
+def test_los_datos_se_editan_en_tarjetas_con_todo_el_detalle():
+    """2026-10-18: el paso "Los datos" dejó la tabla con cuatro cajas sueltas
+    por fila. Cada dato es una tarjeta con la pregunta, tipo / control /
+    opciones / obligatorio y un renglón plegado con la aclaración, la regla,
+    la fórmula y la función nueva: los cuatro siguen ahí (sin perder un
+    dato) y el catálogo muestra qué devuelve cada uno y un ejemplo."""
+    app = _sin_comentarios((CARPETA / "app.js").read_text(encoding="utf-8"))
+    css = _sin_comentarios((CARPETA / "asistente.css").read_text(encoding="utf-8"))
+    assert "campo-extra" not in app and "campo-extra" not in css
+    for rotulo in ("Aclaración", "Regla", "Fórmula", "Función nueva"):
+        assert f'"{rotulo}"' in app, rotulo
+    assert 'class="cp-det-cab" aria-expanded=' in app and 'class="cp-chip"' in app
+    assert "function Catalogo" in app and "d.ejemplo" in app and "f.ejemplo" in app and "cat.comparar" in app
+    assert 'list=${k === "formula" ? "at-nombres" : null}' in app, "la fórmula sigue sugiriendo los nombres"
+    assert re.search(r"\.cp-det-cab\[aria-expanded=\"true\"\] \.cp-chev \{ rotate: 90deg; \}", css)
+    assert "transition: rotate var(--mov-rapido) var(--ease-mueve)" in css

@@ -284,7 +284,8 @@ tr.caso { cursor: pointer; }
 
 /* ---------- reducir movimiento: solo fundidos ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .tarjeta, .vista, .op, .entendi div, tr.fila, .est, .item, svg .nodo { animation: fundido var(--mov-rapido) ease both; animation-delay: 0ms; }
+  .tarjeta, .vista, .op, .entendi div, tr.fila, .est, .item, svg .nodo, .cp, .cp-det-cuerpo, .cat { animation: fundido var(--mov-rapido) ease both; animation-delay: 0ms; }
+  .cp-chev { transition: none; }
   .inv-barra i { animation: fundido var(--mov-rapido) ease both; }
   .pestana-marca, .barra i { transition: none; }
 }
@@ -294,13 +295,67 @@ tr.caso { cursor: pointer; }
 .marca-rec { font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--agua); border: 1px solid color-mix(in srgb, var(--agua) 40%, white); border-radius: 999px; padding: 1px 7px; margin-left: 6px; }
 .inferidas { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px 16px; margin-top: 8px; }
 .inferidas .campo span { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
-.campo-extra { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 2px 0 8px; }
-.campo-extra input { width: 100%; }
-.campo-extra .mono { font-family: var(--fuente-num, ui-monospace, monospace); font-size: 12px; }
-tr.extra td { border-top: none !important; padding-top: 0 !important; }
-.catalogo { font-size: 12px; color: #5b6478; margin-top: 8px; }
-.catalogo summary { cursor: pointer; font-weight: 600; }
-.catalogo ul { margin: 4px 0 8px 16px; padding: 0; }
-.catalogo code { background: #f1eefa; padding: 1px 4px; border-radius: 4px; font-size: 11px; }
+
+/* ---------- los datos del formulario: una tarjeta por dato (2026-10-18) ----------
+   La pregunta grande y sola; abajo tipo / control / opciones / obligatorio
+   con rótulo chico; y un renglón plegado con la aclaración y el control, que
+   se resume en chips. Se anima opacity y translate al entrar, el chevrón al
+   abrir; nunca el alto. */
+.cps { display: grid; gap: 10px; }
+.cp { display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 12px 14px 12px 10px; border: 1px solid var(--linea); border-radius: 14px;
+  background: rgba(255,255,255,.03); animation: fila-entra var(--mov-medio) var(--ease-entrada) both; animation-delay: calc(var(--i, 0) * var(--mov-escalon) / 3);
+  transition: border-color var(--mov-rapido) var(--ease-salida); }
+.cp.sep { background: transparent; border-style: dashed; }
+.cp:focus-within { border-color: rgba(255,176,32,.45); }
+.cp-n { font: 600 13px var(--mono); color: var(--ambar); padding-top: 11px; text-align: center; }
+.cp-cuerpo { display: grid; gap: 9px; min-width: 0; }
+.cp-fila { display: flex; gap: 8px; align-items: center; }
+.cp-fila.ctls { flex-wrap: wrap; align-items: flex-end; gap: 8px 12px; }
+.cp-etq { font-size: 16px; font-weight: 600; padding: 9px 11px; }
+.cp.sep .cp-etq { font-family: var(--fuente-display); font-size: 19px; letter-spacing: .5px; text-transform: uppercase; font-weight: 700; }
+.cp-ctl { display: flex; flex-direction: column; gap: 4px; min-width: 150px; flex: 0 1 auto; }
+.cp-ctl.crece { flex: 1 1 220px; }
+.cp-ctl > span { font: 600 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--suave); display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.cp-ctl > span i { font: 11.5px system-ui; letter-spacing: 0; text-transform: none; color: var(--suave); opacity: .85; }
+.cp-ctl select, .cp-ctl input { padding: 7px 9px; font-size: 13.5px; }
+.cp-oblig { display: inline-flex; gap: 7px; align-items: center; font-size: 13px; color: var(--suave); padding: 8px 0; cursor: pointer; white-space: nowrap; }
+.cp-oblig input { width: 17px; height: 17px; accent-color: var(--ambar); margin: 0; }
+.cp-det { border-top: 1px solid rgba(255,255,255,.08); margin-top: 2px; padding-top: 6px; }
+.cp-det-cab { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; width: 100%; background: none; border: 0; color: var(--suave);
+  padding: 5px 2px; cursor: pointer; text-align: left; font: 13px system-ui; border-radius: 8px;
+  transition: color var(--mov-rapido) var(--ease-salida), background-color var(--mov-rapido) var(--ease-salida); }
+.cp-det-cab:active { scale: .995; }
+@media (hover: hover) and (pointer: fine) { .cp-det-cab:hover { color: #fff; background: rgba(255,255,255,.04); } }
+.cp-det-cab[aria-expanded="true"] { color: #fff; }
+.cp-chev { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  transition: rotate var(--mov-rapido) var(--ease-mueve); }
+.cp-det-cab[aria-expanded="true"] .cp-chev { rotate: 90deg; }
+.cp-det-tit { font: 600 11.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.cp-det-vacio { font-size: 12px; opacity: .7; }
+.cp-chip { display: inline-flex; gap: 6px; align-items: baseline; max-width: 100%; font-size: 12.5px; color: #fff; background: rgba(255,255,255,.08);
+  border: 1px solid var(--linea); border-radius: 999px; padding: 3px 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cp-chip b { font: 600 10.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--celeste); flex: none; }
+.cp-det-cuerpo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; padding: 6px 2px 2px; animation: fila-entra var(--mov-medio) var(--ease-entrada) both; }
+.cp-det-cuerpo .mono { font-family: var(--mono); font-size: 13px; }
+.cp-det-pie { grid-column: 1 / -1; font-size: 12.5px; color: var(--suave); line-height: 1.5; }
+.cp-det-pie code, .cat code { font-family: var(--mono); font-size: 12px; background: rgba(255,255,255,.1); padding: 1px 5px; border-radius: 4px; color: #fff; }
+@media (max-width: 640px) { .cp-det-cuerpo { grid-template-columns: 1fr; } .cp { grid-template-columns: 26px 1fr; padding: 10px; } }
+
+/* el catálogo de datos y funciones, debajo de los datos */
+.cat { display: grid; gap: 12px; padding: 16px 18px; border: 1px solid var(--linea); border-radius: 14px; background: rgba(0,0,0,.18);
+  animation: fila-entra var(--mov-medio) var(--ease-entrada) both; }
+.cat-cab { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.cat-cab h3 { margin: 0; }
+.cat-buscar { flex: 1 1 240px; max-width: 360px; background: rgba(255,255,255,.07); color: #fff; border: 1px solid rgba(255,255,255,.18); border-radius: 9px; padding: 8px 10px; font-size: 13.5px;
+  transition: border-color var(--mov-rapido) var(--ease-salida), box-shadow var(--mov-rapido) var(--ease-salida); }
+.cat-buscar:focus-visible { outline: none; border-color: var(--ambar); box-shadow: 0 0 0 3px rgba(255,176,32,.22); }
+.cat-grupo { display: grid; gap: 6px; }
+.cat-grupo h4 { font: 700 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ambar); margin: 6px 0 2px; }
+.cat-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: baseline; padding: 8px 11px; border: 1px solid var(--linea); border-radius: 10px;
+  background: rgba(255,255,255,.03); font-size: 13.5px; }
+.cat-item code { justify-self: start; }
+.cat-tipo { font: 600 10.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--celeste); white-space: nowrap; }
+.cat-item p { grid-column: 1 / -1; color: #fff; line-height: 1.4; }
+.cat-item small { grid-column: 1 / -1; color: var(--suave); font-size: 12.5px; line-height: 1.5; }
 pre.prompt { white-space: pre-wrap; }
 details.grupo summary { cursor: pointer; }
