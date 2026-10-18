@@ -230,9 +230,52 @@
      itálica, siempre. */
   .ct-ficha { background:transparent; border:none; border-radius:0; position:relative; display:grid; gap:10px; }
   .ct-ficha:empty { border:none; }
-  .ct-ficha .campo-tramite-fila { background:#fff; border:1px solid var(--linea); border-left:5px solid var(--marca-primario);
-    border-radius:8px; margin:0; padding:10px 12px 10px 0; box-shadow:0 1px 3px rgba(21,34,56,.06); row-gap:8px; }
-  .ct-ficha .campo-tramite-fila .ct-etiqueta { font-weight:600; font-size:13px; }
+  .ct-ficha .campo-tramite-fila { display:block; background:#fff; border:1px solid var(--linea); border-left:5px solid var(--marca-primario);
+    border-radius:8px; margin:0; padding:0; box-shadow:0 1px 3px rgba(21,34,56,.06); overflow:hidden; }
+  /* Un solo bloque por campo, tres pasos (SDN, 2026-10-18): cabecera con el
+     orden, el título y las acciones; debajo cada paso con su número en un
+     círculo, obligatorio / opcional, los controles y la aclaración al
+     costado (en teléfono, debajo). */
+  .ct-campo-cab { display:flex; align-items:center; gap:10px; padding:7px 10px 7px 8px;
+    background:color-mix(in srgb, var(--marca-primario) 9%, #fff); border-bottom:1px solid var(--linea); }
+  .ct-campo-cab .ct-orden { width:auto; font-weight:700; color:var(--marca-primario); font-size:13px; }
+  .ct-campo-tit { flex:1; min-width:0; font-family:var(--fuente-display); text-transform:uppercase; letter-spacing:.5px;
+    font-size:15px; color:var(--tinta); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ct-campo-tit em { font-style:italic; text-transform:none; color:var(--gris); font-family:system-ui, sans-serif; font-size:12px; letter-spacing:0; }
+  .ct-campo-tipo { font:600 10px var(--fuente-num); letter-spacing:.8px; text-transform:uppercase; color:var(--gris);
+    border:1px solid var(--linea); border-radius:3px; padding:2px 6px; background:#fff; white-space:nowrap; }
+  .ct-campo-acc { display:inline-flex; gap:4px; }
+  .ct-campo-acc button { margin:0; }
+  .ct-paso { display:grid; grid-template-columns:minmax(0,1fr) 170px; grid-template-areas:"cab cab" "cuerpo nota";
+    gap:6px 14px; padding:9px 10px 10px; border-top:1px solid var(--linea); align-items:start; }
+  .ct-campo-cab + .ct-paso { border-top:none; }
+  .ct-paso-cab { grid-area:cab; display:flex; align-items:center; gap:8px; }
+  .ct-paso-cab b { width:20px; height:20px; border-radius:50%; background:var(--marca-primario); color:#fff; flex:0 0 auto;
+    font:700 11px var(--fuente-num); display:inline-flex; align-items:center; justify-content:center; }
+  .ct-paso-cab span { font-size:10.5px; font-weight:800; letter-spacing:1.1px; text-transform:uppercase; color:var(--tinta); }
+  .ct-paso-cab i { font-style:normal; font-size:9px; font-weight:700; letter-spacing:.7px; text-transform:uppercase; padding:2px 6px; border-radius:3px; }
+  .ct-paso-cab i.ob { background:#fbe5e2; color:#a0281e; }
+  .ct-paso-cab i.op { background:#eef1f5; color:var(--gris); }
+  .ct-paso-cuerpo { grid-area:cuerpo; display:flex; flex-wrap:wrap; gap:6px; align-items:center; min-width:0; }
+  .ct-paso-cuerpo .ct-etiqueta { flex:1 1 100%; font-weight:600; font-size:13px; }
+  .ct-paso-cuerpo .ct-tipo { flex:1 1 150px; }
+  .ct-paso-cuerpo .ct-ancho { flex:0 1 130px; }
+  .ct-paso-cuerpo .ct-extra { flex:1 1 100%; }
+  .ct-paso-cuerpo .ct-vrow { flex-basis:100%; background:#fff; min-width:0; }
+  .ct-paso-cuerpo .ct-vrow > select, .ct-paso-cuerpo .ct-vrow > input { max-width:100%; }
+  .ct-paso-cuerpo .ct-vrow .ct-fuente { width:auto; }
+  .ct-paso-cuerpo .ct-radios { flex-basis:100%; }
+  .ct-chk-ob { display:inline-flex; align-items:center; gap:4px; font-size:12px; color:var(--tinta); white-space:nowrap; }
+  .ct-paso-nota { grid-area:nota; font-size:10.5px; font-style:italic; color:var(--gris); line-height:1.45;
+    border-left:2px solid var(--linea); padding-left:9px; align-self:stretch; }
+  .ct-paso-nota code, .ct-paso-nota b { font-style:normal; }
+  .ct-paso-nota code { white-space:normal; overflow-wrap:anywhere; }
+  .ct-paso-nota .ct-fn-mas { font-size:10.5px; }
+  .ct-paso.valid .ct-paso-nota { border-left-color:color-mix(in srgb, var(--marca-primario) 40%, #fff); }
+  @media (max-width:1100px) {
+    .ct-paso { grid-template-columns:1fr; grid-template-areas:"cab" "cuerpo" "nota"; }
+    .ct-paso-nota { border-left:none; padding-left:0; }
+  }
   .ct-orden { width:40px; flex:0 0 auto; text-align:center; font-family:var(--fuente-num);
     font-size:12px; color:#aab3c2; cursor:grab; user-select:none; }
   .ct-orden:active { cursor:grabbing; }
@@ -264,7 +307,7 @@
      la fila del campo. INGRESO dice de dónde sale el valor (lo carga el
      afiliado / Extraer un dato / Calcular con una fórmula); VALIDACIÓN, qué
      se controla, y puede no haber ninguna (el dato se toma como está). */
-  .ct-bloque { flex-basis:100%; margin:2px 0 0 40px; display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center;
+  .ct-bloque { flex-basis:100%; margin:2px 0 0 0; display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center;
     padding:8px 10px; border:1px solid var(--linea); border-left:3px solid #7a56b5; border-radius:6px; background:#fcfbff; }
   .ct-bloque.valid { flex-direction:column; align-items:stretch; gap:6px; border-left-color:var(--marca-primario); background:#fafbfd; }
   .ct-bloque.valid .ct-bloque-cab { display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; }
@@ -3924,48 +3967,93 @@ const TIPOS_DATO_TRAMITE_EMP = Object.fromEntries(Object.entries(TIPOS_DATO_TRAM
 const TIENE_OPCIONES_TRAMITE = new Set(['seleccion', 'opcion_unica', 'multiple']);
 
 function renderCamposTramite() {
+  // Cada campo es UNA tarjeta con tres pasos, como un onboarding (SDN,
+  // 2026-10-18): 1 El dato (obligatorio), 2 Ingreso (obligatorio), 3
+  // Validación (opcional). Cada paso lleva su aclaración al costado, chica
+  // y en itálica; los controles que no aplican al tipo no se dibujan.
   const cont = document.getElementById('tt-campos-lista');
   const cabecera = document.getElementById('campos-tramite-cabecera');
-  cabecera.classList.toggle('oculto', !camposTramiteActuales.length);
+  if (cabecera) cabecera.classList.add('oculto');
   if (!camposTramiteActuales.length) {
     cont.innerHTML = '<p class="muted" style="font-size:12px;">Todavía no agregaste ningún campo.</p>';
     renderVistaPreviaTramite();
     return;
   }
-  cont.innerHTML = camposTramiteActuales.map((c, i) => `
+  const paso = (n, titulo, obligatorio, cuerpo, nota, extra) => `
+    <div class="ct-paso ${extra || ''}">
+      <div class="ct-paso-cab"><b>${n}</b><span>${titulo}</span><i class="${obligatorio ? 'ob' : 'op'}">${obligatorio ? 'obligatorio' : 'opcional'}</i></div>
+      <div class="ct-paso-cuerpo">${cuerpo}</div>
+      <div class="ct-paso-nota">${nota}</div>
+    </div>`;
+  cont.innerHTML = camposTramiteActuales.map((c, i) => {
+    const sep = c.tipo_dato === 'separador';
+    const calc = c.tipo_dato === 'calculado';
+    const n = String(i + 1).padStart(2, '0');
+    const tipoTexto = calc ? (modoIngreso(c) === 'calcular' ? 'Calculado' : 'Extraído') : (TIPOS_DATO_TRAMITE_LABEL[c.tipo_dato] || c.tipo_dato);
+    // ---- paso 1: el dato
+    let dato = `<input class="ct-etiqueta" placeholder="${sep ? 'Etiqueta (opcional, solo referencia)' : 'Etiqueta: la pregunta como la ve el afiliado'}"
+             value="${escHtml(c.etiqueta)}" oninput="actualizarCampoTramite(${i},'etiqueta',this.value)">`;
+    if (!sep) {
+      dato += calc
+        ? `<select class="ct-tipo fijo" disabled title="El tipo lo da el dato extraído o la fórmula (paso 2)"><option>${tipoTexto}</option></select>`
+        : `<select class="ct-tipo" onchange="actualizarCampoTramite(${i},'tipo_dato',this.value)">
+          ${Object.entries(TIPOS_DATO_TRAMITE_LABEL).map(([v, l]) => `<option value="${v}" ${c.tipo_dato===v?'selected':''}>${l}</option>`).join('')}</select>`;
+      dato += `<select class="ct-ancho" onchange="actualizarCampoTramite(${i},'ancho',this.value)" title="Ancho en el formulario">
+          <option value="completo" ${c.ancho==='completo'?'selected':''}>Ancho completo</option>
+          <option value="mitad" ${c.ancho==='mitad'?'selected':''}>Mitad</option>
+          <option value="tercio" ${c.ancho==='tercio'?'selected':''}>Un tercio</option>
+        </select>`;
+      if (!calc) dato += `<label class="ct-chk-ob"><input type="checkbox" ${c.obligatorio?'checked':''} onchange="actualizarCampoTramite(${i},'obligatorio',this.checked)"> Obligatorio para el afiliado</label>`;
+      if (c.tipo_dato === 'texto') dato += `<input class="ct-num" type="number" min="0" placeholder="Long. máx." value="${c.longitud_maxima ?? ''}" oninput="actualizarCampoTramite(${i},'longitud_maxima',this.value)">
+        <input class="ct-num" type="number" min="0" placeholder="Long. exacta" value="${c.longitud_exacta ?? ''}" oninput="actualizarCampoTramite(${i},'longitud_exacta',this.value)">`;
+      if (c.tipo_dato === 'numero') dato += `<input class="ct-num" type="number" min="0" placeholder="Decimales" value="${c.decimales ?? ''}" oninput="actualizarCampoTramite(${i},'decimales',this.value)">`;
+      if (TIENE_OPCIONES_TRAMITE.has(c.tipo_dato)) dato += `<input class="ct-extra" placeholder="Opciones separadas por coma" value="${escHtml(c.opciones)}" oninput="actualizarCampoTramite(${i},'opciones',this.value)">`;
+      if (c.tipo_dato === 'archivo') dato += `<input class="ct-extra" placeholder="Tipos de archivo (pdf,jpg)" value="${escHtml(c.tipos_archivo_permitidos)}" oninput="actualizarCampoTramite(${i},'tipos_archivo_permitidos',this.value)">`;
+    }
+    const notaDato = sep ? 'Una raya que separa el formulario en partes. No junta ningún dato.'
+      : calc ? 'La etiqueta es lo que el afiliado lee. El tipo lo decide el paso 2: el dato que se extrae o la fórmula.'
+      : 'La etiqueta es la pregunta tal como la lee el afiliado. El tipo decide qué puede escribir' +
+        (c.tipo_dato === 'texto' ? '; las longitudes son opcionales.' : c.tipo_dato === 'numero' ? '; los decimales son opcionales.' :
+         TIENE_OPCIONES_TRAMITE.has(c.tipo_dato) ? '; las opciones van separadas por coma.' : c.tipo_dato === 'archivo' ? '; sin tipos, acepta cualquiera.' : '.') +
+        ' «Obligatorio» no deja enviar sin este dato.';
+    // ---- paso 2: ingreso
+    let ingreso = '', notaIngreso = '';
+    if (!sep && !['archivo', 'booleano', 'multiple'].includes(c.tipo_dato)) {
+      const modo = modoIngreso(c);
+      const radio = (m, texto) => `<label><input type="radio" name="ct-ing-${i}" ${modo===m?'checked':''} onchange="cambiarIngresoTramite(${i},'${m}')"> ${texto}</label>`;
+      ingreso = `<span class="ct-radios">${radio('manual', 'Lo carga el afiliado')}${radio('extraer', 'Extraer un dato')}${radio('calcular', 'Calcular con una fórmula')}</span>`;
+      if (modo === 'manual') {
+        notaIngreso = 'De dónde sale el valor. Acá lo escribe el afiliado al pedir el trámite. «Extraer» lo trae de sus datos o de una lista del sindicato; «Calcular» lo arma con una fórmula.';
+      } else {
+        const v = ingresoDe(c);
+        ingreso += htmlFuncionRow(v, i, c.validaciones.indexOf(v), 'Tramite', modo, true);
+        notaIngreso = ayudaDeIngreso(c, modo);
+      }
+    }
+    // ---- paso 3: validación
+    const piezas = sep ? null : htmlValidacionesPiezas(c, i, 'Tramite');
+    const notaValid = !piezas ? '' : (piezas.filas
+      ? 'Cada validación frena el envío (Bloquea) o deja pasar con un aviso al operador (Avisa). El mensaje es lo que lee el afiliado si no pasa.'
+      : 'Sin validación, el dato se toma como está. Agregá una para controlarlo contra un valor, un rango, otro campo, un dato del afiliado o una fórmula.');
+    return `
     <div class="campo-tramite-fila" draggable="true" data-idx="${i}"
          ondragstart="dragCampoTramiteStart(event, ${i})" ondragover="dragCampoTramiteOver(event, ${i})"
          ondrop="dragCampoTramiteDrop(event, ${i})" ondragend="dragCampoTramiteEnd(event)">
-      <span class="ct-orden" title="Arrastrá para reordenar">${String(i + 1).padStart(2, '0')}</span>
-      <input class="ct-etiqueta" placeholder="${c.tipo_dato==='separador' ? 'Etiqueta (opcional, solo referencia)' : 'Etiqueta'}"
-             value="${escHtml(c.etiqueta)}" oninput="actualizarCampoTramite(${i},'etiqueta',this.value)">
-      ${c.tipo_dato === 'calculado'
-        ? `<select class="ct-tipo fijo" disabled title="El tipo lo da el dato extraído o la fórmula (ver Ingreso)"><option>${modoIngreso(c) === 'calcular' ? 'Calculado' : 'Extraído'}</option></select>`
-        : `<select class="ct-tipo" onchange="actualizarCampoTramite(${i},'tipo_dato',this.value)">
-        ${Object.entries(TIPOS_DATO_TRAMITE_LABEL).map(([v, l]) =>
-          `<option value="${v}" ${c.tipo_dato===v?'selected':''}>${l}</option>`).join('')}
-      </select>`}
-      <input class="ct-num" type="number" min="0" placeholder="Long. máx." value="${c.longitud_maxima ?? ''}" ${c.tipo_dato!=='texto'?'disabled':''} oninput="actualizarCampoTramite(${i},'longitud_maxima',this.value)">
-      <input class="ct-num" type="number" min="0" placeholder="Long. exacta" value="${c.longitud_exacta ?? ''}" ${c.tipo_dato!=='texto'?'disabled':''} oninput="actualizarCampoTramite(${i},'longitud_exacta',this.value)">
-      <input class="ct-num" type="number" min="0" placeholder="Decimales" value="${c.decimales ?? ''}" ${c.tipo_dato!=='numero'?'disabled':''} oninput="actualizarCampoTramite(${i},'decimales',this.value)">
-      ${TIENE_OPCIONES_TRAMITE.has(c.tipo_dato)
-        ? `<input class="ct-extra" placeholder="Opciones separadas por coma" value="${escHtml(c.opciones)}" oninput="actualizarCampoTramite(${i},'opciones',this.value)">`
-        : `<input class="ct-extra" placeholder="Tipos de archivo (pdf,jpg)" value="${escHtml(c.tipos_archivo_permitidos)}" ${c.tipo_dato!=='archivo'?'disabled':''} oninput="actualizarCampoTramite(${i},'tipos_archivo_permitidos',this.value)">`}
-      <select class="ct-ancho" ${c.tipo_dato==='separador'?'disabled':''} onchange="actualizarCampoTramite(${i},'ancho',this.value)" title="Ancho en el formulario">
-        <option value="completo" ${c.ancho==='completo'?'selected':''}>Ancho completo</option>
-        <option value="mitad" ${c.ancho==='mitad'?'selected':''}>Mitad</option>
-        <option value="tercio" ${c.ancho==='tercio'?'selected':''}>Un tercio</option>
-      </select>
-      <label style="display:flex; align-items:center; gap:3px; white-space:nowrap;" ${['separador','calculado'].includes(c.tipo_dato)?'class="oculto"':''}>
-        <input type="checkbox" ${c.obligatorio?'checked':''} ${['separador','calculado'].includes(c.tipo_dato)?'disabled':''} onchange="actualizarCampoTramite(${i},'obligatorio',this.checked)"> Oblig.
-      </label>
-      <button type="button" class="sec mini" ${i===0?'disabled':''} onclick="moverCampoTramite(${i},-1)" title="Subir">↑</button>
-      <button type="button" class="sec mini" ${i===camposTramiteActuales.length-1?'disabled':''} onclick="moverCampoTramite(${i},1)" title="Bajar">↓</button>
-      <button type="button" class="peligro mini" onclick="quitarCampoTramite(${i})" title="Quitar">✕</button>
-      ${htmlIngresoCampo(c, i)}
-      ${htmlValidacionesCampo(c, i, 'Tramite')}
-    </div>
-  `).join('');
+      <div class="ct-campo-cab">
+        <span class="ct-orden" title="Arrastrá para reordenar">${n}</span>
+        <span class="ct-campo-tit">${escHtml(c.etiqueta) || '<em>sin etiqueta</em>'}</span>
+        <span class="ct-campo-tipo">${escHtml(tipoTexto)}</span>
+        <span class="ct-campo-acc">
+          <button type="button" class="sec mini" ${i===0?'disabled':''} onclick="moverCampoTramite(${i},-1)" title="Subir">↑</button>
+          <button type="button" class="sec mini" ${i===camposTramiteActuales.length-1?'disabled':''} onclick="moverCampoTramite(${i},1)" title="Bajar">↓</button>
+          <button type="button" class="peligro mini" onclick="quitarCampoTramite(${i})" title="Quitar">✕</button>
+        </span>
+      </div>
+      ${paso(1, 'El dato', true, dato, notaDato)}
+      ${ingreso ? paso(2, 'Ingreso', true, ingreso, notaIngreso) : ''}
+      ${piezas ? paso(3, 'Validación', false, piezas.menu + piezas.filas, notaValid, 'valid') : ''}
+    </div>`;
+  }).join('');
   podarReglasTramite();
   renderRequisitosTramite();
   refrescarNombresTramite();
@@ -4022,18 +4110,27 @@ function htmlValorValidacion(c, v, i, vi, ns) {
       onchange="vtOffsetValidacion('${ns}',${i},${vi},this.value)">`;
 }
 function htmlValidacionesCampo(c, i, ns) {
-  // El bloque VALIDACIÓN del campo (2026-10-18): lo que se controla sobre el
-  // valor, sea quien sea el que lo puso. Un campo sin filas es declarativo:
-  // se toma como está. Filas: "que sea … un valor" (fija), "contra otro
-  // campo" (regla de consistencia, guardada aparte por orden), "contra un
-  // dato del afiliado o una lista" y "con una fórmula" (función).
-  if (c.tipo_dato === 'separador') return '';
+  // Envoltorio del constructor de EMPRESA (el de trámites del afiliado arma
+  // el paso 3 con las piezas): el bloque VALIDACIÓN del campo.
+  const p = htmlValidacionesPiezas(c, i, ns);
+  if (!p) return '';
+  return `<div class="ct-bloque valid"><div class="ct-bloque-cab"><span class="ct-kicker">Validación</span>
+    ${p.filas ? '' : '<span class="ct-req-vacio">Sin validación: el dato se toma como está.</span>'}${p.menu}</div>${p.filas}</div>`;
+}
+function htmlValidacionesPiezas(c, i, ns) {
+  // Las piezas de VALIDACIÓN de un campo (2026-10-18): lo que se controla
+  // sobre el valor, sea quien sea el que lo puso. Un campo sin filas es
+  // declarativo: se toma como está. Filas: "que sea … un valor" (fija),
+  // "contra otro campo" (regla de consistencia, guardada aparte por orden),
+  // "contra un dato del afiliado o una lista" y "con una fórmula" (función).
+  // Devuelve {filas, menu} o null si el tipo no admite ninguna.
+  if (c.tipo_dato === 'separador') return null;
   const esCalc = c.tipo_dato === 'calculado';
   const conFija = ['numero', 'fecha'].includes(c.tipo_dato) || esCalc;
   const conFuncion = ns === 'Tramite' && TIPOS_CON_FUNCION.includes(c.tipo_dato);
   const conCampo = ns === 'Tramite' && ['numero', 'fecha'].includes(c.tipo_dato)
     && camposComparables(camposTramiteActuales).some(x => x.c !== c && x.c.tipo_dato === c.tipo_dato);
-  if (!conFija && !conFuncion && !conCampo) return '';
+  if (!conFija && !conFuncion && !conCampo) return null;
   const ingreso = ingresoDe(c);
   const filas = (c.validaciones || []).map((v, vi) => {
     if (v === ingreso) return '';
@@ -4061,10 +4158,9 @@ function htmlValidacionesCampo(c, i, ns) {
     conCampo ? `<option value="campo">contra otro campo del formulario</option>` : '',
     conFuncion ? `<option value="dato">contra un dato del afiliado o una lista</option><option value="formula">con una fórmula</option>` : '',
   ].join('');
-  return `<div class="ct-bloque valid"><div class="ct-bloque-cab"><span class="ct-kicker">Validación</span>
-    ${filas ? '' : '<span class="ct-req-vacio">Sin validación: el dato se toma como está.</span>'}
-    <select class="ct-mas-valid-sel" onchange="agregarValidacionDesdeMenu('${ns}',${i},this.value); this.value='';">
-      <option value="">+ Validar…</option>${opciones}</select></div>${filas}</div>`;
+  const menu = `<select class="ct-mas-valid-sel" onchange="agregarValidacionDesdeMenu('${ns}',${i},this.value); this.value='';">
+      <option value="">+ Validar…</option>${opciones}</select>`;
+  return { filas, menu };
 }
 // Las reglas de consistencia (dos campos del formulario) se muestran como
 // una validación más del campo restringido; se guardan aparte, por orden.
@@ -4121,18 +4217,15 @@ function modoIngreso(c) {
   if (!v) return 'manual';
   return (v.formula || v.trae === '__formula') ? 'calcular' : 'extraer';
 }
-function htmlIngresoCampo(c, i) {
-  if (['separador', 'archivo', 'booleano', 'multiple'].includes(c.tipo_dato)) return '';
-  const modo = modoIngreso(c);
-  const radio = (m, texto) => `<label><input type="radio" name="ct-ing-${i}" ${modo===m?'checked':''} onchange="cambiarIngresoTramite(${i},'${m}')"> ${texto}</label>`;
-  let fila = '';
-  if (modo !== 'manual') {
-    const v = ingresoDe(c);
-    const vi = c.validaciones.indexOf(v);
-    fila = htmlFuncionRow(v, i, vi, 'Tramite', modo);
-  }
-  return `<div class="ct-bloque"><span class="ct-kicker">Ingreso</span><span class="ct-radios">
-    ${radio('manual', 'Lo carga el afiliado')}${radio('extraer', 'Extraer un dato')}${radio('calcular', 'Calcular con una fórmula')}</span>${fila}</div>`;
+// La aclaración del paso Ingreso (la misma que la fila mostraba abajo),
+// para la columna del costado.
+function ayudaDeIngreso(c, modo) {
+  const v = ingresoDe(c);
+  if (!v) return '';
+  const esLista = v.origen === 'lista';
+  const lista = esLista ? listaDe(v.lista) : null;
+  const trae = modo === 'calcular' ? '__formula' : (v.trae && v.trae !== '__formula' ? v.trae : (esLista ? 'existe' : CATALOGO_FUNCION.sistema[0].clave));
+  return htmlAyudaElegido(trae, esLista, lista, modo).replace(/^<div class="ct-fn-ayuda">/, '').replace(/<\/div>$/, '');
 }
 function cambiarIngresoTramite(i, modo) {
   const c = camposTramiteActuales[i];
@@ -4172,7 +4265,7 @@ function funcionDe(i, vi) {
   return i < 0 ? requisitosTramiteActuales[vi] : camposTramiteActuales[i].validaciones[vi];
 }
 function listaDe(clave) { return CATALOGO_FUNCION.listas.find(l => l.clave === clave) || CATALOGO_FUNCION.listas[0]; }
-function htmlFuncionRow(v, i, vi, ns, modo) {
+function htmlFuncionRow(v, i, vi, ns, modo, sinAyuda) {
   const upd = (k) => `onchange="actualizarFuncionTramite(${i},${vi},'${k}',this.value)"`;
   const esLista = v.origen === 'lista';
   const lista = esLista ? listaDe(v.lista) : null;
@@ -4226,7 +4319,7 @@ function htmlFuncionRow(v, i, vi, ns, modo) {
   if (traeActual === '__formula') {
     partes += `<input class="ct-formula" list="tt-nombres-datalist" placeholder="p. ej. anios_entre(lista.fecha_nacimiento, hoy()) <= 12" value="${escHtml(v.formula || '')}" oninput="actualizarFuncionTramite(${i},${vi},'formula',this.value,true)">`;
   }
-  const ayudaElegido = htmlAyudaElegido(traeActual, esLista, lista, modo);
+  const ayudaElegido = sinAyuda ? '' : htmlAyudaElegido(traeActual, esLista, lista, modo);
   if (traeActual === 'existe') {
     partes += `<select ${upd('operador')}><option value="==" ${v.operador!=='!='?'selected':''}>tiene que estar</option><option value="!=" ${v.operador==='!='?'selected':''}>no tiene que estar</option></select>`;
   } else if (!esIngreso) {

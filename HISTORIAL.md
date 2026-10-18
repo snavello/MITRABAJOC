@@ -8234,3 +8234,25 @@ Dos observaciones de SDN al probar el constructor nuevo:
   «+ Validar…» en el primario con borde punteado. Todas las ayudas del
   constructor (`.ct-fn-ayuda`, los `muted` de la sub-pestaña, los vacíos)
   van en 11px itálica gris, con el código derecho.
+
+## El campo del constructor como un onboarding de tres pasos (2026-10-18, Admin 0.62.03)
+
+SDN vio los bloques de la vuelta anterior "demasiado aislados" y pidió un
+solo bloque por campo, paso a paso como un onboarding, con la aclaración al
+costado de cada dato y marcando qué es obligatorio y qué opcional. Cada
+campo es ahora una tarjeta con una **cabecera** (orden, etiqueta en
+condensada, tipo como chip, subir / bajar / quitar) y **tres pasos**
+numerados en un círculo del primario: **1 El dato** (obligatorio: etiqueta,
+tipo, ancho, obligatorio para el afiliado y solo los controles que aplican
+al tipo: longitudes para texto, decimales para número, opciones para las
+listas, tipos para archivo), **2 Ingreso** (obligatorio: los tres radios y,
+si extrae o calcula, la fila de ingreso) y **3 Validación** (opcional: el
+menú «+ Validar…» y las filas). Cada paso lleva a la derecha su
+**aclaración en 10,5px itálica** (`.ct-paso-nota`): la del ingreso es la
+misma ayuda que la fila mostraba abajo (`ayudaDeIngreso`, qué devuelve,
+cómo se compara, el ejemplo y "Ver todos"), ahora al costado; en teléfono
+baja debajo. `renderCamposTramite` arma la tarjeta; `htmlValidacionesPiezas`
+devuelve filas y menú (el constructor de empresa sigue con su envoltorio
+`htmlValidacionesCampo`); `htmlFuncionRow(..., sinAyuda)` omite la ayuda
+inline cuando va al costado. Los selectores de los robots pasaron de
+`.ct-bloque.valid` a `.ct-paso.valid`.
