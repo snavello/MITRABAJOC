@@ -8092,3 +8092,25 @@ aclaración, regla, fórmula y función nueva) y con
 `test_validaciones_funcion.py` (14), `test_asistente_tramites_v2.py` (8),
 `test_asistente_tramites_api.py`, `test_tramites.py`, `test_modales.py` y
 `test_alcance_seccional_pantalla.py`.
+
+## Un calculado con condición muestra Sí / No y nunca frena (2026-10-18, Admin 0.61.02, Trabajador 0.46.03)
+
+SDN probó en el banco de pruebas un campo **calculado** con la fórmula
+`sistema.edad > 1` y vio que "pasaba todo": con `> 1000000` o con `<`
+también daba "Listo para enviar". Dos cosas distintas:
+
+- **Por diseño**: un calculado MUESTRA el resultado de su fórmula, no
+  valida. Nunca frena el envío. Para frenar por una condición hay que usar
+  una **validación del campo** o un **requisito para iniciar** (p. ej.
+  "en el padrón" → "Años cumplidos" → mayor que 18, o la fórmula
+  `sistema.edad >= 18`). La fila de un calculado ahora lo dice en su línea
+  de ayuda.
+- **Bug real**: `_evaluar_funcion` devuelve `pasa=False` cuando una fórmula
+  da un booleano falso (es el camino de las validaciones), y
+  `evaluar_envio`, `validar_campo_en_vivo` y `requisitos_al_abrir` tomaban
+  ese `pasa` para decidir si había resultado: con `sistema.edad > 1000000`
+  el campo quedaba **vacío** y salía el aviso "no se pudo calcular (no
+  cumple la condición)". Ahora el calculado muestra `_texto_resultado`
+  siempre que haya resultado ("No" para un falso) y el aviso queda solo
+  para cuando falta un dato (`resultado is None`). Test:
+  `test_un_calculado_con_condicion_muestra_si_o_no_y_nunca_frena`.

@@ -4078,7 +4078,7 @@ function htmlFuncionRow(v, i, vi, ns, modo) {
   if (traeActual === '__formula') {
     partes += `<input class="ct-formula" list="tt-nombres-datalist" placeholder="p. ej. anios_entre(lista.fecha_nacimiento, hoy()) <= 12" value="${escHtml(v.formula || '')}" oninput="actualizarFuncionTramite(${i},${vi},'formula',this.value,true)">`;
   }
-  const ayudaElegido = htmlAyudaElegido(traeActual, esLista, lista);
+  const ayudaElegido = htmlAyudaElegido(traeActual, esLista, lista, modo);
   if (traeActual === 'existe') {
     partes += `<select ${upd('operador')}><option value="==" ${v.operador!=='!='?'selected':''}>tiene que estar</option><option value="!=" ${v.operador==='!='?'selected':''}>no tiene que estar</option></select>`;
   } else if (modo !== 'calculado') {
@@ -4105,10 +4105,13 @@ function htmlFuncionRow(v, i, vi, ns, modo) {
 // Qué devuelve lo elegido y cómo se compara, en una línea abajo de la fila
 // (2026-10-18): con 22 datos del padrón el nombre solo no alcanza. Sale del
 // catálogo del código (validaciones_tramite.AYUDA_SISTEMA / COMO_SE_COMPARA).
-function htmlAyudaElegido(traeActual, esLista, lista) {
+function htmlAyudaElegido(traeActual, esLista, lista, modo) {
   const mas = (ancla) => `<button type="button" class="ct-fn-mas" onclick="abrirAyudaFunciones(${ancla ? `'${ancla}'` : ''})">${ancla ? 'Ver todos' : 'Ver datos y funciones, con ejemplos'}</button>`;
+  // Un calculado muestra, no frena: la confusión real de SDN (2026-10-18)
+  // fue esperar que "sistema.edad > 65" frenara el envío.
+  const calc = modo === 'calculado' ? '<b>Un calculado muestra el resultado y nunca frena</b> (una condición se ve como Sí / No). Para frenar, usá una validación del campo o un requisito para iniciar. ' : '';
   if (traeActual === '__formula') {
-    return `<div class="ct-fn-ayuda">Escribila con <code>campo.…</code>, <code>lista.…</code>, <code>sistema.…</code> y las funciones. ${mas('')}</div>`;
+    return `<div class="ct-fn-ayuda">${calc}Escribila con <code>campo.…</code>, <code>lista.…</code>, <code>sistema.…</code> y las funciones. ${mas('')}</div>`;
   }
   if (traeActual === 'existe') return '';
   if (esLista) {
