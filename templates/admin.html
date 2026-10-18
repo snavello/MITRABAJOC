@@ -222,18 +222,17 @@
     font-family:var(--fuente-display); text-transform:uppercase; letter-spacing:.8px;
     display:flex; align-items:center; gap:10px; }
   .ct-secc::after { content:""; flex:1; height:1px; background:var(--linea); }
-  .ct-ficha { background:#fff; border:1px solid var(--linea); border-radius:4px; position:relative; }
+  /* Cada campo es una TARJETA delimitada (2026-10-18, pedido de SDN: con
+     Ingreso y Validación adentro, hay que ver dónde empieza y termina cada
+     uno): filo grueso del primario a la izquierda, fondo blanco, sombra
+     corta; adentro, la fila del campo y debajo los dos bloques, cada uno
+     con su propio filo y su rótulo sólido. Las ayudas van chicas y en
+     itálica, siempre. */
+  .ct-ficha { background:transparent; border:none; border-radius:0; position:relative; display:grid; gap:10px; }
   .ct-ficha:empty { border:none; }
-  .ct-ficha::before { content:""; position:absolute; top:0; bottom:0; left:40px;
-    border-left:1.5px dashed #d8dde6; pointer-events:none; }
-  .ct-ficha .campo-tramite-fila { background:#fff; border:none; border-bottom:1px solid var(--linea);
-    border-radius:0; margin:0; padding:9px 10px 9px 0; }
-  /* Intercalado: los campos se funden entre sí sin una guía visual -- las
-     filas pares llevan un lavado apenas perceptible del primario de la
-     marca, para ver dónde empieza uno y termina el otro. */
-  .ct-ficha .campo-tramite-fila:nth-child(even) {
-    background:color-mix(in srgb, var(--marca-primario) 9%, #fff); }
-  .ct-ficha .campo-tramite-fila:last-child { border-bottom:none; }
+  .ct-ficha .campo-tramite-fila { background:#fff; border:1px solid var(--linea); border-left:5px solid var(--marca-primario);
+    border-radius:8px; margin:0; padding:10px 12px 10px 0; box-shadow:0 1px 3px rgba(21,34,56,.06); row-gap:8px; }
+  .ct-ficha .campo-tramite-fila .ct-etiqueta { font-weight:600; font-size:13px; }
   .ct-orden { width:40px; flex:0 0 auto; text-align:center; font-family:var(--fuente-num);
     font-size:12px; color:#aab3c2; cursor:grab; user-select:none; }
   .ct-orden:active { cursor:grabbing; }
@@ -265,16 +264,30 @@
      la fila del campo. INGRESO dice de dónde sale el valor (lo carga el
      afiliado / Extraer un dato / Calcular con una fórmula); VALIDACIÓN, qué
      se controla, y puede no haber ninguna (el dato se toma como está). */
-  .ct-bloque { flex-basis:100%; margin:3px 0 2px 40px; display:flex; flex-wrap:wrap; gap:6px 8px; align-items:center; }
-  .ct-bloque.valid { flex-direction:column; align-items:stretch; gap:5px; }
+  .ct-bloque { flex-basis:100%; margin:2px 0 0 40px; display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center;
+    padding:8px 10px; border:1px solid var(--linea); border-left:3px solid #7a56b5; border-radius:6px; background:#fcfbff; }
+  .ct-bloque.valid { flex-direction:column; align-items:stretch; gap:6px; border-left-color:var(--marca-primario); background:#fafbfd; }
   .ct-bloque.valid .ct-bloque-cab { display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; }
-  .ct-kicker { font-size:9.5px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:#98a2b3; flex:0 0 68px; }
+  .ct-kicker { font-size:9.5px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:#fff; background:#7a56b5;
+    border-radius:3px; padding:3px 8px; flex:0 0 auto; line-height:1; }
+  .ct-bloque.valid .ct-kicker { background:var(--marca-primario); }
+  .ct-bloque.valid .ct-vrow .ct-fuente { color:var(--marca-primario); width:auto; }
+  .ct-bloque .ct-vrow { background:#fff; }
+  /* Las ayudas: chicas, en itálica, grises; el código adentro, derecho. */
+  .ct-fn-ayuda, .ct-req-vacio, .ct-ayuda-formula, .ct-regla-vacia,
+  #tramite-sub-tipos p.muted, #tramite-sub-tipos span.muted, .ct-chk { font-size:11px; font-style:italic; color:var(--gris); }
+  .ct-fn-ayuda code, .ct-ayuda-formula code, .ct-fn-ayuda b { font-style:normal; }
+  .ct-fn-ayuda .ct-fn-mas, .ct-ayuda-formula .ct-fn-mas { font-style:italic; }
+  #tt-requisitos-lista { display:grid; gap:6px; padding:8px 10px; border:1px solid var(--linea); border-left:3px solid var(--marca-primario);
+    border-radius:6px; background:#fafbfd; }
+  #tt-requisitos-lista:empty { display:none; }
+  #tt-requisitos-lista .ct-vrow { background:#fff; }
   .ct-radios { display:inline-flex; flex-wrap:wrap; gap:4px 12px; }
   .ct-radios label { display:inline-flex; align-items:center; gap:4px; font-size:12px; color:var(--tinta); cursor:pointer; white-space:nowrap; }
   .ct-radios input { margin:0; accent-color:#7a56b5; }
   .ct-bloque .ct-vrow { flex-basis:100%; }
-  .ct-mas-valid-sel { border:1px dashed #c3cbd8; background:none; color:var(--gris); border-radius:8px; font-size:11px;
-    padding:3px 9px; cursor:pointer; width:auto; max-width:300px; }
+  .ct-mas-valid-sel { border:1.5px dashed color-mix(in srgb, var(--marca-primario) 55%, #fff); background:#fff; color:var(--marca-primario);
+    border-radius:8px; font-size:11.5px; font-weight:600; padding:4px 10px; cursor:pointer; width:auto; max-width:320px; }
   .ct-mas-valid-sel:hover { color:var(--tinta); border-color:var(--gris); }
   .ct-vrow.ingreso { border-color:#cdbde9; background:#f8f4fe; }
   .ct-vrow.ingreso .ct-fuente { color:#7a56b5; width:auto; }
@@ -4125,6 +4138,7 @@ function cambiarIngresoTramite(i, modo) {
   const c = camposTramiteActuales[i];
   const actual = modoIngreso(c);
   if (modo === actual) return;
+  olvidarPruebaTramite(c);
   if (modo === 'manual') {
     c.validaciones = (c.validaciones || []).filter(v => v !== ingresoDe(c));
     c.tipo_dato = c._tipo_manual || 'texto';
@@ -4305,6 +4319,7 @@ function agregarFuncionTramite(i) {
 function actualizarFuncionTramite(i, vi, k, valor, sinRender) {
   const v = funcionDe(i, vi);
   if (!v) return;
+  if (v.ingreso && i >= 0) olvidarPruebaTramite(camposTramiteActuales[i]);
   if (k === 'origen') {
     const eraIngreso = !!v.ingreso, eraFormula = !!(v.formula || v.trae === '__formula');
     Object.assign(v, nuevaFuncionTramite(i, valor, eraIngreso), { mensaje: v.mensaje, bloquea: v.bloquea, en_vivo: v.en_vivo });
@@ -4572,7 +4587,11 @@ function htmlCampoPreview(c, i, ns) {
   } else if (c.tipo_dato === 'numero') {
     campo = `<input type="number" class="tram-input" id="${idp}" value="${valor}" placeholder="Ej: 1234" ${guarda}>`;
   } else if (c.tipo_dato === 'calculado') {
-    campo = `<input type="text" class="tram-input ttp-calculado" id="${idp}" value="${valor}" placeholder="Se completa solo (se puede corregir)" ${guarda}>`;
+    // Lo propuesto por el último "Probar" se muestra pero NO viaja como
+    // corrección: solo lo que el admin escriba encima (2026-10-18, SDN vio
+    // un "el afiliado corrigió" después de cambiar él las condiciones).
+    const propuesto = ns === 'Tramite' ? (propuestosPruebaTramite.get(c) ?? '') : '';
+    campo = `<input type="text" class="tram-input ttp-calculado" id="${idp}" value="${valor || escHtml(propuesto)}" data-propuesto="${escHtml(propuesto)}" placeholder="Se completa solo (se puede corregir)" ${guarda}>`;
   } else {
     campo = `<input type="text" class="tram-input" id="${idp}" value="${valor}" placeholder="${c.longitud_exacta ? c.longitud_exacta + ' caracteres' : 'Texto'}" ${guarda}>`;
   }
@@ -4590,8 +4609,21 @@ function pintarMarcasPrueba(ns, campos, valores, erroresCampos) {
     marca.classList.toggle('mal', mal);
   });
 }
+// Lo que el último "Probar" propuso para cada extraído o calculado, aparte
+// de lo que el admin escribió: si coinciden, no hay corrección que probar.
+const propuestosPruebaTramite = new Map();
 function guardarValorPruebaTramite(i, valor) {
-  valoresPruebaTramite.set(camposTramiteActuales[i], valor);
+  const c = camposTramiteActuales[i];
+  if (c.tipo_dato === 'calculado' && String(valor).trim() === String(propuestosPruebaTramite.get(c) ?? '').trim()) {
+    valoresPruebaTramite.delete(c);
+    return;
+  }
+  valoresPruebaTramite.set(c, valor);
+}
+// Cambió el ingreso de un campo: lo propuesto y lo escrito ya no valen.
+function olvidarPruebaTramite(c) {
+  valoresPruebaTramite.delete(c);
+  propuestosPruebaTramite.delete(c);
 }
 function limpiarResultadoPrueba(pref) {
   const res = document.getElementById(pref + '-probar-res');
@@ -4603,9 +4635,15 @@ async function probarFormularioTramite() {
   const valores = {};
   camposTramiteActuales.forEach((c, i) => {
     const el = document.getElementById(`ttp_Tramite_${i}`);
-    // un extraído o calculado viaja solo si el admin escribió encima: así
-    // se prueba también la corrección del afiliado
-    if (el && el.value !== undefined && (c.tipo_dato !== 'calculado' || el.value.trim())) valores[i] = el.value;
+    if (!el || el.value === undefined) return;
+    // un extraído o calculado viaja solo si el admin escribió encima de lo
+    // propuesto: así se prueba la corrección del afiliado, y nada más
+    if (c.tipo_dato === 'calculado') {
+      const v = el.value.trim();
+      if (v && v !== (el.dataset.propuesto || '').trim()) valores[i] = v;
+      return;
+    }
+    valores[i] = el.value;
   });
   limpiarResultadoPrueba('tt');
   let data;
@@ -4630,8 +4668,14 @@ async function probarFormularioTramite() {
   });
   pintarMarcasPrueba('Tramite', camposTramiteActuales, valores, data.errores_campos);
   Object.entries(data.calculados || {}).forEach(([idx, texto]) => {
+    const c = camposTramiteActuales[idx];
     const el = document.getElementById(`ttp_Tramite_${idx}`);
-    if (el) { el.value = texto; valoresPruebaTramite.set(camposTramiteActuales[idx], texto); }
+    // si el admin no escribió encima, lo que vuelve es lo propuesto
+    if (!(valores[idx] !== undefined && String(valores[idx]).trim())) {
+      propuestosPruebaTramite.set(c, texto);
+      valoresPruebaTramite.delete(c);
+      if (el) { el.value = texto; el.dataset.propuesto = texto; }
+    } else if (el) { el.value = texto; }
   });
   const res = document.getElementById('tt-probar-res');
   res.innerHTML = (data.advertencias || []).map(a => `<div class="adv">Aviso al operador: ${escHtml(a)}</div>`).join('')
