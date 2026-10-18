@@ -376,7 +376,7 @@ def test_el_constructor_muestra_la_ayuda_de_cada_dato():
     assert 'id="overlay-ayuda-funciones"' in html and 'id="cf-buscar"' in html
     assert "function htmlAyudaElegido" in html and "function abrirAyudaFunciones" in html
     assert "tituloDe(k)" in html, "el title de la opción es el tooltip antes de elegir"
-    assert 'class="ct-fn-mas" onclick="abrirAyudaFunciones()"' in html, "el enlace al pie del constructor"
+    assert 'onclick="abrirAyudaFunciones()"' in html and 'id="ct-tip"' in html, "el enlace a la referencia y el globo de ayuda"
 
 
 def test_un_calculado_con_condicion_muestra_si_o_no_y_nunca_frena():
