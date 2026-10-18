@@ -8114,3 +8114,102 @@ también daba "Listo para enviar". Dos cosas distintas:
   siempre que haya resultado ("No" para un falso) y el aviso queda solo
   para cuando falta un dato (`resultado is None`). Test:
   `test_un_calculado_con_condicion_muestra_si_o_no_y_nunca_frena`.
+
+## Ingreso y validación: dos cosas separadas en cada campo de Trámites (2026-10-18, Admin 0.62.01, Trabajador 0.47.01, Plataforma 0.52.02)
+
+SDN encontró el constructor difícil de leer para alguien que no lo conoce y
+lo definió así: un campo **se completa** de una de tres maneras (lo carga
+el afiliado a mano, se **extrae** de una función directa como "traeme la
+edad", o se **calcula** como "la antigüedad por cinco") y, aparte, **se
+valida** o no (contra un valor fijo, un rango, otro campo, el resultado de
+otra función, una fórmula). El único chequeo del ingreso es el intrínseco
+(no se cargó, no se pudo recuperar); todo lo de contenido va en la
+validación. Nombres normalizados: `Extraer X`, `Calcular X`, `Validar X`, y
+los datos del sistema como `Sistema.Afiliado.Edad`. Cuatro decisiones más,
+tomadas con opciones: alcance **pantalla y nombres, mismo modelo guardado**;
+lo extraído o calculado es **propuesto y el afiliado lo puede corregir**; la
+consistencia entre campos pasa a ser «Validar contra otro campo» y los
+requisitos quedan aparte como «Validar antes de abrir». Y una regla más,
+de SDN sobre la marcha: **al tocar un dato propuesto la app avisa que está
+registrado**; si es un dato propio de la persona el cambio se actualiza en
+su perfil, si es del sindicato o un cálculo queda anotado en el trámite
+para quien lo evalúa, y el trámite sigue.
+
+**Motor (`validaciones_tramite.py`).**
+- `sistema.afiliado.<dato>` es el nombre completo (`FAMILIA_SISTEMA`,
+  `nombre_dato`); `_ev` lo resuelve al mismo diccionario que `sistema.<dato>`,
+  que sigue valiendo en lo guardado, y `_a_python` pasa los nombres con
+  punto a minúsculas fuera de comillas (`Sistema.Afiliado.Edad` vale). El
+  catálogo trae `nombre`, `propio` y `familia`; la ayuda, el prompt de la
+  IA y las dos pantallas lo usan.
+- El ingreso de un calculado es la validación de fuente `funcion` marcada
+  **`ingreso`** (`funcion_saneada(calculado=True)` la marca;
+  `validaciones_saneadas` la pone primera). Lo guardado antes tenía una sola
+  función sin operador: `ingreso_de` la toma como ingreso. `validaciones_de`
+  devuelve el resto. Un calculado ahora **puede tener validaciones**: una
+  fija infiere el tipo del límite (`_tipo_inferido`: número, fecha u
+  hoy±N, texto) porque el campo no declara tipo; las de función van como en
+  cualquier campo.
+- `evaluar_envio` en dos pasadas: primero los ingresos (lo propuesto, y si
+  el afiliado escribió otra cosa vale lo suyo: `calculados` lleva el valor
+  FINAL, `corregidos` la lista de lo cambiado con `dato` y `propio`, y la
+  advertencia dice "el afiliado corrigió el dato: puso «41»; el sistema
+  tenía «40». Revisarlo al evaluar / Se actualizó en su perfil"); una fecha
+  de nacimiento corregida que no sea ISO frena. Después, con los valores
+  finales en el namespace, requisitos, funciones, fijas y reglas.
+- Un dato sí / no elegido sin operador (un requisito «Tiene credencial
+  vigente» a secas) vale "tiene que ser sí": antes se descartaba en
+  silencio al guardar y el requisito desaparecía.
+- `descripcion_ingreso(campo)` → `{modo, dato, propio, rotulo}`, lo que la
+  app del afiliado necesita para avisar. `DATOS_PROPIOS` = fecha de
+  nacimiento, provincia, localidad: lo que la persona edita en su perfil.
+
+**Servidor.** `/api/tramite` ya no ignora el valor de un calculado: lo
+lleva a `evaluar_envio` y, por cada corregido propio, llama a
+`db.actualizar_dato_personal` (la fecha directa; provincia o localidad
+rearmando el bloque de domicilio con `geo.campos_para_guardar` y `sin_geo`,
+porque el globo ya no vale). `/api/tramites/tipos` suma `ingreso` a cada
+campo extraído o calculado.
+
+**Constructor (`templates/admin.html`).** "Calculado" dejó de ser un tipo
+del desplegable. Cada campo tiene dos bloques: **INGRESO** con tres radios
+(Lo carga el afiliado / Extraer un dato / Calcular con una fórmula;
+`htmlIngresoCampo`, `cambiarIngresoTramite` guarda el tipo manual en
+`_tipo_manual` para volver) y la fila de ingreso (`htmlFuncionRow` en modo
+`extraer`, que ofrece solo datos y columnas, o `calcular`, solo la fórmula)
+con la ayuda que dice qué pasa si el afiliado lo corrige; y **VALIDACIÓN**
+con un menú «+ Validar…» (un valor, un rango —dos fijas—, otro campo, un
+dato del afiliado o una lista, una fórmula) y las filas "Validar que sea…",
+"Validar contra otro campo:" (las reglas de consistencia, `htmlReglasDeCampo`,
+se dibujan adentro del campo restringido y se siguen guardando por orden) y
+las de función. Sin filas: "Sin validación: el dato se toma como está". La
+sección "Consistencia al enviar" se fue; "Requisitos para iniciar" es
+«Validar antes de abrir» con rótulo "Antes de abrir". El banco de pruebas
+deja escribir encima de un extraído para probar la corrección. El
+constructor de empresa conserva su sección de consistencia (D7).
+
+**App del afiliado (`templates/trabajador.html`).** El campo extraído o
+calculado ya no es de solo lectura: se precarga (`data-propuesto`), se ve
+en violeta claro, y al enfocarlo aparece la nota: "Este dato está registrado
+en tu perfil. Si lo cambiás acá, se actualiza en el sistema" para los
+propios; "Este dato lo tiene registrado el sindicato / Este valor lo
+calcula el sistema. Si lo cambiás, queda anotado en el trámite para que lo
+revisen" para el resto. Un recálculo en vivo no pisa lo que la persona ya
+corrigió (`data-editado`). El valor viaja al enviar.
+
+**Asistente.** Rótulos del detalle: Aclaración / Validar / Validar con
+fórmula / Función a desarrollar; catálogo y sugerencias con
+`sistema.afiliado.…`.
+
+**Verificado** con dos robots Playwright contra la app local: el
+constructor arma extraer (propio y del sindicato), calcular, un valor, un
+rango, contra otro campo y antes de abrir, prueba con un afiliado real
+(corrige la edad a 70 y la validación "hasta 60" frena con el aviso de
+corrección), guarda y reabre con los modos reconocidos; y la app del
+afiliado muestra los propuestos, las dos notas, envía con la edad corregida
+(queda la advertencia) y con la fecha de nacimiento corregida (se actualiza
+en `CuentaTrabajador`). Tests: `test_validaciones_funcion.py` (16, con
+`test_ingreso_y_validacion_de_un_campo_extraido_o_calculado`),
+`test_tramites.py`, `test_tramites_en_vivo.py`, `test_asistente_tramites*.py`,
+`test_alcance_seccional_pantalla.py`, `test_modales.py` y el robot e2e del
+asistente.

@@ -140,7 +140,7 @@ def test_el_saneo_de_una_funcion_descarta_lo_mal_formado():
     assert vt.funcion_saneada({"origen": "sistema"}, campos) is None, "sin dato ni fórmula no afirma nada"
     assert vt.funcion_saneada({"origen": "sistema", "trae": "recibos_verificados"}, campos) is None, "un dato sin operador no afirma nada"
     con_op = vt.funcion_saneada({"origen": "sistema", "trae": "recibos_verificados", "operador": ">=", "valor": "3"}, campos)
-    assert con_op["mensaje"] == "sistema.recibos_verificados tiene que ser mayor o igual a 3."
+    assert con_op["mensaje"] == "sistema.afiliado.recibos_verificados tiene que ser mayor o igual a 3."
     req = vt.requisitos_saneados([{"origen": "sistema", "formula": "sistema.en_padron", "bloquea": False, "clave2": 0, "en_vivo": True}], campos)
     assert req[0]["bloquea"] is True and req[0]["clave2"] is None and req[0]["en_vivo"] is False
     calc = vt.validaciones_saneadas([{"fuente": "funcion", "origen": "sistema", "formula": "sistema.recibos_verificados * 2",
@@ -216,7 +216,7 @@ def test_cada_dato_y_cada_funcion_traen_su_ejemplo():
               {"id": 5, "etiqueta": "Credencial", "tipo_dato": "texto"}]
     for clave, (grupo, devuelve, ejemplo, significa) in vt.AYUDA_SISTEMA.items():
         assert grupo in grupos and devuelve and significa, clave
-        assert f"sistema.{clave}" in ejemplo, clave
+        assert f"sistema.afiliado.{clave}" in ejemplo, clave
         assert vt.error_de_formula(ejemplo, campos, "grupo_familiar") is None, (clave, ejemplo)
     for nombre, (ejemplo, significa) in vt.AYUDA_FUNCION.items():
         assert nombre + "(" in ejemplo and significa, nombre
@@ -294,12 +294,14 @@ def test_el_envio_del_afiliado_se_frena_o_se_guarda_con_el_calculado():
     assert r.json()["errores_campos"][str(ids["DNI del chico"])] == "Ese DNI no figura en tu grupo familiar."
     r = juan.post("/api/tramite", data={"tipo_tramite_id": TIPO["id"], f'campo_{ids["DNI del chico"]}': "58.765.432",
                                         f'campo_{ids["Grado"]}': "1º",
-                                        f'campo_{ids["Edad del chico"]}': "3"})     # lo que mande el cliente se ignora
+                                        f'campo_{ids["Edad del chico"]}': "3"})     # el afiliado corrigió lo propuesto (2026-10-18)
     assert r.status_code == 200, r.text
     detalle = db.tramite_detalle(r.json()["id"])
     respuestas = {x["etiqueta"]: x["valor_texto"] for x in detalle["respuestas"]}
-    assert respuestas["Edad del chico"] == "15" and respuestas["Antigüedad (meses)"] == str(vt._meses_entre("2019-05-02", HOY.isoformat()))
-    assert detalle["advertencias"] == ['"DNI del chico": El kit es hasta los 12 años.']
+    # Vale lo que escribió el afiliado y queda anotado para quien evalúa.
+    assert respuestas["Edad del chico"] == "3" and respuestas["Antigüedad (meses)"] == str(vt._meses_entre("2019-05-02", HOY.isoformat()))
+    assert detalle["advertencias"] == ['"Edad del chico": el afiliado corrigió el dato: puso «3»; el sistema tenía «15». Revisarlo al evaluar.',
+                                       '"DNI del chico": El kit es hasta los 12 años.']
     ana = _trab(ANA)
     r = ana.post("/api/tramite", data={"tipo_tramite_id": TIPO["id"], f'campo_{ids["DNI del chico"]}': "55123456",
                                        f'campo_{ids["Grado"]}': "1º"})
@@ -400,3 +402,57 @@ def test_un_calculado_con_condicion_muestra_si_o_no_y_nunca_frena():
     campos = [{"id": 1, "etiqueta": "Edad", "tipo_dato": "calculado",
                "validaciones": [{"fuente": "funcion", "origen": "sistema", "formula": "sistema.edad > 1000000", "trae": "", "operador": "", "valor": ""}]}]
     assert vt.requisitos_al_abrir(campos, [], ctx)["calculados"] == {1: "No"}
+
+
+def test_ingreso_y_validacion_de_un_campo_extraido_o_calculado():
+    """2026-10-18 (SDN): un campo tiene INGRESO (lo carga el afiliado, se
+    extrae de un dato o se calcula) y VALIDACIÓN aparte. Los datos se nombran
+    sistema.afiliado.<dato> (la forma corta sigue valiendo, y da igual la
+    mayúscula); el afiliado puede corregir lo propuesto: vale lo suyo, queda
+    anotado para quien evalúa y, si es un dato propio (fecha de nacimiento,
+    provincia, localidad), `corregidos` lo lleva al perfil; un extraído se
+    valida como cualquier campo."""
+    ctx = {"sistema": {"edad": 40.0, "fecha_nacimiento": "1986-03-01", "credencial_vigente": True}, "buscar": lambda *a: None}
+
+    def campos(formula=None, trae="", validaciones=()):
+        ing = {"fuente": "funcion", "origen": "sistema", "formula": formula, "trae": trae, "operador": "", "valor": "", "ingreso": True}
+        return [{"id": 1, "etiqueta": "Edad", "tipo_dato": "calculado", "validaciones": [ing, *validaciones]}]
+
+    assert vt.error_de_formula("sistema.afiliado.edad >= 18", []) is None
+    assert vt.error_de_formula("Sistema.Afiliado.Edad >= 18", []) is None
+    assert vt.error_de_formula("sistema.edad >= 18", []) is None, "lo guardado antes sigue valiendo"
+    assert vt.error_de_formula("sistema.gremio.edad >= 18", [])
+    assert vt.evaluar_envio(campos("Sistema.Afiliado.Edad > 1000000"), [], {}, ctx, [])["calculados"] == {1: "No"}
+    # corregido por el afiliado: vale lo suyo y queda anotado
+    r = vt.evaluar_envio(campos(trae="edad"), [], {1: "41"}, ctx, [])
+    assert r["calculados"] == {1: "41"} and r["errores"] == [] and not r["corregidos"][0]["propio"]
+    assert "puso «41»" in r["advertencias"][0] and "Revisarlo" in r["advertencias"][0]
+    # igual a lo propuesto: no es una corrección
+    r = vt.evaluar_envio(campos(trae="edad"), [], {1: "40"}, ctx, [])
+    assert r["calculados"] == {1: "40"} and r["advertencias"] == [] and r["corregidos"] == []
+    # un dato propio: va al perfil, y una fecha ilegible no pasa
+    r = vt.evaluar_envio(campos(trae="fecha_nacimiento"), [], {1: "1990-01-02"}, ctx, [])
+    assert r["corregidos"] == [{"id": 1, "etiqueta": "Edad", "propuesto": "1986-03-01", "escrito": "1990-01-02",
+                                "dato": "fecha_nacimiento", "propio": True}]
+    assert "Se actualizó en su perfil" in r["advertencias"][0]
+    assert vt.evaluar_envio(campos(trae="fecha_nacimiento"), [], {1: "02/01/1990"}, ctx, [])["errores"]
+    # validación sobre un extraído: fija (tipo inferido del límite) y función
+    fija = {"fuente": "fija", "operador": "<=", "valor": "30", "mensaje": "Hasta 30 años.", "bloquea": True}
+    r = vt.evaluar_envio(campos(trae="edad", validaciones=[fija]), [], {}, ctx, [])
+    assert r["errores"] == ['"Edad": Hasta 30 años.'] and r["calculados"] == {1: "40"}
+    func = {"fuente": "funcion", "origen": "sistema", "trae": "credencial_vigente", "operador": "==", "valor": "no",
+            "mensaje": "Solo sin credencial.", "bloquea": False}
+    r = vt.evaluar_envio(campos(trae="edad", validaciones=[func]), [], {}, ctx, [])
+    assert r["advertencias"] == ['"Edad": Solo sin credencial.']
+    # el saneo: el ingreso queda marcado y primero; lo demás son validaciones
+    san = vt.validaciones_saneadas([fija, {"fuente": "funcion", "origen": "sistema", "trae": "edad"}, func],
+                                   "calculado", campos=[{"etiqueta": "Edad", "tipo_dato": "calculado"}], indice=0)
+    assert [(v["fuente"], bool(v.get("ingreso")), v.get("operador")) for v in san] == \
+        [("funcion", True, None), ("fija", False, "<="), ("funcion", False, "==")]
+    assert vt.ingreso_de({"tipo_dato": "calculado", "validaciones": san})["trae"] == "edad"
+    assert len(vt.validaciones_de({"tipo_dato": "calculado", "validaciones": san})) == 2
+    assert vt.descripcion_ingreso({"tipo_dato": "calculado", "validaciones": san}) == \
+        {"modo": "extraer", "dato": "edad", "propio": False, "rotulo": "Años cumplidos (desde la fecha de nacimiento)"}
+    cat = vt.catalogo_funcion()
+    assert cat["familia"]["prefijo"] == "sistema.afiliado." and cat["sistema"][0]["nombre"].startswith("sistema.afiliado.")
+    assert {d["clave"] for d in cat["sistema"] if d["propio"]} == set(vt.DATOS_PROPIOS)

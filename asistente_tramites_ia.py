@@ -124,8 +124,8 @@ def _catalogo_para_el_prompt() -> str:
     solo puede proponer fórmulas con esto, y lo que no esté acá es una
     función a desarrollar."""
     cat = validaciones_tramite.catalogo_funcion()
-    L = ["Datos del sistema (sistema.<dato>, del afiliado que inicia el trámite):"]
-    L += [f"- sistema.{d['clave']} ({d['devuelve']}): {d['rotulo']}. Ej.: {d['ejemplo']}" for d in cat["sistema"]]
+    L = ["Datos del sistema (sistema.afiliado.<dato>, del afiliado que inicia el trámite):"]
+    L += [f"- {d['nombre']} ({d['devuelve']}): {d['rotulo']}. Ej.: {d['ejemplo']}" for d in cat["sistema"]]
     L.append("Listas que el sindicato carga por CSV (lista.<columna>, la fila del afiliado):")
     L += [f"- {l['nombre']}: " + ", ".join(f"lista.{c['clave']} ({c['tipo']})" for c in l["columnas"]) for l in cat["listas"]]
     L.append("Funciones: " + "; ".join(f"{f['ayuda']} (ej.: {f['ejemplo']})" for f in cat["funciones"]) + ".")

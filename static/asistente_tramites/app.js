@@ -345,7 +345,7 @@ function Datos({ E, set, ir, cat, res, preguntas }) {
   return html`<section class="tarjeta">
     <div class="contador">Los datos</div>
     <h2>¿Estos son los datos que se piden?</h2>
-    <p class="ayuda">Revisá, corregí o agregá. Tipo y control son los del constructor de Colm3na. En «Aclaración y control» de cada dato: qué es si no es obvio, qué hay que controlar y, si se puede, la fórmula con el catálogo; si no, el prompt dirá qué función habría que desarrollar.</p>
+    <p class="ayuda">Revisá, corregí o agregá. Tipo y control son los del constructor de Colm3na. En «Aclaración y validación» de cada dato: qué es si no es obvio, qué hay que validar y, si se puede, la fórmula con el catálogo; si no, el prompt dirá qué función habría que desarrollar.</p>
     <${Campos} E=${E} set=${set} cat=${cat} />
     <details class="grupo"><summary><b>Agregar a alguien que falta en el circuito</b></summary><${Actores} E=${E} set=${set} res=${res} /></details>
     <div class="acciones"><button class="boton suave" type="button" onClick=${() => ir("pregunta", preguntas.length - 1)}>← Preguntas</button>
@@ -391,9 +391,9 @@ function Campos({ E, set, cat }) {
     return { ...e, campos: cs };
   });
   const nombres = (cat.funciones || { sistema: [], listas: [], funciones: [] });
-  const sugerencias = [...nombres.sistema.map((d) => "sistema." + d.clave), ...nombres.listas.flatMap((l) => l.columnas.map((x) => "lista." + x.clave)), ...nombres.funciones.map((f) => f.nombre + "(")];
-  const DETALLE = [["aclaracion", "Aclaración", "Qué es, de dónde sale, por qué se pide"], ["regla", "Regla", "Qué hay que controlar sobre este dato"],
-    ["formula", "Fórmula", "Con el catálogo, si se puede"], ["funcion_nueva", "Función nueva", "A desarrollar, si hace falta: nombre y qué devuelve"]];
+  const sugerencias = [...nombres.sistema.map((d) => d.nombre || "sistema." + d.clave), ...nombres.listas.flatMap((l) => l.columnas.map((x) => "lista." + x.clave)), ...nombres.funciones.map((f) => f.nombre + "(")];
+  const DETALLE = [["aclaracion", "Aclaración", "Qué es, de dónde sale, por qué se pide"], ["regla", "Validar", "Qué hay que controlar sobre este dato, en palabras"],
+    ["formula", "Validar con fórmula", "Con el catálogo, si se puede"], ["funcion_nueva", "Función a desarrollar", "Si hace falta: nombre y qué devuelve"]];
   const abrirCatalogo = () => { setVerCat(true); requestAnimationFrame(() => { const el = document.getElementById("at-catalogo"); if (el) el.scrollIntoView({ block: "start", behavior: "smooth" }); }); };
   return html`
     <datalist id="at-nombres">${sugerencias.map((x) => html`<option value=${x} />`)}</datalist>
@@ -417,13 +417,13 @@ function Campos({ E, set, cat }) {
             ${sep ? null : html`<div class="cp-det">
               <button type="button" class="cp-det-cab" aria-expanded=${ab} onClick=${() => setAbiertos({ ...abiertos, [i]: !ab })}>
                 <svg class="cp-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
-                <span class="cp-det-tit">Aclaración y control</span>
+                <span class="cp-det-tit">Aclaración y validación</span>
                 ${ab ? null : lleno.length ? lleno.map(([k, rot]) => html`<span class="cp-chip" title=${c[k]}><b>${rot}</b>${c[k]}</span>`) : html`<span class="cp-det-vacio">opcional</span>`}
               </button>
               ${ab ? html`<div class="cp-det-cuerpo">
                 ${DETALLE.map(([k, rot, ayuda]) => html`<label class="cp-ctl" key=${k}><span>${rot} <i>· ${ayuda}</i></span>
                   <input type="text" class=${k === "formula" ? "mono" : ""} list=${k === "formula" ? "at-nombres" : null} placeholder=${k === "formula" ? "anios_entre(lista.fecha_nacimiento, hoy()) <= 12" : ""} aria-label=${rot} value=${c[k] || ""} onInput=${(e) => cambiar(i, k, e.target.value)} /></label>`)}
-                <p class="cp-det-pie">La fórmula nombra <code>campo.…</code>, <code>lista.…</code> y <code>sistema.…</code>. <button type="button" class="boton-link" onClick=${abrirCatalogo}>Ver los datos y las funciones, con ejemplos</button></p>
+                <p class="cp-det-pie">La fórmula nombra <code>campo.…</code>, <code>lista.…</code> y <code>sistema.afiliado.…</code>. <button type="button" class="boton-link" onClick=${abrirCatalogo}>Ver los datos y las funciones, con ejemplos</button></p>
               </div>` : null}
             </div>`}
           </div>
@@ -442,7 +442,7 @@ function Catalogo({ cat }) {
   const t = q.trim().toLowerCase();
   const pasa = (...xs) => !t || xs.join(" ").toLowerCase().includes(t);
   const comparar = cat.comparar || {};
-  const grupos = (cat.grupos || []).map((g) => ({ ...g, items: cat.sistema.filter((d) => d.grupo === g.clave && pasa("sistema." + d.clave, d.rotulo, d.devuelve, d.ejemplo, d.significa)) })).filter((g) => g.items.length);
+  const grupos = (cat.grupos || []).map((g) => ({ ...g, items: cat.sistema.filter((d) => d.grupo === g.clave && pasa(d.nombre || "sistema." + d.clave, d.rotulo, d.devuelve, d.ejemplo, d.significa)) })).filter((g) => g.items.length);
   const listas = cat.listas.map((l) => ({ ...l, columnas: l.columnas.filter((x) => pasa("lista." + x.clave, x.rotulo, x.tipo, l.nombre)) })).filter((l) => l.columnas.length);
   const funciones = cat.funciones.filter((f) => pasa(f.nombre, f.ayuda, f.ejemplo, f.significa));
   const tipos = [["booleano", "sí / no"], ["numero", "número"], ["texto", "texto"], ["fecha", "fecha"]].filter(([k, n]) => pasa(k, n, comparar[k]));
@@ -451,7 +451,7 @@ function Catalogo({ cat }) {
     <div class="cat-cab"><h3>Datos y funciones</h3><input type="search" class="cat-buscar" aria-label="Buscar en el catálogo" placeholder="Buscar: credencial, recibo, fecha, edad…" value=${q} onInput=${(e) => setQ(e.target.value)} /></div>
     <p class="nota">Se escriben como las Reglas de control: <code>+ - * /</code>, comparaciones (<code>${"<= >= < > == !="}</code>), <code>y</code> / <code>o</code> / <code>no</code>, textos entre comillas y fechas AAAA-MM-DD. Los campos del formulario se nombran <code>${"campo.<etiqueta en minúsculas, sin tildes, con guion bajo>"}</code>. Un dato que falta no vale 0: la validación no pasa.</p>
     ${tipos.length ? html`<div class="cat-grupo"><h4>Cómo se compara cada tipo</h4>${tipos.map(([k, n]) => html`<div class="cat-item" key=${k}><code>${n}</code><p>${comparar[k]}</p></div>`)}</div>` : null}
-    ${grupos.map((g) => html`<div class="cat-grupo" key=${g.clave}><h4>Padrón · ${g.nombre}</h4>${g.items.map((d) => html`<div class="cat-item" key=${d.clave}><code>sistema.${d.clave}</code><span class="cat-tipo">${d.devuelve}</span><p>${d.rotulo}</p><small>Ej.: <code>${d.ejemplo}</code> → ${d.significa}</small></div>`)}</div>`)}
+    ${grupos.map((g) => html`<div class="cat-grupo" key=${g.clave}><h4>Sistema · Afiliado · ${g.nombre}</h4>${g.items.map((d) => html`<div class="cat-item" key=${d.clave}><code>${d.nombre || "sistema." + d.clave}</code><span class="cat-tipo">${d.devuelve}</span><p>${d.rotulo}</p><small>Ej.: <code>${d.ejemplo}</code> → ${d.significa}</small></div>`)}</div>`)}
     ${listas.map((l) => html`<div class="cat-grupo" key=${l.clave}><h4>Lista «${l.nombre}» · la fila del afiliado</h4>${l.columnas.map((x) => html`<div class="cat-item" key=${x.clave}><code>lista.${x.clave}</code><span class="cat-tipo">${x.tipo}${x.busqueda ? " · clave" : ""}</span><p>${x.rotulo}</p></div>`)}</div>`)}
     ${funciones.length ? html`<div class="cat-grupo"><h4>Funciones</h4>${funciones.map((f) => html`<div class="cat-item" key=${f.nombre}><code>${f.ayuda}</code><small>Ej.: <code>${f.ejemplo}</code> → ${f.significa}</small></div>`)}</div>` : null}
     ${nada ? html`<p class="vacio">Nada coincide con la búsqueda.</p>` : null}

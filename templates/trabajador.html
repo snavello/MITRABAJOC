@@ -443,7 +443,13 @@
     color:var(--ok); opacity:0; transform:scale(.4); pointer-events:none;
     transition:all .25s cubic-bezier(.2,1.6,.4,1); }
   .campo-tram.ok .tram-tick { opacity:1; transform:scale(1); }
-  .tram-input.tram-calculado { background:#f1f5f9; color:#475569; font-style:italic; }
+  /* Un campo extraído o calculado (2026-10-18): lo propone el servidor y la
+     persona puede corregirlo. Se ve como propuesto hasta que lo toca. */
+  .tram-input.tram-calculado { background:#f5f3ff; border-color:#cdbde9; color:#3b2d63; }
+  .tram-input.tram-calculado:focus { background:#fff; }
+  .campo-tram .tram-nota-ingreso { display:none; font-size:11px; color:#5b4a86; line-height:1.4; margin-top:5px;
+    background:#f5f3ff; border-left:3px solid #cdbde9; padding:5px 8px; border-radius:0 6px 6px 0; }
+  .campo-tram.ingreso-tocado .tram-nota-ingreso { display:block; }
   .tram-requisitos { border:1px solid color-mix(in srgb, var(--error) 35%, white); background:color-mix(in srgb, var(--error) 7%, white);
     border-radius:12px; padding:14px 16px; margin-bottom:14px; }
   .tram-requisitos b { display:block; margin-bottom:6px; }
@@ -2350,9 +2356,18 @@ if (document.getElementById('tp-tramites')) {
     }
     if (c.tipo_dato === 'fecha') return `<input type="date" class="tram-input" id="${id}">`;
     if (c.tipo_dato === 'numero') return `<input type="text" inputmode="decimal" class="tram-input" id="${id}" placeholder="${c.decimales ? 'Ej: 1234.56' : 'Ej: 1234'}">`;
-    // Un calculado lo completa el servidor (con el padrón y las listas del
-    // sindicato): acá solo se muestra, y lo que diga el navegador no viaja.
-    if (c.tipo_dato === 'calculado') return `<input type="text" class="tram-input tram-calculado" id="${id}" readonly placeholder="Se calcula al enviar">`;
+    // Un campo extraído o calculado lo propone el servidor (con el padrón y
+    // las listas del sindicato) y la persona puede corregirlo (SDN,
+    // 2026-10-18): al tocarlo se le avisa qué pasa con el cambio.
+    if (c.tipo_dato === 'calculado') {
+      const ing = c.ingreso || {};
+      const nota = ing.propio
+        ? 'Este dato está registrado en tu perfil. Si lo cambiás acá, se actualiza en el sistema.'
+        : (ing.modo === 'calcular' ? 'Este valor lo calcula el sistema.' : 'Este dato lo tiene registrado el sindicato.') + ' Si lo cambiás, queda anotado en el trámite para que lo revisen.';
+      return `<input type="text" class="tram-input tram-calculado" id="${id}" placeholder="Se completa solo" data-propuesto=""
+        onfocus="document.getElementById('ctw_${c.id}').classList.add('ingreso-tocado')" oninput="this.dataset.editado = '1'">
+        <div class="tram-nota-ingreso">${escTram(nota)}</div>`;
+    }
     if (c.tipo_dato === 'seleccion') {
       const opciones = (c.opciones || '').split(',').map(o => o.trim()).filter(Boolean);
       return `<select class="tram-input" id="${id}">
@@ -2430,7 +2445,10 @@ if (document.getElementById('tp-tramites')) {
   function pintarCalculados(calculados) {
     Object.entries(calculados || {}).forEach(([cid, texto]) => {
       const el = document.getElementById('tc_' + cid);
-      if (el) el.value = texto;
+      if (!el) return;
+      el.dataset.propuesto = texto;
+      // lo que la persona ya corrigió no se pisa con un recálculo
+      if (el.dataset.editado !== '1') el.value = texto;
     });
   }
   // Validación en vivo contra el servidor (solo las funciones que el admin
@@ -2622,7 +2640,7 @@ if (document.getElementById('tp-tramites')) {
     if (tramiteOrigenParaEnvio) fd.append('origen_tramite_id', tramiteOrigenParaEnvio);
     const faltan = [];
     tipoTramiteActual.campos.forEach(c => {
-      if (c.tipo_dato === 'separador' || c.tipo_dato === 'calculado') return;
+      if (c.tipo_dato === 'separador') return;
       if (c.tipo_dato === 'booleano') {
         // Un checkbox sin marcar es "No", una respuesta válida -- nunca bloquea por obligatorio.
         const el = document.getElementById('tc_' + c.id);
