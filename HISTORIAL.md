@@ -8256,3 +8256,47 @@ devuelve filas y menú (el constructor de empresa sigue con su envoltorio
 `htmlValidacionesCampo`); `htmlFuncionRow(..., sinAyuda)` omite la ayuda
 inline cuando va al costado. Los selectores de los robots pasaron de
 `.ct-bloque.valid` a `.ct-paso.valid`.
+
+## El constructor como formulario guía, con la ayuda a pedido (2026-10-18, Admin 0.63.01)
+
+SDN: "es desproporcionada la cantidad de texto de ayuda; no lo quiero ver
+por default; poné solo los datos necesarios, las explicaciones solo si se
+presiona; un diseño más profesional del formulario guía, con la skill de
+Emil Kowalski". Lo que cambió en `templates/admin.html`:
+
+- **Cuatro pasos con riel** (`.ct-guia`, `.ct-pasog`): 1 El trámite (título,
+  código), 2 Quién lo recibe (área por defecto, quién lo ve, permitir pase,
+  mapa por seccional plegado), 3 Los campos (las tarjetas) y 4 Validar
+  antes de abrir; cada uno con su número en un círculo del primario, el
+  nombre en condensada, obligatorio / opcional y un «?». La vista del
+  afiliado queda a la derecha, fija, para los cuatro. Los seis párrafos
+  `muted` que SDN pegó desaparecieron de la vista; el pie "Las fórmulas
+  nombran…" es ahora un enlace corto, "Datos y funciones, con ejemplos".
+- **El «?»** (`.ct-help`, `data-ayuda` con HTML propio escapado por
+  `escAttr`; `helpBtn()` lo arma): un solo globo `#ct-tip` delegado en
+  `document`, porque los constructores se redibujan con `innerHTML`. Al
+  pasar el mouse aparece a los 150 ms y, si se recorre el siguiente dentro
+  de los 600 ms, al instante (Emil Kowalski: la espera es para el primero);
+  escala desde `.97` con `--mov-rapido` y `--ease-salida`, con el origen en
+  el disparador y flip hacia arriba si no entra abajo; un clic lo deja
+  fijo (para tocar "Ver todos") y Escape o un clic afuera lo cierra; el
+  foco del teclado también lo abre. Se agregó a la lista de excepciones de
+  la regla global de botones (condensada mayúscula), como `.ct-fn-mas`.
+- **En la tarjeta del campo**, la columna de aclaraciones se fue: cada paso
+  lleva su «?» en la cabecera, y la fila de ingreso o de validación por
+  función lleva el suyo con lo específico del dato elegido (qué devuelve,
+  cómo se compara, ejemplo, "Ver todos"). `htmlAyudaElegido` devuelve el
+  HTML pelado y `htmlFuncionRow` lo envuelve en `helpBtn`.
+- Un tropiezo que atrapó el robot: al reemplazar el bloque de CSS de los
+  pasos se fue con él el de las filas de validación (`.ct-vrow`,
+  `.ct-sello-sw`, `.ct-fuente`): "Bloquea / Avisa" quedó como texto plano
+  en la primera captura. Se restauró desde `main`. Y el «?» salía como un
+  círculo rojo lleno sin signo: la regla global de botones le pisaba el
+  fondo; de ahí la excepción.
+- De paso, el texto vacío del teléfono ("Agregá campos para ver la vista
+  previa") ocupaba una sola columna de la grilla de 12 y salía una palabra
+  por línea: ahora cruza toda la grilla.
+
+Robots: el del constructor completo más uno del globo (oculto por default,
+hover lo muestra y lo esconde, clic lo fija, Escape lo cierra; cero textos
+`muted` de ayuda visibles salvo los dos estados vacíos).

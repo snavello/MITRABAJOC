@@ -246,17 +246,16 @@
     border:1px solid var(--linea); border-radius:3px; padding:2px 6px; background:#fff; white-space:nowrap; }
   .ct-campo-acc { display:inline-flex; gap:4px; }
   .ct-campo-acc button { margin:0; }
-  .ct-paso { display:grid; grid-template-columns:minmax(0,1fr) 170px; grid-template-areas:"cab cab" "cuerpo nota";
-    gap:6px 14px; padding:9px 10px 10px; border-top:1px solid var(--linea); align-items:start; }
+  .ct-paso { display:block; padding:9px 10px 10px; border-top:1px solid var(--linea); }
   .ct-campo-cab + .ct-paso { border-top:none; }
-  .ct-paso-cab { grid-area:cab; display:flex; align-items:center; gap:8px; }
+  .ct-paso-cab { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
   .ct-paso-cab b { width:20px; height:20px; border-radius:50%; background:var(--marca-primario); color:#fff; flex:0 0 auto;
     font:700 11px var(--fuente-num); display:inline-flex; align-items:center; justify-content:center; }
   .ct-paso-cab span { font-size:10.5px; font-weight:800; letter-spacing:1.1px; text-transform:uppercase; color:var(--tinta); }
-  .ct-paso-cab i { font-style:normal; font-size:9px; font-weight:700; letter-spacing:.7px; text-transform:uppercase; padding:2px 6px; border-radius:3px; }
-  .ct-paso-cab i.ob { background:#fbe5e2; color:#a0281e; }
-  .ct-paso-cab i.op { background:#eef1f5; color:var(--gris); }
-  .ct-paso-cuerpo { grid-area:cuerpo; display:flex; flex-wrap:wrap; gap:6px; align-items:center; min-width:0; }
+  .ct-paso-cab i, .ct-pasog-cab i { font-style:normal; font-size:9px; font-weight:700; letter-spacing:.7px; text-transform:uppercase; padding:2px 6px; border-radius:3px; }
+  .ct-paso-cab i.ob, .ct-pasog-cab i.ob { background:#fbe5e2; color:#a0281e; }
+  .ct-paso-cab i.op, .ct-pasog-cab i.op { background:#eef1f5; color:var(--gris); }
+  .ct-paso-cuerpo { display:flex; flex-wrap:wrap; gap:6px; align-items:center; min-width:0; }
   .ct-paso-cuerpo .ct-etiqueta { flex:1 1 100%; font-weight:600; font-size:13px; }
   .ct-paso-cuerpo .ct-tipo { flex:1 1 150px; }
   .ct-paso-cuerpo .ct-ancho { flex:0 1 130px; }
@@ -266,16 +265,47 @@
   .ct-paso-cuerpo .ct-vrow .ct-fuente { width:auto; }
   .ct-paso-cuerpo .ct-radios { flex-basis:100%; }
   .ct-chk-ob { display:inline-flex; align-items:center; gap:4px; font-size:12px; color:var(--tinta); white-space:nowrap; }
-  .ct-paso-nota { grid-area:nota; font-size:10.5px; font-style:italic; color:var(--gris); line-height:1.45;
-    border-left:2px solid var(--linea); padding-left:9px; align-self:stretch; }
-  .ct-paso-nota code, .ct-paso-nota b { font-style:normal; }
-  .ct-paso-nota code { white-space:normal; overflow-wrap:anywhere; }
-  .ct-paso-nota .ct-fn-mas { font-size:10.5px; }
-  .ct-paso.valid .ct-paso-nota { border-left-color:color-mix(in srgb, var(--marca-primario) 40%, #fff); }
-  @media (max-width:1100px) {
-    .ct-paso { grid-template-columns:1fr; grid-template-areas:"cab" "cuerpo" "nota"; }
-    .ct-paso-nota { border-left:none; padding-left:0; }
-  }
+  /* ---- La ayuda, solo a pedido (SDN, 2026-10-18): un «?» al lado de cada
+     cosa que la tenga. Al pasar el mouse aparece un globo (150 ms de espera
+     la primera vez, instantáneo si se recorre el siguiente, Emil Kowalski);
+     al hacer clic queda fijo, para poder tocar un enlace adentro. ---- */
+  .ct-help { width:17px; height:17px; border-radius:50%; border:1.5px solid color-mix(in srgb, var(--marca-primario) 55%, #fff);
+    background:#fff; color:var(--marca-primario); font:700 11px/1 var(--fuente-num); padding:0; margin:0; cursor:help; flex:0 0 auto;
+    display:inline-flex; align-items:center; justify-content:center; text-transform:none; letter-spacing:0; vertical-align:middle;
+    transition:background-color var(--mov-rapido, 180ms) var(--ease-salida, ease-out), color var(--mov-rapido, 180ms) var(--ease-salida, ease-out), scale var(--mov-presion, 120ms) var(--ease-salida, ease-out); }
+  .ct-help::before { content:"?"; }
+  .ct-help:hover, .ct-help.fijo { background:var(--marca-primario); color:#fff; border-color:var(--marca-primario); }
+  .ct-help:active { scale:.94; }
+  #ct-tip { position:fixed; z-index:260; max-width:320px; background:var(--tinta); color:#fff; font-size:12px; line-height:1.5;
+    padding:9px 12px; border-radius:9px; box-shadow:0 10px 28px -8px rgba(21,34,56,.5); pointer-events:none;
+    opacity:0; scale:.97; transform-origin:var(--origen, top left);
+    transition:opacity var(--mov-rapido, 180ms) var(--ease-salida, ease-out), scale var(--mov-rapido, 180ms) var(--ease-salida, ease-out); }
+  #ct-tip.on { opacity:1; scale:1; }
+  #ct-tip.fijo { pointer-events:auto; }
+  #ct-tip[data-instant] { transition-duration:0ms; }
+  #ct-tip b { color:#fff; font-weight:700; }
+  #ct-tip code { font-family:var(--fuente-num); font-size:11px; background:rgba(255,255,255,.14); color:#fff; padding:1px 5px; border-radius:4px; white-space:normal; overflow-wrap:anywhere; }
+  #ct-tip .ct-fn-mas { color:#ffd27a; font-size:12px; margin-left:4px; font-style:normal; }
+  #ct-tip .ct-fn-mas:hover { color:#fff; }
+  /* ---- El formulario guía: los cuatro pasos del tipo de trámite, en una
+     columna con riel, cada uno con número, nombre, obligatorio / opcional
+     y su «?». ---- */
+  .ct-guia { display:grid; gap:4px; }
+  .ct-pasog { position:relative; padding:4px 0 18px 34px; }
+  .ct-pasog::before { content:""; position:absolute; left:11px; top:28px; bottom:-4px; border-left:2px solid var(--linea); }
+  .ct-pasog:last-child::before { display:none; }
+  .ct-pasog-cab { display:flex; align-items:center; gap:8px; margin:0 0 10px -34px; }
+  .ct-pasog-cab b { width:24px; height:24px; border-radius:50%; background:var(--marca-primario); color:#fff; flex:0 0 auto;
+    font:700 12px var(--fuente-num); display:inline-flex; align-items:center; justify-content:center; box-shadow:0 0 0 3px #fff; }
+  .ct-pasog-cab h3 { margin:0; font-family:var(--fuente-display); font-size:17px; letter-spacing:.6px; text-transform:uppercase; color:var(--tinta); }
+  .ct-pasog .campo label { font-size:12px; display:flex; align-items:center; gap:6px; }
+  .ct-pasog .grid2 { gap:10px 14px; }
+  .ct-pasog .chk-seccional { display:inline-flex; align-items:center; gap:6px; }
+  .ct-pasog details > summary { cursor:pointer; font-size:12.5px; color:var(--tinta); font-weight:600; list-style:none; display:flex; align-items:center; gap:6px; }
+  .ct-pasog details > summary::before { content:"▸"; color:var(--gris); font-size:11px; transition:rotate var(--mov-rapido, 180ms) var(--ease-mueve, ease); }
+  .ct-pasog details[open] > summary::before { rotate:90deg; }
+  .ct-pasog-pie { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:8px; }
+  .ct-estado { font-size:12px; color:var(--gris); }
   .ct-orden { width:40px; flex:0 0 auto; text-align:center; font-family:var(--fuente-num);
     font-size:12px; color:#aab3c2; cursor:grab; user-select:none; }
   .ct-orden:active { cursor:grabbing; }
@@ -317,8 +347,7 @@
   .ct-bloque.valid .ct-vrow .ct-fuente { color:var(--marca-primario); width:auto; }
   .ct-bloque .ct-vrow { background:#fff; }
   /* Las ayudas: chicas, en itálica, grises; el código adentro, derecho. */
-  .ct-fn-ayuda, .ct-req-vacio, .ct-ayuda-formula, .ct-regla-vacia,
-  #tramite-sub-tipos p.muted, #tramite-sub-tipos span.muted, .ct-chk { font-size:11px; font-style:italic; color:var(--gris); }
+  .ct-req-vacio, .ct-regla-vacia, .ct-chk { font-size:11px; font-style:italic; color:var(--gris); }
   .ct-fn-ayuda code, .ct-ayuda-formula code, .ct-fn-ayuda b { font-style:normal; }
   .ct-fn-ayuda .ct-fn-mas, .ct-ayuda-formula .ct-fn-mas { font-style:italic; }
   #tt-requisitos-lista { display:grid; gap:6px; padding:8px 10px; border:1px solid var(--linea); border-left:3px solid var(--marca-primario);
@@ -464,6 +493,7 @@
     width:38px; height:38px; border-radius:50%; background:var(--marca-acento);
     font-size:17px; margin-top:8px; box-shadow:0 3px 8px rgba(0,0,0,.15); }
   .tram-preview-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:0 12px; }
+  .tram-preview-grid > p.muted { grid-column:1 / -1; }
   .tp-completo { grid-column:span 12; }
   .tp-mitad { grid-column:span 6; }
   .tp-tercio { grid-column:span 4; }
@@ -678,7 +708,7 @@
   .subtab, .tramite-subtab, .emp-subtab, .emptram-subtab, .subtab-au, .enc-subtab { font-family:var(--fuente-display); font-weight:700; font-size:13px; letter-spacing:.8px;
     text-transform:uppercase; background:#fff; border-radius:20px; }
   th { font-size:10.5px; letter-spacing:1px; font-weight:700; color:var(--gris); background:#f4f2ec; }
-  button:not(.sec):not(.mini):not(.tab-btn):not(.ptab):not(.subtab):not(.tramite-subtab):not(.emp-subtab):not(.emptram-subtab):not(.subtab-au):not(.enc-subtab):not(.btn-ayuda):not(.link-num):not(.geo-cand):not(.ct-fn-mas) {
+  button:not(.sec):not(.mini):not(.tab-btn):not(.ptab):not(.subtab):not(.tramite-subtab):not(.emp-subtab):not(.emptram-subtab):not(.subtab-au):not(.enc-subtab):not(.btn-ayuda):not(.link-num):not(.geo-cand):not(.ct-fn-mas):not(.ct-help) {
     font-family:var(--fuente-display); font-weight:700; font-size:15px; letter-spacing:1px; text-transform:uppercase;
     background:var(--marca-acento); color:var(--marca-base); border-radius:9px; }
   button.mini { border-radius:7px; }
@@ -878,6 +908,7 @@
 <!-- Overlay: la referencia de datos y funciones para las fórmulas del
      constructor de Trámites (2026-10-18). Misma familia .overlay-ayuda: la
      entrada y la salida ya las sostienen movimiento.css y modales.js. -->
+<div id="ct-tip" role="tooltip"></div>
 <div class="overlay-ayuda" id="overlay-ayuda-funciones" onclick="if (event.target === this) cerrarAyudaFunciones()">
   <div class="overlay-ayuda-caja cf-caja" role="dialog" aria-labelledby="cf-titulo">
     <button type="button" class="overlay-ayuda-cerrar" onclick="cerrarAyudaFunciones()" aria-label="Cerrar">
@@ -1820,102 +1851,112 @@
       <form method="post" action="/admin/tramite-tipo" id="form-tramite-tipo">
         <input type="hidden" name="id" id="tt-id">
         <input type="hidden" name="campos_json" id="tt-campos-json">
-        <div class="grid2">
-          <div class="campo"><label>Título *</label><input name="titulo" id="tt-titulo" required placeholder="Ej: Solicitud de Reintegro"></div>
-          <div class="campo"><label>Código *</label><input name="codigo" id="tt-codigo" required placeholder="Ej: F01 AEFIP"></div>
-        </div>
-        <div class="campo oculto" id="tt-activo-campo" style="margin-top:10px;">
-          <label class="chk-seccional" style="width:fit-content;"><input type="checkbox" id="tt-activo" checked> Activo (visible para el trabajador)</label>
-        </div>
-
-        {# ---------- Ruteo (decisiones N6 y N7) ---------- #}
         <input type="hidden" name="destinos_json" id="tt-destinos-json">
-        <h3 class="ct-secc" style="margin-top:18px;">¿Quién recibe este trámite?</h3>
-        <div class="grid2">
-          <div class="campo"><label>Área que lo recibe por defecto *</label>
-            <select name="area_destino_default_id" id="tt-area-default" required>
-              <option value="">— elegí un área —</option>
-              {% for a in areas %}{% if a.activo %}<option value="{{ a.id }}">{{ a.nombre }} · {{ a.seccional }}</option>{% endif %}{% endfor %}
-            </select>
-            <span class="muted" style="font-size:11.5px;">Es obligatoria: las seccionales que no mapees abajo caen acá, y una seccional nueva funciona desde el día uno sin tocar nada.</span>
-          </div>
-          <div class="campo" id="tt-seccional-campo"><label>¿Quién lo ve?</label>
-            <select name="seccional_id" id="tt-seccional">
-              {# Un global lo arma solo el alcance total (bloque 3). #}
-              {% if alcance_propio is none %}<option value="">Todas las seccionales (global)</option>{% endif %}
-              {% for sec in seccionales_alcance %}<option value="{{ sec.id }}">Solo {{ sec.nombre }}</option>{% endfor %}
-            </select>
-            <span class="muted" style="font-size:11.5px;">No se puede cambiar después: al trabajador que ya lo tenía disponible se le sacaría de la vista.</span>
-          </div>
-        </div>
-
-        <div style="margin-top:12px;">
-          <label class="chk-seccional" style="width:fit-content;">
-            <input type="checkbox" name="permite_pase" id="tt-permite-pase" value="1" onchange="cambioPermitePase()">
-            Permitir <b>pase</b> a otra área
-          </label>
-          <p class="muted" style="font-size:11.5px; margin:4px 0;">Sin esto, el área que lo recibe solo puede contestarle al trabajador. Con esto, puede derivarlo a alguna de las áreas que elijas -- y la que lo reciba puede volver a derivarlo dentro de esa misma lista, incluso devolverlo.</p>
-          <div id="tt-pase-areas" class="oculto">
-            <label style="font-weight:700; font-size:13px;">¿A qué áreas se puede derivar?</label>
-            <div class="check-seccionales">
-              {% for a in areas %}{% if a.activo %}
-              <label class="chk-seccional"><input type="checkbox" name="areas_pase" value="{{ a.id }}"> {{ a.nombre }} · {{ a.seccional }}</label>
-              {% endif %}{% endfor %}
-            </div>
-          </div>
-        </div>
-
-        <details style="margin-top:10px;">
-          <summary class="muted" style="cursor:pointer;">Mapa por seccional (opcional) — mandá cada seccional a un área distinta</summary>
-          <p class="muted" style="font-size:11.5px; margin:8px 0;">Sirve cuando cada delegación atiende lo suyo: el trámite de un trabajador de Rosario cae en el área de Rosario. Lo que dejes en "— por defecto —" usa el área de arriba.</p>
-          <table style="font-size:13px;">
-            <tr><th>Seccional</th><th>Área que lo recibe</th></tr>
-            {% for sec in seccionales_alcance %}
-            <tr>
-              <td>{{ sec.nombre }}</td>
-              <td>
-                <select class="tt-destino" data-seccional="{{ sec.id }}">
-                  <option value="">— por defecto —</option>
-                  {% for a in areas %}{% if a.activo %}<option value="{{ a.id }}">{{ a.nombre }} · {{ a.seccional }}</option>{% endif %}{% endfor %}
-                </select>
-              </td>
-            </tr>
-            {% else %}
-            <tr><td colspan="2" class="muted">No hay seccionales cargadas.</td></tr>
-            {% endfor %}
-          </table>
-        </details>
-
         <input type="hidden" name="reglas_json" id="tt-reglas-json">
+        <input type="hidden" name="requisitos_json" id="tt-requisitos-json">
+        {# El formulario guía (SDN, 2026-10-18): cuatro pasos, solo los datos
+           necesarios a la vista; cada explicación vive en un «?» (globo al
+           pasar el mouse, fijo al hacer clic). #}
         <div class="ct-layout">
-          <div class="ct-izq">
-            <h3 class="ct-secc">Campos del formulario</h3>
-            <div class="campos-tramite-cabecera oculto" id="campos-tramite-cabecera">
-              <span>Etiqueta</span><span>Tipo</span><span>Long. máx.</span><span>Long. exacta</span>
-              <span>Decimales</span><span>Opciones / archivo</span><span>Ancho</span>
-            </div>
-            <div class="ct-ficha" id="tt-campos-lista"></div>
-            <button type="button" class="sec mini" style="margin-top:8px;" onclick="agregarCampoTramite()">+ Agregar campo</button>
+          <div class="ct-izq ct-guia">
 
-            {# Las validaciones "contra otro campo" (reglas de consistencia)
-               viven adentro de cada campo desde 2026-10-18; el contenedor
-               queda vacío para el código que lo referencia. #}
-            <div id="tt-reglas-lista" class="oculto"></div>
+            <section class="ct-pasog">
+              <div class="ct-pasog-cab"><b>1</b><h3>El trámite</h3><i class="ob">obligatorio</i>
+                <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="El <b>título</b> es lo que el afiliado ve en su lista de trámites; el <b>código</b> es corto, único en el sindicato, y arma el número de expediente (<code>KIT-2026-000123</code>)."></button></div>
+              <div class="grid2">
+                <div class="campo"><label>Título *</label><input name="titulo" id="tt-titulo" required placeholder="Ej: Solicitud de Reintegro"></div>
+                <div class="campo"><label>Código *</label><input name="codigo" id="tt-codigo" required placeholder="Ej: F01 AEFIP"></div>
+              </div>
+              <div class="campo oculto" id="tt-activo-campo" style="margin-top:8px;">
+                <label class="chk-seccional" style="width:fit-content;"><input type="checkbox" id="tt-activo" checked> Activo (visible para el afiliado)</label>
+              </div>
+            </section>
+
+            {# ---------- Ruteo (decisiones N6 y N7) ---------- #}
+            <section class="ct-pasog">
+              <div class="ct-pasog-cab"><b>2</b><h3>Quién lo recibe</h3><i class="ob">obligatorio</i>
+                <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="El trámite cae en un <b>área</b> del sindicato, que lo atiende por el chat. Las seccionales que no mapees abajo caen en el área por defecto, así una seccional nueva funciona desde el día uno."></button></div>
+              <div class="grid2">
+                <div class="campo"><label>Área que lo recibe por defecto *</label>
+                  <select name="area_destino_default_id" id="tt-area-default" required>
+                    <option value="">— elegí un área —</option>
+                    {% for a in areas %}{% if a.activo %}<option value="{{ a.id }}">{{ a.nombre }} · {{ a.seccional }}</option>{% endif %}{% endfor %}
+                  </select>
+                </div>
+                <div class="campo" id="tt-seccional-campo"><label>Quién lo ve
+                    <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Un formulario <b>global</b> lo ven todos los afiliados; uno de una seccional, solo los de esa seccional. <b>No se puede cambiar después</b>: al afiliado que ya lo tenía disponible se le sacaría de la vista."></button></label>
+                  <select name="seccional_id" id="tt-seccional">
+                    {# Un global lo arma solo el alcance total (bloque 3). #}
+                    {% if alcance_propio is none %}<option value="">Todas las seccionales (global)</option>{% endif %}
+                    {% for sec in seccionales_alcance %}<option value="{{ sec.id }}">Solo {{ sec.nombre }}</option>{% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="ct-pasog-pie">
+                <label class="chk-seccional" style="width:fit-content;">
+                  <input type="checkbox" name="permite_pase" id="tt-permite-pase" value="1" onchange="cambioPermitePase()">
+                  Permitir pase a otra área
+                </label>
+                <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Sin esto, el área que lo recibe solo puede contestarle al afiliado. Con esto, puede <b>derivarlo</b> a alguna de las áreas que elijas, y la que lo reciba puede volver a derivarlo dentro de esa misma lista, incluso devolverlo. Todo pase queda escrito en el chat del afiliado."></button>
+              </div>
+              <div id="tt-pase-areas" class="oculto" style="margin-top:6px;">
+                <label style="font-weight:700; font-size:12px;">¿A qué áreas se puede derivar?</label>
+                <div class="check-seccionales">
+                  {% for a in areas %}{% if a.activo %}
+                  <label class="chk-seccional"><input type="checkbox" name="areas_pase" value="{{ a.id }}"> {{ a.nombre }} · {{ a.seccional }}</label>
+                  {% endif %}{% endfor %}
+                </div>
+              </div>
+              <details style="margin-top:10px;">
+                <summary>Mapa por seccional <i class="op" style="font-style:normal; font-size:9px; font-weight:700; letter-spacing:.7px; text-transform:uppercase; padding:2px 6px; border-radius:3px; background:#eef1f5; color:var(--gris);">opcional</i>
+                  <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Mandá cada seccional a un área distinta: el trámite de un afiliado de Rosario cae en el área de Rosario. Lo que dejes en «— por defecto —» usa el área de arriba."></button></summary>
+                <table style="font-size:13px; margin-top:8px;">
+                  <tr><th>Seccional</th><th>Área que lo recibe</th></tr>
+                  {% for sec in seccionales_alcance %}
+                  <tr>
+                    <td>{{ sec.nombre }}</td>
+                    <td>
+                      <select class="tt-destino" data-seccional="{{ sec.id }}">
+                        <option value="">— por defecto —</option>
+                        {% for a in areas %}{% if a.activo %}<option value="{{ a.id }}">{{ a.nombre }} · {{ a.seccional }}</option>{% endif %}{% endfor %}
+                      </select>
+                    </td>
+                  </tr>
+                  {% else %}
+                  <tr><td colspan="2" class="muted">No hay seccionales cargadas.</td></tr>
+                  {% endfor %}
+                </table>
+              </details>
+            </section>
+
+            <section class="ct-pasog">
+              <div class="ct-pasog-cab"><b>3</b><h3>Los campos</h3><i class="ob">obligatorio</i>
+                <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Lo que el afiliado completa. Cada campo tiene tres pasos: <b>el dato</b> (cómo se ve), el <b>ingreso</b> (lo carga el afiliado, se extrae de sus datos o se calcula) y la <b>validación</b> (opcional). Arrastrá para reordenar; el teléfono de la derecha muestra el resultado y lo prueba contra un afiliado real."></button></div>
+              <div class="campos-tramite-cabecera oculto" id="campos-tramite-cabecera"></div>
+              <div class="ct-ficha" id="tt-campos-lista"></div>
+              <div class="ct-pasog-pie"><button type="button" class="sec mini" onclick="agregarCampoTramite()">+ Agregar campo</button></div>
+              {# Las validaciones "contra otro campo" (reglas de consistencia)
+                 viven adentro de cada campo; el contenedor queda vacío para
+                 el código que lo referencia. #}
+              <div id="tt-reglas-lista" class="oculto"></div>
+            </section>
 
             {# Validar antes de abrir (los requisitos para iniciar,
                PLAN_LISTAS_VALIDACIONES.md bloque 3): validaciones sobre el
                padrón o las listas, todas bloqueantes, que se controlan antes
                de mostrar el formulario y otra vez al enviar. #}
-            <h3 class="ct-secc" style="margin-top:22px;">Validar antes de abrir</h3>
-            <p class="muted" style="font-size:11.5px;">Lo que el afiliado tiene que cumplir para iniciar este trámite: se controla contra sus datos y las listas del sindicato antes de mostrar el formulario, y otra vez al enviar. Todo frena.</p>
-            <div id="tt-requisitos-lista"></div>
-            <button type="button" class="sec mini" style="margin-top:8px;" onclick="agregarRequisitoTramite()">+ Validar antes de abrir</button>
-            <input type="hidden" name="requisitos_json" id="tt-requisitos-json">
-            <p class="ct-ayuda-formula" id="tt-ayuda-formula">Las fórmulas nombran los campos de este formulario (<code>campo.…</code>), la fila de una lista (<code>lista.…</code>) y los datos del afiliado (<code>sistema.afiliado.…</code>).
-              <button type="button" class="ct-fn-mas" onclick="abrirAyudaFunciones()">Ver todos los datos y funciones, con ejemplos</button></p>
-            <datalist id="tt-nombres-datalist"></datalist>
+            <section class="ct-pasog">
+              <div class="ct-pasog-cab"><b>4</b><h3>Validar antes de abrir</h3><i class="op">opcional</i>
+                <button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="Lo que el afiliado tiene que cumplir para <b>iniciar</b> este trámite (tener credencial vigente, seis meses de afiliación, no tener otro pedido abierto). Se controla contra sus datos y las listas del sindicato antes de mostrar el formulario, y otra vez al enviar. Todo frena."></button></div>
+              <div id="tt-requisitos-lista"></div>
+              <div class="ct-pasog-pie">
+                <button type="button" class="sec mini" onclick="agregarRequisitoTramite()">+ Validar antes de abrir</button>
+                <button type="button" class="ct-fn-mas" id="tt-ayuda-formula" onclick="abrirAyudaFunciones()">Datos y funciones, con ejemplos</button>
+              </div>
+              <datalist id="tt-nombres-datalist"></datalist>
+            </section>
 
-            <div style="margin-top:18px;">
+            <div style="margin-top:4px;">
               <button type="submit" id="tt-submit">Crear tipo de trámite</button>
               <button type="button" class="sec oculto" id="tt-cancel" onclick="cancelarTramiteTipo()">Cancelar edición</button>
             </div>
@@ -3907,6 +3948,70 @@ function verDestinatariosNotificacionEmp(id) {
 
 // ---------- Trámites ----------
 function escHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+// Un trozo de HTML propio dentro de un atributo (data-ayuda): & y " escapados,
+// el navegador los devuelve tal cual al leer el dataset.
+function escAttr(html) { return String(html || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;'); }
+function helpBtn(html) { return html ? `<button type="button" class="ct-help" aria-label="Ayuda" data-ayuda="${escAttr(html)}"></button>` : ''; }
+
+// ---------- El globo de ayuda compartido (2026-10-18) ----------
+// Un solo elemento #ct-tip para todos los «?»: delegado en document porque
+// los constructores se redibujan con innerHTML. Hover con 150 ms de espera la
+// primera vez e instantáneo mientras se recorre (los siguientes 600 ms);
+// clic lo deja fijo (y deja tocar un enlace adentro); Escape o clic afuera
+// lo cierra. Escala desde su disparador, nunca desde cero.
+(function () {
+  let tip = null, timer = null, fijo = null, ultimoCierre = 0, actual = null;
+  const el = () => tip || (tip = document.getElementById('ct-tip'));
+  function ubicar(btn) {
+    const t = el(); const r = btn.getBoundingClientRect();
+    t.style.left = '0px'; t.style.top = '0px';
+    const w = t.offsetWidth, h = t.offsetHeight;
+    let x = Math.min(r.left, window.innerWidth - w - 12), y = r.bottom + 8, origen = 'top left';
+    if (y + h > window.innerHeight - 8) { y = r.top - h - 8; origen = 'bottom left'; }
+    t.style.left = Math.max(8, x) + 'px'; t.style.top = Math.max(8, y) + 'px'; t.style.setProperty('--origen', origen);
+  }
+  function mostrar(btn, instant) {
+    const t = el(); if (!t) return;
+    t.innerHTML = btn.dataset.ayuda || '';
+    if (instant) t.setAttribute('data-instant', ''); else t.removeAttribute('data-instant');
+    ubicar(btn); actual = btn;
+    requestAnimationFrame(() => t.classList.add('on'));
+  }
+  function ocultar() {
+    clearTimeout(timer); timer = null;
+    const t = el(); if (!t || fijo) return;
+    if (t.classList.contains('on')) ultimoCierre = performance.now();
+    t.classList.remove('on'); t.classList.remove('fijo'); actual = null;
+  }
+  document.addEventListener('mouseover', e => {
+    const btn = e.target.closest('.ct-help'); if (!btn || fijo) return;
+    clearTimeout(timer);
+    const seguido = performance.now() - ultimoCierre < 600;
+    timer = setTimeout(() => mostrar(btn, seguido), seguido ? 0 : 150);
+  });
+  document.addEventListener('mouseout', e => {
+    const btn = e.target.closest('.ct-help'); if (!btn || fijo) return;
+    if (e.relatedTarget && btn.contains(e.relatedTarget)) return;
+    ocultar();
+  });
+  document.addEventListener('focusin', e => { const btn = e.target.closest('.ct-help'); if (btn && !fijo) mostrar(btn, false); });
+  document.addEventListener('focusout', e => { if (e.target.closest && e.target.closest('.ct-help') && !fijo) ocultar(); });
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.ct-help');
+    const t = el();
+    if (btn) {
+      e.preventDefault();
+      if (fijo === btn) { fijo.classList.remove('fijo'); fijo = null; ocultar(); return; }
+      if (fijo) fijo.classList.remove('fijo');
+      fijo = btn; btn.classList.add('fijo'); clearTimeout(timer);
+      mostrar(btn, actual === btn); t.classList.add('fijo');
+      return;
+    }
+    if (fijo && t && !t.contains(e.target)) { fijo.classList.remove('fijo'); fijo = null; ocultar(); }
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && fijo) { fijo.classList.remove('fijo'); fijo = null; ocultar(); } });
+  window.addEventListener('scroll', () => { if (actual && !fijo) ocultar(); }, true);
+})();
 
 function cambiarSubTramite(dest) {
   document.querySelectorAll('.tramite-subtab').forEach(b => b.classList.toggle('activa', b.dataset.tramiteSub === dest));
@@ -3981,9 +4086,8 @@ function renderCamposTramite() {
   }
   const paso = (n, titulo, obligatorio, cuerpo, nota, extra) => `
     <div class="ct-paso ${extra || ''}">
-      <div class="ct-paso-cab"><b>${n}</b><span>${titulo}</span><i class="${obligatorio ? 'ob' : 'op'}">${obligatorio ? 'obligatorio' : 'opcional'}</i></div>
+      <div class="ct-paso-cab"><b>${n}</b><span>${titulo}</span><i class="${obligatorio ? 'ob' : 'op'}">${obligatorio ? 'obligatorio' : 'opcional'}</i>${helpBtn(nota)}</div>
       <div class="ct-paso-cuerpo">${cuerpo}</div>
-      <div class="ct-paso-nota">${nota}</div>
     </div>`;
   cont.innerHTML = camposTramiteActuales.map((c, i) => {
     const sep = c.tipo_dato === 'separador';
@@ -4022,19 +4126,15 @@ function renderCamposTramite() {
       const modo = modoIngreso(c);
       const radio = (m, texto) => `<label><input type="radio" name="ct-ing-${i}" ${modo===m?'checked':''} onchange="cambiarIngresoTramite(${i},'${m}')"> ${texto}</label>`;
       ingreso = `<span class="ct-radios">${radio('manual', 'Lo carga el afiliado')}${radio('extraer', 'Extraer un dato')}${radio('calcular', 'Calcular con una fórmula')}</span>`;
-      if (modo === 'manual') {
-        notaIngreso = 'De dónde sale el valor. Acá lo escribe el afiliado al pedir el trámite. «Extraer» lo trae de sus datos o de una lista del sindicato; «Calcular» lo arma con una fórmula.';
-      } else {
+      notaIngreso = 'De dónde sale el valor. <b>Lo carga el afiliado</b>: lo escribe al pedir el trámite. <b>Extraer</b>: lo trae de sus datos o de una lista del sindicato. <b>Calcular</b>: lo arma con una fórmula. Lo extraído o calculado se propone y el afiliado puede corregirlo: el «?» de la fila dice qué pasa con el cambio.';
+      if (modo !== 'manual') {
         const v = ingresoDe(c);
-        ingreso += htmlFuncionRow(v, i, c.validaciones.indexOf(v), 'Tramite', modo, true);
-        notaIngreso = ayudaDeIngreso(c, modo);
+        ingreso += htmlFuncionRow(v, i, c.validaciones.indexOf(v), 'Tramite', modo);
       }
     }
     // ---- paso 3: validación
     const piezas = sep ? null : htmlValidacionesPiezas(c, i, 'Tramite');
-    const notaValid = !piezas ? '' : (piezas.filas
-      ? 'Cada validación frena el envío (Bloquea) o deja pasar con un aviso al operador (Avisa). El mensaje es lo que lee el afiliado si no pasa.'
-      : 'Sin validación, el dato se toma como está. Agregá una para controlarlo contra un valor, un rango, otro campo, un dato del afiliado o una fórmula.');
+    const notaValid = !piezas ? '' : 'Opcional. Sin validación, el dato se toma como está. Cada una controla el valor contra un valor fijo, un rango, otro campo, un dato del afiliado o una fórmula, y <b>Bloquea</b> el envío o solo <b>Avisa</b> al operador. El mensaje es lo que lee el afiliado si no pasa.';
     return `
     <div class="campo-tramite-fila" draggable="true" data-idx="${i}"
          ondragstart="dragCampoTramiteStart(event, ${i})" ondragover="dragCampoTramiteOver(event, ${i})"
@@ -4225,7 +4325,7 @@ function ayudaDeIngreso(c, modo) {
   const esLista = v.origen === 'lista';
   const lista = esLista ? listaDe(v.lista) : null;
   const trae = modo === 'calcular' ? '__formula' : (v.trae && v.trae !== '__formula' ? v.trae : (esLista ? 'existe' : CATALOGO_FUNCION.sistema[0].clave));
-  return htmlAyudaElegido(trae, esLista, lista, modo).replace(/^<div class="ct-fn-ayuda">/, '').replace(/<\/div>$/, '');
+  return htmlAyudaElegido(trae, esLista, lista, modo);
 }
 function cambiarIngresoTramite(i, modo) {
   const c = camposTramiteActuales[i];
@@ -4319,7 +4419,7 @@ function htmlFuncionRow(v, i, vi, ns, modo, sinAyuda) {
   if (traeActual === '__formula') {
     partes += `<input class="ct-formula" list="tt-nombres-datalist" placeholder="p. ej. anios_entre(lista.fecha_nacimiento, hoy()) <= 12" value="${escHtml(v.formula || '')}" oninput="actualizarFuncionTramite(${i},${vi},'formula',this.value,true)">`;
   }
-  const ayudaElegido = sinAyuda ? '' : htmlAyudaElegido(traeActual, esLista, lista, modo);
+  const ayudaElegido = sinAyuda ? '' : helpBtn(htmlAyudaElegido(traeActual, esLista, lista, modo));
   if (traeActual === 'existe') {
     partes += `<select ${upd('operador')}><option value="==" ${v.operador!=='!='?'selected':''}>tiene que estar</option><option value="!=" ${v.operador==='!='?'selected':''}>no tiene que estar</option></select>`;
   } else if (!esIngreso) {
@@ -4356,19 +4456,19 @@ function htmlAyudaElegido(traeActual, esLista, lista, modo) {
   const calc = modo === 'calcular' ? '<b>El resultado completa el campo</b> (una condición se ve como Sí / No) y el afiliado puede corregirlo: si lo cambia, queda anotado en el trámite para quien lo evalúa. Lo que se controla va en Validación. '
     : modo === 'extraer' ? `<b>El dato completa el campo</b> y el afiliado puede corregirlo: ${propio ? 'es un dato propio de la persona, así que el cambio se actualiza en su perfil' : 'si lo cambia, queda anotado en el trámite para quien lo evalúa'}. ` : '';
   if (traeActual === '__formula') {
-    return `<div class="ct-fn-ayuda">${calc}Escribila con <code>campo.…</code>, <code>lista.…</code>, <code>sistema.afiliado.…</code> y las funciones. ${mas('')}</div>`;
+    return `${calc}Escribila con <code>campo.…</code>, <code>lista.…</code>, <code>sistema.afiliado.…</code> y las funciones. ${mas('')}`;
   }
   if (traeActual === 'existe') return '';
   if (esLista) {
     const col = (lista.columnas || []).find(c => c.clave === traeActual);
     if (!col) return '';
     const tipo = ['numero', 'fecha', 'booleano'].includes(col.tipo) ? col.tipo : 'texto';
-    return `<div class="ct-fn-ayuda"><b>${escHtml(col.rotulo)}</b> de la fila encontrada. ${escHtml(CATALOGO_FUNCION.comparar[tipo] || '')} ${mas('lista.' + col.clave)}</div>`;
+    return `<b>${escHtml(col.rotulo)}</b> de la fila encontrada. ${escHtml(CATALOGO_FUNCION.comparar[tipo] || '')} ${mas('lista.' + col.clave)}`;
   }
   const d = CATALOGO_FUNCION.sistema.find(x => x.clave === traeActual);
   if (!d) return '';
-  return `<div class="ct-fn-ayuda">${calc}Devuelve <b>${escHtml(d.devuelve)}</b>. ${escHtml(CATALOGO_FUNCION.comparar[d.tipo] || '')}
-    Ej.: <code>${escHtml(d.ejemplo)}</code> → ${escHtml(d.significa)}. ${mas('sistema.' + d.clave)}</div>`;
+  return `${calc}Devuelve <b>${escHtml(d.devuelve)}</b>. ${escHtml(CATALOGO_FUNCION.comparar[d.tipo] || '')}
+    Ej.: <code>${escHtml(d.ejemplo)}</code> → ${escHtml(d.significa)}. ${mas('sistema.' + d.clave)}`;
 }
 function abrirAyudaFunciones(ancla) {
   renderAyudaFormula();

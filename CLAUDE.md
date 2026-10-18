@@ -1799,11 +1799,15 @@ prefijado), `lista` (datos del admin), `sistema` (padrón/recibos), `externa`
 por función en Trámites"); la 4 (externa) sigue en BACKLOG.md. Reglas vigentes:
 
 - **Ingreso y validación, por separado** (2026-10-18): ver la decisión en
-  "Decisiones tomadas". En el constructor cada campo tiene el bloque
-  INGRESO (Lo carga el afiliado / Extraer un dato / Calcular con una
-  fórmula) y el bloque VALIDACIÓN («+ Validar…»: un valor, un rango, otro
-  campo, un dato del afiliado o una lista, una fórmula); «Validar antes de
-  abrir» son los requisitos. Lo guardado no cambió.
+  "Decisiones tomadas". El constructor es un **formulario guía de cuatro
+  pasos** (El trámite, Quién lo recibe, Los campos, Validar antes de abrir),
+  cada campo una tarjeta con tres pasos (El dato, Ingreso: Lo carga el
+  afiliado / Extraer / Calcular, Validación: «+ Validar…»), cada paso con
+  obligatorio / opcional. **Ninguna explicación a la vista**: viven en un
+  «?» (`.ct-help`, `data-ayuda`) que abre un globo al pasar el mouse y queda
+  fijo con un clic (`#ct-tip`, delegado en `document`). Un texto de ayuda
+  nuevo en esta pantalla va ahí, nunca en un `muted` siempre visible. Lo
+  guardado no cambió.
 - **Fuente `funcion`** (`origen` lista o sistema): busca una fila de una
   lista del sindicato o un dato del padrón y compara, o evalúa una fórmula
   escrita como las Reglas (`campo.*`, `lista.*`, `sistema.afiliado.*`, `y`/`o`/`no`,
