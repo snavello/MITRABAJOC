@@ -30,6 +30,7 @@ from typing import Optional
 import fechas
 import modulos
 import permisos
+import listas as listas_mod
 import validaciones_tramite
 
 # ---------------------------------------------------------------- catálogo
@@ -154,65 +155,82 @@ BRECHAS = {
 # `cuando` es un dato, no una función: viaja al navegador tal cual.
 # `texto` / `texto2`: un campo libre que acompaña a la respuesta
 # (`si` = solo con esa opción; sin `si`, siempre).
+# Las SEIS preguntas que se le hacen al analista (2026-10-18, pedido de
+# SDN: "demasiadas preguntas y opciones ridículas"). Cada una trae una
+# RECOMENDADA, que queda puesta si la IA no propuso nada, y admite una
+# respuesta libre (`nota_<clave>`) que viaja a la instrucción y al prompt.
+# Lo demás que el motor necesita (segundo formulario, ventana, quién
+# entrega, cupo, listado, tercero) ya no se pregunta: son INFERIDAS, con su
+# valor por defecto, que la IA completa desde el relato y el analista
+# puede corregir en "Lo que entendí".
 PREGUNTAS = [
     {"clave": "quien", "titulo": "¿Quién inicia el pedido?", "ayuda": "La persona que completa el formulario.",
+     "recomendada": "afiliado",
      "opciones": [["afiliado", "El afiliado, desde la app"], ["empresa", "La empresa empleadora"],
                   ["publico", "Alguien que no está en el padrón (un familiar, un no afiliado)"]]},
-    {"clave": "frecuencia", "titulo": "¿Cuántas veces lo puede pedir?", "ayuda": "Esto define si hace falta controlar pedidos repetidos.",
-     "opciones": [["libre", "Cada vez que lo necesite"], ["periodo", "Una vez por período o campaña"],
-                  ["familiar", "Uno por cada familiar"], ["unica", "Una sola vez"]]},
     {"clave": "atiende", "titulo": "¿Quién lo recibe y lo revisa?", "ayuda": "En Colm3na cada área pertenece a una seccional.",
+     "recomendada": "seccional",
      "opciones": [["seccional", "Un área de la seccional del afiliado"], ["central", "Siempre la misma área central"]],
      "texto": {"clave": "area", "rotulo": "Nombre del área", "ejemplo": "Acción Social"}},
     {"clave": "aprueba", "titulo": "¿Hace falta una aprobación?", "ayuda": "Si aprueba otra área, el trámite se le pasa desde el chat.",
+     "recomendada": "misma",
      "opciones": [["misma", "Sí, la misma área que lo revisa"], ["otra", "Sí, otra área"], ["no", "No, solo se responde"]],
      "texto": {"clave": "area_aprueba", "si": "otra", "rotulo": "¿Qué área aprueba?", "ejemplo": "Secretaría General"}},
+    {"clave": "requisitos", "titulo": "¿Qué tiene que cumplir quien lo pide?", "ayuda": "Marcá todas las que correspondan. Lo que no esté acá, escribilo abajo: el asistente dice con qué función se controla o qué habría que desarrollar.",
+     "multiple": True, "excluyente": "ninguno", "recomendada": ["ninguno"],
+     "opciones": [["antiguedad", "Una antigüedad mínima como afiliado"], ["titular", "Ser el afiliado titular"],
+                  ["familiar", "Tener un familiar a cargo"], ["edad", "Una edad (propia o del familiar)"],
+                  ["credencial", "Tener la credencial vigente"],
+                  ["ninguno", "Ninguna: alcanza con estar afiliado"]]},
+    {"clave": "fin", "titulo": "¿Cómo termina?", "ayuda": "Lo último que pasa antes de cerrar el expediente.",
+     "recomendada": "respuesta",
+     "opciones": [["entrega", "Se entrega algo en persona"], ["respuesta", "Con una respuesta o un documento por el chat"],
+                  ["turno", "Con un turno o una entrevista"], ["pago", "Con un pago o un reintegro"]],
+     "texto": {"clave": "lugar", "si": "entrega", "rotulo": "¿Dónde se entrega o retira?", "ejemplo": "Sede, delegación, comisión gremial"}},
+    {"clave": "frecuencia", "titulo": "¿Cuántas veces lo puede pedir?", "ayuda": "Define si hace falta controlar pedidos repetidos.",
+     "recomendada": "libre",
+     "opciones": [["libre", "Cada vez que lo necesite"], ["periodo", "Una vez por período o campaña"],
+                  ["familiar", "Uno por cada familiar"], ["unica", "Una sola vez"]]},
+]
+INFERIDAS = [
     {"clave": "segundo", "titulo": "Después de aprobarlo, ¿hay que pedirle datos nuevos?",
-     "ayuda": "Un segundo formulario que el área le manda desde el chat, con datos que después se procesan. Por ejemplo, aprobada la plaza de hotel, el registro de pasajeros que se envía al hotel. Para corregir o completar lo ya enviado alcanza con el chat.",
-     "cuando": {"clave": "aprueba", "en": ["misma", "otra"]},
+     "ayuda": "Un segundo formulario que el área le manda desde el chat (por ejemplo, el registro de pasajeros de una plaza de hotel). Para corregir lo ya enviado alcanza con el chat.",
+     "cuando": {"clave": "aprueba", "en": ["misma", "otra"]}, "recomendada": "no",
      "opciones": [["no", "No, con el chat alcanza"], ["si", "Sí, un segundo formulario"]],
      "texto": {"clave": "enc_nombre", "si": "si", "rotulo": "Nombre del segundo formulario", "ejemplo": "Registro de pasajeros"},
      "texto2": {"clave": "enc_datos", "si": "si", "rotulo": "Qué datos pide, separados por coma",
                 "ejemplo": "Apellido y nombre, DNI, fecha de nacimiento, parentesco"}},
     {"clave": "ventana", "titulo": "¿Tiene fecha de apertura y cierre?", "ayuda": "Una campaña con fechas, o un formulario siempre disponible.",
+     "recomendada": "no",
      "opciones": [["si", "Sí, es una campaña con fechas"], ["no", "No, está siempre abierto"]],
      "texto": {"clave": "fechas", "si": "si", "rotulo": "Fechas aproximadas", "ejemplo": "del 1/12 al 31/1"}},
-    {"clave": "requisitos", "titulo": "¿Qué tiene que cumplir quien lo pide?", "ayuda": "Marcá todas las que correspondan.",
-     "multiple": True, "excluyente": "ninguno",
-     "opciones": [["antiguedad", "Una antigüedad mínima como afiliado"], ["titular", "Ser el afiliado titular"],
-                  ["familiar", "Tener un familiar a cargo"], ["edad", "Una edad (propia o del familiar)"],
-                  ["ninguno", "Ninguna: alcanza con estar afiliado"]]},
-    {"clave": "fin", "titulo": "¿Cómo termina?", "ayuda": "Lo último que pasa antes de cerrar el expediente.",
-     "opciones": [["entrega", "Se entrega algo en persona"], ["respuesta", "Con una respuesta o un documento por el chat"],
-                  ["turno", "Con un turno o una entrevista"], ["pago", "Con un pago o un reintegro"]],
-     "texto": {"clave": "lugar", "si": "entrega", "rotulo": "¿Dónde se entrega o retira?", "ejemplo": "Sede, delegación, comisión gremial"}},
     {"clave": "entrega", "titulo": "¿Quién entrega?",
      "ayuda": "Quien da en mano lo que se pidió. Si no usa el panel de Colm3na, el área registra la entrega después.",
-     "cuando": {"clave": "fin", "en": ["entrega"]},
+     "cuando": {"clave": "fin", "en": ["entrega"]}, "recomendada": "area",
      "opciones": [["area", "La misma área que lo atiende"], ["delegado_panel", "Un delegado que usa el panel de Colm3na"],
                   ["delegado", "Un delegado sin acceso al panel"], ["proveedor", "El proveedor lo entrega o lo envía"]],
      "texto": {"clave": "entrega_quien", "si": ["delegado_panel", "delegado"], "rotulo": "¿Cómo se llama ese rol?",
                "ejemplo": "Delegado de la comisión gremial"}},
     {"clave": "cupo", "titulo": "¿La cantidad es limitada?", "ayuda": "Por ejemplo, unidades por seccional.",
-     "cuando": {"clave": "fin", "en": ["entrega"]},
+     "cuando": {"clave": "fin", "en": ["entrega"]}, "recomendada": "no",
      "opciones": [["si", "Sí, hay cupo o stock"], ["no", "No"]]},
     {"clave": "listado", "titulo": "¿Necesitan un listado de los pedidos?", "ayuda": "Para compras, logística o para rendir cuentas.",
-     "opciones": [["si", "Sí"], ["no", "No"]]},
+     "recomendada": "no", "opciones": [["si", "Sí"], ["no", "No"]]},
     {"clave": "tercero", "titulo": "¿Interviene alguien fuera del sindicato?", "ayuda": "Un proveedor, la obra social, un banco. No usa la app.",
-     "opciones": [["no", "No"], ["si", "Sí"]],
+     "recomendada": "no", "opciones": [["no", "No"], ["si", "Sí"]],
      "texto": {"clave": "tercero_nombre", "si": "si", "rotulo": "¿Quién?", "ejemplo": "Proveedor de kits"}},
-    {"clave": "actores", "titulo": "¿Están todos los que intervienen?",
-     "ayuda": "Cada uno con lo que hace en el circuito. Si falta alguien, agregalo con su acción y el momento en que actúa.",
-     "actores": True},
-    {"clave": "campos", "titulo": "¿Estos son los datos que se piden?",
-     "ayuda": "Revisá, corregí o agregá. El tipo y el control salen del constructor de Colm3na.", "campos": True},
 ]
-PREGUNTAS_POR_CLAVE = {p["clave"]: p for p in PREGUNTAS}
-# Las claves que una respuesta puede traer (opciones + textos libres).
-CLAVES_RESPUESTA = [p["clave"] for p in PREGUNTAS if not p.get("campos") and not p.get("actores")]
-CLAVES_TEXTO = [p[t]["clave"] for p in PREGUNTAS for t in ("texto", "texto2") if t in p]
+PREGUNTAS_TODAS = PREGUNTAS + INFERIDAS
+PREGUNTAS_POR_CLAVE = {p["clave"]: p for p in PREGUNTAS_TODAS}
+# Las claves que una respuesta puede traer (opciones + textos libres + la
+# respuesta libre de cada pregunta hecha).
+CLAVES_RESPUESTA = [p["clave"] for p in PREGUNTAS_TODAS]
+CLAVES_NOTA = ["nota_" + p["clave"] for p in PREGUNTAS]
+CLAVES_TEXTO = [p[t]["clave"] for p in PREGUNTAS_TODAS for t in ("texto", "texto2") if t in p] + CLAVES_NOTA
 MAX_TEXTO = {c: 120 for c in CLAVES_TEXTO}
 MAX_TEXTO["enc_datos"] = 400
+for _c in CLAVES_NOTA:
+    MAX_TEXTO[_c] = 300
 
 # ---------------------------------------------------------------- ejemplo
 # El kit escolar de La Bancaria (relevamiento T41): lo que la pantalla carga
@@ -321,17 +339,22 @@ def sanear_campo(c) -> Optional[dict]:
         opciones = ""
     return {"etiqueta": _texto(c.get("etiqueta"), 200), "tipo": tipo,
             "obligatorio": bool(c.get("obligatorio", True)) and tipo != "separador",
-            "opciones": opciones, "control": control}
+            "opciones": opciones, "control": control,
+            # 2026-10-18: lo que explica el dato (lo ve el que arma el
+            # formulario) y lo que hay que controlar: en una frase, como
+            # fórmula del catálogo si se puede, o como función a desarrollar.
+            "aclaracion": _texto(c.get("aclaracion"), 300),
+            "regla": _texto(c.get("regla"), 300),
+            "formula": _texto(c.get("formula"), 300),
+            "funcion_nueva": _texto(c.get("funcion_nueva"), 200)}
 
 
 def sanear_respuestas(crudas) -> tuple:
     """Devuelve (respuestas limpias, claves que venían con un valor válido).
     Un valor fuera de las opciones se descarta: la IA propone, esto decide."""
     r = crudas if isinstance(crudas, dict) else {}
-    limpias, con_valor = {"requisitos": []}, []
-    for p in PREGUNTAS:
-        if p.get("campos") or p.get("actores"):
-            continue
+    limpias, con_valor, recomendadas = {"requisitos": []}, [], []
+    for p in PREGUNTAS_TODAS:
         v = r.get(p["clave"])
         validas = [k for k, _ in p["opciones"]]
         if p.get("multiple"):
@@ -347,7 +370,15 @@ def sanear_respuestas(crudas) -> tuple:
         for t in ("texto", "texto2"):
             if t in p and r.get(p[t]["clave"]):
                 limpias[p[t]["clave"]] = _texto(r.get(p[t]["clave"]), MAX_TEXTO[p[t]["clave"]])
-    return limpias, con_valor
+        if p["clave"] not in con_valor:
+            # Sin respuesta, queda la recomendada: siempre hay una, y el
+            # analista la confirma con un clic o la cambia.
+            limpias[p["clave"]] = list(p["recomendada"]) if p.get("multiple") else p["recomendada"]
+            recomendadas.append(p["clave"])
+    for nk in CLAVES_NOTA:
+        if r.get(nk):
+            limpias[nk] = _texto(r.get(nk), MAX_TEXTO[nk])
+    return limpias, con_valor, recomendadas
 
 
 def sanear_extras(crudos) -> list:
@@ -366,7 +397,7 @@ def sanear_propuesta(o, de_ia: bool = False, relato: str = "") -> dict:
     para el ejemplo y para lo que manda el navegador en cada cambio."""
     o = o if isinstance(o, dict) else {}
     nombre = _texto(o.get("nombre"), 120)
-    respuestas, con_valor = sanear_respuestas(o.get("respuestas"))
+    respuestas, con_valor, recomendadas = sanear_respuestas(o.get("respuestas"))
     campos = [c for c in (sanear_campo(x) for x in (o.get("campos") or [])[:MAX_CAMPOS]) if c]
     return {
         "relato": _texto(relato or o.get("relato"), 6000),
@@ -378,6 +409,7 @@ def sanear_propuesta(o, de_ia: bool = False, relato: str = "") -> dict:
         "extras": sanear_extras(o.get("extras")),
         "dudas": [_texto(d, 300) for d in (o.get("dudas") or [])[:8] if _texto(d, 300)],
         "de_ia": con_valor if de_ia else [],
+        "recomendadas": recomendadas,
     }
 
 
@@ -400,7 +432,8 @@ def datos_a_campos(s: str) -> list:
             tipo = "texto"
         campos.append({"etiqueta": e, "tipo": tipo, "obligatorio": True,
                        "opciones": EXTENSIONES_DEFAULT if tipo == "archivo" else "",
-                       "control": "no_futura" if "nacimiento" in n else ""})
+                       "control": "no_futura" if "nacimiento" in n else "",
+                       "aclaracion": "", "regla": "", "formula": "", "funcion_nueva": ""})
     return campos
 
 
@@ -629,7 +662,33 @@ def campos_colm3na(campos: list) -> list:
                                       "bloquea": True, "en_vivo": True})
         if c["control"] in CONTROL_BRECHA:
             o["x_pendiente"] = CONTROLES[c["control"]]
+        if c.get("aclaracion"):
+            o["x_aclaracion"] = c["aclaracion"]
+        if c.get("funcion_nueva"):
+            o["x_funcion_nueva"] = c["funcion_nueva"]
+        o["_regla"], o["_formula"] = c.get("regla") or "", c.get("formula") or ""
         salida.append(o)
+    # Segunda pasada: una fórmula escrita con el catálogo (campo.*, lista.*,
+    # sistema.*) se exporta como validación por función REAL si compila
+    # contra los nombres de este formulario; si no, queda como regla
+    # pendiente y el prompt lo dice. Va después porque `campo.<nombre>`
+    # necesita la lista entera.
+    for i, o in enumerate(salida):
+        regla, formula = o.pop("_regla"), o.pop("_formula")
+        if formula and o["tipo_dato"] in validaciones_tramite.TIPOS_CON_FUNCION:
+            es_lista = "lista." in formula
+            error = validaciones_tramite.error_de_formula(formula, salida, LISTA_FAMILIAR if es_lista else None)
+            if not error:
+                o["validaciones"].append({"fuente": "funcion", "origen": "lista" if es_lista else "sistema",
+                                          "lista": LISTA_FAMILIAR if es_lista else None,
+                                          "clave2": i if es_lista else None, "trae": "", "formula": formula,
+                                          "operador": None, "valor": "",
+                                          "mensaje": regla or f"No cumple: {formula}.", "bloquea": True,
+                                          "en_vivo": es_lista})
+                continue
+            o["x_regla"] = (regla or formula) + f" (la fórmula no se pudo guardar: {error})"
+        elif regla:
+            o["x_regla"] = regla
     return salida
 
 
@@ -647,6 +706,9 @@ def requisitos_colm3na(respuestas: dict) -> list:
     if "titular" in req:
         salida.append({"origen": "sistema", "trae": "en_padron", "operador": "==", "valor": "si",
                        "mensaje": "Tenés que estar en el padrón del sindicato como titular.", "bloquea": True})
+    if "credencial" in req:
+        salida.append({"origen": "sistema", "trae": "credencial_vigente", "operador": "==", "valor": "si",
+                       "mensaje": "Necesitás tener la credencial vigente.", "bloquea": True})
     if r.get("frecuencia") == "unica":
         salida.append({"origen": "sistema", "trae": "tramites_de_este_tipo", "operador": "==", "valor": "0",
                        "mensaje": "Este trámite se pide una sola vez, y ya lo pediste.", "bloquea": True})
@@ -801,6 +863,14 @@ def instruccion(entrada: dict, cfg: dict) -> dict:
             linea += " — " + c["tipos_archivo_permitidos"]
         if c.get("x_pendiente"):
             linea += " — pendiente: " + c["x_pendiente"]
+        if c.get("x_aclaracion"):
+            linea += " — " + c["x_aclaracion"]
+        for v in c.get("validaciones") or []:
+            linea += " — validación: " + (v.get("formula") or v.get("mensaje") or "")
+        if c.get("x_regla"):
+            linea += " — a controlar (sin función todavía): " + c["x_regla"]
+        if c.get("x_funcion_nueva"):
+            linea += " — desarrollar: " + c["x_funcion_nueva"]
         lineas.append(linea)
     lineas += ["", f"Destino: «{A}» de cada seccional; por defecto, la de {SECCIONAL_CENTRAL}." if r.get("atiende") == "seccional" else f"Destino: «{A}».",
                f"Pase permitido a {texto_pase(cfg['pase'])}." if cfg["pase"] else "Sin pase."]
@@ -808,19 +878,84 @@ def instruccion(entrada: dict, cfg: dict) -> dict:
 
 
 def preguntas_pendientes(entrada: dict, brechas: dict) -> list:
-    """Las dudas del relato, las preguntas sin responder y, por cada brecha,
-    si el sindicato acepta arrancar con la salida provisoria."""
+    """Solo lo que el relato no aclaró (las dudas de la IA). Hasta el
+    2026-10-18 sumaba las preguntas sin responder y una por brecha: era un
+    segundo cuestionario después del primero, y SDN lo sacó. Las brechas
+    van en el prompt, con su salida provisoria."""
+    return list(entrada["dudas"])
+
+
+def prompt_para_code(entrada: dict, cfg: dict, brechas: dict, sindicato: Optional[dict] = None) -> str:
+    """El resultado como instrucción para Code (o para quien arma el
+    formulario): qué configurar, qué validar con qué función existente y
+    qué función habría que desarrollar. Es texto para copiar."""
     r = entrada["respuestas"]
-    pend = list(entrada["dudas"])
-    for p in preguntas_vigentes(r):
-        if p.get("actores"):
+    p = cfg["formularios"][0]
+    A = area_atiende(entrada)
+    nombre_sind = (sindicato or {}).get("nombre") or "el sindicato"
+    L = [f"# Trámite «{entrada['nombre'] or '…'}» (código {p['codigo']}) para {nombre_sind}",
+         entrada["objetivo"] or "", "",
+         "## Configurar en el panel de Colm3na (sin programar)",
+         "- Módulos habilitados: " + ", ".join(MODULOS_NOMBRE.get(m, m) for m in cfg["modulos"]) + ".",
+         "- Áreas: " + "; ".join(f"«{a['area']}» en {'cada seccional' if a['en'] == 'cada_seccional' else SECCIONAL_CENTRAL} ({a['para']})" for a in cfg["areas"]) + ".",
+         f"- Formulario «{p['titulo']}» en Trámites → Crear formularios, destino «{A}»"
+         + (" de la seccional de cada afiliado" if r.get("atiende") == "seccional" else "")
+         + (f", con pase a {texto_pase(cfg['pase'])}" if cfg["pase"] else "") + "."]
+    for f in cfg["formularios"][1:]:
+        L.append(f"- Segundo formulario «{f['titulo']}» (se manda desde el chat), mismo destino.")
+    L += ["", "## Campos del formulario"]
+    for i, c in enumerate(p["campos"]):
+        if c["tipo_dato"] == "separador":
+            L.append(f"{i + 1}. — {c['etiqueta'] or 'separador'} —")
             continue
-        v = len(entrada["campos"]) if p.get("campos") else len(r.get(p["clave"]) or []) if p.get("multiple") else r.get(p["clave"])
-        if not v:
-            pend.append(p["titulo"])
-    for k in brechas:
-        pend.append(f"¿Aceptan arrancar así mientras tanto? {BRECHAS[k]['titulo']}: {BRECHAS[k]['hoy']}")
-    return pend
+        linea = f"{i + 1}. {c['etiqueta']} · {TIPOS[c['tipo_dato']]}" + (", obligatorio" if c["obligatorio"] else ", opcional")
+        if c["opciones"]:
+            linea += f" · opciones: {c['opciones']}"
+        if c["tipos_archivo_permitidos"]:
+            linea += f" · archivos: {c['tipos_archivo_permitidos']}"
+        if c.get("x_aclaracion"):
+            linea += f"\n   Aclaración: {c['x_aclaracion']}"
+        L.append(linea)
+    usar, desarrollar, a_mano = [], [], []
+    for i, c in enumerate(p["campos"]):
+        for v in c.get("validaciones") or []:
+            if v["fuente"] == "fija":
+                usar.append(f"«{c['etiqueta']}»: validación fija {v['operador']} {v['valor']} → «{v['mensaje']}».")
+            elif v.get("formula"):
+                usar.append(f"«{c['etiqueta']}»: validación «contra una lista o el padrón», fórmula `{v['formula']}`"
+                            + (f" (lista {listas_mod.PLANTILLAS[v['lista']]['nombre']}, buscada por este campo)" if v.get("origen") == "lista" else "")
+                            + f" → «{v['mensaje']}»" + (", en vivo" if v.get("en_vivo") else "") + ".")
+            else:
+                usar.append(f"«{c['etiqueta']}»: {('tiene que estar en la lista ' + listas_mod.PLANTILLAS[v['lista']]['nombre']) if v.get('trae') == 'existe' else v['mensaje']}"
+                            + (", en vivo" if v.get("en_vivo") else "") + ".")
+        if c.get("x_regla"):
+            a_mano.append(f"«{c['etiqueta']}»: {c['x_regla']}")
+        if c.get("x_funcion_nueva"):
+            desarrollar.append(f"Para «{c['etiqueta']}»: {c['x_funcion_nueva']}")
+        if c.get("x_pendiente"):
+            a_mano.append(f"«{c['etiqueta']}»: {c['x_pendiente']} (hoy no existe en el constructor).")
+    for q in p.get("requisitos") or []:
+        usar.append("Requisito para iniciar: " + (f"`{q['formula']}`" if q.get("formula") else f"`sistema.{q['trae']} {q['operador']} {q['valor']}`") + f" → «{q['mensaje']}».")
+    req = [x for x in (r.get("requisitos") or []) if x != "ninguno"]
+    if "familiar" in req or "edad" in req:
+        a_mano.append("Sobre el campo del DNI del familiar: validación contra la lista Grupo familiar"
+                      + (" y fórmula `anios_entre(lista.fecha_nacimiento, hoy()) <= N`" if "edad" in req else "")
+                      + "; el sindicato carga antes el grupo familiar en Listas.")
+    L += ["", "## Validaciones: usar lo que existe"]
+    L += [f"- {x}" for x in usar] or ["- Ninguna además de los obligatorios."]
+    if a_mano:
+        L += ["", "## A controlar sin función todavía (revisa el área, o se expresa con el catálogo)"] + [f"- {x}" for x in a_mano]
+    L += ["", "## Funciones a desarrollar"]
+    L += [f"- {x}" for x in desarrollar] or ["- Ninguna: todo lo que se controla se puede hacer con el catálogo actual."]
+    notas = [(PREGUNTAS_POR_CLAVE[k[5:]]["titulo"], r[k]) for k in CLAVES_NOTA if r.get(k)]
+    if notas or entrada["dudas"]:
+        L += ["", "## A confirmar con el sindicato"]
+        L += [f"- {t} {v}" for t, v in notas] + [f"- {d}" for d in entrada["dudas"]]
+    if brechas:
+        L += ["", "## Lo que Colm3na todavía no tiene (se arranca con la salida provisoria)"]
+        L += [f"- {BRECHAS[k]['titulo']}: {' '.join(w)} Mientras tanto: {BRECHAS[k]['hoy']}" for k, w in brechas.items()]
+    L += ["", "Catálogo de datos y funciones para las fórmulas: en el constructor, «Nombres y funciones para las fórmulas»."]
+    return "\n".join(L)
 
 
 # ---------------------------------------------------------------- preparar
@@ -936,6 +1071,7 @@ def resolver(entrada: dict, sindicato: Optional[dict] = None, hoy=None) -> dict:
         "preparar": preparar(entrada, cfg, b, sindicato),
         "pendientes": pend,
         "brechas": list(b),
+        "prompt": prompt_para_code(entrada, cfg, b, sindicato),
         "json": exportar(entrada, cfg, b, pend, hoy.isoformat()),
     }
 
@@ -943,7 +1079,8 @@ def resolver(entrada: dict, sindicato: Optional[dict] = None, hoy=None) -> dict:
 def catalogo() -> dict:
     """Lo que la pantalla necesita para andar sin IA: preguntas, tipos,
     controles, brechas, estados y el ejemplo."""
-    return {"preguntas": PREGUNTAS, "tipos": TIPOS, "anchos": ANCHO_POR_TIPO, "con_opciones": list(CON_OPCIONES),
+    return {"preguntas": PREGUNTAS, "inferidas": INFERIDAS, "funciones": validaciones_tramite.catalogo_funcion(),
+            "tipos": TIPOS, "anchos": ANCHO_POR_TIPO, "con_opciones": list(CON_OPCIONES),
             "extensiones_default": EXTENSIONES_DEFAULT, "controles": CONTROLES, "control_brecha": CONTROL_BRECHA,
             "estados": ESTADOS, "brechas": BRECHAS, "max_campos": MAX_CAMPOS,
             "ejemplo": {"relato": EJEMPLO_RELATO, "propuesta": EJEMPLO_PROPUESTA}}

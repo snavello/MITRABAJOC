@@ -9777,24 +9777,6 @@ def api_asistente_resolver(request: Request, payload: dict = Body(...)):
     return {"entrada": entrada, "sindicato": sind, "resultado": resultado}
 
 
-@app.post(API_ASISTENTE + "/preguntas-extra")
-def api_asistente_preguntas_extra(request: Request, payload: dict = Body(...)):
-    """Entre 4 y 8 preguntas nuevas para el sindicato sobre casos borde."""
-    _exigir_herramientas(request)
-    if not asistente_tramites_ia.disponible():
-        return {"disponible": False, "preguntas": []}
-    entrada, sind, resultado = _resolver_pedido(payload)
-    sid = sind["id"] if sind else None
-    try:
-        preguntas, uso = asistente_tramites_ia.preguntas_extra(
-            resultado["instruccion"]["texto"], resultado["pendientes"], db.modelo_ia("asistente_tramites"))
-    except asistente_tramites_ia.ErrorModelo as e:
-        _registrar_uso_asistente(getattr(e, "uso", None), sid)
-        raise HTTPException(502, "No se pudieron sumar preguntas. Probá de nuevo.")
-    _registrar_uso_asistente(uso, sid)
-    return {"disponible": True, "preguntas": preguntas, "uso": uso}
-
-
 def _caso_asistente_resumen(c) -> dict:
     return {"id": c.id, "creado": c.creado, "quien": c.quien, "nota": c.nota, "estado": c.estado,
             "estado_cambiado": c.estado_cambiado, "estado_quien": c.estado_quien,

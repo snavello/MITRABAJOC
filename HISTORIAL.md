@@ -7636,6 +7636,88 @@ carga incremental, la fuente `externa` (fase 4 del BACKLOG) y la segunda
 vuelta de empresa (D7).
 
 
+
+## El asistente de trámites, más ágil, y once datos nuevos del sistema (2026-10-18, Admin 0.55.02, Plataforma 0.50.01)
+
+Pedido de SDN probando el asistente: "hace demasiadas preguntas y en las
+opciones pone opciones ridículas; siempre debe recomendar una y permitir
+una respuesta; una vez hechas las preguntas no tiene sentido agregar otro
+set al final; en los campos, un texto aclaratorio no obligatorio; tener en
+cuenta las validaciones que los formularios ya tienen; y que el resultado
+diga «usar la función X para validar así» o «desarrollar la función X que
+haga tal cosa», en formato prompt". Decisiones tomadas de a una con él:
+seis preguntas (la opción mínima), credencial vigente = código generado y
+fecha no vencida (sin fecha, vigente), la aclaración es del asistente (no
+una columna del formulario), y el prompt se suma como pestaña al lado de la
+instrucción y las brechas, sin reemplazarlas.
+
+**Seis preguntas, seis inferidas.** `PREGUNTAS` quedó con quién inicia,
+quién recibe, aprobación, requisitos, cómo termina y cuántas veces. Las
+otras seis que el motor necesita (segundo formulario, ventana, quién
+entrega, cupo, listado, tercero) pasaron a `INFERIDAS`: la IA las completa
+desde el relato, cada una tiene un valor por defecto y el analista las ve y
+las corrige en "Lo que entendí", sin pantalla propia. Los dos
+pseudo-pasos "actores" y "campos" dejaron de ser preguntas: los datos del
+formulario son la etapa 4 (con el editor de actores plegado adentro) y el
+flujo quedó en cinco etapas. **Toda pregunta tiene una recomendada**
+(`recomendada` en el catálogo): si la IA no propuso nada, `sanear_respuestas`
+la deja puesta y la marca en `recomendadas`, así la pantalla muestra
+"Recomendada" o "Propuesto por la IA" y el analista confirma con un clic.
+Y toda pregunta admite **una respuesta libre** (`nota_<clave>`, 300
+caracteres) que viaja al prompt bajo "A confirmar con el sindicato".
+**El segundo cuestionario se fue**: `preguntas_pendientes` devuelve solo
+las dudas de la IA, la ruta `/preguntas-extra` y `asistente_tramites_ia.preguntas_extra`
+no existen más, y las brechas se leen en el prompt con su salida provisoria.
+
+**Por campo: aclaración, regla, fórmula y función nueva.** `sanear_campo`
+acepta `aclaracion` (qué es el dato, para quien arma el formulario),
+`regla` (qué hay que controlar, en una frase), `formula` (la regla escrita
+con el catálogo) y `funcion_nueva` ("nombre: qué devuelve"). En
+`campos_colm3na` la fórmula que compila contra los nombres del formulario
+(`validaciones_tramite.error_de_formula`, con la lista Grupo familiar si
+nombra `lista.`) sale como validación por función REAL, con el mensaje de
+la regla y en vivo si mira la lista; la que no compila queda como
+`x_regla` con el motivo; la aclaración va como `x_aclaracion` y la función
+nueva como `x_funcion_nueva` (el importador ignora `x_`). **La IA conoce
+el catálogo**: `PROMPT_SISTEMA` lleva los datos del sistema, las listas y
+las funciones sacados de `validaciones_tramite.catalogo_funcion()`, con la
+regla de proponer lo mínimo, no repetir lo que el padrón ya sabe y no
+inventar datos que no estén ahí. Los requisitos suman la opción
+"credencial vigente".
+
+**El prompt** (`prompt_para_code`, pestaña "Prompt para Code" del
+resultado): configuración en el panel, los campos con sus aclaraciones,
+"Validaciones: usar lo que existe" (fijas, fórmulas con qué lista y si van
+en vivo, requisitos), "A controlar sin función todavía", "Funciones a
+desarrollar", "A confirmar con el sindicato" (notas libres y dudas) y las
+brechas. Es texto para pegar en Claude Code o pasarle a quien arma el
+formulario. La instrucción y la vista previa muestran también la
+aclaración y las reglas de cada campo.
+
+**Once datos nuevos del sistema** (`DATOS_SISTEMA`, los calcula
+`db.contexto_validaciones` con el CUIL de la sesión, ninguno se guarda):
+`credencial_vigente` (código generado y, si tiene vigencia, no vencida;
+sin fecha, vigente), `numero_credencial`, `edad`, `antiguedad_meses`
+(ambos con `meses_cumplidos` / `anios_cumplidos`, las mismas cuentas que
+`meses_entre` en una fórmula), `ultimo_recibo_periodo`, `meses_sin_recibo`,
+`ultimo_recibo_bruto` (el último recibo verificado por período, como la
+portada), `empleador_cuit`, `empleador_nombre` (la razón social si el
+sindicato tiene cargado ese CUIT), `tramites_abiertos` (de cualquier
+formulario) y `dias_desde_ultimo_pedido_de_este_tipo`. Con esto "credencial
+vigente y mayor de 18" es `sistema.credencial_vigente y sistema.edad >= 18`,
+y "hasta el 30% del bruto" es `campo.monto <= sistema.ultimo_recibo_bruto * 0.3`.
+
+JSON dorado del kit escolar regenerado (lo único que cambió es
+`pendientes.preguntas`, que ya no trae el segundo cuestionario). Tests:
+`test_asistente_tramites` (65: preguntas y recomendadas, prompt con usar /
+desarrollar / a controlar), `test_asistente_tramites_api` (15: el catálogo
+en el prompt de la IA, la ruta que se fue), `test_asistente_tramites_v2`,
+`test_validaciones_funcion` (12: los once datos contra el padrón, los
+recibos y el empleador, la credencial vencida y sin fecha) y el robot
+`e2e/test_robot_asistente_tramites.py` con el flujo de cinco etapas. Humo
+con Playwright: sin relato las recomendadas quedan puestas, la respuesta
+libre, la aclaración, la fórmula y la función nueva llegan al prompt.
+
 ## Una clave por persona en el panel (2026-10-17, Admin 0.56.01, Plataforma 0.50.01)
 
 **El síntoma.** SDN dio de alta en La Bancaria a un usuario de área de la

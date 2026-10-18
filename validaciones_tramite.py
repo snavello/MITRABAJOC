@@ -77,6 +77,20 @@ DATOS_SISTEMA = {
     "fecha_nacimiento": ("fecha", "Fecha de nacimiento"),
     "tramites_de_este_tipo": ("numero", "Cuántas veces ya pidió este mismo trámite (en cualquier estado)"),
     "tramites_abiertos_de_este_tipo": ("numero", "Cuántos pedidos de este mismo trámite tiene sin terminar"),
+    # ---- 2026-10-18: funciones pedidas por SDN para los requisitos y las
+    # validaciones (la credencial primero). Todas las calcula
+    # db.contexto_validaciones con el CUIL de la sesión; ninguna se guarda.
+    "credencial_vigente": ("booleano", "Tiene credencial generada y, si tiene fecha de vigencia, no venció"),
+    "numero_credencial": ("texto", "Código de la credencial (vacío si no se generó)"),
+    "edad": ("numero", "Años cumplidos (desde la fecha de nacimiento)"),
+    "antiguedad_meses": ("numero", "Meses cumplidos desde la afiliación a este sindicato"),
+    "ultimo_recibo_periodo": ("texto", "Período AAAA-MM del último recibo verificado"),
+    "meses_sin_recibo": ("numero", "Meses desde el período del último recibo verificado"),
+    "ultimo_recibo_bruto": ("numero", "Bruto del último recibo verificado"),
+    "empleador_cuit": ("texto", "CUIT del empleador que figura en el padrón"),
+    "empleador_nombre": ("texto", "Razón social de ese empleador, si el sindicato lo tiene cargado"),
+    "tramites_abiertos": ("numero", "Cuántos trámites tiene sin terminar, de cualquier formulario"),
+    "dias_desde_ultimo_pedido_de_este_tipo": ("numero", "Días desde su último pedido de este mismo trámite"),
 }
 
 # Las funciones que una fórmula puede llamar, con su ayuda. Las de fechas
@@ -469,6 +483,27 @@ def _fecha(valor):
     if f is None:
         raise ValueError("fecha inválida")
     return date.fromisoformat(f)
+
+
+def meses_cumplidos(desde, hasta=None):
+    """Meses cumplidos entre una fecha ISO (o AAAA-MM, que cuenta desde el
+    día 1) y `hasta` (hoy por defecto); None si `desde` no es una fecha.
+    Es lo que usan los datos del sistema `antiguedad_meses` y
+    `meses_sin_recibo`, con la misma regla que `meses_entre` en una fórmula."""
+    d = str(desde or "").strip()
+    if len(d) == 7 and d[4] == "-":
+        d += "-01"
+    if not _RE_FECHA.match(d):
+        return None
+    try:
+        return _meses_entre(d, (hasta or fechas.hoy().isoformat()))
+    except ValueError:
+        return None
+
+
+def anios_cumplidos(desde, hasta=None):
+    m = meses_cumplidos(desde, hasta)
+    return None if m is None else int(m // 12)
 
 
 def _meses_entre(desde, hasta) -> int:

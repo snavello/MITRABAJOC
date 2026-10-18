@@ -497,15 +497,15 @@
       "edad"
     ],
     "quien": "afiliado",
-    "frecuencia": "familiar",
     "atiende": "seccional",
     "area": "Acción Social",
     "aprueba": "misma",
+    "fin": "entrega",
+    "lugar": "Sede, delegación o comisión gremial del banco",
+    "frecuencia": "familiar",
     "segundo": "no",
     "ventana": "si",
     "fechas": "de principios de diciembre a fines de enero",
-    "fin": "entrega",
-    "lugar": "Sede, delegación o comisión gremial del banco",
     "entrega": "delegado",
     "entrega_quien": "Delegado de la comisión gremial",
     "cupo": "si",
@@ -560,14 +560,7 @@
     ],
     "preguntas": [
       "¿Aprueba la seccional o Acción Social Nacional?",
-      "¿Desde qué grado o año ya no corresponde el kit?",
-      "¿Aceptan arrancar así mientras tanto? Abrir y cerrar el formulario por fechas: Alguien del sindicato activa el formulario el día de apertura y lo desactiva al cierre. La noticia que lo anuncia sí vence sola.",
-      "¿Aceptan arrancar así mientras tanto? Familiares declarados una sola vez: El formulario pide los datos y documentos del familiar en cada pedido.",
-      "¿Aceptan arrancar así mientras tanto? Evitar pedidos repetidos por familiar o por período: «Una sola vez» ya se controla con un requisito (sistema.tramites_de_este_tipo). Por familiar o por período nada lo impide: el área lo detecta al revisar.",
-      "¿Aceptan arrancar así mientras tanto? Cupo o stock por seccional: El área lleva las unidades en su planilla y avisa por el chat si se agotaron.",
-      "¿Aceptan arrancar así mientras tanto? Listado de pedidos con sus respuestas: El Panel Sindical lista expediente, seccional, estado y días, pero no las respuestas.",
-      "¿Aceptan arrancar así mientras tanto? Registrar la entrega: Al entregar, el área pasa el trámite a Terminado con un mensaje. El afiliado se identifica con su credencial digital.",
-      "¿Aceptan arrancar así mientras tanto? Una respuesta que depende de otra: Las reglas entre campos comparan solo números o fechas. Salida: unir las dos preguntas en una lista («Primaria 1.º», «Primaria 2.º»…)."
+      "¿Desde qué grado o año ya no corresponde el kit?"
     ]
   }
 }

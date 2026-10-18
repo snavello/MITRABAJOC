@@ -55,9 +55,14 @@ def test_cada_brecha_esta_completa():
 
 def test_las_preguntas_viajan_como_datos():
     """`cuando` es un dict (no una función): la pantalla lo evalúa igual."""
-    claves = [p["clave"] for p in at.PREGUNTAS]
-    assert len(claves) == len(set(claves)) == 14
-    for p in at.PREGUNTAS:
+    claves = [p["clave"] for p in at.PREGUNTAS_TODAS]
+    assert len(claves) == len(set(claves)) == 12
+    assert len(at.PREGUNTAS) == 6 and len(at.INFERIDAS) == 6, "seis se preguntan, seis se infieren (SDN, 2026-10-18)"
+    assert not any("cuando" in p for p in at.PREGUNTAS), "las que se preguntan se preguntan siempre"
+    for p in at.PREGUNTAS_TODAS:
+        validas = [k for k, _ in p["opciones"]]
+        rec = p["recomendada"]
+        assert (set(rec) <= set(validas)) if p.get("multiple") else rec in validas, p["clave"]
         if "cuando" in p:
             assert set(p["cuando"]) == {"clave", "en"} and p["cuando"]["clave"] in claves
         for t in ("texto", "texto2"):
@@ -143,10 +148,13 @@ def test_sanear_descarta_lo_que_no_esta_en_el_catalogo():
         "dudas": ["¿Y los mellizos?", "", 42],
     }, de_ia=True)
     assert e["codigo"] == "AYUDAN"          # sigla("ayú-da nac!") recortada a seis
-    assert "quien" not in e["respuestas"] and e["respuestas"]["fin"] == "pago"
+    # Un valor fuera del catálogo se descarta y queda la RECOMENDADA: siempre hay una.
+    assert e["respuestas"]["quien"] == "afiliado" and "quien" in e["recomendadas"] and e["respuestas"]["fin"] == "pago"
     assert e["respuestas"]["requisitos"] == ["ninguno"], "lo excluyente desmarca lo demás"
     assert e["respuestas"]["area"] == "Acción Social" and len(e["respuestas"]["enc_datos"]) == 400
-    assert e["de_ia"] == ["requisitos", "fin"]
+    assert e["de_ia"] == ["requisitos", "fin"] and "fin" not in e["recomendadas"]
+    assert e["respuestas"]["ventana"] == "no" and "ventana" in e["recomendadas"], "las inferidas también traen su valor"
+    assert e["campos"][0]["aclaracion"] == "" and e["campos"][0]["formula"] == ""
     assert [c["tipo"] for c in e["campos"]] == ["texto", "archivo", "separador"]
     assert e["campos"][0]["control"] == "" and e["campos"][1]["opciones"] == "jpg,jpeg"
     assert e["campos"][2]["obligatorio"] is False
@@ -166,10 +174,13 @@ def test_codigo_desde_el_nombre():
 
 
 def test_preguntas_vigentes_dependen_de_las_respuestas():
-    sin = [p["clave"] for p in at.preguntas_vigentes({"aprueba": "no", "fin": "pago"})]
+    """Las inferidas con `cuando` solo valen si la respuesta de la que
+    dependen las habilita; las seis preguntadas, siempre."""
+    sin = [p["clave"] for p in at.INFERIDAS if at.pregunta_vigente(p, {"aprueba": "no", "fin": "pago"})]
     assert "segundo" not in sin and "entrega" not in sin and "cupo" not in sin
-    con = [p["clave"] for p in at.preguntas_vigentes({"aprueba": "otra", "fin": "entrega"})]
+    con = [p["clave"] for p in at.INFERIDAS if at.pregunta_vigente(p, {"aprueba": "otra", "fin": "entrega"})]
     assert {"segundo", "entrega", "cupo"} <= set(con)
+    assert [p["clave"] for p in at.preguntas_vigentes({})] == [p["clave"] for p in at.PREGUNTAS]
 
 
 # ---------------------------------------------------------------- circuito
@@ -228,12 +239,45 @@ def test_preparar_dice_que_existe_y_que_falta_con_el_sindicato_elegido():
     assert "requisitos" in [p["clave"] for p in r["instruccion"]["pasos"]]
 
 
-def test_las_pendientes_incluyen_dudas_preguntas_sin_responder_y_brechas():
-    e = at.sanear_propuesta({"nombre": "X", "respuestas": {"ventana": "si"}, "dudas": ["¿Plazo?"]})
-    pend = at.resolver(e, hoy=HOY)["pendientes"]
-    assert pend[0] == "¿Plazo?"
-    assert "¿Quién inicia el pedido?" in pend and "¿Estos son los datos que se piden?" in pend
-    assert pend[-1].startswith("¿Aceptan arrancar así mientras tanto? Abrir y cerrar el formulario por fechas")
+def test_las_pendientes_son_solo_las_dudas_y_el_resto_va_al_prompt():
+    """Sin segundo cuestionario (SDN, 2026-10-18): lo pendiente son las
+    dudas de la IA; las notas libres y las brechas viven en el prompt."""
+    e = at.sanear_propuesta({"nombre": "X", "respuestas": {"ventana": "si", "nota_fin": "Se entrega en la obra social"},
+                             "dudas": ["¿Plazo?"]})
+    r = at.resolver(e, hoy=HOY)
+    assert r["pendientes"] == ["¿Plazo?"]
+    assert "## A confirmar con el sindicato" in r["prompt"] and "- ¿Plazo?" in r["prompt"]
+    assert "¿Cómo termina? Se entrega en la obra social" in r["prompt"]
+    assert "Abrir y cerrar el formulario por fechas" in r["prompt"] and "salida provisoria" in r["prompt"]
+
+
+def test_el_prompt_dice_que_funcion_usar_y_cual_desarrollar():
+    """Una regla escrita con el catálogo sale como validación real; una que
+    no compila queda «a controlar»; una función nueva, «a desarrollar»."""
+    e = at.sanear_propuesta({"nombre": "Préstamo", "respuestas": {"requisitos": ["credencial"]}, "campos": [
+        {"etiqueta": "DNI del chico", "tipo": "texto", "aclaracion": "Sin puntos", "regla": "Hasta 12 años",
+         "formula": "anios_entre(lista.fecha_nacimiento, hoy()) <= 12"},
+        {"etiqueta": "Monto", "tipo": "numero", "regla": "Hasta el 30% del bruto", "formula": "campo.monto <= sistema.ultimo_recibo_bruto * 0.3"},
+        {"etiqueta": "Sucursal", "tipo": "texto", "regla": "Una sucursal del banco", "funcion_nueva": "sucursal_valida: si está en la lista de sucursales"},
+        {"etiqueta": "Mal", "tipo": "texto", "formula": "sistema.inventado > 1"}]})
+    r = at.resolver(e, hoy=HOY)
+    f = r["formularios"][0]
+    dni, monto, suc, mal = f["campos"]
+    assert dni["x_aclaracion"] == "Sin puntos" and dni["validaciones"][0]["origen"] == "lista" and dni["validaciones"][0]["clave2"] == 0
+    assert dni["validaciones"][0]["mensaje"] == "Hasta 12 años" and dni["validaciones"][0]["en_vivo"] is True
+    assert monto["validaciones"][0]["origen"] == "sistema" and monto["validaciones"][0]["en_vivo"] is False
+    assert suc["validaciones"] == [] and suc["x_funcion_nueva"].startswith("sucursal_valida")
+    assert "no se pudo guardar" in mal["x_regla"] and mal["validaciones"] == []
+    assert f["requisitos"][0]["trae"] == "credencial_vigente"
+    # Y lo exportado pasa entero por el saneo real del constructor.
+    saneados = main._campos_tramite_validos(copy.deepcopy(f["campos"]))
+    assert [len(c["validaciones"]) for c in saneados] == [1, 1, 0, 0]
+    p = r["prompt"]
+    assert "## Validaciones: usar lo que existe" in p and "`campo.monto <= sistema.ultimo_recibo_bruto * 0.3`" in p
+    assert "`sistema.credencial_vigente == si`" in p
+    assert "## Funciones a desarrollar" in p and "sucursal_valida" in p
+    assert "## A controlar sin función todavía" in p and "«Sucursal»: Una sucursal del banco" in p
+    assert "Aclaración: Sin puntos" in p
 
 
 def test_la_instruccion_y_los_estados_siguen_a_las_respuestas():
